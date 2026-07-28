@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import { PrismaService } from "./prisma/prisma.service"
-import { CreateUserResponseSchema } from "@workspace/shared"
-import type { CreateUser, CreateUserResponse } from "@workspace/shared"
+import { UserResponseSchema } from "@workspace/shared"
+import type { SignupInput, UserResponse } from "@workspace/shared"
 
 @Injectable()
 export class AppService {
@@ -11,7 +11,7 @@ export class AppService {
     return "Hello from the Freebuff API!"
   }
 
-  async healthCheck() {
+  async healthCheck(): Promise<{ status: string; db: string; timestamp: string }> {
     let dbStatus: string
     try {
       await this.prisma.$queryRaw`SELECT 1`
@@ -27,23 +27,41 @@ export class AppService {
     }
   }
 
-  async createUser(data: CreateUser): Promise<CreateUserResponse> {
+  async createUser(data: SignupInput): Promise<UserResponse> {
     const user = await this.prisma.user.create({
       data: {
         email: data.email,
-        name: data.name,
-        role: data.role,
-        password: data.password,
+        fullName: data.fullName,
+        passwordHash: data.password,
       },
     })
 
-    return CreateUserResponseSchema.parse({
+    // Assign default "User" role
+    const role = await this.prisma.role.findUnique({ where: { name: "User" } })
+    if (role) {
+      await this.prisma.userRole.create({
+        data: {
+          userId: user.id,
+          roleId: role.id,
+        },
+      })
+    }
+
+    return UserResponseSchema.parse({
       id: user.id,
       email: user.email,
-      name: user.name,
-      role: user.role,
+      fullName: user.fullName,
+      isActive: user.isActive,
+      isSuperAdmin: user.isSuperAdmin,
+      isEmailVerified: user.emailVerifiedAt !== null,
+      roles: role
+        ? [{ id: role.id, name: role.name, description: role.description }]
+        : [],
+      permissions: [],
       createdAt: user.createdAt.toISOString(),
       updatedAt: user.updatedAt.toISOString(),
+      isDeleted: user.isDeleted,
+      deletedAt: user.deletedAt ? user.deletedAt.toISOString() : null,
     })
   }
 }

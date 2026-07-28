@@ -6,8 +6,8 @@ import {
   ApiOkResponse,
   ApiCreatedResponse,
 } from "@nestjs/swagger"
-import { LoginRequestSchema, CreateUserSchema } from "@workspace/shared"
-import type { LoginRequest, CreateUser } from "@workspace/shared"
+import { LoginSchema, SignupSchema } from "@workspace/shared"
+import type { LoginInput, SignupInput } from "@workspace/shared"
 import { AppService } from "./app.service"
 import { ZodValidationPipe } from "./common/pipes/zod-validation.pipe"
 import { LoginRequestDto } from "./common/dto/login-request.dto"
@@ -43,8 +43,8 @@ export class AppController {
   @ApiBody({ type: LoginRequestDto })
   @ApiOkResponse({ type: LoginResponseDto, description: "JWT access token" })
   login(
-    @Body(new ZodValidationPipe(LoginRequestSchema))
-    body: LoginRequest
+    @Body(new ZodValidationPipe(LoginSchema))
+    body: LoginInput
   ) {
     // Placeholder — real auth will be added later
     return {
@@ -62,8 +62,8 @@ export class AppController {
     description: "The created user",
   })
   async createUser(
-    @Body(new ZodValidationPipe(CreateUserSchema))
-    body: CreateUser
+    @Body(new ZodValidationPipe(SignupSchema))
+    body: SignupInput
   ) {
     return this.appService.createUser(body)
   }

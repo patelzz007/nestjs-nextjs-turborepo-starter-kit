@@ -1,5 +1,5 @@
 import { createZodDto } from "nestjs-zod/dto"
-import { CreateUserSchema } from "@workspace/shared"
+import { SignupSchema } from "@workspace/shared"
 
 /** DTO for creating a user — auto-generates OpenAPI schema via nestjs-zod */
-export class CreateUserDto extends createZodDto(CreateUserSchema) {}
+export class CreateUserDto extends createZodDto(SignupSchema) {}

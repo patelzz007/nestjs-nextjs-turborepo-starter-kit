@@ -6,12 +6,513 @@ datasource db {
   provider = "postgresql"
 }
 
+enum Plan {
+  FREE
+  PRO
+  ENTERPRISE
+}
+
+enum RedirectType {
+  PERMANENT // 301
+  TEMPORARY // 302
+}
+
+enum DeviceType {
+  DESKTOP
+  MOBILE
+  TABLET
+  BOT
+  UNKNOWN
+}
+
+// Enums
+enum PermissionAction {
+  CREATE
+  READ
+  UPDATE
+  DELETE
+  LIST
+  MANAGE
+}
+
+enum PermissionResource {
+  USER
+  PROFILE
+  ROLE
+  PERMISSION
+  ADMIN_DASHBOARD
+  SYSTEM_SETTINGS
+  URL
+  TAG
+  API_KEY
+  ANALYTICS
+  AUDIT_LOG
+  REPORT
+}
+
+// Tables
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
+  id           String  @id @default(uuid())
+  fullName     String  @db.VarChar(100)
+  email        String  @unique @db.VarChar(100)
+  passwordHash String  @db.Text
+  refreshToken String? @db.Text
+  isActive     Boolean @default(true)
+  isSuperAdmin Boolean @default(false)
+
+  provider          String? // "google" | "github" | null
+  providerId        String? @map("provider_id")
+  plan              Plan    @default(FREE)
+  monthlyUrlLimit   Int     @default(50) @map("monthly_url_limit")
+  monthlyClickLimit Int     @default(10000) @map("monthly_click_limit")
+
+  // Relations
+  refreshTokens   RefreshToken[]
+  userRoles       UserRole[]
+  userPermissions UserPermission[]
+
+  emailVerifiedAt DateTime? @map("email_verified_at")
+  isDeleted       Boolean   @default(false) @map("is_deleted")
+  deletedAt       DateTime? @map("deleted_at")
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  urls                Url[]
+  tags                Tag[]
+  apiKeys             ApiKey[]
+  passwordResetTokens PasswordResetToken[]
+  impersonatedBy      ImpersonationAuditLog[] @relation("Impersonator")
+  impersonatedUser    ImpersonationAuditLog[] @relation("ImpersonationTarget")
+
+  @@unique([provider, providerId])
+  @@map("users")
+}
+
+model Role {
+  id          String  @id @default(uuid())
+  name        String  @unique @db.VarChar(100)
+  description String? @db.Text
+  isActive    Boolean @default(true)
+
+  // Self-referential hierarchy — a role can inherit permissions from a parent role.
+  parentId String? @map("parent_id")
+  parent   Role?   @relation("RoleHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children Role[]  @relation("RoleHierarchy")
+
+  // Relations
+  userRoles       UserRole[]
+  rolePermissions RolePermission[]
+  menuItemRoles   MenuItemRole[]
+
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  deletedAt DateTime? @map("deleted_at")
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([parentId])
+  @@map("roles")
+}
+
+model Permission {
+  id          String             @id @default(uuid())
+  action      PermissionAction
+  resource    PermissionResource
+  description String?            @db.Text
+
+  group      String? @db.VarChar(100)
+  isSystem   Boolean @default(false)
+  conditions Json?
+
+  // Relations
+  rolePermissions     RolePermission[]
+  userPermissions     UserPermission[]
+  menuItemPermissions MenuItemPermission[]
+
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  deletedAt DateTime? @map("deleted_at")
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@unique([action, resource])
+  @@map("permissions")
+}
+
+// ---------------------------------------------------------------------------
+// Permission Audit Trail
+// ---------------------------------------------------------------------------
+
+model PermissionAuditLog {
+  id           String    @id @default(uuid())
+  actorId      String    @map("actor_id")
+  targetUserId String?   @map("target_user_id")
+  targetRoleId String?   @map("target_role_id")
+  permissionId String?   @map("permission_id")
+  action       String
+  detail       String?   @db.Text
+  isDeleted    Boolean   @default(false) @map("is_deleted")
+  deletedAt    DateTime? @map("deleted_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  @@index([actorId])
+  @@index([targetUserId])
+  @@index([targetRoleId])
+  @@index([createdAt])
+  @@map("permission_audit_logs")
+}
+
+// ---------------------------------------------------------------------------
+// Sidebar / Menu
+// ---------------------------------------------------------------------------
+
+enum MenuMatchType {
+  ANY
+  ALL
+}
+
+model MenuItem {
+  id       String  @id @default(uuid())
+  name     String  @db.VarChar(100)
+  label    String? @db.VarChar(100)
+  icon     String? @db.VarChar(50)
+  path     String? @db.VarChar(255)
+  parentId String? @map("parent_id")
+  order    Int     @default(0)
+  isActive Boolean @default(true) @map("is_active")
+
+  parent   MenuItem?  @relation("MenuHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children MenuItem[] @relation("MenuHierarchy")
+
+  menuItemPermissions MenuItemPermission[]
+  menuItemRoles       MenuItemRole[]
+
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  deletedAt DateTime? @map("deleted_at")
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([parentId])
+  @@map("menu_items")
+}
+
+model MenuItemPermission {
+  id           String        @id @default(uuid())
+  menuItemId   String        @map("menu_item_id")
+  permissionId String        @map("permission_id")
+  matchType    MenuMatchType @default(ANY) @map("match_type")
+
+  menuItem   MenuItem   @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  deletedAt DateTime? @map("deleted_at")
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@unique([menuItemId, permissionId])
+  @@map("menu_item_permissions")
+}
+
+model MenuItemRole {
+  id         String @id @default(uuid())
+  menuItemId String @map("menu_item_id")
+  roleId     String @map("role_id")
+
+  menuItem MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  role     Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  deletedAt DateTime? @map("deleted_at")
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@unique([menuItemId, roleId])
+  @@map("menu_item_roles")
+}
+
+// ---------------------------------------------------------------------------
+// Password Reset Tokens
+// ---------------------------------------------------------------------------
+
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
+  token     String    @unique @db.Text
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  deletedAt DateTime? @map("deleted_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+  @@map("password_reset_tokens")
+}
+
+model UserRole {
+  id     String @id @default(uuid())
+  userId String
+  roleId String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  assignedAt DateTime @default(now())
+  assignedBy String?
+
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  deletedAt DateTime? @map("deleted_at")
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@unique([userId, roleId])
+  @@map("user_roles")
+}
+
+model UserPermission {
+  id           String @id @default(uuid())
+  userId       String
+  permissionId String
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  assignedAt DateTime  @default(now())
+  assignedBy String?
+  expiresAt  DateTime?
+
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  deletedAt DateTime? @map("deleted_at")
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@unique([userId, permissionId])
+  @@map("user_permissions")
+}
+
+model RolePermission {
+  id           String @id @default(uuid())
+  roleId       String
+  permissionId String
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  assignedAt DateTime @default(now())
+  assignedBy String?
+
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  deletedAt DateTime? @map("deleted_at")
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@unique([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+model RefreshToken {
+  id     String @id @default(uuid())
+  token  String @db.Text
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  deviceInfo String? @db.VarChar(255)
+  ipAddress  String? @db.VarChar(45)
+
+  expiresAt DateTime
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  deletedAt DateTime? @map("deleted_at")
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([token])
+  @@map("refresh_tokens")
+}
+
+model Url {
+  id           String       @id @default(uuid())
+  userId       String?      @map("user_id")
+  shortCode    String       @unique @map("short_code")
+  customAlias  String?      @unique @map("custom_alias")
+  originalUrl  String       @map("original_url") @db.Text
+  title        String?
+  redirectType RedirectType @default(TEMPORARY) @map("redirect_type")
+  isActive     Boolean      @default(true) @map("is_active")
+  passwordHash String?      @map("password_hash")
+  clickLimit   Int?         @map("click_limit")
+  clickCount   Int          @default(0) @map("click_count")
+  expiresAt    DateTime?    @map("expires_at")
+  isDeleted    Boolean      @default(false) @map("is_deleted")
+  deletedAt    DateTime?    @map("deleted_at")
+  createdAt    DateTime     @default(now()) @map("created_at")
+  updatedAt    DateTime     @updatedAt @map("updated_at")
+
+  user   User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  clicks Click[]
+  tags   UrlTag[]
+
+  @@index([shortCode])
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([deletedAt])
+  @@map("urls")
+}
+
+model Tag {
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
   name      String
-  password  String
-  role      String   @default("seller")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  color     String    @default("#6366f1")
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  deletedAt DateTime? @map("deleted_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  user User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  urls UrlTag[]
+
+  @@unique([userId, name])
+  @@map("tags")
+}
+
+model UrlTag {
+  id    String @id @default(uuid())
+  urlId String @map("url_id")
+  tagId String @map("tag_id")
+
+  url Url @relation(fields: [urlId], references: [id], onDelete: Cascade)
+  tag Tag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  deletedAt DateTime? @map("deleted_at")
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@unique([urlId, tagId])
+  @@map("url_tags")
+}
+
+model Click {
+  id          String     @id @default(uuid())
+  urlId       String     @map("url_id")
+  ipAddress   String?    @map("ip_address")
+  country     String?
+  city        String?
+  deviceType  DeviceType @default(UNKNOWN) @map("device_type")
+  os          String?
+  browser     String?
+  referrer    String?    @db.Text
+  utmSource   String?    @map("utm_source")
+  utmMedium   String?    @map("utm_medium")
+  utmCampaign String?    @map("utm_campaign")
+  clickedAt   DateTime   @default(now()) @map("clicked_at")
+  isDeleted   Boolean    @default(false) @map("is_deleted")
+  deletedAt   DateTime?  @map("deleted_at")
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  url Url @relation(fields: [urlId], references: [id], onDelete: Cascade)
+
+  @@index([urlId])
+  @@index([clickedAt])
+  @@index([urlId, clickedAt])
+  @@map("clicks")
+}
+
+model ApiKey {
+  id            String    @id @default(uuid())
+  userId        String    @map("user_id")
+  name          String
+  keyHash       String    @unique @map("key_hash")
+  keyPrefix     String    @map("key_prefix")
+  scopes        String[]  @default(["read", "write"])
+  rateLimitTier String    @default("standard") @map("rate_limit_tier")
+  totalRequests Int       @default(0) @map("total_requests")
+  lastUsedAt    DateTime? @map("last_used_at")
+  expiresAt     DateTime? @map("expires_at")
+  isActive      Boolean   @default(true) @map("is_active")
+  isDeleted     Boolean   @default(false) @map("is_deleted")
+  deletedAt     DateTime? @map("deleted_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  usageLogs ApiKeyUsageLog[]
+
+  @@index([userId])
+  @@index([keyHash])
+  @@index([deletedAt])
+  @@map("api_keys")
+}
+
+// ---------------------------------------------------------------------------
+// Impersonation Audit Log
+// ---------------------------------------------------------------------------
+
+model ImpersonationAuditLog {
+  id             String   @id @default(uuid())
+  impersonatorId String   @map("impersonator_id")
+  targetUserId   String   @map("target_user_id")
+  action         String // "START" | "STOP"
+  ipAddress      String?  @map("ip_address") @db.VarChar(45)
+  userAgent      String?  @map("user_agent") @db.Text
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  impersonator User @relation("Impersonator", fields: [impersonatorId], references: [id], onDelete: Cascade)
+  targetUser   User @relation("ImpersonationTarget", fields: [targetUserId], references: [id], onDelete: Cascade)
+
+  @@index([impersonatorId])
+  @@index([targetUserId])
+  @@index([createdAt])
+  @@map("impersonation_audit_logs")
+}
+
+model Log {
+  id             String    @id @default(uuid())
+  level          String
+  message        String    @db.Text
+  context        String?
+  userId         String?
+  correlationId  String?   @map("correlation_id")
+  metadata       Json?
+  durationMs     Int?      @map("duration_ms")
+  errorGroup     String?   @map("error_group")
+  tags           String[]  @default([])
+  timestamp      DateTime  @default(now())
+  createdAt      DateTime  @default(now())
+
+  @@index([level])
+  @@index([timestamp])
+  @@index([context])
+  @@index([message])
+  @@index([userId])
+  @@index([correlationId])
+  @@index([errorGroup])
+  @@map("logs")
+}
+
+model ApiKeyUsageLog {
+  id             String    @id @default(uuid())
+  apiKeyId       String    @map("api_key_id")
+  endpoint       String    @db.VarChar(255)
+  method         String    @db.VarChar(10)
+  statusCode     Int       @map("status_code")
+  ipAddress      String?   @map("ip_address") @db.VarChar(45)
+  userAgent      String?   @map("user_agent") @db.Text
+  responseTimeMs Int?      @map("response_time_ms")
+  isDeleted      Boolean   @default(false) @map("is_deleted")
+  deletedAt      DateTime? @map("deleted_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  apiKey ApiKey @relation(fields: [apiKeyId], references: [id], onDelete: Cascade)
+
+  @@index([apiKeyId])
+  @@index([apiKeyId, createdAt])
+  @@index([createdAt])
+  @@map("api_key_usage_logs")
 }

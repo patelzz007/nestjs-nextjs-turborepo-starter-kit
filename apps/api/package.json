@@ -8,11 +8,19 @@
     "start": "nest start",
     "start:prod": "node dist/main",
     "db:push": "dotenv -e .env -- prisma db push --accept-data-loss",
-    "db:studio": "prisma studio",
     "lint": "eslint",
     "format": "prettier --write \"**/*.{ts,tsx}\"",
-    "typecheck": "nest build"
+    "typecheck": "nest build",
+    "db:generate": "dotenv -e .env -- prisma generate",
+    "db:migrate": "dotenv -e .env -- prisma migrate dev",
+    "db:migrate:create": "dotenv -e .env -- prisma migrate dev --create-only",
+    "db:migrate:deploy": "dotenv -e .env -- prisma migrate deploy",
+    "db:migrate:status": "dotenv -e .env -- prisma migrate status",
+    "db:seed": "dotenv -e .env -- ts-node prisma/seed.ts",
+    "db:studio": "prisma studio",
+    "db:reset": "dotenv -e .env -- prisma migrate reset --force"
   },
+
   "dependencies": {
     "@nestjs/common": "^11.1.28",
     "@nestjs/core": "^11.1.28",
@@ -21,17 +29,20 @@
     "@prisma/adapter-pg": "^7.9.1",
     "@prisma/client": "^7.9.1",
     "@workspace/shared": "workspace:*",
+    "bcrypt": "^6.0.0",
     "dotenv": "^17.4.2",
     "nestjs-zod": "^5.5.0",
     "pg": "^8.22.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
+    "ts-node": "^10.9.2",
     "zod": "^4.4.3"
   },
   "devDependencies": {
     "@nestjs/cli": "^11.0.24",
     "@nestjs/schematics": "^11.1.0",
     "@prisma/config": "^7.9.1",
+    "@types/bcrypt": "^6.0.0",
     "@types/express": "^5.0.6",
     "@types/node": "^22.20.1",
     "@types/pg": "^8.20.0",
