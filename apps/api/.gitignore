@@ -1,0 +1,5 @@
+# Environment
+.env
+
+# Build output
+dist/

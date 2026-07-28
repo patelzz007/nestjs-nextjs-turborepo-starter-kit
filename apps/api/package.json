@@ -1,0 +1,45 @@
+{
+  "name": "api",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "build": "nest build",
+    "dev": "nest start --watch",
+    "start": "nest start",
+    "start:prod": "node dist/main",
+    "db:push": "dotenv -e .env -- prisma db push --accept-data-loss",
+    "db:studio": "prisma studio",
+    "lint": "eslint",
+    "format": "prettier --write \"**/*.{ts,tsx}\"",
+    "typecheck": "nest build"
+  },
+  "dependencies": {
+    "@nestjs/common": "^11.1.28",
+    "@nestjs/core": "^11.1.28",
+    "@nestjs/platform-express": "^11.1.28",
+    "@nestjs/swagger": "^11.4.6",
+    "@prisma/adapter-pg": "^7.9.1",
+    "@prisma/client": "^7.9.1",
+    "@workspace/shared": "workspace:*",
+    "dotenv": "^17.4.2",
+    "nestjs-zod": "^5.5.0",
+    "pg": "^8.22.0",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@nestjs/cli": "^11.0.24",
+    "@nestjs/schematics": "^11.1.0",
+    "@prisma/config": "^7.9.1",
+    "@types/express": "^5.0.6",
+    "@types/node": "^22.20.1",
+    "@types/pg": "^8.20.0",
+    "@workspace/eslint-config": "workspace:^",
+    "@workspace/typescript-config": "workspace:*",
+    "dotenv-cli": "^11.0.0",
+    "eslint": "^9.39.5",
+    "prisma": "^7.9.1",
+    "typescript": "^6.0.3"
+  }
+}
