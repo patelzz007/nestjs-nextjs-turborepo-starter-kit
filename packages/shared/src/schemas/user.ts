@@ -78,6 +78,30 @@ export const UpdateUserSchema = UpdateProfileSchema.extend({
 export type UpdateUserInput = z.output<typeof UpdateUserSchema>;
 
 /**
+ * Admin-only user detail schema — extends UserResponseSchema with internal
+ * security fields that should NOT be exposed to regular users or API clients.
+ *
+ * Includes:
+ * - `failedLoginAttempts`: Number of consecutive failed login attempts
+ * - `lockedUntil`: When the account lockout expires (null = not locked)
+ *
+ * This schema should ONLY be used for SuperAdmin/Admin endpoints where the
+ * caller has explicit permission to view account security state.
+ */
+export const AdminUserDetailSchema = UserResponseSchema.extend({
+	failedLoginAttempts: z.number().int().min(0).meta({
+		description: "Number of consecutive failed login attempts",
+		example: 0,
+	}),
+	lockedUntil: z.string().datetime().nullable().meta({
+		description: "ISO-8601 timestamp when the account lockout expires (null = not locked)",
+		example: null,
+	}),
+}).strict();
+
+export type AdminUserDetail = z.output<typeof AdminUserDetailSchema>;
+
+/**
  * Message response for user deletion / profile operations.
  */
 export const UserMessageResponseSchema = z

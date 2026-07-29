@@ -2,6 +2,7 @@ import "reflect-metadata"
 import "dotenv/config"
 import { NestFactory } from "@nestjs/core"
 import { SwaggerModule, DocumentBuilder } from "@nestjs/swagger"
+import cookieParser from "cookie-parser"
 import { AppModule } from "./app.module"
 
 async function bootstrap() {
@@ -13,6 +14,11 @@ async function bootstrap() {
     origin: ["http://localhost:3000", "http://localhost:3001"],
     credentials: true,
   })
+
+  // ── Cookie Parser ────────────────────────────────────────────
+  // Required for AuthGuard to read JWT tokens from httpOnly cookies.
+  // Without this middleware, request.cookies is always undefined.
+  app.use(cookieParser())
 
   // ── Favicon ────────────────────────────────────────────────
   // NestJS logo on dark rounded square
@@ -43,6 +49,9 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config)
   SwaggerModule.setup("docs", app, document, {
     customSiteTitle: "Freebuff API",
+    swaggerOptions: {
+      withCredentials: true,
+    },
   })
 
   await app.listen(8080)

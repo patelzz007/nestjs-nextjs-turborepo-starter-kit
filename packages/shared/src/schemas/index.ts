@@ -55,9 +55,14 @@ export type {
 	SignupResponse,
 	StopImpersonationResponse,
 	VerifyEmailResponse,
-} from "./auth";
-export {
-	AccountAnalyticsResponseSchema,
+} from "./auth";export {
+	ApiErrorResponseSchema,
+	ApiPaginatedMetaSchema,
+	ApiResponseMetaSchema,
+	ApiSuccessResponseSchema,
+} from "./api-response";
+export type { ApiErrorResponse, ApiPaginatedMeta, ApiResponseMeta, ApiSuccessResponse } from "./api-response";
+export { AccountAnalyticsResponseSchema,
 	AdminOverviewResponseSchema,
 	AdminUrlItemSchema,
 	AdminUserItemSchema,
@@ -189,5 +194,5 @@ export { CreateTagSchema, TagAssignResponseSchema, TagMessageResponseSchema, Tag
 export type { CreateTagInput, TagAssignResponse, TagMessageResponse, TagResponse, TagWithUrlsResponse, UpdateTagInput } from "./tags";
 export { CreateUrlSchema, RedirectResponseSchema, UpdateUrlSchema, UrlMessageResponseSchema, UrlQuerySchema, UrlResponseSchema, UrlStatsResponseSchema } from "./url";
 export type { CreateUrlInput, RedirectResponse, UpdateUrlInput, UrlMessageResponse, UrlQueryInput, UrlResponse, UrlStatsResponse } from "./url";
-export { PermissionDetailsSchema, SlimRoleSchema, UpdateProfileSchema, UpdateUserSchema, UserMessageResponseSchema, UserResponseSchema } from "./user";
-export type { PermissionDetailsResponse, SlimRoleResponse, UpdateProfileInput, UpdateUserInput, UserMessageResponse, UserResponse } from "./user";
+export { AdminUserDetailSchema, PermissionDetailsSchema, SlimRoleSchema, UpdateProfileSchema, UpdateUserSchema, UserMessageResponseSchema, UserResponseSchema } from "./user";
+export type { AdminUserDetail, PermissionDetailsResponse, SlimRoleResponse, UpdateProfileInput, UpdateUserInput, UserMessageResponse, UserResponse } from "./user";

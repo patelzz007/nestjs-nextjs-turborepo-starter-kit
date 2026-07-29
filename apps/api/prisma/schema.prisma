@@ -60,6 +60,9 @@ model User {
   isActive     Boolean @default(true)
   isSuperAdmin Boolean @default(false)
 
+  failedLoginAttempts Int      @default(0) @map("failed_login_attempts")
+  lockedUntil         DateTime? @map("locked_until")
+
   provider          String? // "google" | "github" | null
   providerId        String? @map("provider_id")
   plan              Plan    @default(FREE)

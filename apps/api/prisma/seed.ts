@@ -656,6 +656,8 @@ async function createUsers(): Promise<User[]> {
     plan: Plan
     monthlyUrlLimit: number
     monthlyClickLimit: number
+    failedLoginAttempts?: number
+    lockedUntil?: Date | null
   }[] = [
     // System accounts
     {

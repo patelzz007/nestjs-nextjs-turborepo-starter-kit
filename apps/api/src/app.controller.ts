@@ -5,66 +5,60 @@ import {
   ApiBody,
   ApiOkResponse,
   ApiCreatedResponse,
+  ApiResponse,
 } from "@nestjs/swagger"
-import { LoginSchema, SignupSchema } from "@workspace/shared"
-import type { LoginInput, SignupInput } from "@workspace/shared"
+import { SignupSchema, HealthResponseSchema, UserResponseSchema } from "@workspace/shared"
+import { ApiErrorResponseDto } from "./common/dto/api-response.dto"
+import { createWrappedDto } from "./common/dto/response-wrapper"
+import { Public } from "./common/decorators/public.decorator"
 import { AppService } from "./app.service"
+import { AuthService } from "./modules/auth/auth.service"
 import { ZodValidationPipe } from "./common/pipes/zod-validation.pipe"
-import { LoginRequestDto } from "./common/dto/login-request.dto"
 import { CreateUserDto } from "./common/dto/create-user.dto"
-import { HealthResponseDto } from "./common/dto/health-response.dto"
-import { LoginResponseDto } from "./common/dto/login-response.dto"
-import { CreateUserResponseDto } from "./common/dto/create-user-response.dto"
+import type { UserResponse, SignupInput } from "@workspace/shared"
+import { z } from "zod"
+
+// ── Wrapped Response DTOs ────────────────────────────────────────────────
+
+const WrappedHelloResponse = createWrappedDto(z.string(), "WrappedHelloResponse");
+const WrappedHealthResponse = createWrappedDto(HealthResponseSchema, "WrappedHealthResponse");
+const WrappedCreatedUserResponse = createWrappedDto(UserResponseSchema, "WrappedCreatedUserResponse");
 
 @ApiTags("App")
 @Controller()
 export class AppController {
-  constructor(private readonly appService: AppService) {}
+  constructor(
+    private readonly appService: AppService,
+    private readonly authService: AuthService,
+  ) {}
 
+  @Public()
   @Get()
   @ApiOperation({ summary: "Welcome message" })
-  @ApiOkResponse({ type: String, description: "Welcome message" })
+  @ApiOkResponse({ type: WrappedHelloResponse, description: "Welcome message" })
   getHello(): string {
     return this.appService.getHello()
   }
 
+  @Public()
   @Get("health")
   @ApiOperation({ summary: "Health check (includes DB status)" })
-  @ApiOkResponse({
-    type: HealthResponseDto,
-    description: "Current service health status",
-  })
+  @ApiOkResponse({ type: WrappedHealthResponse, description: "Current service health status" })
   async getHealth() {
     return this.appService.healthCheck()
   }
 
-  @Post("auth/login")
-  @ApiOperation({ summary: "Authenticate a user" })
-  @ApiBody({ type: LoginRequestDto })
-  @ApiOkResponse({ type: LoginResponseDto, description: "JWT access token" })
-  login(
-    @Body(new ZodValidationPipe(LoginSchema))
-    body: LoginInput
-  ) {
-    // Placeholder — real auth will be added later
-    return {
-      accessToken: "placeholder-token",
-      tokenType: "Bearer",
-      expiresIn: 3600,
-    }
-  }
-
+  @Public()
   @Post("users")
   @ApiOperation({ summary: "Create a new user" })
   @ApiBody({ type: CreateUserDto })
-  @ApiCreatedResponse({
-    type: CreateUserResponseDto,
-    description: "The created user",
-  })
+  @ApiCreatedResponse({ type: WrappedCreatedUserResponse, description: "The created user" })
+  @ApiResponse({ status: 409, type: ApiErrorResponseDto, description: "Email already in use" })
   async createUser(
     @Body(new ZodValidationPipe(SignupSchema))
     body: SignupInput
-  ) {
-    return this.appService.createUser(body)
+  ): Promise<UserResponse> {
+    const result = await this.authService.signup(body)
+    return result.user
   }
 }
