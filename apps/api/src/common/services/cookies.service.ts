@@ -40,12 +40,7 @@ export class CookieService {
 	 *
 	 * @returns A {@link CookieResult} indicating success or failure
 	 */
-	public static setCookie(
-		response: Response,
-		name: CookieNames,
-		value: string | null | undefined,
-		options?: Partial<ExtendedCookieOptions>,
-	): CookieResult {
+	public static setCookie(response: Response, name: CookieNames, value: string | null | undefined, options?: Partial<ExtendedCookieOptions>): CookieResult {
 		// Validate cookie name
 		if (!CookieService.ALLOWED_NAMES.includes(name)) {
 			return {

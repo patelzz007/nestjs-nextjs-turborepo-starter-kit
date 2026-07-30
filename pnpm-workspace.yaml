@@ -4,7 +4,7 @@ packages:
 
 allowBuilds:
   "@prisma/engines": true
-  '@scarf/scarf': true
+  "@scarf/scarf": true
   bcrypt: true
   esbuild: true
   msw: false

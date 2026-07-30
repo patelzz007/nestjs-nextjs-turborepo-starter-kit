@@ -160,9 +160,7 @@ export class AuthService {
 			if (!user.isSuperAdmin) {
 				// Check ADMIN_DASHBOARD permission via RBAC
 				const userPerms: UserPermissions = await this.rbacService.getUserPermissions(user.id);
-				const hasDashboardAccess: boolean = userPerms.permissions.some(
-					(p) => p.resource === "ADMIN_DASHBOARD",
-				);
+				const hasDashboardAccess: boolean = userPerms.permissions.some((p) => p.resource === "ADMIN_DASHBOARD");
 
 				if (!hasDashboardAccess) {
 					throw new ForbiddenException({
@@ -797,9 +795,7 @@ export class AuthService {
 		return users.map((u) => {
 			const isEmailVerified: boolean = u.emailVerifiedAt !== null && u.emailVerifiedAt <= new Date();
 			const roles = rolesByUserId.get(u.id) ?? [];
-			const hasAdminAccess: boolean = u.isSuperAdmin || roles.some(
-				(r) => r.name === "SuperAdmin" || r.name === "Admin",
-			);
+			const hasAdminAccess: boolean = u.isSuperAdmin || roles.some((r) => r.name === "SuperAdmin" || r.name === "Admin");
 
 			return {
 				id: u.id,
@@ -949,9 +945,7 @@ export class AuthService {
 		userPermissions: UserPermissions,
 		isEmailVerified: boolean,
 	): UserResponse {
-		const hasAdminAccess: boolean = user.isSuperAdmin || userPermissions.permissions.some(
-			(p) => p.resource === "ADMIN_DASHBOARD",
-		);
+		const hasAdminAccess: boolean = user.isSuperAdmin || userPermissions.permissions.some((p) => p.resource === "ADMIN_DASHBOARD");
 
 		return {
 			id: user.id,
@@ -970,4 +964,3 @@ export class AuthService {
 		};
 	}
 }
-

@@ -2,50 +2,47 @@
 // components/client-auth-wrapper.tsx
 // Bridges next/navigation useRouter to AuthProvider
 // ============================================
-"use client"
+"use client";
 
-import { useRouter } from "next/navigation"
-import { AuthProvider, type AuthProviderProps } from "@workspace/ui/lib/auth"
-import { useCallback, type JSX } from "react"
+import { useRouter } from "next/navigation";
+import { AuthProvider, type AuthProviderProps } from "@workspace/ui/lib/auth";
+import { useCallback, type JSX } from "react";
 
 export interface ClientAuthWrapperProps {
-  readonly children: React.ReactNode
-  readonly redirectPath?: string
+	readonly children: React.ReactNode;
+	readonly redirectPath?: string;
 }
 
-export function ClientAuthWrapper({
-  children,
-  redirectPath = "/auth/login",
-}: ClientAuthWrapperProps): JSX.Element {
-  const router = useRouter()
+export function ClientAuthWrapper({ children, redirectPath = "/auth/login" }: ClientAuthWrapperProps): JSX.Element {
+	const router = useRouter();
 
-  const navigate = useCallback(
-    (url: string): void => {
-      router.push(url)
-    },
-    [router],
-  )
+	const navigate = useCallback(
+		(url: string): void => {
+			router.push(url);
+		},
+		[router],
+	);
 
-  const refresh = useCallback((): void => {
-    router.refresh()
-  }, [router])
+	const refresh = useCallback((): void => {
+		router.refresh();
+	}, [router]);
 
-  const authProps: AuthProviderProps = {
-    children,
-    baseUrl: process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080",
-    onUnauthorizedRedirect: redirectPath,
-    navigate,
-    refresh,
-    // Use isolated cookie names for the admin panel so that web app
-    // cookies are not shared with the admin app on the same host.
-    cookieNames: {
-      accessToken: "adminAccessToken",
-      refreshToken: "adminRefreshToken",
-    },
-    // Send X-Client-Type: admin on logout so the backend only clears
-    // the admin cookie set, not the web cookies.
-    clientType: "admin",
-  }
+	const authProps: AuthProviderProps = {
+		children,
+		baseUrl: process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080",
+		onUnauthorizedRedirect: redirectPath,
+		navigate,
+		refresh,
+		// Use isolated cookie names for the admin panel so that web app
+		// cookies are not shared with the admin app on the same host.
+		cookieNames: {
+			accessToken: "adminAccessToken",
+			refreshToken: "adminRefreshToken",
+		},
+		// Send X-Client-Type: admin on logout so the backend only clears
+		// the admin cookie set, not the web cookies.
+		clientType: "admin",
+	};
 
-  return <AuthProvider {...authProps} />
+	return <AuthProvider {...authProps} />;
 }

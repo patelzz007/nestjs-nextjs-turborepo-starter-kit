@@ -1,22 +1,15 @@
-import { Controller, Get, Post, Body } from "@nestjs/common"
-import {
-  ApiTags,
-  ApiOperation,
-  ApiBody,
-  ApiOkResponse,
-  ApiCreatedResponse,
-  ApiResponse,
-} from "@nestjs/swagger"
-import { SignupSchema, HealthResponseSchema, UserResponseSchema } from "@workspace/shared"
-import { ApiErrorResponseDto } from "./common/dto/api-response.dto"
-import { createWrappedDto } from "./common/dto/response-wrapper"
-import { Public } from "./common/decorators/public.decorator"
-import { AppService } from "./app.service"
-import { AuthService } from "./modules/auth/auth.service"
-import { ZodValidationPipe } from "./common/pipes/zod-validation.pipe"
-import { CreateUserDto } from "./common/dto/create-user.dto"
-import type { UserResponse, SignupInput } from "@workspace/shared"
-import { z } from "zod"
+import { Controller, Get, Post, Body } from "@nestjs/common";
+import { ApiTags, ApiOperation, ApiBody, ApiOkResponse, ApiCreatedResponse, ApiResponse } from "@nestjs/swagger";
+import { SignupSchema, HealthResponseSchema, UserResponseSchema } from "@workspace/shared";
+import { ApiErrorResponseDto } from "./common/dto/api-response.dto";
+import { createWrappedDto } from "./common/dto/response-wrapper";
+import { Public } from "./common/decorators/public.decorator";
+import { AppService } from "./app.service";
+import { AuthService } from "./modules/auth/auth.service";
+import { ZodValidationPipe } from "./common/pipes/zod-validation.pipe";
+import { CreateUserDto } from "./common/dto/create-user.dto";
+import type { UserResponse, SignupInput } from "@workspace/shared";
+import { z } from "zod";
 
 // ── Wrapped Response DTOs ────────────────────────────────────────────────
 
@@ -27,38 +20,38 @@ const WrappedCreatedUserResponse = createWrappedDto(UserResponseSchema, "Wrapped
 @ApiTags("App")
 @Controller()
 export class AppController {
-  constructor(
-    private readonly appService: AppService,
-    private readonly authService: AuthService,
-  ) {}
+	constructor(
+		private readonly appService: AppService,
+		private readonly authService: AuthService,
+	) {}
 
-  @Public()
-  @Get()
-  @ApiOperation({ summary: "Welcome message" })
-  @ApiOkResponse({ type: WrappedHelloResponse, description: "Welcome message" })
-  getHello(): string {
-    return this.appService.getHello()
-  }
+	@Public()
+	@Get()
+	@ApiOperation({ summary: "Welcome message" })
+	@ApiOkResponse({ type: WrappedHelloResponse, description: "Welcome message" })
+	getHello(): string {
+		return this.appService.getHello();
+	}
 
-  @Public()
-  @Get("health")
-  @ApiOperation({ summary: "Health check (includes DB status)" })
-  @ApiOkResponse({ type: WrappedHealthResponse, description: "Current service health status" })
-  async getHealth() {
-    return this.appService.healthCheck()
-  }
+	@Public()
+	@Get("health")
+	@ApiOperation({ summary: "Health check (includes DB status)" })
+	@ApiOkResponse({ type: WrappedHealthResponse, description: "Current service health status" })
+	async getHealth() {
+		return this.appService.healthCheck();
+	}
 
-  @Public()
-  @Post("users")
-  @ApiOperation({ summary: "Create a new user" })
-  @ApiBody({ type: CreateUserDto })
-  @ApiCreatedResponse({ type: WrappedCreatedUserResponse, description: "The created user" })
-  @ApiResponse({ status: 409, type: ApiErrorResponseDto, description: "Email already in use" })
-  async createUser(
-    @Body(new ZodValidationPipe(SignupSchema))
-    body: SignupInput
-  ): Promise<UserResponse> {
-    const result = await this.authService.signup(body)
-    return result.user
-  }
+	@Public()
+	@Post("users")
+	@ApiOperation({ summary: "Create a new user" })
+	@ApiBody({ type: CreateUserDto })
+	@ApiCreatedResponse({ type: WrappedCreatedUserResponse, description: "The created user" })
+	@ApiResponse({ status: 409, type: ApiErrorResponseDto, description: "Email already in use" })
+	async createUser(
+		@Body(new ZodValidationPipe(SignupSchema))
+		body: SignupInput,
+	): Promise<UserResponse> {
+		const result = await this.authService.signup(body);
+		return result.user;
+	}
 }

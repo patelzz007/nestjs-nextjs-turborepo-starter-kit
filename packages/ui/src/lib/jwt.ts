@@ -16,19 +16,19 @@
  * @returns The decoded payload object, or `null` if the token is malformed
  */
 export function decodeJwtPayload(token: string): Record<string, unknown> | null {
-  try {
-    const parts: string[] = token.split(".")
-    if (parts.length !== 3) return null
+	try {
+		const parts: string[] = token.split(".");
+		if (parts.length !== 3) return null;
 
-    const payload: string | undefined = parts[1]
-    if (!payload) return null
+		const payload: string | undefined = parts[1];
+		if (!payload) return null;
 
-    // Convert URL-safe base64url to standard base64
-    const base64: string = payload.replace(/-/g, "+").replace(/_/g, "/")
-    const decoded: string = atob(base64)
+		// Convert URL-safe base64url to standard base64
+		const base64: string = payload.replace(/-/g, "+").replace(/_/g, "/");
+		const decoded: string = atob(base64);
 
-    return JSON.parse(decoded) as Record<string, unknown>
-  } catch {
-    return null
-  }
+		return JSON.parse(decoded) as Record<string, unknown>;
+	} catch {
+		return null;
+	}
 }

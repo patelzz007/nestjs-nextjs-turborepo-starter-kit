@@ -24,8 +24,5 @@ export const SUPER_ADMIN_KEY = "isSuperAdmin";
  * ```
  */
 export const SuperAdminOnly = (): ReturnType<typeof applyDecorators> => {
-	return applyDecorators(
-		SetMetadata(SUPER_ADMIN_KEY, true),
-		UseGuards(AuthGuard, SuperAdminGuard),
-	);
+	return applyDecorators(SetMetadata(SUPER_ADMIN_KEY, true), UseGuards(AuthGuard, SuperAdminGuard));
 };

@@ -28,10 +28,7 @@ export class AuthGuard implements CanActivate {
 
 	public async canActivate(context: ExecutionContext): Promise<boolean> {
 		// Skip authentication for public routes
-		const isPublic: boolean = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
-			context.getHandler(),
-			context.getClass(),
-		]);
+		const isPublic: boolean = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [context.getHandler(), context.getClass()]);
 
 		if (isPublic) return true;
 
@@ -42,9 +39,7 @@ export class AuthGuard implements CanActivate {
 		// adminAccessToken since the admin panel uses isolated cookie names.
 		const authorization: string | undefined = request.headers.authorization;
 		const token: string | undefined =
-			(authorization?.startsWith("Bearer ") ? authorization.slice(7) : undefined) ??
-			request.cookies?.["accessToken"] ??
-			request.cookies?.["adminAccessToken"];
+			(authorization?.startsWith("Bearer ") ? authorization.slice(7) : undefined) ?? request.cookies?.["accessToken"] ?? request.cookies?.["adminAccessToken"];
 
 		if (!token) {
 			throw new UnauthorizedException({

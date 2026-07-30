@@ -13,10 +13,7 @@ import { ApiResponseMetaSchema } from "@workspace/shared";
  * @param className    — Unique class name for the generated DTO (e.g. `"WrappedMeResponse"`)
  *                      This ensures each endpoint gets a distinct OpenAPI component name.
  */
-export function createWrappedDto<T extends z.ZodTypeAny>(
-	dataSchema: T,
-	className: string,
-) {
+export function createWrappedDto<T extends z.ZodTypeAny>(dataSchema: T, className: string) {
 	const envelopeSchema = z
 		.object({
 			success: z.literal(true).meta({
@@ -47,10 +44,7 @@ export function createWrappedDto<T extends z.ZodTypeAny>(
  * @example createWrappedArrayDto(SessionSchema, "WrappedSessionList")
  *          → { success, data: Session[], meta }
  */
-export function createWrappedArrayDto<T extends z.ZodTypeAny>(
-	itemSchema: T,
-	className: string,
-) {
+export function createWrappedArrayDto<T extends z.ZodTypeAny>(itemSchema: T, className: string) {
 	const envelopeSchema = z
 		.object({
 			success: z.literal(true).meta({

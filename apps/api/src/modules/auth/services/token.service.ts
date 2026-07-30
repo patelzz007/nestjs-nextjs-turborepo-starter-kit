@@ -219,6 +219,4 @@ export class TokenService {
 			expiresIn: 900, // 15 minutes
 		});
 	}
-
-
 }

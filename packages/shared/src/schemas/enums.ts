@@ -20,7 +20,20 @@ export type PermissionAction = z.output<typeof PermissionActionSchema>;
 
 // ── Permission Resource ───────────────────────────────────────────────────
 
-export const PermissionResourceSchema = z.enum(["USER", "PROFILE", "ROLE", "PERMISSION", "ADMIN_DASHBOARD", "SYSTEM_SETTINGS", "URL", "TAG", "API_KEY", "ANALYTICS", "AUDIT_LOG", "REPORT"]);
+export const PermissionResourceSchema = z.enum([
+	"USER",
+	"PROFILE",
+	"ROLE",
+	"PERMISSION",
+	"ADMIN_DASHBOARD",
+	"SYSTEM_SETTINGS",
+	"URL",
+	"TAG",
+	"API_KEY",
+	"ANALYTICS",
+	"AUDIT_LOG",
+	"REPORT",
+]);
 export type PermissionResource = z.output<typeof PermissionResourceSchema>;
 
 // ── Device Type ───────────────────────────────────────────────────────────

@@ -5,12 +5,7 @@ import type { Response } from "express";
 import type { JsonValue } from "../../types/json";
 import { CookieService } from "../services/cookies.service";
 import type { CookieNames, ExtendedCookieOptions } from "../constants/cookie.config";
-import {
-	ACCESS_TOKEN_COOKIE_NAME,
-	REFRESH_TOKEN_COOKIE_NAME,
-	ADMIN_ACCESS_TOKEN_COOKIE_NAME,
-	ADMIN_REFRESH_TOKEN_COOKIE_NAME,
-} from "../constants/cookie.config";
+import { ACCESS_TOKEN_COOKIE_NAME, REFRESH_TOKEN_COOKIE_NAME, ADMIN_ACCESS_TOKEN_COOKIE_NAME, ADMIN_REFRESH_TOKEN_COOKIE_NAME } from "../constants/cookie.config";
 
 /**
  * A single cookie operation to be performed by the CookieInterceptor.

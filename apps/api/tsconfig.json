@@ -1,10 +1,10 @@
 {
-  "extends": "@workspace/typescript-config/nestjs.json",
-  "compilerOptions": {
-    "outDir": "./dist",
-    "rootDir": "./src",
-    "incremental": true
-  },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "src/**/*.spec.ts"]
+	"extends": "@workspace/typescript-config/nestjs.json",
+	"compilerOptions": {
+		"outDir": "./dist",
+		"rootDir": "./src",
+		"incremental": true
+	},
+	"include": ["src/**/*"],
+	"exclude": ["node_modules", "dist", "src/**/*.spec.ts"]
 }

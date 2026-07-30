@@ -78,9 +78,7 @@ const WrappedStopImpersonationResponse = createWrappedDto(StopImpersonationRespo
 @ApiTags("Auth")
 @Controller("auth")
 export class AuthController {
-	constructor(
-		private readonly authService: AuthService,
-	) {}
+	constructor(private readonly authService: AuthService) {}
 
 	@Throttle({ strict: { ttl: 60000, limit: 3 } })
 	@Public()
@@ -318,7 +316,11 @@ export class AuthController {
 	@Post("/stop-impersonation")
 	@ApiOperation({ summary: "SuperAdmin: stop impersonating" })
 	@ApiOkResponse({ type: WrappedStopImpersonationResponse, description: "Impersonation ended" })
-	public async stopImpersonation(@GetUser("originalUserId") impersonatorId: string | undefined, @GetUser("sub") targetUserId: string, @Req() req: Request): Promise<StopImpersonationResponse> {
+	public async stopImpersonation(
+		@GetUser("originalUserId") impersonatorId: string | undefined,
+		@GetUser("sub") targetUserId: string,
+		@Req() req: Request,
+	): Promise<StopImpersonationResponse> {
 		const { ipAddress } = extractClientInfo(req);
 		const userAgent: string | null = req.headers["user-agent"] ?? null;
 		// If originalUserId is not set (not an impersonation token), fall back to sub
