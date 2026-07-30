@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import type { Response } from "express";
 import type { CookieNames, ExtendedCookieOptions } from "../constants/cookie.config";
-import { ACCESS_TOKEN_COOKIE_NAME, REFRESH_TOKEN_COOKIE_NAME } from "../constants/cookie.config";
+import { ACCESS_TOKEN_COOKIE_NAME, REFRESH_TOKEN_COOKIE_NAME, ADMIN_ACCESS_TOKEN_COOKIE_NAME, ADMIN_REFRESH_TOKEN_COOKIE_NAME } from "../constants/cookie.config";
 
 /**
  * Result of a cookie set/clear operation.
@@ -23,7 +23,12 @@ export class CookieService {
 	private static readonly MAX_COOKIE_VALUE_BYTES: number = 4096;
 
 	/** Allowed cookie names */
-	private static readonly ALLOWED_NAMES: readonly CookieNames[] = [ACCESS_TOKEN_COOKIE_NAME, REFRESH_TOKEN_COOKIE_NAME];
+	private static readonly ALLOWED_NAMES: readonly CookieNames[] = [
+		ACCESS_TOKEN_COOKIE_NAME,
+		REFRESH_TOKEN_COOKIE_NAME,
+		ADMIN_ACCESS_TOKEN_COOKIE_NAME,
+		ADMIN_REFRESH_TOKEN_COOKIE_NAME,
+	];
 
 	/**
 	 * Set (or clear) a cookie on the response object.

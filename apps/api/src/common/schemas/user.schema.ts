@@ -84,6 +84,9 @@ export const UserResponseSchema = BaseResponseSchema.extend({
 	isEmailVerified: z.boolean().meta({
 		description: "Whether the user's email has been verified",
 	}),
+	hasAdminAccess: z.boolean().meta({
+		description: "Whether the user can access the admin panel",
+	}),
 	roles: z.array(SlimRoleSchema).meta({
 		description: "Roles assigned to the user",
 	}),

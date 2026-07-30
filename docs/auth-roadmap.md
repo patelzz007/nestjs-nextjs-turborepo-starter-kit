@@ -710,3 +710,208 @@ Deciding what to build first? Here's a rough priority by impact vs effort:
 | **🎯 High impact, Medium effort** | File uploads, Audit log, In-app notifications, Subscription billing, Full-text search |
 | **🏗️ Medium impact, Medium effort** | Webhooks, Data export, Activity feed, Email templates, OpenAPI client SDK |
 | **🚀 High impact, High effort** | Real-time notifications, i18n, Background jobs, Performance monitoring |
+
+
+
+
+----------------------------------------------------- Update after API integration -----------------------------------------------------
+
+# Auth System Roadmap
+
+> Last updated: July 30, 2026
+> Auth architecture: JWT access + refresh tokens, httpOnly cookie isolation (web vs admin), RBAC permissions
+
+---
+
+## 15 Enhancements (improving what exists)
+
+### 1. Rate-limit recovery headers on login
+**Problem:** When login is rate-limited, the client has no idea when to retry.
+**Enhancement:** Return `Retry-After` header on 429 ThrottlerException. The login form could show "Too many attempts. Try again in X seconds."
+
+### 2. Soft logout (invalidate session without clearing cookies)
+**Problem:** Logout clears cookies immediately. If the API call fails (network blip), the user
+still gets logged out on the frontend but the session remains valid on the backend.
+**Enhancement:** Add a "soft logout" path — clear client state first, then fire-and-forget the
+API call. If the API call fails, the session expires naturally.
+
+### 3. Expose session metadata on the `/auth/me` response
+**Problem:** `/auth/me` currently returns only user data. The client can't tell which device
+this session belongs to.
+**Enhancement:** Include `sessionId`, `deviceInfo`, `ipAddress`, `createdAt` alongside the user
+profile. The hello page / dashboard could show "This session started 2h ago from Chrome on macOS."
+
+### 4. Add `scope` / `purpose` claim to refresh tokens
+**Problem:** Refresh tokens are all-purpose. If a refresh token leaks, it can be used to
+obtain new access tokens from anywhere.
+**Enhancement:** Bind the refresh token to its intended use (e.g., `purpose: "session_refresh"`).
+Future enhancements could restrict refresh scope (e.g., a refresh token obtained from the web
+app can only be refreshed from the web app).
+
+### 5. Add session-level `lastUsedAt` to the session list
+**Problem:** The sessions list shows `createdAt` and `expiresAt` but not `lastUsedAt`. Users
+can't tell which sessions are active vs stale.
+**Enhancement:** Update `lastUsedAt` on each token refresh. Show it in the sessions endpoint.
+
+### 6. Invalidate all sessions on password change
+**Problem:** Currently, changing the password only revokes refresh tokens. The user's existing
+API requests with still-valid access tokens continue to work until they expire.
+**Enhancement:** Add an `tokenVersion` field to the User model. Increment it on password change.
+Include the version in JWT claims. The AuthGuard checks it on every request and rejects stale
+tokens immediately.
+
+### 7. Add email change flow
+**Problem:** No way to change the email address. Users who need to update their email must
+contact an admin.
+**Enhancement:** Add a `PATCH /auth/email` endpoint that requires current password + email
+verification of the new address (same token mechanism as signup verification).
+
+### 8. Step-up authentication for sensitive operations
+**Problem:** Admin operations (user unlock, impersonate) rely solely on the access token.
+If the access token is compromised, an attacker can perform any admin action.
+**Enhancement:** Require re-authentication (current password) for sensitive operations.
+Add a `step_up_at` claim to the JWT that records when the user last confirmed their identity.
+
+### 9. Add login history (audit trail)
+**Problem:** The impersonation module has audit logs, but regular login/logout events
+are not persisted beyond application logs.
+**Enhancement:** Create a `LoginAuditLog` model. Log every login attempt (success/failure),
+logout, and token refresh with IP, device, and user ID.
+
+### 10. Add device fingerprinting to sessions
+**Problem:** Sessions are identified by `deviceInfo` (user-agent string) which is easy to
+spoof.
+**Enhancement:** Generate a device fingerprint hash on the frontend (screen dimensions, timezone,
+installed fonts — via a library like `fingerprintjs`). Send it as a header. Store it alongside
+the session. Flag sessions with mismatched fingerprints.
+
+### 11. Make cookie names configurable via env vars
+**Problem:** Cookie names are hardcoded in constants. Deploying with different cookie names
+for different environments (staging vs production) requires code changes.
+**Enhancement:** Read cookie name overrides from environment variables
+(`ACCESS_TOKEN_COOKIE_NAME`, `REFRESH_TOKEN_COOKIE_NAME`, etc.) with the hardcoded defaults
+as fallback.
+
+### 12. Add consistent error codes to all auth exceptions
+**Problem:** Some exceptions return error codes (`ACCESS_TOKEN_MISSING`, `REFRESH_TOKEN_INVALID`)
+while others only return a human-readable `message`. Frontend error handling must parse strings.
+**Enhancement:** Add a structured `error` field to every auth-related exception. Define an enum
+of all possible auth error codes. Document them in Swagger.
+
+### 13. Add JWT revocation list for emergency
+**Problem:** If a breach is detected, there's no way to revoke tokens other than waiting
+for them to expire or dropping the database.
+**Enhancement:** Add a `TokenBlacklist` model (JWT `jti` + `expiresAt`). Check it in the
+AuthGuard on every request. Add a `POST /auth/revoke-all` SuperAdmin endpoint.
+
+### 14. Move refresh token rotation to a Prisma transaction
+**Problem:** `refreshToken` in `auth.service.ts` updates the token record, but the update
+and the reuse-detection check aren't wrapped in a transaction. A race condition could allow
+two concurrent refreshes from the same token.
+**Enhancement:** Wrap the update + reuse check in `prisma.$transaction()`. Add
+`$transaction` isolation for concurrent refresh scenarios.
+
+### 15. Add JWT audience / issuer validation
+**Problem:** The application doesn't set `aud` or `iss` claims on generated tokens. A token
+generated for one environment could theoretically be used on another.
+**Enhancement:** Set `audience` and `issuer` in `JwtModule.register()` and validate them
+in both `verifyAccessToken` and `verifyRefreshToken`.
+
+---
+
+## 15 New Features (extending capability)
+
+### 1. Multi-tenant organization isolation
+**Feature:** Add an `Organization` model with `orgId` FK on the `User` model. All data
+queries filter by `orgId`. The AuthService reads the user's org on login and includes
+`orgId` in the JWT claims.
+**API shape:** `GET /auth/orgs/switch/:orgId` (switch active org for cross-org users)
+
+### 2. WebAuthn / Passkey authentication
+**Feature:** Add FIDO2 WebAuthn as a passwordless login option. Register passkeys on
+the `/auth/webauthn/register` endpoint. Login via `/auth/webauthn/authenticate`.
+**Backend:** Store `credentialId`, `publicKey`, and `counter` per user. Verify signatures
+using the WebAuthn spec.
+**Frontend:** Use `@simplewebauthn/browser` for credential creation and assertion.
+
+### 3. TOTP two-factor authentication (2FA)
+**Feature:** Add optional TOTP-based 2FA. Users enable it via `/auth/2fa/setup` (returns
+a `otpauth://` URI and QR code). Login with 2FA sends a short-lived `2fa_token` on
+password verification, then the client completes login with `/auth/login/2fa`.
+**Backend:** Store TOTP secret encrypted in the database. Verify codes with `otplib`.
+
+### 4. Backup codes for 2FA recovery
+**Feature:** When enabling 2FA, generate 8 one-time backup codes (hashed with bcrypt).
+Store them alongside the TOTP secret. A `?use_backup_code` flag on the 2FA endpoint
+consumes and invalidates the code.
+**Frontend:** Show backup codes once after setup. Warn the user to save them securely.
+
+### 5. OAuth2 / Social login (Google, GitHub, Microsoft)
+**Feature:** Add Passport.js strategies for Google, GitHub, and Microsoft. After OAuth
+callback, either link to an existing account (if the email matches) or create a new user.
+**API shape:** `GET /auth/oauth/:provider`, `GET /auth/oauth/:provider/callback`
+
+### 6. Account linking (merge OAuth + password accounts)
+**Feature:** Allow users with the same verified email to link their OAuth and password
+accounts. After linking, they can log in with either method.
+**API shape:** `POST /auth/link/oauth` (authenticated), `POST /auth/unlink/:provider`
+
+### 7. API key management for programmatic access
+**Feature:** Allow users to generate long-lived API keys for headless access. Keys have
+their own rate limits and scope restrictions. Stored as bcrypt hashes.
+**API shape:** `POST /api-keys`, `GET /api-keys`, `DELETE /api-keys/:id`
+**Auth:** A dedicated `ApiKeyGuard` that reads the key from `Authorization: Bearer <key>`
+and attaches the same `AccessTokenPayload` to the request.
+
+### 8. Session management UI (web + admin)
+**Feature:** Build a session management page showing all active sessions with device info,
+IP, last used time, and "Revoke" button. Also add "Revoke all other sessions" (keep current).
+**API shape:** `GET /auth/sessions`, `DELETE /auth/sessions/:id`, `DELETE /auth/sessions/others`
+
+### 9. Email template management
+**Feature:** Move email templates (verification, password reset, account locked, etc.) to
+a database table or file-based system so they can be customized without code changes.
+**API shape:** `GET /admin/email-templates`, `PATCH /admin/email-templates/:name`
+**Backend:** Read templates from the database. Support Handlebars or EJS for variable
+interpolation.
+
+### 10. IP allowlisting for admin access
+**Feature:** Allow SuperAdmins to define a list of trusted IPs / CIDR ranges for admin panel
+access. Logins from outside the allowlist are rejected with a specific error code.
+**API shape:** `POST /admin/ip-allowlist`, `GET /admin/ip-allowlist`
+**Enforcement:** A guard that checks `request.ip` against the allowlist before allowing
+admin routes.
+
+### 11. Concurrent session limit configuration
+**Feature:** Allow per-role or per-user configuration of max concurrent sessions. When a
+user exceeds the limit, the oldest session is automatically revoked (log out least recently
+used device).
+**API shape:** `PATCH /admin/users/:id/session-limit`
+**Enforcement:** Check in `login()` after creating a new refresh token — if count exceeds
+limit, soft-delete the oldest token.
+
+### 12. Account deletion flow (GDPR)
+**Feature:** Add a self-service account deletion flow. User requests deletion → account is
+flagged `isDeleted` → 30-day grace period → permanent anonymization via a cron job.
+**API shape:** `POST /auth/delete-account`, `POST /auth/cancel-deletion`
+**Backend:** A scheduled job that processes users with `deletedAt + 30 days < now()`.
+
+### 13. Password breach detection (haveibeenpwned)
+**Feature:** On signup and password change, hash the password with SHA-1 and check the
+first 5 characters against the HaveIBeenPwned API (k-anonymity model). Reject commonly
+compromised passwords.
+**Enhancement:** This is purely a backend change — no new API shape needed. The `k-anonymity`
+model never sends the full password hash to the external API.
+
+### 14. Idle session timeout
+**Feature:** Automatically log out sessions that have been idle for a configurable period
+(e.g., 30 minutes for web, 15 minutes for admin). Track `lastActivityAt` on the session.
+**Frontend:** Send periodic heartbeat pings to `/auth/heartbeat` while the user is active.
+**Backend:** A guard that checks `lastActivityAt` and rejects requests past the threshold.
+
+### 15. Rate-limited email notifications (cooldown)
+**Feature:** Prevent email floods by enforcing a per-user cooldown on notification emails.
+If a user triggers 5 account-locked alerts in an hour (e.g., brute force from multiple IPs),
+only send the first email. Subsequent alerts are logged but not emailed.
+**Backend:** A `NotificationCooldownService` that checks `EmailAuditLog` before sending.
+The cooldown window and max-per-window are configurable via env vars.

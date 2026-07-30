@@ -39,6 +39,9 @@ export const UserResponseSchema = BaseResponseSchema.extend({
 	isActive: z.boolean(),
 	isSuperAdmin: z.boolean(),
 	isEmailVerified: z.boolean(),
+	hasAdminAccess: z.boolean().meta({
+		description: "Whether the user can access the admin panel",
+	}),
 	roles: z.array(SlimRoleSchema),
 	permissions: z.array(PermissionDetailsSchema),
 }).strict();

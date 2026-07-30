@@ -3,7 +3,10 @@ import { Geist, Geist_Mono, JetBrains_Mono } from "next/font/google"
 
 import "@workspace/ui/globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
+import { AuthProvider } from "@workspace/ui/lib/auth"
+import { QueryProvider } from "@workspace/ui/lib/query-provider"
 import { cn } from "@workspace/ui/lib/utils"
+import { ClientAuthWrapper } from "@/components/client-auth-wrapper"
 
 const jetbrainsMonoHeading = JetBrains_Mono({
   subsets: ["latin"],
@@ -37,11 +40,15 @@ export default function RootLayout({
         fontMono.variable,
         "font-sans",
         geist.variable,
-        jetbrainsMonoHeading.variable
+        jetbrainsMonoHeading.variable,
       )}
     >
       <body>
-        <ThemeProvider>{children}</ThemeProvider>
+        <QueryProvider>
+          <ClientAuthWrapper>
+            <ThemeProvider>{children}</ThemeProvider>
+          </ClientAuthWrapper>
+        </QueryProvider>
       </body>
     </html>
   )

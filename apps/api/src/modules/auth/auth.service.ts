@@ -108,7 +108,18 @@ export class AuthService {
 		};
 	}
 
-	public async login(loginDto: LoginInput, deviceInfo?: string, ipAddress?: string): Promise<LoginServiceResponse> {
+	/**
+	 * Authenticate a user with email and password.
+	 *
+	 * @param loginDto  - Validation-friendly login input (email + password)
+	 * @param clientType - Origin of the login request ("web" | "admin").
+	 *                     The admin panel sends `X-Client-Type: admin` header.
+	 *                     Users with `isSuperAdmin: true` or the `ADMIN_DASHBOARD`
+	 *                     resource permission may log in from the admin panel.
+	 * @param deviceInfo - Device/user-agent string for session tracking
+	 * @param ipAddress  - Client IP address for session tracking
+	 */
+	public async login(loginDto: LoginInput, clientType?: string, deviceInfo?: string, ipAddress?: string): Promise<LoginServiceResponse> {
 		const { email, password } = loginDto;
 
 		const user = await this.prisma.user.findUnique({
@@ -129,6 +140,39 @@ export class AuthService {
 				lockedUntil: true,
 			},
 		});
+
+		// ── Client-type check: admin-only login ─────────────────────────
+		// The admin panel sends `X-Client-Type: admin` header.
+		// Access is granted if:
+		//   1. User is a SuperAdmin (fast path — no extra query), OR
+		//   2. User has the ADMIN_DASHBOARD resource permission via their role(s)
+		// Users whose email doesn't exist get a consistent 403 (no enumeration).
+		// ────────────────────────────────────────────────────────────────
+		if (clientType === "admin") {
+			if (!user) {
+				throw new ForbiddenException({
+					message: "Admin access required. This account does not have administrator privileges.",
+					error: "ADMIN_ACCESS_REQUIRED",
+				});
+			}
+
+			// Fast path: SuperAdmin always has admin panel access
+			if (!user.isSuperAdmin) {
+				// Check ADMIN_DASHBOARD permission via RBAC
+				const userPerms: UserPermissions = await this.rbacService.getUserPermissions(user.id);
+				const hasDashboardAccess: boolean = userPerms.permissions.some(
+					(p) => p.resource === "ADMIN_DASHBOARD",
+				);
+
+				if (!hasDashboardAccess) {
+					throw new ForbiddenException({
+						message: "Admin access required. This account does not have administrator privileges.",
+						error: "ADMIN_ACCESS_REQUIRED",
+					});
+				}
+			}
+		}
+		// ─────────────────────────────────────────────────────────────────
 
 		// Use consistent dummy hash to prevent timing-based account enumeration
 		const dummyHash = await this.cryptoService.hash("dummy-password-to-prevent-timing-attack");
@@ -753,6 +797,9 @@ export class AuthService {
 		return users.map((u) => {
 			const isEmailVerified: boolean = u.emailVerifiedAt !== null && u.emailVerifiedAt <= new Date();
 			const roles = rolesByUserId.get(u.id) ?? [];
+			const hasAdminAccess: boolean = u.isSuperAdmin || roles.some(
+				(r) => r.name === "SuperAdmin" || r.name === "Admin",
+			);
 
 			return {
 				id: u.id,
@@ -761,6 +808,7 @@ export class AuthService {
 				isActive: u.isActive,
 				isSuperAdmin: u.isSuperAdmin,
 				isEmailVerified,
+				hasAdminAccess,
 				roles,
 				permissions: [], // Not fetched for list performance; use detail endpoint for full permissions
 				createdAt: u.createdAt.toISOString(),
@@ -901,6 +949,10 @@ export class AuthService {
 		userPermissions: UserPermissions,
 		isEmailVerified: boolean,
 	): UserResponse {
+		const hasAdminAccess: boolean = user.isSuperAdmin || userPermissions.permissions.some(
+			(p) => p.resource === "ADMIN_DASHBOARD",
+		);
+
 		return {
 			id: user.id,
 			email: user.email,
@@ -908,6 +960,7 @@ export class AuthService {
 			isActive: user.isActive,
 			isSuperAdmin: user.isSuperAdmin,
 			isEmailVerified,
+			hasAdminAccess,
 			roles: userPermissions.roles.map(({ id, name, description }) => ({ id, name, description })),
 			permissions: userPermissions.permissions,
 			createdAt: user.createdAt.toISOString(),

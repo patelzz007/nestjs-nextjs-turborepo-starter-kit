@@ -1,5 +1,5 @@
-import { Body, Controller, Get, HttpCode, Param, Patch, Post, Req, UseGuards, UseInterceptors } from "@nestjs/common";
-import { ApiBearerAuth, ApiBody, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
+import { Body, Controller, Get, Headers, HttpCode, Param, Patch, Post, Query, Req, UseGuards, UseInterceptors } from "@nestjs/common";
+import { ApiBearerAuth, ApiBody, ApiCreatedResponse, ApiHeader, ApiOkResponse, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { SkipThrottle, Throttle } from "@nestjs/throttler";
 import type { Request } from "express";
 import { extractClientInfo } from "../../common/utils/client-info";
@@ -98,12 +98,25 @@ export class AuthController {
 	@Post("/login")
 	@ApiOperation({ summary: "Authenticate with email and password" })
 	@ApiBody({ type: LoginDto })
+	@ApiHeader({
+		name: "x-client-type",
+		required: false,
+		description: "Set to 'admin' when logging in from the admin panel. Only users with isSuperAdmin === true or the ADMIN_DASHBOARD permission may use this.",
+	})
 	@ApiOkResponse({ type: WrappedLoginResponse, description: "Login successful" })
 	@ApiResponse({ status: 401, type: ApiErrorResponseDto, description: "Invalid credentials / Account locked" })
+	@ApiResponse({ status: 403, type: ApiErrorResponseDto, description: "Admin access required (when X-Client-Type: admin and user is not superadmin)" })
 	@UseInterceptors(SetAuthCookiesInterceptor)
-	public async login(@Body() loginDto: LoginDto, @Req() req: Request): Promise<LoginServiceResponse> {
+	public async login(
+		@Body() loginDto: LoginDto,
+		@Headers("x-client-type") headerClientType: string | undefined,
+		@Query("client_type") queryClientType: string | undefined,
+		@Req() req: Request,
+	): Promise<LoginServiceResponse> {
+		// Accept client type from header (browser apps) or query param (Swagger UI)
+		const clientType: string | undefined = headerClientType ?? queryClientType;
 		const { deviceInfo, ipAddress } = extractClientInfo(req);
-		return this.authService.login(loginDto, deviceInfo, ipAddress);
+		return this.authService.login(loginDto, clientType, deviceInfo, ipAddress);
 	}
 
 	@Throttle({ default: { ttl: 60000, limit: 10 } })

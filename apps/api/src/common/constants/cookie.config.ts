@@ -4,13 +4,19 @@ import type { CookieOptions } from "express";
 // ── Exported Constants ─────────────────────────────────────────────────────
 
 /** Union of all supported cookie names */
-export type CookieNames = "accessToken" | "refreshToken";
+export type CookieNames = "accessToken" | "refreshToken" | "adminAccessToken" | "adminRefreshToken";
 
 /** Name of the access token cookie */
 export const ACCESS_TOKEN_COOKIE_NAME: CookieNames = "accessToken";
 
 /** Name of the refresh token cookie */
 export const REFRESH_TOKEN_COOKIE_NAME: CookieNames = "refreshToken";
+
+/** Name of the admin access token cookie (isolated from web cookies) */
+export const ADMIN_ACCESS_TOKEN_COOKIE_NAME: CookieNames = "adminAccessToken";
+
+/** Name of the admin refresh token cookie (isolated from web cookies) */
+export const ADMIN_REFRESH_TOKEN_COOKIE_NAME: CookieNames = "adminRefreshToken";
 
 /** Extended cookie options with same-site as required (not optional) */
 export interface ExtendedCookieOptions extends CookieOptions {

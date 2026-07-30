@@ -1,9 +1,16 @@
 import { Injectable, type NestInterceptor, type ExecutionContext, type CallHandler } from "@nestjs/common";
 import { type Observable } from "rxjs";
 import { map, tap } from "rxjs/operators";
-import type { Response } from "express";
+import type { Request, Response } from "express";
 import { CookieService } from "../services/cookies.service";
-import { CookieConfigService, ACCESS_TOKEN_COOKIE_NAME, REFRESH_TOKEN_COOKIE_NAME } from "../constants/cookie.config";
+import {
+	CookieConfigService,
+	ACCESS_TOKEN_COOKIE_NAME,
+	REFRESH_TOKEN_COOKIE_NAME,
+	ADMIN_ACCESS_TOKEN_COOKIE_NAME,
+	ADMIN_REFRESH_TOKEN_COOKIE_NAME,
+	type CookieNames,
+} from "../constants/cookie.config";
 import type { JsonValue } from "../../types/json";
 
 /**
@@ -27,7 +34,20 @@ export class SetAuthCookiesInterceptor implements NestInterceptor {
 	constructor(private readonly cookieConfig: CookieConfigService) {}
 
 	public intercept(context: ExecutionContext, next: CallHandler): Observable<JsonValue> {
+		const request: Request = context.switchToHttp().getRequest<Request>();
 		const response: Response = context.switchToHttp().getResponse<Response>();
+
+		// Determine which cookie names to use based on X-Client-Type header or
+		// client_type query parameter (used by Swagger UI which cannot send
+		// custom headers in the browser's native fetch to the docs page).
+		// This isolates admin cookies from web cookies on the same host.
+		const headerType: string | undefined = request.headers["x-client-type"] as string | undefined;
+		const queryValue: unknown = request.query?.client_type;
+		const queryType: string | undefined = typeof queryValue === "string" ? queryValue : undefined;
+		const clientType: string | undefined = headerType ?? queryType;
+		const isAdmin: boolean = clientType === "admin";
+		const accessTokenName: CookieNames = isAdmin ? ADMIN_ACCESS_TOKEN_COOKIE_NAME : ACCESS_TOKEN_COOKIE_NAME;
+		const refreshTokenName: CookieNames = isAdmin ? ADMIN_REFRESH_TOKEN_COOKIE_NAME : REFRESH_TOKEN_COOKIE_NAME;
 
 		return next.handle().pipe(
 			tap((data: JsonValue) => {
@@ -37,10 +57,10 @@ export class SetAuthCookiesInterceptor implements NestInterceptor {
 					const refreshToken: JsonValue | undefined = record["refreshToken"];
 
 					if (typeof accessToken === "string" && accessToken.length > 0) {
-						CookieService.setCookie(response, ACCESS_TOKEN_COOKIE_NAME, accessToken, this.cookieConfig.accessTokenOptions);
+						CookieService.setCookie(response, accessTokenName, accessToken, this.cookieConfig.accessTokenOptions);
 					}
 					if (typeof refreshToken === "string" && refreshToken.length > 0) {
-						CookieService.setCookie(response, REFRESH_TOKEN_COOKIE_NAME, refreshToken, this.cookieConfig.refreshTokenOptions);
+						CookieService.setCookie(response, refreshTokenName, refreshToken, this.cookieConfig.refreshTokenOptions);
 					}
 				}
 			}),

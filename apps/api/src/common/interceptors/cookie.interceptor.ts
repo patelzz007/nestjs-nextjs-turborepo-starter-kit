@@ -5,7 +5,12 @@ import type { Response } from "express";
 import type { JsonValue } from "../../types/json";
 import { CookieService } from "../services/cookies.service";
 import type { CookieNames, ExtendedCookieOptions } from "../constants/cookie.config";
-import { ACCESS_TOKEN_COOKIE_NAME, REFRESH_TOKEN_COOKIE_NAME } from "../constants/cookie.config";
+import {
+	ACCESS_TOKEN_COOKIE_NAME,
+	REFRESH_TOKEN_COOKIE_NAME,
+	ADMIN_ACCESS_TOKEN_COOKIE_NAME,
+	ADMIN_REFRESH_TOKEN_COOKIE_NAME,
+} from "../constants/cookie.config";
 
 /**
  * A single cookie operation to be performed by the CookieInterceptor.
@@ -69,22 +74,41 @@ export const createCookieInterceptor = (operations: CookieOperation | CookieOper
 };
 
 /**
+ * Options for creating auth cookie interceptors.
+ * Allows specifying which cookie name set to use.
+ */
+export interface AuthCookieOptions {
+	readonly accessTokenName?: CookieNames;
+	readonly refreshTokenName?: CookieNames;
+}
+
+/**
  * Create a CookieInterceptor that sets both auth cookies (access + refresh).
- * Used for login and token refresh endpoints.
+ * Supports both web (default) and admin cookie name sets.
  *
  * @example
  * ```typescript
+ * // Web cookies
  * @UseInterceptors(withAuthCookies(accessToken, refreshToken))
+ *
+ * // Admin cookies
+ * @UseInterceptors(withAuthCookies(accessToken, refreshToken, {
+ *   accessTokenName: ADMIN_ACCESS_TOKEN_COOKIE_NAME,
+ *   refreshTokenName: ADMIN_REFRESH_TOKEN_COOKIE_NAME,
+ * }))
  * ```
  */
-export const withAuthCookies = (accessToken: string, refreshToken: string): CookieInterceptor => {
+export const withAuthCookies = (accessToken: string, refreshToken: string, options?: AuthCookieOptions): CookieInterceptor => {
+	const accessTokenName: CookieNames = options?.accessTokenName ?? ACCESS_TOKEN_COOKIE_NAME;
+	const refreshTokenName: CookieNames = options?.refreshTokenName ?? REFRESH_TOKEN_COOKIE_NAME;
+
 	return new CookieInterceptor([
 		{
-			name: ACCESS_TOKEN_COOKIE_NAME,
+			name: accessTokenName,
 			value: accessToken,
 		},
 		{
-			name: REFRESH_TOKEN_COOKIE_NAME,
+			name: refreshTokenName,
 			value: refreshToken,
 		},
 	]);
@@ -92,21 +116,25 @@ export const withAuthCookies = (accessToken: string, refreshToken: string): Cook
 
 /**
  * Create a CookieInterceptor that clears both auth cookies.
- * Used for logout endpoints.
+ * Supports both web (default) and admin cookie name sets.
+ * Clears both sets by default for safety.
  *
  * @example
  * ```typescript
  * @UseInterceptors(withClearAuthCookies())
  * ```
  */
-export const withClearAuthCookies = (): CookieInterceptor => {
+export const withClearAuthCookies = (options?: AuthCookieOptions): CookieInterceptor => {
+	const accessTokenName: CookieNames = options?.accessTokenName ?? ACCESS_TOKEN_COOKIE_NAME;
+	const refreshTokenName: CookieNames = options?.refreshTokenName ?? REFRESH_TOKEN_COOKIE_NAME;
+
 	return new CookieInterceptor([
 		{
-			name: ACCESS_TOKEN_COOKIE_NAME,
+			name: accessTokenName,
 			value: null,
 		},
 		{
-			name: REFRESH_TOKEN_COOKIE_NAME,
+			name: refreshTokenName,
 			value: null,
 		},
 	]);

@@ -6,17 +6,21 @@ import { SuperAdminGuard } from "../guards/super-admin.guard";
 export const SUPER_ADMIN_KEY = "isSuperAdmin";
 
 /**
- * Decorator that restricts access to SuperAdmin users only.
+ * Decorator that restricts access to admin-authorized users only.
+ *
+ * Access is granted if:
+ * 1. The user has `isSuperAdmin === true`, OR
+ * 2. The user has the `ADMIN_DASHBOARD` resource permission in their JWT.
  *
  * Combines:
  * 1. AuthGuard — ensures the user is authenticated
- * 2. SuperAdminGuard — ensures the user has isSuperAdmin === true
+ * 2. SuperAdminGuard — checks isSuperAdmin or ADMIN_DASHBOARD permission
  *
  * Usage:
  * ```typescript
  * @SuperAdminOnly()
- * @Post("/impersonate/:userId")
- * public async impersonate(...) { ... }
+ * @Get("/admin/users")
+ * public async getAdminUsersList() { ... }
  * ```
  */
 export const SuperAdminOnly = (): ReturnType<typeof applyDecorators> => {

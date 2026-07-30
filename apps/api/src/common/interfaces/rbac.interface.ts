@@ -35,6 +35,7 @@ export interface FlatUserResponse {
 	readonly isActive: boolean;
 	readonly isSuperAdmin: boolean;
 	readonly isEmailVerified: boolean;
+	readonly hasAdminAccess: boolean;
 	readonly roles: SlimRoleResponse[];
 	readonly permissions: PermissionDetailsResponse[];
 }

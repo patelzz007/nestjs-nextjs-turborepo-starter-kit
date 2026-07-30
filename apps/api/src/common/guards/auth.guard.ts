@@ -38,11 +38,13 @@ export class AuthGuard implements CanActivate {
 		const request: Request = context.switchToHttp().getRequest<Request>();
 
 		// Try Authorization: Bearer header first (Swagger UI / API clients)
-		// Fall back to httpOnly cookie (browser-based apps)
+		// Fall back to httpOnly cookie(s). Check both accessToken and
+		// adminAccessToken since the admin panel uses isolated cookie names.
 		const authorization: string | undefined = request.headers.authorization;
 		const token: string | undefined =
 			(authorization?.startsWith("Bearer ") ? authorization.slice(7) : undefined) ??
-			request.cookies?.["accessToken"];
+			request.cookies?.["accessToken"] ??
+			request.cookies?.["adminAccessToken"];
 
 		if (!token) {
 			throw new UnauthorizedException({

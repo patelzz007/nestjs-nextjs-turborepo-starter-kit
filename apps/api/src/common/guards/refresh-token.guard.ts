@@ -17,7 +17,9 @@ export class RefreshTokenGuard implements CanActivate {
 
 	public async canActivate(context: ExecutionContext): Promise<boolean> {
 		const request: Request = context.switchToHttp().getRequest<Request>();
-		const token: string | undefined = request.cookies?.["refreshToken"];
+		// Check both refreshToken and adminRefreshToken since the admin panel
+		// uses isolated cookie names for cookie path isolation.
+		const token: string | undefined = request.cookies?.["refreshToken"] ?? request.cookies?.["adminRefreshToken"];
 
 		if (!token) {
 			throw new UnauthorizedException({

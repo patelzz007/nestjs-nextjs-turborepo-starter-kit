@@ -22,6 +22,7 @@ export interface AccessTokenPayload {
 	isActive: boolean;
 	isSuperAdmin: boolean;
 	isEmailVerified: boolean;
+	hasAdminAccess: boolean;
 	roles: { id: string; name: string; description: string | null }[];
 	permissions: JwtPermission[];
 
@@ -80,6 +81,7 @@ export class TokenService {
 			isActive: user.isActive,
 			isSuperAdmin: user.isSuperAdmin,
 			isEmailVerified: user.isEmailVerified,
+			hasAdminAccess: user.hasAdminAccess,
 			roles: user.roles,
 			permissions: slimPermissions,
 		};
@@ -204,6 +206,7 @@ export class TokenService {
 			isActive: user.isActive,
 			isSuperAdmin: user.isSuperAdmin,
 			isEmailVerified: user.isEmailVerified,
+			hasAdminAccess: user.hasAdminAccess,
 			roles: user.roles,
 			permissions: slimPermissions,
 			isImpersonating: true,
@@ -217,17 +220,5 @@ export class TokenService {
 		});
 	}
 
-	/**
-	 * Cookie name used by the AuthGuard for locating the access token.
-	 */
-	public get accessTokenCookieName(): string {
-		return "accessToken";
-	}
 
-	/**
-	 * Cookie name used by the RefreshTokenGuard for locating the refresh token.
-	 */
-	public get refreshTokenCookieName(): string {
-		return "refreshToken";
-	}
 }
