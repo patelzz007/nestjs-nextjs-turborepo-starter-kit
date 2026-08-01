@@ -1,5 +1,5 @@
-import { Injectable } from "@nestjs/common";
 import type { Response } from "express";
+
 import type { CookieNames, ExtendedCookieOptions } from "../constants/cookie.config";
 import { ACCESS_TOKEN_COOKIE_NAME, REFRESH_TOKEN_COOKIE_NAME, ADMIN_ACCESS_TOKEN_COOKIE_NAME, ADMIN_REFRESH_TOKEN_COOKIE_NAME } from "../constants/cookie.config";
 
@@ -17,13 +17,12 @@ export interface CookieResult {
  * All cookie names are validated against the allowed `CookieNames` union.
  * Values longer than 4096 bytes are rejected to respect browser limits.
  */
-@Injectable()
 export class CookieService {
 	/** Maximum cookie value length in bytes (most browsers: 4096) */
-	private static readonly MAX_COOKIE_VALUE_BYTES: number = 4096;
+	private static readonly maxCookieValueBytes: number = 4096;
 
 	/** Allowed cookie names */
-	private static readonly ALLOWED_NAMES: readonly CookieNames[] = [
+	private static readonly allowedNames: readonly CookieNames[] = [
 		ACCESS_TOKEN_COOKIE_NAME,
 		REFRESH_TOKEN_COOKIE_NAME,
 		ADMIN_ACCESS_TOKEN_COOKIE_NAME,
@@ -42,18 +41,18 @@ export class CookieService {
 	 */
 	public static setCookie(response: Response, name: CookieNames, value: string | null | undefined, options?: Partial<ExtendedCookieOptions>): CookieResult {
 		// Validate cookie name
-		if (!CookieService.ALLOWED_NAMES.includes(name)) {
+		if (!CookieService.allowedNames.includes(name)) {
 			return {
 				success: false,
-				error: new Error(`Invalid cookie name: "${name}". Allowed: ${CookieService.ALLOWED_NAMES.join(", ")}`),
+				error: new Error(`Invalid cookie name: "${name}". Allowed: ${CookieService.allowedNames.join(", ")}`),
 			};
 		}
 
 		// Validate cookie value length (only for non-null values)
-		if (value !== null && value !== undefined && Buffer.byteLength(value, "utf-8") > CookieService.MAX_COOKIE_VALUE_BYTES) {
+		if (value !== null && value !== undefined && Buffer.byteLength(value, "utf-8") > CookieService.maxCookieValueBytes) {
 			return {
 				success: false,
-				error: new Error(`Cookie value for "${name}" exceeds ${CookieService.MAX_COOKIE_VALUE_BYTES} bytes`),
+				error: new Error(`Cookie value for "${name}" exceeds ${String(CookieService.maxCookieValueBytes)} bytes`),
 			};
 		}
 

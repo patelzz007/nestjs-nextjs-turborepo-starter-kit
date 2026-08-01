@@ -1,6 +1,7 @@
 import { z } from "zod";
+
+import { BaseResponseSchema, DateStringSchema } from "./common";
 import { PermissionActionSchema, PermissionResourceSchema } from "./enums";
-import { BaseResponseSchema } from "./common";
 
 /**
  * A single permission entry — action + resource pair with metadata.
@@ -96,7 +97,7 @@ export const AdminUserDetailSchema = UserResponseSchema.extend({
 		description: "Number of consecutive failed login attempts",
 		example: 0,
 	}),
-	lockedUntil: z.string().datetime().nullable().meta({
+	lockedUntil: DateStringSchema.nullable().meta({
 		description: "ISO-8601 timestamp when the account lockout expires (null = not locked)",
 		example: null,
 	}),

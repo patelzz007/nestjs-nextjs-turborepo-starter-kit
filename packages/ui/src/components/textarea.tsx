@@ -1,8 +1,7 @@
+import { cn } from "@workspace/ui/lib/utils";
 import * as React from "react";
 
-import { cn } from "@workspace/ui/lib/utils";
-
-function Textarea({ className, ...props }: React.ComponentProps<"textarea">) {
+function Textarea({ className, ...props }: React.ComponentProps<"textarea">): React.JSX.Element {
 	return (
 		<textarea
 			data-slot="textarea"

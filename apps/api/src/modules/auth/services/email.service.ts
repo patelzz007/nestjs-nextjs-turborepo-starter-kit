@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
-import { TypedConfigService } from "../../../config/typed-config.service";
 import { Resend } from "resend";
+
+import { TypedConfigService } from "../../../config/typed-config.service";
 import { LogService } from "../../../modules/logs/logs.service";
 
 @Injectable()
@@ -134,8 +135,7 @@ export class EmailService {
       </td>
     </tr>
     <tr>
-      <td style="padding: 16px 0; text-align: center;">
-        <p style="color: #9ca3af; font-size: 12px; margin: 0;">&copy; ${year} ${this.appName}. All rights reserved.</p>
+      <td style="padding: 16px 0; text-align: center;">			<p style="color: #9ca3af; font-size: 12px; margin: 0;">&copy; ${String(year)} ${this.appName}. All rights reserved.</p>
       </td>
     </tr>
   </table>
@@ -156,7 +156,7 @@ export class EmailService {
 			"",
 			"If you did not create an account, you can safely ignore this email.",
 			"",
-			`© ${year} ${this.appName}. All rights reserved.`,
+			`© ${String(year)} ${this.appName}. All rights reserved.`,
 		].join("\n");
 	}
 
@@ -198,8 +198,7 @@ export class EmailService {
       </td>
     </tr>
     <tr>
-      <td style="padding: 16px 0; text-align: center;">
-        <p style="color: #9ca3af; font-size: 12px; margin: 0;">&copy; ${year} ${this.appName}. All rights reserved.</p>
+      <td style="padding: 16px 0; text-align: center;">			<p style="color: #9ca3af; font-size: 12px; margin: 0;">&copy; ${String(year)} ${this.appName}. All rights reserved.</p>
       </td>
     </tr>
   </table>
@@ -220,7 +219,7 @@ export class EmailService {
 			"",
 			"If you did not request a password reset, you can safely ignore this email.",
 			"",
-			`© ${year} ${this.appName}. All rights reserved.`,
+			`© ${String(year)} ${this.appName}. All rights reserved.`,
 		].join("\n");
 	}
 
@@ -249,7 +248,7 @@ export class EmailService {
 
         <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 20px; margin: 24px 0;">
           <p style="color: #991b1b; font-size: 18px; font-weight: 600; margin: 0 0 8px 0; text-align: center;">
-            Locked for ${remainingMin} minute${remainingMin === 1 ? "" : "s"}
+            Locked for ${String(remainingMin)} minute${remainingMin === 1 ? "" : "s"}
           </p>
           <p style="color: #7f1d1d; font-size: 14px; line-height: 1.5; margin: 0; text-align: center;">
             You will be able to try again after this period ends.
@@ -269,8 +268,7 @@ export class EmailService {
       </td>
     </tr>
     <tr>
-      <td style="padding: 16px 0; text-align: center;">
-        <p style="color: #9ca3af; font-size: 12px; margin: 0;">&copy; ${year} ${this.appName}. All rights reserved.</p>
+      <td style="padding: 16px 0; text-align: center;">			<p style="color: #9ca3af; font-size: 12px; margin: 0;">&copy; ${String(year)} ${this.appName}. All rights reserved.</p>
       </td>
     </tr>
   </table>
@@ -285,7 +283,7 @@ export class EmailService {
 			"",
 			"Your account has been temporarily locked due to too many failed login attempts.",
 			"",
-			`Locked for ${remainingMin} minute${remainingMin === 1 ? "" : "s"}.`,
+			`Locked for ${String(remainingMin)} minute${remainingMin === 1 ? "" : "s"}.`,
 			"You will be able to try again after this period ends.",
 			"",
 			"If you forgot your password, you can request a password reset on the login page.",
@@ -293,7 +291,7 @@ export class EmailService {
 			"If you did not attempt to log in, someone else may be trying to access your account.",
 			"Please contact support if you have any concerns.",
 			"",
-			`© ${year} ${this.appName}. All rights reserved.`,
+			`© ${String(year)} ${this.appName}. All rights reserved.`,
 		].join("\n");
 	}
 }

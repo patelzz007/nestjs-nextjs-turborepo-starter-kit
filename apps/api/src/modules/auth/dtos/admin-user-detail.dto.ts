@@ -1,5 +1,5 @@
-import { createZodDto } from "nestjs-zod";
 import { AdminUserDetailSchema } from "@workspace/shared";
+import { createZodDto } from "nestjs-zod";
 
 /**
  * DTO for admin user detail response — includes internal security fields

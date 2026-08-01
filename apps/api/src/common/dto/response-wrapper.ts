@@ -1,6 +1,6 @@
+import { ApiResponseMetaSchema } from "@workspace/shared";
 import { createZodDto } from "nestjs-zod";
 import { z } from "zod";
-import { ApiResponseMetaSchema } from "@workspace/shared";
 
 /**
  * Creates a ZodDto class that wraps a data schema in the standard
@@ -13,7 +13,7 @@ import { ApiResponseMetaSchema } from "@workspace/shared";
  * @param className    — Unique class name for the generated DTO (e.g. `"WrappedMeResponse"`)
  *                      This ensures each endpoint gets a distinct OpenAPI component name.
  */
-export function createWrappedDto<T extends z.ZodTypeAny>(dataSchema: T, className: string) {
+export function createWrappedDto(dataSchema: z.ZodType, className: string): ReturnType<typeof createZodDto<z.ZodObject<Record<string, z.ZodType>>>> {
 	const envelopeSchema = z
 		.object({
 			success: z.literal(true).meta({
@@ -44,7 +44,7 @@ export function createWrappedDto<T extends z.ZodTypeAny>(dataSchema: T, classNam
  * @example createWrappedArrayDto(SessionSchema, "WrappedSessionList")
  *          → { success, data: Session[], meta }
  */
-export function createWrappedArrayDto<T extends z.ZodTypeAny>(itemSchema: T, className: string) {
+export function createWrappedArrayDto(itemSchema: z.ZodType, className: string): ReturnType<typeof createZodDto<z.ZodObject<Record<string, z.ZodType>>>> {
 	const envelopeSchema = z
 		.object({
 			success: z.literal(true).meta({

@@ -6,6 +6,8 @@
 "use client";
 
 import { createContext, useCallback, useContext, useMemo, useState, type JSX, type ReactNode } from "react";
+
+import { API_BASE_URL } from "./config";
 import { useApi } from "./use-api";
 
 export interface AuthContextType {
@@ -45,6 +47,10 @@ function checkAuthStatus(accessTokenName: string, refreshTokenName: string): boo
 
 export interface AuthProviderProps {
 	readonly children: ReactNode;
+	/**
+	 * Base URL of the API. Defaults to the env-driven `API_BASE_URL`
+	 * (see lib/config.ts) — override only when you need a per-call value.
+	 */
 	readonly baseUrl?: string;
 	readonly onUnauthorizedRedirect?: string;
 	readonly navigate?: (url: string) => void;
@@ -65,20 +71,20 @@ export interface AuthProviderProps {
 
 export function AuthProvider({
 	children,
-	baseUrl = "http://localhost:8080",
+	baseUrl = API_BASE_URL,
 	onUnauthorizedRedirect = "/auth/login",
 	navigate,
 	refresh,
 	cookieNames = DEFAULT_COOKIE_NAMES,
 	clientType,
 }: AuthProviderProps): JSX.Element {
-	const [isLoading, setIsLoading] = useState(false);
+	const [isLoading] = useState(false);
 
 	// Memoize so checkAuthStatus only re-runs when cookieNames changes
 	const [isAuthenticated, setIsAuthenticated] = useState(() => checkAuthStatus(cookieNames.accessToken, cookieNames.refreshToken));
 
 	// Handle 401 responses from the API
-	const handleUnauthorized = useCallback(async (): Promise<void> => {
+	const handleUnauthorized = useCallback((): void => {
 		setIsAuthenticated(false);
 		navigate?.(onUnauthorizedRedirect);
 	}, [navigate, onUnauthorizedRedirect]);
@@ -106,7 +112,7 @@ export function AuthProvider({
 		} finally {
 			setIsAuthenticated(false);
 			navigate?.(onUnauthorizedRedirect);
-			// Refresh to trigger middleware re-check
+			// Refresh to trigger proxy re-check
 			setTimeout(() => {
 				refresh?.();
 			}, 100);

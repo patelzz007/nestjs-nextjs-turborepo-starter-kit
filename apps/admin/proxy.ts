@@ -3,9 +3,9 @@
 // Next.js 16+ convention (replaces middleware.ts)
 // ============================================
 
+import { decodeJwtPayload } from "@workspace/client/lib/jwt";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { decodeJwtPayload } from "@workspace/ui/lib/jwt";
 
 // ── Cookie names are isolated from web app ─────────────────────────────
 // The admin panel uses separate cookie names (adminAccessToken,

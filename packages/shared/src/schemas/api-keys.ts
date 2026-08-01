@@ -1,4 +1,5 @@
 import { z } from "zod";
+
 import { BaseResponseSchema } from "./common";
 
 // ── Scope literals ───────────────────────────────────────────────────────
@@ -15,8 +16,9 @@ export const CreateApiKeySchema = z
 		rateLimitTier: z.enum(API_KEY_RATE_LIMIT_TIERS).optional().default("standard"),
 		expiresAt: z
 			.string()
+			// eslint-disable-next-line @typescript-eslint/no-deprecated -- z.string().datetime() is the only viable option (z.iso.datetime() doesn't exist on string)
 			.datetime({ offset: true })
-			.transform((val) => new Date(val))
+			.transform((val: string) => new Date(val))
 			.optional(),
 	})
 	.strict();
@@ -30,8 +32,9 @@ export const UpdateApiKeySchema = z
 		scopes: z.array(z.enum(API_KEY_SCOPES)).min(1).max(3).optional(),
 		expiresAt: z
 			.string()
+			// eslint-disable-next-line @typescript-eslint/no-deprecated -- z.string().datetime() is the only viable option (z.iso.datetime() doesn't exist on string)
 			.datetime({ offset: true })
-			.transform((val) => new Date(val))
+			.transform((val: string) => new Date(val))
 			.optional(),
 	})
 	.strict();
@@ -56,13 +59,15 @@ export const UsageLogQuerySchema = z
 	.object({
 		from: z
 			.string()
+			// eslint-disable-next-line @typescript-eslint/no-deprecated
 			.datetime({ offset: true })
-			.transform((val) => new Date(val))
+			.transform((val: string) => new Date(val))
 			.optional(),
 		to: z
 			.string()
+			// eslint-disable-next-line @typescript-eslint/no-deprecated
 			.datetime({ offset: true })
-			.transform((val) => new Date(val))
+			.transform((val: string) => new Date(val))
 			.optional(),
 		method: z.string().optional(),
 		statusCode: z.coerce.number().int().optional(),

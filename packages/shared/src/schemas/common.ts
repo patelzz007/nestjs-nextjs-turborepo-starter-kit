@@ -5,9 +5,12 @@ import { z } from "zod";
  *
  * Zod v4 cannot represent `z.date()` in JSON Schema / OpenAPI
  * (throws "Date cannot be represented in JSON Schema"), so we
- * use `z.string().datetime()` instead of `z.date().transform(...)`.
+ * use `z.iso.datetime()` instead of `z.date().transform(...)`.
  */
-export const DateStringSchema = z.string().datetime();
+// z.string().datetime() is deprecated, but z.iso.datetime() has unresolvable
+// types in strictTypeChecked so we use the deprecated API here.
+// eslint-disable-next-line @typescript-eslint/no-deprecated
+export const DateStringSchema = z.string().datetime({ offset: true });
 
 /**
  * Base response schema for all database entity responses.

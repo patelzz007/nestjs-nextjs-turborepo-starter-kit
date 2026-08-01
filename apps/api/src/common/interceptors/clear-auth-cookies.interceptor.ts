@@ -1,8 +1,9 @@
 import { Injectable, type NestInterceptor, type ExecutionContext, type CallHandler } from "@nestjs/common";
+import type { Request, Response } from "express";
 import { type Observable } from "rxjs";
 import { tap } from "rxjs/operators";
-import type { Request, Response } from "express";
-import { CookieService } from "../services/cookies.service";
+
+import type { JsonValue } from "../../types/json";
 import {
 	CookieConfigService,
 	ACCESS_TOKEN_COOKIE_NAME,
@@ -10,7 +11,7 @@ import {
 	ADMIN_ACCESS_TOKEN_COOKIE_NAME,
 	ADMIN_REFRESH_TOKEN_COOKIE_NAME,
 } from "../constants/cookie.config";
-import type { JsonValue } from "../../types/json";
+import { CookieService } from "../services/cookies.service";
 
 /**
  * Interceptor that clears auth cookies after the route handler completes.
@@ -40,7 +41,8 @@ export class ClearAuthCookiesInterceptor implements NestInterceptor {
 		const response: Response = context.switchToHttp().getResponse<Response>();
 
 		// Determine which cookie set to clear based on X-Client-Type header.
-		const clientType: string | undefined = request.headers["x-client-type"] as string | undefined;
+		const header: string | string[] | undefined = request.headers["x-client-type"];
+		const clientType: string | undefined = typeof header === "string" ? header : undefined;
 		const isAdmin: boolean = clientType === "admin";
 
 		return next.handle().pipe(

@@ -1,11 +1,13 @@
 import { z } from "zod";
 
+import { DateStringSchema } from "./common";
+
 /** Health check response */
 export const HealthResponseSchema = z
 	.object({
 		status: z.string(),
 		db: z.string(),
-		timestamp: z.string().datetime(),
+		timestamp: DateStringSchema,
 	})
 	.strict();
 

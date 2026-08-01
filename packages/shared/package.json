@@ -4,7 +4,9 @@
 	"type": "module",
 	"private": true,
 	"scripts": {
-		"build": "tsc && node scripts/add-js-extensions.mjs",
+		"build": "tsup",
+		"lint": "eslint",
+		"format": "prettier --write \"**/*.{ts,tsx}\"",
 		"typecheck": "tsc --noEmit",
 		"clean": "rm -rf dist"
 	},
@@ -12,15 +14,22 @@
 	"types": "./dist/index.d.ts",
 	"exports": {
 		".": {
+			"development": {
+				"types": "./src/index.ts",
+				"default": "./src/index.ts"
+			},
 			"types": "./dist/index.d.ts",
 			"default": "./dist/index.js"
 		}
 	},
 	"dependencies": {
-		"zod": "^4.4.3"
+		"zod": "4.4.3"
 	},
 	"devDependencies": {
+		"@workspace/eslint-config": "workspace:*",
 		"@workspace/typescript-config": "workspace:*",
-		"typescript": "^6.0.3"
+		"eslint": "^9.39.5",
+		"tsup": "^8.5.0",
+		"typescript": "6.0.3"
 	}
 }

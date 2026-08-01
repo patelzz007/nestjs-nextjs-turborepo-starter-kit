@@ -1,16 +1,17 @@
 import { Module } from "@nestjs/common";
 import { JwtModule } from "@nestjs/jwt";
-import { PrismaModule } from "../../prisma/prisma.module";
 
 import { CookieConfigService } from "../../common/constants/cookie.config";
+import { AuthGuard } from "../../common/guards/auth.guard";
+import { RefreshTokenGuard } from "../../common/guards/refresh-token.guard";
+import { SuperAdminGuard } from "../../common/guards/super-admin.guard";
+import { ClearAuthCookiesInterceptor } from "../../common/interceptors/clear-auth-cookies.interceptor";
+import { SetAuthCookiesInterceptor } from "../../common/interceptors/set-auth-cookies.interceptor";
 import { TypedConfigService } from "../../config/typed-config.service";
 import { LogService } from "../../modules/logs/logs.service";
-import { AuthGuard } from "../../common/guards/auth.guard";
-import { SuperAdminGuard } from "../../common/guards/super-admin.guard";
-import { RefreshTokenGuard } from "../../common/guards/refresh-token.guard";
+import { PrismaModule } from "../../prisma/prisma.module";
 import { RbacModule } from "../rbac/rbac.module";
-import { SetAuthCookiesInterceptor } from "../../common/interceptors/set-auth-cookies.interceptor";
-import { ClearAuthCookiesInterceptor } from "../../common/interceptors/clear-auth-cookies.interceptor";
+
 import { AuthController } from "./auth.controller";
 import { AuthService } from "./auth.service";
 import { CryptoService } from "./services/crypto.service";

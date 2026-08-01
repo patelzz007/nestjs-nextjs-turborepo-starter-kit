@@ -5,7 +5,8 @@
 // ============================================
 "use client";
 
-import type { FormEvent, JSX, ReactNode } from "react";
+import type { JSX, ReactNode } from "react";
+
 import { Button } from "./button";
 
 export interface FormShellProps {
@@ -18,7 +19,7 @@ export interface FormShellProps {
 	/** Label shown while loading (default: "Submitting...") */
 	readonly loadingLabel?: string;
 	/** Form submit handler */
-	readonly onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+	readonly onSubmit: (event: React.SyntheticEvent<HTMLFormElement>) => void;
 	/** Form fields rendered inside the shell */
 	readonly children: ReactNode;
 }
@@ -36,7 +37,7 @@ export function FormShell({ error, isLoading, submitLabel = "Submit", loadingLab
 	return (
 		<>
 			{/* Error banner */}
-			{error && (
+			{error ? (
 				<div className="rounded-lg border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive">
 					<div className="flex items-start gap-3">
 						<svg className="mt-0.5 size-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -45,7 +46,7 @@ export function FormShell({ error, isLoading, submitLabel = "Submit", loadingLab
 						<span>{error}</span>
 					</div>
 				</div>
-			)}
+			) : null}
 
 			{/* Form */}
 			<form onSubmit={onSubmit} className="space-y-4">

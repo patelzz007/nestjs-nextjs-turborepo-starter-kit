@@ -1,5 +1,5 @@
-import { createZodDto } from "nestjs-zod";
 import { ResendVerificationSchema, ResendVerificationResponseSchema } from "@workspace/shared";
+import { createZodDto } from "nestjs-zod";
 
 /** Request DTO for POST /auth/resend-verification */
 export class ResendVerificationDto extends createZodDto(ResendVerificationSchema) {}

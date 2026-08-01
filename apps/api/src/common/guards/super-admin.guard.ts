@@ -17,7 +17,7 @@ import type { Request } from "express";
 export class SuperAdminGuard implements CanActivate {
 	public canActivate(context: ExecutionContext): boolean {
 		const request: Request = context.switchToHttp().getRequest<Request>();
-		const user: Record<string, unknown> | undefined = request.user as Record<string, unknown> | undefined;
+		const user = request.user;
 
 		if (!user) {
 			throw new ForbiddenException({
@@ -27,13 +27,13 @@ export class SuperAdminGuard implements CanActivate {
 		}
 
 		// Fast path: isSuperAdmin bypasses permission check
-		if (user.isSuperAdmin === true) {
+		if ("isSuperAdmin" in user && user.isSuperAdmin) {
 			return true;
 		}
 
 		// Use the pre-computed hasAdminAccess flag from the JWT payload
 		// (computed once at login time by AuthService.buildUserResponse)
-		if ((user.hasAdminAccess as boolean) !== true) {
+		if (!("hasAdminAccess" in user) || !user.hasAdminAccess) {
 			throw new ForbiddenException({
 				message: "Super admin privileges required",
 				error: "SUPER_ADMIN_REQUIRED",

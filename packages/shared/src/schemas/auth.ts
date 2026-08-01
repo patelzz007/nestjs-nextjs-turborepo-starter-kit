@@ -1,4 +1,5 @@
 import { z } from "zod";
+
 import { UserResponseSchema } from "./user";
 
 // ── Password Validation ──────────────────────────────────────────────────
@@ -15,7 +16,7 @@ export const strongPassword = z
 
 export const LoginSchema = z
 	.object({
-		email: z.string().email("Invalid email address").meta({
+		email: z.email("Invalid email address").meta({
 			description: "User email address",
 			example: "admin@example.com",
 		}),
@@ -30,7 +31,7 @@ export type LoginInput = z.output<typeof LoginSchema>;
 
 export const SignupSchema = z
 	.object({
-		email: z.string().email("Invalid email address"),
+		email: z.email("Invalid email address"),
 		password: strongPassword.meta({
 			description: "User password (must meet complexity requirements)",
 			example: "StrongP@ss1",
@@ -46,7 +47,7 @@ export type SignupInput = z.output<typeof SignupSchema>;
 
 export const ForgotPasswordSchema = z
 	.object({
-		email: z.string().email("Invalid email address").meta({
+		email: z.email("Invalid email address").meta({
 			description: "The email address associated with the user account",
 			example: "user@example.com",
 		}),
@@ -72,7 +73,7 @@ export type ResetPasswordInput = z.output<typeof ResetPasswordSchema>;
 
 export const ResendVerificationSchema = z
 	.object({
-		email: z.string().email("Invalid email address").meta({
+		email: z.email("Invalid email address").meta({
 			description: "The email address to resend verification to",
 			example: "user@example.com",
 		}),
@@ -221,7 +222,7 @@ export const StopImpersonationResponseSchema = z
 
 export type StopImpersonationResponse = z.output<typeof StopImpersonationResponseSchema>;
 
-// ── Re-exports from user.ts for backward compatibility ───────────────────
+// Re-exports for backward compatibility
 
 export { SlimRoleSchema, PermissionDetailsSchema, UserResponseSchema } from "./user";
 export type { SlimRoleResponse, PermissionDetailsResponse, UserResponse } from "./user";

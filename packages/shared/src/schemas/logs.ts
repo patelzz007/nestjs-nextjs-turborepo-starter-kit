@@ -148,7 +148,7 @@ export const LogBulkDeleteQuerySchema = z.object({
 export type LogBulkDeleteQuery = z.output<typeof LogBulkDeleteQuerySchema>;
 
 export const LogEmailReportQuerySchema = z.object({
-	email: z.string().email(),
+	email: z.email(),
 	level: LogLevelSchema.optional(),
 	context: z.string().optional(),
 	userId: z.string().optional(),

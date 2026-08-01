@@ -1,9 +1,10 @@
 import { Injectable, UnauthorizedException } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import { TokenExpiredError } from "jsonwebtoken";
+
 import { FlatUserResponse, JwtPermission } from "../../../common/interfaces/rbac.interface";
-import { TypedConfigService } from "../../../config/typed-config.service";
 import { parseExpiryToSeconds } from "../../../common/utils/expiry";
+import { TypedConfigService } from "../../../config/typed-config.service";
 
 /**
  * The shape embedded in the JWT payload (access token).

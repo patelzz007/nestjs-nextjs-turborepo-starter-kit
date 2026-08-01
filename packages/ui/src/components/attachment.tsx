@@ -1,10 +1,9 @@
-import * as React from "react";
 import { mergeProps } from "@base-ui/react/merge-props";
 import { useRender } from "@base-ui/react/use-render";
-import { cva, type VariantProps } from "class-variance-authority";
-
-import { cn } from "@workspace/ui/lib/utils";
 import { Button } from "@workspace/ui/components/button";
+import { cn } from "@workspace/ui/lib/utils";
+import { cva, type VariantProps } from "class-variance-authority";
+import * as React from "react";
 
 const attachmentVariants = cva(
 	"group/attachment relative flex w-fit max-w-full min-w-0 shrink-0 flex-wrap rounded-xl border bg-card text-card-foreground transition-colors focus-within:ring-1 focus-within:ring-ring/50 has-[>a,>button]:hover:bg-muted/50 data-[state=error]:border-destructive/30 data-[state=idle]:border-dashed",
@@ -32,7 +31,7 @@ function Attachment({
 }: React.ComponentProps<"div"> &
 	VariantProps<typeof attachmentVariants> & {
 		state?: "idle" | "uploading" | "processing" | "error" | "done";
-	}) {
+	}): React.JSX.Element {
 	return (
 		<div
 			data-slot="attachment"
@@ -61,17 +60,17 @@ const attachmentMediaVariants = cva(
 	},
 );
 
-function AttachmentMedia({ className, variant = "icon", ...props }: React.ComponentProps<"div"> & VariantProps<typeof attachmentMediaVariants>) {
+function AttachmentMedia({ className, variant = "icon", ...props }: React.ComponentProps<"div"> & VariantProps<typeof attachmentMediaVariants>): React.JSX.Element {
 	return <div data-slot="attachment-media" data-variant={variant} className={cn(attachmentMediaVariants({ variant }), className)} {...props} />;
 }
 
-function AttachmentContent({ className, ...props }: React.ComponentProps<"div">) {
+function AttachmentContent({ className, ...props }: React.ComponentProps<"div">): React.JSX.Element {
 	return (
 		<div data-slot="attachment-content" className={cn("max-w-full min-w-0 flex-1 leading-tight group-data-[orientation=vertical]/attachment:px-1", className)} {...props} />
 	);
 }
 
-function AttachmentTitle({ className, ...props }: React.ComponentProps<"span">) {
+function AttachmentTitle({ className, ...props }: React.ComponentProps<"span">): React.JSX.Element {
 	return (
 		<span
 			data-slot="attachment-title"
@@ -84,7 +83,7 @@ function AttachmentTitle({ className, ...props }: React.ComponentProps<"span">) 
 	);
 }
 
-function AttachmentDescription({ className, ...props }: React.ComponentProps<"span">) {
+function AttachmentDescription({ className, ...props }: React.ComponentProps<"span">): React.JSX.Element {
 	return (
 		<span
 			data-slot="attachment-description"
@@ -94,7 +93,7 @@ function AttachmentDescription({ className, ...props }: React.ComponentProps<"sp
 	);
 }
 
-function AttachmentActions({ className, ...props }: React.ComponentProps<"div">) {
+function AttachmentActions({ className, ...props }: React.ComponentProps<"div">): React.JSX.Element {
 	return (
 		<div
 			data-slot="attachment-actions"
@@ -107,11 +106,11 @@ function AttachmentActions({ className, ...props }: React.ComponentProps<"div">)
 	);
 }
 
-function AttachmentAction({ className, variant, size = "icon-xs", ...props }: React.ComponentProps<typeof Button>) {
+function AttachmentAction({ className, variant, size = "icon-xs", ...props }: React.ComponentProps<typeof Button>): React.JSX.Element {
 	return <Button data-slot="attachment-action" variant={variant ?? "ghost"} size={size} className={cn(className)} {...props} />;
 }
 
-function AttachmentTrigger({ className, render, type, ...props }: useRender.ComponentProps<"button">) {
+function AttachmentTrigger({ className, render, type, ...props }: useRender.ComponentProps<"button">): React.JSX.Element {
 	return useRender({
 		defaultTagName: "button",
 		props: mergeProps<"button">(
@@ -128,7 +127,7 @@ function AttachmentTrigger({ className, render, type, ...props }: useRender.Comp
 	});
 }
 
-function AttachmentGroup({ className, ...props }: React.ComponentProps<"div">) {
+function AttachmentGroup({ className, ...props }: React.ComponentProps<"div">): React.JSX.Element {
 	return (
 		<div
 			data-slot="attachment-group"

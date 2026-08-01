@@ -1,0 +1,14 @@
+{
+	"name": "@workspace/tooling",
+	"version": "0.0.1",
+	"private": true,
+	"description": "Repo-wide tooling scripts. Owns the syncpack dependency-hygiene commands so they can run as turbo tasks (turbo 2.x doesn't execute root package.json scripts).",
+	"scripts": {
+		"deps:check": "syncpack lint",
+		"deps:fix": "syncpack fix-mismatches",
+		"deps:list": "syncpack list"
+	},
+	"devDependencies": {
+		"syncpack": "^15.3.2"
+	}
+}

@@ -26,15 +26,21 @@ export const PaginationMetaSchema = z.object({
 
 export type PaginationMeta = z.output<typeof PaginationMetaSchema>;
 
-export const PaginatedResponseSchema = <T extends z.ZodTypeAny>(itemSchema: T) =>
+export const PaginatedResponseSchema = <T extends z.ZodType>(
+	itemSchema: T,
+): z.ZodObject<{
+	success: z.ZodLiteral<true>;
+	data: z.ZodArray<T>;
+	meta: typeof PaginationMetaSchema;
+}> =>
 	z.object({
 		success: z.literal(true),
 		data: z.array(itemSchema),
 		meta: PaginationMetaSchema,
 	});
 
-export type PaginatedResponse<T> = {
+export interface PaginatedResponse<T> {
 	success: true;
 	data: T[];
 	meta: PaginationMeta;
-};
+}

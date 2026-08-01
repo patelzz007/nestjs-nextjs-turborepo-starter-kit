@@ -1534,9 +1534,10 @@ function generateSeedApiKey(): { rawKey: string; keyPrefix: string } {
 }
 
 async function createApiKeys(users: User[]): Promise<void> {
-	// NOTE: We do NOT delete existing keys here to preserve keys created by
-	// generateAdditionalSeedData(). The skipDuplicates option on createMany
-	// prevents hash conflicts since each key uses a unique random value.
+	// NOTE: Keys are NOT deleted here on purpose — volatile cleanup happens at
+	// the top of main(), and this function runs AFTER generateAdditionalSeedData()
+	// so it must preserve the keys that function just created for extra users.
+	// skipDuplicates guards against hash collisions from random key generation.
 	// For a full reset, use: npx prisma migrate reset
 
 	const hash = (s: string): Promise<string> => bcrypt.hash(s, 10);
@@ -2906,6 +2907,20 @@ async function generateAdditionalSeedData(roles: Role[], userRole: Role): Promis
 
 async function main() {
 	console.log("🌱 Starting seed...\n");
+
+	// ── Idempotency cleanup ─────────────────────────────────────────────
+	// Reference data (permissions, roles, users, tags, URLs, menu items) is
+	// upserted below so it survives re-runs. Rows with random/unique values
+	// (refresh tokens, clicks, API keys, usage logs, reset tokens) have no
+	// stable key to upsert against — wipe them first so re-running db:seed
+	// converges to the same state instead of throwing or accumulating rows.
+	console.log("Cleaning volatile demo rows...");
+	await prisma.passwordResetToken.deleteMany();
+	await prisma.apiKeyUsageLog.deleteMany();
+	await prisma.apiKey.deleteMany();
+	await prisma.click.deleteMany();
+	await prisma.refreshToken.deleteMany();
+	console.log("✅ Volatile demo rows cleaned\n");
 
 	console.log("Creating permissions...");
 	const permissions = await createPermissions();

@@ -1,9 +1,8 @@
 "use client";
 
-import * as React from "react";
 import { Avatar as AvatarPrimitive } from "@base-ui/react/avatar";
-
 import { cn } from "@workspace/ui/lib/utils";
+import * as React from "react";
 
 function Avatar({
 	className,
@@ -11,7 +10,7 @@ function Avatar({
 	...props
 }: AvatarPrimitive.Root.Props & {
 	size?: "default" | "sm" | "lg";
-}) {
+}): React.JSX.Element {
 	return (
 		<AvatarPrimitive.Root
 			data-slot="avatar"
@@ -25,11 +24,11 @@ function Avatar({
 	);
 }
 
-function AvatarImage({ className, ...props }: AvatarPrimitive.Image.Props) {
+function AvatarImage({ className, ...props }: AvatarPrimitive.Image.Props): React.JSX.Element {
 	return <AvatarPrimitive.Image data-slot="avatar-image" className={cn("aspect-square size-full rounded-full object-cover", className)} {...props} />;
 }
 
-function AvatarFallback({ className, ...props }: AvatarPrimitive.Fallback.Props) {
+function AvatarFallback({ className, ...props }: AvatarPrimitive.Fallback.Props): React.JSX.Element {
 	return (
 		<AvatarPrimitive.Fallback
 			data-slot="avatar-fallback"
@@ -39,7 +38,7 @@ function AvatarFallback({ className, ...props }: AvatarPrimitive.Fallback.Props)
 	);
 }
 
-function AvatarBadge({ className, ...props }: React.ComponentProps<"span">) {
+function AvatarBadge({ className, ...props }: React.ComponentProps<"span">): React.JSX.Element {
 	return (
 		<span
 			data-slot="avatar-badge"
@@ -55,7 +54,7 @@ function AvatarBadge({ className, ...props }: React.ComponentProps<"span">) {
 	);
 }
 
-function AvatarGroup({ className, ...props }: React.ComponentProps<"div">) {
+function AvatarGroup({ className, ...props }: React.ComponentProps<"div">): React.JSX.Element {
 	return (
 		<div
 			data-slot="avatar-group"
@@ -65,7 +64,7 @@ function AvatarGroup({ className, ...props }: React.ComponentProps<"div">) {
 	);
 }
 
-function AvatarGroupCount({ className, ...props }: React.ComponentProps<"div">) {
+function AvatarGroupCount({ className, ...props }: React.ComponentProps<"div">): React.JSX.Element {
 	return (
 		<div
 			data-slot="avatar-group-count"

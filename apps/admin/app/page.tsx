@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 
-export default function AdminRootPage() {
+/** Redirect rule for the admin root path — sends to admin login. */
+export default function AdminRootPage(): never {
 	redirect("/auth/login");
 }

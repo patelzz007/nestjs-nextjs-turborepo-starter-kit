@@ -1,5 +1,5 @@
-import { createZodDto } from "nestjs-zod";
 import { ResetPasswordSchema, ResetPasswordResponseSchema } from "@workspace/shared";
+import { createZodDto } from "nestjs-zod";
 
 /** Request DTO for POST /auth/reset-password */
 export class ResetPasswordDto extends createZodDto(ResetPasswordSchema) {}

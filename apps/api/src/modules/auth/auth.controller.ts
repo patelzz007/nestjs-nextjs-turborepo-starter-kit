@@ -1,23 +1,6 @@
 import { Body, Controller, Get, Headers, HttpCode, Param, Patch, Post, Query, Req, UseGuards, UseInterceptors } from "@nestjs/common";
 import { ApiBearerAuth, ApiBody, ApiCreatedResponse, ApiHeader, ApiOkResponse, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { SkipThrottle, Throttle } from "@nestjs/throttler";
-import type { Request } from "express";
-import { extractClientInfo } from "../../common/utils/client-info";
-import { GetUser } from "../../common/decorators/get-user.decorator";
-import { RefreshTokenGuard } from "../../common/guards/refresh-token.guard";
-import type { RefreshTokenPayload } from "./services/token.service";
-import { SuperAdminOnly } from "../../common/decorators/super-admin.decorator";
-import { Public } from "../../common/decorators/public.decorator";
-import { SetAuthCookiesInterceptor } from "../../common/interceptors/set-auth-cookies.interceptor";
-import { ClearAuthCookiesInterceptor } from "../../common/interceptors/clear-auth-cookies.interceptor";
-import { ApiErrorResponseDto } from "../../common/dto/api-response.dto";
-import { createWrappedDto, createWrappedArrayDto } from "../../common/dto/response-wrapper";
-import { AuthService } from "./auth.service";
-import { ForgotPasswordDto } from "./dtos/forgot-password.dto";
-import { LoginDto } from "./dtos/login.dto";
-import { ResendVerificationDto } from "./dtos/resend-verification.dto";
-import { ResetPasswordDto } from "./dtos/reset-password.dto";
-import { SignupDto } from "./dtos/signup.dto";
 import type {
 	AdminUserDetail,
 	ForgotPasswordResponse,
@@ -53,6 +36,25 @@ import {
 	UserResponseSchema,
 	VerifyEmailResponseSchema,
 } from "@workspace/shared";
+import type { Request } from "express";
+
+import { GetUser } from "../../common/decorators/get-user.decorator";
+import { Public } from "../../common/decorators/public.decorator";
+import { SuperAdminOnly } from "../../common/decorators/super-admin.decorator";
+import { ApiErrorResponseDto } from "../../common/dto/api-response.dto";
+import { createWrappedDto, createWrappedArrayDto } from "../../common/dto/response-wrapper";
+import { RefreshTokenGuard } from "../../common/guards/refresh-token.guard";
+import { ClearAuthCookiesInterceptor } from "../../common/interceptors/clear-auth-cookies.interceptor";
+import { SetAuthCookiesInterceptor } from "../../common/interceptors/set-auth-cookies.interceptor";
+import { extractClientInfo } from "../../common/utils/client-info";
+
+import { AuthService } from "./auth.service";
+import { ForgotPasswordDto } from "./dtos/forgot-password.dto";
+import { LoginDto } from "./dtos/login.dto";
+import { ResendVerificationDto } from "./dtos/resend-verification.dto";
+import { ResetPasswordDto } from "./dtos/reset-password.dto";
+import { SignupDto } from "./dtos/signup.dto";
+import type { RefreshTokenPayload } from "./services/token.service";
 
 // ── Wrapped Response DTOs (envelope + data) ─────────────────────────────
 // Each constant wraps a data schema in the { success, data, meta } envelope
@@ -131,7 +133,7 @@ export class AuthController {
 		// Extract the raw refresh token JWT from cookies for reuse detection
 		// The service will bcrypt-compare it against the stored hash before rotating
 		// RefreshTokenGuard already verified the cookie exists, so it's always a string
-		const rawRefreshToken: string = req.cookies["refreshToken"];
+		const rawRefreshToken: string = req.cookies.refreshToken;
 
 		// The refresh token's jti (JWT ID) is used for direct DB lookup
 		const tokens: RefreshResponse = await this.authService.refreshToken(user.sub, rawRefreshToken, user.jti, deviceInfo, ipAddress);

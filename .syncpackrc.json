@@ -1,0 +1,17 @@
+{
+	"$schema": "https://unpkg.com/syncpack@15.3.2/dist/schema.json",
+	"versionGroups": [
+		{
+			"label": "Shared deps must be the same version across all workspaces",
+			"dependencies": ["react", "react-dom", "zod", "typescript", "next"],
+			"policy": "sameRange"
+		}
+	],
+	"semverGroups": [
+		{
+			"label": "Shared deps are pinned to exact versions (no ^ or ~)",
+			"dependencies": ["react", "react-dom", "zod", "typescript"],
+			"range": ""
+		}
+	]
+}

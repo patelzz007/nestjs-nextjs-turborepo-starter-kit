@@ -1,10 +1,11 @@
 import { Injectable, type NestInterceptor, type ExecutionContext, type CallHandler, HttpException, HttpStatus } from "@nestjs/common";
+import type { Request } from "express";
 import { type Observable, throwError } from "rxjs";
 import { catchError, map } from "rxjs/operators";
 import { z } from "zod";
+
 import type { JsonValue } from "../../types/json";
 import type { RequestWithTrace } from "../middleware/correlation-id.middleware";
-import type { Request } from "express";
 
 /**
  * Zod schema for a PaginatedResult shape (from paginate()).
@@ -74,6 +75,7 @@ function isApiResponse(value: JsonValue): value is z.infer<typeof ApiResponseSch
 export class ResponseInterceptor implements NestInterceptor {
 	public intercept(context: ExecutionContext, next: CallHandler): Observable<object> {
 		const request: Request = context.switchToHttp().getRequest<Request>();
+		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Runtime type: CorrelationIdMiddleware sets correlationId
 		const correlationId: string = (request as RequestWithTrace).correlationId ?? "";
 
 		return next.handle().pipe(
@@ -97,6 +99,7 @@ export class ResponseInterceptor implements NestInterceptor {
 						},
 					};
 
+					// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Runtime type: CorrelationIdMiddleware sets responseData
 					(request as RequestWithTrace).responseData = wrapped;
 					return wrapped;
 				}
@@ -114,7 +117,7 @@ export class ResponseInterceptor implements NestInterceptor {
 						},
 					};
 
-					(request as RequestWithTrace).responseData = wrapped;
+					(request satisfies RequestWithTrace).responseData = wrapped;
 					return wrapped;
 				}
 
@@ -128,6 +131,7 @@ export class ResponseInterceptor implements NestInterceptor {
 					},
 				};
 
+				// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Runtime type: CorrelationIdMiddleware sets responseData
 				(request as RequestWithTrace).responseData = wrapped;
 				return wrapped;
 			}),
@@ -135,6 +139,7 @@ export class ResponseInterceptor implements NestInterceptor {
 			catchError((err: Error) => {
 				const statusCode: number = err instanceof HttpException ? err.getStatus() : HttpStatus.INTERNAL_SERVER_ERROR;
 
+				// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Runtime type: CorrelationIdMiddleware sets responseData
 				(request as RequestWithTrace).responseData = {
 					success: false,
 					error: {

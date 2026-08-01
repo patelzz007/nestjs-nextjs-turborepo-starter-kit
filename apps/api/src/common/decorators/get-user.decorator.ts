@@ -1,5 +1,6 @@
 import { createParamDecorator, type ExecutionContext } from "@nestjs/common";
 import type { Request } from "express";
+
 import type { AccessTokenPayload, RefreshTokenPayload } from "../../modules/auth/services/token.service";
 
 /**

@@ -1,15 +1,16 @@
 import { Controller, Get, Post, Body } from "@nestjs/common";
 import { ApiTags, ApiOperation, ApiBody, ApiOkResponse, ApiCreatedResponse, ApiResponse } from "@nestjs/swagger";
 import { SignupSchema, HealthResponseSchema, UserResponseSchema } from "@workspace/shared";
-import { ApiErrorResponseDto } from "./common/dto/api-response.dto";
-import { createWrappedDto } from "./common/dto/response-wrapper";
-import { Public } from "./common/decorators/public.decorator";
-import { AppService } from "./app.service";
-import { AuthService } from "./modules/auth/auth.service";
-import { ZodValidationPipe } from "./common/pipes/zod-validation.pipe";
-import { CreateUserDto } from "./common/dto/create-user.dto";
 import type { UserResponse, SignupInput } from "@workspace/shared";
 import { z } from "zod";
+
+import { AppService } from "./app.service";
+import { Public } from "./common/decorators/public.decorator";
+import { ApiErrorResponseDto } from "./common/dto/api-response.dto";
+import { CreateUserDto } from "./common/dto/create-user.dto";
+import { createWrappedDto } from "./common/dto/response-wrapper";
+import { ZodValidationPipe } from "./common/pipes/zod-validation.pipe";
+import { AuthService } from "./modules/auth/auth.service";
 
 // ── Wrapped Response DTOs ────────────────────────────────────────────────
 
@@ -37,7 +38,7 @@ export class AppController {
 	@Get("health")
 	@ApiOperation({ summary: "Health check (includes DB status)" })
 	@ApiOkResponse({ type: WrappedHealthResponse, description: "Current service health status" })
-	async getHealth() {
+	async getHealth(): Promise<Record<string, unknown>> {
 		return this.appService.healthCheck();
 	}
 

@@ -1,10 +1,4 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException, UnauthorizedException } from "@nestjs/common";
-import { PrismaService } from "../../prisma/prisma.service";
-import { parseExpiryToMilliseconds } from "../../common/utils/expiry";
-import { LogService } from "../../modules/logs/logs.service";
-import { UserPermissions } from "../../common/interfaces/rbac.interface";
-import { TypedConfigService } from "../../config/typed-config.service";
-import { RbacService } from "../rbac/rbac.service";
 import {
 	AdminUserDetail,
 	ForgotPasswordInput,
@@ -26,6 +20,14 @@ import {
 	UserResponse,
 	VerifyEmailResponse,
 } from "@workspace/shared";
+
+import { UserPermissions } from "../../common/interfaces/rbac.interface";
+import { parseExpiryToMilliseconds } from "../../common/utils/expiry";
+import { TypedConfigService } from "../../config/typed-config.service";
+import { LogService } from "../../modules/logs/logs.service";
+import { PrismaService } from "../../prisma/prisma.service";
+import { RbacService } from "../rbac/rbac.service";
+
 import { CryptoService } from "./services/crypto.service";
 import { EmailService } from "./services/email.service";
 import { TokenService } from "./services/token.service";
@@ -33,13 +35,13 @@ import { TokenService } from "./services/token.service";
 @Injectable()
 export class AuthService {
 	constructor(
-		private prisma: PrismaService,
-		private tokenService: TokenService,
-		private cryptoService: CryptoService,
-		private config: TypedConfigService,
-		private logService: LogService,
-		private rbacService: RbacService,
-		private emailService: EmailService,
+		private readonly prisma: PrismaService,
+		private readonly tokenService: TokenService,
+		private readonly cryptoService: CryptoService,
+		private readonly config: TypedConfigService,
+		private readonly logService: LogService,
+		private readonly rbacService: RbacService,
+		private readonly emailService: EmailService,
 	) {}
 
 	public async signup(signupDto: SignupInput): Promise<SignupResponse> {
@@ -180,17 +182,17 @@ export class AuthService {
 		// ── Brute-force protection ────────────────────────────────────────
 		// Check BEFORE the outer error block so TypeScript sees the clean
 		// `{...} | null` type (not a narrowed union after `!user ||`).
-		if (user && user.lockedUntil && user.lockedUntil > new Date()) {
+		if (user?.lockedUntil && user.lockedUntil > new Date()) {
 			const remainingMs: number = user.lockedUntil.getTime() - Date.now();
 			const remainingMin: number = Math.ceil(remainingMs / 60_000);
-			throw new UnauthorizedException(`Account temporarily locked. Try again in ${remainingMin} minute(s).`);
+			throw new UnauthorizedException(`Account temporarily locked. Try again in ${String(remainingMin)} minute(s).`);
 		}
 		// ─────────────────────────────────────────────────────────────────
 
 		if (!user || !user.isActive || user.isDeleted || !passwordMatches) {
 			// ── Increment failed attempt counter ───────────────────────
 			if (user) {
-				const MAX_FAILED_ATTEMPTS: number = 5;
+				const MAX_FAILED_ATTEMPTS = 5;
 				const LOCK_DURATION_MS: number = 15 * 60 * 1000; // 15 minutes
 				const shouldLock: boolean = user.failedLoginAttempts + 1 >= MAX_FAILED_ATTEMPTS;
 				const lockedUntil: Date = new Date(Date.now() + LOCK_DURATION_MS);
@@ -324,7 +326,7 @@ export class AuthService {
 			where: { id: refreshTokenJti },
 		});
 
-		if (!storedToken || storedToken?.userId !== userId) {
+		if (storedToken?.userId !== userId) {
 			throw new UnauthorizedException({
 				message: "Invalid refresh token",
 				error: "REFRESH_TOKEN_INVALID",
@@ -504,7 +506,7 @@ export class AuthService {
 
 		// Always return the same message regardless of whether the user exists
 		// to prevent email enumeration attacks
-		if (!user?.isActive || user?.isDeleted) {
+		if (!user?.isActive || user.isDeleted) {
 			return { message: "If an account with that email exists, a password reset link has been sent." };
 		}
 
@@ -781,7 +783,7 @@ export class AuthService {
 		});
 
 		// Group roles by userId
-		const rolesByUserId: Map<string, Array<{ id: string; name: string; description: string | null }>> = new Map();
+		const rolesByUserId = new Map<string, { id: string; name: string; description: string | null }[]>();
 		for (const ur of userRoles) {
 			const existing = rolesByUserId.get(ur.userId) ?? [];
 			existing.push({
@@ -945,7 +947,7 @@ export class AuthService {
 		userPermissions: UserPermissions,
 		isEmailVerified: boolean,
 	): UserResponse {
-		const hasAdminAccess: boolean = user.isSuperAdmin || userPermissions.permissions.some((p) => p.resource === "ADMIN_DASHBOARD");
+		const hasAdminAccess: boolean = userPermissions.permissions.some((p) => p.resource === "ADMIN_DASHBOARD") || user.isSuperAdmin;
 
 		return {
 			id: user.id,

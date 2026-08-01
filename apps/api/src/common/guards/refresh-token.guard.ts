@@ -1,5 +1,6 @@
 import { CanActivate, type ExecutionContext, Injectable, UnauthorizedException } from "@nestjs/common";
 import type { Request } from "express";
+
 import { TokenService, type RefreshTokenPayload } from "../../modules/auth/services/token.service";
 
 /**
@@ -19,7 +20,7 @@ export class RefreshTokenGuard implements CanActivate {
 		const request: Request = context.switchToHttp().getRequest<Request>();
 		// Check both refreshToken and adminRefreshToken since the admin panel
 		// uses isolated cookie names for cookie path isolation.
-		const token: string | undefined = request.cookies?.["refreshToken"] ?? request.cookies?.["adminRefreshToken"];
+		const token: string | undefined = request.cookies.refreshToken ?? request.cookies.adminRefreshToken;
 
 		if (!token) {
 			throw new UnauthorizedException({

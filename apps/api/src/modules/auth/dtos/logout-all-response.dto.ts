@@ -1,4 +1,4 @@
-import { createZodDto } from "nestjs-zod";
 import { LogoutAllResponseSchema } from "@workspace/shared";
+import { createZodDto } from "nestjs-zod";
 
 export class LogoutAllResponseDto extends createZodDto(LogoutAllResponseSchema) {}

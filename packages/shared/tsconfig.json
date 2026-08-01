@@ -1,16 +1,16 @@
 {
 	"extends": "@workspace/typescript-config/base.json",
 	"compilerOptions": {
-		"outDir": "./dist",
-		"rootDir": "src",
-		"declaration": true,
-		"declarationMap": true,
 		"module": "ESNext",
 		"moduleResolution": "bundler",
 		"noUncheckedIndexedAccess": false,
 		"lib": ["es2022"],
-		"stripInternal": true
+		"stripInternal": true,
+		"noEmit": true,
+		// tsup's DTS bundler generates a temp tsconfig that sets `baseUrl`
+		// (deprecated in TypeScript 6). This silences the TS5101 error.
+		"ignoreDeprecations": "6.0"
 	},
-	"include": ["src"],
+	"include": ["src", "tsup.config.ts"],
 	"exclude": ["node_modules", "dist"]
 }

@@ -1,10 +1,9 @@
 "use client";
 
-import * as React from "react";
-import { OTPInput, OTPInputContext } from "input-otp";
-
 import { cn } from "@workspace/ui/lib/utils";
+import { OTPInput, OTPInputContext } from "input-otp";
 import { MinusIcon } from "lucide-react";
+import * as React from "react";
 
 function InputOTP({
 	className,
@@ -12,7 +11,7 @@ function InputOTP({
 	...props
 }: React.ComponentProps<typeof OTPInput> & {
 	containerClassName?: string;
-}) {
+}): React.JSX.Element {
 	return (
 		<OTPInput
 			data-slot="input-otp"
@@ -24,7 +23,7 @@ function InputOTP({
 	);
 }
 
-function InputOTPGroup({ className, ...props }: React.ComponentProps<"div">) {
+function InputOTPGroup({ className, ...props }: React.ComponentProps<"div">): React.JSX.Element {
 	return (
 		<div
 			data-slot="input-otp-group"
@@ -43,9 +42,9 @@ function InputOTPSlot({
 	...props
 }: React.ComponentProps<"div"> & {
 	index: number;
-}) {
+}): React.JSX.Element {
 	const inputOTPContext = React.useContext(OTPInputContext);
-	const { char, hasFakeCaret, isActive } = inputOTPContext?.slots[index] ?? {};
+	const { char, hasFakeCaret, isActive } = inputOTPContext.slots[index] ?? {};
 
 	return (
 		<div
@@ -57,16 +56,16 @@ function InputOTPSlot({
 			)}
 			{...props}>
 			{char}
-			{hasFakeCaret && (
+			{hasFakeCaret ? (
 				<div className="pointer-events-none absolute inset-0 flex items-center justify-center">
 					<div className="h-4 w-px animate-caret-blink bg-foreground duration-1000" />
 				</div>
-			)}
+			) : null}
 		</div>
 	);
 }
 
-function InputOTPSeparator({ ...props }: React.ComponentProps<"div">) {
+function InputOTPSeparator({ ...props }: React.ComponentProps<"div">): React.JSX.Element {
 	return (
 		<div data-slot="input-otp-separator" className="flex items-center [&_svg:not([class*='size-'])]:size-4" role="separator" {...props}>
 			<MinusIcon />

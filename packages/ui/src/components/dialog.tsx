@@ -1,29 +1,28 @@
 "use client";
 
-import * as React from "react";
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
-
-import { cn } from "@workspace/ui/lib/utils";
 import { Button } from "@workspace/ui/components/button";
+import { cn } from "@workspace/ui/lib/utils";
 import { XIcon } from "lucide-react";
+import * as React from "react";
 
-function Dialog({ ...props }: DialogPrimitive.Root.Props) {
+function Dialog({ ...props }: DialogPrimitive.Root.Props): React.JSX.Element {
 	return <DialogPrimitive.Root data-slot="dialog" {...props} />;
 }
 
-function DialogTrigger({ ...props }: DialogPrimitive.Trigger.Props) {
+function DialogTrigger({ ...props }: DialogPrimitive.Trigger.Props): React.JSX.Element {
 	return <DialogPrimitive.Trigger data-slot="dialog-trigger" {...props} />;
 }
 
-function DialogPortal({ ...props }: DialogPrimitive.Portal.Props) {
+function DialogPortal({ ...props }: DialogPrimitive.Portal.Props): React.JSX.Element {
 	return <DialogPrimitive.Portal data-slot="dialog-portal" {...props} />;
 }
 
-function DialogClose({ ...props }: DialogPrimitive.Close.Props) {
+function DialogClose({ ...props }: DialogPrimitive.Close.Props): React.JSX.Element {
 	return <DialogPrimitive.Close data-slot="dialog-close" {...props} />;
 }
 
-function DialogOverlay({ className, ...props }: DialogPrimitive.Backdrop.Props) {
+function DialogOverlay({ className, ...props }: DialogPrimitive.Backdrop.Props): React.JSX.Element {
 	return (
 		<DialogPrimitive.Backdrop
 			data-slot="dialog-overlay"
@@ -43,7 +42,7 @@ function DialogContent({
 	...props
 }: DialogPrimitive.Popup.Props & {
 	showCloseButton?: boolean;
-}) {
+}): React.JSX.Element {
 	return (
 		<DialogPortal>
 			<DialogOverlay />
@@ -55,18 +54,18 @@ function DialogContent({
 				)}
 				{...props}>
 				{children}
-				{showCloseButton && (
+				{showCloseButton ? (
 					<DialogPrimitive.Close data-slot="dialog-close" render={<Button variant="ghost" className="absolute end-4 top-4" size="icon-sm" />}>
 						<XIcon />
 						<span className="sr-only">Close</span>
 					</DialogPrimitive.Close>
-				)}
+				) : null}
 			</DialogPrimitive.Popup>
 		</DialogPortal>
 	);
 }
 
-function DialogHeader({ className, ...props }: React.ComponentProps<"div">) {
+function DialogHeader({ className, ...props }: React.ComponentProps<"div">): React.JSX.Element {
 	return <div data-slot="dialog-header" className={cn("flex flex-col gap-2", className)} {...props} />;
 }
 
@@ -77,20 +76,20 @@ function DialogFooter({
 	...props
 }: React.ComponentProps<"div"> & {
 	showCloseButton?: boolean;
-}) {
+}): React.JSX.Element {
 	return (
 		<div data-slot="dialog-footer" className={cn("flex flex-col-reverse gap-2 sm:flex-row sm:justify-end", className)} {...props}>
 			{children}
-			{showCloseButton && <DialogPrimitive.Close render={<Button variant="outline" />}>Close</DialogPrimitive.Close>}
+			{showCloseButton ? <DialogPrimitive.Close render={<Button variant="outline" />}>Close</DialogPrimitive.Close> : null}
 		</div>
 	);
 }
 
-function DialogTitle({ className, ...props }: DialogPrimitive.Title.Props) {
+function DialogTitle({ className, ...props }: DialogPrimitive.Title.Props): React.JSX.Element {
 	return <DialogPrimitive.Title data-slot="dialog-title" className={cn("font-heading leading-none font-medium", className)} {...props} />;
 }
 
-function DialogDescription({ className, ...props }: DialogPrimitive.Description.Props) {
+function DialogDescription({ className, ...props }: DialogPrimitive.Description.Props): React.JSX.Element {
 	return (
 		<DialogPrimitive.Description
 			data-slot="dialog-description"

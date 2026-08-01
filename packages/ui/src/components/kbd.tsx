@@ -1,6 +1,6 @@
 import { cn } from "@workspace/ui/lib/utils";
 
-function Kbd({ className, ...props }: React.ComponentProps<"kbd">) {
+function Kbd({ className, ...props }: React.ComponentProps<"kbd">): React.JSX.Element {
 	return (
 		<kbd
 			data-slot="kbd"
@@ -13,7 +13,7 @@ function Kbd({ className, ...props }: React.ComponentProps<"kbd">) {
 	);
 }
 
-function KbdGroup({ className, ...props }: React.ComponentProps<"div">) {
+function KbdGroup({ className, ...props }: React.ComponentProps<"div">): React.JSX.Element {
 	return <kbd data-slot="kbd-group" className={cn("inline-flex items-center gap-1", className)} {...props} />;
 }
 

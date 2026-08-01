@@ -6,7 +6,24 @@
 			"dependsOn": ["^build"],
 			"cache": false,
 			"inputs": ["$TURBO_DEFAULT$", ".env*"],
-			"outputs": [".next/**", "!.next/cache/**", "dist/**"]
+			"outputs": [".next/**", "!.next/cache/**", "dist/**"],
+			"env": [
+				"NODE_ENV",
+				"DATABASE_URL",
+				"JWT_ACCESS_SECRET",
+				"JWT_ACCESS_EXPIRY",
+				"JWT_REFRESH_SECRET",
+				"JWT_REFRESH_EXPIRY",
+				"EMAIL_VERIFICATION_SECRET",
+				"BCRYPT_SALT_ROUNDS",
+				"RESEND_API_KEY",
+				"EMAIL_FROM_ADDRESS",
+				"APP_NAME",
+				"APP_URL",
+				"PORT",
+				"CORS_ORIGINS",
+				"NEXT_PUBLIC_API_URL"
+			]
 		},
 		"lint": {
 			"dependsOn": ["^lint"],
@@ -17,13 +34,95 @@
 			"cache": false
 		},
 		"typecheck": {
-			"dependsOn": ["^typecheck"],
+			// ^build ensures @workspace/shared's dist/ exists before the API's
+			// `nest build` (which resolves shared via package exports) runs.
+			"dependsOn": ["^build", "^typecheck"],
+			"cache": false
+		},
+		// ── Database tasks ───────────────────────────────────────────────────
+		// All db:* scripts are defined in apps/api (the only workspace that has
+		// them), so `pnpm turbo run db:<task>` executes them exactly once there.
+		// The root `pnpm db:*` shortcuts are plain `pnpm --filter` calls and are
+		// NOT part of the turbo graph (turbo 2.x doesn't execute root scripts).
+		"db:generate": {
+			"cache": false
+		},
+		"db:deploy": {
+			"cache": false,
+			"env": ["DATABASE_URL"]
+		},
+		"db:migrate": {
+			"cache": false,
+			"env": ["DATABASE_URL"],
+			// `prisma migrate dev` may prompt for a migration name — pass stdin through.
+			"interactive": true
+		},
+		"db:migrate:create": {
+			"cache": false,
+			"env": ["DATABASE_URL"],
+			// `prisma migrate dev --create-only` may prompt for a migration name.
+			"interactive": true
+		},
+		"db:migrate:status": {
+			"cache": false,
+			"env": ["DATABASE_URL"]
+		},
+		"db:push": {
+			"cache": false,
+			"env": ["DATABASE_URL"]
+		},
+		"db:seed": {
+			"cache": false,
+			"env": ["DATABASE_URL"],
+			// Seeding needs the generated Prisma client and an up-to-date schema,
+			// so ensure db:generate + db:deploy run first (both idempotent).
+			"dependsOn": ["db:generate", "db:deploy"]
+		},
+		"db:studio": {
+			"cache": false,
+			"env": ["DATABASE_URL"],
+			// `prisma studio` is a long-running dev server — don't wait for exit.
+			"persistent": true
+		},
+		"db:reset": {
+			"cache": false,
+			"env": ["DATABASE_URL"],
+			"dependsOn": ["db:generate"]
+		},
+		// ── Dependency-hygiene tasks (syncpack) ──────────────────────────────
+		// The actual scripts live in packages/tooling. The root package.json
+		// `deps:check` / `deps:fix` / `deps:list` scripts delegate here because
+		// turbo 2.x doesn't execute root package.json scripts as tasks.
+		"deps:check": {
+			"cache": false
+		},
+		"deps:fix": {
+			"cache": false
+		},
+		"deps:list": {
 			"cache": false
 		},
 		"dev": {
 			"dependsOn": ["^build"],
 			"cache": false,
-			"persistent": true
+			"persistent": true,
+			"env": [
+				"NODE_ENV",
+				"DATABASE_URL",
+				"JWT_ACCESS_SECRET",
+				"JWT_ACCESS_EXPIRY",
+				"JWT_REFRESH_SECRET",
+				"JWT_REFRESH_EXPIRY",
+				"EMAIL_VERIFICATION_SECRET",
+				"BCRYPT_SALT_ROUNDS",
+				"RESEND_API_KEY",
+				"EMAIL_FROM_ADDRESS",
+				"APP_NAME",
+				"APP_URL",
+				"PORT",
+				"CORS_ORIGINS",
+				"NEXT_PUBLIC_API_URL"
+			]
 		}
 	}
 }

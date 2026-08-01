@@ -1,9 +1,9 @@
 "use client";
 
-import * as React from "react";
 import { ThemeProvider as NextThemesProvider, useTheme } from "next-themes";
+import * as React from "react";
 
-function ThemeProvider({ children, ...props }: React.ComponentProps<typeof NextThemesProvider>) {
+function ThemeProvider({ children, ...props }: React.ComponentProps<typeof NextThemesProvider>): React.JSX.Element {
 	return (
 		<NextThemesProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange {...props}>
 			<ThemeHotkey />
@@ -12,7 +12,7 @@ function ThemeProvider({ children, ...props }: React.ComponentProps<typeof NextT
 	);
 }
 
-function isTypingTarget(target: EventTarget | null) {
+function isTypingTarget(target: EventTarget | null): boolean {
 	if (!(target instanceof HTMLElement)) {
 		return false;
 	}
@@ -20,11 +20,11 @@ function isTypingTarget(target: EventTarget | null) {
 	return target.isContentEditable || target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.tagName === "SELECT";
 }
 
-function ThemeHotkey() {
+function ThemeHotkey(): null {
 	const { resolvedTheme, setTheme } = useTheme();
 
 	React.useEffect(() => {
-		function onKeyDown(event: KeyboardEvent) {
+		function onKeyDown(event: KeyboardEvent): void {
 			if (event.defaultPrevented || event.repeat) {
 				return;
 			}
@@ -45,8 +45,7 @@ function ThemeHotkey() {
 		}
 
 		window.addEventListener("keydown", onKeyDown);
-
-		return () => {
+		return (): void => {
 			window.removeEventListener("keydown", onKeyDown);
 		};
 	}, [resolvedTheme, setTheme]);

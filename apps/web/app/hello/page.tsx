@@ -1,26 +1,23 @@
 "use client";
 
-import { useState } from "react";
-import { useAuth } from "@workspace/ui/lib/auth";
-import { LogoutButton } from "@/components/logout-button";
-import type { UserResponse } from "@workspace/shared";
+import { useAuth } from "@workspace/client/lib/auth";
+import { authEndpoints } from "@workspace/client/lib/endpoints";
+import { useCallback, useState, type JSX } from "react";
 
-export default function HelloPage() {
+import { LogoutButton } from "@/components/logout-button";
+
+export default function HelloPage(): JSX.Element {
 	const { api } = useAuth();
 	const [showDetails, setShowDetails] = useState(false);
+	const toggleDetails = useCallback((): void => {
+		setShowDetails((prev: boolean) => !prev);
+	}, []);
 
-	const {
-		data: response,
-		isLoading,
-		error,
-	} = api.useQuery<{
-		readonly success: boolean;
-		readonly data?: UserResponse;
-	}>(["auth", "me"], "/auth/me");
+	const meQuery = api.procedure(authEndpoints.me).useQuery();
 
-	const user = response?.data;
+	const user = meQuery.data?.data;
 
-	if (isLoading) {
+	if (meQuery.isLoading) {
 		return (
 			<div className="flex min-h-svh items-center justify-center">
 				<div className="flex flex-col items-center gap-4">
@@ -34,7 +31,7 @@ export default function HelloPage() {
 		);
 	}
 
-	if (error) {
+	if (meQuery.error) {
 		return (
 			<div className="flex min-h-svh items-center justify-center">
 				<div className="text-center">
@@ -72,7 +69,9 @@ export default function HelloPage() {
 						}`}>
 						{user?.isEmailVerified ? "Email Verified" : "Email Not Verified"}
 					</span>
-					{user?.isSuperAdmin && <span className="inline-flex items-center rounded-full bg-purple-100 px-2.5 py-0.5 text-xs font-medium text-purple-700">Super Admin</span>}
+					{user?.isSuperAdmin ? (
+						<span className="inline-flex items-center rounded-full bg-purple-100 px-2.5 py-0.5 text-xs font-medium text-purple-700">Super Admin</span>
+					) : null}
 					{user?.roles.map((role) => (
 						<span key={role.id} className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-700">
 							{role.name}
@@ -82,13 +81,13 @@ export default function HelloPage() {
 
 				{/* Details card */}
 				<div className="rounded-lg border bg-card p-6 text-card-foreground shadow-xs">
-					<button onClick={() => setShowDetails(!showDetails)} className="flex w-full items-center justify-between text-sm font-medium">
+					<button onClick={toggleDetails} className="flex w-full items-center justify-between text-sm font-medium">
 						Account Details
 						<svg className={`size-4 transition-transform ${showDetails ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
 							<path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
 						</svg>
 					</button>
-					{showDetails && user && (
+					{showDetails && user ? (
 						<div className="mt-4 space-y-2 border-t pt-4 text-sm">
 							<div className="flex justify-between">
 								<span className="text-muted-foreground">User ID</span>
@@ -115,7 +114,7 @@ export default function HelloPage() {
 								<span>{user.permissions.length}</span>
 							</div>
 						</div>
-					)}
+					) : null}
 				</div>
 
 				{/* Actions */}

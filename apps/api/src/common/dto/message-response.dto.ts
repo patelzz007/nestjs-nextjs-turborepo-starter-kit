@@ -1,5 +1,5 @@
-import { createZodDto } from "nestjs-zod";
 import { MessageResponseSchema } from "@workspace/shared";
+import { createZodDto } from "nestjs-zod";
 
 /**
  * Generic message response DTO — used for endpoints that return only a message string.

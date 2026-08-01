@@ -3,9 +3,7 @@ import { Injectable, Logger } from "@nestjs/common";
 /**
  * Metadata shape for structured log entries.
  */
-export interface LogMetadata {
-	readonly [key: string]: string | number | boolean | null | undefined;
-}
+export type LogMetadata = Readonly<Record<string, string | number | boolean | null | undefined>>;
 
 /**
  * Options for log entries — supports context, optional userId, and structured metadata.

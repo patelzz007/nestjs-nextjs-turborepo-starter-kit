@@ -1,7 +1,8 @@
 import { Injectable, Logger } from "@nestjs/common";
-import { PrismaService } from "../../prisma/prisma.service";
+
 import type { UserPermissions } from "../../common/interfaces/rbac.interface";
 import type { SlimRoleResponse, PermissionDetailsResponse } from "../../common/schemas/user.schema";
+import { PrismaService } from "../../prisma/prisma.service";
 
 /**
  * Role-Based Access Control service.
@@ -46,11 +47,11 @@ export class RbacService {
 		}));
 
 		// Aggregate permissions from all roles, deduplicating by action + resource
-		const permissionMap: Map<string, PermissionDetailsResponse> = new Map();
+		const permissionMap = new Map<string, PermissionDetailsResponse>();
 
 		for (const userRole of userRoles) {
 			for (const rp of userRole.role.rolePermissions) {
-				const key: string = `${rp.permission.action}:${rp.permission.resource}`;
+				const key = `${rp.permission.action}:${rp.permission.resource}`;
 				if (!permissionMap.has(key)) {
 					permissionMap.set(key, {
 						id: rp.permission.id,

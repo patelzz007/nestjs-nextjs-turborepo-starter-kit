@@ -1,11 +1,10 @@
-import * as React from "react";
 import { mergeProps } from "@base-ui/react/merge-props";
 import { useRender } from "@base-ui/react/use-render";
-import { cva, type VariantProps } from "class-variance-authority";
-
 import { cn } from "@workspace/ui/lib/utils";
+import { cva, type VariantProps } from "class-variance-authority";
+import * as React from "react";
 
-function BubbleGroup({ className, ...props }: React.ComponentProps<"div">) {
+function BubbleGroup({ className, ...props }: React.ComponentProps<"div">): React.JSX.Element {
 	return <div data-slot="bubble-group" className={cn("flex min-w-0 flex-col gap-2", className)} {...props} />;
 }
 
@@ -43,11 +42,11 @@ function Bubble({
 }: React.ComponentProps<"div"> &
 	VariantProps<typeof bubbleVariants> & {
 		align?: "start" | "end";
-	}) {
+	}): React.JSX.Element {
 	return <div data-slot="bubble" data-variant={variant} data-align={align} className={cn(bubbleVariants({ variant }), className)} {...props} />;
 }
 
-function BubbleContent({ className, render, ...props }: useRender.ComponentProps<"div">) {
+function BubbleContent({ className, render, ...props }: useRender.ComponentProps<"div">): React.JSX.Element {
 	return useRender({
 		defaultTagName: "div",
 		props: mergeProps<"div">(
@@ -94,7 +93,7 @@ function BubbleReactions({
 }: React.ComponentProps<"div"> & {
 	align?: "start" | "end";
 	side?: "top" | "bottom";
-}) {
+}): React.JSX.Element {
 	return <div data-slot="bubble-reactions" data-align={align} data-side={side} className={cn(bubbleReactionsVariants({ side, align }), className)} {...props} />;
 }
 

@@ -1,7 +1,8 @@
 import { z } from "zod";
+
+import { BaseResponseSchema, DateStringSchema } from "./common";
 import { PermissionActionSchema, PermissionResourceSchema } from "./enums";
-import { BaseResponseSchema } from "./common";
-import { PermissionDetailsSchema, SlimRoleSchema, UserResponseSchema } from "./user";
+import { PermissionDetailsSchema } from "./user";
 
 export const CreateRoleSchema = z
 	.object({
@@ -139,7 +140,7 @@ export const AssignPermissionsToUserBulkSchema = z
 		permissionIds: z.array(z.uuid()).min(1).meta({
 			description: "List of permission IDs to assign",
 		}),
-		expiresAt: z.string().datetime().optional().meta({
+		expiresAt: DateStringSchema.optional().meta({
 			description: "ISO date string for when the grants expire",
 			example: "2027-01-01T00:00:00.000Z",
 		}),
@@ -230,7 +231,7 @@ export type PermissionFilterInput = z.output<typeof PermissionFilterSchema>;
 // ── Permission update (PATCH) ────────────────────────────────────────────────
 
 const abacConditionValue = z.union([z.string(), z.number(), z.boolean(), z.null()]);
-const abacConditions: z.ZodType<Record<string, string | number | boolean | null>> = z.record(z.string(), abacConditionValue);
+const abacConditions = z.record(z.string(), abacConditionValue);
 
 export const PermissionUpdateSchema = z
 	.object({
@@ -541,7 +542,7 @@ export const InspectPermissionEntrySchema = z
 		action: z.string(),
 		resource: z.string(),
 		via: z.string(),
-		expiresAt: z.string().datetime().nullable().optional(),
+		expiresAt: DateStringSchema.nullable().optional(),
 	})
 	.strict();
 
@@ -594,7 +595,7 @@ export const FindPermissionOwnersResponseSchema = z
 			.array(
 				z.object({
 					name: z.string(),
-					assignedAt: z.string().datetime(),
+					assignedAt: DateStringSchema,
 				}),
 			)
 			.optional(),

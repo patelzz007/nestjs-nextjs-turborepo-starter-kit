@@ -1,12 +1,11 @@
+import { cn } from "@workspace/ui/lib/utils";
 import * as React from "react";
 
-import { cn } from "@workspace/ui/lib/utils";
-
-function MessageGroup({ className, ...props }: React.ComponentProps<"div">) {
+function MessageGroup({ className, ...props }: React.ComponentProps<"div">): React.JSX.Element {
 	return <div data-slot="message-group" className={cn("flex min-w-0 flex-col gap-2", className)} {...props} />;
 }
 
-function Message({ className, align = "start", ...props }: React.ComponentProps<"div"> & { align?: "start" | "end" }) {
+function Message({ className, align = "start", ...props }: React.ComponentProps<"div"> & { align?: "start" | "end" }): React.JSX.Element {
 	return (
 		<div
 			data-slot="message"
@@ -17,7 +16,7 @@ function Message({ className, align = "start", ...props }: React.ComponentProps<
 	);
 }
 
-function MessageAvatar({ className, ...props }: React.ComponentProps<"div">) {
+function MessageAvatar({ className, ...props }: React.ComponentProps<"div">): React.JSX.Element {
 	return (
 		<div
 			data-slot="message-avatar"
@@ -30,7 +29,7 @@ function MessageAvatar({ className, ...props }: React.ComponentProps<"div">) {
 	);
 }
 
-function MessageContent({ className, ...props }: React.ComponentProps<"div">) {
+function MessageContent({ className, ...props }: React.ComponentProps<"div">): React.JSX.Element {
 	return (
 		<div
 			data-slot="message-content"
@@ -40,7 +39,7 @@ function MessageContent({ className, ...props }: React.ComponentProps<"div">) {
 	);
 }
 
-function MessageHeader({ className, ...props }: React.ComponentProps<"div">) {
+function MessageHeader({ className, ...props }: React.ComponentProps<"div">): React.JSX.Element {
 	return (
 		<div
 			data-slot="message-header"
@@ -50,7 +49,7 @@ function MessageHeader({ className, ...props }: React.ComponentProps<"div">) {
 	);
 }
 
-function MessageFooter({ className, ...props }: React.ComponentProps<"div">) {
+function MessageFooter({ className, ...props }: React.ComponentProps<"div">): React.JSX.Element {
 	return (
 		<div
 			data-slot="message-footer"

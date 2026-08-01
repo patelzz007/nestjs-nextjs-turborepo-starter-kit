@@ -15,6 +15,10 @@
  * @param token - The JWT string (three dot-separated base64url parts)
  * @returns The decoded payload object, or `null` if the token is malformed
  */
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 export function decodeJwtPayload(token: string): Record<string, unknown> | null {
 	try {
 		const parts: string[] = token.split(".");
@@ -27,7 +31,9 @@ export function decodeJwtPayload(token: string): Record<string, unknown> | null 
 		const base64: string = payload.replace(/-/g, "+").replace(/_/g, "/");
 		const decoded: string = atob(base64);
 
-		return JSON.parse(decoded) as Record<string, unknown>;
+		const parsed: unknown = JSON.parse(decoded);
+		// JWT payloads are JSON objects — narrow via a type guard instead of an assertion.
+		return isRecord(parsed) ? parsed : null;
 	} catch {
 		return null;
 	}

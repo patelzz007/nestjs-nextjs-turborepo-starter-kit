@@ -4,8 +4,8 @@
 // ============================================
 "use client";
 
+import { AuthProvider, type AuthProviderProps } from "@workspace/client/lib/auth";
 import { useRouter } from "next/navigation";
-import { AuthProvider, type AuthProviderProps } from "@workspace/ui/lib/auth";
 import { useCallback, type JSX } from "react";
 
 export interface ClientAuthWrapperProps {
@@ -29,7 +29,6 @@ export function ClientAuthWrapper({ children, redirectPath = "/auth/login" }: Cl
 
 	const authProps: AuthProviderProps = {
 		children,
-		baseUrl: process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080",
 		onUnauthorizedRedirect: redirectPath,
 		navigate,
 		refresh,

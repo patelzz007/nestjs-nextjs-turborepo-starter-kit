@@ -3,35 +3,14 @@
 // ============================================
 "use client";
 
-import { useState, type FormEvent, type JSX, type ReactNode } from "react";
-import { useRouter } from "next/navigation";
-import { z } from "zod";
+import { useAuth } from "@workspace/client/lib/auth";
+import { authEndpoints } from "@workspace/client/lib/endpoints";
+import { ApiErrorSchema } from "@workspace/client/lib/use-api";
 import { FormShell } from "@workspace/ui/components/form-shell";
 import { Input } from "@workspace/ui/components/input";
 import { Label } from "@workspace/ui/components/label";
-import { useAuth } from "@workspace/ui/lib/auth";
-
-// ── Zod schema for the login response envelope ─────────────────────────────
-
-const ApiErrorBodySchema = z
-	.object({
-		message: z.string(),
-	})
-	.loose();
-
-// ── Response shape ─────────────────────────────────────────────────────────
-
-interface AdminLoginUser {
-	readonly hasAdminAccess?: boolean;
-}
-
-interface AdminLoginData {
-	readonly user?: AdminLoginUser;
-}
-
-interface AdminLoginResponse {
-	readonly data?: AdminLoginData;
-}
+import { useRouter } from "next/navigation";
+import { useCallback, useState, type JSX, type ReactNode } from "react";
 
 // ── Props ───────────────────────────────────────────────────────────────────
 
@@ -55,39 +34,53 @@ export function LoginForm({ logo, title, heading, subtitle, emailPlaceholder = "
 	const router = useRouter();
 	const { api, login: authLogin } = useAuth();
 
+	const handleEmailChange = useCallback((e: React.ChangeEvent<HTMLInputElement>): void => {
+		setEmail(e.target.value);
+	}, []);
+
+	const handlePasswordChange = useCallback((e: React.ChangeEvent<HTMLInputElement>): void => {
+		setPassword(e.target.value);
+	}, []);
+
 	// Admin login always sends X-Client-Type: admin for cookie isolation
-	const loginMutation = api.useMutation<AdminLoginResponse, { email: string; password: string }>("POST", "/auth/login", { headers: { "X-Client-Type": "admin" } });
+	// (handled by authEndpoints.adminLogin's baseOptions)
+	const loginMutation = api.procedure(authEndpoints.adminLogin).useMutation();
 
-	async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
-		event.preventDefault();
-		setIsLoading(true);
-		setError(null);
+	const handleFormSubmit = useCallback(
+		(event: React.SyntheticEvent<HTMLFormElement>): void => {
+			event.preventDefault();
+			setIsLoading(true);
+			setError(null);
 
-		try {
-			const data: AdminLoginResponse = await loginMutation.mutateAsync({ email, password });
+			loginMutation
+				.mutateAsync({ email, password })
+				.then((data): void => {
+					// Verify admin access
+					const hasAdminAccess: boolean = data.data.user.hasAdminAccess;
+					if (!hasAdminAccess) {
+						setError("Admin access required. This account does not have administrator privileges.");
+						return;
+					}
 
-			// Verify admin access
-			const user: AdminLoginUser | undefined = data.data?.user;
-			if (!user?.hasAdminAccess) {
-				setError("Admin access required. This account does not have administrator privileges.");
-				return;
-			}
-
-			authLogin();
-			router.push(redirectPath);
-		} catch (err: unknown) {
-			const parsed = ApiErrorBodySchema.safeParse(err);
-			if (parsed.success) {
-				setError(parsed.data.message);
-			} else if (err instanceof Error) {
-				setError(err.message);
-			} else {
-				setError("Unable to connect to the server. Please try again.");
-			}
-		} finally {
-			setIsLoading(false);
-		}
-	}
+					authLogin();
+					router.push(redirectPath);
+				})
+				.catch((err: unknown): void => {
+					const parsed = ApiErrorSchema.safeParse(err);
+					if (parsed.success) {
+						setError(parsed.data.message);
+					} else if (err instanceof Error) {
+						setError(err.message);
+					} else {
+						setError("Unable to connect to the server. Please try again.");
+					}
+				})
+				.finally((): void => {
+					setIsLoading(false);
+				});
+		},
+		[email, password, loginMutation, authLogin, router, redirectPath],
+	);
 
 	return (
 		<>
@@ -103,10 +96,10 @@ export function LoginForm({ logo, title, heading, subtitle, emailPlaceholder = "
 						<p className="text-sm text-balance text-muted-foreground">{subtitle}</p>
 					</div>
 
-					<FormShell error={error} isLoading={isLoading} submitLabel="Login" loadingLabel="Logging in..." onSubmit={handleSubmit}>
+					<FormShell error={error} isLoading={isLoading} submitLabel="Login" loadingLabel="Logging in..." onSubmit={handleFormSubmit}>
 						<div className="space-y-2">
 							<Label htmlFor="email">Email</Label>
-							<Input id="email" type="email" placeholder={emailPlaceholder} value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" autoFocus />
+							<Input id="email" type="email" placeholder={emailPlaceholder} value={email} onChange={handleEmailChange} required autoComplete="email" autoFocus />
 						</div>
 						<div className="space-y-2">
 							<div className="flex items-center justify-between">
@@ -120,7 +113,7 @@ export function LoginForm({ logo, title, heading, subtitle, emailPlaceholder = "
 								type="password"
 								placeholder="Enter your password"
 								value={password}
-								onChange={(e) => setPassword(e.target.value)}
+								onChange={handlePasswordChange}
 								required
 								autoComplete="current-password"
 							/>

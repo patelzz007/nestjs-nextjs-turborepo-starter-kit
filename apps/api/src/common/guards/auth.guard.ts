@@ -1,9 +1,10 @@
 import { CanActivate, type ExecutionContext, Injectable, UnauthorizedException } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
 import type { Request } from "express";
+
 import { TokenService } from "../../modules/auth/services/token.service";
-import { IS_PUBLIC_KEY } from "../decorators/public.decorator";
 import type { AccessTokenPayload } from "../../modules/auth/services/token.service";
+import { IS_PUBLIC_KEY } from "../decorators/public.decorator";
 
 /**
  * Guard that validates the JWT access token.
@@ -39,7 +40,7 @@ export class AuthGuard implements CanActivate {
 		// adminAccessToken since the admin panel uses isolated cookie names.
 		const authorization: string | undefined = request.headers.authorization;
 		const token: string | undefined =
-			(authorization?.startsWith("Bearer ") ? authorization.slice(7) : undefined) ?? request.cookies?.["accessToken"] ?? request.cookies?.["adminAccessToken"];
+			(authorization?.startsWith("Bearer ") ? authorization.slice(7) : undefined) ?? request.cookies.accessToken ?? request.cookies.adminAccessToken;
 
 		if (!token) {
 			throw new UnauthorizedException({

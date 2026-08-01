@@ -1,12 +1,12 @@
+import "@workspace/ui/globals.css";
+
+import { QueryProvider } from "@workspace/client/lib/query-provider";
+import { cn } from "@workspace/ui/lib/utils";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, JetBrains_Mono } from "next/font/google";
 
-import "@workspace/ui/globals.css";
-import { ThemeProvider } from "@/components/theme-provider";
-import { AuthProvider } from "@workspace/ui/lib/auth";
-import { QueryProvider } from "@workspace/ui/lib/query-provider";
-import { cn } from "@workspace/ui/lib/utils";
 import { ClientAuthWrapper } from "@/components/client-auth-wrapper";
+import { ThemeProvider } from "@/components/theme-provider";
 
 const jetbrainsMonoHeading = JetBrains_Mono({
 	subsets: ["latin"],
@@ -30,7 +30,7 @@ export default function RootLayout({
 	children,
 }: Readonly<{
 	children: React.ReactNode;
-}>) {
+}>): React.JSX.Element {
 	return (
 		<html lang="en" suppressHydrationWarning className={cn("antialiased", fontMono.variable, "font-sans", geist.variable, jetbrainsMonoHeading.variable)}>
 			<body>

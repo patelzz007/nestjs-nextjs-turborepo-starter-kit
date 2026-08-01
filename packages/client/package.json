@@ -1,0 +1,32 @@
+{
+	"name": "@workspace/client",
+	"version": "0.0.0",
+	"type": "module",
+	"private": true,
+	"scripts": {
+		"lint": "eslint",
+		"format": "prettier --write \"**/*.{ts,tsx}\"",
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@tanstack/react-query": "^5.101.4",
+		"@workspace/shared": "workspace:*",
+		"react": "19.2.8",
+		"react-dom": "19.2.8",
+		"zod": "4.4.3"
+	},
+	"devDependencies": {
+		"@types/node": "^22.20.1",
+		"@types/react": "^19.2.17",
+		"@types/react-dom": "^19.2.3",
+		"@workspace/eslint-config": "workspace:*",
+		"@workspace/typescript-config": "workspace:*",
+		"eslint": "^9.39.5",
+		"typescript": "6.0.3"
+	},
+	"exports": {
+		"./lib/*.tsx": "./src/lib/*.tsx",
+		"./lib/*.ts": "./src/lib/*.ts",
+		"./lib/*": "./src/lib/*"
+	}
+}

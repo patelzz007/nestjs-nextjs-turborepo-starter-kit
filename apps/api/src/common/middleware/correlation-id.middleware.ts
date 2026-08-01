@@ -1,6 +1,7 @@
 import { Injectable, type NestMiddleware } from "@nestjs/common";
 import type { Request, Response, NextFunction } from "express";
 import { nanoid } from "nanoid";
+
 import type { JsonValue } from "../../types/json";
 
 /**
@@ -26,7 +27,8 @@ export interface RequestWithTrace extends Request {
 export class CorrelationIdMiddleware implements NestMiddleware {
 	public use(req: RequestWithTrace, res: Response, next: NextFunction): void {
 		// Generate or forward correlation ID
-		const correlationId: string = (req.headers["x-correlation-id"] as string | undefined) ?? (req.headers["x-request-id"] as string | undefined) ?? nanoid();
+		const headerValue: string | string[] | undefined = req.headers["x-correlation-id"] ?? req.headers["x-request-id"];
+		const correlationId: string = typeof headerValue === "string" ? headerValue : nanoid();
 
 		req.correlationId = correlationId;
 		req.traceId = correlationId;

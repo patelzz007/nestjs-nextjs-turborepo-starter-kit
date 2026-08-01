@@ -1,15 +1,14 @@
 "use client";
 
-import * as React from "react";
 import { Popover as PopoverPrimitive } from "@base-ui/react/popover";
-
 import { cn } from "@workspace/ui/lib/utils";
+import * as React from "react";
 
-function Popover({ ...props }: PopoverPrimitive.Root.Props) {
+function Popover({ ...props }: PopoverPrimitive.Root.Props): React.JSX.Element {
 	return <PopoverPrimitive.Root data-slot="popover" {...props} />;
 }
 
-function PopoverTrigger({ ...props }: PopoverPrimitive.Trigger.Props) {
+function PopoverTrigger({ ...props }: PopoverPrimitive.Trigger.Props): React.JSX.Element {
 	return <PopoverPrimitive.Trigger data-slot="popover-trigger" {...props} />;
 }
 
@@ -20,7 +19,7 @@ function PopoverContent({
 	side = "bottom",
 	sideOffset = 4,
 	...props
-}: PopoverPrimitive.Popup.Props & Pick<PopoverPrimitive.Positioner.Props, "align" | "alignOffset" | "side" | "sideOffset">) {
+}: PopoverPrimitive.Popup.Props & Pick<PopoverPrimitive.Positioner.Props, "align" | "alignOffset" | "side" | "sideOffset">): React.JSX.Element {
 	return (
 		<PopoverPrimitive.Portal>
 			<PopoverPrimitive.Positioner align={align} alignOffset={alignOffset} side={side} sideOffset={sideOffset} className="isolate z-50">
@@ -37,15 +36,15 @@ function PopoverContent({
 	);
 }
 
-function PopoverHeader({ className, ...props }: React.ComponentProps<"div">) {
+function PopoverHeader({ className, ...props }: React.ComponentProps<"div">): React.JSX.Element {
 	return <div data-slot="popover-header" className={cn("flex flex-col gap-1 text-sm", className)} {...props} />;
 }
 
-function PopoverTitle({ className, ...props }: PopoverPrimitive.Title.Props) {
+function PopoverTitle({ className, ...props }: PopoverPrimitive.Title.Props): React.JSX.Element {
 	return <PopoverPrimitive.Title data-slot="popover-title" className={cn("font-medium", className)} {...props} />;
 }
 
-function PopoverDescription({ className, ...props }: PopoverPrimitive.Description.Props) {
+function PopoverDescription({ className, ...props }: PopoverPrimitive.Description.Props): React.JSX.Element {
 	return <PopoverPrimitive.Description data-slot="popover-description" className={cn("text-muted-foreground", className)} {...props} />;
 }
 

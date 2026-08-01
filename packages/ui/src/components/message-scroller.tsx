@@ -1,17 +1,16 @@
 "use client";
 
-import * as React from "react";
 import { MessageScroller as MessageScrollerPrimitive, useMessageScroller, useMessageScrollerScrollable, useMessageScrollerVisibility } from "@shadcn/react/message-scroller";
-
-import { cn } from "@workspace/ui/lib/utils";
 import { Button } from "@workspace/ui/components/button";
+import { cn } from "@workspace/ui/lib/utils";
 import { ArrowDownIcon } from "lucide-react";
+import * as React from "react";
 
-function MessageScrollerProvider(props: React.ComponentProps<typeof MessageScrollerPrimitive.Provider>) {
+function MessageScrollerProvider(props: React.ComponentProps<typeof MessageScrollerPrimitive.Provider>): React.JSX.Element {
 	return <MessageScrollerPrimitive.Provider {...props} />;
 }
 
-function MessageScroller({ className, ...props }: React.ComponentProps<typeof MessageScrollerPrimitive.Root>) {
+function MessageScroller({ className, ...props }: React.ComponentProps<typeof MessageScrollerPrimitive.Root>): React.JSX.Element {
 	return (
 		<MessageScrollerPrimitive.Root
 			data-slot="message-scroller"
@@ -21,7 +20,7 @@ function MessageScroller({ className, ...props }: React.ComponentProps<typeof Me
 	);
 }
 
-function MessageScrollerViewport({ className, ...props }: React.ComponentProps<typeof MessageScrollerPrimitive.Viewport>) {
+function MessageScrollerViewport({ className, ...props }: React.ComponentProps<typeof MessageScrollerPrimitive.Viewport>): React.JSX.Element {
 	return (
 		<MessageScrollerPrimitive.Viewport
 			data-slot="message-scroller-viewport"
@@ -34,11 +33,11 @@ function MessageScrollerViewport({ className, ...props }: React.ComponentProps<t
 	);
 }
 
-function MessageScrollerContent({ className, ...props }: React.ComponentProps<typeof MessageScrollerPrimitive.Content>) {
+function MessageScrollerContent({ className, ...props }: React.ComponentProps<typeof MessageScrollerPrimitive.Content>): React.JSX.Element {
 	return <MessageScrollerPrimitive.Content data-slot="message-scroller-content" className={cn("flex h-max min-h-full flex-col gap-8", className)} {...props} />;
 }
 
-function MessageScrollerItem({ className, scrollAnchor = false, ...props }: React.ComponentProps<typeof MessageScrollerPrimitive.Item>) {
+function MessageScrollerItem({ className, scrollAnchor = false, ...props }: React.ComponentProps<typeof MessageScrollerPrimitive.Item>): React.JSX.Element {
 	return (
 		<MessageScrollerPrimitive.Item
 			data-slot="message-scroller-item"
@@ -57,7 +56,7 @@ function MessageScrollerButton({
 	variant = "secondary",
 	size = "icon-sm",
 	...props
-}: React.ComponentProps<typeof MessageScrollerPrimitive.Button> & Pick<React.ComponentProps<typeof Button>, "variant" | "size">) {
+}: React.ComponentProps<typeof MessageScrollerPrimitive.Button> & Pick<React.ComponentProps<typeof Button>, "variant" | "size">): React.JSX.Element {
 	return (
 		<MessageScrollerPrimitive.Button
 			data-slot="message-scroller-button"

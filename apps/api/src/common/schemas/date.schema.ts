@@ -10,7 +10,7 @@ import { z } from "zod";
  *
  * Example value: "2026-07-28T12:00:00.000Z"
  */
-export const DateStringSchema = z.string().datetime({ offset: true }).meta({
+export const DateStringSchema = z.iso.datetime({ offset: true }).meta({
 	description: "ISO-8601 datetime string",
 	example: "2026-07-28T12:00:00.000Z",
 });

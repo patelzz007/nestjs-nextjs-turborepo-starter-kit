@@ -11,18 +11,13 @@
  * @example parseExpiryToMilliseconds("7d")  // 604800000
  */
 export const parseExpiryToMilliseconds = (expiry: string): number => {
-	const groups: RegExpMatchArray | null = expiry.match(/^(\d+)([smhd])?$/);
+	const groups: RegExpMatchArray | null = /^(\d+)([smhd])?$/.exec(expiry);
 	if (groups === null) {
 		throw new Error(`Invalid expiry format: "${expiry}". Expected format: <number><s|m|h|d> (e.g. "15m", "7d")`);
 	}
 
-	// Safe: groups[1] always exists because the regex has at least one capture group
-	const valueStr: string | undefined = groups[1];
-	const unit: string = groups[2] ?? "m";
-
-	if (valueStr === undefined) {
-		throw new Error(`parseExpiry: unexpected missing capture group for "${expiry}"`);
-	}
+	const valueStr: string = groups[1];
+	const unit: string = typeof groups[2] === "string" ? groups[2] : "m";
 
 	const value: number = Number.parseInt(valueStr, 10);
 

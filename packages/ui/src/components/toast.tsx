@@ -1,23 +1,22 @@
 "use client";
 
-import * as React from "react";
 import { Toast as ToastPrimitive } from "@base-ui/react/toast";
-
-import { cn } from "@workspace/ui/lib/utils";
 import { Button } from "@workspace/ui/components/button";
+import { cn } from "@workspace/ui/lib/utils";
 import { XIcon, CircleCheckIcon, InfoIcon, TriangleAlertIcon, OctagonXIcon, Loader2Icon } from "lucide-react";
+import * as React from "react";
 
 const toast = ToastPrimitive.createToastManager();
 
-function ToastProvider({ ...props }: ToastPrimitive.Provider.Props) {
+function ToastProvider({ ...props }: ToastPrimitive.Provider.Props): React.JSX.Element {
 	return <ToastPrimitive.Provider {...props} />;
 }
 
-function ToastPortal({ ...props }: ToastPrimitive.Portal.Props) {
+function ToastPortal({ ...props }: ToastPrimitive.Portal.Props): React.JSX.Element {
 	return <ToastPrimitive.Portal data-slot="toast-portal" {...props} />;
 }
 
-function ToastViewport({ className, ...props }: ToastPrimitive.Viewport.Props) {
+function ToastViewport({ className, ...props }: ToastPrimitive.Viewport.Props): React.JSX.Element {
 	return (
 		<ToastPrimitive.Viewport
 			data-slot="toast-viewport"
@@ -27,7 +26,7 @@ function ToastViewport({ className, ...props }: ToastPrimitive.Viewport.Props) {
 	);
 }
 
-function Toast({ className, ...props }: ToastPrimitive.Root.Props) {
+function Toast({ className, ...props }: ToastPrimitive.Root.Props): React.JSX.Element {
 	return (
 		<ToastPrimitive.Root
 			data-slot="toast"
@@ -54,7 +53,7 @@ function Toast({ className, ...props }: ToastPrimitive.Root.Props) {
 	);
 }
 
-function ToastContent({ className, ...props }: ToastPrimitive.Content.Props) {
+function ToastContent({ className, ...props }: ToastPrimitive.Content.Props): React.JSX.Element {
 	return (
 		<ToastPrimitive.Content
 			data-slot="toast-content"
@@ -67,19 +66,19 @@ function ToastContent({ className, ...props }: ToastPrimitive.Content.Props) {
 	);
 }
 
-function ToastTitle({ className, ...props }: ToastPrimitive.Title.Props) {
+function ToastTitle({ className, ...props }: ToastPrimitive.Title.Props): React.JSX.Element {
 	return <ToastPrimitive.Title data-slot="toast-title" className={cn("text-sm font-medium", className)} {...props} />;
 }
 
-function ToastDescription({ className, ...props }: ToastPrimitive.Description.Props) {
+function ToastDescription({ className, ...props }: ToastPrimitive.Description.Props): React.JSX.Element {
 	return <ToastPrimitive.Description data-slot="toast-description" className={cn("text-sm text-muted-foreground", className)} {...props} />;
 }
 
-function ToastAction({ className, render = <Button variant="outline" size="sm" />, ...props }: ToastPrimitive.Action.Props) {
+function ToastAction({ className, render = <Button variant="outline" size="sm" />, ...props }: ToastPrimitive.Action.Props): React.JSX.Element {
 	return <ToastPrimitive.Action data-slot="toast-action" render={render} className={cn("shrink-0", className)} {...props} />;
 }
 
-function ToastClose({ className, children, render = <Button variant="ghost" size="icon-sm" />, ...props }: ToastPrimitive.Close.Props) {
+function ToastClose({ className, children, render = <Button variant="ghost" size="icon-sm" />, ...props }: ToastPrimitive.Close.Props): React.JSX.Element {
 	return (
 		<ToastPrimitive.Close
 			data-slot="toast-close"
@@ -92,7 +91,7 @@ function ToastClose({ className, children, render = <Button variant="ghost" size
 	);
 }
 
-function ToastIcon({ type }: { type: string | undefined }) {
+function ToastIcon({ type }: { type: string | undefined }): React.JSX.Element | null {
 	let icon: React.ReactNode = null;
 
 	if (type === "success") {
@@ -126,7 +125,7 @@ function ToastIcon({ type }: { type: string | undefined }) {
 	);
 }
 
-function ToastList() {
+function ToastList(): React.JSX.Element[] {
 	const { toasts } = ToastPrimitive.useToastManager();
 
 	return toasts.map((toastItem) => (
@@ -144,7 +143,7 @@ function ToastList() {
 	));
 }
 
-function Toaster({ children, toastManager = toast, ...props }: ToastPrimitive.Provider.Props) {
+function Toaster({ children, toastManager = toast, ...props }: ToastPrimitive.Provider.Props): React.JSX.Element {
 	return (
 		<ToastProvider toastManager={toastManager} {...props}>
 			{children}

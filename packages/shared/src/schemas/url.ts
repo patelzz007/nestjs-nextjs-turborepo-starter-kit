@@ -1,12 +1,13 @@
 import { z } from "zod";
-import { PaginationSchema } from "./pagination";
+
 import { BaseResponseSchema } from "./common";
+import { PaginationSchema } from "./pagination";
 
 // ── Input Schemas ────────────────────────────────────────────────────────
 
 export const CreateUrlSchema = z
 	.object({
-		originalUrl: z.string().url({ message: "originalUrl must be a valid URL" }).max(2048),
+		originalUrl: z.url("originalUrl must be a valid URL").max(2048),
 		title: z.string().max(255).optional(),
 		customAlias: z
 			.string()
@@ -19,8 +20,9 @@ export const CreateUrlSchema = z
 		clickLimit: z.coerce.number().int().min(1).optional(),
 		expiresAt: z
 			.string()
+			// eslint-disable-next-line @typescript-eslint/no-deprecated -- z.string().datetime() is the only viable option (z.iso.datetime() doesn't exist on string)
 			.datetime({ offset: true })
-			.transform((val) => new Date(val))
+			.transform((val: string) => new Date(val))
 			.optional(),
 	})
 	.strict();
@@ -29,15 +31,16 @@ export type CreateUrlInput = z.output<typeof CreateUrlSchema>;
 
 export const UpdateUrlSchema = z
 	.object({
-		originalUrl: z.string().url().max(2048).optional(),
+		originalUrl: z.url("Must be a valid URL").max(2048).optional(),
 		title: z.string().max(255).optional(),
 		redirectType: z.enum(["PERMANENT", "TEMPORARY"]).optional(),
 		isActive: z.boolean().optional(),
 		clickLimit: z.coerce.number().int().min(1).optional(),
 		expiresAt: z
 			.string()
+			// eslint-disable-next-line @typescript-eslint/no-deprecated -- z.string().datetime() is the only viable option (z.iso.datetime() doesn't exist on string)
 			.datetime({ offset: true })
-			.transform((val) => new Date(val))
+			.transform((val: string) => new Date(val))
 			.optional(),
 	})
 	.strict();

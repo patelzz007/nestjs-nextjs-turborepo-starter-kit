@@ -1,7 +1,7 @@
-import { z } from "zod";
 import { PermissionActionSchema, PermissionResourceSchema } from "@workspace/shared";
+import { z } from "zod";
+
 import { BaseResponseSchema } from "./base.schema";
-import { DateStringSchema } from "./date.schema";
 
 // ── Slim Role ───────────────────────────────────────────────────────────────
 
@@ -67,7 +67,7 @@ export const UserResponseSchema = BaseResponseSchema.extend({
 		description: "User unique identifier",
 		example: "clx...",
 	}),
-	email: z.string().email().meta({
+	email: z.email().meta({
 		description: "User email address",
 		example: "admin@example.com",
 	}),

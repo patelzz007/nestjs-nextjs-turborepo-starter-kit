@@ -1,24 +1,18 @@
 "use client";
 
-import { useAuth } from "@workspace/ui/lib/auth";
-import { LogoutButton } from "@/components/logout-button";
-import type { UserResponse } from "@workspace/shared";
+import { useAuth } from "@workspace/client/lib/auth";
+import { authEndpoints } from "@workspace/client/lib/endpoints";
 
-export default function AdminDashboardPage() {
+import { LogoutButton } from "@/components/logout-button";
+
+export default function AdminDashboardPage(): React.JSX.Element {
 	const { api } = useAuth();
 
-	const {
-		data: response,
-		isLoading,
-		error,
-	} = api.useQuery<{
-		readonly success: boolean;
-		readonly data?: UserResponse;
-	}>(["auth", "me"], "/auth/me");
+	const meQuery = api.procedure(authEndpoints.me).useQuery();
 
-	const user = response?.data;
+	const user = meQuery.data?.data;
 
-	if (isLoading) {
+	if (meQuery.isLoading) {
 		return (
 			<div className="flex min-h-svh items-center justify-center">
 				<div className="flex flex-col items-center gap-4">
@@ -32,7 +26,7 @@ export default function AdminDashboardPage() {
 		);
 	}
 
-	if (error) {
+	if (meQuery.error) {
 		return (
 			<div className="flex min-h-svh items-center justify-center">
 				<div className="text-center">
@@ -65,13 +59,17 @@ export default function AdminDashboardPage() {
 
 				{/* Status badges */}
 				<div className="flex flex-wrap justify-center gap-2">
-					{user?.isSuperAdmin && <span className="inline-flex items-center rounded-full bg-purple-100 px-2.5 py-0.5 text-xs font-medium text-purple-700">Super Admin</span>}
+					{user?.isSuperAdmin ? (
+						<span className="inline-flex items-center rounded-full bg-purple-100 px-2.5 py-0.5 text-xs font-medium text-purple-700">Super Admin</span>
+					) : null}
 					{user?.isEmailVerified ? (
 						<span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-700">Email Verified</span>
 					) : (
 						<span className="inline-flex items-center rounded-full bg-yellow-100 px-2.5 py-0.5 text-xs font-medium text-yellow-700">Email Not Verified</span>
 					)}
-					{user?.hasAdminAccess && <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-700">Admin Access</span>}
+					{user?.hasAdminAccess ? (
+						<span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-700">Admin Access</span>
+					) : null}
 					{user?.roles.map((role) => (
 						<span key={role.id} className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-700">
 							{role.name}
@@ -92,7 +90,7 @@ export default function AdminDashboardPage() {
 				</div>
 
 				{/* RBAC Summary */}
-				{user && user.permissions.length > 0 && (
+				{user && user.permissions.length > 0 ? (
 					<div className="rounded-lg border bg-card p-6 text-card-foreground shadow-xs">
 						<h2 className="mb-3 text-sm font-medium">Permission Summary</h2>
 						<div className="space-y-2">
@@ -102,10 +100,10 @@ export default function AdminDashboardPage() {
 									<span className="text-muted-foreground">{perm.action}</span>
 								</div>
 							))}
-							{user.permissions.length > 8 && <p className="text-center text-xs text-muted-foreground">+{user.permissions.length - 8} more permissions</p>}
+							{user.permissions.length > 8 ? <p className="text-center text-xs text-muted-foreground">+{user.permissions.length - 8} more permissions</p> : null}
 						</div>
 					</div>
-				)}
+				) : null}
 
 				{/* Actions */}
 				<div className="flex justify-center gap-4">

@@ -3,27 +3,28 @@
 // ============================================
 "use client";
 
-import { useState, type JSX } from "react";
+import { useAuth } from "@workspace/client/lib/auth";
 import { Button } from "@workspace/ui/components/button";
-import { useAuth } from "@workspace/ui/lib/auth";
+import { useCallback, useState, type JSX } from "react";
 
 export interface LogoutButtonProps {
 	readonly variant?: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link";
 	readonly className?: string;
 	readonly children?: string;
 }
-
 export function LogoutButton({ variant = "outline", className, children = "Logout" }: LogoutButtonProps): JSX.Element {
 	const [isLoading, setIsLoading] = useState(false);
 	const { logout } = useAuth();
 
-	async function handleLogout(): Promise<void> {
+	const handleClick = useCallback((): void => {
 		setIsLoading(true);
-		await logout();
-	}
+		logout().catch(() => {
+			// Logout failure is handled by the auth context
+		});
+	}, [logout]);
 
 	return (
-		<Button variant={variant} className={className} onClick={handleLogout} disabled={isLoading}>
+		<Button variant={variant} className={className} onClick={handleClick} disabled={isLoading}>
 			{isLoading ? (
 				<span className="flex items-center gap-2">
 					<svg className="size-4 animate-spin" fill="none" viewBox="0 0 24 24">

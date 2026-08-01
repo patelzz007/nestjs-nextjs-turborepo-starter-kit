@@ -1,11 +1,10 @@
 "use client";
 
+import { Button, buttonVariants } from "@workspace/ui/components/button";
+import { cn } from "@workspace/ui/lib/utils";
+import { ChevronLeftIcon, ChevronRightIcon, ChevronDownIcon } from "lucide-react";
 import * as React from "react";
 import { DayPicker, getDefaultClassNames, type DayButton, type Locale } from "react-day-picker";
-
-import { cn } from "@workspace/ui/lib/utils";
-import { Button, buttonVariants } from "@workspace/ui/components/button";
-import { ChevronLeftIcon, ChevronRightIcon, ChevronDownIcon } from "lucide-react";
 
 function Calendar({
 	className,
@@ -19,7 +18,7 @@ function Calendar({
 	...props
 }: React.ComponentProps<typeof DayPicker> & {
 	buttonVariant?: React.ComponentProps<typeof Button>["variant"];
-}) {
+}): React.JSX.Element {
 	const defaultClassNames = getDefaultClassNames();
 
 	return (
@@ -111,7 +110,7 @@ function Calendar({
 	);
 }
 
-function CalendarDayButton({ className, day, modifiers, locale, ...props }: React.ComponentProps<typeof DayButton> & { locale?: Partial<Locale> }) {
+function CalendarDayButton({ className, day, modifiers, locale, ...props }: React.ComponentProps<typeof DayButton> & { locale?: Partial<Locale> }): React.JSX.Element {
 	const defaultClassNames = getDefaultClassNames();
 
 	const ref = React.useRef<HTMLButtonElement>(null);
@@ -124,7 +123,7 @@ function CalendarDayButton({ className, day, modifiers, locale, ...props }: Reac
 			variant="ghost"
 			size="icon"
 			data-day={day.date.toLocaleDateString(locale?.code)}
-			data-selected-single={modifiers.selected && !modifiers.range_start && !modifiers.range_end && !modifiers.range_middle}
+			data-selected-single={modifiers.selected && !modifiers.range_start && !modifiers.range_end ? !modifiers.range_middle : null}
 			data-range-start={modifiers.range_start}
 			data-range-end={modifiers.range_end}
 			data-range-middle={modifiers.range_middle}
