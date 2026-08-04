@@ -27,8 +27,12 @@ coverImage: "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?auto=f
 | **[ESLint setup](./eslint.md)**                      | The shared lint config, how each workspace extends it, and how to run linting.                                                                          |
 | **[Dependency hygiene](./dependencies.md)**          | How `syncpack` keeps shared deps (React, Zod, TS) pinned to the same exact version everywhere.                                                          |
 | **[Prisma & database](./prisma.md)**                 | The DB layer, migrations, seeding, and every `db:*` command.                                                                                            |
-| **[Auth roadmap](./auth-roadmap.md)**                | Ideas and design decisions for auth, RBAC, multi-tenancy, and secrets management.                                                                       |
+| **[Auth roadmap](./auth-roadmap.md)**                | Auth ideas/designs + the 30-point hardening deep-dive (status per item) and the full A→Z auth flow, explained like you're 5.                            |
 | **[Boilerplate roadmap](./boilerplate-roadmap.md)**  | 15 improvements + 15 new features for the monorepo template itself (tests, CI/CD, Docker, tooling).                                                     |
+| **[UI component audit](./ui-components.md)**         | 20 improvements + 20 new features for every component in `packages/ui/src/components` (68 components, 2,720 items), tagged by area.                     |
+| **[Logging system](./logging.md)**                  | 40 must-haves for the in-house Datadog-style logging service (terminal + DB, no external SaaS) — grounded in current code.                              |
+| **[Email templates](./email.md)**                   | 40 must-haves for the Resend-powered transactional email template system — grounded in current code.                                                  |
+| **[Reactive core](./reactive-core.md)**             | Design for replacing promises with a zero-dep rxjs-like core — 50 items, pitfalls (incl. full-SSR), unsubscribe guarantees, rxjs coverage matrix.          |
 
 ---
 
@@ -44,7 +48,7 @@ Don't read top to bottom. Here's the path we'd walk a new developer through:
 | 4️⃣    | **[Token Refresh](./token-refresh.md)**                             | Now the real machinery: the two layers, how to observe them in DevTools / server logs, and the FAQ.     |
 | 5️⃣    | **[TypeScript](./typescript.md) · [ESLint](./eslint.md) · [Dependencies](./dependencies.md)** | Read when you touch config or hit a lint/type error — no need up front.          |
 | 6️⃣    | **[Prisma](./prisma.md)**                                           | Read when you touch the database: migrations, seeding, every `db:*` command.                            |
-| 7️⃣    | **[Auth roadmap](./auth-roadmap.md) · [Boilerplate roadmap](./boilerplate-roadmap.md)** | Read when you're *planning* new work — they're idea lists, not tutorials.          |
+| 7️⃣    | **[Auth roadmap](./auth-roadmap.md) · [Boilerplate roadmap](./boilerplate-roadmap.md) · [UI component audit](./ui-components.md)** | Read when you're *planning* new work — idea lists and the per-component improvement backlog. |
 
 **TL;DR for the common case:** steps 1–4 are required reading; steps 5–7 are
 reference material to reach for when the moment calls for them.
