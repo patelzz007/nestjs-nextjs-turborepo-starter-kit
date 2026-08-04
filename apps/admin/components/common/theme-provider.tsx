@@ -20,11 +20,31 @@ function isTypingTarget(target: EventTarget | null): boolean {
 	return target.isContentEditable || target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.tagName === "SELECT";
 }
 
+/**
+ * Minimal shape of the keydown event as observed at runtime.
+ *
+ * `key` is typed optional because some synthetic / polyfilled events reach the
+ * listener without a populated `key` — guarding on it is therefore necessary
+ * (it also keeps the strict lint rules happy, which would reject a guard on
+ * the DOM-lib `KeyboardEvent.key` since that type says it's always a string).
+ * Real `KeyboardEvent`s satisfy this interface structurally, so the listener
+ * stays assignable to `window.addEventListener("keydown", …)`.
+ */
+interface ThemeHotkeyKeyDownEvent {
+	readonly defaultPrevented: boolean;
+	readonly repeat: boolean;
+	readonly metaKey: boolean;
+	readonly ctrlKey: boolean;
+	readonly altKey: boolean;
+	readonly key?: string;
+	readonly target: EventTarget | null;
+}
+
 function ThemeHotkey(): null {
 	const { resolvedTheme, setTheme } = useTheme();
 
 	React.useEffect(() => {
-		function onKeyDown(event: KeyboardEvent): void {
+		function onKeyDown(event: ThemeHotkeyKeyDownEvent): void {
 			if (event.defaultPrevented || event.repeat) {
 				return;
 			}
@@ -33,7 +53,9 @@ function ThemeHotkey(): null {
 				return;
 			}
 
-			if (event.key.toLowerCase() !== "d") {
+			// Defensive: some synthetic / polyfilled events reach the listener
+			// without a populated `key` — treat them as a no-op instead of crashing.
+			if (event.key?.toLowerCase() !== "d") {
 				return;
 			}
 

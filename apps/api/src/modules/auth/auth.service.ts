@@ -184,8 +184,16 @@ export class AuthService {
 		// `{...} | null` type (not a narrowed union after `!user ||`).
 		if (user?.lockedUntil && user.lockedUntil > new Date()) {
 			const remainingMs: number = user.lockedUntil.getTime() - Date.now();
-			const remainingMin: number = Math.ceil(remainingMs / 60_000);
-			throw new UnauthorizedException(`Account temporarily locked. Try again in ${String(remainingMin)} minute(s).`);
+			const remainingSec: number = Math.max(1, Math.ceil(remainingMs / 1000));
+			const remainingMin: number = Math.ceil(remainingSec / 60);
+			throw new UnauthorizedException({
+				message: `Account temporarily locked. Try again in ${String(remainingMin)} minute(s).`,
+				error: "ACCOUNT_LOCKED",
+				// Structured lockout payload so the client can render a live
+				// "retry in MM:SS" countdown instead of a static message.
+				lockedUntil: user.lockedUntil.toISOString(),
+				remainingSeconds: remainingSec,
+			});
 		}
 		// ─────────────────────────────────────────────────────────────────
 
@@ -215,7 +223,10 @@ export class AuthService {
 			}
 			// ────────────────────────────────────────────────────────────
 
-			throw new UnauthorizedException("Invalid email or password");
+			throw new UnauthorizedException({
+				message: "Invalid email or password",
+				error: "INVALID_CREDENTIALS",
+			});
 		}
 
 		// ── Reset failed attempts on successful login ────────────────────

@@ -10,10 +10,14 @@ import { useCallback, type JSX } from "react";
 
 export interface ClientAuthWrapperProps {
 	readonly children: React.ReactNode;
-	readonly redirectPath?: string;
 }
 
-export function ClientAuthWrapper({ children, redirectPath = "/auth/login" }: ClientAuthWrapperProps): JSX.Element {
+/**
+ * Bridges `next/navigation` `useRouter` into the shared `AuthProvider`.
+ * The admin app only has one auth redirect target, so it is hardcoded here
+ * rather than threaded through props nobody overrides.
+ */
+export function ClientAuthWrapper({ children }: ClientAuthWrapperProps): JSX.Element {
 	const router = useRouter();
 
 	const navigate = useCallback(
@@ -29,7 +33,7 @@ export function ClientAuthWrapper({ children, redirectPath = "/auth/login" }: Cl
 
 	const authProps: AuthProviderProps = {
 		children,
-		onUnauthorizedRedirect: redirectPath,
+		onUnauthorizedRedirect: "/auth/login",
 		navigate,
 		refresh,
 		// Use isolated cookie names for the admin panel so that web app

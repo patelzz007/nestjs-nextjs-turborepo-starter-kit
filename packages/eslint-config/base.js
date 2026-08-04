@@ -47,33 +47,17 @@ export const config = [
 		},
 	},
 
-	// ── 6. Import ordering & validation ─────────────────────────────
+	// ── 6. Import validation ────────────────────────────────────────
+	// Note: `import/order` and `import/newline-after-import` were intentionally
+	// removed (per the team's request) — the team prefers to let Prettier handle
+	// import formatting. `import/no-duplicates` and `import/first` are kept.
 	{
 		plugins: {
 			import: eslintPluginImport,
 		},
 		rules: {
-			"import/order": [
-				"error",
-				{
-					groups: [
-						"builtin", // node built-ins (fs, path)
-						"external", // npm packages
-						"internal", // workspace packages (@workspace/*)
-						"parent", // ../*
-						"sibling", // ./*
-						"index", // ./
-					],
-					"newlines-between": "always",
-					alphabetize: {
-						order: "asc",
-						caseInsensitive: true,
-					},
-				},
-			],
 			"import/no-duplicates": "error",
 			"import/first": "error",
-			"import/newline-after-import": "error",
 		},
 	},
 

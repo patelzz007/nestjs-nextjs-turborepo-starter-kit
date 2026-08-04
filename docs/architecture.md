@@ -1,3 +1,12 @@
+---
+title: "Monorepo Architecture"
+description: "The big picture: what each workspace is for, how data flows between frontends and backend, and where new code belongs."
+order: 2
+author: "Acme Inc."
+lastUpdated: "2026-08-02"
+coverImage: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1600&q=80"
+---
+
 # Monorepo Architecture
 
 > **Start here.** This document explains the big picture: what each workspace is for,
@@ -150,16 +159,17 @@ packages/client/src/lib/
 ├── use-api.ts         ← useApi() hook — typed fetch wrapper on TanStack Query
 ├── endpoints.ts       ← THE endpoint registry: path + method + request/response schemas
 ├── query-provider.tsx ← TanStack Query provider used by both apps
-└── jwt.ts             ← decodeJwtPayload (edge-safe, used by proxy.ts)
+├── jwt.ts             ← decodeJwtPayload (edge-safe, used by proxy.ts)
+└── proxy-refresh.ts   ← Edge-safe server-side refresh helpers (used by both proxies)
 ```
 
 **The endpoint registry (`endpoints.ts`) is the heart of type-safe API calls:**
 
 ```ts
 export const authEndpoints = {
-  me:   { path: "/auth/me",   method: "GET",  queryKey: ["auth", "me"],   responseSchema: envelope(UserResponseSchema) },
-  login: { path: "/auth/login", method: "POST", bodySchema: LoginSchema, responseSchema: envelope(LoginResponseSchema) },
-  // …
+	me: { path: "/auth/me", method: "GET", queryKey: ["auth", "me"], responseSchema: envelope(UserResponseSchema) },
+	login: { path: "/auth/login", method: "POST", bodySchema: LoginSchema, responseSchema: envelope(LoginResponseSchema) },
+	// …
 };
 ```
 
@@ -202,17 +212,35 @@ move it up to the page (smart component) or into `@workspace/client`.
 - Customer-facing app: `/auth/login`, `/auth/signup`, `/auth/forgot-password`,
   `/hello`, …
 - `proxy.ts` guards routes: redirects unauthenticated users to `/auth/login`,
-  redirects authenticated users away from auth pages.
+  redirects authenticated users away from auth pages. On **document
+  navigations** it also performs a **server-side silent refresh**: the proxy
+  runs server-side, so it can read the httpOnly cookies — when the access
+  token is expired (or within 30s of expiring) it calls `POST /auth/refresh`
+  itself and forwards the rotated `Set-Cookie` headers with the response, so
+  the first API call after the navigation never 401s. A rejected refresh
+  token means the session is genuinely dead: the proxy clears the stale
+  cookies and redirects to login (breaking the dead-session bounce loop that
+  neither the client nor the API guard can break).
 - Uses cookie names `accessToken` / `refreshToken`.
+- Runs on the **Node.js runtime** (Next.js 16 runs `proxy.ts` on Node by
+  design; only legacy `middleware.ts` can opt into Edge), so no Edge setup
+  is needed on Node hosts (DigitalOcean / Linode droplets, etc.).
 
 ### `@workspace/admin` (port 3001)
 
 - Admin app: `/auth/login`, `/dashboard`, …
 - `proxy.ts` guards routes **and** checks the `hasAdminAccess` claim in the JWT —
-  non-admins are redirected back to login.
+  non-admins are redirected back to login. Like the web proxy it silently
+  refreshes expired sessions server-side on document navigations (sending
+  `X-Client-Type: admin` so the admin cookie set rotates) and re-evaluates
+  `hasAdminAccess` against the **rotated** token, so the gating decision
+  reflects the session the browser is about to hold.
 - Uses **isolated** cookie names `adminAccessToken` / `adminRefreshToken`, so a web
   login doesn't grant admin access (and vice versa).
 - Sends `X-Client-Type: admin` on login so the backend sets the right cookie set.
+- Runs on the **Node.js runtime** (Next.js 16 runs `proxy.ts` on Node by
+  design; only legacy `middleware.ts` can opt into Edge), so no Edge setup
+  is needed on Node hosts (DigitalOcean / Linode droplets, etc.).
 
 ### `@workspace/api` (port 8080)
 

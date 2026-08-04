@@ -1,8 +1,41 @@
 "use client";
 
-import { LoginForm } from "@/components/login-form";
+import { useAuth } from "@workspace/client/lib/auth";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 
-export default function AdminLoginPage(): React.JSX.Element {
+import { LoginForm } from "@/components/auth/login-form";
+
+/** Web app URL — set `NEXT_PUBLIC_WEB_URL` in `apps/admin/.env` to change it. */
+const WEB_BASE_URL: string = process.env.NEXT_PUBLIC_WEB_URL ?? "http://localhost:3000";
+
+function AdminLoginContent(): React.JSX.Element {
+	const { isInitializing } = useAuth();
+
+	// The proxy sets `?redirect=` when bouncing an unauthenticated request, so
+	// after a successful login we land back on the page the user originally
+	// tried to visit (SPA-like, no full page reload to a hardcoded route).
+	const searchParams = useSearchParams();
+	const redirectPath = searchParams.get("redirect") ?? "/";
+
+	// On SSR + the first client render, auth state isn't established yet.
+	// Rendering the form during that window would flash it on every reload
+	// (and for admins, the proxy is about to bounce them into the panel).
+	if (isInitializing) {
+		return (
+			<div className="flex min-h-svh items-center justify-center">
+				<div className="flex flex-col items-center gap-4">
+					<svg className="size-8 animate-spin text-muted-foreground" fill="none" viewBox="0 0 24 24">
+						<circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+						<path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+					</svg>
+					<p className="text-sm text-muted-foreground">Loading…</p>
+				</div>
+			</div>
+		);
+	}
+
 	return (
 		<div className="grid min-h-svh lg:grid-cols-2">
 			{/* ── Left: Login Form ──────────────────────────────────────── */}
@@ -21,13 +54,13 @@ export default function AdminLoginPage(): React.JSX.Element {
 					heading="Admin Login"
 					subtitle="Sign in with your administrator credentials"
 					emailPlaceholder="admin@example.com"
-					redirectPath="/dashboard"
+					redirectPath={redirectPath}
 					footer={
 						<p className="text-center text-xs text-balance text-muted-foreground">
 							Returning to{" "}
-							<a href="http://localhost:3000" className="font-medium text-primary underline-offset-4 hover:underline">
+							<Link href={WEB_BASE_URL} className="font-medium text-primary underline-offset-4 hover:underline">
 								main website
-							</a>
+							</Link>
 						</p>
 					}
 				/>
@@ -74,5 +107,13 @@ export default function AdminLoginPage(): React.JSX.Element {
 				</div>
 			</div>
 		</div>
+	);
+}
+
+export default function AdminLoginPage(): React.JSX.Element {
+	return (
+		<Suspense fallback={null}>
+			<AdminLoginContent />
+		</Suspense>
 	);
 }

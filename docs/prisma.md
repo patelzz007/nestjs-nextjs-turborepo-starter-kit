@@ -1,3 +1,12 @@
+---
+title: "Prisma & Database Commands"
+description: "The database layer: how Prisma is configured, where the schema lives, and every db: command."
+order: 8
+author: "Acme Inc."
+lastUpdated: "2026-08-02"
+coverImage: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=1600&q=80"
+---
+
 # Prisma & Database Commands
 
 > This document covers everything you need to know about the database layer in this
@@ -70,14 +79,14 @@ Format breakdown:
 postgresql://USER:PASSWORD@HOST:PORT/DATABASE_NAME?schema=public
 ```
 
-| Part | Example | Meaning |
-| ---- | ------- | ------- |
-| `USER` | `postgres` | DB user |
-| `PASSWORD` | `postgres` | DB password |
-| `HOST` | `localhost` | Where Postgres runs |
-| `PORT` | `5432` | Postgres default port |
-| `DATABASE_NAME` | `monorepo` | The database name (must exist) |
-| `?schema=public` | — | Postgres schema to use |
+| Part             | Example     | Meaning                        |
+| ---------------- | ----------- | ------------------------------ |
+| `USER`           | `postgres`  | DB user                        |
+| `PASSWORD`       | `postgres`  | DB password                    |
+| `HOST`           | `localhost` | Where Postgres runs            |
+| `PORT`           | `5432`      | Postgres default port          |
+| `DATABASE_NAME`  | `monorepo`  | The database name (must exist) |
+| `?schema=public` | —           | Postgres schema to use         |
 
 > Note: `schema.prisma` no longer hardcodes `url = env("DATABASE_URL")` — with
 > Prisma 7 the connection is passed **programmatically** via the driver adapter
@@ -114,17 +123,17 @@ pnpm db:generate
 
 ### Command reference
 
-| Command | Script (`apps/api/package.json`) | What it does | Destructive? |
-| ------- | -------------------------------- | ------------ | ------------ |
-| `pnpm db:migrate` | `dotenv -e .env -- prisma migrate dev` | Creates a new migration from schema changes **and applies it**, then regenerates the Prisma client | ❌ No (safe) |
-| `pnpm db:migrate:create` | `dotenv -e .env -- prisma migrate dev --create-only` | Creates the migration file **without applying** it (so you can review/edit the SQL first) | ❌ No |
-| `pnpm db:deploy` | `dotenv -e .env -- prisma migrate deploy` | Applies **pending** migrations (used in CI/production — never generates) | ❌ No |
-| `pnpm db:migrate:status` | `dotenv -e .env -- prisma migrate status` | Shows which migrations are applied / pending | ❌ No |
-| `pnpm db:generate` | `dotenv -e .env -- prisma generate` | Regenerates the Prisma client types in `node_modules/.prisma` | ❌ No |
-| `pnpm db:push` | `dotenv -e .env -- prisma db push --accept-data-loss` | Pushes schema straight to the DB **without a migration file** (dev-only) | ⚠️ Can drop data |
-| `pnpm db:seed` | `dotenv -e .env -- ts-node prisma/seed.ts` | Runs the seeder (idempotent — safe to re-run) | ⚠️ Rewrites seed rows |
-| `pnpm db:reset` | `dotenv -e .env -- prisma migrate reset --force` | Drops **all** tables, re-applies all migrations, then runs the seeder | 🔴 **Wipes the DB** |
-| `pnpm db:studio` | `prisma studio` | Opens the Prisma Studio GUI at `localhost:5555` to browse/edit data | ❌ No (read/write UI) |
+| Command                  | Script (`apps/api/package.json`)                      | What it does                                                                                       | Destructive?          |
+| ------------------------ | ----------------------------------------------------- | -------------------------------------------------------------------------------------------------- | --------------------- |
+| `pnpm db:migrate`        | `dotenv -e .env -- prisma migrate dev`                | Creates a new migration from schema changes **and applies it**, then regenerates the Prisma client | ❌ No (safe)          |
+| `pnpm db:migrate:create` | `dotenv -e .env -- prisma migrate dev --create-only`  | Creates the migration file **without applying** it (so you can review/edit the SQL first)          | ❌ No                 |
+| `pnpm db:deploy`         | `dotenv -e .env -- prisma migrate deploy`             | Applies **pending** migrations (used in CI/production — never generates)                           | ❌ No                 |
+| `pnpm db:migrate:status` | `dotenv -e .env -- prisma migrate status`             | Shows which migrations are applied / pending                                                       | ❌ No                 |
+| `pnpm db:generate`       | `dotenv -e .env -- prisma generate`                   | Regenerates the Prisma client types in `node_modules/.prisma`                                      | ❌ No                 |
+| `pnpm db:push`           | `dotenv -e .env -- prisma db push --accept-data-loss` | Pushes schema straight to the DB **without a migration file** (dev-only)                           | ⚠️ Can drop data      |
+| `pnpm db:seed`           | `dotenv -e .env -- ts-node prisma/seed.ts`            | Runs the seeder (idempotent — safe to re-run)                                                      | ⚠️ Rewrites seed rows |
+| `pnpm db:reset`          | `dotenv -e .env -- prisma migrate reset --force`      | Drops **all** tables, re-applies all migrations, then runs the seeder                              | 🔴 **Wipes the DB**   |
+| `pnpm db:studio`         | `prisma studio`                                       | Opens the Prisma Studio GUI at `localhost:5555` to browse/edit data                                | ❌ No (read/write UI) |
 
 > **Why `dotenv -e .env --`?** Prisma CLI doesn't load `.env` automatically in all
 > contexts here, so the scripts explicitly load `apps/api/.env` first.
@@ -238,12 +247,12 @@ duplicating rows or throwing:
 
 ### Seeded login accounts
 
-| Email | Password | Role |
-| ----- | -------- | ---- |
+| Email                    | Password         | Role       |
+| ------------------------ | ---------------- | ---------- |
 | `superadmin@example.com` | `SuperAdmin@123` | SuperAdmin |
-| `admin@example.com` | `Admin@123` | Admin |
-| `manager@example.com` | `Manager@123` | Manager |
-| `user@example.com` | `User@123` | User |
+| `admin@example.com`      | `Admin@123`      | Admin      |
+| `manager@example.com`    | `Manager@123`    | Manager    |
+| `user@example.com`       | `User@123`       | User       |
 
 Plus 10 dummy users: `alice.johnson@example.com` / `Bob@123`-style passwords
 (`Alice@123`, `Bob@123`, `Carol@123`, …).
@@ -284,7 +293,7 @@ pool:
 ```typescript
 // (conceptually, in apps/api/src/prisma/prisma.service.ts)
 const prisma = new PrismaClient({
-  adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }),
+	adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }),
 });
 ```
 
@@ -313,6 +322,7 @@ cd apps/api && pnpm db:migrate
 ```
 
 ### "Can't reach database server at `localhost:5432`"Postgres isn't running, or the port/user/password in `DATABASE_URL` is wrong.
+
 Start your local Postgres (e.g. `brew services start postgresql` or via Docker), then re-run. Verify with:
 
 ```bash

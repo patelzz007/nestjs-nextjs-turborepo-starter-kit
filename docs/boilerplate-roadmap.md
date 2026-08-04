@@ -1,7 +1,16 @@
+---
+title: "Boilerplate Roadmap"
+description: "Ideas for making the monorepo template production-ready and pleasant to build on."
+order: 10
+author: "Acme Inc."
+lastUpdated: "2026-08-02"
+coverImage: "https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=1600&q=80"
+---
+
 # Boilerplate Roadmap
 
 > Ideas for making this **monorepo template** production-ready and pleasant to build on.
-> This guide is about the *boilerplate itself* (repo structure, tooling, DX, deployment,
+> This guide is about the _boilerplate itself_ (repo structure, tooling, DX, deployment,
 > testing). Auth-specific ideas live in [auth-roadmap.md](./auth-roadmap.md).
 >
 > Note: product-heavy features like billing, i18n, webhooks, notifications, full-text search,
@@ -42,7 +51,7 @@ No `Dockerfile`s and no `docker-compose.yml`. Add:
 ### 4. Health endpoint that actually checks the DB
 
 `GET /health` currently reports the DB status — but the check should ping the DB with
-`prisma.$queryRaw\`SELECT 1\`` and return `503` (with `db: "disconnected"`) instead of a
+`prisma.$queryRaw\`SELECT 1\``and return`503`(with`db: "disconnected"`) instead of a
 misleading `200`. Add an uptime field and an optional `deep` query param that also checks
 Redis/S3 once those exist.
 
@@ -82,6 +91,7 @@ startup check (or lint rule) that warns when a required var is missing — saves
 
 `turbo.json` currently disables caching for everything and rebuilds `@workspace/shared`
 before dependents. Add:
+
 - a `test` task that runs after `^build`
 - a `db:deploy` task (for CI)
 - an explicit `dev` graph so `api`, `web`, `admin` start in parallel without blocking.
@@ -235,12 +245,12 @@ endpoints. This is the "wow" page that proves the template end-to-end.
 
 ## Priority Matrix
 
-| Quadrant | Items |
-| -------- | ----- |
-| **⚡ High impact, low effort** | #1 Tests, #2 CI/CD, #4 Health check, #6 Env validation, #14 Prisma scripts |
-| **🎯 High impact, medium effort** | #3 Docker Compose, #5 Logging, #7 Error filter, #8 Envelope reuse, #15 Admin analytics |
-| **🏗️ Medium impact, medium effort** | #10 Turbo polish, #12 Storybook, #13 FE runtime checks, #11 E2E suite, #9 Feature flags |
-| **🚀 High impact, high effort** | Multi-tenancy, Secrets UI, File uploads, Background jobs, Webhooks, Search, Audit log, OpenAPI SDK, i18n, Export/import, Billing |
+| Quadrant                            | Items                                                                                                                            |
+| ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| **⚡ High impact, low effort**      | #1 Tests, #2 CI/CD, #4 Health check, #6 Env validation, #14 Prisma scripts                                                       |
+| **🎯 High impact, medium effort**   | #3 Docker Compose, #5 Logging, #7 Error filter, #8 Envelope reuse, #15 Admin analytics                                           |
+| **🏗️ Medium impact, medium effort** | #10 Turbo polish, #12 Storybook, #13 FE runtime checks, #11 E2E suite, #9 Feature flags                                          |
+| **🚀 High impact, high effort**     | Multi-tenancy, Secrets UI, File uploads, Background jobs, Webhooks, Search, Audit log, OpenAPI SDK, i18n, Export/import, Billing |
 
 ---
 

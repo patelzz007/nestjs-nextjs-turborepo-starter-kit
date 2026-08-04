@@ -1,3 +1,12 @@
+---
+title: "Dependency Hygiene (syncpack)"
+description: "How syncpack keeps shared dependencies on the exact same version across every workspace."
+order: 7
+author: "Acme Inc."
+lastUpdated: "2026-08-02"
+coverImage: "https://images.unsplash.com/photo-1504384308090-c894fdcc538d?auto=format&fit=crop&w=1600&q=80"
+---
+
 # Dependency Hygiene (syncpack)
 
 > How this monorepo keeps shared dependencies **on the exact same version** across
@@ -53,21 +62,21 @@ The config lives at the **repo root** in `.syncpackrc.json`:
 
 ```json
 {
-  "$schema": "https://unpkg.com/syncpack@15.3.2/dist/schema.json",
-  "versionGroups": [
-    {
-      "label": "Shared deps must be the same version across all workspaces",
-      "dependencies": ["react", "react-dom", "zod", "typescript", "next"],
-      "policy": "sameRange"
-    }
-  ],
-  "semverGroups": [
-    {
-      "label": "Shared deps are pinned to exact versions (no ^ or ~)",
-      "dependencies": ["react", "react-dom", "zod", "typescript"],
-      "range": ""
-    }
-  ]
+	"$schema": "https://unpkg.com/syncpack@15.3.2/dist/schema.json",
+	"versionGroups": [
+		{
+			"label": "Shared deps must be the same version across all workspaces",
+			"dependencies": ["react", "react-dom", "zod", "typescript", "next"],
+			"policy": "sameRange"
+		}
+	],
+	"semverGroups": [
+		{
+			"label": "Shared deps are pinned to exact versions (no ^ or ~)",
+			"dependencies": ["react", "react-dom", "zod", "typescript"],
+			"range": ""
+		}
+	]
 }
 ```
 
@@ -89,11 +98,11 @@ Two rules are configured:
 
 Run from the **repo root**:
 
-| Command | What it does | Exit code |
-| ------- | ------------ | --------- |
+| Command           | What it does                                                     | Exit code                                 |
+| ----------------- | ---------------------------------------------------------------- | ----------------------------------------- |
 | `pnpm deps:check` | Lint all versions/ranges against the config. Prints drift if any | `0` = clean, `1` = drift found (fails CI) |
-| `pnpm deps:fix` | Auto-align all `package.json` files to the configured versions | — |
-| `pnpm deps:list` | Show every dependency version per workspace | — |
+| `pnpm deps:fix`   | Auto-align all `package.json` files to the configured versions   | —                                         |
+| `pnpm deps:list`  | Show every dependency version per workspace                      | —                                         |
 
 Examples:
 

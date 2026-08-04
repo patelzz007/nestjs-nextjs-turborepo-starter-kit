@@ -69,6 +69,8 @@ export type {
 } from "./auth";
 export { ApiErrorResponseSchema, ApiPaginatedMetaSchema, ApiResponseMetaSchema, ApiSuccessResponseSchema } from "./api-response";
 export type { ApiErrorResponse, ApiPaginatedMeta, ApiResponseMeta, ApiSuccessResponse } from "./api-response";
+export { AuthErrorCodeSchema, LockedErrorCodeSchema } from "./auth-errors";
+export type { AuthErrorCode, LockedErrorCode } from "./auth-errors";
 export {
 	AccountAnalyticsResponseSchema,
 	AdminOverviewResponseSchema,
@@ -91,6 +93,8 @@ export type {
 } from "./clicks";
 export { BaseResponseSchema, DateStringSchema } from "./common";
 export type { BaseResponse } from "./common";
+export { SessionStatusSchema } from "./session-status";
+export type { SessionStatus } from "./session-status";
 export { EnvSchema, parseEnv } from "./env";
 export type { Env } from "./env";
 export { AudienceTypeSchema, DeviceTypeSchema, MenuMatchTypeSchema, PermissionActionSchema, PermissionResourceSchema, PlanSchema, RedirectTypeSchema } from "./enums";

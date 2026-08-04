@@ -4,10 +4,11 @@ import { useAuth } from "@workspace/client/lib/auth";
 import { authEndpoints } from "@workspace/client/lib/endpoints";
 import { useCallback, useState, type JSX } from "react";
 
+import { BreadcrumbTrail } from "@/components/breadcrumb-trail";
 import { LogoutButton } from "@/components/logout-button";
 
 export default function HelloPage(): JSX.Element {
-	const { api } = useAuth();
+	const { api, isInitializing } = useAuth();
 	const [showDetails, setShowDetails] = useState(false);
 	const toggleDetails = useCallback((): void => {
 		setShowDetails((prev: boolean) => !prev);
@@ -16,6 +17,23 @@ export default function HelloPage(): JSX.Element {
 	const meQuery = api.procedure(authEndpoints.me).useQuery();
 
 	const user = meQuery.data?.data;
+
+	// On SSR + the first client render, auth state isn't established yet.
+	// Render the hydration spinner instead of flashing the query states
+	// (mirrors the isInitializing gate on the admin login page).
+	if (isInitializing) {
+		return (
+			<div className="flex min-h-svh items-center justify-center">
+				<div className="flex flex-col items-center gap-4">
+					<svg className="size-8 animate-spin text-muted-foreground" fill="none" viewBox="0 0 24 24">
+						<circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+						<path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+					</svg>
+					<p className="text-sm text-muted-foreground">Loading…</p>
+				</div>
+			</div>
+		);
+	}
 
 	if (meQuery.isLoading) {
 		return (
@@ -46,6 +64,9 @@ export default function HelloPage(): JSX.Element {
 	return (
 		<div className="flex min-h-svh items-center justify-center p-8">
 			<div className="w-full max-w-lg space-y-8">
+				{/* Breadcrumb (context-driven, with mandatory icons) */}
+				<BreadcrumbTrail />
+
 				{/* Header */}
 				<div className="text-center">
 					<div className="mx-auto flex size-16 items-center justify-center rounded-full bg-primary/10">

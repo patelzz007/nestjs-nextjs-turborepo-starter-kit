@@ -1,3 +1,12 @@
+---
+title: "Auth Roadmap"
+description: "Ideas and design decisions for improving authentication, authorization, and multi-tenancy."
+order: 9
+author: "Acme Inc."
+lastUpdated: "2026-08-04"
+coverImage: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=1600&q=80"
+---
+
 # Auth Roadmap
 
 > Ideas and design decisions for improving authentication, authorization, and multi-tenancy.
@@ -994,3 +1003,235 @@ If a user triggers 5 account-locked alerts in an hour (e.g., brute force from mu
 only send the first email. Subsequent alerts are logged but not emailed.
 **Backend:** A `NotificationCooldownService` that checks `EmailAuditLog` before sending.
 The cooldown window and max-per-window are configurable via env vars.
+
+---
+
+----------------------------------------------------- Shipped: Auth hardening batch (August 2026) -----------------------------------------------------
+
+# ✅ Auth Hardening — 5 Features Shipped
+
+> Five items from the roadmap above were designed, implemented, and shipped together as the
+> **auth hardening batch**. This section is the source of truth for how they were built — the
+> implementation notes, the files involved, and the do's and don'ts that keep the machinery
+> from regressing.
+>
+> Deep-dive companion: [Token Refresh — How It Works](./token-refresh.md) covers the two
+> refresh layers (proxy + client), the dead-session/transient-failure handling, and the
+> observability story these features plug into.
+
+---
+
+### 26. Auth error-code mapping + i18n-ready catalog (P1)
+
+**What:** A single, shared, typed catalog of canonical auth error codes that the API emits and
+both frontends map to friendly, locale-ready messages. Also preserves the lockout payload
+(`lockedUntil` / `remainingSeconds`) on `ACCOUNT_LOCKED` so the UI can render a live countdown.
+
+**How it was implemented:**
+
+- `packages/shared/src/schemas/auth-errors.ts` — `AuthErrorCodeSchema` (a zod enum of the 15
+  canonical codes: `INVALID_CREDENTIALS`, `ACCOUNT_LOCKED`, `ADMIN_ACCESS_REQUIRED`,
+  `EMAIL_NOT_VERIFIED`, `ACCESS_TOKEN_*`, `REFRESH_TOKEN_*`, `TOKEN_THEFT_DETECTED`,
+  `USER_NOT_FOUND`, `ACCOUNT_IS_INACTIVE`, `ACCOUNT_DELETED`, `SUPER_ADMIN_REQUIRED`) plus a
+  `LockedErrorCodeSchema` literal. Backend and both frontends import from the same package, so
+  the set can never drift.
+- `packages/shared/src/schemas/message.ts` — `ErrorResponseSchema` (`.strict()`) gained
+  **optional** `lockedUntil` / `remainingSeconds` fields so `ACCOUNT_LOCKED` payloads pass
+  strict validation.
+- `apps/api/src/modules/auth/auth.service.ts` — the login path now throws structured errors:
+  `ACCOUNT_LOCKED` (with `lockedUntil` + `remainingSeconds` when `user.lockedUntil > now`) and
+  `INVALID_CREDENTIALS` for bad credentials.
+- `packages/client/src/lib/use-api.ts` — a real `ApiError` class that preserves `error` (the
+  canonical code), `statusCode`, and the lockout fields. Previously these were flattened into a
+  generic `Error` and the code was lost.
+- `packages/client/src/lib/auth-errors.ts` — `resolveAuthErrorMessage(error, locale = "en")`
+  (catalog lookup → server message → generic fallback), `isAccountLockedError()` (type guard
+  that narrows to a lockout-payload error), `extractAuthErrorMessage()`.
+- Both login forms (web + admin) call `resolveAuthErrorMessage` and, when
+  `isAccountLockedError`, render `<LockoutCountdown>` instead of a static message.
+
+**✅ Do:**
+
+- Key user-facing wording on the **stable `error` code**, never on the server's raw `message`
+  (server copy is technical and inconsistent).
+- Add a new locale by adding **one catalog object** to `AUTH_MESSAGE_CATALOGS` — the resolver
+  already takes a `locale` param, so nothing downstream changes.
+- Keep the catalog type complete: `AuthMessageCatalog` is `Record<AuthErrorCode, string>`, so
+  TypeScript forces an entry for every code.
+
+**❌ Don't:**
+
+- Don't surface raw server strings as the primary UX text — keep the friendly catalog as the
+  single place the apps own the wording.
+- Don't swallow `ApiError` back into a plain `Error` in request paths — that's what discards
+  the code and lockout payload this feature exists to preserve.
+
+---
+
+### 27. Password UX affordances (P3)
+
+**What:** Richer password fields on both login forms: show/hide toggle, caps-lock warning, a
+0–4 strength meter with a checklist, and a live lockout countdown for locked accounts.
+
+**How it was implemented:**
+
+- `packages/ui/src/components/password-input.tsx` — show/hide toggle (eye icon) + caps-lock
+  warning driven by `getModifierState("CapsLock")` on keydown.
+- `packages/ui/src/components/password-strength-meter.tsx` — a meter bar + label + unmet-
+  criteria checklist.
+- `packages/ui/src/components/lockout-countdown.tsx` — live "retry in MM:SS" countdown fed by
+  the `remainingSeconds` on an `ACCOUNT_LOCKED` error.
+- `packages/client/src/lib/password.ts` — `passwordStrength()` pure helper (tested) that scores
+  0–4 by how many of five criteria are met. The criteria **deliberately mirror** `strongPassword`
+  in the shared package (length 8+, upper, lower, digit, special) so UI feedback and server
+  validation can never disagree.
+- Wired into the web and admin login forms (fields + meter + countdown).
+
+**✅ Do:**
+
+- Keep the UI scoring rules byte-identical to the server's validation rules — a meter that
+  says "Strong" for a password the API rejects is a UX bug.
+- Treat an empty password as score 0 and derive `percent = score * 25` for a stable bar width.
+
+**❌ Don't:**
+
+- Don't disable the browser's password manager by fighting `autoComplete` — keep
+  `autoComplete="current-password"` and render the toggle as an overlay control.
+- Don't store or log the raw password in the strength helper — it must stay a pure,
+  side-effect-free function.
+
+---
+
+### 28. Client refresh cooldown (P2)
+
+**What:** When the API is unreachable, the client's 401-refresh pipeline previously fired on
+**every** new 401. Now a **transient** refresh failure (network error / 5xx) is memoized for
+30s, so a dead API isn't hammered — while a genuinely dead session is **never** suppressed.
+
+**How it was implemented:**
+
+- `packages/client/src/lib/use-api.ts` — `RefreshResult` became a tri-state
+  `"ok" | "expired" | "transient"` so the pipeline can tell a dead API from a dead session.
+  `performRefresh` (in `auth.tsx`) maps response/error into one of the three.
+- `createRefreshCooldown(refresh, cooldownMs = 30_000)` wraps the raw refresh: a
+  `"transient"` result arms a 30s window during which calls short-circuit to `false` (no
+  network call, no retry — and importantly **no logout**). `"expired"` clears the window and
+  still returns `false` so the caller's unauthorized path (clear state + redirect) runs
+  normally. A success resets the window.
+- The wrapper instance lives in a `useRef` (`cooldownRefreshRef.current ??= ...`) so it is
+  stable across renders and `useApi`'s memo never re-creates it.
+- Single-flight is preserved by the existing `refreshPromiseRef.current ??=` pattern —
+  concurrent 401s still share one refresh call.
+
+**✅ Do:**
+
+- Cooldown **only** `"transient"` failures. A dead session must always redirect — that's the
+  difference between a temporary blip and a real logout.
+- Reset the cooldown on success so a healthy session is never throttled.
+- Keep the wrapper in a ref so the `useApi` memo deps stay stable.
+
+**❌ Don't:**
+
+- Don't treat a 401 on `/auth/refresh` as transient — `"expired"` is a dead session and must
+  flow through `handleUnauthorized` (clear cache + redirect).
+- Don't build a second cooldown for the proxy and the client separately without documenting
+  the interaction — see #29's caveat below.
+
+---
+
+### 29. Proxy refresh cooldown (P2)
+
+**What:** Same idea as #28, but for the server-side refresh in the route proxies. A transient
+proxy-refresh failure (API down / 5xx) is memoized for **60s**, so repeated navigations inside
+that window skip the refresh call entirely — this is what killed the `ECONNREFUSED` log spam
+seen when the API is down and the user keeps navigating.
+
+**How it was implemented:**
+
+- `packages/client/src/lib/proxy-refresh.ts` — `createProxyRefreshCooldown(refreshAttempt,
+  cooldownMs = PROXY_REFRESH_COOLDOWN_MS /* 60_000 */)`. Inside the window it short-circuits
+  to `{ ok: false, status: 0, skipped: true }` (no network call).
+- Instantiated **once at module scope** in both `apps/web/proxy.ts` and `apps/admin/proxy.ts` —
+  the returned function owns the closure state, so the memoized failure survives across
+  requests in the server process (that's what makes it effective for real navigations).
+- The proxy logs the new `cooldown-active` outcome (`[proxy:*] ... transient failure recently
+  — refresh skipped (cooldown)`) and serves the stale page — matching the existing
+  `transient-failure` fall-through that deliberately does **not** log the user out.
+- A success, a dead session (401/403), or a fresh login resets the window.
+
+**✅ Do:**
+
+- Instantiate the cooldown at **module scope** — a per-request instance would reset on every
+  navigation and the cooldown would never engage.
+- Never memoize a 401/403 refresh response: a dead session must clear cookies and redirect on
+  **every** navigation until the user re-logs-in (that's what breaks the stale-cookie bounce
+  loop).
+
+**❌ Don't:**
+
+- Don't expect to see this in the browser Network tab — the proxy refresh is server-to-server.
+  It's observable via the `[proxy:web]` / `[proxy:admin]` lines in the server console.
+- ⚠️ **Caveat (documented trade-off):** the web (`:3000`) and admin (`:3001`) proxies share
+  one Next.js server process but keep **separate cooldown instances**. If the API were flaky
+  enough to fail for only one client type, that app's proxy refresh is suppressed for up to
+  60s while the other keeps retrying. Self-heals on the next success or after the window
+  elapses. (See `docs/token-refresh.md` §6.)
+
+---
+
+### 30. Auth hydration + cache sync (P2)
+
+**What:** Three related fixes: (a) an `isInitializing` state that kills the login-form flash on
+page reload, (b) all React Query caches are cleared on logout **and** every unauthorized so no
+stale user data survives a session change, and (c) cross-tab sync so logging out in one tab
+logs out every tab sharing the same cookie set.
+
+**How it was implemented:**
+
+- **Hydration** — `packages/client/src/lib/auth.tsx` exposes `isInitializing`, implemented as a
+  tiny external store read via `useSyncExternalStore` (the canonical hydration pattern: no
+  `setState`-in-effect, SSR-safe). The store tracks a module-level `clientMounted` flag that
+  starts `false` — on the server **and** the client's first render — so `getServerSnapshot`
+  and `getSnapshot` agree (no hydration mismatch). `isInitializing` is the **negation** of
+  that flag: `true` during SSR + the first client render, `false` once mounted. The mount
+  effect flips the flag to `true` and **notifies the store's subscribers** — the notification
+  is what makes `useSyncExternalStore` re-render. ⚠️ Gotcha: the flag must start `false` and
+  flip to `true` (a no-op `subscribe`, or starting the snapshot at `true`, leaves the
+  hydration spinner stuck forever because React never sees a change). Consumers gate on it —
+  the admin login page, web login page, and web `/hello` page render a spinner during the
+  window instead of flashing the form/content.
+- **Cache clear** — `queryClient.clear()` runs in `logout` **and** in `handleUnauthorized`, so
+  a 401-refresh failure also wipes user data (previously a dead session could leave the
+  previous user's queries cached).
+- **Cross-tab sync** — `packages/client/src/lib/auth-sync.ts` provides `createAuthChannel(name)`,
+  a thin wrapper over `BroadcastChannel`. Each `AuthProvider` owns one channel per auth context
+  (web vs admin cookie set, keyed by `cookieNames.accessToken`), broadcasts **only state
+  changes** (`"logged-out"` / `"logged-in"` — never tokens), and closes its channel on
+  unmount. Receiving `"logged-out"` runs the same `handleUnauthorized` path (clear cache +
+  redirect). Degrades to no-ops where `BroadcastChannel` is unavailable (SSR, jsdom, old
+  browsers).
+- `resetAuthHydrationForTests()` test helper resets the module-scoped hydration flag between
+  tests.
+
+**✅ Do:**
+
+- Broadcast **state changes only** — never access or refresh tokens over the channel (other
+  tabs might listen; and tokens live in httpOnly cookies precisely so JS never touches them).
+- Give each provider its **own channel** and close it on unmount — a shared singleton channel
+  leaks stale listeners across mounts/tabs/tests (this bit us in the tests).
+- Use `useSyncExternalStore` (not setState-in-effect) for the hydration flag — it's what keeps
+  it SSR-consistent and React-Compiler-clean.
+
+**❌ Don't:**
+
+- Don't use a module-singleton channel cache — each call must create an independent channel so
+  real tabs (and tests) get clean delivery semantics.
+- Don't forget the SSR snapshot: `getServerSnapshot` must return the "initializing" value, or
+  the server HTML shows the form and hydration flashes it.
+
+---
+
+**Test coverage:** the batch is locked down by unit tests in `packages/client` (auth, auth-sync,
+proxy-refresh, password, use-api), `apps/web` (proxy), `apps/admin` (proxy), plus the
+real-docs frontmatter test in `apps/admin/lib/__tests__/markdown.test.ts`.
+

@@ -1,9 +1,23 @@
 // ============================================
 // proxy.ts - Admin App Route Protection
 // Next.js 16+ convention (replaces middleware.ts)
+// Next.js 16 runs `proxy.ts` on the **Node.js** runtime by design (only the
+// legacy `middleware.ts` convention can opt into Edge), so no Edge runtime
+// setup is needed on Node hosts (DigitalOcean / Linode droplets, etc.).
 // ============================================
 
+import { API_BASE_URL } from "@workspace/client/lib/config";
 import { decodeJwtPayload } from "@workspace/client/lib/jwt";
+import {
+	createProxyRefreshCooldown,
+	isAccessTokenExpired,
+	isDocumentNavigation,
+	logProxyRefresh,
+	parseSetCookie,
+	refreshSessionFromProxy,
+	type ParsedCookie,
+	type ProxyRefreshResult,
+} from "@workspace/client/lib/proxy-refresh";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
@@ -14,67 +28,161 @@ import type { NextRequest } from "next/server";
 const ACCESS_TOKEN_COOKIE = "adminAccessToken";
 const REFRESH_TOKEN_COOKIE = "adminRefreshToken";
 
-// Routes that require authentication + admin access
-const PROTECTED_ROUTES: readonly string[] = ["/dashboard", "/users", "/roles", "/permissions", "/settings", "/audit-log", "/environments"];
+// The whole admin panel lives under `/` (overview, settings, users, …).
+// Only `/auth/*` is open to unauthenticated visitors.
+const AUTH_ROUTES: readonly string[] = ["/auth/login", "/auth/forgot-password"];
 
-// Routes that should redirect to /dashboard if already authenticated
-const AUTH_ROUTES: readonly string[] = ["/auth/forgot-password"];
-
-// Routes accessible without authentication
+// Routes accessible without authentication.
 const PUBLIC_ROUTES: readonly string[] = [];
 
-export function proxy(request: NextRequest): NextResponse {
+/** True when `redirect` is a safe in-app path (no open redirects, no auth pages). */
+/**
+ * Transient-failure cooldown (60s), instantiated ONCE at module scope so the
+ * memoized failure survives across requests in the server process. When the
+ * API is down, the first navigation inside the skew window hits it once and
+ * subsequent navigations skip — silencing the ECONNREFUSED spam in the logs.
+ */
+const attemptRefresh = createProxyRefreshCooldown((refreshToken: string): Promise<ProxyRefreshResult> =>
+	refreshSessionFromProxy({
+		apiBaseUrl: API_BASE_URL,
+		refreshTokenName: REFRESH_TOKEN_COOKIE,
+		refreshToken,
+		clientType: "admin",
+	}),
+);
+
+function isSafeRedirect(redirect: string): boolean {
+	return redirect.startsWith("/") && !redirect.startsWith("//") && !redirect.startsWith("/auth/");
+}
+
+/**
+ * Expire the given cookies on a response. The proxy CAN clear httpOnly
+ * cookies (unlike browser JS), so a confirmed-dead session can be cleaned up
+ * here — this is what breaks the stale-cookie bounce loop between the panel
+ * and the login page.
+ */
+function clearCookies(response: NextResponse, names: readonly string[]): NextResponse {
+	for (const name of names) {
+		response.cookies.set(name, "", { maxAge: 0, path: "/" });
+	}
+	return response;
+}
+
+/** Forward the rotated `Set-Cookie` headers from the refresh response to the browser. */
+function applyRotatedCookies(response: NextResponse, setCookies: readonly string[]): NextResponse {
+	for (const header of setCookies) {
+		const cookie: ParsedCookie | null = parseSetCookie(header);
+		if (cookie === null) continue;
+		response.cookies.set(cookie.name, cookie.value, {
+			httpOnly: cookie.httpOnly,
+			secure: cookie.secure,
+			sameSite: cookie.sameSite,
+			path: cookie.path,
+			domain: cookie.domain ?? undefined,
+			// Faithful forwarding: the API's session cookies carry no lifetime,
+			// so maxAge/expires are null and omitted — preserving the exact
+			// cookie the browser would have received on a direct refresh.
+			maxAge: cookie.maxAge ?? undefined,
+			expires: cookie.expires ?? undefined,
+		});
+	}
+	return response;
+}
+
+export async function proxy(request: NextRequest): Promise<NextResponse> {
 	const accessToken = request.cookies.get(ACCESS_TOKEN_COOKIE)?.value;
 	const refreshToken = request.cookies.get(REFRESH_TOKEN_COOKIE)?.value;
 	const { pathname } = request.nextUrl;
 
-	const isAuthenticated = !!(accessToken && refreshToken);
-
-	// Decode JWT to check the hasAdminAccess claim for route-level protection
-	const payload = accessToken ? decodeJwtPayload(accessToken) : null;
-	const hasAdminAccess: boolean = payload?.hasAdminAccess === true;
-
-	const isProtectedRoute = PROTECTED_ROUTES.some((route) => pathname.startsWith(route));
 	const isAuthRoute = AUTH_ROUTES.some((route) => pathname.startsWith(route));
 	const isPublicRoute = PUBLIC_ROUTES.some((route) => pathname === route);
 
-	// Allow public routes for everyone
-	if (isPublicRoute) {
-		return NextResponse.next();
-	}
+	// ── Proxy-side silent refresh ──────────────────────────────────────────
+	// The proxy runs server-side, so it CAN read the httpOnly cookies (unlike
+	// browser JS). On a document navigation with an expired access token it
+	// rotates the tokens BEFORE serving the page — the first API call (e.g.
+	// /auth/me) then never 401s. If the refresh token is dead too, it clears
+	// the stale cookies and sends the user to login, breaking the dead-session
+	// bounce loop that neither the client nor the API guard could break.
+	//
+	// NOTE: this refresh and the client's 401-refresh are independent
+	// single-flight domains — a rotation here can invalidate an in-flight
+	// rotation from another tab. That is a deliberate trade-off (worst case:
+	// a spurious re-login) kept in exchange for no cross-tab coordination.
+	let rotatedCookies: readonly string[] = [];
+	// Start from the presented token; a successful refresh replaces it with
+	// the rotated one so hasAdminAccess reflects the CURRENT session.
+	let effectiveAccessToken: string | undefined = accessToken;
 
-	// Protected routes: must be authenticated AND have admin access
-	if (isProtectedRoute) {
-		if (!isAuthenticated) {
+	if (!isPublicRoute && accessToken !== undefined && refreshToken !== undefined && isDocumentNavigation(request.headers) && isAccessTokenExpired(accessToken)) {
+		const refreshStartedAt: number = Date.now();
+		const result = await attemptRefresh(refreshToken);
+		const elapsedMs: number = Date.now() - refreshStartedAt;
+		if (result.ok) {
+			rotatedCookies = result.setCookies;
+			// Re-extract the rotated access token so the hasAdminAccess claim
+			// below is evaluated against the token the browser is about to hold.
+			const newAccessToken: string | undefined = rotatedCookies
+				.map((header: string): ParsedCookie | null => parseSetCookie(header))
+				.find((cookie: ParsedCookie | null): cookie is ParsedCookie => cookie?.name === ACCESS_TOKEN_COOKIE)?.value;
+			if (newAccessToken !== undefined) effectiveAccessToken = newAccessToken;
+			logProxyRefresh({ app: "admin", pathname, status: result.status, elapsedMs, outcome: "refreshed", rotatedCookieCount: result.setCookies.length });
+		} else if (result.status === 401 || result.status === 403) {
+			// Session is genuinely dead (refresh token rejected) — clear the
+			// stale cookies so the next request isn't treated as authenticated,
+			// then send to login.
+			logProxyRefresh({ app: "admin", pathname, status: result.status, elapsedMs, outcome: "dead-session", rotatedCookieCount: 0 });
 			const loginUrl = new URL("/auth/login", request.url);
 			loginUrl.searchParams.set("redirect", pathname);
-			return NextResponse.redirect(loginUrl);
+			return clearCookies(NextResponse.redirect(loginUrl), [ACCESS_TOKEN_COOKIE, REFRESH_TOKEN_COOKIE]);
+		} else if (result.skipped === true) {
+			// A transient failure happened recently — skip the re-attempt so a
+			// dead API isn't hammered on every navigation. Serve the stale page.
+			logProxyRefresh({ app: "admin", pathname, status: result.status, elapsedMs, outcome: "cooldown-active", rotatedCookieCount: 0 });
+		} else {
+			// Network error / 5xx: fall through without clearing — don't log the
+			// user out because of a temporary API blip.
+			logProxyRefresh({ app: "admin", pathname, status: result.status, elapsedMs, outcome: "transient-failure", rotatedCookieCount: 0, errorDetail: result.errorDetail });
 		}
-		// Authenticated but not an admin — redirect to login
-		if (!hasAdminAccess) {
-			const loginUrl = new URL("/auth/login", request.url);
-			return NextResponse.redirect(loginUrl);
-		}
-		// Authenticated + has admin access — proceed
-		return NextResponse.next();
 	}
 
-	// Auth routes (forgot-password only): redirect to dashboard if admin
-	if (isAuthRoute && isAuthenticated && hasAdminAccess) {
-		const redirect = request.nextUrl.searchParams.get("redirect");
-		const targetUrl = redirect && PROTECTED_ROUTES.some((route) => redirect.startsWith(route)) ? redirect : "/dashboard";
-		return NextResponse.redirect(new URL(targetUrl, request.url));
+	// Authenticated by access token presence; the refresh-on-401 flow in useApi
+	// silently rotates an expired access token. Route-level admin gating still
+	// uses the decoded JWT below — actual token validity is enforced by the API.
+	const isAuthenticated = !!effectiveAccessToken;
+
+	// Decode JWT to check the hasAdminAccess claim for route-level protection
+	const payload = effectiveAccessToken ? decodeJwtPayload(effectiveAccessToken) : null;
+	const hasAdminAccess: boolean = payload?.hasAdminAccess === true;
+
+	// Allow public routes for everyone
+	if (isPublicRoute) {
+		return applyRotatedCookies(NextResponse.next(), rotatedCookies);
 	}
 
-	// Root path: redirect admin users to dashboard
-	if (pathname === "/") {
+	// Auth routes (login, forgot-password): bounce already-authenticated
+	// admins back into the panel instead of showing the form again.
+	if (isAuthRoute) {
 		if (isAuthenticated && hasAdminAccess) {
-			return NextResponse.redirect(new URL("/dashboard", request.url));
+			const redirect = request.nextUrl.searchParams.get("redirect");
+			const targetUrl = redirect !== null && isSafeRedirect(redirect) ? redirect : "/";
+			return applyRotatedCookies(NextResponse.redirect(new URL(targetUrl, request.url)), rotatedCookies);
 		}
-		// Unauthenticated or non-admin users see the login page
+		return applyRotatedCookies(NextResponse.next(), rotatedCookies);
 	}
 
-	return NextResponse.next();
+	// Everything else is a protected panel route: must be authenticated
+	// AND have admin access.
+	if (!isAuthenticated) {
+		const loginUrl = new URL("/auth/login", request.url);
+		loginUrl.searchParams.set("redirect", pathname);
+		return applyRotatedCookies(NextResponse.redirect(loginUrl), rotatedCookies);
+	}
+	if (!hasAdminAccess) {
+		const loginUrl = new URL("/auth/login", request.url);
+		return applyRotatedCookies(NextResponse.redirect(loginUrl), rotatedCookies);
+	}
+	return applyRotatedCookies(NextResponse.next(), rotatedCookies);
 }
 
 export const config = {

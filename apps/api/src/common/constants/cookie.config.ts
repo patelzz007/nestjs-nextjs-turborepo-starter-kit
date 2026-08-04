@@ -3,7 +3,9 @@ import type { CookieOptions } from "express";
 
 // ── Exported Constants ─────────────────────────────────────────────────────
 
-/** Union of all supported cookie names */
+/**
+ * Union of all supported cookie names.
+ */
 export type CookieNames = "accessToken" | "refreshToken" | "adminAccessToken" | "adminRefreshToken";
 
 /** Name of the access token cookie */

@@ -1,8 +1,29 @@
 "use client";
 
+import { useAuth } from "@workspace/client/lib/auth";
+
 import { LoginForm } from "@/components/login-form";
 
 export default function WebLoginPage(): React.JSX.Element {
+	const { isInitializing } = useAuth();
+
+	// On SSR + the first client render, auth state isn't established yet.
+	// Rendering the form during that window would flash it on every reload
+	// (and for logged-in users, the proxy is about to bounce them to /hello).
+	if (isInitializing) {
+		return (
+			<div className="flex min-h-svh items-center justify-center">
+				<div className="flex flex-col items-center gap-4">
+					<svg className="size-8 animate-spin text-muted-foreground" fill="none" viewBox="0 0 24 24">
+						<circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+						<path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+					</svg>
+					<p className="text-sm text-muted-foreground">Loading…</p>
+				</div>
+			</div>
+		);
+	}
+
 	return (
 		<div className="grid min-h-svh lg:grid-cols-2">
 			{/* ── Left: Login Form ──────────────────────────────────────── */}

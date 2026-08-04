@@ -39,6 +39,10 @@
 			"dependsOn": ["^build", "^typecheck"],
 			"cache": false
 		},
+		"test": {
+			"dependsOn": ["^build"],
+			"cache": false
+		},
 		// ── Database tasks ───────────────────────────────────────────────────
 		// All db:* scripts are defined in apps/api (the only workspace that has
 		// them), so `pnpm turbo run db:<task>` executes them exactly once there.

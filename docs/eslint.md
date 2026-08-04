@@ -1,3 +1,12 @@
+---
+title: "ESLint Setup & How To Run It"
+description: "How ESLint is configured repo-wide and how to run it — both globally (via Turborepo) and per project."
+order: 6
+author: "Acme Inc."
+lastUpdated: "2026-08-02"
+coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=1600&q=80"
+---
+
 # ESLint Setup & How To Run It
 
 > This document explains how ESLint is configured across the entire monorepo and
@@ -41,24 +50,24 @@ packages/eslint-config/          ← the shared config package (@workspace/eslin
 
 Each workspace's own `eslint.config.js` simply imports one of the above:
 
-| Workspace        | `eslint.config.js` imports            | Shared config used        |
-| ---------------- | -------------------------------------- | ------------------------- |
-| `apps/web`       | `nextJsConfig`                         | `@workspace/eslint-config/next-js` |
-| `apps/admin`     | `nextJsConfig`                         | `@workspace/eslint-config/next-js` |
-| `apps/api`       | `nestjsConfig` (+ local overrides)     | `@workspace/eslint-config/nestjs`  |
-| `packages/ui`    | `config`                               | `@workspace/eslint-config/react-internal` |
-| `packages/shared`| `baseConfig` (+ Zod exception)         | `@workspace/eslint-config/base`    |
+| Workspace         | `eslint.config.js` imports         | Shared config used                        |
+| ----------------- | ---------------------------------- | ----------------------------------------- |
+| `apps/web`        | `nextJsConfig`                     | `@workspace/eslint-config/next-js`        |
+| `apps/admin`      | `nextJsConfig`                     | `@workspace/eslint-config/next-js`        |
+| `apps/api`        | `nestjsConfig` (+ local overrides) | `@workspace/eslint-config/nestjs`         |
+| `packages/ui`     | `config`                           | `@workspace/eslint-config/react-internal` |
+| `packages/shared` | `baseConfig` (+ Zod exception)     | `@workspace/eslint-config/base`           |
 
 The package `packages/eslint-config/package.json` maps these import paths:
 
 ```json
 {
-  "exports": {
-    "./base": "./base.js",
-    "./next-js": "./next.js",
-    "./react-internal": "./react-internal.js",
-    "./nestjs": "./nestjs.js"
-  }
+	"exports": {
+		"./base": "./base.js",
+		"./next-js": "./next.js",
+		"./react-internal": "./react-internal.js",
+		"./nestjs": "./nestjs.js"
+	}
 }
 ```
 
@@ -147,17 +156,17 @@ Everything from `base.js` plus:
 
 These are the **non-negotiable** project rules and how ESLint enforces them:
 
-| Non-negotiable rule | How ESLint enforces it |
-| ------------------- | ---------------------- |
-| No `any` / `z.any` | `no-explicit-any` = error + `strictTypeChecked` (`no-unsafe-*`) |
-| No `unknown` / `z.unknown` | `strictTypeChecked` rules flag unsafe `unknown` usage |
-| No `never` / `z.never` | `no-unnecessary-condition` + `strictTypeChecked` |
-| No type casting / `as Type` | `consistent-type-assertions` (`assertionStyle: "never"`; `as const` exempt) |
-| Avoid `typeof`, infer from Zod | `strictTypeChecked` + code review; types come from `z.infer<>` |
-| Use generic types (priority 0) | `stylisticTypeChecked` + code review |
-| Always add access modifiers + return types | `explicit-member-accessibility` + `explicit-function-return-type` = error |
-| No `console.log` in production code | `no-console` = warn (use a logger) |
-| Strict equality | `eqeqeq` = error (except `== null` null-checks) |
+| Non-negotiable rule                        | How ESLint enforces it                                                      |
+| ------------------------------------------ | --------------------------------------------------------------------------- |
+| No `any` / `z.any`                         | `no-explicit-any` = error + `strictTypeChecked` (`no-unsafe-*`)             |
+| No `unknown` / `z.unknown`                 | `strictTypeChecked` rules flag unsafe `unknown` usage                       |
+| No `never` / `z.never`                     | `no-unnecessary-condition` + `strictTypeChecked`                            |
+| No type casting / `as Type`                | `consistent-type-assertions` (`assertionStyle: "never"`; `as const` exempt) |
+| Avoid `typeof`, infer from Zod             | `strictTypeChecked` + code review; types come from `z.infer<>`              |
+| Use generic types (priority 0)             | `stylisticTypeChecked` + code review                                        |
+| Always add access modifiers + return types | `explicit-member-accessibility` + `explicit-function-return-type` = error   |
+| No `console.log` in production code        | `no-console` = warn (use a logger)                                          |
+| Strict equality                            | `eqeqeq` = error (except `== null` null-checks)                             |
 
 ---
 
@@ -185,7 +194,19 @@ export default [
 
 	// 3. Relax no-unsafe-* for runtime-type patterns (Prisma / Zod / Express)
 	{
-		files: ["src/prisma/**/*.ts", "src/modules/**/*.ts", "src/common/schemas/**/*.ts", "src/common/guards/**/*.ts", "src/common/interceptors/**/*.ts", "src/common/middleware/**/*.ts", "src/app.controller.ts", "src/main.ts", "src/common/dto/**/*.ts", "src/common/services/**/*.ts", "src/common/utils/**/*.ts"],
+		files: [
+			"src/prisma/**/*.ts",
+			"src/modules/**/*.ts",
+			"src/common/schemas/**/*.ts",
+			"src/common/guards/**/*.ts",
+			"src/common/interceptors/**/*.ts",
+			"src/common/middleware/**/*.ts",
+			"src/app.controller.ts",
+			"src/main.ts",
+			"src/common/dto/**/*.ts",
+			"src/common/services/**/*.ts",
+			"src/common/utils/**/*.ts",
+		],
 		rules: {
 			"@typescript-eslint/no-unsafe-assignment": "off",
 			"@typescript-eslint/no-unsafe-call": "off",
@@ -367,16 +388,16 @@ npx eslint .      # should end with "✖ 0 problems (0 errors, 0 warnings)"
 
 ## 7. Quick reference cheat sheet
 
-| What you want | Command |
-| ------------- | ------------------------ |
-| Lint everything | `pnpm lint` |
-| Lint one workspace | `pnpm lint --filter @workspace/web` (or `@workspace/admin` / `@workspace/api` / `@workspace/ui` / `@workspace/client`) |
-| Lint shared (no script) | `cd packages/shared && npx eslint src` (or `pnpm --filter @workspace/shared exec eslint src`) |
-| Lint + auto-fix (inside workspace) | `npx eslint --fix .` |
-| Format with Prettier | `pnpm format` |
-| Typecheck everything | `pnpm typecheck` |
-| Fail on any warning (inside workspace) | `npx eslint --max-warnings 0 .` |
-| Bypass cache (inside workspace) | `npx eslint --no-cache .` |
+| What you want                          | Command                                                                                                                |
+| -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| Lint everything                        | `pnpm lint`                                                                                                            |
+| Lint one workspace                     | `pnpm lint --filter @workspace/web` (or `@workspace/admin` / `@workspace/api` / `@workspace/ui` / `@workspace/client`) |
+| Lint shared (no script)                | `cd packages/shared && npx eslint src` (or `pnpm --filter @workspace/shared exec eslint src`)                          |
+| Lint + auto-fix (inside workspace)     | `npx eslint --fix .`                                                                                                   |
+| Format with Prettier                   | `pnpm format`                                                                                                          |
+| Typecheck everything                   | `pnpm typecheck`                                                                                                       |
+| Fail on any warning (inside workspace) | `npx eslint --max-warnings 0 .`                                                                                        |
+| Bypass cache (inside workspace)        | `npx eslint --no-cache .`                                                                                              |
 
 > Rows that run raw `npx eslint` must be executed **from inside a workspace**
 > (each workspace has its own `eslint.config.js`; the repo root does not).

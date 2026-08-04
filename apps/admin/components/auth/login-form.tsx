@@ -4,13 +4,18 @@
 "use client";
 
 import { useAuth } from "@workspace/client/lib/auth";
+import { isAccountLockedError, resolveAuthErrorMessage } from "@workspace/client/lib/auth-errors";
 import { authEndpoints } from "@workspace/client/lib/endpoints";
-import { ApiErrorSchema } from "@workspace/client/lib/use-api";
+import { passwordStrength } from "@workspace/client/lib/password";
 import { FormShell } from "@workspace/ui/components/form-shell";
 import { Input } from "@workspace/ui/components/input";
 import { Label } from "@workspace/ui/components/label";
+import { LockoutCountdown } from "@workspace/ui/components/lockout-countdown";
+import { PasswordInput } from "@workspace/ui/components/password-input";
+import { PasswordStrengthMeter } from "@workspace/ui/components/password-strength-meter";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useState, type JSX, type ReactNode } from "react";
+import { useCallback, useMemo, useState, type JSX, type ReactNode } from "react";
 
 // ── Props ───────────────────────────────────────────────────────────────────
 
@@ -26,11 +31,13 @@ export interface LoginFormProps {
 
 // ── Component ───────────────────────────────────────────────────────────────
 
-export function LoginForm({ logo, title, heading, subtitle, emailPlaceholder = "admin@example.com", redirectPath = "/dashboard", footer }: LoginFormProps): JSX.Element {
+export function LoginForm({ logo, title, heading, subtitle, emailPlaceholder = "admin@example.com", redirectPath = "/", footer }: LoginFormProps): JSX.Element {
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
 	const [isLoading, setIsLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+	// Set when the API answers ACCOUNT_LOCKED — drives the live countdown (#27).
+	const [lockout, setLockout] = useState<{ readonly remainingSeconds: number; readonly lockedUntil: string } | null>(null);
 	const router = useRouter();
 	const { api, login: authLogin } = useAuth();
 
@@ -46,11 +53,14 @@ export function LoginForm({ logo, title, heading, subtitle, emailPlaceholder = "
 	// (handled by authEndpoints.adminLogin's baseOptions)
 	const loginMutation = api.procedure(authEndpoints.adminLogin).useMutation();
 
+	// Live password-strength feedback while typing (#27).
+	const strength = useMemo(() => passwordStrength(password), [password]);
 	const handleFormSubmit = useCallback(
 		(event: React.SyntheticEvent<HTMLFormElement>): void => {
 			event.preventDefault();
 			setIsLoading(true);
 			setError(null);
+			setLockout(null);
 
 			loginMutation
 				.mutateAsync({ email, password })
@@ -66,14 +76,13 @@ export function LoginForm({ logo, title, heading, subtitle, emailPlaceholder = "
 					router.push(redirectPath);
 				})
 				.catch((err: unknown): void => {
-					const parsed = ApiErrorSchema.safeParse(err);
-					if (parsed.success) {
-						setError(parsed.data.message);
-					} else if (err instanceof Error) {
-						setError(err.message);
-					} else {
-						setError("Unable to connect to the server. Please try again.");
+					// Map the API's canonical error code to a friendly message;
+					// ACCOUNT_LOCKED carries a structured lockout payload used to
+					// render a live countdown (see lockout state below).
+					if (isAccountLockedError(err)) {
+						setLockout({ remainingSeconds: err.remainingSeconds, lockedUntil: err.lockedUntil });
 					}
+					setError(resolveAuthErrorMessage(err));
 				})
 				.finally((): void => {
 					setIsLoading(false);
@@ -100,24 +109,18 @@ export function LoginForm({ logo, title, heading, subtitle, emailPlaceholder = "
 						<div className="space-y-2">
 							<Label htmlFor="email">Email</Label>
 							<Input id="email" type="email" placeholder={emailPlaceholder} value={email} onChange={handleEmailChange} required autoComplete="email" autoFocus />
-						</div>
+						</div>{" "}
 						<div className="space-y-2">
 							<div className="flex items-center justify-between">
 								<Label htmlFor="password">Password</Label>
-								<a href="/auth/forgot-password" className="text-xs text-muted-foreground underline-offset-4 hover:text-primary hover:underline">
+								<Link href="/auth/forgot-password" className="text-xs text-muted-foreground underline-offset-4 hover:text-primary hover:underline">
 									Forgot password?
-								</a>
+								</Link>
 							</div>
-							<Input
-								id="password"
-								type="password"
-								placeholder="Enter your password"
-								value={password}
-								onChange={handlePasswordChange}
-								required
-								autoComplete="current-password"
-							/>
+							<PasswordInput id="password" placeholder="Enter your password" value={password} onChange={handlePasswordChange} required autoComplete="current-password" />
+							<PasswordStrengthMeter score={strength.score} label={strength.label} percent={strength.percent} missing={strength.missing} />
 						</div>
+						{lockout !== null ? <LockoutCountdown remainingSeconds={lockout.remainingSeconds} /> : null}
 					</FormShell>
 
 					{footer}

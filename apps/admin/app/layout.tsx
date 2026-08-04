@@ -1,12 +1,14 @@
 import "@workspace/ui/globals.css";
+import "@/app/markdown.css";
 
 import { QueryProvider } from "@workspace/client/lib/query-provider";
+import { Toaster } from "@workspace/ui/components/sonner";
 import { cn } from "@workspace/ui/lib/utils";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, JetBrains_Mono } from "next/font/google";
 
-import { ClientAuthWrapper } from "@/components/client-auth-wrapper";
-import { ThemeProvider } from "@/components/theme-provider";
+import { ClientAuthWrapper } from "@/components/common/client-auth-wrapper";
+import { ThemeProvider } from "@/components/common/theme-provider";
 
 const jetbrainsMonoHeading = JetBrains_Mono({
 	subsets: ["latin"],
@@ -36,7 +38,10 @@ export default function RootLayout({
 			<body>
 				<QueryProvider>
 					<ClientAuthWrapper>
-						<ThemeProvider>{children}</ThemeProvider>
+						<ThemeProvider>
+							{children}
+							<Toaster />
+						</ThemeProvider>
 					</ClientAuthWrapper>
 				</QueryProvider>
 			</body>

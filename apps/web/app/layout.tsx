@@ -5,6 +5,7 @@ import { cn } from "@workspace/ui/lib/utils";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, JetBrains_Mono } from "next/font/google";
 
+import { WebBreadcrumbProvider } from "@/components/breadcrumb-provider";
 import { ClientAuthWrapper } from "@/components/client-auth-wrapper";
 import { ThemeProvider } from "@/components/theme-provider";
 
@@ -36,7 +37,9 @@ export default function RootLayout({
 			<body>
 				<QueryProvider>
 					<ClientAuthWrapper>
-						<ThemeProvider>{children}</ThemeProvider>
+						<ThemeProvider>
+							<WebBreadcrumbProvider>{children}</WebBreadcrumbProvider>
+						</ThemeProvider>
 					</ClientAuthWrapper>
 				</QueryProvider>
 			</body>

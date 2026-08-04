@@ -10,6 +10,7 @@ import {
 	LoginSchema,
 	LogoutResponseSchema,
 	RefreshResponseSchema,
+	SessionStatusSchema,
 	SignupResponseSchema,
 	SignupSchema,
 	UserResponseSchema,
@@ -18,6 +19,7 @@ import {
 	type LoginResponse,
 	type LogoutResponse,
 	type RefreshResponse,
+	type SessionStatus,
 	type SignupInput,
 	type SignupResponse,
 	type UserResponse,
@@ -70,6 +72,7 @@ interface PostProcedure<Body, Resp> {
 
 export const authEndpoints: {
 	readonly me: GetProcedure<Envelope<UserResponse>>;
+	readonly sessionStatus: GetProcedure<Envelope<SessionStatus>>;
 	readonly login: PostProcedure<LoginInput, Envelope<LoginResponse>>;
 	readonly adminLogin: PostProcedure<LoginInput, Envelope<LoginResponse>>;
 	readonly signup: PostProcedure<SignupInput, Envelope<SignupResponse>>;
@@ -81,6 +84,16 @@ export const authEndpoints: {
 		method: "GET",
 		queryKey: ["auth", "me"],
 		responseSchema: envelope(UserResponseSchema),
+	},
+	// Very basic protected endpoint — proves the access token is valid and
+	// answers "who am I + when does my token expire" with no DB work. The
+	// admin panel polls it on page mount so every SPA navigation exercises
+	// the 401 → silent-refresh → retry flow (see docs/token-refresh.md).
+	sessionStatus: {
+		path: "/session",
+		method: "GET",
+		queryKey: ["auth", "session-status"],
+		responseSchema: envelope(SessionStatusSchema),
 	},
 	login: {
 		path: "/auth/login",

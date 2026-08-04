@@ -1,0 +1,32 @@
+{
+	"notifications": [
+		{
+			"id": "1",
+			"title": "New Transaction",
+			"message": "You have received a new trade finance transaction worth $125,000",
+			"time": "2 minutes ago",
+			"read": false
+		},
+		{
+			"id": "2",
+			"title": "Document Approved",
+			"message": "Your letter of credit documents have been approved by the bank",
+			"time": "1 hour ago",
+			"read": false
+		},
+		{
+			"id": "3",
+			"title": "Payment Received",
+			"message": "Payment of $85,000 has been received for transaction TXN002",
+			"time": "3 hours ago",
+			"read": true
+		},
+		{
+			"id": "4",
+			"title": "System Maintenance",
+			"message": "Scheduled maintenance will occur tonight from 2:00 AM to 4:00 AM",
+			"time": "1 day ago",
+			"read": true
+		}
+	]
+}

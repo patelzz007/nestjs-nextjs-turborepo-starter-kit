@@ -130,10 +130,11 @@ export class AuthController {
 	public async refreshToken(@GetUser() user: RefreshTokenPayload, @Req() req: Request): Promise<RefreshResponseMessage> {
 		const { deviceInfo, ipAddress } = extractClientInfo(req);
 
-		// Extract the raw refresh token JWT from cookies for reuse detection
-		// The service will bcrypt-compare it against the stored hash before rotating
-		// RefreshTokenGuard already verified the cookie exists, so it's always a string
-		const rawRefreshToken: string = req.cookies.refreshToken;
+		// Extract the raw refresh token JWT from cookies for reuse detection.
+		// RefreshTokenGuard already verified the cookie exists (it checks both
+		// `refreshToken` and `adminRefreshToken`), so one of these is always a string.
+		// The service will bcrypt-compare it against the stored hash before rotating.
+		const rawRefreshToken: string = req.cookies.refreshToken ?? req.cookies.adminRefreshToken;
 
 		// The refresh token's jti (JWT ID) is used for direct DB lookup
 		const tokens: RefreshResponse = await this.authService.refreshToken(user.sub, rawRefreshToken, user.jti, deviceInfo, ipAddress);

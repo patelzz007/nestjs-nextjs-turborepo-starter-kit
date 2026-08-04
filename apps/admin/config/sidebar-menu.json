@@ -1,0 +1,234 @@
+{
+	"header": {
+		"title": "Acme Inc.",
+		"subtitle": "Admin Panel"
+	},
+	"sections": [
+		{
+			"title": "Main",
+			"items": [
+				{
+					"title": "Overview",
+					"url": "/",
+					"icon": "LayoutDashboard"
+				},
+				{
+					"title": "Analytics",
+					"url": "/analytics",
+					"icon": "BarChart3",
+					"disabled": true,
+					"children": [
+						{
+							"title": "Realtime",
+							"url": "/analytics/realtime",
+							"icon": "Activity",
+							"disabled": true
+						},
+						{
+							"title": "Reports",
+							"url": "/analytics/reports",
+							"icon": "FileBarChart",
+							"disabled": true,
+							"children": [
+								{
+									"title": "Sales",
+									"url": "/analytics/reports/sales",
+									"icon": "TrendingUp",
+									"disabled": true
+								},
+								{
+									"title": "Marketing",
+									"url": "/analytics/reports/marketing",
+									"icon": "Megaphone",
+									"disabled": true,
+									"children": [
+										{
+											"title": "Campaigns",
+											"url": "/analytics/reports/marketing/campaigns",
+											"icon": "Send",
+											"disabled": true
+										},
+										{
+											"title": "Segments",
+											"url": "/analytics/reports/marketing/segments",
+											"icon": "Layers",
+											"disabled": true,
+											"children": [
+												{
+													"title": "Audiences",
+													"url": "/analytics/reports/marketing/segments/audiences",
+													"icon": "Users",
+													"disabled": true
+												},
+												{
+													"title": "Personas",
+													"url": "/analytics/reports/marketing/segments/personas",
+													"icon": "UserRound",
+													"disabled": true,
+													"children": [
+														{
+															"title": "Buyer Persona",
+															"url": "/analytics/reports/marketing/segments/personas/buyer-persona",
+															"icon": "UserCog",
+															"disabled": true
+														},
+														{
+															"title": "Power User",
+															"url": "/analytics/reports/marketing/segments/personas/power-user",
+															"icon": "Shield",
+															"disabled": true
+														}
+													]
+												}
+											]
+										}
+									]
+								}
+							]
+						}
+					]
+				},
+				{
+					"title": "Users",
+					"url": "/users",
+					"icon": "Users",
+					"disabled": true,
+					"children": [
+						{
+							"title": "All Users",
+							"url": "/users/all",
+							"icon": "CircleUserRound",
+							"disabled": true
+						},
+						{
+							"title": "Roles",
+							"url": "/users/roles",
+							"icon": "Shield",
+							"disabled": true,
+							"children": [
+								{
+									"title": "Admins",
+									"url": "/users/roles/admins",
+									"icon": "ShieldCheck",
+									"disabled": true
+								},
+								{
+									"title": "Managers",
+									"url": "/users/roles/managers",
+									"icon": "Briefcase",
+									"disabled": true
+								},
+								{
+									"title": "Members",
+									"url": "/users/roles/members",
+									"icon": "UsersRound",
+									"disabled": true
+								}
+							]
+						},
+						{
+							"title": "API Keys",
+							"url": "/users/api-keys",
+							"icon": "KeyRound",
+							"disabled": true
+						}
+					]
+				},
+				{
+					"title": "Settings",
+					"url": "/settings",
+					"icon": "Settings",
+					"children": [
+						{
+							"title": "General",
+							"url": "/settings/general",
+							"icon": "Gauge"
+						},
+						{
+							"title": "Security",
+							"url": "/settings/security",
+							"icon": "Shield",
+							"disabled": true,
+							"children": [
+								{
+									"title": "Sessions",
+									"url": "/settings/security/sessions",
+									"icon": "Activity",
+									"disabled": true
+								},
+								{
+									"title": "Audit Log",
+									"url": "/settings/security/audit-log",
+									"icon": "Database",
+									"disabled": true
+								}
+							]
+						},
+						{
+							"title": "Billing",
+							"url": "/settings/billing",
+							"icon": "CreditCard"
+						}
+					]
+				}
+			]
+		},
+		{
+			"title": "Documentation",
+			"items": [
+				{
+					"title": "Docs Home",
+					"url": "/docs",
+					"icon": "BookOpen",
+					"children": [
+						{ "title": "Getting Started", "url": "/docs/getting-started", "icon": "Rocket" },
+						{ "title": "Architecture", "url": "/docs/architecture", "icon": "Network" },
+						{ "title": "TypeScript", "url": "/docs/typescript", "icon": "Braces" },
+						{ "title": "ESLint", "url": "/docs/eslint", "icon": "Shield" },
+						{ "title": "Dependencies", "url": "/docs/dependencies", "icon": "Package" },
+						{ "title": "Prisma & DB", "url": "/docs/prisma", "icon": "Database" },
+						{ "title": "Auth Roadmap", "url": "/docs/auth-roadmap", "icon": "KeyRound" },
+						{ "title": "Boilerplate Roadmap", "url": "/docs/boilerplate-roadmap", "icon": "ScrollText" }
+					]
+				}
+			]
+		},
+		{
+			"title": "Documents",
+			"items": [
+				{
+					"title": "Project Alpha",
+					"url": "/documents/alpha",
+					"icon": "FileText",
+					"disabled": true
+				},
+				{
+					"title": "Project Beta",
+					"url": "/documents/beta",
+					"icon": "Folder",
+					"disabled": true
+				},
+				{
+					"title": "Project Gamma",
+					"url": "/documents/gamma",
+					"icon": "Table",
+					"disabled": true
+				}
+			]
+		}
+	],
+	"bottomItems": [
+		{
+			"title": "Support",
+			"url": "/support",
+			"icon": "LifeBuoy",
+			"disabled": true
+		},
+		{
+			"title": "Feedback",
+			"url": "/feedback",
+			"icon": "Send",
+			"disabled": true
+		}
+	]
+}

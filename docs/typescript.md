@@ -1,3 +1,12 @@
+---
+title: "TypeScript Configs & How To Use Them"
+description: "How TypeScript is configured across the monorepo via the shared @workspace/typescript-config package."
+order: 5
+author: "Acme Inc."
+lastUpdated: "2026-08-02"
+coverImage: "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?auto=format&fit=crop&w=1600&q=80"
+---
+
 # TypeScript Configs & How To Use Them
 
 > This document explains how TypeScript is configured across the monorepo: the shared
@@ -58,22 +67,22 @@ The workspace-level files live at:
 
 Every other config `extends` this one. It sets the strict baseline:
 
-| Option | Value | What it does |
-| ------ | ----- | ------------ |
-| `strict` | `true` | All strictness flags on (no implicit any, strict null checks, etc.) |
-| `target` | `ES2022` | Compiles to ES2022 syntax |
-| `module` | `NodeNext` | ESM/CJS resolution based on `package.json` `"type"` |
-| `moduleResolution` | `NodeNext` | Modern Node-style resolution |
-| `moduleDetection` | `force` | Treat every file as a module |
-| `lib` | `["es2022", "DOM", "DOM.Iterable"]` | Available global APIs |
-| `declaration` | `true` | Emit `.d.ts` files |
-| `declarationMap` | `true` | Source maps for `.d.ts` files (go-to-definition in editors) |
-| `esModuleInterop` | `true` | `import x from "cjs-module"` works as expected |
-| `isolatedModules` | `true` | Each file compiles in isolation (safe for bundlers/transpilers) |
-| `resolveJsonModule` | `true` | `import data from "./data.json"` is allowed |
-| `skipLibCheck` | `true` | Don't type-check `.d.ts` files from node_modules (faster) |
-| `incremental` | `false` | No `.tsbuildinfo` caching by default (overridden in api) |
-| `noUncheckedIndexedAccess` | `true` | **Array/object index access is `T | undefined`** — forces handling undefined |
+| Option                     | Value                               | What it does                                                        |
+| -------------------------- | ----------------------------------- | ------------------------------------------------------------------- |
+| `strict`                   | `true`                              | All strictness flags on (no implicit any, strict null checks, etc.) |
+| `target`                   | `ES2022`                            | Compiles to ES2022 syntax                                           |
+| `module`                   | `NodeNext`                          | ESM/CJS resolution based on `package.json` `"type"`                 |
+| `moduleResolution`         | `NodeNext`                          | Modern Node-style resolution                                        |
+| `moduleDetection`          | `force`                             | Treat every file as a module                                        |
+| `lib`                      | `["es2022", "DOM", "DOM.Iterable"]` | Available global APIs                                               |
+| `declaration`              | `true`                              | Emit `.d.ts` files                                                  |
+| `declarationMap`           | `true`                              | Source maps for `.d.ts` files (go-to-definition in editors)         |
+| `esModuleInterop`          | `true`                              | `import x from "cjs-module"` works as expected                      |
+| `isolatedModules`          | `true`                              | Each file compiles in isolation (safe for bundlers/transpilers)     |
+| `resolveJsonModule`        | `true`                              | `import data from "./data.json"` is allowed                         |
+| `skipLibCheck`             | `true`                              | Don't type-check `.d.ts` files from node_modules (faster)           |
+| `incremental`              | `false`                             | No `.tsbuildinfo` caching by default (overridden in api)            |
+| `noUncheckedIndexedAccess` | `true`                              | **Array/object index access is `T                                   | undefined`** — forces handling undefined |
 
 > ⚠️ `noUncheckedIndexedAccess: true` is the strictest (and most annoying) option.
 > `arr[0]` is `T | undefined`, so you must handle the `undefined` case. Some
@@ -85,15 +94,15 @@ Extends `base.json` and overrides for Next.js:
 
 ```json
 {
-  "extends": "./base.json",
-  "compilerOptions": {
-    "plugins": [{ "name": "next" }],
-    "module": "ESNext",
-    "moduleResolution": "Bundler",
-    "allowJs": true,
-    "jsx": "preserve",
-    "noEmit": true
-  }
+	"extends": "./base.json",
+	"compilerOptions": {
+		"plugins": [{ "name": "next" }],
+		"module": "ESNext",
+		"moduleResolution": "Bundler",
+		"allowJs": true,
+		"jsx": "preserve",
+		"noEmit": true
+	}
 }
 ```
 
@@ -109,10 +118,10 @@ Extends `base.json` and just enables the automatic JSX transform:
 
 ```json
 {
-  "extends": "./base.json",
-  "compilerOptions": {
-    "jsx": "react-jsx"
-  }
+	"extends": "./base.json",
+	"compilerOptions": {
+		"jsx": "react-jsx"
+	}
 }
 ```
 
@@ -122,20 +131,20 @@ Extends `base.json` with NestJS requirements:
 
 ```json
 {
-  "extends": "./base.json",
-  "compilerOptions": {
-    "allowSyntheticDefaultImports": true,
-    "emitDecoratorMetadata": true,
-    "experimentalDecorators": true,
-    "forceConsistentCasingInFileNames": true,
-    "lib": ["ESNext"],
-    "module": "nodenext",
-    "moduleResolution": "nodenext",
-    "noFallthroughCasesInSwitch": true,
-    "noUncheckedIndexedAccess": false,
-    "removeComments": true,
-    "sourceMap": true
-  }
+	"extends": "./base.json",
+	"compilerOptions": {
+		"allowSyntheticDefaultImports": true,
+		"emitDecoratorMetadata": true,
+		"experimentalDecorators": true,
+		"forceConsistentCasingInFileNames": true,
+		"lib": ["ESNext"],
+		"module": "nodenext",
+		"moduleResolution": "nodenext",
+		"noFallthroughCasesInSwitch": true,
+		"noUncheckedIndexedAccess": false,
+		"removeComments": true,
+		"sourceMap": true
+	}
 }
 ```
 
@@ -150,15 +159,15 @@ Extends `base.json` with NestJS requirements:
 
 ## 3. How each workspace extends them
 
-| Workspace | `tsconfig.json` extends | Key additions |
-| --------- | ----------------------- | ------------- |
-| `apps/web` | `@workspace/typescript-config/nextjs.json` | `@/*`, `@workspace/client/*`, `@workspace/ui/*` path aliases; `customConditions: ["development"]`; Next include globs |
-| `apps/admin` | `@workspace/typescript-config/nextjs.json` | Same as web |
-| `apps/api` | `@workspace/typescript-config/nestjs.json` | `outDir: ./dist`, `rootDir: ./src`, `incremental: true`; excludes `src/**/*.spec.ts` |
-| `packages/client` | `@workspace/typescript-config/react-library.json` | `module: ESNext`, `moduleResolution: bundler`; hosts auth / API client code |
-| `packages/ui` | `@workspace/typescript-config/react-library.json` | `module: ESNext`, `moduleResolution: bundler`, `@workspace/ui/*` alias |
-| `packages/shared` | `@workspace/typescript-config/base.json` | `module: ESNext`, `moduleResolution: bundler`, `noEmit: true`, `noUncheckedIndexedAccess: false`, `ignoreDeprecations: "6.0"` |
-| repo root `tsconfig.json` | `@workspace/typescript-config/base.json` | Nothing extra |
+| Workspace                 | `tsconfig.json` extends                           | Key additions                                                                                                                 |
+| ------------------------- | ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `apps/web`                | `@workspace/typescript-config/nextjs.json`        | `@/*`, `@workspace/client/*`, `@workspace/ui/*` path aliases; `customConditions: ["development"]`; Next include globs         |
+| `apps/admin`              | `@workspace/typescript-config/nextjs.json`        | Same as web                                                                                                                   |
+| `apps/api`                | `@workspace/typescript-config/nestjs.json`        | `outDir: ./dist`, `rootDir: ./src`, `incremental: true`; excludes `src/**/*.spec.ts`                                          |
+| `packages/client`         | `@workspace/typescript-config/react-library.json` | `module: ESNext`, `moduleResolution: bundler`; hosts auth / API client code                                                   |
+| `packages/ui`             | `@workspace/typescript-config/react-library.json` | `module: ESNext`, `moduleResolution: bundler`, `@workspace/ui/*` alias                                                        |
+| `packages/shared`         | `@workspace/typescript-config/base.json`          | `module: ESNext`, `moduleResolution: bundler`, `noEmit: true`, `noUncheckedIndexedAccess: false`, `ignoreDeprecations: "6.0"` |
+| repo root `tsconfig.json` | `@workspace/typescript-config/base.json`          | Nothing extra                                                                                                                 |
 
 > **Why do `packages/shared`, `packages/client`, and `packages/ui` use `bundler`
 > resolution?** They are consumed by bundlers (Next.js, tsup/esbuild), so
@@ -175,14 +184,14 @@ Extends `base.json` with NestJS requirements:
 
 ```json
 {
-  "extends": "@workspace/typescript-config/nestjs.json",
-  "compilerOptions": {
-    "outDir": "./dist",
-    "rootDir": "./src",
-    "incremental": true
-  },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "src/**/*.spec.ts"]
+	"extends": "@workspace/typescript-config/nestjs.json",
+	"compilerOptions": {
+		"outDir": "./dist",
+		"rootDir": "./src",
+		"incremental": true
+	},
+	"include": ["src/**/*"],
+	"exclude": ["node_modules", "dist", "src/**/*.spec.ts"]
 }
 ```
 
@@ -228,14 +237,14 @@ import { LoginSchema } from "@workspace/shared";
 
 Every workspace exposes a `typecheck` script:
 
-| Workspace | `typecheck` command |
-| --------- | ------------------- |
-| `@workspace/web` | `tsc --noEmit` |
-| `@workspace/admin` | `tsc --noEmit` |
-| `@workspace/api` | `nest build` (compiles = typechecks) |
-| `@workspace/client` | `tsc --noEmit` |
-| `@workspace/ui` | `tsc --noEmit` |
-| `@workspace/shared` | `tsc --noEmit` |
+| Workspace           | `typecheck` command                  |
+| ------------------- | ------------------------------------ |
+| `@workspace/web`    | `tsc --noEmit`                       |
+| `@workspace/admin`  | `tsc --noEmit`                       |
+| `@workspace/api`    | `nest build` (compiles = typechecks) |
+| `@workspace/client` | `tsc --noEmit`                       |
+| `@workspace/ui`     | `tsc --noEmit`                       |
+| `@workspace/shared` | `tsc --noEmit`                       |
 
 Run them all from the repo root:
 

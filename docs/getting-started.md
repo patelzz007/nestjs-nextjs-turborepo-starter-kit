@@ -1,3 +1,12 @@
+---
+title: "Getting Started — A-to-Z Setup Guide"
+description: "From an empty laptop to a running monorepo: prerequisites, env setup, database bootstrap, and all three apps."
+order: 1
+author: "Acme Inc."
+lastUpdated: "2026-08-02"
+coverImage: "https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&w=1600&q=80"
+---
+
 # Getting Started — A-to-Z Setup Guide
 
 > This guide walks you through **everything**: from an empty laptop to a running
@@ -46,17 +55,17 @@
 This is a **monorepo** — multiple projects in one repository, sharing code. There are
 three apps and six shared packages:
 
-| Path | Package | What it is | URL (local) |
-| ---- | ------- | ---------- | ----------- |
-| `apps/web` | `@workspace/web` | Customer-facing Next.js app (login, signup, hello page) | http://localhost:3000 |
-| `apps/admin` | `@workspace/admin` | Admin panel Next.js app (login, dashboard) | http://localhost:3001 |
-| `apps/api` | `@workspace/api` | NestJS backend — auth, users, URLs, everything | http://localhost:8080 |
-| `packages/ui` | `@workspace/ui` | shadcn/ui components (**presentational only**) | — |
-| `packages/client` | `@workspace/client` | `AuthProvider`, `useApi` hook, typed endpoint registry | — |
-| `packages/shared` | `@workspace/shared` | Zod schemas + shared types (the API contract) | — |
-| `packages/tooling` | `@workspace/tooling` | Repo-wide scripts (syncpack dependency hygiene) | — |
-| `packages/eslint-config` | `@workspace/eslint-config` | Shared ESLint presets | — |
-| `packages/typescript-config` | `@workspace/typescript-config` | Shared tsconfig presets | — |
+| Path                         | Package                        | What it is                                              | URL (local)           |
+| ---------------------------- | ------------------------------ | ------------------------------------------------------- | --------------------- |
+| `apps/web`                   | `@workspace/web`               | Customer-facing Next.js app (login, signup, hello page) | http://localhost:3000 |
+| `apps/admin`                 | `@workspace/admin`             | Admin panel Next.js app (login, dashboard)              | http://localhost:3001 |
+| `apps/api`                   | `@workspace/api`               | NestJS backend — auth, users, URLs, everything          | http://localhost:8080 |
+| `packages/ui`                | `@workspace/ui`                | shadcn/ui components (**presentational only**)          | —                     |
+| `packages/client`            | `@workspace/client`            | `AuthProvider`, `useApi` hook, typed endpoint registry  | —                     |
+| `packages/shared`            | `@workspace/shared`            | Zod schemas + shared types (the API contract)           | —                     |
+| `packages/tooling`           | `@workspace/tooling`           | Repo-wide scripts (syncpack dependency hygiene)         | —                     |
+| `packages/eslint-config`     | `@workspace/eslint-config`     | Shared ESLint presets                                   | —                     |
+| `packages/typescript-config` | `@workspace/typescript-config` | Shared tsconfig presets                                 | —                     |
 
 **Swagger (API docs)** is served by the API at http://localhost:8080/docs.
 **Prisma Studio** (visual DB browser) runs at http://localhost:5555.
@@ -70,12 +79,12 @@ three apps and six shared packages:
 
 ## 2. Prerequisites — install these first
 
-| Tool | Version | Why you need it | Check it's installed |
-| ---- | ------- | --------------- | -------------------- |
-| **Node.js** | `>= 20` | Runs everything (Next.js, NestJS, Prisma) | `node -v` |
-| **pnpm** | `11.18.0` (this repo's version) | The package manager (faster than npm, enforces the workspace) | `pnpm -v` |
-| **PostgreSQL** | 14+ (any recent) | The database | `psql --version` and `pg_isready` |
-| **git** | any | Clone the repo | `git --version` |
+| Tool           | Version                         | Why you need it                                               | Check it's installed              |
+| -------------- | ------------------------------- | ------------------------------------------------------------- | --------------------------------- |
+| **Node.js**    | `>= 20`                         | Runs everything (Next.js, NestJS, Prisma)                     | `node -v`                         |
+| **pnpm**       | `11.18.0` (this repo's version) | The package manager (faster than npm, enforces the workspace) | `pnpm -v`                         |
+| **PostgreSQL** | 14+ (any recent)                | The database                                                  | `psql --version` and `pg_isready` |
+| **git**        | any                             | Clone the repo                                                | `git --version`                   |
 
 ### Installing Node.js
 
@@ -213,22 +222,22 @@ cp apps/api/.env.example apps/api/.env
 
 Open `apps/api/.env` and fill in real values:
 
-| Variable | Example | What it's for |
-| -------- | ------- | ------------- |
-| `NODE_ENV` | `development` | Runtime mode |
-| `APP_NAME` | `Freebuff API` | Shown in docs/emails |
-| `APP_URL` | `http://localhost:3000` | Base URL of the web app (used in emails) |
-| `PORT` | `8080` | Port the API listens on |
-| `CORS_ORIGINS` | `http://localhost:3000,http://localhost:3001` | Comma-separated frontend origins allowed to call the API |
-| `DATABASE_URL` | `postgresql://postgres:postgres@localhost:5432/monorepo?schema=public` | Postgres connection string |
-| `JWT_ACCESS_SECRET` | (random ≥ 32 chars) | Signs access tokens |
-| `JWT_ACCESS_EXPIRY` | `15m` | Access token lifetime (e.g. `15m`, `1h`) |
-| `JWT_REFRESH_SECRET` | (random ≥ 32 chars) | Signs refresh tokens |
-| `JWT_REFRESH_EXPIRY` | `7d` | Refresh token lifetime |
-| `EMAIL_VERIFICATION_SECRET` | (random ≥ 32 chars) | Signs email-verification tokens |
-| `BCRYPT_SALT_ROUNDS` | `10` | Password hashing cost |
-| `RESEND_API_KEY` | `re_...` | Sends transactional emails (signup, password reset) |
-| `EMAIL_FROM_ADDRESS` | `noreply@example.com` | "From" address for emails |
+| Variable                    | Example                                                                | What it's for                                            |
+| --------------------------- | ---------------------------------------------------------------------- | -------------------------------------------------------- |
+| `NODE_ENV`                  | `development`                                                          | Runtime mode                                             |
+| `APP_NAME`                  | `Freebuff API`                                                         | Shown in docs/emails                                     |
+| `APP_URL`                   | `http://localhost:3000`                                                | Base URL of the web app (used in emails)                 |
+| `PORT`                      | `8080`                                                                 | Port the API listens on                                  |
+| `CORS_ORIGINS`              | `http://localhost:3000,http://localhost:3001`                          | Comma-separated frontend origins allowed to call the API |
+| `DATABASE_URL`              | `postgresql://postgres:postgres@localhost:5432/monorepo?schema=public` | Postgres connection string                               |
+| `JWT_ACCESS_SECRET`         | (random ≥ 32 chars)                                                    | Signs access tokens                                      |
+| `JWT_ACCESS_EXPIRY`         | `15m`                                                                  | Access token lifetime (e.g. `15m`, `1h`)                 |
+| `JWT_REFRESH_SECRET`        | (random ≥ 32 chars)                                                    | Signs refresh tokens                                     |
+| `JWT_REFRESH_EXPIRY`        | `7d`                                                                   | Refresh token lifetime                                   |
+| `EMAIL_VERIFICATION_SECRET` | (random ≥ 32 chars)                                                    | Signs email-verification tokens                          |
+| `BCRYPT_SALT_ROUNDS`        | `10`                                                                   | Password hashing cost                                    |
+| `RESEND_API_KEY`            | `re_...`                                                               | Sends transactional emails (signup, password reset)      |
+| `EMAIL_FROM_ADDRESS`        | `noreply@example.com`                                                  | "From" address for emails                                |
 
 **Generate strong secrets** (run this 3 times, paste each result into the three
 secret vars):
@@ -247,8 +256,8 @@ openssl rand -base64 32
 cp apps/web/.env.example apps/web/.env
 ```
 
-| Variable | Example | What it's for |
-| -------- | ------- | ------------- |
+| Variable              | Example                 | What it's for                         |
+| --------------------- | ----------------------- | ------------------------------------- |
 | `NEXT_PUBLIC_API_URL` | `http://localhost:8080` | Base URL of the API the browser calls |
 
 ### The admin app (`apps/admin/.env`)
@@ -257,10 +266,14 @@ cp apps/web/.env.example apps/web/.env
 cp apps/admin/.env.example apps/admin/.env
 ```
 
-Same single variable: `NEXT_PUBLIC_API_URL=http://localhost:8080`.
+| Variable              | Example                 | What it's for                                     |
+| --------------------- | ----------------------- | ------------------------------------------------- |
+| `NEXT_PUBLIC_API_URL` | `http://localhost:8080` | Base URL of the API the browser calls             |
+| `NEXT_PUBLIC_WEB_URL` | `http://localhost:3000` | Web app URL used by the "main website" login link |
 
 > `NEXT_PUBLIC_*` vars are inlined into the browser bundle at build time. When you
-> deploy, set them to your production API URL (e.g. `https://api.example.com`).
+> deploy, set them to your production URLs (e.g. `https://api.example.com` and
+> `https://app.example.com`).
 
 ---
 
@@ -287,7 +300,7 @@ Expect it to take ~30 seconds and end with:
 
 > ⚠️ `db:all` applies **pending** migrations — it never **creates** a new one. On a
 > fresh clone there are no pending migrations (they're committed), so step 2 is a
-> no-op. If you ever *change* `schema.prisma`, use `pnpm db:migrate` (interactive)
+> no-op. If you ever _change_ `schema.prisma`, use `pnpm db:migrate` (interactive)
 > to create a migration first, then `pnpm db:all` to re-seed.
 >
 > ⚠️ The seed is **idempotent** — safe to re-run as many times as you like. Note it
@@ -296,12 +309,12 @@ Expect it to take ~30 seconds and end with:
 
 ### Seeded login accounts
 
-| Email | Password | Role |
-| ----- | -------- | ---- |
+| Email                    | Password         | Role       |
+| ------------------------ | ---------------- | ---------- |
 | `superadmin@example.com` | `SuperAdmin@123` | SuperAdmin |
-| `admin@example.com` | `Admin@123` | Admin |
-| `manager@example.com` | `Manager@123` | Manager |
-| `user@example.com` | `User@123` | User |
+| `admin@example.com`      | `Admin@123`      | Admin      |
+| `manager@example.com`    | `Manager@123`    | Manager    |
+| `user@example.com`       | `User@123`       | User       |
 
 Plus ~10 dummy users (`alice.johnson@example.com` / `Alice@123`, `bob.smith@example.com` /
 `Bob@123`, …). Only users with the **Admin** role (or above) can log into the admin
@@ -319,11 +332,11 @@ pnpm dev
 
 This starts all three apps in **watch mode** (they rebuild automatically on save):
 
-| App | URL |
-| --- | --- |
-| Web | http://localhost:3000 |
-| Admin | http://localhost:3001 |
-| API | http://localhost:8080 |
+| App          | URL                        |
+| ------------ | -------------------------- |
+| Web          | http://localhost:3000      |
+| Admin        | http://localhost:3001      |
+| API          | http://localhost:8080      |
 | Swagger docs | http://localhost:8080/docs |
 
 To run just one app (saves memory):
@@ -355,13 +368,38 @@ its request/response schemas (inferred from the shared Zod schemas).
 `user@example.com` / `User@123`. You'll be redirected to `/hello`.
 
 **4. Log into the admin panel** — http://localhost:3001/auth/login with
-`admin@example.com` / `Admin@123`. You'll land on `/dashboard`.
+`admin@example.com` / `Admin@123`. You'll land on `/` (the overview dashboard).
 
 > **Login gotcha:** the web app stores cookies named `accessToken` / `refreshToken`,
 > while the admin panel uses **separate** cookies (`adminAccessToken` /
 > `adminRefreshToken`) so a web login can't access the admin panel (and vice versa).
 > If you're logged in to one app and the other says "not authenticated", that's
 > expected — log in again on that app.
+
+> **Token refresh:** when an access token expires, the API returns `401` and the
+> `useApi` hook (via `AuthProvider`) automatically calls `POST /auth/refresh`
+> once (single-flighted, so concurrent 401s share one call), then retries the
+> original request. On a **full page navigation** the route proxy (`proxy.ts`)
+> can refresh ahead of time instead: it runs server-side, so it can read the
+> httpOnly cookies, and when the access token is expired (or within 30s of
+> expiring) it calls `POST /auth/refresh` itself and forwards the rotated
+> cookies with the response — the first API call (e.g. `/auth/me`) then never
+> 401s. If the refresh token is dead too, the proxy clears the stale cookies
+> and sends the user to `/auth/login`. Only if the refresh itself fails do you
+> get redirected to `/auth/login`. The route proxies only require the _access_
+> token cookie to be present — validity is enforced by the API, not the proxy.
+>
+> The proxies run on the **Node.js runtime** — Next.js 16 runs `proxy.ts` on
+> Node by design (only the legacy `middleware.ts` convention can opt into
+> Edge), so there is no Edge runtime to set up on Node hosts (DigitalOcean /
+> Linode droplets, etc.). One trade-off: the proxy refresh and the client's
+> 401-refresh are independent single-flight domains, so a rotation in one tab
+> can invalidate an in-flight rotation in another (worst case: a re-login).
+>
+> **Theme hotkey (`d`):** both apps listen for the `d` key on `window` to toggle
+> dark mode (`theme-provider.tsx`). The handler defensively guards against a
+> missing `event.key` (some synthetic/polyfilled events can reach the listener
+> without a populated key) so it can never throw.
 
 **5. Browse the database visually** (optional):
 
@@ -375,30 +413,34 @@ pnpm db:studio     # opens Prisma Studio at http://localhost:5555
 
 Run these from the **repo root**:
 
-| Command | What it does |
-| ------- | ------------ |
-| `pnpm dev` | Run web + admin + api in watch mode |
-| `pnpm dev:web` / `pnpm dev:admin` / `pnpm dev:api` | Run just one app |
-| `pnpm build` | Production build (shared → api → web/admin) |
-| `pnpm lint` | Lint every workspace (run via turbo) |
-| `pnpm typecheck` | Type-check every workspace |
-| `pnpm format` | Format everything with Prettier |
-| `pnpm db:all` | **One-shot DB bootstrap**: generate + deploy + seed |
-| `pnpm db:migrate` | Create + apply a migration (interactive) |
-| `pnpm db:migrate:create` | Create a migration without applying it |
-| `pnpm db:migrate:status` | Show applied / pending migrations |
-| `pnpm db:deploy` | Apply pending migrations (CI/prod) |
-| `pnpm db:generate` | Regenerate Prisma client types |
-| `pnpm db:seed` | Re-seed the database (idempotent) |
-| `pnpm db:reset` | 🔴 Drop all data, re-migrate, re-seed |
-| `pnpm db:studio` | Open Prisma Studio (localhost:5555) |
-| `pnpm deps:check` | Verify shared deps (React/Zod/TS) are the same everywhere |
-| `pnpm deps:fix` | Auto-align dependency versions |
-| `pnpm turbo run db:<task>` | Run any db task through turbo explicitly |
+| Command                                            | What it does                                              |
+| -------------------------------------------------- | --------------------------------------------------------- |
+| `pnpm dev`                                         | Run web + admin + api in watch mode                       |
+| `pnpm dev:web` / `pnpm dev:admin` / `pnpm dev:api` | Run just one app                                          |
+| `pnpm build`                                       | Production build (shared → api → web/admin)               |
+| `pnpm lint`                                        | Lint every workspace (run via turbo)                      |
+| `pnpm typecheck`                                   | Type-check every workspace                                |
+| `pnpm test`                                        | Run every workspace's unit tests (vitest)                 |
+| `pnpm format`                                      | Format everything with Prettier                           |
+| `pnpm db:all`                                      | **One-shot DB bootstrap**: generate + deploy + seed       |
+| `pnpm db:migrate`                                  | Create + apply a migration (interactive)                  |
+| `pnpm db:migrate:create`                           | Create a migration without applying it                    |
+| `pnpm db:migrate:status`                           | Show applied / pending migrations                         |
+| `pnpm db:deploy`                                   | Apply pending migrations (CI/prod)                        |
+| `pnpm db:generate`                                 | Regenerate Prisma client types                            |
+| `pnpm db:seed`                                     | Re-seed the database (idempotent)                         |
+| `pnpm db:reset`                                    | 🔴 Drop all data, re-migrate, re-seed                     |
+| `pnpm db:studio`                                   | Open Prisma Studio (localhost:5555)                       |
+| `pnpm deps:check`                                  | Verify shared deps (React/Zod/TS) are the same everywhere |
+| `pnpm deps:fix`                                    | Auto-align dependency versions                            |
+| `pnpm turbo run db:<task>`                         | Run any db task through turbo explicitly                  |
 
-> **Add a shadcn component:** `pnpm dlx shadcn@latest add <component> -c apps/web`
-> adds it to `packages/ui/src/components/`. UI components go in `packages/ui`, not
-> in the apps — see [Section 12](#12-where-does-new-code-go).
+> **Add a shadcn component/block:** `pnpm dlx shadcn@latest add <name> -y -o -c apps/admin`
+> (run from the repo root; `-y` skips the confirm prompt and `-o` auto-answers the
+> "file already exists — overwrite?" prompt, otherwise the CLI hangs waiting for
+> input). Primitive components land in `packages/ui/src/components/`, while **block**
+> files (page + its components) land inside the target app — see
+> [Section 12](#12-where-does-new-code-go).
 
 ---
 
@@ -408,23 +450,23 @@ Run these from the **repo root**:
 
 These are enforced by ESLint **and** code review. Violations fail CI:
 
-| # | Rule | What it means in practice |
-| - | ---- | ------------------------- |
-| 1 | **No `any` / `z.any`** | Never opt out of the type system. ESLint: `no-explicit-any` = error. |
-| 2 | **No `unknown` / `z.unknown`** | Type everything properly. |
-| 3 | **No `never` / `z.never`** | A schema that accepts nothing is a design smell. |
-| 4 | **No type casting (`as Type`)** | Don't use `as` to force types. **Avoid `as const` too** — use a tuple: `const X: ["a", "b"] = ["a", "b"]`. |
-| 5 | **Avoid `typeof`, infer from Zod** | Types come from `z.infer<typeof Schema>`, not hand-written interfaces. |
-| 6 | **Use generic types (priority 0)** | Write reusable, generic code — especially in low-level components. |
-| 7 | **Polish the UI** | Production-ready, professional, visually appealing. |
-| 8 | **Mobile responsive** | Any UI you touch must work on small screens. |
-| 9 | **Data lives in the page** | `app/<page>/page.tsx` (the "smart component") owns the data; low-level components receive it via **props**. |
-| 10 | **Data changes happen in the smart component** | Low-level components never mutate/fetch data themselves. |
-| 11 | **Low-level components are fluid** | Nothing hardcoded — they adapt to whatever props the smart component passes. |
-| 12 | **Don't change the layout unless asked** | Layouts are deliberate. |
-| 13 | **Prefer Zod validation over string checks** | Avoid `x === "string"` — validate with a schema. |
-| 14 | **Update the docs** | Whenever you finish a task, update the relevant docs so a junior can follow. |
-| 15 | **Access modifiers + return types always** | `public`/`private`/`protected` and an explicit return type on every class member and function. ESLint enforces this. |
+| #   | Rule                                           | What it means in practice                                                                                            |
+| --- | ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| 1   | **No `any` / `z.any`**                         | Never opt out of the type system. ESLint: `no-explicit-any` = error.                                                 |
+| 2   | **No `unknown` / `z.unknown`**                 | Type everything properly.                                                                                            |
+| 3   | **No `never` / `z.never`**                     | A schema that accepts nothing is a design smell.                                                                     |
+| 4   | **No type casting (`as Type`)**                | Don't use `as` to force types. **Avoid `as const` too** — use a tuple: `const X: ["a", "b"] = ["a", "b"]`.           |
+| 5   | **Avoid `typeof`, infer from Zod**             | Types come from `z.infer<typeof Schema>`, not hand-written interfaces.                                               |
+| 6   | **Use generic types (priority 0)**             | Write reusable, generic code — especially in low-level components.                                                   |
+| 7   | **Polish the UI**                              | Production-ready, professional, visually appealing.                                                                  |
+| 8   | **Mobile responsive**                          | Any UI you touch must work on small screens.                                                                         |
+| 9   | **Data lives in the page**                     | `app/<page>/page.tsx` (the "smart component") owns the data; low-level components receive it via **props**.          |
+| 10  | **Data changes happen in the smart component** | Low-level components never mutate/fetch data themselves.                                                             |
+| 11  | **Low-level components are fluid**             | Nothing hardcoded — they adapt to whatever props the smart component passes.                                         |
+| 12  | **Don't change the layout unless asked**       | Layouts are deliberate.                                                                                              |
+| 13  | **Prefer Zod validation over string checks**   | Avoid `x === "string"` — validate with a schema.                                                                     |
+| 14  | **Update the docs**                            | Whenever you finish a task, update the relevant docs so a junior can follow.                                         |
+| 15  | **Access modifiers + return types always**     | `public`/`private`/`protected` and an explicit return type on every class member and function. ESLint enforces this. |
 
 ### Dos ✅
 
@@ -476,16 +518,403 @@ These are enforced by ESLint **and** code review. Violations fail CI:
 
 ## 12. Where does new code go?
 
-| You're building… | Put it in… |
-| ---------------- | ---------- |
-| A reusable UI component (button, dialog, table…) | `packages/ui/src/components/` |
-| Auth state, API fetching, cookie handling | `packages/client/src/lib/` |
-| A Zod schema / shared type used by FE and BE | `packages/shared/src/schemas/` |
-| A NestJS module / endpoint | `apps/api/src/modules/` |
-| A page or route in the web app | `apps/web/app/` |
-| A page or route in the admin app | `apps/admin/app/` |
-| A new ESLint rule for everyone | `packages/eslint-config/base.js` |
-| A new tsconfig base | `packages/typescript-config/` |
+| You're building…                                   | Put it in…                                   |
+| -------------------------------------------------- | -------------------------------------------- |
+| A reusable UI component (button, dialog, table…)   | `packages/ui/src/components/`                |
+| Auth state, API fetching, cookie handling          | `packages/client/src/lib/`                   |
+| A Zod schema / shared type used by FE and BE       | `packages/shared/src/schemas/`               |
+| A NestJS module / endpoint                         | `apps/api/src/modules/`                      |
+| A page or route in the web app                     | `apps/web/app/`                              |
+| A page or route in the admin app                   | `apps/admin/app/`                            |
+| Admin layout chrome (sidebar, topbar, shell)       | `apps/admin/components/layout/`              |
+| Admin auth UI (login form)                         | `apps/admin/components/auth/`                |
+| Admin dashboard blocks (table, cards, charts)      | `apps/admin/components/dashboard/`           |
+| Admin settings UI (profile card)                   | `apps/admin/components/settings/`            |
+| Admin notifications UI (bell dropdown, list)       | `apps/admin/components/notifications/`       |
+| Admin docs viewer (renderer, ToC, index cards)     | `apps/admin/components/docs/`                |
+| Admin docs server reader + markdown helpers        | `apps/admin/lib/` (`docs.ts`, `markdown.ts`) |
+| Admin providers / presentational bits              | `apps/admin/components/common/`              |
+| Pure admin logic (search, menu utils, helpers)     | `apps/admin/lib/`                            |
+| Admin unit tests (vitest)                          | `apps/admin/lib/__tests__/`                  |
+| Admin app config (menu JSON, icon registry)        | `apps/admin/config/`                         |
+| Shared admin types (`SidebarUser`, `FooterAction`) | `apps/admin/types/`                          |
+| A new ESLint rule for everyone                     | `packages/eslint-config/base.js`             |
+| A new tsconfig base                                | `packages/typescript-config/`                |
+
+### The admin dashboard (`apps/admin/app/(panel)`)
+
+The admin dashboard shell is a **TFX-style app layout** (ported from the reference
+"TFX Global" seller portal — minus role/permission filtering) built on **Zustand**
+(state) and **framer-motion** (animations). All authenticated admin pages live in
+the `(panel)` **route group** — route groups add no URL segment, so the overview
+is `/`, settings is `/settings/*`, users is `/users`, etc. It is arranged as
+follows:
+
+- **The layout** — `apps/admin/app/(panel)/layout.tsx` renders `DashboardShell`
+  **once for the whole route group**. Because the shell (sidebar + topbar) lives
+  in the layout instead of inside each page, Next.js keeps it **mounted across
+  navigations** and only swaps the `children` segment. Navigation is therefore
+  **SPA-like**: the sidebar/topbar never remount or re-render, so their state
+  (search, expand/collapse, animations, scroll) persists when moving between
+  pages. This is why editing the DOM on one page and navigating away no longer
+  wipes it — no full page refresh happens between panel routes.
+- **The shell** — `apps/admin/components/layout/dashboard-shell.tsx` is the smart
+  wrapper the `(panel)` layout uses. It owns the **"who am I?" fetch**
+  (`api.procedure(authEndpoints.me).useQuery()`), the loading / error states (with
+  a logout button on failure), wraps everything in the **`AdminBreadcrumbProvider`**
+  (so the breadcrumb consumers inside the frame are always covered — see
+  _Breadcrumbs_ below), and renders `DashboardLayout` with the resolved user.
+  Pages never touch auth or the layout directly — they only supply `children`.
+- **The frame** — `apps/admin/components/layout/dashboard-layout.tsx` is purely
+  presentational: the desktop `Sidebar`, the `Topbar`, the mobile drawer
+  (`components/layout/mobile-menu-overlay.tsx`), the breadcrumb trail, and the
+  page content. Each page (e.g. `apps/admin/app/(panel)/page.tsx`) is a thin
+  smart component that owns its page data — no per-page `DashboardShell` wrapper
+  needed.
+- **Route-level fallbacks** — `apps/admin/app/(panel)/loading.tsx` shows a content
+  skeleton while a page segment streams in (the shell stays mounted, so it feels
+  SPA-like), and `apps/admin/app/(panel)/error.tsx` is the client error boundary
+  for panel routes with a "Try again" button. **Not-found is shell-preserving:**
+  `app/(panel)/[...slug]/page.tsx` is a catch-all that calls `notFound()` for any
+  unmatched panel URL, and `app/(panel)/not-found.tsx` is the closest not-found
+  boundary — because it lives inside the `(panel)` route group it renders
+  **within** the layout, so the sidebar/topbar stay mounted and only the content
+  area becomes the 404 page (with a "Back to dashboard" link). The root
+  `app/not-found.tsx` (no shell) is the global fallback for URLs that match no
+  route anywhere (e.g. malformed auth paths). The 404 markup itself is the
+  **shared** `packages/ui/src/components/not-found-content.tsx` (framework-free:
+  all strings + the back link arrive as props, per rules 9–11); the admin wraps
+  it in `components/common/not-found-content.tsx` (renamed
+  `AdminNotFoundContent`) only to supply the Next.js `Link`.
+- **Web app 404** — `apps/web/app/not-found.tsx` renders the same shared
+  `NotFoundContent` for any unmatched web URL (the web app has no persistent
+  shell — `/hello` is full-screen — so no catch-all route group is needed),
+  with a "Back to home" `Link`.
+- **Sidebar nav items live in a JSON file** — `apps/admin/config/sidebar-menu.json`.
+  The file has a `header` (brand title/subtitle), an array of `sections` (each with
+  a `title` + recursive `items`), and `bottomItems`. Items may nest to **any depth**
+  and each carries a string `icon` name (a PascalCase lucide name). An item whose
+  page has not been built yet is marked `"disabled": true` — it renders greyed out
+  with a "This feature is currently unavailable" tooltip and is excluded from the
+  command palette. The JSON is loaded **once** and typed in
+  `config/sidebar-menu.ts` (`SIDEBAR_MENU: SidebarMenuData`) — so the whole tree is
+  type-checked against `SidebarMenuItem` (from `types/sidebar.ts`) and nothing
+  menu-related is hardcoded in the components (rules 9–11).
+- **Icons are resolved by name.** `config/menu-icons.ts` exports a module-scope
+  `ICON_MAP` (string → lucide component). Components look icons up **directly from
+  the map** (`ICON_MAP[name] ?? AlertCircle`) instead of calling a factory function
+  — that keeps the component reference static, which satisfies React 19's
+  `react-hooks/static-components` lint rule. Add any new icon name to `ICON_MAP`
+  when you add a menu item.
+- **Shared menu logic lives in `lib/`.** `lib/menu.ts` exports the pure tree
+  helpers used by both the sidebar and the command palette — `isRouteActive`,
+  `computeRouteState` (active + auto-expanded items), `filterItemsBySearch`,
+  `flattenMenuItems` (with breadcrumbs), and `createItemId`. `lib/highlight.tsx`
+  is the single `<mark>` highlight utility both surfaces use for search results.
+  These are unit-tested in `lib/__tests__/` (see testing below).
+- **State lives in a Zustand store** — `stores/sidebar-store.ts`, persisted to
+  `localStorage` (key `admin-sidebar-state`). It owns:
+  - `isOpen` — desktop rail expanded/collapsed (persisted) with `toggle`/`open`/`close`.
+  - `sectionOrder` — the user's custom section ordering (persisted) with
+    `moveSectionUp`/`moveSectionDown`; `null` means "use the natural order from the
+    config".
+  - Actions use **block bodies with explicit `(): void` return types** — zustand's
+    `persist` types `set` as returning `unknown`, so expression bodies would fail
+    both tsc's void check and ESLint's `explicit-function-return-type`; block bodies
+    sidestep both.
+  - `hooks/use-sidebar-control.ts` binds **Ctrl/Cmd+B** to toggle the sidebar via a
+    `window` keydown listener (implemented exactly like the reference app).
+- **The sidebar** (`components/layout/sidebar.tsx`, with the recursive row in
+  `components/layout/sidebar-nav-item.tsx` and the reorderable section header in
+  `components/layout/sidebar-section-header.tsx`) is fully recursive and fluid:
+  - **Search** — a filter input with per-match `<mark>` highlighting; while
+    searching every item is forced open so results are visible.
+  - **Active-route highlight** — `usePathname()` derives `activeItems` and
+    `autoExpandedItems` (every ancestor of the active page auto-expands). Items use
+    **real route URLs** (e.g. `/users`) so navigation is SPA-based
+    (`router.push`, never raw `<a href>`).
+  - **Manual expand/collapse** — user toggles merge on top of the auto-expanded set;
+    a `grid-template-rows` transition animates open/close smoothly.
+  - **Section reordering** — hover a section header to reveal up/down buttons; the
+    new order persists through the store.
+  - **Footer** — optional `footerActions` (passed as props), `bottomItems` from the
+    JSON, and the user card (initials avatar via `lib/user-initials.ts`) with a
+    logout button.
+  - Every row is the same height at every depth — only indentation differs, nothing
+    shrinks as you nest deeper.
+- **The topbar** (`components/layout/topbar.tsx`) — mobile menu button, desktop
+  sidebar toggle, brand (shown when the rail is collapsed), the **⌘K command
+  palette**, a notifications bell (no unread dot on the trigger — the count only
+  shows inside the dropdown; see _Notifications_ below), a network status
+  indicator (`components/common/network-status-bar.tsx`), theme toggle
+  (`components/common/theme-toggle.tsx`), settings link (→ `/settings/general`),
+  and the profile dropdown. Mobile detection uses the shared `useMediaQuery` hook
+  (`hooks/use-media-query.ts`) at the `lg` breakpoint — no hand-rolled resize
+  listeners.
+- **The command palette** (`components/ui/command-palette.tsx`) — a full-featured
+  ⌘K search over every page in the sidebar JSON. It supports **scope prefixes**
+  (`>` commands, `/` pages, `#` settings), quick actions (toggle theme, open
+  settings, go to dashboard, open billing), **pinned & recent chips** (persisted to
+  `localStorage` via `stores/command-palette-store.ts`, a zustand store),
+  per-item colour tiles, section badges, breadcrumb trails, fuzzy "did you mean?"
+  suggestions (Levenshtein + filler-word stripping), and a keyboard-hint footer.
+  The matching, alias, and styling logic lives in `lib/palette-search.ts` and
+  `lib/palette-styles.ts` so the component stays small and the logic is testable.
+- **The profile dropdown** (`components/settings/profile-01.tsx`) — a polished
+  card: avatar with online-status dot, name + email, a **plan badge** (with an
+  Upgrade button), and menu actions (Billing, Settings, Terms & Policies) followed
+  by Logout. Every action navigates to a **real route** (`/settings/billing`,
+  `/settings/general`) — there is no dead `/settings` link anymore.
+- **Notifications** — split into a smart + dumb pair (rules 9–11):
+  `components/notifications/notifications-dropdown.tsx` (smart) owns the state —
+  it loads the data, tracks read/dismissed items, and hands **props + callbacks**
+  to `components/notifications/notifications-list.tsx` (dumb, purely
+  presentational). The list renders a header with unread count + "Mark all read",
+  every notification (unread tint + per-item _mark read_ / _dismiss_ actions
+  revealed on hover at `sm`+, always visible on touch), an empty state, and a
+  footer. The type is derived from a **Zod schema** in `lib/notifications.ts` via
+  `z.infer` (`NotificationItem`), and `data/notification-data.json` is **parsed**
+  at module load so the JSON can never drift from the schema. No
+  `DropdownMenuLabel` is used — Base UI maps that to `Menu.GroupLabel`, which
+  **requires** a `<Menu.Group>` wrapper and throws "MenuGroupContext is missing"
+  outside one (the old inline dropdown hit exactly this).
+- **The docs viewer** — every guide in the repo's `docs/*.md` folder is
+  served inside the admin panel under **`/docs`**: `/docs` (a card-grid index
+  with an **inline search box** that filters the grid as you type — no
+  separate search page needed) and `/docs/<slug>` (one guide, opened with a
+  generated hero **banner**). The pages are **server components** —
+  `lib/docs.ts` reads the files straight off the filesystem (`server-only`
+  guarded, path-traversal protected, case-insensitive slug resolution so
+  `README.md` is served too) and derives metadata + ToC headings with the
+  pure helpers in `lib/markdown.ts` (shared `slugifyHeadingText`, so ToC
+  anchor ids always match the rendered heading ids).
+  - **Frontmatter.** Every guide starts with a small YAML block that drives
+    its metadata and ordering:
+    `---` / `title:` / `description:` / `order:` / `author:` / `lastUpdated:`
+    / `coverImage:` / `---`. It is validated by `DocFrontmatterSchema`
+    (`z.infer` for the type) via `parseMarkdownFile` in `lib/markdown.ts` —
+    anything missing falls back to the H1 + first paragraph, and a broken
+    block can never take the page down (it degrades to empty frontmatter).
+    Guides without an `order` sort after every ordered guide. `author` and
+    `lastUpdated` are shown on the banner (and `lastUpdated` on the index
+    cards); `coverImage` is the absolute https photo URL used as the banner
+    cover art (validated with `z.url()`, so a malformed URL fails at parse
+    time); the reading time is estimated from the word count
+    (`estimateReadingTime`).
+  - **Inline search.** The `/docs` index is a client **smart component**
+    (`components/docs/docs-index.tsx`) that owns the query and filters the
+    card grid with the pure, generic `filterDocSummaries` helper (title
+    matches rank above description matches, with `<mark>` highlighting). The
+    search box itself (`components/docs/docs-search-box.tsx`) is a dumb,
+    controlled input. The old `/docs/search` route now redirects to `/docs`.
+  - **Detail page layout.** `app/(panel)/docs/[slug]/page.tsx` is a server
+    component: the banner, then the article + ToC. The breadcrumb
+    (`Documentation › <title>`, linking back to `/docs`) comes from the
+    **shared `BreadcrumbContext` trail** rendered by the `(panel)` layout — the
+    resolver maps `/docs/<slug>` to its menu entry (Settings → …) or falls back
+    to the section + doc title, so the docs page needs no breadcrumb markup of
+    its own. The article column is constrained to a comfortable **reading
+    measure** (`max-w-3xl`, ~70ch) so lines don't stretch across the whole
+    container, and the whole group is centered on the page.
+  - **Banner.** `components/docs/doc-banner.tsx` renders a per-guide hero — a
+    real **photograph** from the guide's `coverImage` frontmatter (an absolute
+    https URL, e.g. an `images.unsplash.com` photo), displayed through
+    `next/image` (`fill` + `object-cover` + `priority`, so it is optimized and
+    eager-loads) with a **soft** left-to-right **dark scrim** that keeps the
+    light title readable over any photo. `next.config.ts` whitelists
+    `images.unsplash.com` via `images.remotePatterns` — add any other image
+    host you use there. If a guide has no `coverImage`, the banner falls back
+    to a clean neutral panel — no decorative gradients. The typography is
+    deliberately restrained (the "AI-ish" look comes from heavy bold headings,
+    letter-spaced eyebrows and high-contrast scrims): a small **pill eyebrow
+    chip** instead of an uppercase label, a `font-semibold tracking-tight`
+    title (never `font-bold`), and a **top-divided meta row** for author,
+    last-updated date, and reading time. Because the banner owns the title,
+    `getDoc` strips the leading H1 from the markdown body
+    (`stripFirstHeading`) so it isn't duplicated.
+    Rendering is done by `components/docs/markdown-renderer.tsx` — a custom
+    `react-markdown` renderer with GFM + math/KaTeX, headings with copy-link
+    buttons, tables, images, task lists, **shiki**-highlighted code blocks
+    (`components/ui/code-block.tsx`, dual light/dark themes, copy/download,
+    optional line numbers), and lazy-loaded **mermaid** diagrams
+    (`components/ui/mermaid-diagram.tsx`, `mermaid` is dynamic-imported so it
+    only loads when a diagram exists). The **reading typography** is tuned for
+    docs: a `15px` body (`text-foreground/90`, `leading-7`) instead of the
+    default `14px`, a **stepped heading scale** (24px h2 → 18px h3 → 16px h4,
+    `font-semibold`, never bold + tight-tracking everywhere), inline code as a
+    quiet `bg-muted` pill (no border), **non-italic** blockquotes styled as a
+    subtle callout panel, and lists with `marker`-colored bullets. The right-hand **ToC**
+    (`components/docs/docs-toc.tsx`) is a sticky scroll-spy rail at the `lg`
+    breakpoint (hidden on mobile): a **visible 1px gray guide line** (the same
+    guide-line concept as the sidebar's nested items, but on a tone that reads
+    over the light page background) with a **sliding 2px primary indicator**,
+    and **`h3` sub-sections render indented with their own guide line** —
+    mirroring the sidebar's nested-child indentation, so sub-headings are
+    visually grouped under their `h2`. The scroll-spy **stays in sync with the
+    dashboard's real scroll container**: the shell scrolls inside
+    `<main className="flex-1 overflow-y-auto">`, not the window. The
+    container is found by **walking up the DOM from the nav's PARENT** — never
+    the nav itself, because the ToC's own `<nav>` is `overflow-y-auto` too and
+    would be mistaken for the page scroller (which broke the bottom-of-page
+    correction on guides whose ToC fits the viewport, e.g. `architecture`,
+    `typescript`, `dependencies`). The ToC listens on that container _and_ on
+    `window` with a **capture-phase** listener (`{ capture: true }`) — scroll
+    events don't bubble, but capture-phase listeners still catch scrolls from
+    any inner container. A **`ResizeObserver`** on the scroll container
+    re-measures when the sidebar's collapse animation reflows the article (no
+    window resize fires in that case), so the indicator never sits stale. A
+    **rAF-throttled handler** recomputes the active section once per frame
+    (the last heading whose top crossed the reading line, with a
+    bottom-of-page correction so the last heading always wins at the end of
+    the doc — guarded by `scrollHeight > clientHeight` so a page that fits
+    the viewport never pins the last heading), so it tracks scrolling
+    continuously instead of snapping (state updates stay inside rAF/event
+    callbacks — never in an effect body, per
+    `react-hooks/set-state-in-effect`). **Clicking a link** smooth-scrolls the
+    ONE detected container with a manual `scrollTo` computed from the
+    heading's offset — deliberately NOT `scrollIntoView`, which scrolls every
+    scrollable ancestor (main + shell + body) and makes the page "jump
+    around" when you click a section far away.
+    Internal `.md` links are rewritten to their `/docs/<slug>` pages. New
+    dependencies live in `apps/admin/package.json`: `react-markdown`,
+    `remark-gfm`, `remark-math`, `rehype-katex`, `katex`, `unist-util-visit`,
+    `shiki`, `mermaid`, `server-only` (+ `@types/mdast`). Sidebar
+    **Documentation → Docs Home** lists every guide; the sidebar menu,
+    breadcrumbs, and ⌘K palette pick them up automatically.
+- **Settings pages** — `apps/admin/app/(panel)/settings/general/page.tsx` (profile
+  form + notification toggles + timezone, all state at the page level) and
+  `apps/admin/app/(panel)/settings/billing/page.tsx` (current plan + feature
+  checklist, payment method card, invoices table). They render **content only** —
+  the `(panel)` layout supplies the shell — and are wired into the sidebar JSON
+  under **Settings** → General / Billing (plus a disabled Security subtree). A
+  server-component `app/(panel)/settings/page.tsx` `redirect()`s a direct hit on
+  `/settings` to `/settings/general`.
+- **Route protection** — `apps/admin/proxy.ts` (Next.js 16 middleware
+  convention) treats **everything except `/auth/*`** as protected: unauthenticated
+  visitors are bounced to `/auth/login?redirect=<original path>`, and the login
+  page reads that param so you land back on the page you tried to visit. An
+  already-authenticated admin hitting `/auth/*` is redirected back into the panel.
+- **Mobile** — below `lg` the sidebar renders inside a framer-motion slide-in drawer
+  with a backdrop (`components/layout/mobile-menu-overlay.tsx`); the topbar's
+  hamburger opens it.
+- **Scroll-to-top** (`components/common/scroll-to-top.tsx`) — a floating chevron
+  button that appears after 300px of scroll (`threshold` prop) and smooth-scrolls
+  back up.
+- **Logout is wired in the layout** — `dashboard-layout.tsx` passes `onLogout` down
+  to the sidebar footer and the profile dropdown; there is no standalone logout
+  button file.
+- **Breadcrumbs via a shared context** — the trail is driven by a
+  `BreadcrumbContext` so it can be updated from anywhere (a page, a dialog, a
+  settings tab) and stays in sync automatically. The context itself is a
+  **framework-free factory** in `packages/ui/src/components/breadcrumb-context.tsx`
+  (`createBreadcrumbContext(resolve)`) — it returns a `{ provider, useBreadcrumb }`
+  pair plus the shared `BreadcrumbItem` type (an icon-bearing crumb: `label`,
+  `href?`, `icon`). Because `packages/ui` never imports `next/*` (it is
+  framework-agnostic, so it can't hold the router), **each app instantiates its
+  own instance**:
+  - **Shared state machinery** — the provider holds a **trail status**
+    (`loading | error | ready`), validates every trail through a **Zod schema**
+    (`BreadcrumbItemSchema`, type via `z.infer` — rule 13), memoizes its context
+    value, and exposes `setItems` (override), `setError`, `reset` (restore the
+    route-derived trail), and **`subscribe`** — a lightweight listener registry
+    fired on explicit overrides (`setItems`/`setError`/`reset`) for
+    non-render consumers; plain route changes flow to subscribers through the
+    normal context re-render instead (no stale reads). Resolving happens in an
+    effect keyed on `pathname`; the resolver is held in a ref so it never
+    triggers effect churn.
+  - **Admin** — `components/common/admin-breadcrumb.tsx` creates the app-wide
+    instance, and `lib/breadcrumb.ts` exports `resolveAdminTrail(pathname)`, a
+    pure function that walks `config/sidebar-menu.json` with robust
+    prefix-matching (normalizes trailing slashes, never confuses `/users` with
+    `/users-x`, matches through any nesting depth) and maps each ancestor to a
+    crumb with its **mandatory icon** (from `config/menu-icons.ts`'s `ICON_MAP`, `FileText` fallback).
+    The resolver is **section-aware** (multi-item content sections like
+    `Documents` contribute a context root: `/documents/alpha` →
+    `Documents › Project Alpha`; the `Main` catch-all and single-item sections
+    don't duplicate) and handles **dynamic segments** (`/users/123` →
+    `Users › 123`, rendered from the deepest matching menu parent) and **docs
+    routes** (`/docs/prisma` → `Docs Home › Prisma & DB` straight from the menu
+    tree). **The provider lives in `DashboardShell`** — one level above
+    `DashboardLayout` — so every consumer (the layout's own
+    `useTrailDocumentTitle` + `ShellBreadcrumb`) sits inside it; putting it
+    inside the layout itself makes those hooks run outside the provider and
+    throw "useBreadcrumb must be used within a BreadcrumbProvider".
+    `dashboard-layout.tsx` reads the **status** via `useAdminBreadcrumb()` and
+    renders the **shared** `BreadcrumbTrail` with a Next.js `renderLink` and a
+    responsive `maxItems` (2 on mobile, 4 on desktop via `useMediaQuery`).
+  - **Docs title override** — the `/docs/<slug>` page (server component) mounts
+    `components/docs/doc-breadcrumb-bridge.tsx`, a client component that calls
+    `setItems` with the guide's real **frontmatter title** in an effect and
+    `reset()`s in its cleanup, so the trail shows `Docs Home › <Guide Title>`
+    while reading a guide and restores the route-derived trail on navigation.
+  - **Shared presentational trail** — `packages/ui/src/components/breadcrumb-trail.tsx`
+    is a dumb, `React.memo`-wrapped component used by both apps. Features:
+    **mandatory icons** on every crumb; a **`maxItems` collapse** (first crumb +
+    last `maxItems - 1`, default 4) whose hidden middle is listed in a
+    **popover** (`HiddenCrumbsPopover`) so every hidden crumb stays reachable; a
+    **copy-link button** (appears on hover at `sm`+, always on touch, transient
+    ✓ state); `title` tooltips on labels; hover (primary + underline) and
+    `focus-visible` ring states on links; `font-medium text-foreground` on the
+    current-page crumb; a light **entrance animation** (tw-animate-css) keyed on
+    the last crumb so it replays on navigation; and **status placeholders** — a
+    skeleton while `loading`, a muted message on `error`. The component is
+    framework-free: apps pass `renderLink(item) → <Link>`.
+  - **Document title** — the admin's `useTrailDocumentTitle` reads the trail
+    from the context value and keeps `document.title` in sync with the last
+    crumb (the effect re-runs with a fresh status on every navigation — no
+    stale closures).
+  - **Web** — `apps/web/lib/breadcrumb.ts` (a route table returning `[]` on
+    full-screen auth routes so no trail renders, with a current-page `Home`
+    fallback on unknown routes) + `components/breadcrumb-provider.tsx` (thin
+    client wrapper feeding `usePathname()` into the framework-free provider) +
+    `components/breadcrumb-trail.tsx` (reads status, renders the shared trail
+    with a Next.js `renderLink`); wired into `apps/web/app/layout.tsx` and
+    rendered on `/hello`.
+  - **Data-driven demo** — `app/(panel)/users/[id]/page.tsx` is a live example
+    of the override pattern: the page owns the data (a deterministic mock user;
+    a real app would `useQuery` the entity), and the client
+    `components/users/user-detail-breadcrumb.tsx` calls `setItems` in an effect
+    (with `reset` in its cleanup) so the trail reads `Users › <display name>`
+    instead of the URL-derived `Users › 123`.
+  - **Testing** — `lib/__tests__/breadcrumb.test.ts` covers the resolver: exact
+    matches, nested ancestors, section-aware roots, dynamic segments
+    (`/users/123`), docs routes, trailing slashes, `/users` vs `/users-x`
+    boundary, unknown-route fallback, and mandatory icons on every crumb.
+    **Component tests** (`components/common/breadcrumb-trail.test.tsx`, run in
+    a **jsdom** environment via `@vitest-environment jsdom`) render the shared
+    trail with `@testing-library/react` and cover: crumb rendering with
+    `aria-current` on the current page, the loading skeleton, the error
+    message, the empty state, the `maxItems` collapse (hidden middle + ellipsis
+    trigger), the no-collapse case, and the copy-link button. Dev deps
+    `jsdom`, `@testing-library/react`, `@testing-library/dom`, and
+    `@vitejs/plugin-react` (for `.tsx` transforms) were added to
+    `apps/admin/package.json`; `vitest.config.ts` now includes
+    `components/**/*.test.tsx` (with the React plugin so JSX transforms).
+- **Auth pages are SPA-friendly** — `components/auth/login-form.tsx` and the auth
+  pages use `Link`/`router.push` (never raw `<a href>` or `window.location.href`),
+  and the "main website" link reads `NEXT_PUBLIC_WEB_URL`. The admin has only one
+  redirect target, so `ClientAuthWrapper` (`components/common/client-auth-wrapper.tsx`)
+  hardcodes `onUnauthorizedRedirect: "/auth/login"` instead of threading an unused
+  prop.
+- **Testing** — the admin app has **vitest** (`pnpm test` / `pnpm --filter
+@workspace/admin test`). Tests live in `lib/__tests__/` and cover the pure
+  logic: `menu.test.ts` (route matching, active/expanded state, search pruning),
+  `palette-search.test.ts` (scope parsing, aliases, fuzzy suggestions),
+  `user-initials.test.ts`, `notifications.test.ts` (schema parse, id
+  uniqueness, unread counting), `breadcrumb.test.ts` (trail resolution,
+  collapse boundary), and `markdown.test.ts` (slugify, ToC extraction,
+  frontmatter parsing, inline search filtering, reading time + dates) — plus
+  **component tests** (`components/common/breadcrumb-trail.test.tsx`, jsdom).
+  Run from the app folder with `npx vitest run`, or from the root with
+  `pnpm test` (turbo delegates to each workspace's `test` script).
+- **Dependencies** — `zustand`, `framer-motion`, and `vitest` (dev) are declared
+  in **`apps/admin/package.json`** (app-level, not in `packages/ui`). The dashboard
+  page reuses `components/dashboard/section-cards.tsx`,
+  `components/dashboard/chart-area-interactive.tsx`, and `data/dashboard-data.json`
+  from the original dashboard-01 block; the data-table is split across
+  `components/dashboard/data-table.tsx` (main component),
+  `data-table-columns.tsx` (column defs + cell renderers), and
+  `data-table-constants.ts` (schema + option lists).
 
 Not sure? Read [architecture.md](./architecture.md) first.
 
@@ -493,22 +922,22 @@ Not sure? Read [architecture.md](./architecture.md) first.
 
 ## 13. Troubleshooting
 
-| Symptom | Cause & fix |
-| ------- | ----------- |
-| `pnpm: command not found` | pnpm isn't installed. Run `corepack enable && corepack prepare pnpm@11.18.0 --activate`. |
-| `Unsupported engine` / node version error during install | Your Node is too old. The repo needs Node **>= 20**. Install 20+ and retry. |
-| `psql: could not connect to server` / `Connection refused (0x0000274D)` | Postgres isn't running. Start it (`brew services start postgresql@17` or your Docker container) and re-run `pg_isready`. |
-| `Environment variable not found: DATABASE_URL` | `apps/api/.env` is missing or incomplete. Copy `.env.example` → `.env` and fill it in. |
-| `database "monorepo" does not exist` | Create it first: `createdb monorepo`. |
-| `P3009: migration found that was not applied` / schema not up to date | Run `pnpm db:all` (applies pending migrations). |
-| `Tasks: 2 successful, 1 failed` from `pnpm db:all` | `db:deploy` or `db:generate` failed, so the seed was skipped (by design). Run `pnpm turbo run db:deploy` to see the real error. |
-| Port 3000/3001/8080 already in use | Another process is on the port. Find it (`lsof -i :3000`) and stop it, or change `PORT` in `apps/api/.env`. |
-| Web says "not authenticated" but I logged in on Admin | Cookie isolation by design. Web uses `accessToken`/`refreshToken`; admin uses `adminAccessToken`/`adminRefreshToken`. Log in on each app separately. |
-| `user@example.com` can't log into the admin panel | Expected — non-admin users are blocked from admin **by design**. Admins (`admin@example.com`/`Admin@123`) can log into **both** web and admin; non-admins only web. |
-| `ESLint couldn't find an eslint.config.js file` | You ran `npx eslint` from the repo root (no root config). Run it inside a workspace: `cd apps/web && npx eslint .` — see [eslint.md](./eslint.md). |
-| Prisma client doesn't know a new field | Run `pnpm db:generate` (or `pnpm db:migrate`, which regenerates) and restart your TS server. |
-| Email verification link fails | `RESEND_API_KEY` missing or `APP_URL` wrong. Emails are optional in dev. |
-| I broke the DB and want a clean slate | `pnpm db:reset` (drops everything, re-migrates, re-seeds). 🔴 All data is wiped. |
+| Symptom                                                                 | Cause & fix                                                                                                                                                         |
+| ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm: command not found`                                               | pnpm isn't installed. Run `corepack enable && corepack prepare pnpm@11.18.0 --activate`.                                                                            |
+| `Unsupported engine` / node version error during install                | Your Node is too old. The repo needs Node **>= 20**. Install 20+ and retry.                                                                                         |
+| `psql: could not connect to server` / `Connection refused (0x0000274D)` | Postgres isn't running. Start it (`brew services start postgresql@17` or your Docker container) and re-run `pg_isready`.                                            |
+| `Environment variable not found: DATABASE_URL`                          | `apps/api/.env` is missing or incomplete. Copy `.env.example` → `.env` and fill it in.                                                                              |
+| `database "monorepo" does not exist`                                    | Create it first: `createdb monorepo`.                                                                                                                               |
+| `P3009: migration found that was not applied` / schema not up to date   | Run `pnpm db:all` (applies pending migrations).                                                                                                                     |
+| `Tasks: 2 successful, 1 failed` from `pnpm db:all`                      | `db:deploy` or `db:generate` failed, so the seed was skipped (by design). Run `pnpm turbo run db:deploy` to see the real error.                                     |
+| Port 3000/3001/8080 already in use                                      | Another process is on the port. Find it (`lsof -i :3000`) and stop it, or change `PORT` in `apps/api/.env`.                                                         |
+| Web says "not authenticated" but I logged in on Admin                   | Cookie isolation by design. Web uses `accessToken`/`refreshToken`; admin uses `adminAccessToken`/`adminRefreshToken`. Log in on each app separately.                |
+| `user@example.com` can't log into the admin panel                       | Expected — non-admin users are blocked from admin **by design**. Admins (`admin@example.com`/`Admin@123`) can log into **both** web and admin; non-admins only web. |
+| `ESLint couldn't find an eslint.config.js file`                         | You ran `npx eslint` from the repo root (no root config). Run it inside a workspace: `cd apps/web && npx eslint .` — see [eslint.md](./eslint.md).                  |
+| Prisma client doesn't know a new field                                  | Run `pnpm db:generate` (or `pnpm db:migrate`, which regenerates) and restart your TS server.                                                                        |
+| Email verification link fails                                           | `RESEND_API_KEY` missing or `APP_URL` wrong. Emails are optional in dev.                                                                                            |
+| I broke the DB and want a clean slate                                   | `pnpm db:reset` (drops everything, re-migrates, re-seeds). 🔴 All data is wiped.                                                                                    |
 
 ---
 
@@ -529,8 +958,7 @@ need signup/verification emails to send.
 
 **Q: I changed `schema.prisma` — what now?**
 A: 1) `pnpm db:migrate` to create + apply a migration. 2) Update the shared Zod
-schemas in `packages/shared` if the API shape changed. 3) `pnpm db:all` to re-seed.
-4) `pnpm typecheck` to find every usage that needs updating.
+schemas in `packages/shared` if the API shape changed. 3) `pnpm db:all` to re-seed. 4) `pnpm typecheck` to find every usage that needs updating.
 
 **Q: Where does the `:8080` / `3000` / `3001` come from?**
 A: Defaults in `main.ts` (API) and the Next.js apps. Override with `PORT` (API) and
@@ -555,4 +983,4 @@ A: 1) Schema in `packages/shared/src/schemas/<domain>.ts`. 2) DTO with
 
 ---
 
-_Last updated: August 1, 2026_
+_Last updated: August 2, 2026_
