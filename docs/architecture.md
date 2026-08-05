@@ -144,10 +144,14 @@ packages/shared/src/
 - **No `any`, `unknown`, `never`, no type casting.** Infer everything from Zod.
 - **Add new schemas to the barrel** (`src/index.ts`) or they won't be importable.
 
-**How it's built:** `packages/shared` compiles to ESM with **tsup**
-(`pnpm --filter @workspace/shared build`), producing `dist/index.js` + `dist/index.d.ts`.
-The `add-js-extensions` post-build script is gone — tsup emits correct `.js` extensions
-for Node ESM consumers (the API).
+**How it's built:** `packages/shared` compiles to real ESM + `.d.ts` with plain
+**`tsc`** (`pnpm --filter @workspace/shared build` → `tsc -p tsconfig.build.json`),
+producing per-file `dist/*.js` + `dist/*.d.ts`. There is **no bundler** (no tsup)
+and **no NodeNext**: source is authored **extensionless** (Turbopack and the web
+apps require that — see `docs/typescript.md`), and a tiny post-build script
+(`scripts/fix-dist-extensions.mjs`) rewrites `dist/` so every relative import
+gets its `.js` extension — Node's ESM runtime requires them. Do **not** hand-edit
+`dist/` — rebuild with `pnpm --filter @workspace/shared build`.
 
 ---
 
@@ -248,6 +252,21 @@ move it up to the page (smart component) or into `@workspace/client`.
 - Controllers use DTOs built with `createZodDto(<Schema from @workspace/shared>)`.
 - Swagger docs live at `http://localhost:8080/docs` (inferred from the same schemas).
 - The `ResponseInterceptor` wraps every response in `{ success, data, meta }`.
+- **Uses Nest's standard build/run commands**: `pnpm dev` → `nest start --watch`,
+  `pnpm build` → `nest build`, `pnpm start` → `nest start --prod`,
+  `pnpm start:prod` → `node dist/main.js` (what a process manager runs).
+- **ESM, with `.js` on value imports only.** The API is the one exception to
+  the repo's extensionless-import convention: **runtime (value) imports** are
+  written as `./app.module.js` (standard Nest ESM pattern). **Type-only
+  imports** (`import type … from "./foo"`) stay extensionless — they're erased
+  during compilation, so Node never sees them. The API is never consumed by
+  Turbopack (unlike `@workspace/shared`), so `.js` specifiers are safe here —
+  and both `nest build` and `tsc` emit them verbatim, so `dist/` is directly
+  runnable by Node with **no post-build fixer and no resolver hook**.
+- **TypeScript note:** the API's `typescript` is pinned to **6.0.2** (the last
+  JS-based release) because the Nest CLI **hard-refuses** TS7 (TS7 has no
+  compiler API until 7.1). See `docs/typescript.md` → "TS6 shims". `tsc` there
+  runs TS6, but the emitted ESM is identical to a TS7 build.
 
 ---
 

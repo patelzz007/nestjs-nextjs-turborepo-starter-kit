@@ -13,7 +13,10 @@ export const nestjsConfig = [
 	// ── Override base's TypeScript rules with relaxed ones for NestJS ──
 	// NestJS decorators and DI patterns need flexibility that strict TS rules
 	// can conflict with (e.g., unused constructor params used as DI tokens).
+	// Scoped to TS files: `naming-convention` is type-aware and would crash on
+	// plain `scripts/*.mjs` files (same issue as the base config).
 	{
+		files: ["**/*.ts", "**/*.tsx", "**/*.mts", "**/*.cts"],
 		rules: {
 			// Allow empty constructor-parameter classes (NestJS DTOs extend createZodDto)
 			"@typescript-eslint/no-extraneous-class": "off",
@@ -79,10 +82,17 @@ export const nestjsConfig = [
 	},
 
 	// ── NestJS-specific rules ──────────────────────────────────────────
-	// flatRecommended is an array of config objects (plugins + rules) — spread them in
-	...nestjsPlugin.configs.flatRecommended,
-	// Override specific rule severities
+	// flatRecommended is an array of config objects (plugins + rules) — spread
+	// them in, but pin each to TS files. Every @darraghor rule is type-aware
+	// (needs parserServices) and crashes on the repo's plain `scripts/*.mjs`
+	// files if left global.
+	...nestjsPlugin.configs.flatRecommended.map((config) => ({
+		...config,
+		files: ["**/*.ts", "**/*.tsx", "**/*.mts", "**/*.cts"],
+	})),
+	// Override specific rule severities (also TS-scoped)
 	{
+		files: ["**/*.ts", "**/*.tsx", "**/*.mts", "**/*.cts"],
 		rules: {
 			"@darraghor/nestjs-typed/api-property-matches-property-optionality": "warn",
 		},

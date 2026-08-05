@@ -4,14 +4,14 @@ import { SignupSchema, HealthResponseSchema, SessionStatusSchema, UserResponseSc
 import type { UserResponse, SessionStatus, SignupInput } from "@workspace/shared";
 import { z } from "zod";
 
-import { AppService } from "./app.service";
-import { GetUser } from "./common/decorators/get-user.decorator";
-import { Public } from "./common/decorators/public.decorator";
-import { ApiErrorResponseDto } from "./common/dto/api-response.dto";
-import { CreateUserDto } from "./common/dto/create-user.dto";
-import { createWrappedDto } from "./common/dto/response-wrapper";
-import { ZodValidationPipe } from "./common/pipes/zod-validation.pipe";
-import { AuthService } from "./modules/auth/auth.service";
+import { AppService } from "./app.service.js";
+import { GetUser } from "./common/decorators/get-user.decorator.js";
+import { Public } from "./common/decorators/public.decorator.js";
+import { ApiErrorResponseDto } from "./common/dto/api-response.dto.js";
+import { CreateUserDto } from "./common/dto/create-user.dto.js";
+import { createWrappedDto } from "./common/dto/response-wrapper.js";
+import { ZodValidationPipe } from "./common/pipes/zod-validation.pipe.js";
+import { AuthService } from "./modules/auth/auth.service.js";
 import type { AccessTokenPayload } from "./modules/auth/services/token.service";
 
 // ── Wrapped Response DTOs ────────────────────────────────────────────────

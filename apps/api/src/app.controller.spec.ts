@@ -1,9 +1,9 @@
 import { Test, TestingModule } from "@nestjs/testing";
 
-import { AppController } from "./app.controller";
-import { AppService } from "./app.service";
+import { AppController } from "./app.controller.js";
+import { AppService } from "./app.service.js";
 import type { AccessTokenPayload } from "./modules/auth/services/token.service";
-import { AuthService } from "./modules/auth/auth.service";
+import { AuthService } from "./modules/auth/auth.service.js";
 
 describe("AppController", () => {
 	let controller: AppController;

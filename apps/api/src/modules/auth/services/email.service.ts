@@ -1,8 +1,8 @@
 import { Injectable } from "@nestjs/common";
 import { Resend } from "resend";
 
-import { TypedConfigService } from "../../../config/typed-config.service";
-import { LogService } from "../../../modules/logs/logs.service";
+import { TypedConfigService } from "../../../config/typed-config.service.js";
+import { LogService } from "../../../modules/logs/logs.service.js";
 
 @Injectable()
 export class EmailService {

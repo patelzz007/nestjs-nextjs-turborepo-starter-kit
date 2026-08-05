@@ -1,8 +1,8 @@
 import { Injectable } from "@nestjs/common";
 import { Cron, CronExpression } from "@nestjs/schedule";
 
-import { LogService } from "../../../modules/logs/logs.service";
-import { PrismaService } from "../../../prisma/prisma.service";
+import { LogService } from "../../../modules/logs/logs.service.js";
+import { PrismaService } from "../../../prisma/prisma.service.js";
 
 /**
  * Scheduled tasks for auth module housekeeping.

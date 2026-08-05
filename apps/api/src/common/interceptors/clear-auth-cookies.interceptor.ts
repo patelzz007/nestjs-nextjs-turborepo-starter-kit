@@ -3,15 +3,15 @@ import type { Request, Response } from "express";
 import { type Observable } from "rxjs";
 import { tap } from "rxjs/operators";
 
-import type { JsonValue } from "../../types/json";
+import type { JsonValue } from "../../types/json.js";
 import {
 	CookieConfigService,
 	ACCESS_TOKEN_COOKIE_NAME,
 	REFRESH_TOKEN_COOKIE_NAME,
 	ADMIN_ACCESS_TOKEN_COOKIE_NAME,
 	ADMIN_REFRESH_TOKEN_COOKIE_NAME,
-} from "../constants/cookie.config";
-import { CookieService } from "../services/cookies.service";
+} from "../constants/cookie.config.js";
+import { CookieService } from "../services/cookies.service.js";
 
 /**
  * Interceptor that clears auth cookies after the route handler completes.

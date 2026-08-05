@@ -3,9 +3,9 @@ import type { Response } from "express";
 import { type Observable } from "rxjs";
 import { tap } from "rxjs/operators";
 
-import type { JsonValue } from "../../types/json";
-import { ACCESS_TOKEN_COOKIE_NAME, REFRESH_TOKEN_COOKIE_NAME, type CookieNames, ExtendedCookieOptions } from "../constants/cookie.config";
-import { CookieService } from "../services/cookies.service";
+import type { JsonValue } from "../../types/json.js";
+import { ACCESS_TOKEN_COOKIE_NAME, REFRESH_TOKEN_COOKIE_NAME, type CookieNames, ExtendedCookieOptions } from "../constants/cookie.config.js";
+import { CookieService } from "../services/cookies.service.js";
 
 /**
  * A single cookie operation to be performed by the CookieInterceptor.

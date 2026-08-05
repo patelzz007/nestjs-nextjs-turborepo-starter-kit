@@ -6,6 +6,7 @@ const eslintPluginImport = eslintPluginImportDef.default ?? eslintPluginImportDe
 import eslintPluginPrettier from "eslint-plugin-prettier";
 import turboPlugin from "eslint-plugin-turbo";
 import tseslint from "typescript-eslint";
+import globals from "globals";
 
 /**
  * A shared ESLint configuration for the repository.
@@ -19,8 +20,31 @@ export const config = [
 	// ── 1. Recommended JS rules ────────────────────────────────────
 	js.configs.recommended,
 
+	// ── 1b. Register the typescript-eslint plugin globally ─────────
+	// The strictTypeChecked/stylisticTypeChecked configs below only register
+	// the plugin inside TS-scoped config objects. Later config blocks in this
+	// file reference `@typescript-eslint/*` rules with NO `files` restriction,
+	// so those blocks also apply to non-TS files (e.g. our `scripts/*.mjs`).
+	// Without a global registration, ESLint fails with "could not find plugin
+	// @typescript-eslint" the moment any non-TS file is linted.
+	{
+		plugins: {
+			"@typescript-eslint": tseslint.plugin,
+		},
+	},
+
 	// ── 2. Turn off rules that conflict with Prettier ──────────────
 	eslintConfigPrettier,
+
+	// ── 2b. Node globals for repo script files ─────────────────────
+	// scripts/*.mjs (build fixers, dev runners) run on Node, so give them the
+	// Node global environment instead of the browser defaults.
+	{
+		files: ["**/*.mjs", "**/*.cjs", "**/scripts/**/*.js"],
+		languageOptions: {
+			globals: globals.node,
+		},
+	},
 
 	// ── 3. TypeScript strict type-checked rules ────────────────────
 	// Catches: null/undefined misuse, promise handling, unsafe access, type narrowing gaps.
@@ -62,7 +86,10 @@ export const config = [
 	},
 
 	// ── 7. Naming conventions (TypeScript strict) ──────────────────
+	// Scoped to TS files: these rules need parserServices (typed linting) and
+	// crash on plain JS/MJS files (e.g. scripts/*.mjs).
 	{
+		files: ["**/*.ts", "**/*.tsx", "**/*.mts", "**/*.cts"],
 		rules: {
 			"@typescript-eslint/naming-convention": [
 				"error",
@@ -120,7 +147,10 @@ export const config = [
 	},
 
 	// ── 8. Safety & quality rules ───────────────────────────────────
+	// The @typescript-eslint/* rules need parserServices, so the whole block is
+	// scoped to TS files. (js.configs.recommended still covers plain JS.)
 	{
+		files: ["**/*.ts", "**/*.tsx", "**/*.mts", "**/*.cts"],
 		rules: {
 			// Require === and !== over == and !=, but allow `== null` / `!= null`
 			// null-checks (idiomatic way to check for both null and undefined).
@@ -172,6 +202,7 @@ export const config = [
 	//    literal types for better type inference (required by cva, shadcn,
 	//    and constant tuple patterns).
 	{
+		files: ["**/*.ts", "**/*.tsx", "**/*.mts", "**/*.cts"],
 		rules: {
 			// No type assertions — use Zod inference or proper types.
 			// NOTE: `as const` is automatically exempted from this rule.
@@ -184,6 +215,7 @@ export const config = [
 
 	// ── 10. Non-negotiable: explicit return types (Rule #15) ──────
 	{
+		files: ["**/*.ts", "**/*.tsx", "**/*.mts", "**/*.cts"],
 		rules: {
 			// No explicit `any` — use proper types (derived from Zod where possible)
 			"@typescript-eslint/no-explicit-any": "error",

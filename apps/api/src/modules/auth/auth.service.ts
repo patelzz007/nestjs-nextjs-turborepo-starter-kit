@@ -21,16 +21,16 @@ import {
 	VerifyEmailResponse,
 } from "@workspace/shared";
 
-import { UserPermissions } from "../../common/interfaces/rbac.interface";
-import { parseExpiryToMilliseconds } from "../../common/utils/expiry";
-import { TypedConfigService } from "../../config/typed-config.service";
-import { LogService } from "../../modules/logs/logs.service";
-import { PrismaService } from "../../prisma/prisma.service";
-import { RbacService } from "../rbac/rbac.service";
+import { UserPermissions } from "../../common/interfaces/rbac.interface.js";
+import { parseExpiryToMilliseconds } from "../../common/utils/expiry.js";
+import { TypedConfigService } from "../../config/typed-config.service.js";
+import { LogService } from "../../modules/logs/logs.service.js";
+import { PrismaService } from "../../prisma/prisma.service.js";
+import { RbacService } from "../rbac/rbac.service.js";
 
-import { CryptoService } from "./services/crypto.service";
-import { EmailService } from "./services/email.service";
-import { TokenService } from "./services/token.service";
+import { CryptoService } from "./services/crypto.service.js";
+import { EmailService } from "./services/email.service.js";
+import { TokenService } from "./services/token.service.js";
 
 @Injectable()
 export class AuthService {

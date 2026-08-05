@@ -2,9 +2,9 @@ import { CanActivate, type ExecutionContext, Injectable, UnauthorizedException }
 import { Reflector } from "@nestjs/core";
 import type { Request } from "express";
 
-import { TokenService } from "../../modules/auth/services/token.service";
-import type { AccessTokenPayload } from "../../modules/auth/services/token.service";
-import { IS_PUBLIC_KEY } from "../decorators/public.decorator";
+import { TokenService } from "../../modules/auth/services/token.service.js";
+import type { AccessTokenPayload } from "../../modules/auth/services/token.service.js";
+import { IS_PUBLIC_KEY } from "../decorators/public.decorator.js";
 
 /**
  * Guard that validates the JWT access token.

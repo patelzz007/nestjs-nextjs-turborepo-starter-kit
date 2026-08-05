@@ -266,10 +266,11 @@ cp apps/web/.env.example apps/web/.env
 cp apps/admin/.env.example apps/admin/.env
 ```
 
-| Variable              | Example                 | What it's for                                     |
-| --------------------- | ----------------------- | ------------------------------------------------- |
-| `NEXT_PUBLIC_API_URL` | `http://localhost:8080` | Base URL of the API the browser calls             |
-| `NEXT_PUBLIC_WEB_URL` | `http://localhost:3000` | Web app URL used by the "main website" login link |
+| Variable                    | Example                 | What it's for                                                                                                     |
+| --------------------------- | ----------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `NEXT_PUBLIC_API_URL`       | `http://localhost:8080` | Base URL of the API the browser calls                                                                             |
+| `NEXT_PUBLIC_WEB_URL`       | `http://localhost:3000` | Web app URL used by the "main website" login link                                                                 |
+| `NEXT_PUBLIC_SESSION_POLL_MS` | `60000` (optional)    | Session-status badge steady-poll interval in ms — OPT-IN; unset/`0` disables steady polling (default). The countdown is computed locally from the JWT `exp` claim, so the badge works with zero polling |
 
 > `NEXT_PUBLIC_*` vars are inlined into the browser bundle at build time. When you
 > deploy, set them to your production URLs (e.g. `https://api.example.com` and

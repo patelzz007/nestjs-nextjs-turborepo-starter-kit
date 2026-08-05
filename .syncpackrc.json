@@ -4,6 +4,7 @@
 		{
 			"label": "Shared deps must be the same version across all workspaces",
 			"dependencies": ["react", "react-dom", "zod", "typescript", "next"],
+			"packages": ["**", "!@workspace/eslint-config", "!@workspace/api"],
 			"policy": "sameRange"
 		}
 	],
@@ -11,6 +12,7 @@
 		{
 			"label": "Shared deps are pinned to exact versions (no ^ or ~)",
 			"dependencies": ["react", "react-dom", "zod", "typescript"],
+			"packages": ["**", "!@workspace/eslint-config", "!@workspace/api"],
 			"range": ""
 		}
 	]

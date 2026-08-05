@@ -71,8 +71,8 @@ Every other config `extends` this one. It sets the strict baseline:
 | -------------------------- | ----------------------------------- | ------------------------------------------------------------------- |
 | `strict`                   | `true`                              | All strictness flags on (no implicit any, strict null checks, etc.) |
 | `target`                   | `ES2022`                            | Compiles to ES2022 syntax                                           |
-| `module`                   | `NodeNext`                          | ESM/CJS resolution based on `package.json` `"type"`                 |
-| `moduleResolution`         | `NodeNext`                          | Modern Node-style resolution                                        |
+| `module`                   | `ESNext`                            | Native ESM module syntax (no CJS emit)                              |
+| `moduleResolution`         | `Bundler`                           | Bundler-style resolution — extensionless relative imports allowed   |
 | `moduleDetection`          | `force`                             | Treat every file as a module                                        |
 | `lib`                      | `["es2022", "DOM", "DOM.Iterable"]` | Available global APIs                                               |
 | `declaration`              | `true`                              | Emit `.d.ts` files                                                  |
@@ -138,8 +138,8 @@ Extends `base.json` with NestJS requirements:
 		"experimentalDecorators": true,
 		"forceConsistentCasingInFileNames": true,
 		"lib": ["ESNext"],
-		"module": "nodenext",
-		"moduleResolution": "nodenext",
+		"module": "ESNext",
+		"moduleResolution": "bundler",
 		"noFallthroughCasesInSwitch": true,
 		"noUncheckedIndexedAccess": false,
 		"removeComments": true,
@@ -150,10 +150,24 @@ Extends `base.json` with NestJS requirements:
 
 - `experimentalDecorators` + `emitDecoratorMetadata` — required for NestJS decorators
   (`@Injectable()`, `@Controller()`, DI).
-- `module: nodenext` + `moduleResolution: nodenext` — Node-native ESM resolution.
+- `module: ESNext` + `moduleResolution: bundler` — **but the API is the one
+  exception to the extensionless convention**: its **value imports** (runtime
+  imports) use explicit `.js` extensions on relative specifiers
+  (`import { AppModule } from "./app.module.js"`), the standard Nest ESM
+  pattern. The API is never consumed by Turbopack (unlike `@workspace/shared`),
+  so `.js` specifiers are safe here — and `nest build` / `nest start` emit them
+  verbatim, which means `dist/` is directly runnable by Node with no post-build
+  fixer (see `docs/architecture.md`).
+
+  **Type-only imports stay extensionless.** `import type { X } from "./foo"`
+  (and `export type`) are erased during compilation — they produce **zero**
+  emitted JavaScript — so Node never sees them and the `.js` suffix would be
+  dead weight. Rule of thumb: *value imports get `.js`, type-only imports
+  don't*. (An inline `import { type X } from "./foo.js"` mixed with value
+  specifiers keeps `.js`, because the statement emits a runtime import.)
 - `noUncheckedIndexedAccess: false` — turned **off** because NestJS + Prisma code
   hits too many false positives (e.g. `process.env.X!` patterns in the seeder).
-- `sourceMap: true` + `removeComments: true` — good for `nest build`.
+- `sourceMap: true` + `removeComments: true` — good for `tsc`-based builds.
 
 ---
 
@@ -166,14 +180,18 @@ Extends `base.json` with NestJS requirements:
 | `apps/api`                | `@workspace/typescript-config/nestjs.json`        | `outDir: ./dist`, `rootDir: ./src`, `incremental: true`; excludes `src/**/*.spec.ts`                                          |
 | `packages/client`         | `@workspace/typescript-config/react-library.json` | `module: ESNext`, `moduleResolution: bundler`; hosts auth / API client code                                                   |
 | `packages/ui`             | `@workspace/typescript-config/react-library.json` | `module: ESNext`, `moduleResolution: bundler`, `@workspace/ui/*` alias                                                        |
-| `packages/shared`         | `@workspace/typescript-config/base.json`          | `module: ESNext`, `moduleResolution: bundler`, `noEmit: true`, `noUncheckedIndexedAccess: false`, `ignoreDeprecations: "6.0"` |
+| `packages/shared`         | `@workspace/typescript-config/base.json`          | `module: ESNext`, `moduleResolution: bundler`, `noEmit: true`, `noUncheckedIndexedAccess: false`, `lib: ["es2022"]` |
 | repo root `tsconfig.json` | `@workspace/typescript-config/base.json`          | Nothing extra                                                                                                                 |
 
 > **Why do `packages/shared`, `packages/client`, and `packages/ui` use `bundler`
-> resolution?** They are consumed by bundlers (Next.js, tsup/esbuild), so
-> extensionless relative imports are fine. `packages/shared` is built to ESM with
-> **tsup** (`pnpm build` → `tsup`, which emits `dist/index.js` + `dist/index.d.ts`
-> with proper `.js` extensions — no post-build rewrite script needed).
+> resolution?** They are consumed by bundlers (Next.js) or tooling that resolves
+> extensionless imports, so all source files are authored **extensionless** —
+> Turbopack cannot map a `.js` specifier back to a `.ts` file, so `.js`-suffixed
+> imports in source break web/admin (see the gotcha below).
+> `packages/shared` is built to ESM with plain **`tsc`** (`pnpm build` →
+> `tsc -p tsconfig.build.json`), then `scripts/fix-dist-extensions.mjs` rewrites
+> `dist/` so every relative import gets its `.js` extension — Node's ESM runtime
+> requires them even though source stays extensionless.
 >
 > **How `@workspace/shared` is resolved:** the package `exports` field exposes a
 > `development` condition pointing at the raw `src/index.ts`, and web/admin set
@@ -241,7 +259,7 @@ Every workspace exposes a `typecheck` script:
 | ------------------- | ------------------------------------ |
 | `@workspace/web`    | `tsc --noEmit`                       |
 | `@workspace/admin`  | `tsc --noEmit`                       |
-| `@workspace/api`    | `nest build` (compiles = typechecks) |
+| `@workspace/api`    | `tsc --noEmit`                       |
 | `@workspace/client` | `tsc --noEmit`                       |
 | `@workspace/ui`     | `tsc --noEmit`                       |
 | `@workspace/shared` | `tsc --noEmit`                       |
@@ -251,7 +269,7 @@ Run them all from the repo root:
 ```bash
 pnpm typecheck                    # turbo typecheck → runs the script in every workspace
 pnpm typecheck --filter @workspace/web    # just web
-pnpm typecheck --filter @workspace/api    # just api (runs nest build)
+pnpm typecheck --filter @workspace/api    # just api (tsc --noEmit)
 ```
 
 Or inside one workspace:
@@ -279,27 +297,57 @@ if (value === undefined) throw new Error("expected an element");
 const value: string = arr[0] ?? "";
 ```
 
-### "Relative import paths need explicit file extensions in ECMAScript imports"
+### Turbopack can't resolve `.js` specifiers in `@workspace/shared` source
 
-This error appears under `moduleResolution: nodenext` (used by `apps/api`). Two
-ways to deal with it:
+If web/admin ever fails with `Export UserResponseSchema doesn't exist in target
+module` (or similar) while importing from `@workspace/shared`, a relative import
+in `packages/shared/src` gained a `.js` extension (e.g. `./schemas/index.js`).
+Turbopack resolves **source** directly through the `development` export condition,
+but cannot map a `.js` specifier back to a `.ts` file — it sees an empty module
+and reports every export as missing. Source must stay **extensionless**; `.js`
+extensions belong in `dist/` only, applied by `scripts/fix-dist-extensions.mjs`
+during `pnpm build`.
 
-- In `apps/api` (source), imports like `./auth.service` are fine because Nest's
-  own build pipeline (`nest build`) transpiles and resolves them without strict
-  Node ESM resolution at dev/build time — but if you hit this error, the fix is
-  to use a `.js` extension (e.g. `./auth.service.js`) even though the source is
-  `.ts`.
-- In `packages/shared`, the source uses extensionless imports with `bundler`
-  resolution, and **tsup** emits the built `dist/` files with proper `.js`
-  extensions, so Node ESM consumers (the API) import them without issues.
-  Do **not** hand-edit `dist/` — rebuild with `pnpm --filter @workspace/shared build`.
+### The API is ESM now — CJS named imports need interop care
 
-### `TS5101: Option 'baseUrl' is deprecated`
+`apps/api` runs true ESM (both `pnpm dev` and `node dist/main.js`). Most CJS
+packages work fine through Node's ESM-CJS interop, but a **named** import only
+works if the CJS export is statically detectable. `jsonwebtoken` is the known
+case: `import { TokenExpiredError } from "jsonwebtoken"` crashes at runtime, so
+`token.service.ts` imports the default (`import jwt from "jsonwebtoken"`) and
+destructures the class from it. If you add a new CJS dependency, prefer default
+imports and destructure from there.
 
-This appears when tsup's DTS bundler runs under TypeScript 6 — it generates a temp
-config with `baseUrl` (deprecated). `packages/shared/tsconfig.json` sets
-`"ignoreDeprecations": "6.0"` to silence it. If you ever remove it and the build
-breaks, add it back.
+### TypeScript 7 + the TS6 shims (for JS-API tooling)
+
+The repo runs **TypeScript 7.0** (the Go-native compiler) for `tsc` in the web
+apps and packages — but TS7 ships **no JS compiler API** (no `ts.sys`, no
+`createProgram`), which breaks every JS-API consumer. Two workspaces therefore
+run the **last JS-based release (TypeScript 6.0.2)** side-by-side:
+
+- `@workspace/eslint-config` declares `"typescript": "6.0.2"` — so
+  typescript-eslint (resolved through eslint-config) gets the classic compiler
+  API it needs.
+- `@workspace/api` declares the same `"typescript": "6.0.2"`. The Nest CLI
+  (`nest build` / `nest start`) **hard-refuses** TS7 — it throws "the installed
+  TypeScript version does not expose the programmatic compiler API … install TS
+  6 until [7.1]" — so the API must resolve TS6 to use Nest's built-in commands.
+  The emitted ESM output is identical either way.
+- `pnpm-workspace.yaml` uses `packageExtensions` to inject `typescript: 6.0.2`
+  into `@darraghor/eslint-plugin-nestjs-typed` (which imports `typescript`
+  directly). Without it, the plugin would resolve the hoisted TS7 and crash.
+- `.syncpackrc.json` exempts `@workspace/eslint-config` and `@workspace/api` from
+  the exact-version group so the 6.0.2 vs 7.0.2 difference doesn't count as
+  dependency drift.
+
+Note: the lockfile legitimately contains **two** `typescript` versions
+(`6.0.2` in the shimmed workspaces, `7.0.2` everywhere else) — that's expected.
+After a `pnpm install`, re-run `pnpm db:generate` if Prisma's generated client
+types ever look missing (the reinstall can wipe `node_modules/.prisma`).
+
+If you see tooling crash with `Cannot read properties of undefined (reading
+'useCaseSensitiveFileNames')` or `ts.sys is undefined`, that's a JS-API consumer
+resolving TS7 — give it the TS6 shim the same way.
 
 ### `process` is not defined
 

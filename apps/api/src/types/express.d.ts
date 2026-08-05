@@ -1,4 +1,4 @@
-import type { AccessTokenPayload, RefreshTokenPayload } from "../modules/auth/services/token.service";
+import type { AccessTokenPayload, RefreshTokenPayload } from "../modules/auth/services/token.service.js";
 
 import type { JsonValue } from "./json";
 

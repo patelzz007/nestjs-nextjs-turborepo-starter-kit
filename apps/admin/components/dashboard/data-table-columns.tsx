@@ -1,5 +1,6 @@
 "use client";
 
+import { type Column, type ColumnDef, type Row, type Table } from "@tanstack/react-table";
 import { Badge } from "@workspace/ui/components/badge";
 import { Button } from "@workspace/ui/components/button";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@workspace/ui/components/chart";
@@ -22,9 +23,9 @@ import { CircleCheckIcon, EllipsisVerticalIcon, GripVerticalIcon, LoaderIcon, Tr
 import * as React from "react";
 import { Area, AreaChart, CartesianGrid, XAxis } from "recharts";
 import { toast } from "sonner";
-import type { Column, ColumnDef, Row, Table as TanStackTable } from "@tanstack/react-table";
 import { useSortable } from "@dnd-kit/sortable";
 
+import type { DashboardFeatures } from "@/components/dashboard/dashboard-table-features";
 import {
 	chartConfig,
 	chartData,
@@ -47,7 +48,7 @@ function DragHandle({ id }: { id: number }): React.JSX.Element {
 	);
 }
 
-function SelectAllCheckbox({ table }: { table: TanStackTable<RowData> }): React.JSX.Element {
+function SelectAllCheckbox({ table }: { table: Table<DashboardFeatures, RowData> }): React.JSX.Element {
 	const handleCheckedChange = React.useCallback(
 		(value: boolean): void => {
 			table.toggleAllPageRowsSelected(value);
@@ -67,7 +68,7 @@ function SelectAllCheckbox({ table }: { table: TanStackTable<RowData> }): React.
 	);
 }
 
-function SelectRowCheckbox({ row }: { row: Row<RowData> }): React.JSX.Element {
+function SelectRowCheckbox({ row }: { row: Row<DashboardFeatures, RowData> }): React.JSX.Element {
 	const handleCheckedChange = React.useCallback(
 		(value: boolean): void => {
 			row.toggleSelected(value);
@@ -116,7 +117,7 @@ function SaveInputCell({ id, defaultValue, header, label }: SaveInputCellProps):
 	);
 }
 
-function ReviewerCell({ row }: { row: Row<RowData> }): React.JSX.Element {
+function ReviewerCell({ row }: { row: Row<DashboardFeatures, RowData> }): React.JSX.Element {
 	const isAssigned = row.original.reviewer !== "Assign reviewer";
 
 	if (isAssigned) {
@@ -143,7 +144,7 @@ function ReviewerCell({ row }: { row: Row<RowData> }): React.JSX.Element {
 	);
 }
 
-export function ColumnVisibilityCheckbox({ column }: { column: Column<RowData> }): React.JSX.Element {
+export function ColumnVisibilityCheckbox({ column }: { column: Column<DashboardFeatures, RowData> }): React.JSX.Element {
 	const handleCheckedChange = React.useCallback(
 		(value: boolean): void => {
 			column.toggleVisibility(value);
@@ -272,7 +273,7 @@ function TableCellViewer({ item }: { item: RowData }): React.JSX.Element {
 	);
 }
 
-export const columns: ColumnDef<RowData>[] = [
+export const columns: ColumnDef<DashboardFeatures, RowData>[] = [
 	{
 		id: "drag",
 		header: (): null => null,

@@ -1,6 +1,6 @@
 import { Module } from "@nestjs/common";
 
-import { RbacService } from "./rbac.service";
+import { RbacService } from "./rbac.service.js";
 
 @Module({
 	providers: [RbacService],

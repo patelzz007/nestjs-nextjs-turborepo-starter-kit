@@ -9,6 +9,7 @@ import * as React from "react";
 
 import { NetworkStatusIndicator } from "@/components/common/network-status-bar";
 import { NotificationsDropdown } from "@/components/notifications/notifications-dropdown";
+import { SessionStatusBadge } from "@/components/common/session-status-badge";
 import { ThemeToggle } from "@/components/common/theme-toggle";
 import { CommandPalette } from "@/components/ui/command-palette";
 import { Profile01 } from "@/components/settings/profile-01";
@@ -104,6 +105,15 @@ export interface TopbarProps {
 					{/* Network status */}
 					<div className="mx-1 hidden md:mx-2 md:block">
 						<NetworkStatusIndicator />
+					</div>
+
+					{/* Session status — compact pill: live token-expiry countdown computed
+					    locally from the JWT exp claim (GET /session once on mount). The
+					    topbar lives in the persistent (panel) shell, so the badge mounts
+					    ONCE for the whole session — no refetch on page navigation. Hidden
+					    below `lg` to keep the small-screen topbar uncluttered. */}
+					<div className="mx-1 hidden lg:block">
+						<SessionStatusBadge compact />
 					</div>
 
 					{/* Theme toggle */}

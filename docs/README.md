@@ -33,6 +33,7 @@ coverImage: "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?auto=f
 | **[Logging system](./logging.md)**                  | 40 must-haves for the in-house Datadog-style logging service (terminal + DB, no external SaaS) — grounded in current code.                              |
 | **[Email templates](./email.md)**                   | 40 must-haves for the Resend-powered transactional email template system — grounded in current code.                                                  |
 | **[Reactive core](./reactive-core.md)**             | Design for replacing promises with a zero-dep rxjs-like core — 50 items, pitfalls (incl. full-SSR), unsubscribe guarantees, rxjs coverage matrix.          |
+| **[Performance & DX roadmap](./performance-and-dx.md)** | 20 grounded performance + developer-experience improvements (turbo cache, pino, CI, smoke test…) — each with a priority, effort estimate, and acceptance criteria. |
 
 ---
 
@@ -48,7 +49,7 @@ Don't read top to bottom. Here's the path we'd walk a new developer through:
 | 4️⃣    | **[Token Refresh](./token-refresh.md)**                             | Now the real machinery: the two layers, how to observe them in DevTools / server logs, and the FAQ.     |
 | 5️⃣    | **[TypeScript](./typescript.md) · [ESLint](./eslint.md) · [Dependencies](./dependencies.md)** | Read when you touch config or hit a lint/type error — no need up front.          |
 | 6️⃣    | **[Prisma](./prisma.md)**                                           | Read when you touch the database: migrations, seeding, every `db:*` command.                            |
-| 7️⃣    | **[Auth roadmap](./auth-roadmap.md) · [Boilerplate roadmap](./boilerplate-roadmap.md) · [UI component audit](./ui-components.md)** | Read when you're *planning* new work — idea lists and the per-component improvement backlog. |
+| 7️⃣    | **[Auth roadmap](./auth-roadmap.md) · [Boilerplate roadmap](./boilerplate-roadmap.md) · [UI component audit](./ui-components.md) · [Performance & DX roadmap](./performance-and-dx.md) | Read when you're *planning* new work — idea lists, the per-component improvement backlog, and the perf/DX backlog. |
 
 **TL;DR for the common case:** steps 1–4 are required reading; steps 5–7 are
 reference material to reach for when the moment calls for them.

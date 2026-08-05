@@ -1,4 +1,4 @@
-import type { SlimRoleResponse, PermissionDetailsResponse } from "../schemas/user.schema";
+import type { SlimRoleResponse, PermissionDetailsResponse } from "../schemas/user.schema.js";
 
 // ── Public Exports ──────────────────────────────────────────────────────────
 

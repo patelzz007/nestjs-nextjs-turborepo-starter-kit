@@ -67,6 +67,7 @@ The config lives at the **repo root** in `.syncpackrc.json`:
 		{
 			"label": "Shared deps must be the same version across all workspaces",
 			"dependencies": ["react", "react-dom", "zod", "typescript", "next"],
+			"packages": ["**", "!@workspace/eslint-config"],
 			"policy": "sameRange"
 		}
 	],
@@ -74,6 +75,7 @@ The config lives at the **repo root** in `.syncpackrc.json`:
 		{
 			"label": "Shared deps are pinned to exact versions (no ^ or ~)",
 			"dependencies": ["react", "react-dom", "zod", "typescript"],
+			"packages": ["**", "!@workspace/eslint-config"],
 			"range": ""
 		}
 	]
@@ -91,6 +93,16 @@ Two rules are configured:
 
 > Why `range: ""`? An empty range means "no semver range allowed" — syncpack
 > rejects `^4.4.3` and accepts `4.4.3`.
+
+**Why are `@workspace/eslint-config` and `@workspace/api` exempted?**
+
+Both declare `typescript: 6.0.2` — the last JS-based release — so JS-API
+consumers (typescript-eslint, eslint plugins, and the Nest CLI, which
+**hard-refuses** TS7) keep working under TypeScript 7 (which ships no compiler
+API). Their `typescript` entry intentionally differs from the rest of the repo
+(7.0.2), so the `!@workspace/eslint-config` / `!@workspace/api` exclusions stop
+syncpack from reporting that as drift. See `docs/typescript.md` → "TypeScript 7
++ the TS6 shims (for JS-API tooling)".
 
 ---
 

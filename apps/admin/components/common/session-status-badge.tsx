@@ -3,28 +3,38 @@
 import { useAuth } from "@workspace/client/lib/auth";
 import { authEndpoints } from "@workspace/client/lib/endpoints";
 import { Badge } from "@workspace/ui/components/badge";
+import { useObservable } from "@workspace/ui/hooks/use-observable";
 import { cn } from "@workspace/ui/lib/utils";
+import type { SessionStatus } from "@workspace/shared";
 import { Loader2, ShieldCheck, ShieldX } from "lucide-react";
 import * as React from "react";
 
+import { buildSessionBadgeStreams, type SessionState } from "@/lib/session-badge";
+
+/** The loading state shown before the first fetch resolves. Hoisted for a stable identity. */
+const INITIAL_STATE: SessionState = { status: "loading" };
+
 /**
- * Session status badge — the "very basic protected API" demo.
+ * Session status badge — the "very basic protected API" demo, now stream-driven.
  *
- * On mount it calls `GET /session` (which requires a valid access token). That
- * single call makes the silent-refresh flow observable on **SPA navigation**:
+ * The whole thing is a declarative pipeline (`lib/session-badge.ts`):
  *
- * - `DashboardShell` fetches `/auth/me` once when the panel mounts and stays
- *   mounted across navigations — so it never fires again when you click around.
- * - This badge lives in each page, so every time you navigate to one of the
- *   demo pages (`/`, `/settings/general`, `/settings/billing`) it fires a
- *   fresh `GET /session`. If the access token expired, the API answers 401 →
- *   the client silently refreshes (`POST /auth/refresh`) → the request retries.
- *   The live countdown below then shows a fresh `expiresAt` — proof the token
- *   was rotated without any user interaction or full page reload.
+ * - `sessionState$`  — fetches `GET /session` through the typed procedure's
+ *   `fetchOrThrow()`, which runs the SAME 401 → silent-refresh → retry flow
+ *   the old `useQuery` used. Fetches happen on mount, on tab-return, and on a
+ *   steady poll (`NEXT_PUBLIC_SESSION_POLL_MS`, default 5 minutes; set to `0`
+ *   to disable steady polling — the old badge never polled, so the rotation
+ *   pulse below was dead code; polling is what makes it observable).
+ * - `secondsLeft$`    — the live countdown, re-emitted every second only while
+ *   the tab is visible (the old setInterval kept firing in hidden tabs).
+ * - `rotationPulse$`  — `true` for 2s whenever `expiresAt` jumps FORWARD: the
+ *   unmistakable "silent refresh just rotated the token" glow.
  *
- * The view is split into a smart wrapper (query + countdown) and a dumb,
- * memoized presentational `SessionStatusView` so the rendering is unit-testable
- * without mocking React Query (same split as `BreadcrumbTrail`).
+ * The view is the same memoized `SessionStatusView` as before (dumb, pure);
+ * the smart wrapper is now just three `useObservable` subscriptions. Every
+ * subscription is created and destroyed by `useObservable`'s
+ * useSyncExternalStore lifecycle, so unmounting the badge leaves zero active
+ * subscriptions (assertable via `@workspace/reactive/testing`).
  */
 
 export interface SessionStatusViewProps {
@@ -40,11 +50,23 @@ export interface SessionStatusViewProps {
 	 * countdown so the rotation is unmistakable at a glance.
 	 */
 	readonly refreshed?: boolean;
+	/**
+	 * Compact rendering for the topbar: hides the name/email identity (the
+	 * profile dropdown already shows it) and keeps just the shield + countdown
+	 * (or pulse). The countdown drops the "Token expires in" prefix so the pill
+	 * stays narrow enough for a 56px topbar. Non-compact keeps the full pill.
+	 */
+	readonly compact?: boolean;
 }
 
-function formatTimeLeft(totalSeconds: number): string {
+function formatTimeLeft(totalSeconds: number, compact = false): string {
 	const minutes = Math.floor(totalSeconds / 60);
 	const seconds = totalSeconds % 60;
+	// Compact long expiries as `Xh YYm` so a 150-minute token stays a narrow pill.
+	if (compact && minutes >= 60) {
+		const hours = Math.floor(minutes / 60);
+		return `${String(hours)}h ${String(minutes % 60).padStart(2, "0")}m`;
+	}
 	return `${String(minutes)}m ${String(seconds).padStart(2, "0")}s`;
 }
 
@@ -63,12 +85,13 @@ export const SessionStatusView = React.memo(function SessionStatusView({
 	secondsLeft,
 	errorMessage,
 	refreshed = false,
+	compact = false,
 }: SessionStatusViewProps): React.JSX.Element {
 	if (status === "loading") {
 		return (
 			<Badge variant="outline" className="gap-1.5 px-2.5 py-1 text-muted-foreground" aria-label="Session status: checking">
 				<Loader2 className="size-3 animate-spin" />
-				<span>Checking session…</span>
+				{compact ? <span>Checking…</span> : <span>Checking session…</span>}
 			</Badge>
 		);
 	}
@@ -77,6 +100,9 @@ export const SessionStatusView = React.memo(function SessionStatusView({
 		return (
 			<Badge variant="destructive" className="gap-1.5 px-2.5 py-1" aria-label="Session status: error">
 				<ShieldX className="size-3" />
+				{/* Compact still shows the REAL message — the 401 case ("Session
+				    expired — please log in again") must stay distinguishable from a
+				    transient network error even in a topbar-sized pill. */}
 				<span>{errorMessage ?? "Session check failed"}</span>
 			</Badge>
 		);
@@ -84,7 +110,7 @@ export const SessionStatusView = React.memo(function SessionStatusView({
 
 	// Guard against an impossible state (ready without a countdown) so the
 	// component still renders something sane if the API ever omits exp.
-	const label = secondsLeft !== undefined ? `Token expires in ${formatTimeLeft(Math.max(0, secondsLeft))}` : "Token expiry unknown";
+	const formatted = secondsLeft !== undefined ? formatTimeLeft(Math.max(0, secondsLeft), compact) : null;
 
 	return (
 		<Badge
@@ -98,122 +124,76 @@ export const SessionStatusView = React.memo(function SessionStatusView({
 			)}
 			aria-label="Session status: verified">
 			<ShieldCheck className="size-3" />
-			<span className="font-semibold">{fullName ?? "Verified"}</span>
-			<span className="text-muted-foreground">{email}</span>
+			{compact ? null : (
+				<>
+					<span className="font-semibold">{fullName ?? "Verified"}</span>
+					<span className="text-muted-foreground">{email}</span>
+				</>
+			)}
 			{refreshed ? (
-				<span className="font-semibold text-emerald-600 dark:text-emerald-400">· Refreshed just now</span>
+				<span className="font-semibold text-emerald-600 dark:text-emerald-400">{compact ? "Refreshed" : "· Refreshed just now"}</span>
+			) : formatted === null ? (
+				<span className="text-muted-foreground/80">{compact ? "—" : "· Token expiry unknown"}</span>
 			) : (
-				<span className="text-muted-foreground/80 tabular-nums" title="Refresh the page or navigate again to watch the silent refresh rotate this">
-					· {label}
+				<span className="text-muted-foreground/80 tabular-nums" title={`Token expires in ${formatted}`}>
+					{compact ? formatted : `· Token expires in ${formatted}`}
 				</span>
 			)}
 		</Badge>
 	);
 });
 
-function secondsUntil(expiresAt: string, now: Date): number {
-	const remaining = new Date(expiresAt).getTime() - now.getTime();
-	return Math.max(0, Math.round(remaining / 1000));
+/**
+ * Smart wrapper: subscribes to the three badge streams. Fully contained —
+ * render `<SessionStatusBadge />` anywhere (the admin topbar is the primary
+ * home: the `(panel)` shell stays mounted across navigations, so the badge
+ * mounts ONCE and its streams persist for the whole session — no per-page
+ * refetch, unlike the old per-page placement).
+ *
+ * The countdown is computed LOCALLY from the JWT `exp` claim (served as
+ * `expiresAt` by `GET /session`) and ticks with a client timer — steady
+ * polling is opt-in via `NEXT_PUBLIC_SESSION_POLL_MS` and defaults to OFF.
+ */
+export interface SessionStatusBadgeProps {
+	/** Compact topbar rendering: shield + countdown only (no name/email). */
+	readonly compact?: boolean;
 }
 
-/**
- * True when a silent refresh rotated the token: the new `expiresAt` is strictly
- * later than the previously observed one. Compared as epoch milliseconds rather
- * than ISO strings because `DateStringSchema` permits offset-bearing timestamps
- * (`+08:00` etc.), which don't sort lexicographically against UTC `Z` strings.
- * The first sighting (`previous === null`) never counts as a rotation.
- */
-export function didTokenRotate(previous: string | null, next: string | null): boolean {
-	if (previous === null || next === null) return false;
-	return new Date(next).getTime() > new Date(previous).getTime();
-}
-
-/**
- * Smart wrapper: owns the `GET /session` query + a 1s countdown tick.
- * Fully contained — pages just render `<SessionStatusBadge />`.
- */
-export function SessionStatusBadge(): React.JSX.Element {
+export function SessionStatusBadge({ compact = false }: SessionStatusBadgeProps): React.JSX.Element {
 	const { api } = useAuth();
-	// `staleTime: 0` is deliberate: the badge exists to fire a fresh `GET /session`
-	// on EVERY page mount, so a navigated-to page with an expired token triggers
-	// the 401 → silent-refresh → retry flow. A larger staleTime would serve the
-	// cached session on navigation and silently defeat this demo.
-	const sessionQuery = api.procedure(authEndpoints.sessionStatus).useQuery(undefined, { staleTime: 0 });
 
-	// One tick per second re-renders the countdown without refetching. The timer
-	// pauses while the tab is hidden (browsers throttle intervals there anyway,
-	// and no one is looking at the badge) and cleans up on unmount.
-	const [now, setNow] = React.useState<Date>(() => new Date());
-	React.useEffect(() => {
-		const tick = (): void => {
-			setNow(new Date());
-		};
-		const timer = window.setInterval(tick, 1000);
-		const onVisibilityChange = (): void => {
-			if (document.visibilityState === "visible") {
-				tick(); // resync immediately when the tab becomes visible again
-			}
-		};
-		document.addEventListener("visibilitychange", onVisibilityChange);
-		return (): void => {
-			window.clearInterval(timer);
-			document.removeEventListener("visibilitychange", onVisibilityChange);
-		};
-	}, []);
+	// `fetchOrThrow` (not `useQuery`) runs the 401 → silent-refresh → retry
+	// pipeline as a plain promise — the stream wraps it. React Query is no
+	// longer involved in this component at all. The procedure returns the
+	// response envelope, so unwrap `.data` at the boundary.
+	const fetchSession = React.useCallback(async (): Promise<SessionStatus> => {
+		const response = await api.procedure(authEndpoints.sessionStatus).fetchOrThrow();
+		return response.data;
+	}, [api]);
 
-	const session = sessionQuery.data?.data;
+	const streams = React.useMemo(() => buildSessionBadgeStreams({ fetchSession }), [fetchSession]);
 
-	// ── Refresh pulse ────────────────────────────────────────────────────────
-	// A silent refresh is visible as `expiresAt` jumping FORWARD (the rotated
-	// token lives longer than the one we last saw). When that happens, glow the
-	// badge green for ~2s so the rotation is unmistakable. The first sighting
-	// (mount) and same-value refetches don't count — only an actual rotation.
-	const [refreshed, setRefreshed] = React.useState(false);
-	const prevExpiresAtRef = React.useRef<string | null>(null);
-	const pulseTimeoutRef = React.useRef<number | null>(null);
+	const state = useObservable<SessionState>(streams.sessionState$, INITIAL_STATE);
+	const secondsLeft = useObservable<number | null>(streams.secondsLeft$, null);
+	const refreshed = useObservable<boolean>(streams.rotationPulse$, false);
 
-	React.useEffect(() => {
-		const expiresAt: string | null = session?.expiresAt ?? null;
-		const previous: string | null = prevExpiresAtRef.current;
-		prevExpiresAtRef.current = expiresAt;
-
-		if (didTokenRotate(previous, expiresAt)) {
-			setRefreshed(true);
-			if (pulseTimeoutRef.current !== null) {
-				window.clearTimeout(pulseTimeoutRef.current);
-			}
-			pulseTimeoutRef.current = window.setTimeout((): void => {
-				setRefreshed(false);
-				pulseTimeoutRef.current = null;
-			}, 2000);
-		}
-	}, [session?.expiresAt]);
-
-	// Clear any pending pulse timer on unmount (e.g. SPA navigation away).
-	React.useEffect(() => {
-		return (): void => {
-			if (pulseTimeoutRef.current !== null) {
-				window.clearTimeout(pulseTimeoutRef.current);
-			}
-		};
-	}, []);
-
-	if (sessionQuery.isLoading) {
-		return <SessionStatusView status="loading" />;
+	if (state.status === "loading") {
+		return <SessionStatusView status="loading" compact={compact} />;
 	}
 
-	if (sessionQuery.error !== null || session === undefined) {
-		return <SessionStatusView status="error" errorMessage="Session check failed — please log in again" />;
+	if (state.status === "error") {
+		return <SessionStatusView status="error" errorMessage={state.errorMessage} compact={compact} />;
 	}
 
 	return (
 		<div className="animate-in duration-200 fill-mode-both fade-in slide-in-from-top-1">
 			<SessionStatusView
 				status="ready"
-				email={session.email}
-				fullName={session.fullName}
-				secondsLeft={session.expiresAt !== null ? secondsUntil(session.expiresAt, now) : undefined}
+				email={state.session.email}
+				fullName={state.session.fullName}
+				secondsLeft={secondsLeft ?? undefined}
 				refreshed={refreshed}
+				compact={compact}
 			/>
 		</div>
 	);

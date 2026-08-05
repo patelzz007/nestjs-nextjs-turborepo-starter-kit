@@ -15,9 +15,38 @@ coverImage: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=form
 > `subscribe`, `pipe`, `map`, `switchMap`, `forkJoin`, `combineLatest`, …) but **no rxjs
 > library**. Every subscription is **guaranteed unsubscribable**.
 >
-> **This document is a design proposal — nothing here is implemented yet.** It answers: what
-> would we build (50 items), what could bite us (pitfalls), how unsubscribe is guaranteed, and
-> which rxjs surface we'd cover.
+> **Implementation status (2026-08-05):** the **scoped-down core ships** as
+> `packages/reactive` — items 1–6, 9–10 (primitives), 11–15 (creation), 19–20, 27–28, 31–32,
+> 33 (map / switchMap / filter / take* / debounceTime / throttleTime / **startWith** /
+> **distinctUntilChanged** / **merge** / **shareReplay(1)**), plus the `TestScheduler` and
+> marble helpers, the
+> **leak detector** (`assertNoActiveSubscriptions` — every live `Subscription` is registered
+> and asserted-absent after a test), and a `filter` type-guard overload that narrows
+> discriminated unions through pipelines. **71 tests green** (incl. synchronous-source
+> teardown regressions, operator marbles, leak-registry checks), **lint + typecheck clean**.
+>
+> **React binding ships too:** `useObservable` (the Part 7½ async-pipe port, on
+> `useSyncExternalStore`) lives at `packages/ui/src/hooks/use-observable.ts` and is used by
+> the **rewritten `SessionStatusBadge`** (`apps/admin/lib/session-badge.ts` + the component) —
+> the Phase-1 "kill-switch" proof. The badge's imperative `setInterval` + `visibilitychange` +
+> `useRef` mess is now a declarative pipeline (visibility gate → poll → rotation pulse →
+> countdown), with **zero React Query involvement** and **zero leaks after unmount** (asserted
+> by the leak detector in the badge's own test suite).
+>
+> **Zero-polling by default.** The badge (now in the admin **topbar**, so it mounts once in
+> the persistent `(panel)` shell and survives SPA navigations) fetches `GET /session` once
+> on mount and computes the countdown **locally** from the JWT `exp` claim (served as
+> `expiresAt`) with a client timer — no steady poll required. `NEXT_PUBLIC_SESSION_POLL_MS`
+> is an **opt-in** steady-poll interval (unset/`0` = disabled); it is the **observation
+> cadence** for proactive rotation/session-death detection, NOT the token lifetime — the
+> two are deliberately unrelated. `shareReplay(1)` is what makes the
+> badge correct: the component subscribes `sessionState$` three ways (directly + via the
+> countdown and pulse streams), and the share operator collapses those into ONE fetch
+> pipeline — a regression test asserts exactly one fetch per cycle despite three subscribers.
+> The rest of this
+> document remains the design for the deferred surface (see the kill/keep/cut rubric below
+> the migration plan) — this section explains what would be built and why the remaining
+> items were cut or deferred.
 >
 > **Ground truth (checked 2026-08-05):** today the web/admin apps fetch via
 > `packages/client/src/lib/use-api.ts` (TanStack React Query wrapper — `useQuery`/`useMutation`
@@ -924,6 +953,13 @@ export function useObservable<T>(source: Observable<T>, initialValue: T): T {
 object identity on every call (that triggers React's infinite-re-render warning). Two safe
 patterns:
 
+> ✅ **SHIPPED (2026-08-05):** `useObservable` is implemented at
+> `packages/ui/src/hooks/use-observable.ts` using the `useSyncExternalStore` shape below
+> (with the latest value cached in a ref — pattern 2). It is consumed by the rewritten
+> `SessionStatusBadge` and is the documented way to bind streams to React.
+> The subscription it creates is a plain `Subscription`, so it participates in the leak
+> registry — unmounting a component empties the registry, and tests assert exactly that.
+
 1. **Snapshot = primitive/stable reference** — e.g. a `BehaviorSubject`'s value that is a
    number/string/stable object. `getSnapshot` returns the identical reference until the
    subject actually changes.
@@ -1374,6 +1410,26 @@ coin-flip.
 > `apps/admin/vitest.config.ts`); `packages/reactive` gets its own vitest config wired into
 > the turbo pipeline.
 
+> ✅ **SHIPPED (2026-08-05):** all three pillars are real code. `TestScheduler` (virtual
+> time, `TEST_MAX_FRAME`, pending-action flush check), `cold`/`hot`/`toMarble`/`parseMarble`,
+> and the **leak detector** — a module-scope registry in `subscription.ts` that every live
+> `Subscription` joins on construction and leaves on `unsubscribe()` (which `Subscriber`'s
+> `error`/`complete` run automatically). Exported from `@workspace/reactive/testing`:
+>
+> - `activeSubscriptionCount()` — live subscriptions right now.
+> - `activeSubscriptionSnapshot()` — newest-first, for diagnostics.
+> - `assertNoActiveSubscriptions(label?)` — **throws with the leak count + offender sample
+>   if any subscription is still alive.**
+>
+> **Scheduler leak contract (important):** every scheduler's handle must self-close when
+> its action FIRES, not just when cancelled — otherwise a fired timer leaves a
+> registered-but-dead subscription and the registry never empties. `asyncScheduler`,
+> `syncScheduler` and `TestScheduler.advanceTo` all honor this (the `TestScheduler` closes
+> the handle right before running the action, so a self-rescheduling `interval` leaves only
+> the newest handle live). The badge's own pipeline test ends with
+> `assertNoActiveSubscriptions("session badge streams")` after unsubscribing all three
+> streams — the kill-switch proof that a well-formed stream graph tears down to zero.
+
 ## 🧭 Test file layout
 
 ```
@@ -1435,16 +1491,16 @@ export function toMarble<T>(source: Observable<T>, scheduler: TestScheduler): st
 
 **Example 1 — `debounceTime` (item 32), including the complete-flush subtlety:**
 
-```typescript
-test("debounceTime(2) emits the last value after silence, and flushes on complete", () => {
-	const scheduler = new TestScheduler();
-	const input = cold("--a--b--c|");               // a@2, b@5, c@8, complete@9
-	const output = input.pipe(debounceTime(2, scheduler));
-	expect(toMarble(output, scheduler)).toBe("----a--b-(c|)");
-	//                     frames: 0123456789
-	//  a@2 waits 2 silent frames → emitted @4; b@5 → @7;
-	//  c@8 is still pending when | arrives @9 → flushed WITH the completion: (c|)@9
-});
+```typescript	test("debounceTime(2) emits the last value after silence, and drops the pending one on complete", () => {
+		const scheduler = new TestScheduler();
+		const input = cold("--a--b--c|", scheduler);    // a@2, b@5, c@8, complete@9
+		const output = input.pipe(debounceTime(2, scheduler));
+		expect(toMarble(output, scheduler)).toBe("----a--b-|");
+		//                     frames: 0123456789
+		//  a@2 waits 2 silent frames → emitted @4; b@5 → @7;
+		//  c@8 is still pending when | arrives @9 → DROPPED (rxjs-faithful:
+		//  debounceTime does NOT flush the trailing value on completion).
+	});
 ```
 
 **Example 2 — `switchMap` cancellation is *visible* in the marbles (item 20):**

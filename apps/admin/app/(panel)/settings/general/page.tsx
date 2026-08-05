@@ -12,8 +12,6 @@ import { Save } from "lucide-react";
 import * as React from "react";
 import { toast } from "sonner";
 
-import { SessionStatusBadge } from "@/components/common/session-status-badge";
-
 /** Profile form state — lives at the page level (smart component owns the data). */
 interface ProfileFormState {
 	readonly fullName: string;
@@ -96,11 +94,6 @@ export default function GeneralSettingsPage(): React.JSX.Element {
 			<div>
 				<h1 className="text-2xl font-semibold tracking-tight">General Settings</h1>
 				<p className="mt-1 text-sm text-muted-foreground">Manage your account profile and notification preferences.</p>
-				{/* Live session check — fires GET /session on every SPA navigation so the
-				   silent refresh is observable (see session-status-badge.tsx). */}
-				<div className="mt-3">
-					<SessionStatusBadge />
-				</div>
 			</div>
 
 			<div className="grid grid-cols-1 gap-6 lg:grid-cols-3">

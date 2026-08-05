@@ -131,7 +131,13 @@ pnpm db:generate
 | `pnpm db:migrate:status` | `dotenv -e .env -- prisma migrate status`             | Shows which migrations are applied / pending                                                       | ❌ No                 |
 | `pnpm db:generate`       | `dotenv -e .env -- prisma generate`                   | Regenerates the Prisma client types in `node_modules/.prisma`                                      | ❌ No                 |
 | `pnpm db:push`           | `dotenv -e .env -- prisma db push --accept-data-loss` | Pushes schema straight to the DB **without a migration file** (dev-only)                           | ⚠️ Can drop data      |
-| `pnpm db:seed`           | `dotenv -e .env -- ts-node prisma/seed.ts`            | Runs the seeder (idempotent — safe to re-run)                                                      | ⚠️ Rewrites seed rows |
+| `pnpm db:seed`           | `dotenv -e .env -- tsx prisma/seed.ts`               | Runs the seeder (idempotent — safe to re-run)                                                      | ⚠️ Rewrites seed rows |
+
+> **Note:** the seeder runs through `tsx`, which resolves `@workspace/shared` via
+> default (non-`development`) export conditions → it imports the **built**
+> `packages/shared/dist/`. On a fresh clone, run `pnpm --filter @workspace/shared build`
+> before `pnpm db:seed` (or run `pnpm build` once) or the seed fails with a
+> "cannot find module" error.
 | `pnpm db:reset`          | `dotenv -e .env -- prisma migrate reset --force`      | Drops **all** tables, re-applies all migrations, then runs the seeder                              | 🔴 **Wipes the DB**   |
 | `pnpm db:studio`         | `prisma studio`                                       | Opens the Prisma Studio GUI at `localhost:5555` to browse/edit data                                | ❌ No (read/write UI) |
 

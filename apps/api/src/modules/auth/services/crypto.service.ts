@@ -3,7 +3,7 @@ import * as crypto from "crypto";
 import { Injectable } from "@nestjs/common";
 import * as bcrypt from "bcrypt";
 
-import { TypedConfigService } from "../../../config/typed-config.service";
+import { TypedConfigService } from "../../../config/typed-config.service.js";
 
 @Injectable()
 export class CryptoService {

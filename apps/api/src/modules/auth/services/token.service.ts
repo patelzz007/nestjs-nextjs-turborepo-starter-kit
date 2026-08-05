@@ -1,10 +1,18 @@
 import { Injectable, UnauthorizedException } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
-import { TokenExpiredError } from "jsonwebtoken";
+// `jsonwebtoken` is CJS; its named export `TokenExpiredError` is not statically
+// detectable by Node's ESM-CJS interop (cjs-module-lexer), so a named import
+// crashes under true ESM. The default import IS module.exports, which exposes
+// the error class at runtime (and is fully typed via `export =` declarations).
+import jwt from "jsonwebtoken";
 
-import { FlatUserResponse, JwtPermission } from "../../../common/interfaces/rbac.interface";
-import { parseExpiryToSeconds } from "../../../common/utils/expiry";
-import { TypedConfigService } from "../../../config/typed-config.service";
+import { FlatUserResponse, JwtPermission } from "../../../common/interfaces/rbac.interface.js";
+import { parseExpiryToSeconds } from "../../../common/utils/expiry.js";
+import { TypedConfigService } from "../../../config/typed-config.service.js";
+
+// `TokenExpiredError` is exposed at runtime on the CJS default export — see the
+// comment on the `jsonwebtoken` import above for why it can't be named-imported.
+const { TokenExpiredError } = jwt;
 
 /**
  * The shape embedded in the JWT payload (access token).

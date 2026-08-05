@@ -38,22 +38,22 @@ import {
 } from "@workspace/shared";
 import type { Request } from "express";
 
-import { GetUser } from "../../common/decorators/get-user.decorator";
-import { Public } from "../../common/decorators/public.decorator";
-import { SuperAdminOnly } from "../../common/decorators/super-admin.decorator";
-import { ApiErrorResponseDto } from "../../common/dto/api-response.dto";
-import { createWrappedDto, createWrappedArrayDto } from "../../common/dto/response-wrapper";
-import { RefreshTokenGuard } from "../../common/guards/refresh-token.guard";
-import { ClearAuthCookiesInterceptor } from "../../common/interceptors/clear-auth-cookies.interceptor";
-import { SetAuthCookiesInterceptor } from "../../common/interceptors/set-auth-cookies.interceptor";
-import { extractClientInfo } from "../../common/utils/client-info";
+import { GetUser } from "../../common/decorators/get-user.decorator.js";
+import { Public } from "../../common/decorators/public.decorator.js";
+import { SuperAdminOnly } from "../../common/decorators/super-admin.decorator.js";
+import { ApiErrorResponseDto } from "../../common/dto/api-response.dto.js";
+import { createWrappedDto, createWrappedArrayDto } from "../../common/dto/response-wrapper.js";
+import { RefreshTokenGuard } from "../../common/guards/refresh-token.guard.js";
+import { ClearAuthCookiesInterceptor } from "../../common/interceptors/clear-auth-cookies.interceptor.js";
+import { SetAuthCookiesInterceptor } from "../../common/interceptors/set-auth-cookies.interceptor.js";
+import { extractClientInfo } from "../../common/utils/client-info.js";
 
-import { AuthService } from "./auth.service";
-import { ForgotPasswordDto } from "./dtos/forgot-password.dto";
-import { LoginDto } from "./dtos/login.dto";
-import { ResendVerificationDto } from "./dtos/resend-verification.dto";
-import { ResetPasswordDto } from "./dtos/reset-password.dto";
-import { SignupDto } from "./dtos/signup.dto";
+import { AuthService } from "./auth.service.js";
+import { ForgotPasswordDto } from "./dtos/forgot-password.dto.js";
+import { LoginDto } from "./dtos/login.dto.js";
+import { ResendVerificationDto } from "./dtos/resend-verification.dto.js";
+import { ResetPasswordDto } from "./dtos/reset-password.dto.js";
+import { SignupDto } from "./dtos/signup.dto.js";
 import type { RefreshTokenPayload } from "./services/token.service";
 
 // ── Wrapped Response DTOs (envelope + data) ─────────────────────────────

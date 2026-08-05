@@ -3,7 +3,10 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { didTokenRotate, SessionStatusView } from "./session-status-badge";
+// `didTokenRotate` lives with the stream pipeline (lib/session-badge.ts); the
+// component file only exports the presentational view.
+import { didTokenRotate } from "@/lib/session-badge";
+import { SessionStatusView } from "./session-status-badge";
 
 afterEach(() => {
 	cleanup();
@@ -73,6 +76,35 @@ describe("SessionStatusView", () => {
 
 		expect(screen.queryByText("Refreshed just now")).toBeNull();
 		expect(screen.getByText(/Token expires in 1m 00s/)).toBeTruthy();
+	});
+
+	it("compact hides the identity and shows just the countdown", () => {
+		render(<SessionStatusView status="ready" email="admin@example.com" fullName="Alex Morgan" secondsLeft={125} compact />);
+
+		expect(screen.getByLabelText("Session status: verified")).toBeTruthy();
+		// Identity is hidden — the topbar profile dropdown already shows it.
+		expect(screen.queryByText("Alex Morgan")).toBeNull();
+		expect(screen.queryByText("admin@example.com")).toBeNull();
+		// Countdown stays, without the "Token expires in" prefix.
+		expect(screen.getByText("2m 05s")).toBeTruthy();
+	});
+
+	it("compact formats long expiries as hours and minutes", () => {
+		render(<SessionStatusView status="ready" email="a@b.com" fullName="Dev" secondsLeft={7530} compact />);
+
+		expect(screen.getByText("2h 05m")).toBeTruthy();
+	});
+
+	it("compact shows a short pulse label and short loading/error text", () => {
+		render(<SessionStatusView status="ready" email="a@b.com" fullName="Dev" secondsLeft={125} refreshed compact />);
+		expect(screen.getByText("Refreshed")).toBeTruthy();
+
+		render(<SessionStatusView status="loading" compact />);
+		expect(screen.getByText("Checking…")).toBeTruthy();
+
+		render(<SessionStatusView status="error" errorMessage="Session expired — please log in again" compact />);
+		// Compact still surfaces the REAL message (401 vs network distinction matters).
+		expect(screen.getByText("Session expired — please log in again")).toBeTruthy();
 	});
 });
 

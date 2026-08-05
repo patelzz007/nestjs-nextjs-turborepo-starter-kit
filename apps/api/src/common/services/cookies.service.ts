@@ -1,7 +1,7 @@
 import type { Response } from "express";
 
-import type { CookieNames, ExtendedCookieOptions } from "../constants/cookie.config";
-import { ACCESS_TOKEN_COOKIE_NAME, REFRESH_TOKEN_COOKIE_NAME, ADMIN_ACCESS_TOKEN_COOKIE_NAME, ADMIN_REFRESH_TOKEN_COOKIE_NAME } from "../constants/cookie.config";
+import type { CookieNames, ExtendedCookieOptions } from "../constants/cookie.config.js";
+import { ACCESS_TOKEN_COOKIE_NAME, REFRESH_TOKEN_COOKIE_NAME, ADMIN_ACCESS_TOKEN_COOKIE_NAME, ADMIN_REFRESH_TOKEN_COOKIE_NAME } from "../constants/cookie.config.js";
 
 /**
  * Result of a cookie set/clear operation.

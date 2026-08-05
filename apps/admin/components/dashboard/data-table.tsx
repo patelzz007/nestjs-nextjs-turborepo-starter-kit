@@ -6,33 +6,29 @@ import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } 
 import { CSS } from "@dnd-kit/utilities";
 import {
 	flexRender,
-	getCoreRowModel,
-	getFacetedRowModel,
-	getFacetedUniqueValues,
-	getFilteredRowModel,
-	getPaginationRowModel,
-	getSortedRowModel,
-	useReactTable,
+	useTable,
 	type ColumnFiltersState,
+	type ColumnVisibilityState,
 	type Row,
 	type RowSelectionState,
 	type SortingState,
-	type VisibilityState,
+	type Table,
 } from "@tanstack/react-table";
 import { Button } from "@workspace/ui/components/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@workspace/ui/components/dropdown-menu";
 import { Label } from "@workspace/ui/components/label";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@workspace/ui/components/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@workspace/ui/components/table";
+import { Table as UITable, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@workspace/ui/components/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@workspace/ui/components/tabs";
 import { Badge } from "@workspace/ui/components/badge";
 import { ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, ChevronsLeftIcon, ChevronsRightIcon, Columns3Icon, PlusIcon } from "lucide-react";
 import * as React from "react";
 
 import { ColumnVisibilityCheckbox, columns } from "@/components/dashboard/data-table-columns";
+import { dashboardFeatures, type DashboardFeatures } from "@/components/dashboard/dashboard-table-features";
 import { PAGE_SIZE_ITEMS, VIEW_ITEMS, type RowData } from "@/components/dashboard/data-table-constants";
 
-function DraggableRow({ row }: { row: Row<RowData> }): React.JSX.Element {
+function DraggableRow({ row }: { row: Row<DashboardFeatures, RowData> }): React.JSX.Element {
 	const { transform, transition, setNodeRef, isDragging } = useSortable({
 		id: row.original.id,
 	});
@@ -54,7 +50,7 @@ function DraggableRow({ row }: { row: Row<RowData> }): React.JSX.Element {
 	);
 }
 
-function ColumnVisibilityDropdown({ table }: { table: ReturnType<typeof useReactTable<RowData>> }): React.JSX.Element {
+function ColumnVisibilityDropdown({ table }: { table: Table<DashboardFeatures, RowData> }): React.JSX.Element {
 	return (
 		<DropdownMenu>
 			<DropdownMenuTrigger render={<Button variant="outline" size="sm" />}>
@@ -77,7 +73,7 @@ function ColumnVisibilityDropdown({ table }: { table: ReturnType<typeof useReact
 export function DataTable({ data: initialData }: { data: RowData[] }): React.JSX.Element {
 	const [data, setData] = React.useState<RowData[]>(() => initialData);
 	const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({});
-	const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
+	const [columnVisibility, setColumnVisibility] = React.useState<ColumnVisibilityState>({});
 	const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
 	const [sorting, setSorting] = React.useState<SortingState>([]);
 	const [pagination, setPagination] = React.useState({
@@ -88,30 +84,30 @@ export function DataTable({ data: initialData }: { data: RowData[] }): React.JSX
 	const sensors = useSensors(useSensor(MouseSensor, {}), useSensor(TouchSensor, {}), useSensor(KeyboardSensor, {}));
 	const dataIds = React.useMemo<UniqueIdentifier[]>(() => data.map(({ id }) => id), [data]);
 
-	const table = useReactTable({
-		data,
-		columns,
-		state: {
-			sorting,
-			columnVisibility,
-			rowSelection,
-			columnFilters,
-			pagination,
+	const table = useTable(
+		{
+			features: dashboardFeatures,
+			data,
+			columns,
+			state: {
+				sorting,
+				columnVisibility,
+				rowSelection,
+				columnFilters,
+				pagination,
+			},
+			getRowId: (row) => row.id.toString(),
+			enableRowSelection: true,
+			onRowSelectionChange: setRowSelection,
+			onSortingChange: setSorting,
+			onColumnFiltersChange: setColumnFilters,
+			onColumnVisibilityChange: setColumnVisibility,
+			onPaginationChange: setPagination,
 		},
-		getRowId: (row) => row.id.toString(),
-		enableRowSelection: true,
-		onRowSelectionChange: setRowSelection,
-		onSortingChange: setSorting,
-		onColumnFiltersChange: setColumnFilters,
-		onColumnVisibilityChange: setColumnVisibility,
-		onPaginationChange: setPagination,
-		getCoreRowModel: getCoreRowModel(),
-		getFilteredRowModel: getFilteredRowModel(),
-		getPaginationRowModel: getPaginationRowModel(),
-		getSortedRowModel: getSortedRowModel(),
-		getFacetedRowModel: getFacetedRowModel(),
-		getFacetedUniqueValues: getFacetedUniqueValues(),
-	});
+		// Select the full state so `table.state` mirrors the v8 `getState()`
+		// shape. Narrow this later if render-perf ever matters.
+		(state) => state,
+	);
 
 	const handleDragEnd = React.useCallback(
 		(event: DragEndEvent): void => {
@@ -193,7 +189,7 @@ export function DataTable({ data: initialData }: { data: RowData[] }): React.JSX
 			<TabsContent value="outline" className="relative flex flex-col gap-4 overflow-auto px-4 lg:px-6">
 				<div className="overflow-hidden rounded-lg border">
 					<DndContext collisionDetection={closestCenter} modifiers={[restrictToVerticalAxis]} onDragEnd={handleDragEnd} sensors={sensors} id={sortableId}>
-						<Table>
+						<UITable>
 							<TableHeader className="sticky top-0 z-10 bg-muted">
 								{table.getHeaderGroups().map((headerGroup) => (
 									<TableRow key={headerGroup.id}>
@@ -220,7 +216,7 @@ export function DataTable({ data: initialData }: { data: RowData[] }): React.JSX
 									</TableRow>
 								)}
 							</TableBody>
-						</Table>
+						</UITable>
 					</DndContext>
 				</div>
 				<div className="flex items-center justify-between px-4">
@@ -232,9 +228,9 @@ export function DataTable({ data: initialData }: { data: RowData[] }): React.JSX
 							<Label htmlFor="rows-per-page" className="text-sm font-medium">
 								Rows per page
 							</Label>
-							<Select value={String(table.getState().pagination.pageSize)} onValueChange={handlePageSizeChange} items={PAGE_SIZE_ITEMS}>
+							<Select value={String(table.state.pagination.pageSize)} onValueChange={handlePageSizeChange} items={PAGE_SIZE_ITEMS}>
 								<SelectTrigger size="sm" className="w-20" id="rows-per-page">
-									<SelectValue placeholder={table.getState().pagination.pageSize} />
+									<SelectValue placeholder={table.state.pagination.pageSize} />
 								</SelectTrigger>
 								<SelectContent side="top">
 									<SelectGroup>
@@ -248,7 +244,7 @@ export function DataTable({ data: initialData }: { data: RowData[] }): React.JSX
 							</Select>
 						</div>
 						<div className="flex w-fit items-center justify-center text-sm font-medium">
-							Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
+							Page {table.state.pagination.pageIndex + 1} of {Math.max(table.getPageCount(), 1)}
 						</div>
 						<div className="ms-auto flex items-center gap-2 lg:ms-0">
 							<Button variant="outline" className="hidden h-8 w-8 p-0 lg:flex" onClick={handleFirstPage} disabled={!table.getCanPreviousPage()}>

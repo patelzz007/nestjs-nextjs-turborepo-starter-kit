@@ -5,9 +5,9 @@
 	"scripts": {
 		"build": "turbo build",
 		"dev": "turbo dev",
-		"dev:web": "turbo dev --filter @workspace/web",
-		"dev:admin": "turbo dev --filter @workspace/admin",
-		"dev:api": "turbo dev --filter @workspace/api",
+		"dev:web": "turbo dev --filter @workspace/web --log-prefix=none",
+		"dev:admin": "turbo dev --filter @workspace/admin --log-prefix=none",
+		"dev:api": "turbo dev --filter @workspace/api --log-prefix=none",
 		"lint": "turbo lint",
 		"format": "turbo format",
 		"typecheck": "turbo typecheck",
@@ -27,10 +27,10 @@
 		"deps:list": "turbo run deps:list"
 	},
 	"devDependencies": {
-		"@darraghor/eslint-plugin-nestjs-typed": "^7.2.9",
+		"@darraghor/eslint-plugin-nestjs-typed": "^7.3.0",
 		"@eslint/js": "^9.39.5",
-		"@next/eslint-plugin-next": "^16.2.12",
-		"@types/node": "^22.20.1",
+		"@next/eslint-plugin-next": "^16.3.0",
+		"@types/node": "^26.1.2",
 		"@workspace/eslint-config": "workspace:*",
 		"@workspace/typescript-config": "workspace:*",
 		"concurrently": "^10.0.4",
@@ -42,14 +42,14 @@
 		"eslint-plugin-prettier": "^5.5.6",
 		"eslint-plugin-react": "^7.37.5",
 		"eslint-plugin-react-hooks": "^7.1.1",
-		"eslint-plugin-turbo": "^2.10.7",
-		"globals": "^17.8.0",
+		"eslint-plugin-turbo": "^2.10.8",
+		"globals": "^17.9.0",
 		"prettier": "^3.9.6",
 		"prettier-plugin-tailwindcss": "^0.8.1",
 		"syncpack": "^15.3.2",
-		"turbo": "^2.10.7",
-		"typescript": "6.0.3",
-		"typescript-eslint": "^8.65.0"
+		"turbo": "^2.10.8",
+		"typescript": "7.0.2",
+		"typescript-eslint": "^8.66.0"
 	},
 	"packageManager": "pnpm@11.18.0",
 	"engines": {

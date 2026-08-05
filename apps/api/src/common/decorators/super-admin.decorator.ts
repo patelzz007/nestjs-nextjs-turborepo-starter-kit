@@ -1,7 +1,7 @@
 import { applyDecorators, SetMetadata, UseGuards } from "@nestjs/common";
 
-import { AuthGuard } from "../guards/auth.guard";
-import { SuperAdminGuard } from "../guards/super-admin.guard";
+import { AuthGuard } from "../guards/auth.guard.js";
+import { SuperAdminGuard } from "../guards/super-admin.guard.js";
 
 /** Metadata key for checking super admin status */
 export const SUPER_ADMIN_KEY = "isSuperAdmin";

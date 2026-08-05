@@ -6,11 +6,8 @@
 		"noUncheckedIndexedAccess": false,
 		"lib": ["es2022"],
 		"stripInternal": true,
-		"noEmit": true,
-		// tsup's DTS bundler generates a temp tsconfig that sets `baseUrl`
-		// (deprecated in TypeScript 6). This silences the TS5101 error.
-		"ignoreDeprecations": "6.0"
+		"noEmit": true
 	},
-	"include": ["src", "tsup.config.ts"],
+	"include": ["src"],
 	"exclude": ["node_modules", "dist"]
 }

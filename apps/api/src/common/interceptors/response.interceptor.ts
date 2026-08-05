@@ -4,8 +4,8 @@ import { type Observable, throwError } from "rxjs";
 import { catchError, map } from "rxjs/operators";
 import { z } from "zod";
 
-import type { JsonValue } from "../../types/json";
-import type { RequestWithTrace } from "../middleware/correlation-id.middleware";
+import type { JsonValue } from "../../types/json.js";
+import type { RequestWithTrace } from "../middleware/correlation-id.middleware.js";
 
 /**
  * Zod schema for a PaginatedResult shape (from paginate()).

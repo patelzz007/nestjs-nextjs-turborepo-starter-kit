@@ -4,7 +4,7 @@
 	"type": "module",
 	"private": true,
 	"scripts": {
-		"build": "tsup",
+		"build": "tsc -p tsconfig.build.json && node ../../scripts/fix-dist-extensions.mjs dist",
 		"lint": "eslint",
 		"format": "prettier --write \"**/*.{ts,tsx}\"",
 		"typecheck": "tsc --noEmit",
@@ -29,7 +29,6 @@
 		"@workspace/eslint-config": "workspace:*",
 		"@workspace/typescript-config": "workspace:*",
 		"eslint": "^9.39.5",
-		"tsup": "^8.5.0",
-		"typescript": "6.0.3"
+		"typescript": "7.0.2"
 	}
 }

@@ -1,13 +1,13 @@
 import { MiddlewareConsumer, Module, type NestModule } from "@nestjs/common";
 import { APP_GUARD, APP_INTERCEPTOR } from "@nestjs/core";
 
-import { AppController } from "./app.controller";
-import { AppService } from "./app.service";
-import { AuthGuard } from "./common/guards/auth.guard";
-import { ResponseInterceptor } from "./common/interceptors/response.interceptor";
-import { CorrelationIdMiddleware } from "./common/middleware/correlation-id.middleware";
-import { AuthModule } from "./modules/auth/auth.module";
-import { PrismaModule } from "./prisma/prisma.module";
+import { AppController } from "./app.controller.js";
+import { AppService } from "./app.service.js";
+import { AuthGuard } from "./common/guards/auth.guard.js";
+import { ResponseInterceptor } from "./common/interceptors/response.interceptor.js";
+import { CorrelationIdMiddleware } from "./common/middleware/correlation-id.middleware.js";
+import { AuthModule } from "./modules/auth/auth.module.js";
+import { PrismaModule } from "./prisma/prisma.module.js";
 
 @Module({
 	imports: [PrismaModule, AuthModule],

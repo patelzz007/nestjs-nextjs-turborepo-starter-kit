@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { DateStringSchema } from "./date.schema";
+import { DateStringSchema } from "./date.schema.js";
 
 /**
  * Base schema extended by all response schemas.
