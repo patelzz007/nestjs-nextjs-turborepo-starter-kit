@@ -1,7 +1,7 @@
 "use client";
 
-import { Badge } from "@workspace/ui/components/badge";
-import { Card, CardAction, CardDescription, CardFooter, CardHeader, CardTitle } from "@workspace/ui/components/card";
+import { Badge } from "@workspace/ui/components/feedback/badge";
+import { Card, CardAction, CardDescription, CardFooter, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
 import { TrendingDownIcon, TrendingUpIcon } from "lucide-react";
 import * as React from "react";
 

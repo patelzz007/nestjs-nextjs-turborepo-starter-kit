@@ -1,8 +1,7 @@
 "use client";
 
 import { useAuth } from "@workspace/client/lib/auth";
-
-import { LoginForm } from "@/components/login-form";
+import { LoginForm } from "@workspace/client/lib/auth/login-form";
 
 export default function WebLoginPage(): React.JSX.Element {
 	const { isInitializing } = useAuth();
@@ -41,8 +40,6 @@ export default function WebLoginPage(): React.JSX.Element {
 					title="LinkHub"
 					heading="Login"
 					subtitle="Enter your email below to login to your account"
-					emailPlaceholder="m@example.com"
-					redirectPath="/hello"
 					footer={
 						<p className="text-center text-xs text-balance text-muted-foreground">
 							Don&apos;t have an account?{" "}

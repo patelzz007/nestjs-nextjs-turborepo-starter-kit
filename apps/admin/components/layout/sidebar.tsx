@@ -4,11 +4,11 @@ import { LogOut, Search, X } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import * as React from "react";
 
-import { SIDEBAR_MENU } from "@/config/sidebar-menu";
+import { SIDEBAR_MENU } from "@/lib/navigation/sidebar-menu";
 import { getInitials } from "@/lib/user-initials";
-import { sectionHasActiveItem, type SidebarView } from "@/lib/menu";
+import { sectionHasActiveItem, type SidebarView } from "@/lib/navigation/menu";
 import { useSidebarStore } from "@/stores/sidebar-store";
-import type { FooterAction, SidebarUser } from "@/types/sidebar";
+import type { FooterAction, SidebarUser } from "@/lib/navigation/sidebar";
 
 import { SidebarNavItem } from "@/components/layout/sidebar-nav-item";
 import { SidebarSectionHeader } from "@/components/layout/sidebar-section-header";

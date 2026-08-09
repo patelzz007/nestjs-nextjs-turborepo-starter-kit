@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuth } from "@workspace/client/lib/auth";
-import { authEndpoints } from "@workspace/client/lib/endpoints";
+import { authEndpoints } from "@workspace/client/lib/api/endpoints";
 import { useCallback, useState, type JSX } from "react";
 
 import { BreadcrumbTrail } from "@/components/breadcrumb-trail";

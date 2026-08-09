@@ -1,7 +1,7 @@
 "use client";
 
-import { Button } from "@workspace/ui/components/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@workspace/ui/components/dropdown-menu";
+import { Button } from "@workspace/ui/components/form/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@workspace/ui/components/overlay/dropdown-menu";
 import { Bell } from "lucide-react";
 import * as React from "react";
 

@@ -6,7 +6,7 @@
 // setup is needed on Node hosts (DigitalOcean / Linode droplets, etc.).
 // ============================================
 
-import { API_BASE_URL } from "@workspace/client/lib/config";
+import { API_BASE_URL } from "@workspace/client/lib/api/config";
 import {
 	createProxyRefreshCooldown,
 	isAccessTokenExpired,
@@ -16,7 +16,7 @@ import {
 	refreshSessionFromProxy,
 	type ParsedCookie,
 	type ProxyRefreshResult,
-} from "@workspace/client/lib/proxy-refresh";
+} from "@workspace/client/lib/auth/proxy-refresh";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 

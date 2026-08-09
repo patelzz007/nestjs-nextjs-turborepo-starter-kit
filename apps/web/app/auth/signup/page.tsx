@@ -1,6 +1,6 @@
 "use client";
 
-import { Button } from "@workspace/ui/components/button";
+import { Button } from "@workspace/ui/components/form/button";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 import { useCallback } from "react";

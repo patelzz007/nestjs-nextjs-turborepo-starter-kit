@@ -189,7 +189,7 @@ Extends `base.json` with NestJS requirements:
 > Turbopack cannot map a `.js` specifier back to a `.ts` file, so `.js`-suffixed
 > imports in source break web/admin (see the gotcha below).
 > `packages/shared` is built to ESM with plain **`tsc`** (`pnpm build` →
-> `tsc -p tsconfig.build.json`), then `scripts/fix-dist-extensions.mjs` rewrites
+> `tsc -p tsconfig.build.json`), then `packages/tooling/scripts/fix-dist-extensions.mjs` rewrites
 > `dist/` so every relative import gets its `.js` extension — Node's ESM runtime
 > requires them even though source stays extensionless.
 >
@@ -237,7 +237,7 @@ Web and admin define import shortcuts:
 So in `apps/web` you can write:
 
 ```ts
-import { Button } from "@workspace/ui/components/button";
+import { Button } from "@workspace/ui/components/form/button";
 import { useAuth } from "@workspace/client/lib/auth";
 import { LoginSchema } from "@workspace/shared";
 ```
@@ -305,7 +305,7 @@ in `packages/shared/src` gained a `.js` extension (e.g. `./schemas/index.js`).
 Turbopack resolves **source** directly through the `development` export condition,
 but cannot map a `.js` specifier back to a `.ts` file — it sees an empty module
 and reports every export as missing. Source must stay **extensionless**; `.js`
-extensions belong in `dist/` only, applied by `scripts/fix-dist-extensions.mjs`
+extensions belong in `dist/` only, applied by `packages/tooling/scripts/fix-dist-extensions.mjs`
 during `pnpm build`.
 
 ### The API is ESM now — CJS named imports need interop care
@@ -379,5 +379,66 @@ cd packages/ui && npx tsc --noEmit
 ```
 
 ---
+## 8. Zod-first type derivation (schema → `z.output`)
 
-_Last updated: July 31, 2026_
+**The rule:** every *data shape* in the repo is exported from a zod schema —
+`export type X = z.output<typeof XSchema>` (or `z.infer`). Never hand-write an
+`interface`/`type` next to a schema that already describes the same data; the
+schema is the single source of truth and the type can't drift from it.
+
+**What STAYS plain (deliberately — do not "fix" these):**
+
+- **Function contracts** — `OnRefresh`, `AuthChannel`, `FooterAction`, store
+  shapes like `SidebarState` (they carry callbacks/observables zod can't
+  validate).
+- **Generics** — `PaginatedResponse<T>`, `ApiResponse<T>`, `RequestOptions`.
+  A schema can't be generic; where a generic factory exists, derive the type
+  from it (below) instead of writing the shape by hand.
+- **Third-party `extends`** — `RequestWithTrace extends Request`,
+  `ExtendedCookieOptions extends CookieOptions`.
+- **Component props** — `ButtonProps`, `LoginFormProps`, …
+- **Aliases** — `export type X = Y` re-exports and `typeof someConst`.
+
+**The recursion-anchor pattern** (menus, JSON trees): zod can't infer a
+self-referencing schema, so anchor it to a node type and derive the alias:
+
+```ts
+interface MenuNode { title: string; children?: readonly MenuNode[] }
+
+export const MenuItemSchema: z.ZodType<MenuNode> = z.lazy(() =>
+  z.object({ title: z.string(), children: z.array(z.lazy(() => MenuItemSchema)).optional() }),
+);
+
+export type MenuItem = z.output<typeof MenuItemSchema>;
+```
+
+> The anchor is exported **only** when another module exports a schema that
+> references this one (TypeScript declaration emit needs to name it — TS4023).
+> `export type` re-export blocks are fine; hand-written data interfaces are not.
+
+**Generic factories:** when a schema is a factory, derive the type with an
+instantiation expression so it can never drift:
+
+```ts
+export type PaginatedResponse<T> = z.output<ReturnType<typeof PaginatedResponseSchema<z.ZodType<T>>>>;
+```
+
+**Strict vs. strip — pick by boundary:**
+
+- **Decode paths** (JWT claims, raw error bodies) → **non-strict** so adding a
+  claim/key can't take down the whole pipeline (`JwtPermissionSchema`,
+  `ApiErrorSchema`). Unknown keys are stripped, never rejected.
+- **Config at load** (`sidebar-menu.json`) → `.strict()` so renamed keys fail
+  loudly at boot instead of silently rendering a broken menu.
+- **Transport contracts** (the client's `ApiResponse<T>`) → plain type; no
+  schema exists for the raw fetch envelope and it is not parsed from input.
+
+**Runtime validation checklist** — a schema that only derives a type is
+half the job. `.parse()`/`.safeParse()` should run wherever external or
+hand-assembled data crosses a trust boundary: JSON imports, JWT decodes,
+localStorage hydration, frontmatter. (See `sidebar-menu.ts`, `token.service.ts`,
+`notifications.ts`, the zustand `merge` fns, `docs/index.ts`.)
+
+---
+
+_Last updated: August 9, 2026_

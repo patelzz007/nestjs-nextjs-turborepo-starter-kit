@@ -1,9 +1,9 @@
 "use client";
 
-import { Badge } from "@workspace/ui/components/badge";
-import { Button } from "@workspace/ui/components/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@workspace/ui/components/card";
-import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@workspace/ui/components/table";
+import { Badge } from "@workspace/ui/components/feedback/badge";
+import { Button } from "@workspace/ui/components/form/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
+import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@workspace/ui/components/display/table";
 import { Check, CreditCard, Download, Sparkles } from "lucide-react";
 import * as React from "react";
 import { toast } from "sonner";

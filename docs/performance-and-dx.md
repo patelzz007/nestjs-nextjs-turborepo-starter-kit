@@ -634,12 +634,12 @@ not worth it. The TUI sidebar is the intended "nice labels" surface, and it's al
 | `components/layout/dashboard-shell.tsx` | Renders the shell immediately with a fallback identity; error screen only when `/auth/me` **fails** with no cached data | First paint no longer waits for the API; `/` is now statically prerendered |
 | `app/(panel)/layout.tsx` + `lib/auth-server.ts` | Panel layout is now a **server component** that decodes the `adminAccessToken` JWT cookie and passes the real `{ name, email }` into `DashboardShell` | SSR paints the true identity — **no placeholder flash** |
 | `app/(panel)/page.tsx` | The 8 demo sections below the chart are wrapped in `LazySection`; the chart loads eagerly behind a `ChartSkeleton` | recharts + friends load on scroll, not at hydration |
-| `components/dashboard/lazy-section.tsx` *(new)* | IntersectionObserver-gated mount (default `300px` rootMargin) with a fade/slide-up reveal; never unmounts once shown | Below-fold sections only download/parse their chunks when scrolled near |
+| `components/common/lazy-section.tsx` *(new)* | IntersectionObserver-gated mount (default `300px` rootMargin) with a fade/slide-up reveal; never unmounts once shown | Below-fold sections only download/parse their chunks when scrolled near |
 | `components/dashboard/chart-skeleton.tsx` *(new)* | Chart-shaped skeleton (header + gridlines + pulse bars) shown while recharts loads | The chart never leaves a blank gap |
 | `components/layout/topbar.tsx` | `CommandPalette` is dynamic and mounts only when opened; the ⌘K listener moved to the Topbar | cmdk + the palette search index leave the initial bundle |
 | `components/layout/dashboard-layout.tsx` | framer-motion sidebar tween → CSS `transition-[width]` | framer-motion dropped from the app |
 | `components/layout/mobile-menu-overlay.tsx` | `AnimatePresence` → conditional render + `animate-in` CSS | framer-motion gone; the mobile `Sidebar` only mounts when opened |
-| `components/ui/code-block.tsx` | shiki is a runtime `import()` (types stay static) | ~300 KB shiki chunk leaves the docs bundle |
+| `components/docs/code-block.tsx` | shiki is a runtime `import()` (types stay static) | ~300 KB shiki chunk leaves the docs bundle |
 | `stores/sidebar-store.ts` | `skipHydration: true`; `DashboardLayout` calls `persist.rehydrate()` once after mount | Fixes a hydration mismatch the shell's new SSR would otherwise cause |
 
 ### ⚠️ The zustand gotcha (read before you touch the shell)

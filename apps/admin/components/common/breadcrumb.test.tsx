@@ -4,7 +4,15 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { createRef } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { Breadcrumb, BreadcrumbEllipsis, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@workspace/ui/components/breadcrumb";
+import {
+	Breadcrumb,
+	BreadcrumbEllipsis,
+	BreadcrumbItem,
+	BreadcrumbLink,
+	BreadcrumbList,
+	BreadcrumbPage,
+	BreadcrumbSeparator,
+} from "@workspace/ui/components/navigation/breadcrumb";
 
 afterEach(() => {
 	cleanup();

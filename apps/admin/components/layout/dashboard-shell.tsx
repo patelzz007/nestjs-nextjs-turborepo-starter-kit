@@ -1,14 +1,14 @@
 "use client";
 
 import { useAuth } from "@workspace/client/lib/auth";
-import { authEndpoints } from "@workspace/client/lib/endpoints";
-import { Button } from "@workspace/ui/components/button";
+import { authEndpoints } from "@workspace/client/lib/api/endpoints";
+import { Button } from "@workspace/ui/components/form/button";
 import { usePathname } from "next/navigation";
 import * as React from "react";
 
 import { AdminBreadcrumbProvider } from "@/components/common/admin-breadcrumb";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
-import type { FooterAction, SidebarUser } from "@/types/sidebar";
+import type { FooterAction, SidebarUser } from "@/lib/navigation/sidebar";
 
 export interface DashboardShellProps {
 	readonly footerActions?: readonly FooterAction[];

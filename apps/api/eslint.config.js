@@ -4,7 +4,7 @@ import { nestjsConfig } from "@workspace/eslint-config/nestjs";
 export default [
 	// Global ignores — must be first so ESLint skips these files entirely
 	{
-		ignores: ["**/*.spec.ts", "**/*.test.ts"],
+		ignores: ["**/*.spec.ts", "**/*.test.ts", "**/*.e2e-spec.ts", "test/**"],
 	},
 	...nestjsConfig,
 
@@ -28,7 +28,7 @@ export default [
 	// and dynamic Express middleware patterns cannot be fully resolved by
 	// strictTypeChecked, causing false-positive no-unsafe-* errors.
 	{
-		files: ["src/prisma/**/*.ts", "src/modules/**/*.ts", "src/common/schemas/**/*.ts", "src/common/guards/**/*.ts", "src/common/interceptors/**/*.ts", "src/common/middleware/**/*.ts", "src/app.controller.ts", "src/main.ts", "src/common/dto/**/*.ts", "src/common/services/**/*.ts", "src/common/utils/**/*.ts"],
+		files: ["src/prisma/**/*.ts", "src/modules/**/*.ts", "src/common/**/*.ts", "src/main.ts"],
 		rules: {
 			"@typescript-eslint/no-unsafe-assignment": "off",
 			"@typescript-eslint/no-unsafe-call": "off",

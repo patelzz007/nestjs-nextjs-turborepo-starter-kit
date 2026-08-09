@@ -16,7 +16,7 @@ import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { MarkdownRenderer } from "@/components/docs/markdown-renderer";
-import { parseMarkdownFile } from "@/lib/markdown";
+import { parseMarkdownFile } from "@/lib/docs/markdown";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 

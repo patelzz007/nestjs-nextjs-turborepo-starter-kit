@@ -1,15 +1,15 @@
 "use client";
 
 import { useAuth } from "@workspace/client/lib/auth";
-import { authEndpoints } from "@workspace/client/lib/endpoints";
-import { Badge } from "@workspace/ui/components/badge";
+import { authEndpoints } from "@workspace/client/lib/api/endpoints";
+import { Badge } from "@workspace/ui/components/feedback/badge";
 import { useObservable } from "@workspace/ui/hooks/use-observable";
 import { cn } from "@workspace/ui/lib/utils";
 import type { SessionStatus } from "@workspace/shared";
 import { Loader2, ShieldCheck, ShieldX } from "lucide-react";
 import * as React from "react";
 
-import { buildSessionBadgeStreams, type SessionState } from "@/lib/session-badge";
+import { buildSessionBadgeStreams, type SessionState } from "@/lib/session-status-badge";
 
 /** The loading state shown before the first fetch resolves. Hoisted for a stable identity. */
 const INITIAL_STATE: SessionState = { status: "loading" };

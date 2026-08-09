@@ -5,13 +5,6 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
 /** A page the user has navigated to from the command palette (for "Recent"). */
-export interface RecentSearch {
-	readonly title: string;
-	readonly url: string;
-	readonly section: string;
-	readonly icon?: string;
-}
-
 export interface CommandPaletteState {
 	readonly recentSearches: readonly RecentSearch[];
 	readonly pinnedUrls: readonly string[];
@@ -34,6 +27,9 @@ const RecentSearchSchema = z.object({
 	section: z.string(),
 	icon: z.string().optional(),
 });
+
+/** A page the user has navigated to from the command palette (for "Recent"). */
+export type RecentSearch = z.infer<typeof RecentSearchSchema>;
 
 const PersistedPaletteSchema = z.object({
 	recentSearches: z.array(RecentSearchSchema).optional(),

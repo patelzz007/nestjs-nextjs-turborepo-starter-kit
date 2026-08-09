@@ -4,8 +4,8 @@ import * as React from "react";
 
 import Link from "next/link";
 
-import { BreadcrumbTrail as SharedBreadcrumbTrail } from "@workspace/ui/components/breadcrumb-trail";
-import type { BreadcrumbItem } from "@workspace/ui/components/breadcrumb-context";
+import { BreadcrumbTrail as SharedBreadcrumbTrail } from "@workspace/ui/components/navigation/breadcrumb-trail";
+import type { BreadcrumbItem } from "@workspace/ui/components/navigation/breadcrumb-context";
 
 import { useWebBreadcrumb } from "@/components/breadcrumb-provider";
 

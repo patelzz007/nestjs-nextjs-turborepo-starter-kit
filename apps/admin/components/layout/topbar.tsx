@@ -1,8 +1,8 @@
 "use client";
 
-import { Avatar, AvatarFallback } from "@workspace/ui/components/avatar";
-import { Button } from "@workspace/ui/components/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@workspace/ui/components/dropdown-menu";
+import { Avatar, AvatarFallback } from "@workspace/ui/components/display/avatar";
+import { Button } from "@workspace/ui/components/form/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@workspace/ui/components/overlay/dropdown-menu";
 import { Leaf, Menu, Search, Settings } from "lucide-react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
@@ -13,15 +13,15 @@ import { NotificationsDropdown } from "@/components/notifications/notifications-
 import { SessionStatusBadge } from "@/components/common/session-status-badge";
 import { ThemeToggle } from "@/components/common/theme-toggle";
 import { Profile01 } from "@/components/settings/profile-01";
-import { SIDEBAR_MENU } from "@/config/sidebar-menu";
+import { SIDEBAR_MENU } from "@/lib/navigation/sidebar-menu";
 import { getInitials } from "@/lib/user-initials";
 import { useSidebar } from "@/stores/sidebar-store";
-import type { SidebarUser } from "@/types/sidebar";
+import type { SidebarUser } from "@/lib/navigation/sidebar";
 
 // The command palette pulls in `cmdk` + the palette search index — code-split
 // it so neither ships in the initial bundle. It only mounts once the user
 // opens it (⌘K or the search button); the shortcut listener lives here.
-const CommandPalette = dynamic(() => import("@/components/ui/command-palette").then((m) => m.CommandPalette), { ssr: false });
+const CommandPalette = dynamic(() => import("@/components/layout/command-palette").then((m) => m.CommandPalette), { ssr: false });
 
 export interface TopbarProps {
 	readonly user: SidebarUser;

@@ -4,7 +4,7 @@ import * as React from "react";
 
 import { cn } from "@/lib/utils";
 import { HEADING_SCROLL_OFFSET } from "@/lib/constants";
-import type { TocHeading } from "@/lib/markdown";
+import type { TocHeading } from "@/lib/docs/markdown";
 import { findPageScrollContainer } from "@workspace/ui/lib/scroll-container";
 
 /**

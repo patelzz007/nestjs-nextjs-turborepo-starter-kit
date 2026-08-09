@@ -3,14 +3,12 @@
 import * as React from "react";
 import dynamic from "next/dynamic";
 
-import { Button } from "@workspace/ui/components/button";
+import { Button } from "@workspace/ui/components/form/button";
 import { cn } from "@workspace/ui/lib/utils";
 
-import data from "@/data/dashboard-data.json";
-
-import type { AccordionDemoItem } from "@/components/dashboard/accordion-showcase";
+import type { AccordionDemoItem } from "@/components/showcase/accordion-showcase";
 import { ChartSkeleton } from "@/components/dashboard/chart-skeleton";
-import { LazySection } from "@/components/dashboard/lazy-section";
+import { LazySection } from "@/components/common/lazy-section";
 import { SectionCards } from "@/components/dashboard/section-cards";
 
 // ── Lazy demo sections ────────────────────────────────────────────────────
@@ -41,37 +39,37 @@ const ChartAreaInteractive = dynamic(() => import("@/components/dashboard/chart-
 	loading: ChartSkeleton,
 });
 
-const DataTable = dynamic(() => import("@/components/dashboard/data-table").then((m) => m.DataTable), {
+const DataTableShowcase = dynamic(() => import("@/components/showcase/data-table-showcase").then((m) => m.DataTableShowcase), {
 	ssr: false,
 	loading: tableSectionLoading,
 });
 
-const AccordionShowcase = dynamic(() => import("@/components/dashboard/accordion-showcase").then((m) => m.AccordionShowcase), {
+const AccordionShowcase = dynamic(() => import("@/components/showcase/accordion-showcase").then((m) => m.AccordionShowcase), {
 	ssr: false,
 	loading: accordionSectionLoading,
 });
 
-const BreadcrumbShowcase = dynamic(() => import("@/components/dashboard/breadcrumb-showcase").then((m) => m.BreadcrumbShowcase), {
+const BreadcrumbShowcase = dynamic(() => import("@/components/showcase/breadcrumb-showcase").then((m) => m.BreadcrumbShowcase), {
 	ssr: false,
 	loading: breadcrumbSectionLoading,
 });
 
-const ComboboxShowcase = dynamic(() => import("@/components/dashboard/combobox-showcase").then((m) => m.ComboboxShowcase), {
+const ComboboxShowcase = dynamic(() => import("@/components/showcase/combobox-showcase").then((m) => m.ComboboxShowcase), {
 	ssr: false,
 	loading: comboboxSectionLoading,
 });
 
-const SelectShowcase = dynamic(() => import("@/components/dashboard/select-showcase").then((m) => m.SelectShowcase), {
+const SelectShowcase = dynamic(() => import("@/components/showcase/select-showcase").then((m) => m.SelectShowcase), {
 	ssr: false,
 	loading: selectSectionLoading,
 });
 
-const AlertShowcase = dynamic(() => import("@/components/dashboard/alert-showcase").then((m) => m.AlertShowcase), {
+const AlertShowcase = dynamic(() => import("@/components/showcase/alert-showcase").then((m) => m.AlertShowcase), {
 	ssr: false,
 	loading: alertSectionLoading,
 });
 
-const ToastShowcase = dynamic(() => import("@/components/dashboard/toast-showcase").then((m) => m.ToastShowcase), {
+const ToastShowcase = dynamic(() => import("@/components/showcase/toast-showcase").then((m) => m.ToastShowcase), {
 	ssr: false,
 	loading: toastSectionLoading,
 });
@@ -285,7 +283,7 @@ export default function Page(): React.JSX.Element {
 				</div>
 				<div id="demo-table" className="scroll-mt-4">
 					<LazySection height="h-[400px]">
-						<DataTable data={data} />
+						<DataTableShowcase />
 					</LazySection>
 				</div>
 				<div id="demo-accordion" className="scroll-mt-4">

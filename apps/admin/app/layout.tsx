@@ -1,14 +1,14 @@
 import "@workspace/ui/globals.css";
 import "@/app/docs.css";
 
-import { QueryProvider } from "@workspace/client/lib/query-provider";
-import { Toaster } from "@workspace/ui/components/sonner";
+import { QueryProvider } from "@workspace/client/lib/api/query-provider";
+import { Toaster } from "@workspace/ui/components/feedback/sonner";
 import { cn } from "@workspace/ui/lib/utils";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, JetBrains_Mono } from "next/font/google";
 
-import { ClientAuthWrapper } from "@/components/common/client-auth-wrapper";
-import { ThemeProvider } from "@/components/common/theme-provider";
+import { ClientAuthWrapper } from "@workspace/client/lib/auth/client-auth-wrapper";
+import { ThemeProvider } from "@workspace/ui/components/theme-provider";
 
 const jetbrainsMonoHeading = JetBrains_Mono({
 	subsets: ["latin"],
@@ -37,7 +37,11 @@ export default function RootLayout({
 		<html lang="en" suppressHydrationWarning className={cn("antialiased", fontMono.variable, "font-sans", geist.variable, jetbrainsMonoHeading.variable)}>
 			<body>
 				<QueryProvider>
-					<ClientAuthWrapper>
+					<ClientAuthWrapper
+						// Isolated cookie names + X-Client-Type: admin so web and admin
+						// sessions never share cookies on the same host.
+						cookieNames={{ accessToken: "adminAccessToken", refreshToken: "adminRefreshToken" }}
+						clientType="admin">
 						<ThemeProvider>
 							{children}
 							<Toaster />

@@ -9,13 +9,15 @@
 import { z } from "zod";
 
 /** A parsed shortcut: a single key plus which modifier keys must be down. */
-export interface ShortcutSpec {
-	readonly key: string;
-	readonly meta: boolean;
-	readonly ctrl: boolean;
-	readonly alt: boolean;
-	readonly shift: boolean;
-}
+export const ShortcutSpecSchema = z.object({
+	key: z.string().min(1),
+	meta: z.boolean(),
+	ctrl: z.boolean(),
+	alt: z.boolean(),
+	shift: z.boolean(),
+});
+
+export type ShortcutSpec = z.output<typeof ShortcutSpecSchema>;
 
 /** Validates that a shortcut token is a non-empty string (rule 13). */
 const SHORTCUT_TOKEN_SCHEMA = z.string().min(1);

@@ -4,7 +4,7 @@
 "use client";
 
 import { useAuth } from "@workspace/client/lib/auth";
-import { Button } from "@workspace/ui/components/button";
+import { Button } from "@workspace/ui/components/form/button";
 import { useCallback, useState, type JSX } from "react";
 
 export interface LogoutButtonProps {

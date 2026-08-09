@@ -197,7 +197,7 @@ export default [
 		files: [
 			"src/prisma/**/*.ts",
 			"src/modules/**/*.ts",
-			"src/common/schemas/**/*.ts",
+			"src/common/**/*.ts",
 			"src/common/guards/**/*.ts",
 			"src/common/interceptors/**/*.ts",
 			"src/common/middleware/**/*.ts",
@@ -205,7 +205,7 @@ export default [
 			"src/main.ts",
 			"src/common/dto/**/*.ts",
 			"src/common/services/**/*.ts",
-			"src/common/utils/**/*.ts",
+			"src/main.ts",
 		],
 		rules: {
 			"@typescript-eslint/no-unsafe-assignment": "off",
@@ -458,7 +458,7 @@ stale results.
 To verify a rule works as expected (remember: run from inside the workspace):
 
 ```bash
-cd packages/ui && npx eslint src/components/button.tsx
+cd packages/ui && npx eslint src/components/form/button.tsx
 ```
 
 ---

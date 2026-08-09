@@ -5,7 +5,7 @@ import { proxy } from "./proxy";
 
 // ── Mocks ──────────────────────────────────────────────────────────────────
 // The proxy module imports `next/server` (NextResponse) and
-// `@workspace/client/lib/config` (API_BASE_URL). Both are mocked below
+// `@workspace/client/lib/api/config` (API_BASE_URL). Both are mocked below
 // (vi.mock factories are hoisted above the import).
 
 interface CookieCall {
@@ -41,7 +41,7 @@ const nextResponse = vi.hoisted(() => {
 });
 
 vi.mock("next/server", () => ({ NextResponse: nextResponse }));
-vi.mock("@workspace/client/lib/config", () => ({ API_BASE_URL: "http://api.test" }));
+vi.mock("@workspace/client/lib/api/config", () => ({ API_BASE_URL: "http://api.test" }));
 
 // ── Request / response plumbing ─────────────────────────────────────────────
 

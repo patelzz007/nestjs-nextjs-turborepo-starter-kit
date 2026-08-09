@@ -553,7 +553,7 @@ These are enforced by ESLint **and** code review. Violations fail CI:
 | Admin providers / presentational bits              | `apps/admin/components/common/`              |
 | Pure admin logic (search, menu utils, helpers)     | `apps/admin/lib/`                            |
 | Admin unit tests (vitest)                          | `apps/admin/lib/__tests__/`                  |
-| Admin app config (menu JSON, icon registry)        | `apps/admin/config/`                         |
+| Sidebar menu data + icons                        | `apps/admin/lib/navigation/`                   |
 | Shared admin types (`SidebarUser`, `FooterAction`) | `apps/admin/types/`                          |
 | A new ESLint rule for everyone                     | `packages/eslint-config/base.js`             |
 | A new tsconfig base                                | `packages/typescript-config/`                |
@@ -599,7 +599,7 @@ follows:
   area becomes the 404 page (with a "Back to dashboard" link). The root
   `app/not-found.tsx` (no shell) is the global fallback for URLs that match no
   route anywhere (e.g. malformed auth paths). The 404 markup itself is the
-  **shared** `packages/ui/src/components/not-found-content.tsx` (framework-free:
+  **shared** `packages/ui/src/components/feedback/not-found-content.tsx` (framework-free:
   all strings + the back link arrive as props, per rules 9–11); the admin wraps
   it in `components/common/not-found-content.tsx` (renamed
   `AdminNotFoundContent`) only to supply the Next.js `Link`.
@@ -607,7 +607,7 @@ follows:
   `NotFoundContent` for any unmatched web URL (the web app has no persistent
   shell — `/hello` is full-screen — so no catch-all route group is needed),
   with a "Back to home" `Link`.
-- **Sidebar nav items live in a JSON file** — `apps/admin/config/sidebar-menu.json`.
+- **Sidebar nav items live in a JSON file** — `apps/admin/lib/navigation/sidebar-menu.json`.
   The file has a `header` (brand title/subtitle), an array of `sections` (each with
   a `title` + recursive `items`), and `bottomItems`. Items may nest to **any depth**
   and each carries a string `icon` name (a PascalCase lucide name). An item whose
@@ -615,18 +615,18 @@ follows:
   with a "This feature is currently unavailable" tooltip and is excluded from the
   command palette. The JSON is loaded **once** and typed in
   `config/sidebar-menu.ts` (`SIDEBAR_MENU: SidebarMenuData`) — so the whole tree is
-  type-checked against `SidebarMenuItem` (from `types/sidebar.ts`) and nothing
+  type-checked against `SidebarMenuItem` (from `lib/navigation/sidebar.ts`) and nothing
   menu-related is hardcoded in the components (rules 9–11).
-- **Icons are resolved by name.** `config/menu-icons.ts` exports a module-scope
+- **Icons are resolved by name.** `lib/navigation/menu-icons.ts` exports a module-scope
   `ICON_MAP` (string → lucide component). Components look icons up **directly from
   the map** (`ICON_MAP[name] ?? AlertCircle`) instead of calling a factory function
   — that keeps the component reference static, which satisfies React 19's
   `react-hooks/static-components` lint rule. Add any new icon name to `ICON_MAP`
   when you add a menu item.
-- **Shared menu logic lives in `lib/`.** `lib/menu.ts` exports the pure tree
+- **Shared menu logic lives in `lib/`.** `lib/navigation/menu.ts` exports the pure tree
   helpers used by both the sidebar and the command palette — `isRouteActive`,
   `computeRouteState` (active + auto-expanded items), `filterItemsBySearch`,
-  `flattenMenuItems` (with breadcrumbs), and `createItemId`. `lib/highlight.tsx`
+  `flattenMenuItems` (with breadcrumbs), and `createItemId`. `components/common/highlight.tsx`
   is the single `<mark>` highlight utility both surfaces use for search results.
   These are unit-tested in `lib/__tests__/` (see testing below).
 - **State lives in a Zustand store** — `stores/sidebar-store.ts`, persisted to
@@ -643,7 +643,7 @@ follows:
     `persist` types `set` as returning `unknown`, so expression bodies would fail
     both tsc's void check and ESLint's `explicit-function-return-type`; block bodies
     sidestep both.
-  - `hooks/use-sidebar-control.ts` binds **Ctrl/Cmd+B** to toggle the sidebar via a
+  - `components/layout/use-sidebar-control.ts` binds **Ctrl/Cmd+B** to toggle the sidebar via a
     `window` keydown listener (implemented exactly like the reference app).
 - **The sidebar** (`components/layout/sidebar.tsx`, with the recursive row in
   `components/layout/sidebar-nav-item.tsx` and the reorderable section header in
@@ -672,7 +672,7 @@ follows:
   and the profile dropdown. Mobile detection uses the shared `useMediaQuery` hook
   (`hooks/use-media-query.ts`) at the `lg` breakpoint — no hand-rolled resize
   listeners.
-- **The command palette** (`components/ui/command-palette.tsx`) — a full-featured
+- **The command palette** (`components/layout/command-palette.tsx`) — a full-featured
   ⌘K search over every page in the sidebar JSON. It supports **scope prefixes**
   (`>` commands, `/` pages, `#` settings), quick actions (toggle theme, open
   settings, go to dashboard, open billing), **pinned & recent chips** (persisted to
@@ -683,8 +683,8 @@ follows:
   state),
   per-item colour tiles, section badges, breadcrumb trails, fuzzy "did you mean?"
   suggestions (Levenshtein + filler-word stripping), and a keyboard-hint footer.
-  The matching, alias, and styling logic lives in `lib/palette-search.ts` and
-  `lib/palette-styles.ts` so the component stays small and the logic is testable.
+  The matching, alias, and styling logic lives in `lib/palette/search.ts` and
+  `lib/palette/styles.ts` so the component stays small and the logic is testable.
 - **The profile dropdown** (`components/settings/profile-01.tsx`) — a polished
   card: avatar with online-status dot, name + email, a **plan badge** (with an
   Upgrade button), and menu actions (Billing, Settings, Terms & Policies) followed
@@ -711,13 +711,13 @@ follows:
   `lib/docs.ts` reads the files straight off the filesystem (`server-only`
   guarded, path-traversal protected, case-insensitive slug resolution so
   `README.md` is served too) and derives metadata + ToC headings with the
-  pure helpers in `lib/markdown.ts` (shared `slugifyHeadingText`, so ToC
+  pure helpers in `lib/docs/markdown.ts` (shared `slugifyHeadingText`, so ToC
   anchor ids always match the rendered heading ids).
   - **Frontmatter.** Every guide starts with a small YAML block that drives
     its metadata and ordering:
     `---` / `title:` / `description:` / `order:` / `author:` / `lastUpdated:`
     / `coverImage:` / `---`. It is validated by `DocFrontmatterSchema`
-    (`z.infer` for the type) via `parseMarkdownFile` in `lib/markdown.ts` —
+    (`z.infer` for the type) via `parseMarkdownFile` in `lib/docs/markdown.ts` —
     anything missing falls back to the H1 + first paragraph, and a broken
     block can never take the page down (it degrades to empty frontmatter).
     Guides without an `order` sort after every ordered guide. `author` and
@@ -781,7 +781,7 @@ follows:
     Rendering is done by `components/docs/markdown-renderer.tsx` — a custom
     `react-markdown` renderer with GFM + math/KaTeX, headings with copy-link
     buttons, tables, images, task lists, **shiki**-highlighted code blocks
-    (`components/ui/code-block.tsx` — the **One Dark Pro** editor theme on a
+    (`components/docs/code-block.tsx` — the **One Dark Pro** editor theme on a
     fixed dark surface in BOTH light and dark app modes, copy/download,
     optional line numbers, and a **per-language accent** — a colored dot +
     colored label in the header bar matching the grammar's hue). The
@@ -790,7 +790,7 @@ follows:
     prisma, env, css, html, yaml, ini, markdown, http, diff, plaintext). **Always
     tag your fences** (` ```typescript `, ` ```bash `, ` ```http `, ` ```env `,
     …) — a **bare ` ``` `** falls back to `detectLanguageName`
-    (`components/ui/code-block.tsx`), which recognizes env `KEY=value` lines,
+    (`components/docs/code-block.tsx`), which recognizes env `KEY=value` lines,
     HTTP request/response blocks, shell commands, `export default […]` /
     `import … from` configs, SQL, and Prisma schema keywords; everything else
     (ASCII trees, diagrams, prose) renders as uncolored plaintext. Fences are
@@ -807,7 +807,7 @@ follows:
     **drop-cap on the article's opening paragraph** (a remark plugin stamps
     the first ROOT-level paragraph — never one inside a callout, so a guide
     that opens with `> [!NOTE]` doesn't get a drop-cap inside it),
-    **glossary tooltips** (jargon from `GLOSSARY_TERMS` in `lib/markdown.ts`
+    **glossary tooltips** (jargon from `GLOSSARY_TERMS` in `lib/docs/markdown.ts`
     — JWT, RBAC, jti, HS256, … — renders as `<abbr title>` hover tooltips;
     add a term + one-line definition there and every guide gets it), an
     **image lightbox** (click a diagram's zoom button to open a native
@@ -920,7 +920,7 @@ follows:
   with a backdrop (`components/layout/mobile-menu-overlay.tsx`); the topbar's
   hamburger opens it.
 - **Scroll-to-top** — a floating chevron button, **shared** between apps in
-  `packages/ui/src/components/scroll-to-top.tsx` (framework-free; the DOM
+  `packages/ui/src/components/navigation/scroll-to-top.tsx` (framework-free; the DOM
   helper `findPageScrollContainer` lives in `packages/ui/src/lib/scroll-container.ts`).
   It appears after 300px of scroll (`threshold` prop) and smooth-scrolls back
   up. It does **not** assume the window scrolls: it detects the real scroller
@@ -935,7 +935,7 @@ follows:
 - **Breadcrumbs via a shared context** — the trail is driven by a
   `BreadcrumbContext` so it can be updated from anywhere (a page, a dialog, a
   settings tab) and stays in sync automatically. The context itself is a
-  **framework-free factory** in `packages/ui/src/components/breadcrumb-context.tsx`
+  **framework-free factory** in `packages/ui/src/components/navigation/breadcrumb-context.tsx`
   (`createBreadcrumbContext(resolve)`) — it returns a `{ provider, useBreadcrumb }`
   pair plus the shared `BreadcrumbItem` type (an icon-bearing crumb: `label`,
   `href?`, `icon`). Because `packages/ui` never imports `next/*` (it is
@@ -952,11 +952,11 @@ follows:
     effect keyed on `pathname`; the resolver is held in a ref so it never
     triggers effect churn.
   - **Admin** — `components/common/admin-breadcrumb.tsx` creates the app-wide
-    instance, and `lib/breadcrumb.ts` exports `resolveAdminTrail(pathname)`, a
+    instance, and `lib/navigation/breadcrumb.ts` exports `resolveAdminTrail(pathname)`, a
     pure function that walks `config/sidebar-menu.json` with robust
     prefix-matching (normalizes trailing slashes, never confuses `/users` with
     `/users-x`, matches through any nesting depth) and maps each ancestor to a
-    crumb with its **mandatory icon** (from `config/menu-icons.ts`'s `ICON_MAP`, `FileText` fallback).
+    crumb with its **mandatory icon** (from `lib/navigation/menu-icons.ts`'s `ICON_MAP`, `FileText` fallback).
     The resolver is **section-aware** (multi-item content sections like
     `Documents` contribute a context root: `/documents/alpha` →
     `Documents › Project Alpha`; the `Main` catch-all and single-item sections
@@ -976,7 +976,7 @@ follows:
     `setItems` with the guide's real **frontmatter title** in an effect and
     `reset()`s in its cleanup, so the trail shows `Docs Home › <Guide Title>`
     while reading a guide and restores the route-derived trail on navigation.
-  - **Shared presentational trail** — `packages/ui/src/components/breadcrumb-trail.tsx`
+  - **Shared presentational trail** — `packages/ui/src/components/navigation/breadcrumb-trail.tsx`
     is a dumb, `React.memo`-wrapped component used by both apps. Features:
     **mandatory icons** on every crumb; a **`maxItems` collapse** (first crumb +
     last `maxItems - 1`, default 4) whose hidden middle is listed in a
@@ -992,11 +992,11 @@ follows:
     from the context value and keeps `document.title` in sync with the last
     crumb (the effect re-runs with a fresh status on every navigation — no
     stale closures).
-  - **Web** — `apps/web/lib/breadcrumb.ts` (a route table returning `[]` on
+  - **Web** — `apps/web/lib/navigation/breadcrumb.ts` (a route table returning `[]` on
     full-screen auth routes so no trail renders, with a current-page `Home`
     fallback on unknown routes) + `components/breadcrumb-provider.tsx` (thin
     client wrapper feeding `usePathname()` into the framework-free provider) +
-    `components/breadcrumb-trail.tsx` (reads status, renders the shared trail
+    `components/navigation/breadcrumb-trail.tsx` (reads status, renders the shared trail
     with a Next.js `renderLink`); wired into `apps/web/app/layout.tsx` and
     rendered on `/hello`.
   - **Data-driven demo** — `app/(panel)/users/[id]/page.tsx` is a live example
@@ -1005,7 +1005,7 @@ follows:
     `components/users/user-detail-breadcrumb.tsx` calls `setItems` in an effect
     (with `reset` in its cleanup) so the trail reads `Users › <display name>`
     instead of the URL-derived `Users › 123`.
-  - **Testing** — `lib/__tests__/breadcrumb.test.ts` covers the resolver: exact
+  - **Testing** — `lib/navigation/breadcrumb.test.ts` covers the resolver: exact
     matches, nested ancestors, section-aware roots, dynamic segments
     (`/users/123`), docs routes, trailing slashes, `/users` vs `/users-x`
     boundary, unknown-route fallback, and mandatory icons on every crumb.
@@ -1022,7 +1022,7 @@ follows:
 - **Auth pages are SPA-friendly** — `components/auth/login-form.tsx` and the auth
   pages use `Link`/`router.push` (never raw `<a href>` or `window.location.href`),
   and the "main website" link reads `NEXT_PUBLIC_WEB_URL`. The admin has only one
-  redirect target, so `ClientAuthWrapper` (`components/common/client-auth-wrapper.tsx`)
+  redirect target, so `ClientAuthWrapper` (`@workspace/client/lib/auth/client-auth-wrapper`)
   hardcodes `onUnauthorizedRedirect: "/auth/login"` instead of threading an unused
   prop.
 - **Testing** — the admin app has **vitest** (`pnpm test` / `pnpm --filter

@@ -13,7 +13,7 @@ coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=form
 > against `apps/admin/components/layout/sidebar.tsx`, `sidebar-nav-item.tsx`,
 > `sidebar-section-header.tsx`, `mobile-menu-overlay.tsx`,
 > `apps/admin/components/layout/dashboard-layout.tsx`, `stores/sidebar-store.ts`,
-> `config/sidebar-menu.json`, `lib/menu.ts`, and `hooks/use-sidebar-control.ts`
+> `lib/navigation/sidebar-menu.json`, `lib/navigation/menu.ts`, and `components/layout/use-sidebar-control.ts`
 > before being written down. This is not a wish-list.
 >
 > Each item has a **What / Why / Where / How**, an **effort estimate**, and a
@@ -39,7 +39,7 @@ the improvements target **gaps**, not rewrites.
   the single typed entry point. No hardcoded items in components. ✅
 - **Recursive rendering.** `SidebarNavItem` renders children to any depth
   (the demo tree goes 6 levels deep under Analytics → Reports → …). ✅
-- **Route-aware state.** `computeRouteState` in `lib/menu.ts` marks the active item
+- **Route-aware state.** `computeRouteState` in `lib/navigation/menu.ts` marks the active item
   (`isRouteActive` handles `/` exactly and boundary chars, so `/settings` never
   highlights `/settings/general`), auto-expands the active branch, and optionally
   highlights the parent. ✅
@@ -71,9 +71,9 @@ moderate effort. **P3** = polish / hygiene. **Effort:** S (hours) · M (a day) �
 | 2 | Missing `aria-current="page"` on the active item | `sidebar-nav-item.tsx` | **P1** | S | ⬜ |
 | 3 | Menu is a `<div>`, not a `<nav aria-label>` landmark | `sidebar.tsx` | **P1** | S | ⬜ |
 | 4 | No `/` (or `Cmd+K`) shortcut to focus the sidebar search | `sidebar.tsx` | P2 | S | ✅ |
-| 5 | Search matches titles only — no URL / alias / fuzzy matching | `lib/menu.ts` | P2 | M | ✅ |
+| 5 | Search matches titles only — no URL / alias / fuzzy matching | `lib/navigation/menu.ts` | P2 | M | ✅ |
 | 6 | Manual expand state is ephemeral (lost on reload) | `sidebar.tsx` | P2 | S | ✅ |
-| 7 | `createItemId` collisions for same-titled items under different parents | `lib/menu.ts` | **P1** | S | ✅ |
+| 7 | `createItemId` collisions for same-titled items under different parents | `lib/navigation/menu.ts` | **P1** | S | ✅ |
 | 8 | Active item is never scrolled into view (deep docs branch) | `sidebar.tsx` | P2 | S | ✅ |
 | 9 | Truncated labels have no `title` tooltip | `sidebar-nav-item.tsx` | P3 | S | ⬜ |
 | 10 | Section reorder controls are hover-only (touch/keyboard dead) | `sidebar-section-header.tsx` | **P1** | S | ✅ |
@@ -84,7 +84,7 @@ moderate effort. **P3** = polish / hygiene. **Effort:** S (hours) · M (a day) �
 | 15 | No "skip to content" link (keyboard users tab the whole menu first) | `sidebar.tsx` | P2 | S | ✅ |
 | 16 | Active section header is not emphasized (only the item is) | `sidebar-section-header.tsx` | P3 | S | ✅ |
 | 17 | Search highlight uses hardcoded blue classes (violates token rule) | `sidebar-nav-item.tsx` | P2 | S | ✅ |
-| 18 | No component tests for the sidebar (only `lib/menu` is tested) | `lib/__tests__/menu.test.ts` | **P1** | M | ✅ |
+| 18 | No component tests for the sidebar (only `lib/menu` is tested) | `lib/navigation/menu.test.ts` | **P1** | M | ✅ |
 | 19 | Chevron (300 ms) vs rows (200 ms) animation timings mismatch | `sidebar-nav-item.tsx` | P3 | S | ✅ |
 | 20 | Desktop + mobile mount two full `Sidebar` trees (duplicated work) | `dashboard-layout.tsx` | P2 | M | ✅ |
 
@@ -95,20 +95,20 @@ moderate effort. **P3** = polish / hygiene. **Effort:** S (hours) · M (a day) �
 | 1 | **Rail (icon-only) collapse mode** with tooltips + hover flyouts | `dashboard-layout.tsx` | **P1** | L | ⬜ |
 | 2 | **Favorites / pinned items** ("Favorites" section pinned on top) | `stores/sidebar-store.ts` | P2 | M | ⬜ |
 | 3 | **Recent items** — last-visited pages, auto-tracked | `stores/sidebar-store.ts` | P2 | M | ⬜ |
-| 4 | **Badges & counts** per item (`badge` field in JSON, e.g. "Errors (3)") | `types/sidebar.ts` + `sidebar-menu.json` | P2 | M | ⬜ |
+| 4 | **Badges & counts** per item (`badge` field in JSON, e.g. "Errors (3)") | `lib/navigation/sidebar.ts` + `sidebar-menu.json` | P2 | M | ⬜ |
 | 5 | **Collapsible sections** (per-section collapse, persisted) | `sidebar.tsx` | P2 | M | ⬜ |
 | 6 | **Drag-and-drop section reordering** via @dnd-kit (already a dep) | `sidebar-section-header.tsx` | P3 | M | ⬜ |
 | 7 | **Right-click context menu** on items (open in new tab / copy link / pin / hide) | `sidebar-nav-item.tsx` | P3 | M | ⬜ |
 | 8 | **Hide / unhide items** — user-tailored menu, persisted, with "reset menu" | `stores/sidebar-store.ts` | P3 | M | ⬜ |
-| 9 | **RBAC-filtered menu** — `requiredPermission` per item, filtered by `/auth/me` | `lib/menu.ts` + `sidebar.tsx` | **P1** | M | ⬜ |
+| 9 | **RBAC-filtered menu** — `requiredPermission` per item, filtered by `/auth/me` | `lib/navigation/menu.ts` + `sidebar.tsx` | **P1** | M | ⬜ |
 | 10 | **External links** — `external: true` → `target=_blank` + link icon | `sidebar-nav-item.tsx` | P2 | S | ⬜ |
-| 11 | **Keyboard shortcut hints** on items (optional `shortcut` → kbd chip) | `types/sidebar.ts` + `sidebar-nav-item.tsx` | P3 | S | ⬜ |
+| 11 | **Keyboard shortcut hints** on items (optional `shortcut` → kbd chip) | `lib/navigation/sidebar.ts` + `sidebar-nav-item.tsx` | P3 | S | ⬜ |
 | 12 | **Profile dropdown in the footer** (Profile / Settings / Sign out) | `sidebar.tsx` footer | **P1** | M | ⬜ |
 | 13 | **Environment pill in the header** (dev / prod + app version) | `sidebar.tsx` header | P3 | S | ⬜ |
 | 14 | **Session badge + theme toggle in the footer** | `sidebar.tsx` footer | P2 | M | ⬜ |
-| 15 | **Deep-link the ⌘K palette from the menu** (breadcrumb-grouped results) | `components/ui/command-palette.tsx` | P2 | M | ⬜ |
+| 15 | **Deep-link the ⌘K palette from the menu** (breadcrumb-grouped results) | `components/layout/command-palette.tsx` | P2 | M | ⬜ |
 | 16 | **Onboarding spotlight** — first-run tour of search / reorder / collapse | `sidebar.tsx` | P3 | M | ⬜ |
-| 17 | **Fuzzy search with keyboard navigation** (↑/↓ + Enter to jump) | `lib/menu.ts` + `sidebar.tsx` | P2 | L | ⬜ |
+| 17 | **Fuzzy search with keyboard navigation** (↑/↓ + Enter to jump) | `lib/navigation/menu.ts` + `sidebar.tsx` | P2 | L | ⬜ |
 | 18 | **Collapsed flyout panels** — hover a rail icon → floating nested menu | `dashboard-layout.tsx` | P3 | L | ⬜ |
 | 19 | **API-driven menu** — menu comes from the backend (fallback to JSON) | `lib/docs.ts`-style server loader | P3 | L | ⬜ |
 | 20 | **Active-branch auto-collapse** — unrelated sections close on navigation | `sidebar.tsx` | P3 | M | ⬜ |
@@ -129,12 +129,12 @@ moderate effort. **P3** = polish / hygiene. **Effort:** S (hours) · M (a day) �
 | # | What shipped | Files |
 | - | ------------ | ----- |
 | 4 | `/` focuses the sidebar search (GitHub/Linear pattern; ignored in inputs; Cmd+K untouched) | `components/layout/sidebar.tsx` |
-| 5 | Search matches **titles + URLs + icon names**, multi-token, case-insensitive (`filterItemsBySearch`); `menu.test.ts` covers URL + multi-token cases | `lib/menu.ts` |
+| 5 | Search matches **titles + URLs + icon names**, multi-token, case-insensitive (`filterItemsBySearch`); `menu.test.ts` covers URL + multi-token cases | `lib/navigation/menu.ts` |
 | 6 | Manual expansions live in the zustand store (`expandedItems`, `setItemExpanded`) — **session-only since 2026-08-08**: a refresh (soft or hard) resets the menu to default. Route-driven auto-expansion still opens the active branch. Legacy localStorage payloads are stripped of `expandedItems` via a zod-validated `merge` (no unchecked casts) | `stores/sidebar-store.ts` |
-| 7 | Menu is **compiled once** with globally-unique ids (`compileMenu` — section prefix + `-2`/`-3` dedupe); all consumers read `item.id` (no more title-derived id collisions) | `config/sidebar-menu.ts`, `types/sidebar.ts`, `lib/menu.ts` |
+| 7 | Menu is **compiled once** with globally-unique ids (`compileMenu` — section prefix + `-2`/`-3` dedupe); all consumers read `item.id` (no more title-derived id collisions) | `config/sidebar-menu.ts`, `lib/navigation/sidebar.ts`, `lib/navigation/menu.ts` |
 | 8 | Active item **scrolls into view** on navigation (only when the nav scrolls + item is out of view; respects reduced motion) | `components/layout/sidebar.tsx` |
 | 10 | Reorder controls reveal on **focus-within** (not just hover); `Alt+↑`/`Alt+↓` move the section while a reorder button is focused | `components/layout/sidebar-section-header.tsx` |
-| 11 | Motion constants extracted to **`lib/layout-motion.ts`** — sidebar + drawer share one source of truth | `lib/layout-motion.ts` |
+| 11 | Motion constants extracted to **`components/layout/layout-motion.ts`** — sidebar + drawer share one source of truth | `lib/layout-motion.ts` |
 | 13 | Search state lives in the **store** — desktop + mobile instances share it; survives drawer open/close | `stores/sidebar-store.ts` (searchQuery, not persisted) |
 | 14 | Disabled parents render as a **single dimmed row — children are pruned** (Analytics/Users demo trees now collapse to one row) | `components/layout/sidebar-nav-item.tsx` |
 | 15 | **Skip-to-content** link before the sidebar, target `#main-content` on `<main>` | `components/layout/dashboard-layout.tsx` |
@@ -142,7 +142,7 @@ moderate effort. **P3** = polish / hygiene. **Effort:** S (hours) · M (a day) �
 | 17 | Search highlight is **token-driven** (`--sidebar-search-mark-*` + `.sidebar-mark` in globals.css) — no hardcoded blue | `packages/ui/src/styles/globals.css`, `components/layout/sidebar-nav-item.tsx` |
 | 19 | Chevron + rows collapse now share **one 200 ms timing** | `components/layout/sidebar-nav-item.tsx` |
 | 18 | **Component tests** (`components/layout/__tests__/sidebar.test.tsx`, 15 tests): rendering, active + route-prefix state, auto/manual expansion, disabled parents, search + no-results, `/` focus + typing guard, navigation, footer actions, section reorder (buttons + Alt+arrows), active-section marker | `components/layout/__tests__/sidebar.test.tsx` |
-| 20 | **`buildSidebarView`** computes route/search/order state once in `DashboardLayout` and passes it to both `Sidebar` instances (`view` prop) | `lib/menu.ts`, `components/layout/dashboard-layout.tsx` |
+| 20 | **`buildSidebarView`** computes route/search/order state once in `DashboardLayout` and passes it to both `Sidebar` instances (`view` prop) | `lib/navigation/menu.ts`, `components/layout/dashboard-layout.tsx` |
 | — | **Nav-item design pass (2026-08-08)** — hover is a *soft* tint (60%) with the label brightening; the active item is a **solid pill** (`--sidebar-primary` = `slate-800` light / `white` dark, foreground inverted — themeable tokens, never hardcoded); icon + expanded-chevron invert to the pill foreground; the chevron whispers at `/40` and brightens on hover; a barely-there `active:scale-[0.99]` gives tactile press feedback. Submenus **animate**: height (grid-rows) + opacity fade + 2px slide-up in sync with the chevron (all 200 ms) | `components/layout/sidebar-nav-item.tsx`, `packages/ui/src/styles/globals.css` |
 | — | **Persistence audit (2026-08-08)** — the **admin shell's search surfaces** are confirmed session-only and pinned by tests: sidebar `searchQuery` (never in `partialize`, stripped from legacy payloads) and the palette's search text (local component state, not in the store at all). The **command-palette store** got the same zod-validated `merge` hardening as the sidebar store — a corrupted `command-palette-state` payload falls back to live state instead of spreading garbage. What still persists on purpose: sidebar `isOpen`/`sectionOrder`, palette recents/pins. Known intentional exception: the `/` page **demo showcases** opt into `sessionStorage` (accordion `persistKey`, combobox `persistQueryKey`, alert `storageKey`) — sessionStorage survives a same-tab refresh by design, but these are explicit feature demos, tab-scoped, and only exist on the showcase page. +4 tests (`stores/__tests__/command-palette-store.test.ts`, search assertions in `sidebar.test.tsx`) | `stores/sidebar-store.ts`, `stores/command-palette-store.ts`, `stores/__tests__/command-palette-store.test.ts`, `components/layout/__tests__/sidebar.test.tsx`, `vitest.config.ts` |
 
@@ -247,17 +247,17 @@ use `/` only.
 
 ### 5. Search matches titles only
 
-**What:** `filterItemsBySearch` in `lib/menu.ts` does `item.title.toLowerCase().includes(lowerQuery)`.
+**What:** `filterItemsBySearch` in `lib/navigation/menu.ts` does `item.title.toLowerCase().includes(lowerQuery)`.
 
 **Why:** users often remember a **URL** ("the page with /settings/security/sessions")
 or an **alias** ("audit" for "Audit Log"), not the exact title. Also no fuzzy
 tolerance for typos ("settigs").
 
-**Where:** `apps/admin/lib/menu.ts` (`filterItemsBySearch`).
+**Where:** `apps/admin/lib/navigation/menu.ts` (`filterItemsBySearch`).
 
 **How:** extend the match to `title + url + icon-name`, normalize case/accents,
 and add a simple scoring pass (exact-prefix > substring > char-skip). Keep the
-function pure and unit-test it in `lib/__tests__/menu.test.ts`. Don't reach for a
+function pure and unit-test it in `lib/navigation/menu.test.ts`. Don't reach for a
 fuzzy lib — a 20-line scorer is plenty for a menu this size (feature 17 builds on
 this).
 
@@ -300,7 +300,7 @@ so `expandedItems` / `activeItems` / React `key`s collide.
 **Why:** wrong item highlights/expands and React reconciles the wrong subtree —
 a correctness bug that silently appears the day a duplicate title lands in the JSON.
 
-**Where:** `apps/admin/lib/menu.ts` (`createItemId`).
+**Where:** `apps/admin/lib/navigation/menu.ts` (`createItemId`).
 
 **How:** include the parent trail: `createItemId(item, parentId)` already receives
 `parentId` — make it slugify the **full path** (`settings-security-sessions`)
@@ -394,13 +394,13 @@ drifts, exactly the class of bug that already bit this pair.
 **Where:** `apps/admin/components/layout/dashboard-layout.tsx` +
 `apps/admin/components/layout/mobile-menu-overlay.tsx`.
 
-**How:** extract `apps/admin/lib/layout-motion.ts` exporting
+**How:** extract `apps/admin/components/layout/layout-motion.ts` exporting
 `SIDEBAR_EASE`, `SIDEBAR_ASIDE_TRANSITION`, `SIDEBAR_CONTENT_*_TRANSITION`,
 `DRAWER_TRANSITION`, `BACKDROP_TRANSITION` — import them in both files (rule 16:
 module-scope, stable identity). Delete the local duplicates.
 
 **Acceptance criteria:**
-- [ ] Both files import from `@/lib/layout-motion` — zero inline transition objects.
+- [ ] Both files import from `@/components/layout/layout-motion` — zero inline transition objects.
 - [ ] Typecheck + lint green; animation feel identical (both files now share the same constants by construction).
 
 **Status:** ✅ Done (2026-08-08) — see the shipped-change log below.
@@ -554,7 +554,7 @@ becomes `"sidebar-mark rounded-sm px-0.5 font-semibold"`.
 
 ### 18. No component tests for the sidebar
 
-**What:** `lib/__tests__/menu.test.ts` covers the pure functions
+**What:** `lib/navigation/menu.test.ts` covers the pure functions
 (`computeRouteState`, `filterItemsBySearch`, `isRouteActive`), but
 `Sidebar`, `SidebarNavItem`, and `SidebarSectionHeader` have zero render tests.
 
@@ -704,7 +704,7 @@ rendered as a small pill on the right (e.g. "Errors (3)", "v2"). Also a
 **Why:** product teams always want counts on nav ("Inbox (12)"); supporting it in
 the data model keeps the component generic instead of hardcoding a feature.
 
-**Where:** `apps/admin/types/sidebar.ts` (extend `SidebarMenuItem`) +
+**Where:** `apps/admin/lib/navigation/sidebar.ts` (add the field to `SidebarMenuItemSchema` — `SidebarMenuItem` is the derived `z.output` type) +
 `sidebar-nav-item.tsx` (render next to the chevron) + `sidebar-menu.json`.
 
 **How:** add the field to the type (optional), render `<span className="ml-auto rounded-full bg-sidebar-accent px-1.5 text-[10px]">` when present. When the
@@ -788,7 +788,7 @@ hidden items vanish from the tree (and search).
 
 **Why:** personal information architecture without forking the shared JSON.
 
-**Where:** `apps/admin/stores/sidebar-store.ts` + `lib/menu.ts`
+**Where:** `apps/admin/stores/sidebar-store.ts` + `lib/navigation/menu.ts`
 (`filterHiddenItems(items, hiddenIds)` — pure, tested) + `sidebar.tsx`.
 
 **How:** apply the filter after `filterItemsBySearch`. Expose the reset via the
@@ -811,7 +811,7 @@ filtered by the authenticated user's permission set from `/auth/me`.
 RBAC story — the menu should reflect what the admin can actually do. A non-super-admin
 shouldn't see "Users" at all.
 
-**Where:** `apps/admin/types/sidebar.ts` + `lib/menu.ts` (`filterByPermissions`) +
+**Where:** `apps/admin/lib/navigation/sidebar.ts` + `lib/navigation/menu.ts` (`filterByPermissions`) +
 `sidebar.tsx` (needs the user's permissions — extend `SidebarUser` with an
 optional `permissions` array).
 
@@ -836,9 +836,9 @@ missing `requiredPermission` → always visible.
 **Why:** admin panels always end up linking to docs, status pages, or support
 tickets; today the JSON can't express "this isn't an internal route".
 
-**Where:** `apps/admin/types/sidebar.ts` (optional `external?: boolean`) +
+**Where:** `apps/admin/lib/navigation/sidebar.ts` (optional `external?: boolean`) +
 `sidebar-nav-item.tsx` (use `<a target="_blank" rel="noreferrer">` instead of the
-button/router push) + `lib/menu.ts` (external items are never "active" and never
+button/router push) + `lib/navigation/menu.ts` (external items are never "active" and never
 participate in `isRouteActive`).
 
 **How:** the `hasChildren`/leaf branching already exists — add a third branch for
@@ -859,7 +859,7 @@ subtle `kbd` chip on the right of the item.
 **Why:** discoverability for global shortcuts (⌘K exists; "G" routing, etc. could
 follow) without a separate shortcuts doc page.
 
-**Where:** `apps/admin/types/sidebar.ts` + `sidebar-nav-item.tsx` (render a
+**Where:** `apps/admin/lib/navigation/sidebar.ts` + `sidebar-nav-item.tsx` (render a
 `<kbd>` before the chevron). Hidden while searching/collapsed.
 
 **How:** pure presentation — the *actual* key handling stays where it is today
@@ -944,11 +944,11 @@ render it.
 **What:** make the sidebar's tree the *source* for the command palette's grouped
 results (section → breadcrumbed items), so ⌘K and the sidebar can never disagree.
 
-**Why:** `flattenMenuItems` in `lib/menu.ts` already produces exactly the
+**Why:** `flattenMenuItems` in `lib/navigation/menu.ts` already produces exactly the
 `{ section, breadcrumb }` shape the palette needs — the wiring exists but isn't
 shared.
 
-**Where:** `apps/admin/components/ui/command-palette.tsx` (or `lib/palette-search.ts`)
+**Where:** `apps/admin/components/layout/command-palette.tsx` (or `lib/palette/search.ts`)
 + `sidebar.tsx` (no change needed if it reads the same config).
 
 **How:** ensure both read the same `flattenMenuItems(SIDEBAR_MENU…)` output;
@@ -997,7 +997,7 @@ clear with **Esc**.
 a flat results mode collapses the whole tree into a picker.
 
 **Where:** `apps/admin/components/layout/sidebar.tsx` (search mode branch) +
-`lib/menu.ts` (ranked `searchMenuItems` returning `{ item, breadcrumb, score }[]`).
+`lib/navigation/menu.ts` (ranked `searchMenuItems` returning `{ item, breadcrumb, score }[]`).
 
 **How:** when `isSearching`, render results (not the section tree) with
 `role="listbox"` semantics (or the base-ui `Menu`), keep the existing highlight,
@@ -1093,7 +1093,7 @@ feel finished.
 
 **Tier 3 — power features:** features **9 (RBAC), 17 (fuzzy search), 19
 (API-driven)** — larger, but they build directly on the pure functions in
-`lib/menu.ts` and the existing SSR shell, so they slot in without restructuring.
+`lib/navigation/menu.ts` and the existing SSR shell, so they slot in without restructuring.
 
 **Tier 4 — polish/hygiene:** improvements **5, 11, 16, 17, 19, 20** and the
 remaining features — pick up as time allows; nothing here blocks anything else.
@@ -1105,7 +1105,7 @@ remaining features — pick up as time allows; nothing here blocks anything else
 - **When you ship an item:** flip its status to ✅ (or 🔶 for partial) and update
   the matrix + the item's acceptance criteria. Unticked boxes mean "claimed but
   unproven".
-- **When the menu config changes** (`sidebar-menu.json` / `types/sidebar.ts`):
+- **When the menu config changes** (`sidebar-menu.json` / `lib/navigation/sidebar.ts`):
   re-check item 7 (id collisions) and items 9/10 (new fields) — the JSON is the
   contract everything else tests against.
 - **When you touch the motion files:** re-check improvement 11 (constants are

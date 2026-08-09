@@ -2,26 +2,32 @@
 
 import { motion, MotionConfig } from "framer-motion";
 
-import { BreadcrumbTrail } from "@workspace/ui/components/breadcrumb-trail";
-import type { BreadcrumbItem } from "@workspace/ui/components/breadcrumb-context";
+import { BreadcrumbTrail } from "@workspace/ui/components/navigation/breadcrumb-trail";
+import type { BreadcrumbItem } from "@workspace/ui/components/navigation/breadcrumb-context";
 import { cn } from "@workspace/ui/lib/utils";
 import { toast } from "sonner";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import * as React from "react";
 
-import { useSidebarControl } from "@/hooks/use-sidebar-control";
-import { useMediaQuery } from "@/hooks/use-media-query";
-import { buildSidebarView } from "@/lib/menu";
-import { SIDEBAR_ASIDE_TRANSITION, SIDEBAR_CONTENT_CLOSE_TRANSITION, SIDEBAR_CONTENT_OPEN_TRANSITION, SIDEBAR_INNER_CLASS, DESKTOP_SIDEBAR_WIDTH } from "@/lib/layout-motion";
-import { SIDEBAR_MENU } from "@/config/sidebar-menu";
+import { useSidebarControl } from "@/components/layout/use-sidebar-control";
+import { useMediaQuery } from "@workspace/ui/hooks/use-media-query";
+import { buildSidebarView } from "@/lib/navigation/menu";
+import {
+	SIDEBAR_ASIDE_TRANSITION,
+	SIDEBAR_CONTENT_CLOSE_TRANSITION,
+	SIDEBAR_CONTENT_OPEN_TRANSITION,
+	SIDEBAR_INNER_CLASS,
+	DESKTOP_SIDEBAR_WIDTH,
+} from "@/components/layout/layout-motion";
+import { SIDEBAR_MENU } from "@/lib/navigation/sidebar-menu";
 import { useAdminBreadcrumb } from "@/components/common/admin-breadcrumb";
 import { MobileMenuOverlay } from "@/components/layout/mobile-menu-overlay";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
-import { ScrollToTop } from "@workspace/ui/components/scroll-to-top";
+import { ScrollToTop } from "@workspace/ui/components/navigation/scroll-to-top";
 import { useSidebarStore } from "@/stores/sidebar-store";
-import type { FooterAction, SidebarUser } from "@/types/sidebar";
+import type { FooterAction, SidebarUser } from "@/lib/navigation/sidebar";
 
 export interface DashboardLayoutProps {
 	readonly user: SidebarUser;

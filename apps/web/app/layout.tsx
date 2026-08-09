@@ -1,14 +1,14 @@
 import "@workspace/ui/globals.css";
 
-import { QueryProvider } from "@workspace/client/lib/query-provider";
+import { QueryProvider } from "@workspace/client/lib/api/query-provider";
 import { cn } from "@workspace/ui/lib/utils";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, JetBrains_Mono } from "next/font/google";
 
 import { WebBreadcrumbProvider } from "@/components/breadcrumb-provider";
-import { ClientAuthWrapper } from "@/components/client-auth-wrapper";
-import { ThemeProvider } from "@/components/theme-provider";
-import { ScrollToTop } from "@workspace/ui/components/scroll-to-top";
+import { ClientAuthWrapper } from "@workspace/client/lib/auth/client-auth-wrapper";
+import { ThemeProvider } from "@workspace/ui/components/theme-provider";
+import { ScrollToTop } from "@workspace/ui/components/navigation/scroll-to-top";
 
 const jetbrainsMonoHeading = JetBrains_Mono({
 	subsets: ["latin"],

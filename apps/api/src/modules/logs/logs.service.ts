@@ -1,21 +1,26 @@
 import { Injectable, Logger } from "@nestjs/common";
+import { z } from "zod";
 
 /**
  * Metadata shape for structured log entries.
  */
-export type LogMetadata = Readonly<Record<string, string | number | boolean | null | undefined>>;
+export const LogMetadataSchema = z.record(z.string(), z.union([z.string(), z.number(), z.boolean(), z.null(), z.undefined()]));
+
+export type LogMetadata = z.output<typeof LogMetadataSchema>;
 
 /**
  * Options for log entries — supports context, optional userId, and structured metadata.
  */
-export interface LogOptions {
+export const LogOptionsSchema = z.object({
 	/** The context/module name for the log entry (e.g. "AuthService") */
-	readonly context?: string;
+	context: z.string().optional(),
 	/** Optional user identifier for the log entry */
-	readonly userId?: string;
+	userId: z.string().optional(),
 	/** Structured metadata for the log entry */
-	readonly metadata?: LogMetadata;
-}
+	metadata: LogMetadataSchema.optional(),
+});
+
+export type LogOptions = z.output<typeof LogOptionsSchema>;
 
 /**
  * Application-level structured logging service.

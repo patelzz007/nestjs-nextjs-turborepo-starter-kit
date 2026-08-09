@@ -4,11 +4,11 @@ import { BookOpen, Braces, Database, KeyRound, Network, Package, Rocket, ScrollT
 import Link from "next/link";
 import * as React from "react";
 
-import { Card, CardContent } from "@workspace/ui/components/card";
+import { Card, CardContent } from "@workspace/ui/components/display/card";
 
 import { DocsSearchBox } from "@/components/docs/docs-search-box";
-import { highlightText } from "@/lib/highlight";
-import { filterDocSummaries, formatIsoDate } from "@/lib/markdown";
+import { highlightText } from "@/components/common/highlight";
+import { filterDocSummaries, formatIsoDate } from "@/lib/docs/markdown";
 import type { DocSummary } from "@/lib/docs";
 
 /**

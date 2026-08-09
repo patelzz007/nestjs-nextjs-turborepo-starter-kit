@@ -270,13 +270,14 @@ DB/terminal write still goes through the single parent.
 **Why:** debug is too chatty for prod but too valuable to delete.
 **How:** `sampled?: boolean` option; when set, persist only if `Math.random() < LOG_SAMPLE_RATE`.
 
-## 29. Zod-typed `LogService` options (rule 13/5)
+## 29. Zod-typed `LogService` options (rule 13/5) — ✅ Done
 
 **What:** `LogOptions` should be an inferred type from a zod schema, not a hand-written
 interface with stringly-typed keys.
 **Why:** repo rules — infer from zod, use tuples over `as const`, no `typeof` guards.
-**How:** `LogEntrySchema` in shared (item 4) — `LogOptions = z.input<typeof LogEntrySchema>`
-at the `LogService` boundary.
+**How (done):** `apps/api/src/modules/logs/logs.service.ts` now exports
+`LogOptionsSchema`/`LogMetadataSchema`; `LogOptions = z.output<typeof LogOptionsSchema>`
+and `LogMetadata = z.output<typeof LogMetadataSchema>` — schema-first, no hand-written shape.
 
 ## 30. Test coverage for `LogService`
 

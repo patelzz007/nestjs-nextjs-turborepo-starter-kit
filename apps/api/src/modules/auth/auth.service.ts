@@ -1,27 +1,22 @@
-import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException, UnauthorizedException } from "@nestjs/common";
-import {
+import { ConflictException, ForbiddenException, Injectable, NotFoundException, UnauthorizedException } from "@nestjs/common";
+import type {
 	AdminUserDetail,
 	ForgotPasswordInput,
 	ForgotPasswordResponse,
-	ImpersonateResponse,
 	LoginInput,
 	LoginServiceResponse,
 	MessageResponse,
-	RefreshResponse,
 	ResendVerificationInput,
 	ResendVerificationResponse,
 	ResetPasswordInput,
 	ResetPasswordResponse,
-	Session,
-	SessionSchema,
 	SignupInput,
 	SignupResponse,
-	StopImpersonationResponse,
 	UserResponse,
 	VerifyEmailResponse,
 } from "@workspace/shared";
 
-import { UserPermissions } from "../../common/interfaces/rbac.interface.js";
+import { UserPermissions } from "../rbac/rbac.interface.js";
 import { parseExpiryToMilliseconds } from "../../common/utils/expiry.js";
 import { TypedConfigService } from "../../config/typed-config.service.js";
 import { LogService } from "../../modules/logs/logs.service.js";
@@ -32,6 +27,14 @@ import { CryptoService } from "./services/crypto.service.js";
 import { EmailService } from "./services/email.service.js";
 import { TokenService } from "./services/token.service.js";
 
+/**
+ * Credential / identity / admin operations: signup, login, email verification,
+ * password reset, profile (`/me`), and SuperAdmin user management.
+ *
+ * Session lifecycle (refresh, logout, active sessions) lives in
+ * `modules/sessions` and impersonation in `modules/impersonation` — see
+ * `docs/architecture.md` (module layout convention).
+ */
 @Injectable()
 export class AuthService {
 	constructor(
@@ -294,178 +297,8 @@ export class AuthService {
 		};
 	}
 
-	public async refreshToken(userId: string, rawRefreshTokenJwt: string, refreshTokenJti: string, deviceInfo?: string, ipAddress?: string): Promise<RefreshResponse> {
-		const user = await this.prisma.user.findUnique({
-			where: { id: userId },
-			select: {
-				id: true,
-				email: true,
-				isActive: true,
-				isSuperAdmin: true,
-				fullName: true,
-				emailVerifiedAt: true,
-				createdAt: true,
-				updatedAt: true,
-				isDeleted: true,
-				deletedAt: true,
-			},
-		});
-
-		if (!user) {
-			throw new UnauthorizedException({
-				message: "User account no longer exists. Please log in again.",
-				error: "USER_NOT_FOUND",
-			});
-		}
-
-		if (!user.isActive) {
-			throw new UnauthorizedException({
-				message: "Account is inactive. Please contact support.",
-				error: "ACCOUNT_IS_INACTIVE",
-			});
-		}
-
-		if (user.isDeleted) {
-			throw new UnauthorizedException({
-				message: "Account has been deleted. Please contact support.",
-				error: "ACCOUNT_DELETED",
-			});
-		}
-
-		// Look up the refresh token record directly by its ID (extracted from JWT jti claim)
-		const storedToken = await this.prisma.refreshToken.findUnique({
-			where: { id: refreshTokenJti },
-		});
-
-		if (storedToken?.userId !== userId) {
-			throw new UnauthorizedException({
-				message: "Invalid refresh token",
-				error: "REFRESH_TOKEN_INVALID",
-			});
-		}
-
-		if (storedToken.expiresAt < new Date()) {
-			throw new UnauthorizedException("Refresh token has expired");
-		}
-
-		// ── Reuse Detection (Strategy 3) ────────────────────────────────────
-		// Compare the incoming raw refresh token JWT against the stored bcrypt hash.
-		// If they DON'T match, someone is using an OLD refresh token that was
-		// already rotated — this indicates token theft.
-		// ─────────────────────────────────────────────────────────────────────
-		const tokenMatches = await this.cryptoService.compare(rawRefreshTokenJwt, storedToken.token);
-		if (!tokenMatches) {
-			this.logService.warn("Suspicious activity: token reuse detected — revoking all sessions", {
-				userId: user.id,
-				context: "AuthService",
-				metadata: { tokenId: storedToken.id },
-			});
-
-			// Token theft detected — revoke ALL refresh tokens for this user
-			await this.prisma.refreshToken.updateMany({
-				where: { userId: user.id },
-				data: { isDeleted: true, deletedAt: new Date() },
-			});
-
-			throw new UnauthorizedException({
-				message: "Suspicious activity detected. All sessions have been revoked. Please log in again.",
-				error: "TOKEN_THEFT_DETECTED",
-			});
-		}
-
-		// Get user permissions
-		const userPermissions = await this.rbacService.getUserPermissions(user.id);
-		const isEmailVerified = user.emailVerifiedAt !== null && user.emailVerifiedAt <= new Date();
-		const flatUser = this.buildUserResponse(user, userPermissions, isEmailVerified);
-
-		// Update the existing refresh token record with new expiry and hashed token (rotation)
-		const expiryMs = parseExpiryToMilliseconds(this.config.jwtRefreshExpiry);
-		const expiresAt = new Date(Date.now() + expiryMs);
-
-		const tokens = await this.tokenService.generateTokens(flatUser, storedToken.id);
-		const hashedRt = await this.cryptoService.hash(tokens.refreshToken);
-
-		await this.prisma.refreshToken.update({
-			where: { id: storedToken.id },
-			data: {
-				token: hashedRt,
-				deviceInfo: deviceInfo ?? storedToken.deviceInfo,
-				ipAddress: ipAddress ?? storedToken.ipAddress,
-				expiresAt,
-			},
-		});
-
-		return tokens;
-	}
-
-	/**
-	 * Logout from the specific device identified by the refresh token's jti.
-	 */
-	public async logoutDevice(userId: string, refreshTokenJti: string): Promise<void> {
-		const storedToken = await this.prisma.refreshToken.findUnique({
-			where: { id: refreshTokenJti },
-		});
-
-		if (storedToken?.userId === userId) {
-			await this.prisma.refreshToken.update({
-				where: { id: storedToken.id },
-				data: { isDeleted: true, deletedAt: new Date() },
-			});
-		}
-	}
-
-	/**
-	 * Logout from all devices — clears every refresh token for this user.
-	 */
-	public async logoutAllDevices(userId: string): Promise<void> {
-		await this.prisma.refreshToken.updateMany({
-			where: { userId },
-			data: { isDeleted: true, deletedAt: new Date() },
-		});
-	}
-
 	public async getMe(userId: string): Promise<UserResponse> {
 		return this.getUserResponse(userId);
-	}
-
-	// ═══════════════════════════════════════════════════════════════════════════
-	// Active Sessions
-	// ═══════════════════════════════════════════════════════════════════════════
-
-	/**
-	 * Get all active sessions (refresh tokens) for the current user.
-	 * Returns device info, IP, creation date, and expiry date.
-	 * Does NOT return the token hash.
-	 */
-	public async getSessions(userId: string): Promise<Session[]> {
-		const tokens = await this.prisma.refreshToken.findMany({
-			where: {
-				userId,
-				isDeleted: false,
-				expiresAt: { gte: new Date() },
-			},
-			orderBy: { createdAt: "desc" },
-			select: {
-				id: true,
-				deviceInfo: true,
-				ipAddress: true,
-				createdAt: true,
-				expiresAt: true,
-			},
-		});
-
-		// Convert Date objects to ISO strings before Zod validation.
-		// SessionSchema expects `expiresAt` and `createdAt` as `z.string()`, but
-		// Prisma returns native Date objects. Without this conversion, Zod throws.
-		return tokens.map((t: { id: string; deviceInfo: string | null; ipAddress: string | null; createdAt: Date; expiresAt: Date }) =>
-			SessionSchema.parse({
-				id: t.id,
-				deviceInfo: t.deviceInfo,
-				ipAddress: t.ipAddress,
-				createdAt: t.createdAt.toISOString(),
-				expiresAt: t.expiresAt.toISOString(),
-			}),
-		);
 	}
 
 	// ═══════════════════════════════════════════════════════════════════════════
@@ -628,135 +461,6 @@ export class AuthService {
 		});
 
 		return { message: "Email verified successfully" };
-	}
-
-	// ═══════════════════════════════════════════════════════════════════════════
-	// Impersonation
-	// ═══════════════════════════════════════════════════════════════════════════
-
-	/**
-	 * SuperAdmin impersonates another user.
-	 * Returns a short-lived access token for the target user with impersonation
-	 * claims embedded in the JWT payload.
-	 *
-	 * Rules:
-	 * - Only isSuperAdmin users can impersonate
-	 * - Cannot impersonate other superadmins
-	 * - Target user must exist and be active
-	 */
-	public async impersonateUser(superAdminId: string, targetUserId: string, ipAddress?: string, userAgent?: string | null): Promise<ImpersonateResponse> {
-		// 1. Verify the impersonator is a superadmin
-		const superAdmin = await this.prisma.user.findUnique({
-			where: { id: superAdminId },
-			select: { id: true, isSuperAdmin: true },
-		});
-
-		if (!superAdmin?.isSuperAdmin) {
-			throw new ForbiddenException("Only super administrators can impersonate users");
-		}
-
-		// 2. Cannot impersonate yourself
-		if (superAdminId === targetUserId) {
-			throw new BadRequestException("Cannot impersonate yourself");
-		}
-
-		// 3. Verify target user exists, is active, and is not a superadmin
-		const targetUser = await this.prisma.user.findUnique({
-			where: { id: targetUserId },
-			select: {
-				id: true,
-				email: true,
-				fullName: true,
-				isActive: true,
-				isSuperAdmin: true,
-				isDeleted: true,
-				emailVerifiedAt: true,
-				createdAt: true,
-				updatedAt: true,
-				deletedAt: true,
-			},
-		});
-
-		if (!targetUser) {
-			throw new NotFoundException("Target user not found");
-		}
-
-		if (!targetUser.isActive || targetUser.isDeleted) {
-			throw new BadRequestException("Cannot impersonate an inactive or deleted user");
-		}
-
-		if (targetUser.isSuperAdmin) {
-			throw new ForbiddenException("Cannot impersonate another super administrator");
-		}
-
-		// 4. Get target user's permissions
-		const userPermissions = await this.rbacService.getUserPermissions(targetUser.id);
-		const isEmailVerified = targetUser.emailVerifiedAt !== null && targetUser.emailVerifiedAt <= new Date();
-		const flatUser = this.buildUserResponse(targetUser, userPermissions, isEmailVerified);
-
-		// 5. Generate impersonation token
-		const accessToken = await this.tokenService.generateImpersonationToken(flatUser, superAdmin.id);
-
-		// 6. Persist audit log entry
-		await this.prisma.impersonationAuditLog.create({
-			data: {
-				impersonatorId: superAdmin.id,
-				targetUserId: targetUser.id,
-				action: "START",
-				ipAddress: ipAddress ?? null,
-				userAgent: userAgent ?? null,
-			},
-		});
-
-		// 7. Application-level audit log
-		this.logService.warn("SuperAdmin impersonation started", {
-			context: "AuthService",
-			metadata: {
-				superAdminId: superAdmin.id,
-				targetUserId: targetUser.id,
-			},
-		});
-
-		return {
-			accessToken,
-			message: `Now impersonating ${targetUser.email}`,
-			impersonating: true,
-			originalUserId: superAdmin.id,
-			user: flatUser,
-		};
-	}
-
-	/**
-	 * Stop impersonating.
-	 * Returns a confirmation message. The frontend should discard the
-	 * impersonation token and restore the original session.
-	 *
-	 * @param impersonatorId - The SuperAdmin's original user ID (from originalUserId claim)
-	 * @param targetUserId - The user who was being impersonated (from sub claim)
-	 */
-	public async stopImpersonation(impersonatorId: string, targetUserId: string, ipAddress?: string, userAgent?: string | null): Promise<StopImpersonationResponse> {
-		// Persist audit log entry with both IDs correctly recorded
-		await this.prisma.impersonationAuditLog.create({
-			data: {
-				impersonatorId,
-				targetUserId,
-				action: "STOP",
-				ipAddress: ipAddress ?? null,
-				userAgent: userAgent ?? null,
-			},
-		});
-
-		this.logService.warn("SuperAdmin impersonation ended", {
-			context: "AuthService",
-			metadata: {
-				impersonatorId: impersonatorId,
-				targetUserId: targetUserId,
-			},
-		});
-
-		return {
-			message: "Impersonation ended. Original session restored.",
-		};
 	}
 
 	/**
@@ -953,7 +657,14 @@ export class AuthService {
 		});
 	}
 
-	private buildUserResponse(
+	/**
+	 * Builds the canonical `UserResponse` (with roles + permissions) from a
+	 * Prisma user row. `public` because the sibling `SessionsService` and
+	 * `ImpersonationService` reuse it when constructing their own responses
+	 * (token refresh / impersonation targets) — kept here so the shape lives
+	 * in exactly one place.
+	 */
+	public buildUserResponse(
 		user: Pick<UserResponse, "id" | "email" | "fullName" | "isActive" | "isSuperAdmin"> & { createdAt: Date; updatedAt: Date; isDeleted: boolean; deletedAt: Date | null },
 		userPermissions: UserPermissions,
 		isEmailVerified: boolean,

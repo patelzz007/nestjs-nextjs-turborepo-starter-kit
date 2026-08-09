@@ -1,7 +1,7 @@
 import { ArrowRight, BookOpen, Clock, PenLine } from "lucide-react";
 import Link from "next/link";
 
-import { formatIsoDate } from "@/lib/markdown";
+import { formatIsoDate } from "@/lib/docs/markdown";
 import type { DocContent } from "@/lib/docs";
 
 /**

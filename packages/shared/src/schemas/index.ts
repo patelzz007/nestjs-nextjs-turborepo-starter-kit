@@ -11,7 +11,7 @@ export {
 	UsageLogQuerySchema,
 	UsageStatsResponseSchema,
 	VerifiedApiKeySchema,
-} from "./api-keys";
+} from "./domain/api-keys";
 export type {
 	AdminApiKey,
 	ApiKeyMessageResponse,
@@ -23,7 +23,7 @@ export type {
 	UsageLogQueryInput,
 	UsageStatsResponse,
 	VerifiedApiKey,
-} from "./api-keys";
+} from "./domain/api-keys";
 export {
 	ForgotPasswordResponseSchema,
 	ForgotPasswordSchema,
@@ -45,7 +45,7 @@ export {
 	StopImpersonationResponseSchema,
 	strongPassword,
 	VerifyEmailResponseSchema,
-} from "./auth";
+} from "./auth/auth";
 export type {
 	ForgotPasswordInput,
 	ForgotPasswordResponse,
@@ -66,11 +66,11 @@ export type {
 	SignupResponse,
 	StopImpersonationResponse,
 	VerifyEmailResponse,
-} from "./auth";
-export { ApiErrorResponseSchema, ApiPaginatedMetaSchema, ApiResponseMetaSchema, ApiSuccessResponseSchema } from "./api-response";
-export type { ApiErrorResponse, ApiPaginatedMeta, ApiResponseMeta, ApiSuccessResponse } from "./api-response";
-export { AuthErrorCodeSchema, LockedErrorCodeSchema } from "./auth-errors";
-export type { AuthErrorCode, LockedErrorCode } from "./auth-errors";
+} from "./auth/auth";
+export { ApiErrorResponseSchema, ApiPaginatedMetaSchema, ApiResponseMetaSchema, ApiSuccessResponseSchema } from "./api/api-response";
+export type { ApiErrorResponse, ApiPaginatedMeta, ApiResponseMeta, ApiSuccessResponse } from "./api/api-response";
+export { AuthErrorCodeSchema, LockedErrorCodeSchema } from "./auth/auth-errors";
+export type { AuthErrorCode, LockedErrorCode } from "./auth/auth-errors";
 export {
 	AccountAnalyticsResponseSchema,
 	AdminOverviewResponseSchema,
@@ -80,7 +80,7 @@ export {
 	ClickQuerySchema,
 	ClickRecordResponseSchema,
 	UrlAnalyticsResponseSchema,
-} from "./clicks";
+} from "./domain/clicks";
 export type {
 	AccountAnalyticsResponse,
 	AdminOverviewResponse,
@@ -90,17 +90,17 @@ export type {
 	ClickQueryInput,
 	ClickRecordResponse,
 	UrlAnalyticsResponse,
-} from "./clicks";
-export { BaseResponseSchema, DateStringSchema } from "./common";
-export type { BaseResponse } from "./common";
-export { SessionStatusSchema } from "./session-status";
-export type { SessionStatus } from "./session-status";
-export { EnvSchema, parseEnv } from "./env";
-export type { Env } from "./env";
-export { AudienceTypeSchema, DeviceTypeSchema, MenuMatchTypeSchema, PermissionActionSchema, PermissionResourceSchema, PlanSchema, RedirectTypeSchema } from "./enums";
-export type { AudienceType, DeviceType, MenuMatchType, PermissionAction, PermissionResource, Plan, RedirectType } from "./enums";
-export { HealthResponseSchema } from "./health.schema";
-export type { HealthResponse } from "./health.schema";
+} from "./domain/clicks";
+export { BaseResponseSchema, DateStringSchema } from "./api/common";
+export type { BaseResponse } from "./api/common";
+export { SessionStatusSchema } from "./auth/session-status";
+export type { SessionStatus } from "./auth/session-status";
+export { EnvSchema, parseEnv } from "./api/env";
+export type { Env } from "./api/env";
+export { AudienceTypeSchema, DeviceTypeSchema, MenuMatchTypeSchema, PermissionActionSchema, PermissionResourceSchema, PlanSchema, RedirectTypeSchema } from "./domain/enums";
+export type { AudienceType, DeviceType, MenuMatchType, PermissionAction, PermissionResource, Plan, RedirectType } from "./domain/enums";
+export { HealthResponseSchema } from "./api/health.schema";
+export type { HealthResponse } from "./api/health.schema";
 export {
 	AggregatedLogSchema,
 	ErrorGroupQuerySchema,
@@ -117,7 +117,7 @@ export {
 	LogStatsQuerySchema,
 	LogStatsSchema,
 	MetadataValueSchema,
-} from "./logs";
+} from "./domain/logs";
 export type {
 	AggregatedLog,
 	ErrorGroup,
@@ -133,13 +133,13 @@ export type {
 	LogQuery,
 	LogStats,
 	LogStatsQuery,
-} from "./logs";
-export { CreateMenuItemSchema, MenuItemResponseSchema, MenuMessageResponseSchema, UpdateMenuItemSchema } from "./menu";
-export type { CreateMenuItemInput, MenuItemResponse, MenuMessageResponse, UpdateMenuItemInput } from "./menu";
-export { ErrorResponseSchema, MessageResponseSchema } from "./message";
-export type { ErrorResponse, MessageResponse } from "./message";
-export { PaginatedResponseSchema, PaginationMetaSchema, PaginationSchema } from "./pagination";
-export type { PaginatedResponse, PaginationInput, PaginationMeta } from "./pagination";
+} from "./domain/logs";
+export { CreateMenuItemSchema, MenuItemResponseSchema, MenuMessageResponseSchema, UpdateMenuItemSchema } from "./domain/menu";
+export type { CreateMenuItemInput, MenuItemResponse, MenuMessageResponse, UpdateMenuItemInput } from "./domain/menu";
+export { ErrorResponseSchema, MessageResponseSchema } from "./api/message";
+export type { ErrorResponse, MessageResponse } from "./api/message";
+export { PaginatedResponseSchema, PaginationMetaSchema, PaginationSchema } from "./api/pagination";
+export type { PaginatedResponse, PaginationInput, PaginationMeta } from "./api/pagination";
 export {
 	AssignPermissionsToUserBulkSchema,
 	AssignPermissionToRoleSchema,
@@ -175,7 +175,7 @@ export {
 	RoleFilterSchema,
 	RoleResponseSchema,
 	SetRoleParentSchema,
-} from "./rbac";
+} from "./domain/rbac";
 export type {
 	AssignPermissionsToUserBulkInput,
 	AssignPermissionToRoleInput,
@@ -212,10 +212,18 @@ export type {
 	RoleFilterInput,
 	RoleResponse,
 	SetRoleParentInput,
-} from "./rbac";
-export { CreateTagSchema, TagAssignResponseSchema, TagMessageResponseSchema, TagResponseSchema, TagWithUrlsResponseSchema, UpdateTagSchema } from "./tags";
-export type { CreateTagInput, TagAssignResponse, TagMessageResponse, TagResponse, TagWithUrlsResponse, UpdateTagInput } from "./tags";
-export { CreateUrlSchema, RedirectResponseSchema, UpdateUrlSchema, UrlMessageResponseSchema, UrlQuerySchema, UrlResponseSchema, UrlStatsResponseSchema } from "./url";
-export type { CreateUrlInput, RedirectResponse, UpdateUrlInput, UrlMessageResponse, UrlQueryInput, UrlResponse, UrlStatsResponse } from "./url";
-export { AdminUserDetailSchema, PermissionDetailsSchema, SlimRoleSchema, UpdateProfileSchema, UpdateUserSchema, UserMessageResponseSchema, UserResponseSchema } from "./user";
-export type { AdminUserDetail, PermissionDetailsResponse, SlimRoleResponse, UpdateProfileInput, UpdateUserInput, UserMessageResponse, UserResponse } from "./user";
+} from "./domain/rbac";
+export { CreateTagSchema, TagAssignResponseSchema, TagMessageResponseSchema, TagResponseSchema, TagWithUrlsResponseSchema, UpdateTagSchema } from "./domain/tags";
+export type { CreateTagInput, TagAssignResponse, TagMessageResponse, TagResponse, TagWithUrlsResponse, UpdateTagInput } from "./domain/tags";
+export { CreateUrlSchema, RedirectResponseSchema, UpdateUrlSchema, UrlMessageResponseSchema, UrlQuerySchema, UrlResponseSchema, UrlStatsResponseSchema } from "./domain/url";
+export type { CreateUrlInput, RedirectResponse, UpdateUrlInput, UrlMessageResponse, UrlQueryInput, UrlResponse, UrlStatsResponse } from "./domain/url";
+export {
+	AdminUserDetailSchema,
+	PermissionDetailsSchema,
+	SlimRoleSchema,
+	UpdateProfileSchema,
+	UpdateUserSchema,
+	UserMessageResponseSchema,
+	UserResponseSchema,
+} from "./auth/user";
+export type { AdminUserDetail, PermissionDetailsResponse, SlimRoleResponse, UpdateProfileInput, UpdateUserInput, UserMessageResponse, UserResponse } from "./auth/user";

@@ -1,9 +1,9 @@
 "use client";
 
-import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
-import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@workspace/ui/components/chart";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@workspace/ui/components/select";
-import { ToggleGroup, ToggleGroupItem } from "@workspace/ui/components/toggle-group";
+import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
+import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@workspace/ui/components/display/chart";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@workspace/ui/components/form/select";
+import { ToggleGroup, ToggleGroupItem } from "@workspace/ui/components/form/toggle-group";
 import { useIsMobile } from "@workspace/ui/hooks/use-mobile";
 import * as React from "react";
 import { Area, AreaChart, CartesianGrid, XAxis } from "recharts";

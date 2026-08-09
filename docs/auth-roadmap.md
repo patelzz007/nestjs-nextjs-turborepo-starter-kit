@@ -1077,11 +1077,11 @@ both frontends map to friendly, locale-ready messages. Also preserves the lockou
 
 **How it was implemented:**
 
-- `packages/ui/src/components/password-input.tsx` — show/hide toggle (eye icon) + caps-lock
+- `packages/ui/src/components/form/password-input.tsx` — show/hide toggle (eye icon) + caps-lock
   warning driven by `getModifierState("CapsLock")` on keydown.
-- `packages/ui/src/components/password-strength-meter.tsx` — a meter bar + label + unmet-
+- `packages/ui/src/components/form/password-strength-meter.tsx` — a meter bar + label + unmet-
   criteria checklist.
-- `packages/ui/src/components/lockout-countdown.tsx` — live "retry in MM:SS" countdown fed by
+- `packages/ui/src/components/form/lockout-countdown.tsx` — live "retry in MM:SS" countdown fed by
   the `remainingSeconds` on an `ACCOUNT_LOCKED` error.
 - `packages/client/src/lib/password.ts` — `passwordStrength()` pure helper (tested) that scores
   0–4 by how many of five criteria are met. The criteria **deliberately mirror** `strongPassword`
@@ -1235,7 +1235,7 @@ logs out every tab sharing the same cookie set.
 
 **Test coverage:** the batch is locked down by unit tests in `packages/client` (auth, auth-sync,
 proxy-refresh, password, use-api), `apps/web` (proxy), `apps/admin` (proxy), plus the
-real-docs frontmatter test in `apps/admin/lib/__tests__/markdown.test.ts`.
+real-docs frontmatter test in `apps/admin/lib/docs/markdown.test.ts`.
 
 ---
 
@@ -1346,7 +1346,7 @@ The 30-point auth hardening plan (deep dive) -----------------------------------
 **Implementation plan:**
 
 1. **Schema:** add `tokenVersion Int @default(0)` to `User` (+ migration).
-2. **JWT:** include `tokenVersion` in `AccessTokenPayload` (`token.service.ts`).
+2. **JWT:** include `tokenVersion` in `AccessTokenPayload` (`token.service.ts`). **⚠ Must also add the claim to `AccessTokenPayloadSchema`** — the zod verify-parse (`verifyAccessToken`) strips unknown claims, so a schema-only-forgetting-JWT change would silently drop the claim in every decoded token.
 3. **Guard:** in `AuthGuard.canActivate`, after `verifyAccessToken`, fetch the user's `tokenVersion` and reject when `payload.tokenVersion !== user.tokenVersion` (`ACCESS_TOKEN_STALE` error code, 401). Add the same check to `refreshToken()` in the service.
 4. **Bump points:** `resetPassword` (already revokes tokens — also `increment: 1`), a new self-service `PATCH /auth/password` (item 31 in Beyond-the-30), admin role/permission changes (RBAC service), and account deactivation (item 25).
 

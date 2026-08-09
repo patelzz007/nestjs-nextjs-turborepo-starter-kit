@@ -6,10 +6,12 @@
 	"scripts": {
 		"lint": "eslint",
 		"format": "prettier --write \"**/*.{ts,tsx}\"",
-		"typecheck": "tsc --noEmit"
+		"typecheck": "tsc --noEmit",
+		"test": "vitest run"
 	},
 	"dependencies": {
 		"@base-ui/react": "^1.6.0",
+		"@tanstack/react-table": "^9.0.0",
 		"@shadcn/react": "^0.2.1",
 		"@workspace/reactive": "workspace:*",
 		"class-variance-authority": "^0.7.1",
@@ -33,15 +35,20 @@
 	},
 	"devDependencies": {
 		"@tailwindcss/postcss": "^4.3.3",
+		"@testing-library/dom": "^10.4.1",
+		"@testing-library/react": "^16.3.2",
 		"@turbo/gen": "^2.10.8",
 		"@types/node": "^26.1.2",
 		"@types/react": "^19.2.18",
 		"@types/react-dom": "^19.2.4",
+		"@vitejs/plugin-react": "^6.0.5",
 		"@workspace/eslint-config": "workspace:*",
 		"@workspace/typescript-config": "workspace:*",
 		"eslint": "^9.39.5",
+		"jsdom": "^30.0.1",
 		"tailwindcss": "^4.3.3",
-		"typescript": "7.0.2"
+		"typescript": "7.0.2",
+		"vitest": "^4.1.10"
 	},
 	"exports": {
 		"./globals.css": "./src/styles/globals.css",
@@ -50,6 +57,12 @@
 		"./lib/*.tsx": "./src/lib/*.tsx",
 		"./lib/*.ts": "./src/lib/*.ts",
 		"./components/*": "./src/components/*.tsx",
+		"./components/form/*": "./src/components/form/*.tsx",
+		"./components/overlay/*": "./src/components/overlay/*.tsx",
+		"./components/navigation/*": "./src/components/navigation/*.tsx",
+		"./components/feedback/*": "./src/components/feedback/*.tsx",
+		"./components/chat/*": "./src/components/chat/*.tsx",
+		"./components/display/*": "./src/components/display/*.tsx",
 		"./hooks/*": "./src/hooks/*.ts"
 	}
 }

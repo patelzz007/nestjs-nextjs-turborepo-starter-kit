@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 
-import { LoginForm } from "@/components/auth/login-form";
+import { LoginForm } from "@workspace/client/lib/auth/login-form";
 
 /** Web app URL — set `NEXT_PUBLIC_WEB_URL` in `apps/admin/.env` to change it. */
 const WEB_BASE_URL: string = process.env.NEXT_PUBLIC_WEB_URL ?? "http://localhost:3000";
@@ -53,7 +53,7 @@ function AdminLoginContent(): React.JSX.Element {
 					title="Admin Panel"
 					heading="Admin Login"
 					subtitle="Sign in with your administrator credentials"
-					emailPlaceholder="admin@example.com"
+					mode="admin"
 					redirectPath={redirectPath}
 					footer={
 						<p className="text-center text-xs text-balance text-muted-foreground">

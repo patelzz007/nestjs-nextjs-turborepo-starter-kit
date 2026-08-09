@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 // `didTokenRotate` lives with the stream pipeline (lib/session-badge.ts); the
 // component file only exports the presentational view.
-import { didTokenRotate } from "@/lib/session-badge";
+import { didTokenRotate } from "@/lib/session-status-badge";
 import { SessionStatusView } from "./session-status-badge";
 
 afterEach(() => {

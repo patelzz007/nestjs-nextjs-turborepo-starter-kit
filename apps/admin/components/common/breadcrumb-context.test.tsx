@@ -13,7 +13,7 @@ import {
 	createBreadcrumbContext,
 	type BreadcrumbItem,
 	type BreadcrumbStatus,
-} from "@workspace/ui/components/breadcrumb-context";
+} from "@workspace/ui/components/navigation/breadcrumb-context";
 
 afterEach(() => {
 	cleanup();

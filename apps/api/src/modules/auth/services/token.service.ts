@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from "@nestjs/common";
+import { Injectable, Logger, UnauthorizedException } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 // `jsonwebtoken` is CJS; its named export `TokenExpiredError` is not statically
 // detectable by Node's ESM-CJS interop (cjs-module-lexer), so a named import
@@ -6,7 +6,9 @@ import { JwtService } from "@nestjs/jwt";
 // the error class at runtime (and is fully typed via `export =` declarations).
 import jwt from "jsonwebtoken";
 
-import { FlatUserResponse, JwtPermission } from "../../../common/interfaces/rbac.interface.js";
+import { z, ZodError } from "zod";
+
+import { FlatUserResponse, JwtPermission, JwtPermissionSchema } from "../../rbac/rbac.interface.js";
 import { parseExpiryToSeconds } from "../../../common/utils/expiry.js";
 import { TypedConfigService } from "../../../config/typed-config.service.js";
 
@@ -23,46 +25,52 @@ const { TokenExpiredError } = jwt;
  * when attaching the payload to `request.user` — the guards only check
  * action+resource, so the slim format is sufficient.
  */
-export interface AccessTokenPayload {
-	sub: string;
-	id: string;
-	email: string;
-	fullName: string;
-	isActive: boolean;
-	isSuperAdmin: boolean;
-	isEmailVerified: boolean;
-	hasAdminAccess: boolean;
-	roles: { id: string; name: string; description: string | null }[];
-	permissions: JwtPermission[];
+export const AccessTokenPayloadSchema = z.object({
+	sub: z.string(),
+	id: z.string(),
+	email: z.string(),
+	fullName: z.string(),
+	isActive: z.boolean(),
+	isSuperAdmin: z.boolean(),
+	isEmailVerified: z.boolean(),
+	hasAdminAccess: z.boolean(),
+	roles: z.array(z.object({ id: z.string(), name: z.string(), description: z.string().nullable() })),
+	permissions: z.array(JwtPermissionSchema),
 
-	/** @description Set to true when a SuperAdmin is impersonating this user */
-	isImpersonating?: boolean;
-	/** @description The SuperAdmin's original user ID (only set when isImpersonating === true) */
-	originalUserId?: string;
+	/** Set to true when a SuperAdmin is impersonating this user */
+	isImpersonating: z.boolean().optional(),
+	/** The SuperAdmin's original user ID (only set when isImpersonating === true) */
+	originalUserId: z.string().optional(),
 
-	iat?: number;
-	exp?: number;
-}
+	iat: z.number().optional(),
+	exp: z.number().optional(),
+});
+
+export type AccessTokenPayload = z.output<typeof AccessTokenPayloadSchema>;
 
 /**
  * The shape embedded in the refresh token JWT payload.
  * Includes a `jti` (JWT ID) for direct database lookup without iterating all tokens.
  */
-export interface RefreshTokenPayload {
-	sub: string;
-	email: string;
+export const RefreshTokenPayloadSchema = z.object({
+	sub: z.string(),
+	email: z.string(),
 	/**
 	 * JWT ID — stored in the RefreshToken model's `id` field.
 	 * Allows direct DB lookup without iterating all tokens.
 	 */
-	jti: string;
-	tokenType: "refresh";
-	iat: number;
-	exp: number;
-}
+	jti: z.string(),
+	tokenType: z.literal("refresh"),
+	iat: z.number(),
+	exp: z.number(),
+});
+
+export type RefreshTokenPayload = z.output<typeof RefreshTokenPayloadSchema>;
 
 @Injectable()
 export class TokenService {
+	private readonly logger: Logger = new Logger(TokenService.name);
+
 	constructor(
 		private readonly jwtService: JwtService,
 		private readonly config: TypedConfigService,
@@ -122,15 +130,26 @@ export class TokenService {
 	 */
 	public async verifyAccessToken(token: string): Promise<AccessTokenPayload> {
 		try {
-			return await this.jwtService.verifyAsync<AccessTokenPayload>(token, {
+			const payload = await this.jwtService.verifyAsync<AccessTokenPayload>(token, {
 				secret: this.config.jwtAccessSecret,
 			});
+			// Runtime-validate the decoded claims so a structurally-wrong token
+			// (missing fields / wrong types) is rejected here, not deep inside a
+			// guard. A malformed payload lands in the same catch below as an
+			// invalid token.
+			return AccessTokenPayloadSchema.parse(payload);
 		} catch (error: unknown) {
 			if (error instanceof TokenExpiredError) {
 				throw new UnauthorizedException({
 					message: "Access token has expired",
 					error: "ACCESS_TOKEN_EXPIRED",
 				});
+			}
+			// A ZodError here means OUR schema drifted from the tokens we sign
+			// (not a client attack) — log it loudly so it's not mistaken for
+			// malicious traffic at 2 AM.
+			if (error instanceof ZodError) {
+				this.logger.error(`Access token payload failed schema validation: ${error.message}`);
 			}
 			throw new UnauthorizedException({
 				message: "Invalid or malformed access token",
@@ -145,15 +164,20 @@ export class TokenService {
 	 */
 	public async verifyRefreshToken(token: string): Promise<RefreshTokenPayload> {
 		try {
-			return await this.jwtService.verifyAsync<RefreshTokenPayload>(token, {
+			const payload = await this.jwtService.verifyAsync<RefreshTokenPayload>(token, {
 				secret: this.config.jwtRefreshSecret,
 			});
+			// Runtime-validate the decoded claims (see verifyAccessToken).
+			return RefreshTokenPayloadSchema.parse(payload);
 		} catch (error: unknown) {
 			if (error instanceof TokenExpiredError) {
 				throw new UnauthorizedException({
 					message: "Refresh token has expired",
 					error: "REFRESH_TOKEN_EXPIRED",
 				});
+			}
+			if (error instanceof ZodError) {
+				this.logger.error(`Refresh token payload failed schema validation: ${error.message}`);
 			}
 			throw new UnauthorizedException({
 				message: "Invalid or malformed refresh token",

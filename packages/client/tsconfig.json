@@ -5,7 +5,8 @@
 		"moduleResolution": "bundler",
 		"types": ["node"],
 		"paths": {
-			"@workspace/client/*": ["./src/*"]
+			"@workspace/client/*": ["./src/*"],
+			"@workspace/ui/*": ["../ui/src/*"]
 		}
 	},
 	"include": ["."],

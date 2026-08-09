@@ -4,7 +4,7 @@ import { BookOpen, Clock, PenLine } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import type { DocContent } from "@/lib/docs";
-import { formatIsoDate } from "@/lib/markdown";
+import { formatIsoDate } from "@/lib/docs/markdown";
 
 /**
  * DocBanner — the cover banner shown at the top of every `/docs/<slug>` page.

@@ -4,7 +4,7 @@
 		// Emit real ESM + .d.ts files with tsc (no bundler, no tsup).
 		// Source is authored extensionless for Turbopack/dev (`module: ESNext` +
 		// `moduleResolution: bundler`, inherited from tsconfig.json); Node's ESM
-		// runtime still needs `.js` extensions, so `scripts/fix-dist-extensions.mjs`
+		// runtime still needs `.js` extensions, so `packages/tooling/scripts/fix-dist-extensions.mjs`
 		// rewrites dist/ after emit (see package.json build script).
 		"noEmit": false,
 		"outDir": "./dist",

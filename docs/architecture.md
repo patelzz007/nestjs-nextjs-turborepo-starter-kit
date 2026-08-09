@@ -68,9 +68,9 @@ Think of the monorepo as **three layers**, each depending only on the layer belo
 | `apps/admin`                 | `@workspace/admin`             | Admin panel Next.js app (dashboard…)                                   | 3001 |
 | `apps/api`                   | `@workspace/api`               | NestJS backend — all endpoints, auth, Prisma                           | 8080 |
 | `packages/ui`                | `@workspace/ui`                | shadcn/ui components (and `globals.css`)                               | —    |
-| `packages/client`            | `@workspace/client`            | AuthContext, `useApi`, typed endpoint registry                         | —    |
+| `packages/client`            | `@workspace/client`            | AuthContext, `useApi`, typed endpoint registry, shared auth UI (`LoginForm`, auth bridge) | —    |
 | `packages/shared`            | `@workspace/shared`            | Zod schemas + shared types (the API contract)                          | —    |
-| `packages/tooling`           | `@workspace/tooling`           | Repo-wide scripts (syncpack dependency hygiene, turbo-backed `deps:*`) | —    |
+| `packages/tooling`           | `@workspace/tooling`           | Repo-wide scripts (syncpack dependency hygiene, turbo-backed `deps:*`, build infra in `scripts/`: check-ui-audit, fix-dist-extensions) | —    |
 | `packages/eslint-config`     | `@workspace/eslint-config`     | Shared ESLint presets                                                  | —    |
 | `packages/typescript-config` | `@workspace/typescript-config` | Shared tsconfig presets                                                | —    |
 
@@ -123,15 +123,16 @@ Key points:
 
 ```
 packages/shared/src/
-├── index.ts            ← barrel — re-exports everything
+├── index.ts   ← barrel — re-exports everything
 └── schemas/
-    ├── auth.ts         ← login, signup, refresh, session…
-    ├── user.ts         ← user responses, profiles…
-    ├── api-response.ts ← the { success, data, meta } envelope
-    ├── common.ts       ← BaseResponse, DateString…
-    ├── enums.ts        ← PermissionAction, PermissionResource…
-    └── …               ← one file per domain (rbac, urls, clicks…)
+    ├── auth/    ← auth.ts, auth-errors, session-status, user
+    ├── api/     ← api-response, common, env, health.schema, message, pagination
+    └── domain/  ← rbac, enums, menu, url, clicks, tags, logs, api-keys
 ```
+
+Schemas are grouped by domain (`auth/`, `api/`, `domain/`). The barrel
+(`schemas/index.ts`) is the only import surface — consumers always import from
+`@workspace/shared`, never from deep schema paths.
 
 **Rules:**
 
@@ -149,7 +150,7 @@ packages/shared/src/
 producing per-file `dist/*.js` + `dist/*.d.ts`. There is **no bundler** (no tsup)
 and **no NodeNext**: source is authored **extensionless** (Turbopack and the web
 apps require that — see `docs/typescript.md`), and a tiny post-build script
-(`scripts/fix-dist-extensions.mjs`) rewrites `dist/` so every relative import
+(`packages/tooling/scripts/fix-dist-extensions.mjs`) rewrites `dist/` so every relative import
 gets its `.js` extension — Node's ESM runtime requires them. Do **not** hand-edit
 `dist/` — rebuild with `pnpm --filter @workspace/shared build`.
 
@@ -159,13 +160,45 @@ gets its `.js` extension — Node's ESM runtime requires them. Do **not** hand-e
 
 ```
 packages/client/src/lib/
-├── auth.tsx           ← AuthProvider / useAuth (reads cookies, drives login state)
-├── use-api.ts         ← useApi() hook — typed fetch wrapper on TanStack Query
-├── endpoints.ts       ← THE endpoint registry: path + method + request/response schemas
-├── query-provider.tsx ← TanStack Query provider used by both apps
-├── jwt.ts             ← decodeJwtPayload (edge-safe, used by proxy.ts)
-└── proxy-refresh.ts   ← Edge-safe server-side refresh helpers (used by both proxies)
+├── auth/  ← auth domain: index.tsx (AuthProvider/useAuth — public path @workspace/client/lib/auth),
+│            auth-errors, auth-sync, client-auth-wrapper, login-form, jwt, password, proxy-refresh
+├── api/   ← API domain: use-api, endpoints (the endpoint registry), query-provider, config
+└── test-utils.ts  ← shared test helpers (colocated, used by both domains)
 ```
+
+Tests are colocated next to their source (`auth/auth.test.tsx`, `api/use-api.test.ts`,
+…). The public deep paths mirror the folders: `@workspace/client/lib/auth` (the
+provider entry, via a dedicated exports entry), `@workspace/client/lib/auth/login-form`,
+`@workspace/client/lib/api/endpoints`, …
+
+**The client layer also hosts the shared, Next-coupled auth UI.** The old
+arrangement duplicated `login-form.tsx` and `client-auth-wrapper.tsx` in each
+app with ~15 lines of divergence (admin cookie isolation, `adminLogin` endpoint,
+admin-access gate). Both are now **one prop-driven implementation here**:
+
+```tsx
+<LoginForm
+	logo={…}
+	title="Acme"
+	heading="Admin Login"
+	subtitle="…"
+	mode="admin"        // "admin" → adminLogin endpoint + requires admin access
+	redirectPath={…}
+	footer={…}
+/>
+```
+
+- `<LoginForm>` takes a `mode` prop (`"web"` | `"admin"`). Admin mode swaps in
+  `authEndpoints.adminLogin`, enforces `hasAdminAccess`, and renders the cookie
+  isolation; web mode is the plain credential form. It imports presentational
+  primitives from `@workspace/ui/components/form/*`.
+- `<ClientAuthWrapper>` is the `next/navigation`-aware bridge (router push +
+  refresh fed into `AuthProvider`), with `cookieNames` + `clientType`
+  configurable per app.
+- Both live in `packages/client` (not `packages/ui`) because they depend on
+  `next/navigation` + the auth context — they are *auth*, not presentation.
+  `next` is a peer dependency of `packages/client` so that coupling is honest.
+  See rule 3 below for the layering carve-out this implies.
 
 **The endpoint registry (`endpoints.ts`) is the heart of type-safe API calls:**
 
@@ -194,9 +227,23 @@ are typed end-to-end — no manual response interfaces in the pages.
 
 ```
 packages/ui/src/
-├── styles/globals.css  ← design tokens (imported by both apps)
-└── components/         ← shadcn components (button, dialog, table, input…)
+├── styles/globals.css   ← design tokens (imported by both apps)
+├── hooks/               ← use-media-query, use-mobile
+├── lib/                 ← cn() and other shared helpers
+└── components/
+    ├── form/            ← button, input, select, checkbox, field…
+    ├── overlay/         ← dialog, popover, tooltip, sheet, drawer…
+    ├── navigation/      ← breadcrumb*, sidebar, tabs, pagination…
+    ├── feedback/        ← alert, toast, badge, skeleton, spinner…
+    ├── chat/            ← message, attachment, bubble…
+    ├── display/         ← card, table, chart, avatar, calendar…
+    └── theme-provider.tsx  ← the one flat provider (imported by both apps)
 ```
+
+**Component grouping rule:** public import paths are `@workspace/ui/components/<group>/<name>`
+(e.g. `@workspace/ui/components/form/button`) — the `exports` map in `package.json`
+mirrors each group. When adding a component, put it in the most natural group;
+create a new group only when 3+ components share a domain.
 
 **This package is presentational only.** It must not:
 
@@ -226,6 +273,8 @@ move it up to the page (smart component) or into `@workspace/client`.
   cookies and redirects to login (breaking the dead-session bounce loop that
   neither the client nor the API guard can break).
 - Uses cookie names `accessToken` / `refreshToken`.
+- Login/forgot pages render the **shared** `LoginForm` / auth bridge from
+  `@workspace/client` (`mode="web"`).
 - Runs on the **Node.js runtime** (Next.js 16 runs `proxy.ts` on Node by
   design; only legacy `middleware.ts` can opt into Edge), so no Edge setup
   is needed on Node hosts (DigitalOcean / Linode droplets, etc.).
@@ -242,13 +291,42 @@ move it up to the page (smart component) or into `@workspace/client`.
 - Uses **isolated** cookie names `adminAccessToken` / `adminRefreshToken`, so a web
   login doesn't grant admin access (and vice versa).
 - Sends `X-Client-Type: admin` on login so the backend sets the right cookie set.
+- Login page renders the **shared** `LoginForm` from `@workspace/client`
+  (`mode="admin"` → `adminLogin` endpoint + admin-access gate).
 - Runs on the **Node.js runtime** (Next.js 16 runs `proxy.ts` on Node by
   design; only legacy `middleware.ts` can opt into Edge), so no Edge setup
   is needed on Node hosts (DigitalOcean / Linode droplets, etc.).
 
 ### `@workspace/api` (port 8080)
 
-- NestJS app. Routes are grouped in `src/modules/` (auth, rbac, urls, …).
+- NestJS app. Routes are grouped in `src/modules/` — `health` (`GET /` +
+  `GET /health`), `auth` (credentials, email verification, password reset,
+  `/me`, SuperAdmin user management, root `POST /users`), `sessions`
+  (refresh / logout / logout-all / active sessions, root `GET /session`),
+  `impersonation`, `rbac`, `logs`.
+- **The old root `AppController` is gone** — its four endpoints were dissolved
+  into their domain modules with **URL paths unchanged**: `GET /` + `GET /health`
+  → `HealthController`; `GET /session` → `SessionStatusController` (a root-`@Controller()`
+  sibling of `SessionsController` in the sessions module); `POST /users` →
+  `RootUsersController` in the auth module. A module can host multiple
+  controllers — use an unprefixed controller for root-pathed endpoints.
+- **`common/` only holds truly shared HTTP plumbing.** The auth-domain files
+  (guards, auth decorators, set/clear-auth-cookies interceptors, cookie
+  config, cookie service) live in `modules/auth/{guards,decorators,interceptors,constants,services}`
+  and are re-exported by `AuthModule` so `sessions`/`impersonation` still
+  resolve them. What remains in `common/`: `response.interceptor`,
+  `correlation-id.middleware`, `zod-validation.pipe`, `utils/` (expiry,
+  client-info — shared by 2+ modules), `dto/` (the shared envelope
+  `api-response` + `response-wrapper`), `interfaces/json.ts`. **DTO rule:**
+  modules own their DTOs (`modules/auth/dtos/`, …); `common/dto/` is only for
+  shapes shared by 2+ modules.
+- **Module layout convention (point 18):** the controller sits at the module
+  root; subfolders (`dtos/`, `services/`, `guards/`, …) appear only when a
+  kind has more than one file. `auth` uses them (12 DTOs, 4 services, plus
+  decorators/guards/interceptors/constants); `sessions` is flat except for
+  `dtos/`; `rbac` hosts its own response schemas (`schemas/`); `health` is
+  fully flat; `logs` is a single service. Splitting a module? Keep the same
+  URL paths and move only the endpoint + its service methods.
 - Controllers use DTOs built with `createZodDto(<Schema from @workspace/shared>)`.
 - Swagger docs live at `http://localhost:8080/docs` (inferred from the same schemas).
 - The `ResponseInterceptor` wraps every response in `{ success, data, meta }`.
@@ -290,7 +368,11 @@ Different consumers resolve `@workspace/*` packages differently — this is inte
 1. **Schema changes go in `packages/shared`** — never define a request/response shape
    inside an app or a module.
 2. **Never import `@workspace/client` from `@workspace/ui`** — UI must stay presentational.
-3. **Never import `@workspace/ui` from `@workspace/client`** — keep the layers one-way.
+3. **`@workspace/client` may import `@workspace/ui`, never the other way.** The shared
+   auth UI (`login-form.tsx`, `client-auth-wrapper.tsx`) composes presentational
+   `@workspace/ui` primitives — that is a legal downward dependency (apps →
+   client → ui → shared). The forbidden edge is `ui → client`: a `packages/ui`
+   component must never touch auth, data, or `next/navigation`.
 4. **Pages are the smart components.** Pages fetch data (via `useApi` / endpoint
    registry), own the state, and pass plain props down to dumb UI components.
 5. **No `any` / `unknown` / `never`, no casts.** If you need a type, derive it from a
@@ -299,6 +381,28 @@ Different consumers resolve `@workspace/*` packages differently — this is inte
    call raw `fetch` in a page.
 7. **Access modifiers + return types on every class method / function** (enforced by ESLint).
 8. **Keep docs updated** — if you change how the layers interact, update this file.
+9. **Tests live next to their source** (colocated) — `foo.ts` has `foo.test.ts` in
+   the same folder. `packages/ui` runs its own vitest suite (`pnpm --filter @workspace/ui test`);
+   the admin app runs its vitest suite (which includes the opt-in `e2e/` smoke);
+   the API runs `test:e2e` for full-stack specs (needs Postgres).
+10. **App folders group by domain, not by type** — `components/showcase/` for demos,
+    `components/dashboard/` for real dashboard widgets, `components/docs/` for
+    doc renderers, `lib/navigation/` / `lib/palette/` / `lib/docs/` for lib
+    domains, `stores/` for zustand. Components shared by both apps live in
+    `packages/ui`; app-only thin wrappers stay in the app they configure.
+11. **`components/` is `.tsx` only.** Pure logic/constants/types with no JSX
+    live in `lib/` (e.g. `lib/dashboard/data-table-constants.ts`) — a `.ts`
+    inside `components/` is a smell, not a rule.
+12. **JSON data has one home per kind** — `apps/admin/data/` holds fixtures;
+    runtime config JSON lives next to its consumers (e.g.
+    `lib/navigation/sidebar-menu.json` beside the compile logic). There is no
+    top-level `config/` folder.
+13. **No single-file folders.** If a folder would hold exactly one file, put
+    that file in its parent (or merge it with a sibling kind). Exception:
+    ambient `.d.ts` declarations may live in `src/types/`.
+14. **Repo-wide shell scripts live in `packages/tooling/scripts/`** (e.g.
+    `check-ui-audit.mjs`, `fix-dist-extensions.mjs`) — referenced as
+    `node ../../packages/tooling/scripts/<name>.mjs` from package scripts.
 
 ---
 

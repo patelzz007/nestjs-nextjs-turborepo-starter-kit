@@ -1,8 +1,8 @@
 "use client";
 
-import { createBreadcrumbContext } from "@workspace/ui/components/breadcrumb-context";
+import { createBreadcrumbContext } from "@workspace/ui/components/navigation/breadcrumb-context";
 
-import { resolveAdminTrail } from "@/lib/breadcrumb";
+import { resolveAdminTrail } from "@/lib/navigation/breadcrumb";
 
 /**
  * The admin's single BreadcrumbContext instance — created from the shared

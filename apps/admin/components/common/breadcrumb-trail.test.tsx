@@ -4,8 +4,8 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { Settings } from "lucide-react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { BreadcrumbTrail } from "@workspace/ui/components/breadcrumb-trail";
-import type { BreadcrumbItem } from "@workspace/ui/components/breadcrumb-context";
+import { BreadcrumbTrail } from "@workspace/ui/components/navigation/breadcrumb-trail";
+import type { BreadcrumbItem } from "@workspace/ui/components/navigation/breadcrumb-context";
 
 afterEach(() => {
 	cleanup();

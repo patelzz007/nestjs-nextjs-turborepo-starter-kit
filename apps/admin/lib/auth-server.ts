@@ -1,6 +1,6 @@
 import "server-only";
 
-import { decodeJwtPayload } from "@workspace/client/lib/jwt";
+import { decodeJwtPayload } from "@workspace/client/lib/auth/jwt";
 import { cookies } from "next/headers";
 import { z } from "zod";
 
@@ -28,10 +28,13 @@ const ServerUserPayloadSchema = z.object({
 	email: z.string(),
 });
 
-export interface ServerUser {
-	readonly name: string;
-	readonly email: string;
-}
+/** The SSR-painted identity — schema-derived (rule 5). */
+export const ServerUserSchema = z.object({
+	name: z.string().min(1),
+	email: z.string(),
+});
+
+export type ServerUser = z.output<typeof ServerUserSchema>;
 
 /** Reads the admin access-token cookie and decodes `{ name, email }` from the JWT. */
 export async function getServerUser(): Promise<ServerUser | null> {

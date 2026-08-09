@@ -1,51 +1,36 @@
-import { Body, Controller, Get, Headers, HttpCode, Param, Patch, Post, Query, Req, UseGuards, UseInterceptors } from "@nestjs/common";
+import { Body, Controller, Get, Headers, HttpCode, Param, Patch, Post, Query, Req, UseInterceptors } from "@nestjs/common";
 import { ApiBearerAuth, ApiBody, ApiCreatedResponse, ApiHeader, ApiOkResponse, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { SkipThrottle, Throttle } from "@nestjs/throttler";
 import type {
 	AdminUserDetail,
 	ForgotPasswordResponse,
-	ImpersonateResponse,
 	LoginServiceResponse,
-	LogoutAllResponse,
-	LogoutResponse,
 	MessageResponse,
-	RefreshResponse,
-	RefreshResponseMessage,
 	ResendVerificationResponse,
 	ResetPasswordResponse,
-	Session,
 	SignupResponse,
-	StopImpersonationResponse,
 	UserResponse,
 	VerifyEmailResponse,
 } from "@workspace/shared";
 import {
 	AdminUserDetailSchema,
 	ForgotPasswordResponseSchema,
-	ImpersonateResponseSchema,
 	LoginServiceResponseSchema,
-	LogoutAllResponseSchema,
-	LogoutResponseSchema,
 	MessageResponseSchema,
-	RefreshResponseMessageSchema,
 	ResendVerificationResponseSchema,
 	ResetPasswordResponseSchema,
-	SessionSchema,
 	SignupResponseSchema,
-	StopImpersonationResponseSchema,
 	UserResponseSchema,
 	VerifyEmailResponseSchema,
 } from "@workspace/shared";
 import type { Request } from "express";
 
-import { GetUser } from "../../common/decorators/get-user.decorator.js";
-import { Public } from "../../common/decorators/public.decorator.js";
-import { SuperAdminOnly } from "../../common/decorators/super-admin.decorator.js";
+import { GetUser } from "./decorators/get-user.decorator.js";
+import { Public } from "./decorators/public.decorator.js";
+import { SuperAdminOnly } from "./decorators/super-admin.decorator.js";
 import { ApiErrorResponseDto } from "../../common/dto/api-response.dto.js";
-import { createWrappedDto, createWrappedArrayDto } from "../../common/dto/response-wrapper.js";
-import { RefreshTokenGuard } from "../../common/guards/refresh-token.guard.js";
-import { ClearAuthCookiesInterceptor } from "../../common/interceptors/clear-auth-cookies.interceptor.js";
-import { SetAuthCookiesInterceptor } from "../../common/interceptors/set-auth-cookies.interceptor.js";
+import { createWrappedArrayDto, createWrappedDto } from "../../common/dto/response-wrapper.js";
+import { SetAuthCookiesInterceptor } from "./interceptors/set-auth-cookies.interceptor.js";
 import { extractClientInfo } from "../../common/utils/client-info.js";
 
 import { AuthService } from "./auth.service.js";
@@ -54,7 +39,6 @@ import { LoginDto } from "./dtos/login.dto.js";
 import { ResendVerificationDto } from "./dtos/resend-verification.dto.js";
 import { ResetPasswordDto } from "./dtos/reset-password.dto.js";
 import { SignupDto } from "./dtos/signup.dto.js";
-import type { RefreshTokenPayload } from "./services/token.service";
 
 // ── Wrapped Response DTOs (envelope + data) ─────────────────────────────
 // Each constant wraps a data schema in the { success, data, meta } envelope
@@ -62,10 +46,6 @@ import type { RefreshTokenPayload } from "./services/token.service";
 
 const WrappedSignupResponse = createWrappedDto(SignupResponseSchema, "WrappedSignupResponse");
 const WrappedLoginResponse = createWrappedDto(LoginServiceResponseSchema, "WrappedLoginResponse");
-const WrappedRefreshResponse = createWrappedDto(RefreshResponseMessageSchema, "WrappedRefreshResponse");
-const WrappedLogoutResponse = createWrappedDto(LogoutResponseSchema, "WrappedLogoutResponse");
-const WrappedLogoutAllResponse = createWrappedDto(LogoutAllResponseSchema, "WrappedLogoutAllResponse");
-const WrappedSessionList = createWrappedArrayDto(SessionSchema, "WrappedSessionList");
 const WrappedResendVerificationResponse = createWrappedDto(ResendVerificationResponseSchema, "WrappedResendVerificationResponse");
 const WrappedForgotPasswordResponse = createWrappedDto(ForgotPasswordResponseSchema, "WrappedForgotPasswordResponse");
 const WrappedResetPasswordResponse = createWrappedDto(ResetPasswordResponseSchema, "WrappedResetPasswordResponse");
@@ -74,9 +54,14 @@ const WrappedVerifyEmailResponse = createWrappedDto(VerifyEmailResponseSchema, "
 const WrappedAdminUserList = createWrappedArrayDto(AdminUserDetailSchema, "WrappedAdminUserList");
 const WrappedAdminUserDetail = createWrappedDto(AdminUserDetailSchema, "WrappedAdminUserDetail");
 const WrappedMessageResponse = createWrappedDto(MessageResponseSchema, "WrappedMessageResponse");
-const WrappedImpersonateResponse = createWrappedDto(ImpersonateResponseSchema, "WrappedImpersonateResponse");
-const WrappedStopImpersonationResponse = createWrappedDto(StopImpersonationResponseSchema, "WrappedStopImpersonationResponse");
 
+/**
+ * Credential / identity / admin endpoints: signup, login, email verification,
+ * password reset, `/me`, and SuperAdmin user management.
+ *
+ * Session lifecycle endpoints moved to `SessionsController`, impersonation to
+ * `ImpersonationController` — URL paths are unchanged.
+ */
 @ApiTags("Auth")
 @Controller("auth")
 export class AuthController {
@@ -117,67 +102,6 @@ export class AuthController {
 		const clientType: string | undefined = headerClientType ?? queryClientType;
 		const { deviceInfo, ipAddress } = extractClientInfo(req);
 		return this.authService.login(loginDto, clientType, deviceInfo, ipAddress);
-	}
-
-	@Throttle({ default: { ttl: 60000, limit: 10 } })
-	@Public()
-	@UseGuards(RefreshTokenGuard)
-	@Post("/refresh")
-	@ApiOperation({ summary: "Refresh access token using refresh token cookie" })
-	@ApiOkResponse({ type: WrappedRefreshResponse, description: "Tokens refreshed" })
-	@ApiResponse({ status: 401, type: ApiErrorResponseDto, description: "Invalid or expired refresh token" })
-	@UseInterceptors(SetAuthCookiesInterceptor)
-	public async refreshToken(@GetUser() user: RefreshTokenPayload, @Req() req: Request): Promise<RefreshResponseMessage> {
-		const { deviceInfo, ipAddress } = extractClientInfo(req);
-
-		// Extract the raw refresh token JWT from cookies for reuse detection.
-		// RefreshTokenGuard already verified the cookie exists (it checks both
-		// `refreshToken` and `adminRefreshToken`), so one of these is always a string.
-		// The service will bcrypt-compare it against the stored hash before rotating.
-		const rawRefreshToken: string = req.cookies.refreshToken ?? req.cookies.adminRefreshToken;
-
-		// The refresh token's jti (JWT ID) is used for direct DB lookup
-		const tokens: RefreshResponse = await this.authService.refreshToken(user.sub, rawRefreshToken, user.jti, deviceInfo, ipAddress);
-
-		return {
-			...tokens,
-			message: "Tokens refreshed successfully",
-		};
-	}
-
-	@Public()
-	@UseGuards(RefreshTokenGuard)
-	@Post("/logout")
-	@ApiOperation({ summary: "Logout from the current device" })
-	@ApiOkResponse({ type: WrappedLogoutResponse, description: "Logged out from current device" })
-	@UseInterceptors(ClearAuthCookiesInterceptor)
-	public async logout(@GetUser() user: RefreshTokenPayload): Promise<LogoutResponse> {
-		await this.authService.logoutDevice(user.sub, user.jti);
-
-		return { message: "Logged out successfully" };
-	}
-
-	@Public()
-	@Post("/logout-all")
-	@UseGuards(RefreshTokenGuard)
-	@ApiOperation({ summary: "Logout from all devices" })
-	@ApiOkResponse({ type: WrappedLogoutAllResponse, description: "Logged out from all devices" })
-	@UseInterceptors(ClearAuthCookiesInterceptor)
-	public async logoutAll(@GetUser() user: RefreshTokenPayload): Promise<LogoutAllResponse> {
-		await this.authService.logoutAllDevices(user.sub);
-
-		return { message: "Logged out from all devices" };
-	}
-
-	// ── Active Sessions ──────────────────────────────────────────────────
-
-	@SkipThrottle()
-	@ApiBearerAuth()
-	@Get("/sessions")
-	@ApiOperation({ summary: "Get all active sessions for the current user" })
-	@ApiOkResponse({ type: WrappedSessionList, description: "List of active sessions" })
-	public async getSessions(@GetUser("sub") userId: string): Promise<Session[]> {
-		return this.authService.getSessions(userId);
 	}
 
 	// ── Email Verification ───────────────────────────────────────────────
@@ -237,11 +161,7 @@ export class AuthController {
 	}
 
 	// ═══════════════════════════════════════════════════════════════════════
-	// Admin User Detail  (SuperAdmin only)
-	// ═══════════════════════════════════════════════════════════════════════
-
-	// ═══════════════════════════════════════════════════════════════════════
-	// Admin User List  (SuperAdmin only)
+	// Admin User Management  (SuperAdmin only)
 	// ═══════════════════════════════════════════════════════════════════════
 
 	@SkipThrottle()
@@ -255,10 +175,6 @@ export class AuthController {
 		return this.authService.getAdminUsersList();
 	}
 
-	// ═══════════════════════════════════════════════════════════════════════
-	// Admin User Detail  (SuperAdmin only)
-	// ═══════════════════════════════════════════════════════════════════════
-
 	@SkipThrottle()
 	@ApiBearerAuth()
 	@SuperAdminOnly()
@@ -270,10 +186,6 @@ export class AuthController {
 		return this.authService.getAdminUserDetail(userId);
 	}
 
-	// ═══════════════════════════════════════════════════════════════════════
-	// Admin Unlock User  (SuperAdmin only)
-	// ═══════════════════════════════════════════════════════════════════════
-
 	@SkipThrottle()
 	@ApiBearerAuth()
 	@SuperAdminOnly()
@@ -283,51 +195,5 @@ export class AuthController {
 	@ApiResponse({ status: 404, type: ApiErrorResponseDto, description: "User not found" })
 	public async unlockUser(@Param("userId") userId: string): Promise<MessageResponse> {
 		return this.authService.unlockUser(userId);
-	}
-
-	// ═══════════════════════════════════════════════════════════════════════
-	// Impersonation  (SuperAdmin only)
-	// ═══════════════════════════════════════════════════════════════════════
-
-	/**
-	 * POST /auth/impersonate/:userId
-	 * SuperAdmin starts impersonating another user.
-	 * Returns a short-lived access token that the frontend can use to act as
-	 * the target user. The original SuperAdmin session is NOT invalidated.
-	 */
-	@Throttle({ strict: { ttl: 60000, limit: 10 } })
-	@ApiBearerAuth()
-	@SuperAdminOnly()
-	@Post("/impersonate/:userId")
-	@ApiOperation({ summary: "SuperAdmin: impersonate another user" })
-	@ApiOkResponse({ type: WrappedImpersonateResponse, description: "Impersonation started" })
-	@ApiResponse({ status: 403, type: ApiErrorResponseDto, description: "SuperAdmin privileges required" })
-	public async impersonate(@GetUser("sub") superAdminId: string, @Param("userId") targetUserId: string, @Req() req: Request): Promise<ImpersonateResponse> {
-		const { ipAddress } = extractClientInfo(req);
-		const userAgent: string | null = req.headers["user-agent"] ?? null;
-		return this.authService.impersonateUser(superAdminId, targetUserId, ipAddress, userAgent);
-	}
-
-	/**
-	 * POST /auth/stop-impersonation
-	 * Stop impersonating — returns a confirmation message.
-	 * The frontend should discard the impersonation token and restore
-	 * the original SuperAdmin session.
-	 */
-	@Throttle({ strict: { ttl: 60000, limit: 10 } })
-	@ApiBearerAuth()
-	@Post("/stop-impersonation")
-	@ApiOperation({ summary: "SuperAdmin: stop impersonating" })
-	@ApiOkResponse({ type: WrappedStopImpersonationResponse, description: "Impersonation ended" })
-	public async stopImpersonation(
-		@GetUser("originalUserId") impersonatorId: string | undefined,
-		@GetUser("sub") targetUserId: string,
-		@Req() req: Request,
-	): Promise<StopImpersonationResponse> {
-		const { ipAddress } = extractClientInfo(req);
-		const userAgent: string | null = req.headers["user-agent"] ?? null;
-		// If originalUserId is not set (not an impersonation token), fall back to sub
-		const superAdminId: string = impersonatorId ?? targetUserId;
-		return this.authService.stopImpersonation(superAdminId, targetUserId, ipAddress, userAgent);
 	}
 }

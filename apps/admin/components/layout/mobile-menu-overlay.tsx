@@ -3,7 +3,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import * as React from "react";
 
-import { BACKDROP_TRANSITION, DRAWER_TRANSITION } from "@/lib/layout-motion";
+import { BACKDROP_TRANSITION, DRAWER_TRANSITION } from "@/components/layout/layout-motion";
 
 export interface MobileMenuOverlayProps {
 	readonly open: boolean;

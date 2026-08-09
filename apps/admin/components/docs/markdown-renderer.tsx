@@ -13,12 +13,12 @@ import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import { visit } from "unist-util-visit";
 
-import { CodeBlock } from "@/components/ui/code-block";
-import { MermaidDiagram } from "@/components/ui/mermaid-diagram";
+import { CodeBlock } from "@/components/docs/code-block";
+import { MermaidDiagram } from "@/components/docs/mermaid-diagram";
 import { DocsTable } from "@/components/docs/docs-table";
 import { HEADING_SCROLL_OFFSET } from "@/lib/constants";
-import { detectQuoteKind, GLOSSARY_TERMS, QUOTE_MARKER_KINDS, QuoteKindSchema, slugifyHeadingText, type QuoteKind } from "@/lib/markdown";
-import { CodeLanguage } from "@/lib/types/code-block";
+import { detectQuoteKind, GLOSSARY_TERMS, QUOTE_MARKER_KINDS, QuoteKindSchema, slugifyHeadingText, type QuoteKind } from "@/lib/docs/markdown";
+import { CodeLanguage } from "@/lib/docs/code-block";
 
 // ─── Remark plugins ─────────────────────────────────────────────────────────
 

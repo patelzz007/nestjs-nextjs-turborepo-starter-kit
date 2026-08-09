@@ -2,7 +2,7 @@ import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
 
-import { NotFoundContent as SharedNotFoundContent } from "@workspace/ui/components/not-found-content";
+import { NotFoundContent as SharedNotFoundContent } from "@workspace/ui/components/feedback/not-found-content";
 
 /**
  * Admin wrapper around the **shared** presentational 404 content (rule 6 —

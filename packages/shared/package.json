@@ -4,7 +4,7 @@
 	"type": "module",
 	"private": true,
 	"scripts": {
-		"build": "tsc -p tsconfig.build.json && node ../../scripts/fix-dist-extensions.mjs dist",
+		"build": "tsc -p tsconfig.build.json && node ../../packages/tooling/scripts/fix-dist-extensions.mjs dist",
 		"lint": "eslint",
 		"format": "prettier --write \"**/*.{ts,tsx}\"",
 		"typecheck": "tsc --noEmit",

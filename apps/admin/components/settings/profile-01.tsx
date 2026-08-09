@@ -1,14 +1,14 @@
 "use client";
 
-import { Avatar, AvatarFallback } from "@workspace/ui/components/avatar";
-import { Button } from "@workspace/ui/components/button";
+import { Avatar, AvatarFallback } from "@workspace/ui/components/display/avatar";
+import { Button } from "@workspace/ui/components/form/button";
 import { CreditCard, FileText, LogOut, MoveUpRight, Settings, Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 import { toast } from "sonner";
 
 import { getInitials } from "@/lib/user-initials";
-import type { SidebarUser } from "@/types/sidebar";
+import type { SidebarUser } from "@/lib/navigation/sidebar";
 
 export interface Profile01Props {
 	readonly user: SidebarUser;

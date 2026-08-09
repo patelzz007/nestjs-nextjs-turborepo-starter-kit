@@ -4,9 +4,9 @@ import { cn } from "@workspace/ui/lib/utils";
 import { AlertCircle, ChevronRight, type LucideIcon } from "lucide-react";
 import * as React from "react";
 
-import { ICON_MAP } from "@/config/menu-icons";
-import { highlightText } from "@/lib/highlight";
-import type { CompiledSidebarMenuItem } from "@/types/sidebar";
+import { ICON_MAP } from "@/lib/navigation/menu-icons";
+import { highlightText } from "@/components/common/highlight";
+import type { CompiledSidebarMenuItem } from "@/lib/navigation/sidebar";
 
 export interface SidebarNavItemProps {
 	readonly item: CompiledSidebarMenuItem;

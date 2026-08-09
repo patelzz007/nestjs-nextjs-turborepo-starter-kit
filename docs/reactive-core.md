@@ -27,7 +27,7 @@ coverImage: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=form
 >
 > **React binding ships too:** `useObservable` (the Part 7½ async-pipe port, on
 > `useSyncExternalStore`) lives at `packages/ui/src/hooks/use-observable.ts` and is used by
-> the **rewritten `SessionStatusBadge`** (`apps/admin/lib/session-badge.ts` + the component) —
+> the **rewritten `SessionStatusBadge`** (`apps/admin/lib/session-status-badge.ts` + the component) —
 > the Phase-1 "kill-switch" proof. The badge's imperative `setInterval` + `visibilitychange` +
 > `useRef` mess is now a declarative pipeline (visibility gate → poll → rotation pulse →
 > countdown), with **zero React Query involvement** and **zero leaks after unmount** (asserted
