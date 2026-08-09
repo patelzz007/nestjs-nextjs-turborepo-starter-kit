@@ -258,3 +258,68 @@ export function formatIsoDate(iso: string): string {
 	}
 	return `${MONTH_NAMES[date.getUTCMonth()] ?? ""} ${String(date.getUTCDate())}, ${String(date.getUTCFullYear())}`;
 }
+
+/** Blockquote kinds for the docs renderer's color-coded callouts. Zod enum (rule 13) so the renderer can `safeParse` runtime values instead of sniffing strings. */
+export const QuoteKindSchema = z.enum(["info", "warning", "error", "success"]);
+
+export type QuoteKind = z.infer<typeof QuoteKindSchema>;
+
+/** Maps GitHub-style `[!KIND]` markers to the app's quote kinds. */
+export const QUOTE_MARKER_KINDS: Readonly<Record<string, QuoteKind>> = {
+	note: "info",
+	info: "info",
+	tip: "success",
+	success: "success",
+	warning: "warning",
+	caution: "warning",
+	important: "warning",
+	error: "error",
+	danger: "error",
+};
+
+/**
+ * Detects a quote kind from the quote's plain text (used when no marker
+ * exists). Word-boundary anchored so neutral prose ("don'ts", "antipattern")
+ * can't accidentally tint a callout — only whole keywords count.
+ */
+export function detectQuoteKind(text: string): QuoteKind {
+	const lower = text.toLowerCase();
+	if (/(?:\b(?:errors?|failed?|failure|broken|danger)\b|❌)/.test(lower)) {
+		return "error";
+	}
+	if (/(?:\b(?:warnings?|caution|careful|important|gotcha|never|don'?t|wipes|pending)\b|⚠)/.test(lower)) {
+		return "warning";
+	}
+	if (/(?:\b(?:success|tip)\b|✅)/.test(lower)) {
+		return "success";
+	}
+	return "info";
+}
+
+// ─── Glossary (hover tooltips in prose) ─────────────────────────────────────
+
+/**
+ * Terms the docs renderer wraps in `<abbr title>` tooltips. Longest-first
+ * matching in the remark plugin, so a multi-word term wins over its prefix.
+ * Add any jargon the guides use that a junior might not know — keep
+ * definitions to one short sentence.
+ *
+ * Note: the plugin only matches DIRECT `text` children of paragraphs, so a
+ * term inside `**bold**`, `*em*`, or an inline link does NOT get a tooltip.
+ * That's a deliberate limitation (keeps the AST surgery trivial) — don't
+ * "fix" it by recursing, or tooltips will start appearing inside code spans.
+ */
+export const GLOSSARY_TERMS: readonly { readonly term: string; readonly definition: string }[] = [
+	{ term: "RBAC", definition: "Role-based access control — permissions granted via roles" },
+	{ term: "JWT", definition: "JSON Web Token — a signed, self-contained auth token" },
+	{ term: "jti", definition: "JWT ID — a unique per-token identifier used to revoke sessions" },
+	{ term: "HS256", definition: "HMAC-SHA256 — the symmetric signing algorithm for these JWTs" },
+	{ term: "CORS", definition: "Cross-Origin Resource Sharing — which origins may call the API" },
+	{ term: "CSRF", definition: "Cross-Site Request Forgery — an attack mitigated by SameSite cookies" },
+	{ term: "SSR", definition: "Server-side rendering — HTML produced on the server per request" },
+	{ term: "SPA", definition: "Single-page application — client-side navigation without full reloads" },
+	{ term: "DTO", definition: "Data Transfer Object — the typed shape of a request/response body" },
+	{ term: "ORM", definition: "Object-relational mapper — Prisma maps tables to TypeScript objects" },
+	{ term: "idempotent", definition: "Safe to run repeatedly — the second run leaves the same state" },
+	{ term: "granular", definition: "Fine-grained — broken into small, specific pieces" },
+];

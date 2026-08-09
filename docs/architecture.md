@@ -9,7 +9,7 @@ coverImage: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=f
 
 # Monorepo Architecture
 
-> **Start here.** This document explains the big picture: what each workspace is for,
+> [!NOTE] **Start here.** This document explains the big picture: what each workspace is for,
 > how data flows between the frontends and the backend, and how to decide where new
 > code belongs. Written for a junior developer with ~6 months of experience.
 
@@ -74,7 +74,7 @@ Think of the monorepo as **three layers**, each depending only on the layer belo
 | `packages/eslint-config`     | `@workspace/eslint-config`     | Shared ESLint presets                                                  | —    |
 | `packages/typescript-config` | `@workspace/typescript-config` | Shared tsconfig presets                                                | —    |
 
-> **Why are the apps named `@workspace/web` / `@workspace/admin` / `@workspace/api`
+> [!NOTE] **Why are the apps named `@workspace/web` / `@workspace/admin` / `@workspace/api`
 > instead of just `web` / `admin` / `api`?** So every `pnpm --filter <name>` and
 > import follows one consistent naming scheme: `@workspace/*` everywhere.
 

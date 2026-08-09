@@ -12,6 +12,7 @@
 import {
 	fromEvent,
 	fromPromise,
+	of,
 	merge,
 	startWith,
 	shareReplay,
@@ -33,7 +34,9 @@ import type { SessionStatus } from "@workspace/shared";
 // next poll simply emits again — see `fetchSessionState`).
 
 export type SessionState =
-	{ readonly status: "loading" } | { readonly status: "error"; readonly errorMessage: string } | { readonly status: "ready"; readonly session: SessionStatus };
+	| { readonly status: "loading" }
+	| { readonly status: "error"; readonly errorMessage: string; readonly retryable: boolean }
+	| { readonly status: "ready"; readonly session: SessionStatus };
 
 // ── Small pure helpers ─────────────────────────────────────────────────────
 
@@ -55,9 +58,14 @@ export function didTokenRotate(previous: string | null, next: string | null): bo
 	return new Date(next).getTime() > new Date(previous).getTime();
 }
 
+/** True when the error means the session is genuinely dead (401 after refresh). */
+export function isExpiredSessionError(err: Error): boolean {
+	return err instanceof ApiError && err.statusCode === 401;
+}
+
 /** Map a failed fetch into a friendly error message (error shaping at the boundary). */
 export function toSessionErrorMessage(err: Error): string {
-	if (err instanceof ApiError && err.statusCode === 401) {
+	if (isExpiredSessionError(err)) {
 		return "Session expired — please log in again";
 	}
 	return "Session check failed — network or server error";
@@ -68,16 +76,60 @@ export function toSessionErrorMessage(err: Error): string {
  *
  * Errors are caught HERE (not via a catchError operator) so the stream stays
  * alive across transient failures: a poll that hits a dead API emits an
- * "error" state, and the NEXT poll retries automatically. The try/catch also
- * guards against a synchronous throw, which `fromPromise` alone cannot see.
+ * "error" state, and the NEXT poll (or the automatic retry — see
+ * `fetchSessionStateWithRetry`) tries again. The try/catch also guards
+ * against a synchronous throw, which `fromPromise` alone cannot see.
+ *
+ * `retryable` classifies the failure: network/server errors (API down or
+ * booting — e.g. right after a dev-server restart) are worth retrying; a 401
+ * after the client's refresh pipeline means the session is genuinely dead and
+ * the auth layer is already redirecting to login, so retrying would just spam
+ * a dead session.
  */
 export async function fetchSessionState(fetchSession: () => Promise<SessionStatus>): Promise<SessionState> {
 	try {
 		const session = await fetchSession();
 		return { status: "ready", session };
 	} catch (err) {
-		return { status: "error", errorMessage: toSessionErrorMessage(err instanceof Error ? err : new Error(String(err))) };
+		const error: Error = err instanceof Error ? err : new Error(String(err));
+		return { status: "error", errorMessage: toSessionErrorMessage(error), retryable: !isExpiredSessionError(error) };
 	}
+}
+
+/**
+ * One fetch attempt with automatic retry for TRANSIENT failures.
+ *
+ * A transient error (API down / still booting — the classic dev-restart
+ * window) emits NOTHING here: the chain schedules a retry after `retryMs`
+ * and keeps retrying until it succeeds or hits a non-retryable error
+ * (expired session — the auth layer is redirecting to login). This is what
+ * makes the badge self-heal within seconds of the API returning, instead of
+ * waiting for the next poll or a tab switch.
+ *
+ * Each retry is gated on tab visibility so a hidden tab never hammers a dead
+ * API, and the upstream `switchMap` cancels the whole chain whenever a newer
+ * trigger fires (tab-return, poll) or the component unmounts — so the
+ * recursion is always bounded in practice.
+ */
+export function fetchSessionStateWithRetry(
+	fetchSession: () => Promise<SessionStatus>,
+	retryMs: number,
+	scheduler: SchedulerLike,
+	isVisible: () => boolean,
+): Observable<SessionState> {
+	const attempt = (): Observable<SessionState> =>
+		fromPromise(fetchSessionState(fetchSession)).pipe(
+			switchMap((state) =>
+				state.status === "error" && state.retryable
+					? timer(retryMs, undefined, scheduler).pipe(
+							filter(() => isVisible()),
+							switchMap(() => attempt()),
+						)
+					: of(state),
+			),
+		);
+
+	return attempt();
 }
 
 /**
@@ -89,7 +141,7 @@ export function sameSessionState(a: SessionState, b: SessionState): boolean {
 	// `a.status` to `b.status` through the equality check alone, so a single
 	// `if (a.status === "error")` would leave `b.errorMessage` un-narrowed.
 	if (a.status === "error" && b.status === "error") {
-		return a.errorMessage === b.errorMessage;
+		return a.errorMessage === b.errorMessage && a.retryable === b.retryable;
 	}
 	if (a.status === "ready" && b.status === "ready") {
 		const s = a.session;
@@ -169,6 +221,14 @@ export interface SessionBadgeStreamParams {
 	 * (5 minutes, env-tunable). Pass `null` to disable steady polling entirely.
 	 */
 	readonly pollMs?: number | null;
+	/**
+	 * Delay between automatic retries of a TRANSIENT fetch failure (network /
+	 * server error), in ms. Defaults to 2000 — matching the `/auth/me` retry
+	 * cadence (retry: 5, retryDelay: 2000) so both recover together after a
+	 * restart instead of succeeding at different moments. Non-retryable
+	 * failures (expired session) never schedule retries. Gated on tab visibility.
+	 */
+	readonly retryMs?: number;
 	readonly tickMs?: number;
 	readonly pulseMs?: number;
 	readonly scheduler?: SchedulerLike;
@@ -213,9 +273,12 @@ export interface SessionBadgeStreams {
  *   tab — a real improvement over the old code, whose setInterval kept firing.
  * - `switchMap` gives us "latest wins" on every layer: a new poll result
  *   cancels an in-flight fetch's re-emission, a new session restarts the
- *   countdown clock, a new rotation restarts the 2s pulse window.
- * - No stream ever completes or errors: transient failures surface as "error"
- *   STATE and the next poll recovers. The badge is self-healing by design.
+ *   countdown clock, a new rotation restarts the 2s pulse window.	 * - No stream ever completes or errors. TRANSIENT failures (API down/booting)
+ *   are swallowed by `fetchSessionStateWithRetry` — the badge quietly stays in
+ *   its initial "checking" state and auto-retries every `retryMs` until the
+ *   API is back, so it never flashes "Session check failed" for a blip. Only
+ *   NON-retryable failures (a 401 after the refresh pipeline — a genuinely
+ *   dead session) surface as an "error" STATE. Self-healing by design.
  */
 export function buildSessionBadgeStreams(params: SessionBadgeStreamParams): SessionBadgeStreams {
 	const {
@@ -226,6 +289,7 @@ export function buildSessionBadgeStreams(params: SessionBadgeStreamParams): Sess
 		// NEXT_PUBLIC_ vars for literal property access (bracket access with a
 		// computed key is NOT replaced at build time and would crash in the browser).
 		pollMs = resolvePollMs(process.env.NEXT_PUBLIC_SESSION_POLL_MS),
+		retryMs = 2_000,
 		tickMs = 1_000,
 		pulseMs = 2_000,
 		scheduler = asyncScheduler,
@@ -260,7 +324,11 @@ export function buildSessionBadgeStreams(params: SessionBadgeStreamParams): Sess
 	// them into ONE source pipeline shared by all subscribers (refCount: torn
 	// down when the last subscriber leaves).
 	const sessionState$ = refetchTriggers$.pipe(
-		switchMap(() => fromPromise(fetchSessionState(fetchSession))),
+		// `fetchSessionStateWithRetry` wraps the fetch so a transient failure
+		// (API down/booting after a restart) retries every `retryMs` until it
+		// recovers — the badge never shows a stale "Session check failed" that
+		// waits for a tab switch or the next (possibly 5-minute) poll to clear.
+		switchMap(() => fetchSessionStateWithRetry(fetchSession, retryMs, scheduler, isVisible)),
 		distinctUntilChanged(sameSessionState),
 		shareReplay(1),
 	);

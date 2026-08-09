@@ -8,66 +8,71 @@ import * as React from "react";
 
 import { AdminBreadcrumbProvider } from "@/components/common/admin-breadcrumb";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
-import type { FooterAction } from "@/types/sidebar";
+import type { FooterAction, SidebarUser } from "@/types/sidebar";
 
 export interface DashboardShellProps {
 	readonly footerActions?: readonly FooterAction[];
 	readonly children: React.ReactNode;
+	/**
+	 * Identity decoded server-side from the access-token JWT (see
+	 * `lib/auth-server.ts`), used to paint the real name/email in the SSR HTML.
+	 * `GET /auth/me` still runs on the client and supersedes this once it
+	 * resolves. `null`/`undefined` falls back to the placeholder.
+	 */
+	readonly initialUser?: SidebarUser | null;
 }
 
 /**
+ * Identity shown in the sidebar/topbar while `GET /auth/me` is still in
+ * flight. Rendering the shell immediately — instead of a blocking spinner —
+ * means first paint no longer waits for the API round-trip: LCP drops to
+ * HTML-paint time. The real identity swaps in as soon as the fetch resolves.
+ */
+const PLACEHOLDER_USER: SidebarUser = { name: "Account", email: "Loading profile…" };
+
+/**
  * Smart wrapper for every authenticated admin page. Owns the "who am I?"
- * fetch, the loading / error states, and the shared dashboard chrome
- * (`DashboardLayout`). Pages only supply their own content via `children` —
- * they never touch auth or the layout directly.
- */ export function DashboardShell({ footerActions = [], children }: DashboardShellProps): React.JSX.Element {
-	const { api, isInitializing, logout } = useAuth();
+ * fetch, the error state, and the shared dashboard chrome (`DashboardLayout`).
+ * Pages only supply their own content via `children` — they never touch auth
+ * or the layout directly.
+ *
+ * Loading philosophy: the proxy has already confirmed the session server-side
+ * (unauthenticated requests never reach this component), so the shell is safe
+ * to render while `/auth/me` is in flight. Only a *failed* fetch shows the
+ * error screen — a still-loading one renders the full shell with the
+ * placeholder identity.
+ */
+export function DashboardShell({ footerActions = [], children, initialUser = null }: DashboardShellProps): React.JSX.Element {
+	const { api, logout } = useAuth();
 	// The breadcrumb provider must wrap EVERY consumer (the layout's own
 	// `useTrailDocumentTitle` + `ShellBreadcrumb`), so it lives here — one
-	// level above `DashboardLayout` — not inside it. The hook is called before
-	// any early return (rules of hooks).
+	// level above `DashboardLayout` — not inside it.
 	const pathname = usePathname();
 
-	const meQuery = api.procedure(authEndpoints.me).useQuery();
+	// `GET /auth/me` returns the full user record; the shell only needs the
+	// sidebar identity shape (name/email). The JWT-decoded `initialUser` covers
+	// the SSR paint AND the transient-failure window (e.g. the API still
+	// booting after a dev restart): a bumped retry lets the fetch self-heal and
+	// refresh roles/permissions without a manual page reload.
+	const meQuery = api.procedure(authEndpoints.me).useQuery(undefined, {
+		retry: 5,
+		retryDelay: 2000,
+	});
 	const user = meQuery.data?.data;
 
 	const handleLogout = React.useCallback((): void => {
 		void logout();
 	}, [logout]);
 
-	// On SSR + the first client render, auth state isn't established yet — render
-	// the hydration spinner instead of flashing the query states (mirrors the
-	// isInitializing gate on the login pages / hello page). This single gate
-	// covers every admin panel page, since DashboardShell wraps them all.
-	if (isInitializing) {
-		return (
-			<div className="flex min-h-svh items-center justify-center">
-				<div className="flex flex-col items-center gap-4">
-					<svg className="size-8 animate-spin text-muted-foreground" fill="none" viewBox="0 0 24 24" aria-hidden="true">
-						<circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-						<path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-					</svg>
-					<p className="text-sm text-muted-foreground">Loading…</p>
-				</div>
-			</div>
-		);
-	}
-
-	if (meQuery.isLoading) {
-		return (
-			<div className="flex min-h-svh items-center justify-center">
-				<div className="flex flex-col items-center gap-4">
-					<svg className="size-8 animate-spin text-muted-foreground" fill="none" viewBox="0 0 24 24" aria-hidden="true">
-						<circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-						<path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-					</svg>
-					<p className="text-sm text-muted-foreground">Loading dashboard...</p>
-				</div>
-			</div>
-		);
-	}
-
-	if (meQuery.error !== null || user === undefined) {
+	// A failed fetch gets the error screen ONLY when there is no identity to
+	// fall back to (no `/auth/me` data, no JWT-decoded `initialUser`). The
+	// proxy has already validated the session server-side, so a failed fetch
+	// here is almost always a transient error (e.g. the API still booting
+	// after a dev restart) — the shell keeps rendering with the JWT identity
+	// and the 401 → silent-refresh flow still bounces a genuinely dead
+	// session. Falling back instead of swapping to a different tree also
+	// prevents a hydration mismatch on the first load.
+	if (meQuery.error !== null && meQuery.data === undefined && initialUser === null) {
 		return (
 			<div className="flex min-h-svh items-center justify-center">
 				<div className="text-center">
@@ -81,9 +86,15 @@ export interface DashboardShellProps {
 		);
 	}
 
+	// `GET /auth/me` returns the full user record (with `fullName`); the shell
+	// only needs the sidebar identity shape. Precedence: fresh `/auth/me` data
+	// > JWT-decoded server identity (SSR paint) > placeholder. So SSR already
+	// shows the real user and the fetch simply refreshes roles/perms when done.
+	const resolvedUser: SidebarUser = user !== undefined ? { name: user.fullName, email: user.email } : (initialUser ?? PLACEHOLDER_USER);
+
 	return (
 		<AdminBreadcrumbProvider pathname={pathname}>
-			<DashboardLayout user={{ name: user.fullName, email: user.email }} onLogout={handleLogout} footerActions={footerActions}>
+			<DashboardLayout user={{ name: resolvedUser.name, email: resolvedUser.email }} onLogout={handleLogout} footerActions={footerActions}>
 				{children}
 			</DashboardLayout>
 		</AdminBreadcrumbProvider>

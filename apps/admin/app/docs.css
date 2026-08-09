@@ -1,0 +1,96 @@
+/*
+ * Docs viewer prose extras (loaded only by the admin app).
+ *
+ * Everything here is additive to the Tailwind-styled markdown renderer:
+ * - a subtle drop-cap on the opening paragraph of each guide,
+ * - glossary `<abbr>` tooltip affordance (dotted underline + help cursor),
+ * - `@media print` rules so a guide prints cleanly: no sidebar, no topbar,
+ *   no reading chrome — just the article on white.
+ */
+
+/* ── Opening-paragraph drop-cap ─────────────────────────────────────────── */
+.docs-first-paragraph::first-letter {
+	float: left;
+	margin: 0.06em 0.08em 0 0;
+	font-size: 2.6em;
+	font-weight: 700;
+	line-height: 0.85;
+	color: var(--color-primary);
+}
+
+/* ── Glossary tooltips ───────────────────────────────────────────────────── */
+.markdown-body abbr {
+	text-decoration: underline dotted;
+	text-underline-offset: 3px;
+	text-decoration-color: var(--color-muted-foreground);
+	cursor: help;
+}
+
+/* ── Print: strip the app shell, print the article ──────────────────────── */
+@media print {
+	/* Kill the dashboard shell chrome (sidebar, drawer, topbar, breadcrumb,
+	   scroll-to-top, session badge, notifications, command palette). */
+	.sidebar,
+	.topbar-brand,
+	.topbar,
+	.mobile-menu-overlay,
+	.breadcrumb-trail,
+	.scroll-to-top,
+	.network-status-bar,
+	.notifications-dropdown,
+	.session-status-badge,
+	.theme-toggle,
+	.profile-dropdown,
+	[data-docs-lightbox] {
+		display: none !important;
+	}
+
+	/* The shell flexes to full viewport height; printing needs natural flow. */
+	#main-content {
+		overflow: visible !important;
+		height: auto !important;
+	}
+
+	/* The (panel) layout wrapper is `h-svh overflow-hidden` — undo for print. */
+	body,
+	html {
+		height: auto !important;
+		overflow: visible !important;
+	}
+
+	/* Reading chrome hidden; the page becomes one clean document. */
+	.docs-toc {
+		display: none !important;
+	}
+
+	/* Dark mode inverts via CSS vars — force black-on-white for print. */
+	html,
+	html.dark {
+		background: #fff !important;
+		color: #111 !important;
+		color-scheme: light;
+	}
+
+	/* Articles span the full printable width; avoid awkward code breaks. */
+	article {
+		max-width: 100% !important;
+	}
+
+	pre,
+	code {
+		white-space: pre-wrap !important;
+		word-break: break-word !important;
+		background: #f6f8fa !important;
+		color: #24292e !important;
+	}
+
+	/* Pages, not the scroll area, define boundaries. */
+	.main-content,
+	main {
+		overflow: visible !important;
+	}
+
+	a {
+		text-decoration: none !important;
+	}
+}

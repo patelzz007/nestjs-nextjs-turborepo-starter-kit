@@ -6,60 +6,63 @@ import * as React from "react";
 
 import { SIDEBAR_MENU } from "@/config/sidebar-menu";
 import { getInitials } from "@/lib/user-initials";
-import { computeRouteState, createItemId, filterItemsBySearch } from "@/lib/menu";
+import { sectionHasActiveItem, type SidebarView } from "@/lib/menu";
 import { useSidebarStore } from "@/stores/sidebar-store";
-import type { FooterAction, SidebarMenuItem, SidebarUser } from "@/types/sidebar";
+import type { FooterAction, SidebarUser } from "@/types/sidebar";
 
 import { SidebarNavItem } from "@/components/layout/sidebar-nav-item";
 import { SidebarSectionHeader } from "@/components/layout/sidebar-section-header";
-
 export interface SidebarProps {
 	readonly user: SidebarUser;
 	readonly onLogout: () => void;
 	readonly isMobileMenuOpen: boolean;
 	readonly setIsMobileMenuOpen: (isOpen: boolean) => void;
-	/** When true, a top-level item stays highlighted while any of its children is active. */
-	readonly isHighlightParentItem?: boolean;
 	readonly footerActions?: readonly FooterAction[];
+	/**
+	 * The render model, computed ONCE in `DashboardLayout` and shared by the
+	 * desktop + mobile instances (sidebar audit, improvement 20). The sidebar
+	 * never computes route/search/order state itself.
+	 */
+	readonly view: SidebarView;
+}
+
+/** True when the keyboard event target is a text-entry element (don't hijack "/"). */
+function isTypingTarget(target: EventTarget | null): boolean {
+	if (!(target instanceof HTMLElement)) {
+		return false;
+	}
+	return target.isContentEditable || target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.tagName === "SELECT";
 }
 
 /**
- * The admin sidebar. The nav tree is loaded from `config/sidebar-menu.json`
- * (see `config/sidebar-menu.ts`) — no hardcoded items live here. The active
- * route is derived from the current pathname, sections can be reordered
- * (persisted in the Zustand store), and the menu is searchable with match
- * highlighting.
+ * The admin sidebar. All derived state (active route, search results, section
+ * order) arrives via the `view` prop from `DashboardLayout` — this component is
+ * a pure renderer over it. The nav tree lives in `config/sidebar-menu.json`,
+ * sections can be reordered (persisted), the menu is searchable with match
+ * highlighting, and manual expansions are persisted in the store (audit #6).
  */
-export function Sidebar({ user, onLogout, isMobileMenuOpen, setIsMobileMenuOpen, isHighlightParentItem = false, footerActions = [] }: SidebarProps): React.JSX.Element {
+export function Sidebar({ user, onLogout, isMobileMenuOpen, setIsMobileMenuOpen, footerActions = [], view }: SidebarProps): React.JSX.Element {
 	const router = useRouter();
 	const pathname = usePathname();
-	const sectionOrder = useSidebarStore((s) => s.sectionOrder);
+	const storeExpandedItems = useSidebarStore((s) => s.expandedItems);
+	const setItemExpanded = useSidebarStore((s) => s.setItemExpanded);
+	const searchQuery = useSidebarStore((s) => s.searchQuery);
+	const setSearchQuery = useSidebarStore((s) => s.setSearchQuery);
+	const clearSearch = useSidebarStore((s) => s.clearSearch);
 	const moveSectionUp = useSidebarStore((s) => s.moveSectionUp);
 	const moveSectionDown = useSidebarStore((s) => s.moveSectionDown);
 
-	const [manualExpanded, setManualExpanded] = React.useState<Record<string, boolean>>({});
-	const [searchQuery, setSearchQuery] = React.useState("");
+	const searchInputRef = React.useRef<HTMLInputElement>(null);
+	const navContainerRef = React.useRef<HTMLDivElement>(null);
 
-	const isSearching = searchQuery.trim().length > 0;
-
-	const allItems = React.useMemo((): readonly SidebarMenuItem[] => {
-		const sectionItems = SIDEBAR_MENU.sections.flatMap((section) => section.items);
-		return [...sectionItems, ...SIDEBAR_MENU.bottomItems];
-	}, []);
-
-	const routeState = React.useMemo(() => computeRouteState(allItems, pathname, isHighlightParentItem), [allItems, pathname, isHighlightParentItem]);
-
-	/** Auto-expanded (route-driven) state merged with the user's manual toggles. */
-	const expandedItems = React.useMemo(() => ({ ...routeState.autoExpandedItems, ...manualExpanded }), [routeState.autoExpandedItems, manualExpanded]);
+	/** Auto-expanded (route-driven) state merged with the user's manual toggles (session-only — resets on refresh). Route wins. */
+	const expandedItems = React.useMemo(() => ({ ...storeExpandedItems, ...view.routeState.autoExpandedItems }), [storeExpandedItems, view.routeState.autoExpandedItems]);
 
 	const handleToggle = React.useCallback(
 		(itemId: string): void => {
-			setManualExpanded((previous) => ({
-				...previous,
-				[itemId]: !(previous[itemId] ?? routeState.autoExpandedItems[itemId] ?? false),
-			}));
+			setItemExpanded(itemId, !(expandedItems[itemId] ?? false));
 		},
-		[routeState.autoExpandedItems],
+		[expandedItems, setItemExpanded],
 	);
 
 	const handleNavigate = React.useCallback(
@@ -74,48 +77,66 @@ export function Sidebar({ user, onLogout, isMobileMenuOpen, setIsMobileMenuOpen,
 		[isMobileMenuOpen, setIsMobileMenuOpen, router],
 	);
 
-	const handleSearchChange = React.useCallback((event: React.ChangeEvent<HTMLInputElement>): void => {
-		const value = event.target.value;
-		setSearchQuery(value);
-		// Restore the route-driven expansion when the search is cleared.
-		if (value.trim().length === 0) {
-			setManualExpanded({});
-		}
-	}, []);
-
-	const handleClearSearch = React.useCallback((): void => {
-		setSearchQuery("");
-		setManualExpanded({});
-	}, []);
-
-	const filteredSections = React.useMemo(
-		() => SIDEBAR_MENU.sections.map((section) => ({ ...section, items: filterItemsBySearch(section.items, searchQuery) })).filter((section) => section.items.length > 0),
-		[searchQuery],
+	const handleSearchChange = React.useCallback(
+		(event: React.ChangeEvent<HTMLInputElement>): void => {
+			setSearchQuery(event.target.value);
+		},
+		[setSearchQuery],
 	);
 
-	const filteredBottomItems = React.useMemo(() => filterItemsBySearch(SIDEBAR_MENU.bottomItems, searchQuery), [searchQuery]);
+	const handleClearSearch = React.useCallback((): void => {
+		clearSearch();
+	}, [clearSearch]);
 
-	const allSectionTitles = React.useMemo(() => filteredSections.map((section) => section.title), [filteredSections]);
+	// "/" focuses the search box (GitHub/Linear pattern). Ignored while typing
+	// in a text field; Cmd/Ctrl/Alt combos pass through (Cmd+K is the Topbar's).
+	React.useEffect(() => {
+		const onKeyDown = (event: KeyboardEvent): void => {
+			if (event.defaultPrevented || event.repeat) {
+				return;
+			}
+			if (event.ctrlKey || event.metaKey || event.altKey) {
+				return;
+			}
+			if (event.key !== "/") {
+				return;
+			}
+			if (isTypingTarget(event.target)) {
+				return;
+			}
+			event.preventDefault();
+			searchInputRef.current?.focus();
+		};
+		window.addEventListener("keydown", onKeyDown);
+		return (): void => {
+			window.removeEventListener("keydown", onKeyDown);
+		};
+	}, []);
 
-	const orderedSections = React.useMemo(() => {
-		if (sectionOrder === null) {
-			return filteredSections;
+	// Scroll the active item into view after navigation (audit #8) — but only
+	// when the nav area actually scrolls and the item is out of view.
+	React.useEffect(() => {
+		const container = navContainerRef.current;
+		if (container === null) {
+			return;
 		}
-		return [...filteredSections].sort((a, b): number => {
-			const aIndex = sectionOrder.indexOf(a.title);
-			const bIndex = sectionOrder.indexOf(b.title);
-			if (aIndex === -1 && bIndex === -1) {
-				return 0;
-			}
-			if (aIndex === -1) {
-				return 1;
-			}
-			if (bIndex === -1) {
-				return -1;
-			}
-			return aIndex - bIndex;
-		});
-	}, [filteredSections, sectionOrder]);
+		const activeElement = container.querySelector<HTMLElement>('[data-active="true"]');
+		if (activeElement === null) {
+			return;
+		}
+		const isScrollable = container.scrollHeight > container.clientHeight;
+		if (!isScrollable) {
+			return;
+		}
+		const containerRect = container.getBoundingClientRect();
+		const elementRect = activeElement.getBoundingClientRect();
+		const isOutOfView = elementRect.top < containerRect.top || elementRect.bottom > containerRect.bottom;
+		if (!isOutOfView) {
+			return;
+		}
+		const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+		activeElement.scrollIntoView({ block: "nearest", behavior: prefersReducedMotion ? "auto" : "smooth" });
+	}, [pathname]);
 
 	const handleLogout = React.useCallback((): void => {
 		onLogout();
@@ -137,13 +158,14 @@ export function Sidebar({ user, onLogout, isMobileMenuOpen, setIsMobileMenuOpen,
 			</div>
 
 			{/* ── Scrollable nav area ────────────────────────────────────── */}
-			<div className="flex-1 overflow-y-auto px-3 py-3">
+			<div ref={navContainerRef} className="flex-1 overflow-y-auto px-3 py-3">
 				{/* Search */}
 				<div className="relative mb-4">
-					<Search className="pointer-events-none absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/50" />
+					<Search className="pointer-events-none absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/50" aria-hidden="true" />
 					<input
+						ref={searchInputRef}
 						type="text"
-						placeholder="Search menu..."
+						placeholder="Search menu…"
 						value={searchQuery}
 						onChange={handleSearchChange}
 						className="h-8 w-full rounded-md border border-sidebar-border bg-sidebar-accent/20 pr-7 pl-7 text-xs text-sidebar-foreground transition-all placeholder:text-muted-foreground/50 focus:border-sidebar-ring/60 focus:ring-2 focus:ring-sidebar-ring/40 focus:outline-none"
@@ -161,38 +183,38 @@ export function Sidebar({ user, onLogout, isMobileMenuOpen, setIsMobileMenuOpen,
 				</div>
 
 				{/* No results */}
-				{isSearching && orderedSections.length === 0 && filteredBottomItems.length === 0 ? (
+				{view.noResults ? (
 					<div className="flex flex-col items-center justify-center py-10 text-center">
-						<Search className="mb-2.5 h-7 w-7 text-muted-foreground/30" />
+						<Search className="mb-2.5 h-7 w-7 text-muted-foreground/30" aria-hidden="true" />
 						<p className="text-sm text-muted-foreground">No menu items found</p>
 						<p className="mt-1 text-xs text-muted-foreground/50">Try a different search term</p>
 					</div>
 				) : null}
 
 				{/* Sections */}
-				{orderedSections.length > 0 ? (
+				{view.sections.length > 0 ? (
 					<div className="space-y-5">
-						{orderedSections.map((section, index) => (
+						{view.sections.map((section, index) => (
 							<div key={section.title}>
 								<SidebarSectionHeader
 									title={section.title}
 									index={index}
-									isLast={index === orderedSections.length - 1}
-									isSearching={isSearching}
-									allTitles={allSectionTitles}
+									isLast={index === view.sections.length - 1}
+									isSearching={view.isSearching}
+									allTitles={view.sectionTitles}
+									isActiveSection={sectionHasActiveItem(section.items, view.routeState.activeItems)}
 									onMoveSectionUp={moveSectionUp}
 									onMoveSectionDown={moveSectionDown}
 								/>
 								<div className="space-y-0.5">
 									{section.items.map((item) => (
 										<SidebarNavItem
-											key={createItemId(item, "")}
+											key={item.id}
 											item={item}
-											parentId=""
-											isSearching={isSearching}
+											isSearching={view.isSearching}
 											searchQuery={searchQuery}
 											expandedItems={expandedItems}
-											activeItems={routeState.activeItems}
+											activeItems={view.routeState.activeItems}
 											onToggle={handleToggle}
 											onNavigate={handleNavigate}
 										/>
@@ -222,17 +244,16 @@ export function Sidebar({ user, onLogout, isMobileMenuOpen, setIsMobileMenuOpen,
 						</div>
 					) : null}
 
-					{filteredBottomItems.length > 0 ? (
+					{view.bottomItems.length > 0 ? (
 						<div className="space-y-0.5">
-							{filteredBottomItems.map((item) => (
+							{view.bottomItems.map((item) => (
 								<SidebarNavItem
-									key={createItemId(item, "")}
+									key={item.id}
 									item={item}
-									parentId=""
-									isSearching={isSearching}
+									isSearching={view.isSearching}
 									searchQuery={searchQuery}
 									expandedItems={expandedItems}
-									activeItems={routeState.activeItems}
+									activeItems={view.routeState.activeItems}
 									onToggle={handleToggle}
 									onNavigate={handleNavigate}
 								/>

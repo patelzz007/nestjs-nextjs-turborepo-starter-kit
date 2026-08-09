@@ -8,6 +8,7 @@ import { Geist, Geist_Mono, JetBrains_Mono } from "next/font/google";
 import { WebBreadcrumbProvider } from "@/components/breadcrumb-provider";
 import { ClientAuthWrapper } from "@/components/client-auth-wrapper";
 import { ThemeProvider } from "@/components/theme-provider";
+import { ScrollToTop } from "@workspace/ui/components/scroll-to-top";
 
 const jetbrainsMonoHeading = JetBrains_Mono({
 	subsets: ["latin"],
@@ -39,6 +40,8 @@ export default function RootLayout({
 					<ClientAuthWrapper>
 						<ThemeProvider>
 							<WebBreadcrumbProvider>{children}</WebBreadcrumbProvider>
+							{/* The web app scrolls the window — walk-up from here finds `window`. */}
+							<ScrollToTop />
 						</ThemeProvider>
 					</ClientAuthWrapper>
 				</QueryProvider>

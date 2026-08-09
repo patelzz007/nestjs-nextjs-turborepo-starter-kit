@@ -77,9 +77,10 @@ describe("sameSessionState", () => {
 		const ready: SessionState = { status: "ready", session: makeSession(BASE) };
 		expect(sameSessionState(ready, { status: "ready", session: makeSession(BASE) })).toBe(true);
 		expect(sameSessionState(ready, { status: "ready", session: makeSession("2026-08-05T00:10:00.000Z") })).toBe(false);
-		const error: SessionState = { status: "error", errorMessage: "boom" };
-		expect(sameSessionState(error, { status: "error", errorMessage: "boom" })).toBe(true);
-		expect(sameSessionState(error, { status: "error", errorMessage: "different" })).toBe(false);
+		const error: SessionState = { status: "error", errorMessage: "boom", retryable: true };
+		expect(sameSessionState(error, { status: "error", errorMessage: "boom", retryable: true })).toBe(true);
+		expect(sameSessionState(error, { status: "error", errorMessage: "different", retryable: true })).toBe(false);
+		expect(sameSessionState(error, { status: "error", errorMessage: "boom", retryable: false })).toBe(false);
 		expect(sameSessionState({ status: "loading" }, { status: "loading" })).toBe(true);
 		expect(sameSessionState(ready, error)).toBe(false);
 	});
@@ -100,6 +101,7 @@ describe("fetchSessionState", () => {
 		await expect(fetchSessionState(() => Promise.reject(new Error("down")))).resolves.toEqual({
 			status: "error",
 			errorMessage: "Session check failed — network or server error",
+			retryable: true,
 		});
 	});
 
@@ -107,7 +109,7 @@ describe("fetchSessionState", () => {
 		const state = await fetchSessionState(() => {
 			throw new Error("sync boom");
 		});
-		expect(state).toEqual({ status: "error", errorMessage: "Session check failed — network or server error" });
+		expect(state).toEqual({ status: "error", errorMessage: "Session check failed — network or server error", retryable: true });
 	});
 });
 
@@ -228,15 +230,46 @@ describe("buildSessionBadgeStreams", () => {
 		const states: SessionState[] = [];
 		const sub = streams.sessionState$.subscribe({ next: (v) => states.push(v) });
 		await settle();
-		expect(states).toEqual([{ status: "error", errorMessage: "Session expired — please log in again" }]);
+		expect(states).toEqual([{ status: "error", errorMessage: "Session expired — please log in again", retryable: false }]);
 
 		shouldFail = false;
 		s.advanceBy(10);
 		await settle();
 		expect(states).toEqual([
-			{ status: "error", errorMessage: "Session expired — please log in again" },
+			{ status: "error", errorMessage: "Session expired — please log in again", retryable: false },
 			{ status: "ready", session: makeSession(BASE) },
 		]);
+		sub.unsubscribe();
+	});
+
+	it("silently auto-retries a transient failure and recovers WITHOUT a poll or tab switch", async () => {
+		const s = new TestScheduler();
+		let failCount = 0;
+		// Fail twice (transient — like the API still booting after a restart),
+		// then succeed. `pollMs: null` proves the recovery comes from the retry
+		// chain, not a steady poll.
+		const fetchSession = vi.fn((): Promise<SessionStatus> => {
+			failCount += 1;
+			return failCount <= 2 ? Promise.reject(new Error("fetch failed")) : Promise.resolve(makeSession(BASE));
+		});
+		const streams = buildSessionBadgeStreams({ fetchSession, scheduler: s, pollMs: null, retryMs: 5 });
+
+		const states: SessionState[] = [];
+		const sub = streams.sessionState$.subscribe({ next: (v) => states.push(v) });
+		await settle(); // mount fetch — fails; transient errors are SILENT so the badge
+		// stays in its initial "checking" state (never flashes "Session check failed")
+		expect(fetchSession).toHaveBeenCalledTimes(1);
+		expect(states).toEqual([]);
+
+		s.advanceBy(5); // retry 1 — still failing
+		await settle();
+		expect(fetchSession).toHaveBeenCalledTimes(2);
+		expect(states).toEqual([]);
+
+		s.advanceBy(5); // retry 2 — succeeds
+		await settle();
+		expect(fetchSession).toHaveBeenCalledTimes(3);
+		expect(states).toEqual([{ status: "ready", session: makeSession(BASE) }]);
 		sub.unsubscribe();
 	});
 

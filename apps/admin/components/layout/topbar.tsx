@@ -4,6 +4,7 @@ import { Avatar, AvatarFallback } from "@workspace/ui/components/avatar";
 import { Button } from "@workspace/ui/components/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@workspace/ui/components/dropdown-menu";
 import { Leaf, Menu, Search, Settings } from "lucide-react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import * as React from "react";
 
@@ -11,13 +12,16 @@ import { NetworkStatusIndicator } from "@/components/common/network-status-bar";
 import { NotificationsDropdown } from "@/components/notifications/notifications-dropdown";
 import { SessionStatusBadge } from "@/components/common/session-status-badge";
 import { ThemeToggle } from "@/components/common/theme-toggle";
-import { CommandPalette } from "@/components/ui/command-palette";
 import { Profile01 } from "@/components/settings/profile-01";
 import { SIDEBAR_MENU } from "@/config/sidebar-menu";
-import { useMediaQuery } from "@/hooks/use-media-query";
 import { getInitials } from "@/lib/user-initials";
 import { useSidebar } from "@/stores/sidebar-store";
 import type { SidebarUser } from "@/types/sidebar";
+
+// The command palette pulls in `cmdk` + the palette search index — code-split
+// it so neither ships in the initial bundle. It only mounts once the user
+// opens it (⌘K or the search button); the shortcut listener lives here.
+const CommandPalette = dynamic(() => import("@/components/ui/command-palette").then((m) => m.CommandPalette), { ssr: false });
 
 export interface TopbarProps {
 	readonly user: SidebarUser;
@@ -30,12 +34,8 @@ export interface TopbarProps {
  * (when the sidebar is collapsed), command-palette search, notifications,
  * network status, theme toggle, settings, and the profile dropdown.
  */ export function Topbar({ user, onLogout, setIsMobileMenuOpen }: TopbarProps): React.JSX.Element {
-	const { toggle, isOpen } = useSidebar();
+	const { toggle } = useSidebar();
 	const [commandOpen, setCommandOpen] = React.useState(false);
-	// The desktop sidebar only renders at the `lg` breakpoint (>= 1024px), so
-	// the brand must show whenever we're below it — not just at the `md`
-	// breakpoint that `useIsMobile` uses.
-	const isBelowLg = !useMediaQuery("(min-width: 1024px)");
 
 	const handleOpenMobileMenu = React.useCallback((): void => {
 		setIsMobileMenuOpen(true);
@@ -45,9 +45,32 @@ export interface TopbarProps {
 		setCommandOpen(true);
 	}, []);
 
+	// ⌘K / Ctrl+K shortcut. Lives here (not inside the palette) because the
+	// palette is now only mounted while open — the shortcut must work before
+	// its first open. Once mounted, the palette registers its own handler
+	// (toggle-close), so this one skips while `commandOpen` is true to avoid a
+	// double toggle on the same keypress.
+	React.useEffect(() => {
+		const handleShortcut = (event: KeyboardEvent): void => {
+			if (event.key === "k" && (event.metaKey || event.ctrlKey)) {
+				event.preventDefault();
+				if (!commandOpen) {
+					setCommandOpen(true);
+				}
+			}
+		};
+
+		document.addEventListener("keydown", handleShortcut);
+		return (): void => {
+			document.removeEventListener("keydown", handleShortcut);
+		};
+	}, [commandOpen]);
+
 	return (
 		<>
-			<CommandPalette open={commandOpen} setOpen={setCommandOpen} />
+			{/* The palette only mounts on demand — cmdk stays out of the initial
+			    bundle and out of the DOM until the user opens it. */}
+			{commandOpen ? <CommandPalette open setOpen={setCommandOpen} /> : null}
 			<div className="flex h-14 w-full items-center justify-between border-b border-sidebar-border bg-background px-2 sm:px-4">
 				{/* Left side */}
 				<div className="flex min-w-0 items-center">
@@ -61,15 +84,18 @@ export interface TopbarProps {
 						<Menu className="size-5 text-muted-foreground" />
 					</button>
 
-					{/* Brand — shown when the sidebar is collapsed on desktop, or always below `lg` */}
-					{!isOpen || isBelowLg ? (
-						<div className="flex items-center">
-							<div className="mr-2 flex h-7 w-7 items-center justify-center rounded-full bg-green-500">
-								<Leaf className="size-4 text-white" />
-							</div>
-							<span className="text-lg font-semibold text-foreground">{SIDEBAR_MENU.header.title}</span>
+					{/* Brand — ALWAYS rendered (no JS media-query flash on reload). Its
+					    visibility is pure CSS and MOBILE-ONLY: shown below `lg` where
+					    the sidebar is a mobile drawer, always hidden at `lg` and up
+					    (the desktop sidebar header already shows the app title, and
+					    re-showing it while collapsed reads as a stray mobile icon).
+					    See the `.topbar-brand` rule in globals.css. */}
+					<div className="topbar-brand flex items-center">
+						<div className="mr-2 flex h-7 w-7 items-center justify-center rounded-full bg-green-500">
+							<Leaf className="size-4 text-white" />
 						</div>
-					) : null}
+						<span className="text-lg font-semibold text-foreground">{SIDEBAR_MENU.header.title}</span>
+					</div>
 				</div>
 
 				{/* Right side */}

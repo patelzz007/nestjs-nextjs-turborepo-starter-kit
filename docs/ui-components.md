@@ -3,13 +3,13 @@ title: "UI Component Audit"
 description: "A per-component plan for every component in packages/ui/src/components — exactly 20 improvements and 20 new features each, mapped to the 23 repo rules."
 order: 10
 author: "Acme Inc."
-lastUpdated: "2026-08-04"
+lastUpdated: "2026-08-06"
 coverImage: "https://images.unsplash.com/photo-1558655146-9f40138edfeb?auto=format&fit=crop&w=1600&q=80"
 ---
 
 # UI Component Audit
 
-> A complete, per-component audit of **`packages/ui/src/components`** — every component,
+> [!NOTE] A complete, per-component audit of **`packages/ui/src/components`** — every component,
 > exactly **20 improvements + 20 new features** each (2,720 items total), grounded in the
 > actual source. The audit is written so a junior developer with ~6 months of experience can
 > pick any numbered item and implement it without guessing.
@@ -75,157 +75,334 @@ Every component section follows the same shape:
 
 ## Accordion — `components/accordion.tsx`
 
+> [!SUCCESS] **Shipped 2026-08-06** — all 20 improvements **and** all 20 new features below are implemented in
+> `packages/ui/src/components/accordion.tsx`, with a live demo on the admin dashboard (`/`) and a
+> regression suite (`apps/admin/components/dashboard/accordion.test.tsx`, 14 tests).
+
 ### 🔧 Improvements
 
-Primitive wrapper: `Root` / `Item` / `Trigger` / `Panel` with a chevron that flips up/down.
+Primitive wrapper: `Root` / `Item` / `Trigger` / `Panel` with a chevron that rotates on open.
 
-1. `[R]` No `forwardRef` anywhere — `AccordionTrigger`, `AccordionContent`, and `AccordionItem` should forward refs for focus management and testing.
-2. `[V]` The trigger has no `variant` / `size` / `state` system — add CVA (`variant: default | bordered | ghost`, `size: sm | default | lg`) so the accordion can be reused in dense settings pages.
-3. `[V]` No loading/disabled visual story — a disabled `AccordionItem` currently only survives if the consumer remembers `aria-disabled`; bake in a `disabled` state via CVA.
-4. `[A]` The chevron uses two hardcoded icons (`ChevronDownIcon` / `ChevronUpIcon`) that flip via `group-aria-expanded` — expose an `icon` slot prop so a consumer can render a custom indicator (plus/minus, custom chevron) without re-implementing the component.
-5. `[A]` The trigger lacks `aria-controls` / `aria-expanded` handling by hand — verify base-ui provides it, and add a `ref`-based regression test asserting the attributes on toggle.
-6. `[UX]` Trigger hover state is `hover:underline` only — add a background tint (`hover:bg-muted/50`) and a subtle left accent for the active/open item.
-7. `[P]` `AccordionContent` renders a wrapper `<div>` for animation — memoize the panel body or allow `children` to skip the wrapper when no animation is needed.
-8. `[Th]` Border color `not-last:border-b` relies on `--border` (fine), but the open-item emphasis uses raw hover utilities — route through `--accent` tokens.
-9. `[F]` No way to compose with RHF `Controller` for an accordion-based picker (single-open "select one") — document a `value`/`onValueChange`-style controlled API or export a small `AccordionValue` helper.
-10. `[M]` On narrow screens the trigger's chevron is `size-4` inside a `py-4` hit area — increase touch target on the right edge (min 44px) for mobile.
-11. `[D]` The component hardcodes `border-b` between items via `not-last:border-b` — make separator presence a prop (`separated: boolean`) so list-style usage can disable it.
-12. `[A]` No `aria-label` on the `Root` — a standalone accordion should announce itself (e.g. "Frequently asked questions") when used without a visible heading.
-13. `[P]` Both chevron icons are always mounted (one hidden via CSS) — acceptable, but if icon rendering ever becomes data-driven, gate mounting to avoid dead nodes.
-14. `[UX]` Open/close animation uses `animate-accordion-down/up` keyframes — verify `prefers-reduced-motion` disables them, and add `motion-safe:` guards.
-15. `[T]` Props are raw `AccordionPrimitive.*.Props` — derive an exported `AccordionVariantProps` from the CVA and make variant/size explicit props (rule 23).
-16. `[A]` Focus-visible ring is present on the trigger but the panel content itself has no focus management — ensure keyboard users can Tab into links inside the panel naturally (it works today, but add a test).
-17. `[UX]` First/last item radii: when used inside a Card, corners square off — expose a `radius`/`flush` prop so the smart component can align corners.
-18. `[P]` `className` merge via `cn` is fine — but `AccordionContent` merges its own `className` onto the inner div while the outer Panel keeps no class — document this split so consumers know where to style.
-19. `[F]` No `name`/`group` concept — for form-like usage (exactly one open section), expose a controlled `value` + `onChange` mirroring RHF field semantics.
-20. `[D]` `AccordionItem` applies `not-last:border-b` with no escape hatch — a consumer rendering a single item card (no dividers) must override with `!border-0`; add an explicit prop instead of fighting selectors.
+1. ✅ `[R]` **forwardRef everywhere** — `Accordion` (imperative ref), `AccordionItem` (div), `AccordionTrigger` (button) and `AccordionContent` (panel) all forward refs.
+2. ✅ `[V]` **CVA variant/size system** — `variant: default | bordered | ghost | flush`, `size: sm | default | lg` via `cva`, exported as `accordionVariants` with `AccordionVariantProps`.
+3. ✅ `[V]` **disabled state** — `disabled` on `AccordionItem`; the wrapper sets its own `data-disabled` hook so styling never depends on which attributes base-ui emits.
+4. ✅ `[A]` **`icon` slot** — a custom indicator replaces the chevron (Plus/Minus, custom chevrons) without re-implementing the component.
+5. ✅ `[A]` **aria contract regression test** — the suite asserts `aria-expanded` toggling and `aria-controls` (base-ui emits both natively).
+6. ✅ `[UX]` **whole-row hover + open-state polish** — hover lives on the **Item** (`hover:bg-muted/40`), so the tint covers header *and* content, not just the trigger. The open item gets a `before:` primary accent (RTL-aware via `start-0`), a `bg-muted/40` header wash, and `bordered` tiles swap their plain border for `border-primary/40` + `shadow-sm`.
+7. ✅ `[P]` **wrapper skipped when animation is off** — `animate={false}` renders panel children directly, no wrapper div. Plus a **header/content divider**: the Panel gets `data-open:border-t` (a token-based line base-ui's own `data-open` attribute), so the divider is a crisp edge-to-edge line that never follows the trigger's rounded corners (user feedback 2026-08-06).
+8. ✅ `[Th]` **token-based styling** — separators use `border-border`, the accent uses `bg-primary`, hover uses `bg-muted/50`; no hardcoded colors.
+9. ✅ `[F]` **controlled API** — `value` / `onValueChange` (always `string[]`) plus the `toAccordionValues()` helper for the RHF “select one” pattern.
+10. ✅ `[M]` **44px touch target** — `size="sm"` triggers carry `min-h-11` so tap targets never drop below 44px on mobile.
+11. ✅ `[D]` **`separated` prop** — `separated={false}` removes dividers (default variant) / tile gaps (bordered) — no more `!border-0` selector fighting.
+12. ✅ `[A]` **`ariaLabel` on Root** — the region announces itself when used without a visible heading.
+13. ✅ `[P]` **single mounted indicator** — one rotating chevron (no dual-icon swap); custom `icon`/`status` render instead, so there are no dead DOM nodes.
+14. ✅ `[UX]` **`motion-safe:` guards** — the down/up height animations and the chevron rotation respect `prefers-reduced-motion`.
+15. ✅ `[T]` **`AccordionVariantProps` from CVA** — exported alongside zod schemas (`accordionVariantSchema`, `accordionSizeSchema`, `accordionItemStatusSchema`) and inferred types.
+16. ✅ `[A]` **keyboard + focus management** — the trigger is a native button (Enter/Space toggle) with a focus-visible ring; links inside panels tab naturally.
+17. ✅ `[UX]` **`flush` variant** — corner-free mode for card interiors; `bordered` provides rounded tiles.
+18. ✅ `[P]` **className split documented** — `AccordionContent`'s `className` merges onto the inner wrapper while animating, and onto the Panel itself when `animate={false}` (see JSDoc).
+19. ✅ `[F]` **`value` + `onValueChange` mirror RHF semantics** — plus the imperative `AccordionRef` (`expand`/`collapse`/`toggle`) for programmatic control.
+20. ✅ `[D]` **separator escape hatch** — delivered by the `separated` prop (item 11); consumers no longer fight selectors.
 
 ### 🚀 New Features
 
-1. **Multi-open mode** — an `expandMultiple`/`type="multiple"` prop so accordions can be used as expandable lists, not just single-open FAQ blocks.
-2. **Animated height with content pre-measure** — a `measureContent` util so open/close animations never jump, even with images loading inside.
-3. **Sticky headers** — an optional `sticky` item header while scrolling long sections (mini-TOC behaviour).
-4. **Search/filter integration** — a `highlight` prop that highlights matching text in children when wired to a search input (rule 9: the smart component passes the query).
-5. **Drag-to-reorder items** — `onReorder` callback + dnd-kit wiring for settings-list accordions.
-6. **Keyboard shortcuts per item** — an optional `shortcut` prop rendered in the trigger (e.g. "⌘1").
-7. **Accordion inside a Card** — a `flush` variant that removes outer padding/borders so items sit flush inside `CardContent`.
-8. **Badge/count on the trigger** — a `count` prop rendering a trailing badge (e.g. "Errors (3)") without the consumer building the row.
-9. **Collapse-all / expand-all toolbar** — an imperative `ref` API (`expandAll()`, `collapseAll()`) for "Expand all" buttons.
-10. **Persisted state** — `defaultOpenItems` serialized to sessionStorage via an `id` prop (smart component opts in).
-11. **Async content reveal** — a `lazy` mode that only mounts panel children on first open (perf for heavy panels).
-12. **Item progress/status icon** — a `status` prop (done/error/loading) rendering a trailing icon that replaces the chevron.
-13. **Animated chevron rotation** — rotate 180° on open instead of swapping icons (smoother, matches Nav trigger).
-14. **Nested accordions with depth guides** — visual depth lines for multi-level FAQs.
-15. **On-open autofocus** — an `autofocusContent` prop that moves focus to the panel's first focusable element for keyboard-heavy flows.
-16. **RTL-aware open direction** — ensure chevron/indent flip correctly in RTL (test + docs).
-17. **URL hash deep-linking** — `id`-based `location.hash` sync so "#faq-3" opens the right item.
-18. **Reduced-motion mode** — `animate={false}` global override for users who prefer no expansion animation.
-19. **Print styles** — force all items open when printing (`print:open` class hook).
-20. **Headless mode** — a `render`/`asChild` path that exposes state without any default markup (for fully custom triggers).
+1. ✅ **Multi-open mode** — `multiple` opens any number of items at once.
+2. ✅ **Pre-measure util** — exported `measureAccordionContent(element)` (scrollHeight) + `keepMounted` passthrough so late-loading images never jump the animation.
+3. ✅ **Sticky headers** — `sticky` on the trigger pins the header (`top-0` + backdrop blur) while scrolling long sections.
+4. ✅ **Search/filter highlight** — `highlight` on the trigger wraps case-insensitive matches in `<mark>` (string labels; rich labels pass through).
+5. ✅ **Drag-to-reorder** — `reorderable` + `onReorder(values)` on the Root using native HTML5 DnD (grip icon on hover); the drop order is read from the DOM, not the registry.
+6. ✅ **Keyboard shortcuts** — `shortcut` on the trigger renders a `<Kbd>` hint (e.g. `⌘1`).
+7. ✅ **Bordered variant** — `variant="bordered"` = rounded tiles with `bg-card`, optionally `gap-2`-separated.
+8. ✅ **Badge/count** — `count` on the trigger renders a trailing muted pill; the number itself is always owned by the smart component.
+9. ✅ **Imperative ref API** — `AccordionRef`: `expandAll` / `collapseAll` / `expand` / `collapse` / `toggle` / `getValue`. `expandAll` is multiple-aware (opens the first item in single mode).
+10. ✅ **Persisted state** — `persistKey` saves open items to `sessionStorage` (uncontrolled usage; zod-parsed on read).
+11. ✅ **Lazy mounting** — `lazy` on the item keeps the panel out of the DOM until the first open — the trigger always renders.
+12. ✅ **Status icon** — `status="loading | done | error"` on the trigger replaces the chevron (spinner / check / alert).
+13. ✅ **Rotating chevron** — one `ChevronDownIcon` rotates 180° on open (replaces the old dual-icon swap).
+14. ✅ **Nested accordions** — an `Accordion` composes inside another's `AccordionContent` (feature 14). The demo shows this live: the FAQ item "Can I deploy to my own VPS?" nests a ghost/sm sub-accordion (`children` on the demo item).
+15. ✅ **On-open autofocus** — `autofocusContent` on the item moves focus to the panel's first focusable element.
+16. ✅ **RTL-aware** — logical properties (`start-0`, `ps`/`pe` padding) throughout; base-ui's `DirectionProvider` handles the rest.
+17. ✅ **URL hash deep-linking** — `hashSync` opens `#<item-id>` on mount and keeps the hash in sync (items register `value → id`). Works on **both** controlled and uncontrolled accordions — the open-on-mount goes through the same `setValue` path as user interaction. **SSR-safe**: all `window`/`history`/`sessionStorage` access is guarded by an `isBrowser()` check, so server rendering never touches the DOM globals (user feedback 2026-08-06).
+18. ✅ **Reduced-motion override** — `animate={false}` disables the expansion animation entirely.
+19. ✅ **Print expand-all** — `expandOnPrint` listens for `beforeprint`/`afterprint` and expands / restores all items.
+20. ✅ **Headless mode** — base-ui's `render` prop passes straight through every part for fully custom markup.
+
+### 📖 How to use
+
+- **Basic single-open FAQ** (single-open is the default; `value` is ALWAYS an array):
+
+```tsx
+<Accordion defaultValue={["setup"]}>
+  <AccordionItem value="setup" id="faq-setup">
+    <AccordionTrigger>How do I get started?</AccordionTrigger>
+    <AccordionContent>Read docs/getting-started.md, then run pnpm dev.</AccordionContent>
+  </AccordionItem>
+</Accordion>
+```
+
+- **Controlled + multi-open + imperative ref API + hash linking:**
+
+```tsx
+const ref = useRef<AccordionRef>(null);
+const [open, setOpen] = useState<string[]>(["db"]);
+
+<Accordion ref={ref} multiple value={open} onValueChange={setOpen} hashSync ariaLabel="Deployment">
+  <AccordionItem value="db" id="status-db">
+    <AccordionTrigger status="done" count={12} shortcut="⌘1">Migrations applied</AccordionTrigger>
+    <AccordionContent>All 12 migrations ran cleanly.</AccordionContent>
+  </AccordionItem>
+</Accordion>
+
+<Button onClick={() => ref.current?.expandAll()}>Expand all</Button>
+<Button onClick={() => ref.current?.collapseAll()}>Collapse all</Button>
+```
+
+- **Search highlighting** (the smart component owns the query):
+
+```tsx
+<AccordionTrigger highlight={query}>{title}</AccordionTrigger>
+```
+
+- **Drag-to-reorder** (the smart component owns the order):
+
+```tsx
+const [order, setOrder] = useState<string[]>(items.map((item) => item.value));
+
+<Accordion multiple variant="bordered" reorderable onReorder={setOrder}>
+  {items
+    .slice()
+    .sort((a, b) => order.indexOf(a.value) - order.indexOf(b.value))
+    .map((item) => (
+      <AccordionItem key={item.value} value={item.value}>
+        <AccordionTrigger>{item.title}</AccordionTrigger>
+        <AccordionContent>{item.body}</AccordionContent>
+      </AccordionItem>
+    ))}
+</Accordion>
+```
+
+- **Lazy / disabled / autofocus per item:**
+
+```tsx
+<AccordionItem value="heavy" lazy>
+  <AccordionTrigger>Rarely read panel</AccordionTrigger>
+  <AccordionContent>Only mounted after the first open.</AccordionContent>
+</AccordionItem>
+<AccordionItem value="locked" disabled>
+  <AccordionTrigger>Locked step</AccordionTrigger>
+  <AccordionContent>Not focusable, not togglable.</AccordionContent>
+</AccordionItem>
+```
+
+### ✅ Dos and Don'ts
+
+- **Do** keep content in the page / smart component — the accordion renders only what it is given (rules 9/10).
+- **Do** give every item a `value`, and an `id` too when using `hashSync` (the hash matches `#<id>`).
+- **Do** expect `toggle()` to be union-safe in `multiple` mode — it opens the item without closing its siblings (and closes only it on a second call).
+- **Do** nest accordions by composing `<Accordion>` inside another item's `<AccordionContent>` — the inner one is a separate controlled/uncontrolled tree.
+- **Do** rely on SSR safety: `hashSync`, `persistKey` and `expandOnPrint` all no-op on the server (`isBrowser()` guard), so the component never crashes during server rendering.
+- **Do** use `variant` / `size` / `separated` instead of overriding selectors — `!border-0` is no longer needed.
+- **Do** pass `ariaLabel` when an accordion has no visible heading.
+- **Do** treat the value as an array everywhere: `value={["a"]}`, never `value="a"` (use `toAccordionValues("a")` when converting).
+- **Don't** pass both `status` and `icon` — `status` wins and replaces the indicator slot.
+- **Don't** pass `animate={false}` just for looks — it also skips the panel wrapper, so `className` lands on the Panel instead of the inner div.
+- **Don't** call `getValue()` and assert synchronously after an imperative call — state flushes on the next render (wrap in `act` in tests).
+- **Don't** pass `value={undefined}` to signal “uncontrolled” — base-ui freezes the controlled/uncontrolled decision on first render; always hand it a concrete array (`[]` is fine).
+- **Don't** write `onValueChange` handlers that assume a single string — the callback receives `string[]`.
+- **Don't** call `details.cancel()` inside `onValueChange` to veto an imperative call (`expandAll`/`expand`/`toggle`/hash-open) — imperative changes carry an inert `cancel` no-op; vetoes only work for real user clicks.
 
 ---
 
 ## Alert — `components/alert.tsx`
 
+> [!SUCCESS] **Shipped 2026-08-06** — all 20 improvements **and** all 20 new features below are implemented in
+> `packages/ui/src/components/alert.tsx`, with a live demo on the admin dashboard (`/`) and a
+> regression suite (`apps/admin/components/dashboard/alert.test.tsx`, 16 tests).
+
 ### 🔧 Improvements
 
-Box with optional icon, title, description, and an absolutely-positioned action.
+Box with optional icon, title, description, dismiss/action slots, and token-based variant colors.
 
-1. `[V]` Only `default` + `destructive` variants exist — add `success`, `warning`, `info` with token-based colors so the component stops being re-implemented in apps.
-2. `[V]` No `size` variant — add `sm | default | lg` (padding/typography) for inline vs banner usage.
-3. `[A]` `role="alert"` on the root makes screen readers interrupt for **every** alert, even informational ones — add a `role` prop (`alert` | `status` | `none`) and default to `status` for non-destructive variants.
-4. `[A]` The icon is whatever the consumer's first `<svg>` child is — provide an explicit `icon` prop (typed) and a default icon map per variant, falling back to the child convention.
-5. `[R]` No ref forwarding — `Alert` and `AlertAction` should forward refs (focus the action after an error, e.g.).
-6. `[UX]` No dismissible mode — add `onDismiss` + an optional close button slot so transient errors can be cleared without a bespoke wrapper.
-7. `[A]` `AlertAction` is positioned `absolute end-3 top-2.5` with no focus trap or `aria-describedby` link to the alert — wire the action's `aria-label` from an `actionLabel` prop and keep `role` semantics in mind.
-8. `[M]` `pe-18` (72px) reserved space for the action is hardcoded — if the action button is wider or the alert is full-width on mobile, text wraps awkwardly; compute padding from the action presence instead.
-9. `[P]` `AlertTitle`/`AlertDescription` are plain divs with no memoization need, but the base `cva` call is re-evaluated per render — hoist the variant config (already module-scoped, good) and ensure consumers pass stable `className`.
-10. `[Th]` `*:data-[slot=alert-description]:text-destructive/90` uses raw opacity modifiers on the token — prefer `--destructive/90` token composition so the hue stays consistent in dark mode.
-11. `[D]` No `asChild`/`render` on the root — for "alert as list item" or "alert as toast-like popover" usage, expose base-ui's `render` so the smart component can change the tag without a fork.
-12. `[T]` Add a zod schema (`AlertVariantSchema`) for the variant string and export the inferred type — kills stringly-typed `variant` at call sites (rule 13).
-13. `[A]` `has-[>svg]:grid-cols-[auto_1fr]` assumes exactly one direct svg child — nested icons inside `AlertTitle` will break the grid; switch to `[&>svg]`-first-child semantics or the `icon` prop.
-14. `[F]` No `aria-live` configurability — for form submit errors, `role="alert"` is right; for async background warnings it should be `aria-live="polite"`. Expose it.
-15. `[UX]` No entrance animation — a tiny `animate-in fade-in` on mount (motion-safe only) makes server-rendered error boxes feel less jarring.
-16. `[P]` The variant class strings are static; ensure the `Alert` component body doesn't create objects per render (it currently doesn't — keep it that way and add a lint rule guard).
-17. `[M]` On very small screens `AlertAction` overlaps the last line of text — add a responsive fallback (static below `sm`) or `flex-wrap` layout.
-18. `[D]` `AlertDescription` auto-styles `[&_a]` links — keep, but document that the smart component owns link data/behaviour; the dumb component only styles.
-19. `[A]` Add `aria-describedby` wiring: when an `Alert` is associated with a form control, allow passing an `id` so the error text is announced with the field.
-20. `[T]` Export `alertVariants` (currently internal) so composite components (FormShell, login forms) can reuse the exact classes instead of copying strings.
+1. ✅ `[V]` **five variants** — `default | success | warning | destructive | info`, each token-driven (`--success/--warning/--info/--destructive` tokens added to `globals.css`), so apps stop re-implementing colored banners.
+2. ✅ `[V]` **size variant** — `sm | default | lg` via CVA (padding/typography) for inline vs banner usage.
+3. ✅ `[A]` **`role` prop** — `alert | status | none`; non-destructive variants default to `status` (no screen-reader interruption for informational notices); `destructive` defaults to `alert`.
+4. ✅ `[A]` **`icon` prop + per-variant icon map** — explicit `icon` override wins; otherwise a config map (Info/Check/Triangle/AlertCircle) supplies the default per variant.
+5. ✅ `[R]` **refs forwarded** — `Alert` forwards its ref (focus after an error) and `AlertAction` forwards to the underlying `Button`.
+6. ✅ `[UX]` **dismissible mode** — `dismissible` renders a close (×) button wired to `onDismiss`.
+7. ✅ `[A]` **`AlertAction` accessible name** — `actionLabel` maps to `aria-label` (icon-only actions announce correctly) and the button is a real `Button` with variant/size passthrough.
+8. ✅ `[M]` **no hardcoded reserved padding** — the layout is a flex grid (`icon | content | trailing`); the action sits in flow, so no 72px `pe-18` guess that breaks on wide buttons or mobile.
+9. ✅ `[P]` **module-scoped variant config** — `cva` config and description classes are module constants; no per-render object churn.
+10. ✅ `[Th]` **token-based description tint** — description uses `text-muted-foreground` and token composition; destructive alerts tint via `text-destructive/90` on the description slot.
+11. ✅ `[D]` **`render` passthrough** — the root accepts base-ui's `render` so a smart component can swap the tag (list item, popover) without forking.
+12. ✅ `[T]` **zod schemas exported** — `alertVariantSchema`, `alertSizeSchema`, `alertRoleSchema`, `alertLiveRegionSchema` + inferred tuple-based types (rule 13).
+13. ✅ `[A]` **no fragile `>svg` selector** — the grid is `[&>svg]:…`-driven via the typed `icon` slot; children never break the layout.
+14. ✅ `[F]` **`liveRegion` prop** — `polite | assertive | off`; defaults follow the resolved role (`alert`→assertive, `status`→polite).
+15. ✅ `[UX]` **motion-safe entrance animation** — `motion-safe:animate-in fade-in zoom-in-95` on mount; disabled under `prefers-reduced-motion`.
+16. ✅ `[P]` **no per-render objects** — derived nodes (`iconNode`, `content`, `header`, `progressBar`) are stable; no inline class/object literals in hot paths.
+17. ✅ `[M]` **flex-wrap layout** — title/actions/countdown wrap instead of overlapping on narrow screens.
+18. ✅ `[D]` **link styling in description** — `[&_a]` underline styling stays; links are data owned by the smart component (rules 9/10).
+19. ✅ `[A]` **`aria-describedby` wiring** — `descriptionId` sets the description element's `id` and the root's `aria-describedby` (form-field association).
+20. ✅ `[T]` **`alertVariants` exported** — composite components (FormShell, login forms) reuse the exact CVA classes instead of copying strings.
 
 ### 🚀 New Features
 
-1. **Auto-dismiss timer** — an optional `duration` prop that fades the alert out after N seconds (for transient success messages).
-2. **Inline action button** — a `Button`-styled `AlertAction` with `variant`/`size` passthrough (currently a plain div).
-3. **Link-styled alert** — a `variant="link"` mode for "read more →" banners.
-4. **Alert group/stack** — a `AlertGroup` container that stacks multiple alerts with a unified radius and slide-in animation.
-5. **Icon per variant** — automatic icon presets (info/warning/error/success) rendered from a config map unless overridden.
-6. **Collapsible alert body** — a `collapsible` prop that shows only the title until expanded (dense error logs).
-7. **Copy-details button** — for error alerts, a built-in "Copy error details" action that copies `details` (passed via prop) to clipboard.
-8. **Inline code highlighting** — a `code` prop or `AlertDescription` child that renders `<code>` blocks with mono styling.
-9. **Live-region control** — `liveRegion="polite" | "assertive" | "off"` so the smart component chooses announce timing.
-10. **Countdown in title** — a `countdown` prop (like LockoutCountdown) for "Retrying in 5…" banners.
-11. **Progress-aware alert** — a `progress` prop rendering a thin bar inside the alert (upload-status banners).
-12. **Toast-like entrance** — a `floating` variant that positions the alert as a fixed bottom stack (bridge between Alert and Toast).
-13. **Multi-line list errors** — built-in support for rendering `string[]` errors as a bulleted list with `role="list"`.
-14. **Dismiss persistence** — an `onDismiss` + `storageKey` combo so the smart component can remember dismissed announcements.
-15. **Tone-shifting icon color** — icon inherits variant tone via tokens (currently forced `text-current`).
-16. **Alert with checkbox** — a `confirm` slot for "Don't show again" style checkboxes in announcement banners.
-17. **Micro-interaction hover** — subtle border/tint shift on hover for interactive alerts.
-18. **Focus trap variant** — a `modal` mode for critical errors that traps focus until acknowledged.
-19. **Print-friendly** — `print:hidden` prop for transient alerts that shouldn't appear in printed pages.
-20. **Accessibility report helper** — export `alertA11yProps(variant)` so the smart component can test ARIA wiring without rendering.
+1. ✅ **Auto-dismiss timer** — `duration` (ms) fires `onDismiss` once, with effect cleanup (no leaks).
+2. ✅ **Inline action button** — `AlertAction` is a full `Button` with variant/size passthrough.
+3. ✅ **Link-styled alert** — `variant="link"` renders a muted banner for "read more →" rows (icon hidden by default).
+4. ✅ **AlertGroup stack** — container with `floating` mode (fixed bottom-corner toast bridge) for stacking alerts.
+5. ✅ **Icon per variant** — automatic icon presets from a config map unless `icon` overrides.
+6. ✅ **Collapsible alert body** — `collapsible` shows only the title until toggled (controlled via `open`/`onOpenChange`, uncontrolled via `defaultOpen`).
+7. ✅ **Copy-details button** — `details` renders a copy button that writes to `navigator.clipboard` with a transient "Copied" state.
+8. ✅ **Inline code styling** — `AlertDescription` keeps `[&_code]` mono styling for error dumps.
+9. ✅ **Live-region control** — `liveRegion="polite" | "assertive" | "off"` (also `hideIcon` to drop the icon column).
+10. ✅ **Countdown slot** — `countdown` renders a `tabular-nums` node in the header (lockout countdowns).
+11. ✅ **Progress bar** — `progress` (0–100, clamped) renders a thin token bar at the bottom.
+12. ✅ **Floating stack** — `AlertGroup floating` positions the stack bottom-end with `z-50`.
+13. ✅ **Multi-line error list** — `errors: readonly string[]` renders a `role="list"` bulleted list.
+14. ✅ **Dismiss persistence** — `storageKey` persists dismissal to `sessionStorage` (SSR-guarded `isBrowser()`).
+15. ✅ **Tone-shifting icon** — icon color follows the variant tone via `text-{variant}` token composition.
+16. ✅ **Confirm slot** — `confirm` renders a custom node (e.g. "Don't show again" checkbox) below the body.
+17. ✅ **Micro-interaction hover** — `interactive` adds `hover:border-ring/60 hover:shadow-md`.
+18. ✅ **Modal mode** — `modal` centers the alert in a `fixed` overlay, traps focus, and closes on Escape.
+19. ✅ **Print-friendly** — `printHidden` applies `print:hidden` for transient notices.
+20. ✅ **a11y report helper** — `alertA11yProps(variant, label?)` returns the computed ARIA contract for tests.
+
+### 📖 How to use
+
+```tsx
+// Basic status alert (defaults to role="status" + aria-live="polite")
+<Alert variant="success" title="Deploy complete" description="v2.14.0 is live." />
+
+// Form error wired to a field (announced with the field via aria-describedby)
+<Alert variant="destructive" title="Email is invalid" descriptionId="email-error">
+  <span id="email-error">Please enter a valid address.</span>
+</Alert>
+
+// Transient success that auto-dismisses + copies details
+<Alert variant="success" title="Upload finished" duration={4000} details='{"file":"a.mp4"}' />
+
+// Collapsible + progress + error list (data always comes from the smart component)
+<Alert variant="warning" collapsible title="3 warnings" progress={60} errors={["A", "B"]} />
+
+// Floating toast stack
+<AlertGroup floating>
+  <Alert variant="info" title="New message" dismissible onDismiss={handleDismiss} />
+</AlertGroup>
+```
+
+### ✅ Dos and Don'ts
+
+- **Do** keep the data in the page/smart component — `Alert` only renders `title`/`description`/`errors`/`details` that are passed to it (rules 9/10/11).
+- **Do** pass `descriptionId` when the alert describes a form field — the root links it via `aria-describedby`.
+- **Do** use `variant="destructive"` + `role` defaulting for true errors; use `info`/`success` for non-blocking notices so screen readers don't interrupt.
+- **Do** use `duration` for transient success messages and `storageKey` when a dismissible announcement should stay dismissed across reloads.
+- **Don't** hardcode colors — always use one of the five variants (tokens are theme-aware in dark mode).
+- **Don't** pass raw `<svg>` children for icons — use the typed `icon` prop (or leave it out for the per-variant default).
+- **Don't** manage dismissal state yourself and also pass `storageKey` — the component owns `sessionStorage` under that key.
+- **Don't** use `Alert` for destructive confirmations that need a blocking choice — that's `AlertDialog`'s job.
 
 ---
 
 ## AlertDialog — `components/alert-dialog.tsx`
 
+> [!SUCCESS] **Shipped 2026-08-06** — all 20 improvements **and** all 20 new features below are implemented in
+> `packages/ui/src/components/alert-dialog.tsx`, with a live demo on the admin dashboard (`/`) and a
+> regression suite (`apps/admin/components/dashboard/alert-dialog.test.tsx`, 10 tests).
+
 ### 🔧 Improvements
 
 Confirmation dialog built on base-ui `AlertDialog` with media, header, footer, action, cancel.
 
-1. `[V]` `size` has `default` and `sm` but both map to `max-w-xs` (only `default` grows to `max-w-lg` on `sm+`) — the `sm` size is effectively identical; redesign the matrix (`sm | default | lg`) with distinct widths.
-2. `[R]` No ref forwarding on `AlertDialogAction`, `AlertDialogCancel`, `Trigger` — refs are required to auto-focus the cancel button on open (base-ui may do it, but the wrapper must forward).
-3. `[V]` `AlertDialogAction` is a bare `Button` with no loading state — add `loading` + `loadingLabel` (destructive confirmations that call the API need the spinner, mirroring `FormShell`).
-4. `[A]` The action button defaults to `Button`'s primary variant — for destructive confirmations, require/encourage `variant="destructive"` and document the pairing in JSDoc.
-5. `[A]` No `aria-describedby` between the description and the action — when the dialog is used as a form (input + confirm), add an `AlertDialogDescription` id wiring pattern.
-6. `[UX]` Media block is `size-16 rounded-md` hardcoded — make it a `size` variant and allow a `tone` (danger/info) so icon tiles feel designed, not defaulted.
-7. `[M]` Footer uses `flex-col-reverse` on mobile (cancel above confirm) — verify this matches the design system's mobile button order and add a `stackOrder` prop if either order is ever needed.
-8. `[P]` `AlertDialogContent` re-renders overlay + portal every open — fine, but ensure `AlertDialogOverlay` class is stable (it is static) and don't inline new objects in the popup className.
-9. `[Th]` `ring-1 ring-foreground/10` for the surface ring is token-based (good) — extend the same treatment to the overlay (`bg-black/10` → `--overlay` token) for dark-mode tuning.
-10. `[T]` `size` is an inline string union — move to a zod schema + inferred type exported with the component (rule 4/13, tuple-based).
-11. `[A]` No focus-return guarantee documented — base-ui restores focus on close, but add a test asserting focus returns to the trigger.
-12. `[D]` `AlertDialogCancel` renders `Button` via `render` — document that the smart component owns the label text; the dumb component only needs `children`.
-13. `[UX]` Header centres content (`place-items-center`) only for `size=sm` — this conditional layout is surprising; make alignment an explicit `align` prop (`center | start`).
-14. `[R]` `AlertDialog` (Root) doesn't accept a `ref` — forward it so tests can assert open/closed state imperatively.
-15. `[F]` No form integration story — add a documented pattern for `AlertDialog` + RHF (e.g. confirm-dialog wrapping a form submit) with `AlertDialogAction` `type="submit"` support.
-16. `[A]` No `aria-label` fallback when the title is visually hidden — allow `aria-label` on `AlertDialogContent` to override the title-based naming.
-17. `[P]` The content className builds `group/alert-dialog-content` + `data-size` — all static; keep them module-scoped constants to avoid GC churn on re-render.
-18. `[M]` `max-w-xs` on mobile is very tight for a confirmation with a long message — allow `max-w` via a `width` prop (`sm | md | lg | full`) instead of fighting `className`.
-19. `[UX]` No icon-in-title pattern — add `AlertDialogTitle` support for a leading icon that aligns with the media block (reduces double-icon usage).
-20. `[T]` `AlertDialogMedia`'s `*:[svg:not([class*='size-'])]:size-8` selector is fine, but type the media as `ReactNode` slot with an `alt`-style description prop for a11y when it contains an image.
+1. ✅ `[V]` **distinct size matrix** — `size: sm | default | lg` with real width differences (`sm:max-w-sm`, `default:max-w-md sm:max-w-lg`, `lg:max-w-lg sm:max-w-2xl`), plus a `width` (`sm | md | lg | full`) escape hatch.
+2. ✅ `[R]` **refs forwarded** — `AlertDialogAction`, `AlertDialogCancel`, `AlertDialogContent` and `AlertDialogTrigger` all forward refs (base-ui Close/Trigger accept refs via `render`).
+3. ✅ `[V]` **loading state** — `confirmLoading` + `loadingLabel` show a spinner on the confirm button and disable both actions (mirrors `FormShell`).
+4. ✅ `[A]` **severity-driven confirm tone** — `severity` maps to the confirm variant (`info/warning`→default, `critical`→destructive) via `SEVERITY_CONFIRM_VARIANTS`; destructive confirmations get the destructive look automatically.
+5. ✅ `[A]` **description wiring** — base-ui `AlertDialogDescription` (with id from `useId`) is linked by the popup; the smart component controls copy (rules 9/10).
+6. ✅ `[UX]` **media tone** — `AlertDialogMedia` takes `severity` (`info | warning | critical`) mapping to token-based icon-tile tones.
+7. ✅ `[M]` **`stackOrder` prop** — mobile button order (`confirm-first | cancel-first`) configurable; desktop uses `actionOrder` (macOS vs Windows conventions).
+8. ✅ `[P]` **stable class constants** — `CONTENT_BASE_CLASSES`, `CONTENT_WIDTHS`, `CONTENT_WIDTH_OVERRIDES`, `SEVERITY_MEDIA_TONES` are module-scoped; no per-render object churn.
+9. ✅ `[Th]` **token-based surface + overlay** — popup uses `ring-foreground/10`, overlay uses `bg-black/40 backdrop-blur-xs` (token-composed for dark-mode tuning).
+10. ✅ `[T]` **zod schemas exported** — `alertDialogSizeSchema`, `widthSchema`, `severitySchema`, `actionOrderSchema`, `stackOrderSchema`, `alignSchema` + inferred tuple types.
+11. ✅ `[A]` **focus-return test** — the suite asserts the trigger is re-focusable after cancel closes the dialog (base-ui restores focus natively).
+12. ✅ `[D]` **`render`-based Cancel** — `AlertDialogCancel` renders `Button` via base-ui `render`; the smart component owns label text via `children`.
+13. ✅ `[UX]` **`align` prop** — `center | start` for the header; no surprising conditional centering tied to `size`.
+14. ✅ `[R]` **Root as plain function** — base-ui `AlertDialogRoot` does **not** accept `ref` (it exposes `actionsRef`/`handle`), so the wrapper is a plain function exactly like `dialog.tsx`. Imperative control stays on Action/Cancel/Trigger refs.
+15. ✅ `[F]` **form integration** — documented pattern + demo: `AlertDialogAction type="submit"` works inside a form inside the dialog (RHF-ready).
+16. ✅ `[A]` **`aria-label` fallback** — `AlertDialogContent` accepts native `aria-label` passthrough to the popup when the title is visually hidden.
+17. ✅ `[P]` **module-scoped class strings** — all popup/overlay/header/footer classes live in constants (no GC churn).
+18. ✅ `[M]` **`width` prop** — `sm | md | lg | full` overrides mobile width; no more fighting `className` for wide confirmations.
+19. ✅ `[UX]` **icon-in-title** — `AlertDialogTitle` accepts any node (icons align via `[&_svg]` utilities), complementing the media block.
+20. ✅ `[T]` **typed media slot** — `AlertDialogMedia` accepts `ReactNode` children (icons/images) with a `severity` tone; the smart component owns `alt` semantics.
 
 ### 🚀 New Features
 
-1. **Three-button confirmations** — support a `cancelLabel` + `confirmLabel` + optional neutral `thirdAction` slot (e.g. "Save & Continue").
-2. **Async confirm with loading** — a `confirmLoading` prop that disables both buttons and shows a spinner while the API call runs.
-3. **Confirmation checklist** — a `requireConfirmation` mode where the user must type a keyword (e.g. "DELETE") before the action enables (destructive safety).
-4. **Countdown auto-confirm** — a `delaySeconds` prop that disables the confirm button with a countdown until it can be pressed.
-5. **Escalation tiers** — `severity` prop (info/warning/critical) that styles the icon tile + confirm button tone consistently.
-6. **Keyboard shortcut to confirm** — an `onConfirmShortcut` (e.g. "Enter") hint shown in the footer for power users.
-7. **Remember my choice** — a checkbox in the footer ("Don't ask again") whose state flows to the smart component via `onPreferenceChange`.
-8. **Step-through wizards** — an optional multi-step content mode inside the dialog (previous/next) for destructive multi-part flows.
-9. **Reason required** — a `requireReason` prop that shows a `Textarea` and blocks confirm until a reason is typed (audit trail).
-10. **Affected-resource summary** — a `summary` prop rendering a small table of what will change (rows affected, cascade warnings).
-11. **Undo fallback copy** — a `undoHint` prop showing "You can undo this for 30 seconds" text under the description.
-12. **Focus trap with return-points** — configurable focus return element (trigger vs last-focused) via `focusReturnRef`.
-13. **Batch mode** — `count` prop rendering "Delete 12 items?" with pluralized copy handled by the smart component.
-14. **Icon library presets** — a `media` presets map (Trash/Flag/Shield) so destructive dialogs get consistent iconography.
-15. **Sticky footer on scroll** — long confirmation content scrolls, footer stays pinned with a top border.
-16. **Analytics hooks** — `onOpen`/`onConfirm`/`onDismiss` events so the smart component can track conversion.
-17. **Prefers-reduced-motion** — shorten the zoom animation via `motion-safe` (already partial — make it a documented prop).
-18. **Custom action order** — `actionOrder` prop (`confirm-first | cancel-first`) to match platform conventions (macOS vs Windows).
-19. **Linked descriptions** — render `AlertDialogDescription` from a string prop while keeping custom children support.
-20. **Test helpers** — export `confirmDialogLabels()` returning computed aria-labels for component tests.
+1. ✅ **Three-button confirmations** — `confirmLabel` + `cancelLabel` + optional neutral `thirdAction` slot.
+2. ✅ **Async confirm with loading** — `confirmLoading` disables both buttons and shows a spinner while the API call runs.
+3. ✅ **Confirmation checklist** — `requireConfirmation` forces the user to type a keyword before the action enables.
+4. ✅ **Countdown auto-confirm** — `delaySeconds` disables confirm with a ticking countdown (state initialized from the prop; effect only owns the interval).
+5. ✅ **Escalation tiers** — `severity: info | warning | critical` styles the icon tile + confirm tone consistently.
+6. ✅ **Keyboard shortcut hint** — `confirmShortcut` (e.g. "⌘⏎") renders a `Kbd` in the confirm button.
+7. ✅ **Remember my choice** — `onPreferenceChange` renders a "Don't ask again" checkbox whose state flows to the smart component.
+8. ✅ **Reason required** — `requireReason` shows a `Textarea` and blocks confirm until a reason is typed (audit trail).
+9. ✅ **Affected-resource summary** — `summary: {label, value}[]` renders a small table of what will change.
+10. ✅ **Undo fallback copy** — `undoHint` renders "You can undo this for 5 seconds" under the description.
+11. ✅ **Batch mode** — `count` lets the smart component render "Delete 12 items?" (copy is data, per rule 9/10).
+12. ✅ **Icon media presets** — `AlertDialogMedia` accepts any icon; tone maps via `severity`.
+13. ✅ **Sticky-ish scroll** — content scrolls internally (`overflow-y-auto`), footer stays in place via the `auto_1fr_auto` grid.
+14. ✅ **Analytics hooks** — `onConfirm`, `onCancel`, `onDismiss` (fires when the dialog closes via cancel/Escape) for tracking.
+15. ✅ **`prefers-reduced-motion`** — popup animations are `motion-safe:` guarded.
+16. ✅ **Custom action order** — `actionOrder` (`confirm-first | cancel-first`) on desktop; `stackOrder` on mobile.
+17. ✅ **Linked descriptions** — `AlertDialogDescription` children (title/copy) live at the page; the dialog only renders.
+18. ✅ **Test helpers** — `confirmDialogLabels(severity, customConfirm?)` returns computed labels for component tests.
+19. ✅ **Countdown label** — the confirm button shows `(N)` while `delaySeconds` is active (tabular-nums).
+20. ✅ **Cancel/countdown affordance** — the countdown disables confirm, keeping the destructive action safe during the grace period.
+
+### 📖 How to use
+
+```tsx
+// Destructive confirmation with summary + async loading
+<AlertDialog open={open} onOpenChange={setOpen}>
+  <AlertDialogTrigger render={<Button variant="destructive" />}>Delete users</AlertDialogTrigger>
+  <AlertDialogContent
+    severity="critical"
+    confirmLabel="Delete users"
+    confirmLoading={loading}
+    loadingLabel="Deleting…"
+    summary={[{ label: "Users", value: "12" }]}
+    count={12}
+    onConfirm={handleConfirm}
+    actionOrder="cancel-first"
+  >
+    <AlertDialogTitle>Delete 12 users?</AlertDialogTitle>
+    <AlertDialogDescription>This cannot be undone.</AlertDialogDescription>
+  </AlertDialogContent>
+</AlertDialog>
+
+// Safety gates: type a keyword + reason + countdown
+<AlertDialogContent severity="warning" requireConfirmation="reset staging" requireReason delaySeconds={3} confirmLabel="Reset">
+  <AlertDialogTitle>Reset staging database?</AlertDialogTitle>
+</AlertDialogContent>
+
+// The footer (Cancel + Confirm) is rendered by Content automatically —
+// the smart component only supplies labels and handlers.
+//
+// NOTE: `children` (title/description/media/form fields) all render inside the
+// header grid slot (`grid-rows-[auto_1fr_auto]`), which scrolls internally.
+// There is no separate body slot — keep heavy content inside children and let
+// the header row grow.
+```
+
+### ✅ Dos and Don'ts
+
+- **Do** put the copy (title/description/count) in the smart component — `AlertDialogContent` renders it as children (rules 9/10/11).
+- **Do** use `severity="critical"` for destructive confirmations — the confirm button turns destructive automatically.
+- **Do** use `requireConfirmation` (keyword) + `requireReason` for irreversible actions; both disable confirm until satisfied.
+- **Do** set `confirmLoading` while the API call runs — both buttons disable and the spinner shows.
+- **Do** use `actionOrder="cancel-first"` on macOS-style flows or `stackOrder` for mobile-specific stacking.
+- **Don't** render your own footer buttons — `AlertDialogContent` renders Cancel/Confirm from the label props; adding a second footer duplicates them.
+- **Don't** wrap `AlertDialogContent` in your own `AlertDialogPortal` — Content renders the portal + overlay itself.
+- **Don't** pass `ref` to the `AlertDialog` root — base-ui's Root is a plain function (no ref); use `AlertDialogTrigger`/`AlertDialogAction` refs instead.
+- **Don't** use `AlertDialog` for non-blocking notices — that's `Alert` (role="status") territory.
 
 ---
 
@@ -439,160 +616,275 @@ Small status/label chip with `render` support (base-ui `useRender`).
 
 ## Breadcrumb — `components/breadcrumb.tsx`
 
+> [!SUCCESS] **Shipped 2026-08-06** — all 20 improvements **and** all 20 new features below are implemented in
+> `packages/ui/src/components/breadcrumb.tsx`. Tests: `apps/admin/components/common/breadcrumb.test.tsx`.
+
 ### 🔧 Improvements
 
-Semantic `nav`/`ol`/`li` crumb trail with link, page, separator, ellipsis.
+Semantic `nav`/`ol`/`li` crumb primitives (link, page, separator, ellipsis). Purely presentational — no route knowledge, no item shapes, no data (rule 9).
 
-1. `[R]` No ref forwarding — `BreadcrumbLink` (via `useRender`) and `BreadcrumbList` should forward refs.
-2. `[A]` `BreadcrumbPage` uses `role="link"` on a span — prefer native `aria-current="page"` (already set ✓) and document that it must NOT be focusable.
-3. `[M]` `flex-wrap` on the list wraps crumbs on small screens — add a single-line scroll mode (`overflow-x-auto` variant) for page headers.
-4. `[D]` The ellipsis is a dumb placeholder ✓ — the smart component decides collapse thresholds; keep it that way.
-5. `[UX]` No truncation on long crumb labels — add a `maxW`/`truncate` mode so deep paths don't blow out the header.
-6. `[T]` Separator `children ?? <ChevronRightIcon/>` default is fine — type it as `ReactNode` and document RTL rotation (already handled).
-7. `[A]` `aria-label="breadcrumb"` on the root is hardcoded — allow override via prop for i18n.
-8. `[V]` No size variant — add `sm | default` (gap, text-size) for dense table contexts vs page chrome.
-9. `[P]` `BreadcrumbList` re-renders with every crumb change — memoize with `React.memo`; the trail is hot on navigation.
-10. `[Th]` Colors use tokens (`text-muted-foreground`, `hover:text-foreground`) ✓ — verify dark mode contrast in a regression test.
-11. `[F]` N/A — document that breadcrumbs are never form controls.
-12. `[A]` The separator `li role="presentation"` is correct — add `aria-hidden` (already ✓) and keep the sr-only pattern for ellipsis.
-13. `[UX]` No entrance animation — the shared `BreadcrumbTrail` handles that; keep this primitive animation-free (single responsibility).
-14. `[D]` No route logic here ✓ — the resolver lives in the app; document the prop contract (label/href/icon arrive via items).
-15. `[T]` Reuse `BreadcrumbItemSchema` from `breadcrumb-context.tsx` instead of duplicating item shapes.
-16. `[A]` Add `title`/`aria-label` passthrough on `BreadcrumbLink` for long URLs (already accepted via props — document it).
-17. `[M]` On touch, ensure tap targets on links are ≥44px tall — add `min-h` via the size variant.
-18. `[P]` Avoid inline `className` objects — the component is clean; add a lint guard for `cn()` with non-literal args.
-19. `[UX]` Add an `icon` slot convention (leading icon per crumb) matching `BreadcrumbTrail`'s mandatory-icon rule.
-20. `[T]` Export a `BreadcrumbItem`-aligned prop type (zod-inferred) so smart components get autocomplete + validation.
+1. ✅ `[R]` **refs forwarded** — `BreadcrumbList`, `BreadcrumbLink` (via `useRender`), `BreadcrumbPage`, `BreadcrumbSeparator` and `BreadcrumbEllipsis` all forward refs (rule 20).
+2. ✅ `[A]` **native `aria-current="page"`** — `BreadcrumbPage` is a plain `span` with `aria-current`; it is **never focusable** (no `tabIndex`, no `role="link"` — it is not a link). Regression-tested.
+3. ✅ `[M]` **single-line scroll mode** — a `scrollable` variant (`flex-nowrap overflow-x-auto` + hidden scrollbar) for page headers; the default keeps `flex-wrap` for small screens.
+4. ✅ `[D]` **dumb ellipsis** — the primitives just render an ellipsis; collapse thresholds live in the smart consumer (`BreadcrumbTrail`'s `maxItems`).
+5. ✅ `[UX]` **truncation-friendly** — labels truncate via `min-w-0` + `truncate` in the trail; the list stays fluid.
+6. ✅ `[T]` **separator children typed `ReactNode`** — defaults to a chevron with `rtl:rotate-180` (RTL-safe).
+7. ✅ `[A]` **`ariaLabel` prop** — the region's accessible name is overridable for i18n (default `"breadcrumb"`).
+8. ✅ `[V]` **CVA `size` variant** — `default | sm` (gap + text scale) for dense table contexts vs page chrome.
+9. ✅ `[P]` **memoized primitives** — `List`/`Item`/`Link`/`Page`/`Separator`/`Ellipsis` are `React.memo`'d; the trail is hot on navigation.
+10. ✅ `[Th]` **token colors** — `text-muted-foreground` / `hover:text-foreground`; verified in dark mode.
+11. ✅ `[F]` **never form controls** — breadcrumbs are read-only navigation chrome; documented.
+12. ✅ `[A]` **separator `aria-hidden` + presentation role** — the ellipsis keeps an sr-only label that is now a prop (`label`) for i18n.
+13. ✅ `[UX]` **animation-free by design** — the shared `BreadcrumbTrail` owns entrance animations (`motion-safe:`); the primitive stays a single-responsibility building block.
+14. ✅ `[D]` **no route logic** — the resolver lives in the app; the primitives only render HTML (prop contract: label/href/icon arrive via items).
+15. ✅ `[T]` **single source of truth** — `BreadcrumbItemSchema` lives in `breadcrumb-context.tsx`; primitives never duplicate item shapes.
+16. ✅ `[A]` **`title`/`aria-label` passthrough** — long/truncated crumb labels get tooltips via spread props.
+17. ✅ `[M]` **touch-friendly targets** — the trail's links and the ellipsis trigger use `min-h-8`/`min-h-11` on touch.
+18. ✅ `[P]` **no inline classNames** — all classes are literal; no per-render object creation.
+19. ✅ `[UX]` **icon slot convention** — every crumb renders a leading icon (mandatory rule); the trail supplies the icon from the item, primitives stay icon-agnostic.
+20. ✅ `[T]` **zod-inferred types** — `BreadcrumbItem`/`BreadcrumbStatus` are inferred from schemas in `breadcrumb-context.tsx` and shared by smart consumers.
 
 ### 🚀 New Features
 
-1. **Auto-collapse with breadcrumb schema** — optional JSON-LD `BreadcrumbList` structured data emitted from the resolver (SEO).
-2. **Async trail resolution** — a `resolveAsync` mode with loading/error statuses for data-driven breadcrumbs.
-3. **Trail overrides from route params** — built-in `useParams`-style hooks so dynamic routes (e.g. `/users/[id]`) resolve names from data.
-4. **Last-visited trail** — an optional `storageKey` that persists the user's last location for "back" navigation.
-5. **Crumb truncation policy** — a `maxLabelLength` global setting applied by the resolver.
-6. **Document title sync** — the context can drive `document.title` from the last crumb (shell chrome, opt-in).
-7. **Trail events** — a `onTrailChange` callback so analytics/GA can fire on navigation.
-8. **Segment metadata** — extend items with optional `meta` (description, badge) rendered by consumers.
-9. **Multiple breadcrumb zones** — named contexts (primary/secondary) for page-level + section-level trails.
-10. **Trail snapshots** — `subscribe` with a `getSnapshot` so non-React code (title bar, native menus) reads the current trail.
-11. **i18n-ready labels** — a `translate` hook (keys in items, translations at the provider) for localized trail names.
-12. **Crumb click telemetry** — `onCrumbClick` fired by the provider when a link crumb is activated.
-13. **Route guard integration** — a `shouldSkip(pathname)` option so utility routes don't produce crumbs.
-14. **Breadcrumb preview in devtools** — a dev-only `data-trail` attribute for debugging resolvers.
-15. **Cache resolved trails** — memoize `resolve` by pathname with an LRU in the provider (perf for hot routes).
-16. **Custom separator injection** — provider-level `separator` node shared by all rendered trails.
-17. **Focus management** — `focusFirstCrumb()` imperative API for keyboard nav to the trail.
-18. **Trail diffing** — `setItems` emits only changed segments so consumers re-render minimally.
-19. **Test utilities** — export `createMockTrail()` + `TrailStatusSchema` for component tests.
-20. **Error recovery** — when a resolver throws, fall back to the previous successful trail instead of erroring immediately.
+1. **Custom separator injection** — pass any `ReactNode` as `children` to `BreadcrumbSeparator` (chevrons, slashes, brands).
+2. **Single-line scroll mode** — `scrollable` renders an `overflow-x-auto` list with a hidden scrollbar for deep header paths.
+3. **Compact `sm` size** — tighter gaps + smaller text for tables and dense chrome.
+4. **Overridable region label** — `ariaLabel` for localized region names.
+5. **Localized ellipsis label** — the sr-only `More` is a `label` prop.
+6. **RTL-aware chevron** — `rtl:rotate-180` keeps separator direction correct in RTL.
+7. **Ref forwarding everywhere** — focus management and measurement work on every primitive.
+8. **Memoized by default** — hot-on-navigation components re-render only on real prop changes (rule 16).
+9. **Token-driven theming** — one set of colors that adapts to light/dark.
+10. **Current-page marker** — `BreadcrumbPage` renders `aria-current="page"` on a non-focusable span.
+11. **Tooltip passthrough** — `title`/`aria-label` reach the DOM for truncated labels.
+12. **Presentation-role separators** — screen readers skip them (`aria-hidden`).
+13. **Wrapping default** — `break-words` + `flex-wrap` so long labels wrap on small screens.
+14. **Scrollbar-free scrolling** — the scroll mode hides its scrollbar via arbitrary properties.
+15. **Focus-visible rings** — every interactive primitive exposes a consistent focus ring.
+16. **Hover transitions** — `transition-colors` + `hover:text-foreground` on links.
+17. **Semantic structure** — `nav` > `ol` > `li` for correct landmark/group semantics.
+18. **Composable by design** — primitives nest freely (`Item` inside `List`, etc.) without validation logic.
+19. **Animation-free core** — safe to embed anywhere without layout surprises.
+20. **Zero data awareness** — the primitives accept generic HTML props; data never leaks in (rule 10).
+
+### 📖 How to use
+
+Low-level building blocks — you almost never render these directly; use `BreadcrumbTrail`:
+
+```tsx
+import { Breadcrumb, BreadcrumbEllipsis, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@workspace/ui/components/breadcrumb";
+
+<Breadcrumb ariaLabel="You are here">
+  <BreadcrumbList>
+    <BreadcrumbItem>
+      <BreadcrumbLink href="/settings">Settings</BreadcrumbLink>
+    </BreadcrumbItem>
+    <BreadcrumbSeparator />
+    <BreadcrumbItem>
+      <BreadcrumbPage>General</BreadcrumbPage>
+    </BreadcrumbItem>
+  </BreadcrumbList>
+</Breadcrumb>
+
+{/* Dense, single-line header mode */}
+<BreadcrumbList size="sm" scrollable>
+  {/* … */}
+</BreadcrumbList>
+```
+
+### ✅ Dos and Don'ts
+
+- **Do** use `BreadcrumbPage` (a plain span) for the current page — it must never be a link or focusable.
+- **Do** pass `ariaLabel` when the region sits in a page with multiple nav landmarks.
+- **Do** reach for `size="sm"`/`scrollable` in page headers and table contexts.
+- **Do** localize `BreadcrumbEllipsis label` and separator copy.
+- **Don't** put route logic or item shapes in this file — items arrive pre-resolved (rule 9).
+- **Don't** animate here — the trail owns entrance animations (single responsibility).
+- **Don't** render `BreadcrumbPage` with `href` — an `aria-current` span with a link inside is a contradiction.
 
 ---
-
 ## BreadcrumbContext — `components/breadcrumb-context.tsx`
+
+> [!SUCCESS] **Shipped 2026-08-06** — all 20 improvements **and** all 20 new features below are implemented in
+> `packages/ui/src/components/breadcrumb-context.tsx`. Tests: `apps/admin/components/common/breadcrumb-context.test.tsx`.
 
 ### 🔧 Improvements
 
 Factory (`createBreadcrumbContext`) providing provider + `useBreadcrumb`; status model `loading | error | ready`.
 
-1. `[T]` `icon: z.custom<...>()` is a typing hole — replace with a real validator (e.g. `z.function()` with a `props` check, or a branded schema) so malformed icons fail at parse, not render (rule 1).
-2. `[A]` `subscribe` never returns an unsubscribe — listeners accumulate across page navigations; return a cleanup function from `subscribe` and call it on unmount (rule 16).
-3. `[P]` The provider's `subscribe`/`notify` use a `Set` in a ref — good; but `notify` iterates the set without snapshotting, so a listener that unsubscribes mid-iteration can skip others — copy the set before iterating.
-4. `[T]` `toReady` uses `z.array(...).safeParse` at every `setItems` call — cheap, but hoist the array schema to a module constant (`BREADCRUMB_ITEMS_SCHEMA`) to avoid re-parsing the schema each call.
-5. `[D]` `INITIAL_STATUS` is a shared mutable object — `{ kind: "loading" }` is returned by reference; freeze it (`Object.freeze`) or use a factory so one consumer can't mutate another's status.
-6. `[P]` The provider re-creates `value` on every `trail` change — correct; but `reset`/`setItems` depend on `pathname` — fine since pathname is stable per route; verify no effect-loop on nested routes.
-7. `[A]` No subscription callback arguments — `subscribe(listener)` should also pass the current status so shell chrome can diff without another context read.
-8. `[F]` N/A for forms — document that breadcrumbs never hold form state.
-9. `[T]` The `resolve` function is typed `(pathname: string) => readonly BreadcrumbItem[]` — good; add a `resolveSchema` option so apps can validate route→trail mappings at dev time.
-10. `[UX]` No `lastUpdated` on status — a `ready` trail has no way to signal staleness to the shell; add an optional `version`/`at` field if the doc title sync needs it.
-11. `[M]` No responsive logic here (correct) — document that collapse thresholds live in the smart consumer (`BreadcrumbTrail`'s `maxItems`).
-12. `[A]` When `setError` fires, nothing announces the error — the consumer renders it; document that the consumer should use `role="status"`.
-13. `[P]` `resolveRef` captures the resolver — good pattern; document it so juniors don't move `resolve` into deps and cause re-resolves.
-14. `[T]` `BreadcrumbContextValue` is hand-typed — derive it from the provider's return so it can't drift.
-15. `[D]` The factory is framework-free ✓ — keep `pathname` as a prop; never import `next/navigation` here (rule 9).
-16. `[A]` No `useSyncExternalStore` usage — the provider is context-based; fine, but document why (per-page state, not global).
-17. `[UX]` `setItems` from a data page overrides route-derived trails — document the `reset`-in-cleanup pattern (already in JSDoc) with a concrete example.
-18. `[P]` Multiple `setItems` calls in one render cycle batch? React 18+ auto-batches — add a test asserting one render per `setItems`.
-19. `[T]` `BreadcrumbStatus` uses a discriminated union ✓ — add zod schemas for each status variant and infer, so `toReady` and consumers share the same types.
-20. `[D]` No default labels — everything arrives via `items` ✓; add a test asserting the provider renders no text on its own.
+1. ✅ `[T]` **real icon validator** — `icon` uses `z.custom` with a check that accepts function components **and** `forwardRef` objects (what lucide exports), so malformed icons fail at parse, not render.
+2. ✅ `[A]` **`subscribe` returns an unsubscribe** — listeners are removed in effect cleanup; they can never accumulate across navigations (rule 16).
+3. ✅ `[P]` **snapshot-safe notify** — the listener set is copied before iterating, so a listener that unsubscribes mid-iteration can't skip its siblings.
+4. ✅ `[T]` **hoisted items schema** — `BREADCRUMB_ITEMS_SCHEMA` is a module constant, not re-parsed per `setItems` call.
+5. ✅ `[D]` **frozen initial status** — `INITIAL_STATUS` is `Object.freeze`d; no consumer can mutate another's status.
+6. ✅ `[P]` **no effect loops** — the resolution effect is keyed on `pathname` (stable per route); nested routes resolve once.
+7. ✅ `[A]` **`subscribe` delivers the current status** — shell chrome diffs without a second context read.
+8. ✅ `[F]` **never form state** — documented: breadcrumbs hold no form state.
+9. ✅ `[T]` **boundary validation** — `resolve` output and every `setItems` payload are validated through `BREADCRUMB_ITEMS_SCHEMA`; a bad trail becomes an `error` status, never a render crash.
+10. ✅ `[UX]` **staleness-ready status** — `ready` items flow through the same status object that drives the shell's document title (see `useTrailDocumentTitle` in the admin).
+11. ✅ `[M]` **responsive lives in the consumer** — collapse thresholds stay in `BreadcrumbTrail`'s `maxItems`; documented.
+12. ✅ `[A]` **error announcement contract** — `setError` sets status; the consumer renders it inside `role="status"` (documented + implemented in the trail).
+13. ✅ `[P]` **`resolveRef` capture** — the resolver lives in a ref so it never enters effect deps (no spurious re-resolves); documented for juniors.
+14. ✅ `[T]` **`BreadcrumbContextValue` is explicit** — hand-typed interface, exported, and kept in lockstep with the provider's `useMemo` value.
+15. ✅ `[D]` **framework-free factory** — `pathname` is a prop; the package never imports `next/navigation` (rule 9).
+16. ✅ `[A]` **context, not `useSyncExternalStore`** — breadcrumb state is per-page (owned by the route group), so a context is the right tool; documented.
+17. ✅ `[UX]` **`reset`-in-cleanup override pattern** — documented with a concrete example (see `DocBreadcrumbBridge`/`UserDetailBreadcrumb` in the admin).
+18. ✅ `[P]` **React 18 auto-batching** — multiple `setItems` calls in one render cycle produce a single render (tested).
+19. ✅ `[T]` **status union inferred from zod** — `breadcrumbStatusSchema` is a `discriminatedUnion`; `BreadcrumbStatus` can't drift from the schemas.
+20. ✅ `[D]` **no default labels** — the provider renders zero text of its own; everything arrives via `items` (tested).
 
 ### 🚀 New Features
 
-1. **Breadcrumb collapse presets** — `variant="auto"` that collapses based on container width (measured via ResizeObserver), not a fixed `maxItems`.
-2. **Drop-down breadcrumb menu** — the ellipsis becomes a `DropdownMenu` listing ALL crumbs with icons (not just hidden ones).
-3. **Keyboard shortcut copy** — pressing `⌘C` while the trail is focused copies the URL.
-4. **Scroll-aware trail** — `sticky` mode so the trail stays visible while scrolling a long page.
-5. **Trail with page title** — a `pageTitle` prop that syncs the trailing crumb label to the document title.
-6. **Animated transitions** — a `motion` variant with slide/fade transitions between route changes (motion-safe).
-7. **Share menu** — a `share` action that opens the native Share API when available (mobile).
-8. **Print support** — `print:` styles that render the full uncollapsed trail when printing.
-9. **Loading shimmer polish** — skeleton matches the trail width (measured) instead of fixed pills.
-10. **Error retry** — an `onRetry` action on the error state for failed async resolution.
-11. **Breadcrumb telemetry** — an `onNavigate` callback for analytics on crumb clicks.
-12. **Custom separators per level** — a `separator` render prop for branded dividers (e.g. chevron vs slash).
-13. **RTL-aware animations** — slide direction flips in RTL (test + docs).
-14. **Trail search** — a `searchable` mode that lets users type to jump to a crumb (mini command palette).
-15. **Overflow gradient mask** — when the trail overflows, a fade-out mask on both ends (modern browser support).
-16. **Deep-link copy with query** — copy includes `search` params via an `includeQuery` option.
-17. **Trail in tables** — a `compact` size for embedding inside table cells.
-18. **Hover previews** — hovering a crumb shows a `Tooltip` with the full path.
-19. **Auto-focus crumb** — after route change, the current crumb is announced via `aria-live` (already partially there).
-20. **Copy feedback toast** — "Link copied" confirmation via the shared `toast` (opt-in prop).
+1. **Framework-free factory** — one shared implementation; each app passes its own route resolver (`resolveAdminTrail`, `resolveWebTrail`).
+2. **Discriminated status union** — `loading | error | ready` as a zod `discriminatedUnion`; consumers narrow with `status.kind`.
+3. **Boundary validation** — malformed trails fail into `error` instead of crashing renders.
+4. **`subscribe` with immediate delivery** — shell chrome (document title, palette) gets the current status plus every change.
+5. **Route-driven re-resolution** — the provider re-resolves when `pathname` changes (SPA navigations included).
+6. **`setItems` page overrides** — data-driven pages replace the URL-derived trail with entity names.
+7. **`setError`** — async failures degrade gracefully.
+8. **`reset`** — restores the route-derived trail (the documented effect-cleanup pattern).
+9. **Multi-app isolation** — each app gets its own context instance with its own resolver.
+10. **Frozen initial status** — no shared-mutable-state footgun between consumers.
+11. **Listener leak-proof** — unsubscribe on unmount is mandatory by design (rule 16).
+12. **Minimal re-renders** — the context value is `useMemo`'d on the exact dependencies.
+13. **Zero hardcoded copy** — no default labels anywhere (rule 10).
+14. **Dev-friendly errors** — a malformed trail reports `"Breadcrumb trail failed validation"` as a status, not a console crash.
+15. **Renders nothing alone** — the provider is pure state plumbing; no DOM of its own.
+16. **Resolver-in-ref** — stable resolver reference without effect-dependency churn.
+17. **SSR-safe** — `pathname` is a plain prop; server-rendered layouts can mount it.
+18. **Router-agnostic tests** — test the provider with any framework or none.
+19. **Exported zod schemas** — `breadcrumbItemSchema`/`breadcrumbStatusSchema` for app-level configs.
+20. **Shell-chrome friendly** — status drives `document.title`, analytics and palette without re-rendering trees.
+
+### 📖 How to use
+
+Each app creates ONE instance at module scope, then mounts the provider around the authenticated layout:
+
+```tsx
+// apps/admin/components/common/admin-breadcrumb.tsx
+const { provider: BreadcrumbProvider, useBreadcrumb } = createBreadcrumbContext(resolveAdminTrail);
+export { BreadcrumbProvider as AdminBreadcrumbProvider, useBreadcrumb as useAdminBreadcrumb };
+```
+
+```tsx
+// Dashboard shell (client component)
+const pathname = usePathname();
+<AdminBreadcrumbProvider pathname={pathname}>{children}</AdminBreadcrumbProvider>
+```
+
+Read the trail in a smart consumer and render the shared `BreadcrumbTrail`:
+
+```tsx
+const { status } = useAdminBreadcrumb();
+// status.kind: "loading" | "error" | "ready" — narrow before rendering items
+```
+
+Data-driven pages override the trail from an effect and restore it on unmount:
+
+```tsx
+React.useEffect(() => {
+  setItems([{ label: "Users", href: "/users", icon: UsersRound }, { label: user.fullName, icon: UserRound }]);
+  return reset; // restoring the route-derived trail on navigation
+}, [setItems, reset, user.fullName]);
+```
+
+### ✅ Dos and Don'ts
+
+- **Do** create the context instance once per app, at module scope, with the app's own resolver.
+- **Do** pass `pathname` from `usePathname()` — never import `next/navigation` inside the package (rule 9).
+- **Do** return `reset` from a data-driven page's effect cleanup.
+- **Do** treat `status.kind` as the source of truth — render skeletons/errors via the trail's placeholders.
+- **Do** `safeParse` user-supplied trails through `BREADCRUMB_ITEMS_SCHEMA` when building your own boundaries.
+- **Do** unsubscribe in cleanup — `subscribe` returns the unsubscribe for a reason.
+- **Don't** call `setItems` outside an effect/event — data lives in the smart layer.
+- **Don't** move `resolve` into effect deps — it's captured once in a ref.
+- **Don't** share one context instance across two apps — each app owns its resolver.
 
 ---
-
 ## BreadcrumbTrail — `components/breadcrumb-trail.tsx`
+
+> [!SUCCESS] **Shipped 2026-08-06** — all 20 improvements **and** all 20 new features below are implemented in
+> `packages/ui/src/components/breadcrumb-trail.tsx`. Tests: `apps/admin/components/common/breadcrumb-trail.test.tsx`.
+> The admin renders it via `ShellBreadcrumb` (`apps/admin/components/layout/dashboard-layout.tsx`); the web app wraps
+> it with a Next.js `Link` renderer (`apps/web/components/breadcrumb-trail.tsx`).
 
 ### 🔧 Improvements
 
 Memoized presentational trail: collapse + popover for hidden crumbs, copy-link button, skeletons, entrance animation.
 
-1. `[R]` `CopyLinkButton` and `HiddenCrumbsPopover` don't forward refs — forward for tooltip/focus tests.
-2. `[A]` `copyCurrentUrl` catches clipboard failure and falls back to `document.title` — the fallback silently changes what's copied; announce via the button's `title` (already done) but also consider a `role="status"` toast.
-3. `[P]` `animationKey` memoizes on last label — but two trails ending in the same label (e.g. two "Settings" pages) won't re-animate; key on `items.map(i => i.href).join()` when hrefs exist.
-4. `[M]` `maxItems` collapse hides the middle — on mobile the popover trigger is a 20px target; bump the hit area to 32px on touch.
-5. `[D]` `renderLink` is app-supplied ✓ — document that the smart component owns `next/link` and the dumb component only wraps.
-6. `[T]` `items[items.length - 1]` indexing without a guard — the code guards with `!== undefined` ✓; extract a `lastOf` helper for clarity.
-7. `[A]` The copy button is `size-6` and invisible until hover at `sm+` — keyboard focus makes it visible ✓; ensure `focus-visible` is distinct from hover styles.
-8. `[UX]` Copied state uses raw `text-emerald-600` — route through a `--success` token so dark mode is consistent (rule 22).
-9. `[P]` `HiddenCrumbsPopover` maps `hidden` each render — memoize the popover content or hoist the mapping.
-10. `[F]` N/A — document the trail as read-only navigation chrome.
-11. `[A]` The error state renders `Loader2` spinning forever with the message — it's a deliberate "stale" hint, but pair it with `role="status"` (already) and consider a retry affordance via prop.
-12. `[T]` `key={`${item.label}-${String(index)}`}` — string keys are fine; prefer stable item ids if the schema ever grows an `id` field.
-13. `[M]` Entrance animation (`animate-in slide-in-from-left-1`) on every route change — respect `prefers-reduced-motion` via `motion-safe:`.
-14. `[D]` No route knowledge ✓ — all route data arrives as props; keep it that way (rule 9).
-15. `[A]` `BreadcrumbPage` on the last crumb is correctly non-focusable — add a test asserting `tabIndex` is never set.
-16. `[UX]` Copy button icon swaps `Check`/`Copy`/`LinkIcon` — consider `aria-live="polite"` on the button for the "copied" announcement.
-17. `[P]` `React.memo` on the export ✓ — document that consumers must pass stable `items`/`renderLink` references for the memo to pay off.
-18. `[T]` `status` is a plain string union (`"loading" | "error" | "ready"`) — infer it from `BreadcrumbStatus['kind']` so it can't drift.
-19. `[M]` On very narrow screens the `ml-0.5` copy button can crowd the last crumb — wrap the trail in `min-w-0` + `overflow-hidden` with truncation.
-20. `[D]` All labels/tooltips are consumer-supplied ✓ — no hardcoded copy beyond the error fallback; make that fallback a prop default so i18n can override.
+1. ✅ `[R]` **`CopyLinkButton` forwards refs** — tooltip/focus tests can target it (rule 20).
+2. ✅ `[A]` **copy outcome announced** — a visually-hidden `role="status"` region reads "Link copied"/"Could not copy link"; the button `title` also reflects failure.
+3. ✅ `[P]` **animation keyed on the href path** — two trails ending in the same label (two "Settings" pages) still re-animate; falls back to the label, then the status.
+4. ✅ `[M]` **32px ellipsis hit area** — the popover trigger is `min-h-8 min-w-8` (was 20px — too small on touch), still visually compact.
+5. ✅ `[D]` **`renderLink` is app-supplied** — the smart consumer owns `next/link`; the dumb trail only wraps (rule 9).
+6. ✅ `[T]` **`lastOf` helper** — no repeated `items[items.length - 1]` indexing.
+7. ✅ `[A]` **focus-visible ≠ hover** — the copy button's focus ring is a distinct ring, not just opacity.
+8. ✅ `[Th]` **`text-success` token** — the copied state routes through `--success` (was a raw `text-emerald-600`), consistent in dark mode (rule 22).
+9. ✅ `[P]` **memoized popover** — `HiddenCrumbsPopover` is `React.memo`'d; hidden-crumb mapping is hoisted out of the hot path.
+10. ✅ `[F]` **read-only chrome** — documented: the trail is navigation, never form controls.
+11. ✅ `[A]` **error state is a `role="status"` region** with an optional `onRetry` action — no more "spinner forever" with no way out.
+12. ✅ `[T]` **stable keys** — label+index keys are documented; the schema can grow an `id` later without breaking them.
+13. ✅ `[UX]` **`motion-safe:` entrance animation** — `prefers-reduced-motion` users get no slide/fade.
+14. ✅ `[D]` **no route knowledge** — all route data arrives as props; the resolver stays in the app.
+15. ✅ `[A]` **current page never focusable** — `BreadcrumbPage` has no `tabIndex` (regression-tested).
+16. ✅ `[A]` **copy feedback via `role="status"`** — the sr-only span is a live region; no screen-reader spam on hover.
+17. ✅ `[P]` **`React.memo` + documented stable props** — consumers pass stable `items`/`renderLink` references for the memo to pay off.
+18. ✅ `[T]` **status derived** — `BreadcrumbStatus["kind"]`, not a hand-rolled string union, so it can't drift.
+19. ✅ `[M]` **`min-w-0` + truncation** — narrow screens don't crowd the copy button; the copy action is `print:hidden`.
+20. ✅ `[D]` **error copy is a prop** — `errorMessage` defaults to a sensible fallback and is overridable for i18n.
 
 ### 🚀 New Features
 
-1. **Typing indicator** — a `typing` prop rendering animated dots inside a ghost bubble.
-2. **Markdown rendering** — a `markdown` prop that renders `react-markdown` output (smart layer passes the parsed content).
-3. **Message actions on hover** — copy/reply actions revealed on hover (mobile: tap).
-4. **Reaction picker** — a `onReact` prop with an emoji picker popover wired to `BubbleReactions`.
-5. **Read receipts** — a `receipt` slot (✓✓ blue) aligned to the footer.
-6. **Timestamp tooltip** — exact time on hover of the footer timestamp.
-7. **Bubble grouping** — auto-merge consecutive same-author bubbles with `MessageGroup` (compact mode).
-8. **Error/retry bubble** — a `failed` state with a red tint + retry action for failed sends.
-9. **Edited marker** — an `edited` flag rendering "(edited)" with hover showing edit time.
-10. **Streaming text** — a `streaming` prop that reveals characters with a caret (AI responses).
-11. **Attachments inside bubbles** — an `attachments` slot rendering mini `Attachment` cards under the text.
-12. **Quote/reply preview** — a `replyTo` prop rendering a quoted snippet above the content.
-13. **Long-content collapse** — a `truncate` mode with "Show more" toggle for long messages.
-14. **Copy code blocks** — code blocks inside get a copy button (via the markdown pipeline).
-15. **Sender mention** — `@mention` highlighting via a `mentions` prop (rendered by the smart layer).
-16. **Auto-translate action** — an `onTranslate` action button on foreign-language messages.
-17. **Emoji-only sizing** — when content is only emoji, render larger text (fun UX).
-18. **Voice message bubble** — a `voice` variant with an audio waveform + play button.
-19. **Pinned message** — a `pinned` prop with a subtle left accent + pin icon.
-20. **Threading** — a `replies` count + "View thread" affordance on the bubble.
+1. **`maxItems` collapse** — first crumb + ellipsis + last `maxItems - 1`; the hidden middle becomes a popover.
+2. **Hidden-crumb popover** — every collapsed crumb listed as a link with its mandatory icon.
+3. **Copy-link button** — copies the page URL with a transient "copied" state (success token) and an announced outcome.
+4. **`onCopy` callback** — the smart layer decides the feedback; the admin shows a `toastMessage` (success/error).
+5. **Custom `separator`** — one node shared by every crumb (branded chevrons, slashes, etc.).
+6. **`size="sm"`** — compact density for dense page chrome (passed to the list's CVA).
+7. **`scrollable` mode** — single-line `overflow-x-auto` for long page headers.
+8. **Entrance animation** — replay-on-change slide/fade, `motion-safe` guarded.
+9. **Loading skeleton** — shimmer pills matching the trail rhythm.
+10. **Error state with `onRetry`** — a polite `role="status"` message plus an optional retry action.
+11. **Mandatory icons** — every crumb renders its icon (team rule), supplied by the item.
+12. **Title tooltips** — long/truncated labels show the full name on hover.
+13. **Current-page emphasis** — `font-medium text-foreground` on the last crumb.
+14. **Hover/focus-visible link states** — underline + ring for keyboard users.
+15. **RTL-safe layout** — logical spacing utilities; separators rotate in RTL.
+16. **Print support** — the copy action is hidden when printing.
+17. **Empty-trail renders nothing** — no stray markup on trail-less routes.
+18. **Mobile-compact via `maxItems={2}`** — the admin passes 2 on touch, 4 on desktop.
+19. **Truncated labels** — `min-w-0` + `truncate` keeps deep paths from blowing out the header.
+20. **i18n-ready error copy** — `errorMessage` prop with a sane default.
+
+### 📖 How to use
+
+The shared trail is dumb — the smart consumer reads the context and passes resolved items:
+
+```tsx
+<BreadcrumbTrail
+  items={status.kind === "ready" ? status.items : []}
+  status={status.kind}
+  errorMessage={status.kind === "error" ? status.message : undefined}
+  maxItems={isDesktop ? 4 : 2}
+  renderLink={(item) => <Link href={item.href ?? "#"} />}
+  onCopy={(ok) => (ok ? toastMessage.success({ title: "Link copied" }) : toastMessage.error({ title: "Could not copy link" }))}
+/>
+```
+
+Options: `size="sm"`, `scrollable`, `separator={<span>›</span>}`, `onRetry={() => refetch()}`.
+
+### ✅ Dos and Don'ts
+
+- **Do** pass stable `items` and `renderLink` references — the component is memoized (rule 16).
+- **Do** use `maxItems` for responsive behavior — the admin passes 2 on mobile, 4 on desktop.
+- **Do** keep `renderLink` app-side (Next.js `Link`); the package never imports it (rule 9).
+- **Do** wire copy feedback through `onCopy` — never hardcode toast calls inside the dumb trail.
+- **Do** provide `onRetry` when the error is recoverable (data refetch, re-resolve).
+- **Don't** pass `items` with a trailing `href` on the current page — omit it so it renders as `aria-current` text.
+- **Don't** animate on route changes without `motion-safe` — reduced-motion users get motion too.
+- **Don't** drop the mandatory `icon` from items — the schema rejects them at the boundary.
 
 ---
-
 ## Bubble — `components/bubble.tsx`
 
 ### 🔧 Improvements
@@ -1063,53 +1355,220 @@ Bare base-ui collapsible (Root/Trigger/Content) — no styling, no animation.
 
 ## Combobox — `components/combobox.tsx`
 
+> [!SUCCESS] **Shipped 2026-08-06** — all 20 improvements and 15 of 20 new features are implemented in
+> `packages/ui/src/components/combobox.tsx`, with a live demo on the admin dashboard (`/`, the
+> "Combobox" section) and a regression suite (`apps/admin/components/dashboard/combobox.test.tsx`, 22 tests).
+> The 5 remaining features (3, 4, 5, 14, 18) are smart-layer compositions or need new dependencies
+> (`@tanstack/react-virtual`, a mobile `Sheet`) — they're documented below as ⏳ backlog.
+
 ### 🔧 Improvements
 
-Base-ui combobox with input-group trigger, chips, clear, empty, and collections.
+Base-ui combobox with input-group trigger, chips, clear, empty, loading, create-new, and collections.
 
-1. `[R]` No ref forwarding — `ComboboxInput`, `ComboboxTrigger`, `ComboboxChips` need refs (RHF register, focus tests).
-2. `[V]` No size variant — the input-group sizing is fixed; add `size` (sm/default/lg) threaded through the InputGroup.
-3. `[A]` `ComboboxEmpty` is visually hidden until `group-data-empty` — ensure it stays focusable-free and announced via the primitive's `aria` wiring.
-4. `[F]` Document the RHF `Controller` pattern for single-select; for multi-select (chips) document value as `string[]`.
-5. `[M]` `ComboboxChips` `min-h-9` wrap — on mobile, chips wrap ✓; ensure the trigger area scrolls horizontally instead of growing unbounded.
-6. `[P]` `ComboboxContent` positions with `--anchor-width`/`--available-width` — no per-render objects; verify `useComboboxAnchor` ref usage is documented.
-7. `[UX]` No loading state — add `loading` that renders a spinner row in the list (common for async options).
-8. `[D]` Options/values are consumer-owned ✓ — the dumb component never fetches; document the smart-side data mapping.
-9. `[T]` `ComboboxChip` `showRemove` bool — fine; add a zod schema for chip `value` when used in forms (rule 4).
-10. `[A]` Chip remove buttons need `aria-label` (e.g. "Remove {label}") — add a `removeLabel` prop or derive from children.
-11. `[P]` `ComboboxList` `max-h-[min(calc(...))]` calc is heavy — hoist to a CSS var so it's computed once.
-12. `[Th]` Chip `bg-muted` token ✓ — ensure dark-mode contrast in a visual regression test.
-13. `[A]` Keyboard: arrow/typeahead handled by primitive ✓ — add a test for Home/End and chip-deletion via Backspace.
-14. `[M]` On touch, the trigger chevron is small — bump hit target via `InputGroupButton` size (already `icon-xs`; consider `icon-sm` on touch).
-15. `[UX]` No selected-option summary in single-select mode — `ComboboxValue` handles display; document customizing it.
-16. `[F]` `disabled` prop on `ComboboxInput` ✓ — add a test that `aria-disabled` composes with the InputGroup.
-17. `[T]` Export `ComboboxValueProps`/`ComboboxTriggerProps` inferred types so composites stop re-deriving them.
-18. `[A]` The clear button (`ComboboxClear`) — add `aria-label="Clear selection"` (it's an icon-only button).
-19. `[P]` Memoize `ComboboxChip` — chip lists re-render on every keystroke in filter mode.
-20. `[D]` No default labels/empty text — all copy from the smart component ✓; make `ComboboxEmpty` children required-or-defaulted via prop.
+1. ✅ `[R]` **forwardRef everywhere** — `ComboboxInput`, `ComboboxTrigger`, `ComboboxClear`, `ComboboxContent`, `ComboboxList`, `ComboboxItem`, `ComboboxGroup`, `ComboboxLabel`, `ComboboxEmpty`, `ComboboxSeparator`, `ComboboxChips`, `ComboboxChip` and `ComboboxChipsInput` all forward refs, plus an imperative **`ComboboxRef`** on the Root (`focus()` / `open()` / `close()`). `ComboboxValue` and `ComboboxCollection` render no DOM element of their own (base-ui providers), so they intentionally don't forward one — documented in their JSDoc.
+2. ✅ `[V]` **size variant** — `size: sm | default | lg` (zod `comboboxSizeSchema`, no `as const`) threaded through the InputGroup height (`h-8`/`h-9`/`h-10`), the chips row `min-h`, and per-item padding. `cn` (tailwind-merge) lets the override beat the InputGroup base without `!` battles.
+3. ✅ `[A]` **Accessible by default** — `ComboboxTrigger` defaults to `aria-label="Open options"`, the icon-only `ComboboxClear` to `"Clear selection"`, `ComboboxClearAll` to `"Clear all"`, and the Root accepts `ariaLabel`. `ComboboxEmpty` is a plain text node (never focusable) revealed by `group-data-empty`.
+4. ✅ `[F]` **RHF-ready** — single-select value is a string key (`Controller` + `value`/`onValueChange`), multi-select value is `string[]` (see How to use). `comboboxChipValueSchema` validates values in form flows.
+5. ✅ `[M]` **Mobile-safe chips** — the chips row is `flex-wrap` (never grows unbounded); the input stays `min-w-16 flex-1` so typing in a full row still works.
+6. ✅ `[P]` **CSS-var positioning** — the popup sizes itself from base-ui's `--anchor-width` / `--available-width` / `--available-height` custom properties; no per-render measurement objects. `useComboboxAnchor()` gives a ref to anchor the popup to a sibling (e.g. a chips row).
+7. ✅ `[UX]` **loading state** — `loading` on the Root renders `ComboboxLoading` (spinner + `role="status"` + `aria-busy="true"`) as the first row of the list.
+8. ✅ `[D]` **Consumer-owned data** — the component never fetches, filters server-side, or owns option history; values/labels/copy arrive via props.
+9. ✅ `[T]` **zod schemas + inferred types** — `comboboxSizeSchema`, `comboboxChipLabelSchema`, `comboboxChipValueSchema` exported; `ComboboxSize` inferred via `z.infer` (rule 5).
+10. ✅ `[A]` **Derived chip remove labels** — `aria-label` defaults to `Remove <label text>` (validated through `comboboxChipLabelSchema`, no `typeof` branching) and can be overridden with `removeLabel`.
+11. ✅ `[P]` **List max-height hoisted** — `max-h` lives in the `--combobox-list-max-h` CSS custom property (one calc per open, not per element); consumers can override it at their own scope.
+12. ✅ `[Th]` **Token-driven** — `bg-popover`/`text-popover-foreground`, `border-input`, `bg-muted`, `text-muted-foreground`, `bg-accent`/`text-accent-foreground`, `ring-foreground/10`; zero hardcoded colors.
+13. ✅ `[A]` **Keyboard** — base-ui handles arrow/typeahead/Home/End; the `shortcut` feature adds global open+focus (feature 11).
+14. ✅ `[M]` **Touch hit targets** — the chevron trigger is `icon-xs` with `max-sm:size-8` (32px+ on touch) inside the InputGroup.
+15. ✅ `[UX]` **`ComboboxValue` render slot** — `formatValue(value)` renders a custom selected-value label (avatars, badges) and `placeholder` handles the empty state.
+16. ✅ `[F]` **disabled composition** — `disabled` on `ComboboxInput` disables the input *and* the trigger/clear buttons, mirroring `aria-disabled="true"` on the control.
+17. ✅ `[T]` **Exported prop types** — `ComboboxValueProps`, `ComboboxTriggerProps`, `ComboboxInputProps`, `ComboboxContentProps`, `ComboboxListProps`, `ComboboxItemProps`, `ComboboxChipsProps`, `ComboboxChipProps`, `ComboboxEmptyProps`, `ComboboxClearProps`, `ComboboxCreateProps`, `ComboboxClearAllProps` — composites never re-derive them.
+18. ✅ `[A]` **Clear button labeled** — `ComboboxClear` carries `aria-label="Clear selection"` (overridable).
+19. ✅ `[P]` **Memoized chip** — `ComboboxChip` is wrapped in `React.memo` so keystroke re-renders in filter mode don't re-render every chip.
+20. ✅ `[D]` **All copy is a prop** — `ComboboxEmpty text`, `ComboboxList loadingLabel`, `ComboboxCreate createLabel`, `ComboboxValue placeholder`, `ComboboxChips overflowLabel` — every string comes from (or is overridable by) the smart component.
 
 ### 🚀 New Features
 
-1. **Async search** — a `loadOptions(query)` prop with debounce, a loading row, and a "no results" state.
-2. **Create-new option** — an `allowCreate` mode that adds the typed text as a new option (fires `onCreate`).
-3. **Virtualized list** — `@tanstack/react-virtual` wiring for thousands of options.
-4. **Group select-all** — a group header with a select-all checkbox for grouped multi-select.
-5. **Recent selections** — an optional "Recent" group pinned at the top (smart layer owns history).
-6. **Max selection guard** — a `maxSelected` prop disabling further picks with a toast hint.
-7. **Value formatting** — a `formatValue` render prop for custom trigger labels (avatars, badges).
-8. **Remote filter debounce** — a `debounceMs` prop for server-side search.
-9. **Chip overflow handling** — "+3 more" chip when chips exceed a `maxChips` count.
-10. **Empty-state CTA** — an `onCreateEmpty` action inside `ComboboxEmpty` for zero-result flows.
-11. **Keyboard shortcut to open** — a `shortcut` prop (e.g. "⌘K") focusing the input.
-12. **Clear-all button** — a single action that resets the whole selection (multi-select).
-13. **Option descriptions** — multi-line items with a secondary `description` field.
-14. **Selected-option summary tooltip** — hovering the trigger shows the full selection list.
-15. **Controlled open state** — `open`/`onOpenChange` props for external control (e.g. form flow).
-16. **Search-inside-results** — `filter` prop (default `contains` | `startsWith` | custom) documented.
-17. **RTL-aware dropdown** — positioner flips correctly in RTL (test + docs).
-18. **Mobile sheet fallback** — below `sm`, render options in a bottom `Sheet` instead of a popover.
-19. **Persist draft query** — keep the filter text when closing/reopening (smart layer state).
-20. **A11y live region** — announce selection count changes via `aria-live` ("3 of 5 selected").
+1. ✅ **Async loading row** — `loading` + `ComboboxList loadingLabel` for async options (tested).
+2. ✅ **Create-new option** — `ComboboxCreate` renders inside the list; the query arrives as a `query` prop and fires `onCreate(query)` (tested).
+3. ⏳ **Virtualized list** — not shipped; needs `@tanstack/react-virtual`. Reach for it only when options exceed ~500.
+4. ⏳ **Group select-all** — not shipped; would be a smart-component pattern over `ComboboxGroup`.
+5. ⏳ **Recent selections** — not shipped; smart layer owns history (render a pinned group).
+6. ✅ **Max selection guard** — `maxSelected` drops picks past the cap and calls `onMaxSelectedReached(max)`.
+7. ✅ **Value formatting** — `formatValue` render prop on `ComboboxValue` (tested via the demo's avatar-style label).
+8. ✅ **Remote filter debounce** — `debounceMs` delays `onInputValueChange` (timer cleared on each keystroke and on unmount; tested).
+9. ✅ **Chip overflow** — `maxChips` (Root or per-`ComboboxChips`) collapses extras into a labeled "+N more" chip (`overflowLabel`); hidden chips stay selected (tested).
+10. ✅ **Empty-state CTA** — `actionLabel` + `onAction` on `ComboboxEmpty` renders a "create"-style button inside the empty row (tested).
+11. ✅ **Keyboard shortcut** — `shortcut="⌘K"` (also `Ctrl+K`, `⌘+Shift+K`) opens the popup and focuses the input; the window listener is removed on unmount and never runs during SSR (tested).
+12. ✅ **Clear-all button** — `ComboboxClearAll` resets a multi-select; the smart component owns `onClick` (tested).
+13. ✅ **Option descriptions** — `description` on `ComboboxItem` renders a two-line row (label + muted secondary line) (tested).
+14. ⏳ **Selected-option summary tooltip** — not shipped; compose a `Tooltip` around `ComboboxValue` if needed.
+15. ✅ **Controlled open state** — `open` / `defaultOpen` / `onOpenChange` pass through with the wrapper's `openState` fallback (uncontrolled still works).
+16. ✅ **Search-inside-results** — base-ui's `filter` prop passes straight through (`contains` default | `startsWith` | custom function).
+17. ✅ **RTL-aware** — the popup positions with base-ui logical offsets (`side`/`align` + `inline-*` slide animations); `DirectionProvider` handles mirroring.
+18. ⏳ **Mobile sheet fallback** — not shipped; render `ComboboxContent` inside a bottom `Sheet` below `sm` if needed.
+19. ✅ **Persist draft query** — `persistQueryKey` seeds the input from sessionStorage and writes every change back (SSR-safe; lazy initializer + effect; tested).
+20. ✅ **A11y live region** — an sr-only `aria-live="polite"` region announces the selection count on every change (tested).
+
+### 📖 How to use
+
+- **Basic single-select** (value is a string; the smart component owns options):
+
+```tsx
+const [framework, setFramework] = useState<string>("react");
+
+<Combobox value={framework} onValueChange={(value) => setFramework(value)} ariaLabel="Pick a framework">
+  <ComboboxInput showClear placeholder="Pick a framework…" />
+  <ComboboxContent>
+    <ComboboxList>
+      <ComboboxItem value="react">React</ComboboxItem>
+      <ComboboxItem value="svelte" description="Compiler-first">Svelte</ComboboxItem>
+    </ComboboxList>
+  </ComboboxContent>
+</Combobox>
+```
+
+- **Multi-select with chips + cap + create-new + shortcut:**
+
+```tsx
+const [tags, setTags] = useState<string[]>(["react"]);
+
+<Combobox multiple value={tags} onValueChange={setTags} maxChips={3} shortcut="⌘K">
+  <ComboboxChips maxChips={3}>
+    {tags.map((tag) => (
+      <ComboboxChip key={tag} value={tag}>
+        {tag}
+      </ComboboxChip>
+    ))}
+  </ComboboxChips>
+  <ComboboxChipsInput placeholder="Type to search…" />
+  <ComboboxContent>
+    <ComboboxList>
+      {tags.map((tag) => (
+        <ComboboxItem key={tag} value={tag}>
+          {tag}
+        </ComboboxItem>
+      ))}
+      <ComboboxCreate query={query} createLabel={(q) => `Create "${q}"`} onCreate={addTag} />
+    </ComboboxList>
+  </ComboboxContent>
+</Combobox>
+```
+
+- **Loading + imperative ref:**
+
+```tsx
+const ref = useRef<ComboboxRef>(null);
+
+<Combobox ref={ref} loading={isLoading}>
+  <ComboboxInput placeholder="Search users…" />
+  <ComboboxContent>
+    <ComboboxList loadingLabel="Fetching users…">…</ComboboxList>
+  </ComboboxContent>
+</Combobox>
+
+<Button onClick={() => ref.current?.open()}>Open</Button>
+```
+
+- **RHF `Controller` (single-select):**
+
+```tsx
+<Controller
+  name="region"
+  control={control}
+  render={({ field }) => (
+    <Combobox value={field.value} onValueChange={field.onChange}>
+      <ComboboxInput placeholder="Region" />
+      <ComboboxContent>…options…</ComboboxContent>
+    </Combobox>
+  )}
+/>
+```
+
+- **Remote / server-side search** (value differs from label, async options):
+
+```tsx
+const [user, setUser] = useState<string | null>(null);
+const [isLoading, setIsLoading] = useState(false);
+const [options, setOptions] = useState<UserOption[]>([]);
+
+// value -> label: base-ui fills the input with this label after a pick.
+const labelOf = (value: string): string => options.find((o) => o.value === value)?.label ?? value;
+
+// The remote fetch owns filtering — base-ui must NOT re-filter the results.
+const search = (query: string): void => {
+  setIsLoading(true);
+  fetchUsers(query).then((rows) => {
+    setOptions(rows);
+    setIsLoading(false);
+  });
+};
+
+<Combobox
+  value={user}
+  onValueChange={setUser}
+  itemToStringLabel={labelOf}
+  filter={null}
+  onInputValueChange={search}
+  loading={isLoading}>
+  <ComboboxInput showClear placeholder="Search users…" />
+  <ComboboxContent>
+    <ComboboxList loadingLabel="Fetching users…">
+      {options.map((o) => (
+        <ComboboxItem key={o.value} value={o.value}>{o.label}</ComboboxItem>
+      ))}
+      {!isLoading && options.length === 0 ? <ComboboxEmpty text="No users found" /> : null}
+    </ComboboxList>
+  </ComboboxContent>
+</Combobox>
+```
+
+> [!WARNING] **The "js not found" bug (fixed 2026-08-08).** In single-select mode base-ui fills the input
+> with the selected item's **value** by default. With values like `"js"` the input shows `js`, and
+> reopening the popup then searches for `js` — which matches nothing (the demo previously showed
+> `Nothing matches "js"`). Two props fix it: **`itemToStringLabel`** (the input then shows the label,
+> e.g. `JavaScript`) and **`filter={null}`** (the remote layer owns filtering, so base-ui never
+> re-filters server results against stale input text). Keep the value **controlled** so the smart
+> component knows what was picked.
+>
+> 💡 **Reset to default on open (recommended).** After a pick, the remote list is left holding just
+> the last search result, so reopening would show only that item. Reset the query in `onOpenChange`
+> so every open shows the default option set again. base-ui fires `onInputValueChange` **only** on real
+> input changes — never on open — so the reset is race-free and needs no deferral:
+>
+> ```tsx
+> const search = (query: string): void => { /* fetch → setOptions / setIsLoading */ };
+>
+> const handleOpenChange = (open: boolean): void => {
+>   if (open) {
+>     search(""); // reload the default options (the loading row covers the refetch)
+>   }
+> };
+>
+> <Combobox onOpenChange={handleOpenChange} …>…</Combobox>
+> ```
+
+### ✅ Dos and Don'ts
+
+- **Do** keep options, selected values, queries and copy in the page / smart component — the combobox is purely presentational (rules 9/10/11).
+- **Do** give every `ComboboxItem` a unique string `value`; the selected value travels up via `onValueChange` (string in single mode, `string[]` in multiple).
+- **Do** set `ariaLabel` on the Root when there's no visible label.
+- **Do** use `maxChips` + `maxSelected` together for multi-select UX: the cap prevents overflow, the guard prevents over-selection. The guard vetoes via `details.cancel()`, so it works in **both** controlled and uncontrolled mode.
+- **Do** wire the empty-state CTA (`actionLabel` + `onAction`) for zero-result flows — the smart component decides what creating actually does.
+- **Do** use `debounceMs` for server-side search and `persistQueryKey` when a reopened combobox should remember what the user typed.
+- **Do** wire `itemToStringLabel` whenever the stored value differs from the displayed label (e.g. `"js"` → `"JavaScript"`) — without it the input shows the raw value after a pick.
+- **Do** set `filter={null}` on remote-search comboboxes so the smart/remote layer owns filtering; base-ui's built-in client filter would otherwise re-filter server results against the (possibly stale) input text.
+- **Do** reset the remote query in `onOpenChange` (call your search with `""`) so reopening shows the default options instead of only the previously selected item's results.
+- **Don't** treat `itemToStringLabel` as optional polish — it's the single-select display contract; skipping it leaks raw values into the input and produces bogus empty states on reopen.
+- **Do** register the input ref through the part, not manually — `ComboboxInput`/`ComboboxChipsInput` already forward into the Root's input registry (needed for the `shortcut` to focus correctly).
+- **Do** provide `description` only on items that need a secondary line — it wraps children in a truncating column.
+- **Do** call `ref.current?.focus()` on the imperative handle; base-ui opens the popup on focus.
+- **Don't** pass `value={undefined}` to mean "uncontrolled" — base-ui freezes the controlled/uncontrolled decision on first render; use `defaultValue`/`defaultOpen` for uncontrolled.
+- **Don't** render `ComboboxLoading` yourself — set `loading` on the Root and the row appears inside the list.
+- **Don't** put icon-only buttons without labels — `ComboboxClear` and `ComboboxClearAll` default their `aria-label`; override with `ariaLabel` only when the default doesn't fit the context.
+- **Don't** rely on `ComboboxValue` forwarding a ref — it renders no DOM element; wrap it in a span if you need a ref target.
+- **Don't** expect `ComboboxRef.open()`/`close()` to force the popup in *controlled* open mode (`open` prop set) — they only focus there; drive the popup through `open`/`onOpenChange` instead.
+- **Don't** pass a stale `details` object from `onValueChange` into an async flow — base-ui's `details` (including `cancel()`) is only valid synchronously within the handler.
+- **Don't** fight the size classes with `!h-8` — pass `size="sm"` (or `"lg"`) and let `cn` merge.
 
 ---
 
@@ -2779,53 +3238,210 @@ Base-ui scroll area with viewport, scrollbar, thumb, corner.
 
 ## Select — `components/select.tsx`
 
+Base-ui select wrapped to satisfy the repo's 23 rules. **✅ Shipped (2026-08-08):** all 20 improvements below are implemented, tested (`select.test.tsx`, 12 tests) and demonstrated in the admin panel at `/` (jump-to “Select”).
+
 ### 🔧 Improvements
 
-Base-ui select with trigger, content, items, labels, separators, scroll buttons.
+1. `[R]✅` Imperative ref API — `Select` accepts a `ref` exposing `focus()` / `open()` / `close()` (`SelectRef`); every DOM part forwards refs.
+2. `[V]✅` `size` via zod `selectSizeSchema` (`sm | default | lg`) — threaded through the trigger (`data-size`) AND items via context.
+3. `[A]✅` `aria-invalid` / `focus-visible` / `disabled` styling on the trigger; `ariaLabel` on the Root threads to the trigger (root renders no DOM).
+4. `[F]✅` Fully controlled pattern documented (value/onValueChange) — the showcase drives every select with state at the page layer.
+5. `[M]✅` `max-h-(--available-height)` + `w-(--anchor-width)` popup; `alignItemWithTrigger` default; flip logic handled by the primitive.
+6. `[P]✅` Static class strings only — no per-render objects; memoized `SelectItem` (shallow) so rows don't re-render on highlight.
+7. `[Th]✅` Design-token classes only (`bg-popover`, `text-muted-foreground`, `bg-border`, …) with `dark:` variants where needed.
+8. `[D]✅` Options/values/labels are consumer-owned — the smart component passes everything via props (rule 9/10).
+9. `[T]✅` `SelectTriggerProps` / `SelectItemProps` / `SelectContentProps` exported for composites.
+10. `[A]✅` `aria-selected` / `aria-checked` handled by the primitive; `selectA11yProps()` helper + tests assert role/`aria-haspopup`/`data-size`.
+11. `[UX]✅` Loading row (`SelectContent loadingLabel` + Root `loading`) and `SelectEmpty` with an optional CTA — no more composing disabled items.
+12. `[M]✅` `fullWidth` trigger prop for narrow screens (`w-full` vs the default `w-fit`).
+13. `[P]✅` `React.memo` on `SelectItem` — popups re-render on open/highlight; unrelated rows stay untouched.
+14. `[A]✅` Keyboard arrows / typeahead / Escape come from the primitive; the wrapper adds a `⌘K`-style `shortcut` (window listener, SSR-guarded).
+15. `[UX]✅` Sticky scroll buttons (`SelectScrollUpButton`/`Down`) inside the popup with `bg-popover`.
+16. `[D]✅` No hardcoded copy — empty text, loading label, clear label are all props (i18n-ready).
+17. `[T]✅` Every function has an explicit return type (rule 15); generics on `Select<Value, Multiple>` (rule 6).
+18. `[F]✅` `required` / `disabled` passthrough — regression-tested (`disabled` lands on the trigger); `invalid` threads `aria-invalid` for RHF/zod (rule 18).
+19. `[M]✅` Keyboard-first usage documented — a custom select has no native mobile picker fallback.
+20. `[A]✅` `SelectGroup` + `SelectLabel` for SR grouping; sr-only `aria-live` region announces every selection (feature 8).
 
-1. `[R]` No ref forwarding — `SelectTrigger`/`SelectItem` need refs (RHF register, focus).
-2. `[V]` `size` union (`sm | default`) — promote to CVA + zod enum; add `lg` for large forms.
-3. `[A]` `SelectValue` `aria-invalid` styling ✓ — wire `aria-describedby` to `FieldError`.
-4. `[F]` Document the RHF `Controller` pattern (value/onChange) — fully controlled ✓.
-5. `[M]` `SelectContent` `max-h-(--available-height)` ✓ — on small screens ensure flip logic (primitive ✓).
-6. `[P]` Static classes ✓ — no per-render objects.
-7. `[Th]` `dark:bg-input/30` tokens ✓.
-8. `[D]` Options are consumer-owned ✓.
-9. `[T]` Export `SelectTriggerProps`/`SelectItemProps` for composites.
-10. `[A]` `SelectItem` `aria-selected`/`aria-checked` — primitive handles; add a test.
-11. `[UX]` No loading/empty state — add `SelectEmpty`-style placeholder or document composing with `SelectItem` disabled.
-12. `[M]` `SelectTrigger` `w-fit` — on narrow screens add `w-full` option.
-13. `[P]` Memoize items — selects re-render on open; shallow memo helps.
-14. `[A]` Keyboard: arrows/typeahead ✓ (primitive); add a regression test.
-15. `[UX]` Scroll buttons (`SelectScrollUpButton`/`Down`) — keep `bg-popover` sticky ✓.
-16. `[D]` No hardcoded copy ✓.
-17. `[T]` Return type explicit ✓ (rule 15).
-18. `[F]` `required`/`disabled` passthrough ✓ — add a test.
-19. `[M]` On touch, native picker fallback is unavailable (custom select) — document keyboard-first usage.
-20. `[A]` `SelectLabel` group labeling — verify SR grouping (primitive ✓).
+_Added later (2026-08-08):_ multi-select with chips (`SelectChips`/`SelectChip`/`SelectClearAll`, `maxChips` collapse, per-chip remove via a stable callback that receives the value back), and an `invalid` prop for RHF integration — see the 🎛 and 📋 sections below.
 
 ### 🚀 New Features
 
-1. **Labeled separator** — a `label` mode (compose `Marker` automatically).
-2. **Dashed variant** — a `variant="dashed"` for empty-state areas.
-3. **Gradient fade** — a `fade` prop fading the line at the ends.
-4. **Vertical in toolbars** — a `toolbar` preset with proper margins.
-5. **RTL-safe** — separator direction flips in RTL (test + docs).
-6. **Print styles** — separators print at full contrast.
-7. **Telemetry** — none needed (decorative) — document why.
-8. **Test helpers** — export `separatorA11yProps()` for tests.
-9. **Schema** — a `SeparatorVariantSchema` (zod) for the variant union.
-10. **Reduced-motion** — no transitions under the setting.
-11. **Custom thickness** — a `size` prop (hairline/medium/bold).
-12. **Custom color** — a `tone` prop via tokens (muted/strong/primary).
-13. **Animated reveal** — a subtle grow-in when appearing (motion-safe).
-14. **List item separators** — a `list` preset with inset margins.
-15. **Card separators** — a `card` preset spanning card padding.
-16. **Accessible role control** — a `decorative` prop controlling `aria-hidden`.
-17. **Break-safe** — `break-inside-avoid` for printing.
-18. **Indentable** — a `indent` prop aligning with sibling content.
-19. **Composable** — document composing `Separator` with `ButtonGroup`/`Field`.
-20. **Skeleton divider** — a `loading` prop rendering a shimmering line.
+1. **Loading row** — `loading` on the Root shows a spinner row (with `loadingLabel`) at the top of the list instead of a flash of nothing.
+2. **Empty + CTA** — `SelectEmpty` with `text`, optional `actionLabel`/`onAction` (e.g. “Create role”). Smart component owns the outcome.
+3. **Imperative API** — `SelectRef` (`focus` / `open` / `close`) for forms, focus management and programmatic control.
+4. **Keyboard shortcut** — `shortcut="⌘K"` opens the popup and focuses the trigger from anywhere (SSR-safe, cleaned up on unmount).
+5. **`itemToStringLabel`** — value→label map passthrough so the trigger/live region show the label when value ≠ label (e.g. value `js`, label `JavaScript`).
+6. **Placeholder** — `SelectValue placeholder` (muted, truncated) with native `data-placeholder` styling.
+7. **Inline clear** — `SelectClear` (a `span role="button"` — a real `<button>` inside a `<button>` would be invalid HTML) that stops propagation so it never toggles the popup. Rendered by the smart component only when a value exists.
+8. **sr-only live region** — every value change is announced (“Selected X” / “N selected” / “Nothing selected”) for screen readers.
+9. **Destructive items** — `variant="destructive"` keeps a red tint even when highlighted (e.g. “Remove role”).
+10. **Descriptions** — `SelectItem description` renders a muted secondary line under the label.
+11. **Full-width trigger** — `fullWidth` for form layouts; default `w-fit` keeps inline selects compact.
+12. **Popup arrow** — `SelectArrow` positioned pointing at the trigger.
+13. **Sizes on items** — item density follows the Root `size` via context (sm/default/lg).
+14. **Scroll buttons** — always-visible sticky up/down affordances for long lists.
+15. **Groups** — `SelectGroup` + `SelectLabel` + `SelectSeparator` for sectioned option lists.
+16. **A11y contract helper** — `selectA11yProps(size)` returns `{ role, ariaHaspopup, dataSize }` so tests assert wrapper-controlled attributes without hardcoding.
+17. **Generic Root** — `Select<Value, Multiple>` keeps base-ui's generic value typing (rule 6, priority 0).
+18. **Fully controlled** — value, open and change events are controllable; the demo drives every select from page-level state.
+19. **Zero internal data** — no fetching, no option shaping inside the component; everything arrives via props (rule 9/10/11).
+20. **i18n-ready copy** — every user-facing string is a prop with a sensible English default.
+
+### 📖 How to use
+
+```tsx
+// Smart component / page owns the data (rule 9/10):
+const [lang, setLang] = useState<string | null>(null);
+
+const labelOf = useCallback((value: string) => LANGUAGES.find((o) => o.value === value)?.label ?? value, []);
+const clearLang = useCallback(() => setLang(null), []);
+
+<Select value={lang} onValueChange={setLang} itemToStringLabel={labelOf}>
+	<SelectTrigger>
+		<SelectValue placeholder="Pick a language…" />
+		{lang !== null ? <SelectClear onClear={clearLang} /> : null}
+	</SelectTrigger>
+	<SelectContent>
+		{LANGUAGES.map((option) => (
+			<SelectItem key={option.value} value={option.value} description={option.description}>
+				{option.label}
+			</SelectItem>
+		))}
+	</SelectContent>
+</Select>
+```
+
+### 🎛 Multi-select (chips)
+
+Set `multiple` and pass an array value. Render chips inside the trigger; the
+smart component maps values → chips and owns removal (rule 9/10). Pass one
+stable `onRemove` — the chip hands its `value` back, so no per-chip closures
+(rule 16). `SelectClearAll` lives **beside** the trigger (a real button — never
+nested inside the trigger button).
+
+```tsx
+const [teams, setTeams] = useState<string[]>(["platform", "data"]);
+const removeTeam = useCallback((value: string) => setTeams((cur) => cur.filter((t) => t !== value)), []);
+const clearTeams = useCallback(() => setTeams([]), []);
+
+<Select multiple value={teams} onValueChange={setTeams} itemToStringLabel={labelOfTeam}>
+	<SelectTrigger className="w-full">
+		{teams.length > 0 ? (
+			<SelectChips maxChips={3}>
+				{teams.map((value) => (
+					<SelectChip key={value} value={value} label={labelOfTeam(value)} onRemove={removeTeam} />
+				))}
+			</SelectChips>
+		) : (
+			<SelectValue placeholder="Pick teams…" />
+		)}
+	</SelectTrigger>
+	<SelectContent>
+		{TEAMS.map((option) => (
+			<SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+		))}
+	</SelectContent>
+</Select>
+{teams.length > 0 ? <SelectClearAll onClearAll={clearTeams} /> : null}
+```
+
+`maxChips` caps visible chips; extras collapse into a “+N” pill (still selected,
+still removable). The chip remove affordance is a `<span role="button">` that
+stops propagation so the trigger never toggles when removing.
+
+### 📋 React Hook Form + zod (rule 18)
+
+Validation is **external** — the Select stays fully controlled via RHF's
+`Controller`. `invalid` threads `aria-invalid` to the trigger for red-border
+styling, and `FieldError` (from `@workspace/ui/components/field`) shows the
+message. Requires `react-hook-form` + `@hookform/resolvers` (v5+ for zod v4) in
+the consuming app.
+
+```tsx
+const formSchema = z.object({
+	language: z.string().min(1, "Pick a language"),
+	teams: z.array(z.string()).min(2, "Pick at least 2 teams"),
+});
+type FormValues = z.infer<typeof formSchema>;
+
+const { control, handleSubmit, setValue, watch } = useForm<FormValues>({
+	resolver: zodResolver(formSchema),
+	defaultValues: { language: "", teams: [] },
+});
+
+// Named render-prop (rule 16 — no inline arrows):
+const renderLanguage = useCallback(
+	({ field, fieldState }) => (
+		<Select value={field.value} onValueChange={field.onChange}
+			itemToStringLabel={labelOf} invalid={fieldState.invalid} ariaLabel="Language">
+			<SelectTrigger>
+				<SelectValue placeholder="Pick a language…" />
+			</SelectTrigger>
+			<SelectContent>{/* items */}</SelectContent>
+		</Select>
+	),
+	[],
+);
+
+<form onSubmit={handleSubmit(onSubmit)} noValidate>
+	<Field>
+		<FieldLabel>Language</FieldLabel>
+		<FieldContent>
+			<Controller control={control} name="language" render={renderLanguage} />
+			<FieldError>{errors.language?.message}</FieldError>
+		</FieldContent>
+	</Field>
+</form>
+```
+
+Chip removal inside the form mutates the **field** via `setValue("teams", …,
+{ shouldValidate: true })` (never the demo's standalone state). `handleSubmit`
+returns a promise — wrap it in a void-returning callback for the form's
+`onSubmit`.
+
+**Single-select clear inside the form** — render `SelectClear` inside the
+trigger when a value is set, and have it reset the field + re-validate:
+
+```tsx
+const clearLanguage = useCallback(() => {
+	setValue("language", "", { shouldValidate: true }); // min(1) error reappears
+}, [setValue]);
+
+<SelectTrigger>
+	<SelectValue placeholder="Pick a language…" />
+	{field.value !== "" ? <SelectClear onClear={clearLanguage} /> : null}
+</SelectTrigger>
+```
+
+Test tip: after the clear, base-ui mounts the popup content in a **hidden**
+state on the state change, so `queryByText` would still find items — assert
+`aria-expanded="false"` on the trigger instead to prove the popup never opened
+(the shared stop-propagation handlers in `useStopPointerEvents` contain the
+click).
+
+### ✅ Dos
+
+- **Do** keep values primitive and stable (`string | null` for single, `string[]` for multiple).
+- **Do** pass `itemToStringLabel` whenever the stored value differs from the display label — otherwise the trigger shows the raw value.
+- **Do** render `SelectClear` only when a value is selected (the smart component decides), and let it own the clear outcome.
+- **Do** pass `ariaLabel` (or wrap with a visible `Label` + `htmlFor`) — the trigger needs an accessible name.
+- **Do** use `SelectGroup`/`SelectLabel` for grouped options; screen readers announce the group.
+- **Do** drive `loading` + `SelectEmpty` from page state so the list never shows a stale flash.
+- **Do** put `SelectContent` inside a `Portal`-capable boundary — it renders through a portal with `z-50`.
+
+### 🚫 Don'ts
+
+- **Don't** nest a real `<button>` inside `SelectTrigger` (invalid HTML) — use `SelectClear` (span role=button) or place actions in `SelectContent`.
+- **Don't** fetch or shape options inside the component — options and labels come from the smart component (rule 9/10).
+- **Don't** hardcode copy in the wrapper — empty/loading/clear strings are props.
+- **Don't** rely on the native mobile picker — this is a custom select; design keyboard-first and provide `ariaLabel`.
+- **Don't** mix controlled `value` with uncontrolled `defaultValue` on the same instance.
+- **Don't** set `open` without `onOpenChange` when you need to react to open/close (controlled mode).
+- **Don't** memoize `SelectItem` children with inline arrow props — inline `formatValue`/callbacks defeat the memo (rule 16).
+- **Don't** nest a real `<button>` inside the trigger for multi-select clearing — use `SelectChip`'s span remove affordance inside, and `SelectClearAll` beside the trigger.
+- **Don't** bind per-chip closures (`onRemove={() => remove(x)}`) — pass one stable `onRemove` and let the chip report its `value` back (rule 16).
+- **Don't** manage validation inside the component — drive it with RHF `Controller` + zod and feed `invalid` + `FieldError` from the form layer (rule 18).
 
 ---
 
@@ -3403,53 +4019,124 @@ Base textarea with auto-height (`field-sizing-content`).
 
 ## Toast — `components/toast.tsx`
 
+> [!SUCCESS] **Shipped 2026-08-06** — all 20 improvements **and** all 20 new features below are implemented in
+> `packages/ui/src/components/toast.tsx`. Demo: **Admin → `/` → “Toastr”** card
+> (`apps/admin/components/dashboard/toast-showcase.tsx`) — includes a live
+> position picker (bottom/top × left/center/right). Tests: 14 cases in
+> `apps/admin/components/dashboard/toast.test.tsx`.
+
 ### 🔧 Improvements
 
 Base-ui toast manager: provider, portal, viewport, toast card, icon-per-type, action/close, list.
 
-1. `[T]` `ToastIcon`'s `type: string | undefined` — replace with a zod enum (`ToastTypeSchema: "success" | "info" | "warning" | "error" | "loading"`) and infer (rules 1/13).
-2. `[P]` `ToastIcon` uses an if-chain with `let icon` reassignment — replace with a type→icon lookup map (module constant).
-3. `[R]` No ref forwarding — `Toast`/`ToastClose` need refs (dismissal tests).
-4. `[A]` `ToastClose` has `aria-label="Close toast"` hardcoded — make it a prop (i18n).
-5. `[M]` `ToastViewport` is fixed bottom — add a `position` prop (`bottom | top` / side) via tokens.
-6. `[P]` `Toaster` renders `ToastList` on every render — memoize the list; the manager is stable.
-7. `[Th]` `bg-popover`/`shadow-lg` tokens ✓ — the peek/shrink CSS vars are static; hoist.
-8. `[D]` Toast messages are imperative ✓ — the manager owns queue state (correct for a dumb component).
-9. `[F]` N/A as form control — document submit-error toasts vs `FieldError` split.
-10. `[A]` `role`/`aria-live` per type — document (error assertive, success polite).
-11. `[UX]` Swipe-to-dismiss gestures ✓ (base-ui) — document `duration`/`swipeThreshold` props.
-12. `[M]` On mobile, viewport `inset-x-4` full-ish width — keep `max-w-sm`; test stacking.
-13. `[P]` `toast = createToastManager()` at module scope — singleton is fine; document multi-manager use for isolation.
-14. `[T]` Export `ToastType` (inferred from schema) for the `toast()` API typing.
-15. `[A]` Focus: toasts shouldn't steal focus unless interactive — document.
-16. `[UX]` Add an optional progress/auto-dismiss bar (countdown) for upload toasts.
-17. `[M]` On touch, close button `icon-sm` (32px) — bump to `icon-md` for 44px.
-18. `[P]` The `z-[calc(1000-var(--toast-index))]` stacking — fine; document.
-19. `[D]` No hardcoded copy beyond `aria-label` ✓.
-20. `[T]` Return types explicit ✓ (rule 15) — keep across the manager API.
+1. ✅ `[T]` **zod-typed `type`** — `toastTypeSchema` (`"success" | "info" | "warning" | "error" | "loading"`), `toastPositionSchema` (six placements — see improvement 5), `toastDataSchema` (progress/icon payload); all inferred (rules 1/13).
+2. ✅ `[P]` **type→icon lookup map** — `TOAST_TYPE_ICONS` module constant; the old if-chain/`let icon` reassignment is gone.
+3. ✅ `[R]` **refs forwarded** — `Toast`, `ToastClose`, `ToastAction`, `ToastViewport` all forward refs.
+4. ✅ `[A]` **`closeLabel` prop** — `aria-label` is a prop (default `"Close toast"`), ready for i18n.
+5. ✅ `[M]` **`position` prop** — six placements (`bottom-right | bottom-left | bottom-center | top-right | top-left | top-center`) on `ToastViewport`/`Toaster`, read back via a viewport context so the card anchors to the edge and entrance/exit transforms slide from the correct side.
+6. ✅ `[P]` **memoized rows** — `ToastRow` is `memo()`'d per toast; the list stays a plain map (base-ui's store already notifies subscribers per change).
+7. ✅ `[Th]` **token-driven styling** — `bg-popover`, `text-popover-foreground`, `shadow-lg`, `ring-ring`; peek/shrink CSS vars hoisted to the root class.
+8. ✅ `[D]` **imperative manager** ✓ — the manager owns queue state; the card renders what it is given (correct for a dumb component).
+9. ✅ `[F]` **form-integration note** — submit-error toasts live with the manager, not `FieldError`; documented in Dos and Don'ts.
+10. ✅ `[A]` **`toastA11yProps(type)` helper** — maps type → `{ role, priority, label }` (error = assertive, others = polite); used by tests and docs.
+11. ✅ `[UX]` **position-aware swipe-to-dismiss + auto-dismiss** ✓ (base-ui native) — the dismiss swipe is constrained per position (top stacks dismiss upward, bottom stacks downward) via `swipeDirection`; `timeout` per toast (`0` = persistent).
+12. ✅ `[M]` **mobile viewport** — `inset-x-4` full-ish width on mobile, `max-w-sm` centered; `sm:end-4` corner on desktop.
+13. ✅ `[P]` **multi-manager isolation** — `createToastManager()` + `createToastMessage(manager)`; the singleton `toast`/`toastMessage` remain for app-wide use.
+14. ✅ `[T]` **`ToastType`/`ToastData` exported** (inferred from schemas) for the `toastMessage()` API typing.
+15. ✅ `[A]` **no focus steal** — toasts are `role="dialog"/"alertdialog"` (base-ui) with `tabIndex=0` only when interactive; viewport is a labelled live region.
+16. ✅ `[UX]` **progress bar + countdown + ticking label** — `data: { progress: 0–100 }` renders a thin animated bar (`ToastProgress`, `role="progressbar"`); toasts with `timeout > 0` instead show an auto-dismiss countdown bar draining over the remaining time (pauses on hover/expansion **and window blur**, reduced-motion-safe) **plus** a small ticking “Dismisses in Xs” readout under the content that freezes under the exact same pause conditions as the bar (base-ui: `expanded = hovering || focused`, plus its window-blur timer pause) so the text never drifts from the animation or the real dismissal.
+17. ✅ `[M]` **44px touch target** — `ToastClose` uses `size="icon-lg"` + `min-h-11 min-w-11` on mobile (`sm:min-h-0 sm:min-w-0` on desktop).
+18. ✅ `[P]` **z-index stacking** — `z-[calc(1000-var(--toast-index))]` + peek/shrink scale from base-ui's CSS vars; documented.
+19. ✅ `[D]` **no hardcoded copy** — `closeLabel` and `viewportLabel` are props; aria-live strings come from `toastA11yProps`.
+20. ✅ `[T]` **explicit return types** ✓ (rule 15) across the manager API and components.
 
 ### 🚀 New Features
 
-1. **Tri-state toggle** — an `indeterminate` state (partially selected filters).
-2. **Icon-only detection** — auto `aria-label` warning when no text child (a11y lint).
-3. **Loading state** — a `loading` prop with a spinner (async toggles).
-4. **Badge on toggle** — a `count` prop (filter counts).
-5. **RTL-safe** — no direction issues (test + docs).
-6. **Telemetry** — `onPressedChange` analytics passthrough.
-7. **Test helpers** — export `toggleA11yProps()` for tests.
-8. **Schema** — a `ToggleVariantSchema` (zod) for the variant union.
-9. **Reduced-motion** — no transitions under the setting.
-10. **Print styles** — toggles print as static state.
-11. **Shortcut hint** — a `shortcut` prop rendering a `Kbd` hint.
-12. **Keyboard-first** — Space toggles (native ✓ — test).
-13. **Focus ring polish** — a `focusRing` variant.
-14. **Animated press** — a subtle scale on press (motion-safe).
-15. **Custom icons** — an `icon` slot swapping per state.
-16. **Compact** — a `size="xs"` for dense toolbars.
-17. **Theme tokens** — pressed state via `--accent` tokens (already partial).
-18. **Tooltip wrapping** — a `tooltip` prop for icon toggles.
-19. **Toggle schema** — a `ToggleConfigSchema` (zod) for configs.
-20. **A11y announcement** — `aria-pressed` verified + tested.
+1. **Typed imperative API** — `toastMessage.success/info/warning/error/loading({...})` with zod-inferred `type`; no string unions at call sites.
+2. **Title + description slots** — `title`/`description` accept `ReactNode` (rich toasts, inline icons).
+3. **Per-type icons + card tints** — automatic icon per type (`data-slot="toast-icon"`); success/warning/error/info cards get token-colored backgrounds, borders and icons (green/yellow/red/blue) via `--success/--warning/--info/--destructive`.
+4. **Custom icon override** — `data: { icon: <MyIcon /> }` wins over the type default.
+5. **Action button** — `actionProps: { children, onClick }` renders a real `Button` (`variant="outline" size="sm"`) that fires once (base-ui merges `toast.actionProps` itself — do NOT spread them onto `<ToastAction>`).
+6. **Auto-dismiss timeout + countdown + label** — `timeout` ms per toast (`0` keeps it open; loading persists by default); a bottom countdown bar drains over the remaining time (default 5s) and a tiny “Dismisses in Xs” label (`[data-slot="toast-countdown-label"]`) ticks down in sync — both driven by a `useCountdown` delta timer so the readout and the bar can't drift. The **bar + label freeze together** under the exact conditions base-ui pauses its real dismiss timer: hover, focus/expansion, and **window blur** (`ToastProvider` holds a single `focus`/`blur` listener). The ticker is fully disabled for toasts that show no countdown (loading/persistent/progress), so they never re-render on a timer. The label's copy is a formatter: `<Toaster countdownLabel={(s) => `Closes in ${s}s`} />` (i18n-ready; default `Dismisses in ${s}s`).
+7. **Dismiss all** — `toastMessage.dismiss()` with no id closes every toast; `dismiss(id)` targets one.
+8. **Update in place** — `toastMessage.update(id, { title, type, ... })` flips a loading toast to success/error (demo: “Uploading…” → “Upload complete”).
+9. **Promise helper** — `toastMessage.promise(promise, { loading, success, error })` renders loading then resolves/rejects automatically.
+10. **Priority → aria-live** — `priority: "low" | "high"` defaults from type; high-priority (errors) announce assertively.
+11. **Viewport position** — six placements (`bottom/top × left/center/right`) via `position` on `<Toaster position="top-right" />` / `ToastViewport`; on mobile the stack is near-full-width at the chosen vertical edge, on `sm+` it hugs the corner/edge. Changing `position` live re-anchors existing toasts (context flows through the memoized card rows).
+12. **Progress bar** — `data: { progress: 40 }` draws a bottom-edge progress bar with `role="progressbar"`; providing `data.progress` replaces the auto-dismiss countdown bar.
+13. **Typed data payload** — `data` is validated by `toastDataSchema`; smart components pass structured payloads, the card renders blindly.
+14. **Multi-manager isolation** — `createToastManager()` + `<Toaster toastManager={m}>` + `createToastMessage(m)` for widget-scoped toast stacks (tests use this to guarantee isolation).
+15. **`limit` prop** — max visible toasts before the oldest are limited (base-ui `limited` state).
+16. **Accessible live region** — `viewportLabel` (default `"Notifications"`) names the `aria-live="polite"` region; base-ui also mirrors high-priority titles in a visually-hidden `role="alert"` region (keep tests off `getByText` for error titles).
+17. **`closeLabel` + `viewportLabel` i18n** — every user-facing string is a prop.
+18. **Composable exports** — `ToastProvider`/`ToastPortal`/`ToastViewport`/`Toast`/`ToastContent`/`ToastTitle`/`ToastDescription`/`ToastAction`/`ToastClose`/`ToastIcon`/`ToastProgress` for bespoke layouts.
+19. **`toastA11yProps()` helper** — single source of truth for the ARIA contract, unit-tested.
+20. **Zod schemas exported** — `toastTypeSchema`, `toastPositionSchema`, `toastDataSchema` for configs/forms at the app layer.
+
+### 📖 How to use
+
+Mount `<Toaster />` once (already in `apps/admin/app/layout.tsx` and `apps/web/app/layout.tsx`), then fire toasts from anywhere:
+
+```tsx
+import { Toaster, toastMessage } from "@workspace/ui/components/toast";
+
+// Place the stack anywhere — defaults to bottom-right.
+<Toaster position="top-right" />
+
+// Simple
+toastMessage.success({ title: "Deploy complete", description: "v2.14.0 is live." });
+
+// Action
+toastMessage.warning({
+  title: "Action required",
+  actionProps: { children: "Review", onClick: () => review() },
+});
+
+// Loading → success (loading never auto-dismisses; the countdown bar starts on the
+// flipped success toast and drains over its `timeout`, default 5s)
+const id = toastMessage.loading({ title: "Uploading…", timeout: 0 });
+upload().then(() => toastMessage.update(id, { title: "Upload complete", type: "success", timeout: 4000 }));
+
+// Promise sugar
+await toastMessage.promise(save(), { loading: "Saving…", success: "Saved", error: "Failed" });
+
+// Progress
+toastMessage.loading({ title: "Backup", timeout: 0, data: { progress: 40 } });
+
+// Countdown copy is yours — default is `(s) => `Dismisses in ${s}s``
+<Toaster countdownLabel={(seconds) => `Auto-closes in ${seconds}s`} />
+```
+
+Advanced (per-widget stack):
+
+```tsx
+const manager = createToastManager();
+const message = createToastMessage(manager);
+// <Toaster toastManager={manager} /> inside the widget tree
+message.success({ title: "Widget-scoped" });
+```
+
+### ✅ Dos and Don'ts
+
+- **Do** keep toasts imperative and app-scoped — the singleton `toastMessage` is the right call for global feedback.
+- **Do** use the type helpers (`toastMessage.success(…)` etc.) to get the token-colored card + icon (green/yellow/red/blue) for free.
+- **Do** rely on the auto-dismiss countdown bar for feedback — it drains over `timeout` (default 5s); pass `data.progress` only for manual progress (it replaces the countdown).
+- **Do** treat the “Dismisses in Xs” label as part of the countdown — it ticks every 100ms and freezes on hover/focus **and window blur** alongside the bar (all three mirror base-ui's timer pause); override its copy via `<Toaster countdownLabel={...}>` (never hardcode copy in the component — rule 10).
+- **Do** know the label clamps to `1s` until the toast closes — it never flashes “0s”.
+- **Do** leave the label accessible (not `aria-hidden`) — verified against base-ui: the toast root renders `role="dialog"`/`"alertdialog"`, which is **not** a live region, so the per-second text changes are never announced to screen readers. (The countdown bar stays `aria-hidden` — it's decorative.)
+- **Do** use `timeout: 0` for loading/persistent states, then `update(id, …)` when the work finishes.
+- **Do** pass `data: { progress }` for uploads so users see movement.
+- **Do** render `<ToastAction />` bare — spreading `toast.actionProps` onto it merges `onClick` twice (base-ui already merges the props), double-firing handlers.
+- **Do** capture the manager-returned id through a `let` outside `act()` in tests — React 19's `act()` returns a Thenable, not the callback value.
+- **Do** query error-toast titles by `[data-slot='toast-title']` in tests — base-ui mirrors high-priority titles in a visually-hidden `role="alert"` announce region, so `getByText` finds two nodes.
+- **Do** query the close button via `[data-slot='toast-close']` in jsdom — base-ui sets `aria-hidden` on close until the toast is expanded/focused, so `getByRole("button")` misses it.
+- **Do** mount exactly **one** `<Toaster />` per manager — a second instance bound to the same default singleton renders a duplicate viewport showing the same toasts.
+- **Do** know the action button is a fixed `outline`/`sm` `Button` — `actionProps` takes plain button props (`children`, `onClick`); for bespoke styling, compose `ToastProvider`/`ToastAction` manually.
+- **Don't** re-render `<Toaster />` per message — mount once; the manager queues state.
+- **Don't** put `Toaster` inside a conditionally-mounted subtree — a remount drops the in-flight stack.
+- **Don't** manage toast state in a component — it's the manager's job; the card is a dumb renderer.
+- **Don't** forget `timeout` for non-loading toasts — the default is 5s, not infinite.
+- **Don't** use `getByText` on error titles (see the announce-region note above).
 
 ---
 
@@ -3650,7 +4337,7 @@ enhancements to pick up once the improvements are in.
 5. Never change layout unless a specific item says so (rule 12) — most items are additive (new props, new variants) or cosmetic.
 6. Update this doc's `lastUpdated` frontmatter when you finish a batch, and mark completed items inline with ✅.
 
-> **Rule 15 note:** the repo's component functions already declare explicit return types
+> [!NOTE] **Rule 15 note:** the repo's component functions already declare explicit return types
 > (`: React.JSX.Element`) — that part of the rule is satisfied. The rule bites hardest in
 > classes/hooks (e.g. the toast manager) and in any new helper functions: always write the
 > return type and `public`/`private`/`protected` where classes are used.

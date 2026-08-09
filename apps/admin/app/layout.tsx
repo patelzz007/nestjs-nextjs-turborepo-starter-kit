@@ -1,5 +1,5 @@
 import "@workspace/ui/globals.css";
-import "@/app/markdown.css";
+import "@/app/docs.css";
 
 import { QueryProvider } from "@workspace/client/lib/query-provider";
 import { Toaster } from "@workspace/ui/components/sonner";

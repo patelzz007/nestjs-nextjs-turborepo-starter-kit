@@ -9,7 +9,7 @@ coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=form
 
 # ESLint Setup & How To Run It
 
-> This document explains how ESLint is configured across the entire monorepo and
+> [!NOTE] This document explains how ESLint is configured across the entire monorepo and
 > how to run it — both globally (all workspaces at once via Turborepo) and per project.
 > It is written so that even a junior developer with 6 months of experience can
 > follow along.
@@ -60,7 +60,7 @@ Each workspace's own `eslint.config.js` simply imports one of the above:
 
 The package `packages/eslint-config/package.json` maps these import paths:
 
-```json
+```json title="packages/eslint-config/package.json"
 {
 	"exports": {
 		"./base": "./base.js",
@@ -71,7 +71,7 @@ The package `packages/eslint-config/package.json` maps these import paths:
 }
 ```
 
-> **Note:** `apps/api` also declares `ignores: ["**/*.spec.ts", "**/*.test.ts"]`
+> [!NOTE] **Note:** `apps/api` also declares `ignores: ["**/*.spec.ts", "**/*.test.ts"]`
 > and a couple of local overrides — see [Section 4](#4-per-repo-exceptions).
 
 ---
@@ -218,7 +218,7 @@ export default [
 ];
 ```
 
-> **Why?** Prisma's complex generic chains, Zod v4 schema metafields (`.meta()`), and
+> [!NOTE] **Why?** Prisma's complex generic chains, Zod v4 schema metafields (`.meta()`), and
 > dynamic Express middleware patterns cannot be fully resolved by `strictTypeChecked`,
 > which produces false-positive `no-unsafe-*` errors. These are validated at runtime
 > by the libraries themselves, so they're relaxed **only** for those file patterns.
@@ -240,7 +240,7 @@ export default [
 ];
 ```
 
-> **Why?** Zod v4 uses extremely complex generic type chains (e.g. `z.iso.datetime()`)
+> [!NOTE] **Why?** Zod v4 uses extremely complex generic type chains (e.g. `z.iso.datetime()`)
 > that `strictTypeChecked` cannot resolve, producing false positives. Relaxed only for
 > `src/schemas/**` — the non-negotiable rules (no `any`, explicit return types, etc.)
 > still apply everywhere.
@@ -280,7 +280,7 @@ pnpm lint
 This runs `turbo lint`, which executes the `lint` script in **every workspace that
 has one** (web, admin, api, ui).
 
-> ⚠️ **Important:** `packages/shared` does **not** have a `lint` script in its
+> [!WARNING] **Important:** `packages/shared` does **not** have a `lint` script in its
 > `package.json`, so `pnpm lint` skips it. To lint shared, run it directly —
 > see [Section 6.2](#62-per-project).
 
@@ -292,11 +292,11 @@ pnpm format                                    # prettier --write everywhere (se
 pnpm typecheck                                 # tsc --noEmit everywhere (api uses nest build)
 ```
 
-> ⚠️ Like `pnpm lint`, `pnpm format` only reaches workspaces that define a `format`
+> [!WARNING] Like `pnpm lint`, `pnpm format` only reaches workspaces that define a `format`
 > script (web, admin, api, ui). `packages/shared` has **no** `format` script either —
 > format it directly: `cd packages/shared && npx prettier --write "src/**/*.ts"`.
 
-> **Caching is disabled** for lint/format/typecheck/build/dev in `turbo.json`
+> [!NOTE] **Caching is disabled** for lint/format/typecheck/build/dev in `turbo.json`
 > (`"cache": false`), so every run is always fresh — you'll never see stale results.
 
 ### 6.2 Per project
@@ -331,7 +331,7 @@ or without `cd`, using pnpm to run the command inside the workspace:
 pnpm --filter @workspace/shared exec eslint src
 ```
 
-> **Why can't I just run `npx eslint packages/shared/src` from the root?**
+> [!NOTE] **Why can't I just run `npx eslint packages/shared/src` from the root?**
 > The repo root does **not** have its own `eslint.config.js` — only each workspace does.
 > ESLint flat config looks for the config relative to the **current working directory**,
 > not the files being linted, so running from root fails with
@@ -353,7 +353,7 @@ npx eslint --fix .                          # auto-fix everything fixable
 npx eslint --max-warnings 0 .               # fail CI if there are any warnings
 ```
 
-> ⚠️ **Flat config caveat:** ESLint loads `eslint.config.js` based on the current
+> [!WARNING] **Flat config caveat:** ESLint loads `eslint.config.js` based on the current
 > working directory, so you must run these commands from inside the workspace
 > (e.g. `cd apps/web`). There is **no root config file** — `npx eslint apps/web/...`
 > from the repo root will fail. If you're at the root, use `pnpm lint --filter <name>`
@@ -375,7 +375,7 @@ cd packages/ui && npx eslint --fix .
 cd packages/shared && npx eslint --fix src
 ```
 
-> The all-in-one `npx eslint --fix apps/web apps/admin ...` from the root will NOT
+> [!WARNING] The all-in-one `npx eslint --fix apps/web apps/admin ...` from the root will NOT
 > work — there is no root config (see the flat-config caveat in [Section 6.3](#63-raw-eslint-commands)).
 
 Always re-run the check afterward to confirm 0 problems:
@@ -399,7 +399,7 @@ npx eslint .      # should end with "✖ 0 problems (0 errors, 0 warnings)"
 | Fail on any warning (inside workspace) | `npx eslint --max-warnings 0 .`                                                                                        |
 | Bypass cache (inside workspace)        | `npx eslint --no-cache .`                                                                                              |
 
-> Rows that run raw `npx eslint` must be executed **from inside a workspace**
+> [!WARNING] Rows that run raw `npx eslint` must be executed **from inside a workspace**
 > (each workspace has its own `eslint.config.js`; the repo root does not).
 > Commands starting with `pnpm` are run from the repo root.
 

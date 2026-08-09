@@ -3,9 +3,21 @@
 import { ThemeProvider as NextThemesProvider, useTheme } from "next-themes";
 import * as React from "react";
 
+/**
+ * Marks next-themes' inline init script as a JS data block
+ * (`application/javascript`). React's canary runtime (bundled in Next 16.3)
+ * warns "Encountered a script tag…" whenever it creates an untyped inline
+ * `<script>` client-side — e.g. when hydration fails and the tree is
+ * regenerated. A JS MIME type makes `isScriptDataBlock` return true, so the
+ * warning never fires and the script still runs exactly as before. Hoisted to
+ * module scope so the reference is stable (next-themes memoizes its script
+ * element on these props — rule 16: no inline object creation in props).
+ */
+const THEME_SCRIPT_PROPS: Readonly<{ type: string }> = { type: "application/javascript" };
+
 function ThemeProvider({ children, ...props }: React.ComponentProps<typeof NextThemesProvider>): React.JSX.Element {
 	return (
-		<NextThemesProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange {...props}>
+		<NextThemesProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange scriptProps={THEME_SCRIPT_PROPS} {...props}>
 			<ThemeHotkey />
 			{children}
 		</NextThemesProvider>

@@ -9,7 +9,7 @@ coverImage: "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?auto=f
 
 # Monorepo Documentation
 
-> Everything a developer needs to understand this monorepo. Each guide is written for
+> [!NOTE] Everything a developer needs to understand this monorepo. Each guide is written for
 > a junior developer with ~6 months of experience — no assumed knowledge beyond the
 > basics of TypeScript, React, and Node.
 
@@ -34,6 +34,7 @@ coverImage: "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?auto=f
 | **[Email templates](./email.md)**                   | 40 must-haves for the Resend-powered transactional email template system — grounded in current code.                                                  |
 | **[Reactive core](./reactive-core.md)**             | Design for replacing promises with a zero-dep rxjs-like core — 50 items, pitfalls (incl. full-SSR), unsubscribe guarantees, rxjs coverage matrix.          |
 | **[Performance & DX roadmap](./performance-and-dx.md)** | 20 grounded performance + developer-experience improvements (turbo cache, pino, CI, smoke test…) — each with a priority, effort estimate, and acceptance criteria. |
+| **[Sidebar audit](./sidebar-audit.md)**              | 20 improvements + 20 new features for the admin sidebar (a11y contracts, search, rail mode, favorites, RBAC menu…) — grounded in the actual sidebar code. |
 
 ---
 
@@ -49,7 +50,7 @@ Don't read top to bottom. Here's the path we'd walk a new developer through:
 | 4️⃣    | **[Token Refresh](./token-refresh.md)**                             | Now the real machinery: the two layers, how to observe them in DevTools / server logs, and the FAQ.     |
 | 5️⃣    | **[TypeScript](./typescript.md) · [ESLint](./eslint.md) · [Dependencies](./dependencies.md)** | Read when you touch config or hit a lint/type error — no need up front.          |
 | 6️⃣    | **[Prisma](./prisma.md)**                                           | Read when you touch the database: migrations, seeding, every `db:*` command.                            |
-| 7️⃣    | **[Auth roadmap](./auth-roadmap.md) · [Boilerplate roadmap](./boilerplate-roadmap.md) · [UI component audit](./ui-components.md) · [Performance & DX roadmap](./performance-and-dx.md) | Read when you're *planning* new work — idea lists, the per-component improvement backlog, and the perf/DX backlog. |
+| 7️⃣    | **[Auth roadmap](./auth-roadmap.md) · [Boilerplate roadmap](./boilerplate-roadmap.md) · [UI component audit](./ui-components.md) · [Performance & DX roadmap](./performance-and-dx.md) · [Sidebar audit](./sidebar-audit.md) | Read when you're *planning* new work — idea lists, the per-component improvement backlog, and the perf/DX backlog. |
 
 **TL;DR for the common case:** steps 1–4 are required reading; steps 5–7 are
 reference material to reach for when the moment calls for them.
@@ -89,7 +90,7 @@ packages/                ← shared libraries (no ports)
 | `pnpm db:deploy` / `db:migrate` / `db:seed` / `db:generate` / `db:studio` / `db:reset` (or `pnpm turbo run db:<task>`) | Database commands (see [prisma.md](./prisma.md))                                                                                        |
 | `pnpm deps:check` / `pnpm deps:fix` / `pnpm deps:list` (or `pnpm turbo run deps:check`)                                | Verify / auto-fix shared dependency version drift — turbo tasks backed by `packages/tooling` (see [dependencies.md](./dependencies.md)) |
 
-> ⚠️ Turbo caching is **disabled** (`"cache": false` in `turbo.json`) — commands always
+> [!WARNING] Turbo caching is **disabled** (`"cache": false` in `turbo.json`) — commands always
 > run fresh, and the shared package rebuilds before the apps that depend on it.
 
 ---

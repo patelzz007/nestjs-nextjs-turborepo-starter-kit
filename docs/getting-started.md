@@ -9,7 +9,7 @@ coverImage: "https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=f
 
 # Getting Started — A-to-Z Setup Guide
 
-> This guide walks you through **everything**: from an empty laptop to a running
+> [!NOTE] This guide walks you through **everything**: from an empty laptop to a running
 > monorepo with a database, seeded data, and all three apps on screen. It is written
 > for a junior developer with ~6 months of experience — no assumed knowledge beyond
 > the basics of TypeScript, React, and Node.
@@ -70,7 +70,7 @@ three apps and six shared packages:
 **Swagger (API docs)** is served by the API at http://localhost:8080/docs.
 **Prisma Studio** (visual DB browser) runs at http://localhost:5555.
 
-> The key idea: `@workspace/shared` is the **single source of truth**. The API's
+> [!NOTE] The key idea: `@workspace/shared` is the **single source of truth**. The API's
 > request/response shapes are Zod schemas in `shared`, and both the backend (DTOs)
 > and the frontends (typed hooks) derive their types from those schemas. See
 > [architecture.md](./architecture.md) for the full mental model.
@@ -119,7 +119,7 @@ If you already have pnpm but a different version, install the repo's version onc
 corepack use pnpm@11.18.0   # pins it for this folder
 ```
 
-> ⚠️ **Don't mix package managers.** Use `pnpm` only — never `npm install` or
+> [!WARNING] **Don't mix package managers.** Use `pnpm` only — never `npm install` or
 > `yarn` in this repo. The lockfile (`pnpm-lock.yaml`) is pnpm-specific.
 
 ### Installing PostgreSQL
@@ -154,7 +154,7 @@ git clone <repo-url> hello-world
 cd hello-world
 ```
 
-> The folder is currently named `hello-world` — rename it to your project if you like
+> [!NOTE] The folder is currently named `hello-world` — rename it to your project if you like
 > (e.g. `mv hello-world my-project && cd my-project`). The package name inside
 > `package.json` (`"hello-world"`) can be changed too, but that's optional.
 
@@ -173,7 +173,7 @@ What this does:
 - Wires up the `workspace:*` packages so `@workspace/ui`, `@workspace/shared`, etc.
   resolve to each other.
 
-> No build step happens here — packages are built on demand by turbo when you run
+> [!NOTE] No build step happens here — packages are built on demand by turbo when you run
 > `pnpm dev` or `pnpm build` (the `dev`/`build` tasks depend on `^build`, so
 > `@workspace/shared` compiles first).
 >
@@ -194,13 +194,13 @@ createdb monorepo
 psql -U postgres -c "CREATE DATABASE monorepo;"
 ```
 
-> ⚠️ The seed and migrations **will not create the database for you** — it must
+> [!WARNING] The seed and migrations **will not create the database for you** — it must
 > exist before `pnpm db:all`. If you used the Docker option above, the container
 > already created it (`POSTGRES_DB=monorepo`).
 
 The default connection string this repo expects:
 
-```
+```env title=".env"
 DATABASE_URL="postgresql://postgres:postgres@localhost:5432/monorepo?schema=public"
 ```
 
@@ -239,6 +239,12 @@ Open `apps/api/.env` and fill in real values:
 | `RESEND_API_KEY`            | `re_...`                                                               | Sends transactional emails (signup, password reset)      |
 | `EMAIL_FROM_ADDRESS`        | `noreply@example.com`                                                  | "From" address for emails                                |
 
+> [!NOTE] **CORS** (Cross-Origin Resource Sharing): the browser blocks a page on one
+> origin (say `localhost:3000`) from calling an API on another origin unless
+> the API explicitly allows it. That's what the comma-separated `CORS_ORIGINS`
+> value above is for — add any frontend origin that should be allowed to call
+> the API.
+
 **Generate strong secrets** (run this 3 times, paste each result into the three
 secret vars):
 
@@ -246,7 +252,7 @@ secret vars):
 openssl rand -base64 32
 ```
 
-> Email sending is **optional** for local dev. If you don't have a Resend key yet,
+> [!NOTE] Email sending is **optional** for local dev. If you don't have a Resend key yet,
 > leave `RESEND_API_KEY` empty — auth still works; only the actual email delivery
 > will fail (you'll see the error in the API logs).
 
@@ -272,7 +278,7 @@ cp apps/admin/.env.example apps/admin/.env
 | `NEXT_PUBLIC_WEB_URL`       | `http://localhost:3000` | Web app URL used by the "main website" login link                                                                 |
 | `NEXT_PUBLIC_SESSION_POLL_MS` | `60000` (optional)    | Session-status badge steady-poll interval in ms — OPT-IN; unset/`0` disables steady polling (default). The countdown is computed locally from the JWT `exp` claim, so the badge works with zero polling |
 
-> `NEXT_PUBLIC_*` vars are inlined into the browser bundle at build time. When you
+> [!NOTE] `NEXT_PUBLIC_*` vars are inlined into the browser bundle at build time. When you
 > deploy, set them to your production URLs (e.g. `https://api.example.com` and
 > `https://app.example.com`).
 
@@ -289,22 +295,24 @@ pnpm db:all
 `pnpm db:all` runs `turbo run db:seed`, which executes three tasks in order
 (generate & deploy run in parallel, then seed):
 
-1. **`db:generate`** — regenerates the Prisma client types from `schema.prisma`.
+1. **`db:generate`** — regenerates the Prisma client types from `schema.prisma`
+   (Prisma is the project's **ORM** — object-relational mapper — and
+   `schema.prisma` is the file that defines every table and relation).
 2. **`db:deploy`** — applies any pending migrations (`prisma migrate deploy`).
 3. **`db:seed`** — creates permissions, roles, users, URLs, clicks, API keys, etc.
 
 Expect it to take ~30 seconds and end with:
 
-```
+```bash
  Tasks:    3 successful, 3 total
 ```
 
-> ⚠️ `db:all` applies **pending** migrations — it never **creates** a new one. On a
+> [!WARNING] `db:all` applies **pending** migrations — it never **creates** a new one. On a
 > fresh clone there are no pending migrations (they're committed), so step 2 is a
 > no-op. If you ever _change_ `schema.prisma`, use `pnpm db:migrate` (interactive)
 > to create a migration first, then `pnpm db:all` to re-seed.
 >
-> ⚠️ The seed is **idempotent** — safe to re-run as many times as you like. Note it
+> [!WARNING] The seed is **idempotent** — safe to re-run as many times as you like. Note it
 > **wipes volatile demo data** (refresh tokens, clicks, API keys, usage logs) at the
 > start, so any API keys you created manually will be removed.
 
@@ -319,7 +327,9 @@ Expect it to take ~30 seconds and end with:
 
 Plus ~10 dummy users (`alice.johnson@example.com` / `Alice@123`, `bob.smith@example.com` /
 `Bob@123`, …). Only users with the **Admin** role (or above) can log into the admin
-panel — `user@example.com` can only use the web app.
+panel — `user@example.com` can only use the web app. That gate is enforced by
+**RBAC** (role-based access control): permissions are attached to roles, roles to
+users, and the API checks both when an endpoint is hit.
 
 ---
 
@@ -348,7 +358,7 @@ pnpm dev:admin
 pnpm dev:api
 ```
 
-> Turbo caching is **disabled** in this repo (`"cache": false`), so dev always runs
+> [!NOTE] Turbo caching is **disabled** in this repo (`"cache": false`), so dev always runs
 > fresh, and `@workspace/shared` is rebuilt before the apps that depend on it.
 
 ---
@@ -371,26 +381,32 @@ its request/response schemas (inferred from the shared Zod schemas).
 **4. Log into the admin panel** — http://localhost:3001/auth/login with
 `admin@example.com` / `Admin@123`. You'll land on `/` (the overview dashboard).
 
-> **Login gotcha:** the web app stores cookies named `accessToken` / `refreshToken`,
+> [!NOTE] **Login gotcha:** the web app stores cookies named `accessToken` / `refreshToken`,
 > while the admin panel uses **separate** cookies (`adminAccessToken` /
 > `adminRefreshToken`) so a web login can't access the admin panel (and vice versa).
 > If you're logged in to one app and the other says "not authenticated", that's
-> expected — log in again on that app.
+> expected — log in again on that app. Both cookie pairs are `SameSite`-scoped,
+> which is the primary defence against **CSRF** (Cross-Site Request Forgery):
+> a rogue site can't make the browser attach your session cookie to a
+> cross-site request it didn't originate.
 
-> **Token refresh:** when an access token expires, the API returns `401` and the
+> [!NOTE] **Token refresh:** when an access token expires, the API returns `401` and the
 > `useApi` hook (via `AuthProvider`) automatically calls `POST /auth/refresh`
 > once (single-flighted, so concurrent 401s share one call), then retries the
-> original request. On a **full page navigation** the route proxy (`proxy.ts`)
-> can refresh ahead of time instead: it runs server-side, so it can read the
-> httpOnly cookies, and when the access token is expired (or within 30s of
-> expiring) it calls `POST /auth/refresh` itself and forwards the rotated
-> cookies with the response — the first API call (e.g. `/auth/me`) then never
-> 401s. If the refresh token is dead too, the proxy clears the stale cookies
-> and sends the user to `/auth/login`. Only if the refresh itself fails do you
-> get redirected to `/auth/login`. The route proxies only require the _access_
-> token cookie to be present — validity is enforced by the API, not the proxy.
->
-> The proxies run on the **Node.js runtime** — Next.js 16 runs `proxy.ts` on
+> original request. Each refresh token carries a unique ID — its `jti` (JWT
+> ID) — which the API uses to detect token reuse: when a token is rotated the
+> old `jti` is invalidated, so a stolen token dies the moment it's used twice.
+> On a **full page navigation** the route proxy (`proxy.ts`) can refresh ahead
+> of time instead: it runs server-side, so it can read the httpOnly cookies,
+> and when the access token is expired (or within 30s of expiring) it calls
+> `POST /auth/refresh` itself and forwards the rotated cookies with the
+> response — the first API call (e.g. `/auth/me`) then never 401s. If the
+> refresh token is dead too, the proxy clears the stale cookies and sends the
+> user to `/auth/login`. Only if the refresh itself fails do you get redirected
+> to `/auth/login`. The route proxies only require the _access_ token cookie to
+> be present — validity is enforced by the API, not the proxy.
+
+> [!NOTE]The proxies run on the **Node.js runtime** — Next.js 16 runs `proxy.ts` on
 > Node by design (only the legacy `middleware.ts` convention can opt into
 > Edge), so there is no Edge runtime to set up on Node hosts (DigitalOcean /
 > Linode droplets, etc.). One trade-off: the proxy refresh and the client's
@@ -436,7 +452,7 @@ Run these from the **repo root**:
 | `pnpm deps:fix`                                    | Auto-align dependency versions                            |
 | `pnpm turbo run db:<task>`                         | Run any db task through turbo explicitly                  |
 
-> **Add a shadcn component/block:** `pnpm dlx shadcn@latest add <name> -y -o -c apps/admin`
+> [!NOTE] **Add a shadcn component/block:** `pnpm dlx shadcn@latest add <name> -y -o -c apps/admin`
 > (run from the repo root; `-y` skips the confirm prompt and `-o` auto-answers the
 > "file already exists — overwrite?" prompt, otherwise the CLI hangs waiting for
 > input). Primitive components land in `packages/ui/src/components/`, while **block**
@@ -619,6 +635,10 @@ follows:
   - `sectionOrder` — the user's custom section ordering (persisted) with
     `moveSectionUp`/`moveSectionDown`; `null` means "use the natural order from the
     config".
+  - `expandedItems` + `searchQuery` — **session-only, deliberately NOT persisted**
+    (a zod-validated `merge` strips both from any legacy payload, so a refresh
+    always resets the menu to default and the search box to empty). Only `isOpen`
+    and `sectionOrder` survive reloads.
   - Actions use **block bodies with explicit `(): void` return types** — zustand's
     `persist` types `set` as returning `unknown`, so expression bodies would fail
     both tsc's void check and ESLint's `explicit-function-return-type`; block bodies
@@ -656,7 +676,11 @@ follows:
   ⌘K search over every page in the sidebar JSON. It supports **scope prefixes**
   (`>` commands, `/` pages, `#` settings), quick actions (toggle theme, open
   settings, go to dashboard, open billing), **pinned & recent chips** (persisted to
-  `localStorage` via `stores/command-palette-store.ts`, a zustand store),
+  `localStorage` via `stores/command-palette-store.ts`, a zustand store — the
+  recents/pins survive reloads on purpose, but the **search text itself is local
+  component state** and resets on close/refresh; the store validates its persisted
+  payload with zod so a corrupted `command-palette-state` can't leak into live
+  state),
   per-item colour tiles, section badges, breadcrumb trails, fuzzy "did you mean?"
   suggestions (Levenshtein + filler-word stripping), and a keyboard-hint footer.
   The matching, alias, and styling logic lives in `lib/palette-search.ts` and
@@ -709,50 +733,147 @@ follows:
     search box itself (`components/docs/docs-search-box.tsx`) is a dumb,
     controlled input. The old `/docs/search` route now redirects to `/docs`.
   - **Detail page layout.** `app/(panel)/docs/[slug]/page.tsx` is a server
-    component: the banner, then the article + ToC. The breadcrumb
-    (`Documentation › <title>`, linking back to `/docs`) comes from the
-    **shared `BreadcrumbContext` trail** rendered by the `(panel)` layout — the
-    resolver maps `/docs/<slug>` to its menu entry (Settings → …) or falls back
-    to the section + doc title, so the docs page needs no breadcrumb markup of
-    its own. The article column is constrained to a comfortable **reading
-    measure** (`max-w-3xl`, ~70ch) so lines don't stretch across the whole
-    container, and the whole group is centered on the page.
+    component — rendered with **SSR** (server-side rendering), so the guide's
+    HTML arrives pre-built from the server rather than being assembled in the
+    browser: the banner, then the article + ToC, ending with a
+    **previous / next guide** pager, a **"Continue exploring" card**, and a
+    quiet **"Edit this guide"** link to the source `.md` on GitHub. The
+    breadcrumb (`Documentation › <title>`, linking back to `/docs`) comes
+    from the **shared `BreadcrumbContext` trail** rendered by the `(panel)`
+    layout — the resolver maps `/docs/<slug>` to its menu entry (Settings →
+    …) or falls back to the section + doc title, so the docs page needs no		breadcrumb markup of its own. The article column is constrained to a
+		comfortable **reading measure** (`max-w-3xl`, ~70ch) so lines don't
+		stretch across the whole container, and the whole group is centered on
+		the page. **Keyboard shortcuts** (`components/docs/doc-keyboard-nav.tsx`): `[` and
+    `]` jump to the previous / next guide (guarded against typing targets
+    and modifier keys). **ToC**: the sticky right-hand rail
+    (`components/docs/docs-toc.tsx` — scroll-spy, sliding indicator,
+    back-to-top, **estimated reading time**, a thin **scroll-progress fill**,
+    and **collapsible h3 subtrees**: groups with more than 3 sub-headings
+    fold into a "Show N more" toggle) shows at `lg+`; below that it folds
+    into a collapsible "On this page" `<details>` disclosure above the
+    article. **Pager** (`components/docs/doc-pager.tsx`): the two
+    neighbouring guides from the ordered `getAllDocs()` list, rendered as
+    quiet link cards at the end of the article. **CTA card**
+    (`components/docs/doc-cta-card.tsx`): after the pager — the guide's
+    author / updated / read-time meta and a "Browse all guides" link back to
+    `/docs`. **Loading state**: `app/(panel)/docs/loading.tsx` is a
+    docs-aware skeleton (banner-shaped block + shimmering text lines) shown
+    while the segment streams in.
   - **Banner.** `components/docs/doc-banner.tsx` renders a per-guide hero — a
     real **photograph** from the guide's `coverImage` frontmatter (an absolute
     https URL, e.g. an `images.unsplash.com` photo), displayed through
     `next/image` (`fill` + `object-cover` + `priority`, so it is optimized and
-    eager-loads) with a **soft** left-to-right **dark scrim** that keeps the
-    light title readable over any photo. `next.config.ts` whitelists
-    `images.unsplash.com` via `images.remotePatterns` — add any other image
-    host you use there. If a guide has no `coverImage`, the banner falls back
-    to a clean neutral panel — no decorative gradients. The typography is
-    deliberately restrained (the "AI-ish" look comes from heavy bold headings,
-    letter-spaced eyebrows and high-contrast scrims): a small **pill eyebrow
-    chip** instead of an uppercase label, a `font-semibold tracking-tight`
-    title (never `font-bold`), and a **top-divided meta row** for author,
+    eager-loads) with a **cinematic** left-to-right **dark scrim** plus a
+    **bottom vignette** that gives the meta row a solid base. `next.config.ts`
+    whitelists `images.unsplash.com` via `images.remotePatterns` — add any
+    other image host you use there. If a guide has no `coverImage`, the banner
+    falls back to a quiet **dotted-paper** texture (a faint `--color-border`
+    dot grid over `bg-card`, token-driven — no hardcoded colors, no decorative
+    gradient bands). The typography is deliberately restrained (the "AI-ish"
+    look comes from heavy bold headings, letter-spaced uppercase eyebrows and
+    high-contrast scrims): a small **sentence-case pill chip** (never
+    uppercase, never letter-spaced), a `font-semibold tracking-tight` title
+    (never `font-bold`), and a **top-divided meta row** for author,
     last-updated date, and reading time. Because the banner owns the title,
     `getDoc` strips the leading H1 from the markdown body
     (`stripFirstHeading`) so it isn't duplicated.
     Rendering is done by `components/docs/markdown-renderer.tsx` — a custom
     `react-markdown` renderer with GFM + math/KaTeX, headings with copy-link
     buttons, tables, images, task lists, **shiki**-highlighted code blocks
-    (`components/ui/code-block.tsx`, dual light/dark themes, copy/download,
-    optional line numbers), and lazy-loaded **mermaid** diagrams
-    (`components/ui/mermaid-diagram.tsx`, `mermaid` is dynamic-imported so it
-    only loads when a diagram exists). The **reading typography** is tuned for
-    docs: a `15px` body (`text-foreground/90`, `leading-7`) instead of the
-    default `14px`, a **stepped heading scale** (24px h2 → 18px h3 → 16px h4,
-    `font-semibold`, never bold + tight-tracking everywhere), inline code as a
-    quiet `bg-muted` pill (no border), **non-italic** blockquotes styled as a
-    subtle callout panel, and lists with `marker`-colored bullets. The right-hand **ToC**
+    (`components/ui/code-block.tsx` — the **One Dark Pro** editor theme on a
+    fixed dark surface in BOTH light and dark app modes, copy/download,
+    optional line numbers, and a **per-language accent** — a colored dot +
+    colored label in the header bar matching the grammar's hue). The
+    supported fence languages are the `CODE_LANGUAGES` tuple in
+    `lib/types/code-block.ts` (bash, typescript, ts, tsx, js, jsx, json, sql,
+    prisma, env, css, html, yaml, ini, markdown, http, diff, plaintext). **Always
+    tag your fences** (` ```typescript `, ` ```bash `, ` ```http `, ` ```env `,
+    …) — a **bare ` ``` `** falls back to `detectLanguageName`
+    (`components/ui/code-block.tsx`), which recognizes env `KEY=value` lines,
+    HTTP request/response blocks, shell commands, `export default […]` /
+    `import … from` configs, SQL, and Prisma schema keywords; everything else
+    (ASCII trees, diagrams, prose) renders as uncolored plaintext. Fences are
+    lazy-loaded **mermaid** diagrams (`components/ui/mermaid-diagram.tsx`,
+    `mermaid` is dynamic-imported so it only loads when a diagram exists). The
+    **reading typography** is tuned for docs: a `15px` body
+    (`text-foreground/90`, `leading-7`) instead of the default `14px`, a
+    **stepped heading scale** (24px h2 → 18px h3 → 16px h4, `font-semibold`,
+    never bold + tight-tracking everywhere), inline code as a quiet `bg-muted`
+    pill (no border), and lists with `marker`-colored bullets. Beyond the
+    basics the renderer adds: **interactive tables**
+    (`components/docs/docs-table.tsx` — sticky header, zebra rows, row-hover
+    highlight, horizontal scroll on small screens with a swipe affordance), a
+    **drop-cap on the article's opening paragraph** (a remark plugin stamps
+    the first ROOT-level paragraph — never one inside a callout, so a guide
+    that opens with `> [!NOTE]` doesn't get a drop-cap inside it),
+    **glossary tooltips** (jargon from `GLOSSARY_TERMS` in `lib/markdown.ts`
+    — JWT, RBAC, jti, HS256, … — renders as `<abbr title>` hover tooltips;
+    add a term + one-line definition there and every guide gets it), an
+    **image lightbox** (click a diagram's zoom button to open a native
+    `<dialog>` full-view overlay; Esc / backdrop / ✕ closes), and optional
+    **fence titles** — a `title="file.ts"` hint on the fence's first line
+    shows a filename in the code-block header:
+    ` ```typescript title="endpoints.ts" `.
+  - **Code blocks carry reading extras** — **line highlights** via the
+    fence's `{…}` range (` ```ts {2-4,7} ` tints 1-based lines 2–4 and 7 with
+    the theme's blue accent and shows an "N lines highlighted" chip in the
+    header; `parseHighlightMeta` in the renderer parses the braces and a
+    shiki v4 transformer stamps the lines), a **`diff` language** that
+    renders GitHub-style (`+` green, `-` red, `@@` hunk headers blue — pure
+    CSS, no shiki grammar), a **word-wrap toggle** in the header bar
+    (`aria-pressed`, wraps long lines instead of horizontal scrolling), a
+    **collapse** for blocks over 30    lines (a bottom fade + "Show all N
+    lines" expander), and a **copy toast** that names the target
+    (`toast.success("Copied file.ts")` instead of a silent icon flip). The
+    fence below demos the highlight + collapse + wrap features together
+    (lines 2–3 are tinted, and the block is short enough to skip the
+    collapse):
+
+    ```typescript {2-3}
+    const client = createClient();
+    const session = await client.sessions.current();
+    const user = await client.users.me();
+    ```
+  - **Blockquotes are color-coded callouts** (a remark plugin
+    `remarkQuoteKindsPlugin`). Each quote gets a **light pastel** background
+    + a 4px left border + tinted text, keyed by kind:
+
+    | Kind | Marker | Colors |
+    | ---- | ------ | ------ |
+    | info (default) | `> [!NOTE]` / `> [!INFO]` | blue |
+    | warning | `> [!WARNING]` / `> [!CAUTION]` / `> [!IMPORTANT]` | yellow |
+    | error | `> [!ERROR]` / `> [!DANGER]` | red |
+    | success | `> [!SUCCESS]` / `> [!TIP]` | green |
+
+    The marker is **stripped from the rendered text**. When no marker is
+    present (the existing guides use plain `>` quotes), the kind is **detected
+    from the quote body's keywords** (error/fail → error; warning/caution/
+    gotcha/pending → warning; success/tip → success; everything else → info).
+    To force a kind explicitly, put the marker on the first line:
+
+    ```markdown
+    > [!WARNING]
+    > This command wipes volatile demo data.
+    ```
+    Each kind also gets a **matching icon** in the callout (ℹ / ⚠ / ⛔ / ✓
+    — the plugin stamps `data-quote-kind` on the hast node and the
+    component reads it back with `QuoteKindSchema`, so the icon always
+    matches the colour, rule 13). A `**Bold title:**` lead renders as an
+    icon + bold header line; without one, the icon sits inline before the
+    content. `[!TIP]` markers render as a decorative **pull-quote** (larger,
+    centered) instead of a callout. The right-hand **ToC**
     (`components/docs/docs-toc.tsx`) is a sticky scroll-spy rail at the `lg`
     breakpoint (hidden on mobile): a **visible 1px gray guide line** (the same
     guide-line concept as the sidebar's nested items, but on a tone that reads
     over the light page background) with a **sliding 2px primary indicator**,
     and **`h3` sub-sections render indented with their own guide line** —
     mirroring the sidebar's nested-child indentation, so sub-headings are
-    visually grouped under their `h2`. The scroll-spy **stays in sync with the
-    dashboard's real scroll container**: the shell scrolls inside
+    visually grouped under their `h2`. The rail header shows the
+    **estimated reading time** ("X min"), a thin **scroll-progress fill**
+    grows under it as you read, and long `h3` groups (more than 3) collapse
+    behind a **"Show N more"** toggle so deep guides stay scannable. The
+    scroll-spy **stays in sync with the dashboard's real scroll container**: the shell scrolls inside
     `<main className="flex-1 overflow-y-auto">`, not the window. The
     container is found by **walking up the DOM from the nav's PARENT** — never
     the nav itself, because the ToC's own `<nav>` is `overflow-y-auto` too and
@@ -798,9 +919,16 @@ follows:
 - **Mobile** — below `lg` the sidebar renders inside a framer-motion slide-in drawer
   with a backdrop (`components/layout/mobile-menu-overlay.tsx`); the topbar's
   hamburger opens it.
-- **Scroll-to-top** (`components/common/scroll-to-top.tsx`) — a floating chevron
-  button that appears after 300px of scroll (`threshold` prop) and smooth-scrolls
-  back up.
+- **Scroll-to-top** — a floating chevron button, **shared** between apps in
+  `packages/ui/src/components/scroll-to-top.tsx` (framework-free; the DOM
+  helper `findPageScrollContainer` lives in `packages/ui/src/lib/scroll-container.ts`).
+  It appears after 300px of scroll (`threshold` prop) and smooth-scrolls back
+  up. It does **not** assume the window scrolls: it detects the real scroller
+  by walking up from its own DOM position, so it works both inside the admin
+  shell (where `<main>` scrolls — mounted inside `<main>` in
+  `dashboard-layout.tsx`) and in the web app (which scrolls the window —
+  mounted in `apps/web/app/layout.tsx`). Mount it INSIDE the scrollable area;
+  mounted outside, the walk-up lands on `window` and the button never appears.
 - **Logout is wired in the layout** — `dashboard-layout.tsx` passes `onLogout` down
   to the sidebar footer and the profile dropdown; there is no standalone logout
   button file.

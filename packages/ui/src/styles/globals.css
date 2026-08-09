@@ -21,6 +21,13 @@
 	--accent: oklch(0.967 0.001 286.375);
 	--accent-foreground: oklch(0.21 0.006 285.885);
 	--destructive: oklch(0.577 0.245 27.325);
+	--success: oklch(0.627 0.17 149.214);
+	--warning: oklch(0.723 0.148 71.953);
+	--info: oklch(0.623 0.146 252.062);
+	--destructive-soft: oklch(0.93 0.04 27);
+	--success-soft: oklch(0.92 0.05 149);
+	--warning-soft: oklch(0.94 0.05 84);
+	--info-soft: oklch(0.92 0.04 250);
 	--border: oklch(0.92 0.004 286.32);
 	--input: oklch(0.92 0.004 286.32);
 	--ring: oklch(0.705 0.015 286.067);
@@ -32,12 +39,14 @@
 	--radius: 0.625rem;
 	--sidebar: oklch(0.985 0 0);
 	--sidebar-foreground: oklch(0.141 0.005 285.823);
-	--sidebar-primary: oklch(0.21 0.006 285.885);
-	--sidebar-primary-foreground: oklch(0.985 0 0);
+	--sidebar-primary: oklch(0.279 0.041 260.031); /* slate-800 — active nav pill */
+	--sidebar-primary-foreground: oklch(1 0 0); /* white */
 	--sidebar-accent: oklch(0.93 0.006 286.375);
 	--sidebar-accent-foreground: oklch(0.21 0.006 285.885);
 	--sidebar-border: oklch(0.92 0.004 286.32);
 	--sidebar-ring: oklch(0.705 0.015 286.067);
+	--sidebar-search-mark-bg: oklch(0.9 0.05 250);
+	--sidebar-search-mark-fg: oklch(0.4 0.16 260);
 	--background: #f9fafb;
 	--foreground: oklch(0.141 0.005 285.823);
 }
@@ -58,6 +67,13 @@
 	--accent: oklch(0.274 0.006 286.033);
 	--accent-foreground: oklch(0.985 0 0);
 	--destructive: oklch(0.704 0.191 22.216);
+	--success: oklch(0.723 0.219 149.579);
+	--warning: oklch(0.828 0.189 84.429);
+	--info: oklch(0.685 0.169 237.323);
+	--destructive-soft: oklch(0.22 0.05 27);
+	--success-soft: oklch(0.22 0.05 149);
+	--warning-soft: oklch(0.22 0.05 84);
+	--info-soft: oklch(0.22 0.05 250);
 	--border: oklch(1 0 0 / 10%);
 	--input: oklch(1 0 0 / 15%);
 	--ring: oklch(0.552 0.016 285.938);
@@ -68,12 +84,14 @@
 	--chart-5: oklch(0.274 0.006 286.033);
 	--sidebar: oklch(0.21 0.006 285.885);
 	--sidebar-foreground: oklch(0.985 0 0);
-	--sidebar-primary: oklch(0.92 0.004 286.32);
-	--sidebar-primary-foreground: oklch(0.21 0.006 285.885);
+	--sidebar-primary: oklch(1 0 0); /* white — active nav pill */
+	--sidebar-primary-foreground: oklch(0.279 0.041 260.031); /* slate-800 */
 	--sidebar-accent: oklch(0.274 0.006 286.033);
 	--sidebar-accent-foreground: oklch(0.985 0 0);
 	--sidebar-border: oklch(1 0 0 / 10%);
 	--sidebar-ring: oklch(0.552 0.016 285.938);
+	--sidebar-search-mark-bg: oklch(0.3 0.1 260);
+	--sidebar-search-mark-fg: oklch(0.8 0.1 250);
 }
 
 @theme inline {
@@ -92,6 +110,13 @@
 	--color-accent: var(--accent);
 	--color-accent-foreground: var(--accent-foreground);
 	--color-destructive: var(--destructive);
+	--color-success: var(--success);
+	--color-warning: var(--warning);
+	--color-info: var(--info);
+	--color-destructive-soft: var(--destructive-soft);
+	--color-success-soft: var(--success-soft);
+	--color-warning-soft: var(--warning-soft);
+	--color-info-soft: var(--info-soft);
 	--color-border: var(--border);
 	--color-input: var(--input);
 	--color-ring: var(--ring);
@@ -134,4 +159,34 @@
 		font-size: 0.8rem;
 		line-height: 1rem;
 	}
+}
+
+/* Toast auto-dismiss countdown — drains 100% → 0% over the toast's `timeout`. */
+@keyframes toast-countdown {
+	from {
+		width: 100%;
+	}
+	to {
+		width: 0%;
+	}
+}
+
+/* Topbar brand visibility — CSS-driven so there's no JS media-query flash on
+   reload (a matchMedia hook only resolves after hydration, which briefly
+   rendered the wrong brand state). The brand is MOBILE-ONLY: below the `lg`
+   breakpoint the sidebar is a mobile drawer, so the brand always shows in the
+   topbar. At `lg` and up it is always hidden — the desktop sidebar header
+   already shows the app title, and showing the brand again (e.g. while the
+   sidebar is collapsed) reads as a stray "mobile" icon on desktop. */
+@media (min-width: 64rem) {
+	.topbar-brand {
+		display: none;
+	}
+}
+
+/* Sidebar search-match highlight — token-driven (sidebar audit #17) so theme
+   changes never require hunting hardcoded color literals in components. */
+.sidebar-mark {
+	background-color: var(--sidebar-search-mark-bg);
+	color: var(--sidebar-search-mark-fg);
 }

@@ -3,13 +3,13 @@ title: "Performance & DX Roadmap"
 description: "20 grounded improvements to make the monorepo faster and friendlier to develop in — each with a priority, effort estimate, and acceptance criteria."
 order: 15
 author: "Acme Inc."
-lastUpdated: "2026-08-05"
+lastUpdated: "2026-08-08"
 coverImage: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=1600&q=80"
 ---
 
 # Performance & Developer Experience Roadmap
 
-> This guide lists **20 concrete improvements** to make the monorepo run faster and be
+> [!NOTE] This guide lists **20 concrete improvements** to make the monorepo run faster and be
 > nicer to develop in. Every item is grounded in the repo's *actual current state* —
 > each one was verified against `turbo.json`, the workspace `package.json` files, the
 > tsconfigs, and the running output before being written down (not a wish-list).
@@ -36,7 +36,7 @@ coverImage: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=f
 | 2 | Incremental `nest build` | ⚡ Speed | P2 | S | ⬜ |
 | 3 | `tsc -b` project references for typecheck | ⚡ Speed | P2 | M | ⬜ |
 | 4 | Wire the installed pino logger | ⚡ Speed | **P1** | M | ⬜ |
-| 5 | Lazy-load heavy admin libs | ⚡ Speed | **P1** | M | 🔶 |
+| 5 | Lazy-load heavy admin libs | ⚡ Speed | **P1** | M | ✅ |
 | 6 | `output: "standalone"` in the Next apps | ⚡ Speed | P2 | S | ⬜ |
 | 7 | Narrow the `useTable` selector | ⚡ Speed | P2 | S | ⬜ |
 | 8 | Bundle analyzer (`pnpm analyze`) | ⚡ Speed | P2 | S | ⬜ |
@@ -187,24 +187,28 @@ megabyte-class deps — and most admin pages never render them. `mermaid` is alr
 `next/dynamic` (only loads when a diagram exists); the others are still in the main
 bundle.
 
-**How:**
+**How (what shipped 2026-08-08 — see the LCP/INP section below for the full detail):**
 
-- `mermaid-diagram.tsx` — already done; keep.
-- `code-block.tsx` — `next/dynamic` the shiki highlighter with `ssr: false` (or move it
-  behind the docs route).
-- `markdown-renderer.tsx` — lazy-load the KaTeX CSS only when math is present
-  (`remark-math` already tells you a doc has math).
-- `data-table-columns.tsx` — move the `recharts` import into a dynamic chart component
-  (only the dashboard block needs it).
-- Measure before/after with #8.
+- `mermaid-diagram.tsx` — already `next/dynamic`-lazy; keep.
+- `code-block.tsx` — shiki is now a **runtime `import("shiki")`** (type-only static
+  import), so the ~300 KB shiki chunk is no longer part of the docs page bundle; it
+  downloads on the first code block and the plain `<pre>` shows until highlight lands.
+- The admin `/` page — recharts, react-table, dnd-kit, cmdk, and react-hook-form are
+  all code-split out of the initial bundle; the eight below-the-fold demo sections are
+  additionally **viewport-gated** (they mount only when scrolled near).
+- `framer-motion` was removed from the admin entirely (sidebar/drawer are pure CSS).
+- KaTeX stays in the docs route chunk (reactive-core.md and ui-components.md use math).
 
 **Acceptance criteria:**
 
-- [ ] The admin **main** bundle (from #8 output) shrinks by the size of shiki/katex/recharts.
-- [ ] `/docs/<any guide>` still renders code blocks, math, and mermaid correctly.
-- [ ] The dashboard chart still renders with no flash of missing data.
+- [x] The admin **initial** HTML no longer references recharts / cmdk / react-table /
+  dnd-kit / react-hook-form / framer-motion / shiki / mermaid (verified against the
+  prod build's chunk list).
+- [x] `/docs/<any guide>` still renders code blocks, math, and mermaid correctly.
+- [x] The dashboard chart renders with a skeleton while its chunk loads (no blank gap).
 
-**Status:** 🔶 Partial — mermaid only.
+**Status:** ✅ Done (initial-load half). See "Admin initial-load (LCP/INP)" below for
+what shipped and how to re-measure.
 
 ### 6. `output: "standalone"` in both Next apps
 
@@ -572,7 +576,7 @@ one hard constraint:
   prefix is stripped so you see the app's own output (Next's `Ready`, Nest's routes)
   cleanly.
 
-  > ⚠️ **Trade-off:** `--log-prefix=none` also strips prefixes from a task's
+  > [!WARNING] ⚠️ **Trade-off:** `--log-prefix=none` also strips prefixes from a task's
   > *dependencies* — `pnpm dev:web` runs `@workspace/shared:build` first (via
   > `^build`), so a failure there shows up without a `@workspace/shared:build:` tag.
   > For a single app that's a fair trade (the shared build rarely fails); if it ever
@@ -603,6 +607,115 @@ not worth it. The TUI sidebar is the intended "nice labels" surface, and it's al
 - [ ] A PR that adds `--log-order=grouped` to any dev task fails review with this doc as the citation.
 
 **Status:** ✅ Done.
+
+---
+
+## 🚀 Admin initial-load (LCP/INP) — shipped 2026-08-08
+
+> [!NOTE] The measurable goal this section documents: take the admin panel's **Largest
+> Contentful Paint (LCP) from 1.36 s down toward HTML-paint time** (the existing INP of
+> ~8 ms was already excellent and must stay that way). This is the "why" behind every
+> file touched — a junior should be able to explain each change to a reviewer.
+
+### The two things that made LCP slow
+
+1. **First paint was blocked on the API.** `DashboardShell` rendered a full-screen
+   spinner until auth hydration (`isInitializing`) AND `GET /auth/me` resolved. The SSR
+   HTML was *just a spinner*, so no content could paint until JS hydrated and a network
+   round-trip completed.
+2. **The `/` page eagerly imported every demo section.** recharts, @tanstack/react-table,
+   dnd-kit, cmdk, react-hook-form and framer-motion were all in the initial JS bundle —
+   downloaded, parsed, and executed before the first frame.
+
+### What changed (file by file)
+
+| File | Change | Effect |
+| --- | --- | --- |
+| `components/layout/dashboard-shell.tsx` | Renders the shell immediately with a fallback identity; error screen only when `/auth/me` **fails** with no cached data | First paint no longer waits for the API; `/` is now statically prerendered |
+| `app/(panel)/layout.tsx` + `lib/auth-server.ts` | Panel layout is now a **server component** that decodes the `adminAccessToken` JWT cookie and passes the real `{ name, email }` into `DashboardShell` | SSR paints the true identity — **no placeholder flash** |
+| `app/(panel)/page.tsx` | The 8 demo sections below the chart are wrapped in `LazySection`; the chart loads eagerly behind a `ChartSkeleton` | recharts + friends load on scroll, not at hydration |
+| `components/dashboard/lazy-section.tsx` *(new)* | IntersectionObserver-gated mount (default `300px` rootMargin) with a fade/slide-up reveal; never unmounts once shown | Below-fold sections only download/parse their chunks when scrolled near |
+| `components/dashboard/chart-skeleton.tsx` *(new)* | Chart-shaped skeleton (header + gridlines + pulse bars) shown while recharts loads | The chart never leaves a blank gap |
+| `components/layout/topbar.tsx` | `CommandPalette` is dynamic and mounts only when opened; the ⌘K listener moved to the Topbar | cmdk + the palette search index leave the initial bundle |
+| `components/layout/dashboard-layout.tsx` | framer-motion sidebar tween → CSS `transition-[width]` | framer-motion dropped from the app |
+| `components/layout/mobile-menu-overlay.tsx` | `AnimatePresence` → conditional render + `animate-in` CSS | framer-motion gone; the mobile `Sidebar` only mounts when opened |
+| `components/ui/code-block.tsx` | shiki is a runtime `import()` (types stay static) | ~300 KB shiki chunk leaves the docs bundle |
+| `stores/sidebar-store.ts` | `skipHydration: true`; `DashboardLayout` calls `persist.rehydrate()` once after mount | Fixes a hydration mismatch the shell's new SSR would otherwise cause |
+
+### ⚠️ The zustand gotcha (read before you touch the shell)
+
+The shell is now server-rendered. zustand's `persist` middleware rehydrates
+**synchronously from localStorage at store creation** on the client — sowithout `skipHydration`, the client's first render could differ from the SSR HTML (a
+persisted collapsed sidebar vs the default expanded one) and React would throw a
+hydration mismatch. Pattern to reuse:
+
+```ts title="stores/sidebar-store.ts"
+persist(config, { name: KEY, skipHydration: true });
+// in a component that mounts on every panel page:
+useEffect(() => { void useSidebarStore.persist.rehydrate(); }, []);
+```
+
+### 🚿 The SSR hydration checklist (every new shell component must pass this)
+
+Now that the shell server-renders, **any** window/browser read during the first
+render is a latent hydration mismatch. The bugs we actually hit (all were hidden
+by the old spinner gate):
+
+| Footgun | Symptom | Fix |
+| --- | --- | --- |
+| `useMediaQuery` reading `matchMedia` in `useState` | Topbar brand / breadcrumb mismatch | Init `false` on server **and** first client render; resolve in an effect |
+| `navigator.onLine` in `useState` | Network pill mismatch | Same pattern (init `true`) |
+| `window.scrollY` in `useState` | ScrollToTop mismatch on reload | Same pattern (init `false`) |
+| next-themes `resolvedTheme` in render | ThemeToggle Sun/Moon mismatch | Mounted-gate: render an invisible placeholder until one frame after mount |
+| zustand `persist` sync rehydration | Sidebar collapsed state mismatch | `skipHydration` + `rehydrate()` after mount (above) |
+
+**Rule of thumb:** if a component's first render depends on `window`/`document`/
+`navigator`/localStorage/theme, its initial state must be the **same constant on
+both server and client**, and the real value must arrive via an effect (or the
+`useSyncExternalStore` server-snapshot pattern).
+
+### The viewport-lazy pattern (reuse for new sections)
+
+```tsx
+<LazySection height="h-40">
+  <MyHeavySection />
+</LazySection>
+```
+
+- The `height` reserves space → zero layout shift while the skeleton shows.
+- The IO fires ~300px early, so by the time the user scrolls there, the section is
+  usually already rendered.
+- The reveal is a CSS `fade-in slide-in-from-bottom-2` — no JS animation lib needed.
+- SSR-safe: `visible` starts `false` on both server and client (no hydration mismatch).
+
+### SSR + SPA — how it actually works now
+
+- **Every page SSRs.** Client components still render to HTML on the server; only the
+  *interactivity* is hydrated. The `/` page is statically prerendered; the shell is
+  rendered per-request with the real user (because it reads the cookie).
+- **Navigation stays SPA-like.** The `(panel)` route-group layout stays mounted across
+  navigations — Next swaps only the page `children`, so the sidebar/topbar never
+  reset (search state, animations, the command palette all persist).
+- **Only heavy interactive sections are client-deferred** — and only until they're
+  needed (chart immediately, demos on scroll).
+
+### How to re-measure (and what "good" looks like)
+
+- Lighthouse in DevTools or `npx lighthouse http://localhost:3001/ --only-categories=performance`
+  (log in first so the panel is the measured page, not the login form).
+- Expected: **LCP ≈ TTFB + HTML-paint time** — the HTML now contains the shell, stat
+  cards, and chart skeleton, so the first paint no longer waits on JS or the API.
+- INP should stay low (single-digit ms) — the only animations left are CSS transitions
+  (sidebar width, drawer, reveal fades), which never block the main thread.
+
+### What's still on the table (follow-ups, not regressions)
+
+- The `/docs` route bundle still ships react-markdown + KaTeX for math-heavy guides
+  (acceptable: it's a route-level chunk, not the initial bundle).
+- `data-table.tsx` still subscribes to the whole table state (#7) — worth doing when
+  the table grows real data.
+- #8 (bundle analyzer) would make the next perf pass data-driven instead of measured
+  by hand.
 
 ---
 

@@ -1,13 +1,16 @@
 "use client";
 
 import { Button } from "@workspace/ui/components/button";
+import { useRouter } from "next/navigation";
 import * as React from "react";
 import { useCallback } from "react";
 
 export default function SignupPage(): React.JSX.Element {
+	const router = useRouter();
+
 	const handleBackToLogin = useCallback((): void => {
-		window.location.href = "/auth/login";
-	}, []);
+		router.push("/auth/login");
+	}, [router]);
 
 	return (
 		<div className="flex min-h-svh items-center justify-center p-8">

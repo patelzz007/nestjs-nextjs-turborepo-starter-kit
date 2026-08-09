@@ -34,6 +34,31 @@ export interface SidebarMenuData {
 	readonly bottomItems: readonly SidebarMenuItem[];
 }
 
+/**
+ * A nav item with its **unique compiled id** attached (see
+ * `config/sidebar-menu.ts` → `compileMenu`). Ids are full-title-path slugs
+ * (`settings-security-sessions`), prefixed with the section at the root, and
+ * suffixed with `-2`/`-3`… when two same-titled siblings would collide. Every
+ * consumer (expansion maps, active-state maps, React keys) must use `id`, never
+ * the title — see the sidebar audit, improvement 7.
+ */
+export interface CompiledSidebarMenuItem extends Omit<SidebarMenuItem, "children"> {
+	readonly id: string;
+	readonly children?: readonly CompiledSidebarMenuItem[];
+}
+
+export interface CompiledSidebarMenuSection {
+	readonly title: string;
+	readonly items: readonly CompiledSidebarMenuItem[];
+}
+
+/** The menu after `compileMenu` — the shape every component consumes. */
+export interface CompiledSidebarMenuData {
+	readonly header: SidebarMenuHeader;
+	readonly sections: readonly CompiledSidebarMenuSection[];
+	readonly bottomItems: readonly CompiledSidebarMenuItem[];
+}
+
 /** The signed-in user as shown in the sidebar / topbar / profile dropdown. */
 export interface SidebarUser {
 	readonly name: string;

@@ -1,5 +1,6 @@
 "use client";
 
+import { z } from "zod";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
@@ -20,6 +21,24 @@ export interface CommandPaletteState {
 
 const STORAGE_KEY = "command-palette-state";
 const MAX_RECENT = 6;
+
+/**
+ * The persisted payload, as far as we'll trust it. Both fields are deliberate
+ * user preferences (Recent + Pinned chips) and survive reloads on purpose.
+ * The palette's *search text* is NOT here — it lives as local component state
+ * in `command-palette.tsx` and resets on close/refresh.
+ */
+const RecentSearchSchema = z.object({
+	title: z.string(),
+	url: z.string(),
+	section: z.string(),
+	icon: z.string().optional(),
+});
+
+const PersistedPaletteSchema = z.object({
+	recentSearches: z.array(RecentSearchSchema).optional(),
+	pinnedUrls: z.array(z.string()).optional(),
+});
 
 /**
  * Command palette UI state — which pages were recently opened and which are
@@ -46,6 +65,25 @@ export const useCommandPaletteStore = create<CommandPaletteState>()(
 		}),
 		{
 			name: STORAGE_KEY,
+			// Validate before applying: a corrupted payload (e.g. `recentSearches`
+			// stored as a string) would otherwise spread garbage into live state and
+			// crash `addRecentSearch`. Falls back to the current state untouched —
+			// same hardening pattern as the sidebar store. No `skipHydration` here:
+			// the palette mounts only client-side (dynamic import, `ssr: false`), so
+			// synchronous rehydration can't cause an SSR hydration mismatch.
+			merge: (persistedState, currentState) => {
+				const parsed = PersistedPaletteSchema.safeParse(persistedState);
+				if (!parsed.success) {
+					return currentState;
+				}
+				// Any field added to `CommandPaletteState` in the future must also be
+				// added to `PersistedPaletteSchema` (or it's silently dropped here —
+				// zod strips unknown keys by default).
+				return {
+					...currentState,
+					...parsed.data,
+				};
+			},
 		},
 	),
 );

@@ -9,7 +9,7 @@ coverImage: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=form
 
 # Reactive Core — Subscription-based, no rxjs
 
-> **The vision:** replace the promise-based data flow (React Query + `useApi` + `useEffect`
+> [!NOTE] **The vision:** replace the promise-based data flow (React Query + `useApi` + `useEffect`
 > bookkeeping) with a tiny, **in-house rxjs-like** reactive core — `packages/reactive` — built
 > with zero dependencies. Same mental model as Angular/rxjs (`Observable`, `Subject`,
 > `subscribe`, `pipe`, `map`, `switchMap`, `forkJoin`, `combineLatest`, …) but **no rxjs
@@ -64,7 +64,7 @@ coverImage: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=form
 
 # 🧩 Part 1 — The core primitives (items 1–10)
 
-> The foundation. Everything else is built from these ~500 lines of TypeScript. All types are
+> [!NOTE] The foundation. Everything else is built from these ~500 lines of TypeScript. All types are
 > generic, all methods have explicit return types, and every `subscribe` returns something you
 > can `unsubscribe`.
 
@@ -240,7 +240,7 @@ operators, no hidden state, trivially unit-testable, and `pipe` gives the famili
 
 # 🏭 Part 2 — Creation operators (items 11–18)
 
-> Functions that produce observables from values, events, promises, and timers. Every one
+> [!NOTE] Functions that produce observables from values, events, promises, and timers. Every one
 > returns an `Observable` whose teardown cleans up its resources (event listeners, timers,
 > AbortController).
 
@@ -374,7 +374,7 @@ form. Included for rxjs parity; used for pagination math and test fixtures.
 
 # 🔄 Part 3 — Transformation operators (items 19–26)
 
-> The higher-order flattening operators (`switchMap`/`mergeMap`/`concatMap`/`exhaustMap`) are the
+> [!NOTE] The higher-order flattening operators (`switchMap`/`mergeMap`/`concatMap`/`exhaustMap`) are the
 > reason to adopt this system — they encode race handling that promises can't. Each one
 > subscribes to inner observables **as children of the outer Subscription**, so unsubscribing
 > the outer tears down every inner.
@@ -556,7 +556,7 @@ hand-rolled `setTimeout`/`setInterval` effects.
 
 # 🔗 Part 5 — Combination operators (items 33–40)
 
-> These are the multi-source operators — the ones that replace `Promise.all`, event-handler
+> [!NOTE] These are the multi-source operators — the ones that replace `Promise.all`, event-handler
 > coordination, and hand-rolled state merging.
 
 ## 33. `merge(...sources)` — emit from all, interleaved
@@ -698,7 +698,7 @@ hangs forever).
 
 # ⚛️ Part 7 — App integration (items 45–50)
 
-> The bridge between the core and the React apps — how components subscribe safely, how app
+> [!NOTE] The bridge between the core and the React apps — how components subscribe safely, how app
 > state becomes streams, and how the existing promise-based `useApi`/React Query layer gets
 > replaced.
 
@@ -838,7 +838,7 @@ for 90% of the app.
 
 # 🎛 Part 7½ — Angular ergonomics parity (async pipe & takeUntilDestroy)
 
-> Two Angular features we want the same *feel* for, adapted to React. The short answer:
+> [!NOTE] Two Angular features we want the same *feel* for, adapted to React. The short answer:
 > **the async pipe becomes `useObservable` (item 45) + a `<Subscribe>` component, and
 > `takeUntilDestroy` becomes a `useDestroy()` hook feeding the `takeUntil` operator (item 28).**
 > Both keep the unsubscribe guarantee — the framework does it for us, exactly like Angular.
@@ -953,7 +953,7 @@ export function useObservable<T>(source: Observable<T>, initialValue: T): T {
 object identity on every call (that triggers React's infinite-re-render warning). Two safe
 patterns:
 
-> ✅ **SHIPPED (2026-08-05):** `useObservable` is implemented at
+> [!SUCCESS] **SHIPPED (2026-08-05):** `useObservable` is implemented at
 > `packages/ui/src/hooks/use-observable.ts` using the `useSyncExternalStore` shape below
 > (with the latest value cached in a ref — pattern 2). It is consumed by the rewritten
 > `SessionStatusBadge` and is the documented way to bind streams to React.
@@ -976,7 +976,7 @@ patterns:
 | Hot event streams / time-based | `useObservable` + `useEffect` + `takeUntil` | these are imperative by nature; render-state usually comes from a `BehaviorSubject` buffer, not the raw stream |
 | Any stream that must be SSR-identical | `useSyncExternalStore` version | server + client first paint guaranteed equal |
 
-> **Bottom line:** ship **both** hook shapes behind one name. `useObservable` dispatches
+> [!NOTE] **Bottom line:** ship **both** hook shapes behind one name. `useObservable` dispatches
 > internally: if the source exposes a stable current value (`BehaviorSubject`), it uses the
 > `useSyncExternalStore` path; otherwise it falls back to the `useEffect` path. Consumers write
 > one line either way, and the unsubscribe guarantee never varies.
@@ -1055,7 +1055,7 @@ special-case beyond what pitfall 9 already covers.
 
 # ⚠️ Part 8 — Pitfalls and mitigations
 
-> Every pitfall below is a *real* rxjs-classic footgun that we WILL hit if we build this
+> [!NOTE] Every pitfall below is a *real* rxjs-classic footgun that we WILL hit if we build this
 > naively. Each entry: the trap → why it happens → the mitigation. **SSR-specific concerns are
 > marked 🖥️** — read those carefully, because going full SSR changes how every subscription
 > must be created and destroyed.
@@ -1401,7 +1401,7 @@ coin-flip.
 
 # 🧪 Part 8½ — Testing strategy (marble syntax, virtual scheduler, leak detector)
 
-> Testing is not an afterthought for a reactive core — **it's the mechanism that makes the 8
+> [!NOTE] Testing is not an afterthought for a reactive core — **it's the mechanism that makes the 8
 > unsubscribe rules (Part 9) enforceable**. Pitfall 7 and pitfall 15 already point at "the
 > testing section"; this is it. Three pillars: **marble syntax** for readable stream
 > assertions, a **virtual scheduler** (`TestScheduler`) so time-based operators test in
@@ -1410,7 +1410,7 @@ coin-flip.
 > `apps/admin/vitest.config.ts`); `packages/reactive` gets its own vitest config wired into
 > the turbo pipeline.
 
-> ✅ **SHIPPED (2026-08-05):** all three pillars are real code. `TestScheduler` (virtual
+> [!SUCCESS] **SHIPPED (2026-08-05):** all three pillars are real code. `TestScheduler` (virtual
 > time, `TEST_MAX_FRAME`, pending-action flush check), `cold`/`hot`/`toMarble`/`parseMarble`,
 > and the **leak detector** — a module-scope registry in `subscription.ts` that every live
 > `Subscription` joins on construction and leaves on `unsubscribe()` (which `Subscriber`'s
@@ -1515,7 +1515,7 @@ test("switchMap subscribes a fresh inner per outer value", () => {
 });
 ```
 
-> **Marble hygiene rules:** (1) one marble string = one timeline — never assert with real
+> [!NOTE] **Marble hygiene rules:** (1) one marble string = one timeline — never assert with real
 > timers. (2) Add the frame ruler as a comment for non-trivial expectations. (3) Use `#` and
 > `(x|)` groups deliberately — they document error and simultaneous-emission semantics. (4)
 > For hot sources always mark `^`/`!` — an unmarked hot test silently asserts the *wrong*
@@ -1695,7 +1695,7 @@ from the library (`vi.getTimerCount()` under vitest fake timers, or equivalent).
 
 # ✅ Part 9 — Unsubscribe guarantees (the non-negotiables)
 
-> The requirement: **every subscription has unsubscribe**. Not "we try", not "mostly" —
+> [!NOTE] The requirement: **every subscription has unsubscribe**. Not "we try", not "mostly" —
 > structurally guaranteed. These are the rules the implementation and review process enforce:
 
 ## Rule 1 — `subscribe()` always returns `Subscription`
@@ -1755,7 +1755,7 @@ every operator.
 
 # 📊 Part 10 — rxjs coverage matrix
 
-> Every operator/feature below maps to an item in this design. Nothing ships under the rxjs
+> [!NOTE] Every operator/feature below maps to an item in this design. Nothing ships under the rxjs
 > name; all of it is our own `packages/reactive` implementation.
 
 | rxjs feature | Our item | Notes |
@@ -1822,7 +1822,7 @@ unsubscribe rules intact.
 
 # 🗺 Part 11 — Migration plan (from promises to streams)
 
-> How to move the existing app over without a big-bang rewrite. The key insight: **the core
+> [!NOTE] How to move the existing app over without a big-bang rewrite. The key insight: **the core
 > ships first as an additive library; apps migrate endpoint-by-endpoint.**
 
 ## Phase 0 — Build `packages/reactive` (items 1–10)
@@ -1864,7 +1864,7 @@ patterns via `fromEvent`/`interval` + `takeUntil`.
 Apply pitfalls 9–14 systematically: SSR-aware hooks, request-scoped stores, server prefetch +
 client replay, hydration-safe initial values, and the dev leak detector in CI.
 
-> **Exit criteria per phase:** all tests green, no regressions in the migrated components, and
+> [!NOTE] **Exit criteria per phase:** all tests green, no regressions in the migrated components, and
 > every new subscription satisfies the 8 unsubscribe rules (Part 9). Roll back a phase if the
 > leak detector or StrictMode pass flags anything.
 

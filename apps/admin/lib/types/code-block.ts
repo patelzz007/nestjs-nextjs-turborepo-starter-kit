@@ -5,7 +5,7 @@ import { z } from "zod";
  * typed **tuple** (rule 4 — no `as const`), and the schema/type are derived
  * with `z.enum` + `z.infer` (rule 5).
  */
-export const CODE_LANGUAGES: ["bash", "typescript", "ts", "tsx", "js", "jsx", "json", "sql", "prisma", "env", "css", "html", "yaml", "ini", "markdown", "plaintext"] = [
+export const CODE_LANGUAGES: [
 	"bash",
 	"typescript",
 	"ts",
@@ -21,8 +21,10 @@ export const CODE_LANGUAGES: ["bash", "typescript", "ts", "tsx", "js", "jsx", "j
 	"yaml",
 	"ini",
 	"markdown",
+	"http",
+	"diff",
 	"plaintext",
-];
+] = ["bash", "typescript", "ts", "tsx", "js", "jsx", "json", "sql", "prisma", "env", "css", "html", "yaml", "ini", "markdown", "http", "diff", "plaintext"];
 
 /** Zod schema for a valid code-block language (used to validate fence language tags). */
 export const CodeLanguage = z.enum(CODE_LANGUAGES);

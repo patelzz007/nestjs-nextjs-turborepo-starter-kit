@@ -9,7 +9,7 @@ coverImage: "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?auto=f
 
 # TypeScript Configs & How To Use Them
 
-> This document explains how TypeScript is configured across the monorepo: the shared
+> [!NOTE] This document explains how TypeScript is configured across the monorepo: the shared
 > `@workspace/typescript-config` package, the four base configs it ships, and how each
 > workspace (`@workspace/web`, `@workspace/admin`, `@workspace/api`, `@workspace/ui`,
 > `@workspace/client`, `@workspace/shared`) extends them. Written for a junior developer
@@ -84,7 +84,7 @@ Every other config `extends` this one. It sets the strict baseline:
 | `incremental`              | `false`                             | No `.tsbuildinfo` caching by default (overridden in api)            |
 | `noUncheckedIndexedAccess` | `true`                              | **Array/object index access is `T                                   | undefined`** — forces handling undefined |
 
-> ⚠️ `noUncheckedIndexedAccess: true` is the strictest (and most annoying) option.
+> [!WARNING] `noUncheckedIndexedAccess: true` is the strictest (and most annoying) option.
 > `arr[0]` is `T | undefined`, so you must handle the `undefined` case. Some
 > workspaces deliberately turn it off (see below) when it produces noise.
 
@@ -92,7 +92,7 @@ Every other config `extends` this one. It sets the strict baseline:
 
 Extends `base.json` and overrides for Next.js:
 
-```json
+```json title="tsconfig.json"
 {
 	"extends": "./base.json",
 	"compilerOptions": {
@@ -116,7 +116,7 @@ Extends `base.json` and overrides for Next.js:
 
 Extends `base.json` and just enables the automatic JSX transform:
 
-```json
+```json title="tsconfig.json"
 {
 	"extends": "./base.json",
 	"compilerOptions": {
@@ -129,7 +129,7 @@ Extends `base.json` and just enables the automatic JSX transform:
 
 Extends `base.json` with NestJS requirements:
 
-```json
+```json title="tsconfig.json"
 {
 	"extends": "./base.json",
 	"compilerOptions": {
@@ -183,7 +183,7 @@ Extends `base.json` with NestJS requirements:
 | `packages/shared`         | `@workspace/typescript-config/base.json`          | `module: ESNext`, `moduleResolution: bundler`, `noEmit: true`, `noUncheckedIndexedAccess: false`, `lib: ["es2022"]` |
 | repo root `tsconfig.json` | `@workspace/typescript-config/base.json`          | Nothing extra                                                                                                                 |
 
-> **Why do `packages/shared`, `packages/client`, and `packages/ui` use `bundler`
+> [!NOTE] **Why do `packages/shared`, `packages/client`, and `packages/ui` use `bundler`
 > resolution?** They are consumed by bundlers (Next.js) or tooling that resolves
 > extensionless imports, so all source files are authored **extensionless** —
 > Turbopack cannot map a `.js` specifier back to a `.ts` file, so `.js`-suffixed
@@ -200,7 +200,7 @@ Extends `base.json` with NestJS requirements:
 
 ### `apps/api/tsconfig.json` in detail
 
-```json
+```json title="tsconfig.json"
 {
 	"extends": "@workspace/typescript-config/nestjs.json",
 	"compilerOptions": {
@@ -226,7 +226,7 @@ Extends `base.json` with NestJS requirements:
 
 Web and admin define import shortcuts:
 
-```json
+```json title="tsconfig.json"
 "paths": {
   "@/*": ["./*"],
   "@workspace/client/*": ["../../packages/client/src/*"],
@@ -279,7 +279,7 @@ cd apps/web && pnpm typecheck
 cd packages/shared && pnpm typecheck
 ```
 
-> Turbo caching is disabled (`"cache": false` in `turbo.json`), so typecheck always
+> [!NOTE] Turbo caching is disabled (`"cache": false` in `turbo.json`), so typecheck always
 > runs fresh.
 
 ---

@@ -5,13 +5,11 @@ import { AlertCircle, ChevronRight, type LucideIcon } from "lucide-react";
 import * as React from "react";
 
 import { ICON_MAP } from "@/config/menu-icons";
-import { createItemId } from "@/lib/menu";
 import { highlightText } from "@/lib/highlight";
-import type { SidebarMenuItem } from "@/types/sidebar";
+import type { CompiledSidebarMenuItem } from "@/types/sidebar";
 
 export interface SidebarNavItemProps {
-	readonly item: SidebarMenuItem;
-	readonly parentId: string;
+	readonly item: CompiledSidebarMenuItem;
 	readonly isSearching: boolean;
 	readonly searchQuery: string;
 	readonly expandedItems: Readonly<Record<string, boolean>>;
@@ -20,15 +18,23 @@ export interface SidebarNavItemProps {
 	readonly onNavigate: (href: string) => void;
 }
 
-const SIDEBAR_MARK_CLASS = "rounded-sm bg-blue-500/15 px-0.5 font-semibold text-blue-700 ring-1 ring-blue-500/20 dark:text-blue-300";
+/** Search-match highlight — token-driven colors via `.sidebar-mark` (audit #17). */
+const SIDEBAR_MARK_CLASS = "sidebar-mark rounded-sm px-0.5 font-semibold";
 
-/** Recursive renderer for a single nav item and all of its children. */
-export function SidebarNavItem({ item, parentId, isSearching, searchQuery, expandedItems, activeItems, onToggle, onNavigate }: SidebarNavItemProps): React.JSX.Element {
-	const itemId = createItemId(item, parentId);
-	const hasChildren = item.children !== undefined && item.children.length > 0;
+/**
+ * Recursive renderer for a single nav item and all of its children. Item
+ * identity comes from the compiled `item.id` (globally unique — audit #7), so
+ * expansion/active maps and React keys can never collide across same-titled
+ * items.
+ */
+export function SidebarNavItem({ item, isSearching, searchQuery, expandedItems, activeItems, onToggle, onNavigate }: SidebarNavItemProps): React.JSX.Element {
+	const itemId = item.id;
+	const isDisabled = item.disabled === true;
+	// Disabled parents never render their children (audit #14) — a disabled
+	// feature shouldn't leak its subtree into the tab order / reader flow.
+	const hasChildren = !isDisabled && item.children !== undefined && item.children.length > 0;
 	const isExpanded = isSearching ? true : (expandedItems[itemId] ?? false);
 	const isActive = activeItems[itemId] ?? false;
-	const isDisabled = item.disabled === true;
 	// Direct module-scope map lookup (not a function call) so the component
 	// reference is static — satisfies `react-hooks/static-components`.
 	const IconComponent: LucideIcon = item.icon !== undefined ? (ICON_MAP[item.icon] ?? AlertCircle) : AlertCircle;
@@ -41,38 +47,53 @@ export function SidebarNavItem({ item, parentId, isSearching, searchQuery, expan
 		onNavigate(item.url);
 	}, [item.url, onNavigate]);
 
+	// Hover/active treatment:
+	// - hover is a *soft* tint (60%) with the label brightening,
+	// - active is a *solid* pill — `slate-800` on light / `white` on dark,
+	//   driven by the `--sidebar-primary` / `--sidebar-primary-foreground`
+	//   tokens (themeable, never hardcoded),
+	// - a barely-there press-down (`active:scale-[0.99]`) for tactile feedback.
 	const buttonClassName = cn(
-		"flex w-full items-center justify-between gap-2 rounded-md px-3 py-2 text-sm transition-colors duration-200",
-		"focus:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring/40 focus-visible:ring-offset-1",
+		"group flex w-full items-center justify-between gap-2 rounded-md px-3 py-2 text-sm transition-[background-color,color,transform] duration-200 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1",
 		isActive
-			? "bg-sidebar-primary font-medium text-sidebar-primary-foreground"
+			? // The focus ring inverts with the pill: the default gray ring would
+				// vanish against a dark slate fill, so focus uses the foreground.
+				"bg-sidebar-primary font-medium text-sidebar-primary-foreground focus-visible:ring-sidebar-primary-foreground/50 active:scale-[0.99]"
 			: isDisabled
 				? "cursor-not-allowed text-muted-foreground opacity-50"
-				: "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground",
+				: "text-sidebar-foreground/80 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground focus-visible:ring-sidebar-ring/40 active:scale-[0.99]",
+	);
+
+	// Icons stay quiet until the row is hovered or active — then they take the
+	// pill foreground (white on slate-800 / slate-800 on white), which is the
+	// cue the eye reads first.
+	const iconClassName = cn(
+		"mr-3 h-4 w-4 shrink-0 transition-colors duration-200",
+		isActive ? "text-sidebar-primary-foreground" : isDisabled ? "text-muted-foreground" : "text-sidebar-foreground/50 group-hover:text-sidebar-foreground/80",
+	);
+
+	// The chevron is a quiet /40 whisper until the row is hovered (usable) or
+	// expanded (rotated 90°, one step brighter). Active parents invert to the
+	// pill foreground so the whole row reads as one unit.
+	const chevronClassName = cn(
+		"h-3.5 w-3.5 shrink-0 transition-[transform,color] duration-200 ease-out",
+		isExpanded
+			? isActive
+				? "rotate-90 text-sidebar-primary-foreground/80"
+				: "rotate-90 text-sidebar-foreground/70"
+			: "text-sidebar-foreground/40 group-hover:text-sidebar-foreground/70",
 	);
 
 	return (
 		<div className="space-y-0.5">
 			<div>
 				{hasChildren ? (
-					<button
-						type="button"
-						onClick={handleToggle}
-						disabled={isDisabled}
-						className={buttonClassName}
-						title={isDisabled ? "This feature is currently unavailable" : undefined}>
+					<button type="button" onClick={handleToggle} className={buttonClassName} data-active={isActive ? true : undefined}>
 						<span className="flex min-w-0 items-center">
-							<IconComponent
-								className={cn("mr-3 h-4 w-4 shrink-0", isActive ? "text-sidebar-primary-foreground" : isDisabled ? "text-muted-foreground" : "text-sidebar-foreground/50")}
-							/>
+							<IconComponent className={iconClassName} />
 							<span className="truncate">{highlightText(item.title, searchQuery, SIDEBAR_MARK_CLASS)}</span>
 						</span>
-						<ChevronRight
-							className={cn(
-								"h-3.5 w-3.5 shrink-0 transition-transform duration-300 ease-out",
-								isExpanded ? "rotate-90 text-sidebar-foreground/60" : "text-sidebar-foreground/40",
-							)}
-						/>
+						<ChevronRight className={chevronClassName} />
 					</button>
 				) : (
 					<button
@@ -80,11 +101,10 @@ export function SidebarNavItem({ item, parentId, isSearching, searchQuery, expan
 						onClick={handleNavigate}
 						disabled={isDisabled}
 						className={buttonClassName}
+						data-active={isActive ? true : undefined}
 						title={isDisabled ? "This feature is currently unavailable" : undefined}>
 						<span className="flex min-w-0 items-center">
-							<IconComponent
-								className={cn("mr-3 h-4 w-4 shrink-0", isActive ? "text-sidebar-primary-foreground" : isDisabled ? "text-muted-foreground" : "text-sidebar-foreground/50")}
-							/>
+							<IconComponent className={iconClassName} />
 							<span className="truncate">{highlightText(item.title, searchQuery, SIDEBAR_MARK_CLASS)}</span>
 						</span>
 					</button>
@@ -92,14 +112,20 @@ export function SidebarNavItem({ item, parentId, isSearching, searchQuery, expan
 			</div>
 
 			{hasChildren ? (
-				<div className="grid transition-[grid-template-rows] duration-200 ease-in-out" style={{ gridTemplateRows: isExpanded ? "1fr" : "0fr" }}>
-					<div className="min-h-0 overflow-hidden">
-						<div className="ml-5 border-l border-sidebar-border/80 pl-2">
+				<div className="grid transition-[grid-template-rows] duration-200 ease-out motion-reduce:transition-none" style={{ gridTemplateRows: isExpanded ? "1fr" : "0fr" }}>
+					{/* `inert` while collapsed: hidden children can't be Tab'd into or
+					    read by screen readers (a11y). The CSS animation still runs
+					    — inert only removes them from focus/AT, not from paint. */}
+					<div className="min-h-0 overflow-hidden" inert={!isExpanded ? true : undefined}>
+						<div
+							className={cn(
+								"ml-5 border-l border-sidebar-border/80 pl-2 transition-[opacity,transform] duration-200 ease-out motion-reduce:transition-none",
+								isExpanded ? "translate-y-0 opacity-100" : "-translate-y-0.5 opacity-0",
+							)}>
 							{item.children.map((childItem) => (
 								<SidebarNavItem
-									key={createItemId(childItem, itemId)}
+									key={childItem.id}
 									item={childItem}
-									parentId={itemId}
 									isSearching={isSearching}
 									searchQuery={searchQuery}
 									expandedItems={expandedItems}

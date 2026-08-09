@@ -9,9 +9,16 @@ import * as React from "react";
  * setState is needed.
  */
 export function NetworkStatusIndicator(): React.JSX.Element {
-	const [isOnline, setIsOnline] = React.useState<boolean>(() => (typeof navigator === "undefined" ? true : navigator.onLine));
+	// Initial state is `true` on BOTH server and first client render (reading
+	// `navigator.onLine` in `useState` would return different values and cause a
+	// React hydration mismatch now that the shell is server-rendered). The real
+	// status resolves in the effect right after hydration.
+	const [isOnline, setIsOnline] = React.useState<boolean>(true);
 
 	React.useEffect(() => {
+		const updateOnline = (): void => {
+			setIsOnline(navigator.onLine);
+		};
 		const handleOnline = (): void => {
 			setIsOnline(true);
 		};
@@ -19,6 +26,7 @@ export function NetworkStatusIndicator(): React.JSX.Element {
 			setIsOnline(false);
 		};
 
+		updateOnline();
 		window.addEventListener("online", handleOnline);
 		window.addEventListener("offline", handleOffline);
 		return (): void => {

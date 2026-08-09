@@ -9,7 +9,7 @@ coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=form
 
 # Logging System
 
-> A self-hosted, Datadog-style logging service — **no external SaaS**. Every item states **what**
+> [!NOTE] A self-hosted, Datadog-style logging service — **no external SaaS**. Every item states **what**
 > it is, **why** it matters, the **current state** (verified against the code today), and **how**
 > to implement it — written so a junior developer with ~6 months of experience can execute
 > without guessing.
@@ -36,7 +36,7 @@ coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=form
 
 # 🪵 Logging Service (Datadog-style, self-hosted)
 
-> **The goal:** a logging system that gives you the three things Datadog gives you — one place
+> [!NOTE] **The goal:** a logging system that gives you the three things Datadog gives you — one place
 > to see everything, rich structured fields to filter/aggregate on, and the ability to trace a
 > single request through the whole stack — **without any external SaaS**. Logs go to **two
 > places at once**: the **terminal** (dev experience) and the **`Log` table in Postgres**
@@ -304,7 +304,7 @@ page.
 ## 33. Webhook/slack-style digest (optional, internal)
 
 **What:** a cron that emails/notifies the team when error counts spike (e.g. `errorGroup` count
-> threshold in 5 min).
+threshold in 5 min).
 **Why:** Datadog alerts, self-hosted — the minimum viable alerting.
 **How:** `TaskScheduleService` job → aggregate `Log` by errorGroup over the window → if over
 threshold, use the email system (see [email.md](./email.md)) to send an `ErrorDigest` email.

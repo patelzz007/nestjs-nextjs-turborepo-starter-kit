@@ -9,7 +9,7 @@ coverImage: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=form
 
 # Token Refresh — How It Works
 
-> This guide explains the session-refresh machinery end to end: why tokens rotate,
+> [!NOTE] This guide explains the session-refresh machinery end to end: why tokens rotate,
 > the **two independent refresh layers** (a server-side one in the route proxies and
 > a client-side one in `useApi`), how to tell which one fired, and how to deploy and
 > tune it. Written for a junior developer with ~6 months of experience.

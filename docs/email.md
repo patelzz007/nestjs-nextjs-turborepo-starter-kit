@@ -9,7 +9,7 @@ coverImage: "https://images.unsplash.com/photo-1596526131083-e8c633c948d2?auto=f
 
 # Email Template System
 
-> A production-grade transactional-email layer on **Resend**. Every item states **what** it is,
+> [!NOTE] A production-grade transactional-email layer on **Resend**. Every item states **what** it is,
 > **why** it matters, the **current state** (verified against the code today), and **how** to
 > implement it — written so a junior developer with ~6 months of experience can execute without
 > guessing.
@@ -32,7 +32,7 @@ coverImage: "https://images.unsplash.com/photo-1596526131083-e8c633c948d2?auto=f
 
 # ✉️ Email Template System (Resend)
 
-> **The goal:** a production-grade transactional-email layer on **Resend** — real template files
+> [!NOTE] **The goal:** a production-grade transactional-email layer on **Resend** — real template files
 > (no inline HTML strings), HTML + plain-text for every email, a preview workflow, and total
 > control over content without touching code. `EmailService` stays the single send entry point.
 

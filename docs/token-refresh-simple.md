@@ -9,7 +9,7 @@ coverImage: "https://images.unsplash.com/photo-1495615080073-6b89c9839ce0?auto=f
 
 # Token Refresh — The Simple Version
 
-> This is the "explain it to me like I'm five" version of
+> [!NOTE] This is the "explain it to me like I'm five" version of
 > [Token Refresh — How It Works](./token-refresh.md). If you understand this page,
 > you understand 90% of what's happening in the network tab. No jargon, no code
 > reading required.
@@ -59,7 +59,7 @@ stamp **before you even reach the counter**. You never see this happen.
 But if you're **already inside the shop** (the page is already open) and you walk
 up to the barista with an expired stamp, the barista says:
 
-> "401 — sorry, this stamp is no good."
+> [!NOTE] "401 — sorry, this stamp is no good."
 
 Then the barista quietly goes and gets you a new stamp using your receipt, and
 takes your order anyway. **You never get kicked out.**
@@ -83,7 +83,7 @@ different rooms.**
 
 ### The one sentence that explains everything
 
-> **Full page loads refresh invisibly on the server. Anything that happens while
+> [!NOTE] **Full page loads refresh invisibly on the server. Anything that happens while
 > the page is already open refreshes visibly from the browser.**
 
 ---

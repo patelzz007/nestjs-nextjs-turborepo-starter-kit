@@ -9,7 +9,7 @@ coverImage: "https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=f
 
 # Boilerplate Roadmap
 
-> Ideas for making this **monorepo template** production-ready and pleasant to build on.
+> [!NOTE] Ideas for making this **monorepo template** production-ready and pleasant to build on.
 > This guide is about the _boilerplate itself_ (repo structure, tooling, DX, deployment,
 > testing). Auth-specific ideas live in [auth-roadmap.md](./auth-roadmap.md).
 >

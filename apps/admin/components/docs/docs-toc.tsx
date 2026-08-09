@@ -5,6 +5,7 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 import { HEADING_SCROLL_OFFSET } from "@/lib/constants";
 import type { TocHeading } from "@/lib/markdown";
+import { findPageScrollContainer } from "@workspace/ui/lib/scroll-container";
 
 /**
  * DocsToc — the sticky right-hand "On this page" rail. Dumb and presentational:
@@ -16,7 +17,7 @@ import type { TocHeading } from "@/lib/markdown";
  * the window — so a plain `window` scroll listener never fires. Three things
  * keep the rail correct:
  * 1. **The real scroll container is found by walking up from the nav's PARENT**
- *    (not the nav itself). The ToC's own `<nav>` is `overflow-y-auto` too, so
+ *    (not the nav itself). The ToC's own `<nav>` is scrollable too, so
  *    starting the walk at the nav would mistake the rail for the page scroller
  *    — which broke the bottom-of-page correction on guides whose ToC is short
  *    enough to fit the viewport.
@@ -42,15 +43,23 @@ import type { TocHeading } from "@/lib/markdown";
  * body) and causes the visible "jump around" when clicking a section far away.
  *
  * ## The rail
- * A visible 1px gray guide line on the far left (the same guide-line concept
- * the sidebar uses for nested items) with a **sliding 2px primary indicator**
- * that glides to the active heading. `h3` headings render **indented with
- * their own guide line** — mirroring the sidebar's nested-child indentation —
- * so sub-sections are visually grouped under their `h2`.
+ * A clean card with a header divider ("On this page" + reading-time pill), a
+ * thin reading-progress fill under the header, and links with a soft pill
+ * active state (`bg-primary/10` + primary text — the same active treatment the
+ * rest of the admin uses). `h3` headings are indented (no borders, no guide
+ * lines) so the hierarchy reads at a glance. Spacing is uniform: every link
+ * gets the same `py-1.5` rhythm and Tailwind-class padding — no inline styles.
  */
 
 export interface DocsTocProps {
 	readonly headings: readonly TocHeading[];
+	/**
+	 * When `false` (mobile collapsible), the rail renders as a static list
+	 * inside the `<details>` disclosure instead of a sticky sidebar rail.
+	 */
+	readonly sticky?: boolean;
+	/** Estimated reading minutes — shown in the rail header on the sticky variant. */
+	readonly readingTimeMinutes?: number;
 }
 
 interface TocLinkProps {
@@ -75,31 +84,15 @@ function TocLink({ heading, isActive, onNavigate, depth }: TocLinkProps): React.
 			href={`#${heading.id}`}
 			data-toc-id={heading.id}
 			onClick={handleClick}
+			aria-current={isActive ? "location" : undefined}
 			className={cn(
-				"block py-1.5 pr-2 text-[13px] leading-snug transition-colors duration-150",
-				isActive ? "font-medium text-foreground" : "text-muted-foreground hover:text-foreground",
-			)}
-			style={{ paddingLeft: depth === 0 ? 16 : 0 }}>
+				"block rounded-md py-1.5 pr-2 text-[13px] leading-snug transition-colors duration-150",
+				depth === 0 ? "pl-3" : "pl-8",
+				isActive ? "bg-primary/10 font-medium text-primary" : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+			)}>
 			{heading.text}
 		</a>
 	);
-}
-
-/**
- * Finds the element that actually scrolls the page content. Walks up from the
- * ToC's `<aside>` (the nav's parent) so the ToC's own scrollable `<nav>` is
- * never mistaken for the page scroller. Falls back to `window`.
- */
-function findPageScrollContainer(from: HTMLElement | null): Window | HTMLElement {
-	let current: HTMLElement | null = from;
-	while (current !== null) {
-		const overflowY = getComputedStyle(current).overflowY;
-		if (overflowY === "auto" || overflowY === "scroll" || overflowY === "overlay") {
-			return current;
-		}
-		current = current.parentElement;
-	}
-	return window;
 }
 
 /** Groups sequential h2/h3 headings into (root h2, nested h3s) buckets. Generic so the caller's extra fields (e.g. `key`) flow through. */
@@ -123,11 +116,11 @@ function groupHeadings<T extends TocHeading>(headings: readonly T[]): readonly {
 	return groups;
 }
 
-export function DocsToc({ headings }: DocsTocProps): React.JSX.Element | null {
+export function DocsToc({ headings, sticky = true, readingTimeMinutes }: DocsTocProps): React.JSX.Element | null {
 	const [activeId, setActiveId] = React.useState<string | null>(() => headings[0]?.id ?? null);
-	const containerRef = React.useRef<HTMLDivElement>(null);
 	const navRef = React.useRef<HTMLElement | null>(null);
-	const [indicator, setIndicator] = React.useState<{ readonly top: number; readonly height: number } | null>(null);
+	const [progress, setProgress] = React.useState(0);
+	const [collapsedGroups, setCollapsedGroups] = React.useState<ReadonlySet<number>>(new Set<number>());
 
 	// Reset the active section when navigating to a different guide (the
 	// component stays mounted across `/docs/a` → `/docs/b`). Uses React's
@@ -136,7 +129,6 @@ export function DocsToc({ headings }: DocsTocProps): React.JSX.Element | null {
 	if (previousHeadings !== headings) {
 		setPreviousHeadings(headings);
 		setActiveId(headings[0]?.id ?? null);
-		setIndicator(null);
 	}
 
 	// De-duplicate ids for React keys (duplicate heading text shares one anchor).
@@ -145,36 +137,52 @@ export function DocsToc({ headings }: DocsTocProps): React.JSX.Element | null {
 		return headings.map((heading) => {
 			const count = counts.get(heading.id) ?? 0;
 			counts.set(heading.id, count + 1);
-			return { ...heading, key: count === 0 ? heading.id : `${heading.id}-${String(count + 1)}` };
+			// First occurrence keeps the plain id; duplicates get `-1`, `-2`, …
+			// (count is already the pre-increment occurrence index).
+			return { ...heading, key: count === 0 ? heading.id : `${heading.id}-${String(count)}` };
 		});
 	}, [headings]);
 
 	const grouped = React.useMemo(() => groupHeadings(keyedHeadings), [keyedHeadings]);
 
-	/** Measures and slides the active indicator under the given heading id. */
-	const positionIndicator = React.useCallback((id: string): void => {
-		const container = containerRef.current;
-		if (container === null) {
-			setIndicator(null);
-			return;
+	/** Groups whose nested h3s collapse into a "+N" toggle (long subtrees only). */
+	const collapsibleGroups = React.useMemo(() => {
+		const result: Set<number> = new Set<number>();
+		for (let index = 0; index < grouped.length; index += 1) {
+			const group = grouped[index];
+			if (group !== undefined && group.children.length > 3) {
+				result.add(index);
+			}
 		}
-		const activeLink = container.querySelector<HTMLAnchorElement>(`[data-toc-id="${CSS.escape(id)}"]`);
-		if (activeLink === null) {
-			setIndicator(null);
-			return;
-		}
-		const containerTop = container.getBoundingClientRect().top;
-		const linkTop = activeLink.getBoundingClientRect().top;
-		setIndicator({ top: linkTop - containerTop, height: activeLink.offsetHeight });
+		return result;
+	}, [grouped]);
+
+	const handleToggleGroup = React.useCallback((index: number): void => {
+		setCollapsedGroups((current) => {
+			const next = new Set(current);
+			if (next.has(index)) {
+				next.delete(index);
+			} else {
+				next.add(index);
+			}
+			return next;
+		});
 	}, []);
 
-	/** Marks a section active and slides the indicator to it (used by link clicks). */
-	const handleActivate = React.useCallback(
-		(id: string): void => {
-			setActiveId(id);
-			positionIndicator(id);
+	/**
+	 * Single stable click handler for the "Show N more" / "Show less" buttons —
+	 * the group index travels on `data-group-index`, so no per-render closures
+	 * are created (rule 16).
+	 */
+	const handleToggleFromButton = React.useCallback(
+		(event: React.MouseEvent<HTMLButtonElement>): void => {
+			const raw = event.currentTarget.dataset.groupIndex;
+			const index = raw === undefined ? -1 : Number.parseInt(raw, 10);
+			if (index >= 0) {
+				handleToggleGroup(index);
+			}
 		},
-		[positionIndicator],
+		[handleToggleGroup],
 	);
 
 	/**
@@ -192,25 +200,30 @@ export function DocsToc({ headings }: DocsTocProps): React.JSX.Element | null {
 		const containerScrollTop = container instanceof Window ? container.scrollY : container.scrollTop;
 		// Element's absolute offset inside the container's content, minus the sticky topbar.
 		const targetTop = element.getBoundingClientRect().top - containerTop + containerScrollTop - HEADING_SCROLL_OFFSET;
-		if (container instanceof Window) {
-			container.scrollTo({ top: Math.max(0, targetTop), behavior: "smooth" });
-		} else {
-			container.scrollTo({ top: Math.max(0, targetTop), behavior: "smooth" });
-		}
+		// Both `Window` and `HTMLElement` expose the same `scrollTo` signature.
+		container.scrollTo({ top: Math.max(0, targetTop), behavior: "smooth" });
 	}, []);
 
 	const handleNavigate = React.useCallback(
 		(id: string): void => {
 			scrollHeadingIntoView(id);
-			handleActivate(id);
+			setActiveId(id);
 		},
-		[scrollHeadingIntoView, handleActivate],
+		[scrollHeadingIntoView],
 	);
 
 	// Scroll-spy: recompute the active heading on scroll/resize, throttled to
-	// one rAF per frame, from whichever element actually scrolls.
+	// one rAF per frame, from whichever element actually scrolls. Only the
+	// STICKY (desktop aside) instance spies — the mobile `<details>` instance
+	// (`sticky={false}`) is click-activated only, and the desktop aside is
+	// CSS-hidden below `lg` so spying there would be pure waste.
 	React.useEffect(() => {
-		if (headings.length === 0) {
+		if (headings.length === 0 || !sticky) {
+			return undefined;
+		}
+		// The desktop aside only exists at `lg+` — below that it is CSS-hidden
+		// but still mounted, so gate the listeners on the same breakpoint.
+		if (typeof window !== "undefined" && !window.matchMedia("(min-width: 1024px)").matches) {
 			return undefined;
 		}
 		const elements = new Map<string, HTMLElement>();
@@ -230,6 +243,7 @@ export function DocsToc({ headings }: DocsTocProps): React.JSX.Element | null {
 		// Only touches state when the active section actually changes — this is
 		// what keeps the rail from re-rendering on every scroll frame.
 		let lastActive: string | null = null;
+		let lastProgress = -1;
 
 		// The real page scroll container — the shell scrolls inside `<main>`,
 		// not the window. Start from the nav's PARENT so the ToC's own
@@ -267,7 +281,13 @@ export function DocsToc({ headings }: DocsTocProps): React.JSX.Element | null {
 			if (current !== null && current !== lastActive) {
 				lastActive = current;
 				setActiveId(current);
-				positionIndicator(current);
+			}
+			// Reading progress — a 1% step granularity keeps re-renders rare.
+			const percent = scrollHeight > clientHeight ? Math.min(1, Math.max(0, scrollTop / Math.max(1, scrollHeight - clientHeight))) : 0;
+			const percentStep = Math.round(percent * 100);
+			if (percentStep !== lastProgress) {
+				lastProgress = percentStep;
+				setProgress(percent);
 			}
 		};
 
@@ -303,44 +323,78 @@ export function DocsToc({ headings }: DocsTocProps): React.JSX.Element | null {
 				cancelAnimationFrame(frame);
 			}
 		};
-	}, [headings, positionIndicator]);
+	}, [headings, sticky]);
 
 	if (headings.length === 0) {
 		return null;
 	}
 
 	return (
-		<nav ref={navRef} aria-label="Table of contents" className="sticky top-4 max-h-[calc(100svh-2rem)] overflow-y-auto pb-8">
-			<p className="mb-2 text-xs font-semibold tracking-wider text-muted-foreground uppercase">On this page</p>
-			<div ref={containerRef} className="relative">
-				{/* Static gray guide rail — clearly visible in both themes */}
-				<div aria-hidden="true" className="absolute inset-y-0 left-0 w-px bg-muted-foreground/25" />
-				{/* Sliding active indicator */}
-				<div
-					aria-hidden="true"
-					className="absolute left-0 w-0.5 rounded-full bg-primary transition-all duration-300 ease-out"
-					style={{
-						top: `${String(indicator?.top ?? 0)}px`,
-						height: `${String(indicator?.height ?? 0)}px`,
-						opacity: indicator === null ? 0 : 1,
-					}}
-				/>
-				<ul className="relative">
-					{grouped.map((group) => (
-						<li key={group.root.key}>
-							<TocLink heading={group.root} isActive={activeId === group.root.id} onNavigate={handleNavigate} depth={0} />
-							{group.children.length > 0 ? (
-								/* Nested h3s: indented with their own guide line, like the sidebar's children */
-								<div className="ml-7 border-l border-muted-foreground/20 pl-2">
-									{group.children.map((child) => (
-										<TocLink key={child.key} heading={child} isActive={activeId === child.id} onNavigate={handleNavigate} depth={1} />
-									))}
-								</div>
-							) : null}
-						</li>
-					))}
+		<nav
+			ref={navRef}
+			aria-label="Table of contents"
+			className={cn(
+				"docs-toc flex flex-col",
+				// Sticky desktop rail: a clean solid card. The list owns its own
+				// scroll area (`flex-1 min-h-0`) so the header, progress fill and
+				// keyboard hint stay pinned while the links scroll. (No "Back to
+				// top" here — the global ScrollToTop in the shell covers that.)
+				sticky && "sticky top-6 max-h-[calc(100svh-3rem)] overflow-hidden rounded-xl border border-border/60 bg-card shadow-sm",
+			)}>
+			{/* Header + progress render ONLY on the sticky (desktop) variant — the
+			    mobile <details> disclosure already supplies its own "On this page"
+			    summary, so rendering a second header there would duplicate it. */}
+			{sticky ? (
+				<>
+					<div className="flex items-center justify-between gap-2 border-b border-border/50 px-4 pt-3 pb-2.5">
+						<p className="text-[13px] font-semibold tracking-tight text-foreground">On this page</p>
+						{readingTimeMinutes !== undefined && readingTimeMinutes > 0 ? (
+							<span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">{readingTimeMinutes} min</span>
+						) : null}
+					</div>
+					{/* Reading progress — a thin fill that grows as you scroll */}
+					<div aria-hidden="true" className="h-0.5 shrink-0 bg-muted/60">
+						<div className="h-full bg-primary transition-[width] duration-150 ease-out" style={{ width: `${String(Math.round(progress * 100))}%` }} />
+					</div>
+				</>
+			) : null}
+			{/* Scrollable link list — padding only on the card variant (mobile sits
+			    inside the details body which has its own padding) */}
+			<div className={cn("relative min-h-0 flex-1 overflow-y-auto", sticky && "p-3")}>
+				<ul className="space-y-0.5">
+					{grouped.map((group, groupIndex) => {
+						const isCollapsible = collapsibleGroups.has(groupIndex);
+						const isCollapsed = collapsedGroups.has(groupIndex);
+						const visibleChildren = isCollapsible && isCollapsed ? group.children.slice(0, 3) : group.children;
+						return (
+							<li key={group.root.key}>
+								<TocLink heading={group.root} isActive={activeId === group.root.id} onNavigate={handleNavigate} depth={0} />
+								{group.children.length > 0 ? (
+									<>
+										{/* Nested h3s — indented, no borders; hierarchy reads from indentation alone */}
+										<div className="mt-0.5 space-y-0.5">
+											{visibleChildren.map((child) => (
+												<TocLink key={child.key} heading={child} isActive={activeId === child.id} onNavigate={handleNavigate} depth={1} />
+											))}
+										</div>
+										{isCollapsible ? (
+											<button
+												type="button"
+												data-group-index={String(groupIndex)}
+												onClick={handleToggleFromButton}
+												className="mt-0.5 ml-8 rounded-md px-2 py-1 text-[11px] font-medium text-muted-foreground transition-colors duration-150 hover:bg-muted/50 hover:text-foreground">
+												{isCollapsed ? `Show ${String(group.children.length - 3)} more` : "Show less"}
+											</button>
+										) : null}
+									</>
+								) : null}
+							</li>
+						);
+					})}
 				</ul>
 			</div>
+			{/* Keyboard hint — a quiet, human ending for the rail */}
+			{sticky ? <p className="shrink-0 border-t border-border/50 px-4 py-2 text-center text-[11px] text-muted-foreground/70">[ ] prev · next guide</p> : null}
 		</nav>
 	);
 }

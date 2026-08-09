@@ -9,7 +9,7 @@ coverImage: "https://images.unsplash.com/photo-1504384308090-c894fdcc538d?auto=f
 
 # Dependency Hygiene (syncpack)
 
-> How this monorepo keeps shared dependencies **on the exact same version** across
+> [!NOTE] How this monorepo keeps shared dependencies **on the exact same version** across
 > all workspaces, so "works in web, breaks in admin" bugs never happen.
 > Written for a junior developer with 6 months of experience.
 
@@ -60,7 +60,7 @@ in the repo and compares how each dependency is declared:
 
 The config lives at the **repo root** in `.syncpackrc.json`:
 
-```json
+```json title=".syncpackrc.json"
 {
 	"$schema": "https://unpkg.com/syncpack@15.3.2/dist/schema.json",
 	"versionGroups": [
@@ -91,7 +91,7 @@ Two rules are configured:
    `typescript`, the version must be **exact** (no `^` / `~` prefix). This is the
    "pin" part — floating ranges are banned for shared deps.
 
-> Why `range: ""`? An empty range means "no semver range allowed" — syncpack
+> [!NOTE] Why `range: ""`? An empty range means "no semver range allowed" — syncpack
 > rejects `^4.4.3` and accepts `4.4.3`.
 
 **Why are `@workspace/eslint-config` and `@workspace/api` exempted?**
@@ -127,7 +127,7 @@ pnpm deps:fix
 pnpm deps:check
 ```
 
-> **`deps:check` / `deps:fix` / `deps:list` ARE turbo tasks.** turbo 2.x does not
+> [!NOTE] **`deps:check` / `deps:fix` / `deps:list` ARE turbo tasks.** turbo 2.x does not
 > execute scripts defined only in the **root** `package.json` (it would report
 > "0 tasks"), so the actual syncpack commands live in the **`packages/tooling`**
 > workspace. The root `pnpm deps:*` scripts simply delegate to turbo:
@@ -158,7 +158,7 @@ To bump a shared dependency (e.g. `zod`):
    ```
 4. If syncpack reports drift you didn't intend to keep, use `pnpm deps:fix`.
 
-> **Non-shared dependencies** (e.g. `@nestjs/common`, `lucide-react`) are allowed
+> [!NOTE] **Non-shared dependencies** (e.g. `@nestjs/common`, `lucide-react`) are allowed
 > to use carets — only the 5 deps in `.syncpackrc.json` are pinned exact.
 
 ---

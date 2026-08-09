@@ -11,18 +11,25 @@ import { formatIsoDate } from "@/lib/markdown";
  * Purely presentational (rules 9–11): it receives the whole `DocContent` via
  * props and renders whatever cover art the smart layer gave it.
  *
- * The cover is a real photograph sourced from the guide's `coverImage`
- * frontmatter (an absolute https URL), rendered through `next/image` with a
- * subtle left-to-right scrim so the light title stays legible over any photo.
- * When a guide has no `coverImage`, the banner falls back to a clean neutral
- * panel — no decorative gradients anywhere.
+ * ## Cover variant
+ * A real photograph (the guide's `coverImage` frontmatter, an absolute https
+ * URL) rendered through `next/image` with a **cinematic left-to-right scrim**
+ * plus a **bottom vignette**, so the light title stays legible over any photo
+ * and the meta row sits on a solid base rather than floating over busy pixels.
+ *
+ * ## Fallback variant (no cover)
+ * A quiet **dotted-paper** texture instead of a flat gray panel: a faint
+ * `--color-border` dot grid (theme-token driven, no hardcoded colors) over
+ * `bg-card`, finished with a soft primary tint in the top corner. The dots are
+ * small and low-opacity — it reads as an intentional editorial texture, not a
+ * decorative gradient.
  *
  * ## Typography
- * Kept deliberately restrained (the "AI-ish" look comes from heavy bold
- * headings, tight letter-spacing eyebrows, and high-contrast scrims):
- * - a small pill **eyebrow chip** instead of a letter-spaced uppercase label,
+ * Deliberately restrained (the "AI-ish" look comes from heavy bold headings,
+ * letter-spaced uppercase eyebrows, and high-contrast scrims):
+ * - a small **sentence-case pill chip** (never uppercase, never letter-spaced),
  * - a `font-semibold tracking-tight text-balance` title (no `font-bold`),
- * - body-copy description at `15px`,
+ * - body-copy description,
  * - a **top-divided meta row** so author / updated / read-time read as a
  *   structured footer rather than a floating list of chips.
  */
@@ -42,18 +49,33 @@ export function DocBanner({ doc, className }: DocBannerProps): React.JSX.Element
 				<>
 					{/* Real photograph, cropped to cover the banner */}
 					<Image src={coverUrl} alt="" fill priority sizes="(min-width: 1024px) 1152px, 100vw" className="object-cover" />
-					{/* Legibility scrim — a light left-to-right darkening so the title stays readable over any photo */}
-					<div aria-hidden="true" className="absolute inset-0 bg-linear-to-r from-black/65 via-black/35 to-black/10" />
+					{/* Legibility scrim — left-to-right darkening so the title stays readable over any photo */}
+					<div aria-hidden="true" className="absolute inset-0 bg-linear-to-r from-black/70 via-black/40 to-black/10" />
+					{/* Bottom vignette — gives the meta row a solid base instead of floating over busy pixels */}
+					<div aria-hidden="true" className="absolute inset-x-0 bottom-0 h-28 bg-linear-to-t from-black/50 to-transparent" />
 				</>
 			) : (
-				<div aria-hidden="true" className="absolute inset-0 bg-muted" />
+				<>
+					{/* Dotted-paper base — faint token-colored dot grid over the card surface */}
+					<div aria-hidden="true" className="absolute inset-0 bg-card" />
+					<div
+						aria-hidden="true"
+						className="absolute inset-0 opacity-40"
+						style={{
+							backgroundImage: "radial-gradient(circle, var(--color-border) 1px, transparent 1px)",
+							backgroundSize: "22px 22px",
+						}}
+					/>
+					{/* Soft primary tint, top-left corner — subtle warmth, not a gradient band */}
+					<div aria-hidden="true" className="absolute inset-0 bg-linear-to-br from-primary/[0.07] via-transparent to-transparent" />
+				</>
 			)}
 
 			<div className="relative px-6 py-10 sm:px-10 sm:py-12">
-				{/* Eyebrow — a quiet pill chip, not a letter-spaced label */}
+				{/* Eyebrow — a quiet sentence-case pill chip, not a letter-spaced uppercase label */}
 				<span
 					className={cn(
-						"inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium tracking-wide uppercase",
+						"inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium",
 						hasCover ? "border-white/20 bg-white/10 text-white/90 backdrop-blur-sm" : "border-border bg-background/60 text-muted-foreground",
 					)}>
 					<span aria-hidden="true" className={cn("size-1.5 rounded-full", hasCover ? "bg-white/70" : "bg-muted-foreground/60")} />

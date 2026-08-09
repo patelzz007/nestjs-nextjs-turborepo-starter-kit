@@ -9,7 +9,7 @@ coverImage: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=form
 
 # Prisma & Database Commands
 
-> This document covers everything you need to know about the database layer in this
+> [!NOTE] This document covers everything you need to know about the database layer in this
 > monorepo: how Prisma is configured, where the schema lives, and the exact commands
 > for migrating, generating, seeding, resetting, and inspecting the database.
 > Written for a junior developer with 6 months of experience.
@@ -59,7 +59,7 @@ apps/api/
 └── package.json                ← the db:* scripts
 ```
 
-> ⚠️ **`.env` is git-ignored** (`.gitignore` has `.env*`). You must create it
+> [!WARNING] **`.env` is git-ignored** (`.gitignore` has `.env*`). You must create it
 > locally. See the next section.
 
 ---
@@ -68,14 +68,14 @@ apps/api/
 
 The connection string is read from `apps/api/.env`:
 
-```env
+```env title=".env"
 # apps/api/.env
 DATABASE_URL="postgresql://postgres:postgres@localhost:5432/monorepo?schema=public"
 ```
 
 Format breakdown:
 
-```
+```env title=".env"
 postgresql://USER:PASSWORD@HOST:PORT/DATABASE_NAME?schema=public
 ```
 
@@ -88,7 +88,7 @@ postgresql://USER:PASSWORD@HOST:PORT/DATABASE_NAME?schema=public
 | `DATABASE_NAME`  | `monorepo`  | The database name (must exist) |
 | `?schema=public` | —           | Postgres schema to use         |
 
-> Note: `schema.prisma` no longer hardcodes `url = env("DATABASE_URL")` — with
+> [!NOTE] Note: `schema.prisma` no longer hardcodes `url = env("DATABASE_URL")` — with
 > Prisma 7 the connection is passed **programmatically** via the driver adapter
 > (`PrismaPg`) in both the API's `PrismaService` and the seeder. The `DATABASE_URL`
 > env var is still the single source of truth.
@@ -133,7 +133,7 @@ pnpm db:generate
 | `pnpm db:push`           | `dotenv -e .env -- prisma db push --accept-data-loss` | Pushes schema straight to the DB **without a migration file** (dev-only)                           | ⚠️ Can drop data      |
 | `pnpm db:seed`           | `dotenv -e .env -- tsx prisma/seed.ts`               | Runs the seeder (idempotent — safe to re-run)                                                      | ⚠️ Rewrites seed rows |
 
-> **Note:** the seeder runs through `tsx`, which resolves `@workspace/shared` via
+> [!NOTE] **Note:** the seeder runs through `tsx`, which resolves `@workspace/shared` via
 > default (non-`development`) export conditions → it imports the **built**
 > `packages/shared/dist/`. On a fresh clone, run `pnpm --filter @workspace/shared build`
 > before `pnpm db:seed` (or run `pnpm build` once) or the seed fails with a
@@ -141,7 +141,7 @@ pnpm db:generate
 | `pnpm db:reset`          | `dotenv -e .env -- prisma migrate reset --force`      | Drops **all** tables, re-applies all migrations, then runs the seeder                              | 🔴 **Wipes the DB**   |
 | `pnpm db:studio`         | `prisma studio`                                       | Opens the Prisma Studio GUI at `localhost:5555` to browse/edit data                                | ❌ No (read/write UI) |
 
-> **Why `dotenv -e .env --`?** Prisma CLI doesn't load `.env` automatically in all
+> [!NOTE] **Why `dotenv -e .env --`?** Prisma CLI doesn't load `.env` automatically in all
 > contexts here, so the scripts explicitly load `apps/api/.env` first.
 
 ### From the repo root
@@ -170,11 +170,11 @@ database — in the right order (generate & deploy run **in parallel**, then see
 exactly once each, non-interactively. It is the fastest way to get a fresh
 machine or CI environment from "empty repo" to "seeded, running DB".
 
-> ⚠️ Don't "simplify" `db:all` to `pnpm --filter @workspace/api db:all` —
+> [!WARNING] Don't "simplify" `db:all` to `pnpm --filter @workspace/api db:all` —
 > `apps/api` has no `db:all` script. The whole point is running through **turbo**
 > so `db:seed`'s `dependsOn` chain (generate + deploy) executes first.
 
-> ⚠️ `db:all` applies pending migrations (`migrate deploy`) — it never **creates**
+> [!WARNING] `db:all` applies pending migrations (`migrate deploy`) — it never **creates**
 > one. If you changed `schema.prisma` and need a brand-new migration, run
 > `pnpm db:migrate` (interactive) once first, then `pnpm db:all`.
 
@@ -248,7 +248,7 @@ duplicating rows or throwing:
   scratch. This keeps row counts stable across runs and guarantees the seed never
   crashes on a unique-constraint conflict.
 
-> ⚠️ Because volatile tables are wiped, any API keys / refresh tokens you created
+> [!WARNING] Because volatile tables are wiped, any API keys / refresh tokens you created
 > manually during development will be removed when you re-run `db:seed`.
 
 ### Seeded login accounts
@@ -285,7 +285,7 @@ migrations/
 - **`prisma migrate reset`** (`db:reset`) drops everything and replays all
   migrations from scratch, then seeds.
 
-> When you change the schema, **commit the generated migration folder** — it's part
+> [!NOTE] When you change the schema, **commit the generated migration folder** — it's part
 > of the repo so other environments can replay the exact same SQL.
 
 ---
@@ -306,7 +306,7 @@ const prisma = new PrismaClient({
 Because of this, `schema.prisma`'s `datasource` block only declares the provider —
 no `url`:
 
-```prisma
+```prisma title="schema.prisma"
 datasource db {
   provider = "postgresql"
 }

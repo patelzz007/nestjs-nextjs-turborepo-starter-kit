@@ -7,14 +7,15 @@ import * as React from "react";
  * stays in sync with viewport changes. Components that need a specific
  * breakpoint (e.g. `lg` for the sidebar) use this instead of hand-rolling a
  * resize listener.
+ *
+ * Hydration-safe by design: the initial state is `false` on BOTH the server
+ * and the first client render (reading `window.matchMedia` synchronously in
+ * `useState` would return different values — `false` vs the real match — and
+ * trigger a React hydration mismatch now that the shell is server-rendered).
+ * The real value is resolved in an effect right after hydration.
  */
 export function useMediaQuery(query: string): boolean {
-	const [matches, setMatches] = React.useState<boolean>(() => {
-		if (typeof window === "undefined") {
-			return false;
-		}
-		return window.matchMedia(query).matches;
-	});
+	const [matches, setMatches] = React.useState<boolean>(false);
 
 	React.useEffect(() => {
 		const mql = window.matchMedia(query);

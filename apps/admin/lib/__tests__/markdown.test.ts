@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+	detectQuoteKind,
 	estimateReadingTime,
 	extractTocHeadings,
 	filterDocSummaries,
@@ -10,6 +11,7 @@ import {
 	parseMarkdownFile,
 	slugifyHeadingText,
 	stripFirstHeading,
+	type QuoteKind,
 } from "@/lib/markdown";
 
 describe("slugifyHeadingText", () => {
@@ -200,4 +202,31 @@ describe("integration with the real docs/ folder", () => {
 			}
 		}
 	});
+});
+
+describe("detectQuoteKind", () => {
+	const cases: readonly { readonly text: string; readonly expected: QuoteKind }[] = [
+		// Error keywords.
+		{ text: "This throws an error when the token is invalid", expected: "error" },
+		{ text: "The request failed with a network timeout", expected: "error" },
+		{ text: "❌ Do not merge yet", expected: "error" },
+		// Warning keywords.
+		{ text: "Warning: this wipes volatile demo data", expected: "warning" },
+		{ text: "Caution — the scheduler leak contract is important", expected: "warning" },
+		{ text: "⚠ Never run this against production", expected: "warning" },
+		{ text: "Login gotcha: the cookie must be httpOnly", expected: "warning" },
+		// Success keywords.
+		{ text: "✅ Done — all tests pass", expected: "success" },
+		{ text: "Tip: keep the tuple ordering stable", expected: "success" },
+		// Neutral prose stays info — no substring false positives.
+		{ text: "The do's and don'ts that keep the machinery stable", expected: "info" },
+		{ text: "An antipattern to avoid is premature optimization", expected: "info" },
+		{ text: "Start here — this guide explains the big picture", expected: "info" },
+	];
+
+	for (const testCase of cases) {
+		it(`classifies "${testCase.text}" as ${testCase.expected}`, () => {
+			expect(detectQuoteKind(testCase.text)).toBe(testCase.expected);
+		});
+	}
 });

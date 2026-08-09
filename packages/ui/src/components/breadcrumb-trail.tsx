@@ -2,49 +2,65 @@
 
 import { Check, Copy, LinkIcon, Loader2 } from "lucide-react";
 import * as React from "react";
+import { memo, useCallback, useMemo } from "react";
 
 import { Breadcrumb, BreadcrumbEllipsis, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@workspace/ui/components/breadcrumb";
-
 import { Popover, PopoverContent, PopoverTrigger } from "@workspace/ui/components/popover";
-
-import type { BreadcrumbItem as BreadcrumbItemData } from "@workspace/ui/components/breadcrumb-context";
-
+import type { BreadcrumbItem as BreadcrumbItemData, BreadcrumbStatus } from "@workspace/ui/components/breadcrumb-context";
 import { cn } from "@workspace/ui/lib/utils";
 
-/**
- * Shared, presentational breadcrumb trail. It knows nothing about routing or
- * menus — it receives the resolved crumbs via props and renders them with
- * **mandatory icons** on every crumb.
- *
- * Rendering features:
- * - `maxItems` collapse: the first crumb + the last `maxItems - 1` are shown;
- *   the hidden middle becomes a **popover** listing every hidden crumb as a
- *   link (click/hover the ellipsis to jump to one).
- * - A **copy-link** button after the last crumb (appears on hover at `sm`+,
- *   always visible on touch) that copies the current page URL.
- * - `title` tooltips on labels (for long/truncated names), hover + focus
- *   states on every link, and `font-medium text-foreground` on the current
- *   page crumb so "you are here" reads instantly.
- * - A light **entrance animation** (tw-animate-css fade + slide) that replays
- *   whenever the trail changes.
- * - **Status placeholders**: `loading` renders a skeleton, `error` a muted
- *   message — data-driven pages never show a stale trail.
- *
- * The component is framework-free: `renderLink` is supplied by the host app
- * (admin/web) so `packages/ui` never imports `next/link`.
- */
+// ════════════════════════════════════════════════════════════════════════════
+// BreadcrumbTrail — memoized, presentational trail.
+//
+// It knows nothing about routing or menus — it receives the resolved crumbs
+// via props and renders them with **mandatory icons** on every crumb (rule 9:
+// data arrives from the smart consumer; `renderLink` is app-supplied so this
+// package never imports `next/link`).
+//
+// Rendering features:
+// - `maxItems` collapse: the first crumb + the last `maxItems - 1` are shown;
+//   the hidden middle becomes a **popover** listing every hidden crumb.
+// - A **copy-link** button after the last crumb (hover at `sm`+, always on
+//   touch) that copies the current page URL and announces the result via a
+//   visually-hidden `role="status"` region; `onCopy` lets the smart layer
+//   show a toast (feature — copy feedback).
+// - A light **entrance animation** (`motion-safe:` — respects
+//   `prefers-reduced-motion`) that replays on trail changes.
+// - **Status placeholders**: `loading` renders a skeleton, `error` a
+//   `role="status"` message with an optional `onRetry` action.
+// - Custom `separator`, `size` (sm/default) and `scrollable` props for dense
+//   page chrome and single-line header mode.
+// ════════════════════════════════════════════════════════════════════════════
 
-interface BreadcrumbTrailProps {
+export interface BreadcrumbTrailProps {
 	readonly items: readonly BreadcrumbItemData[];
-	readonly status: "loading" | "error" | "ready";
+	/** Derived from the shared status union so it can't drift (improvement 18). */
+	readonly status: BreadcrumbStatus["kind"];
+	/** Error-state copy — overridable for i18n (improvement 20). @default "Could not load the breadcrumb trail" */
 	readonly errorMessage?: string;
 	/** Collapse threshold — defaults to 4 (first + ellipsis + last 3). Pass 2 for a compact mobile trail. */
 	readonly maxItems?: number;
 	/** App-supplied link renderer (e.g. a Next.js `Link`) — returns the bare link element the crumb wraps. */
 	readonly renderLink: (item: BreadcrumbItemData) => React.ReactElement;
+	/** Compact density for dense page chrome (feature — compact). @default "default" */
+	readonly size?: "sm" | "default";
+	/** Single-line `overflow-x-auto` mode for page headers with many crumbs (improvement 3). @default false */
+	readonly scrollable?: boolean;
+	/** Custom separator node shared by every crumb (feature — branded separators). */
+	readonly separator?: React.ReactNode;
+	/** Rendered under the error message — a retry affordance (improvement 11). */
+	readonly onRetry?: () => void;
+	/** Fired after a copy attempt with the result — the smart layer wires the toast (feature — copy feedback). */
+	readonly onCopy?: (ok: boolean) => void;
 }
 
 const DEFAULT_MAX_ITEMS = 4;
+const DEFAULT_ERROR_MESSAGE = "Could not load the breadcrumb trail";
+
+/** Last element of a non-empty trail, without repeated `items[items.length - 1]` indexing (improvement 6). */
+function lastOf(items: readonly BreadcrumbItemData[]): BreadcrumbItemData | undefined {
+	return items[items.length - 1];
+}
 
 /** Copy the current page URL to the clipboard, falling back to `document.title` text. */
 async function copyCurrentUrl(): Promise<boolean> {
@@ -62,8 +78,18 @@ async function copyCurrentUrl(): Promise<boolean> {
 	}
 }
 
-/** Copy-link button: appears on hover at `sm`+, always visible on touch, with a transient "copied" state. */
-function CopyLinkButton(): React.JSX.Element {
+export interface CopyLinkButtonProps {
+	/** Fired after a copy attempt with the result (smart layer wires the toast). */
+	readonly onCopy?: (ok: boolean) => void;
+}
+
+/**
+ * Copy-link button: appears on hover at `sm`+, always visible on touch, with a
+ * transient "copied" state and a visually-hidden `role="status"` region that
+ * announces the outcome (improvements 2/16). Ref-forwarded for tooltip/focus
+ * tests (improvement 1).
+ */
+const CopyLinkButton = React.forwardRef<HTMLButtonElement, CopyLinkButtonProps>(function CopyLinkButton({ onCopy }, ref): React.JSX.Element {
 	const [copied, setCopied] = React.useState(false);
 	const [failed, setFailed] = React.useState(false);
 
@@ -77,23 +103,25 @@ function CopyLinkButton(): React.JSX.Element {
 		};
 	}, []);
 
-	const handleCopy = React.useCallback((): void => {
+	const handleCopy = useCallback((): void => {
 		if (timeoutRef.current !== null) {
 			window.clearTimeout(timeoutRef.current);
 		}
-		void copyCurrentUrl().then((ok: boolean) => {
+		void copyCurrentUrl().then((ok: boolean): void => {
 			setCopied(ok);
 			setFailed(!ok);
+			onCopy?.(ok);
 			timeoutRef.current = window.setTimeout(() => {
 				setCopied(false);
 				setFailed(false);
 				timeoutRef.current = null;
 			}, 2000);
 		});
-	}, []);
+	}, [onCopy]);
 
 	return (
 		<button
+			ref={ref}
 			type="button"
 			onClick={handleCopy}
 			aria-label="Copy link to this page"
@@ -101,21 +129,27 @@ function CopyLinkButton(): React.JSX.Element {
 			className={cn(
 				"inline-flex size-6 items-center justify-center rounded-md text-muted-foreground/50 transition-all",
 				"hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
-				copied ? "text-emerald-600" : failed ? "text-destructive" : "sm:opacity-0 sm:group-hover/breadcrumb:opacity-100 sm:focus-visible:opacity-100",
+				// `text-success` (token, not a raw emerald hex) so the copied
+				// state is consistent in dark mode (improvement 8 — rule 22).
+				copied ? "text-success" : failed ? "text-destructive" : "sm:opacity-0 sm:group-hover/breadcrumb:opacity-100 sm:focus-visible:opacity-100",
 			)}>
 			{copied ? <Check className="size-3.5" /> : failed ? <Copy className="size-3.5" /> : <LinkIcon className="size-3.5" />}
+			{/* Visually-hidden live region — announces the copy outcome without
+			    changing the button's visible label (improvement 16). */}
+			<span className="sr-only" role="status">
+				{copied ? "Link copied" : failed ? "Could not copy link" : ""}
+			</span>
 		</button>
 	);
-}
+});
 
-/** Popover listing the hidden (collapsed) crumbs as links. */
-function HiddenCrumbsPopover({
-	hidden,
-	renderLink,
-}: {
+interface HiddenCrumbsPopoverProps {
 	readonly hidden: readonly BreadcrumbItemData[];
 	readonly renderLink: (item: BreadcrumbItemData) => React.ReactElement;
-}): React.JSX.Element {
+}
+
+/** Popover listing the hidden (collapsed) crumbs as links — memoized (improvement 9). */
+const HiddenCrumbsPopover = memo(function HiddenCrumbsPopover({ hidden, renderLink }: HiddenCrumbsPopoverProps): React.JSX.Element {
 	return (
 		<Popover>
 			<PopoverTrigger
@@ -125,7 +159,9 @@ function HiddenCrumbsPopover({
 						aria-label="More breadcrumbs"
 						title="Show all breadcrumbs"
 						className={cn(
-							"inline-flex size-5 items-center justify-center rounded text-muted-foreground/60 transition-colors",
+							// 32px hit area (improvement 4: the old 20px target was
+							// too small on touch), still visually compact at size-5.
+							"inline-flex min-h-8 min-w-8 items-center justify-center rounded text-muted-foreground/60 transition-colors",
 							"hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
 						)}>
 						{" "}
@@ -143,7 +179,13 @@ function HiddenCrumbsPopover({
 								className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
 								<Icon className="size-3.5 shrink-0" />
 								{item.href !== undefined ? (
-									<span className="min-w-0 truncate text-muted-foreground hover:text-foreground">{renderLink(item)}</span>
+									<span className="min-w-0 truncate text-muted-foreground hover:text-foreground">
+										{/* `renderLink` returns the app's BARE link element (base-ui `render`
+									    pattern — the trail's `BreadcrumbLink` injects the label as its
+									    children, which this popover doesn't do). Inject the label so
+									    hidden crumbs show their text, not just an icon. */}
+										{React.cloneElement(renderLink(item), undefined, item.label)}
+									</span>
 								) : (
 									<span className="font-medium text-foreground">{item.label}</span>
 								)}
@@ -154,7 +196,7 @@ function HiddenCrumbsPopover({
 			</PopoverContent>
 		</Popover>
 	);
-}
+});
 
 /** Loading placeholder — a short shimmering pill row. */
 function BreadcrumbSkeleton(): React.JSX.Element {
@@ -179,21 +221,32 @@ function ChevronSeparator(): React.JSX.Element {
 
 /**
  * The dumb, presentational trail. Memoized — it only re-renders when its
- * props change (the smart consumer passes stable references).
+ * props change; consumers must pass stable `items`/`renderLink` references for
+ * the memo to pay off (improvement 17).
  */
 export const BreadcrumbTrail = React.memo(function BreadcrumbTrail({
 	items,
 	status,
-	errorMessage,
+	errorMessage = DEFAULT_ERROR_MESSAGE,
 	maxItems = DEFAULT_MAX_ITEMS,
 	renderLink,
+	size,
+	scrollable = false,
+	separator,
+	onRetry,
+	onCopy,
 }: BreadcrumbTrailProps): React.JSX.Element | null {
-	// Entrance animation replays whenever the trail changes: key on the last
-	// crumb's label (falling back to status so loading/error animate too).
-	const animationKey = React.useMemo((): string => {
+	// Entrance animation replays whenever the trail changes: key on the href
+	// path when present (two trails ending in the same label — e.g. two
+	// "Settings" pages — still re-animate), falling back to the label, then to
+	// the status so loading/error animate too (improvement 3).
+	const animationKey = useMemo((): string => {
 		if (status === "ready" && items.length > 0) {
-			const lastItem = items[items.length - 1];
+			const lastItem = lastOf(items);
 			if (lastItem !== undefined) {
+				if (lastItem.href !== undefined) {
+					return items.map((item) => item.href ?? item.label).join("/");
+				}
 				return lastItem.label;
 			}
 		}
@@ -203,7 +256,7 @@ export const BreadcrumbTrail = React.memo(function BreadcrumbTrail({
 	if (status === "loading") {
 		return (
 			<Breadcrumb className="group/breadcrumb mb-6">
-				<BreadcrumbList>
+				<BreadcrumbList size={size} scrollable={scrollable}>
 					<BreadcrumbItem>
 						<BreadcrumbSkeleton />
 					</BreadcrumbItem>
@@ -215,11 +268,20 @@ export const BreadcrumbTrail = React.memo(function BreadcrumbTrail({
 	if (status === "error") {
 		return (
 			<Breadcrumb className="group/breadcrumb mb-6">
-				<BreadcrumbList>
+				<BreadcrumbList size={size} scrollable={scrollable}>
 					<BreadcrumbItem>
-						<span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
+						{/* `role="status"` announces the failure politely (improvement 12). */}
+						<span role="status" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
 							<Loader2 className="size-3.5 animate-spin" />
-							{errorMessage ?? "Could not load the breadcrumb trail"}
+							{errorMessage}
+							{onRetry !== undefined ? (
+								<button
+									type="button"
+									onClick={onRetry}
+									className="font-medium text-foreground underline underline-offset-2 transition-colors hover:text-primary focus-visible:rounded focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none">
+									Retry
+								</button>
+							) : null}
 						</span>
 					</BreadcrumbItem>
 				</BreadcrumbList>
@@ -270,12 +332,16 @@ export const BreadcrumbTrail = React.memo(function BreadcrumbTrail({
 
 	return (
 		<Breadcrumb className="group/breadcrumb mb-6">
-			<BreadcrumbList>
-				<div key={animationKey} className="flex min-w-0 animate-in items-center gap-1.5 duration-200 fill-mode-both fade-in slide-in-from-left-1 sm:gap-2.5">
+			<BreadcrumbList size={size} scrollable={scrollable}>
+				{/* `motion-safe:` — the entrance animation is skipped for users who
+				    prefer reduced motion (improvement 13). */}
+				<div
+					key={animationKey}
+					className="flex min-w-0 items-center gap-1.5 motion-safe:animate-in motion-safe:duration-200 motion-safe:fill-mode-both motion-safe:fade-in motion-safe:slide-in-from-left-1 sm:gap-2.5">
 					{leading.map((item) => (
 						<React.Fragment key={`${item.label}-leading`}>
 							{renderCrumb(item, 0)}
-							<BreadcrumbSeparator />
+							<BreadcrumbSeparator>{separator}</BreadcrumbSeparator>
 						</React.Fragment>
 					))}
 					{collapsed && hidden.length > 0 ? (
@@ -283,7 +349,7 @@ export const BreadcrumbTrail = React.memo(function BreadcrumbTrail({
 							<BreadcrumbItem>
 								<HiddenCrumbsPopover hidden={hidden} renderLink={renderLink} />
 							</BreadcrumbItem>
-							<BreadcrumbSeparator />
+							<BreadcrumbSeparator>{separator}</BreadcrumbSeparator>
 						</React.Fragment>
 					) : null}
 					{tail.map((item, offset) => {
@@ -291,13 +357,14 @@ export const BreadcrumbTrail = React.memo(function BreadcrumbTrail({
 						return (
 							<React.Fragment key={`${item.label}-${String(index)}`}>
 								{renderCrumb(item, index)}
-								{index !== lastIndex ? <BreadcrumbSeparator /> : null}
+								{index !== lastIndex ? <BreadcrumbSeparator>{separator}</BreadcrumbSeparator> : null}
 							</React.Fragment>
 						);
 					})}
-					{/* Copy-link action — appears on hover at `sm`+, always on touch */}
-					<BreadcrumbItem className="ml-0.5">
-						<CopyLinkButton />
+					{/* Copy-link action — appears on hover at `sm`+, always on touch;
+					    hidden entirely when printing (feature — print support). */}
+					<BreadcrumbItem className="ml-0.5 print:hidden">
+						<CopyLinkButton onCopy={onCopy} />
 					</BreadcrumbItem>
 				</div>
 			</BreadcrumbList>

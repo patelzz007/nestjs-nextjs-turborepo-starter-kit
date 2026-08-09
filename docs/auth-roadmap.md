@@ -9,7 +9,7 @@ coverImage: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=f
 
 # Auth Roadmap
 
-> Ideas and design decisions for improving authentication, authorization, and multi-tenancy.
+> [!NOTE] Ideas and design decisions for improving authentication, authorization, and multi-tenancy.
 >
 > **Jump to:** [📊 Status at a glance](#-status-at-a-glance) · [A. Security hardening](#a-security-hardening-api-core) · [B. API & protocol](#b-api--protocol) · [C. Client & apps](#c-client--apps) · [🆕 Beyond the 30](#-beyond-the-30--additional-enhancements) · [🧸 The auth flow A→Z](#-the-authentication-flow-from-a-to-z-explained-like-im-5)
 
@@ -157,7 +157,7 @@ The backend is **always multi-tenant by design**. Single-tenancy is simply the c
 
 ### Data Model
 
-```prisma
+```prisma title="schema.prisma"
 model Organization {
   id        String   @id @default(uuid())
   name      String   @db.VarChar(200)
@@ -190,7 +190,7 @@ model User {
 
 Every tenant-scoped data table gets `organizationId`:
 
-```prisma
+```prisma title="schema.prisma"
 model Url {
   id             String  @id @default(uuid())
   organizationId String  @map("organization_id")    // ← Direct FK for perf
@@ -216,7 +216,7 @@ if (!tenantConfig.enabled) {
 
 **Correct approach — Real org name from day one:**
 
-```env
+```env title=".env"
 # .env  ← Set this during project setup
 DEFAULT_ORG_NAME=Joe's Burger
 DEFAULT_ORG_SLUG=joes-burger
@@ -389,7 +389,7 @@ Environment variables (`RESEND_API_KEY`, `JWT_ACCESS_SECRET`, etc.) are read at 
 
 ### Data Model
 
-```prisma
+```prisma title="schema.prisma"
 model Secret {
   id          String   @id @default(uuid())
   key         String   @unique @db.VarChar(200)  // "RESEND_API_KEY"
@@ -778,7 +778,7 @@ Deciding what to build first? Here's a rough priority by impact vs effort:
 
 # Auth System Roadmap
 
-> Last updated: July 30, 2026
+> [!NOTE] Last updated: July 30, 2026
 > Auth architecture: JWT access + refresh tokens, httpOnly cookie isolation (web vs admin), RBAC permissions
 
 ---
@@ -1012,7 +1012,7 @@ The cooldown window and max-per-window are configurable via env vars.
 
 # ✅ Auth Hardening — 5 Features Shipped
 
-> Five items from the roadmap above were designed, implemented, and shipped together as the
+> [!NOTE] Five items from the roadmap above were designed, implemented, and shipped together as the
 > **auth hardening batch**. This section is the source of truth for how they were built — the
 > implementation notes, the files involved, and the do's and don'ts that keep the machinery
 > from regressing.
@@ -1244,7 +1244,7 @@ The 30-point auth hardening plan (deep dive) -----------------------------------
 
 # 🔐 Auth Hardening — 30-Item Deep-Dive
 
-> **Status legend:** ✅ **Done** (shipped + tested) · 🟡 **Partial** (exists in some form, gaps remain) · ⬜ **Pending** (not started)
+> [!NOTE] **Status legend:** ✅ **Done** (shipped + tested) · 🟡 **Partial** (exists in some form, gaps remain) · ⬜ **Pending** (not started)
 >
 > This section expands the 30-point list (A. Security · B. API & Protocol · C. Client & Apps)
 > into implementation-ready specs. Each item states the **goal**, the **current state as verified
@@ -1791,7 +1791,7 @@ Items **26** (error-code mapping + i18n), **27** (password UX), **28** (client r
 
 ## 🆕 Beyond the 30 — additional enhancements
 
-> Extra ideas (items 31–43) that would further harden or round out the auth story. Same format: goal, current state, plan, do/don't.
+> [!NOTE] Extra ideas (items 31–43) that would further harden or round out the auth story. Same format: goal, current state, plan, do/don't.
 
 ### 31. Self-service password change (P1) — ⬜ Pending
 
@@ -1905,7 +1905,7 @@ Items **26** (error-code mapping + i18n), **27** (password UX), **28** (client r
 
 ---
 
-> **Everything above is pending.** Suggested order: 31 → 15 → 3 → 25 → 5 → 12 (the P1 security chain), then 16/23 (UI + pagination), then the rest by priority.
+> [!WARNING] **Everything above is pending.** Suggested order: 31 → 15 → 3 → 25 → 5 → 12 (the P1 security chain), then 16/23 (UI + pagination), then the rest by priority.
 
 ---
 
@@ -1913,7 +1913,7 @@ Items **26** (error-code mapping + i18n), **27** (password UX), **28** (client r
 
 # 🧸 The Authentication Flow from A to Z (Explained Like I'm 5)
 
-> Everything in this section is **true today** (verified against the code). Read it top-to-bottom once,
+> [!NOTE] Everything in this section is **true today** (verified against the code). Read it top-to-bottom once,
 > and you'll understand the whole journey a single login takes — and what happens after, when tokens
 > expire, refresh, and log out.
 >
@@ -1936,7 +1936,7 @@ When you open `http://localhost:3001/auth/login`, the request first hits **the p
 2. `/auth/login` is an **auth route** → the proxy lets the page through (it's the login page, after all).
 3. The page renders. The login form's parent (`AuthProvider`) shows a spinner for a split second (`isInitializing` — item 30), then reveals the form.
 
-> **Why the spinner?** The browser needs one "tick" after the page loads to know it's a real browser and not a server render. Showing the form during that tick would flash it on every reload (and for logged-in users the proxy is about to bounce them away anyway).
+> [!NOTE] **Why the spinner?** The browser needs one "tick" after the page loads to know it's a real browser and not a server render. Showing the form during that tick would flash it on every reload (and for logged-in users the proxy is about to bounce them away anyway).
 
 ---
 
@@ -1982,7 +1982,7 @@ Two important details:
 - `credentials: "include"` is set on every request → the browser **sends cookies** with the request (right now there are none yet, but this matters for steps 6–8).
 - The admin request carries `X-Client-Type: admin` so the API knows to (a) require admin access and (b) set the **admin cookie set** (`adminAccessToken`/`adminRefreshToken`) instead of the web ones. That's how the two apps keep isolated sessions on the same browser.
 
-> ⚠️ Note: this request goes **straight from the browser to the API** (`localhost:8080`), not through the Next.js proxy. The proxy only handles *page navigations*; API calls are direct, with CORS enabled in `main.ts` to allow `:3000`/`:3001` origins.
+> [!WARNING] Note: this request goes **straight from the browser to the API** (`localhost:8080`), not through the Next.js proxy. The proxy only handles *page navigations*; API calls are direct, with CORS enabled in `main.ts` to allow `:3000`/`:3001` origins.
 
 ### 2c. The API's front door (middleware + guards)
 
@@ -2048,7 +2048,7 @@ Set-Cookie: refreshToken=<jwt>; HttpOnly; SameSite=Lax; Path=/
 { "success": true, "data": { "user": { ... }, "accessToken": "...", "refreshToken": "..." }, "meta": {} }
 ```
 
-> **Why `HttpOnly`?** The browser stores the cookies but **JavaScript never sees them**. This blocks XSS attacks: even if an attacker runs script on your page, they can't read your tokens and can't steal your session. The cookies just ride along automatically on every request.
+> [!NOTE] **Why `HttpOnly`?** The browser stores the cookies but **JavaScript never sees them**. This blocks XSS attacks: even if an attacker runs script on your page, they can't read your tokens and can't steal your session. The cookies just ride along automatically on every request.
 > **Why `SameSite=Lax`?** The browser only sends them on same-site requests and top-level navigations — a cross-site request forgery (CSRF) defense.
 
 ---
@@ -2075,7 +2075,7 @@ Every navigation (`/hello`, `/settings/general`, …) hits `proxy.ts` **before**
 3. **Is it a dead session?** The refresh was rejected → the proxy clears the stale cookies and bounces you to login (breaking the infinite "stale cookie" loop).
 4. **Everything fine?** → serve the page.
 
-> ⚠️ **You won't see the proxy refresh in the browser's Network tab.** It's server-to-server. You'll only see it in the terminal as `[proxy:web] /hello: refreshed — rotated 2 cookie(s) (API 200, 12ms)`.
+> [!WARNING] **You won't see the proxy refresh in the browser's Network tab.** It's server-to-server. You'll only see it in the terminal as `[proxy:web] /hello: refreshed — rotated 2 cookie(s) (API 200, 12ms)`.
 
 ---
 
