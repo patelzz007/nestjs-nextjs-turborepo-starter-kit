@@ -310,6 +310,13 @@ move it up to the page (smart component) or into `@workspace/client`.
   sibling of `SessionsController` in the sessions module); `POST /users` →
   `RootUsersController` in the auth module. A module can host multiple
   controllers — use an unprefixed controller for root-pathed endpoints.
+- **Configuration lives in a `@Global() ConfigModule** (`src/config/config.module.ts`)
+  that provides + exports `TypedConfigService`. It MUST be global: Nest instantiates
+  imported modules before the importing module's own providers, so a locally-provided
+  `TypedConfigService` is invisible to dynamic modules like
+  `ThrottlerModule.forRootAsync({ inject: [TypedConfigService] })` — booting fails
+  with `UnknownDependenciesException` (THROTTLER:MODULE_OPTIONS) if it isn't global.
+  Do NOT re-register `TypedConfigService` in feature modules; inject the global one.
 - **`common/` only holds truly shared HTTP plumbing.** The auth-domain files
   (guards, auth decorators, set/clear-auth-cookies interceptors, cookie
   config, cookie service) live in `modules/auth/{guards,decorators,interceptors,constants,services}`

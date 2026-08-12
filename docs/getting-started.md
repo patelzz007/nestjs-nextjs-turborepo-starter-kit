@@ -3,7 +3,7 @@ title: "Getting Started — A-to-Z Setup Guide"
 description: "From an empty laptop to a running monorepo: prerequisites, env setup, database bootstrap, and all three apps."
 order: 1
 author: "Acme Inc."
-lastUpdated: "2026-08-02"
+lastUpdated: "2026-08-11"
 coverImage: "https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&w=1600&q=80"
 ---
 
@@ -803,7 +803,21 @@ follows:
     pill (no border), and lists with `marker`-colored bullets. Beyond the
     basics the renderer adds: **interactive tables**
     (`components/docs/docs-table.tsx` — sticky header, zebra rows, row-hover
-    highlight, horizontal scroll on small screens with a swipe affordance), a
+    highlight, horizontal scroll on small screens with a swipe affordance),
+    **image galleries** (a table whose **every** body row contains an `<img>` — e.g.
+    a "Template | Preview" screenshot table — is detected by
+    `lib/docs/image-gallery.ts` and rendered as a **polished card grid**
+    (`components/docs/docs-image-gallery.tsx`: responsive 1/2/3-column showcase
+    cards where each screenshot is shown **in full** — `object-contain`, never
+    cropped — inside a padded frame with a quiet token-driven **dot-grid
+    texture** (the same `radial-gradient` pattern as the docs banner) acting as
+    a neutral stage, a hover zoom + ring, an **"Open full size"** pill button
+    (bottom-right, hover-revealed on desktop, always tappable on touch) that
+    opens the shared **lightbox**, and a caption bar derived from the row
+    labels — the title comes from the image `alt` text and the description from
+    the remaining label text with wrapping parens trimmed; the detection is
+    conservative, so any table with even one image-less row falls back to the
+    normal data table), a
     **drop-cap on the article's opening paragraph** (a remark plugin stamps
     the first ROOT-level paragraph — never one inside a callout, so a guide
     that opens with `> [!NOTE]` doesn't get a drop-cap inside it),
@@ -811,7 +825,22 @@ follows:
     — JWT, RBAC, jti, HS256, … — renders as `<abbr title>` hover tooltips;
     add a term + one-line definition there and every guide gets it), an
     **image lightbox** (click a diagram's zoom button to open a native
-    `<dialog>` full-view overlay; Esc / backdrop / ✕ closes), and optional
+    `<dialog>` full-view overlay; Esc / backdrop / ✕ closes — the lightbox
+    helpers live in the shared `lib/docs/lightbox.ts` module, used by BOTH the
+    renderer's `img` component and the image gallery, so every zoom button opens
+    the same dialog). The lightbox supports **two zoom modes** toggled by
+    clicking the image itself (or the mode pill in the dialog header):
+    **Fit** — the default, image scaled to the largest size that fits the
+    dialog — and **1:1** (actual size), where the image renders at its
+    natural pixel resolution inside a scrollable box so you can pan around
+    large screenshots. Every open starts in Fit; a double-click always snaps
+    back to Fit, and the mode resets when the dialog closes. The header also
+    carries a live mode pill ("Fit" / "1:1") as an accessible status, and a
+    **Download** button that fetches the current image as a blob (same-origin
+    credentials, so auth-gated images work) and saves it at **full
+    resolution** — the filename is derived from the image's URL path (or its
+    alt text as a fallback), with a success/error toast — and
+    optional
     **fence titles** — a `title="file.ts"` hint on the fence's first line
     shows a filename in the code-block header:
     ` ```typescript title="endpoints.ts" `.
@@ -844,7 +873,8 @@ follows:
     | info (default) | `> [!NOTE]` / `> [!INFO]` | blue |
     | warning | `> [!WARNING]` / `> [!CAUTION]` / `> [!IMPORTANT]` | yellow |
     | error | `> [!ERROR]` / `> [!DANGER]` | red |
-    | success | `> [!SUCCESS]` / `> [!TIP]` | green |
+    | success | `> [!SUCCESS]` | blue (same styling as info) |
+    | tip | `> [!TIP]` | violet (own hue + lightbulb icon) |
 
     The marker is **stripped from the rendered text**. When no marker is
     present (the existing guides use plain `>` quotes), the kind is **detected
@@ -861,8 +891,11 @@ follows:
     component reads it back with `QuoteKindSchema`, so the icon always
     matches the colour, rule 13). A `**Bold title:**` lead renders as an
     icon + bold header line; without one, the icon sits inline before the
-    content. `[!TIP]` markers render as a decorative **pull-quote** (larger,
-    centered) instead of a callout. The right-hand **ToC**
+    content. Every marker kind — NOTE/INFO/TIP/SUCCESS/WARNING/ERROR —
+    renders the same **standardized callout** layout: only the accent colour
+    and icon vary by kind (TIP gets a distinct **violet** hue with a
+    **lightbulb** icon so it never reads as a plain success), so no callout
+    ever looks like an outlier. The right-hand **ToC**
     (`components/docs/docs-toc.tsx`) is a sticky scroll-spy rail at the `lg`
     breakpoint (hidden on mobile): a **visible 1px gray guide line** (the same
     guide-line concept as the sidebar's nested items, but on a tone that reads

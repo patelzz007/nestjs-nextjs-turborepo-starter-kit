@@ -7,7 +7,10 @@ import cookieParser from "cookie-parser";
 import { AppModule } from "./app.module.js";
 
 async function bootstrap(): Promise<void> {
-	const app = await NestFactory.create(AppModule);
+	// rawBody: true — the Resend webhook controller reads `req.rawBody` so the
+	// signature check covers the exact bytes Resend sent (the JSON body parser
+	// would otherwise re-encode whitespace and break verification).
+	const app = await NestFactory.create(AppModule, { rawBody: true });
 
 	app.enableShutdownHooks();
 

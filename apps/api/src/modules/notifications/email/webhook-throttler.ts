@@ -1,0 +1,58 @@
+import type { ThrottlerModuleOptions } from "@nestjs/throttler";
+
+import type { TypedConfigService } from "../../../config/typed-config.service.js";
+
+/** Fallback tracker when a request carries no usable IP information. */
+const UNKNOWN_CLIENT = "unknown";
+
+/**
+ * Resolve the REAL client IP behind the cloudflared tunnel / Cloudflare edge.
+ *
+ * The tunnel is the only public ingress, and Cloudflare overwrites
+ * `cf-connecting-ip` at the edge (it is not spoofable through the tunnel), so
+ * trusting it is safe. Direct localhost access falls back to the socket
+ * address. Order:
+ *
+ * 1. `cf-connecting-ip` — set by Cloudflare's edge, forwarded by cloudflared.
+ * 2. first value of `x-forwarded-for` — the tunnel's standard forward header.
+ * 3. `req.ip` — the direct socket address (local dev without a tunnel).
+ */ export function resolveClientIp(req: { readonly headers?: Readonly<Record<string, unknown>>; readonly ip?: string }): string {
+	const headers: Readonly<Record<string, unknown>> = req.headers ?? {};
+	const cfConnectingIp: unknown = headers["cf-connecting-ip"];
+	if (typeof cfConnectingIp === "string") {
+		const trimmed: string = cfConnectingIp.trim();
+		if (trimmed.length > 0) {
+			return trimmed;
+		}
+	}
+	const forwardedFor: unknown = headers["x-forwarded-for"];
+	if (typeof forwardedFor === "string") {
+		const firstHop: string = forwardedFor.split(",")[0]?.trim() ?? "";
+		if (firstHop.length > 0) {
+			return firstHop;
+		}
+	}
+	return typeof req.ip === "string" && req.ip.trim().length > 0 ? req.ip.trim() : UNKNOWN_CLIENT;
+}
+
+/**
+ * Build the per-IP rate-limit options for the public delivery-webhook route.
+ *
+ * Defense-in-depth: the endpoint is already signature-verified, but the route
+ * is public, so a client (attacker or misbehaving script) could hammer it —
+ * every request costs signature work + log lines. The fixed-window limiter
+ * caps requests per IP per minute; a request that 403s on signature still
+ * counts (the guard runs before the handler), which is exactly what we want
+ * for abuse.
+ *
+ * `WEBHOOK_RATE_LIMIT_PER_MINUTE=0` disables the limiter entirely (empty
+ * throttlers = the guard passes everything).
+ */
+export function webhookThrottlerOptionsFactory(config: TypedConfigService): ThrottlerModuleOptions {
+	const limitPerMinute: number = config.webhookRateLimitPerMinute;
+	return {
+		errorMessage: "Too many webhook requests — this endpoint is rate-limited per IP (WEBHOOK_RATE_LIMIT_PER_MINUTE). Try again shortly.",
+		getTracker: (req: Record<string, unknown>): string => resolveClientIp(req),
+		throttlers: limitPerMinute > 0 ? [{ name: "webhook", ttl: 60_000, limit: limitPerMinute }] : [],
+	};
+}

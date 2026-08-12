@@ -6,6 +6,10 @@
 import type { QueryKey } from "@tanstack/react-query";
 import {
 	ApiResponseMetaSchema,
+	EmailLogListResponseSchema,
+	EmailPreviewListResponseSchema,
+	EmailPreviewSchema,
+	EmailSendResultSchema,
 	LoginResponseSchema,
 	LoginSchema,
 	LogoutResponseSchema,
@@ -15,6 +19,10 @@ import {
 	SignupSchema,
 	UserResponseSchema,
 	type ApiResponseMeta,
+	type EmailLogListResponse,
+	type EmailPreview,
+	type EmailPreviewListResponse,
+	type EmailSendResult,
 	type LoginInput,
 	type LoginResponse,
 	type LogoutResponse,
@@ -130,5 +138,45 @@ export const authEndpoints: {
 		queryKey: ["auth", "logout"],
 		bodySchema: z.object({}).strict(),
 		responseSchema: envelope(LogoutResponseSchema),
+	},
+};
+
+// ── Email template preview endpoints ───────────────────────────────────────
+
+/**
+ * Email-template preview endpoints used by the admin panel's Email Templates
+ * page. `previewDetail` is a factory because the route carries a `:key` param
+ * — the admin page builds the procedure per selected template.
+ */
+export const emailEndpoints: {
+	readonly previewList: GetProcedure<Envelope<EmailPreviewListResponse>>;
+	readonly previewDetail: (key: string) => GetProcedure<Envelope<EmailPreview>>;
+	readonly previewSend: (key: string) => PostProcedure<Record<string, never>, Envelope<EmailSendResult>>;
+	readonly logList: GetProcedure<Envelope<EmailLogListResponse>>;
+} = {
+	previewList: {
+		path: "/notifications/email-preview",
+		method: "GET",
+		queryKey: ["email", "preview-list"],
+		responseSchema: envelope(EmailPreviewListResponseSchema),
+	},
+	previewDetail: (key: string): GetProcedure<Envelope<EmailPreview>> => ({
+		path: `/notifications/email-preview/${key}`,
+		method: "GET",
+		queryKey: ["email", "preview-detail", key],
+		responseSchema: envelope(EmailPreviewSchema),
+	}),
+	previewSend: (key: string): PostProcedure<Record<string, never>, Envelope<EmailSendResult>> => ({
+		path: `/notifications/email-preview/${key}/send`,
+		method: "POST",
+		queryKey: ["email", "preview-send", key],
+		bodySchema: z.object({}).strict(),
+		responseSchema: envelope(EmailSendResultSchema),
+	}),
+	logList: {
+		path: "/notifications/email-log",
+		method: "GET",
+		queryKey: ["email", "log-list"],
+		responseSchema: envelope(EmailLogListResponseSchema),
 	},
 };

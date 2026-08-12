@@ -217,7 +217,10 @@ describe("detectQuoteKind", () => {
 		{ text: "Login gotcha: the cookie must be httpOnly", expected: "warning" },
 		// Success keywords.
 		{ text: "✅ Done — all tests pass", expected: "success" },
-		{ text: "Tip: keep the tuple ordering stable", expected: "success" },
+		{ text: "Success: the migration applied cleanly", expected: "success" },
+		// Tip keywords — their own kind (violet), distinct from success.
+		{ text: "Tip: keep the tuple ordering stable", expected: "tip" },
+		{ text: "💡 Wrap long-running queries in a transaction", expected: "tip" },
 		// Neutral prose stays info — no substring false positives.
 		{ text: "The do's and don'ts that keep the machinery stable", expected: "info" },
 		{ text: "An antipattern to avoid is premature optimization", expected: "info" },

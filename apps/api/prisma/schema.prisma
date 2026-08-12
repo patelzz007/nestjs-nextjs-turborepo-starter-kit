@@ -519,3 +519,27 @@ model ApiKeyUsageLog {
   @@index([createdAt])
   @@map("api_key_usage_logs")
 }
+
+// ---------------------------------------------------------------------------
+// Email Audit Trail
+// ---------------------------------------------------------------------------
+
+model EmailLog {
+  id          String   @id @default(uuid())
+  templateKey String   @map("template_key")
+  to          String   @db.VarChar(255)
+  subject     String   @db.VarChar(255)
+  status      String // "sent" | "delivered" | "bounced" | "complained" | "failed"
+  resendId    String?  @map("resend_id")
+  error       String?  @db.Text
+  metadata    Json?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@index([templateKey])
+  @@index([to])
+  @@index([resendId])
+  @@index([createdAt])
+  @@map("email_logs")
+}

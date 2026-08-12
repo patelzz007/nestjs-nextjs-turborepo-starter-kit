@@ -3,7 +3,7 @@
 import "katex/dist/katex.min.css";
 
 import { cn } from "@/lib/utils";
-import { AlertOctagon, AlertTriangle, Check, CheckCircle2, Copy, Info, ZoomIn } from "lucide-react";
+import { AlertOctagon, AlertTriangle, Check, Copy, Info, Lightbulb, ZoomIn } from "lucide-react";
 import type { Blockquote, Root, Text } from "mdast";
 import * as React from "react";
 import { isValidElement, useState, type ReactElement, type ReactNode } from "react";
@@ -14,32 +14,40 @@ import remarkMath from "remark-math";
 import { visit } from "unist-util-visit";
 
 import { CodeBlock } from "@/components/docs/code-block";
+import { DocsImageGallery } from "@/components/docs/docs-image-gallery";
 import { MermaidDiagram } from "@/components/docs/mermaid-diagram";
 import { DocsTable } from "@/components/docs/docs-table";
 import { HEADING_SCROLL_OFFSET } from "@/lib/constants";
+import { extractImageGalleryItems } from "@/lib/docs/image-gallery";
+import { handleLightboxClick } from "@/lib/docs/lightbox";
 import { detectQuoteKind, GLOSSARY_TERMS, QUOTE_MARKER_KINDS, QuoteKindSchema, slugifyHeadingText, type QuoteKind } from "@/lib/docs/markdown";
 import { CodeLanguage } from "@/lib/docs/code-block";
 
 // ─── Remark plugins ─────────────────────────────────────────────────────────
 
-/** Light pastel callout classes per kind — "don't make it too dark". */
+/**
+ * Light pastel callout classes per kind — "don't make it too dark".
+ * `success` intentionally reuses `info`'s blue styling (design decision: a
+ * success callout should read exactly like an info callout, not introduce a
+ * fifth color), while `tip` gets its own violet hue so a tip is instantly
+ * distinguishable from a success.
+ */
 const QUOTE_KIND_CLASSES: Readonly<Record<QuoteKind, string>> = {
 	info: "border-blue-400/60 bg-blue-50 text-blue-900 dark:border-blue-400/50 dark:bg-blue-500/10 dark:text-blue-200",
+	tip: "border-violet-400/60 bg-violet-50 text-violet-900 dark:border-violet-400/50 dark:bg-violet-500/10 dark:text-violet-200",
 	warning: "border-amber-400/60 bg-amber-50 text-amber-900 dark:border-amber-400/50 dark:bg-amber-500/10 dark:text-amber-200",
 	error: "border-red-400/60 bg-red-50 text-red-900 dark:border-red-400/50 dark:bg-red-500/10 dark:text-red-200",
-	success: "border-emerald-400/60 bg-emerald-50 text-emerald-900 dark:border-emerald-400/50 dark:bg-emerald-500/10 dark:text-emerald-200",
+	success: "border-blue-400/60 bg-blue-50 text-blue-900 dark:border-blue-400/50 dark:bg-blue-500/10 dark:text-blue-200",
 };
 
-/** Icon per callout kind (for the title line). */
+/** Icon per callout kind (for the title line) — `success` shares `info`'s icon; `tip` gets a lightbulb. */
 const QUOTE_KIND_ICONS: Readonly<Record<QuoteKind, React.ComponentType<{ readonly className?: string }>>> = {
 	info: Info,
+	tip: Lightbulb,
 	warning: AlertTriangle,
 	error: AlertOctagon,
-	success: CheckCircle2,
+	success: Info,
 };
-
-/** `[!TIP]` markers render as a pull-quote (larger, decorative) instead of a plain callout. */
-const PULL_QUOTE_MARKERS: readonly [string, ...string[]] = ["tip"];
 
 /** Recursively joins all text in a blockquote (for quote-kind detection). */
 function collectQuoteText(node: Blockquote): string {
@@ -107,16 +115,13 @@ function remarkQuoteKindsPlugin(): (tree: Root) => void {
 				}
 			}
 
-			// `[!TIP]` renders as a decorative pull-quote; everything else is a
-			// standard callout.
-			const isPullQuote = markerMatch?.[1] !== undefined && PULL_QUOTE_MARKERS.includes(markerMatch[1].toLowerCase());
 			node.data = {
 				...(node.data ?? {}),
 				hProperties: {
 					...(node.data?.hProperties ?? {}),
 					// hast `Properties.className` is a string array — the plugin's
 					// classes merge with any the markdown itself provided.
-					className: [QUOTE_KIND_CLASSES[kind], ...(isPullQuote ? ["pull-quote"] : [])],
+					className: [QUOTE_KIND_CLASSES[kind]],
 					// The kind is ALSO stamped as a data attribute so the component
 					// can pick the matching icon — reverse-mapping the color classes
 					// would be fragile string sniffing.
@@ -471,12 +476,12 @@ const components: Partial<Components> = {
 
 	// ── Blockquotes — color-coded callouts with icon + title line ──────────
 	// The remark `remarkQuoteKindsPlugin` attaches the kind's classes; here we
-	// render the leading `**Title:**` (if any) as a bold icon header. `[!TIP]`
-	// markers render as a decorative pull-quote instead of a callout.
+	// render the leading `**Title:**` (if any) as a bold icon header. Every
+	// marker kind (NOTE/INFO/TIP/SUCCESS/WARNING/ERROR) renders the same
+	// standardized callout — color and icon vary by kind, nothing else.
 	blockquote({ node: _node, className, children, ...props }): React.JSX.Element {
 		const flattened = flattenForCallout(children);
 		const titleMatch = /^\*\*([^*]+)\*\*\s*:?\s*(.*)$/s.exec(flattened);
-		const isPullQuote = (className ?? "").includes("pull-quote");
 		// The kind is stamped on the hast node's properties by the remark
 		// plugin — zod-parse it (rule 13) so a malformed value degrades to the
 		// neutral info kind instead of blowing up or being string-sniffed.
@@ -486,22 +491,6 @@ const components: Partial<Components> = {
 		const Icon = QUOTE_KIND_ICONS[kind];
 		const title = titleMatch?.[1] ?? "";
 		const body = titleMatch !== null ? (titleMatch[2] ?? "") : flattened;
-
-		if (isPullQuote) {
-			return (
-				<blockquote
-					className={cn("my-10 rounded-2xl border border-border/70 bg-gradient-to-br from-primary/[0.06] via-transparent to-transparent px-8 py-7 text-center", className)}
-					{...props}>
-					<span aria-hidden="true" className="block text-4xl leading-none text-primary/30 select-none">
-						"
-					</span>
-					<div className="mx-auto max-w-xl text-[15px] leading-7 text-foreground/90">
-						{title.length > 0 ? <strong className="mb-1 block font-semibold text-primary">{title}</strong> : null}
-						{body}
-					</div>
-				</blockquote>
-			);
-		}
 
 		return (
 			<blockquote className={cn("my-6 rounded-r-lg border-l-4 px-4 py-3 text-[15px] leading-7", className)} {...props}>
@@ -525,8 +514,17 @@ const components: Partial<Components> = {
 		);
 	},
 
-	// ── Tables — interactive docs tables (sticky header, zebra, hover) ─────
+	// ── Tables — interactive docs tables (sticky header, zebra, hover).
+	// Image-bearing tables (every body row carries a screenshot) are rendered
+	// as a responsive card gallery instead of a data table — a gallery of
+	// screenshots reads far better as cards. Detection is a pure helper over
+	// the hast node (`extractImageGalleryItems`); a mixed-shape table falls
+	// back to the regular DocsTable.
 	table({ node: _node, children, ...props }): React.JSX.Element {
+		const galleryItems = extractImageGalleryItems(_node);
+		if (galleryItems.length > 0) {
+			return <DocsImageGallery items={galleryItems} />;
+		}
 		return <DocsTable {...props}>{children}</DocsTable>;
 	},
 	thead({ node: _node, children, ...props }): React.JSX.Element {
@@ -637,59 +635,6 @@ function flattenForCallout(node: ReactNode): string {
 	return "";
 }
 
-/**
- * Creates the shared lightbox `<dialog>` (lazily, once) with its backdrop-close
- * wiring. Returns the non-null element so callers never re-check for null.
- */
-function createLightboxDialog(): HTMLDialogElement {
-	const dialog = document.createElement("dialog");
-	dialog.setAttribute("data-docs-lightbox", "true");
-	dialog.className =
-		"fixed inset-0 z-50 m-auto max-w-[92vw] max-h-[88vh] rounded-2xl border border-border/60 bg-background/95 p-0 shadow-2xl backdrop:bg-black/70 backdrop:backdrop-blur-sm";
-	// Click on the backdrop closes the dialog (the event target is the
-	// dialog itself only when the backdrop — not the image — was clicked).
-	dialog.addEventListener("click", (event): void => {
-		if (event.target === dialog) {
-			dialog.close();
-		}
-	});
-	// Accessible name for screen readers — the dialog contains only an image
-	// plus an icon button, so it needs an explicit label.
-	dialog.setAttribute("aria-label", "Image preview");
-	return dialog;
-}
-
-/** Opens the shared image lightbox (a native <dialog>, created on demand). */
-function openLightbox(trigger: HTMLElement): void {
-	const src = trigger.getAttribute("data-lightbox-src") ?? "";
-	const alt = trigger.getAttribute("data-lightbox-alt") ?? "";
-	let dialog = document.querySelector<HTMLDialogElement>("dialog[data-docs-lightbox]");
-	if (dialog === null) {
-		dialog = createLightboxDialog();
-		document.body.appendChild(dialog);
-	}
-	// Replace content — re-created on every open so the src/alt stay fresh.
-	dialog.replaceChildren();
-	const img = document.createElement("img");
-	img.src = src;
-	img.alt = alt;
-	img.className = "block max-h-[80vh] w-auto max-w-full rounded-xl object-contain";
-	const closeButton = document.createElement("button");
-	closeButton.type = "button";
-	closeButton.textContent = "✕";
-	closeButton.setAttribute("aria-label", "Close image");
-	closeButton.className =
-		"absolute top-3 right-3 flex size-8 cursor-pointer items-center justify-center rounded-full bg-black/60 text-sm text-white transition-colors hover:bg-black/80";
-	closeButton.addEventListener("click", (): void => {
-		dialog.close();
-	});
-	const wrapper = document.createElement("div");
-	wrapper.className = "relative";
-	wrapper.append(img, closeButton);
-	dialog.append(wrapper);
-	dialog.showModal();
-}
-
 /** Type guard: checks if a React element has a children prop with ReactNode content */
 function isElementWithChildren(node: ReactNode): node is ReactElement & { props: { children: ReactNode } } {
 	return isValidElement(node) && node.props !== null && typeof node.props === "object" && "children" in node.props;
@@ -716,12 +661,6 @@ function extractTextFromReactNode(node: ReactNode): string {
 function extractId(children: ReactNode): string {
 	return slugifyHeadingText(extractTextFromReactNode(children));
 }
-
-/** Lightbox trigger handler — opens the shared dialog for the clicked image. */
-const handleLightboxClick = (event: React.MouseEvent<HTMLButtonElement>): void => {
-	event.preventDefault();
-	openLightbox(event.currentTarget);
-};
 
 // ─── Heading wrapper — applies the shared scroll-margin via inline style ────
 

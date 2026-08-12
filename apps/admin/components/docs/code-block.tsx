@@ -431,7 +431,11 @@ export function CodeBlock({
 							{showLineNumbers ? <LineNumberGutter lineCount={lineCount} /> : null}
 							<div
 								className={cn(
-									"min-w-0 flex-1 py-3 [&_code]:text-[13px]! [&_code]:leading-6! [&_pre]:m-0! [&_pre]:bg-transparent! [&_pre]:p-0! [&_pre]:shadow-none!",
+									// px-4 gives the code body breathing room from the line-number
+									// gutter's divider (and the block's left edge when no gutter is
+									// shown) — the highlighted `<pre>` is padded to 0, so without
+									// this the text would hug the divider.
+									"min-w-0 flex-1 px-4 py-3 [&_code]:text-[13px]! [&_code]:leading-6! [&_pre]:m-0! [&_pre]:bg-transparent! [&_pre]:p-0! [&_pre]:shadow-none!",
 									// Shiki emits `.line` spans as INLINE elements separated by literal
 									// `\n` text nodes. The transformer strips those newlines, so a plain
 									// `display: block` gives every row EXACTLY the 24px `leading-6` the

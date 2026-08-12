@@ -24,7 +24,8 @@
 		"db:reset": "pnpm --filter @workspace/api db:reset",
 		"deps:check": "turbo run deps:check",
 		"deps:fix": "turbo run deps:fix",
-		"deps:list": "turbo run deps:list"
+		"deps:list": "turbo run deps:list",
+		"kill:port": "PIDS=$(lsof -ti :8080 2>/dev/null); if [ -n \"$PIDS\" ]; then kill -9 $PIDS; echo \"Freed port 8080 (killed $PIDS)\"; else echo \"Port 8080 is already free\"; fi"
 	},
 	"devDependencies": {
 		"@darraghor/eslint-plugin-nestjs-typed": "^7.3.0",

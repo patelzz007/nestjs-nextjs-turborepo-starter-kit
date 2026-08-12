@@ -75,6 +75,18 @@ function isApiResponse(value: JsonValue): value is z.infer<typeof ApiResponseSch
 export class ResponseInterceptor implements NestInterceptor {
 	public intercept(context: ExecutionContext, next: CallHandler): Observable<object> {
 		const request: Request = context.switchToHttp().getRequest<Request>();
+		// ── SSE routes pass through untouched ──────────────────────────────
+		// The `@Sse()` adapter writes each frame (`data: …`) directly to the
+		// wire. Wrapping every frame in the `{ success, data, meta }` envelope
+		// would corrupt the stream (each frame would become a nested envelope),
+		// so `text/event-stream` requests bypass the wrapper entirely. The
+		// global AuthGuard still applies — the stream stays admin-only.
+		// `includes` (not strict equality) tolerates clients that send
+		// `text/event-stream, */*` or other Accept parameters.
+		const acceptHeader: string | undefined = request.headers.accept;
+		if (acceptHeader?.includes("text/event-stream")) {
+			return next.handle();
+		}
 		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Runtime type: CorrelationIdMiddleware sets correlationId
 		const correlationId: string = (request as RequestWithTrace).correlationId ?? "";
 

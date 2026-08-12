@@ -8,6 +8,12 @@
  *   no reading chrome — just the article on white.
  */
 
+/* ── Dotted "stage" texture (shared by the docs banner + image gallery) ── */
+.bg-dot-grid {
+	background-image: radial-gradient(circle, var(--color-border) 1px, transparent 1px);
+	background-size: 18px 18px;
+}
+
 /* ── Opening-paragraph drop-cap ─────────────────────────────────────────── */
 .docs-first-paragraph::first-letter {
 	float: left;

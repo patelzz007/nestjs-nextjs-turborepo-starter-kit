@@ -17,7 +17,7 @@ export default [
 		languageOptions: {
 			parserOptions: {
 				projectService: {
-					allowDefaultProject: ["src/modules/auth/*.spec.ts"],
+					allowDefaultProject: ["src/modules/auth/*.spec.ts", "scripts/render-email-previews.ts", "scripts/test-webhook-signature.ts"],
 				},
 			},
 		},
@@ -28,7 +28,7 @@ export default [
 	// and dynamic Express middleware patterns cannot be fully resolved by
 	// strictTypeChecked, causing false-positive no-unsafe-* errors.
 	{
-		files: ["src/prisma/**/*.ts", "src/modules/**/*.ts", "src/common/**/*.ts", "src/main.ts"],
+		files: ["src/prisma/**/*.ts", "src/modules/**/*.ts", "src/common/**/*.ts", "src/main.ts", "scripts/**/*.ts"],
 		rules: {
 			"@typescript-eslint/no-unsafe-assignment": "off",
 			"@typescript-eslint/no-unsafe-call": "off",

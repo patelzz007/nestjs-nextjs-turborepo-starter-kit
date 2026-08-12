@@ -168,6 +168,16 @@
 							"title": "Billing",
 							"url": "/settings/billing",
 							"icon": "CreditCard"
+						},
+						{
+							"title": "Email Templates",
+							"url": "/emails",
+							"icon": "Mail"
+						},
+						{
+							"title": "Email Log",
+							"url": "/email-log",
+							"icon": "MailCheck"
 						}
 					]
 				}
@@ -181,14 +191,51 @@
 					"url": "/docs",
 					"icon": "BookOpen",
 					"children": [
-						{ "title": "Getting Started", "url": "/docs/getting-started", "icon": "Rocket" },
-						{ "title": "Architecture", "url": "/docs/architecture", "icon": "Network" },
-						{ "title": "TypeScript", "url": "/docs/typescript", "icon": "Braces" },
-						{ "title": "ESLint", "url": "/docs/eslint", "icon": "Shield" },
-						{ "title": "Dependencies", "url": "/docs/dependencies", "icon": "Package" },
-						{ "title": "Prisma & DB", "url": "/docs/prisma", "icon": "Database" },
-						{ "title": "Auth Roadmap", "url": "/docs/auth-roadmap", "icon": "KeyRound" },
-						{ "title": "Boilerplate Roadmap", "url": "/docs/boilerplate-roadmap", "icon": "ScrollText" }
+						{
+							"title": "View All Docs",
+							"url": "/docs",
+							"icon": "Rocket"
+						},
+						{
+							"title": "Getting Started",
+							"url": "/docs/getting-started",
+							"icon": "Rocket"
+						},
+						{
+							"title": "Architecture",
+							"url": "/docs/architecture",
+							"icon": "Network"
+						},
+						{
+							"title": "TypeScript",
+							"url": "/docs/typescript",
+							"icon": "Braces"
+						},
+						{
+							"title": "ESLint",
+							"url": "/docs/eslint",
+							"icon": "Shield"
+						},
+						{
+							"title": "Dependencies",
+							"url": "/docs/dependencies",
+							"icon": "Package"
+						},
+						{
+							"title": "Prisma & DB",
+							"url": "/docs/prisma",
+							"icon": "Database"
+						},
+						{
+							"title": "Auth Roadmap",
+							"url": "/docs/auth-roadmap",
+							"icon": "KeyRound"
+						},
+						{
+							"title": "Boilerplate Roadmap",
+							"url": "/docs/boilerplate-roadmap",
+							"icon": "ScrollText"
+						}
 					]
 				}
 			]

@@ -55,6 +55,58 @@ export class TypedConfigService {
 		return process.env.EMAIL_FROM_ADDRESS ?? "noreply@example.com";
 	}
 
+	/** Send mode: "send" (real Resend), "log-only" (print), or "noop" (skip). */
+	public get emailMode(): "send" | "log-only" | "noop" {
+		const value: string | undefined = process.env.EMAIL_MODE;
+		return value === "log-only" || value === "noop" ? value : "send";
+	}
+
+	/** Dev-only override that redirects every send to a single inbox. */
+	public get emailTestTo(): string | undefined {
+		return process.env.EMAIL_TEST_TO;
+	}
+
+	/** Reply-to address appended to every outbound email. */
+	public get emailReplyTo(): string | undefined {
+		return process.env.EMAIL_REPLY_TO;
+	}
+
+	/** Max attempts per send (including the first try) — retry with backoff. */
+	public get emailMaxAttempts(): number {
+		const value: string | undefined = process.env.EMAIL_MAX_ATTEMPTS;
+		const parsed: number = value ? Number.parseInt(value, 10) : 3;
+		return parsed >= 1 && parsed <= 10 ? parsed : 3;
+	}
+
+	/** Per-send timeout in milliseconds. */
+	public get emailTimeoutMs(): number {
+		const value: string | undefined = process.env.EMAIL_TIMEOUT_MS;
+		return value ? Number.parseInt(value, 10) : 10_000;
+	}
+
+	/** Per-recipient sends-per-minute cap; 0 disables rate limiting. */
+	public get emailRateLimitPerMinute(): number {
+		const value: string | undefined = process.env.EMAIL_RATE_LIMIT_PER_MINUTE;
+		const parsed: number = value ? Number.parseInt(value, 10) : 0;
+		return parsed >= 0 ? parsed : 0;
+	}
+
+	/** Secret used to verify Resend webhook signatures. */
+	public get resendWebhookSecret(): string {
+		return process.env.RESEND_WEBHOOK_SECRET ?? "";
+	}
+
+	/**
+	 * Per-IP requests-per-minute cap on the public delivery-webhook endpoint;
+	 * `0` disables the limiter. The endpoint is already signature-verified —
+	 * this is defense-in-depth against hammering a public route.
+	 */
+	public get webhookRateLimitPerMinute(): number {
+		const value: string | undefined = process.env.WEBHOOK_RATE_LIMIT_PER_MINUTE;
+		const parsed: number = value ? Number.parseInt(value, 10) : 120;
+		return parsed >= 0 ? parsed : 0;
+	}
+
 	// ── App Configuration ──────────────────────────────────────────────
 
 	/** Application name (used in email templates) */

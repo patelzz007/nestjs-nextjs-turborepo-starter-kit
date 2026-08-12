@@ -97,6 +97,32 @@ export { SessionStatusSchema } from "./auth/session-status";
 export type { SessionStatus } from "./auth/session-status";
 export { EnvSchema, parseEnv } from "./api/env";
 export type { Env } from "./api/env";
+export {
+	EmailLogEntrySchema,
+	EmailLogListResponseSchema,
+	EmailLogStatusSchema,
+	EmailPreviewListResponseSchema,
+	EmailPreviewPropValueSchema,
+	EmailPreviewSchema,
+	EmailSendResultSchema,
+	EmailTemplateKeySchema,
+	EmailTemplateMetaSchema,
+	ResendWebhookEventSchema,
+	ResendWebhookEventTypeSchema,
+} from "./email/email";
+export type {
+	EmailLogEntry,
+	EmailLogListResponse,
+	EmailLogStatus,
+	EmailPreview,
+	EmailPreviewListResponse,
+	EmailPreviewPropValue,
+	EmailSendResult,
+	EmailTemplateKey,
+	EmailTemplateMeta,
+	ResendWebhookEvent,
+	ResendWebhookEventType,
+} from "./email/email";
 export { AudienceTypeSchema, DeviceTypeSchema, MenuMatchTypeSchema, PermissionActionSchema, PermissionResourceSchema, PlanSchema, RedirectTypeSchema } from "./domain/enums";
 export type { AudienceType, DeviceType, MenuMatchType, PermissionAction, PermissionResource, Plan, RedirectType } from "./domain/enums";
 export { HealthResponseSchema } from "./api/health.schema";

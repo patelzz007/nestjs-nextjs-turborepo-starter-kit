@@ -13,6 +13,7 @@
 		"lint": "eslint",
 		"format": "prettier --write \"**/*.{ts,tsx}\"",
 		"typecheck": "tsc --noEmit",
+		"test:unit": "vitest run --config vitest.config.unit.ts",
 		"test:e2e": "vitest run --config vitest.config.e2e.ts",
 		"db:generate": "dotenv -e .env -- prisma generate",
 		"db:migrate": "dotenv -e .env -- prisma migrate dev",

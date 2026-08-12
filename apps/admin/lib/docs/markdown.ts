@@ -264,7 +264,7 @@ export function formatIsoDate(iso: string): string {
 }
 
 /** Blockquote kinds for the docs renderer's color-coded callouts. Zod enum (rule 13) so the renderer can `safeParse` runtime values instead of sniffing strings. */
-export const QuoteKindSchema = z.enum(["info", "warning", "error", "success"]);
+export const QuoteKindSchema = z.enum(["info", "tip", "warning", "error", "success"]);
 
 export type QuoteKind = z.infer<typeof QuoteKindSchema>;
 
@@ -272,7 +272,7 @@ export type QuoteKind = z.infer<typeof QuoteKindSchema>;
 export const QUOTE_MARKER_KINDS: Readonly<Record<string, QuoteKind>> = {
 	note: "info",
 	info: "info",
-	tip: "success",
+	tip: "tip",
 	success: "success",
 	warning: "warning",
 	caution: "warning",
@@ -294,8 +294,13 @@ export function detectQuoteKind(text: string): QuoteKind {
 	if (/(?:\b(?:warnings?|caution|careful|important|gotcha|never|don'?t|wipes|pending)\b|⚠)/.test(lower)) {
 		return "warning";
 	}
-	if (/(?:\b(?:success|tip)\b|✅)/.test(lower)) {
+	if (/(?:\b(?:success|succeeded)\b|✅)/.test(lower)) {
 		return "success";
+	}
+	// Tips get their own kind (violet) — distinct from success, so a bare
+	// "Tip: …" quote reads as a tip rather than a success.
+	if (/(?:\b(?:tip|tips)\b|💡)/.test(lower)) {
+		return "tip";
 	}
 	return "info";
 }

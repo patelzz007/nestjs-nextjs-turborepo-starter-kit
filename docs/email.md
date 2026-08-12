@@ -3,7 +3,7 @@ title: "Email Template System"
 description: "The 40 must-have items for the Resend-powered transactional email template system — each grounded in the current code."
 order: 13
 author: "Acme Inc."
-lastUpdated: "2026-08-05"
+lastUpdated: "2026-08-11"
 coverImage: "https://images.unsplash.com/photo-1596526131083-e8c633c948d2?auto=format&fit=crop&w=1600&q=80"
 ---
 
@@ -26,7 +26,9 @@ coverImage: "https://images.unsplash.com/photo-1596526131083-e8c633c948d2?auto=f
 > casting, infer types from zod schemas, generic types first, explicit access modifiers + return
 > types on every method, and structured zod-schema-driven payloads.
 >
-> **Related docs:** the logging system has its own guide — [Logging System](./logging.md).
+> **Related docs:** the logging system has its own guide — [Logging System](./logging.md). For
+> the **operational** half (setting up Resend, verifying a domain, and exposing the delivery
+> webhook locally with cloudflared), read **[Email + Webhook Setup](./email-setup.md)**.
 
 ---
 
@@ -35,6 +37,250 @@ coverImage: "https://images.unsplash.com/photo-1596526131083-e8c633c948d2?auto=f
 > [!NOTE] **The goal:** a production-grade transactional-email layer on **Resend** — real template files
 > (no inline HTML strings), HTML + plain-text for every email, a preview workflow, and total
 > control over content without touching code. `EmailService` stays the single send entry point.
+
+---
+
+## ✅ Implementation status (shipped 2026-08-10)
+
+> [!TIP] The core system from items **1–8, 10–17, 20, 26, 28, 36–38** below is **built and
+> tested**. The old ~250-line copy-pasted HTML in `email.service.ts` is gone — the auth flows now
+> delegate to the shared `BaseEmailTemplate` + `EmailSenderService` pipeline. This section is the
+> ground truth for what exists **today**; the numbered items below remain the backlog for what
+> hasn't landed yet.
+
+### What exists now
+
+| Area | Where | Notes |
+|---|---|---|
+| Abstract base template | `apps/api/src/modules/notifications/email/base/base-email-template.ts` | Shared responsive HTML shell (950px container), preheader, CTA button, `linkBlock`, footer, dark-mode overrides, HTML escaping, `buildUrl` query encoding, plain-text twin |
+| 7 concrete templates | `apps/api/src/modules/notifications/email/templates/*.template.ts` | `verification`, `password-reset`, `account-locked`, `welcome`, `security-alert`, `admin-alert`, `api-key-created` — each with zod props + `sampleProps` for previews |
+| Registry | `email-template.registry.ts` | Single source of truth `key → { meta, build }`; completeness-tested against the shared `EmailTemplateKeySchema` |
+| Delivery engine | `email-sender.service.ts` | Zod re-validation, `EMAIL_MODE` (send / log-only / noop), `EMAIL_TEST_TO` override, per-recipient sliding-window rate limit, retry-with-jittered-backoff, per-send timeout, PII-safe recipient masking, never throws |
+| Email log | `email-log.service.ts` + Prisma `EmailLog` model (`email_logs` table, migrations `20260809182240_add_email_log`, `20260811132303_add_email_engagement_tracking`, `20260811133228_add_email_log_resend_id_index`, `20260811160000_remove_email_tracking`) | One row per send; the webhook flips `sent → delivered / bounced / complained / failed`. `resend_id` is indexed (every webhook looks a row up by it). The tracking columns (`tracking_token` / `opened_at` / `clicked_at`) were dropped by the `remove_email_tracking` migration — open/click tracking is gone |
+| Admin preview API | `GET /notifications/email-preview`, `GET /notifications/email-preview/:key` | Sample props only — never sends mail |
+| Resend webhook | `POST /notifications/email-webhook` | `@Public()` + signature-verified via `resend.webhooks.verify` (booted with `rawBody: true`). Handles delivery events (status flips, bounce/complaint reasons captured into `error`); tracking events (`email.opened` / `email.clicked`) are acknowledged and ignored — open/click tracking was removed |
+| Admin preview page | `apps/admin/app/(panel)/emails/page.tsx` + sidebar entry (Settings → Email Templates) | Template index + iframe preview + HTML/text tabs + copy |
+| Admin email log | `apps/admin/app/(panel)/email-log/page.tsx` + sidebar entry (Settings → Email Log) | `GET /notifications/email-log` (JWT-guarded, `?limit=` 1–500) → shared `DataTable`. Delivery-only status badges (Sent / Delivered / Bounced / Complained / Failed) with bounce/complaint reasons in `error`. Search, export, mobile cards. **Live updates via SSE** — see "Live updates (SSE)" below |
+| Env vars | `EMAIL_MODE`, `EMAIL_TEST_TO`, `EMAIL_REPLY_TO`, `EMAIL_MAX_ATTEMPTS`, `EMAIL_TIMEOUT_MS`, `EMAIL_RATE_LIMIT_PER_MINUTE`, `RESEND_WEBHOOK_SECRET` | Added to shared `EnvSchema` + `TypedConfigService` |
+
+### Live wiring (verified 2026-08-10)
+
+> [!TIP] Production config confirmed working end-to-end. Real sends + webhook signature
+> verification were exercised against Resend's API and the public tunnel:
+>
+> - `apps/api/.env`: `RESEND_API_KEY=re_…` (real key), `RESEND_WEBHOOK_SECRET=whsec_…`,
+>   `EMAIL_FROM_ADDRESS=noreply@bishenpatel.com` (domain **verified** in Resend).
+> - Real send via Resend returned an email `id` (`POST https://api.resend.com/emails` with the
+>   verified from-address).
+> - Webhook endpoint is publicly reachable behind a `cloudflared` quick tunnel:
+>   `https://<random>.trycloudflare.com/notifications/email-webhook` — register this URL in the
+>   Resend dashboard (Webhooks → Add Webhook) with events Sent / Delivered / Delivery Delayed /
+>   Bounced / Complained / Failed. The signing secret Resend shows becomes
+>   `RESEND_WEBHOOK_SECRET` in `.env`.
+> - Signed-payload test: a locally HMAC-signed `email.delivered` event (standard-webhooks scheme,
+>   message = `<msgId>.<timestamp>.<payload>`) was POSTed through the tunnel and accepted (200);
+>   a tampered signature was rejected (403).
+
+### Live updates (SSE)
+
+> [!TIP] The admin Email Log page updates itself **in real time** — no polling, no refresh.
+> Every `EmailLog` write (a send is logged, a delivery webhook flips a status) pushes a
+> frame down a Server-Sent Events stream, and the page refetches its list the instant the
+> frame arrives — the status badge updates the moment the webhook writes the row.
+>
+> **How it works (3 moving parts):**
+>
+> 1. **`EmailLogEventsService`** (`email-log-events.service.ts`) — a tiny in-process
+>    `node:events` emitter. `EmailLogService` calls `emitUpdated()` after every successful
+>    write (create / status flip).
+> 2. **`GET /notifications/email-log/events`** — an `@Sse()` endpoint on `EmailLogController`
+>    that subscribes to the emitter and streams one `{ updatedAt }` frame per signal. It's
+>    guarded by the global auth guard like the rest of the controller (admin-only), and the
+>    global `ResponseInterceptor` **bypasses** `text/event-stream` requests so frames stay
+>    raw instead of being wrapped in the `{ success, data, meta }` envelope.
+> 3. **`useEmailLogLive()`** (`apps/admin/lib/email-log-live.ts`) — opens an
+>    `EventSource(url, { withCredentials: true })` (cookies are the only auth transport SSE
+>    supports) and invalidates the `["email", "log-list"]` query on every frame. The refetch
+>    goes through the normal schema-validated pipeline (including the 401 → silent-refresh
+>    flow), so rows always come from the same validated path. A **Live pill** next to the
+>    Refresh button shows the connection state: green `Live`, amber `Connecting…`, or
+>    `Offline` (stream down — Refresh still works as a fallback).
+>
+> EventSource auto-reconnects after a drop, so a momentary API blip self-heals; navigating
+> away closes the stream (the hook cleans up its listener + connection). The stream also
+> sends a typed `event: ping` frame every **25s** as a keep-alive — idle SSE connections
+> send zero bytes and intermediaries (nginx, CDNs, the cloudflared tunnel) drop them after
+> ~30–60s. The client ignores the ping (it's an `event:`-typed frame, not a `message`), so
+> it holds the socket open without triggering refetches.
+> - **Tunnel caveat:** quick tunnels are ephemeral — the URL changes on restart. In dev,
+>   re-run `python3 apps/api/scripts/start-tunnel.py`: it auto-repoints the Resend webhook
+>   to the fresh URL (see [Email + Webhook Setup → Auto-wiring](./email-setup.md)). For
+>   production, point the webhook at the deployed API URL instead.
+
+### Tracking removed (deliberately)
+
+> [!NOTE] Open/click tracking was **removed** from the system (2026-08-11): no tracking
+> pixel in the HTML, no `openedAt` / `clickedAt` columns, no opener fingerprinting on the
+> admin side. The EmailLog page shows delivery only. The webhook still receives Resend's
+> `email.opened` / `email.clicked` events but acknowledges and ignores them. If you ever
+> want engagement data back, re-add it from git history — this doc and
+> `docs/email-setup.md` were updated alongside the removal.
+
+### Template gallery (rendered with sample props)
+
+Every template below is rendered with the **same HTML, shell, and colors** (slate-800 hero band
++ slate CTA buttons via `SHELL_HEADER_BG`/`SHELL_CTA_BG`; content-area chips keep per-accent
+color via `ACCENT_PALETTES`). Generated from the preview API's sample props with headless
+Chrome — the captures are **light-mode renders** (dark-mode mail clients get the
+`@media (prefers-color-scheme: dark)` overrides instead).
+
+| Template | Preview |
+|---|---|
+| **Email Verification** (green accent) | ![Email Verification](./images/email/verification.png) |
+| **Password Reset** (indigo) | ![Password Reset](./images/email/password-reset.png) |
+| **Account Locked** (red, locked-duration chip) | ![Account Locked](./images/email/account-locked.png) |
+| **Welcome** (green, onboarding list) | ![Welcome](./images/email/welcome.png) |
+| **Security Alert** (amber, device/location chip) | ![Security Alert](./images/email/security-alert.png) |
+| **Admin Alert** (indigo, `[Admin]` subject prefix) | ![Admin Alert](./images/email/admin-alert.png) |
+| **API Key Created** (sky, key-name chip) | ![API Key Created](./images/email/api-key-created.png) |
+
+### Quick-start env setup
+
+```bash
+# apps/api/.env
+RESEND_API_KEY=re_xxxxx
+EMAIL_FROM_ADDRESS="Acme Inc <noreply@example.com>"
+APP_NAME="Acme Inc"
+APP_URL=https://app.example.com
+
+# Optional but recommended
+EMAIL_MODE=log-only            # send | log-only | noop (dev default: send)
+EMAIL_TEST_TO=you@example.com  # redirects EVERY send to one inbox (non-prod)
+EMAIL_MAX_ATTEMPTS=3
+EMAIL_TIMEOUT_MS=10000
+EMAIL_RATE_LIMIT_PER_MINUTE=0  # 0 = disabled
+RESEND_WEBHOOK_SECRET=whsec_xxx # required for delivery webhooks
+```
+
+### Tests
+
+`pnpm --filter @workspace/api test:unit` (vitest, `vitest.config.unit.ts`) — **39 tests** across:
+`base-email-template.spec.ts` (escaping, URL building, footer, text twin),
+`email-sender.service.spec.ts` (mode switch, test-recipient, retry/backoff, non-retryable
+short-circuit, timeout, rate limiting, PII masking), `email-log.service.spec.ts` (create/update +
+metadata mapping + **live-event emissions on every write** — and asserts rows carry **no** tracking
+fields), `email-webhook.controller.spec.ts` (event branching: delivery flips update the row,
+tracking events like `email.opened` are acknowledged and ignored, bounce/complaint reason capture,
+missing-header 403), `email-log-events.service.spec.ts` (pub/sub delivery, unsubscribe, no replay),
+`email-log.controller.spec.ts` (**SSE stream**: one `{ updatedAt }` frame per emit, cold + stops on
+disconnect), `email-template.registry.spec.ts` (schema↔registry completeness + every template
+renders). The admin side has `lib/email-log-live.test.ts` (SSE `readyState → LiveState` mapping).
+
+---
+
+## 📋 Reference — 20 improvements + 20 new features (the shortlist)
+
+> [!NOTE] This is the **planning shortlist** discussed for the email module, split into
+> **20 improvements** (polish what already exists) and **20 new features** (net-new
+> capability). Each item names the current state so you can see exactly what would change.
+> Items that have **already shipped** are marked ✅. The detailed how-to for the backlog
+> lives in items **1–40** below this section — the two lists cross-reference where relevant.
+
+### The 20 improvements (make what exists better)
+
+1. **Token-driven design tokens instead of hardcoded hex** — `SHELL_HEADER_BG`,
+   `SHELL_CTA_BG`, and the per-template `ACCENT_PALETTES` in `base-email-template.ts` are
+   hardcoded color strings. Move them into one token map so a rebrand touches a single place.
+2. **Subject discipline enshrined in a test** — add a registry test asserting every subject is
+   ≤ 78 chars, not ALL-CAPS, and free of spam trigger words (relates to item 29).
+3. **Preheader length rule** — `getPreviewText()` exists per template; add a ≤ 100 char
+   constraint + a test (Gmail clips longer previews).
+4. **Outlook dark-mode support** — the shell has `@media (prefers-color-scheme: dark)`
+   overrides but not the `[data-ogsc]` / `[data-ogsb]` attribute overrides Outlook (Windows)
+   needs; add them (item 20).
+5. **Rate-limit key granularity** — the sliding window in `email-sender.service.ts` is
+   per-recipient; extend it to `(recipient, templateKey)` so two different templates to the
+   same user don't share one bucket (item 18).
+6. **Retry policy polish** — honor `Retry-After` on 429s, cap the jitter, and skip retry for
+   non-idempotent sends unless an idempotency key is present (ties to feature 7 below).
+7. **Per-template timeout override** — `EMAIL_TIMEOUT_MS` is global today; allow a per-template
+   override so urgent resets get a stricter budget than alerts.
+8. **Richer log context** — `EmailSenderService` logs via `LogService`, but without
+   `userId` / `correlationId`; thread those through the send context so every line answers
+   "which user, which request" (item 14).
+9. **Masked recipient everywhere** — PII-safe masking exists for logging; make sure the
+   masked form is also what lands in `EmailLog.to` when `EMAIL_TEST_TO` rewrites the target.
+10. **Webhook event dedupe** — a Resend retry can deliver the same event twice; dedupe by
+    `event id` before flipping `EmailLog.status` so status transitions are idempotent (item 16).
+11. **Webhook replay tolerance** — verify `webhook-timestamp` freshness before HMAC
+    verification so an old captured payload can't be replayed (item 17).
+12. **EmailLog retention + index** — the `email_logs` table grows unbounded; add a prune job
+    and an index on `(status, sentAt)` so the admin log stays fast (item 15).
+13. **Preview API hardening** — `GET /notifications/email-preview/:key` should 404 cleanly
+    (not 500) for unknown keys and expose a text-only variant (item 21).
+14. **Snapshot tests per template** — the registry completeness test renders every template;
+    add committed HTML snapshots so a visual regression fails CI (item 28).
+15. **Sender edge-case tests** — cover the rate-limit boundary (exactly N/min), timeout
+    boundary, and retry exhaustion in `email-sender.service.spec.ts` (item 36).
+16. **Admin-facing error surface** — map `EmailSendResult.reason` (`config | api-error |
+    invalid-recipient`) to helpful toasts on the `/emails` send button instead of a raw
+    message (item 8).
+17. **Dev-mode HTML dump** — in `EMAIL_MODE=log-only`, also write the rendered HTML to
+    `/tmp/email-preview.html` so you can eyeball a template without sending (item 37).
+18. **Boot-time env sanity** — fail fast at startup (not first send) when `EMAIL_MODE=send`
+    but `RESEND_API_KEY` is empty or malformed (item 38).
+19. **Error-code runbook table** — consolidate Resend `error_code`s (`invalid_from_address`,
+    `rate_limit_exceeded`, …) into one table in `email-setup.md` with cause + fix (item 40).
+20. **Screenshot drift guard** — the gallery PNGs in `docs/images/email/` are regenerated by
+    `scripts/render-email-previews.ts`; add a check that flags when a template's HTML changed
+    but the screenshot wasn't refreshed (item 40).
+
+### The 20 new features (net-new capability)
+
+1. ✅ **Email verification / password reset / account locked / welcome / security alert /
+   admin alert / API-key-created templates** — all seven shipped with the `BaseEmailTemplate`
+   pipeline (see “What exists now”).
+2. **Email-change verification** — a template + flow that emails the NEW address when a user
+   changes their email (auth-roadmap: item 33).
+3. **Password-changed confirmation** — “your password was changed; if this wasn't you, reset
+   it now” (item 33).
+4. **New-device login alert** — reuse the `security-alert` pattern to flag logins from an
+   unfamiliar device/geo (item 33).
+5. **2FA enabled / disabled confirmations** — two small templates for toggling 2FA (item 33).
+6. **Role / admin invite emails** — notify when an admin grants or revokes a role (RBAC
+   wiring, item 33).
+7. **Send idempotency (`X-Entity-Ref-ID`)** — pass a per-logical-email idempotency key so a
+   retried send never double-delivers (item 9).
+8. **Background send queue** — move slow sends off the request path (fire-and-forget or a
+   tiny in-process queue with a flusher), keeping resets ordered but verifies async (item 25).
+9. **BCC audit copy** — `EMAIL_AUDIT_BCC` env (comma-separated) spread into `bcc` on every
+   send for compliance (item 13).
+10. **`POST /notifications/email-test`** — an admin endpoint that sends any registry template
+    with its `sampleProps` to a given address, returning the `EmailSendResult` (item 24).
+11. **Template versioning on the log** — record the template `key` + a content hash on each
+    `EmailLog` row so you can reproduce exactly what was sent (item 15).
+12. **i18n-ready templates** — `render(props, { locale })` with `en` as today's default;
+    wire the FE i18n catalog later without breaking the contract (item 23).
+13. **Email preferences center** — per-user opt-out categories for non-transactional sends
+    (digests, alerts), backed by a `Preference` model (item 30).
+14. **`List-Unsubscribe` + one-click unsubscribe** — CAN-SPAM-compliant headers + endpoint
+    for non-transactional emails (item 30).
+15. ❌ **Open/click tracking — REMOVED (2026-08-11).** This shipped earlier (Resend's native
+    tracking + our own pixel) but was deliberately removed as annoying: no pixel in the
+    HTML, `opened_at` / `clicked_at` / `tracking_token` dropped from the DB, and no
+    engagement UI on the admin log. See "Tracking removed" above.
+16. **Health integration** — `GET /health` reports `email: ok | misconfigured` from
+    `EmailSenderService.isConfigured()` (item 39).
+17. **Usage dashboard** — an admin widget (recharts + the existing DataTable) plotting sends /
+    day, per-template counts, and delivery % from `EmailLog` (item 40).
+18. **Markdown → HTML for content emails** — a shared `mdToEmailHtml` helper so future
+    welcome/digest content is authored in markdown, not HTML (item 27).
+19. **Attachment support** — thread Resend's `attachments` through the sender contract for
+    receipts/PDFs (currently `html` + `text` only).
+20. **Scheduled / digest sends** — a cron flusher that sends non-urgent digests at a set
+    time instead of inline in a request (item 25).
+
+---
 
 ## 1. Move templates out of the service into real files
 
@@ -371,15 +617,30 @@ email" checklist at the bottom of this file.
 
 ---
 
-## ✅ How to add a new email (checklist, once the system lands)
+## ✅ How to add a new email (checklist — the system is live)
 
-1. Add a `TemplateNameSchema` entry + a `templates/<name>.tsx` renderer (react-email) exporting
-   `render(props) → { html, text }` with zod-validated props.
-2. Register it in `TEMPLATE_REGISTRY`; add sample props for the preview page.
-3. Add the `EmailService.send("<name>", props)` call at the trigger point (with `userId`/
-   `correlationId` context).
-4. Add an `EmailLog`-aware unit test (render + payload shape).
-5. Preview it in `/admin/emails/preview`, send a dry-run, then a real test send.
-6. Update this doc's registry table.
+1. **Add the shared key** — extend `EmailTemplateKeySchema` in
+   `packages/shared/src/schemas/email/email.ts` (the registry completeness test fails until
+   you register it).
+2. **Write the template** — copy any file in
+   `apps/api/src/modules/notifications/email/templates/`; extend `BaseEmailPropsSchema` with your
+   zod props, implement `key / subject / accent / eyebrow / heading / getPreviewText /
+   renderBodyHtml / renderBodyText`, set a `static sampleProps` (powers the admin preview +
+   screenshots), and give it a `key` string matching the shared enum.
+3. **Register it** — add an entry to `EMAIL_TEMPLATE_REGISTRY` in
+   `apps/api/src/modules/notifications/email/email-template.registry.ts` (label, description,
+   sample `to`, `build()` factory).
+4. **Send it** — construct the template with real props and call
+   `emailSenderService.send(template)` (or add a facade method on `EmailService` in
+   `apps/api/src/modules/auth/services/email.service.ts` for auth flows). Inspect the returned
+   `EmailSendResult` — `send()` never throws.
+5. **Preview it** — open the admin panel → Settings → Email Templates. The new template appears
+   automatically with its sample render.
+6. **Test it** — add a smoke case to `email-template.registry.spec.ts` and, if it has unusual
+   delivery semantics, a sender test in `email-sender.service.spec.ts`.
+7. **Docs** — regenerate the gallery screenshots with
+   `pnpm --filter @workspace/api exec tsx scripts/render-email-previews.ts` (renders every
+   template to HTML, pins a light-mode capture via headless Chrome, and writes the PNGs into
+   `docs/images/email/`).
 
-_Last updated: 2026-08-05._
+_Last updated: 2026-08-11._
