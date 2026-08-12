@@ -10,6 +10,7 @@ import {
 	EmailPreviewListResponseSchema,
 	EmailPreviewSchema,
 	EmailSendResultSchema,
+	ExceptionLogEntrySchema,
 	LoginResponseSchema,
 	LoginSchema,
 	LogoutResponseSchema,
@@ -17,12 +18,21 @@ import {
 	SessionStatusSchema,
 	SignupResponseSchema,
 	SignupSchema,
+	TelescopeDumpInputSchema,
+	TelescopeDumpResponseSchema,
+	TelescopeExceptionListResponseSchema,
+	TelescopeMailResponseSchema,
+	TelescopeOverviewSchema,
+	TelescopeRequestDetailResponseSchema,
+	TelescopeRequestListResponseSchema,
+	TelescopeSqlListResponseSchema,
 	UserResponseSchema,
 	type ApiResponseMeta,
 	type EmailLogListResponse,
 	type EmailPreview,
 	type EmailPreviewListResponse,
 	type EmailSendResult,
+	type ExceptionLogEntry,
 	type LoginInput,
 	type LoginResponse,
 	type LogoutResponse,
@@ -30,6 +40,18 @@ import {
 	type SessionStatus,
 	type SignupInput,
 	type SignupResponse,
+	type TelescopeDumpInput,
+	type TelescopeDumpResponse,
+	type TelescopeExceptionListQuery,
+	type TelescopeExceptionListResponse,
+	type TelescopeMailResponse,
+	type TelescopeOverview,
+	type TelescopeRange,
+	type TelescopeRequestDetailResponse,
+	type TelescopeRequestListQuery,
+	type TelescopeRequestListResponse,
+	type TelescopeSqlListQuery,
+	type TelescopeSqlListResponse,
 	type UserResponse,
 } from "@workspace/shared";
 import { z, type ZodType } from "zod";
@@ -178,5 +200,83 @@ export const emailEndpoints: {
 		method: "GET",
 		queryKey: ["email", "log-list"],
 		responseSchema: envelope(EmailLogListResponseSchema),
+	},
+};
+
+// ── Telescope endpoints (docs/telescope.md §7) ─────────────────────────────
+// The read API is admin-gated on the server (AuthGuard + TelescopeAdminGuard)
+// and excluded from Swagger. List endpoints take a parsed query object — the
+// query doubles as the react-query key slice (structural hashing), so filters
+// and pages are distinct cache entries.
+
+// Wrapper schemas for the `{ overview }` / `{ list }` controller envelopes.
+const TelescopeOverviewWrapperSchema = z.object({ overview: TelescopeOverviewSchema }).strict();
+const TelescopeRequestListWrapperSchema = z.object({ list: TelescopeRequestListResponseSchema }).strict();
+const TelescopeSqlListWrapperSchema = z.object({ list: TelescopeSqlListResponseSchema }).strict();
+const TelescopeExceptionListWrapperSchema = z.object({ list: TelescopeExceptionListResponseSchema }).strict();
+
+/**
+ * Telescope read/write procedures used by the admin panel's Telescope section.
+ * `overview`/`requests`/`sql`/`exceptions` are factories over a query object;
+ * `mail` reuses the email-log data; `dump` is the `dd()` probe.
+ */
+export const telescopeEndpoints: {
+	readonly overview: (range: TelescopeRange) => GetProcedure<Envelope<{ readonly overview: TelescopeOverview }>>;
+	readonly requests: (query: TelescopeRequestListQuery) => GetProcedure<Envelope<{ readonly list: TelescopeRequestListResponse }>>;
+	readonly requestDetail: (id: string) => GetProcedure<Envelope<TelescopeRequestDetailResponse>>;
+	readonly sql: (query: TelescopeSqlListQuery) => GetProcedure<Envelope<{ readonly list: TelescopeSqlListResponse }>>;
+	readonly exceptions: (query: TelescopeExceptionListQuery) => GetProcedure<Envelope<{ readonly list: TelescopeExceptionListResponse }>>;
+	readonly exceptionDetail: (id: string) => GetProcedure<Envelope<ExceptionLogEntry>>;
+	readonly mail: () => GetProcedure<Envelope<TelescopeMailResponse>>;
+	readonly dump: PostProcedure<TelescopeDumpInput, Envelope<TelescopeDumpResponse>>;
+} = {
+	overview: (range: TelescopeRange): GetProcedure<Envelope<{ readonly overview: TelescopeOverview }>> => ({
+		path: "/telescope/overview",
+		method: "GET",
+		queryKey: ["telescope", "overview", range],
+		responseSchema: envelope(TelescopeOverviewWrapperSchema),
+	}),
+	requests: (query: TelescopeRequestListQuery): GetProcedure<Envelope<{ readonly list: TelescopeRequestListResponse }>> => ({
+		path: "/telescope/requests",
+		method: "GET",
+		queryKey: ["telescope", "requests", query],
+		responseSchema: envelope(TelescopeRequestListWrapperSchema),
+	}),
+	requestDetail: (id: string): GetProcedure<Envelope<TelescopeRequestDetailResponse>> => ({
+		path: `/telescope/requests/${id}`,
+		method: "GET",
+		queryKey: ["telescope", "request-detail", id],
+		responseSchema: envelope(TelescopeRequestDetailResponseSchema),
+	}),
+	sql: (query: TelescopeSqlListQuery): GetProcedure<Envelope<{ readonly list: TelescopeSqlListResponse }>> => ({
+		path: "/telescope/sql",
+		method: "GET",
+		queryKey: ["telescope", "sql", query],
+		responseSchema: envelope(TelescopeSqlListWrapperSchema),
+	}),
+	exceptions: (query: TelescopeExceptionListQuery): GetProcedure<Envelope<{ readonly list: TelescopeExceptionListResponse }>> => ({
+		path: "/telescope/exceptions",
+		method: "GET",
+		queryKey: ["telescope", "exceptions", query],
+		responseSchema: envelope(TelescopeExceptionListWrapperSchema),
+	}),
+	exceptionDetail: (id: string): GetProcedure<Envelope<ExceptionLogEntry>> => ({
+		path: `/telescope/exceptions/${id}`,
+		method: "GET",
+		queryKey: ["telescope", "exception-detail", id],
+		responseSchema: envelope(ExceptionLogEntrySchema),
+	}),
+	mail: (): GetProcedure<Envelope<TelescopeMailResponse>> => ({
+		path: "/telescope/mail",
+		method: "GET",
+		queryKey: ["telescope", "mail"],
+		responseSchema: envelope(TelescopeMailResponseSchema),
+	}),
+	dump: {
+		path: "/telescope/dump",
+		method: "POST",
+		queryKey: ["telescope", "dump"],
+		bodySchema: TelescopeDumpInputSchema,
+		responseSchema: envelope(TelescopeDumpResponseSchema),
 	},
 };

@@ -184,6 +184,43 @@
 			]
 		},
 		{
+			"title": "Developer",
+			"items": [
+				{
+					"title": "Telescope",
+					"url": "/telescope",
+					"icon": "Radar",
+					"children": [
+						{
+							"title": "Overview",
+							"url": "/telescope",
+							"icon": "Activity"
+						},
+						{
+							"title": "Requests",
+							"url": "/telescope/requests",
+							"icon": "ListChecks"
+						},
+						{
+							"title": "SQL",
+							"url": "/telescope/sql",
+							"icon": "Database"
+						},
+						{
+							"title": "Exceptions",
+							"url": "/telescope/exceptions",
+							"icon": "ShieldAlert"
+						},
+						{
+							"title": "Mail",
+							"url": "/telescope/mail",
+							"icon": "Mail"
+						}
+					]
+				}
+			]
+		},
+		{
 			"title": "Documentation",
 			"items": [
 				{

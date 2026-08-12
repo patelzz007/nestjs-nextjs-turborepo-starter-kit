@@ -226,6 +226,10 @@ export interface DataTableProps<TData extends RowData> {
 	// ── NEW FEATURE 6: Server-side mode ───────────────────────────────────
 	readonly manual?: boolean;
 	readonly totalCount?: number;
+	// Manual-mode pager round-trip: fires with the 1-based page + page size the
+	// consumer must fetch. `totalCount` comes back in the response; the table
+	// never mutates external data, so the parent owns the refetch.
+	readonly onManualPaginationChange?: (page: number, pageSize: number) => void;
 
 	// ── NEW FEATURE 7: Inline editing ─────────────────────────────────────
 	readonly editable?: boolean;
@@ -1460,6 +1464,7 @@ export function DataTable<TData extends RowData>({
 	// NEW FEATURE 6: Server-side mode
 	manual = false,
 	totalCount,
+	onManualPaginationChange,
 
 	// NEW FEATURE 7: Inline editing
 	editable = false,
@@ -1619,6 +1624,13 @@ export function DataTable<TData extends RowData>({
 	// ── Table instance ─────────────────────────────────────────────────
 	const pageCount = manual && totalCount !== undefined ? Math.ceil(totalCount / pagination.pageSize) : undefined;
 
+	// Mirror of `pagination` for the manual-mode notification callback. The
+	// handler below is memoized with a stable identity (it feeds TanStack's
+	// `onPaginationChange`), so an updater-function must resolve its next state
+	// against a ref rather than a stale closure.
+	const paginationRef = useRef<PaginationState>(pagination);
+	paginationRef.current = pagination;
+
 	// Sorting is loaded from persisted prefs, so writes go through this
 	// handler to keep the round-trip symmetric (persistKey is opt-in).
 	const handleSortingChange = useCallback(
@@ -1633,10 +1645,19 @@ export function DataTable<TData extends RowData>({
 	);
 
 	// Pagination also invalidates the virtual scroll offset (same reason).
-	const handlePaginationChange = useCallback((updater: PaginationState | ((prev: PaginationState) => PaginationState)): void => {
-		setPagination(updater);
-		setScrollTop(0);
-	}, []);
+	const handlePaginationChange = useCallback(
+		(updater: PaginationState | ((prev: PaginationState) => PaginationState)): void => {
+			setPagination(updater);
+			setScrollTop(0);
+			// Server-side mode: the consumer owns the data, so the pager must
+			// round-trip through it — report the page + size to fetch (1-based).
+			if (manual) {
+				const next: PaginationState = typeof updater === "function" ? updater(paginationRef.current) : updater;
+				onManualPaginationChange?.(next.pageIndex + 1, next.pageSize);
+			}
+		},
+		[manual, onManualPaginationChange],
+	);
 
 	// Pinning changes flow through this handler so persistence mirrors the
 	// sorting/visibility pattern (v9's `table.state` is intentionally opaque).
@@ -1693,6 +1714,7 @@ export function DataTable<TData extends RowData>({
 			enableBulkSelection,
 			enableColumnPinning,
 			manual,
+			onManualPaginationChange,
 			pageCount,
 			searchKeys,
 		],

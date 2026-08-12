@@ -10,10 +10,12 @@ import { HealthModule } from "./modules/health/health.module.js";
 import { ImpersonationModule } from "./modules/impersonation/impersonation.module.js";
 import { NotificationsModule } from "./modules/notifications/notifications.module.js";
 import { SessionsModule } from "./modules/sessions/sessions.module.js";
+import { TelescopeModule } from "./modules/telescope/telescope.module.js";
+import { TelescopeCaptureMiddleware } from "./modules/telescope/telescope-capture.middleware.js";
 import { PrismaModule } from "./prisma/prisma.module.js";
 
 @Module({
-	imports: [ConfigModule, PrismaModule, HealthModule, AuthModule, SessionsModule, ImpersonationModule, NotificationsModule],
+	imports: [ConfigModule, PrismaModule, HealthModule, AuthModule, SessionsModule, ImpersonationModule, NotificationsModule, TelescopeModule.register({})],
 	providers: [
 		{
 			provide: APP_INTERCEPTOR,
@@ -27,6 +29,8 @@ import { PrismaModule } from "./prisma/prisma.module.js";
 })
 export class AppModule implements NestModule {
 	public configure(consumer: MiddlewareConsumer): void {
-		consumer.apply(CorrelationIdMiddleware).forRoutes("*");
+		// CorrelationId first (stamps req.correlationId), then the telescope
+		// capture middleware (opens the ALS scope using that correlation id).
+		consumer.apply(CorrelationIdMiddleware, TelescopeCaptureMiddleware).forRoutes("*");
 	}
 }
