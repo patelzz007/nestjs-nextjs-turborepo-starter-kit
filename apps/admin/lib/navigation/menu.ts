@@ -45,9 +45,17 @@ export function computeRouteState(items: readonly CompiledSidebarMenuItem[], pat
 
 	const checkItem = (item: CompiledSidebarMenuItem, isRootLevel: boolean): { readonly isActive: boolean; readonly hasActiveChild: boolean } => {
 		const itemId = item.id;
-		// Disabled items are never navigable, so they must never highlight.
-		const isExactMatch = item.disabled !== true && isRouteActive(item.url, pathname);
 		const children = item.children;
+		const hasChildren = children !== undefined && children.length > 0;
+
+		// Route matching rules:
+		// - Disabled items are never navigable, so they must never highlight.
+		// - Parents (items with children) match their URL plus any nested route
+		//   below it — "Docs Home" (/docs) stays lit on /docs/telescope.
+		// - Leaf items match their URL **exactly**. A leaf whose URL is a prefix
+		//   of a sibling page ("View All Docs" at /docs vs "Telescope" at
+		//   /docs/telescope) must not light up while that sibling is active.
+		const isExactMatch = item.disabled !== true && isRouteActive(item.url, pathname) && (hasChildren || pathname === item.url);
 
 		let hasActiveChild = false;
 		if (children !== undefined) {

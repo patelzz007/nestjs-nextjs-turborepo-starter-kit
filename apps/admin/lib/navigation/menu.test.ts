@@ -108,6 +108,43 @@ describe("computeRouteState", () => {
 		expect(activeItems["docs-alpha"]).toBeUndefined();
 		expect(autoExpandedItems.docs).toBeUndefined();
 	});
+
+	it("does not highlight a leaf whose URL is a prefix of the active sibling page", () => {
+		const items: readonly CompiledSidebarMenuItem[] = [
+			{
+				id: "docs",
+				title: "Docs",
+				url: "/docs",
+				children: [
+					{ id: "docs-all", title: "View All Docs", url: "/docs" },
+					{ id: "docs-telescope", title: "Telescope", url: "/docs/telescope" },
+				],
+			},
+		];
+		const { activeItems } = computeRouteState(items, "/docs/telescope", false);
+		// The exact page is active…
+		expect(activeItems["docs-telescope"]).toBe(true);
+		// …the route-prefix parent stays active…
+		expect(activeItems.docs).toBe(true);
+		// …but the shallower sibling leaf is not (it only matches on /docs itself).
+		expect(activeItems["docs-all"]).toBeUndefined();
+	});
+
+	it("still highlights a leaf on its own exact page even when it is a prefix of siblings", () => {
+		const items: readonly CompiledSidebarMenuItem[] = [
+			{
+				id: "docs",
+				title: "Docs",
+				url: "/docs",
+				children: [
+					{ id: "docs-all", title: "View All Docs", url: "/docs" },
+					{ id: "docs-telescope", title: "Telescope", url: "/docs/telescope" },
+				],
+			},
+		];
+		const { activeItems } = computeRouteState(items, "/docs", false);
+		expect(activeItems["docs-all"]).toBe(true);
+	});
 });
 
 describe("filterItemsBySearch", () => {

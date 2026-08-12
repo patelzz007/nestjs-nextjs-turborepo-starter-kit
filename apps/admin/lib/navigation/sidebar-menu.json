@@ -235,6 +235,11 @@
 							"title": "Boilerplate Roadmap",
 							"url": "/docs/boilerplate-roadmap",
 							"icon": "ScrollText"
+						},
+						{
+							"title": "Telescope for NestJS",
+							"url": "/docs/telescope",
+							"icon": "Radar"
 						}
 					]
 				}
