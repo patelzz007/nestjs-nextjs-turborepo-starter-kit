@@ -1195,6 +1195,60 @@ docs/telescope.md                                    ← this document
    feature). Postgres mode: restart with `TELESCOPE_RETENTION_DAYS=1`, or drop the
    three telescope tables for a hard reset (dev only).
 
+### 14.5 Telescope CLI cheat-sheet
+
+> Inspect captured Telescope data from the terminal — no browser needed. The script
+> is `apps/api/scripts/telescope-cli.ts` (improvement 14), invoked via the
+> `telescope:cli` package script. It is **read-only**: it never captures or mutates
+> anything. The API must be running and capturing (`TELESCOPE_ENABLED`, on by
+> default in dev).
+
+```bash
+# List recent captured requests (default 20)
+pnpm --filter @workspace/api telescope:cli requests
+
+# …with a custom limit
+pnpm --filter @workspace/api telescope:cli requests --limit 50
+
+# Full detail for one request (spans, headers, bodies, SQL, dumps, console logs)
+pnpm --filter @workspace/api telescope:cli view <requestId>
+
+# Scalar diff between two requests
+pnpm --filter @workspace/api telescope:cli compare <idA> <idB>
+
+# No/invalid args → prints the usage block
+pnpm --filter @workspace/api telescope:cli
+```
+
+**Typical workflow:**
+
+1. `telescope:cli requests --limit 5` → grab an `id` from the printed items.
+2. `telescope:cli view <id>` → pretty-printed JSON of the same payload the UI shows
+   at `/telescope/requests/:id`.
+3. Pipe through `jq` to pull out only what you need:
+
+   ```bash
+   pnpm --filter @workspace/api telescope:cli view <id> | jq '.data.request.durationMs, .data.request.spans'
+   ```
+
+4. `telescope:cli compare <idA> <idB>` → same-field diffs (great for "why is this
+   one slow and this one fast?").
+
+**Auth & config (env vars):**
+
+| Var | Purpose | Default |
+| --- | ------- | ------- |
+| `TELESCOPE_TOKEN` | **Recommended** — sent as `Authorization: Bearer <token>`; skips the login round-trip, CI-friendly | — |
+| `ADMIN_EMAIL` / `ADMIN_PASSWORD` | Fallback: CLI logs in and reuses the `adminAccessToken` cookie | `admin@example.com` / `Admin@123` |
+| `TELESCOPE_URL` | Point at a remote API instead of localhost | `http://localhost:8080` |
+
+Auth is resolved in order of preference: `TELESCOPE_TOKEN` first, then an admin
+login. To run against a deployed API:
+
+```bash
+TELESCOPE_URL=https://api.example.com TELESCOPE_TOKEN=whsec... pnpm --filter @workspace/api telescope:cli requests
+```
+
 ---
 
 ## 15. Roadmap — 20 improvements + 20 new features
