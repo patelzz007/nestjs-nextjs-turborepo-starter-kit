@@ -33,6 +33,21 @@ describe("passwordStrength", () => {
 		expect(result.missing).toEqual(["An uppercase letter", "A number", "A special character"]);
 	});
 
+	it("reports every criterion with its met state for the ✓/✗ checklist", () => {
+		const result = passwordStrength("abcdefgh");
+		expect(result.criteria).toEqual([
+			{ label: "At least 8 characters", met: true },
+			{ label: "An uppercase letter", met: false },
+			{ label: "A lowercase letter", met: true },
+			{ label: "A number", met: false },
+			{ label: "A special character", met: false },
+		]);
+
+		// A password meeting all five criteria marks every row as met.
+		const strong = passwordStrength("StrongP@ss1");
+		expect(strong.criteria.every((criterion) => criterion.met)).toBe(true);
+	});
+
 	it("caps the score at 4 even for very long passwords", () => {
 		// Passes every criterion — still 4, never 5.
 		expect(passwordStrength("LongP@ssw0rdWithManyChars").score).toBe(4);

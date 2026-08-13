@@ -33,7 +33,7 @@ coverImage: "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?auto=f
 | **[Logging system](./logging.md)**                  | 40 must-haves for the in-house Datadog-style logging service (terminal + DB, no external SaaS) — grounded in current code.                              |
 | **[Email templates](./email.md)**                   | 40 must-haves for the Resend-powered transactional email template system — grounded in current code.                                                  |
 | **[Email + Webhook Setup](./email-setup.md)**     | Operational guide: how the email pipeline works end-to-end, setting up Resend (API key, verified domain, env vars), and exposing delivery webhooks locally with cloudflared. |
-| **[Reactive core](./reactive-core.md)**             | Design for replacing promises with a zero-dep rxjs-like core — 50 items, pitfalls (incl. full-SSR), unsubscribe guarantees, rxjs coverage matrix.          |
+| **[Reactive core](./reactive-core.md)**             | Historical design doc for the in-house rxjs-like core — **superseded: the package was replaced by RxJS** (`rxjs` in `apps/admin` + `packages/ui`, see `apps/admin/lib/virtual-time-scheduler.ts` for the test scheduler). |
 | **[Performance & DX roadmap](./performance-and-dx.md)** | 20 grounded performance + developer-experience improvements (turbo cache, pino, CI, smoke test…) — each with a priority, effort estimate, and acceptance criteria. |
 | **[Sidebar audit](./sidebar-audit.md)**              | 20 improvements + 20 new features for the admin sidebar (a11y contracts, search, rail mode, favorites, RBAC menu…) — grounded in the actual sidebar code. |
 
@@ -91,8 +91,8 @@ packages/                ← shared libraries (no ports)
 | `pnpm db:deploy` / `db:migrate` / `db:seed` / `db:generate` / `db:studio` / `db:reset` (or `pnpm turbo run db:<task>`) | Database commands (see [prisma.md](./prisma.md))                                                                                        |
 | `pnpm deps:check` / `pnpm deps:fix` / `pnpm deps:list` (or `pnpm turbo run deps:check`)                                | Verify / auto-fix shared dependency version drift — turbo tasks backed by `packages/tooling` (see [dependencies.md](./dependencies.md)) |
 
-> [!WARNING] Turbo caching is **disabled** (`"cache": false` in `turbo.json`) — commands always
-> run fresh, and the shared package rebuilds before the apps that depend on it.
+> [!NOTE] Turbo caching is **enabled** for `build`, `lint`, `typecheck` and `test` — repeat runs
+> reuse cached outputs. `dev`, `format`, `db:*` and `deps:*` stay uncached by design.
 
 ---
 

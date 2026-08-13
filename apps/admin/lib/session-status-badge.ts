@@ -2,18 +2,21 @@
 // lib/session-status-badge.ts - Session badge stream pipeline
 // ============================================
 //
-// The `SessionStatusBadge` rewritten on `@workspace/reactive` — the Phase-1
+// The `SessionStatusBadge` rewritten on RxJS — the Phase-1
 // "kill-switch" proof. Everything the imperative version did with two
 // useEffects, a setInterval, a visibilitychange listener and two useRefs is
 // now ONE declarative pipeline. The component is a thin subscriber; this
 // module is pure (no React, no direct DOM access) and fully unit-testable
-// with the TestScheduler + leak detector from `@workspace/reactive/testing`.
+// with a virtual-time scheduler (see the spec).
 
 import {
+	asyncScheduler,
+	type Observable,
+	type SchedulerLike,
+	from,
 	fromEvent,
-	fromPromise,
-	of,
 	merge,
+	of,
 	startWith,
 	shareReplay,
 	distinctUntilChanged,
@@ -21,10 +24,7 @@ import {
 	map,
 	switchMap,
 	timer,
-	asyncScheduler,
-	type Observable,
-	type SchedulerLike,
-} from "@workspace/reactive";
+} from "rxjs";
 import { z } from "zod";
 
 import { ApiError } from "@workspace/client/lib/api/use-api";
@@ -124,10 +124,10 @@ export function fetchSessionStateWithRetry(
 	isVisible: () => boolean,
 ): Observable<SessionState> {
 	const attempt = (): Observable<SessionState> =>
-		fromPromise(fetchSessionState(fetchSession)).pipe(
+		from(fetchSessionState(fetchSession)).pipe(
 			switchMap((state) =>
 				state.status === "error" && state.retryable
-					? timer(retryMs, undefined, scheduler).pipe(
+					? timer(retryMs, scheduler).pipe(
 							filter(() => isVisible()),
 							switchMap(() => attempt()),
 						)
@@ -327,8 +327,9 @@ export function buildSessionBadgeStreams(params: SessionBadgeStreamParams): Sess
 	// AND via secondsLeft$ and rotationPulse$ (three subscriptions). Without it,
 	// each subscription would start its own cold pipeline — three poll timers,
 	// three visibility listeners, three fetches per cycle. shareReplay collapses
-	// them into ONE source pipeline shared by all subscribers (refCount: torn
-	// down when the last subscriber leaves).
+	// them into ONE source pipeline shared by all subscribers. `refCount: true`
+	// preserves the teardown semantics: the shared source is torn down when the
+	// LAST subscriber leaves (unsubscribing the badge stops the poll timers).
 	const sessionState$ = refetchTriggers$.pipe(
 		// `fetchSessionStateWithRetry` wraps the fetch so a transient failure
 		// (API down/booting after a restart) retries every `retryMs` until it
@@ -336,7 +337,7 @@ export function buildSessionBadgeStreams(params: SessionBadgeStreamParams): Sess
 		// waits for a tab switch or the next (possibly 5-minute) poll to clear.
 		switchMap(() => fetchSessionStateWithRetry(fetchSession, retryMs, scheduler, isVisible)),
 		distinctUntilChanged(sameSessionState),
-		shareReplay(1),
+		shareReplay({ bufferSize: 1, refCount: true }),
 	);
 
 	// ── The live countdown (ready-only, ticks while visible).
@@ -361,7 +362,7 @@ export function buildSessionBadgeStreams(params: SessionBadgeStreamParams): Sess
 		distinctUntilChanged((previous, current) => !didTokenRotate(previous, current)),
 		filter((_, index) => index > 0),
 		switchMap(() =>
-			timer(pulseMs, undefined, scheduler).pipe(
+			timer(pulseMs, scheduler).pipe(
 				map(() => false),
 				startWith(true),
 			),

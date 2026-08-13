@@ -2892,28 +2892,28 @@ Password field with show/hide toggle + caps-lock warning.
 
 ### 🔧 Improvements
 
-4-segment strength bar + label + unmet-criteria checklist (score driven by the smart component).
+Status badge (soft token colors + icon) + animated progress bar + ✓/✗ criterion checklist (score driven by the smart component).
 
-1. `[Th]` `SEGMENT_COLORS` uses raw `bg-red-500`/`orange-500`/`amber-500`/`emerald-500`/`emerald-600` — replace with design tokens (`--danger`, `--warning`, `--success`…, rule 22).
-2. `[A]` The bar is `aria-hidden` with no progress semantics — add `role="progressbar"` + `aria-valuemin/max/now` derived from `percent`/`score`.
-3. `[P]` `[0, 1, 2, 3].map(...)` array literal per render — hoist to a module constant (`SEGMENT_INDEXES`).
-4. `[D]` Score/label/percent are computed by the smart component (`passwordStrength()`) ✓ — keep the meter pure.
-5. `[T]` `score`/`percent` are numbers — validate at the boundary with a zod schema (`z.number().int().min(0).max(4)` / `0–100`).
-6. `[UX]` Segments fill by `index < Math.round(score)` — round half-up is fine; document the mapping.
-7. `[M]` On narrow forms the label row ("Password strength" + label) wraps — add `flex-wrap` + `min-w-0`.
-8. `[R]` No ref forwarding — forward for tests/measurement.
-9. `[F]` N/A as form control — document that validation logic never lives here.
-10. `[A]` `aria-live="polite"` on the root ✓ — but re-announces every keystroke; consider `aria-live="off"` + explicit announce.
-11. `[P]` `colorForScore` loop is O(5) — fine; hoist to a lookup via the sorted array (already sorted).
-12. `[Th]` `bg-muted` inactive segments ✓ — verify dark-mode contrast.
-13. `[UX]` Add an optional `criteria` completion check (✓/✗ per criterion) — the checklist already exists; add icons.
-14. `[D]` `missing` copy is consumer-owned ✓ — the meter renders it verbatim (i18n at the smart layer).
-15. `[T]` Export `PasswordStrengthMeterProps` (already) — document the smart-side contract with `passwordStrength()`.
-16. `[M]` Hidden when `percent <= 0` ✓ — document the empty-password case.
-17. `[A]` The checklist bullets are decorative (`size-1` dots) — keep `aria-hidden`.
-18. `[UX]` Color the label with the active segment color ✓ — ensure contrast on dark mode via tokens.
-19. `[P]` Memoize — the meter re-renders per keystroke; cheap memo + stable props.
-20. `[F]` N/A — note that RHF `watch` drives `percent` at the smart layer.
+1. `[Th]` ✅ Token colors — the bar and badge now use `bg-destructive`/`bg-warning`/`bg-info`/`bg-success` + `*-soft` chips (rule 22), replacing the raw `red-500`/`emerald-600` palette.
+2. `[A]` ✅ Progress semantics — the bar is a `role="progressbar"` with `aria-valuemin/max/now` from `percent`.
+3. `[P]` ✅ Segment array removed — the meter now uses a single continuous bar with `transition-[width]` (no per-render literal).
+4. `[D]` ✅ Score/label/percent are computed by the smart component (`passwordStrength()`) — the meter stays pure.
+5. `[T]` The smart layer's result is typed by `PasswordStrengthResultSchema` (zod); the meter's props are plain numbers rendered verbatim.
+6. `[UX]` ✅ Bar width is driven directly by `percent` (0–100) — smooth, continuous feedback instead of discrete segment rounding.
+7. `[M]` ✅ Header row wraps — `flex-wrap` + `min-w-0` on both the row and the badge chip.
+8. `[R]` ✅ Ref forwarding — `React.forwardRef` to the root element (rule 20).
+9. `[F]` N/A as form control — validation logic never lives here (still true).
+10. `[A]` `aria-live="polite"` now sits on the header row only (announces label changes, not the checklist).
+11. `[P]` ✅ Tier lookup — sorted `STRENGTH_TIERS` array with a highest-first pass (constant time, no per-render work).
+12. `[Th]` ✅ `bg-muted` track — dark-mode contrast verified via tokens.
+13. `[UX]` ✅ ✓/✗ per criterion — the meter accepts an optional `criteria: { label, met }[]` prop and renders a full checklist; `passwordStrength()` now returns `criteria` alongside `missing`.
+14. `[D]` ✅ `criteria`/`missing` copy is consumer-owned — the meter renders it verbatim (i18n at the smart layer).
+15. `[T]` ✅ `PasswordStrengthMeterProps` exported — contract documented against `passwordStrength()`.
+16. `[M]` ✅ Hidden when `percent <= 0` — empty-password case renders nothing.
+17. `[A]` ✅ Checklist icons are `aria-hidden` (decorative; the label text is the accessible content).
+18. `[UX]` ✅ Badge colored per tier via tokens — contrast verified in light + dark.
+19. `[P]` ✅ Memoized — wrapped in `React.memo` so per-keystroke re-renders only happen when props change.
+20. `[F]` N/A — RHF `watch`/`useState` drives `percent` at the smart layer.
 
 ### 🚀 New Features
 

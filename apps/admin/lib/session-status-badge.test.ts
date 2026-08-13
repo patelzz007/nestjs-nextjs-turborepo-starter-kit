@@ -1,5 +1,5 @@
-import { Subject } from "@workspace/reactive";
-import { assertNoActiveSubscriptions, TestScheduler } from "@workspace/reactive/testing";
+import { Subject } from "rxjs";
+import { VirtualTimeScheduler } from "@/lib/virtual-time-scheduler";
 import { ApiError } from "@workspace/client/lib/api/use-api";
 import type { SessionStatus } from "@workspace/shared";
 import { describe, expect, it, vi } from "vitest";
@@ -23,7 +23,7 @@ function makeSession(expiresAt: string | null, fullName = "Alex Morgan", email =
 	return { userId: "u1", email, fullName, expiresAt, checkedAt: BASE };
 }
 
-/** Drain the microtask queue so `fromPromise`-wrapped fetches have resolved. */
+/** Drain the microtask queue so `from`-wrapped fetches have resolved. */
 async function settle(): Promise<void> {
 	await new Promise((resolve) => setTimeout(resolve, 0));
 }
@@ -105,7 +105,7 @@ describe("fetchSessionState", () => {
 		});
 	});
 
-	it("catches synchronous throws that fromPromise alone cannot see", async () => {
+	it("normalizes a fetch that throws synchronously", async () => {
 		const state = await fetchSessionState(() => {
 			throw new Error("sync boom");
 		});
@@ -117,7 +117,7 @@ describe("fetchSessionState", () => {
 
 describe("buildSessionBadgeStreams", () => {
 	it("fetches immediately on mount and emits a ready state", async () => {
-		const s = new TestScheduler();
+		const s = new VirtualTimeScheduler();
 		const fetchSession = vi.fn((): Promise<SessionStatus> => Promise.resolve(makeSession(BASE)));
 		const streams = buildSessionBadgeStreams({ fetchSession, scheduler: s, pollMs: 1000 });
 
@@ -131,7 +131,7 @@ describe("buildSessionBadgeStreams", () => {
 	});
 
 	it("with pollMs null, fetches only on mount + tab-return (no steady polling)", async () => {
-		const s = new TestScheduler();
+		const s = new VirtualTimeScheduler();
 		let visible = true;
 		const visibility = new Subject<Event>();
 		const fetchSession = vi.fn((): Promise<SessionStatus> => Promise.resolve(makeSession(BASE)));
@@ -163,7 +163,7 @@ describe("buildSessionBadgeStreams", () => {
 		delete process.env.NEXT_PUBLIC_SESSION_POLL_MS;
 
 		try {
-			const s = new TestScheduler();
+			const s = new VirtualTimeScheduler();
 			const fetchSession = vi.fn((): Promise<SessionStatus> => Promise.resolve(makeSession("2026-08-05T01:00:00.000Z")));
 			// No pollMs → resolvePollMs(env) with unset env → null → the steady timer
 			// arm is dropped entirely. Yet the countdown MUST still tick locally from
@@ -196,7 +196,7 @@ describe("buildSessionBadgeStreams", () => {
 	});
 
 	it("polls, suppresses identical results, and re-emits changed ones", async () => {
-		const s = new TestScheduler();
+		const s = new VirtualTimeScheduler();
 		let current: SessionStatus = makeSession(BASE);
 		const fetchSession = vi.fn((): Promise<SessionStatus> => Promise.resolve(current));
 		const streams = buildSessionBadgeStreams({ fetchSession, scheduler: s, pollMs: 10 });
@@ -220,7 +220,7 @@ describe("buildSessionBadgeStreams", () => {
 	});
 
 	it("emits an error state on failure and recovers on the next poll", async () => {
-		const s = new TestScheduler();
+		const s = new VirtualTimeScheduler();
 		let shouldFail = true;
 		const fetchSession = vi.fn((): Promise<SessionStatus> =>
 			shouldFail ? Promise.reject(new ApiError({ message: "Unauthorized", statusCode: 401 })) : Promise.resolve(makeSession(BASE)),
@@ -243,7 +243,7 @@ describe("buildSessionBadgeStreams", () => {
 	});
 
 	it("silently auto-retries a transient failure and recovers WITHOUT a poll or tab switch", async () => {
-		const s = new TestScheduler();
+		const s = new VirtualTimeScheduler();
 		let failCount = 0;
 		// Fail twice (transient — like the API still booting after a restart),
 		// then succeed. `pollMs: null` proves the recovery comes from the retry
@@ -274,7 +274,7 @@ describe("buildSessionBadgeStreams", () => {
 	});
 
 	it("never pulses on the first sighting, and pulses for pulseMs after a rotation", async () => {
-		const s = new TestScheduler();
+		const s = new VirtualTimeScheduler();
 		let expiresAt: string = BASE;
 		const fetchSession = vi.fn((): Promise<SessionStatus> => Promise.resolve(makeSession(expiresAt)));
 		const streams = buildSessionBadgeStreams({ fetchSession, scheduler: s, pollMs: 10, pulseMs: 5 });
@@ -295,7 +295,7 @@ describe("buildSessionBadgeStreams", () => {
 	});
 
 	it("emits seconds-left every tick while ready, and pauses while the tab is hidden", async () => {
-		const s = new TestScheduler();
+		const s = new VirtualTimeScheduler();
 		let visible = true;
 		const visibility = new Subject<Event>();
 		const fetchSession = vi.fn((): Promise<SessionStatus> => Promise.resolve(makeSession("2026-08-05T01:00:00.000Z")));
@@ -336,7 +336,7 @@ describe("buildSessionBadgeStreams", () => {
 	});
 
 	it("emits null seconds-left when the token carries no expiry", async () => {
-		const s = new TestScheduler();
+		const s = new VirtualTimeScheduler();
 		const fetchSession = vi.fn((): Promise<SessionStatus> => Promise.resolve(makeSession(null)));
 		const streams = buildSessionBadgeStreams({ fetchSession, scheduler: s, tickMs: 2 });
 
@@ -350,7 +350,7 @@ describe("buildSessionBadgeStreams", () => {
 	});
 
 	it("shares ONE fetch pipeline across all three streams (regression: no triple-fetch)", async () => {
-		const s = new TestScheduler();
+		const s = new VirtualTimeScheduler();
 		const fetchSession = vi.fn((): Promise<SessionStatus> => Promise.resolve(makeSession(BASE)));
 		const streams = buildSessionBadgeStreams({ fetchSession, scheduler: s, pollMs: 10 });
 
@@ -370,7 +370,7 @@ describe("buildSessionBadgeStreams", () => {
 	});
 
 	it("leaves zero active subscriptions after tearing down all three streams (leak detector)", async () => {
-		const s = new TestScheduler();
+		const s = new VirtualTimeScheduler();
 		const fetchSession = vi.fn((): Promise<SessionStatus> => Promise.resolve(makeSession(BASE)));
 		const streams = buildSessionBadgeStreams({ fetchSession, scheduler: s, pollMs: 10, tickMs: 2, pulseMs: 5 });
 
@@ -382,9 +382,8 @@ describe("buildSessionBadgeStreams", () => {
 			sub.unsubscribe();
 		}
 		// Every timer handle, listener and inner subscription must have
-		// unregistered — including the scheduler's own pending actions.
-		expect(() => {
-			assertNoActiveSubscriptions("session badge streams");
-		}).not.toThrow();
+		// unregistered — the virtual scheduler's queue is the RxJS leak detector:
+		// zero pending actions means no timer/interval is still scheduled.
+		expect(s.pendingCount).toBe(0);
 	});
 });

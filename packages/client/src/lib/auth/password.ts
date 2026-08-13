@@ -13,6 +13,13 @@ export const PasswordScoreSchema = z.union([z.literal(0), z.literal(1), z.litera
 
 export type PasswordScore = z.output<typeof PasswordScoreSchema>;
 
+export const PasswordStrengthCriterionSchema = z.object({
+	/** Human-readable criterion label. */
+	label: z.string(),
+	/** Whether this criterion is currently met. */
+	met: z.boolean(),
+});
+
 export const PasswordStrengthResultSchema = z.object({
 	/** 0–4 (0 = empty/very weak, 4 = strong). */
 	score: PasswordScoreSchema,
@@ -22,6 +29,8 @@ export const PasswordStrengthResultSchema = z.object({
 	percent: z.number(),
 	/** List of the specific criteria that are still unmet (for checklist UI). */
 	missing: z.array(z.string()),
+	/** Every criterion with its met state, so the meter can render ✓/✗ per row. */
+	criteria: z.array(PasswordStrengthCriterionSchema),
 });
 
 export type PasswordStrengthResult = z.output<typeof PasswordStrengthResultSchema>;
@@ -75,5 +84,6 @@ export function passwordStrength(password: string): PasswordStrengthResult {
 		label: labelForScore(score),
 		percent: score * 25,
 		missing,
+		criteria: CRITERIA.map((c) => ({ label: c.label, met: c.test(password) })),
 	};
 }

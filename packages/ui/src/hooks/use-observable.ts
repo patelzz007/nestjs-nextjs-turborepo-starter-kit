@@ -1,19 +1,17 @@
-import { type Observable } from "@workspace/reactive";
+import { type Observable } from "rxjs";
 import * as React from "react";
 
 /**
- * `useObservable(source, initialValue)` — the React binding for
- * `@workspace/reactive` (design doc Part 7½: the async-pipe port, built on
- * React's own `useSyncExternalStore` rather than a hand-rolled store).
+ * `useObservable(source, initialValue)` — the React binding for RxJS
+ * observables, built on React's own `useSyncExternalStore` rather than a
+ * hand-rolled store.
  *
  * Renders `initialValue` on the server AND on the first client render (so SSR
  * output never hydration-mismatches), then live-updates with each emission.
  *
- * Unsubscribe guarantee: the subscription created here is a plain
- * `Subscription`, so it registers with the package's active-subscription
- * registry; when the component unmounts (or `source` identity changes) the
- * cleanup unsubscribes — leaving the registry empty. Tests assert this with
- * `assertNoActiveSubscriptions()` from `@workspace/reactive/testing`.
+ * Unsubscribe guarantee: the subscription created here is unsubscribed when
+ * the component unmounts (or `source` identity changes) — no leaked timers,
+ * listeners, or fetch pipelines across re-renders or navigations.
  *
  * Design notes:
  * - The latest value lives in a ref; `getSnapshot` reads the ref. A source

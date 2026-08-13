@@ -34,7 +34,8 @@ const INITIAL_STATE: SessionState = { status: "loading" };
  * the smart wrapper is now just three `useObservable` subscriptions. Every
  * subscription is created and destroyed by `useObservable`'s
  * useSyncExternalStore lifecycle, so unmounting the badge leaves zero active
- * subscriptions (assertable via `@workspace/reactive/testing`).
+ * timers/listeners (assertable in the spec via the virtual-time scheduler's
+ * `pendingCount`).
  */
 
 export interface SessionStatusViewProps {

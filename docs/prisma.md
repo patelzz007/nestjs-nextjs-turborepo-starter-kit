@@ -138,7 +138,7 @@ pnpm db:generate
 > `packages/shared/dist/`. On a fresh clone, run `pnpm --filter @workspace/shared build`
 > before `pnpm db:seed` (or run `pnpm build` once) or the seed fails with a
 > "cannot find module" error.
-| `pnpm db:reset`          | `dotenv -e .env -- prisma migrate reset --force`      | Drops **all** tables, re-applies all migrations, then runs the seeder                              | 🔴 **Wipes the DB**   |
+| `pnpm db:reset`          | `dotenv -e .env -- prisma migrate reset --force && pnpm db:seed` | Drops **all** tables, re-applies all migrations, then runs the seeder                              | 🔴 **Wipes the DB**   |
 | `pnpm db:studio`         | `prisma studio`                                       | Opens the Prisma Studio GUI at `localhost:5555` to browse/edit data                                | ❌ No (read/write UI) |
 
 > [!NOTE] **Why `dotenv -e .env --`?** Prisma CLI doesn't load `.env` automatically in all
@@ -284,6 +284,11 @@ migrations/
   — this is what you'd run in a CI/CD pipeline or on a production server.
 - **`prisma migrate reset`** (`db:reset`) drops everything and replays all
   migrations from scratch, then seeds.
+
+> [!NOTE] **Prisma 7 no longer auto-seeds** on `migrate reset` / `migrate dev` — seeding
+> is only triggered explicitly via `prisma db seed`. That's why the `db:reset`
+> script chains the seeder manually (`migrate reset --force && pnpm db:seed`);
+> the two-step sequence is what the docs below describe as "re-seeds".
 
 > [!NOTE] When you change the schema, **commit the generated migration folder** — it's part
 > of the repo so other environments can replay the exact same SQL.

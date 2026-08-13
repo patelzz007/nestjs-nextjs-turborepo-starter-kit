@@ -150,7 +150,7 @@ export function LoginForm({
 								</Link>
 							</div>
 							<PasswordInput id="password" placeholder="Enter your password" value={password} onChange={handlePasswordChange} required autoComplete="current-password" />
-							<PasswordStrengthMeter score={strength.score} label={strength.label} percent={strength.percent} missing={strength.missing} />
+							<PasswordStrengthMeter score={strength.score} label={strength.label} percent={strength.percent} criteria={strength.criteria} />
 						</div>
 						{lockout !== null ? <LockoutCountdown remainingSeconds={lockout.remainingSeconds} /> : null}
 					</FormShell>

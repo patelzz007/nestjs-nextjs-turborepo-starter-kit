@@ -4,59 +4,48 @@
 	"tasks": {
 		"build": {
 			"dependsOn": ["^build"],
-			"cache": false,
 			"inputs": ["$TURBO_DEFAULT$", ".env*"],
 			"outputs": [".next/**", "!.next/cache/**", "dist/**"],
 			"env": [
-				"NODE_ENV",
-				"DATABASE_URL",
-				"JWT_ACCESS_SECRET",
-				"JWT_ACCESS_EXPIRY",
-				"JWT_REFRESH_SECRET",
-				"JWT_REFRESH_EXPIRY",
-				"EMAIL_VERIFICATION_SECRET",
-				"BCRYPT_SALT_ROUNDS",
-				"RESEND_API_KEY",
-				"EMAIL_FROM_ADDRESS",
-				"EMAIL_MODE",
-				"EMAIL_TEST_TO",
-				"EMAIL_REPLY_TO",
-				"EMAIL_MAX_ATTEMPTS",
-				"EMAIL_TIMEOUT_MS",
-				"EMAIL_RATE_LIMIT_PER_MINUTE",
-				"RESEND_WEBHOOK_SECRET",
-				"WEBHOOK_RATE_LIMIT_PER_MINUTE",
-				"WEBHOOK_URL",
 				"APP_NAME",
 				"APP_URL",
-				"PORT",
+				"BCRYPT_SALT_ROUNDS",
 				"CORS_ORIGINS",
-				"NEXT_PUBLIC_API_URL"
+				"DATABASE_URL",
+				"EMAIL_FROM_ADDRESS",
+				"EMAIL_MAX_ATTEMPTS",
+				"EMAIL_MODE",
+				"EMAIL_RATE_LIMIT_PER_MINUTE",
+				"EMAIL_REPLY_TO",
+				"EMAIL_TEST_TO",
+				"EMAIL_TIMEOUT_MS",
+				"EMAIL_VERIFICATION_SECRET",
+				"JWT_ACCESS_EXPIRY",
+				"JWT_ACCESS_SECRET",
+				"JWT_REFRESH_EXPIRY",
+				"JWT_REFRESH_SECRET",
+				"NEXT_PUBLIC_API_URL",
+				"NODE_ENV",
+				"PORT",
+				"RESEND_API_KEY",
+				"RESEND_WEBHOOK_SECRET",
+				"WEBHOOK_RATE_LIMIT_PER_MINUTE",
+				"WEBHOOK_URL"
 			]
 		},
 		"lint": {
-			"dependsOn": ["^lint"],
-			"cache": false
+			"dependsOn": ["^lint"]
 		},
 		"format": {
 			"dependsOn": ["^format"],
 			"cache": false
 		},
 		"typecheck": {
-			// ^build ensures @workspace/shared's dist/ exists before the API's
-			// `nest build` (which resolves shared via package exports) runs.
-			"dependsOn": ["^build", "^typecheck"],
-			"cache": false
+			"dependsOn": ["^build", "^typecheck"]
 		},
 		"test": {
-			"dependsOn": ["^build"],
-			"cache": false
+			"dependsOn": ["^build"]
 		},
-		// ── Database tasks ───────────────────────────────────────────────────
-		// All db:* scripts are defined in apps/api (the only workspace that has
-		// them), so `pnpm turbo run db:<task>` executes them exactly once there.
-		// The root `pnpm db:*` shortcuts are plain `pnpm --filter` calls and are
-		// NOT part of the turbo graph (turbo 2.x doesn't execute root scripts).
 		"db:generate": {
 			"cache": false
 		},
@@ -67,13 +56,11 @@
 		"db:migrate": {
 			"cache": false,
 			"env": ["DATABASE_URL"],
-			// `prisma migrate dev` may prompt for a migration name — pass stdin through.
 			"interactive": true
 		},
 		"db:migrate:create": {
 			"cache": false,
 			"env": ["DATABASE_URL"],
-			// `prisma migrate dev --create-only` may prompt for a migration name.
 			"interactive": true
 		},
 		"db:migrate:status": {
@@ -87,14 +74,11 @@
 		"db:seed": {
 			"cache": false,
 			"env": ["DATABASE_URL"],
-			// Seeding needs the generated Prisma client and an up-to-date schema,
-			// so ensure db:generate + db:deploy run first (both idempotent).
 			"dependsOn": ["db:generate", "db:deploy"]
 		},
 		"db:studio": {
 			"cache": false,
 			"env": ["DATABASE_URL"],
-			// `prisma studio` is a long-running dev server — don't wait for exit.
 			"persistent": true
 		},
 		"db:reset": {
@@ -102,10 +86,6 @@
 			"env": ["DATABASE_URL"],
 			"dependsOn": ["db:generate"]
 		},
-		// ── Dependency-hygiene tasks (syncpack) ──────────────────────────────
-		// The actual scripts live in packages/tooling. The root package.json
-		// `deps:check` / `deps:fix` / `deps:list` scripts delegate here because
-		// turbo 2.x doesn't execute root package.json scripts as tasks.
 		"deps:check": {
 			"cache": false
 		},
