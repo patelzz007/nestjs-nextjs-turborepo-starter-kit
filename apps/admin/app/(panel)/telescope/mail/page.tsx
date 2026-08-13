@@ -10,14 +10,16 @@
 import { useAuth } from "@workspace/client/lib/auth";
 import { telescopeEndpoints } from "@workspace/client/lib/api/endpoints";
 import { Badge } from "@workspace/ui/components/feedback/badge";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@workspace/ui/components/overlay/dialog";
+import type { ColumnDef } from "@tanstack/react-table";
 import { DataTable, type DataTableFeatures } from "@workspace/ui/components/display/data-table";
 import { Loader2, Mail, CircleCheck, CircleX, TriangleAlert } from "lucide-react";
 import Link from "next/link";
-import { useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import type { EmailLogEntry, EmailLogStatus } from "@workspace/shared";
 
-import { formatTime } from "@/lib/telescope";
+import { formatTime, timeAgo } from "@/lib/telescope";
 
 const STATUS_META: Readonly<
 	Record<EmailLogStatus, { readonly label: string; readonly variant: "default" | "secondary" | "destructive" | "outline" | "ghost" | "link"; readonly icon: React.ReactNode }>
@@ -38,12 +40,23 @@ function StatusBadge({ status }: { readonly status: EmailLogStatus }): React.JSX
 		</Badge>
 	);
 }
-
 export default function TelescopeMailPage(): React.JSX.Element {
 	const { api } = useAuth();
 	const mailQuery = api.procedure(telescopeEndpoints.mail()).useQuery();
+	const [selected, setSelected] = useState<EmailLogEntry | null>(null);
 
-	const rows = useMemo(() => mailQuery.data?.logs ?? [], [mailQuery.data]);
+	const rows = useMemo(() => mailQuery.data?.data.logs ?? [], [mailQuery.data]);
+
+	// Improvement 17 — clicking a row opens a detail dialog.
+	const handleDialogOpenChange = useCallback((open: boolean): void => {
+		if (!open) {
+			setSelected(null);
+		}
+	}, []);
+
+	const handleRowClick = useCallback((row: EmailLogEntry): void => {
+		setSelected(row);
+	}, []);
 
 	const columns = useMemo<ColumnDef<DataTableFeatures, EmailLogEntry>[]>(
 		() => [
@@ -69,8 +82,14 @@ export default function TelescopeMailPage(): React.JSX.Element {
 			},
 			{
 				accessorKey: "createdAt",
-				header: (): React.JSX.Element => <div className="w-full text-end">Sent at</div>,
-				cell: ({ row }): React.JSX.Element => <div className="text-end text-muted-foreground tabular-nums">{formatTime(row.original.createdAt)}</div>,
+				header: "Sent at",
+				cell: ({ row }): React.JSX.Element => (
+					<div className="text-muted-foreground tabular-nums">
+						<div>{formatTime(row.original.createdAt)}</div>
+						{/* Improvement v2 — relative "2m ago" sub-line. */}
+						<div className="text-[11px] text-muted-foreground/70">{timeAgo(row.original.createdAt)}</div>
+					</div>
+				),
 			},
 		],
 		[],
@@ -109,7 +128,40 @@ export default function TelescopeMailPage(): React.JSX.Element {
 				exportable
 				exportFilename="telescope-mail"
 				enableColumnVisibility
+				onRowClick={handleRowClick}
 			/>
+
+			{/* Mail detail dialog (improvement 17) */}
+			<Dialog open={selected !== null} onOpenChange={handleDialogOpenChange}>
+				<DialogContent className="sm:max-w-lg">
+					{selected !== null ? (
+						<>
+							<DialogHeader>
+								<DialogTitle className="flex items-center gap-2">
+									<StatusBadge status={selected.status} />
+									<span className="truncate">{selected.subject}</span>
+								</DialogTitle>
+								<DialogDescription>Email log detail — timestamps and delivery metadata.</DialogDescription>
+							</DialogHeader>
+							<dl className="space-y-2 text-sm">
+								{[
+									{ label: "Template", value: selected.templateKey },
+									{ label: "To", value: selected.to },
+									{ label: "Sent", value: formatTime(selected.createdAt) },
+									{ label: "Updated", value: formatTime(selected.updatedAt) },
+									{ label: "Resend id", value: selected.resendId ?? "—" },
+									{ label: "Error", value: selected.error ?? "—" },
+								].map((row) => (
+									<div key={row.label} className="grid grid-cols-[6rem_minmax(0,1fr)] gap-3">
+										<dt className="text-muted-foreground">{row.label}</dt>
+										<dd className="min-w-0 font-mono text-xs break-all text-foreground">{row.value}</dd>
+									</div>
+								))}
+							</dl>
+						</>
+					) : null}
+				</DialogContent>
+			</Dialog>
 		</div>
 	);
 }

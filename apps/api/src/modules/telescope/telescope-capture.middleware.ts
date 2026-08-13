@@ -1,5 +1,5 @@
 import { Inject, Injectable, type NestMiddleware } from "@nestjs/common";
-import type { NextFunction, Request, Response } from "express";
+import type { NextFunction, Response } from "express";
 import { nanoid } from "nanoid";
 
 import { TelescopeJsonValueSchema, type TelescopeJsonValue, type TelescopeOptions } from "@workspace/shared";
@@ -25,7 +25,17 @@ export class TelescopeCaptureMiddleware implements NestMiddleware {
 
 	public use(req: RequestWithTrace, res: Response, next: NextFunction): void {
 		const options: TelescopeOptions = this.options;
-		if (!options.enabled || !shouldCaptureRequest(req.method, req.path, options.ignorePaths)) {
+		// NOTE: inside a router-level Nest middleware, `req.path` is the
+		// mount-relative path (`/`) — the real path lives in `req.originalUrl`.
+		// Comparing `/` against the ignore prefixes would capture EVERYTHING,
+		// including `/health`, `/docs` and `/telescope/*` itself.
+		const queryIndex: number = req.originalUrl.indexOf("?");
+		const pathname: string = queryIndex >= 0 ? req.originalUrl.slice(0, queryIndex) : req.originalUrl;
+
+		if (
+			!options.enabled ||
+			!shouldCaptureRequest(req.method, pathname, { ignorePaths: options.ignorePaths, redactPaths: options.redactPaths, capturePaths: options.capturePaths })
+		) {
 			next();
 			return;
 		}
@@ -40,6 +50,8 @@ export class TelescopeCaptureMiddleware implements NestMiddleware {
 			captured,
 			userId: null,
 			requestBody: options.captureBody === "full" ? toJsonValue(req.body) : null,
+			// Improvement 16: per-request console log buffer.
+			logs: [],
 		};
 
 		// next() starts the whole downstream chain inside the ALS scope, so the
@@ -55,8 +67,12 @@ export class TelescopeCaptureMiddleware implements NestMiddleware {
  * object, an array, or a raw string. One zod parse — no `typeof` guards —
  * returns a JSON-compatible value or `null`. The sanitizer runs at capture
  * time in the interceptor, so stored data is already clean (§10.2).
+ *
+ * Typed as the JSON value union (repo rule 2: no `unknown`/`any`); a
+ * non-JSON body that slips past body-parsing is still handled by the
+ * JSON.stringify fallback at runtime.
  */
-function toJsonValue(body: unknown): TelescopeJsonValue | null {
+function toJsonValue(body: TelescopeJsonValue | null | undefined): TelescopeJsonValue | null {
 	if (body === undefined || body === null) {
 		return null;
 	}
@@ -64,10 +80,13 @@ function toJsonValue(body: unknown): TelescopeJsonValue | null {
 	if (direct.success) {
 		return direct.data;
 	}
+	// JSON.stringify (never `String(...)`): a non-JSON body like a Buffer or
+	// FormData object must serialize losslessly-ish instead of `[object Object]`.
 	try {
-		const reparsed = TelescopeJsonValueSchema.safeParse(JSON.parse(String(body)));
-		return reparsed.success ? reparsed.data : String(body);
+		const serialized: string = JSON.stringify(body);
+		const reparsed = TelescopeJsonValueSchema.safeParse(JSON.parse(serialized));
+		return reparsed.success ? reparsed.data : serialized;
 	} catch {
-		return String(body);
+		return "{}";
 	}
 }

@@ -9,6 +9,7 @@
 
 import { useAuth } from "@workspace/client/lib/auth";
 import { telescopeEndpoints } from "@workspace/client/lib/api/endpoints";
+import type { ColumnDef } from "@tanstack/react-table";
 import { DataTable, type DataTableFeatures } from "@workspace/ui/components/display/data-table";
 import { Input } from "@workspace/ui/components/form/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@workspace/ui/components/form/select";
@@ -42,13 +43,10 @@ export default function TelescopeExceptionsPage(): React.JSX.Element {
 		return TelescopeExceptionListQuerySchema.parse(draft);
 	}, [page, pageSize, status, errorGroup]);
 
-	const listQuery = api.procedure(telescopeEndpoints.exceptions(query)).useQuery(
-		{ query },
-		{ placeholderData: (previous) => previous },
-	);
+	const listQuery = api.procedure(telescopeEndpoints.exceptions(query)).useQuery({ query }, { placeholderData: (previous) => previous });
 
-	const rows: readonly ExceptionLogEntry[] = useMemo(() => listQuery.data?.list.items ?? [], [listQuery.data]);
-	const totalCount: number = listQuery.data?.list.total ?? 0;
+	const rows: readonly ExceptionLogEntry[] = useMemo(() => listQuery.data?.data.list.items ?? [], [listQuery.data]);
+	const totalCount: number = listQuery.data?.data.list.total ?? 0;
 
 	const handleManualPaginationChange = useCallback((nextPage: number, nextPageSize: number): void => {
 		setPage(nextPage);
@@ -99,9 +97,14 @@ export default function TelescopeExceptionsPage(): React.JSX.Element {
 				),
 			},
 			{
-				accessorKey: "createdAt",
-				header: (): React.JSX.Element => <div className="w-full text-end">Time</div>,
-				cell: ({ row }): React.JSX.Element => <div className="text-end text-xs text-muted-foreground tabular-nums">{formatTime(row.original.createdAt)}</div>,
+				accessorKey: "lastSeenAt",
+				header: "Last seen",
+				cell: ({ row }): React.JSX.Element => (
+					<div className="min-w-0">
+						<p className="text-xs text-foreground tabular-nums">{formatTime(row.original.lastSeenAt)}</p>
+						<p className="text-[11px] text-muted-foreground tabular-nums">first {formatTime(row.original.firstSeenAt)}</p>
+					</div>
+				),
 			},
 		],
 		[],
@@ -113,13 +116,23 @@ export default function TelescopeExceptionsPage(): React.JSX.Element {
 				<p className="truncate font-mono text-xs font-medium text-foreground">{item.name}</p>
 				<p className="mt-0.5 truncate text-xs text-muted-foreground">{item.message}</p>
 				<div className="mt-1.5 flex items-center justify-between text-[11px] text-muted-foreground">
-					<span className="truncate font-mono">{item.method} {item.path}</span>
+					<span className="truncate font-mono">
+						{item.method} {item.path}
+					</span>
 					<span className="shrink-0 tabular-nums">{formatTime(item.createdAt)}</span>
 				</div>
 			</div>
 		),
 		[],
 	);
+
+	// Select's `onValueChange` passes `string | null` — narrow before writing.
+	const handleStatusChange = useCallback((value: string | null): void => {
+		if (value !== null) setStatus(value);
+	}, []);
+	const handleGroupChange = useCallback((event: React.ChangeEvent<HTMLInputElement>): void => {
+		setErrorGroup(event.target.value);
+	}, []);
 
 	const filtersKey: string = useMemo(() => JSON.stringify({ status, errorGroup }), [status, errorGroup]);
 	const statusItems = useMemo(() => STATUS_OPTIONS, []);
@@ -128,17 +141,15 @@ export default function TelescopeExceptionsPage(): React.JSX.Element {
 		<div className="mx-auto w-full max-w-7xl space-y-6">
 			<header>
 				<h1 className="text-2xl font-semibold tracking-tight text-foreground">Exceptions</h1>
-				<p className="mt-1 max-w-xl text-sm text-muted-foreground">
-					Every captured exception, grouped by stack signature. Click a row to inspect its full stack trace below.
-				</p>
+				<p className="mt-1 max-w-xl text-sm text-muted-foreground">Every captured exception, grouped by stack signature. Click a row to inspect its full stack trace below.</p>
 			</header>
 
 			<div className="flex flex-wrap items-end gap-3">
-				<div className="space-y-1.5">
+				<div className="flex flex-col gap-1.5">
 					<label htmlFor="tel-ex-status" className="text-xs font-medium text-muted-foreground">
 						Status
 					</label>
-					<Select value={status} onValueChange={setStatus} items={statusItems}>
+					<Select value={status} onValueChange={handleStatusChange} items={statusItems}>
 						<SelectTrigger id="tel-ex-status" className="h-9 w-32 text-sm">
 							<SelectValue placeholder="Status" />
 						</SelectTrigger>
@@ -152,17 +163,11 @@ export default function TelescopeExceptionsPage(): React.JSX.Element {
 						</SelectContent>
 					</Select>
 				</div>
-				<div className="space-y-1.5">
+				<div className="flex flex-col gap-1.5">
 					<label htmlFor="tel-ex-group" className="text-xs font-medium text-muted-foreground">
 						Error group
 					</label>
-					<Input
-						id="tel-ex-group"
-						placeholder="e.g. 3f2a91c4d0e5b7a1"
-						value={errorGroup}
-						onChange={(event: React.ChangeEvent<HTMLInputElement>): void => setErrorGroup(event.target.value)}
-						className="h-9 w-52 font-mono text-sm"
-					/>
+					<Input id="tel-ex-group" placeholder="e.g. 3f2a91c4d0e5b7a1" value={errorGroup} onChange={handleGroupChange} className="h-9 w-52 font-mono text-sm" />
 				</div>
 			</div>
 

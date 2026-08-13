@@ -40,7 +40,11 @@ export function ExceptionCard({ exception, href }: ExceptionCardProps): React.JS
 						<span className={`size-1.5 rounded-full ${tone.dotClass}`} />
 						{tone.label}
 					</span>
-					{exception.path !== null ? <span className="truncate font-mono">{exception.method} {exception.path}</span> : null}
+					{exception.path !== null ? (
+						<span className="truncate font-mono">
+							{exception.method} {exception.path}
+						</span>
+					) : null}
 					<span className="hidden shrink-0 sm:inline">{formatTime(exception.createdAt)}</span>
 				</p>
 			</div>
@@ -56,7 +60,7 @@ export function ExceptionCard({ exception, href }: ExceptionCardProps): React.JS
 		return (
 			<details className="group rounded-lg border bg-card text-card-foreground shadow-xs">
 				<summary className="cursor-pointer list-none p-3 transition-colors hover:bg-accent/40 [&::-webkit-details-marker]:hidden">{header}</summary>
-				<pre className="overflow-x-auto border-t bg-muted/50 p-3 font-mono text-[11px] leading-relaxed text-muted-foreground whitespace-pre-wrap">{exception.stack}</pre>
+				<pre className="overflow-x-auto border-t bg-muted/50 p-3 font-mono text-[11px] leading-relaxed whitespace-pre-wrap text-muted-foreground">{exception.stack}</pre>
 			</details>
 		);
 	}

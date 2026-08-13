@@ -6,19 +6,19 @@ import { TelescopeJsonValueSchema, type TelescopeJsonValue } from "@workspace/sh
  * Keys that are ALWAYS stripped from stored data — even when explicitly
  * whitelisted (docs/telescope.md §10.2). Credentials can never be captured.
  */
-const REDACT_KEY_PATTERN: RegExp = /password|authorization|set-cookie|cookie|token|secret|api[_-]?key|credential/i;
+const REDACT_KEY_PATTERN = /password|authorization|set-cookie|cookie|token|secret|api[_-]?key|credential/i;
 
 /** Masks the local part of an email: `alice.wong@x.com` → `a***@x.com`. */
-const EMAIL_MASK_PATTERN: RegExp = /([a-zA-Z0-9._%+-])[^@\s]{1,24}@/g;
+const EMAIL_MASK_PATTERN = /([a-zA-Z0-9._%+-])[^@\s]{1,24}@/g;
 
-const REDACTED: string = "[REDACTED]";
+const REDACTED = "[REDACTED]";
 
 /** Serialization budget applied to stored bodies (docs/telescope.md §10.4). */
-export const MAX_BODY_CHARS: number = 2000;
+export const MAX_BODY_CHARS = 2000;
 /** Per-value header length cap. */
-export const MAX_HEADER_VALUE_CHARS: number = 200;
+export const MAX_HEADER_VALUE_CHARS = 200;
 /** Per-string length cap inside stored bodies. */
-export const MAX_STRING_FIELD_CHARS: number = 500;
+export const MAX_STRING_FIELD_CHARS = 500;
 
 const REDACT_KEY_PATTERN_FOR_KEY: (key: string) => boolean = (key) => REDACT_KEY_PATTERN.test(key);
 
@@ -71,13 +71,16 @@ export function sanitizeJson(value: TelescopeJsonValue, depth = 0): TelescopeJso
  * Truncates a sanitized JSON value to the body budget. If serialization +
  * slicing lands mid-string, falls back to a stable `{ truncated, preview }`
  * marker so the stored value always parses as JSON.
+ *
+ * Improvement 10: the budget is a parameter (defaults to the module constant)
+ * so `TELESCOPE_BODY_LIMIT_CHARS` can raise/lower it per deployment.
  */
-export function truncateJson(value: TelescopeJsonValue): TelescopeJsonValue {
+export function truncateJson(value: TelescopeJsonValue, maxChars: number = MAX_BODY_CHARS): TelescopeJsonValue {
 	const serialized: string = JSON.stringify(value);
-	if (serialized.length <= MAX_BODY_CHARS) {
+	if (serialized.length <= maxChars) {
 		return value;
 	}
-	const preview: string = serialized.slice(0, MAX_BODY_CHARS);
+	const preview: string = serialized.slice(0, maxChars);
 	try {
 		const parsed = TelescopeJsonValueSchema.safeParse(JSON.parse(preview));
 		return parsed.success ? parsed.data : { truncated: true, preview: `${preview}…` };

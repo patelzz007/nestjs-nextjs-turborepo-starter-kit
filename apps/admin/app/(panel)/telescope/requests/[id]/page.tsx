@@ -9,20 +9,29 @@
 
 import { useAuth } from "@workspace/client/lib/auth";
 import { telescopeEndpoints } from "@workspace/client/lib/api/endpoints";
+import { Button } from "@workspace/ui/components/form/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
-import { ArrowLeft, Braces, Database, Fingerprint, Loader2, UserRound } from "lucide-react";
+import { ArrowLeft, Braces, Copy, Database, Fingerprint, ListChecks, Loader2, TerminalSquare, TriangleAlert, UserRound } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
+import { toast } from "sonner";
 
 import type { TelescopeRequestDetailResponse } from "@workspace/shared";
 
+import { CodeBlock } from "@/components/docs/code-block";
 import { SqlList } from "@/components/telescope/sql-list";
 import { Timeline } from "@/components/telescope/timeline";
 import { durationLabel, formatTime, statusTone } from "@/lib/telescope";
 
 /** Key/value panel (headers) — one table, no per-row hooks. */
-function KeyValueTable({ entries, emptyLabel }: { readonly entries: readonly { readonly key: string; readonly value: string }[]; readonly emptyLabel: string }): React.JSX.Element {
+function KeyValueTable({
+	entries,
+	emptyLabel,
+}: {
+	readonly entries: readonly { readonly key: string; readonly value: string }[];
+	readonly emptyLabel: string;
+}): React.JSX.Element {
 	if (entries.length === 0) {
 		return <p className="rounded-lg border border-dashed p-4 text-center text-xs text-muted-foreground">{emptyLabel}</p>;
 	}
@@ -31,19 +40,19 @@ function KeyValueTable({ entries, emptyLabel }: { readonly entries: readonly { r
 			{entries.map((entry) => (
 				<div key={entry.key} className="grid grid-cols-[minmax(0,10rem)_minmax(0,1fr)] gap-2 border-b px-3 py-1.5 text-xs last:border-b-0">
 					<span className="truncate font-mono font-medium text-muted-foreground">{entry.key}</span>
-					<span className="break-all font-mono text-foreground">{entry.value}</span>
+					<span className="font-mono break-all text-foreground">{entry.value}</span>
 				</div>
 			))}
 		</div>
 	);
 }
 
-/** Pretty-printed JSON body, or a plain pre for non-JSON captures. */
+/** Pretty-printed JSON body via the shared shiki CodeBlock, or an empty state. */
 function BodyBlock({ value, emptyLabel }: { readonly value: string | null; readonly emptyLabel: string }): React.JSX.Element {
 	if (value === null) {
 		return <p className="rounded-lg border border-dashed p-4 text-center text-xs text-muted-foreground">{emptyLabel}</p>;
 	}
-	return <pre className="max-h-80 overflow-auto rounded-lg bg-muted/50 p-3 font-mono text-xs leading-relaxed text-foreground whitespace-pre-wrap">{value}</pre>;
+	return <CodeBlock code={value} language="json" fileName="body.json" />;
 }
 
 export default function TelescopeRequestDetailPage(): React.JSX.Element {
@@ -52,7 +61,39 @@ export default function TelescopeRequestDetailPage(): React.JSX.Element {
 	const id: string = params.id;
 
 	const detailQuery = api.procedure(telescopeEndpoints.requestDetail(id)).useQuery();
-	const detail: TelescopeRequestDetailResponse | undefined = detailQuery.data;
+	const detail: TelescopeRequestDetailResponse | undefined = detailQuery.data?.data;
+
+	// Improvement 13 — export the whole detail payload as JSON for repros/issues.
+	// Declared BEFORE the early returns (rules of hooks).
+	const handleCopyJson = useCallback((): void => {
+		if (detail === undefined) {
+			return;
+		}
+		void navigator.clipboard.writeText(JSON.stringify(detail, null, 2)).then((): void => {
+			toast.success("Request copied as JSON.");
+		});
+	}, [detail]);
+
+	// Improvement v2 — copy a ready-to-run curl command for this request.
+	const handleCopyCurl = useCallback((): void => {
+		if (detail === undefined) {
+			return;
+		}
+		const { request } = detail;
+		const url: string = request.queryString !== null ? `${request.path}?${request.queryString}` : request.path;
+		const parts: string[] = [`curl -X ${request.method} '${url}'`];
+		if (request.requestHeaders !== null) {
+			for (const [key, value] of Object.entries(request.requestHeaders)) {
+				parts.push(`  -H '${key}: ${value}'`);
+			}
+		}
+		if (request.requestBody !== null) {
+			parts.push(`  -d '${JSON.stringify(request.requestBody)}'`);
+		}
+		void navigator.clipboard.writeText(parts.join(" \\\n")).then((): void => {
+			toast.success("cURL command copied.");
+		});
+	}, [detail]);
 
 	const headers = useMemo(
 		(): readonly { readonly key: string; readonly value: string }[] =>
@@ -84,7 +125,7 @@ export default function TelescopeRequestDetailPage(): React.JSX.Element {
 		);
 	}
 
-	const { request, queries, dumps } = detail;
+	const { request, queries, dumps, n1Warnings } = detail;
 	const tone = statusTone(request.statusCode);
 
 	return (
@@ -104,7 +145,15 @@ export default function TelescopeRequestDetailPage(): React.JSX.Element {
 							<span className={`size-1.5 rounded-full ${tone.dotClass}`} />
 							{tone.label}
 						</span>
-						<span className="ml-auto font-mono text-sm font-medium tabular-nums text-foreground">{durationLabel(request.durationMs)}</span>
+						<span className="ml-auto font-mono text-sm font-medium text-foreground tabular-nums">{durationLabel(request.durationMs)}</span>
+						<Button variant="outline" size="sm" className="h-7 gap-1.5 text-xs" onClick={handleCopyCurl} title="Copy a ready-to-run curl command">
+							<TerminalSquare className="size-3" />
+							Copy cURL
+						</Button>
+						<Button variant="outline" size="sm" className="h-7 gap-1.5 text-xs" onClick={handleCopyJson}>
+							<Copy className="size-3" />
+							Copy JSON
+						</Button>
 					</div>
 					<CardDescription className="pt-1">{formatTime(request.createdAt)}</CardDescription>
 				</CardHeader>
@@ -128,6 +177,30 @@ export default function TelescopeRequestDetailPage(): React.JSX.Element {
 				</CardContent>
 			</Card>
 
+			{/* ── N+1 warnings (improvement 7) ─────────────────────────── */}
+			{n1Warnings.length > 0 ? (
+				<Card className="border-amber-300/60 bg-amber-500/5 dark:border-amber-500/40">
+					<CardHeader className="pb-3">
+						<CardTitle className="flex items-center gap-2 text-base">
+							<TriangleAlert className="size-4 text-amber-600 dark:text-amber-400" />
+							N+1 queries detected
+						</CardTitle>
+						<CardDescription>The same model+operation ran 5+ times — likely a loop fetching related rows one by one.</CardDescription>
+					</CardHeader>
+					<CardContent className="space-y-2">
+						{n1Warnings.map((warning) => (
+							<div key={`${warning.operation}:${warning.model}`} className="flex flex-wrap items-center gap-2 rounded-lg border bg-card px-3 py-2 text-xs">
+								<span className="rounded-md bg-muted px-1.5 py-0.5 font-mono font-medium">{warning.operation}</span>
+								<span className="font-mono text-muted-foreground">{warning.model || "(unknown table)"}</span>
+								<span className="ml-auto font-medium text-amber-700 tabular-nums dark:text-amber-400">
+									{String(warning.count)}× · {durationLabel(warning.totalMs)}
+								</span>
+							</div>
+						))}
+					</CardContent>
+				</Card>
+			) : null}
+
 			{/* ── Timeline ─────────────────────────────────────────────── */}
 			<Card>
 				<CardHeader className="pb-3">
@@ -147,7 +220,9 @@ export default function TelescopeRequestDetailPage(): React.JSX.Element {
 							<Database className="size-4 text-muted-foreground" />
 							SQL
 						</CardTitle>
-						<CardDescription>{queries.length} quer{queries.length === 1 ? "y" : "ies"} for this correlation.</CardDescription>
+						<CardDescription>
+							{queries.length} quer{queries.length === 1 ? "y" : "ies"} for this correlation.
+						</CardDescription>
 					</CardHeader>
 					<CardContent>
 						<SqlList queries={queries} />
@@ -161,22 +236,58 @@ export default function TelescopeRequestDetailPage(): React.JSX.Element {
 							<Braces className="size-4 text-muted-foreground" />
 							Dumps
 						</CardTitle>
-						<CardDescription>Values recorded via the Telescope <code className="font-mono">dump</code> probe.</CardDescription>
+						<CardDescription>
+							Values recorded via the Telescope <code className="font-mono">dump</code> probe.
+						</CardDescription>
 					</CardHeader>
 					<CardContent className="space-y-2">
 						{dumps.length === 0 ? (
 							<p className="rounded-lg border border-dashed p-4 text-center text-xs text-muted-foreground">No dumps for this request.</p>
 						) : (
 							dumps.map((dump) => (
-								<div key={dump.id} className="rounded-lg border">
-									<p className="border-b px-3 py-1.5 font-mono text-xs font-medium text-foreground">{dump.name}</p>
-									<pre className="max-h-56 overflow-auto p-3 font-mono text-xs leading-relaxed text-muted-foreground whitespace-pre-wrap">{JSON.stringify(dump.value, null, 2)}</pre>
+								<div key={dump.id}>
+									<CodeBlock code={JSON.stringify(dump.value, null, 2)} language="json" fileName={dump.name} />
 								</div>
 							))
 						)}
 					</CardContent>
 				</Card>
 			</div>
+
+			{/* ── Console output (improvement 16) ──────────────────────── */}
+			{request.logs.length > 0 ? (
+				<Card>
+					<CardHeader className="pb-3">
+						<CardTitle className="flex items-center gap-2 text-base">
+							<ListChecks className="size-4 text-muted-foreground" />
+							Console output
+						</CardTitle>
+						<CardDescription>console.* calls that ran inside this request&apos;s async context ({request.logs.length} lines).</CardDescription>
+					</CardHeader>
+					<CardContent className="space-y-1 overflow-hidden rounded-lg border bg-muted/30 p-2 font-mono text-xs">
+						{/* eslint-disable react/no-array-index-key -- Console lines are chronological
+						    and static per request (no stable id); the index is the legitimate key. */}
+						{request.logs.map((log, index) => (
+							<div key={index} className="flex items-baseline gap-2 px-2 py-0.5">
+								<span className="shrink-0 text-muted-foreground">{log.timestamp.slice(11, 19)}</span>
+								<span
+									className={`w-10 shrink-0 font-semibold uppercase ${
+										log.level === "error"
+											? "text-red-500"
+											: log.level === "warn"
+												? "text-amber-500"
+												: log.level === "debug"
+													? "text-muted-foreground"
+													: "text-sky-600 dark:text-sky-400"
+									}`}>
+									{log.level}
+								</span>
+								<span className="break-all text-foreground">{log.message}</span>
+							</div>
+						))}
+					</CardContent>
+				</Card>
+			) : null}
 
 			{/* ── Headers + bodies ──────────────────────────────────────── */}
 			<Card>
@@ -192,11 +303,17 @@ export default function TelescopeRequestDetailPage(): React.JSX.Element {
 					<div className="space-y-4">
 						<div>
 							<p className="mb-2 text-xs font-medium text-muted-foreground uppercase">Request body</p>
-							<BodyBlock value={request.requestBody !== null ? JSON.stringify(request.requestBody, null, 2) : null} emptyLabel="Body capture disabled (TELESCOPE_BODY_CAPTURE)." />
+							<BodyBlock
+								value={request.requestBody !== null ? JSON.stringify(request.requestBody, null, 2) : null}
+								emptyLabel="Body capture disabled (TELESCOPE_BODY_CAPTURE)."
+							/>
 						</div>
 						<div>
 							<p className="mb-2 text-xs font-medium text-muted-foreground uppercase">Response body</p>
-							<BodyBlock value={request.responseBody !== null ? JSON.stringify(request.responseBody, null, 2) : null} emptyLabel="Response not captured (JSON-only, sanitized)." />
+							<BodyBlock
+								value={request.responseBody !== null ? JSON.stringify(request.responseBody, null, 2) : null}
+								emptyLabel="Response not captured (JSON-only, sanitized)."
+							/>
 						</div>
 					</div>
 				</CardContent>

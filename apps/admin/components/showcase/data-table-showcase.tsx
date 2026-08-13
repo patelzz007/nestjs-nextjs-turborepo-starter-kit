@@ -273,13 +273,13 @@ export function DataTableShowcase(): React.JSX.Element {
 			},
 			{
 				accessorKey: "target",
-				header: (): React.JSX.Element => <div className="w-full text-end">Target</div>,
-				cell: ({ row }): React.JSX.Element => <div className="text-end tabular-nums">{row.original.target}</div>,
+				header: "Target",
+				cell: ({ row }): React.JSX.Element => <div className="tabular-nums">{row.original.target}</div>,
 			},
 			{
 				accessorKey: "limit",
-				header: (): React.JSX.Element => <div className="w-full text-end">Limit</div>,
-				cell: ({ row }): React.JSX.Element => <div className="text-end tabular-nums">{row.original.limit}</div>,
+				header: "Limit",
+				cell: ({ row }): React.JSX.Element => <div className="tabular-nums">{row.original.limit}</div>,
 			},
 			{
 				accessorKey: "reviewer",

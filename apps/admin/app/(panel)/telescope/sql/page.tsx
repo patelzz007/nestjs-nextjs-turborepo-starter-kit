@@ -9,6 +9,7 @@
 
 import { useAuth } from "@workspace/client/lib/auth";
 import { telescopeEndpoints } from "@workspace/client/lib/api/endpoints";
+import type { ColumnDef } from "@tanstack/react-table";
 import { DataTable, type DataTableFeatures } from "@workspace/ui/components/display/data-table";
 import { Input } from "@workspace/ui/components/form/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@workspace/ui/components/form/select";
@@ -26,12 +27,47 @@ const SORT_OPTIONS: readonly { readonly value: string; readonly label: string }[
 	{ value: "newest", label: "Newest first" },
 ];
 
+/** Improvement v2 — one-click duration thresholds for the SQL log. */
+const DURATION_PRESETS: readonly { readonly label: string; readonly value: string }[] = [
+	{ label: "All", value: "" },
+	{ label: "≥100ms", value: "100" },
+	{ label: "≥500ms", value: "500" },
+	{ label: "≥1s", value: "1000" },
+	{ label: "≥2s", value: "2000" },
+];
+
+interface DurationPresetButtonProps {
+	readonly preset: { readonly label: string; readonly value: string };
+	readonly active: boolean;
+	readonly onSelect: (value: string) => void;
+}
+
+/** One preset chip — the per-option closure lives here (rule 16). */
+function DurationPresetButton({ preset, active, onSelect }: DurationPresetButtonProps): React.JSX.Element {
+	const handleClick = useCallback((): void => {
+		onSelect(preset.value);
+	}, [onSelect, preset.value]);
+
+	return (
+		<button
+			type="button"
+			onClick={handleClick}
+			className={`rounded-md px-2 py-1 text-[11px] font-medium transition-colors ${
+				active ? "bg-primary text-primary-foreground shadow-xs" : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+			}`}>
+			{preset.label}
+		</button>
+	);
+}
+
 export default function TelescopeSqlPage(): React.JSX.Element {
 	const { api } = useAuth();
 	const router = useRouter();
 
+	// Improvement 8: a sane default (100 ms) makes slow queries surface
+	// without forcing the dev to type a filter every visit.
 	const [model, setModel] = useState<string>("");
-	const [minDuration, setMinDuration] = useState<string>("");
+	const [minDuration, setMinDuration] = useState<string>("100");
 	const [sort, setSort] = useState<string>("duration");
 	const [page, setPage] = useState<number>(1);
 	const [pageSize, setPageSize] = useState<number>(20);
@@ -43,13 +79,10 @@ export default function TelescopeSqlPage(): React.JSX.Element {
 		return TelescopeSqlListQuerySchema.parse(draft);
 	}, [page, pageSize, sort, model, minDuration]);
 
-	const listQuery = api.procedure(telescopeEndpoints.sql(query)).useQuery(
-		{ query },
-		{ placeholderData: (previous) => previous },
-	);
+	const listQuery = api.procedure(telescopeEndpoints.sql(query)).useQuery({ query }, { placeholderData: (previous) => previous });
 
-	const rows: readonly QueryLogEntry[] = useMemo(() => listQuery.data?.list.items ?? [], [listQuery.data]);
-	const totalCount: number = listQuery.data?.list.total ?? 0;
+	const rows: readonly QueryLogEntry[] = useMemo(() => listQuery.data?.data.list.items ?? [], [listQuery.data]);
+	const totalCount: number = listQuery.data?.data.list.total ?? 0;
 
 	const handleManualPaginationChange = useCallback((nextPage: number, nextPageSize: number): void => {
 		setPage(nextPage);
@@ -94,8 +127,8 @@ export default function TelescopeSqlPage(): React.JSX.Element {
 			},
 			{
 				accessorKey: "createdAt",
-				header: (): React.JSX.Element => <div className="w-full text-end">Time</div>,
-				cell: ({ row }): React.JSX.Element => <div className="text-end text-xs text-muted-foreground tabular-nums">{formatTime(row.original.createdAt)}</div>,
+				header: "Time",
+				cell: ({ row }): React.JSX.Element => <span className="text-xs text-muted-foreground tabular-nums">{formatTime(row.original.createdAt)}</span>,
 			},
 		],
 		[],
@@ -118,6 +151,20 @@ export default function TelescopeSqlPage(): React.JSX.Element {
 		[],
 	);
 
+	// Select's `onValueChange` passes `string | null` — narrow before writing.
+	const handleSortChange = useCallback((value: string | null): void => {
+		if (value !== null) setSort(value);
+	}, []);
+	const handleModelChange = useCallback((event: React.ChangeEvent<HTMLInputElement>): void => {
+		setModel(event.target.value);
+	}, []);
+	const handleMinDurationChange = useCallback((event: React.ChangeEvent<HTMLInputElement>): void => {
+		setMinDuration(event.target.value);
+	}, []);
+	const handlePresetClick = useCallback((presetValue: string): void => {
+		setMinDuration(presetValue);
+	}, []);
+
 	const filtersKey: string = useMemo(() => JSON.stringify({ model, minDuration, sort }), [model, minDuration, sort]);
 	const sortItems = useMemo(() => SORT_OPTIONS, []);
 
@@ -126,42 +173,37 @@ export default function TelescopeSqlPage(): React.JSX.Element {
 			<header>
 				<h1 className="text-2xl font-semibold tracking-tight text-foreground">SQL</h1>
 				<p className="mt-1 max-w-xl text-sm text-muted-foreground">
-					Every Prisma query captured alongside its requests. Click a row to open the originating request, filtered to that correlation.
+					Every Prisma query captured alongside its requests, filtered to ≥100ms by default so slow queries surface. Click a row to open the originating request, filtered to
+					that correlation.
 				</p>
 			</header>
 
 			<div className="flex flex-wrap items-end gap-3">
-				<div className="space-y-1.5">
+				<div className="flex flex-col gap-1.5">
 					<label htmlFor="tel-sql-model" className="text-xs font-medium text-muted-foreground">
 						Model
 					</label>
-					<Input
-						id="tel-sql-model"
-						placeholder="e.g. EmailLog"
-						value={model}
-						onChange={(event: React.ChangeEvent<HTMLInputElement>): void => setModel(event.target.value)}
-						className="h-9 w-40 text-sm"
-					/>
+					<Input id="tel-sql-model" placeholder="e.g. EmailLog" value={model} onChange={handleModelChange} className="h-9 w-40 text-sm" />
 				</div>
-				<div className="space-y-1.5">
+				<div className="flex flex-col gap-1.5">
 					<label htmlFor="tel-sql-min" className="text-xs font-medium text-muted-foreground">
 						Min duration (ms)
 					</label>
-					<Input
-						id="tel-sql-min"
-						type="number"
-						min={0}
-						placeholder="e.g. 500"
-						value={minDuration}
-						onChange={(event: React.ChangeEvent<HTMLInputElement>): void => setMinDuration(event.target.value)}
-						className="h-9 w-36 text-sm"
-					/>
+					<div className="flex items-center gap-1.5">
+						<Input id="tel-sql-min" type="number" min={0} placeholder="e.g. 500" value={minDuration} onChange={handleMinDurationChange} className="h-9 w-32 text-sm" />
+						{/* Quick presets (improvement v2) — one click, no typing. */}
+						<div className="inline-flex items-center gap-0.5 rounded-lg border border-input bg-background p-0.5">
+							{DURATION_PRESETS.map((preset) => (
+								<DurationPresetButton key={preset.label} preset={preset} active={minDuration === preset.value} onSelect={handlePresetClick} />
+							))}
+						</div>
+					</div>
 				</div>
-				<div className="space-y-1.5">
+				<div className="flex flex-col gap-1.5">
 					<label htmlFor="tel-sql-sort" className="text-xs font-medium text-muted-foreground">
 						Sort
 					</label>
-					<Select value={sort} onValueChange={setSort} items={sortItems}>
+					<Select value={sort} onValueChange={handleSortChange} items={sortItems}>
 						<SelectTrigger id="tel-sql-sort" className="h-9 w-40 text-sm">
 							<SelectValue placeholder="Sort" />
 						</SelectTrigger>

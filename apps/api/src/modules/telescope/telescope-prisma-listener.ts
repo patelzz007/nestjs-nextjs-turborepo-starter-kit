@@ -5,6 +5,7 @@ import type { QueryLogEntry } from "@workspace/shared";
 
 import { PrismaService } from "../../prisma/prisma.service.js";
 
+import { modelFromSql } from "./n1-detector.js";
 import { RequestSpanContext, type SpanStore } from "./request-span-context.js";
 import { sanitizeQueryParams } from "./sanitize.js";
 import { TELESCOPE_STORE } from "./telescope.options.js";
@@ -28,7 +29,7 @@ interface PrismaClientWithQueryEvents {
 	$on(event: "query", callback: (event: PrismaQueryEventLike) => void): void;
 }
 
-const SQL_OPERATION_PATTERN: RegExp = /^\s*(select|insert|update|delete|create|alter|drop|truncate)\b/i;
+const SQL_OPERATION_PATTERN = /^\s*(select|insert|update|delete|create|alter|drop|truncate)\b/i;
 
 function operationFromSql(query: string): string {
 	const match: RegExpMatchArray | null = SQL_OPERATION_PATTERN.exec(query);
@@ -45,7 +46,9 @@ function operationFromSql(query: string): string {
  * limitation — see docs/telescope.md §5.3). Capture degrades gracefully: no
  * events = no query rows, and nothing else is affected.
  */
+
 @Injectable()
+// eslint-disable-next-line @darraghor/nestjs-typed/injectable-should-be-provided -- Registered in TelescopeModule.register()'s dynamic providers; the typed plugin only scans static @Module decorators.
 export class TelescopePrismaListener implements OnModuleInit {
 	public constructor(
 		private readonly prisma: PrismaService,
@@ -59,11 +62,14 @@ export class TelescopePrismaListener implements OnModuleInit {
 			const spanStore: SpanStore | undefined = RequestSpanContext.getStore();
 			// Only queries that ran inside a CAPTURED request are recorded —
 			// queries outside a request (or sampled out) are skipped entirely.
-			if (spanStore === undefined || !spanStore.captured) {
+			if (spanStore?.captured !== true) {
 				return;
 			}
 			const correlationId: string = spanStore.correlationId;
-			const durationMs: number = event.duration;
+			// Prisma's query event reports float milliseconds (e.g. 17.697…); the
+			// shared `QueryLogEntrySchema` requires `z.number().int()`, so round
+			// at capture time or the client-side envelope validation rejects the row.
+			const durationMs: number = Math.round(event.duration);
 
 			spanStore.spans.push({
 				name: `${operationFromSql(event.query)} query`,
@@ -75,7 +81,10 @@ export class TelescopePrismaListener implements OnModuleInit {
 			const entry: QueryLogEntry = {
 				id: nanoid(),
 				correlationId,
-				model: "",
+				// Improvement 7: derive the model from SQL so the N+1 detector
+				// can group queries by table (Prisma 7 driver adapters don't
+				// report the model on the query event).
+				model: modelFromSql(event.query),
 				operation: operationFromSql(event.query),
 				query: event.query,
 				params: sanitizeQueryParams(event.params),

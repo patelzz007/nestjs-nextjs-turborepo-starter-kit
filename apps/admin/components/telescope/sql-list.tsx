@@ -39,11 +39,11 @@ function QueryCard({ query, slowThresholdMs }: { readonly query: QueryLogEntry; 
 				<span className="hidden shrink-0 text-[11px] text-muted-foreground sm:block">{formatTime(query.createdAt)}</span>
 			</summary>
 			<div className="space-y-2 border-t p-3">
-				<pre className="overflow-x-auto rounded-lg bg-muted/50 p-3 font-mono text-xs leading-relaxed text-foreground whitespace-pre-wrap">{query.query}</pre>
+				<pre className="overflow-x-auto rounded-lg bg-muted/50 p-3 font-mono text-xs leading-relaxed whitespace-pre-wrap text-foreground">{query.query}</pre>
 				{query.params !== null ? (
 					<div>
 						<p className="mb-1 text-[11px] font-medium text-muted-foreground uppercase">Bind params (sanitized)</p>
-						<pre className="overflow-x-auto rounded-lg bg-muted/50 p-2 font-mono text-[11px] text-muted-foreground whitespace-pre-wrap">{query.params}</pre>
+						<pre className="overflow-x-auto rounded-lg bg-muted/50 p-2 font-mono text-[11px] whitespace-pre-wrap text-muted-foreground">{query.params}</pre>
 					</div>
 				) : null}
 			</div>

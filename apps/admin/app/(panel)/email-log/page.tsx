@@ -133,8 +133,8 @@ export default function EmailLogPage(): React.JSX.Element {
 			},
 			{
 				accessorKey: "createdAt",
-				header: (): React.JSX.Element => <div className="w-full text-end">Sent at</div>,
-				cell: ({ row }): React.JSX.Element => <div className="text-end text-muted-foreground tabular-nums">{formatTime(row.original.createdAt)}</div>,
+				header: "Sent at",
+				cell: ({ row }): React.JSX.Element => <div className="text-muted-foreground tabular-nums">{formatTime(row.original.createdAt)}</div>,
 			},
 		],
 		[],

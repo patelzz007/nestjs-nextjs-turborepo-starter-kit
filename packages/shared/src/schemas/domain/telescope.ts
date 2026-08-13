@@ -11,6 +11,23 @@ export const TelescopeJsonValueSchema: z.ZodType<TelescopeJsonValue> = z.lazy(()
 	z.union([z.string(), z.number(), z.boolean(), z.null(), z.array(TelescopeJsonValueSchema), z.record(z.string(), TelescopeJsonValueSchema)]),
 );
 
+// ── Per-request console capture (improvement 16) ───────────────────────────
+// Declared before RequestLogEntrySchema, which references it.
+
+export const TelescopeLogLevelSchema = z.enum(["debug", "info", "warn", "error"]);
+export type TelescopeLogLevel = z.output<typeof TelescopeLogLevelSchema>;
+
+export const TelescopeLogEntrySchema = z
+	.object({
+		level: TelescopeLogLevelSchema,
+		/** Sanitized + length-capped message text. */
+		message: z.string(),
+		timestamp: z.string(),
+	})
+	.strict();
+
+export type TelescopeLogEntry = z.output<typeof TelescopeLogEntrySchema>;
+
 // ── Timeline spans ─────────────────────────────────────────────────────────
 
 export const TelescopeSpanKindSchema = z.enum(["middleware", "guard", "interceptor", "service", "prisma", "queue", "serialization", "other"]);
@@ -57,6 +74,8 @@ export const RequestLogEntrySchema = RequestLogSummarySchema.extend({
 	responseBody: TelescopeJsonValueSchema.nullable(),
 	requestHeaders: z.record(z.string(), z.string()).nullable(),
 	spans: z.array(TelescopeSpanSchema).readonly(),
+	/** Console output that ran inside the request's async context (improvement 16). */
+	logs: z.array(TelescopeLogEntrySchema).readonly().default([]),
 }).strict();
 
 export type RequestLogEntry = z.output<typeof RequestLogEntrySchema>;
@@ -95,6 +114,9 @@ export const ExceptionLogEntrySchema = z
 		userId: z.string().nullable(),
 		occurrences: z.number().int().positive(),
 		createdAt: z.string(),
+		/** Group-aggregation fields (improvement 15): first/last occurrence. */
+		firstSeenAt: z.string(),
+		lastSeenAt: z.string(),
 	})
 	.strict();
 
@@ -126,10 +148,20 @@ export const TelescopeOptionsSchema = z
 	.object({
 		/** NODE_ENV=production forces false at boot unless explicitly true. */
 		enabled: z.boolean().default(true),
-		/** "postgres" is the opt-in persistence upgrade (not yet implemented). */
+		/** "postgres" is the opt-in persistence upgrade (improvement 1 — shipped). */
 		storage: TelescopeStorageSchema.default("memory"),
 		/** Memory ring-buffer cap. */
-		maxRequests: z.number().int().positive().default(1000),
+		maxRequests: z.number().int().positive().default(10000),
+		/** Serialization budget for stored request/response bodies (chars). */
+		maxBodyChars: z.number().int().positive().default(2000),
+		/** Entries older than this (minutes) are pruned by the retention task. */
+		retentionMinutes: z.number().int().positive().default(1440),
+		/** Optional allowlist: when set, ONLY paths under these prefixes are captured. */
+		capturePaths: z.array(z.string()).optional(),
+		/** Extra denylist on top of `ignorePaths` (e.g. PII-heavy endpoints). */
+		redactPaths: z.array(z.string()).default([]),
+		/** Optional shared secret accepted as `Authorization: Bearer <token>`. */
+		token: z.string().optional(),
 		captureBody: TelescopeBodyCaptureSchema.default("headers"),
 		/** Header whitelist — nothing outside this list is ever stored. */
 		captureHeaders: z.array(z.string()).default(["content-type", "user-agent", "x-client-type"]),
@@ -198,6 +230,31 @@ export type TelescopeOverviewQuery = z.output<typeof TelescopeOverviewQuerySchem
 
 // ── Response shapes ────────────────────────────────────────────────────────
 
+/** One bucket of the overview traffic time-series (improvement v2 — sparkline). */
+export const TelescopeTrafficPointSchema = z
+	.object({
+		/** Bucket start time (ISO). */
+		t: z.string(),
+		requests: z.number().int().nonnegative(),
+		errors: z.number().int().nonnegative(),
+	})
+	.strict();
+
+export type TelescopeTrafficPoint = z.output<typeof TelescopeTrafficPointSchema>;
+
+/** Status-class counts for the overview (2xx/3xx/4xx/5xx + aborted/unknown). */
+export const TelescopeStatusCountsSchema = z
+	.object({
+		"2xx": z.number().int().nonnegative(),
+		"3xx": z.number().int().nonnegative(),
+		"4xx": z.number().int().nonnegative(),
+		"5xx": z.number().int().nonnegative(),
+		other: z.number().int().nonnegative(),
+	})
+	.strict();
+
+export type TelescopeStatusCounts = z.output<typeof TelescopeStatusCountsSchema>;
+
 export const TelescopeOverviewSchema = z
 	.object({
 		range: TelescopeRangeSchema,
@@ -211,10 +268,86 @@ export const TelescopeOverviewSchema = z
 		mailSent: z.number().int(),
 		mailDelivered: z.number().int(),
 		exceptionGroups: z.number().int(),
+		/** Request volume over the range — 24 fixed buckets for the sparkline. */
+		traffic: z.array(TelescopeTrafficPointSchema).readonly(),
+		/** Status-class counts over the range. */
+		statusCounts: TelescopeStatusCountsSchema,
 	})
 	.strict();
 
 export type TelescopeOverview = z.output<typeof TelescopeOverviewSchema>;
+
+// ── N+1 detection (improvement 7) ──────────────────────────────────────────
+
+/** A single N+1 warning: the same model+operation repeated ≥ 5× in a request. */
+export const TelescopeN1WarningSchema = z
+	.object({
+		model: z.string(),
+		operation: z.string(),
+		count: z.number().int().positive(),
+		totalMs: z.number().int().nonnegative(),
+	})
+	.strict();
+
+export type TelescopeN1Warning = z.output<typeof TelescopeN1WarningSchema>;
+
+// ── Request compare (improvement 6) ────────────────────────────────────────
+
+export const TelescopeCompareQuerySchema = z
+	.object({
+		a: z.string().min(1),
+		b: z.string().min(1),
+	})
+	.strict();
+
+export type TelescopeCompareQuery = z.output<typeof TelescopeCompareQuerySchema>;
+
+/** One scalar difference between two compared requests. */
+export const TelescopeDiffFieldSchema = z
+	.object({
+		field: z.string(),
+		valueA: z.string().nullable(),
+		valueB: z.string().nullable(),
+		same: z.boolean(),
+	})
+	.strict();
+
+export type TelescopeDiffField = z.output<typeof TelescopeDiffFieldSchema>;
+
+export const TelescopeCompareResponseSchema = z
+	.object({
+		a: RequestLogEntrySchema,
+		b: RequestLogEntrySchema,
+		diffs: z.array(TelescopeDiffFieldSchema).readonly(),
+	})
+	.strict();
+
+export type TelescopeCompareResponse = z.output<typeof TelescopeCompareResponseSchema>;
+
+// ── Live stream (improvement 2) ────────────────────────────────────────────
+
+/**
+ * Pushed over the `GET /telescope/stream` SSE channel after a capture.
+ * Carries a compact summary so the live feed renders without a refetch:
+ * request events include method/path/status/duration, exception events
+ * include name/message/status.
+ */
+export const TelescopeStreamEventSchema = z
+	.object({
+		type: z.enum(["request", "exception"]),
+		id: z.string(),
+		// Request summary (present when type === "request").
+		method: z.string().optional(),
+		path: z.string().optional(),
+		statusCode: z.number().int().nullable().optional(),
+		durationMs: z.number().int().nonnegative().optional(),
+		// Exception summary (present when type === "exception").
+		name: z.string().optional(),
+		message: z.string().optional(),
+	})
+	.strict();
+
+export type TelescopeStreamEvent = z.output<typeof TelescopeStreamEventSchema>;
 
 export const TelescopeRequestListResponseSchema = z
 	.object({
@@ -255,6 +388,7 @@ export const TelescopeRequestDetailResponseSchema = z
 		request: RequestLogEntrySchema,
 		queries: z.array(QueryLogEntrySchema).readonly(),
 		dumps: z.array(DumpEntrySchema).readonly(),
+		n1Warnings: z.array(TelescopeN1WarningSchema).readonly(),
 	})
 	.strict();
 

@@ -1,15 +1,22 @@
-import { Body, Controller, Get, Param, Post, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, Post, Query, Sse, UseGuards, type MessageEvent } from "@nestjs/common";
 import { ApiExcludeController } from "@nestjs/swagger";
+import { map, type Observable } from "rxjs";
 
-import type {
-	EmailLogEntry,
-	ExceptionLogEntry,
-	TelescopeExceptionListResponse,
-	TelescopeOverview,
-	TelescopeRequestDetailResponse,
-	TelescopeRequestListResponse,
-	TelescopeSqlListResponse,
+import {
+	TelescopeDumpInputSchema,
+	type EmailLogEntry,
+	type ExceptionLogEntry,
+	type TelescopeCompareResponse,
+	type TelescopeDumpInput,
+	type TelescopeExceptionListResponse,
+	type TelescopeOverview,
+	type TelescopeRequestDetailResponse,
+	type TelescopeRequestListResponse,
+	type TelescopeSqlListResponse,
+	type TelescopeStreamEvent,
 } from "@workspace/shared";
+
+import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe.js";
 
 import { TelescopeAdminGuard } from "./telescope-admin.guard.js";
 import { TelescopeService } from "./telescope.service.js";
@@ -22,15 +29,34 @@ import { TelescopeService } from "./telescope.service.js";
  * All responses pass through the standard `ResponseInterceptor` envelope.
  * Query params are parsed through the shared Zod schemas (coerced, tolerant).
  */
+
 @ApiExcludeController()
 @Controller("telescope")
 @UseGuards(TelescopeAdminGuard)
+// eslint-disable-next-line @darraghor/nestjs-typed/injectable-should-be-provided -- Registered in TelescopeModule.register()'s dynamic controllers; the typed plugin only scans static @Module decorators.
 export class TelescopeController {
 	public constructor(private readonly telescopeService: TelescopeService) {}
 
 	@Get("overview")
 	public async overview(@Query() query: Record<string, string | string[] | undefined>): Promise<{ readonly overview: TelescopeOverview }> {
 		return { overview: await this.telescopeService.overview(query) };
+	}
+
+	/**
+	 * Improvement 2 — live stream. Frames are `{ type, id }` (JSON in the
+	 * `data:` field). The global `ResponseInterceptor` bypasses the envelope
+	 * for `text/event-stream` Accept headers, and the global AuthGuard +
+	 * TelescopeAdminGuard keep the channel admin-only.
+	 */
+	@Sse("stream")
+	public stream(): Observable<MessageEvent> {
+		return this.telescopeService.stream().pipe(map((event: TelescopeStreamEvent): MessageEvent => ({ data: JSON.stringify(event) })));
+	}
+
+	/** Improvement 6 — compare two requests via `?a=<id>&b=<id>`. */
+	@Get("compare")
+	public compare(@Query() query: Record<string, string | string[] | undefined>): TelescopeCompareResponse {
+		return this.telescopeService.compare(query);
 	}
 
 	@Get("requests")
@@ -64,7 +90,7 @@ export class TelescopeController {
 	}
 
 	@Post("dump")
-	public dump(@Body() body: unknown): { readonly id: string } {
+	public dump(@Body(new ZodValidationPipe(TelescopeDumpInputSchema)) body: TelescopeDumpInput): { readonly id: string } {
 		return this.telescopeService.pushDump(body);
 	}
 }

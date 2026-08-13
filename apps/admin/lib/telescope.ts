@@ -23,13 +23,21 @@ export function statusTone(statusCode: number | null): StatusTone {
 		return { label: "—", pillClass: "border-border text-muted-foreground", dotClass: "bg-muted-foreground" };
 	}
 	if (statusCode < 300) {
-		return { label: String(statusCode), pillClass: "border-emerald-300/60 bg-emerald-500/10 text-emerald-700 dark:border-emerald-500/40 dark:text-emerald-400", dotClass: "bg-emerald-500" };
+		return {
+			label: String(statusCode),
+			pillClass: "border-emerald-300/60 bg-emerald-500/10 text-emerald-700 dark:border-emerald-500/40 dark:text-emerald-400",
+			dotClass: "bg-emerald-500",
+		};
 	}
 	if (statusCode < 400) {
 		return { label: String(statusCode), pillClass: "border-sky-300/60 bg-sky-500/10 text-sky-700 dark:border-sky-500/40 dark:text-sky-400", dotClass: "bg-sky-500" };
 	}
 	if (statusCode < 500) {
-		return { label: String(statusCode), pillClass: "border-amber-300/60 bg-amber-500/10 text-amber-700 dark:border-amber-500/40 dark:text-amber-400", dotClass: "bg-amber-500" };
+		return {
+			label: String(statusCode),
+			pillClass: "border-amber-300/60 bg-amber-500/10 text-amber-700 dark:border-amber-500/40 dark:text-amber-400",
+			dotClass: "bg-amber-500",
+		};
 	}
 	return { label: String(statusCode), pillClass: "border-red-300/60 bg-red-500/10 text-red-700 dark:border-red-500/40 dark:text-red-400", dotClass: "bg-red-500" };
 }
@@ -39,7 +47,7 @@ export function statusTone(statusCode: number | null): StatusTone {
 /** `842` → `842ms`, `1850` → `1.9s`. */
 export function durationLabel(ms: number): string {
 	if (ms < 1000) {
-		return `${Math.round(ms)}ms`;
+		return `${String(Math.round(ms))}ms`;
 	}
 	return `${(ms / 1000).toFixed(1)}s`;
 }
@@ -51,6 +59,53 @@ export function formatTime(iso: string): string {
 	return TIME_FORMATTER.format(new Date(iso));
 }
 
+// ── Relative time (improvement v2 — "3s ago" labels) ─────────────────────
+
+/** "just now" / "42s ago" / "5m ago" / "2h ago" — compact relative label. */
+export function timeAgo(isoOrMs: string | number, nowMs: number = Date.now()): string {
+	const then: number = typeof isoOrMs === "string" ? Date.parse(isoOrMs) : isoOrMs;
+	if (!Number.isFinite(then)) {
+		return "—";
+	}
+	const seconds: number = Math.max(0, Math.floor((nowMs - then) / 1000));
+	if (seconds < 5) {
+		return "just now";
+	}
+	if (seconds < 60) {
+		return `${String(seconds)}s ago`;
+	}
+	const minutes: number = Math.floor(seconds / 60);
+	if (minutes < 60) {
+		return `${String(minutes)}m ago`;
+	}
+	const hours: number = Math.floor(minutes / 60);
+	if (hours < 24) {
+		return `${String(hours)}h ago`;
+	}
+	return `${String(Math.floor(hours / 24))}d ago`;
+}
+
+// ── Duration tone (requests/SQL tables — slow = amber/red) ─────────────────
+
+export interface DurationTone {
+	readonly textClass: string;
+}
+
+/** Thresholds (ms) for the amber / red duration treatments. */
+const SLOW_MS = 500;
+const CRITICAL_MS = 2000;
+
+/** Duration cell classes: muted < 500ms, amber ≥ 500ms, red ≥ 2s. */
+export function durationTone(durationMs: number): DurationTone {
+	if (durationMs >= CRITICAL_MS) {
+		return { textClass: "font-medium text-red-600 dark:text-red-400" };
+	}
+	if (durationMs >= SLOW_MS) {
+		return { textClass: "font-medium text-amber-600 dark:text-amber-400" };
+	}
+	return { textClass: "text-muted-foreground" };
+}
+
 // ── Span kind metadata (timeline colors) ───────────────────────────────────
 
 export interface SpanKindMeta {
@@ -59,15 +114,19 @@ export interface SpanKindMeta {
 	readonly barClass: string;
 }
 
+// A categorical palette with one recognizable hue per stage (no purple/indigo
+// family — adjacent indigo/sky/violet bars used to read as one big purple
+// gradient). Hues stay distinct from each other so the eye can map a stage to
+// a color at a glance, and they hold up on the muted track in both themes.
 const SPAN_KIND_META: Readonly<Record<TelescopeSpanKind, SpanKindMeta>> = {
-	middleware: { label: "Middleware", barClass: "bg-slate-500" },
-	guard: { label: "Guard", barClass: "bg-indigo-500" },
-	interceptor: { label: "Interceptor", barClass: "bg-sky-500" },
-	service: { label: "Service", barClass: "bg-blue-500" },
-	prisma: { label: "Prisma", barClass: "bg-violet-500" },
-	queue: { label: "Queue", barClass: "bg-amber-500" },
-	serialization: { label: "Serialization", barClass: "bg-emerald-500" },
-	other: { label: "Other", barClass: "bg-zinc-500" },
+	middleware: { label: "Middleware", barClass: "bg-slate-400" },
+	guard: { label: "Guard", barClass: "bg-amber-500" },
+	interceptor: { label: "Interceptor", barClass: "bg-cyan-500" },
+	service: { label: "Service", barClass: "bg-emerald-500" },
+	prisma: { label: "Prisma", barClass: "bg-sky-500" },
+	queue: { label: "Queue", barClass: "bg-orange-500" },
+	serialization: { label: "Serialization", barClass: "bg-teal-500" },
+	other: { label: "Other", barClass: "bg-zinc-400" },
 };
 
 export function spanKindMeta(kind: TelescopeSpanKind): SpanKindMeta {

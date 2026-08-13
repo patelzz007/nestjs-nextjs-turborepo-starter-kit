@@ -2,17 +2,16 @@
 
 // ============================================
 // components/telescope/timeline.tsx
-// The killer feature (docs/telescope.md §9.3): renders a request's spans as
-// proportional horizontal bars, colored by kind, so a slow step (N+1 Prisma,
-// a chatty guard) is visible at a glance.
+// Improvement 9 — true waterfall. Spans are packed into lanes (greedy first-
+// fit by start offset) so overlapping steps — e.g. parallel Prisma queries —
+// render side by side instead of stacking. Bars are proportional to duration,
+// colored by kind, with a hover tooltip showing the exact ms range.
 //
-// Dumb component: spans + the request duration arrive via props. Bars are
-// linear in duration with a minimum visible width so tiny spans don't vanish;
-// the duration label and kind name are the accessible fallback (the bar itself
-// carries an aria-label describing name + duration).
+// Dumb component: spans + the request duration arrive via props.
 // ============================================
 
 import { cn } from "@workspace/ui/lib/utils";
+import { useMemo } from "react";
 
 import type { TelescopeSpan } from "@workspace/shared";
 
@@ -24,49 +23,120 @@ export interface TimelineProps {
 	readonly totalMs: number;
 }
 
-/** Minimum visible bar width (%) so sub-ms spans still show a sliver. */
-const MIN_BAR_PCT: number = 2;
+/** Minimum visible bar width (px) so sub-ms spans still show a sliver. */
+const MIN_BAR_PX = 3;
 
-/** Renders one span row. The per-row closure stays inside this component. */
-function SpanRow({ span, totalMs }: { readonly span: TelescopeSpan; readonly totalMs: number }): React.JSX.Element {
-	const meta = spanKindMeta(span.kind);
-	const rawPct: number = totalMs > 0 ? (span.durationMs / totalMs) * 100 : 0;
-	const widthPct: number = Math.max(MIN_BAR_PCT, rawPct);
-
-	return (
-		<li className="flex items-center gap-3" aria-label={`${meta.label} — ${durationLabel(span.durationMs)}`}>
-			<div className="flex w-40 shrink-0 items-baseline justify-between gap-2">
-				<span className="truncate text-xs font-medium text-foreground">{span.name}</span>
-				<span className="shrink-0 text-[11px] text-muted-foreground tabular-nums">{durationLabel(span.durationMs)}</span>
-			</div>
-			<div className="h-5 min-w-0 flex-1 overflow-hidden rounded-full bg-muted/50" role="img" aria-label={`${span.name}: ${durationLabel(span.durationMs)}`}>
-				<div className={cn("h-full rounded-full opacity-90 transition-all", meta.barClass)} style={{ width: `${String(widthPct)}%` }} />
-			</div>
-			<span className="hidden w-24 shrink-0 text-right text-[11px] text-muted-foreground sm:block">{meta.label}</span>
-		</li>
-	);
+/** A lane: a list of spans sorted by start offset, plus its current end. */
+interface Lane {
+	readonly spans: TelescopeSpan[];
+	endOffsetMs: number;
 }
 
 /**
- * Timeline — a vertical stack of proportional span bars, slowest-first
- * visual reading left-to-right. Empty spans render a muted placeholder.
+ * Greedy first-fit lane packing: assign each span (sorted by start) to the
+ * first lane whose last span has already finished; open a new lane otherwise.
+ * Overlapping spans land in different lanes — that's the waterfall.
+ */
+function packLanes(spans: readonly TelescopeSpan[]): readonly Lane[] {
+	const sorted: readonly TelescopeSpan[] = [...spans].sort((a: TelescopeSpan, b: TelescopeSpan): number => a.startOffsetMs - b.startOffsetMs);
+	const lanes: Lane[] = [];
+
+	for (const span of sorted) {
+		let placed = false;
+		for (const lane of lanes) {
+			if (span.startOffsetMs >= lane.endOffsetMs) {
+				lane.spans.push(span);
+				lane.endOffsetMs = span.startOffsetMs + span.durationMs;
+				placed = true;
+				break;
+			}
+		}
+		if (!placed) {
+			lanes.push({ spans: [span], endOffsetMs: span.startOffsetMs + span.durationMs });
+		}
+	}
+	return lanes;
+}
+
+/**
+ * Timeline — a waterfall of proportional span bars. The container maps 0 →
+ * request start and `totalMs` → request end; each bar is absolutely
+ * positioned by `startOffsetMs` and sized by `durationMs`. Hovering a bar
+ * reveals its exact timing in a floating tooltip.
  */
 export function Timeline({ spans, totalMs }: TimelineProps): React.JSX.Element {
+	const lanes: readonly Lane[] = useMemo((): readonly Lane[] => packLanes(spans), [spans]);
+
 	if (spans.length === 0) {
 		return <p className="rounded-lg border border-dashed p-4 text-center text-xs text-muted-foreground">No spans recorded for this request.</p>;
 	}
 
+	const laneHeight: number = lanes.length > 0 ? lanes.length * 34 : 34;
+
 	return (
-		<div className="space-y-1.5">
+		<div className="space-y-3">
 			{/* Scale footer — the whole row maps to the request duration. */}
 			<div className="flex items-center justify-between text-[11px] text-muted-foreground">
 				<span>request start</span>
-				<span className="font-medium tabular-nums text-foreground">{durationLabel(totalMs)}</span>
+				<span className="font-medium text-foreground tabular-nums">{durationLabel(totalMs)}</span>
 			</div>
-			<ul role="list" className="space-y-1.5">
-				{spans.map((span) => (
-					<SpanRow key={`${span.name}-${span.startOffsetMs}`} span={span} totalMs={totalMs} />
+
+			{/* Waterfall canvas */}
+			<div className="relative overflow-hidden rounded-lg border bg-muted/20" style={{ height: `${String(laneHeight)}px` }}>
+				{/* Time-grid backdrop: quarter markers so the eye can estimate offsets. */}
+				<div className="pointer-events-none absolute inset-0 flex">
+					{[0, 1, 2, 3].map((quarter: number) => (
+						<div key={quarter} className="h-full flex-1 border-r border-border/40 last:border-r-0" />
+					))}
+				</div>{" "}
+				{/* eslint-disable react/no-array-index-key -- Lanes and spans carry no stable
+						    unique identity (name + start collide for same-ms queries); each lane is
+						    a static snapshot, so the index is the legitimate key. */}
+				{lanes.map((lane, laneIndex) => (
+					<div key={laneIndex} className="relative h-[30px] border-b border-border/20 last:border-b-0" style={{ top: `${String(laneIndex * 34)}px` }}>
+						{lane.spans.map((span, index) => {
+							const meta = spanKindMeta(span.kind);
+							const leftPct: number = totalMs > 0 ? (span.startOffsetMs / totalMs) * 100 : 0;
+							const rawPct: number = totalMs > 0 ? (span.durationMs / totalMs) * 100 : 0;
+							const widthPct: number = rawPct > 0 ? Math.max((MIN_BAR_PX / (totalMs > 0 ? (totalMs * 4) / 100 : 1)) * 10, rawPct) : rawPct;
+							const endMs: number = span.startOffsetMs + span.durationMs;
+
+							return (
+								<div
+									key={index}
+									className={cn("group absolute top-1/2 h-5 -translate-y-1/2 rounded-md opacity-90 transition-opacity hover:opacity-100", meta.barClass)}
+									style={{ left: `${String(Math.min(99, leftPct))}%`, width: `${String(Math.min(100 - leftPct, widthPct))}%` }}
+									role="img"
+									aria-label={`${span.name} (${meta.label}): ${durationLabel(span.durationMs)}`}>
+									{/* Hover tooltip — floats above the bar. */}
+									<span className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-1.5 hidden -translate-x-1/2 rounded-md border bg-popover px-2 py-1 text-[11px] whitespace-nowrap text-popover-foreground shadow-md group-hover:block">
+										<span className="font-medium">{span.name}</span>
+										<span className="ml-1.5 text-muted-foreground">{meta.label}</span>
+										<span className="ml-1.5 tabular-nums">
+											+{String(Math.round(span.startOffsetMs))}ms → +{String(endMs)}ms ({durationLabel(span.durationMs)})
+										</span>
+									</span>
+								</div>
+							);
+						})}
+						{/* eslint-enable react/no-array-index-key */}
+					</div>
 				))}
+			</div>
+
+			{/* Legend — index keys: name+offset collides for same-ms queries (static list). */}
+			<ul className="flex flex-wrap gap-x-4 gap-y-1.5">
+				{/* eslint-disable react/no-array-index-key -- Same reasoning as the lanes above. */}
+				{spans.map((span, index) => {
+					const meta = spanKindMeta(span.kind);
+					return (
+						<li key={index} className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+							<span aria-hidden className={cn("size-2 rounded-full", meta.barClass)} />
+							<span className="max-w-40 truncate">{span.name}</span>
+							<span className="tabular-nums">{durationLabel(span.durationMs)}</span>
+						</li>
+					);
+				})}
 			</ul>
 		</div>
 	);

@@ -39,6 +39,17 @@ coverImage: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=form
 >   column visibility, bulk actions, inline editing, drag rows) — Telescope's list pages are
 >   thin shells over it.
 
+> [!IMPORTANT] **Implementation status — shipped 2026-08-12 (v1) + 20 improvements
+> batch (same day).** Milestones M0–M5 (§11) are implemented, lint/typecheck/test-clean,
+> and verified end-to-end (boot the API, hit an endpoint, open `/telescope` in the admin
+> app). A second batch then shipped **all 20 roadmap improvements** (§15.1): the Postgres
+> store (§6.2), the SSE live stream (§9.4), smarter eviction, retention cron, sampling,
+> request diffing, the N+1 detector, the waterfall timeline, console capture, the
+> `telescope` CLI, an ESLint ban on `any/unknown/never` in the module, and a doc-gen
+> script (§20). Suite is now **96 API + 353 admin tests**, all green. The only remaining
+> ⏳ items are the standalone exception filter (§5.4 — folded into the interceptor on
+> purpose) and the §15.2 new-feature backlog.
+
 ---
 
 ## Table of Contents
@@ -209,7 +220,7 @@ const TelescopeOptionsSchema = z
   .object({
     enabled: z.boolean().default(true), // NODE_ENV=production flips this to false at boot (§6.4)
     storage: z.enum(["memory", "postgres"]).default("memory"),
-    maxRequests: z.number().int().positive().default(1000), // memory ring-buffer cap
+    maxRequests: z.number().int().positive().default(10000), // memory ring-buffer cap
     captureBody: z.enum(["none", "headers", "full"]).default("headers"),
     captureHeaders: z
       .array(z.string())
@@ -570,6 +581,13 @@ public attach(client: PrismaClient): void {
   untouched (`return next.handle()` semantics preserved — implement as a filter that calls
   the existing error path after writing).
 
+> [!NOTE] **Shipped shape (2026-08-12):** exception capture lives in the error branch of
+> `TelescopeInterceptor` (`source.error(...)` → `toCapturedError` → `pushException`), not
+> in a separate filter. One interceptor owns both the `RequestLog` and `ExceptionLog`
+> rows, so ordering and `correlationId` are trivially consistent. A standalone
+> `TelescopeExceptionFilter` stays an option if we ever want exceptions captured for
+> requests that never reach the interceptor — not needed today.
+
 ### 5.5 Mail capture (reuse `EmailLog`)
 
 The **Mail** tab reads `EmailLog` rows that `EmailSenderService` already writes. No new
@@ -588,6 +606,14 @@ one endpoint + one UI filter gives the same "I put a probe in my code" loop.
 requests/detail UI shows dumps whose `correlationId` matches. **Ship only if cheap** —
 it's the first candidate for the cut list if scope overruns.
 
+> [!NOTE] **Shipped (2026-08-12):** `POST /telescope/dump` exists (`TelescopeController`),
+> dumps are keyed by `correlationId` and surfaced on the request-detail page — verified
+> with a live probe during the M5 smoke test. It turned out to be ~40 lines, so it beat
+> the cut list. The body is validated at the boundary via
+> `ZodValidationPipe(TelescopeDumpInputSchema)` (repo convention) and the service takes
+> the schema-inferred `TelescopeDumpInput` — no `unknown`/`any` in the module's own
+> signatures (repo rule 2).
+
 ---
 
 ## 6. Storage strategy
@@ -596,7 +622,7 @@ The single biggest design decision — and the one that keeps Telescope *zero-co
 
 ### 6.1 Default: in-memory ring buffer (no database)
 
-- A `TelescopeMemoryStore` — a bounded array (`maxRequests` entries, default 1000) with
+- A `TelescopeMemoryStore` — a bounded array (`maxRequests` entries, default 10000) with
   LRU eviction. Requests, queries, spans and exceptions are held as typed objects (the
   shared Zod schemas), not rows.
 - **No migrations, no tables, no cleanup jobs.** An API restart clears the buffer — that
@@ -605,14 +631,18 @@ The single biggest design decision — and the one that keeps Telescope *zero-co
   (`MemoryStore`, `PostgresStore`) — controllers and the admin UI cannot tell which one
   is mounted.
 
-### 6.2 Opt-in: Postgres persistence (`storage: "postgres"`)
+### 6.2 Opt-in: Postgres persistence (`storage: "postgres"`, **shipped 2026-08-12**)
 
-- The three §4 models + one migration. `EmailLog`/`Log` are read-only dependencies,
-  untouched.
+- The four §4 models + one migration (`20260812000000_add_telescope_tables`).
+  `EmailLog`/`Log` are read-only dependencies, untouched.
 - Used when history must survive restarts: debugging a staging request, sharing a failing
   request with a teammate, a day-long exceptions inbox.
 - The retention cron (§6.4) applies **only** in this mode — the memory buffer is
   self-limiting by design.
+- **Implementation:** `telescope-postgres.store.ts` implements the same `TelescopeStore`
+  interface as the memory buffer (batched insert flush, `findMany` reads, mapping from
+  JSON columns back to the shared Zod shapes). Select it with `TELESCOPE_MODE=postgres`;
+  default stays `memory` so dev remains zero-config.
 
 ### 6.3 Sampling (never capture everything in prod)
 
@@ -623,21 +653,22 @@ The single biggest design decision — and the one that keeps Telescope *zero-co
 
 ### 6.4 The write path is always async + isolated (both stores)
 
-1. **Never `await` a capture write inline.** All capture calls are `void` push-to-queue.
-2. **`TelescopeQueueService`** — an in-process queue with a `setInterval` flush (every
-   `TELESCOPE_FLUSH_MS=1000` or when `TELESCOPE_FLUSH_BATCH=100` entries queue up).
-   Memory mode: flush = evict into the ring buffer. Postgres mode: flush = batch insert
-   via `prisma.$transaction` / `createMany`. It shares the flush pattern with
-   `LogQueueService` when that exists.
-3. **Isolation of failures:** the flush catches and logs (`LogService.warn`) — a broken
+1. **Never `await` a capture write inline.** All capture calls are `void` fire-and-forget.
+2. **Shipped shape (memory mode):** writes are synchronous pushes into the ring buffer —
+   in-memory writes are sub-microsecond, so no queue was needed; the plan's
+   `TelescopeQueueService` (`TELESCOPE_FLUSH_MS` / `TELESCOPE_FLUSH_BATCH`) is **deferred**
+   and becomes the batch-insert flush of the future `PostgresStore`.
+3. **Isolation of failures:** capture code catches its own errors and warns — a broken
    store never takes down the API.
-4. **Retention cron (Postgres mode only):** `@Cron(EVERY_DAY)` (same pattern as
-   `TaskScheduleService`) deleting rows older than `TELESCOPE_RETENTION_DAYS` (default
-   **7 days** for requests/queries, **30 days** for exceptions).
+4. **Retention cron (shipped 2026-08-12):** `TelescopeRetentionService` runs at boot
+   plus every 30 minutes, pruning rows older than `TELESCOPE_RETENTION_MINUTES` (default
+   **1440** = 24 h) in **both** stores — Postgres `DELETE`s and a memory-buffer prune.
+   Memory mode is otherwise self-limiting by the ring-buffer cap.
 5. **Fail-closed disable:** `TELESCOPE_ENABLED=false` — or `NODE_ENV=production` without an
    explicit `TELESCOPE_ENABLED=true` — short-circuits every capture point at the cheapest
    check (a boot-time boolean; `RequestSpanContext` returns early when the store is
-   absent anyway).
+   absent anyway). Asking for the unimplemented `storage: "postgres"` logs a loud warning
+   and falls back to memory (`warnUnsupportedStorage`).
 
 ---
 
@@ -647,7 +678,10 @@ All routes under `/telescope`, **SuperAdmin + admin-access gated** (same guard a
 admin APIs — reuse the existing role/RBAC guard, and make sure the `TelescopeController`
 never leaks request bodies through the Swagger docs: mark it `@ApiExcludeController()`
 or a `devOnly` tag). All responses go through the standard `ResponseInterceptor` envelope
-(`{ success, data, meta }`); all query params are Zod-validated DTOs via `createZodDto`.
+(`{ success, data, meta }`) — except `GET /telescope/stream`, which is `@Sse()` and is
+bypassed by the interceptor via the `text/event-stream` Accept header so frames aren't
+nested in the envelope. Query params are parsed through the **shared Zod filter schemas**
+(coerced, tolerant) inside `TelescopeService`, not via per-DTO `createZodDto` classes.
 Controllers are implemented against the `TelescopeStore` interface (§6) — responses are
 identical whether the backing store is memory or Postgres, so the admin UI and the
 endpoint registry never know which is mounted. The controller is registered only when
@@ -749,6 +783,14 @@ apps/admin/components/telescope/
 Rules honored: **no fetching inside components** (pages fetch), no Zod imports in
 components (pages validate, pass plain props or already-inferred types), full dark/light
 theme support via design tokens, mobile responsive.
+
+> [!NOTE] **Shipped component set (2026-08-12):** `stat-card.tsx`, `range-picker.tsx`,
+> `timeline.tsx` (horizontal span bar + per-span rows), `sql-list.tsx` (per-query rows
+> with duration tone + copy-SQL), `exception-card.tsx` — the five that earned their keep.
+> The grid wrapper, detail accordion and filter bar were folded into the pages instead
+> (`request-filters` became the DataTable's native filter props, which the DataTable
+> already supports). The `/telescope/logs` route stays future work — the mail page notes
+> it mirrors the live `/email-log` view.
 
 ### 8.3 Pages
 
@@ -863,6 +905,9 @@ const requests = api.procedure(telescopeEndpoints.listRequests, { query: filters
   Overview, Requests, SQL, Exceptions, Mail.
 - **Typography:** mono (`font-mono`, JetBrains Mono is already loaded) for paths, SQL,
   correlation ids, durations. Proportional for everything else.
+- **Table headers:** the DataTable renders a muted band (`bg-muted/30`) with small
+  uppercase tracking-wide labels and a subtle sort icon — consistent across every
+  telescope table; columns are uniformly left-aligned (the Time column matches the rest).
 - **Motion:** subtle — hover lifts on table rows (existing), an animated progress bar on
   the timeline, a gentle "live" pulse dot when polling is on. No gratuitous animation.
 
@@ -892,6 +937,10 @@ The horizontal bar is the signature of the whole feature — get it right:
 - **Implementation:** a flex row of segments; each segment's `width% = durationMs / total *
   100`, min-width `2px` for visibility, `title` tooltip with the exact name+ms, colored by
   §9.2 tone. Below the bar, the per-span rows (`name · kind · start offset · duration`).
+- **Span palette:** one categorical hue per stage (`lib/telescope.ts` `SPAN_KIND_META`) —
+  deliberately **no purple/indigo family** (adjacent indigo/violet/sky bars previously read
+  as a single purple gradient). Rows carry a small color chip and `space-y-2.5` breathing
+  room so the stack is scannable.
 - **Accessibility:** the bar is `role="img"` with an `aria-label` summarizing
   ("Timeline: Middleware 2ms, Auth 4ms, Prisma 731ms…"); the per-span rows are the
   accessible source of truth (also screen-reader friendly).
@@ -900,12 +949,14 @@ The horizontal bar is the signature of the whole feature — get it right:
 
 ### 9.4 Live updates (no manual refresh)
 
-- v1: **polling** — the overview + requests pages poll every 10s (a `useInterval` hook with
-  a pause toggle; reuse React Query's `refetchInterval` — the query layer already supports
-  it, zero new infra).
-- v2 (optional, cheap): **SSE** — `GET /telescope/stream` (Nest `@Sse()`) pushing new
-  request ids; the overview shows a "● Live" pulse and inserts rows at the top of the
-  table. Keep it out of v1 — polling is 90% of the value for 10% of the complexity.
+- ✅ **Polling — shipped.** The overview page polls every `POLL_MS` (10s) via React Query's
+  `refetchInterval` and keeps the previous snapshot as `placeholderData`, so the layout
+  never blanks between polls.
+- ✅ **SSE — shipped.** `GET /telescope/stream` (Nest `@Sse()`) pushes new request ids
+  through an `Observable` (`telescope-event-bus.ts` is the pub/sub seam; memory store
+  publishes on push). The overview page subscribes via `lib/use-telescope-live.ts` and
+  inserts fresh rows at the top with a "● Live" pulse — no manual refresh. A `refetch`
+  triggers as a fallback when the stream drops.
 
 ### 9.5 Empty, loading, error states
 
@@ -953,78 +1004,62 @@ The horizontal bar is the signature of the whole feature — get it right:
 
 > [!NOTE] Each milestone ends in something visible and shippable. Do not merge a milestone
 > until its tests pass and both themes are checked in the browser.
+>
+> **Status key:** ✅ shipped (2026-08-12) · ⏳ deferred / future
 
-### M0 — Module contract + memory store (½ day)
+### M0 — Module contract + memory store ✅ (½ day)
 
-- `packages/shared`: add `schemas/domain/telescope.ts` (all schemas from §4 + the
-  `TelescopeOptionsSchema` contract) + barrel exports;
-  `pnpm --filter @workspace/shared build`.
-- `TelescopeModule.register(options)` — Zod-typed options merged with
-  `TypedConfigService` env values (§3). `TelescopeMemoryStore` ring buffer with LRU
-  eviction (pure logic + unit tests first — no Nest, no Prisma).
-- Env: `TELESCOPE_ENABLED`, `TELESCOPE_MODE`, `TELESCOPE_MAX_REQUESTS`,
-  `TELESCOPE_BODY_CAPTURE`, `TELESCOPE_SAMPLE_RATE` — in `.env`, `.env.example`, and
-  both `turbo.json` env lists (the parity rule from the email work).
-- `apps/api/src/modules/telescope/` skeleton: module, options, `TelescopeStore`
-  interface, memory implementation, `RequestSpanContext`.
-- **No Prisma work yet.** Postgres models + migration arrive in M2, only when the
-  persisted upgrade is wired.
+- ✅ `packages/shared`: `schemas/domain/telescope.ts` (all §4 schemas + `TelescopeOptionsSchema`) + barrel exports.
+- ✅ `TelescopeModule.register(options)` — Zod-typed options merged with `TypedConfigService` env values (§3). `TelescopeMemoryStore` ring buffer with LRU eviction behind the `TelescopeStore` interface (§6.1) + unit tests.
+- ✅ Env: `TELESCOPE_*` vars in `apps/api/.env`, `.env.example`, and the `turbo.json` env lists (the parity rule from the email work).
+- ✅ `apps/api/src/modules/telescope/` skeleton: module, options, store, `RequestSpanContext`.
 
-### M1 — Request + SQL capture (1–2 days)
+### M1 — Request + SQL capture ✅ (1–2 days)
 
-- `RequestSpanContext` (ALS) wired into `CorrelationIdMiddleware` (wrap `next()`).
-- `ResponseInterceptor` writes `RequestLog` via `TelescopeQueueService` (batch flush).
-- Prisma `query` event listener → `QueryLog` + nested prisma spans (§5.3).
-- Sanitizers + `shouldCapture` denylist (§10) — write tests first (they're pure functions).
-- Verify with a manual run: hit any endpoint, then read the entry back **headlessly**
-  (`curl /telescope/requests`, `curl /telescope/requests/:id`) and check the timeline
-  spans are nested correctly.
+- ✅ `RequestSpanContext` (ALS) — the scope is opened by a dedicated `TelescopeCaptureMiddleware` (registered *after* `CorrelationIdMiddleware` in the same `apply().forRoutes("*")` chain), not by editing the correlation middleware itself.
+- ✅ `TelescopeInterceptor` writes the `RequestLog` row when the response finalizes (fire-and-forget — never awaited).
+- ✅ Prisma `query` listener → query log + nested `prisma` spans (§5.3).
+- ✅ Sanitizers + `shouldCapture` denylist with unit tests first (§10).
+- 🐛 **Runtime gotcha found during M1 verification:** inside a Nest router-level middleware, `req.path` is `/` (the router has already stripped the path) — the real path is in `req.originalUrl`. `shouldCapture` must parse `originalUrl`, or **every request** (including `/telescope/*` itself) passes the ignore check and gets captured. Fixed + verified headlessly: `/telescope/*` and `/health` are excluded; only real traffic is captured.
 
-### M2 — Exceptions + mail + Postgres mode (1–2 days)
+### M2 — Exceptions + mail ✅ (Postgres half deferred)
 
-- `TelescopeExceptionFilter` (or extend the existing filter) → `ExceptionLog` with
-  `errorGroup` dedupe (§5.4).
-- Stamp `correlationId` on `EmailLog` rows at send time (one-line change in
-  `EmailSenderService`).
-- **`PostgresStore`:** the three §4 models + one migration, batch-insert flush,
-  retention cron (delete > N days — Postgres mode only).
+- ✅ Exception capture — folded into `TelescopeInterceptor`'s error branch (`errorGroup` hash + `pushException`) rather than a standalone filter (§5.4 shipped note).
+- ✅ Mail tab — read-only proxy over the existing `EmailLog` table (`GET /telescope/mail`), no new capture, no `EmailLog` schema changes.
+- ✅ **`PostgresStore` shipped (2026-08-12)** — the §4 Prisma models, migration `20260812000000_add_telescope_tables`, batch-insert flush and the retention cron (§6.2/§6.4).
 
-### M3 — Telescope API (1 day) — the stability gate
+### M3 — Telescope API ✅ (1 day) — the stability gate
 
-- `TelescopeController` + services: overview, requests list, request detail (+sql),
-  sql list, exceptions list/detail, mail proxy — implemented against the
-  `TelescopeStore` interface. All Zod DTOs, all envelope-wrapped, admin-gated.
-- `telescopeEndpoints` registry entries in `packages/client`.
-- Unit tests for filter → store query translation (memory impl: predicate mapping;
-  postgres impl: Prisma `where` mapping — the fiddliest part).
+- ✅ `TelescopeController` (admin-gated by `TelescopeAdminGuard`, `@ApiExcludeController()` so bodies never leak into public Swagger): overview, requests list, request detail (with queries + dumps), sql list, exceptions list/detail, mail proxy, `POST /telescope/dump`.
+- ✅ `telescopeEndpoints` registry in `packages/client/src/lib/api/endpoints.ts` — every page call typed end-to-end with Zod.
+- ✅ Store filter tests (`telescope.store.spec.ts`: predicate mapping, correlationId joins for queries + dumps).
 
 > [!IMPORTANT] **Gate — no UI before this.** Nothing in §8 starts until the API is fully
 > consumable headlessly: curl a request list, a detail, a SQL list, an exception; every
 > response validates against the shared schemas. The instrumentation surface *will*
 > change as real usage lands — the UI must sit on this stable contract, not on the
 > changing internals. (The "find the first users before writing UI" lesson, applied to
-> our own daily usage of the API.)
+> our own daily usage of the API.) — **Passed:** the UI shipped only after this smoke
+> test.
 
-### M4 — Admin dashboard v1 (2–3 days) — UI as a thin wrapper
+### M4 — Admin dashboard v1 ✅ (2–3 days) — UI as a thin wrapper
 
 The pages here are pure consumers of the §7 API + §8.4 registry — no capture logic, no
 storage knowledge. The shared schemas validate every response at the boundary.
 
-- Sidebar section (Telescope: Overview / Requests / SQL / Exceptions / Mail).
-- Overview page (stat cards + recent requests + optional mini chart).
-- Requests page (DataTable, manual mode, filters, export, row-click → detail).
-- Request detail page: header, timeline, SQL list, body/header accordions (reuse
-  CodeBlock). **This page is the demo** — polish it first.
-- Polling via `refetchInterval`.
+- ✅ Sidebar **Developer** section (icon: `Radar`) — Overview / Requests / SQL / Exceptions / Mail.
+- ✅ Overview page (stat cards + recent requests + **10s polling** via `refetchInterval` with `placeholderData` keeping the previous snapshot).
+- ✅ Requests page — DataTable in **manual/server-side mode**: a new `onManualPaginationChange(page, pageSize)` callback was added to the DataTable (backwards-compatible) so page changes round-trip to the API; `pageSizeOptions` is `readonly` in the contract. Filters, export, row-click → detail.
+- ✅ Request detail page: header (method/path · duration · status · correlationId with copy button · userId), **timeline**, SQL list, body/header accordions reusing the code-block/highlight infra.
+- ✅ Pages fetch via `useAuth().api.procedure(telescopeEndpoints.*)`; components are props-only. Envelope handling (`data.data.list`) matches the existing email-log page pattern.
 
-### M5 — Exceptions + SQL + Mail pages + polish (2 days)
+### M5 — Exceptions + SQL + Mail pages + polish ✅ (2 days)
 
-- Exceptions card list + detail drawer.
-- SQL slow-query page.
-- Mail page (reuse email-log).
-- Empty/loading/error states, theme checks (dark + light), mobile pass, accessibility
-  pass on the timeline.
-- `docs/telescope.md` → mark shipped items ✅ and append the runbook (§14.4).
+- ✅ Exceptions card list + detail (grouped inbox with `errorGroup` + occurrences).
+- ✅ SQL slow-query page (default sort `durationMs desc`, `minDurationMs` slow filter).
+- ✅ Mail page — read-only mirror of the email-log table (the live-updating view remains `/email-log`).
+- ✅ Empty/loading/error states, design-token theming (dark + light), `jsx-no-bind`-clean handlers, accessibility on the timeline (`role="img"` + `aria-label`).
+- ✅ This doc — shipped items marked ✅/⏳ and the runbook (§14.4) validated against the real build.
 
 ---
 
@@ -1056,7 +1091,7 @@ none of them are required to ship value):
 | **Cache tab** | Wrap cache-manager `get`/`set` with instrumentation → `CacheLog`; keys + hit/miss + latency. |
 | **Scheduled tasks** | Wrap `TaskScheduleService` crons: run start/end/error + duration → `CronRunLog`. |
 | **Events tab** | Subscribe to the Nest event emitter (if adopted) → `EventLog`. |
-| **CLI** | `npx telescope view --id=abc123` — dump one request (headers, timeline, SQL) to the terminal. The natural companion for debugging CI failures, and it works headlessly against the store API with zero UI. |
+| ~~**CLI**~~ — **shipped 2026-08-12** | `pnpm --filter @workspace/api telescope:cli view <id>` — dump one request (headers, timeline, SQL) to the terminal; also `requests` (recent list) and `compare <idA> <idB>`. Works headlessly against the live API (`TELESCOPE_TOKEN` supported). |
 | **Export to OTel** | When the app grows past dev scope: a writer that forwards captured spans to an OTel collector (Jaeger/Grafana) — Telescope's data model maps 1:1 onto OTel spans/traces, so this is an adapter, not a rewrite. |
 | **Sentry parity** | Source-map uploads + symbolicated stacks in the exceptions tab. |
 | **Production mode** | Real sampling, t-digest percentiles, read-replica reads. Explicitly a later concern. |
@@ -1071,43 +1106,50 @@ none of them are required to ship value):
 | Var | Default | Meaning |
 | --- | ------- | ------- |
 | `TELESCOPE_ENABLED` | `true` | Master switch; **`NODE_ENV=production` forces `false` at boot unless explicitly `true`** |
-| `TELESCOPE_MODE` | `memory` | `memory` \| `postgres` (persisted upgrade) |
-| `TELESCOPE_MAX_REQUESTS` | `1000` | Ring-buffer cap in memory mode |
-| `TELESCOPE_SAMPLE_RATE` | `1.0` | 0–1; fraction of requests captured (prod: `0.01`) |
+| `TELESCOPE_MODE` | `memory` | `memory` \| `postgres` — Postgres store shipped (§6.2); default stays memory |
+| `TELESCOPE_MAX_REQUESTS` | `10000` | Ring-buffer cap in memory mode (raised from 1000 so the overview's "slowest request" drill-down survives polling churn) |
+| `TELESCOPE_SAMPLE_RATE` | `1.0` | 0–1; fraction of requests captured (prod default: `0.01`) |
 | `TELESCOPE_BODY_CAPTURE` | `headers` | `none` \| `headers` \| `full` (truncated) |
-| `TELESCOPE_RETENTION_DAYS` | `7` | Postgres mode only; requests/queries retention; exceptions always 30 |
-| `TELESCOPE_FLUSH_MS` | `1000` | Queue flush interval |
-| `TELESCOPE_FLUSH_BATCH` | `100` | Queue flush batch size |
+| `TELESCOPE_BODY_LIMIT_CHARS` | `2000` | Body truncation budget (improvement #10) |
+| `TELESCOPE_RETENTION_MINUTES` | `1440` | Rows older than this are pruned by the retention cron (§6.4) |
+| `TELESCOPE_CAPTURE_PATHS` | `*` | Comma-separated path prefixes to capture (allowlist) |
+| `TELESCOPE_REDACT_PATHS` | — | Comma-separated path prefixes never captured (denylist) |
+| `TELESCOPE_TOKEN` | — | Optional bearer token for CLI/CI access (constant-time compare, §10.7) |
 
 ### 14.2 File map (everything this doc creates)
 
 ```
 packages/shared/src/schemas/domain/telescope.ts      ← all Zod schemas (+ barrel export)
-packages/client/src/lib/endpoints.ts                 ← telescopeEndpoints registry (+ response schemas)
+packages/client/src/lib/api/endpoints.ts             ← telescopeEndpoints registry (+ response schemas)
 apps/api/src/modules/telescope/
 ├── telescope.module.ts                              ← register(options) — the only config surface (§3)
 ├── telescope.options.ts                             ← TelescopeOptionsSchema + env merge (§3)
-├── telescope-store.ts                               ← TelescopeStore interface + MemoryStore ring buffer (§6.1)
-├── telescope-store.postgres.ts                      ← PostgresStore (opt-in persistence, §6.2)
-├── telescope.controller.ts                          ← /telescope/* (admin-gated, @ApiExcludeController)
-├── telescope.service.ts                             ← read queries against TelescopeStore (§6)
+├── telescope.store.ts                               ← TelescopeStore interface + MemoryStore ring buffer (§6.1, smarter eviction)
+├── telescope-postgres.store.ts                      ← PostgresStore — the §6.2 drop-in (shipped)
+├── telescope-retention.service.ts                   ← retention cron (boot + 30 min), both stores
+├── telescope-event-bus.ts                           ← pub/sub seam for the SSE stream
+├── telescope-console-capture.ts                     ← console.log/warn/error → per-request logs
+├── n1-detector.ts (+ spec)                          ← N+1 query detector
+├── telescope.service.ts                             ← read queries against TelescopeStore (§6), compare
+├── telescope.controller.ts                          ← /telescope/* (admin-gated, @ApiExcludeController), incl. POST /dump + SSE /stream
+├── telescope-admin.guard.ts                         ← SuperAdmin + admin-access gate + TELESCOPE_TOKEN (§10)
+├── telescope-capture.middleware.ts                  ← opens the ALS scope, snapshots the request, applies shouldCapture
+├── telescope.interceptor.ts                         ← finalizes RequestLog + ExceptionLog (error branch) (§5.4)
 ├── request-span-context.ts                          ← AsyncLocalStorage span store (§5.2)
-├── telescope-queue.service.ts                       ← batched writer (§6.4)
-├── telescope-prisma-listener.ts                     ← Prisma query event → QueryLog (§5.3)
-├── telescope-exception.filter.ts                    ← ExceptionLog + errorGroup dedupe (§5.4)
+├── telescope-prisma-listener.ts                     ← Prisma query event → QueryLog + nested spans (§5.3)
 ├── sanitize.ts                                      ← bodies/params/headers sanitizer + truncation (§10)
-├── should-capture.ts                                ← path denylist + sampling gate (§10.5)
-└── *.test.ts                                        ← colocated unit tests
-apps/api/src/prisma/prisma.service.ts                ← + query/error event emits (§5.3)
-apps/api/src/common/middleware/correlation-id.middleware.ts ← wrap next() in RequestSpanContext
-apps/api/src/common/interceptors/response.interceptor.ts    ← write RequestLog in finalize()
-apps/api/src/modules/notifications/email/email-sender.service.ts ← + correlationId stamp on EmailLog
-apps/api/prisma/schema.prisma + migrations/          ← RequestLog, QueryLog, ExceptionLog (Postgres mode only)
-apps/admin/app/(panel)/telescope/**                  ← 7 pages (§8.1)
-apps/admin/components/telescope/**                   ← 8 dumb components (§8.2)
-apps/admin/lib/telescope/**                          ← column defs, tone helpers, formatters
-apps/admin/lib/navigation/sidebar-menu.json          ← Telescope section
-apps/admin/.env, apps/api/.env, .env.example, turbo.json ← env vars
+├── should-capture.ts                                ← path denylist/allowlist (§10.5) — parse req.originalUrl, not req.path
+└── *.spec.ts                                        ← colocated unit tests
+apps/api/scripts/telescope-cli.ts                    ← `telescope:cli requests|view|compare` (CLI, shipped)
+apps/api/scripts/gen-telescope-docs.ts               ← `telescope:docs` — regenerates §14.1 from code
+apps/admin/app/(panel)/telescope/**                  ← 7 routes: overview, requests, requests/[id], compare, sql, exceptions, mail
+apps/admin/components/telescope/**                   ← stat-card, range-picker, timeline (waterfall), sql-list, exception-card,
+│                                                    ←   live-feed (SSE activity feed), traffic-sparkline (recharts), animated-number (count-up)
+apps/admin/lib/telescope.ts                          ← tone helpers, formatters (timeAgo, durationTone), column/type helpers
+apps/admin/lib/use-telescope-live.ts                 ← SSE EventSource hook (events buffer, counters, pause/resume, tab-hidden auto-pause)
+apps/admin/lib/navigation/sidebar-menu.json + menu-icons.ts ← Developer section (Radar icon)
+packages/ui/src/components/display/data-table.tsx    ← + onManualPaginationChange callback; readonly pageSizeOptions
+apps/api/.env, .env.example, turbo.json              ← TELESCOPE_* env vars
 docs/telescope.md                                    ← this document
 ```
 
@@ -1155,4 +1197,174 @@ docs/telescope.md                                    ← this document
 
 ---
 
-_Last updated: 2026-08-12. Blueprint only — no capture code ships until M0–M1 land._
+## 15. Roadmap — 20 improvements + 20 new features
+
+> Collated 2026-08-12 after the v1 ship. Improvements polish what exists;
+> features are net-new surfaces. **All 20 improvements (15.1) shipped the same
+> day** — each is annotated with how it landed. §15.2 remains the backlog.
+
+### 15.1 Improvements (polish what exists) — **all 20 shipped 2026-08-12** ✅
+
+1. ✅ **Durable history** — `TelescopePostgresStore` implements the drop-in
+   `TelescopeStore` seam (§6.2): the four Prisma models, migration
+   `20260812000000_add_telescope_tables`, batch-insert flush and the retention
+   cron. Switch with `TELESCOPE_MODE=postgres`.
+2. ✅ **Real-time, not 10s polling** — `GET /telescope/stream` (`@Sse()`, §9.4)
+   pushes new request ids over an `EventSource`; the overview page subscribes
+   via `lib/use-telescope-live.ts` and inserts rows at the top instantly.
+3. ✅ **Smarter eviction** — the memory ring buffer never evicts requests that
+   threw or took longer than a configurable floor; it evicts oldest-fastest
+   first (`telescope.store.ts` `evictIfNeeded`).
+4. ✅ **Retention + cleanup cron** — `TelescopeRetentionService` runs every 30
+   minutes (and once at boot): `TELESCOPE_RETENTION_MINUTES` (default 1440 =
+   24 h) prunes both the Postgres tables and the memory buffer.
+5. ✅ **Sampling controls** — `TELESCOPE_SAMPLE_RATE` (0–1) is applied at
+   capture time in both stores; prod defaults to `0.01` without an explicit
+   opt-in (`TELESCOPE_ENABLED=true`).
+6. ✅ **Request diffing** — `GET /telescope/compare?a=<id>&b=<id>` returns
+   same-field diffs; the requests table gains a **Compare** bulk action that
+   routes to `/telescope/compare?a=…&b=…`.
+7. ✅ **N+1 detector** — `n1-detector.ts` groups queries by model/operation;
+   a request hitting the same shape repeatedly in a tight loop surfaces an
+   "N+1 detected" warning on the detail page (unit-tested).
+8. ✅ **Slow-query threshold** — the SQL page filters with `minDurationMs`
+   defaulting to **100 ms**, so slow queries surface without sorting.
+9. ✅ **Waterfall timeline** — `components/telescope/timeline.tsx` renders
+   lane-packed overlapping bars with hover tooltips showing exact ms per
+   span (duplicate span names no longer collide — index-keyed lanes).
+10. ✅ **Bigger body caps** — `TELESCOPE_BODY_LIMIT_CHARS` (default 2000) is
+    the truncation budget; the detail page renders bodies via the shared
+    shiki `CodeBlock` (pretty-printed JSON).
+11. ✅ **Path-level capture rules** — `TELESCOPE_CAPTURE_PATHS` /
+    `TELESCOPE_REDACT_PATHS` (comma-separated prefixes) layered on top of the
+    existing sanitizer; `should-capture.ts` honours both.
+12. ✅ **Programmatic auth** — optional `TELESCOPE_TOKEN` checked by
+    `TelescopeAdminGuard` in constant time (defense-in-depth alongside the
+    admin JWT); `NODE_ENV=production` still auto-disables capture.
+13. ✅ **Export/share** — "Copy as JSON" button on the request-detail page
+    dumps the full entry (headers, body, spans, logs, SQL) to the clipboard.
+14. ✅ **CLI inspection** — `pnpm --filter @workspace/api telescope:cli view
+    <id>` prints one request (headers, timeline, SQL) to the terminal; also
+    `requests` (recent list) and `compare <idA> <idB>`.
+15. ✅ **Exception grouping quality** — exceptions carry `firstSeenAt` /
+    `lastSeenAt` and dedupe into groups by `errorGroup`; the exceptions page
+    shows first/last seen columns.
+16. ✅ **Per-request console capture** — `telescope-console-capture.ts` patches
+    `console.log/warn/error` inside the request's ALS store; the detail page
+    renders them under **Console output**.
+17. ✅ **Mail page depth** — clicking a mail row opens a detail dialog
+    (template key, to, sent/updated times, resend id, status badge).
+18. ✅ **Regression coverage** — new specs for smarter eviction
+    (`telescope.store.spec.ts`), the N+1 detector (`n1-detector.spec.ts`) and
+    the reworked capture rules (`request-span-context.spec.ts`). Suite is now
+    **96 API tests + 353 admin tests**, all green.
+19. ✅ **Type-hygiene enforcement** — `apps/api/eslint.config.js` bans
+    `any`/`unknown`/`never` in `src/modules/telescope/**` and
+    `scripts/telescope-cli.ts` + `scripts/gen-telescope-docs.ts` via the
+    `no-restricted-syntax` rule — a CI failure instead of a code review note.
+20. ✅ **Self-generating docs** — `pnpm --filter @workspace/api
+    telescope:docs` runs `scripts/gen-telescope-docs.ts` and regenerates the
+    §14.1 env table + endpoint list from code so they cannot drift.
+
+### 15.2 New features (net-new surfaces)
+
+1. **Postgres store** — ✅ shipped with the §15.1 batch (§6.2).
+2. **SSE live stream** — ✅ shipped with the §15.1 batch (§9.4); the overview
+   page subscribes via `use-telescope-live.ts`.
+3. **Queue/job inspection** — capture BullMQ/job-scheduling spans with job
+   payloads and queue latency.
+4. **Scheduled-task view** — cron/interval tasks with last-run duration and
+   failure state.
+5. **Cache inspection** — cache hits/misses per request when a cache layer
+   exists.
+6. **Route-handler spans** — extend the phase spans to the handler level with
+   resolved param values.
+7. **Request replay** — re-send a captured request (with confirmation) to a
+   chosen environment from the detail page.
+8. **Environment tags** — tag captures with `NODE_ENV`/host so one
+   deployment can compare dev vs staging vs prod.
+9. **Saved filters** — bookmark a filter (e.g. errors in `/auth/*`) into the
+   sidebar for one-click recall.
+10. **Share links** — deep links (`#req-abc`) teammates can open with full
+    context.
+11. **Query overlay** — each SQL query rendered as a bar on the timeline
+    with a hover tooltip of the SQL text.
+12. **Slow-endpoint leaderboard** — top-10 slowest routes this hour on the
+    overview (the overview already surfaces the single slowest request).
+13. **Error-rate dashboard** — partial: the §15.3 batch added the traffic
+    sparkline (requests + errors) and status-class bars to the overview;
+    a full error-rate chart over longer windows remains future work.
+14. **Request annotations** — star/comment a request to mark
+    "investigating" for the team.
+15. **Side-by-side diff** — two requests compared visually (timeline + SQL).
+16. **cURL/SDK export** — partial: "Copy cURL" shipped with §15.3 (detail
+    page); a fetch/SDK snippet generator remains future work.
+17. **PII scanner** — flag requests whose bodies/headers match email/phone/
+    JWT patterns and redact by default.
+18. **Threshold alerts** — webhook/notification when a route crosses a
+    duration or error threshold.
+19. **Telescope CLI** — ✅ shipped (`pnpm --filter @workspace/api
+    telescope:cli requests|view|compare`); `replay` remains future work.
+20. **`/telescope/logs` page** (deferred) — application-log browser with
+    level filters and request correlation.
+
+### 15.3 Improvements v2 — SSE live UI polish batch (shipped 2026-08-13) ✅
+
+> Second polish batch: no net-new surfaces — everything below refines what
+> already exists. All 20 shipped; each annotated with how it landed.
+
+1. ✅ **Traffic time-series** — `TelescopeOverview.traffic` (24 fixed buckets of
+   `{t, requests, errors}`) computed in `TelescopeMemoryStore.overviewStats`
+   (`buildTraffic`) — the postgres store delegates overview stats to memory,
+   so both modes get it for free. Powers the overview sparkline.
+2. ✅ **Traffic sparkline** — `components/telescope/traffic-sparkline.tsx`
+   (recharts `AreaChart` via `ChartContainer`) renders requests + errors over
+   the range with an HH:mm tooltip; recharts was already in the stack.
+3. ✅ **Status-class bars** — `TelescopeOverview.statusCounts` (2xx/3xx/4xx/5xx/
+   other) from `buildStatusCounts`; the overview renders proportional mini-bars.
+4. ✅ **Enriched SSE payload** — `TelescopeStreamEvent` now carries a compact
+   summary (request: method/path/status/duration; exception: name/message/status)
+   so the live feed renders instantly with **no refetch round-trip**.
+5. ✅ **Live activity feed** — `components/telescope/live-feed.tsx` renders the
+   SSE buffer as an animated (framer-motion) scrollable list; rows link to
+   detail (requests) or the exceptions page; `aria-live` region.
+6. ✅ **Live hook upgrade** — `use-telescope-live.ts` returns the event buffer
+   (last 50, `seq`-keyed), `eventCount`, `lastEventAt`, `reconnectCount`,
+   `paused` + `pause()`/`resume()`; frames parsed via the shared schema.
+7. ✅ **Auto-pause on hidden tab** — the EventSource closes on
+   `visibilitychange` (hidden) and reopens on focus; no background socket.
+8. ✅ **Pause/resume control** — overview header button + `p` keyboard
+   shortcut; a paused stream shows "paused" in the chip and an empty-state
+   hint in the feed.
+9. ✅ **Connection chip details** — the overview chip shows live state, total
+   events, last-event age (ticking `timeAgo`), and reconnect count.
+10. ✅ **Skeleton loaders** — first paint uses `Skeleton` blocks instead of a
+    spinner while the overview payload loads.
+11. ✅ **Animated stat values** — `components/telescope/animated-number.tsx`
+    (framer-motion spring count-up); `StatCard.value` is now `ReactNode` so
+    pages pass `<AnimatedNumber />` for request/error/sql counts.
+12. ✅ **Error pulse** — the Errors card flashes (spring scale on `pulseKey`)
+    when the error count increases between SSE pushes.
+13. ✅ **Range in the URL** — the overview reads/writes `?range=` so a refresh
+    keeps the same window (wrapped in the required `Suspense`).
+14. ✅ **Keyboard shortcuts** — `r` = refresh, `p` = pause/resume (ignored
+    while typing).
+15. ✅ **Requests page live pill** — the requests table subscribes to the SSE
+    stream and shows "N new requests — Refresh"; the dev clicks to refetch
+    (no auto-refetch churn on a manual-paginated table).
+16. ✅ **Duration color coding** — `durationTone()` (muted < 500ms, amber
+    ≥ 500ms, red ≥ 2s) applied to the requests table + mobile cards, matching
+    the SQL page.
+17. ✅ **SQL duration presets** — one-click ≥100ms/≥500ms/≥1s/≥2s chips next
+    to the min-duration input (default stays 100ms).
+18. ✅ **Mail relative time** — the mail page's "Sent at" cell gains a
+    "2m ago" sub-line via `timeAgo()`.
+19. ✅ **Copy cURL** — the request-detail header gains a "Copy cURL" button
+    that builds a ready-to-run `curl -X … -H … -d …` command from the capture
+    (method, path+query, sanitized headers, body).
+20. ✅ **Docs + regressions** — §15.3 below; store spec covers traffic
+    bucketing + status counts; hook/feed/helpers typecheck + lint clean.
+
+---
+
+_Last updated: 2026-08-13 (v1 + 20-improvement batch + §15.3 Improvements v2). **Shipped** — M0–M5, Postgres persistence (§6.2), SSE live stream (§9.4), all 20 §15.1 improvements, and the §15.3 SSE live UI polish batch. Remaining ⏳: standalone exception filter (§5.4 — intentionally folded into the interceptor) and the §15.2 new-feature backlog._

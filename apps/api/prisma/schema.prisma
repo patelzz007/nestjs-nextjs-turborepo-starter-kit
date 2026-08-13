@@ -543,3 +543,78 @@ model EmailLog {
   @@index([createdAt])
   @@map("email_logs")
 }
+
+// ── Telescope persistence (improvement 1 — TELESCOPE_MODE=postgres) ───────
+// Tables mirror the memory-store entries. JSON columns hold the sanitized
+// bodies/headers/spans/logs; retention pruning (improvement 4) deletes rows
+// older than the configured window.
+
+model TelescopeRequest {
+  id             String   @id
+  correlationId  String   @map("correlation_id")
+  method         String   @db.VarChar(10)
+  path           String   @db.Text
+  statusCode     Int?     @map("status_code")
+  userId         String?  @map("user_id")
+  durationMs     Int      @map("duration_ms")
+  queryString    String?  @db.Text @map("query_string")
+  ip             String?  @db.VarChar(64)
+  userAgent      String?  @db.Text @map("user_agent")
+  requestBody    Json?    @map("request_body")
+  responseBody   Json?    @map("response_body")
+  requestHeaders Json?    @map("request_headers")
+  spans          Json
+  logs           Json?
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@index([createdAt])
+  @@index([correlationId])
+  @@map("telescope_requests")
+}
+
+model TelescopeQuery {
+  id            String   @id
+  correlationId String   @map("correlation_id")
+  model         String   @default("")
+  operation     String   @db.VarChar(20)
+  query         String   @db.Text
+  params        String?  @db.Text
+  durationMs    Int      @map("duration_ms")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@index([createdAt])
+  @@index([correlationId])
+  @@map("telescope_queries")
+}
+
+model TelescopeException {
+  id            String   @id
+  correlationId String   @map("correlation_id")
+  errorGroup    String   @map("error_group")
+  name          String   @db.VarChar(200)
+  message       String   @db.Text
+  stack         String?  @db.Text
+  statusCode    Int?     @map("status_code")
+  path          String?  @db.Text
+  method        String?  @db.VarChar(10)
+  userId        String?  @map("user_id")
+  occurrences   Int      @default(1)
+  createdAt     DateTime @default(now()) @map("created_at")
+  firstSeenAt   DateTime @default(now()) @map("first_seen_at")
+  lastSeenAt    DateTime @default(now()) @map("last_seen_at")
+
+  @@unique([errorGroup])
+  @@index([createdAt])
+  @@map("telescope_exceptions")
+}
+
+model TelescopeDump {
+  id            String   @id
+  name          String   @db.VarChar(100)
+  value         Json
+  correlationId String?  @map("correlation_id")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@index([createdAt])
+  @@map("telescope_dumps")
+}

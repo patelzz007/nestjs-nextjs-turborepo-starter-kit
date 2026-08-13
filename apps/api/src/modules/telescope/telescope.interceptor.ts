@@ -1,4 +1,4 @@
-import { CallHandler, ExecutionContext, HttpException, Injectable, type NestInterceptor } from "@nestjs/common";
+import { CallHandler, ExecutionContext, HttpException, Inject, Injectable, type NestInterceptor } from "@nestjs/common";
 import type { Request } from "express";
 import { nanoid } from "nanoid";
 import { createHash } from "node:crypto";
@@ -11,6 +11,8 @@ import type { AccessTokenPayload } from "../auth/services/token.service";
 
 import { RequestSpanContext, type SpanStore } from "./request-span-context.js";
 import { sanitizeHeaders, sanitizeJson, truncateJson } from "./sanitize.js";
+import { TelescopeEventBus } from "./telescope-event-bus.js";
+import { TELESCOPE_OPTIONS, TELESCOPE_STORE } from "./telescope.options.js";
 import type { TelescopeStore } from "./telescope.store.js";
 
 interface CapturedError {
@@ -33,14 +35,15 @@ interface CapturedError {
 @Injectable()
 export class TelescopeInterceptor implements NestInterceptor {
 	public constructor(
-		private readonly store: TelescopeStore,
-		private readonly options: TelescopeOptions,
+		@Inject(TELESCOPE_STORE) private readonly store: TelescopeStore,
+		@Inject(TELESCOPE_OPTIONS) private readonly options: TelescopeOptions,
+		private readonly eventBus: TelescopeEventBus,
 	) {}
 
-	public intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
+	public intercept(context: ExecutionContext, next: CallHandler): Observable<TelescopeJsonValue> {
 		const request: Request = context.switchToHttp().getRequest<Request>();
 		const spanStore: SpanStore | undefined = RequestSpanContext.getStore();
-		if (spanStore === undefined || !spanStore.captured) {
+		if (!spanStore?.captured) {
 			return next.handle();
 		}
 
@@ -59,13 +62,15 @@ export class TelescopeInterceptor implements NestInterceptor {
 
 		return next.handle().pipe(
 			tap({
-				next: (data: unknown): void => {
+				// Typed like the repo's ResponseInterceptor (`map((data: JsonValue))`):
+				// the schema check below is the runtime guard for non-JSON payloads.
+				next: (data: TelescopeJsonValue): void => {
 					const parsed = TelescopeJsonValueSchema.safeParse(data);
 					if (parsed.success) {
 						rawResponse = parsed.data;
 					}
 				},
-				error: (err: unknown): void => {
+				error: (err: Error): void => {
 					errorInfo = this.toCapturedError(err);
 				},
 			}),
@@ -77,34 +82,27 @@ export class TelescopeInterceptor implements NestInterceptor {
 		);
 	}
 
-	private toCapturedError(err: unknown): CapturedError {
-		const name: string = err instanceof Error ? err.name : "Error";
-		const message: string = err instanceof Error ? err.message : String(err);
+	private toCapturedError(err: Error): CapturedError {
 		const statusCode: number = err instanceof HttpException ? err.getStatus() : 500;
-		const stack: string | null = err instanceof Error && err.stack !== undefined ? err.stack : null;
-		return { name, message, statusCode, stack };
+		return { name: err.name, message: err.message, statusCode, stack: err.stack ?? null };
 	}
 
 	/** Builds and writes the RequestLog entry (+ exception entry on error). */
-	private finalize(
-		request: Request,
-		spanStore: SpanStore,
-		rawResponse: TelescopeJsonValue | undefined,
-		errorInfo: CapturedError | undefined,
-		handlerStart: number,
-	): void {
+	private finalize(request: Request, spanStore: SpanStore, rawResponse: TelescopeJsonValue | undefined, errorInfo: CapturedError | undefined, handlerStart: number): void {
 		const now: number = performance.now();
 		const durationMs: number = Math.round(now - spanStore.startedAt);
 
-		// Patch span 0 (guards & middleware) with its real duration.
-		const guardSpan = spanStore.spans[0];
-		if (guardSpan !== undefined) {
-			guardSpan.durationMs = Math.round(now - handlerStart);
+		// Patch span 0 (guards & middleware) with its real duration — the span
+		// was pushed unconditionally above, so the length guard is the contract.
+		if (spanStore.spans.length > 0) {
+			spanStore.spans[0].durationMs = Math.round(now - handlerStart);
 		}
 		spanStore.spans.push({ name: "serialization", kind: "serialization", startOffsetMs: durationMs, durationMs: 0 });
 
-		const responseBody: TelescopeJsonValue | null = rawResponse !== undefined ? truncateJson(sanitizeJson(rawResponse)) : null;
-		const requestBody: TelescopeJsonValue | null = spanStore.requestBody !== null ? truncateJson(sanitizeJson(spanStore.requestBody)) : null;
+		// Improvement 10: the body serialization budget is configurable
+		// (`TELESCOPE_BODY_LIMIT_CHARS`) instead of a hardcoded constant.
+		const responseBody: TelescopeJsonValue | null = rawResponse !== undefined ? truncateJson(sanitizeJson(rawResponse), this.options.maxBodyChars) : null;
+		const requestBody: TelescopeJsonValue | null = spanStore.requestBody !== null ? truncateJson(sanitizeJson(spanStore.requestBody), this.options.maxBodyChars) : null;
 
 		const entry: RequestLogEntry = {
 			id: nanoid(),
@@ -121,17 +119,37 @@ export class TelescopeInterceptor implements NestInterceptor {
 			responseBody,
 			requestHeaders: sanitizeHeaders(request.headers, this.options.captureHeaders),
 			spans: [...spanStore.spans],
+			// Improvement 16: console output that ran inside this request.
+			logs: [...spanStore.logs],
 			createdAt: new Date().toISOString(),
 		};
 
 		if (errorInfo !== undefined) {
 			this.store.pushException(this.toExceptionEntry(entry, errorInfo));
+			// Improvement 2: push an exception event so live dashboards update.
+			this.eventBus.publish({
+				type: "exception",
+				id: entry.correlationId,
+				name: errorInfo.name,
+				message: errorInfo.message,
+				statusCode: errorInfo.statusCode,
+			});
 		}
 		this.store.pushRequest(entry);
+		// Improvement 2: push a request event so live dashboards update.
+		this.eventBus.publish({
+			type: "request",
+			id: entry.id,
+			method: entry.method,
+			path: entry.path,
+			statusCode: entry.statusCode,
+			durationMs: entry.durationMs,
+		});
 	}
 
 	/** AuthGuard attaches the JWT payload to `request.user` before finalize. */
 	private readUserId(request: Request): string | null {
+		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Express' Request type does not model AuthGuard's `user` attachment; the shape is the documented AccessTokenPayload.
 		const user: AccessTokenPayload | undefined = (request as { user?: AccessTokenPayload }).user;
 		return user?.sub ?? null;
 	}
@@ -151,6 +169,7 @@ export class TelescopeInterceptor implements NestInterceptor {
 		const firstFrame: string = errorInfo.stack !== null ? errorInfo.stack.split("\n").slice(1, 2).join("") : "";
 		const errorGroup: string = createHash("sha256").update(`${errorInfo.name}:${errorInfo.message}:${firstFrame}`).digest("hex").slice(0, 16);
 
+		const nowIso: string = new Date().toISOString();
 		return {
 			id: nanoid(),
 			correlationId: requestEntry.correlationId,
@@ -163,7 +182,11 @@ export class TelescopeInterceptor implements NestInterceptor {
 			method: requestEntry.method,
 			userId: requestEntry.userId,
 			occurrences: 1,
-			createdAt: new Date().toISOString(),
+			createdAt: nowIso,
+			// Improvement 15: first/last seen are filled at the boundary; the
+			// store bumps lastSeenAt + occurrences on repeats of the same group.
+			firstSeenAt: nowIso,
+			lastSeenAt: nowIso,
 		};
 	}
 }

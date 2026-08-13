@@ -18,6 +18,7 @@ import {
 	SessionStatusSchema,
 	SignupResponseSchema,
 	SignupSchema,
+	TelescopeCompareResponseSchema,
 	TelescopeDumpInputSchema,
 	TelescopeDumpResponseSchema,
 	TelescopeExceptionListResponseSchema,
@@ -40,6 +41,7 @@ import {
 	type SessionStatus,
 	type SignupInput,
 	type SignupResponse,
+	type TelescopeCompareResponse,
 	type TelescopeDumpInput,
 	type TelescopeDumpResponse,
 	type TelescopeExceptionListQuery,
@@ -224,6 +226,7 @@ export const telescopeEndpoints: {
 	readonly overview: (range: TelescopeRange) => GetProcedure<Envelope<{ readonly overview: TelescopeOverview }>>;
 	readonly requests: (query: TelescopeRequestListQuery) => GetProcedure<Envelope<{ readonly list: TelescopeRequestListResponse }>>;
 	readonly requestDetail: (id: string) => GetProcedure<Envelope<TelescopeRequestDetailResponse>>;
+	readonly compare: (a: string, b: string) => GetProcedure<Envelope<TelescopeCompareResponse>>;
 	readonly sql: (query: TelescopeSqlListQuery) => GetProcedure<Envelope<{ readonly list: TelescopeSqlListResponse }>>;
 	readonly exceptions: (query: TelescopeExceptionListQuery) => GetProcedure<Envelope<{ readonly list: TelescopeExceptionListResponse }>>;
 	readonly exceptionDetail: (id: string) => GetProcedure<Envelope<ExceptionLogEntry>>;
@@ -247,6 +250,12 @@ export const telescopeEndpoints: {
 		method: "GET",
 		queryKey: ["telescope", "request-detail", id],
 		responseSchema: envelope(TelescopeRequestDetailResponseSchema),
+	}),
+	compare: (a: string, b: string): GetProcedure<Envelope<TelescopeCompareResponse>> => ({
+		path: `/telescope/compare?a=${encodeURIComponent(a)}&b=${encodeURIComponent(b)}`,
+		method: "GET",
+		queryKey: ["telescope", "compare", a, b],
+		responseSchema: envelope(TelescopeCompareResponseSchema),
 	}),
 	sql: (query: TelescopeSqlListQuery): GetProcedure<Envelope<{ readonly list: TelescopeSqlListResponse }>> => ({
 		path: "/telescope/sql",

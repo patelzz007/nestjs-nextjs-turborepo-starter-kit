@@ -47,20 +47,39 @@ describe("RequestSpanContext", () => {
 });
 
 describe("shouldCaptureRequest", () => {
-	const ignorePaths: readonly string[] = ["/health", "/docs", "/telescope"];
+	const options = { ignorePaths: ["/health", "/docs", "/telescope"], redactPaths: [], capturePaths: undefined };
 
 	it("skips preflight OPTIONS", () => {
-		expect(shouldCaptureRequest("OPTIONS", "/api/orders", ignorePaths)).toBe(false);
+		expect(shouldCaptureRequest("OPTIONS", "/api/orders", options)).toBe(false);
 	});
 
 	it("skips ignore paths and their subtrees", () => {
-		expect(shouldCaptureRequest("GET", "/health", ignorePaths)).toBe(false);
-		expect(shouldCaptureRequest("GET", "/docs/swagger-ui", ignorePaths)).toBe(false);
-		expect(shouldCaptureRequest("GET", "/telescope/requests", ignorePaths)).toBe(false);
+		expect(shouldCaptureRequest("GET", "/health", options)).toBe(false);
+		expect(shouldCaptureRequest("GET", "/docs/swagger-ui", options)).toBe(false);
+		expect(shouldCaptureRequest("GET", "/telescope/requests", options)).toBe(false);
 	});
 
 	it("captures everything else", () => {
-		expect(shouldCaptureRequest("GET", "/auth/me", ignorePaths)).toBe(true);
-		expect(shouldCaptureRequest("POST", "/api/orders", ignorePaths)).toBe(true);
+		expect(shouldCaptureRequest("GET", "/auth/me", options)).toBe(true);
+		expect(shouldCaptureRequest("POST", "/api/orders", options)).toBe(true);
+	});
+
+	it("skips redact paths on top of the built-in ignore list", () => {
+		const redacted = { ...options, redactPaths: ["/auth/login", "/admin/pii"] };
+		expect(shouldCaptureRequest("POST", "/auth/login", redacted)).toBe(false);
+		expect(shouldCaptureRequest("GET", "/admin/pii/records", redacted)).toBe(false);
+		expect(shouldCaptureRequest("GET", "/auth/me", redacted)).toBe(true);
+	});
+
+	it("capturePaths allowlist captures ONLY listed prefixes", () => {
+		const allowlisted = { ignorePaths: ["/health"], redactPaths: [], capturePaths: ["/api"] };
+		expect(shouldCaptureRequest("GET", "/api/orders", allowlisted)).toBe(true);
+		expect(shouldCaptureRequest("GET", "/api", allowlisted)).toBe(true);
+		expect(shouldCaptureRequest("GET", "/auth/me", allowlisted)).toBe(false);
+		expect(shouldCaptureRequest("GET", "/health", allowlisted)).toBe(false);
+	});
+
+	it("an empty capturePaths list is treated as no allowlist", () => {
+		expect(shouldCaptureRequest("GET", "/auth/me", { ...options, capturePaths: [] })).toBe(true);
 	});
 });

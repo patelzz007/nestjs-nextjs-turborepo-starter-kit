@@ -22,7 +22,9 @@
 		"db:migrate:status": "dotenv -e .env -- prisma migrate status",
 		"db:seed": "dotenv -e .env -- tsx prisma/seed.ts",
 		"db:studio": "prisma studio",
-		"db:reset": "dotenv -e .env -- prisma migrate reset --force"
+		"db:reset": "dotenv -e .env -- prisma migrate reset --force",
+		"telescope:cli": "tsx scripts/telescope-cli.ts",
+		"telescope:docs": "tsx scripts/gen-telescope-docs.ts"
 	},
 	"dependencies": {
 		"@nestjs/common": "^11.1.28",
@@ -58,7 +60,7 @@
 		"@nestjs/cli": "^11.0.24",
 		"@nestjs/schematics": "^11.1.0",
 		"@nestjs/testing": "^11.1.28",
-		"@types/supertest": "^6.0.3",
+		"@types/supertest": "^7.2.1",
 		"@prisma/config": "^7.9.1",
 		"@types/bcrypt": "^6.0.0",
 		"@types/cookie-parser": "^1.4.10",
@@ -70,7 +72,6 @@
 		"@types/node": "^26.1.2",
 		"@types/pdfkit": "^0.17.6",
 		"@types/pg": "^8.20.4",
-		"@types/supertest": "^7.2.1",
 		"@workspace/eslint-config": "workspace:^",
 		"@workspace/typescript-config": "workspace:*",
 		"dotenv-cli": "^11.0.0",

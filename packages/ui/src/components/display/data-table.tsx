@@ -189,7 +189,7 @@ export interface DataTableProps<TData extends RowData> {
 	readonly actions?: Action<TData>[];
 	readonly searchKeys?: string[];
 	readonly pageSize?: number;
-	readonly pageSizeOptions?: number[];
+	readonly pageSizeOptions?: readonly number[];
 	readonly title?: string;
 	readonly description?: string;
 
@@ -314,9 +314,9 @@ function readPersistedPrefs(persistKey: string | undefined): PersistedPrefs | nu
 
 function getSortIcon<TData extends RowData>(column: Column<DataTableFeatures, TData>): React.JSX.Element {
 	const sorted = column.getIsSorted();
-	if (sorted === "asc") return <ArrowUp className="h-4 w-4" />;
-	if (sorted === "desc") return <ArrowDown className="h-4 w-4" />;
-	return <ArrowUpDown className="h-4 w-4" />;
+	if (sorted === "asc") return <ArrowUp className="h-3.5 w-3.5 text-primary" />;
+	if (sorted === "desc") return <ArrowDown className="h-3.5 w-3.5 text-primary" />;
+	return <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground/70" />;
 }
 
 /** Builds the CSV header row, excluding utility columns (select/drag/actions). */
@@ -1079,10 +1079,19 @@ const HeaderCell = memoGeneric(function HeaderCell<TData extends RowData>({ head
 	);
 
 	return (
-		<TableHead style={pinnedStyles} className={cn("h-12 p-4", column.getCanSort() && "cursor-pointer hover:bg-muted/50", isPinned && "sticky")} onClick={handleHeaderClick}>
-			<div className="flex items-center gap-2">
+		<TableHead
+			style={pinnedStyles}
+			className={cn(
+				"h-11 bg-muted/30 px-4 text-xs font-semibold tracking-wider text-muted-foreground uppercase",
+				column.getCanSort() && "cursor-pointer hover:bg-muted/50",
+				isPinned && "sticky",
+			)}
+			onClick={handleHeaderClick}>
+			{/* Sort icon sits right after the label (shrink-0) so it never gets pushed
+			    to the right edge by a wide header child or a stretched column. */}
+			<div className="flex w-full items-center gap-1.5">
 				{header.isPlaceholder ? null : flexRender(column.columnDef.header, header.getContext())}
-				{column.getCanSort() ? getSortIcon(column) : null}
+				{column.getCanSort() ? <span className="flex shrink-0 items-center">{getSortIcon(column)}</span> : null}
 
 				{/* NEW FEATURE 5: Pin indicator */}
 				{enableColumnPinning && column.getCanPin() ? (
@@ -1155,7 +1164,9 @@ const TableCellView = memoGeneric(function TableCellView<TData extends RowData>(
 			{isEditing ? (
 				<InlineEditInput value={toCellString(cell.getValue())} onSave={handleCellSave} onCancel={onCellEditCancel} />
 			) : (
-				<div className="flex items-center gap-1">
+				// w-full lets a column's own `text-end` cell content right-align;
+				// without it the flex wrapper shrink-fits and text-end is a no-op.
+				<div className="flex w-full items-center gap-1">
 					{flexRender(cell.column.columnDef.cell, cell.getContext())}
 					{editableSet.has(cellId) ? <Pencil className="ml-1 h-3 w-3 shrink-0 text-muted-foreground/40 opacity-0 transition-opacity hover:opacity-100" /> : null}
 				</div>
@@ -1627,9 +1638,12 @@ export function DataTable<TData extends RowData>({
 	// Mirror of `pagination` for the manual-mode notification callback. The
 	// handler below is memoized with a stable identity (it feeds TanStack's
 	// `onPaginationChange`), so an updater-function must resolve its next state
-	// against a ref rather than a stale closure.
+	// against a ref rather than a stale closure. Written in an effect — refs
+	// cannot be mutated during render under React 19.
 	const paginationRef = useRef<PaginationState>(pagination);
-	paginationRef.current = pagination;
+	useEffect((): void => {
+		paginationRef.current = pagination;
+	}, [pagination]);
 
 	// Sorting is loaded from persisted prefs, so writes go through this
 	// handler to keep the round-trip symmetric (persistKey is opt-in).
@@ -1714,7 +1728,6 @@ export function DataTable<TData extends RowData>({
 			enableBulkSelection,
 			enableColumnPinning,
 			manual,
-			onManualPaginationChange,
 			pageCount,
 			searchKeys,
 		],
@@ -2105,7 +2118,7 @@ export function DataTable<TData extends RowData>({
 								{table.getHeaderGroups().map((headerGroup) => (
 									<TableRow key={headerGroup.id}>
 										{headerGroup.headers.map((header) => (
-											<TableHead key={header.id} className="h-12 p-4">
+											<TableHead key={header.id} className="h-11 bg-muted/30 px-4 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
 												{header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
 											</TableHead>
 										))}

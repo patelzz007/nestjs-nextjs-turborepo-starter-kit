@@ -1,6 +1,6 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 
-import type { TelescopeJsonValue, TelescopeSpan } from "@workspace/shared";
+import type { TelescopeJsonValue, TelescopeLogEntry, TelescopeSpan } from "@workspace/shared";
 
 /**
  * Per-request capture state, carried through the async chain via
@@ -19,6 +19,8 @@ export interface SpanStore {
 	userId: string | null;
 	/** Captured request-body JSON (set by the capture middleware when allowed). */
 	requestBody: TelescopeJsonValue | null;
+	/** Console output that ran inside this request (improvement 16). */
+	logs: TelescopeLogEntry[];
 }
 
 /**
@@ -46,7 +48,8 @@ export class RequestSpanContext {
 	 */
 	public static async span<T>(name: string, kind: TelescopeSpan["kind"], fn: () => Promise<T>): Promise<T> {
 		const store = this.storage.getStore();
-		if (store === undefined || !store.captured) {
+		// Sampled-out requests (or no active scope) run `fn` untouched.
+		if (store?.captured !== true) {
 			return fn();
 		}
 		const start: number = performance.now();

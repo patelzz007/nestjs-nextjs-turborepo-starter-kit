@@ -4,62 +4,161 @@
 // app/(panel)/telescope/page.tsx
 // Telescope Overview — the live dashboard (docs/telescope.md §8).
 //
-// Smart page: owns the range state and the data queries (overview + a 5-row
-// exceptions preview), renders dumb StatCards / ExceptionCards / RangePicker.
-// Polls every 5s so the numbers tick while you debug; `placeholderData` keeps
-// the previous snapshot during each poll so the layout never blanks.
+// Smart page: owns the range state (synced to `?range=`), the data queries
+// (overview + a 5-row exceptions preview) and the SSE live subscription.
+// Improvement v2 polish: skeleton loaders, a connection chip (event count /
+// last-event age / reconnect count), pause-resume, a traffic sparkline and a
+// live activity feed rendered straight from the SSE buffer — no refetch
+// needed to see new requests stream in.
 // ============================================
 
 import { useAuth } from "@workspace/client/lib/auth";
 import { telescopeEndpoints } from "@workspace/client/lib/api/endpoints";
-import { Loader2, Activity, Clock, Database, Mail, ShieldAlert, TriangleAlert } from "lucide-react";
-import { useCallback, useMemo, useState } from "react";
+import { Button } from "@workspace/ui/components/form/button";
+import { Skeleton } from "@workspace/ui/components/feedback/skeleton";
+import { Activity, Clock, Database, Mail, Pause, Play, Radio, ShieldAlert, TriangleAlert } from "lucide-react";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useMemo, useRef, useState, Suspense } from "react";
 
-import type { TelescopeOverview, TelescopeRange } from "@workspace/shared";
+import { TelescopeRangeSchema, type TelescopeOverview, type TelescopeRange, type TelescopeStreamEvent } from "@workspace/shared";
 
+import { LiveFeed } from "@/components/telescope/live-feed";
 import { RangePicker } from "@/components/telescope/range-picker";
 import { StatCard } from "@/components/telescope/stat-card";
+import { TrafficSparkline } from "@/components/telescope/traffic-sparkline";
 import { ExceptionCard } from "@/components/telescope/exception-card";
-import { durationLabel, rangeLabel } from "@/lib/telescope";
+import { AnimatedNumber } from "@/components/telescope/animated-number";
+import { durationLabel, rangeLabel, timeAgo } from "@/lib/telescope";
+import { useTelescopeLive } from "@/lib/use-telescope-live";
 
-/** How often the overview refreshes (ms) — a dev tool should feel live. */
-const POLL_MS: number = 5000;
+/** Skeleton block shown while the first overview payload loads. */
+function OverviewSkeleton(): React.JSX.Element {
+	return (
+		<div className="mx-auto w-full max-w-7xl space-y-6">
+			<header className="flex flex-wrap items-start justify-between gap-4">
+				<div className="space-y-2">
+					<Skeleton className="h-8 w-40" />
+					<Skeleton className="h-4 w-96 max-w-full" />
+				</div>
+				<Skeleton className="h-8 w-52" />
+			</header>
+			<div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+				{Array.from({ length: 4 }, (_, index) => (
+					<Skeleton key={index} className="h-24 rounded-lg" />
+				))}
+			</div>
+			<div className="grid gap-6 lg:grid-cols-3">
+				<Skeleton className="h-40 rounded-lg lg:col-span-2" />
+				<Skeleton className="h-40 rounded-lg" />
+			</div>
+		</div>
+	);
+}
 
-export default function TelescopeOverviewPage(): React.JSX.Element {
+function OverviewContent(): React.JSX.Element {
 	const { api } = useAuth();
-	const [range, setRange] = useState<TelescopeRange>("15m");
+	const router = useRouter();
+	const searchParams = useSearchParams();
 
-	const overviewQuery = api.procedure(telescopeEndpoints.overview(range)).useQuery(
-		{ query: { range } },
-		{
-			refetchInterval: POLL_MS,
-			placeholderData: (previous: TelescopeOverview | undefined): TelescopeOverview | undefined => previous,
+	const parsedRange = TelescopeRangeSchema.safeParse(searchParams.get("range"));
+	const rangeParam: TelescopeRange | null = parsedRange.success ? parsedRange.data : null;
+	const [range, setRange] = useState<TelescopeRange>(rangeParam ?? "15m");
+
+	// Range lives in the URL so a refresh keeps the same window (v2 polish).
+	const handleRangeChange = useCallback(
+		(next: TelescopeRange): void => {
+			setRange(next);
+			router.replace(`/telescope?range=${next}`, { scroll: false });
 		},
+		[router],
 	);
 
-	const exceptionsQuery = api.procedure(
-		telescopeEndpoints.exceptions({ page: 1, pageSize: 5 }),
-	).useQuery(
-		{ query: { page: 1, pageSize: 5 } },
-		{ refetchInterval: POLL_MS, placeholderData: (previous) => previous },
-	);
+	const overviewQuery = api.procedure(telescopeEndpoints.overview(range)).useQuery({ query: { range } }, { placeholderData: (previous) => previous });
 
-	const handleRangeChange = useCallback((next: TelescopeRange): void => {
-		setRange(next);
+	const exceptionsQuery = api
+		.procedure(telescopeEndpoints.exceptions({ page: 1, pageSize: 5 }))
+		.useQuery({ query: { page: 1, pageSize: 5 } }, { placeholderData: (previous) => previous });
+
+	// Improvement 2: refetch on SSE pushes instead of polling on a timer.
+	const refresh = useCallback((): void => {
+		void overviewQuery.refetch();
+		void exceptionsQuery.refetch();
+	}, [overviewQuery, exceptionsQuery]);
+	const live = useTelescopeLive(refresh);
+
+	// Track the previous error count so a NEW error pulses the card (v2).
+	const [errorFlash, setErrorFlash] = useState<number>(0);
+	const prevErrorCount = useRef<number>(0);
+	useEffect((): void => {
+		const errorCount: number = overviewQuery.data?.data.overview.errorCount ?? 0;
+		if (errorCount > prevErrorCount.current) {
+			setErrorFlash((key: number): number => key + 1);
+		}
+		prevErrorCount.current = errorCount;
+	}, [overviewQuery.data]);
+
+	// Keyboard shortcuts: r = refresh, p = pause/resume (v2).
+	const togglePause = useCallback((): void => {
+		if (live.paused) {
+			live.resume();
+		} else {
+			live.pause();
+		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- `live` is the whole result object; the paused flag + stable callbacks are the real deps.
+	}, [live.paused, live.pause, live.resume]);
+
+	useEffect((): (() => void) => {
+		const onKeyDown = (event: KeyboardEvent): void => {
+			if (event.metaKey || event.ctrlKey || event.altKey || event.repeat) {
+				return;
+			}
+			if (event.target instanceof HTMLElement && (event.target.isContentEditable || event.target.tagName === "INPUT" || event.target.tagName === "TEXTAREA")) {
+				return;
+			}
+			if (event.key.toLowerCase() === "r") {
+				refresh();
+			} else if (event.key.toLowerCase() === "p") {
+				togglePause();
+			}
+		};
+		window.addEventListener("keydown", onKeyDown);
+		return (): void => {
+			window.removeEventListener("keydown", onKeyDown);
+		};
+	}, [refresh, togglePause]);
+
+	const overview: TelescopeOverview | undefined = overviewQuery.data?.data.overview;
+	const recentExceptions = useMemo(() => exceptionsQuery.data?.data.list.items ?? [], [exceptionsQuery.data]);
+
+	// A ticking "Xs ago" for the last SSE event — re-renders every 5s. The
+	// interval effect sets the initial tick immediately (no impure Date.now()
+	// in the render path), then every 5s.
+	const [nowTick, setNowTick] = useState<number>(0);
+	useEffect((): (() => void) => {
+		const tick = (): void => {
+			setNowTick(Date.now());
+		};
+		tick();
+		const timer: ReturnType<typeof setInterval> = setInterval(tick, 5000);
+		return (): void => {
+			clearInterval(timer);
+		};
 	}, []);
 
-	const overview: TelescopeOverview | undefined = overviewQuery.data?.overview;
-	const recentExceptions = useMemo(() => exceptionsQuery.data?.list.items ?? [], [exceptionsQuery.data]);
+	const handleFeedNavigate = useCallback(
+		(event: TelescopeStreamEvent): void => {
+			if (event.type === "exception") {
+				router.push("/telescope/exceptions");
+			} else {
+				router.push(`/telescope/requests/${encodeURIComponent(event.id)}`);
+			}
+		},
+		[router],
+	);
 
 	if (overviewQuery.isLoading && overview === undefined) {
-		return (
-			<div className="flex min-h-[60vh] items-center justify-center">
-				<div className="flex flex-col items-center gap-3 text-muted-foreground">
-					<Loader2 className="size-6 animate-spin" />
-					<p className="text-sm">Loading telescope…</p>
-				</div>
-			</div>
-		);
+		return <OverviewSkeleton />;
 	}
 
 	if (overviewQuery.error && overview === undefined) {
@@ -74,32 +173,177 @@ export default function TelescopeOverviewPage(): React.JSX.Element {
 		<div className="mx-auto w-full max-w-7xl space-y-6">
 			<header className="flex flex-wrap items-start justify-between gap-4">
 				<div>
-					<h1 className="text-2xl font-semibold tracking-tight text-foreground">Telescope</h1>
+					<div className="flex flex-wrap items-center gap-2.5">
+						<h1 className="text-2xl font-semibold tracking-tight text-foreground">Telescope</h1>
+
+						{/* Connection chip (v2): live state + event count + last-event age + reconnects. */}
+						<span
+							className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] font-medium ${
+								live.connected
+									? "border-emerald-300/60 bg-emerald-500/10 text-emerald-700 dark:border-emerald-500/40 dark:text-emerald-400"
+									: "border-amber-300/60 bg-amber-500/10 text-amber-700 dark:border-amber-500/40 dark:text-amber-400"
+							}`}>
+							<span className={`size-1.5 animate-pulse rounded-full ${live.connected ? "bg-emerald-500" : "bg-amber-500"}`} />
+							{live.paused ? "paused" : live.connected ? "live" : "reconnecting…"}
+							{live.eventCount > 0 ? (
+								<span className="opacity-80">
+									· {String(live.eventCount)} event{live.eventCount === 1 ? "" : "s"}
+								</span>
+							) : null}
+							{live.lastEventAt !== null ? <span className="opacity-80">· {timeAgo(live.lastEventAt, nowTick)}</span> : null}
+							{live.reconnectCount > 0 ? (
+								<span className="opacity-80">
+									· {String(live.reconnectCount)} reconnect{live.reconnectCount === 1 ? "" : "s"}
+								</span>
+							) : null}
+						</span>
+					</div>
 					<p className="mt-1 max-w-xl text-sm text-muted-foreground">
-						Live observability for the {rangeLabel(range)} — requests, SQL, exceptions and mail, captured in memory and refreshing automatically.
+						Live observability for the {rangeLabel(range)} — requests, SQL, exceptions and mail, updating in real time via SSE.
 					</p>
 				</div>
-				<RangePicker value={range} onChange={handleRangeChange} />
+
+				<div className="flex items-center gap-2">
+					<Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs" onClick={togglePause}>
+						{live.paused ? <Play className="size-3.5" /> : <Pause className="size-3.5" />}
+						{live.paused ? "Resume" : "Pause"}
+					</Button>
+					<RangePicker value={range} onChange={handleRangeChange} />
+				</div>
 			</header>
 
 			{overview === undefined ? null : (
 				<>
 					{/* ── Traffic + latency ─────────────────────────────── */}
 					<div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-						<StatCard label="Requests" value={overview.requests} sub={rangeLabel(range)} icon={<Activity className="size-4" />} accentClass="text-sky-500" />
-						<StatCard label="Avg duration" value={durationLabel(overview.avgDurationMs)} sub="across all requests" icon={<Clock className="size-4" />} accentClass="text-emerald-500" />
-						<StatCard label="P95 duration" value={durationLabel(overview.p95DurationMs)} sub="slowest 5% baseline" icon={<Clock className="size-4" />} accentClass="text-amber-500" />
-						<StatCard label="Errors" value={overview.errorCount} sub="5xx responses" icon={<TriangleAlert className="size-4" />} accentClass="text-red-500" />
+						<StatCard
+							label="Requests"
+							value={<AnimatedNumber value={overview.requests} />}
+							sub={rangeLabel(range)}
+							icon={<Activity className="size-4" />}
+							accentClass="text-sky-500"
+						/>
+						<StatCard
+							label="Avg duration"
+							value={durationLabel(overview.avgDurationMs)}
+							sub="across all requests"
+							icon={<Clock className="size-4" />}
+							accentClass="text-emerald-500"
+						/>
+						<StatCard
+							label="P95 duration"
+							value={durationLabel(overview.p95DurationMs)}
+							sub="slowest 5% baseline"
+							icon={<Clock className="size-4" />}
+							accentClass="text-amber-500"
+						/>
+						<StatCard
+							label="Errors"
+							value={<AnimatedNumber value={overview.errorCount} />}
+							sub="5xx responses"
+							icon={<TriangleAlert className="size-4" />}
+							accentClass="text-red-500"
+							pulseKey={errorFlash}
+						/>
+					</div>
+
+					{/* ── Sparkline + live feed (v2) ───────────────────── */}
+					<div className="grid gap-6 lg:grid-cols-3">
+						<section className="space-y-2 lg:col-span-2">
+							<div className="flex items-center justify-between">
+								<h2 className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+									<Radio className="size-3.5 text-muted-foreground" />
+									Traffic
+								</h2>
+								<div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+									<span className="inline-flex items-center gap-1.5">
+										<span className="size-2 rounded-full bg-[var(--chart-2)]" />
+										Requests
+									</span>
+									<span className="inline-flex items-center gap-1.5">
+										<span className="size-2 rounded-full bg-[var(--chart-4)]" />
+										Errors
+									</span>
+								</div>
+							</div>
+							<div className="rounded-lg border bg-card p-3 text-card-foreground shadow-xs">
+								<TrafficSparkline points={overview.traffic} />
+							</div>
+							{/* Status-class mini bars (v2) */}
+							<div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+								{(
+									[
+										{ key: "2xx", label: "2xx", className: "bg-emerald-500" },
+										{ key: "3xx", label: "3xx", className: "bg-sky-500" },
+										{ key: "4xx", label: "4xx", className: "bg-amber-500" },
+										{ key: "5xx", label: "5xx", className: "bg-red-500" },
+										{ key: "other", label: "—", className: "bg-muted-foreground" },
+									] as const
+								).map((segment) => (
+									<div key={segment.key} className="rounded-lg border bg-card p-3 text-card-foreground shadow-xs">
+										<div className="flex items-center justify-between text-xs">
+											<span className="font-medium text-muted-foreground">{segment.label}</span>
+											<span className="font-semibold tabular-nums">{String(overview.statusCounts[segment.key])}</span>
+										</div>
+										<div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
+											<div
+												className={`h-full rounded-full ${segment.className} transition-[width] duration-500`}
+												style={{ width: `${String(overview.requests > 0 ? Math.max(4, (overview.statusCounts[segment.key] / overview.requests) * 100) : 0)}%` }}
+											/>
+										</div>
+									</div>
+								))}
+							</div>
+						</section>
+
+						<section className="space-y-2">
+							<div className="flex items-center justify-between">
+								<h2 className="text-sm font-semibold text-foreground">Live activity</h2>
+								<Link href="/telescope/requests" className="text-xs font-medium text-primary hover:underline">
+									View all →
+								</Link>
+							</div>
+							<div className="rounded-lg border bg-card p-2 text-card-foreground shadow-xs">
+								{live.events.length === 0 ? (
+									<div className="flex min-h-32 items-center justify-center rounded-md border border-dashed p-4 text-center">
+										<p className="text-xs text-muted-foreground">{live.paused ? "Stream paused." : "Waiting for traffic… make a request and it shows up here instantly."}</p>
+									</div>
+								) : (
+									<LiveFeed events={live.events} onNavigate={handleFeedNavigate} />
+								)}
+							</div>
+						</section>
 					</div>
 
 					{/* ── Data + mail ───────────────────────────────────── */}
 					<div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-						<StatCard label="SQL queries" value={overview.sqlCount} sub={rangeLabel(range)} icon={<Database className="size-4" />} accentClass="text-violet-500" />
-						<StatCard label="Slow SQL" value={overview.slowSqlCount} sub="≥500ms" icon={<Database className="size-4" />} accentClass="text-amber-500" />
-						<StatCard label="Exception groups" value={overview.exceptionGroups} sub="deduped by stack" icon={<ShieldAlert className="size-4" />} accentClass="text-red-500" />
+						<StatCard
+							label="SQL queries"
+							value={<AnimatedNumber value={overview.sqlCount} />}
+							sub={rangeLabel(range)}
+							icon={<Database className="size-4" />}
+							accentClass="text-violet-500"
+							href="/telescope/sql"
+						/>
+						<StatCard
+							label="Slow SQL"
+							value={<AnimatedNumber value={overview.slowSqlCount} />}
+							sub="≥500ms"
+							icon={<Database className="size-4" />}
+							accentClass="text-amber-500"
+							href="/telescope/sql"
+						/>
+						<StatCard
+							label="Exception groups"
+							value={<AnimatedNumber value={overview.exceptionGroups} />}
+							sub="deduped by stack"
+							icon={<ShieldAlert className="size-4" />}
+							accentClass="text-red-500"
+							href="/telescope/exceptions"
+						/>
 						<StatCard
 							label="Mail"
-							value={overview.mailSent}
+							value={<AnimatedNumber value={overview.mailSent} />}
 							sub={`${String(overview.mailDelivered)} delivered`}
 							icon={<Mail className="size-4" />}
 							accentClass="text-emerald-500"
@@ -124,9 +368,9 @@ export default function TelescopeOverviewPage(): React.JSX.Element {
 						<section className="space-y-2">
 							<div className="flex items-center justify-between">
 								<h2 className="text-sm font-semibold text-foreground">Recent exceptions</h2>
-								<a href="/telescope/exceptions" className="text-xs font-medium text-primary hover:underline">
+								<Link href="/telescope/exceptions" className="text-xs font-medium text-primary hover:underline">
 									View all →
-								</a>
+								</Link>
 							</div>
 							{recentExceptions.map((exception) => (
 								<ExceptionCard key={exception.id} exception={exception} />
@@ -136,5 +380,14 @@ export default function TelescopeOverviewPage(): React.JSX.Element {
 				</>
 			)}
 		</div>
+	);
+}
+
+/** `useSearchParams` must render under a Suspense boundary during prerender. */
+export default function TelescopeOverviewPage(): React.JSX.Element {
+	return (
+		<Suspense fallback={null}>
+			<OverviewContent />
+		</Suspense>
 	);
 }
