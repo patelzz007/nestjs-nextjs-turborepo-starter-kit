@@ -269,6 +269,17 @@ export function scheduleStatusTone(status: string): string {
 	return "border-border text-muted-foreground";
 }
 
+/** Exception triage status chip: open → amber, resolved → emerald, ignored → muted (improvement 6). */
+export function exceptionStatusTone(status: string): string {
+	if (status === "resolved") {
+		return "border-emerald-300/60 bg-emerald-500/10 text-emerald-700 dark:border-emerald-500/40 dark:text-emerald-400";
+	}
+	if (status === "ignored") {
+		return "border-border bg-muted/40 text-muted-foreground";
+	}
+	return "border-amber-300/60 bg-amber-500/10 text-amber-700 dark:border-amber-500/40 dark:text-amber-400";
+}
+
 /** Alert reason chip: duration → amber, error → red. */
 export function alertReasonTone(reason: string): string {
 	if (reason === "error") {

@@ -9,16 +9,19 @@
 
 import { useAuth } from "@workspace/client/lib/auth";
 import { telescopeEndpoints } from "@workspace/client/lib/api/endpoints";
+import { Button } from "@workspace/ui/components/form/button";
 import type { ColumnDef } from "@tanstack/react-table";
 import { DataTable, type DataTableFeatures } from "@workspace/ui/components/display/data-table";
 import { Input } from "@workspace/ui/components/form/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@workspace/ui/components/form/select";
+import { Check, EyeOff, RotateCcw } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
+import { toast } from "sonner";
 
-import { TelescopeExceptionListQuerySchema, type ExceptionLogEntry, type TelescopeExceptionListQuery } from "@workspace/shared";
+import { TelescopeExceptionListQuerySchema, type ExceptionLogEntry, type TelescopeExceptionListQuery, type TelescopeExceptionStatus } from "@workspace/shared";
 
 import { ExceptionCard } from "@/components/telescope/exception-card";
-import { formatTime, statusTone } from "@/lib/telescope";
+import { exceptionStatusTone, formatTime, statusTone } from "@/lib/telescope";
 
 const PAGE_SIZE_OPTIONS: readonly number[] = [10, 20, 50, 100];
 
@@ -27,10 +30,98 @@ const STATUS_OPTIONS: readonly { readonly value: string; readonly label: string 
 	label: String(code),
 }));
 
+// Improvement 6 — triage inbox: filter exception groups by their status.
+const TRIAGE_OPTIONS: readonly { readonly value: TelescopeExceptionStatus; readonly label: string }[] = [
+	{ value: "open", label: "Open" },
+	{ value: "resolved", label: "Resolved" },
+	{ value: "ignored", label: "Ignored" },
+];
+
+/**
+ * Per-row triage controls (improvement 6). Renders the status chip plus
+ * Resolve / Ignore / Reopen actions. One component per row → the mutation
+ * (whose id is part of the URL path) is declared inside it, not in a loop.
+ */
+function TriageActions({ entry, onChanged }: { readonly entry: ExceptionLogEntry; readonly onChanged: (updated: ExceptionLogEntry) => void }): React.JSX.Element {
+	const { api } = useAuth();
+	const statusMutation = api.procedure(telescopeEndpoints.setExceptionStatus(entry.id)).useMutation();
+
+	const apply = useCallback(
+		(nextStatus: TelescopeExceptionStatus): void => {
+			statusMutation.mutate(
+				{ status: nextStatus },
+				{
+					onSuccess: (data): void => {
+						onChanged(data.data);
+						toast.success(`Exception marked ${nextStatus}.`);
+					},
+					onError: (): void => {
+						toast.error("Failed to update the exception status.");
+					},
+				},
+			);
+		},
+		[statusMutation, onChanged],
+	);
+
+	const stop = (event: React.MouseEvent): void => {
+		event.stopPropagation();
+	};
+
+	return (
+		<div className="flex items-center gap-1.5">
+			<span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium capitalize ${exceptionStatusTone(entry.status)}`}>{entry.status}</span>
+			{entry.status === "open" ? (
+				<>
+					<Button
+						variant="ghost"
+						size="sm"
+						className="h-6 gap-1 px-1.5 text-xs"
+						onClick={(event: React.MouseEvent): void => {
+							stop(event);
+							apply("resolved");
+						}}
+						title="Mark resolved">
+						<Check className="size-3" />
+						Resolve
+					</Button>
+					<Button
+						variant="ghost"
+						size="sm"
+						className="h-6 gap-1 px-1.5 text-xs text-muted-foreground"
+						onClick={(event: React.MouseEvent): void => {
+							stop(event);
+							apply("ignored");
+						}}
+						title="Ignore this group">
+						<EyeOff className="size-3" />
+						Ignore
+					</Button>
+				</>
+			) : null}
+			{entry.status !== "open" ? (
+				<Button
+					variant="ghost"
+					size="sm"
+					className="h-6 gap-1 px-1.5 text-xs text-muted-foreground"
+					onClick={(event: React.MouseEvent): void => {
+						stop(event);
+						apply("open");
+					}}
+					title="Reopen — new occurrences will surface again">
+					<RotateCcw className="size-3" />
+					Reopen
+				</Button>
+			) : null}
+		</div>
+	);
+}
+
 export default function TelescopeExceptionsPage(): React.JSX.Element {
 	const { api } = useAuth();
 
 	const [status, setStatus] = useState<string>("all");
+	const [triage, setTriage] = useState<string>("all");
 	const [errorGroup, setErrorGroup] = useState<string>("");
 	const [page, setPage] = useState<number>(1);
 	const [pageSize, setPageSize] = useState<number>(20);
@@ -39,9 +130,10 @@ export default function TelescopeExceptionsPage(): React.JSX.Element {
 	const query: TelescopeExceptionListQuery = useMemo((): TelescopeExceptionListQuery => {
 		const draft: Record<string, string | number> = { page, pageSize };
 		if (status !== "all") draft.statusCode = status;
+		if (triage !== "all") draft.status = triage;
 		if (errorGroup !== "") draft.errorGroup = errorGroup;
 		return TelescopeExceptionListQuerySchema.parse(draft);
-	}, [page, pageSize, status, errorGroup]);
+	}, [page, pageSize, status, triage, errorGroup]);
 
 	const listQuery = api.procedure(telescopeEndpoints.exceptions(query)).useQuery({ query }, { placeholderData: (previous) => previous });
 
@@ -56,6 +148,16 @@ export default function TelescopeExceptionsPage(): React.JSX.Element {
 	const handleRowClick = useCallback((row: ExceptionLogEntry): void => {
 		setSelected(row);
 	}, []);
+
+	// Improvement 6 — a status change refetches the list and (if the row was
+	// the selected one) updates the pinned card below the table.
+	const handleTriageChanged = useCallback(
+		(updated: ExceptionLogEntry): void => {
+			void listQuery.refetch();
+			setSelected((current: ExceptionLogEntry | null): ExceptionLogEntry | null => (current?.id === updated.id ? updated : current));
+		},
+		[listQuery],
+	);
 
 	const columns = useMemo<ColumnDef<DataTableFeatures, ExceptionLogEntry>[]>(
 		() => [
@@ -83,6 +185,12 @@ export default function TelescopeExceptionsPage(): React.JSX.Element {
 				},
 			},
 			{
+				// Improvement 6 — triage chip + per-group actions.
+				id: "triage",
+				header: "Triage",
+				cell: ({ row }): React.JSX.Element => <TriageActions entry={row.original} onChanged={handleTriageChanged} />,
+			},
+			{
 				accessorKey: "occurrences",
 				header: "Occurrences",
 				cell: ({ row }): React.JSX.Element => <span className="text-xs text-muted-foreground tabular-nums">{row.original.occurrences}</span>,
@@ -107,7 +215,7 @@ export default function TelescopeExceptionsPage(): React.JSX.Element {
 				),
 			},
 		],
-		[],
+		[handleTriageChanged],
 	);
 
 	const mobileCardRender = useCallback(
@@ -130,12 +238,16 @@ export default function TelescopeExceptionsPage(): React.JSX.Element {
 	const handleStatusChange = useCallback((value: string | null): void => {
 		if (value !== null) setStatus(value);
 	}, []);
+	const handleTriageChange = useCallback((value: string | null): void => {
+		if (value !== null) setTriage(value);
+	}, []);
 	const handleGroupChange = useCallback((event: React.ChangeEvent<HTMLInputElement>): void => {
 		setErrorGroup(event.target.value);
 	}, []);
 
-	const filtersKey: string = useMemo(() => JSON.stringify({ status, errorGroup }), [status, errorGroup]);
+	const filtersKey: string = useMemo(() => JSON.stringify({ status, triage, errorGroup }), [status, triage, errorGroup]);
 	const statusItems = useMemo(() => STATUS_OPTIONS, []);
+	const triageItems = useMemo(() => [{ value: "all", label: "Any triage" }, ...TRIAGE_OPTIONS], []);
 
 	return (
 		<div className="mx-auto w-full max-w-7xl space-y-6">
@@ -156,6 +268,24 @@ export default function TelescopeExceptionsPage(): React.JSX.Element {
 						<SelectContent>
 							<SelectItem value="all">Any status</SelectItem>
 							{STATUS_OPTIONS.map((option) => (
+								<SelectItem key={option.value} value={option.value}>
+									{option.label}
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
+				</div>
+				<div className="flex flex-col gap-1.5">
+					<label htmlFor="tel-ex-triage" className="text-xs font-medium text-muted-foreground">
+						Triage
+					</label>
+					<Select value={triage} onValueChange={handleTriageChange} items={triageItems}>
+						<SelectTrigger id="tel-ex-triage" className="h-9 w-36 text-sm">
+							<SelectValue placeholder="Triage" />
+						</SelectTrigger>
+						<SelectContent>
+							<SelectItem value="all">Any triage</SelectItem>
+							{TRIAGE_OPTIONS.map((option) => (
 								<SelectItem key={option.value} value={option.value}>
 									{option.label}
 								</SelectItem>

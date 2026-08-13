@@ -107,6 +107,8 @@ export const RequestLogSummarySchema = z
 		environment: TelescopeEnvironmentSchema.nullable().default(null),
 		/** Starred via request annotations (feature 14). */
 		starred: z.boolean().default(false),
+		/** N+1 warning count for this request's queries (improvement 4 — surfaced on the list). */
+		n1WarningCount: z.number().int().nonnegative().default(0),
 	})
 	.strict();
 
@@ -156,6 +158,11 @@ export const QueryLogEntrySchema = z
 export type QueryLogEntry = z.output<typeof QueryLogEntrySchema>;
 
 // ── ExceptionLog ───────────────────────────────────────────────────────────
+// ── Exception triage (improvement 6 — resolve/ignore per error group) ─────
+// Declared BEFORE ExceptionLogEntrySchema, which references it.
+
+export const TelescopeExceptionStatusSchema = z.enum(["open", "resolved", "ignored"]);
+export type TelescopeExceptionStatus = z.output<typeof TelescopeExceptionStatusSchema>;
 
 export const ExceptionLogEntrySchema = z
 	.object({
@@ -174,9 +181,10 @@ export const ExceptionLogEntrySchema = z
 		/** Group-aggregation fields (improvement 15): first/last occurrence. */
 		firstSeenAt: z.string(),
 		lastSeenAt: z.string(),
+		/** Triage status (improvement 6) — default open; resolved/ignored hide the group. */
+		status: TelescopeExceptionStatusSchema.default("open"),
 	})
 	.strict();
-
 export type ExceptionLogEntry = z.output<typeof ExceptionLogEntrySchema>;
 
 // ── Dump (the dd() equivalent) ─────────────────────────────────────────────
@@ -197,6 +205,10 @@ export type DumpEntry = z.output<typeof DumpEntrySchema>;
 
 export const TelescopeStorageSchema = z.enum(["memory", "postgres"]);
 export type TelescopeStorage = z.output<typeof TelescopeStorageSchema>;
+
+/** Improvement 15 — "redact" masks PII at capture; "flag" only records the category. */
+export const TelescopePiiModeSchema = z.enum(["redact", "flag"]);
+export type TelescopePiiMode = z.output<typeof TelescopePiiModeSchema>;
 
 export const TelescopeBodyCaptureSchema = z.enum(["none", "headers", "full"]);
 export type TelescopeBodyCapture = z.output<typeof TelescopeBodyCaptureSchema>;
@@ -219,6 +231,12 @@ export const TelescopeOptionsSchema = z
 		redactPaths: z.array(z.string()).default([]),
 		/** Optional shared secret accepted as `Authorization: Bearer <token>`. */
 		token: z.string().optional(),
+		/** Improvement 14 — cap on timeline spans stored per request (long tail protection). */
+		maxSpansPerRequest: z.number().int().positive().default(200),
+		/** Improvement 14 — cap on console output lines stored per request. */
+		maxConsoleEntriesPerRequest: z.number().int().positive().default(100),
+		/** Improvement 15 — "redact" masks PII at capture; "flag" only records the category. */
+		piiMode: TelescopePiiModeSchema.default("redact"),
 		captureBody: TelescopeBodyCaptureSchema.default("headers"),
 		/** Header whitelist — nothing outside this list is ever stored. */
 		captureHeaders: z.array(z.string()).default(["content-type", "user-agent", "x-client-type"]),
@@ -282,11 +300,21 @@ export type TelescopeSqlListQuery = z.output<typeof TelescopeSqlListQuerySchema>
 export const TelescopeExceptionListQuerySchema = TelescopePaginationSchema.extend({
 	errorGroup: z.string().optional(),
 	statusCode: z.coerce.number().int().optional(),
+	/** Triage status filter (improvement 6). */
+	status: TelescopeExceptionStatusSchema.optional(),
 	from: z.string().optional(),
 	to: z.string().optional(),
 }).strict();
 
 export type TelescopeExceptionListQuery = z.output<typeof TelescopeExceptionListQuerySchema>;
+
+/** Body for `PUT /telescope/exceptions/:id/status` (improvement 6). */
+export const TelescopeExceptionStatusInputSchema = z
+	.object({
+		status: TelescopeExceptionStatusSchema,
+	})
+	.strict();
+export type TelescopeExceptionStatusInput = z.output<typeof TelescopeExceptionStatusInputSchema>;
 
 export const TelescopeRangeSchema = z.enum(["15m", "1h", "6h", "24h"]);
 export type TelescopeRange = z.output<typeof TelescopeRangeSchema>;
@@ -309,8 +337,7 @@ export const TelescopeTrafficPointSchema = z
 
 export type TelescopeTrafficPoint = z.output<typeof TelescopeTrafficPointSchema>;
 
-/** Status-class counts for the overview (2xx/3xx/4xx/5xx + aborted/unknown). */
-export const TelescopeStatusCountsSchema = z
+/** Status-class counts for the overview (2xx/3xx/4xx/5xx + aborted/unknown). */ export const TelescopeStatusCountsSchema = z
 	.object({
 		"2xx": z.number().int().nonnegative(),
 		"3xx": z.number().int().nonnegative(),
@@ -319,8 +346,25 @@ export const TelescopeStatusCountsSchema = z
 		other: z.number().int().nonnegative(),
 	})
 	.strict();
-
 export type TelescopeStatusCounts = z.output<typeof TelescopeStatusCountsSchema>;
+
+/** Capture-pipeline health snapshot (improvement 19 — overview health card). */
+export const TelescopeHealthSchema = z
+	.object({
+		/** Backing store: "memory" or "postgres". */
+		mode: TelescopeStorageSchema,
+		/** Whether capture is currently active (false = fail-closed). */
+		enabled: z.boolean(),
+		/** Requests currently held in the buffer. */
+		bufferRequests: z.number().int().nonnegative(),
+		/** Ring-buffer cap (memory mode) or 0 for postgres mode. */
+		bufferCap: z.number().int().nonnegative(),
+		/** Current retention window in minutes. */
+		retentionMinutes: z.number().int().positive(),
+	})
+	.strict();
+export type TelescopeHealth = z.output<typeof TelescopeHealthSchema>;
+
 export const TelescopeOverviewSchema = z
 	.object({
 		range: TelescopeRangeSchema,
@@ -334,12 +378,18 @@ export const TelescopeOverviewSchema = z
 		mailSent: z.number().int(),
 		mailDelivered: z.number().int(),
 		exceptionGroups: z.number().int(),
+		/** Requests with at least one N+1 warning in range (improvement 4). */
+		n1RequestCount: z.number().int(),
+		/** Requests with PII flags in range (improvement 15). */
+		piiRequestCount: z.number().int(),
 		/** Request volume over the range — 24 fixed buckets for the sparkline. */
 		traffic: z.array(TelescopeTrafficPointSchema).readonly(),
 		/** Status-class counts over the range. */
 		statusCounts: TelescopeStatusCountsSchema,
 		/** Environment tag of the process that captured (feature 8). */
 		environment: TelescopeEnvironmentSchema,
+		/** Capture-pipeline health snapshot (improvement 19). */
+		health: TelescopeHealthSchema,
 	})
 	.strict();
 export type TelescopeOverview = z.output<typeof TelescopeOverviewSchema>;
@@ -407,6 +457,10 @@ export type TelescopeScheduleStatus = z.output<typeof TelescopeScheduleStatusSch
  * carries exactly its own fields (extra fields are rejected by `.strict()`),
  * so a `job` frame can never smuggle request-only fields or vice versa.
  * Consumers narrow on `event.type` and get precise per-variant typing.
+ *
+ * Frames also carry a monotonically increasing `seq` (assigned by the event
+ * bus) used for SSE replay (improvement 7) — the `seq` is transported as the
+ * SSE `id:` field, never inside the JSON payload.
  */
 export const TelescopeRequestStreamEventSchema = z
 	.object({
@@ -460,6 +514,17 @@ export const TelescopeStreamEventSchema = z.discriminatedUnion("type", [
 
 export type TelescopeStreamEvent = z.output<typeof TelescopeStreamEventSchema>;
 
+/**
+ * A published stream frame stamped with its monotonic sequence number. The
+ * `seq` is transported as the SSE `id:` field — a reconnecting client sends
+ * `Last-Event-ID` and the server replays the buffered frames after it
+ * (improvement 7).
+ */
+export interface BufferedStreamEvent {
+	readonly seq: number;
+	readonly event: TelescopeStreamEvent;
+}
+
 export const TelescopeRequestListResponseSchema = z
 	.object({
 		items: z.array(RequestLogSummarySchema).readonly(),
@@ -511,18 +576,36 @@ export const TelescopeAnnotationInputSchema = z
 	.strict();
 export type TelescopeAnnotationInput = z.output<typeof TelescopeAnnotationInputSchema>;
 
-/** Detail view: the request + its queries + its dumps (joined by correlationId). */
+/** Detail view: the request + its annotation + navigation context (improvements 3/12/18). */
 export const TelescopeRequestDetailResponseSchema = z
 	.object({
 		request: RequestLogEntrySchema,
-		queries: z.array(QueryLogEntrySchema).readonly(),
-		dumps: z.array(DumpEntrySchema).readonly(),
-		n1Warnings: z.array(TelescopeN1WarningSchema).readonly(),
 		/** Star/comment annotation (feature 14) — null until first set. */
 		annotation: TelescopeAnnotationSchema.nullable().default(null),
+		/** Neighbor request ids by capture order (improvement 12 — prev/next nav). */
+		adjacent: z
+			.object({
+				/** The request captured immediately before this one, or null. */
+				prevId: z.string().nullable(),
+				/** The request captured immediately after this one, or null. */
+				nextId: z.string().nullable(),
+			})
+			.strict(),
+		/** Nearest earlier request with the same method+path (improvement 18 — compare). */
+		previousRequestId: z.string().nullable(),
 	})
 	.strict();
 export type TelescopeRequestDetailResponse = z.output<typeof TelescopeRequestDetailResponseSchema>;
+
+/** Lazy detail payload (improvement 3): SQL + dumps + N+1 warnings, fetched on demand. */
+export const TelescopeRequestSqlResponseSchema = z
+	.object({
+		queries: z.array(QueryLogEntrySchema).readonly(),
+		dumps: z.array(DumpEntrySchema).readonly(),
+		n1Warnings: z.array(TelescopeN1WarningSchema).readonly(),
+	})
+	.strict();
+export type TelescopeRequestSqlResponse = z.output<typeof TelescopeRequestSqlResponseSchema>;
 
 // ── Jobs (feature 3 — queue/job inspection) ────────────────────────────────
 // A job is any async unit of work recorded by `TelescopeJobRunner` — the
@@ -564,6 +647,17 @@ export type TelescopeJobsListResponse = z.output<typeof TelescopeJobsListRespons
 // ── Schedules (feature 4 — scheduled-task view) ────────────────────────────
 // One row per registered schedule, keeping the last run + the next run.
 
+/** One entry in a schedule's run history (improvement 20 — last N runs). */
+export const TelescopeScheduleRunSchema = z
+	.object({
+		/** ISO timestamp of the run's start. */
+		at: z.string(),
+		status: TelescopeScheduleStatusSchema,
+		durationMs: z.number().int().nonnegative().nullable(),
+	})
+	.strict();
+export type TelescopeScheduleRun = z.output<typeof TelescopeScheduleRunSchema>;
+
 export const TelescopeScheduleLogSchema = z
 	.object({
 		name: z.string(),
@@ -573,6 +667,8 @@ export const TelescopeScheduleLogSchema = z
 		lastDurationMs: z.number().int().nonnegative().nullable(),
 		lastError: z.string().nullable(),
 		nextRunAt: z.string(),
+		/** Improvement 20 — recent run history (oldest-first, capped by the scheduler). */
+		history: z.array(TelescopeScheduleRunSchema).readonly().default([]),
 	})
 	.strict();
 export type TelescopeScheduleLog = z.output<typeof TelescopeScheduleLogSchema>;
@@ -680,6 +776,10 @@ export type TelescopeLogsListResponse = z.output<typeof TelescopeLogsListRespons
 export const TelescopeAlertReasonSchema = z.enum(["duration", "error"]);
 export type TelescopeAlertReason = z.output<typeof TelescopeAlertReasonSchema>;
 
+/** Triage status for an alert (improvement 5 — ack/snooze). */
+export const TelescopeAlertStatusSchema = z.enum(["open", "acknowledged", "snoozed"]);
+export type TelescopeAlertStatus = z.output<typeof TelescopeAlertStatusSchema>;
+
 export const TelescopeAlertEntrySchema = z
 	.object({
 		id: z.string(),
@@ -690,6 +790,10 @@ export const TelescopeAlertEntrySchema = z
 		durationMs: z.number().int().nonnegative(),
 		reason: TelescopeAlertReasonSchema,
 		firedAt: z.string(),
+		/** Triage status (improvement 5) — open until acked or snoozed. */
+		status: TelescopeAlertStatusSchema.default("open"),
+		/** When a snoozed alert becomes open again; null when not snoozed. */
+		snoozedUntil: z.string().nullable().default(null),
 	})
 	.strict();
 export type TelescopeAlertEntry = z.output<typeof TelescopeAlertEntrySchema>;
@@ -700,6 +804,15 @@ export const TelescopeAlertsResponseSchema = z
 	})
 	.strict();
 export type TelescopeAlertsResponse = z.output<typeof TelescopeAlertsResponseSchema>;
+
+/** Body for `POST /telescope/alerts/:id/snooze` (improvement 5). */
+export const TelescopeAlertSnoozeInputSchema = z
+	.object({
+		/** Snooze window in minutes (default 30). */
+		minutes: z.coerce.number().int().positive().max(1440).default(30),
+	})
+	.strict();
+export type TelescopeAlertSnoozeInput = z.output<typeof TelescopeAlertSnoozeInputSchema>;
 
 // ── Request replay (feature 7 — re-send a captured request) ────────────────
 

@@ -9,11 +9,14 @@
 
 import { useAuth } from "@workspace/client/lib/auth";
 import { telescopeEndpoints } from "@workspace/client/lib/api/endpoints";
+import { Button } from "@workspace/ui/components/form/button";
 import type { ColumnDef } from "@tanstack/react-table";
 import { DataTable, type DataTableFeatures } from "@workspace/ui/components/display/data-table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@workspace/ui/components/form/select";
+import { RotateCcw } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useState } from "react";
+import { toast } from "sonner";
 
 import { TelescopeJobsListQuerySchema, type TelescopeJobLogEntry, type TelescopeJobsListQuery, type TelescopeStreamEvent } from "@workspace/shared";
 
@@ -28,6 +31,43 @@ const STATUS_OPTIONS: readonly { readonly value: string; readonly label: string 
 	{ value: "failed", label: "Failed" },
 	{ value: "running", label: "Running" },
 ];
+
+/**
+ * Improvement 17 — re-run a failed job from the UI. The runner keeps a
+ * registry of job fns, so the retry endpoint spawns a NEW entry with the
+ * same fn (background jobs stay retryable; jobs whose fn was never
+ * registered return a 404 the mutation surfaces as a toast).
+ */
+function RetryAction({ job, onRetried }: { readonly job: TelescopeJobLogEntry; readonly onRetried: () => void }): React.JSX.Element {
+	const { api } = useAuth();
+	const retryMutation = api.procedure(telescopeEndpoints.retryJob(job.id)).useMutation();
+
+	const handleRetry = useCallback(
+		(event: React.MouseEvent): void => {
+			event.stopPropagation();
+			retryMutation.mutate(
+				{},
+				{
+					onSuccess: (): void => {
+						onRetried();
+						toast.success("Job re-queued — a new entry will appear.");
+					},
+					onError: (): void => {
+						toast.error("Retry failed — the job fn is not registered (API restart clears it).");
+					},
+				},
+			);
+		},
+		[retryMutation, onRetried],
+	);
+
+	return (
+		<Button variant="outline" size="sm" className="h-6 gap-1 px-2 text-xs" onClick={handleRetry} disabled={retryMutation.isPending} title="Re-run this job (new entry)">
+			<RotateCcw className="size-3" />
+			{retryMutation.isPending ? "Re-queueing…" : "Retry"}
+		</Button>
+	);
+}
 
 export default function TelescopeJobsPage(): React.JSX.Element {
 	const { api } = useAuth();
@@ -65,6 +105,11 @@ export default function TelescopeJobsPage(): React.JSX.Element {
 		},
 		[router],
 	);
+
+	// Improvement 17 — after a retry, refetch so the new entry shows up.
+	const refreshList = useCallback((): void => {
+		void listQuery.refetch();
+	}, [listQuery]);
 
 	// Live: the API publishes a `job` frame on the SSE stream when a job
 	// finishes — refetch on push so the table updates without a manual refresh.
@@ -133,8 +178,15 @@ export default function TelescopeJobsPage(): React.JSX.Element {
 						<span className="text-xs text-muted-foreground">—</span>
 					),
 			},
+			{
+				// Improvement 17 — re-run a failed job straight from the table.
+				id: "retry",
+				header: "",
+				cell: ({ row }): React.JSX.Element =>
+					row.original.status === "failed" ? <RetryAction job={row.original} onRetried={refreshList} /> : <span className="text-xs text-muted-foreground">—</span>,
+			},
 		],
-		[],
+		[refreshList],
 	);
 
 	const statusItems = useMemo(() => [{ value: "all", label: "All statuses" }, ...STATUS_OPTIONS], []);

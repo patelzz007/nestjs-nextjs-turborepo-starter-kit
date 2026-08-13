@@ -699,6 +699,14 @@ Telescope is enabled.
 | `GET /telescope/mail` | Mail outbox (proxies `EmailLog`) | `page`, `pageSize`, `status`, `templateKey` |
 | `GET /telescope/logs` | Log viewer feed (proxies `Log` — optional) | same as `GET /logs` |
 | `POST /telescope/dump` | Dev dump probe (optional) | body: `{ name, value }` |
+| `GET /telescope/alerts` | Threshold alert feed | `page`, `pageSize`, `status` (`open\|acked\|snoozed`) |
+| `POST /telescope/alerts/:id/ack` | Mark an alert acknowledged | — |
+| `POST /telescope/alerts/:id/snooze` | Snooze an alert until a time | body: `{ snoozeUntil }` |
+| `POST /telescope/jobs/:id/retry` | Re-run a failed job through the runner | — |
+
+> [!NOTE] **Improvement 2 (doc drift) fixed:** `GET /telescope/requests/:id/sql` is now a
+> real route (lazy-load the SQL + dumps for one request instead of bundling them into the
+> detail payload — improvement 3), and the table above matches the controller exactly.
 
 Response shapes (in `packages/shared`):
 
@@ -977,6 +985,14 @@ The horizontal bar is the signature of the whole feature — get it right:
   the exceptions list, **job → the correlated request** (`?correlation=`, via
   the `correlationId` now carried on job frames; jobs without a correlation stay
   static); schedule rows are informational.
+- ✅ **SSE replay + resilient reconnect — shipped (2026-08-13).** Every published frame
+  is stamped with a monotonic `seq` (carried in the SSE `id:` field). The client hook
+  (`use-telescope-live.ts`) is now fetch-based with `Last-Event-ID` support: on
+  reconnect it sends the last seen `seq` and the server **replays the buffered frames
+  after it**, so frames published during a gap aren't lost. Reconnect uses exponential
+  backoff with jitter (0.5×–1.5× of `min(30s, 1s · 2^attempt)`), and the hook exposes
+  `reconnectCount` so the UI can show a "reconnecting" state instead of silently
+  dropping live updates.
 
 ### 9.5 Empty, loading, error states
 
@@ -1140,6 +1156,9 @@ none of them are required to ship value):
 | `TELESCOPE_ALERT_WINDOW_MINUTES` | `5` | Feature 18 — per-route+reason dedupe window for alerts |
 | `TELESCOPE_REPLAY_TARGETS` | — | Feature 7 — `name:baseUrl` pairs for request replay (`local` always exists) |
 | `TELESCOPE_LOCAL_BASE_URL` | `http://localhost:8080` | Feature 7 — the API's own origin used as the `local` replay target |
+| `TELESCOPE_MAX_SPANS_PER_REQUEST` | `200` | Improvement 14 — capture budget: max timeline spans per request (protects the ring buffer from pathological spans) |
+| `TELESCOPE_MAX_CONSOLE_ENTRIES` | `100` | Improvement 14 — capture budget: max console entries captured per request |
+| `TELESCOPE_PII_MODE` | `redact` | Improvement 15 — `redact` (mask sensitive values at capture) \| `flag` (record only, no masking — for local debugging with real payloads) |
 
 ### 14.2 File map (everything this doc creates)
 
@@ -1252,6 +1271,21 @@ pnpm --filter @workspace/api telescope:cli compare <idA> <idB>
 # Feature 7 — replay a captured request against a named target (default: local)
 pnpm --filter @workspace/api telescope:cli replay <requestId>
 pnpm --filter @workspace/api telescope:cli replay <requestId> staging
+
+# Improvement 9 — slow queries (slowest first)
+pnpm --filter @workspace/api telescope:cli sql
+pnpm --filter @workspace/api telescope:cli sql --limit 50
+
+# Improvement 9 — exception inbox
+pnpm --filter @workspace/api telescope:cli exceptions
+pnpm --filter @workspace/api telescope:cli exceptions --limit 50
+
+# Improvement 9 — tail the live SSE stream until Ctrl+C
+pnpm --filter @workspace/api telescope:cli watch
+
+# Any command with --json → raw machine-readable output (no pretty-printing)
+pnpm --filter @workspace/api telescope:cli sql --json
+pnpm --filter @workspace/api telescope:cli watch --json
 
 # No/invalid args → prints the usage block
 pnpm --filter @workspace/api telescope:cli
@@ -1725,6 +1759,71 @@ rows (`level` filter, `q` text search, `correlationId` filter, paginated).
 `app/(panel)/telescope/logs` renders a DataTable with level badges and links
 back to the owning request.
 
+### 15.5 Improvements v3 — deep-polish batch (shipped 2026-08-13) ✅
+
+> The "20 improvements" follow-up list, implemented in one pass. Backend first
+> (shared → store → capture → alert → event bus → service → controller), then
+> the client registry and the admin pages.
+
+1. ✅ **Postgres read parity** — `TelescopePostgresStore` now **persists jobs,
+   alerts and annotations** (three new Prisma models + migration
+   `20260813000000_add_telescope_feature_surfaces`) and hydrates them on
+   read, so `TELESCOPE_MODE=postgres` survives restarts across *all*
+   surfaces, not just requests/queries/exceptions.
+2. ✅ **Doc drift fix** — `GET /telescope/requests/:id/sql` is now a real
+   route; the §7 endpoint table matches the controller exactly.
+3. ✅ **Lazy detail loading** — the request-detail payload no longer bundles
+   SQL/dumps/console; the detail page fetches them on demand via
+   `GET /telescope/requests/:id/sql` (improvement 2's route) so a heavy
+   request opens instantly.
+4. ✅ **N+1 surfaced on the list** — `RequestLogSummary` now carries
+   `n1WarningCount`; the requests table shows an N+1 badge column and the
+   overview counts requests with N+1 warnings.
+5. ✅ **Alert ack/snooze** — alerts gain `status` (`open | acked | snoozed`);
+   `POST /telescope/alerts/:id/ack` + `POST /telescope/alerts/:id/snooze`
+   (`{ snoozeUntil }`), and a route that stops failing automatically
+   transitions its open alerts to `resolved`.
+6. ✅ **Exception inbox triage** — exception groups gain `status`
+   (`new | resolved | ignored`); the exceptions page has a status filter and
+   per-row Resolve/Ignore actions that re-open on new occurrences.
+7. ✅ **SSE resume with replay** — the event bus stamps every frame with a
+   monotonic `seq` (SSE `id:`); the hook sends `Last-Event-ID` and the
+   controller replays buffered frames after it, so a reconnect gap loses
+   nothing.
+8. ✅ **Reconnect backoff + jitter** — the client hook reconnects with
+   exponential backoff (`1s · 2^attempt`, jitter 0.5–1.5×, capped at 30s)
+   and exposes `reconnectCount` for the "reconnecting" chip.
+9. ✅ **CLI depth** — `telescope:cli` gained `sql` (slowest-first),
+   `exceptions`, and `watch` (tails the SSE stream until Ctrl+C); every
+   command accepts `--json` for machine-readable output (§14.5).
+10. ✅ **Table prefs persistence** — the requests page remembers column
+    visibility, page size and sort per user (localStorage, zod-validated).
+11. ✅ **Saved filters via URL** — the active filter is encoded in the query
+    string (`?pageSize=…&sort=…`), so a filtered view is shareable and
+    survives refresh; the saved-filter bar writes back to the URL.
+12. ✅ **Prev/next request nav** — the detail page walks to the
+    previous/next captured request (`previousId`/`nextId` from the store).
+13. ✅ **Timeline noise filter** — spans < 1 ms are collapsed behind a
+    "show trivial" toggle so hot routes stay scannable.
+14. ✅ **Capture budget caps** — `TELESCOPE_MAX_SPANS_PER_REQUEST` (200) and
+    `TELESCOPE_MAX_CONSOLE_ENTRIES` (100) cap pathological captures.
+15. ✅ **PII mode option** — `TELESCOPE_PII_MODE=redact|flag`; the overview
+    counts requests with PII flags.
+16. ✅ **Alert webhook retry** — webhook POSTs retry up to 2 times with
+    backoff before giving up (was a single-shot warn).
+17. ✅ **Jobs retry action** — failed jobs can be re-run from the UI
+    (`POST /telescope/jobs/:id/retry`); the runner keeps a retryable-fn
+    registry for jobs registered with a re-runnable closure.
+18. ✅ **Compare with previous run** — a "diff against previous" quick link
+    on the detail page routes to `/telescope/compare` for the same route's
+    last run.
+19. ✅ **Capture-pipeline health card** — the overview shows store type
+    (memory/postgres), buffer usage %, drop count and enabled flag via
+    `health()` in the store.
+20. ✅ **Schedule run history** — the scheduler keeps per-schedule run
+    history (timestamps + durations); the schedules page renders a
+    per-card history strip.
+
 ---
 
-_Last updated: 2026-08-13 (v1 + 20-improvement batch + §15.3 SSE live polish + §15.4 new-features batch). **Shipped** — M0–M5, Postgres persistence (§6.2), SSE live stream (§9.4), all 20 §15.1 improvements, §15.3 SSE live UI polish, and all 20 §15.2 new features. Remaining ⏳: standalone exception filter (§5.4 — intentionally folded into the interceptor)._
+_Last updated: 2026-08-13 (v1 + 20-improvement batch + §15.3 SSE live polish + §15.4 new-features batch + §15.5 deep-polish batch). **Shipped** — M0–M5, Postgres persistence (§6.2), SSE live stream (§9.4), all 20 §15.1 improvements, §15.3 SSE live UI polish, all 20 §15.2 new features, and all 20 §15.5 deep-polish improvements. Remaining ⏳: standalone exception filter (§5.4 — intentionally folded into the interceptor)._

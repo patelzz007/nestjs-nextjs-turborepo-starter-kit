@@ -23,6 +23,7 @@ import { GitCompareArrows, RefreshCw } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { z } from "zod";
 
 import { TelescopeRequestListQuerySchema, type RequestLogSummary, type TelescopeRequestListQuery, type TelescopeStreamEvent } from "@workspace/shared";
 
@@ -32,6 +33,50 @@ import { durationLabel, durationTone, formatTime, statusTone } from "@/lib/teles
 import { useTelescopeLive } from "@/lib/use-telescope-live";
 
 const PAGE_SIZE_OPTIONS: readonly number[] = [10, 20, 50, 100];
+
+/** Improvement 10 — per-user table preferences persisted across sessions. */
+const TABLE_PREFS_KEY = "telescope.requests.prefs";
+
+interface TablePrefs {
+	readonly pageSize: number;
+	readonly sort: string;
+}
+
+function loadTablePrefs(): TablePrefs {
+	if (typeof window === "undefined") {
+		return { pageSize: 20, sort: "newest" };
+	}
+	try {
+		const raw: string | null = window.localStorage.getItem(TABLE_PREFS_KEY);
+		if (raw === null) {
+			return { pageSize: 20, sort: "newest" };
+		}
+		// Zod-parse the persisted blob so a corrupt/foreign value falls back
+		// to defaults instead of throwing (no type assertions — repo rule).
+		const parsed = z
+			.object({
+				pageSize: z.number().int().positive().optional(),
+				sort: z.string().optional(),
+			})
+			.safeParse(JSON.parse(raw));
+		if (!parsed.success) {
+			return { pageSize: 20, sort: "newest" };
+		}
+		const pageSize: number = parsed.data.pageSize !== undefined && PAGE_SIZE_OPTIONS.includes(parsed.data.pageSize) ? parsed.data.pageSize : 20;
+		const sort: string = parsed.data.sort !== undefined && SORT_OPTIONS.some((option) => option.value === parsed.data.sort) ? parsed.data.sort : "newest";
+		return { pageSize, sort };
+	} catch {
+		return { pageSize: 20, sort: "newest" };
+	}
+}
+
+function saveTablePrefs(prefs: TablePrefs): void {
+	try {
+		window.localStorage.setItem(TABLE_PREFS_KEY, JSON.stringify(prefs));
+	} catch {
+		// localStorage unavailable (private mode) — prefs simply don't persist.
+	}
+}
 
 const METHOD_OPTIONS: readonly { readonly value: string; readonly label: string }[] = [
 	{ value: "GET", label: "GET" },
@@ -57,13 +102,18 @@ function RequestsContent(): React.JSX.Element {
 	const searchParams = useSearchParams();
 	const correlationParam: string | null = searchParams.get("correlation");
 
-	const [method, setMethod] = useState<string>("all");
-	const [status, setStatus] = useState<string>("all");
-	const [minDuration, setMinDuration] = useState<string>("");
-	const [sort, setSort] = useState<string>("newest");
+	// Improvement 11 — filters live in the URL (?method=&status=&min=&sort=&correlation=)
+	// so a filtered view is shareable and survives a refresh. Initial state is seeded
+	// from the query string; handlers rewrite the URL imperatively (an effect would
+	// trip the react-hooks/purity rule on synchronous setState).
+	const [method, setMethod] = useState<string>(() => searchParams.get("method") ?? "all");
+	const [status, setStatus] = useState<string>(() => searchParams.get("status") ?? "all");
+	const [minDuration, setMinDuration] = useState<string>(() => searchParams.get("min") ?? "");
+	// Improvement 11 — an explicit `?sort=` in the URL wins; otherwise the persisted pref (improvement 10).
+	const [sort, setSort] = useState<string>(() => searchParams.get("sort") ?? loadTablePrefs().sort);
 	const [correlationFilter, setCorrelationFilter] = useState<string | null>(correlationParam);
 	const [page, setPage] = useState<number>(1);
-	const [pageSize, setPageSize] = useState<number>(20);
+	const [pageSize, setPageSize] = useState<number>(() => loadTablePrefs().pageSize);
 
 	// Feature 9 — saved filters (localStorage-backed bookmarks).
 	const [savedFilters, setSavedFilters] = useState<readonly SavedFilter[]>(() => loadSavedFilters());
@@ -108,11 +158,36 @@ function RequestsContent(): React.JSX.Element {
 		setNewRequestCount(0);
 	}, []);
 
-	const handleManualPaginationChange = useCallback((nextPage: number, nextPageSize: number): void => {
-		setPage(nextPage);
-		setPageSize(nextPageSize);
-		setNewRequestCount(0);
-	}, []);
+	const handleManualPaginationChange = useCallback(
+		(nextPage: number, nextPageSize: number): void => {
+			setPage(nextPage);
+			setPageSize(nextPageSize);
+			// Improvement 10 — persist the chosen page size for next time.
+			saveTablePrefs({ pageSize: nextPageSize, sort });
+			setNewRequestCount(0);
+		},
+		[sort],
+	);
+
+	// Improvement 11 — imperatively mirror the active filter into the URL so a
+	// filtered view is shareable + refresh-safe (the correlation param survives).
+	const syncUrl = useCallback(
+		(next: { readonly method?: string; readonly status?: string; readonly minDuration?: string; readonly sort?: string }): void => {
+			const params: URLSearchParams = new URLSearchParams();
+			const effectiveMethod: string = next.method ?? method;
+			const effectiveStatus: string = next.status ?? status;
+			const effectiveMin: string = next.minDuration ?? minDuration;
+			const effectiveSort: string = next.sort ?? sort;
+			if (effectiveMethod !== "all") params.set("method", effectiveMethod);
+			if (effectiveStatus !== "all") params.set("status", effectiveStatus);
+			if (effectiveMin !== "") params.set("min", effectiveMin);
+			if (effectiveSort !== "newest") params.set("sort", effectiveSort);
+			if (correlationFilter !== null) params.set("correlation", correlationFilter);
+			const query: string = params.toString();
+			router.replace(query.length > 0 ? `/telescope/requests?${query}` : "/telescope/requests", { scroll: false });
+		},
+		[router, method, status, minDuration, sort, correlationFilter],
+	);
 
 	const handleRowClick = useCallback(
 		(row: RequestLogSummary): void => {
@@ -143,37 +218,46 @@ function RequestsContent(): React.JSX.Element {
 	const clearCorrelation = useCallback((): void => {
 		setCorrelationFilter(null);
 		resetNewCount();
-		router.replace("/telescope/requests");
-	}, [router, resetNewCount]);
+		syncUrl({});
+	}, [resetNewCount, syncUrl]);
 
 	// Select's `onValueChange` passes `string | null` — narrow before writing.
 	const handleMethodChange = useCallback(
 		(value: string | null): void => {
-			if (value !== null) setMethod(value);
+			if (value === null) return;
+			setMethod(value);
 			resetNewCount();
+			syncUrl({ method: value });
 		},
-		[resetNewCount],
+		[resetNewCount, syncUrl],
 	);
 	const handleStatusChange = useCallback(
 		(value: string | null): void => {
-			if (value !== null) setStatus(value);
+			if (value === null) return;
+			setStatus(value);
 			resetNewCount();
+			syncUrl({ status: value });
 		},
-		[resetNewCount],
+		[resetNewCount, syncUrl],
 	);
 	const handleSortChange = useCallback(
 		(value: string | null): void => {
-			if (value !== null) setSort(value);
+			if (value === null) return;
+			setSort(value);
 			resetNewCount();
+			// Improvement 10 — remember the sort preference for next visit.
+			saveTablePrefs({ pageSize, sort: value });
+			syncUrl({ sort: value });
 		},
-		[resetNewCount],
+		[resetNewCount, syncUrl, pageSize],
 	);
 	const handleMinDurationChange = useCallback(
 		(event: React.ChangeEvent<HTMLInputElement>): void => {
 			setMinDuration(event.target.value);
 			resetNewCount();
+			syncUrl({ minDuration: event.target.value });
 		},
-		[resetNewCount],
+		[resetNewCount, syncUrl],
 	);
 
 	// Feature 9 — apply a saved filter to the live filter state.
@@ -184,8 +268,10 @@ function RequestsContent(): React.JSX.Element {
 			setMinDuration(filter.minDuration);
 			setSort(filter.sort);
 			resetNewCount();
+			// Improvement 11 — applying a bookmark also makes the URL shareable.
+			syncUrl({ method: filter.method, status: filter.status, minDuration: filter.minDuration, sort: filter.sort });
 		},
-		[resetNewCount],
+		[resetNewCount, syncUrl],
 	);
 
 	const handleSaveFilter = useCallback((name: string, filter: SavedFilterValue): void => {
@@ -248,6 +334,22 @@ function RequestsContent(): React.JSX.Element {
 				accessorKey: "createdAt",
 				header: "Time",
 				cell: ({ row }): React.JSX.Element => <span className="text-xs text-muted-foreground tabular-nums">{formatTime(row.original.createdAt)}</span>,
+			},
+			{
+				// Improvement 4 — N+1 surfaced on the list: a badge on requests whose
+				// captured queries trip the detector (count lives in the summary).
+				accessorKey: "n1WarningCount",
+				header: "N+1",
+				cell: ({ row }): React.JSX.Element =>
+					row.original.n1WarningCount > 0 ? (
+						<span
+							title={`${String(row.original.n1WarningCount)} query pattern${row.original.n1WarningCount === 1 ? "" : "s"} flagged`}
+							className="inline-flex items-center rounded-full border border-amber-300/60 bg-amber-500/10 px-2 py-0.5 font-mono text-xs font-medium text-amber-700 tabular-nums dark:border-amber-500/40 dark:text-amber-400">
+							{String(row.original.n1WarningCount)}×
+						</span>
+					) : (
+						<span className="text-xs text-muted-foreground">—</span>
+					),
 			},
 		],
 		[],

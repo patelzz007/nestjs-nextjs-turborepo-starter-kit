@@ -6,6 +6,7 @@ import {
 	TelescopeStorageSchema,
 	type TelescopeBodyCapture,
 	type TelescopeOptions,
+	type TelescopePiiMode,
 	type TelescopeStorage,
 } from "@workspace/shared";
 
@@ -48,6 +49,15 @@ export function resolveTelescopeOptions(provided: Partial<TelescopeOptions>): Te
 	const envRetentionMinutes: string | undefined = process.env.TELESCOPE_RETENTION_MINUTES;
 	const envAlertDurationMs: string | undefined = process.env.TELESCOPE_ALERT_DURATION_MS;
 	const envAlertWindowMinutes: string | undefined = process.env.TELESCOPE_ALERT_WINDOW_MINUTES;
+	const envMaxSpans: string | undefined = process.env.TELESCOPE_MAX_SPANS_PER_REQUEST;
+	const envMaxConsoleEntries: string | undefined = process.env.TELESCOPE_MAX_CONSOLE_ENTRIES;
+
+	// Improvement 15 — PII mode: "redact" (default, masks values) or "flag" (records only).
+	const envPiiMode: string | undefined = process.env.TELESCOPE_PII_MODE;
+	const piiMode: TelescopePiiMode =
+		envPiiMode !== undefined && TelescopeOptionsSchema.shape.piiMode.safeParse(envPiiMode).success
+			? TelescopeOptionsSchema.shape.piiMode.parse(envPiiMode)
+			: (provided.piiMode ?? "redact");
 
 	// Feature 18 — webhook URL (empty = alerts stay in-app only).
 	const envAlertWebhookUrl: string | undefined = process.env.TELESCOPE_ALERT_WEBHOOK_URL;
@@ -88,6 +98,8 @@ export function resolveTelescopeOptions(provided: Partial<TelescopeOptions>): Te
 
 	const alertDurationMs: number = envAlertDurationMs !== undefined ? Number(envAlertDurationMs) : (provided.alertDurationMs ?? 2000);
 	const alertWindowMinutes: number = envAlertWindowMinutes !== undefined ? Number(envAlertWindowMinutes) : (provided.alertWindowMinutes ?? 5);
+	const maxSpans: number = envMaxSpans !== undefined ? Number(envMaxSpans) : (provided.maxSpansPerRequest ?? 200);
+	const maxConsoleEntries: number = envMaxConsoleEntries !== undefined ? Number(envMaxConsoleEntries) : (provided.maxConsoleEntriesPerRequest ?? 100);
 
 	return TelescopeOptionsSchema.parse({
 		enabled,
@@ -105,6 +117,9 @@ export function resolveTelescopeOptions(provided: Partial<TelescopeOptions>): Te
 		alertWebhookUrl: envAlertWebhookUrl !== undefined && envAlertWebhookUrl.length > 0 ? envAlertWebhookUrl : provided.alertWebhookUrl,
 		alertDurationMs: Number.isFinite(alertDurationMs) && alertDurationMs > 0 ? Math.floor(alertDurationMs) : 2000,
 		alertWindowMinutes: Number.isFinite(alertWindowMinutes) && alertWindowMinutes > 0 ? Math.floor(alertWindowMinutes) : 5,
+		maxSpansPerRequest: Number.isFinite(maxSpans) && maxSpans > 0 ? Math.floor(maxSpans) : 200,
+		maxConsoleEntriesPerRequest: Number.isFinite(maxConsoleEntries) && maxConsoleEntries > 0 ? Math.floor(maxConsoleEntries) : 100,
+		piiMode,
 		replayTargets: { ...replayTargets, ...(provided.replayTargets ?? {}) },
 	});
 }

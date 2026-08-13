@@ -16,6 +16,7 @@ import {
 	type TelescopeOptions,
 	type TelescopePiiCategory,
 	type TelescopePiiFlag,
+	type TelescopeSpan,
 } from "@workspace/shared";
 
 import type { AccessTokenPayload } from "../auth/services/token.service";
@@ -96,6 +97,20 @@ export class TelescopeInterceptor implements NestInterceptor {
 		);
 	}
 
+	/** Improvement 14 — keep bookends + longest spans under the configured cap. */
+	private capSpans(spans: TelescopeSpan[], cap: number): TelescopeSpan[] {
+		if (spans.length <= cap) {
+			return spans;
+		}
+		const bookendCount: number = Math.min(3, spans.length);
+		const bookends: TelescopeSpan[] = spans.slice(0, bookendCount);
+		const middle: TelescopeSpan[] = spans
+			.slice(bookendCount, -bookendCount)
+			.sort((a: TelescopeSpan, b: TelescopeSpan): number => b.durationMs - a.durationMs)
+			.slice(0, Math.max(0, cap - bookendCount));
+		return [...bookends, ...middle];
+	}
+
 	private toCapturedError(err: Error): CapturedError {
 		const statusCode: number = err instanceof HttpException ? err.getStatus() : 500;
 		return { name: err.name, message: err.message, statusCode, stack: err.stack ?? null };
@@ -121,6 +136,14 @@ export class TelescopeInterceptor implements NestInterceptor {
 		});
 		spanStore.spans.push({ name: "serialization", kind: "serialization", startOffsetMs: durationMs, durationMs: 0 });
 
+		// Improvement 14 — span budget cap: keep the bookend spans (guards &
+		// middleware, handler, serialization) and the longest N-3 in between, so
+		// a pathological request (thousands of queries) can't blow the buffer.
+		// The SpanStore reference is read-only; replace the array contents in place.
+		const cappedSpans = this.capSpans(spanStore.spans, this.options.maxSpansPerRequest);
+		spanStore.spans.length = 0;
+		spanStore.spans.push(...cappedSpans);
+
 		// Feature 17 — PII scan + redact BEFORE truncation: flags are counted on
 		// the sanitized value, then phone/JWT/SSN/card patterns are masked by
 		// default (the sanitizer already masks emails + secret keys).
@@ -130,8 +153,13 @@ export class TelescopeInterceptor implements NestInterceptor {
 
 		const piiFlags: readonly TelescopePiiFlag[] = this.mergePiiFlags(scanPii(sanitizedRequest), scanPii(sanitizedResponse), scanPiiHeaders(sanitizedHeaders));
 
-		const responseBody: TelescopeJsonValue | null = sanitizedResponse !== null ? truncateJson(redactPii(sanitizedResponse), this.options.maxBodyChars) : null;
-		const requestBody: TelescopeJsonValue | null = sanitizedRequest !== null ? truncateJson(redactPii(sanitizedRequest), this.options.maxBodyChars) : null;
+		// Improvement 15 — PII mode: "redact" masks values (default), "flag"
+		// keeps the payload untouched and only records the categories found.
+		const shouldRedact: boolean = this.options.piiMode === "redact";
+		const responseBody: TelescopeJsonValue | null =
+			sanitizedResponse !== null ? truncateJson(shouldRedact ? redactPii(sanitizedResponse) : sanitizedResponse, this.options.maxBodyChars) : null;
+		const requestBody: TelescopeJsonValue | null =
+			sanitizedRequest !== null ? truncateJson(shouldRedact ? redactPii(sanitizedRequest) : sanitizedRequest, this.options.maxBodyChars) : null;
 
 		const entry: RequestLogEntry = {
 			id: nanoid(),
@@ -160,6 +188,9 @@ export class TelescopeInterceptor implements NestInterceptor {
 			piiFlags: [...piiFlags],
 			// Feature 14: new requests start unstarred (annotation lives in the store).
 			starred: false,
+			// Improvement 4: N+1 warnings are computed lazily on the SQL endpoint; the
+			// summary column is populated by the store on first detect.
+			n1WarningCount: 0,
 			createdAt: new Date().toISOString(),
 		};
 
@@ -268,6 +299,9 @@ export class TelescopeInterceptor implements NestInterceptor {
 			// store bumps lastSeenAt + occurrences on repeats of the same group.
 			firstSeenAt: nowIso,
 			lastSeenAt: nowIso,
+			// Improvement 6: new groups start open; the store re-opens resolved/
+			// ignored groups when the same error recurs.
+			status: "open",
 		};
 	}
 }

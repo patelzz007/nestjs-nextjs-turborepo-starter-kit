@@ -602,9 +602,11 @@ model TelescopeException {
   createdAt     DateTime @default(now()) @map("created_at")
   firstSeenAt   DateTime @default(now()) @map("first_seen_at")
   lastSeenAt    DateTime @default(now()) @map("last_seen_at")
+  status        String   @default("open") @map("status")
 
   @@unique([errorGroup])
   @@index([createdAt])
+  @@index([status])
   @@map("telescope_exceptions")
 }
 
@@ -617,4 +619,54 @@ model TelescopeDump {
 
   @@index([createdAt])
   @@map("telescope_dumps")
+}
+
+// ── Feature-surface persistence (improvement 1 — history survives restarts) ──
+// Jobs / alerts / annotations were memory-scoped in the first Postgres store;
+// these tables make every surface durable. Schedules are re-registered at boot
+// so they need no table.
+
+model TelescopeJob {
+  id            String    @id
+  jobName       String    @map("job_name")
+  status        String    @db.VarChar(20)
+  durationMs    Int?      @map("duration_ms")
+  payloadSize   Int       @default(0) @map("payload_size")
+  error         String?   @db.Text
+  correlationId String?   @map("correlation_id")
+  enqueuedAt    DateTime  @map("enqueued_at")
+  startedAt     DateTime? @map("started_at")
+  finishedAt    DateTime? @map("finished_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  @@index([createdAt])
+  @@map("telescope_jobs")
+}
+
+model TelescopeAlert {
+  id           String    @id
+  requestId    String    @map("request_id")
+  method       String    @db.VarChar(10)
+  path         String    @db.Text
+  statusCode   Int?      @map("status_code")
+  durationMs   Int       @map("duration_ms")
+  reason       String    @db.VarChar(20)
+  status       String    @default("open") @map("status")
+  snoozedUntil DateTime? @map("snoozed_until")
+  firedAt      DateTime  @map("fired_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  @@index([createdAt])
+  @@map("telescope_alerts")
+}
+
+model TelescopeAnnotation {
+  requestId String   @id
+  starred   Boolean  @default(false)
+  comment   String?  @db.Text
+  updatedAt DateTime @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([createdAt])
+  @@map("telescope_annotations")
 }

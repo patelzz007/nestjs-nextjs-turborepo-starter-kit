@@ -116,6 +116,21 @@ export default function TelescopeSchedulesPage(): React.JSX.Element {
 										<p className="mt-0.5 font-mono text-[11px] break-all text-red-600/80 dark:text-red-400/80">{schedule.lastError}</p>
 									</div>
 								) : null}
+								{/* Improvement 20 — recent run history as a status dot row. */}
+								{schedule.history.length > 0 ? (
+									<div className="col-span-2">
+										<p className="mb-1 text-muted-foreground">Recent runs ({String(schedule.history.length)})</p>
+										<div className="flex flex-wrap items-center gap-1">
+											{schedule.history.map((run) => (
+												<span
+													key={run.at}
+													title={`${formatTime(run.at)} · ${run.status}${run.durationMs !== null ? ` · ${durationLabel(run.durationMs)}` : ""}`}
+													className={`size-2 rounded-full ${run.status === "succeeded" ? "bg-emerald-500" : run.status === "failed" ? "bg-red-500" : "bg-muted-foreground/50"}`}
+												/>
+											))}
+										</div>
+									</div>
+								) : null}
 							</div>{" "}
 						</div>
 					))}

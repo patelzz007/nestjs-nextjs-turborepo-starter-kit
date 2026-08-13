@@ -18,13 +18,16 @@ import {
 	SessionStatusSchema,
 	SignupResponseSchema,
 	SignupSchema,
+	TelescopeAlertEntrySchema,
 	TelescopeAlertsResponseSchema,
+	TelescopeAlertSnoozeInputSchema,
 	TelescopeAnnotationInputSchema,
 	TelescopeAnnotationSchema,
 	TelescopeCompareResponseSchema,
 	TelescopeDumpInputSchema,
 	TelescopeDumpResponseSchema,
 	TelescopeExceptionListResponseSchema,
+	TelescopeExceptionStatusInputSchema,
 	TelescopeJobLogEntrySchema,
 	TelescopeJobsListResponseSchema,
 	TelescopeLeaderboardResponseSchema,
@@ -35,6 +38,7 @@ import {
 	TelescopeReplayResponseSchema,
 	TelescopeRequestDetailResponseSchema,
 	TelescopeRequestListResponseSchema,
+	TelescopeRequestSqlResponseSchema,
 	TelescopeSchedulesResponseSchema,
 	TelescopeSqlListResponseSchema,
 	TelescopeTrendsResponseSchema,
@@ -52,6 +56,8 @@ import {
 	type SessionStatus,
 	type SignupInput,
 	type SignupResponse,
+	type TelescopeAlertEntry,
+	type TelescopeAlertSnoozeInput,
 	type TelescopeAlertsResponse,
 	type TelescopeAnnotation,
 	type TelescopeAnnotationInput,
@@ -60,6 +66,7 @@ import {
 	type TelescopeDumpResponse,
 	type TelescopeExceptionListQuery,
 	type TelescopeExceptionListResponse,
+	type TelescopeExceptionStatus,
 	type TelescopeJobLogEntry,
 	type TelescopeJobsListQuery,
 	type TelescopeJobsListResponse,
@@ -75,6 +82,7 @@ import {
 	type TelescopeRequestDetailResponse,
 	type TelescopeRequestListQuery,
 	type TelescopeRequestListResponse,
+	type TelescopeRequestSqlResponse,
 	type TelescopeSchedulesResponse,
 	type TelescopeSqlListQuery,
 	type TelescopeSqlListResponse,
@@ -261,6 +269,7 @@ export const telescopeEndpoints: {
 	readonly overview: (range: TelescopeRange) => GetProcedure<Envelope<{ readonly overview: TelescopeOverview }>>;
 	readonly requests: (query: TelescopeRequestListQuery) => GetProcedure<Envelope<{ readonly list: TelescopeRequestListResponse }>>;
 	readonly requestDetail: (id: string) => GetProcedure<Envelope<TelescopeRequestDetailResponse>>;
+	readonly requestSql: (id: string) => GetProcedure<Envelope<TelescopeRequestSqlResponse>>;
 	readonly compare: (a: string, b: string) => GetProcedure<Envelope<TelescopeCompareResponse>>;
 	readonly sql: (query: TelescopeSqlListQuery) => GetProcedure<Envelope<{ readonly list: TelescopeSqlListResponse }>>;
 	readonly exceptions: (query: TelescopeExceptionListQuery) => GetProcedure<Envelope<{ readonly list: TelescopeExceptionListResponse }>>;
@@ -284,6 +293,14 @@ export const telescopeEndpoints: {
 	readonly setAnnotation: (id: string) => PutProcedure<TelescopeAnnotationInput, Envelope<TelescopeAnnotation>>;
 	// Feature 7 — replay a captured request.
 	readonly replay: (id: string) => PostProcedure<TelescopeReplayInput, Envelope<TelescopeReplayResponse>>;
+	// Improvement 5 — acknowledge (resolve) an alert.
+	readonly alertAck: (id: string) => PostProcedure<Record<string, never>, Envelope<TelescopeAlertEntry>>;
+	// Improvement 5 — snooze an alert for N minutes.
+	readonly alertSnooze: (id: string) => PostProcedure<TelescopeAlertSnoozeInput, Envelope<TelescopeAlertEntry>>;
+	// Improvement 6 — set the triage status of an exception group.
+	readonly setExceptionStatus: (id: string) => PutProcedure<{ readonly status: TelescopeExceptionStatus }, Envelope<ExceptionLogEntry>>;
+	// Improvement 17 — re-run a failed job (new entry).
+	readonly retryJob: (id: string) => PostProcedure<Record<string, never>, Envelope<TelescopeJobLogEntry>>;
 } = {
 	overview: (range: TelescopeRange): GetProcedure<Envelope<{ readonly overview: TelescopeOverview }>> => ({
 		path: "/telescope/overview",
@@ -395,5 +412,39 @@ export const telescopeEndpoints: {
 		queryKey: ["telescope", "replay", id],
 		bodySchema: TelescopeReplayInputSchema,
 		responseSchema: envelope(TelescopeReplayResponseSchema),
+	}),
+	requestSql: (id: string): GetProcedure<Envelope<TelescopeRequestSqlResponse>> => ({
+		path: `/telescope/requests/${id}/sql`,
+		method: "GET",
+		queryKey: ["telescope", "request-sql", id],
+		responseSchema: envelope(TelescopeRequestSqlResponseSchema),
+	}),
+	alertAck: (id: string): PostProcedure<Record<string, never>, Envelope<TelescopeAlertEntry>> => ({
+		path: `/telescope/alerts/${id}/ack`,
+		method: "POST",
+		queryKey: ["telescope", "alert-ack", id],
+		bodySchema: z.object({}).strict(),
+		responseSchema: envelope(TelescopeAlertEntrySchema),
+	}),
+	alertSnooze: (id: string): PostProcedure<TelescopeAlertSnoozeInput, Envelope<TelescopeAlertEntry>> => ({
+		path: `/telescope/alerts/${id}/snooze`,
+		method: "POST",
+		queryKey: ["telescope", "alert-snooze", id],
+		bodySchema: TelescopeAlertSnoozeInputSchema,
+		responseSchema: envelope(TelescopeAlertEntrySchema),
+	}),
+	setExceptionStatus: (id: string): PutProcedure<{ readonly status: TelescopeExceptionStatus }, Envelope<ExceptionLogEntry>> => ({
+		path: `/telescope/exceptions/${id}/status`,
+		method: "PUT",
+		queryKey: ["telescope", "exception-status", id],
+		bodySchema: TelescopeExceptionStatusInputSchema,
+		responseSchema: envelope(ExceptionLogEntrySchema),
+	}),
+	retryJob: (id: string): PostProcedure<Record<string, never>, Envelope<TelescopeJobLogEntry>> => ({
+		path: `/telescope/jobs/${id}/retry`,
+		method: "POST",
+		queryKey: ["telescope", "job-retry", id],
+		bodySchema: z.object({}).strict(),
+		responseSchema: envelope(TelescopeJobLogEntrySchema),
 	}),
 };

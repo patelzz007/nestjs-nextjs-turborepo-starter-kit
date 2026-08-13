@@ -1,10 +1,11 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { nanoid } from "nanoid";
 
-import { type RequestLogEntry, type TelescopeAlertEntry, type TelescopeAlertReason, type TelescopeOptions } from "@workspace/shared";
+import { type RequestLogEntry, type TelescopeAlertEntry, type TelescopeAlertReason, type TelescopeAlertStatus, type TelescopeOptions } from "@workspace/shared";
 
 import { TELESCOPE_OPTIONS, TELESCOPE_STORE } from "./telescope.options.js";
-import type { TelescopeStore } from "./telescope.store.js"; /**
+import type { TelescopeStore } from "./telescope.store.js";
+/**
  * Feature 18 — threshold alerts.
  *
  * Evaluates every captured request against the configured thresholds:
@@ -15,6 +16,17 @@ import type { TelescopeStore } from "./telescope.store.js"; /**
  * `TELESCOPE_ALERT_WINDOW_MINUTES` so a failing endpoint doesn't flood the
  * dashboard); the `TELESCOPE_ALERT_WEBHOOK_URL` setting only gates the
  * outbound webhook POST, not the in-app record.
+ *
+ * Improvement 5 — triage:
+ * - `acknowledge(id)` marks an alert acknowledged ("resolved" for the team),
+ * - `snooze(id, minutes)` marks it snoozed until a deadline,
+ * - a NEW fire of the same route+reason supersedes (auto-resolves) any still-
+ *   open alerts for that route+reason — a route that stopped failing then
+ *   failed again shows the latest alert as open, old ones as acknowledged.
+ *
+ * Improvement 16 — the webhook POST retries transient failures with backoff
+ * (2 retries at 500ms / 2s), so a blip in the endpoint or network doesn't
+ * silently drop the alert.
  */
 interface DedupeKey {
 	readonly key: string;
@@ -60,13 +72,47 @@ export class TelescopeAlertService {
 			durationMs: entry.durationMs,
 			reason,
 			firedAt: new Date().toISOString(),
+			status: "open",
+			snoozedUntil: null,
 		};
+		// Improvement 5 — a new fire supersedes any open alert on the same
+		// route+reason: the old one becomes acknowledged ("resolved").
+		this.supersedeOpen(alert);
 		this.store.pushAlert(alert);
-		this.fireWebhook(alert);
+		void this.fireWebhook(alert);
 	}
 
 	public listAlerts(limit: number): readonly TelescopeAlertEntry[] {
 		return this.store.listAlerts(limit);
+	}
+
+	/** Improvement 5 — acknowledge (resolve) an alert by id. */
+	public acknowledge(id: string): TelescopeAlertEntry | null {
+		return this.setStatus(id, "acknowledged", null);
+	}
+
+	/** Improvement 5 — snooze an alert until now + `minutes`. */
+	public snooze(id: string, minutes: number): TelescopeAlertEntry | null {
+		const until: string = new Date(Date.now() + minutes * 60 * 1000).toISOString();
+		return this.setStatus(id, "snoozed", until);
+	}
+
+	private setStatus(id: string, status: TelescopeAlertStatus, snoozedUntil: string | null): TelescopeAlertEntry | null {
+		const current: TelescopeAlertEntry | null = this.store.listAlerts(200).find((candidate: TelescopeAlertEntry): boolean => candidate.id === id) ?? null;
+		if (current === null) {
+			return null;
+		}
+		this.store.setAlertStatus(id, status, snoozedUntil);
+		return { ...current, status, snoozedUntil };
+	}
+
+	/** Old open alerts on the same route+reason flip to acknowledged. */
+	private supersedeOpen(fresh: TelescopeAlertEntry): void {
+		for (const alert of this.store.listAlerts(200)) {
+			if (alert.id !== fresh.id && alert.status === "open" && alert.method === fresh.method && alert.path === fresh.path && alert.reason === fresh.reason) {
+				this.store.setAlertStatus(alert.id, "acknowledged", null);
+			}
+		}
 	}
 
 	/** Thresholds are opt-in (webhook set) — detection is cheap either way. */
@@ -84,18 +130,49 @@ export class TelescopeAlertService {
 		return null;
 	}
 
-	private fireWebhook(alert: TelescopeAlertEntry): void {
+	/** Improvement 16 — webhook POST with 2 backoff retries for transient failures. */
+	private async fireWebhook(alert: TelescopeAlertEntry): Promise<void> {
 		const url: string | undefined = this.options.alertWebhookUrl;
 		if (url === undefined) {
 			return;
 		}
-		void fetch(url, {
-			method: "POST",
-			headers: { "content-type": "application/json" },
-			body: JSON.stringify(alert),
-			signal: AbortSignal.timeout(5000),
-		}).catch((err: Error): void => {
-			console.warn(`[Telescope] alert webhook failed: ${err.message}`);
-		});
+		// First attempt immediately, then up to `delaysMs.length` retries with
+		// backoff (500ms, 2s) — transient 5xx/network failures self-heal.
+		const delaysMs: readonly number[] = [500, 2000];
+		const sleep = async (ms: number): Promise<void> =>
+			new Promise<void>((resolve): void => {
+				setTimeout(resolve, ms);
+			});
+		let delivered = false;
+		let attempt = 0;
+		for (const delayMs of [0, ...delaysMs]) {
+			if (delayMs > 0) {
+				await sleep(delayMs);
+			}
+			delivered = await this.postWebhook(url, alert);
+			attempt += 1;
+			if (delivered) {
+				break;
+			}
+		}
+		if (!delivered) {
+			console.warn(`[Telescope] alert webhook failed after ${String(attempt)} attempts: ${url}`);
+		}
+	}
+
+	/** One POST attempt; true = delivered (2xx), false = retryable failure. */
+	private async postWebhook(url: string, alert: TelescopeAlertEntry): Promise<boolean> {
+		try {
+			const response: Response = await fetch(url, {
+				method: "POST",
+				headers: { "content-type": "application/json" },
+				body: JSON.stringify(alert),
+				signal: AbortSignal.timeout(5000),
+			});
+			return response.ok;
+		} catch {
+			// Network failure / timeout — retryable.
+			return false;
+		}
 	}
 }

@@ -20,6 +20,12 @@ function makeRequest(overrides: Partial<RequestLogEntry>): RequestLogEntry {
 		responseBody: null,
 		requestHeaders: null,
 		spans: [],
+		logs: [],
+		handlerParams: null,
+		cacheOps: [],
+		piiFlags: [],
+		starred: false,
+		n1WarningCount: 0,
 		createdAt: "2026-08-12T10:00:00.000Z",
 		...overrides,
 	};

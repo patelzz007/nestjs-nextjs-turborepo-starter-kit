@@ -7,6 +7,8 @@ import {
 	ExceptionLogEntrySchema,
 	QueryLogEntrySchema,
 	RequestLogEntrySchema,
+	TelescopeAlertEntrySchema,
+	TelescopeJobLogEntrySchema,
 	TelescopeJsonValueSchema,
 	TelescopeLogEntrySchema,
 	TelescopeSpanSchema,
@@ -16,8 +18,10 @@ import {
 	type RequestLogEntry,
 	type RequestLogSummary,
 	type TelescopeAlertEntry,
+	type TelescopeAlertStatus,
 	type TelescopeAnnotation,
 	type TelescopeExceptionListQuery,
+	type TelescopeExceptionStatus,
 	type TelescopeJobLogEntry,
 	type TelescopeJobsListQuery,
 	type TelescopeJsonValue,
@@ -66,11 +70,14 @@ export class TelescopePostgresStore implements TelescopeStore, OnModuleInit {
 
 	/** Hydrates the buffer from the DB at boot so history survives restarts. */
 	public async onModuleInit(): Promise<void> {
-		const [requests, queries, exceptions, dumps] = await Promise.all([
+		const [requests, queries, exceptions, dumps, jobs, alerts, annotations] = await Promise.all([
 			this.prisma.telescopeRequest.findMany({ orderBy: { createdAt: "desc" }, take: this.options.maxRequests }),
 			this.prisma.telescopeQuery.findMany({ orderBy: { createdAt: "desc" }, take: this.options.maxRequests * 4 }),
 			this.prisma.telescopeException.findMany({ orderBy: { createdAt: "desc" }, take: this.options.maxRequests }),
 			this.prisma.telescopeDump.findMany({ orderBy: { createdAt: "desc" }, take: this.options.maxRequests }),
+			this.prisma.telescopeJob.findMany({ orderBy: { createdAt: "desc" }, take: 500 }),
+			this.prisma.telescopeAlert.findMany({ orderBy: { createdAt: "desc" }, take: 200 }),
+			this.prisma.telescopeAnnotation.findMany(),
 		]);
 
 		// Oldest-first push restores the same ordering the memory store produces.
@@ -85,6 +92,19 @@ export class TelescopePostgresStore implements TelescopeStore, OnModuleInit {
 		}
 		for (const row of dumps.reverse()) {
 			this.memory.pushDump(mapDumpRow(row));
+		}
+		for (const row of jobs.reverse()) {
+			this.memory.pushJob(mapJobRow(row));
+		}
+		for (const row of alerts.reverse()) {
+			this.memory.pushAlert(mapAlertRow(row));
+		}
+		for (const row of annotations) {
+			this.memory.setAnnotation(row.requestId, {
+				starred: row.starred,
+				comment: row.comment ?? "",
+				updatedAt: row.updatedAt.toISOString(),
+			});
 		}
 	}
 
@@ -107,7 +127,8 @@ export class TelescopePostgresStore implements TelescopeStore, OnModuleInit {
 	public pushException(entry: ExceptionLogEntry): void {
 		// Group aggregation must be reflected in Postgres too: instead of a
 		// blind insert, upsert on the errorGroup (first insert wins the id +
-		// firstSeenAt; every repeat bumps occurrences + lastSeenAt).
+		// firstSeenAt; every repeat bumps occurrences + lastSeenAt). A repeat
+		// also re-opens a resolved/ignored group (triage status is per-lifetime).
 		this.memory.pushException(entry);
 		const row = toExceptionRow(entry);
 		void this.prisma.telescopeException
@@ -119,6 +140,7 @@ export class TelescopePostgresStore implements TelescopeStore, OnModuleInit {
 					lastSeenAt: new Date(entry.createdAt),
 					message: entry.message,
 					stack: entry.stack ?? null,
+					status: "open",
 				},
 			})
 			.catch((err: Error): void => {
@@ -131,6 +153,108 @@ export class TelescopePostgresStore implements TelescopeStore, OnModuleInit {
 		void this.prisma.telescopeDump.create({ data: toDumpRow(entry) }).catch((err: Error): void => {
 			this.logPersistError("dump", err);
 		});
+	}
+
+	// ── Feature surfaces: buffer + persistence (improvement 1) ──────────────
+
+	public pushJob(entry: TelescopeJobLogEntry): void {
+		this.memory.pushJob(entry);
+		// Upsert on id — the runner pushes the same entry twice (running + terminal).
+		void this.prisma.telescopeJob
+			.upsert({
+				where: { id: entry.id },
+				create: toJobRow(entry),
+				update: {
+					status: entry.status,
+					durationMs: entry.durationMs,
+					error: entry.error,
+					startedAt: entry.startedAt !== null ? new Date(entry.startedAt) : null,
+					finishedAt: entry.finishedAt !== null ? new Date(entry.finishedAt) : null,
+				},
+			})
+			.catch((err: Error): void => {
+				this.logPersistError("job", err);
+			});
+	}
+
+	public listJobs(query: TelescopeJobsListQuery): ListResult<TelescopeJobLogEntry> {
+		return this.memory.listJobs(query);
+	}
+
+	public getJob(id: string): TelescopeJobLogEntry | undefined {
+		return this.memory.getJob(id);
+	}
+
+	public pushAlert(entry: TelescopeAlertEntry): void {
+		this.memory.pushAlert(entry);
+		void this.prisma.telescopeAlert.create({ data: toAlertRow(entry) }).catch((err: Error): void => {
+			this.logPersistError("alert", err);
+		});
+	}
+
+	public listAlerts(limit: number): readonly TelescopeAlertEntry[] {
+		return this.memory.listAlerts(limit);
+	}
+
+	public setAlertStatus(id: string, status: TelescopeAlertStatus, snoozedUntil: string | null): void {
+		this.memory.setAlertStatus(id, status, snoozedUntil);
+		void this.prisma.telescopeAlert
+			.update({
+				where: { id },
+				data: { status, snoozedUntil: snoozedUntil !== null ? new Date(snoozedUntil) : null },
+			})
+			.catch((err: Error): void => {
+				this.logPersistError("alert-status", err);
+			});
+	}
+
+	public setAnnotation(requestId: string, annotation: TelescopeAnnotation | null): void {
+		this.memory.setAnnotation(requestId, annotation);
+		if (annotation === null) {
+			void this.prisma.telescopeAnnotation.delete({ where: { requestId } }).catch((err: Error): void => {
+				this.logPersistError("annotation-delete", err);
+			});
+			return;
+		}
+		void this.prisma.telescopeAnnotation
+			.upsert({
+				where: { requestId },
+				create: { requestId, starred: annotation.starred, comment: annotation.comment, updatedAt: new Date(annotation.updatedAt) },
+				update: { starred: annotation.starred, comment: annotation.comment, updatedAt: new Date(annotation.updatedAt) },
+			})
+			.catch((err: Error): void => {
+				this.logPersistError("annotation", err);
+			});
+	}
+
+	public getAnnotation(requestId: string): TelescopeAnnotation | null {
+		return this.memory.getAnnotation(requestId);
+	}
+
+	public setExceptionStatus(errorGroup: string, status: TelescopeExceptionStatus): void {
+		this.memory.setExceptionStatus(errorGroup, status);
+		void this.prisma.telescopeException.updateMany({ where: { errorGroup }, data: { status } }).catch((err: Error): void => {
+			this.logPersistError("exception-status", err);
+		});
+	}
+
+	public getAdjacentRequestIds(id: string): { readonly prevId: string | null; readonly nextId: string | null } {
+		return this.memory.getAdjacentRequestIds(id);
+	}
+
+	public findPreviousRequest(id: string): RequestLogEntry | undefined {
+		return this.memory.findPreviousRequest(id);
+	}
+
+	public health(): { readonly mode: "postgres"; readonly bufferRequests: number; readonly bufferCap: number } {
+		// The Postgres store persists rows to the DB; the "buffer" surface shown
+		// on the health card reflects the in-memory ring that backs live reads.
+		const memoryHealth = this.memory.health();
+		return {
+			mode: "postgres",
+			bufferRequests: memoryHealth.bufferRequests,
+			bufferCap: memoryHealth.bufferCap,
+		};
 	}
 
 	// ── Reads: pure delegation ──────────────────────────────────────────────
@@ -167,9 +291,7 @@ export class TelescopePostgresStore implements TelescopeStore, OnModuleInit {
 		return this.memory.overviewStats(fromIso);
 	}
 
-	// ── Feature surfaces: memory-scoped (jobs/schedules/annotations/logs/     ──
-	// ── leaderboard/trends/alerts are dev-time surfaces — persisted rows stay  ──
-	// ── request/query/exception/dump; these delegate to the memory buffer.     ──
+	// ── Aggregate reads: delegated (identical filter semantics via the buffer) ──
 
 	public leaderboard(fromIso: string, limit: number): readonly TelescopeLeaderboardEntry[] {
 		return this.memory.leaderboard(fromIso, limit);
@@ -177,18 +299,6 @@ export class TelescopePostgresStore implements TelescopeStore, OnModuleInit {
 
 	public trends(fromIso: string, bucketCount: number): readonly TelescopeTrendPoint[] {
 		return this.memory.trends(fromIso, bucketCount);
-	}
-
-	public pushJob(entry: TelescopeJobLogEntry): void {
-		this.memory.pushJob(entry);
-	}
-
-	public listJobs(query: TelescopeJobsListQuery): ListResult<TelescopeJobLogEntry> {
-		return this.memory.listJobs(query);
-	}
-
-	public getJob(id: string): TelescopeJobLogEntry | undefined {
-		return this.memory.getJob(id);
 	}
 
 	public upsertSchedule(entry: TelescopeScheduleLog): void {
@@ -199,24 +309,8 @@ export class TelescopePostgresStore implements TelescopeStore, OnModuleInit {
 		return this.memory.listSchedules();
 	}
 
-	public setAnnotation(requestId: string, annotation: TelescopeAnnotation | null): void {
-		this.memory.setAnnotation(requestId, annotation);
-	}
-
-	public getAnnotation(requestId: string): TelescopeAnnotation | null {
-		return this.memory.getAnnotation(requestId);
-	}
-
 	public listLogs(query: TelescopeLogsListQuery): ListResult<TelescopeLogRow> {
 		return this.memory.listLogs(query);
-	}
-
-	public pushAlert(entry: TelescopeAlertEntry): void {
-		this.memory.pushAlert(entry);
-	}
-
-	public listAlerts(limit: number): readonly TelescopeAlertEntry[] {
-		return this.memory.listAlerts(limit);
 	}
 
 	/** Prunes both the buffer and the DB tables (improvement 4). */
@@ -233,6 +327,12 @@ export class TelescopePostgresStore implements TelescopeStore, OnModuleInit {
 			this.logPersistError("prune", err);
 		});
 		void this.prisma.telescopeDump.deleteMany({ where: { createdAt: { lt: cutoff } } }).catch((err: Error): void => {
+			this.logPersistError("prune", err);
+		});
+		void this.prisma.telescopeJob.deleteMany({ where: { createdAt: { lt: cutoff } } }).catch((err: Error): void => {
+			this.logPersistError("prune", err);
+		});
+		void this.prisma.telescopeAlert.deleteMany({ where: { createdAt: { lt: cutoff } } }).catch((err: Error): void => {
 			this.logPersistError("prune", err);
 		});
 		return removed;
@@ -371,6 +471,7 @@ function toExceptionRow(entry: ExceptionLogEntry): Prisma.TelescopeExceptionCrea
 		createdAt: new Date(entry.createdAt),
 		firstSeenAt: new Date(entry.firstSeenAt),
 		lastSeenAt: new Date(entry.lastSeenAt),
+		status: entry.status,
 	};
 }
 
@@ -389,6 +490,7 @@ function mapExceptionRow(row: {
 	readonly createdAt: Date;
 	readonly firstSeenAt: Date;
 	readonly lastSeenAt: Date;
+	readonly status: string;
 }): ExceptionLogEntry {
 	return ExceptionLogEntrySchema.parse({
 		id: row.id,
@@ -405,6 +507,7 @@ function mapExceptionRow(row: {
 		createdAt: row.createdAt.toISOString(),
 		firstSeenAt: row.firstSeenAt.toISOString(),
 		lastSeenAt: row.lastSeenAt.toISOString(),
+		status: row.status,
 	});
 }
 
@@ -431,6 +534,88 @@ function mapDumpRow(row: {
 		value: row.value,
 		correlationId: row.correlationId,
 		createdAt: row.createdAt.toISOString(),
+	});
+}
+
+function toJobRow(entry: TelescopeJobLogEntry): Prisma.TelescopeJobCreateInput {
+	return {
+		id: entry.id,
+		jobName: entry.jobName,
+		status: entry.status,
+		durationMs: entry.durationMs,
+		payloadSize: entry.payloadSize,
+		error: entry.error,
+		correlationId: entry.correlationId,
+		enqueuedAt: new Date(entry.enqueuedAt),
+		startedAt: entry.startedAt !== null ? new Date(entry.startedAt) : null,
+		finishedAt: entry.finishedAt !== null ? new Date(entry.finishedAt) : null,
+	};
+}
+
+function mapJobRow(row: {
+	readonly id: string;
+	readonly jobName: string;
+	readonly status: string;
+	readonly durationMs: number | null;
+	readonly payloadSize: number;
+	readonly error: string | null;
+	readonly correlationId: string | null;
+	readonly enqueuedAt: Date;
+	readonly startedAt: Date | null;
+	readonly finishedAt: Date | null;
+}): TelescopeJobLogEntry {
+	return TelescopeJobLogEntrySchema.parse({
+		id: row.id,
+		jobName: row.jobName,
+		status: row.status,
+		durationMs: row.durationMs,
+		payloadSize: row.payloadSize,
+		error: row.error,
+		correlationId: row.correlationId,
+		enqueuedAt: row.enqueuedAt.toISOString(),
+		startedAt: row.startedAt !== null ? row.startedAt.toISOString() : null,
+		finishedAt: row.finishedAt !== null ? row.finishedAt.toISOString() : null,
+	});
+}
+
+function toAlertRow(entry: TelescopeAlertEntry): Prisma.TelescopeAlertCreateInput {
+	return {
+		id: entry.id,
+		requestId: entry.requestId,
+		method: entry.method,
+		path: entry.path,
+		statusCode: entry.statusCode,
+		durationMs: entry.durationMs,
+		reason: entry.reason,
+		status: entry.status,
+		snoozedUntil: entry.snoozedUntil !== null ? new Date(entry.snoozedUntil) : null,
+		firedAt: new Date(entry.firedAt),
+	};
+}
+
+function mapAlertRow(row: {
+	readonly id: string;
+	readonly requestId: string;
+	readonly method: string;
+	readonly path: string;
+	readonly statusCode: number | null;
+	readonly durationMs: number;
+	readonly reason: string;
+	readonly status: string;
+	readonly snoozedUntil: Date | null;
+	readonly firedAt: Date;
+}): TelescopeAlertEntry {
+	return TelescopeAlertEntrySchema.parse({
+		id: row.id,
+		requestId: row.requestId,
+		method: row.method,
+		path: row.path,
+		statusCode: row.statusCode,
+		durationMs: row.durationMs,
+		reason: row.reason,
+		status: row.status,
+		snoozedUntil: row.snoozedUntil !== null ? row.snoozedUntil.toISOString() : null,
+		firedAt: row.firedAt.toISOString(),
 	});
 }
 

@@ -5,8 +5,10 @@ import type {
 	RequestLogEntry,
 	RequestLogSummary,
 	TelescopeAlertEntry,
+	TelescopeAlertStatus,
 	TelescopeAnnotation,
 	TelescopeExceptionListQuery,
+	TelescopeExceptionStatus,
 	TelescopeJobLogEntry,
 	TelescopeJobsListQuery,
 	TelescopeLeaderboardEntry,
@@ -16,9 +18,12 @@ import type {
 	TelescopeScheduleLog,
 	TelescopeSqlListQuery,
 	TelescopeStatusCounts,
+	TelescopeStorage,
 	TelescopeTrafficPoint,
 	TelescopeTrendPoint,
 } from "@workspace/shared";
+
+import { detectN1Warnings } from "./n1-detector.js";
 
 // ── Filter / result shapes ─────────────────────────────────────────────────
 
@@ -39,10 +44,21 @@ export interface OverviewStats {
 	readonly sqlCount: number;
 	readonly slowSqlCount: number;
 	readonly exceptionGroups: number;
+	/** Requests with ≥1 N+1 warning in range (improvement 4). */
+	readonly n1RequestCount: number;
+	/** Requests with PII flags in range (improvement 15). */
+	readonly piiRequestCount: number;
 	/** Request volume over the range (24 fixed buckets) — powers the sparkline. */
 	readonly traffic: readonly TelescopeTrafficPoint[];
 	/** Status-class counts over the range. */
 	readonly statusCounts: TelescopeStatusCounts;
+}
+
+/** Capture-pipeline health snapshot (improvement 19) — options merge in the service. */
+export interface StoreHealth {
+	readonly mode: TelescopeStorage;
+	readonly bufferRequests: number;
+	readonly bufferCap: number;
 }
 
 /**
@@ -84,6 +100,16 @@ export interface TelescopeStore {
 	// Feature 18 — threshold alerts (memory-scoped; survives via the alert service).
 	pushAlert(entry: TelescopeAlertEntry): void;
 	listAlerts(limit: number): readonly TelescopeAlertEntry[];
+	/** Improvement 5 — ack or snooze an alert by id. */
+	setAlertStatus(id: string, status: TelescopeAlertStatus, snoozedUntil: string | null): void;
+	/** Improvement 6 — set the triage status of an exception group. */
+	setExceptionStatus(errorGroup: string, status: TelescopeExceptionStatus): void;
+	/** Improvement 12 — neighbor ids around a request in capture order. */
+	getAdjacentRequestIds(id: string): { readonly prevId: string | null; readonly nextId: string | null };
+	/** Improvement 18 — nearest earlier request with the same method+path. */
+	findPreviousRequest(id: string): RequestLogEntry | undefined;
+	/** Improvement 19 — capture-pipeline health snapshot. */
+	health(): StoreHealth;
 	/** Drops entries older than `retentionMinutes`; returns how many were removed. */
 	pruneRetention(retentionMinutes: number): number;
 	clear(): void;
@@ -155,6 +181,9 @@ function matchesException(entry: ExceptionLogEntry, query: TelescopeExceptionLis
 	if (query.statusCode !== undefined && entry.statusCode !== query.statusCode) {
 		return false;
 	}
+	if (query.status !== undefined && entry.status !== query.status) {
+		return false;
+	}
 	return isAfter(entry.createdAt, query.from) && isBefore(entry.createdAt, query.to);
 }
 
@@ -191,7 +220,7 @@ function paginate<T>(items: readonly T[], page: number, pageSize: number): ListR
 	};
 }
 
-function toSummary(entry: RequestLogEntry, starred: boolean): RequestLogSummary {
+function toSummary(entry: RequestLogEntry, starred: boolean, n1WarningCount: number): RequestLogSummary {
 	return {
 		id: entry.id,
 		method: entry.method,
@@ -202,7 +231,17 @@ function toSummary(entry: RequestLogEntry, starred: boolean): RequestLogSummary 
 		createdAt: entry.createdAt,
 		environment: entry.environment,
 		starred,
+		n1WarningCount,
 	};
+}
+
+/** How many distinct N+1 warning groups a request's queries trigger (improvement 4). */
+function n1WarningCountFor(entry: RequestLogEntry, queriesByCorrelationId: Map<string, QueryLogEntry[]>): number {
+	const queries: readonly QueryLogEntry[] | undefined = queriesByCorrelationId.get(entry.correlationId);
+	if (queries === undefined || queries.length === 0) {
+		return 0;
+	}
+	return detectN1Warnings(queries).length;
 }
 
 // ── Overview time-series + status counts (improvement v2) ───────────────────
@@ -368,7 +407,7 @@ function isProtectedRequest(entry: RequestLogEntry): boolean {
  * persists via `TelescopePostgresStore` — improvement 1).
  */
 export class TelescopeMemoryStore implements TelescopeStore {
-	public readonly mode: string = "memory";
+	public readonly mode: TelescopeStorage = "memory";
 
 	private readonly requests: RequestLogEntry[] = [];
 	private readonly queries: QueryLogEntry[] = [];
@@ -451,6 +490,8 @@ export class TelescopeMemoryStore implements TelescopeStore {
 			existing.lastSeenAt = entry.createdAt;
 			existing.message = entry.message;
 			existing.stack = entry.stack ?? existing.stack;
+			// A new occurrence re-opens a resolved/ignored group (improvement 6).
+			existing.status = "open";
 			this.exceptions.splice(existingIndex, 1);
 			this.exceptions.unshift(existing);
 			return;
@@ -477,7 +518,9 @@ export class TelescopeMemoryStore implements TelescopeStore {
 	public listRequests(query: TelescopeRequestListQuery): ListResult<RequestLogSummary> {
 		const filtered: RequestLogSummary[] = this.requests
 			.filter((entry: RequestLogEntry): boolean => matchesRequest(entry, query))
-			.map((entry: RequestLogEntry): RequestLogSummary => toSummary(entry, this.annotations.get(entry.id)?.starred === true));
+			.map((entry: RequestLogEntry): RequestLogSummary =>
+				toSummary(entry, this.annotations.get(entry.id)?.starred === true, n1WarningCountFor(entry, this.queriesByCorrelationId)),
+			);
 		sortRequestsByQuery(filtered, query);
 		return paginate(filtered, query.page, query.pageSize);
 	}
@@ -600,6 +643,65 @@ export class TelescopeMemoryStore implements TelescopeStore {
 		return this.alerts.slice(0, Math.max(0, limit));
 	}
 
+	/** Improvement 5 — ack or snooze an alert by id. */
+	public setAlertStatus(id: string, status: TelescopeAlertStatus, snoozedUntil: string | null): void {
+		const index: number = this.alerts.findIndex((entry: TelescopeAlertEntry): boolean => entry.id === id);
+		if (index < 0) {
+			return;
+		}
+		const current: TelescopeAlertEntry = this.alerts[index];
+		const updated: TelescopeAlertEntry = { ...current, status, snoozedUntil };
+		this.alerts.splice(index, 1);
+		this.alerts.unshift(updated);
+	}
+
+	/** Improvement 6 — set the triage status of an exception group (all rows of the group). */
+	public setExceptionStatus(errorGroup: string, status: TelescopeExceptionStatus): void {
+		for (let index = 0; index < this.exceptions.length; index += 1) {
+			const entry: ExceptionLogEntry = this.exceptions[index];
+			if (entry.errorGroup === errorGroup) {
+				this.exceptions[index] = { ...entry, status };
+			}
+		}
+	}
+
+	/** Improvement 12 — neighbors around a request in capture order (newest-first). */
+	public getAdjacentRequestIds(id: string): { readonly prevId: string | null; readonly nextId: string | null } {
+		const index: number = this.requests.findIndex((entry: RequestLogEntry): boolean => entry.id === id);
+		if (index < 0) {
+			return { prevId: null, nextId: null };
+		}
+		// The buffer is newest-first: "prev" (older) is at a higher index.
+		const older: RequestLogEntry | undefined = this.requests.at(index + 1);
+		const newer: RequestLogEntry | undefined = this.requests.at(index - 1);
+		return { prevId: older?.id ?? null, nextId: newer?.id ?? null };
+	}
+
+	/** Improvement 18 — nearest earlier request with the same method+path. */
+	public findPreviousRequest(id: string): RequestLogEntry | undefined {
+		const index: number = this.requests.findIndex((entry: RequestLogEntry): boolean => entry.id === id);
+		if (index < 0) {
+			return undefined;
+		}
+		const current: RequestLogEntry = this.requests[index];
+		for (let cursor = index + 1; cursor < this.requests.length; cursor += 1) {
+			const candidate: RequestLogEntry | undefined = this.requests.at(cursor);
+			if (candidate?.method === current.method && candidate.path === current.path) {
+				return candidate;
+			}
+		}
+		return undefined;
+	}
+
+	/** Improvement 19 — capture-pipeline health snapshot. */
+	public health(): StoreHealth {
+		return {
+			mode: this.mode,
+			bufferRequests: this.requests.length,
+			bufferCap: this.maxRequests,
+		};
+	}
+
 	public overviewStats(fromIso: string): OverviewStats {
 		const fromMs: number = parseIso(fromIso);
 		const nowMs: number = Date.now();
@@ -616,17 +718,30 @@ export class TelescopeMemoryStore implements TelescopeStore {
 
 		const errorCount: number = inRange.filter((entry: RequestLogEntry): boolean => (entry.statusCode ?? 500) >= 500).length;
 
+		// Improvement 4 — how many requests in range trip the N+1 detector.
+		let n1RequestCount = 0;
+		for (const entry of inRange) {
+			if (n1WarningCountFor(entry, this.queriesByCorrelationId) > 0) {
+				n1RequestCount += 1;
+			}
+		}
+
 		return {
 			requests,
 			avgDurationMs,
 			p95DurationMs,
-			slowest: slowestEntry !== undefined ? toSummary(slowestEntry, this.annotations.get(slowestEntry.id)?.starred === true) : null,
+			slowest:
+				slowestEntry !== undefined
+					? toSummary(slowestEntry, this.annotations.get(slowestEntry.id)?.starred === true, n1WarningCountFor(slowestEntry, this.queriesByCorrelationId))
+					: null,
 			errorCount,
 			sqlCount: this.queries.filter((entry: QueryLogEntry): boolean => parseIso(entry.createdAt) >= fromMs).length,
 			slowSqlCount: this.queries.filter((entry: QueryLogEntry): boolean => parseIso(entry.createdAt) >= fromMs && entry.durationMs >= 500).length,
 			exceptionGroups: new Set(
 				this.exceptions.filter((entry: ExceptionLogEntry): boolean => parseIso(entry.createdAt) >= fromMs).map((entry: ExceptionLogEntry): string => entry.errorGroup),
 			).size,
+			n1RequestCount,
+			piiRequestCount: inRange.filter((entry: RequestLogEntry): boolean => entry.piiFlags.length > 0).length,
 			traffic: buildTraffic(inRange, fromMs, nowMs),
 			statusCounts: buildStatusCounts(inRange),
 		};

@@ -1,10 +1,11 @@
 /* eslint-disable no-console -- The entire purpose of this module is to wrap the global console methods. */
 
-import { Injectable, type OnModuleInit } from "@nestjs/common";
+import { Inject, Injectable, type OnModuleInit } from "@nestjs/common";
 
-import type { TelescopeLogLevel } from "@workspace/shared";
+import type { TelescopeLogLevel, TelescopeOptions } from "@workspace/shared";
 
 import { RequestSpanContext, type SpanStore } from "./request-span-context.js";
+import { TELESCOPE_OPTIONS } from "./telescope.options.js";
 
 /**
  * Node's `console` methods accept arbitrary values — the real signature is
@@ -60,6 +61,8 @@ function formatArg(arg: ConsoleArg): string {
 @Injectable()
 // eslint-disable-next-line @darraghor/nestjs-typed/injectable-should-be-provided -- Registered in TelescopeModule.register()'s dynamic providers; the typed plugin only scans static @Module decorators.
 export class TelescopeConsoleCapture implements OnModuleInit {
+	public constructor(@Inject(TELESCOPE_OPTIONS) private readonly options: TelescopeOptions) {}
+
 	public onModuleInit(): void {
 		// Keep the originals so captured output still reaches the real console.
 		const originalLog: typeof console.log = console.log.bind(console);
@@ -93,6 +96,11 @@ export class TelescopeConsoleCapture implements OnModuleInit {
 		const store: SpanStore | undefined = RequestSpanContext.getStore();
 		if (store?.captured !== true) {
 			return;
+		}
+		// Improvement 14 — per-request console budget: once the cap is reached,
+		// drop the oldest lines so the newest output stays visible.
+		if (store.logs.length >= this.options.maxConsoleEntriesPerRequest) {
+			store.logs.shift();
 		}
 		const raw: string = args.map(formatArg).join(" ").slice(0, MAX_LOG_MESSAGE_CHARS);
 		const masked: string = raw.replace(EMAIL_MASK_PATTERN, "$1***@");

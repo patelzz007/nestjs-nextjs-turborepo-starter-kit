@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Put, Query, Sse, UseGuards, type MessageEvent } from "@nestjs/common";
+import { Body, Controller, Get, Headers, Param, Post, Put, Query, Sse, UseGuards, type MessageEvent } from "@nestjs/common";
 import { ApiExcludeController } from "@nestjs/swagger";
 import { map, type Observable } from "rxjs";
 
@@ -6,8 +6,10 @@ import {
 	TelescopeAnnotationInputSchema,
 	TelescopeDumpInputSchema,
 	TelescopeReplayInputSchema,
+	type BufferedStreamEvent,
 	type EmailLogEntry,
 	type ExceptionLogEntry,
+	type TelescopeAlertEntry,
 	type TelescopeAlertsResponse,
 	type TelescopeAnnotation,
 	type TelescopeAnnotationInput,
@@ -23,9 +25,9 @@ import {
 	type TelescopeReplayResponse,
 	type TelescopeRequestDetailResponse,
 	type TelescopeRequestListResponse,
+	type TelescopeRequestSqlResponse,
 	type TelescopeSchedulesResponse,
 	type TelescopeSqlListResponse,
-	type TelescopeStreamEvent,
 	type TelescopeTrendsResponse,
 } from "@workspace/shared";
 
@@ -57,13 +59,17 @@ export class TelescopeController {
 
 	/**
 	 * Improvement 2 — live stream. Frames are `{ type, id }` (JSON in the
-	 * `data:` field). The global `ResponseInterceptor` bypasses the envelope
+	 * `data:` field), each stamped with a monotonic `id:` seq so a reconnecting
+	 * client can send `Last-Event-ID` and get a replay of what it missed
+	 * (improvement 7). The global `ResponseInterceptor` bypasses the envelope
 	 * for `text/event-stream` Accept headers, and the global AuthGuard +
 	 * TelescopeAdminGuard keep the channel admin-only.
 	 */
 	@Sse("stream")
-	public stream(): Observable<MessageEvent> {
-		return this.telescopeService.stream().pipe(map((event: TelescopeStreamEvent): MessageEvent => ({ data: JSON.stringify(event) })));
+	public stream(@Headers("last-event-id") lastEventId?: string): Observable<MessageEvent> {
+		const afterSeq: number = Number.parseInt(lastEventId ?? "0", 10);
+		const parsed: number = Number.isFinite(afterSeq) && afterSeq > 0 ? afterSeq : 0;
+		return this.telescopeService.stream(parsed).pipe(map((entry: BufferedStreamEvent): MessageEvent => ({ id: String(entry.seq), data: JSON.stringify(entry.event) })));
 	}
 
 	/** Improvement 6 — compare two requests via `?a=<id>&b=<id>`. */
@@ -80,6 +86,12 @@ export class TelescopeController {
 	@Get("requests/:id")
 	public requestDetail(@Param("id") id: string): TelescopeRequestDetailResponse {
 		return this.telescopeService.getRequestDetail(id);
+	}
+
+	/** Improvement 3 — the lazy SQL/dumps/N+1 payload for a request detail. */
+	@Get("requests/:id/sql")
+	public requestSql(@Param("id") id: string): TelescopeRequestSqlResponse {
+		return this.telescopeService.requestSql(id);
 	}
 
 	@Get("sql")
@@ -146,6 +158,30 @@ export class TelescopeController {
 	@Get("alerts")
 	public listAlerts(): TelescopeAlertsResponse {
 		return this.telescopeService.listAlerts();
+	}
+
+	/** Improvement 5 — acknowledge (resolve) an alert. */
+	@Post("alerts/:id/ack")
+	public acknowledgeAlert(@Param("id") id: string): TelescopeAlertEntry {
+		return this.telescopeService.acknowledgeAlert(id);
+	}
+
+	/** Improvement 5 — snooze an alert for N minutes. */
+	@Post("alerts/:id/snooze")
+	public snoozeAlert(@Param("id") id: string, @Body() body: Record<string, string | number | undefined>): TelescopeAlertEntry {
+		return this.telescopeService.snoozeAlert(id, body);
+	}
+
+	/** Improvement 6 — set the triage status of an exception group. */
+	@Put("exceptions/:id/status")
+	public setExceptionStatus(@Param("id") id: string, @Body() body: Record<string, string | undefined>): ExceptionLogEntry {
+		return this.telescopeService.setExceptionStatus(id, body);
+	}
+
+	/** Improvement 17 — re-run a failed job (new entry). */
+	@Post("jobs/:id/retry")
+	public async retryJob(@Param("id") id: string): Promise<TelescopeJobLogEntry> {
+		return this.telescopeService.retryJob(id);
 	}
 
 	/** Feature 14 — star/comment a request. */

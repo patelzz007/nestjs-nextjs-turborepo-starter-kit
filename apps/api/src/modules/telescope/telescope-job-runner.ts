@@ -24,6 +24,8 @@ import type { TelescopeStore } from "./telescope.store.js";
 @Injectable()
 // eslint-disable-next-line @darraghor/nestjs-typed/injectable-should-be-provided -- Registered in TelescopeModule.register()'s dynamic providers; the typed plugin only scans static @Module decorators.
 export class TelescopeJobRunner {
+	private readonly runnables = new Map<string, () => Promise<void>>();
+
 	public constructor(
 		@Inject(TELESCOPE_STORE) private readonly store: TelescopeStore,
 		private readonly eventBus: TelescopeEventBus,
@@ -34,8 +36,17 @@ export class TelescopeJobRunner {
 	 * (jobs are the caller's work — Telescope only watches). When the job is
 	 * enqueued inside a captured request, `correlationId` links it back to the
 	 * request and a `queue` span is added to that request's timeline.
+	 *
+	 * Improvement 17 — the fn is registered under `jobName` so a failed job
+	 * can be re-run from the UI (`POST /telescope/jobs/:id/retry`). Re-running
+	 * creates a NEW job entry; the original entry keeps its history.
 	 */
 	public async run<T>(jobName: string, fn: () => Promise<T>, payload?: TelescopeJsonValueForJob): Promise<T> {
+		// Register the runnable (last writer wins — the same jobName re-running
+		// with a different fn is fine; the retry uses whatever is current).
+		this.runnables.set(jobName, async (): Promise<void> => {
+			await fn();
+		});
 		const correlationId: string | null = RequestSpanContext.getStore()?.correlationId ?? null;
 		const enqueuedAt: string = new Date().toISOString();
 		const payloadSize: number = payload === undefined ? 0 : Buffer.byteLength(JSON.stringify(payload), "utf8");
@@ -86,6 +97,22 @@ export class TelescopeJobRunner {
 				correlationId: entry.correlationId,
 			});
 		}
+	}
+
+	/** Improvement 17 — re-run a failed job by id, producing a NEW job entry. */
+	public async retry(id: string): Promise<TelescopeJobLogEntry | null> {
+		const original: TelescopeJobLogEntry | undefined = this.store.getJob(id);
+		if (original === undefined) {
+			return null;
+		}
+		const runnable: (() => Promise<void>) | undefined = this.runnables.get(original.jobName);
+		if (runnable === undefined) {
+			return null;
+		}
+		await this.run(original.jobName, runnable);
+		// The retry entry is the newest in the buffer.
+		const result = this.store.listJobs({ page: 1, pageSize: 1 });
+		return result.items[0] ?? null;
 	}
 }
 

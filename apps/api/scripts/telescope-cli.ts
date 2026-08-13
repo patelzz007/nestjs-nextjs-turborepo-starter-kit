@@ -17,7 +17,7 @@
 
 import "dotenv/config";
 
-import { TelescopeReplayInputSchema, type TelescopeRequestListResponse } from "@workspace/shared";
+import { TelescopeReplayInputSchema, TelescopeStreamEventSchema, type TelescopeRequestListResponse, type TelescopeSqlListResponse } from "@workspace/shared";
 
 const BASE_URL: string = process.env.TELESCOPE_URL ?? "http://localhost:8080";
 
@@ -26,11 +26,15 @@ function printUsage(): void {
 		[
 			"Usage: telescope:cli <command> [args]",
 			"",
-			"  requests [--limit N]          List recent requests (default 20)",
+			"requests [--limit N]          List recent requests (default 20)",
 			"  view <requestId>              Full detail for one request",
 			"  compare <idA> <idB>           Scalar diff between two requests",
 			"  replay <requestId> [target]   Re-send a captured request (default target: local)",
+			"  sql [--limit N]               List captured SQL queries (slowest first)",
+			"  exceptions [--limit N]        List captured exceptions",
+			"  watch [--json]                Tail the live SSE stream until Ctrl+C",
 			"",
+			"All commands accept --json for raw machine-readable output.",
 			"Env: TELESCOPE_TOKEN (auth) · ADMIN_EMAIL/ADMIN_PASSWORD · TELESCOPE_URL",
 		].join("\n"),
 	);
@@ -110,6 +114,75 @@ async function main(): Promise<void> {
 		}
 		const data = await getJson(`/telescope/compare?a=${encodeURIComponent(idA)}&b=${encodeURIComponent(idB)}`, headers);
 		console.log(JSON.stringify(data, null, 2));
+		return;
+	}
+
+	if (command === "sql") {
+		const limitIndex: number = args.indexOf("--limit");
+		const rawLimit: string | undefined = limitIndex >= 0 ? args[limitIndex + 1] : undefined;
+		const limit: string = rawLimit ?? "20";
+		const data = await getJson<{ readonly data: { readonly list: TelescopeSqlListResponse } }>(
+			`/telescope/sql?page=1&pageSize=${limit}&sortBy=duration&sortDir=desc`,
+			headers,
+		);
+		console.log(JSON.stringify({ total: data.data.list.total, items: data.data.list.items }, null, 2));
+		return;
+	}
+
+	if (command === "exceptions") {
+		const limitIndex: number = args.indexOf("--limit");
+		const rawLimit: string | undefined = limitIndex >= 0 ? args[limitIndex + 1] : undefined;
+		const limit: string = rawLimit ?? "20";
+		const data = await getJson<{ readonly data: { readonly list: TelescopeExceptionListResponse } }>(`/telescope/exceptions?page=1&pageSize=${limit}`, headers);
+		console.log(JSON.stringify({ total: data.data.list.total, items: data.data.list.items }, null, 2));
+		return;
+	}
+
+	if (command === "watch") {
+		const jsonMode: boolean = args.includes("--json");
+		// The stream must declare `Accept: text/event-stream` — the global
+		// ResponseInterceptor bypasses its envelope only for that Accept, so
+		// without it every frame arrives wrapped (improvement 7 wire contract).
+		const response: Response = await fetch(`${BASE_URL}/telescope/stream`, {
+			headers: { ...headers, accept: "text/event-stream" },
+		});
+		if (!response.ok) {
+			bail(`GET /telescope/stream → ${String(response.status)}`);
+		}
+		if (response.body === null) {
+			bail("stream returned an empty body");
+		}
+		const decoder: TextDecoder = new TextDecoder();
+		const reader: ReadableStreamDefaultReader<Uint8Array> = response.body.getReader();
+		let buffer = "";
+
+		for (;;) {
+			const { done, value } = await reader.read();
+			if (done || value === undefined) {
+				break;
+			}
+			const chunk: string = decoder.decode(value, { stream: true });
+			buffer += chunk;
+			const blocks: string[] = buffer.split("\n\n");
+			buffer = blocks.pop() ?? "";
+			for (const block of blocks) {
+				const dataLine: string | undefined = block.split("\n").find((line: string): boolean => line.startsWith("data:"));
+				if (dataLine === undefined) {
+					continue;
+				}
+				const parsed = TelescopeStreamEventSchema.safeParse(JSON.parse(dataLine.slice(5).trim()));
+				if (!parsed.success) {
+					console.error(`[telescope:cli] non-JSON SSE frame: ${dataLine.slice(5, 125)}`);
+					continue;
+				}
+				if (jsonMode) {
+					console.log(JSON.stringify(parsed.data));
+				} else {
+					const { type, id, ...rest } = parsed.data;
+					console.log(`[${type}] ${id} — ${JSON.stringify(rest).slice(0, 140)}`);
+				}
+			}
+		}
 		return;
 	}
 

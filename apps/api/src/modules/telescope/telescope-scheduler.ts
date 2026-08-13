@@ -1,10 +1,13 @@
 import { Inject, Injectable, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common";
 
-import { type TelescopeScheduleLog, type TelescopeScheduleStatus } from "@workspace/shared";
+import { type TelescopeScheduleLog, type TelescopeScheduleRun, type TelescopeScheduleStatus } from "@workspace/shared";
 
 import { TelescopeEventBus } from "./telescope-event-bus.js";
 import { TELESCOPE_STORE } from "./telescope.options.js";
 import type { TelescopeStore } from "./telescope.store.js";
+
+/** Improvement 20 — how many recent runs each schedule keeps in `history`. */
+const MAX_HISTORY = 24;
 
 /**
  * Feature 4 — scheduled-task view.
@@ -102,6 +105,7 @@ function nextRunAt(fields: CronFields, from: Date): string {
 export class TelescopeSchedulerService implements OnModuleInit, OnModuleDestroy {
 	private readonly schedules: RegisteredSchedule[] = [];
 	private readonly lastRunBySchedule = new Map<string, TelescopeScheduleLog>();
+	private readonly historyBySchedule = new Map<string, TelescopeScheduleRun[]>();
 	private timer: ReturnType<typeof setInterval> | null = null;
 
 	public constructor(
@@ -145,29 +149,29 @@ export class TelescopeSchedulerService implements OnModuleInit, OnModuleDestroy 
 	private async runSchedule(schedule: RegisteredSchedule): Promise<void> {
 		const start: number = performance.now();
 		const startedAt: string = new Date().toISOString();
+		let status: TelescopeScheduleStatus = "succeeded";
+		let error: string | null = null;
 		try {
 			await schedule.fn();
-			this.lastRunBySchedule.set(schedule.name, {
-				name: schedule.name,
-				cron: schedule.cron,
-				status: "succeeded",
-				lastRunAt: startedAt,
-				lastDurationMs: Math.round(performance.now() - start),
-				lastError: null,
-				nextRunAt: nextRunAt(schedule.fields, new Date(Date.now() + 60 * 1000)),
-			});
-		} catch (error) {
-			this.lastRunBySchedule.set(schedule.name, {
-				name: schedule.name,
-				cron: schedule.cron,
-				status: "failed",
-				lastRunAt: startedAt,
-				lastDurationMs: Math.round(performance.now() - start),
-				lastError: error instanceof Error ? error.message : String(error),
-				nextRunAt: nextRunAt(schedule.fields, new Date(Date.now() + 60 * 1000)),
-			});
+		} catch (caught) {
+			status = "failed";
+			error = caught instanceof Error ? caught.message : String(caught);
 		}
-		const log: TelescopeScheduleLog = this.lastRunBySchedule.get(schedule.name) ?? this.snapshot(schedule);
+		const durationMs: number = Math.round(performance.now() - start);
+		// Improvement 20 — append to this schedule's run history (oldest-first, capped).
+		const history: TelescopeScheduleRun[] = [...(this.historyBySchedule.get(schedule.name) ?? []), { at: startedAt, status, durationMs }].slice(-MAX_HISTORY);
+		this.historyBySchedule.set(schedule.name, history);
+		const log: TelescopeScheduleLog = {
+			name: schedule.name,
+			cron: schedule.cron,
+			status,
+			lastRunAt: startedAt,
+			lastDurationMs: durationMs,
+			lastError: error,
+			nextRunAt: nextRunAt(schedule.fields, new Date(Date.now() + 60 * 1000)),
+			history,
+		};
+		this.lastRunBySchedule.set(schedule.name, log);
 		this.store.upsertSchedule(log);
 		// Publish a `schedule` frame so the /telescope/schedules page refetches
 		// on push instead of polling — a card flips to succeeded/failed live.
@@ -195,6 +199,7 @@ export class TelescopeSchedulerService implements OnModuleInit, OnModuleDestroy 
 			lastDurationMs: null,
 			lastError: null,
 			nextRunAt: nextRunAt(schedule.fields, new Date()),
+			history: this.historyBySchedule.get(schedule.name) ?? [],
 		};
 	}
 }

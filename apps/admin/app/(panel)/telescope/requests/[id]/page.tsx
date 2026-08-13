@@ -11,13 +11,30 @@ import { useAuth } from "@workspace/client/lib/auth";
 import { telescopeEndpoints } from "@workspace/client/lib/api/endpoints";
 import { Button } from "@workspace/ui/components/form/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
-import { ArrowLeft, Braces, Copy, Database, Fingerprint, ListChecks, Loader2, RotateCw, Share2, Star, TerminalSquare, TriangleAlert, UserRound } from "lucide-react";
+import {
+	ArrowLeft,
+	Braces,
+	ChevronLeft,
+	ChevronRight,
+	Copy,
+	Database,
+	Fingerprint,
+	GitCompareArrows,
+	ListChecks,
+	Loader2,
+	RotateCw,
+	Share2,
+	Star,
+	TerminalSquare,
+	TriangleAlert,
+	UserRound,
+} from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
 
-import type { TelescopeReplayResponse, TelescopeRequestDetailResponse } from "@workspace/shared";
+import type { TelescopeReplayResponse, TelescopeRequestDetailResponse, TelescopeRequestSqlResponse, TelescopeSpan } from "@workspace/shared";
 
 import { CodeBlock } from "@/components/docs/code-block";
 import { AnnotationPanel } from "@/components/telescope/annotation-panel";
@@ -72,6 +89,20 @@ export default function TelescopeRequestDetailPage(): React.JSX.Element {
 	const replayMutation = api.procedure(telescopeEndpoints.replay(id)).useMutation();
 	const [replayOpen, setReplayOpen] = useState<boolean>(false);
 	const [replayResult, setReplayResult] = useState<TelescopeReplayResponse | null>(null);
+
+	// Improvement 3 — lazy detail: SQL + dumps + N+1 analysis are NOT bundled
+	// in the detail payload; they load on demand (a button in the SQL card) so
+	// a heavy request opens instantly without paying the query-serialization cost.
+	const [sqlEnabled, setSqlEnabled] = useState<boolean>(false);
+	const sqlQuery = api.procedure(telescopeEndpoints.requestSql(id)).useQuery(undefined, { enabled: sqlEnabled && detailQuery.isSuccess });
+	const sqlData: TelescopeRequestSqlResponse | undefined = sqlQuery.data?.data;
+	const handleLoadSql = useCallback((): void => {
+		setSqlEnabled(true);
+	}, []);
+
+	// Improvement 13 — timeline noise filter: trivial (<1ms) spans collapse by
+	// default behind the toggle so hot-route waterfalls stay scannable.
+	const [showTrivialSpans, setShowTrivialSpans] = useState<boolean>(false);
 
 	// Replay targets: the API always exposes `local` (its own origin); extra
 	// named targets come from TELESCOPE_REPLAY_TARGETS server-side.
@@ -196,6 +227,13 @@ export default function TelescopeRequestDetailPage(): React.JSX.Element {
 		[detail],
 	);
 
+	// Improvement 13 — spans passing the noise filter (hidden <1ms unless the toggle is on).
+	const visibleSpans = useMemo(
+		(): readonly TelescopeSpan[] =>
+			detail !== undefined ? (showTrivialSpans ? detail.request.spans : detail.request.spans.filter((span: TelescopeSpan): boolean => span.durationMs >= 1)) : [],
+		[detail, showTrivialSpans],
+	);
+
 	if (detailQuery.isLoading) {
 		return (
 			<div className="flex min-h-[60vh] items-center justify-center">
@@ -220,15 +258,37 @@ export default function TelescopeRequestDetailPage(): React.JSX.Element {
 		);
 	}
 
-	const { request, queries, dumps, n1Warnings } = detail;
+	const { request } = detail;
 	const tone = statusTone(request.statusCode);
 
 	return (
 		<div className="mx-auto w-full max-w-7xl space-y-6">
-			<Link href="/telescope/requests" className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground">
-				<ArrowLeft className="size-3.5" />
-				Back to requests
-			</Link>
+			<div className="flex flex-wrap items-center justify-between gap-3">
+				<Link href="/telescope/requests" className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground">
+					<ArrowLeft className="size-3.5" />
+					Back to requests
+				</Link>
+
+				{/* Improvement 12 — walk the capture order: prev/next neighbors. */}
+				<div className="flex items-center gap-2">
+					{detail.adjacent.prevId !== null ? (
+						<Link
+							href={`/telescope/requests/${detail.adjacent.prevId}`}
+							className="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground">
+							<ChevronLeft className="size-3.5" />
+							Previous
+						</Link>
+					) : null}
+					{detail.adjacent.nextId !== null ? (
+						<Link
+							href={`/telescope/requests/${detail.adjacent.nextId}`}
+							className="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground">
+							Next
+							<ChevronRight className="size-3.5" />
+						</Link>
+					) : null}
+				</div>
+			</div>
 
 			{/* ── Header card ─────────────────────────────────────────── */}
 			<Card>
@@ -256,6 +316,15 @@ export default function TelescopeRequestDetailPage(): React.JSX.Element {
 							<Share2 className="size-3" />
 							Share
 						</Button>
+						{/* Improvement 18 — diff against the previous run of the same route. */}
+						{detail.previousRequestId !== null ? (
+							<Link
+								href={`/telescope/compare?a=${encodeURIComponent(detail.previousRequestId)}&b=${encodeURIComponent(detail.request.id)}`}
+								className="inline-flex h-7 items-center gap-1.5 rounded-md border border-border bg-background px-2.5 text-xs font-medium text-foreground shadow-xs transition-colors hover:bg-accent">
+								<GitCompareArrows className="size-3" />
+								Diff vs previous run
+							</Link>
+						) : null}
 						{/* Feature 7 — replay against a configured target. */}
 						<Button variant="outline" size="sm" className="h-7 gap-1.5 text-xs" onClick={handleOpenReplay}>
 							<RotateCw className="size-3" />
@@ -284,8 +353,8 @@ export default function TelescopeRequestDetailPage(): React.JSX.Element {
 				</CardContent>
 			</Card>
 
-			{/* ── N+1 warnings (improvement 7) ─────────────────────────── */}
-			{n1Warnings.length > 0 ? (
+			{/* ── N+1 warnings (improvement 4 — surfaced from the lazy SQL payload) ── */}
+			{sqlEnabled && sqlData !== undefined && sqlData.n1Warnings.length > 0 ? (
 				<Card className="border-amber-300/60 bg-amber-500/5 dark:border-amber-500/40">
 					<CardHeader className="pb-3">
 						<CardTitle className="flex items-center gap-2 text-base">
@@ -295,7 +364,7 @@ export default function TelescopeRequestDetailPage(): React.JSX.Element {
 						<CardDescription>The same model+operation ran 5+ times — likely a loop fetching related rows one by one.</CardDescription>
 					</CardHeader>
 					<CardContent className="space-y-2">
-						{n1Warnings.map((warning) => (
+						{sqlData.n1Warnings.map((warning) => (
 							<div key={`${warning.operation}:${warning.model}`} className="flex flex-wrap items-center gap-2 rounded-lg border bg-card px-3 py-2 text-xs">
 								<span className="rounded-md bg-muted px-1.5 py-0.5 font-mono font-medium">{warning.operation}</span>
 								<span className="font-mono text-muted-foreground">{warning.model || "(unknown table)"}</span>
@@ -326,55 +395,102 @@ export default function TelescopeRequestDetailPage(): React.JSX.Element {
 			{/* ── Timeline ─────────────────────────────────────────────── */}
 			<Card>
 				<CardHeader className="pb-3">
-					<CardTitle className="text-base">Timeline</CardTitle>
-					<CardDescription>Span breakdown — the bars are proportional to time spent, colored by stage.</CardDescription>
+					<div className="flex flex-wrap items-center justify-between gap-2">
+						<div>
+							<CardTitle className="text-base">Timeline</CardTitle>
+							<CardDescription>Span breakdown — the bars are proportional to time spent, colored by stage.</CardDescription>
+						</div>
+						{/* Improvement 13 — collapse sub-millisecond noise behind a toggle. */}
+						<label className="inline-flex cursor-pointer items-center gap-1.5 text-xs text-muted-foreground select-none">
+							<input
+								type="checkbox"
+								checked={showTrivialSpans}
+								onChange={(event: React.ChangeEvent<HTMLInputElement>): void => {
+									setShowTrivialSpans(event.target.checked);
+								}}
+								className="size-3.5 rounded border-border accent-primary"
+							/>
+							Show trivial spans ({"<"}1ms)
+						</label>
+					</div>
 				</CardHeader>
 				<CardContent>
-					<Timeline spans={request.spans} totalMs={request.durationMs} />
+					<Timeline
+						spans={visibleSpans}
+						totalMs={request.durationMs}
+						queries={sqlData !== undefined ? sqlData.queries.map((query) => ({ query, startOffsetMs: query.startOffsetMs })) : undefined}
+					/>
 				</CardContent>
 			</Card>
 
-			<div className="grid gap-6 lg:grid-cols-2">
-				{/* ── SQL ────────────────────────────────────────────────── */}
+			{/* ── Lazy SQL + dumps (improvement 3) ────────────────────── */}
+			{sqlEnabled && sqlData === undefined && sqlQuery.isLoading ? (
 				<Card>
-					<CardHeader className="pb-3">
-						<CardTitle className="flex items-center gap-2 text-base">
-							<Database className="size-4 text-muted-foreground" />
-							SQL
-						</CardTitle>
-						<CardDescription>
-							{queries.length} quer{queries.length === 1 ? "y" : "ies"} for this correlation.
-						</CardDescription>
-					</CardHeader>
-					<CardContent>
-						<SqlList queries={queries} />
+					<CardContent className="flex items-center justify-center gap-2 p-8 text-sm text-muted-foreground">
+						<Loader2 className="size-4 animate-spin" />
+						Loading SQL, dumps & N+1 analysis…
 					</CardContent>
 				</Card>
+			) : null}
 
-				{/* ── Dumps ───────────────────────────────────────────────── */}
+			{!sqlEnabled ? (
 				<Card>
-					<CardHeader className="pb-3">
-						<CardTitle className="flex items-center gap-2 text-base">
-							<Braces className="size-4 text-muted-foreground" />
-							Dumps
-						</CardTitle>
-						<CardDescription>
-							Values recorded via the Telescope <code className="font-mono">dump</code> probe.
-						</CardDescription>
-					</CardHeader>
-					<CardContent className="space-y-2">
-						{dumps.length === 0 ? (
-							<p className="rounded-lg border border-dashed p-4 text-center text-xs text-muted-foreground">No dumps for this request.</p>
-						) : (
-							dumps.map((dump) => (
-								<div key={dump.id}>
-									<CodeBlock code={JSON.stringify(dump.value, null, 2)} language="json" fileName={dump.name} />
-								</div>
-							))
-						)}
+					<CardContent className="flex flex-wrap items-center justify-between gap-3 p-5">
+						<div className="flex items-center gap-3 text-sm text-muted-foreground">
+							<Database className="size-4 shrink-0" />
+							<span>SQL queries, dumps and N+1 analysis load on demand — kept out of the detail payload so heavy requests open instantly.</span>
+						</div>
+						<Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs" onClick={handleLoadSql}>
+							<Database className="size-3.5" />
+							Load SQL & dumps
+						</Button>
 					</CardContent>
 				</Card>
-			</div>
+			) : null}
+
+			{sqlEnabled && sqlData !== undefined ? (
+				<div className="grid gap-6 lg:grid-cols-2">
+					{/* ── SQL ────────────────────────────────────────────────── */}
+					<Card>
+						<CardHeader className="pb-3">
+							<CardTitle className="flex items-center gap-2 text-base">
+								<Database className="size-4 text-muted-foreground" />
+								SQL
+							</CardTitle>
+							<CardDescription>
+								{sqlData.queries.length} quer{sqlData.queries.length === 1 ? "y" : "ies"} for this correlation.
+							</CardDescription>
+						</CardHeader>
+						<CardContent>
+							<SqlList queries={sqlData.queries} />
+						</CardContent>
+					</Card>
+
+					{/* ── Dumps ───────────────────────────────────────────────── */}
+					<Card>
+						<CardHeader className="pb-3">
+							<CardTitle className="flex items-center gap-2 text-base">
+								<Braces className="size-4 text-muted-foreground" />
+								Dumps
+							</CardTitle>
+							<CardDescription>
+								Values recorded via the Telescope <code className="font-mono">dump</code> probe.
+							</CardDescription>
+						</CardHeader>
+						<CardContent className="space-y-2">
+							{sqlData.dumps.length === 0 ? (
+								<p className="rounded-lg border border-dashed p-4 text-center text-xs text-muted-foreground">No dumps for this request.</p>
+							) : (
+								sqlData.dumps.map((dump) => (
+									<div key={dump.id}>
+										<CodeBlock code={JSON.stringify(dump.value, null, 2)} language="json" fileName={dump.name} />
+									</div>
+								))
+							)}
+						</CardContent>
+					</Card>
+				</div>
+			) : null}
 
 			{/* ── Console output (improvement 16) ──────────────────────── */}
 			{request.logs.length > 0 ? (

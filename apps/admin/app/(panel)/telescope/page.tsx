@@ -16,7 +16,7 @@ import { useAuth } from "@workspace/client/lib/auth";
 import { telescopeEndpoints } from "@workspace/client/lib/api/endpoints";
 import { Button } from "@workspace/ui/components/form/button";
 import { Skeleton } from "@workspace/ui/components/feedback/skeleton";
-import { Activity, Clock, Database, Mail, Pause, Play, Radio, ShieldAlert, TriangleAlert } from "lucide-react";
+import { Activity, Clock, Database, Fingerprint, Mail, Pause, Play, Radio, ShieldAlert, TriangleAlert } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, Suspense } from "react";
@@ -93,6 +93,12 @@ function OverviewContent(): React.JSX.Element {
 
 	// Feature 18 — recently fired threshold alerts.
 	const alertsQuery = api.procedure(telescopeEndpoints.alerts()).useQuery(undefined, { placeholderData: (previous) => previous });
+
+	// Improvement 5 — after an ack/snooze (handled inside AlertsPanel's per-row
+	// actions, which own their mutations), refetch to reflect the new status.
+	const handleAlertsChanged = useCallback((): void => {
+		void alertsQuery.refetch();
+	}, [alertsQuery]);
 
 	// Improvement 2: refetch on SSE pushes instead of polling on a timer.
 	const refresh = useCallback((): void => {
@@ -342,6 +348,14 @@ function OverviewContent(): React.JSX.Element {
 							href="/telescope/exceptions"
 						/>
 						<StatCard
+							label="N+1 flagged"
+							value={<AnimatedNumber value={overview.n1RequestCount} />}
+							sub="requests with query loops"
+							icon={<TriangleAlert className="size-4" />}
+							accentClass="text-amber-500"
+							href="/telescope/requests?sort=duration"
+						/>
+						<StatCard
 							label="Mail"
 							value={<AnimatedNumber value={overview.mailSent} />}
 							sub={`${String(overview.mailDelivered)} delivered`}
@@ -349,6 +363,40 @@ function OverviewContent(): React.JSX.Element {
 							accentClass="text-emerald-500"
 							href="/telescope/mail"
 						/>
+						<StatCard
+							label="PII flagged"
+							value={<AnimatedNumber value={overview.piiRequestCount} />}
+							sub="sensitive data detected at capture"
+							icon={<Fingerprint className="size-4" />}
+							accentClass="text-violet-500"
+						/>
+					</div>
+
+					{/* Improvement 19 — capture-pipeline health card. */}
+					<div className="grid grid-cols-2 gap-4 rounded-lg border bg-card p-4 text-card-foreground shadow-xs sm:grid-cols-4">
+						<div>
+							<p className="text-xs text-muted-foreground">Store</p>
+							<p className="mt-1 font-mono text-sm font-semibold capitalize">{overview.health.mode}</p>
+						</div>
+						<div>
+							<p className="text-xs text-muted-foreground">Capture</p>
+							<p
+								className={`mt-1 inline-flex items-center gap-1.5 text-sm font-semibold ${overview.health.enabled ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}>
+								<span className={`size-1.5 rounded-full ${overview.health.enabled ? "bg-emerald-500" : "bg-red-500"}`} />
+								{overview.health.enabled ? "active" : "off"}
+							</p>
+						</div>
+						<div>
+							<p className="text-xs text-muted-foreground">Buffer</p>
+							<p className="mt-1 text-sm font-semibold tabular-nums">
+								{String(overview.health.bufferRequests)}/{String(overview.health.bufferCap)}
+								{overview.health.bufferCap > 0 ? ` (${String(Math.round((overview.health.bufferRequests / overview.health.bufferCap) * 100))}%)` : ""}
+							</p>
+						</div>
+						<div>
+							<p className="text-xs text-muted-foreground">Retention</p>
+							<p className="mt-1 text-sm font-semibold tabular-nums">{String(overview.health.retentionMinutes)}m</p>
+						</div>
 					</div>
 
 					{/* ── Slowest request drill-down ───────────────────── */}
@@ -411,7 +459,7 @@ function OverviewContent(): React.JSX.Element {
 								</Link>
 							</div>
 							<div className="rounded-lg border bg-card p-2 text-card-foreground shadow-xs">
-								<AlertsPanel alerts={alertEntries} />
+								<AlertsPanel alerts={alertEntries} onChanged={handleAlertsChanged} />
 							</div>
 						</section>
 					</div>

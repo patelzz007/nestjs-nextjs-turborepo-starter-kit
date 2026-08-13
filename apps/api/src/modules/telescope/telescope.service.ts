@@ -2,14 +2,16 @@ import { Inject, Injectable, NotFoundException } from "@nestjs/common";
 import { nanoid } from "nanoid";
 import { z } from "zod";
 
-import { Subject } from "rxjs";
+import { type Observable } from "rxjs";
 
 import { hostname } from "node:os";
 
 import {
 	EmailLogEntrySchema,
+	TelescopeAlertSnoozeInputSchema,
 	TelescopeCompareQuerySchema,
 	TelescopeExceptionListQuerySchema,
+	TelescopeExceptionStatusInputSchema,
 	TelescopeJobsListQuerySchema,
 	TelescopeLeaderboardQuerySchema,
 	TelescopeLogsListQuerySchema,
@@ -18,12 +20,14 @@ import {
 	TelescopeRequestListQuerySchema,
 	TelescopeSqlListQuerySchema,
 	TelescopeTrendsQuerySchema,
+	type BufferedStreamEvent,
 	type DumpEntry,
 	type EmailLogEntry,
 	type ExceptionLogEntry,
 	type RequestLogEntry,
 	type TelescopeAlertEntry,
 	type TelescopeAlertsResponse,
+	type TelescopeAlertSnoozeInput,
 	type TelescopeAnnotation,
 	type TelescopeAnnotationInput,
 	type TelescopeCompareResponse,
@@ -32,6 +36,7 @@ import {
 	type TelescopeEnvironment,
 	type TelescopeExceptionListQuery,
 	type TelescopeExceptionListResponse,
+	type TelescopeExceptionStatusInput,
 	type TelescopeJobLogEntry,
 	type TelescopeJobsListQuery,
 	type TelescopeJobsListResponse,
@@ -49,21 +54,21 @@ import {
 	type TelescopeRequestDetailResponse,
 	type TelescopeRequestListQuery,
 	type TelescopeRequestListResponse,
+	type TelescopeRequestSqlResponse,
 	type TelescopeScheduleLog,
 	type TelescopeSchedulesResponse,
 	type TelescopeSqlListQuery,
 	type TelescopeSqlListResponse,
-	type TelescopeStreamEvent,
 	type TelescopeTrendsQuery,
 	type TelescopeTrendsResponse,
 } from "@workspace/shared";
-
 import { PrismaService } from "../../prisma/prisma.service.js";
 
 import { detectN1Warnings } from "./n1-detector.js";
 import { RequestSpanContext } from "./request-span-context.js";
 import { TelescopeAlertService } from "./telescope-alert.service.js";
 import { TelescopeEventBus } from "./telescope-event-bus.js";
+import { TelescopeJobRunner } from "./telescope-job-runner.js";
 import { TELESCOPE_OPTIONS, TELESCOPE_STORE } from "./telescope.options.js";
 import type { TelescopeStore } from "./telescope.store.js";
 
@@ -108,6 +113,7 @@ export class TelescopeService {
 		private readonly prisma: PrismaService,
 		private readonly eventBus: TelescopeEventBus,
 		private readonly alertService: TelescopeAlertService,
+		private readonly jobRunner: TelescopeJobRunner,
 	) {}
 
 	public async overview(rawQuery: RawQuery): Promise<TelescopeOverview> {
@@ -120,6 +126,8 @@ export class TelescopeService {
 			this.prisma.emailLog.count(),
 			this.prisma.emailLog.count({ where: { status: "delivered" } }),
 		]);
+		// Improvement 19 — capture-pipeline health (store snapshot + options).
+		const health = this.store.health();
 
 		return {
 			range,
@@ -133,10 +141,20 @@ export class TelescopeService {
 			mailSent,
 			mailDelivered,
 			exceptionGroups: stats.exceptionGroups,
+			n1RequestCount: stats.n1RequestCount,
+			piiRequestCount: stats.piiRequestCount,
 			traffic: stats.traffic,
 			statusCounts: stats.statusCounts,
 			// Feature 8 — environment tag of the capturing process.
 			environment: this.environment(),
+			// Improvement 19 — buffer usage + mode + retention window.
+			health: {
+				mode: health.mode,
+				enabled: this.options.enabled,
+				bufferRequests: health.bufferRequests,
+				bufferCap: health.bufferCap,
+				retentionMinutes: this.options.retentionMinutes,
+			},
 		};
 	}
 
@@ -150,15 +168,31 @@ export class TelescopeService {
 		if (request === undefined) {
 			throw new NotFoundException({ message: `Telescope request ${id} not found.`, error: "TELESCOPE_REQUEST_NOT_FOUND" });
 		}
-		const queries = this.store.listQueriesByCorrelationId(request.correlationId);
+		// Improvement 3 — SQL/dumps/N+1 moved to the lazy `requestSql` endpoint.
+		// Improvement 12 — neighbor ids for prev/next navigation.
+		// Improvement 18 — nearest earlier request with the same route for compare.
+		const previous: RequestLogEntry | undefined = this.store.findPreviousRequest(id);
 		return {
 			request,
+			// Feature 14 — star/comment annotation (null until first set).
+			annotation: this.store.getAnnotation(id),
+			adjacent: this.store.getAdjacentRequestIds(id),
+			previousRequestId: previous?.id ?? null,
+		};
+	}
+
+	/** Improvement 3 — the lazy SQL/dumps/N+1 payload for a request detail. */
+	public requestSql(id: string): TelescopeRequestSqlResponse {
+		const request = this.store.getRequest(id);
+		if (request === undefined) {
+			throw new NotFoundException({ message: `Telescope request ${id} not found.`, error: "TELESCOPE_REQUEST_NOT_FOUND" });
+		}
+		const queries = this.store.listQueriesByCorrelationId(request.correlationId);
+		return {
 			queries,
 			dumps: this.store.listDumpsByCorrelationId(request.correlationId),
 			// Improvement 7: N+1 warnings computed from this request's queries.
 			n1Warnings: detectN1Warnings(queries),
-			// Feature 14 — star/comment annotation (null until first set).
-			annotation: this.store.getAnnotation(id),
 		};
 	}
 
@@ -253,9 +287,9 @@ export class TelescopeService {
 		};
 	}
 
-	/** The SSE subject — the controller maps it into `MessageEvent` frames. */
-	public stream(): Subject<TelescopeStreamEvent> {
-		return this.eventBus.subscribe();
+	/** The SSE observable — replays buffered frames past `afterSeq`, then live. */
+	public stream(afterSeq: number): Observable<BufferedStreamEvent> {
+		return this.eventBus.subscribe(afterSeq);
 	}
 
 	public storeMode(): string {
@@ -319,6 +353,45 @@ export class TelescopeService {
 	public listLogs(rawQuery: RawQuery): TelescopeLogsListResponse {
 		const query: TelescopeLogsListQuery = parseQuery(TelescopeLogsListQuerySchema, rawQuery);
 		return this.store.listLogs(query);
+	}
+
+	/** Improvement 5 — acknowledge (resolve) an alert by id. */
+	public acknowledgeAlert(id: string): TelescopeAlertEntry {
+		const updated: TelescopeAlertEntry | null = this.alertService.acknowledge(id);
+		if (updated === null) {
+			throw new NotFoundException({ message: `Telescope alert ${id} not found.`, error: "TELESCOPE_ALERT_NOT_FOUND" });
+		}
+		return updated;
+	}
+
+	/** Improvement 5 — snooze an alert by id until now + N minutes. */
+	public snoozeAlert(id: string, rawBody: Record<string, string | number | undefined>): TelescopeAlertEntry {
+		const input: TelescopeAlertSnoozeInput = TelescopeAlertSnoozeInputSchema.parse(rawBody);
+		const updated: TelescopeAlertEntry | null = this.alertService.snooze(id, input.minutes);
+		if (updated === null) {
+			throw new NotFoundException({ message: `Telescope alert ${id} not found.`, error: "TELESCOPE_ALERT_NOT_FOUND" });
+		}
+		return updated;
+	}
+
+	/** Improvement 6 — set the triage status of an exception group. */
+	public setExceptionStatus(id: string, rawBody: Record<string, string | undefined>): ExceptionLogEntry {
+		const input: TelescopeExceptionStatusInput = TelescopeExceptionStatusInputSchema.parse(rawBody);
+		const entry: ExceptionLogEntry = this.getException(id);
+		this.store.setExceptionStatus(entry.errorGroup, input.status);
+		return { ...entry, status: input.status };
+	}
+
+	/** Improvement 17 — re-run a failed job from the UI (new entry). */
+	public async retryJob(id: string): Promise<TelescopeJobLogEntry> {
+		const retried: TelescopeJobLogEntry | null = await this.jobRunner.retry(id);
+		if (retried === null) {
+			throw new NotFoundException({
+				message: `Telescope job ${id} not found or not retryable (its fn is not registered).`,
+				error: "TELESCOPE_JOB_NOT_RETRYABLE",
+			});
+		}
+		return retried;
 	}
 
 	/** Feature 18 — recent threshold alerts. */
