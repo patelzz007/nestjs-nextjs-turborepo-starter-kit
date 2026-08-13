@@ -136,6 +136,21 @@ export class TelescopeSchedulerService implements OnModuleInit, OnModuleDestroy 
 		this.store.upsertSchedule(this.snapshot({ name, cron, fields: parseCron(cron), fn }));
 	}
 
+	/**
+	 * Feature 12 — run a registered schedule on demand (the UI's "Run now"
+	 * button). Records the run through the same path as a cron tick, so the
+	 * schedule's history + the SSE `schedule` frame behave identically.
+	 * Returns the updated schedule row, or `undefined` if no such name.
+	 */
+	public async runNow(name: string): Promise<TelescopeScheduleLog | undefined> {
+		const schedule: RegisteredSchedule | undefined = this.schedules.find((candidate: RegisteredSchedule): boolean => candidate.name === name);
+		if (schedule === undefined) {
+			return undefined;
+		}
+		await this.runSchedule(schedule);
+		return this.store.listSchedules().find((candidate: TelescopeScheduleLog): boolean => candidate.name === name);
+	}
+
 	private async tick(): Promise<void> {
 		const now: Date = new Date();
 		for (const schedule of this.schedules) {

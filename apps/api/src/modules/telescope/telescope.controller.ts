@@ -26,9 +26,14 @@ import {
 	type TelescopeRequestDetailResponse,
 	type TelescopeRequestListResponse,
 	type TelescopeRequestSqlResponse,
+	type TelescopeScheduleLog,
 	type TelescopeSchedulesResponse,
+	type TelescopeSearchResponse,
 	type TelescopeSqlListResponse,
+	type TelescopeStatus,
 	type TelescopeTrendsResponse,
+	type TelescopeUsersResponse,
+	type TelescopeWebhookDeliveriesResponse,
 } from "@workspace/shared";
 
 import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe.js";
@@ -79,12 +84,12 @@ export class TelescopeController {
 	}
 
 	@Get("requests")
-	public listRequests(@Query() query: Record<string, string | string[] | undefined>): { readonly list: TelescopeRequestListResponse } {
-		return { list: this.telescopeService.listRequests(query) };
+	public async listRequests(@Query() query: Record<string, string | string[] | undefined>): Promise<{ readonly list: TelescopeRequestListResponse }> {
+		return { list: await this.telescopeService.listRequests(query) };
 	}
 
 	@Get("requests/:id")
-	public requestDetail(@Param("id") id: string): TelescopeRequestDetailResponse {
+	public async requestDetail(@Param("id") id: string): Promise<TelescopeRequestDetailResponse> {
 		return this.telescopeService.getRequestDetail(id);
 	}
 
@@ -152,6 +157,48 @@ export class TelescopeController {
 	@Get("logs")
 	public listLogs(@Query() query: Record<string, string | string[] | undefined>): { readonly list: TelescopeLogsListResponse } {
 		return { list: this.telescopeService.listLogs(query) };
+	}
+
+	/** Feature 1 — global free-text search across every captured surface. */
+	@Get("search")
+	public async search(@Query() query: Record<string, string | string[] | undefined>): Promise<TelescopeSearchResponse> {
+		return this.telescopeService.search(query);
+	}
+
+	/** Feature 3 — per-user request aggregation. */
+	@Get("users")
+	public async listUsers(@Query() query: Record<string, string | string[] | undefined>): Promise<{ readonly list: TelescopeUsersResponse }> {
+		return { list: await this.telescopeService.listUsers(query) };
+	}
+
+	/** Feature 12 — run a registered schedule on demand ("Run now" button). */
+	@Post("schedules/:name/run")
+	public async runSchedule(@Param("name") name: string, @Body() body: Record<string, string | undefined> | undefined): Promise<TelescopeScheduleLog> {
+		return this.telescopeService.runSchedule(name, body);
+	}
+
+	/** Feature 13 — webhook delivery records for the alerts panel. */
+	@Get("webhook-deliveries")
+	public listWebhookDeliveries(): TelescopeWebhookDeliveriesResponse {
+		return this.telescopeService.listWebhookDeliveries();
+	}
+
+	/** Feature 8 — manual retention pruning (`?force=true` clears everything old). */
+	@Post("admin/prune")
+	public prune(@Query() query: Record<string, string | string[] | undefined>): { readonly removed: number } {
+		return this.telescopeService.prune(query);
+	}
+
+	/** Feature 8 — empty every buffer (requests, SQL, exceptions, jobs, …). */
+	@Post("admin/clear")
+	public clearAll(): { readonly cleared: true } {
+		return this.telescopeService.clearAll();
+	}
+
+	/** Feature 9 — the fully-resolved capture config + pipeline health snapshot. */
+	@Get("status")
+	public status(): TelescopeStatus {
+		return this.telescopeService.status();
 	}
 
 	/** Feature 18 — recent threshold alerts. */

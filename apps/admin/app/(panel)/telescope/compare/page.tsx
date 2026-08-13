@@ -18,6 +18,7 @@ import { Suspense, useMemo } from "react";
 
 import type { TelescopeCompareResponse, TelescopeDiffField } from "@workspace/shared";
 
+import { Timeline } from "@/components/telescope/timeline";
 import { durationLabel, formatTime, statusTone } from "@/lib/telescope";
 
 function CompareContent(): React.JSX.Element {
@@ -153,6 +154,32 @@ function CompareContent(): React.JSX.Element {
 							))}
 						</tbody>
 					</table>
+				</CardContent>
+			</Card>
+
+			{/* ── Timelines side by side (feature 14) ──────────────────── */}
+			<Card>
+				<CardHeader className="pb-3">
+					<CardTitle className="text-base">Timelines</CardTitle>
+					<CardDescription>Both requests’ span waterfalls — scan for structural differences at a glance.</CardDescription>
+				</CardHeader>
+				<CardContent className="grid gap-4 lg:grid-cols-2">
+					<div>
+						<p className="mb-1.5 text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">Request A</p>
+						<Timeline
+							spans={response.a.spans}
+							totalMs={Math.max(1, response.a.durationMs)}
+							queries={response.queriesA.map((query) => ({ query, startOffsetMs: query.startOffsetMs }))}
+						/>
+					</div>
+					<div>
+						<p className="mb-1.5 text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">Request B</p>
+						<Timeline
+							spans={response.b.spans}
+							totalMs={Math.max(1, response.b.durationMs)}
+							queries={response.queriesB.map((query) => ({ query, startOffsetMs: query.startOffsetMs }))}
+						/>
+					</div>
 				</CardContent>
 			</Card>
 		</div>

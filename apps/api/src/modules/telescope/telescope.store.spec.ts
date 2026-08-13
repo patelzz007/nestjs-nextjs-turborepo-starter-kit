@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { ExceptionLogEntry, QueryLogEntry, RequestLogEntry } from "@workspace/shared";
+import type { ExceptionLogEntry, QueryLogEntry, RequestLogEntry, TelescopeWebhookDelivery } from "@workspace/shared";
 
 import { TelescopeMemoryStore } from "./telescope.store.js";
 
@@ -250,6 +250,184 @@ describe("TelescopeMemoryStore", () => {
 		expect(store.getRequest("old")).toBeUndefined();
 		expect(store.getRequest("fresh")).toBeDefined();
 		expect(store.listQueries({ page: 1, pageSize: 10, sort: "newest" }).total).toBe(0);
+	});
+
+	// ── Feature batch (20 new features) regressions ──────────────────────────
+
+	describe("feature batch: search, users, starred, deliveries", () => {
+		it("searches across requests, SQL, exceptions and logs (feature 1)", () => {
+			const store = new TelescopeMemoryStore(100);
+			store.pushRequest(makeRequest({ id: "r1", path: "/api/orders", requestBody: { email: "a@b.co" } }));
+			store.pushQuery(makeQuery({ id: "q1", query: "SELECT * FROM orders" }));
+			store.pushException(makeException({ id: "e1", errorGroup: "g1", message: "orders boom" }));
+
+			const found = store.search({ q: "orders", limit: 10 });
+			expect(found.requests.map((entry) => entry.id)).toContain("r1");
+			expect(found.sql.map((entry) => entry.id)).toContain("q1");
+			expect(found.exceptions.map((entry) => entry.id)).toContain("e1");
+
+			const bodyHit = store.search({ q: "a@b.co", limit: 10 });
+			expect(bodyHit.requests.map((entry) => entry.id)).toContain("r1");
+
+			const miss = store.search({ q: "zzz-nope", limit: 10 });
+			expect(miss.requests).toHaveLength(0);
+		});
+
+		it("returns an empty result set for blank queries (no 500)", () => {
+			const store = new TelescopeMemoryStore(100);
+			store.pushRequest(makeRequest({ id: "r1", path: "/api/orders" }));
+
+			const blank = store.search({ q: "", limit: 10 });
+			expect(blank.requests).toHaveLength(0);
+			expect(blank.sql).toHaveLength(0);
+
+			const whitespace = store.search({ q: "   ", limit: 10 });
+			expect(whitespace.requests).toHaveLength(0);
+		});
+
+		it("filters requests by free-text q over path/query/body (feature 2)", () => {
+			const store = new TelescopeMemoryStore(100);
+			store.pushRequest(makeRequest({ id: "r1", path: "/api/orders", queryString: "status=open" }));
+			store.pushRequest(makeRequest({ id: "r2", path: "/api/users" }));
+
+			const hit = store.listRequests({ page: 1, pageSize: 10, q: "orders" });
+			expect(hit.items.map((entry) => entry.id)).toEqual(["r1"]);
+
+			const queryHit = store.listRequests({ page: 1, pageSize: 10, q: "status=open" });
+			expect(queryHit.items.map((entry) => entry.id)).toEqual(["r1"]);
+		});
+
+		it("q filter matches the user id so pasting a UUID finds that user's traffic (feature 3)", () => {
+			const store = new TelescopeMemoryStore(100);
+			store.pushRequest(makeRequest({ id: "r1", path: "/api/orders", userId: "uuid-1234" }));
+			store.pushRequest(makeRequest({ id: "r2", path: "/api/users", userId: "uuid-9999" }));
+
+			const userHit = store.listRequests({ page: 1, pageSize: 10, q: "uuid-9999" });
+			expect(userHit.items.map((entry) => entry.id)).toEqual(["r2"]);
+
+			const miss = store.listRequests({ page: 1, pageSize: 10, q: "uuid-0000" });
+			expect(miss.items).toHaveLength(0);
+		});
+
+		it("global search matches the user id (feature 1)", () => {
+			const store = new TelescopeMemoryStore(100);
+			store.pushRequest(makeRequest({ id: "r1", path: "/api/orders", userId: "uuid-1234" }));
+			store.pushRequest(makeRequest({ id: "r2", path: "/api/users", userId: "uuid-9999" }));
+
+			const hit = store.search({ q: "uuid-1234", limit: 10 });
+			expect(hit.requests.map((entry) => entry.id)).toEqual(["r1"]);
+
+			const miss = store.search({ q: "uuid-0000", limit: 10 });
+			expect(miss.requests).toHaveLength(0);
+		});
+
+		it("global search ORs in requests whose resolved email matches (feature 1)", () => {
+			const store = new TelescopeMemoryStore(100);
+			store.pushRequest(makeRequest({ id: "r1", path: "/api/orders", userId: "uuid-1234" }));
+			store.pushRequest(makeRequest({ id: "r2", path: "/api/users", userId: null }));
+
+			// `emailUserIds` is the set the service resolves from the users table;
+			// the needle itself does not match r1's path/body/userId text.
+			const hit = store.search({ q: "alice@example.com", limit: 10 }, new Set(["uuid-1234"]));
+			expect(hit.requests.map((entry) => entry.id)).toEqual(["r1"]);
+
+			// A user id that resolves to nothing is not matched by the email pass.
+			const miss = store.search({ q: "bob@example.com", limit: 10 }, new Set(["uuid-9999"]));
+			expect(miss.requests).toHaveLength(0);
+		});
+
+		it("aggregates per-user activity (feature 3)", () => {
+			const store = new TelescopeMemoryStore(100);
+			store.pushRequest(makeRequest({ id: "r1", userId: "u1", durationMs: 100, statusCode: 500, createdAt: "2026-08-13T10:00:00.000Z" }));
+			store.pushRequest(makeRequest({ id: "r2", userId: "u1", durationMs: 300, statusCode: 200, createdAt: "2026-08-13T10:01:00.000Z" }));
+			store.pushRequest(makeRequest({ id: "r3", userId: "u2", durationMs: 50, statusCode: 200, createdAt: "2026-08-13T10:02:00.000Z" }));
+			store.pushRequest(makeRequest({ id: "r4", userId: null, durationMs: 10, createdAt: "2026-08-13T10:03:00.000Z" }));
+
+			const result = store.listUsers({ page: 1, pageSize: 10, range: "24h", sort: "count" });
+			const u1 = result.items.find((entry) => entry.userId === "u1");
+			expect(u1?.count).toBe(2);
+			expect(u1?.errorCount).toBe(1);
+			expect(u1?.errorRatePct).toBe(50);
+			expect(result.items.find((entry) => entry.userId === "u2")?.count).toBe(1);
+			// Anonymous requests are skipped.
+			expect(result.items.some((entry) => entry.userId === null)).toBe(false);
+			// Email starts null (the service resolves it via the users table).
+			expect(u1?.email).toBeNull();
+		});
+
+		it("filters starred requests only (feature 4)", () => {
+			const store = new TelescopeMemoryStore(100);
+			store.pushRequest(makeRequest({ id: "r1" }));
+			store.pushRequest(makeRequest({ id: "r2" }));
+			store.setAnnotation("r1", { starred: true, comment: "", updatedAt: "2026-08-13T10:00:00.000Z" });
+
+			const starred = store.listRequests({ page: 1, pageSize: 10, starred: "true" });
+			expect(starred.items.map((entry) => entry.id)).toEqual(["r1"]);
+
+			const unstarred = store.listRequests({ page: 1, pageSize: 10, starred: "false" });
+			expect(unstarred.items.map((entry) => entry.id)).toEqual(["r2"]);
+
+			const all = store.listRequests({ page: 1, pageSize: 10 });
+			expect(all.total).toBe(2);
+		});
+
+		it("records and lists webhook deliveries (feature 13)", () => {
+			const store = new TelescopeMemoryStore(100);
+			const delivery: TelescopeWebhookDelivery = {
+				id: "d1",
+				alertId: "a1",
+				status: "success",
+				statusCode: 200,
+				durationMs: 42,
+				attempt: 0,
+				error: null,
+				createdAt: "2026-08-13T10:00:00.000Z",
+			};
+			store.pushWebhookDelivery(delivery);
+			expect(store.listWebhookDeliveries(10).map((entry) => entry.id)).toEqual(["d1"]);
+		});
+
+		it("includes errorRatePct in the leaderboard (feature 15)", () => {
+			const store = new TelescopeMemoryStore(100);
+			const now: string = new Date().toISOString();
+			store.pushRequest(makeRequest({ id: "r1", method: "GET", path: "/api/x", durationMs: 100, statusCode: 500, createdAt: now }));
+			store.pushRequest(makeRequest({ id: "r2", method: "GET", path: "/api/x", durationMs: 100, statusCode: 200, createdAt: now }));
+
+			const fromIso: string = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+			const entries = store.leaderboard(fromIso, 10);
+			expect(entries[0]?.errorRatePct).toBe(50);
+		});
+
+		it("filters jobs by name substring (feature 11)", () => {
+			const store = new TelescopeMemoryStore(100);
+			store.pushJob({
+				id: "j1",
+				jobName: "send-email:verification",
+				status: "succeeded",
+				durationMs: 12,
+				payloadSize: 0,
+				error: null,
+				correlationId: null,
+				enqueuedAt: "2026-08-13T10:00:00.000Z",
+				startedAt: null,
+				finishedAt: null,
+			});
+			store.pushJob({
+				id: "j2",
+				jobName: "demo-job",
+				status: "succeeded",
+				durationMs: 12,
+				payloadSize: 0,
+				error: null,
+				correlationId: null,
+				enqueuedAt: "2026-08-13T10:01:00.000Z",
+				startedAt: null,
+				finishedAt: null,
+			});
+
+			const hit = store.listJobs({ page: 1, pageSize: 10, jobName: "send-email" });
+			expect(hit.items.map((entry) => entry.id)).toEqual(["j1"]);
+		});
 	});
 });
 

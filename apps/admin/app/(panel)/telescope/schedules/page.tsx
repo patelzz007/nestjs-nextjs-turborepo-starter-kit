@@ -9,9 +9,11 @@
 
 import { useAuth } from "@workspace/client/lib/auth";
 import { telescopeEndpoints } from "@workspace/client/lib/api/endpoints";
-import { CalendarClock, Loader2 } from "lucide-react";
+import { Button } from "@workspace/ui/components/form/button";
+import { CalendarClock, Loader2, Play } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useMemo } from "react";
+import { toast } from "sonner";
 
 import type { TelescopeScheduleLog, TelescopeSchedulesResponse, TelescopeStreamEvent } from "@workspace/shared";
 
@@ -90,11 +92,14 @@ export default function TelescopeSchedulesPage(): React.JSX.Element {
 									<h2 className="truncate text-sm font-semibold">{schedule.name}</h2>
 									<code className="mt-1 inline-block rounded bg-muted px-1.5 py-0.5 font-mono text-xs text-muted-foreground">{schedule.cron}</code>
 								</div>
-								<span
-									className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs font-medium capitalize ${scheduleStatusTone(schedule.status)}`}>
-									<span className="size-1.5 rounded-full bg-current" />
-									{schedule.status}
-								</span>
+								<div className="flex shrink-0 items-center gap-1.5">
+									<span className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs font-medium capitalize ${scheduleStatusTone(schedule.status)}`}>
+										<span className="size-1.5 rounded-full bg-current" />
+										{schedule.status}
+									</span>
+									{/* Feature 12 — run this schedule on demand. */}
+									<RunNowButton name={schedule.name} onRan={(): void => void schedulesQuery.refetch()} />
+								</div>
 							</div>
 							<div className="mt-3 grid grid-cols-2 gap-3 text-xs">
 								<div>
@@ -138,5 +143,41 @@ export default function TelescopeSchedulesPage(): React.JSX.Element {
 			)}{" "}
 			<LiveFeedCard events={live.events} onNavigate={handleFeedNavigate} paused={live.paused} />
 		</div>
+	);
+}
+
+/**
+ * Feature 12 — "Run now": fires a registered schedule on demand via
+ * `POST /telescope/schedules/:name/run`. The mutation id is part of the URL,
+ * so this per-row component owns its mutation (rule: no hooks in a map).
+ */
+function RunNowButton({ name, onRan }: { readonly name: string; readonly onRan: () => void }): React.JSX.Element {
+	const { api } = useAuth();
+	const runMutation = api.procedure(telescopeEndpoints.runSchedule(name)).useMutation();
+
+	const handleClick = useCallback(
+		(event: React.MouseEvent): void => {
+			event.stopPropagation();
+			runMutation.mutate(
+				{},
+				{
+					onSuccess: (): void => {
+						onRan();
+						toast.success(`"${name}" ran — check the history dots.`);
+					},
+					onError: (): void => {
+						toast.error("Run failed — the task threw (see the card's last-error).");
+					},
+				},
+			);
+		},
+		[runMutation, name, onRan],
+	);
+
+	return (
+		<Button variant="outline" size="sm" className="h-6 gap-1 px-2 text-xs" onClick={handleClick} disabled={runMutation.isPending} title={`Run "${name}" now`}>
+			{runMutation.isPending ? <Loader2 className="size-3 animate-spin" /> : <Play className="size-3" />}
+			Run now
+		</Button>
 	);
 }

@@ -12,6 +12,7 @@ import { TriangleAlert } from "lucide-react";
 
 import type { ExceptionLogEntry } from "@workspace/shared";
 
+import { CodeBlock } from "@/components/docs/code-block";
 import { formatTime, statusTone } from "@/lib/telescope";
 
 export interface ExceptionCardProps {
@@ -60,7 +61,9 @@ export function ExceptionCard({ exception, href }: ExceptionCardProps): React.JS
 		return (
 			<details className="group rounded-lg border bg-card text-card-foreground shadow-xs">
 				<summary className="cursor-pointer list-none p-3 transition-colors hover:bg-accent/40 [&::-webkit-details-marker]:hidden">{header}</summary>
-				<pre className="overflow-x-auto border-t bg-muted/50 p-3 font-mono text-[11px] leading-relaxed whitespace-pre-wrap text-muted-foreground">{exception.stack}</pre>
+				<div className="border-t">
+					<CodeBlock code={exception.stack} language="plaintext" fileName="stack-trace.txt" />
+				</div>
 			</details>
 		);
 	}

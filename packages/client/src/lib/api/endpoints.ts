@@ -39,9 +39,14 @@ import {
 	TelescopeRequestDetailResponseSchema,
 	TelescopeRequestListResponseSchema,
 	TelescopeRequestSqlResponseSchema,
+	TelescopeScheduleLogSchema,
 	TelescopeSchedulesResponseSchema,
+	TelescopeSearchResponseSchema,
+	TelescopeStatusSchema,
 	TelescopeSqlListResponseSchema,
 	TelescopeTrendsResponseSchema,
+	TelescopeUsersResponseSchema,
+	TelescopeWebhookDeliveriesResponseSchema,
 	UserResponseSchema,
 	type ApiResponseMeta,
 	type EmailLogListResponse,
@@ -83,10 +88,17 @@ import {
 	type TelescopeRequestListQuery,
 	type TelescopeRequestListResponse,
 	type TelescopeRequestSqlResponse,
+	type TelescopeScheduleLog,
 	type TelescopeSchedulesResponse,
+	type TelescopeSearchQuery,
+	type TelescopeSearchResponse,
+	type TelescopeStatus,
 	type TelescopeSqlListQuery,
 	type TelescopeSqlListResponse,
 	type TelescopeTrendsQuery,
+	type TelescopeUsersQuery,
+	type TelescopeUsersResponse,
+	type TelescopeWebhookDeliveriesResponse,
 	type TelescopeTrendsResponse,
 	type UserResponse,
 } from "@workspace/shared";
@@ -291,8 +303,23 @@ export const telescopeEndpoints: {
 	readonly alerts: () => GetProcedure<Envelope<TelescopeAlertsResponse>>;
 	// Feature 14 — star/comment a request.
 	readonly setAnnotation: (id: string) => PutProcedure<TelescopeAnnotationInput, Envelope<TelescopeAnnotation>>;
+
 	// Feature 7 — replay a captured request.
 	readonly replay: (id: string) => PostProcedure<TelescopeReplayInput, Envelope<TelescopeReplayResponse>>;
+	// Feature 1 — global free-text search across every captured surface.
+	readonly search: (query: TelescopeSearchQuery) => GetProcedure<Envelope<TelescopeSearchResponse>>;
+	// Feature 3 — per-user request aggregation.
+	readonly users: (query: TelescopeUsersQuery) => GetProcedure<Envelope<{ readonly list: TelescopeUsersResponse }>>;
+	// Feature 12 — run a registered schedule on demand ("Run now" button).
+	readonly runSchedule: (name: string) => PostProcedure<Record<string, never>, Envelope<TelescopeScheduleLog>>;
+	// Feature 13 — webhook delivery records for the alerts panel.
+	readonly webhookDeliveries: () => GetProcedure<Envelope<TelescopeWebhookDeliveriesResponse>>;
+	// Feature 8 — manual retention pruning (`force=true` clears everything old).
+	readonly prune: (force: boolean) => PostProcedure<Record<string, never>, Envelope<{ readonly removed: number }>>;
+	// Feature 8 — empty every buffer (requests, SQL, exceptions, jobs, …).
+	readonly clearAll: () => PostProcedure<Record<string, never>, Envelope<{ readonly cleared: true }>>;
+	// Feature 9 — the fully-resolved capture config + pipeline health snapshot.
+	readonly status: () => GetProcedure<Envelope<TelescopeStatus>>;
 	// Improvement 5 — acknowledge (resolve) an alert.
 	readonly alertAck: (id: string) => PostProcedure<Record<string, never>, Envelope<TelescopeAlertEntry>>;
 	// Improvement 5 — snooze an alert for N minutes.
@@ -446,5 +473,50 @@ export const telescopeEndpoints: {
 		queryKey: ["telescope", "job-retry", id],
 		bodySchema: z.object({}).strict(),
 		responseSchema: envelope(TelescopeJobLogEntrySchema),
+	}),
+	search: (query: TelescopeSearchQuery): GetProcedure<Envelope<TelescopeSearchResponse>> => ({
+		path: "/telescope/search",
+		method: "GET",
+		queryKey: ["telescope", "search", query],
+		responseSchema: envelope(TelescopeSearchResponseSchema),
+	}),
+	users: (query: TelescopeUsersQuery): GetProcedure<Envelope<{ readonly list: TelescopeUsersResponse }>> => ({
+		path: "/telescope/users",
+		method: "GET",
+		queryKey: ["telescope", "users", query],
+		responseSchema: envelope(z.object({ list: TelescopeUsersResponseSchema }).strict()),
+	}),
+	runSchedule: (name: string): PostProcedure<Record<string, never>, Envelope<TelescopeScheduleLog>> => ({
+		path: `/telescope/schedules/${encodeURIComponent(name)}/run`,
+		method: "POST",
+		queryKey: ["telescope", "schedule-run", name],
+		bodySchema: z.object({}).strict(),
+		responseSchema: envelope(TelescopeScheduleLogSchema),
+	}),
+	webhookDeliveries: (): GetProcedure<Envelope<TelescopeWebhookDeliveriesResponse>> => ({
+		path: "/telescope/webhook-deliveries",
+		method: "GET",
+		queryKey: ["telescope", "webhook-deliveries"],
+		responseSchema: envelope(TelescopeWebhookDeliveriesResponseSchema),
+	}),
+	prune: (force: boolean): PostProcedure<Record<string, never>, Envelope<{ readonly removed: number }>> => ({
+		path: force ? "/telescope/admin/prune?force=true" : "/telescope/admin/prune",
+		method: "POST",
+		queryKey: ["telescope", "prune", force],
+		bodySchema: z.object({}).strict(),
+		responseSchema: envelope(z.object({ removed: z.number().int() }).strict()),
+	}),
+	clearAll: (): PostProcedure<Record<string, never>, Envelope<{ readonly cleared: true }>> => ({
+		path: "/telescope/admin/clear",
+		method: "POST",
+		queryKey: ["telescope", "clear-all"],
+		bodySchema: z.object({}).strict(),
+		responseSchema: envelope(z.object({ cleared: z.literal(true) }).strict()),
+	}),
+	status: (): GetProcedure<Envelope<TelescopeStatus>> => ({
+		path: "/telescope/status",
+		method: "GET",
+		queryKey: ["telescope", "status"],
+		responseSchema: envelope(TelescopeStatusSchema),
 	}),
 };

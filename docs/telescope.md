@@ -40,15 +40,13 @@ coverImage: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=form
 >   thin shells over it.
 
 > [!IMPORTANT] **Implementation status — shipped 2026-08-12 (v1) + 20 improvements
-> batch (same day).** Milestones M0–M5 (§11) are implemented, lint/typecheck/test-clean,
-> and verified end-to-end (boot the API, hit an endpoint, open `/telescope` in the admin
-> app). A second batch then shipped **all 20 roadmap improvements** (§15.1): the Postgres
-> store (§6.2), the SSE live stream (§9.4), smarter eviction, retention cron, sampling,
-> request diffing, the N+1 detector, the waterfall timeline, console capture, the
-> `telescope` CLI, an ESLint ban on `any/unknown/never` in the module, and a doc-gen
-> script (§20). Suite is now **117 API + 353 admin tests**, all green. The only remaining
-> ⏳ items are the standalone exception filter (§5.4 — folded into the interceptor on
-> purpose) (the §15.2 new-feature backlog — all 20 — shipped with the §15.4 batch).
+> batch (same day) + §15.4 new-features batch + §15.5 deep-polish + §15.6 features v2.**
+> Milestones M0–M5 (§11) are implemented, lint/typecheck/test-clean, and verified
+> end-to-end (boot the API, hit an endpoint, open `/telescope` in the admin app). All 20
+> §15.1 roadmap improvements, all 20 §15.2 new features (via §15.4), the §15.3 SSE live
+> polish, the §15.5 deep-polish batch and the §15.6 features-v2 batch are shipped.
+> Suite is now **132 API + 353 admin tests**, all green. The only remaining ⏳ item is
+> the standalone exception filter (§5.4 — folded into the interceptor on purpose).
 
 ---
 
@@ -690,11 +688,11 @@ Telescope is enabled.
 | Endpoint | Purpose | Key query params (Zod) |
 | -------- | ------- | ---------------------- |
 | `GET /telescope/overview` | Stat cards for the landing view | `range` (`15m\|1h\|6h\|24h`), `from`, `to` |
-| `GET /telescope/requests` | Request list (the DataTable feed) | `page`, `pageSize`, `method`, `path`, `status`, `minDurationMs`, `userId`, `correlationId`, `from`, `to`, `sort` |
+| `GET /telescope/requests` | Request list (the DataTable feed) | `page`, `pageSize`, `method`, `path`, `status`, `minDurationMs`, `userId`, `correlationId`, `env`, `q`, `starred`, `from`, `to`, `sort` |
 | `GET /telescope/requests/:id` | Request detail (spans + body + headers) | — |
 | `GET /telescope/requests/:id/sql` | Queries for one request | — |
 | `GET /telescope/sql` | Query list (slow-query view) | `page`, `pageSize`, `model`, `operation`, `minDurationMs`, `from`, `to` |
-| `GET /telescope/exceptions` | Grouped exception inbox | `page`, `pageSize`, `errorGroup`, `statusCode`, `from`, `to`, `grouped=true` |
+| `GET /telescope/exceptions` | Grouped exception inbox | `page`, `pageSize`, `errorGroup`, `statusCode`, `status` (`open\|resolved\|ignored`), `from`, `to` |
 | `GET /telescope/exceptions/:id` | One exception + stack | — |
 | `GET /telescope/mail` | Mail outbox (proxies `EmailLog`) | `page`, `pageSize`, `status`, `templateKey` |
 | `GET /telescope/logs` | Log viewer feed (proxies `Log` — optional) | same as `GET /logs` |
@@ -703,6 +701,13 @@ Telescope is enabled.
 | `POST /telescope/alerts/:id/ack` | Mark an alert acknowledged | — |
 | `POST /telescope/alerts/:id/snooze` | Snooze an alert until a time | body: `{ snoozeUntil }` |
 | `POST /telescope/jobs/:id/retry` | Re-run a failed job through the runner | — |
+| `GET /telescope/search` | Global free-text search across all surfaces | `q`, `limit` |
+| `GET /telescope/users` | Per-user request aggregation | `page`, `pageSize`, `range`, `sort` (`count\|errors\|duration`) |
+| `GET /telescope/status` | Resolved capture config + pipeline health | — |
+| `GET /telescope/webhook-deliveries` | Alert-webhook delivery records | — |
+| `POST /telescope/schedules/:name/run` | Run a registered schedule on demand | — |
+| `POST /telescope/admin/prune` | Prune entries past the retention window | `force=true` drops almost everything |
+| `POST /telescope/admin/clear` | Empty every buffer | — |
 
 > [!NOTE] **Improvement 2 (doc drift) fixed:** `GET /telescope/requests/:id/sql` is now a
 > real route (lazy-load the SQL + dumps for one request instead of bundling them into the
@@ -1826,4 +1831,86 @@ back to the owning request.
 
 ---
 
-_Last updated: 2026-08-13 (v1 + 20-improvement batch + §15.3 SSE live polish + §15.4 new-features batch + §15.5 deep-polish batch). **Shipped** — M0–M5, Postgres persistence (§6.2), SSE live stream (§9.4), all 20 §15.1 improvements, §15.3 SSE live UI polish, all 20 §15.2 new features, and all 20 §15.5 deep-polish improvements. Remaining ⏳: standalone exception filter (§5.4 — intentionally folded into the interceptor)._
+### 15.6 New features v2 — the 20-feature batch (shipped 2026-08-13) ✅
+
+> The "20 new features" follow-up list, implemented in one pass. Backend first
+> (shared → store → scheduler → alert → service → controller → client), then
+> the admin pages. Each entry is annotated with where it landed.
+
+1. ✅ **Global search** — `GET /telescope/search?q=&limit=` scans requests
+   (method/path/query-string/body), SQL (model/operation/query), exceptions
+   (name/message/path) and console logs (message) in one pass; a new
+   `/telescope/search` page groups the results per surface, each linking into
+   its owning detail view. Search state lives in `?q=` (shareable, refresh-safe).
+2. ✅ **Request text search** — `TelescopeRequestListQuery` gained `q`
+   (matches method/path/query-string/sanitized-body text); the requests page
+   has a live search box wired to `?q=`.
+3. ✅ **User activity view** — `GET /telescope/users` aggregates in-range
+   requests per `userId` (count / error count+rate / avg / p95 / last seen),
+   sortable by `count|errors|duration` over a `range`; a new `/telescope/users`
+   page renders a DataTable and row-click deep-links into the requests table
+   (`?userId=<id>`, which the requests page now accepts).
+4. ✅ **Starred filter + starred panel** — `TelescopeRequestListQuery.starred`
+   (`true|false`) filters by the annotation star; the requests page has a
+   "Starred only" toggle (URL-synced) and the overview gained a **Starred
+   requests** quick-access panel linking to `/telescope/requests?starred=true`.
+5. ✅ **Bulk export selected rows (JSON)** — the requests table gained an
+   **Export JSON** bulk action that downloads exactly the selected rows as a
+   timestamped `.json` file (client-side; no API round-trip).
+6. ✅ **CSV export** — the DataTable's existing `exportable` facility now backs
+   every telescope table (`telescope-requests`, `telescope-sql`, …); CSV
+   injection-safe escaping was already in the shared component.
+7. ✅ **Environment filter chips** — the requests page gained an
+   **Environment** select (`All | Dev | Prod`) wired to the existing `env`
+   query param (matches `environment.nodeEnv`); saved in the URL.
+8. ✅ **Manual prune + clear-all** — `POST /telescope/admin/prune`
+   (`?force=true` drops everything past a minute) and
+   `POST /telescope/admin/clear` (empties every buffer) live behind the
+   **Capture status** page's confirm-first buttons; the health card on the
+   overview links there.
+9. ✅ **Capture status page** — `GET /telescope/status` returns the
+   fully-resolved options (mode, caps, PII mode, path rules, sample rates,
+   alert config, env tag) merged from env + defaults; `/telescope/status`
+   renders four config cards + the two maintenance actions.
+10. ✅ **Exception stack viewer** — the exception disclosure now renders the
+    stack through the shared shiki `CodeBlock` (syntax highlighting, copy,
+    collapse for long stacks) instead of a raw `<pre>`.
+11. ✅ **Job name filter + detail drawer** — `TelescopeJobsListQuery.jobName`
+    (substring) filters the jobs page; clicking a job row opens a detail
+    drawer (full timestamps, queue latency, payload size, error, correlation
+    link, retry for failed jobs) instead of a hard redirect.
+12. ✅ **Manual schedule trigger** — `POST /telescope/schedules/:name/run`
+    runs a registered schedule through `TelescopeSchedulerService.runNow()`
+    (same code path as a cron tick — history + SSE frame behave identically);
+    each schedule card has a **Run now** button.
+13. ✅ **Webhook delivery log** — `TelescopeAlertService` records every
+    outbound alert-webhook POST as a `TelescopeWebhookDelivery`
+    (status/statusCode/latency/attempt/error); `GET /telescope/webhook-deliveries`
+    + the overview's **Webhook deliveries** strip shows whether alerts
+    actually reached the endpoint.
+14. ✅ **Timeline compare** — the compare page stacks both requests' span
+    waterfalls (and query overlays) side by side under the scalar diff table,
+    so structural differences are visible at a glance.
+15. ✅ **Leaderboard error-rate column** — `TelescopeLeaderboardEntry` gained
+    `errorRatePct`; the leaderboard panel shows "N% errors" (amber ≥ 0, red
+    ≥ 25) per route.
+16. ✅ **SQL detail drawer** — clicking a SQL row opens a right-hand drawer
+    with the full query text, bind params, duration and one-click copy — the
+    "view request" link still routes to the originating correlation.
+17. ✅ **Mail page filters** — the mail tab gained a **Status** select and a
+    **Template** search input (client-side over the bounded 100-row payload)
+    on top of the existing full-text search.
+18. ✅ **SQL page live pill** — the SQL page subscribes to the SSE stream and
+    shows "N new requests arrived" with a Refresh button (the stream reports
+    request frames; queries ride inside them), mirroring the requests page.
+19. ✅ **Overview → starred/exceptions depth** — the overview's exceptions
+    preview keeps its "View all →" link (feature 19) and the new starred
+    panel (feature 4) links to the filtered list.
+20. ✅ **Docs + regressions** — this §15.6 section; the endpoint table (§7)
+    gained all 7 new routes + the `q`/`starred`/`env` filters; 7 new store
+    specs cover search, `q`, user aggregation, starred, deliveries,
+    leaderboard error-rate and job-name filtering (suite now 132 API tests).
+
+---
+
+_Last updated: 2026-08-13 (v1 + §15.1 improvements + §15.3 SSE polish + §15.4 features + §15.5 deep-polish + §15.6 features v2). **Shipped** — M0–M5, Postgres persistence (§6.2), SSE live stream (§9.4), all 20 §15.1 improvements, all 20 §15.2 new features, §15.3 SSE live UI polish, all 20 §15.5 deep-polish improvements, and all 20 §15.6 features v2. Remaining ⏳: standalone exception filter (§5.4 — intentionally folded into the interceptor)._

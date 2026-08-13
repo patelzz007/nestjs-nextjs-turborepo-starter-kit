@@ -16,7 +16,7 @@ import { useAuth } from "@workspace/client/lib/auth";
 import { telescopeEndpoints } from "@workspace/client/lib/api/endpoints";
 import { Button } from "@workspace/ui/components/form/button";
 import { Skeleton } from "@workspace/ui/components/feedback/skeleton";
-import { Activity, Clock, Database, Fingerprint, Mail, Pause, Play, Radio, ShieldAlert, TriangleAlert } from "lucide-react";
+import { Activity, Clock, Database, Fingerprint, Mail, Pause, Play, Radio, ShieldAlert, Star, TriangleAlert } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, Suspense } from "react";
@@ -32,7 +32,8 @@ import { LiveFeedCard } from "@/components/telescope/live-feed-card";
 import { RangePicker } from "@/components/telescope/range-picker";
 import { StatCard } from "@/components/telescope/stat-card";
 import { TrafficSparkline } from "@/components/telescope/traffic-sparkline";
-import { durationLabel, rangeLabel, streamEventTarget, timeAgo } from "@/lib/telescope";
+import { WebhookDeliveries } from "@/components/telescope/webhook-deliveries";
+import { durationLabel, durationTone, rangeLabel, statusTone, streamEventTarget, timeAgo } from "@/lib/telescope";
 import { useTelescopeLive } from "@/lib/use-telescope-live";
 
 /** Skeleton block shown while the first overview payload loads. */
@@ -94,6 +95,14 @@ function OverviewContent(): React.JSX.Element {
 	// Feature 18 — recently fired threshold alerts.
 	const alertsQuery = api.procedure(telescopeEndpoints.alerts()).useQuery(undefined, { placeholderData: (previous) => previous });
 
+	// Feature 4 — the starred requests quick-access panel.
+	const starredQuery = api
+		.procedure(telescopeEndpoints.requests({ page: 1, pageSize: 5, sort: "newest", starred: "true" }))
+		.useQuery({ query: { page: 1, pageSize: 5, sort: "newest", starred: "true" } }, { placeholderData: (previous) => previous });
+
+	// Feature 13 — recent alert-webhook deliveries.
+	const deliveriesQuery = api.procedure(telescopeEndpoints.webhookDeliveries()).useQuery(undefined, { placeholderData: (previous) => previous });
+
 	// Improvement 5 — after an ack/snooze (handled inside AlertsPanel's per-row
 	// actions, which own their mutations), refetch to reflect the new status.
 	const handleAlertsChanged = useCallback((): void => {
@@ -153,6 +162,8 @@ function OverviewContent(): React.JSX.Element {
 	const trendPoints = useMemo(() => trendsQuery.data?.data.points ?? [], [trendsQuery.data]);
 	const leaderboardEntries = useMemo(() => leaderboardQuery.data?.data.entries ?? [], [leaderboardQuery.data]);
 	const alertEntries = useMemo(() => alertsQuery.data?.data.items ?? [], [alertsQuery.data]);
+	const starredEntries = useMemo(() => starredQuery.data?.data.list.items ?? [], [starredQuery.data]);
+	const deliveryEntries = useMemo(() => deliveriesQuery.data?.data.items ?? [], [deliveriesQuery.data]);
 
 	// A ticking "Xs ago" for the last SSE event — re-renders every 5s. The
 	// interval effect sets the initial tick immediately (no impure Date.now()
@@ -399,6 +410,36 @@ function OverviewContent(): React.JSX.Element {
 						</div>
 					</div>
 
+					{/* ── Starred requests (feature 4) ──────────────────── */}
+					{starredEntries.length > 0 ? (
+						<section className="space-y-2">
+							<div className="flex items-center justify-between">
+								<h2 className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+									<Star className="size-3.5 text-amber-500" />
+									Starred requests
+								</h2>
+								<Link href="/telescope/requests?starred=true" className="text-xs font-medium text-primary hover:underline">
+									All starred →
+								</Link>
+							</div>
+							<div className="overflow-hidden rounded-lg border bg-card text-card-foreground shadow-xs">
+								{starredEntries.map((entry) => {
+									const tone = statusTone(entry.statusCode);
+									return (
+										<Link
+											key={entry.id}
+											href={`/telescope/requests/${entry.id}`}
+											className="flex items-center gap-3 border-b px-4 py-2.5 text-sm transition-colors last:border-b-0 hover:bg-accent">
+											<span className={`inline-flex items-center rounded-full border px-2 py-0.5 font-mono text-xs ${tone.pillClass}`}>{entry.method}</span>
+											<span className="min-w-0 flex-1 truncate font-mono text-xs">{entry.path}</span>
+											<span className={`shrink-0 font-mono text-xs tabular-nums ${durationTone(entry.durationMs).textClass}`}>{durationLabel(entry.durationMs)}</span>
+										</Link>
+									);
+								})}
+							</div>
+						</section>
+					) : null}
+
 					{/* ── Slowest request drill-down ───────────────────── */}
 					{overview.slowest !== null ? (
 						<StatCard
@@ -458,8 +499,15 @@ function OverviewContent(): React.JSX.Element {
 									Requests →
 								</Link>
 							</div>
-							<div className="rounded-lg border bg-card p-2 text-card-foreground shadow-xs">
-								<AlertsPanel alerts={alertEntries} onChanged={handleAlertsChanged} />
+							<div className="space-y-2">
+								<div className="rounded-lg border bg-card p-2 text-card-foreground shadow-xs">
+									<AlertsPanel alerts={alertEntries} onChanged={handleAlertsChanged} />
+								</div>
+								{/* Feature 13 — webhook delivery log. */}
+								<div className="rounded-lg border bg-card p-2 text-card-foreground shadow-xs">
+									<h3 className="px-2 pt-1 pb-1 text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">Webhook deliveries</h3>
+									<WebhookDeliveries deliveries={deliveryEntries} isLoading={deliveriesQuery.isLoading} />
+								</div>
 							</div>
 						</section>
 					</div>

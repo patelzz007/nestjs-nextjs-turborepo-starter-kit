@@ -101,6 +101,8 @@ export const RequestLogSummarySchema = z
 		path: z.string(),
 		statusCode: z.number().int().nullable(),
 		userId: z.string().nullable(),
+		/** Resolved from the `users` table by the service (null when unknown/anonymous). */
+		userEmail: z.string().nullable().default(null),
 		durationMs: z.number().int().nonnegative(),
 		createdAt: z.string(),
 		/** Environment tag (feature 8) — null for pre-upgrade/persisted rows. */
@@ -278,6 +280,10 @@ export const TelescopeRequestListQuerySchema = TelescopePaginationSchema.extend(
 	correlationId: z.string().optional(),
 	/** Environment-tag filter (feature 8) — matches `environment.nodeEnv`. */
 	env: z.string().optional(),
+	/** Free-text search (feature 2) — matches path, query-string and sanitized body text. */
+	q: z.string().optional(),
+	/** Starred-only filter (feature 4) — `true` returns only starred requests. */
+	starred: z.enum(["true", "false"]).optional(),
 	sort: z.enum(["newest", "duration"]).default("newest"),
 	from: z.string().optional(),
 	to: z.string().optional(),
@@ -347,6 +353,38 @@ export type TelescopeTrafficPoint = z.output<typeof TelescopeTrafficPointSchema>
 	})
 	.strict();
 export type TelescopeStatusCounts = z.output<typeof TelescopeStatusCountsSchema>;
+
+/**
+ * Feature 9 — the fully-resolved capture config + pipeline health, exposed by
+ * `GET /telescope/status` for the admin status page. Everything here is what
+ * the process actually runs with (env + defaults merged), not the raw env.
+ */
+export const TelescopeStatusSchema = z
+	.object({
+		enabled: z.boolean(),
+		storage: TelescopeStorageSchema,
+		bufferRequests: z.number().int().nonnegative(),
+		bufferCap: z.number().int().nonnegative(),
+		retentionMinutes: z.number().int().positive(),
+		maxRequests: z.number().int().positive(),
+		maxBodyChars: z.number().int().positive(),
+		maxSpansPerRequest: z.number().int().positive(),
+		maxConsoleEntriesPerRequest: z.number().int().positive(),
+		piiMode: TelescopePiiModeSchema,
+		captureBody: TelescopeBodyCaptureSchema,
+		captureHeaders: z.array(z.string()).readonly(),
+		ignorePaths: z.array(z.string()).readonly(),
+		redactPaths: z.array(z.string()).readonly(),
+		capturePaths: z.array(z.string()).readonly(),
+		sampleRateDev: z.number().min(0).max(1),
+		sampleRateProd: z.number().min(0).max(1),
+		alertWebhookUrl: z.string().nullable(),
+		alertDurationMs: z.number().int().positive(),
+		alertWindowMinutes: z.number().int().positive(),
+		environment: TelescopeEnvironmentSchema,
+	})
+	.strict();
+export type TelescopeStatus = z.output<typeof TelescopeStatusSchema>;
 
 /** Capture-pipeline health snapshot (improvement 19 — overview health card). */
 export const TelescopeHealthSchema = z
@@ -631,6 +669,8 @@ export type TelescopeJobLogEntry = z.output<typeof TelescopeJobLogEntrySchema>;
 
 export const TelescopeJobsListQuerySchema = TelescopePaginationSchema.extend({
 	status: TelescopeJobStatusSchema.optional(),
+	/** Feature 11 — filter by job name (substring match). */
+	jobName: z.string().optional(),
 }).strict();
 export type TelescopeJobsListQuery = z.output<typeof TelescopeJobsListQuerySchema>;
 
@@ -680,7 +720,17 @@ export const TelescopeSchedulesResponseSchema = z
 	.strict();
 export type TelescopeSchedulesResponse = z.output<typeof TelescopeSchedulesResponseSchema>;
 
+/** Body for `POST /telescope/schedules/:name/run` (feature 12 — manual trigger). */
+export const TelescopeScheduleRunInputSchema = z
+	.object({
+		/** Optional short label recorded on the run (e.g. "manual / run now"). */
+		trigger: z.string().max(100).default("manual"),
+	})
+	.strict();
+export type TelescopeScheduleRunInput = z.output<typeof TelescopeScheduleRunInputSchema>;
+
 // ── Leaderboard (feature 12 — slow-endpoint leaderboard) ───────────────────
+// `errorRatePct` (feature 15) is the % of that route's requests that errored.
 
 export const TelescopeLeaderboardEntrySchema = z
 	.object({
@@ -693,6 +743,8 @@ export const TelescopeLeaderboardEntrySchema = z
 		p95Ms: z.number().nonnegative(),
 		maxMs: z.number().nonnegative(),
 		errorCount: z.number().int().nonnegative(),
+		/** errors/count × 100 (feature 15). */
+		errorRatePct: z.number().min(0).max(100),
 	})
 	.strict();
 export type TelescopeLeaderboardEntry = z.output<typeof TelescopeLeaderboardEntrySchema>;
@@ -804,6 +856,153 @@ export const TelescopeAlertsResponseSchema = z
 	})
 	.strict();
 export type TelescopeAlertsResponse = z.output<typeof TelescopeAlertsResponseSchema>;
+
+// ── Webhook delivery log (feature 13 — alert webhook delivery records) ─────
+// Each outbound POST from `TelescopeAlertService` records a delivery row so
+// the alerts panel can show whether the webhook actually went out.
+
+export const TelescopeWebhookDeliveryStatusSchema = z.enum(["success", "failed"]);
+export type TelescopeWebhookDeliveryStatus = z.output<typeof TelescopeWebhookDeliveryStatusSchema>;
+
+export const TelescopeWebhookDeliverySchema = z
+	.object({
+		id: z.string(),
+		/** The alert id this delivery was for. */
+		alertId: z.string(),
+		status: TelescopeWebhookDeliveryStatusSchema,
+		/** HTTP status from the receiving endpoint (null when the request never completed). */
+		statusCode: z.number().int().nullable(),
+		durationMs: z.number().int().nonnegative(),
+		/** Retry attempt index (0 = first attempt, 1 = first retry, …). */
+		attempt: z.number().int().nonnegative(),
+		error: z.string().nullable(),
+		createdAt: z.string(),
+	})
+	.strict();
+export type TelescopeWebhookDelivery = z.output<typeof TelescopeWebhookDeliverySchema>;
+
+export const TelescopeWebhookDeliveriesResponseSchema = z
+	.object({
+		items: z.array(TelescopeWebhookDeliverySchema).readonly(),
+	})
+	.strict();
+export type TelescopeWebhookDeliveriesResponse = z.output<typeof TelescopeWebhookDeliveriesResponseSchema>;
+
+// ── User activity (feature 3 — per-user request aggregation) ───────────────
+
+export const TelescopeUserSummarySchema = z
+	.object({
+		userId: z.string(),
+		/** Resolved from the `users` table when the service can look it up (null for deleted/unknown ids). */
+		email: z.string().nullable().default(null),
+		count: z.number().int().positive(),
+		errorCount: z.number().int().nonnegative(),
+		errorRatePct: z.number().min(0).max(100),
+		avgDurationMs: z.number().nonnegative(),
+		p95DurationMs: z.number().nonnegative(),
+		lastSeenAt: z.string(),
+	})
+	.strict();
+export type TelescopeUserSummary = z.output<typeof TelescopeUserSummarySchema>;
+
+export const TelescopeUsersQuerySchema = TelescopePaginationSchema.extend({
+	/** Aggregate only requests in this range (default 24h). */
+	range: TelescopeRangeSchema.default("24h"),
+	sort: z.enum(["count", "errors", "duration"]).default("count"),
+}).strict();
+export type TelescopeUsersQuery = z.output<typeof TelescopeUsersQuerySchema>;
+
+export const TelescopeUsersResponseSchema = z
+	.object({
+		items: z.array(TelescopeUserSummarySchema).readonly(),
+		total: z.number().int(),
+		page: z.number().int(),
+		pageSize: z.number().int(),
+	})
+	.strict();
+export type TelescopeUsersResponse = z.output<typeof TelescopeUsersResponseSchema>;
+
+// ── Global search (feature 1 — one query across every surface) ─────────────
+// The response is a discriminated set of scopes; each scope carries its own
+// match shape so the admin search page can render per-surface results.
+
+export const TelescopeSearchScopeSchema = z.enum(["requests", "sql", "exceptions", "logs"]);
+export type TelescopeSearchScope = z.output<typeof TelescopeSearchScopeSchema>;
+
+export const TelescopeSearchRequestMatchSchema = z
+	.object({
+		id: z.string(),
+		method: z.string(),
+		path: z.string(),
+		statusCode: z.number().int().nullable(),
+		userId: z.string().nullable(),
+		/** Resolved from the `users` table by the service (null when unknown/anonymous). */
+		userEmail: z.string().nullable().default(null),
+		durationMs: z.number().int().nonnegative(),
+		createdAt: z.string(),
+	})
+	.strict();
+export type TelescopeSearchRequestMatch = z.output<typeof TelescopeSearchRequestMatchSchema>;
+
+export const TelescopeSearchSqlMatchSchema = z
+	.object({
+		id: z.string(),
+		correlationId: z.string(),
+		model: z.string(),
+		operation: z.string(),
+		query: z.string(),
+		durationMs: z.number().int().nonnegative(),
+		createdAt: z.string(),
+	})
+	.strict();
+export type TelescopeSearchSqlMatch = z.output<typeof TelescopeSearchSqlMatchSchema>;
+
+export const TelescopeSearchExceptionMatchSchema = z
+	.object({
+		id: z.string(),
+		errorGroup: z.string(),
+		name: z.string(),
+		message: z.string(),
+		statusCode: z.number().int().nullable(),
+		path: z.string().nullable(),
+		occurrences: z.number().int().positive(),
+		lastSeenAt: z.string(),
+	})
+	.strict();
+export type TelescopeSearchExceptionMatch = z.output<typeof TelescopeSearchExceptionMatchSchema>;
+
+export const TelescopeSearchLogMatchSchema = z
+	.object({
+		id: z.string(),
+		requestId: z.string(),
+		level: TelescopeLogLevelSchema,
+		message: z.string(),
+		timestamp: z.string(),
+		path: z.string().nullable(),
+	})
+	.strict();
+export type TelescopeSearchLogMatch = z.output<typeof TelescopeSearchLogMatchSchema>;
+
+export const TelescopeSearchResponseSchema = z
+	.object({
+		q: z.string(),
+		requests: z.array(TelescopeSearchRequestMatchSchema).readonly(),
+		sql: z.array(TelescopeSearchSqlMatchSchema).readonly(),
+		exceptions: z.array(TelescopeSearchExceptionMatchSchema).readonly(),
+		logs: z.array(TelescopeSearchLogMatchSchema).readonly(),
+	})
+	.strict();
+export type TelescopeSearchResponse = z.output<typeof TelescopeSearchResponseSchema>;
+
+export const TelescopeSearchQuerySchema = z
+	.object({
+		/** Blank searches return an empty result set (never an error). */
+		q: z.string().max(200).default(""),
+		/** Per-scope match cap (total across scopes is capped server-side). */
+		limit: z.coerce.number().int().positive().max(50).default(10),
+	})
+	.strict();
+export type TelescopeSearchQuery = z.output<typeof TelescopeSearchQuerySchema>;
 
 /** Body for `POST /telescope/alerts/:id/snooze` (improvement 5). */
 export const TelescopeAlertSnoozeInputSchema = z

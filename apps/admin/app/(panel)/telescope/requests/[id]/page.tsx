@@ -338,9 +338,12 @@ export default function TelescopeRequestDetailPage(): React.JSX.Element {
 						<Fingerprint className="size-3.5 shrink-0" />
 						<span className="truncate font-mono">{request.correlationId}</span>
 					</div>
-					<div className="flex items-center gap-2 text-muted-foreground">
-						<UserRound className="size-3.5 shrink-0" />
-						<span className="truncate font-mono">{request.userId ?? "anonymous"}</span>
+					<div className="flex flex-col gap-0.5 text-muted-foreground">
+						<div className="flex items-center gap-2">
+							<UserRound className="size-3.5 shrink-0" />
+							<span className="truncate font-medium text-foreground">{request.userEmail ?? request.userId ?? "anonymous"}</span>
+						</div>
+						{request.userEmail !== null && request.userId !== null ? <span className="truncate font-mono text-[10px]">{request.userId}</span> : null}
 					</div>
 					<div className="flex items-center gap-2 text-muted-foreground">
 						<span className="shrink-0">IP</span>

@@ -42,6 +42,12 @@ export function LeaderboardPanel({ entries }: { readonly entries: readonly Teles
 							</div>
 							<div className="mt-0.5 text-[11px] text-muted-foreground">
 								{String(entry.count)} req · {String(entry.errorCount)} err
+								{entry.errorCount > 0 ? (
+									<span className={entry.errorRatePct >= 25 ? "text-red-600 dark:text-red-400" : "text-amber-600 dark:text-amber-400"}>
+										{" "}
+										· {entry.errorRatePct.toFixed(1)}% errors
+									</span>
+								) : null}
 							</div>
 						</div>
 						<div className="shrink-0 text-right">

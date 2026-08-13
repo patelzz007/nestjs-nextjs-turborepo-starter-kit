@@ -230,6 +230,21 @@
        "title": "Logs",
        "url": "/telescope/logs",
        "icon": "ScrollText"
+      },
+      {
+       "title": "Search",
+       "url": "/telescope/search",
+       "icon": "Search"
+      },
+      {
+       "title": "Users",
+       "url": "/telescope/users",
+       "icon": "Users"
+      },
+      {
+       "title": "Status",
+       "url": "/telescope/status",
+       "icon": "Gauge"
       }
      ]
     }

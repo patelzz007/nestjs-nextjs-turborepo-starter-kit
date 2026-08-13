@@ -1,7 +1,14 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { nanoid } from "nanoid";
 
-import { type RequestLogEntry, type TelescopeAlertEntry, type TelescopeAlertReason, type TelescopeAlertStatus, type TelescopeOptions } from "@workspace/shared";
+import {
+	type RequestLogEntry,
+	type TelescopeAlertEntry,
+	type TelescopeAlertReason,
+	type TelescopeAlertStatus,
+	type TelescopeOptions,
+	type TelescopeWebhookDelivery,
+} from "@workspace/shared";
 
 import { TELESCOPE_OPTIONS, TELESCOPE_STORE } from "./telescope.options.js";
 import type { TelescopeStore } from "./telescope.store.js";
@@ -130,7 +137,12 @@ export class TelescopeAlertService {
 		return null;
 	}
 
-	/** Improvement 16 — webhook POST with 2 backoff retries for transient failures. */
+	/**
+	 * Improvement 16 — webhook POST with 2 backoff retries for transient
+	 * failures. Feature 13 — every attempt is recorded as a webhook delivery
+	 * row (success/failure + status + latency + attempt index), so the alerts
+	 * panel can show whether the webhook actually went out.
+	 */
 	private async fireWebhook(alert: TelescopeAlertEntry): Promise<void> {
 		const url: string | undefined = this.options.alertWebhookUrl;
 		if (url === undefined) {
@@ -149,7 +161,9 @@ export class TelescopeAlertService {
 			if (delayMs > 0) {
 				await sleep(delayMs);
 			}
-			delivered = await this.postWebhook(url, alert);
+			const outcome: TelescopeWebhookDelivery = await this.postWebhook(url, alert, attempt);
+			this.store.pushWebhookDelivery(outcome);
+			delivered = outcome.status === "success";
 			attempt += 1;
 			if (delivered) {
 				break;
@@ -160,8 +174,13 @@ export class TelescopeAlertService {
 		}
 	}
 
-	/** One POST attempt; true = delivered (2xx), false = retryable failure. */
-	private async postWebhook(url: string, alert: TelescopeAlertEntry): Promise<boolean> {
+	/**
+	 * One POST attempt → a delivery record. Success = 2xx; anything else
+	 * (non-2xx or a network/timeout failure) is a retryable failure.
+	 */
+	private async postWebhook(url: string, alert: TelescopeAlertEntry, attempt: number): Promise<TelescopeWebhookDelivery> {
+		const id: string = nanoid();
+		const start: number = performance.now();
 		try {
 			const response: Response = await fetch(url, {
 				method: "POST",
@@ -169,10 +188,41 @@ export class TelescopeAlertService {
 				body: JSON.stringify(alert),
 				signal: AbortSignal.timeout(5000),
 			});
-			return response.ok;
-		} catch {
-			// Network failure / timeout — retryable.
-			return false;
+			const durationMs: number = Math.round(performance.now() - start);
+			if (response.ok) {
+				return {
+					id,
+					alertId: alert.id,
+					status: "success",
+					statusCode: response.status,
+					durationMs,
+					attempt,
+					error: null,
+					createdAt: new Date().toISOString(),
+				};
+			}
+			return {
+				id,
+				alertId: alert.id,
+				status: "failed",
+				statusCode: response.status,
+				durationMs,
+				attempt,
+				error: `HTTP ${String(response.status)}`,
+				createdAt: new Date().toISOString(),
+			};
+		} catch (caught) {
+			const durationMs: number = Math.round(performance.now() - start);
+			return {
+				id,
+				alertId: alert.id,
+				status: "failed",
+				statusCode: null,
+				durationMs,
+				attempt,
+				error: caught instanceof Error ? caught.message : String(caught),
+				createdAt: new Date().toISOString(),
+			};
 		}
 	}
 }

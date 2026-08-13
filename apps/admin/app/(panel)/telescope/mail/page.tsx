@@ -16,6 +16,8 @@ import { DataTable, type DataTableFeatures } from "@workspace/ui/components/disp
 import { Loader2, Mail, CircleCheck, CircleX, TriangleAlert } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useMemo, useState } from "react";
+import { Input } from "@workspace/ui/components/form/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@workspace/ui/components/form/select";
 
 import type { EmailLogEntry, EmailLogStatus } from "@workspace/shared";
 
@@ -46,6 +48,32 @@ export default function TelescopeMailPage(): React.JSX.Element {
 	const [selected, setSelected] = useState<EmailLogEntry | null>(null);
 
 	const rows = useMemo(() => mailQuery.data?.data.logs ?? [], [mailQuery.data]);
+
+	// Feature 17 — status filter + template search (client-side; the payload
+	// is bounded at 100 rows, so filtering in-memory beats another round-trip).
+	const [statusFilter, setStatusFilter] = useState<string>("all");
+	const [templateFilter, setTemplateFilter] = useState<string>("");
+
+	const filteredRows = useMemo((): readonly EmailLogEntry[] => {
+		const needle: string = templateFilter.trim().toLowerCase();
+		return rows.filter((row: EmailLogEntry): boolean => {
+			if (statusFilter !== "all" && row.status !== statusFilter) {
+				return false;
+			}
+			if (needle.length > 0 && !row.templateKey.toLowerCase().includes(needle)) {
+				return false;
+			}
+			return true;
+		});
+	}, [rows, statusFilter, templateFilter]);
+
+	const handleStatusFilterChange = useCallback((value: string | null): void => {
+		if (value !== null) setStatusFilter(value);
+	}, []);
+
+	const handleTemplateFilterChange = useCallback((event: React.ChangeEvent<HTMLInputElement>): void => {
+		setTemplateFilter(event.target.value);
+	}, []);
 
 	// Improvement 17 — clicking a row opens a detail dialog.
 	const handleDialogOpenChange = useCallback((open: boolean): void => {
@@ -119,8 +147,46 @@ export default function TelescopeMailPage(): React.JSX.Element {
 				</p>
 			</header>
 
+			{/* Feature 17 — status + template filters. */}
+			<div className="flex flex-wrap items-end gap-3">
+				<div className="flex flex-col gap-1.5">
+					<label htmlFor="tel-mail-status" className="text-xs font-medium text-muted-foreground">
+						Status
+					</label>
+					<Select
+						value={statusFilter}
+						onValueChange={handleStatusFilterChange}
+						items={[{ value: "all", label: "All statuses" }, ...Object.entries(STATUS_META).map(([value, meta]) => ({ value, label: meta.label }))]}>
+						<SelectTrigger id="tel-mail-status" className="h-9 w-40 text-sm">
+							<SelectValue placeholder="Status" />
+						</SelectTrigger>
+						<SelectContent>
+							<SelectItem value="all">All statuses</SelectItem>
+							{Object.entries(STATUS_META).map(([value, meta]) => (
+								<SelectItem key={value} value={value}>
+									{meta.label}
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
+				</div>
+				<div className="flex flex-col gap-1.5">
+					<label htmlFor="tel-mail-template" className="text-xs font-medium text-muted-foreground">
+						Template
+					</label>
+					<Input
+						id="tel-mail-template"
+						type="search"
+						placeholder="e.g. verification"
+						value={templateFilter}
+						onChange={handleTemplateFilterChange}
+						className="h-9 w-48 text-sm"
+					/>
+				</div>
+			</div>
+
 			<DataTable
-				data={[...rows]}
+				data={[...filteredRows]}
 				columns={columns}
 				searchKeys={["subject", "to", "templateKey"]}
 				pageSize={10}

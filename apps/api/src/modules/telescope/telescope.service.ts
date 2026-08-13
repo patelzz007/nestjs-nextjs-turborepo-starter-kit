@@ -18,8 +18,11 @@ import {
 	TelescopeOverviewQuerySchema,
 	TelescopeRangeSchema,
 	TelescopeRequestListQuerySchema,
+	TelescopeScheduleRunInputSchema,
+	TelescopeSearchQuerySchema,
 	TelescopeSqlListQuerySchema,
 	TelescopeTrendsQuerySchema,
+	TelescopeUsersQuerySchema,
 	type BufferedStreamEvent,
 	type DumpEntry,
 	type EmailLogEntry,
@@ -57,10 +60,18 @@ import {
 	type TelescopeRequestSqlResponse,
 	type TelescopeScheduleLog,
 	type TelescopeSchedulesResponse,
+	type TelescopeSearchQuery,
+	type TelescopeSearchResponse,
 	type TelescopeSqlListQuery,
 	type TelescopeSqlListResponse,
+	type TelescopeStatus,
 	type TelescopeTrendsQuery,
 	type TelescopeTrendsResponse,
+	type TelescopeUserSummary,
+	type TelescopeUsersQuery,
+	type TelescopeUsersResponse,
+	type TelescopeWebhookDeliveriesResponse,
+	type TelescopeWebhookDelivery,
 } from "@workspace/shared";
 import { PrismaService } from "../../prisma/prisma.service.js";
 
@@ -70,7 +81,8 @@ import { TelescopeAlertService } from "./telescope-alert.service.js";
 import { TelescopeEventBus } from "./telescope-event-bus.js";
 import { TelescopeJobRunner } from "./telescope-job-runner.js";
 import { TELESCOPE_OPTIONS, TELESCOPE_STORE } from "./telescope.options.js";
-import type { TelescopeStore } from "./telescope.store.js";
+import { TelescopeSchedulerService } from "./telescope-scheduler.js";
+import type { ListResult, TelescopeStore } from "./telescope.store.js";
 
 const RANGE_MS: Readonly<Record<TelescopeRange, number>> = {
 	"15m": 15 * 60 * 1000,
@@ -114,6 +126,7 @@ export class TelescopeService {
 		private readonly eventBus: TelescopeEventBus,
 		private readonly alertService: TelescopeAlertService,
 		private readonly jobRunner: TelescopeJobRunner,
+		private readonly schedulerService: TelescopeSchedulerService,
 	) {}
 
 	public async overview(rawQuery: RawQuery): Promise<TelescopeOverview> {
@@ -158,12 +171,13 @@ export class TelescopeService {
 		};
 	}
 
-	public listRequests(rawQuery: RawQuery): TelescopeRequestListResponse {
+	public async listRequests(rawQuery: RawQuery): Promise<TelescopeRequestListResponse> {
 		const query: TelescopeRequestListQuery = parseQuery(TelescopeRequestListQuerySchema, rawQuery);
-		return this.store.listRequests(query);
+		const list: TelescopeRequestListResponse = this.store.listRequests(query);
+		return { ...list, items: await this.enrichWithEmails(list.items) };
 	}
 
-	public getRequestDetail(id: string): TelescopeRequestDetailResponse {
+	public async getRequestDetail(id: string): Promise<TelescopeRequestDetailResponse> {
 		const request = this.store.getRequest(id);
 		if (request === undefined) {
 			throw new NotFoundException({ message: `Telescope request ${id} not found.`, error: "TELESCOPE_REQUEST_NOT_FOUND" });
@@ -172,8 +186,9 @@ export class TelescopeService {
 		// Improvement 12 — neighbor ids for prev/next navigation.
 		// Improvement 18 — nearest earlier request with the same route for compare.
 		const previous: RequestLogEntry | undefined = this.store.findPreviousRequest(id);
+		const enriched: RequestLogEntry = await this.enrichRequestWithEmail(request);
 		return {
-			request,
+			request: enriched,
 			// Feature 14 — star/comment annotation (null until first set).
 			annotation: this.store.getAnnotation(id),
 			adjacent: this.store.getAdjacentRequestIds(id),
@@ -398,6 +413,172 @@ export class TelescopeService {
 	public listAlerts(): TelescopeAlertsResponse {
 		const items: readonly TelescopeAlertEntry[] = this.alertService.listAlerts(50);
 		return { items };
+	}
+
+	/** Feature 13 — webhook delivery records for the alerts panel. */
+	public listWebhookDeliveries(): TelescopeWebhookDeliveriesResponse {
+		const items: readonly TelescopeWebhookDelivery[] = this.store.listWebhookDeliveries(50);
+		return { items };
+	}
+
+	/**
+	 * Feature 1 — global free-text search across every captured surface. The
+	 * store matches method/path/body/userId text; this layer additionally
+	 * resolves an email fragment (e.g. "alice@") against the `users` table and
+	 * ORs in those users' requests, so searching by email works too.
+	 */
+	public async search(rawQuery: RawQuery): Promise<TelescopeSearchResponse> {
+		const query: TelescopeSearchQuery = parseQuery(TelescopeSearchQuerySchema, rawQuery);
+		const emailUserIds: ReadonlySet<string> = await this.resolveEmailUserIds(query.q.trim());
+		const result: TelescopeSearchResponse = this.store.search(query, emailUserIds);
+		// Attach emails to the matched request rows (the store scan is DB-free).
+		return { ...result, requests: await this.enrichWithEmails(result.requests) };
+	}
+
+	/** Attach each summary's resolved user email (null for anonymous/unknown ids). */
+	private async enrichWithEmails<T extends { readonly userId: string | null; readonly userEmail: string | null }>(items: readonly T[]): Promise<readonly T[]> {
+		const ids: readonly string[] = items.map((item: T): string => item.userId ?? "").filter((value: string): boolean => value.length > 0);
+		const emailById: ReadonlyMap<string, string> = await this.resolveEmails(ids);
+		return items.map((item: T): T => {
+			if (item.userId === null) {
+				return item;
+			}
+			const email: string | null = emailById.get(item.userId) ?? null;
+			return email === null ? item : { ...item, userEmail: email };
+		});
+	}
+
+	/** Resolve one request's userId → email (spread over the detail payload). */
+	private async enrichRequestWithEmail(request: RequestLogEntry): Promise<RequestLogEntry> {
+		const [enriched]: readonly RequestLogEntry[] = await this.enrichWithEmails([request]);
+		return enriched;
+	}
+
+	/** Batch userId → email lookup (empty set = no lookups, degrades to raw ids). */
+	private async resolveEmails(ids: readonly string[]): Promise<ReadonlyMap<string, string>> {
+		if (ids.length === 0) {
+			return new Map<string, string>();
+		}
+		try {
+			const rows: readonly { readonly id: string; readonly email: string }[] = await this.prisma.user.findMany({
+				where: { id: { in: [...ids] } },
+				select: { id: true, email: true },
+			});
+			return new Map(rows.map((row: { readonly id: string; readonly email: string }): [string, string] => [row.id, row.email]));
+		} catch {
+			return new Map<string, string>();
+		}
+	}
+
+	/** Users whose email contains the fragment → their id set (empty for blank/unknown). */
+	private async resolveEmailUserIds(fragment: string): Promise<ReadonlySet<string>> {
+		const trimmed: string = fragment.trim().toLowerCase();
+		if (trimmed.length === 0) {
+			return new Set<string>();
+		}
+		try {
+			const rows: readonly { readonly id: string }[] = await this.prisma.user.findMany({
+				where: { email: { contains: trimmed, mode: "insensitive" } },
+				select: { id: true },
+				take: 25,
+			});
+			return new Set(rows.map((row: { readonly id: string }): string => row.id));
+		} catch {
+			// Telescope must never break because the users table is unreachable —
+			// email search degrades to text-only matching.
+			return new Set<string>();
+		}
+	}
+
+	/**
+	 * Feature 3 — per-user request aggregation. The store groups by `userId`
+	 * (a JWT `sub`, opaque); this layer resolves each id to the user's email
+	 * from the `users` table so the UI shows a friendly identity instead of a
+	 * raw UUID. Unknown/deleted ids keep `email: null`.
+	 */
+	public async listUsers(rawQuery: RawQuery): Promise<TelescopeUsersResponse> {
+		const query: TelescopeUsersQuery = parseQuery(TelescopeUsersQuerySchema, rawQuery);
+		const list: ListResult<TelescopeUserSummary> = this.store.listUsers(query);
+		const ids: readonly string[] = list.items.map((item: TelescopeUserSummary): string => item.userId);
+		const emailById = new Map<string, string>();
+		if (ids.length > 0) {
+			try {
+				const rows: readonly { readonly id: string; readonly email: string }[] = await this.prisma.user.findMany({
+					where: { id: { in: [...ids] } },
+					select: { id: true, email: true },
+				});
+				for (const row of rows) {
+					emailById.set(row.id, row.email);
+				}
+			} catch {
+				// Telescope must never break because the users table is unreachable
+				// (e.g. Postgres down) — the list degrades to raw ids.
+			}
+		}
+		return {
+			items: list.items.map((item: TelescopeUserSummary): TelescopeUserSummary => ({ ...item, email: emailById.get(item.userId) ?? null })),
+			total: list.total,
+			page: list.page,
+			pageSize: list.pageSize,
+		};
+	}
+
+	/** Feature 12 — run a registered schedule on demand (the "Run now" button). */
+	public async runSchedule(name: string, rawBody: Record<string, string | undefined> | undefined): Promise<TelescopeScheduleLog> {
+		// Validate the optional trigger label — the body is tolerant (an empty
+		// POST body is `undefined` at runtime), defaults apply.
+		TelescopeScheduleRunInputSchema.parse(rawBody ?? {});
+		const updated: TelescopeScheduleLog | undefined = await this.schedulerService.runNow(name);
+		if (updated === undefined) {
+			throw new NotFoundException({ message: `Telescope schedule ${name} not registered.`, error: "TELESCOPE_SCHEDULE_NOT_FOUND" });
+		}
+		return updated;
+	}
+
+	/**
+	 * Feature 8 — manual retention pruning. Prunes entries older than the
+	 * configured retention window and returns how many were removed. Passing
+	 * `?force=true` drops EVERYTHING older than one minute (the "Clear all
+	 * history" escape hatch behind the health card).
+	 */
+	public prune(rawQuery: RawQuery): { readonly removed: number } {
+		const force: boolean = rawQuery.force === "true";
+		const minutes: number = force ? 1 : this.options.retentionMinutes;
+		return { removed: this.store.pruneRetention(minutes) };
+	}
+
+	/** Feature 8 — empty every buffer (requests, SQL, exceptions, jobs, …). */
+	public clearAll(): { readonly cleared: true } {
+		this.store.clear();
+		return { cleared: true };
+	}
+
+	/** Feature 9 — the fully-resolved capture config + pipeline health snapshot. */
+	public status(): TelescopeStatus {
+		const health = this.store.health();
+		return {
+			enabled: this.options.enabled,
+			storage: this.options.storage,
+			bufferRequests: health.bufferRequests,
+			bufferCap: health.bufferCap,
+			retentionMinutes: this.options.retentionMinutes,
+			maxRequests: this.options.maxRequests,
+			maxBodyChars: this.options.maxBodyChars,
+			maxSpansPerRequest: this.options.maxSpansPerRequest,
+			maxConsoleEntriesPerRequest: this.options.maxConsoleEntriesPerRequest,
+			piiMode: this.options.piiMode,
+			captureBody: this.options.captureBody,
+			captureHeaders: this.options.captureHeaders,
+			ignorePaths: this.options.ignorePaths,
+			redactPaths: this.options.redactPaths,
+			capturePaths: this.options.capturePaths ?? [],
+			sampleRateDev: this.options.sampling.dev,
+			sampleRateProd: this.options.sampling.prod,
+			alertWebhookUrl: this.options.alertWebhookUrl ?? null,
+			alertDurationMs: this.options.alertDurationMs,
+			alertWindowMinutes: this.options.alertWindowMinutes,
+			environment: this.environment(),
+		};
 	}
 
 	/** Feature 7 — replay a captured request against a configured target. */

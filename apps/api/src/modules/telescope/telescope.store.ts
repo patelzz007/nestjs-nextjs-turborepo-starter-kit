@@ -14,13 +14,23 @@ import type {
 	TelescopeLeaderboardEntry,
 	TelescopeLogRow,
 	TelescopeLogsListQuery,
+	TelescopeRange,
 	TelescopeRequestListQuery,
 	TelescopeScheduleLog,
+	TelescopeSearchExceptionMatch,
+	TelescopeSearchLogMatch,
+	TelescopeSearchQuery,
+	TelescopeSearchRequestMatch,
+	TelescopeSearchResponse,
+	TelescopeSearchSqlMatch,
 	TelescopeSqlListQuery,
 	TelescopeStatusCounts,
 	TelescopeStorage,
 	TelescopeTrafficPoint,
 	TelescopeTrendPoint,
+	TelescopeUserSummary,
+	TelescopeUsersQuery,
+	TelescopeWebhookDelivery,
 } from "@workspace/shared";
 
 import { detectN1Warnings } from "./n1-detector.js";
@@ -100,6 +110,15 @@ export interface TelescopeStore {
 	// Feature 18 — threshold alerts (memory-scoped; survives via the alert service).
 	pushAlert(entry: TelescopeAlertEntry): void;
 	listAlerts(limit: number): readonly TelescopeAlertEntry[];
+	// Feature 13 — webhook delivery records for the alert service.
+	pushWebhookDelivery(entry: TelescopeWebhookDelivery): void;
+	listWebhookDeliveries(limit: number): readonly TelescopeWebhookDelivery[];
+	// Feature 1 — global search across requests/sql/exceptions/logs. `emailUserIds`
+	// (resolved server-side by the service) ORs in requests whose authenticated
+	// user's email matches the query, so a fragment like "alice@" finds her traffic.
+	search(query: TelescopeSearchQuery, emailUserIds?: ReadonlySet<string>): TelescopeSearchResponse;
+	// Feature 3 — per-user request aggregation.
+	listUsers(query: TelescopeUsersQuery): ListResult<TelescopeUserSummary>;
 	/** Improvement 5 — ack or snooze an alert by id. */
 	setAlertStatus(id: string, status: TelescopeAlertStatus, snoozedUntil: string | null): void;
 	/** Improvement 6 — set the triage status of an exception group. */
@@ -130,6 +149,11 @@ function isBefore(iso: string, toIso: string | undefined): boolean {
 	return toIso === undefined || parseIso(iso) <= parseIso(toIso);
 }
 
+/** Range → window start (ms before now) for the users aggregation (feature 3). */
+function rangeToWindowStartMs(range: TelescopeRange): number {
+	return Date.now() - (range === "15m" ? 15 * 60 * 1000 : range === "1h" ? 60 * 60 * 1000 : range === "6h" ? 6 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000);
+}
+
 // ── Pure filter predicates (unit-testable in isolation) ────────────────────
 
 function matchesRequest(request: RequestLogEntry, query: TelescopeRequestListQuery): boolean {
@@ -155,7 +179,28 @@ function matchesRequest(request: RequestLogEntry, query: TelescopeRequestListQue
 	if (query.env !== undefined && request.environment?.nodeEnv !== query.env) {
 		return false;
 	}
+	// Feature 2 — free-text search over path, query-string, sanitized body text
+	// and the authenticated user id (so a UUID paste finds that user's traffic).
+	if (query.q !== undefined && query.q.length > 0) {
+		const needle: string = query.q.toLowerCase();
+		const haystack: string = `${request.method} ${request.path} ${request.queryString ?? ""} ${requestBodyText(request)} ${request.userId ?? ""}`.toLowerCase();
+		if (!haystack.includes(needle)) {
+			return false;
+		}
+	}
 	return isAfter(request.createdAt, query.from) && isBefore(request.createdAt, query.to);
+}
+
+/** Flattens the sanitized request body into searchable text (feature 2). */
+function requestBodyText(request: RequestLogEntry): string {
+	if (request.requestBody === null) {
+		return "";
+	}
+	try {
+		return typeof request.requestBody === "string" ? request.requestBody : JSON.stringify(request.requestBody);
+	} catch {
+		return "";
+	}
 }
 
 function matchesQuery(entry: QueryLogEntry, query: TelescopeSqlListQuery): boolean {
@@ -227,12 +272,23 @@ function toSummary(entry: RequestLogEntry, starred: boolean, n1WarningCount: num
 		path: entry.path,
 		statusCode: entry.statusCode,
 		userId: entry.userId,
+		// Email is resolved by the service via the users table (the store is
+		// intentionally DB-free); null until then.
+		userEmail: null,
 		durationMs: entry.durationMs,
 		createdAt: entry.createdAt,
 		environment: entry.environment,
 		starred,
 		n1WarningCount,
 	};
+}
+
+/** True when the request is starred and the query asks for starred-only rows (feature 4). */
+function matchesStarred(starred: boolean, queryStarred: "true" | "false" | undefined): boolean {
+	if (queryStarred === undefined) {
+		return true;
+	}
+	return queryStarred === "true" ? starred : !starred;
 }
 
 /** How many distinct N+1 warning groups a request's queries trigger (improvement 4). */
@@ -358,6 +414,7 @@ function buildLeaderboard(inRange: readonly RequestLogEntry[], limit: number): r
 				p95Ms: percentile(sorted, 0.95),
 				maxMs: sorted.length > 0 ? (sorted[sorted.length - 1] ?? 0) : 0,
 				errorCount: bucket.errorCount,
+				errorRatePct: bucket.durations.length > 0 ? (bucket.errorCount / bucket.durations.length) * 100 : 0,
 			};
 		})
 		.sort((a: TelescopeLeaderboardEntry, b: TelescopeLeaderboardEntry): number => b.p95Ms - a.p95Ms)
@@ -417,6 +474,7 @@ export class TelescopeMemoryStore implements TelescopeStore {
 	private readonly schedules = new Map<string, TelescopeScheduleLog>();
 	private readonly annotations = new Map<string, TelescopeAnnotation>();
 	private readonly alerts: TelescopeAlertEntry[] = [];
+	private readonly webhookDeliveries: TelescopeWebhookDelivery[] = [];
 
 	private readonly byRequestId = new Map<string, RequestLogEntry>();
 	private readonly byCorrelationId = new Map<string, RequestLogEntry>();
@@ -517,7 +575,10 @@ export class TelescopeMemoryStore implements TelescopeStore {
 
 	public listRequests(query: TelescopeRequestListQuery): ListResult<RequestLogSummary> {
 		const filtered: RequestLogSummary[] = this.requests
-			.filter((entry: RequestLogEntry): boolean => matchesRequest(entry, query))
+			.filter((entry: RequestLogEntry): boolean => {
+				const starred: boolean = this.annotations.get(entry.id)?.starred === true;
+				return matchesRequest(entry, query) && matchesStarred(starred, query.starred);
+			})
 			.map((entry: RequestLogEntry): RequestLogSummary =>
 				toSummary(entry, this.annotations.get(entry.id)?.starred === true, n1WarningCountFor(entry, this.queriesByCorrelationId)),
 			);
@@ -573,8 +634,16 @@ export class TelescopeMemoryStore implements TelescopeStore {
 	}
 
 	public listJobs(query: TelescopeJobsListQuery): ListResult<TelescopeJobLogEntry> {
-		const filtered: TelescopeJobLogEntry[] =
-			query.status !== undefined ? this.jobs.filter((entry: TelescopeJobLogEntry): boolean => entry.status === query.status) : [...this.jobs];
+		const filtered: TelescopeJobLogEntry[] = this.jobs.filter((entry: TelescopeJobLogEntry): boolean => {
+			if (query.status !== undefined && entry.status !== query.status) {
+				return false;
+			}
+			// Feature 11 — job name substring filter.
+			if (query.jobName !== undefined && query.jobName.length > 0 && !entry.jobName.toLowerCase().includes(query.jobName.toLowerCase())) {
+				return false;
+			}
+			return true;
+		});
 		return paginate(filtered, query.page, query.pageSize);
 	}
 
@@ -641,6 +710,179 @@ export class TelescopeMemoryStore implements TelescopeStore {
 
 	public listAlerts(limit: number): readonly TelescopeAlertEntry[] {
 		return this.alerts.slice(0, Math.max(0, limit));
+	}
+
+	/** Feature 13 — webhook delivery records (bounded, newest-first). */
+	public pushWebhookDelivery(entry: TelescopeWebhookDelivery): void {
+		this.webhookDeliveries.unshift(entry);
+		if (this.webhookDeliveries.length > 500) {
+			this.webhookDeliveries.pop();
+		}
+	}
+
+	public listWebhookDeliveries(limit: number): readonly TelescopeWebhookDelivery[] {
+		return this.webhookDeliveries.slice(0, Math.max(0, limit));
+	}
+
+	/**
+	 * Feature 1 — global free-text search across requests, SQL, exceptions and
+	 * logs. Each scope matches on its own fields; the whole capture is scanned
+	 * (bounded per-scope by the query limit, no pagination — top hits only).
+	 */
+	public search(query: TelescopeSearchQuery, emailUserIds: ReadonlySet<string> = new Set()): TelescopeSearchResponse {
+		// A blank query matches everything with `includes("")` — return an
+		// empty set instead (an empty search is not an error, just nothing).
+		const needle: string = query.q.trim().toLowerCase();
+		if (needle.length === 0) {
+			return { q: "", requests: [], sql: [], exceptions: [], logs: [] };
+		}
+		const limit: number = query.limit;
+
+		const requestMatches: TelescopeSearchRequestMatch[] = [];
+		for (const entry of this.requests) {
+			if (requestMatches.length >= limit) {
+				break;
+			}
+			const haystackMatches: boolean = `${entry.method} ${entry.path} ${entry.queryString ?? ""} ${requestBodyText(entry)} ${entry.userId ?? ""}`
+				.toLowerCase()
+				.includes(needle);
+			// An email fragment matches when the request's user id resolved to an
+			// email containing the fragment (server-side lookup in the service).
+			const emailMatches: boolean = entry.userId !== null && emailUserIds.has(entry.userId);
+			if (haystackMatches || emailMatches) {
+				requestMatches.push({
+					id: entry.id,
+					method: entry.method,
+					path: entry.path,
+					statusCode: entry.statusCode,
+					userId: entry.userId,
+					// Resolved by the service after the store scan (store is DB-free).
+					userEmail: null,
+					durationMs: entry.durationMs,
+					createdAt: entry.createdAt,
+				});
+			}
+		}
+
+		const sqlMatches: TelescopeSearchSqlMatch[] = [];
+		for (const entry of this.queries) {
+			if (sqlMatches.length >= limit) {
+				break;
+			}
+			if (`${entry.model} ${entry.operation} ${entry.query}`.toLowerCase().includes(needle)) {
+				sqlMatches.push({
+					id: entry.id,
+					correlationId: entry.correlationId,
+					model: entry.model,
+					operation: entry.operation,
+					query: entry.query,
+					durationMs: entry.durationMs,
+					createdAt: entry.createdAt,
+				});
+			}
+		}
+
+		const exceptionMatches: TelescopeSearchExceptionMatch[] = [];
+		for (const entry of this.exceptions) {
+			if (exceptionMatches.length >= limit) {
+				break;
+			}
+			if (`${entry.name} ${entry.message} ${entry.path ?? ""}`.toLowerCase().includes(needle)) {
+				exceptionMatches.push({
+					id: entry.id,
+					errorGroup: entry.errorGroup,
+					name: entry.name,
+					message: entry.message,
+					statusCode: entry.statusCode,
+					path: entry.path,
+					occurrences: entry.occurrences,
+					lastSeenAt: entry.lastSeenAt,
+				});
+			}
+		}
+
+		const logMatches: TelescopeSearchLogMatch[] = [];
+		for (const entry of this.requests) {
+			for (const log of entry.logs) {
+				if (logMatches.length >= limit) {
+					break;
+				}
+				if (log.message.toLowerCase().includes(needle)) {
+					logMatches.push({
+						id: `${entry.id}:${log.timestamp}`,
+						requestId: entry.id,
+						level: log.level,
+						message: log.message,
+						timestamp: log.timestamp,
+						path: entry.path,
+					});
+				}
+			}
+			if (logMatches.length >= limit) {
+				break;
+			}
+		}
+
+		return { q: query.q, requests: requestMatches, sql: sqlMatches, exceptions: exceptionMatches, logs: logMatches };
+	}
+
+	/**
+	 * Feature 3 — per-user aggregation: groups in-range requests by `userId`
+	 * and returns count/errors/avg/p95/last-seen per user, sorted by the
+	 * requested column. Users without a userId are skipped (not attributable).
+	 */
+	public listUsers(query: TelescopeUsersQuery): ListResult<TelescopeUserSummary> {
+		const fromMs: number = rangeToWindowStartMs(query.range);
+		const buckets = new Map<string, { readonly durations: number[]; errors: number; lastSeenMs: number }>();
+		for (const entry of this.requests) {
+			if (entry.userId === null || parseIso(entry.createdAt) < fromMs) {
+				continue;
+			}
+			const existing = buckets.get(entry.userId);
+			const createdAtMs: number = parseIso(entry.createdAt);
+			if (existing !== undefined) {
+				existing.durations.push(entry.durationMs);
+				if ((entry.statusCode ?? 500) >= 500) {
+					existing.errors += 1;
+				}
+				if (createdAtMs > existing.lastSeenMs) {
+					existing.lastSeenMs = createdAtMs;
+				}
+			} else {
+				buckets.set(entry.userId, {
+					durations: [entry.durationMs],
+					errors: (entry.statusCode ?? 500) >= 500 ? 1 : 0,
+					lastSeenMs: createdAtMs,
+				});
+			}
+		}
+
+		const summaries: TelescopeUserSummary[] = [...buckets.entries()].map(([userId, bucket]) => {
+			const sorted: number[] = [...bucket.durations].sort((a: number, b: number): number => a - b);
+			const totalMs: number = sorted.reduce((sum: number, value: number): number => sum + value, 0);
+			return {
+				userId,
+				// Email is resolved by the service via the users table (the store is
+				// intentionally DB-free); null until then.
+				email: null,
+				count: bucket.durations.length,
+				errorCount: bucket.errors,
+				errorRatePct: bucket.durations.length > 0 ? (bucket.errors / bucket.durations.length) * 100 : 0,
+				avgDurationMs: sorted.length > 0 ? totalMs / sorted.length : 0,
+				p95DurationMs: percentile(sorted, 0.95),
+				lastSeenAt: new Date(bucket.lastSeenMs).toISOString(),
+			};
+		});
+		summaries.sort((a: TelescopeUserSummary, b: TelescopeUserSummary): number => {
+			if (query.sort === "errors") {
+				return b.errorCount - a.errorCount;
+			}
+			if (query.sort === "duration") {
+				return b.p95DurationMs - a.p95DurationMs;
+			}
+			return b.count - a.count;
+		});
+		return paginate(summaries, query.page, query.pageSize);
 	}
 
 	/** Improvement 5 — ack or snooze an alert by id. */
@@ -819,6 +1061,11 @@ export class TelescopeMemoryStore implements TelescopeStore {
 		this.alerts.length = 0;
 		this.alerts.push(...keptAlerts);
 
+		const keptDeliveries: TelescopeWebhookDelivery[] = this.webhookDeliveries.filter((entry: TelescopeWebhookDelivery): boolean => kept(entry.createdAt));
+		removed += this.webhookDeliveries.length - keptDeliveries.length;
+		this.webhookDeliveries.length = 0;
+		this.webhookDeliveries.push(...keptDeliveries);
+
 		for (const requestId of [...this.annotations.keys()]) {
 			if (!this.byRequestId.has(requestId)) {
 				this.annotations.delete(requestId);
@@ -841,6 +1088,7 @@ export class TelescopeMemoryStore implements TelescopeStore {
 		this.dumps.length = 0;
 		this.jobs.length = 0;
 		this.alerts.length = 0;
+		this.webhookDeliveries.length = 0;
 		this.schedules.clear();
 		this.annotations.clear();
 		this.byRequestId.clear();

@@ -19,7 +19,7 @@ import { DataTable, type BulkAction, type DataTableFeatures } from "@workspace/u
 import { Button } from "@workspace/ui/components/form/button";
 import { Input } from "@workspace/ui/components/form/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@workspace/ui/components/form/select";
-import { GitCompareArrows, RefreshCw } from "lucide-react";
+import { Download, GitCompareArrows, RefreshCw, Search as SearchIcon, Star } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -96,6 +96,66 @@ const SORT_OPTIONS: readonly { readonly value: string; readonly label: string }[
 	{ value: "duration", label: "Slowest first" },
 ];
 
+const ENV_OPTIONS: readonly { readonly value: string; readonly label: string }[] = [
+	{ value: "development", label: "Dev" },
+	{ value: "production", label: "Prod" },
+];
+
+/**
+ * Feature 14 (end-to-end) — inline star toggle for one request row. Owns its
+ * own mutation (rule: no hooks inside a column `cell` render), so starring is
+ * possible straight from the list without opening the detail page.
+ */
+function RowStarToggle({ request, onChanged }: { readonly request: RequestLogSummary; readonly onChanged: () => void }): React.JSX.Element {
+	const { api } = useAuth();
+	const starMutation = api.procedure(telescopeEndpoints.setAnnotation(request.id)).useMutation();
+
+	const handleToggle = useCallback(
+		(event: React.MouseEvent): void => {
+			event.stopPropagation();
+			const next = !request.starred;
+			starMutation.mutate(
+				{ starred: next },
+				{
+					onSuccess: (): void => {
+						onChanged();
+						toast.success(next ? "Request starred." : "Star removed.");
+					},
+					onError: (): void => {
+						toast.error("Failed to update the star.");
+					},
+				},
+			);
+		},
+		[request.starred, starMutation, onChanged],
+	);
+
+	return (
+		<button
+			type="button"
+			onClick={handleToggle}
+			className="inline-flex size-7 items-center justify-center rounded-md transition-colors hover:bg-muted"
+			title={request.starred ? "Unstar this request" : "Star this request"}
+			aria-label={request.starred ? "Unstar" : "Star"}
+			disabled={starMutation.isPending}>
+			<Star className={`size-4 ${request.starred ? "fill-amber-400 text-amber-500" : "text-muted-foreground"}`} fill={request.starred ? "currentColor" : "none"} />
+		</button>
+	);
+}
+
+/** Feature 5 — download the selected rows as a timestamped JSON file. */
+function downloadJsonRows(rows: readonly RequestLogSummary[]): void {
+	const blob: Blob = new Blob([JSON.stringify(rows, null, 2)], { type: "application/json;charset=utf-8" });
+	const url: string = URL.createObjectURL(blob);
+	const link: HTMLAnchorElement = document.createElement("a");
+	link.href = url;
+	link.download = `telescope-requests-${new Date().toISOString().slice(0, 19).replaceAll(":", "-")}.json`;
+	document.body.appendChild(link);
+	link.click();
+	link.remove();
+	URL.revokeObjectURL(url);
+}
+
 function RequestsContent(): React.JSX.Element {
 	const { api } = useAuth();
 	const router = useRouter();
@@ -109,6 +169,15 @@ function RequestsContent(): React.JSX.Element {
 	const [method, setMethod] = useState<string>(() => searchParams.get("method") ?? "all");
 	const [status, setStatus] = useState<string>(() => searchParams.get("status") ?? "all");
 	const [minDuration, setMinDuration] = useState<string>(() => searchParams.get("min") ?? "");
+	// Feature 2 — free-text search over path / query-string / body text.
+	const [q, setQ] = useState<string>(() => searchParams.get("q") ?? "");
+	// Feature 4 — starred-only toggle (`?starred=true`).
+	const [starredOnly, setStarredOnly] = useState<boolean>(() => searchParams.get("starred") === "true");
+	// Feature 7 — environment filter chips (`?env=development|production`).
+	const [env, setEnv] = useState<string>(() => searchParams.get("env") ?? "all");
+	// Feature 3 — deep link from /telescope/users (`?userId=<id>`).
+	const userIdParam: string | null = searchParams.get("userId");
+	const [userIdFilter, setUserIdFilter] = useState<string | null>(userIdParam);
 	// Improvement 11 — an explicit `?sort=` in the URL wins; otherwise the persisted pref (improvement 10).
 	const [sort, setSort] = useState<string>(() => searchParams.get("sort") ?? loadTablePrefs().sort);
 	const [correlationFilter, setCorrelationFilter] = useState<string | null>(correlationParam);
@@ -126,8 +195,12 @@ function RequestsContent(): React.JSX.Element {
 		if (status !== "all") draft.status = status;
 		if (minDuration !== "") draft.minDurationMs = minDuration;
 		if (correlationFilter !== null) draft.correlationId = correlationFilter;
+		if (userIdFilter !== null) draft.userId = userIdFilter;
+		if (env !== "all") draft.env = env;
+		if (q.trim().length > 0) draft.q = q.trim();
+		if (starredOnly) draft.starred = "true";
 		return TelescopeRequestListQuerySchema.parse(draft);
-	}, [page, pageSize, sort, method, status, minDuration, correlationFilter]);
+	}, [page, pageSize, sort, method, status, minDuration, correlationFilter, userIdFilter, env, q, starredOnly]);
 
 	const listQuery = api.procedure(telescopeEndpoints.requests(query)).useQuery({ query }, { placeholderData: (previous) => previous });
 
@@ -157,7 +230,6 @@ function RequestsContent(): React.JSX.Element {
 	const resetNewCount = useCallback((): void => {
 		setNewRequestCount(0);
 	}, []);
-
 	const handleManualPaginationChange = useCallback(
 		(nextPage: number, nextPageSize: number): void => {
 			setPage(nextPage);
@@ -172,21 +244,39 @@ function RequestsContent(): React.JSX.Element {
 	// Improvement 11 — imperatively mirror the active filter into the URL so a
 	// filtered view is shareable + refresh-safe (the correlation param survives).
 	const syncUrl = useCallback(
-		(next: { readonly method?: string; readonly status?: string; readonly minDuration?: string; readonly sort?: string }): void => {
+		(next: {
+			readonly method?: string;
+			readonly status?: string;
+			readonly minDuration?: string;
+			readonly sort?: string;
+			readonly q?: string;
+			readonly starredOnly?: boolean;
+			readonly env?: string;
+			readonly userId?: string | null;
+		}): void => {
 			const params: URLSearchParams = new URLSearchParams();
 			const effectiveMethod: string = next.method ?? method;
 			const effectiveStatus: string = next.status ?? status;
 			const effectiveMin: string = next.minDuration ?? minDuration;
 			const effectiveSort: string = next.sort ?? sort;
+			const effectiveQ: string = next.q ?? q;
+			const effectiveStarred: boolean = next.starredOnly ?? starredOnly;
+			const effectiveEnv: string = next.env ?? env;
+			const effectiveUserId: string | null = next.userId === undefined ? userIdFilter : next.userId;
+
 			if (effectiveMethod !== "all") params.set("method", effectiveMethod);
 			if (effectiveStatus !== "all") params.set("status", effectiveStatus);
 			if (effectiveMin !== "") params.set("min", effectiveMin);
 			if (effectiveSort !== "newest") params.set("sort", effectiveSort);
+			if (effectiveQ.trim().length > 0) params.set("q", effectiveQ.trim());
+			if (effectiveStarred) params.set("starred", "true");
+			if (effectiveEnv !== "all") params.set("env", effectiveEnv);
+			if (effectiveUserId !== null && effectiveUserId.length > 0) params.set("userId", effectiveUserId);
 			if (correlationFilter !== null) params.set("correlation", correlationFilter);
 			const query: string = params.toString();
 			router.replace(query.length > 0 ? `/telescope/requests?${query}` : "/telescope/requests", { scroll: false });
 		},
-		[router, method, status, minDuration, sort, correlationFilter],
+		[router, method, status, minDuration, sort, correlationFilter, q, starredOnly, env, userIdFilter],
 	);
 
 	const handleRowClick = useCallback(
@@ -197,6 +287,7 @@ function RequestsContent(): React.JSX.Element {
 	);
 
 	// Improvement 6 — Compare: exactly two selected rows open the diff page.
+	// Feature 5 — Export JSON: download the selected rows as a JSON file.
 	const bulkActions = useMemo(
 		(): BulkAction<RequestLogSummary>[] => [
 			{
@@ -211,6 +302,15 @@ function RequestsContent(): React.JSX.Element {
 					router.push(`/telescope/compare?a=${encodeURIComponent(rows[0]?.id ?? "")}&b=${encodeURIComponent(rows[1]?.id ?? "")}`);
 				},
 			},
+			{
+				key: "export-json",
+				label: "Export JSON",
+				icon: <Download className="size-3.5" />,
+				onClick: (rows: RequestLogSummary[]): void => {
+					downloadJsonRows(rows);
+					toast.success(`Exported ${String(rows.length)} request${rows.length === 1 ? "" : "s"} as JSON.`);
+				},
+			},
 		],
 		[router],
 	);
@@ -219,6 +319,13 @@ function RequestsContent(): React.JSX.Element {
 		setCorrelationFilter(null);
 		resetNewCount();
 		syncUrl({});
+	}, [resetNewCount, syncUrl]);
+
+	// Feature 3 — clear the userId deep-link filter (from /telescope/users).
+	const clearUserId = useCallback((): void => {
+		setUserIdFilter(null);
+		resetNewCount();
+		syncUrl({ userId: null });
 	}, [resetNewCount, syncUrl]);
 
 	// Select's `onValueChange` passes `string | null` — narrow before writing.
@@ -256,6 +363,36 @@ function RequestsContent(): React.JSX.Element {
 			setMinDuration(event.target.value);
 			resetNewCount();
 			syncUrl({ minDuration: event.target.value });
+		},
+		[resetNewCount, syncUrl],
+	);
+	// Feature 2 — free-text search box (debounce handled by the input; the
+	// query rebuilds on every keystroke and the server filters cheaply).
+	const handleQChange = useCallback(
+		(event: React.ChangeEvent<HTMLInputElement>): void => {
+			setQ(event.target.value);
+			setPage(1);
+			resetNewCount();
+			syncUrl({ q: event.target.value });
+		},
+		[resetNewCount, syncUrl],
+	);
+	// Feature 4 — starred-only toggle.
+	const handleStarredToggle = useCallback((): void => {
+		const next = !starredOnly;
+		setStarredOnly(next);
+		setPage(1);
+		resetNewCount();
+		syncUrl({ starredOnly: next });
+	}, [starredOnly, resetNewCount, syncUrl]);
+	// Feature 7 — environment filter chips.
+	const handleEnvChange = useCallback(
+		(value: string | null): void => {
+			if (value === null) return;
+			setEnv(value);
+			setPage(1);
+			resetNewCount();
+			syncUrl({ env: value });
 		},
 		[resetNewCount, syncUrl],
 	);
@@ -299,6 +436,76 @@ function RequestsContent(): React.JSX.Element {
 	// Column defs — status/duration/time cells are pure presentations.
 	const columns = useMemo<ColumnDef<DataTableFeatures, RequestLogSummary>[]>(
 		() => [
+			{
+				// Feature 14 (end-to-end) — inline star so starring happens in the
+				// list, not just the detail page.
+				id: "star",
+				header: (): React.JSX.Element => <span className="sr-only">Star</span>,
+				cell: ({ row }): React.JSX.Element => (
+					<RowStarToggle
+						request={row.original}
+						onChanged={(): void => {
+							void listQuery.refetch();
+						}}
+					/>
+				),
+			},
+			{
+				// Feature 3 (end-to-end) — the resolved email as its own toggleable
+				// column; click to filter the list to that user.
+				id: "email",
+				header: "Email",
+				cell: ({ row }): React.JSX.Element => {
+					const userId: string | null = row.original.userId;
+					const email: string | null = row.original.userEmail;
+					if (userId === null) {
+						return <span className="text-xs text-muted-foreground">—</span>;
+					}
+					if (email === null) {
+						return <span className="font-mono text-xs text-muted-foreground">{userId.slice(0, 8)}…</span>;
+					}
+					return (
+						<button
+							type="button"
+							onClick={(event: React.MouseEvent): void => {
+								event.stopPropagation();
+								setUserIdFilter(userId);
+								resetNewCount();
+								syncUrl({ userId });
+							}}
+							className="inline-flex max-w-[12rem] items-center rounded-md bg-muted/60 px-1.5 py-0.5 text-[11px] font-medium text-foreground transition-colors hover:bg-muted"
+							title={`${email} — click to filter to this user`}>
+							<span className="truncate">{email}</span>
+						</button>
+					);
+				},
+			},
+			{
+				// Feature 3 (end-to-end) — the opaque user id, toggleable separately
+				// from the email column; click to filter the list to that user.
+				id: "user",
+				header: "User id",
+				cell: ({ row }): React.JSX.Element => {
+					const userId: string | null = row.original.userId;
+					if (userId === null) {
+						return <span className="text-xs text-muted-foreground">—</span>;
+					}
+					return (
+						<button
+							type="button"
+							onClick={(event: React.MouseEvent): void => {
+								event.stopPropagation();
+								setUserIdFilter(userId);
+								resetNewCount();
+								syncUrl({ userId });
+							}}
+							className="inline-flex max-w-[9rem] items-center rounded-md bg-muted/60 px-1.5 py-0.5 font-mono text-[11px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+							title={`${userId} — click to filter to this user`}>
+							<span className="truncate">{userId}</span>
+						</button>
+					);
+				},
+			},
 			{
 				accessorKey: "method",
 				header: "Method",
@@ -352,7 +559,7 @@ function RequestsContent(): React.JSX.Element {
 					),
 			},
 		],
-		[],
+		[listQuery, setUserIdFilter, resetNewCount, syncUrl],
 	);
 
 	const mobileCardRender = useCallback((item: RequestLogSummary): React.ReactNode => {
@@ -373,6 +580,7 @@ function RequestsContent(): React.JSX.Element {
 					<span className={`tabular-nums ${durationTone(item.durationMs).textClass}`}>{durationLabel(item.durationMs)}</span>
 					<span className="tabular-nums">{formatTime(item.createdAt)}</span>
 				</div>
+				{item.userId !== null ? <div className="mt-1.5 truncate font-mono text-[10px] text-muted-foreground/80">{item.userEmail ?? item.userId}</div> : null}
 			</div>
 		);
 	}, []);
@@ -380,8 +588,8 @@ function RequestsContent(): React.JSX.Element {
 	// Filter bar — dumb controls; changing any filter remounts the table (key)
 	// so its internal pager resets to page 1 instead of fetching a stale page.
 	const filtersKey: string = useMemo(
-		() => JSON.stringify({ method, status, minDuration, sort, correlationFilter, page, pageSize }),
-		[method, status, minDuration, sort, correlationFilter, page, pageSize],
+		() => JSON.stringify({ method, status, minDuration, sort, correlationFilter, userIdFilter, env, q, starredOnly, page, pageSize }),
+		[method, status, minDuration, sort, correlationFilter, userIdFilter, env, q, starredOnly, page, pageSize],
 	);
 
 	const selectItems = useMemo(() => [{ value: "all", label: "All methods" }, ...METHOD_OPTIONS], []);
@@ -402,6 +610,17 @@ function RequestsContent(): React.JSX.Element {
 					<span className="font-medium">Filtered to correlation</span>
 					<code className="rounded bg-muted px-1.5 py-0.5 font-mono">{correlationFilter}</code>
 					<Button variant="ghost" size="sm" onClick={clearCorrelation} className="ml-auto h-6 px-2 text-xs">
+						Clear
+					</Button>
+				</div>
+			) : null}
+
+			{userIdFilter !== null ? (
+				<div className="flex items-center gap-2 rounded-lg border border-violet-300/60 bg-violet-500/10 px-3 py-2 text-xs text-violet-700 dark:border-violet-500/40 dark:text-violet-400">
+					<span className="font-medium">Filtered to user</span>
+					{rows[0]?.userEmail !== null ? <code className="rounded bg-muted px-1.5 py-0.5 font-mono">{rows[0]?.userEmail}</code> : null}
+					<code className="rounded bg-muted px-1.5 py-0.5 font-mono">{userIdFilter}</code>
+					<Button variant="ghost" size="sm" onClick={clearUserId} className="ml-auto h-6 px-2 text-xs">
 						Clear
 					</Button>
 				</div>
@@ -482,6 +701,52 @@ function RequestsContent(): React.JSX.Element {
 							<SelectItem value="duration">Slowest first</SelectItem>
 						</SelectContent>
 					</Select>
+				</div>
+
+				{/* Feature 2 — free-text search (path / query-string / body). */}
+				<div className="flex flex-col gap-1.5">
+					<label htmlFor="tel-q" className="text-xs font-medium text-muted-foreground">
+						Search
+					</label>
+					<div className="relative">
+						<SearchIcon className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
+						<Input id="tel-q" type="search" placeholder="path, body, query, user id…" value={q} onChange={handleQChange} className="h-9 w-56 pl-8 text-sm" />
+					</div>
+				</div>
+
+				{/* Feature 7 — environment filter chips. */}
+				<div className="flex flex-col gap-1.5">
+					<label htmlFor="tel-env" className="text-xs font-medium text-muted-foreground">
+						Environment
+					</label>
+					<Select value={env} onValueChange={handleEnvChange} items={[{ value: "all", label: "All environments" }, ...ENV_OPTIONS]}>
+						<SelectTrigger id="tel-env" className="h-9 w-40 text-sm">
+							<SelectValue placeholder="Environment" />
+						</SelectTrigger>
+						<SelectContent>
+							<SelectItem value="all">All environments</SelectItem>
+							{ENV_OPTIONS.map((option) => (
+								<SelectItem key={option.value} value={option.value}>
+									{option.label}
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
+				</div>
+
+				{/* Feature 4 — starred-only toggle. */}
+				<div className="flex flex-col gap-1.5">
+					<span className="text-xs font-medium text-muted-foreground">&nbsp;</span>
+					<Button
+						type="button"
+						variant={starredOnly ? "default" : "outline"}
+						size="sm"
+						onClick={handleStarredToggle}
+						className={`h-9 ${starredOnly ? "" : "text-muted-foreground"}`}
+						aria-pressed={starredOnly}>
+						<Star className={`size-3.5 ${starredOnly ? "fill-current" : ""}`} />
+						Starred only
+					</Button>
 				</div>
 			</div>
 

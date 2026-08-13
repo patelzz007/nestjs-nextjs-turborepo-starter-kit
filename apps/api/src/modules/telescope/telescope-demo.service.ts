@@ -37,7 +37,44 @@ export class TelescopeDemoService implements OnModuleInit {
 		this.scheduler.register("telescope-demo", "*/1 * * * *", async (): Promise<void> => {
 			await this.runDemoJob();
 		});
+		this.seedDemoDeliveries();
 		this.logger.log('Demo schedule registered: "telescope-demo" every minute', TelescopeDemoService.name);
+	}
+
+	/**
+	 * Seed a few webhook-delivery rows so the deliveries strip (overview +
+	 * status page) has data out of the box instead of the empty state. The
+	 * timestamps are intentionally recent so they show up in the default view.
+	 */
+	private seedDemoDeliveries(): void {
+		const now: number = Date.now();
+		const seed: readonly {
+			readonly status: "success" | "failed";
+			readonly statusCode: number | null;
+			readonly durationMs: number;
+			readonly attempt: number;
+			readonly error: string | null;
+			readonly minutesAgo: number;
+		}[] = [
+			// Pushed with `unshift`, so list them OLDEST-first here — the newest
+			// (minutesAgo 2) ends up at the head of the deliveries list.
+			{ status: "failed", statusCode: 500, durationMs: 94, attempt: 1, error: "POST https://example.invalid/hook — 500 Internal Server Error", minutesAgo: 31 },
+			{ status: "success", statusCode: 200, durationMs: 211, attempt: 0, error: null, minutesAgo: 14 },
+			{ status: "success", statusCode: 200, durationMs: 182, attempt: 0, error: null, minutesAgo: 2 },
+		];
+		for (const row of seed) {
+			this.store.pushWebhookDelivery({
+				id: `demo-wh-${String(row.minutesAgo)}`,
+				alertId: "demo-alert",
+				status: row.status,
+				statusCode: row.statusCode,
+				durationMs: row.durationMs,
+				attempt: row.attempt,
+				error: row.error,
+				createdAt: new Date(now - row.minutesAgo * 60_000).toISOString(),
+			});
+		}
+		this.logger.log(`Seeded ${String(seed.length)} demo webhook delivery rows`, TelescopeDemoService.name);
 	}
 
 	/** One demo job: a tiny fake "report" task so the Jobs page has data. */

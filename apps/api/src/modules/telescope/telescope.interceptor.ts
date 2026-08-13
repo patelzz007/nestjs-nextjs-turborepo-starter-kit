@@ -172,6 +172,8 @@ export class TelescopeInterceptor implements NestInterceptor {
 			ip: request.ip ?? null,
 			userAgent: this.readUserAgent(request),
 			userId: this.readUserId(request),
+			// Resolved to an email by TelescopeService on read (store is DB-free).
+			userEmail: null,
 			requestBody,
 			responseBody,
 			requestHeaders: redactPiiHeaders(sanitizedHeaders),

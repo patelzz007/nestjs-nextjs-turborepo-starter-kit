@@ -32,9 +32,14 @@ import {
 	type TelescopeOptions,
 	type TelescopeRequestListQuery,
 	type TelescopeScheduleLog,
+	type TelescopeSearchQuery,
+	type TelescopeSearchResponse,
 	type TelescopeSpan,
 	type TelescopeSqlListQuery,
 	type TelescopeTrendPoint,
+	type TelescopeUserSummary,
+	type TelescopeUsersQuery,
+	type TelescopeWebhookDelivery,
 } from "@workspace/shared";
 
 import { PrismaService } from "../../prisma/prisma.service.js";
@@ -194,6 +199,24 @@ export class TelescopePostgresStore implements TelescopeStore, OnModuleInit {
 
 	public listAlerts(limit: number): readonly TelescopeAlertEntry[] {
 		return this.memory.listAlerts(limit);
+	}
+
+	/** Feature 13 — webhook delivery records are ephemeral diagnostics; memory-scoped. */
+	public pushWebhookDelivery(entry: TelescopeWebhookDelivery): void {
+		this.memory.pushWebhookDelivery(entry);
+	}
+
+	public listWebhookDeliveries(limit: number): readonly TelescopeWebhookDelivery[] {
+		return this.memory.listWebhookDeliveries(limit);
+	}
+
+	/** Feature 1 — search + feature 3 — user aggregation read the memory buffer. */
+	public search(query: TelescopeSearchQuery, emailUserIds?: ReadonlySet<string>): TelescopeSearchResponse {
+		return this.memory.search(query, emailUserIds);
+	}
+
+	public listUsers(query: TelescopeUsersQuery): ListResult<TelescopeUserSummary> {
+		return this.memory.listUsers(query);
 	}
 
 	public setAlertStatus(id: string, status: TelescopeAlertStatus, snoozedUntil: string | null): void {
