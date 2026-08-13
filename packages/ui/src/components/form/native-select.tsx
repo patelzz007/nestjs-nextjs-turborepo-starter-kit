@@ -6,10 +6,11 @@ type NativeSelectProps = Omit<React.ComponentProps<"select">, "size"> & {
 	size?: "sm" | "default";
 };
 
-function NativeSelect({ className, size = "default", ...props }: NativeSelectProps): React.JSX.Element {
+const NativeSelect = React.forwardRef<HTMLSelectElement, NativeSelectProps>(function NativeSelect({ className, size = "default", ...props }, ref): React.JSX.Element {
 	return (
 		<div className={cn("group/native-select relative w-fit has-[select:disabled]:opacity-50", className)} data-slot="native-select-wrapper" data-size={size}>
 			<select
+				ref={ref}
 				data-slot="native-select"
 				data-size={size}
 				className="h-9 w-full min-w-0 appearance-none rounded-md border border-input bg-transparent py-1 ps-2.5 pe-8 text-sm shadow-xs transition-[color,box-shadow] outline-none select-none selection:bg-primary selection:text-primary-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 data-[size=sm]:h-8 dark:bg-input/30 dark:hover:bg-input/50 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40"
@@ -22,7 +23,7 @@ function NativeSelect({ className, size = "default", ...props }: NativeSelectPro
 			/>
 		</div>
 	);
-}
+});
 
 function NativeSelectOption({ className, ...props }: React.ComponentProps<"option">): React.JSX.Element {
 	return <option data-slot="native-select-option" className={cn("bg-[Canvas] text-[CanvasText]", className)} {...props} />;

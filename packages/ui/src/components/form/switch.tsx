@@ -2,16 +2,17 @@
 
 import { Switch as SwitchPrimitive } from "@base-ui/react/switch";
 import { cn } from "@workspace/ui/lib/utils";
+import * as React from "react";
 
-function Switch({
-	className,
-	size = "default",
-	...props
-}: SwitchPrimitive.Root.Props & {
-	size?: "sm" | "default";
-}): React.JSX.Element {
+const Switch = React.forwardRef<
+	HTMLElement,
+	SwitchPrimitive.Root.Props & {
+		size?: "sm" | "default";
+	}
+>(function Switch({ className, size = "default", ...props }, ref): React.JSX.Element {
 	return (
 		<SwitchPrimitive.Root
+			ref={ref}
 			data-slot="switch"
 			data-size={size}
 			className={cn(
@@ -25,6 +26,6 @@ function Switch({
 			/>
 		</SwitchPrimitive.Root>
 	);
-}
+});
 
 export { Switch };

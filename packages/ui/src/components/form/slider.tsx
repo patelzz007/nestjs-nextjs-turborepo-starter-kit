@@ -1,11 +1,16 @@
 import { Slider as SliderPrimitive } from "@base-ui/react/slider";
 import { cn } from "@workspace/ui/lib/utils";
+import * as React from "react";
 
-function Slider({ className, defaultValue, value, min = 0, max = 100, ...props }: SliderPrimitive.Root.Props): React.JSX.Element {
+const Slider = React.forwardRef<HTMLDivElement, SliderPrimitive.Root.Props>(function Slider(
+	{ className, defaultValue, value, min = 0, max = 100, ...props },
+	ref,
+): React.JSX.Element {
 	const values = Array.isArray(value) ? value : Array.isArray(defaultValue) ? defaultValue : [min, max];
 
 	return (
 		<SliderPrimitive.Root
+			ref={ref}
 			className={cn("data-horizontal:w-full data-vertical:h-full", className)}
 			data-slot="slider"
 			defaultValue={defaultValue}
@@ -30,6 +35,6 @@ function Slider({ className, defaultValue, value, min = 0, max = 100, ...props }
 			</SliderPrimitive.Control>
 		</SliderPrimitive.Root>
 	);
-}
+});
 
 export { Slider };

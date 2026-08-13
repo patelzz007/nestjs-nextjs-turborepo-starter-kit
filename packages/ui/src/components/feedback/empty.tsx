@@ -1,19 +1,21 @@
 import { cn } from "@workspace/ui/lib/utils";
 import { cva, type VariantProps } from "class-variance-authority";
+import * as React from "react";
 
-function Empty({ className, ...props }: React.ComponentProps<"div">): React.JSX.Element {
+const Empty = React.forwardRef<HTMLDivElement, React.ComponentProps<"div">>(function Empty({ className, ...props }, ref): React.JSX.Element {
 	return (
 		<div
+			ref={ref}
 			data-slot="empty"
 			className={cn("flex w-full min-w-0 flex-1 flex-col items-center justify-center gap-4 rounded-lg border-dashed p-12 text-center text-balance", className)}
 			{...props}
 		/>
 	);
-}
+});
 
-function EmptyHeader({ className, ...props }: React.ComponentProps<"div">): React.JSX.Element {
-	return <div data-slot="empty-header" className={cn("flex max-w-sm flex-col items-center gap-2", className)} {...props} />;
-}
+const EmptyHeader = React.forwardRef<HTMLDivElement, React.ComponentProps<"div">>(function EmptyHeader({ className, ...props }, ref): React.JSX.Element {
+	return <div ref={ref} data-slot="empty-header" className={cn("flex max-w-sm flex-col items-center gap-2", className)} {...props} />;
+});
 
 const emptyMediaVariants = cva("mb-2 flex shrink-0 items-center justify-center [&_svg]:pointer-events-none [&_svg]:shrink-0", {
 	variants: {
@@ -27,26 +29,30 @@ const emptyMediaVariants = cva("mb-2 flex shrink-0 items-center justify-center [
 	},
 });
 
-function EmptyMedia({ className, variant = "default", ...props }: React.ComponentProps<"div"> & VariantProps<typeof emptyMediaVariants>): React.JSX.Element {
-	return <div data-slot="empty-icon" data-variant={variant} className={cn(emptyMediaVariants({ variant, className }))} {...props} />;
-}
+const EmptyMedia = React.forwardRef<HTMLDivElement, React.ComponentProps<"div"> & VariantProps<typeof emptyMediaVariants>>(function EmptyMedia(
+	{ className, variant = "default", ...props },
+	ref,
+): React.JSX.Element {
+	return <div ref={ref} data-slot="empty-icon" data-variant={variant} className={cn(emptyMediaVariants({ variant, className }))} {...props} />;
+});
 
-function EmptyTitle({ className, ...props }: React.ComponentProps<"div">): React.JSX.Element {
-	return <div data-slot="empty-title" className={cn("font-heading text-lg font-medium tracking-tight", className)} {...props} />;
-}
+const EmptyTitle = React.forwardRef<HTMLDivElement, React.ComponentProps<"div">>(function EmptyTitle({ className, ...props }, ref): React.JSX.Element {
+	return <div ref={ref} data-slot="empty-title" className={cn("font-heading text-lg font-medium tracking-tight", className)} {...props} />;
+});
 
-function EmptyDescription({ className, ...props }: React.ComponentProps<"p">): React.JSX.Element {
+const EmptyDescription = React.forwardRef<HTMLDivElement, React.ComponentProps<"p">>(function EmptyDescription({ className, ...props }, ref): React.JSX.Element {
 	return (
 		<div
+			ref={ref}
 			data-slot="empty-description"
 			className={cn("text-sm/relaxed text-muted-foreground [&>a]:underline [&>a]:underline-offset-4 [&>a:hover]:text-primary", className)}
 			{...props}
 		/>
 	);
-}
+});
 
-function EmptyContent({ className, ...props }: React.ComponentProps<"div">): React.JSX.Element {
-	return <div data-slot="empty-content" className={cn("flex w-full max-w-sm min-w-0 flex-col items-center gap-4 text-sm text-balance", className)} {...props} />;
-}
+const EmptyContent = React.forwardRef<HTMLDivElement, React.ComponentProps<"div">>(function EmptyContent({ className, ...props }, ref): React.JSX.Element {
+	return <div ref={ref} data-slot="empty-content" className={cn("flex w-full max-w-sm min-w-0 flex-col items-center gap-4 text-sm text-balance", className)} {...props} />;
+});
 
 export { Empty, EmptyHeader, EmptyTitle, EmptyDescription, EmptyContent, EmptyMedia };

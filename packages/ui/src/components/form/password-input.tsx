@@ -17,8 +17,19 @@ import { cn } from "@workspace/ui/lib/utils";
  *
  * Pure presentational: value/onChange flow in via props, exactly like the base
  * `Input`. Both apps use it on their login forms.
+ *
+ * Ref forwarding (rule 20): the ref lands on the inner `<input>` so RHF
+ * `register()` and focus management work.
+ *
+ * Event contract (rule 21): `onChange`/`onBlur`/`onFocus` pass straight
+ * through to the input. `onKeyDown`/`onKeyUp` are *composed* with the internal
+ * caps-lock detector (never clobbered), and `onBlur` also clears the stale
+ * caps-lock hint.
  */
-function PasswordInput({ className, onChange, ...props }: React.ComponentProps<"input">): React.JSX.Element {
+const PasswordInput = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(function PasswordInput(
+	{ className, onChange, onBlur, onFocus, onKeyDown, onKeyUp, ...props },
+	ref,
+): React.JSX.Element {
 	const [visible, setVisible] = React.useState(false);
 	const [capsLock, setCapsLock] = React.useState(false);
 
@@ -33,16 +44,47 @@ function PasswordInput({ className, onChange, ...props }: React.ComponentProps<"
 		setCapsLock(event.getModifierState("CapsLock"));
 	}, []);
 
+	// Compose the internal caps-lock detection with consumer handlers instead of
+	// clobbering them (the spread `{...props}` comes first, so the explicit
+	// props below always win — but never at the consumer's expense).
+	const handleKeyDown = React.useCallback(
+		(event: React.KeyboardEvent<HTMLInputElement>): void => {
+			handleCapsLockChange(event);
+			onKeyDown?.(event);
+		},
+		[handleCapsLockChange, onKeyDown],
+	);
+
+	const handleKeyUp = React.useCallback(
+		(event: React.KeyboardEvent<HTMLInputElement>): void => {
+			handleCapsLockChange(event);
+			onKeyUp?.(event);
+		},
+		[handleCapsLockChange, onKeyUp],
+	);
+
+	// Tabbing away with Caps Lock on must not leave a stale warning behind.
+	const handleBlur = React.useCallback(
+		(event: React.FocusEvent<HTMLInputElement>): void => {
+			setCapsLock(false);
+			onBlur?.(event);
+		},
+		[onBlur],
+	);
+
 	return (
 		<div className="space-y-1.5">
 			<InputGroup>
 				<InputGroupInput
+					ref={ref}
 					type={visible ? "text" : "password"}
 					onChange={onChange}
+					onBlur={handleBlur}
+					onFocus={onFocus}
+					onKeyDown={handleKeyDown}
+					onKeyUp={handleKeyUp}
 					className={className}
 					{...props}
-					onKeyDown={handleCapsLockChange}
-					onKeyUp={handleCapsLockChange}
 				/>
 				<InputGroupAddon align="inline-end">
 					<InputGroupButton
@@ -75,6 +117,6 @@ function PasswordInput({ className, onChange, ...props }: React.ComponentProps<"
 			) : null}
 		</div>
 	);
-}
+});
 
 export { PasswordInput };

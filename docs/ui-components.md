@@ -584,7 +584,7 @@ Upload/attachment card with media, content, actions, trigger, and group scroller
 
 Avatar with image/fallback, badge, and group with overflow count.
 
-1. `[R]` No ref forwarding on `Avatar`, `AvatarImage`, `AvatarFallback` — forward for image-load measurement and tests.
+1. ✅ `[R]` **refs forwarded** — `Avatar`, `AvatarImage`, `AvatarFallback` (plus `AvatarBadge`, `AvatarGroup`, `AvatarGroupCount`) all forward refs (rule 20) for image-load measurement and tests.
 2. `[V]` Sizes are `sm | default | lg` inline union — promote to CVA (`size` + `variant: circle | rounded | square`) so avatars match other token-driven components.
 3. `[V]` No `state` support — add `status`/presence (`online | offline | busy | away`) rendering a token-coloured dot instead of forcing the badge for presence.
 4. `[A]` `Avatar` has no default `aria-label` and no `alt` wiring — when the image fails, `AvatarFallback` becomes the accessible name; ensure a single source of truth (prefer an `alt`/`name` prop).
@@ -638,7 +638,7 @@ Small status/label chip with `render` support (base-ui `useRender`).
 
 1. `[V]` No `size` variant — add `sm | default | lg` via CVA (height, padding, text scale) so badges work in dense tables and page headers.
 2. `[V]` No `state` concept — add `disabled` (opacity + no pointer) and `loading` (small spinner dot) per rule 23.
-3. `[R]` No ref forwarding — forward to the rendered element (needed for tooltip triggers wrapping badges).
+3. ✅ `[R]` **ref forwarded** — `Badge` forwards its ref to the rendered element via `useRender` (rule 20), so tooltip triggers wrapping badges and focus tests work.
 4. `[A]` `overflow-hidden` + `whitespace-nowrap` truncates without an ellipsis — add `max-w` + `truncate` guidance and a `title` prop for long labels.
 5. `[UX]` No removable badge — add `onRemove` + an optional X slot for tag-list usage (drives `ComboboxChip` consistency).
 6. `[D]` Status data (color mapping from API state) belongs to the smart component — document that the variant prop is the only styling input.
@@ -1012,7 +1012,7 @@ Chat bubble with `variant` CVA (default/secondary/muted/tinted/outline/ghost/des
 The workhorse: CVA variants (default/outline/secondary/ghost/destructive/link) + sizes (default/xs/sm/lg/icon/icon-xs/icon-sm/icon-lg).
 
 1. `[V]` No `loading` state — add `loading?: boolean` that renders the shared `Spinner`, disables the button, and sets `aria-busy` (rule 23: `state` support).
-2. `[R]` Wraps `ButtonPrimitive` (base-ui) — verify the wrapper forwards refs; add an explicit `forwardRef` wrapper so `RHF register()` works without the primitive leaking.
+2. ✅ `[R]` **`forwardRef` wrapper** — `Button` now forwards its ref to `ButtonPrimitive` (rule 20), so RHF `register()` and focus management work without the primitive leaking. (`InputGroupButton`, `PaginationLink` etc. compose on top.)
 3. `[T]` `variant`/`size` are CVA-typed but the unions are string literals — export `ButtonVariantSchema` (zod enum) + inferred types so smart components can validate config at the boundary.
 4. `[A]` Icon-only sizes (`icon`, `icon-xs`…) have no built-in `aria-label` requirement — add a dev-time warning or docs mandating `aria-label` for icon buttons.
 5. `[P]` `buttonVariants({ variant, size, className })` re-runs CVA on every render — CVA is memoized internally, but ensure consumers don't pass new `className` objects (rule 16).
@@ -1063,7 +1063,7 @@ The workhorse: CVA variants (default/outline/secondary/ghost/destructive/link) +
 
 Segmented group (horizontal/vertical) with text and separator sub-parts.
 
-1. `[R]` No ref forwarding on `ButtonGroup`/`ButtonGroupText` — forward for focus-group management (arrow-key roving lives in base-ui for ToggleGroup, not here).
+1. ✅ `[R]` **refs forwarded** — `ButtonGroup` (div), `ButtonGroupText` (via `useRender`) and `ButtonGroupSeparator` (via `Separator`) all forward refs (rule 20) for focus-group management and tests.
 2. `[V]` No size/variant propagation — children (Buttons) set their own; add `size`/`variant` props that thread into a context so all members stay consistent.
 3. `[A]` The group has `role="group"` ✓ — document that segmented single-choice groups should instead use `role="radiogroup"` semantics at the smart layer.
 4. `[M]` Vertical orientation + many items can exceed viewport height — add an overflow/scroll option or document `flex-wrap` fallback.
@@ -1167,7 +1167,7 @@ DayPicker wrapper with themed classNames, chevrons, dropdown captions, and a cus
 
 Container with header/title/description/action/content/footer, spacing driven by `--card-spacing`.
 
-1. `[R]` No ref forwarding — `Card`/`CardContent` should forward refs (scroll-into-view, intersection observers).
+1. ✅ `[R]` **refs forwarded** — `Card` and every part (`CardHeader`, `CardTitle`, `CardDescription`, `CardAction`, `CardContent`, `CardFooter`) forward refs (rule 20) for scroll-into-view and intersection observers.
 2. `[V]` Only `size` (`default | sm`) exists — add `variant: default | outline | ghost | interactive` so clickable cards get hover elevation without per-app CSS.
 3. `[UX]` No `hoverable`/press affordance — an `interactive` variant should add `hover:shadow-md`, `hover:ring`, and `active:scale-[0.99]` (polish).
 4. `[A]` Interactive cards need keyboard support — document `render="button"`/`role` semantics for clickable cards at the smart layer.
@@ -1326,7 +1326,7 @@ Base-ui checkbox with check indicator and aria-invalid support.
 1. `[V]` No `size` variant — add `sm | default | lg` (box px + icon size) via CVA for tables vs settings pages.
 2. `[V]` No `state` support — add `error` (visual + aria-invalid already) and `loading` (indeterminate spinner) states.
 3. `[A]` No indeterminate visual — base-ui supports `indeterminate`; add the prop + a minus icon when checked-state is `indeterminate`.
-4. `[R]` No ref forwarding — `forwardRef` is mandatory (rule 20) so RHF `register()` and focus management work.
+4. ✅ `[R]` **refs forwarded** — `Checkbox` forwards its ref to `CheckboxPrimitive.Root` (rule 20), so RHF `register()` and focus management work.
 5. `[F]` Document the RHF `Controller` pattern (value/onChange) — the component is already fully controlled ✓.
 6. `[A]` The `after:-inset-x-3 -inset-y-2` hit-area expansion is invisible to tests — add `aria-label` guidance + a larger-focus-ring note.
 7. `[P]` The `CheckIcon` mounts even when unchecked (hidden by CSS) — fine; document the pattern for icon a11y.
@@ -1698,7 +1698,7 @@ cmdk-based command palette with dialog, input, list, item, shortcut, separator.
 
 Right-click menu mirroring DropdownMenu's API on base-ui `ContextMenu`.
 
-1. `[R]` No ref forwarding — `ContextMenuItem`, `ContextMenuTrigger`, `ContextMenuContent` need refs.
+1. ✅ `[R]` **refs forwarded** — `ContextMenuTrigger`, `ContextMenuContent`, `ContextMenuItem` plus `ContextMenuLabel`, `ContextMenuGroup`, `ContextMenuCheckboxItem`, `ContextMenuRadioGroup`, `ContextMenuRadioItem`, `ContextMenuSeparator`, `ContextMenuShortcut`, `ContextMenuSubTrigger` and `ContextMenuSubContent` all forward refs (rule 20) for focus restore and tests. (`ContextMenu` root, `ContextMenuPortal` and `ContextMenuSub` render no DOM, so they stay plain functions — same as the Select root.)
 2. `[T]` `variant`/`inset` are inline unions — promote to zod enums shared with DropdownMenu (rule 4).
 3. `[A]` `ContextMenuTrigger` adds `select-none` — document that text selection is intentionally disabled inside triggers.
 4. `[M]` Right-click is desktop-only — document long-press/`onContextMenu` fallback for touch, or a smart-layer alternative (long-press menu).
@@ -1752,7 +1752,7 @@ Base-ui dialog with overlay, content (close button option), header, footer, titl
 
 1. `[V]` No `size` variant — add `sm | default | lg | xl` (max-width) so modals aren't all `sm:max-w-md`.
 2. `[A]` No scroll handling for long content — add `overflow-y-auto` + `max-h-[calc(100dvh-...)]` on the content, or a `scrollable` variant.
-3. `[R]` No ref forwarding — `DialogContent`, `DialogTitle` need refs (focus trap verification, tests).
+3. ✅ `[R]` **refs forwarded** — `DialogContent` (popup), `DialogTitle`, `DialogDescription`, `DialogOverlay`, `DialogTrigger`, `DialogClose`, `DialogHeader`, `DialogFooter` all forward refs (rule 20) for focus-trap verification and tests. (`Dialog` root and `DialogPortal` render no DOM, so they stay plain functions — same as the Select root.)
 4. `[A]` `DialogTitle`/`DialogDescription` required pairing — add a dev warning when a Dialog has content but no `DialogTitle` (a11y, rule 19).
 5. `[M]` `max-w-[calc(100%-2rem)]` on mobile — good; add `inset-x-4`-style safe margins for landscape phones.
 6. `[P]` Overlay + popup classes are static ✓ — keep them out of render bodies.
@@ -1802,7 +1802,7 @@ Base-ui dialog with overlay, content (close button option), header, footer, titl
 
 Base-ui drawer with snap points, swipe handle, nested-drawer stack, and direction-aware swipe axes.
 
-1. `[R]` No ref forwarding — `DrawerContent`/`DrawerTrigger` need refs (swipe measuring, tests).
+1. ✅ `[R]` **refs forwarded** — `DrawerTrigger`, `DrawerContent` (popup), `DrawerOverlay`, `DrawerClose`, `DrawerSwipeHandle`, `DrawerHeader`, `DrawerFooter`, `DrawerTitle` and `DrawerDescription` all forward refs (rule 20) for swipe measuring and tests. (`Drawer` root and `DrawerPortal` render no DOM, so they stay plain functions — same as the Select root.)
 2. `[A]` `DrawerSwipeHandle` has no keyboard equivalent — add `aria-hidden` (already ✓) and document that keyboard users use Escape/Enter via the trigger.
 3. `[M]` Swipe-to-close conflicts with horizontal scroll on mobile — document `swipeDirection` configuration per use case.
 4. `[P]` `contextValue` is memoized ✓ — keep `hasSnapPoints`/`modal`/`showSwipeHandle`/`swipeDirection` as the only deps.
@@ -1854,7 +1854,7 @@ Base-ui drawer with snap points, swipe handle, nested-drawer stack, and directio
 
 Full base-ui menu: items, labels, separators, shortcuts, checkbox/radio items, submenus, destructive variant.
 
-1. `[R]` No ref forwarding — `DropdownMenuItem`, `DropdownMenuTrigger`, `DropdownMenuContent` need refs (focus restore, tests).
+1. ✅ `[R]` **refs forwarded** — `DropdownMenuTrigger`, `DropdownMenuContent`, `DropdownMenuItem`, `DropdownMenuLabel`, `DropdownMenuGroup`, `DropdownMenuCheckboxItem`, `DropdownMenuRadioGroup`, `DropdownMenuRadioItem`, `DropdownMenuSeparator`, `DropdownMenuShortcut`, `DropdownMenuSubTrigger` and `DropdownMenuSubContent` all forward refs (rule 20) for focus restore and tests. (`DropdownMenu` root and `DropdownMenuPortal` render no DOM, so they stay plain functions — same as the Select root.)
 2. `[V]` No `size` variant — add `sm | default` (row padding/text) for dense table actions vs toolbar menus.
 3. `[T]` `variant`/`inset` inline unions — promote to zod enums shared with ContextMenu/Menubar (rule 4).
 4. `[A]` Icon-only menu items need `aria-label` guidance — document the pattern in JSDoc.
@@ -1906,7 +1906,7 @@ Full base-ui menu: items, labels, separators, shortcuts, checkbox/radio items, s
 
 Empty-state block with header, media, title, description, content.
 
-1. `[R]` No ref forwarding — `Empty`/`EmptyContent` should forward refs (focus management for empty-state CTAs).
+1. ✅ `[R]` **refs forwarded** — `Empty`, `EmptyHeader`, `EmptyMedia`, `EmptyTitle`, `EmptyDescription` and `EmptyContent` all forward refs (rule 20) for focus management of empty-state CTAs.
 2. `[V]` No `size` variant — add `sm | default | lg` (padding, icon tile size) for inline vs full-page empty states.
 3. `[A]` Add `aria-label`/`role="status"` option — an empty state after a search should be announced politely.
 4. `[M]` `p-12` padding is fixed — on small screens reduce to `p-8` via the size variant.
@@ -2011,7 +2011,7 @@ Form-field primitives: Field (orientation), FieldLabel, FieldDescription, FieldE
 Low-level form wrapper: error banner, `<form>` with onSubmit, loading submit button.
 
 1. `[P]` The inline spinner `<svg>` duplicates the shared `Spinner` component — replace with `Spinner` (single source of truth).
-2. `[R]` No ref forwarding — `FormShell` should forward a `form` ref (RHF `handleSubmit`, reset focus).
+2. ✅ `[R]` **`form` ref forwarded** — `FormShell` is a `forwardRef` component whose ref lands on the `<form>` element (rule 20), so RHF `handleSubmit` and reset-focus management work.
 3. `[F]` It takes `onSubmit` + `error` manually — for RHF, accept `onSubmit: (values) => void` (already) and document passing `form.handleSubmit`; or accept `form` methods via prop.
 4. `[T]` `error: string | null` — upgrade to a zod-validated `FormError` shape (`{ message: string; code?: AuthErrorCode }`) so error codes survive.
 5. `[A]` The error banner has no `aria-describedby` link to the form — wire `id` + `aria-describedby` on the form.
@@ -2062,7 +2062,7 @@ Low-level form wrapper: error banner, `<form>` with onSubmit, loading submit but
 
 Base-ui preview-card (hover/click preview popover).
 
-1. `[R]` No ref forwarding — `HoverCardTrigger`/`HoverCardContent` need refs.
+1. ✅ `[R]` **refs forwarded** — `HoverCardTrigger` and `HoverCardContent` forward refs (rule 20). (`HoverCard` root renders no DOM, so it stays a plain function — same as the Select root.)
 2. `[A]` Preview cards on hover are mouse-only — add keyboard focus-trigger guidance (focus + Enter) via the trigger (base-ui supports focus triggers).
 3. `[M]` Hover delay (`hoverDelay`) should be shorter on touch — document prop configuration.
 4. `[P]` `w-64` hardcoded — make `width` a prop (`sm | md | lg | auto`) so previews scale.
@@ -2114,7 +2114,7 @@ Base-ui preview-card (hover/click preview popover).
 
 The base text input (base-ui `InputPrimitive`).
 
-1. `[R]` No explicit `forwardRef` — verify `InputPrimitive` forwards, and wrap to guarantee the contract (RHF `register` needs it, rule 20).
+1. ✅ `[R]` **`forwardRef` added** — `Input` now wraps `InputPrimitive` with an explicit `forwardRef` whose ref lands on the native input (rule 20). RHF `register()` and focus management work.
 2. `[V]` No `size` variant — add `sm | default | lg` (h-7/h-9/h-10) via CVA for dense tables vs large CTAs.
 3. `[V]` No `state` beyond `aria-invalid` — add `error` (already styled via `aria-invalid`), `loading` (spinner suffix), `disabled` (already).
 4. `[F]` Consistent event contract ✓ (`onChange`/`onBlur`/`onFocus` passthrough) — document RHF `register` usage.
@@ -2166,7 +2166,7 @@ The base text input (base-ui `InputPrimitive`).
 
 Composable input+addon+button+textarea group (powered by `InputGroupInput`).
 
-1. `[R]` No ref forwarding — `InputGroupInput`/`InputGroupTextarea` should forward refs (RHF register).
+1. ✅ `[R]` **refs forwarded** — `InputGroupInput`/`InputGroupTextarea` forward refs to the inner controls; `InputGroup`, `InputGroupAddon`, `InputGroupButton` and `InputGroupText` forward too (rule 20).
 2. `[V]` No `size` variant — add `sm | default | lg` threaded through the group's `h-9` base.
 3. `[A]` `InputGroupAddon`'s pointerdown handler focuses the first `input` — it misses `textarea`; also add `aria-label` guidance for decorative addons.
 4. `[P]` `handlePointerDown` is a `useCallback` ✓ — keep it stable; ensure it doesn't fire on addon buttons (it guards ✓).
@@ -2218,7 +2218,7 @@ Composable input+addon+button+textarea group (powered by `InputGroupInput`).
 
 One-time-password input with group, slot, separator, and fake caret.
 
-1. `[R]` No ref forwarding — `InputOTP`/`InputOTPSlot` need refs (autofocus, submit-on-complete).
+1. ✅ `[R]` **refs forwarded** — `InputOTP` (native input), `InputOTPGroup`, `InputOTPSlot` and `InputOTPSeparator` all forward refs (rule 20) for autofocus, submit-on-complete and tests.
 2. `[V]` No `size` variant — add `sm | default | lg` (slot size `size-9` base) via CVA.
 3. `[A]` No `aria-label`/description wiring — add `label` prop or document `aria-label` per field.
 4. `[F]` `onComplete` passthrough ✓ — document RHF usage (value/onChange via `Controller`).
@@ -2686,7 +2686,7 @@ Base-ui navigation menu: root, list, item, trigger, content, link, indicator.
 
 Native `<select>` with chevron addon and option/optgroup helpers.
 
-1. `[R]` The wrapper `div` isn't ref-forwarded and the `<select>` ref isn't exposed — `forwardRef` is mandatory (rule 20).
+1. ✅ `[R]` **`<select>` ref exposed** — `NativeSelect` is a `forwardRef` component whose ref lands directly on the native `<select>` (rule 20), so RHF `register()` and focus management work; the wrapper div stays an implementation detail.
 2. `[V]` `size` is an inline union (`sm | default`) — promote to CVA + zod enum.
 3. `[A]` The chevron is `aria-hidden` ✓ — good; add `aria-label` guidance for icon-only selects.
 4. `[F]` Consistent event contract ✓ — document RHF `register` on the `<select>`.
@@ -2842,9 +2842,9 @@ Nav-based pagination: content, items, link (Button-rendered anchor), previous/ne
 
 Password field with show/hide toggle + caps-lock warning.
 
-1. `[R]` **No `forwardRef`** — the underlying `InputGroupInput` never receives a ref, so RHF `register()` cannot attach; this is the single most important fix (rule 20).
-2. `[A]` `onKeyDown`/`onKeyUp` are hardcoded to `handleCapsLockChange` and **clobber consumer handlers** (spread `{...props}` happens before) — compose them: `onKeyDown={(e) => { props.onKeyDown?.(e); handleCapsLockChange(e); }}`.
-3. `[A]` Caps-lock state never resets on blur — a user who tabs away with Caps Lock on leaves a stale warning; clear on `onBlur`.
+1. ✅ `[R]` **`forwardRef` added** — `PasswordInput` forwards its ref to the inner input (rule 20); RHF `register()` and focus management now attach correctly.
+2. ✅ `[A]` **handlers composed, never clobbered** — `onKeyDown`/`onKeyUp` call the internal caps-lock detector first, then the consumer handler.
+3. ✅ `[A]` **caps-lock resets on blur** — `onBlur` clears the stale warning (and still calls the consumer's `onBlur`).
 4. `[F]` Consistent event contract ✓ (`onChange`/`onBlur`/`onFocus` passthrough) — document RHF `register` + the `name` prop once #1 lands.
 5. `[A]` `aria-describedby` — wire to a caps-lock/error hint so SRs hear the warning.
 6. `[Th]` `text-amber-600 dark:text-amber-400` warning — route through a `--warning` token (rule 22).
@@ -3050,7 +3050,7 @@ Base-ui progress with track, indicator, label, value.
 
 Base-ui radio group with item + indicator dot.
 
-1. `[R]` No ref forwarding — `RadioGroupItem` needs a ref (RHF register, focus).
+1. ✅ `[R]` **refs forwarded** — both `RadioGroup` and `RadioGroupItem` forward refs (rule 20) so RHF `register()` and focus management work.
 2. `[V]` No `orientation`/`size` — add `orientation: horizontal | vertical` + `size` (dot size) via CVA.
 3. `[A]` Keyboard: arrow keys handled by primitive ✓ — add a regression test.
 4. `[F]` Document the RHF `Controller` pattern (value/onChange) — the group is fully controlled ✓.
@@ -3623,7 +3623,7 @@ Pulse placeholder block.
 
 Base-ui slider with track, range indicator, and thumbs.
 
-1. `[R]` No ref forwarding — `Slider` needs a ref (value reads, tests).
+1. ✅ `[R]` **ref forwarded** — `Slider` forwards its ref to `SliderPrimitive.Root` (rule 20) for value reads and tests.
 2. `[A]` No value display — add an optional `output`/`showValue` (uses `<output>` + `aria-valuetext`) for SR and visual feedback.
 3. `[P]` `values` computation + `Array.from({ length: values.length })` per render — memoize with `useMemo` (rule 16).
 4. `[P]` `[min, max]` fallback array literal per render — hoist to a module constant.
@@ -3779,7 +3779,7 @@ Loader icon with `role="status"`.
 
 Base-ui switch with thumb + sizes.
 
-1. `[R]` No ref forwarding — `Switch` needs a ref (RHF register).
+1. ✅ `[R]` **ref forwarded** — `Switch` forwards its ref to `SwitchPrimitive.Root` (rule 20) so RHF `register()` works.
 2. `[Th]` Magic pixel values (`h-[18.4px] w-[32px]`, `14px/24px`) — replace with design tokens (`--switch-w/h`) so theming scales (rule 22).
 3. `[V]` No `state` — add `loading` (spinner in thumb), `disabled` (has ✓), `error` (aria-invalid ✓ but no message).
 4. `[A]` No label wiring — document pairing with `Label` (`htmlFor`/`id`).
@@ -4213,7 +4213,7 @@ Base-ui tabs with CVA list variants (default/line) + vertical orientation.
 
 Base textarea with auto-height (`field-sizing-content`).
 
-1. `[R]` No explicit `forwardRef` — guarantee the contract (RHF register, rule 20).
+1. ✅ `[R]` **`forwardRef` added** — `Textarea` forwards its ref to the native textarea (rule 20); RHF `register()` and focus management work.
 2. `[V]` No `size` variant — add `sm | default | lg` (min-height, text scale).
 3. `[A]` No character counter — add optional `maxLength` + `showCount` (renders `aria-describedby` counter).
 4. `[F]` Consistent event contract ✓ — document RHF `register` + `rows` control.
@@ -4388,7 +4388,7 @@ message.success({ title: "Widget-scoped" });
 
 Base-ui toggle (press-state button) with CVA variants/sizes.
 
-1. `[R]` No ref forwarding — `Toggle` needs a ref (RHF register for boolean fields).
+1. ✅ `[R]` **ref forwarded** — `Toggle` forwards its ref to `TogglePrimitive` (rule 20) so RHF `register()` for boolean fields works.
 2. `[V]` No `state` — add `loading` (spinner), `disabled` (has ✓), `error` (aria-invalid styling) per rule 23.
 3. `[A]` `aria-pressed` from primitive ✓ — add a regression test.
 4. `[F]` RHF `Controller` pattern for boolean fields — document.
@@ -4440,7 +4440,7 @@ Base-ui toggle (press-state button) with CVA variants/sizes.
 
 Base-ui toggle group with context-driven variant/size/spacing/orientation.
 
-1. `[R]` No ref forwarding — `ToggleGroup`/`ToggleGroupItem` need refs.
+1. ✅ `[R]` **refs forwarded** — both `ToggleGroup` (root) and `ToggleGroupItem` (button) forward refs (rule 20).
 2. `[A]` `role="group"`/radiogroup semantics — document that single-select groups should expose `aria-pressed` per item (primitive ✓).
 3. `[M]` Horizontal groups overflow on narrow screens — add `flex-wrap`/scroll option.
 4. `[P]` `toggleGroupStyle` object recreated per render — memoize (rule 16).
@@ -4492,7 +4492,7 @@ Base-ui toggle group with context-driven variant/size/spacing/orientation.
 
 Base-ui tooltip provider/root/trigger/content/arrow.
 
-1. `[R]` No ref forwarding — `TooltipTrigger`/`TooltipContent` need refs.
+1. ✅ `[R]` **refs forwarded** — `TooltipTrigger` and `TooltipContent` forward refs (rule 20). (`TooltipProvider`/`Tooltip` roots render no DOM, so they stay plain functions — same as the Select root.)
 2. `[V]` No `size`/`variant` — add `size` (padding/text) + `variant` (`default | inverted`) via CVA.
 3. `[A]` The arrow is always rendered — add a `showArrow` prop; table cell tooltips often want it off.
 4. `[M]` `max-w-xs` hardcoded — add a `maxWidth` prop (token) so long hints wrap.

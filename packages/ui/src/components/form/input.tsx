@@ -2,9 +2,10 @@ import { Input as InputPrimitive } from "@base-ui/react/input";
 import { cn } from "@workspace/ui/lib/utils";
 import * as React from "react";
 
-function Input({ className, type, ...props }: React.ComponentProps<"input">): React.JSX.Element {
+const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(function Input({ className, type, ...props }, ref): React.JSX.Element {
 	return (
 		<InputPrimitive
+			ref={ref}
 			type={type}
 			data-slot="input"
 			className={cn(
@@ -14,6 +15,6 @@ function Input({ className, type, ...props }: React.ComponentProps<"input">): Re
 			{...props}
 		/>
 	);
-}
+});
 
 export { Input };

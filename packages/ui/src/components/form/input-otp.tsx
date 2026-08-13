@@ -5,15 +5,15 @@ import { OTPInput, OTPInputContext } from "input-otp";
 import { MinusIcon } from "lucide-react";
 import * as React from "react";
 
-function InputOTP({
-	className,
-	containerClassName,
-	...props
-}: React.ComponentProps<typeof OTPInput> & {
-	containerClassName?: string;
-}): React.JSX.Element {
+const InputOTP = React.forwardRef<
+	HTMLInputElement,
+	React.ComponentProps<typeof OTPInput> & {
+		containerClassName?: string;
+	}
+>(function InputOTP({ className, containerClassName, ...props }, ref): React.JSX.Element {
 	return (
 		<OTPInput
+			ref={ref}
 			data-slot="input-otp"
 			containerClassName={cn("cn-input-otp flex items-center has-disabled:opacity-50", containerClassName)}
 			spellCheck={false}
@@ -21,11 +21,12 @@ function InputOTP({
 			{...props}
 		/>
 	);
-}
+});
 
-function InputOTPGroup({ className, ...props }: React.ComponentProps<"div">): React.JSX.Element {
+const InputOTPGroup = React.forwardRef<HTMLDivElement, React.ComponentProps<"div">>(function InputOTPGroup({ className, ...props }, ref): React.JSX.Element {
 	return (
 		<div
+			ref={ref}
 			data-slot="input-otp-group"
 			className={cn(
 				"flex items-center rounded-md has-aria-invalid:border-destructive has-aria-invalid:ring-3 has-aria-invalid:ring-destructive/20 dark:has-aria-invalid:ring-destructive/40",
@@ -34,20 +35,20 @@ function InputOTPGroup({ className, ...props }: React.ComponentProps<"div">): Re
 			{...props}
 		/>
 	);
-}
+});
 
-function InputOTPSlot({
-	index,
-	className,
-	...props
-}: React.ComponentProps<"div"> & {
-	index: number;
-}): React.JSX.Element {
+const InputOTPSlot = React.forwardRef<
+	HTMLDivElement,
+	React.ComponentProps<"div"> & {
+		index: number;
+	}
+>(function InputOTPSlot({ index, className, ...props }, ref): React.JSX.Element {
 	const inputOTPContext = React.useContext(OTPInputContext);
 	const { char, hasFakeCaret, isActive } = inputOTPContext.slots[index] ?? {};
 
 	return (
 		<div
+			ref={ref}
 			data-slot="input-otp-slot"
 			data-active={isActive}
 			className={cn(
@@ -63,14 +64,14 @@ function InputOTPSlot({
 			) : null}
 		</div>
 	);
-}
+});
 
-function InputOTPSeparator({ ...props }: React.ComponentProps<"div">): React.JSX.Element {
+const InputOTPSeparator = React.forwardRef<HTMLDivElement, React.ComponentProps<"div">>(function InputOTPSeparator(props, ref): React.JSX.Element {
 	return (
-		<div data-slot="input-otp-separator" className="flex items-center [&_svg:not([class*='size-'])]:size-4" role="separator" {...props}>
+		<div ref={ref} data-slot="input-otp-separator" className="flex items-center [&_svg:not([class*='size-'])]:size-4" role="separator" {...props}>
 			<MinusIcon />
 		</div>
 	);
-}
+});
 
 export { InputOTP, InputOTPGroup, InputOTPSlot, InputOTPSeparator };

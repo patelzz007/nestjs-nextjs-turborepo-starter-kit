@@ -7,9 +7,10 @@ import { cn } from "@workspace/ui/lib/utils";
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
 
-function InputGroup({ className, ...props }: React.ComponentProps<"div">): React.JSX.Element {
+const InputGroup = React.forwardRef<HTMLDivElement, React.ComponentProps<"div">>(function InputGroup({ className, ...props }, ref): React.JSX.Element {
 	return (
 		<div
+			ref={ref}
 			data-slot="input-group"
 			role="group"
 			className={cn(
@@ -19,7 +20,7 @@ function InputGroup({ className, ...props }: React.ComponentProps<"div">): React
 			{...props}
 		/>
 	);
-}
+});
 
 const inputGroupAddonVariants = cva(
 	"flex h-auto cursor-text items-center justify-center gap-2 py-1.5 text-sm font-medium text-muted-foreground select-none group-data-[disabled=true]/input-group:opacity-50 [&>kbd]:rounded-[calc(var(--radius)-5px)] [&>svg:not([class*='size-'])]:size-4",
@@ -38,7 +39,10 @@ const inputGroupAddonVariants = cva(
 	},
 );
 
-function InputGroupAddon({ className, align = "inline-start", ...props }: React.ComponentProps<"div"> & VariantProps<typeof inputGroupAddonVariants>): React.JSX.Element {
+const InputGroupAddon = React.forwardRef<HTMLDivElement, React.ComponentProps<"div"> & VariantProps<typeof inputGroupAddonVariants>>(function InputGroupAddon(
+	{ className, align = "inline-start", ...props },
+	ref,
+): React.JSX.Element {
 	const handlePointerDown = React.useCallback((event: React.PointerEvent<HTMLDivElement>): void => {
 		const target = event.target;
 		if (target instanceof HTMLElement && target.closest("button")) {
@@ -49,6 +53,7 @@ function InputGroupAddon({ className, align = "inline-start", ...props }: React.
 
 	return (
 		<div
+			ref={ref}
 			role="group"
 			data-slot="input-group-addon"
 			data-align={align}
@@ -57,7 +62,7 @@ function InputGroupAddon({ className, align = "inline-start", ...props }: React.
 			{...props}
 		/>
 	);
-}
+});
 
 const inputGroupButtonVariants = cva("flex items-center gap-2 text-sm shadow-none", {
 	variants: {
@@ -73,43 +78,49 @@ const inputGroupButtonVariants = cva("flex items-center gap-2 text-sm shadow-non
 	},
 });
 
-function InputGroupButton({
-	className,
-	type = "button",
-	variant = "ghost",
-	size = "xs",
-	...props
-}: Omit<React.ComponentProps<typeof Button>, "size" | "type"> &
-	VariantProps<typeof inputGroupButtonVariants> & {
-		type?: "button" | "submit" | "reset";
-	}): React.JSX.Element {
-	return <Button type={type} data-size={size} variant={variant} className={cn(inputGroupButtonVariants({ size }), className)} {...props} />;
-}
+const InputGroupButton = React.forwardRef<
+	HTMLButtonElement,
+	Omit<React.ComponentProps<typeof Button>, "size" | "type"> &
+		VariantProps<typeof inputGroupButtonVariants> & {
+			type?: "button" | "submit" | "reset";
+		}
+>(function InputGroupButton({ className, type = "button", variant = "ghost", size = "xs", ...props }, ref): React.JSX.Element {
+	return <Button ref={ref} type={type} data-size={size} variant={variant} className={cn(inputGroupButtonVariants({ size }), className)} {...props} />;
+});
 
-function InputGroupText({ className, ...props }: React.ComponentProps<"span">): React.JSX.Element {
+const InputGroupText = React.forwardRef<HTMLSpanElement, React.ComponentProps<"span">>(function InputGroupText({ className, ...props }, ref): React.JSX.Element {
 	return (
-		<span className={cn("flex items-center gap-2 text-sm text-muted-foreground [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4", className)} {...props} />
+		<span
+			ref={ref}
+			className={cn("flex items-center gap-2 text-sm text-muted-foreground [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4", className)}
+			{...props}
+		/>
 	);
-}
+});
 
-function InputGroupInput({ className, ...props }: React.ComponentProps<"input">): React.JSX.Element {
+const InputGroupInput = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(function InputGroupInput({ className, ...props }, ref): React.JSX.Element {
 	return (
 		<Input
+			ref={ref}
 			data-slot="input-group-control"
 			className={cn("flex-1 rounded-none border-0 bg-transparent shadow-none ring-0 focus-visible:ring-0 aria-invalid:ring-0 dark:bg-transparent", className)}
 			{...props}
 		/>
 	);
-}
+});
 
-function InputGroupTextarea({ className, ...props }: React.ComponentProps<"textarea">): React.JSX.Element {
+const InputGroupTextarea = React.forwardRef<HTMLTextAreaElement, React.ComponentProps<"textarea">>(function InputGroupTextarea(
+	{ className, ...props },
+	ref,
+): React.JSX.Element {
 	return (
 		<Textarea
+			ref={ref}
 			data-slot="input-group-control"
 			className={cn("flex-1 resize-none rounded-none border-0 bg-transparent py-2 shadow-none ring-0 focus-visible:ring-0 aria-invalid:ring-0 dark:bg-transparent", className)}
 			{...props}
 		/>
 	);
-}
+});
 
 export { InputGroup, InputGroupAddon, InputGroupButton, InputGroupText, InputGroupInput, InputGroupTextarea };

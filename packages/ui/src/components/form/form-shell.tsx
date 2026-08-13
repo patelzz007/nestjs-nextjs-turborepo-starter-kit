@@ -5,7 +5,7 @@
 // ============================================
 "use client";
 
-import type { JSX, ReactNode } from "react";
+import { forwardRef, type JSX, type ReactNode } from "react";
 
 import { Button } from "./button";
 
@@ -33,7 +33,10 @@ export interface FormShellProps {
  * Intended for use by app-level login/signup/reset-password forms.
  * Contains no authentication or business logic.
  */
-export function FormShell({ error, isLoading, submitLabel = "Submit", loadingLabel = "Submitting...", onSubmit, children }: FormShellProps): JSX.Element {
+export const FormShell = forwardRef<HTMLFormElement, FormShellProps>(function FormShell(
+	{ error, isLoading, submitLabel = "Submit", loadingLabel = "Submitting...", onSubmit, children },
+	ref,
+): JSX.Element {
 	return (
 		<>
 			{/* Error banner */}
@@ -49,7 +52,7 @@ export function FormShell({ error, isLoading, submitLabel = "Submit", loadingLab
 			) : null}
 
 			{/* Form */}
-			<form onSubmit={onSubmit} className="space-y-4">
+			<form ref={ref} onSubmit={onSubmit} className="space-y-4">
 				{children}
 
 				<Button type="submit" className="w-full" disabled={isLoading}>
@@ -68,4 +71,4 @@ export function FormShell({ error, isLoading, submitLabel = "Submit", loadingLab
 			</form>
 		</>
 	);
-}
+});

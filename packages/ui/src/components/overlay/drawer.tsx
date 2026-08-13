@@ -42,21 +42,23 @@ function Drawer({
 	);
 }
 
-function DrawerTrigger({ ...props }: DrawerPrimitive.Trigger.Props): React.JSX.Element {
-	return <DrawerPrimitive.Trigger data-slot="drawer-trigger" {...props} />;
-}
+const DrawerTrigger = React.forwardRef<HTMLButtonElement, DrawerPrimitive.Trigger.Props>(function DrawerTrigger({ ...props }, ref): React.JSX.Element {
+	return <DrawerPrimitive.Trigger ref={ref} data-slot="drawer-trigger" {...props} />;
+});
 
+// Portal renders no DOM of its own (a base-ui provider) — plain function like the Select Root.
 function DrawerPortal({ ...props }: DrawerPrimitive.Portal.Props): React.JSX.Element {
 	return <DrawerPrimitive.Portal data-slot="drawer-portal" {...props} />;
 }
 
-function DrawerClose({ ...props }: DrawerPrimitive.Close.Props): React.JSX.Element {
-	return <DrawerPrimitive.Close data-slot="drawer-close" {...props} />;
-}
+const DrawerClose = React.forwardRef<HTMLButtonElement, DrawerPrimitive.Close.Props>(function DrawerClose({ ...props }, ref): React.JSX.Element {
+	return <DrawerPrimitive.Close ref={ref} data-slot="drawer-close" {...props} />;
+});
 
-function DrawerOverlay({ className, ...props }: DrawerPrimitive.Backdrop.Props): React.JSX.Element {
+const DrawerOverlay = React.forwardRef<HTMLDivElement, DrawerPrimitive.Backdrop.Props>(function DrawerOverlay({ className, ...props }, ref): React.JSX.Element {
 	return (
 		<DrawerPrimitive.Backdrop
+			ref={ref}
 			data-slot="drawer-overlay"
 			className={cn(
 				"fixed inset-0 z-50 min-h-dvh bg-black/10 opacity-[max(var(--drawer-overlay-min-opacity,0),calc(1-var(--drawer-swipe-progress)))] transition-opacity duration-450 ease-[cubic-bezier(0.32,0.72,0,1)] select-none data-ending-style:pointer-events-none data-ending-style:opacity-0 data-ending-style:duration-[calc(var(--drawer-swipe-strength)*400ms)] data-snap-points:[--drawer-overlay-min-opacity:0.5] data-starting-style:opacity-0 data-swiping:duration-0 supports-backdrop-filter:backdrop-blur-xs supports-[-webkit-touch-callout:none]:absolute",
@@ -65,11 +67,12 @@ function DrawerOverlay({ className, ...props }: DrawerPrimitive.Backdrop.Props):
 			{...props}
 		/>
 	);
-}
+});
 
-function DrawerSwipeHandle({ className, ...props }: React.ComponentProps<"div">): React.JSX.Element {
+const DrawerSwipeHandle = React.forwardRef<HTMLDivElement, React.ComponentProps<"div">>(function DrawerSwipeHandle({ className, ...props }, ref): React.JSX.Element {
 	return (
 		<div
+			ref={ref}
 			data-slot="drawer-swipe-handle"
 			aria-hidden="true"
 			className={cn(
@@ -79,9 +82,9 @@ function DrawerSwipeHandle({ className, ...props }: React.ComponentProps<"div">)
 			{...props}
 		/>
 	);
-}
+});
 
-function DrawerContent({ className, children, ...props }: DrawerPrimitive.Popup.Props): React.JSX.Element {
+const DrawerContent = React.forwardRef<HTMLDivElement, DrawerPrimitive.Popup.Props>(function DrawerContent({ className, children, ...props }, ref): React.JSX.Element {
 	const { hasSnapPoints, modal, showSwipeHandle, swipeDirection } = useDrawer();
 	const swipeAxis = swipeDirection === "down" || swipeDirection === "up" ? "y" : "x";
 
@@ -93,6 +96,7 @@ function DrawerContent({ className, children, ...props }: DrawerPrimitive.Popup.
 				data-modal={modal}
 				className="pointer-events-none fixed inset-0 z-50 select-none data-[modal=true]:pointer-events-auto">
 				<DrawerPrimitive.Popup
+					ref={ref}
 					data-slot="drawer-popup"
 					data-swipe-axis={swipeAxis}
 					data-snap-points={hasSnapPoints ? "" : undefined}
@@ -136,28 +140,32 @@ function DrawerContent({ className, children, ...props }: DrawerPrimitive.Popup.
 			</DrawerPrimitive.Viewport>
 		</DrawerPortal>
 	);
-}
+});
 
-function DrawerHeader({ className, ...props }: React.ComponentProps<"div">): React.JSX.Element {
+const DrawerHeader = React.forwardRef<HTMLDivElement, React.ComponentProps<"div">>(function DrawerHeader({ className, ...props }, ref): React.JSX.Element {
 	return (
 		<div
+			ref={ref}
 			data-slot="drawer-header"
 			className={cn("flex shrink-0 flex-col gap-0.5 p-4 pb-0 group-data-[swipe-axis=y]/drawer-popup:text-center md:gap-1.5 md:text-start", className)}
 			{...props}
 		/>
 	);
-}
+});
 
-function DrawerFooter({ className, ...props }: React.ComponentProps<"div">): React.JSX.Element {
-	return <div data-slot="drawer-footer" className={cn("mt-auto flex shrink-0 flex-col gap-2 p-4 pt-0", className)} {...props} />;
-}
+const DrawerFooter = React.forwardRef<HTMLDivElement, React.ComponentProps<"div">>(function DrawerFooter({ className, ...props }, ref): React.JSX.Element {
+	return <div ref={ref} data-slot="drawer-footer" className={cn("mt-auto flex shrink-0 flex-col gap-2 p-4 pt-0", className)} {...props} />;
+});
 
-function DrawerTitle({ className, ...props }: DrawerPrimitive.Title.Props): React.JSX.Element {
-	return <DrawerPrimitive.Title data-slot="drawer-title" className={cn("font-heading font-medium text-foreground", className)} {...props} />;
-}
+const DrawerTitle = React.forwardRef<HTMLHeadingElement, DrawerPrimitive.Title.Props>(function DrawerTitle({ className, ...props }, ref): React.JSX.Element {
+	return <DrawerPrimitive.Title ref={ref} data-slot="drawer-title" className={cn("font-heading font-medium text-foreground", className)} {...props} />;
+});
 
-function DrawerDescription({ className, ...props }: DrawerPrimitive.Description.Props): React.JSX.Element {
-	return <DrawerPrimitive.Description data-slot="drawer-description" className={cn("text-sm text-balance text-muted-foreground", className)} {...props} />;
-}
+const DrawerDescription = React.forwardRef<HTMLParagraphElement, DrawerPrimitive.Description.Props>(function DrawerDescription(
+	{ className, ...props },
+	ref,
+): React.JSX.Element {
+	return <DrawerPrimitive.Description ref={ref} data-slot="drawer-description" className={cn("text-sm text-balance text-muted-foreground", className)} {...props} />;
+});
 
 export { Drawer, DrawerPortal, DrawerOverlay, DrawerSwipeHandle, DrawerTrigger, DrawerClose, DrawerContent, DrawerHeader, DrawerFooter, DrawerTitle, DrawerDescription };
