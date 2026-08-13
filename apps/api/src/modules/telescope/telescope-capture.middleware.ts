@@ -52,6 +52,8 @@ export class TelescopeCaptureMiddleware implements NestMiddleware {
 			requestBody: options.captureBody === "full" ? toJsonValue(req.body) : null,
 			// Improvement 16: per-request console log buffer.
 			logs: [],
+			// Feature 5: cache ops recorded by TelescopeCacheTracer.
+			cacheOps: [],
 		};
 
 		// next() starts the whole downstream chain inside the ALS scope, so the

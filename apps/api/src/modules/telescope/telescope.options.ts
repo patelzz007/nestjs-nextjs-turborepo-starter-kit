@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 import {
 	TelescopeBodyCaptureSchema,
 	TelescopeOptionsSchema,
@@ -44,6 +46,25 @@ export function resolveTelescopeOptions(provided: Partial<TelescopeOptions>): Te
 	const envSampleRate: string | undefined = process.env.TELESCOPE_SAMPLE_RATE;
 	const envMaxBodyChars: string | undefined = process.env.TELESCOPE_BODY_LIMIT_CHARS;
 	const envRetentionMinutes: string | undefined = process.env.TELESCOPE_RETENTION_MINUTES;
+	const envAlertDurationMs: string | undefined = process.env.TELESCOPE_ALERT_DURATION_MS;
+	const envAlertWindowMinutes: string | undefined = process.env.TELESCOPE_ALERT_WINDOW_MINUTES;
+
+	// Feature 18 — webhook URL (empty = alerts stay in-app only).
+	const envAlertWebhookUrl: string | undefined = process.env.TELESCOPE_ALERT_WEBHOOK_URL;
+
+	// Feature 7 — named replay targets as JSON: `{"staging":"https://staging.example.com"}`.
+	let replayTargets: Record<string, string> = {};
+	const envReplayTargets: string | undefined = process.env.TELESCOPE_REPLAY_TARGETS;
+	if (envReplayTargets !== undefined && envReplayTargets.length > 0) {
+		try {
+			const parsed = z.record(z.string(), z.string()).safeParse(JSON.parse(envReplayTargets));
+			if (parsed.success) {
+				replayTargets = parsed.data;
+			}
+		} catch {
+			// Invalid JSON — fall back to the empty map (local only).
+		}
+	}
 
 	// Effective sample rate: explicit env beats the dev/prod default.
 	const sampleRate: number = envSampleRate !== undefined ? Number(envSampleRate) : isProduction ? (provided.sampling?.prod ?? 0.01) : (provided.sampling?.dev ?? 1);
@@ -65,6 +86,9 @@ export function resolveTelescopeOptions(provided: Partial<TelescopeOptions>): Te
 		.map((path: string): string => path.trim())
 		.filter((path: string): boolean => path.length > 0);
 
+	const alertDurationMs: number = envAlertDurationMs !== undefined ? Number(envAlertDurationMs) : (provided.alertDurationMs ?? 2000);
+	const alertWindowMinutes: number = envAlertWindowMinutes !== undefined ? Number(envAlertWindowMinutes) : (provided.alertWindowMinutes ?? 5);
+
 	return TelescopeOptionsSchema.parse({
 		enabled,
 		storage,
@@ -78,5 +102,9 @@ export function resolveTelescopeOptions(provided: Partial<TelescopeOptions>): Te
 		captureHeaders: provided.captureHeaders,
 		ignorePaths: provided.ignorePaths,
 		sampling: { dev: clampedSampleRate, prod: clampedSampleRate },
+		alertWebhookUrl: envAlertWebhookUrl !== undefined && envAlertWebhookUrl.length > 0 ? envAlertWebhookUrl : provided.alertWebhookUrl,
+		alertDurationMs: Number.isFinite(alertDurationMs) && alertDurationMs > 0 ? Math.floor(alertDurationMs) : 2000,
+		alertWindowMinutes: Number.isFinite(alertWindowMinutes) && alertWindowMinutes > 0 ? Math.floor(alertWindowMinutes) : 5,
+		replayTargets: { ...replayTargets, ...(provided.replayTargets ?? {}) },
 	});
 }

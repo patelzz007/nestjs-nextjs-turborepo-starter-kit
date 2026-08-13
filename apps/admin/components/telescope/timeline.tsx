@@ -13,14 +13,22 @@
 import { cn } from "@workspace/ui/lib/utils";
 import { useMemo } from "react";
 
-import type { TelescopeSpan } from "@workspace/shared";
+import type { QueryLogEntry, TelescopeSpan } from "@workspace/shared";
 
 import { durationLabel, spanKindMeta } from "@/lib/telescope";
+
+export interface TimelineQueryOverlay {
+	readonly query: QueryLogEntry;
+	/** Offset from the request start (ms) — same value the span uses. */
+	readonly startOffsetMs: number;
+}
 
 export interface TimelineProps {
 	readonly spans: readonly TelescopeSpan[];
 	/** Total request duration — the denominator for bar widths. */
 	readonly totalMs: number;
+	/** Feature 11 — SQL queries rendered as bars on the same axis. */
+	readonly queries?: readonly TimelineQueryOverlay[];
 }
 
 /** Minimum visible bar width (px) so sub-ms spans still show a sliver. */
@@ -63,15 +71,15 @@ function packLanes(spans: readonly TelescopeSpan[]): readonly Lane[] {
  * request start and `totalMs` → request end; each bar is absolutely
  * positioned by `startOffsetMs` and sized by `durationMs`. Hovering a bar
  * reveals its exact timing in a floating tooltip.
- */
-export function Timeline({ spans, totalMs }: TimelineProps): React.JSX.Element {
+ */ export function Timeline({ spans, totalMs, queries }: TimelineProps): React.JSX.Element {
 	const lanes: readonly Lane[] = useMemo((): readonly Lane[] => packLanes(spans), [spans]);
 
-	if (spans.length === 0) {
+	if (spans.length === 0 && (queries === undefined || queries.length === 0)) {
 		return <p className="rounded-lg border border-dashed p-4 text-center text-xs text-muted-foreground">No spans recorded for this request.</p>;
 	}
 
 	const laneHeight: number = lanes.length > 0 ? lanes.length * 34 : 34;
+	const queryLaneHeight: number = queries !== undefined && queries.length > 0 ? 34 : 0;
 
 	return (
 		<div className="space-y-3">
@@ -82,7 +90,7 @@ export function Timeline({ spans, totalMs }: TimelineProps): React.JSX.Element {
 			</div>
 
 			{/* Waterfall canvas */}
-			<div className="relative overflow-hidden rounded-lg border bg-muted/20" style={{ height: `${String(laneHeight)}px` }}>
+			<div className="relative overflow-hidden rounded-lg border bg-muted/20" style={{ height: `${String(laneHeight + queryLaneHeight)}px` }}>
 				{/* Time-grid backdrop: quarter markers so the eye can estimate offsets. */}
 				<div className="pointer-events-none absolute inset-0 flex">
 					{[0, 1, 2, 3].map((quarter: number) => (
@@ -122,6 +130,38 @@ export function Timeline({ spans, totalMs }: TimelineProps): React.JSX.Element {
 						{/* eslint-enable react/no-array-index-key */}
 					</div>
 				))}
+				{/* Feature 11 — SQL query overlay: one bar per query on the same axis,
+				    positioned by startOffsetMs, tooltip shows the SQL text. */}
+				{queries !== undefined && queries.length > 0 ? (
+					<div className="relative h-[30px] border-t border-border/30" style={{ top: `${String(laneHeight)}px` }}>
+						{queries.map((overlay, index) => {
+							const leftPct: number = totalMs > 0 ? (overlay.startOffsetMs / totalMs) * 100 : 0;
+							const rawPct: number = totalMs > 0 ? (overlay.query.durationMs / totalMs) * 100 : 0;
+							const widthPct: number = rawPct > 0 ? Math.max((MIN_BAR_PX / (totalMs > 0 ? (totalMs * 4) / 100 : 1)) * 10, rawPct) : rawPct;
+							const endMs: number = overlay.startOffsetMs + overlay.query.durationMs;
+
+							return (
+								<div
+									// eslint-disable-next-line react/no-array-index-key -- Same-ms queries collide; the index is the stable key (chronological, static).
+									key={index}
+									className="group absolute top-1/2 h-5 -translate-y-1/2 rounded-md bg-violet-400/80 opacity-90 transition-opacity hover:opacity-100 dark:bg-violet-500/70"
+									style={{ left: `${String(Math.min(99, leftPct))}%`, width: `${String(Math.min(100 - leftPct, widthPct))}%` }}
+									role="img"
+									aria-label={`SQL ${overlay.query.operation} on ${overlay.query.model}: ${durationLabel(overlay.query.durationMs)}`}>
+									{/* Hover tooltip — the SQL text (truncated for the popover). */}
+									<span className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-1.5 hidden w-64 -translate-x-1/2 rounded-md border bg-popover p-2 text-[11px] text-popover-foreground shadow-md group-hover:block">
+										<span className="block truncate font-mono">{overlay.query.query}</span>
+										<span className="mt-1 block text-muted-foreground">
+											{overlay.query.operation} · {overlay.query.model || "(unknown table)"} · +{String(Math.round(overlay.startOffsetMs))}ms → +{String(endMs)}ms (
+											{durationLabel(overlay.query.durationMs)})
+										</span>
+									</span>
+								</div>
+							);
+						})}
+						{}
+					</div>
+				) : null}
 			</div>
 
 			{/* Legend — index keys: name+offset collides for same-ms queries (static list). */}
@@ -137,6 +177,15 @@ export function Timeline({ spans, totalMs }: TimelineProps): React.JSX.Element {
 						</li>
 					);
 				})}
+				{queries !== undefined && queries.length > 0 ? (
+					<li className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+						<span aria-hidden className="size-2 rounded-full bg-violet-400 dark:bg-violet-500" />
+						<span>SQL</span>
+						<span className="tabular-nums">
+							{String(queries.length)} quer{queries.length === 1 ? "y" : "ies"}
+						</span>
+					</li>
+				) : null}
 			</ul>
 		</div>
 	);

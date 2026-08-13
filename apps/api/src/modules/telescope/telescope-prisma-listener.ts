@@ -70,11 +70,14 @@ export class TelescopePrismaListener implements OnModuleInit {
 			// shared `QueryLogEntrySchema` requires `z.number().int()`, so round
 			// at capture time or the client-side envelope validation rejects the row.
 			const durationMs: number = Math.round(event.duration);
+			// Feature 11 — query overlay: the query's offset from the request start
+			// (same value as the span so the overlay lines up with the waterfall).
+			const startOffsetMs: number = Math.max(0, Math.round(performance.now() - spanStore.startedAt) - durationMs);
 
 			spanStore.spans.push({
 				name: `${operationFromSql(event.query)} query`,
 				kind: "prisma",
-				startOffsetMs: Math.max(0, Math.round(performance.now() - spanStore.startedAt) - durationMs),
+				startOffsetMs,
 				durationMs,
 			});
 
@@ -89,6 +92,8 @@ export class TelescopePrismaListener implements OnModuleInit {
 				query: event.query,
 				params: sanitizeQueryParams(event.params),
 				durationMs,
+				// Feature 11 — same offset as the span above.
+				startOffsetMs,
 				createdAt: new Date().toISOString(),
 			};
 			this.store.pushQuery(entry);

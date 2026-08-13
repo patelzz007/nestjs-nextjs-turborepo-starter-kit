@@ -28,6 +28,51 @@ export const TelescopeLogEntrySchema = z
 
 export type TelescopeLogEntry = z.output<typeof TelescopeLogEntrySchema>;
 
+// ── Environment tags (feature 8 — tag captures with NODE_ENV/host) ────────
+// Declared before RequestLogEntrySchema, which references it.
+
+export const TelescopeEnvironmentSchema = z
+	.object({
+		nodeEnv: z.string(),
+		host: z.string(),
+	})
+	.strict();
+
+export type TelescopeEnvironment = z.output<typeof TelescopeEnvironmentSchema>;
+
+// ── Cache inspection (feature 5 — per-request cache hit/miss ops) ──────────
+// Declared before RequestLogEntrySchema, which references it.
+
+export const TelescopeCacheOperationSchema = z.enum(["get", "set", "delete"]);
+export type TelescopeCacheOperation = z.output<typeof TelescopeCacheOperationSchema>;
+
+export const TelescopeCacheOpSchema = z
+	.object({
+		operation: TelescopeCacheOperationSchema,
+		/** Cache key (truncated at capture). */
+		key: z.string(),
+		/** `null` for write ops (set/delete); true/false for get. */
+		hit: z.boolean().nullable(),
+		durationMs: z.number().int().nonnegative(),
+		at: z.string(),
+	})
+	.strict();
+export type TelescopeCacheOp = z.output<typeof TelescopeCacheOpSchema>;
+
+// ── PII scanner (feature 17 — flag + redact PII by default) ────────────────
+// Declared before RequestLogEntrySchema, which references it.
+
+export const TelescopePiiCategorySchema = z.enum(["email", "phone", "jwt", "ssn", "creditCard"]);
+export type TelescopePiiCategory = z.output<typeof TelescopePiiCategorySchema>;
+
+export const TelescopePiiFlagSchema = z
+	.object({
+		category: TelescopePiiCategorySchema,
+		count: z.number().int().nonnegative(),
+	})
+	.strict();
+export type TelescopePiiFlag = z.output<typeof TelescopePiiFlagSchema>;
+
 // ── Timeline spans ─────────────────────────────────────────────────────────
 
 export const TelescopeSpanKindSchema = z.enum(["middleware", "guard", "interceptor", "service", "prisma", "queue", "serialization", "other"]);
@@ -58,6 +103,10 @@ export const RequestLogSummarySchema = z
 		userId: z.string().nullable(),
 		durationMs: z.number().int().nonnegative(),
 		createdAt: z.string(),
+		/** Environment tag (feature 8) — null for pre-upgrade/persisted rows. */
+		environment: TelescopeEnvironmentSchema.nullable().default(null),
+		/** Starred via request annotations (feature 14). */
+		starred: z.boolean().default(false),
 	})
 	.strict();
 
@@ -76,6 +125,12 @@ export const RequestLogEntrySchema = RequestLogSummarySchema.extend({
 	spans: z.array(TelescopeSpanSchema).readonly(),
 	/** Console output that ran inside the request's async context (improvement 16). */
 	logs: z.array(TelescopeLogEntrySchema).readonly().default([]),
+	/** Resolved route params (feature 6 — handler spans with params). */
+	handlerParams: z.record(z.string(), z.string()).nullable().default(null),
+	/** Per-request cache ops (feature 5). */
+	cacheOps: z.array(TelescopeCacheOpSchema).readonly().default([]),
+	/** PII categories found + redacted at capture (feature 17). */
+	piiFlags: z.array(TelescopePiiFlagSchema).readonly().default([]),
 }).strict();
 
 export type RequestLogEntry = z.output<typeof RequestLogEntrySchema>;
@@ -92,6 +147,8 @@ export const QueryLogEntrySchema = z
 		/** Sanitized bind-parameter JSON string. */
 		params: z.string().nullable(),
 		durationMs: z.number().int().nonnegative(),
+		/** Offset from the request start (feature 11 — query overlay on the timeline). */
+		startOffsetMs: z.number().int().nonnegative().default(0),
 		createdAt: z.string(),
 	})
 	.strict();
@@ -166,6 +223,14 @@ export const TelescopeOptionsSchema = z
 		/** Header whitelist — nothing outside this list is ever stored. */
 		captureHeaders: z.array(z.string()).default(["content-type", "user-agent", "x-client-type"]),
 		ignorePaths: z.array(z.string()).default(["/health", "/docs", "/telescope", "/favicon.ico"]),
+		/** Feature 18 — alert webhook URL; alerts fire only when this is set. */
+		alertWebhookUrl: z.string().optional(),
+		/** Feature 18 — duration threshold (ms) that triggers a "duration" alert. */
+		alertDurationMs: z.number().int().positive().default(2000),
+		/** Feature 18 — per-route+reason dedupe window (minutes). */
+		alertWindowMinutes: z.number().int().positive().default(5),
+		/** Feature 7 — named replay targets ({ name: baseUrl }); `local` always exists. */
+		replayTargets: z.record(z.string(), z.string()).default({}),
 		sampling: z
 			.object({
 				dev: z.number().min(0).max(1).default(1),
@@ -193,6 +258,8 @@ export const TelescopeRequestListQuerySchema = TelescopePaginationSchema.extend(
 	minDurationMs: z.coerce.number().int().nonnegative().optional(),
 	userId: z.string().optional(),
 	correlationId: z.string().optional(),
+	/** Environment-tag filter (feature 8) — matches `environment.nodeEnv`. */
+	env: z.string().optional(),
 	sort: z.enum(["newest", "duration"]).default("newest"),
 	from: z.string().optional(),
 	to: z.string().optional(),
@@ -254,7 +321,6 @@ export const TelescopeStatusCountsSchema = z
 	.strict();
 
 export type TelescopeStatusCounts = z.output<typeof TelescopeStatusCountsSchema>;
-
 export const TelescopeOverviewSchema = z
 	.object({
 		range: TelescopeRangeSchema,
@@ -272,9 +338,10 @@ export const TelescopeOverviewSchema = z
 		traffic: z.array(TelescopeTrafficPointSchema).readonly(),
 		/** Status-class counts over the range. */
 		statusCounts: TelescopeStatusCountsSchema,
+		/** Environment tag of the process that captured (feature 8). */
+		environment: TelescopeEnvironmentSchema,
 	})
 	.strict();
-
 export type TelescopeOverview = z.output<typeof TelescopeOverviewSchema>;
 
 // ── N+1 detection (improvement 7) ──────────────────────────────────────────
@@ -313,39 +380,83 @@ export const TelescopeDiffFieldSchema = z
 	.strict();
 
 export type TelescopeDiffField = z.output<typeof TelescopeDiffFieldSchema>;
-
 export const TelescopeCompareResponseSchema = z
 	.object({
 		a: RequestLogEntrySchema,
 		b: RequestLogEntrySchema,
 		diffs: z.array(TelescopeDiffFieldSchema).readonly(),
+		/** Queries for each side — powers the side-by-side SQL diff (feature 15). */
+		queriesA: z.array(QueryLogEntrySchema).readonly(),
+		queriesB: z.array(QueryLogEntrySchema).readonly(),
 	})
 	.strict();
-
 export type TelescopeCompareResponse = z.output<typeof TelescopeCompareResponseSchema>;
 
 // ── Live stream (improvement 2) ────────────────────────────────────────────
+// The status enums are declared here (before the stream schema) because the
+// stream frames reference them for `job` / `schedule` events.
+
+export const TelescopeJobStatusSchema = z.enum(["succeeded", "failed", "running"]);
+export type TelescopeJobStatus = z.output<typeof TelescopeJobStatusSchema>;
+
+export const TelescopeScheduleStatusSchema = z.enum(["succeeded", "failed", "pending"]);
+export type TelescopeScheduleStatus = z.output<typeof TelescopeScheduleStatusSchema>;
 
 /**
- * Pushed over the `GET /telescope/stream` SSE channel after a capture.
- * Carries a compact summary so the live feed renders without a refetch:
- * request events include method/path/status/duration, exception events
- * include name/message/status.
+ * Stream frames are a strict discriminated union on `type`: each variant
+ * carries exactly its own fields (extra fields are rejected by `.strict()`),
+ * so a `job` frame can never smuggle request-only fields or vice versa.
+ * Consumers narrow on `event.type` and get precise per-variant typing.
  */
-export const TelescopeStreamEventSchema = z
+export const TelescopeRequestStreamEventSchema = z
 	.object({
-		type: z.enum(["request", "exception"]),
+		type: z.literal("request"),
 		id: z.string(),
-		// Request summary (present when type === "request").
-		method: z.string().optional(),
-		path: z.string().optional(),
-		statusCode: z.number().int().nullable().optional(),
-		durationMs: z.number().int().nonnegative().optional(),
-		// Exception summary (present when type === "exception").
-		name: z.string().optional(),
-		message: z.string().optional(),
+		method: z.string(),
+		path: z.string(),
+		statusCode: z.number().int().nullable(),
+		durationMs: z.number().int().nonnegative(),
 	})
 	.strict();
+
+export const TelescopeExceptionStreamEventSchema = z
+	.object({
+		type: z.literal("exception"),
+		id: z.string(),
+		name: z.string(),
+		message: z.string(),
+		statusCode: z.number().int(),
+	})
+	.strict();
+
+export const TelescopeJobStreamEventSchema = z
+	.object({
+		type: z.literal("job"),
+		id: z.string(),
+		jobName: z.string(),
+		jobStatus: TelescopeJobStatusSchema,
+		durationMs: z.number().int().nonnegative().optional(),
+		/** Correlation to the request the job ran inside (null for background work). */
+		correlationId: z.string().nullable().default(null),
+	})
+	.strict();
+
+export const TelescopeScheduleStreamEventSchema = z
+	.object({
+		type: z.literal("schedule"),
+		id: z.string(),
+		scheduleName: z.string(),
+		scheduleStatus: TelescopeScheduleStatusSchema,
+		durationMs: z.number().int().nonnegative().optional(),
+	})
+	.strict();
+
+export const TelescopeStreamEventSchema = z.discriminatedUnion("type", [
+	TelescopeRequestStreamEventSchema,
+	TelescopeExceptionStreamEventSchema,
+	TelescopeJobStreamEventSchema,
+	TelescopeScheduleStreamEventSchema,
+]);
 
 export type TelescopeStreamEvent = z.output<typeof TelescopeStreamEventSchema>;
 
@@ -380,7 +491,25 @@ export const TelescopeExceptionListResponseSchema = z
 	})
 	.strict();
 
-export type TelescopeExceptionListResponse = z.output<typeof TelescopeExceptionListResponseSchema>;
+export type TelescopeExceptionListResponse = z.output<typeof TelescopeExceptionListResponseSchema>; // ── Annotations (feature 14 — star/comment a request) ──────────────────────
+// Declared BEFORE TelescopeRequestDetailResponseSchema, which references it.
+
+export const TelescopeAnnotationSchema = z
+	.object({
+		starred: z.boolean(),
+		comment: z.string(),
+		updatedAt: z.string(),
+	})
+	.strict();
+export type TelescopeAnnotation = z.output<typeof TelescopeAnnotationSchema>;
+
+export const TelescopeAnnotationInputSchema = z
+	.object({
+		starred: z.boolean().optional(),
+		comment: z.string().max(2000).optional(),
+	})
+	.strict();
+export type TelescopeAnnotationInput = z.output<typeof TelescopeAnnotationInputSchema>;
 
 /** Detail view: the request + its queries + its dumps (joined by correlationId). */
 export const TelescopeRequestDetailResponseSchema = z
@@ -389,10 +518,210 @@ export const TelescopeRequestDetailResponseSchema = z
 		queries: z.array(QueryLogEntrySchema).readonly(),
 		dumps: z.array(DumpEntrySchema).readonly(),
 		n1Warnings: z.array(TelescopeN1WarningSchema).readonly(),
+		/** Star/comment annotation (feature 14) — null until first set. */
+		annotation: TelescopeAnnotationSchema.nullable().default(null),
 	})
 	.strict();
-
 export type TelescopeRequestDetailResponse = z.output<typeof TelescopeRequestDetailResponseSchema>;
+
+// ── Jobs (feature 3 — queue/job inspection) ────────────────────────────────
+// A job is any async unit of work recorded by `TelescopeJobRunner` — the
+// seam is deliberately queue-agnostic (works with BullMQ, a custom executor,
+// or a plain fire-and-forget task). Queue latency = startedAt - enqueuedAt.
+
+export const TelescopeJobLogEntrySchema = z
+	.object({
+		id: z.string(),
+		jobName: z.string(),
+		status: TelescopeJobStatusSchema,
+		durationMs: z.number().int().nonnegative().nullable(),
+		/** Approximate JSON payload size in bytes (0 when no payload passed). */
+		payloadSize: z.number().int().nonnegative().default(0),
+		error: z.string().nullable(),
+		correlationId: z.string().nullable(),
+		enqueuedAt: z.string(),
+		startedAt: z.string().nullable(),
+		finishedAt: z.string().nullable(),
+	})
+	.strict();
+export type TelescopeJobLogEntry = z.output<typeof TelescopeJobLogEntrySchema>;
+
+export const TelescopeJobsListQuerySchema = TelescopePaginationSchema.extend({
+	status: TelescopeJobStatusSchema.optional(),
+}).strict();
+export type TelescopeJobsListQuery = z.output<typeof TelescopeJobsListQuerySchema>;
+
+export const TelescopeJobsListResponseSchema = z
+	.object({
+		items: z.array(TelescopeJobLogEntrySchema).readonly(),
+		total: z.number().int(),
+		page: z.number().int(),
+		pageSize: z.number().int(),
+	})
+	.strict();
+export type TelescopeJobsListResponse = z.output<typeof TelescopeJobsListResponseSchema>;
+
+// ── Schedules (feature 4 — scheduled-task view) ────────────────────────────
+// One row per registered schedule, keeping the last run + the next run.
+
+export const TelescopeScheduleLogSchema = z
+	.object({
+		name: z.string(),
+		cron: z.string(),
+		status: TelescopeScheduleStatusSchema,
+		lastRunAt: z.string().nullable(),
+		lastDurationMs: z.number().int().nonnegative().nullable(),
+		lastError: z.string().nullable(),
+		nextRunAt: z.string(),
+	})
+	.strict();
+export type TelescopeScheduleLog = z.output<typeof TelescopeScheduleLogSchema>;
+
+export const TelescopeSchedulesResponseSchema = z
+	.object({
+		items: z.array(TelescopeScheduleLogSchema).readonly(),
+	})
+	.strict();
+export type TelescopeSchedulesResponse = z.output<typeof TelescopeSchedulesResponseSchema>;
+
+// ── Leaderboard (feature 12 — slow-endpoint leaderboard) ───────────────────
+
+export const TelescopeLeaderboardEntrySchema = z
+	.object({
+		/** `METHOD /path` — the grouped route identity. */
+		route: z.string(),
+		method: z.string(),
+		path: z.string(),
+		count: z.number().int().positive(),
+		avgMs: z.number().nonnegative(),
+		p95Ms: z.number().nonnegative(),
+		maxMs: z.number().nonnegative(),
+		errorCount: z.number().int().nonnegative(),
+	})
+	.strict();
+export type TelescopeLeaderboardEntry = z.output<typeof TelescopeLeaderboardEntrySchema>;
+
+export const TelescopeLeaderboardResponseSchema = z
+	.object({
+		range: TelescopeRangeSchema,
+		entries: z.array(TelescopeLeaderboardEntrySchema).readonly(),
+	})
+	.strict();
+export type TelescopeLeaderboardResponse = z.output<typeof TelescopeLeaderboardResponseSchema>;
+
+// ── Trends / error-rate (feature 13 — error-rate over longer windows) ──────
+// Hourly buckets over a 6h/24h window — a coarser, longer lens than the
+// overview's 24 fixed buckets.
+
+export const TelescopeTrendPointSchema = z
+	.object({
+		/** Bucket start time (ISO). */
+		t: z.string(),
+		requests: z.number().int().nonnegative(),
+		errors: z.number().int().nonnegative(),
+		/** errors/requests × 100 (0 when no requests). */
+		errorRatePct: z.number().nonnegative(),
+	})
+	.strict();
+export type TelescopeTrendPoint = z.output<typeof TelescopeTrendPointSchema>;
+
+export const TelescopeTrendsQuerySchema = z.object({ range: TelescopeRangeSchema.default("24h") }).strict();
+export type TelescopeTrendsQuery = z.output<typeof TelescopeTrendsQuerySchema>;
+
+export const TelescopeTrendsResponseSchema = z
+	.object({
+		range: TelescopeRangeSchema,
+		points: z.array(TelescopeTrendPointSchema).readonly(),
+	})
+	.strict();
+export type TelescopeTrendsResponse = z.output<typeof TelescopeTrendsResponseSchema>;
+
+// ── Leaderboard query (feature 12) ─────────────────────────────────────────
+
+export const TelescopeLeaderboardQuerySchema = z.object({ range: TelescopeRangeSchema.default("1h") }).strict();
+export type TelescopeLeaderboardQuery = z.output<typeof TelescopeLeaderboardQuerySchema>;
+
+// ── Logs browser (feature 20 — /telescope/logs) ────────────────────────────
+// Console output flattened across requests, correlated back to the request.
+
+export const TelescopeLogRowSchema = z
+	.object({
+		id: z.string(),
+		requestId: z.string(),
+		correlationId: z.string(),
+		level: TelescopeLogLevelSchema,
+		message: z.string(),
+		timestamp: z.string(),
+		method: z.string().nullable(),
+		path: z.string().nullable(),
+	})
+	.strict();
+export type TelescopeLogRow = z.output<typeof TelescopeLogRowSchema>;
+
+export const TelescopeLogsListQuerySchema = TelescopePaginationSchema.extend({
+	level: TelescopeLogLevelSchema.optional(),
+	q: z.string().optional(),
+	correlationId: z.string().optional(),
+}).strict();
+export type TelescopeLogsListQuery = z.output<typeof TelescopeLogsListQuerySchema>;
+
+export const TelescopeLogsListResponseSchema = z
+	.object({
+		items: z.array(TelescopeLogRowSchema).readonly(),
+		total: z.number().int(),
+		page: z.number().int(),
+		pageSize: z.number().int(),
+	})
+	.strict();
+export type TelescopeLogsListResponse = z.output<typeof TelescopeLogsListResponseSchema>;
+
+// ── Alerts (feature 18 — threshold alerts) ─────────────────────────────────
+
+export const TelescopeAlertReasonSchema = z.enum(["duration", "error"]);
+export type TelescopeAlertReason = z.output<typeof TelescopeAlertReasonSchema>;
+
+export const TelescopeAlertEntrySchema = z
+	.object({
+		id: z.string(),
+		requestId: z.string(),
+		method: z.string(),
+		path: z.string(),
+		statusCode: z.number().int().nullable(),
+		durationMs: z.number().int().nonnegative(),
+		reason: TelescopeAlertReasonSchema,
+		firedAt: z.string(),
+	})
+	.strict();
+export type TelescopeAlertEntry = z.output<typeof TelescopeAlertEntrySchema>;
+
+export const TelescopeAlertsResponseSchema = z
+	.object({
+		items: z.array(TelescopeAlertEntrySchema).readonly(),
+	})
+	.strict();
+export type TelescopeAlertsResponse = z.output<typeof TelescopeAlertsResponseSchema>;
+
+// ── Request replay (feature 7 — re-send a captured request) ────────────────
+
+export const TelescopeReplayInputSchema = z
+	.object({
+		/** Named target from `TELESCOPE_REPLAY_TARGETS` (defaults to `local`). */
+		target: z.string().default("local"),
+	})
+	.strict();
+export type TelescopeReplayInput = z.output<typeof TelescopeReplayInputSchema>;
+
+export const TelescopeReplayResponseSchema = z
+	.object({
+		ok: z.boolean(),
+		status: z.number().int().nullable(),
+		statusText: z.string(),
+		durationMs: z.number().int().nonnegative(),
+		/** First 500 chars of the replay response body (best-effort). */
+		responsePreview: z.string().nullable(),
+	})
+	.strict();
+export type TelescopeReplayResponse = z.output<typeof TelescopeReplayResponseSchema>;
 
 export const TelescopeMailResponseSchema = z
 	.object({

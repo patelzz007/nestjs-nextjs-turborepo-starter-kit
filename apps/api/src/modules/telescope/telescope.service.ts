@@ -4,40 +4,67 @@ import { z } from "zod";
 
 import { Subject } from "rxjs";
 
+import { hostname } from "node:os";
+
 import {
 	EmailLogEntrySchema,
 	TelescopeCompareQuerySchema,
 	TelescopeExceptionListQuerySchema,
+	TelescopeJobsListQuerySchema,
+	TelescopeLeaderboardQuerySchema,
+	TelescopeLogsListQuerySchema,
 	TelescopeOverviewQuerySchema,
 	TelescopeRangeSchema,
 	TelescopeRequestListQuerySchema,
 	TelescopeSqlListQuerySchema,
+	TelescopeTrendsQuerySchema,
 	type DumpEntry,
 	type EmailLogEntry,
 	type ExceptionLogEntry,
 	type RequestLogEntry,
+	type TelescopeAlertEntry,
+	type TelescopeAlertsResponse,
+	type TelescopeAnnotation,
+	type TelescopeAnnotationInput,
 	type TelescopeCompareResponse,
 	type TelescopeDiffField,
 	type TelescopeDumpInput,
+	type TelescopeEnvironment,
 	type TelescopeExceptionListQuery,
 	type TelescopeExceptionListResponse,
+	type TelescopeJobLogEntry,
+	type TelescopeJobsListQuery,
+	type TelescopeJobsListResponse,
+	type TelescopeLeaderboardEntry,
+	type TelescopeLeaderboardQuery,
+	type TelescopeLeaderboardResponse,
+	type TelescopeOptions,
+	type TelescopeLogsListQuery,
+	type TelescopeLogsListResponse,
 	type TelescopeOverview,
 	type TelescopeOverviewQuery,
 	type TelescopeRange,
+	type TelescopeReplayInput,
+	type TelescopeReplayResponse,
 	type TelescopeRequestDetailResponse,
 	type TelescopeRequestListQuery,
 	type TelescopeRequestListResponse,
+	type TelescopeScheduleLog,
+	type TelescopeSchedulesResponse,
 	type TelescopeSqlListQuery,
 	type TelescopeSqlListResponse,
 	type TelescopeStreamEvent,
+	type TelescopeTrendsQuery,
+	type TelescopeTrendsResponse,
 } from "@workspace/shared";
 
 import { PrismaService } from "../../prisma/prisma.service.js";
 
 import { detectN1Warnings } from "./n1-detector.js";
 import { RequestSpanContext } from "./request-span-context.js";
+import { TelescopeAlertService } from "./telescope-alert.service.js";
 import { TelescopeEventBus } from "./telescope-event-bus.js";
-import { TELESCOPE_STORE } from "./telescope.options.js";
+import { TELESCOPE_OPTIONS, TELESCOPE_STORE } from "./telescope.options.js";
 import type { TelescopeStore } from "./telescope.store.js";
 
 const RANGE_MS: Readonly<Record<TelescopeRange, number>> = {
@@ -77,8 +104,10 @@ function parseQuery<T>(schema: z.ZodType<T>, raw: RawQuery): T {
 export class TelescopeService {
 	public constructor(
 		@Inject(TELESCOPE_STORE) private readonly store: TelescopeStore,
+		@Inject(TELESCOPE_OPTIONS) private readonly options: TelescopeOptions,
 		private readonly prisma: PrismaService,
 		private readonly eventBus: TelescopeEventBus,
+		private readonly alertService: TelescopeAlertService,
 	) {}
 
 	public async overview(rawQuery: RawQuery): Promise<TelescopeOverview> {
@@ -106,6 +135,8 @@ export class TelescopeService {
 			exceptionGroups: stats.exceptionGroups,
 			traffic: stats.traffic,
 			statusCounts: stats.statusCounts,
+			// Feature 8 — environment tag of the capturing process.
+			environment: this.environment(),
 		};
 	}
 
@@ -126,6 +157,8 @@ export class TelescopeService {
 			dumps: this.store.listDumpsByCorrelationId(request.correlationId),
 			// Improvement 7: N+1 warnings computed from this request's queries.
 			n1Warnings: detectN1Warnings(queries),
+			// Feature 14 — star/comment annotation (null until first set).
+			annotation: this.store.getAnnotation(id),
 		};
 	}
 
@@ -210,7 +243,14 @@ export class TelescopeService {
 			field("created at", requestA.createdAt, requestB.createdAt),
 		];
 
-		return { a: requestA, b: requestB, diffs };
+		// Feature 15 — side-by-side diff: each side's SQL for the visual comparison.
+		return {
+			a: requestA,
+			b: requestB,
+			diffs,
+			queriesA: this.store.listQueriesByCorrelationId(requestA.correlationId),
+			queriesB: this.store.listQueriesByCorrelationId(requestB.correlationId),
+		};
 	}
 
 	/** The SSE subject — the controller maps it into `MessageEvent` frames. */
@@ -220,6 +260,136 @@ export class TelescopeService {
 
 	public storeMode(): string {
 		return this.store.mode;
+	}
+
+	/** Feature 12 — slow-endpoint leaderboard over the range. */
+	public leaderboard(rawQuery: RawQuery): TelescopeLeaderboardResponse {
+		const query: TelescopeLeaderboardQuery = parseQuery(TelescopeLeaderboardQuerySchema, rawQuery);
+		const range: TelescopeRange = TelescopeRangeSchema.parse(query.range);
+		const fromIso: string = new Date(Date.now() - RANGE_MS[range]).toISOString();
+		const entries: readonly TelescopeLeaderboardEntry[] = this.store.leaderboard(fromIso, 10);
+		return { range, entries };
+	}
+
+	/** Feature 13 — hourly trend buckets for the error-rate chart. */
+	public trends(rawQuery: RawQuery): TelescopeTrendsResponse {
+		const query: TelescopeTrendsQuery = parseQuery(TelescopeTrendsQuerySchema, rawQuery);
+		const range: TelescopeRange = TelescopeRangeSchema.parse(query.range);
+		const fromIso: string = new Date(Date.now() - RANGE_MS[range]).toISOString();
+		// Hourly buckets: 6h → 6, 24h → 24 (15m/1h fall back to 12 for readability).
+		const bucketCount: number = range === "15m" ? 12 : range === "1h" ? 12 : range === "6h" ? 6 : 24;
+		const points = this.store.trends(fromIso, bucketCount);
+		return { range, points };
+	}
+
+	/** Feature 3 — jobs. */
+	public listJobs(rawQuery: RawQuery): TelescopeJobsListResponse {
+		const query: TelescopeJobsListQuery = parseQuery(TelescopeJobsListQuerySchema, rawQuery);
+		return this.store.listJobs(query);
+	}
+
+	public getJob(id: string): TelescopeJobLogEntry {
+		const job = this.store.getJob(id);
+		if (job === undefined) {
+			throw new NotFoundException({ message: `Telescope job ${id} not found.`, error: "TELESCOPE_JOB_NOT_FOUND" });
+		}
+		return job;
+	}
+
+	/** Feature 4 — schedules. */
+	public listSchedules(): TelescopeSchedulesResponse {
+		const items: readonly TelescopeScheduleLog[] = this.store.listSchedules();
+		return { items };
+	}
+
+	/** Feature 14 — star/comment a request. */
+	public setAnnotation(requestId: string, input: TelescopeAnnotationInput): TelescopeAnnotation {
+		this.requireRequest(requestId);
+		const current: TelescopeAnnotation | null = this.store.getAnnotation(requestId);
+		const annotation: TelescopeAnnotation = {
+			starred: input.starred ?? current?.starred ?? false,
+			comment: input.comment ?? current?.comment ?? "",
+			updatedAt: new Date().toISOString(),
+		};
+		this.store.setAnnotation(requestId, annotation);
+		return annotation;
+	}
+
+	/** Feature 20 — logs browser. */
+	public listLogs(rawQuery: RawQuery): TelescopeLogsListResponse {
+		const query: TelescopeLogsListQuery = parseQuery(TelescopeLogsListQuerySchema, rawQuery);
+		return this.store.listLogs(query);
+	}
+
+	/** Feature 18 — recent threshold alerts. */
+	public listAlerts(): TelescopeAlertsResponse {
+		const items: readonly TelescopeAlertEntry[] = this.alertService.listAlerts(50);
+		return { items };
+	}
+
+	/** Feature 7 — replay a captured request against a configured target. */
+	public async replay(requestId: string, input: TelescopeReplayInput): Promise<TelescopeReplayResponse> {
+		const request: RequestLogEntry = this.requireRequest(requestId);
+		const targets: Record<string, string> = { local: this.localBaseUrl(), ...this.options.replayTargets };
+		const baseUrl: string = targets[input.target];
+		if (!Object.prototype.hasOwnProperty.call(targets, input.target)) {
+			throw new NotFoundException({
+				message: `Unknown replay target "${input.target}". Configured targets: ${Object.keys(targets).join(", ")}.`,
+				error: "TELESCOPE_REPLAY_TARGET_UNKNOWN",
+			});
+		}
+
+		const url: string = request.queryString !== null ? `${baseUrl}${request.path}?${request.queryString}` : `${baseUrl}${request.path}`;
+		const headers: Record<string, string> = {};
+		if (request.requestHeaders !== null) {
+			for (const [key, value] of Object.entries(request.requestHeaders)) {
+				// Never forward credentials on a replay — the captured whitelist
+				// excludes them, but re-check here as defense in depth.
+				if (key.toLowerCase() === "authorization" || key.toLowerCase() === "cookie" || key.toLowerCase() === "set-cookie") {
+					continue;
+				}
+				headers[key] = value;
+			}
+		}
+
+		const start: number = performance.now();
+		try {
+			const response: Response = await fetch(url, {
+				method: request.method,
+				headers,
+				body: request.method === "GET" || request.method === "HEAD" ? undefined : JSON.stringify(request.requestBody),
+				signal: AbortSignal.timeout(10_000),
+			});
+			const rawText: string = await response.text();
+			return {
+				ok: response.ok,
+				status: response.status,
+				statusText: response.statusText,
+				durationMs: Math.round(performance.now() - start),
+				responsePreview: rawText.length > 500 ? `${rawText.slice(0, 497)}…` : rawText,
+			};
+		} catch (error) {
+			return {
+				ok: false,
+				status: null,
+				statusText: "fetch failed",
+				durationMs: Math.round(performance.now() - start),
+				responsePreview: error instanceof Error ? error.message.slice(0, 500) : "replay failed",
+			};
+		}
+	}
+
+	/** Feature 8 — the environment tag used across overview + entries. */
+	private environment(): TelescopeEnvironment {
+		return {
+			nodeEnv: process.env.NODE_ENV ?? "development",
+			host: hostname(),
+		};
+	}
+
+	/** Feature 7 — the API's own origin is always the `local` replay target. */
+	private localBaseUrl(): string {
+		return process.env.TELESCOPE_LOCAL_BASE_URL ?? `http://localhost:${process.env.PORT ?? "8080"}`;
 	}
 
 	private requireRequest(id: string): RequestLogEntry {

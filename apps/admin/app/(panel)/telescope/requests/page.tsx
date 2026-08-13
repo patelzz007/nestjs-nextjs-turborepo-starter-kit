@@ -26,6 +26,8 @@ import { toast } from "sonner";
 
 import { TelescopeRequestListQuerySchema, type RequestLogSummary, type TelescopeRequestListQuery, type TelescopeStreamEvent } from "@workspace/shared";
 
+import { SavedFilters } from "@/components/telescope/saved-filters";
+import { addSavedFilter, loadSavedFilters, removeSavedFilter, type SavedFilter, type SavedFilterValue } from "@/lib/saved-filters";
 import { durationLabel, durationTone, formatTime, statusTone } from "@/lib/telescope";
 import { useTelescopeLive } from "@/lib/use-telescope-live";
 
@@ -62,6 +64,9 @@ function RequestsContent(): React.JSX.Element {
 	const [correlationFilter, setCorrelationFilter] = useState<string | null>(correlationParam);
 	const [page, setPage] = useState<number>(1);
 	const [pageSize, setPageSize] = useState<number>(20);
+
+	// Feature 9 — saved filters (localStorage-backed bookmarks).
+	const [savedFilters, setSavedFilters] = useState<readonly SavedFilter[]>(() => loadSavedFilters());
 
 	// The active query — parsed through the shared schema so defaults and
 	// coercion are identical to the server's DTO (rule 6: infer, don't guess).
@@ -171,6 +176,40 @@ function RequestsContent(): React.JSX.Element {
 		[resetNewCount],
 	);
 
+	// Feature 9 — apply a saved filter to the live filter state.
+	const handleApplySavedFilter = useCallback(
+		(filter: SavedFilterValue): void => {
+			setMethod(filter.method);
+			setStatus(filter.status);
+			setMinDuration(filter.minDuration);
+			setSort(filter.sort);
+			resetNewCount();
+		},
+		[resetNewCount],
+	);
+
+	const handleSaveFilter = useCallback((name: string, filter: SavedFilterValue): void => {
+		setSavedFilters(
+			addSavedFilter({
+				id: `${Date.now().toString(36)}-${name
+					.toLowerCase()
+					.replace(/[^a-z0-9]+/g, "-")
+					.slice(0, 24)}`,
+				name,
+				filter,
+				createdAt: new Date().toISOString(),
+			}),
+		);
+		toast.success("Filter saved.");
+	}, []);
+
+	const handleDeleteFilter = useCallback((id: string): void => {
+		setSavedFilters(removeSavedFilter(id));
+	}, []);
+
+	// The current filter value (what a bookmark would capture).
+	const currentFilter: SavedFilterValue = useMemo((): SavedFilterValue => ({ method, status, minDuration, sort }), [method, status, minDuration, sort]);
+
 	// Column defs — status/duration/time cells are pure presentations.
 	const columns = useMemo<ColumnDef<DataTableFeatures, RequestLogSummary>[]>(
 		() => [
@@ -278,6 +317,9 @@ function RequestsContent(): React.JSX.Element {
 					</Button>
 				</div>
 			) : null}
+
+			{/* Feature 9 — saved filter bookmarks. */}
+			<SavedFilters saved={savedFilters} current={currentFilter} onApply={handleApplySavedFilter} onSave={handleSaveFilter} onDelete={handleDeleteFilter} />
 
 			<div className="flex flex-wrap items-end gap-3">
 				<div className="flex flex-col gap-1.5">

@@ -1,19 +1,32 @@
-import { Body, Controller, Get, Param, Post, Query, Sse, UseGuards, type MessageEvent } from "@nestjs/common";
+import { Body, Controller, Get, Param, Post, Put, Query, Sse, UseGuards, type MessageEvent } from "@nestjs/common";
 import { ApiExcludeController } from "@nestjs/swagger";
 import { map, type Observable } from "rxjs";
 
 import {
+	TelescopeAnnotationInputSchema,
 	TelescopeDumpInputSchema,
+	TelescopeReplayInputSchema,
 	type EmailLogEntry,
 	type ExceptionLogEntry,
+	type TelescopeAlertsResponse,
+	type TelescopeAnnotation,
+	type TelescopeAnnotationInput,
 	type TelescopeCompareResponse,
 	type TelescopeDumpInput,
 	type TelescopeExceptionListResponse,
+	type TelescopeJobLogEntry,
+	type TelescopeJobsListResponse,
+	type TelescopeLeaderboardResponse,
+	type TelescopeLogsListResponse,
 	type TelescopeOverview,
+	type TelescopeReplayInput,
+	type TelescopeReplayResponse,
 	type TelescopeRequestDetailResponse,
 	type TelescopeRequestListResponse,
+	type TelescopeSchedulesResponse,
 	type TelescopeSqlListResponse,
 	type TelescopeStreamEvent,
+	type TelescopeTrendsResponse,
 } from "@workspace/shared";
 
 import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe.js";
@@ -92,5 +105,58 @@ export class TelescopeController {
 	@Post("dump")
 	public dump(@Body(new ZodValidationPipe(TelescopeDumpInputSchema)) body: TelescopeDumpInput): { readonly id: string } {
 		return this.telescopeService.pushDump(body);
+	}
+
+	/** Feature 3 — jobs. */
+	@Get("jobs")
+	public listJobs(@Query() query: Record<string, string | string[] | undefined>): { readonly list: TelescopeJobsListResponse } {
+		return { list: this.telescopeService.listJobs(query) };
+	}
+
+	@Get("jobs/:id")
+	public jobDetail(@Param("id") id: string): TelescopeJobLogEntry {
+		return this.telescopeService.getJob(id);
+	}
+
+	/** Feature 4 — schedules. */
+	@Get("schedules")
+	public listSchedules(): TelescopeSchedulesResponse {
+		return this.telescopeService.listSchedules();
+	}
+
+	/** Feature 12 — slow-endpoint leaderboard. */
+	@Get("leaderboard")
+	public leaderboard(@Query() query: Record<string, string | string[] | undefined>): TelescopeLeaderboardResponse {
+		return this.telescopeService.leaderboard(query);
+	}
+
+	/** Feature 13 — hourly error-rate trends. */
+	@Get("trends")
+	public trends(@Query() query: Record<string, string | string[] | undefined>): TelescopeTrendsResponse {
+		return this.telescopeService.trends(query);
+	}
+
+	/** Feature 20 — logs browser. */
+	@Get("logs")
+	public listLogs(@Query() query: Record<string, string | string[] | undefined>): { readonly list: TelescopeLogsListResponse } {
+		return { list: this.telescopeService.listLogs(query) };
+	}
+
+	/** Feature 18 — recent threshold alerts. */
+	@Get("alerts")
+	public listAlerts(): TelescopeAlertsResponse {
+		return this.telescopeService.listAlerts();
+	}
+
+	/** Feature 14 — star/comment a request. */
+	@Put("requests/:id/annotation")
+	public setAnnotation(@Param("id") id: string, @Body(new ZodValidationPipe(TelescopeAnnotationInputSchema)) body: TelescopeAnnotationInput): TelescopeAnnotation {
+		return this.telescopeService.setAnnotation(id, body);
+	}
+
+	/** Feature 7 — replay a captured request against a configured target. */
+	@Post("replay/:id")
+	public async replay(@Param("id") id: string, @Body(new ZodValidationPipe(TelescopeReplayInputSchema)) body: TelescopeReplayInput): Promise<TelescopeReplayResponse> {
+		return this.telescopeService.replay(id, body);
 	}
 }

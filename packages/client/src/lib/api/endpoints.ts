@@ -18,15 +18,26 @@ import {
 	SessionStatusSchema,
 	SignupResponseSchema,
 	SignupSchema,
+	TelescopeAlertsResponseSchema,
+	TelescopeAnnotationInputSchema,
+	TelescopeAnnotationSchema,
 	TelescopeCompareResponseSchema,
 	TelescopeDumpInputSchema,
 	TelescopeDumpResponseSchema,
 	TelescopeExceptionListResponseSchema,
+	TelescopeJobLogEntrySchema,
+	TelescopeJobsListResponseSchema,
+	TelescopeLeaderboardResponseSchema,
+	TelescopeLogsListResponseSchema,
 	TelescopeMailResponseSchema,
 	TelescopeOverviewSchema,
+	TelescopeReplayInputSchema,
+	TelescopeReplayResponseSchema,
 	TelescopeRequestDetailResponseSchema,
 	TelescopeRequestListResponseSchema,
+	TelescopeSchedulesResponseSchema,
 	TelescopeSqlListResponseSchema,
+	TelescopeTrendsResponseSchema,
 	UserResponseSchema,
 	type ApiResponseMeta,
 	type EmailLogListResponse,
@@ -41,19 +52,34 @@ import {
 	type SessionStatus,
 	type SignupInput,
 	type SignupResponse,
+	type TelescopeAlertsResponse,
+	type TelescopeAnnotation,
+	type TelescopeAnnotationInput,
 	type TelescopeCompareResponse,
 	type TelescopeDumpInput,
 	type TelescopeDumpResponse,
 	type TelescopeExceptionListQuery,
 	type TelescopeExceptionListResponse,
+	type TelescopeJobLogEntry,
+	type TelescopeJobsListQuery,
+	type TelescopeJobsListResponse,
+	type TelescopeLeaderboardQuery,
+	type TelescopeLeaderboardResponse,
+	type TelescopeLogsListQuery,
+	type TelescopeLogsListResponse,
 	type TelescopeMailResponse,
 	type TelescopeOverview,
 	type TelescopeRange,
+	type TelescopeReplayInput,
+	type TelescopeReplayResponse,
 	type TelescopeRequestDetailResponse,
 	type TelescopeRequestListQuery,
 	type TelescopeRequestListResponse,
+	type TelescopeSchedulesResponse,
 	type TelescopeSqlListQuery,
 	type TelescopeSqlListResponse,
+	type TelescopeTrendsQuery,
+	type TelescopeTrendsResponse,
 	type UserResponse,
 } from "@workspace/shared";
 import { z, type ZodType } from "zod";
@@ -94,6 +120,15 @@ interface GetProcedure<Resp> {
 interface PostProcedure<Body, Resp> {
 	readonly path: string;
 	readonly method: "POST";
+	readonly queryKey: QueryKey;
+	readonly bodySchema: ZodType<Body>;
+	readonly responseSchema: ZodType<Resp>;
+	readonly baseOptions?: { readonly headers?: Record<string, string> };
+}
+
+interface PutProcedure<Body, Resp> {
+	readonly path: string;
+	readonly method: "PUT";
 	readonly queryKey: QueryKey;
 	readonly bodySchema: ZodType<Body>;
 	readonly responseSchema: ZodType<Resp>;
@@ -232,6 +267,23 @@ export const telescopeEndpoints: {
 	readonly exceptionDetail: (id: string) => GetProcedure<Envelope<ExceptionLogEntry>>;
 	readonly mail: () => GetProcedure<Envelope<TelescopeMailResponse>>;
 	readonly dump: PostProcedure<TelescopeDumpInput, Envelope<TelescopeDumpResponse>>;
+	// Feature 3 — jobs.
+	readonly jobs: (query: TelescopeJobsListQuery) => GetProcedure<Envelope<{ readonly list: TelescopeJobsListResponse }>>;
+	readonly jobDetail: (id: string) => GetProcedure<Envelope<TelescopeJobLogEntry>>;
+	// Feature 4 — schedules.
+	readonly schedules: () => GetProcedure<Envelope<TelescopeSchedulesResponse>>;
+	// Feature 12 — leaderboard.
+	readonly leaderboard: (query: TelescopeLeaderboardQuery) => GetProcedure<Envelope<TelescopeLeaderboardResponse>>;
+	// Feature 13 — trends / error-rate.
+	readonly trends: (query: TelescopeTrendsQuery) => GetProcedure<Envelope<TelescopeTrendsResponse>>;
+	// Feature 20 — logs browser.
+	readonly logs: (query: TelescopeLogsListQuery) => GetProcedure<Envelope<{ readonly list: TelescopeLogsListResponse }>>;
+	// Feature 18 — alerts.
+	readonly alerts: () => GetProcedure<Envelope<TelescopeAlertsResponse>>;
+	// Feature 14 — star/comment a request.
+	readonly setAnnotation: (id: string) => PutProcedure<TelescopeAnnotationInput, Envelope<TelescopeAnnotation>>;
+	// Feature 7 — replay a captured request.
+	readonly replay: (id: string) => PostProcedure<TelescopeReplayInput, Envelope<TelescopeReplayResponse>>;
 } = {
 	overview: (range: TelescopeRange): GetProcedure<Envelope<{ readonly overview: TelescopeOverview }>> => ({
 		path: "/telescope/overview",
@@ -288,4 +340,60 @@ export const telescopeEndpoints: {
 		bodySchema: TelescopeDumpInputSchema,
 		responseSchema: envelope(TelescopeDumpResponseSchema),
 	},
+	jobs: (query: TelescopeJobsListQuery): GetProcedure<Envelope<{ readonly list: TelescopeJobsListResponse }>> => ({
+		path: "/telescope/jobs",
+		method: "GET",
+		queryKey: ["telescope", "jobs", query],
+		responseSchema: envelope(z.object({ list: TelescopeJobsListResponseSchema }).strict()),
+	}),
+	jobDetail: (id: string): GetProcedure<Envelope<TelescopeJobLogEntry>> => ({
+		path: `/telescope/jobs/${id}`,
+		method: "GET",
+		queryKey: ["telescope", "job-detail", id],
+		responseSchema: envelope(TelescopeJobLogEntrySchema),
+	}),
+	schedules: (): GetProcedure<Envelope<TelescopeSchedulesResponse>> => ({
+		path: "/telescope/schedules",
+		method: "GET",
+		queryKey: ["telescope", "schedules"],
+		responseSchema: envelope(TelescopeSchedulesResponseSchema),
+	}),
+	leaderboard: (query: TelescopeLeaderboardQuery): GetProcedure<Envelope<TelescopeLeaderboardResponse>> => ({
+		path: "/telescope/leaderboard",
+		method: "GET",
+		queryKey: ["telescope", "leaderboard", query],
+		responseSchema: envelope(TelescopeLeaderboardResponseSchema),
+	}),
+	trends: (query: TelescopeTrendsQuery): GetProcedure<Envelope<TelescopeTrendsResponse>> => ({
+		path: "/telescope/trends",
+		method: "GET",
+		queryKey: ["telescope", "trends", query],
+		responseSchema: envelope(TelescopeTrendsResponseSchema),
+	}),
+	logs: (query: TelescopeLogsListQuery): GetProcedure<Envelope<{ readonly list: TelescopeLogsListResponse }>> => ({
+		path: "/telescope/logs",
+		method: "GET",
+		queryKey: ["telescope", "logs", query],
+		responseSchema: envelope(z.object({ list: TelescopeLogsListResponseSchema }).strict()),
+	}),
+	alerts: (): GetProcedure<Envelope<TelescopeAlertsResponse>> => ({
+		path: "/telescope/alerts",
+		method: "GET",
+		queryKey: ["telescope", "alerts"],
+		responseSchema: envelope(TelescopeAlertsResponseSchema),
+	}),
+	setAnnotation: (id: string): PutProcedure<TelescopeAnnotationInput, Envelope<TelescopeAnnotation>> => ({
+		path: `/telescope/requests/${id}/annotation`,
+		method: "PUT",
+		queryKey: ["telescope", "annotation", id],
+		bodySchema: TelescopeAnnotationInputSchema,
+		responseSchema: envelope(TelescopeAnnotationSchema),
+	}),
+	replay: (id: string): PostProcedure<TelescopeReplayInput, Envelope<TelescopeReplayResponse>> => ({
+		path: `/telescope/replay/${id}`,
+		method: "POST",
+		queryKey: ["telescope", "replay", id],
+		bodySchema: TelescopeReplayInputSchema,
+		responseSchema: envelope(TelescopeReplayResponseSchema),
+	}),
 };

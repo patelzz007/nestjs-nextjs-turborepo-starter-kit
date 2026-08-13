@@ -23,13 +23,16 @@ import { useCallback, useEffect, useMemo, useRef, useState, Suspense } from "rea
 
 import { TelescopeRangeSchema, type TelescopeOverview, type TelescopeRange, type TelescopeStreamEvent } from "@workspace/shared";
 
-import { LiveFeed } from "@/components/telescope/live-feed";
+import { AlertsPanel } from "@/components/telescope/alerts-panel";
+import { AnimatedNumber } from "@/components/telescope/animated-number";
+import { ErrorRateChart } from "@/components/telescope/error-rate-chart";
+import { ExceptionCard } from "@/components/telescope/exception-card";
+import { LeaderboardPanel } from "@/components/telescope/leaderboard-panel";
+import { LiveFeedCard } from "@/components/telescope/live-feed-card";
 import { RangePicker } from "@/components/telescope/range-picker";
 import { StatCard } from "@/components/telescope/stat-card";
 import { TrafficSparkline } from "@/components/telescope/traffic-sparkline";
-import { ExceptionCard } from "@/components/telescope/exception-card";
-import { AnimatedNumber } from "@/components/telescope/animated-number";
-import { durationLabel, rangeLabel, timeAgo } from "@/lib/telescope";
+import { durationLabel, rangeLabel, streamEventTarget, timeAgo } from "@/lib/telescope";
 import { useTelescopeLive } from "@/lib/use-telescope-live";
 
 /** Skeleton block shown while the first overview payload loads. */
@@ -79,6 +82,17 @@ function OverviewContent(): React.JSX.Element {
 	const exceptionsQuery = api
 		.procedure(telescopeEndpoints.exceptions({ page: 1, pageSize: 5 }))
 		.useQuery({ query: { page: 1, pageSize: 5 } }, { placeholderData: (previous) => previous });
+
+	// Feature 13 — long-window error-rate trend (6h/24h lens the overview
+	// sparkline cannot show). Kept on the same range state so the header's
+	// RangePicker drives it too.
+	const trendsQuery = api.procedure(telescopeEndpoints.trends({ range })).useQuery({ query: { range } }, { placeholderData: (previous) => previous });
+
+	// Feature 12 — slow-endpoint leaderboard for the current window.
+	const leaderboardQuery = api.procedure(telescopeEndpoints.leaderboard({ range })).useQuery({ query: { range } }, { placeholderData: (previous) => previous });
+
+	// Feature 18 — recently fired threshold alerts.
+	const alertsQuery = api.procedure(telescopeEndpoints.alerts()).useQuery(undefined, { placeholderData: (previous) => previous });
 
 	// Improvement 2: refetch on SSE pushes instead of polling on a timer.
 	const refresh = useCallback((): void => {
@@ -130,6 +144,9 @@ function OverviewContent(): React.JSX.Element {
 
 	const overview: TelescopeOverview | undefined = overviewQuery.data?.data.overview;
 	const recentExceptions = useMemo(() => exceptionsQuery.data?.data.list.items ?? [], [exceptionsQuery.data]);
+	const trendPoints = useMemo(() => trendsQuery.data?.data.points ?? [], [trendsQuery.data]);
+	const leaderboardEntries = useMemo(() => leaderboardQuery.data?.data.entries ?? [], [leaderboardQuery.data]);
+	const alertEntries = useMemo(() => alertsQuery.data?.data.items ?? [], [alertsQuery.data]);
 
 	// A ticking "Xs ago" for the last SSE event — re-renders every 5s. The
 	// interval effect sets the initial tick immediately (no impure Date.now()
@@ -146,13 +163,12 @@ function OverviewContent(): React.JSX.Element {
 		};
 	}, []);
 
+	// Clicking a feed row: the shared streamEventTarget helper decides the
+	// route (request detail, exceptions list, or a job's correlated request).
 	const handleFeedNavigate = useCallback(
 		(event: TelescopeStreamEvent): void => {
-			if (event.type === "exception") {
-				router.push("/telescope/exceptions");
-			} else {
-				router.push(`/telescope/requests/${encodeURIComponent(event.id)}`);
-			}
+			const target: string | null = streamEventTarget(event);
+			if (target !== null) router.push(target);
 		},
 		[router],
 	);
@@ -296,23 +312,7 @@ function OverviewContent(): React.JSX.Element {
 							</div>
 						</section>
 
-						<section className="space-y-2">
-							<div className="flex items-center justify-between">
-								<h2 className="text-sm font-semibold text-foreground">Live activity</h2>
-								<Link href="/telescope/requests" className="text-xs font-medium text-primary hover:underline">
-									View all →
-								</Link>
-							</div>
-							<div className="rounded-lg border bg-card p-2 text-card-foreground shadow-xs">
-								{live.events.length === 0 ? (
-									<div className="flex min-h-32 items-center justify-center rounded-md border border-dashed p-4 text-center">
-										<p className="text-xs text-muted-foreground">{live.paused ? "Stream paused." : "Waiting for traffic… make a request and it shows up here instantly."}</p>
-									</div>
-								) : (
-									<LiveFeed events={live.events} onNavigate={handleFeedNavigate} />
-								)}
-							</div>
-						</section>
+						<LiveFeedCard events={live.events} onNavigate={handleFeedNavigate} paused={live.paused} linkHref="/telescope/requests" linkLabel="View all →" />
 					</div>
 
 					{/* ── Data + mail ───────────────────────────────────── */}
@@ -377,6 +377,44 @@ function OverviewContent(): React.JSX.Element {
 							))}
 						</section>
 					) : null}
+
+					{/* ── Error-rate trend (feature 13) ────────────────── */}
+					<section className="space-y-2">
+						<div className="flex items-center justify-between">
+							<h2 className="text-sm font-semibold text-foreground">Error rate</h2>
+							<span className="text-[11px] text-muted-foreground">{rangeLabel(range)} · % of requests returning 5xx</span>
+						</div>
+						<div className="rounded-lg border bg-card p-3 text-card-foreground shadow-xs">
+							<ErrorRateChart points={trendPoints} />
+						</div>
+					</section>
+
+					{/* ── Leaderboard + alerts (features 12, 18) ────────── */}
+					<div className="grid gap-6 lg:grid-cols-2">
+						<section className="space-y-2">
+							<div className="flex items-center justify-between">
+								<h2 className="text-sm font-semibold text-foreground">Slowest endpoints</h2>
+								<Link href="/telescope/requests?sort=duration" className="text-xs font-medium text-primary hover:underline">
+									All requests →
+								</Link>
+							</div>
+							<div className="rounded-lg border bg-card p-2 text-card-foreground shadow-xs">
+								<LeaderboardPanel entries={leaderboardEntries} />
+							</div>
+						</section>
+
+						<section className="space-y-2">
+							<div className="flex items-center justify-between">
+								<h2 className="text-sm font-semibold text-foreground">Alerts</h2>
+								<Link href="/telescope/requests" className="text-xs font-medium text-primary hover:underline">
+									Requests →
+								</Link>
+							</div>
+							<div className="rounded-lg border bg-card p-2 text-card-foreground shadow-xs">
+								<AlertsPanel alerts={alertEntries} />
+							</div>
+						</section>
+					</div>
 				</>
 			)}
 		</div>

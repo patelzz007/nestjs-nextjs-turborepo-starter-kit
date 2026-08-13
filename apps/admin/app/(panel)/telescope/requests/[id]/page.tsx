@@ -11,18 +11,21 @@ import { useAuth } from "@workspace/client/lib/auth";
 import { telescopeEndpoints } from "@workspace/client/lib/api/endpoints";
 import { Button } from "@workspace/ui/components/form/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
-import { ArrowLeft, Braces, Copy, Database, Fingerprint, ListChecks, Loader2, TerminalSquare, TriangleAlert, UserRound } from "lucide-react";
+import { ArrowLeft, Braces, Copy, Database, Fingerprint, ListChecks, Loader2, RotateCw, Share2, Star, TerminalSquare, TriangleAlert, UserRound } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
 
-import type { TelescopeRequestDetailResponse } from "@workspace/shared";
+import type { TelescopeReplayResponse, TelescopeRequestDetailResponse } from "@workspace/shared";
 
 import { CodeBlock } from "@/components/docs/code-block";
+import { AnnotationPanel } from "@/components/telescope/annotation-panel";
+import { ReplayDialog, type ReplayTargetOption } from "@/components/telescope/replay-dialog";
+import { SnippetMenu } from "@/components/telescope/snippet-menu";
 import { SqlList } from "@/components/telescope/sql-list";
 import { Timeline } from "@/components/telescope/timeline";
-import { durationLabel, formatTime, statusTone } from "@/lib/telescope";
+import { buildRequestSnippet, durationLabel, formatTime, snippetFormatLabel, statusTone, type RequestSnippetFormat } from "@/lib/telescope";
 
 /** Key/value panel (headers) — one table, no per-row hooks. */
 function KeyValueTable({
@@ -62,6 +65,98 @@ export default function TelescopeRequestDetailPage(): React.JSX.Element {
 
 	const detailQuery = api.procedure(telescopeEndpoints.requestDetail(id)).useQuery();
 	const detail: TelescopeRequestDetailResponse | undefined = detailQuery.data?.data;
+
+	// Feature 14 — star/comment (annotation) + Feature 7 — replay + Feature 16
+	// — snippet export. Mutations are declared here, before the early returns.
+	const annotationMutation = api.procedure(telescopeEndpoints.setAnnotation(id)).useMutation();
+	const replayMutation = api.procedure(telescopeEndpoints.replay(id)).useMutation();
+	const [replayOpen, setReplayOpen] = useState<boolean>(false);
+	const [replayResult, setReplayResult] = useState<TelescopeReplayResponse | null>(null);
+
+	// Replay targets: the API always exposes `local` (its own origin); extra
+	// named targets come from TELESCOPE_REPLAY_TARGETS server-side.
+	const replayTargets = useMemo((): readonly ReplayTargetOption[] => [{ name: "local", url: "API origin (localhost:8080)" }], []);
+
+	const handleToggleStar = useCallback(
+		(starred: boolean): void => {
+			annotationMutation.mutate(
+				{ starred },
+				{
+					onSuccess: (): void => {
+						void detailQuery.refetch();
+						toast.success(starred ? "Request starred." : "Star removed.");
+					},
+					onError: (): void => {
+						toast.error("Failed to update the star.");
+					},
+				},
+			);
+		},
+		[annotationMutation, detailQuery],
+	);
+
+	const handleSaveComment = useCallback(
+		(comment: string): void => {
+			annotationMutation.mutate(
+				{ comment },
+				{
+					onSuccess: (): void => {
+						void detailQuery.refetch();
+						toast.success("Comment saved.");
+					},
+					onError: (): void => {
+						toast.error("Failed to save the comment.");
+					},
+				},
+			);
+		},
+		[annotationMutation, detailQuery],
+	);
+
+	const handleReplay = useCallback(
+		(target: string): void => {
+			replayMutation.mutate(
+				{ target },
+				{
+					onSuccess: (data): void => {
+						setReplayResult(data.data);
+					},
+					onError: (): void => {
+						toast.error("Replay failed — check the API logs.");
+					},
+				},
+			);
+		},
+		[replayMutation],
+	);
+
+	const handleCopySnippet = useCallback(
+		async (format: RequestSnippetFormat): Promise<void> => {
+			if (detail === undefined) {
+				return;
+			}
+			const snippet: string = buildRequestSnippet(detail.request, format);
+			await navigator.clipboard.writeText(snippet);
+			toast.success(`${snippetFormatLabel(format)} snippet copied.`);
+		},
+		[detail],
+	);
+
+	const handleOpenReplay = useCallback((): void => {
+		setReplayOpen(true);
+	}, []);
+
+	const handleCloseReplay = useCallback((): void => {
+		setReplayOpen(false);
+	}, []);
+
+	// Feature 10 — share link: a deep link a teammate can open with full
+	// context (the request ID is already URL-addressable).
+	const handleCopyShareLink = useCallback((): void => {
+		void navigator.clipboard.writeText(window.location.href).then((): void => {
+			toast.success("Share link copied.");
+		});
+	}, []);
 
 	// Improvement 13 — export the whole detail payload as JSON for repros/issues.
 	// Declared BEFORE the early returns (rules of hooks).
@@ -154,6 +249,18 @@ export default function TelescopeRequestDetailPage(): React.JSX.Element {
 							<Copy className="size-3" />
 							Copy JSON
 						</Button>
+						{/* Feature 16 — cURL / fetch / axios export. */}
+						<SnippetMenu onCopy={handleCopySnippet} />
+						{/* Feature 10 — deep-link share for teammates. */}
+						<Button variant="ghost" size="sm" className="h-7 gap-1.5 text-xs" onClick={handleCopyShareLink} title="Copy a link to this request">
+							<Share2 className="size-3" />
+							Share
+						</Button>
+						{/* Feature 7 — replay against a configured target. */}
+						<Button variant="outline" size="sm" className="h-7 gap-1.5 text-xs" onClick={handleOpenReplay}>
+							<RotateCw className="size-3" />
+							Replay
+						</Button>
 					</div>
 					<CardDescription className="pt-1">{formatTime(request.createdAt)}</CardDescription>
 				</CardHeader>
@@ -200,6 +307,21 @@ export default function TelescopeRequestDetailPage(): React.JSX.Element {
 					</CardContent>
 				</Card>
 			) : null}
+
+			{/* ── Annotation (feature 14) ────────────────────────────── */}
+			<Card>
+				<CardHeader className="pb-3">
+					<CardTitle className="flex items-center gap-2 text-base">
+						<Star className="size-4 text-muted-foreground" />
+						Mark for the team
+					</CardTitle>
+					<CardDescription>Star this request or leave a note so other devs know it&apos;s being investigated.</CardDescription>
+				</CardHeader>
+				<CardContent>
+					{" "}
+					<AnnotationPanel annotation={detail.annotation} onToggleStar={handleToggleStar} onSaveComment={handleSaveComment} saving={annotationMutation.isPending} />
+				</CardContent>
+			</Card>
 
 			{/* ── Timeline ─────────────────────────────────────────────── */}
 			<Card>
@@ -318,6 +440,9 @@ export default function TelescopeRequestDetailPage(): React.JSX.Element {
 					</div>
 				</CardContent>
 			</Card>
+
+			{/* ── Replay dialog (feature 7) ───────────────────────────── */}
+			<ReplayDialog open={replayOpen} onClose={handleCloseReplay} targets={replayTargets} replaying={replayMutation.isPending} result={replayResult} onReplay={handleReplay} />
 		</div>
 	);
 }

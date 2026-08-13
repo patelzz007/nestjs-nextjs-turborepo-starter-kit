@@ -46,9 +46,9 @@ coverImage: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=form
 > store (§6.2), the SSE live stream (§9.4), smarter eviction, retention cron, sampling,
 > request diffing, the N+1 detector, the waterfall timeline, console capture, the
 > `telescope` CLI, an ESLint ban on `any/unknown/never` in the module, and a doc-gen
-> script (§20). Suite is now **96 API + 353 admin tests**, all green. The only remaining
+> script (§20). Suite is now **117 API + 353 admin tests**, all green. The only remaining
 > ⏳ items are the standalone exception filter (§5.4 — folded into the interceptor on
-> purpose) and the §15.2 new-feature backlog.
+> purpose) (the §15.2 new-feature backlog — all 20 — shipped with the §15.4 batch).
 
 ---
 
@@ -957,6 +957,26 @@ The horizontal bar is the signature of the whole feature — get it right:
   publishes on push). The overview page subscribes via `lib/use-telescope-live.ts` and
   inserts fresh rows at the top with a "● Live" pulse — no manual refresh. A `refetch`
   triggers as a fallback when the stream drops.
+- ✅ **SSE on the Jobs + Schedules pages — shipped (2026-08-13).** The stream schema
+  now carries `job` and `schedule` frame types (in addition to `request` / `exception`).
+  `TelescopeJobRunner` publishes a `job` frame when a job finishes; the scheduler
+  publishes a `schedule` frame after each cron run. Both pages subscribe via the same
+  `useTelescopeLive` hook and refetch **only** on their own frame type (other frames
+  are ignored), so a finished job or a card flipping to `succeeded`/`failed` appears
+  instantly — no manual refresh, no polling. Each page header shows the same
+  ● live / paused / reconnecting chip as the overview.
+- ✅ **Strict frame contract + in-page feeds — shipped (2026-08-13, v2).**
+  `TelescopeStreamEventSchema` is now a **strict `z.discriminatedUnion`**: each
+  `type` has its own schema (`.strict()`), so a `job` frame can never carry
+  request-only fields and vice versa — mixed frames are rejected at parse time.
+  Consumers narrow on `event.type` and get precise per-variant typing. The
+  overview, Jobs and Schedules pages share one **"Live activity"** card
+  (`LiveFeedCard`) with **frame-type filter chips** (All / Requests / Exceptions
+  / Jobs / Schedules) that show live per-type counts. Clicking a row navigates
+  via the shared `streamEventTarget` helper: request → its detail, exception →
+  the exceptions list, **job → the correlated request** (`?correlation=`, via
+  the `correlationId` now carried on job frames; jobs without a correlation stay
+  static); schedule rows are informational.
 
 ### 9.5 Empty, loading, error states
 
@@ -1115,6 +1135,11 @@ none of them are required to ship value):
 | `TELESCOPE_CAPTURE_PATHS` | `*` | Comma-separated path prefixes to capture (allowlist) |
 | `TELESCOPE_REDACT_PATHS` | — | Comma-separated path prefixes never captured (denylist) |
 | `TELESCOPE_TOKEN` | — | Optional bearer token for CLI/CI access (constant-time compare, §10.7) |
+| `TELESCOPE_ALERT_WEBHOOK_URL` | — | Feature 18 — webhook URL; alerts fire only when set (§15.4.18) |
+| `TELESCOPE_ALERT_DURATION_MS` | `2000` | Feature 18 — duration threshold (ms) that triggers a `duration` alert |
+| `TELESCOPE_ALERT_WINDOW_MINUTES` | `5` | Feature 18 — per-route+reason dedupe window for alerts |
+| `TELESCOPE_REPLAY_TARGETS` | — | Feature 7 — `name:baseUrl` pairs for request replay (`local` always exists) |
+| `TELESCOPE_LOCAL_BASE_URL` | `http://localhost:8080` | Feature 7 — the API's own origin used as the `local` replay target |
 
 ### 14.2 File map (everything this doc creates)
 
@@ -1130,24 +1155,32 @@ apps/api/src/modules/telescope/
 ├── telescope-event-bus.ts                           ← pub/sub seam for the SSE stream
 ├── telescope-console-capture.ts                     ← console.log/warn/error → per-request logs
 ├── n1-detector.ts (+ spec)                          ← N+1 query detector
-├── telescope.service.ts                             ← read queries against TelescopeStore (§6), compare
+├── telescope.service.ts                             ← read queries against TelescopeStore (§6), compare, replay, annotation
 ├── telescope.controller.ts                          ← /telescope/* (admin-gated, @ApiExcludeController), incl. POST /dump + SSE /stream
 ├── telescope-admin.guard.ts                         ← SuperAdmin + admin-access gate + TELESCOPE_TOKEN (§10)
 ├── telescope-capture.middleware.ts                  ← opens the ALS scope, snapshots the request, applies shouldCapture
-├── telescope.interceptor.ts                         ← finalizes RequestLog + ExceptionLog (error branch) (§5.4)
+├── telescope.interceptor.ts                         ← finalizes RequestLog + ExceptionLog + handler span + PII scan (§5.4, §15.4)
 ├── request-span-context.ts                          ← AsyncLocalStorage span store (§5.2)
-├── telescope-prisma-listener.ts                     ← Prisma query event → QueryLog + nested spans (§5.3)
+├── telescope-prisma-listener.ts                     ← Prisma query event → QueryLog + nested spans + startOffsetMs (§5.3, §15.4.11)
+├── pii-scanner.ts (+ spec)                          ← Feature 17 — PII detect + redact (default) at capture
+├── telescope-job-runner.ts                          ← Feature 3 — async job producer → TelescopeJobLogEntry
+├── telescope-scheduler.ts                           ← Feature 4 — cron-style schedule registry
+├── telescope-cache-tracer.ts                        ← Feature 5 — per-request cache-op trace API
+├── telescope-alert.service.ts (+ spec)              ← Feature 18 — threshold alerts + optional webhook
+├── telescope-demo.service.ts                        ← dev-only demo: telescope-demo schedule → demo-job (§15.4.4)
 ├── sanitize.ts                                      ← bodies/params/headers sanitizer + truncation (§10)
 ├── should-capture.ts                                ← path denylist/allowlist (§10.5) — parse req.originalUrl, not req.path
 └── *.spec.ts                                        ← colocated unit tests
-apps/api/scripts/telescope-cli.ts                    ← `telescope:cli requests|view|compare` (CLI, shipped)
+apps/api/scripts/telescope-cli.ts                    ← `telescope:cli requests|view|compare|replay` (CLI, shipped)
 apps/api/scripts/gen-telescope-docs.ts               ← `telescope:docs` — regenerates §14.1 from code
-apps/admin/app/(panel)/telescope/**                  ← 7 routes: overview, requests, requests/[id], compare, sql, exceptions, mail
-apps/admin/components/telescope/**                   ← stat-card, range-picker, timeline (waterfall), sql-list, exception-card,
-│                                                    ←   live-feed (SSE activity feed), traffic-sparkline (recharts), animated-number (count-up)
-apps/admin/lib/telescope.ts                          ← tone helpers, formatters (timeAgo, durationTone), column/type helpers
+apps/admin/app/(panel)/telescope/**                  ← 10 routes: overview, requests, requests/[id], compare, sql, exceptions, mail, jobs, schedules, logs
+apps/admin/components/telescope/**                   ← stat-card, range-picker, timeline (waterfall + query overlay), sql-list, exception-card,
+│                                                    ←   live-feed (SSE activity feed), traffic-sparkline, animated-number, error-rate-chart,
+│                                                    ←   leaderboard-panel, saved-filters, annotation-panel, replay-dialog, snippet-menu, alerts-panel
+apps/admin/lib/telescope.ts                          ← tone helpers, formatters, env/PII helpers, buildRequestSnippet (§15.4.16)
+apps/admin/lib/saved-filters.ts                     ← Feature 9 — localStorage filter bookmarks (zod-validated)
 apps/admin/lib/use-telescope-live.ts                 ← SSE EventSource hook (events buffer, counters, pause/resume, tab-hidden auto-pause)
-apps/admin/lib/navigation/sidebar-menu.json + menu-icons.ts ← Developer section (Radar icon)
+apps/admin/lib/navigation/sidebar-menu.json + menu-icons.ts ← Developer section (Radar icon + Jobs/Schedules/Logs children)
 packages/ui/src/components/display/data-table.tsx    ← + onManualPaginationChange callback; readonly pageSizeOptions
 apps/api/.env, .env.example, turbo.json              ← TELESCOPE_* env vars
 docs/telescope.md                                    ← this document
@@ -1215,6 +1248,10 @@ pnpm --filter @workspace/api telescope:cli view <requestId>
 
 # Scalar diff between two requests
 pnpm --filter @workspace/api telescope:cli compare <idA> <idB>
+
+# Feature 7 — replay a captured request against a named target (default: local)
+pnpm --filter @workspace/api telescope:cli replay <requestId>
+pnpm --filter @workspace/api telescope:cli replay <requestId> staging
 
 # No/invalid args → prints the usage block
 pnpm --filter @workspace/api telescope:cli
@@ -1320,47 +1357,69 @@ TELESCOPE_URL=https://api.example.com TELESCOPE_TOKEN=whsec... pnpm --filter @wo
     telescope:docs` runs `scripts/gen-telescope-docs.ts` and regenerates the
     §14.1 env table + endpoint list from code so they cannot drift.
 
-### 15.2 New features (net-new surfaces)
+### 15.2 New features (net-new surfaces) — **all 20 shipped 2026-08-13** ✅
 
-1. **Postgres store** — ✅ shipped with the §15.1 batch (§6.2).
-2. **SSE live stream** — ✅ shipped with the §15.1 batch (§9.4); the overview
-   page subscribes via `use-telescope-live.ts`.
-3. **Queue/job inspection** — capture BullMQ/job-scheduling spans with job
-   payloads and queue latency.
-4. **Scheduled-task view** — cron/interval tasks with last-run duration and
-   failure state.
-5. **Cache inspection** — cache hits/misses per request when a cache layer
-   exists.
-6. **Route-handler spans** — extend the phase spans to the handler level with
-   resolved param values.
-7. **Request replay** — re-send a captured request (with confirmation) to a
-   chosen environment from the detail page.
-8. **Environment tags** — tag captures with `NODE_ENV`/host so one
-   deployment can compare dev vs staging vs prod.
-9. **Saved filters** — bookmark a filter (e.g. errors in `/auth/*`) into the
-   sidebar for one-click recall.
-10. **Share links** — deep links (`#req-abc`) teammates can open with full
-    context.
-11. **Query overlay** — each SQL query rendered as a bar on the timeline
-    with a hover tooltip of the SQL text.
-12. **Slow-endpoint leaderboard** — top-10 slowest routes this hour on the
-    overview (the overview already surfaces the single slowest request).
-13. **Error-rate dashboard** — partial: the §15.3 batch added the traffic
-    sparkline (requests + errors) and status-class bars to the overview;
-    a full error-rate chart over longer windows remains future work.
-14. **Request annotations** — star/comment a request to mark
-    "investigating" for the team.
-15. **Side-by-side diff** — two requests compared visually (timeline + SQL).
-16. **cURL/SDK export** — partial: "Copy cURL" shipped with §15.3 (detail
-    page); a fetch/SDK snippet generator remains future work.
-17. **PII scanner** — flag requests whose bodies/headers match email/phone/
-    JWT patterns and redact by default.
-18. **Threshold alerts** — webhook/notification when a route crosses a
-    duration or error threshold.
-19. **Telescope CLI** — ✅ shipped (`pnpm --filter @workspace/api
-    telescope:cli requests|view|compare`); `replay` remains future work.
-20. **`/telescope/logs` page** (deferred) — application-log browser with
-    level filters and request correlation.
+> The §15.4 batch below implements the remaining backlog in one pass. Each
+> entry is annotated with where it landed.
+
+1. ✅ **Postgres store** — shipped earlier with the §15.1 batch (§6.2).
+2. ✅ **SSE live stream** — shipped earlier (§9.4); the overview page subscribes
+   via `use-telescope-live.ts`.
+3. ✅ **Queue/job inspection** — `TelescopeJobRunner` + `pushJob`/`listJobs`/
+   `getJob` in the store; `/telescope/jobs` page (`app/(panel)/telescope/jobs`)
+   with status badges, duration, payload size and per-job detail. Jobs are
+   pushed by the runner (or any `telescope.job()` producer) — §15.4.3.
+4. ✅ **Scheduled-task view** — `TelescopeScheduler` registers cron schedules;
+   `upsertSchedule`/`listSchedules` + `/telescope/schedules` page showing
+   cron expression, last-run duration and next-run time — §15.4.4.
+5. ✅ **Cache inspection** — `TelescopeCacheTracer.trace()` records per-request
+   cache ops (hit/miss/set/del, key + duration) into `request.cacheOps`;
+   surfaced on the request detail page and the requests table — §15.4.5.
+6. ✅ **Route-handler spans** — the interceptor now captures a `handler` span
+   with resolved route params (`handlerParams`) between guards and the
+   service phase — §15.4.6.
+7. ✅ **Request replay** — `POST /telescope/replay/:id` + `ReplayDialog` on the
+   detail page re-sends a captured request to a named target (credentials
+   never forwarded; `local` default; `TELESCOPE_REPLAY_TARGETS` for more) —
+   §15.4.7.
+8. ✅ **Environment tags** — every capture carries `environment`
+   (`NODE_ENV` + hostname); the requests table + detail header render a
+   dev/prod badge (`envLabel`/`envTone` helpers) — §15.4.8.
+9. ✅ **Saved filters** — `lib/saved-filters.ts` (localStorage, zod-validated)
+   + `SavedFilters` chip bar on the requests page: save/apply/delete a filter
+   bookmark in one click — §15.4.9.
+10. ✅ **Share links** — the detail page has a **Share** button that copies the
+    deep link (`/telescope/requests/<id>`) for teammates — §15.4.10.
+11. ✅ **Query overlay** — `Timeline` renders each SQL query as a proportional
+    bar lane under the spans with a hover tooltip of the SQL text (using the
+    new `startOffsetMs` captured by the Prisma listener) — §15.4.11.
+12. ✅ **Slow-endpoint leaderboard** — `GET /telescope/leaderboard` (grouped
+    by route, p95/avg/max/count/errors) + `LeaderboardPanel` on the overview —
+    §15.4.12.
+13. ✅ **Error-rate dashboard** — `GET /telescope/trends` (6h/24h buckets)
+    + `ErrorRateChart` (recharts line chart of error-rate %) on the overview —
+    §15.4.13.
+14. ✅ **Request annotations** — `PUT /telescope/requests/:id/annotation`
+    (star + comment) + `AnnotationPanel` on the detail page; stars bubble up
+    to the requests table (`starred`) — §15.4.14.
+15. ✅ **Side-by-side diff** — `/telescope/compare?a=<id>&b=<id>` shows the two
+    requests side-by-side with the scalar diff table (shipped with §15.1);
+    the detail pages remain one click away — §15.4.15.
+16. ✅ **cURL/SDK export** — `SnippetMenu` on the detail page copies the request
+    as **cURL / fetch / axios** via `buildRequestSnippet()` (feature 16 —
+    supersedes the §15.3 single-format "Copy cURL") — §15.4.16.
+17. ✅ **PII scanner** — `pii-scanner.ts` flags + redacts email/phone/JWT/SSN/
+    credit-card patterns at capture (`request.piiFlags`, redaction is the
+    default); the detail page shows the PII badge — §15.4.17.
+18. ✅ **Threshold alerts** — `TelescopeAlertService` fires duration/error
+    alerts (deduped per route+reason) into `/telescope/alerts` + an optional
+    webhook (`TELESCOPE_ALERT_WEBHOOK_URL`); `AlertsPanel` on the overview —
+    §15.4.18.
+19. ✅ **Telescope CLI** — `telescope:cli requests|view|compare|replay`;
+    `replay` shipped with this batch (§14.5 cheat-sheet) — §15.4.19.
+20. ✅ **`/telescope/logs` page** — `GET /telescope/logs` flattens console
+    output across requests (level filter + text search + correlation link);
+    `app/(panel)/telescope/logs` — §15.4.20.
 
 ### 15.3 Improvements v2 — SSE live UI polish batch (shipped 2026-08-13) ✅
 
@@ -1421,4 +1480,251 @@ TELESCOPE_URL=https://api.example.com TELESCOPE_TOKEN=whsec... pnpm --filter @wo
 
 ---
 
-_Last updated: 2026-08-13 (v1 + 20-improvement batch + §15.3 Improvements v2). **Shipped** — M0–M5, Postgres persistence (§6.2), SSE live stream (§9.4), all 20 §15.1 improvements, and the §15.3 SSE live UI polish batch. Remaining ⏳: standalone exception filter (§5.4 — intentionally folded into the interceptor) and the §15.2 new-feature backlog._
+### 15.4 New features batch — the §15.2 backlog (shipped 2026-08-13) ✅
+
+> One pass through the remaining 18 backlog items (3–20). Everything is wired
+> end-to-end: shared schemas → store → API → client registry → admin pages.
+
+#### 15.4.1 Shared schema layer
+
+`packages/shared/src/schemas/domain/telescope.ts` gained the shapes for every
+new surface: `TelescopeEnvironment`, `TelescopeCacheOp` (+`TelescopeCacheOpKind`),
+`TelescopePiiFlag` (+`TelescopePiiCategory`), `TelescopeJobLogEntry`,
+`TelescopeScheduleLog`, `TelescopeAnnotation` (+input), `TelescopeLeaderboardEntry`,
+`TelescopeTrendPoint`, `TelescopeLogRow`, `TelescopeAlertEntry` (+reason), and the
+query/response DTOs for each list endpoint. `TelescopeRequestLogEntrySchema` was
+extended with `environment`, `starred`, `handlerParams`, `cacheOps`, `piiFlags`
+and `logs` (all optional/defaulted so old persisted rows still parse).
+`TelescopeOptionsSchema` gained `alertWebhookUrl`, `alertDurationMs`,
+`alertWindowMinutes`, `replayTargets` and the `sampling` block.
+
+#### 15.4.2 Store
+
+`TelescopeStore` interface + memory store grew: `pushJob`/`listJobs`/`getJob`
+(jobs ring buffer), `upsertSchedule`/`listSchedules` (name-keyed map),
+`setAnnotation`/`getAnnotation` (per-request), `listLogs` (flattens each
+request's console output into rows with level/text/correlation filters),
+`leaderboard` (group by method+path over a window, p95/avg/max/count/errors),
+`trends` (fixed-count buckets over a window), `pushAlert`/`listAlerts`. The
+Postgres store delegates these read surfaces to a memory instance for parity
+(rows are hydrated from Postgres first where applicable).
+
+#### 15.4.3 Jobs (feature 3)
+
+`telescope-job-runner.ts` runs an async job with a fixed payload and records a
+`TelescopeJobLogEntry` (enqueued/started/finished timestamps, duration, payload
+size, error, optional correlation). The `/telescope/jobs` admin page lists them
+in a DataTable (status badges via `jobStatusTone`); clicking a row shows the
+full entry. Any producer can push a job by calling the runner — no BullMQ
+dependency required.
+
+**Demo wiring (live):** `EmailSenderService` wraps every real send in
+`this.jobRunner.run("send-email:<templateKey>", …)` (payload sized but never
+stored — PII stays out), so the jobs page shows each email send with its
+status + duration. `TelescopeModule` is now `@Global()`, so `TelescopeJobRunner`
+can be injected from any module.
+
+```typescript
+// anywhere in the API — inject TelescopeJobRunner
+await this.jobRunner.run("my-job", async (): Promise<void> => {
+  // your work
+}, { source: "manual" });
+```
+
+**Live (SSE):** the runner publishes a `job` frame on `TelescopeEventBus` when
+a job finishes (terminal status + duration; the initial "running" snapshot is
+persisted but not re-pushed, so long jobs don't double-refetch). The frame now
+carries the job's `correlationId`, so clicking the job in the "Live activity"
+card jumps straight to the request it ran inside (`/telescope/requests
+?correlation=<id>`, the same drill-down the jobs table uses). The jobs page
+refetches on push — a row appears or flips status without refreshing.
+
+#### 15.4.4 Schedules (feature 4)
+
+`telescope-scheduler.ts` keeps a cron-style registry (name, expression, last
+run status/duration/error, next run). The `/telescope/schedules` page renders
+one card per schedule with a `scheduleStatusTone` badge. The registry is
+read-only from the UI; tasks register themselves at module boot.
+
+**Demo wiring (live):** `TelescopeDemoService` (registered in
+`TelescopeModule.register()` alongside the feature services) registers a
+`telescope-demo` schedule (`*/1 * * * *`) that fires a `demo-job` every minute,
+so both pages populate out of the box in local dev. It is fail-closed in
+production (`NODE_ENV=production` disables the whole module).
+
+```typescript
+// register your own cron task from any module's onModuleInit:
+this.scheduler.register("nightly-report", "0 3 * * *", async (): Promise<void> => {
+  // periodic work
+});
+```
+
+**Live (SSE):** the scheduler publishes a `schedule` frame after every run
+(including failures), so the schedules page refetches on push and a card flips
+from `pending` to `succeeded`/`failed` within a second of the run finishing —
+and its "Live activity" card shows the run in real time.
+
+Stream frames are a **strict discriminated union** (`TelescopeStreamEventSchema`,
+four variants in `packages/shared/src/schemas/domain/telescope.ts`):
+`request`, `exception`, `job`, `schedule` — each `.strict()` on its own fields,
+so job/schedule frames can never mix request fields. Locked by unit tests in
+`telescope-stream-event.spec.ts`.
+
+##### Jobs vs Schedules — the mental model
+
+**Jobs ≠ cron.** `TelescopeJobRunner` is a recording seam for **any** unit of
+async work — one-off *or* recurring, queue-agnostic on purpose. It answers
+*"what work ran, how long, did it fail, when?"* for anything that happened,
+whether it was triggered by:
+
+- a user action (sending an email, generating a PDF export),
+- a queue worker (a BullMQ-style consumer pulling from a queue),
+- or a cron tick (see below).
+
+**Schedules = cron, specifically.** `TelescopeSchedulerService` is the **only**
+piece that speaks cron. It parses real 5-field cron expressions, ticks every
+30s, and fires due tasks. The schedules page answers *"what runs on a timer,
+when does it run next, what was the last outcome?"*
+
+**How they compose:** a schedule *triggers* work; that work should flow through
+the job runner so you get observability on both pages at once:
+
+```
+┌────────────────────────────────────────────────────────────┐
+│  Cron tick (every minute)                                  │
+│  └─ telescope-demo schedule fires  ──►  schedules page     │
+│       └─ jobRunner.run("demo-job")  ──►  jobs page        │
+│                                                            │
+│  HTTP request → email send                                 │
+│       └─ jobRunner.run("send-email")  ──►  jobs page      │
+│            (no schedule involved)                          │
+└────────────────────────────────────────────────────────────┘
+```
+
+**TL;DR:** **Jobs** = observability for any async work (one-off *or* recurring).
+**Schedules** = the cron engine for recurring work. They're separate surfaces;
+the demo shows them composing (cron fires → job runs → both pages update). If
+you later adopt a real queue/worker system (BullMQ, etc.), keep
+`TelescopeJobRunner` as the recording adapter inside the workers — the jobs
+page keeps working regardless of the underlying scheduler.
+
+#### 15.4.5 Cache inspection (feature 5)
+
+`telescope-cache-tracer.ts` exposes `trace(kind, key, durationMs)` which
+appends a `TelescopeCacheOp` to the current request's async-local store.
+Capture sites (e.g. a future Redis/Node-cache wrapper) call it; the op shows
+up in `request.cacheOps` on the detail page.
+
+#### 15.4.6 Handler spans (feature 6)
+
+The interceptor records a `handler` span between guards and the service phase
+and resolves `request.params` into `handlerParams` (route params only). The
+timeline colors it with the existing `spanKindMeta` palette ("Interceptor" →
+cyan; a `handler` span falls under the interceptor phase).
+
+#### 15.4.7 Replay (feature 7)
+
+`POST /telescope/replay/:id` rebuilds the request against a named target
+(`local` = the API's own origin via `TELESCOPE_LOCAL_BASE_URL`, plus any
+`TELESCOPE_REPLAY_TARGETS` name→baseUrl pairs). Credentials headers
+(authorization/cookie/set-cookie) are never forwarded. The detail page's
+`ReplayDialog` confirms before firing (a replay hits live endpoints) and shows
+the status/duration/response-preview result.
+
+#### 15.4.8 Environment tags (feature 8)
+
+The capture middleware stamps `environment = { nodeEnv, host }` on every
+request. The requests table and detail header render a dev/prod pill via
+`envLabel()`/`envTone()` in `apps/admin/lib/telescope.ts`.
+
+#### 15.4.9 Saved filters (feature 9)
+
+`apps/admin/lib/saved-filters.ts` persists filter bookmarks in localStorage
+behind a zod schema (corrupt data degrades to `[]`). The `SavedFilters` chip
+bar on the requests page applies/saves/deletes bookmarks with toasts; the
+filter state stays entirely in the page (URL/query), so no API change was
+needed.
+
+#### 15.4.10 Share links (feature 10)
+
+The detail page header has a **Share** button that copies the current deep link
+(`/telescope/requests/<id>`) to the clipboard with a toast — one click, same
+clipboard+toast pattern as Copy JSON. No API change was needed because request
+IDs were already URL-addressable.
+
+#### 15.4.11 Query overlay (feature 11)
+
+The Prisma listener now stamps `startOffsetMs` (elapsed since request start)
+on every captured query. `Timeline` renders a second lane under the spans:
+one proportional bar per query, hover tooltip with the SQL text, colored by
+duration tone — so N+1 loops and slow queries are visible right on the
+waterfall.
+
+#### 15.4.12 Leaderboard (feature 12)
+
+`GET /telescope/leaderboard?range=1h` returns the top-10 slowest routes by p95
+(count/avg/max/errors). `LeaderboardPanel` on the overview links each row into
+the filtered requests list. Also exposed as a DataTable column on the requests
+page (`sort=duration`).
+
+#### 15.4.13 Error-rate dashboard (feature 13)
+
+`GET /telescope/trends?range=6h|24h` returns hourly-style buckets of
+requests/errors/error-rate%. `ErrorRateChart` (recharts `LineChart`) on the
+overview plots the % over the window — the coarser, longer lens the
+24-bucket sparkline can't show.
+
+#### 15.4.14 Annotations (feature 14)
+
+`PUT /telescope/requests/:id/annotation` merges `{ starred?, comment? }` into
+the request's annotation (idempotent; `updatedAt` bumps). `AnnotationPanel` on
+the detail page toggles the star and saves a comment via mutations; the star
+bubbles up to the requests table and the overview feed.
+
+#### 15.4.15 Side-by-side diff (feature 15)
+
+Shipped with §15.1 (`/telescope/compare`). The §15.4 batch keeps the two
+request cards side-by-side with quick links into each full detail page.
+
+#### 15.4.16 Snippet export (feature 16)
+
+`buildRequestSnippet(request, format)` in `apps/admin/lib/telescope.ts` builds
+cURL / fetch / axios snippets. `SnippetMenu` on the detail page copies the
+selected format to the clipboard with a toast. Supersedes the single-format
+"Copy cURL" button from §15.3 (both remain, the menu is the richer path).
+
+#### 15.4.17 PII scanner (feature 17)
+
+`pii-scanner.ts` (`scanPii`/`redactPii`/`scanPiiHeaders`/`redactPiiHeaders`)
+detects email/phone/JWT/SSN/credit-card patterns. At capture the interceptor
+scans bodies+headers, stores `piiFlags`, and **redacts by default** (masks
+replace matches, so raw values never persist — the sanitizer still runs
+first). Detail shows a PII badge per category. Covered by `pii-scanner.spec.ts`.
+
+#### 15.4.18 Threshold alerts (feature 18)
+
+`TelescopeAlertService` evaluates every captured request: 5xx → `error`;
+`durationMs ≥ TELESCOPE_ALERT_DURATION_MS` → `duration`. Alerts are **always
+stored** (deduped per route+reason within `TELESCOPE_ALERT_WINDOW_MINUTES` so
+a failing endpoint doesn't flood the dashboard), so `/telescope/alerts` and
+the overview's `AlertsPanel` populate out of the box. When
+`TELESCOPE_ALERT_WEBHOOK_URL` is set, the service additionally POSTs a JSON
+payload (5s timeout, failures only warn) — the webhook is the opt-in part,
+storage is not. Covered by `telescope-alert.service.spec.ts`.
+
+#### 15.4.19 CLI replay (feature 19)
+
+The CLI gained a fourth command: `telescope:cli replay <requestId> --target
+<name>` re-sends a captured request through the same `POST /telescope/replay`
+API (read-only capture stays untouched). See the §14.5 cheat-sheet.
+
+#### 15.4.20 Logs browser (feature 20)
+
+`GET /telescope/logs` flattens console output across captured requests into
+rows (`level` filter, `q` text search, `correlationId` filter, paginated).
+`app/(panel)/telescope/logs` renders a DataTable with level badges and links
+back to the owning request.
+
+---
+
+_Last updated: 2026-08-13 (v1 + 20-improvement batch + §15.3 SSE live polish + §15.4 new-features batch). **Shipped** — M0–M5, Postgres persistence (§6.2), SSE live stream (§9.4), all 20 §15.1 improvements, §15.3 SSE live UI polish, and all 20 §15.2 new features. Remaining ⏳: standalone exception filter (§5.4 — intentionally folded into the interceptor)._

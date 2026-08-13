@@ -15,13 +15,22 @@ import {
 	type QueryLogEntry,
 	type RequestLogEntry,
 	type RequestLogSummary,
+	type TelescopeAlertEntry,
+	type TelescopeAnnotation,
 	type TelescopeExceptionListQuery,
+	type TelescopeJobLogEntry,
+	type TelescopeJobsListQuery,
 	type TelescopeJsonValue,
+	type TelescopeLeaderboardEntry,
 	type TelescopeLogEntry,
+	type TelescopeLogRow,
+	type TelescopeLogsListQuery,
 	type TelescopeOptions,
 	type TelescopeRequestListQuery,
+	type TelescopeScheduleLog,
 	type TelescopeSpan,
 	type TelescopeSqlListQuery,
+	type TelescopeTrendPoint,
 } from "@workspace/shared";
 
 import { PrismaService } from "../../prisma/prisma.service.js";
@@ -156,6 +165,58 @@ export class TelescopePostgresStore implements TelescopeStore, OnModuleInit {
 
 	public overviewStats(fromIso: string): OverviewStats {
 		return this.memory.overviewStats(fromIso);
+	}
+
+	// ── Feature surfaces: memory-scoped (jobs/schedules/annotations/logs/     ──
+	// ── leaderboard/trends/alerts are dev-time surfaces — persisted rows stay  ──
+	// ── request/query/exception/dump; these delegate to the memory buffer.     ──
+
+	public leaderboard(fromIso: string, limit: number): readonly TelescopeLeaderboardEntry[] {
+		return this.memory.leaderboard(fromIso, limit);
+	}
+
+	public trends(fromIso: string, bucketCount: number): readonly TelescopeTrendPoint[] {
+		return this.memory.trends(fromIso, bucketCount);
+	}
+
+	public pushJob(entry: TelescopeJobLogEntry): void {
+		this.memory.pushJob(entry);
+	}
+
+	public listJobs(query: TelescopeJobsListQuery): ListResult<TelescopeJobLogEntry> {
+		return this.memory.listJobs(query);
+	}
+
+	public getJob(id: string): TelescopeJobLogEntry | undefined {
+		return this.memory.getJob(id);
+	}
+
+	public upsertSchedule(entry: TelescopeScheduleLog): void {
+		this.memory.upsertSchedule(entry);
+	}
+
+	public listSchedules(): readonly TelescopeScheduleLog[] {
+		return this.memory.listSchedules();
+	}
+
+	public setAnnotation(requestId: string, annotation: TelescopeAnnotation | null): void {
+		this.memory.setAnnotation(requestId, annotation);
+	}
+
+	public getAnnotation(requestId: string): TelescopeAnnotation | null {
+		return this.memory.getAnnotation(requestId);
+	}
+
+	public listLogs(query: TelescopeLogsListQuery): ListResult<TelescopeLogRow> {
+		return this.memory.listLogs(query);
+	}
+
+	public pushAlert(entry: TelescopeAlertEntry): void {
+		this.memory.pushAlert(entry);
+	}
+
+	public listAlerts(limit: number): readonly TelescopeAlertEntry[] {
+		return this.memory.listAlerts(limit);
 	}
 
 	/** Prunes both the buffer and the DB tables (improvement 4). */

@@ -1,0 +1,83 @@
+"use client";
+
+// ============================================
+// components/telescope/saved-filters.tsx
+// Feature 9 — bookmark a request-list filter for one-click recall. Chips are
+// rendered from localStorage (lib/saved-filters.ts); clicking one applies the
+// filter, the ✕ deletes it, and "Save" bookmarks the current filter state.
+//
+// Dumb component: the current filter value + callbacks arrive via props.
+// ============================================
+
+import { Bookmark, BookmarkCheck, X } from "lucide-react";
+import { useCallback, useState } from "react";
+import { toast } from "sonner";
+
+import type { SavedFilter, SavedFilterValue } from "@/lib/saved-filters";
+
+export interface SavedFiltersProps {
+	readonly saved: readonly SavedFilter[];
+	readonly current: SavedFilterValue;
+	readonly onApply: (filter: SavedFilterValue) => void;
+	readonly onSave: (name: string, filter: SavedFilterValue) => void;
+	readonly onDelete: (id: string) => void;
+}
+
+export function SavedFilters({ saved, current, onApply, onSave, onDelete }: SavedFiltersProps): React.JSX.Element {
+	const [draftName, setDraftName] = useState<string>("");
+
+	const handleSave = useCallback((): void => {
+		const name: string = draftName.trim();
+		if (name.length === 0) {
+			toast.warning("Give the filter a name first.");
+			return;
+		}
+		onSave(name, current);
+		setDraftName("");
+	}, [draftName, current, onSave]);
+
+	return (
+		<div className="flex flex-wrap items-center gap-2">
+			{saved.map((filter) => (
+				<span
+					key={filter.id}
+					className="group inline-flex items-center gap-1.5 rounded-full border bg-card px-2.5 py-1 text-xs text-foreground shadow-xs transition-colors hover:border-primary/40">
+					<button
+						type="button"
+						onClick={(): void => {
+							onApply(filter.filter);
+						}}
+						className="inline-flex items-center gap-1.5 font-medium hover:underline">
+						<BookmarkCheck className="size-3 text-primary" />
+						{filter.name}
+					</button>
+					<button
+						type="button"
+						onClick={(): void => {
+							onDelete(filter.id);
+						}}
+						className="text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 hover:text-destructive"
+						aria-label={`Delete saved filter ${filter.name}`}>
+						<X className="size-3" />
+					</button>
+				</span>
+			))}
+
+			<input
+				value={draftName}
+				onChange={(event: React.ChangeEvent<HTMLInputElement>): void => {
+					setDraftName(event.target.value);
+				}}
+				placeholder="Filter name…"
+				className="h-7 w-36 rounded-full border bg-card px-2.5 text-xs text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-ring focus:outline-none"
+			/>
+			<button
+				type="button"
+				onClick={handleSave}
+				className="inline-flex h-7 items-center gap-1 rounded-full border bg-card px-2.5 text-xs font-medium text-foreground shadow-xs transition-colors hover:border-primary/40 hover:text-primary">
+				<Bookmark className="size-3" />
+				Save filter
+			</button>
+		</div>
+	);
+}

@@ -1,6 +1,6 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 
-import type { TelescopeJsonValue, TelescopeLogEntry, TelescopeSpan } from "@workspace/shared";
+import type { TelescopeCacheOp, TelescopeJsonValue, TelescopeLogEntry, TelescopeSpan } from "@workspace/shared";
 
 /**
  * Per-request capture state, carried through the async chain via
@@ -21,6 +21,8 @@ export interface SpanStore {
 	requestBody: TelescopeJsonValue | null;
 	/** Console output that ran inside this request (improvement 16). */
 	logs: TelescopeLogEntry[];
+	/** Cache ops recorded by `TelescopeCacheTracer` inside this request (feature 5). */
+	cacheOps: TelescopeCacheOp[];
 }
 
 /**

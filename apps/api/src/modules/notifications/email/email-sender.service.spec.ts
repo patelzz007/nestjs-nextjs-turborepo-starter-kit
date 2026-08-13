@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { TypedConfigService } from "../../../config/typed-config.service.js";
 import type { LogService } from "../../logs/logs.service.js";
+import type { TelescopeJobRunner } from "../../telescope/telescope-job-runner.js";
 import type { EmailLogService } from "./email-log.service.js";
 import { EmailSenderService } from "./email-sender.service.js";
 import { VerificationEmailTemplate } from "./templates/verification-email.template.js";
@@ -45,6 +46,12 @@ const emailLogServiceMock = {
 	updateStatusByResendId: vi.fn().mockResolvedValue("updated"),
 } as unknown as EmailLogService;
 
+const jobRunnerMock = {
+	// The real runner records the job AND awaits the wrapped fn — the mock
+	// just delegates so send-with-retry behavior is exercised unchanged.
+	run: vi.fn(async <T>(_jobName: string, fn: () => Promise<T>): Promise<T> => fn()),
+} as unknown as TelescopeJobRunner;
+
 function makeTemplate(): VerificationEmailTemplate {
 	return new VerificationEmailTemplate({ to: "jamie@example.com", verificationToken: "tok-123", expiresInHours: 24 });
 }
@@ -55,7 +62,7 @@ describe("EmailSenderService", () => {
 	});
 
 	it("returns invalid-props without calling Resend when props are malformed", async () => {
-		const service = new EmailSenderService(createConfig(), logServiceMock, emailLogServiceMock);
+		const service = new EmailSenderService(createConfig(), logServiceMock, emailLogServiceMock, jobRunnerMock);
 		const template = new VerificationEmailTemplate({ to: "not-an-email", verificationToken: "tok" });
 		const result = await service.send(template);
 		expect(result.ok).toBe(false);
@@ -66,7 +73,7 @@ describe("EmailSenderService", () => {
 	});
 
 	it("noop mode never touches the network but persists a row", async () => {
-		const service = new EmailSenderService(createConfig({ emailMode: "noop" }), logServiceMock, emailLogServiceMock);
+		const service = new EmailSenderService(createConfig({ emailMode: "noop" }), logServiceMock, emailLogServiceMock, jobRunnerMock);
 		const result = await service.send(makeTemplate());
 		expect(result.ok).toBe(true);
 		if (result.ok) {
@@ -77,7 +84,7 @@ describe("EmailSenderService", () => {
 	});
 
 	it("log-only mode prints the rendered text and returns ok", async () => {
-		const service = new EmailSenderService(createConfig({ emailMode: "log-only" }), logServiceMock, emailLogServiceMock);
+		const service = new EmailSenderService(createConfig({ emailMode: "log-only" }), logServiceMock, emailLogServiceMock, jobRunnerMock);
 		const result = await service.send(makeTemplate());
 		expect(result.ok).toBe(true);
 		if (result.ok) {
@@ -89,7 +96,7 @@ describe("EmailSenderService", () => {
 
 	it("applies the EMAIL_TEST_TO override in send mode", async () => {
 		resendSendMock.mockResolvedValueOnce({ data: { id: "re-1" }, error: null, headers: null });
-		const service = new EmailSenderService(createConfig({ emailTestTo: "qa@example.com" }), logServiceMock, emailLogServiceMock);
+		const service = new EmailSenderService(createConfig({ emailTestTo: "qa@example.com" }), logServiceMock, emailLogServiceMock, jobRunnerMock);
 		const result = await service.send(makeTemplate());
 		expect(result.ok).toBe(true);
 		const sentPayload = resendSendMock.mock.calls[0]?.[0] as { readonly to: string };
@@ -98,7 +105,7 @@ describe("EmailSenderService", () => {
 
 	it("returns the resend id on success and persists a sent row", async () => {
 		resendSendMock.mockResolvedValueOnce({ data: { id: "re-42" }, error: null, headers: null });
-		const service = new EmailSenderService(createConfig(), logServiceMock, emailLogServiceMock);
+		const service = new EmailSenderService(createConfig(), logServiceMock, emailLogServiceMock, jobRunnerMock);
 		const result = await service.send(makeTemplate());
 		expect(result.ok).toBe(true);
 		if (result.ok) {
@@ -121,7 +128,7 @@ describe("EmailSenderService", () => {
 		resendSendMock
 			.mockRejectedValueOnce({ code: "internal_server_error", message: "boom" })
 			.mockResolvedValueOnce({ data: { id: "re-7" }, error: null, headers: null });
-		const service = new EmailSenderService(createConfig({ emailMaxAttempts: 3 }), logServiceMock, emailLogServiceMock);
+		const service = new EmailSenderService(createConfig({ emailMaxAttempts: 3 }), logServiceMock, emailLogServiceMock, jobRunnerMock);
 		const result = await service.send(makeTemplate());
 		expect(result.ok).toBe(true);
 		expect(resendSendMock).toHaveBeenCalledTimes(2);
@@ -129,7 +136,7 @@ describe("EmailSenderService", () => {
 
 	it("gives up after max attempts and reports api-error", async () => {
 		resendSendMock.mockRejectedValue({ code: "internal_server_error", message: "boom" });
-		const service = new EmailSenderService(createConfig({ emailMaxAttempts: 2 }), logServiceMock, emailLogServiceMock);
+		const service = new EmailSenderService(createConfig({ emailMaxAttempts: 2 }), logServiceMock, emailLogServiceMock, jobRunnerMock);
 		const result = await service.send(makeTemplate());
 		expect(result.ok).toBe(false);
 		if (!result.ok) {
@@ -140,7 +147,7 @@ describe("EmailSenderService", () => {
 
 	it("does not retry non-retryable errors (validation_error)", async () => {
 		resendSendMock.mockRejectedValue({ code: "validation_error", message: "bad" });
-		const service = new EmailSenderService(createConfig({ emailMaxAttempts: 3 }), logServiceMock, emailLogServiceMock);
+		const service = new EmailSenderService(createConfig({ emailMaxAttempts: 3 }), logServiceMock, emailLogServiceMock, jobRunnerMock);
 		const result = await service.send(makeTemplate());
 		expect(result.ok).toBe(false);
 		expect(resendSendMock).toHaveBeenCalledTimes(1);
@@ -148,7 +155,7 @@ describe("EmailSenderService", () => {
 
 	it("reports rate-limited when Resend says so", async () => {
 		resendSendMock.mockResolvedValue({ data: null, error: { code: "rate_limit_exceeded", message: "slow down" }, headers: null });
-		const service = new EmailSenderService(createConfig(), logServiceMock, emailLogServiceMock);
+		const service = new EmailSenderService(createConfig(), logServiceMock, emailLogServiceMock, jobRunnerMock);
 		const result = await service.send(makeTemplate());
 		expect(result.ok).toBe(false);
 		if (!result.ok) {
@@ -158,7 +165,7 @@ describe("EmailSenderService", () => {
 
 	it("enforces the per-recipient rate limit before the network", async () => {
 		resendSendMock.mockResolvedValue({ data: { id: "re-x" }, error: null, headers: null });
-		const service = new EmailSenderService(createConfig({ emailRateLimitPerMinute: 2 }), logServiceMock, emailLogServiceMock);
+		const service = new EmailSenderService(createConfig({ emailRateLimitPerMinute: 2 }), logServiceMock, emailLogServiceMock, jobRunnerMock);
 		await service.send(makeTemplate());
 		await service.send(makeTemplate());
 		const third = await service.send(makeTemplate());
@@ -176,7 +183,7 @@ describe("EmailSenderService", () => {
 					// Never resolves — the abort timer must fire.
 				}),
 		);
-		const service = new EmailSenderService(createConfig({ emailTimeoutMs: 50, emailMaxAttempts: 1 }), logServiceMock, emailLogServiceMock);
+		const service = new EmailSenderService(createConfig({ emailTimeoutMs: 50, emailMaxAttempts: 1 }), logServiceMock, emailLogServiceMock, jobRunnerMock);
 		const result = await service.send(makeTemplate());
 		expect(result.ok).toBe(false);
 		if (!result.ok) {

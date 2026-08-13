@@ -5,7 +5,7 @@
 // pages own the queries (rule 9/10), these just make the dumb components
 // consistent (rule 22: no hardcoded colors in components).
 
-import type { TelescopeRange, TelescopeSpanKind } from "@workspace/shared";
+import type { RequestLogEntry, TelescopePiiCategory, TelescopeRange, TelescopeSpanKind, TelescopeStreamEvent } from "@workspace/shared";
 
 // ── Status tone (request status codes) ─────────────────────────────────────
 
@@ -144,4 +144,156 @@ export const RANGE_OPTIONS: readonly { readonly value: TelescopeRange; readonly 
 
 export function rangeLabel(range: TelescopeRange): string {
 	return range === "15m" ? "last 15 minutes" : range === "1h" ? "last hour" : range === "6h" ? "last 6 hours" : "last 24 hours";
+}
+
+// ── Environment tag helpers (feature 8) ────────────────────────────────────
+
+/** Short env badge label: `development` → `dev`. */
+export function envLabel(nodeEnv: string | null | undefined): string {
+	if (nodeEnv === null || nodeEnv === undefined) {
+		return "—";
+	}
+	if (nodeEnv === "production") {
+		return "prod";
+	}
+	if (nodeEnv === "development") {
+		return "dev";
+	}
+	return nodeEnv;
+}
+
+/** Pill classes for the env badge — token-driven (light + dark). */
+export function envTone(nodeEnv: string | null | undefined): string {
+	if (nodeEnv === "production") {
+		return "border-amber-300/60 bg-amber-500/10 text-amber-700 dark:border-amber-500/40 dark:text-amber-400";
+	}
+	return "border-sky-300/60 bg-sky-500/10 text-sky-700 dark:border-sky-500/40 dark:text-sky-400";
+}
+
+// ── PII helpers (feature 17) ───────────────────────────────────────────────
+
+const PII_LABELS: Readonly<Record<TelescopePiiCategory, string>> = {
+	email: "Email",
+	phone: "Phone",
+	jwt: "JWT",
+	ssn: "SSN",
+	creditCard: "Credit card",
+};
+
+export function piiCategoryLabel(category: TelescopePiiCategory): string {
+	return PII_LABELS[category];
+}
+
+// ── Snippet builder (feature 16 — cURL / fetch / axios) ────────────────────
+
+export type RequestSnippetFormat = "curl" | "fetch" | "axios";
+
+const SNIPPET_FORMAT_LABELS: Readonly<Record<RequestSnippetFormat, string>> = {
+	curl: "cURL",
+	fetch: "fetch",
+	axios: "axios",
+};
+
+export function snippetFormatLabel(format: RequestSnippetFormat): string {
+	return SNIPPET_FORMAT_LABELS[format];
+}
+
+/** Builds a ready-to-run request snippet from a captured request. */
+export function buildRequestSnippet(request: RequestLogEntry, format: RequestSnippetFormat): string {
+	const url: string = request.queryString !== null ? `${request.path}?${request.queryString}` : request.path;
+	const method: string = request.method.toUpperCase();
+	const headers: readonly { readonly key: string; readonly value: string }[] =
+		request.requestHeaders !== null ? Object.entries(request.requestHeaders).map(([key, value]) => ({ key, value })) : [];
+	const body: string = request.requestBody !== null ? JSON.stringify(request.requestBody) : "";
+
+	if (format === "curl") {
+		const parts: string[] = [`curl -X ${method} '${url}'`];
+		for (const header of headers) {
+			parts.push(`  -H '${header.key}: ${header.value}'`);
+		}
+		if (request.requestBody !== null) {
+			parts.push(`  -d '${body}'`);
+		}
+		return parts.join(" \\\n");
+	}
+
+	if (format === "axios") {
+		const parts: string[] = ['import axios from "axios";', "", "await axios.request({"];
+		parts.push(`  method: "${method}",`);
+		parts.push(`  url: "${url}",`);
+		if (headers.length > 0) {
+			parts.push(`  headers: ${JSON.stringify(Object.fromEntries(headers.map((header) => [header.key, header.value])), null, 2).replace(/\n/g, "\n  ")},`);
+		}
+		if (request.requestBody !== null) {
+			parts.push(`  data: ${body},`);
+		}
+		parts.push("});");
+		return parts.join("\n");
+	}
+
+	// fetch
+	const parts: string[] = [];
+	parts.push(`const response = await fetch("${url}", {`);
+	parts.push(`  method: "${method}",`);
+	if (headers.length > 0) {
+		parts.push(`  headers: ${JSON.stringify(Object.fromEntries(headers.map((header) => [header.key, header.value])), null, 2).replace(/\n/g, "\n  ")},`);
+	}
+	if (request.requestBody !== null) {
+		parts.push(`  body: JSON.stringify(${body}),`);
+	}
+	parts.push("});");
+	return parts.join("\n");
+}
+
+// ── Job / schedule / alert status tones ────────────────────────────────────
+
+/** Jobs: running → sky, succeeded → emerald, failed → red. */
+export function jobStatusTone(status: string): string {
+	if (status === "succeeded") {
+		return "border-emerald-300/60 bg-emerald-500/10 text-emerald-700 dark:border-emerald-500/40 dark:text-emerald-400";
+	}
+	if (status === "failed") {
+		return "border-red-300/60 bg-red-500/10 text-red-700 dark:border-red-500/40 dark:text-red-400";
+	}
+	return "border-sky-300/60 bg-sky-500/10 text-sky-700 dark:border-sky-500/40 dark:text-sky-400";
+}
+
+/** Schedules: pending → muted, succeeded → emerald, failed → red. */
+export function scheduleStatusTone(status: string): string {
+	if (status === "succeeded") {
+		return "border-emerald-300/60 bg-emerald-500/10 text-emerald-700 dark:border-emerald-500/40 dark:text-emerald-400";
+	}
+	if (status === "failed") {
+		return "border-red-300/60 bg-red-500/10 text-red-700 dark:border-red-500/40 dark:text-red-400";
+	}
+	return "border-border text-muted-foreground";
+}
+
+/** Alert reason chip: duration → amber, error → red. */
+export function alertReasonTone(reason: string): string {
+	if (reason === "error") {
+		return "border-red-300/60 bg-red-500/10 text-red-700 dark:border-red-500/40 dark:text-red-400";
+	}
+	return "border-amber-300/60 bg-amber-500/10 text-amber-700 dark:border-amber-500/40 dark:text-amber-400";
+}
+
+/**
+ * The route a live-feed frame should navigate to, or null when the frame is
+ * not navigable (schedule runs, jobs with no correlation). Shared by every
+ * page that renders a `LiveFeed` so the click targets stay consistent:
+ * - exception → exceptions list,
+ * - request → its detail page,
+ * - job → the correlated request on the requests page (via `?correlation=`).
+ */
+export function streamEventTarget(event: TelescopeStreamEvent): string | null {
+	if (event.type === "exception") {
+		return "/telescope/exceptions";
+	}
+	if (event.type === "request") {
+		return `/telescope/requests/${encodeURIComponent(event.id)}`;
+	}
+	if (event.type === "job" && event.correlationId !== null) {
+		return `/telescope/requests?correlation=${encodeURIComponent(event.correlationId)}`;
+	}
+	return null;
 }

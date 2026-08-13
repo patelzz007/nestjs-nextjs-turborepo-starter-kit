@@ -1,17 +1,22 @@
-import { DynamicModule, Module, type Provider, type Type } from "@nestjs/common";
+import { DynamicModule, Global, Module, type Provider, type Type } from "@nestjs/common";
 import { APP_INTERCEPTOR } from "@nestjs/core";
 
 import type { TelescopeOptions } from "@workspace/shared";
 
 import { resolveTelescopeOptions, TELESCOPE_OPTIONS, TELESCOPE_STORE } from "./telescope.options.js";
 import { TelescopeAdminGuard } from "./telescope-admin.guard.js";
+import { TelescopeAlertService } from "./telescope-alert.service.js";
+import { TelescopeCacheTracer } from "./telescope-cache-tracer.js";
 import { TelescopeConsoleCapture } from "./telescope-console-capture.js";
+import { TelescopeDemoService } from "./telescope-demo.service.js";
 import { TelescopeController } from "./telescope.controller.js";
 import { TelescopeEventBus } from "./telescope-event-bus.js";
 import { TelescopeInterceptor } from "./telescope.interceptor.js";
+import { TelescopeJobRunner } from "./telescope-job-runner.js";
 import { TelescopePrismaListener } from "./telescope-prisma-listener.js";
 import { TelescopePostgresStore } from "./telescope-postgres.store.js";
 import { TelescopeRetentionService } from "./telescope-retention.service.js";
+import { TelescopeSchedulerService } from "./telescope-scheduler.js";
 import { TelescopeService } from "./telescope.service.js";
 import { TelescopeMemoryStore } from "./telescope.store.js";
 
@@ -25,6 +30,7 @@ import { TelescopeMemoryStore } from "./telescope.store.js";
  * controller, no interceptor, and no Prisma listener, so nothing is captured
  * and `/telescope/*` does not exist.
  */
+@Global()
 @Module({})
 export class TelescopeModule {
 	public static register(provided: Partial<TelescopeOptions>): DynamicModule {
@@ -42,10 +48,27 @@ export class TelescopeModule {
 		const controllers: Type<TelescopeController>[] = [];
 
 		if (resolved.enabled) {
-			providers.push(TelescopeEventBus, TelescopeConsoleCapture, TelescopeRetentionService, TelescopePrismaListener, TelescopeService, TelescopeAdminGuard, {
-				provide: APP_INTERCEPTOR,
-				useClass: TelescopeInterceptor,
-			});
+			providers.push(
+				TelescopeEventBus,
+				TelescopeConsoleCapture,
+				TelescopeRetentionService,
+				TelescopePrismaListener,
+				// Feature surfaces (3/4/5/7/18): job runner, scheduler, cache tracer,
+				// alert service — registered alongside the capture pipeline. The
+				// demo service is dev-only sugar so the jobs/schedules pages have
+				// data out of the box (fail-closed in production).
+				TelescopeJobRunner,
+				TelescopeSchedulerService,
+				TelescopeCacheTracer,
+				TelescopeAlertService,
+				TelescopeDemoService,
+				TelescopeService,
+				TelescopeAdminGuard,
+				{
+					provide: APP_INTERCEPTOR,
+					useClass: TelescopeInterceptor,
+				},
+			);
 			controllers.push(TelescopeController);
 		}
 
@@ -53,7 +76,7 @@ export class TelescopeModule {
 			module: TelescopeModule,
 			providers,
 			controllers,
-			exports: [TELESCOPE_OPTIONS, TELESCOPE_STORE],
+			exports: [TELESCOPE_OPTIONS, TELESCOPE_STORE, TelescopeJobRunner, TelescopeSchedulerService, TelescopeCacheTracer, TelescopeAlertService, TelescopeDemoService],
 		};
 	}
 }

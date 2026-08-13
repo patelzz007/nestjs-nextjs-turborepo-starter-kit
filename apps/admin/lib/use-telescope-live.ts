@@ -27,12 +27,18 @@ import { useCallback, useEffect, useRef, useState } from "react";
 /** How many recent events the buffer keeps (feed rows + badge counts). */
 const MAX_EVENTS = 50;
 
-export interface LiveFeedEvent extends TelescopeStreamEvent {
+/**
+ * A buffered frame with feed metadata. Must be a type-alias intersection
+ * (NOT an `interface extends`): `TelescopeStreamEvent` is a discriminated
+ * union, and interfaces cannot extend union types — the intersection keeps
+ * the `type` discriminant so consumers narrow on it as usual.
+ */
+export type LiveFeedEvent = TelescopeStreamEvent & {
 	/** Monotonic sequence — the stable React key for feed rows. */
 	readonly seq: number;
 	/** Epoch ms the frame was received — powers "X ago" labels. */
 	readonly receivedAt: number;
-}
+};
 
 export interface UseTelescopeLiveResult {
 	readonly connected: boolean;

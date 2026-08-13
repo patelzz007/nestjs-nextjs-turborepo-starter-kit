@@ -4,11 +4,20 @@ import type {
 	QueryLogEntry,
 	RequestLogEntry,
 	RequestLogSummary,
+	TelescopeAlertEntry,
+	TelescopeAnnotation,
 	TelescopeExceptionListQuery,
+	TelescopeJobLogEntry,
+	TelescopeJobsListQuery,
+	TelescopeLeaderboardEntry,
+	TelescopeLogRow,
+	TelescopeLogsListQuery,
 	TelescopeRequestListQuery,
+	TelescopeScheduleLog,
 	TelescopeSqlListQuery,
 	TelescopeStatusCounts,
 	TelescopeTrafficPoint,
+	TelescopeTrendPoint,
 } from "@workspace/shared";
 
 // ── Filter / result shapes ─────────────────────────────────────────────────
@@ -56,6 +65,25 @@ export interface TelescopeStore {
 	getException(id: string): ExceptionLogEntry | undefined;
 	listDumpsByCorrelationId(correlationId: string): readonly DumpEntry[];
 	overviewStats(fromIso: string): OverviewStats;
+	// Feature 12 — slow-endpoint leaderboard over the range.
+	leaderboard(fromIso: string, limit: number): readonly TelescopeLeaderboardEntry[];
+	// Feature 13 — hourly trend buckets (longer error-rate windows).
+	trends(fromIso: string, bucketCount: number): readonly TelescopeTrendPoint[];
+	// Feature 3 — jobs.
+	pushJob(entry: TelescopeJobLogEntry): void;
+	listJobs(query: TelescopeJobsListQuery): ListResult<TelescopeJobLogEntry>;
+	getJob(id: string): TelescopeJobLogEntry | undefined;
+	// Feature 4 — schedules.
+	upsertSchedule(entry: TelescopeScheduleLog): void;
+	listSchedules(): readonly TelescopeScheduleLog[];
+	// Feature 14 — per-request annotations (star/comment).
+	setAnnotation(requestId: string, annotation: TelescopeAnnotation | null): void;
+	getAnnotation(requestId: string): TelescopeAnnotation | null;
+	// Feature 20 — logs browser (console output flattened across requests).
+	listLogs(query: TelescopeLogsListQuery): ListResult<TelescopeLogRow>;
+	// Feature 18 — threshold alerts (memory-scoped; survives via the alert service).
+	pushAlert(entry: TelescopeAlertEntry): void;
+	listAlerts(limit: number): readonly TelescopeAlertEntry[];
 	/** Drops entries older than `retentionMinutes`; returns how many were removed. */
 	pruneRetention(retentionMinutes: number): number;
 	clear(): void;
@@ -95,6 +123,10 @@ function matchesRequest(request: RequestLogEntry, query: TelescopeRequestListQue
 		return false;
 	}
 	if (query.correlationId !== undefined && request.correlationId !== query.correlationId) {
+		return false;
+	}
+	// Feature 8 — environment tag filter (nodeEnv, e.g. "development"/"production").
+	if (query.env !== undefined && request.environment?.nodeEnv !== query.env) {
 		return false;
 	}
 	return isAfter(request.createdAt, query.from) && isBefore(request.createdAt, query.to);
@@ -159,7 +191,7 @@ function paginate<T>(items: readonly T[], page: number, pageSize: number): ListR
 	};
 }
 
-function toSummary(entry: RequestLogEntry): RequestLogSummary {
+function toSummary(entry: RequestLogEntry, starred: boolean): RequestLogSummary {
 	return {
 		id: entry.id,
 		method: entry.method,
@@ -168,6 +200,8 @@ function toSummary(entry: RequestLogEntry): RequestLogSummary {
 		userId: entry.userId,
 		durationMs: entry.durationMs,
 		createdAt: entry.createdAt,
+		environment: entry.environment,
+		starred,
 	};
 }
 
@@ -232,6 +266,96 @@ function buildStatusCounts(inRange: readonly RequestLogEntry[]): TelescopeStatus
 /** Requests at/over this duration (ms) are "slow" and protected from eviction. */
 const SLOW_REQUEST_MS = 1000;
 
+/** Bounds for the new feature buffers (jobs/schedules/alerts). */
+const MAX_JOBS = 500;
+const MAX_ALERTS = 200;
+
+// ── Leaderboard (feature 12) ───────────────────────────────────────────────
+
+interface RouteBucket {
+	readonly route: string;
+	readonly method: string;
+	readonly path: string;
+	readonly durations: number[];
+	errorCount: number;
+}
+
+function percentile(sorted: readonly number[], pct: number): number {
+	if (sorted.length === 0) {
+		return 0;
+	}
+	return sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * pct))] ?? 0;
+}
+
+/**
+ * Groups in-range requests by `METHOD path`, computes avg/p95/max + error
+ * count per route, sorts by p95 desc and returns the top `limit`.
+ */
+function buildLeaderboard(inRange: readonly RequestLogEntry[], limit: number): readonly TelescopeLeaderboardEntry[] {
+	const buckets = new Map<string, RouteBucket>();
+	for (const entry of inRange) {
+		const key = `${entry.method} ${entry.path}`;
+		const existing: RouteBucket | undefined = buckets.get(key);
+		if (existing !== undefined) {
+			existing.durations.push(entry.durationMs);
+			if ((entry.statusCode ?? 500) >= 500) {
+				existing.errorCount += 1;
+			}
+		} else {
+			buckets.set(key, { route: key, method: entry.method, path: entry.path, durations: [entry.durationMs], errorCount: (entry.statusCode ?? 500) >= 500 ? 1 : 0 });
+		}
+	}
+
+	return [...buckets.values()]
+		.map((bucket: RouteBucket): TelescopeLeaderboardEntry => {
+			const sorted: number[] = [...bucket.durations].sort((a: number, b: number): number => a - b);
+			const totalMs: number = sorted.reduce((sum: number, value: number): number => sum + value, 0);
+			return {
+				route: bucket.route,
+				method: bucket.method,
+				path: bucket.path,
+				count: bucket.durations.length,
+				avgMs: sorted.length > 0 ? totalMs / sorted.length : 0,
+				p95Ms: percentile(sorted, 0.95),
+				maxMs: sorted.length > 0 ? (sorted[sorted.length - 1] ?? 0) : 0,
+				errorCount: bucket.errorCount,
+			};
+		})
+		.sort((a: TelescopeLeaderboardEntry, b: TelescopeLeaderboardEntry): number => b.p95Ms - a.p95Ms)
+		.slice(0, limit);
+}
+
+// ── Trends (feature 13) ────────────────────────────────────────────────────
+
+/** Hourly-style trend buckets over the range — coarser than the 24-bucket traffic. */
+function buildTrends(inRange: readonly RequestLogEntry[], fromMs: number, nowMs: number, bucketCount: number): readonly TelescopeTrendPoint[] {
+	const spanMs: number = Math.max(1, nowMs - fromMs);
+	const bucketMs: number = spanMs / bucketCount;
+	const requests: number[] = new Array<number>(bucketCount).fill(0);
+	const errors: number[] = new Array<number>(bucketCount).fill(0);
+
+	for (const entry of inRange) {
+		const offsetMs: number = parseIso(entry.createdAt) - fromMs;
+		const index: number = Math.min(bucketCount - 1, Math.max(0, Math.floor(offsetMs / bucketMs)));
+		requests[index] += 1;
+		if ((entry.statusCode ?? 500) >= 500) {
+			errors[index] += 1;
+		}
+	}
+
+	const points: TelescopeTrendPoint[] = [];
+	for (let index = 0; index < bucketCount; index += 1) {
+		const bucketRequests: number = requests[index] ?? 0;
+		points.push({
+			t: new Date(fromMs + index * bucketMs).toISOString(),
+			requests: bucketRequests,
+			errors: errors[index] ?? 0,
+			errorRatePct: bucketRequests > 0 ? ((errors[index] ?? 0) / bucketRequests) * 100 : 0,
+		});
+	}
+	return points;
+}
+
 /** Improvement 3: slow or errored requests are protected from ordinary eviction. */
 function isProtectedRequest(entry: RequestLogEntry): boolean {
 	return (entry.statusCode ?? 500) >= 400 || entry.durationMs >= SLOW_REQUEST_MS;
@@ -250,6 +374,10 @@ export class TelescopeMemoryStore implements TelescopeStore {
 	private readonly queries: QueryLogEntry[] = [];
 	private readonly exceptions: ExceptionLogEntry[] = [];
 	private readonly dumps: DumpEntry[] = [];
+	private readonly jobs: TelescopeJobLogEntry[] = [];
+	private readonly schedules = new Map<string, TelescopeScheduleLog>();
+	private readonly annotations = new Map<string, TelescopeAnnotation>();
+	private readonly alerts: TelescopeAlertEntry[] = [];
 
 	private readonly byRequestId = new Map<string, RequestLogEntry>();
 	private readonly byCorrelationId = new Map<string, RequestLogEntry>();
@@ -347,7 +475,9 @@ export class TelescopeMemoryStore implements TelescopeStore {
 	}
 
 	public listRequests(query: TelescopeRequestListQuery): ListResult<RequestLogSummary> {
-		const filtered: RequestLogSummary[] = this.requests.filter((entry: RequestLogEntry): boolean => matchesRequest(entry, query)).map(toSummary);
+		const filtered: RequestLogSummary[] = this.requests
+			.filter((entry: RequestLogEntry): boolean => matchesRequest(entry, query))
+			.map((entry: RequestLogEntry): RequestLogSummary => toSummary(entry, this.annotations.get(entry.id)?.starred === true));
 		sortRequestsByQuery(filtered, query);
 		return paginate(filtered, query.page, query.pageSize);
 	}
@@ -380,6 +510,96 @@ export class TelescopeMemoryStore implements TelescopeStore {
 		return this.dumpsByCorrelationId.get(correlationId) ?? [];
 	}
 
+	public leaderboard(fromIso: string, limit: number): readonly TelescopeLeaderboardEntry[] {
+		const fromMs: number = parseIso(fromIso);
+		const inRange: RequestLogEntry[] = this.requests.filter((entry: RequestLogEntry): boolean => parseIso(entry.createdAt) >= fromMs);
+		return buildLeaderboard(inRange, limit);
+	}
+
+	public trends(fromIso: string, bucketCount: number): readonly TelescopeTrendPoint[] {
+		const fromMs: number = parseIso(fromIso);
+		const inRange: RequestLogEntry[] = this.requests.filter((entry: RequestLogEntry): boolean => parseIso(entry.createdAt) >= fromMs);
+		return buildTrends(inRange, fromMs, Date.now(), Math.max(1, Math.min(96, bucketCount)));
+	}
+
+	public pushJob(entry: TelescopeJobLogEntry): void {
+		this.jobs.unshift(entry);
+		if (this.jobs.length > MAX_JOBS) {
+			this.jobs.pop();
+		}
+	}
+
+	public listJobs(query: TelescopeJobsListQuery): ListResult<TelescopeJobLogEntry> {
+		const filtered: TelescopeJobLogEntry[] =
+			query.status !== undefined ? this.jobs.filter((entry: TelescopeJobLogEntry): boolean => entry.status === query.status) : [...this.jobs];
+		return paginate(filtered, query.page, query.pageSize);
+	}
+
+	public getJob(id: string): TelescopeJobLogEntry | undefined {
+		return this.jobs.find((entry: TelescopeJobLogEntry): boolean => entry.id === id);
+	}
+
+	public upsertSchedule(entry: TelescopeScheduleLog): void {
+		this.schedules.set(entry.name, entry);
+	}
+
+	public listSchedules(): readonly TelescopeScheduleLog[] {
+		return [...this.schedules.values()].sort((a: TelescopeScheduleLog, b: TelescopeScheduleLog): number => a.name.localeCompare(b.name));
+	}
+
+	public setAnnotation(requestId: string, annotation: TelescopeAnnotation | null): void {
+		if (annotation === null) {
+			this.annotations.delete(requestId);
+		} else {
+			this.annotations.set(requestId, annotation);
+		}
+	}
+
+	public getAnnotation(requestId: string): TelescopeAnnotation | null {
+		return this.annotations.get(requestId) ?? null;
+	}
+
+	public listLogs(query: TelescopeLogsListQuery): ListResult<TelescopeLogRow> {
+		const rows: TelescopeLogRow[] = [];
+		for (const request of this.requests) {
+			for (let index = 0; index < request.logs.length; index += 1) {
+				const log = request.logs[index];
+				if (query.level !== undefined && log.level !== query.level) {
+					continue;
+				}
+				if (query.correlationId !== undefined && request.correlationId !== query.correlationId) {
+					continue;
+				}
+				if (query.q !== undefined && query.q.length > 0 && !log.message.toLowerCase().includes(query.q.toLowerCase())) {
+					continue;
+				}
+				rows.push({
+					id: `${request.id}:${String(index)}`,
+					requestId: request.id,
+					correlationId: request.correlationId,
+					level: log.level,
+					message: log.message,
+					timestamp: log.timestamp,
+					method: request.method,
+					path: request.path,
+				});
+			}
+		}
+		rows.sort((a: TelescopeLogRow, b: TelescopeLogRow): number => parseIso(b.timestamp) - parseIso(a.timestamp));
+		return paginate(rows, query.page, query.pageSize);
+	}
+
+	public pushAlert(entry: TelescopeAlertEntry): void {
+		this.alerts.unshift(entry);
+		if (this.alerts.length > MAX_ALERTS) {
+			this.alerts.pop();
+		}
+	}
+
+	public listAlerts(limit: number): readonly TelescopeAlertEntry[] {
+		return this.alerts.slice(0, Math.max(0, limit));
+	}
+
 	public overviewStats(fromIso: string): OverviewStats {
 		const fromMs: number = parseIso(fromIso);
 		const nowMs: number = Date.now();
@@ -400,7 +620,7 @@ export class TelescopeMemoryStore implements TelescopeStore {
 			requests,
 			avgDurationMs,
 			p95DurationMs,
-			slowest: slowestEntry !== undefined ? toSummary(slowestEntry) : null,
+			slowest: slowestEntry !== undefined ? toSummary(slowestEntry, this.annotations.get(slowestEntry.id)?.starred === true) : null,
 			errorCount,
 			sqlCount: this.queries.filter((entry: QueryLogEntry): boolean => parseIso(entry.createdAt) >= fromMs).length,
 			slowSqlCount: this.queries.filter((entry: QueryLogEntry): boolean => parseIso(entry.createdAt) >= fromMs && entry.durationMs >= 500).length,
@@ -472,6 +692,30 @@ export class TelescopeMemoryStore implements TelescopeStore {
 			}
 		}
 
+		// Feature buffers: jobs + alerts prune by age; annotations/schedules are
+		// small keyed maps pruned by association with removed requests.
+		const keptJobs: TelescopeJobLogEntry[] = this.jobs.filter((entry: TelescopeJobLogEntry): boolean => kept(entry.enqueuedAt));
+		removed += this.jobs.length - keptJobs.length;
+		this.jobs.length = 0;
+		this.jobs.push(...keptJobs);
+
+		const keptAlerts: TelescopeAlertEntry[] = this.alerts.filter((entry: TelescopeAlertEntry): boolean => kept(entry.firedAt));
+		removed += this.alerts.length - keptAlerts.length;
+		this.alerts.length = 0;
+		this.alerts.push(...keptAlerts);
+
+		for (const requestId of [...this.annotations.keys()]) {
+			if (!this.byRequestId.has(requestId)) {
+				this.annotations.delete(requestId);
+			}
+		}
+		for (const scheduleName of [...this.schedules.keys()]) {
+			const schedule: TelescopeScheduleLog | undefined = this.schedules.get(scheduleName);
+			if (schedule !== undefined && !kept(schedule.nextRunAt) && schedule.lastRunAt !== null && !kept(schedule.lastRunAt)) {
+				this.schedules.delete(scheduleName);
+			}
+		}
+
 		return removed;
 	}
 
@@ -480,6 +724,10 @@ export class TelescopeMemoryStore implements TelescopeStore {
 		this.queries.length = 0;
 		this.exceptions.length = 0;
 		this.dumps.length = 0;
+		this.jobs.length = 0;
+		this.alerts.length = 0;
+		this.schedules.clear();
+		this.annotations.clear();
 		this.byRequestId.clear();
 		this.byCorrelationId.clear();
 		this.queriesByCorrelationId.clear();

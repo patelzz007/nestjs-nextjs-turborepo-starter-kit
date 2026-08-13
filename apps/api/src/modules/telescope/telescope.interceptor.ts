@@ -2,15 +2,28 @@ import { CallHandler, ExecutionContext, HttpException, Inject, Injectable, type 
 import type { Request } from "express";
 import { nanoid } from "nanoid";
 import { createHash } from "node:crypto";
+import { hostname } from "node:os";
 import { type Observable, tap } from "rxjs";
 import { z } from "zod";
 
-import { TelescopeJsonValueSchema, type ExceptionLogEntry, type RequestLogEntry, type TelescopeJsonValue, type TelescopeOptions } from "@workspace/shared";
+import {
+	TelescopeJsonValueSchema,
+	TelescopePiiCategorySchema,
+	type ExceptionLogEntry,
+	type RequestLogEntry,
+	type TelescopeEnvironment,
+	type TelescopeJsonValue,
+	type TelescopeOptions,
+	type TelescopePiiCategory,
+	type TelescopePiiFlag,
+} from "@workspace/shared";
 
 import type { AccessTokenPayload } from "../auth/services/token.service";
 
+import { redactPii, redactPiiHeaders, scanPii, scanPiiHeaders } from "./pii-scanner.js";
 import { RequestSpanContext, type SpanStore } from "./request-span-context.js";
 import { sanitizeHeaders, sanitizeJson, truncateJson } from "./sanitize.js";
+import { TelescopeAlertService } from "./telescope-alert.service.js";
 import { TelescopeEventBus } from "./telescope-event-bus.js";
 import { TELESCOPE_OPTIONS, TELESCOPE_STORE } from "./telescope.options.js";
 import type { TelescopeStore } from "./telescope.store.js";
@@ -38,6 +51,7 @@ export class TelescopeInterceptor implements NestInterceptor {
 		@Inject(TELESCOPE_STORE) private readonly store: TelescopeStore,
 		@Inject(TELESCOPE_OPTIONS) private readonly options: TelescopeOptions,
 		private readonly eventBus: TelescopeEventBus,
+		private readonly alertService: TelescopeAlertService,
 	) {}
 
 	public intercept(context: ExecutionContext, next: CallHandler): Observable<TelescopeJsonValue> {
@@ -95,14 +109,29 @@ export class TelescopeInterceptor implements NestInterceptor {
 		// Patch span 0 (guards & middleware) with its real duration — the span
 		// was pushed unconditionally above, so the length guard is the contract.
 		if (spanStore.spans.length > 0) {
-			spanStore.spans[0].durationMs = Math.round(now - handlerStart);
+			spanStore.spans[0].durationMs = Math.round(handlerStart - spanStore.startedAt);
 		}
+		// Feature 6 — a dedicated handler span (controller execution) with the
+		// resolved route params captured alongside it.
+		spanStore.spans.push({
+			name: "handler",
+			kind: "service",
+			startOffsetMs: Math.round(handlerStart - spanStore.startedAt),
+			durationMs: Math.round(now - handlerStart),
+		});
 		spanStore.spans.push({ name: "serialization", kind: "serialization", startOffsetMs: durationMs, durationMs: 0 });
 
-		// Improvement 10: the body serialization budget is configurable
-		// (`TELESCOPE_BODY_LIMIT_CHARS`) instead of a hardcoded constant.
-		const responseBody: TelescopeJsonValue | null = rawResponse !== undefined ? truncateJson(sanitizeJson(rawResponse), this.options.maxBodyChars) : null;
-		const requestBody: TelescopeJsonValue | null = spanStore.requestBody !== null ? truncateJson(sanitizeJson(spanStore.requestBody), this.options.maxBodyChars) : null;
+		// Feature 17 — PII scan + redact BEFORE truncation: flags are counted on
+		// the sanitized value, then phone/JWT/SSN/card patterns are masked by
+		// default (the sanitizer already masks emails + secret keys).
+		const sanitizedResponse: TelescopeJsonValue | null = rawResponse !== undefined ? sanitizeJson(rawResponse) : null;
+		const sanitizedRequest: TelescopeJsonValue | null = spanStore.requestBody !== null ? sanitizeJson(spanStore.requestBody) : null;
+		const sanitizedHeaders: Record<string, string> | null = sanitizeHeaders(request.headers, this.options.captureHeaders);
+
+		const piiFlags: readonly TelescopePiiFlag[] = this.mergePiiFlags(scanPii(sanitizedRequest), scanPii(sanitizedResponse), scanPiiHeaders(sanitizedHeaders));
+
+		const responseBody: TelescopeJsonValue | null = sanitizedResponse !== null ? truncateJson(redactPii(sanitizedResponse), this.options.maxBodyChars) : null;
+		const requestBody: TelescopeJsonValue | null = sanitizedRequest !== null ? truncateJson(redactPii(sanitizedRequest), this.options.maxBodyChars) : null;
 
 		const entry: RequestLogEntry = {
 			id: nanoid(),
@@ -117,10 +146,20 @@ export class TelescopeInterceptor implements NestInterceptor {
 			userId: this.readUserId(request),
 			requestBody,
 			responseBody,
-			requestHeaders: sanitizeHeaders(request.headers, this.options.captureHeaders),
+			requestHeaders: redactPiiHeaders(sanitizedHeaders),
 			spans: [...spanStore.spans],
 			// Improvement 16: console output that ran inside this request.
 			logs: [...spanStore.logs],
+			// Feature 8: environment tag (NODE_ENV + host) for multi-env filters.
+			environment: this.readEnvironment(),
+			// Feature 6: resolved route params (e.g. { id: "abc" }) from Express.
+			handlerParams: this.readHandlerParams(request),
+			// Feature 5: cache ops recorded by TelescopeCacheTracer.
+			cacheOps: [...spanStore.cacheOps],
+			// Feature 17: PII categories found + redacted.
+			piiFlags: [...piiFlags],
+			// Feature 14: new requests start unstarred (annotation lives in the store).
+			starred: false,
 			createdAt: new Date().toISOString(),
 		};
 
@@ -136,6 +175,8 @@ export class TelescopeInterceptor implements NestInterceptor {
 			});
 		}
 		this.store.pushRequest(entry);
+		// Feature 18 — threshold alerts (webhook + in-app list).
+		this.alertService.evaluate(entry);
 		// Improvement 2: push a request event so live dashboards update.
 		this.eventBus.publish({
 			type: "request",
@@ -163,6 +204,46 @@ export class TelescopeInterceptor implements NestInterceptor {
 		const raw: string | string[] | undefined = request.headers["user-agent"];
 		const parsed = z.string().safeParse(raw);
 		return parsed.success ? parsed.data : null;
+	}
+
+	/** Feature 8 — the process environment tag captured once per request. */
+	private readEnvironment(): TelescopeEnvironment {
+		return {
+			nodeEnv: process.env.NODE_ENV ?? "development",
+			host: hostname(),
+		};
+	}
+
+	/** Feature 6 — resolved Express route params, values length-capped. */
+	private readHandlerParams(request: Request): Record<string, string> | null {
+		const rawParams: Readonly<Record<string, string | string[]>> = { ...request.params };
+		const keys: readonly string[] = Object.keys(rawParams);
+		if (keys.length === 0) {
+			return null;
+		}
+		const params: Record<string, string> = {};
+		for (const key of keys) {
+			// Express types params as string | string[]; route params are always
+			// single strings, arrays are ignored defensively.
+			const rawValue: string | string[] = rawParams[key] ?? "";
+			const value: string = typeof rawValue === "string" ? rawValue : (rawValue[0] ?? "");
+			params[key] = value.length > 100 ? `${value.slice(0, 97)}…` : value;
+		}
+		return params;
+	}
+
+	/** Feature 17 — merge per-source PII flag lists, summing shared categories. */
+	private mergePiiFlags(...sources: readonly (readonly TelescopePiiFlag[])[]): readonly TelescopePiiFlag[] {
+		const totals = new Map<TelescopePiiCategory, number>();
+		for (const source of sources) {
+			for (const flag of source) {
+				const category: TelescopePiiCategory = TelescopePiiCategorySchema.parse(flag.category);
+				totals.set(category, (totals.get(category) ?? 0) + flag.count);
+			}
+		}
+		return [...totals.entries()]
+			.map(([category, count]) => ({ category, count }))
+			.sort((a: TelescopePiiFlag, b: TelescopePiiFlag): number => a.category.localeCompare(b.category));
 	}
 
 	private toExceptionEntry(requestEntry: RequestLogEntry, errorInfo: CapturedError): ExceptionLogEntry {

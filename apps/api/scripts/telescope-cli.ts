@@ -17,7 +17,7 @@
 
 import "dotenv/config";
 
-import type { TelescopeRequestListResponse } from "@workspace/shared";
+import { TelescopeReplayInputSchema, type TelescopeRequestListResponse } from "@workspace/shared";
 
 const BASE_URL: string = process.env.TELESCOPE_URL ?? "http://localhost:8080";
 
@@ -29,6 +29,7 @@ function printUsage(): void {
 			"  requests [--limit N]          List recent requests (default 20)",
 			"  view <requestId>              Full detail for one request",
 			"  compare <idA> <idB>           Scalar diff between two requests",
+			"  replay <requestId> [target]   Re-send a captured request (default target: local)",
 			"",
 			"Env: TELESCOPE_TOKEN (auth) · ADMIN_EMAIL/ADMIN_PASSWORD · TELESCOPE_URL",
 		].join("\n"),
@@ -109,6 +110,28 @@ async function main(): Promise<void> {
 		}
 		const data = await getJson(`/telescope/compare?a=${encodeURIComponent(idA)}&b=${encodeURIComponent(idB)}`, headers);
 		console.log(JSON.stringify(data, null, 2));
+		return;
+	}
+
+	// Feature 7 — replay a captured request against a configured target.
+	if (command === "replay") {
+		const id: string | undefined = args.length > 1 ? args[1] : undefined;
+		const target: string = args.length > 2 ? args[2] : "local";
+		if (id === undefined) {
+			printUsage();
+			return;
+		}
+		const input = TelescopeReplayInputSchema.parse({ target });
+		const response: Response = await fetch(`${BASE_URL}/telescope/replay/${encodeURIComponent(id)}`, {
+			method: "POST",
+			headers: { ...headers, "content-type": "application/json" },
+			body: JSON.stringify(input),
+		});
+		if (!response.ok) {
+			const bodyPreview: string = (await response.text()).slice(0, 300);
+			bail(`POST /telescope/replay/${id} → ${String(response.status)}: ${bodyPreview}`);
+		}
+		console.log(JSON.stringify(await response.json(), null, 2));
 		return;
 	}
 
