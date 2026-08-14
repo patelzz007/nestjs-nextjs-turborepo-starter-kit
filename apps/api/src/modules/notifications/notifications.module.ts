@@ -4,7 +4,6 @@ import { ThrottlerModule } from "@nestjs/throttler";
 // Only the CLASS REFERENCE is needed here (for `inject`) — the instance comes
 // from the @Global() ConfigModule at runtime.
 import { TypedConfigService } from "../../config/typed-config.service.js";
-import { LogService } from "../../modules/logs/logs.service.js";
 import { PrismaModule } from "../../prisma/prisma.module.js";
 
 import { EmailLogController } from "./email/email-log.controller.js";
@@ -41,8 +40,9 @@ import { webhookThrottlerOptionsFactory } from "./email/webhook-throttler.js";
 	// TypedConfigService is NOT listed here — it comes from the @Global()
 	// ConfigModule (see config/config.module.ts). Imported modules instantiate
 	// before this module's own providers, so a local copy would never be visible
-	// to ThrottlerModule.forRootAsync's `inject` anyway.
-	providers: [EmailSenderService, EmailLogService, EmailLogEventsService, LogService],
-	exports: [EmailSenderService, EmailLogService, LogService],
+	// to ThrottlerModule.forRootAsync's `inject` anyway. LogService likewise
+	// comes from the @Global() LogsModule.
+	providers: [EmailSenderService, EmailLogService, EmailLogEventsService],
+	exports: [EmailSenderService, EmailLogService],
 })
 export class NotificationsModule {}

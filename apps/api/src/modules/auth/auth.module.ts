@@ -7,7 +7,6 @@ import { RefreshTokenGuard } from "./guards/refresh-token.guard.js";
 import { SuperAdminGuard } from "./guards/super-admin.guard.js";
 import { ClearAuthCookiesInterceptor } from "./interceptors/clear-auth-cookies.interceptor.js";
 import { SetAuthCookiesInterceptor } from "./interceptors/set-auth-cookies.interceptor.js";
-import { LogService } from "../../modules/logs/logs.service.js";
 import { PrismaModule } from "../../prisma/prisma.module.js";
 import { NotificationsModule } from "../notifications/notifications.module.js";
 import { RbacModule } from "../rbac/rbac.module.js";
@@ -28,7 +27,6 @@ import { TokenService } from "./services/token.service.js";
 		TokenService,
 		CryptoService,
 		CookieConfigService,
-		LogService,
 		EmailService,
 		TaskScheduleService,
 		AuthGuard,
@@ -48,7 +46,6 @@ import { TokenService } from "./services/token.service.js";
 		SetAuthCookiesInterceptor,
 		ClearAuthCookiesInterceptor,
 		CookieConfigService,
-		LogService,
 	],
 })
 export class AuthModule {}

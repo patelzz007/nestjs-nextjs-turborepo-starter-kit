@@ -8,6 +8,7 @@ import { AuthModule } from "./modules/auth/auth.module.js";
 import { AuthGuard } from "./modules/auth/guards/auth.guard.js";
 import { HealthModule } from "./modules/health/health.module.js";
 import { ImpersonationModule } from "./modules/impersonation/impersonation.module.js";
+import { LogsModule } from "./modules/logs/logs.module.js";
 import { NotificationsModule } from "./modules/notifications/notifications.module.js";
 import { SessionsModule } from "./modules/sessions/sessions.module.js";
 import { TelescopeModule } from "./modules/telescope/telescope.module.js";
@@ -15,7 +16,7 @@ import { TelescopeCaptureMiddleware } from "./modules/telescope/telescope-captur
 import { PrismaModule } from "./prisma/prisma.module.js";
 
 @Module({
-	imports: [ConfigModule, PrismaModule, HealthModule, AuthModule, SessionsModule, ImpersonationModule, NotificationsModule, TelescopeModule.register({})],
+	imports: [ConfigModule, PrismaModule, LogsModule, HealthModule, AuthModule, SessionsModule, ImpersonationModule, NotificationsModule, TelescopeModule.register({})],
 	providers: [
 		{
 			provide: APP_INTERCEPTOR,
