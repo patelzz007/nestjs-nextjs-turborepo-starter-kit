@@ -3,7 +3,7 @@ title: "TypeScript Configs & How To Use Them"
 description: "How TypeScript is configured across the monorepo via the shared @workspace/typescript-config package."
 order: 5
 author: "Acme Inc."
-lastUpdated: "2026-08-02"
+lastUpdated: 1785628800000
 coverImage: "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?auto=format&fit=crop&w=1600&q=80"
 ---
 
@@ -442,3 +442,4 @@ localStorage hydration, frontmatter. (See `sidebar-menu.ts`, `token.service.ts`,
 ---
 
 _Last updated: August 9, 2026_
+

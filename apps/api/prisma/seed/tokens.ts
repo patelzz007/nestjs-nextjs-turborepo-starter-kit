@@ -36,7 +36,7 @@ export async function createPasswordResetTokens(users: User[]): Promise<void> {
 	const rows: Array<{
 		userId: string;
 		token: string;
-		expiresAt: Date;
+		expiresAt: number;
 	}> = [];
 
 	// Create 3 pending tokens for different users

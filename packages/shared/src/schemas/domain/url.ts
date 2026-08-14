@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { BaseResponseSchema } from "../api/common";
+import { BaseResponseSchema, EpochMsSchema } from "../api/common";
 import { PaginationSchema } from "../api/pagination";
 
 // ── Input Schemas ────────────────────────────────────────────────────────
@@ -18,12 +18,7 @@ export const CreateUrlSchema = z
 		redirectType: z.enum(["PERMANENT", "TEMPORARY"]).optional().default("TEMPORARY"),
 		password: z.string().max(72).optional(),
 		clickLimit: z.coerce.number().int().min(1).optional(),
-		expiresAt: z
-			.string()
-			// eslint-disable-next-line @typescript-eslint/no-deprecated -- z.string().datetime() is the only viable option (z.iso.datetime() doesn't exist on string)
-			.datetime({ offset: true })
-			.transform((val: string) => new Date(val))
-			.optional(),
+		expiresAt: EpochMsSchema.optional(),
 	})
 	.strict();
 
@@ -36,12 +31,7 @@ export const UpdateUrlSchema = z
 		redirectType: z.enum(["PERMANENT", "TEMPORARY"]).optional(),
 		isActive: z.boolean().optional(),
 		clickLimit: z.coerce.number().int().min(1).optional(),
-		expiresAt: z
-			.string()
-			// eslint-disable-next-line @typescript-eslint/no-deprecated -- z.string().datetime() is the only viable option (z.iso.datetime() doesn't exist on string)
-			.datetime({ offset: true })
-			.transform((val: string) => new Date(val))
-			.optional(),
+		expiresAt: EpochMsSchema.optional(),
 	})
 	.strict();
 
@@ -67,7 +57,7 @@ export const UrlResponseSchema = BaseResponseSchema.extend({
 	isActive: z.boolean(),
 	clickCount: z.number(),
 	clickLimit: z.number().nullable(),
-	expiresAt: z.string().nullable(),
+	expiresAt: EpochMsSchema.nullable(),
 	tags: z.array(
 		z.object({
 			tag: z.object({

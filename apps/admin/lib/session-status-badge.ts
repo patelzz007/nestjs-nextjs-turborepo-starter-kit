@@ -46,22 +46,20 @@ export type SessionState = z.output<typeof SessionStateSchema>;
 
 // ── Small pure helpers ─────────────────────────────────────────────────────
 
-/** Seconds until `expiresAt` from `now`, floored at 0. */
-export function secondsUntil(expiresAt: string, now: Date): number {
-	const remaining = new Date(expiresAt).getTime() - now.getTime();
+/** Seconds until `expiresAt` (epoch ms) from `now`, floored at 0. */
+export function secondsUntil(expiresAt: number, now: Date): number {
+	const remaining: number = expiresAt - now.getTime();
 	return Math.max(0, Math.round(remaining / 1000));
 }
 
 /**
- * True when a silent refresh rotated the token: the new `expiresAt` is strictly
- * later than the previously observed one. Compared as epoch milliseconds rather
- * than ISO strings because the API permits offset-bearing timestamps
- * (`+08:00` etc.), which don't sort lexicographically against UTC `Z` strings.
- * The first sighting (`previous === null`) never counts as a rotation.
+ * True when a silent refresh rotated the token: the new `expiresAt` (epoch ms)
+ * is strictly later than the previously observed one. The first sighting
+ * (`previous === null`) never counts as a rotation.
  */
-export function didTokenRotate(previous: string | null, next: string | null): boolean {
+export function didTokenRotate(previous: number | null, next: number | null): boolean {
 	if (previous === null || next === null) return false;
-	return new Date(next).getTime() > new Date(previous).getTime();
+	return next > previous;
 }
 
 /** True when the error means the session is genuinely dead (401 after refresh). */

@@ -1,7 +1,7 @@
 import { ArrowRight, BookOpen, Clock, PenLine } from "lucide-react";
 import Link from "next/link";
 
-import { formatIsoDate } from "@/lib/docs/markdown";
+import { formatEpochDate } from "@/lib/docs/markdown";
 import type { DocContent } from "@/lib/docs";
 
 /**
@@ -32,7 +32,7 @@ export function DocCtaCard({ doc }: DocCtaCardProps): React.JSX.Element {
 				{doc.lastUpdated !== undefined ? (
 					<span className="inline-flex items-center gap-1.5">
 						<Clock className="size-3.5 text-muted-foreground/70" />
-						Updated {formatIsoDate(doc.lastUpdated)}
+						Updated {formatEpochDate(doc.lastUpdated)}
 					</span>
 				) : null}
 				<span className="inline-flex items-center gap-1.5">

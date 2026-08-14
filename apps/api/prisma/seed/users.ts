@@ -16,7 +16,7 @@ export async function createUsers(): Promise<User[]> {
 		monthlyUrlLimit: number;
 		monthlyClickLimit: number;
 		failedLoginAttempts?: number;
-		lockedUntil?: Date | null;
+		lockedUntil?: number | null;
 	}[] = [
 		// System accounts
 		{

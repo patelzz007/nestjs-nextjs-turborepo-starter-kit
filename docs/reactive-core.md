@@ -3,7 +3,7 @@ title: "Reactive Core (Subscription-based, no rxjs)"
 description: "Design for replacing promise-based flows with a tiny in-house rxjs-like reactive core — 50 items to implement, pitfalls, unsubscribe guarantees, and full operator coverage."
 order: 14
 author: "Acme Inc."
-lastUpdated: "2026-08-05"
+lastUpdated: 1785888000000
 coverImage: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=1600&q=80"
 ---
 
@@ -1871,3 +1871,4 @@ client replay, hydration-safe initial values, and the dev leak detector in CI.
 ---
 
 _Last updated: 2026-08-05._
+

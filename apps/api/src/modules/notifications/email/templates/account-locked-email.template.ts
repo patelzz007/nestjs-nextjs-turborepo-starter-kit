@@ -1,11 +1,13 @@
 import { z } from "zod";
 
+import { EpochMsSchema, epochMs } from "@workspace/shared";
+
 import { BaseEmailPropsSchema, BaseEmailTemplate } from "../base/base-email-template.js";
 import type { EmailRenderContext } from "../base/email-render-context.js";
 
-/** Locked-until ISO timestamp (see `DateStringSchema` conventions). */
+/** Locked-until epoch-ms timestamp. */
 export const AccountLockedEmailPropsSchema = BaseEmailPropsSchema.extend({
-	lockedUntil: z.iso.datetime(),
+	lockedUntil: EpochMsSchema,
 });
 
 export type AccountLockedEmailProps = z.output<typeof AccountLockedEmailPropsSchema>;
@@ -18,7 +20,7 @@ export class AccountLockedEmailTemplate extends BaseEmailTemplate<AccountLockedE
 	/** Sample props used by the admin preview + screenshot pipeline. */
 	public static readonly sampleProps: AccountLockedEmailProps = {
 		to: "jamie@example.com",
-		lockedUntil: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+		lockedUntil: epochMs(Date.now() + 15 * 60 * 1000),
 	};
 
 	public readonly key: string = "account-locked";
@@ -34,7 +36,7 @@ export class AccountLockedEmailTemplate extends BaseEmailTemplate<AccountLockedE
 
 	/** Remaining lock duration in whole minutes (min 1). */
 	private get remainingMinutes(): number {
-		const remainingMs: number = new Date(this.props.lockedUntil).getTime() - Date.now();
+		const remainingMs: number = this.props.lockedUntil - Date.now();
 		return Math.max(1, Math.ceil(remainingMs / 60_000));
 	}
 

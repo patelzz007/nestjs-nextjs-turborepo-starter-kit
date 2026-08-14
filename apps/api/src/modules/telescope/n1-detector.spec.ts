@@ -13,7 +13,7 @@ function makeQuery(overrides: Partial<QueryLogEntry>): QueryLogEntry {
 		query: "SELECT * FROM orders",
 		params: null,
 		durationMs: 4,
-		createdAt: "2026-08-12T10:00:00.000Z",
+		createdAt: 1786528800000,
 		...overrides,
 	};
 }

@@ -1,40 +1,56 @@
 import { z } from "zod";
 
 /**
- * Schema for an ISO 8601 datetime string.
- *
- * Zod v4 cannot represent `z.date()` in JSON Schema / OpenAPI
- * (throws "Date cannot be represented in JSON Schema"), so we
- * use `z.iso.datetime()` instead of `z.date().transform(...)`.
+ * Epoch milliseconds (UTC) — the single time representation across the DB,
+ * API, and UI. Branded (via Zod's `$brand`) so an ISO string or any other
+ * plain number can never silently flow where a timestamp is expected.
  */
-// z.string().datetime() is deprecated, but z.iso.datetime() has unresolvable
-// types in strictTypeChecked so we use the deprecated API here.
-// eslint-disable-next-line @typescript-eslint/no-deprecated
-export const DateStringSchema = z.string().datetime({ offset: true });
+export type EpochMs = z.output<typeof EpochMsSchema>;
+
+/**
+ * Zod schema for epoch-ms timestamps. Runtime validation accepts any
+ * non-negative integer (milliseconds); the output type is branded `EpochMs`
+ * so consumers get strict typing and ISO-string regressions fail to compile.
+ */
+export const EpochMsSchema = z.number().int().nonnegative().brand("EpochMs");
+
+/** The one sanctioned way to stamp "now" as an epoch-ms value. */
+export function nowEpochMs(): EpochMs {
+	return EpochMsSchema.parse(Date.now());
+}
+
+/**
+ * Convert a plain number to an `EpochMs`. Normalizes non-integer inputs
+ * (e.g. bucket-boundary math like `fromMs + i * (span / 24)`) by rounding to
+ * the nearest millisecond before validating.
+ */
+export function epochMs(value: number): EpochMs {
+	return EpochMsSchema.parse(Math.round(value));
+}
 
 /**
  * Base response schema for all database entity responses.
  *
  * Every entity response schema should extend this via `.extend()` so that
  * `createdAt`, `updatedAt`, `isDeleted`, and `deletedAt` are consistently
- * present across all endpoints.
+ * present across all endpoints. All timestamps are epoch milliseconds.
  */
 export const BaseResponseSchema = z
 	.object({
-		createdAt: DateStringSchema.meta({
-			description: "ISO 8601 timestamp when the record was created",
-			example: "2026-07-20T10:00:00.000Z",
+		createdAt: EpochMsSchema.meta({
+			description: "Epoch milliseconds when the record was created",
+			example: 1786300000000,
 		}),
-		updatedAt: DateStringSchema.meta({
-			description: "ISO 8601 timestamp when the record was last updated",
-			example: "2026-07-20T10:00:00.000Z",
+		updatedAt: EpochMsSchema.meta({
+			description: "Epoch milliseconds when the record was last updated",
+			example: 1786300000000,
 		}),
 		isDeleted: z.boolean().meta({
 			description: "Soft-delete flag — false means the record is active",
 			example: false,
 		}),
-		deletedAt: DateStringSchema.nullable().meta({
-			description: "ISO 8601 timestamp when soft-delete occurred, or null if active",
+		deletedAt: EpochMsSchema.nullable().meta({
+			description: "Epoch milliseconds when soft-delete occurred, or null if active",
 			example: null,
 		}),
 	})

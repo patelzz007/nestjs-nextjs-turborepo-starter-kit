@@ -4,7 +4,7 @@ import { BookOpen, Clock, PenLine } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import type { DocContent } from "@/lib/docs";
-import { formatIsoDate } from "@/lib/docs/markdown";
+import { formatEpochDate } from "@/lib/docs/markdown";
 
 /**
  * DocBanner — the cover banner shown at the top of every `/docs/<slug>` page.
@@ -103,7 +103,7 @@ export function DocBanner({ doc, className }: DocBannerProps): React.JSX.Element
 					{doc.lastUpdated !== undefined ? (
 						<span className="inline-flex items-center gap-1.5">
 							<Clock className={cn("size-3.5", hasCover ? "text-white/60" : "text-muted-foreground/70")} />
-							Updated {formatIsoDate(doc.lastUpdated)}
+							Updated {formatEpochDate(doc.lastUpdated)}
 						</span>
 					) : null}
 					<span className="inline-flex items-center gap-1.5">

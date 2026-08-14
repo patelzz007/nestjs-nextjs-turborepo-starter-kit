@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { DateStringSchema } from "./common";
+import { EpochMsSchema } from "./common";
 
 // ── Shared response envelope primitives ──────────────────────────────────
 
@@ -13,9 +13,9 @@ export const ApiResponseMetaSchema = z
 			description: "Request tracing ID (from X-Correlation-Id header or auto-generated)",
 			example: "abc123-def456",
 		}),
-		timestamp: DateStringSchema.meta({
-			description: "ISO-8601 timestamp when the response was generated",
-			example: "2026-07-30T10:00:00.000Z",
+		timestamp: EpochMsSchema.meta({
+			description: "Epoch milliseconds when the response was generated",
+			example: 1786300000000,
 		}),
 	})
 	.strict();

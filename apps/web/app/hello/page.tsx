@@ -4,6 +4,8 @@ import { useAuth } from "@workspace/client/lib/auth";
 import { authEndpoints } from "@workspace/client/lib/api/endpoints";
 import { useCallback, useState, type JSX } from "react";
 
+import { format } from "date-fns";
+
 import { BreadcrumbTrail } from "@/components/breadcrumb-trail";
 import { LogoutButton } from "@/components/logout-button";
 
@@ -124,7 +126,7 @@ export default function HelloPage(): JSX.Element {
 							</div>
 							<div className="flex justify-between">
 								<span className="text-muted-foreground">Created</span>
-								<span>{new Date(user.createdAt).toLocaleDateString()}</span>
+								<span>{format(new Date(user.createdAt), "MMM d, yyyy")}</span>
 							</div>
 							<div className="flex justify-between">
 								<span className="text-muted-foreground">Roles</span>

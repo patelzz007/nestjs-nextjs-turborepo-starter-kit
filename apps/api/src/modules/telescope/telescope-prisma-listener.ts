@@ -1,7 +1,7 @@
 import { Inject, Injectable, type OnModuleInit } from "@nestjs/common";
 import { nanoid } from "nanoid";
 
-import type { QueryLogEntry } from "@workspace/shared";
+import { nowEpochMs, type QueryLogEntry } from "@workspace/shared";
 
 import { PrismaService } from "../../prisma/prisma.service.js";
 
@@ -93,7 +93,7 @@ export class TelescopePrismaListener implements OnModuleInit {
 				durationMs,
 				// Feature 11 — same offset as the span above.
 				startOffsetMs,
-				createdAt: new Date().toISOString(),
+				createdAt: nowEpochMs(),
 			};
 			this.store.pushQuery(entry);
 		});

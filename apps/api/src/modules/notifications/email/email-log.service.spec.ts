@@ -115,8 +115,8 @@ describe("EmailLogService", () => {
 		);
 	});
 
-	it("maps recent rows to the wire contract (ISO dates, no tracking fields)", async () => {
-		const createdAt = new Date("2026-08-11T10:00:00.000Z");
+	it("maps recent rows to the wire contract (epoch dates, no tracking fields)", async () => {
+		const createdAt = Date.parse("2026-08-11T10:00:00.000Z");
 		findManyMock.mockResolvedValue([
 			{
 				id: "row-1",
@@ -138,8 +138,8 @@ describe("EmailLogService", () => {
 				templateKey: "welcome",
 				status: "delivered",
 				resendId: "re-1",
-				createdAt: createdAt.toISOString(),
-				updatedAt: createdAt.toISOString(),
+				createdAt,
+				updatedAt: createdAt,
 			}),
 		);
 		// Tracking fields are gone from the wire contract.

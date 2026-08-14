@@ -3,7 +3,7 @@ title: "Logging System"
 description: "The 40 must-have items for the in-house Datadog-style logging service (terminal + DB, no external SaaS) — each grounded in the current code."
 order: 12
 author: "Acme Inc."
-lastUpdated: "2026-08-05"
+lastUpdated: 1785888000000
 coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=1600&q=80"
 ---
 
@@ -362,3 +362,4 @@ find X" recipes.
 **How:** each item, once shipped, gets a ✅ and its recipe appended below.
 
 _Last updated: 2026-08-05._
+

@@ -3,7 +3,7 @@ title: "Boilerplate Roadmap"
 description: "Ideas for making the monorepo template production-ready and pleasant to build on."
 order: 10
 author: "Acme Inc."
-lastUpdated: "2026-08-02"
+lastUpdated: 1785628800000
 coverImage: "https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=1600&q=80"
 ---
 
@@ -255,3 +255,4 @@ endpoints. This is the "wow" page that proves the template end-to-end.
 ---
 
 _Last updated: July 31, 2026_
+

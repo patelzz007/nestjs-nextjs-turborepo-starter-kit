@@ -13,17 +13,19 @@ import { Area, AreaChart, CartesianGrid, XAxis } from "recharts";
 
 import type { TelescopeTrafficPoint } from "@workspace/shared";
 
+import { formatTimeOfDay } from "@/lib/dates";
+
 export interface TrafficSparklineProps {
 	readonly points: readonly TelescopeTrafficPoint[];
 }
 
-/** HH:mm label for a bucket start ISO timestamp. */
-function timeLabel(iso: string): string {
-	return new Date(iso).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+/** HH:mm label for a bucket start epoch-ms timestamp. */
+function timeLabel(ms: number): string {
+	return formatTimeOfDay(ms);
 }
 
 /** Compact "12:34" x-axis label, keeping every 3rd bucket. */
-function tickFormatter(value: string, index: number): string {
+function tickFormatter(value: number, index: number): string {
 	return index % 3 === 0 ? timeLabel(value) : "";
 }
 
@@ -36,7 +38,7 @@ export function TrafficSparkline({ points }: TrafficSparklineProps): React.JSX.E
 		[],
 	);
 
-	const labelFormatter = useCallback((value: React.ReactNode): React.ReactNode => (typeof value === "string" ? timeLabel(value) : value), []);
+	const labelFormatter = useCallback((value: React.ReactNode): React.ReactNode => (typeof value === "number" ? timeLabel(value) : value), []);
 
 	return (
 		<ChartContainer config={config} className="h-28 w-full">

@@ -1,13 +1,13 @@
 import { z } from "zod";
 
-import { DateStringSchema } from "./common";
+import { EpochMsSchema } from "./common";
 
 /** Health check response */
 export const HealthResponseSchema = z
 	.object({
 		status: z.string(),
 		db: z.string(),
-		timestamp: DateStringSchema,
+		timestamp: EpochMsSchema,
 	})
 	.strict();
 

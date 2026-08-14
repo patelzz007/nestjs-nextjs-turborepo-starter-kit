@@ -5,6 +5,7 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } f
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@workspace/ui/components/form/select";
 import { ToggleGroup, ToggleGroupItem } from "@workspace/ui/components/form/toggle-group";
 import { useIsMobile } from "@workspace/ui/hooks/use-mobile";
+import { format } from "date-fns";
 import * as React from "react";
 import { Area, AreaChart, CartesianGrid, XAxis } from "recharts";
 
@@ -117,11 +118,7 @@ const chartConfig = {
 } satisfies ChartConfig;
 
 function formatAxisDate(value: string): string {
-	const date = new Date(value);
-	return date.toLocaleDateString("en-US", {
-		month: "short",
-		day: "numeric",
-	});
+	return format(new Date(value), "MMM d");
 }
 
 function formatTooltipLabel(value: React.ReactNode): string {
@@ -129,11 +126,7 @@ function formatTooltipLabel(value: React.ReactNode): string {
 		return "";
 	}
 
-	const date = new Date(value);
-	return date.toLocaleDateString("en-US", {
-		month: "short",
-		day: "numeric",
-	});
+	return format(new Date(value), "MMM d");
 }
 
 export function ChartAreaInteractive(): React.JSX.Element {

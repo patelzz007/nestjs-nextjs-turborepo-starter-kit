@@ -8,7 +8,7 @@ import { Card, CardContent } from "@workspace/ui/components/display/card";
 
 import { DocsSearchBox } from "@/components/docs/docs-search-box";
 import { highlightText } from "@/components/common/highlight";
-import { filterDocSummaries, formatIsoDate } from "@/lib/docs/markdown";
+import { filterDocSummaries, formatEpochDate } from "@/lib/docs/markdown";
 import type { DocSummary } from "@/lib/docs";
 
 /**
@@ -55,7 +55,7 @@ function DocCard({ doc, query }: DocCardProps): React.JSX.Element {
 					<p className="mt-2.5 line-clamp-2 text-sm leading-relaxed text-muted-foreground">
 						{hasQuery ? highlightText(doc.description, query, MARK_CLASS_NAME) : doc.description}
 					</p>
-					{doc.lastUpdated !== undefined ? <p className="mt-auto pt-3 text-[11px] text-muted-foreground/60">Updated {formatIsoDate(doc.lastUpdated)}</p> : null}
+					{doc.lastUpdated !== undefined ? <p className="mt-auto pt-3 text-[11px] text-muted-foreground/60">Updated {formatEpochDate(doc.lastUpdated)}</p> : null}
 				</CardContent>
 			</Card>
 		</Link>

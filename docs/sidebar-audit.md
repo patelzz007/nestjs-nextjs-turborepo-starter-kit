@@ -3,7 +3,7 @@ title: "Sidebar Audit"
 description: "A per-item improvement plan for the admin sidebar — 20 improvements + 20 new features, each grounded in the actual current code (sidebar.tsx, sidebar-nav-item.tsx, mobile drawer, store, config)."
 order: 16
 author: "Acme Inc."
-lastUpdated: "2026-08-08"
+lastUpdated: 1786147200000
 coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=1600&q=80"
 ---
 
@@ -1110,3 +1110,4 @@ remaining features — pick up as time allows; nothing here blocks anything else
   contract everything else tests against.
 - **When you touch the motion files:** re-check improvement 11 (constants are
   shared, not duplicated) — the sidebar/drawer pair has already drifted once.
+

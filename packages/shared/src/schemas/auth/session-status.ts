@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { DateStringSchema } from "../api/common";
+import { EpochMsSchema } from "../api/common";
 
 /**
  * Minimal "session status" payload returned by `GET /session`.
@@ -28,13 +28,13 @@ export const SessionStatusSchema = z
 			description: "The authenticated user's full name (JWT `fullName`)",
 			example: "Alex Morgan",
 		}),
-		expiresAt: DateStringSchema.nullable().meta({
-			description: "ISO-8601 instant when the current access token expires (JWT `exp`), or null when the token carries no expiry",
-			example: "2026-08-04T12:34:56.000Z",
+		expiresAt: EpochMsSchema.nullable().meta({
+			description: "Epoch ms when the current access token expires (JWT `exp`), or null when the token carries no expiry",
+			example: 1786300000000,
 		}),
-		checkedAt: DateStringSchema.meta({
-			description: "ISO-8601 instant when this status was produced (server clock)",
-			example: "2026-08-04T12:20:00.000Z",
+		checkedAt: EpochMsSchema.meta({
+			description: "Epoch ms when this status was produced (server clock)",
+			example: 1786300000000,
 		}),
 	})
 	.strict();

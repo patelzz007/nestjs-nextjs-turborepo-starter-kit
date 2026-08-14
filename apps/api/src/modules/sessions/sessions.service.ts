@@ -1,6 +1,5 @@
 import { Injectable, UnauthorizedException } from "@nestjs/common";
-import type { RefreshResponse, Session, UserResponse } from "@workspace/shared";
-import { SessionSchema } from "@workspace/shared";
+import { SessionSchema, epochMs, type EpochMs, type RefreshResponse, type Session, type UserResponse } from "@workspace/shared";
 
 import { parseExpiryToMilliseconds } from "../../common/utils/expiry.js";
 import { TypedConfigService } from "../../config/typed-config.service.js";
@@ -84,7 +83,7 @@ export class SessionsService {
 			});
 		}
 
-		if (storedToken.expiresAt < new Date()) {
+		if (storedToken.expiresAt < Date.now()) {
 			throw new UnauthorizedException("Refresh token has expired");
 		}
 
@@ -104,7 +103,7 @@ export class SessionsService {
 			// Token theft detected — revoke ALL refresh tokens for this user
 			await this.prisma.refreshToken.updateMany({
 				where: { userId: user.id },
-				data: { isDeleted: true, deletedAt: new Date() },
+				data: { isDeleted: true, deletedAt: Date.now() },
 			});
 
 			this.sessionsEvents.emitAction(
@@ -124,12 +123,12 @@ export class SessionsService {
 
 		// Get user permissions
 		const userPermissions = await this.rbacService.getUserPermissions(user.id);
-		const isEmailVerified = user.emailVerifiedAt !== null && user.emailVerifiedAt <= new Date();
+		const isEmailVerified = user.emailVerifiedAt !== null && user.emailVerifiedAt <= Date.now();
 		const flatUser: UserResponse = this.authService.buildUserResponse(user, userPermissions, isEmailVerified);
 
 		// Update the existing refresh token record with new expiry and hashed token (rotation)
 		const expiryMs = parseExpiryToMilliseconds(this.config.jwtRefreshExpiry);
-		const expiresAt = new Date(Date.now() + expiryMs);
+		const expiresAt: EpochMs = epochMs(Date.now() + expiryMs);
 
 		const tokens = await this.tokenService.generateTokens(flatUser, storedToken.id);
 		const hashedRt = await this.cryptoService.hash(tokens.refreshToken);
@@ -141,6 +140,7 @@ export class SessionsService {
 				deviceInfo: deviceInfo ?? storedToken.deviceInfo,
 				ipAddress: ipAddress ?? storedToken.ipAddress,
 				expiresAt,
+				updatedAt: Date.now(),
 			},
 		});
 
@@ -169,7 +169,7 @@ export class SessionsService {
 		if (storedToken?.userId === userId) {
 			await this.prisma.refreshToken.update({
 				where: { id: storedToken.id },
-				data: { isDeleted: true, deletedAt: new Date() },
+				data: { isDeleted: true, deletedAt: Date.now(), updatedAt: Date.now() },
 			});
 		}
 
@@ -191,7 +191,7 @@ export class SessionsService {
 		const actionStartedAt: number = performance.now();
 		await this.prisma.refreshToken.updateMany({
 			where: { userId },
-			data: { isDeleted: true, deletedAt: new Date() },
+			data: { isDeleted: true, deletedAt: Date.now() },
 		});
 
 		this.sessionsEvents.emitAction(
@@ -215,7 +215,7 @@ export class SessionsService {
 			where: {
 				userId,
 				isDeleted: false,
-				expiresAt: { gte: new Date() },
+				expiresAt: { gte: Date.now() },
 			},
 			orderBy: { createdAt: "desc" },
 			select: {
@@ -230,13 +230,13 @@ export class SessionsService {
 		// Convert Date objects to ISO strings before Zod validation.
 		// SessionSchema expects `expiresAt` and `createdAt` as `z.string()`, but
 		// Prisma returns native Date objects. Without this conversion, Zod throws.
-		return tokens.map((t: { id: string; deviceInfo: string | null; ipAddress: string | null; createdAt: Date; expiresAt: Date }) =>
+		return tokens.map((t: { id: string; deviceInfo: string | null; ipAddress: string | null; createdAt: bigint; expiresAt: bigint }) =>
 			SessionSchema.parse({
 				id: t.id,
 				deviceInfo: t.deviceInfo,
 				ipAddress: t.ipAddress,
-				createdAt: t.createdAt.toISOString(),
-				expiresAt: t.expiresAt.toISOString(),
+				createdAt: epochMs(Number(t.createdAt)),
+				expiresAt: epochMs(Number(t.expiresAt)),
 			}),
 		);
 	}

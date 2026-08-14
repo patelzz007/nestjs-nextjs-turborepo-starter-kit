@@ -72,6 +72,8 @@ import {
 	type TelescopeUsersResponse,
 	type TelescopeWebhookDeliveriesResponse,
 	type TelescopeWebhookDelivery,
+	epochMs,
+	nowEpochMs,
 } from "@workspace/shared";
 import { PrismaService } from "../../prisma/prisma.service.js";
 
@@ -131,10 +133,10 @@ export class TelescopeService {
 	public async overview(rawQuery: RawQuery): Promise<TelescopeOverview> {
 		const query: TelescopeOverviewQuery = parseQuery(TelescopeOverviewQuerySchema, rawQuery);
 		const range: TelescopeRange = TelescopeRangeSchema.parse(query.range);
-		const fromIso: string = new Date(Date.now() - RANGE_MS[range]).toISOString();
+		const fromMs: number = Date.now() - RANGE_MS[range];
 
 		const [stats, mailSent, mailDelivered] = await Promise.all([
-			Promise.resolve(this.store.overviewStats(fromIso)),
+			Promise.resolve(this.store.overviewStats(fromMs)),
 			this.prisma.emailLog.count(),
 			this.prisma.emailLog.count({ where: { status: "delivered" } }),
 		]);
@@ -238,8 +240,8 @@ export class TelescopeService {
 			status: row.status,
 			resendId: row.resendId ?? undefined,
 			error: row.error ?? undefined,
-			createdAt: row.createdAt.toISOString(),
-			updatedAt: row.updatedAt.toISOString(),
+			createdAt: epochMs(Number(row.createdAt)),
+			updatedAt: epochMs(Number(row.updatedAt)),
 		}));
 		return { logs: EmailLogEntrySchema.array().parse(mapped) };
 	}
@@ -257,7 +259,7 @@ export class TelescopeService {
 			name: input.name,
 			value: input.value,
 			correlationId: spanStore?.captured === true ? spanStore.correlationId : null,
-			createdAt: new Date().toISOString(),
+			createdAt: nowEpochMs(),
 		};
 		this.store.pushDump(entry);
 		return { id: entry.id };
@@ -314,8 +316,8 @@ export class TelescopeService {
 	public leaderboard(rawQuery: RawQuery): TelescopeLeaderboardResponse {
 		const query: TelescopeLeaderboardQuery = parseQuery(TelescopeLeaderboardQuerySchema, rawQuery);
 		const range: TelescopeRange = TelescopeRangeSchema.parse(query.range);
-		const fromIso: string = new Date(Date.now() - RANGE_MS[range]).toISOString();
-		const entries: readonly TelescopeLeaderboardEntry[] = this.store.leaderboard(fromIso, 10);
+		const fromMs: number = Date.now() - RANGE_MS[range];
+		const entries: readonly TelescopeLeaderboardEntry[] = this.store.leaderboard(fromMs, 10);
 		return { range, entries };
 	}
 
@@ -323,10 +325,10 @@ export class TelescopeService {
 	public trends(rawQuery: RawQuery): TelescopeTrendsResponse {
 		const query: TelescopeTrendsQuery = parseQuery(TelescopeTrendsQuerySchema, rawQuery);
 		const range: TelescopeRange = TelescopeRangeSchema.parse(query.range);
-		const fromIso: string = new Date(Date.now() - RANGE_MS[range]).toISOString();
+		const fromMs: number = Date.now() - RANGE_MS[range];
 		// Hourly buckets: 6h → 6, 24h → 24 (15m/1h fall back to 12 for readability).
 		const bucketCount: number = range === "15m" ? 12 : range === "1h" ? 12 : range === "6h" ? 6 : 24;
-		const points = this.store.trends(fromIso, bucketCount);
+		const points = this.store.trends(fromMs, bucketCount);
 		return { range, points };
 	}
 
@@ -357,7 +359,7 @@ export class TelescopeService {
 		const annotation: TelescopeAnnotation = {
 			starred: input.starred ?? current?.starred ?? false,
 			comment: input.comment ?? current?.comment ?? "",
-			updatedAt: new Date().toISOString(),
+			updatedAt: nowEpochMs(),
 		};
 		this.store.setAnnotation(requestId, annotation);
 		return annotation;

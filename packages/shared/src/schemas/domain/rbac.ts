@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { BaseResponseSchema, DateStringSchema } from "../api/common";
+import { BaseResponseSchema, EpochMsSchema } from "../api/common";
 import { PermissionActionSchema, PermissionResourceSchema } from "./enums";
 import { PermissionDetailsSchema } from "../auth/user";
 
@@ -140,9 +140,9 @@ export const AssignPermissionsToUserBulkSchema = z
 		permissionIds: z.array(z.uuid()).min(1).meta({
 			description: "List of permission IDs to assign",
 		}),
-		expiresAt: DateStringSchema.optional().meta({
-			description: "ISO date string for when the grants expire",
-			example: "2027-01-01T00:00:00.000Z",
+		expiresAt: EpochMsSchema.optional().meta({
+			description: "Epoch milliseconds when the grants expire",
+			example: 1786300000000,
 		}),
 	})
 	.strict();
@@ -542,7 +542,7 @@ export const InspectPermissionEntrySchema = z
 		action: z.string(),
 		resource: z.string(),
 		via: z.string(),
-		expiresAt: DateStringSchema.nullable().optional(),
+		expiresAt: EpochMsSchema.nullable().optional(),
 	})
 	.strict();
 
@@ -595,7 +595,7 @@ export const FindPermissionOwnersResponseSchema = z
 			.array(
 				z.object({
 					name: z.string(),
-					assignedAt: DateStringSchema,
+					assignedAt: EpochMsSchema,
 				}),
 			)
 			.optional(),

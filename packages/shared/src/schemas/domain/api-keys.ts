@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { BaseResponseSchema } from "../api/common";
+import { BaseResponseSchema, EpochMsSchema } from "../api/common";
 
 // ── Scope literals ───────────────────────────────────────────────────────
 
@@ -14,12 +14,7 @@ export const CreateApiKeySchema = z
 		name: z.string().min(1).max(100),
 		scopes: z.array(z.enum(API_KEY_SCOPES)).min(1).max(3).optional().default(["read", "write"]),
 		rateLimitTier: z.enum(API_KEY_RATE_LIMIT_TIERS).optional().default("standard"),
-		expiresAt: z
-			.string()
-			// eslint-disable-next-line @typescript-eslint/no-deprecated -- z.string().datetime() is the only viable option (z.iso.datetime() doesn't exist on string)
-			.datetime({ offset: true })
-			.transform((val: string) => new Date(val))
-			.optional(),
+		expiresAt: EpochMsSchema.optional(),
 	})
 	.strict();
 
@@ -30,12 +25,7 @@ export const UpdateApiKeySchema = z
 		name: z.string().min(1).max(100).optional(),
 		isActive: z.boolean().optional(),
 		scopes: z.array(z.enum(API_KEY_SCOPES)).min(1).max(3).optional(),
-		expiresAt: z
-			.string()
-			// eslint-disable-next-line @typescript-eslint/no-deprecated -- z.string().datetime() is the only viable option (z.iso.datetime() doesn't exist on string)
-			.datetime({ offset: true })
-			.transform((val: string) => new Date(val))
-			.optional(),
+		expiresAt: EpochMsSchema.optional(),
 	})
 	.strict();
 
@@ -57,18 +47,8 @@ export type ApiKeyQueryInput = z.output<typeof ApiKeyQuerySchema>;
 
 export const UsageLogQuerySchema = z
 	.object({
-		from: z
-			.string()
-			// eslint-disable-next-line @typescript-eslint/no-deprecated
-			.datetime({ offset: true })
-			.transform((val: string) => new Date(val))
-			.optional(),
-		to: z
-			.string()
-			// eslint-disable-next-line @typescript-eslint/no-deprecated
-			.datetime({ offset: true })
-			.transform((val: string) => new Date(val))
-			.optional(),
+		from: EpochMsSchema.optional(),
+		to: EpochMsSchema.optional(),
 		method: z.string().optional(),
 		statusCode: z.coerce.number().int().optional(),
 		page: z.coerce.number().int().min(1).optional().default(1),
@@ -96,8 +76,8 @@ export const SafeApiKeySchema = BaseResponseSchema.extend({
 	rateLimitTier: z.string(),
 	totalRequests: z.number(),
 	isActive: z.boolean(),
-	lastUsedAt: z.string().nullable(),
-	expiresAt: z.string().nullable(),
+	lastUsedAt: EpochMsSchema.nullable(),
+	expiresAt: EpochMsSchema.nullable(),
 });
 
 export type SafeApiKey = z.output<typeof SafeApiKeySchema>;
@@ -124,11 +104,11 @@ export type UsageLogEntry = z.output<typeof UsageLogEntrySchema>;
 export const UsageStatsResponseSchema = z.object({
 	apiKeyId: z.string(),
 	totalRequests: z.number(),
-	period: z.object({ from: z.string(), to: z.string() }),
+	period: z.object({ from: EpochMsSchema, to: EpochMsSchema }),
 	byMethod: z.array(z.object({ method: z.string(), count: z.number() })),
 	byStatusCode: z.array(z.object({ statusCode: z.number(), count: z.number() })),
 	byEndpoint: z.array(z.object({ endpoint: z.string(), count: z.number() })),
-	byDay: z.array(z.object({ day: z.string(), count: z.number() })),
+	byDay: z.array(z.object({ day: EpochMsSchema, count: z.number() })),
 });
 
 export type UsageStatsResponse = z.output<typeof UsageStatsResponseSchema>;

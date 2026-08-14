@@ -25,11 +25,11 @@ export async function createApiKeys(users: User[]): Promise<void> {
 		scopes: string[];
 		rateLimitTier: string;
 		isActive: boolean;
-		expiresAt?: Date;
+		expiresAt?: number;
 	}> = [];
 
 	// Helper: generate a key row using random key + log the raw key for display
-	const addKey = async (email: string, name: string, scopes: string[], tier: string, active: boolean, expiresAt?: Date) => {
+	const addKey = async (email: string, name: string, scopes: string[], tier: string, active: boolean, expiresAt?: number) => {
 		const { rawKey, keyPrefix } = generateSeedApiKey();
 		const keyHash = await hash(rawKey);
 		rows.push({
@@ -104,7 +104,7 @@ export async function createApiKeyUsageLogs(): Promise<void> {
 		ipAddress: string;
 		userAgent: string;
 		responseTimeMs: number;
-		createdAt: Date;
+		createdAt: number;
 	};
 
 	const ip = () => `${randInt(1, 254)}.${randInt(0, 255)}.${randInt(0, 255)}.${randInt(1, 254)}`;

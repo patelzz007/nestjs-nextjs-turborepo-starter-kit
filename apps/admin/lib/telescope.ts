@@ -7,6 +7,8 @@
 
 import type { RequestLogEntry, TelescopePiiCategory, TelescopeRange, TelescopeSpanKind, TelescopeStreamEvent } from "@workspace/shared";
 
+import { formatDateTime, timeAgo as timeAgoLabel } from "@/lib/dates";
+
 // ── Status tone (request status codes) ─────────────────────────────────────
 
 export interface StatusTone {
@@ -52,37 +54,16 @@ export function durationLabel(ms: number): string {
 	return `${(ms / 1000).toFixed(1)}s`;
 }
 
-/** Module-scope formatter — one `Intl.DateTimeFormat` for every cell render. */
-const TIME_FORMATTER: Intl.DateTimeFormat = new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "medium" });
-
-export function formatTime(iso: string): string {
-	return TIME_FORMATTER.format(new Date(iso));
+/** Epoch-ms timestamp → locale string via date-fns (see lib/dates.ts). */
+export function formatTime(ms: number): string {
+	return formatDateTime(ms);
 }
 
 // ── Relative time (improvement v2 — "3s ago" labels) ─────────────────────
 
-/** "just now" / "42s ago" / "5m ago" / "2h ago" — compact relative label. */
-export function timeAgo(isoOrMs: string | number, nowMs: number = Date.now()): string {
-	const then: number = typeof isoOrMs === "string" ? Date.parse(isoOrMs) : isoOrMs;
-	if (!Number.isFinite(then)) {
-		return "—";
-	}
-	const seconds: number = Math.max(0, Math.floor((nowMs - then) / 1000));
-	if (seconds < 5) {
-		return "just now";
-	}
-	if (seconds < 60) {
-		return `${String(seconds)}s ago`;
-	}
-	const minutes: number = Math.floor(seconds / 60);
-	if (minutes < 60) {
-		return `${String(minutes)}m ago`;
-	}
-	const hours: number = Math.floor(minutes / 60);
-	if (hours < 24) {
-		return `${String(hours)}h ago`;
-	}
-	return `${String(Math.floor(hours / 24))}d ago`;
+/** "just now" / "42s ago" / "5m ago" / "2h ago" / "2d ago" — compact relative label. */
+export function timeAgo(ms: number, nowMs: number = Date.now()): string {
+	return timeAgoLabel(ms, nowMs);
 }
 
 // ── Duration tone (requests/SQL tables — slow = amber/red) ─────────────────

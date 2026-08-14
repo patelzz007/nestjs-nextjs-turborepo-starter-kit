@@ -2,7 +2,7 @@
 
 import { Inject, Injectable, type OnModuleInit } from "@nestjs/common";
 
-import type { TelescopeLogLevel, TelescopeOptions } from "@workspace/shared";
+import { nowEpochMs, type TelescopeLogLevel, type TelescopeOptions } from "@workspace/shared";
 
 import { RequestSpanContext, type SpanStore } from "./request-span-context.js";
 import { TELESCOPE_OPTIONS } from "./telescope.options.js";
@@ -108,6 +108,6 @@ export class TelescopeConsoleCapture implements OnModuleInit {
 		}
 		const raw: string = args.map(formatArg).join(" ").slice(0, MAX_LOG_MESSAGE_CHARS);
 		const masked: string = raw.replace(EMAIL_MASK_PATTERN, "$1***@");
-		store.logs.push({ level, message: masked, timestamp: new Date().toISOString() });
+		store.logs.push({ level, message: masked, timestamp: nowEpochMs() });
 	}
 }

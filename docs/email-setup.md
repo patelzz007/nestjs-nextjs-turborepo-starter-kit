@@ -3,7 +3,7 @@ title: "Email + Webhook Setup (Resend & Cloudflare Tunnel)"
 description: "Step-by-step: how the email pipeline works, setting up Resend (API key, verified domain, env vars), and exposing the delivery webhook locally with cloudflared."
 order: 17
 author: "Acme Inc."
-lastUpdated: "2026-08-11"
+lastUpdated: 1786406400000
 coverImage: "https://images.unsplash.com/photo-1563986768609-322da13575f3?auto=format&fit=crop&w=1600&q=80"
 ---
 
@@ -637,3 +637,4 @@ After setup, run through this in order — each step builds on the last:
 - **[Logging system](./logging.md)** — where send logs land and how to query them.
 
 _Last updated: 2026-08-11._
+

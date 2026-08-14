@@ -85,7 +85,7 @@ export class ImpersonationService {
 
 		// 4. Get target user's permissions
 		const userPermissions = await this.rbacService.getUserPermissions(targetUser.id);
-		const isEmailVerified = targetUser.emailVerifiedAt !== null && targetUser.emailVerifiedAt <= new Date();
+		const isEmailVerified = targetUser.emailVerifiedAt !== null && targetUser.emailVerifiedAt <= Date.now();
 		const flatUser: UserResponse = this.authService.buildUserResponse(targetUser, userPermissions, isEmailVerified);
 
 		// 5. Generate impersonation token

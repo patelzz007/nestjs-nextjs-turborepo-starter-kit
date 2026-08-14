@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { EpochMsSchema, nowEpochMs } from "@workspace/shared";
+
 import { BaseEmailPropsSchema, BaseEmailTemplate } from "../base/base-email-template.js";
 import type { EmailRenderContext } from "../base/email-render-context.js";
 
@@ -8,8 +10,8 @@ export const SecurityAlertEmailPropsSchema = BaseEmailPropsSchema.extend({
 	deviceLabel: z.string().min(1).optional(),
 	/** Approximate location from IP geo (e.g. "Kuala Lumpur, MY"). */
 	location: z.string().min(1).optional(),
-	/** When the sign-in happened (ISO). */
-	signedInAt: z.iso.datetime().optional(),
+	/** When the sign-in happened (epoch ms). */
+	signedInAt: EpochMsSchema.optional(),
 });
 
 export type SecurityAlertEmailProps = z.output<typeof SecurityAlertEmailPropsSchema>;
@@ -25,7 +27,7 @@ export class SecurityAlertEmailTemplate extends BaseEmailTemplate<SecurityAlertE
 		to: "jamie@example.com",
 		deviceLabel: "Chrome on macOS",
 		location: "Kuala Lumpur, MY",
-		signedInAt: new Date().toISOString(),
+		signedInAt: nowEpochMs(),
 	};
 
 	public readonly key: string = "security-alert";
@@ -44,7 +46,7 @@ export class SecurityAlertEmailTemplate extends BaseEmailTemplate<SecurityAlertE
 		if (!this.props.signedInAt) {
 			return "recently";
 		}
-		const elapsedMs: number = Date.now() - new Date(this.props.signedInAt).getTime();
+		const elapsedMs: number = Date.now() - this.props.signedInAt;
 		if (elapsedMs < 60_000) {
 			return "just now";
 		}

@@ -1,3 +1,5 @@
+import { format } from "date-fns";
+import { EpochMsSchema, type EpochMs } from "@workspace/shared";
 import { z } from "zod";
 
 /**
@@ -95,9 +97,13 @@ export function stripFirstHeading(markdown: string): string {
  * description: "From an empty laptop to a running monorepo."
  * order: 1
  * author: "Acme Inc."
- * lastUpdated: "2026-08-02"
+ * lastUpdated: 1785628800000
  * ---
  * ```
+ *
+ * `lastUpdated` is an **epoch-ms integer** (UTC midnight of the calendar day
+ * the guide was last touched), matching the repo-wide epoch convention —
+ * display is always handled by date-fns (`formatEpochDate`).
  *
  * All fields are optional — when missing, the docs reader falls back to
  * deriving the title/description from the markdown body and places the guide
@@ -109,9 +115,10 @@ export const DocFrontmatterSchema = z
 		description: z.string().min(1),
 		order: z.number().int().min(1),
 		author: z.string().min(1),
-		// ISO date string (e.g. `2026-08-02`) so a typo'd date fails loudly at
-		// parse time instead of silently rendering garbage (rule 13).
-		lastUpdated: z.iso.date(),
+		// Epoch-ms integer (e.g. `1785628800000` — UTC midnight of Aug 2, 2026)
+		// so a typo'd date fails loudly at parse time instead of silently
+		// rendering garbage (rule 13). Display is date-fns via `formatEpochDate`.
+		lastUpdated: EpochMsSchema,
 		// Absolute https image URL used as the banner cover art on `/docs/<slug>`.
 		coverImage: z.url().refine((url) => url.startsWith("https://"), "coverImage must be an https URL"),
 	})
@@ -239,28 +246,21 @@ export function estimateReadingTime(markdown: string): number {
 	return Math.max(1, Math.ceil(words / WORDS_PER_MINUTE));
 }
 
-const MONTH_NAMES: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"] = [
-	"Jan",
-	"Feb",
-	"Mar",
-	"Apr",
-	"May",
-	"Jun",
-	"Jul",
-	"Aug",
-	"Sep",
-	"Oct",
-	"Nov",
-	"Dec",
-];
-
-/** Formats an ISO date string (e.g. `2026-08-02`) as `Aug 2, 2026`. Falls back to the raw string when unparseable. */
-export function formatIsoDate(iso: string): string {
-	const date = new Date(iso);
-	if (Number.isNaN(date.getTime())) {
-		return iso;
+/**
+ * Formats an epoch-ms timestamp (front-matter `lastUpdated`) as `Aug 2, 2026`
+ * using date-fns. Front-matter dates are stored as **UTC midnight**, so the
+ * date is normalized to its UTC calendar components and rebuilt as a
+ * local-midnight `Date` — the same calendar day then reads identically in
+ * every viewer's timezone (date-fns core has no `timeZone` option in v4).
+ * Falls back to `—` for non-finite input.
+ */
+export function formatEpochDate(epoch: EpochMs): string {
+	const parsed = new Date(epoch);
+	if (!Number.isFinite(parsed.getTime())) {
+		return "—";
 	}
-	return `${MONTH_NAMES[date.getUTCMonth()] ?? ""} ${String(date.getUTCDate())}, ${String(date.getUTCFullYear())}`;
+	const utcMidnight = new Date(parsed.getUTCFullYear(), parsed.getUTCMonth(), parsed.getUTCDate());
+	return format(utcMidnight, "MMM d, yyyy");
 }
 
 /** Blockquote kinds for the docs renderer's color-coded callouts. Zod enum (rule 13) so the renderer can `safeParse` runtime values instead of sniffing strings. */

@@ -5,6 +5,8 @@ import { afterEach, describe, expect, it } from "vitest";
 
 // `didTokenRotate` lives with the stream pipeline (lib/session-badge.ts); the
 // component file only exports the presentational view.
+import { epochMs } from "@workspace/shared";
+
 import { didTokenRotate } from "@/lib/session-status-badge";
 import { SessionStatusView } from "./session-status-badge";
 
@@ -109,28 +111,33 @@ describe("SessionStatusView", () => {
 });
 
 describe("didTokenRotate", () => {
+	// Epoch ms for `2026-08-04T12:00:00.000Z` (the reference instant used below).
+	const T12: number = epochMs(Date.parse("2026-08-04T12:00:00.000Z"));
+
 	it("is false when either side is null (first sighting or unknown expiry)", () => {
-		expect(didTokenRotate(null, "2026-08-04T12:34:56.000Z")).toBe(false);
-		expect(didTokenRotate("2026-08-04T12:00:00.000Z", null)).toBe(false);
+		expect(didTokenRotate(null, T12)).toBe(false);
+		expect(didTokenRotate(T12, null)).toBe(false);
 		expect(didTokenRotate(null, null)).toBe(false);
 	});
 
 	it("is false when the expiry did not change", () => {
-		expect(didTokenRotate("2026-08-04T12:34:56.000Z", "2026-08-04T12:34:56.000Z")).toBe(false);
+		expect(didTokenRotate(T12, T12)).toBe(false);
 	});
 
 	it("is false when the new expiry is earlier (shouldn't happen, but never pulse on it)", () => {
-		expect(didTokenRotate("2026-08-04T13:00:00.000Z", "2026-08-04T12:00:00.000Z")).toBe(false);
+		expect(didTokenRotate(epochMs(T12 + 3_600_000), T12)).toBe(false);
 	});
 
 	it("is true when the new expiry jumps forward (a real rotation)", () => {
-		expect(didTokenRotate("2026-08-04T12:00:00.000Z", "2026-08-04T12:15:00.000Z")).toBe(true);
+		expect(didTokenRotate(T12, epochMs(T12 + 900_000))).toBe(true);
 	});
 
-	it("handles offset-bearing timestamps (DateStringSchema allows +08:00)", () => {
+	it("compares epoch instants (offsets are already normalized server-side)", () => {
 		// Same instant, different representations → not a rotation.
-		expect(didTokenRotate("2026-08-04T04:34:56.000Z", "2026-08-04T12:34:56.000+08:00")).toBe(false);
-		// A later instant written with an offset → rotation.
-		expect(didTokenRotate("2026-08-04T04:00:00.000Z", "2026-08-04T12:15:00.000+08:00")).toBe(true);
+		const sameInstantA: number = epochMs(Date.parse("2026-08-04T04:34:56.000Z"));
+		const sameInstantB: number = epochMs(Date.parse("2026-08-04T12:34:56.000+08:00"));
+		expect(didTokenRotate(sameInstantA, sameInstantB)).toBe(false);
+		// A later instant → rotation.
+		expect(didTokenRotate(sameInstantA, epochMs(sameInstantA + 900_000))).toBe(true);
 	});
 });

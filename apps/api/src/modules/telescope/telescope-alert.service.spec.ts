@@ -27,7 +27,7 @@ function makeRequest(overrides: Partial<RequestLogEntry>): RequestLogEntry {
 		piiFlags: [],
 		environment: null,
 		starred: false,
-		createdAt: "2026-08-12T10:00:00.000Z",
+		createdAt: 1786528800000,
 		...overrides,
 	};
 }
@@ -48,9 +48,9 @@ function makeJob(overrides: Partial<TelescopeJobLogEntry>): TelescopeJobLogEntry
 		payloadSize: 0,
 		error: null,
 		correlationId: null,
-		enqueuedAt: "2026-08-12T10:00:00.000Z",
-		startedAt: "2026-08-12T10:00:00.000Z",
-		finishedAt: "2026-08-12T10:00:00.042Z",
+		enqueuedAt: 1786528800000,
+		startedAt: 1786528800000,
+		finishedAt: 1786528800042,
 		...overrides,
 	};
 }

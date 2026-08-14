@@ -3,7 +3,7 @@ title: "Token Refresh — The Simple Version"
 description: "A no-jargon walkthrough of how silent refresh works: why there are two layers (proxy vs browser), when each one runs, and why you sometimes see a 401 in the Network tab. For anyone who found the main guide too technical."
 order: 4
 author: "Acme Inc."
-lastUpdated: "2026-08-04"
+lastUpdated: 1785801600000
 coverImage: "https://images.unsplash.com/photo-1495615080073-6b89c9839ce0?auto=format&fit=crop&w=1600&q=80"
 ---
 
@@ -140,3 +140,4 @@ deployment notes, the FAQ), read
 ---
 
 _Last updated: August 4, 2026_
+

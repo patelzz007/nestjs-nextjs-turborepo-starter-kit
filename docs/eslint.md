@@ -3,7 +3,7 @@ title: "ESLint Setup & How To Run It"
 description: "How ESLint is configured repo-wide and how to run it — both globally (via Turborepo) and per project."
 order: 6
 author: "Acme Inc."
-lastUpdated: "2026-08-02"
+lastUpdated: 1785628800000
 coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=1600&q=80"
 ---
 
@@ -464,3 +464,4 @@ cd packages/ui && npx eslint src/components/form/button.tsx
 ---
 
 _Last updated: July 31, 2026_
+

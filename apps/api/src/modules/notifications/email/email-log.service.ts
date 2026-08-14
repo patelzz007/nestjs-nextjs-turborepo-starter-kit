@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { z } from "zod";
 
-import { EmailLogEntrySchema, EmailLogStatusSchema, type EmailLogEntry, type EmailLogStatus } from "@workspace/shared";
+import { EmailLogEntrySchema, EmailLogStatusSchema, epochMs, type EmailLogEntry, type EmailLogStatus } from "@workspace/shared";
 
 import { PrismaService } from "../../../prisma/prisma.service.js";
 
@@ -120,7 +120,7 @@ export class EmailLogService {
 		const allowedCurrentStatuses: EmailLogStatus[] = [...ALLOWED_FROM[parsedStatus]];
 		const result = await this.prisma.emailLog.updateMany({
 			where: { resendId, status: { in: allowedCurrentStatuses } },
-			data: { status: parsedStatus, error },
+			data: { status: parsedStatus, error, updatedAt: Date.now() },
 		});
 		if (result.count > 0) {
 			this.events.emitUpdated();
@@ -154,8 +154,8 @@ export class EmailLogService {
 			status: row.status,
 			resendId: row.resendId ?? undefined,
 			error: row.error ?? undefined,
-			createdAt: row.createdAt.toISOString(),
-			updatedAt: row.updatedAt.toISOString(),
+			createdAt: epochMs(Number(row.createdAt)),
+			updatedAt: epochMs(Number(row.updatedAt)),
 		}));
 		return EmailLogEntrySchema.array().parse(mapped);
 	}

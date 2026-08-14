@@ -1,7 +1,7 @@
 import { Subject } from "rxjs";
 import { VirtualTimeScheduler } from "@/lib/virtual-time-scheduler";
 import { ApiError } from "@workspace/client/lib/api/use-api";
-import type { SessionStatus } from "@workspace/shared";
+import { epochMs, type EpochMs, type SessionStatus } from "@workspace/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import {
@@ -17,9 +17,10 @@ import {
 
 // ── Test fixtures ───────────────────────────────────────────────────────────
 
-const BASE = "2026-08-05T00:00:00.000Z";
+/** Epoch ms for `2026-08-05T00:00:00.000Z`. */
+const BASE: EpochMs = epochMs(Date.parse("2026-08-05T00:00:00.000Z"));
 
-function makeSession(expiresAt: string | null, fullName = "Alex Morgan", email = "admin@example.com"): SessionStatus {
+function makeSession(expiresAt: EpochMs | null, fullName = "Alex Morgan", email = "admin@example.com"): SessionStatus {
 	return { userId: "u1", email, fullName, expiresAt, checkedAt: BASE };
 }
 
@@ -55,10 +56,10 @@ describe("resolvePollMs", () => {
 
 describe("secondsUntil", () => {
 	it("returns whole seconds remaining, floored at 0", () => {
-		const now = new Date("2026-08-05T00:00:00.000Z");
-		expect(secondsUntil("2026-08-05T00:01:30.000Z", now)).toBe(90);
-		expect(secondsUntil("2026-08-05T00:00:00.400Z", now)).toBe(0);
-		expect(secondsUntil("2026-08-04T00:00:00.000Z", now)).toBe(0);
+		const now = new Date(BASE);
+		expect(secondsUntil(epochMs(BASE + 90_000), now)).toBe(90);
+		expect(secondsUntil(epochMs(BASE + 400), now)).toBe(0);
+		expect(secondsUntil(epochMs(BASE - 86_400_000), now)).toBe(0);
 	});
 });
 
@@ -67,16 +68,15 @@ describe("didTokenRotate", () => {
 		expect(didTokenRotate(null, null)).toBe(false);
 		expect(didTokenRotate(null, BASE)).toBe(false);
 		expect(didTokenRotate(BASE, BASE)).toBe(false);
-		expect(didTokenRotate(BASE, "2026-08-05T00:10:00.000Z")).toBe(true);
-		expect(didTokenRotate("2026-08-05T00:10:00.000Z", BASE)).toBe(false);
+		expect(didTokenRotate(BASE, epochMs(BASE + 600_000))).toBe(true);
+		expect(didTokenRotate(epochMs(BASE + 600_000), BASE)).toBe(false);
 	});
 });
-
 describe("sameSessionState", () => {
 	it("ignores identical poll results and flags any change", () => {
 		const ready: SessionState = { status: "ready", session: makeSession(BASE) };
 		expect(sameSessionState(ready, { status: "ready", session: makeSession(BASE) })).toBe(true);
-		expect(sameSessionState(ready, { status: "ready", session: makeSession("2026-08-05T00:10:00.000Z") })).toBe(false);
+		expect(sameSessionState(ready, { status: "ready", session: makeSession(epochMs(BASE + 600_000)) })).toBe(false);
 		const error: SessionState = { status: "error", errorMessage: "boom", retryable: true };
 		expect(sameSessionState(error, { status: "error", errorMessage: "boom", retryable: true })).toBe(true);
 		expect(sameSessionState(error, { status: "error", errorMessage: "different", retryable: true })).toBe(false);
@@ -164,7 +164,7 @@ describe("buildSessionBadgeStreams", () => {
 
 		try {
 			const s = new VirtualTimeScheduler();
-			const fetchSession = vi.fn((): Promise<SessionStatus> => Promise.resolve(makeSession("2026-08-05T01:00:00.000Z")));
+			const fetchSession = vi.fn((): Promise<SessionStatus> => Promise.resolve(makeSession(epochMs(BASE + 3_600_000))));
 			// No pollMs → resolvePollMs(env) with unset env → null → the steady timer
 			// arm is dropped entirely. Yet the countdown MUST still tick locally from
 			// the mount-fetched expiresAt — that is the zero-poll promise.
@@ -211,7 +211,7 @@ describe("buildSessionBadgeStreams", () => {
 		expect(fetchSession).toHaveBeenCalledTimes(2);
 		expect(states).toHaveLength(1); // distinctUntilChanged suppressed it
 
-		current = makeSession("2026-08-05T00:10:00.000Z"); // rotation
+		current = makeSession(epochMs(BASE + 600_000)); // rotation
 		s.advanceBy(10);
 		await settle();
 		expect(fetchSession).toHaveBeenCalledTimes(3);
@@ -275,7 +275,7 @@ describe("buildSessionBadgeStreams", () => {
 
 	it("never pulses on the first sighting, and pulses for pulseMs after a rotation", async () => {
 		const s = new VirtualTimeScheduler();
-		let expiresAt: string = BASE;
+		let expiresAt: EpochMs = BASE;
 		const fetchSession = vi.fn((): Promise<SessionStatus> => Promise.resolve(makeSession(expiresAt)));
 		const streams = buildSessionBadgeStreams({ fetchSession, scheduler: s, pollMs: 10, pulseMs: 5 });
 
@@ -284,7 +284,7 @@ describe("buildSessionBadgeStreams", () => {
 		await settle(); // mount sighting — must NOT pulse
 		expect(pulses).toEqual([]);
 
-		expiresAt = "2026-08-05T00:10:00.000Z"; // a silent refresh rotated the token
+		expiresAt = epochMs(BASE + 600_000); // a silent refresh rotated the token
 		s.advanceBy(10);
 		await settle();
 		expect(pulses).toEqual([true]);
@@ -298,7 +298,7 @@ describe("buildSessionBadgeStreams", () => {
 		const s = new VirtualTimeScheduler();
 		let visible = true;
 		const visibility = new Subject<Event>();
-		const fetchSession = vi.fn((): Promise<SessionStatus> => Promise.resolve(makeSession("2026-08-05T01:00:00.000Z")));
+		const fetchSession = vi.fn((): Promise<SessionStatus> => Promise.resolve(makeSession(epochMs(BASE + 3_600_000))));
 		const streams = buildSessionBadgeStreams({
 			fetchSession,
 			scheduler: s,

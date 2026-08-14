@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { EpochMsSchema } from "../api/common";
 import { EmailLogEntrySchema } from "../email/email";
 
 // ── JSON value (rule 2: no z.unknown — a recursive union instead) ────────
@@ -22,7 +23,7 @@ export const TelescopeLogEntrySchema = z
 		level: TelescopeLogLevelSchema,
 		/** Sanitized + length-capped message text. */
 		message: z.string(),
-		timestamp: z.string(),
+		timestamp: EpochMsSchema,
 	})
 	.strict();
 
@@ -54,7 +55,7 @@ export const TelescopeCacheOpSchema = z
 		/** `null` for write ops (set/delete); true/false for get. */
 		hit: z.boolean().nullable(),
 		durationMs: z.number().int().nonnegative(),
-		at: z.string(),
+		at: EpochMsSchema,
 	})
 	.strict();
 export type TelescopeCacheOp = z.output<typeof TelescopeCacheOpSchema>;
@@ -104,7 +105,7 @@ export const RequestLogSummarySchema = z
 		/** Resolved from the `users` table by the service (null when unknown/anonymous). */
 		userEmail: z.string().nullable().default(null),
 		durationMs: z.number().int().nonnegative(),
-		createdAt: z.string(),
+		createdAt: EpochMsSchema,
 		/** Environment tag (feature 8) — null for pre-upgrade/persisted rows. */
 		environment: TelescopeEnvironmentSchema.nullable().default(null),
 		/** Starred via request annotations (feature 14). */
@@ -153,7 +154,7 @@ export const QueryLogEntrySchema = z
 		durationMs: z.number().int().nonnegative(),
 		/** Offset from the request start (feature 11 — query overlay on the timeline). */
 		startOffsetMs: z.number().int().nonnegative().default(0),
-		createdAt: z.string(),
+		createdAt: EpochMsSchema,
 	})
 	.strict();
 
@@ -179,10 +180,10 @@ export const ExceptionLogEntrySchema = z
 		method: z.string().nullable(),
 		userId: z.string().nullable(),
 		occurrences: z.number().int().positive(),
-		createdAt: z.string(),
-		/** Group-aggregation fields (improvement 15): first/last occurrence. */
-		firstSeenAt: z.string(),
-		lastSeenAt: z.string(),
+		createdAt: EpochMsSchema,
+		/** Group-aggregation fields (improvement 15): first/last occurrence (epoch ms). */
+		firstSeenAt: EpochMsSchema,
+		lastSeenAt: EpochMsSchema,
 		/** Triage status (improvement 6) — default open; resolved/ignored hide the group. */
 		status: TelescopeExceptionStatusSchema.default("open"),
 	})
@@ -197,7 +198,7 @@ export const DumpEntrySchema = z
 		name: z.string(),
 		value: TelescopeJsonValueSchema,
 		correlationId: z.string().nullable(),
-		createdAt: z.string(),
+		createdAt: EpochMsSchema,
 	})
 	.strict();
 
@@ -285,8 +286,8 @@ export const TelescopeRequestListQuerySchema = TelescopePaginationSchema.extend(
 	/** Starred-only filter (feature 4) — `true` returns only starred requests. */
 	starred: z.enum(["true", "false"]).optional(),
 	sort: z.enum(["newest", "duration"]).default("newest"),
-	from: z.string().optional(),
-	to: z.string().optional(),
+	from: EpochMsSchema.optional(),
+	to: EpochMsSchema.optional(),
 }).strict();
 
 export type TelescopeRequestListQuery = z.output<typeof TelescopeRequestListQuerySchema>;
@@ -297,8 +298,8 @@ export const TelescopeSqlListQuerySchema = TelescopePaginationSchema.extend({
 	minDurationMs: z.coerce.number().int().nonnegative().optional(),
 	correlationId: z.string().optional(),
 	sort: z.enum(["newest", "duration"]).default("duration"),
-	from: z.string().optional(),
-	to: z.string().optional(),
+	from: EpochMsSchema.optional(),
+	to: EpochMsSchema.optional(),
 }).strict();
 
 export type TelescopeSqlListQuery = z.output<typeof TelescopeSqlListQuerySchema>;
@@ -308,8 +309,8 @@ export const TelescopeExceptionListQuerySchema = TelescopePaginationSchema.exten
 	statusCode: z.coerce.number().int().optional(),
 	/** Triage status filter (improvement 6). */
 	status: TelescopeExceptionStatusSchema.optional(),
-	from: z.string().optional(),
-	to: z.string().optional(),
+	from: EpochMsSchema.optional(),
+	to: EpochMsSchema.optional(),
 }).strict();
 
 export type TelescopeExceptionListQuery = z.output<typeof TelescopeExceptionListQuerySchema>;
@@ -334,8 +335,8 @@ export type TelescopeOverviewQuery = z.output<typeof TelescopeOverviewQuerySchem
 /** One bucket of the overview traffic time-series (improvement v2 — sparkline). */
 export const TelescopeTrafficPointSchema = z
 	.object({
-		/** Bucket start time (ISO). */
-		t: z.string(),
+		/** Bucket start time (epoch ms). */
+		t: EpochMsSchema,
 		requests: z.number().int().nonnegative(),
 		errors: z.number().int().nonnegative(),
 	})
@@ -601,7 +602,7 @@ export const TelescopeAnnotationSchema = z
 	.object({
 		starred: z.boolean(),
 		comment: z.string(),
-		updatedAt: z.string(),
+		updatedAt: EpochMsSchema,
 	})
 	.strict();
 export type TelescopeAnnotation = z.output<typeof TelescopeAnnotationSchema>;
@@ -660,9 +661,9 @@ export const TelescopeJobLogEntrySchema = z
 		payloadSize: z.number().int().nonnegative().default(0),
 		error: z.string().nullable(),
 		correlationId: z.string().nullable(),
-		enqueuedAt: z.string(),
-		startedAt: z.string().nullable(),
-		finishedAt: z.string().nullable(),
+		enqueuedAt: EpochMsSchema,
+		startedAt: EpochMsSchema.nullable(),
+		finishedAt: EpochMsSchema.nullable(),
 	})
 	.strict();
 export type TelescopeJobLogEntry = z.output<typeof TelescopeJobLogEntrySchema>;
@@ -690,8 +691,8 @@ export type TelescopeJobsListResponse = z.output<typeof TelescopeJobsListRespons
 /** One entry in a schedule's run history (improvement 20 — last N runs). */
 export const TelescopeScheduleRunSchema = z
 	.object({
-		/** ISO timestamp of the run's start. */
-		at: z.string(),
+		/** Epoch ms of the run's start. */
+		at: EpochMsSchema,
 		status: TelescopeScheduleStatusSchema,
 		durationMs: z.number().int().nonnegative().nullable(),
 	})
@@ -703,10 +704,10 @@ export const TelescopeScheduleLogSchema = z
 		name: z.string(),
 		cron: z.string(),
 		status: TelescopeScheduleStatusSchema,
-		lastRunAt: z.string().nullable(),
+		lastRunAt: EpochMsSchema.nullable(),
 		lastDurationMs: z.number().int().nonnegative().nullable(),
 		lastError: z.string().nullable(),
-		nextRunAt: z.string(),
+		nextRunAt: EpochMsSchema,
 		/** Improvement 20 — recent run history (oldest-first, capped by the scheduler). */
 		history: z.array(TelescopeScheduleRunSchema).readonly().default([]),
 	})
@@ -763,8 +764,8 @@ export type TelescopeLeaderboardResponse = z.output<typeof TelescopeLeaderboardR
 
 export const TelescopeTrendPointSchema = z
 	.object({
-		/** Bucket start time (ISO). */
-		t: z.string(),
+		/** Bucket start time (epoch ms). */
+		t: EpochMsSchema,
 		requests: z.number().int().nonnegative(),
 		errors: z.number().int().nonnegative(),
 		/** errors/requests × 100 (0 when no requests). */
@@ -799,7 +800,7 @@ export const TelescopeLogRowSchema = z
 		correlationId: z.string(),
 		level: TelescopeLogLevelSchema,
 		message: z.string(),
-		timestamp: z.string(),
+		timestamp: EpochMsSchema,
 		method: z.string().nullable(),
 		path: z.string().nullable(),
 	})
@@ -844,11 +845,11 @@ export const TelescopeAlertEntrySchema = z
 		statusCode: z.number().int().nullable(),
 		durationMs: z.number().int().nonnegative(),
 		reason: TelescopeAlertReasonSchema,
-		firedAt: z.string(),
+		firedAt: EpochMsSchema,
 		/** Triage status (improvement 5) — open until acked or snoozed. */
 		status: TelescopeAlertStatusSchema.default("open"),
 		/** When a snoozed alert becomes open again; null when not snoozed. */
-		snoozedUntil: z.string().nullable().default(null),
+		snoozedUntil: EpochMsSchema.nullable().default(null),
 	})
 	.strict();
 export type TelescopeAlertEntry = z.output<typeof TelescopeAlertEntrySchema>;
@@ -879,7 +880,7 @@ export const TelescopeWebhookDeliverySchema = z
 		/** Retry attempt index (0 = first attempt, 1 = first retry, …). */
 		attempt: z.number().int().nonnegative(),
 		error: z.string().nullable(),
-		createdAt: z.string(),
+		createdAt: EpochMsSchema,
 	})
 	.strict();
 export type TelescopeWebhookDelivery = z.output<typeof TelescopeWebhookDeliverySchema>;
@@ -903,7 +904,7 @@ export const TelescopeUserSummarySchema = z
 		errorRatePct: z.number().min(0).max(100),
 		avgDurationMs: z.number().nonnegative(),
 		p95DurationMs: z.number().nonnegative(),
-		lastSeenAt: z.string(),
+		lastSeenAt: EpochMsSchema,
 	})
 	.strict();
 export type TelescopeUserSummary = z.output<typeof TelescopeUserSummarySchema>;
@@ -942,7 +943,7 @@ export const TelescopeSearchRequestMatchSchema = z
 		/** Resolved from the `users` table by the service (null when unknown/anonymous). */
 		userEmail: z.string().nullable().default(null),
 		durationMs: z.number().int().nonnegative(),
-		createdAt: z.string(),
+		createdAt: EpochMsSchema,
 	})
 	.strict();
 export type TelescopeSearchRequestMatch = z.output<typeof TelescopeSearchRequestMatchSchema>;
@@ -955,7 +956,7 @@ export const TelescopeSearchSqlMatchSchema = z
 		operation: z.string(),
 		query: z.string(),
 		durationMs: z.number().int().nonnegative(),
-		createdAt: z.string(),
+		createdAt: EpochMsSchema,
 	})
 	.strict();
 export type TelescopeSearchSqlMatch = z.output<typeof TelescopeSearchSqlMatchSchema>;
@@ -969,7 +970,7 @@ export const TelescopeSearchExceptionMatchSchema = z
 		statusCode: z.number().int().nullable(),
 		path: z.string().nullable(),
 		occurrences: z.number().int().positive(),
-		lastSeenAt: z.string(),
+		lastSeenAt: EpochMsSchema,
 	})
 	.strict();
 export type TelescopeSearchExceptionMatch = z.output<typeof TelescopeSearchExceptionMatchSchema>;
@@ -980,7 +981,7 @@ export const TelescopeSearchLogMatchSchema = z
 		requestId: z.string(),
 		level: TelescopeLogLevelSchema,
 		message: z.string(),
-		timestamp: z.string(),
+		timestamp: EpochMsSchema,
 		path: z.string().nullable(),
 	})
 	.strict();

@@ -12,6 +12,7 @@ import {
 	type UseMutationOptions,
 	type UseMutationResult,
 } from "@tanstack/react-query";
+import { EpochMsSchema, type EpochMs } from "@workspace/shared";
 import { useMemo } from "react";
 import { z, type ZodType } from "zod";
 
@@ -113,7 +114,7 @@ export const ApiErrorSchema = z.object({
 	message: z.string(),
 	error: z.string().optional(),
 	statusCode: z.number().optional(),
-	lockedUntil: z.string().optional(),
+	lockedUntil: EpochMsSchema.optional(),
 	remainingSeconds: z.number().optional(),
 });
 
@@ -127,7 +128,7 @@ export type ApiErrorBody = z.output<typeof ApiErrorSchema>;
 export class ApiError extends Error implements ApiErrorBody {
 	public readonly error?: string;
 	public readonly statusCode?: number;
-	public readonly lockedUntil?: string;
+	public readonly lockedUntil?: EpochMs;
 	public readonly remainingSeconds?: number;
 
 	public constructor(body: ApiErrorBody) {

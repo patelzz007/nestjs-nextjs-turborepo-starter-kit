@@ -23,15 +23,15 @@ export class TaskScheduleService {
 	 */
 	@Cron(CronExpression.EVERY_HOUR)
 	public async cleanupExpiredResetTokens(): Promise<void> {
-		const now = new Date();
+		const nowMs: number = Date.now();
 
 		const result = await this.prisma.passwordResetToken.deleteMany({
 			where: {
 				OR: [
 					// Used tokens older than 7 days — clean up old records
-					{ usedAt: { not: null, lte: new Date(now.getTime() - 7 * 86_400_000) } },
+					{ usedAt: { not: null, lte: nowMs - 7 * 86_400_000 } },
 					// Expired tokens that are at least 1 hour past expiry (safety buffer)
-					{ expiresAt: { lte: new Date(now.getTime() - 3_600_000) } },
+					{ expiresAt: { lte: nowMs - 3_600_000 } },
 				],
 			},
 		});

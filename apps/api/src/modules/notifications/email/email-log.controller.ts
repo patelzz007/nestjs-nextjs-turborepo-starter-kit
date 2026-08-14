@@ -3,7 +3,7 @@ import type { MessageEvent } from "@nestjs/common";
 import { ApiOkResponse, ApiOperation, ApiQuery, ApiTags } from "@nestjs/swagger";
 import { interval, map, merge, type Observable } from "rxjs";
 
-import { EmailLogListResponseSchema, type EmailLogEntry } from "@workspace/shared";
+import { EmailLogListResponseSchema, nowEpochMs, type EmailLogEntry } from "@workspace/shared";
 
 import { createWrappedDto } from "../../../common/dto/response-wrapper.js";
 
@@ -68,7 +68,7 @@ export class EmailLogController {
 		return merge(
 			// One frame per EmailLog write (send logged / webhook flipped a status /
 			// opened-clicked recorded).
-			this.emailLogEvents.observeUpdates().pipe(map((): MessageEvent => ({ data: { updatedAt: new Date().toISOString() } }))),
+			this.emailLogEvents.observeUpdates().pipe(map((): MessageEvent => ({ data: { updatedAt: nowEpochMs() } }))),
 			// Keep-alive: idle SSE connections send zero bytes, and intermediaries
 			// (nginx, CDNs, the cloudflared tunnel) drop them after ~30–60s. A typed
 			// `ping` frame every 25s holds the socket open; it dispatches an `event:`

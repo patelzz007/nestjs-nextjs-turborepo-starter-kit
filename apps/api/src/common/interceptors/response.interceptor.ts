@@ -4,6 +4,8 @@ import { type Observable, throwError } from "rxjs";
 import { catchError, map } from "rxjs/operators";
 import { z } from "zod";
 
+import { nowEpochMs } from "@workspace/shared";
+
 import type { JsonValue } from "../interfaces/json.js";
 import type { RequestWithTrace } from "../middleware/correlation-id.middleware.js";
 
@@ -107,7 +109,7 @@ export class ResponseInterceptor implements NestInterceptor {
 							hasNext: hasNext ?? null,
 							hasPrevious: hasPrevious ?? null,
 							correlationId,
-							timestamp: new Date().toISOString(),
+							timestamp: nowEpochMs(),
 						},
 					};
 
@@ -125,7 +127,7 @@ export class ResponseInterceptor implements NestInterceptor {
 						meta: {
 							...meta,
 							correlationId,
-							timestamp: new Date().toISOString(),
+							timestamp: nowEpochMs(),
 						},
 					};
 
@@ -139,7 +141,7 @@ export class ResponseInterceptor implements NestInterceptor {
 					data,
 					meta: {
 						correlationId,
-						timestamp: new Date().toISOString(),
+						timestamp: nowEpochMs(),
 					},
 				};
 
@@ -160,7 +162,7 @@ export class ResponseInterceptor implements NestInterceptor {
 					},
 					meta: {
 						correlationId,
-						timestamp: new Date().toISOString(),
+						timestamp: nowEpochMs(),
 					},
 				};
 

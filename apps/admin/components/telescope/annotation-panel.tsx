@@ -13,6 +13,8 @@ import { useCallback, useState } from "react";
 
 import type { TelescopeAnnotation } from "@workspace/shared";
 
+import { formatDateTime } from "@/lib/dates";
+
 export interface AnnotationPanelProps {
 	readonly annotation: TelescopeAnnotation | null;
 	readonly onToggleStar: (starred: boolean) => void;
@@ -27,8 +29,8 @@ export function AnnotationPanel({ annotation, onToggleStar, onSaveComment, savin
 	// in-progress typing. `updatedAt` only moves when the annotation changes,
 	// so this re-syncs exactly then. Setting state during render is the
 	// officially recommended "adjust state when a prop changes" pattern.
-	const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(annotation?.updatedAt ?? null);
-	const currentUpdatedAt: string | null = annotation?.updatedAt ?? null;
+	const [lastSyncedAt, setLastSyncedAt] = useState<number | null>(annotation?.updatedAt ?? null);
+	const currentUpdatedAt: number | null = annotation?.updatedAt ?? null;
 	if (lastSyncedAt !== currentUpdatedAt) {
 		setLastSyncedAt(currentUpdatedAt);
 		setDraft(annotation?.comment ?? "");
@@ -67,7 +69,7 @@ export function AnnotationPanel({ annotation, onToggleStar, onSaveComment, savin
 					className="w-full resize-y rounded-md border bg-card px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-ring focus:outline-none"
 				/>
 				<div className="mt-1.5 flex items-center justify-between">
-					<span className="text-[11px] text-muted-foreground">{annotation !== null ? `Updated ${new Date(annotation.updatedAt).toLocaleString()}` : "No annotation yet"}</span>
+					<span className="text-[11px] text-muted-foreground">{annotation !== null ? `Updated ${formatDateTime(annotation.updatedAt)}` : "No annotation yet"}</span>
 					<button
 						type="button"
 						onClick={handleSave}

@@ -12,8 +12,10 @@ export const rand = <T>(arr: T[]): T => {
 	return value;
 };
 export const randInt = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min;
-export const daysAgo = (n: number) => new Date(Date.now() - n * 86_400_000);
-export const daysFromNow = (n: number) => new Date(Date.now() + n * 86_400_000);
+
+// Epoch-millisecond helpers (DB stores BigInt epoch ms).
+export const daysAgo = (n: number) => Date.now() - n * 86_400_000;
+export const daysFromNow = (n: number) => Date.now() + n * 86_400_000;
 
 /** Safely get an array element using modulo cycling. Assumes the array is non-empty. */
 export const cycle = <T>(arr: T[], i: number): T => {

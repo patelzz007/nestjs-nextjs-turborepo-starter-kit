@@ -11,7 +11,7 @@ const BASE_URL = "http://api.test";
 interface Envelope {
 	readonly success: true;
 	readonly data: unknown;
-	readonly meta: { readonly timestamp: string };
+	readonly meta: { readonly timestamp: number };
 }
 
 /** Minimal mirror of the API's ResponseInterceptor envelope. */
@@ -19,12 +19,12 @@ const envelopeSchema = z
 	.object({
 		success: z.literal(true),
 		data: z.unknown(),
-		meta: z.object({ timestamp: z.string() }).loose(),
+		meta: z.object({ timestamp: z.number() }).loose(),
 	})
 	.loose();
 
 function successEnvelope(data: unknown): Envelope {
-	return { success: true, data, meta: { timestamp: "2026-08-03T10:00:00.000Z" } };
+	return { success: true, data, meta: { timestamp: 1786428000000 } };
 }
 
 afterEach(() => {

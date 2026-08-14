@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { EpochMsSchema } from "../api/common";
+
 /**
  * Email template system — shared contract.
  *
@@ -165,8 +167,8 @@ export const EmailLogEntrySchema = z
 		status: EmailLogStatusSchema,
 		resendId: z.string().nullable().optional(),
 		error: z.string().nullable().optional(),
-		createdAt: z.iso.datetime(),
-		updatedAt: z.iso.datetime(),
+		createdAt: EpochMsSchema,
+		updatedAt: EpochMsSchema,
 	})
 	.strict();
 

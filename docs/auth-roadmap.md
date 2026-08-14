@@ -3,7 +3,7 @@ title: "Auth Roadmap"
 description: "Ideas and design decisions for improving authentication, authorization, and multi-tenancy — plus the 30-point hardening deep-dive and the A→Z authentication flow."
 order: 9
 author: "Acme Inc."
-lastUpdated: "2026-08-05"
+lastUpdated: 1785888000000
 coverImage: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=1600&q=80"
 ---
 
@@ -2173,4 +2173,5 @@ Clicking **Logout** (in web or admin):
 3. **Every API call** rides the access token; when it 401s, the **client** silently refreshes once (single-flighted) and retries — and never logs you out for a mere network blip (cooldown).
 4. **Both refresh layers exist so you never see a login form in the middle of a session** — and the cookie isolation (web vs admin) keeps the two apps from sharing sessions.
 5. **Logout** = revoke the session row + clear the cookies + tell the other tabs.
+
 

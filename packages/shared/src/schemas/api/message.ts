@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { DateStringSchema } from "./common";
+import { EpochMsSchema } from "./common";
 
 /**
  * Standard message response schema.
@@ -39,10 +39,10 @@ export const ErrorResponseSchema = z
 			description: "HTTP status code",
 			example: 401,
 		}),
-		/** ISO-8601 instant when the account lockout expires (ACCOUNT_LOCKED only). */
-		lockedUntil: DateStringSchema.optional().meta({
-			description: "ISO-8601 instant when the account lockout expires",
-			example: "2026-08-04T12:49:00.000Z",
+		/** Epoch ms when the account lockout expires (ACCOUNT_LOCKED only). */
+		lockedUntil: EpochMsSchema.optional().meta({
+			description: "Epoch ms when the account lockout expires",
+			example: 1786300000000,
 		}),
 		/** Whole seconds until the lockout expires (ACCOUNT_LOCKED only). */
 		remainingSeconds: z.number().int().min(0).optional().meta({

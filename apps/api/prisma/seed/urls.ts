@@ -16,7 +16,7 @@ export async function createUrls(users: User[]): Promise<Url[]> {
 		isActive: boolean;
 		clickCount: number;
 		clickLimit?: number;
-		expiresAt?: Date;
+		expiresAt?: number;
 	}[] = [
 		// Alice
 		{
@@ -56,7 +56,7 @@ export async function createUrls(users: User[]): Promise<Url[]> {
 			redirectType: "TEMPORARY",
 			isActive: false,
 			clickCount: 1840,
-			expiresAt: new Date("2025-03-31"),
+			expiresAt: new Date("2025-03-31").getTime(),
 		},
 		{
 			userId: get("alice.johnson@example.com").id,
@@ -456,7 +456,7 @@ export async function createClicks(urls: Url[]): Promise<void> {
 		utmSource: string | null;
 		utmMedium: string | null;
 		utmCampaign: string | null;
-		clickedAt: Date;
+		clickedAt: number;
 	};
 
 	const ip = () => `${randInt(1, 254)}.${randInt(0, 255)}.${randInt(0, 255)}.${randInt(1, 254)}`;

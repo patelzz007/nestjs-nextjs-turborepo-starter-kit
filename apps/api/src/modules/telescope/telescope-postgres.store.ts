@@ -2,6 +2,8 @@ import { Inject, Injectable, type OnModuleInit } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
 import { z } from "zod";
 
+import { epochMs } from "@workspace/shared";
+
 import {
 	DumpEntrySchema,
 	ExceptionLogEntrySchema,
@@ -113,7 +115,7 @@ export class TelescopePostgresStore implements TelescopeStore, OnModuleInit {
 			this.memory.setAnnotation(row.requestId, {
 				starred: row.starred,
 				comment: row.comment ?? "",
-				updatedAt: row.updatedAt.toISOString(),
+				updatedAt: epochMs(Number(row.updatedAt)),
 			});
 		}
 	}
@@ -147,7 +149,7 @@ export class TelescopePostgresStore implements TelescopeStore, OnModuleInit {
 				create: row,
 				update: {
 					occurrences: { increment: 1 },
-					lastSeenAt: new Date(entry.createdAt),
+					lastSeenAt: entry.createdAt,
 					message: entry.message,
 					stack: entry.stack ?? null,
 					status: "open",
@@ -178,8 +180,8 @@ export class TelescopePostgresStore implements TelescopeStore, OnModuleInit {
 					status: entry.status,
 					durationMs: entry.durationMs,
 					error: entry.error,
-					startedAt: entry.startedAt !== null ? new Date(entry.startedAt) : null,
-					finishedAt: entry.finishedAt !== null ? new Date(entry.finishedAt) : null,
+					startedAt: entry.startedAt,
+					finishedAt: entry.finishedAt,
 				},
 			})
 			.catch((err: Error): void => {
@@ -224,12 +226,12 @@ export class TelescopePostgresStore implements TelescopeStore, OnModuleInit {
 		return this.memory.listUsers(query);
 	}
 
-	public setAlertStatus(id: string, status: TelescopeAlertStatus, snoozedUntil: string | null): void {
+	public setAlertStatus(id: string, status: TelescopeAlertStatus, snoozedUntil: number | null): void {
 		this.memory.setAlertStatus(id, status, snoozedUntil);
 		void this.prisma.telescopeAlert
 			.update({
 				where: { id },
-				data: { status, snoozedUntil: snoozedUntil !== null ? new Date(snoozedUntil) : null },
+				data: { status, snoozedUntil },
 			})
 			.catch((err: Error): void => {
 				this.logPersistError("alert-status", err);
@@ -247,8 +249,8 @@ export class TelescopePostgresStore implements TelescopeStore, OnModuleInit {
 		void this.prisma.telescopeAnnotation
 			.upsert({
 				where: { requestId },
-				create: { requestId, starred: annotation.starred, comment: annotation.comment, updatedAt: new Date(annotation.updatedAt) },
-				update: { starred: annotation.starred, comment: annotation.comment, updatedAt: new Date(annotation.updatedAt) },
+				create: { requestId, starred: annotation.starred, comment: annotation.comment, updatedAt: annotation.updatedAt },
+				update: { starred: annotation.starred, comment: annotation.comment, updatedAt: annotation.updatedAt },
 			})
 			.catch((err: Error): void => {
 				this.logPersistError("annotation", err);
@@ -315,18 +317,18 @@ export class TelescopePostgresStore implements TelescopeStore, OnModuleInit {
 		return this.memory.listDumpsByCorrelationId(correlationId);
 	}
 
-	public overviewStats(fromIso: string): OverviewStats {
-		return this.memory.overviewStats(fromIso);
+	public overviewStats(fromMs: number): OverviewStats {
+		return this.memory.overviewStats(fromMs);
 	}
 
 	// ── Aggregate reads: delegated (identical filter semantics via the buffer) ──
 
-	public leaderboard(fromIso: string, limit: number): readonly TelescopeLeaderboardEntry[] {
-		return this.memory.leaderboard(fromIso, limit);
+	public leaderboard(fromMs: number, limit: number): readonly TelescopeLeaderboardEntry[] {
+		return this.memory.leaderboard(fromMs, limit);
 	}
 
-	public trends(fromIso: string, bucketCount: number): readonly TelescopeTrendPoint[] {
-		return this.memory.trends(fromIso, bucketCount);
+	public trends(fromMs: number, bucketCount: number): readonly TelescopeTrendPoint[] {
+		return this.memory.trends(fromMs, bucketCount);
 	}
 
 	public upsertSchedule(entry: TelescopeScheduleLog): void {
@@ -344,23 +346,23 @@ export class TelescopePostgresStore implements TelescopeStore, OnModuleInit {
 	/** Prunes both the buffer and the DB tables (improvement 4). */
 	public pruneRetention(retentionMinutes: number): number {
 		const removed: number = this.memory.pruneRetention(retentionMinutes);
-		const cutoff: Date = new Date(Date.now() - retentionMinutes * 60 * 1000);
-		void this.prisma.telescopeRequest.deleteMany({ where: { createdAt: { lt: cutoff } } }).catch((err: Error): void => {
+		const cutoffMs: number = Date.now() - retentionMinutes * 60 * 1000;
+		void this.prisma.telescopeRequest.deleteMany({ where: { createdAt: { lt: cutoffMs } } }).catch((err: Error): void => {
 			this.logPersistError("prune", err);
 		});
-		void this.prisma.telescopeQuery.deleteMany({ where: { createdAt: { lt: cutoff } } }).catch((err: Error): void => {
+		void this.prisma.telescopeQuery.deleteMany({ where: { createdAt: { lt: cutoffMs } } }).catch((err: Error): void => {
 			this.logPersistError("prune", err);
 		});
-		void this.prisma.telescopeException.deleteMany({ where: { createdAt: { lt: cutoff } } }).catch((err: Error): void => {
+		void this.prisma.telescopeException.deleteMany({ where: { createdAt: { lt: cutoffMs } } }).catch((err: Error): void => {
 			this.logPersistError("prune", err);
 		});
-		void this.prisma.telescopeDump.deleteMany({ where: { createdAt: { lt: cutoff } } }).catch((err: Error): void => {
+		void this.prisma.telescopeDump.deleteMany({ where: { createdAt: { lt: cutoffMs } } }).catch((err: Error): void => {
 			this.logPersistError("prune", err);
 		});
-		void this.prisma.telescopeJob.deleteMany({ where: { createdAt: { lt: cutoff } } }).catch((err: Error): void => {
+		void this.prisma.telescopeJob.deleteMany({ where: { createdAt: { lt: cutoffMs } } }).catch((err: Error): void => {
 			this.logPersistError("prune", err);
 		});
-		void this.prisma.telescopeAlert.deleteMany({ where: { createdAt: { lt: cutoff } } }).catch((err: Error): void => {
+		void this.prisma.telescopeAlert.deleteMany({ where: { createdAt: { lt: cutoffMs } } }).catch((err: Error): void => {
 			this.logPersistError("prune", err);
 		});
 		return removed;
@@ -402,7 +404,7 @@ function toRequestRow(entry: RequestLogEntry): Prisma.TelescopeRequestCreateInpu
 		requestHeaders: toJsonInput(entry.requestHeaders),
 		spans: toJsonInput(entry.spans),
 		logs: toJsonInput(entry.logs),
-		createdAt: new Date(entry.createdAt),
+		createdAt: entry.createdAt,
 	};
 }
 
@@ -422,7 +424,7 @@ function mapRequestRow(row: {
 	readonly requestHeaders: Prisma.JsonValue | null;
 	readonly spans: Prisma.JsonValue;
 	readonly logs: Prisma.JsonValue;
-	readonly createdAt: Date;
+	readonly createdAt: bigint;
 }): RequestLogEntry {
 	const parsed = RequestLogEntrySchema.safeParse({
 		id: row.id,
@@ -440,7 +442,7 @@ function mapRequestRow(row: {
 		requestHeaders: parseHeaderMap(row.requestHeaders),
 		spans: parseArraySafe(TelescopeSpanSchema.array(), row.spans),
 		logs: parseArraySafe(TelescopeLogEntrySchema.array(), row.logs),
-		createdAt: row.createdAt.toISOString(),
+		createdAt: epochMs(Number(row.createdAt)),
 	});
 	if (!parsed.success) {
 		throw new Error(`[Telescope] hydrated request row failed schema validation: ${parsed.error.message}`);
@@ -457,7 +459,7 @@ function toQueryRow(entry: QueryLogEntry): Prisma.TelescopeQueryCreateInput {
 		query: entry.query,
 		params: entry.params,
 		durationMs: entry.durationMs,
-		createdAt: new Date(entry.createdAt),
+		createdAt: entry.createdAt,
 	};
 }
 
@@ -469,7 +471,7 @@ function mapQueryRow(row: {
 	readonly query: string;
 	readonly params: string | null;
 	readonly durationMs: number;
-	readonly createdAt: Date;
+	readonly createdAt: bigint;
 }): QueryLogEntry {
 	return QueryLogEntrySchema.parse({
 		id: row.id,
@@ -479,7 +481,7 @@ function mapQueryRow(row: {
 		query: row.query,
 		params: row.params,
 		durationMs: row.durationMs,
-		createdAt: row.createdAt.toISOString(),
+		createdAt: epochMs(Number(row.createdAt)),
 	});
 }
 
@@ -496,9 +498,9 @@ function toExceptionRow(entry: ExceptionLogEntry): Prisma.TelescopeExceptionCrea
 		method: entry.method,
 		userId: entry.userId,
 		occurrences: 1,
-		createdAt: new Date(entry.createdAt),
-		firstSeenAt: new Date(entry.firstSeenAt),
-		lastSeenAt: new Date(entry.lastSeenAt),
+		createdAt: entry.createdAt,
+		firstSeenAt: entry.firstSeenAt,
+		lastSeenAt: entry.lastSeenAt,
 		status: entry.status,
 	};
 }
@@ -515,9 +517,9 @@ function mapExceptionRow(row: {
 	readonly method: string | null;
 	readonly userId: string | null;
 	readonly occurrences: number;
-	readonly createdAt: Date;
-	readonly firstSeenAt: Date;
-	readonly lastSeenAt: Date;
+	readonly createdAt: bigint;
+	readonly firstSeenAt: bigint;
+	readonly lastSeenAt: bigint;
 	readonly status: string;
 }): ExceptionLogEntry {
 	return ExceptionLogEntrySchema.parse({
@@ -532,9 +534,9 @@ function mapExceptionRow(row: {
 		method: row.method,
 		userId: row.userId,
 		occurrences: row.occurrences,
-		createdAt: row.createdAt.toISOString(),
-		firstSeenAt: row.firstSeenAt.toISOString(),
-		lastSeenAt: row.lastSeenAt.toISOString(),
+		createdAt: epochMs(Number(row.createdAt)),
+		firstSeenAt: epochMs(Number(row.firstSeenAt)),
+		lastSeenAt: epochMs(Number(row.lastSeenAt)),
 		status: row.status,
 	});
 }
@@ -545,7 +547,7 @@ function toDumpRow(entry: DumpEntry): Prisma.TelescopeDumpCreateInput {
 		name: entry.name,
 		value: toJsonInput(entry.value),
 		correlationId: entry.correlationId,
-		createdAt: new Date(entry.createdAt),
+		createdAt: entry.createdAt,
 	};
 }
 
@@ -554,14 +556,14 @@ function mapDumpRow(row: {
 	readonly name: string;
 	readonly value: Prisma.JsonValue;
 	readonly correlationId: string | null;
-	readonly createdAt: Date;
+	readonly createdAt: bigint;
 }): DumpEntry {
 	return DumpEntrySchema.parse({
 		id: row.id,
 		name: row.name,
 		value: row.value,
 		correlationId: row.correlationId,
-		createdAt: row.createdAt.toISOString(),
+		createdAt: epochMs(Number(row.createdAt)),
 	});
 }
 
@@ -574,9 +576,9 @@ function toJobRow(entry: TelescopeJobLogEntry): Prisma.TelescopeJobCreateInput {
 		payloadSize: entry.payloadSize,
 		error: entry.error,
 		correlationId: entry.correlationId,
-		enqueuedAt: new Date(entry.enqueuedAt),
-		startedAt: entry.startedAt !== null ? new Date(entry.startedAt) : null,
-		finishedAt: entry.finishedAt !== null ? new Date(entry.finishedAt) : null,
+		enqueuedAt: entry.enqueuedAt,
+		startedAt: entry.startedAt,
+		finishedAt: entry.finishedAt,
 	};
 }
 
@@ -588,9 +590,9 @@ function mapJobRow(row: {
 	readonly payloadSize: number;
 	readonly error: string | null;
 	readonly correlationId: string | null;
-	readonly enqueuedAt: Date;
-	readonly startedAt: Date | null;
-	readonly finishedAt: Date | null;
+	readonly enqueuedAt: bigint;
+	readonly startedAt: bigint | null;
+	readonly finishedAt: bigint | null;
 }): TelescopeJobLogEntry {
 	return TelescopeJobLogEntrySchema.parse({
 		id: row.id,
@@ -600,9 +602,9 @@ function mapJobRow(row: {
 		payloadSize: row.payloadSize,
 		error: row.error,
 		correlationId: row.correlationId,
-		enqueuedAt: row.enqueuedAt.toISOString(),
-		startedAt: row.startedAt !== null ? row.startedAt.toISOString() : null,
-		finishedAt: row.finishedAt !== null ? row.finishedAt.toISOString() : null,
+		enqueuedAt: epochMs(Number(row.enqueuedAt)),
+		startedAt: row.startedAt !== null ? epochMs(Number(row.startedAt)) : null,
+		finishedAt: row.finishedAt !== null ? epochMs(Number(row.finishedAt)) : null,
 	});
 }
 
@@ -617,8 +619,8 @@ function toAlertRow(entry: TelescopeAlertEntry): Prisma.TelescopeAlertCreateInpu
 		durationMs: entry.durationMs,
 		reason: entry.reason,
 		status: entry.status,
-		snoozedUntil: entry.snoozedUntil !== null ? new Date(entry.snoozedUntil) : null,
-		firedAt: new Date(entry.firedAt),
+		snoozedUntil: entry.snoozedUntil,
+		firedAt: entry.firedAt,
 	};
 }
 
@@ -632,8 +634,8 @@ function mapAlertRow(row: {
 	readonly durationMs: number;
 	readonly reason: string;
 	readonly status: string;
-	readonly snoozedUntil: Date | null;
-	readonly firedAt: Date;
+	readonly snoozedUntil: bigint | null;
+	readonly firedAt: bigint;
 }): TelescopeAlertEntry {
 	return TelescopeAlertEntrySchema.parse({
 		id: row.id,
@@ -645,8 +647,8 @@ function mapAlertRow(row: {
 		durationMs: row.durationMs,
 		reason: row.reason,
 		status: row.status,
-		snoozedUntil: row.snoozedUntil !== null ? row.snoozedUntil.toISOString() : null,
-		firedAt: row.firedAt.toISOString(),
+		snoozedUntil: row.snoozedUntil !== null ? epochMs(Number(row.snoozedUntil)) : null,
+		firedAt: epochMs(Number(row.firedAt)),
 	});
 }
 

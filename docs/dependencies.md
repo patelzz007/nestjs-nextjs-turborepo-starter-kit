@@ -3,7 +3,7 @@ title: "Dependency Hygiene (syncpack)"
 description: "How syncpack keeps shared dependencies on the exact same version across every workspace."
 order: 7
 author: "Acme Inc."
-lastUpdated: "2026-08-02"
+lastUpdated: 1785628800000
 coverImage: "https://images.unsplash.com/photo-1504384308090-c894fdcc538d?auto=format&fit=crop&w=1600&q=80"
 ---
 
@@ -164,3 +164,4 @@ To bump a shared dependency (e.g. `zod`):
 ---
 
 _Last updated: July 31, 2026_
+

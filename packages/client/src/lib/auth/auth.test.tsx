@@ -79,13 +79,13 @@ const USER_FIXTURE = {
 	hasAdminAccess: false,
 	roles: [],
 	permissions: [],
-	createdAt: "2026-08-03T10:00:00.000Z",
-	updatedAt: "2026-08-03T10:00:00.000Z",
+	createdAt: 1786428000000,
+	updatedAt: 1786428000000,
 	isDeleted: false,
 	deletedAt: null,
 };
 
-const ME_BODY = { success: true, data: USER_FIXTURE, meta: { timestamp: "2026-08-03T10:00:00.000Z" } };
+const ME_BODY = { success: true, data: USER_FIXTURE, meta: { timestamp: 1786428000000 } };
 
 function refreshCalls(mock: Mock<FetchImpl>): FetchCall[] {
 	return fetchCalls(mock).filter((call) => inputUrl(call.input).endsWith("/auth/refresh"));
@@ -174,9 +174,7 @@ describe("useAuth", () => {
 });
 describe("AuthProvider logout", () => {
 	it("clears the React Query cache on logout", async () => {
-		const fetchMock = vi
-			.fn<FetchImpl>()
-			.mockResolvedValue(jsonResponse(200, { success: true, data: { message: "Logged out" }, meta: { timestamp: "2026-08-03T10:00:00.000Z" } }));
+		const fetchMock = vi.fn<FetchImpl>().mockResolvedValue(jsonResponse(200, { success: true, data: { message: "Logged out" }, meta: { timestamp: 1786428000000 } }));
 		vi.stubGlobal("fetch", fetchMock);
 
 		const { result } = renderHook(() => useAuth(), { wrapper });
@@ -200,9 +198,7 @@ describe("AuthProvider logout", () => {
 	});
 
 	it("broadcasts logged-out to other tabs so they clear their sessions too", async () => {
-		const fetchMock = vi
-			.fn<FetchImpl>()
-			.mockResolvedValue(jsonResponse(200, { success: true, data: { message: "Logged out" }, meta: { timestamp: "2026-08-03T10:00:00.000Z" } }));
+		const fetchMock = vi.fn<FetchImpl>().mockResolvedValue(jsonResponse(200, { success: true, data: { message: "Logged out" }, meta: { timestamp: 1786428000000 } }));
 		vi.stubGlobal("fetch", fetchMock);
 
 		const { result } = renderHook(() => useAuth(), { wrapper });
@@ -224,9 +220,7 @@ describe("AuthProvider logout", () => {
 	});
 
 	it("calls the logout endpoint, clears state and navigates to login", async () => {
-		const fetchMock = vi
-			.fn<FetchImpl>()
-			.mockResolvedValue(jsonResponse(200, { success: true, data: { message: "Logged out" }, meta: { timestamp: "2026-08-03T10:00:00.000Z" } }));
+		const fetchMock = vi.fn<FetchImpl>().mockResolvedValue(jsonResponse(200, { success: true, data: { message: "Logged out" }, meta: { timestamp: 1786428000000 } }));
 		vi.stubGlobal("fetch", fetchMock);
 
 		document.cookie = "accessToken=abc123";
@@ -257,9 +251,7 @@ describe("AuthProvider logout", () => {
 	});
 
 	it("sends X-Client-Type: admin on logout for admin sessions", async () => {
-		const fetchMock = vi
-			.fn<FetchImpl>()
-			.mockResolvedValue(jsonResponse(200, { success: true, data: { message: "Logged out" }, meta: { timestamp: "2026-08-03T10:00:00.000Z" } }));
+		const fetchMock = vi.fn<FetchImpl>().mockResolvedValue(jsonResponse(200, { success: true, data: { message: "Logged out" }, meta: { timestamp: 1786428000000 } }));
 		vi.stubGlobal("fetch", fetchMock);
 
 		const { result } = renderHook(() => useAuth(), { wrapper: adminWrapper });
@@ -278,7 +270,7 @@ describe("AuthProvider logout", () => {
 
 describe("AuthProvider cross-tab sync", () => {
 	it("logs out locally when another tab broadcasts logged-out", () => {
-		const fetchMock = vi.fn<FetchImpl>().mockResolvedValue(jsonResponse(200, { success: true, data: { message: "OK" }, meta: { timestamp: "2026-08-03T10:00:00.000Z" } }));
+		const fetchMock = vi.fn<FetchImpl>().mockResolvedValue(jsonResponse(200, { success: true, data: { message: "OK" }, meta: { timestamp: 1786428000000 } }));
 		vi.stubGlobal("fetch", fetchMock);
 
 		document.cookie = "accessToken=abc123";
@@ -314,7 +306,7 @@ describe("AuthProvider silent refresh", () => {
 			.fn<FetchImpl>()
 			.mockResolvedValueOnce(jsonResponse(401, { message: "Unauthorized" }))
 			.mockResolvedValueOnce(jsonResponse(401, { message: "Unauthorized" }))
-			.mockResolvedValueOnce(jsonResponse(200, { success: true, data: {}, meta: { timestamp: "2026-08-03T10:00:00.000Z" } }))
+			.mockResolvedValueOnce(jsonResponse(200, { success: true, data: {}, meta: { timestamp: 1786428000000 } }))
 			.mockResolvedValueOnce(jsonResponse(200, ME_BODY))
 			.mockResolvedValueOnce(jsonResponse(200, ME_BODY));
 		vi.stubGlobal("fetch", fetchMock);
@@ -354,7 +346,7 @@ describe("AuthProvider silent refresh", () => {
 		const fetchMock = vi
 			.fn<FetchImpl>()
 			.mockResolvedValueOnce(jsonResponse(401, { message: "Unauthorized" }))
-			.mockResolvedValueOnce(jsonResponse(200, { success: true, data: {}, meta: { timestamp: "2026-08-03T10:00:00.000Z" } }))
+			.mockResolvedValueOnce(jsonResponse(200, { success: true, data: {}, meta: { timestamp: 1786428000000 } }))
 			.mockResolvedValueOnce(jsonResponse(200, ME_BODY));
 		vi.stubGlobal("fetch", fetchMock);
 

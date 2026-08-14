@@ -1,6 +1,6 @@
 import { Inject, Injectable, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common";
 
-import { type TelescopeScheduleLog, type TelescopeScheduleRun, type TelescopeScheduleStatus } from "@workspace/shared";
+import { epochMs, nowEpochMs, type EpochMs, type TelescopeScheduleLog, type TelescopeScheduleRun, type TelescopeScheduleStatus } from "@workspace/shared";
 
 import { TelescopeEventBus } from "./telescope-event-bus.js";
 import { TELESCOPE_STORE } from "./telescope.options.js";
@@ -88,16 +88,16 @@ function isDue(fields: CronFields, date: Date): boolean {
 }
 
 /** Next minute-granularity match, scanning forward (bounded to 1 year). */
-function nextRunAt(fields: CronFields, from: Date): string {
+function nextRunAt(fields: CronFields, from: Date): EpochMs {
 	const probe: Date = new Date(from);
 	probe.setSeconds(0, 0);
 	for (let step = 0; step < 60 * 24 * 366; step += 1) {
 		if (isDue(fields, probe)) {
-			return probe.toISOString();
+			return epochMs(probe.getTime());
 		}
 		probe.setMinutes(probe.getMinutes() + 1);
 	}
-	return new Date(from.getTime() + 60 * 60 * 1000).toISOString();
+	return epochMs(from.getTime() + 60 * 60 * 1000);
 }
 
 @Injectable()
@@ -162,7 +162,7 @@ export class TelescopeSchedulerService implements OnModuleInit, OnModuleDestroy 
 
 	private async runSchedule(schedule: RegisteredSchedule): Promise<void> {
 		const start: number = performance.now();
-		const startedAt: string = new Date().toISOString();
+		const startedAt: EpochMs = nowEpochMs();
 		let status: TelescopeScheduleStatus = "succeeded";
 		let error: string | null = null;
 		try {

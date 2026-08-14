@@ -1,7 +1,7 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { nanoid } from "nanoid";
 
-import { type TelescopeJobLogEntry } from "@workspace/shared";
+import { nowEpochMs, type EpochMs, type TelescopeJobLogEntry } from "@workspace/shared";
 
 import { TelescopeEventBus } from "./telescope-event-bus.js";
 import { RequestSpanContext } from "./request-span-context.js";
@@ -47,7 +47,7 @@ export class TelescopeJobRunner {
 			await fn();
 		});
 		const correlationId: string | null = RequestSpanContext.getStore()?.correlationId ?? null;
-		const enqueuedAt: string = new Date().toISOString();
+		const enqueuedAt: EpochMs = nowEpochMs();
 		const payloadSize: number = payload === undefined ? 0 : Buffer.byteLength(JSON.stringify(payload), "utf8");
 
 		const entry: TelescopeJobLogEntry = {
@@ -64,7 +64,7 @@ export class TelescopeJobRunner {
 		};
 		this.store.pushJob(entry);
 
-		const startedAt: string = new Date().toISOString();
+		const startedAt: EpochMs = nowEpochMs();
 		entry.startedAt = startedAt;
 		const start: number = performance.now();
 
@@ -72,12 +72,12 @@ export class TelescopeJobRunner {
 			const result: T = await RequestSpanContext.span(`job: ${jobName}`, "queue", fn);
 			entry.status = "succeeded";
 			entry.durationMs = Math.round(performance.now() - start);
-			entry.finishedAt = new Date().toISOString();
+			entry.finishedAt = nowEpochMs();
 			return result;
 		} catch (error) {
 			entry.status = "failed";
 			entry.durationMs = Math.round(performance.now() - start);
-			entry.finishedAt = new Date().toISOString();
+			entry.finishedAt = nowEpochMs();
 			entry.error = error instanceof Error ? error.message : String(error);
 			throw error;
 		} finally {

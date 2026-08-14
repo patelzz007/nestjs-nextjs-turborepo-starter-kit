@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { EpochMsSchema } from "../api/common";
 import { UserResponseSchema } from "./user";
 
 // ── Password Validation ──────────────────────────────────────────────────
@@ -89,8 +90,8 @@ export const SessionSchema = z
 		id: z.string(),
 		deviceInfo: z.string().nullable(),
 		ipAddress: z.string().nullable(),
-		expiresAt: z.string(),
-		createdAt: z.string(),
+		expiresAt: EpochMsSchema,
+		createdAt: EpochMsSchema,
 	})
 	.strict();
 

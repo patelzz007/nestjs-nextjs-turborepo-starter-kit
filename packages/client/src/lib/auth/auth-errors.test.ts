@@ -1,3 +1,4 @@
+import { epochMs } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
 import { resolveAuthErrorMessage, isAccountLockedError } from "./auth-errors";
@@ -9,7 +10,7 @@ describe("ApiError", () => {
 			message: "Account temporarily locked. Try again in 5 minute(s).",
 			error: "ACCOUNT_LOCKED",
 			statusCode: 401,
-			lockedUntil: "2026-08-04T12:49:00.000Z",
+			lockedUntil: epochMs(Date.parse("2026-08-04T12:49:00.000Z")),
 			remainingSeconds: 299,
 		});
 
@@ -18,7 +19,7 @@ describe("ApiError", () => {
 		expect(err.message).toBe("Account temporarily locked. Try again in 5 minute(s).");
 		expect(err.error).toBe("ACCOUNT_LOCKED");
 		expect(err.statusCode).toBe(401);
-		expect(err.lockedUntil).toBe("2026-08-04T12:49:00.000Z");
+		expect(err.lockedUntil).toBe(epochMs(Date.parse("2026-08-04T12:49:00.000Z")));
 		expect(err.remainingSeconds).toBe(299);
 	});
 
@@ -73,7 +74,7 @@ describe("resolveAuthErrorMessage", () => {
 
 describe("isAccountLockedError", () => {
 	it("returns true only for ACCOUNT_LOCKED with a full lockout payload", () => {
-		const locked = new ApiError({ message: "locked", error: "ACCOUNT_LOCKED", lockedUntil: "2026-08-04T12:49:00.000Z", remainingSeconds: 299 });
+		const locked = new ApiError({ message: "locked", error: "ACCOUNT_LOCKED", lockedUntil: epochMs(Date.parse("2026-08-04T12:49:00.000Z")), remainingSeconds: 299 });
 		expect(isAccountLockedError(locked)).toBe(true);
 	});
 

@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { BaseResponseSchema } from "../api/common";
+import { BaseResponseSchema, EpochMsSchema } from "../api/common";
 
 export const CreateTagSchema = z
 	.object({
@@ -49,7 +49,7 @@ export const TagWithUrlsResponseSchema = TagResponseSchema.extend({
 				title: z.string().nullable(),
 				isActive: z.boolean(),
 				clickCount: z.number(),
-				createdAt: z.string(),
+				createdAt: EpochMsSchema,
 			}),
 		}),
 	),

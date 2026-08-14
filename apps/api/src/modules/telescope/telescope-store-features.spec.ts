@@ -26,7 +26,7 @@ function makeRequest(overrides: Partial<RequestLogEntry>): RequestLogEntry {
 		piiFlags: [],
 		environment: null,
 		starred: false,
-		createdAt: "2026-08-12T10:00:00.000Z",
+		createdAt: 1786528800000,
 		...overrides,
 	};
 }
@@ -40,9 +40,9 @@ function makeJob(overrides: Partial<TelescopeJobLogEntry>): TelescopeJobLogEntry
 		payloadSize: 0,
 		error: null,
 		correlationId: null,
-		enqueuedAt: "2026-08-12T10:00:00.000Z",
-		startedAt: "2026-08-12T10:00:00.100Z",
-		finishedAt: "2026-08-12T10:00:00.350Z",
+		enqueuedAt: 1786528800000,
+		startedAt: 1786528800100,
+		finishedAt: 1786528800350,
 		...overrides,
 	};
 }
@@ -67,10 +67,10 @@ describe("TelescopeMemoryStore — feature store surfaces", () => {
 			name: "nightly-report",
 			cron: "0 3 * * *",
 			status: "succeeded",
-			lastRunAt: "2026-08-12T03:00:00.000Z",
+			lastRunAt: 1786503600000,
 			lastDurationMs: 400,
 			lastError: null,
-			nextRunAt: "2026-08-13T03:00:00.000Z",
+			nextRunAt: 1786590000000,
 		};
 		store.upsertSchedule(schedule);
 		store.upsertSchedule({ ...schedule, status: "failed", lastError: "disk full" });
@@ -81,7 +81,7 @@ describe("TelescopeMemoryStore — feature store surfaces", () => {
 	it("round-trips annotations, including clearing to null", () => {
 		const store = new TelescopeMemoryStore(100);
 		store.pushRequest(makeRequest({}));
-		const annotation: TelescopeAnnotation = { starred: true, comment: "investigating", updatedAt: "2026-08-12T10:05:00.000Z" };
+		const annotation: TelescopeAnnotation = { starred: true, comment: "investigating", updatedAt: 1786529100000 };
 		store.setAnnotation("req-1", annotation);
 		expect(store.getAnnotation("req-1")).toEqual(annotation);
 		store.setAnnotation("req-1", null);
@@ -97,8 +97,8 @@ describe("TelescopeMemoryStore — feature store surfaces", () => {
 				path: "/api/orders",
 				method: "GET",
 				logs: [
-					{ level: "error", message: "connection refused", timestamp: "2026-08-12T10:00:01.000Z" },
-					{ level: "info", message: "loaded 3 orders", timestamp: "2026-08-12T10:00:02.000Z" },
+					{ level: "error", message: "connection refused", timestamp: 1786528801000 },
+					{ level: "info", message: "loaded 3 orders", timestamp: 1786528802000 },
 				],
 			}),
 		);
@@ -114,11 +114,11 @@ describe("TelescopeMemoryStore — feature store surfaces", () => {
 
 	it("builds a leaderboard grouped by route over a window", () => {
 		const store = new TelescopeMemoryStore(100);
-		const base = "2026-08-12T10:00:00.000Z";
+		const base = 1786528800000;
 		store.pushRequest(makeRequest({ id: "a", path: "/api/orders", durationMs: 100, createdAt: base }));
 		store.pushRequest(makeRequest({ id: "b", path: "/api/orders", durationMs: 900, createdAt: base }));
 		store.pushRequest(makeRequest({ id: "c", path: "/api/users", durationMs: 500, createdAt: base, statusCode: 500 }));
-		const entries = store.leaderboard("2026-08-12T09:00:00.000Z", 10);
+		const entries = store.leaderboard(1786525200000, 10);
 		expect(entries.length).toBe(2);
 		const orders = entries.find((entry) => entry.path === "/api/orders");
 		expect(orders?.count).toBe(2);
@@ -129,10 +129,10 @@ describe("TelescopeMemoryStore — feature store surfaces", () => {
 
 	it("buckets trends over a window, counting requests and errors", () => {
 		const store = new TelescopeMemoryStore(100);
-		const base = "2026-08-12T10:00:00.000Z";
+		const base = 1786528800000;
 		store.pushRequest(makeRequest({ id: "a", createdAt: base }));
 		store.pushRequest(makeRequest({ id: "b", createdAt: base, statusCode: 500 }));
-		const points = store.trends("2026-08-12T09:00:00.000Z", 24);
+		const points = store.trends(1786525200000, 24);
 		expect(points.length).toBe(24);
 		// `Date.now()` drives the bucket boundaries, so assert on totals across
 		// all buckets (the request lands in whatever the current bucket is).
@@ -152,7 +152,7 @@ describe("TelescopeMemoryStore — feature store surfaces", () => {
 			statusCode: 500,
 			durationMs: 10,
 			reason: "error",
-			firedAt: "2026-08-12T10:00:00.000Z",
+			firedAt: 1786528800000,
 		});
 		const alerts = store.listAlerts(50);
 		expect(alerts.length).toBe(1);

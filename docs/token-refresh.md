@@ -3,7 +3,7 @@ title: "Token Refresh — How It Works"
 description: "Why tokens rotate, the two refresh layers (server-side proxy refresh + client-side 401 refresh), how to observe each one, deployment notes, and common questions."
 order: 3
 author: "Acme Inc."
-lastUpdated: "2026-08-03"
+lastUpdated: 1785715200000
 coverImage: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=1600&q=80"
 ---
 
@@ -317,3 +317,4 @@ two layers don't coordinate across tabs.
 ---
 
 _Last updated: August 3, 2026_
+

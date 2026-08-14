@@ -1,6 +1,6 @@
 import { nanoid } from "nanoid";
 
-import { type TelescopeJobLogEntry, type TelescopeJobStatus, type TelescopeOptions } from "@workspace/shared";
+import { epochMs, type EpochMs, type TelescopeJobLogEntry, type TelescopeJobStatus, type TelescopeOptions } from "@workspace/shared";
 
 import { RequestSpanContext, type SpanStore } from "./request-span-context.js";
 import { TelescopeAlertService } from "./telescope-alert.service.js";
@@ -43,8 +43,8 @@ export class TelescopeJobRecorder {
 
 		const nowMs: number = Date.now();
 		const startedAtMs: number = nowMs - input.durationMs;
-		const startedAt: string = new Date(startedAtMs).toISOString();
-		const finishedAt: string = new Date(nowMs).toISOString();
+		const startedAt: EpochMs = epochMs(startedAtMs);
+		const finishedAt: EpochMs = epochMs(nowMs);
 
 		const spanStore: SpanStore | undefined = RequestSpanContext.getStore();
 		const correlationId: string | null = spanStore?.correlationId ?? null;

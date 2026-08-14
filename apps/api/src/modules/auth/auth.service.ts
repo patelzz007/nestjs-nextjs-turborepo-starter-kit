@@ -1,6 +1,8 @@
 import { ConflictException, ForbiddenException, Injectable, NotFoundException, UnauthorizedException } from "@nestjs/common";
-import type {
-	AdminUserDetail,
+import {
+	epochMs,
+	type AdminUserDetail,
+	type EpochMs,
 	ForgotPasswordInput,
 	ForgotPasswordResponse,
 	LoginInput,
@@ -212,8 +214,8 @@ export class AuthService {
 		// ── Brute-force protection ────────────────────────────────────────
 		// Check BEFORE the outer error block so TypeScript sees the clean
 		// `{...} | null` type (not a narrowed union after `!user ||`).
-		if (user?.lockedUntil && user.lockedUntil > new Date()) {
-			const remainingMs: number = user.lockedUntil.getTime() - Date.now();
+		if (user?.lockedUntil && user.lockedUntil > Date.now()) {
+			const remainingMs: number = Number(user.lockedUntil) - Date.now();
 			const remainingSec: number = Math.max(1, Math.ceil(remainingMs / 1000));
 			const remainingMin: number = Math.ceil(remainingSec / 60);
 			this.authEvents.emitFlow(
@@ -231,7 +233,7 @@ export class AuthService {
 				error: "ACCOUNT_LOCKED",
 				// Structured lockout payload so the client can render a live
 				// "retry in MM:SS" countdown instead of a static message.
-				lockedUntil: user.lockedUntil.toISOString(),
+				lockedUntil: epochMs(Number(user.lockedUntil)),
 				remainingSeconds: remainingSec,
 			});
 		}
@@ -243,13 +245,14 @@ export class AuthService {
 				const MAX_FAILED_ATTEMPTS = 5;
 				const LOCK_DURATION_MS: number = 15 * 60 * 1000; // 15 minutes
 				const shouldLock: boolean = user.failedLoginAttempts + 1 >= MAX_FAILED_ATTEMPTS;
-				const lockedUntil: Date = new Date(Date.now() + LOCK_DURATION_MS);
+				const lockedUntil: EpochMs = epochMs(Date.now() + LOCK_DURATION_MS);
 
 				await this.prisma.user.update({
 					where: { id: user.id },
 					data: {
 						failedLoginAttempts: { increment: 1 },
 						lockedUntil: shouldLock ? lockedUntil : undefined,
+						updatedAt: Date.now(),
 					},
 				});
 
@@ -286,6 +289,7 @@ export class AuthService {
 				data: {
 					failedLoginAttempts: 0,
 					lockedUntil: null,
+					updatedAt: Date.now(),
 				},
 			});
 		}
@@ -293,12 +297,12 @@ export class AuthService {
 		// Get user permissions
 		const userPermissions: UserPermissions = await this.rbacService.getUserPermissions(user.id);
 
-		const isEmailVerified = user.emailVerifiedAt !== null && user.emailVerifiedAt <= new Date();
+		const isEmailVerified = user.emailVerifiedAt !== null && user.emailVerifiedAt <= Date.now();
 		const flatUser = this.buildUserResponse(user, userPermissions, isEmailVerified);
 
 		// Create the refresh token record FIRST to get its ID (used as JWT jti)
 		const expiryMs = parseExpiryToMilliseconds(this.config.jwtRefreshExpiry);
-		const expiresAt = new Date(Date.now() + expiryMs);
+		const expiresAt: EpochMs = epochMs(Date.now() + expiryMs);
 
 		const refreshTokenRecord = await this.prisma.refreshToken.create({
 			data: {
@@ -318,7 +322,7 @@ export class AuthService {
 
 		await this.prisma.refreshToken.update({
 			where: { id: refreshTokenRecord.id },
-			data: { token: hashedRt },
+			data: { token: hashedRt, updatedAt: Date.now() },
 		});
 
 		// Clean up expired tokens for this user
@@ -425,8 +429,8 @@ export class AuthService {
 
 		// Invalidate any existing unused tokens for this user
 		await this.prisma.passwordResetToken.updateMany({
-			where: { userId: user.id, usedAt: null, expiresAt: { gte: new Date() } },
-			data: { expiresAt: new Date() }, // Expire existing tokens immediately
+			where: { userId: user.id, usedAt: null, expiresAt: { gte: Date.now() } },
+			data: { expiresAt: Date.now(), updatedAt: Date.now() }, // Expire existing tokens immediately
 		});
 
 		// Generate a cryptographically random token
@@ -437,7 +441,7 @@ export class AuthService {
 			data: {
 				userId: user.id,
 				token: tokenHash,
-				expiresAt: new Date(Date.now() + 3_600_000), // 1 hour
+				expiresAt: Date.now() + 3_600_000, // 1 hour
 			},
 		});
 
@@ -469,7 +473,7 @@ export class AuthService {
 		const candidates = await this.prisma.passwordResetToken.findMany({
 			where: {
 				usedAt: null,
-				expiresAt: { gte: new Date() },
+				expiresAt: { gte: Date.now() },
 			},
 			select: { id: true, userId: true, token: true },
 		});
@@ -504,19 +508,19 @@ export class AuthService {
 		await this.prisma.$transaction([
 			this.prisma.user.update({
 				where: { id: matchedToken.userId },
-				data: { passwordHash: newPasswordHash },
+				data: { passwordHash: newPasswordHash, updatedAt: Date.now() },
 			}),
 			// Mark the token as used (one-time use)
 			this.prisma.passwordResetToken.update({
 				where: { id: matchedToken.id },
-				data: { usedAt: new Date() },
+				data: { usedAt: Date.now(), updatedAt: Date.now() },
 			}),
 		]);
 
 		// Revoke all existing refresh tokens for this user (force re-login)
 		await this.prisma.refreshToken.updateMany({
 			where: { userId: matchedToken.userId },
-			data: { isDeleted: true, deletedAt: new Date() },
+			data: { isDeleted: true, deletedAt: Date.now(), updatedAt: Date.now() },
 		});
 
 		this.logService.info("Password reset completed", {
@@ -570,7 +574,7 @@ export class AuthService {
 
 		await this.prisma.user.update({
 			where: { email },
-			data: { emailVerifiedAt: new Date() },
+			data: { emailVerifiedAt: Date.now(), updatedAt: Date.now() },
 		});
 
 		this.authEvents.emitFlow(
@@ -634,7 +638,7 @@ export class AuthService {
 		}
 
 		return users.map((u) => {
-			const isEmailVerified: boolean = u.emailVerifiedAt !== null && u.emailVerifiedAt <= new Date();
+			const isEmailVerified: boolean = u.emailVerifiedAt !== null && u.emailVerifiedAt <= Date.now();
 			const roles = rolesByUserId.get(u.id) ?? [];
 			const hasAdminAccess: boolean = u.isSuperAdmin || roles.some((r) => r.name === "SuperAdmin" || r.name === "Admin");
 
@@ -648,12 +652,12 @@ export class AuthService {
 				hasAdminAccess,
 				roles,
 				permissions: [], // Not fetched for list performance; use detail endpoint for full permissions
-				createdAt: u.createdAt.toISOString(),
-				updatedAt: u.updatedAt.toISOString(),
+				createdAt: epochMs(Number(u.createdAt)),
+				updatedAt: epochMs(Number(u.updatedAt)),
 				isDeleted: u.isDeleted,
-				deletedAt: u.deletedAt?.toISOString() ?? null,
+				deletedAt: u.deletedAt !== null ? epochMs(Number(u.deletedAt)) : null,
 				failedLoginAttempts: u.failedLoginAttempts,
-				lockedUntil: u.lockedUntil?.toISOString() ?? null,
+				lockedUntil: u.lockedUntil !== null ? epochMs(Number(u.lockedUntil)) : null,
 			};
 		});
 	}
@@ -678,6 +682,7 @@ export class AuthService {
 			data: {
 				failedLoginAttempts: 0,
 				lockedUntil: null,
+				updatedAt: Date.now(),
 			},
 		});
 
@@ -719,13 +724,13 @@ export class AuthService {
 		if (!user) throw new NotFoundException("User not found");
 
 		const userPermissions: UserPermissions = await this.rbacService.getUserPermissions(userId);
-		const isEmailVerified: boolean = user.emailVerifiedAt !== null && user.emailVerifiedAt <= new Date();
+		const isEmailVerified: boolean = user.emailVerifiedAt !== null && user.emailVerifiedAt <= Date.now();
 		const baseUser: UserResponse = this.buildUserResponse(user, userPermissions, isEmailVerified);
 
 		return {
 			...baseUser,
 			failedLoginAttempts: user.failedLoginAttempts,
-			lockedUntil: user.lockedUntil?.toISOString() ?? null,
+			lockedUntil: user.lockedUntil !== null ? epochMs(Number(user.lockedUntil)) : null,
 		};
 	}
 
@@ -751,7 +756,7 @@ export class AuthService {
 		if (!user) throw new NotFoundException("User not found");
 
 		const userPermissions = await this.rbacService.getUserPermissions(userId);
-		const isEmailVerified = user.emailVerifiedAt !== null && user.emailVerifiedAt <= new Date();
+		const isEmailVerified = user.emailVerifiedAt !== null && user.emailVerifiedAt <= Date.now();
 
 		return this.buildUserResponse(user, userPermissions, isEmailVerified);
 	}
@@ -761,8 +766,8 @@ export class AuthService {
 		await this.prisma.$transaction(async (tx) => {
 			// Soft-delete expired refresh tokens
 			await tx.refreshToken.updateMany({
-				where: { userId, expiresAt: { lt: new Date() } },
-				data: { isDeleted: true, deletedAt: new Date() },
+				where: { userId, expiresAt: { lt: Date.now() } },
+				data: { isDeleted: true, deletedAt: Date.now() },
 			});
 
 			// Limit to 5 most recent tokens per user
@@ -775,7 +780,7 @@ export class AuthService {
 			if (excessTokens.length > 0) {
 				await tx.refreshToken.updateMany({
 					where: { id: { in: excessTokens.map((t) => t.id) } },
-					data: { isDeleted: true, deletedAt: new Date() },
+					data: { isDeleted: true, deletedAt: Date.now() },
 				});
 			}
 		});
@@ -789,7 +794,12 @@ export class AuthService {
 	 * in exactly one place.
 	 */
 	public buildUserResponse(
-		user: Pick<UserResponse, "id" | "email" | "fullName" | "isActive" | "isSuperAdmin"> & { createdAt: Date; updatedAt: Date; isDeleted: boolean; deletedAt: Date | null },
+		user: Pick<UserResponse, "id" | "email" | "fullName" | "isActive" | "isSuperAdmin"> & {
+			createdAt: bigint;
+			updatedAt: bigint;
+			isDeleted: boolean;
+			deletedAt: bigint | null;
+		},
 		userPermissions: UserPermissions,
 		isEmailVerified: boolean,
 	): UserResponse {
@@ -805,10 +815,10 @@ export class AuthService {
 			hasAdminAccess,
 			roles: userPermissions.roles.map(({ id, name, description }) => ({ id, name, description })),
 			permissions: userPermissions.permissions,
-			createdAt: user.createdAt.toISOString(),
-			updatedAt: user.updatedAt.toISOString(),
+			createdAt: epochMs(Number(user.createdAt)),
+			updatedAt: epochMs(Number(user.updatedAt)),
 			isDeleted: user.isDeleted,
-			deletedAt: user.deletedAt?.toISOString() ?? null,
+			deletedAt: user.deletedAt !== null ? epochMs(Number(user.deletedAt)) : null,
 		};
 	}
 }

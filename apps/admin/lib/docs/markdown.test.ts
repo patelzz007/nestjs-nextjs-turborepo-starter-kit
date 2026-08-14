@@ -1,3 +1,4 @@
+import { epochMs } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -5,7 +6,7 @@ import {
 	estimateReadingTime,
 	extractTocHeadings,
 	filterDocSummaries,
-	formatIsoDate,
+	formatEpochDate,
 	headingText,
 	normalizeSearchQuery,
 	parseMarkdownFile,
@@ -74,14 +75,14 @@ describe("stripFirstHeading", () => {
 describe("parseMarkdownFile", () => {
 	it("parses all fields from YAML frontmatter", () => {
 		const source =
-			'---\ntitle: "Prisma & Database"\ndescription: How to run db commands\norder: 3\nauthor: "Acme Inc."\nlastUpdated: "2026-08-02"\ncoverImage: "https://images.unsplash.com/photo-123?auto=format&fit=crop&w=1600&q=80"\n---\n\n# Heading\n\nBody text.';
+			'---\ntitle: "Prisma & Database"\ndescription: How to run db commands\norder: 3\nauthor: "Acme Inc."\nlastUpdated: 1785628800000\ncoverImage: "https://images.unsplash.com/photo-123?auto=format&fit=crop&w=1600&q=80"\n---\n\n# Heading\n\nBody text.';
 		const parsed = parseMarkdownFile(source);
 
 		expect(parsed.frontmatter.title).toBe("Prisma & Database");
 		expect(parsed.frontmatter.description).toBe("How to run db commands");
 		expect(parsed.frontmatter.order).toBe(3);
 		expect(parsed.frontmatter.author).toBe("Acme Inc.");
-		expect(parsed.frontmatter.lastUpdated).toBe("2026-08-02");
+		expect(parsed.frontmatter.lastUpdated).toBe(1785628800000);
 		expect(parsed.frontmatter.coverImage).toBe("https://images.unsplash.com/photo-123?auto=format&fit=crop&w=1600&q=80");
 		expect(parsed.body).toBe("# Heading\n\nBody text.");
 	});
@@ -161,13 +162,9 @@ describe("estimateReadingTime", () => {
 	});
 });
 
-describe("formatIsoDate", () => {
-	it("formats an ISO date as 'Aug 2, 2026'", () => {
-		expect(formatIsoDate("2026-08-02")).toBe("Aug 2, 2026");
-	});
-
-	it("falls back to the raw string when unparseable", () => {
-		expect(formatIsoDate("not-a-date")).toBe("not-a-date");
+describe("formatEpochDate", () => {
+	it("formats an epoch-ms timestamp as 'Aug 2, 2026' (UTC calendar day, timezone-independent)", () => {
+		expect(formatEpochDate(epochMs(1785628800000))).toBe("Aug 2, 2026");
 	});
 });
 
@@ -195,7 +192,7 @@ describe("integration with the real docs/ folder", () => {
 				expect(parsed.frontmatter.author.length, file).toBeGreaterThan(0);
 			}
 			if (parsed.frontmatter.lastUpdated !== undefined) {
-				expect(parsed.frontmatter.lastUpdated.length, file).toBeGreaterThan(0);
+				expect(Number.isInteger(parsed.frontmatter.lastUpdated), file).toBe(true);
 			}
 			if (parsed.frontmatter.coverImage !== undefined) {
 				expect(parsed.frontmatter.coverImage, file).toMatch(/^https:\/\//);

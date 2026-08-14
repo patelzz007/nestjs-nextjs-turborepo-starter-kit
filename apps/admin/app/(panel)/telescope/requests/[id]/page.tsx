@@ -43,6 +43,7 @@ import { SnippetMenu } from "@/components/telescope/snippet-menu";
 import { SqlList } from "@/components/telescope/sql-list";
 import { Timeline } from "@/components/telescope/timeline";
 import { buildRequestSnippet, durationLabel, formatTime, snippetFormatLabel, statusTone, type RequestSnippetFormat } from "@/lib/telescope";
+import { formatTimeOfDay24 } from "@/lib/dates";
 
 /** Key/value panel (headers) — one table, no per-row hooks. */
 function KeyValueTable({
@@ -510,7 +511,7 @@ export default function TelescopeRequestDetailPage(): React.JSX.Element {
 						    and static per request (no stable id); the index is the legitimate key. */}
 						{request.logs.map((log, index) => (
 							<div key={index} className="flex items-baseline gap-2 px-2 py-0.5">
-								<span className="shrink-0 text-muted-foreground">{log.timestamp.slice(11, 19)}</span>
+								<span className="shrink-0 text-muted-foreground">{formatTimeOfDay24(log.timestamp)}</span>
 								<span
 									className={`w-10 shrink-0 font-semibold uppercase ${
 										log.level === "error"

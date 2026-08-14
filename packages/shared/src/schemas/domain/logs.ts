@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { EpochMsSchema } from "../api/common";
+
 /**
  * Valid log levels supported by the logging system.
  */
@@ -23,8 +25,8 @@ export const LogEntrySchema = z.object({
 	durationMs: z.number().nullable(),
 	errorGroup: z.string().nullable(),
 	tags: z.array(z.string()),
-	timestamp: z.string(),
-	createdAt: z.string(),
+	timestamp: EpochMsSchema,
+	createdAt: EpochMsSchema,
 });
 
 export type LogEntry = z.output<typeof LogEntrySchema>;
@@ -62,8 +64,8 @@ export const LogQuerySchema = z.object({
 	correlationId: z.string().optional(),
 	errorGroup: z.string().optional(),
 	tags: z.string().optional(),
-	from: z.string().optional(),
-	to: z.string().optional(),
+	from: EpochMsSchema.optional(),
+	to: EpochMsSchema.optional(),
 	page: z.coerce.number().int().min(1).optional().default(1),
 	limit: z.coerce.number().int().min(1).max(100).optional().default(20),
 });
@@ -71,8 +73,8 @@ export const LogQuerySchema = z.object({
 export type LogQuery = z.output<typeof LogQuerySchema>;
 
 export const LogStatsQuerySchema = z.object({
-	from: z.string().optional(),
-	to: z.string().optional(),
+	from: EpochMsSchema.optional(),
+	to: EpochMsSchema.optional(),
 });
 
 export type LogStatsQuery = z.output<typeof LogStatsQuerySchema>;
@@ -89,8 +91,8 @@ export type LogStats = z.output<typeof LogStatsSchema>;
 
 export const LogAggregationQuerySchema = z.object({
 	granularity: z.enum(["hour", "day", "week"]).optional().default("hour"),
-	from: z.string().optional(),
-	to: z.string().optional(),
+	from: EpochMsSchema.optional(),
+	to: EpochMsSchema.optional(),
 });
 
 export type LogAggregationQuery = z.output<typeof LogAggregationQuerySchema>;
@@ -104,8 +106,8 @@ export const AggregatedLogSchema = z.object({
 export type AggregatedLog = z.output<typeof AggregatedLogSchema>;
 
 export const ErrorGroupQuerySchema = z.object({
-	from: z.string().optional(),
-	to: z.string().optional(),
+	from: EpochMsSchema.optional(),
+	to: EpochMsSchema.optional(),
 	minCount: z.coerce.number().int().min(1).optional().default(2),
 });
 
@@ -115,8 +117,8 @@ export const ErrorGroupSchema = z.object({
 	errorGroup: z.string(),
 	message: z.string(),
 	count: z.number(),
-	firstOccurrence: z.string(),
-	lastOccurrence: z.string(),
+	firstOccurrence: EpochMsSchema,
+	lastOccurrence: EpochMsSchema,
 });
 
 export type ErrorGroup = z.output<typeof ErrorGroupSchema>;
@@ -129,8 +131,8 @@ export const LogExportQuerySchema = z.object({
 	userId: z.string().optional(),
 	search: z.string().optional(),
 	tags: z.string().optional(),
-	from: z.string().optional(),
-	to: z.string().optional(),
+	from: EpochMsSchema.optional(),
+	to: EpochMsSchema.optional(),
 	limit: z.coerce.number().int().min(1).max(10000).optional().default(1000),
 });
 
@@ -141,8 +143,8 @@ export const LogBulkDeleteQuerySchema = z.object({
 	context: z.string().optional(),
 	userId: z.string().optional(),
 	tags: z.string().optional(),
-	from: z.string().optional(),
-	to: z.string().optional(),
+	from: EpochMsSchema.optional(),
+	to: EpochMsSchema.optional(),
 });
 
 export type LogBulkDeleteQuery = z.output<typeof LogBulkDeleteQuerySchema>;
@@ -154,8 +156,8 @@ export const LogEmailReportQuerySchema = z.object({
 	userId: z.string().optional(),
 	search: z.string().optional(),
 	tags: z.string().optional(),
-	from: z.string().optional(),
-	to: z.string().optional(),
+	from: EpochMsSchema.optional(),
+	to: EpochMsSchema.optional(),
 	limit: z.coerce.number().int().min(1).max(10000).optional().default(1000),
 });
 

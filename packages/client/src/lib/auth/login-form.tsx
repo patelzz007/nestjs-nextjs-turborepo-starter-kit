@@ -17,6 +17,7 @@ import { PasswordInput } from "@workspace/ui/components/form/password-input";
 import { PasswordStrengthMeter } from "@workspace/ui/components/form/password-strength-meter";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import type { EpochMs } from "@workspace/shared";
 import { useCallback, useMemo, useState, type JSX, type ReactNode } from "react";
 
 import { isAccountLockedError, resolveAuthErrorMessage } from "./auth-errors";
@@ -66,7 +67,7 @@ export function LoginForm({
 	const [isLoading, setIsLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	// Set when the API answers ACCOUNT_LOCKED — drives the live countdown (#27).
-	const [lockout, setLockout] = useState<{ readonly remainingSeconds: number; readonly lockedUntil: string } | null>(null);
+	const [lockout, setLockout] = useState<{ readonly remainingSeconds: number; readonly lockedUntil: EpochMs } | null>(null);
 	const router = useRouter();
 	const { api, login: authLogin } = useAuth();
 

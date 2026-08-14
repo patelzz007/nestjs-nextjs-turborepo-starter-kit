@@ -3,7 +3,7 @@ title: "Getting Started — A-to-Z Setup Guide"
 description: "From an empty laptop to a running monorepo: prerequisites, env setup, database bootstrap, and all three apps."
 order: 1
 author: "Acme Inc."
-lastUpdated: "2026-08-11"
+lastUpdated: 1786406400000
 coverImage: "https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&w=1600&q=80"
 ---
 
@@ -1146,3 +1146,4 @@ A: 1) Schema in `packages/shared/src/schemas/<domain>.ts`. 2) DTO with
 ---
 
 _Last updated: August 2, 2026_
+

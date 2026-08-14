@@ -9,6 +9,7 @@
 // technical / inconsistent). This catalog is the single place the apps own the
 // wording, keyed by the stable code.
 
+import type { EpochMs } from "@workspace/shared";
 import { z } from "zod";
 
 import { AuthErrorCodeSchema } from "@workspace/shared";
@@ -103,8 +104,8 @@ export function resolveAuthErrorMessage(error: unknown, locale: Locale = DEFAULT
  * payload — the login form uses this to render a live countdown instead of the
  * static message.
  */
-export function isAccountLockedError(error: unknown): error is ApiError & { readonly lockedUntil: string; readonly remainingSeconds: number } {
+export function isAccountLockedError(error: unknown): error is ApiError & { readonly lockedUntil: EpochMs; readonly remainingSeconds: number } {
 	if (!(error instanceof ApiError)) return false;
 	if (error.error !== "ACCOUNT_LOCKED") return false;
-	return typeof error.lockedUntil === "string" && typeof error.remainingSeconds === "number";
+	return typeof error.lockedUntil === "number" && typeof error.remainingSeconds === "number";
 }

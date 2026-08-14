@@ -1,6 +1,6 @@
 import { Controller, Get } from "@nestjs/common";
 import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
-import { SessionStatusSchema, type SessionStatus } from "@workspace/shared";
+import { SessionStatusSchema, epochMs, nowEpochMs, type EpochMs, type SessionStatus } from "@workspace/shared";
 
 import { ApiErrorResponseDto } from "../../common/dto/api-response.dto.js";
 import { createWrappedDto } from "../../common/dto/response-wrapper.js";
@@ -37,14 +37,14 @@ export class SessionStatusController {
 		// `exp` is the JWT expiry in whole seconds since the Unix epoch.
 		// When the token carries no expiry, surface null rather than a misleading
 		// "expires now" instant — the client renders "Token expiry unknown".
-		const expiresAt: string | null = user.exp !== undefined ? new Date(user.exp * 1000).toISOString() : null;
+		const expiresAt: EpochMs | null = user.exp !== undefined ? epochMs(user.exp * 1000) : null;
 
 		return {
 			userId: user.sub,
 			email: user.email,
 			fullName: user.fullName,
 			expiresAt,
-			checkedAt: new Date().toISOString(),
+			checkedAt: nowEpochMs(),
 		};
 	}
 }

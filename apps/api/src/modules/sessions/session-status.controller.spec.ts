@@ -40,9 +40,10 @@ describe("SessionStatusController", () => {
 			expect(session.userId).toBe("user-123");
 			expect(session.email).toBe("admin@example.com");
 			expect(session.fullName).toBe("Alex Morgan");
-			expect(session.expiresAt).toBe(new Date(payload.exp! * 1000).toISOString());
-			// checkedAt is produced by the server clock — must parse as a valid date.
-			expect(Number.isNaN(new Date(session.checkedAt).getTime())).toBe(false);
+			expect(session.expiresAt).toBe(payload.exp! * 1000);
+			// checkedAt is produced by the server clock — must be a plausible epoch ms.
+			expect(session.checkedAt).toBeGreaterThan(0);
+			expect(Number.isSafeInteger(session.checkedAt)).toBe(true);
 		});
 
 		it("returns null expiresAt when the token has no exp claim", () => {

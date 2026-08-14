@@ -2,6 +2,9 @@ import { Inject, Injectable } from "@nestjs/common";
 import { nanoid } from "nanoid";
 
 import {
+	epochMs,
+	nowEpochMs,
+	type EpochMs,
 	type RequestLogEntry,
 	type TelescopeAlertEntry,
 	type TelescopeAlertReason,
@@ -79,7 +82,7 @@ export class TelescopeAlertService {
 			statusCode: entry.statusCode,
 			durationMs: entry.durationMs,
 			reason,
-			firedAt: new Date().toISOString(),
+			firedAt: nowEpochMs(),
 			status: "open",
 			snoozedUntil: null,
 		};
@@ -126,7 +129,7 @@ export class TelescopeAlertService {
 			statusCode: null,
 			durationMs: job.durationMs ?? 0,
 			reason: "job",
-			firedAt: new Date().toISOString(),
+			firedAt: nowEpochMs(),
 			status: "open",
 			snoozedUntil: null,
 		};
@@ -146,17 +149,17 @@ export class TelescopeAlertService {
 
 	/** Improvement 5 — snooze an alert until now + `minutes`. */
 	public snooze(id: string, minutes: number): TelescopeAlertEntry | null {
-		const until: string = new Date(Date.now() + minutes * 60 * 1000).toISOString();
+		const until: EpochMs = epochMs(Date.now() + minutes * 60 * 1000);
 		return this.setStatus(id, "snoozed", until);
 	}
 
-	private setStatus(id: string, status: TelescopeAlertStatus, snoozedUntil: string | null): TelescopeAlertEntry | null {
+	private setStatus(id: string, status: TelescopeAlertStatus, snoozedUntil: number | null): TelescopeAlertEntry | null {
 		const current: TelescopeAlertEntry | null = this.store.listAlerts(200).find((candidate: TelescopeAlertEntry): boolean => candidate.id === id) ?? null;
 		if (current === null) {
 			return null;
 		}
 		this.store.setAlertStatus(id, status, snoozedUntil);
-		return { ...current, status, snoozedUntil };
+		return { ...current, status, snoozedUntil: snoozedUntil !== null ? epochMs(snoozedUntil) : null };
 	}
 
 	/** Old open alerts on the same route+reason flip to acknowledged. */
@@ -244,7 +247,7 @@ export class TelescopeAlertService {
 					durationMs,
 					attempt,
 					error: null,
-					createdAt: new Date().toISOString(),
+					createdAt: nowEpochMs(),
 				};
 			}
 			return {
@@ -255,7 +258,7 @@ export class TelescopeAlertService {
 				durationMs,
 				attempt,
 				error: `HTTP ${String(response.status)}`,
-				createdAt: new Date().toISOString(),
+				createdAt: nowEpochMs(),
 			};
 		} catch (caught) {
 			const durationMs: number = Math.round(performance.now() - start);
@@ -267,7 +270,7 @@ export class TelescopeAlertService {
 				durationMs,
 				attempt,
 				error: caught instanceof Error ? caught.message : String(caught),
-				createdAt: new Date().toISOString(),
+				createdAt: nowEpochMs(),
 			};
 		}
 	}

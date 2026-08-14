@@ -31,7 +31,7 @@ export const SavedFilterSchema = z
 		id: z.string(),
 		name: z.string().min(1).max(60),
 		filter: SavedFilterValueSchema,
-		createdAt: z.string(),
+		createdAt: z.number().int().nonnegative(),
 	})
 	.strict();
 

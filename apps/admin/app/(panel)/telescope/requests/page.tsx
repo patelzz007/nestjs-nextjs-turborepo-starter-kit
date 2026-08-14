@@ -149,7 +149,7 @@ function downloadJsonRows(rows: readonly RequestLogSummary[]): void {
 	const url: string = URL.createObjectURL(blob);
 	const link: HTMLAnchorElement = document.createElement("a");
 	link.href = url;
-	link.download = `telescope-requests-${new Date().toISOString().slice(0, 19).replaceAll(":", "-")}.json`;
+	link.download = `telescope-requests-${String(Date.now())}.json`;
 	document.body.appendChild(link);
 	link.click();
 	link.remove();
@@ -420,7 +420,7 @@ function RequestsContent(): React.JSX.Element {
 					.slice(0, 24)}`,
 				name,
 				filter,
-				createdAt: new Date().toISOString(),
+				createdAt: Date.now(),
 			}),
 		);
 		toast.success("Filter saved.");

@@ -14,10 +14,10 @@ import { CartesianGrid, Line, LineChart, XAxis, YAxis, Tooltip, ResponsiveContai
 
 import type { TelescopeTrendPoint } from "@workspace/shared";
 
-const HOUR_FORMATTER: Intl.DateTimeFormat = new Intl.DateTimeFormat(undefined, { hour: "2-digit", minute: "2-digit" });
+import { formatTimeOfDay } from "@/lib/dates";
 
-function bucketLabel(iso: string): string {
-	return HOUR_FORMATTER.format(new Date(iso));
+function bucketLabel(ms: number): string {
+	return formatTimeOfDay(ms);
 }
 
 function ChartTooltip({
@@ -25,7 +25,7 @@ function ChartTooltip({
 	payload,
 }: {
 	readonly active?: boolean;
-	readonly payload?: readonly { readonly payload: { readonly t: string; readonly errorRatePct: number; readonly requests: number; readonly errors: number } }[];
+	readonly payload?: readonly { readonly payload: { readonly t: number; readonly errorRatePct: number; readonly requests: number; readonly errors: number } }[];
 }): React.JSX.Element | null {
 	if (!active || payload === undefined || payload.length === 0) {
 		return null;

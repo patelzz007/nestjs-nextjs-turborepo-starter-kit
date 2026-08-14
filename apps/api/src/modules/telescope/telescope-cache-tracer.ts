@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 
-import { type TelescopeCacheOp, type TelescopeJsonValue } from "@workspace/shared";
+import { nowEpochMs, type TelescopeCacheOp, type TelescopeJsonValue } from "@workspace/shared";
 
 import { RequestSpanContext } from "./request-span-context.js";
 
@@ -86,7 +86,7 @@ export class TelescopeCacheTracer {
 		if (spanStore?.captured !== true) {
 			return;
 		}
-		spanStore.cacheOps.push({ ...op, at: new Date().toISOString() });
+		spanStore.cacheOps.push({ ...op, at: nowEpochMs() });
 	}
 
 	/** Cache keys can be long — keep the stored key readable. */

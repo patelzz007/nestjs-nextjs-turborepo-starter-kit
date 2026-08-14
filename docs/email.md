@@ -3,7 +3,7 @@ title: "Email Template System"
 description: "The 40 must-have items for the Resend-powered transactional email template system — each grounded in the current code."
 order: 13
 author: "Acme Inc."
-lastUpdated: "2026-08-11"
+lastUpdated: 1786406400000
 coverImage: "https://images.unsplash.com/photo-1596526131083-e8c633c948d2?auto=format&fit=crop&w=1600&q=80"
 ---
 
@@ -644,3 +644,4 @@ email" checklist at the bottom of this file.
    `docs/images/email/`).
 
 _Last updated: 2026-08-11._
+

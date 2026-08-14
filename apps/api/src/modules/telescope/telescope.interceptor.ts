@@ -9,6 +9,8 @@ import { z } from "zod";
 import {
 	TelescopeJsonValueSchema,
 	TelescopePiiCategorySchema,
+	nowEpochMs,
+	type EpochMs,
 	type ExceptionLogEntry,
 	type RequestLogEntry,
 	type TelescopeEnvironment,
@@ -193,7 +195,7 @@ export class TelescopeInterceptor implements NestInterceptor {
 			// Improvement 4: N+1 warnings are computed lazily on the SQL endpoint; the
 			// summary column is populated by the store on first detect.
 			n1WarningCount: 0,
-			createdAt: new Date().toISOString(),
+			createdAt: nowEpochMs(),
 		};
 
 		if (errorInfo !== undefined) {
@@ -283,7 +285,7 @@ export class TelescopeInterceptor implements NestInterceptor {
 		const firstFrame: string = errorInfo.stack !== null ? errorInfo.stack.split("\n").slice(1, 2).join("") : "";
 		const errorGroup: string = createHash("sha256").update(`${errorInfo.name}:${errorInfo.message}:${firstFrame}`).digest("hex").slice(0, 16);
 
-		const nowIso: string = new Date().toISOString();
+		const nowEpoch: EpochMs = nowEpochMs();
 		return {
 			id: nanoid(),
 			correlationId: requestEntry.correlationId,
@@ -296,11 +298,11 @@ export class TelescopeInterceptor implements NestInterceptor {
 			method: requestEntry.method,
 			userId: requestEntry.userId,
 			occurrences: 1,
-			createdAt: nowIso,
+			createdAt: nowEpoch,
 			// Improvement 15: first/last seen are filled at the boundary; the
 			// store bumps lastSeenAt + occurrences on repeats of the same group.
-			firstSeenAt: nowIso,
-			lastSeenAt: nowIso,
+			firstSeenAt: nowEpoch,
+			lastSeenAt: nowEpoch,
 			// Improvement 6: new groups start open; the store re-opens resolved/
 			// ignored groups when the same error recurs.
 			status: "open",

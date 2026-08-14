@@ -26,7 +26,7 @@ function makeRequest(overrides: Partial<RequestLogEntry>): RequestLogEntry {
 		piiFlags: [],
 		starred: false,
 		n1WarningCount: 0,
-		createdAt: "2026-08-12T10:00:00.000Z",
+		createdAt: 1786528800000,
 		...overrides,
 	};
 }
@@ -40,7 +40,7 @@ function makeQuery(overrides: Partial<QueryLogEntry>): QueryLogEntry {
 		query: "SELECT * FROM orders",
 		params: null,
 		durationMs: 40,
-		createdAt: "2026-08-12T10:00:01.000Z",
+		createdAt: 1786528801000,
 		...overrides,
 	};
 }
@@ -66,8 +66,8 @@ describe("TelescopeMemoryStore", () => {
 
 	it("lists newest-first by default with pagination totals", () => {
 		const store = new TelescopeMemoryStore(100);
-		store.pushRequest(makeRequest({ id: "old", durationMs: 10, createdAt: "2026-08-12T10:00:00.000Z" }));
-		store.pushRequest(makeRequest({ id: "new", durationMs: 900, createdAt: "2026-08-12T10:05:00.000Z" }));
+		store.pushRequest(makeRequest({ id: "old", durationMs: 10, createdAt: 1786528800000 }));
+		store.pushRequest(makeRequest({ id: "new", durationMs: 900, createdAt: 1786529100000 }));
 		const page = store.listRequests({ page: 1, pageSize: 1, sort: "newest" });
 		expect(page.total).toBe(2);
 		expect(page.items.map((item) => item.id)).toEqual(["new"]);
@@ -91,7 +91,7 @@ describe("TelescopeMemoryStore", () => {
 		store.pushRequest(makeRequest({}));
 		store.pushQuery(makeQuery({}));
 		store.pushQuery(makeQuery({ id: "query-2", correlationId: "other" }));
-		store.pushDump({ id: "dump-1", name: "cart.items", value: [1, 2], correlationId: "corr-1", createdAt: "2026-08-12T10:00:02.000Z" });
+		store.pushDump({ id: "dump-1", name: "cart.items", value: [1, 2], correlationId: "corr-1", createdAt: 1786528802000 });
 		expect(store.listQueriesByCorrelationId("corr-1").map((q) => q.id)).toEqual(["query-1"]);
 		expect(store.listDumpsByCorrelationId("corr-1").map((d) => d.id)).toEqual(["dump-1"]);
 	});
@@ -99,11 +99,11 @@ describe("TelescopeMemoryStore", () => {
 	it("computes overview stats over the range window", () => {
 		const store = new TelescopeMemoryStore(100);
 		// Within the last 15 minutes:
-		store.pushRequest(makeRequest({ id: "r1", durationMs: 100, statusCode: 200, createdAt: "2026-08-12T10:00:00.000Z" }));
-		store.pushRequest(makeRequest({ id: "r2", durationMs: 200, statusCode: 200, createdAt: "2026-08-12T10:01:00.000Z" }));
-		store.pushRequest(makeRequest({ id: "r3", durationMs: 700, statusCode: 500, createdAt: "2026-08-12T10:02:00.000Z" }));
-		store.pushQuery(makeQuery({ durationMs: 900, createdAt: "2026-08-12T10:01:30.000Z" }));
-		store.pushQuery(makeQuery({ id: "query-fast", durationMs: 10, createdAt: "2026-08-12T10:01:31.000Z" }));
+		store.pushRequest(makeRequest({ id: "r1", durationMs: 100, statusCode: 200, createdAt: 1786528800000 }));
+		store.pushRequest(makeRequest({ id: "r2", durationMs: 200, statusCode: 200, createdAt: 1786528860000 }));
+		store.pushRequest(makeRequest({ id: "r3", durationMs: 700, statusCode: 500, createdAt: 1786528920000 }));
+		store.pushQuery(makeQuery({ durationMs: 900, createdAt: 1786528890000 }));
+		store.pushQuery(makeQuery({ id: "query-fast", durationMs: 10, createdAt: 1786528891000 }));
 		store.pushException({
 			id: "ex-1",
 			correlationId: "corr-1",
@@ -116,7 +116,7 @@ describe("TelescopeMemoryStore", () => {
 			method: "POST",
 			userId: null,
 			occurrences: 1,
-			createdAt: "2026-08-12T10:01:00.000Z",
+			createdAt: 1786528860000,
 		});
 		store.pushException({
 			id: "ex-2",
@@ -130,10 +130,10 @@ describe("TelescopeMemoryStore", () => {
 			method: "POST",
 			userId: null,
 			occurrences: 1,
-			createdAt: "2026-08-12T10:01:05.000Z",
+			createdAt: 1786528865000,
 		});
 
-		const stats = store.overviewStats("2026-08-12T09:50:00.000Z");
+		const stats = store.overviewStats(1786528200000);
 		expect(stats.requests).toBe(3);
 		expect(stats.avgDurationMs).toBeCloseTo(333.33, 0);
 		expect(stats.errorCount).toBe(1);
@@ -147,13 +147,13 @@ describe("TelescopeMemoryStore", () => {
 
 	it("buckets the traffic time-series across 24 points and counts status classes", () => {
 		const store = new TelescopeMemoryStore(100);
-		store.pushRequest(makeRequest({ id: "r1", durationMs: 100, statusCode: 200, createdAt: "2026-08-12T10:00:00.000Z" }));
-		store.pushRequest(makeRequest({ id: "r2", durationMs: 200, statusCode: 302, createdAt: "2026-08-12T10:01:00.000Z" }));
-		store.pushRequest(makeRequest({ id: "r3", durationMs: 700, statusCode: 500, createdAt: "2026-08-12T10:02:00.000Z" }));
-		store.pushRequest(makeRequest({ id: "r4", durationMs: 50, statusCode: 404, createdAt: "2026-08-12T10:03:00.000Z" }));
-		store.pushRequest(makeRequest({ id: "r5", durationMs: 10, statusCode: null, createdAt: "2026-08-12T10:04:00.000Z" }));
+		store.pushRequest(makeRequest({ id: "r1", durationMs: 100, statusCode: 200, createdAt: 1786528800000 }));
+		store.pushRequest(makeRequest({ id: "r2", durationMs: 200, statusCode: 302, createdAt: 1786528860000 }));
+		store.pushRequest(makeRequest({ id: "r3", durationMs: 700, statusCode: 500, createdAt: 1786528920000 }));
+		store.pushRequest(makeRequest({ id: "r4", durationMs: 50, statusCode: 404, createdAt: 1786528980000 }));
+		store.pushRequest(makeRequest({ id: "r5", durationMs: 10, statusCode: null, createdAt: 1786529040000 }));
 
-		const stats = store.overviewStats("2026-08-12T09:50:00.000Z");
+		const stats = store.overviewStats(1786528200000);
 
 		// Fixed 24 buckets; every request lands somewhere in range (sums must
 		// match the raw counts), and all bucket counts are non-negative.
@@ -170,8 +170,8 @@ describe("TelescopeMemoryStore", () => {
 
 	it("treats out-of-range requests as absent from the overview", () => {
 		const store = new TelescopeMemoryStore(100);
-		store.pushRequest(makeRequest({ createdAt: "2026-08-10T10:00:00.000Z" }));
-		const stats = store.overviewStats("2026-08-12T09:50:00.000Z");
+		store.pushRequest(makeRequest({ createdAt: 1786356000000 }));
+		const stats = store.overviewStats(1786528200000);
 		expect(stats.requests).toBe(0);
 		expect(stats.traffic).toHaveLength(24);
 		expect(stats.traffic.every((point): boolean => point.requests === 0)).toBe(true);
@@ -217,9 +217,9 @@ describe("TelescopeMemoryStore", () => {
 
 	it("aggregates repeats of the same errorGroup into one entry", () => {
 		const store = new TelescopeMemoryStore(100);
-		store.pushException(makeException({ id: "e1", errorGroup: "g1", createdAt: "2026-08-12T10:00:00.000Z" }));
-		store.pushException(makeException({ id: "e2", errorGroup: "g1", createdAt: "2026-08-12T10:01:00.000Z" }));
-		store.pushException(makeException({ id: "e3", errorGroup: "g2", createdAt: "2026-08-12T10:02:00.000Z" }));
+		store.pushException(makeException({ id: "e1", errorGroup: "g1", createdAt: 1786528800000 }));
+		store.pushException(makeException({ id: "e2", errorGroup: "g1", createdAt: 1786528860000 }));
+		store.pushException(makeException({ id: "e3", errorGroup: "g2", createdAt: 1786528920000 }));
 
 		const list = store.listExceptions({ page: 1, pageSize: 10 });
 		expect(list.total).toBe(2);
@@ -227,8 +227,8 @@ describe("TelescopeMemoryStore", () => {
 		const groupOne = list.items.find((entry) => entry.errorGroup === "g1");
 		expect(groupOne?.occurrences).toBe(2);
 		expect(groupOne?.id).toBe("e1"); // first id wins
-		expect(groupOne?.firstSeenAt).toBe("2026-08-12T10:00:00.000Z");
-		expect(groupOne?.lastSeenAt).toBe("2026-08-12T10:01:00.000Z");
+		expect(groupOne?.firstSeenAt).toBe(1786528800000);
+		expect(groupOne?.lastSeenAt).toBe(1786528860000);
 	});
 
 	// ── Improvement 4: retention pruning ─────────────────────────────
@@ -237,8 +237,8 @@ describe("TelescopeMemoryStore", () => {
 		// Fixture timestamps are relative to the real clock so the test is not
 		// flaky (the window is computed against Date.now()).
 		const now: number = Date.now();
-		const twoHoursAgo: string = new Date(now - 2 * 60 * 60 * 1000).toISOString();
-		const tenMinutesAgo: string = new Date(now - 10 * 60 * 1000).toISOString();
+		const twoHoursAgo: number = now - 2 * 60 * 60 * 1000;
+		const tenMinutesAgo: number = now - 10 * 60 * 1000;
 
 		const store = new TelescopeMemoryStore(100);
 		store.pushRequest(makeRequest({ id: "old", correlationId: "co", createdAt: twoHoursAgo }));
@@ -337,11 +337,14 @@ describe("TelescopeMemoryStore", () => {
 		});
 
 		it("aggregates per-user activity (feature 3)", () => {
+			// Timestamps are relative to the real clock so the 24h window (which
+			// is computed against Date.now()) always covers the fixtures.
+			const now: number = Date.now();
 			const store = new TelescopeMemoryStore(100);
-			store.pushRequest(makeRequest({ id: "r1", userId: "u1", durationMs: 100, statusCode: 500, createdAt: "2026-08-13T10:00:00.000Z" }));
-			store.pushRequest(makeRequest({ id: "r2", userId: "u1", durationMs: 300, statusCode: 200, createdAt: "2026-08-13T10:01:00.000Z" }));
-			store.pushRequest(makeRequest({ id: "r3", userId: "u2", durationMs: 50, statusCode: 200, createdAt: "2026-08-13T10:02:00.000Z" }));
-			store.pushRequest(makeRequest({ id: "r4", userId: null, durationMs: 10, createdAt: "2026-08-13T10:03:00.000Z" }));
+			store.pushRequest(makeRequest({ id: "r1", userId: "u1", durationMs: 100, statusCode: 500, createdAt: now - 3 * 60_000 }));
+			store.pushRequest(makeRequest({ id: "r2", userId: "u1", durationMs: 300, statusCode: 200, createdAt: now - 2 * 60_000 }));
+			store.pushRequest(makeRequest({ id: "r3", userId: "u2", durationMs: 50, statusCode: 200, createdAt: now - 60_000 }));
+			store.pushRequest(makeRequest({ id: "r4", userId: null, durationMs: 10, createdAt: now - 30_000 }));
 
 			const result = store.listUsers({ page: 1, pageSize: 10, range: "24h", sort: "count" });
 			const u1 = result.items.find((entry) => entry.userId === "u1");
@@ -359,7 +362,7 @@ describe("TelescopeMemoryStore", () => {
 			const store = new TelescopeMemoryStore(100);
 			store.pushRequest(makeRequest({ id: "r1" }));
 			store.pushRequest(makeRequest({ id: "r2" }));
-			store.setAnnotation("r1", { starred: true, comment: "", updatedAt: "2026-08-13T10:00:00.000Z" });
+			store.setAnnotation("r1", { starred: true, comment: "", updatedAt: 1786615200000 });
 
 			const starred = store.listRequests({ page: 1, pageSize: 10, starred: "true" });
 			expect(starred.items.map((entry) => entry.id)).toEqual(["r1"]);
@@ -381,7 +384,7 @@ describe("TelescopeMemoryStore", () => {
 				durationMs: 42,
 				attempt: 0,
 				error: null,
-				createdAt: "2026-08-13T10:00:00.000Z",
+				createdAt: 1786615200000,
 			};
 			store.pushWebhookDelivery(delivery);
 			expect(store.listWebhookDeliveries(10).map((entry) => entry.id)).toEqual(["d1"]);
@@ -389,12 +392,12 @@ describe("TelescopeMemoryStore", () => {
 
 		it("includes errorRatePct in the leaderboard (feature 15)", () => {
 			const store = new TelescopeMemoryStore(100);
-			const now: string = new Date().toISOString();
+			const now: number = Date.now();
 			store.pushRequest(makeRequest({ id: "r1", method: "GET", path: "/api/x", durationMs: 100, statusCode: 500, createdAt: now }));
 			store.pushRequest(makeRequest({ id: "r2", method: "GET", path: "/api/x", durationMs: 100, statusCode: 200, createdAt: now }));
 
-			const fromIso: string = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-			const entries = store.leaderboard(fromIso, 10);
+			const fromEpoch: number = Date.now() - 60 * 60 * 1000;
+			const entries = store.leaderboard(fromEpoch, 10);
 			expect(entries[0]?.errorRatePct).toBe(50);
 		});
 
@@ -408,7 +411,7 @@ describe("TelescopeMemoryStore", () => {
 				payloadSize: 0,
 				error: null,
 				correlationId: null,
-				enqueuedAt: "2026-08-13T10:00:00.000Z",
+				enqueuedAt: 1786615200000,
 				startedAt: null,
 				finishedAt: null,
 			});
@@ -420,7 +423,7 @@ describe("TelescopeMemoryStore", () => {
 				payloadSize: 0,
 				error: null,
 				correlationId: null,
-				enqueuedAt: "2026-08-13T10:01:00.000Z",
+				enqueuedAt: 1786615260000,
 				startedAt: null,
 				finishedAt: null,
 			});
@@ -445,9 +448,9 @@ function makeException(overrides: Partial<ExceptionLogEntry>): ExceptionLogEntry
 		method: "GET",
 		userId: null,
 		occurrences: 1,
-		createdAt: "2026-08-12T10:00:00.000Z",
-		firstSeenAt: "2026-08-12T10:00:00.000Z",
-		lastSeenAt: "2026-08-12T10:00:00.000Z",
+		createdAt: 1786528800000,
+		firstSeenAt: 1786528800000,
+		lastSeenAt: 1786528800000,
 		...overrides,
 	};
 }

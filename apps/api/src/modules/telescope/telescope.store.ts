@@ -32,6 +32,7 @@ import type {
 	TelescopeUsersQuery,
 	TelescopeWebhookDelivery,
 } from "@workspace/shared";
+import { epochMs } from "@workspace/shared";
 
 import { detectN1Warnings } from "./n1-detector.js";
 
@@ -90,11 +91,11 @@ export interface TelescopeStore {
 	listExceptions(query: TelescopeExceptionListQuery): ListResult<ExceptionLogEntry>;
 	getException(id: string): ExceptionLogEntry | undefined;
 	listDumpsByCorrelationId(correlationId: string): readonly DumpEntry[];
-	overviewStats(fromIso: string): OverviewStats;
+	overviewStats(fromMs: number): OverviewStats;
 	// Feature 12 — slow-endpoint leaderboard over the range.
-	leaderboard(fromIso: string, limit: number): readonly TelescopeLeaderboardEntry[];
+	leaderboard(fromMs: number, limit: number): readonly TelescopeLeaderboardEntry[];
 	// Feature 13 — hourly trend buckets (longer error-rate windows).
-	trends(fromIso: string, bucketCount: number): readonly TelescopeTrendPoint[];
+	trends(fromMs: number, bucketCount: number): readonly TelescopeTrendPoint[];
 	// Feature 3 — jobs.
 	pushJob(entry: TelescopeJobLogEntry): void;
 	listJobs(query: TelescopeJobsListQuery): ListResult<TelescopeJobLogEntry>;
@@ -120,7 +121,7 @@ export interface TelescopeStore {
 	// Feature 3 — per-user request aggregation.
 	listUsers(query: TelescopeUsersQuery): ListResult<TelescopeUserSummary>;
 	/** Improvement 5 — ack or snooze an alert by id. */
-	setAlertStatus(id: string, status: TelescopeAlertStatus, snoozedUntil: string | null): void;
+	setAlertStatus(id: string, status: TelescopeAlertStatus, snoozedUntil: number | null): void;
 	/** Improvement 6 — set the triage status of an exception group. */
 	setExceptionStatus(errorGroup: string, status: TelescopeExceptionStatus): void;
 	/** Improvement 12 — neighbor ids around a request in capture order. */
@@ -134,19 +135,14 @@ export interface TelescopeStore {
 	clear(): void;
 }
 
-// ── Time helpers ───────────────────────────────────────────────────────────
+// ── Time helpers (all timestamps are epoch ms) ──────────────────────────────
 
-function parseIso(value: string): number {
-	const ms: number = Date.parse(value);
-	return Number.isFinite(ms) ? ms : 0;
+function isAfter(createdAt: number, from: number | undefined): boolean {
+	return from === undefined || createdAt >= from;
 }
 
-function isAfter(iso: string, fromIso: string | undefined): boolean {
-	return fromIso === undefined || parseIso(iso) >= parseIso(fromIso);
-}
-
-function isBefore(iso: string, toIso: string | undefined): boolean {
-	return toIso === undefined || parseIso(iso) <= parseIso(toIso);
+function isBefore(createdAt: number, to: number | undefined): boolean {
+	return to === undefined || createdAt <= to;
 }
 
 /** Range → window start (ms before now) for the users aggregation (feature 3). */
@@ -237,21 +233,21 @@ function sortRequestsByQuery(items: RequestLogSummary[], query: TelescopeRequest
 		if (query.sort === "duration") {
 			return b.durationMs - a.durationMs;
 		}
-		return parseIso(b.createdAt) - parseIso(a.createdAt);
+		return b.createdAt - a.createdAt;
 	});
 }
 
 function sortQueriesByQuery(items: QueryLogEntry[], query: TelescopeSqlListQuery): void {
 	items.sort((a, b): number => {
 		if (query.sort === "newest") {
-			return parseIso(b.createdAt) - parseIso(a.createdAt);
+			return b.createdAt - a.createdAt;
 		}
 		return b.durationMs - a.durationMs;
 	});
 }
 
 function sortExceptionsNewestFirst(items: ExceptionLogEntry[]): void {
-	items.sort((a, b): number => parseIso(b.createdAt) - parseIso(a.createdAt));
+	items.sort((a, b): number => b.createdAt - a.createdAt);
 }
 
 /** Slices a sorted array into the requested page. */
@@ -317,7 +313,7 @@ function buildTraffic(inRange: readonly RequestLogEntry[], fromMs: number, nowMs
 	const errors: number[] = new Array<number>(TRAFFIC_BUCKETS).fill(0);
 
 	for (const entry of inRange) {
-		const offsetMs: number = parseIso(entry.createdAt) - fromMs;
+		const offsetMs: number = entry.createdAt - fromMs;
 		const index: number = Math.min(TRAFFIC_BUCKETS - 1, Math.max(0, Math.floor(offsetMs / bucketMs)));
 		requests[index] += 1;
 		if ((entry.statusCode ?? 500) >= 500) {
@@ -328,7 +324,7 @@ function buildTraffic(inRange: readonly RequestLogEntry[], fromMs: number, nowMs
 	const points: TelescopeTrafficPoint[] = [];
 	for (let index = 0; index < TRAFFIC_BUCKETS; index += 1) {
 		points.push({
-			t: new Date(fromMs + index * bucketMs).toISOString(),
+			t: epochMs(fromMs + index * bucketMs),
 			requests: requests[index] ?? 0,
 			errors: errors[index] ?? 0,
 		});
@@ -431,7 +427,7 @@ function buildTrends(inRange: readonly RequestLogEntry[], fromMs: number, nowMs:
 	const errors: number[] = new Array<number>(bucketCount).fill(0);
 
 	for (const entry of inRange) {
-		const offsetMs: number = parseIso(entry.createdAt) - fromMs;
+		const offsetMs: number = entry.createdAt - fromMs;
 		const index: number = Math.min(bucketCount - 1, Math.max(0, Math.floor(offsetMs / bucketMs)));
 		requests[index] += 1;
 		if ((entry.statusCode ?? 500) >= 500) {
@@ -443,7 +439,7 @@ function buildTrends(inRange: readonly RequestLogEntry[], fromMs: number, nowMs:
 	for (let index = 0; index < bucketCount; index += 1) {
 		const bucketRequests: number = requests[index] ?? 0;
 		points.push({
-			t: new Date(fromMs + index * bucketMs).toISOString(),
+			t: epochMs(fromMs + index * bucketMs),
 			requests: bucketRequests,
 			errors: errors[index] ?? 0,
 			errorRatePct: bucketRequests > 0 ? ((errors[index] ?? 0) / bucketRequests) * 100 : 0,
@@ -614,15 +610,13 @@ export class TelescopeMemoryStore implements TelescopeStore {
 		return this.dumpsByCorrelationId.get(correlationId) ?? [];
 	}
 
-	public leaderboard(fromIso: string, limit: number): readonly TelescopeLeaderboardEntry[] {
-		const fromMs: number = parseIso(fromIso);
-		const inRange: RequestLogEntry[] = this.requests.filter((entry: RequestLogEntry): boolean => parseIso(entry.createdAt) >= fromMs);
+	public leaderboard(fromMs: number, limit: number): readonly TelescopeLeaderboardEntry[] {
+		const inRange: RequestLogEntry[] = this.requests.filter((entry: RequestLogEntry): boolean => entry.createdAt >= fromMs);
 		return buildLeaderboard(inRange, limit);
 	}
 
-	public trends(fromIso: string, bucketCount: number): readonly TelescopeTrendPoint[] {
-		const fromMs: number = parseIso(fromIso);
-		const inRange: RequestLogEntry[] = this.requests.filter((entry: RequestLogEntry): boolean => parseIso(entry.createdAt) >= fromMs);
+	public trends(fromMs: number, bucketCount: number): readonly TelescopeTrendPoint[] {
+		const inRange: RequestLogEntry[] = this.requests.filter((entry: RequestLogEntry): boolean => entry.createdAt >= fromMs);
 		return buildTrends(inRange, fromMs, Date.now(), Math.max(1, Math.min(96, bucketCount)));
 	}
 
@@ -697,7 +691,7 @@ export class TelescopeMemoryStore implements TelescopeStore {
 				});
 			}
 		}
-		rows.sort((a: TelescopeLogRow, b: TelescopeLogRow): number => parseIso(b.timestamp) - parseIso(a.timestamp));
+		rows.sort((a: TelescopeLogRow, b: TelescopeLogRow): number => b.timestamp - a.timestamp);
 		return paginate(rows, query.page, query.pageSize);
 	}
 
@@ -809,7 +803,7 @@ export class TelescopeMemoryStore implements TelescopeStore {
 				}
 				if (log.message.toLowerCase().includes(needle)) {
 					logMatches.push({
-						id: `${entry.id}:${log.timestamp}`,
+						id: `${entry.id}:${String(log.timestamp)}`,
 						requestId: entry.id,
 						level: log.level,
 						message: log.message,
@@ -835,11 +829,11 @@ export class TelescopeMemoryStore implements TelescopeStore {
 		const fromMs: number = rangeToWindowStartMs(query.range);
 		const buckets = new Map<string, { readonly durations: number[]; errors: number; lastSeenMs: number }>();
 		for (const entry of this.requests) {
-			if (entry.userId === null || parseIso(entry.createdAt) < fromMs) {
+			if (entry.userId === null || entry.createdAt < fromMs) {
 				continue;
 			}
 			const existing = buckets.get(entry.userId);
-			const createdAtMs: number = parseIso(entry.createdAt);
+			const createdAtMs: number = entry.createdAt;
 			if (existing !== undefined) {
 				existing.durations.push(entry.durationMs);
 				if ((entry.statusCode ?? 500) >= 500) {
@@ -870,7 +864,7 @@ export class TelescopeMemoryStore implements TelescopeStore {
 				errorRatePct: bucket.durations.length > 0 ? (bucket.errors / bucket.durations.length) * 100 : 0,
 				avgDurationMs: sorted.length > 0 ? totalMs / sorted.length : 0,
 				p95DurationMs: percentile(sorted, 0.95),
-				lastSeenAt: new Date(bucket.lastSeenMs).toISOString(),
+				lastSeenAt: epochMs(bucket.lastSeenMs),
 			};
 		});
 		summaries.sort((a: TelescopeUserSummary, b: TelescopeUserSummary): number => {
@@ -886,13 +880,13 @@ export class TelescopeMemoryStore implements TelescopeStore {
 	}
 
 	/** Improvement 5 — ack or snooze an alert by id. */
-	public setAlertStatus(id: string, status: TelescopeAlertStatus, snoozedUntil: string | null): void {
+	public setAlertStatus(id: string, status: TelescopeAlertStatus, snoozedUntil: number | null): void {
 		const index: number = this.alerts.findIndex((entry: TelescopeAlertEntry): boolean => entry.id === id);
 		if (index < 0) {
 			return;
 		}
 		const current: TelescopeAlertEntry = this.alerts[index];
-		const updated: TelescopeAlertEntry = { ...current, status, snoozedUntil };
+		const updated: TelescopeAlertEntry = { ...current, status, snoozedUntil: snoozedUntil !== null ? epochMs(snoozedUntil) : null };
 		this.alerts.splice(index, 1);
 		this.alerts.unshift(updated);
 	}
@@ -944,10 +938,9 @@ export class TelescopeMemoryStore implements TelescopeStore {
 		};
 	}
 
-	public overviewStats(fromIso: string): OverviewStats {
-		const fromMs: number = parseIso(fromIso);
+	public overviewStats(fromMs: number): OverviewStats {
 		const nowMs: number = Date.now();
-		const inRange: RequestLogEntry[] = this.requests.filter((entry: RequestLogEntry): boolean => parseIso(entry.createdAt) >= fromMs);
+		const inRange: RequestLogEntry[] = this.requests.filter((entry: RequestLogEntry): boolean => entry.createdAt >= fromMs);
 		const durations: number[] = inRange.map((entry: RequestLogEntry): number => entry.durationMs).sort((a: number, b: number): number => a - b);
 
 		const requests: number = inRange.length;
@@ -977,10 +970,10 @@ export class TelescopeMemoryStore implements TelescopeStore {
 					? toSummary(slowestEntry, this.annotations.get(slowestEntry.id)?.starred === true, n1WarningCountFor(slowestEntry, this.queriesByCorrelationId))
 					: null,
 			errorCount,
-			sqlCount: this.queries.filter((entry: QueryLogEntry): boolean => parseIso(entry.createdAt) >= fromMs).length,
-			slowSqlCount: this.queries.filter((entry: QueryLogEntry): boolean => parseIso(entry.createdAt) >= fromMs && entry.durationMs >= 500).length,
+			sqlCount: this.queries.filter((entry: QueryLogEntry): boolean => entry.createdAt >= fromMs).length,
+			slowSqlCount: this.queries.filter((entry: QueryLogEntry): boolean => entry.createdAt >= fromMs && entry.durationMs >= 500).length,
 			exceptionGroups: new Set(
-				this.exceptions.filter((entry: ExceptionLogEntry): boolean => parseIso(entry.createdAt) >= fromMs).map((entry: ExceptionLogEntry): string => entry.errorGroup),
+				this.exceptions.filter((entry: ExceptionLogEntry): boolean => entry.createdAt >= fromMs).map((entry: ExceptionLogEntry): string => entry.errorGroup),
 			).size,
 			n1RequestCount,
 			piiRequestCount: inRange.filter((entry: RequestLogEntry): boolean => entry.piiFlags.length > 0).length,
@@ -996,7 +989,7 @@ export class TelescopeMemoryStore implements TelescopeStore {
 	 */
 	public pruneRetention(retentionMinutes: number): number {
 		const cutoffMs: number = Date.now() - retentionMinutes * 60 * 1000;
-		const kept = (iso: string): boolean => parseIso(iso) >= cutoffMs;
+		const kept = (at: number): boolean => at >= cutoffMs;
 		let removed = 0;
 
 		const keptRequests: RequestLogEntry[] = this.requests.filter((entry: RequestLogEntry): boolean => kept(entry.createdAt));

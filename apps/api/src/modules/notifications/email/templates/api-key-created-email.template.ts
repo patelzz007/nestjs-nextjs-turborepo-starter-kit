@@ -1,4 +1,7 @@
+import { format } from "date-fns";
 import { z } from "zod";
+
+import { EpochMsSchema, nowEpochMs } from "@workspace/shared";
 
 import { BaseEmailPropsSchema, BaseEmailTemplate, type CtaConfig } from "../base/base-email-template.js";
 import type { EmailRenderContext } from "../base/email-render-context.js";
@@ -6,8 +9,8 @@ import type { EmailRenderContext } from "../base/email-render-context.js";
 export const ApiKeyCreatedEmailPropsSchema = BaseEmailPropsSchema.extend({
 	/** Display name of the new API key. */
 	keyName: z.string().min(1),
-	/** When the key was created (ISO). */
-	createdAt: z.iso.datetime(),
+	/** When the key was created (epoch ms). */
+	createdAt: EpochMsSchema,
 });
 
 export type ApiKeyCreatedEmailProps = z.output<typeof ApiKeyCreatedEmailPropsSchema>;
@@ -22,7 +25,7 @@ export class ApiKeyCreatedEmailTemplate extends BaseEmailTemplate<ApiKeyCreatedE
 	public static readonly sampleProps: ApiKeyCreatedEmailProps = {
 		to: "jamie@example.com",
 		keyName: "production-deploy",
-		createdAt: new Date().toISOString(),
+		createdAt: nowEpochMs(),
 	};
 
 	public readonly key: string = "api-key-created";
@@ -45,11 +48,7 @@ export class ApiKeyCreatedEmailTemplate extends BaseEmailTemplate<ApiKeyCreatedE
 
 	/** Human-readable creation date (e.g. "Aug 9, 2026"). */
 	private get createdLabel(): string {
-		return new Date(this.props.createdAt).toLocaleDateString("en-US", {
-			year: "numeric",
-			month: "short",
-			day: "numeric",
-		});
+		return format(this.props.createdAt, "MMM d, yyyy");
 	}
 
 	public renderBodyHtml(context: EmailRenderContext): string {

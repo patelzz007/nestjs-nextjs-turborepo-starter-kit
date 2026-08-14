@@ -44,7 +44,7 @@ export async function generateAdditionalSeedData(roles: Role[], userRole: Role):
 		scopes: string[];
 		rateLimitTier: string;
 		isActive: boolean;
-		expiresAt?: Date;
+		expiresAt?: number;
 	}> = [];
 	const rawKeyLog: Array<{ email: string; rawKey: string }> = [];
 
@@ -222,7 +222,7 @@ export async function generateAdditionalSeedData(roles: Role[], userRole: Role):
 			utmSource: string | null;
 			utmMedium: string | null;
 			utmCampaign: string | null;
-			clickedAt: Date;
+			clickedAt: number;
 		}> = [];
 
 		const ip = () => `${randInt(1, 254)}.${randInt(0, 255)}.${randInt(0, 255)}.${randInt(1, 254)}`;

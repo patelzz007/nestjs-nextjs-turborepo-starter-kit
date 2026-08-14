@@ -4,6 +4,7 @@ import { useAuth } from "@workspace/client/lib/auth";
 import { emailEndpoints } from "@workspace/client/lib/api/endpoints";
 import type { EmailLogEntry, EmailLogStatus } from "@workspace/shared";
 import { useEmailLogLive, type LiveState } from "@/lib/email-log-live";
+import { formatDateTime } from "@/lib/dates";
 import { Badge } from "@workspace/ui/components/feedback/badge";
 import { Button } from "@workspace/ui/components/form/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
@@ -231,12 +232,7 @@ export default function EmailLogPage(): React.JSX.Element {
 	);
 }
 
-/**
- * ISO timestamp → locale string. The formatter is built once at module scope
- * so every cell render reuses the same `Intl.DateTimeFormat` instance.
- */
-const TIME_FORMATTER: Intl.DateTimeFormat = new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" });
-
-function formatTime(iso: string): string {
-	return TIME_FORMATTER.format(new Date(iso));
+/** Epoch-ms timestamp → locale string via date-fns (see lib/dates.ts). */
+function formatTime(ms: number): string {
+	return formatDateTime(ms);
 }

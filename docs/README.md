@@ -3,7 +3,7 @@ title: "Monorepo Documentation"
 description: "Everything a developer needs to understand this monorepo — a hub for all the guides."
 order: 11
 author: "Acme Inc."
-lastUpdated: "2026-08-02"
+lastUpdated: 1785628800000
 coverImage: "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?auto=format&fit=crop&w=1600&q=80"
 ---
 
@@ -110,3 +110,4 @@ If you're unsure, read [architecture.md](./architecture.md) first.
 ---
 
 _Last updated: July 31, 2026_
+

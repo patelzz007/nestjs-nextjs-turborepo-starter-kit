@@ -1,5 +1,7 @@
 import { Injectable } from "@nestjs/common";
 
+import { nowEpochMs } from "@workspace/shared";
+
 import { PrismaService } from "../../prisma/prisma.service.js";
 
 @Injectable()
@@ -10,7 +12,7 @@ export class HealthService {
 		return "Hello from the Freebuff API!";
 	}
 
-	public async healthCheck(): Promise<{ status: string; db: string; timestamp: string }> {
+	public async healthCheck(): Promise<{ status: string; db: string; timestamp: number }> {
 		let dbStatus: string;
 		try {
 			await this.prisma.$queryRaw`SELECT 1`;
@@ -22,7 +24,7 @@ export class HealthService {
 		return {
 			status: "ok",
 			db: dbStatus,
-			timestamp: new Date().toISOString(),
+			timestamp: nowEpochMs(),
 		};
 	}
 }

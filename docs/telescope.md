@@ -3,7 +3,7 @@ title: "Telescope for NestJS"
 description: "An in-house, Laravel-Telescope-style observability console for the NestJS API — requests, SQL, exceptions, mail and logs — with the dashboard built into the admin app. Full blueprint: capture layer, data model, API, and UI."
 order: 18
 author: "Acme Inc."
-lastUpdated: "2026-08-12"
+lastUpdated: 1786492800000
 coverImage: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=1600&q=80"
 ---
 
@@ -288,7 +288,7 @@ model RequestLog {
   responseHeaders Json?
   // Timeline spans — one row per phase, joined by requestId:
   // (alternatively a Json[] column; see note below)
-  createdAt     DateTime @default(now())
+  createdAt     BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) // epoch ms
   @@index([createdAt(sort: Desc)])
   @@index([method])
   @@index([path])
@@ -371,7 +371,7 @@ model QueryLog {
   query         String                        // raw SQL from Prisma's query event
   params        String?                       // JSON string — SANITIZED before store
   durationMs    Int
-  createdAt     DateTime @default(now())
+  createdAt     BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) // epoch ms
   @@index([correlationId])
   @@index([model, operation])
   @@index([durationMs])
@@ -397,7 +397,7 @@ model ExceptionLog {
   tags          String[]
   metadata      Json?                         // sanitized
   occurrences   Int      @default(1)          // incremented on dedupe (same group in window)
-  createdAt     DateTime @default(now())
+  createdAt     BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) // epoch ms
   @@index([errorGroup])
   @@index([createdAt(sort: Desc)])
 }
@@ -2009,3 +2009,4 @@ back to the owning request.
 ---
 
 _Last updated: 2026-08-14 (v1 + §15.1 improvements + §15.3 SSE polish + §15.4 features + §15.5 deep-polish + §15.6 features v2 + §15.7 auto-capture adapters & job alerts). **Shipped** — M0–M5, Postgres persistence (§6.2), SSE live stream (§9.4), all 20 §15.1 improvements, all 20 §15.2 new features, §15.3 SSE live UI polish, all 20 §15.5 deep-polish improvements, all 20 §15.6 features v2, §15.7 auto-capture adapters (email/auth/impersonation/sessions) + job alerts + jobs family filter. Remaining ⏳: standalone exception filter (§5.4 — intentionally folded into the interceptor)._
+

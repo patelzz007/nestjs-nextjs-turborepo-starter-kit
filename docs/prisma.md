@@ -3,7 +3,7 @@ title: "Prisma & Database Commands"
 description: "The database layer: how Prisma is configured, where the schema lives, and every db: command."
 order: 8
 author: "Acme Inc."
-lastUpdated: "2026-08-02"
+lastUpdated: 1785628800000
 coverImage: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=1600&q=80"
 ---
 
@@ -370,6 +370,14 @@ This drops all data, replays all migrations, and re-seeds. 🔴 Everything is wi
 
 ## 9. Adding a new model / field
 
+> [!IMPORTANT] **Timestamp convention — epoch milliseconds everywhere.**
+> Every date column is `BigInt` storing epoch ms (never `DateTime`). Use
+> `@default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))` for
+> `createdAt`-style defaults so the DB computes the value on insert. In the
+> shared Zod schemas use `EpochMsSchema` (branded `EpochMs`), stamp `now` with
+> `nowEpochMs()`, and render dates on the FE exclusively via date-fns helpers
+> in `apps/admin/lib/dates.ts` — never raw `Intl`/`toLocale*`/ISO slicing.
+
 1. Edit `apps/api/prisma/schema.prisma`.
 2. Generate + apply a migration:
    ```bash
@@ -391,3 +399,4 @@ This drops all data, replays all migrations, and re-seeds. 🔴 Everything is wi
 ---
 
 _Last updated: July 31, 2026_
+

@@ -2,6 +2,7 @@ import "server-only";
 
 import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
+import { EpochMsSchema } from "@workspace/shared";
 import { z } from "zod";
 
 import { TocHeadingSchema, estimateReadingTime, extractTocHeadings, parseMarkdownFile, stripFirstHeading } from "@/lib/docs/markdown";
@@ -19,8 +20,8 @@ export const DocSummarySchema = z.object({
 	description: z.string(),
 	/** Optional `author` from the guide's frontmatter. */
 	author: z.string().optional(),
-	/** Optional ISO date (`lastUpdated`) from the guide's frontmatter. */
-	lastUpdated: z.string().optional(),
+	/** Optional epoch-ms `lastUpdated` from the guide's frontmatter. */
+	lastUpdated: EpochMsSchema.optional(),
 	/** Optional absolute https cover-image URL for the banner (`coverImage` frontmatter). */
 	coverImage: z.string().optional(),
 });

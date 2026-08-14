@@ -322,7 +322,7 @@ function JobDetailDrawer({
 	readonly onRetried: () => void;
 }): React.JSX.Element {
 	const router = useRouter();
-	const queueLatencyMs: number | null = job.startedAt !== null ? Math.max(0, Date.parse(job.startedAt) - Date.parse(job.enqueuedAt)) : null;
+	const queueLatencyMs: number | null = job.startedAt !== null ? Math.max(0, job.startedAt - job.enqueuedAt) : null;
 
 	const handleViewRequest = useCallback((): void => {
 		if (job.correlationId !== null) {

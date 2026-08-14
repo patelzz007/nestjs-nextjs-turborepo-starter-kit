@@ -8,7 +8,7 @@ describe("HealthController", () => {
 
 	const healthServiceMock = {
 		getHello: jest.fn().mockReturnValue("Hello from the Freebuff API!"),
-		healthCheck: jest.fn().mockResolvedValue({ status: "ok", db: "connected", timestamp: "2026-01-01T00:00:00.000Z" }),
+		healthCheck: jest.fn().mockResolvedValue({ status: "ok", db: "connected", timestamp: 1767225600000 }),
 	};
 
 	beforeEach(async () => {

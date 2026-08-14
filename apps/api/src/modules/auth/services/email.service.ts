@@ -1,5 +1,7 @@
 import { Injectable } from "@nestjs/common";
 
+import type { EpochMs } from "@workspace/shared";
+
 import { EmailSenderService } from "../../notifications/email/email-sender.service.js";
 import { AccountLockedEmailTemplate } from "../../notifications/email/templates/account-locked-email.template.js";
 import { PasswordResetEmailTemplate } from "../../notifications/email/templates/password-reset-email.template.js";
@@ -30,8 +32,8 @@ export class EmailService {
 	}
 
 	/** Send an account-locked notice with the remaining lock duration. */
-	public async sendAccountLockedEmail(email: string, lockedUntil: Date): Promise<void> {
-		const template = new AccountLockedEmailTemplate({ to: email, lockedUntil: lockedUntil.toISOString() });
+	public async sendAccountLockedEmail(email: string, lockedUntil: EpochMs): Promise<void> {
+		const template = new AccountLockedEmailTemplate({ to: email, lockedUntil });
 		await this.sender.send(template);
 	}
 }

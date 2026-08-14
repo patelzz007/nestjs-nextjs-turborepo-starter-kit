@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { BaseResponseSchema, DateStringSchema } from "../api/common";
+import { BaseResponseSchema, EpochMsSchema } from "../api/common";
 import { PermissionActionSchema, PermissionResourceSchema } from "../domain/enums";
 
 /**
@@ -97,8 +97,8 @@ export const AdminUserDetailSchema = UserResponseSchema.extend({
 		description: "Number of consecutive failed login attempts",
 		example: 0,
 	}),
-	lockedUntil: DateStringSchema.nullable().meta({
-		description: "ISO-8601 timestamp when the account lockout expires (null = not locked)",
+	lockedUntil: EpochMsSchema.nullable().meta({
+		description: "Epoch ms when the account lockout expires (null = not locked)",
 		example: null,
 	}),
 }).strict();

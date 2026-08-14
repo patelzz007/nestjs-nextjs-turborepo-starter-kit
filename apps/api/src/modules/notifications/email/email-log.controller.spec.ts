@@ -24,7 +24,7 @@ describe("EmailLogController (SSE stream)", () => {
 		events.emitUpdated();
 
 		expect(frames).toHaveLength(2);
-		expect(frames[0]).toEqual({ data: expect.objectContaining({ updatedAt: expect.any(String) }) });
+		expect(frames[0]).toEqual({ data: expect.objectContaining({ updatedAt: expect.any(Number) }) });
 
 		subscription.unsubscribe();
 	});

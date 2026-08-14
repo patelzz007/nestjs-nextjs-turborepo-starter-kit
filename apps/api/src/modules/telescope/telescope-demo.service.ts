@@ -1,6 +1,6 @@
 import { Inject, Injectable, Logger, type OnModuleInit } from "@nestjs/common";
 
-import type { TelescopeOptions } from "@workspace/shared";
+import { epochMs, type TelescopeOptions } from "@workspace/shared";
 
 import { TelescopeJobRunner } from "./telescope-job-runner.js";
 import { TELESCOPE_OPTIONS, TELESCOPE_STORE } from "./telescope.options.js";
@@ -77,7 +77,7 @@ export class TelescopeDemoService implements OnModuleInit {
 				durationMs: row.durationMs,
 				attempt: row.attempt,
 				error: row.error,
-				createdAt: new Date(now - row.minutesAgo * 60_000).toISOString(),
+				createdAt: epochMs(now - row.minutesAgo * 60_000),
 			});
 		}
 		this.logger.log(`Seeded ${String(seed.length)} demo webhook delivery rows`, TelescopeDemoService.name);

@@ -3,7 +3,7 @@ title: "Monorepo Architecture"
 description: "The big picture: what each workspace is for, how data flows between frontends and backend, and where new code belongs."
 order: 2
 author: "Acme Inc."
-lastUpdated: "2026-08-02"
+lastUpdated: 1785628800000
 coverImage: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1600&q=80"
 ---
 
@@ -414,3 +414,4 @@ Different consumers resolve `@workspace/*` packages differently — this is inte
 ---
 
 _Last updated: July 31, 2026_
+

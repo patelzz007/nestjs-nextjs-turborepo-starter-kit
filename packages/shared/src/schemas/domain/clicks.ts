@@ -1,12 +1,12 @@
 import { z } from "zod";
 
-import { DateStringSchema } from "../api/common";
+import { EpochMsSchema } from "../api/common";
 import { DeviceTypeSchema } from "./enums";
 import { PaginationSchema } from "../api/pagination";
 
 export const ClickQuerySchema = PaginationSchema.extend({
-	from: z.iso.datetime({ offset: true }).optional(),
-	to: z.iso.datetime({ offset: true }).optional(),
+	from: EpochMsSchema.optional(),
+	to: EpochMsSchema.optional(),
 	deviceType: DeviceTypeSchema.optional(),
 	country: z.string().optional(),
 	browser: z.string().optional(),
@@ -16,8 +16,8 @@ export type ClickQueryInput = z.output<typeof ClickQuerySchema>;
 
 export const AnalyticsQuerySchema = z
 	.object({
-		from: z.iso.datetime({ offset: true }).optional(),
-		to: z.iso.datetime({ offset: true }).optional(),
+		from: EpochMsSchema.optional(),
+		to: EpochMsSchema.optional(),
 	})
 	.strict();
 
@@ -37,14 +37,14 @@ export const ClickRecordResponseSchema = z.object({
 	utmSource: z.string().nullable(),
 	utmMedium: z.string().nullable(),
 	utmCampaign: z.string().nullable(),
-	clickedAt: DateStringSchema,
+	clickedAt: EpochMsSchema,
 });
 
 export type ClickRecordResponse = z.output<typeof ClickRecordResponseSchema>;
 
 export const UrlAnalyticsResponseSchema = z.object({
 	urlId: z.string(),
-	period: z.object({ from: DateStringSchema, to: DateStringSchema }),
+	period: z.object({ from: EpochMsSchema, to: EpochMsSchema }),
 	totalClicks: z.number(),
 	byDevice: z.array(z.object({ device: z.string(), count: z.number() })),
 	byCountry: z.array(z.object({ country: z.string(), count: z.number() })),
@@ -52,13 +52,13 @@ export const UrlAnalyticsResponseSchema = z.object({
 	byOs: z.array(z.object({ os: z.string(), count: z.number() })),
 	byReferrer: z.array(z.object({ referrer: z.string().nullable(), count: z.number() })),
 	byUtmSource: z.array(z.object({ source: z.string().nullable(), count: z.number() })),
-	byDay: z.array(z.object({ day: DateStringSchema, count: z.number() })),
+	byDay: z.array(z.object({ day: EpochMsSchema, count: z.number() })),
 });
 
 export type UrlAnalyticsResponse = z.output<typeof UrlAnalyticsResponseSchema>;
 
 export const AccountAnalyticsResponseSchema = z.object({
-	period: z.object({ from: DateStringSchema, to: DateStringSchema }),
+	period: z.object({ from: EpochMsSchema, to: EpochMsSchema }),
 	totalClicks: z.number(),
 	topUrls: z.array(
 		z.object({
@@ -70,7 +70,7 @@ export const AccountAnalyticsResponseSchema = z.object({
 			clicksInPeriod: z.number(),
 		}),
 	),
-	byDay: z.array(z.object({ day: DateStringSchema, count: z.number() })),
+	byDay: z.array(z.object({ day: EpochMsSchema, count: z.number() })),
 	byDevice: z.array(z.object({ device: z.string(), count: z.number() })),
 	byCountry: z.array(z.object({ country: z.string(), count: z.number() })),
 });
@@ -78,7 +78,7 @@ export const AccountAnalyticsResponseSchema = z.object({
 export type AccountAnalyticsResponse = z.output<typeof AccountAnalyticsResponseSchema>;
 
 export const AdminOverviewResponseSchema = z.object({
-	period: z.object({ from: DateStringSchema, to: DateStringSchema }),
+	period: z.object({ from: EpochMsSchema, to: EpochMsSchema }),
 	totalClicks: z.number(),
 	activeUrls: z.number(),
 	totalUsers: z.number(),
@@ -94,7 +94,7 @@ export const AdminOverviewResponseSchema = z.object({
 			user: z.object({ email: z.string(), fullName: z.string() }).nullable(),
 		}),
 	),
-	byDay: z.array(z.object({ day: DateStringSchema, count: z.number() })),
+	byDay: z.array(z.object({ day: EpochMsSchema, count: z.number() })),
 });
 
 export type AdminOverviewResponse = z.output<typeof AdminOverviewResponseSchema>;
@@ -107,10 +107,10 @@ export const AdminUrlItemSchema = z.object({
 	title: z.string().nullable(),
 	clickCount: z.number(),
 	isActive: z.boolean(),
-	createdAt: z.string(),
-	updatedAt: z.string(),
+	createdAt: EpochMsSchema,
+	updatedAt: EpochMsSchema,
 	isDeleted: z.boolean(),
-	deletedAt: z.string().nullable(),
+	deletedAt: EpochMsSchema.nullable(),
 	user: z.object({ id: z.string(), email: z.string(), fullName: z.string() }).nullable(),
 });
 
@@ -123,10 +123,10 @@ export const AdminUserItemSchema = z.object({
 	plan: z.string(),
 	totalUrls: z.number(),
 	totalClicks: z.number(),
-	createdAt: z.string(),
-	updatedAt: z.string(),
+	createdAt: EpochMsSchema,
+	updatedAt: EpochMsSchema,
 	isDeleted: z.boolean(),
-	deletedAt: z.string().nullable(),
+	deletedAt: EpochMsSchema.nullable(),
 });
 
 export type AdminUserItem = z.output<typeof AdminUserItemSchema>;
