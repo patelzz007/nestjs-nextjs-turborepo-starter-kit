@@ -48,7 +48,6 @@ function operationFromSql(query: string): string {
  */
 
 @Injectable()
-// eslint-disable-next-line @darraghor/nestjs-typed/injectable-should-be-provided -- Registered in TelescopeModule.register()'s dynamic providers; the typed plugin only scans static @Module decorators.
 export class TelescopePrismaListener implements OnModuleInit {
 	public constructor(
 		private readonly prisma: PrismaService,

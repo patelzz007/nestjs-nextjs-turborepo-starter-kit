@@ -22,7 +22,6 @@ interface CacheEntry {
 }
 
 @Injectable()
-// eslint-disable-next-line @darraghor/nestjs-typed/injectable-should-be-provided -- Registered in TelescopeModule.register()'s dynamic providers; the typed plugin only scans static @Module decorators.
 export class TelescopeCacheTracer {
 	/**
 	 * Cap for the in-memory entry map (LRU-ish: evicts the first inserted key

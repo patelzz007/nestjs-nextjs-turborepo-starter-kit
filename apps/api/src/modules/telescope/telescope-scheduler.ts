@@ -101,7 +101,6 @@ function nextRunAt(fields: CronFields, from: Date): string {
 }
 
 @Injectable()
-// eslint-disable-next-line @darraghor/nestjs-typed/injectable-should-be-provided -- Registered in TelescopeModule.register()'s dynamic providers; the typed plugin only scans static @Module decorators.
 export class TelescopeSchedulerService implements OnModuleInit, OnModuleDestroy {
 	private readonly schedules: RegisteredSchedule[] = [];
 	private readonly lastRunBySchedule = new Map<string, TelescopeScheduleLog>();

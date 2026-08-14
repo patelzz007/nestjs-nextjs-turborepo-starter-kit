@@ -237,21 +237,24 @@ export type TelescopeOptions = z.output<typeof TelescopeOptionsSchema>;
 ```
 
 ```ts
-// apps/api/src/app.module.ts
-TelescopeModule.register({
-  storage: "memory", // "postgres" = persisted upgrade (§6.2)
-  captureBody: "headers",
-  captureHeaders: ["content-type", "user-agent", "x-client-type"],
-  ignorePaths: ["/health", "/docs"],
-  sampling: { dev: 1.0, prod: 0.01 },
-}),
+// apps/api/src/app.module.ts — plain static import, no register() call.
+// All knobs come from TELESCOPE_* env vars (see §14.1); the module is
+// @Global(), so any module can inject its services without importing it.
+TelescopeModule,
 ```
 
-`register()` merges these options with `TypedConfigService` env values (env wins at boot;
-see §14.1) and is the **only** knobs the module reads — capture code never touches
-`process.env` directly. **The instrumentation surface must stabilize before any UI is
-built on it** — the shared Zod schemas *are* the contract the UI consumes (see the §11
-M3 gate).
+The module is a plain static **`@Global()`** module (same pattern as `ConfigModule`,
+`PrismaModule` and `LogsModule`): options are resolved from `TELESCOPE_*` env vars at
+module init, capture components are registered unconditionally and self-guard on
+`options.enabled` at runtime (fail-closed semantics are preserved — when disabled, the
+middleware never opens a captured span store, the console is never wrapped, the demo
+service stays silent, and `/telescope/*` returns 404). Business modules can inject
+`TelescopeJobRunner`, `TelescopeSchedulerService`, `TELESCOPE_STORE`, … with no imports
+and no provider boilerplate — and without wrapping their own code in telescope calls
+(email sends, for example, are observed automatically — see §5.5). Capture code never
+touches `process.env` directly. **The instrumentation surface must stabilize before any
+UI is built on it** — the shared Zod schemas *are* the contract the UI consumes (see the
+§11 M3 gate).
 
 ---
 
@@ -593,6 +596,17 @@ capture needed. If a per-request join is wanted ("which request sent this mail?"
 `correlationId` onto the `EmailLog` row at send time — one optional column, add it in the
 same migration.
 
+> [!NOTE] **Email sends → Jobs, zero telescope references in business code (2026-08-13).**
+> `EmailLogEventsService` now emits a typed attempt payload (template key, status, to,
+> resend id, error, send duration) when an `EmailLog` row is **created**. A telescope-side
+> observer — `TelescopeEmailJobAdapter` — subscribes to that same in-process event stream
+> and records every **real** send as a `send-email:<template>` job (duration, status,
+> correlation id + a `queue` span on the request it ran inside), so `/telescope/jobs`
+> populates automatically. The notifications module emits a domain event — it has no
+> telescope imports and no `jobRunner.run()` wrapping. Webhook status flips
+> (`delivered`, `bounced`, …) carry no attempt payload and are ignored by the adapter;
+> noop/log-only sends (no resend id) are skipped — the same surface the old wrap covered.
+
 ### 5.6 Optional: `POST /telescope/dump` (the `dd()` equivalent)
 
 **What:** a dev-only endpoint that records an arbitrary value under a name and shows up in
@@ -611,6 +625,32 @@ it's the first candidate for the cut list if scope overruns.
 > `ZodValidationPipe(TelescopeDumpInputSchema)` (repo convention) and the service takes
 > the schema-inferred `TelescopeDumpInput` — no `unknown`/`any` in the module's own
 > signatures (repo rule 2).
+
+### 5.7 Auto-capture job adapters (auth, impersonation, sessions)
+
+**What:** the email adapter (§5.5) is the template for a general mechanism —
+business code emits a typed **domain event** when a unit of work finishes; a
+telescope-side adapter subscribes and records it as a job. Same zero-telescope
+contract, more surfaces:
+
+| Adapter | Event stream | Jobs recorded |
+|---|---|---|
+| `TelescopeEmailJobAdapter` | `EmailLogEventsService` | `send-email:<template>` (real sends only) |
+| `TelescopeAuthJobAdapter` | `AuthEventsService` (signup / login / forgot / reset / verify) | `auth:<flow>` — incl. failed logins (`INVALID_CREDENTIALS`, `ACCOUNT_LOCKED`, `EMAIL_IN_USE`) |
+| `TelescopeImpersonationJobAdapter` | `ImpersonationEventsService` (start / stop) | `impersonation:<action>` |
+| `TelescopeSessionsJobAdapter` | `SessionsEventsService` (refresh / logout) | `session:<action>` |
+
+All four share `TelescopeJobRecorder` — the entry → store → `queue`-span →
+stream-frame mechanics live in one class, so a new adapter is ~40 lines of
+"which events become jobs". Adapters register in `AppModule` (they need exports
+from BOTH the `@Global()` TelescopeModule and a non-global business module) and
+self-guard on `options.enabled` — disabled Telescope never attaches an observer.
+
+> [!NOTE] **Session refresh throttle.** `session:refresh` fires on every token
+> rotation — far noisier than any other family — so the sessions adapter records
+> at most one **succeeded** refresh per 30 seconds (`SESSION_REFRESH_THROTTLE_MS`
+> in `telescope-sessions-job-adapter.ts`). Failed refreshes (token reuse / theft
+> detection) always record; logout actions are rare and never throttled.
 
 ---
 
@@ -1051,7 +1091,7 @@ The horizontal bar is the signature of the whole feature — get it right:
 ### M0 — Module contract + memory store ✅ (½ day)
 
 - ✅ `packages/shared`: `schemas/domain/telescope.ts` (all §4 schemas + `TelescopeOptionsSchema`) + barrel exports.
-- ✅ `TelescopeModule.register(options)` — Zod-typed options merged with `TypedConfigService` env values (§3). `TelescopeMemoryStore` ring buffer with LRU eviction behind the `TelescopeStore` interface (§6.1) + unit tests.
+- ✅ `TelescopeModule` — a plain static `@Global()` module; Zod-typed options resolved from `TELESCOPE_*` env at boot (§3), `TelescopeMemoryStore` ring buffer with LRU eviction behind the `TelescopeStore` interface (§6.1) + unit tests.
 - ✅ Env: `TELESCOPE_*` vars in `apps/api/.env`, `.env.example`, and the `turbo.json` env lists (the parity rule from the email work).
 - ✅ `apps/api/src/modules/telescope/` skeleton: module, options, store, `RequestSpanContext`.
 
@@ -1190,7 +1230,12 @@ apps/api/src/modules/telescope/
 ├── telescope-job-runner.ts                          ← Feature 3 — async job producer → TelescopeJobLogEntry
 ├── telescope-scheduler.ts                           ← Feature 4 — cron-style schedule registry
 ├── telescope-cache-tracer.ts                        ← Feature 5 — per-request cache-op trace API
-├── telescope-alert.service.ts (+ spec)              ← Feature 18 — threshold alerts + optional webhook
+├── telescope-alert.service.ts (+ spec)              ← Feature 18 — threshold alerts + optional webhook (§15.4.18, job alerts §5.7)
+├── telescope-job-recorder.ts                        ← shared entry→store→span→frame mechanics + failed-job→alert hook (§5.7)
+├── telescope-email-job-adapter.ts (+ spec)          ← auto-capture: real sends → send-email:<template> jobs (§5.5)
+├── telescope-auth-job-adapter.ts (+ spec)           ← auto-capture: auth flows → auth:<flow> jobs (§5.7)
+├── telescope-impersonation-job-adapter.ts (+ spec)  ← auto-capture: impersonation start/stop → jobs (§5.7)
+├── telescope-sessions-job-adapter.ts (+ spec)       ← auto-capture: session actions → jobs, refresh throttled (§5.7)
 ├── telescope-demo.service.ts                        ← dev-only demo: telescope-demo schedule → demo-job (§15.4.4)
 ├── sanitize.ts                                      ← bodies/params/headers sanitizer + truncation (§10)
 ├── should-capture.ts                                ← path denylist/allowlist (§10.5) — parse req.originalUrl, not req.path
@@ -1557,11 +1602,13 @@ in a DataTable (status badges via `jobStatusTone`); clicking a row shows the
 full entry. Any producer can push a job by calling the runner — no BullMQ
 dependency required.
 
-**Demo wiring (live):** `EmailSenderService` wraps every real send in
-`this.jobRunner.run("send-email:<templateKey>", …)` (payload sized but never
-stored — PII stays out), so the jobs page shows each email send with its
-status + duration. `TelescopeModule` is now `@Global()`, so `TelescopeJobRunner`
-can be injected from any module.
+**Auto-populated (no wrapping needed):** business code emits domain events and
+the auto-capture adapters (§5.5, §5.7) record the jobs — real email sends
+become `send-email:<template>` (via `TelescopeEmailJobAdapter`), auth flows
+`auth:<flow>`, impersonation `impersonation:<action>`, session actions
+`session:<action>` (refresh throttled). `TelescopeModule` is `@Global()`, so
+`TelescopeJobRunner`/`TelescopeSchedulerService` can be injected from any module
+for explicitly-run jobs.
 
 ```typescript
 // anywhere in the API — inject TelescopeJobRunner
@@ -1585,11 +1632,16 @@ run status/duration/error, next run). The `/telescope/schedules` page renders
 one card per schedule with a `scheduleStatusTone` badge. The registry is
 read-only from the UI; tasks register themselves at module boot.
 
-**Demo wiring (live):** `TelescopeDemoService` (registered in
-`TelescopeModule.register()` alongside the feature services) registers a
+**Demo wiring (live):** `TelescopeDemoService` (a provider of the static
+`@Global()` module, self-guarded on `options.enabled`) registers a
 `telescope-demo` schedule (`*/1 * * * *`) that fires a `demo-job` every minute,
 so both pages populate out of the box in local dev. It is fail-closed in
 production (`NODE_ENV=production` disables the whole module).
+
+**Real wiring (zero telescope in business code):** any module can call
+`TelescopeSchedulerService.register(...)` from its `onModuleInit` — the
+service is globally injectable with no imports. Email sends are observed
+automatically (`TelescopeEmailJobAdapter`, §5.5) — no wrapping required.
 
 ```typescript
 // register your own cron task from any module's onModuleInit:
@@ -1750,6 +1802,15 @@ the overview's `AlertsPanel` populate out of the box. When
 `TELESCOPE_ALERT_WEBHOOK_URL` is set, the service additionally POSTs a JSON
 payload (5s timeout, failures only warn) — the webhook is the opt-in part,
 storage is not. Covered by `telescope-alert.service.spec.ts`.
+
+**Job alerts (2026-08-14):** any FAILED job — email send, auth flow,
+impersonation action, session action, scheduled task — also fires a `job`-reason
+alert via `TelescopeAlertService.evaluateJob()`, called by the shared job
+recorder the moment a job lands with `status: "failed"`. Same dedupe (per
+`jobName` within `TELESCOPE_ALERT_WINDOW_MINUTES`), same ack/snooze + webhook
+behaviour as the request alerts, so the overview's Alerts panel surfaces job
+failures live without anyone watching the jobs page. The panel links job alerts
+to `/telescope/jobs` (or the correlated request when the job ran inside one).
 
 #### 15.4.19 CLI replay (feature 19)
 
@@ -1913,4 +1974,38 @@ back to the owning request.
 
 ---
 
-_Last updated: 2026-08-13 (v1 + §15.1 improvements + §15.3 SSE polish + §15.4 features + §15.5 deep-polish + §15.6 features v2). **Shipped** — M0–M5, Postgres persistence (§6.2), SSE live stream (§9.4), all 20 §15.1 improvements, all 20 §15.2 new features, §15.3 SSE live UI polish, all 20 §15.5 deep-polish improvements, and all 20 §15.6 features v2. Remaining ⏳: standalone exception filter (§5.4 — intentionally folded into the interceptor)._
+### 15.7 Auto-capture adapters + job alerts (shipped 2026-08-14) ✅
+
+> Follow-up to the email send adapter (§5.5): more business paths auto-populate
+> `/telescope/jobs` with zero telescope references in business code, failed jobs
+> surface as alerts, and the jobs page gains a family filter. Each entry is
+> annotated with where it landed.
+
+1. ✅ **Shared job recorder** — `TelescopeJobRecorder` owns the entry → store →
+   `queue`-span → stream-frame mechanics once; every adapter delegates to it
+   (§5.7).
+2. ✅ **Auth-flow adapter** — `TelescopeAuthJobAdapter` subscribes to
+   `AuthEventsService` and records `auth:signup | auth:login | auth:forgot-password |
+   auth:reset-password | auth:verify-email` jobs, including failed logins
+   (`INVALID_CREDENTIALS`, `ACCOUNT_LOCKED`, `EMAIL_IN_USE`).
+3. ✅ **Impersonation adapter** — `TelescopeImpersonationJobAdapter` records
+   `impersonation:start | impersonation:stop` jobs.
+4. ✅ **Sessions adapter + throttle** — `TelescopeSessionsJobAdapter` records
+   `session:refresh | session:logout-device | session:logout-all`; succeeded
+   refreshes are throttled to one job per 30s, failed refreshes (token reuse /
+   theft detection) always record (§5.7 note).
+5. ✅ **Failed jobs → alerts** — `TelescopeAlertService.evaluateJob()` turns any
+   failed job into a `job`-reason alert (deduped per job name, ack/snooze,
+   optional webhook); the overview's Alerts panel refetches on SSE pushes so
+   failures appear live (§15.4.18).
+6. ✅ **Job-family filter** — the jobs page gained a **Family** select
+   (`All | Auth | Email | Impersonation | Session | Demo`) that presets the
+   existing job-name substring filter.
+7. ✅ **Regressions** — 8 new tests this batch: sessions-adapter (4 — refresh
+   mapping, throttle, throttle bypass on failure, logouts) and alert-service
+   `evaluateJob` (4 — job reason, correlation link, ignored succeeded, dedupe) —
+   suite now 156 API tests.
+
+---
+
+_Last updated: 2026-08-14 (v1 + §15.1 improvements + §15.3 SSE polish + §15.4 features + §15.5 deep-polish + §15.6 features v2 + §15.7 auto-capture adapters & job alerts). **Shipped** — M0–M5, Postgres persistence (§6.2), SSE live stream (§9.4), all 20 §15.1 improvements, all 20 §15.2 new features, §15.3 SSE live UI polish, all 20 §15.5 deep-polish improvements, all 20 §15.6 features v2, §15.7 auto-capture adapters (email/auth/impersonation/sessions) + job alerts + jobs family filter. Remaining ⏳: standalone exception filter (§5.4 — intentionally folded into the interceptor)._

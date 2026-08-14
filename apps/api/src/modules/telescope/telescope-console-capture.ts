@@ -59,11 +59,15 @@ function formatArg(arg: ConsoleArg): string {
  * sampled-out requests) pass through untouched.
  */
 @Injectable()
-// eslint-disable-next-line @darraghor/nestjs-typed/injectable-should-be-provided -- Registered in TelescopeModule.register()'s dynamic providers; the typed plugin only scans static @Module decorators.
 export class TelescopeConsoleCapture implements OnModuleInit {
 	public constructor(@Inject(TELESCOPE_OPTIONS) private readonly options: TelescopeOptions) {}
 
 	public onModuleInit(): void {
+		// Fail-closed: the global console is ONLY wrapped while Telescope is
+		// enabled. When disabled (production), the originals stay untouched.
+		if (!this.options.enabled) {
+			return;
+		}
 		// Keep the originals so captured output still reaches the real console.
 		const originalLog: typeof console.log = console.log.bind(console);
 		const originalWarn: typeof console.warn = console.warn.bind(console);

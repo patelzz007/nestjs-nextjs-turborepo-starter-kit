@@ -34,6 +34,20 @@ const STATUS_OPTIONS: readonly { readonly value: string; readonly label: string 
 ];
 
 /**
+ * Job-family presets — each maps to the `jobName` prefix the auto-capture
+ * adapters use, so one click isolates a family (auth flows, email sends,
+ * impersonation, sessions, demo). "all" = no filter.
+ */
+const FAMILY_OPTIONS: readonly { readonly value: string; readonly label: string }[] = [
+	{ value: "all", label: "All families" },
+	{ value: "auth:", label: "Auth" },
+	{ value: "send-email:", label: "Email" },
+	{ value: "impersonation:", label: "Impersonation" },
+	{ value: "session:", label: "Session" },
+	{ value: "demo", label: "Demo" },
+];
+
+/**
  * Improvement 17 — re-run a failed job from the UI. The runner keeps a
  * registry of job fns, so the retry endpoint spawns a NEW entry with the
  * same fn (background jobs stay retryable; jobs whose fn was never
@@ -101,6 +115,14 @@ export default function TelescopeJobsPage(): React.JSX.Element {
 
 	const handleStatusChange = useCallback((value: string | null): void => {
 		if (value !== null) setStatus(value);
+	}, []);
+
+	// The family select mirrors the free-text `jobName` input: picking a
+	// preset fills the input with that prefix (which the API substring-matches),
+	// and editing the text drops the select back to "all".
+	const activeFamily: string = FAMILY_OPTIONS.some((option) => option.value !== "all" && jobName === option.value) ? jobName : "all";
+	const handleFamilyChange = useCallback((value: string | null): void => {
+		if (value !== null) setJobName(value === "all" ? "" : value);
 	}, []);
 
 	// Feature 11 — row click opens the detail drawer (not a hard redirect).
@@ -224,6 +246,23 @@ export default function TelescopeJobsPage(): React.JSX.Element {
 						Job name
 					</label>
 					<Input id="tel-job-name" type="search" placeholder="e.g. send-email" value={jobName} onChange={handleJobNameChange} className="h-9 w-48 text-sm" />
+				</div>{" "}
+				<div className="flex flex-col gap-1.5">
+					<label htmlFor="tel-job-family" className="text-xs font-medium text-muted-foreground">
+						Family
+					</label>
+					<Select value={activeFamily} onValueChange={handleFamilyChange} items={FAMILY_OPTIONS}>
+						<SelectTrigger id="tel-job-family" className="h-9 w-40 text-sm">
+							<SelectValue placeholder="Family" />
+						</SelectTrigger>
+						<SelectContent>
+							{FAMILY_OPTIONS.map((option) => (
+								<SelectItem key={option.value} value={option.value}>
+									{option.label}
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
 				</div>
 				<div className="flex flex-col gap-1.5">
 					<label htmlFor="tel-job-status" className="text-xs font-medium text-muted-foreground">

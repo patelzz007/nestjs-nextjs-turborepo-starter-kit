@@ -6,6 +6,7 @@ import { PrismaService } from "../../prisma/prisma.service.js";
 import { RbacService } from "../rbac/rbac.service.js";
 import { AuthService } from "../auth/auth.service.js";
 import { TokenService } from "../auth/services/token.service.js";
+import { ImpersonationActionEventSchema, ImpersonationEventsService } from "./impersonation-events.service.js";
 
 /**
  * SuperAdmin impersonation flows — starting and stopping impersonation,
@@ -22,6 +23,7 @@ export class ImpersonationService {
 		private readonly rbacService: RbacService,
 		private readonly logService: LogService,
 		private readonly authService: AuthService,
+		private readonly impersonationEvents: ImpersonationEventsService,
 	) {}
 
 	/**
@@ -35,6 +37,8 @@ export class ImpersonationService {
 	 * - Target user must exist and be active
 	 */
 	public async impersonateUser(superAdminId: string, targetUserId: string, ipAddress?: string, userAgent?: string | null): Promise<ImpersonateResponse> {
+		const actionStartedAt: number = performance.now();
+
 		// 1. Verify the impersonator is a superadmin
 		const superAdmin = await this.prisma.user.findUnique({
 			where: { id: superAdminId },
@@ -107,6 +111,17 @@ export class ImpersonationService {
 			},
 		});
 
+		this.impersonationEvents.emitAction(
+			ImpersonationActionEventSchema.parse({
+				action: "start",
+				superAdminId: superAdmin.id,
+				targetUserId: targetUser.id,
+				status: "succeeded",
+				error: null,
+				durationMs: Math.round(performance.now() - actionStartedAt),
+			}),
+		);
+
 		return {
 			accessToken,
 			message: `Now impersonating ${targetUser.email}`,
@@ -125,6 +140,8 @@ export class ImpersonationService {
 	 * @param targetUserId - The user who was being impersonated (from sub claim)
 	 */
 	public async stopImpersonation(impersonatorId: string, targetUserId: string, ipAddress?: string, userAgent?: string | null): Promise<StopImpersonationResponse> {
+		const actionStartedAt: number = performance.now();
+
 		// Persist audit log entry with both IDs correctly recorded
 		await this.prisma.impersonationAuditLog.create({
 			data: {
@@ -143,6 +160,17 @@ export class ImpersonationService {
 				targetUserId: targetUserId,
 			},
 		});
+
+		this.impersonationEvents.emitAction(
+			ImpersonationActionEventSchema.parse({
+				action: "stop",
+				superAdminId: impersonatorId,
+				targetUserId,
+				status: "succeeded",
+				error: null,
+				durationMs: Math.round(performance.now() - actionStartedAt),
+			}),
+		);
 
 		return {
 			message: "Impersonation ended. Original session restored.",

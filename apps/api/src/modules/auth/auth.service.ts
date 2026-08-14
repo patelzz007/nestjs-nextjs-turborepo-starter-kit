@@ -23,6 +23,7 @@ import { LogService } from "../../modules/logs/logs.service.js";
 import { PrismaService } from "../../prisma/prisma.service.js";
 import { RbacService } from "../rbac/rbac.service.js";
 
+import { AuthEventsService, AuthFlowEventSchema } from "./services/auth-events.service.js";
 import { CryptoService } from "./services/crypto.service.js";
 import { EmailService } from "./services/email.service.js";
 import { TokenService } from "./services/token.service.js";
@@ -45,16 +46,30 @@ export class AuthService {
 		private readonly logService: LogService,
 		private readonly rbacService: RbacService,
 		private readonly emailService: EmailService,
+		private readonly authEvents: AuthEventsService,
 	) {}
 
 	public async signup(signupDto: SignupInput): Promise<SignupResponse> {
 		const { email, password, fullName } = signupDto;
+		const flowStartedAt: number = performance.now();
 
 		const existingUser = await this.prisma.user.findUnique({
 			where: { email },
 		});
 
-		if (existingUser) throw new ConflictException("Email already in use");
+		if (existingUser) {
+			this.authEvents.emitFlow(
+				AuthFlowEventSchema.parse({
+					flow: "signup",
+					userId: null,
+					clientType: null,
+					status: "failed",
+					error: "EMAIL_IN_USE",
+					durationMs: Math.round(performance.now() - flowStartedAt),
+				}),
+			);
+			throw new ConflictException("Email already in use");
+		}
 
 		const hashedPassword = await this.cryptoService.hash(password);
 
@@ -106,6 +121,17 @@ export class AuthService {
 			},
 		});
 
+		this.authEvents.emitFlow(
+			AuthFlowEventSchema.parse({
+				flow: "signup",
+				userId: newUser.id,
+				clientType: null,
+				status: "succeeded",
+				error: null,
+				durationMs: Math.round(performance.now() - flowStartedAt),
+			}),
+		);
+
 		return {
 			user: this.buildUserResponse(newUser, userPermissions, false),
 			verificationToken,
@@ -126,6 +152,7 @@ export class AuthService {
 	 */
 	public async login(loginDto: LoginInput, clientType?: string, deviceInfo?: string, ipAddress?: string): Promise<LoginServiceResponse> {
 		const { email, password } = loginDto;
+		const flowStartedAt: number = performance.now();
 
 		const user = await this.prisma.user.findUnique({
 			where: { email },
@@ -189,6 +216,16 @@ export class AuthService {
 			const remainingMs: number = user.lockedUntil.getTime() - Date.now();
 			const remainingSec: number = Math.max(1, Math.ceil(remainingMs / 1000));
 			const remainingMin: number = Math.ceil(remainingSec / 60);
+			this.authEvents.emitFlow(
+				AuthFlowEventSchema.parse({
+					flow: "login",
+					userId: user.id,
+					clientType: clientType ?? null,
+					status: "failed",
+					error: "ACCOUNT_LOCKED",
+					durationMs: Math.round(performance.now() - flowStartedAt),
+				}),
+			);
 			throw new UnauthorizedException({
 				message: `Account temporarily locked. Try again in ${String(remainingMin)} minute(s).`,
 				error: "ACCOUNT_LOCKED",
@@ -226,6 +263,16 @@ export class AuthService {
 			}
 			// ────────────────────────────────────────────────────────────
 
+			this.authEvents.emitFlow(
+				AuthFlowEventSchema.parse({
+					flow: "login",
+					userId: user?.id ?? null,
+					clientType: clientType ?? null,
+					status: "failed",
+					error: "INVALID_CREDENTIALS",
+					durationMs: Math.round(performance.now() - flowStartedAt),
+				}),
+			);
 			throw new UnauthorizedException({
 				message: "Invalid email or password",
 				error: "INVALID_CREDENTIALS",
@@ -291,6 +338,17 @@ export class AuthService {
 			},
 		});
 
+		this.authEvents.emitFlow(
+			AuthFlowEventSchema.parse({
+				flow: "login",
+				userId: user.id,
+				clientType: clientType ?? null,
+				status: "succeeded",
+				error: null,
+				durationMs: Math.round(performance.now() - flowStartedAt),
+			}),
+		);
+
 		return {
 			user: flatUser,
 			...tokens,
@@ -342,6 +400,7 @@ export class AuthService {
 	 */
 	public async forgotPassword(dto: ForgotPasswordInput): Promise<ForgotPasswordResponse> {
 		const { email } = dto;
+		const flowStartedAt: number = performance.now();
 
 		const user = await this.prisma.user.findUnique({
 			where: { email },
@@ -351,6 +410,16 @@ export class AuthService {
 		// Always return the same message regardless of whether the user exists
 		// to prevent email enumeration attacks
 		if (!user?.isActive || user.isDeleted) {
+			this.authEvents.emitFlow(
+				AuthFlowEventSchema.parse({
+					flow: "forgot-password",
+					userId: null,
+					clientType: null,
+					status: "succeeded",
+					error: null,
+					durationMs: Math.round(performance.now() - flowStartedAt),
+				}),
+			);
 			return { message: "If an account with that email exists, a password reset link has been sent." };
 		}
 
@@ -375,6 +444,17 @@ export class AuthService {
 		// Send email (fire-and-forget — never throw)
 		await this.emailService.sendPasswordResetEmail(email, rawToken);
 
+		this.authEvents.emitFlow(
+			AuthFlowEventSchema.parse({
+				flow: "forgot-password",
+				userId: user.id,
+				clientType: null,
+				status: "succeeded",
+				error: null,
+				durationMs: Math.round(performance.now() - flowStartedAt),
+			}),
+		);
+
 		return { message: "If an account with that email exists, a password reset link has been sent." };
 	}
 
@@ -383,6 +463,7 @@ export class AuthService {
 	 */
 	public async resetPassword(dto: ResetPasswordInput): Promise<ResetPasswordResponse> {
 		const { token: rawToken, password } = dto;
+		const flowStartedAt: number = performance.now();
 
 		// Find all valid (unused, not expired) reset tokens
 		const candidates = await this.prisma.passwordResetToken.findMany({
@@ -404,6 +485,16 @@ export class AuthService {
 		}
 
 		if (!matchedToken) {
+			this.authEvents.emitFlow(
+				AuthFlowEventSchema.parse({
+					flow: "reset-password",
+					userId: null,
+					clientType: null,
+					status: "failed",
+					error: "INVALID_RESET_TOKEN",
+					durationMs: Math.round(performance.now() - flowStartedAt),
+				}),
+			);
 			throw new UnauthorizedException("Invalid or expired reset token");
 		}
 
@@ -436,6 +527,17 @@ export class AuthService {
 			},
 		});
 
+		this.authEvents.emitFlow(
+			AuthFlowEventSchema.parse({
+				flow: "reset-password",
+				userId: matchedToken.userId,
+				clientType: null,
+				status: "succeeded",
+				error: null,
+				durationMs: Math.round(performance.now() - flowStartedAt),
+			}),
+		);
+
 		return { message: "Password has been reset successfully. Please log in with your new password." };
 	}
 
@@ -444,6 +546,7 @@ export class AuthService {
 	 */
 	public async verifyEmail(token: string): Promise<VerifyEmailResponse> {
 		const email = await this.tokenService.verifyEmailToken(token);
+		const flowStartedAt: number = performance.now();
 
 		// Mark the user's email as verified
 		const user = await this.prisma.user.findUnique({ where: { email } });
@@ -452,6 +555,16 @@ export class AuthService {
 		}
 
 		if (user.emailVerifiedAt) {
+			this.authEvents.emitFlow(
+				AuthFlowEventSchema.parse({
+					flow: "verify-email",
+					userId: user.id,
+					clientType: null,
+					status: "succeeded",
+					error: null,
+					durationMs: Math.round(performance.now() - flowStartedAt),
+				}),
+			);
 			return { message: "Email already verified" };
 		}
 
@@ -459,6 +572,17 @@ export class AuthService {
 			where: { email },
 			data: { emailVerifiedAt: new Date() },
 		});
+
+		this.authEvents.emitFlow(
+			AuthFlowEventSchema.parse({
+				flow: "verify-email",
+				userId: user.id,
+				clientType: null,
+				status: "succeeded",
+				error: null,
+				durationMs: Math.round(performance.now() - flowStartedAt),
+			}),
+		);
 
 		return { message: "Email verified successfully" };
 	}

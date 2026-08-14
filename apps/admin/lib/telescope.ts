@@ -280,9 +280,9 @@ export function exceptionStatusTone(status: string): string {
 	return "border-amber-300/60 bg-amber-500/10 text-amber-700 dark:border-amber-500/40 dark:text-amber-400";
 }
 
-/** Alert reason chip: duration → amber, error → red. */
+/** Alert reason chip: duration → amber, error/job → red. */
 export function alertReasonTone(reason: string): string {
-	if (reason === "error") {
+	if (reason === "error" || reason === "job") {
 		return "border-red-300/60 bg-red-500/10 text-red-700 dark:border-red-500/40 dark:text-red-400";
 	}
 	return "border-amber-300/60 bg-amber-500/10 text-amber-700 dark:border-amber-500/40 dark:text-amber-400";

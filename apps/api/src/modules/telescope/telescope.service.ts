@@ -117,7 +117,6 @@ function parseQuery<T>(schema: z.ZodType<T>, raw: RawQuery): T {
  * touch is the Mail tab, which reuses the existing `email_logs` table.
  */
 @Injectable()
-// eslint-disable-next-line @darraghor/nestjs-typed/injectable-should-be-provided -- Registered in TelescopeModule.register()'s dynamic providers; the typed plugin only scans static @Module decorators.
 export class TelescopeService {
 	public constructor(
 		@Inject(TELESCOPE_STORE) private readonly store: TelescopeStore,

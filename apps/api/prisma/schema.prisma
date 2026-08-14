@@ -645,7 +645,8 @@ model TelescopeJob {
 
 model TelescopeAlert {
   id           String    @id
-  requestId    String    @map("request_id")
+  requestId    String?   @map("request_id")
+  jobName      String?   @map("job_name")
   method       String    @db.VarChar(10)
   path         String    @db.Text
   statusCode   Int?      @map("status_code")

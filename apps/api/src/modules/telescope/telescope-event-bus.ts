@@ -20,7 +20,6 @@ const REPLAY_BUFFER_SIZE = 200;
  * source of truth for full history).
  */
 @Injectable()
-// eslint-disable-next-line @darraghor/nestjs-typed/injectable-should-be-provided -- Registered in TelescopeModule.register()'s dynamic providers; the typed plugin only scans static @Module decorators.
 export class TelescopeEventBus {
 	private readonly live$: Subject<BufferedStreamEvent> = new Subject<BufferedStreamEvent>();
 	private readonly buffer: BufferedStreamEvent[] = [];

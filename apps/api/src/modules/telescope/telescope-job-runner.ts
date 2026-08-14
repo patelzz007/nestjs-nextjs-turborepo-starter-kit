@@ -22,7 +22,6 @@ import type { TelescopeStore } from "./telescope.store.js";
  * correlation id come along for free.
  */
 @Injectable()
-// eslint-disable-next-line @darraghor/nestjs-typed/injectable-should-be-provided -- Registered in TelescopeModule.register()'s dynamic providers; the typed plugin only scans static @Module decorators.
 export class TelescopeJobRunner {
 	private readonly runnables = new Map<string, () => Promise<void>>();
 

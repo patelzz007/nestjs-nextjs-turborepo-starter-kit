@@ -109,11 +109,14 @@ function OverviewContent(): React.JSX.Element {
 		void alertsQuery.refetch();
 	}, [alertsQuery]);
 
-	// Improvement 2: refetch on SSE pushes instead of polling on a timer.
+	// Improvement 2: refetch on SSE pushes instead of polling on a timer. The
+	// alerts query is included so a FAILED job (job alert) surfaces in the
+	// Alerts panel the moment it lands — no manual refresh.
 	const refresh = useCallback((): void => {
 		void overviewQuery.refetch();
 		void exceptionsQuery.refetch();
-	}, [overviewQuery, exceptionsQuery]);
+		void alertsQuery.refetch();
+	}, [overviewQuery, exceptionsQuery, alertsQuery]);
 	const live = useTelescopeLive(refresh);
 
 	// Track the previous error count so a NEW error pulses the card (v2).

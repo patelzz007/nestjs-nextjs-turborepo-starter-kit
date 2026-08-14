@@ -53,7 +53,6 @@ import { TelescopeService } from "./telescope.service.js";
 @ApiExcludeController()
 @Controller("telescope")
 @UseGuards(TelescopeAdminGuard)
-// eslint-disable-next-line @darraghor/nestjs-typed/injectable-should-be-provided -- Registered in TelescopeModule.register()'s dynamic controllers; the typed plugin only scans static @Module decorators.
 export class TelescopeController {
 	public constructor(private readonly telescopeService: TelescopeService) {}
 

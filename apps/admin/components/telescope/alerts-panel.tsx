@@ -145,11 +145,11 @@ export function AlertsPanel({ alerts, onChanged }: AlertsPanelProps): React.JSX.
 		<div className="space-y-1">
 			{alerts.map((alert) => {
 				const snoozed: boolean = alert.snoozedUntil !== null;
+				// Request alerts deep-link to the offending request; job alerts
+				// (no correlated request) link to the jobs page instead.
+				const href: string = alert.requestId !== null ? `/telescope/requests/${alert.requestId}` : "/telescope/jobs";
 				return (
-					<Link
-						key={alert.id}
-						href={`/telescope/requests/${alert.requestId}`}
-						className="group flex items-center gap-3 rounded-md px-2 py-1.5 transition-colors hover:bg-accent">
+					<Link key={alert.id} href={href} className="group flex items-center gap-3 rounded-md px-2 py-1.5 transition-colors hover:bg-accent">
 						<BellRing className={`size-3.5 shrink-0 ${snoozed ? "text-muted-foreground" : "text-red-500"}`} />
 						<div className="min-w-0 flex-1">
 							<div className="flex items-center gap-2">

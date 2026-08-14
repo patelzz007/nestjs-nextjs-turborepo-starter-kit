@@ -6,6 +6,7 @@ import {
 	type TelescopeAlertEntry,
 	type TelescopeAlertReason,
 	type TelescopeAlertStatus,
+	type TelescopeJobLogEntry,
 	type TelescopeOptions,
 	type TelescopeWebhookDelivery,
 } from "@workspace/shared";
@@ -41,7 +42,6 @@ interface DedupeKey {
 }
 
 @Injectable()
-// eslint-disable-next-line @darraghor/nestjs-typed/injectable-should-be-provided -- Registered in TelescopeModule.register()'s dynamic providers; the typed plugin only scans static @Module decorators.
 export class TelescopeAlertService {
 	private readonly dedupe = new Map<string, DedupeKey>();
 
@@ -73,6 +73,7 @@ export class TelescopeAlertService {
 		const alert: TelescopeAlertEntry = {
 			id: nanoid(),
 			requestId: entry.id,
+			jobName: null,
 			method: entry.method,
 			path: entry.path,
 			statusCode: entry.statusCode,
@@ -84,6 +85,51 @@ export class TelescopeAlertService {
 		};
 		// Improvement 5 — a new fire supersedes any open alert on the same
 		// route+reason: the old one becomes acknowledged ("resolved").
+		this.supersedeOpen(alert);
+		this.store.pushAlert(alert);
+		void this.fireWebhook(alert);
+	}
+
+	/**
+	 * Called by the job recorder when a job finishes FAILED. Any failed job
+	 * (email send, auth flow, impersonation, scheduled task, …) becomes an
+	 * alert with reason `"job"`, deduped per job name within the same
+	 * `TELESCOPE_ALERT_WINDOW_MINUTES` window so a repeatedly-failing job
+	 * doesn't flood the panel. `requestId` is the job's correlation id when it
+	 * ran inside a captured request, else null (the panel then links to the
+	 * jobs page instead).
+	 */
+	public evaluateJob(job: TelescopeJobLogEntry): void {
+		if (job.status !== "failed") {
+			return;
+		}
+		const key = `${job.jobName}#job`;
+		const previous: DedupeKey | undefined = this.dedupe.get(key);
+		const windowMs: number = this.options.alertWindowMinutes * 60 * 1000;
+		if (previous !== undefined && Date.now() - previous.firedAt < windowMs) {
+			return;
+		}
+		this.dedupe.set(key, { key, firedAt: Date.now() });
+		if (this.dedupe.size > 500) {
+			const oldestKey: string | undefined = this.dedupe.keys().next().value;
+			if (oldestKey !== undefined) {
+				this.dedupe.delete(oldestKey);
+			}
+		}
+
+		const alert: TelescopeAlertEntry = {
+			id: nanoid(),
+			requestId: job.correlationId,
+			jobName: job.jobName,
+			method: "JOB",
+			path: job.jobName,
+			statusCode: null,
+			durationMs: job.durationMs ?? 0,
+			reason: "job",
+			firedAt: new Date().toISOString(),
+			status: "open",
+			snoozedUntil: null,
+		};
 		this.supersedeOpen(alert);
 		this.store.pushAlert(alert);
 		void this.fireWebhook(alert);

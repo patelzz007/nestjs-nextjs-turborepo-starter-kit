@@ -43,6 +43,9 @@ import { webhookThrottlerOptionsFactory } from "./email/webhook-throttler.js";
 	// to ThrottlerModule.forRootAsync's `inject` anyway. LogService likewise
 	// comes from the @Global() LogsModule.
 	providers: [EmailSenderService, EmailLogService, EmailLogEventsService],
-	exports: [EmailSenderService, EmailLogService],
+	// EmailLogEventsService is exported for Telescope's email-job adapter
+	// (telescope → notifications is a one-way observation edge — notifications
+	// must never import TelescopeModule, that would create a cycle).
+	exports: [EmailSenderService, EmailLogService, EmailLogEventsService],
 })
 export class NotificationsModule {}

@@ -825,7 +825,7 @@ export type TelescopeLogsListResponse = z.output<typeof TelescopeLogsListRespons
 
 // ── Alerts (feature 18 — threshold alerts) ─────────────────────────────────
 
-export const TelescopeAlertReasonSchema = z.enum(["duration", "error"]);
+export const TelescopeAlertReasonSchema = z.enum(["duration", "error", "job"]);
 export type TelescopeAlertReason = z.output<typeof TelescopeAlertReasonSchema>;
 
 /** Triage status for an alert (improvement 5 — ack/snooze). */
@@ -835,7 +835,10 @@ export type TelescopeAlertStatus = z.output<typeof TelescopeAlertStatusSchema>;
 export const TelescopeAlertEntrySchema = z
 	.object({
 		id: z.string(),
-		requestId: z.string(),
+		/** The request the alert fired on — null for job alerts (job may run without a request). */
+		requestId: z.string().nullable(),
+		/** The failed job name — null for request-based alerts (duration/error). */
+		jobName: z.string().nullable().default(null),
 		method: z.string(),
 		path: z.string(),
 		statusCode: z.number().int().nullable(),

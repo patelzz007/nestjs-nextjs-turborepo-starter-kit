@@ -17,12 +17,10 @@ export const TELESCOPE_OPTIONS = "TELESCOPE_OPTIONS";
 export const TELESCOPE_STORE = "TELESCOPE_STORE";
 
 /**
- * Resolves the final Telescope options from the `register()` input + env.
- *
- * Order of precedence (docs/telescope.md §3 — "env wins at boot"):
- * 1. Explicit env vars (`TELESCOPE_*`) — highest priority.
- * 2. Values passed to `TelescopeModule.register({ ... })`.
- * 3. Schema defaults.
+ * Resolves the final Telescope options from env (`TELESCOPE_*`), falling
+ * back to schema defaults (docs/telescope.md §3 — "env wins at boot"). The
+ * module is now a plain static `@Global()` module, so options are resolved
+ * here at module init with no `register()` call site.
  *
  * Fail-closed by design: `NODE_ENV=production` disables Telescope unless
  * `TELESCOPE_ENABLED=true` is set explicitly (docs/telescope.md §6.4).

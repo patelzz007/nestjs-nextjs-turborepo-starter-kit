@@ -1,7 +1,9 @@
 import { Inject, Injectable, Logger, type OnModuleInit } from "@nestjs/common";
 
+import type { TelescopeOptions } from "@workspace/shared";
+
 import { TelescopeJobRunner } from "./telescope-job-runner.js";
-import { TELESCOPE_STORE } from "./telescope.options.js";
+import { TELESCOPE_OPTIONS, TELESCOPE_STORE } from "./telescope.options.js";
 import { TelescopeSchedulerService } from "./telescope-scheduler.js";
 import type { TelescopeStore } from "./telescope.store.js";
 
@@ -17,23 +19,27 @@ import type { TelescopeStore } from "./telescope.store.js";
  *   succeeded (or failed) with duration + next run time, and
  * - `/telescope/jobs` — a "demo-job" entry per fire with timestamps.
  *
- * This is intentionally a SEPARATE injectable that only exists when Telescope
- * is enabled (it is registered alongside the other feature services in
- * `TelescopeModule.register()`), so it cannot affect production behavior:
- * `NODE_ENV=production` fail-closes Telescope entirely.
+ * This is intentionally a SEPARATE injectable that self-guards on
+ * `options.enabled` — when Telescope is disabled (production fail-closed),
+ * `onModuleInit` returns without registering anything, so the demo schedule
+ * and seeded deliveries cannot leak into production.
  */
 @Injectable()
-// eslint-disable-next-line @darraghor/nestjs-typed/injectable-should-be-provided -- Registered in TelescopeModule.register()'s dynamic providers; the typed plugin only scans static @Module decorators.
 export class TelescopeDemoService implements OnModuleInit {
 	private readonly logger: Logger = new Logger(TelescopeDemoService.name);
 
 	public constructor(
+		@Inject(TELESCOPE_OPTIONS) private readonly options: TelescopeOptions,
 		@Inject(TELESCOPE_STORE) private readonly store: TelescopeStore,
 		private readonly jobRunner: TelescopeJobRunner,
 		private readonly scheduler: TelescopeSchedulerService,
 	) {}
 
 	public onModuleInit(): void {
+		// Fail-closed: demo wiring only ever runs while Telescope is enabled.
+		if (!this.options.enabled) {
+			return;
+		}
 		this.scheduler.register("telescope-demo", "*/1 * * * *", async (): Promise<void> => {
 			await this.runDemoJob();
 		});

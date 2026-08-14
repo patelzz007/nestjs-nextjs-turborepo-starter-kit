@@ -1,4 +1,4 @@
-import { CanActivate, ExecutionContext, ForbiddenException, Inject, Injectable } from "@nestjs/common";
+import { CanActivate, ExecutionContext, ForbiddenException, Inject, Injectable, NotFoundException } from "@nestjs/common";
 import type { Request } from "express";
 import { createHash, timingSafeEqual } from "node:crypto";
 
@@ -25,6 +25,13 @@ export class TelescopeAdminGuard implements CanActivate {
 
 	public canActivate(context: ExecutionContext): boolean {
 		const request: Request = context.switchToHttp().getRequest<Request>();
+
+		// Fail-closed: when Telescope is disabled (production default), the
+		// routes behave as if they never existed — 404 instead of leaking an
+		// empty dashboard or exercising the capture surfaces.
+		if (!this.options.enabled) {
+			throw new NotFoundException();
+		}
 
 		const token: string | undefined = this.options.token;
 		if (token !== undefined && request.headers.authorization?.startsWith("Bearer ") === true) {

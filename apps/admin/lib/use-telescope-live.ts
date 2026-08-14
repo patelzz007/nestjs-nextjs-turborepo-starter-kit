@@ -16,6 +16,14 @@
 // capped at 30s) plus random jitter so a flapping socket doesn't hammer the
 // API, and a closed stream never silently dies.
 //
+// Same-origin proxy: the stream is fetched from `/api/telescope/stream` on
+// THIS app's origin (not the API's), which is proxied server-side to the API
+// by `app/api/telescope/stream/route.ts`. Same-origin means no CORS preflight
+// ever runs — `Last-Event-ID` (not a CORS-safelisted header) used to trigger a
+// preflight on every reconnect, which the API's allowedHeaders rejected and
+// wedged the stream on "reconnecting…" forever. The proxy forwards the admin
+// cookies + `Last-Event-ID`, and silently rotates an expired access token.
+//
 // Improvement v2 (SSE live UI polish):
 // - each frame is parsed through `TelescopeStreamEventSchema` and buffered
 //   (last 50) so pages can render a live activity feed without a refetch,
@@ -30,7 +38,6 @@
 
 "use client";
 
-import { API_BASE_URL } from "@workspace/client/lib/api/config";
 import { TelescopeStreamEventSchema, type TelescopeStreamEvent } from "@workspace/shared";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -135,7 +142,9 @@ export function useTelescopeLive(onEvent: (event: TelescopeStreamEvent) => void)
 		const attempt: number = reconnectAttemptRef.current;
 		void (async (): Promise<void> => {
 			try {
-				const response: Response = await fetch(`${API_BASE_URL}/telescope/stream`, {
+				// Same-origin (proxied by the route handler) — cookies flow
+				// automatically; `credentials` kept explicit for clarity.
+				const response: Response = await fetch("/api/telescope/stream", {
 					credentials: "include",
 					// `Accept: text/event-stream` is required — the global
 					// ResponseInterceptor bypasses its `{ success, data, meta }`

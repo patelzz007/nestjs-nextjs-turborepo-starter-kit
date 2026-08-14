@@ -14,6 +14,7 @@ import { RbacModule } from "../rbac/rbac.module.js";
 import { AuthController } from "./auth.controller.js";
 import { RootUsersController } from "./root-users.controller.js";
 import { AuthService } from "./auth.service.js";
+import { AuthEventsService } from "./services/auth-events.service.js";
 import { CryptoService } from "./services/crypto.service.js";
 import { EmailService } from "./services/email.service.js";
 import { TaskScheduleService } from "./services/task-schedule.service.js";
@@ -24,6 +25,7 @@ import { TokenService } from "./services/token.service.js";
 	controllers: [AuthController, RootUsersController],
 	providers: [
 		AuthService,
+		AuthEventsService,
 		TokenService,
 		CryptoService,
 		CookieConfigService,
@@ -37,6 +39,8 @@ import { TokenService } from "./services/token.service.js";
 	],
 	exports: [
 		AuthService,
+		// AuthEventsService is exported for Telescope's auth-job adapter
+		AuthEventsService,
 		TokenService,
 		CryptoService,
 		EmailService,

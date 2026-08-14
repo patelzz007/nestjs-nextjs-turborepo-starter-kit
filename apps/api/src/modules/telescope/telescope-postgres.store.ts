@@ -59,7 +59,6 @@ import { TelescopeMemoryStore, type ListResult, type OverviewStats, type Telesco
  * Retention (improvement 4) prunes both the buffer and the DB tables.
  */
 @Injectable()
-// eslint-disable-next-line @darraghor/nestjs-typed/injectable-should-be-provided -- Registered in TelescopeModule.register()'s dynamic providers; the typed plugin only scans static @Module decorators.
 export class TelescopePostgresStore implements TelescopeStore, OnModuleInit {
 	public readonly mode: string = "postgres";
 
@@ -75,6 +74,12 @@ export class TelescopePostgresStore implements TelescopeStore, OnModuleInit {
 
 	/** Hydrates the buffer from the DB at boot so history survives restarts. */
 	public async onModuleInit(): Promise<void> {
+		// Static-registered unconditionally (the TELESCOPE_STORE factory picks
+		// memory instead when storage is not postgres) — never touch the DB
+		// unless this store is actually the active backend.
+		if (this.options.storage !== "postgres") {
+			return;
+		}
 		const [requests, queries, exceptions, dumps, jobs, alerts, annotations] = await Promise.all([
 			this.prisma.telescopeRequest.findMany({ orderBy: { createdAt: "desc" }, take: this.options.maxRequests }),
 			this.prisma.telescopeQuery.findMany({ orderBy: { createdAt: "desc" }, take: this.options.maxRequests * 4 }),
@@ -605,6 +610,7 @@ function toAlertRow(entry: TelescopeAlertEntry): Prisma.TelescopeAlertCreateInpu
 	return {
 		id: entry.id,
 		requestId: entry.requestId,
+		jobName: entry.jobName,
 		method: entry.method,
 		path: entry.path,
 		statusCode: entry.statusCode,
@@ -618,7 +624,8 @@ function toAlertRow(entry: TelescopeAlertEntry): Prisma.TelescopeAlertCreateInpu
 
 function mapAlertRow(row: {
 	readonly id: string;
-	readonly requestId: string;
+	readonly requestId: string | null;
+	readonly jobName: string | null;
 	readonly method: string;
 	readonly path: string;
 	readonly statusCode: number | null;
@@ -631,6 +638,7 @@ function mapAlertRow(row: {
 	return TelescopeAlertEntrySchema.parse({
 		id: row.id,
 		requestId: row.requestId,
+		jobName: row.jobName,
 		method: row.method,
 		path: row.path,
 		statusCode: row.statusCode,

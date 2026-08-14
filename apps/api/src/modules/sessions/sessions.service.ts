@@ -10,6 +10,7 @@ import { RbacService } from "../rbac/rbac.service.js";
 import { AuthService } from "../auth/auth.service.js";
 import { CryptoService } from "../auth/services/crypto.service.js";
 import { TokenService } from "../auth/services/token.service.js";
+import { SessionActionEventSchema, SessionsEventsService } from "./sessions-events.service.js";
 
 /**
  * Owns the refresh-token / active-session lifecycle: token rotation,
@@ -29,9 +30,11 @@ export class SessionsService {
 		private readonly logService: LogService,
 		private readonly rbacService: RbacService,
 		private readonly authService: AuthService,
+		private readonly sessionsEvents: SessionsEventsService,
 	) {}
 
 	public async refreshToken(userId: string, rawRefreshTokenJwt: string, refreshTokenJti: string, deviceInfo?: string, ipAddress?: string): Promise<RefreshResponse> {
+		const actionStartedAt: number = performance.now();
 		const user = await this.prisma.user.findUnique({
 			where: { id: userId },
 			select: {
@@ -104,6 +107,15 @@ export class SessionsService {
 				data: { isDeleted: true, deletedAt: new Date() },
 			});
 
+			this.sessionsEvents.emitAction(
+				SessionActionEventSchema.parse({
+					action: "refresh",
+					userId: user.id,
+					status: "failed",
+					error: "TOKEN_THEFT_DETECTED",
+					durationMs: Math.round(performance.now() - actionStartedAt),
+				}),
+			);
 			throw new UnauthorizedException({
 				message: "Suspicious activity detected. All sessions have been revoked. Please log in again.",
 				error: "TOKEN_THEFT_DETECTED",
@@ -132,6 +144,16 @@ export class SessionsService {
 			},
 		});
 
+		this.sessionsEvents.emitAction(
+			SessionActionEventSchema.parse({
+				action: "refresh",
+				userId: user.id,
+				status: "succeeded",
+				error: null,
+				durationMs: Math.round(performance.now() - actionStartedAt),
+			}),
+		);
+
 		return tokens;
 	}
 
@@ -139,6 +161,7 @@ export class SessionsService {
 	 * Logout from the specific device identified by the refresh token's jti.
 	 */
 	public async logoutDevice(userId: string, refreshTokenJti: string): Promise<void> {
+		const actionStartedAt: number = performance.now();
 		const storedToken = await this.prisma.refreshToken.findUnique({
 			where: { id: refreshTokenJti },
 		});
@@ -149,16 +172,37 @@ export class SessionsService {
 				data: { isDeleted: true, deletedAt: new Date() },
 			});
 		}
+
+		this.sessionsEvents.emitAction(
+			SessionActionEventSchema.parse({
+				action: "logout-device",
+				userId,
+				status: "succeeded",
+				error: null,
+				durationMs: Math.round(performance.now() - actionStartedAt),
+			}),
+		);
 	}
 
 	/**
 	 * Logout from all devices — clears every refresh token for this user.
 	 */
 	public async logoutAllDevices(userId: string): Promise<void> {
+		const actionStartedAt: number = performance.now();
 		await this.prisma.refreshToken.updateMany({
 			where: { userId },
 			data: { isDeleted: true, deletedAt: new Date() },
 		});
+
+		this.sessionsEvents.emitAction(
+			SessionActionEventSchema.parse({
+				action: "logout-all",
+				userId,
+				status: "succeeded",
+				error: null,
+				durationMs: Math.round(performance.now() - actionStartedAt),
+			}),
+		);
 	}
 
 	/**

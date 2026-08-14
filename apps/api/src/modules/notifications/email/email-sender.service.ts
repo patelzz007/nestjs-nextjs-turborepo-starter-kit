@@ -1,11 +1,10 @@
-import { Inject, Injectable } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
 import { Resend } from "resend";
 
 import { EmailSendResultSchema, type EmailSendResult } from "@workspace/shared";
 
 import { TypedConfigService } from "../../../config/typed-config.service.js";
 import { LogService } from "../../logs/logs.service.js";
-import { TelescopeJobRunner } from "../../telescope/telescope-job-runner.js";
 import { BaseEmailTemplate, type BaseEmailProps } from "./base/base-email-template.js";
 import { EmailRenderContextSchema, type EmailRenderContext } from "./base/email-render-context.js";
 import { EmailLogService } from "./email-log.service.js";
@@ -61,7 +60,6 @@ export class EmailSenderService {
 		private readonly config: TypedConfigService,
 		private readonly logService: LogService,
 		private readonly emailLogService: EmailLogService,
-		@Inject(TelescopeJobRunner) private readonly jobRunner: TelescopeJobRunner,
 	) {
 		this.resend = new Resend(this.config.resendApiKey);
 		this.fromAddress = this.config.emailFromAddress;
@@ -121,24 +119,20 @@ export class EmailSenderService {
 		const text: string = template.renderText(this.renderContext);
 
 		try {
-			// Telescope (feature 3): every real send is recorded as a job so
-			// /telescope/jobs shows send-email entries with duration + status.
-			// The payload is sized but NEVER stored (PII stays out of the log).
-			const resendId: string = await this.jobRunner.run(
-				`send-email:${template.key}`,
-				async (): Promise<string> =>
-					this.sendWithRetry({
-						to: effectiveTo,
-						subject: template.subject,
-						html,
-						text,
-						cc: parsed.data.cc,
-						bcc: parsed.data.bcc,
-						replyTo: parsed.data.replyTo ?? this.config.emailReplyTo,
-					}),
-				{ template: template.key, to: this.maskEmail(effectiveTo) },
-			);
-			await this.persist(template, effectiveTo, "sent", resendId);
+			// The send duration is carried on the EmailLog attempt event; the
+			// telescope module observes that stream and records a job per real
+			// send automatically (this module has no telescope references).
+			const sendStartedAt: number = performance.now();
+			const resendId: string = await this.sendWithRetry({
+				to: effectiveTo,
+				subject: template.subject,
+				html,
+				text,
+				cc: parsed.data.cc,
+				bcc: parsed.data.bcc,
+				replyTo: parsed.data.replyTo ?? this.config.emailReplyTo,
+			});
+			await this.persist(template, effectiveTo, "sent", resendId, undefined, Math.round(performance.now() - sendStartedAt));
 			this.logService.info(`Sent "${template.subject}" to ${this.maskEmail(effectiveTo)} (${resendId})`, {
 				context: "EmailSenderService",
 			});
@@ -287,7 +281,14 @@ export class EmailSenderService {
 	}
 
 	/** Persist one row in EmailLog. Fire-and-forget on persistence errors. */
-	private async persist(template: BaseEmailTemplate<BaseEmailProps>, to: string, status: "sent" | "failed", resendId: string | undefined, error?: string): Promise<void> {
+	private async persist(
+		template: BaseEmailTemplate<BaseEmailProps>,
+		to: string,
+		status: "sent" | "failed",
+		resendId: string | undefined,
+		error?: string,
+		durationMs?: number,
+	): Promise<void> {
 		try {
 			await this.emailLogService.create({
 				templateKey: template.key,
@@ -296,6 +297,7 @@ export class EmailSenderService {
 				status,
 				resendId,
 				error,
+				durationMs,
 			});
 		} catch (persistError) {
 			// Log persistence must never fail the send pipeline.

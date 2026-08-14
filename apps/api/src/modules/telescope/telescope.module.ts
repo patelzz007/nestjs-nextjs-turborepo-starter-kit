@@ -1,15 +1,17 @@
-import { DynamicModule, Global, Module, type Provider, type Type } from "@nestjs/common";
+import { Global, Module } from "@nestjs/common";
 import { APP_INTERCEPTOR } from "@nestjs/core";
 
-import type { TelescopeOptions } from "@workspace/shared";
+import type { TelescopeOptions, TelescopeStorage } from "@workspace/shared";
+
+import { PrismaModule } from "../../prisma/prisma.module.js";
 
 import { resolveTelescopeOptions, TELESCOPE_OPTIONS, TELESCOPE_STORE } from "./telescope.options.js";
 import { TelescopeAdminGuard } from "./telescope-admin.guard.js";
 import { TelescopeAlertService } from "./telescope-alert.service.js";
 import { TelescopeCacheTracer } from "./telescope-cache-tracer.js";
 import { TelescopeConsoleCapture } from "./telescope-console-capture.js";
-import { TelescopeDemoService } from "./telescope-demo.service.js";
 import { TelescopeController } from "./telescope.controller.js";
+import { TelescopeDemoService } from "./telescope-demo.service.js";
 import { TelescopeEventBus } from "./telescope-event-bus.js";
 import { TelescopeInterceptor } from "./telescope.interceptor.js";
 import { TelescopeJobRunner } from "./telescope-job-runner.js";
@@ -18,65 +20,73 @@ import { TelescopePostgresStore } from "./telescope-postgres.store.js";
 import { TelescopeRetentionService } from "./telescope-retention.service.js";
 import { TelescopeSchedulerService } from "./telescope-scheduler.js";
 import { TelescopeService } from "./telescope.service.js";
-import { TelescopeMemoryStore } from "./telescope.store.js";
+import { TelescopeMemoryStore, type TelescopeStore } from "./telescope.store.js";
 
 /**
- * The one config surface (docs/telescope.md §3): `TelescopeModule.register()`
- * resolves options (env wins), builds the store (memory or Postgres —
- * improvement 1), and wires capture.
+ * The one config surface (docs/telescope.md §3): options are resolved from
+ * env (`TELESCOPE_*`) at module init — `TELESCOPE_ENABLED`/`NODE_ENV` decide
+ * whether capture runs, `TELESCOPE_MODE` picks the store backend.
  *
- * When disabled (fail-closed in production), the module still provides the
- * store + options so the capture middleware can resolve — but registers no
- * controller, no interceptor, and no Prisma listener, so nothing is captured
- * and `/telescope/*` does not exist.
+ * This is a plain static `@Global()` module (same pattern as ConfigModule,
+ * PrismaModule and LogsModule): any module can inject `TelescopeJobRunner`,
+ * `TelescopeSchedulerService`, `TELESCOPE_STORE`, … without importing it or
+ * listing providers. All capture components are registered unconditionally and
+ * self-guard on the resolved options at runtime, so the fail-closed semantics
+ * are preserved: when disabled, the middleware never opens a captured span
+ * store (the interceptor + Prisma listener + console capture become no-ops),
+ * the demo service stays silent, and `/telescope/*` returns 404 via the guard.
  */
 @Global()
-@Module({})
-export class TelescopeModule {
-	public static register(provided: Partial<TelescopeOptions>): DynamicModule {
-		const resolved: TelescopeOptions = resolveTelescopeOptions(provided);
-
-		const providers: Provider[] = [
-			{ provide: TELESCOPE_OPTIONS, useValue: resolved },
-			// The store is a drop-in behind the token: memory = plain instance,
-			// postgres = an injectable class that hydrates from the DB at boot.
-			...(resolved.storage === "postgres"
-				? [TelescopePostgresStore, { provide: TELESCOPE_STORE, useExisting: TelescopePostgresStore }]
-				: [{ provide: TELESCOPE_STORE, useValue: new TelescopeMemoryStore(resolved.maxRequests) }]),
-		];
-
-		const controllers: Type<TelescopeController>[] = [];
-
-		if (resolved.enabled) {
-			providers.push(
-				TelescopeEventBus,
-				TelescopeConsoleCapture,
-				TelescopeRetentionService,
-				TelescopePrismaListener,
-				// Feature surfaces (3/4/5/7/18): job runner, scheduler, cache tracer,
-				// alert service — registered alongside the capture pipeline. The
-				// demo service is dev-only sugar so the jobs/schedules pages have
-				// data out of the box (fail-closed in production).
-				TelescopeJobRunner,
-				TelescopeSchedulerService,
-				TelescopeCacheTracer,
-				TelescopeAlertService,
-				TelescopeDemoService,
-				TelescopeService,
-				TelescopeAdminGuard,
-				{
-					provide: APP_INTERCEPTOR,
-					useClass: TelescopeInterceptor,
-				},
-			);
-			controllers.push(TelescopeController);
-		}
-
-		return {
-			module: TelescopeModule,
-			providers,
-			controllers,
-			exports: [TELESCOPE_OPTIONS, TELESCOPE_STORE, TelescopeJobRunner, TelescopeSchedulerService, TelescopeCacheTracer, TelescopeAlertService, TelescopeDemoService],
-		};
-	}
-}
+@Module({
+	imports: [PrismaModule],
+	providers: [
+		// Env-driven options — capture code never touches process.env directly.
+		{ provide: TELESCOPE_OPTIONS, useFactory: (): TelescopeOptions => resolveTelescopeOptions({}) },
+		TelescopeEventBus,
+		TelescopeConsoleCapture,
+		TelescopeRetentionService,
+		TelescopePrismaListener,
+		// Feature surfaces (3/4/5/7/18): job runner, scheduler, cache tracer,
+		// alert service — registered alongside the capture pipeline.
+		TelescopeJobRunner,
+		TelescopeSchedulerService,
+		TelescopeCacheTracer,
+		TelescopeAlertService,
+		// The demo service is dev-only sugar so the jobs/schedules pages have
+		// data out of the box (self-guards on `options.enabled` — silent in
+		// production). The email-job adapter (TelescopeEmailJobAdapter) is wired
+		// in AppModule — it observes NotificationsModule's event stream, so it
+		// lives where both modules' exports are visible.
+		TelescopeDemoService,
+		// The store is a drop-in behind the token: memory = plain instance,
+		// postgres = the injectable class (its onModuleInit hydrates from the
+		// DB at boot, and no-ops unless TELESCOPE_MODE=postgres).
+		TelescopePostgresStore,
+		{
+			provide: TELESCOPE_STORE,
+			inject: [TELESCOPE_OPTIONS, TelescopePostgresStore],
+			useFactory: (options: TelescopeOptions, postgresStore: TelescopePostgresStore): TelescopeStore => {
+				const storage: TelescopeStorage = options.storage;
+				return storage === "postgres" ? postgresStore : new TelescopeMemoryStore(options.maxRequests);
+			},
+		},
+		TelescopeService,
+		TelescopeAdminGuard,
+		{
+			provide: APP_INTERCEPTOR,
+			useClass: TelescopeInterceptor,
+		},
+	],
+	controllers: [TelescopeController],
+	exports: [
+		TELESCOPE_OPTIONS,
+		TELESCOPE_STORE,
+		TelescopeEventBus,
+		TelescopeJobRunner,
+		TelescopeSchedulerService,
+		TelescopeCacheTracer,
+		TelescopeAlertService,
+		TelescopeDemoService,
+	],
+})
+export class TelescopeModule {}

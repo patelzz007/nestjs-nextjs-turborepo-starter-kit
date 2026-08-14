@@ -27,7 +27,12 @@ async function bootstrap(): Promise<void> {
 	app.enableCors({
 		origin: corsOrigins,
 		credentials: true,
-		allowedHeaders: ["Content-Type", "X-Client-Type"],
+		// `Last-Event-ID` is required for SSE replay reconnects: the Telescope
+		// stream client sends it (fetch-based SSE) to resume from the last
+		// received seq. It is not a CORS-safelisted header, so without it here
+		// every reconnect preflight is rejected and the stream shows
+		// "reconnecting…" forever after the first pause/drop.
+		allowedHeaders: ["Content-Type", "X-Client-Type", "Accept", "Last-Event-ID"],
 	});
 
 	// ── Cookie Parser ────────────────────────────────────────────

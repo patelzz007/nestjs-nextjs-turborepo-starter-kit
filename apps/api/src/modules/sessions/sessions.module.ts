@@ -6,12 +6,14 @@ import { RbacModule } from "../rbac/rbac.module.js";
 
 import { SessionStatusController } from "./session-status.controller.js";
 import { SessionsController } from "./sessions.controller.js";
+import { SessionsEventsService } from "./sessions-events.service.js";
 import { SessionsService } from "./sessions.service.js";
 
 @Module({
 	imports: [PrismaModule, AuthModule, RbacModule],
 	controllers: [SessionsController, SessionStatusController],
-	providers: [SessionsService],
-	exports: [SessionsService],
+	providers: [SessionsService, SessionsEventsService],
+	// SessionsEventsService is exported for Telescope's sessions-job adapter
+	exports: [SessionsService, SessionsEventsService],
 })
 export class SessionsModule {}

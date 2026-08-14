@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { TelescopeOptionsSchema, type RequestLogEntry, type TelescopeOptions } from "@workspace/shared";
+import { TelescopeOptionsSchema, type RequestLogEntry, type TelescopeJobLogEntry, type TelescopeOptions } from "@workspace/shared";
 
 import { TelescopeAlertService } from "./telescope-alert.service.js";
 import { TelescopeMemoryStore } from "./telescope.store.js";
@@ -37,6 +37,22 @@ function makeService(overrides: Partial<TelescopeOptions>): { readonly service: 
 	const options: TelescopeOptions = TelescopeOptionsSchema.parse({ alertWebhookUrl: "https://example.test/hook", sampling: { dev: 1, prod: 0.01 }, ...overrides });
 	const service = new TelescopeAlertService(options, store);
 	return { service, store };
+}
+
+function makeJob(overrides: Partial<TelescopeJobLogEntry>): TelescopeJobLogEntry {
+	return {
+		id: "job-1",
+		jobName: "auth:login",
+		status: "failed",
+		durationMs: 42,
+		payloadSize: 0,
+		error: null,
+		correlationId: null,
+		enqueuedAt: "2026-08-12T10:00:00.000Z",
+		startedAt: "2026-08-12T10:00:00.000Z",
+		finishedAt: "2026-08-12T10:00:00.042Z",
+		...overrides,
+	};
 }
 
 describe("TelescopeAlertService", () => {
@@ -76,5 +92,38 @@ describe("TelescopeAlertService", () => {
 		expect(service.reasonFor(makeRequest({ id: "b", durationMs: 3000 }))).toBe("duration");
 		expect(service.reasonFor(makeRequest({ id: "c", statusCode: 200, durationMs: 10 }))).toBeNull();
 		expect(store.listAlerts(50).length).toBe(0);
+	});
+
+	// ── Failed jobs → job alerts ────────────────────────────────────────
+
+	it("fires a job alert for a failed job with the job name", () => {
+		const { service, store } = makeService({});
+		service.evaluateJob(makeJob({ id: "j1", jobName: "auth:login", error: "INVALID_CREDENTIALS" }));
+		const alerts = store.listAlerts(50);
+		expect(alerts.length).toBe(1);
+		expect(alerts[0]?.reason).toBe("job");
+		expect(alerts[0]?.jobName).toBe("auth:login");
+		expect(alerts[0]?.path).toBe("auth:login");
+		expect(alerts[0]?.requestId).toBeNull();
+	});
+
+	it("links a job alert to its correlated request when one exists", () => {
+		const { service, store } = makeService({});
+		service.evaluateJob(makeJob({ id: "j1", jobName: "send-email:welcome", correlationId: "corr-x" }));
+		const alerts = store.listAlerts(50);
+		expect(alerts[0]?.requestId).toBe("corr-x");
+	});
+
+	it("ignores succeeded jobs", () => {
+		const { service, store } = makeService({});
+		service.evaluateJob(makeJob({ id: "j1", status: "succeeded" }));
+		expect(store.listAlerts(50).length).toBe(0);
+	});
+
+	it("dedupes repeated failures of the same job within the window", () => {
+		const { service, store } = makeService({});
+		service.evaluateJob(makeJob({ id: "j1", jobName: "auth:login" }));
+		service.evaluateJob(makeJob({ id: "j2", jobName: "auth:login" }));
+		expect(store.listAlerts(50).length).toBe(1);
 	});
 });

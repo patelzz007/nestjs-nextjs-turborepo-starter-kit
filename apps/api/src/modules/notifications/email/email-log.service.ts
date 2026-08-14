@@ -16,6 +16,8 @@ export const EmailLogCreateSchema = z
 		status: EmailLogStatusSchema,
 		resendId: z.string().optional(),
 		error: z.string().optional(),
+		/** Send duration in ms — carried on the attempt event for the jobs view. */
+		durationMs: z.number().int().nonnegative().optional(),
 		metadata: z.record(z.string(), z.union([z.string(), z.number(), z.boolean(), z.null()])).optional(),
 	})
 	.strict();
@@ -88,7 +90,16 @@ export class EmailLogService {
 			},
 			select: { id: true },
 		});
-		this.events.emitUpdated();
+		// Full attempt payload on creation (the telescope adapter records real
+		// sends as jobs from this); bare signal for webhook flips.
+		this.events.emitUpdated({
+			templateKey: parsed.templateKey,
+			status: parsed.status,
+			to: parsed.to,
+			resendId: parsed.resendId ?? null,
+			error: parsed.error ?? null,
+			durationMs: parsed.durationMs ?? null,
+		});
 		return { id: row.id };
 	}
 

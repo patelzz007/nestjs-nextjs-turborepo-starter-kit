@@ -12,7 +12,6 @@ import type { TelescopeStore } from "./telescope.store.js";
  * both stores: memory prunes the buffer, Postgres prunes buffer + DB.
  */
 @Injectable()
-// eslint-disable-next-line @darraghor/nestjs-typed/injectable-should-be-provided -- Registered in TelescopeModule.register()'s dynamic providers; the typed plugin only scans static @Module decorators.
 export class TelescopeRetentionService implements OnModuleInit, OnModuleDestroy {
 	private readonly intervalMs: number = 5 * 60 * 1000;
 	/** First prune is deferred until shortly after boot so the store can hydrate. */
@@ -27,6 +26,10 @@ export class TelescopeRetentionService implements OnModuleInit, OnModuleDestroy 
 	) {}
 
 	public onModuleInit(): void {
+		// Fail-closed: no timers at all while Telescope is disabled.
+		if (!this.options.enabled) {
+			return;
+		}
 		this.bootTimeout = setTimeout((): void => {
 			this.prune();
 		}, this.firstPruneDelayMs);
