@@ -4,28 +4,37 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 import { apiFetch, useApi, type OnRefresh, type OnUnauthorized } from "./use-api";
+import { type JsonValue } from "@workspace/shared";
+import { defineQuery } from "./endpoints";
 import { firstFetchCall, headersOf, inputUrl, jsonResponse, type FetchImpl } from "../test-utils";
 
 const BASE_URL = "http://api.test";
 
 interface Envelope {
 	readonly success: true;
-	readonly data: unknown;
+	readonly data: JsonValue;
 	readonly meta: { readonly timestamp: number };
 }
 
 /** Minimal mirror of the API's ResponseInterceptor envelope. */
-const envelopeSchema = z
-	.object({
-		success: z.literal(true),
-		data: z.unknown(),
-		meta: z.object({ timestamp: z.number() }).loose(),
-	})
-	.loose();
+const envelopeSchema = z.object({
+	success: z.literal(true),
+	data: z.custom<JsonValue>(),
+	meta: z.object({ timestamp: z.number() }),
+});
 
-function successEnvelope(data: unknown): Envelope {
+function successEnvelope(data: JsonValue): Envelope {
 	return { success: true, data, meta: { timestamp: 1786428000000 } };
 }
+
+/** Minimal tRPC-style GET def mirroring `apiRouter.auth.me` for the 401-pipeline tests. */
+const meDef = defineQuery(
+	{ method: "GET", path: "/auth/me", input: z.undefined() },
+	{
+		response: envelopeSchema,
+		queryKey: () => ["auth", "me"],
+	},
+);
 
 afterEach(() => {
 	vi.unstubAllGlobals();
@@ -75,7 +84,10 @@ describe("apiFetch", () => {
 
 		expect(result.ok).toBe(false);
 		expect(result.status).toBe(500);
-		if (!result.ok) expect(result.error).toEqual({ message: "Server exploded" });
+		if (!result.ok) {
+			expect(result.error instanceof Error).toBe(true);
+			if (result.error instanceof Error) expect(result.error.message).toBe("Server exploded");
+		}
 	});
 
 	it("maps AbortError to ok:false with status 0", async () => {
@@ -112,9 +124,9 @@ describe("useApi 401 pipeline", () => {
 		const onUnauthorized = vi.fn<OnUnauthorized>();
 
 		const { result } = renderHook(() => useApi(BASE_URL, onUnauthorized, onRefresh));
-		const me = result.current.procedure({ method: "GET", path: "/auth/me", responseSchema: envelopeSchema });
+		const me = result.current.procedure(meDef);
 
-		const response = await me.fetch();
+		const response = await me.fetch(undefined);
 
 		expect(onRefresh).toHaveBeenCalledTimes(1);
 		expect(onUnauthorized).not.toHaveBeenCalled();
@@ -133,9 +145,9 @@ describe("useApi 401 pipeline", () => {
 		const onUnauthorized = vi.fn<OnUnauthorized>();
 
 		const { result } = renderHook(() => useApi(BASE_URL, onUnauthorized, onRefresh));
-		const me = result.current.procedure({ method: "GET", path: "/auth/me", responseSchema: envelopeSchema });
+		const me = result.current.procedure(meDef);
 
-		const response = await me.fetch();
+		const response = await me.fetch(undefined);
 
 		expect(onRefresh).toHaveBeenCalledTimes(1);
 		expect(onUnauthorized).toHaveBeenCalledTimes(1);
@@ -152,9 +164,9 @@ describe("useApi 401 pipeline", () => {
 		const onUnauthorized = vi.fn<OnUnauthorized>();
 
 		const { result } = renderHook(() => useApi(BASE_URL, onUnauthorized, onRefresh));
-		const me = result.current.procedure({ method: "GET", path: "/auth/me", responseSchema: envelopeSchema });
+		const me = result.current.procedure(meDef);
 
-		const response = await me.fetch();
+		const response = await me.fetch(undefined);
 
 		expect(onRefresh).not.toHaveBeenCalled();
 		expect(onUnauthorized).not.toHaveBeenCalled();

@@ -22,7 +22,7 @@ import { useCallback, useMemo, useState, type JSX, type ReactNode } from "react"
 
 import { isAccountLockedError, resolveAuthErrorMessage } from "./auth-errors";
 import { useAuth } from "./index";
-import { authEndpoints } from "../api/endpoints";
+
 import { passwordStrength } from "./password";
 
 /** Which app the form is authenticating for — drives endpoint + defaults. */
@@ -39,7 +39,7 @@ export interface LoginFormProps {
 	readonly redirectPath?: string;
 	readonly footer?: ReactNode;
 	/**
-	 * Selects the login endpoint (`authEndpoints.login` vs `.adminLogin` — the
+	 * Selects the login endpoint (`apiRouter.auth.login` vs `.adminLogin` — the
 	 * latter sends `X-Client-Type: admin` for cookie isolation) plus the
 	 * per-app defaults above. @default "web"
 	 */
@@ -82,9 +82,9 @@ export function LoginForm({
 		setPassword(e.target.value);
 	}, []);
 
-	// Admin logins send `X-Client-Type: admin` (handled by the endpoint's
+	// Admin logins send `X-Client-Type: admin` (handled by the def's
 	// baseOptions) so the backend sets the isolated admin cookie set.
-	const loginMutation = api.procedure(mode === "admin" ? authEndpoints.adminLogin : authEndpoints.login).useMutation();
+	const loginMutation = api.auth[mode === "admin" ? "adminLogin" : "login"].useMutation();
 
 	// Live password-strength feedback while typing (#27).
 	const strength = useMemo(() => passwordStrength(password), [password]);

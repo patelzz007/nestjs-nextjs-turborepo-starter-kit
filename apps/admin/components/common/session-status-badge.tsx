@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuth } from "@workspace/client/lib/auth";
-import { authEndpoints } from "@workspace/client/lib/api/endpoints";
+
 import { Badge } from "@workspace/ui/components/feedback/badge";
 import { useObservable } from "@workspace/ui/hooks/use-observable";
 import { cn } from "@workspace/ui/lib/utils";
@@ -168,7 +168,7 @@ export function SessionStatusBadge({ compact = false }: SessionStatusBadgeProps)
 	// longer involved in this component at all. The procedure returns the
 	// response envelope, so unwrap `.data` at the boundary.
 	const fetchSession = React.useCallback(async (): Promise<SessionStatus> => {
-		const response = await api.procedure(authEndpoints.sessionStatus).fetchOrThrow();
+		const response = await api.auth.sessionStatus.fetchOrThrow(undefined);
 		return response.data;
 	}, [api]);
 

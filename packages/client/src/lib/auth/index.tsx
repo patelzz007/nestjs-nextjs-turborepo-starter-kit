@@ -11,7 +11,7 @@ import { z } from "zod";
 
 import { createAuthChannel } from "./auth-sync";
 import { API_BASE_URL } from "../api/config";
-import { authEndpoints } from "../api/endpoints";
+import { apiRouter } from "../api/endpoints";
 import { apiFetch, createRefreshCooldown, useApi, type RefreshResult } from "../api/use-api";
 
 export interface AuthContextType {
@@ -195,7 +195,7 @@ export function AuthProvider({
 			// the 401-refresh-unauthorized pipeline it drives, and `useApi` is built
 			// *from* this callback, so depending on it would be circular. The path
 			// and method still come from the typed endpoint registry.
-			const response = await apiFetch(baseUrl, authEndpoints.refresh.method, authEndpoints.refresh.path, {
+			const response = await apiFetch(baseUrl, apiRouter.auth.refresh.method, apiRouter.auth.refresh.path, {
 				headers: clientType === "admin" ? { "X-Client-Type": "admin" } : undefined,
 			});
 			if (response.ok) return "ok";
@@ -249,7 +249,7 @@ export function AuthProvider({
 			// cookie set (web vs admin). Like refresh, this deliberately bypasses
 			// the `useApi` pipeline (logout must not trigger the 401-refresh flow)
 			// while still using the registry's path/method.
-			const response = await apiFetch(baseUrl, authEndpoints.logout.method, authEndpoints.logout.path, {
+			const response = await apiFetch(baseUrl, apiRouter.auth.logout.method, apiRouter.auth.logout.path, {
 				headers: clientType === "admin" ? { "X-Client-Type": "admin" } : undefined,
 			});
 			// `apiFetch` converts network failures into `ok: false` rather than

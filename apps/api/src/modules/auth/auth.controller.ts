@@ -3,11 +3,16 @@ import { ApiBearerAuth, ApiBody, ApiCreatedResponse, ApiHeader, ApiOkResponse, A
 import { SkipThrottle, Throttle } from "@nestjs/throttler";
 import type {
 	AdminUserDetail,
+	ForgotPasswordInput,
 	ForgotPasswordResponse,
+	LoginInput,
 	LoginServiceResponse,
 	MessageResponse,
+	ResendVerificationInput,
 	ResendVerificationResponse,
+	ResetPasswordInput,
 	ResetPasswordResponse,
+	SignupInput,
 	SignupResponse,
 	UserResponse,
 	VerifyEmailResponse,
@@ -22,8 +27,11 @@ import {
 	SignupResponseSchema,
 	UserResponseSchema,
 	VerifyEmailResponseSchema,
+	apiContract,
 } from "@workspace/shared";
 import type { Request } from "express";
+
+import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe.js";
 
 import { GetUser } from "./decorators/get-user.decorator.js";
 import { Public } from "./decorators/public.decorator.js";
@@ -74,8 +82,8 @@ export class AuthController {
 	@ApiBody({ type: SignupDto })
 	@ApiCreatedResponse({ type: WrappedSignupResponse, description: "User registered" })
 	@ApiResponse({ status: 409, type: ApiErrorResponseDto, description: "Email already in use" })
-	public async signup(@Body() signupDto: SignupDto): Promise<SignupResponse> {
-		return this.authService.signup(signupDto);
+	public async signup(@Body(new ZodValidationPipe(apiContract.auth.signup.input)) body: SignupInput): Promise<SignupResponse> {
+		return this.authService.signup(body);
 	}
 
 	@Throttle({ strict: { ttl: 60000, limit: 5 } })
@@ -93,7 +101,7 @@ export class AuthController {
 	@ApiResponse({ status: 403, type: ApiErrorResponseDto, description: "Admin access required (when X-Client-Type: admin and user is not superadmin)" })
 	@UseInterceptors(SetAuthCookiesInterceptor)
 	public async login(
-		@Body() loginDto: LoginDto,
+		@Body(new ZodValidationPipe(apiContract.auth.login.input)) body: LoginInput,
 		@Headers("x-client-type") headerClientType: string | undefined,
 		@Query("client_type") queryClientType: string | undefined,
 		@Req() req: Request,
@@ -101,7 +109,7 @@ export class AuthController {
 		// Accept client type from header (browser apps) or query param (Swagger UI)
 		const clientType: string | undefined = headerClientType ?? queryClientType;
 		const { deviceInfo, ipAddress } = extractClientInfo(req);
-		return this.authService.login(loginDto, clientType, deviceInfo, ipAddress);
+		return this.authService.login(body, clientType, deviceInfo, ipAddress);
 	}
 
 	// ── Email Verification ───────────────────────────────────────────────
@@ -113,8 +121,8 @@ export class AuthController {
 	@ApiOperation({ summary: "Resend email verification link" })
 	@ApiBody({ type: ResendVerificationDto })
 	@ApiOkResponse({ type: WrappedResendVerificationResponse, description: "Verification email resent" })
-	public async resendVerification(@Body() dto: ResendVerificationDto): Promise<ResendVerificationResponse> {
-		return this.authService.resendVerificationEmail(dto);
+	public async resendVerification(@Body(new ZodValidationPipe(apiContract.auth.resendVerification.input)) body: ResendVerificationInput): Promise<ResendVerificationResponse> {
+		return this.authService.resendVerificationEmail(body);
 	}
 
 	// ── Password Reset ───────────────────────────────────────────────────
@@ -126,8 +134,8 @@ export class AuthController {
 	@ApiOperation({ summary: "Request a password reset email" })
 	@ApiBody({ type: ForgotPasswordDto })
 	@ApiOkResponse({ type: WrappedForgotPasswordResponse, description: "Password reset email sent (if account exists)" })
-	public async forgotPassword(@Body() dto: ForgotPasswordDto): Promise<ForgotPasswordResponse> {
-		return this.authService.forgotPassword(dto);
+	public async forgotPassword(@Body(new ZodValidationPipe(apiContract.auth.forgotPassword.input)) body: ForgotPasswordInput): Promise<ForgotPasswordResponse> {
+		return this.authService.forgotPassword(body);
 	}
 
 	@Throttle({ strict: { ttl: 60000, limit: 5 } })
@@ -138,8 +146,8 @@ export class AuthController {
 	@ApiBody({ type: ResetPasswordDto })
 	@ApiOkResponse({ type: WrappedResetPasswordResponse, description: "Password reset successful" })
 	@ApiResponse({ status: 401, type: ApiErrorResponseDto, description: "Invalid or expired reset token" })
-	public async resetPassword(@Body() dto: ResetPasswordDto): Promise<ResetPasswordResponse> {
-		return this.authService.resetPassword(dto);
+	public async resetPassword(@Body(new ZodValidationPipe(apiContract.auth.resetPassword.input)) body: ResetPasswordInput): Promise<ResetPasswordResponse> {
+		return this.authService.resetPassword(body);
 	}
 
 	@SkipThrottle()

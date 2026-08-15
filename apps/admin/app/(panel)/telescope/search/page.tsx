@@ -1,308 +1,33 @@
-"use client";
+import { PrefetchBoundary } from "@workspace/client/lib/api/prefetch-boundary";
 
-// ============================================
-// app/(panel)/telescope/search/page.tsx
-// Feature 1 — global free-text search. One query scans every captured surface
-// (requests, SQL, exceptions, console logs) and renders grouped results, each
-// linking into its owning detail view. The search term lives in `?q=` so a
-// result set is shareable and survives refresh.
-// ============================================
+import { prefetchPage } from "@workspace/client/lib/api/server-api";
 
-import { useAuth } from "@workspace/client/lib/auth";
-import { telescopeEndpoints } from "@workspace/client/lib/api/endpoints";
-import { Button } from "@workspace/ui/components/form/button";
-import { Input } from "@workspace/ui/components/form/input";
-import { Search as SearchIcon, TriangleAlert } from "lucide-react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useCallback, useMemo, useState } from "react";
+import TelescopeSearchView from "./search-results";
 
-import {
-	TelescopeSearchQuerySchema,
-	type TelescopeSearchExceptionMatch,
-	type TelescopeSearchLogMatch,
-	type TelescopeSearchRequestMatch,
-	type TelescopeSearchResponse,
-	type TelescopeSearchSqlMatch,
-} from "@workspace/shared";
+export const dynamic = "force-dynamic";
 
-import { durationLabel, durationTone, formatTime, statusTone } from "@/lib/telescope";
-
-function SearchContent(): React.JSX.Element {
-	const { api } = useAuth();
-	const router = useRouter();
-	const searchParams = useSearchParams();
-
-	const initialQ: string = searchParams.get("q") ?? "";
-	const [q, setQ] = useState<string>(initialQ);
-
-	const query = useMemo(() => {
-		const trimmed: string = q.trim();
-		if (trimmed.length === 0) {
-			return null;
-		}
-		const parsed = TelescopeSearchQuerySchema.safeParse({ q: trimmed, limit: 10 });
-		return parsed.success ? parsed.data : null;
-	}, [q]);
-
-	// Pass the query params in the first argument (same as the requests/users
-	// pages) so `?q=` actually reaches the API. When the box is empty the
-	// query is null and the fetch is disabled — no request is made.
-	const searchQuery = api.procedure(telescopeEndpoints.search({ q: "___noop___", limit: 1 })).useQuery(query !== null ? { query } : undefined, {
-		enabled: query !== null,
-		placeholderData: (previous) => previous,
-	});
-
-	const results: TelescopeSearchResponse | undefined = searchQuery.data?.data;
-
-	const handleSubmit = useCallback(
-		(event: React.SyntheticEvent<HTMLFormElement>): void => {
-			event.preventDefault();
-			const trimmed: string = q.trim();
-			if (trimmed.length === 0) {
-				return;
-			}
-			router.replace(`/telescope/search?q=${encodeURIComponent(trimmed)}`, { scroll: false });
-		},
-		[q, router],
-	);
-
-	const handleChange = useCallback((event: React.ChangeEvent<HTMLInputElement>): void => {
-		setQ(event.target.value);
-	}, []);
-
-	return (
-		<div className="mx-auto w-full max-w-5xl space-y-6">
-			<header className="space-y-1">
-				<h1 className="text-2xl font-bold tracking-tight">Search</h1>
-				<p className="text-sm text-muted-foreground">One query across captured requests, SQL, exceptions and console output.</p>
-			</header>
-
-			<form onSubmit={handleSubmit} className="flex items-center gap-2">
-				<div className="relative flex-1">
-					<SearchIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-					<Input
-						value={q}
-						onChange={handleChange}
-						placeholder="Search paths, SQL, error messages, log lines…"
-						className="pl-9"
-						autoFocus
-						aria-label="Search telescope captures"
-					/>
-				</div>
-				<Button type="submit" disabled={q.trim().length === 0}>
-					Search
-				</Button>
-			</form>
-
-			{query === null ? (
-				<p className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">Type a term above to search every captured surface.</p>
-			) : searchQuery.isLoading ? (
-				<p className="text-sm text-muted-foreground">Searching…</p>
-			) : results === undefined ? (
-				<p className="text-sm text-muted-foreground">Searching…</p>
-			) : (
-				<div className="space-y-6">
-					{totalMatches(results) === 0 ? (
-						<div className="rounded-lg border border-dashed p-8 text-center">
-							<TriangleAlert className="mx-auto size-6 text-muted-foreground" />
-							<p className="mt-2 text-sm font-medium">No matches for “{query.q}”</p>
-							<p className="text-xs text-muted-foreground">Try a broader term — captures are limited to the retention window.</p>
-						</div>
-					) : (
-						<>
-							<RequestResults
-								rows={results.requests}
-								onOpen={(id: string): void => {
-									router.push(`/telescope/requests/${id}`);
-								}}
-								onOpenUser={(userId: string): void => {
-									router.push(`/telescope/requests?userId=${encodeURIComponent(userId)}`);
-								}}
-							/>
-							<SqlResults
-								rows={results.sql}
-								onOpen={(row: TelescopeSearchSqlMatch): void => {
-									router.push(`/telescope/requests?correlation=${row.correlationId}`);
-								}}
-							/>
-							<ExceptionResults
-								rows={results.exceptions}
-								onOpen={(row: TelescopeSearchExceptionMatch): void => {
-									router.push(`/telescope/exceptions?group=${row.errorGroup}`);
-								}}
-							/>
-							<LogResults
-								rows={results.logs}
-								onOpen={(row: TelescopeSearchLogMatch): void => {
-									router.push(`/telescope/requests/${row.requestId}`);
-								}}
-							/>
-						</>
-					)}
-				</div>
-			)}
-		</div>
-	);
-}
-
-function totalMatches(results: TelescopeSearchResponse): number {
-	return results.requests.length + results.sql.length + results.exceptions.length + results.logs.length;
-}
-
-/** A titled result group with shared row styling. */
-function ResultGroup({ title, count, children }: { readonly title: string; readonly count: number; readonly children: React.ReactNode }): React.JSX.Element {
-	if (count === 0) {
-		return <></>;
-	}
-	return (
-		<section className="space-y-2">
-			<h2 className="text-sm font-semibold tracking-wide text-muted-foreground uppercase">
-				{title} <span className="ml-1 text-xs">({String(count)})</span>
-			</h2>
-			<div className="overflow-hidden rounded-lg border">{children}</div>
-		</section>
-	);
-}
-
-/** Email/user deep-link inside a search result row (module-level: no hooks). */
-function SearchUserLink({ row, onOpenUser }: { readonly row: TelescopeSearchRequestMatch; readonly onOpenUser: (userId: string) => void }): React.JSX.Element {
-	const userId: string | null = row.userId;
-	if (userId === null) {
-		return <span>anonymous</span>;
-	}
-	return (
-		<button
-			type="button"
-			onClick={(event: React.MouseEvent): void => {
-				event.stopPropagation();
-				onOpenUser(userId);
-			}}
-			className="font-medium text-primary underline-offset-4 hover:underline"
-			title={`Filter requests to ${row.userEmail ?? userId}`}>
-			{row.userEmail ?? userId}
-		</button>
-	);
-}
-
-function RequestResults({
-	rows,
-	onOpen,
-	onOpenUser,
+/**
+ * `/telescope/search` — global free-text search. Prefetches results server-side
+ * only when `?q=` is present and non-empty (the client disables its query
+ * otherwise); the empty box renders its idle state with no API call.
+ */
+export default async function TelescopeSearchPage({
+	searchParams,
 }: {
-	readonly rows: readonly TelescopeSearchRequestMatch[];
-	readonly onOpen: (id: string) => void;
-	/** Email deep-link: filter the requests table to this user. */
-	readonly onOpenUser: (userId: string) => void;
-}): React.JSX.Element {
-	return (
-		<ResultGroup title="Requests" count={rows.length}>
-			{rows.map((row) => {
-				const tone = statusTone(row.statusCode);
-				return (
-					<button
-						key={row.id}
-						type="button"
-						onClick={(): void => {
-							onOpen(row.id);
-						}}
-						className="grid w-full grid-cols-[auto_1fr_auto] items-center gap-3 border-b px-4 py-2.5 text-left text-sm transition-colors last:border-b-0 hover:bg-muted/50">
-						<span className={`inline-flex items-center rounded-full border px-2 py-0.5 font-mono text-xs ${tone.pillClass}`}>{row.method}</span>
-						<span className="min-w-0">
-							<span className="block truncate font-medium">{row.path}</span>
-							<span className="truncate text-xs text-muted-foreground">
-								<SearchUserLink row={row} onOpenUser={onOpenUser} />
-								{" · "}
-								{formatTime(row.createdAt)}
-							</span>
-						</span>
-						<span className={`font-mono text-xs ${durationTone(row.durationMs).textClass}`}>{durationLabel(row.durationMs)}</span>
-					</button>
-				);
-			})}
-		</ResultGroup>
-	);
-}
+	readonly searchParams: Promise<Record<string, string | string[] | undefined>>;
+}): Promise<React.JSX.Element> {
+	const sp = await searchParams;
+	const rawQ: string | undefined = typeof sp.q === "string" ? sp.q : undefined;
+	const q: string = rawQ?.trim() ?? "";
+	const hasQuery: boolean = q.length > 0;
 
-function SqlResults({ rows, onOpen }: { readonly rows: readonly TelescopeSearchSqlMatch[]; readonly onOpen: (row: TelescopeSearchSqlMatch) => void }): React.JSX.Element {
-	return (
-		<ResultGroup title="SQL" count={rows.length}>
-			{rows.map((row) => (
-				<button
-					key={row.id}
-					type="button"
-					onClick={(): void => {
-						onOpen(row);
-					}}
-					className="block w-full border-b px-4 py-2.5 text-left text-sm transition-colors last:border-b-0 hover:bg-muted/50">
-					<span className="flex items-center gap-2">
-						<span className="rounded border px-1.5 py-0.5 font-mono text-xs text-muted-foreground">
-							{row.model}.{row.operation}
-						</span>
-						<span className={`font-mono text-xs ${durationTone(row.durationMs).textClass}`}>{durationLabel(row.durationMs)}</span>
-					</span>
-					<span className="mt-1 block truncate font-mono text-xs text-foreground/80">{row.query}</span>
-				</button>
-			))}
-		</ResultGroup>
-	);
-}
+	// The single input `{ q, limit }` drives both the URL and the react-query
+	// key — identical to what the client view computes, so the hydration binds.
+	const { state, report } = await prefetchPage((server) => [server.telescope.search({ q, limit: 10 }, { enabled: hasQuery })]);
 
-function ExceptionResults({
-	rows,
-	onOpen,
-}: {
-	readonly rows: readonly TelescopeSearchExceptionMatch[];
-	readonly onOpen: (row: TelescopeSearchExceptionMatch) => void;
-}): React.JSX.Element {
 	return (
-		<ResultGroup title="Exceptions" count={rows.length}>
-			{rows.map((row) => (
-				<button
-					key={row.id}
-					type="button"
-					onClick={(): void => {
-						onOpen(row);
-					}}
-					className="block w-full border-b px-4 py-2.5 text-left text-sm transition-colors last:border-b-0 hover:bg-muted/50">
-					<span className="flex items-center gap-2">
-						<span className="font-medium text-red-600 dark:text-red-400">{row.name}</span>
-						<span className="text-xs text-muted-foreground">
-							×{String(row.occurrences)} · {row.path ?? "—"}
-						</span>
-					</span>
-					<span className="mt-0.5 block truncate text-xs text-muted-foreground">{row.message}</span>
-				</button>
-			))}
-		</ResultGroup>
-	);
-}
-
-function LogResults({ rows, onOpen }: { readonly rows: readonly TelescopeSearchLogMatch[]; readonly onOpen: (row: TelescopeSearchLogMatch) => void }): React.JSX.Element {
-	return (
-		<ResultGroup title="Console output" count={rows.length}>
-			{rows.map((row) => (
-				<button
-					key={row.id}
-					type="button"
-					onClick={(): void => {
-						onOpen(row);
-					}}
-					className="block w-full border-b px-4 py-2.5 text-left text-sm transition-colors last:border-b-0 hover:bg-muted/50">
-					<span className="flex items-center gap-2">
-						<span className="rounded border px-1.5 py-0.5 font-mono text-xs text-muted-foreground uppercase">{row.level}</span>
-						<span className="text-xs text-muted-foreground">{row.path ?? "—"}</span>
-					</span>
-					<span className="mt-0.5 block truncate font-mono text-xs text-foreground/80">{row.message}</span>
-				</button>
-			))}
-		</ResultGroup>
-	);
-}
-
-export default function TelescopeSearchPage(): React.JSX.Element {
-	return (
-		<Suspense fallback={null}>
-			<SearchContent />
-		</Suspense>
+		<PrefetchBoundary state={state} report={report}>
+			<TelescopeSearchView />
+		</PrefetchBoundary>
 	);
 }

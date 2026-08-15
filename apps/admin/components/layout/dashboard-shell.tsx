@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuth } from "@workspace/client/lib/auth";
-import { authEndpoints } from "@workspace/client/lib/api/endpoints";
+
 import { Button } from "@workspace/ui/components/form/button";
 import { usePathname } from "next/navigation";
 import * as React from "react";
@@ -54,7 +54,7 @@ export function DashboardShell({ footerActions = [], children, initialUser = nul
 	// the SSR paint AND the transient-failure window (e.g. the API still
 	// booting after a dev restart): a bumped retry lets the fetch self-heal and
 	// refresh roles/permissions without a manual page reload.
-	const meQuery = api.procedure(authEndpoints.me).useQuery(undefined, {
+	const meQuery = api.auth.me.useQuery(undefined, {
 		retry: 5,
 		retryDelay: 2000,
 	});

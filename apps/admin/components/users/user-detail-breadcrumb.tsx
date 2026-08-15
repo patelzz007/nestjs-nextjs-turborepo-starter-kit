@@ -12,7 +12,7 @@ import { useAdminBreadcrumb } from "@/components/common/admin-breadcrumb";
  * but the entity's real name is only known at runtime. This component:
  *
  * 1. derives a display name for the user id (in a real app this would come
- *    from `api.procedure(...).useQuery()` — see `apps/api` modules),
+ *    from `api.users...useQuery()` — see `apps/api` modules),
  * 2. overrides the trail with `setItems` so the current page crumb shows the
  *    entity name,
  * 3. returns `reset` as the effect cleanup so navigating away restores the

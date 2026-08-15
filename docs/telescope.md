@@ -201,11 +201,13 @@ layer; it only reads the read-model via typed endpoints (`packages/client/lib/en
 - **Shared schemas live in `packages/shared`** (`schemas/domain/telescope.ts`). Both the
   API's DTOs (via `createZodDto`) and the admin's response validation import from here.
 - **The dashboard lives in the admin app.** Pages (`apps/admin/app/(panel)/telescope/**`)
-  are the smart components — they fetch via `useAuth().api.procedure(...)`. Components
-  (`apps/admin/components/telescope/**`) are dumb — they receive data through props and
-  render it. No component fetches.
-- **Endpoint registry entries** go in `packages/client/src/lib/endpoints.ts`
-  (`telescopeEndpoints`), so every page call is typed end-to-end with Zod.
+  are the smart components — they fetch via `useAuth().api` (the tRPC-style router).
+  Components (`apps/admin/components/telescope/**`) are dumb — they receive data through
+  props and render it. No component fetches.
+- **The route contract** lives in `packages/shared/contracts` (`apiContract.telescope`);
+  the client router (`packages/client/src/lib/api/endpoints.ts`, `apiRouter.telescope`)
+  derives from it and adds response/query-key, so every page call is typed end-to-end
+  with Zod — and the NestJS controllers validate the same inputs at the boundary.
 
 ### The module contract — one config surface
 
@@ -863,13 +865,14 @@ theme support via design tokens, mobile responsive.
 "use client";
 
 import { useAuth } from "@workspace/client/lib/auth";
-import { telescopeEndpoints } from "@workspace/client/lib/endpoints";
 import { DataTable } from "@workspace/ui/components/display/data-table";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useRouter } from "next/navigation";
 
 // column defs live in lib/telescope/request-columns.ts (no JSX-in-lib rule: .tsx)
 // …
+const { api } = useAuth();
+const requestsQuery = api.telescope.requests.useQuery(filters); // typed end-to-end
 ```
 
 - Columns: Method (badge, colored), Path (mono), Status (colored badge), Duration
@@ -904,38 +907,36 @@ expandable), Model, Op, Duration, Time. Row click → the owning request detail 
 `EmailLog` with status badges). Telescope's menu entry links here; do not build a second
 email table.
 
-### 8.4 Wiring the endpoint registry
+### 8.4 Wiring the router
+
+The route contract (method + path + input schema) is defined ONCE in
+`packages/shared/src/contracts` — the API validates requests against it at the
+HTTP boundary (`ZodValidationPipe(apiContract.telescope.requests.input)`,
+strict 400 on malformed input). The client router pairs each contract leaf with
+the response envelope + query key:
 
 ```ts
-// packages/client/src/lib/endpoints.ts (excerpt)
-export const telescopeEndpoints = {
-  overview: {
-    path: "/telescope/overview",
-    method: "GET",
-    queryKey: ["telescope", "overview"],
-    responseSchema: envelope(TelescopeOverviewSchema),
+// packages/client/src/lib/api/endpoints.ts (excerpt)
+export const apiRouter = {
+  telescope: {
+    overview: defineQuery(apiContract.telescope.overview, {
+      response: envelope(z.object({ overview: TelescopeOverviewSchema }).strict()),
+      queryKey: ({ range }) => ["telescope", "overview", range],
+    }),
+    requests: defineQuery(apiContract.telescope.requests, {
+      response: envelope(z.object({ list: TelescopeRequestListResponseSchema }).strict()),
+      queryKey: (query) => ["telescope", "requests", query],
+    }),
+    // …sql, exceptions, mail
   },
-  listRequests: {
-    path: "/telescope/requests",
-    method: "GET",
-    queryKey: ["telescope", "requests"],
-    responseSchema: envelope(TelescopeRequestListSchema),
-  },
-  requestDetail: {
-    path: "/telescope/requests/:id",
-    method: "GET",
-    queryKey: ["telescope", "request"],
-    responseSchema: envelope(RequestLogDetailSchema),
-  },
-  // …sql, exceptions, mail
-} as const satisfies Record<string, EndpointDefinition>;
+} as const;
 ```
 
-Pages call them exactly like the existing `authEndpoints.me` pattern:
+Pages call them input-first, exactly like `auth.me`:
 
 ```tsx
 const { api } = useAuth();
-const requests = api.procedure(telescopeEndpoints.listRequests, { query: filters }).useQuery();
+const requests = api.telescope.requests.useQuery(filters);
 ```
 
 ---
@@ -1112,7 +1113,7 @@ The horizontal bar is the signature of the whole feature — get it right:
 ### M3 — Telescope API ✅ (1 day) — the stability gate
 
 - ✅ `TelescopeController` (admin-gated by `TelescopeAdminGuard`, `@ApiExcludeController()` so bodies never leak into public Swagger): overview, requests list, request detail (with queries + dumps), sql list, exceptions list/detail, mail proxy, `POST /telescope/dump`.
-- ✅ `telescopeEndpoints` registry in `packages/client/src/lib/api/endpoints.ts` — every page call typed end-to-end with Zod.
+- ✅ `apiRouter.telescope` in `packages/client/src/lib/api/endpoints.ts` (derived from `apiContract` in `packages/shared`) — every page call typed end-to-end with Zod, and the API validates the same inputs at the boundary.
 - ✅ Store filter tests (`telescope.store.spec.ts`: predicate mapping, correlationId joins for queries + dumps).
 
 > [!IMPORTANT] **Gate — no UI before this.** Nothing in §8 starts until the API is fully

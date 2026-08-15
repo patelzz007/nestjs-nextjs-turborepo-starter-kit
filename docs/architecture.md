@@ -124,10 +124,11 @@ Key points:
 ```
 packages/shared/src/
 ├── index.ts   ← barrel — re-exports everything
+├── contracts/ ← apiContract — the shared route contract (method + path + input schema)
 └── schemas/
     ├── auth/    ← auth.ts, auth-errors, session-status, user
     ├── api/     ← api-response, common, env, health.schema, message, pagination
-    └── domain/  ← rbac, enums, menu, url, clicks, tags, logs, api-keys
+    └── domain/  ← rbac, enums, menu, url, clicks, tags, logs, api-keys, telescope
 ```
 
 Schemas are grouped by domain (`auth/`, `api/`, `domain/`). The barrel
@@ -144,6 +145,29 @@ Schemas are grouped by domain (`auth/`, `api/`, `domain/`). The barrel
   ```
 - **No `any`, `unknown`, `never`, no type casting.** Infer everything from Zod.
 - **Add new schemas to the barrel** (`src/index.ts`) or they won't be importable.
+
+**The shared contract (`contracts/`)** is the single source of truth for every
+route both sides agree on. One leaf per endpoint — method, path template and
+the ONE zod input schema:
+
+```ts
+export const apiContract = {
+	auth: {
+		login: defineContract({ method: "POST", path: "/auth/login", input: LoginSchema }),
+		// …
+	},
+	telescope: {
+		requests: defineContract({ method: "GET", path: "/telescope/requests", input: TelescopeRequestListQuerySchema }),
+		// …
+	},
+} as const;
+```
+
+The client router (`packages/client` `endpoints.ts`) derives path/method/input
+from `apiContract`; the NestJS controllers validate at the HTTP boundary with
+the very same schemas (`ZodValidationPipe(apiContract.telescope.requests.input)`)
+— the contract is the only place a path or input schema is written, so the two
+sides can never drift.
 
 **How it's built:** `packages/shared` compiles to real ESM + `.d.ts` with plain
 **`tsc`** (`pnpm --filter @workspace/shared build` → `tsc -p tsconfig.build.json`),
@@ -189,7 +213,7 @@ admin-access gate). Both are now **one prop-driven implementation here**:
 ```
 
 - `<LoginForm>` takes a `mode` prop (`"web"` | `"admin"`). Admin mode swaps in
-  `authEndpoints.adminLogin`, enforces `hasAdminAccess`, and renders the cookie
+  `api.auth.adminLogin`, enforces `hasAdminAccess`, and renders the cookie
   isolation; web mode is the plain credential form. It imports presentational
   primitives from `@workspace/ui/components/form/*`.
 - `<ClientAuthWrapper>` is the `next/navigation`-aware bridge (router push +
@@ -200,26 +224,41 @@ admin-access gate). Both are now **one prop-driven implementation here**:
   `next` is a peer dependency of `packages/client` so that coupling is honest.
   See rule 3 below for the layering carve-out this implies.
 
-**The endpoint registry (`endpoints.ts`) is the heart of type-safe API calls:**
+**The router (`endpoints.ts`) is the heart of type-safe API calls** — tRPC-flavoured,
+REST under the hood. Every leaf pairs a shared `apiContract` leaf (method + path
++ input schema — defined once in `packages/shared`) with the client-only
+concerns: the response envelope schema and the react-query key:
 
 ```ts
-export const authEndpoints = {
-	me: { path: "/auth/me", method: "GET", queryKey: ["auth", "me"], responseSchema: envelope(UserResponseSchema) },
-	login: { path: "/auth/login", method: "POST", bodySchema: LoginSchema, responseSchema: envelope(LoginResponseSchema) },
-	// …
-};
+export const apiRouter = {
+	auth: {
+		me: defineQuery(apiContract.auth.me, { response: envelope(UserResponseSchema), queryKey: () => ["auth", "me"] }),
+		login: defineMutation(apiContract.auth.login, { response: envelope(LoginResponseSchema), queryKey: () => ["auth", "login"] }),
+	},
+	telescope: {
+		requests: defineQuery(apiContract.telescope.requests, { response: envelope(z.object({ list: TelescopeRequestListResponseSchema }).strict()), queryKey: (q) => ["telescope", "requests", q] }),
+		// …
+	},
+} as const;
 ```
 
-A page uses it like this:
+A page uses it like this (input-first, same dot-chain on client and server):
 
 ```tsx
 const { api } = useAuth();
-const meQuery = api.procedure(authEndpoints.me).useQuery();
+const meQuery = api.auth.me.useQuery();
 const user = meQuery.data?.data; // fully typed
+
+// SSR twin — prefetchPage builds the same tree server-side:
+prefetchPage((server) => [server.telescope.requests({ page: 1, pageSize: 20 })]);
 ```
 
 Because every endpoint carries its own Zod schemas, `useQuery`/`useMutation` results
-are typed end-to-end — no manual response interfaces in the pages.
+are typed end-to-end — no manual response interfaces in the pages. `resolveRequest`
+(the shared input → URL/body serializer) keeps client and server byte-identical,
+so hydration keys always agree. The NestJS side validates the same inputs at the
+boundary (`ZodValidationPipe(apiContract.*.input)` — strict 400 on malformed
+input, see `apps/api/src/common/pipes/zod-validation.pipe.ts`).
 
 ---
 

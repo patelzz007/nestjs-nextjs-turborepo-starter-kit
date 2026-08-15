@@ -12,9 +12,11 @@ import {
 	type UseMutationOptions,
 	type UseMutationResult,
 } from "@tanstack/react-query";
-import { EpochMsSchema, type EpochMs } from "@workspace/shared";
+import { EpochMsSchema, type EpochMs, type JsonValue, type SerializableInput } from "@workspace/shared";
 import { useMemo } from "react";
 import { z, type ZodType } from "zod";
+
+import { apiRouter, resolveRequest, type ApiRouter, type MutationDef, type ProcedureDef, type QueryDef } from "./endpoints";
 
 export const HttpMethodSchema = z.enum(["GET", "POST", "PUT", "PATCH", "DELETE"]);
 
@@ -97,8 +99,7 @@ export function createRefreshCooldown(refresh: RefreshCall, cooldownMs = 30_000)
  * Not `.loose()` deliberately: zod's default object behavior STRIPS unknown
  * keys (it never fails on them), so extra fields such as validation `details`
  * can't break parsing — and the derived `ApiErrorBody` type stays free of an
- * index signature so `ApiError` can `implements` it (a loose object would add
- * `[x: string]: unknown` and break the class contract).
+ * index signature so `ApiError` can `implements` it.
  *
  * Deliberately NOT derived from shared's `ApiErrorResponseSchema.shape.error`:
  * that is the strict, Swagger-documented envelope nested under
@@ -141,22 +142,43 @@ export class ApiError extends Error implements ApiErrorBody {
 	}
 }
 
+/** What a failed request carries: a thrown `Error`, an `ApiError`, or raw text. */
+export type ApiErrorPayload = Error | string;
+
 /**
  * Extracts a human-readable message from an error payload.
  * The ResponseInterceptor returns `{ message, statusCode, error? }` — prefer that
  * `message` field when present, otherwise fall back to a generic status message.
  */
-function extractErrorMessage(error: unknown, status: number): string {
+function extractErrorMessage(error: Error | string, status: number): string {
 	if (typeof error === "string" && error.length > 0) {
 		return error;
 	}
-	if (typeof error === "object" && error !== null && "message" in error) {
-		const message: unknown = error.message;
-		if (typeof message === "string" && message.length > 0) {
-			return message;
-		}
+	if (error instanceof Error && error.message.length > 0) {
+		return error.message;
 	}
 	return `Request failed (${String(status)})`;
+}
+
+/**
+ * Normalizes a non-2xx response body into `ApiErrorPayload`: JSON error bodies
+ * become `ApiError` (preserving `error` code + lockout payload), anything else
+ * becomes its raw text (or a generic `Error` for empty bodies).
+ */
+async function readErrorPayload(response: Response): Promise<ApiErrorPayload> {
+	const text: string = await response.text();
+	if (text.length === 0) {
+		return new Error(`Request failed (${String(response.status)})`);
+	}
+	try {
+		const parsed = ApiErrorSchema.safeParse(JSON.parse(text));
+		if (parsed.success) {
+			return new ApiError(parsed.data);
+		}
+	} catch {
+		// Not JSON (a plain-text error body) — fall through to raw text.
+	}
+	return text;
 }
 
 type QueryParams = Record<string, string | number | boolean | undefined>;
@@ -167,7 +189,7 @@ interface BaseRequestOptions {
 	signal?: AbortSignal;
 }
 
-export type RequestOptions<Method extends HttpMethod, Body = unknown> = Method extends "GET" ? BaseRequestOptions : BaseRequestOptions & { body: Body };
+export type RequestOptions<Method extends HttpMethod, Body = undefined> = Method extends "GET" ? BaseRequestOptions : BaseRequestOptions & { body: Body };
 
 // ── Transport envelope ─────────────────────────────────────────────────────
 // `ApiSuccess<T>` / `ApiFailure` / `ApiResponse<T>` describe the RAW fetch
@@ -187,35 +209,10 @@ export interface ApiFailure {
 	ok: false;
 	status: number;
 	data: null;
-	error: unknown;
+	error: ApiErrorPayload;
 }
 
 export type ApiResponse<T> = ApiSuccess<T> | ApiFailure;
-
-interface RestProcedureConfig<M extends HttpMethod, Body, Resp> {
-	path: string;
-	method: M;
-	responseSchema?: ZodType<Resp>;
-	bodySchema?: M extends "GET" ? never : ZodType<Body>;
-	baseOptions?: BaseRequestOptions;
-	queryKey?: QueryKey | ((options?: RequestOptions<"GET">) => QueryKey);
-}
-
-interface RestQueryProcedure<Resp> {
-	queryKey: QueryKey | ((options?: RequestOptions<"GET">) => QueryKey);
-	useQuery: (
-		options?: RequestOptions<"GET">,
-		queryOptions?: Omit<UseQueryOptions<Resp, Error, Resp>, "queryKey" | "queryFn">,
-		overrideQueryKey?: QueryKey,
-	) => UseQueryResult<Resp>;
-	fetch: (options?: RequestOptions<"GET">) => Promise<ApiResponse<Resp>>;
-	fetchOrThrow: (options?: RequestOptions<"GET">) => Promise<Resp>;
-}
-
-interface RestMutationProcedure<Resp, Body> {
-	useMutation: (mutationOptions?: UseMutationOptions<Resp, Error, Body>) => UseMutationResult<Resp, Error, Body>;
-	mutate: (body: Body) => Promise<Resp>;
-}
 
 function buildUrl(baseUrl: string, path: string, query?: QueryParams): string {
 	const url = new URL(path, baseUrl);
@@ -240,11 +237,11 @@ function buildHeaders(baseHeaders: Record<string, string> | undefined): Record<s
  * can omit the body on POST lifecycle calls; `RequestOptions` remains
  * assignable, so this is purely additive.
  */
-async function request<T, Body = unknown>(
+async function request<T, Body = undefined>(
 	baseUrl: string,
 	method: HttpMethod,
 	path: string,
-	options: (BaseRequestOptions & { body?: unknown }) | undefined,
+	options: (BaseRequestOptions & { body?: Body }) | undefined,
 	responseSchema: ZodType<T> | undefined,
 	bodySchema: ZodType<Body> | undefined,
 	onUnauthorized?: OnUnauthorized,
@@ -268,25 +265,30 @@ async function request<T, Body = unknown>(
 	const execute = async (): Promise<ApiResponse<T>> => {
 		try {
 			const res = await fetch(url, init);
-			const isJson = res.headers.get("content-type")?.includes("application/json");
+			const isJson = res.headers.get("content-type")?.includes("application/json") ?? false;
 
 			if (!res.ok) {
-				const errorData: unknown = isJson ? await res.json() : await res.text();
+				const errorData: ApiErrorPayload = await readErrorPayload(res);
 				return { ok: false, status: res.status, data: null, error: errorData };
 			}
 
-			const rawData: unknown = isJson ? await res.json() : null;
 			// When a schema is provided, validate the payload. When it isn't, rely on
-			// z.custom<T>() (a passthrough schema) to type the raw payload as T without
-			// resorting to an `as T` type assertion.
-			const data: T = responseSchema ? responseSchema.parse(rawData) : z.custom<T>().parse(rawData);
+			// z.custom<T>() (a passthrough schema) to type the raw payload as T.
+			// `JSON.parse` returns `any`, so it flows straight into zod's `unknown`
+			// parse parameter — never through a typed variable.
+			const text: string = isJson ? await res.text() : "";
+			const raw: JsonValue = z.custom<JsonValue>().parse(text.length === 0 ? null : JSON.parse(text));
+			const data: T = responseSchema ? responseSchema.parse(raw) : z.custom<T>().parse(raw);
 
 			return { ok: true, status: res.status, data };
 		} catch (error) {
 			if (error instanceof DOMException && error.name === "AbortError") {
 				return { ok: false, status: 0, data: null, error: "aborted" };
 			}
-			return { ok: false, status: 0, data: null, error };
+			if (error instanceof Error || typeof error === "string") {
+				return { ok: false, status: 0, data: null, error };
+			}
+			return { ok: false, status: 0, data: null, error: new Error(String(error)) };
 		}
 	};
 
@@ -320,14 +322,14 @@ async function request<T, Body = unknown>(
  * logout — that must NOT re-enter the machinery they drive: routing refresh
  * through `useApi` would recurse on a failed refresh, and the context is what
  * *builds* `useApi`, so it cannot depend on it. Pass the `path`/`method` from
- * the typed endpoint registry (`authEndpoints.refresh` / `authEndpoints.logout`)
- * so endpoint URLs stay a single source of truth.
+ * the typed router (`apiRouter.auth.refresh` / `apiRouter.auth.logout`) so
+ * endpoint URLs stay a single source of truth.
  */
-export function apiFetch<T = unknown>(baseUrl: string, method: HttpMethod, path: string, options?: BaseRequestOptions & { body?: unknown }): Promise<ApiResponse<T>> {
-	return request<T>(baseUrl, method, path, options, undefined, undefined, undefined, undefined);
+export function apiFetch<T>(baseUrl: string, method: HttpMethod, path: string, options?: BaseRequestOptions & { body?: JsonValue }): Promise<ApiResponse<T>> {
+	return request<T, JsonValue>(baseUrl, method, path, options, undefined, undefined, undefined, undefined);
 }
 
-async function requestOrThrow<T, Method extends HttpMethod, Body = unknown>(
+async function requestOrThrow<T, Method extends HttpMethod, Body = undefined>(
 	baseUrl: string,
 	method: Method,
 	path: string,
@@ -345,139 +347,185 @@ async function requestOrThrow<T, Method extends HttpMethod, Body = unknown>(
 		if (res.error instanceof Error) {
 			throw res.error;
 		}
-		// Structured API error body → throw an ApiError so the error code and
-		// lockout payload survive for friendly-message mapping / countdowns.
-		const parsedBody = ApiErrorSchema.safeParse(res.error);
-		if (parsedBody.success) {
-			throw new ApiError(parsedBody.data);
-		}
 		throw new Error(extractErrorMessage(res.error, res.status));
 	}
 
 	return res.data;
 }
 
-function mergeGetOptions(base: BaseRequestOptions | undefined, additional: RequestOptions<"GET"> | undefined): RequestOptions<"GET"> {
-	if (!base && !additional) return {};
-	if (!base) return additional ?? {};
-	if (!additional) return base;
+// ── tRPC-style client procedures (input-first, REST transport) ─────────────
 
+/** A GET procedure on the client — `.useQuery()` / `.fetch()` / `.fetchOrThrow()`. */
+export interface ClientQueryProcedure<Input, Resp> {
+	/**
+	 * Query hook. `input` is the single tRPC-style input: it is zod-validated,
+	 * serialized onto the URL (path params + query string), and folded into the
+	 * react-query key via the def's `queryKey` builder.
+	 */
+	useQuery(input: Input, queryOptions?: Omit<UseQueryOptions<Resp, Error, Resp>, "queryKey" | "queryFn">, overrideQueryKey?: QueryKey): UseQueryResult<Resp>;
+	/** One-shot fetch returning the raw transport envelope. */
+	fetch(input: Input): Promise<ApiResponse<Resp>>;
+	/** One-shot fetch that throws on failure. */
+	fetchOrThrow(input: Input): Promise<Resp>;
+}
+
+/** A mutation procedure on the client — `.useMutation()` / `.mutate()`. */
+export interface ClientMutationProcedure<Input, Resp> {
+	useMutation(mutationOptions?: UseMutationOptions<Resp, Error, Input>): UseMutationResult<Resp, Error, Input>;
+	/** One-shot mutation; the input carries path params + body fields. */
+	mutate(input: Input): Promise<Resp>;
+}
+
+function createQueryProcedure<Input extends SerializableInput, Resp extends JsonValue>(
+	baseUrl: string,
+	onUnauthorized: OnUnauthorized | undefined,
+	onRefresh: OnRefresh | undefined,
+	def: QueryDef<Input, Resp>,
+): ClientQueryProcedure<Input, Resp> {
 	return {
-		query: { ...base.query, ...additional.query },
-		headers: { ...base.headers, ...additional.headers },
-		signal: additional.signal ?? base.signal,
+		useQuery: (input, queryOptions?, overrideQueryKey?): UseQueryResult<Resp> => {
+			// Key from the RAW input — the server page computes its prefetch key
+			// from the same raw input, so hydration binds even when the schema
+			// applies defaults (e.g. `sort: "newest"`). Parsing happens inside
+			// the queryFn so a disabled query never validates (compare/search
+			// gate on `enabled` with placeholder inputs) and validation errors
+			// land in the query's error state instead of crashing the render.
+			const key: QueryKey = overrideQueryKey ?? def.queryKey(input);
+			return rqUseQuery<Resp, Error, Resp>({
+				queryKey: key,
+				queryFn: ({ signal }): Promise<Resp> => {
+					const parsed: Input = def.inputSchema.parse(input);
+					const url: string = resolveRequest(def.path, parsed).url;
+					return requestOrThrow<Resp, "GET">(baseUrl, "GET", url, { headers: def.baseOptions?.headers, signal }, def.responseSchema, undefined, onUnauthorized, onRefresh);
+				},
+				...queryOptions,
+			});
+		},
+		fetch: (input): Promise<ApiResponse<Resp>> => {
+			const parsed: Input = def.inputSchema.parse(input);
+			const url: string = resolveRequest(def.path, parsed).url;
+			return request<Resp>(baseUrl, "GET", url, { headers: def.baseOptions?.headers }, def.responseSchema, undefined, onUnauthorized, onRefresh);
+		},
+		fetchOrThrow: (input): Promise<Resp> => {
+			const parsed: Input = def.inputSchema.parse(input);
+			const url: string = resolveRequest(def.path, parsed).url;
+			return requestOrThrow<Resp, "GET">(baseUrl, "GET", url, { headers: def.baseOptions?.headers }, def.responseSchema, undefined, onUnauthorized, onRefresh);
+		},
 	};
 }
 
-function mergeMutationOptions<Body>(base: BaseRequestOptions | undefined, body: Body): BaseRequestOptions & { body: Body } {
+function createMutationProcedure<Input extends SerializableInput, Resp extends JsonValue>(
+	baseUrl: string,
+	onUnauthorized: OnUnauthorized | undefined,
+	onRefresh: OnRefresh | undefined,
+	def: MutationDef<Input, Resp>,
+): ClientMutationProcedure<Input, Resp> {
+	const run = (input: Input): Promise<Resp> => {
+		const parsed: Input = def.inputSchema.parse(input);
+		const { url, body } = resolveRequest(def.path, parsed, { method: def.method, toQuery: def.toQuery });
+		const finalBody: JsonValue = def.toBody !== undefined ? def.toBody(parsed) : (body ?? {});
+		return requestOrThrow<Resp, HttpMethod, JsonValue>(
+			baseUrl,
+			def.method,
+			url,
+			{ body: finalBody, headers: def.baseOptions?.headers },
+			def.responseSchema,
+			undefined,
+			onUnauthorized,
+			onRefresh,
+		);
+	};
 	return {
-		...base,
-		body,
+		useMutation: (mutationOptions?): UseMutationResult<Resp, Error, Input> => rqUseMutation<Resp, Error, Input>({ mutationFn: run, ...mutationOptions }),
+		mutate: run,
 	};
 }
 
 /**
- * Builds a typed REST procedure (query or mutation) from a config.
- *
- * Exposed as a standalone function (rather than inline in the object literal)
- * so it can use function overloads — the conditional return type cannot be
- * expressed with object-literal method overloads.
+ * Recursively maps the router tree to client procedures — this is what makes
+ * `api.auth.me.useQuery()` / `api.telescope.overview.useQuery({ range })` work.
  */
-function createProcedure<M extends HttpMethod, Resp, Body>(
-	baseUrl: string,
-	onUnauthorized: OnUnauthorized | undefined,
-	onRefresh: OnRefresh | undefined,
-	config: RestProcedureConfig<M, Body, Resp>,
-): M extends "GET" ? RestQueryProcedure<Resp> : RestMutationProcedure<Resp, Body>;
+export type ClientRouterTree<R> = {
+	[K in keyof R]: R[K] extends QueryDef<infer Input, infer Resp>
+		? ClientQueryProcedure<Input, Resp>
+		: R[K] extends MutationDef<infer Input, infer Resp>
+			? ClientMutationProcedure<Input, Resp>
+			: ClientRouterTree<R[K]>;
+};
 
-function createProcedure<Resp, Body>(
-	baseUrl: string,
-	onUnauthorized: OnUnauthorized | undefined,
-	onRefresh: OnRefresh | undefined,
-	config: RestProcedureConfig<HttpMethod, Body, Resp>,
-): RestQueryProcedure<Resp> | RestMutationProcedure<Resp, Body>;
+/** The client-side router: same shape as `apiRouter`, every leaf a procedure. */
+export type ClientRouter = ClientRouterTree<ApiRouter>;
 
-function createProcedure<Resp, Body>(
-	baseUrl: string,
-	onUnauthorized: OnUnauthorized | undefined,
-	onRefresh: OnRefresh | undefined,
-	config: RestProcedureConfig<HttpMethod, Body, Resp>,
-): RestQueryProcedure<Resp> | RestMutationProcedure<Resp, Body> {
-	const { method, path, responseSchema, bodySchema, baseOptions, queryKey } = config;
+/**
+ * Builds the client router as a TYPED LITERAL — every leaf is created with a
+ * generic call against `apiRouter`'s def, so `Input`/`Resp` flow through
+ * inference and autocomplete stays intact. No runtime tree-walk, no casts.
+ * The `ClientRouter` return annotation is the drift guard: a missing or
+ * mistyped leaf fails the typecheck.
+ */
+function buildClientRouter(baseUrl: string, onUnauthorized: OnUnauthorized | undefined, onRefresh: OnRefresh | undefined): ClientRouter {
+	return {
+		auth: {
+			me: createQueryProcedure(baseUrl, onUnauthorized, onRefresh, apiRouter.auth.me),
+			sessionStatus: createQueryProcedure(baseUrl, onUnauthorized, onRefresh, apiRouter.auth.sessionStatus),
+			login: createMutationProcedure(baseUrl, onUnauthorized, onRefresh, apiRouter.auth.login),
+			adminLogin: createMutationProcedure(baseUrl, onUnauthorized, onRefresh, apiRouter.auth.adminLogin),
+			signup: createMutationProcedure(baseUrl, onUnauthorized, onRefresh, apiRouter.auth.signup),
+			refresh: createMutationProcedure(baseUrl, onUnauthorized, onRefresh, apiRouter.auth.refresh),
+			logout: createMutationProcedure(baseUrl, onUnauthorized, onRefresh, apiRouter.auth.logout),
+		},
+		email: {
+			previewList: createQueryProcedure(baseUrl, onUnauthorized, onRefresh, apiRouter.email.previewList),
+			previewDetail: createQueryProcedure(baseUrl, onUnauthorized, onRefresh, apiRouter.email.previewDetail),
+			previewSend: createMutationProcedure(baseUrl, onUnauthorized, onRefresh, apiRouter.email.previewSend),
+			logList: createQueryProcedure(baseUrl, onUnauthorized, onRefresh, apiRouter.email.logList),
+		},
+		telescope: {
+			overview: createQueryProcedure(baseUrl, onUnauthorized, onRefresh, apiRouter.telescope.overview),
+			requests: createQueryProcedure(baseUrl, onUnauthorized, onRefresh, apiRouter.telescope.requests),
+			requestDetail: createQueryProcedure(baseUrl, onUnauthorized, onRefresh, apiRouter.telescope.requestDetail),
+			requestSql: createQueryProcedure(baseUrl, onUnauthorized, onRefresh, apiRouter.telescope.requestSql),
+			compare: createQueryProcedure(baseUrl, onUnauthorized, onRefresh, apiRouter.telescope.compare),
+			sql: createQueryProcedure(baseUrl, onUnauthorized, onRefresh, apiRouter.telescope.sql),
+			exceptions: createQueryProcedure(baseUrl, onUnauthorized, onRefresh, apiRouter.telescope.exceptions),
+			exceptionDetail: createQueryProcedure(baseUrl, onUnauthorized, onRefresh, apiRouter.telescope.exceptionDetail),
+			mail: createQueryProcedure(baseUrl, onUnauthorized, onRefresh, apiRouter.telescope.mail),
+			jobs: createQueryProcedure(baseUrl, onUnauthorized, onRefresh, apiRouter.telescope.jobs),
+			jobDetail: createQueryProcedure(baseUrl, onUnauthorized, onRefresh, apiRouter.telescope.jobDetail),
+			schedules: createQueryProcedure(baseUrl, onUnauthorized, onRefresh, apiRouter.telescope.schedules),
+			leaderboard: createQueryProcedure(baseUrl, onUnauthorized, onRefresh, apiRouter.telescope.leaderboard),
+			trends: createQueryProcedure(baseUrl, onUnauthorized, onRefresh, apiRouter.telescope.trends),
+			logs: createQueryProcedure(baseUrl, onUnauthorized, onRefresh, apiRouter.telescope.logs),
+			alerts: createQueryProcedure(baseUrl, onUnauthorized, onRefresh, apiRouter.telescope.alerts),
+			search: createQueryProcedure(baseUrl, onUnauthorized, onRefresh, apiRouter.telescope.search),
+			users: createQueryProcedure(baseUrl, onUnauthorized, onRefresh, apiRouter.telescope.users),
+			status: createQueryProcedure(baseUrl, onUnauthorized, onRefresh, apiRouter.telescope.status),
+			webhookDeliveries: createQueryProcedure(baseUrl, onUnauthorized, onRefresh, apiRouter.telescope.webhookDeliveries),
 
-	const computeQueryKey = (options?: RequestOptions<"GET">, override?: QueryKey): QueryKey => {
-		if (override) return override;
-		if (typeof queryKey === "function") return queryKey(options);
-		if (queryKey) return queryKey;
-		return [method, path];
-	};
-
-	if (method === "GET") {
-		const queryProcedure: RestQueryProcedure<Resp> = {
-			queryKey: queryKey ?? [method, path],
-			useQuery: (
-				options?: RequestOptions<"GET">,
-				queryOptions?: Omit<UseQueryOptions<Resp, Error, Resp>, "queryKey" | "queryFn">,
-				overrideQueryKey?: QueryKey,
-			): UseQueryResult<Resp> => {
-				const finalQueryKey = computeQueryKey(options, overrideQueryKey);
-
-				return rqUseQuery<Resp, Error, Resp>({
-					queryKey: finalQueryKey,
-					queryFn: ({ signal }): Promise<Resp> => {
-						const mergedOptions = mergeGetOptions(baseOptions, { ...options, signal });
-						return requestOrThrow<Resp, "GET">(baseUrl, "GET", path, mergedOptions, responseSchema, undefined, onUnauthorized, onRefresh);
-					},
-					...queryOptions,
-				});
-			},
-			fetch: (options?: RequestOptions<"GET">): Promise<ApiResponse<Resp>> => {
-				const mergedOptions = mergeGetOptions(baseOptions, options);
-				return request<Resp>(baseUrl, "GET", path, mergedOptions, responseSchema, undefined, onUnauthorized, onRefresh);
-			},
-			fetchOrThrow: (options?: RequestOptions<"GET">): Promise<Resp> => {
-				const mergedOptions = mergeGetOptions(baseOptions, options);
-				return requestOrThrow<Resp, "GET">(baseUrl, "GET", path, mergedOptions, responseSchema, undefined, onUnauthorized, onRefresh);
-			},
-		};
-
-		return queryProcedure;
-	}
-
-	const mutationProcedure: RestMutationProcedure<Resp, Body> = {
-		useMutation: (mutationOptions?: UseMutationOptions<Resp, Error, Body>): UseMutationResult<Resp, Error, Body> =>
-			rqUseMutation<Resp, Error, Body>({
-				mutationFn: (body: Body): Promise<Resp> => {
-					const mergedOptions = mergeMutationOptions(baseOptions, body);
-
-					if (method === "POST") {
-						return requestOrThrow<Resp, "POST", Body>(baseUrl, "POST", path, mergedOptions, responseSchema, bodySchema, onUnauthorized, onRefresh);
-					} else if (method === "PUT") {
-						return requestOrThrow<Resp, "PUT", Body>(baseUrl, "PUT", path, mergedOptions, responseSchema, bodySchema, onUnauthorized, onRefresh);
-					} else if (method === "PATCH") {
-						return requestOrThrow<Resp, "PATCH", Body>(baseUrl, "PATCH", path, mergedOptions, responseSchema, bodySchema, onUnauthorized, onRefresh);
-					} else {
-						return requestOrThrow<Resp, "DELETE", Body>(baseUrl, "DELETE", path, mergedOptions, responseSchema, bodySchema, onUnauthorized, onRefresh);
-					}
-				},
-				...mutationOptions,
-			}),
-		mutate: (body: Body): Promise<Resp> => {
-			const mergedOptions = mergeMutationOptions(baseOptions, body);
-
-			if (method === "POST") {
-				return requestOrThrow<Resp, "POST", Body>(baseUrl, "POST", path, mergedOptions, responseSchema, bodySchema, onUnauthorized, onRefresh);
-			} else if (method === "PUT") {
-				return requestOrThrow<Resp, "PUT", Body>(baseUrl, "PUT", path, mergedOptions, responseSchema, bodySchema, onUnauthorized, onRefresh);
-			} else if (method === "PATCH") {
-				return requestOrThrow<Resp, "PATCH", Body>(baseUrl, "PATCH", path, mergedOptions, responseSchema, bodySchema, onUnauthorized, onRefresh);
-			} else {
-				return requestOrThrow<Resp, "DELETE", Body>(baseUrl, "DELETE", path, mergedOptions, responseSchema, bodySchema, onUnauthorized, onRefresh);
-			}
+			dump: createMutationProcedure(baseUrl, onUnauthorized, onRefresh, apiRouter.telescope.dump),
+			setAnnotation: createMutationProcedure(baseUrl, onUnauthorized, onRefresh, apiRouter.telescope.setAnnotation),
+			replay: createMutationProcedure(baseUrl, onUnauthorized, onRefresh, apiRouter.telescope.replay),
+			runSchedule: createMutationProcedure(baseUrl, onUnauthorized, onRefresh, apiRouter.telescope.runSchedule),
+			prune: createMutationProcedure(baseUrl, onUnauthorized, onRefresh, apiRouter.telescope.prune),
+			clearAll: createMutationProcedure(baseUrl, onUnauthorized, onRefresh, apiRouter.telescope.clearAll),
+			alertAck: createMutationProcedure(baseUrl, onUnauthorized, onRefresh, apiRouter.telescope.alertAck),
+			alertSnooze: createMutationProcedure(baseUrl, onUnauthorized, onRefresh, apiRouter.telescope.alertSnooze),
+			setExceptionStatus: createMutationProcedure(baseUrl, onUnauthorized, onRefresh, apiRouter.telescope.setExceptionStatus),
+			retryJob: createMutationProcedure(baseUrl, onUnauthorized, onRefresh, apiRouter.telescope.retryJob),
 		},
 	};
+}
 
-	return mutationProcedure;
+function createProcedureForDef<Input extends SerializableInput, Resp extends JsonValue>(
+	baseUrl: string,
+	onUnauthorized: OnUnauthorized | undefined,
+	onRefresh: OnRefresh | undefined,
+	def: ProcedureDef<Input, Resp>,
+): ClientQueryProcedure<Input, Resp> | ClientMutationProcedure<Input, Resp> {
+	if (def.kind === "query") {
+		return createQueryProcedure(baseUrl, onUnauthorized, onRefresh, def);
+	}
+	return createMutationProcedure(baseUrl, onUnauthorized, onRefresh, def);
 }
 
 export interface ApiClientRQHooks {
@@ -498,12 +546,16 @@ export interface ApiClientRQHooks {
 		mutationOptions?: UseMutationOptions<T, Error, Body>,
 	): UseMutationResult<T, Error, Body>;
 
-	procedure<M extends HttpMethod, Resp, Body = undefined>(
-		config: RestProcedureConfig<M, Body, Resp>,
-	): M extends "GET" ? RestQueryProcedure<Resp> : RestMutationProcedure<Resp, Body>;
+	procedure<Input extends SerializableInput, Resp extends JsonValue>(def: QueryDef<Input, Resp>): ClientQueryProcedure<Input, Resp>;
+	procedure<Input extends SerializableInput, Resp extends JsonValue>(def: MutationDef<Input, Resp>): ClientMutationProcedure<Input, Resp>;
+	procedure<Input extends SerializableInput, Resp extends JsonValue>(def: ProcedureDef<Input, Resp>): ClientQueryProcedure<Input, Resp> | ClientMutationProcedure<Input, Resp>;
 }
 
-export type UseApiReturn = ApiClientRQHooks;
+/** The full client API: low-level hooks + `procedure()` + the tRPC-style router. */
+export type ApiClient = ApiClientRQHooks & ClientRouter;
+
+/** @deprecated alias — use `ApiClient`. */
+export type UseApiReturn = ApiClient;
 
 /**
  * useApi hook - works with cookie-based authentication
@@ -518,8 +570,22 @@ export type UseApiReturn = ApiClientRQHooks;
  *                    the original request is retried once. Required — wired up
  *                    by AuthProvider.
  */
-export function useApi(baseUrl: string, onUnauthorized: OnUnauthorized, onRefresh: OnRefresh): UseApiReturn {
+export function useApi(baseUrl: string, onUnauthorized: OnUnauthorized, onRefresh: OnRefresh): ApiClient {
 	return useMemo(() => {
+		// Overloads mirror `ApiClientRQHooks["procedure"]` exactly (same constrained
+		// type params) so the object literal typechecks; the implementation
+		// narrows by `kind`.
+		function procedure<Input extends SerializableInput, Resp extends JsonValue>(def: QueryDef<Input, Resp>): ClientQueryProcedure<Input, Resp>;
+		function procedure<Input extends SerializableInput, Resp extends JsonValue>(def: MutationDef<Input, Resp>): ClientMutationProcedure<Input, Resp>;
+		function procedure<Input extends SerializableInput, Resp extends JsonValue>(
+			def: ProcedureDef<Input, Resp>,
+		): ClientQueryProcedure<Input, Resp> | ClientMutationProcedure<Input, Resp>;
+		function procedure<Input extends SerializableInput, Resp extends JsonValue>(
+			def: ProcedureDef<Input, Resp>,
+		): ClientQueryProcedure<Input, Resp> | ClientMutationProcedure<Input, Resp> {
+			return createProcedureForDef(baseUrl, onUnauthorized, onRefresh, def);
+		}
+
 		return {
 			useQuery<T>(
 				queryKey: QueryKey,
@@ -564,11 +630,27 @@ export function useApi(baseUrl: string, onUnauthorized: OnUnauthorized, onRefres
 				});
 			},
 
-			procedure<M extends HttpMethod, Resp, Body = undefined>(
-				config: RestProcedureConfig<M, Body, Resp>,
-			): M extends "GET" ? RestQueryProcedure<Resp> : RestMutationProcedure<Resp, Body> {
-				return createProcedure(baseUrl, onUnauthorized, onRefresh, config);
-			},
+			procedure,
+			...buildClientRouter(baseUrl, onUnauthorized, onRefresh),
 		};
 	}, [baseUrl, onUnauthorized, onRefresh]);
+}
+
+function mergeGetOptions(base: BaseRequestOptions | undefined, additional: RequestOptions<"GET"> | undefined): RequestOptions<"GET"> {
+	if (!base && !additional) return {};
+	if (!base) return additional ?? {};
+	if (!additional) return base;
+
+	return {
+		query: { ...base.query, ...additional.query },
+		headers: { ...base.headers, ...additional.headers },
+		signal: additional.signal ?? base.signal,
+	};
+}
+
+function mergeMutationOptions<Body>(base: BaseRequestOptions | undefined, body: Body): BaseRequestOptions & { body: Body } {
+	return {
+		...base,
+		body,
+	};
 }

@@ -12,7 +12,7 @@
 // ============================================
 
 import { useAuth } from "@workspace/client/lib/auth";
-import { telescopeEndpoints } from "@workspace/client/lib/api/endpoints";
+
 import { Button } from "@workspace/ui/components/form/button";
 import { BellRing, Check, Clock3 } from "lucide-react";
 import Link from "next/link";
@@ -33,14 +33,14 @@ export interface AlertsPanelProps {
 function AlertRowActions({ alert, onChanged }: { readonly alert: TelescopeAlertEntry; readonly onChanged: () => void }): React.JSX.Element {
 	const { api } = useAuth();
 	const [showSnooze, setShowSnooze] = useState<boolean>(false);
-	const ackMutation = api.procedure(telescopeEndpoints.alertAck(alert.id)).useMutation();
-	const snoozeMutation = api.procedure(telescopeEndpoints.alertSnooze(alert.id)).useMutation();
+	const ackMutation = api.telescope.alertAck.useMutation();
+	const snoozeMutation = api.telescope.alertSnooze.useMutation();
 
 	const handleAck = useCallback(
 		(event: React.MouseEvent): void => {
 			event.preventDefault();
 			ackMutation.mutate(
-				{},
+				{ id: alert.id },
 				{
 					onSuccess: (): void => {
 						onChanged();
@@ -58,7 +58,7 @@ function AlertRowActions({ alert, onChanged }: { readonly alert: TelescopeAlertE
 		(event: React.MouseEvent, minutes: number): void => {
 			event.preventDefault();
 			snoozeMutation.mutate(
-				{ minutes },
+				{ id: alert.id, minutes },
 				{
 					onSuccess: (): void => {
 						onChanged();

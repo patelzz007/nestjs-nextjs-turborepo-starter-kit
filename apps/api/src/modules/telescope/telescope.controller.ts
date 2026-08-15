@@ -3,9 +3,12 @@ import { ApiExcludeController } from "@nestjs/swagger";
 import { map, type Observable } from "rxjs";
 
 import {
+	apiContract,
+	TelescopeAlertSnoozeInputSchema,
 	TelescopeAnnotationInputSchema,
-	TelescopeDumpInputSchema,
+	TelescopeExceptionStatusInputSchema,
 	TelescopeReplayInputSchema,
+	TelescopeScheduleRunInputSchema,
 	type BufferedStreamEvent,
 	type EmailLogEntry,
 	type ExceptionLogEntry,
@@ -13,25 +16,39 @@ import {
 	type TelescopeAlertsResponse,
 	type TelescopeAnnotation,
 	type TelescopeAnnotationInput,
+	type TelescopeAlertSnoozeInput,
+	type TelescopeCompareQuery,
 	type TelescopeCompareResponse,
 	type TelescopeDumpInput,
+	type TelescopeExceptionListQuery,
 	type TelescopeExceptionListResponse,
+	type TelescopeExceptionStatusInput,
 	type TelescopeJobLogEntry,
+	type TelescopeJobsListQuery,
 	type TelescopeJobsListResponse,
+	type TelescopeLeaderboardQuery,
 	type TelescopeLeaderboardResponse,
+	type TelescopeLogsListQuery,
 	type TelescopeLogsListResponse,
 	type TelescopeOverview,
+	type TelescopeOverviewQuery,
 	type TelescopeReplayInput,
 	type TelescopeReplayResponse,
 	type TelescopeRequestDetailResponse,
+	type TelescopeRequestListQuery,
 	type TelescopeRequestListResponse,
 	type TelescopeRequestSqlResponse,
 	type TelescopeScheduleLog,
+	type TelescopeScheduleRunInput,
 	type TelescopeSchedulesResponse,
+	type TelescopeSearchQuery,
 	type TelescopeSearchResponse,
+	type TelescopeSqlListQuery,
 	type TelescopeSqlListResponse,
 	type TelescopeStatus,
+	type TelescopeTrendsQuery,
 	type TelescopeTrendsResponse,
+	type TelescopeUsersQuery,
 	type TelescopeUsersResponse,
 	type TelescopeWebhookDeliveriesResponse,
 } from "@workspace/shared";
@@ -47,7 +64,11 @@ import { TelescopeService } from "./telescope.service.js";
  * public Swagger document — request bodies and SQL must never leak.
  *
  * All responses pass through the standard `ResponseInterceptor` envelope.
- * Query params are parsed through the shared Zod schemas (coerced, tolerant).
+ * Every query-string and body is validated STRICTLY at the HTTP boundary via
+ * `ZodValidationPipe(apiContract.telescope.*.input)` — the same zod contract
+ * the client router (`@workspace/client` endpoints.ts) derives from, so the
+ * two sides can never drift. Malformed input returns a 400 with the zod
+ * issues instead of being silently dropped.
  */
 
 @ApiExcludeController()
@@ -57,7 +78,7 @@ export class TelescopeController {
 	public constructor(private readonly telescopeService: TelescopeService) {}
 
 	@Get("overview")
-	public async overview(@Query() query: Record<string, string | string[] | undefined>): Promise<{ readonly overview: TelescopeOverview }> {
+	public async overview(@Query(new ZodValidationPipe(apiContract.telescope.overview.input)) query: TelescopeOverviewQuery): Promise<{ readonly overview: TelescopeOverview }> {
 		return { overview: await this.telescopeService.overview(query) };
 	}
 
@@ -78,12 +99,14 @@ export class TelescopeController {
 
 	/** Improvement 6 — compare two requests via `?a=<id>&b=<id>`. */
 	@Get("compare")
-	public compare(@Query() query: Record<string, string | string[] | undefined>): TelescopeCompareResponse {
+	public compare(@Query(new ZodValidationPipe(apiContract.telescope.compare.input)) query: TelescopeCompareQuery): TelescopeCompareResponse {
 		return this.telescopeService.compare(query);
 	}
 
 	@Get("requests")
-	public async listRequests(@Query() query: Record<string, string | string[] | undefined>): Promise<{ readonly list: TelescopeRequestListResponse }> {
+	public async listRequests(
+		@Query(new ZodValidationPipe(apiContract.telescope.requests.input)) query: TelescopeRequestListQuery,
+	): Promise<{ readonly list: TelescopeRequestListResponse }> {
 		return { list: await this.telescopeService.listRequests(query) };
 	}
 
@@ -99,12 +122,14 @@ export class TelescopeController {
 	}
 
 	@Get("sql")
-	public listSql(@Query() query: Record<string, string | string[] | undefined>): { readonly list: TelescopeSqlListResponse } {
+	public listSql(@Query(new ZodValidationPipe(apiContract.telescope.sql.input)) query: TelescopeSqlListQuery): { readonly list: TelescopeSqlListResponse } {
 		return { list: this.telescopeService.listSql(query) };
 	}
 
 	@Get("exceptions")
-	public listExceptions(@Query() query: Record<string, string | string[] | undefined>): { readonly list: TelescopeExceptionListResponse } {
+	public listExceptions(@Query(new ZodValidationPipe(apiContract.telescope.exceptions.input)) query: TelescopeExceptionListQuery): {
+		readonly list: TelescopeExceptionListResponse;
+	} {
 		return { list: this.telescopeService.listExceptions(query) };
 	}
 
@@ -119,13 +144,13 @@ export class TelescopeController {
 	}
 
 	@Post("dump")
-	public dump(@Body(new ZodValidationPipe(TelescopeDumpInputSchema)) body: TelescopeDumpInput): { readonly id: string } {
+	public dump(@Body(new ZodValidationPipe(apiContract.telescope.dump.input)) body: TelescopeDumpInput): { readonly id: string } {
 		return this.telescopeService.pushDump(body);
 	}
 
 	/** Feature 3 — jobs. */
 	@Get("jobs")
-	public listJobs(@Query() query: Record<string, string | string[] | undefined>): { readonly list: TelescopeJobsListResponse } {
+	public listJobs(@Query(new ZodValidationPipe(apiContract.telescope.jobs.input)) query: TelescopeJobsListQuery): { readonly list: TelescopeJobsListResponse } {
 		return { list: this.telescopeService.listJobs(query) };
 	}
 
@@ -142,37 +167,40 @@ export class TelescopeController {
 
 	/** Feature 12 — slow-endpoint leaderboard. */
 	@Get("leaderboard")
-	public leaderboard(@Query() query: Record<string, string | string[] | undefined>): TelescopeLeaderboardResponse {
+	public leaderboard(@Query(new ZodValidationPipe(apiContract.telescope.leaderboard.input)) query: TelescopeLeaderboardQuery): TelescopeLeaderboardResponse {
 		return this.telescopeService.leaderboard(query);
 	}
 
 	/** Feature 13 — hourly error-rate trends. */
 	@Get("trends")
-	public trends(@Query() query: Record<string, string | string[] | undefined>): TelescopeTrendsResponse {
+	public trends(@Query(new ZodValidationPipe(apiContract.telescope.trends.input)) query: TelescopeTrendsQuery): TelescopeTrendsResponse {
 		return this.telescopeService.trends(query);
 	}
 
 	/** Feature 20 — logs browser. */
 	@Get("logs")
-	public listLogs(@Query() query: Record<string, string | string[] | undefined>): { readonly list: TelescopeLogsListResponse } {
+	public listLogs(@Query(new ZodValidationPipe(apiContract.telescope.logs.input)) query: TelescopeLogsListQuery): { readonly list: TelescopeLogsListResponse } {
 		return { list: this.telescopeService.listLogs(query) };
 	}
 
 	/** Feature 1 — global free-text search across every captured surface. */
 	@Get("search")
-	public async search(@Query() query: Record<string, string | string[] | undefined>): Promise<TelescopeSearchResponse> {
+	public async search(@Query(new ZodValidationPipe(apiContract.telescope.search.input)) query: TelescopeSearchQuery): Promise<TelescopeSearchResponse> {
 		return this.telescopeService.search(query);
 	}
 
 	/** Feature 3 — per-user request aggregation. */
 	@Get("users")
-	public async listUsers(@Query() query: Record<string, string | string[] | undefined>): Promise<{ readonly list: TelescopeUsersResponse }> {
+	public async listUsers(@Query(new ZodValidationPipe(apiContract.telescope.users.input)) query: TelescopeUsersQuery): Promise<{ readonly list: TelescopeUsersResponse }> {
 		return { list: await this.telescopeService.listUsers(query) };
 	}
 
-	/** Feature 12 — run a registered schedule on demand ("Run now" button). */
+	/** Feature 12 — run a registered schedule on demand (\"Run now\" button). */
 	@Post("schedules/:name/run")
-	public async runSchedule(@Param("name") name: string, @Body() body: Record<string, string | undefined> | undefined): Promise<TelescopeScheduleLog> {
+	public async runSchedule(
+		@Param("name") name: string,
+		@Body(new ZodValidationPipe(TelescopeScheduleRunInputSchema)) body: TelescopeScheduleRunInput,
+	): Promise<TelescopeScheduleLog> {
 		return this.telescopeService.runSchedule(name, body);
 	}
 
@@ -184,7 +212,7 @@ export class TelescopeController {
 
 	/** Feature 8 — manual retention pruning (`?force=true` clears everything old). */
 	@Post("admin/prune")
-	public prune(@Query() query: Record<string, string | string[] | undefined>): { readonly removed: number } {
+	public prune(@Query(new ZodValidationPipe(apiContract.telescope.prune.input)) query: { readonly force?: boolean | "true" | "false" }): { readonly removed: number } {
 		return this.telescopeService.prune(query);
 	}
 
@@ -214,13 +242,16 @@ export class TelescopeController {
 
 	/** Improvement 5 — snooze an alert for N minutes. */
 	@Post("alerts/:id/snooze")
-	public snoozeAlert(@Param("id") id: string, @Body() body: Record<string, string | number | undefined>): TelescopeAlertEntry {
+	public snoozeAlert(@Param("id") id: string, @Body(new ZodValidationPipe(TelescopeAlertSnoozeInputSchema)) body: TelescopeAlertSnoozeInput): TelescopeAlertEntry {
 		return this.telescopeService.snoozeAlert(id, body);
 	}
 
 	/** Improvement 6 — set the triage status of an exception group. */
 	@Put("exceptions/:id/status")
-	public setExceptionStatus(@Param("id") id: string, @Body() body: Record<string, string | undefined>): ExceptionLogEntry {
+	public setExceptionStatus(
+		@Param("id") id: string,
+		@Body(new ZodValidationPipe(TelescopeExceptionStatusInputSchema)) body: TelescopeExceptionStatusInput,
+	): ExceptionLogEntry {
 		return this.telescopeService.setExceptionStatus(id, body);
 	}
 

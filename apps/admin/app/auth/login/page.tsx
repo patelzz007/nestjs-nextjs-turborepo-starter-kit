@@ -1,119 +1,24 @@
-"use client";
+import { LoginView } from "./login-view";
 
-import { useAuth } from "@workspace/client/lib/auth";
-import Link from "next/link";
-import { useSearchParams } from "next/navigation";
-import { Suspense } from "react";
-
-import { LoginForm } from "@workspace/client/lib/auth/login-form";
-
-/** Web app URL — set `NEXT_PUBLIC_WEB_URL` in `apps/admin/.env` to change it. */
-const WEB_BASE_URL: string = process.env.NEXT_PUBLIC_WEB_URL ?? "http://localhost:3000";
-
-function AdminLoginContent(): React.JSX.Element {
-	const { isInitializing } = useAuth();
-
-	// The proxy sets `?redirect=` when bouncing an unauthenticated request, so
-	// after a successful login we land back on the page the user originally
-	// tried to visit (SPA-like, no full page reload to a hardcoded route).
-	const searchParams = useSearchParams();
-	const redirectPath = searchParams.get("redirect") ?? "/";
-
-	// On SSR + the first client render, auth state isn't established yet.
-	// Rendering the form during that window would flash it on every reload
-	// (and for admins, the proxy is about to bounce them into the panel).
-	if (isInitializing) {
-		return (
-			<div className="flex min-h-svh items-center justify-center">
-				<div className="flex flex-col items-center gap-4">
-					<svg className="size-8 animate-spin text-muted-foreground" fill="none" viewBox="0 0 24 24">
-						<circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-						<path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-					</svg>
-					<p className="text-sm text-muted-foreground">Loading…</p>
-				</div>
-			</div>
-		);
-	}
-
-	return (
-		<div className="grid min-h-svh lg:grid-cols-2">
-			{/* ── Left: Login Form ──────────────────────────────────────── */}
-			<div className="flex flex-col p-8">
-				<LoginForm
-					logo={
-						<svg className="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-							<path
-								strokeLinecap="round"
-								strokeLinejoin="round"
-								d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"
-							/>
-						</svg>
-					}
-					title="Admin Panel"
-					heading="Admin Login"
-					subtitle="Sign in with your administrator credentials"
-					mode="admin"
-					redirectPath={redirectPath}
-					footer={
-						<p className="text-center text-xs text-balance text-muted-foreground">
-							Returning to{" "}
-							<Link href={WEB_BASE_URL} className="font-medium text-primary underline-offset-4 hover:underline">
-								main website
-							</Link>
-						</p>
-					}
-				/>
-			</div>
-
-			{/* ── Right: Brand / Testimonial ─────────────────────────────── */}
-			<div className="relative hidden flex-col items-center justify-center bg-linear-to-br from-muted to-muted/80 p-10 text-muted-foreground lg:flex">
-				<div className="absolute inset-0 bg-[radial-gradient(ellipse_at_70%_50%,hsl(var(--primary)/0.06),transparent_60%)]" />
-				<div className="relative z-10 flex max-w-md flex-col gap-6">
-					<div className="flex items-center gap-3 rounded-lg border bg-background/50 px-4 py-2 text-xs font-medium text-foreground/80">
-						<svg className="size-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-							<path
-								strokeLinecap="round"
-								strokeLinejoin="round"
-								d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"
-							/>
-						</svg>
-						Admin access is restricted to authorized personnel only.
-					</div>
-
-					<blockquote className="space-y-3">
-						<p className="text-lg leading-relaxed text-foreground/90">
-							&ldquo;The admin panel gives me complete visibility into our operations. I can manage users, monitor activity, and control permissions — all from one
-							place.&rdquo;
-						</p>
-						<footer className="flex items-center gap-3">
-							<div className="flex size-9 items-center justify-center rounded-full bg-primary/10 text-sm font-medium text-primary">AM</div>
-							<div>
-								<p className="text-sm font-medium text-foreground">Alex Morgan</p>
-								<p className="text-xs">Head of Operations, TechCorp</p>
-							</div>
-						</footer>
-					</blockquote>
-
-					<div className="flex items-center gap-1.5">
-						{[0, 1, 2, 3].map((i) => (
-							<svg key={`star-${String(i)}`} className="size-4 fill-primary/20 text-primary/20" viewBox="0 0 20 20">
-								<path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-							</svg>
-						))}
-					</div>
-
-					<p className="text-xs text-muted-foreground">Enterprise-grade security. Used by leading companies worldwide.</p>
-				</div>
-			</div>
-		</div>
-	);
+/** True when `redirect` is a safe in-app path (mirrors the proxy's check — no open redirects). */
+function isSafeRedirect(redirect: string): boolean {
+	return redirect.startsWith("/") && !redirect.startsWith("//") && !redirect.startsWith("/auth/");
 }
 
-export default function AdminLoginPage(): React.JSX.Element {
-	return (
-		<Suspense fallback={null}>
-			<AdminLoginContent />
-		</Suspense>
-	);
+/**
+ * `/auth/login` — admin login. Server component: reads `?redirect=` from the
+ * URL (set by the proxy when bouncing an unauthenticated request) and the web
+ * base URL from env, then hands both to the client `LoginView` as props — so
+ * `useSearchParams`/`Suspense` and env reads stay out of the client bundle.
+ * The static brand/testimonial shell renders in the initial SSR HTML.
+ */
+export default async function AdminLoginPage({ searchParams }: { readonly searchParams: Promise<Record<string, string | string[] | undefined>> }): Promise<React.JSX.Element> {
+	const sp = await searchParams;
+	const rawRedirect: string | undefined = typeof sp.redirect === "string" ? sp.redirect : undefined;
+	const redirectPath: string = rawRedirect !== undefined && isSafeRedirect(rawRedirect) ? rawRedirect : "/";
+
+	// Web app URL — read server-side so the client never touches `process.env`.
+	const webBaseUrl: string = process.env.NEXT_PUBLIC_WEB_URL ?? "http://localhost:3000";
+
+	return <LoginView redirectPath={redirectPath} webBaseUrl={webBaseUrl} />;
 }

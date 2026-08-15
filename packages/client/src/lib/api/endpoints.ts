@@ -1,40 +1,55 @@
 // ============================================
-// lib/endpoints.ts - Typed API endpoint registry
+// lib/endpoints.ts - Typed API router (tRPC-flavoured, REST under the hood)
 // ============================================
-"use client";
+// Pure module (zod schemas + plain procedure definitions — no hooks, no
+// browser APIs), deliberately NOT marked "use client": the same router is used
+// by client pages for data fetching (useApi builds a client router from it)
+// AND by server components for SSR prefetching (server-api.ts builds a caller
+// from it), so the definitions must be callable on both sides.
+//
+// The model is tRPC-like: every leaf is a procedure with a SINGLE typed input
+// (zod-validated) and a typed response. "But not exactly tRPC": the
+// transport is plain REST — the input maps onto a URL (path params + query
+// string for GET, path params + JSON body for mutations) instead of a
+// procedure-call envelope. `resolveRequest` is the single serializer shared
+// by the client transport and the server prefetch pipeline.
+//
+// The route contract (method + path + input schema) lives in
+// `@workspace/shared` (`apiContract`) — this module derives every def from it,
+// so the client router and the API's boundary validation can never drift.
+// Only the client-side concerns stay here: the response envelope schema, the
+// react-query key, and the serialization knobs (`toQuery` / `toBody`).
+//
+// The input/output type parameters are CONSTRAINED (`SerializableInput` /
+// `JsonValue`) so the shared pipeline (dedupe map, observable, spec closures)
+// can be typed end-to-end with generics — no type erasure, no `unknown`,
+// no casts anywhere.
 
 import type { QueryKey } from "@tanstack/react-query";
 import {
-	ApiResponseMetaSchema,
+	apiContract,
 	EmailLogListResponseSchema,
 	EmailPreviewListResponseSchema,
 	EmailPreviewSchema,
 	EmailSendResultSchema,
 	ExceptionLogEntrySchema,
 	LoginResponseSchema,
-	LoginSchema,
 	LogoutResponseSchema,
 	RefreshResponseSchema,
 	SessionStatusSchema,
 	SignupResponseSchema,
-	SignupSchema,
 	TelescopeAlertEntrySchema,
 	TelescopeAlertsResponseSchema,
-	TelescopeAlertSnoozeInputSchema,
-	TelescopeAnnotationInputSchema,
 	TelescopeAnnotationSchema,
 	TelescopeCompareResponseSchema,
-	TelescopeDumpInputSchema,
 	TelescopeDumpResponseSchema,
 	TelescopeExceptionListResponseSchema,
-	TelescopeExceptionStatusInputSchema,
 	TelescopeJobLogEntrySchema,
 	TelescopeJobsListResponseSchema,
 	TelescopeLeaderboardResponseSchema,
 	TelescopeLogsListResponseSchema,
 	TelescopeMailResponseSchema,
 	TelescopeOverviewSchema,
-	TelescopeReplayInputSchema,
 	TelescopeReplayResponseSchema,
 	TelescopeRequestDetailResponseSchema,
 	TelescopeRequestListResponseSchema,
@@ -42,65 +57,18 @@ import {
 	TelescopeScheduleLogSchema,
 	TelescopeSchedulesResponseSchema,
 	TelescopeSearchResponseSchema,
-	TelescopeStatusSchema,
 	TelescopeSqlListResponseSchema,
+	TelescopeStatusSchema,
 	TelescopeTrendsResponseSchema,
 	TelescopeUsersResponseSchema,
 	TelescopeWebhookDeliveriesResponseSchema,
 	UserResponseSchema,
+	ApiResponseMetaSchema,
+	type ApiContractDef,
 	type ApiResponseMeta,
-	type EmailLogListResponse,
-	type EmailPreview,
-	type EmailPreviewListResponse,
-	type EmailSendResult,
-	type ExceptionLogEntry,
-	type LoginInput,
-	type LoginResponse,
-	type LogoutResponse,
-	type RefreshResponse,
-	type SessionStatus,
-	type SignupInput,
-	type SignupResponse,
-	type TelescopeAlertEntry,
-	type TelescopeAlertSnoozeInput,
-	type TelescopeAlertsResponse,
-	type TelescopeAnnotation,
-	type TelescopeAnnotationInput,
-	type TelescopeCompareResponse,
-	type TelescopeDumpInput,
-	type TelescopeDumpResponse,
-	type TelescopeExceptionListQuery,
-	type TelescopeExceptionListResponse,
-	type TelescopeExceptionStatus,
-	type TelescopeJobLogEntry,
-	type TelescopeJobsListQuery,
-	type TelescopeJobsListResponse,
-	type TelescopeLeaderboardQuery,
-	type TelescopeLeaderboardResponse,
-	type TelescopeLogsListQuery,
-	type TelescopeLogsListResponse,
-	type TelescopeMailResponse,
-	type TelescopeOverview,
-	type TelescopeRange,
-	type TelescopeReplayInput,
-	type TelescopeReplayResponse,
-	type TelescopeRequestDetailResponse,
-	type TelescopeRequestListQuery,
-	type TelescopeRequestListResponse,
-	type TelescopeRequestSqlResponse,
-	type TelescopeScheduleLog,
-	type TelescopeSchedulesResponse,
-	type TelescopeSearchQuery,
-	type TelescopeSearchResponse,
-	type TelescopeStatus,
-	type TelescopeSqlListQuery,
-	type TelescopeSqlListResponse,
-	type TelescopeTrendsQuery,
-	type TelescopeUsersQuery,
-	type TelescopeUsersResponse,
-	type TelescopeWebhookDeliveriesResponse,
-	type TelescopeTrendsResponse,
-	type UserResponse,
+	type JsonValue,
+	type RestMethod,
+	type SerializableInput,
 } from "@workspace/shared";
 import { z, type ZodType } from "zod";
 
@@ -109,16 +77,20 @@ import { z, type ZodType } from "zod";
 // { success: true, data, meta }. We build a typed envelope schema per endpoint
 // so the FE knows the exact shape without `any` or `z.unknown`.
 
-interface Envelope<Data> {
+/**
+ * The envelope is an interface WITH an index signature: the index signature is
+ * what makes `Envelope<Data> extends JsonValue` provable for the defs' `Resp`
+ * constraint (interfaces only get index-signature assignability when they
+ * declare one), while staying a plain interface per the lint rules.
+ */
+export interface Envelope<Data extends JsonValue> {
 	readonly success: true;
 	readonly data: Data;
 	readonly meta: ApiResponseMeta;
+	readonly [key: string]: JsonValue | undefined;
 }
 
-// The `Input` type parameter defaults to `unknown` in Zod 4, which keeps the
-// input widened so paginated meta schemas (whose input carries extra required
-// fields) remain assignable under Zod 4's contravariant `Input` type parameter.
-function envelope<Data>(dataSchema: ZodType<Data>, metaSchema: ZodType<ApiResponseMeta> = ApiResponseMetaSchema): ZodType<Envelope<Data>> {
+function envelope<Data extends JsonValue>(dataSchema: ZodType<Data>, metaSchema: ZodType<ApiResponseMeta> = ApiResponseMetaSchema): ZodType<Envelope<Data>> {
 	return z
 		.object({
 			success: z.literal(true),
@@ -128,395 +100,363 @@ function envelope<Data>(dataSchema: ZodType<Data>, metaSchema: ZodType<ApiRespon
 		.strict();
 }
 
-// ── Procedure config types ─────────────────────────────────────────────────
+// ── Definition model (input-first, tRPC-style) ────────────────────────────
 
-interface GetProcedure<Resp> {
-	readonly path: string;
+/** A GET procedure: input → path params + query string, response → typed payload. */
+export interface QueryDef<Input extends SerializableInput, Resp extends JsonValue> {
+	readonly kind: "query";
 	readonly method: "GET";
-	readonly queryKey: QueryKey;
-	readonly responseSchema: ZodType<Resp>;
-}
-
-interface PostProcedure<Body, Resp> {
+	/** Path template; `:name` segments are filled from the input. */
 	readonly path: string;
-	readonly method: "POST";
-	readonly queryKey: QueryKey;
-	readonly bodySchema: ZodType<Body>;
+	/** Single typed input, validated before every call (tRPC-style). */
+	readonly inputSchema: ZodType<Input>;
 	readonly responseSchema: ZodType<Resp>;
+	/** Derives the react-query key from the (parsed) input — server and client MUST agree. */
+	readonly queryKey: (input: Input) => QueryKey;
 	readonly baseOptions?: { readonly headers?: Record<string, string> };
 }
 
-interface PutProcedure<Body, Resp> {
+/** A POST/PUT/PATCH/DELETE procedure: input → path params + JSON body, response → typed payload. */
+export interface MutationDef<Input extends SerializableInput, Resp extends JsonValue> {
+	readonly kind: "mutation";
+	readonly method: Exclude<RestMethod, "GET">;
 	readonly path: string;
-	readonly method: "PUT";
-	readonly queryKey: QueryKey;
-	readonly bodySchema: ZodType<Body>;
+	readonly inputSchema: ZodType<Input>;
 	readonly responseSchema: ZodType<Resp>;
+	readonly queryKey: (input: Input) => QueryKey;
 	readonly baseOptions?: { readonly headers?: Record<string, string> };
+	/**
+	 * Maps the input to the request body. Default: every input key not consumed
+	 * by a `:param` segment or listed in `toQuery`.
+	 */
+	readonly toBody?: (input: Input) => JsonValue;
+	/** Input keys routed to the QUERY string instead of the body (e.g. `prune({ force })`). */
+	readonly toQuery?: readonly string[];
 }
 
-// ── Auth endpoints ─────────────────────────────────────────────────────────
-
-export const authEndpoints: {
-	readonly me: GetProcedure<Envelope<UserResponse>>;
-	readonly sessionStatus: GetProcedure<Envelope<SessionStatus>>;
-	readonly login: PostProcedure<LoginInput, Envelope<LoginResponse>>;
-	readonly adminLogin: PostProcedure<LoginInput, Envelope<LoginResponse>>;
-	readonly signup: PostProcedure<SignupInput, Envelope<SignupResponse>>;
-	readonly refresh: PostProcedure<Record<string, never>, Envelope<RefreshResponse>>;
-	readonly logout: PostProcedure<Record<string, never>, Envelope<LogoutResponse>>;
-} = {
-	me: {
-		path: "/auth/me",
-		method: "GET",
-		queryKey: ["auth", "me"],
-		responseSchema: envelope(UserResponseSchema),
-	},
-	// Very basic protected endpoint — proves the access token is valid and
-	// answers "who am I + when does my token expire" with no DB work. The
-	// admin panel polls it on page mount so every SPA navigation exercises
-	// the 401 → silent-refresh → retry flow (see docs/token-refresh.md).
-	sessionStatus: {
-		path: "/session",
-		method: "GET",
-		queryKey: ["auth", "session-status"],
-		responseSchema: envelope(SessionStatusSchema),
-	},
-	login: {
-		path: "/auth/login",
-		method: "POST",
-		queryKey: ["auth", "login"],
-		bodySchema: LoginSchema,
-		responseSchema: envelope(LoginResponseSchema),
-	},
-	adminLogin: {
-		path: "/auth/login",
-		method: "POST",
-		queryKey: ["auth", "admin-login"],
-		bodySchema: LoginSchema,
-		responseSchema: envelope(LoginResponseSchema),
-		baseOptions: { headers: { "X-Client-Type": "admin" } },
-	},
-	signup: {
-		path: "/auth/signup",
-		method: "POST",
-		queryKey: ["auth", "signup"],
-		bodySchema: SignupSchema,
-		responseSchema: envelope(SignupResponseSchema),
-	},
-	refresh: {
-		path: "/auth/refresh",
-		method: "POST",
-		queryKey: ["auth", "refresh"],
-		bodySchema: z.object({}).strict(),
-		responseSchema: envelope(RefreshResponseSchema),
-	},
-	logout: {
-		path: "/auth/logout",
-		method: "POST",
-		queryKey: ["auth", "logout"],
-		bodySchema: z.object({}).strict(),
-		responseSchema: envelope(LogoutResponseSchema),
-	},
-};
-
-// ── Email template preview endpoints ───────────────────────────────────────
+export type ProcedureDef<Input extends SerializableInput, Resp extends JsonValue> = QueryDef<Input, Resp> | MutationDef<Input, Resp>;
 
 /**
- * Email-template preview endpoints used by the admin panel's Email Templates
- * page. `previewDetail` is a factory because the route carries a `:key` param
- * — the admin page builds the procedure per selected template.
+ * Declares a GET procedure from its shared contract leaf. The contract owns
+ * method + path + input; this layer adds the response envelope + query key.
  */
-export const emailEndpoints: {
-	readonly previewList: GetProcedure<Envelope<EmailPreviewListResponse>>;
-	readonly previewDetail: (key: string) => GetProcedure<Envelope<EmailPreview>>;
-	readonly previewSend: (key: string) => PostProcedure<Record<string, never>, Envelope<EmailSendResult>>;
-	readonly logList: GetProcedure<Envelope<EmailLogListResponse>>;
-} = {
-	previewList: {
-		path: "/notifications/email-preview",
-		method: "GET",
-		queryKey: ["email", "preview-list"],
-		responseSchema: envelope(EmailPreviewListResponseSchema),
+export function defineQuery<Input extends SerializableInput, Resp extends JsonValue>(
+	contract: ApiContractDef<Input, "GET">,
+	opts: {
+		readonly response: ZodType<Resp>;
+		readonly queryKey: (input: Input) => QueryKey;
+		readonly baseOptions?: { readonly headers?: Record<string, string> };
 	},
-	previewDetail: (key: string): GetProcedure<Envelope<EmailPreview>> => ({
-		path: `/notifications/email-preview/${key}`,
+): QueryDef<Input, Resp> {
+	return {
+		kind: "query",
 		method: "GET",
-		queryKey: ["email", "preview-detail", key],
-		responseSchema: envelope(EmailPreviewSchema),
-	}),
-	previewSend: (key: string): PostProcedure<Record<string, never>, Envelope<EmailSendResult>> => ({
-		path: `/notifications/email-preview/${key}/send`,
-		method: "POST",
-		queryKey: ["email", "preview-send", key],
-		bodySchema: z.object({}).strict(),
-		responseSchema: envelope(EmailSendResultSchema),
-	}),
-	logList: {
-		path: "/notifications/email-log",
-		method: "GET",
-		queryKey: ["email", "log-list"],
-		responseSchema: envelope(EmailLogListResponseSchema),
-	},
-};
-
-// ── Telescope endpoints (docs/telescope.md §7) ─────────────────────────────
-// The read API is admin-gated on the server (AuthGuard + TelescopeAdminGuard)
-// and excluded from Swagger. List endpoints take a parsed query object — the
-// query doubles as the react-query key slice (structural hashing), so filters
-// and pages are distinct cache entries.
-
-// Wrapper schemas for the `{ overview }` / `{ list }` controller envelopes.
-const TelescopeOverviewWrapperSchema = z.object({ overview: TelescopeOverviewSchema }).strict();
-const TelescopeRequestListWrapperSchema = z.object({ list: TelescopeRequestListResponseSchema }).strict();
-const TelescopeSqlListWrapperSchema = z.object({ list: TelescopeSqlListResponseSchema }).strict();
-const TelescopeExceptionListWrapperSchema = z.object({ list: TelescopeExceptionListResponseSchema }).strict();
+		path: contract.path,
+		inputSchema: contract.input,
+		responseSchema: opts.response,
+		queryKey: opts.queryKey,
+		baseOptions: opts.baseOptions,
+	};
+}
 
 /**
- * Telescope read/write procedures used by the admin panel's Telescope section.
- * `overview`/`requests`/`sql`/`exceptions` are factories over a query object;
- * `mail` reuses the email-log data; `dump` is the `dd()` probe.
+ * Declares a POST (or PUT/PATCH/DELETE) procedure from its shared contract
+ * leaf. `toQuery` routes input keys to the query string instead of the body.
  */
-export const telescopeEndpoints: {
-	readonly overview: (range: TelescopeRange) => GetProcedure<Envelope<{ readonly overview: TelescopeOverview }>>;
-	readonly requests: (query: TelescopeRequestListQuery) => GetProcedure<Envelope<{ readonly list: TelescopeRequestListResponse }>>;
-	readonly requestDetail: (id: string) => GetProcedure<Envelope<TelescopeRequestDetailResponse>>;
-	readonly requestSql: (id: string) => GetProcedure<Envelope<TelescopeRequestSqlResponse>>;
-	readonly compare: (a: string, b: string) => GetProcedure<Envelope<TelescopeCompareResponse>>;
-	readonly sql: (query: TelescopeSqlListQuery) => GetProcedure<Envelope<{ readonly list: TelescopeSqlListResponse }>>;
-	readonly exceptions: (query: TelescopeExceptionListQuery) => GetProcedure<Envelope<{ readonly list: TelescopeExceptionListResponse }>>;
-	readonly exceptionDetail: (id: string) => GetProcedure<Envelope<ExceptionLogEntry>>;
-	readonly mail: () => GetProcedure<Envelope<TelescopeMailResponse>>;
-	readonly dump: PostProcedure<TelescopeDumpInput, Envelope<TelescopeDumpResponse>>;
-	// Feature 3 — jobs.
-	readonly jobs: (query: TelescopeJobsListQuery) => GetProcedure<Envelope<{ readonly list: TelescopeJobsListResponse }>>;
-	readonly jobDetail: (id: string) => GetProcedure<Envelope<TelescopeJobLogEntry>>;
-	// Feature 4 — schedules.
-	readonly schedules: () => GetProcedure<Envelope<TelescopeSchedulesResponse>>;
-	// Feature 12 — leaderboard.
-	readonly leaderboard: (query: TelescopeLeaderboardQuery) => GetProcedure<Envelope<TelescopeLeaderboardResponse>>;
-	// Feature 13 — trends / error-rate.
-	readonly trends: (query: TelescopeTrendsQuery) => GetProcedure<Envelope<TelescopeTrendsResponse>>;
-	// Feature 20 — logs browser.
-	readonly logs: (query: TelescopeLogsListQuery) => GetProcedure<Envelope<{ readonly list: TelescopeLogsListResponse }>>;
-	// Feature 18 — alerts.
-	readonly alerts: () => GetProcedure<Envelope<TelescopeAlertsResponse>>;
-	// Feature 14 — star/comment a request.
-	readonly setAnnotation: (id: string) => PutProcedure<TelescopeAnnotationInput, Envelope<TelescopeAnnotation>>;
-
-	// Feature 7 — replay a captured request.
-	readonly replay: (id: string) => PostProcedure<TelescopeReplayInput, Envelope<TelescopeReplayResponse>>;
-	// Feature 1 — global free-text search across every captured surface.
-	readonly search: (query: TelescopeSearchQuery) => GetProcedure<Envelope<TelescopeSearchResponse>>;
-	// Feature 3 — per-user request aggregation.
-	readonly users: (query: TelescopeUsersQuery) => GetProcedure<Envelope<{ readonly list: TelescopeUsersResponse }>>;
-	// Feature 12 — run a registered schedule on demand ("Run now" button).
-	readonly runSchedule: (name: string) => PostProcedure<Record<string, never>, Envelope<TelescopeScheduleLog>>;
-	// Feature 13 — webhook delivery records for the alerts panel.
-	readonly webhookDeliveries: () => GetProcedure<Envelope<TelescopeWebhookDeliveriesResponse>>;
-	// Feature 8 — manual retention pruning (`force=true` clears everything old).
-	readonly prune: (force: boolean) => PostProcedure<Record<string, never>, Envelope<{ readonly removed: number }>>;
-	// Feature 8 — empty every buffer (requests, SQL, exceptions, jobs, …).
-	readonly clearAll: () => PostProcedure<Record<string, never>, Envelope<{ readonly cleared: true }>>;
-	// Feature 9 — the fully-resolved capture config + pipeline health snapshot.
-	readonly status: () => GetProcedure<Envelope<TelescopeStatus>>;
-	// Improvement 5 — acknowledge (resolve) an alert.
-	readonly alertAck: (id: string) => PostProcedure<Record<string, never>, Envelope<TelescopeAlertEntry>>;
-	// Improvement 5 — snooze an alert for N minutes.
-	readonly alertSnooze: (id: string) => PostProcedure<TelescopeAlertSnoozeInput, Envelope<TelescopeAlertEntry>>;
-	// Improvement 6 — set the triage status of an exception group.
-	readonly setExceptionStatus: (id: string) => PutProcedure<{ readonly status: TelescopeExceptionStatus }, Envelope<ExceptionLogEntry>>;
-	// Improvement 17 — re-run a failed job (new entry).
-	readonly retryJob: (id: string) => PostProcedure<Record<string, never>, Envelope<TelescopeJobLogEntry>>;
-} = {
-	overview: (range: TelescopeRange): GetProcedure<Envelope<{ readonly overview: TelescopeOverview }>> => ({
-		path: "/telescope/overview",
-		method: "GET",
-		queryKey: ["telescope", "overview", range],
-		responseSchema: envelope(TelescopeOverviewWrapperSchema),
-	}),
-	requests: (query: TelescopeRequestListQuery): GetProcedure<Envelope<{ readonly list: TelescopeRequestListResponse }>> => ({
-		path: "/telescope/requests",
-		method: "GET",
-		queryKey: ["telescope", "requests", query],
-		responseSchema: envelope(TelescopeRequestListWrapperSchema),
-	}),
-	requestDetail: (id: string): GetProcedure<Envelope<TelescopeRequestDetailResponse>> => ({
-		path: `/telescope/requests/${id}`,
-		method: "GET",
-		queryKey: ["telescope", "request-detail", id],
-		responseSchema: envelope(TelescopeRequestDetailResponseSchema),
-	}),
-	compare: (a: string, b: string): GetProcedure<Envelope<TelescopeCompareResponse>> => ({
-		path: `/telescope/compare?a=${encodeURIComponent(a)}&b=${encodeURIComponent(b)}`,
-		method: "GET",
-		queryKey: ["telescope", "compare", a, b],
-		responseSchema: envelope(TelescopeCompareResponseSchema),
-	}),
-	sql: (query: TelescopeSqlListQuery): GetProcedure<Envelope<{ readonly list: TelescopeSqlListResponse }>> => ({
-		path: "/telescope/sql",
-		method: "GET",
-		queryKey: ["telescope", "sql", query],
-		responseSchema: envelope(TelescopeSqlListWrapperSchema),
-	}),
-	exceptions: (query: TelescopeExceptionListQuery): GetProcedure<Envelope<{ readonly list: TelescopeExceptionListResponse }>> => ({
-		path: "/telescope/exceptions",
-		method: "GET",
-		queryKey: ["telescope", "exceptions", query],
-		responseSchema: envelope(TelescopeExceptionListWrapperSchema),
-	}),
-	exceptionDetail: (id: string): GetProcedure<Envelope<ExceptionLogEntry>> => ({
-		path: `/telescope/exceptions/${id}`,
-		method: "GET",
-		queryKey: ["telescope", "exception-detail", id],
-		responseSchema: envelope(ExceptionLogEntrySchema),
-	}),
-	mail: (): GetProcedure<Envelope<TelescopeMailResponse>> => ({
-		path: "/telescope/mail",
-		method: "GET",
-		queryKey: ["telescope", "mail"],
-		responseSchema: envelope(TelescopeMailResponseSchema),
-	}),
-	dump: {
-		path: "/telescope/dump",
-		method: "POST",
-		queryKey: ["telescope", "dump"],
-		bodySchema: TelescopeDumpInputSchema,
-		responseSchema: envelope(TelescopeDumpResponseSchema),
+export function defineMutation<Input extends SerializableInput, Resp extends JsonValue, M extends Exclude<RestMethod, "GET">>(
+	contract: ApiContractDef<Input, M>,
+	opts: {
+		readonly response: ZodType<Resp>;
+		readonly queryKey: (input: Input) => QueryKey;
+		readonly baseOptions?: { readonly headers?: Record<string, string> };
+		readonly toBody?: (input: Input) => JsonValue;
+		readonly toQuery?: readonly string[];
 	},
-	jobs: (query: TelescopeJobsListQuery): GetProcedure<Envelope<{ readonly list: TelescopeJobsListResponse }>> => ({
-		path: "/telescope/jobs",
-		method: "GET",
-		queryKey: ["telescope", "jobs", query],
-		responseSchema: envelope(z.object({ list: TelescopeJobsListResponseSchema }).strict()),
-	}),
-	jobDetail: (id: string): GetProcedure<Envelope<TelescopeJobLogEntry>> => ({
-		path: `/telescope/jobs/${id}`,
-		method: "GET",
-		queryKey: ["telescope", "job-detail", id],
-		responseSchema: envelope(TelescopeJobLogEntrySchema),
-	}),
-	schedules: (): GetProcedure<Envelope<TelescopeSchedulesResponse>> => ({
-		path: "/telescope/schedules",
-		method: "GET",
-		queryKey: ["telescope", "schedules"],
-		responseSchema: envelope(TelescopeSchedulesResponseSchema),
-	}),
-	leaderboard: (query: TelescopeLeaderboardQuery): GetProcedure<Envelope<TelescopeLeaderboardResponse>> => ({
-		path: "/telescope/leaderboard",
-		method: "GET",
-		queryKey: ["telescope", "leaderboard", query],
-		responseSchema: envelope(TelescopeLeaderboardResponseSchema),
-	}),
-	trends: (query: TelescopeTrendsQuery): GetProcedure<Envelope<TelescopeTrendsResponse>> => ({
-		path: "/telescope/trends",
-		method: "GET",
-		queryKey: ["telescope", "trends", query],
-		responseSchema: envelope(TelescopeTrendsResponseSchema),
-	}),
-	logs: (query: TelescopeLogsListQuery): GetProcedure<Envelope<{ readonly list: TelescopeLogsListResponse }>> => ({
-		path: "/telescope/logs",
-		method: "GET",
-		queryKey: ["telescope", "logs", query],
-		responseSchema: envelope(z.object({ list: TelescopeLogsListResponseSchema }).strict()),
-	}),
-	alerts: (): GetProcedure<Envelope<TelescopeAlertsResponse>> => ({
-		path: "/telescope/alerts",
-		method: "GET",
-		queryKey: ["telescope", "alerts"],
-		responseSchema: envelope(TelescopeAlertsResponseSchema),
-	}),
-	setAnnotation: (id: string): PutProcedure<TelescopeAnnotationInput, Envelope<TelescopeAnnotation>> => ({
-		path: `/telescope/requests/${id}/annotation`,
-		method: "PUT",
-		queryKey: ["telescope", "annotation", id],
-		bodySchema: TelescopeAnnotationInputSchema,
-		responseSchema: envelope(TelescopeAnnotationSchema),
-	}),
-	replay: (id: string): PostProcedure<TelescopeReplayInput, Envelope<TelescopeReplayResponse>> => ({
-		path: `/telescope/replay/${id}`,
-		method: "POST",
-		queryKey: ["telescope", "replay", id],
-		bodySchema: TelescopeReplayInputSchema,
-		responseSchema: envelope(TelescopeReplayResponseSchema),
-	}),
-	requestSql: (id: string): GetProcedure<Envelope<TelescopeRequestSqlResponse>> => ({
-		path: `/telescope/requests/${id}/sql`,
-		method: "GET",
-		queryKey: ["telescope", "request-sql", id],
-		responseSchema: envelope(TelescopeRequestSqlResponseSchema),
-	}),
-	alertAck: (id: string): PostProcedure<Record<string, never>, Envelope<TelescopeAlertEntry>> => ({
-		path: `/telescope/alerts/${id}/ack`,
-		method: "POST",
-		queryKey: ["telescope", "alert-ack", id],
-		bodySchema: z.object({}).strict(),
-		responseSchema: envelope(TelescopeAlertEntrySchema),
-	}),
-	alertSnooze: (id: string): PostProcedure<TelescopeAlertSnoozeInput, Envelope<TelescopeAlertEntry>> => ({
-		path: `/telescope/alerts/${id}/snooze`,
-		method: "POST",
-		queryKey: ["telescope", "alert-snooze", id],
-		bodySchema: TelescopeAlertSnoozeInputSchema,
-		responseSchema: envelope(TelescopeAlertEntrySchema),
-	}),
-	setExceptionStatus: (id: string): PutProcedure<{ readonly status: TelescopeExceptionStatus }, Envelope<ExceptionLogEntry>> => ({
-		path: `/telescope/exceptions/${id}/status`,
-		method: "PUT",
-		queryKey: ["telescope", "exception-status", id],
-		bodySchema: TelescopeExceptionStatusInputSchema,
-		responseSchema: envelope(ExceptionLogEntrySchema),
-	}),
-	retryJob: (id: string): PostProcedure<Record<string, never>, Envelope<TelescopeJobLogEntry>> => ({
-		path: `/telescope/jobs/${id}/retry`,
-		method: "POST",
-		queryKey: ["telescope", "job-retry", id],
-		bodySchema: z.object({}).strict(),
-		responseSchema: envelope(TelescopeJobLogEntrySchema),
-	}),
-	search: (query: TelescopeSearchQuery): GetProcedure<Envelope<TelescopeSearchResponse>> => ({
-		path: "/telescope/search",
-		method: "GET",
-		queryKey: ["telescope", "search", query],
-		responseSchema: envelope(TelescopeSearchResponseSchema),
-	}),
-	users: (query: TelescopeUsersQuery): GetProcedure<Envelope<{ readonly list: TelescopeUsersResponse }>> => ({
-		path: "/telescope/users",
-		method: "GET",
-		queryKey: ["telescope", "users", query],
-		responseSchema: envelope(z.object({ list: TelescopeUsersResponseSchema }).strict()),
-	}),
-	runSchedule: (name: string): PostProcedure<Record<string, never>, Envelope<TelescopeScheduleLog>> => ({
-		path: `/telescope/schedules/${encodeURIComponent(name)}/run`,
-		method: "POST",
-		queryKey: ["telescope", "schedule-run", name],
-		bodySchema: z.object({}).strict(),
-		responseSchema: envelope(TelescopeScheduleLogSchema),
-	}),
-	webhookDeliveries: (): GetProcedure<Envelope<TelescopeWebhookDeliveriesResponse>> => ({
-		path: "/telescope/webhook-deliveries",
-		method: "GET",
-		queryKey: ["telescope", "webhook-deliveries"],
-		responseSchema: envelope(TelescopeWebhookDeliveriesResponseSchema),
-	}),
-	prune: (force: boolean): PostProcedure<Record<string, never>, Envelope<{ readonly removed: number }>> => ({
-		path: force ? "/telescope/admin/prune?force=true" : "/telescope/admin/prune",
-		method: "POST",
-		queryKey: ["telescope", "prune", force],
-		bodySchema: z.object({}).strict(),
-		responseSchema: envelope(z.object({ removed: z.number().int() }).strict()),
-	}),
-	clearAll: (): PostProcedure<Record<string, never>, Envelope<{ readonly cleared: true }>> => ({
-		path: "/telescope/admin/clear",
-		method: "POST",
-		queryKey: ["telescope", "clear-all"],
-		bodySchema: z.object({}).strict(),
-		responseSchema: envelope(z.object({ cleared: z.literal(true) }).strict()),
-	}),
-	status: (): GetProcedure<Envelope<TelescopeStatus>> => ({
-		path: "/telescope/status",
-		method: "GET",
-		queryKey: ["telescope", "status"],
-		responseSchema: envelope(TelescopeStatusSchema),
-	}),
-};
+): MutationDef<Input, Resp> {
+	return {
+		kind: "mutation",
+		method: contract.method,
+		path: contract.path,
+		inputSchema: contract.input,
+		responseSchema: opts.response,
+		queryKey: opts.queryKey,
+		baseOptions: opts.baseOptions,
+		toBody: opts.toBody,
+		toQuery: opts.toQuery,
+	};
+}
+
+// ── REST serialization (shared by client + server) ─────────────────────────
+
+const PARAM_PATTERN = /:([A-Za-z0-9_]+)/g;
+
+/** Result of serializing an input onto a path template. */
+export interface ResolvedRequest {
+	readonly url: string;
+	/** Present for mutations (defaults to `{}` when the input has no body fields). */
+	readonly body?: JsonValue;
+}
+
+/**
+ * The single input → REST mapping. `:param` segments consume matching input
+ * keys into the path; for GET the remaining keys become the query string; for
+ * mutations the remaining keys become the JSON body (except `toQuery` keys,
+ * which go to the query string instead). `undefined` values are skipped.
+ *
+ * The `Input` constraint is what keeps this cast-free: a `SerializableInput`
+ * is indexable by any key, so no `Record` re-typing is needed.
+ */
+export function resolveRequest(path: string, input: SerializableInput, options?: { readonly method?: RestMethod; readonly toQuery?: readonly string[] }): ResolvedRequest {
+	const record: Readonly<Record<string, JsonValue | undefined>> = input ?? {};
+	const method: RestMethod = options?.method ?? "GET";
+	const paramNames: readonly string[] = [...path.matchAll(PARAM_PATTERN)].map((match) => match[1] ?? "");
+
+	const consumed = new Set<string>(paramNames);
+	for (const key of options?.toQuery ?? []) consumed.add(key);
+
+	let url = path;
+	for (const param of paramNames) {
+		url = url.replace(`:${param}`, encodeURIComponent(stringifyQueryValue(record[param])));
+	}
+
+	// Leftover keys → query string (GET) or body (mutations); `undefined` values are dropped.
+	const leftover: readonly { readonly key: string; readonly value: JsonValue }[] = Object.keys(record).flatMap((key) => {
+		const value: JsonValue | undefined = record[key];
+		if (consumed.has(key) || value === undefined) return [];
+		return [{ key, value }];
+	});
+
+	if (method === "GET") {
+		if (leftover.length > 0) {
+			const search = new URLSearchParams();
+			for (const { key, value } of leftover) search.set(key, stringifyQueryValue(value));
+			const qs = search.toString();
+			url = `${url}${url.includes("?") ? "&" : "?"}${qs}`;
+		}
+		return { url };
+	}
+
+	// Mutations: `toQuery` keys ride the query string, everything else is the body.
+	const toQueryEntries: readonly { readonly key: string; readonly value: JsonValue }[] = (options?.toQuery ?? []).flatMap((key) => {
+		const value: JsonValue | undefined = record[key];
+		if (value === undefined) return [];
+		return [{ key, value }];
+	});
+	if (toQueryEntries.length > 0) {
+		const search = new URLSearchParams();
+		for (const { key, value } of toQueryEntries) search.set(key, stringifyQueryValue(value));
+		const qs = search.toString();
+		url = `${url}${url.includes("?") ? "&" : "?"}${qs}`;
+	}
+
+	const body: Record<string, JsonValue> = {};
+	for (const { key, value } of leftover) body[key] = value;
+	return { url, body };
+}
+
+/** Serializes a query value without tripping no-base-to-string on arbitrary values. */
+function stringifyQueryValue(value: JsonValue | undefined): string {
+	if (value === undefined) return "";
+	if (typeof value === "string") return value;
+	if (typeof value === "number" || typeof value === "boolean") return String(value);
+	if (value === null) return "null";
+	// Non-primitive values are normalized to their JSON form (schemas only
+	// allow primitives on query strings, so this is defensive only).
+	return JSON.stringify(value);
+}
+
+// ── The router ─────────────────────────────────────────────────────────────
+// Every leaf derives path/method/input from `apiContract` (shared) and only
+// adds the client-side envelope + query key. Adding a route = adding one
+// contract leaf in `@workspace/shared` + one def here + one pipe in the API
+// controller — a missing leaf is a compile error on the client and a 400 on
+// the API side.
+
+export const apiRouter = {
+	auth: {
+		/** "Who am I?" — full user record. */
+		me: defineQuery(apiContract.auth.me, {
+			response: envelope(UserResponseSchema),
+			queryKey: () => ["auth", "me"],
+		}),
+		/** Very basic protected endpoint — proves the access token is valid and answers "who am I + when does my token expire" with no DB work. */
+		sessionStatus: defineQuery(apiContract.auth.sessionStatus, {
+			response: envelope(SessionStatusSchema),
+			queryKey: () => ["auth", "session-status"],
+		}),
+		login: defineMutation(apiContract.auth.login, {
+			response: envelope(LoginResponseSchema),
+			queryKey: () => ["auth", "login"],
+		}),
+		/** Admin login — sends `X-Client-Type: admin` for cookie isolation. */
+		adminLogin: defineMutation(apiContract.auth.adminLogin, {
+			response: envelope(LoginResponseSchema),
+			queryKey: () => ["auth", "admin-login"],
+			baseOptions: { headers: { "X-Client-Type": "admin" } },
+		}),
+		signup: defineMutation(apiContract.auth.signup, {
+			response: envelope(SignupResponseSchema),
+			queryKey: () => ["auth", "signup"],
+		}),
+		refresh: defineMutation(apiContract.auth.refresh, {
+			response: envelope(RefreshResponseSchema),
+			queryKey: () => ["auth", "refresh"],
+		}),
+		logout: defineMutation(apiContract.auth.logout, {
+			response: envelope(LogoutResponseSchema),
+			queryKey: () => ["auth", "logout"],
+		}),
+	},
+
+	// ── Email template preview procedures ─────────────────────────────────────
+	email: {
+		previewList: defineQuery(apiContract.email.previewList, {
+			response: envelope(EmailPreviewListResponseSchema),
+			queryKey: () => ["email", "preview-list"],
+		}),
+		/** Preview detail for one template key. */
+		previewDetail: defineQuery(apiContract.email.previewDetail, {
+			response: envelope(EmailPreviewSchema),
+			queryKey: ({ key }) => ["email", "preview-detail", key],
+		}),
+		/** Sends one template to the configured test address. */
+		previewSend: defineMutation(apiContract.email.previewSend, {
+			response: envelope(EmailSendResultSchema),
+			queryKey: ({ key }) => ["email", "preview-send", key],
+		}),
+		logList: defineQuery(apiContract.email.logList, {
+			response: envelope(EmailLogListResponseSchema),
+			queryKey: () => ["email", "log-list"],
+		}),
+	},
+
+	// ── Telescope procedures (docs/telescope.md §7) ──────────────────────────
+	telescope: {
+		overview: defineQuery(apiContract.telescope.overview, {
+			response: envelope(z.object({ overview: TelescopeOverviewSchema }).strict()),
+			queryKey: ({ range }) => ["telescope", "overview", range],
+		}),
+		requests: defineQuery(apiContract.telescope.requests, {
+			response: envelope(z.object({ list: TelescopeRequestListResponseSchema }).strict()),
+			queryKey: (query) => ["telescope", "requests", query],
+		}),
+		requestDetail: defineQuery(apiContract.telescope.requestDetail, {
+			response: envelope(TelescopeRequestDetailResponseSchema),
+			queryKey: ({ id }) => ["telescope", "request-detail", id],
+		}),
+		requestSql: defineQuery(apiContract.telescope.requestSql, {
+			response: envelope(TelescopeRequestSqlResponseSchema),
+			queryKey: ({ id }) => ["telescope", "request-sql", id],
+		}),
+		compare: defineQuery(apiContract.telescope.compare, {
+			response: envelope(TelescopeCompareResponseSchema),
+			queryKey: ({ a, b }) => ["telescope", "compare", a, b],
+		}),
+		sql: defineQuery(apiContract.telescope.sql, {
+			response: envelope(z.object({ list: TelescopeSqlListResponseSchema }).strict()),
+			queryKey: (query) => ["telescope", "sql", query],
+		}),
+		exceptions: defineQuery(apiContract.telescope.exceptions, {
+			response: envelope(z.object({ list: TelescopeExceptionListResponseSchema }).strict()),
+			queryKey: (query) => ["telescope", "exceptions", query],
+		}),
+		exceptionDetail: defineQuery(apiContract.telescope.exceptionDetail, {
+			response: envelope(ExceptionLogEntrySchema),
+			queryKey: ({ id }) => ["telescope", "exception-detail", id],
+		}),
+		mail: defineQuery(apiContract.telescope.mail, {
+			response: envelope(TelescopeMailResponseSchema),
+			queryKey: () => ["telescope", "mail"],
+		}),
+		jobs: defineQuery(apiContract.telescope.jobs, {
+			response: envelope(z.object({ list: TelescopeJobsListResponseSchema }).strict()),
+			queryKey: (query) => ["telescope", "jobs", query],
+		}),
+		jobDetail: defineQuery(apiContract.telescope.jobDetail, {
+			response: envelope(TelescopeJobLogEntrySchema),
+			queryKey: ({ id }) => ["telescope", "job-detail", id],
+		}),
+		schedules: defineQuery(apiContract.telescope.schedules, {
+			response: envelope(TelescopeSchedulesResponseSchema),
+			queryKey: () => ["telescope", "schedules"],
+		}),
+		leaderboard: defineQuery(apiContract.telescope.leaderboard, {
+			response: envelope(TelescopeLeaderboardResponseSchema),
+			queryKey: (query) => ["telescope", "leaderboard", query],
+		}),
+		trends: defineQuery(apiContract.telescope.trends, {
+			response: envelope(TelescopeTrendsResponseSchema),
+			queryKey: (query) => ["telescope", "trends", query],
+		}),
+		logs: defineQuery(apiContract.telescope.logs, {
+			response: envelope(z.object({ list: TelescopeLogsListResponseSchema }).strict()),
+			queryKey: (query) => ["telescope", "logs", query],
+		}),
+		alerts: defineQuery(apiContract.telescope.alerts, {
+			response: envelope(TelescopeAlertsResponseSchema),
+			queryKey: () => ["telescope", "alerts"],
+		}),
+		search: defineQuery(apiContract.telescope.search, {
+			response: envelope(TelescopeSearchResponseSchema),
+			queryKey: (query) => ["telescope", "search", query],
+		}),
+		users: defineQuery(apiContract.telescope.users, {
+			response: envelope(z.object({ list: TelescopeUsersResponseSchema }).strict()),
+			queryKey: (query) => ["telescope", "users", query],
+		}),
+		status: defineQuery(apiContract.telescope.status, {
+			response: envelope(TelescopeStatusSchema),
+			queryKey: () => ["telescope", "status"],
+		}),
+		webhookDeliveries: defineQuery(apiContract.telescope.webhookDeliveries, {
+			response: envelope(TelescopeWebhookDeliveriesResponseSchema),
+			queryKey: () => ["telescope", "webhook-deliveries"],
+		}),
+
+		// ── Mutations ─────────────────────────────────────────────────────────
+		dump: defineMutation(apiContract.telescope.dump, {
+			response: envelope(TelescopeDumpResponseSchema),
+			queryKey: () => ["telescope", "dump"],
+		}),
+		setAnnotation: defineMutation(apiContract.telescope.setAnnotation, {
+			response: envelope(TelescopeAnnotationSchema),
+			queryKey: ({ id }) => ["telescope", "annotation", id],
+		}),
+		replay: defineMutation(apiContract.telescope.replay, {
+			response: envelope(TelescopeReplayResponseSchema),
+			queryKey: ({ id }) => ["telescope", "replay", id],
+		}),
+		runSchedule: defineMutation(apiContract.telescope.runSchedule, {
+			response: envelope(TelescopeScheduleLogSchema),
+			queryKey: ({ name }) => ["telescope", "schedule-run", name],
+		}),
+		prune: defineMutation(apiContract.telescope.prune, {
+			toQuery: ["force"],
+			response: envelope(z.object({ removed: z.number().int() }).strict()),
+			queryKey: ({ force }) => ["telescope", "prune", force],
+		}),
+		clearAll: defineMutation(apiContract.telescope.clearAll, {
+			response: envelope(z.object({ cleared: z.literal(true) }).strict()),
+			queryKey: () => ["telescope", "clear-all"],
+		}),
+		alertAck: defineMutation(apiContract.telescope.alertAck, {
+			response: envelope(TelescopeAlertEntrySchema),
+			queryKey: ({ id }) => ["telescope", "alert-ack", id],
+		}),
+		alertSnooze: defineMutation(apiContract.telescope.alertSnooze, {
+			response: envelope(TelescopeAlertEntrySchema),
+			queryKey: ({ id }) => ["telescope", "alert-snooze", id],
+		}),
+		setExceptionStatus: defineMutation(apiContract.telescope.setExceptionStatus, {
+			response: envelope(ExceptionLogEntrySchema),
+			queryKey: ({ id }) => ["telescope", "exception-status", id],
+		}),
+		retryJob: defineMutation(apiContract.telescope.retryJob, {
+			response: envelope(TelescopeJobLogEntrySchema),
+			queryKey: ({ id }) => ["telescope", "job-retry", id],
+		}),
+	},
+} as const;
+
+/** The full router tree — used to derive the client router + server caller types. */
+export type ApiRouter = typeof apiRouter;

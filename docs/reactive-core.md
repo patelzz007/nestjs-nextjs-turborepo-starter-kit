@@ -780,11 +780,11 @@ the existing zod `responseSchema`.
 ```typescript
 export class ReactiveApiClient {
 	public me$(): Observable<UserResponse> {
-		return defer(() => fromFetch(`${this.baseUrl}${authEndpoints.me.path}`, {
+		return defer(() => fromFetch(`${this.baseUrl}${apiRouter.auth.me.path}`, {
 			credentials: "include",
 		}).pipe(
 			map((res) => res.json()),
-			map((raw) => authEndpoints.me.responseSchema.parse(raw)),
+			map((raw) => apiRouter.auth.me.responseSchema.parse(raw)),
 		));
 	}
 	// ... login$, refresh$, logout$, every endpoint in the registry

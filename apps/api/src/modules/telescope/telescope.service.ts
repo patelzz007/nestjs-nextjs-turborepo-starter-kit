@@ -1,6 +1,5 @@
 import { Inject, Injectable, NotFoundException } from "@nestjs/common";
 import { nanoid } from "nanoid";
-import { z } from "zod";
 
 import { type Observable } from "rxjs";
 
@@ -8,21 +7,6 @@ import { hostname } from "node:os";
 
 import {
 	EmailLogEntrySchema,
-	TelescopeAlertSnoozeInputSchema,
-	TelescopeCompareQuerySchema,
-	TelescopeExceptionListQuerySchema,
-	TelescopeExceptionStatusInputSchema,
-	TelescopeJobsListQuerySchema,
-	TelescopeLeaderboardQuerySchema,
-	TelescopeLogsListQuerySchema,
-	TelescopeOverviewQuerySchema,
-	TelescopeRangeSchema,
-	TelescopeRequestListQuerySchema,
-	TelescopeScheduleRunInputSchema,
-	TelescopeSearchQuerySchema,
-	TelescopeSqlListQuerySchema,
-	TelescopeTrendsQuerySchema,
-	TelescopeUsersQuerySchema,
 	type BufferedStreamEvent,
 	type DumpEntry,
 	type EmailLogEntry,
@@ -32,6 +16,7 @@ import {
 	type TelescopeAlertsResponse,
 	type TelescopeAlertSnoozeInput,
 	type TelescopeAnnotation,
+	type TelescopeCompareQuery,
 	type TelescopeAnnotationInput,
 	type TelescopeCompareResponse,
 	type TelescopeDiffField,
@@ -59,6 +44,7 @@ import {
 	type TelescopeRequestListResponse,
 	type TelescopeRequestSqlResponse,
 	type TelescopeScheduleLog,
+	type TelescopeScheduleRunInput,
 	type TelescopeSchedulesResponse,
 	type TelescopeSearchQuery,
 	type TelescopeSearchResponse,
@@ -93,30 +79,15 @@ const RANGE_MS: Readonly<Record<TelescopeRange, number>> = {
 	"24h": 24 * 60 * 60 * 1000,
 };
 
-/** Raw Express query-string object as Nest delivers it to `@Query()`. */
-type RawQuery = Record<string, string | string[] | undefined>;
-
-/**
- * Parses a raw query-string object through a shared Zod schema (coerces
- * numbers). Invalid values fall back to the schema defaults rather than
- * 400ing — this is a dev tool; a bad filter must not block the dashboard.
- */
-function parseQuery<T>(schema: z.ZodType<T>, raw: RawQuery): T {
-	const parsed = schema.safeParse(raw);
-	if (parsed.success) {
-		return parsed.data;
-	}
-	const fallback = schema.safeParse({});
-	if (fallback.success) {
-		return fallback.data;
-	}
-	return schema.parse(raw);
-}
-
 /**
  * Read side of Telescope. All list/detail/overview reads go through the
  * `TelescopeStore` interface (memory today, Postgres later); the only Prisma
  * touch is the Mail tab, which reuses the existing `email_logs` table.
+ *
+ * Every query/body arrives here ALREADY validated at the HTTP boundary by
+ * `ZodValidationPipe(apiContract.telescope.*.input)` — the same shared zod
+ * contract the client router derives from — so the methods take typed inputs
+ * and never touch raw request objects.
  */
 @Injectable()
 export class TelescopeService {
@@ -130,9 +101,8 @@ export class TelescopeService {
 		private readonly schedulerService: TelescopeSchedulerService,
 	) {}
 
-	public async overview(rawQuery: RawQuery): Promise<TelescopeOverview> {
-		const query: TelescopeOverviewQuery = parseQuery(TelescopeOverviewQuerySchema, rawQuery);
-		const range: TelescopeRange = TelescopeRangeSchema.parse(query.range);
+	public async overview(query: TelescopeOverviewQuery): Promise<TelescopeOverview> {
+		const range: TelescopeRange = query.range;
 		const fromMs: number = Date.now() - RANGE_MS[range];
 
 		const [stats, mailSent, mailDelivered] = await Promise.all([
@@ -172,8 +142,7 @@ export class TelescopeService {
 		};
 	}
 
-	public async listRequests(rawQuery: RawQuery): Promise<TelescopeRequestListResponse> {
-		const query: TelescopeRequestListQuery = parseQuery(TelescopeRequestListQuerySchema, rawQuery);
+	public async listRequests(query: TelescopeRequestListQuery): Promise<TelescopeRequestListResponse> {
 		const list: TelescopeRequestListResponse = this.store.listRequests(query);
 		return { ...list, items: await this.enrichWithEmails(list.items) };
 	}
@@ -212,13 +181,11 @@ export class TelescopeService {
 		};
 	}
 
-	public listSql(rawQuery: RawQuery): TelescopeSqlListResponse {
-		const query: TelescopeSqlListQuery = parseQuery(TelescopeSqlListQuerySchema, rawQuery);
+	public listSql(query: TelescopeSqlListQuery): TelescopeSqlListResponse {
 		return this.store.listQueries(query);
 	}
 
-	public listExceptions(rawQuery: RawQuery): TelescopeExceptionListResponse {
-		const query: TelescopeExceptionListQuery = parseQuery(TelescopeExceptionListQuerySchema, rawQuery);
+	public listExceptions(query: TelescopeExceptionListQuery): TelescopeExceptionListResponse {
 		return this.store.listExceptions(query);
 	}
 
@@ -270,9 +237,7 @@ export class TelescopeService {
 	 * table (method/path/status/duration/user/correlation/timing). `same`
 	 * flags identical values so the UI can fade unchanged rows.
 	 */
-	public compare(rawQuery: RawQuery): TelescopeCompareResponse {
-		const query = TelescopeCompareQuerySchema.parse({ a: rawQuery.a ?? "", b: rawQuery.b ?? "" });
-
+	public compare(query: TelescopeCompareQuery): TelescopeCompareResponse {
 		const requestA: RequestLogEntry = this.requireRequest(query.a);
 		const requestB: RequestLogEntry = this.requireRequest(query.b);
 
@@ -313,18 +278,16 @@ export class TelescopeService {
 	}
 
 	/** Feature 12 — slow-endpoint leaderboard over the range. */
-	public leaderboard(rawQuery: RawQuery): TelescopeLeaderboardResponse {
-		const query: TelescopeLeaderboardQuery = parseQuery(TelescopeLeaderboardQuerySchema, rawQuery);
-		const range: TelescopeRange = TelescopeRangeSchema.parse(query.range);
+	public leaderboard(query: TelescopeLeaderboardQuery): TelescopeLeaderboardResponse {
+		const range: TelescopeRange = query.range;
 		const fromMs: number = Date.now() - RANGE_MS[range];
 		const entries: readonly TelescopeLeaderboardEntry[] = this.store.leaderboard(fromMs, 10);
 		return { range, entries };
 	}
 
 	/** Feature 13 — hourly trend buckets for the error-rate chart. */
-	public trends(rawQuery: RawQuery): TelescopeTrendsResponse {
-		const query: TelescopeTrendsQuery = parseQuery(TelescopeTrendsQuerySchema, rawQuery);
-		const range: TelescopeRange = TelescopeRangeSchema.parse(query.range);
+	public trends(query: TelescopeTrendsQuery): TelescopeTrendsResponse {
+		const range: TelescopeRange = query.range;
 		const fromMs: number = Date.now() - RANGE_MS[range];
 		// Hourly buckets: 6h → 6, 24h → 24 (15m/1h fall back to 12 for readability).
 		const bucketCount: number = range === "15m" ? 12 : range === "1h" ? 12 : range === "6h" ? 6 : 24;
@@ -333,8 +296,7 @@ export class TelescopeService {
 	}
 
 	/** Feature 3 — jobs. */
-	public listJobs(rawQuery: RawQuery): TelescopeJobsListResponse {
-		const query: TelescopeJobsListQuery = parseQuery(TelescopeJobsListQuerySchema, rawQuery);
+	public listJobs(query: TelescopeJobsListQuery): TelescopeJobsListResponse {
 		return this.store.listJobs(query);
 	}
 
@@ -366,8 +328,7 @@ export class TelescopeService {
 	}
 
 	/** Feature 20 — logs browser. */
-	public listLogs(rawQuery: RawQuery): TelescopeLogsListResponse {
-		const query: TelescopeLogsListQuery = parseQuery(TelescopeLogsListQuerySchema, rawQuery);
+	public listLogs(query: TelescopeLogsListQuery): TelescopeLogsListResponse {
 		return this.store.listLogs(query);
 	}
 
@@ -381,8 +342,7 @@ export class TelescopeService {
 	}
 
 	/** Improvement 5 — snooze an alert by id until now + N minutes. */
-	public snoozeAlert(id: string, rawBody: Record<string, string | number | undefined>): TelescopeAlertEntry {
-		const input: TelescopeAlertSnoozeInput = TelescopeAlertSnoozeInputSchema.parse(rawBody);
+	public snoozeAlert(id: string, input: TelescopeAlertSnoozeInput): TelescopeAlertEntry {
 		const updated: TelescopeAlertEntry | null = this.alertService.snooze(id, input.minutes);
 		if (updated === null) {
 			throw new NotFoundException({ message: `Telescope alert ${id} not found.`, error: "TELESCOPE_ALERT_NOT_FOUND" });
@@ -391,8 +351,7 @@ export class TelescopeService {
 	}
 
 	/** Improvement 6 — set the triage status of an exception group. */
-	public setExceptionStatus(id: string, rawBody: Record<string, string | undefined>): ExceptionLogEntry {
-		const input: TelescopeExceptionStatusInput = TelescopeExceptionStatusInputSchema.parse(rawBody);
+	public setExceptionStatus(id: string, input: TelescopeExceptionStatusInput): ExceptionLogEntry {
 		const entry: ExceptionLogEntry = this.getException(id);
 		this.store.setExceptionStatus(entry.errorGroup, input.status);
 		return { ...entry, status: input.status };
@@ -428,8 +387,7 @@ export class TelescopeService {
 	 * resolves an email fragment (e.g. "alice@") against the `users` table and
 	 * ORs in those users' requests, so searching by email works too.
 	 */
-	public async search(rawQuery: RawQuery): Promise<TelescopeSearchResponse> {
-		const query: TelescopeSearchQuery = parseQuery(TelescopeSearchQuerySchema, rawQuery);
+	public async search(query: TelescopeSearchQuery): Promise<TelescopeSearchResponse> {
 		const emailUserIds: ReadonlySet<string> = await this.resolveEmailUserIds(query.q.trim());
 		const result: TelescopeSearchResponse = this.store.search(query, emailUserIds);
 		// Attach emails to the matched request rows (the store scan is DB-free).
@@ -497,8 +455,7 @@ export class TelescopeService {
 	 * from the `users` table so the UI shows a friendly identity instead of a
 	 * raw UUID. Unknown/deleted ids keep `email: null`.
 	 */
-	public async listUsers(rawQuery: RawQuery): Promise<TelescopeUsersResponse> {
-		const query: TelescopeUsersQuery = parseQuery(TelescopeUsersQuerySchema, rawQuery);
+	public async listUsers(query: TelescopeUsersQuery): Promise<TelescopeUsersResponse> {
 		const list: ListResult<TelescopeUserSummary> = this.store.listUsers(query);
 		const ids: readonly string[] = list.items.map((item: TelescopeUserSummary): string => item.userId);
 		const emailById = new Map<string, string>();
@@ -525,10 +482,9 @@ export class TelescopeService {
 	}
 
 	/** Feature 12 — run a registered schedule on demand (the "Run now" button). */
-	public async runSchedule(name: string, rawBody: Record<string, string | undefined> | undefined): Promise<TelescopeScheduleLog> {
-		// Validate the optional trigger label — the body is tolerant (an empty
-		// POST body is `undefined` at runtime), defaults apply.
-		TelescopeScheduleRunInputSchema.parse(rawBody ?? {});
+	public async runSchedule(name: string, _input: TelescopeScheduleRunInput): Promise<TelescopeScheduleLog> {
+		// The optional trigger label is validated at the boundary; runNow does
+		// not consume it yet (kept for the manual-trigger run record).
 		const updated: TelescopeScheduleLog | undefined = await this.schedulerService.runNow(name);
 		if (updated === undefined) {
 			throw new NotFoundException({ message: `Telescope schedule ${name} not registered.`, error: "TELESCOPE_SCHEDULE_NOT_FOUND" });
@@ -542,8 +498,8 @@ export class TelescopeService {
 	 * `?force=true` drops EVERYTHING older than one minute (the "Clear all
 	 * history" escape hatch behind the health card).
 	 */
-	public prune(rawQuery: RawQuery): { readonly removed: number } {
-		const force: boolean = rawQuery.force === "true";
+	public prune(query: { readonly force?: boolean | "true" | "false" }): { readonly removed: number } {
+		const force: boolean = query.force === true || query.force === "true";
 		const minutes: number = force ? 1 : this.options.retentionMinutes;
 		return { removed: this.store.pruneRetention(minutes) };
 	}

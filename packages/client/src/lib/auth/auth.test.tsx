@@ -4,7 +4,6 @@ import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from "vite
 import type { ReactNode } from "react";
 
 import { AuthProvider, resetAuthHydrationForTests, useAuth, type CookieNamesConfig } from "./index";
-import { authEndpoints } from "../api/endpoints";
 import { QueryProvider } from "../api/query-provider";
 import { fetchCalls, headersOf, inputUrl, jsonResponse, type FetchCall, type FetchImpl } from "../test-utils";
 
@@ -183,9 +182,9 @@ describe("AuthProvider logout", () => {
 		});
 
 		// Populate the query cache with the /auth/me result.
-		const me = result.current.api.procedure(authEndpoints.me);
+		const me = result.current.api.auth.me;
 		await act(async () => {
-			await me.fetch();
+			await me.fetch(undefined);
 		});
 
 		await act(async () => {
@@ -312,9 +311,9 @@ describe("AuthProvider silent refresh", () => {
 		vi.stubGlobal("fetch", fetchMock);
 
 		const { result } = renderHook(() => useAuth(), { wrapper });
-		const me = result.current.api.procedure(authEndpoints.me);
+		const me = result.current.api.auth.me;
 
-		const [first, second] = await Promise.all([me.fetch(), me.fetch()]);
+		const [first, second] = await Promise.all([me.fetch(undefined), me.fetch(undefined)]);
 
 		expect(first.ok).toBe(true);
 		expect(second.ok).toBe(true);
@@ -332,9 +331,9 @@ describe("AuthProvider silent refresh", () => {
 		vi.stubGlobal("fetch", fetchMock);
 
 		const { result } = renderHook(() => useAuth(), { wrapper });
-		const me = result.current.api.procedure(authEndpoints.me);
+		const me = result.current.api.auth.me;
 
-		const response = await me.fetch();
+		const response = await me.fetch(undefined);
 
 		expect(response.ok).toBe(false);
 		expect(refreshCalls(fetchMock)).toHaveLength(1);
@@ -351,9 +350,9 @@ describe("AuthProvider silent refresh", () => {
 		vi.stubGlobal("fetch", fetchMock);
 
 		const { result } = renderHook(() => useAuth(), { wrapper: adminWrapper });
-		const me = result.current.api.procedure(authEndpoints.me);
+		const me = result.current.api.auth.me;
 
-		const response = await me.fetch();
+		const response = await me.fetch(undefined);
 
 		expect(response.ok).toBe(true);
 		const refreshCall = refreshCalls(fetchMock)[0];
