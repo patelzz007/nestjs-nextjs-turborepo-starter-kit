@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import { TelescopeOptionsSchema, type RequestLogEntry, type TelescopeJobLogEntry, type TelescopeOptions } from "@workspace/shared";
 
-import { TelescopeAlertService } from "./telescope-alert.service.js";
-import { TelescopeMemoryStore } from "./telescope.store.js";
+import { TelescopeAlertService } from "./telescope-alert.service";
+import { TelescopeMemoryStore } from "./telescope.store";
 
 function makeRequest(overrides: Partial<RequestLogEntry>): RequestLogEntry {
 	return {

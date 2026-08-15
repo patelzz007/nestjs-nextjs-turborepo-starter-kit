@@ -3,13 +3,13 @@ import { ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { HealthResponseSchema } from "@workspace/shared";
 import { z } from "zod";
 
-import { createWrappedDto } from "../../common/dto/response-wrapper.js";
+import { createWrappedDto } from "../../common/dto/response-wrapper";
 // @Public() is metadata-only (no DI) — HealthModule must NOT import AuthModule.
 // The global AuthGuard reads the public marker via Reflector and skips these
 // routes. Do not "fix" this into a module import.
-import { Public } from "../auth/decorators/public.decorator.js";
+import { Public } from "../auth/decorators/public.decorator";
 
-import { HealthService } from "./health.service.js";
+import { HealthService } from "./health.service";
 
 // ── Wrapped Response DTOs ────────────────────────────────────────────────
 

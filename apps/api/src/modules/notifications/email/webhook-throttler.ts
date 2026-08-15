@@ -1,6 +1,6 @@
 import type { ThrottlerModuleOptions } from "@nestjs/throttler";
 
-import type { TypedConfigService } from "../../../config/typed-config.service.js";
+import type { TypedConfigService } from "../../../config/typed-config.service";
 
 /** Fallback tracker when a request carries no usable IP information. */
 const UNKNOWN_CLIENT = "unknown";

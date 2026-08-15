@@ -7,7 +7,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 // test-file imports, so the AppModule graph never sees unset config). This
 // spec boots the REAL AppModule and needs a reachable Postgres — see
 // `setup-env.ts` for the DATABASE_URL override.
-import { AppModule } from "../src/app.module.js";
+import { AppModule } from "../src/app.module";
 
 describe("App (e2e)", () => {
 	let app: INestApplication;

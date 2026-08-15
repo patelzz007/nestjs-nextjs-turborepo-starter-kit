@@ -1,7 +1,7 @@
 import { CanActivate, type ExecutionContext, Injectable, UnauthorizedException } from "@nestjs/common";
 import type { Request } from "express";
 
-import { TokenService, type RefreshTokenPayload } from "../services/token.service.js";
+import { TokenService, type RefreshTokenPayload } from "../services/token.service";
 
 /**
  * Guard that validates the refresh token JWT from an httpOnly cookie.

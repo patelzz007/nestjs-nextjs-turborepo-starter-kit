@@ -8,12 +8,12 @@ import type { Request } from "express";
 
 import type { EmailLogStatus } from "@workspace/shared";
 
-import { TypedConfigService } from "../../../config/typed-config.service.js";
-import { LogService } from "../../logs/logs.service.js";
-import { Public } from "../../auth/decorators/public.decorator.js";
+import { TypedConfigService } from "../../../config/typed-config.service";
+import { LogService } from "../../logs/logs.service";
+import { Public } from "../../auth/decorators/public.decorator";
 
-import { EmailLogService, type WebhookUpdateResult } from "./email-log.service.js";
-import { ResendWebhookEventDto } from "./dtos/resend-webhook-event.dto.js";
+import { EmailLogService, type WebhookUpdateResult } from "./email-log.service";
+import { ResendWebhookEventDto } from "./dtos/resend-webhook-event.dto";
 
 /** Raw webhook headers Resend signs (standard-webhooks). */
 const WebhookHeadersSchema = z

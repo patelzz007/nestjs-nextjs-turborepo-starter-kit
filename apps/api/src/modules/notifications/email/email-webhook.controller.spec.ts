@@ -3,10 +3,10 @@ import type { RawBodyRequest } from "@nestjs/common";
 import type { Request } from "express";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { TypedConfigService } from "../../../config/typed-config.service.js";
-import type { LogService } from "../../logs/logs.service.js";
-import type { EmailLogService } from "./email-log.service.js";
-import { EmailWebhookController } from "./email-webhook.controller.js";
+import type { TypedConfigService } from "../../../config/typed-config.service";
+import type { LogService } from "../../logs/logs.service";
+import type { EmailLogService } from "./email-log.service";
+import { EmailWebhookController } from "./email-webhook.controller";
 
 // ── Mocks ─────────────────────────────────────────────────────────────────
 

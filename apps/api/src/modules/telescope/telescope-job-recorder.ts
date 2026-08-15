@@ -2,9 +2,9 @@ import { nanoid } from "nanoid";
 
 import { epochMs, type EpochMs, type TelescopeJobLogEntry, type TelescopeJobStatus, type TelescopeOptions } from "@workspace/shared";
 
-import { RequestSpanContext, type SpanStore } from "./request-span-context.js";
-import { TelescopeAlertService } from "./telescope-alert.service.js";
-import { TelescopeEventBus } from "./telescope-event-bus.js";
+import { RequestSpanContext, type SpanStore } from "./request-span-context";
+import { TelescopeAlertService } from "./telescope-alert.service";
+import { TelescopeEventBus } from "./telescope-event-bus";
 
 /**
  * Shared "a unit of work finished" recorder used by every auto-capture job

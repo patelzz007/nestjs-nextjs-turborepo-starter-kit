@@ -2,10 +2,10 @@ import { Injectable } from "@nestjs/common";
 
 import type { EpochMs } from "@workspace/shared";
 
-import { EmailSenderService } from "../../notifications/email/email-sender.service.js";
-import { AccountLockedEmailTemplate } from "../../notifications/email/templates/account-locked-email.template.js";
-import { PasswordResetEmailTemplate } from "../../notifications/email/templates/password-reset-email.template.js";
-import { VerificationEmailTemplate } from "../../notifications/email/templates/verification-email.template.js";
+import { EmailSenderService } from "../../notifications/email/email-sender.service";
+import { AccountLockedEmailTemplate } from "../../notifications/email/templates/account-locked-email.template";
+import { PasswordResetEmailTemplate } from "../../notifications/email/templates/password-reset-email.template";
+import { VerificationEmailTemplate } from "../../notifications/email/templates/verification-email.template";
 
 /**
  * Legacy facade kept so `auth.service.ts` call sites stay unchanged.

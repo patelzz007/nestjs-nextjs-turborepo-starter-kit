@@ -2,11 +2,11 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import { TelescopeOptionsSchema, type TelescopeOptions } from "@workspace/shared";
 
-import { SessionsEventsService } from "../sessions/sessions-events.service.js";
+import { SessionsEventsService } from "../sessions/sessions-events.service";
 
-import { TelescopeEventBus } from "./telescope-event-bus.js";
-import { TelescopeMemoryStore } from "./telescope.store.js";
-import { TelescopeSessionsJobAdapter } from "./telescope-sessions-job-adapter.js";
+import { TelescopeEventBus } from "./telescope-event-bus";
+import { TelescopeMemoryStore } from "./telescope.store";
+import { TelescopeSessionsJobAdapter } from "./telescope-sessions-job-adapter";
 
 describe("TelescopeSessionsJobAdapter", () => {
 	let store: TelescopeMemoryStore;

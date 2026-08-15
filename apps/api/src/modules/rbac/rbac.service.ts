@@ -1,8 +1,8 @@
 import { Injectable, Logger } from "@nestjs/common";
 
-import type { UserPermissions } from "./rbac.interface.js";
-import type { SlimRoleResponse, PermissionDetailsResponse } from "./schemas/user.schema.js";
-import { PrismaService } from "../../prisma/prisma.service.js";
+import type { UserPermissions } from "./rbac.interface";
+import type { SlimRoleResponse, PermissionDetailsResponse } from "./schemas/user.schema";
+import { PrismaService } from "../../prisma/prisma.service";
 
 /**
  * Role-Based Access Control service.

@@ -2,7 +2,7 @@ import { Injectable, type NestMiddleware } from "@nestjs/common";
 import type { Request, Response, NextFunction } from "express";
 import { nanoid } from "nanoid";
 
-import type { JsonValue } from "../interfaces/json.js";
+import type { JsonValue } from "../interfaces/json";
 
 /**
  * Extended Express Request interface that includes correlation ID, trace info,

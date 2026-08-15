@@ -2,10 +2,10 @@ import { Inject, Injectable, Logger, type OnModuleInit } from "@nestjs/common";
 
 import { epochMs, type TelescopeOptions } from "@workspace/shared";
 
-import { TelescopeJobRunner } from "./telescope-job-runner.js";
-import { TELESCOPE_OPTIONS, TELESCOPE_STORE } from "./telescope.options.js";
-import { TelescopeSchedulerService } from "./telescope-scheduler.js";
-import type { TelescopeStore } from "./telescope.store.js";
+import { TelescopeJobRunner } from "./telescope-job-runner";
+import { TELESCOPE_OPTIONS, TELESCOPE_STORE } from "./telescope.options";
+import { TelescopeSchedulerService } from "./telescope-scheduler";
+import type { TelescopeStore } from "./telescope.store";
 
 /**
  * Demo wiring for the Jobs + Schedules pages (docs/telescope.md §15.4).

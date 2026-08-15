@@ -1,6 +1,6 @@
 import { Global, Module } from "@nestjs/common";
 
-import { TypedConfigService } from "./typed-config.service.js";
+import { TypedConfigService } from "./typed-config.service";
 
 /**
  * Global configuration context.

@@ -4,10 +4,10 @@ import { ThrottlerModule, type ThrottlerModuleOptions } from "@nestjs/throttler"
 import request from "supertest";
 import { describe, expect, it } from "vitest";
 
-import { ConfigModule } from "../../../config/config.module.js";
-import { TypedConfigService } from "../../../config/typed-config.service.js";
-import { resolveClientIp, webhookThrottlerOptionsFactory } from "./webhook-throttler.js";
-import { ProbeController } from "./webhook-rate-limit.probe.js";
+import { ConfigModule } from "../../../config/config.module";
+import { TypedConfigService } from "../../../config/typed-config.service";
+import { resolveClientIp, webhookThrottlerOptionsFactory } from "./webhook-throttler";
+import { ProbeController } from "./webhook-rate-limit.probe";
 
 describe("resolveClientIp", () => {
 	it("prefers cf-connecting-ip (set by Cloudflare's edge, forwarded by cloudflared)", () => {

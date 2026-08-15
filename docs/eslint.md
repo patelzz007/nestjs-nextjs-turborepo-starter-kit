@@ -464,4 +464,3 @@ cd packages/ui && npx eslint src/components/form/button.tsx
 ---
 
 _Last updated: July 31, 2026_
-

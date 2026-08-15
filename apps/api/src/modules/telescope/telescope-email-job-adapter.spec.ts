@@ -2,12 +2,12 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import { TelescopeOptionsSchema, type TelescopeOptions, type TelescopeSpan } from "@workspace/shared";
 
-import { EmailLogEventsService } from "../notifications/email/email-log-events.service.js";
+import { EmailLogEventsService } from "../notifications/email/email-log-events.service";
 
-import { RequestSpanContext, type SpanStore } from "./request-span-context.js";
-import { TelescopeEmailJobAdapter } from "./telescope-email-job-adapter.js";
-import { TelescopeEventBus } from "./telescope-event-bus.js";
-import { TelescopeMemoryStore } from "./telescope.store.js";
+import { RequestSpanContext, type SpanStore } from "./request-span-context";
+import { TelescopeEmailJobAdapter } from "./telescope-email-job-adapter";
+import { TelescopeEventBus } from "./telescope-event-bus";
+import { TelescopeMemoryStore } from "./telescope.store";
 
 describe("TelescopeEmailJobAdapter", () => {
 	let store: TelescopeMemoryStore;

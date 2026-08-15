@@ -3,13 +3,13 @@ import type { Subscription } from "rxjs";
 
 import { type TelescopeOptions } from "@workspace/shared";
 
-import { ImpersonationEventsService, type ImpersonationActionEvent } from "../impersonation/impersonation-events.service.js";
+import { ImpersonationEventsService, type ImpersonationActionEvent } from "../impersonation/impersonation-events.service";
 
-import { TelescopeAlertService } from "./telescope-alert.service.js";
-import { TelescopeEventBus } from "./telescope-event-bus.js";
-import { TelescopeJobRecorder } from "./telescope-job-recorder.js";
-import { TELESCOPE_OPTIONS, TELESCOPE_STORE } from "./telescope.options.js";
-import type { TelescopeStore } from "./telescope.store.js";
+import { TelescopeAlertService } from "./telescope-alert.service";
+import { TelescopeEventBus } from "./telescope-event-bus";
+import { TelescopeJobRecorder } from "./telescope-job-recorder";
+import { TELESCOPE_OPTIONS, TELESCOPE_STORE } from "./telescope.options";
+import type { TelescopeStore } from "./telescope.store";
 
 /**
  * Auto-capture adapter for SuperAdmin impersonation — every completed

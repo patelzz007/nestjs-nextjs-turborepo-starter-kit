@@ -1,12 +1,12 @@
 import { Module } from "@nestjs/common";
 
-import { PrismaModule } from "../../prisma/prisma.module.js";
-import { AuthModule } from "../auth/auth.module.js";
-import { RbacModule } from "../rbac/rbac.module.js";
+import { PrismaModule } from "../../prisma/prisma.module";
+import { AuthModule } from "../auth/auth.module";
+import { RbacModule } from "../rbac/rbac.module";
 
-import { ImpersonationController } from "./impersonation.controller.js";
-import { ImpersonationEventsService } from "./impersonation-events.service.js";
-import { ImpersonationService } from "./impersonation.service.js";
+import { ImpersonationController } from "./impersonation.controller";
+import { ImpersonationEventsService } from "./impersonation-events.service";
+import { ImpersonationService } from "./impersonation.service";
 
 @Module({
 	imports: [PrismaModule, AuthModule, RbacModule],

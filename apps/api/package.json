@@ -4,11 +4,11 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"build": "nest build",
-		"dev": "nest start --watch",
-		"prestart": "test -f dist/main.js || pnpm build",
-		"start": "nest start --prod",
-		"start:prod": "node dist/main.js",
+		"build": "nest build && node scripts/bundle-prod.mjs",
+		"dev": "nest start --watch -e tsx",
+		"prestart": "test -f dist/main.bundle.js || pnpm build",
+		"start": "tsx dist/src/main.js",
+		"start:prod": "node dist/main.bundle.js",
 		"db:push": "dotenv -e .env -- prisma db push --accept-data-loss",
 		"lint": "eslint",
 		"format": "prettier --write \"**/*.{ts,tsx}\"",
@@ -24,7 +24,8 @@
 		"db:studio": "prisma studio",
 		"db:reset": "dotenv -e .env -- prisma migrate reset --force && pnpm db:seed",
 		"telescope:cli": "tsx scripts/telescope-cli.ts",
-		"telescope:docs": "tsx scripts/gen-telescope-docs.ts"
+		"telescope:docs": "tsx scripts/gen-telescope-docs.ts",
+		"bundle": "node scripts/bundle-prod.mjs"
 	},
 	"dependencies": {
 		"@nestjs/common": "^11.1.28",
@@ -61,24 +62,27 @@
 		"@nestjs/cli": "^11.0.24",
 		"@nestjs/schematics": "^11.1.0",
 		"@nestjs/testing": "^11.1.28",
-		"@types/supertest": "^7.2.1",
 		"@prisma/config": "^7.9.1",
+		"@swc/cli": "^0.8.1",
+		"@swc/core": "^1.15.47",
 		"@types/bcrypt": "^6.0.0",
 		"@types/cookie-parser": "^1.4.10",
 		"@types/express": "^5.0.6",
 		"@types/jest": "^30.0.0",
 		"@types/jsonwebtoken": "^9.0.10",
-		"supertest": "^7.1.4",
-		"vitest": "^4.1.10",
 		"@types/node": "^26.1.2",
 		"@types/pdfkit": "^0.17.6",
 		"@types/pg": "^8.20.4",
+		"@types/supertest": "^7.2.1",
 		"@workspace/eslint-config": "workspace:^",
 		"@workspace/typescript-config": "workspace:*",
 		"dotenv-cli": "^11.0.0",
+		"esbuild": "^0.28.2",
 		"eslint": "^9.39.5",
 		"prisma": "^7.9.1",
+		"supertest": "^7.1.4",
 		"tsx": "^4.23.7",
-		"typescript": "6.0.2"
+		"typescript": "6.0.2",
+		"vitest": "^4.1.10"
 	}
 }

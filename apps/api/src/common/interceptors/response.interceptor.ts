@@ -6,8 +6,8 @@ import { z } from "zod";
 
 import { nowEpochMs } from "@workspace/shared";
 
-import type { JsonValue } from "../interfaces/json.js";
-import type { RequestWithTrace } from "../middleware/correlation-id.middleware.js";
+import type { JsonValue } from "../interfaces/json";
+import type { RequestWithTrace } from "../middleware/correlation-id.middleware";
 
 /**
  * Zod schema for a PaginatedResult shape (from paginate()).

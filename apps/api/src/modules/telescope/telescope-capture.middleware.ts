@@ -4,11 +4,11 @@ import { nanoid } from "nanoid";
 
 import { TelescopeJsonValueSchema, type TelescopeJsonValue, type TelescopeOptions } from "@workspace/shared";
 
-import type { RequestWithTrace } from "../../common/middleware/correlation-id.middleware.js";
+import type { RequestWithTrace } from "../../common/middleware/correlation-id.middleware";
 
-import { RequestSpanContext, type SpanStore } from "./request-span-context.js";
-import { shouldCaptureRequest } from "./should-capture.js";
-import { TELESCOPE_OPTIONS } from "./telescope.options.js";
+import { RequestSpanContext, type SpanStore } from "./request-span-context";
+import { shouldCaptureRequest } from "./should-capture";
+import { TELESCOPE_OPTIONS } from "./telescope.options";
 
 /**
  * Opens the AsyncLocalStorage scope for every capturable request: snapshots

@@ -1,6 +1,6 @@
 import { Global, Module } from "@nestjs/common";
 
-import { LogService } from "./logs.service.js";
+import { LogService } from "./logs.service";
 
 /**
  * Application-wide structured logging.

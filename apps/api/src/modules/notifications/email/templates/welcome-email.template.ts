@@ -1,7 +1,7 @@
 import { z } from "zod";
 
-import { BaseEmailPropsSchema, BaseEmailTemplate, type CtaConfig } from "../base/base-email-template.js";
-import type { EmailRenderContext } from "../base/email-render-context.js";
+import { BaseEmailPropsSchema, BaseEmailTemplate, type CtaConfig } from "../base/base-email-template";
+import type { EmailRenderContext } from "../base/email-render-context";
 
 export const WelcomeEmailPropsSchema = BaseEmailPropsSchema.extend({
 	/** Recipient's display name (never the subject line — privacy). */

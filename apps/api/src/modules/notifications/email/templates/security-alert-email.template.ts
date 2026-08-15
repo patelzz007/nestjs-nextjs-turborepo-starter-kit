@@ -2,8 +2,8 @@ import { z } from "zod";
 
 import { EpochMsSchema, nowEpochMs } from "@workspace/shared";
 
-import { BaseEmailPropsSchema, BaseEmailTemplate } from "../base/base-email-template.js";
-import type { EmailRenderContext } from "../base/email-render-context.js";
+import { BaseEmailPropsSchema, BaseEmailTemplate } from "../base/base-email-template";
+import type { EmailRenderContext } from "../base/email-render-context";
 
 export const SecurityAlertEmailPropsSchema = BaseEmailPropsSchema.extend({
 	/** Human-readable device description (e.g. "Chrome on macOS"). */

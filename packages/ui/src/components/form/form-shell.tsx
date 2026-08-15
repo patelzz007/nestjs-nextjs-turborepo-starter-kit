@@ -7,6 +7,8 @@
 
 import { forwardRef, type JSX, type ReactNode } from "react";
 
+import { cn } from "@workspace/ui/lib/utils";
+
 import { Button } from "./button";
 
 export interface FormShellProps {
@@ -18,6 +20,8 @@ export interface FormShellProps {
 	readonly submitLabel?: string;
 	/** Label shown while loading (default: "Submitting...") */
 	readonly loadingLabel?: string;
+	/** Extra classes for the submit button (e.g. `h-11` for auth forms). */
+	readonly submitClassName?: string;
 	/** Form submit handler */
 	readonly onSubmit: (event: React.SyntheticEvent<HTMLFormElement>) => void;
 	/** Form fields rendered inside the shell */
@@ -34,7 +38,7 @@ export interface FormShellProps {
  * Contains no authentication or business logic.
  */
 export const FormShell = forwardRef<HTMLFormElement, FormShellProps>(function FormShell(
-	{ error, isLoading, submitLabel = "Submit", loadingLabel = "Submitting...", onSubmit, children },
+	{ error, isLoading, submitLabel = "Submit", loadingLabel = "Submitting...", submitClassName, onSubmit, children },
 	ref,
 ): JSX.Element {
 	return (
@@ -55,7 +59,7 @@ export const FormShell = forwardRef<HTMLFormElement, FormShellProps>(function Fo
 			<form ref={ref} onSubmit={onSubmit} className="space-y-4">
 				{children}
 
-				<Button type="submit" className="w-full" disabled={isLoading}>
+				<Button type="submit" className={cn("w-full", submitClassName)} disabled={isLoading}>
 					{isLoading ? (
 						<span className="flex items-center gap-2">
 							<svg className="size-4 animate-spin" fill="none" viewBox="0 0 24 24">

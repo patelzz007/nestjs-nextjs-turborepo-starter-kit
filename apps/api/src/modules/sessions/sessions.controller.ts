@@ -5,17 +5,17 @@ import type { LogoutAllResponse, LogoutResponse, RefreshResponse, RefreshRespons
 import { LogoutAllResponseSchema, LogoutResponseSchema, RefreshResponseMessageSchema, SessionSchema } from "@workspace/shared";
 import type { Request } from "express";
 
-import { GetUser } from "../auth/decorators/get-user.decorator.js";
-import { Public } from "../auth/decorators/public.decorator.js";
-import { ApiErrorResponseDto } from "../../common/dto/api-response.dto.js";
-import { createWrappedArrayDto, createWrappedDto } from "../../common/dto/response-wrapper.js";
-import { RefreshTokenGuard } from "../auth/guards/refresh-token.guard.js";
-import { ClearAuthCookiesInterceptor } from "../auth/interceptors/clear-auth-cookies.interceptor.js";
-import { SetAuthCookiesInterceptor } from "../auth/interceptors/set-auth-cookies.interceptor.js";
-import { extractClientInfo } from "../../common/utils/client-info.js";
+import { GetUser } from "../auth/decorators/get-user.decorator";
+import { Public } from "../auth/decorators/public.decorator";
+import { ApiErrorResponseDto } from "../../common/dto/api-response.dto";
+import { createWrappedArrayDto, createWrappedDto } from "../../common/dto/response-wrapper";
+import { RefreshTokenGuard } from "../auth/guards/refresh-token.guard";
+import { ClearAuthCookiesInterceptor } from "../auth/interceptors/clear-auth-cookies.interceptor";
+import { SetAuthCookiesInterceptor } from "../auth/interceptors/set-auth-cookies.interceptor";
+import { extractClientInfo } from "../../common/utils/client-info";
 import type { RefreshTokenPayload } from "../auth/services/token.service";
 
-import { SessionsService } from "./sessions.service.js";
+import { SessionsService } from "./sessions.service";
 
 // ── Wrapped Response DTOs (envelope + data) ─────────────────────────────
 

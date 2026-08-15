@@ -44,10 +44,10 @@ import {
 	type TelescopeWebhookDelivery,
 } from "@workspace/shared";
 
-import { PrismaService } from "../../prisma/prisma.service.js";
+import { PrismaService } from "../../prisma/prisma.service";
 
-import { TELESCOPE_OPTIONS } from "./telescope.options.js";
-import { TelescopeMemoryStore, type ListResult, type OverviewStats, type TelescopeStore } from "./telescope.store.js";
+import { TELESCOPE_OPTIONS } from "./telescope.options";
+import { TelescopeMemoryStore, type ListResult, type OverviewStats, type TelescopeStore } from "./telescope.store";
 
 /**
  * Improvement 1 — durable Postgres store (opt-in via `TELESCOPE_MODE=postgres`).

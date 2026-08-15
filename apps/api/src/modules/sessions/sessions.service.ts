@@ -1,15 +1,15 @@
 import { Injectable, UnauthorizedException } from "@nestjs/common";
 import { SessionSchema, epochMs, type EpochMs, type RefreshResponse, type Session, type UserResponse } from "@workspace/shared";
 
-import { parseExpiryToMilliseconds } from "../../common/utils/expiry.js";
-import { TypedConfigService } from "../../config/typed-config.service.js";
-import { LogService } from "../../modules/logs/logs.service.js";
-import { PrismaService } from "../../prisma/prisma.service.js";
-import { RbacService } from "../rbac/rbac.service.js";
-import { AuthService } from "../auth/auth.service.js";
-import { CryptoService } from "../auth/services/crypto.service.js";
-import { TokenService } from "../auth/services/token.service.js";
-import { SessionActionEventSchema, SessionsEventsService } from "./sessions-events.service.js";
+import { parseExpiryToMilliseconds } from "../../common/utils/expiry";
+import { TypedConfigService } from "../../config/typed-config.service";
+import { LogService } from "../../modules/logs/logs.service";
+import { PrismaService } from "../../prisma/prisma.service";
+import { RbacService } from "../rbac/rbac.service";
+import { AuthService } from "../auth/auth.service";
+import { CryptoService } from "../auth/services/crypto.service";
+import { TokenService } from "../auth/services/token.service";
+import { SessionActionEventSchema, SessionsEventsService } from "./sessions-events.service";
 
 /**
  * Owns the refresh-token / active-session lifecycle: token rotation,

@@ -8,9 +8,9 @@ import jwt from "jsonwebtoken";
 
 import { z, ZodError } from "zod";
 
-import { FlatUserResponse, JwtPermission, JwtPermissionSchema } from "../../rbac/rbac.interface.js";
-import { parseExpiryToSeconds } from "../../../common/utils/expiry.js";
-import { TypedConfigService } from "../../../config/typed-config.service.js";
+import { FlatUserResponse, JwtPermission, JwtPermissionSchema } from "../../rbac/rbac.interface";
+import { parseExpiryToSeconds } from "../../../common/utils/expiry";
+import { TypedConfigService } from "../../../config/typed-config.service";
 
 // `TokenExpiredError` is exposed at runtime on the CJS default export — see the
 // comment on the `jsonwebtoken` import above for why it can't be named-imported.

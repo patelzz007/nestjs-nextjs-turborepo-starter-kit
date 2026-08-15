@@ -102,18 +102,18 @@ APP_URL=http://localhost:3000
 
 All of these live in `apps/api/.env` and are read through `TypedConfigService`:
 
-| Variable | Default | Meaning |
-|---|---|---|
-| `RESEND_API_KEY` | `""` | Resend API key (`re_…`). Empty key ⇒ sends fail with `missing_api_key`. |
-| `EMAIL_FROM_ADDRESS` | `noreply@example.com` | Sender. Must use a **verified** domain. |
-| `EMAIL_MODE` | `send` | `send` (real) · `log-only` (print body, no network) · `noop` (skip entirely). |
-| `EMAIL_TEST_TO` | unset | **Dev override** — every send redirects here (never spams real recipients). |
-| `EMAIL_REPLY_TO` | unset | `replyTo` on every email. |
-| `EMAIL_MAX_ATTEMPTS` | `3` | Send attempts incl. first try; jittered exponential backoff. |
-| `EMAIL_TIMEOUT_MS` | `10000` | Per-attempt timeout; a hung Resend call is cut. |
-| `EMAIL_RATE_LIMIT_PER_MINUTE` | `0` | Per-recipient sends/min; `0` disables. |
-| `RESEND_WEBHOOK_SECRET` | `""` | Required for delivery webhooks (Part 2). |
-| `WEBHOOK_RATE_LIMIT_PER_MINUTE` | `120` | Per-IP cap on the **public** `POST /notifications/email-webhook` route (fixed window / min). `0` disables the limiter entirely. |
+| Variable                        | Default               | Meaning                                                                                                                         |
+| ------------------------------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `RESEND_API_KEY`                | `""`                  | Resend API key (`re_…`). Empty key ⇒ sends fail with `missing_api_key`.                                                         |
+| `EMAIL_FROM_ADDRESS`            | `noreply@example.com` | Sender. Must use a **verified** domain.                                                                                         |
+| `EMAIL_MODE`                    | `send`                | `send` (real) · `log-only` (print body, no network) · `noop` (skip entirely).                                                   |
+| `EMAIL_TEST_TO`                 | unset                 | **Dev override** — every send redirects here (never spams real recipients).                                                     |
+| `EMAIL_REPLY_TO`                | unset                 | `replyTo` on every email.                                                                                                       |
+| `EMAIL_MAX_ATTEMPTS`            | `3`                   | Send attempts incl. first try; jittered exponential backoff.                                                                    |
+| `EMAIL_TIMEOUT_MS`              | `10000`               | Per-attempt timeout; a hung Resend call is cut.                                                                                 |
+| `EMAIL_RATE_LIMIT_PER_MINUTE`   | `0`                   | Per-recipient sends/min; `0` disables.                                                                                          |
+| `RESEND_WEBHOOK_SECRET`         | `""`                  | Required for delivery webhooks (Part 2).                                                                                        |
+| `WEBHOOK_RATE_LIMIT_PER_MINUTE` | `120`                 | Per-IP cap on the **public** `POST /notifications/email-webhook` route (fixed window / min). `0` disables the limiter entirely. |
 
 ### 2.4 Send your first email — the admin "Send test email" button
 
@@ -131,25 +131,25 @@ The fastest way to prove the config is a real send without triggering an auth fl
 5. The row lands in **Settings → Email Log** (`/email-log`) with a `sent` badge.
 
 > [!NOTE] Why the button is safe: it only ever sends **sample** props, never real user data,
-> and with `EMAIL_TEST_TO` set it can only reach *your* inbox.
+> and with `EMAIL_TEST_TO` set it can only reach _your_ inbox.
 
 ---
 
 ## 3. Part 2 — Delivery webhooks (status tracking)
 
-Webhooks tell your app what happened *after* the send: delivered, bounced, complained,
+Webhooks tell your app what happened _after_ the send: delivered, bounced, complained,
 failed. Without them, a password-reset email that bounced silently is a support ticket.
 
 ### 3.1 Which events matter
 
-| Event | Meaning | EmailLog effect |
-|---|---|---|
-| `email.sent` | Accepted by Resend | `sent` (default row) |
-| `email.delivered` | Reached the inbox | `delivered` |
-| `email.bounced` | Hard bounce (bad address) | `bounced` + the bounce type/reason in `error` |
-| `email.complained` | Recipient marked spam | `complained` + the complaint reason in `error` |
-| `email.failed` | Permanent failure | `failed` |
-| `email.opened` / `email.clicked` / `email.forwarded` / `email.delivery_delayed` | Tracking / informational | **Acknowledged and ignored** — open/click tracking was removed from the system; the log records delivery outcomes only |
+| Event                                                                           | Meaning                   | EmailLog effect                                                                                                        |
+| ------------------------------------------------------------------------------- | ------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `email.sent`                                                                    | Accepted by Resend        | `sent` (default row)                                                                                                   |
+| `email.delivered`                                                               | Reached the inbox         | `delivered`                                                                                                            |
+| `email.bounced`                                                                 | Hard bounce (bad address) | `bounced` + the bounce type/reason in `error`                                                                          |
+| `email.complained`                                                              | Recipient marked spam     | `complained` + the complaint reason in `error`                                                                         |
+| `email.failed`                                                                  | Permanent failure         | `failed`                                                                                                               |
+| `email.opened` / `email.clicked` / `email.forwarded` / `email.delivery_delayed` | Tracking / informational  | **Acknowledged and ignored** — open/click tracking was removed from the system; the log records delivery outcomes only |
 
 > [!IMPORTANT] **Open/click tracking was removed from the system.** The webhook still
 > receives `email.opened` / `email.clicked` events (they're part of Resend's event stream),
@@ -166,11 +166,11 @@ failed. Without them, a password-reset email that bounced silently is a support 
 ### 3.2 Create the webhook in Resend
 
 1. Resend dashboard → **Webhooks** → **Add Webhook**.
-3. **Events:** tick Sent, Delivered, Delivery Delayed, Bounced, Complained, Failed. (Opened and
+2. **Events:** tick Sent, Delivered, Delivery Delayed, Bounced, Complained, Failed. (Opened and
    Clicked are optional — if ticked, the controller acknowledges and ignores them, since open/click
    tracking was removed from the system.)
-4. **URL:** your public endpoint (see Part 3 for the tunnel).
-5. Save — Resend shows a **Signing secret** (`whsec_…`). Copy it into `apps/api/.env`:
+3. **URL:** your public endpoint (see Part 3 for the tunnel).
+4. Save — Resend shows a **Signing secret** (`whsec_…`). Copy it into `apps/api/.env`:
 
 ```bash
 # apps/api/.env
@@ -183,9 +183,9 @@ RESEND_WEBHOOK_SECRET=whsec_xxxxxxxxxxxxxxxxxxxxxxxx
 >    the webhook is created. If you ever **delete and recreate** the webhook (common when
 >    the tunnel URL changes — see 4.2), Resend generates a **new** secret — the old one in
 >    `.env` goes stale and every real delivery fails verification with `403 Invalid
->    webhook signature (No matching signature found)`, even though emails still send fine.
+webhook signature (No matching signature found)`, even though emails still send fine.
 > 2. **`.env` changes need an API restart.** Env vars are read once at boot — `nest start
->    --watch` hot-reloads source files but NOT `.env`. After editing
+--watch` hot-reloads source files but NOT `.env`. After editing
 >    `RESEND_WEBHOOK_SECRET`, restart the API (`Ctrl+C`, then `pnpm run dev` again), or
 >    the old secret stays loaded in the running process.
 > 3. **Keep exactly ONE uncommented `RESEND_WEBHOOK_SECRET=` line.** Delete stale
@@ -207,7 +207,7 @@ keeps it safe is **verification**:
   `{ id, timestamp, signature }` to `resend.webhooks.verify(...)`.
 - The controller verifies via `resend.webhooks.verify(...)` (the `resend` SDK wraps
   `standardwebhooks`). Wrong or missing signature ⇒ **403**, and the payload is rejected
-  *before* any DB write.
+  _before_ any DB write.
 - You can prove it locally (Part 4.4) — a tampered signature is rejected even though the
   route is public.
 - **The route is rate-limited per IP as defense-in-depth** (`WEBHOOK_RATE_LIMIT_PER_MINUTE`,
@@ -218,14 +218,14 @@ keeps it safe is **verification**:
   back to the first `x-forwarded-for` hop, then the socket address. **Important:** a request
   that fails signature verification still **counts against the limit** (the guard runs before
   the handler), so brute-forcing is throttled too. Over-limit requests get `429 Too Many
-  Requests`. Set `0` to disable (empty throttlers = guard passes everything).
+Requests`. Set `0` to disable (empty throttlers = guard passes everything).
 - **Events for emails this system never sent are never written.** A signed event whose
   `email_id` doesn't match a row in `EmailLog` is acknowledged (`200`, so Resend stops
   retrying) but **no row is created or updated** — a spoofed event, or one for an email
   sent from the Resend dashboard / another app on the same account, cannot inject fake
   history. (Logged as `Webhook for unknown resend_id …`.)
 - **Statuses only move forward.** The webhook is monotonic: `sent → delivered → bounced /
-  complained / failed`, and re-applying the same status is idempotent. Two safe
+complained / failed`, and re-applying the same status is idempotent. Two safe
   exceptions: `delivered` may override a `bounced` row (Resend retries **soft** bounces
   and emits `delivered` when a later attempt succeeds — the row must reflect the eventual
   outcome), while `sent` can **never** override anything. A replayed or out-of-order event
@@ -326,7 +326,7 @@ region: us
 ingress:
   - hostname: webhooks.bishenpatel.com
     service: http://localhost:8080
-  - service: http_status:404   # catch-all: everything else → 404
+  - service: http_status:404 # catch-all: everything else → 404
 ```
 
 #### Run it
@@ -424,7 +424,7 @@ the fresh URL the moment it registers:
 > `{"url": …}` returns `2xx` but is **silently ignored** — the endpoint never changes
 > (verified 2026-08-12; the create API rejects `url` with a 422, and the update API
 > accepts it but does nothing). `start-tunnel.py` sends the correct `endpoint` field.
-> If you ever hand-PATCH via curl, use `endpoint` too — otherwise you'll *think* the
+> If you ever hand-PATCH via curl, use `endpoint` too — otherwise you'll _think_ the
 > re-point worked while Resend keeps posting to the old URL.
 
 The step is **non-fatal**: if the API key is missing or Resend is unreachable, the script
@@ -476,14 +476,14 @@ pkill -f 'cloudflared tunnel'         # or: kill <pid from pgrep -fl cloudflared
 
 #### Troubleshooting
 
-| Symptom | Cause / fix |
-|---|---|
-| `python3: can't open file '...start-tunnel.py'` | Wrong path — run from the **repo root**: `python3 apps/api/scripts/start-tunnel.py`. |
-| `cloudflared: command not found` | cloudflared not installed (4.1) or not on `PATH`. |
-| Prints `no URL registered within 30s` | cloudflared can't reach Cloudflare's edge (offline / VPN / region). Read `/tmp/cloudflared.log` for the reason, then re-run. |
-| Tunnel up but `/health` returns `530` | The API on `:8080` isn't running — start `apps/api`, then re-test. |
-| Old URL stops working after a restart | Expected — quick tunnels are ephemeral. Grab the new URL and update Resend (see above). |
-| `429 Too Many Requests` from the webhook | `WEBHOOK_RATE_LIMIT_PER_MINUTE` exceeded for your IP (delivery bursts + your manual tests can share a bucket). Wait ~1 min or raise the value (e.g. `600`), then restart the API. **Note:** Resend/Svix treats `429` like a terminal failure (no auto-retry) — if a delivery was dropped, re-trigger it from the Resend dashboard. |
+| Symptom                                         | Cause / fix                                                                                                                                                                                                                                                                                                                        |
+| ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `python3: can't open file '...start-tunnel.py'` | Wrong path — run from the **repo root**: `python3 apps/api/scripts/start-tunnel.py`.                                                                                                                                                                                                                                               |
+| `cloudflared: command not found`                | cloudflared not installed (4.1) or not on `PATH`.                                                                                                                                                                                                                                                                                  |
+| Prints `no URL registered within 30s`           | cloudflared can't reach Cloudflare's edge (offline / VPN / region). Read `/tmp/cloudflared.log` for the reason, then re-run.                                                                                                                                                                                                       |
+| Tunnel up but `/health` returns `530`           | The API on `:8080` isn't running — start `apps/api`, then re-test.                                                                                                                                                                                                                                                                 |
+| Old URL stops working after a restart           | Expected — quick tunnels are ephemeral. Grab the new URL and update Resend (see above).                                                                                                                                                                                                                                            |
+| `429 Too Many Requests` from the webhook        | `WEBHOOK_RATE_LIMIT_PER_MINUTE` exceeded for your IP (delivery bursts + your manual tests can share a bucket). Wait ~1 min or raise the value (e.g. `600`), then restart the API. **Note:** Resend/Svix treats `429` like a terminal failure (no auto-retry) — if a delivery was dropped, re-trigger it from the Resend dashboard. |
 
 ### 4.4 Test the webhook end-to-end (sign → 200, tamper → 403)
 
@@ -494,13 +494,13 @@ sign the payload locally the way `standardwebhooks` does:
 // test-webhook-sig.mjs  (run with: node test-webhook-sig.mjs)
 import { createHmac, timingSafeEqual } from "node:crypto";
 
-const SECRET = "whsec_xxxxxxxxxxxxxxxx";          // your RESEND_WEBHOOK_SECRET
+const SECRET = "whsec_xxxxxxxxxxxxxxxx"; // your RESEND_WEBHOOK_SECRET
 const URL = "https://<random>.trycloudflare.com/notifications/email-webhook";
 const msgId = "msg_1";
 const timestamp = String(Math.floor(Date.now() / 1000));
 const payload = JSON.stringify({
-  type: "email.delivered",
-  data: { email_id: "e5e8d669-9ef0-44de-98f9-4097dcab36d8" },
+	type: "email.delivered",
+	data: { email_id: "e5e8d669-9ef0-44de-98f9-4097dcab36d8" },
 });
 
 // standard-webhooks scheme: base64-decode the part AFTER "whsec_", then
@@ -510,37 +510,37 @@ const signedContent = `${msgId}.${timestamp}.${payload}`;
 const signature = createHmac("sha256", key).update(signedContent).digest("base64");
 
 const res = await fetch(URL, {
-  method: "POST",
-  headers: {
-    "content-type": "application/json",
-    "webhook-id": msgId,
-    "webhook-timestamp": timestamp,
-    "webhook-signature": `v1,${signature}`,
-  },
-  body: payload,
+	method: "POST",
+	headers: {
+		"content-type": "application/json",
+		"webhook-id": msgId,
+		"webhook-timestamp": timestamp,
+		"webhook-signature": `v1,${signature}`,
+	},
+	body: payload,
 });
-console.log("signed request   →", res.status);   // expect 200
+console.log("signed request   →", res.status); // expect 200
 
 // Now tamper: flip a character in the payload but keep the old signature.
 const tampered = JSON.stringify({
-  type: "email.delivered",
-  data: { email_id: "deadbeef-0000-0000-0000-000000000000" },
+	type: "email.delivered",
+	data: { email_id: "deadbeef-0000-0000-0000-000000000000" },
 });
 const res2 = await fetch(URL, {
-  method: "POST",
-  headers: {
-    "content-type": "application/json",
-    "webhook-id": msgId,
-    "webhook-timestamp": timestamp,
-    "webhook-signature": `v1,${signature}`,
-  },
-  body: tampered,
+	method: "POST",
+	headers: {
+		"content-type": "application/json",
+		"webhook-id": msgId,
+		"webhook-timestamp": timestamp,
+		"webhook-signature": `v1,${signature}`,
+	},
+	body: tampered,
 });
-console.log("tampered request →", res2.status);   // expect 403
+console.log("tampered request →", res2.status); // expect 403
 ```
 
 **Expected output:** `signed request   → 200` and `tampered request → 403`. That proves the
-endpoint is reachable *and* that only Resend-signed payloads are accepted.
+endpoint is reachable _and_ that only Resend-signed payloads are accepted.
 
 > [!IMPORTANT] The signature is **byte-exact** and **time-limited** — this trips up
 > everyone who tries Swagger's "Try it out":
@@ -548,7 +548,7 @@ endpoint is reachable *and* that only Resend-signed payloads are accepted.
 > 1. **The HMAC covers the RAW body bytes.** If the body in your request differs from
 >    the one the script signed — Swagger pretty-prints the example, your editor adds a
 >    trailing newline, you reformat the JSON — verification fails with `403 Invalid
->    webhook signature`. Paste the body **exactly as the script printed it** (single
+webhook signature`. Paste the body **exactly as the script printed it** (single
 >    line, no changes), or use the `curl` one-liner the script also prints.
 > 2. **The timestamp expires after 5 minutes** (standard-webhooks tolerance). Generate
 >    the values and paste them into Swagger within 5 minutes, or re-run the script.
@@ -578,7 +578,7 @@ For anything real, don't use a quick tunnel:
   3. Add a DNS `CNAME` (`webhooks.yourdomain.com` → `<tunnel-id>.cfargotunnel.com`).
   4. Run with a config file pointing `service: http://localhost:8080` and the ingress rule
      `{ hostname: "webhooks.yourdomain.com", service: "http://localhost:8080" }`.
-  The URL never changes, so Resend's webhook config stays valid across restarts.
+     The URL never changes, so Resend's webhook config stays valid across restarts.
 
 ---
 
@@ -586,17 +586,17 @@ For anything real, don't use a quick tunnel:
 
 After setup, run through this in order — each step builds on the last:
 
-| # | Check | Command / action | Passes when |
-|---|---|---|---|
-| 1 | API is up | `curl -s -o /dev/null -w '%{http_code}' localhost:8080/health` | `200` |
-| 2 | Key loaded | `grep RESEND_API_KEY apps/api/.env` | starts with `re_` |
-| 3 | Domain verified | Resend dashboard → Domains | status **Verified** |
-| 4 | Real send | Admin → Email Templates → Send test email | toast shows a Resend id |
-| 5 | Log row | Admin → Email Log | row with `sent` badge + Resend id |
-| 6 | Tunnel up | `cloudflared tunnel list` + `curl -s -o /dev/null -w '%{http_code}' https://webhooks.bishenpatel.com/notifications/email-webhook` | `email-webhook` shows connections, curl → `200` |
-| 7 | Webhook reachable | run `test-webhook-sig.mjs` | `200` signed / `403` tampered |
-| 8 | Live event flips status | send to a bad address (e.g. `bounce@resend.dev`), wait ~1 min | EmailLog flips to `bounced` with the reason in `error` |
-| 9 | Resend delivery accepted | Resend → Webhooks → **Send test event** | the attempt shows **`200`** (not `403`) |
+| #   | Check                    | Command / action                                                                                                                  | Passes when                                            |
+| --- | ------------------------ | --------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| 1   | API is up                | `curl -s -o /dev/null -w '%{http_code}' localhost:8080/health`                                                                    | `200`                                                  |
+| 2   | Key loaded               | `grep RESEND_API_KEY apps/api/.env`                                                                                               | starts with `re_`                                      |
+| 3   | Domain verified          | Resend dashboard → Domains                                                                                                        | status **Verified**                                    |
+| 4   | Real send                | Admin → Email Templates → Send test email                                                                                         | toast shows a Resend id                                |
+| 5   | Log row                  | Admin → Email Log                                                                                                                 | row with `sent` badge + Resend id                      |
+| 6   | Tunnel up                | `cloudflared tunnel list` + `curl -s -o /dev/null -w '%{http_code}' https://webhooks.bishenpatel.com/notifications/email-webhook` | `email-webhook` shows connections, curl → `200`        |
+| 7   | Webhook reachable        | run `test-webhook-sig.mjs`                                                                                                        | `200` signed / `403` tampered                          |
+| 8   | Live event flips status  | send to a bad address (e.g. `bounce@resend.dev`), wait ~1 min                                                                     | EmailLog flips to `bounced` with the reason in `error` |
+| 9   | Resend delivery accepted | Resend → Webhooks → **Send test event**                                                                                           | the attempt shows **`200`** (not `403`)                |
 
 > [!NOTE] Open/click tracking is **not** part of this checklist — it was deliberately removed
 > from the system. No pixels, no `opened_at`/`clicked_at` columns, no engagement UI. The log
@@ -610,22 +610,21 @@ After setup, run through this in order — each step builds on the last:
 
 ## 6. Troubleshooting
 
-| Symptom | Cause | Fix |
-|---|---|---|
-| `missing_api_key` / sends fail immediately | `RESEND_API_KEY` empty or malformed (e.g. a bare `  =re_…` with no `RESEND_API_KEY=` prefix) | Fix the line to `RESEND_API_KEY=re_…` (no leading spaces), restart the API. |
-| `invalid_from_address` | `EMAIL_FROM_ADDRESS` domain not verified in Resend | Verify the domain (2.2) or use the verified domain's `noreply@`. |
-| `EADDRINUSE: :::8080` | A previous API process is still running (incl. an orphaned `nest start --watch` daemon that respawns the app) | `pnpm kill:port` (kills whatever holds 8080), then re-run `pnpm run dev`. Check `lsof -nP -i :8080 -sTCP:LISTEN` if it recurs — kill the whole process tree, not just the child. |
-| Webhook URL stops working | Named tunnel not running, or the API on `:8080` is down | Start it with `cloudflared tunnel run email-webhook` (4.3) — the URL never changes, so no re-pointing is ever needed. Check `cloudflared tunnel list` shows connections. |
-| Opening the webhook URL in a browser returns `404 Cannot GET /notifications/email-webhook` | The browser sends a **GET**, but the endpoint only serves **POST** (Resend's delivery method) — so there's no GET route | Expected. A GET now returns a friendly JSON note explaining the endpoint is POST-only. Real webhooks (POST) work fine — verify with 4.4 or by sending a real email. |
-| Webhook returns `403 Missing webhook signature header(s)` | (a) A manual test (browser/curl/Postman/Swagger) that sent no signed headers, or (b) the request is a **genuine Resend delivery** arriving with the **`svix-*`** header names (`svix-id`/`svix-timestamp`/`svix-signature` — Resend runs on Svix) while the running controller is an older build that only reads `webhook-*` | Real Resend deliveries are logged with `UA=Svix-Webhooks/rolling` and the controller now accepts **both** naming schemes — if the API log shows that UA alongside `missing signature header(s)`, restart the API (the dual-scheme fix hot-reloads via `nest start --watch`, so a plain `pnpm run dev` is enough). For manual tests, sign the payload the standard-webhooks way (see 4.4). Still failing? Check the webhook URL + secret in the Resend dashboard match `.env`. |
-| Webhook returns `403 Invalid webhook signature (No matching signature found)` | Two causes: (a) the body bytes differ from what was signed — usually Swagger pretty-printed the JSON or your editor added whitespace; (b) **the signing secret in `.env` doesn't match the current webhook's** — e.g. the webhook was recreated (new URL → new secret) or `.env` changed without an API restart | (a) Paste the body **byte-exact** as the test script printed it (or use its `curl` one-liner). (b) Copy the `whsec_…` from Resend → Webhooks into `.env` (one line only), then **restart the API** — env vars load at boot. Verify with Resend's **Send test event** → `200`. |
-| Webhook returns `403 Invalid webhook signature (Message timestamp too old)` | Headers present but the `webhook-timestamp` is older than 5 minutes (standard-webhooks tolerance) | You took too long copying values into Swagger. Re-run the script and paste within 5 minutes. |
-| Email sent but status stays `sent` | Webhook events not ticked, URL not registered (named tunnel down or API not running), or every delivery 403s (secret mismatch) | Confirm events + URL + signing secret in Resend → Webhooks (3.2); start the named tunnel (`cloudflared tunnel run email-webhook`, 4.3); test with 4.4. |
-| Resend dashboard shows **attempting** (or you got the `[Admin] Webhook delivery failing` email) even though the email arrived in the inbox | That **attempting** is **webhook delivery**, not the email — the email is delivered/opened (check Resend → Emails → the row), but Resend is retrying a webhook endpoint that doesn't respond. Emails themselves are unaffected. | Ensure the named tunnel is running (`cloudflared tunnel run email-webhook`, 4.3) and the API is up, then in Resend → Webhooks hit **Send test event** until the attempt shows `200`. With the stable URL this should never recur. |
-| Emails arrive but Resend shows `403` | The webhook URL or signing secret changed after a tunnel restart / webhook recreation | Re-sync BOTH in Resend → Webhooks (3.2) and restart the API. |
-| `rate_limit_exceeded` | Exceeded Resend's per-second rate or free-tier day limit | Back off, or check `EMAIL_RATE_LIMIT_PER_MINUTE` isn't misconfigured. |
-| Emails going to spam | Sender domain not fully verified / DKIM missing | Re-check all 3 DNS records (2.2); they can take up to 24h. |
-
+| Symptom                                                                                                                                    | Cause                                                                                                                                                                                                                                                                                                                        | Fix                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| ------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `missing_api_key` / sends fail immediately                                                                                                 | `RESEND_API_KEY` empty or malformed (e.g. a bare `  =re_…` with no `RESEND_API_KEY=` prefix)                                                                                                                                                                                                                                 | Fix the line to `RESEND_API_KEY=re_…` (no leading spaces), restart the API.                                                                                                                                                                                                                                                                                                                                                                                                   |
+| `invalid_from_address`                                                                                                                     | `EMAIL_FROM_ADDRESS` domain not verified in Resend                                                                                                                                                                                                                                                                           | Verify the domain (2.2) or use the verified domain's `noreply@`.                                                                                                                                                                                                                                                                                                                                                                                                              |
+| `EADDRINUSE: :::8080`                                                                                                                      | A previous API process is still running (incl. an orphaned `nest start --watch` daemon that respawns the app)                                                                                                                                                                                                                | `pnpm kill:port` (kills whatever holds 8080), then re-run `pnpm run dev`. Check `lsof -nP -i :8080 -sTCP:LISTEN` if it recurs — kill the whole process tree, not just the child.                                                                                                                                                                                                                                                                                              |
+| Webhook URL stops working                                                                                                                  | Named tunnel not running, or the API on `:8080` is down                                                                                                                                                                                                                                                                      | Start it with `cloudflared tunnel run email-webhook` (4.3) — the URL never changes, so no re-pointing is ever needed. Check `cloudflared tunnel list` shows connections.                                                                                                                                                                                                                                                                                                      |
+| Opening the webhook URL in a browser returns `404 Cannot GET /notifications/email-webhook`                                                 | The browser sends a **GET**, but the endpoint only serves **POST** (Resend's delivery method) — so there's no GET route                                                                                                                                                                                                      | Expected. A GET now returns a friendly JSON note explaining the endpoint is POST-only. Real webhooks (POST) work fine — verify with 4.4 or by sending a real email.                                                                                                                                                                                                                                                                                                           |
+| Webhook returns `403 Missing webhook signature header(s)`                                                                                  | (a) A manual test (browser/curl/Postman/Swagger) that sent no signed headers, or (b) the request is a **genuine Resend delivery** arriving with the **`svix-*`** header names (`svix-id`/`svix-timestamp`/`svix-signature` — Resend runs on Svix) while the running controller is an older build that only reads `webhook-*` | Real Resend deliveries are logged with `UA=Svix-Webhooks/rolling` and the controller now accepts **both** naming schemes — if the API log shows that UA alongside `missing signature header(s)`, restart the API (the dual-scheme fix hot-reloads via `nest start --watch`, so a plain `pnpm run dev` is enough). For manual tests, sign the payload the standard-webhooks way (see 4.4). Still failing? Check the webhook URL + secret in the Resend dashboard match `.env`. |
+| Webhook returns `403 Invalid webhook signature (No matching signature found)`                                                              | Two causes: (a) the body bytes differ from what was signed — usually Swagger pretty-printed the JSON or your editor added whitespace; (b) **the signing secret in `.env` doesn't match the current webhook's** — e.g. the webhook was recreated (new URL → new secret) or `.env` changed without an API restart              | (a) Paste the body **byte-exact** as the test script printed it (or use its `curl` one-liner). (b) Copy the `whsec_…` from Resend → Webhooks into `.env` (one line only), then **restart the API** — env vars load at boot. Verify with Resend's **Send test event** → `200`.                                                                                                                                                                                                 |
+| Webhook returns `403 Invalid webhook signature (Message timestamp too old)`                                                                | Headers present but the `webhook-timestamp` is older than 5 minutes (standard-webhooks tolerance)                                                                                                                                                                                                                            | You took too long copying values into Swagger. Re-run the script and paste within 5 minutes.                                                                                                                                                                                                                                                                                                                                                                                  |
+| Email sent but status stays `sent`                                                                                                         | Webhook events not ticked, URL not registered (named tunnel down or API not running), or every delivery 403s (secret mismatch)                                                                                                                                                                                               | Confirm events + URL + signing secret in Resend → Webhooks (3.2); start the named tunnel (`cloudflared tunnel run email-webhook`, 4.3); test with 4.4.                                                                                                                                                                                                                                                                                                                        |
+| Resend dashboard shows **attempting** (or you got the `[Admin] Webhook delivery failing` email) even though the email arrived in the inbox | That **attempting** is **webhook delivery**, not the email — the email is delivered/opened (check Resend → Emails → the row), but Resend is retrying a webhook endpoint that doesn't respond. Emails themselves are unaffected.                                                                                              | Ensure the named tunnel is running (`cloudflared tunnel run email-webhook`, 4.3) and the API is up, then in Resend → Webhooks hit **Send test event** until the attempt shows `200`. With the stable URL this should never recur.                                                                                                                                                                                                                                             |
+| Emails arrive but Resend shows `403`                                                                                                       | The webhook URL or signing secret changed after a tunnel restart / webhook recreation                                                                                                                                                                                                                                        | Re-sync BOTH in Resend → Webhooks (3.2) and restart the API.                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `rate_limit_exceeded`                                                                                                                      | Exceeded Resend's per-second rate or free-tier day limit                                                                                                                                                                                                                                                                     | Back off, or check `EMAIL_RATE_LIMIT_PER_MINUTE` isn't misconfigured.                                                                                                                                                                                                                                                                                                                                                                                                         |
+| Emails going to spam                                                                                                                       | Sender domain not fully verified / DKIM missing                                                                                                                                                                                                                                                                              | Re-check all 3 DNS records (2.2); they can take up to 24h.                                                                                                                                                                                                                                                                                                                                                                                                                    |
 
 ---
 
@@ -637,4 +636,3 @@ After setup, run through this in order — each step builds on the last:
 - **[Logging system](./logging.md)** — where send logs land and how to query them.
 
 _Last updated: 2026-08-11._
-

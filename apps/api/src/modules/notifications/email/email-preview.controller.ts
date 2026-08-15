@@ -3,11 +3,11 @@ import { ApiNotFoundResponse, ApiOkResponse, ApiOperation, ApiTags } from "@nest
 
 import { EmailPreviewSchema, EmailSendResultSchema, EmailTemplateMetaSchema, type EmailPreview, type EmailSendResult, type EmailTemplateMeta } from "@workspace/shared";
 
-import { createWrappedDto, createWrappedArrayDto } from "../../../common/dto/response-wrapper.js";
-import { TypedConfigService } from "../../../config/typed-config.service.js";
-import { EmailRenderContextSchema, type EmailRenderContext } from "./base/email-render-context.js";
-import { EMAIL_TEMPLATE_REGISTRY, buildEmailPreview, EmailTemplateKeyParamSchema, listTemplateMeta } from "./email-template.registry.js";
-import { EmailSenderService } from "./email-sender.service.js";
+import { createWrappedDto, createWrappedArrayDto } from "../../../common/dto/response-wrapper";
+import { TypedConfigService } from "../../../config/typed-config.service";
+import { EmailRenderContextSchema, type EmailRenderContext } from "./base/email-render-context";
+import { EMAIL_TEMPLATE_REGISTRY, buildEmailPreview, EmailTemplateKeyParamSchema, listTemplateMeta } from "./email-template.registry";
+import { EmailSenderService } from "./email-sender.service";
 
 // ── Wrapped Response DTOs ────────────────────────────────────────────────
 

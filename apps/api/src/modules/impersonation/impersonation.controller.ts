@@ -5,13 +5,13 @@ import type { ImpersonateResponse, StopImpersonationResponse } from "@workspace/
 import { ImpersonateResponseSchema, StopImpersonationResponseSchema } from "@workspace/shared";
 import type { Request } from "express";
 
-import { GetUser } from "../auth/decorators/get-user.decorator.js";
-import { SuperAdminOnly } from "../auth/decorators/super-admin.decorator.js";
-import { ApiErrorResponseDto } from "../../common/dto/api-response.dto.js";
-import { createWrappedDto } from "../../common/dto/response-wrapper.js";
-import { extractClientInfo } from "../../common/utils/client-info.js";
+import { GetUser } from "../auth/decorators/get-user.decorator";
+import { SuperAdminOnly } from "../auth/decorators/super-admin.decorator";
+import { ApiErrorResponseDto } from "../../common/dto/api-response.dto";
+import { createWrappedDto } from "../../common/dto/response-wrapper";
+import { extractClientInfo } from "../../common/utils/client-info";
 
-import { ImpersonationService } from "./impersonation.service.js";
+import { ImpersonationService } from "./impersonation.service";
 
 const WrappedImpersonateResponse = createWrappedDto(ImpersonateResponseSchema, "WrappedImpersonateResponse");
 const WrappedStopImpersonationResponse = createWrappedDto(StopImpersonationResponseSchema, "WrappedStopImpersonationResponse");

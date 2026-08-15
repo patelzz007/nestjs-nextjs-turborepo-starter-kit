@@ -2,12 +2,12 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import { TelescopeOptionsSchema, type TelescopeOptions, type TelescopeSpan } from "@workspace/shared";
 
-import { AuthEventsService, type AuthFlowEvent } from "../auth/services/auth-events.service.js";
+import { AuthEventsService, type AuthFlowEvent } from "../auth/services/auth-events.service";
 
-import { RequestSpanContext, type SpanStore } from "./request-span-context.js";
-import { TelescopeAuthJobAdapter } from "./telescope-auth-job-adapter.js";
-import { TelescopeEventBus } from "./telescope-event-bus.js";
-import { TelescopeMemoryStore } from "./telescope.store.js";
+import { RequestSpanContext, type SpanStore } from "./request-span-context";
+import { TelescopeAuthJobAdapter } from "./telescope-auth-job-adapter";
+import { TelescopeEventBus } from "./telescope-event-bus";
+import { TelescopeMemoryStore } from "./telescope.store";
 
 describe("TelescopeAuthJobAdapter", () => {
 	let store: TelescopeMemoryStore;

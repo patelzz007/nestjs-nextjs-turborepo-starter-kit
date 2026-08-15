@@ -14,8 +14,8 @@ import {
 	type TelescopeWebhookDelivery,
 } from "@workspace/shared";
 
-import { TELESCOPE_OPTIONS, TELESCOPE_STORE } from "./telescope.options.js";
-import type { TelescopeStore } from "./telescope.store.js";
+import { TELESCOPE_OPTIONS, TELESCOPE_STORE } from "./telescope.options";
+import type { TelescopeStore } from "./telescope.store";
 /**
  * Feature 18 — threshold alerts.
  *

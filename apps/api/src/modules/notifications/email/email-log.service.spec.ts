@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { EmailLogEventsService } from "./email-log-events.service.js";
-import { EmailLogService } from "./email-log.service.js";
+import type { EmailLogEventsService } from "./email-log-events.service";
+import { EmailLogService } from "./email-log.service";
 
 const createMock = vi.fn();
 const updateManyMock = vi.fn();

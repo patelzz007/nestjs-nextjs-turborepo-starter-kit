@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { TelescopeJsonValue } from "@workspace/shared";
 
-import { redactPii, redactPiiHeaders, scanPii, scanPiiHeaders } from "./pii-scanner.js";
+import { redactPii, redactPiiHeaders, scanPii, scanPiiHeaders } from "./pii-scanner";
 
 describe("PiiScanner", () => {
 	it("flags an email inside a nested JSON value", () => {

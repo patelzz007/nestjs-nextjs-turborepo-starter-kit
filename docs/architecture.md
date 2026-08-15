@@ -62,17 +62,17 @@ Think of the monorepo as **three layers**, each depending only on the layer belo
 
 ## 2. Workspace map
 
-| Path                         | Package name                   | Role                                                                   | Port |
-| ---------------------------- | ------------------------------ | ---------------------------------------------------------------------- | ---- |
-| `apps/web`                   | `@workspace/web`               | Customer-facing Next.js app (login, hello page…)                       | 3000 |
-| `apps/admin`                 | `@workspace/admin`             | Admin panel Next.js app (dashboard…)                                   | 3001 |
-| `apps/api`                   | `@workspace/api`               | NestJS backend — all endpoints, auth, Prisma                           | 8080 |
-| `packages/ui`                | `@workspace/ui`                | shadcn/ui components (and `globals.css`)                               | —    |
-| `packages/client`            | `@workspace/client`            | AuthContext, `useApi`, typed endpoint registry, shared auth UI (`LoginForm`, auth bridge) | —    |
-| `packages/shared`            | `@workspace/shared`            | Zod schemas + shared types (the API contract)                          | —    |
+| Path                         | Package name                   | Role                                                                                                                                   | Port |
+| ---------------------------- | ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------- | ---- |
+| `apps/web`                   | `@workspace/web`               | Customer-facing Next.js app (login, hello page…)                                                                                       | 3000 |
+| `apps/admin`                 | `@workspace/admin`             | Admin panel Next.js app (dashboard…)                                                                                                   | 3001 |
+| `apps/api`                   | `@workspace/api`               | NestJS backend — all endpoints, auth, Prisma                                                                                           | 8080 |
+| `packages/ui`                | `@workspace/ui`                | shadcn/ui components (and `globals.css`)                                                                                               | —    |
+| `packages/client`            | `@workspace/client`            | AuthContext, `useApi`, typed endpoint registry, shared auth UI (`LoginForm`, auth bridge)                                              | —    |
+| `packages/shared`            | `@workspace/shared`            | Zod schemas + shared types (the API contract)                                                                                          | —    |
 | `packages/tooling`           | `@workspace/tooling`           | Repo-wide scripts (syncpack dependency hygiene, turbo-backed `deps:*`, build infra in `scripts/`: check-ui-audit, fix-dist-extensions) | —    |
-| `packages/eslint-config`     | `@workspace/eslint-config`     | Shared ESLint presets                                                  | —    |
-| `packages/typescript-config` | `@workspace/typescript-config` | Shared tsconfig presets                                                | —    |
+| `packages/eslint-config`     | `@workspace/eslint-config`     | Shared ESLint presets                                                                                                                  | —    |
+| `packages/typescript-config` | `@workspace/typescript-config` | Shared tsconfig presets                                                                                                                | —    |
 
 > [!NOTE] **Why are the apps named `@workspace/web` / `@workspace/admin` / `@workspace/api`
 > instead of just `web` / `admin` / `api`?** So every `pnpm --filter <name>` and
@@ -201,33 +201,41 @@ app with ~15 lines of divergence (admin cookie isolation, `adminLogin` endpoint,
 admin-access gate). Both are now **one prop-driven implementation here**:
 
 ```tsx
-<LoginForm
+<AuthLayout
 	logo={…}
-	title="Acme"
-	heading="Admin Login"
-	subtitle="…"
-	mode="admin"        // "admin" → adminLogin endpoint + requires admin access
-	redirectPath={…}
-	footer={…}
-/>
+	brandName="Acme"
+	tagline="…"
+	features={["…", "…", "…"]}
+	title="Welcome back"
+	subtitle="Enter your credentials"
+>
+	<LoginForm mode="admin" redirectPath={…} footer={…} />
+</AuthLayout>
 ```
 
+- `<AuthLayout>` (in `@workspace/ui`) is the shared split-screen auth shell —
+  dark brand panel + centered form panel with a theme toggle and back button.
+  Both apps render it so their login pages stay pixel-identical.
 - `<LoginForm>` takes a `mode` prop (`"web"` | `"admin"`). Admin mode swaps in
   `api.auth.adminLogin`, enforces `hasAdminAccess`, and renders the cookie
-  isolation; web mode is the plain credential form. It imports presentational
-  primitives from `@workspace/ui/components/form/*`.
+  isolation; web mode is the plain credential form. It renders the email +
+  password fields, the submit button, an "Or continue with" divider and the
+  social-login buttons (Google / Facebook / Twitter / GitHub — UI-only until
+  a provider is wired). It imports presentational primitives from
+  `@workspace/ui/components/form/*`.
 - `<ClientAuthWrapper>` is the `next/navigation`-aware bridge (router push +
   refresh fed into `AuthProvider`), with `cookieNames` + `clientType`
   configurable per app.
 - Both live in `packages/client` (not `packages/ui`) because they depend on
-  `next/navigation` + the auth context — they are *auth*, not presentation.
+  `next/navigation` + the auth context — they are _auth_, not presentation.
   `next` is a peer dependency of `packages/client` so that coupling is honest.
   See rule 3 below for the layering carve-out this implies.
 
 **The router (`endpoints.ts`) is the heart of type-safe API calls** — tRPC-flavoured,
 REST under the hood. Every leaf pairs a shared `apiContract` leaf (method + path
-+ input schema — defined once in `packages/shared`) with the client-only
-concerns: the response envelope schema and the react-query key:
+
+- input schema — defined once in `packages/shared`) with the client-only
+  concerns: the response envelope schema and the react-query key:
 
 ```ts
 export const apiRouter = {
@@ -236,7 +244,10 @@ export const apiRouter = {
 		login: defineMutation(apiContract.auth.login, { response: envelope(LoginResponseSchema), queryKey: () => ["auth", "login"] }),
 	},
 	telescope: {
-		requests: defineQuery(apiContract.telescope.requests, { response: envelope(z.object({ list: TelescopeRequestListResponseSchema }).strict()), queryKey: (q) => ["telescope", "requests", q] }),
+		requests: defineQuery(apiContract.telescope.requests, {
+			response: envelope(z.object({ list: TelescopeRequestListResponseSchema }).strict()),
+			queryKey: (q) => ["telescope", "requests", q],
+		}),
 		// …
 	},
 } as const;
@@ -350,12 +361,11 @@ move it up to the page (smart component) or into `@workspace/client`.
   `RootUsersController` in the auth module. A module can host multiple
   controllers — use an unprefixed controller for root-pathed endpoints.
 - **Configuration lives in a `@Global() ConfigModule** (`src/config/config.module.ts`)
-  that provides + exports `TypedConfigService`. It MUST be global: Nest instantiates
-  imported modules before the importing module's own providers, so a locally-provided
-  `TypedConfigService` is invisible to dynamic modules like
-  `ThrottlerModule.forRootAsync({ inject: [TypedConfigService] })` — booting fails
-  with `UnknownDependenciesException` (THROTTLER:MODULE_OPTIONS) if it isn't global.
-  Do NOT re-register `TypedConfigService` in feature modules; inject the global one.
+that provides + exports `TypedConfigService`. It MUST be global: Nest instantiates
+imported modules before the importing module's own providers, so a locally-provided
+`TypedConfigService`is invisible to dynamic modules like`ThrottlerModule.forRootAsync({ inject: [TypedConfigService] })`— booting fails
+with`UnknownDependenciesException`(THROTTLER:MODULE_OPTIONS) if it isn't global.
+Do NOT re-register`TypedConfigService` in feature modules; inject the global one.
 - **`common/` only holds truly shared HTTP plumbing.** The auth-domain files
   (guards, auth decorators, set/clear-auth-cookies interceptors, cookie
   config, cookie service) live in `modules/auth/{guards,decorators,interceptors,constants,services}`
@@ -376,21 +386,23 @@ move it up to the page (smart component) or into `@workspace/client`.
 - Controllers use DTOs built with `createZodDto(<Schema from @workspace/shared>)`.
 - Swagger docs live at `http://localhost:8080/docs` (inferred from the same schemas).
 - The `ResponseInterceptor` wraps every response in `{ success, data, meta }`.
-- **Uses Nest's standard build/run commands**: `pnpm dev` → `nest start --watch`,
-  `pnpm build` → `nest build`, `pnpm start` → `nest start --prod`,
-  `pnpm start:prod` → `node dist/main.js` (what a process manager runs).
-- **ESM, with `.js` on value imports only.** The API is the one exception to
-  the repo's extensionless-import convention: **runtime (value) imports** are
-  written as `./app.module.js` (standard Nest ESM pattern). **Type-only
-  imports** (`import type … from "./foo"`) stay extensionless — they're erased
-  during compilation, so Node never sees them. The API is never consumed by
-  Turbopack (unlike `@workspace/shared`), so `.js` specifiers are safe here —
-  and both `nest build` and `tsc` emit them verbatim, so `dist/` is directly
-  runnable by Node with **no post-build fixer and no resolver hook**.
-- **TypeScript note:** the API's `typescript` is pinned to **6.0.2** (the last
-  JS-based release) because the Nest CLI **hard-refuses** TS7 (TS7 has no
-  compiler API until 7.1). See `docs/typescript.md` → "TS6 shims". `tsc` there
-  runs TS6, but the emitted ESM is identical to a TS7 build.
+- **Nest CLI (SWC builder) + esbuild prod bundle.** `pnpm dev` → `nest start --watch -e tsx`
+  (SWC recompiles in ~70ms on save, runs through tsx), `pnpm build` → `nest build`
+  (SWC compiler — see `nest-cli.json` + `.swcrc`) followed by an **esbuild** bundle
+  of the compiled output (`scripts/bundle-prod.mjs`), `pnpm start` → `tsx dist/src/main.js`,
+  `pnpm start:prod` → `node dist/main.bundle.js` (what a process manager like pm2 or
+  supervisord runs).
+- **Extensionless imports everywhere.** The API follows the repo's
+  extensionless-import convention like every other package. Dev runs the
+  per-file SWC output through **tsx** (whose loader resolves extensionless
+  specifiers at runtime); the prod bundle is one self-contained
+  `dist/main.bundle.js` (relative imports inlined, bare packages external) that
+  plain `node` runs directly — so `tsx` is a **dev-only** dependency. Note the
+  SWC builder mirrors the source tree, so the compiled entry lives at
+  `dist/src/main.js`.
+- **TypeScript note:** the API's `typescript` is pinned to **6.0.2** for the
+  type-aware lint toolchain and `tsc --noEmit` (the SWC builder does not
+  type-check). See `docs/typescript.md` → "TS6 shims".
 
 ---
 
@@ -453,4 +465,3 @@ Different consumers resolve `@workspace/*` packages differently — this is inte
 ---
 
 _Last updated: July 31, 2026_
-

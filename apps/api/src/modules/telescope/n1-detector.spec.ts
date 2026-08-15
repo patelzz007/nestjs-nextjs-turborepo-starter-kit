@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { QueryLogEntry } from "@workspace/shared";
 
-import { detectN1Warnings, modelFromSql, N1_THRESHOLD } from "./n1-detector.js";
+import { detectN1Warnings, modelFromSql, N1_THRESHOLD } from "./n1-detector";
 
 function makeQuery(overrides: Partial<QueryLogEntry>): QueryLogEntry {
 	return {

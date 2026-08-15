@@ -31,22 +31,22 @@ import {
 } from "@workspace/shared";
 import type { Request } from "express";
 
-import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe.js";
+import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe";
 
-import { GetUser } from "./decorators/get-user.decorator.js";
-import { Public } from "./decorators/public.decorator.js";
-import { SuperAdminOnly } from "./decorators/super-admin.decorator.js";
-import { ApiErrorResponseDto } from "../../common/dto/api-response.dto.js";
-import { createWrappedArrayDto, createWrappedDto } from "../../common/dto/response-wrapper.js";
-import { SetAuthCookiesInterceptor } from "./interceptors/set-auth-cookies.interceptor.js";
-import { extractClientInfo } from "../../common/utils/client-info.js";
+import { GetUser } from "./decorators/get-user.decorator";
+import { Public } from "./decorators/public.decorator";
+import { SuperAdminOnly } from "./decorators/super-admin.decorator";
+import { ApiErrorResponseDto } from "../../common/dto/api-response.dto";
+import { createWrappedArrayDto, createWrappedDto } from "../../common/dto/response-wrapper";
+import { SetAuthCookiesInterceptor } from "./interceptors/set-auth-cookies.interceptor";
+import { extractClientInfo } from "../../common/utils/client-info";
 
-import { AuthService } from "./auth.service.js";
-import { ForgotPasswordDto } from "./dtos/forgot-password.dto.js";
-import { LoginDto } from "./dtos/login.dto.js";
-import { ResendVerificationDto } from "./dtos/resend-verification.dto.js";
-import { ResetPasswordDto } from "./dtos/reset-password.dto.js";
-import { SignupDto } from "./dtos/signup.dto.js";
+import { AuthService } from "./auth.service";
+import { ForgotPasswordDto } from "./dtos/forgot-password.dto";
+import { LoginDto } from "./dtos/login.dto";
+import { ResendVerificationDto } from "./dtos/resend-verification.dto";
+import { ResetPasswordDto } from "./dtos/reset-password.dto";
+import { SignupDto } from "./dtos/signup.dto";
 
 // ── Wrapped Response DTOs (envelope + data) ─────────────────────────────
 // Each constant wraps a data schema in the { success, data, meta } envelope

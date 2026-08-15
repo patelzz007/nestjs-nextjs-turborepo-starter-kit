@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { PermissionDetailsSchema, SlimRoleSchema } from "./schemas/user.schema.js";
+import { PermissionDetailsSchema, SlimRoleSchema } from "./schemas/user.schema";
 
 // ── Public Exports ──────────────────────────────────────────────────────────
 

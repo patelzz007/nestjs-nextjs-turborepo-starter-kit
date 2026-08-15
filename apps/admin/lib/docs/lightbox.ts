@@ -39,11 +39,18 @@ const FIT_IMAGE_CLASSES = "block w-full h-full max-w-full max-h-full object-cont
  */
 export function downloadFilename(src: string, alt: string): string {
 	// The last non-empty segment after stripping any query/hash.
-	const segment = src
-		.split(/[?#]/)
-		.findLast((part): boolean => part.length > 0)
-		?.split("/")
-		.findLast((part): boolean => part.length > 0);
+	// (Manual reverse walk instead of `findLast` — the configured TS lib target
+	// predates es2023, so `Array.prototype.findLast` is unavailable.)
+	const pathOnly: string = src.split(/[?#]/)[0] ?? src;
+	const segments = pathOnly.split("/");
+	let segment: string | undefined;
+	for (let i = segments.length - 1; i >= 0; i -= 1) {
+		const candidate: string | undefined = segments[i];
+		if (candidate !== undefined && candidate.length > 0) {
+			segment = candidate;
+			break;
+		}
+	}
 	if (segment?.includes(".") === true) {
 		return segment;
 	}

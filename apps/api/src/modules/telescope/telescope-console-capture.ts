@@ -4,8 +4,8 @@ import { Inject, Injectable, type OnModuleInit } from "@nestjs/common";
 
 import { nowEpochMs, type TelescopeLogLevel, type TelescopeOptions } from "@workspace/shared";
 
-import { RequestSpanContext, type SpanStore } from "./request-span-context.js";
-import { TELESCOPE_OPTIONS } from "./telescope.options.js";
+import { RequestSpanContext, type SpanStore } from "./request-span-context";
+import { TELESCOPE_OPTIONS } from "./telescope.options";
 
 /**
  * Node's `console` methods accept arbitrary values — the real signature is

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { EmailLogEventsService } from "./email-log-events.service.js";
+import { EmailLogEventsService } from "./email-log-events.service";
 
 describe("EmailLogEventsService", () => {
 	let service: EmailLogEventsService;

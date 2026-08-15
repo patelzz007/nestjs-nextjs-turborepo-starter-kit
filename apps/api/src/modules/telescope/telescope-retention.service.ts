@@ -2,8 +2,8 @@ import { Inject, Injectable, type OnModuleDestroy, type OnModuleInit } from "@ne
 
 import type { TelescopeOptions } from "@workspace/shared";
 
-import { TELESCOPE_OPTIONS, TELESCOPE_STORE } from "./telescope.options.js";
-import type { TelescopeStore } from "./telescope.store.js";
+import { TELESCOPE_OPTIONS, TELESCOPE_STORE } from "./telescope.options";
+import type { TelescopeStore } from "./telescope.store";
 
 /**
  * Improvement 4 — retention pruning on a fixed interval (every 5 minutes).

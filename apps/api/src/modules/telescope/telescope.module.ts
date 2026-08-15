@@ -3,24 +3,24 @@ import { APP_INTERCEPTOR } from "@nestjs/core";
 
 import type { TelescopeOptions, TelescopeStorage } from "@workspace/shared";
 
-import { PrismaModule } from "../../prisma/prisma.module.js";
+import { PrismaModule } from "../../prisma/prisma.module";
 
-import { resolveTelescopeOptions, TELESCOPE_OPTIONS, TELESCOPE_STORE } from "./telescope.options.js";
-import { TelescopeAdminGuard } from "./telescope-admin.guard.js";
-import { TelescopeAlertService } from "./telescope-alert.service.js";
-import { TelescopeCacheTracer } from "./telescope-cache-tracer.js";
-import { TelescopeConsoleCapture } from "./telescope-console-capture.js";
-import { TelescopeController } from "./telescope.controller.js";
-import { TelescopeDemoService } from "./telescope-demo.service.js";
-import { TelescopeEventBus } from "./telescope-event-bus.js";
-import { TelescopeInterceptor } from "./telescope.interceptor.js";
-import { TelescopeJobRunner } from "./telescope-job-runner.js";
-import { TelescopePrismaListener } from "./telescope-prisma-listener.js";
-import { TelescopePostgresStore } from "./telescope-postgres.store.js";
-import { TelescopeRetentionService } from "./telescope-retention.service.js";
-import { TelescopeSchedulerService } from "./telescope-scheduler.js";
-import { TelescopeService } from "./telescope.service.js";
-import { TelescopeMemoryStore, type TelescopeStore } from "./telescope.store.js";
+import { resolveTelescopeOptions, TELESCOPE_OPTIONS, TELESCOPE_STORE } from "./telescope.options";
+import { TelescopeAdminGuard } from "./telescope-admin.guard";
+import { TelescopeAlertService } from "./telescope-alert.service";
+import { TelescopeCacheTracer } from "./telescope-cache-tracer";
+import { TelescopeConsoleCapture } from "./telescope-console-capture";
+import { TelescopeController } from "./telescope.controller";
+import { TelescopeDemoService } from "./telescope-demo.service";
+import { TelescopeEventBus } from "./telescope-event-bus";
+import { TelescopeInterceptor } from "./telescope.interceptor";
+import { TelescopeJobRunner } from "./telescope-job-runner";
+import { TelescopePrismaListener } from "./telescope-prisma-listener";
+import { TelescopePostgresStore } from "./telescope-postgres.store";
+import { TelescopeRetentionService } from "./telescope-retention.service";
+import { TelescopeSchedulerService } from "./telescope-scheduler";
+import { TelescopeService } from "./telescope.service";
+import { TelescopeMemoryStore, type TelescopeStore } from "./telescope.store";
 
 /**
  * The one config surface (docs/telescope.md §3): options are resolved from

@@ -2,9 +2,9 @@ import { Inject, Injectable, type OnModuleDestroy, type OnModuleInit } from "@ne
 
 import { epochMs, nowEpochMs, type EpochMs, type TelescopeScheduleLog, type TelescopeScheduleRun, type TelescopeScheduleStatus } from "@workspace/shared";
 
-import { TelescopeEventBus } from "./telescope-event-bus.js";
-import { TELESCOPE_STORE } from "./telescope.options.js";
-import type { TelescopeStore } from "./telescope.store.js";
+import { TelescopeEventBus } from "./telescope-event-bus";
+import { TELESCOPE_STORE } from "./telescope.options";
+import type { TelescopeStore } from "./telescope.store";
 
 /** Improvement 20 — how many recent runs each schedule keeps in `history`. */
 const MAX_HISTORY = 24;

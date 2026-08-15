@@ -5,10 +5,10 @@ import { interval, map, merge, type Observable } from "rxjs";
 
 import { EmailLogListResponseSchema, nowEpochMs, type EmailLogEntry } from "@workspace/shared";
 
-import { createWrappedDto } from "../../../common/dto/response-wrapper.js";
+import { createWrappedDto } from "../../../common/dto/response-wrapper";
 
-import { EmailLogEventsService } from "./email-log-events.service.js";
-import { EmailLogService } from "./email-log.service.js";
+import { EmailLogEventsService } from "./email-log-events.service";
+import { EmailLogService } from "./email-log.service";
 
 // ── Wrapped Response DTO ──────────────────────────────────────────────────
 

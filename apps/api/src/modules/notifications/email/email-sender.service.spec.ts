@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { TypedConfigService } from "../../../config/typed-config.service.js";
-import type { LogService } from "../../logs/logs.service.js";
-import type { TelescopeJobRunner } from "../../telescope/telescope-job-runner.js";
-import type { EmailLogService } from "./email-log.service.js";
-import { EmailSenderService } from "./email-sender.service.js";
-import { VerificationEmailTemplate } from "./templates/verification-email.template.js";
+import type { TypedConfigService } from "../../../config/typed-config.service";
+import type { LogService } from "../../logs/logs.service";
+import type { TelescopeJobRunner } from "../../telescope/telescope-job-runner";
+import type { EmailLogService } from "./email-log.service";
+import { EmailSenderService } from "./email-sender.service";
+import { VerificationEmailTemplate } from "./templates/verification-email.template";
 
 // ── Mocks ─────────────────────────────────────────────────────────────────
 

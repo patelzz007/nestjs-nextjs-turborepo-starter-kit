@@ -6,7 +6,7 @@ import type { AccessTokenPayload } from "../auth/services/token.service";
 
 import type { TelescopeOptions } from "@workspace/shared";
 
-import { TELESCOPE_OPTIONS } from "./telescope.options.js";
+import { TELESCOPE_OPTIONS } from "./telescope.options";
 
 /**
  * Defense-in-depth admin gate for `/telescope/*` (docs/telescope.md §10.7).

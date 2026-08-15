@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common";
 
 import { nowEpochMs } from "@workspace/shared";
 
-import { PrismaService } from "../../prisma/prisma.service.js";
+import { PrismaService } from "../../prisma/prisma.service";
 
 @Injectable()
 export class HealthService {

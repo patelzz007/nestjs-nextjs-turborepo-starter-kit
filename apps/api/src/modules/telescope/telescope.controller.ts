@@ -53,10 +53,10 @@ import {
 	type TelescopeWebhookDeliveriesResponse,
 } from "@workspace/shared";
 
-import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe.js";
+import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe";
 
-import { TelescopeAdminGuard } from "./telescope-admin.guard.js";
-import { TelescopeService } from "./telescope.service.js";
+import { TelescopeAdminGuard } from "./telescope-admin.guard";
+import { TelescopeService } from "./telescope.service";
 
 /**
  * The Telescope read API (docs/telescope.md §7). Every route requires admin

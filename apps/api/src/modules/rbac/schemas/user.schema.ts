@@ -1,7 +1,7 @@
 import { PermissionActionSchema, PermissionResourceSchema } from "@workspace/shared";
 import { z } from "zod";
 
-import { BaseResponseSchema } from "./base.schema.js";
+import { BaseResponseSchema } from "./base.schema";
 
 // ── Slim Role ───────────────────────────────────────────────────────────────
 

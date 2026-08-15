@@ -20,5 +20,10 @@ export default async function AdminLoginPage({ searchParams }: { readonly search
 	// Web app URL — read server-side so the client never touches `process.env`.
 	const webBaseUrl: string = process.env.NEXT_PUBLIC_WEB_URL ?? "http://localhost:3000";
 
-	return <LoginView redirectPath={redirectPath} webBaseUrl={webBaseUrl} />;
+	// One-click demo account — only when explicitly enabled (local/dev
+	// convenience). Read server-side so the flag + credential never reach the
+	// client bundle when off.
+	const showDemoAccounts: boolean = process.env.NEXT_PUBLIC_SHOW_DEMO_ACCOUNTS === "true";
+
+	return <LoginView redirectPath={redirectPath} webBaseUrl={webBaseUrl} showDemoAccounts={showDemoAccounts} />;
 }

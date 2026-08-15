@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { sanitizeHeaders, sanitizeJson, sanitizeQueryParams, truncateJson } from "./sanitize.js";
+import { sanitizeHeaders, sanitizeJson, sanitizeQueryParams, truncateJson } from "./sanitize";
 
 describe("sanitizeJson", () => {
 	it("redacts secret-looking keys at any depth", () => {

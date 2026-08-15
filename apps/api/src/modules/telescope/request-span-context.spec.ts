@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { RequestSpanContext, type SpanStore } from "./request-span-context.js";
-import { shouldCaptureRequest } from "./should-capture.js";
+import { RequestSpanContext, type SpanStore } from "./request-span-context";
+import { shouldCaptureRequest } from "./should-capture";
 
 function makeStore(): SpanStore {
 	return {

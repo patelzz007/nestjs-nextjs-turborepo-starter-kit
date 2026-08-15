@@ -34,7 +34,7 @@ import type {
 } from "@workspace/shared";
 import { epochMs } from "@workspace/shared";
 
-import { detectN1Warnings } from "./n1-detector.js";
+import { detectN1Warnings } from "./n1-detector";
 
 // ── Filter / result shapes ─────────────────────────────────────────────────
 

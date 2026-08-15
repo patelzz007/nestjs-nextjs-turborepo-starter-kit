@@ -10,7 +10,7 @@ coverImage: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=f
 # Performance & Developer Experience Roadmap
 
 > [!NOTE] This guide lists **20 concrete improvements** to make the monorepo run faster and be
-> nicer to develop in. Every item is grounded in the repo's *actual current state* —
+> nicer to develop in. Every item is grounded in the repo's _actual current state_ —
 > each one was verified against `turbo.json`, the workspace `package.json` files, the
 > tsconfigs, and the running output before being written down (not a wish-list).
 >
@@ -20,38 +20,38 @@ coverImage: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=f
 
 ## Status legend
 
-| Mark | Meaning |
-| ---- | ------- |
-| ✅ **Done** | Shipped and verified. |
+| Mark           | Meaning                                                  |
+| -------------- | -------------------------------------------------------- |
+| ✅ **Done**    | Shipped and verified.                                    |
 | 🔶 **Partial** | Some of it exists; the rest is listed as follow-up work. |
-| ⬜ **Pending** | Not started — the recipe below is the plan. |
+| ⬜ **Pending** | Not started — the recipe below is the plan.              |
 
 ---
 
 ## Priority matrix
 
-| # | Improvement | Area | Priority | Effort | Status |
-| - | ----------- | ---- | -------- | ------ | ------ |
-| 1 | Enable turbo caching | ⚡ Speed | **P1** | S | ⬜ |
-| 2 | Incremental `nest build` | ⚡ Speed | P2 | S | ⬜ |
-| 3 | `tsc -b` project references for typecheck | ⚡ Speed | P2 | M | ⬜ |
-| 4 | Wire the installed pino logger | ⚡ Speed | **P1** | M | ⬜ |
-| 5 | Lazy-load heavy admin libs | ⚡ Speed | **P1** | M | ✅ |
-| 6 | `output: "standalone"` in the Next apps | ⚡ Speed | P2 | S | ⬜ |
-| 7 | Narrow the `useTable` selector | ⚡ Speed | P2 | S | ⬜ |
-| 8 | Bundle analyzer (`pnpm analyze`) | ⚡ Speed | P2 | S | ⬜ |
-| 9 | `.env.example` for api / web / admin | 🧑💻 DX | — | — | ✅ |
-| 10 | `postinstall: prisma generate` | 🧑💻 DX | **P0** | S | ⬜ |
-| 11 | Pin the toolchain (`.nvmrc` + engines) | 🧑💻 DX | **P1** | S | 🔶 |
-| 12 | Husky + lint-staged | 🧑💻 DX | **P1** | M | ⬜ |
-| 13 | Watch feedback loops | 🧑💻 DX | P2 | S | ⬜ |
-| 14 | `dev:clean` — stale-server killer | 🧑💻 DX | **P1** | S | ⬜ |
-| 15 | GitHub Actions CI | 🧑💻 DX | **P1** | M | ⬜ |
-| 16 | Port preflight before dev | 🧑💻 DX | **P0** | S | ⬜ |
-| 17 | `dev:fresh` — nuke-and-restart | 🧑💻 DX | P2 | S | ⬜ |
-| 18 | `pnpm smoke` — boot smoke test | 🧑💻 DX | **P0** | S | ⬜ |
-| 19 | Enable typed routes | 🧑💻 DX | **P1** | S | ⬜ |
-| 20 | Cleaner dev output | 🧑💻 DX | — | — | ✅ |
+| #   | Improvement                                 | Area     | Priority | Effort | Status |
+| --- | ------------------------------------------- | -------- | -------- | ------ | ------ |
+| 1   | Enable turbo caching                        | ⚡ Speed | **P1**   | S      | ⬜     |
+| 2   | SWC builder (was: incremental `nest build`) | ⚡ Speed | —        | S      | ✅     |
+| 3   | `tsc -b` project references for typecheck   | ⚡ Speed | P2       | M      | ⬜     |
+| 4   | Wire the installed pino logger              | ⚡ Speed | **P1**   | M      | ⬜     |
+| 5   | Lazy-load heavy admin libs                  | ⚡ Speed | **P1**   | M      | ✅     |
+| 6   | `output: "standalone"` in the Next apps     | ⚡ Speed | P2       | S      | ⬜     |
+| 7   | Narrow the `useTable` selector              | ⚡ Speed | P2       | S      | ⬜     |
+| 8   | Bundle analyzer (`pnpm analyze`)            | ⚡ Speed | P2       | S      | ⬜     |
+| 9   | `.env.example` for api / web / admin        | 🧑💻 DX  | —        | —      | ✅     |
+| 10  | `postinstall: prisma generate`              | 🧑💻 DX  | **P0**   | S      | ⬜     |
+| 11  | Pin the toolchain (`.nvmrc` + engines)      | 🧑💻 DX  | **P1**   | S      | 🔶     |
+| 12  | Husky + lint-staged                         | 🧑💻 DX  | **P1**   | M      | ⬜     |
+| 13  | Watch feedback loops                        | 🧑💻 DX  | P2       | S      | ⬜     |
+| 14  | `dev:clean` — stale-server killer           | 🧑💻 DX  | **P1**   | S      | ⬜     |
+| 15  | GitHub Actions CI                           | 🧑💻 DX  | **P1**   | M      | ⬜     |
+| 16  | Port preflight before dev                   | 🧑💻 DX  | **P0**   | S      | ⬜     |
+| 17  | `dev:fresh` — nuke-and-restart              | 🧑💻 DX  | P2       | S      | ⬜     |
+| 18  | `pnpm smoke` — boot smoke test              | 🧑💻 DX  | **P0**   | S      | ⬜     |
+| 19  | Enable typed routes                         | 🧑💻 DX  | **P1**   | S      | ⬜     |
+| 20  | Cleaner dev output                          | 🧑💻 DX  | —        | —      | ✅     |
 
 **Priority scale:** **P0** = landmine/footgun removal (do first — they bite every day).
 **P1** = high value, low risk. **P2** = nice-to-have or requires more effort than the
@@ -90,40 +90,20 @@ project. A no-op `pnpm lint` would go from ~30s to ~200ms.
 **Acceptance criteria:**
 
 - [ ] Second consecutive `pnpm lint` / `pnpm typecheck` / `pnpm test` prints `FULL TURBO`
-  (or per-task cache hits) — the **cache-hit line is the structural proof**, not a
-  stopwatch (timing comparisons are noisy on loaded machines).
+      (or per-task cache hits) — the **cache-hit line is the structural proof**, not a
+      stopwatch (timing comparisons are noisy on loaded machines).
 - [ ] Changing one source file in `apps/web` does **not** replay `@workspace/shared:build` (hash-based invalidation works).
 - [ ] `pnpm build` still produces identical artifacts (smoke: `pnpm start` boots the API after a cached build).
 
 **Status:** ⬜ Pending.
 
-### 2. Re-enable incremental for `nest build`
+### 2. Re-enable incremental for `nest build` — ✅ superseded
 
-**What:** stop forcing `"incremental": false` in `apps/api/tsconfig.build.json`.
-
-**Why:** `tsconfig.json` already sets `"incremental": true` (it's the dev-time
-default), but the build config overrides it back to `false`, so **every** `nest build`
-recompiles all ~120 API files from scratch. With incremental builds, unchanged files
-are skipped via `.tsbuildinfo`.
-
-**How:**
-
-- Remove the `"incremental": false` override from `tsconfig.build.json` (it inherits
-  `true` from `tsconfig.json`).
-- `*.tsbuildinfo` is already git-ignored (`.gitignore` line 44), so no repo noise.
-- Ensure the `build` script does `rm -rf dist` *or* keeps the tsbuildinfo alongside —
-  pick one strategy and document it (recommended: keep both `dist` and `.tsbuildinfo`
-  and let Nest overwrite; only `pnpm dev:fresh` (#17) does a full wipe).
-
-**Acceptance criteria:**
-
-- [ ] Two consecutive `pnpm --filter @workspace/api build` runs — the second emits far
-  fewer files (Nest prints the count) or completes faster; the `.tsbuildinfo` file
-  existing after the build is the structural proof.
-- [ ] A `.tsbuildinfo` file exists after build and is not tracked by git.
-- [ ] `nest build` still emits runnable ESM (`node dist/main.js` boots, `/health` returns 200).
-
-**Status:** ⬜ Pending.
+**Status:** ✅ Done-by-replacement. The API compiles with the **SWC builder**
+(`nest-cli.json` → `"builder": "swc"`) — a full recompile of all ~141 files takes
+~70ms, so incremental `.tsbuildinfo` caching is moot. `tsconfig.build.json`'s
+`"incremental": false` is no longer read by the build. `pnpm typecheck` still runs
+`tsc --noEmit` as the type gate (SWC doesn't type-check).
 
 ### 3. `tsc -b` (project references) for typecheck
 
@@ -202,8 +182,8 @@ bundle.
 **Acceptance criteria:**
 
 - [x] The admin **initial** HTML no longer references recharts / cmdk / react-table /
-  dnd-kit / react-hook-form / framer-motion / shiki / mermaid (verified against the
-  prod build's chunk list).
+      dnd-kit / react-hook-form / framer-motion / shiki / mermaid (verified against the
+      prod build's chunk list).
 - [x] `/docs/<any guide>` still renders code blocks, math, and mermaid correctly.
 - [x] The dashboard chart renders with a skeleton while its chunk loads (no blank gap).
 
@@ -243,7 +223,7 @@ subscribes to the whole store via `(state) => state` — the migration comment e
 "narrow later if render-perf ever matters".
 
 **Why:** TanStack v9 re-renders the table whenever the selected slice changes.
-Subscribing to the whole state means *any* table state change (hover, column resize,
+Subscribing to the whole state means _any_ table state change (hover, column resize,
 row expansion) re-renders the entire grid.
 
 **How:**
@@ -267,7 +247,7 @@ row expansion) re-renders the entire grid.
 
 **What:** add `@next/bundle-analyzer` and a root `pnpm analyze` script.
 
-**Why:** #5 is a guess until you can *see* how much mermaid/recharts/shiki contribute.
+**Why:** #5 is a guess until you can _see_ how much mermaid/recharts/shiki contribute.
 An analyzer makes future bundle decisions data-driven instead of vibes-driven.
 
 **How:**
@@ -419,7 +399,7 @@ next boot half-fails (web up, API dead → "failed to fetch"). One script kills 
 **How:**
 
 - Root script (macOS/Linux): `"dev:clean": "lsof -ti :3000,3001,8080 | xargs kill 2>/dev/null; echo 'dev servers stopped'"`.
-- Pair it with the preflight (#16): `dev` should *check* and warn; `dev:clean` is the
+- Pair it with the preflight (#16): `dev` should _check_ and warn; `dev:clean` is the
   explicit hammer when you see the warning.
 
 **Acceptance criteria:**
@@ -511,15 +491,15 @@ command, not a 5-command ritual.
 **What:** a script that boots the API and checks `/health` + `/docs`, exiting non-zero
 on failure.
 
-**Why:** the login outage was a *dead server with a green terminal* — nothing told you
+**Why:** the login outage was a _dead server with a green terminal_ — nothing told you
 the API was down until a 401/failed-fetch. A smoke test catches the broken-`dist` /
 dead-server class of regression in seconds, and it's the perfect "did the deploy
 work?" check.
 
 **How:**
 
-- `scripts/smoke.mjs` (root): spawns `node apps/api/dist/main.js` (or `pnpm --filter
-  @workspace/api start:prod`), polls `/health` up to N seconds, asserts 200 + JSON
+- `scripts/smoke.mjs` (root): spawns `node apps/api/dist/main.bundle.js` (or `pnpm --filter
+@workspace/api start:prod`), polls `/health` up to N seconds, asserts 200 + JSON
   `status: "ok"`, curls `/docs` for 200, then kills the child.
 - Exit codes: 0 = all good, 1 = any step failed (with the failing step named).
 - Wire as `"smoke": "node scripts/smoke.mjs"` and call it from CI (#15) after build.
@@ -527,7 +507,7 @@ work?" check.
 **Acceptance criteria:**
 
 - [ ] `pnpm smoke` passes when the API builds and boots.
-- [ ] Simulating a broken `dist` (rename `dist/main.js`) makes `pnpm smoke` exit 1 with a clear message.
+- [ ] Simulating a broken `dist` (rename `dist/main.bundle.js`) makes `pnpm smoke` exit 1 with a clear message.
 - [ ] It never leaves an orphaned API process behind.
 
 **Status:** ⬜ Pending.
@@ -552,7 +532,7 @@ per the repo's Next-version rule.)
 
 - [ ] `pnpm typecheck` fails on a `<Link href="/non-existent">`.
 - [ ] All existing `<Link>`/`router.push` calls still typecheck (any that fail reveal
-  real dead routes — fix them, don't cast).
+      real dead routes — fix them, don't cast).
 
 **Status:** ⬜ Pending.
 
@@ -577,16 +557,17 @@ one hard constraint:
   cleanly.
 
   > [!WARNING] ⚠️ **Trade-off:** `--log-prefix=none` also strips prefixes from a task's
-  > *dependencies* — `pnpm dev:web` runs `@workspace/shared:build` first (via
+  > _dependencies_ — `pnpm dev:web` runs `@workspace/shared:build` first (via
   > `^build`), so a failure there shows up without a `@workspace/shared:build:` tag.
   > For a single app that's a fair trade (the shared build rarely fails); if it ever
   > bites, drop the flag from that one script.
+
 - Verified behavior (tested against turbo 2.10.8 under a real PTY):
   - TTY + `ui: tui` → TUI dashboard.
   - Non-TTY + multiple tasks → stream mode with colored `@workspace/<app>:dev:`
     prefixes (`--log-prefix=task`, the default).
   - `--log-order=grouped` is **NOT** usable for `dev` — it buffers output until the
-    task *finishes*, which for persistent dev servers means **no output at all**
+    task _finishes_, which for persistent dev servers means **no output at all**
     (tested; 0 lines captured). Never add it to a dev task.
 
 **The one hard constraint (why we can't name them "Dev Web"):**
@@ -595,7 +576,7 @@ turbo 2.10's prefix values are a fixed enum — `none | task | auto` — and the
 is always `<package-name>:<task>` (e.g. `@workspace/admin:dev`). There is no per-task
 `logPrefix` or label override in `turbo.json` (verified against the installed
 `schema.json`: `ui` is the only output-related key, and its enum is just
-`tui | stream`). The *only* way to change the label would be renaming the workspace
+`tui | stream`). The _only_ way to change the label would be renaming the workspace
 packages, which would ripple through every `--filter`, import, and doc in the repo —
 not worth it. The TUI sidebar is the intended "nice labels" surface, and it's already on.
 
@@ -621,7 +602,7 @@ not worth it. The TUI sidebar is the intended "nice labels" surface, and it's al
 
 1. **First paint was blocked on the API.** `DashboardShell` rendered a full-screen
    spinner until auth hydration (`isInitializing`) AND `GET /auth/me` resolved. The SSR
-   HTML was *just a spinner*, so no content could paint until JS hydrated and a network
+   HTML was _just a spinner_, so no content could paint until JS hydrated and a network
    round-trip completed.
 2. **The `/` page eagerly imported every demo section.** recharts, @tanstack/react-table,
    dnd-kit, cmdk, react-hook-form and framer-motion were all in the initial JS bundle —
@@ -629,18 +610,18 @@ not worth it. The TUI sidebar is the intended "nice labels" surface, and it's al
 
 ### What changed (file by file)
 
-| File | Change | Effect |
-| --- | --- | --- |
-| `components/layout/dashboard-shell.tsx` | Renders the shell immediately with a fallback identity; error screen only when `/auth/me` **fails** with no cached data | First paint no longer waits for the API; `/` is now statically prerendered |
-| `app/(panel)/layout.tsx` + `lib/auth-server.ts` | Panel layout is now a **server component** that decodes the `adminAccessToken` JWT cookie and passes the real `{ name, email }` into `DashboardShell` | SSR paints the true identity — **no placeholder flash** |
-| `app/(panel)/page.tsx` | The 8 demo sections below the chart are wrapped in `LazySection`; the chart loads eagerly behind a `ChartSkeleton` | recharts + friends load on scroll, not at hydration |
-| `components/common/lazy-section.tsx` *(new)* | IntersectionObserver-gated mount (default `300px` rootMargin) with a fade/slide-up reveal; never unmounts once shown | Below-fold sections only download/parse their chunks when scrolled near |
-| `components/dashboard/chart-skeleton.tsx` *(new)* | Chart-shaped skeleton (header + gridlines + pulse bars) shown while recharts loads | The chart never leaves a blank gap |
-| `components/layout/topbar.tsx` | `CommandPalette` is dynamic and mounts only when opened; the ⌘K listener moved to the Topbar | cmdk + the palette search index leave the initial bundle |
-| `components/layout/dashboard-layout.tsx` | framer-motion sidebar tween → CSS `transition-[width]` | framer-motion dropped from the app |
-| `components/layout/mobile-menu-overlay.tsx` | `AnimatePresence` → conditional render + `animate-in` CSS | framer-motion gone; the mobile `Sidebar` only mounts when opened |
-| `components/docs/code-block.tsx` | shiki is a runtime `import()` (types stay static) | ~300 KB shiki chunk leaves the docs bundle |
-| `stores/sidebar-store.ts` | `skipHydration: true`; `DashboardLayout` calls `persist.rehydrate()` once after mount | Fixes a hydration mismatch the shell's new SSR would otherwise cause |
+| File                                              | Change                                                                                                                                                | Effect                                                                     |
+| ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| `components/layout/dashboard-shell.tsx`           | Renders the shell immediately with a fallback identity; error screen only when `/auth/me` **fails** with no cached data                               | First paint no longer waits for the API; `/` is now statically prerendered |
+| `app/(panel)/layout.tsx` + `lib/auth-server.ts`   | Panel layout is now a **server component** that decodes the `adminAccessToken` JWT cookie and passes the real `{ name, email }` into `DashboardShell` | SSR paints the true identity — **no placeholder flash**                    |
+| `app/(panel)/page.tsx`                            | The 8 demo sections below the chart are wrapped in `LazySection`; the chart loads eagerly behind a `ChartSkeleton`                                    | recharts + friends load on scroll, not at hydration                        |
+| `components/common/lazy-section.tsx` _(new)_      | IntersectionObserver-gated mount (default `300px` rootMargin) with a fade/slide-up reveal; never unmounts once shown                                  | Below-fold sections only download/parse their chunks when scrolled near    |
+| `components/dashboard/chart-skeleton.tsx` _(new)_ | Chart-shaped skeleton (header + gridlines + pulse bars) shown while recharts loads                                                                    | The chart never leaves a blank gap                                         |
+| `components/layout/topbar.tsx`                    | `CommandPalette` is dynamic and mounts only when opened; the ⌘K listener moved to the Topbar                                                          | cmdk + the palette search index leave the initial bundle                   |
+| `components/layout/dashboard-layout.tsx`          | framer-motion sidebar tween → CSS `transition-[width]`                                                                                                | framer-motion dropped from the app                                         |
+| `components/layout/mobile-menu-overlay.tsx`       | `AnimatePresence` → conditional render + `animate-in` CSS                                                                                             | framer-motion gone; the mobile `Sidebar` only mounts when opened           |
+| `components/docs/code-block.tsx`                  | shiki is a runtime `import()` (types stay static)                                                                                                     | ~300 KB shiki chunk leaves the docs bundle                                 |
+| `stores/sidebar-store.ts`                         | `skipHydration: true`; `DashboardLayout` calls `persist.rehydrate()` once after mount                                                                 | Fixes a hydration mismatch the shell's new SSR would otherwise cause       |
 
 ### ⚠️ The zustand gotcha (read before you touch the shell)
 
@@ -652,7 +633,9 @@ hydration mismatch. Pattern to reuse:
 ```ts title="stores/sidebar-store.ts"
 persist(config, { name: KEY, skipHydration: true });
 // in a component that mounts on every panel page:
-useEffect(() => { void useSidebarStore.persist.rehydrate(); }, []);
+useEffect(() => {
+	void useSidebarStore.persist.rehydrate();
+}, []);
 ```
 
 ### 🚿 The SSR hydration checklist (every new shell component must pass this)
@@ -661,13 +644,13 @@ Now that the shell server-renders, **any** window/browser read during the first
 render is a latent hydration mismatch. The bugs we actually hit (all were hidden
 by the old spinner gate):
 
-| Footgun | Symptom | Fix |
-| --- | --- | --- |
-| `useMediaQuery` reading `matchMedia` in `useState` | Topbar brand / breadcrumb mismatch | Init `false` on server **and** first client render; resolve in an effect |
-| `navigator.onLine` in `useState` | Network pill mismatch | Same pattern (init `true`) |
-| `window.scrollY` in `useState` | ScrollToTop mismatch on reload | Same pattern (init `false`) |
-| next-themes `resolvedTheme` in render | ThemeToggle Sun/Moon mismatch | Mounted-gate: render an invisible placeholder until one frame after mount |
-| zustand `persist` sync rehydration | Sidebar collapsed state mismatch | `skipHydration` + `rehydrate()` after mount (above) |
+| Footgun                                            | Symptom                            | Fix                                                                       |
+| -------------------------------------------------- | ---------------------------------- | ------------------------------------------------------------------------- |
+| `useMediaQuery` reading `matchMedia` in `useState` | Topbar brand / breadcrumb mismatch | Init `false` on server **and** first client render; resolve in an effect  |
+| `navigator.onLine` in `useState`                   | Network pill mismatch              | Same pattern (init `true`)                                                |
+| `window.scrollY` in `useState`                     | ScrollToTop mismatch on reload     | Same pattern (init `false`)                                               |
+| next-themes `resolvedTheme` in render              | ThemeToggle Sun/Moon mismatch      | Mounted-gate: render an invisible placeholder until one frame after mount |
+| zustand `persist` sync rehydration                 | Sidebar collapsed state mismatch   | `skipHydration` + `rehydrate()` after mount (above)                       |
 
 **Rule of thumb:** if a component's first render depends on `window`/`document`/
 `navigator`/localStorage/theme, its initial state must be the **same constant on
@@ -678,7 +661,7 @@ both server and client**, and the real value must arrive via an effect (or the
 
 ```tsx
 <LazySection height="h-40">
-  <MyHeavySection />
+	<MyHeavySection />
 </LazySection>
 ```
 
@@ -691,7 +674,7 @@ both server and client**, and the real value must arrive via an effect (or the
 ### SSR + SPA — how it actually works now
 
 - **Every page SSRs.** Client components still render to HTML on the server; only the
-  *interactivity* is hydrated. The `/` page is statically prerendered; the shell is
+  _interactivity_ is hydrated. The `/` page is statically prerendered; the shell is
   rendered per-request with the real user (because it reads the cookie).
 - **Navigation stays SPA-like.** The `(panel)` route-group layout stays mounted across
   navigations — Next swaps only the page `children`, so the sidebar/topbar never
@@ -730,4 +713,3 @@ both server and client**, and the real value must arrive via an effect (or the
 - **When you touch `turbo.json` or the dev scripts:** re-check #20's constraint box
   (never `--log-order=grouped` on dev) and update the acceptance criteria if the
   behavior changes.
-

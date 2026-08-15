@@ -9,15 +9,15 @@ import {
 	type EmailTemplateMeta,
 } from "@workspace/shared";
 
-import { BaseEmailTemplate, type BaseEmailProps } from "./base/base-email-template.js";
-import type { EmailRenderContext } from "./base/email-render-context.js";
-import { AccountLockedEmailTemplate } from "./templates/account-locked-email.template.js";
-import { AdminAlertEmailTemplate } from "./templates/admin-alert-email.template.js";
-import { ApiKeyCreatedEmailTemplate } from "./templates/api-key-created-email.template.js";
-import { PasswordResetEmailTemplate } from "./templates/password-reset-email.template.js";
-import { SecurityAlertEmailTemplate } from "./templates/security-alert-email.template.js";
-import { VerificationEmailTemplate } from "./templates/verification-email.template.js";
-import { WelcomeEmailTemplate } from "./templates/welcome-email.template.js";
+import { BaseEmailTemplate, type BaseEmailProps } from "./base/base-email-template";
+import type { EmailRenderContext } from "./base/email-render-context";
+import { AccountLockedEmailTemplate } from "./templates/account-locked-email.template";
+import { AdminAlertEmailTemplate } from "./templates/admin-alert-email.template";
+import { ApiKeyCreatedEmailTemplate } from "./templates/api-key-created-email.template";
+import { PasswordResetEmailTemplate } from "./templates/password-reset-email.template";
+import { SecurityAlertEmailTemplate } from "./templates/security-alert-email.template";
+import { VerificationEmailTemplate } from "./templates/verification-email.template";
+import { WelcomeEmailTemplate } from "./templates/welcome-email.template";
 
 /** Static metadata + a sample-props factory for one template. */
 export interface EmailTemplateEntry {

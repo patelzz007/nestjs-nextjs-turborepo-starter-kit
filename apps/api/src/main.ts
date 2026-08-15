@@ -4,7 +4,7 @@ import { NestFactory } from "@nestjs/core";
 import { SwaggerModule, DocumentBuilder } from "@nestjs/swagger";
 import cookieParser from "cookie-parser";
 
-import { AppModule } from "./app.module.js";
+import { AppModule } from "./app.module";
 
 async function bootstrap(): Promise<void> {
 	// rawBody: true — the Resend webhook controller reads `req.rawBody` so the

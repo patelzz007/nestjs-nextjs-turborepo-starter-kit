@@ -3,10 +3,10 @@ import { nanoid } from "nanoid";
 
 import { nowEpochMs, type EpochMs, type TelescopeJobLogEntry } from "@workspace/shared";
 
-import { TelescopeEventBus } from "./telescope-event-bus.js";
-import { RequestSpanContext } from "./request-span-context.js";
-import { TELESCOPE_STORE } from "./telescope.options.js";
-import type { TelescopeStore } from "./telescope.store.js";
+import { TelescopeEventBus } from "./telescope-event-bus";
+import { RequestSpanContext } from "./request-span-context";
+import { TELESCOPE_STORE } from "./telescope.options";
+import type { TelescopeStore } from "./telescope.store";
 
 /**
  * Feature 3 — queue/job inspection.

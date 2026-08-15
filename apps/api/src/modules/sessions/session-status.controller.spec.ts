@@ -2,7 +2,7 @@ import { Test, TestingModule } from "@nestjs/testing";
 
 import type { AccessTokenPayload } from "../auth/services/token.service";
 
-import { SessionStatusController } from "./session-status.controller.js";
+import { SessionStatusController } from "./session-status.controller";
 
 describe("SessionStatusController", () => {
 	let controller: SessionStatusController;

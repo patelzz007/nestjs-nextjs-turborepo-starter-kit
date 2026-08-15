@@ -61,16 +61,16 @@ import {
 	epochMs,
 	nowEpochMs,
 } from "@workspace/shared";
-import { PrismaService } from "../../prisma/prisma.service.js";
+import { PrismaService } from "../../prisma/prisma.service";
 
-import { detectN1Warnings } from "./n1-detector.js";
-import { RequestSpanContext } from "./request-span-context.js";
-import { TelescopeAlertService } from "./telescope-alert.service.js";
-import { TelescopeEventBus } from "./telescope-event-bus.js";
-import { TelescopeJobRunner } from "./telescope-job-runner.js";
-import { TELESCOPE_OPTIONS, TELESCOPE_STORE } from "./telescope.options.js";
-import { TelescopeSchedulerService } from "./telescope-scheduler.js";
-import type { ListResult, TelescopeStore } from "./telescope.store.js";
+import { detectN1Warnings } from "./n1-detector";
+import { RequestSpanContext } from "./request-span-context";
+import { TelescopeAlertService } from "./telescope-alert.service";
+import { TelescopeEventBus } from "./telescope-event-bus";
+import { TelescopeJobRunner } from "./telescope-job-runner";
+import { TELESCOPE_OPTIONS, TELESCOPE_STORE } from "./telescope.options";
+import { TelescopeSchedulerService } from "./telescope-scheduler";
+import type { ListResult, TelescopeStore } from "./telescope.store";
 
 const RANGE_MS: Readonly<Record<TelescopeRange, number>> = {
 	"15m": 15 * 60 * 1000,

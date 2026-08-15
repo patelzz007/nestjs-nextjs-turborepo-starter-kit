@@ -3,11 +3,11 @@ import { Resend } from "resend";
 
 import { EmailSendResultSchema, type EmailSendResult } from "@workspace/shared";
 
-import { TypedConfigService } from "../../../config/typed-config.service.js";
-import { LogService } from "../../logs/logs.service.js";
-import { BaseEmailTemplate, type BaseEmailProps } from "./base/base-email-template.js";
-import { EmailRenderContextSchema, type EmailRenderContext } from "./base/email-render-context.js";
-import { EmailLogService } from "./email-log.service.js";
+import { TypedConfigService } from "../../../config/typed-config.service";
+import { LogService } from "../../logs/logs.service";
+import { BaseEmailTemplate, type BaseEmailProps } from "./base/base-email-template";
+import { EmailRenderContextSchema, type EmailRenderContext } from "./base/email-render-context";
+import { EmailLogService } from "./email-log.service";
 
 /** Thrown when a send exceeds `EMAIL_TIMEOUT_MS`. */
 class TimeoutError extends Error {

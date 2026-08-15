@@ -3,7 +3,7 @@ import type { Request, Response } from "express";
 import { type Observable } from "rxjs";
 import { map, tap } from "rxjs/operators";
 
-import type { JsonValue } from "../../../common/interfaces/json.js";
+import type { JsonValue } from "../../../common/interfaces/json";
 import {
 	CookieConfigService,
 	ACCESS_TOKEN_COOKIE_NAME,
@@ -11,8 +11,8 @@ import {
 	ADMIN_ACCESS_TOKEN_COOKIE_NAME,
 	ADMIN_REFRESH_TOKEN_COOKIE_NAME,
 	type CookieNames,
-} from "../constants/cookie.config.js";
-import { CookieService } from "../services/cookies.service.js";
+} from "../constants/cookie.config";
+import { CookieService } from "../services/cookies.service";
 
 /**
  * Interceptor that extracts `accessToken` and `refreshToken` from the response

@@ -1,23 +1,23 @@
 import { MiddlewareConsumer, Module, type NestModule } from "@nestjs/common";
 import { APP_GUARD, APP_INTERCEPTOR } from "@nestjs/core";
 
-import { ResponseInterceptor } from "./common/interceptors/response.interceptor.js";
-import { CorrelationIdMiddleware } from "./common/middleware/correlation-id.middleware.js";
-import { ConfigModule } from "./config/config.module.js";
-import { AuthModule } from "./modules/auth/auth.module.js";
-import { AuthGuard } from "./modules/auth/guards/auth.guard.js";
-import { HealthModule } from "./modules/health/health.module.js";
-import { ImpersonationModule } from "./modules/impersonation/impersonation.module.js";
-import { LogsModule } from "./modules/logs/logs.module.js";
-import { NotificationsModule } from "./modules/notifications/notifications.module.js";
-import { SessionsModule } from "./modules/sessions/sessions.module.js";
-import { TelescopeCaptureMiddleware } from "./modules/telescope/telescope-capture.middleware.js";
-import { TelescopeAuthJobAdapter } from "./modules/telescope/telescope-auth-job-adapter.js";
-import { TelescopeEmailJobAdapter } from "./modules/telescope/telescope-email-job-adapter.js";
-import { TelescopeImpersonationJobAdapter } from "./modules/telescope/telescope-impersonation-job-adapter.js";
-import { TelescopeSessionsJobAdapter } from "./modules/telescope/telescope-sessions-job-adapter.js";
-import { TelescopeModule } from "./modules/telescope/telescope.module.js";
-import { PrismaModule } from "./prisma/prisma.module.js";
+import { ResponseInterceptor } from "./common/interceptors/response.interceptor";
+import { CorrelationIdMiddleware } from "./common/middleware/correlation-id.middleware";
+import { ConfigModule } from "./config/config.module";
+import { AuthModule } from "./modules/auth/auth.module";
+import { AuthGuard } from "./modules/auth/guards/auth.guard";
+import { HealthModule } from "./modules/health/health.module";
+import { ImpersonationModule } from "./modules/impersonation/impersonation.module";
+import { LogsModule } from "./modules/logs/logs.module";
+import { NotificationsModule } from "./modules/notifications/notifications.module";
+import { SessionsModule } from "./modules/sessions/sessions.module";
+import { TelescopeCaptureMiddleware } from "./modules/telescope/telescope-capture.middleware";
+import { TelescopeAuthJobAdapter } from "./modules/telescope/telescope-auth-job-adapter";
+import { TelescopeEmailJobAdapter } from "./modules/telescope/telescope-email-job-adapter";
+import { TelescopeImpersonationJobAdapter } from "./modules/telescope/telescope-impersonation-job-adapter";
+import { TelescopeSessionsJobAdapter } from "./modules/telescope/telescope-sessions-job-adapter";
+import { TelescopeModule } from "./modules/telescope/telescope.module";
+import { PrismaModule } from "./prisma/prisma.module";
 
 @Module({
 	imports: [ConfigModule, PrismaModule, LogsModule, HealthModule, AuthModule, SessionsModule, ImpersonationModule, NotificationsModule, TelescopeModule],

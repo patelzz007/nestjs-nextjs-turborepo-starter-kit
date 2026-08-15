@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { BaseEmailPropsSchema, BaseEmailTemplate, type CtaConfig } from "./base-email-template.js";
-import type { EmailRenderContext } from "./email-render-context.js";
-import { PasswordResetEmailTemplate } from "../templates/password-reset-email.template.js";
-import { VerificationEmailTemplate } from "../templates/verification-email.template.js";
+import { BaseEmailPropsSchema, BaseEmailTemplate, type CtaConfig } from "./base-email-template";
+import type { EmailRenderContext } from "./email-render-context";
+import { PasswordResetEmailTemplate } from "../templates/password-reset-email.template";
+import { VerificationEmailTemplate } from "../templates/verification-email.template";
 
 const context: EmailRenderContext = {
 	appName: "Acme Inc",

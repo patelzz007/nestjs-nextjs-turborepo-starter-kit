@@ -3,13 +3,13 @@ import { nanoid } from "nanoid";
 
 import { nowEpochMs, type QueryLogEntry } from "@workspace/shared";
 
-import { PrismaService } from "../../prisma/prisma.service.js";
+import { PrismaService } from "../../prisma/prisma.service";
 
-import { modelFromSql } from "./n1-detector.js";
-import { RequestSpanContext, type SpanStore } from "./request-span-context.js";
-import { sanitizeQueryParams } from "./sanitize.js";
-import { TELESCOPE_STORE } from "./telescope.options.js";
-import type { TelescopeStore } from "./telescope.store.js";
+import { modelFromSql } from "./n1-detector";
+import { RequestSpanContext, type SpanStore } from "./request-span-context";
+import { sanitizeQueryParams } from "./sanitize";
+import { TELESCOPE_STORE } from "./telescope.options";
+import type { TelescopeStore } from "./telescope.store";
 
 /**
  * Structural shape of Prisma's `query` event. The generated client does NOT

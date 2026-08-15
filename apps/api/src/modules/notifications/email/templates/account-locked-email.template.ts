@@ -2,8 +2,8 @@ import { z } from "zod";
 
 import { EpochMsSchema, epochMs } from "@workspace/shared";
 
-import { BaseEmailPropsSchema, BaseEmailTemplate } from "../base/base-email-template.js";
-import type { EmailRenderContext } from "../base/email-render-context.js";
+import { BaseEmailPropsSchema, BaseEmailTemplate } from "../base/base-email-template";
+import type { EmailRenderContext } from "../base/email-render-context";
 
 /** Locked-until epoch-ms timestamp. */
 export const AccountLockedEmailPropsSchema = BaseEmailPropsSchema.extend({

@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common";
 
 import { nowEpochMs, type TelescopeCacheOp, type TelescopeJsonValue } from "@workspace/shared";
 
-import { RequestSpanContext } from "./request-span-context.js";
+import { RequestSpanContext } from "./request-span-context";
 
 /**
  * Feature 5 — cache inspection.

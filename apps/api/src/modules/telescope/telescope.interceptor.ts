@@ -23,13 +23,13 @@ import {
 
 import type { AccessTokenPayload } from "../auth/services/token.service";
 
-import { redactPii, redactPiiHeaders, scanPii, scanPiiHeaders } from "./pii-scanner.js";
-import { RequestSpanContext, type SpanStore } from "./request-span-context.js";
-import { sanitizeHeaders, sanitizeJson, truncateJson } from "./sanitize.js";
-import { TelescopeAlertService } from "./telescope-alert.service.js";
-import { TelescopeEventBus } from "./telescope-event-bus.js";
-import { TELESCOPE_OPTIONS, TELESCOPE_STORE } from "./telescope.options.js";
-import type { TelescopeStore } from "./telescope.store.js";
+import { redactPii, redactPiiHeaders, scanPii, scanPiiHeaders } from "./pii-scanner";
+import { RequestSpanContext, type SpanStore } from "./request-span-context";
+import { sanitizeHeaders, sanitizeJson, truncateJson } from "./sanitize";
+import { TelescopeAlertService } from "./telescope-alert.service";
+import { TelescopeEventBus } from "./telescope-event-bus";
+import { TELESCOPE_OPTIONS, TELESCOPE_STORE } from "./telescope.options";
+import type { TelescopeStore } from "./telescope.store";
 
 interface CapturedError {
 	readonly name: string;

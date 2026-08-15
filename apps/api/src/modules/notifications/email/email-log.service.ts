@@ -3,9 +3,9 @@ import { z } from "zod";
 
 import { EmailLogEntrySchema, EmailLogStatusSchema, epochMs, type EmailLogEntry, type EmailLogStatus } from "@workspace/shared";
 
-import { PrismaService } from "../../../prisma/prisma.service.js";
+import { PrismaService } from "../../../prisma/prisma.service";
 
-import { EmailLogEventsService } from "./email-log-events.service.js";
+import { EmailLogEventsService } from "./email-log-events.service";
 
 /** Payload used to create a new EmailLog row. */
 export const EmailLogCreateSchema = z

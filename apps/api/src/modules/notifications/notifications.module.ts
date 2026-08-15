@@ -3,16 +3,16 @@ import { ThrottlerModule } from "@nestjs/throttler";
 
 // Only the CLASS REFERENCE is needed here (for `inject`) — the instance comes
 // from the @Global() ConfigModule at runtime.
-import { TypedConfigService } from "../../config/typed-config.service.js";
-import { PrismaModule } from "../../prisma/prisma.module.js";
+import { TypedConfigService } from "../../config/typed-config.service";
+import { PrismaModule } from "../../prisma/prisma.module";
 
-import { EmailLogController } from "./email/email-log.controller.js";
-import { EmailLogEventsService } from "./email/email-log-events.service.js";
-import { EmailLogService } from "./email/email-log.service.js";
-import { EmailPreviewController } from "./email/email-preview.controller.js";
-import { EmailSenderService } from "./email/email-sender.service.js";
-import { EmailWebhookController } from "./email/email-webhook.controller.js";
-import { webhookThrottlerOptionsFactory } from "./email/webhook-throttler.js";
+import { EmailLogController } from "./email/email-log.controller";
+import { EmailLogEventsService } from "./email/email-log-events.service";
+import { EmailLogService } from "./email/email-log.service";
+import { EmailPreviewController } from "./email/email-preview.controller";
+import { EmailSenderService } from "./email/email-sender.service";
+import { EmailWebhookController } from "./email/email-webhook.controller";
+import { webhookThrottlerOptionsFactory } from "./email/webhook-throttler";
 
 /**
  * Notifications context — owns the entire outbound-email system.

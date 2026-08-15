@@ -3,8 +3,8 @@ import { z } from "zod";
 
 import { EpochMsSchema, nowEpochMs } from "@workspace/shared";
 
-import { BaseEmailPropsSchema, BaseEmailTemplate, type CtaConfig } from "../base/base-email-template.js";
-import type { EmailRenderContext } from "../base/email-render-context.js";
+import { BaseEmailPropsSchema, BaseEmailTemplate, type CtaConfig } from "../base/base-email-template";
+import type { EmailRenderContext } from "../base/email-render-context";
 
 export const ApiKeyCreatedEmailPropsSchema = BaseEmailPropsSchema.extend({
 	/** Display name of the new API key. */

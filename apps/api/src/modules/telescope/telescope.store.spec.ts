@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { ExceptionLogEntry, QueryLogEntry, RequestLogEntry, TelescopeWebhookDelivery } from "@workspace/shared";
 
-import { TelescopeMemoryStore } from "./telescope.store.js";
+import { TelescopeMemoryStore } from "./telescope.store";
 
 function makeRequest(overrides: Partial<RequestLogEntry>): RequestLogEntry {
 	return {

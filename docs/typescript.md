@@ -150,21 +150,12 @@ Extends `base.json` with NestJS requirements:
 
 - `experimentalDecorators` + `emitDecoratorMetadata` — required for NestJS decorators
   (`@Injectable()`, `@Controller()`, DI).
-- `module: ESNext` + `moduleResolution: bundler` — **but the API is the one
-  exception to the extensionless convention**: its **value imports** (runtime
-  imports) use explicit `.js` extensions on relative specifiers
-  (`import { AppModule } from "./app.module.js"`), the standard Nest ESM
-  pattern. The API is never consumed by Turbopack (unlike `@workspace/shared`),
-  so `.js` specifiers are safe here — and `nest build` / `nest start` emit them
-  verbatim, which means `dist/` is directly runnable by Node with no post-build
-  fixer (see `docs/architecture.md`).
-
-  **Type-only imports stay extensionless.** `import type { X } from "./foo"`
-  (and `export type`) are erased during compilation — they produce **zero**
-  emitted JavaScript — so Node never sees them and the `.js` suffix would be
-  dead weight. Rule of thumb: *value imports get `.js`, type-only imports
-  don't*. (An inline `import { type X } from "./foo.js"` mixed with value
-  specifiers keeps `.js`, because the statement emits a runtime import.)
+- `module: ESNext` + `moduleResolution: bundler` — **extensionless relative
+  imports everywhere, the API included.** The API no longer writes `.js`
+  suffixes on value imports. Dev runs the SWC-compiled output through **tsx**
+  (whose loader resolves extensionless specifiers at runtime); production runs
+  an **esbuild** bundle (`dist/main.bundle.js`) under plain `node`, so `tsx` is
+  a dev-only dependency. See `docs/architecture.md` for the full build story.
 - `noUncheckedIndexedAccess: false` — turned **off** because NestJS + Prisma code
   hits too many false positives (e.g. `process.env.X!` patterns in the seeder).
 - `sourceMap: true` + `removeComments: true` — good for `tsc`-based builds.
@@ -173,15 +164,15 @@ Extends `base.json` with NestJS requirements:
 
 ## 3. How each workspace extends them
 
-| Workspace                 | `tsconfig.json` extends                           | Key additions                                                                                                                 |
-| ------------------------- | ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| `apps/web`                | `@workspace/typescript-config/nextjs.json`        | `@/*`, `@workspace/client/*`, `@workspace/ui/*` path aliases; `customConditions: ["development"]`; Next include globs         |
-| `apps/admin`              | `@workspace/typescript-config/nextjs.json`        | Same as web                                                                                                                   |
-| `apps/api`                | `@workspace/typescript-config/nestjs.json`        | `outDir: ./dist`, `rootDir: ./src`, `incremental: true`; excludes `src/**/*.spec.ts`                                          |
-| `packages/client`         | `@workspace/typescript-config/react-library.json` | `module: ESNext`, `moduleResolution: bundler`; hosts auth / API client code                                                   |
-| `packages/ui`             | `@workspace/typescript-config/react-library.json` | `module: ESNext`, `moduleResolution: bundler`, `@workspace/ui/*` alias                                                        |
-| `packages/shared`         | `@workspace/typescript-config/base.json`          | `module: ESNext`, `moduleResolution: bundler`, `noEmit: true`, `noUncheckedIndexedAccess: false`, `lib: ["es2022"]` |
-| repo root `tsconfig.json` | `@workspace/typescript-config/base.json`          | Nothing extra                                                                                                                 |
+| Workspace                 | `tsconfig.json` extends                           | Key additions                                                                                                         |
+| ------------------------- | ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `apps/web`                | `@workspace/typescript-config/nextjs.json`        | `@/*`, `@workspace/client/*`, `@workspace/ui/*` path aliases; `customConditions: ["development"]`; Next include globs |
+| `apps/admin`              | `@workspace/typescript-config/nextjs.json`        | Same as web                                                                                                           |
+| `apps/api`                | `@workspace/typescript-config/nestjs.json`        | `outDir: ./dist`, `rootDir: ./src`, `incremental: true`; excludes `src/**/*.spec.ts`                                  |
+| `packages/client`         | `@workspace/typescript-config/react-library.json` | `module: ESNext`, `moduleResolution: bundler`; hosts auth / API client code                                           |
+| `packages/ui`             | `@workspace/typescript-config/react-library.json` | `module: ESNext`, `moduleResolution: bundler`, `@workspace/ui/*` alias                                                |
+| `packages/shared`         | `@workspace/typescript-config/base.json`          | `module: ESNext`, `moduleResolution: bundler`, `noEmit: true`, `noUncheckedIndexedAccess: false`, `lib: ["es2022"]`   |
+| repo root `tsconfig.json` | `@workspace/typescript-config/base.json`          | Nothing extra                                                                                                         |
 
 > [!NOTE] **Why do `packages/shared`, `packages/client`, and `packages/ui` use `bundler`
 > resolution?** They are consumed by bundlers (Next.js) or tooling that resolves
@@ -213,10 +204,13 @@ Extends `base.json` with NestJS requirements:
 }
 ```
 
-- `outDir: ./dist` — compiled output lands in `apps/api/dist`.
-- `rootDir: ./src` — only `src/` is compiled; keeps `dist/main.js` etc. at the
-  `dist` root so `node dist/main` works.
-- `incremental: true` — speeds up watch rebuilds.
+- `outDir: ./dist` — compiled output lands in `apps/api/dist`. The SWC builder
+  (see `nest-cli.json` + `.swcrc`) mirrors the source tree, so the entry is
+  `dist/src/main.js`.
+- `rootDir: ./src` — only `src/` is typechecked (`tsc --noEmit`); the SWC
+  builder ignores it.
+- `incremental: true` — unused by the SWC builder (it recompiles everything in
+  ~70ms anyway); kept for editor/typecheck ergonomics.
 - `exclude: ["src/**/*.spec.ts"]` — tests are not part of the build. (ESLint
   handles them via `allowDefaultProject`, see `docs/eslint.md`.)
 
@@ -255,14 +249,14 @@ import { LoginSchema } from "@workspace/shared";
 
 Every workspace exposes a `typecheck` script:
 
-| Workspace           | `typecheck` command                  |
-| ------------------- | ------------------------------------ |
-| `@workspace/web`    | `tsc --noEmit`                       |
-| `@workspace/admin`  | `tsc --noEmit`                       |
-| `@workspace/api`    | `tsc --noEmit`                       |
-| `@workspace/client` | `tsc --noEmit`                       |
-| `@workspace/ui`     | `tsc --noEmit`                       |
-| `@workspace/shared` | `tsc --noEmit`                       |
+| Workspace           | `typecheck` command |
+| ------------------- | ------------------- |
+| `@workspace/web`    | `tsc --noEmit`      |
+| `@workspace/admin`  | `tsc --noEmit`      |
+| `@workspace/api`    | `tsc --noEmit`      |
+| `@workspace/client` | `tsc --noEmit`      |
+| `@workspace/ui`     | `tsc --noEmit`      |
+| `@workspace/shared` | `tsc --noEmit`      |
 
 Run them all from the repo root:
 
@@ -310,7 +304,7 @@ during `pnpm build`.
 
 ### The API is ESM now — CJS named imports need interop care
 
-`apps/api` runs true ESM (both `pnpm dev` and `node dist/main.js`). Most CJS
+`apps/api` runs true ESM (dev via `tsx`, prod via `node dist/main.bundle.js`). Most CJS
 packages work fine through Node's ESM-CJS interop, but a **named** import only
 works if the CJS export is statically detectable. `jsonwebtoken` is the known
 case: `import { TokenExpiredError } from "jsonwebtoken"` crashes at runtime, so
@@ -328,11 +322,11 @@ run the **last JS-based release (TypeScript 6.0.2)** side-by-side:
 - `@workspace/eslint-config` declares `"typescript": "6.0.2"` — so
   typescript-eslint (resolved through eslint-config) gets the classic compiler
   API it needs.
-- `@workspace/api` declares the same `"typescript": "6.0.2"`. The Nest CLI
-  (`nest build` / `nest start`) **hard-refuses** TS7 — it throws "the installed
-  TypeScript version does not expose the programmatic compiler API … install TS
-  6 until [7.1]" — so the API must resolve TS6 to use Nest's built-in commands.
-  The emitted ESM output is identical either way.
+- `@workspace/api` declares the same `"typescript": "6.0.2"` for the same
+  reason: `tsc --noEmit` typechecks the API and typescript-eslint lints it.
+  (Compilation itself is the **SWC** builder — `nest-cli.json` → `builder: swc`
+  — which does not invoke tsc and does not type-check, so it is TS-version
+  agnostic.)
 - `pnpm-workspace.yaml` uses `packageExtensions` to inject `typescript: 6.0.2`
   into `@darraghor/eslint-plugin-nestjs-typed` (which imports `typescript`
   directly). Without it, the plugin would resolve the hoisted TS7 and crash.
@@ -379,9 +373,10 @@ cd packages/ui && npx tsc --noEmit
 ```
 
 ---
+
 ## 8. Zod-first type derivation (schema → `z.output`)
 
-**The rule:** every *data shape* in the repo is exported from a zod schema —
+**The rule:** every _data shape_ in the repo is exported from a zod schema —
 `export type X = z.output<typeof XSchema>` (or `z.infer`). Never hand-write an
 `interface`/`type` next to a schema that already describes the same data; the
 schema is the single source of truth and the type can't drift from it.
@@ -403,11 +398,12 @@ schema is the single source of truth and the type can't drift from it.
 self-referencing schema, so anchor it to a node type and derive the alias:
 
 ```ts
-interface MenuNode { title: string; children?: readonly MenuNode[] }
+interface MenuNode {
+	title: string;
+	children?: readonly MenuNode[];
+}
 
-export const MenuItemSchema: z.ZodType<MenuNode> = z.lazy(() =>
-  z.object({ title: z.string(), children: z.array(z.lazy(() => MenuItemSchema)).optional() }),
-);
+export const MenuItemSchema: z.ZodType<MenuNode> = z.lazy(() => z.object({ title: z.string(), children: z.array(z.lazy(() => MenuItemSchema)).optional() }));
 
 export type MenuItem = z.output<typeof MenuItemSchema>;
 ```
@@ -442,4 +438,3 @@ localStorage hydration, frontmatter. (See `sidebar-menu.ts`, `token.service.ts`,
 ---
 
 _Last updated: August 9, 2026_
-

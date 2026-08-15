@@ -1,9 +1,9 @@
 import type { MessageEvent } from "@nestjs/common";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { EmailLogService } from "./email-log.service.js";
-import { EmailLogEventsService } from "./email-log-events.service.js";
-import { EmailLogController } from "./email-log.controller.js";
+import type { EmailLogService } from "./email-log.service";
+import { EmailLogEventsService } from "./email-log-events.service";
+import { EmailLogController } from "./email-log.controller";
 
 // The stream() tests only exercise the SSE wiring, so the list service is a
 // stub — the events service is real to prove the pub/sub bridge end to end.

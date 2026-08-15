@@ -2,12 +2,12 @@ import { Body, Controller, Post } from "@nestjs/common";
 import { ApiBody, ApiCreatedResponse, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { SignupSchema, UserResponseSchema, type SignupInput, type UserResponse } from "@workspace/shared";
 
-import { ApiErrorResponseDto } from "../../common/dto/api-response.dto.js";
-import { createWrappedDto } from "../../common/dto/response-wrapper.js";
-import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe.js";
-import { AuthService } from "./auth.service.js";
-import { Public } from "./decorators/public.decorator.js";
-import { CreateUserDto } from "./dtos/create-user.dto.js";
+import { ApiErrorResponseDto } from "../../common/dto/api-response.dto";
+import { createWrappedDto } from "../../common/dto/response-wrapper";
+import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe";
+import { AuthService } from "./auth.service";
+import { Public } from "./decorators/public.decorator";
+import { CreateUserDto } from "./dtos/create-user.dto";
 
 const WrappedCreatedUserResponse = createWrappedDto(UserResponseSchema, "WrappedCreatedUserResponse");
 
