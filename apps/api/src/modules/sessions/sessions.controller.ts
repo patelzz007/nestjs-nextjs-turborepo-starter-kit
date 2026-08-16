@@ -2,7 +2,7 @@ import { Controller, Get, Post, Req, UseGuards, UseInterceptors } from "@nestjs/
 import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { SkipThrottle, Throttle } from "@nestjs/throttler";
 import type { LogoutAllResponse, LogoutResponse, RefreshResponse, RefreshResponseMessage, Session } from "@workspace/shared";
-import { LogoutAllResponseSchema, LogoutResponseSchema, RefreshResponseMessageSchema, SessionSchema } from "@workspace/shared";
+import { LogoutAllResponseSchema, LogoutResponseSchema, RefreshResponseMessageSchema, SessionSchema, apiPath } from "@workspace/shared";
 import type { FastifyRequest } from "fastify";
 
 import { GetUser } from "../auth/decorators/get-user.decorator";
@@ -32,7 +32,7 @@ const WrappedSessionList = createWrappedArrayDto(SessionSchema, "WrappedSessionL
  * bookmarked URLs keep working unchanged. Only the Swagger tag changed.
  */
 @ApiTags("Sessions")
-@Controller("auth")
+@Controller(apiPath("/auth"))
 export class SessionsController {
 	constructor(private readonly sessionsService: SessionsService) {}
 

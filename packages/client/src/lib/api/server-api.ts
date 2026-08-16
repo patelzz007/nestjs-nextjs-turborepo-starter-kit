@@ -21,7 +21,7 @@ import "server-only";
 
 import { dehydrate, QueryClient, type QueryKey } from "@tanstack/react-query";
 import { API_BASE_URL, API_URL_PREFIX } from "./config";
-import { type JsonValue, type SerializableInput } from "@workspace/shared";
+import { apiVersionPrefix, type JsonValue, type SerializableInput } from "@workspace/shared";
 import { apiRouter, resolveRequest, type ApiRouter, type MutationDef, type ProcedureDef, type QueryDef } from "./endpoints";
 import { cookies, headers } from "next/headers";
 import { catchError, defer, from, map, mergeMap, Observable, of, retry, throwError, timer, timeout, firstValueFrom } from "rxjs";
@@ -498,7 +498,11 @@ function createPrefetchObservable<Input extends SerializableInput, Resp extends 
 	allowRefresh: boolean,
 	captureHeaders: readonly string[],
 ): Observable<{ readonly raw: Resp; readonly headers: Readonly<Record<string, string>> }> {
-	const url: string = new URL(`${API_URL_PREFIX}${resolveRequest(def.path, input).url}`, API_BASE_URL).toString();
+	// A leaf pinned to a non-default version (`def.version`) builds `/api/v2/...`
+	// — identical URL derivation to the client transport, so prefetch and
+	// client hydration always target the same route.
+	const prefix: string = def.version === undefined ? API_URL_PREFIX : apiVersionPrefix(def.version);
+	const url: string = new URL(`${prefix}${resolveRequest(def.path, input).url}`, API_BASE_URL).toString();
 	const source: Observable<Response> = createFetchObservable(url, { ...def.baseOptions?.headers, ...extraHeaders }, config, token, forwarded, contextSignal);
 
 	return source.pipe(
@@ -728,6 +732,7 @@ async function mutateServerData<Input extends SerializableInput, Resp extends Js
 	const parsed: Input = def.inputSchema.parse(input);
 	const { url, body } = resolveRequest(def.path, parsed, { method: def.method, toQuery: def.toQuery });
 	const finalBody: JsonValue = def.toBody !== undefined ? def.toBody(parsed) : (body ?? {});
+	const prefix: string = def.version === undefined ? API_URL_PREFIX : apiVersionPrefix(def.version);
 
 	const cookieStore = await cookies();
 	const accessToken: string | undefined = cookieStore.get(config.accessTokenCookie)?.value;
@@ -735,7 +740,7 @@ async function mutateServerData<Input extends SerializableInput, Resp extends Js
 	if (accessToken !== undefined) headers.Cookie = `${encodeURIComponent(config.accessTokenCookie)}=${encodeURIComponent(accessToken)}`;
 
 	const fetchImpl: typeof fetch = config.fetchImpl ?? globalThis.fetch;
-	const response: Response = await fetchImpl(new URL(`${API_URL_PREFIX}${url}`, API_BASE_URL), {
+	const response: Response = await fetchImpl(new URL(`${prefix}${url}`, API_BASE_URL), {
 		method: def.method,
 		headers,
 		body: JSON.stringify(finalBody),

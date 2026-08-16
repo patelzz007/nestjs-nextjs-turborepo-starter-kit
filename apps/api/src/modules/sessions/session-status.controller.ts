@@ -1,6 +1,6 @@
 import { Controller, Get } from "@nestjs/common";
 import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
-import { SessionStatusSchema, epochMs, nowEpochMs, type EpochMs, type SessionStatus } from "@workspace/shared";
+import { SessionStatusSchema, apiPath, epochMs, nowEpochMs, type EpochMs, type SessionStatus } from "@workspace/shared";
 
 import { ApiErrorResponseDto } from "../../common/dto/api-response.dto";
 import { createWrappedDto } from "../../common/dto/response-wrapper";
@@ -14,7 +14,9 @@ import type { AccessTokenPayload } from "../auth/services/token.service";
 const WrappedSessionStatusResponse = createWrappedDto(SessionStatusSchema, "WrappedSessionStatusResponse");
 
 /**
- * Root-level session-status endpoint (`GET /session` — no `/auth` prefix).
+ * Session-status endpoint (`GET /api/v1/session` — versioned like every other
+ * business endpoint, via `apiPath()`; the `/auth` prefix is NOT used here
+ * because this is not an auth-flow route).
  *
  * Moved here from the old root `AppController` (folder-structure pass, item
  * 11) so every session concern lives in the sessions module. The URL is
@@ -26,10 +28,10 @@ const WrappedSessionStatusResponse = createWrappedDto(SessionStatusSchema, "Wrap
  * round-trip.
  */
 @ApiTags("Sessions")
-@Controller()
+@Controller(apiPath("/session"))
 export class SessionStatusController {
 	@ApiBearerAuth()
-	@Get("session")
+	@Get()
 	@ApiOperation({ summary: "Current session status (requires a valid access token)" })
 	@ApiOkResponse({ type: WrappedSessionStatusResponse, description: "Authenticated session identity + token expiry" })
 	@ApiResponse({ status: 401, type: ApiErrorResponseDto, description: "Access token missing / invalid / expired" })

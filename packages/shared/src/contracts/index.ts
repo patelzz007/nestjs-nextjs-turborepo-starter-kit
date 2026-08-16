@@ -17,6 +17,7 @@
 import { z, type ZodType } from "zod";
 
 import { ForgotPasswordSchema, LoginSchema, ResendVerificationSchema, ResetPasswordSchema, SignupSchema } from "../schemas/auth/auth";
+import type { ApiVersion } from "./versioning";
 import {
 	TelescopeAlertSnoozeInputSchema,
 	TelescopeAnnotationInputSchema,
@@ -54,6 +55,14 @@ export type JsonValue = JsonPrimitive | readonly JsonValue[] | { readonly [key: 
  */
 export type SerializableInput = Readonly<Record<string, JsonValue | undefined>> | undefined;
 
+// ── API versioning ─────────────────────────────────────────────────────────
+// The version constants (`API_VERSION`, `apiPath`, `apiDocsPath`, …) live in
+// `./versioning` — a dependency-free module — so schemas can import them
+// without a circular import (schemas/domain/telescope derives its `ignorePaths`
+// from the version prefix). Re-exported here for the public `@workspace/shared`
+// surface; anything that only needs the constants can import `./versioning`.
+export * from "./versioning";
+
 // ── Route contract ─────────────────────────────────────────────────────────
 
 export type RestMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
@@ -63,11 +72,19 @@ export type RestMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
  * input schema. `M` keeps the literal method (so the client router can tell
  * query defs from mutation defs without any cast), and `Input` is constrained
  * to JSON so the schema is a valid contract input on both sides.
+ *
+ * `version` defaults to `API_VERSION` at the transport; a leaf can override it
+ * (`version: "v2"`) so a single contract describes a v1+v2 migration without
+ * forking the whole tree. `deprecatedSince`/`sunsetAt` are metadata for the
+ * `Sunset` header and client-side deprecation warnings.
  */
 export interface ApiContractDef<Input extends SerializableInput, M extends RestMethod = RestMethod> {
 	readonly method: M;
 	readonly path: string;
 	readonly input: ZodType<Input>;
+	readonly version?: ApiVersion;
+	readonly deprecatedSince?: string;
+	readonly sunsetAt?: string;
 }
 
 /** Declares one route in the contract. */
@@ -75,6 +92,9 @@ export function defineContract<Input extends SerializableInput, M extends RestMe
 	readonly method: M;
 	readonly path: string;
 	readonly input: ZodType<Input>;
+	readonly version?: ApiVersion;
+	readonly deprecatedSince?: string;
+	readonly sunsetAt?: string;
 }): ApiContractDef<Input, M> {
 	return def;
 }
@@ -129,6 +149,12 @@ const EmptyInputSchema = z.object({}).strict();
 // the exact method + path + input the client sends on the wire.
 
 export const apiContract = {
+	// NOTE: the version manifest (`GET /version`) is deliberately NOT a
+	// contract leaf — it is UNVERSIONED (the thing clients use to FIND the
+	// current version must never move when a major bumps). The client transport
+	// fetches `${API_BASE_URL}/version` directly and parses it with
+	// `ApiVersionManifestSchema` from @workspace/shared.
+
 	auth: {
 		/** "Who am I?" — full user record. */
 		me: defineContract({ method: "GET", path: "/auth/me", input: z.undefined() }),

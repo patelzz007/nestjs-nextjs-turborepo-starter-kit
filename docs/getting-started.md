@@ -67,7 +67,7 @@ three apps and six shared packages:
 | `packages/eslint-config`     | `@workspace/eslint-config`     | Shared ESLint presets                                   | —                     |
 | `packages/typescript-config` | `@workspace/typescript-config` | Shared tsconfig presets                                 | —                     |
 
-**Swagger (API docs)** is served by the API at http://localhost:8080/docs.
+**Swagger (API docs)** is served by the API at http://localhost:8080/v1/docs.
 **Prisma Studio** (visual DB browser) runs at http://localhost:5555.
 
 > [!NOTE] The key idea: `@workspace/shared` is the **single source of truth**. The API's
@@ -343,12 +343,12 @@ pnpm dev
 
 This starts all three apps in **watch mode** (they rebuild automatically on save):
 
-| App          | URL                        |
-| ------------ | -------------------------- |
-| Web          | http://localhost:3000      |
-| Admin        | http://localhost:3001      |
-| API          | http://localhost:8080      |
-| Swagger docs | http://localhost:8080/docs |
+| App          | URL                            |
+| ------------ | ------------------------------ |
+| Web          | http://localhost:3000          |
+| Admin        | http://localhost:3001          |
+| API          | http://localhost:8080          |
+| Swagger docs | http://localhost:8080/v1/docs   |
 
 To run just one app (saves memory):
 
@@ -372,16 +372,19 @@ curl http://localhost:8080/health
 # → {"status":"ok","db":"connected","timestamp":"..."}
 ```
 
-> [!NOTE] **API versioning:** every endpoint is served under the `/api/v1` prefix (URI
-> versioning, `v1` as the default — a future `@Version('2')` controller lands at
-> `/api/v2/…` automatically). The client applies the prefix in one place
-> (`packages/client/src/lib/api/config.ts` → `API_URL_PREFIX`), so endpoint paths in
-> the typed registry stay logical (`/auth/login`, `/telescope/overview`, …). Two routes
-> are **excluded** and stay at their historical paths: `GET /health` (infra checks) and
-> `POST /notifications/email-webhook` (registered in the Resend dashboard).
+> [!NOTE] **API versioning:** every business endpoint is served under `/api/v1`
+> (e.g. `POST /api/v1/auth/login`, `GET /api/v1/telescope/overview`). The prefix is
+> defined ONCE in `@workspace/shared` (`API_VERSION_PREFIX` / the `apiPath()` helper
+> in `packages/shared/src/contracts/versioning.ts`) and used by BOTH the server
+> controller decorators and the client transport — they can never drift. `GET /`,
+> `GET /health`, `GET /version` (the machine-readable version manifest) and
+> `POST /notifications/email-webhook` are unversioned by design (infra plumbing + a
+> URL registered in the Resend dashboard). Swagger lives at `/v1/docs` (`/docs`
+> 302-redirects there). Full invariants — including how to add a v2 and the
+> deploy-any-or-die 404 negotiation — are in `docs/architecture.md` §5.
 
-**2. Swagger** — open http://localhost:8080/docs. You should see every endpoint with
-its request/response schemas (inferred from the shared Zod schemas).
+**2. Swagger** — open http://localhost:8080/v1/docs. You should see every endpoint
+with its request/response schemas (inferred from the shared Zod schemas).
 
 **3. Log into the web app** — http://localhost:3000/auth/login with
 `user@example.com` / `User@123`. You'll be redirected to `/hello`.

@@ -1,7 +1,15 @@
 import { Controller, Get, NotFoundException, Param, Post } from "@nestjs/common";
 import { ApiNotFoundResponse, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
 
-import { EmailPreviewSchema, EmailSendResultSchema, EmailTemplateMetaSchema, type EmailPreview, type EmailSendResult, type EmailTemplateMeta } from "@workspace/shared";
+import {
+	EmailPreviewSchema,
+	EmailSendResultSchema,
+	EmailTemplateMetaSchema,
+	type EmailPreview,
+	type EmailSendResult,
+	type EmailTemplateMeta,
+	apiPath,
+} from "@workspace/shared";
 
 import { createWrappedDto, createWrappedArrayDto } from "../../../common/dto/response-wrapper";
 import { TypedConfigService } from "../../../config/typed-config.service";
@@ -24,7 +32,7 @@ const WrappedSendResult = createWrappedDto(EmailSendResultSchema, "WrappedEmailS
  * every template without a real recipient.
  */
 @ApiTags("Email Templates")
-@Controller("notifications/email-preview")
+@Controller(apiPath("/notifications/email-preview"))
 export class EmailPreviewController {
 	private readonly renderContext: EmailRenderContext;
 

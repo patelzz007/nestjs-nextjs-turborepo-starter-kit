@@ -1,15 +1,46 @@
-import type { INestApplication } from "@nestjs/common";
-import { VersioningType } from "@nestjs/common";
 import { FastifyAdapter, type NestFastifyApplication } from "@nestjs/platform-fastify";
 import fastifyCookie from "@fastify/cookie";
 import { Test, type TestingModule } from "@nestjs/testing";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { API_VERSION_PREFIX, apiContract, type RestMethod } from "@workspace/shared";
 
 // Env defaults are applied in `./setup-env.ts` (vitest setupFiles run before
 // test-file imports, so the AppModule graph never sees unset config). This
 // spec boots the REAL AppModule and needs a reachable Postgres — see
 // `setup-env.ts` for the DATABASE_URL override.
 import { AppModule } from "../src/app.module";
+
+// ── Contract-vs-routes drift guard ───────────────────────────────────────
+// Every `apiContract` leaf must map to a REGISTERED versioned route. This is
+// the machine check that would have caught the `/session` regression: a
+// controller that forgets `apiPath()` silently serves an unversioned path the
+// client transport can never reach. We inject an UNAUTHENTICATED request per
+// leaf — protected routes answer 401 before their handlers run (so a fake id
+// never triggers a data-dependent 404), and public routes answer 400/401 on
+// the empty/fake input. A 404 means the route simply isn't registered.
+interface ContractLeaf {
+	readonly method: RestMethod;
+	readonly path: string;
+}
+
+function collectContractLeaves(node: unknown, out: ContractLeaf[]): void {
+	if (node === null || typeof node !== "object") return;
+	if ("method" in node && "path" in node && typeof node.method === "string" && typeof node.path === "string") {
+		const method: string = node.method as string;
+		if (method === "GET" || method === "POST" || method === "PUT" || method === "PATCH" || method === "DELETE") {
+			out.push({ method, path: node.path as string });
+		}
+		return;
+	}
+	for (const value of Object.values(node)) {
+		if (typeof value === "object" && value !== null) collectContractLeaves(value, out);
+	}
+}
+
+/** Fills `:param` segments with stable placeholders so the URL is injectable. */
+function fillPathParams(path: string): string {
+	return path.replace(/:([A-Za-z0-9_]+)/g, (_match: string, name: string) => `test-${name}`);
+}
 
 describe("App (e2e)", () => {
 	let app: NestFastifyApplication;
@@ -20,15 +51,13 @@ describe("App (e2e)", () => {
 		}).compile();
 
 		// The API runs on the Fastify adapter; rawBody: true matches bootstrap()
-		// (the webhook controller reads `req.rawBody`). The global prefix +
-		// URI versioning mirror main.ts so route paths behave identically
-		// (`/api/v1/…` for everything except the excluded health/webhook routes).
+		// (the webhook controller reads `req.rawBody`). Versioning is explicit:
+		// business controllers build their paths with `apiPath()` from
+		// `@workspace/shared` (→ `/api/v1/…`), and health/webhook stay
+		// unversioned — mirroring main.ts exactly. `@fastify/cookie` decorates
+		// `request.cookies` (AuthGuard reads it directly), registered like main.ts.
 		app = moduleFixture.createNestApplication<NestFastifyApplication>(new FastifyAdapter(), { rawBody: true });
-		// `@fastify/cookie` decorates `request.cookies` — AuthGuard / RefreshTokenGuard
-		// read it directly, so the harness registers it exactly like main.ts does.
 		await app.register(fastifyCookie);
-		app.setGlobalPrefix("api", { exclude: ["", "health", "notifications/email-webhook"] });
-		app.enableVersioning({ type: VersioningType.URI, defaultVersion: "1" });
 		await app.init();
 	});
 
@@ -70,5 +99,29 @@ describe("App (e2e)", () => {
 		// ResponseInterceptor wraps successes and records failures internally).
 		expect(response.json().error).toBe("INVALID_CREDENTIALS");
 		expect(response.json().message).toContain("Invalid email or password");
+	});
+
+	it("every apiContract leaf maps to a registered versioned route (no 404s)", async () => {
+		const leaves: ContractLeaf[] = [];
+		collectContractLeaves(apiContract, leaves);
+		expect(leaves.length).toBeGreaterThan(0);
+
+		for (const { method, path } of leaves) {
+			const url: string = `${API_VERSION_PREFIX}${fillPathParams(path)}`;
+			const response = await app.inject({ method, url });
+			expect(response.statusCode, `${method} ${url} must be a registered route (was ${String(response.statusCode)})`).not.toBe(404);
+		}
+	});
+
+	it("GET /version (unversioned manifest) exposes the current version and prefix", async () => {
+		const response = await app.inject({ method: "GET", url: "/version" });
+
+		expect(response.statusCode).toBe(200);
+		// The ResponseInterceptor wraps the manifest in the standard envelope.
+		const body = response.json().data;
+		expect(body.current).toBe("v1");
+		expect(body.prefix).toBe("/api/v1");
+		expect(body.docs).toBe("/v1/docs");
+		expect(Array.isArray(body.supported)).toBe(true);
 	});
 });

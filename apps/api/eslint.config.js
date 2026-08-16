@@ -1,10 +1,11 @@
 import { nestjsConfig } from "@workspace/eslint-config/nestjs";
+import { noUnversionedController } from "./eslint-rules/no-unversioned-controller.js";
 
 /** @type {import("eslint").Linter.Config} */
 export default [
 	// Global ignores — must be first so ESLint skips these files entirely
 	{
-		ignores: ["**/*.spec.ts", "**/*.test.ts", "**/*.e2e-spec.ts", "test/**"],
+		ignores: ["**/*.spec.ts", "**/*.test.ts", "**/*.e2e-spec.ts", "test/**", "eslint-rules/**"],
 	},
 	...nestjsConfig,
 
@@ -41,6 +42,23 @@ export default [
 			"@typescript-eslint/no-unsafe-member-access": "off",
 			"@typescript-eslint/no-unsafe-argument": "off",
 			"@typescript-eslint/no-unsafe-return": "off",
+		},
+	},
+
+	// ── Versioning guard: no unversioned business controllers ──────
+	// Every controller must build its path with `apiPath()` from
+	// `@workspace/shared` (→ `/api/v1/...`). The client transport prepends the
+	// SAME prefix, so an unversioned controller is unreachable from the apps
+	// (the `/session` 404 regression). Root/health/webhook stay unversioned by
+	// allowlist; test-only `*.probe.ts` controllers are excluded.
+	{
+		files: ["src/**/*.controller.ts"],
+		ignores: ["**/*.probe.ts"],
+		plugins: {
+			"local-rules": { rules: { "no-unversioned-controller": noUnversionedController } },
+		},
+		rules: {
+			"local-rules/no-unversioned-controller": "error",
 		},
 	},
 

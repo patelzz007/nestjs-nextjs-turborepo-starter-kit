@@ -52,6 +52,7 @@ import {
 	type TelescopeUsersResponse,
 	type TelescopeWebhookDeliveriesResponse,
 } from "@workspace/shared";
+import { apiPath } from "@workspace/shared";
 
 import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe";
 
@@ -72,7 +73,7 @@ import { TelescopeService } from "./telescope.service";
  */
 
 @ApiExcludeController()
-@Controller("telescope")
+@Controller(apiPath("/telescope"))
 @UseGuards(TelescopeAdminGuard)
 export class TelescopeController {
 	public constructor(private readonly telescopeService: TelescopeService) {}

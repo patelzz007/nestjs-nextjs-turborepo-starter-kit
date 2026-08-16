@@ -21,11 +21,12 @@ coverImage: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=f
 2. [Workspace map](#2-workspace-map)
 3. [How data flows](#3-how-data-flows)
 4. [The shared contract (packages/shared)](#4-the-shared-contract-packages-shared)
-5. [The client layer (packages/client)](#5-the-client-layer-packages-client)
-6. [The UI layer (packages/ui)](#6-the-ui-layer-packages-ui)
-7. [The apps](#7-the-apps)
-8. [How packages are resolved](#8-how-packages-are-resolved)
-9. [Rules of thumb](#9-rules-of-thumb)
+5. [API versioning](#5-api-versioning)
+6. [The client layer (packages/client)](#6-the-client-layer-packages-client)
+7. [The UI layer (packages/ui)](#7-the-ui-layer-packages-ui)
+8. [The apps](#8-the-apps)
+9. [How packages are resolved](#9-how-packages-are-resolved)
+10. [Rules of thumb](#10-rules-of-thumb)
 
 ---
 
@@ -104,12 +105,19 @@ Key points:
 - **The API runs on the Fastify adapter** (`@nestjs/platform-fastify`): cookies via
   `@fastify/cookie`, CORS via `@fastify/cors`, Nest middleware through bundled middie,
   and `rawBody: true` for the signature-verified Resend webhook. Express is fully removed.
-- **Every endpoint is URI-versioned under `/api/v1`** (`setGlobalPrefix("api")` +
-  `enableVersioning(URI, defaultVersion "1")` in `main.ts`). The prefix lives in one
-  place on the client too — `API_URL_PREFIX` in
-  `packages/client/src/lib/api/config.ts` — and is applied at the transport layer, so
-  the typed endpoint registry holds logical paths (`/auth/login`). `GET /health` and
-  `POST /notifications/email-webhook` are excluded and stay at their historical paths.
+  Additional native plugins: `@fastify/request-context` (AsyncLocalStorage per-request
+  store), `@fastify/rate-limit` (per-IP, tighter cap on the webhook), `@fastify/compress`
+  (gzip/brotli), `@fastify/etag`, `@fastify/under-pressure` (event-loop/heap health).
+- **Every business endpoint is served under `/api/v1` via EXPLICIT path helpers** —
+  no Nest `enableVersioning` machinery (no `VERSION_NEUTRAL`/exclude quirks).
+  `API_VERSION_PREFIX` + `apiPath()` in `packages/shared/src/contracts/versioning.ts`
+  (re-exported from `contracts/index.ts`) is the single source of truth: server
+  controllers build their `@Controller` paths with `apiPath("/auth")` → `/api/v1/auth`,
+  and the client transport prepends the same constant to the logical contract paths.
+  `GET /`, `GET /health`, `GET /version` and `POST /notifications/email-webhook` stay
+  unversioned by not using the helper. Swagger is served at `/v1/docs` (`/docs`
+  redirects there). See [section 5](#5-api-versioning) for the full invariants —
+  including the version manifest, `Accept-version` rewriting, and how to add a v2.
 - **Authentication is cookie-based.** The API sets `httpOnly` cookies on login; the
   frontends never store tokens in JS. `useApi` sends `credentials: "include"`, so the
   browser attaches the cookies automatically.
@@ -189,7 +197,86 @@ gets its `.js` extension — Node's ESM runtime requires them. Do **not** hand-e
 
 ---
 
-## 5. The client layer (packages/client)
+## 5. API versioning
+
+Everything about `/api/v1/…` is described here so the property stays machine-checked,
+not tribal knowledge. The `/session` 404 regression — a controller that served an
+unversioned path the client transport could never reach — is exactly the failure
+mode this section (plus the drift test + lint rule below) exists to prevent.
+
+### The single source of truth
+
+```
+packages/shared/src/contracts/versioning.ts   ← the constants (dependency-free)
+  API_VERSION        = "v1"   (the current default)
+  API_VERSION_PREFIX = "/api/v1"
+  apiPath(path, version?)     → "/api/v1/<path>"
+  apiDocsPath(version?)       → "/v1/docs"
+  UNVERSIONED_ROUTE_PREFIXES  → ["", "health", "notifications/email-webhook", "version"]
+  API_DEPRECATED_VERSIONS     → []   (drives the Sunset header)
+```
+
+- **Server:** every business controller builds its physical path with the helper:
+  `@Controller(apiPath("/auth"))` → serves `/api/v1/auth`. Unversioned routes
+  (root `/`, `/health`, the Resend webhook, the `/version` manifest) simply don't
+  call `apiPath()`.
+- **Client:** the transport prepends `API_VERSION_PREFIX` to the logical contract
+  paths (`/auth/login` in `apiContract` → `/api/v1/auth/login` on the wire).
+
+Both sides derive from the same definition, so they can never drift.
+`versioning.ts` is deliberately dependency-free — `schemas/domain/telescope.ts`
+imports `API_VERSION_PREFIX`/`apiDocsPath` from it to derive its `ignorePaths`;
+importing the `contracts` barrel from a schema would be a runtime circular import.
+
+### The drift test + lint rule (machine checks)
+
+1. **e2e drift test** (`apps/api/test/app.e2e-spec.ts`): walks every `apiContract`
+   leaf, injects an unauthenticated request at `/api/v1/<path>`, and asserts it is
+   NOT a 404. A controller that forgets `apiPath()` fails this immediately.
+2. **ESLint rule** `no-unversioned-controller` (`apps/api/eslint-rules/`, wired into
+   `apps/api/eslint.config.js`): flags any `@Controller("...")` whose path is not
+   `apiPath(...)` and not in the unversioned allowlist. `*.probe.ts` test controllers
+   are exempt.
+
+### Version manifest + client negotiation
+
+- `GET /version` (unversioned, root) returns `{ current, default, supported[], docs, prefix }`
+  — parsed by `ApiVersionManifestSchema` in `@workspace/shared`.
+- On a **404** from the pinned version, the client transport (`use-api.ts`) fetches
+  the manifest once (cached) and retries against `manifest.current` — the
+  "deploy-any-or-die" pattern: web/admin can deploy before the API without breaking.
+
+### Legacy-client escape hatch: `Accept-version`
+
+Clients that can't change their URLs can pin a version with the `Accept-version: v2`
+header. `main.ts` rewrites `/api/v1/...` → `/api/v2/...` before routing (only when the
+requested version is actually served). Rate-limit buckets key on the version actually
+served, so a v2 canary is never starved by v1 traffic during a migration.
+
+### Response metadata
+
+- Every versioned response carries `x-api-version: v1` (plus `x-request-id`).
+- Deprecated versions (listed in `API_DEPRECATED_VERSIONS`) also get a `Sunset`
+  header with the removal date, so clients can schedule their migration.
+
+### Adding a new major (v2) — the checklist
+
+1. Add `"v2"` to the `ApiVersion` union in `versioning.ts` and flip `API_VERSION`.
+2. New/renamed endpoints: annotate the contract leaf `defineContract({ path, version: "v2" })`
+   and serve it from a `@Controller(apiPath("/…", "v2"))`. The client transport
+   derives `/api/v2/...` and **namespaces the react-query key** (`["v2", …]`), so
+   v1 and v2 cache entries can never collide.
+3. Keep v1 served during the migration (dual-version): one contract, one controller
+   per version. The drift test covers both.
+4. When v1 is fully drained, deprecate it: add it to `API_DEPRECATED_VERSIONS` with
+   a `sunsetAt`, then remove it entirely after the date.
+
+Swagger always mounts at `apiDocsPath()` — `v1` at `/v1/docs`, `v2` at `/v2/docs` —
+with the legacy `/docs` URL 302-redirecting to the current one.
+
+---
+
+## 6. The client layer (packages/client)
 
 ```
 packages/client/src/lib/
@@ -282,7 +369,7 @@ input, see `apps/api/src/common/pipes/zod-validation.pipe.ts`).
 
 ---
 
-## 6. The UI layer (packages/ui)
+## 7. The UI layer (packages/ui)
 
 ```
 packages/ui/src/
@@ -315,7 +402,7 @@ move it up to the page (smart component) or into `@workspace/client`.
 
 ---
 
-## 7. The apps
+## 8. The apps
 
 ### `@workspace/web` (port 3000)
 
@@ -393,7 +480,7 @@ Do NOT re-register`TypedConfigService` in feature modules; inject the global one
   fully flat; `logs` is a single service. Splitting a module? Keep the same
   URL paths and move only the endpoint + its service methods.
 - Controllers use DTOs built with `createZodDto(<Schema from @workspace/shared>)`.
-- Swagger docs live at `http://localhost:8080/docs` (inferred from the same schemas).
+- Swagger docs live at `http://localhost:8080/v1/docs` (inferred from the same schemas).
 - The `ResponseInterceptor` wraps every response in `{ success, data, meta }`.
 - **Nest CLI (SWC builder) + esbuild prod bundle.** `pnpm dev` → `nest start --watch -e tsx`
   (SWC recompiles in ~70ms on save, runs through tsx), `pnpm build` → `nest build`
@@ -415,7 +502,7 @@ Do NOT re-register`TypedConfigService` in feature modules; inject the global one
 
 ---
 
-## 8. How packages are resolved
+## 9. How packages are resolved
 
 Different consumers resolve `@workspace/*` packages differently — this is intentional:
 
@@ -430,7 +517,7 @@ Different consumers resolve `@workspace/*` packages differently — this is inte
 
 ---
 
-## 9. Rules of thumb
+## 10. Rules of thumb
 
 1. **Schema changes go in `packages/shared`** — never define a request/response shape
    inside an app or a module.

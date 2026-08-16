@@ -682,9 +682,17 @@ First-time user flow: create profile → create first URL → invite team → do
 
 ### 18. API Versioning Strategy
 
-`/api/v1/urls`, `/api/v2/urls` — maintain backward compatibility. Version middleware reads `Accept-version` header or URL prefix.
+`/api/v1/urls`, `/api/v2/urls` — maintain backward compatibility.
 
-**Pattern:** NestJS `setGlobalPrefix('api/v1')` + versioned controllers.
+**Pattern (shipped):** explicit path helpers — `apiPath()` / `API_VERSION_PREFIX` in
+`packages/shared/src/contracts/versioning.ts` are the single source of truth, used by
+both server `@Controller` decorators and the client transport. No Nest
+`enableVersioning` machinery. `GET /`, `GET /health`, `GET /version` (the version
+manifest), `POST /notifications/email-webhook` stay unversioned; Swagger is served at
+`/v1/docs`. The 2026-08-16 hardening round added the manifest + client 404
+negotiation, `Accept-version` rewriting, `x-api-version`/`Sunset` headers, per-leaf
+`version` on `defineContract`, the drift test, and the lint rule — full invariants in
+`docs/architecture.md` §5.
 
 ### 19. Health Check Dashboard
 

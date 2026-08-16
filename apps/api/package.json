@@ -28,10 +28,15 @@
 		"bundle": "node scripts/bundle-prod.mjs"
 	},
 	"dependencies": {
+		"@fastify/compress": "^9.2.0",
 		"@fastify/cookie": "^11.1.2",
 		"@fastify/cors": "^11.3.0",
+		"@fastify/etag": "^6.2.0",
 		"@fastify/helmet": "^13.1.0",
+		"@fastify/rate-limit": "^11.2.0",
+		"@fastify/request-context": "^7.0.0",
 		"@fastify/static": "^10.1.3",
+		"@fastify/under-pressure": "^9.1.0",
 		"@nestjs/common": "^11.1.28",
 		"@nestjs/config": "^4.0.4",
 		"@nestjs/core": "^11.1.28",
@@ -45,6 +50,7 @@
 		"@prisma/adapter-pg": "^7.9.1",
 		"@prisma/client": "^7.9.1",
 		"@workspace/shared": "workspace:*",
+		"ajv": "^8.20.0",
 		"bcrypt": "^6.0.0",
 		"date-fns": "^4.4.0",
 		"dotenv": "^17.4.2",

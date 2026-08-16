@@ -714,8 +714,9 @@ The single biggest design decision — and the one that keeps Telescope *zero-co
 
 ## 7. Telescope API
 
-All routes under `/telescope` (served at `/api/v1/telescope/…` — the URI versioning
-prefix from `main.ts`; the client's `API_URL_PREFIX` adds it automatically), **SuperAdmin
+All routes under `/telescope` (served at `/api/v1/telescope/…` — the explicit
+`apiPath()` prefix from `@workspace/shared`, applied in the controller decorator and
+mirrored by the client's `API_URL_PREFIX`), **SuperAdmin
 + admin-access gated** (same guard as other
 admin APIs — reuse the existing role/RBAC guard, and make sure the `TelescopeController`
 never leaks request bodies through the Swagger docs: mark it `@ApiExcludeController()`

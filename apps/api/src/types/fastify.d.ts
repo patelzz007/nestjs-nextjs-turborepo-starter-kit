@@ -19,4 +19,16 @@ declare module "fastify" {
 	}
 }
 
+// @fastify/request-context — the per-request AsyncLocalStorage store. The
+// correlation/trace ids are mirrored here by the preHandler hook in main.ts so
+// any code spawned during a request can read them without a request reference.
+declare module "@fastify/request-context" {
+	interface RequestContextData {
+		/** Correlation ID for request tracing. */
+		correlationId?: string;
+		/** Trace ID — alias of correlationId, used for request grouping. */
+		traceId?: string;
+	}
+}
+
 export {};

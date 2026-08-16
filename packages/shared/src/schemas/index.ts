@@ -97,6 +97,8 @@ export { SessionStatusSchema } from "./auth/session-status";
 export type { SessionStatus } from "./auth/session-status";
 export { EnvSchema, parseEnv } from "./api/env";
 export type { Env } from "./api/env";
+export { ApiVersionManifestSchema } from "./api/version";
+export type { ApiVersionManifest } from "./api/version";
 export {
 	EmailLogEntrySchema,
 	EmailLogListResponseSchema,

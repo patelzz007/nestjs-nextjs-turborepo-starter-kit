@@ -1,5 +1,9 @@
 import { z } from "zod";
 
+// Imported from the dependency-free `versioning` submodule (not `../../contracts`)
+// — contracts/index.ts imports schemas, so importing the barrel from here would
+// create a runtime circular-import crash.
+import { API_VERSION_PREFIX, apiDocsPath } from "../../contracts/versioning";
 import { EpochMsSchema } from "../api/common";
 import { EmailLogEntrySchema } from "../email/email";
 
@@ -243,7 +247,9 @@ export const TelescopeOptionsSchema = z
 		captureBody: TelescopeBodyCaptureSchema.default("headers"),
 		/** Header whitelist — nothing outside this list is ever stored. */
 		captureHeaders: z.array(z.string()).default(["content-type", "user-agent", "x-client-type"]),
-		ignorePaths: z.array(z.string()).default(["/health", "/docs", "/api/v1/telescope", "/favicon.ico"]),
+		// Derived from the versioning constants so a version bump can't strand the
+		// telescope's own routes in capture (which would recurse into itself).
+		ignorePaths: z.array(z.string()).default(["/health", "/docs", apiDocsPath(), `${API_VERSION_PREFIX}/telescope`, "/favicon.ico"]),
 		/** Feature 18 — alert webhook URL; alerts fire only when this is set. */
 		alertWebhookUrl: z.string().optional(),
 		/** Feature 18 — duration threshold (ms) that triggers a "duration" alert. */

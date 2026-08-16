@@ -12,7 +12,16 @@ import {
 	type UseMutationOptions,
 	type UseMutationResult,
 } from "@tanstack/react-query";
-import { EpochMsSchema, type EpochMs, type JsonValue, type SerializableInput } from "@workspace/shared";
+import {
+	ApiVersionManifestSchema,
+	EpochMsSchema,
+	apiVersionPrefix,
+	type ApiVersion,
+	type ApiVersionManifest,
+	type EpochMs,
+	type JsonValue,
+	type SerializableInput,
+} from "@workspace/shared";
 import { useMemo } from "react";
 import { z, type ZodType } from "zod";
 
@@ -215,16 +224,55 @@ export interface ApiFailure {
 
 export type ApiResponse<T> = ApiSuccess<T> | ApiFailure;
 
-function buildUrl(baseUrl: string, path: string, query?: QueryParams): string {
+function buildUrl(baseUrl: string, path: string, query?: QueryParams, version?: ApiVersion): string {
 	// API routes are versioned under `/api/v1` — the endpoint registry holds the
 	// logical paths (`/auth/login`), the prefix is applied at the transport.
-	const url = new URL(`${API_URL_PREFIX}${path}`, baseUrl);
+	// A leaf pinned to a non-default version (`def.version`) builds `/api/v2/...`.
+	const prefix: string = version === undefined ? API_URL_PREFIX : apiVersionPrefix(version);
+	const url = new URL(`${prefix}${path}`, baseUrl);
 	if (query) {
 		Object.entries(query).forEach(([key, value]) => {
 			if (value !== undefined) url.searchParams.set(key, String(value));
 		});
 	}
 	return url.toString();
+}
+
+/** Extracts the `vX` segment from a built API URL (`…/api/v1/auth/me` → `"v1"`). */
+function versionOfUrl(url: string): string | undefined {
+	const match = /\/api\/(v\d+)\//.exec(url);
+	return match?.[1];
+}
+
+/**
+ * Cached copy of the version manifest — negotiation runs at most once per
+ * session (`undefined` = not fetched yet, `null` = unreachable/invalid).
+ */
+let cachedVersionManifest: ApiVersionManifest | null | undefined;
+
+/**
+ * Fetches the UNVERSIONED version manifest (`GET /version`) once and caches it.
+ * The manifest lives at the root on purpose — it is the thing a client reads
+ * when its pinned version 404s, so it must never move when a major bumps.
+ * Returns `null` when unreachable (negotiation is best-effort, never fatal).
+ */
+async function loadVersionManifest(baseUrl: string): Promise<ApiVersionManifest | null> {
+	if (cachedVersionManifest !== undefined) return cachedVersionManifest;
+	try {
+		const response: Response = await fetch(`${baseUrl}/version`, {
+			headers: { Accept: "application/json" },
+			cache: "no-store",
+		});
+		if (!response.ok) {
+			cachedVersionManifest = null;
+			return null;
+		}
+		cachedVersionManifest = ApiVersionManifestSchema.parse(await response.json());
+		return cachedVersionManifest;
+	} catch {
+		cachedVersionManifest = null;
+		return null;
+	}
 }
 
 function buildHeaders(baseHeaders: Record<string, string> | undefined): Record<string, string> {
@@ -249,8 +297,9 @@ async function request<T, Body = undefined>(
 	bodySchema: ZodType<Body> | undefined,
 	onUnauthorized?: OnUnauthorized,
 	onRefresh?: OnRefresh,
+	version?: ApiVersion,
 ): Promise<ApiResponse<T>> {
-	const url = buildUrl(baseUrl, path, options?.query);
+	const url = buildUrl(baseUrl, path, options?.query, version);
 	const headers = buildHeaders(options?.headers);
 	const init: RequestInit = {
 		method,
@@ -265,9 +314,9 @@ async function request<T, Body = undefined>(
 		init.body = typeof options.body === "string" ? options.body : JSON.stringify(options.body);
 	}
 
-	const execute = async (): Promise<ApiResponse<T>> => {
+	const execute = async (targetUrl: string): Promise<ApiResponse<T>> => {
 		try {
-			const res = await fetch(url, init);
+			const res = await fetch(targetUrl, init);
 			const isJson = res.headers.get("content-type")?.includes("application/json") ?? false;
 
 			if (!res.ok) {
@@ -296,7 +345,7 @@ async function request<T, Body = undefined>(
 	};
 
 	// Initial attempt
-	let result: ApiResponse<T> = await execute();
+	let result: ApiResponse<T> = await execute(url);
 
 	// 401 → try a silent refresh once, then retry the original request.
 	// The refresh is single-flighted by the caller (auth.tsx) so concurrent
@@ -304,7 +353,7 @@ async function request<T, Body = undefined>(
 	if (result.status === 401 && onRefresh) {
 		const refreshed: boolean = await onRefresh();
 		if (refreshed) {
-			result = await execute();
+			result = await execute(url);
 		}
 	}
 
@@ -313,6 +362,19 @@ async function request<T, Body = undefined>(
 	if (result.status === 401 && onUnauthorized) {
 		await onUnauthorized();
 		return { ok: false, status: result.status, data: null, error: "Unauthorized" };
+	}
+
+	// Version negotiation: a 404 on a versioned path usually means the pinned
+	// version isn't deployed yet (deploy-any-or-die — web/admin ship before the
+	// API). Consult the UNVERSIONED version manifest once (cached) and retry
+	// against the server's current version when it differs from the one we
+	// pinned. Best-effort: an unreachable manifest leaves the 404 as-is.
+	if (result.status === 404) {
+		const requestedVersion: string | undefined = versionOfUrl(url);
+		const manifest: ApiVersionManifest | null = await loadVersionManifest(baseUrl);
+		if (requestedVersion !== undefined && manifest !== null && manifest.current !== requestedVersion) {
+			result = await execute(buildUrl(baseUrl, path, options?.query, manifest.current));
+		}
 	}
 
 	return result;
@@ -341,8 +403,9 @@ async function requestOrThrow<T, Method extends HttpMethod, Body = undefined>(
 	bodySchema: ZodType<Body> | undefined,
 	onUnauthorized?: OnUnauthorized,
 	onRefresh?: OnRefresh,
+	version?: ApiVersion,
 ): Promise<T> {
-	const res = await request<T, Body>(baseUrl, method, path, options, responseSchema, bodySchema, onUnauthorized, onRefresh);
+	const res = await request<T, Body>(baseUrl, method, path, options, responseSchema, bodySchema, onUnauthorized, onRefresh, version);
 
 	if (!res.ok) {
 		// Preserve the original Error instance (stack, cause) when present;
@@ -399,7 +462,17 @@ function createQueryProcedure<Input extends SerializableInput, Resp extends Json
 				queryFn: ({ signal }): Promise<Resp> => {
 					const parsed: Input = def.inputSchema.parse(input);
 					const url: string = resolveRequest(def.path, parsed).url;
-					return requestOrThrow<Resp, "GET">(baseUrl, "GET", url, { headers: def.baseOptions?.headers, signal }, def.responseSchema, undefined, onUnauthorized, onRefresh);
+					return requestOrThrow<Resp, "GET">(
+						baseUrl,
+						"GET",
+						url,
+						{ headers: def.baseOptions?.headers, signal },
+						def.responseSchema,
+						undefined,
+						onUnauthorized,
+						onRefresh,
+						def.version,
+					);
 				},
 				...queryOptions,
 			});
@@ -407,12 +480,12 @@ function createQueryProcedure<Input extends SerializableInput, Resp extends Json
 		fetch: (input): Promise<ApiResponse<Resp>> => {
 			const parsed: Input = def.inputSchema.parse(input);
 			const url: string = resolveRequest(def.path, parsed).url;
-			return request<Resp>(baseUrl, "GET", url, { headers: def.baseOptions?.headers }, def.responseSchema, undefined, onUnauthorized, onRefresh);
+			return request<Resp>(baseUrl, "GET", url, { headers: def.baseOptions?.headers }, def.responseSchema, undefined, onUnauthorized, onRefresh, def.version);
 		},
 		fetchOrThrow: (input): Promise<Resp> => {
 			const parsed: Input = def.inputSchema.parse(input);
 			const url: string = resolveRequest(def.path, parsed).url;
-			return requestOrThrow<Resp, "GET">(baseUrl, "GET", url, { headers: def.baseOptions?.headers }, def.responseSchema, undefined, onUnauthorized, onRefresh);
+			return requestOrThrow<Resp, "GET">(baseUrl, "GET", url, { headers: def.baseOptions?.headers }, def.responseSchema, undefined, onUnauthorized, onRefresh, def.version);
 		},
 	};
 }
@@ -436,6 +509,7 @@ function createMutationProcedure<Input extends SerializableInput, Resp extends J
 			undefined,
 			onUnauthorized,
 			onRefresh,
+			def.version,
 		);
 	};
 	return {

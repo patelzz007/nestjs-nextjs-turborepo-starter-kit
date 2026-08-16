@@ -25,6 +25,35 @@
   bundle, runtime smoke (login → cookies → webhook rawBody → SSE `id:`/`data:`
   frames), and telescope request-body capture with PII redaction.
 
+**Post-migration round (Fastify-native upgrades):**
+
+- **API versioning is now explicit paths, not Nest machinery.** `API_VERSION_PREFIX`
+  (`/api/v1`) + `apiPath()` in `packages/shared/src/contracts/versioning.ts` is the
+  single source of truth; server `@Controller` decorators and the client transport
+  both derive from it. `enableVersioning`/`VERSION_NEUTRAL`/`setGlobalPrefix`
+  removed. Swagger moved to `/v1/docs` (`/docs` 302-redirects).
+- **Versioning hardening round (2026-08-16):** unversioned `GET /version` manifest
+  (`ApiVersionManifestSchema`), client 404→manifest negotiation (deploy-any-or-die),
+  `Accept-version` header rewrite in `main.ts` (legacy clients), `x-api-version`
+  + `Sunset` response headers, per-leaf `version` on `defineContract` with
+  version-namespaced react-query keys, the `no-unversioned-controller` ESLint rule,
+  and an e2e drift test that injects every contract leaf expecting non-404.
+  Invariants + the v2 checklist live in `docs/architecture.md` §5.
+- Plugins: `@fastify/request-context` (AsyncLocalStorage correlation store),
+  `@fastify/rate-limit` (global 300/min + 60/min on the webhook route),
+  `@fastify/compress` (gzip/brotli), `@fastify/etag`, `@fastify/under-pressure`
+  (event-loop/heap 503s, health-check wired to `HealthService`).
+- Adapter: `exposeHeadRoutes`, `trustProxy` (`TRUST_PROXY=1`), `keepAliveTimeout`
+  65s, pino logger with `redact` (`LOG_LEVEL`), `genReqId` reusing
+  `x-request-id`/`x-correlation-id` (exposed as `x-request-id` on every response
+  via `onSend`), per-route `requestTimeout: 0` for SSE streams, webhook bodyLimit.
+- Observability: `onResponse` access log (method · path · status · duration · reqId)
+  and `onError` 5xx log through the global `LogService`.
+- Validation: `ZodValidationPipe` now compiles schemas with Ajv ONCE (via zod v4's
+  native `toJSONSchema`) instead of parsing with Zod per request — Zod remains the
+  single source of truth shared with the FE; error shape unchanged.
+- New env vars: `TRUST_PROXY`, `LOG_LEVEL` (registered in `turbo.json`).
+
 > **Notes for readers:** the plan below documents *why* each change was needed and
 > the traps we hit — keep it as the reference for the two runtime-sensitive spots
 > (§6 middleware, §7 webhook/SSE) rather than a step-by-step re-run.

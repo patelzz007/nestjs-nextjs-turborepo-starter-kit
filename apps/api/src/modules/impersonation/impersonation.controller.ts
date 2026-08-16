@@ -2,7 +2,7 @@ import { Controller, Param, Post, Req } from "@nestjs/common";
 import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { Throttle } from "@nestjs/throttler";
 import type { ImpersonateResponse, StopImpersonationResponse } from "@workspace/shared";
-import { ImpersonateResponseSchema, StopImpersonationResponseSchema } from "@workspace/shared";
+import { ImpersonateResponseSchema, StopImpersonationResponseSchema, apiPath } from "@workspace/shared";
 import type { FastifyRequest } from "fastify";
 
 import { GetUser } from "../auth/decorators/get-user.decorator";
@@ -24,7 +24,7 @@ const WrappedStopImpersonationResponse = createWrappedDto(StopImpersonationRespo
  * Swagger tag changed.
  */
 @ApiTags("Impersonation")
-@Controller("auth")
+@Controller(apiPath("/auth"))
 export class ImpersonationController {
 	constructor(private readonly impersonationService: ImpersonationService) {}
 

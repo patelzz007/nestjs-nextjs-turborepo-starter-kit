@@ -7,6 +7,8 @@
 // `.env` file. The localhost fallback only applies during local development when
 // no `.env` has been created yet.
 
+import { API_VERSION_PREFIX } from "@workspace/shared";
+
 const DEFAULT_API_BASE_URL = "http://localhost:8080";
 
 /**
@@ -18,10 +20,10 @@ const DEFAULT_API_BASE_URL = "http://localhost:8080";
 export const API_BASE_URL: string = process.env.NEXT_PUBLIC_API_URL ?? DEFAULT_API_BASE_URL;
 
 /**
- * Versioned path prefix for every API route. The API serves all endpoints
- * under `/api/v1/<path>` (Nest URI versioning with v1 as the default; a
- * future v2 controller lands at `/api/v2/<path>`). Prepend this to a route
- * path when building an API URL — keep it in ONE place so bumping the version
- * is a single-line change here.
+ * Versioned path prefix for every API route. The single source of truth is
+ * `API_VERSION_PREFIX` in `@workspace/shared` (contracts) — the SAME constant
+ * the server controllers use to build their physical paths — so the client
+ * transport and the server can never drift. Prepend this to a logical contract
+ * path (`/auth/login`) when building an API URL.
  */
-export const API_URL_PREFIX = "/api/v1";
+export const API_URL_PREFIX: string = API_VERSION_PREFIX;

@@ -66,6 +66,7 @@ import {
 	ApiResponseMetaSchema,
 	type ApiContractDef,
 	type ApiResponseMeta,
+	type ApiVersion,
 	type JsonValue,
 	type RestMethod,
 	type SerializableInput,
@@ -108,6 +109,13 @@ export interface QueryDef<Input extends SerializableInput, Resp extends JsonValu
 	readonly method: "GET";
 	/** Path template; `:name` segments are filled from the input. */
 	readonly path: string;
+	/**
+	 * API version for this leaf — `undefined` means the current default
+	 * (`API_VERSION`). Set from the shared contract (`defineContract({ version: "v2" })`)
+	 * so the transport derives `/api/v2/<path>` and the query key is
+	 * namespaced — server and client can never drift.
+	 */
+	readonly version?: ApiVersion;
 	/** Single typed input, validated before every call (tRPC-style). */
 	readonly inputSchema: ZodType<Input>;
 	readonly responseSchema: ZodType<Resp>;
@@ -121,6 +129,8 @@ export interface MutationDef<Input extends SerializableInput, Resp extends JsonV
 	readonly kind: "mutation";
 	readonly method: Exclude<RestMethod, "GET">;
 	readonly path: string;
+	/** API version for this leaf — see `QueryDef.version`. */
+	readonly version?: ApiVersion;
 	readonly inputSchema: ZodType<Input>;
 	readonly responseSchema: ZodType<Resp>;
 	readonly queryKey: (input: Input) => QueryKey;
@@ -140,6 +150,11 @@ export type ProcedureDef<Input extends SerializableInput, Resp extends JsonValue
  * Declares a GET procedure from its shared contract leaf. The contract owns
  * method + path + input; this layer adds the response envelope + query key.
  */
+/** Prefixes a query key with the version when a leaf opts out of the default — v2 keys can never collide with v1 cache entries. */
+function versionedKey(version: ApiVersion | undefined, base: QueryKey): QueryKey {
+	return version === undefined ? base : [version, ...base];
+}
+
 export function defineQuery<Input extends SerializableInput, Resp extends JsonValue>(
 	contract: ApiContractDef<Input, "GET">,
 	opts: {
@@ -152,9 +167,10 @@ export function defineQuery<Input extends SerializableInput, Resp extends JsonVa
 		kind: "query",
 		method: "GET",
 		path: contract.path,
+		version: contract.version,
 		inputSchema: contract.input,
 		responseSchema: opts.response,
-		queryKey: opts.queryKey,
+		queryKey: (input: Input): QueryKey => versionedKey(contract.version, opts.queryKey(input)),
 		baseOptions: opts.baseOptions,
 	};
 }
@@ -177,9 +193,10 @@ export function defineMutation<Input extends SerializableInput, Resp extends Jso
 		kind: "mutation",
 		method: contract.method,
 		path: contract.path,
+		version: contract.version,
 		inputSchema: contract.input,
 		responseSchema: opts.response,
-		queryKey: opts.queryKey,
+		queryKey: (input: Input): QueryKey => versionedKey(contract.version, opts.queryKey(input)),
 		baseOptions: opts.baseOptions,
 		toBody: opts.toBody,
 		toQuery: opts.toQuery,

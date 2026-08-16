@@ -28,6 +28,7 @@ import {
 	UserResponseSchema,
 	VerifyEmailResponseSchema,
 	apiContract,
+	apiPath,
 } from "@workspace/shared";
 import type { FastifyRequest } from "fastify";
 
@@ -71,7 +72,7 @@ const WrappedMessageResponse = createWrappedDto(MessageResponseSchema, "WrappedM
  * `ImpersonationController` — URL paths are unchanged.
  */
 @ApiTags("Auth")
-@Controller("auth")
+@Controller(apiPath("/auth"))
 export class AuthController {
 	constructor(private readonly authService: AuthService) {}
 

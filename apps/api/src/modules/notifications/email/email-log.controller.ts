@@ -3,7 +3,7 @@ import type { MessageEvent } from "@nestjs/common";
 import { ApiOkResponse, ApiOperation, ApiQuery, ApiTags } from "@nestjs/swagger";
 import { interval, map, merge, type Observable } from "rxjs";
 
-import { EmailLogListResponseSchema, nowEpochMs, type EmailLogEntry } from "@workspace/shared";
+import { EmailLogListResponseSchema, nowEpochMs, type EmailLogEntry, apiPath } from "@workspace/shared";
 
 import { createWrappedDto } from "../../../common/dto/response-wrapper";
 
@@ -27,7 +27,7 @@ const WrappedEmailLogList = createWrappedDto(EmailLogListResponseSchema, "Wrappe
  * up the instant they land, no polling and no manual refresh.
  */
 @ApiTags("Email Log")
-@Controller("notifications/email-log")
+@Controller(apiPath("/notifications/email-log"))
 export class EmailLogController {
 	constructor(
 		private readonly emailLogService: EmailLogService,
