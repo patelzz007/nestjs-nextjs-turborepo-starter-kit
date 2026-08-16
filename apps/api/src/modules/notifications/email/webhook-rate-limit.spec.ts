@@ -1,7 +1,7 @@
 import { type INestApplication } from "@nestjs/common";
 import { Test, type TestingModule } from "@nestjs/testing";
 import { ThrottlerModule, type ThrottlerModuleOptions } from "@nestjs/throttler";
-import request from "supertest";
+import { FastifyAdapter, type NestFastifyApplication } from "@nestjs/platform-fastify";
 import { describe, expect, it } from "vitest";
 
 import { ConfigModule } from "../../../config/config.module";
@@ -40,7 +40,7 @@ function fakeConfig(limit: number): TypedConfigService {
 	return { webhookRateLimitPerMinute: limit } as unknown as TypedConfigService;
 }
 
-async function buildApp(limit: number): Promise<INestApplication> {
+async function buildApp(limit: number): Promise<NestFastifyApplication> {
 	const moduleFixture: TestingModule = await Test.createTestingModule({
 		imports: [
 			ThrottlerModule.forRootAsync({
@@ -49,32 +49,33 @@ async function buildApp(limit: number): Promise<INestApplication> {
 		],
 		controllers: [ProbeController],
 	}).compile();
-	const app = moduleFixture.createNestApplication();
+	const app = moduleFixture.createNestApplication<NestFastifyApplication>(new FastifyAdapter());
 	await app.init();
 	return app;
 }
 
 describe("Webhook per-IP rate limiting (ThrottlerGuard)", () => {
 	it("rejects the request that exceeds the per-IP limit with 429 + a clear message", async () => {
-		const app: INestApplication = await buildApp(3);
+		const app: NestFastifyApplication = await buildApp(3);
 		try {
-			const server = app.getHttpServer();
-			await request(server).get("/probe").expect(200);
-			await request(server).get("/probe").expect(200);
-			await request(server).get("/probe").expect(200);
-			const throttled = await request(server).get("/probe").expect(429);
-			expect(throttled.body.message).toContain("rate-limited per IP");
+			for (let i = 0; i < 3; i += 1) {
+				const ok = await app.inject({ method: "GET", url: "/probe" });
+				expect(ok.statusCode).toBe(200);
+			}
+			const throttled = await app.inject({ method: "GET", url: "/probe" });
+			expect(throttled.statusCode).toBe(429);
+			expect(throttled.json().message).toContain("rate-limited per IP");
 		} finally {
 			await app.close();
 		}
 	});
 
 	it("counts per cf-connecting-ip: different IPs do not share a bucket", async () => {
-		const app: INestApplication = await buildApp(2);
+		const app: NestFastifyApplication = await buildApp(2);
 		try {
-			const server = app.getHttpServer();
 			for (const ip of ["203.0.113.1", "203.0.113.2", "203.0.113.3", "203.0.113.4"]) {
-				await request(server).get("/probe").set("cf-connecting-ip", ip).expect(200);
+				const response = await app.inject({ method: "GET", url: "/probe", headers: { "cf-connecting-ip": ip } });
+				expect(response.statusCode).toBe(200);
 			}
 		} finally {
 			await app.close();
@@ -82,23 +83,25 @@ describe("Webhook per-IP rate limiting (ThrottlerGuard)", () => {
 	});
 
 	it("shares a bucket when the SAME cf-connecting-ip sends repeatedly", async () => {
-		const app: INestApplication = await buildApp(2);
+		const app: NestFastifyApplication = await buildApp(2);
 		try {
-			const server = app.getHttpServer();
-			await request(server).get("/probe").set("cf-connecting-ip", "203.0.113.9").expect(200);
-			await request(server).get("/probe").set("cf-connecting-ip", "203.0.113.9").expect(200);
-			await request(server).get("/probe").set("cf-connecting-ip", "203.0.113.9").expect(429);
+			const first = await app.inject({ method: "GET", url: "/probe", headers: { "cf-connecting-ip": "203.0.113.9" } });
+			expect(first.statusCode).toBe(200);
+			const second = await app.inject({ method: "GET", url: "/probe", headers: { "cf-connecting-ip": "203.0.113.9" } });
+			expect(second.statusCode).toBe(200);
+			const throttled = await app.inject({ method: "GET", url: "/probe", headers: { "cf-connecting-ip": "203.0.113.9" } });
+			expect(throttled.statusCode).toBe(429);
 		} finally {
 			await app.close();
 		}
 	});
 
 	it("passes everything when the limit is 0 (disabled)", async () => {
-		const app: INestApplication = await buildApp(0);
+		const app: NestFastifyApplication = await buildApp(0);
 		try {
-			const server = app.getHttpServer();
 			for (let i = 0; i < 6; i += 1) {
-				await request(server).get("/probe").expect(200);
+				const response = await app.inject({ method: "GET", url: "/probe" });
+				expect(response.statusCode).toBe(200);
 			}
 		} finally {
 			await app.close();
@@ -106,16 +109,18 @@ describe("Webhook per-IP rate limiting (ThrottlerGuard)", () => {
 	});
 
 	it("counts signature-rejected requests toward the limit (guard runs before the handler)", async () => {
-		const app: INestApplication = await buildApp(2);
+		const app: NestFastifyApplication = await buildApp(2);
 		try {
-			const server = app.getHttpServer();
 			// Two requests that 403 in the handler (like a bad webhook signature)…
-			await request(server).get("/probe/forbidden").set("cf-connecting-ip", "203.0.113.50").expect(403);
-			await request(server).get("/probe/forbidden").set("cf-connecting-ip", "203.0.113.50").expect(403);
+			const rejectedA = await app.inject({ method: "GET", url: "/probe/forbidden", headers: { "cf-connecting-ip": "203.0.113.50" } });
+			expect(rejectedA.statusCode).toBe(403);
+			const rejectedB = await app.inject({ method: "GET", url: "/probe/forbidden", headers: { "cf-connecting-ip": "203.0.113.50" } });
+			expect(rejectedB.statusCode).toBe(403);
 			// …exhaust the bucket, so the NEXT request to the same route is throttled.
 			// (Note: the throttler key is per-IP AND per-handler, so the third hit on
 			// THIS route is the one that trips the limiter.)
-			await request(server).get("/probe/forbidden").set("cf-connecting-ip", "203.0.113.50").expect(429);
+			const throttled = await app.inject({ method: "GET", url: "/probe/forbidden", headers: { "cf-connecting-ip": "203.0.113.50" } });
+			expect(throttled.statusCode).toBe(429);
 		} finally {
 			await app.close();
 		}
@@ -142,12 +147,13 @@ describe("Webhook per-IP rate limiting (ThrottlerGuard)", () => {
 			],
 			controllers: [ProbeController],
 		}).compile();
-		const app: INestApplication = moduleFixture.createNestApplication();
+		const app: NestFastifyApplication = moduleFixture.createNestApplication<NestFastifyApplication>(new FastifyAdapter());
 		try {
 			await app.init();
 			// Boot succeeded = the DI graph resolved. Default limit is 120, so one
 			// request passes.
-			await request(app.getHttpServer()).get("/probe").expect(200);
+			const response = await app.inject({ method: "GET", url: "/probe" });
+			expect(response.statusCode).toBe(200);
 		} finally {
 			await app.close();
 		}

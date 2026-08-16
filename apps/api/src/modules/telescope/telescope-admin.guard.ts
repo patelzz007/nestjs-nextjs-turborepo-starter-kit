@@ -1,8 +1,6 @@
 import { CanActivate, ExecutionContext, ForbiddenException, Inject, Injectable, NotFoundException } from "@nestjs/common";
-import type { Request } from "express";
+import type { FastifyRequest } from "fastify";
 import { createHash, timingSafeEqual } from "node:crypto";
-
-import type { AccessTokenPayload } from "../auth/services/token.service";
 
 import type { TelescopeOptions } from "@workspace/shared";
 
@@ -24,7 +22,7 @@ export class TelescopeAdminGuard implements CanActivate {
 	public constructor(@Inject(TELESCOPE_OPTIONS) private readonly options: TelescopeOptions) {}
 
 	public canActivate(context: ExecutionContext): boolean {
-		const request: Request = context.switchToHttp().getRequest<Request>();
+		const request: FastifyRequest = context.switchToHttp().getRequest<FastifyRequest>();
 
 		// Fail-closed: when Telescope is disabled (production default), the
 		// routes behave as if they never existed — 404 instead of leaking an
@@ -41,9 +39,10 @@ export class TelescopeAdminGuard implements CanActivate {
 			}
 		}
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Runtime type: AuthGuard attaches the JWT payload
-		const user: AccessTokenPayload | undefined = (request as { user?: AccessTokenPayload }).user;
-		if (user?.hasAdminAccess !== true) {
+		const user = request.user;
+		// Narrow the access/refresh payload union: only access tokens carry
+		// `hasAdminAccess`, and the guard requires it to be true.
+		if (user === undefined || !("hasAdminAccess" in user) || !user.hasAdminAccess) {
 			throw new ForbiddenException({ message: "Admin access required to view Telescope data.", error: "ADMIN_ACCESS_REQUIRED" });
 		}
 		return true;

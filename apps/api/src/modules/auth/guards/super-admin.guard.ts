@@ -1,5 +1,5 @@
 import { CanActivate, type ExecutionContext, ForbiddenException, Injectable } from "@nestjs/common";
-import type { Request } from "express";
+import type { FastifyRequest } from "fastify";
 
 /**
  * Guard that checks whether the authenticated user can access
@@ -16,7 +16,7 @@ import type { Request } from "express";
 @Injectable()
 export class SuperAdminGuard implements CanActivate {
 	public canActivate(context: ExecutionContext): boolean {
-		const request: Request = context.switchToHttp().getRequest<Request>();
+		const request: FastifyRequest = context.switchToHttp().getRequest<FastifyRequest>();
 		const user = request.user;
 
 		if (!user) {

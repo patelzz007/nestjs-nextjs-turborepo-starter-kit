@@ -1,5 +1,5 @@
 import { Injectable, type NestInterceptor, type ExecutionContext, type CallHandler } from "@nestjs/common";
-import type { Request, Response } from "express";
+import type { FastifyReply, FastifyRequest } from "fastify";
 import { type Observable } from "rxjs";
 import { map, tap } from "rxjs/operators";
 
@@ -13,6 +13,22 @@ import {
 	type CookieNames,
 } from "../constants/cookie.config";
 import { CookieService } from "../services/cookies.service";
+
+/**
+ * Reads a query parameter without type assertions: Fastify types the query
+ * string as opaque, so iterate the entries and keep only string values.
+ */
+function readQueryStringValue(request: FastifyRequest, name: string): string | undefined {
+	if (typeof request.query !== "object" || request.query === null) {
+		return undefined;
+	}
+	for (const [key, value] of Object.entries(request.query)) {
+		if (key === name && typeof value === "string") {
+			return value;
+		}
+	}
+	return undefined;
+}
 
 /**
  * Interceptor that extracts `accessToken` and `refreshToken` from the response
@@ -35,8 +51,8 @@ export class SetAuthCookiesInterceptor implements NestInterceptor {
 	constructor(private readonly cookieConfig: CookieConfigService) {}
 
 	public intercept(context: ExecutionContext, next: CallHandler): Observable<JsonValue> {
-		const request: Request = context.switchToHttp().getRequest<Request>();
-		const response: Response = context.switchToHttp().getResponse<Response>();
+		const request: FastifyRequest = context.switchToHttp().getRequest<FastifyRequest>();
+		const response: FastifyReply = context.switchToHttp().getResponse<FastifyReply>();
 
 		// Determine which cookie names to use based on X-Client-Type header or
 		// client_type query parameter (used by Swagger UI which cannot send
@@ -44,9 +60,8 @@ export class SetAuthCookiesInterceptor implements NestInterceptor {
 		// This isolates admin cookies from web cookies on the same host.
 		const headerValue: string | string[] | undefined = request.headers["x-client-type"];
 		const headerType: string | undefined = typeof headerValue === "string" ? headerValue : undefined;
-		const queryValue: unknown = request.query.client_type;
-		const queryType: string | undefined = typeof queryValue === "string" ? queryValue : undefined;
-		const clientType: string | undefined = headerType ?? queryType;
+		const queryValue: string | undefined = readQueryStringValue(request, "client_type");
+		const clientType: string | undefined = headerType ?? queryValue;
 		const isAdmin: boolean = clientType === "admin";
 		const accessTokenName: CookieNames = isAdmin ? ADMIN_ACCESS_TOKEN_COOKIE_NAME : ACCESS_TOKEN_COOKIE_NAME;
 		const refreshTokenName: CookieNames = isAdmin ? ADMIN_REFRESH_TOKEN_COOKIE_NAME : REFRESH_TOKEN_COOKIE_NAME;

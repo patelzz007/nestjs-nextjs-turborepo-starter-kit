@@ -3,7 +3,7 @@
 // ============================================
 "use client";
 
-import { API_BASE_URL } from "@workspace/client/lib/api/config";
+import { API_BASE_URL, API_URL_PREFIX } from "@workspace/client/lib/api/config";
 import { apiRouter } from "@workspace/client/lib/api/endpoints";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
@@ -62,7 +62,7 @@ export function useEmailLogLive(): LiveState {
 	const [state, setState] = useState<LiveState>("connecting");
 
 	useEffect(() => {
-		const url: string = new URL(EMAIL_LOG_EVENTS_PATH, API_BASE_URL).toString();
+		const url: string = new URL(`${API_URL_PREFIX}${EMAIL_LOG_EVENTS_PATH}`, API_BASE_URL).toString();
 		const source: EventSource = new EventSource(url, { withCredentials: true });
 
 		const handleOpen = (): void => {

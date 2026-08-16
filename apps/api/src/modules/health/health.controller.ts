@@ -1,4 +1,4 @@
-import { Controller, Get } from "@nestjs/common";
+import { Controller, Get, Version, VERSION_NEUTRAL } from "@nestjs/common";
 import { ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { HealthResponseSchema } from "@workspace/shared";
 import { z } from "zod";
@@ -28,7 +28,13 @@ const WrappedHealthResponse = createWrappedDto(HealthResponseSchema, "WrappedHea
 export class HealthController {
 	constructor(private readonly healthService: HealthService) {}
 
+	// Version-neutral (per-method): `GET /` + `GET /health` are infra plumbing,
+	// not versioned business endpoints. Combined with the global-prefix
+	// `exclude` in main.ts they stay at `/` and `/health` instead of moving
+	// under `/api/v1` — URI versioning would otherwise leave a `/v1` segment on
+	// excluded routes (verified in the Nest route-path-factory).
 	@Public()
+	@Version(VERSION_NEUTRAL)
 	@Get()
 	@ApiOperation({ summary: "Welcome message" })
 	@ApiOkResponse({ type: WrappedHelloResponse, description: "Welcome message" })
@@ -37,6 +43,7 @@ export class HealthController {
 	}
 
 	@Public()
+	@Version(VERSION_NEUTRAL)
 	@Get("health")
 	@ApiOperation({ summary: "Health check (includes DB status)" })
 	@ApiOkResponse({ type: WrappedHealthResponse, description: "Current service health status" })

@@ -101,6 +101,15 @@ Think of the monorepo as **three layers**, each depending only on the layer belo
 
 Key points:
 
+- **The API runs on the Fastify adapter** (`@nestjs/platform-fastify`): cookies via
+  `@fastify/cookie`, CORS via `@fastify/cors`, Nest middleware through bundled middie,
+  and `rawBody: true` for the signature-verified Resend webhook. Express is fully removed.
+- **Every endpoint is URI-versioned under `/api/v1`** (`setGlobalPrefix("api")` +
+  `enableVersioning(URI, defaultVersion "1")` in `main.ts`). The prefix lives in one
+  place on the client too — `API_URL_PREFIX` in
+  `packages/client/src/lib/api/config.ts` — and is applied at the transport layer, so
+  the typed endpoint registry holds logical paths (`/auth/login`). `GET /health` and
+  `POST /notifications/email-webhook` are excluded and stay at their historical paths.
 - **Authentication is cookie-based.** The API sets `httpOnly` cookies on login; the
   frontends never store tokens in JS. `useApi` sends `credentials: "include"`, so the
   browser attaches the cookies automatically.

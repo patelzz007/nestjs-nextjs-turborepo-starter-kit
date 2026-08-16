@@ -239,7 +239,7 @@ describe("AuthProvider logout", () => {
 		expect(calls).toHaveLength(1);
 		const call = calls[0];
 		if (call === undefined) throw new Error("logout fetch was never called");
-		expect(inputUrl(call.input)).toBe("http://api.test/auth/logout");
+		expect(inputUrl(call.input)).toBe("http://api.test/api/v1/auth/logout");
 		expect(call.init.method).toBe("POST");
 		expect(call.init.credentials).toBe("include");
 

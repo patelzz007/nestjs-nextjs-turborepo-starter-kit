@@ -20,6 +20,8 @@ import "dotenv/config";
 import { TelescopeReplayInputSchema, TelescopeStreamEventSchema, type TelescopeRequestListResponse, type TelescopeSqlListResponse } from "@workspace/shared";
 
 const BASE_URL: string = process.env.TELESCOPE_URL ?? "http://localhost:8080";
+// The API serves every route under `/api/v1` (URI versioning).
+const API_PREFIX = "/api/v1";
 
 function printUsage(): void {
 	console.error(
@@ -55,7 +57,7 @@ async function authHeaders(): Promise<Record<string, string>> {
 	const email: string = process.env.ADMIN_EMAIL ?? "admin@example.com";
 	const password: string = process.env.ADMIN_PASSWORD ?? "Admin@123";
 
-	const response: Response = await fetch(`${BASE_URL}/auth/login`, {
+	const response: Response = await fetch(`${BASE_URL}${API_PREFIX}/auth/login`, {
 		method: "POST",
 		headers: { "content-type": "application/json", "x-client-type": "admin" },
 		body: JSON.stringify({ email, password }),
@@ -71,7 +73,7 @@ async function authHeaders(): Promise<Record<string, string>> {
 }
 
 async function getJson<T>(path: string, headers: Record<string, string>): Promise<T> {
-	const response: Response = await fetch(`${BASE_URL}${path}`, { headers });
+	const response: Response = await fetch(`${BASE_URL}${API_PREFIX}${path}`, { headers });
 	if (!response.ok) {
 		const bodyPreview: string = (await response.text()).slice(0, 300);
 		bail(`GET ${path} → ${String(response.status)}: ${bodyPreview}`);
@@ -143,7 +145,7 @@ async function main(): Promise<void> {
 		// The stream must declare `Accept: text/event-stream` — the global
 		// ResponseInterceptor bypasses its envelope only for that Accept, so
 		// without it every frame arrives wrapped (improvement 7 wire contract).
-		const response: Response = await fetch(`${BASE_URL}/telescope/stream`, {
+		const response: Response = await fetch(`${BASE_URL}${API_PREFIX}/telescope/stream`, {
 			headers: { ...headers, accept: "text/event-stream" },
 		});
 		if (!response.ok) {
@@ -195,7 +197,7 @@ async function main(): Promise<void> {
 			return;
 		}
 		const input = TelescopeReplayInputSchema.parse({ target });
-		const response: Response = await fetch(`${BASE_URL}/telescope/replay/${encodeURIComponent(id)}`, {
+		const response: Response = await fetch(`${BASE_URL}${API_PREFIX}/telescope/replay/${encodeURIComponent(id)}`, {
 			method: "POST",
 			headers: { ...headers, "content-type": "application/json" },
 			body: JSON.stringify(input),

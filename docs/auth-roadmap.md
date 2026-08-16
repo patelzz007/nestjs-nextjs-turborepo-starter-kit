@@ -1300,23 +1300,24 @@ The 30-point auth hardening plan (deep dive) -----------------------------------
 
 ## A. Security hardening (API core)
 
-### 1. Helmet + security headers (P1) — ⬜ Pending
+### 1. Helmet + security headers (P1) — ✅ Done (2026-08-16)
 
 **Goal:** Send a baseline of HTTP security headers (CSP, HSTS, `X-Content-Type-Options`, `Referrer-Policy`, `X-Frame-Options`) on every API response.
 
-**Current state (verified):** `apps/api/src/main.ts` calls `enableCors` + `cookieParser` but never applies Helmet. There is no CSP, HSTS, `nosniff`, or frame-ancestors policy anywhere.
+**Current state (implemented):** `apps/api/src/main.ts` registers `@fastify/helmet` on the Fastify instance (`await app.register(fastifyHelmet, …)`) with `enableCSPNonces: true`: the per-request nonce is appended to `script-src`/`style-src`, and an `onSend` hook stamps it onto Swagger's inline `<style>`/`<script>` tags — so **`script-src` is `'self'` + nonce with NO `'unsafe-inline'` anywhere** (all three Swagger scripts are external same-origin). `style-src-attr 'unsafe-inline'` remains (nonces don't cover inline `style="…"` attributes, which Swagger UI's components set at runtime). `upgrade-insecure-requests` is removed so http://localhost dev isn't force-upgraded; `crossOriginResourcePolicy: cross-origin` lets the web/admin apps consume cross-origin JSON; `Referrer-Policy: no-referrer` and HSTS with preload are on. `@fastify/cors` + `@fastify/cookie` were already registered (the API runs on the **Fastify adapter** since the 2026-08-16 migration).
 
 **Implementation plan:**
 
-1. `pnpm --filter @workspace/api add helmet` (and `@types/helmet` if needed).
-2. In `main.ts`, before `enableCors`: `app.use(helmet({ ... }))`.
+1. `pnpm --filter @workspace/api add @fastify/helmet`.
+2. In `main.ts`, before `enableCors`, register it on the Fastify instance:
+   `await instance.register(fastifyHelmet, { ... })`.
 3. Tune the defaults for a cookie-based API — the two that matter:
    - `crossOriginResourcePolicy: { policy: "cross-origin" }` — otherwise fonts/images loaded by the web/admin origins get blocked.
    - `contentSecurityPolicy: false` **for the `/docs` Swagger route only** — Swagger injects inline scripts/styles; a strict CSP breaks it. Either use a per-route conditional or set a permissive CSP that still bans `unsafe-inline` script-src where possible.
 4. Add a `Referrer-Policy: no-referrer` (default from Helmet) and `Strict-Transport-Security` via `hsts` (auto-enabled when the request is HTTPS).
 
 **✅ Do:** test Swagger + both apps after enabling — CSP is the #1 thing that silently breaks the UI.
-**❌ Don't:** set `helmet()` with zero options blindly; the default `crossOriginResourcePolicy: same-origin` will break cross-origin image/font loading between `:3000`/`:3001` and `:8080`.
+**❌ Don't:** register `fastifyHelmet()` with zero options blindly; the default `crossOriginResourcePolicy: same-origin` will break cross-origin image/font loading between `:3000`/`:3001` and `:8080`.
 
 ---
 
@@ -1970,19 +1971,22 @@ Invalid → show the error right there, **no network request**. Valid → contin
 The login form calls the API through the **typed endpoint registry** (`authEndpoints.adminLogin` for admin, `authEndpoints.login` for web) via `useApi`'s mutation. Behind the scenes this becomes:
 
 ```http
-POST http://localhost:8080/auth/login
+POST http://localhost:8080/api/v1/auth/login
 Content-Type: application/json
 X-Client-Type: admin          # only for the admin panel (adminLogin)
 
 { "email": "admin@example.com", "password": "hunter2" }
 ```
 
+> [!NOTE] Endpoints are URI-versioned under `/api/v1` (see `API_URL_PREFIX` in
+> `packages/client/src/lib/api/config.ts` — the one place the prefix lives).
+
 Two important details:
 
 - `credentials: "include"` is set on every request → the browser **sends cookies** with the request (right now there are none yet, but this matters for steps 6–8).
 - The admin request carries `X-Client-Type: admin` so the API knows to (a) require admin access and (b) set the **admin cookie set** (`adminAccessToken`/`adminRefreshToken`) instead of the web ones. That's how the two apps keep isolated sessions on the same browser.
 
-> [!WARNING] Note: this request goes **straight from the browser to the API** (`localhost:8080`), not through the Next.js proxy. The proxy only handles *page navigations*; API calls are direct, with CORS enabled in `main.ts` to allow `:3000`/`:3001` origins.
+> [!WARNING] Note: this request goes **straight from the browser to the API** (`localhost:8080/api/v1/…`), not through the Next.js proxy. The proxy only handles *page navigations*; API calls are direct, with CORS enabled in `main.ts` to allow `:3000`/`:3001` origins.
 
 ### 2c. The API's front door (middleware + guards)
 

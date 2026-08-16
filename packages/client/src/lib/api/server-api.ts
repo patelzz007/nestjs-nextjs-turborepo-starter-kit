@@ -20,7 +20,7 @@
 import "server-only";
 
 import { dehydrate, QueryClient, type QueryKey } from "@tanstack/react-query";
-import { API_BASE_URL } from "./config";
+import { API_BASE_URL, API_URL_PREFIX } from "./config";
 import { type JsonValue, type SerializableInput } from "@workspace/shared";
 import { apiRouter, resolveRequest, type ApiRouter, type MutationDef, type ProcedureDef, type QueryDef } from "./endpoints";
 import { cookies, headers } from "next/headers";
@@ -457,7 +457,7 @@ export async function refreshAccessToken(config: ServerApiConfig): Promise<strin
 	const refreshToken: string | undefined = cookieStore.get(config.refreshTokenCookie)?.value;
 	if (refreshToken === undefined) return null;
 
-	const url: URL = new URL(apiRouter.auth.refresh.path, API_BASE_URL);
+	const url: URL = new URL(`${API_URL_PREFIX}${apiRouter.auth.refresh.path}`, API_BASE_URL);
 	const fetchImpl: typeof fetch = config.fetchImpl ?? globalThis.fetch;
 	try {
 		const response: Response = await fetchImpl(url, {
@@ -498,7 +498,7 @@ function createPrefetchObservable<Input extends SerializableInput, Resp extends 
 	allowRefresh: boolean,
 	captureHeaders: readonly string[],
 ): Observable<{ readonly raw: Resp; readonly headers: Readonly<Record<string, string>> }> {
-	const url: string = new URL(resolveRequest(def.path, input).url, API_BASE_URL).toString();
+	const url: string = new URL(`${API_URL_PREFIX}${resolveRequest(def.path, input).url}`, API_BASE_URL).toString();
 	const source: Observable<Response> = createFetchObservable(url, { ...def.baseOptions?.headers, ...extraHeaders }, config, token, forwarded, contextSignal);
 
 	return source.pipe(
@@ -735,7 +735,7 @@ async function mutateServerData<Input extends SerializableInput, Resp extends Js
 	if (accessToken !== undefined) headers.Cookie = `${encodeURIComponent(config.accessTokenCookie)}=${encodeURIComponent(accessToken)}`;
 
 	const fetchImpl: typeof fetch = config.fetchImpl ?? globalThis.fetch;
-	const response: Response = await fetchImpl(new URL(url, API_BASE_URL), {
+	const response: Response = await fetchImpl(new URL(`${API_URL_PREFIX}${url}`, API_BASE_URL), {
 		method: def.method,
 		headers,
 		body: JSON.stringify(finalBody),

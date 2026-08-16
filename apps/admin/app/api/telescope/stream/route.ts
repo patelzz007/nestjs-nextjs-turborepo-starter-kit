@@ -30,7 +30,7 @@
 // upstream so a paused tab tears down the upstream fetch instead of leaking a
 // socket.
 
-import { API_BASE_URL } from "@workspace/client/lib/api/config";
+import { API_BASE_URL, API_URL_PREFIX } from "@workspace/client/lib/api/config";
 import { isAccessTokenExpired, parseSetCookie, refreshSessionFromProxy } from "@workspace/client/lib/auth/proxy-refresh";
 import type { NextRequest } from "next/server";
 
@@ -98,7 +98,7 @@ export async function GET(request: NextRequest): Promise<Response> {
 	// client abort so the upstream fetch dies with the browser.
 	let upstream: Response;
 	try {
-		upstream = await fetch(`${API_BASE_URL}/telescope/stream`, {
+		upstream = await fetch(`${API_BASE_URL}${API_URL_PREFIX}/telescope/stream`, {
 			headers: {
 				Accept: "text/event-stream",
 				Cookie: upstreamCookie,

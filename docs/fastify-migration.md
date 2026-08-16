@@ -1,6 +1,35 @@
 # NestJS Express → Fastify Migration Plan
 
-**Status:** 📝 Plan — no code changed yet.
+**Status:** ✅ **Complete** — executed 2026-08-16, all phases landed.
+
+**What shipped:**
+
+- `main.ts` boots on `FastifyAdapter({ bodyLimit: 1 MiB })` with `rawBody: true`;
+  `@fastify/cookie`, `@fastify/cors`, and `@fastify/static` (Swagger) registered;
+  the three favicon handlers became native Fastify routes.
+- All 19 Express type imports migrated (`Request` → `FastifyRequest`,
+  `Response` → `FastifyReply`, middleware typed with `IncomingMessage`/
+  `ServerResponse`). `types/express.d.ts` → `types/fastify.d.ts`.
+- Cookie layer runs on `reply.setCookie`/`clearCookie` (`CookieSerializeOptions`);
+  auth interceptors use `FastifyReply`.
+- Telescope body capture preserved: instead of the §6.2 preHandler bridge, the
+  body is captured **in the interceptor** (runs after Fastify parses the body),
+  sidestepping middie's `onRequest` limitation entirely.
+- e2e tests converted from supertest to `app.inject()`; the pre-existing broken
+  401-envelope assertion was corrected to the real error shape.
+- Deps: removed `@nestjs/platform-express`, `@types/express`, `cookie-parser`,
+  `@types/cookie-parser`, `supertest`, `@types/supertest`, and the three dead
+  deps (`nestjs-pino`, `pino-http`, `helmet`). Added `@nestjs/platform-fastify`,
+  `@fastify/cors`, `@fastify/cookie`, `@fastify/static`, `fastify`.
+- Validated: typecheck, lint, 156 unit tests, 3 e2e tests, dev boot, prod esbuild
+  bundle, runtime smoke (login → cookies → webhook rawBody → SSE `id:`/`data:`
+  frames), and telescope request-body capture with PII redaction.
+
+> **Notes for readers:** the plan below documents *why* each change was needed and
+> the traps we hit — keep it as the reference for the two runtime-sensitive spots
+> (§6 middleware, §7 webhook/SSE) rather than a step-by-step re-run.
+
+---
 
 This document is the execution plan for migrating `apps/api` from the default
 Express HTTP adapter to the Fastify adapter (`@nestjs/platform-fastify`).

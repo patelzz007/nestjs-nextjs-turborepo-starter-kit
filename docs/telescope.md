@@ -21,7 +21,7 @@ coverImage: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=form
 > `JSON.stringify`, a 400-line `debug.ts`, and pino logs they `tail -f` — Datadog in prod,
 > nothing in dev. The Laravel Telescope experience (opinionated, visual, near-zero
 > config) is strictly better. We build it **for ourselves, in this monorepo**, NestJS +
-> Express only — and if it's as good as it should be, the extraction path (§13) is clean.
+> Fastify only — and if it's as good as it should be, the extraction path (§13) is clean.
 > If we build only one developer-experience feature, this is the one.
 >
 > **Ground truth** (verified 2026-08-12):
@@ -131,10 +131,10 @@ That single screen answers the three questions every debugging session starts wi
 4. **Reuse everything.** `LogService`, `EmailLog`, `CorrelationIdMiddleware`,
    `ResponseInterceptor`, the `DataTable`, the chart components, the auth guards. Telescope
    is a *consumer* of existing infrastructure, not a parallel universe.
-5. **One framework, owned.** v1 targets NestJS on the **Express adapter** — nothing else.
+5. **One framework, owned.** v1 targets NestJS on the **Fastify adapter** — nothing else.
    Different frameworks have different lifecycles, middleware order, DI, error handling
    and async-context propagation; a cross-framework v1 would work nowhere well. The
-   capture layer is isolated in `modules/telescope/`, so a later port (Express-only
+   capture layer is isolated in `modules/telescope/`, so a later port (Fastify-first
    lib, Hono) is a rewrite of the instrumenters — not the store, API, or UI.
 
 ---
@@ -714,7 +714,9 @@ The single biggest design decision — and the one that keeps Telescope *zero-co
 
 ## 7. Telescope API
 
-All routes under `/telescope`, **SuperAdmin + admin-access gated** (same guard as other
+All routes under `/telescope` (served at `/api/v1/telescope/…` — the URI versioning
+prefix from `main.ts`; the client's `API_URL_PREFIX` adds it automatically), **SuperAdmin
++ admin-access gated** (same guard as other
 admin APIs — reuse the existing role/RBAC guard, and make sure the `TelescopeController`
 never leaks request bodies through the Swagger docs: mark it `@ApiExcludeController()`
 or a `devOnly` tag). All responses go through the standard `ResponseInterceptor` envelope

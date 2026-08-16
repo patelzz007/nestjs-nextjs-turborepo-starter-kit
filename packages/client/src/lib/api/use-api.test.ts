@@ -49,7 +49,7 @@ describe("apiFetch", () => {
 
 		expect(fetchMock).toHaveBeenCalledTimes(1);
 		const { input, init } = firstFetchCall(fetchMock);
-		expect(inputUrl(input)).toBe("http://api.test/auth/me?page=1");
+		expect(inputUrl(input)).toBe("http://api.test/api/v1/auth/me?page=1");
 		expect(init.method).toBe("GET");
 		expect(init.credentials).toBe("include");
 		expect(result.ok).toBe(true);

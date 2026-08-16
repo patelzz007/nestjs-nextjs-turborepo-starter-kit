@@ -1,5 +1,5 @@
 import { CallHandler, ExecutionContext, HttpException, Inject, Injectable, type NestInterceptor } from "@nestjs/common";
-import type { Request } from "express";
+import type { FastifyReply, FastifyRequest } from "fastify";
 import { nanoid } from "nanoid";
 import { createHash } from "node:crypto";
 import { hostname } from "node:os";
@@ -21,8 +21,6 @@ import {
 	type TelescopeSpan,
 } from "@workspace/shared";
 
-import type { AccessTokenPayload } from "../auth/services/token.service";
-
 import { redactPii, redactPiiHeaders, scanPii, scanPiiHeaders } from "./pii-scanner";
 import { RequestSpanContext, type SpanStore } from "./request-span-context";
 import { sanitizeHeaders, sanitizeJson, truncateJson } from "./sanitize";
@@ -36,6 +34,35 @@ interface CapturedError {
 	readonly message: string;
 	readonly statusCode: number;
 	readonly stack: string | null;
+}
+
+/**
+ * Best-effort body snapshot: `request.body` may be undefined (GET), a parsed
+ * object, an array, or a raw string. One zod parse — no `typeof` guards —
+ * returns a JSON-compatible value or `null`. The sanitizer runs at capture
+ * time in finalize, so stored data is already clean (§10.2).
+ *
+ * The parameter is widened to `object` because Fastify's untyped request body
+ * is opaque; a non-JSON body that slips past body-parsing is still handled by
+ * the JSON.stringify fallback at runtime.
+ */
+function toJsonValue(body: object | null | undefined): TelescopeJsonValue | null {
+	if (body === undefined || body === null) {
+		return null;
+	}
+	const direct = TelescopeJsonValueSchema.safeParse(body);
+	if (direct.success) {
+		return direct.data;
+	}
+	// JSON.stringify (never `String(...)`): a non-JSON body like a Buffer or
+	// FormData object must serialize losslessly-ish instead of `[object Object]`.
+	try {
+		const serialized: string = JSON.stringify(body);
+		const reparsed = TelescopeJsonValueSchema.safeParse(JSON.parse(serialized));
+		return reparsed.success ? reparsed.data : serialized;
+	} catch {
+		return "{}";
+	}
 }
 
 /**
@@ -58,10 +85,20 @@ export class TelescopeInterceptor implements NestInterceptor {
 	) {}
 
 	public intercept(context: ExecutionContext, next: CallHandler): Observable<TelescopeJsonValue> {
-		const request: Request = context.switchToHttp().getRequest<Request>();
+		const request: FastifyRequest = context.switchToHttp().getRequest<FastifyRequest>();
+		const reply: FastifyReply = context.switchToHttp().getResponse<FastifyReply>();
 		const spanStore: SpanStore | undefined = RequestSpanContext.getStore();
 		if (!spanStore?.captured) {
 			return next.handle();
+		}
+
+		// Fastify parses the request body at preParsing — AFTER the capture
+		// middleware (a middie onRequest hook) — so the parsed body is only
+		// available here, in the interceptor, before the handler runs. Mirror it
+		// into the span store so finalize records it (the middleware sees the
+		// unparsed body and leaves requestBody null).
+		if (this.options.captureBody === "full" && request.body !== undefined) {
+			spanStore.requestBody = toJsonValue(request.body);
 		}
 
 		const handlerStart: number = performance.now();
@@ -93,7 +130,7 @@ export class TelescopeInterceptor implements NestInterceptor {
 			}),
 			tap({
 				finalize: (): void => {
-					this.finalize(request, spanStore, rawResponse, errorInfo, handlerStart);
+					this.finalize(request, reply, spanStore, rawResponse, errorInfo, handlerStart);
 				},
 			}),
 		);
@@ -119,7 +156,14 @@ export class TelescopeInterceptor implements NestInterceptor {
 	}
 
 	/** Builds and writes the RequestLog entry (+ exception entry on error). */
-	private finalize(request: Request, spanStore: SpanStore, rawResponse: TelescopeJsonValue | undefined, errorInfo: CapturedError | undefined, handlerStart: number): void {
+	private finalize(
+		request: FastifyRequest,
+		reply: FastifyReply,
+		spanStore: SpanStore,
+		rawResponse: TelescopeJsonValue | undefined,
+		errorInfo: CapturedError | undefined,
+		handlerStart: number,
+	): void {
 		const now: number = performance.now();
 		const durationMs: number = Math.round(now - spanStore.startedAt);
 
@@ -167,11 +211,14 @@ export class TelescopeInterceptor implements NestInterceptor {
 			id: nanoid(),
 			correlationId: spanStore.correlationId,
 			method: request.method,
-			path: request.path,
+			path: this.readPathname(request),
 			queryString: this.readQueryString(request),
-			statusCode: errorInfo !== undefined ? errorInfo.statusCode : (request.res?.statusCode ?? 200),
+			// The reply's status is 200 for successful handlers (the adapter
+			// applies @HttpCode during serialization, after finalize); error
+			// responses carry their real status via errorInfo.
+			statusCode: errorInfo !== undefined ? errorInfo.statusCode : reply.statusCode,
 			durationMs,
-			ip: request.ip ?? null,
+			ip: request.ip,
 			userAgent: this.readUserAgent(request),
 			userId: this.readUserId(request),
 			// Resolved to an email by TelescopeService on read (store is DB-free).
@@ -184,7 +231,7 @@ export class TelescopeInterceptor implements NestInterceptor {
 			logs: [...spanStore.logs],
 			// Feature 8: environment tag (NODE_ENV + host) for multi-env filters.
 			environment: this.readEnvironment(),
-			// Feature 6: resolved route params (e.g. { id: "abc" }) from Express.
+			// Feature 6: resolved route params (e.g. { id: "abc" }) from Fastify.
 			handlerParams: this.readHandlerParams(request),
 			// Feature 5: cache ops recorded by TelescopeCacheTracer.
 			cacheOps: [...spanStore.cacheOps],
@@ -224,18 +271,23 @@ export class TelescopeInterceptor implements NestInterceptor {
 	}
 
 	/** AuthGuard attaches the JWT payload to `request.user` before finalize. */
-	private readUserId(request: Request): string | null {
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Express' Request type does not model AuthGuard's `user` attachment; the shape is the documented AccessTokenPayload.
-		const user: AccessTokenPayload | undefined = (request as { user?: AccessTokenPayload }).user;
-		return user?.sub ?? null;
+	private readUserId(request: FastifyRequest): string | null {
+		// Both access and refresh payloads carry `sub`.
+		return request.user?.sub ?? null;
 	}
 
-	private readQueryString(request: Request): string | null {
-		const index: number = request.originalUrl.indexOf("?");
-		return index >= 0 ? request.originalUrl.slice(index + 1) : null;
+	/** Fastify's `request.url` includes the query string — strip it for the path. */
+	private readPathname(request: FastifyRequest): string {
+		const index: number = request.url.indexOf("?");
+		return index >= 0 ? request.url.slice(0, index) : request.url;
 	}
 
-	private readUserAgent(request: Request): string | null {
+	private readQueryString(request: FastifyRequest): string | null {
+		const index: number = request.url.indexOf("?");
+		return index >= 0 ? request.url.slice(index + 1) : null;
+	}
+
+	private readUserAgent(request: FastifyRequest): string | null {
 		const raw: string | string[] | undefined = request.headers["user-agent"];
 		const parsed = z.string().safeParse(raw);
 		return parsed.success ? parsed.data : null;
@@ -249,22 +301,23 @@ export class TelescopeInterceptor implements NestInterceptor {
 		};
 	}
 
-	/** Feature 6 — resolved Express route params, values length-capped. */
-	private readHandlerParams(request: Request): Record<string, string> | null {
-		const rawParams: Readonly<Record<string, string | string[]>> = { ...request.params };
-		const keys: readonly string[] = Object.keys(rawParams);
-		if (keys.length === 0) {
+	/** Feature 6 — resolved route params, values length-capped. */
+	private readHandlerParams(request: FastifyRequest): Record<string, string> | null {
+		// Fastify types route params as opaque; `typeof` narrowing recovers an
+		// object without a type assertion, then only string values are kept
+		// (route params are always single strings at runtime).
+		const paramsValue: object | null = typeof request.params === "object" ? request.params : null;
+		if (paramsValue === null) {
 			return null;
 		}
 		const params: Record<string, string> = {};
-		for (const key of keys) {
-			// Express types params as string | string[]; route params are always
-			// single strings, arrays are ignored defensively.
-			const rawValue: string | string[] = rawParams[key] ?? "";
-			const value: string = typeof rawValue === "string" ? rawValue : (rawValue[0] ?? "");
-			params[key] = value.length > 100 ? `${value.slice(0, 97)}…` : value;
+		for (const [key, rawValue] of Object.entries(paramsValue)) {
+			if (typeof rawValue !== "string") {
+				continue;
+			}
+			params[key] = rawValue.length > 100 ? `${rawValue.slice(0, 97)}…` : rawValue;
 		}
-		return params;
+		return Object.keys(params).length > 0 ? params : null;
 	}
 
 	/** Feature 17 — merge per-source PII flag lists, summing shared categories. */

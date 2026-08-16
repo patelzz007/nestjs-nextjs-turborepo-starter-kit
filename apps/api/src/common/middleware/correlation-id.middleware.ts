@@ -1,14 +1,18 @@
 import { Injectable, type NestMiddleware } from "@nestjs/common";
-import type { Request, Response, NextFunction } from "express";
+import type { IncomingMessage, ServerResponse } from "node:http";
 import { nanoid } from "nanoid";
 
 import type { JsonValue } from "../interfaces/json";
 
 /**
- * Extended Express Request interface that includes correlation ID, trace info,
- * and response data captured by the ResponseInterceptor for terminal logging.
+ * The raw Node request as seen by Nest middleware on the Fastify adapter.
+ *
+ * Nest middleware is executed by middie at Fastify's `onRequest` phase, which
+ * hands the middleware the RAW `IncomingMessage` (`request.raw`), not the
+ * FastifyRequest. `originalUrl` is patched onto it by middie; this middleware
+ * attaches the correlation/trace ids on top.
  */
-export interface RequestWithTrace extends Request {
+export interface RequestWithTrace extends IncomingMessage {
 	correlationId?: string;
 	traceId?: string;
 	responseData?: JsonValue;
@@ -22,10 +26,14 @@ export interface RequestWithTrace extends Request {
  * - **traceId**: Alias for correlationId, used for request grouping in the terminal output.
  *
  * The middleware also sets the `X-Correlation-Id` response header for client-side tracing.
+ *
+ * On the Fastify adapter this runs against `request.raw` (see {@link RequestWithTrace});
+ * a `preHandler` hook in `main.ts` mirrors `correlationId`/`traceId` onto the
+ * FastifyRequest so guards/interceptors can read them.
  */
 @Injectable()
 export class CorrelationIdMiddleware implements NestMiddleware {
-	public use(req: RequestWithTrace, res: Response, next: NextFunction): void {
+	public use(req: RequestWithTrace, res: ServerResponse, next: () => void): void {
 		// Generate or forward correlation ID
 		const headerValue: string | string[] | undefined = req.headers["x-correlation-id"] ?? req.headers["x-request-id"];
 		const correlationId: string = typeof headerValue === "string" ? headerValue : nanoid();

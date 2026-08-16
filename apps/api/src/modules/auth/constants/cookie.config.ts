@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import type { CookieOptions } from "express";
+import type { CookieSerializeOptions } from "@fastify/cookie";
 import { z } from "zod";
 
 // ── Exported Constants ─────────────────────────────────────────────────────
@@ -24,7 +24,7 @@ export const ADMIN_ACCESS_TOKEN_COOKIE_NAME: CookieNames = "adminAccessToken";
 export const ADMIN_REFRESH_TOKEN_COOKIE_NAME: CookieNames = "adminRefreshToken";
 
 /** Extended cookie options with same-site as required (not optional) */
-export interface ExtendedCookieOptions extends CookieOptions {
+export interface ExtendedCookieOptions extends CookieSerializeOptions {
 	readonly sameSite: boolean | "lax" | "strict" | "none";
 }
 

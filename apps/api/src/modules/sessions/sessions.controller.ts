@@ -3,7 +3,7 @@ import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiResponse, ApiTags } from
 import { SkipThrottle, Throttle } from "@nestjs/throttler";
 import type { LogoutAllResponse, LogoutResponse, RefreshResponse, RefreshResponseMessage, Session } from "@workspace/shared";
 import { LogoutAllResponseSchema, LogoutResponseSchema, RefreshResponseMessageSchema, SessionSchema } from "@workspace/shared";
-import type { Request } from "express";
+import type { FastifyRequest } from "fastify";
 
 import { GetUser } from "../auth/decorators/get-user.decorator";
 import { Public } from "../auth/decorators/public.decorator";
@@ -44,14 +44,17 @@ export class SessionsController {
 	@ApiOkResponse({ type: WrappedRefreshResponse, description: "Tokens refreshed" })
 	@ApiResponse({ status: 401, type: ApiErrorResponseDto, description: "Invalid or expired refresh token" })
 	@UseInterceptors(SetAuthCookiesInterceptor)
-	public async refreshToken(@GetUser() user: RefreshTokenPayload, @Req() req: Request): Promise<RefreshResponseMessage> {
+	public async refreshToken(@GetUser() user: RefreshTokenPayload, @Req() req: FastifyRequest): Promise<RefreshResponseMessage> {
 		const { deviceInfo, ipAddress } = extractClientInfo(req);
 
 		// Extract the raw refresh token JWT from cookies for reuse detection.
 		// RefreshTokenGuard already verified the cookie exists (it checks both
 		// `refreshToken` and `adminRefreshToken`), so one of these is always a string.
 		// The service will bcrypt-compare it against the stored hash before rotating.
-		const rawRefreshToken: string = req.cookies.refreshToken ?? req.cookies.adminRefreshToken;
+		// RefreshTokenGuard already verified one of the two cookies exists, so the
+		// `?? ""` fallback is unreachable in practice; it only keeps the type
+		// honest (an empty token fails the bcrypt compare → 401, never a 500).
+		const rawRefreshToken: string = req.cookies.refreshToken ?? req.cookies.adminRefreshToken ?? "";
 
 		// The refresh token's jti (JWT ID) is used for direct DB lookup
 		const tokens: RefreshResponse = await this.sessionsService.refreshToken(user.sub, rawRefreshToken, user.jti, deviceInfo, ipAddress);

@@ -1,6 +1,6 @@
 import { CanActivate, type ExecutionContext, Injectable, UnauthorizedException } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
-import type { Request } from "express";
+import type { FastifyRequest } from "fastify";
 
 import { TokenService } from "../services/token.service";
 import type { AccessTokenPayload } from "../services/token.service";
@@ -33,7 +33,7 @@ export class AuthGuard implements CanActivate {
 
 		if (isPublic) return true;
 
-		const request: Request = context.switchToHttp().getRequest<Request>();
+		const request: FastifyRequest = context.switchToHttp().getRequest<FastifyRequest>();
 
 		// Try Authorization: Bearer header first (Swagger UI / API clients)
 		// Fall back to httpOnly cookie(s). Check both accessToken and

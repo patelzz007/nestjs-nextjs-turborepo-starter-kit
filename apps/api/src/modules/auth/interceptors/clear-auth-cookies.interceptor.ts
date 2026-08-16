@@ -1,5 +1,5 @@
 import { Injectable, type NestInterceptor, type ExecutionContext, type CallHandler } from "@nestjs/common";
-import type { Request, Response } from "express";
+import type { FastifyReply, FastifyRequest } from "fastify";
 import { type Observable } from "rxjs";
 import { tap } from "rxjs/operators";
 
@@ -37,8 +37,8 @@ export class ClearAuthCookiesInterceptor implements NestInterceptor {
 	constructor(private readonly cookieConfig: CookieConfigService) {}
 
 	public intercept(context: ExecutionContext, next: CallHandler): Observable<JsonValue> {
-		const request: Request = context.switchToHttp().getRequest<Request>();
-		const response: Response = context.switchToHttp().getResponse<Response>();
+		const request: FastifyRequest = context.switchToHttp().getRequest<FastifyRequest>();
+		const response: FastifyReply = context.switchToHttp().getResponse<FastifyReply>();
 
 		// Determine which cookie set to clear based on X-Client-Type header.
 		const header: string | string[] | undefined = request.headers["x-client-type"];

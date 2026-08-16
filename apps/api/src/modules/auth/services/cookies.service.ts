@@ -1,4 +1,4 @@
-import type { Response } from "express";
+import type { FastifyReply } from "fastify";
 import { z } from "zod";
 
 import type { CookieNames, ExtendedCookieOptions } from "../constants/cookie.config";
@@ -39,14 +39,14 @@ export class CookieService {
 	/**
 	 * Set (or clear) a cookie on the response object.
 	 *
-	 * @param response - Express Response object
+	 * @param response - FastifyReply object (setCookie/clearCookie)
 	 * @param name - Cookie name (validated against CookieNames union)
 	 * @param value - Cookie value (null/undefined clears the cookie)
 	 * @param options - Optional overrides for cookie options
 	 *
 	 * @returns A {@link CookieResult} indicating success or failure
 	 */
-	public static setCookie(response: Response, name: CookieNames, value: string | null | undefined, options?: Partial<ExtendedCookieOptions>): CookieResult {
+	public static setCookie(response: FastifyReply, name: CookieNames, value: string | null | undefined, options?: Partial<ExtendedCookieOptions>): CookieResult {
 		// Validate cookie name
 		if (!CookieService.allowedNames.includes(name)) {
 			return {
@@ -76,7 +76,7 @@ export class CookieService {
 		if (value === null || value === undefined) {
 			response.clearCookie(name, mergedOptions);
 		} else {
-			response.cookie(name, value, mergedOptions);
+			response.setCookie(name, value, mergedOptions);
 		}
 
 		return { success: true };

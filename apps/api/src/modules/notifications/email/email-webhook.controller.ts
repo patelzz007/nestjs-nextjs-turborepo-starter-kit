@@ -1,10 +1,10 @@
-import { Controller, ForbiddenException, Get, Headers, HttpCode, Post, Req, UseGuards } from "@nestjs/common";
+import { Controller, ForbiddenException, Get, Headers, HttpCode, Post, Req, UseGuards, Version, VERSION_NEUTRAL } from "@nestjs/common";
 import type { RawBodyRequest } from "@nestjs/common";
 import { ApiBody, ApiHeader, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { ThrottlerGuard } from "@nestjs/throttler";
 import { Resend } from "resend";
 import { z } from "zod";
-import type { Request } from "express";
+import type { FastifyRequest } from "fastify";
 
 import type { EmailLogStatus } from "@workspace/shared";
 
@@ -83,7 +83,13 @@ export class EmailWebhookController {
 	 * Browsers (and accidental GETs) hit this and see a friendly explanation
 	 * instead of a bare 404. Resend only ever POSTs to the webhook.
 	 */
+	// Version-neutral (per-method): this exact URL is registered in the Resend
+	// dashboard, so it must not move under `/api/v1`. Combined with the
+	// global-prefix `exclude` in main.ts it stays at
+	// `/notifications/email-webhook` (URI versioning would otherwise leave a
+	// `/v1` segment on excluded routes).
 	@Public()
+	@Version(VERSION_NEUTRAL)
 	@Get()
 	@ApiOperation({ summary: "Webhook endpoint info (GET is not the delivery path)" })
 	@ApiOkResponse({ description: "Explains the endpoint" })
@@ -102,6 +108,7 @@ export class EmailWebhookController {
 	}
 
 	@Public()
+	@Version(VERSION_NEUTRAL)
 	@Post()
 	// Per-IP rate limiting on the delivery path only (defense-in-depth on top
 	// of signature verification). Deliberately method-scoped: the GET info
@@ -166,7 +173,7 @@ export class EmailWebhookController {
 		description: "v1,<base64 HMAC-SHA256> over `<id>.<timestamp>.<rawBody>` using the webhook signing secret — or `svix-signature`",
 	})
 	@ApiOkResponse({ description: "Webhook accepted" })
-	public async receive(@Req() req: RawBodyRequest<Request>, @Headers() headers: Record<string, string | undefined>): Promise<{ readonly received: true }> {
+	public async receive(@Req() req: RawBodyRequest<FastifyRequest>, @Headers() headers: Record<string, string | undefined>): Promise<{ readonly received: true }> {
 		const secret: string = this.config.resendWebhookSecret;
 		if (secret.length === 0) {
 			// No secret configured — the webhook is not wired up. Still answer 200

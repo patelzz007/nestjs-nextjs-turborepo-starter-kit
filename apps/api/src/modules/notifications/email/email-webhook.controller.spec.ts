@@ -1,6 +1,6 @@
 import { ForbiddenException } from "@nestjs/common";
 import type { RawBodyRequest } from "@nestjs/common";
-import type { Request } from "express";
+import type { FastifyRequest } from "fastify";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { TypedConfigService } from "../../../config/typed-config.service";
@@ -42,8 +42,8 @@ function makeController(): EmailWebhookController {
 }
 
 /** A request whose raw body + headers mimic a genuine Svix delivery. */
-function makeReq(body: string, headers: Record<string, string | undefined>): RawBodyRequest<Request> {
-	return { rawBody: body, headers, ip: "::1" } as unknown as RawBodyRequest<Request>;
+function makeReq(body: string, headers: Record<string, string | undefined>): RawBodyRequest<FastifyRequest> {
+	return { rawBody: body, headers, ip: "::1" } as unknown as RawBodyRequest<FastifyRequest>;
 }
 
 function signedHeaders(): Record<string, string> {

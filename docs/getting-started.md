@@ -372,6 +372,14 @@ curl http://localhost:8080/health
 # → {"status":"ok","db":"connected","timestamp":"..."}
 ```
 
+> [!NOTE] **API versioning:** every endpoint is served under the `/api/v1` prefix (URI
+> versioning, `v1` as the default — a future `@Version('2')` controller lands at
+> `/api/v2/…` automatically). The client applies the prefix in one place
+> (`packages/client/src/lib/api/config.ts` → `API_URL_PREFIX`), so endpoint paths in
+> the typed registry stay logical (`/auth/login`, `/telescope/overview`, …). Two routes
+> are **excluded** and stay at their historical paths: `GET /health` (infra checks) and
+> `POST /notifications/email-webhook` (registered in the Resend dashboard).
+
 **2. Swagger** — open http://localhost:8080/docs. You should see every endpoint with
 its request/response schemas (inferred from the shared Zod schemas).
 

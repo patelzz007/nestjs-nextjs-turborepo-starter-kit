@@ -29,7 +29,7 @@ import {
 	VerifyEmailResponseSchema,
 	apiContract,
 } from "@workspace/shared";
-import type { Request } from "express";
+import type { FastifyRequest } from "fastify";
 
 import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe";
 
@@ -104,7 +104,7 @@ export class AuthController {
 		@Body(new ZodValidationPipe(apiContract.auth.login.input)) body: LoginInput,
 		@Headers("x-client-type") headerClientType: string | undefined,
 		@Query("client_type") queryClientType: string | undefined,
-		@Req() req: Request,
+		@Req() req: FastifyRequest,
 	): Promise<LoginServiceResponse> {
 		// Accept client type from header (browser apps) or query param (Swagger UI)
 		const clientType: string | undefined = headerClientType ?? queryClientType;

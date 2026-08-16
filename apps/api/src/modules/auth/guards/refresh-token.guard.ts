@@ -1,5 +1,5 @@
 import { CanActivate, type ExecutionContext, Injectable, UnauthorizedException } from "@nestjs/common";
-import type { Request } from "express";
+import type { FastifyRequest } from "fastify";
 
 import { TokenService, type RefreshTokenPayload } from "../services/token.service";
 
@@ -17,7 +17,7 @@ export class RefreshTokenGuard implements CanActivate {
 	constructor(private readonly tokenService: TokenService) {}
 
 	public async canActivate(context: ExecutionContext): Promise<boolean> {
-		const request: Request = context.switchToHttp().getRequest<Request>();
+		const request: FastifyRequest = context.switchToHttp().getRequest<FastifyRequest>();
 		// Check both refreshToken and adminRefreshToken since the admin panel
 		// uses isolated cookie names for cookie path isolation.
 		const token: string | undefined = request.cookies.refreshToken ?? request.cookies.adminRefreshToken;

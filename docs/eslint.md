@@ -192,7 +192,7 @@ export default [
 		},
 	},
 
-	// 3. Relax no-unsafe-* for runtime-type patterns (Prisma / Zod / Express)
+	// 3. Relax no-unsafe-* for runtime-type patterns (Prisma / Zod / Fastify)
 	{
 		files: [
 			"src/prisma/**/*.ts",
@@ -219,7 +219,7 @@ export default [
 ```
 
 > [!NOTE] **Why?** Prisma's complex generic chains, Zod v4 schema metafields (`.meta()`), and
-> dynamic Express middleware patterns cannot be fully resolved by `strictTypeChecked`,
+> dynamic Fastify middleware patterns cannot be fully resolved by `strictTypeChecked`,
 > which produces false-positive `no-unsafe-*` errors. These are validated at runtime
 > by the libraries themselves, so they're relaxed **only** for those file patterns.
 
@@ -420,7 +420,7 @@ is intentionally **not** in `tsconfig.json` (e.g. spec files), add it to the
 `projectService.allowDefaultProject` list in the workspace's `eslint.config.js`
 (see the api config in [Section 4](#4-per-repo-exceptions)).
 
-### 8.3 False-positive `no-unsafe-*` errors on Prisma / Zod / Express code
+### 8.3 False-positive `no-unsafe-*` errors on Prisma / Zod / Fastify code
 
 These are false positives from `strictTypeChecked` on dynamic library code. Add the
 file pattern to the workspace's existing `no-unsafe-*` override block (see

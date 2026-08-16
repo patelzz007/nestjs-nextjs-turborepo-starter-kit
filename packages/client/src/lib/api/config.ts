@@ -16,3 +16,12 @@ const DEFAULT_API_BASE_URL = "http://localhost:8080";
  * deploying (e.g. `NEXT_PUBLIC_API_URL=https://api.example.com`).
  */
 export const API_BASE_URL: string = process.env.NEXT_PUBLIC_API_URL ?? DEFAULT_API_BASE_URL;
+
+/**
+ * Versioned path prefix for every API route. The API serves all endpoints
+ * under `/api/v1/<path>` (Nest URI versioning with v1 as the default; a
+ * future v2 controller lands at `/api/v2/<path>`). Prepend this to a route
+ * path when building an API URL — keep it in ONE place so bumping the version
+ * is a single-line change here.
+ */
+export const API_URL_PREFIX = "/api/v1";

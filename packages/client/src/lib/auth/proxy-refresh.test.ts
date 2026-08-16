@@ -371,7 +371,7 @@ describe("refreshSessionFromProxy", () => {
 		const call = fetchMock.mock.calls[0];
 		if (call === undefined) throw new Error("fetch was never called");
 		const [input, init] = call;
-		expect(inputUrl(input)).toBe("http://api.test/auth/refresh");
+		expect(inputUrl(input)).toBe("http://api.test/api/v1/auth/refresh");
 		expect(init?.method).toBe("POST");
 		expect(headersOf(init ?? {}).Cookie).toBe("refreshToken=rt-value");
 		expect(headersOf(init ?? {})["X-Client-Type"]).toBeUndefined();
@@ -397,7 +397,7 @@ describe("refreshSessionFromProxy", () => {
 		const headers = headersOf(init ?? {});
 		expect(headers["X-Client-Type"]).toBe("admin");
 		expect(headers.Cookie).toBe("adminRefreshToken=admin-rt");
-		expect(inputUrl(input)).toBe("http://api.test/auth/refresh");
+		expect(inputUrl(input)).toBe("http://api.test/api/v1/auth/refresh");
 	});
 
 	it("surfaces non-2xx statuses without throwing", async () => {

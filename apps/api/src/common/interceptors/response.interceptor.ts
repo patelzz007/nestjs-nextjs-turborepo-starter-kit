@@ -1,5 +1,5 @@
 import { Injectable, type NestInterceptor, type ExecutionContext, type CallHandler, HttpException, HttpStatus } from "@nestjs/common";
-import type { Request } from "express";
+import type { FastifyRequest } from "fastify";
 import { type Observable, throwError } from "rxjs";
 import { catchError, map } from "rxjs/operators";
 import { z } from "zod";
@@ -7,7 +7,6 @@ import { z } from "zod";
 import { nowEpochMs } from "@workspace/shared";
 
 import type { JsonValue } from "../interfaces/json";
-import type { RequestWithTrace } from "../middleware/correlation-id.middleware";
 
 /**
  * Zod schema for a PaginatedResult shape (from paginate()).
@@ -76,7 +75,7 @@ function isApiResponse(value: JsonValue): value is z.infer<typeof ApiResponseSch
 @Injectable()
 export class ResponseInterceptor implements NestInterceptor {
 	public intercept(context: ExecutionContext, next: CallHandler): Observable<object> {
-		const request: Request = context.switchToHttp().getRequest<Request>();
+		const request: FastifyRequest = context.switchToHttp().getRequest<FastifyRequest>();
 		// ── SSE routes pass through untouched ──────────────────────────────
 		// The `@Sse()` adapter writes each frame (`data: …`) directly to the
 		// wire. Wrapping every frame in the `{ success, data, meta }` envelope
@@ -89,8 +88,7 @@ export class ResponseInterceptor implements NestInterceptor {
 		if (acceptHeader?.includes("text/event-stream")) {
 			return next.handle();
 		}
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Runtime type: CorrelationIdMiddleware sets correlationId
-		const correlationId: string = (request as RequestWithTrace).correlationId ?? "";
+		const correlationId: string = request.correlationId ?? "";
 
 		return next.handle().pipe(
 			map((data: JsonValue) => {
@@ -113,8 +111,7 @@ export class ResponseInterceptor implements NestInterceptor {
 						},
 					};
 
-					// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Runtime type: CorrelationIdMiddleware sets responseData
-					(request as RequestWithTrace).responseData = wrapped;
+					request.responseData = wrapped;
 					return wrapped;
 				}
 
@@ -131,7 +128,7 @@ export class ResponseInterceptor implements NestInterceptor {
 						},
 					};
 
-					(request satisfies RequestWithTrace).responseData = wrapped;
+					request.responseData = wrapped;
 					return wrapped;
 				}
 
@@ -145,16 +142,14 @@ export class ResponseInterceptor implements NestInterceptor {
 					},
 				};
 
-				// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Runtime type: CorrelationIdMiddleware sets responseData
-				(request as RequestWithTrace).responseData = wrapped;
+				request.responseData = wrapped;
 				return wrapped;
 			}),
 			// ── Catch errors so error responses are also displayed in terminal ──
 			catchError((err: Error) => {
 				const statusCode: number = err instanceof HttpException ? err.getStatus() : HttpStatus.INTERNAL_SERVER_ERROR;
 
-				// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Runtime type: CorrelationIdMiddleware sets responseData
-				(request as RequestWithTrace).responseData = {
+				request.responseData = {
 					success: false,
 					error: {
 						message: err.message,

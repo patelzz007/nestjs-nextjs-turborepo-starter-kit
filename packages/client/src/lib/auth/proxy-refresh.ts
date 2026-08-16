@@ -9,6 +9,7 @@
 
 import { z } from "zod";
 
+import { API_URL_PREFIX } from "../api/config";
 import { decodeJwtPayload } from "./jwt";
 
 /** How early (ms) before `exp` we refresh on navigation (absorbs clock drift). */
@@ -196,7 +197,7 @@ export async function refreshSessionFromProxy(config: ProxyRefreshConfig): Promi
 	}, REFRESH_TIMEOUT_MS);
 
 	try {
-		const response: Response = await fetch(`${config.apiBaseUrl}/auth/refresh`, {
+		const response: Response = await fetch(`${config.apiBaseUrl}${API_URL_PREFIX}/auth/refresh`, {
 			method: "POST",
 			headers: {
 				Accept: "application/json",

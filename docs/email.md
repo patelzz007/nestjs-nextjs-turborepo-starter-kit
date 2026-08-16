@@ -60,7 +60,7 @@ coverImage: "https://images.unsplash.com/photo-1596526131083-e8c633c948d2?auto=f
 | Admin preview API | `GET /notifications/email-preview`, `GET /notifications/email-preview/:key` | Sample props only — never sends mail |
 | Resend webhook | `POST /notifications/email-webhook` | `@Public()` + signature-verified via `resend.webhooks.verify` (booted with `rawBody: true`). Handles delivery events (status flips, bounce/complaint reasons captured into `error`); tracking events (`email.opened` / `email.clicked`) are acknowledged and ignored — open/click tracking was removed |
 | Admin preview page | `apps/admin/app/(panel)/emails/page.tsx` + sidebar entry (Settings → Email Templates) | Template index + iframe preview + HTML/text tabs + copy |
-| Admin email log | `apps/admin/app/(panel)/email-log/page.tsx` + sidebar entry (Settings → Email Log) | `GET /notifications/email-log` (JWT-guarded, `?limit=` 1–500) → shared `DataTable`. Delivery-only status badges (Sent / Delivered / Bounced / Complained / Failed) with bounce/complaint reasons in `error`. Search, export, mobile cards. **Live updates via SSE** — see "Live updates (SSE)" below |
+| Admin email log | `apps/admin/app/(panel)/email-log/page.tsx` + sidebar entry (Settings → Email Log) | `GET /api/v1/notifications/email-log` (JWT-guarded, `?limit=` 1–500) → shared `DataTable`. Delivery-only status badges (Sent / Delivered / Bounced / Complained / Failed) with bounce/complaint reasons in `error`. Search, export, mobile cards. **Live updates via SSE** — see "Live updates (SSE)" below |
 | Env vars | `EMAIL_MODE`, `EMAIL_TEST_TO`, `EMAIL_REPLY_TO`, `EMAIL_MAX_ATTEMPTS`, `EMAIL_TIMEOUT_MS`, `EMAIL_RATE_LIMIT_PER_MINUTE`, `RESEND_WEBHOOK_SECRET` | Added to shared `EnvSchema` + `TypedConfigService` |
 
 ### Live wiring (verified 2026-08-10)
@@ -93,7 +93,7 @@ coverImage: "https://images.unsplash.com/photo-1596526131083-e8c633c948d2?auto=f
 > 1. **`EmailLogEventsService`** (`email-log-events.service.ts`) — a tiny in-process
 >    `node:events` emitter. `EmailLogService` calls `emitUpdated()` after every successful
 >    write (create / status flip).
-> 2. **`GET /notifications/email-log/events`** — an `@Sse()` endpoint on `EmailLogController`
+> 2. **`GET /api/v1/notifications/email-log/events`** — an `@Sse()` endpoint on `EmailLogController`
 >    that subscribes to the emitter and streams one `{ updatedAt }` frame per signal. It's
 >    guarded by the global auth guard like the rest of the controller (admin-only), and the
 >    global `ResponseInterceptor` **bypasses** `text/event-stream` requests so frames stay

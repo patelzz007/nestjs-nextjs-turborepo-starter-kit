@@ -1,5 +1,5 @@
 import { createParamDecorator, type ExecutionContext } from "@nestjs/common";
-import type { Request } from "express";
+import type { FastifyRequest } from "fastify";
 
 import type { AccessTokenPayload, RefreshTokenPayload } from "../services/token.service";
 
@@ -18,9 +18,8 @@ import type { AccessTokenPayload, RefreshTokenPayload } from "../services/token.
  * // Get a specific property
  * @GetUser("sub") userId: string
  * ```
- */
-export const GetUser = createParamDecorator((data: string | undefined, ctx: ExecutionContext): AccessTokenPayload | RefreshTokenPayload | string | boolean | undefined => {
-	const request: Request = ctx.switchToHttp().getRequest<Request>();
+ */ export const GetUser = createParamDecorator((data: string | undefined, ctx: ExecutionContext): AccessTokenPayload | RefreshTokenPayload | string | boolean | undefined => {
+	const request: FastifyRequest = ctx.switchToHttp().getRequest<FastifyRequest>();
 	const user: AccessTokenPayload | RefreshTokenPayload | undefined = request.user;
 
 	if (!user || !data) return user;

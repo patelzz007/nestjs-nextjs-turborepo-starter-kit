@@ -16,6 +16,7 @@ import { EpochMsSchema, type EpochMs, type JsonValue, type SerializableInput } f
 import { useMemo } from "react";
 import { z, type ZodType } from "zod";
 
+import { API_URL_PREFIX } from "./config";
 import { apiRouter, resolveRequest, type ApiRouter, type MutationDef, type ProcedureDef, type QueryDef } from "./endpoints";
 
 export const HttpMethodSchema = z.enum(["GET", "POST", "PUT", "PATCH", "DELETE"]);
@@ -215,7 +216,9 @@ export interface ApiFailure {
 export type ApiResponse<T> = ApiSuccess<T> | ApiFailure;
 
 function buildUrl(baseUrl: string, path: string, query?: QueryParams): string {
-	const url = new URL(path, baseUrl);
+	// API routes are versioned under `/api/v1` — the endpoint registry holds the
+	// logical paths (`/auth/login`), the prefix is applied at the transport.
+	const url = new URL(`${API_URL_PREFIX}${path}`, baseUrl);
 	if (query) {
 		Object.entries(query).forEach(([key, value]) => {
 			if (value !== undefined) url.searchParams.set(key, String(value));

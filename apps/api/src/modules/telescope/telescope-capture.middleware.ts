@@ -1,14 +1,22 @@
 import { Inject, Injectable, type NestMiddleware } from "@nestjs/common";
-import type { NextFunction, Response } from "express";
+import type { IncomingMessage, ServerResponse } from "node:http";
 import { nanoid } from "nanoid";
 
-import { TelescopeJsonValueSchema, type TelescopeJsonValue, type TelescopeOptions } from "@workspace/shared";
+import type { TelescopeOptions } from "@workspace/shared";
 
 import type { RequestWithTrace } from "../../common/middleware/correlation-id.middleware";
 
 import { RequestSpanContext, type SpanStore } from "./request-span-context";
 import { shouldCaptureRequest } from "./should-capture";
 import { TELESCOPE_OPTIONS } from "./telescope.options";
+
+/**
+ * The raw Node request seen by this middleware on the Fastify adapter (middie
+ * runs Nest middleware on `request.raw` at the `onRequest` phase). `body` is
+ * NOT parsed at that phase — the parsed body is captured by the
+ * `TelescopeInterceptor` (which runs after parsing) instead.
+ */
+type RawCaptureRequest = IncomingMessage & RequestWithTrace & { originalUrl: string };
 
 /**
  * Opens the AsyncLocalStorage scope for every capturable request: snapshots
@@ -18,23 +26,27 @@ import { TELESCOPE_OPTIONS } from "./telescope.options";
  * scope, so `RequestSpanContext.span()` and the Prisma listener find it.
  *
  * Registered AFTER `CorrelationIdMiddleware` so `req.correlationId` exists.
+ *
+ * On the Fastify adapter this middleware runs at `onRequest` — BEFORE body
+ * parsing — so `req.body` is not available here. The parsed body is stored
+ * into the span store by a `preHandler` hook (registered in TelescopeModule)
+ * when `captureBody === "full"`, which is before the interceptor finalizes.
  */
 @Injectable()
 export class TelescopeCaptureMiddleware implements NestMiddleware {
 	public constructor(@Inject(TELESCOPE_OPTIONS) private readonly options: TelescopeOptions) {}
 
-	public use(req: RequestWithTrace, res: Response, next: NextFunction): void {
+	public use(req: RawCaptureRequest, res: ServerResponse, next: () => void): void {
 		const options: TelescopeOptions = this.options;
-		// NOTE: inside a router-level Nest middleware, `req.path` is the
-		// mount-relative path (`/`) — the real path lives in `req.originalUrl`.
-		// Comparing `/` against the ignore prefixes would capture EVERYTHING,
-		// including `/health`, `/docs` and `/telescope/*` itself.
+		// NOTE: inside a router-level Nest middleware, `req.url` is the
+		// mount-relative path — middie patches `originalUrl` to the full path,
+		// which is what the ignore/capture prefixes compare against.
 		const queryIndex: number = req.originalUrl.indexOf("?");
 		const pathname: string = queryIndex >= 0 ? req.originalUrl.slice(0, queryIndex) : req.originalUrl;
 
 		if (
 			!options.enabled ||
-			!shouldCaptureRequest(req.method, pathname, { ignorePaths: options.ignorePaths, redactPaths: options.redactPaths, capturePaths: options.capturePaths })
+			!shouldCaptureRequest(req.method ?? "GET", pathname, { ignorePaths: options.ignorePaths, redactPaths: options.redactPaths, capturePaths: options.capturePaths })
 		) {
 			next();
 			return;
@@ -49,7 +61,9 @@ export class TelescopeCaptureMiddleware implements NestMiddleware {
 			spans: [],
 			captured,
 			userId: null,
-			requestBody: options.captureBody === "full" ? toJsonValue(req.body) : null,
+			// Body is not parsed at onRequest (Fastify parses at preParsing); the
+			// interceptor fills this in for captureBody=full, before finalize.
+			requestBody: null,
 			// Improvement 16: per-request console log buffer.
 			logs: [],
 			// Feature 5: cache ops recorded by TelescopeCacheTracer.
@@ -61,34 +75,5 @@ export class TelescopeCaptureMiddleware implements NestMiddleware {
 		RequestSpanContext.storage.run(store, (): void => {
 			next();
 		});
-	}
-}
-
-/**
- * Best-effort body snapshot: `req.body` may be undefined (GET), a parsed
- * object, an array, or a raw string. One zod parse — no `typeof` guards —
- * returns a JSON-compatible value or `null`. The sanitizer runs at capture
- * time in the interceptor, so stored data is already clean (§10.2).
- *
- * Typed as the JSON value union (repo rule 2: no `unknown`/`any`); a
- * non-JSON body that slips past body-parsing is still handled by the
- * JSON.stringify fallback at runtime.
- */
-function toJsonValue(body: TelescopeJsonValue | null | undefined): TelescopeJsonValue | null {
-	if (body === undefined || body === null) {
-		return null;
-	}
-	const direct = TelescopeJsonValueSchema.safeParse(body);
-	if (direct.success) {
-		return direct.data;
-	}
-	// JSON.stringify (never `String(...)`): a non-JSON body like a Buffer or
-	// FormData object must serialize losslessly-ish instead of `[object Object]`.
-	try {
-		const serialized: string = JSON.stringify(body);
-		const reparsed = TelescopeJsonValueSchema.safeParse(JSON.parse(serialized));
-		return reparsed.success ? reparsed.data : serialized;
-	} catch {
-		return "{}";
 	}
 }

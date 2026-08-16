@@ -243,7 +243,7 @@ export const TelescopeOptionsSchema = z
 		captureBody: TelescopeBodyCaptureSchema.default("headers"),
 		/** Header whitelist — nothing outside this list is ever stored. */
 		captureHeaders: z.array(z.string()).default(["content-type", "user-agent", "x-client-type"]),
-		ignorePaths: z.array(z.string()).default(["/health", "/docs", "/telescope", "/favicon.ico"]),
+		ignorePaths: z.array(z.string()).default(["/health", "/docs", "/api/v1/telescope", "/favicon.ico"]),
 		/** Feature 18 — alert webhook URL; alerts fire only when this is set. */
 		alertWebhookUrl: z.string().optional(),
 		/** Feature 18 — duration threshold (ms) that triggers a "duration" alert. */

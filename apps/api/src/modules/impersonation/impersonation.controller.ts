@@ -3,7 +3,7 @@ import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiResponse, ApiTags } from
 import { Throttle } from "@nestjs/throttler";
 import type { ImpersonateResponse, StopImpersonationResponse } from "@workspace/shared";
 import { ImpersonateResponseSchema, StopImpersonationResponseSchema } from "@workspace/shared";
-import type { Request } from "express";
+import type { FastifyRequest } from "fastify";
 
 import { GetUser } from "../auth/decorators/get-user.decorator";
 import { SuperAdminOnly } from "../auth/decorators/super-admin.decorator";
@@ -41,7 +41,7 @@ export class ImpersonationController {
 	@ApiOperation({ summary: "SuperAdmin: impersonate another user" })
 	@ApiOkResponse({ type: WrappedImpersonateResponse, description: "Impersonation started" })
 	@ApiResponse({ status: 403, type: ApiErrorResponseDto, description: "SuperAdmin privileges required" })
-	public async impersonate(@GetUser("sub") superAdminId: string, @Param("userId") targetUserId: string, @Req() req: Request): Promise<ImpersonateResponse> {
+	public async impersonate(@GetUser("sub") superAdminId: string, @Param("userId") targetUserId: string, @Req() req: FastifyRequest): Promise<ImpersonateResponse> {
 		const { ipAddress } = extractClientInfo(req);
 		const userAgent: string | null = req.headers["user-agent"] ?? null;
 		return this.impersonationService.impersonateUser(superAdminId, targetUserId, ipAddress, userAgent);
@@ -61,7 +61,7 @@ export class ImpersonationController {
 	public async stopImpersonation(
 		@GetUser("originalUserId") impersonatorId: string | undefined,
 		@GetUser("sub") targetUserId: string,
-		@Req() req: Request,
+		@Req() req: FastifyRequest,
 	): Promise<StopImpersonationResponse> {
 		const { ipAddress } = extractClientInfo(req);
 		const userAgent: string | null = req.headers["user-agent"] ?? null;

@@ -1,25 +1,50 @@
 import "reflect-metadata";
 import "dotenv/config";
+import { VersioningType } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import { SwaggerModule, DocumentBuilder } from "@nestjs/swagger";
-import cookieParser from "cookie-parser";
+import { FastifyAdapter, type NestFastifyApplication } from "@nestjs/platform-fastify";
+import fastifyCookie from "@fastify/cookie";
+import fastifyHelmet from "@fastify/helmet";
+import type { FastifyReply, FastifyRequest } from "fastify";
 
 import { AppModule } from "./app.module";
 
 async function bootstrap(): Promise<void> {
 	// rawBody: true — the Resend webhook controller reads `req.rawBody` so the
 	// signature check covers the exact bytes Resend sent (the JSON body parser
-	// would otherwise re-encode whitespace and break verification).
-	const app = await NestFactory.create(AppModule, { rawBody: true });
+	// would otherwise re-encode whitespace and break verification). The
+	// Fastify adapter supports it: the JSON content-type parser copies the raw
+	// buffer onto `request.rawBody` when enabled.
+	const app = await NestFactory.create<NestFastifyApplication>(
+		AppModule,
+		// bodyLimit = 1 MiB (Fastify's default) — comfortably above any request
+		// the API accepts; only the Resend webhook sends a meaningful body.
+		new FastifyAdapter({ bodyLimit: 1024 * 1024 }),
+		{ rawBody: true },
+	);
 
 	app.enableShutdownHooks();
+
+	// ── API versioning + global prefix ───────────────────────────────
+	// Every endpoint is served under `/api/v1/<path>` (URI versioning with v1
+	// as the default — a future `@Version('2')` controller lands at
+	// `/api/v2/<path>` automatically). Two routes stay at their historical
+	// paths by design (excluded routes get the version truncated AND no prefix):
+	//  - `GET /health` — infra/uptime checks and the documented smoke tests
+	//    curl the root path; excluding it means nothing breaks.
+	//  - `POST /notifications/email-webhook` — this exact URL is registered in
+	//    the Resend dashboard; excluding it keeps deliveries flowing without a
+	//    dashboard change (the signature check is the security boundary).
+	app.setGlobalPrefix("api", { exclude: ["", "health", "notifications/email-webhook"] });
+	app.enableVersioning({ type: VersioningType.URI, defaultVersion: "1" });
 
 	// ── Config from env (see apps/api/.env) ────────────────────────
 	// PORT overrides the listen port; CORS_ORIGINS is a comma-separated list of
 	// allowed frontend origins (falls back to local dev defaults).
 	// `|| 8080` guards against an invalid PORT (Number() -> NaN) and treats 0 as unset.
 	const port = Number(process.env.PORT ?? "8080") || 8080;
-	const corsOrigins: readonly string[] = (process.env.CORS_ORIGINS ?? "http://localhost:3000,http://localhost:3001")
+	const corsOrigins: string[] = (process.env.CORS_ORIGINS ?? "http://localhost:3000,http://localhost:3001")
 		.split(",")
 		.map((origin: string): string => origin.trim())
 		.filter((origin: string): boolean => origin.length > 0);
@@ -35,30 +60,122 @@ async function bootstrap(): Promise<void> {
 		allowedHeaders: ["Content-Type", "X-Client-Type", "Accept", "Last-Event-ID"],
 	});
 
-	// ── Cookie Parser ────────────────────────────────────────────
-	// Required for AuthGuard to read JWT tokens from httpOnly cookies.
-	// Without this middleware, request.cookies is always undefined.
-	app.use(cookieParser());
+	// ── Cookies ───────────────────────────────────────────────────
+	// @fastify/cookie replaces cookie-parser: it decorates `request.cookies`
+	// (read by AuthGuard / RefreshTokenGuard) and adds `reply.setCookie` /
+	// `reply.clearCookie` (used by CookieService). Registered here — before
+	// `listen()` — so its onRequest hook runs ahead of middie's and the guards
+	// always see parsed cookies.
+	await app.register(fastifyCookie);
+
+	// ── Security headers ─────────────────────────────────────────
+	// @fastify/helmet (helmet v8 on Fastify 5) sets CSP, HSTS, nosniff,
+	// X-Frame-Options, Referrer-Policy, CORP… on every response. Tuning notes:
+	//  - `enableCSPNonces` generates a per-request CSP nonce (`reply.cspNonce`)
+	//    and appends `'nonce-…'` to script-src/style-src, so inline HTML is
+	//    allow-listed by nonce instead of `'unsafe-inline'`. Swagger's only
+	//    inline content is two <style> blocks — its three scripts are external
+	//    same-origin files — so script-src drops `'unsafe-inline'` entirely;
+	//    the onSend hook below stamps the nonce onto those <style> tags.
+	//  - `style-src-attr 'unsafe-inline'` — Swagger UI's rendered components set
+	//    inline `style="…"` attributes at runtime, and nonces do not apply to
+	//    attributes; this narrow allowance (attributes only, not <style>
+	//    elements) is what lets the docs page render.
+	//  - `crossOriginResourcePolicy: cross-origin` — the web/admin apps fetch
+	//    JSON from :8080 cross-origin; `same-origin` (helmet's default) would
+	//    block resource embedding across ports.
+	//  - `upgrade-insecure-requests` is removed so plain-http local dev
+	//    (http://localhost:8080) isn't force-upgraded to https.
+	await app.register(fastifyHelmet, {
+		enableCSPNonces: true,
+		contentSecurityPolicy: {
+			useDefaults: true,
+			directives: {
+				scriptSrc: ["'self'"],
+				styleSrc: ["'self'"],
+				styleSrcAttr: ["'unsafe-inline'"],
+				imgSrc: ["'self'", "data:"],
+				fontSrc: ["'self'", "data:"],
+				connectSrc: ["'self'"],
+				objectSrc: ["'none'"],
+				upgradeInsecureRequests: null,
+			},
+		},
+		crossOriginResourcePolicy: { policy: "cross-origin" },
+		referrerPolicy: { policy: "no-referrer" },
+		hsts: {
+			maxAge: 31_536_000,
+			includeSubDomains: true,
+			preload: true,
+		},
+	});
+
+	// ── Correlation-id mirror (Fastify request ↔ raw Node request) ──
+	// Nest middleware on the Fastify adapter runs against `request.raw` (middie
+	// executes at the `onRequest` phase and hands Nest the raw IncomingMessage),
+	// so CorrelationIdMiddleware stamps `correlationId`/`traceId` on the RAW
+	// request. Guards and interceptors receive the FastifyRequest instead, so
+	// mirror the ids onto it at `preHandler` (after onRequest, before guards)
+	// to keep `request.correlationId` readable downstream.
+	const fastifyInstance: {
+		addHook?: (name: "preHandler", fn: (request: FastifyRequest & { raw: { correlationId?: string; traceId?: string } }, reply: object, done: () => void) => void) => void;
+	} = app.getHttpAdapter().getInstance();
+	if (typeof fastifyInstance.addHook === "function") {
+		fastifyInstance.addHook("preHandler", (request, _reply, done): void => {
+			if (request.correlationId === undefined && request.raw.correlationId !== undefined) {
+				request.correlationId = request.raw.correlationId;
+			}
+			if (request.traceId === undefined && request.raw.traceId !== undefined) {
+				request.traceId = request.raw.traceId;
+			}
+			done();
+		});
+	}
+
+	// ── CSP nonce stamping for Swagger's inline HTML ──────────────
+	// helmet's strict CSP allows inline styles ONLY when the tag carries the
+	// per-request nonce, and @nestjs/swagger's generated /docs HTML has no
+	// placeholder for it. This onSend hook rewrites the nonce into the inline
+	// <style>/<script> tags of HTML responses (Swagger is the only HTML the API
+	// serves); JSON/Buffer/stream payloads pass through untouched.
+	const fastifyHooks: {
+		addHook?: (
+			name: "onSend",
+			fn: (request: FastifyRequest, reply: FastifyReply, payload: string | Buffer | null, done: (error: Error | null, payload?: string | Buffer | null) => void) => void,
+		) => void;
+	} = app.getHttpAdapter().getInstance();
+	if (typeof fastifyHooks.addHook === "function") {
+		fastifyHooks.addHook("onSend", (_request, reply, payload, done): void => {
+			const contentType = reply.getHeader("content-type");
+			if (typeof payload !== "string" || typeof contentType !== "string" || !contentType.includes("text/html")) {
+				done(null, payload);
+				return;
+			}
+			const nonce = reply.cspNonce;
+			done(null, payload.replace(/<style>/g, `<style nonce="${nonce.style}">`).replace(/<script>/g, `<script nonce="${nonce.script}">`));
+		});
+	}
 
 	// ── Favicon ────────────────────────────────────────────────
 	// NestJS logo on dark rounded square
 	const faviconSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M14.131.047c-.173 0-.334.037-.483.087.316.21.49.49.576.806.007.043.019.074.025.117a.681.681 0 0 1 .013.112c.024.545-.143.614-.26.936-.18.415-.13.861.086 1.22a.74.74 0 0 0 .074.137c-.235-1.568 1.073-1.803 1.314-2.293.019-.428-.334-.713-.613-.911a1.37 1.37 0 0 0-.732-.21zM16.102.4c-.024.143-.006.106-.012.18-.006.05-.006.112-.012.161-.013.05-.025.1-.044.149-.012.05-.03.1-.05.149l-.067.142c-.02.025-.031.05-.05.075l-.037.055a2.152 2.152 0 0 1-.093.124c-.037.038-.068.081-.112.112v.006c-.037.031-.074.068-.118.1-.13.099-.278.173-.415.266-.043.03-.087.056-.124.093a.906.906 0 0 0-.118.099c-.043.037-.074.074-.111.118-.031.037-.068.08-.093.124a1.582 1.582 0 0 0-.087.13c-.025.05-.043.093-.068.142-.019.05-.037.093-.05.143a2.007 2.007 0 0 0-.043.155c-.006.025-.006.056-.012.08-.007.025-.007.05-.013.075 0 .05-.006.105-.006.155 0 .037 0 .074.006.111 0 .05.006.1.019.155.006.05.018.1.03.15.02.049.032.098.05.148.013.03.031.062.044.087l-1.426-.552c-.241-.068-.477-.13-.719-.186l-.39-.093c-.372-.074-.75-.13-1.128-.167-.013 0-.019-.006-.031-.006A11.082 11.082 0 0 0 8.9 2.855c-.378.025-.756.074-1.134.136a12.45 12.45 0 0 0-.837.174l-.279.074c-.092.037-.18.08-.266.118l-.205.093c-.012.006-.024.006-.03.012-.063.031-.118.056-.174.087a2.738 2.738 0 0 0-.236.118c-.043.018-.086.043-.124.062a.559.559 0 0 1-.055.03c-.056.032-.112.063-.162.094a1.56 1.56 0 0 0-.148.093c-.044.03-.087.055-.124.086-.006.007-.013.007-.019.013-.037.025-.08.056-.118.087l-.012.012-.093.074c-.012.007-.025.019-.037.025-.031.025-.062.056-.093.08-.006.013-.019.02-.025.025-.037.038-.074.069-.111.106-.007 0-.007.006-.013.012a1.742 1.742 0 0 0-.111.106c-.007.006-.007.012-.013.012a1.454 1.454 0 0 0-.093.1c-.012.012-.03.024-.043.036a1.374 1.374 0 0 1-.106.112c-.006.012-.018.019-.024.03-.05.05-.093.1-.143.15l-.018.018c-.1.106-.205.211-.317.304-.111.1-.229.192-.347.273a3.777 3.777 0 0 1-.762.421c-.13.056-.267.106-.403.149-.26.056-.527.161-.756.18-.05 0-.105.012-.155.018l-.155.037-.149.056c-.05.019-.099.044-.148.068-.044.031-.093.056-.137.087a1.011 1.011 0 0 0-.124.106c-.043.03-.087.074-.124.111-.037.043-.074.08-.105.124-.031.05-.068.093-.093.143a1.092 1.092 0 0 0-.087.142c-.025.056-.05.106-.068.161-.019.05-.037.106-.056.161-.012.05-.025.1-.03.15 0 .005-.007.012-.007.018-.012.056-.012.13-.019.167C.006 7.95 0 7.986 0 8.03a.657.657 0 0 0 .074.31v.006c.019.037.044.075.069.112.024.037.05.074.08.111.031.031.068.069.106.1a.906.906 0 0 0 .117.099c.149.13.186.173.378.272.031.019.062.031.1.05.006 0 .012.006.018.006 0 .013 0 .019.006.031a1.272 1.272 0 0 0 .08.298c.02.037.032.074.05.111.007.013.013.025.02.031.024.05.049.093.073.137l.093.13c.031.037.069.08.106.118.037.037.074.068.118.105 0 0 .006.006.012.006.037.031.074.062.112.087a.986.986 0 0 0 .136.08c.043.025.093.05.142.069a.73.73 0 0 0 .124.043c.007.006.013.006.025.012.025.007.056.013.08.019-.018.335-.024.65.026.762.055.124.328-.254.6-.688-.036.428-.061.93 0 1.079.069.155.44-.329.763-.862 4.395-1.016 8.405 2.02 8.826 6.31-.08-.67-.905-1.041-1.283-.948-.186.458-.502 1.047-1.01 1.413.043-.41.025-.83-.062-1.24a4.009 4.009 0 0 1-.769 1.562c-.588.043-1.177-.242-1.487-.67-.025-.018-.031-.055-.05-.08-.018-.043-.037-.087-.05-.13a.515.515 0 0 1-.037-.13c-.006-.044-.006-.087-.006-.137v-.093a.992.992 0 0 1 .031-.13c.013-.043.025-.086.044-.13.024-.043.043-.087.074-.13.105-.298.105-.54-.087-.682a.706.706 0 0 0-.118-.062c-.024-.006-.055-.018-.08-.025l-.05-.018a.847.847 0 0 0-.13-.031.472.472 0 0 0-.13-.019 1.01 1.01 0 0 0-.136-.012c-.031 0-.062.006-.093.006a.484.484 0 0 0-.137.019c-.043.006-.086.012-.13.024a1.068 1.068 0 0 0-.13.044c-.043.018-.08.037-.124.056-.037.018-.074.043-.118.062-1.444.942-.582 3.148.403 3.787-.372.068-.75.148-.855.229l-.013.012c.267.161.546.298.837.416.397.13.818.247 1.004.297v.006a5.996 5.996 0 0 0 1.562.112c2.746-.192 4.996-2.281 5.405-5.033l.037.161c.019.112.043.23.056.347v.006c.012.056.018.112.025.162v.024c.006.056.012.112.012.162.006.068.012.136.012.204v.1c0 .03.007.067.007.098 0 .038-.007.075-.007.112v.087c0 .043-.006.08-.006.124 0 .025 0 .05-.006.08 0 .044-.006.087-.006.137-.006.018-.006.037-.006.055l-.02.143c0 .019 0 .037-.005.056-.007.062-.019.118-.025.18v.012l-.037.174v.018l-.037.167c0 .007-.007.02-.007.025a1.663 1.663 0 0 1-.043.168v.018c-.019.062-.037.118-.05.174-.006.006-.006.012-.006.012l-.056.186c-.024.062-.043.118-.068.18-.025.062-.043.124-.068.18-.025.062-.05.117-.074.18h-.007c-.024.055-.05.117-.08.173a.302.302 0 0 1-.019.043c-.006.006-.006.013-.012.019a5.867 5.867 0 0 1-1.742 2.082c-.05.031-.099.069-.149.106-.012.012-.03.018-.043.03a2.603 2.603 0 0 1-.136.094l.018.037h.007l.26-.037h.006c.161-.025.322-.056.483-.087.044-.006.093-.019.137-.031l.087-.019c.043-.006.086-.018.13-.024.037-.013.074-.02.111-.031.62-.15 1.221-.354 1.798-.595a9.926 9.926 0 0 1-3.85 3.142c.714-.05 1.426-.167 2.114-.366a9.903 9.903 0 0 0 5.857-4.68 9.893 9.893 0 0 1-1.667 3.986 9.758 9.758 0 0 0 1.655-1.376 9.824 9.824 0 0 0 2.61-5.268c.21.98.272 1.99.18 2.987 4.474-6.241.371-12.712-1.346-14.416-.006-.013-.012-.019-.012-.031-.006.006-.006.006-.006.012 0-.006 0-.006-.007-.012 0 .074-.006.148-.012.223a8.34 8.34 0 0 1-.062.415c-.03.136-.068.273-.105.41-.044.13-.093.266-.15.396a5.322 5.322 0 0 1-.185.378 4.735 4.735 0 0 1-.477.688c-.093.111-.192.21-.292.31a3.994 3.994 0 0 1-.18.155l-.142.124a3.459 3.459 0 0 1-.347.241 4.295 4.295 0 0 1-.366.211c-.13.062-.26.118-.39.174a4.364 4.364 0 0 1-.818.223c-.143.025-.285.037-.422.05a4.914 4.914 0 0 1-.297.012 4.66 4.66 0 0 1-.422-.025 3.137 3.137 0 0 1-.421-.062 3.136 3.136 0 0 1-.415-.105h-.007c.137-.013.273-.025.41-.05a4.493 4.493 0 0 0 .818-.223c.136-.05.266-.112.39-.174.13-.062.248-.13.372-.204.118-.08.235-.161.347-.248.112-.087.217-.18.316-.279.105-.093.198-.198.291-.304.093-.111.18-.223.26-.334.013-.019.026-.044.038-.062.062-.1.124-.199.18-.298a4.272 4.272 0 0 0 .334-.775c.044-.13.075-.266.106-.403.025-.142.05-.278.062-.415.012-.142.025-.285.025-.421 0-.1-.007-.199-.013-.298a6.726 6.726 0 0 0-.05-.415 4.493 4.493 0 0 0-.092-.415c-.044-.13-.087-.267-.137-.397-.05-.13-.111-.26-.173-.384-.069-.124-.137-.248-.211-.366a6.843 6.843 0 0 0-.248-.34c-.093-.106-.186-.212-.285-.317a3.878 3.878 0 0 0-.161-.155c-.28-.217-.57-.421-.862-.607a1.154 1.154 0 0 0-.124-.062 2.415 2.415 0 0 0-.589-.26Z" fill="#e0234e"/></svg>`;
 
-	// Override Swagger's default favicon paths (must register BEFORE Swagger)
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Express `use` handlers accept any request/response type
-	app.use("/docs/favicon-32x32.png", (_req: any, res: any) => {
-		res.redirect("/favicon.ico");
+	// Override Swagger's default favicon paths (must register BEFORE Swagger).
+	// `app.get(...)` on NestFastifyApplication is the DI provider lookup, so the
+	// HTTP routes go through the adapter (`app.getHttpAdapter()`), which maps
+	// them to native Fastify routes — the correct idiom for an adapter-specific
+	// handler (middie would work, but native routes are cleaner for this).
+	const httpAdapter = app.getHttpAdapter();
+	httpAdapter.get("/docs/favicon-32x32.png", (_req: FastifyRequest, reply: FastifyReply): void => {
+		reply.redirect("/favicon.ico");
 	});
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Express `use` handlers accept any request/response type
-	app.use("/docs/favicon-16x16.png", (_req: any, res: any) => {
-		res.redirect("/favicon.ico");
+	httpAdapter.get("/docs/favicon-16x16.png", (_req: FastifyRequest, reply: FastifyReply): void => {
+		reply.redirect("/favicon.ico");
 	});
 
 	// Serve main favicon at /favicon.ico
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Express `use` handlers accept any request/response type
-	app.use("/favicon.ico", (_req: any, res: any) => {
-		res.setHeader("Content-Type", "image/svg+xml");
-		res.send(faviconSvg);
+	httpAdapter.get("/favicon.ico", (_req: FastifyRequest, reply: FastifyReply): void => {
+		reply.header("Content-Type", "image/svg+xml").send(faviconSvg);
 	});
 
 	// ── Swagger / OpenAPI ──────────────────────────────────────
