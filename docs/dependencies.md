@@ -1,5 +1,6 @@
 ---
 title: "Dependency Hygiene (syncpack)"
+tags: ["dependencies", "syncpack", "tooling"]
 description: "How syncpack keeps shared dependencies on the exact same version across every workspace."
 order: 7
 author: "Acme Inc."

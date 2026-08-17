@@ -240,7 +240,7 @@ export default function EmailPreviewPage(): React.JSX.Element {
 							</CardHeader>
 							<CardContent>
 								{mode === "preview" ? (
-									<iframe title={`${preview.label} preview`} srcDoc={preview.html} sandbox="" className="h-[720px] w-full rounded-lg border bg-background" />
+									<iframe title={`${preview.label} preview`} srcDoc={preview.html} sandbox="" className="h-180 w-full rounded-lg border bg-background" />
 								) : mode === "html" ? (
 									<div className="flex items-center gap-2 border-b pb-2 text-xs text-muted-foreground">
 										<FileCode2 className="size-3.5" />
@@ -248,7 +248,7 @@ export default function EmailPreviewPage(): React.JSX.Element {
 									</div>
 								) : null}
 								{mode === "html" || mode === "text" ? (
-									<pre className="max-h-[720px] overflow-auto rounded-lg bg-muted/40 p-4 font-mono text-xs leading-relaxed text-foreground">
+									<pre className="max-h-180 overflow-auto rounded-lg bg-muted/40 p-4 font-mono text-xs leading-relaxed text-foreground">
 										{mode === "text" ? preview.text : preview.html}
 									</pre>
 								) : null}

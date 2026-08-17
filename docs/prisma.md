@@ -1,5 +1,6 @@
 ---
 title: "Prisma & Database Commands"
+tags: ["prisma", "database", "orm"]
 description: "The database layer: how Prisma is configured, where the schema lives, and every db: command."
 order: 8
 author: "Acme Inc."

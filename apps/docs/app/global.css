@@ -1,0 +1,471 @@
+/*
+ * Docs app global styles: Fumadocs' design tokens + component styles on top of
+ * the workspace UI design system (imported first in `layout.tsx`), plus the
+ * extras ported from the admin docs viewer.
+ *
+ * NOTE: `@import "tailwindcss"` must come FIRST — the Fumadocs preset CSS uses
+ * `@apply` in its own `@import`ed files (e.g. `sm:ms-4` in `lib/base.css`),
+ * which only resolves once Tailwind's utilities are registered in THIS file.
+ */
+
+@import "tailwindcss";
+@import "fumadocs-ui/css/neutral.css";
+@import "fumadocs-ui/css/preset.css";
+
+/*
+ * Fumadocs sizes the docs grid from `--fd-layout-width` (default 97rem). We
+ * make it fully fluid: `100%` resolves against the layout's own width, so the
+ * article column fills the viewport (minus the fixed sidebar/TOC columns) on
+ * every screen size instead of capping at a hardcoded value.
+ */
+:root {
+	--fd-layout-width: 99%;
+}
+
+/*
+ * ── Brand palette: slate, not gray ────────────────────────────────────────
+ * The stock Fumadocs `neutral` theme is pure gray (hsl 0 0%) — it reads flat
+ * and washed-out. This monochrome redesign shifts every token onto the Tailwind
+ * slate ramp (a blue-gray hue) and makes **slate-800 the accent**: buttons,
+ * links, pills and the active nav all use the inverted slate-800/white pill
+ * that matches the admin panel brand. Dark mode inverts to white-on-slate.
+ * Overriding the `--color-fd-*` custom properties (not the `@theme` values)
+ * lets every `bg-fd-*` utility and `var(--color-fd-*)` consumer pick the new
+ * ramp at runtime.
+ */
+:root {
+	--color-fd-background: hsl(210 40% 98%);
+	--color-fd-foreground: hsl(222.2 47.4% 11.2%);
+	--color-fd-muted: hsl(214.3 31.8% 91.4%);
+	--color-fd-muted-foreground: hsl(215.4 16.3% 46.9%);
+	--color-fd-popover: hsl(0 0% 100%);
+	--color-fd-popover-foreground: hsl(222.2 47.4% 11.2%);
+	--color-fd-card: hsl(0 0% 100%);
+	--color-fd-card-foreground: hsl(222.2 47.4% 11.2%);
+	--color-fd-border: hsl(214.3 31.8% 88%);
+	--color-fd-primary: hsl(217.2 32.6% 17.5%);
+	--color-fd-primary-foreground: hsl(0 0% 100%);
+	--color-fd-secondary: hsl(214.3 31.8% 91.4%);
+	--color-fd-secondary-foreground: hsl(222.2 47.4% 11.2%);
+	--color-fd-accent: hsl(214.3 31.8% 91.4%);
+	--color-fd-accent-foreground: hsl(222.2 47.4% 11.2%);
+	--color-fd-ring: hsl(215.3 25% 26.7%);
+	--color-fd-overlay: hsla(222.2 84% 4.9% / 0.3);
+}
+
+.dark {
+	--color-fd-background: hsl(222.2 84% 4.9%);
+	--color-fd-foreground: hsl(214.3 31.8% 91.4%);
+	--color-fd-muted: hsl(217.2 32.6% 11%);
+	--color-fd-muted-foreground: hsl(215.4 16.3% 65%);
+	--color-fd-popover: hsl(217.2 32.6% 12%);
+	--color-fd-popover-foreground: hsl(214.3 31.8% 91.4%);
+	--color-fd-card: hsl(217.2 32.6% 10%);
+	--color-fd-card-foreground: hsl(214.3 31.8% 91.4%);
+	--color-fd-border: hsl(217.2 32.6% 18%);
+	--color-fd-primary: hsl(0 0% 98%);
+	--color-fd-primary-foreground: hsl(217.2 32.6% 17.5%);
+	--color-fd-secondary: hsl(217.2 32.6% 13%);
+	--color-fd-secondary-foreground: hsl(214.3 31.8% 91.4%);
+	--color-fd-accent: hsl(217.2 32.6% 16%);
+	--color-fd-accent-foreground: hsl(214.3 31.8% 91.4%);
+	--color-fd-ring: hsl(215.4 16.3% 65%);
+	--color-fd-overlay: hsla(0 0% 0% / 0.5);
+}
+
+/*
+ * Map the next/font `--font-heading` variable to a Tailwind `font-heading`
+ * utility (`@theme inline` keeps the indirection so the utility resolves the
+ * class-installed variable at runtime) and bump the base font size — Fumadocs'
+ * default 14px body reads small; 15px with the slate ramp feels right.
+ */
+@theme inline {
+	--font-heading: var(--font-heading);
+}
+
+body {
+	font-size: 0.9375rem;
+}
+
+/*
+ * Smooth anchor scrolling — the TOC (desktop rail + mobile popover) links to
+ * `#heading-id` targets, and without this the browser jumps instantly. Only
+ * when the user hasn't asked for reduced motion.
+ */
+@media (prefers-reduced-motion: no-preference) {
+	html {
+		scroll-behavior: smooth;
+	}
+}
+
+/*
+ * Space Grotesk for every heading — tight tracking for that modern dev-tool
+ * voice. Applies to `DocsTitle`, prose h2/h3/h4, landing + blog headings
+ * without touching each component.
+ */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+	font-family: var(--font-heading, var(--font-sans));
+	letter-spacing: -0.02em;
+	text-wrap: balance;
+}
+
+/*
+ * Prose links — monochrome accent: inherit the near-black slate, underline
+ * only on hover (Vercel-style), instead of a heavy always-on underline.
+ */
+.docs-body a,
+.prose a {
+	font-weight: 500;
+	text-underline-offset: 3px;
+	text-decoration-line: underline;
+	text-decoration-color: var(--color-fd-border);
+	text-decoration-thickness: 1px;
+	transition: text-decoration-color 150ms ease, color 150ms ease;
+}
+
+.docs-body a:hover,
+.prose a:hover {
+	text-decoration-color: currentColor;
+}
+
+/* ── Code blocks: refined shell + mono title bar ─────────────────────────
+   The official CodeBlock renders a `figure.shiki` (rounded, bordered card)
+   with an optional title bar — a `div` with `h-9.5 border-b` when a `title=`
+   fence meta is present, or an absolutely-positioned action row without one.
+   The title bar gets a muted slate tint + the mono font so it reads like a
+   filename tab; the viewport keeps a quiet padding under the copy button. */
+#nd-docs-layout figure.shiki {
+	border-color: var(--color-fd-border);
+	border-radius: 0.75rem;
+	box-shadow: 0 1px 2px hsl(222 47% 11% / 0.05);
+	background: var(--color-fd-card);
+}
+
+#nd-docs-layout figure.shiki > div:first-child:not([class*="absolute"]) {
+	background: color-mix(in oklab, var(--color-fd-muted) 50%, transparent);
+	font-family: var(--font-mono);
+	font-size: 0.75rem;
+	letter-spacing: 0.01em;
+}
+
+#nd-docs-layout figure.shiki figcaption {
+	color: var(--color-fd-foreground);
+	font-weight: 500;
+}
+
+/*
+ * The article fills most of the main column (90% of its width) and is centered
+ * with auto side margins, leaving an even 5% gutter on each side. The
+ * article's own `px-4/6/8` padding keeps a little extra breathing room.
+ */
+#nd-docs-layout article {
+	max-width: 80%;
+	margin-inline: auto;
+}
+
+/*
+ * Active sidebar item — inverted "pill": dark slate chip with white text in
+ * light mode, white chip with slate text in dark mode. Applied to both the
+ * desktop rail (`#nd-sidebar`) and the mobile drawer (`#nd-sidebar-mobile`),
+ * overriding Fumadocs' default `bg-fd-primary/10 text-fd-primary`.
+ */
+#nd-sidebar [data-active="true"],
+#nd-sidebar-mobile [data-active="true"] {
+	background-color: var(--color-fd-primary);
+	color: var(--color-fd-primary-foreground);
+}
+
+.dark #nd-sidebar [data-active="true"],
+.dark #nd-sidebar-mobile [data-active="true"] {
+	background-color: var(--color-fd-primary);
+	color: var(--color-fd-primary-foreground);
+}
+
+/*
+ * The `<article>` column = `--fd-layout-width - sidebar - toc`. Once the
+ * layout width reaches the viewport, shrinking the fixed 268px sidebar/TOC
+ * columns is what actually widens the article. These rules repeat the layout's
+ * own `:has()` selectors so they win the cascade (later source order, equal
+ * specificity) without touching the layout component. The sidebar is kept a
+ * little wider (260px vs 236px) so nav items breathe; the TOC stays slim.
+ */
+@media (width >= 64rem) {
+	#nd-docs-layout:has(.md\:layout\:\[--fd-sidebar-width\:268px\]) {
+		--fd-sidebar-width: 300px;
+	}
+}
+@media (width >= 80rem) {
+	#nd-docs-layout:has(.xl\:layout\:\[--fd-toc-width\:268px\]) {
+		--fd-toc-width: 236px;
+	}
+}
+
+/*
+ * Code-block word wrap (toggled from the CodeBlock action bar): soft-wraps
+ * long lines that would otherwise scroll horizontally. `width: 100%` lets the
+ * pre reflow inside the viewport instead of keeping `max-content` width.
+ */
+#nd-docs-layout .code-wrap pre {
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+	width: 100%;
+	min-width: 0;
+}
+
+/* ── Dotted "stage" texture (docs banner + image gallery) ────────────────── */
+.bg-dot-grid {
+	background-image: radial-gradient(circle, var(--color-border) 1px, transparent 1px);
+	background-size: 18px 18px;
+}
+
+/* ── Inline code (prose only — block code inside <pre> is left to the code block) ── */
+.docs-body code:not(pre code),
+.prose code:not(pre code) {
+	border-radius: 0.375rem;
+	background: var(--color-muted);
+	padding: 0.125rem 0.375rem;
+	font-family: var(--font-mono);
+	font-size: 0.85em;
+	font-weight: 500;
+	color: var(--color-foreground);
+}
+
+/* ── Page-level footer inside the DocsLayout grid ─────────────────────────
+   `#nd-docs-layout` is a 5-column grid (sidebar | sidebar | main | toc | toc).
+   A page-level <footer> (rendered on /docs/* and /blog/* pages) is a direct
+   grid child, so without explicit placement CSS grid auto-placement drops it
+   into the empty toc-popover cell at the top of the page. Pin it to the main
+   column on an implicit row below the content instead. */
+#nd-docs-layout > footer {
+	grid-column: main;
+	grid-row: 4;
+}
+
+/* ── TOC — fully custom (right rail + mobile sheet) ────────────────────────
+   Our own component (`components/table-of-contents.tsx`) replaces Fumadocs'
+   TOC renderer via the `slots.toc` escape hatch on `DocsPage`: the layout
+   keeps Fumadocs' `TOCProvider` (right rail + scroll-spy context) and smooth
+   anchor scrolling, but the markup and visuals are 100% ours.
+
+   Design: one quiet continuous rail on the left anchors the list; nesting is
+   conveyed by indentation (14px per level). The active AND hover rows get the
+   inverted brand pill — slate-800 bg + white text in light mode, white bg +
+   slate-800 text in dark (`--color-fd-primary` / `-foreground`), the same
+   treatment as the sidebar's active item. Everything keys off `data-depth`
+   (0 for the shallowest heading, +1 per deeper level). */
+.toc-sticky {
+	position: sticky;
+	top: var(--fd-docs-row-1);
+	height: calc(var(--fd-docs-height) - var(--fd-docs-row-1));
+	width: var(--fd-toc-width);
+	padding: 3rem 1.5rem 2rem 0.75rem;
+	overflow-y: auto;
+}
+
+@media (min-width: 1280px) {
+	.toc-sticky {
+		width: 268px;
+	}
+}
+
+.toc-title {
+	margin-bottom: 1rem;
+	font-size: 0.6875rem;
+	font-weight: 600;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: var(--color-fd-muted-foreground);
+}
+
+.toc-list {
+	position: relative;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+/* One continuous rail on the left — spans the whole TOC, quiet and unbroken. */
+.toc-list::before {
+	content: "";
+	position: absolute;
+	top: 4px;
+	bottom: 4px;
+	left: 3px;
+	width: 1.5px;
+	border-radius: 999px;
+	background: var(--color-fd-muted-foreground);
+	opacity: 0.4;
+	pointer-events: none;
+}
+
+.toc-item {
+	position: relative;
+}
+
+/* Nesting = indentation (14px per level). The label breathes inside the
+   pill: 10px on the left (pill starts at 0.625rem / +1.5rem per level) and
+   10px on top/bottom (row padding 0.8125rem vs the pill's 3px inset). */
+.toc-link {
+	position: relative;
+	display: block;
+	border-radius: 0.375rem;
+	padding: 0.8125rem 0.75rem 0.8125rem 1.25rem;
+	font-family: var(--font-heading, var(--font-sans));
+	font-size: 0.8125rem;
+	line-height: 1.4;
+	letter-spacing: -0.01em;
+	color: var(--color-fd-muted-foreground);
+	transition: color 120ms ease;
+}
+
+.toc-item[data-depth="1"] .toc-link {
+	padding-inline-start: 2.125rem;
+}
+
+.toc-item[data-depth="2"] .toc-link {
+	padding-inline-start: 3rem;
+}
+
+.toc-item[data-depth="3"] .toc-link {
+	padding-inline-start: 3.875rem;
+}
+
+.toc-item[data-depth="4"] .toc-link {
+	padding-inline-start: 4.75rem;
+}
+
+.toc-item[data-depth="5"] .toc-link {
+	padding-inline-start: 5.625rem;
+}
+
+/* The inverted brand pill — slate-800 bg + white text in light mode, white bg
+   + slate-800 text in dark (`--color-fd-primary` / `-foreground`). Painted on
+   an inset ::after at z-index: -1 so it sits BEHIND the label text and starts
+   just right of the rail (never covering it); keyed per depth so nested rows
+   keep their pill aligned with their text. */
+.toc-link::after {
+	content: "";
+	position: absolute;
+	z-index: -1;
+	inset-block: 3px;
+	inset-inline-end: 0.25rem;
+	inset-inline-start: 0.625rem;
+	border-radius: 0.375rem;
+	background: var(--color-fd-primary);
+	opacity: 0;
+	pointer-events: none;
+	transition: opacity 120ms ease;
+}
+
+.toc-item[data-depth="1"] .toc-link::after {
+	inset-inline-start: 1.5rem;
+}
+
+.toc-item[data-depth="2"] .toc-link::after {
+	inset-inline-start: 2.375rem;
+}
+
+.toc-item[data-depth="3"] .toc-link::after {
+	inset-inline-start: 3.25rem;
+}
+
+.toc-item[data-depth="4"] .toc-link::after {
+	inset-inline-start: 4.125rem;
+}
+
+.toc-item[data-depth="5"] .toc-link::after {
+	inset-inline-start: 5rem;
+}
+
+/* Hover and active share the inverted pill. */
+.toc-link:hover,
+.toc-link.is-active {
+	color: var(--color-fd-primary-foreground);
+}
+
+.toc-link:hover::after,
+.toc-link.is-active::after {
+	opacity: 1;
+}
+
+.toc-link.is-active {
+	font-weight: 600;
+}
+
+/* ── Mobile sheet ────────────────────────────────────────────────────────
+   A sticky bar in the `toc-popover` grid row (under the header) on screens
+   below xl: shows the current heading, expands into a scrollable sheet that
+   drops over the article. Item styles are shared with the desktop rail. */
+.toc-mobile {
+	display: none;
+}
+
+@media (max-width: 1279.98px) {
+	.toc-mobile {
+		display: block;
+		position: sticky;
+		top: var(--fd-docs-row-2);
+		z-index: 30;
+		grid-area: toc-popover;
+	}
+}
+
+.toc-mobile-trigger {
+	display: flex;
+	align-items: center;
+	gap: 0.625rem;
+	width: 100%;
+	height: 2.5rem;
+	padding-inline: 1rem;
+	font-size: 0.875rem;
+	text-align: start;
+	color: var(--color-fd-muted-foreground);
+	background: color-mix(in srgb, var(--color-fd-background) 80%, transparent);
+	backdrop-filter: blur(8px);
+	border-bottom: 1px solid var(--color-fd-border);
+}
+
+.toc-mobile-panel {
+	max-height: 60vh;
+	overflow-y: auto;
+	padding-block: 0.5rem;
+	padding-inline: 1rem;
+	background: var(--color-fd-background);
+	border-bottom: 1px solid var(--color-fd-border);
+	box-shadow: 0 16px 40px hsl(222 47% 11% / 0.14), 0 2px 8px hsl(222 47% 11% / 0.08);
+}
+
+/* ── Glossary tooltips ───────────────────────────────────────────────────── */
+.docs-body abbr,
+.prose abbr {
+	text-decoration: underline dotted;
+	text-underline-offset: 3px;
+	text-decoration-color: var(--color-muted-foreground);
+	cursor: help;
+}
+
+/* ── Print: strip the app shell, print the article ──────────────────────── */
+@media print {
+	#nd-sidebar,
+	#nd-navbar,
+	.toc-sticky,
+	.toc-mobile,
+	[data-docs-lightbox] {
+		display: none !important;
+	}
+	pre,
+	code {
+		white-space: pre-wrap !important;
+		word-break: break-word !important;
+		background: #f6f8fa !important;
+		color: #24292e !important;
+	}
+	a {
+		text-decoration: none !important;
+	}
+}

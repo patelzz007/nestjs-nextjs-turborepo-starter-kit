@@ -1,3 +1,12 @@
+---
+title: "NestJS Express → Fastify Migration"
+description: "The execution plan (now complete) for migrating the API from the default Express adapter to Fastify — why, the per-file audit, the middleware/SSE traps, and the validation results."
+author: "Acme Inc."
+lastUpdated: 1786924800000
+coverImage: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=1600&q=80"
+tags: ["fastify", "migration", "performance", "api"]
+---
+
 # NestJS Express → Fastify Migration Plan
 
 **Status:** ✅ **Complete** — executed 2026-08-16, all phases landed.

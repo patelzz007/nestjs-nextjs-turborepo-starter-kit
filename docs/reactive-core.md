@@ -1,5 +1,6 @@
 ---
 title: "Reactive Core (Subscription-based, no rxjs)"
+tags: ["reactive", "rxjs", "architecture"]
 description: "Design for replacing promise-based flows with a tiny in-house rxjs-like reactive core — 50 items to implement, pitfalls, unsubscribe guarantees, and full operator coverage."
 order: 14
 author: "Acme Inc."

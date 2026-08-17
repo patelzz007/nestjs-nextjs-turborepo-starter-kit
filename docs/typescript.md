@@ -1,5 +1,6 @@
 ---
 title: "TypeScript Configs & How To Use Them"
+tags: ["typescript", "tooling", "config"]
 description: "How TypeScript is configured across the monorepo via the shared @workspace/typescript-config package."
 order: 5
 author: "Acme Inc."

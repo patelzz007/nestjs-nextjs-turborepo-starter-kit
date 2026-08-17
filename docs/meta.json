@@ -1,0 +1,29 @@
+{
+ "title": "Guides",
+ "pages": [
+  "--- Getting Started ---",
+  "getting-started",
+  "README",
+  "architecture",
+  "--- Architecture & Auth ---",
+  "token-refresh",
+  "--- Tooling & DX ---",
+  "typescript",
+  "eslint",
+  "prisma",
+  "dependencies",
+  "logging",
+  "performance-and-dx",
+  "--- Deep Dives ---",
+  "email",
+  "email-setup",
+  "reactive-core",
+  "telescope",
+  "fastify-migration",
+  "ui-components",
+  "sidebar-audit",
+  "--- Roadmaps ---",
+  "auth-roadmap",
+  "boilerplate-roadmap"
+ ]
+}

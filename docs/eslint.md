@@ -1,5 +1,6 @@
 ---
 title: "ESLint Setup & How To Run It"
+tags: ["eslint", "linting", "tooling"]
 description: "How ESLint is configured repo-wide and how to run it — both globally (via Turborepo) and per project."
 order: 6
 author: "Acme Inc."

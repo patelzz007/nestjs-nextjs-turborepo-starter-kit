@@ -106,7 +106,7 @@ export function AuthLayout({
 		<div className="flex min-h-svh bg-background">
 			{/* ── Left: Branding / Visual (desktop only) ───────────────────── */}
 			<div className="relative hidden flex-col items-center justify-center overflow-hidden bg-slate-900 md:flex md:w-1/2 dark:bg-slate-950">
-				<div className="absolute inset-0 bg-linear-to-br from-white/[0.03] to-transparent" />
+				<div className="absolute inset-0 bg-linear-to-br from-white/3 to-transparent" />
 
 				{/* Pulsing gradient blobs */}
 				<div className="absolute top-0 left-0 h-full w-full">
@@ -116,7 +116,7 @@ export function AuthLayout({
 						style={{ bottom: "15%", right: "10%", width: "500px", height: "500px", animationDelay: "0.5s" }}
 					/>
 					<div
-						className="absolute animate-pulse rounded-full bg-white/[0.03] blur-2xl"
+						className="absolute animate-pulse rounded-full bg-white/3 blur-2xl"
 						style={{ top: "50%", left: "30%", width: "300px", height: "300px", animationDelay: "1s" }}
 					/>
 				</div>

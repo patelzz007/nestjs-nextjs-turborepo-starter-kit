@@ -1,5 +1,6 @@
 ---
 title: "Getting Started — A-to-Z Setup Guide"
+tags: ["getting-started", "setup", "quickstart"]
 description: "From an empty laptop to a running monorepo: prerequisites, env setup, database bootstrap, and all three apps."
 order: 1
 author: "Acme Inc."

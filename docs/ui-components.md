@@ -1,90 +1,99 @@
+---
+title: "UI Components"
+description: "Per-component improvement plans for the workspace UI package — 20 improvements + 20 new features per component, each grounded in the current code, with the 23 audit rules that drive them."
+author: "Acme Inc."
+lastUpdated: 1786924800000
+coverImage: "https://images.unsplash.com/photo-1561070791-2526d30994b5?auto=format&fit=crop&w=1600&q=80"
+tags: ["ui", "components", "design-system"]
+---
+
 ## Component index
 
 
 ### Form — `components/form/`
 
-- [Button](#button)
-- [ButtonGroup](#buttongroup)
-- [Checkbox](#checkbox)
-- [Combobox](#combobox)
-- [Field](#field)
-- [FormShell](#formshell)
-- [Input](#input)
-- [InputGroup](#inputgroup)
-- [InputOTP](#inputotp)
-- [Label](#label)
-- [LockoutCountdown](#lockoutcountdown)
-- [NativeSelect](#nativeselect)
-- [PasswordInput](#passwordinput)
-- [PasswordStrengthMeter](#passwordstrengthmeter)
-- [RadioGroup](#radiogroup)
-- [Select](#select)
-- [Slider](#slider)
-- [Switch](#switch)
-- [Textarea](#textarea)
-- [Toggle](#toggle)
-- [ToggleGroup](#togglegroup)
+- [Button](#button--componentsformbuttontsx)
+- [ButtonGroup](#buttongroup--componentsformbutton-grouptsx)
+- [Checkbox](#checkbox--componentsformcheckboxtsx)
+- [Combobox](#combobox--componentsformcomboboxtsx)
+- [Field](#field--componentsformfieldtsx)
+- [FormShell](#formshell--componentsformform-shelltsx)
+- [Input](#input--componentsforminputtsx)
+- [InputGroup](#inputgroup--componentsforminput-grouptsx)
+- [InputOTP](#inputotp--componentsforminput-otptsx)
+- [Label](#label--componentsformlabeltsx)
+- [LockoutCountdown](#lockoutcountdown--componentsformlockout-countdowntsx)
+- [NativeSelect](#nativeselect--componentsformnative-selecttsx)
+- [PasswordInput](#passwordinput--componentsformpassword-inputtsx)
+- [PasswordStrengthMeter](#passwordstrengthmeter--componentsformpassword-strength-metertsx)
+- [RadioGroup](#radiogroup--componentsformradio-grouptsx)
+- [Select](#select--componentsformselecttsx)
+- [Slider](#slider--componentsformslidertsx)
+- [Switch](#switch--componentsformswitchtsx)
+- [Textarea](#textarea--componentsformtextareatsx)
+- [Toggle](#toggle--componentsformtoggletsx)
+- [ToggleGroup](#togglegroup--componentsformtoggle-grouptsx)
 
 ### Overlay — `components/overlay/`
 
-- [AlertDialog](#alertdialog)
-- [Command](#command)
-- [ContextMenu](#contextmenu)
-- [Dialog](#dialog)
-- [Drawer](#drawer)
-- [DropdownMenu](#dropdownmenu)
-- [HoverCard](#hovercard)
-- [Menubar](#menubar)
-- [Popover](#popover)
-- [Sheet](#sheet)
-- [Tooltip](#tooltip)
+- [AlertDialog](#alertdialog--componentsoverlayalert-dialogtsx)
+- [Command](#command--componentsoverlaycommandtsx)
+- [ContextMenu](#contextmenu--componentsoverlaycontext-menutsx)
+- [Dialog](#dialog--componentsoverlaydialogtsx)
+- [Drawer](#drawer--componentsoverlaydrawertsx)
+- [DropdownMenu](#dropdownmenu--componentsoverlaydropdown-menutsx)
+- [HoverCard](#hovercard--componentsoverlayhover-cardtsx)
+- [Menubar](#menubar--componentsoverlaymenubartsx)
+- [Popover](#popover--componentsoverlaypopovertsx)
+- [Sheet](#sheet--componentsoverlaysheettsx)
+- [Tooltip](#tooltip--componentsoverlaytooltiptsx)
 
 ### Navigation — `components/navigation/`
 
-- [Accordion](#accordion)
-- [Breadcrumb](#breadcrumb)
-- [BreadcrumbContext](#breadcrumbcontext)
-- [BreadcrumbTrail](#breadcrumbtrail)
-- [Carousel](#carousel)
-- [Collapsible](#collapsible)
-- [NavigationMenu](#navigationmenu)
-- [Pagination](#pagination)
-- [ScrollArea](#scrollarea)
-- [Sidebar](#sidebar)
-- [Tabs](#tabs)
+- [Accordion](#accordion--componentsnavigationaccordiontsx)
+- [Breadcrumb](#breadcrumb--componentsnavigationbreadcrumbtsx)
+- [BreadcrumbContext](#breadcrumbcontext--componentsnavigationbreadcrumb-contexttsx)
+- [BreadcrumbTrail](#breadcrumbtrail--componentsnavigationbreadcrumb-trailtsx)
+- [Carousel](#carousel--componentsnavigationcarouseltsx)
+- [Collapsible](#collapsible--componentsnavigationcollapsibletsx)
+- [NavigationMenu](#navigationmenu--componentsnavigationnavigation-menutsx)
+- [Pagination](#pagination--componentsnavigationpaginationtsx)
+- [ScrollArea](#scrollarea--componentsnavigationscroll-areatsx)
+- [Sidebar](#sidebar--componentsnavigationsidebartsx)
+- [Tabs](#tabs--componentsnavigationtabstsx)
 
 ### Feedback — `components/feedback/`
 
-- [Alert](#alert)
-- [Badge](#badge)
-- [Empty](#empty)
-- [Marker](#marker)
-- [Message](#message)
-- [MessageScroller](#messagescroller)
-- [NotFoundContent](#notfoundcontent)
-- [Progress](#progress)
-- [Skeleton](#skeleton)
-- [Sonner](#sonner)
-- [Spinner](#spinner)
-- [Toast](#toast)
+- [Alert](#alert--componentsfeedbackalerttsx)
+- [Badge](#badge--componentsfeedbackbadgetsx)
+- [Empty](#empty--componentsfeedbackemptytsx)
+- [Marker](#marker--componentsfeedbackmarkertsx)
+- [Message](#message--componentsfeedbackmessagetsx)
+- [MessageScroller](#messagescroller--componentsfeedbackmessage-scrollertsx)
+- [NotFoundContent](#notfoundcontent--componentsfeedbacknot-found-contenttsx)
+- [Progress](#progress--componentsfeedbackprogresstsx)
+- [Skeleton](#skeleton--componentsfeedbackskeletontsx)
+- [Sonner](#sonner--componentsfeedbacksonnertsx)
+- [Spinner](#spinner--componentsfeedbackspinnertsx)
+- [Toast](#toast--componentsfeedbacktoasttsx)
 
 ### Chat — `components/chat/`
 
-- [Attachment](#attachment)
-- [Bubble](#bubble)
+- [Attachment](#attachment--componentschatattachmenttsx)
+- [Bubble](#bubble--componentschatbubbletsx)
 
 ### Display — `components/display/`
 
-- [AspectRatio](#aspectratio)
-- [Avatar](#avatar)
-- [Calendar](#calendar)
-- [Card](#card)
-- [Chart](#chart)
-- [DataTable](#datatable)
-- [Kbd](#kbd)
-- [Resizable](#resizable)
-- [Separator](#separator)
-- [Table](#table)
+- [AspectRatio](#aspectratio--componentsdisplayaspect-ratiotsx)
+- [Avatar](#avatar--componentsdisplayavatartsx)
+- [Calendar](#calendar--componentsdisplaycalendartsx)
+- [Card](#card--componentsdisplaycardtsx)
+- [Chart](#chart--componentsdisplaycharttsx)
+- [DataTable](#datatable--componentsdisplaydata-tabletsx)
+- [Kbd](#kbd--componentsdisplaykbdtsx)
+- [Resizable](#resizable--componentsdisplayresizabletsx)
+- [Separator](#separator--componentsdisplayseparatortsx)
+- [Table](#table--componentsdisplaytabletsx)
 
 ---
 ## How to read this document
@@ -3842,7 +3851,7 @@ Semantic table primitives (header/body/footer/row/head/cell/caption) inside a sc
 9. `[Th]` `bg-muted/50` hover token ✓ — verify dark-mode contrast.
 10. `[D]` Row data is consumer-owned ✓ — the table never knows its data shape.
 11. `[F]` N/A as form control — but selectable rows (`aria-selected`) belong to the smart layer (TanStack Table).
-12. `[T]` Export `TableProps`/`TableRowProps` for composites — now done in practice: the shared `DataTable` (`components/display/data-table.tsx`) is the full-featured composite built on these primitives (see the [DataTable](#datatable) section).
+12. `[T]` Export `TableProps`/`TableRowProps` for composites — now done in practice: the shared `DataTable` (`components/display/data-table.tsx`) is the full-featured composite built on these primitives (see the [DataTable](#datatable--componentsdisplaydata-tabletsx) section).
 13. `[UX]` Add a `TableEmpty`-compatible slot guidance (compose with `Empty`).
 14. `[A]` `data-[state=selected]` styling ✓ — document the selection API for the smart layer.
 15. `[M]` On touch, row hover is irrelevant — ensure `hover:bg-muted/50` doesn't confuse (it's fine; tap still selects).

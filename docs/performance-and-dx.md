@@ -1,5 +1,6 @@
 ---
 title: "Performance & DX Roadmap"
+tags: ["performance", "dx", "roadmap"]
 description: "20 grounded improvements to make the monorepo faster and friendlier to develop in — each with a priority, effort estimate, and acceptance criteria."
 order: 15
 author: "Acme Inc."

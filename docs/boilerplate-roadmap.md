@@ -1,5 +1,6 @@
 ---
 title: "Boilerplate Roadmap"
+tags: ["roadmap", "boilerplate", "monorepo"]
 description: "Ideas for making the monorepo template production-ready and pleasant to build on."
 order: 10
 author: "Acme Inc."

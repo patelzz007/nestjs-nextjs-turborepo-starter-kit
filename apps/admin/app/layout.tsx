@@ -1,5 +1,4 @@
 import "@workspace/ui/globals.css";
-import "@/app/docs.css";
 
 import { QueryProvider } from "@workspace/client/lib/api/query-provider";
 import { Toaster } from "@workspace/ui/components/feedback/sonner";

@@ -1,5 +1,6 @@
 ---
 title: "Telescope for NestJS"
+tags: ["telescope", "observability", "debugging"]
 description: "An in-house, Laravel-Telescope-style observability console for the NestJS API — requests, SQL, exceptions, mail and logs — with the dashboard built into the admin app. Full blueprint: capture layer, data model, API, and UI."
 order: 18
 author: "Acme Inc."

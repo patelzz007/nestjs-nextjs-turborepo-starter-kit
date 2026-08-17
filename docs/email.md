@@ -1,5 +1,6 @@
 ---
 title: "Email Template System"
+tags: ["email", "notifications", "templates"]
 description: "The 40 must-have items for the Resend-powered transactional email template system — each grounded in the current code."
 order: 13
 author: "Acme Inc."

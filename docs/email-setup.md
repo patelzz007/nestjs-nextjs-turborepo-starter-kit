@@ -1,5 +1,6 @@
 ---
 title: "Email + Webhook Setup (Resend & Cloudflare Tunnel)"
+tags: ["email", "resend", "setup", "webhooks"]
 description: "Step-by-step: how the email pipeline works, setting up Resend (API key, verified domain, env vars), and exposing the delivery webhook locally with cloudflared."
 order: 17
 author: "Acme Inc."

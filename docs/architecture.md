@@ -1,5 +1,6 @@
 ---
 title: "Monorepo Architecture"
+tags: ["architecture", "system-design", "monorepo"]
 description: "The big picture: what each workspace is for, how data flows between frontends and backend, and where new code belongs."
 order: 2
 author: "Acme Inc."
@@ -20,10 +21,10 @@ coverImage: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=f
 1. [The mental model](#1-the-mental-model)
 2. [Workspace map](#2-workspace-map)
 3. [How data flows](#3-how-data-flows)
-4. [The shared contract (packages/shared)](#4-the-shared-contract-packages-shared)
+4. [The shared contract (packages/shared)](#4-the-shared-contract-packagesshared)
 5. [API versioning](#5-api-versioning)
-6. [The client layer (packages/client)](#6-the-client-layer-packages-client)
-7. [The UI layer (packages/ui)](#7-the-ui-layer-packages-ui)
+6. [The client layer (packages/client)](#6-the-client-layer-packagesclient)
+7. [The UI layer (packages/ui)](#7-the-ui-layer-packagesui)
 8. [The apps](#8-the-apps)
 9. [How packages are resolved](#9-how-packages-are-resolved)
 10. [Rules of thumb](#10-rules-of-thumb)

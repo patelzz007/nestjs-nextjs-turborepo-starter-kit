@@ -1,5 +1,6 @@
 ---
 title: "Sidebar Audit"
+tags: ["ui", "sidebar", "navigation"]
 description: "A per-item improvement plan for the admin sidebar — 20 improvements + 20 new features, each grounded in the actual current code (sidebar.tsx, sidebar-nav-item.tsx, mobile drawer, store, config)."
 order: 16
 author: "Acme Inc."

@@ -1,5 +1,6 @@
 ---
 title: "Monorepo Documentation"
+tags: ["overview", "monorepo", "documentation"]
 description: "Everything a developer needs to understand this monorepo — a hub for all the guides."
 order: 11
 author: "Acme Inc."
@@ -21,8 +22,7 @@ coverImage: "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?auto=f
 | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **[Getting Started (A-to-Z)](./getting-started.md)** | **Start here.** From a fresh clone to running apps: prerequisites, env setup, DB bootstrap, dev servers, best practices, dos & don'ts, troubleshooting. |
 | **[Architecture](./architecture.md)**                | The big picture: what each workspace is for, how data flows between them, and how to decide where new code goes.                                        |
-| **[Token Refresh (simple)](./token-refresh-simple.md)** | The no-jargon, coffee-shop version of how silent refresh works — start here if the main guide feels too technical.                                        |
-| **[Token Refresh](./token-refresh.md)**              | How session refresh works: the two layers (server-side proxy + client-side 401), how to observe each, deployment notes, and FAQ.                         |
+| **[Token Refresh](./token-refresh.md)**              | How session refresh works — the two layers (server-side proxy + client-side 401), how to observe each, deployment notes, and FAQ. Starts with a no-jargon 30-second TL;DR. |
 | **[TypeScript configs](./typescript.md)**            | How `@workspace/typescript-config` works, the base configs, path aliases, and typechecking.                                                             |
 | **[ESLint setup](./eslint.md)**                      | The shared lint config, how each workspace extends it, and how to run linting.                                                                          |
 | **[Dependency hygiene](./dependencies.md)**          | How `syncpack` keeps shared deps (React, Zod, TS) pinned to the same exact version everywhere.                                                          |
@@ -47,8 +47,7 @@ Don't read top to bottom. Here's the path we'd walk a new developer through:
 | ---- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
 | 1️⃣    | **[Getting Started](./getting-started.md)**                         | Get the stack running before you learn anything else — everything below assumes a working dev setup.    |
 | 2️⃣    | **[Architecture](./architecture.md)**                               | The big picture: which workspace owns what, so the later guides have somewhere to hang.                 |
-| 3️⃣    | **[Token Refresh (simple)](./token-refresh-simple.md)**             | The coffee-shop version of sessions — build the mental model first, zero jargon.                        |
-| 4️⃣    | **[Token Refresh](./token-refresh.md)**                             | Now the real machinery: the two layers, how to observe them in DevTools / server logs, and the FAQ.     |
+| 3️⃣    | **[Token Refresh](./token-refresh.md)**                             | Read its 30-second TL;DR first (coffee-shop mental model, zero jargon), then the real machinery: the two layers, how to observe them in DevTools / server logs, and the FAQ. |
 | 5️⃣    | **[TypeScript](./typescript.md) · [ESLint](./eslint.md) · [Dependencies](./dependencies.md)** | Read when you touch config or hit a lint/type error — no need up front.          |
 | 6️⃣    | **[Prisma](./prisma.md)**                                           | Read when you touch the database: migrations, seeding, every `db:*` command.                            |
 | 7️⃣    | **[Auth roadmap](./auth-roadmap.md) · [Boilerplate roadmap](./boilerplate-roadmap.md) · [UI component audit](./ui-components.md) · [Performance & DX roadmap](./performance-and-dx.md) · [Sidebar audit](./sidebar-audit.md) | Read when you're *planning* new work — idea lists, the per-component improvement backlog, and the perf/DX backlog. |

@@ -1,5 +1,6 @@
 ---
 title: "Auth Roadmap"
+tags: ["roadmap", "auth", "security"]
 description: "Ideas and design decisions for improving authentication, authorization, and multi-tenancy — plus the 30-point hardening deep-dive and the A→Z authentication flow."
 order: 9
 author: "Acme Inc."
@@ -11,7 +12,7 @@ coverImage: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=f
 
 > [!NOTE] Ideas and design decisions for improving authentication, authorization, and multi-tenancy.
 >
-> **Jump to:** [📊 Status at a glance](#-status-at-a-glance) · [A. Security hardening](#a-security-hardening-api-core) · [B. API & protocol](#b-api--protocol) · [C. Client & apps](#c-client--apps) · [🆕 Beyond the 30](#-beyond-the-30--additional-enhancements) · [🧸 The auth flow A→Z](#-the-authentication-flow-from-a-to-z-explained-like-im-5)
+> **Jump to:** [📊 Status at a glance](#status-at-a-glance) · [A. Security hardening](#a-security-hardening-api-core) · [B. API & protocol](#b-api--protocol) · [C. Client & apps](#c-client--apps) · [🆕 Beyond the 30](#beyond-the-30--additional-enhancements) · [🧸 The auth flow A→Z](#the-authentication-flow-from-a-to-z-explained-like-im-5)
 
 ---
 

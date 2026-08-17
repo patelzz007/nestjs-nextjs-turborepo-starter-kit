@@ -15,12 +15,6 @@ describe("resolveAdminTrail", () => {
 		expect(trail.map((crumb) => crumb.href)).toEqual(["/settings", undefined]);
 	});
 
-	it("resolves a docs guide under Docs Home with its menu title", () => {
-		const trail = resolveAdminTrail("/docs/prisma");
-		expect(trail.map((crumb) => crumb.label)).toEqual(["Docs Home", "Prisma & DB"]);
-		expect(trail.map((crumb) => crumb.href)).toEqual(["/docs", undefined]);
-	});
-
 	it("prepends the section title for multi-item content sections", () => {
 		// Documents is a multi-item section (not the Main catch-all) — its title
 		// becomes a context root, and the item itself stays a link to its page.
@@ -79,7 +73,7 @@ describe("resolveAdminTrail", () => {
 	});
 
 	it("gives every crumb an icon (mandatory)", () => {
-		const paths: readonly string[] = ["/", "/analytics", "/settings/general", "/documents/alpha", "/users/roles", "/docs/prisma", "/users/123", "/unknown/route"];
+		const paths: readonly string[] = ["/", "/analytics", "/settings/general", "/documents/alpha", "/users/roles", "/users/123", "/unknown/route"];
 		for (const pathname of paths) {
 			for (const crumb of resolveAdminTrail(pathname)) {
 				expect(crumb.icon, `${pathname} → ${crumb.label}`).toBeDefined();

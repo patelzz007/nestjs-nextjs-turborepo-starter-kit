@@ -1,5 +1,6 @@
 ---
 title: "Logging System"
+tags: ["logging", "observability"]
 description: "The 40 must-have items for the in-house Datadog-style logging service (terminal + DB, no external SaaS) — each grounded in the current code."
 order: 12
 author: "Acme Inc."
