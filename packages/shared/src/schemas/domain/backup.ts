@@ -108,11 +108,12 @@ export const BackupListResponseSchema = z
 		/** True while a job is pending/processing — the UI polls while this is set. */
 		active: z.boolean(),
 		/** How long completed backups are kept (days). */
-		retentionDays: z.number().int().positive(),	/**
-	 * The requesting admin's remaining creation quota (rolling hour).
-	 * `null` when the cap is disabled for that user's tier (`0` env value).
-	 */
-	rateLimit: z
+		retentionDays: z.number().int().positive(),
+		/**
+		 * The requesting admin's remaining creation quota (rolling hour).
+		 * `null` when the cap is disabled for that user's tier (`0` env value).
+		 */
+		rateLimit: z
 			.object({
 				/** The tier cap in effect (superadmins get a higher one). */
 				limit: z.number().int().positive(),
@@ -123,16 +124,18 @@ export const BackupListResponseSchema = z
 			})
 			.strict()
 			.nullable(),
-	/** Active backup schedules. */
-	schedules: z.array(
-			z.object({
-				id: z.string().min(1),
-				cron: z.string().min(1),
-				name: z.string().min(1),
-				enabled: z.boolean(),
-				nextRun: EpochMsSchema,
-			}).strict(),
-	),
+		/** Active backup schedules. */
+		schedules: z.array(
+			z
+				.object({
+					id: z.string().min(1),
+					cron: z.string().min(1),
+					name: z.string().min(1),
+					enabled: z.boolean(),
+					nextRun: EpochMsSchema,
+				})
+				.strict(),
+		),
 	})
 	.strict();
 
@@ -170,17 +173,19 @@ export const BackupOptionsResponseSchema = z
 					.strict(),
 			)
 			.readonly(),
-	/** The env-driven default exclusion list (pre-checked in the form). */
-	defaultExcluded: z.array(z.string()).readonly(),
-	compressLevelDefault: z.number().int().min(1).max(9),
-	/** Current database size in bytes (queried from pg_database_size). */
-	dbSizeBytes: z.number().int().nonnegative().nullable(),
-	/** Suggested compression level based on DB size. */
-	suggestedCompressLevel: z.number().int().min(1).max(9),
-})
-.strict();
+		/** The env-driven default exclusion list (pre-checked in the form). */
+		defaultExcluded: z.array(z.string()).readonly(),
+		compressLevelDefault: z.number().int().min(1).max(9),
+		/** Current database size in bytes (queried from pg_database_size). */
+		dbSizeBytes: z.number().int().nonnegative().nullable(),
+		/** Suggested compression level based on DB size. */
+		suggestedCompressLevel: z.number().int().min(1).max(9),
+	})
+	.strict();
 
-export type BackupOptionsResponse = z.output<typeof BackupOptionsResponseSchema>; /** `DELETE /backup/:id` — file + row removed. */
+export type BackupOptionsResponse = z.output<typeof BackupOptionsResponseSchema>;
+
+/** `DELETE /backup/:id` — file + row removed. */
 export const BackupDeleteResponseSchema = z
 	.object({
 		deleted: z.literal(true),

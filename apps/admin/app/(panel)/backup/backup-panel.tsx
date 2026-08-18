@@ -11,14 +11,15 @@ import { Input } from "@workspace/ui/components/form/input";
 import { Label } from "@workspace/ui/components/form/label";
 import { Slider } from "@workspace/ui/components/form/slider";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
-import { DataTable, type DataTableFeatures } from "@workspace/ui/components/display/data-table";
+import { DataTable, type Action, type BulkAction, type DataTableFeatures, type Filter } from "@workspace/ui/components/display/data-table";
 import { toastMessage } from "@workspace/ui/components/feedback/toast";
 import { Progress, ProgressLabel, ProgressValue } from "@workspace/ui/components/feedback/progress";
 import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogMedia, AlertDialogTitle } from "@workspace/ui/components/overlay/alert-dialog";
 import type { ColumnDef } from "@tanstack/react-table";
 import {
-	CheckCircle2,
 	CheckSquare,
+	CircleCheck,
+	CircleDashed,
 	CircleStop,
 	CircleX,
 	Clock,
@@ -43,14 +44,17 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 // ── Status presentation ───────────────────────────────────────────────────
 
-const STATUS_META: Readonly<
-	Record<BackupStatus, { readonly label: string; readonly variant: "default" | "secondary" | "destructive" | "outline"; readonly icon: React.ReactNode }>
-> = {
-	pending: { label: "Queued", variant: "outline", icon: <Loader2 className="size-3 animate-spin" /> },
-	processing: { label: "Processing", variant: "secondary", icon: <Loader2 className="size-3 animate-spin" /> },
-	completed: { label: "Completed", variant: "default", icon: <CheckCircle2 className="size-3" /> },
-	failed: { label: "Failed", variant: "destructive", icon: <CircleX className="size-3" /> },
-};
+const STATUS_FILTER_OPTIONS: readonly { value: string; label: string }[] = [
+	{ value: "pending", label: "Queued" },
+	{ value: "processing", label: "Processing" },
+	{ value: "completed", label: "Completed" },
+	{ value: "failed", label: "Failed" },
+];
+
+const KIND_FILTER_OPTIONS: readonly { value: string; label: string }[] = [
+	{ value: "false", label: "Full dump" },
+	{ value: "true", label: "Schema only" },
+];
 
 const STAGE_LABELS: Readonly<Record<string, string>> = {
 	queued: "Waiting for the dump to start…",
@@ -62,11 +66,34 @@ const STAGE_LABELS: Readonly<Record<string, string>> = {
 };
 
 function StatusBadge({ status }: { readonly status: BackupStatus }): React.JSX.Element {
-	const meta = STATUS_META[status];
+	if (status === "completed") {
+		return (
+			<Badge variant="secondary" className="gap-1 bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400">
+				<CircleCheck className="size-3.5" />
+				Completed
+			</Badge>
+		);
+	}
+	if (status === "processing") {
+		return (
+			<Badge variant="secondary" className="gap-1 bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-400">
+				<CircleDashed className="size-3.5" />
+				Processing
+			</Badge>
+		);
+	}
+	if (status === "pending") {
+		return (
+			<Badge variant="secondary" className="gap-1 bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-400">
+				<Loader2 className="size-3.5 animate-spin" />
+				Queued
+			</Badge>
+		);
+	}
 	return (
-		<Badge variant={meta.variant} className="gap-1">
-			{meta.icon}
-			{meta.label}
+		<Badge variant="secondary" className="gap-1 bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-400">
+			<CircleX className="size-3.5" />
+			Failed
 		</Badge>
 	);
 }
@@ -180,6 +207,97 @@ function estimateBackupTime(dbSizeBytes: number | null): string {
 /** Warning threshold for large databases (10GB). */
 const LARGE_DB_THRESHOLD_BYTES = 10 * 1024 * 1024 * 1024;
 
+/** Copies a SHA-256 checksum — extracted so `onClick` is a memoized callback, not an inline arrow. */
+function ChecksumCopyButton({ checksum, onCopy }: { readonly checksum: string; readonly onCopy: (checksum: string) => void }): React.JSX.Element {
+	const handleCopy = useCallback((): void => {
+		onCopy(checksum);
+	}, [checksum, onCopy]);
+	return (
+		<button
+			type="button"
+			onClick={handleCopy}
+			className="inline-flex max-w-36 items-center gap-1 rounded-md border border-transparent px-1.5 py-0.5 font-mono text-xs text-muted-foreground transition-colors hover:border-border hover:text-foreground"
+			title="Copy SHA-256 checksum">
+			<Copy className="size-3 shrink-0" />
+			<span className="truncate">{checksum.slice(0, 10)}…</span>
+		</button>
+	);
+}
+
+function ExcludeTableCheckbox({
+	table,
+	isExcluded,
+	disabled,
+	onToggle,
+}: {
+	readonly table: { readonly name: string; readonly excludedByDefault: boolean };
+	readonly isExcluded: boolean;
+	readonly disabled: boolean;
+	readonly onToggle: (name: string, checked: boolean) => void;
+}): React.JSX.Element {
+	const handleCheckedChange = useCallback(
+		(checked: boolean): void => {
+			onToggle(table.name, checked);
+		},
+		[onToggle, table.name],
+	);
+	return (
+		<label className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 text-sm hover:bg-muted/60">
+			<Checkbox checked={isExcluded} disabled={disabled} onCheckedChange={handleCheckedChange} />
+			<span className="min-w-0 truncate font-mono text-xs">{table.name}</span>
+			{table.excludedByDefault && !isExcluded ? <span className="ml-auto shrink-0 text-[10px] text-muted-foreground">default</span> : null}
+		</label>
+	);
+}
+
+interface BackupScheduleRow {
+	readonly id: string;
+	readonly cron: string;
+	readonly name: string;
+	readonly enabled: boolean;
+	readonly nextRun: number;
+}
+
+function ScheduleRow({
+	schedule,
+	disabled,
+	onToggle,
+}: {
+	readonly schedule: BackupScheduleRow;
+	readonly disabled: boolean;
+	readonly onToggle: (schedule: BackupScheduleRow) => void;
+}): React.JSX.Element {
+	const handleToggle = useCallback((): void => {
+		onToggle(schedule);
+	}, [onToggle, schedule]);
+	return (
+		<div className="flex items-center justify-between rounded-md border border-border p-3">
+			<div className="flex items-center gap-3">
+				<div className={`size-2 rounded-full ${schedule.enabled ? "bg-emerald-500" : "bg-muted-foreground/30"}`} />
+				<div>
+					<p className="text-sm font-medium">{schedule.name}</p>
+					<p className="text-xs text-muted-foreground">
+						<Clock className="mr-1 inline size-3" />
+						{schedule.cron} · Next run: {formatDateTime(schedule.nextRun)}
+					</p>
+				</div>
+			</div>
+			<Button variant="outline" size="sm" disabled={disabled} onClick={handleToggle}>
+				{schedule.enabled ? "Disable" : "Enable"}
+			</Button>
+		</div>
+	);
+}
+
+function ActiveJobCancelButton({ pending, onCancel }: { readonly pending: boolean; readonly onCancel: () => void }): React.JSX.Element {
+	return (
+		<Button variant="outline" size="sm" className="gap-1" disabled={pending} onClick={onCancel}>
+			{pending ? <Loader2 className="size-3.5 animate-spin" /> : <CircleStop className="size-3.5" />}
+			Cancel
+		</Button>
+	);
+}
+
 // ── Smart page component ──────────────────────────────────────────────────
 
 /**
@@ -215,7 +333,7 @@ export default function BackupPanel(): React.JSX.Element {
 	const [compressLevel, setCompressLevel] = useState<number>(6);
 	const [excluded, setExcluded] = useState<readonly string[]>([]);
 	const [schemaOnly, setSchemaOnly] = useState<boolean>(false);
-	const [deleteTarget, setDeleteTarget] = useState<BackupEntry | null>(null);
+	const [deleteTargets, setDeleteTargets] = useState<readonly BackupEntry[] | null>(null);
 	const [restoreTarget, setRestoreTarget] = useState<BackupEntry | null>(null);
 	const [restoreName, setRestoreName] = useState<string>("");
 	const [restorePassword, setRestorePassword] = useState<string>("");
@@ -320,16 +438,22 @@ export default function BackupPanel(): React.JSX.Element {
 	);
 
 	const handleDelete = useCallback(async (): Promise<void> => {
-		if (deleteTarget === null) return;
+		if (deleteTargets === null || deleteTargets.length === 0) return;
 		try {
-			await removeMutation.mutateAsync({ id: deleteTarget.id });
-			toastMessage.success({ title: "Backup deleted", description: `"${deleteTarget.name}" and its file were removed.` });
-			setDeleteTarget(null);
+			for (const target of deleteTargets) {
+				await removeMutation.mutateAsync({ id: target.id });
+			}
+			const count: number = deleteTargets.length;
+			toastMessage.success({
+				title: count === 1 ? "Backup deleted" : `${String(count)} backups deleted`,
+				description: count === 1 ? `"${deleteTargets[0]?.name ?? ""}" and its file were removed.` : "The selected files and rows were removed.",
+			});
+			setDeleteTargets(null);
 			await invalidateList();
 		} catch (error) {
 			toastMessage.error({ title: "Delete failed", description: error instanceof Error ? error.message : "Unknown error" });
 		}
-	}, [deleteTarget, removeMutation, invalidateList]);
+	}, [deleteTargets, removeMutation, invalidateList]);
 
 	const handleVerify = useCallback(
 		async (entry: BackupEntry): Promise<void> => {
@@ -388,6 +512,242 @@ export default function BackupPanel(): React.JSX.Element {
 		void listQuery.refetch();
 	}, [listQuery]);
 
+	const handleFormSubmit = useCallback(
+		(event: React.SyntheticEvent<HTMLFormElement>): void => {
+			void handleCreate(event);
+		},
+		[handleCreate],
+	);
+
+	const handleBackupNameChange = useCallback((event: React.ChangeEvent<HTMLInputElement>): void => {
+		setBackupName(event.target.value);
+	}, []);
+
+	const handleCompressChange = useCallback((value: number | readonly number[]): void => {
+		setCompressLevel(typeof value === "number" ? value : (value[0] ?? 6));
+	}, []);
+
+	const handleSchemaOnlyChange = useCallback((checked: boolean): void => {
+		setSchemaOnly(checked);
+	}, []);
+
+	const handleSelectAllTables = useCallback((): void => {
+		const tables = optionsQuery.data?.data.tables;
+		if (tables === undefined) return;
+		setExcluded(tables.map((table): string => table.name));
+	}, [optionsQuery.data]);
+
+	const handleClearExcluded = useCallback((): void => {
+		setExcluded([]);
+	}, []);
+
+	const handleRestoreDefaults = useCallback((): void => {
+		const defaults = optionsQuery.data?.data.defaultExcluded;
+		if (defaults === undefined) return;
+		setExcluded(defaults);
+	}, [optionsQuery.data]);
+
+	const handleExcludeTableToggle = useCallback((name: string, checked: boolean): void => {
+		setExcluded((current) => (checked ? [...current, name] : current.filter((tableName) => tableName !== name)));
+	}, []);
+
+	const handleRestoreOpen = useCallback((entry: BackupEntry): void => {
+		if (entry.status !== "completed") {
+			toastMessage.error({ title: "Restore unavailable", description: "Only completed backups can be restored." });
+			return;
+		}
+		setRestoreName("");
+		setRestorePassword("");
+		setRestoreTarget(entry);
+	}, []);
+
+	const handleDeleteOpen = useCallback((entry: BackupEntry): void => {
+		if (entry.status === "pending" || entry.status === "processing") {
+			toastMessage.error({ title: "Delete unavailable", description: "Queued or running backups cannot be deleted — cancel them first." });
+			return;
+		}
+		setDeleteTargets([entry]);
+	}, []);
+
+	const handleVerifyClick = useCallback(
+		(entry: BackupEntry): void => {
+			if (entry.status !== "completed") {
+				toastMessage.error({ title: "Verify unavailable", description: "Only completed backups can be verified." });
+				return;
+			}
+			void handleVerify(entry);
+		},
+		[handleVerify],
+	);
+
+	const handleDownloadClick = useCallback(
+		(entry: BackupEntry): void => {
+			if (entry.status !== "completed") {
+				toastMessage.error({ title: "Download unavailable", description: "Only completed backups can be downloaded." });
+				return;
+			}
+			void handleDownload(entry);
+		},
+		[handleDownload],
+	);
+
+	const handleCopyChecksumAction = useCallback(
+		(entry: BackupEntry): void => {
+			if (entry.checksum === null) {
+				toastMessage.error({ title: "Checksum unavailable", description: "The dump has not finished yet." });
+				return;
+			}
+			copyChecksum(entry.checksum);
+		},
+		[copyChecksum],
+	);
+
+	const handleBulkDownload = useCallback(
+		(selected: BackupEntry[]): void => {
+			const completed: BackupEntry[] = selected.filter((entry: BackupEntry): boolean => entry.status === "completed");
+			if (completed.length === 0) {
+				toastMessage.error({ title: "Nothing to download", description: "Select at least one completed backup." });
+				return;
+			}
+			void (async (): Promise<void> => {
+				for (const entry of completed) {
+					await handleDownload(entry);
+				}
+			})();
+		},
+		[handleDownload],
+	);
+
+	const handleBulkDelete = useCallback((selected: BackupEntry[]): void => {
+		const removable: BackupEntry[] = selected.filter((entry: BackupEntry): boolean => entry.status !== "pending" && entry.status !== "processing");
+		if (removable.length === 0) {
+			toastMessage.error({ title: "Nothing to delete", description: "Queued or running backups cannot be deleted — cancel them first." });
+			return;
+		}
+		setDeleteTargets(removable);
+	}, []);
+
+	const handleCancelActive = useCallback((): void => {
+		if (activeBackup === undefined) return;
+		void handleCancel(activeBackup);
+	}, [activeBackup, handleCancel]);
+
+	const handleToggleSchedule = useCallback(
+		(schedule: BackupScheduleRow): void => {
+			void (async (): Promise<void> => {
+				try {
+					await fetch(`/api/backup/schedules/${schedule.id}/toggle`, {
+						method: "POST",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({ enabled: !schedule.enabled }),
+					});
+					toastMessage.success({
+						title: schedule.enabled ? "Schedule disabled" : "Schedule enabled",
+						description: `${schedule.name} has been ${schedule.enabled ? "disabled" : "enabled"}.`,
+					});
+					await invalidateList();
+				} catch (error) {
+					toastMessage.error({ title: "Toggle failed", description: error instanceof Error ? error.message : "Unknown error" });
+				}
+			})();
+		},
+		[invalidateList],
+	);
+
+	const handleDeleteDialogOpenChange = useCallback((open: boolean): void => {
+		if (!open) setDeleteTargets(null);
+	}, []);
+
+	const handleRestoreDialogOpenChange = useCallback((open: boolean): void => {
+		if (!open) setRestoreTarget(null);
+	}, []);
+
+	const handleDeleteConfirm = useCallback((): void => {
+		void handleDelete();
+	}, [handleDelete]);
+
+	const handleRestoreConfirmClick = useCallback((): void => {
+		void handleRestoreConfirm();
+	}, [handleRestoreConfirm]);
+
+	const handleRestoreNameChange = useCallback((event: React.ChangeEvent<HTMLInputElement>): void => {
+		setRestoreName(event.target.value);
+	}, []);
+
+	const handleRestorePasswordChange = useCallback((event: React.ChangeEvent<HTMLInputElement>): void => {
+		setRestorePassword(event.target.value);
+	}, []);
+
+	const filters = useMemo<Filter[]>(
+		() => [
+			{ key: "status", label: "Status", options: STATUS_FILTER_OPTIONS },
+			{ key: "schemaOnly", label: "Type", options: KIND_FILTER_OPTIONS },
+		],
+		[],
+	);
+
+	const actions = useMemo<Action<BackupEntry>[]>(
+		() => [
+			{
+				key: "download",
+				label: "Download",
+				description: "Save the compressed dump",
+				icon: <Download className="size-4" />,
+				onClick: handleDownloadClick,
+			},
+			{
+				key: "verify",
+				label: "Verify",
+				description: "Restore into a scratch database",
+				icon: <ShieldCheck className="size-4" />,
+				onClick: handleVerifyClick,
+			},
+			{
+				key: "restore",
+				label: "Restore",
+				description: "Restore into a new database",
+				icon: <DatabaseZap className="size-4" />,
+				onClick: handleRestoreOpen,
+			},
+			{
+				key: "copy-checksum",
+				label: "Copy checksum",
+				description: "Copy the SHA-256 digest",
+				icon: <Copy className="size-4" />,
+				onClick: handleCopyChecksumAction,
+			},
+			{
+				key: "delete",
+				label: "Delete",
+				description: "Remove the file and history row",
+				icon: <Trash2 className="size-4" />,
+				onClick: handleDeleteOpen,
+				isDestructive: true,
+				iconBgColor: "bg-red-100 dark:bg-red-900/40",
+			},
+		],
+		[handleDownloadClick, handleVerifyClick, handleRestoreOpen, handleCopyChecksumAction, handleDeleteOpen],
+	);
+
+	const bulkActions = useMemo<BulkAction<BackupEntry>[]>(
+		() => [
+			{
+				key: "download",
+				label: "Download selected",
+				icon: <Download className="size-4" />,
+				onClick: handleBulkDownload,
+			},
+			{
+				key: "delete",
+				label: "Delete selected",
+				icon: <Trash2 className="size-4" />,
+				onClick: handleBulkDelete,
+				variant: "destructive",
+			},
+		],
+		[handleBulkDownload, handleBulkDelete],
+	);
+
 	const columns = useMemo<ColumnDef<DataTableFeatures, BackupEntry>[]>(
 		() => [
 			{
@@ -396,23 +756,20 @@ export default function BackupPanel(): React.JSX.Element {
 				enableHiding: false,
 				cell: ({ row }): React.JSX.Element => (
 					<div className="min-w-0">
-						<p className="truncate font-medium">
-							{row.original.name}
-							{row.original.schemaOnly ? (
-								<span className="ml-1.5 rounded border border-border px-1 py-0.5 text-[10px] font-normal tracking-wide text-muted-foreground uppercase">schema</span>
-							) : null}
-						</p>
-						<p className="truncate text-xs text-muted-foreground">
-							by {row.original.requestedByName ?? "Admin"} · level {row.original.compressLevel}
-						</p>
+						<span className="font-medium">{row.original.name}</span>
 						{row.original.verifiedAt !== null ? (
 							<p className="truncate text-xs text-emerald-600 dark:text-emerald-400">
-								✓ verified {row.original.verifiedTableCount ?? 0} tables · {formatDateTime(row.original.verifiedAt)}
+								Verified {row.original.verifiedTableCount ?? 0} tables · {formatDateTime(row.original.verifiedAt)}
 							</p>
 						) : null}
-						{row.original.restoredAt !== null ? <p className="truncate text-xs text-sky-600 dark:text-sky-400">↳ restored to {row.original.restoredDatabase}</p> : null}
+						{row.original.restoredAt !== null ? <p className="truncate text-xs text-sky-600 dark:text-sky-400">Restored to {row.original.restoredDatabase}</p> : null}
 					</div>
 				),
+			},
+			{
+				accessorKey: "schemaOnly",
+				header: "Type",
+				cell: ({ row }): React.JSX.Element => <span className="text-muted-foreground">{row.original.schemaOnly ? "Schema only" : "Full dump"}</span>,
 			},
 			{
 				accessorKey: "status",
@@ -431,9 +788,7 @@ export default function BackupPanel(): React.JSX.Element {
 			{
 				accessorKey: "sizeBytes",
 				header: "Size",
-				cell: ({ row }): React.JSX.Element => (
-					<span className="text-muted-foreground tabular-nums">{row.original.sizeBytes === null ? "—" : formatBytes(row.original.sizeBytes)}</span>
-				),
+				cell: ({ row }): React.JSX.Element => <div className="tabular-nums">{row.original.sizeBytes === null ? "—" : formatBytes(row.original.sizeBytes)}</div>,
 			},
 			{
 				accessorKey: "checksum",
@@ -443,19 +798,13 @@ export default function BackupPanel(): React.JSX.Element {
 					if (checksum === null) {
 						return <span className="text-muted-foreground">—</span>;
 					}
-					return (
-						<button
-							type="button"
-							onClick={(): void => {
-								copyChecksum(checksum);
-							}}
-							className="inline-flex max-w-36 items-center gap-1 rounded-md border border-transparent px-1.5 py-0.5 font-mono text-xs text-muted-foreground transition-colors hover:border-border hover:text-foreground"
-							title="Copy SHA-256 checksum">
-							<Copy className="size-3 shrink-0" />
-							<span className="truncate">{checksum.slice(0, 10)}…</span>
-						</button>
-					);
+					return <ChecksumCopyButton checksum={checksum} onCopy={copyChecksum} />;
 				},
+			},
+			{
+				accessorKey: "requestedByName",
+				header: "Requested by",
+				cell: ({ row }): React.JSX.Element => <span className="text-muted-foreground">{row.original.requestedByName ?? "Admin"}</span>,
 			},
 			{
 				accessorKey: "createdAt",
@@ -474,64 +823,8 @@ export default function BackupPanel(): React.JSX.Element {
 					<span className="text-muted-foreground tabular-nums">{row.original.expiresAt === null ? "—" : formatDateTime(row.original.expiresAt)}</span>
 				),
 			},
-			{
-				id: "actions",
-				header: "",
-				cell: ({ row }): React.JSX.Element => {
-					const entry = row.original;
-					return (
-						<div className="flex items-center justify-end gap-1.5">
-							<Button
-								variant="outline"
-								size="sm"
-								disabled={entry.status !== "completed" || verifyMutation.isPending}
-								onClick={(): void => {
-									void handleVerify(entry);
-								}}
-								className="gap-1">
-								{verifyMutation.isPending ? <Loader2 className="size-3.5 animate-spin" /> : <ShieldCheck className="size-3.5" />}
-								Verify
-							</Button>
-							<Button
-								variant="outline"
-								size="sm"
-								disabled={entry.status !== "completed" || restoreMutation.isPending}
-								onClick={(): void => {
-									setRestoreName("");
-									setRestorePassword("");
-									setRestoreTarget(entry);
-								}}
-								className="gap-1">
-								<DatabaseZap className="size-3.5" />
-								Restore
-							</Button>
-							<Button
-								variant="outline"
-								size="sm"
-								disabled={entry.status !== "completed" || downloadMutation.isPending}
-								onClick={(): void => {
-									void handleDownload(entry);
-								}}
-								className="gap-1.5">
-								<Download className="size-3.5" />
-								Download
-							</Button>
-							<Button
-								variant="ghost"
-								size="icon"
-								aria-label={`Delete backup ${entry.name}`}
-								disabled={entry.status === "pending" || entry.status === "processing"}
-								onClick={(): void => {
-									setDeleteTarget(entry);
-								}}>
-								<Trash2 className="size-4 text-destructive" />
-							</Button>
-						</div>
-					);
-				},
-			},
 		],
-		[downloadMutation.isPending, verifyMutation.isPending, restoreMutation.isPending, copyChecksum, handleDownload, handleVerify],
+		[copyChecksum],
 	);
 
 	const mobileCardRender = useCallback(
@@ -540,66 +833,19 @@ export default function BackupPanel(): React.JSX.Element {
 				<div className="flex items-start justify-between gap-2">
 					<div className="min-w-0">
 						<p className="truncate font-medium">{entry.name}</p>
-						<p className="truncate text-xs text-muted-foreground">
-							{entry.sizeBytes === null ? "—" : formatBytes(entry.sizeBytes)} · {formatDateTime(entry.createdAt)}
-						</p>
+						<p className="text-xs text-muted-foreground">{entry.requestedByName ?? "Admin"}</p>
 					</div>
 					<StatusBadge status={entry.status} />
 				</div>
-				{entry.error !== null && entry.status === "failed" ? <p className="mt-1.5 line-clamp-2 text-xs text-destructive">{entry.error}</p> : null}
-				<div className="mt-2.5 flex items-center justify-between">
-					<span className="text-xs text-muted-foreground">Retained until {entry.expiresAt === null ? "—" : formatDateTime(entry.expiresAt)}</span>{" "}
-					<div className="flex flex-wrap items-center gap-1.5">
-						<Button
-							variant="outline"
-							size="sm"
-							disabled={entry.status !== "completed"}
-							onClick={(): void => {
-								void handleVerify(entry);
-							}}
-							className="gap-1">
-							<ShieldCheck className="size-3.5" />
-							Verify
-						</Button>{" "}
-						<Button
-							variant="outline"
-							size="sm"
-							disabled={entry.status !== "completed"}
-							onClick={(): void => {
-								setRestoreName("");
-								setRestorePassword("");
-								setRestoreTarget(entry);
-							}}
-							className="gap-1">
-							<DatabaseZap className="size-3.5" />
-							Restore
-						</Button>
-						<Button
-							variant="outline"
-							size="sm"
-							disabled={entry.status !== "completed"}
-							onClick={(): void => {
-								void handleDownload(entry);
-							}}
-							className="gap-1">
-							<Download className="size-3.5" />
-							Download
-						</Button>
-						<Button
-							variant="ghost"
-							size="icon"
-							aria-label={`Delete backup ${entry.name}`}
-							disabled={entry.status === "pending" || entry.status === "processing"}
-							onClick={(): void => {
-								setDeleteTarget(entry);
-							}}>
-							<Trash2 className="size-4 text-destructive" />
-						</Button>
-					</div>
+				<div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
+					<span>{entry.schemaOnly ? "Schema only" : "Full dump"}</span>
+					<span className="tabular-nums">
+						{entry.sizeBytes === null ? "—" : formatBytes(entry.sizeBytes)} · {formatDateTime(entry.createdAt)}
+					</span>
 				</div>
 			</div>
 		),
-		[handleDownload, handleVerify],
+		[],
 	);
 
 	if (listQuery.isLoading) {
@@ -659,17 +905,7 @@ export default function BackupPanel(): React.JSX.Element {
 								{activeBackup.position !== null && activeBackup.position > 0 ? ` · queue position ${String(activeBackup.position)}` : ""} — refreshes every 2s.
 							</CardDescription>
 						</div>
-						<Button
-							variant="outline"
-							size="sm"
-							className="gap-1"
-							disabled={cancelMutation.isPending}
-							onClick={(): void => {
-								void handleCancel(activeBackup);
-							}}>
-							{cancelMutation.isPending ? <Loader2 className="size-3.5 animate-spin" /> : <CircleStop className="size-3.5" />}
-							Cancel
-						</Button>
+						<ActiveJobCancelButton pending={cancelMutation.isPending} onCancel={handleCancelActive} />
 					</CardHeader>
 					<CardContent className="space-y-2">
 						<Progress value={easedProgress}>
@@ -688,20 +924,14 @@ export default function BackupPanel(): React.JSX.Element {
 				</CardHeader>
 				<CardContent>
 					{" "}
-					<form
-						onSubmit={(event): void => {
-							void handleCreate(event);
-						}}
-						className="space-y-5">
+					<form onSubmit={handleFormSubmit} className="space-y-5">
 						<div className="grid gap-5 sm:grid-cols-2">
 							<div className="space-y-2">
 								<Label htmlFor="backup-name">Name (optional)</Label>
 								<Input
 									id="backup-name"
 									value={backupName}
-									onChange={(event): void => {
-										setBackupName(event.target.value);
-									}}
+									onChange={handleBackupNameChange}
 									placeholder="e.g. before_billing_migration"
 									disabled={formDisabled}
 									autoComplete="off"
@@ -714,31 +944,14 @@ export default function BackupPanel(): React.JSX.Element {
 									<Label htmlFor="compress-level">Compression level</Label>
 									<span className="font-mono text-sm text-muted-foreground tabular-nums">{compressLevel} / 9</span>
 								</div>
-								<Slider
-									id="compress-level"
-									min={1}
-									max={9}
-									step={1}
-									value={[compressLevel]}
-									onValueChange={(value: number | readonly number[]): void => {
-										setCompressLevel(typeof value === "number" ? value : (value[0] ?? 6));
-									}}
-									disabled={formDisabled}
-								/>
+								<Slider id="compress-level" min={1} max={9} step={1} value={[compressLevel]} onValueChange={handleCompressChange} disabled={formDisabled} />
 								<p className="text-xs text-muted-foreground">Lower = faster but bigger files; higher = slower but smaller.</p>
 							</div>
 						</div>
 
 						<div className="flex flex-wrap items-center justify-between gap-2">
 							<label className="flex cursor-pointer items-center gap-2">
-								<Checkbox
-									id="schema-only"
-									checked={schemaOnly}
-									disabled={formDisabled}
-									onCheckedChange={(checked: boolean): void => {
-										setSchemaOnly(checked);
-									}}
-								/>
+								<Checkbox id="schema-only" checked={schemaOnly} disabled={formDisabled} onCheckedChange={handleSchemaOnlyChange} />
 								<span className="text-sm">Schema only</span>
 							</label>
 							<p className="text-xs text-muted-foreground">Structure without data — a much smaller, faster dump for migrations and schema review.</p>
@@ -797,39 +1010,15 @@ export default function BackupPanel(): React.JSX.Element {
 										<span className="text-xs text-muted-foreground tabular-nums">
 											{excluded.length} / {optionsQuery.data.data.tables.length} excluded
 										</span>
-										<Button
-											type="button"
-											variant="outline"
-											size="sm"
-											disabled={formDisabled}
-											onClick={(): void => {
-												setExcluded(optionsQuery.data.data.tables.map((table) => table.name));
-											}}
-											className="gap-1">
+										<Button type="button" variant="outline" size="sm" disabled={formDisabled} onClick={handleSelectAllTables} className="gap-1">
 											<CheckSquare className="size-3.5" />
 											Select all
 										</Button>
-										<Button
-											type="button"
-											variant="outline"
-											size="sm"
-											disabled={formDisabled || excluded.length === 0}
-											onClick={(): void => {
-												setExcluded([]);
-											}}
-											className="gap-1">
+										<Button type="button" variant="outline" size="sm" disabled={formDisabled || excluded.length === 0} onClick={handleClearExcluded} className="gap-1">
 											<SquareDashedMousePointer className="size-3.5" />
 											Clear
 										</Button>
-										<Button
-											type="button"
-											variant="outline"
-											size="sm"
-											disabled={formDisabled || isDefaultSelection}
-											onClick={(): void => {
-												setExcluded(optionsQuery.data.data.defaultExcluded);
-											}}
-											className="gap-1">
+										<Button type="button" variant="outline" size="sm" disabled={formDisabled || isDefaultSelection} onClick={handleRestoreDefaults} className="gap-1">
 											<Settings2 className="size-3.5" />
 											Restore defaults
 										</Button>
@@ -837,22 +1026,15 @@ export default function BackupPanel(): React.JSX.Element {
 								</div>
 								{optionsQuery.data.data.tables.length > 0 ? (
 									<div className="grid max-h-52 grid-cols-1 gap-1 overflow-y-auto rounded-md border border-border p-3 sm:grid-cols-2 lg:grid-cols-3">
-										{optionsQuery.data.data.tables.map((table) => {
-											const isExcluded = excluded.includes(table.name);
-											return (
-												<label key={table.name} className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 text-sm hover:bg-muted/60">
-													<Checkbox
-														checked={isExcluded}
-														disabled={formDisabled}
-														onCheckedChange={(checked: boolean): void => {
-															setExcluded((current) => (checked ? [...current, table.name] : current.filter((name) => name !== table.name)));
-														}}
-													/>
-													<span className="min-w-0 truncate font-mono text-xs">{table.name}</span>
-													{table.excludedByDefault && !isExcluded ? <span className="ml-auto shrink-0 text-[10px] text-muted-foreground">default</span> : null}
-												</label>
-											);
-										})}
+										{optionsQuery.data.data.tables.map((table) => (
+											<ExcludeTableCheckbox
+												key={table.name}
+												table={table}
+												isExcluded={excluded.includes(table.name)}
+												disabled={formDisabled}
+												onToggle={handleExcludeTableToggle}
+											/>
+										))}
 									</div>
 								) : null}
 							</div>
@@ -880,32 +1062,33 @@ export default function BackupPanel(): React.JSX.Element {
 			</Card>
 
 			{/* ── History ────────────────────────────────────────────────── */}
-			<Card>
-				<CardHeader className="pb-3">
-					<CardTitle className="text-base">Backup history</CardTitle>
-					<CardDescription>{rows.length} backups · downloads are gated by a signed 15-minute token · files are pruned at the retention deadline.</CardDescription>
-				</CardHeader>
-				<CardContent>
-					{rows.length === 0 ? (
-						<div className="flex flex-col items-center gap-2 rounded-lg border border-dashed py-10 text-muted-foreground">
-							<DatabaseBackup className="size-8" />
-							<p className="text-sm">No backups yet — create your first one above.</p>
-						</div>
-					) : (
-						<DataTable
-							data={rows}
-							columns={columns}
-							searchKeys={["name", "status", "requestedByName"]}
-							pageSize={10}
-							pageSizeOptions={[10, 25, 50]}
-							exportable
-							exportFilename="backup-history"
-							enableColumnVisibility
-							mobileCardRender={mobileCardRender}
-						/>
-					)}
-				</CardContent>
-			</Card>
+			<DataTable
+				data={rows}
+				columns={columns}
+				title="Backup history"
+				description={`${String(rows.length)} backups · downloads are gated by a signed 15-minute token · files are pruned at the retention deadline.`}
+				searchKeys={["name", "status", "requestedByName"]}
+				filters={filters}
+				actions={actions}
+				bulkActions={bulkActions}
+				enableBulkSelection
+				enableColumnVisibility
+				enableColumnPinning
+				exportable
+				exportFilename="backup-history.csv"
+				exportableColumns={["name", "schemaOnly", "status", "sizeBytes", "checksum", "requestedByName", "createdAt", "expiresAt"]}
+				persistKey="backup-history"
+				pageSize={10}
+				pageSizeOptions={[10, 20, 50]}
+				searchDebounceMs={200}
+				sortCycle="asc-desc-none"
+				mobileCardRender={mobileCardRender}
+				emptyState={{
+					icon: <DatabaseBackup className="size-6" />,
+					title: "No backups found",
+					description: "Create your first backup above, or try adjusting your search or filters.",
+				}}
+			/>
 
 			{/* ── Scheduled backups ───────────────────────────────────────── */}
 			{listQuery.data?.data.schedules !== undefined && listQuery.data.data.schedules.length > 0 ? (
@@ -917,42 +1100,7 @@ export default function BackupPanel(): React.JSX.Element {
 					<CardContent>
 						<div className="space-y-2">
 							{listQuery.data.data.schedules.map((schedule) => (
-								<div key={schedule.id} className="flex items-center justify-between rounded-md border border-border p-3">
-									<div className="flex items-center gap-3">
-										<div className={`size-2 rounded-full ${schedule.enabled ? "bg-emerald-500" : "bg-muted-foreground/30"}`} />
-										<div>
-											<p className="text-sm font-medium">{schedule.name}</p>
-											<p className="text-xs text-muted-foreground">
-												<Clock className="mr-1 inline size-3" />
-												{schedule.cron} · Next run: {formatDateTime(schedule.nextRun)}
-											</p>
-										</div>
-									</div>
-									<Button
-										variant="outline"
-										size="sm"
-										disabled={createMutation.isPending}
-										onClick={(): void => {
-											void (async (): Promise<void> => {
-												try {
-													await fetch(`/api/backup/schedules/${schedule.id}/toggle`, {
-														method: "POST",
-														headers: { "Content-Type": "application/json" },
-														body: JSON.stringify({ enabled: !schedule.enabled }),
-													});
-													toastMessage.success({
-														title: schedule.enabled ? "Schedule disabled" : "Schedule enabled",
-														description: `${schedule.name} has been ${schedule.enabled ? "disabled" : "enabled"}.`,
-													});
-													await invalidateList();
-												} catch (error) {
-													toastMessage.error({ title: "Toggle failed", description: error instanceof Error ? error.message : "Unknown error" });
-												}
-											})();
-										}}>
-										{schedule.enabled ? "Disable" : "Enable"}
-									</Button>
-								</div>
+								<ScheduleRow key={schedule.id} schedule={schedule} disabled={createMutation.isPending} onToggle={handleToggleSchedule} />
 							))}
 						</div>
 					</CardContent>
@@ -960,43 +1108,37 @@ export default function BackupPanel(): React.JSX.Element {
 			) : null}
 
 			{/* ── Delete confirmation ────────────────────────────────────── */}
-			<AlertDialog
-				open={deleteTarget !== null}
-				onOpenChange={(open: boolean): void => {
-					setDeleteTarget(open ? deleteTarget : null);
-				}}>
+			<AlertDialog open={deleteTargets !== null} onOpenChange={handleDeleteDialogOpenChange}>
 				<AlertDialogContent
 					severity="critical"
-					confirmLabel="Delete backup"
+					confirmLabel={deleteTargets !== null && deleteTargets.length > 1 ? "Delete backups" : "Delete backup"}
 					confirmLoading={removeMutation.isPending}
 					loadingLabel="Deleting…"
-					onConfirm={(): void => {
-						void handleDelete();
-					}}>
+					onConfirm={handleDeleteConfirm}>
 					<AlertDialogHeader align="start">
 						<AlertDialogMedia severity="critical">
 							<TriangleAlert className="size-6" />
 						</AlertDialogMedia>
-						<AlertDialogTitle>Delete this backup?</AlertDialogTitle>
-						<AlertDialogDescription>"{deleteTarget?.name}" and its compressed file will be permanently removed. This cannot be undone.</AlertDialogDescription>
+						<AlertDialogTitle>
+							{deleteTargets !== null && deleteTargets.length > 1 ? `Delete ${String(deleteTargets.length)} backups?` : "Delete this backup?"}
+						</AlertDialogTitle>
+						<AlertDialogDescription>
+							{deleteTargets !== null && deleteTargets.length > 1
+								? "The selected compressed files and history rows will be permanently removed. This cannot be undone."
+								: `"${deleteTargets?.[0]?.name ?? ""}" and its compressed file will be permanently removed. This cannot be undone.`}
+						</AlertDialogDescription>
 					</AlertDialogHeader>
 				</AlertDialogContent>
 			</AlertDialog>
 
 			{/* ── Restore confirmation ────────────────────────────────────── */}
-			<AlertDialog
-				open={restoreTarget !== null}
-				onOpenChange={(open: boolean): void => {
-					setRestoreTarget(open ? restoreTarget : null);
-				}}>
+			<AlertDialog open={restoreTarget !== null} onOpenChange={handleRestoreDialogOpenChange}>
 				<AlertDialogContent
 					severity="info"
 					confirmLabel="Restore backup"
 					confirmLoading={restoreMutation.isPending}
 					loadingLabel="Restoring…"
-					onConfirm={(): void => {
-						void handleRestoreConfirm();
-					}}>
+					onConfirm={handleRestoreConfirmClick}>
 					<AlertDialogHeader align="start">
 						<AlertDialogMedia severity="info">
 							<DatabaseZap className="size-6" />
@@ -1011,9 +1153,7 @@ export default function BackupPanel(): React.JSX.Element {
 							<Input
 								id="restore-name"
 								value={restoreName}
-								onChange={(event): void => {
-									setRestoreName(event.target.value);
-								}}
+								onChange={handleRestoreNameChange}
 								placeholder={`restored_${restoreTarget?.name ?? "backup"}_20260818_120000`}
 								disabled={restoreMutation.isPending}
 								autoComplete="off"
@@ -1027,9 +1167,7 @@ export default function BackupPanel(): React.JSX.Element {
 								id="restore-password"
 								type="password"
 								value={restorePassword}
-								onChange={(event): void => {
-									setRestorePassword(event.target.value);
-								}}
+								onChange={handleRestorePasswordChange}
 								placeholder="Re-enter your password to restore"
 								disabled={restoreMutation.isPending}
 								autoComplete="current-password"
