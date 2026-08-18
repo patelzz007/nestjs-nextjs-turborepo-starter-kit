@@ -1,7 +1,7 @@
 import "@workspace/ui/globals.css";
 
 import { QueryProvider } from "@workspace/client/lib/api/query-provider";
-import { Toaster } from "@workspace/ui/components/feedback/sonner";
+import { Toaster } from "@workspace/ui/components/feedback/toast";
 import { cn } from "@workspace/ui/lib/utils";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, JetBrains_Mono } from "next/font/google";

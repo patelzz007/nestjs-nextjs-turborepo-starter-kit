@@ -14,10 +14,10 @@ import { DataTable, type DataTableFeatures } from "@workspace/ui/components/disp
 import { Button } from "@workspace/ui/components/form/button";
 import { Input } from "@workspace/ui/components/form/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@workspace/ui/components/form/select";
+import { toastMessage } from "@workspace/ui/components/feedback/toast";
 import { Copy, ExternalLink, RefreshCw, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useState } from "react";
-import { toast } from "sonner";
 
 import { TelescopeSqlListQuerySchema, type QueryLogEntry, type TelescopeSqlListQuery, type TelescopeStreamEvent } from "@workspace/shared";
 
@@ -132,7 +132,7 @@ export default function TelescopeSqlPage(): React.JSX.Element {
 
 	const handleCopySql = useCallback((sql: string): void => {
 		void navigator.clipboard.writeText(sql).then((): void => {
-			toast.success("SQL copied.");
+			toastMessage.success({ title: "SQL copied." });
 		});
 	}, []);
 

@@ -11,7 +11,8 @@
 
 import { Bookmark, BookmarkCheck, X } from "lucide-react";
 import { useCallback, useState } from "react";
-import { toast } from "sonner";
+
+import { toastMessage } from "@workspace/ui/components/feedback/toast";
 
 import type { SavedFilter, SavedFilterValue } from "@/lib/saved-filters";
 
@@ -29,7 +30,7 @@ export function SavedFilters({ saved, current, onApply, onSave, onDelete }: Save
 	const handleSave = useCallback((): void => {
 		const name: string = draftName.trim();
 		if (name.length === 0) {
-			toast.warning("Give the filter a name first.");
+			toastMessage.warning({ title: "Give the filter a name first." });
 			return;
 		}
 		onSave(name, current);

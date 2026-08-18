@@ -17,7 +17,7 @@ import {
 	ComboboxList,
 	ComboboxValue,
 } from "@workspace/ui/components/form/combobox";
-import { toast } from "sonner";
+import { toastMessage } from "@workspace/ui/components/feedback/toast";
 import * as React from "react";
 import { useCallback, useMemo, useState } from "react";
 
@@ -108,13 +108,13 @@ export function ComboboxShowcase(): React.JSX.Element {
 	const handleCreateTag = useCallback((value: string): void => {
 		setTags((current) => (current.includes(value) ? current : [...current, value]));
 		setTagDraft("");
-		toast.success(`Created tag "${value}"`);
+		toastMessage.success({ title: `Created tag "${value}"` });
 	}, []);
 
 	// Max-selection guard (feature 6).
 	const [frameworks, setFrameworks] = useState<string[]>([]);
 	const handleMaxSelectedReached = useCallback((max: number): void => {
-		toast.warning(`Pick at most ${max.toString()} frameworks`);
+		toastMessage.warning({ title: `Pick at most ${max.toString()} frameworks` });
 	}, []);
 
 	const groupedTeams = useMemo(() => groupOptions(TEAMS), []);

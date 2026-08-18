@@ -2,10 +2,10 @@
 
 import { Avatar, AvatarFallback } from "@workspace/ui/components/display/avatar";
 import { Button } from "@workspace/ui/components/form/button";
+import { toastMessage } from "@workspace/ui/components/feedback/toast";
 import { CreditCard, FileText, LogOut, MoveUpRight, Settings, Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
 import * as React from "react";
-import { toast } from "sonner";
 
 import { getInitials } from "@/lib/user-initials";
 import type { SidebarUser } from "@/lib/navigation/sidebar";
@@ -43,7 +43,7 @@ export function Profile01({ user, onLogout, subscription = "Free Trial" }: Profi
 		(event: React.MouseEvent<HTMLButtonElement>): void => {
 			const href = event.currentTarget.dataset.href;
 			if (href === undefined || href.length === 0) {
-				toast("Coming soon", { description: "This feature will be available soon." });
+				toastMessage.info({ title: "Coming soon", description: "This feature will be available soon." });
 				return;
 			}
 			router.push(href);

@@ -173,16 +173,20 @@
                      "title": "Email Templates",
                      "url": "/emails",
                      "icon": "Mail"
-                  },
-                  {
-                     "title": "Email Log",
-                     "url": "/email-log",
-                     "icon": "MailCheck"
-                  }
-               ]
-            }
-         ]
-      },
+                  },					{
+						"title": "Email Log",
+						"url": "/email-log",
+						"icon": "MailCheck"
+					}
+				]
+			},
+			{
+				"title": "Database Backup",
+				"url": "/backup",
+				"icon": "DatabaseBackup"
+			}
+		]
+		},
       {
          "title": "Developer",
          "items": [

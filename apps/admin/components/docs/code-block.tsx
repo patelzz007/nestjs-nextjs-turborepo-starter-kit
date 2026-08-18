@@ -3,8 +3,8 @@
 import { Check, Copy, Download, WrapText } from "lucide-react";
 import * as React from "react";
 import type { BundledLanguage, BundledTheme, Highlighter, ShikiTransformer } from "shiki";
-import { toast } from "sonner";
 
+import { toastMessage } from "@workspace/ui/components/feedback/toast";
 import { cn } from "@/lib/utils";
 import { CodeLanguage } from "@/lib/docs/code-block";
 
@@ -326,10 +326,10 @@ export function CodeBlock({
 				}, 2000);
 				// Name the copy target — "Copied auth.controller.ts" beats a
 				// silent icon flip, especially for untitled inline blocks.
-				toast.success(`Copied ${fileName ?? lang}`, { description: "The code is on your clipboard." });
+				toastMessage.success({ title: `Copied ${fileName ?? lang}`, description: "The code is on your clipboard." });
 			})
 			.catch((): void => {
-				toast.error("Could not copy code", { description: "Your browser blocked clipboard access." });
+				toastMessage.error({ title: "Could not copy code", description: "Your browser blocked clipboard access." });
 			});
 	}, [code, fileName, lang]);
 

@@ -60,7 +60,7 @@ model User {
   isActive     Boolean @default(true)
   isSuperAdmin Boolean @default(false)
 
-  failedLoginAttempts Int      @default(0) @map("failed_login_attempts")
+  failedLoginAttempts Int     @default(0) @map("failed_login_attempts")
   lockedUntil         BigInt? @map("locked_until")
 
   provider          String? // "google" | "github" | null
@@ -74,11 +74,11 @@ model User {
   userRoles       UserRole[]
   userPermissions UserPermission[]
 
-  emailVerifiedAt BigInt? @map("email_verified_at")
-  isDeleted       Boolean   @default(false) @map("is_deleted")
-  deletedAt       BigInt? @map("deleted_at")
-  createdAt BigInt @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
-  updatedAt BigInt @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
+  emailVerifiedAt     BigInt?                 @map("email_verified_at")
+  isDeleted           Boolean                 @default(false) @map("is_deleted")
+  deletedAt           BigInt?                 @map("deleted_at")
+  createdAt           BigInt                  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
+  updatedAt           BigInt                  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
   urls                Url[]
   tags                Tag[]
   apiKeys             ApiKey[]
@@ -106,10 +106,11 @@ model Role {
   rolePermissions RolePermission[]
   menuItemRoles   MenuItemRole[]
 
-  isDeleted Boolean   @default(false) @map("is_deleted")
+  isDeleted Boolean @default(false) @map("is_deleted")
   deletedAt BigInt? @map("deleted_at")
-  createdAt BigInt @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
-  updatedAt BigInt @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
+  createdAt BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
+  updatedAt BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
+
   @@index([parentId])
   @@map("roles")
 }
@@ -129,10 +130,11 @@ model Permission {
   userPermissions     UserPermission[]
   menuItemPermissions MenuItemPermission[]
 
-  isDeleted Boolean   @default(false) @map("is_deleted")
+  isDeleted Boolean @default(false) @map("is_deleted")
   deletedAt BigInt? @map("deleted_at")
-  createdAt BigInt @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
-  updatedAt BigInt @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
+  createdAt BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
+  updatedAt BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
+
   @@unique([action, resource])
   @@map("permissions")
 }
@@ -142,17 +144,17 @@ model Permission {
 // ---------------------------------------------------------------------------
 
 model PermissionAuditLog {
-  id           String    @id @default(uuid())
-  actorId      String    @map("actor_id")
-  targetUserId String?   @map("target_user_id")
-  targetRoleId String?   @map("target_role_id")
-  permissionId String?   @map("permission_id")
+  id           String  @id @default(uuid())
+  actorId      String  @map("actor_id")
+  targetUserId String? @map("target_user_id")
+  targetRoleId String? @map("target_role_id")
+  permissionId String? @map("permission_id")
   action       String
-  detail       String?   @db.Text
-  isDeleted    Boolean   @default(false) @map("is_deleted")
+  detail       String? @db.Text
+  isDeleted    Boolean @default(false) @map("is_deleted")
   deletedAt    BigInt? @map("deleted_at")
-  createdAt BigInt @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
-  updatedAt BigInt @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
+  createdAt    BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
+  updatedAt    BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
 
   @@index([actorId])
   @@index([targetUserId])
@@ -186,10 +188,11 @@ model MenuItem {
   menuItemPermissions MenuItemPermission[]
   menuItemRoles       MenuItemRole[]
 
-  isDeleted Boolean   @default(false) @map("is_deleted")
+  isDeleted Boolean @default(false) @map("is_deleted")
   deletedAt BigInt? @map("deleted_at")
-  createdAt BigInt @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
-  updatedAt BigInt @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
+  createdAt BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
+  updatedAt BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
+
   @@index([parentId])
   @@map("menu_items")
 }
@@ -203,10 +206,11 @@ model MenuItemPermission {
   menuItem   MenuItem   @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
   permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
 
-  isDeleted Boolean   @default(false) @map("is_deleted")
+  isDeleted Boolean @default(false) @map("is_deleted")
   deletedAt BigInt? @map("deleted_at")
-  createdAt BigInt @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
-  updatedAt BigInt @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
+  createdAt BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
+  updatedAt BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
+
   @@unique([menuItemId, permissionId])
   @@map("menu_item_permissions")
 }
@@ -219,10 +223,11 @@ model MenuItemRole {
   menuItem MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
   role     Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
 
-  isDeleted Boolean   @default(false) @map("is_deleted")
+  isDeleted Boolean @default(false) @map("is_deleted")
   deletedAt BigInt? @map("deleted_at")
-  createdAt BigInt @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
-  updatedAt BigInt @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
+  createdAt BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
+  updatedAt BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
+
   @@unique([menuItemId, roleId])
   @@map("menu_item_roles")
 }
@@ -232,15 +237,15 @@ model MenuItemRole {
 // ---------------------------------------------------------------------------
 
 model PasswordResetToken {
-  id        String    @id @default(uuid())
-  userId    String    @map("user_id")
-  token     String    @unique @db.Text
+  id        String  @id @default(uuid())
+  userId    String  @map("user_id")
+  token     String  @unique @db.Text
   expiresAt BigInt  @map("expires_at")
   usedAt    BigInt? @map("used_at")
-  isDeleted Boolean   @default(false) @map("is_deleted")
+  isDeleted Boolean @default(false) @map("is_deleted")
   deletedAt BigInt? @map("deleted_at")
-  createdAt BigInt @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
-  updatedAt BigInt @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
+  createdAt BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
+  updatedAt BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -257,13 +262,14 @@ model UserRole {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
 
-  assignedAt BigInt @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
+  assignedAt BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
   assignedBy String?
 
-  isDeleted Boolean   @default(false) @map("is_deleted")
+  isDeleted Boolean @default(false) @map("is_deleted")
   deletedAt BigInt? @map("deleted_at")
-  createdAt BigInt @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
-  updatedAt BigInt @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
+  createdAt BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
+  updatedAt BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
+
   @@unique([userId, roleId])
   @@map("user_roles")
 }
@@ -276,14 +282,15 @@ model UserPermission {
   user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
 
-  assignedAt BigInt @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
+  assignedAt BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
   assignedBy String?
   expiresAt  BigInt?
 
-  isDeleted Boolean   @default(false) @map("is_deleted")
+  isDeleted Boolean @default(false) @map("is_deleted")
   deletedAt BigInt? @map("deleted_at")
-  createdAt BigInt @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
-  updatedAt BigInt @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
+  createdAt BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
+  updatedAt BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
+
   @@unique([userId, permissionId])
   @@map("user_permissions")
 }
@@ -296,13 +303,14 @@ model RolePermission {
   role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
   permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
 
-  assignedAt BigInt @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
+  assignedAt BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
   assignedBy String?
 
-  isDeleted Boolean   @default(false) @map("is_deleted")
+  isDeleted Boolean @default(false) @map("is_deleted")
   deletedAt BigInt? @map("deleted_at")
-  createdAt BigInt @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
-  updatedAt BigInt @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
+  createdAt BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
+  updatedAt BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
+
   @@unique([roleId, permissionId])
   @@map("role_permissions")
 }
@@ -317,10 +325,11 @@ model RefreshToken {
   ipAddress  String? @db.VarChar(45)
 
   expiresAt BigInt
-  isDeleted Boolean   @default(false) @map("is_deleted")
+  isDeleted Boolean @default(false) @map("is_deleted")
   deletedAt BigInt? @map("deleted_at")
-  createdAt BigInt @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
-  updatedAt BigInt @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
+  createdAt BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
+  updatedAt BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
+
   @@index([userId])
   @@index([token])
   @@map("refresh_tokens")
@@ -338,11 +347,11 @@ model Url {
   passwordHash String?      @map("password_hash")
   clickLimit   Int?         @map("click_limit")
   clickCount   Int          @default(0) @map("click_count")
-  expiresAt    BigInt?    @map("expires_at")
+  expiresAt    BigInt?      @map("expires_at")
   isDeleted    Boolean      @default(false) @map("is_deleted")
-  deletedAt    BigInt?    @map("deleted_at")
-  createdAt BigInt @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
-  updatedAt BigInt @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
+  deletedAt    BigInt?      @map("deleted_at")
+  createdAt    BigInt       @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
+  updatedAt    BigInt       @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
 
   user   User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
   clicks Click[]
@@ -356,14 +365,14 @@ model Url {
 }
 
 model Tag {
-  id        String    @id @default(uuid())
-  userId    String    @map("user_id")
+  id        String  @id @default(uuid())
+  userId    String  @map("user_id")
   name      String
-  color     String    @default("#6366f1")
-  isDeleted Boolean   @default(false) @map("is_deleted")
+  color     String  @default("#6366f1")
+  isDeleted Boolean @default(false) @map("is_deleted")
   deletedAt BigInt? @map("deleted_at")
-  createdAt BigInt @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
-  updatedAt BigInt @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
+  createdAt BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
+  updatedAt BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
 
   user User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   urls UrlTag[]
@@ -380,10 +389,11 @@ model UrlTag {
   url Url @relation(fields: [urlId], references: [id], onDelete: Cascade)
   tag Tag @relation(fields: [tagId], references: [id], onDelete: Cascade)
 
-  isDeleted Boolean   @default(false) @map("is_deleted")
+  isDeleted Boolean @default(false) @map("is_deleted")
   deletedAt BigInt? @map("deleted_at")
-  createdAt BigInt @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
-  updatedAt BigInt @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
+  createdAt BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
+  updatedAt BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
+
   @@unique([urlId, tagId])
   @@map("url_tags")
 }
@@ -401,12 +411,12 @@ model Click {
   utmSource   String?    @map("utm_source")
   utmMedium   String?    @map("utm_medium")
   utmCampaign String?    @map("utm_campaign")
-  clickedAt BigInt @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("clicked_at")
+  clickedAt   BigInt     @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("clicked_at")
   isDeleted   Boolean    @default(false) @map("is_deleted")
-  deletedAt   BigInt?  @map("deleted_at")
-  createdAt BigInt @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
-  updatedAt BigInt @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
-  url Url @relation(fields: [urlId], references: [id], onDelete: Cascade)
+  deletedAt   BigInt?    @map("deleted_at")
+  createdAt   BigInt     @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
+  updatedAt   BigInt     @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
+  url         Url        @relation(fields: [urlId], references: [id], onDelete: Cascade)
 
   @@index([urlId])
   @@index([clickedAt])
@@ -415,21 +425,21 @@ model Click {
 }
 
 model ApiKey {
-  id            String    @id @default(uuid())
-  userId        String    @map("user_id")
+  id            String   @id @default(uuid())
+  userId        String   @map("user_id")
   name          String
-  keyHash       String    @unique @map("key_hash")
-  keyPrefix     String    @map("key_prefix")
-  scopes        String[]  @default(["read", "write"])
-  rateLimitTier String    @default("standard") @map("rate_limit_tier")
-  totalRequests Int       @default(0) @map("total_requests")
-  lastUsedAt    BigInt? @map("last_used_at")
-  expiresAt     BigInt? @map("expires_at")
-  isActive      Boolean   @default(true) @map("is_active")
-  isDeleted     Boolean   @default(false) @map("is_deleted")
-  deletedAt     BigInt? @map("deleted_at")
-  createdAt BigInt @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
-  updatedAt BigInt @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
+  keyHash       String   @unique @map("key_hash")
+  keyPrefix     String   @map("key_prefix")
+  scopes        String[] @default(["read", "write"])
+  rateLimitTier String   @default("standard") @map("rate_limit_tier")
+  totalRequests Int      @default(0) @map("total_requests")
+  lastUsedAt    BigInt?  @map("last_used_at")
+  expiresAt     BigInt?  @map("expires_at")
+  isActive      Boolean  @default(true) @map("is_active")
+  isDeleted     Boolean  @default(false) @map("is_deleted")
+  deletedAt     BigInt?  @map("deleted_at")
+  createdAt     BigInt   @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
+  updatedAt     BigInt   @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
 
   user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   usageLogs ApiKeyUsageLog[]
@@ -445,13 +455,13 @@ model ApiKey {
 // ---------------------------------------------------------------------------
 
 model ImpersonationAuditLog {
-  id             String   @id @default(uuid())
-  impersonatorId String   @map("impersonator_id")
-  targetUserId   String   @map("target_user_id")
+  id             String  @id @default(uuid())
+  impersonatorId String  @map("impersonator_id")
+  targetUserId   String  @map("target_user_id")
   action         String // "START" | "STOP"
-  ipAddress      String?  @map("ip_address") @db.VarChar(45)
-  userAgent      String?  @map("user_agent") @db.Text
-  createdAt BigInt @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
+  ipAddress      String? @map("ip_address") @db.VarChar(45)
+  userAgent      String? @map("user_agent") @db.Text
+  createdAt      BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
 
   impersonator User @relation("Impersonator", fields: [impersonatorId], references: [id], onDelete: Cascade)
   targetUser   User @relation("ImpersonationTarget", fields: [targetUserId], references: [id], onDelete: Cascade)
@@ -463,18 +473,18 @@ model ImpersonationAuditLog {
 }
 
 model Log {
-  id             String    @id @default(uuid())
-  level          String
-  message        String    @db.Text
-  context        String?
-  userId         String?
-  correlationId  String?   @map("correlation_id")
-  metadata       Json?
-  durationMs     Int?      @map("duration_ms")
-  errorGroup     String?   @map("error_group")
-  tags           String[]  @default([])
-  timestamp BigInt @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
-  createdAt BigInt @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
+  id            String   @id @default(uuid())
+  level         String
+  message       String   @db.Text
+  context       String?
+  userId        String?
+  correlationId String?  @map("correlation_id")
+  metadata      Json?
+  durationMs    Int?     @map("duration_ms")
+  errorGroup    String?  @map("error_group")
+  tags          String[] @default([])
+  timestamp     BigInt   @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
+  createdAt     BigInt   @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
 
   @@index([level])
   @@index([timestamp])
@@ -487,18 +497,18 @@ model Log {
 }
 
 model ApiKeyUsageLog {
-  id             String    @id @default(uuid())
-  apiKeyId       String    @map("api_key_id")
-  endpoint       String    @db.VarChar(255)
-  method         String    @db.VarChar(10)
-  statusCode     Int       @map("status_code")
-  ipAddress      String?   @map("ip_address") @db.VarChar(45)
-  userAgent      String?   @map("user_agent") @db.Text
-  responseTimeMs Int?      @map("response_time_ms")
-  isDeleted      Boolean   @default(false) @map("is_deleted")
+  id             String  @id @default(uuid())
+  apiKeyId       String  @map("api_key_id")
+  endpoint       String  @db.VarChar(255)
+  method         String  @db.VarChar(10)
+  statusCode     Int     @map("status_code")
+  ipAddress      String? @map("ip_address") @db.VarChar(45)
+  userAgent      String? @map("user_agent") @db.Text
+  responseTimeMs Int?    @map("response_time_ms")
+  isDeleted      Boolean @default(false) @map("is_deleted")
   deletedAt      BigInt? @map("deleted_at")
-  createdAt BigInt @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
-  updatedAt BigInt @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
+  createdAt      BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
+  updatedAt      BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
 
   apiKey ApiKey @relation(fields: [apiKeyId], references: [id], onDelete: Cascade)
 
@@ -513,16 +523,16 @@ model ApiKeyUsageLog {
 // ---------------------------------------------------------------------------
 
 model EmailLog {
-  id          String   @id @default(uuid())
-  templateKey String   @map("template_key")
-  to          String   @db.VarChar(255)
-  subject     String   @db.VarChar(255)
+  id          String  @id @default(uuid())
+  templateKey String  @map("template_key")
+  to          String  @db.VarChar(255)
+  subject     String  @db.VarChar(255)
   status      String // "sent" | "delivered" | "bounced" | "complained" | "failed"
-  resendId    String?  @map("resend_id")
-  error       String?  @db.Text
+  resendId    String? @map("resend_id")
+  error       String? @db.Text
   metadata    Json?
-  createdAt BigInt @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
-  updatedAt BigInt @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
+  createdAt   BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
+  updatedAt   BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
 
   @@index([status])
   @@index([templateKey])
@@ -532,28 +542,63 @@ model EmailLog {
   @@map("email_logs")
 }
 
+// ── Database backups ──────────────────────────────────────────────────────
+// One row per pg_dump job. Status/progress live here so the admin panel can
+// poll; the actual file lives under BACKUP_DIR (YYYY/MM/DD/backup_<ts>_<h>.sql.gz)
+// with its SHA-256 checksum recorded on this row. Rows + files are pruned at
+// the retention deadline (expiresAt).
+
+model Backup {
+  id              String   @id @default(uuid())
+  name            String   @db.VarChar(100)
+  status          String   @db.VarChar(20) // pending | processing | completed | failed
+  progress        Int      @default(0)
+  stage           String   @default("queued") // queued | dumping | compressing | finalizing | done | failed
+  filename        String   @db.VarChar(255)
+  sizeBytes       BigInt?  @map("size_bytes")
+  checksum        String?  @db.VarChar(64) // sha256 hex of the .sql.gz
+  error           String?  @db.Text
+  errorCode       String?  @db.VarChar(32) // machine-readable failure category
+  compressLevel   Int      @default(6) @map("compress_level")
+  schemaOnly      Boolean  @default(false) @map("schema_only")
+  tablesExcluded  String[] @default([]) @map("tables_excluded")
+  requestedBy     String   @map("requested_by")
+  requestedByName String?  @map("requested_by_name") @db.VarChar(100)
+  createdAt       BigInt   @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
+  completedAt     BigInt?  @map("completed_at")
+  expiresAt       BigInt?  @map("expires_at")
+  verifiedAt          BigInt? @map("verified_at") // last successful scratch-DB verify
+  verifiedTableCount  Int?    @map("verified_table_count")
+  restoredAt          BigInt? @map("restored_at") // last successful restore into a new DB
+  restoredDatabase    String? @db.VarChar(63) @map("restored_database")
+
+  @@index([status])
+  @@index([createdAt])
+  @@map("backups")
+}
+
 // ── Telescope persistence (improvement 1 — TELESCOPE_MODE=postgres) ───────
 // Tables mirror the memory-store entries. JSON columns hold the sanitized
 // bodies/headers/spans/logs; retention pruning (improvement 4) deletes rows
 // older than the configured window.
 
 model TelescopeRequest {
-  id             String   @id
-  correlationId  String   @map("correlation_id")
-  method         String   @db.VarChar(10)
-  path           String   @db.Text
-  statusCode     Int?     @map("status_code")
-  userId         String?  @map("user_id")
-  durationMs     Int      @map("duration_ms")
-  queryString    String?  @db.Text @map("query_string")
-  ip             String?  @db.VarChar(64)
-  userAgent      String?  @db.Text @map("user_agent")
-  requestBody    Json?    @map("request_body")
-  responseBody   Json?    @map("response_body")
-  requestHeaders Json?    @map("request_headers")
+  id             String  @id
+  correlationId  String  @map("correlation_id")
+  method         String  @db.VarChar(10)
+  path           String  @db.Text
+  statusCode     Int?    @map("status_code")
+  userId         String? @map("user_id")
+  durationMs     Int     @map("duration_ms")
+  queryString    String? @map("query_string") @db.Text
+  ip             String? @db.VarChar(64)
+  userAgent      String? @map("user_agent") @db.Text
+  requestBody    Json?   @map("request_body")
+  responseBody   Json?   @map("response_body")
+  requestHeaders Json?   @map("request_headers")
   spans          Json
   logs           Json?
-  createdAt BigInt @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
+  createdAt      BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
 
   @@index([createdAt])
   @@index([correlationId])
@@ -561,14 +606,14 @@ model TelescopeRequest {
 }
 
 model TelescopeQuery {
-  id            String   @id
-  correlationId String   @map("correlation_id")
-  model         String   @default("")
-  operation     String   @db.VarChar(20)
-  query         String   @db.Text
-  params        String?  @db.Text
-  durationMs    Int      @map("duration_ms")
-  createdAt BigInt @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
+  id            String  @id
+  correlationId String  @map("correlation_id")
+  model         String  @default("")
+  operation     String  @db.VarChar(20)
+  query         String  @db.Text
+  params        String? @db.Text
+  durationMs    Int     @map("duration_ms")
+  createdAt     BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
 
   @@index([createdAt])
   @@index([correlationId])
@@ -576,21 +621,21 @@ model TelescopeQuery {
 }
 
 model TelescopeException {
-  id            String   @id
-  correlationId String   @map("correlation_id")
-  errorGroup    String   @map("error_group")
-  name          String   @db.VarChar(200)
-  message       String   @db.Text
-  stack         String?  @db.Text
-  statusCode    Int?     @map("status_code")
-  path          String?  @db.Text
-  method        String?  @db.VarChar(10)
-  userId        String?  @map("user_id")
-  occurrences   Int      @default(1)
-  createdAt BigInt @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
-  firstSeenAt BigInt @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("first_seen_at")
-  lastSeenAt BigInt @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("last_seen_at")
-  status        String   @default("open") @map("status")
+  id            String  @id
+  correlationId String  @map("correlation_id")
+  errorGroup    String  @map("error_group")
+  name          String  @db.VarChar(200)
+  message       String  @db.Text
+  stack         String? @db.Text
+  statusCode    Int?    @map("status_code")
+  path          String? @db.Text
+  method        String? @db.VarChar(10)
+  userId        String? @map("user_id")
+  occurrences   Int     @default(1)
+  createdAt     BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
+  firstSeenAt   BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("first_seen_at")
+  lastSeenAt    BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("last_seen_at")
+  status        String  @default("open") @map("status")
 
   @@unique([errorGroup])
   @@index([createdAt])
@@ -599,11 +644,11 @@ model TelescopeException {
 }
 
 model TelescopeDump {
-  id            String   @id
-  name          String   @db.VarChar(100)
+  id            String  @id
+  name          String  @db.VarChar(100)
   value         Json
-  correlationId String?  @map("correlation_id")
-  createdAt BigInt @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
+  correlationId String? @map("correlation_id")
+  createdAt     BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
 
   @@index([createdAt])
   @@map("telescope_dumps")
@@ -615,46 +660,46 @@ model TelescopeDump {
 // so they need no table.
 
 model TelescopeJob {
-  id            String    @id
-  jobName       String    @map("job_name")
-  status        String    @db.VarChar(20)
-  durationMs    Int?      @map("duration_ms")
-  payloadSize   Int       @default(0) @map("payload_size")
-  error         String?   @db.Text
-  correlationId String?   @map("correlation_id")
+  id            String  @id
+  jobName       String  @map("job_name")
+  status        String  @db.VarChar(20)
+  durationMs    Int?    @map("duration_ms")
+  payloadSize   Int     @default(0) @map("payload_size")
+  error         String? @db.Text
+  correlationId String? @map("correlation_id")
   enqueuedAt    BigInt  @map("enqueued_at")
   startedAt     BigInt? @map("started_at")
   finishedAt    BigInt? @map("finished_at")
-  createdAt BigInt @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
+  createdAt     BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
 
   @@index([createdAt])
   @@map("telescope_jobs")
 }
 
 model TelescopeAlert {
-  id           String    @id
-  requestId    String?   @map("request_id")
-  jobName      String?   @map("job_name")
-  method       String    @db.VarChar(10)
-  path         String    @db.Text
-  statusCode   Int?      @map("status_code")
-  durationMs   Int       @map("duration_ms")
-  reason       String    @db.VarChar(20)
-  status       String    @default("open") @map("status")
+  id           String  @id
+  requestId    String? @map("request_id")
+  jobName      String? @map("job_name")
+  method       String  @db.VarChar(10)
+  path         String  @db.Text
+  statusCode   Int?    @map("status_code")
+  durationMs   Int     @map("duration_ms")
+  reason       String  @db.VarChar(20)
+  status       String  @default("open") @map("status")
   snoozedUntil BigInt? @map("snoozed_until")
   firedAt      BigInt  @map("fired_at")
-  createdAt BigInt @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
+  createdAt    BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
 
   @@index([createdAt])
   @@map("telescope_alerts")
 }
 
 model TelescopeAnnotation {
-  requestId String   @id
-  starred   Boolean  @default(false)
-  comment   String?  @db.Text
-  updatedAt BigInt @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
-  createdAt BigInt @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
+  requestId String  @id
+  starred   Boolean @default(false)
+  comment   String? @db.Text
+  updatedAt BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
+  createdAt BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
 
   @@index([createdAt])
   @@map("telescope_annotations")

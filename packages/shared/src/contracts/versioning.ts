@@ -41,7 +41,7 @@ export const UNVERSIONED_ROUTE_PREFIXES = ["", "health", "notifications/email-we
  * Every business controller prefix, as a compile-time literal union: a typo
  * like `apiPath("/authh")` now fails to compile instead of 404ing at runtime.
  */
-export const VERSIONED_ROUTE_PREFIXES = ["/auth", "/session", "/notifications/email-preview", "/notifications/email-log", "/telescope", "/version"] as const;
+export const VERSIONED_ROUTE_PREFIXES = ["/auth", "/session", "/notifications/email-preview", "/notifications/email-log", "/backup", "/telescope", "/version"] as const;
 
 export type VersionedRoutePrefix = (typeof VERSIONED_ROUTE_PREFIXES)[number];
 

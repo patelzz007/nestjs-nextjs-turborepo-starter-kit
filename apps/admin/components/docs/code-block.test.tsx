@@ -2,8 +2,8 @@
 //
 // CodeBlock reading-feature tests (points 7–11): GitHub-style diff rendering,
 // line-highlight chip, word-wrap toggle, long-block collapse, and the
-// copy-with-filename toast. shiki + sonner are mocked so the tests are fast,
-// hermetic, and don't touch the network.
+// copy-with-filename toast. shiki + the toast manager are mocked so the tests
+// are fast, hermetic, and don't touch the network.
 
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ComponentProps } from "react";
@@ -32,19 +32,21 @@ vi.mock("shiki", () => ({
 	}),
 }));
 
-// The mock mirrors the sonner calls CodeBlock makes: `toast.success(message,
-// data?)` / `toast.error(message, data?)` where data is the options object.
-type ToastCall = (message: string, data?: { readonly description?: string }) => void;
+// The mock mirrors the toastMessage calls CodeBlock makes:
+// `toastMessage.success({ title, description })` / `toastMessage.error({ title, description })`.
+type ToastCall = (options: { readonly title?: string; readonly description?: string }) => void;
 
 const toastSuccess = vi.fn<ToastCall>();
 const toastError = vi.fn<ToastCall>();
-vi.mock("sonner", () => ({
-	toast: {
-		success: (message: string, data?: { readonly description?: string }): void => {
-			toastSuccess(message, data);
+vi.mock("@workspace/ui/components/feedback/toast", () => ({
+	toastMessage: {
+		success: (options: { readonly title?: string; readonly description?: string }): string => {
+			toastSuccess(options);
+			return "mock-toast-id";
 		},
-		error: (message: string, data?: { readonly description?: string }): void => {
-			toastError(message, data);
+		error: (options: { readonly title?: string; readonly description?: string }): string => {
+			toastError(options);
+			return "mock-toast-id";
 		},
 	},
 }));
@@ -151,7 +153,7 @@ describe("CodeBlock copy toast", () => {
 		fireEvent.click(screen.getByRole("button", { name: "Copy code" }));
 
 		await waitFor((): void => {
-			expect(toastSuccess).toHaveBeenCalledWith("Copied demo.ts", { description: "The code is on your clipboard." });
+			expect(toastSuccess).toHaveBeenCalledWith({ title: "Copied demo.ts", description: "The code is on your clipboard." });
 		});
 	});
 
@@ -161,7 +163,7 @@ describe("CodeBlock copy toast", () => {
 		fireEvent.click(screen.getByRole("button", { name: "Copy code" }));
 
 		await waitFor((): void => {
-			expect(toastSuccess).toHaveBeenCalledWith("Copied bash", { description: "The code is on your clipboard." });
+			expect(toastSuccess).toHaveBeenCalledWith({ title: "Copied bash", description: "The code is on your clipboard." });
 		});
 	});
 
@@ -175,7 +177,7 @@ describe("CodeBlock copy toast", () => {
 		fireEvent.click(screen.getByRole("button", { name: "Copy code" }));
 
 		await waitFor((): void => {
-			expect(toastError).toHaveBeenCalledWith("Could not copy code", { description: "Your browser blocked clipboard access." });
+			expect(toastError).toHaveBeenCalledWith({ title: "Could not copy code", description: "Your browser blocked clipboard access." });
 		});
 	});
 });

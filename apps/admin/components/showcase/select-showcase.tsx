@@ -20,7 +20,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@workspace/ui/components/form/select";
-import { toast } from "sonner";
+import { toastMessage } from "@workspace/ui/components/feedback/toast";
 import * as React from "react";
 import { useCallback, useState } from "react";
 import { Controller, useForm, type ControllerFieldState, type ControllerRenderProps } from "react-hook-form";
@@ -94,7 +94,7 @@ export function SelectShowcase(): React.JSX.Element {
 	const [role, setRole] = useState<string | null>(null);
 	const handleCreateRole = useCallback((): void => {
 		setRole("custom");
-		toast.success("Created a custom role (demo)");
+		toastMessage.success({ title: "Created a custom role (demo)" });
 	}, []);
 
 	// Grouped select (improvement 15).
@@ -146,7 +146,7 @@ export function SelectShowcase(): React.JSX.Element {
 
 	const onSubmit = useCallback(
 		(values: TeamFormValues): void => {
-			toast.success(`Saved: ${values.language} · ${values.teams.join(", ")}`);
+			toastMessage.success({ title: `Saved: ${values.language} · ${values.teams.join(", ")}` });
 			reset(teamFormDefaultValues);
 		},
 		[reset],

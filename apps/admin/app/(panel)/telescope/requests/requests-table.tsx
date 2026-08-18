@@ -20,9 +20,9 @@ import { Button } from "@workspace/ui/components/form/button";
 import { Input } from "@workspace/ui/components/form/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@workspace/ui/components/form/select";
 import { Download, GitCompareArrows, RefreshCw, Search as SearchIcon, Star } from "lucide-react";
+import { toastMessage } from "@workspace/ui/components/feedback/toast";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useMemo, useState } from "react";
-import { toast } from "sonner";
 import { z } from "zod";
 
 import { TelescopeRequestListQuerySchema, type RequestLogSummary, type TelescopeRequestListQuery, type TelescopeStreamEvent } from "@workspace/shared";
@@ -119,10 +119,10 @@ function RowStarToggle({ request, onChanged }: { readonly request: RequestLogSum
 				{
 					onSuccess: (): void => {
 						onChanged();
-						toast.success(next ? "Request starred." : "Star removed.");
+						toastMessage.success({ title: next ? "Request starred." : "Star removed." });
 					},
 					onError: (): void => {
-						toast.error("Failed to update the star.");
+						toastMessage.error({ title: "Failed to update the star." });
 					},
 				},
 			);
@@ -296,7 +296,7 @@ function RequestsContent(): React.JSX.Element {
 				icon: <GitCompareArrows className="size-3.5" />,
 				onClick: (rows: RequestLogSummary[]): void => {
 					if (rows.length !== 2) {
-						toast.warning("Select exactly two requests to compare.");
+						toastMessage.warning({ title: "Select exactly two requests to compare." });
 						return;
 					}
 					router.push(`/telescope/compare?a=${encodeURIComponent(rows[0]?.id ?? "")}&b=${encodeURIComponent(rows[1]?.id ?? "")}`);
@@ -308,7 +308,7 @@ function RequestsContent(): React.JSX.Element {
 				icon: <Download className="size-3.5" />,
 				onClick: (rows: RequestLogSummary[]): void => {
 					downloadJsonRows(rows);
-					toast.success(`Exported ${String(rows.length)} request${rows.length === 1 ? "" : "s"} as JSON.`);
+					toastMessage.success({ title: `Exported ${String(rows.length)} request${rows.length === 1 ? "" : "s"} as JSON.` });
 				},
 			},
 		],
@@ -423,7 +423,7 @@ function RequestsContent(): React.JSX.Element {
 				createdAt: Date.now(),
 			}),
 		);
-		toast.success("Filter saved.");
+		toastMessage.success({ title: "Filter saved." });
 	}, []);
 
 	const handleDeleteFilter = useCallback((id: string): void => {

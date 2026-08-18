@@ -6,6 +6,7 @@ import { CorrelationIdMiddleware } from "./common/middleware/correlation-id.midd
 import { ConfigModule } from "./config/config.module";
 import { AuthModule } from "./modules/auth/auth.module";
 import { AuthGuard } from "./modules/auth/guards/auth.guard";
+import { BackupModule } from "./modules/backup/backup.module";
 import { HealthModule } from "./modules/health/health.module";
 import { ImpersonationModule } from "./modules/impersonation/impersonation.module";
 import { LogsModule } from "./modules/logs/logs.module";
@@ -20,7 +21,7 @@ import { TelescopeModule } from "./modules/telescope/telescope.module";
 import { PrismaModule } from "./prisma/prisma.module";
 
 @Module({
-	imports: [ConfigModule, PrismaModule, LogsModule, HealthModule, AuthModule, SessionsModule, ImpersonationModule, NotificationsModule, TelescopeModule],
+	imports: [ConfigModule, PrismaModule, LogsModule, HealthModule, AuthModule, SessionsModule, ImpersonationModule, NotificationsModule, TelescopeModule, BackupModule],
 	providers: [
 		{
 			provide: APP_INTERCEPTOR,

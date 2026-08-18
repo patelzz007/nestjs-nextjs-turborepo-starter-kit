@@ -10,10 +10,10 @@
 import { useAuth } from "@workspace/client/lib/auth";
 
 import { Button } from "@workspace/ui/components/form/button";
+import { toastMessage } from "@workspace/ui/components/feedback/toast";
 import { CalendarClock, Loader2, Play } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useMemo } from "react";
-import { toast } from "sonner";
 
 import type { TelescopeScheduleLog, TelescopeSchedulesResponse, TelescopeStreamEvent } from "@workspace/shared";
 
@@ -163,10 +163,10 @@ function RunNowButton({ name, onRan }: { readonly name: string; readonly onRan: 
 				{
 					onSuccess: (): void => {
 						onRan();
-						toast.success(`"${name}" ran — check the history dots.`);
+						toastMessage.success({ title: `"${name}" ran — check the history dots.` });
 					},
 					onError: (): void => {
-						toast.error("Run failed — the task threw (see the card's last-error).");
+						toastMessage.error({ title: "Run failed — the task threw (see the card's last-error)." });
 					},
 				},
 			);

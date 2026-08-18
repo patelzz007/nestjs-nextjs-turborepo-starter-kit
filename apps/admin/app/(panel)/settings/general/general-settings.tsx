@@ -8,9 +8,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@workspace/ui/components/display/separator";
 import { Switch } from "@workspace/ui/components/form/switch";
 import { Textarea } from "@workspace/ui/components/form/textarea";
+import { toastMessage } from "@workspace/ui/components/feedback/toast";
 import { Save } from "lucide-react";
 import * as React from "react";
-import { toast } from "sonner";
 
 /** Profile form state — lives at the page level (smart component owns the data). */
 interface ProfileFormState {
@@ -86,7 +86,7 @@ export default function GeneralSettingsView(): React.JSX.Element {
 	}, []);
 
 	const handleSaveProfile = React.useCallback((): void => {
-		toast.success("Profile saved", { description: "Your profile changes have been saved." });
+		toastMessage.success({ title: "Profile saved", description: "Your profile changes have been saved." });
 	}, []);
 
 	return (

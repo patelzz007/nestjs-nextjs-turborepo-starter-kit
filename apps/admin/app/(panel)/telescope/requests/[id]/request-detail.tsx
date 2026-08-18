@@ -29,10 +29,10 @@ import {
 	TriangleAlert,
 	UserRound,
 } from "lucide-react";
+import { toastMessage } from "@workspace/ui/components/feedback/toast";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useMemo, useState } from "react";
-import { toast } from "sonner";
 
 import type { TelescopeReplayResponse, TelescopeRequestDetailResponse, TelescopeRequestSqlResponse, TelescopeSpan } from "@workspace/shared";
 
@@ -116,10 +116,10 @@ export default function TelescopeRequestDetailPage(): React.JSX.Element {
 				{
 					onSuccess: (): void => {
 						void detailQuery.refetch();
-						toast.success(starred ? "Request starred." : "Star removed.");
+						toastMessage.success({ title: starred ? "Request starred." : "Star removed." });
 					},
 					onError: (): void => {
-						toast.error("Failed to update the star.");
+						toastMessage.error({ title: "Failed to update the star." });
 					},
 				},
 			);
@@ -134,10 +134,10 @@ export default function TelescopeRequestDetailPage(): React.JSX.Element {
 				{
 					onSuccess: (): void => {
 						void detailQuery.refetch();
-						toast.success("Comment saved.");
+						toastMessage.success({ title: "Comment saved." });
 					},
 					onError: (): void => {
-						toast.error("Failed to save the comment.");
+						toastMessage.error({ title: "Failed to save the comment." });
 					},
 				},
 			);
@@ -154,7 +154,7 @@ export default function TelescopeRequestDetailPage(): React.JSX.Element {
 						setReplayResult(data.data);
 					},
 					onError: (): void => {
-						toast.error("Replay failed — check the API logs.");
+						toastMessage.error({ title: "Replay failed — check the API logs." });
 					},
 				},
 			);
@@ -169,7 +169,7 @@ export default function TelescopeRequestDetailPage(): React.JSX.Element {
 			}
 			const snippet: string = buildRequestSnippet(detail.request, format);
 			await navigator.clipboard.writeText(snippet);
-			toast.success(`${snippetFormatLabel(format)} snippet copied.`);
+			toastMessage.success({ title: `${snippetFormatLabel(format)} snippet copied.` });
 		},
 		[detail],
 	);
@@ -186,7 +186,7 @@ export default function TelescopeRequestDetailPage(): React.JSX.Element {
 	// context (the request ID is already URL-addressable).
 	const handleCopyShareLink = useCallback((): void => {
 		void navigator.clipboard.writeText(window.location.href).then((): void => {
-			toast.success("Share link copied.");
+			toastMessage.success({ title: "Share link copied." });
 		});
 	}, []);
 
@@ -197,7 +197,7 @@ export default function TelescopeRequestDetailPage(): React.JSX.Element {
 			return;
 		}
 		void navigator.clipboard.writeText(JSON.stringify(detail, null, 2)).then((): void => {
-			toast.success("Request copied as JSON.");
+			toastMessage.success({ title: "Request copied as JSON." });
 		});
 	}, [detail]);
 
@@ -218,7 +218,7 @@ export default function TelescopeRequestDetailPage(): React.JSX.Element {
 			parts.push(`  -d '${JSON.stringify(request.requestBody)}'`);
 		}
 		void navigator.clipboard.writeText(parts.join(" \\\n")).then((): void => {
-			toast.success("cURL command copied.");
+			toastMessage.success({ title: "cURL command copied." });
 		});
 	}, [detail]);
 

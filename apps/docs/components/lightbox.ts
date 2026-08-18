@@ -12,9 +12,9 @@
  * This module is DOM-only and imported exclusively by client components.
  */
 
-import { toast } from "sonner";
-
 import type { MouseEvent } from "react";
+
+import { toastMessage } from "@workspace/ui/components/feedback/toast";
 
 import { downloadFilename } from "@/lib/dates";
 
@@ -136,10 +136,10 @@ export function openLightbox(trigger: HTMLElement): void {
 				link.click();
 				link.remove();
 				URL.revokeObjectURL(url);
-				toast.success(`Downloaded ${filename}`);
+				toastMessage.success({ title: `Downloaded ${filename}` });
 			})
 			.catch((): void => {
-				toast.error("Download failed — the image could not be fetched.");
+				toastMessage.error({ title: "Download failed — the image could not be fetched." });
 			});
 	});
 	const closeButton = document.createElement("button");

@@ -14,7 +14,7 @@
 // features actually provide.
 // ============================================================
 
-import { toast } from "sonner";
+import { toastMessage } from "@workspace/ui/components/feedback/toast";
 import * as React from "react";
 import { useCallback, useMemo, useState } from "react";
 import { z } from "zod";
@@ -121,34 +121,34 @@ export function DataTableShowcase(): React.JSX.Element {
 
 	// Row actions (rule 9: the smart layer owns the outcomes).
 	const handleView = useCallback((row: DashboardRow): void => {
-		toast.info(`Viewing “${row.header}”`, { description: `Section type: ${row.type}` });
+		toastMessage.info({ title: `Viewing “${row.header}”`, description: `Section type: ${row.type}` });
 	}, []);
 
 	const handleEdit = useCallback((row: DashboardRow): void => {
-		toast.success(`Editing “${row.header}”`);
+		toastMessage.success({ title: `Editing “${row.header}”` });
 	}, []);
 
 	const handleDuplicate = useCallback((row: DashboardRow): void => {
-		toast.success(`Duplicated “${row.header}”`);
+		toastMessage.success({ title: `Duplicated “${row.header}”` });
 	}, []);
 
 	const handleDelete = useCallback((row: DashboardRow): void => {
-		toast.error(`Deleted “${row.header}”`, { description: "This is a demo — no data was removed." });
+		toastMessage.error({ title: `Deleted “${row.header}”`, description: "This is a demo — no data was removed." });
 	}, []);
 
 	// Bulk actions (feature: bulk selection).
 	const handleBulkExport = useCallback((rows: DashboardRow[]): void => {
-		toast.success(`Exporting ${String(rows.length)} section${rows.length === 1 ? "" : "s"}`);
+		toastMessage.success({ title: `Exporting ${String(rows.length)} section${rows.length === 1 ? "" : "s"}` });
 	}, []);
 
 	const handleBulkMarkDone = useCallback((rows: DashboardRow[]): void => {
-		toast.success(`Marked ${String(rows.length)} section${rows.length === 1 ? "" : "s"} as done`);
+		toastMessage.success({ title: `Marked ${String(rows.length)} section${rows.length === 1 ? "" : "s"} as done` });
 	}, []);
 
 	// Row click (feature: onRowClick) — same smart-layer contract as the row
 	// actions: the table only reports *which* row was clicked, we own the result.
 	const handleRowClick = useCallback((row: DashboardRow): void => {
-		toast.info(`Opened “${row.header}”`, { description: `Click the ⋯ menu for row actions.` });
+		toastMessage.info({ title: `Opened “${row.header}”`, description: `Click the ⋯ menu for row actions.` });
 	}, []);
 
 	// Inline editing (feature: editable). The shared table reports the column id
@@ -158,7 +158,7 @@ export function DataTableShowcase(): React.JSX.Element {
 	// writing a phantom key onto the record.
 	const handleCellEdit = useCallback((_rowIndex: number, columnId: string, value: unknown, row: DashboardRow): void => {
 		setRows((prev) => prev.map((item) => (item.id === row.id && columnId in item ? { ...item, [columnId]: String(value) } : item)));
-		toast.success(`Updated “${row.header}” — ${EDITABLE_COLUMN_LABELS[columnId] ?? columnId} → ${String(value)}`);
+		toastMessage.success({ title: `Updated “${row.header}” — ${EDITABLE_COLUMN_LABELS[columnId] ?? columnId} → ${String(value)}` });
 	}, []);
 
 	// Row reorder (feature: draggable). The table hands us the visible rows in
@@ -186,7 +186,7 @@ export function DataTableShowcase(): React.JSX.Element {
 			next.splice(insertAt === -1 ? next.length : insertAt, 0, removed);
 			return next;
 		});
-		toast.success(`Reordered “${moved.header}”`);
+		toastMessage.success({ title: `Reordered “${moved.header}”` });
 	}, []);
 
 	const actions = useMemo<Action<DashboardRow>[]>(

@@ -6,9 +6,9 @@ import type { EmailPreview, EmailTemplateMeta } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/feedback/badge";
 import { Button } from "@workspace/ui/components/form/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
+import { toastMessage } from "@workspace/ui/components/feedback/toast";
 import { Check, Copy, FileCode2, Loader2, Mail, Send } from "lucide-react";
 import * as React from "react";
-import { toast } from "sonner";
 
 /** Active preview mode — HTML iframe or raw source. */
 type PreviewMode = "preview" | "html" | "text";
@@ -126,7 +126,7 @@ export default function EmailPreviewPage(): React.JSX.Element {
 		const content: string = mode === "text" ? preview.text : preview.html;
 		void navigator.clipboard.writeText(content).then((): void => {
 			setCopied(true);
-			toast.success("Copied to clipboard");
+			toastMessage.success({ title: "Copied to clipboard" });
 			setTimeout((): void => {
 				setCopied(false);
 			}, 1600);
@@ -142,13 +142,13 @@ export default function EmailPreviewPage(): React.JSX.Element {
 			.then((data): void => {
 				const result = data.data;
 				if (result.ok) {
-					toast.success(result.mode === "send" ? `Sent! Resend id ${result.id}` : `Queued (${result.mode}) — id ${result.id}`);
+					toastMessage.success({ title: result.mode === "send" ? `Sent! Resend id ${result.id}` : `Queued (${result.mode}) — id ${result.id}` });
 				} else {
-					toast.error(`Send failed: ${result.reason}${result.detail !== undefined ? ` — ${result.detail}` : ""}`);
+					toastMessage.error({ title: `Send failed: ${result.reason}${result.detail !== undefined ? ` — ${result.detail}` : ""}` });
 				}
 			})
 			.catch((): void => {
-				toast.error("Send request failed — check that the API is running.");
+				toastMessage.error({ title: "Send request failed — check that the API is running." });
 			});
 	}, [effectiveKey, sendMutation]);
 

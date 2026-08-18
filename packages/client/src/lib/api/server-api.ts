@@ -823,6 +823,17 @@ function buildServerCallerTree(config: ServerApiConfig): ServerCaller {
 			previewSend: createServerMutationLeaf(apiRouter.email.previewSend, config),
 			logList: createServerQueryLeaf(apiRouter.email.logList, config),
 		},
+		backup: {
+			create: createServerMutationLeaf(apiRouter.backup.create, config),
+			list: createServerQueryLeaf(apiRouter.backup.list, config),
+			status: createServerQueryLeaf(apiRouter.backup.status, config),
+			download: createServerMutationLeaf(apiRouter.backup.download, config),
+			remove: createServerMutationLeaf(apiRouter.backup.remove, config),
+			options: createServerQueryLeaf(apiRouter.backup.options, config),
+			verify: createServerMutationLeaf(apiRouter.backup.verify, config),
+			restore: createServerMutationLeaf(apiRouter.backup.restore, config),
+			cancel: createServerMutationLeaf(apiRouter.backup.cancel, config),
+		},
 		telescope: {
 			overview: createServerQueryLeaf(apiRouter.telescope.overview, config),
 			requests: createServerQueryLeaf(apiRouter.telescope.requests, config),

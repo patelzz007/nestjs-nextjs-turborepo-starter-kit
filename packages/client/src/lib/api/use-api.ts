@@ -557,6 +557,17 @@ function buildClientRouter(baseUrl: string, onUnauthorized: OnUnauthorized | und
 			previewSend: createMutationProcedure(baseUrl, onUnauthorized, onRefresh, apiRouter.email.previewSend),
 			logList: createQueryProcedure(baseUrl, onUnauthorized, onRefresh, apiRouter.email.logList),
 		},
+		backup: {
+			create: createMutationProcedure(baseUrl, onUnauthorized, onRefresh, apiRouter.backup.create),
+			list: createQueryProcedure(baseUrl, onUnauthorized, onRefresh, apiRouter.backup.list),
+			status: createQueryProcedure(baseUrl, onUnauthorized, onRefresh, apiRouter.backup.status),
+			download: createMutationProcedure(baseUrl, onUnauthorized, onRefresh, apiRouter.backup.download),
+			remove: createMutationProcedure(baseUrl, onUnauthorized, onRefresh, apiRouter.backup.remove),
+			options: createQueryProcedure(baseUrl, onUnauthorized, onRefresh, apiRouter.backup.options),
+			verify: createMutationProcedure(baseUrl, onUnauthorized, onRefresh, apiRouter.backup.verify),
+			restore: createMutationProcedure(baseUrl, onUnauthorized, onRefresh, apiRouter.backup.restore),
+			cancel: createMutationProcedure(baseUrl, onUnauthorized, onRefresh, apiRouter.backup.cancel),
+		},
 		telescope: {
 			overview: createQueryProcedure(baseUrl, onUnauthorized, onRefresh, apiRouter.telescope.overview),
 			requests: createQueryProcedure(baseUrl, onUnauthorized, onRefresh, apiRouter.telescope.requests),

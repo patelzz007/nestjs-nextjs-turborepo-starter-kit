@@ -3,7 +3,7 @@ import "./global.css";
 import "katex/dist/katex.min.css";
 
 import { cn } from "@workspace/ui/lib/utils";
-import { Toaster } from "@workspace/ui/components/feedback/sonner";
+import { Toaster } from "@workspace/ui/components/feedback/toast";
 import { Geist, Geist_Mono, Space_Grotesk } from "next/font/google";
 import type { Metadata } from "next";
 

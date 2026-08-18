@@ -28,6 +28,15 @@
 import type { QueryKey } from "@tanstack/react-query";
 import {
 	apiContract,
+	BackupCancelResponseSchema,
+	BackupCreateResponseSchema,
+	BackupDeleteResponseSchema,
+	BackupDownloadResponseSchema,
+	BackupListResponseSchema,
+	BackupOptionsResponseSchema,
+	BackupRestoreResponseSchema,
+	BackupStatusResponseSchema,
+	BackupVerifyResponseSchema,
 	EmailLogListResponseSchema,
 	EmailPreviewListResponseSchema,
 	EmailPreviewSchema,
@@ -344,6 +353,52 @@ export const apiRouter = {
 		logList: defineQuery(apiContract.email.logList, {
 			response: envelope(EmailLogListResponseSchema),
 			queryKey: () => ["email", "log-list"],
+		}),
+	},
+
+	// ── Database backup procedures ───────────────────────────────────────────
+	backup: {
+		/** Create a backup — 202 Accepted; the job runs server-side. */
+		create: defineMutation(apiContract.backup.create, {
+			response: envelope(BackupCreateResponseSchema),
+			queryKey: () => ["backup", "create"],
+		}),
+		list: defineQuery(apiContract.backup.list, {
+			response: envelope(BackupListResponseSchema),
+			queryKey: () => ["backup", "list"],
+		}),
+		/** Poll target while a backup runs. */
+		status: defineQuery(apiContract.backup.status, {
+			response: envelope(BackupStatusResponseSchema),
+			queryKey: ({ id }) => ["backup", "status", id],
+		}),
+		/** Mints a signed download token (exchanged for the file via the admin proxy). */
+		download: defineMutation(apiContract.backup.download, {
+			response: envelope(BackupDownloadResponseSchema),
+			queryKey: ({ id }) => ["backup", "download", id],
+		}),
+		remove: defineMutation(apiContract.backup.remove, {
+			response: envelope(BackupDeleteResponseSchema),
+			queryKey: ({ id }) => ["backup", "remove", id],
+		}),
+		options: defineQuery(apiContract.backup.options, {
+			response: envelope(BackupOptionsResponseSchema),
+			queryKey: () => ["backup", "options"],
+		}),
+		/** Restores the dump into a throwaway scratch DB, confirms, drops it. */
+		verify: defineMutation(apiContract.backup.verify, {
+			response: envelope(BackupVerifyResponseSchema),
+			queryKey: ({ id }) => ["backup", "verify", id],
+		}),
+		/** Restores the dump into a NEW database (never an existing one). */
+		restore: defineMutation(apiContract.backup.restore, {
+			response: envelope(BackupRestoreResponseSchema),
+			queryKey: ({ id }) => ["backup", "restore", id],
+		}),
+		/** Gracefully stops a pending/running backup job. */
+		cancel: defineMutation(apiContract.backup.cancel, {
+			response: envelope(BackupCancelResponseSchema),
+			queryKey: ({ id }) => ["backup", "cancel", id],
 		}),
 	},
 

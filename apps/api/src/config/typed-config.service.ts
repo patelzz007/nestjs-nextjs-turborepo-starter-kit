@@ -107,6 +107,85 @@ export class TypedConfigService {
 		return parsed >= 0 ? parsed : 0;
 	}
 
+	// ── Database Backup Configuration ────────────────────────────────────
+
+	/** Master switch — set `BACKUP_ENABLED=false` to disable the feature. */
+	public get backupEnabled(): boolean {
+		return process.env.BACKUP_ENABLED !== "false";
+	}
+
+	/** Directory backups are written to (created on demand). */
+	public get backupDir(): string {
+		return process.env.BACKUP_DIR ?? "./backups";
+	}
+
+	/** How long completed backups are kept before pruning (file + row). */
+	public get backupRetentionDays(): number {
+		const value: string | undefined = process.env.BACKUP_RETENTION_DAYS;
+		const parsed: number = value ? Number.parseInt(value, 10) : 7;
+		return parsed >= 1 && parsed <= 365 ? parsed : 7;
+	}
+
+	/** Per-user cap on backup creations (rolling hour) for regular admins. 0 disables. */
+	public get backupRateLimitPerHour(): number {
+		const value: string | undefined = process.env.BACKUP_RATE_LIMIT;
+		const parsed: number = value ? Number.parseInt(value, 10) : 5;
+		return parsed >= 0 ? parsed : 5;
+	}
+
+	/** Per-user cap on backup creations (rolling hour) for superadmins. 0 disables. */
+	public get backupRateLimitSuperAdminPerHour(): number {
+		const value: string | undefined = process.env.BACKUP_RATE_LIMIT_SUPERADMIN;
+		const parsed: number = value ? Number.parseInt(value, 10) : 10;
+		return parsed >= 0 ? parsed : 10;
+	}
+
+	/**
+	 * Comma-separated tables whose ROWS are skipped (schema is kept, so a
+	 * restore still creates them). Defaults to `logs,backups` — the largest
+	 * tables in the system (ephemeral observability data + the backup index
+	 * itself, which would otherwise double the size of every dump).
+	 * `session_store`-style cache/temp tables can be added the same way.
+	 */
+	public get backupExcludeTables(): string[] {
+		const value: string | undefined = process.env.BACKUP_EXCLUDE_TABLES;
+		if (value === undefined || value.trim().length === 0) return ["logs", "backups"];
+		return value
+			.split(",")
+			.map((table: string): string => table.trim())
+			.filter((table: string): boolean => table.length > 0);
+	}
+
+	/** Secret used to sign short-lived backup download tokens. */
+	public get backupDownloadSecret(): string {
+		return process.env.BACKUP_DOWNLOAD_SECRET ?? "backup-download-secret-change-me";
+	}
+
+	/** Abort a new backup when free disk space drops below this (MB). */
+	public get backupMinFreeMb(): number {
+		const value: string | undefined = process.env.BACKUP_MIN_FREE_MB;
+		const parsed: number = value ? Number.parseInt(value, 10) : 1024;
+		return parsed >= 0 ? parsed : 1024;
+	}
+
+	/** How long a signed download token stays valid (minutes). */
+	public get backupDownloadTtlMinutes(): number {
+		const value: string | undefined = process.env.BACKUP_DOWNLOAD_TTL_MINUTES;
+		const parsed: number = value ? Number.parseInt(value, 10) : 15;
+		return parsed >= 1 && parsed <= 1440 ? parsed : 15;
+	}
+
+	/**
+	 * Per-user cap on download-token mints (rolling 15-minute window).
+	 * 0 disables the cap. The create cap alone would let a user mint
+	 * unlimited signed tokens for one backup.
+	 */
+	public get backupDownloadRateLimit(): number {
+		const value: string | undefined = process.env.BACKUP_DOWNLOAD_RATE_LIMIT;
+		const parsed: number = value ? Number.parseInt(value, 10) : 10;
+		return parsed >= 0 ? parsed : 10;
+	}
+
 	// ── App Configuration ──────────────────────────────────────────────
 
 	/** Application name (used in email templates) */

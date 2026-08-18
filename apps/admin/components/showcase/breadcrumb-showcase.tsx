@@ -4,9 +4,9 @@ import { Button } from "@workspace/ui/components/form/button";
 import type { BreadcrumbItem } from "@workspace/ui/components/navigation/breadcrumb-context";
 import { BreadcrumbTrail } from "@workspace/ui/components/navigation/breadcrumb-trail";
 import { Activity, FileText, Home, LayoutDashboard, Settings, Shield, SlidersHorizontal, Users } from "lucide-react";
+import { toastMessage } from "@workspace/ui/components/feedback/toast";
 import * as React from "react";
 import { useCallback, useState } from "react";
-import { toast } from "sonner";
 
 // ── Demo data — content lives at the smart level (rules 9/10); the dumb
 // trail only renders what it is given. Icons are mandatory on every crumb. ──
@@ -66,13 +66,13 @@ export function BreadcrumbShowcase(): React.JSX.Element {
 		[preventDemoNavigation],
 	);
 
-	// Copy feedback goes through sonner — the admin app's globally-mounted
-	// Toaster (same wiring as the dashboard layout's copy action).
+	// Copy feedback goes through the app-global Toast & Toastr manager
+	// (same wiring as the dashboard layout's copy action).
 	const handleCopy = useCallback((ok: boolean): void => {
 		if (ok) {
-			toast.success("Link copied", { description: "The page URL is on your clipboard." });
+			toastMessage.success({ title: "Link copied", description: "The page URL is on your clipboard." });
 		} else {
-			toast.error("Could not copy link", { description: "Copy the URL from the address bar instead." });
+			toastMessage.error({ title: "Could not copy link", description: "Copy the URL from the address bar instead." });
 		}
 	}, []);
 

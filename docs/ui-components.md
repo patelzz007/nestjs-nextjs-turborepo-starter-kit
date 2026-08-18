@@ -73,7 +73,6 @@ tags: ["ui", "components", "design-system"]
 - [NotFoundContent](#notfoundcontent--componentsfeedbacknot-found-contenttsx)
 - [Progress](#progress--componentsfeedbackprogresstsx)
 - [Skeleton](#skeleton--componentsfeedbackskeletontsx)
-- [Sonner](#sonner--componentsfeedbacksonnertsx)
 - [Spinner](#spinner--componentsfeedbackspinnertsx)
 - [Toast](#toast--componentsfeedbacktoasttsx)
 
@@ -3678,11 +3677,21 @@ Base-ui slider with track, range indicator, and thumbs.
 
 ---
 
-## Sonner — `components/feedback/sonner.tsx`
+## Toast — `components/feedback/toast.tsx` (replaces the former Sonner wrapper)
 
 ### 🔧 Improvements
 
-Sonner toaster wired to theme + CSS vars.
+The old Sonner-based toaster (`components/feedback/sonner.tsx`) has been **removed** — every app (admin, web, docs) now uses the in-house base-ui **Toast & Toastr** manager described above (`toastMessage.success/info/warning/error`). Apps import the typed imperative API:
+
+```ts
+import { toastMessage } from "@workspace/ui/components/feedback/toast";
+
+toastMessage.success({ title: "Saved", description: "Your changes are live." });
+toastMessage.error({ title: "Failed", description: "Check the logs." });
+toastMessage.info({ title: "Heads up", description: "Maintenance starts at 02:00 UTC." });
+```
+
+What the old wrapper provided (theme wiring, CSS-var tokens, imperative `toast()` calls) is now covered natively by the Toast & Toastr component; the leftover improvement notes are kept below for the historical audit trail.
 
 1. `[R]` No ref forwarding — the wrapper doesn't need one, but document that `toast()` calls are imperative.
 2. `[Th]` CSS vars (`--normal-bg`, `--normal-border`) token-mapped ✓ — extend to `--success-bg`/`--error-bg` so rich toasts match tokens.

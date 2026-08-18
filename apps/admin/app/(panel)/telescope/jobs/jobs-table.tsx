@@ -14,10 +14,10 @@ import { Input } from "@workspace/ui/components/form/input";
 import type { ColumnDef } from "@tanstack/react-table";
 import { DataTable, type DataTableFeatures } from "@workspace/ui/components/display/data-table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@workspace/ui/components/form/select";
+import { toastMessage } from "@workspace/ui/components/feedback/toast";
 import { ExternalLink, RotateCcw, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useState } from "react";
-import { toast } from "sonner";
 
 import { TelescopeJobsListQuerySchema, type TelescopeJobLogEntry, type TelescopeJobsListQuery, type TelescopeStreamEvent } from "@workspace/shared";
 
@@ -65,10 +65,10 @@ function RetryAction({ job, onRetried }: { readonly job: TelescopeJobLogEntry; r
 				{
 					onSuccess: (): void => {
 						onRetried();
-						toast.success("Job re-queued — a new entry will appear.");
+						toastMessage.success({ title: "Job re-queued — a new entry will appear." });
 					},
 					onError: (): void => {
-						toast.error("Retry failed — the job fn is not registered (API restart clears it).");
+						toastMessage.error({ title: "Retry failed — the job fn is not registered (API restart clears it)." });
 					},
 				},
 			);

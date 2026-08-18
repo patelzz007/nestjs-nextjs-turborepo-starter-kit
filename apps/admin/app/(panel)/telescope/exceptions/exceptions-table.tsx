@@ -14,9 +14,9 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { DataTable, type DataTableFeatures } from "@workspace/ui/components/display/data-table";
 import { Input } from "@workspace/ui/components/form/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@workspace/ui/components/form/select";
+import { toastMessage } from "@workspace/ui/components/feedback/toast";
 import { Check, EyeOff, RotateCcw } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
-import { toast } from "sonner";
 
 import { TelescopeExceptionListQuerySchema, type ExceptionLogEntry, type TelescopeExceptionListQuery, type TelescopeExceptionStatus } from "@workspace/shared";
 
@@ -53,10 +53,10 @@ function TriageActions({ entry, onChanged }: { readonly entry: ExceptionLogEntry
 				{
 					onSuccess: (data): void => {
 						onChanged(data.data);
-						toast.success(`Exception marked ${nextStatus}.`);
+						toastMessage.success({ title: `Exception marked ${nextStatus}.` });
 					},
 					onError: (): void => {
-						toast.error("Failed to update the exception status.");
+						toastMessage.error({ title: "Failed to update the exception status." });
 					},
 				},
 			);

@@ -4,9 +4,9 @@ import { Badge } from "@workspace/ui/components/feedback/badge";
 import { Button } from "@workspace/ui/components/form/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@workspace/ui/components/display/table";
+import { toastMessage } from "@workspace/ui/components/feedback/toast";
 import { Check, CreditCard, Download, Sparkles } from "lucide-react";
 import * as React from "react";
-import { toast } from "sonner";
 
 /** A single plan feature bullet — data lives at the page level. */
 interface PlanFeature {
@@ -47,13 +47,13 @@ const statusVariant: Readonly<Record<Invoice["status"], "default" | "secondary" 
 
 export default function BillingSettingsView(): React.JSX.Element {
 	const handleUpgrade = React.useCallback((): void => {
-		toast("Upgrade plan", { description: "Plan upgrade is not available yet." });
+		toastMessage.info({ title: "Upgrade plan", description: "Plan upgrade is not available yet." });
 	}, []);
 
 	const handleDownloadInvoice = React.useCallback((event: React.MouseEvent<HTMLButtonElement>): void => {
 		const invoiceId = event.currentTarget.dataset.invoiceId;
 		if (invoiceId !== undefined) {
-			toast("Invoice downloaded", { description: `${invoiceId} has been downloaded.` });
+			toastMessage.success({ title: "Invoice downloaded", description: `${invoiceId} has been downloaded.` });
 		}
 	}, []);
 

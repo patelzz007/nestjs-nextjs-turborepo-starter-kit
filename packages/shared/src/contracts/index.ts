@@ -17,6 +17,7 @@
 import { z, type ZodType } from "zod";
 
 import { ForgotPasswordSchema, LoginSchema, ResendVerificationSchema, ResetPasswordSchema, SignupSchema } from "../schemas/auth/auth";
+import { BackupCreateInputSchema, BackupRestoreInputSchema } from "../schemas/domain/backup";
 import type { ApiVersion } from "./versioning";
 import {
 	TelescopeAlertSnoozeInputSchema,
@@ -180,6 +181,28 @@ export const apiContract = {
 		/** Sends one template to the configured test address. */
 		previewSend: defineContract({ method: "POST", path: "/notifications/email-preview/:key/send", input: z.object({ key: z.string() }).strict() }),
 		logList: defineContract({ method: "GET", path: "/notifications/email-log", input: z.undefined() }),
+	},
+
+	// ── Database backup procedures ───────────────────────────────────────
+	backup: {
+		/** Create a backup — async; the job runs in the background (HTTP 202). */
+		create: defineContract({ method: "POST", path: "/backup", input: BackupCreateInputSchema }),
+		/** History + operational facts (active flag, retention days). */
+		list: defineContract({ method: "GET", path: "/backup", input: z.undefined() }),
+		/** One backup's status/progress — the poll target. */
+		status: defineContract({ method: "GET", path: "/backup/:id", input: z.object({ id: z.string().min(1) }).strict() }),
+		/** Mints a short-lived signed download token. */
+		download: defineContract({ method: "POST", path: "/backup/:id/download", input: z.object({ id: z.string().min(1) }).strict() }),
+		/** Deletes the file + row. */
+		remove: defineContract({ method: "DELETE", path: "/backup/:id", input: z.object({ id: z.string().min(1) }).strict() }),
+		/** Excludable tables + form defaults for the create form. */
+		options: defineContract({ method: "GET", path: "/backup/options", input: z.undefined() }),
+		/** Restores the dump into a throwaway scratch DB, confirms, drops it. */
+		verify: defineContract({ method: "POST", path: "/backup/:id/verify", input: z.object({ id: z.string().min(1) }).strict() }),
+		/** Restores the dump into a NEW database (never an existing one). */
+		restore: defineContract({ method: "POST", path: "/backup/:id/restore", input: BackupRestoreInputSchema.extend({ id: z.string().min(1) }).strict() }),
+		/** Gracefully stops a pending/running backup job. */
+		cancel: defineContract({ method: "POST", path: "/backup/:id/cancel", input: z.object({ id: z.string().min(1) }).strict() }),
 	},
 
 	// ── Telescope procedures ──────────────────────────────────────────────

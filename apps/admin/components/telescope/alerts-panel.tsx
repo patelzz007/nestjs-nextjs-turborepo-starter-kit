@@ -17,7 +17,8 @@ import { Button } from "@workspace/ui/components/form/button";
 import { BellRing, Check, Clock3 } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useState } from "react";
-import { toast } from "sonner";
+
+import { toastMessage } from "@workspace/ui/components/feedback/toast";
 
 import type { TelescopeAlertEntry } from "@workspace/shared";
 
@@ -44,10 +45,10 @@ function AlertRowActions({ alert, onChanged }: { readonly alert: TelescopeAlertE
 				{
 					onSuccess: (): void => {
 						onChanged();
-						toast.success("Alert acknowledged.");
+						toastMessage.success({ title: "Alert acknowledged." });
 					},
 					onError: (): void => {
-						toast.error("Failed to acknowledge the alert.");
+						toastMessage.error({ title: "Failed to acknowledge the alert." });
 					},
 				},
 			);
@@ -62,10 +63,10 @@ function AlertRowActions({ alert, onChanged }: { readonly alert: TelescopeAlertE
 				{
 					onSuccess: (): void => {
 						onChanged();
-						toast.success(`Alert snoozed for ${String(minutes)} minutes.`);
+						toastMessage.success({ title: `Alert snoozed for ${String(minutes)} minutes.` });
 					},
 					onError: (): void => {
-						toast.error("Failed to snooze the alert.");
+						toastMessage.error({ title: "Failed to snooze the alert." });
 					},
 				},
 			);

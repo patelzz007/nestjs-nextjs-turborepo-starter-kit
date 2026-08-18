@@ -4,8 +4,8 @@ import { motion, MotionConfig } from "framer-motion";
 
 import { BreadcrumbTrail } from "@workspace/ui/components/navigation/breadcrumb-trail";
 import type { BreadcrumbItem } from "@workspace/ui/components/navigation/breadcrumb-context";
+import { toastMessage } from "@workspace/ui/components/feedback/toast";
 import { cn } from "@workspace/ui/lib/utils";
-import { toast } from "sonner";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import * as React from "react";
@@ -70,15 +70,13 @@ function ShellBreadcrumb(): React.JSX.Element {
 	}, []);
 
 	// Copy feedback lives in the smart consumer (rule 10): the dumb trail only
-	// reports the result via `onCopy`, this layer decides to toast it.
-	// Routed through sonner (the admin app's global Toaster — mounted in the
-	// root layout) rather than the base-ui toast manager, which only mounts a
-	// Toaster inside the toast showcase page and would render nothing here.
+	// reports the result via `onCopy`, this layer decides to toast it via the
+	// app-global Toast & Toastr manager (mounted in the root layout).
 	const handleCopy = React.useCallback((ok: boolean): void => {
 		if (ok) {
-			toast.success("Link copied", { description: "The page URL is on your clipboard." });
+			toastMessage.success({ title: "Link copied", description: "The page URL is on your clipboard." });
 		} else {
-			toast.error("Could not copy link", { description: "Copy the URL from the address bar instead." });
+			toastMessage.error({ title: "Could not copy link", description: "Copy the URL from the address bar instead." });
 		}
 	}, []);
 

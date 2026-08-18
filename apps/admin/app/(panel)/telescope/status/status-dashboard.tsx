@@ -13,10 +13,10 @@ import { useAuth } from "@workspace/client/lib/auth";
 
 import { Button } from "@workspace/ui/components/form/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
+import { toastMessage } from "@workspace/ui/components/feedback/toast";
 import { CalendarClock, Eraser, Play, RefreshCw, TriangleAlert } from "lucide-react";
 import Link from "next/link";
 import { useCallback } from "react";
-import { toast } from "sonner";
 
 import type { TelescopeScheduleLog, TelescopeStatus, TelescopeWebhookDelivery } from "@workspace/shared";
 
@@ -63,10 +63,10 @@ export default function TelescopeStatusPage(): React.JSX.Element {
 			{
 				onSuccess: (result): void => {
 					const run: TelescopeScheduleLog = result.data;
-					toast.success(`"telescope-demo" ran — ${String(run.lastDurationMs)} ms.`);
+					toastMessage.success({ title: `"telescope-demo" ran — ${String(run.lastDurationMs)} ms.` });
 				},
 				onError: (): void => {
-					toast.error("Failed to run the demo schedule — check the API logs.");
+					toastMessage.error({ title: "Failed to run the demo schedule — check the API logs." });
 				},
 			},
 		);
@@ -80,11 +80,11 @@ export default function TelescopeStatusPage(): React.JSX.Element {
 			{ force: false },
 			{
 				onSuccess: (result): void => {
-					toast.success(`Pruned ${String(result.data.removed)} entries.`);
+					toastMessage.success({ title: `Pruned ${String(result.data.removed)} entries.` });
 					void statusQuery.refetch();
 				},
 				onError: (): void => {
-					toast.error("Failed to prune — check the API logs.");
+					toastMessage.error({ title: "Failed to prune — check the API logs." });
 				},
 			},
 		);
@@ -96,11 +96,11 @@ export default function TelescopeStatusPage(): React.JSX.Element {
 		}
 		clearAllMutation.mutate(undefined, {
 			onSuccess: (): void => {
-				toast.success("All telescope data cleared.");
+				toastMessage.success({ title: "All telescope data cleared." });
 				void statusQuery.refetch();
 			},
 			onError: (): void => {
-				toast.error("Failed to clear — check the API logs.");
+				toastMessage.error({ title: "Failed to clear — check the API logs." });
 			},
 		});
 	}, [clearAllMutation, statusQuery]);

@@ -127,6 +127,38 @@ export type {
 } from "./email/email";
 export { AudienceTypeSchema, DeviceTypeSchema, MenuMatchTypeSchema, PermissionActionSchema, PermissionResourceSchema, PlanSchema, RedirectTypeSchema } from "./domain/enums";
 export type { AudienceType, DeviceType, MenuMatchType, PermissionAction, PermissionResource, Plan, RedirectType } from "./domain/enums";
+export {
+	BackupCancelResponseSchema,
+	BackupCreateInputSchema,
+	BackupCreateResponseSchema,
+	BackupDeleteResponseSchema,
+	BackupDownloadResponseSchema,
+	BackupEntrySchema,
+	BackupListResponseSchema,
+	BackupOptionsResponseSchema,
+	BackupRestoreInputSchema,
+	BackupRestoreResponseSchema,
+	BackupStageSchema,
+	BackupStatusResponseSchema,
+	BackupStatusSchema,
+	BackupVerifyResponseSchema,
+} from "./domain/backup";
+export type {
+	BackupCancelResponse,
+	BackupCreateInput,
+	BackupCreateResponse,
+	BackupDeleteResponse,
+	BackupDownloadResponse,
+	BackupEntry,
+	BackupListResponse,
+	BackupOptionsResponse,
+	BackupRestoreInput,
+	BackupRestoreResponse,
+	BackupStage,
+	BackupStatus,
+	BackupStatusResponse,
+	BackupVerifyResponse,
+} from "./domain/backup";
 export { HealthResponseSchema } from "./api/health.schema";
 export type { HealthResponse } from "./api/health.schema";
 export {
