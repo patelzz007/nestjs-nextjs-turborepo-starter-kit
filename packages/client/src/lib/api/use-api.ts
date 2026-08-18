@@ -550,6 +550,7 @@ function buildClientRouter(baseUrl: string, onUnauthorized: OnUnauthorized | und
 			signup: createMutationProcedure(baseUrl, onUnauthorized, onRefresh, apiRouter.auth.signup),
 			refresh: createMutationProcedure(baseUrl, onUnauthorized, onRefresh, apiRouter.auth.refresh),
 			logout: createMutationProcedure(baseUrl, onUnauthorized, onRefresh, apiRouter.auth.logout),
+			adminUsers: createQueryProcedure(baseUrl, onUnauthorized, onRefresh, apiRouter.auth.adminUsers),
 		},
 		email: {
 			previewList: createQueryProcedure(baseUrl, onUnauthorized, onRefresh, apiRouter.email.previewList),
@@ -567,6 +568,7 @@ function buildClientRouter(baseUrl: string, onUnauthorized: OnUnauthorized | und
 			verify: createMutationProcedure(baseUrl, onUnauthorized, onRefresh, apiRouter.backup.verify),
 			restore: createMutationProcedure(baseUrl, onUnauthorized, onRefresh, apiRouter.backup.restore),
 			cancel: createMutationProcedure(baseUrl, onUnauthorized, onRefresh, apiRouter.backup.cancel),
+			toggleSchedule: createMutationProcedure(baseUrl, onUnauthorized, onRefresh, apiRouter.backup.toggleSchedule),
 		},
 		telescope: {
 			overview: createQueryProcedure(baseUrl, onUnauthorized, onRefresh, apiRouter.telescope.overview),

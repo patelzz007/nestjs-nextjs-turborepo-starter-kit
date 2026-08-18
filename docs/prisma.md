@@ -25,11 +25,13 @@ coverImage: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=form
 4. [The database commands](#4-the-database-commands)
    - [The typical day-to-day workflow](#the-typical-day-to-day-workflow)
    - [Command reference](#command-reference)
+   - [Column / field change order](#column--field-change-order)
 5. [Seeding the database](#5-seeding-the-database)
 6. [Migrations explained](#6-migrations-explained)
 7. [How the API connects to the DB](#7-how-the-api-connects-to-the-db)
 8. [Troubleshooting](#8-troubleshooting)
 9. [Adding a new model / field](#9-adding-a-new-model--field)
+10. [Row Level Security](#10-row-level-security)
 
 ---
 
@@ -90,9 +92,9 @@ postgresql://USER:PASSWORD@HOST:PORT/DATABASE_NAME?schema=public
 | `?schema=public` | —           | Postgres schema to use         |
 
 > [!NOTE] Note: `schema.prisma` no longer hardcodes `url = env("DATABASE_URL")` — with
-> Prisma 7 the connection is passed **programmatically** via the driver adapter
-> (`PrismaPg`) in both the API's `PrismaService` and the seeder. The `DATABASE_URL`
-> env var is still the single source of truth.
+> Prisma 7 the CLI reads `datasource.url` from `prisma.config.ts`, and the API /
+> seeder pass the same `DATABASE_URL` into the `PrismaPg` adapter. `prisma.config.ts`
+> loads `apps/api/.env` so `npx prisma …` works without `dotenv-cli`.
 
 **One-time setup:** make sure the database actually exists:
 
@@ -109,17 +111,56 @@ All commands run from **`apps/api`** (or via `pnpm --filter @workspace/api ...` 
 
 ### The typical day-to-day workflow
 
-```bash
-# 1. You edited schema.prisma (added a model/field) →
-#    create + apply a migration (also regenerates the client)
-pnpm db:migrate
+Prisma is the source of truth for **columns**. Shared Zod is the source of
+truth for **HTTP**. Do not invent a Zod field that has no Prisma column, and
+do not ship a SQL-only column Prisma could have modeled.
 
-# 2. Or, if you only need the client types refreshed (no schema change):
+```bash
+# 1. Edit apps/api/prisma/schema.prisma first (new model / field / index).
+# 2. Create + apply a migration AND regenerate the Prisma client:
+pnpm db:migrate
+#    (same as: prisma migrate dev, then prisma generate)
+# 3. Only then add/update Zod in packages/shared (BE + FE share it).
+# 4. Nest: ZodValidationPipe(apiContract.*.input) + createWrappedDto / ApiBody
+#    so Swagger sample req/res match the same schema.
+# 5. Wire the client leaf (endpoints.ts + use-api + server-api).
+
+# Client types only (no schema change):
 pnpm db:generate
 
-# 3. Fresh machine / CI with an up-to-date schema? One-shot bootstrap
-#    (run from the REPO ROOT — db:all is root-only, not in apps/api):
-#    pnpm db:all
+# Fresh machine / CI with an up-to-date schema? One-shot bootstrap
+# (run from the REPO ROOT — db:all is root-only, not in apps/api):
+# pnpm db:all
+```
+
+### Column / field change order
+
+1. **`schema.prisma`** — add the column, relation, or index.
+2. **`pnpm db:migrate`** (from `apps/api`) — writes `migrations/<timestamp>_*/migration.sql`, applies it, runs `prisma generate`.
+3. **`npx prisma generate`** is already part of `db:migrate`. Run `pnpm db:generate` only if you pulled migrations and need the client without creating a new one.
+4. **`packages/shared` Zod** — request/response/query schemas. Types are `z.output<typeof Schema>` (no hand-written twins).
+5. **Nest HTTP boundary** — `ZodValidationPipe(apiContract.<domain>.<leaf>.input)` (or the same shared schema). Swagger samples come from `createZodDto` / `createWrappedDto` + `@ApiBody` / `@ApiOkResponse`, not a second DTO shape.
+6. **RLS** — if the table is tenant-scoped, add `ENABLE`/`FORCE ROW LEVEL SECURITY` + policies in SQL (Prisma PSL cannot emit them). See §10.
+
+Things Prisma cannot represent (REVOKE, FORCE RLS, `SET ROLE`) stay in SQL **after**
+the schema change they belong to — never as a substitute for a column. In this repo
+that SQL is the **tail of the single `20260818235200_init` migration**, not a
+separate folder. If you regenerate init from `migrate diff --from-empty --to-schema`,
+append that tail again or `app_runtime` will get `42501 permission denied for schema public`.
+
+### Squashing to one `init`
+
+This tree keeps **one** folder under `prisma/migrations/`. Do not delete it and
+run a schema-only migrate — Prisma will not emit GRANT/RLS.
+
+To rebuild init after a schema change (dev only, wipes the DB):
+
+```bash
+cd apps/api
+pnpm exec dotenv -e .env -- prisma migrate diff --from-empty --to-schema prisma/schema.prisma --script
+# Merge that SQL with the existing RLS tail in 20260818235200_init/migration.sql
+pnpm db:reset
+pnpm db:generate
 ```
 
 ### Command reference
@@ -298,16 +339,20 @@ migrations/
 
 ## 7. How the API connects to the DB
 
-The API uses Prisma 7's **driver adapter** pattern. The `PrismaService` wraps
-`PrismaClient` with a `PrismaPg` adapter so the DB driver handles the connection
-pool:
+The API uses Prisma 7's **driver adapter** pattern. `PrismaService` wraps `PrismaClient`
+with a `PrismaPg` adapter over an `RlsPool` (`pg.Pool` subclass):
 
 ```typescript
-// (conceptually, in apps/api/src/prisma/prisma.service.ts)
+// conceptually, in apps/api/src/prisma/prisma.service.ts
+const pool = new RlsPool({ connectionString: process.env.DATABASE_URL });
 const prisma = new PrismaClient({
-	adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }),
+	adapter: new PrismaPg(pool),
 });
 ```
+
+Every checkout runs `SET ROLE app_runtime` and `set_config` for `app.current_user_id` /
+`app.rls_bypass` (see [§10](#10-row-level-security)). The seeder uses a **plain** `pg.Pool`
+(superuser, no `SET ROLE`) so `db:seed` is not subject to FORCE RLS.
 
 Because of this, `schema.prisma`'s `datasource` block only declares the provider —
 no `url`:
@@ -324,12 +369,33 @@ The seeder uses the same pattern (`new PrismaClient({ adapter: new PrismaPg({...
 
 ## 8. Troubleshooting
 
-### "Environment variable not found: DATABASE_URL"
+### "permission denied for schema public" (`42501` / Prisma `P2039`)
 
-The `.env` file is missing or the script didn't load it. Make sure `apps/api/.env`
-exists with a valid `DATABASE_URL`, and run via the npm script (which loads it):
+The API pool runs `SET ROLE app_runtime`. That role is **cluster-wide** (it survives
+`DROP DATABASE`), but `USAGE` on `public` and table grants are **per database**.
+A `prisma migrate reset` that re-baselines without the RLS migration leaves
+`app_runtime` in the cluster and a new `public` schema with no grants (Postgres 15+).
+
+Fix: the squashed `20260818235200_init` migration **must** include the RLS
+tail (`GRANT USAGE ON SCHEMA public TO app_runtime`, policies). A Prisma
+schema-only init will boot into `42501`. Prefer `pnpm db:reset` from the repo
+root so that single file is replayed in full.
 
 ```bash
+cd apps/api && pnpm db:deploy
+```
+
+Prefer `pnpm db:reset` from the repo root over a bare `npx prisma migrate reset`,
+so the RLS SQL is replayed together with the schema.
+
+Prisma 7 takes the URL from `apps/api/prisma.config.ts` (`process.env.DATABASE_URL`),
+not from `schema.prisma`. That file loads `apps/api/.env`. If the error still appears:
+
+1. Copy `apps/api/.env.example` → `apps/api/.env` and set `DATABASE_URL`.
+2. Run from `apps/api` (or use the workspace scripts from the repo root).
+
+```bash
+pnpm db:reset          # from repo root — preferred
 cd apps/api && pnpm db:migrate
 ```
 
@@ -379,25 +445,56 @@ This drops all data, replays all migrations, and re-seeds. 🔴 Everything is wi
 > `nowEpochMs()`, and render dates on the FE exclusively via date-fns helpers
 > in `apps/admin/lib/dates.ts` — never raw `Intl`/`toLocale*`/ISO slicing.
 
+Follow the [column / field change order](#column--field-change-order) in §4. Short version:
+
 1. Edit `apps/api/prisma/schema.prisma`.
-2. Generate + apply a migration:
-   ```bash
-   cd apps/api && pnpm db:migrate
-   ```
-   This creates a timestamped migration folder, applies it, and regenerates the client.
-3. If you want to review the SQL first:
-   ```bash
-   pnpm db:migrate:create   # creates the file without applying
-   # inspect apps/api/prisma/migrations/<new>/migration.sql
-   pnpm db:deploy           # then apply it
-   ```
-4. Update the seeder (`apps/api/prisma/seed.ts`) if new seed data is needed, then
-   `pnpm db:seed`.
-5. Update the **Zod schemas** in `packages/shared/src/schemas/` so the API DTOs and
-   the FE types stay in sync with the new shape.
-6. Run `pnpm typecheck` and `pnpm lint` to verify.
+2. `cd apps/api && pnpm db:migrate` (creates SQL, applies it, `prisma generate`).
+3. Review SQL first if needed: `pnpm db:migrate:create` → inspect → `pnpm db:deploy` → `pnpm db:generate`.
+4. Seed if the new shape needs rows: `pnpm db:seed`.
+5. **Then** Zod in `packages/shared`, Nest `ZodValidationPipe` + Swagger wrappers, client contract leaf.
+6. `pnpm typecheck` and `pnpm lint`.
+7. Tenant tables: keep the RLS tail at the bottom of `20260818235200_init`
+   (Prisma PSL cannot emit GRANT / POLICY).
 
 ---
 
-_Last updated: July 31, 2026_
+## 10. Row Level Security
+
+TypeScript `where: { userId }` is not enough. Postgres enforces isolation.
+
+**Why `SET ROLE`:** the `DATABASE_URL` user is usually a superuser. Superusers **bypass
+RLS even with `FORCE ROW LEVEL SECURITY`**. The API therefore sets `ROLE app_runtime`
+(a `NOLOGIN NOSUPERUSER NOBYPASSRLS` role) on every pool checkout.
+
+**Session vars** (transaction-false / connection-scoped, overwritten every checkout):
+
+| Setting | Meaning |
+| --- | --- |
+| `app.current_user_id` | JWT `sub`, or empty |
+| `app.rls_bypass` | `true` for `@Public()`, telescope-token calls (no `request.user`), admin JWTs (`hasAdminAccess` / `isSuperAdmin`), and anything with no ALS (cron, `onModuleInit`) |
+
+**Who sets ALS:** `RlsInterceptor` (`apps/api/src/common/interceptors/rls.interceptor.ts`,
+outermost `APP_INTERCEPTOR`) wraps `next.handle()` in `rlsStorage.run(...)`. Guards run
+first, so `request.user` is already set on the JWT path.
+
+**Policies** (also noted as `/// RLS:` on each model in `schema.prisma` — Prisma cannot emit
+`ENABLE ROW LEVEL SECURITY` from PSL, so the SQL lives in
+the squashed `20260818235200_init` migration):
+
+- User data (`urls`, `tags`, `api_keys`, tokens, `user_roles`, …): `app_owns(owner_id)`.
+- Join tables (`url_tags`, `clicks`, `api_key_usage_logs`): exist via a parent the user owns.
+- Catalog (`roles`, `permissions`, menu): `SELECT` open; writes need bypass.
+- Ops (`backups`, audit): bypass only. `logs` / `email_logs` / telescope_* : **INSERT**
+  allowed for any session (capture on user traffic); SELECT/UPDATE/DELETE still bypass.
+
+**Apply the migration** before starting the API after this change, or every query fails
+with `role "app_runtime" does not exist`:
+
+```bash
+cd apps/api && pnpm db:deploy
+```
+
+---
+
+_Last updated: August 18, 2026_
 

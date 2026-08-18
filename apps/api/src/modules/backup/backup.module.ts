@@ -1,6 +1,8 @@
 import { Module } from "@nestjs/common";
 
+import { EmailVerifiedGuard } from "../auth/guards/email-verified.guard";
 import { BackupController } from "./backup.controller";
+import { BackupSchedulerService } from "./backup-scheduler.service";
 import { BackupService } from "./backup.service";
 
 /**
@@ -14,7 +16,7 @@ import { BackupService } from "./backup.service";
  */
 @Module({
 	controllers: [BackupController],
-	providers: [BackupService],
+	providers: [BackupService, BackupSchedulerService, EmailVerifiedGuard],
 	exports: [BackupService],
 })
 export class BackupModule {}

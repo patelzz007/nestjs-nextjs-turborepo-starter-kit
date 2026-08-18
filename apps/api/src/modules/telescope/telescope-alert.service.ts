@@ -14,6 +14,7 @@ import {
 	type TelescopeWebhookDelivery,
 } from "@workspace/shared";
 
+import { LogService } from "../logs/logs.service";
 import { TELESCOPE_OPTIONS, TELESCOPE_STORE } from "./telescope.options";
 import type { TelescopeStore } from "./telescope.store";
 /**
@@ -51,6 +52,7 @@ export class TelescopeAlertService {
 	public constructor(
 		@Inject(TELESCOPE_OPTIONS) private readonly options: TelescopeOptions,
 		@Inject(TELESCOPE_STORE) private readonly store: TelescopeStore,
+		private readonly logs: LogService,
 	) {}
 
 	/** Called by the interceptor after a request lands in the store. */
@@ -219,7 +221,7 @@ export class TelescopeAlertService {
 			}
 		}
 		if (!delivered) {
-			console.warn(`[Telescope] alert webhook failed after ${String(attempt)} attempts: ${url}`);
+			this.logs.warn(`alert webhook failed after ${String(attempt)} attempts: ${url}`, { context: "TelescopeAlert" });
 		}
 	}
 

@@ -17,7 +17,8 @@
 import { z, type ZodType } from "zod";
 
 import { ForgotPasswordSchema, LoginSchema, ResendVerificationSchema, ResetPasswordSchema, SignupSchema } from "../schemas/auth/auth";
-import { BackupCreateInputSchema, BackupRestoreInputSchema } from "../schemas/domain/backup";
+import { AdminUserListQuerySchema } from "../schemas/auth/user";
+import { BackupCreateInputSchema, BackupRestoreInputSchema, BackupScheduleToggleInputSchema } from "../schemas/domain/backup";
 import type { ApiVersion } from "./versioning";
 import {
 	TelescopeAlertSnoozeInputSchema,
@@ -171,6 +172,7 @@ export const apiContract = {
 		resetPassword: defineContract({ method: "POST", path: "/auth/reset-password", input: ResetPasswordSchema }),
 		resendVerification: defineContract({ method: "POST", path: "/auth/resend-verification", input: ResendVerificationSchema }),
 		verifyEmail: defineContract({ method: "POST", path: "/auth/verify-email/:token", input: z.object({ token: z.string() }).strict() }),
+		adminUsers: defineContract({ method: "GET", path: "/auth/admin/users", input: AdminUserListQuerySchema }),
 	},
 
 	// ── Email template preview procedures ─────────────────────────────────
@@ -203,6 +205,8 @@ export const apiContract = {
 		restore: defineContract({ method: "POST", path: "/backup/:id/restore", input: BackupRestoreInputSchema.extend({ id: z.string().min(1) }).strict() }),
 		/** Gracefully stops a pending/running backup job. */
 		cancel: defineContract({ method: "POST", path: "/backup/:id/cancel", input: z.object({ id: z.string().min(1) }).strict() }),
+		/** Toggle an in-memory backup cron on/off. */
+		toggleSchedule: defineContract({ method: "POST", path: "/backup/schedules/:id/toggle", input: BackupScheduleToggleInputSchema }),
 	},
 
 	// ── Telescope procedures ──────────────────────────────────────────────

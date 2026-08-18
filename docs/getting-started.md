@@ -1101,7 +1101,7 @@ Not sure? Read [architecture.md](./architecture.md) first.
 | `pnpm: command not found`                                               | pnpm isn't installed. Run `corepack enable && corepack prepare pnpm@11.18.0 --activate`.                                                                            |
 | `Unsupported engine` / node version error during install                | Your Node is too old. The repo needs Node **>= 20**. Install 20+ and retry.                                                                                         |
 | `psql: could not connect to server` / `Connection refused (0x0000274D)` | Postgres isn't running. Start it (`brew services start postgresql@17` or your Docker container) and re-run `pg_isready`.                                            |
-| `Environment variable not found: DATABASE_URL`                          | `apps/api/.env` is missing or incomplete. Copy `.env.example` → `.env` and fill it in.                                                                              |
+| `Environment variable not found: DATABASE_URL` / `datasource.url property is required` | `apps/api/.env` is missing or incomplete. Copy `.env.example` → `.env` and fill it in. Prisma 7 reads the URL from `prisma.config.ts`, which loads that file. |
 | `database "monorepo" does not exist`                                    | Create it first: `createdb monorepo`.                                                                                                                               |
 | `P3009: migration found that was not applied` / schema not up to date   | Run `pnpm db:all` (applies pending migrations).                                                                                                                     |
 | `Tasks: 2 successful, 1 failed` from `pnpm db:all`                      | `db:deploy` or `db:generate` failed, so the seed was skipped (by design). Run `pnpm turbo run db:deploy` to see the real error.                                     |
@@ -1131,17 +1131,23 @@ A: No. Auth works without it — only actual email delivery fails. Add a key whe
 need signup/verification emails to send.
 
 **Q: I changed `schema.prisma` — what now?**
-A: 1) `pnpm db:migrate` to create + apply a migration. 2) Update the shared Zod
-schemas in `packages/shared` if the API shape changed. 3) `pnpm db:all` to re-seed. 4) `pnpm typecheck` to find every usage that needs updating.
+A: Prisma first, then generate, then Zod, then the pipe. 1) Edit `apps/api/prisma/schema.prisma`.
+2) `pnpm db:migrate` (applies SQL **and** `prisma generate`). 3) Add/update Zod in
+`packages/shared` so BE and FE share one shape. 4) Nest: `ZodValidationPipe(apiContract.*.input)`
+plus `createWrappedDto` / `@ApiBody` for Swagger sample req/res. 5) Client leaf in
+`endpoints.ts`. 6) `pnpm typecheck`. See [prisma.md](./prisma.md) §4.
 
 **Q: Where does the `:8080` / `3000` / `3001` come from?**
 A: Defaults in `main.ts` (API) and the Next.js apps. Override with `PORT` (API) and
 `NEXT_PUBLIC_API_URL` (frontends).
 
 **Q: How do I add a new API endpoint?**
-A: 1) Schema in `packages/shared/src/schemas/<domain>.ts`. 2) DTO with
-`createZodDto(Schema)` in the controller. 3) Service method. 4) Typed entry in
-`packages/client/src/lib/endpoints.ts`. 5) Wire the UI page to it via `useApi`.
+A: If it needs a new column, Prisma migrate + generate **before** Zod. Then:
+1) Zod in `packages/shared/src/schemas/<domain>.ts` + `apiContract` leaf.
+2) Nest service + controller with `ZodValidationPipe(apiContract.<leaf>.input)` and
+`createZodDto` / `createWrappedDto` for Swagger. 3) Typed leaf in
+`packages/client/src/lib/api/endpoints.ts` (and `use-api.ts` / `server-api.ts`).
+4) Wire the UI via `useApi`.
 
 ---
 

@@ -14,11 +14,15 @@ import {
 	type BackupOptionsResponse,
 	type BackupRestoreInput,
 	type BackupRestoreResponse,
+	type BackupScheduleToggleBody,
+	type BackupScheduleToggleResponse,
 	type BackupVerifyResponse,
+	BackupRestoreInputSchema,
+	BackupScheduleToggleBodySchema,
 } from "@workspace/shared";
 import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe";
-import { BackupRestoreInputSchema } from "@workspace/shared";
 import { extractClientInfo } from "../../common/utils/client-info";
+import { EmailVerified } from "../auth/decorators/email-verified.decorator";
 import { GetUser } from "../auth/decorators/get-user.decorator";
 import type { AccessTokenPayload, RefreshTokenPayload } from "../auth/services/token.service";
 
@@ -47,6 +51,7 @@ export class BackupController {
 	/** Starts a backup — 202 Accepted; the job runs in the background. */
 	@Post()
 	@HttpCode(202)
+	@EmailVerified()
 	@ApiOperation({ summary: "Create a database backup (async)" })
 	public async create(
 		@Body(new ZodValidationPipe(apiContract.backup.create.input)) body: BackupCreateInput,
@@ -73,6 +78,22 @@ export class BackupController {
 		return this.backupService.getOptions();
 	}
 
+	/** List scheduled backups. Static path — must stay above `:id`. */
+	@Get("schedules")
+	@ApiOperation({ summary: "List scheduled backup jobs" })
+	public schedules(): ReturnType<BackupService["getSchedules"]> {
+		return this.backupService.getSchedules();
+	}
+
+	/** Toggle a scheduled backup on/off. Static prefix — must stay above `:id`. */
+	@Post("schedules/:id/toggle")
+	@HttpCode(200)
+	@EmailVerified()
+	@ApiOperation({ summary: "Toggle a scheduled backup on/off" })
+	public toggleSchedule(@Param("id") id: string, @Body(new ZodValidationPipe(BackupScheduleToggleBodySchema)) body: BackupScheduleToggleBody): BackupScheduleToggleResponse {
+		return this.backupService.toggleSchedule(id, body.enabled);
+	}
+
 	/** One backup's status/progress — the poll target. */
 	@Get(":id")
 	@ApiOperation({ summary: "Backup status" })
@@ -82,6 +103,7 @@ export class BackupController {
 
 	/** Mints a short-lived signed download token (bound to the requesting admin). */
 	@Post(":id/download")
+	@EmailVerified()
 	@ApiOperation({ summary: "Mint a signed download token" })
 	public downloadToken(@Param("id") id: string, @GetUser() user: AccessTokenPayload | RefreshTokenPayload | undefined): Promise<BackupDownloadResponse> {
 		const admin = requireAdminAccessToken(user);
@@ -103,6 +125,7 @@ export class BackupController {
 
 	/** Deletes the file + row. */
 	@Delete(":id")
+	@EmailVerified()
 	@ApiOperation({ summary: "Delete a backup (file + row)" })
 	public remove(@Param("id") id: string): Promise<BackupDeleteResponse> {
 		return this.backupService.remove(id);
@@ -110,6 +133,7 @@ export class BackupController {
 
 	/** Restores the dump into a scratch DB, confirms it, drops it. */
 	@Post(":id/verify")
+	@EmailVerified()
 	@ApiOperation({ summary: "Verify a backup restores cleanly (scratch DB, then dropped)" })
 	public verify(@Param("id") id: string): Promise<BackupVerifyResponse> {
 		return this.backupService.verifyBackup(id);
@@ -117,6 +141,7 @@ export class BackupController {
 
 	/** Restores the dump into a NEW database (left in place for inspection). */
 	@Post(":id/restore")
+	@EmailVerified()
 	@ApiOperation({ summary: "Restore a backup into a new database" })
 	public restore(
 		// The contract input also carries `:id` (consumed by the path); the body
@@ -131,25 +156,10 @@ export class BackupController {
 
 	/** Gracefully stops a pending/running backup job. */
 	@Post(":id/cancel")
+	@EmailVerified()
 	@ApiOperation({ summary: "Cancel a pending or running backup" })
 	public cancel(@Param("id") id: string): Promise<{ readonly cancelled: true }> {
 		return this.backupService.cancelBackup(id);
-	}
-
-	/** List scheduled backups. */
-	@Get("schedules")
-	@ApiOperation({ summary: "List scheduled backup jobs" })
-	public schedules(): ReturnType<BackupService["getSchedules"]> {
-		return this.backupService.getSchedules();
-	}
-
-	/** Toggle a scheduled backup on/off. */
-	@Post("schedules/:id/toggle")
-	@HttpCode(200)
-	@ApiOperation({ summary: "Toggle a scheduled backup on/off" })
-	public toggleSchedule(@Param("id") id: string, @Body() body: { readonly enabled: boolean }): { readonly toggled: true } {
-		this.backupService.toggleSchedule(id, body.enabled);
-		return { toggled: true };
 	}
 }
 

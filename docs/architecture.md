@@ -448,14 +448,14 @@ move it up to the page (smart component) or into `@workspace/client`.
 
 - NestJS app. Routes are grouped in `src/modules/` — `health` (`GET /` +
   `GET /health`), `auth` (credentials, email verification, password reset,
-  `/me`, SuperAdmin user management, root `POST /users`), `sessions`
+  `/me`, SuperAdmin user management), `sessions`
   (refresh / logout / logout-all / active sessions, root `GET /session`),
   `impersonation`, `rbac`, `logs`.
-- **The old root `AppController` is gone** — its four endpoints were dissolved
-  into their domain modules with **URL paths unchanged**: `GET /` + `GET /health`
+- **The old root `AppController` is gone** — its endpoints were dissolved
+  into their domain modules: `GET /` + `GET /health`
   → `HealthController`; `GET /session` → `SessionStatusController` (a root-`@Controller()`
-  sibling of `SessionsController` in the sessions module); `POST /users` →
-  `RootUsersController` in the auth module. A module can host multiple
+  sibling of `SessionsController` in the sessions module). Signup is
+  `POST /auth/signup` only (throttled). A module can host multiple
   controllers — use an unprefixed controller for root-pathed endpoints.
 - **Configuration lives in a `@Global() ConfigModule** (`src/config/config.module.ts`)
 that provides + exports `TypedConfigService`. It MUST be global: Nest instantiates

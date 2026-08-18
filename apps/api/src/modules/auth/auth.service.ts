@@ -1,21 +1,24 @@
 import { ConflictException, ForbiddenException, Injectable, NotFoundException, UnauthorizedException } from "@nestjs/common";
 import {
 	epochMs,
+	PaginationSchema,
 	type AdminUserDetail,
+	type AdminUserListQuery,
 	type EpochMs,
-	ForgotPasswordInput,
-	ForgotPasswordResponse,
-	LoginInput,
-	LoginServiceResponse,
-	MessageResponse,
-	ResendVerificationInput,
-	ResendVerificationResponse,
-	ResetPasswordInput,
-	ResetPasswordResponse,
-	SignupInput,
-	SignupResponse,
-	UserResponse,
-	VerifyEmailResponse,
+	type ForgotPasswordInput,
+	type ForgotPasswordResponse,
+	type LoginInput,
+	type LoginServiceResponse,
+	type MessageResponse,
+	type PaginationInput,
+	type ResendVerificationInput,
+	type ResendVerificationResponse,
+	type ResetPasswordInput,
+	type ResetPasswordResponse,
+	type SignupInput,
+	type SignupResponse,
+	type UserResponse,
+	type VerifyEmailResponse,
 } from "@workspace/shared";
 
 import { UserPermissions } from "../rbac/rbac.interface";
@@ -592,34 +595,48 @@ export class AuthService {
 	}
 
 	/**
-	 * Get a list of all users with their lockout status and roles.
-	 * Intended for SuperAdmin use only.
-	 *
-	 * @returns Array of AdminUserDetail for every user in the system
+	 * Paginated admin user list with lockout status and roles.
 	 */
-	public async getAdminUsersList(): Promise<AdminUserDetail[]> {
-		const users = await this.prisma.user.findMany({
-			orderBy: { createdAt: "desc" },
-			select: {
-				id: true,
-				email: true,
-				fullName: true,
-				isActive: true,
-				isSuperAdmin: true,
-				emailVerifiedAt: true,
-				createdAt: true,
-				updatedAt: true,
-				isDeleted: true,
-				deletedAt: true,
-				failedLoginAttempts: true,
-				lockedUntil: true,
-			},
-		});
+	public async getAdminUsersList(query: AdminUserListQuery): Promise<{
+		readonly items: AdminUserDetail[];
+		readonly total: number;
+		readonly page: number;
+		readonly limit: number;
+		readonly totalPages: number;
+		readonly hasNext: boolean;
+		readonly hasPrevious: boolean;
+	}> {
+		const pagination: PaginationInput = PaginationSchema.parse(query);
+		const page: number = pagination.page;
+		const limit: number = pagination.limit;
+		const skip: number = (page - 1) * limit;
 
-		// Fetch all roles for all users in a single batch query
+		const [users, total] = await Promise.all([
+			this.prisma.user.findMany({
+				orderBy: { createdAt: "desc" },
+				skip,
+				take: limit,
+				select: {
+					id: true,
+					email: true,
+					fullName: true,
+					isActive: true,
+					isSuperAdmin: true,
+					emailVerifiedAt: true,
+					createdAt: true,
+					updatedAt: true,
+					isDeleted: true,
+					deletedAt: true,
+					failedLoginAttempts: true,
+					lockedUntil: true,
+				},
+			}),
+			this.prisma.user.count(),
+		]);
+
 		const userIds: string[] = users.map((u) => u.id);
 		const userRoles = await this.prisma.userRole.findMany({
-			where: { userId: { in: userIds } },
+			where: { userId: { in: userIds }, isDeleted: false, role: { isDeleted: false } },
 			include: {
 				role: { select: { id: true, name: true, description: true } },
 			},
@@ -637,7 +654,7 @@ export class AuthService {
 			rolesByUserId.set(ur.userId, existing);
 		}
 
-		return users.map((u) => {
+		const items: AdminUserDetail[] = users.map((u) => {
 			const isEmailVerified: boolean = u.emailVerifiedAt !== null && u.emailVerifiedAt <= Date.now();
 			const roles = rolesByUserId.get(u.id) ?? [];
 			const hasAdminAccess: boolean = u.isSuperAdmin || roles.some((r) => r.name === "SuperAdmin" || r.name === "Admin");
@@ -651,7 +668,7 @@ export class AuthService {
 				isEmailVerified,
 				hasAdminAccess,
 				roles,
-				permissions: [], // Not fetched for list performance; use detail endpoint for full permissions
+				permissions: [],
 				createdAt: epochMs(Number(u.createdAt)),
 				updatedAt: epochMs(Number(u.updatedAt)),
 				isDeleted: u.isDeleted,
@@ -660,6 +677,17 @@ export class AuthService {
 				lockedUntil: u.lockedUntil !== null ? epochMs(Number(u.lockedUntil)) : null,
 			};
 		});
+
+		const totalPages: number = limit === 0 ? 0 : Math.ceil(total / limit);
+		return {
+			items,
+			total,
+			page,
+			limit,
+			totalPages,
+			hasNext: page < totalPages,
+			hasPrevious: page > 1,
+		};
 	}
 
 	/**

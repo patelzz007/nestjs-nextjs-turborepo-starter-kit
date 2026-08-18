@@ -21,7 +21,7 @@
 		"db:deploy": "dotenv -e .env -- prisma migrate deploy",
 		"db:migrate:status": "dotenv -e .env -- prisma migrate status",
 		"db:seed": "dotenv -e .env -- tsx prisma/seed.ts",
-		"db:studio": "prisma studio",
+		"db:studio": "dotenv -e .env -- prisma studio",
 		"db:reset": "dotenv -e .env -- prisma migrate reset --force && pnpm db:seed",
 		"telescope:cli": "tsx scripts/telescope-cli.ts",
 		"telescope:docs": "tsx scripts/gen-telescope-docs.ts",

@@ -1081,8 +1081,9 @@ The horizontal bar is the signature of the whole feature — get it right:
 6. **Rate/size guard:** cap stored body size (truncation per item 4) and query-string
    length; a giant file upload must not become a giant `RequestLog` row.
 7. **Authentication is not optional.** Admin JWT gate + `hasAdminAccess` check (defense
-   in depth). If Telescope is ever mounted outside the admin origin, add a
-   `TELESCOPE_TOKEN` header check — a random 32+ char string compared in constant time.
+   in depth). `TELESCOPE_TOKEN` is accepted by the **global `AuthGuard` first** (constant-time
+   SHA-256 compare, no `request.user`), then `TelescopeAdminGuard` accepts the same Bearer
+   token **or** an admin JWT. CLI/CI must set `TELESCOPE_TOKEN` on the API process.
 
 ---
 
@@ -1369,7 +1370,9 @@ pnpm --filter @workspace/api telescope:cli
 | `TELESCOPE_URL` | Point at a remote API instead of localhost | `http://localhost:8080` |
 
 Auth is resolved in order of preference: `TELESCOPE_TOKEN` first, then an admin
-login. To run against a deployed API:
+login. The API process must have the **same** `TELESCOPE_TOKEN`; global `AuthGuard`
+accepts that Bearer value before JWT verify, then `TelescopeAdminGuard` accepts it
+again. Without the env on the server, the CLI token is just an invalid JWT (401).
 
 ```bash
 TELESCOPE_URL=https://api.example.com TELESCOPE_TOKEN=whsec... pnpm --filter @workspace/api telescope:cli requests
@@ -1419,8 +1422,9 @@ TELESCOPE_URL=https://api.example.com TELESCOPE_TOKEN=whsec... pnpm --filter @wo
     `TELESCOPE_REDACT_PATHS` (comma-separated prefixes) layered on top of the
     existing sanitizer; `should-capture.ts` honours both.
 12. ✅ **Programmatic auth** — optional `TELESCOPE_TOKEN` checked by
-    `TelescopeAdminGuard` in constant time (defense-in-depth alongside the
-    admin JWT); `NODE_ENV=production` still auto-disables capture.
+    **global `AuthGuard` then** `TelescopeAdminGuard` in constant time
+    (defense-in-depth alongside the admin JWT); `NODE_ENV=production` still
+    auto-disables capture.
 13. ✅ **Export/share** — "Copy as JSON" button on the request-detail page
     dumps the full entry (headers, body, spans, logs, SQL) to the clipboard.
 14. ✅ **CLI inspection** — `pnpm --filter @workspace/api telescope:cli view

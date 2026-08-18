@@ -19,9 +19,8 @@ const WrappedHealthResponse = createWrappedDto(HealthResponseSchema, "WrappedHea
 /**
  * App-level endpoints: `GET /` welcome message and `GET /health` health check.
  * Both are public. The old root `AppController` also hosted `GET /session`
- * (moved to `SessionStatusController` in the sessions module) and
- * `POST /users` (moved to `RootUsersController` in the auth module) — URL
- * paths are unchanged.
+ * (moved to `SessionStatusController` in the sessions module). Signup is only
+ * `POST /auth/signup` (throttled) — there is no root `POST /users` alias.
  */
 @ApiTags("App")
 @Controller()

@@ -1,5 +1,6 @@
 import { MiddlewareConsumer, Module, type NestModule } from "@nestjs/common";
 import { APP_GUARD, APP_INTERCEPTOR } from "@nestjs/core";
+import { ScheduleModule } from "@nestjs/schedule";
 
 import { ResponseInterceptor } from "./common/interceptors/response.interceptor";
 import { CorrelationIdMiddleware } from "./common/middleware/correlation-id.middleware";
@@ -19,10 +20,27 @@ import { TelescopeImpersonationJobAdapter } from "./modules/telescope/telescope-
 import { TelescopeSessionsJobAdapter } from "./modules/telescope/telescope-sessions-job-adapter";
 import { TelescopeModule } from "./modules/telescope/telescope.module";
 import { PrismaModule } from "./prisma/prisma.module";
+import { RlsInterceptor } from "./common/interceptors/rls.interceptor";
 
 @Module({
-	imports: [ConfigModule, PrismaModule, LogsModule, HealthModule, AuthModule, SessionsModule, ImpersonationModule, NotificationsModule, TelescopeModule, BackupModule],
+	imports: [
+		ConfigModule,
+		PrismaModule,
+		ScheduleModule.forRoot(),
+		LogsModule,
+		HealthModule,
+		AuthModule,
+		SessionsModule,
+		ImpersonationModule,
+		NotificationsModule,
+		TelescopeModule,
+		BackupModule,
+	],
 	providers: [
+		{
+			provide: APP_INTERCEPTOR,
+			useClass: RlsInterceptor,
+		},
 		{
 			provide: APP_INTERCEPTOR,
 			useClass: ResponseInterceptor,

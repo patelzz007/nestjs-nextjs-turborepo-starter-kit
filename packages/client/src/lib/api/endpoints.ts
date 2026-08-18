@@ -35,6 +35,7 @@ import {
 	BackupListResponseSchema,
 	BackupOptionsResponseSchema,
 	BackupRestoreResponseSchema,
+	BackupScheduleToggleResponseSchema,
 	BackupStatusResponseSchema,
 	BackupVerifyResponseSchema,
 	EmailLogListResponseSchema,
@@ -47,6 +48,7 @@ import {
 	RefreshResponseSchema,
 	SessionStatusSchema,
 	SignupResponseSchema,
+	AdminUserDetailSchema,
 	TelescopeAlertEntrySchema,
 	TelescopeAlertsResponseSchema,
 	TelescopeAnnotationSchema,
@@ -72,6 +74,7 @@ import {
 	TelescopeUsersResponseSchema,
 	TelescopeWebhookDeliveriesResponseSchema,
 	UserResponseSchema,
+	ApiPaginatedMetaSchema,
 	ApiResponseMetaSchema,
 	type ApiContractDef,
 	type ApiResponseMeta,
@@ -332,6 +335,10 @@ export const apiRouter = {
 			response: envelope(LogoutResponseSchema),
 			queryKey: () => ["auth", "logout"],
 		}),
+		adminUsers: defineQuery(apiContract.auth.adminUsers, {
+			response: envelope(z.array(AdminUserDetailSchema), ApiPaginatedMetaSchema),
+			queryKey: ({ page, limit }) => ["auth", "admin-users", page, limit],
+		}),
 	},
 
 	// ── Email template preview procedures ─────────────────────────────────────
@@ -399,6 +406,10 @@ export const apiRouter = {
 		cancel: defineMutation(apiContract.backup.cancel, {
 			response: envelope(BackupCancelResponseSchema),
 			queryKey: ({ id }) => ["backup", "cancel", id],
+		}),
+		toggleSchedule: defineMutation(apiContract.backup.toggleSchedule, {
+			response: envelope(BackupScheduleToggleResponseSchema),
+			queryKey: ({ id }) => ["backup", "schedules", "toggle", id],
 		}),
 	},
 

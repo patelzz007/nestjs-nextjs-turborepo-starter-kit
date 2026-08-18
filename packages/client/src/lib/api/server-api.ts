@@ -816,6 +816,7 @@ function buildServerCallerTree(config: ServerApiConfig): ServerCaller {
 			signup: createServerMutationLeaf(apiRouter.auth.signup, config),
 			refresh: createServerMutationLeaf(apiRouter.auth.refresh, config),
 			logout: createServerMutationLeaf(apiRouter.auth.logout, config),
+			adminUsers: createServerQueryLeaf(apiRouter.auth.adminUsers, config),
 		},
 		email: {
 			previewList: createServerQueryLeaf(apiRouter.email.previewList, config),
@@ -833,6 +834,7 @@ function buildServerCallerTree(config: ServerApiConfig): ServerCaller {
 			verify: createServerMutationLeaf(apiRouter.backup.verify, config),
 			restore: createServerMutationLeaf(apiRouter.backup.restore, config),
 			cancel: createServerMutationLeaf(apiRouter.backup.cancel, config),
+			toggleSchedule: createServerMutationLeaf(apiRouter.backup.toggleSchedule, config),
 		},
 		telescope: {
 			overview: createServerQueryLeaf(apiRouter.telescope.overview, config),

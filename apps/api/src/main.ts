@@ -16,7 +16,6 @@ import { API_DEPRECATED_VERSIONS, API_VERSION, API_VERSION_PREFIX, apiDocsPath, 
 
 import { AppModule } from "./app.module";
 import { setupApiDocs } from "./common/api-docs";
-import { HealthService } from "./modules/health/health.service";
 import { LogService } from "./modules/logs/logs.service";
 import { VersionController } from "./modules/health/version.controller";
 
@@ -150,16 +149,14 @@ async function bootstrap(): Promise<void> {
 		}),
 	});
 
-	// @fastify/under-pressure — event-loop-delay + heap health with automatic
-	// 503s under pressure (orchestrated-deploy readiness).
+	// @fastify/under-pressure — event-loop-delay + heap only. Do NOT call
+	// Prisma here: this plugin runs healthCheck during `register()` and waits
+	// until it resolves. A hung DB connect (pg default timeout is infinite)
+	// then surfaces as `AVV_ERR_PLUGIN_EXEC_TIMEOUT` for this plugin.
+	// Postgres liveness stays on `GET /health`.
 	await app.register(fastifyUnderPressure, {
 		maxEventLoopDelay: 1000,
 		maxHeapUsedBytes: 512 * 1024 * 1024,
-		healthCheck: async (): Promise<{ readonly ok: boolean }> => {
-			const status = await app.get(HealthService).healthCheck();
-			return { ok: status.status === "ok" };
-		},
-		healthCheckInterval: 10_000,
 	});
 
 	// CORS (plugins must be registered before the routes they affect).

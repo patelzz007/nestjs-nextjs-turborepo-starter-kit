@@ -3,6 +3,7 @@ import { JwtModule } from "@nestjs/jwt";
 
 import { CookieConfigService } from "./constants/cookie.config";
 import { AuthGuard } from "./guards/auth.guard";
+import { EmailVerifiedGuard } from "./guards/email-verified.guard";
 import { RefreshTokenGuard } from "./guards/refresh-token.guard";
 import { SuperAdminGuard } from "./guards/super-admin.guard";
 import { ClearAuthCookiesInterceptor } from "./interceptors/clear-auth-cookies.interceptor";
@@ -12,7 +13,6 @@ import { NotificationsModule } from "../notifications/notifications.module";
 import { RbacModule } from "../rbac/rbac.module";
 
 import { AuthController } from "./auth.controller";
-import { RootUsersController } from "./root-users.controller";
 import { AuthService } from "./auth.service";
 import { AuthEventsService } from "./services/auth-events.service";
 import { CryptoService } from "./services/crypto.service";
@@ -22,7 +22,7 @@ import { TokenService } from "./services/token.service";
 
 @Module({
 	imports: [PrismaModule, JwtModule.register({ global: true }), RbacModule, NotificationsModule],
-	controllers: [AuthController, RootUsersController],
+	controllers: [AuthController],
 	providers: [
 		AuthService,
 		AuthEventsService,
@@ -32,6 +32,7 @@ import { TokenService } from "./services/token.service";
 		EmailService,
 		TaskScheduleService,
 		AuthGuard,
+		EmailVerifiedGuard,
 		SuperAdminGuard,
 		RefreshTokenGuard,
 		SetAuthCookiesInterceptor,
@@ -45,6 +46,7 @@ import { TokenService } from "./services/token.service";
 		CryptoService,
 		EmailService,
 		AuthGuard,
+		EmailVerifiedGuard,
 		SuperAdminGuard,
 		RefreshTokenGuard,
 		SetAuthCookiesInterceptor,

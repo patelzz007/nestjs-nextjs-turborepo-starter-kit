@@ -129,8 +129,8 @@ Menu Items    : ${menuCount}
 
 👤 Test accounts
 ──────────────────────────────────────────────
-superadmin@example.com    /  SuperAdmin@123  (isSuperAdmin · ENTERPRISE)
-admin@example.com         /  Admin@123       (Admin role  · ENTERPRISE)
+superadmin@example.com    /  SuperAdmin@123  (isSuperAdmin · ENTERPRISE · email verified)
+admin@example.com         /  Admin@123       (Admin role  · ENTERPRISE · email verified)
 manager@example.com       /  Manager@123     (Manager role · PRO)
 user@example.com          /  User@123        (User role · FREE)
 alice.johnson@example.com /  Alice@123       (User role · PRO)

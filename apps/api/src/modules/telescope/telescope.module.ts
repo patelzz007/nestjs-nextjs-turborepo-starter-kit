@@ -17,6 +17,7 @@ import { TelescopeInterceptor } from "./telescope.interceptor";
 import { TelescopeJobRunner } from "./telescope-job-runner";
 import { TelescopePrismaListener } from "./telescope-prisma-listener";
 import { TelescopePostgresStore } from "./telescope-postgres.store";
+import { TelescopeReplayService } from "./telescope-replay.service";
 import { TelescopeRetentionService } from "./telescope-retention.service";
 import { TelescopeSchedulerService } from "./telescope-scheduler";
 import { TelescopeService } from "./telescope.service";
@@ -52,6 +53,7 @@ import { TelescopeMemoryStore, type TelescopeStore } from "./telescope.store";
 		TelescopeSchedulerService,
 		TelescopeCacheTracer,
 		TelescopeAlertService,
+		TelescopeReplayService,
 		// The demo service is dev-only sugar so the jobs/schedules pages have
 		// data out of the box (self-guards on `options.enabled` — silent in
 		// production). The email-job adapter (TelescopeEmailJobAdapter) is wired

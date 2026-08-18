@@ -3,6 +3,7 @@ import { ApiBearerAuth, ApiBody, ApiCreatedResponse, ApiHeader, ApiOkResponse, A
 import { SkipThrottle, Throttle } from "@nestjs/throttler";
 import type {
 	AdminUserDetail,
+	AdminUserListQuery,
 	ForgotPasswordInput,
 	ForgotPasswordResponse,
 	LoginInput,
@@ -34,8 +35,10 @@ import type { FastifyRequest } from "fastify";
 
 import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe";
 
+import { EmailVerified } from "./decorators/email-verified.decorator";
 import { GetUser } from "./decorators/get-user.decorator";
 import { Public } from "./decorators/public.decorator";
+import { RequirePermission } from "./decorators/require-permission.decorator";
 import { SuperAdminOnly } from "./decorators/super-admin.decorator";
 import { ApiErrorResponseDto } from "../../common/dto/api-response.dto";
 import { createWrappedArrayDto, createWrappedDto } from "../../common/dto/response-wrapper";
@@ -176,12 +179,23 @@ export class AuthController {
 	@SkipThrottle()
 	@ApiBearerAuth()
 	@SuperAdminOnly()
+	@RequirePermission("LIST", "USER")
 	@Get("/admin/users")
 	@ApiOperation({ summary: "SuperAdmin: list all users with roles and lockout status" })
 	@ApiOkResponse({ type: WrappedAdminUserList, description: "Admin user list" })
 	@ApiResponse({ status: 403, type: ApiErrorResponseDto, description: "SuperAdmin privileges required" })
-	public async getAdminUsersList(): Promise<AdminUserDetail[]> {
-		return this.authService.getAdminUsersList();
+	public async getAdminUsersList(
+		@Query(new ZodValidationPipe(apiContract.auth.adminUsers.input)) query: AdminUserListQuery,
+	): Promise<{
+		readonly items: AdminUserDetail[];
+		readonly total: number;
+		readonly page: number;
+		readonly limit: number;
+		readonly totalPages: number;
+		readonly hasNext: boolean;
+		readonly hasPrevious: boolean;
+	}> {
+		return this.authService.getAdminUsersList(query);
 	}
 
 	@SkipThrottle()
@@ -198,6 +212,8 @@ export class AuthController {
 	@SkipThrottle()
 	@ApiBearerAuth()
 	@SuperAdminOnly()
+	@EmailVerified()
+	@RequirePermission("UPDATE", "USER")
 	@Patch("/admin/users/:userId/unlock")
 	@ApiOperation({ summary: "SuperAdmin: unlock a locked user account" })
 	@ApiOkResponse({ type: WrappedMessageResponse, description: "Account unlocked" })

@@ -2,6 +2,7 @@ import { Inject, Injectable, type OnModuleInit } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
 import { z } from "zod";
 
+import { LogService } from "../logs/logs.service";
 import { epochMs } from "@workspace/shared";
 
 import {
@@ -70,6 +71,7 @@ export class TelescopePostgresStore implements TelescopeStore, OnModuleInit {
 	public constructor(
 		private readonly prisma: PrismaService,
 		@Inject(TELESCOPE_OPTIONS) private readonly options: TelescopeOptions,
+		private readonly logs: LogService,
 	) {
 		this.memory = new TelescopeMemoryStore(options.maxRequests);
 	}
@@ -373,7 +375,7 @@ export class TelescopePostgresStore implements TelescopeStore, OnModuleInit {
 	}
 
 	private logPersistError(kind: string, err: Error): void {
-		console.warn(`[Telescope] postgres persist failed (${kind}): ${err.message}`);
+		this.logs.warn(`postgres persist failed (${kind}): ${err.message}`, { context: "TelescopePostgresStore" });
 	}
 }
 

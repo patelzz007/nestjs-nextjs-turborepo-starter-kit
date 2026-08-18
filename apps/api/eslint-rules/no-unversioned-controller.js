@@ -52,7 +52,7 @@ export const noUnversionedController = {
 
 				const first = node.expression.arguments[0];
 				// Bare @Controller() — root-level controllers (welcome `/`,
-				// `/health`, legacy `POST /users`) are explicitly allowlisted.
+				// `/health`) are explicitly allowlisted.
 				if (first === undefined) return;
 
 				// @Controller(apiPath("/auth")) — versioned via the helper.

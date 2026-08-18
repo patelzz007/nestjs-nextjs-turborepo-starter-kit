@@ -6,6 +6,26 @@ datasource db {
   provider = "postgresql"
 }
 
+// ---------------------------------------------------------------------------
+// Row Level Security (Postgres)
+//
+// Prisma 7 PSL cannot emit CREATE ROLE, GRANT, ENABLE/FORCE RLS, or POLICY.
+// Those statements live at the **bottom** of `migrations/20260818235200_init`
+// and MUST stay there when this folder is squashed or regenerated.
+//
+// Schema-owned pieces (columns, indexes, maps) always land in this file first.
+// Backup prune/list indexes: Backup.@@index([expiresAt], [requestedBy]).
+//
+// Runtime (apps/api):
+//   - Role `app_runtime` (NOLOGIN NOSUPERUSER NOINHERIT NOBYPASSRLS)
+//   - GRANT USAGE ON SCHEMA public + table DML to app_runtime (PG 15+ public
+//     schema has no PUBLIC grants — without this, SET ROLE fails with 42501)
+//   - RlsPool: SET ROLE app_runtime on every checkout
+//   - Session: app.current_user_id, app.rls_bypass (RlsInterceptor ALS)
+//   - Helpers: app_rls_bypass(), app_current_user_id(), app_owns(owner_id)
+// See docs/prisma.md §10.
+// ---------------------------------------------------------------------------
+
 enum Plan {
   FREE
   PRO
@@ -51,12 +71,12 @@ enum PermissionResource {
 }
 
 // Tables
+/// RLS: own row — `app_owns(id)`. Public login/signup uses bypass.
 model User {
   id           String  @id @default(uuid())
   fullName     String  @db.VarChar(100)
   email        String  @unique @db.VarChar(100)
   passwordHash String  @db.Text
-  refreshToken String? @db.Text
   isActive     Boolean @default(true)
   isSuperAdmin Boolean @default(false)
 
@@ -90,6 +110,7 @@ model User {
   @@map("users")
 }
 
+/// RLS: catalog — SELECT true; writes need `app_rls_bypass()`.
 model Role {
   id          String  @id @default(uuid())
   name        String  @unique @db.VarChar(100)
@@ -115,6 +136,7 @@ model Role {
   @@map("roles")
 }
 
+/// RLS: catalog — SELECT true; writes need `app_rls_bypass()`.
 model Permission {
   id          String             @id @default(uuid())
   action      PermissionAction
@@ -143,6 +165,7 @@ model Permission {
 // Permission Audit Trail
 // ---------------------------------------------------------------------------
 
+/// RLS: bypass only (`app_rls_bypass()`).
 model PermissionAuditLog {
   id           String  @id @default(uuid())
   actorId      String  @map("actor_id")
@@ -172,6 +195,7 @@ enum MenuMatchType {
   ALL
 }
 
+/// RLS: catalog — SELECT true; writes need `app_rls_bypass()`.
 model MenuItem {
   id       String  @id @default(uuid())
   name     String  @db.VarChar(100)
@@ -197,6 +221,7 @@ model MenuItem {
   @@map("menu_items")
 }
 
+/// RLS: catalog — SELECT true; writes need `app_rls_bypass()`.
 model MenuItemPermission {
   id           String        @id @default(uuid())
   menuItemId   String        @map("menu_item_id")
@@ -215,6 +240,7 @@ model MenuItemPermission {
   @@map("menu_item_permissions")
 }
 
+/// RLS: catalog — SELECT true; writes need `app_rls_bypass()`.
 model MenuItemRole {
   id         String @id @default(uuid())
   menuItemId String @map("menu_item_id")
@@ -236,6 +262,7 @@ model MenuItemRole {
 // Password Reset Tokens
 // ---------------------------------------------------------------------------
 
+/// RLS: own row — `app_owns(user_id)`.
 model PasswordResetToken {
   id        String  @id @default(uuid())
   userId    String  @map("user_id")
@@ -254,6 +281,7 @@ model PasswordResetToken {
   @@map("password_reset_tokens")
 }
 
+/// RLS: own row — `app_owns("userId")`.
 model UserRole {
   id     String @id @default(uuid())
   userId String
@@ -274,6 +302,7 @@ model UserRole {
   @@map("user_roles")
 }
 
+/// RLS: own row — `app_owns("userId")`.
 model UserPermission {
   id           String @id @default(uuid())
   userId       String
@@ -295,6 +324,7 @@ model UserPermission {
   @@map("user_permissions")
 }
 
+/// RLS: catalog — SELECT true; writes need `app_rls_bypass()`.
 model RolePermission {
   id           String @id @default(uuid())
   roleId       String
@@ -315,6 +345,7 @@ model RolePermission {
   @@map("role_permissions")
 }
 
+/// RLS: own row — `app_owns("userId")`.
 model RefreshToken {
   id     String @id @default(uuid())
   token  String @db.Text
@@ -335,6 +366,7 @@ model RefreshToken {
   @@map("refresh_tokens")
 }
 
+/// RLS: own row — `app_owns(user_id)`. Public redirects use bypass.
 model Url {
   id           String       @id @default(uuid())
   userId       String?      @map("user_id")
@@ -364,6 +396,7 @@ model Url {
   @@map("urls")
 }
 
+/// RLS: own row — `app_owns(user_id)`.
 model Tag {
   id        String  @id @default(uuid())
   userId    String  @map("user_id")
@@ -381,6 +414,7 @@ model Tag {
   @@map("tags")
 }
 
+/// RLS: via parent url — `app_owns(urls.user_id)`.
 model UrlTag {
   id    String @id @default(uuid())
   urlId String @map("url_id")
@@ -398,6 +432,7 @@ model UrlTag {
   @@map("url_tags")
 }
 
+/// RLS: via parent url — `app_owns(urls.user_id)`.
 model Click {
   id          String     @id @default(uuid())
   urlId       String     @map("url_id")
@@ -424,6 +459,7 @@ model Click {
   @@map("clicks")
 }
 
+/// RLS: own row — `app_owns(user_id)`.
 model ApiKey {
   id            String   @id @default(uuid())
   userId        String   @map("user_id")
@@ -454,6 +490,7 @@ model ApiKey {
 // Impersonation Audit Log
 // ---------------------------------------------------------------------------
 
+/// RLS: INSERT + SELECT need `app_rls_bypass()`; UPDATE/DELETE revoked for `app_runtime` (immutable audit).
 model ImpersonationAuditLog {
   id             String  @id @default(uuid())
   impersonatorId String  @map("impersonator_id")
@@ -472,6 +509,7 @@ model ImpersonationAuditLog {
   @@map("impersonation_audit_logs")
 }
 
+/// RLS: INSERT open (request capture); SELECT/UPDATE/DELETE need bypass.
 model Log {
   id            String   @id @default(uuid())
   level         String
@@ -496,6 +534,7 @@ model Log {
   @@map("logs")
 }
 
+/// RLS: via parent api_key — `app_owns(api_keys.user_id)`.
 model ApiKeyUsageLog {
   id             String  @id @default(uuid())
   apiKeyId       String  @map("api_key_id")
@@ -522,6 +561,7 @@ model ApiKeyUsageLog {
 // Email Audit Trail
 // ---------------------------------------------------------------------------
 
+/// RLS: INSERT open (mail send); SELECT/UPDATE/DELETE need bypass.
 model EmailLog {
   id          String  @id @default(uuid())
   templateKey String  @map("template_key")
@@ -548,6 +588,7 @@ model EmailLog {
 // with its SHA-256 checksum recorded on this row. Rows + files are pruned at
 // the retention deadline (expiresAt).
 
+/// RLS: bypass only (`app_rls_bypass()` — admin backup jobs).
 model Backup {
   id              String   @id @default(uuid())
   name            String   @db.VarChar(100)
@@ -574,6 +615,8 @@ model Backup {
 
   @@index([status])
   @@index([createdAt])
+  @@index([expiresAt])
+  @@index([requestedBy])
   @@map("backups")
 }
 
@@ -582,6 +625,7 @@ model Backup {
 // bodies/headers/spans/logs; retention pruning (improvement 4) deletes rows
 // older than the configured window.
 
+/// RLS: INSERT open (capture); SELECT/UPDATE/DELETE need bypass.
 model TelescopeRequest {
   id             String  @id
   correlationId  String  @map("correlation_id")
@@ -605,6 +649,7 @@ model TelescopeRequest {
   @@map("telescope_requests")
 }
 
+/// RLS: INSERT open (capture); SELECT/UPDATE/DELETE need bypass.
 model TelescopeQuery {
   id            String  @id
   correlationId String  @map("correlation_id")
@@ -620,6 +665,7 @@ model TelescopeQuery {
   @@map("telescope_queries")
 }
 
+/// RLS: INSERT open (capture); SELECT/UPDATE/DELETE need bypass.
 model TelescopeException {
   id            String  @id
   correlationId String  @map("correlation_id")
@@ -643,6 +689,7 @@ model TelescopeException {
   @@map("telescope_exceptions")
 }
 
+/// RLS: INSERT open (capture); SELECT/UPDATE/DELETE need bypass.
 model TelescopeDump {
   id            String  @id
   name          String  @db.VarChar(100)
@@ -659,6 +706,7 @@ model TelescopeDump {
 // these tables make every surface durable. Schedules are re-registered at boot
 // so they need no table.
 
+/// RLS: INSERT open (capture); SELECT/UPDATE/DELETE need bypass.
 model TelescopeJob {
   id            String  @id
   jobName       String  @map("job_name")
@@ -676,6 +724,7 @@ model TelescopeJob {
   @@map("telescope_jobs")
 }
 
+/// RLS: INSERT open (capture); SELECT/UPDATE/DELETE need bypass.
 model TelescopeAlert {
   id           String  @id
   requestId    String? @map("request_id")
@@ -694,6 +743,7 @@ model TelescopeAlert {
   @@map("telescope_alerts")
 }
 
+/// RLS: INSERT open (capture); SELECT/UPDATE/DELETE need bypass.
 model TelescopeAnnotation {
   requestId String  @id
   starred   Boolean @default(false)

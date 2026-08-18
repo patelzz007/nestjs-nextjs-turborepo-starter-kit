@@ -105,6 +105,21 @@ export const AdminUserDetailSchema = UserResponseSchema.extend({
 
 export type AdminUserDetail = z.output<typeof AdminUserDetailSchema>;
 
+/** Query string for `GET /auth/admin/users`. Query params arrive as strings; JSON Schema (Ajv) accepts either. */
+export const AdminUserListQuerySchema = z
+	.object({
+		page: z.union([z.number().int().min(1), z.string().min(1)]).optional().meta({
+			description: "Page number (1-based)",
+			example: 1,
+		}),
+		limit: z.union([z.number().int().min(1).max(100), z.string().min(1)]).optional().meta({
+			description: "Results per page",
+			example: 10,
+		}),
+	})
+	.strict();
+export type AdminUserListQuery = z.output<typeof AdminUserListQuerySchema>;
+
 /**
  * Message response for user deletion / profile operations.
  */

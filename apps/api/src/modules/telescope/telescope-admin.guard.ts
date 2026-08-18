@@ -8,9 +8,10 @@ import { TELESCOPE_OPTIONS } from "./telescope.options";
 
 /**
  * Defense-in-depth admin gate for `/telescope/*` (docs/telescope.md §10.7).
- * The global `AuthGuard` already proves the caller is authenticated; this
- * guard additionally requires `hasAdminAccess` — Telescope exposes request
- * bodies, SQL and user ids, so it must never be reachable by a plain user.
+ * The global `AuthGuard` already proves the caller is authenticated (JWT **or**
+ * `TELESCOPE_TOKEN` Bearer). This guard additionally requires `hasAdminAccess`
+ * — Telescope exposes request bodies, SQL and user ids, so it must never be
+ * reachable by a plain user.
  *
  * Improvement 12: when `TELESCOPE_TOKEN` is configured, the same endpoints
  * accept `Authorization: Bearer <token>` — that lets CI / the CLI script

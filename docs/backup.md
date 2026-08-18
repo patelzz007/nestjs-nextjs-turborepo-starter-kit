@@ -32,6 +32,8 @@ coverImage: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=form
 | `POST` | `/api/v1/backup` | Create a backup (202 Accepted, runs in the background) |
 | `GET` | `/api/v1/backup` | List history + operational facts (active flag, retention days) |
 | `GET` | `/api/v1/backup/options` | Excludable tables + env-driven default exclusions |
+| `GET` | `/api/v1/backup/schedules` | In-memory daily/weekly cron rows (static path; registered above `:id`) |
+| `POST` | `/api/v1/backup/schedules/:id/toggle` | Enable/disable a schedule (`{ enabled }`; typed via `api.backup.toggleSchedule`) |
 | `GET` | `/api/v1/backup/:id` | One backup's status/progress (the poll target) |
 | `POST` | `/api/v1/backup/:id/download` | Mint a signed download token (bound to the requesting admin) |
 | `GET` | `/api/v1/backup/:id/download?token=…` | Stream the gzip file (token required) |
@@ -293,7 +295,11 @@ failures. This catches the scenario where a backup fills the disk mid-dump.
 
 ### DB Size Estimation
 
-Before starting, the service queries `pg_database_size()` to show:
+Create writes `expiresAt = now + BACKUP_RETENTION_DAYS`. Prune deletes rows where
+`expiresAt < now` (not `now - retention` — that doubled the window).
+
+Before starting, the service queries `SELECT pg_database_size(current_database())` (no
+database name interpolated into SQL) to show:
 
 - **Database size** in the create form
 - **Estimated backup time** (rough heuristic: ~100MB/min for pg_dump)
@@ -308,7 +314,8 @@ Two built-in schedules run as system-level jobs:
 | `daily` | `0 2 * * *` | Daily full backup at 2 AM UTC |
 | `weekly` | `0 3 * * 0` | Weekly full backup on Sunday at 3 AM UTC |
 
-Schedules are visible in the backup panel and can be toggled on/off. The scheduler checks
+Schedules are visible in the backup panel (also on `GET /backup` as `schedules`) and
+toggled with `POST /api/v1/backup/schedules/:id/toggle`. The scheduler checks
 every 60 seconds. Scheduled backups are skipped when:
 - A manual backup is already running
 - The circuit breaker is open (3+ consecutive failures)

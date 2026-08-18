@@ -87,6 +87,45 @@ export const BackupEntrySchema = z
 
 export type BackupEntry = z.output<typeof BackupEntrySchema>;
 
+/** One in-memory backup cron row (daily / weekly). */
+export const BackupScheduleSchema = z
+	.object({
+		id: z.string().min(1),
+		cron: z.string().min(1),
+		name: z.string().min(1),
+		enabled: z.boolean(),
+		nextRun: EpochMsSchema,
+	})
+	.strict();
+
+export type BackupSchedule = z.output<typeof BackupScheduleSchema>;
+
+/** Body for `POST /backup/schedules/:id/toggle`. Path `:id` is not in the body. */
+export const BackupScheduleToggleBodySchema = z
+	.object({
+		enabled: z.boolean(),
+	})
+	.strict();
+
+export type BackupScheduleToggleBody = z.output<typeof BackupScheduleToggleBodySchema>;
+
+/** Contract input: path id + body. */
+export const BackupScheduleToggleInputSchema = BackupScheduleToggleBodySchema.extend({
+	id: z.string().min(1),
+}).strict();
+
+export type BackupScheduleToggleInput = z.output<typeof BackupScheduleToggleInputSchema>;
+
+export const BackupScheduleToggleResponseSchema = z
+	.object({
+		toggled: z.literal(true),
+		id: z.string().min(1),
+		enabled: z.boolean(),
+	})
+	.strict();
+
+export type BackupScheduleToggleResponse = z.output<typeof BackupScheduleToggleResponseSchema>;
+
 // ── Responses ──────────────────────────────────────────────────────────────
 
 /** `POST /backup` — accepted for async processing (HTTP 202). */
@@ -125,17 +164,7 @@ export const BackupListResponseSchema = z
 			.strict()
 			.nullable(),
 		/** Active backup schedules. */
-		schedules: z.array(
-			z
-				.object({
-					id: z.string().min(1),
-					cron: z.string().min(1),
-					name: z.string().min(1),
-					enabled: z.boolean(),
-					nextRun: EpochMsSchema,
-				})
-				.strict(),
-		),
+		schedules: z.array(BackupScheduleSchema),
 	})
 	.strict();
 

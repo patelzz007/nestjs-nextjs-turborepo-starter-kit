@@ -17,8 +17,9 @@ export async function createUsers(): Promise<User[]> {
 		monthlyClickLimit: number;
 		failedLoginAttempts?: number;
 		lockedUntil?: number | null;
+		emailVerifiedAt?: number | null;
 	}[] = [
-		// System accounts
+		// System accounts — verified so admin-panel ops (backup, unlock) pass EmailVerifiedGuard.
 		{
 			email: "superadmin@example.com",
 			passwordHash: await hash("SuperAdmin@123"),
@@ -28,6 +29,7 @@ export async function createUsers(): Promise<User[]> {
 			plan: "ENTERPRISE",
 			monthlyUrlLimit: -1,
 			monthlyClickLimit: -1,
+			emailVerifiedAt: Date.now(),
 		},
 		{
 			email: "admin@example.com",
@@ -38,6 +40,7 @@ export async function createUsers(): Promise<User[]> {
 			plan: "ENTERPRISE",
 			monthlyUrlLimit: -1,
 			monthlyClickLimit: -1,
+			emailVerifiedAt: Date.now(),
 		},
 		{
 			email: "manager@example.com",
@@ -120,6 +123,7 @@ export async function createUsers(): Promise<User[]> {
 			plan: "ENTERPRISE",
 			monthlyUrlLimit: -1,
 			monthlyClickLimit: -1,
+			emailVerifiedAt: Date.now(),
 		},
 		{
 			email: "grace.wilson@example.com",
@@ -171,6 +175,8 @@ export async function createUsers(): Promise<User[]> {
 				fullName: u.fullName,
 				isActive: u.isActive,
 				plan: u.plan ?? "FREE",
+				isSuperAdmin: u.isSuperAdmin,
+				emailVerifiedAt: u.emailVerifiedAt ?? null,
 			},
 			create: u,
 		});

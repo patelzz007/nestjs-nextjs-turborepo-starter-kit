@@ -138,6 +138,10 @@ export {
 	BackupOptionsResponseSchema,
 	BackupRestoreInputSchema,
 	BackupRestoreResponseSchema,
+	BackupScheduleSchema,
+	BackupScheduleToggleBodySchema,
+	BackupScheduleToggleInputSchema,
+	BackupScheduleToggleResponseSchema,
 	BackupStageSchema,
 	BackupStatusResponseSchema,
 	BackupStatusSchema,
@@ -154,6 +158,10 @@ export type {
 	BackupOptionsResponse,
 	BackupRestoreInput,
 	BackupRestoreResponse,
+	BackupSchedule,
+	BackupScheduleToggleBody,
+	BackupScheduleToggleInput,
+	BackupScheduleToggleResponse,
 	BackupStage,
 	BackupStatus,
 	BackupStatusResponse,
@@ -455,6 +463,7 @@ export type {
 } from "./domain/telescope";
 export {
 	AdminUserDetailSchema,
+	AdminUserListQuerySchema,
 	PermissionDetailsSchema,
 	SlimRoleSchema,
 	UpdateProfileSchema,
@@ -462,4 +471,4 @@ export {
 	UserMessageResponseSchema,
 	UserResponseSchema,
 } from "./auth/user";
-export type { AdminUserDetail, PermissionDetailsResponse, SlimRoleResponse, UpdateProfileInput, UpdateUserInput, UserMessageResponse, UserResponse } from "./auth/user";
+export type { AdminUserDetail, AdminUserListQuery, PermissionDetailsResponse, SlimRoleResponse, UpdateProfileInput, UpdateUserInput, UserMessageResponse, UserResponse } from "./auth/user";

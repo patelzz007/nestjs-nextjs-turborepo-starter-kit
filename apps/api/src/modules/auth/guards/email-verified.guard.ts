@@ -1,31 +1,28 @@
 import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from "@nestjs/common";
-
-interface RequestWithUser {
-	user?: {
-		isEmailVerified?: boolean;
-		email?: string;
-	};
-}
+import type { FastifyRequest } from "fastify";
 
 /**
  * Guard that enforces email verification on protected routes.
  *
- * Apply this guard to routes that require a verified email address
- * (e.g. creating API keys, accessing sensitive settings).
+ * Apply via `@EmailVerified()` on mutations that must not run for unverified accounts
+ * (backup dump/restore, impersonation, account unlock).
  *
- * The `isEmailVerified` flag is set on the user payload by the AuthGuard
- * after successful authentication, based on the `emailVerifiedAt` timestamp.
+ * `isEmailVerified` is set on the access-token payload by `TokenService`.
  */
 @Injectable()
 export class EmailVerifiedGuard implements CanActivate {
-	canActivate(context: ExecutionContext): boolean {
-		const request = context.switchToHttp().getRequest<RequestWithUser>();
+	public canActivate(context: ExecutionContext): boolean {
+		const request: FastifyRequest = context.switchToHttp().getRequest<FastifyRequest>();
+		const user = request.user;
 
-		if (!request.user) {
-			throw new ForbiddenException("User not authenticated");
+		if (user === undefined) {
+			throw new ForbiddenException({
+				message: "User not authenticated",
+				error: "UNAUTHENTICATED",
+			});
 		}
 
-		if (!request.user.isEmailVerified) {
+		if (!("isEmailVerified" in user) || !user.isEmailVerified) {
 			throw new ForbiddenException({
 				message: "Email verification required. Please verify your email address before accessing this resource.",
 				error: "EMAIL_NOT_VERIFIED",

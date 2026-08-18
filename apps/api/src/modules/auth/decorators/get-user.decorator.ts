@@ -35,6 +35,7 @@ import type { AccessTokenPayload, RefreshTokenPayload } from "../services/token.
 	if ("isSuperAdmin" in user && data === "isSuperAdmin") return user.isSuperAdmin;
 	if ("isEmailVerified" in user && data === "isEmailVerified") return user.isEmailVerified;
 	if ("originalUserId" in user && data === "originalUserId") return user.originalUserId;
+	if ("isImpersonating" in user && data === "isImpersonating") return user.isImpersonating;
 
 	// RefreshTokenPayload-specific properties
 	if ("jti" in user && data === "jti") return user.jti;

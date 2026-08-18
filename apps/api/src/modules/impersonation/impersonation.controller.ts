@@ -1,12 +1,14 @@
-import { Controller, Param, Post, Req } from "@nestjs/common";
+import { BadRequestException, Controller, Param, Post, Req } from "@nestjs/common";
 import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { Throttle } from "@nestjs/throttler";
 import type { ImpersonateResponse, StopImpersonationResponse } from "@workspace/shared";
 import { ImpersonateResponseSchema, StopImpersonationResponseSchema, apiPath } from "@workspace/shared";
 import type { FastifyRequest } from "fastify";
 
+import { EmailVerified } from "../auth/decorators/email-verified.decorator";
 import { GetUser } from "../auth/decorators/get-user.decorator";
 import { SuperAdminOnly } from "../auth/decorators/super-admin.decorator";
+import type { AccessTokenPayload, RefreshTokenPayload } from "../auth/services/token.service";
 import { ApiErrorResponseDto } from "../../common/dto/api-response.dto";
 import { createWrappedDto } from "../../common/dto/response-wrapper";
 import { extractClientInfo } from "../../common/utils/client-info";
@@ -37,14 +39,26 @@ export class ImpersonationController {
 	@Throttle({ strict: { ttl: 60000, limit: 10 } })
 	@ApiBearerAuth()
 	@SuperAdminOnly()
+	@EmailVerified()
 	@Post("/impersonate/:userId")
 	@ApiOperation({ summary: "SuperAdmin: impersonate another user" })
 	@ApiOkResponse({ type: WrappedImpersonateResponse, description: "Impersonation started" })
 	@ApiResponse({ status: 403, type: ApiErrorResponseDto, description: "SuperAdmin privileges required" })
-	public async impersonate(@GetUser("sub") superAdminId: string, @Param("userId") targetUserId: string, @Req() req: FastifyRequest): Promise<ImpersonateResponse> {
+	public async impersonate(
+		@GetUser() user: AccessTokenPayload | RefreshTokenPayload | undefined,
+		@Param("userId") targetUserId: string,
+		@Req() req: FastifyRequest,
+	): Promise<ImpersonateResponse> {
+		const admin = requireAccessToken(user);
+		if (admin.isImpersonating === true) {
+			throw new BadRequestException({
+				message: "Already impersonating; stop the current session first",
+				error: "ALREADY_IMPERSONATING",
+			});
+		}
 		const { ipAddress } = extractClientInfo(req);
 		const userAgent: string | null = req.headers["user-agent"] ?? null;
-		return this.impersonationService.impersonateUser(superAdminId, targetUserId, ipAddress, userAgent);
+		return this.impersonationService.impersonateUser(admin.sub, targetUserId, ipAddress, userAgent);
 	}
 
 	/**
@@ -59,14 +73,28 @@ export class ImpersonationController {
 	@ApiOperation({ summary: "SuperAdmin: stop impersonating" })
 	@ApiOkResponse({ type: WrappedStopImpersonationResponse, description: "Impersonation ended" })
 	public async stopImpersonation(
-		@GetUser("originalUserId") impersonatorId: string | undefined,
-		@GetUser("sub") targetUserId: string,
+		@GetUser() user: AccessTokenPayload | RefreshTokenPayload | undefined,
 		@Req() req: FastifyRequest,
 	): Promise<StopImpersonationResponse> {
+		const payload = requireAccessToken(user);
+		if (payload.isImpersonating !== true || payload.originalUserId === undefined) {
+			throw new BadRequestException({
+				message: "Not currently impersonating",
+				error: "NOT_IMPERSONATING",
+			});
+		}
 		const { ipAddress } = extractClientInfo(req);
 		const userAgent: string | null = req.headers["user-agent"] ?? null;
-		// If originalUserId is not set (not an impersonation token), fall back to sub
-		const superAdminId: string = impersonatorId ?? targetUserId;
-		return this.impersonationService.stopImpersonation(superAdminId, targetUserId, ipAddress, userAgent);
+		return this.impersonationService.stopImpersonation(payload.originalUserId, payload.sub, ipAddress, userAgent);
 	}
+}
+
+function requireAccessToken(user: AccessTokenPayload | RefreshTokenPayload | undefined): AccessTokenPayload {
+	if (user === undefined || !("isSuperAdmin" in user)) {
+		throw new BadRequestException({
+			message: "Access token required",
+			error: "ACCESS_TOKEN_REQUIRED",
+		});
+	}
+	return user;
 }

@@ -2,14 +2,15 @@ import { Inject, Injectable, type OnModuleDestroy, type OnModuleInit } from "@ne
 
 import type { TelescopeOptions } from "@workspace/shared";
 
+import { LogService } from "../logs/logs.service";
 import { TELESCOPE_OPTIONS, TELESCOPE_STORE } from "./telescope.options";
 import type { TelescopeStore } from "./telescope.store";
 
 /**
  * Improvement 4 — retention pruning on a fixed interval (every 5 minutes).
- * Uses `setInterval` instead of `@nestjs/schedule` so the module has zero
- * extra wiring (the ScheduleModule is not registered app-wide). Works for
- * both stores: memory prunes the buffer, Postgres prunes buffer + DB.
+ * Uses `setInterval` instead of `@Cron` so retention stays self-contained
+ * even though `ScheduleModule.forRoot()` is now registered for auth cleanup.
+ * Works for both stores: memory prunes the buffer, Postgres prunes buffer + DB.
  */
 @Injectable()
 export class TelescopeRetentionService implements OnModuleInit, OnModuleDestroy {
@@ -23,6 +24,7 @@ export class TelescopeRetentionService implements OnModuleInit, OnModuleDestroy 
 	public constructor(
 		@Inject(TELESCOPE_OPTIONS) private readonly options: TelescopeOptions,
 		@Inject(TELESCOPE_STORE) private readonly store: TelescopeStore,
+		private readonly logs: LogService,
 	) {}
 
 	public onModuleInit(): void {
@@ -52,7 +54,9 @@ export class TelescopeRetentionService implements OnModuleInit, OnModuleDestroy 
 	private prune(): void {
 		const removed: number = this.store.pruneRetention(this.options.retentionMinutes);
 		if (removed > 0) {
-			console.warn(`[Telescope] retention pruned ${String(removed)} entries (${String(this.options.retentionMinutes)}m window)`);
+			this.logs.warn(`retention pruned ${String(removed)} entries (${String(this.options.retentionMinutes)}m window)`, {
+				context: "TelescopeRetention",
+			});
 		}
 	}
 }

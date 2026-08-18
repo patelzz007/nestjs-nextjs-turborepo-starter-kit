@@ -53,9 +53,13 @@ export async function assignRoleHierarchy(roles: Role[]): Promise<void> {
 // ---------------------------------------------------------------------------
 
 export async function assignPermissionsToRoles(roles: Role[], permissions: Permission[]): Promise<void> {
+	const superAdminRole = roles.find((r) => r.name === "SuperAdmin")!;
 	const adminRole = roles.find((r) => r.name === "Admin")!;
 	const managerRole = roles.find((r) => r.name === "Manager")!;
 	const userRole = roles.find((r) => r.name === "User")!;
+
+	// SuperAdmin: the full matrix (JWT + @RequirePermission; isSuperAdmin still bypasses).
+	const superAdminPerms = permissions;
 
 	const adminPerms = permissions.filter(
 		(p) =>
@@ -64,6 +68,7 @@ export async function assignPermissionsToRoles(roles: Role[], permissions: Permi
 			(p.resource === "ROLE" && p.action === "READ") ||
 			p.resource === "PERMISSION" ||
 			p.resource === "ADMIN_DASHBOARD" ||
+			p.resource === "SYSTEM_SETTINGS" ||
 			p.resource === "URL" ||
 			p.resource === "API_KEY" ||
 			(p.resource === "AUDIT_LOG" && (p.action === "READ" || p.action === "LIST")) ||
@@ -86,6 +91,7 @@ export async function assignPermissionsToRoles(roles: Role[], permissions: Permi
 	);
 
 	const rows = [
+		...superAdminPerms.map((p) => ({ roleId: superAdminRole.id, permissionId: p.id })),
 		...adminPerms.map((p) => ({ roleId: adminRole.id, permissionId: p.id })),
 		...managerPerms.map((p) => ({
 			roleId: managerRole.id,

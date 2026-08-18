@@ -17,7 +17,18 @@
 
 import "dotenv/config";
 
-import { TelescopeReplayInputSchema, TelescopeStreamEventSchema, type TelescopeRequestListResponse, type TelescopeSqlListResponse } from "@workspace/shared";
+import {
+	ApiResponseMetaSchema,
+	TelescopeCompareResponseSchema,
+	TelescopeExceptionListResponseSchema,
+	TelescopeReplayInputSchema,
+	TelescopeReplayResponseSchema,
+	TelescopeRequestDetailResponseSchema,
+	TelescopeRequestListResponseSchema,
+	TelescopeSqlListResponseSchema,
+	TelescopeStreamEventSchema,
+} from "@workspace/shared";
+import { z } from "zod";
 
 const BASE_URL: string = process.env.TELESCOPE_URL ?? "http://localhost:8080";
 // The API serves every route under `/api/v1` (URI versioning).
@@ -62,24 +73,46 @@ async function authHeaders(): Promise<Record<string, string>> {
 		headers: { "content-type": "application/json", "x-client-type": "admin" },
 		body: JSON.stringify({ email, password }),
 	});
-	if (!response.ok) {
+	if (response.ok) {
+		const cookieHeader: string | undefined = response.headers.getSetCookie().find((cookie: string): boolean => cookie.startsWith("adminAccessToken="));
+		if (cookieHeader !== undefined) {
+			return { cookie: cookieHeader.split(";")[0] ?? "" };
+		}
+		bail("login succeeded but no adminAccessToken cookie was returned");
+	} else {
 		bail(`login failed (${String(response.status)}) — set TELESCOPE_TOKEN or ADMIN_EMAIL/ADMIN_PASSWORD`);
 	}
-	const cookieHeader: string | undefined = response.headers.getSetCookie().find((cookie: string): boolean => cookie.startsWith("adminAccessToken="));
-	if (cookieHeader === undefined) {
-		bail("login succeeded but no adminAccessToken cookie was returned");
-	}
-	return { cookie: cookieHeader.split(";")[0] ?? "" };
+	process.exit(1);
 }
 
-async function getJson<T>(path: string, headers: Record<string, string>): Promise<T> {
+function envelopeSchema<T extends z.ZodType>(
+	dataSchema: T,
+): z.ZodObject<{
+	success: z.ZodLiteral<true>;
+	data: T;
+	meta: typeof ApiResponseMetaSchema;
+}> {
+	return z.object({
+		success: z.literal(true),
+		data: dataSchema,
+		meta: ApiResponseMetaSchema,
+	});
+}
+
+async function getJson<T extends z.ZodType>(path: string, headers: Record<string, string>, schema: T): Promise<z.output<T>> {
 	const response: Response = await fetch(`${BASE_URL}${API_PREFIX}${path}`, { headers });
 	if (!response.ok) {
 		const bodyPreview: string = (await response.text()).slice(0, 300);
 		bail(`GET ${path} → ${String(response.status)}: ${bodyPreview}`);
+		process.exit(1);
 	}
-	// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Library boundary: the JSON body is validated by the API's zod schemas before it is served.
-	return (await response.json()) as T;
+	const text: string = await response.text();
+	const parsed: z.ZodSafeParseResult<z.output<T>> = schema.safeParse(JSON.parse(text));
+	if (parsed.success) {
+		return parsed.data;
+	}
+	bail(`GET ${path} → response did not match schema: ${parsed.error.message.slice(0, 300)}`);
+	process.exit(1);
 }
 
 async function main(): Promise<void> {
@@ -91,7 +124,7 @@ async function main(): Promise<void> {
 		const limitIndex: number = args.indexOf("--limit");
 		const rawLimit: string | undefined = limitIndex >= 0 ? args[limitIndex + 1] : undefined;
 		const limit: string = rawLimit ?? "20";
-		const data = await getJson<{ readonly data: { readonly list: TelescopeRequestListResponse } }>(`/telescope/requests?page=1&pageSize=${limit}`, headers);
+		const data = await getJson(`/telescope/requests?page=1&pageSize=${limit}`, headers, envelopeSchema(z.object({ list: TelescopeRequestListResponseSchema }).strict()));
 		console.log(JSON.stringify({ total: data.data.list.total, items: data.data.list.items }, null, 2));
 		return;
 	}
@@ -102,7 +135,7 @@ async function main(): Promise<void> {
 			printUsage();
 			return;
 		}
-		const data = await getJson(`/telescope/requests/${encodeURIComponent(id)}`, headers);
+		const data = await getJson(`/telescope/requests/${encodeURIComponent(id)}`, headers, envelopeSchema(TelescopeRequestDetailResponseSchema));
 		console.log(JSON.stringify(data, null, 2));
 		return;
 	}
@@ -114,7 +147,7 @@ async function main(): Promise<void> {
 			printUsage();
 			return;
 		}
-		const data = await getJson(`/telescope/compare?a=${encodeURIComponent(idA)}&b=${encodeURIComponent(idB)}`, headers);
+		const data = await getJson(`/telescope/compare?a=${encodeURIComponent(idA)}&b=${encodeURIComponent(idB)}`, headers, envelopeSchema(TelescopeCompareResponseSchema));
 		console.log(JSON.stringify(data, null, 2));
 		return;
 	}
@@ -123,9 +156,10 @@ async function main(): Promise<void> {
 		const limitIndex: number = args.indexOf("--limit");
 		const rawLimit: string | undefined = limitIndex >= 0 ? args[limitIndex + 1] : undefined;
 		const limit: string = rawLimit ?? "20";
-		const data = await getJson<{ readonly data: { readonly list: TelescopeSqlListResponse } }>(
+		const data = await getJson(
 			`/telescope/sql?page=1&pageSize=${limit}&sortBy=duration&sortDir=desc`,
 			headers,
+			envelopeSchema(z.object({ list: TelescopeSqlListResponseSchema }).strict()),
 		);
 		console.log(JSON.stringify({ total: data.data.list.total, items: data.data.list.items }, null, 2));
 		return;
@@ -135,7 +169,7 @@ async function main(): Promise<void> {
 		const limitIndex: number = args.indexOf("--limit");
 		const rawLimit: string | undefined = limitIndex >= 0 ? args[limitIndex + 1] : undefined;
 		const limit: string = rawLimit ?? "20";
-		const data = await getJson<{ readonly data: { readonly list: TelescopeExceptionListResponse } }>(`/telescope/exceptions?page=1&pageSize=${limit}`, headers);
+		const data = await getJson(`/telescope/exceptions?page=1&pageSize=${limit}`, headers, envelopeSchema(z.object({ list: TelescopeExceptionListResponseSchema }).strict()));
 		console.log(JSON.stringify({ total: data.data.list.total, items: data.data.list.items }, null, 2));
 		return;
 	}
@@ -150,9 +184,11 @@ async function main(): Promise<void> {
 		});
 		if (!response.ok) {
 			bail(`GET /telescope/stream → ${String(response.status)}`);
+			process.exit(1);
 		}
 		if (response.body === null) {
 			bail("stream returned an empty body");
+			process.exit(1);
 		}
 		const decoder: TextDecoder = new TextDecoder();
 		const reader: ReadableStreamDefaultReader<Uint8Array> = response.body.getReader();
@@ -172,7 +208,7 @@ async function main(): Promise<void> {
 				if (dataLine === undefined) {
 					continue;
 				}
-				const parsed = TelescopeStreamEventSchema.safeParse(JSON.parse(dataLine.slice(5).trim()));
+				const parsed: z.ZodSafeParseResult<z.output<typeof TelescopeStreamEventSchema>> = TelescopeStreamEventSchema.safeParse(JSON.parse(dataLine.slice(5).trim()));
 				if (!parsed.success) {
 					console.error(`[telescope:cli] non-JSON SSE frame: ${dataLine.slice(5, 125)}`);
 					continue;
@@ -191,12 +227,12 @@ async function main(): Promise<void> {
 	// Feature 7 — replay a captured request against a configured target.
 	if (command === "replay") {
 		const id: string | undefined = args.length > 1 ? args[1] : undefined;
-		const target: string = args.length > 2 ? args[2] : "local";
+		const target: string | undefined = args.length > 2 ? args[2] : "local";
 		if (id === undefined) {
 			printUsage();
 			return;
 		}
-		const input = TelescopeReplayInputSchema.parse({ target });
+		const input: z.output<typeof TelescopeReplayInputSchema> = TelescopeReplayInputSchema.parse({ target });
 		const response: Response = await fetch(`${BASE_URL}${API_PREFIX}/telescope/replay/${encodeURIComponent(id)}`, {
 			method: "POST",
 			headers: { ...headers, "content-type": "application/json" },
@@ -205,8 +241,16 @@ async function main(): Promise<void> {
 		if (!response.ok) {
 			const bodyPreview: string = (await response.text()).slice(0, 300);
 			bail(`POST /telescope/replay/${id} → ${String(response.status)}: ${bodyPreview}`);
+			process.exit(1);
 		}
-		console.log(JSON.stringify(await response.json(), null, 2));
+		const replayText: string = await response.text();
+		const replaySchema = envelopeSchema(TelescopeReplayResponseSchema);
+		const replayParsed: z.ZodSafeParseResult<z.output<typeof replaySchema>> = replaySchema.safeParse(JSON.parse(replayText));
+		if (!replayParsed.success) {
+			bail(`POST /telescope/replay/${id} → response did not match schema: ${replayParsed.error.message.slice(0, 300)}`);
+			process.exit(1);
+		}
+		console.log(JSON.stringify(replayParsed.data, null, 2));
 		return;
 	}
 

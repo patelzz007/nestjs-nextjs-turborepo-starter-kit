@@ -5,6 +5,7 @@ import {
 	ForbiddenException,
 	Injectable,
 	NotFoundException,
+	OnModuleDestroy,
 	OnModuleInit,
 	ServiceUnavailableException,
 } from "@nestjs/common";
@@ -29,6 +30,8 @@ import {
 	type BackupEntry,
 	type BackupRestoreInput,
 	type BackupRestoreResponse,
+	type BackupSchedule,
+	type BackupScheduleToggleResponse,
 	type BackupStatus,
 	type BackupVerifyResponse,
 } from "@workspace/shared";
@@ -36,6 +39,8 @@ import {
 import { TypedConfigService } from "../../config/typed-config.service";
 import { LogService } from "../logs/logs.service";
 import { PrismaService } from "../../prisma/prisma.service";
+import { libpqSafeUrl, parseDfRow, quoteIdent, redact, timestampForFilename, type DfRow } from "./backup-utils";
+import { BackupSchedulerService } from "./backup-scheduler.service";
 
 const execFileAsync = promisify(execFile);
 
@@ -60,11 +65,6 @@ type DownloadTokenPayload = z.output<typeof DownloadTokenPayloadSchema>;
 
 /** Outcome of one dump/restore attempt — a discriminated union, never a bare string. */
 type DumpResult = { readonly ok: true } | { readonly ok: false; readonly reason: "child" | "pipe" | "timeout"; readonly detail: string };
-
-/** One row from `df -Pk` — the "available" column is what we gate on. */
-interface DfRow {
-	readonly availableKb: number;
-}
 
 /** Max jobs waiting behind the running one. Beyond this, create → 409. */
 const MAX_QUEUE_DEPTH = 3;
@@ -103,7 +103,7 @@ interface BackupAuditEvent {
  *   9. Connection pool isolation — separate timeout settings for backup operations
  */
 @Injectable()
-export class BackupService implements OnModuleInit {
+export class BackupService implements OnModuleInit, OnModuleDestroy {
 	/** Ids waiting behind the running job (FIFO, max `MAX_QUEUE_DEPTH`). */
 	private readonly queue: string[] = [];
 	/** The job currently dumping (or `null`). */
@@ -124,13 +124,11 @@ export class BackupService implements OnModuleInit {
 	/** Disk monitoring interval handles — keyed by backup id. */
 	private readonly diskMonitors = new Map<string, NodeJS.Timeout>();
 
-	/** Scheduled backup jobs — keyed by schedule id. */
-	private readonly scheduledJobs = new Map<string, { readonly cron: string; readonly name: string; readonly enabled: boolean; readonly nextRun: number }>();
-
 	public constructor(
 		private readonly prisma: PrismaService,
 		private readonly config: TypedConfigService,
 		private readonly logs: LogService,
+		private readonly scheduler: BackupSchedulerService,
 	) {}
 
 	public async onModuleInit(): Promise<void> {
@@ -147,8 +145,14 @@ export class BackupService implements OnModuleInit {
 		await this.sweepOrphanFiles();
 		// Sweep leftover scratch databases from a crash mid-verify.
 		await this.sweepScratchDatabases();
-		// Initialize scheduled backups.
-		this.initializeSchedules();
+		this.scheduler.start((name: string): Promise<void> => this.runScheduledBackup(name));
+	}
+
+	public onModuleDestroy(): void {
+		this.scheduler.stop();
+		for (const backupId of [...this.diskMonitors.keys()]) {
+			this.stopDiskMonitor(backupId);
+		}
 	}
 
 	// ── Create (queued) ────────────────────────────────────────────────────
@@ -171,7 +175,7 @@ export class BackupService implements OnModuleInit {
 		await this.assertDiskSpace(resolve(this.config.backupDir));
 
 		const now = Date.now();
-		const name: string = parsed.name ?? `backup_${this.timestampForFilename(new Date(now))}`;
+		const name: string = parsed.name ?? `backup_${timestampForFilename(new Date(now))}`;
 
 		// Estimate DB size before creating the row so the UI can show it.
 		const dbSizeBytes: bigint | null = await this.getDatabaseSizeBytes();
@@ -256,7 +260,7 @@ export class BackupService implements OnModuleInit {
 			const year = String(date.getFullYear());
 			const month = String(date.getMonth() + 1).padStart(2, "0");
 			const day = String(date.getDate()).padStart(2, "0");
-			const relativePath = `${year}/${month}/${day}/backup_${this.timestampForFilename(date)}_${id.slice(0, 8)}.sql.gz`;
+			const relativePath = `${year}/${month}/${day}/backup_${timestampForFilename(date)}_${id.slice(0, 8)}.sql.gz`;
 			const targetPath = resolve(this.config.backupDir, relativePath);
 			mkdirSync(dirname(targetPath), { recursive: true });
 
@@ -295,7 +299,7 @@ export class BackupService implements OnModuleInit {
 
 			let dump: DumpResult;
 			for (let attempt = 1; ; attempt += 1) {
-				dump = await this.runDump(this.libpqSafeUrl(databaseUrl), row.tablesExcluded, compressLevel, targetPath, row.schemaOnly, dataTables, dynamicTimeoutMs, {
+				dump = await this.runDump(libpqSafeUrl(databaseUrl), row.tablesExcluded, compressLevel, targetPath, row.schemaOnly, dataTables, dynamicTimeoutMs, {
 					onBytesWritten: (bytes: number): void => {
 						bytesDumped = bytes;
 					},
@@ -309,7 +313,7 @@ export class BackupService implements OnModuleInit {
 				const backoffMs: number = attempt <= DUMP_BACKOFF_MS.length ? DUMP_BACKOFF_MS[attempt - 1] : 0;
 				this.logs.warn(`Backup dump attempt ${String(attempt)} failed — retrying in ${String(backoffMs)}ms`, {
 					context: "BackupService",
-					metadata: { backupId: id, detail: this.redact(dump.detail).slice(0, 300) },
+					metadata: { backupId: id, detail: redact(dump.detail).slice(0, 300) },
 				});
 				if (backoffMs > 0) await this.sleep(backoffMs);
 			}
@@ -430,12 +434,9 @@ export class BackupService implements OnModuleInit {
 			const databaseUrl: string | undefined = process.env.DATABASE_URL;
 			if (databaseUrl === undefined || databaseUrl.length === 0) return null;
 
-			const url = new URL(this.libpqSafeUrl(databaseUrl));
-			const dbName = decodeURIComponent(url.pathname.slice(1));
-
 			const { stdout } = await execFileAsync(
 				"psql",
-				[`--dbname=${this.libpqSafeUrl(databaseUrl)}`, "--no-psqlrc", "--quiet", "-t", "-A", "-c", `SELECT pg_database_size('${dbName.replace(/'/g, "''")}')`],
+				[`--dbname=${libpqSafeUrl(databaseUrl)}`, "--no-psqlrc", "--quiet", "-t", "-A", "-c", "SELECT pg_database_size(current_database())"],
 				{ timeout: 10_000 },
 			);
 			const size = BigInt(stdout.trim());
@@ -470,7 +471,7 @@ export class BackupService implements OnModuleInit {
 			void (async (): Promise<void> => {
 				try {
 					const { stdout } = await execFileAsync("df", ["-Pk", dirname(targetPath)]);
-					const row = this.parseDfRow(stdout);
+					const row = parseDfRow(stdout);
 					if (row !== undefined) {
 						const availableMB = Math.round(row.availableKb / 1024);
 						if (availableMB < DISK_CRITICAL_MB) {
@@ -518,49 +519,8 @@ export class BackupService implements OnModuleInit {
 
 	// ── Backup scheduling ────────────────────────────────────────────────
 
-	/** Initializes the in-memory backup scheduler. */
-	private initializeSchedules(): void {
-		// Daily backup at 2 AM UTC.
-		this.scheduledJobs.set("daily", {
-			cron: "0 2 * * *",
-			name: "daily_full_backup",
-			enabled: true,
-			nextRun: this.getNextCronRun("0 2 * * *"),
-		});
-
-		// Weekly backup on Sunday at 3 AM UTC.
-		this.scheduledJobs.set("weekly", {
-			cron: "0 3 * * 0",
-			name: "weekly_full_backup",
-			enabled: true,
-			nextRun: this.getNextCronRun("0 3 * * 0"),
-		});
-
-		// Check schedules every minute.
-		setInterval((): void => {
-			this.checkSchedules();
-		}, 60_000);
-	}
-
-	/** Checks if any scheduled backup should run now. */
-	private checkSchedules(): void {
-		const now = Date.now();
-		for (const [id, schedule] of this.scheduledJobs) {
-			if (!schedule.enabled) continue;
-			if (now >= schedule.nextRun) {
-				// Fire the scheduled backup.
-				void this.runScheduledBackup(schedule.name).catch((error: unknown): void => {
-					this.logs.error(`Scheduled backup failed: ${error instanceof Error ? error.message : String(error)}`, { context: "BackupScheduler" });
-				});
-				// Update next run time.
-				this.scheduledJobs.set(id, { ...schedule, nextRun: this.getNextCronRun(schedule.cron) });
-			}
-		}
-	}
-
 	/** Runs a scheduled backup with a system user. */
 	private async runScheduledBackup(name: string): Promise<void> {
-		// Check if system is ready.
 		if (this.runningBackupId !== null) {
 			this.logs.warn("Scheduled backup skipped — a manual backup is already running", { context: "BackupScheduler" });
 			return;
@@ -572,52 +532,25 @@ export class BackupService implements OnModuleInit {
 
 		try {
 			await this.create(
-				{ name: `${name}_${this.timestampForFilename(new Date())}`, compressLevel: 6, schemaOnly: false },
+				{ name: `${name}_${timestampForFilename(new Date())}`, compressLevel: 6, schemaOnly: false },
 				{ sub: "system", fullName: "System Scheduler", isSuperAdmin: true },
 				undefined,
 			);
 			this.logs.info(`Scheduled backup started: ${name}`, { context: "BackupScheduler" });
 		} catch (error) {
-			this.logs.error(`Scheduled backup failed to start: ${error instanceof Error ? error.message : String(error)}`, { context: "BackupScheduler" });
+			const parsed = z.object({ message: z.string() }).safeParse(error);
+			this.logs.error(`Scheduled backup failed to start: ${parsed.success ? parsed.data.message : "unknown error"}`, { context: "BackupScheduler" });
 		}
-	}
-
-	/** Calculates the next run time for a simple cron expression. */
-	private getNextCronRun(cron: string): number {
-		const now = new Date();
-		const parts = cron.split(" ");
-		const minute = parseInt(parts[0] ?? "0", 10);
-		const hour = parseInt(parts[1] ?? "0", 10);
-
-		const next = new Date(now);
-		next.setMinutes(minute, 0, 0);
-		next.setHours(hour, 0, 0, 0);
-
-		if (next <= now) {
-			next.setDate(next.getDate() + 1);
-		}
-
-		return next.getTime();
 	}
 
 	/** Returns the list of scheduled backups. */
-	public getSchedules(): { readonly id: string; readonly cron: string; readonly name: string; readonly enabled: boolean; readonly nextRun: ReturnType<typeof epochMs> }[] {
-		return Array.from(this.scheduledJobs.entries()).map(
-			([id, schedule]): { readonly id: string; readonly cron: string; readonly name: string; readonly enabled: boolean; readonly nextRun: ReturnType<typeof epochMs> } => ({
-				id,
-				cron: schedule.cron,
-				name: schedule.name,
-				enabled: schedule.enabled,
-				nextRun: epochMs(schedule.nextRun),
-			}),
-		);
+	public getSchedules(): BackupSchedule[] {
+		return this.scheduler.getSchedules();
 	}
 
 	/** Toggles a scheduled backup on/off. */
-	public toggleSchedule(id: string, enabled: boolean): void {
-		const schedule = this.scheduledJobs.get(id);
-		if (schedule === undefined) throw new NotFoundException(`Schedule ${id} not found.`);
-		this.scheduledJobs.set(id, { ...schedule, enabled });
+	public toggleSchedule(id: string, enabled: boolean): BackupScheduleToggleResponse {
+		return this.scheduler.toggleSchedule(id, enabled);
 	}
 
 	// ── Runs the next queued job ──────────────────────────────────────────
@@ -783,7 +716,7 @@ export class BackupService implements OnModuleInit {
 	private async assertDiskSpace(targetPath: string): Promise<void> {
 		try {
 			const { stdout } = await execFileAsync("df", ["-Pk", dirname(targetPath)]);
-			const row: DfRow | undefined = this.parseDfRow(stdout);
+			const row: DfRow | undefined = parseDfRow(stdout);
 			if (row !== undefined && row.availableKb < this.config.backupMinFreeMb * 1024) {
 				throw new ServiceUnavailableException(
 					`Not enough free disk space for a backup (${String(Math.round(row.availableKb / 1024))} MB free, need ${String(this.config.backupMinFreeMb)} MB).`,
@@ -806,40 +739,6 @@ export class BackupService implements OnModuleInit {
 			if (error instanceof ServiceUnavailableException) throw error;
 			// Neither df nor statfs worked — don't block backups on it.
 		}
-	}
-
-	/**
-	 * Prisma driver-adapters allow non-libpq query params in DATABASE_URL
-	 * (`?schema=public` is the common one); libpq (pg_dump) hard-fails on any
-	 * param it doesn't know. Strip everything except the params pg_dump
-	 * understands (SSL + timeouts), so the same URL drives both Prisma and the
-	 * dump without touching connection security.
-	 */
-	private libpqSafeUrl(databaseUrl: string): string {
-		const url: URL = new URL(databaseUrl);
-		const safeKeys: ReadonlySet<string> = new Set(["sslmode", "ssl", "sslrootcert", "sslcert", "sslkey", "connect_timeout", "options", "target_session_attrs"]);
-		for (const key of [...url.searchParams.keys()]) {
-			if (!safeKeys.has(key)) {
-				url.searchParams.delete(key);
-			}
-		}
-		return url.toString();
-	}
-
-	/** Parses `df -Pk` output — last data line's "available" column (index 3). */
-	private parseDfRow(stdout: string): DfRow | undefined {
-		const lines: string[] = stdout
-			.split("\n")
-			.map((line: string): string => line.trim())
-			.filter((line: string): boolean => line.length > 0);
-		if (lines.length < 2) return undefined;
-		const dataLine: string | undefined = lines.at(1);
-		if (dataLine === undefined) return undefined;
-		const fields: string[] = dataLine.split(/\s+/);
-		const available: string | undefined = fields.at(3);
-		if (available === undefined) return undefined;
-		const kb: number = Number.parseInt(available, 10);
-		return Number.isFinite(kb) ? { availableKb: kb } : undefined;
 	}
 
 	/** SHA-256 of the finished file — integrity check + the row's checksum. */
@@ -882,7 +781,7 @@ export class BackupService implements OnModuleInit {
 	}
 
 	private async fail(id: string, message: string, startedAt: number, errorCode: BackupErrorCode = "UNKNOWN"): Promise<void> {
-		const redacted = this.redact(message).slice(0, 2000);
+		const redacted = redact(message).slice(0, 2000);
 		try {
 			await this.prisma.backup.update({
 				where: { id },
@@ -1170,7 +1069,7 @@ export class BackupService implements OnModuleInit {
 		if (databaseUrl === undefined || databaseUrl.length === 0) {
 			throw new ServiceUnavailableException("DATABASE_URL is not set — cannot restore a backup.");
 		}
-		const url: URL = new URL(this.libpqSafeUrl(databaseUrl));
+		const url: URL = new URL(libpqSafeUrl(databaseUrl));
 		url.pathname = "/postgres";
 		return url.toString();
 	}
@@ -1182,23 +1081,16 @@ export class BackupService implements OnModuleInit {
 		return url.toString();
 	}
 
-	/** Double-quote-escapes a validated identifier for embedding in SQL. */
-	private quoteIdent(identifier: string): string {
-		return `"${identifier.replaceAll('"', '""')}"`;
-	}
-
 	private async createDatabase(serverUrl: string, databaseName: string): Promise<void> {
-		await execFileAsync("psql", [`--dbname=${serverUrl}`, "--no-psqlrc", "--quiet", "-v", "ON_ERROR_STOP=1", "-c", `CREATE DATABASE ${this.quoteIdent(databaseName)}`], {
+		await execFileAsync("psql", [`--dbname=${serverUrl}`, "--no-psqlrc", "--quiet", "-v", "ON_ERROR_STOP=1", "-c", `CREATE DATABASE ${quoteIdent(databaseName)}`], {
 			timeout: 60_000,
 		});
 	}
 
 	private async dropDatabase(serverUrl: string, databaseName: string): Promise<void> {
-		await execFileAsync(
-			"psql",
-			[`--dbname=${serverUrl}`, "--no-psqlrc", "--quiet", "-v", "ON_ERROR_STOP=1", "-c", `DROP DATABASE IF EXISTS ${this.quoteIdent(databaseName)}`],
-			{ timeout: 60_000 },
-		);
+		await execFileAsync("psql", [`--dbname=${serverUrl}`, "--no-psqlrc", "--quiet", "-v", "ON_ERROR_STOP=1", "-c", `DROP DATABASE IF EXISTS ${quoteIdent(databaseName)}`], {
+			timeout: 60_000,
+		});
 	}
 
 	private async countPublicTables(serverUrl: string, databaseName: string): Promise<number> {
@@ -1344,7 +1236,7 @@ export class BackupService implements OnModuleInit {
 
 		const parsed: BackupRestoreInput = BackupRestoreInputSchema.parse(input);
 		await this.assertRestorePassword(userSub, parsed.password);
-		const database: string = parsed.name ?? `restored_${row.name}_${this.timestampForFilename(new Date())}`;
+		const database: string = parsed.name ?? `restored_${row.name}_${timestampForFilename(new Date())}`;
 
 		this.acquireRestoreSlot();
 		const serverUrl: string = this.maintenanceServerUrl();
@@ -1359,7 +1251,7 @@ export class BackupService implements OnModuleInit {
 				throw error;
 			}
 			const restore = await this.restoreDumpFile(targetPath, serverUrl, database);
-			if (!restore.ok) throw new BadGatewayException(`Restore failed: ${this.redact(restore.detail)}`);
+			if (!restore.ok) throw new BadGatewayException(`Restore failed: ${redact(restore.detail)}`);
 			const tableCount: number = await this.countPublicTables(serverUrl, database);
 			await this.prisma.backup.update({ where: { id }, data: { restoredAt: Date.now(), restoredDatabase: database } });
 			this.auditLog({ event: "restored", backupId: id, userId: userSub, timestamp: Date.now(), metadata: { database, tableCount, durationMs: Date.now() - started } });
@@ -1427,9 +1319,8 @@ export class BackupService implements OnModuleInit {
 
 	/** Deletes files + rows past the retention deadline (epoch-based cutoff). */
 	private async pruneExpired(): Promise<void> {
-		const cutoff: number = Date.now() - this.config.backupRetentionDays * 24 * 60 * 60 * 1000;
 		const expired = await this.prisma.backup.findMany({
-			where: { expiresAt: { not: null, lt: cutoff } },
+			where: { expiresAt: { not: null, lt: Date.now() } },
 			select: { id: true, filename: true },
 		});
 		if (expired.length === 0) return;
@@ -1579,28 +1470,9 @@ export class BackupService implements OnModuleInit {
 		}
 	}
 
-	/** Strips credentials (connection URLs) from any surfaced error text. */
-	private redact(message: string): string {
-		let result: string = message;
-		const databaseUrl: string | undefined = process.env.DATABASE_URL;
-		if (databaseUrl !== undefined && databaseUrl.length > 0) {
-			result = result.split(databaseUrl).join("[redacted]");
-		}
-		// postgres://user:pass@host → postgres://***@host
-		result = result.replace(/(postgres(?:ql)?|mysql|redis):\/\/[^@\s]+@/g, "$1://***@");
-		// bare password=… tokens
-		result = result.replace(/\bpassword\s*[:=]\s*[^\s,;]+/gi, "password=***");
-		return result;
-	}
-
 	private assertEnabled(): void {
 		if (!this.config.backupEnabled) {
 			throw new NotFoundException("Backup feature is disabled.");
 		}
-	}
-
-	private timestampForFilename(date: Date): string {
-		const pad = (value: number): string => String(value).padStart(2, "0");
-		return `${String(date.getFullYear())}${pad(date.getMonth() + 1)}${pad(date.getDate())}_${pad(date.getHours())}${pad(date.getMinutes())}${pad(date.getSeconds())}`;
 	}
 }

@@ -69,6 +69,7 @@ import { TelescopeAlertService } from "./telescope-alert.service";
 import { TelescopeEventBus } from "./telescope-event-bus";
 import { TelescopeJobRunner } from "./telescope-job-runner";
 import { TELESCOPE_OPTIONS, TELESCOPE_STORE } from "./telescope.options";
+import { TelescopeReplayService } from "./telescope-replay.service";
 import { TelescopeSchedulerService } from "./telescope-scheduler";
 import type { ListResult, TelescopeStore } from "./telescope.store";
 
@@ -99,6 +100,7 @@ export class TelescopeService {
 		private readonly alertService: TelescopeAlertService,
 		private readonly jobRunner: TelescopeJobRunner,
 		private readonly schedulerService: TelescopeSchedulerService,
+		private readonly replayService: TelescopeReplayService,
 	) {}
 
 	public async overview(query: TelescopeOverviewQuery): Promise<TelescopeOverview> {
@@ -216,7 +218,7 @@ export class TelescopeService {
 	/**
 	 * The `dd()` probe — records an arbitrary value under a name. The body is
 	 * validated at the HTTP boundary by `ZodValidationPipe(TelescopeDumpInputSchema)`
-	 * (repo convention, see root-users.controller.ts), so the typed input arrives
+	 * (same contract as every other mutation), so the typed input arrives
 	 * here already parsed.
 	 */
 	public pushDump(input: TelescopeDumpInput): { readonly id: string } {
@@ -540,54 +542,7 @@ export class TelescopeService {
 
 	/** Feature 7 — replay a captured request against a configured target. */
 	public async replay(requestId: string, input: TelescopeReplayInput): Promise<TelescopeReplayResponse> {
-		const request: RequestLogEntry = this.requireRequest(requestId);
-		const targets: Record<string, string> = { local: this.localBaseUrl(), ...this.options.replayTargets };
-		const baseUrl: string = targets[input.target];
-		if (!Object.prototype.hasOwnProperty.call(targets, input.target)) {
-			throw new NotFoundException({
-				message: `Unknown replay target "${input.target}". Configured targets: ${Object.keys(targets).join(", ")}.`,
-				error: "TELESCOPE_REPLAY_TARGET_UNKNOWN",
-			});
-		}
-
-		const url: string = request.queryString !== null ? `${baseUrl}${request.path}?${request.queryString}` : `${baseUrl}${request.path}`;
-		const headers: Record<string, string> = {};
-		if (request.requestHeaders !== null) {
-			for (const [key, value] of Object.entries(request.requestHeaders)) {
-				// Never forward credentials on a replay — the captured whitelist
-				// excludes them, but re-check here as defense in depth.
-				if (key.toLowerCase() === "authorization" || key.toLowerCase() === "cookie" || key.toLowerCase() === "set-cookie") {
-					continue;
-				}
-				headers[key] = value;
-			}
-		}
-
-		const start: number = performance.now();
-		try {
-			const response: Response = await fetch(url, {
-				method: request.method,
-				headers,
-				body: request.method === "GET" || request.method === "HEAD" ? undefined : JSON.stringify(request.requestBody),
-				signal: AbortSignal.timeout(10_000),
-			});
-			const rawText: string = await response.text();
-			return {
-				ok: response.ok,
-				status: response.status,
-				statusText: response.statusText,
-				durationMs: Math.round(performance.now() - start),
-				responsePreview: rawText.length > 500 ? `${rawText.slice(0, 497)}…` : rawText,
-			};
-		} catch (error) {
-			return {
-				ok: false,
-				status: null,
-				statusText: "fetch failed",
-				durationMs: Math.round(performance.now() - start),
-				responsePreview: error instanceof Error ? error.message.slice(0, 500) : "replay failed",
-			};
-		}
+		return this.replayService.replay(requestId, input);
 	}
 
 	/** Feature 8 — the environment tag used across overview + entries. */
@@ -596,11 +551,6 @@ export class TelescopeService {
 			nodeEnv: process.env.NODE_ENV ?? "development",
 			host: hostname(),
 		};
-	}
-
-	/** Feature 7 — the API's own origin is always the `local` replay target. */
-	private localBaseUrl(): string {
-		return process.env.TELESCOPE_LOCAL_BASE_URL ?? `http://localhost:${process.env.PORT ?? "8080"}`;
 	}
 
 	private requireRequest(id: string): RequestLogEntry {

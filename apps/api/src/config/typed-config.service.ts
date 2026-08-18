@@ -197,4 +197,12 @@ export class TypedConfigService {
 	public get appUrl(): string {
 		return process.env.APP_URL ?? "http://localhost:3000";
 	}
+
+	/**
+	 * Optional Telescope CLI/CI bearer token. Empty means “not configured”.
+	 * Compared in AuthGuard (before JWT) and again in TelescopeAdminGuard.
+	 */
+	public get telescopeToken(): string {
+		return process.env.TELESCOPE_TOKEN ?? "";
+	}
 }
