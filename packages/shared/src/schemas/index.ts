@@ -471,4 +471,13 @@ export {
 	UserMessageResponseSchema,
 	UserResponseSchema,
 } from "./auth/user";
-export type { AdminUserDetail, AdminUserListQuery, PermissionDetailsResponse, SlimRoleResponse, UpdateProfileInput, UpdateUserInput, UserMessageResponse, UserResponse } from "./auth/user";
+export type {
+	AdminUserDetail,
+	AdminUserListQuery,
+	PermissionDetailsResponse,
+	SlimRoleResponse,
+	UpdateProfileInput,
+	UpdateUserInput,
+	UserMessageResponse,
+	UserResponse,
+} from "./auth/user";
