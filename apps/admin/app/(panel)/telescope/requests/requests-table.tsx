@@ -15,6 +15,7 @@
 import { useAuth } from "@workspace/client/lib/auth";
 
 import type { ColumnDef } from "@tanstack/react-table";
+import { ADMIN_DATA_TABLE_LABELS } from "@/lib/data-table-labels";
 import { DataTable, type BulkAction, type DataTableFeatures } from "@workspace/ui/components/display/data-table";
 import { Button } from "@workspace/ui/components/form/button";
 import { Input } from "@workspace/ui/components/form/input";
@@ -751,6 +752,7 @@ function RequestsContent(): React.JSX.Element {
 			</div>
 
 			<DataTable
+				labels={ADMIN_DATA_TABLE_LABELS}
 				key={filtersKey}
 				data={[...rows]}
 				columns={columns}

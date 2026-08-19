@@ -8,6 +8,7 @@ import { formatDateTime } from "@/lib/dates";
 import { Badge } from "@workspace/ui/components/feedback/badge";
 import { Button } from "@workspace/ui/components/form/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
+import { ADMIN_DATA_TABLE_LABELS } from "@/lib/data-table-labels";
 import { DataTable, type DataTableFeatures } from "@workspace/ui/components/display/data-table";
 import type { ColumnDef } from "@tanstack/react-table";
 import { CircleCheck, CircleX, Loader2, Mail, RefreshCw, TriangleAlert } from "lucide-react";
@@ -216,6 +217,7 @@ export default function EmailLogPage(): React.JSX.Element {
 				</CardHeader>
 				<CardContent>
 					<DataTable
+						labels={ADMIN_DATA_TABLE_LABELS}
 						data={rows}
 						columns={columns}
 						searchKeys={["subject", "to", "templateKey"]}

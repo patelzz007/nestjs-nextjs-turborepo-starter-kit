@@ -2,7 +2,8 @@
 
 import type { BackupEntry } from "@workspace/shared";
 import { formatDateTime, timeAgo } from "@/lib/dates";
-import { DataTable, type Action, type BulkAction, type DataTableFeatures, type DataTableLabels, type Filter } from "@workspace/ui/components/display/data-table";
+import { createDataTableLabels, type DataTableLabels } from "@/lib/data-table-labels";
+import { DataTable, type Action, type BulkAction, type DataTableFeatures, type Filter } from "@workspace/ui/components/display/data-table";
 import type { ColumnDef } from "@tanstack/react-table";
 import { Copy, DatabaseBackup, DatabaseZap, Download, ShieldCheck, Trash2 } from "lucide-react";
 import { useCallback, useMemo } from "react";
@@ -220,10 +221,11 @@ export function BackupHistoryTable({
 	const emptyIcon = useMemo(() => <DatabaseBackup className="size-6" />, []);
 
 	const dataTableLabels = useMemo(
-		(): DataTableLabels => ({
-			actionsMenuTitle: "Backup actions",
-			openRowMenu: "Open backup row menu",
-		}),
+		(): DataTableLabels =>
+			createDataTableLabels({
+				actionsMenuTitle: "Backup actions",
+				openRowMenu: "Open backup row menu",
+			}),
 		[],
 	);
 

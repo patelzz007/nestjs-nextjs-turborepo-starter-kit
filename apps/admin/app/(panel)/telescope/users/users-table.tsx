@@ -10,6 +10,7 @@
 import { useAuth } from "@workspace/client/lib/auth";
 
 import type { ColumnDef } from "@tanstack/react-table";
+import { ADMIN_DATA_TABLE_LABELS } from "@/lib/data-table-labels";
 import { DataTable, type DataTableFeatures } from "@workspace/ui/components/display/data-table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@workspace/ui/components/form/select";
 import { useRouter } from "next/navigation";
@@ -178,6 +179,7 @@ export default function TelescopeUsersPage(): React.JSX.Element {
 			</header>
 
 			<DataTable
+				labels={ADMIN_DATA_TABLE_LABELS}
 				data={[...rows]}
 				columns={columns}
 				manual

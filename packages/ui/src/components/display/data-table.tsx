@@ -83,20 +83,21 @@ import {
 } from "lucide-react";
 import * as React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { cva, type VariantProps } from "class-variance-authority";
 
 import { cn } from "@workspace/ui/lib/utils";
+import { buildExportColumns, exportToCSV, exportToJSON, exportToPDF, exportToSpreadsheet } from "@workspace/ui/lib/data-table-export";
+import { formatDataTableLabel, type DataTableLabels } from "@workspace/ui/lib/data-table-labels";
 import {
 	DataTableCellScalarSchema,
 	DataTableCellValueSchema,
-	parseDataTableCellValue,
 	normalizeFacetedUniqueValues,
-	parseDataTablePersistedPrefs,
-	readDataTableRowField,
 	toDataTableCellString,
 	type DataTableCellScalar,
 	type DataTablePersistedPrefs,
 	type DataTablePersistedPrefsPatch,
 } from "@workspace/ui/lib/data-table-prefs";
+import { createLocalStorageDataTableStorage, type DataTableStorageAdapter } from "@workspace/ui/lib/data-table-storage";
 
 // ── Generic-preserving memo ────────────────────────────────────────────────
 // React's built-in `React.memo` collapses a generic component signature
@@ -175,8 +176,25 @@ function buildPinnedColumnStyles(isPinned: false | "start" | "end", start: numbe
 	};
 }
 
-const DataTableShell = React.forwardRef<HTMLDivElement, React.ComponentProps<typeof Card>>(function DataTableShell({ className, ...props }, ref): React.JSX.Element {
-	return <Card ref={ref} className={cn("w-full", className)} {...props} />;
+const dataTableShellVariants = cva("w-full", {
+	variants: {
+		state: {
+			default: "",
+			loading: "opacity-95",
+			error: "border-destructive/40",
+		},
+	},
+	defaultVariants: {
+		state: "default",
+	},
+});
+
+type DataTableShellState = NonNullable<VariantProps<typeof dataTableShellVariants>["state"]>;
+
+interface DataTableShellProps extends React.ComponentProps<typeof Card>, VariantProps<typeof dataTableShellVariants> {}
+
+const DataTableShell = React.forwardRef<HTMLDivElement, DataTableShellProps>(function DataTableShell({ className, state, ...props }, ref): React.JSX.Element {
+	return <Card ref={ref} className={cn(dataTableShellVariants({ state }), className)} {...props} />;
 });
 
 // ── Filter / Action / BulkAction Types ─────────────────────────────────────
@@ -217,12 +235,12 @@ export interface EmptyStateConfig {
 	};
 }
 
-// ── DataTable Props ────────────────────────────────────────────────────────
+export type { DataTableLabels } from "@workspace/ui/lib/data-table-labels";
+export type { DataTableStorageAdapter } from "@workspace/ui/lib/data-table-storage";
+export { createLocalStorageDataTableStorage } from "@workspace/ui/lib/data-table-storage";
+export { sanitizeExportCell, exportToCSV, exportToJSON, exportToPDF, exportToSpreadsheet, buildExportColumns } from "@workspace/ui/lib/data-table-export";
 
-export interface DataTableLabels {
-	readonly actionsMenuTitle: string;
-	readonly openRowMenu: string;
-}
+// ── DataTable Props ────────────────────────────────────────────────────────
 
 export interface DataTableProps<TData extends RowData> {
 	readonly ref?: React.Ref<HTMLDivElement>;
@@ -261,8 +279,13 @@ export interface DataTableProps<TData extends RowData> {
 	readonly exportFilename?: string;
 	readonly exportableColumns?: string[];
 
-	// ── NEW FEATURE 4: LocalStorage preferences ───────────────────────────
+	// ── NEW FEATURE 4: Preference persistence ─────────────────────────────
 	readonly persistKey?: string;
+	readonly storage?: DataTableStorageAdapter;
+
+	// ── Bulk selection: cross-page select-all (controlled or internal) ────
+	readonly selectAllPages?: boolean;
+	readonly onSelectAllPagesChange?: (selectAllPages: boolean) => void;
 
 	// ── NEW FEATURE 5: Column pinning ──────────────────────────────────────
 	readonly enableColumnPinning?: boolean;
@@ -306,7 +329,7 @@ export interface DataTableProps<TData extends RowData> {
 	readonly sortCycle?: "asc-desc" | "asc-desc-none";
 
 	/** User-visible strings for menus and affordances (rule 11). */
-	readonly labels?: DataTableLabels;
+	readonly labels: DataTableLabels;
 }
 
 // ── Editable Cell ──────────────────────────────────────────────────────────
@@ -324,216 +347,11 @@ function cellValueDisplayString<TData extends RowData>(cell: Cell<DataTableFeatu
 	return parsed.success ? toDataTableCellString(parsed.data) : "";
 }
 
-/** Display string for a typed row field at export boundaries. */
-function rowFieldDisplayString(row: object, key: string): string {
-	return toDataTableCellString(parseDataTableCellValue(readDataTableRowField(row, key)));
-}
-
-/**
- * Escapes a cell value for CSV/Spreadsheet exports so spreadsheet apps do not
- * evaluate it as a formula. Cells starting with `=`, `+`, `-`, `@` (or a tab /
- * CR) get a leading apostrophe — the standard CSV injection guard.
- */
-export function sanitizeExportCell(value: DataTableCellScalar | object): string {
-	const str = toDataTableCellString(parseDataTableCellValue(value));
-	return /^[=+\-@\t\r]/.test(str) ? `'${str}` : str;
-}
-
-/** Reads + safely parses the `datatable:<persistKey>` localStorage entry. */
-function readPersistedPrefs(persistKey: string | undefined): ReturnType<typeof parseDataTablePersistedPrefs> {
-	if (persistKey === undefined || typeof window === "undefined") return null;
-	const saved = window.localStorage.getItem(`datatable:${persistKey}`);
-	if (saved === null) return null;
-	return parseDataTablePersistedPrefs(saved);
-}
-
 function getSortIcon<TData extends RowData>(column: Column<DataTableFeatures, TData>): React.JSX.Element {
 	const sorted = column.getIsSorted();
 	if (sorted === "asc") return <ArrowUp className="h-3.5 w-3.5 text-primary" />;
 	if (sorted === "desc") return <ArrowDown className="h-3.5 w-3.5 text-primary" />;
 	return <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground/70" />;
-}
-
-/** Builds the CSV header row, excluding utility columns (select/drag/actions). */
-function buildExportColumns<TData extends RowData>(
-	columns: ColumnDef<DataTableFeatures, TData>[],
-	extra: readonly string[] = ["select", "actions", "drag"],
-): ColumnDef<DataTableFeatures, TData>[] {
-	return columns.filter((col) => {
-		const key = "id" in col ? String(col.id) : "accessorKey" in col ? String(col.accessorKey) : undefined;
-		return key !== undefined && !extra.includes(key);
-	});
-}
-
-function exportToCSV<TData extends RowData>(data: TData[], columns: ColumnDef<DataTableFeatures, TData>[], filename = "export.csv"): void {
-	if (data.length === 0) return;
-
-	// Build CSV header from column ids
-	const headers = columns
-		.map((col): string | undefined => {
-			if ("id" in col) {
-				return String(col.id);
-			}
-			if ("accessorKey" in col) {
-				return String(col.accessorKey);
-			}
-			return undefined;
-		})
-		.filter((id): id is string => id !== undefined && id !== "select" && id !== "actions");
-
-	const csvRows = [headers.join(",")];
-	for (const row of data) {
-		const values = headers.map((header) => {
-			const str = sanitizeExportCell(readDataTableRowField(row, header));
-			// Escape quotes and wrap in quotes if contains comma or quote
-			return str.includes(",") || str.includes('"') || str.includes("\n") ? `"${str.replace(/"/g, '""')}"` : str;
-		});
-		csvRows.push(values.join(","));
-	}
-
-	const csv = csvRows.join("\n");
-	const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-	const url = URL.createObjectURL(blob);
-	const link = document.createElement("a");
-	link.href = url;
-	link.download = filename;
-	link.click();
-	URL.revokeObjectURL(url);
-}
-
-function exportToJSON<TData extends RowData>(rows: TData[], columns: ColumnDef<DataTableFeatures, TData>[], filename: string): void {
-	const jsonData = rows.map((row) => {
-		const obj: Record<string, DataTableCellScalar> = {};
-		for (const col of columns) {
-			const key = "id" in col ? String(col.id) : "accessorKey" in col ? String(col.accessorKey) : undefined;
-			if (key !== undefined) {
-				const value = readDataTableRowField(row, key);
-				const scalar = DataTableCellScalarSchema.safeParse(value);
-				obj[key] = scalar.success ? scalar.data : toDataTableCellString(value);
-			}
-		}
-		return obj;
-	});
-	const blob = new Blob([JSON.stringify(jsonData, null, 2)], { type: "application/json" });
-	const url = URL.createObjectURL(blob);
-	const link = document.createElement("a");
-	link.href = url;
-	link.download = `${filename}.json`;
-	link.click();
-	URL.revokeObjectURL(url);
-}
-
-/** Escapes XML text content for the SpreadsheetML document. */
-function escapeXml(value: string): string {
-	return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
-}
-
-/**
- * Emits a real SpreadsheetML 2003 document (`.xls`) — a plain-text XML format
- * Excel opens natively, no zip/deflate needed. The old implementation wrote
- * CSV bytes with an `.xlsx` extension, which Excel refused to open.
- */
-export function exportToSpreadsheet<TData extends RowData>(rows: TData[], columns: ColumnDef<DataTableFeatures, TData>[], filename: string): void {
-	const headers = columns
-		.map((col): string | undefined => {
-			if ("id" in col) return String(col.id);
-			if ("accessorKey" in col) return String(col.accessorKey);
-			return undefined;
-		})
-		.filter((id): id is string => id !== undefined);
-
-	const rowXml = (values: readonly string[]): string =>
-		`<Row>${values.map((value) => `<Cell><Data ss:Type="String">${escapeXml(sanitizeExportCell(value))}</Data></Cell>`).join("")}</Row>`;
-
-	const bodyXml = [rowXml(headers), ...rows.map((row) => rowXml(headers.map((header) => rowFieldDisplayString(row, header))))].join("");
-
-	const xml = `<?xml version="1.0"?>
-<?mso-application progid="Excel.Sheet"?>
-<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet" xmlns:html="http://www.w3.org/TR/REC-html40">
-<Worksheet ss:Name="Data">
-<Table>${bodyXml}</Table>
-</Worksheet>
-</Workbook>`;
-
-	const blob = new Blob([xml], { type: "application/vnd.ms-excel" });
-	const url = URL.createObjectURL(blob);
-	const link = document.createElement("a");
-	link.href = url;
-	link.download = `${filename}.xls`;
-	link.click();
-	URL.revokeObjectURL(url);
-}
-
-/**
- * Exports the given rows as a print-ready PDF. Renders ONLY the table
- * (headers + rows, inline styles) into a hidden `srcdoc` iframe and triggers
- * the browser's print dialog on that frame — no page chrome, no other UI, and
- * no popup blocker (unlike the old `window.print()` which dumped the whole
- * page). Falls back to a bare `window.print()` if frames are unavailable.
- */
-export function exportToPDF<TData extends RowData>(rows: TData[], columns: ColumnDef<DataTableFeatures, TData>[], filename: string): void {
-	const headers = columns
-		.map((col): string | undefined => {
-			if ("id" in col) return String(col.id);
-			if ("accessorKey" in col) return String(col.accessorKey);
-			return undefined;
-		})
-		.filter((id): id is string => id !== undefined);
-
-	const escapeHtml = (value: string): string => value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-
-	const headerRow = `<tr>${headers.map((header) => `<th>${escapeHtml(header)}</th>`).join("")}</tr>`;
-	const bodyRows = rows
-		.map((row) => {
-			const cells = headers.map((header) => `<td>${escapeHtml(rowFieldDisplayString(row, header))}</td>`).join("");
-			return `<tr>${cells}</tr>`;
-		})
-		.join("");
-
-	const html = `<!DOCTYPE html>
-<html>
-<head>
-<meta charset="utf-8" />
-<title>${escapeHtml(filename)}</title>
-<style>
-	* { box-sizing: border-box; }
-	body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 2rem; color: var(--print-foreground, oklch(0.21 0.034 264.665)); }
-	h1 { font-size: 1.25rem; font-weight: 600; margin: 0 0 1rem; }
-	table { border-collapse: collapse; width: 100%; font-size: 0.8125rem; }
-	th { background: var(--print-header-bg, oklch(0.967 0.003 264.542)); font-weight: 600; text-align: left; }
-	th, td { border: 1px solid var(--print-border, oklch(0.928 0.006 264.531)); padding: 0.5rem 0.75rem; }
-	tr:nth-child(even) td { background: var(--print-row-alt, oklch(0.985 0.002 247.839)); }
-	@media print { body { margin: 0.5in; } }
-</style>
-</head>
-<body>
-<h1>${escapeHtml(filename)}</h1>
-<table>
-<thead>${headerRow}</thead>
-<tbody>${bodyRows}</tbody>
-</table>
-</body>
-</html>`;
-
-	const frame = document.createElement("iframe");
-	frame.setAttribute("aria-hidden", "true");
-	frame.setAttribute("title", "Print preview");
-	frame.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden";
-	frame.srcdoc = html;
-
-	const onFrameLoad = (): void => {
-		const frameWindow = frame.contentWindow;
-		if (frameWindow === null) {
-			// Frame blocked — degrade to printing the current page.
-			window.print();
-			return;
-		}
-		frameWindow.focus();
-		frameWindow.print();
-	};
-
-	frame.addEventListener("load", onFrameLoad);
-	document.body.appendChild(frame);
 }
 
 // ── Inline Edit Input ──────────────────────────────────────────────────────
@@ -613,9 +431,10 @@ const DragHandleCell = React.memo(function DragHandleCell({ isDragged }: { reado
 interface SelectAllCheckboxProps<TData extends RowData> {
 	readonly table: TanStackTable<DataTableFeatures, TData>;
 	readonly onAnyDeselect: () => void;
+	readonly labels: DataTableLabels;
 }
 
-const SelectAllCheckbox = memoGeneric(function SelectAllCheckbox<TData extends RowData>({ table, onAnyDeselect }: SelectAllCheckboxProps<TData>): React.JSX.Element {
+const SelectAllCheckbox = memoGeneric(function SelectAllCheckbox<TData extends RowData>({ table, onAnyDeselect, labels }: SelectAllCheckboxProps<TData>): React.JSX.Element {
 	const handleCheckedChange = useCallback(
 		(value: boolean): void => {
 			table.toggleAllPageRowsSelected(value);
@@ -628,7 +447,9 @@ const SelectAllCheckbox = memoGeneric(function SelectAllCheckbox<TData extends R
 	// `rowSelection` slice changes, never when the toolbar slices change.
 	// (`atoms.rowSelection` is always present — every DataTable registers the
 	// rowSelectionFeature, so the slice atom is guaranteed by the feature type.)
-	const renderCheckbox = (): React.JSX.Element => <Checkbox checked={table.getIsAllPageRowsSelected()} onCheckedChange={handleCheckedChange} aria-label="Select all" />;
+	const renderCheckbox = (): React.JSX.Element => (
+		<Checkbox checked={table.getIsAllPageRowsSelected()} onCheckedChange={handleCheckedChange} aria-label={labels.selectAllAriaLabel} />
+	);
 	return <Subscribe source={table.atoms.rowSelection}>{renderCheckbox}</Subscribe>;
 });
 
@@ -636,6 +457,7 @@ interface SelectRowCheckboxProps<TData extends RowData> {
 	readonly row: Row<DataTableFeatures, TData>;
 	readonly table: TanStackTable<DataTableFeatures, TData>;
 	readonly onAnyDeselect: () => void;
+	readonly labels: DataTableLabels;
 	readonly className?: string;
 }
 
@@ -643,6 +465,7 @@ const SelectRowCheckbox = memoGeneric(function SelectRowCheckbox<TData extends R
 	row,
 	table,
 	onAnyDeselect,
+	labels,
 	className,
 }: SelectRowCheckboxProps<TData>): React.JSX.Element {
 	const handleCheckedChange = useCallback(
@@ -659,7 +482,7 @@ const SelectRowCheckbox = memoGeneric(function SelectRowCheckbox<TData extends R
 	// pick up a `toggleAllPageRowsSelected` from the header box.
 	const isRowSelected = useCallback((selection: RowSelectionState): boolean => selection[row.id] === true, [row.id]);
 	const renderCheckbox = (isSelected: boolean): React.JSX.Element => (
-		<Checkbox checked={isSelected} onCheckedChange={handleCheckedChange} aria-label="Select row" className={className} />
+		<Checkbox checked={isSelected} onCheckedChange={handleCheckedChange} aria-label={labels.selectRowAriaLabel} className={className} />
 	);
 	return (
 		<Subscribe source={table.atoms.rowSelection} selector={isRowSelected}>
@@ -735,6 +558,7 @@ interface ExportMenuProps<TData extends RowData> {
 	readonly columns: ColumnDef<DataTableFeatures, TData>[];
 	readonly exportFilename?: string;
 	readonly exportableColumns?: string[];
+	readonly labels: DataTableLabels;
 }
 
 /** Selection-aware row projection used by every export format. */
@@ -752,7 +576,13 @@ const rowSelectionSelector =
 	(selection: RowSelectionState): boolean =>
 		selection[rowId] === true;
 
-const ExportMenu = memoGeneric(function ExportMenu<TData extends RowData>({ table, columns, exportFilename, exportableColumns }: ExportMenuProps<TData>): React.JSX.Element {
+const ExportMenu = memoGeneric(function ExportMenu<TData extends RowData>({
+	table,
+	columns,
+	exportFilename,
+	exportableColumns,
+	labels,
+}: ExportMenuProps<TData>): React.JSX.Element {
 	const exportCols = useMemo((): ColumnDef<DataTableFeatures, TData>[] => {
 		const base = buildExportColumns(columns);
 		if (exportableColumns !== undefined && exportableColumns.length > 0) {
@@ -795,17 +625,17 @@ const ExportMenu = memoGeneric(function ExportMenu<TData extends RowData>({ tabl
 		<DropdownMenu>
 			<DropdownMenuTrigger className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-md border border-input bg-background px-3 text-sm font-medium text-foreground transition-colors hover:bg-accent hover:text-accent-foreground">
 				<FileDown className="h-4 w-4" />
-				<span>Export</span>
+				<span>{labels.export}</span>
 			</DropdownMenuTrigger>
 			<DropdownMenuContent align="end" className="w-44 p-1.5">
-				<div className="mb-1 px-2 py-1 text-xs font-medium text-muted-foreground">Export as</div>
+				<div className="mb-1 px-2 py-1 text-xs font-medium text-muted-foreground">{labels.exportAs}</div>
 				<DropdownMenuItem onClick={handleExportCSV} className="flex cursor-pointer items-center gap-3 rounded-md p-2.5">
 					<div className="flex h-7 w-7 items-center justify-center rounded-md bg-success-soft dark:bg-success-soft">
 						<FileDown className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
 					</div>
 					<div className="flex flex-col">
-						<span className="text-sm font-medium">CSV</span>
-						<span className="text-[10px] text-muted-foreground">Comma-separated values</span>
+						<span className="text-sm font-medium">{labels.exportCsv}</span>
+						<span className="text-[10px] text-muted-foreground">{labels.exportCsvDescription}</span>
 					</div>
 				</DropdownMenuItem>
 				<DropdownMenuItem onClick={handleExportJSON} className="flex cursor-pointer items-center gap-3 rounded-md p-2.5">
@@ -813,8 +643,8 @@ const ExportMenu = memoGeneric(function ExportMenu<TData extends RowData>({ tabl
 						<FileDown className="h-3.5 w-3.5 text-info" />
 					</div>
 					<div className="flex flex-col">
-						<span className="text-sm font-medium">JSON</span>
-						<span className="text-[10px] text-muted-foreground">JavaScript object notation</span>
+						<span className="text-sm font-medium">{labels.exportJson}</span>
+						<span className="text-[10px] text-muted-foreground">{labels.exportJsonDescription}</span>
 					</div>
 				</DropdownMenuItem>
 				<DropdownMenuItem onClick={handleExportPDF} className="flex cursor-pointer items-center gap-3 rounded-md p-2.5">
@@ -822,8 +652,8 @@ const ExportMenu = memoGeneric(function ExportMenu<TData extends RowData>({ tabl
 						<FileDown className="h-3.5 w-3.5 text-destructive" />
 					</div>
 					<div className="flex flex-col">
-						<span className="text-sm font-medium">PDF</span>
-						<span className="text-[10px] text-muted-foreground">Portable document format</span>
+						<span className="text-sm font-medium">{labels.exportPdf}</span>
+						<span className="text-[10px] text-muted-foreground">{labels.exportPdfDescription}</span>
 					</div>
 				</DropdownMenuItem>
 				<DropdownMenuItem onClick={handleExportSpreadsheet} className="flex cursor-pointer items-center gap-3 rounded-md p-2.5">
@@ -831,8 +661,8 @@ const ExportMenu = memoGeneric(function ExportMenu<TData extends RowData>({ tabl
 						<FileDown className="h-3.5 w-3.5 text-success" />
 					</div>
 					<div className="flex flex-col">
-						<span className="text-sm font-medium">Spreadsheet</span>
-						<span className="text-[10px] text-muted-foreground">Excel-compatible .xls</span>
+						<span className="text-sm font-medium">{labels.exportSpreadsheet}</span>
+						<span className="text-[10px] text-muted-foreground">{labels.exportSpreadsheetDescription}</span>
 					</div>
 				</DropdownMenuItem>
 			</DropdownMenuContent>
@@ -850,6 +680,7 @@ interface ColumnVisibilityMenuProps<TData extends RowData> {
 	readonly table: TanStackTable<DataTableFeatures, TData>;
 	readonly columnVisibility: ColumnVisibilityState;
 	readonly onVisibilityChange: (visibility: ColumnVisibilityState) => void;
+	readonly labels: DataTableLabels;
 }
 
 const ColumnVisibilityItem = memoGeneric(function ColumnVisibilityItem<TData extends RowData>({
@@ -877,6 +708,7 @@ const ColumnVisibilityMenu = memoGeneric(function ColumnVisibilityMenu<TData ext
 	table,
 	columnVisibility,
 	onVisibilityChange,
+	labels,
 }: ColumnVisibilityMenuProps<TData>): React.JSX.Element {
 	const columns = useMemo(() => table.getAllLeafColumns().filter((col) => col.getCanHide()), [table]);
 
@@ -894,7 +726,7 @@ const ColumnVisibilityMenu = memoGeneric(function ColumnVisibilityMenu<TData ext
 		<DropdownMenu>
 			<DropdownMenuTrigger className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-md border border-input bg-background px-3 text-sm font-medium text-foreground transition-colors hover:bg-accent hover:text-accent-foreground">
 				<Columns3 className="h-4 w-4" />
-				<span>Columns</span>
+				<span>{labels.columnsToggle}</span>
 			</DropdownMenuTrigger>
 			<DropdownMenuContent align="end" className="w-48">
 				{columns.map((col) => (
@@ -1317,6 +1149,7 @@ interface MobileCardViewProps<TData extends RowData> {
 	readonly enableBulkSelection: boolean;
 	readonly mobileCardRender: (item: TData, actions?: Action<TData>[]) => React.ReactNode;
 	readonly actions: Action<TData>[];
+	readonly labels: DataTableLabels;
 	readonly onAnyDeselect: () => void;
 	readonly onRowClick?: (row: TData) => void;
 }
@@ -1327,6 +1160,7 @@ const MobileCardView = memoGeneric(function MobileCardView<TData extends RowData
 	enableBulkSelection,
 	mobileCardRender,
 	actions,
+	labels,
 	onAnyDeselect,
 	onRowClick,
 }: MobileCardViewProps<TData>): React.JSX.Element {
@@ -1359,7 +1193,7 @@ const MobileCardView = memoGeneric(function MobileCardView<TData extends RowData
 
 	return (
 		<div key={row.id} className="flex items-start gap-3" {...cardInteractionProps}>
-			{enableBulkSelection ? <SelectRowCheckbox row={row} table={table} onAnyDeselect={onAnyDeselect} className="mt-4" /> : null}
+			{enableBulkSelection ? <SelectRowCheckbox row={row} table={table} onAnyDeselect={onAnyDeselect} labels={labels} className="mt-4" /> : null}
 			<div className="flex-1">{mobileCardRender(rowData, actions)}</div>
 		</div>
 	);
@@ -1396,6 +1230,7 @@ interface BulkSelectionBarProps<TData extends RowData> {
 	readonly selectedRows: TData[];
 	readonly selectAllPages: boolean;
 	readonly totalFilteredRows: number;
+	readonly labels: DataTableLabels;
 	readonly onAnyDeselect: () => void;
 	readonly onBulkActionDone: () => void;
 	readonly onClearSelection: () => void;
@@ -1408,6 +1243,7 @@ const BulkSelectionBar = memoGeneric(function BulkSelectionBar<TData extends Row
 	selectedRows,
 	selectAllPages,
 	totalFilteredRows,
+	labels,
 	onAnyDeselect,
 	onBulkActionDone,
 	onClearSelection,
@@ -1417,14 +1253,14 @@ const BulkSelectionBar = memoGeneric(function BulkSelectionBar<TData extends Row
 		<div className={cn("mb-4 rounded-lg border p-3 sm:p-4", compact ? "border-border bg-muted/50" : "border-info/30 bg-info-soft dark:border-info/30 dark:bg-info-soft")}>
 			<div className="flex flex-wrap items-center gap-3">
 				<div className="flex items-center gap-2">
-					<SelectAllCheckbox table={table} onAnyDeselect={onAnyDeselect} />
+					<SelectAllCheckbox table={table} onAnyDeselect={onAnyDeselect} labels={labels} />
 					<span className={cn("text-sm font-medium", compact ? "text-foreground" : "text-blue-900 dark:text-blue-100")}>
 						{selectAllPages ? (
-							<>All {totalFilteredRows} rows selected</>
+							<>{formatDataTableLabel(labels.allRowsSelected, { totalCount: totalFilteredRows })}</>
+						) : selectedRows.length === 1 ? (
+							<>{labels.selectedRowCount}</>
 						) : (
-							<>
-								{selectedRows.length} row{selectedRows.length === 1 ? "" : "s"} selected
-							</>
+							<>{formatDataTableLabel(labels.selectedRowsCount, { count: selectedRows.length })}</>
 						)}
 					</span>
 				</div>
@@ -1433,7 +1269,7 @@ const BulkSelectionBar = memoGeneric(function BulkSelectionBar<TData extends Row
 						<BulkActionButton key={action.key} action={action} selectedRows={selectedRows} onDone={onBulkActionDone} />
 					))}
 					<Button variant="ghost" size="sm" onClick={onClearSelection} className="shrink-0 text-xs sm:text-sm">
-						Clear
+						{labels.clearSelection}
 					</Button>
 				</div>
 			</div>
@@ -1480,8 +1316,13 @@ export function DataTable<TData extends RowData>({
 	exportFilename,
 	exportableColumns,
 
-	// NEW FEATURE 4: LocalStorage persistence
+	// NEW FEATURE 4: Preference persistence
 	persistKey,
+	storage,
+
+	// Bulk selection: cross-page select-all
+	selectAllPages: selectAllPagesProp,
+	onSelectAllPagesChange,
 
 	// NEW FEATURE 5: Column pinning
 	enableColumnPinning = false,
@@ -1518,10 +1359,25 @@ export function DataTable<TData extends RowData>({
 
 	labels,
 }: DataTableProps<TData>): React.JSX.Element {
+	const resolvedStorage = useMemo((): DataTableStorageAdapter | null => {
+		if (storage !== undefined) {
+			return storage;
+		}
+		if (persistKey !== undefined) {
+			return createLocalStorageDataTableStorage();
+		}
+		return null;
+	}, [storage, persistKey]);
+
 	// ── State (persisted prefs load lazily once, from the initializer) ────
 	const finalPageSizeOptions = useMemo(() => pageSizeOptions ?? DEFAULT_PAGE_SIZE_OPTIONS, [pageSizeOptions]);
 
-	const [persistedPrefs] = useState<DataTablePersistedPrefs | null>(() => readPersistedPrefs(persistKey));
+	const [persistedPrefs] = useState<DataTablePersistedPrefs | null>(() => {
+		if (persistKey === undefined || resolvedStorage === null) {
+			return null;
+		}
+		return resolvedStorage.read(persistKey);
+	});
 
 	const [sorting, setSorting] = useState<SortingState>(() => persistedPrefs?.sorting ?? []);
 	const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
@@ -1536,7 +1392,20 @@ export function DataTable<TData extends RowData>({
 	// checkboxes). Keeping it out of React state + out of the `useTable`
 	// selector means a row toggle re-renders only those islands — never the
 	// toolbar, pager or the row list.
-	const [selectAllPages, setSelectAllPages] = useState(false);
+	const isSelectAllPagesControlled = onSelectAllPagesChange !== undefined;
+	const [uncontrolledSelectAllPages, setUncontrolledSelectAllPages] = useState(false);
+	const selectAllPages = isSelectAllPagesControlled ? (selectAllPagesProp ?? false) : uncontrolledSelectAllPages;
+
+	const setSelectAllPages = useCallback(
+		(value: boolean): void => {
+			if (isSelectAllPagesControlled) {
+				onSelectAllPagesChange(value);
+			} else {
+				setUncontrolledSelectAllPages(value);
+			}
+		},
+		[isSelectAllPagesControlled, onSelectAllPagesChange],
+	);
 
 	// NEW FEATURE 2: Column visibility state
 	const [columnVisibility, setColumnVisibility] = useState<ColumnVisibilityState>(() => persistedPrefs?.columnVisibility ?? EMPTY_COLUMN_VISIBILITY);
@@ -1572,23 +1441,17 @@ export function DataTable<TData extends RowData>({
 	// ── Save preferences ───────────────────────────────────────────────
 	const persistPreferences = useCallback(
 		(updates: DataTablePersistedPrefsPatch): void => {
-			if (persistKey === undefined || typeof window === "undefined") return;
-			try {
-				const key = `datatable:${persistKey}`;
-				const existing = window.localStorage.getItem(key);
-				const parsedPrefs = existing === null ? null : parseDataTablePersistedPrefs(existing);
-				const current: DataTablePersistedPrefsPatch = parsedPrefs ?? {};
-				window.localStorage.setItem(key, JSON.stringify({ ...current, ...updates }));
-			} catch {
-				/* noop */
+			if (persistKey === undefined || resolvedStorage === null) {
+				return;
 			}
+			resolvedStorage.write(persistKey, updates);
 		},
-		[persistKey],
+		[persistKey, resolvedStorage],
 	);
 
 	const handleAnyDeselect = useCallback((): void => {
 		setSelectAllPages(false);
-	}, []);
+	}, [setSelectAllPages]);
 
 	// ── Build columns ──────────────────────────────────────────────────
 	const columns = useMemo<ColumnDef<DataTableFeatures, TData>[]>(() => {
@@ -1613,8 +1476,8 @@ export function DataTable<TData extends RowData>({
 		if (enableBulkSelection) {
 			cols.push({
 				id: "select",
-				header: ({ table }) => <SelectAllCheckbox table={table} onAnyDeselect={handleAnyDeselect} />,
-				cell: ({ row, table }) => <SelectRowCheckbox row={row} table={table} onAnyDeselect={handleAnyDeselect} />,
+				header: ({ table }) => <SelectAllCheckbox table={table} onAnyDeselect={handleAnyDeselect} labels={labels} />,
+				cell: ({ row, table }) => <SelectRowCheckbox row={row} table={table} onAnyDeselect={handleAnyDeselect} labels={labels} />,
 				enableSorting: false,
 				enableHiding: false,
 				enablePinning: false,
@@ -1627,10 +1490,10 @@ export function DataTable<TData extends RowData>({
 		cols.push(...initialColumns);
 
 		// Actions column
-		if (actions.length > 0 && labels !== undefined) {
+		if (actions.length > 0) {
 			cols.push({
 				id: "actions",
-				header: "Actions",
+				header: labels.actionsColumnHeader,
 				cell: ({ row }) => <RowActionsMenu row={row} actions={actions} labels={labels} />,
 				enableSorting: false,
 				enableHiding: false,
@@ -1917,17 +1780,17 @@ export function DataTable<TData extends RowData>({
 
 	const handleSelectAllPages = useCallback((): void => {
 		setSelectAllPages(true);
-	}, []);
+	}, [setSelectAllPages]);
 
 	const handleBulkActionDone = useCallback((): void => {
 		table.resetRowSelection();
 		setSelectAllPages(false);
-	}, [table]);
+	}, [table, setSelectAllPages]);
 
 	const handleClearSelection = useCallback((): void => {
 		table.resetRowSelection();
 		setSelectAllPages(false);
-	}, [table]);
+	}, [table, setSelectAllPages]);
 
 	const handlePageSizeChange = useCallback(
 		(size: number): void => {
@@ -2015,9 +1878,9 @@ export function DataTable<TData extends RowData>({
 				{showSelectAllBanner ? (
 					<div className="mb-4 rounded-lg border border-info/30 bg-info-soft p-3 dark:border-info/30 dark:bg-info-soft">
 						<p className="text-sm text-blue-900 dark:text-blue-100">
-							All {table.getRowModel().rows.length} rows on this page are selected.{" "}
+							{formatDataTableLabel(labels.selectAllPageRowsSelected, { pageCount: table.getRowModel().rows.length })}{" "}
 							<button onClick={handleSelectAllPages} className="font-semibold underline hover:no-underline focus:outline-none">
-								Select all {currentTotalFiltered} rows
+								{formatDataTableLabel(labels.selectAllFilteredRows, { totalCount: currentTotalFiltered })}
 							</button>
 						</p>
 					</div>
@@ -2032,6 +1895,7 @@ export function DataTable<TData extends RowData>({
 							selectedRows={selectedData}
 							selectAllPages={selectAllPages}
 							totalFilteredRows={currentTotalFiltered}
+							labels={labels}
 							onAnyDeselect={handleAnyDeselect}
 							onBulkActionDone={handleBulkActionDone}
 							onClearSelection={handleClearSelection}
@@ -2048,6 +1912,7 @@ export function DataTable<TData extends RowData>({
 							selectedRows={selectedData}
 							selectAllPages={selectAllPages}
 							totalFilteredRows={currentTotalFiltered}
+							labels={labels}
 							onAnyDeselect={handleAnyDeselect}
 							onBulkActionDone={handleBulkActionDone}
 							onClearSelection={handleClearSelection}
@@ -2057,7 +1922,7 @@ export function DataTable<TData extends RowData>({
 				) : null}
 			</>
 		);
-	}, [selectAllPages, table, bulkActions, enableBulkSelection, mobileCardRender, handleAnyDeselect, handleBulkActionDone, handleClearSelection, handleSelectAllPages]);
+	}, [selectAllPages, table, bulkActions, enableBulkSelection, mobileCardRender, labels, handleAnyDeselect, handleBulkActionDone, handleClearSelection, handleSelectAllPages]);
 
 	const filterFacetedCounts = useMemo((): Record<string, ReadonlyMap<string, number>> => {
 		const counts: Record<string, ReadonlyMap<string, number>> = {};
@@ -2079,9 +1944,11 @@ export function DataTable<TData extends RowData>({
 
 	const virtualBottomSpacerStyle = useMemo((): React.CSSProperties => ({ height: (rowCount - virtualEnd) * effectiveRowHeight }), [rowCount, virtualEnd, effectiveRowHeight]);
 
+	const shellState: DataTableShellState = error !== undefined && error !== null && error !== "" ? "error" : isLoading ? "loading" : "default";
+
 	// ── Render ─────────────────────────────────────────────────────────
 	return (
-		<DataTableShell ref={ref} className={className}>
+		<DataTableShell ref={ref} className={className} state={shellState}>
 			{(title ?? description) ? (
 				<CardHeader>
 					{title ? <CardTitle>{title}</CardTitle> : null}
@@ -2104,12 +1971,18 @@ export function DataTable<TData extends RowData>({
 						{!manual && searchKeys.length > 0 ? (
 							<div className="relative flex-1 sm:max-w-64">
 								<Search className="absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-								<Input aria-label="Search rows" placeholder="Search..." value={searchInput} onChange={handleSearchChange} className="h-9 pr-8 pl-8 text-sm" />
+								<Input
+									aria-label={labels.searchAriaLabel}
+									placeholder={labels.searchPlaceholder}
+									value={searchInput}
+									onChange={handleSearchChange}
+									className="h-9 pr-8 pl-8 text-sm"
+								/>
 								{searchInput !== "" ? (
 									<button
 										type="button"
 										onClick={handleClearSearch}
-										aria-label="Clear search"
+										aria-label={labels.clearSearchAriaLabel}
 										className="absolute top-1/2 right-2 -translate-y-1/2 rounded-sm p-0.5 text-muted-foreground transition-colors hover:text-foreground">
 										<X className="h-4 w-4" />
 									</button>
@@ -2134,16 +2007,16 @@ export function DataTable<TData extends RowData>({
 						{/* Live result count (search or a column filter is active) */}
 						{!manual && (searchInput !== "" || columnFilters.length > 0) ? (
 							<span className="text-xs whitespace-nowrap text-muted-foreground">
-								{totalFilteredRows} of {data.length} results
+								{formatDataTableLabel(labels.resultsCount, { filtered: totalFilteredRows, total: data.length })}
 							</span>
 						) : null}
 
 						<div className="mt-1 flex items-center gap-2 sm:mt-0 sm:ml-auto">
-							{/* ── Multi-format Export Dropdown ────────────────── */}
-							{exportable ? <ExportMenu table={table} columns={columns} exportFilename={exportFilename} exportableColumns={exportableColumns} /> : null}
+							{exportable ? <ExportMenu table={table} columns={columns} exportFilename={exportFilename} exportableColumns={exportableColumns} labels={labels} /> : null}
 
-							{/* ── Column visibility toggle ───────── */}
-							{enableColumnVisibility ? <ColumnVisibilityMenu table={table} columnVisibility={columnVisibility} onVisibilityChange={handleVisibilityChange} /> : null}
+							{enableColumnVisibility ? (
+								<ColumnVisibilityMenu table={table} columnVisibility={columnVisibility} onVisibilityChange={handleVisibilityChange} labels={labels} />
+							) : null}
 						</div>
 					</div>
 				) : null}
@@ -2179,8 +2052,8 @@ export function DataTable<TData extends RowData>({
 					<Empty className="my-12">
 						<EmptyHeader>
 							<EmptyMedia variant="icon">{emptyState?.icon ?? <Search className="h-6 w-6" />}</EmptyMedia>
-							<EmptyTitle>{emptyState?.title ?? "No data available"}</EmptyTitle>
-							<EmptyDescription>{emptyState?.description ?? "Get started by adding your first item."}</EmptyDescription>
+							<EmptyTitle>{emptyState?.title ?? labels.noDataTitle}</EmptyTitle>
+							<EmptyDescription>{emptyState?.description ?? labels.noDataDescription}</EmptyDescription>
 						</EmptyHeader>
 						{emptyState?.action ? (
 							<EmptyContent>
@@ -2199,12 +2072,12 @@ export function DataTable<TData extends RowData>({
 											<EmptyMedia variant="icon">
 												<Search className="h-6 w-6" />
 											</EmptyMedia>
-											<EmptyTitle>No results found</EmptyTitle>
-											<EmptyDescription>Try adjusting your search or filter criteria to find what you&apos;re looking for.</EmptyDescription>
+											<EmptyTitle>{labels.noResultsTitle}</EmptyTitle>
+											<EmptyDescription>{labels.noResultsDescription}</EmptyDescription>
 										</EmptyHeader>
 										<EmptyContent>
 											<Button variant="outline" onClick={handleClearFilters}>
-												Clear filters
+												{labels.clearFilters}
 											</Button>
 										</EmptyContent>
 									</Empty>
@@ -2219,6 +2092,7 @@ export function DataTable<TData extends RowData>({
 												enableBulkSelection={enableBulkSelection}
 												mobileCardRender={mobileCardRender}
 												actions={actions}
+												labels={labels}
 												onAnyDeselect={handleAnyDeselect}
 												onRowClick={onRowClick}
 											/>
@@ -2291,12 +2165,12 @@ export function DataTable<TData extends RowData>({
 														<EmptyMedia variant="icon">
 															<Search className="h-6 w-6" />
 														</EmptyMedia>
-														<EmptyTitle>No results found</EmptyTitle>
-														<EmptyDescription>Try adjusting your search or filter criteria to find what you&apos;re looking for.</EmptyDescription>
+														<EmptyTitle>{labels.noResultsTitle}</EmptyTitle>
+														<EmptyDescription>{labels.noResultsDescription}</EmptyDescription>
 													</EmptyHeader>
 													<EmptyContent>
 														<Button variant="outline" onClick={handleClearFilters}>
-															Clear filters
+															{labels.clearFilters}
 														</Button>
 													</EmptyContent>
 												</Empty>
@@ -2316,26 +2190,28 @@ export function DataTable<TData extends RowData>({
 							<div className="flex flex-col items-center justify-center gap-6 py-6 sm:flex-row md:justify-center lg:justify-between">
 								<div className="flex items-center gap-4">
 									<div className="text-sm text-muted-foreground">
-										Showing {table.state.pagination.pageIndex * table.state.pagination.pageSize + 1} to{" "}
-										{Math.min(
-											(table.state.pagination.pageIndex + 1) * table.state.pagination.pageSize,
-											manual && totalCount !== undefined ? totalCount : table.getFilteredRowModel().rows.length,
-										)}{" "}
-										of {manual && totalCount !== undefined ? totalCount : table.getFilteredRowModel().rows.length} results
+										{formatDataTableLabel(labels.showingResults, {
+											from: table.state.pagination.pageIndex * table.state.pagination.pageSize + 1,
+											to: Math.min(
+												(table.state.pagination.pageIndex + 1) * table.state.pagination.pageSize,
+												manual && totalCount !== undefined ? totalCount : table.getFilteredRowModel().rows.length,
+											),
+											total: manual && totalCount !== undefined ? totalCount : table.getFilteredRowModel().rows.length,
+										})}
 									</div>
 								</div>
 								<div className="flex items-center space-x-4">
 									<div className="flex items-center gap-2">
-										<span className="text-sm text-muted-foreground">Show</span>
+										<span className="text-sm text-muted-foreground">{labels.showPerPage}</span>
 										<PageSizeSelect pageSize={table.state.pagination.pageSize} options={finalPageSizeOptions} onPageSizeChange={handlePageSizeChange} />
-										<span className="text-sm text-muted-foreground">per page</span>
+										<span className="text-sm text-muted-foreground">{labels.perPage}</span>
 									</div>
 								</div>
 								<div className="flex items-center space-x-2">
-									<Button variant="outline" size="sm" onClick={handleFirstPage} disabled={!table.getCanPreviousPage()} aria-label="Go to first page">
+									<Button variant="outline" size="sm" onClick={handleFirstPage} disabled={!table.getCanPreviousPage()} aria-label={labels.firstPageAriaLabel}>
 										<ChevronsLeft className="h-4 w-4" />
 									</Button>
-									<Button variant="outline" size="sm" onClick={handlePreviousPage} disabled={!table.getCanPreviousPage()} aria-label="Go to previous page">
+									<Button variant="outline" size="sm" onClick={handlePreviousPage} disabled={!table.getCanPreviousPage()} aria-label={labels.previousPageAriaLabel}>
 										<ChevronLeft className="h-4 w-4" />
 									</Button>{" "}
 									{table.getPageCount() > 1 ? (
@@ -2359,10 +2235,10 @@ export function DataTable<TData extends RowData>({
 											})}
 										</div>
 									) : null}
-									<Button variant="outline" size="sm" onClick={handleNextPage} disabled={!table.getCanNextPage()} aria-label="Go to next page">
+									<Button variant="outline" size="sm" onClick={handleNextPage} disabled={!table.getCanNextPage()} aria-label={labels.nextPageAriaLabel}>
 										<ChevronRight className="h-4 w-4" />
 									</Button>
-									<Button variant="outline" size="sm" onClick={handleLastPage} disabled={!table.getCanNextPage()} aria-label="Go to last page">
+									<Button variant="outline" size="sm" onClick={handleLastPage} disabled={!table.getCanNextPage()} aria-label={labels.lastPageAriaLabel}>
 										<ChevronsRight className="h-4 w-4" />
 									</Button>
 								</div>

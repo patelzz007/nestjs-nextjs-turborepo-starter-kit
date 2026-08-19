@@ -12,6 +12,7 @@ import { useAuth } from "@workspace/client/lib/auth";
 import { Badge } from "@workspace/ui/components/feedback/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@workspace/ui/components/overlay/dialog";
 import type { ColumnDef } from "@tanstack/react-table";
+import { ADMIN_DATA_TABLE_LABELS } from "@/lib/data-table-labels";
 import { DataTable, type DataTableFeatures } from "@workspace/ui/components/display/data-table";
 import { Loader2, Mail, CircleCheck, CircleX, TriangleAlert } from "lucide-react";
 import Link from "next/link";
@@ -186,6 +187,7 @@ export default function TelescopeMailPage(): React.JSX.Element {
 			</div>
 
 			<DataTable
+				labels={ADMIN_DATA_TABLE_LABELS}
 				data={[...filteredRows]}
 				columns={columns}
 				searchKeys={["subject", "to", "templateKey"]}

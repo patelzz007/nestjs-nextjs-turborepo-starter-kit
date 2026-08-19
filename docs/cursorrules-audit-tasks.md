@@ -42,7 +42,7 @@ Use this doc when you want to **start a specific improvement task**. It is organ
 | Type safety (no `any`/`unknown`/`never`/casts) | **Improved** in API | Production `apps/api` paths audited; telescope + email + backup clean; client/UI still have gaps |
 | Access modifiers + return types | **Partial** | Auth/sessions/health loose |
 | RLS | **Done** (first cut) | `prisma/rls.sql` + `pnpm db:rls`; `@RlsBypass()` for cross-tenant public DB routes |
-| Dumb components (`forwardRef`, CVA, tokens) | **Improved** | Core form + overlays (popover/sheet/command/menubar) + display (kbd/calendar/chart); `data-table` partial (prefs Zod, row-menu tokens, partial `labels`) |
+| Dumb components (`forwardRef`, CVA, tokens) | **Improved** | Core form + overlays + display; `data-table` has required `labels`, storage adapter, export modules, shell CVA `state` |
 | RHF + Zod forms | **Sparse** | Backup create/restore, settings; UI kit documents RHF peer + patterns |
 | Documentation | **Good** | Prisma/backup + `packages/ui/README.md` |
 
@@ -308,10 +308,10 @@ pnpm db:reset        # reset + rls + seed (from apps/api)
 ### `data-table.tsx` (2,334 lines)
 
 - [x] Zod for `localStorage` prefs and cell values — `lib/data-table-prefs.ts`
-- [ ] Required `labels` prop (Search, No data, Select all, export formats) — partial: `actionsMenuTitle`, `openRowMenu` only
-- [ ] Lift persistence/selection to smart parent or inject storage adapter
-- [ ] Extract CSV/PDF/Excel exporters to separate modules
-- [ ] `forwardRef` + CVA on table shell — `DataTableShell` forwards ref to root `Card`; CVA on table shell still open
+- [x] Required `labels` prop — `lib/data-table-labels.ts` (`searchPlaceholder`, empty states, selection, export formats, pagination); `formatDataTableLabel` for `{count}` templates
+- [x] Lift persistence/selection — `DataTableStorageAdapter` + `createLocalStorageDataTableStorage()` in `lib/data-table-storage.ts`; optional controlled `selectAllPages` / `onSelectAllPagesChange`
+- [x] Extract CSV/PDF/Excel exporters — `lib/data-table-export.ts` (re-exported from `data-table.tsx`)
+- [x] `forwardRef` + CVA on table shell — `DataTableShell` forwards ref to root `Card`; `dataTableShellVariants` with `state: default | loading | error`
 - [x] Replace `unknown` / `never` / `assumeType` in memo/export/persist paths
 
 ### Other UI items

@@ -111,6 +111,9 @@ describe("UI kit boundary types (rules 1–3)", () => {
 	const boundarySources: readonly string[] = [
 		"lib/field-state.ts",
 		"lib/data-table-prefs.ts",
+		"lib/data-table-labels.ts",
+		"lib/data-table-storage.ts",
+		"lib/data-table-export.ts",
 		"lib/alert-dialog-labels.ts",
 		"components/overlay/alert-dialog.tsx",
 		"components/form/combobox.tsx",

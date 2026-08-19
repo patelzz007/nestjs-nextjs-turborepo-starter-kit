@@ -11,6 +11,7 @@ import { useAuth } from "@workspace/client/lib/auth";
 
 import { Button } from "@workspace/ui/components/form/button";
 import type { ColumnDef } from "@tanstack/react-table";
+import { ADMIN_DATA_TABLE_LABELS } from "@/lib/data-table-labels";
 import { DataTable, type DataTableFeatures } from "@workspace/ui/components/display/data-table";
 import { Input } from "@workspace/ui/components/form/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@workspace/ui/components/form/select";
@@ -309,6 +310,7 @@ export default function TelescopeExceptionsPage(): React.JSX.Element {
 			) : null}
 
 			<DataTable
+				labels={ADMIN_DATA_TABLE_LABELS}
 				key={filtersKey}
 				data={[...rows]}
 				columns={columns}
