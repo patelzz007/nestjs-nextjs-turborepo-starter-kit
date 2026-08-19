@@ -7,7 +7,7 @@ import { EpochMsSchema } from "../api/common";
  */
 export const LogLevelSchema = z.enum(["debug", "info", "warn", "error"]);
 
-export type LogLevel = z.infer<typeof LogLevelSchema>;
+export type LogLevel = z.output<typeof LogLevelSchema>;
 
 /**
  * Schema for metadata values stored alongside log entries.

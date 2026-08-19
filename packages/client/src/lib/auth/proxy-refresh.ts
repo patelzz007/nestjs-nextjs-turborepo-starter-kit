@@ -7,6 +7,7 @@
 // Imported by apps/web/proxy.ts and apps/admin/proxy.ts.
 // ============================================
 
+import { apiContract } from "@workspace/shared";
 import { z } from "zod";
 
 import { API_URL_PREFIX } from "../api/config";
@@ -55,9 +56,9 @@ export type ProxyRefreshResult = z.output<typeof ProxyRefreshResultSchema>;
  * decides validity on the next authenticated call.
  */
 export function isAccessTokenExpired(accessToken: string, skewMs: number = REFRESH_SKEW_MS): boolean {
-	const payload: Record<string, unknown> | null = decodeJwtPayload(accessToken);
-	const exp: unknown = payload?.exp;
-	if (typeof exp !== "number") return false;
+	const payload = decodeJwtPayload(accessToken);
+	const exp = payload?.exp;
+	if (exp === undefined) return false;
 	return exp * 1000 <= Date.now() + skewMs;
 }
 
@@ -197,7 +198,7 @@ export async function refreshSessionFromProxy(config: ProxyRefreshConfig): Promi
 	}, REFRESH_TIMEOUT_MS);
 
 	try {
-		const response: Response = await fetch(`${config.apiBaseUrl}${API_URL_PREFIX}/auth/refresh`, {
+		const response: Response = await fetch(`${config.apiBaseUrl}${API_URL_PREFIX}${apiContract.auth.refresh.path}`, {
 			method: "POST",
 			headers: {
 				Accept: "application/json",

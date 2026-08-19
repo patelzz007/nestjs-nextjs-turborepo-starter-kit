@@ -20,7 +20,7 @@
 export type ApiVersion = "v1" | "v2";
 
 /** The current default version served by the API. */
-export const API_VERSION = "v1" as const satisfies ApiVersion;
+export const API_VERSION: "v1" = "v1";
 
 /** Build a versioned path prefix (`"v1"` → `"/api/v1"`). */
 export function apiVersionPrefix(version: ApiVersion): string {
@@ -35,13 +35,26 @@ export const API_VERSION_PREFIX: string = apiVersionPrefix(API_VERSION);
  * rule in apps/api (a controller that forgets the helper silently serves a
  * path the client can't reach, exactly like the `/session` regression).
  */
-export const UNVERSIONED_ROUTE_PREFIXES = ["", "health", "notifications/email-webhook", "version"] as const;
+export const UNVERSIONED_ROUTE_PREFIXES: readonly ["", "health", "notifications/email-webhook", "version"] = [
+	"",
+	"health",
+	"notifications/email-webhook",
+	"version",
+];
 
 /**
  * Every business controller prefix, as a compile-time literal union: a typo
  * like `apiPath("/authh")` now fails to compile instead of 404ing at runtime.
  */
-export const VERSIONED_ROUTE_PREFIXES = ["/auth", "/session", "/notifications/email-preview", "/notifications/email-log", "/backup", "/telescope", "/version"] as const;
+export const VERSIONED_ROUTE_PREFIXES: readonly [
+	"/auth",
+	"/session",
+	"/notifications/email-preview",
+	"/notifications/email-log",
+	"/backup",
+	"/telescope",
+	"/version",
+] = ["/auth", "/session", "/notifications/email-preview", "/notifications/email-log", "/backup", "/telescope", "/version"];
 
 export type VersionedRoutePrefix = (typeof VERSIONED_ROUTE_PREFIXES)[number];
 

@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { EpochMsSchema } from "./common";
+import { EpochMsSchema, DataValueSchema, type DataValue } from "./common";
 
 // ── Shared response envelope primitives ──────────────────────────────────
 
@@ -47,7 +47,7 @@ export const ApiSuccessResponseSchema = z
 			description: "Indicates the request was successful",
 			example: true,
 		}),
-		data: z.unknown().meta({
+		data: DataValueSchema.meta({
 			description: "The response payload — varies by endpoint",
 		}),
 		meta: ApiResponseMetaSchema,
@@ -87,3 +87,33 @@ export const ApiErrorResponseSchema = z
 	.strict();
 
 export type ApiErrorResponse = z.output<typeof ApiErrorResponseSchema>;
+
+/**
+ * The raw error body the API returns (unwrapped from the `{ success, error, meta }`
+ * envelope). The base fields (`message`, `statusCode`, `error`) come from the
+ * shared envelope's `.shape.error`, while `statusCode` is made optional here
+ * because not every error response includes it. Client-only lockout fields
+ * (`lockedUntil`, `remainingSeconds`) are added via `.extend()` so both the
+ * API and the client agree on the shape and can never drift.
+ */
+export const ApiErrorBodySchema = ApiErrorResponseSchema.shape.error
+	.extend({
+		statusCode: z.number().int().optional(),
+		lockedUntil: EpochMsSchema.optional(),
+		remainingSeconds: z.number().optional(),
+	});
+
+export type ApiErrorBody = z.output<typeof ApiErrorBodySchema>;
+
+/**
+ * The envelope is an interface WITH an index signature: the index signature is
+ * what makes `Envelope<Data> extends DataValue` provable for the defs' `Resp`
+ * constraint (interfaces only get index-signature assignability when they
+ * declare one), while staying a plain interface per the lint rules.
+ */
+export interface Envelope<Data extends DataValue> {
+	readonly success: true;
+	readonly data: Data;
+	readonly meta: ApiResponseMeta;
+	readonly [key: string]: DataValue | undefined;
+}

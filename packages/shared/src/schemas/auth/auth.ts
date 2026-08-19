@@ -223,6 +223,26 @@ export const StopImpersonationResponseSchema = z
 
 export type StopImpersonationResponse = z.output<typeof StopImpersonationResponseSchema>;
 
+// ── JWT payload (decoded, unverified) ─────────────────────────────────
+
+/**
+ * Minimal JWT payload shape the client needs for route-protection decisions.
+ * Only the fields the proxy and auth context actually read — the full token
+ * carries more claims, but this is all the frontend needs.
+ */
+export const JwtPayloadSchema = z
+	.object({
+		sub: z.string().optional(),
+		email: z.string().optional(),
+		exp: z.number().int().optional(),
+		hasAdminAccess: z.boolean().optional(),
+		isSuperAdmin: z.boolean().optional(),
+		isEmailVerified: z.boolean().optional(),
+	})
+	.loose();
+
+export type JwtPayload = z.output<typeof JwtPayloadSchema>;
+
 // Re-exports for backward compatibility
 
 export { SlimRoleSchema, PermissionDetailsSchema, UserResponseSchema } from "./user";

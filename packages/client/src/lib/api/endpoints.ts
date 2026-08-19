@@ -21,7 +21,7 @@
 // react-query key, and the serialization knobs (`toQuery` / `toBody`).
 //
 // The input/output type parameters are CONSTRAINED (`SerializableInput` /
-// `JsonValue`) so the shared pipeline (dedupe map, observable, spec closures)
+// `DataValue`) so the shared pipeline (dedupe map, observable, spec closures)
 // can be typed end-to-end with generics — no type erasure, no `unknown`,
 // no casts anywhere.
 
@@ -43,11 +43,15 @@ import {
 	EmailPreviewSchema,
 	EmailSendResultSchema,
 	ExceptionLogEntrySchema,
+	ForgotPasswordResponseSchema,
 	LoginResponseSchema,
 	LogoutResponseSchema,
 	RefreshResponseSchema,
+	ResendVerificationResponseSchema,
+	ResetPasswordResponseSchema,
 	SessionStatusSchema,
 	SignupResponseSchema,
+	VerifyEmailResponseSchema,
 	AdminUserDetailSchema,
 	TelescopeAlertEntrySchema,
 	TelescopeAlertsResponseSchema,
@@ -76,10 +80,11 @@ import {
 	UserResponseSchema,
 	ApiPaginatedMetaSchema,
 	ApiResponseMetaSchema,
+	type Envelope,
 	type ApiContractDef,
 	type ApiResponseMeta,
 	type ApiVersion,
-	type JsonValue,
+	type DataValue,
 	type RestMethod,
 	type SerializableInput,
 } from "@workspace/shared";
@@ -90,20 +95,7 @@ import { z, type ZodType } from "zod";
 // { success: true, data, meta }. We build a typed envelope schema per endpoint
 // so the FE knows the exact shape without `any` or `z.unknown`.
 
-/**
- * The envelope is an interface WITH an index signature: the index signature is
- * what makes `Envelope<Data> extends JsonValue` provable for the defs' `Resp`
- * constraint (interfaces only get index-signature assignability when they
- * declare one), while staying a plain interface per the lint rules.
- */
-export interface Envelope<Data extends JsonValue> {
-	readonly success: true;
-	readonly data: Data;
-	readonly meta: ApiResponseMeta;
-	readonly [key: string]: JsonValue | undefined;
-}
-
-function envelope<Data extends JsonValue>(dataSchema: ZodType<Data>, metaSchema: ZodType<ApiResponseMeta> = ApiResponseMetaSchema): ZodType<Envelope<Data>> {
+function envelope<Data extends DataValue>(dataSchema: ZodType<Data>, metaSchema: ZodType<ApiResponseMeta> = ApiResponseMetaSchema): ZodType<Envelope<Data>> {
 	return z
 		.object({
 			success: z.literal(true),
@@ -116,7 +108,7 @@ function envelope<Data extends JsonValue>(dataSchema: ZodType<Data>, metaSchema:
 // ── Definition model (input-first, tRPC-style) ────────────────────────────
 
 /** A GET procedure: input → path params + query string, response → typed payload. */
-export interface QueryDef<Input extends SerializableInput, Resp extends JsonValue> {
+export interface QueryDef<Input extends SerializableInput, Resp extends DataValue> {
 	readonly kind: "query";
 	readonly method: "GET";
 	/** Path template; `:name` segments are filled from the input. */
@@ -137,7 +129,7 @@ export interface QueryDef<Input extends SerializableInput, Resp extends JsonValu
 }
 
 /** A POST/PUT/PATCH/DELETE procedure: input → path params + JSON body, response → typed payload. */
-export interface MutationDef<Input extends SerializableInput, Resp extends JsonValue> {
+export interface MutationDef<Input extends SerializableInput, Resp extends DataValue> {
 	readonly kind: "mutation";
 	readonly method: Exclude<RestMethod, "GET">;
 	readonly path: string;
@@ -151,12 +143,12 @@ export interface MutationDef<Input extends SerializableInput, Resp extends JsonV
 	 * Maps the input to the request body. Default: every input key not consumed
 	 * by a `:param` segment or listed in `toQuery`.
 	 */
-	readonly toBody?: (input: Input) => JsonValue;
+	readonly toBody?: (input: Input) => DataValue;
 	/** Input keys routed to the QUERY string instead of the body (e.g. `prune({ force })`). */
 	readonly toQuery?: readonly string[];
 }
 
-export type ProcedureDef<Input extends SerializableInput, Resp extends JsonValue> = QueryDef<Input, Resp> | MutationDef<Input, Resp>;
+export type ProcedureDef<Input extends SerializableInput, Resp extends DataValue> = QueryDef<Input, Resp> | MutationDef<Input, Resp>;
 
 /**
  * Declares a GET procedure from its shared contract leaf. The contract owns
@@ -167,7 +159,7 @@ function versionedKey(version: ApiVersion | undefined, base: QueryKey): QueryKey
 	return version === undefined ? base : [version, ...base];
 }
 
-export function defineQuery<Input extends SerializableInput, Resp extends JsonValue>(
+export function defineQuery<Input extends SerializableInput, Resp extends DataValue>(
 	contract: ApiContractDef<Input, "GET">,
 	opts: {
 		readonly response: ZodType<Resp>;
@@ -191,13 +183,13 @@ export function defineQuery<Input extends SerializableInput, Resp extends JsonVa
  * Declares a POST (or PUT/PATCH/DELETE) procedure from its shared contract
  * leaf. `toQuery` routes input keys to the query string instead of the body.
  */
-export function defineMutation<Input extends SerializableInput, Resp extends JsonValue, M extends Exclude<RestMethod, "GET">>(
+export function defineMutation<Input extends SerializableInput, Resp extends DataValue, M extends Exclude<RestMethod, "GET">>(
 	contract: ApiContractDef<Input, M>,
 	opts: {
 		readonly response: ZodType<Resp>;
 		readonly queryKey: (input: Input) => QueryKey;
 		readonly baseOptions?: { readonly headers?: Record<string, string> };
-		readonly toBody?: (input: Input) => JsonValue;
+		readonly toBody?: (input: Input) => DataValue;
 		readonly toQuery?: readonly string[];
 	},
 ): MutationDef<Input, Resp> {
@@ -223,7 +215,7 @@ const PARAM_PATTERN = /:([A-Za-z0-9_]+)/g;
 export interface ResolvedRequest {
 	readonly url: string;
 	/** Present for mutations (defaults to `{}` when the input has no body fields). */
-	readonly body?: JsonValue;
+	readonly body?: DataValue;
 }
 
 /**
@@ -236,7 +228,7 @@ export interface ResolvedRequest {
  * is indexable by any key, so no `Record` re-typing is needed.
  */
 export function resolveRequest(path: string, input: SerializableInput, options?: { readonly method?: RestMethod; readonly toQuery?: readonly string[] }): ResolvedRequest {
-	const record: Readonly<Record<string, JsonValue | undefined>> = input ?? {};
+	const record: Readonly<Record<string, DataValue | undefined>> = input ?? {};
 	const method: RestMethod = options?.method ?? "GET";
 	const paramNames: readonly string[] = [...path.matchAll(PARAM_PATTERN)].map((match) => match[1] ?? "");
 
@@ -249,8 +241,8 @@ export function resolveRequest(path: string, input: SerializableInput, options?:
 	}
 
 	// Leftover keys → query string (GET) or body (mutations); `undefined` values are dropped.
-	const leftover: readonly { readonly key: string; readonly value: JsonValue }[] = Object.keys(record).flatMap((key) => {
-		const value: JsonValue | undefined = record[key];
+	const leftover: readonly { readonly key: string; readonly value: DataValue }[] = Object.keys(record).flatMap((key) => {
+		const value: DataValue | undefined = record[key];
 		if (consumed.has(key) || value === undefined) return [];
 		return [{ key, value }];
 	});
@@ -266,8 +258,8 @@ export function resolveRequest(path: string, input: SerializableInput, options?:
 	}
 
 	// Mutations: `toQuery` keys ride the query string, everything else is the body.
-	const toQueryEntries: readonly { readonly key: string; readonly value: JsonValue }[] = (options?.toQuery ?? []).flatMap((key) => {
-		const value: JsonValue | undefined = record[key];
+	const toQueryEntries: readonly { readonly key: string; readonly value: DataValue }[] = (options?.toQuery ?? []).flatMap((key) => {
+		const value: DataValue | undefined = record[key];
 		if (value === undefined) return [];
 		return [{ key, value }];
 	});
@@ -278,13 +270,13 @@ export function resolveRequest(path: string, input: SerializableInput, options?:
 		url = `${url}${url.includes("?") ? "&" : "?"}${qs}`;
 	}
 
-	const body: Record<string, JsonValue> = {};
+	const body: Record<string, DataValue> = {};
 	for (const { key, value } of leftover) body[key] = value;
 	return { url, body };
 }
 
 /** Serializes a query value without tripping no-base-to-string on arbitrary values. */
-function stringifyQueryValue(value: JsonValue | undefined): string {
+function stringifyQueryValue(value: DataValue | undefined): string {
 	if (value === undefined) return "";
 	if (typeof value === "string") return value;
 	if (typeof value === "number" || typeof value === "boolean") return String(value);
@@ -334,6 +326,22 @@ export const apiRouter = {
 		logout: defineMutation(apiContract.auth.logout, {
 			response: envelope(LogoutResponseSchema),
 			queryKey: () => ["auth", "logout"],
+		}),
+		forgotPassword: defineMutation(apiContract.auth.forgotPassword, {
+			response: envelope(ForgotPasswordResponseSchema),
+			queryKey: () => ["auth", "forgot-password"],
+		}),
+		resetPassword: defineMutation(apiContract.auth.resetPassword, {
+			response: envelope(ResetPasswordResponseSchema),
+			queryKey: () => ["auth", "reset-password"],
+		}),
+		resendVerification: defineMutation(apiContract.auth.resendVerification, {
+			response: envelope(ResendVerificationResponseSchema),
+			queryKey: () => ["auth", "resend-verification"],
+		}),
+		verifyEmail: defineMutation(apiContract.auth.verifyEmail, {
+			response: envelope(VerifyEmailResponseSchema),
+			queryKey: ({ token }) => ["auth", "verify-email", token],
 		}),
 		adminUsers: defineQuery(apiContract.auth.adminUsers, {
 			response: envelope(z.array(AdminUserDetailSchema), ApiPaginatedMetaSchema),

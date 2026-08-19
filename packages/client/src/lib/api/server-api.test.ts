@@ -19,7 +19,7 @@ import {
 	type PrefetchSpec,
 	type ServerApiConfig,
 } from "./server-api";
-import { type JsonValue, type SerializableInput } from "@workspace/shared";
+import { type DataValue, type SerializableInput } from "@workspace/shared";
 import { defineQuery, resolveRequest, type QueryDef } from "./endpoints";
 
 // `server-only` throws outside React Server Components; stub it for tests.
@@ -83,7 +83,7 @@ const testConfig: ServerApiConfig = {
  * server caller's spec factory produces, so `prefetchPage` tests exercise the
  * real pipeline.
  */
-function specOf<Input extends SerializableInput, Resp extends JsonValue>(
+function specOf<Input extends SerializableInput, Resp extends DataValue>(
 	def: QueryDef<Input, Resp>,
 	input: Input,
 	options?: { readonly enabled?: boolean | (() => boolean); readonly fallbackData?: Resp },

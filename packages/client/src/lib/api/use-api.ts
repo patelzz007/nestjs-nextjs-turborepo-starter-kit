@@ -13,13 +13,14 @@ import {
 	type UseMutationResult,
 } from "@tanstack/react-query";
 import {
+	ApiErrorBodySchema as ApiErrorSchema,
 	ApiVersionManifestSchema,
-	EpochMsSchema,
 	apiVersionPrefix,
+	type ApiErrorBody,
 	type ApiVersion,
 	type ApiVersionManifest,
 	type EpochMs,
-	type JsonValue,
+	type DataValue,
 	type SerializableInput,
 } from "@workspace/shared";
 import { useMemo } from "react";
@@ -101,35 +102,7 @@ export function createRefreshCooldown(refresh: RefreshCall, cooldownMs = 30_000)
 	};
 }
 
-/**
- * Error body returned by the API on non-2xx responses.
- * `error` is the canonical auth code (see `AuthErrorCodeSchema`); the lockout
- * fields are present only on `ACCOUNT_LOCKED` responses.
- *
- * Not `.loose()` deliberately: zod's default object behavior STRIPS unknown
- * keys (it never fails on them), so extra fields such as validation `details`
- * can't break parsing — and the derived `ApiErrorBody` type stays free of an
- * index signature so `ApiError` can `implements` it.
- *
- * Deliberately NOT derived from shared's `ApiErrorResponseSchema.shape.error`:
- * that is the strict, Swagger-documented envelope nested under
- * `{ success: false, error, meta }`, while this is the raw interceptor body
- * (no wrapper), tolerates unknown keys, and adds the client-only lockout
- * fields. The strictness point is unknown EXTRA keys (e.g. validation
- * `details`/`path`): shared's `.strict()` would reject them, this schema
- * strips them. (Note a class-validator body's `message: string[]` fails the
- * `message: z.string()` check here too — a type mismatch, not a strictness
- * one — and is pre-existing behavior handled by the generic-message fallback.)
- */
-export const ApiErrorSchema = z.object({
-	message: z.string(),
-	error: z.string().optional(),
-	statusCode: z.number().optional(),
-	lockedUntil: EpochMsSchema.optional(),
-	remainingSeconds: z.number().optional(),
-});
-
-export type ApiErrorBody = z.output<typeof ApiErrorSchema>;
+export { ApiErrorSchema, type ApiErrorBody };
 
 /**
  * Structured API error thrown by `requestOrThrow`. Unlike a plain `Error`, it
@@ -329,7 +302,7 @@ async function request<T, Body = undefined>(
 			// `JSON.parse` returns `any`, so it flows straight into zod's `unknown`
 			// parse parameter — never through a typed variable.
 			const text: string = isJson ? await res.text() : "";
-			const raw: JsonValue = z.custom<JsonValue>().parse(text.length === 0 ? null : JSON.parse(text));
+			const raw: DataValue = z.custom<DataValue>().parse(text.length === 0 ? null : JSON.parse(text));
 			const data: T = responseSchema ? responseSchema.parse(raw) : z.custom<T>().parse(raw);
 
 			return { ok: true, status: res.status, data };
@@ -390,8 +363,8 @@ async function request<T, Body = undefined>(
  * the typed router (`apiRouter.auth.refresh` / `apiRouter.auth.logout`) so
  * endpoint URLs stay a single source of truth.
  */
-export function apiFetch<T>(baseUrl: string, method: HttpMethod, path: string, options?: BaseRequestOptions & { body?: JsonValue }): Promise<ApiResponse<T>> {
-	return request<T, JsonValue>(baseUrl, method, path, options, undefined, undefined, undefined, undefined);
+export function apiFetch<T>(baseUrl: string, method: HttpMethod, path: string, options?: BaseRequestOptions & { body?: DataValue }): Promise<ApiResponse<T>> {
+	return request<T, DataValue>(baseUrl, method, path, options, undefined, undefined, undefined, undefined);
 }
 
 async function requestOrThrow<T, Method extends HttpMethod, Body = undefined>(
@@ -442,7 +415,7 @@ export interface ClientMutationProcedure<Input, Resp> {
 	mutate(input: Input): Promise<Resp>;
 }
 
-function createQueryProcedure<Input extends SerializableInput, Resp extends JsonValue>(
+function createQueryProcedure<Input extends SerializableInput, Resp extends DataValue>(
 	baseUrl: string,
 	onUnauthorized: OnUnauthorized | undefined,
 	onRefresh: OnRefresh | undefined,
@@ -490,7 +463,7 @@ function createQueryProcedure<Input extends SerializableInput, Resp extends Json
 	};
 }
 
-function createMutationProcedure<Input extends SerializableInput, Resp extends JsonValue>(
+function createMutationProcedure<Input extends SerializableInput, Resp extends DataValue>(
 	baseUrl: string,
 	onUnauthorized: OnUnauthorized | undefined,
 	onRefresh: OnRefresh | undefined,
@@ -499,8 +472,8 @@ function createMutationProcedure<Input extends SerializableInput, Resp extends J
 	const run = (input: Input): Promise<Resp> => {
 		const parsed: Input = def.inputSchema.parse(input);
 		const { url, body } = resolveRequest(def.path, parsed, { method: def.method, toQuery: def.toQuery });
-		const finalBody: JsonValue = def.toBody !== undefined ? def.toBody(parsed) : (body ?? {});
-		return requestOrThrow<Resp, HttpMethod, JsonValue>(
+		const finalBody: DataValue = def.toBody !== undefined ? def.toBody(parsed) : (body ?? {});
+		return requestOrThrow<Resp, HttpMethod, DataValue>(
 			baseUrl,
 			def.method,
 			url,
@@ -550,6 +523,10 @@ function buildClientRouter(baseUrl: string, onUnauthorized: OnUnauthorized | und
 			signup: createMutationProcedure(baseUrl, onUnauthorized, onRefresh, apiRouter.auth.signup),
 			refresh: createMutationProcedure(baseUrl, onUnauthorized, onRefresh, apiRouter.auth.refresh),
 			logout: createMutationProcedure(baseUrl, onUnauthorized, onRefresh, apiRouter.auth.logout),
+			forgotPassword: createMutationProcedure(baseUrl, onUnauthorized, onRefresh, apiRouter.auth.forgotPassword),
+			resetPassword: createMutationProcedure(baseUrl, onUnauthorized, onRefresh, apiRouter.auth.resetPassword),
+			resendVerification: createMutationProcedure(baseUrl, onUnauthorized, onRefresh, apiRouter.auth.resendVerification),
+			verifyEmail: createMutationProcedure(baseUrl, onUnauthorized, onRefresh, apiRouter.auth.verifyEmail),
 			adminUsers: createQueryProcedure(baseUrl, onUnauthorized, onRefresh, apiRouter.auth.adminUsers),
 		},
 		email: {
@@ -606,7 +583,7 @@ function buildClientRouter(baseUrl: string, onUnauthorized: OnUnauthorized | und
 	};
 }
 
-function createProcedureForDef<Input extends SerializableInput, Resp extends JsonValue>(
+function createProcedureForDef<Input extends SerializableInput, Resp extends DataValue>(
 	baseUrl: string,
 	onUnauthorized: OnUnauthorized | undefined,
 	onRefresh: OnRefresh | undefined,
@@ -636,9 +613,9 @@ export interface ApiClientRQHooks {
 		mutationOptions?: UseMutationOptions<T, Error, Body>,
 	): UseMutationResult<T, Error, Body>;
 
-	procedure<Input extends SerializableInput, Resp extends JsonValue>(def: QueryDef<Input, Resp>): ClientQueryProcedure<Input, Resp>;
-	procedure<Input extends SerializableInput, Resp extends JsonValue>(def: MutationDef<Input, Resp>): ClientMutationProcedure<Input, Resp>;
-	procedure<Input extends SerializableInput, Resp extends JsonValue>(def: ProcedureDef<Input, Resp>): ClientQueryProcedure<Input, Resp> | ClientMutationProcedure<Input, Resp>;
+	procedure<Input extends SerializableInput, Resp extends DataValue>(def: QueryDef<Input, Resp>): ClientQueryProcedure<Input, Resp>;
+	procedure<Input extends SerializableInput, Resp extends DataValue>(def: MutationDef<Input, Resp>): ClientMutationProcedure<Input, Resp>;
+	procedure<Input extends SerializableInput, Resp extends DataValue>(def: ProcedureDef<Input, Resp>): ClientQueryProcedure<Input, Resp> | ClientMutationProcedure<Input, Resp>;
 }
 
 /** The full client API: low-level hooks + `procedure()` + the tRPC-style router. */
@@ -665,12 +642,12 @@ export function useApi(baseUrl: string, onUnauthorized: OnUnauthorized, onRefres
 		// Overloads mirror `ApiClientRQHooks["procedure"]` exactly (same constrained
 		// type params) so the object literal typechecks; the implementation
 		// narrows by `kind`.
-		function procedure<Input extends SerializableInput, Resp extends JsonValue>(def: QueryDef<Input, Resp>): ClientQueryProcedure<Input, Resp>;
-		function procedure<Input extends SerializableInput, Resp extends JsonValue>(def: MutationDef<Input, Resp>): ClientMutationProcedure<Input, Resp>;
-		function procedure<Input extends SerializableInput, Resp extends JsonValue>(
+		function procedure<Input extends SerializableInput, Resp extends DataValue>(def: QueryDef<Input, Resp>): ClientQueryProcedure<Input, Resp>;
+		function procedure<Input extends SerializableInput, Resp extends DataValue>(def: MutationDef<Input, Resp>): ClientMutationProcedure<Input, Resp>;
+		function procedure<Input extends SerializableInput, Resp extends DataValue>(
 			def: ProcedureDef<Input, Resp>,
 		): ClientQueryProcedure<Input, Resp> | ClientMutationProcedure<Input, Resp>;
-		function procedure<Input extends SerializableInput, Resp extends JsonValue>(
+		function procedure<Input extends SerializableInput, Resp extends DataValue>(
 			def: ProcedureDef<Input, Resp>,
 		): ClientQueryProcedure<Input, Resp> | ClientMutationProcedure<Input, Resp> {
 			return createProcedureForDef(baseUrl, onUnauthorized, onRefresh, def);

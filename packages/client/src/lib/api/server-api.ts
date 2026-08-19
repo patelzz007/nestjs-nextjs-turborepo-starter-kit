@@ -14,14 +14,14 @@
 // are available. Importing it from a client bundle is a build error.
 //
 // The pipeline is typed end-to-end with generics — the def's `Input`/`Resp`
-// constraints (`SerializableInput` / `JsonValue`) flow through the observable,
+// constraints (`SerializableInput` / `DataValue`) flow through the observable,
 // the in-flight dedupe map, and the spec closures, so there is no `unknown`,
 // no type assertion, and no eslint-disable anywhere.
 import "server-only";
 
 import { dehydrate, QueryClient, type QueryKey } from "@tanstack/react-query";
 import { API_BASE_URL, API_URL_PREFIX } from "./config";
-import { apiVersionPrefix, type JsonValue, type SerializableInput } from "@workspace/shared";
+import { apiVersionPrefix, type DataValue, type SerializableInput } from "@workspace/shared";
 import { apiRouter, resolveRequest, type ApiRouter, type MutationDef, type ProcedureDef, type QueryDef } from "./endpoints";
 import { cookies, headers } from "next/headers";
 import { catchError, defer, from, map, mergeMap, Observable, of, retry, throwError, timer, timeout, firstValueFrom } from "rxjs";
@@ -111,7 +111,7 @@ export interface PrefetchSpec {
 }
 
 /** Extra per-prefetch knobs beyond the spec (signal, refresh, fallback, headers). */
-export interface PrefetchCallOptions<Resp extends JsonValue = JsonValue> {
+export interface PrefetchCallOptions<Resp extends DataValue = DataValue> {
 	readonly signal?: AbortSignal;
 	readonly allowRefresh?: boolean;
 	readonly fallbackData?: Resp;
@@ -123,7 +123,7 @@ export interface PrefetchCallOptions<Resp extends JsonValue = JsonValue> {
 }
 
 /** Options accepted by the caller's spec factory (`server.x(input, specOptions)`). */
-export interface PrefetchSpecOptions<Resp extends JsonValue> {
+export interface PrefetchSpecOptions<Resp extends DataValue> {
 	readonly enabled?: boolean | (() => boolean);
 	readonly config?: Partial<Omit<ServerApiConfig, "logger" | "logLevel" | "fetchImpl">>;
 	readonly allowRefresh?: boolean;
@@ -208,7 +208,7 @@ export interface PrefetchPageOptions {
 }
 
 /** The parsed data behind a successful prefetch — carried by the in-flight dedupe. */
-export interface PrefetchDetailedResult<Resp extends JsonValue> {
+export interface PrefetchDetailedResult<Resp extends DataValue> {
 	readonly outcome: PrefetchOutcome;
 	/** The validated payload when `ok` — present so sibling clients can seed their cache. */
 	readonly data?: Resp;
@@ -217,7 +217,7 @@ export interface PrefetchDetailedResult<Resp extends JsonValue> {
 // ── The tRPC-style server caller ───────────────────────────────────────────
 
 /** One GET leaf on the caller: callable as a spec factory, plus `.query()` and `.prefetch()`. */
-export interface ServerQueryLeaf<Input extends SerializableInput, Resp extends JsonValue> {
+export interface ServerQueryLeaf<Input extends SerializableInput, Resp extends DataValue> {
 	/**
 	 * Builds a `PrefetchSpec` for `prefetchPage`. The input is REQUIRED (pass
 	 * `undefined` for no-input procedures) so a missing arg is a type error —
@@ -231,7 +231,7 @@ export interface ServerQueryLeaf<Input extends SerializableInput, Resp extends J
 }
 
 /** One mutation leaf on the caller — direct server-side `.mutate()`. */
-export interface ServerMutationLeaf<Input extends SerializableInput, Resp extends JsonValue> {
+export interface ServerMutationLeaf<Input extends SerializableInput, Resp extends DataValue> {
 	mutate(input: Input): Promise<Resp>;
 }
 
@@ -365,7 +365,7 @@ export function classifyError(error: Error | string): PrefetchFailure {
  * just not match). All router defs define explicit builders, so this is a
  * tripwire for future additions, not a runtime check.
  */
-export function assertKeyShape<Input extends SerializableInput, Resp extends JsonValue>(def: QueryDef<Input, Resp>, key: QueryKey): void {
+export function assertKeyShape<Input extends SerializableInput, Resp extends DataValue>(def: QueryDef<Input, Resp>, key: QueryKey): void {
 	const isFallback: boolean = Array.isArray(key) && key.length === 2 && key[0] === "GET" && key[1] === def.path;
 	if (isFallback && process.env.NODE_ENV !== "production") {
 		console.warn(`[api-server] ${def.path} has no explicit queryKey — hydration may not match the client`);
@@ -486,7 +486,7 @@ export async function refreshAccessToken(config: ServerApiConfig): Promise<strin
  * Resolves with `{ raw, headers }` or THROWS a classified `PrefetchFailure`.
  * Consumers use `firstValueFrom`, which auto-unsubscribes — no manual cleanup.
  */
-function createPrefetchObservable<Input extends SerializableInput, Resp extends JsonValue>(
+function createPrefetchObservable<Input extends SerializableInput, Resp extends DataValue>(
 	def: QueryDef<Input, Resp>,
 	input: Input,
 	extraHeaders: Readonly<Record<string, string>> | undefined,
@@ -534,7 +534,7 @@ function createPrefetchObservable<Input extends SerializableInput, Resp extends 
 		timeout({ each: config.timeoutMs, with: () => throwError(() => new PrefetchTimeoutError()) }),
 		mergeMap((response: Response) =>
 			from(response.json()).pipe(
-				map((raw: JsonValue): { readonly raw: JsonValue; readonly headers: Readonly<Record<string, string>> } => ({
+				map((raw: DataValue): { readonly raw: DataValue; readonly headers: Readonly<Record<string, string>> } => ({
 					raw,
 					headers: captureResponseHeaders(response, captureHeaders),
 				})),
@@ -556,7 +556,7 @@ function createPrefetchObservable<Input extends SerializableInput, Resp extends 
  * queries — so failures never reach the client, and the view's own `useQuery`
  * runs normally.
  */
-export function prefetchEndpoint<Input extends SerializableInput, Resp extends JsonValue>(
+export function prefetchEndpoint<Input extends SerializableInput, Resp extends DataValue>(
 	queryClient: QueryClient,
 	def: QueryDef<Input, Resp>,
 	input: Input,
@@ -566,7 +566,7 @@ export function prefetchEndpoint<Input extends SerializableInput, Resp extends J
 }
 
 /** Web-app convenience: same as `prefetchEndpoint` with the web cookie set. */
-export function prefetchWebEndpoint<Input extends SerializableInput, Resp extends JsonValue>(
+export function prefetchWebEndpoint<Input extends SerializableInput, Resp extends DataValue>(
 	queryClient: QueryClient,
 	def: QueryDef<Input, Resp>,
 	input: Input,
@@ -582,7 +582,7 @@ export function prefetchWebEndpoint<Input extends SerializableInput, Resp extend
  *
  * Never throws: returns a `PrefetchDetailedResult` (outcome + optional data).
  */
-export async function prefetchEndpointDetailed<Input extends SerializableInput, Resp extends JsonValue>(
+export async function prefetchEndpointDetailed<Input extends SerializableInput, Resp extends DataValue>(
 	queryClient: QueryClient,
 	def: QueryDef<Input, Resp>,
 	input: Input,
@@ -599,12 +599,12 @@ export async function prefetchEndpointDetailed<Input extends SerializableInput, 
 	// Cross-render dedupe: two concurrent renders (different QueryClients)
 	// sharing a queryKey reuse ONE upstream fetch. TanStack only dedupes within
 	// a single client; this dedupes across clients/module instances. `Resp`
-	// extends `JsonValue`, so the map can hold every endpoint's result without
+	// extends `DataValue`, so the map can hold every endpoint's result without
 	// erasing the data type.
 	const dedupeKey: string = queryKeyString(queryKey);
-	const inFlight: Promise<PrefetchDetailedResult<JsonValue>> | undefined = inFlightFetches.get(dedupeKey);
+	const inFlight: Promise<PrefetchDetailedResult<DataValue>> | undefined = inFlightFetches.get(dedupeKey);
 	if (inFlight !== undefined) {
-		const shared: PrefetchDetailedResult<JsonValue> = await inFlight;
+		const shared: PrefetchDetailedResult<DataValue> = await inFlight;
 		if (shared.outcome.ok && shared.data !== undefined && queryClient.getQueryData(queryKey) === undefined) {
 			queryClient.setQueryData(queryKey, shared.data);
 		}
@@ -623,7 +623,7 @@ export async function prefetchEndpointDetailed<Input extends SerializableInput, 
 }
 
 /** The actual prefetch work — the dedupe wrapper above routes around it. */
-async function prefetchEndpointInternal<Input extends SerializableInput, Resp extends JsonValue>(
+async function prefetchEndpointInternal<Input extends SerializableInput, Resp extends DataValue>(
 	queryClient: QueryClient,
 	def: QueryDef<Input, Resp>,
 	input: Input,
@@ -695,7 +695,7 @@ async function prefetchEndpointInternal<Input extends SerializableInput, Resp ex
 }
 
 /** Direct server-side query (no cache) — the caller's `.query()`. */
-async function queryServerData<Input extends SerializableInput, Resp extends JsonValue>(
+async function queryServerData<Input extends SerializableInput, Resp extends DataValue>(
 	def: QueryDef<Input, Resp>,
 	input: Input,
 	config: ServerApiConfig,
@@ -728,10 +728,10 @@ async function queryServerData<Input extends SerializableInput, Resp extends Jso
 }
 
 /** Direct server-side mutation (no cache) — the caller's `.mutate()`. */
-async function mutateServerData<Input extends SerializableInput, Resp extends JsonValue>(def: MutationDef<Input, Resp>, input: Input, config: ServerApiConfig): Promise<Resp> {
+async function mutateServerData<Input extends SerializableInput, Resp extends DataValue>(def: MutationDef<Input, Resp>, input: Input, config: ServerApiConfig): Promise<Resp> {
 	const parsed: Input = def.inputSchema.parse(input);
 	const { url, body } = resolveRequest(def.path, parsed, { method: def.method, toQuery: def.toQuery });
-	const finalBody: JsonValue = def.toBody !== undefined ? def.toBody(parsed) : (body ?? {});
+	const finalBody: DataValue = def.toBody !== undefined ? def.toBody(parsed) : (body ?? {});
 	const prefix: string = def.version === undefined ? API_URL_PREFIX : apiVersionPrefix(def.version);
 
 	const cookieStore = await cookies();
@@ -755,7 +755,7 @@ async function mutateServerData<Input extends SerializableInput, Resp extends Js
  * factory — the def + input are captured in the `run` closure, so `PrefetchSpec`
  * needs no erased types.
  */
-function createServerQueryLeaf<Input extends SerializableInput, Resp extends JsonValue>(def: QueryDef<Input, Resp>, config: ServerApiConfig): ServerQueryLeaf<Input, Resp> {
+function createServerQueryLeaf<Input extends SerializableInput, Resp extends DataValue>(def: QueryDef<Input, Resp>, config: ServerApiConfig): ServerQueryLeaf<Input, Resp> {
 	const specFactory = (input: Input, specOptions?: PrefetchSpecOptions<Resp>): PrefetchSpec => {
 		const specConfig: ServerApiConfig = specOptions?.config === undefined ? config : { ...config, ...specOptions.config };
 		return {
@@ -782,7 +782,7 @@ function createServerQueryLeaf<Input extends SerializableInput, Resp extends Jso
 }
 
 /** Builds the caller leaf for one mutation def — direct server-side `.mutate()`. */
-function createServerMutationLeaf<Input extends SerializableInput, Resp extends JsonValue>(
+function createServerMutationLeaf<Input extends SerializableInput, Resp extends DataValue>(
 	def: MutationDef<Input, Resp>,
 	config: ServerApiConfig,
 ): ServerMutationLeaf<Input, Resp> {
@@ -816,6 +816,10 @@ function buildServerCallerTree(config: ServerApiConfig): ServerCaller {
 			signup: createServerMutationLeaf(apiRouter.auth.signup, config),
 			refresh: createServerMutationLeaf(apiRouter.auth.refresh, config),
 			logout: createServerMutationLeaf(apiRouter.auth.logout, config),
+			forgotPassword: createServerMutationLeaf(apiRouter.auth.forgotPassword, config),
+			resetPassword: createServerMutationLeaf(apiRouter.auth.resetPassword, config),
+			resendVerification: createServerMutationLeaf(apiRouter.auth.resendVerification, config),
+			verifyEmail: createServerMutationLeaf(apiRouter.auth.verifyEmail, config),
 			adminUsers: createServerQueryLeaf(apiRouter.auth.adminUsers, config),
 		},
 		email: {
@@ -879,8 +883,8 @@ export function createServerCaller(config?: Partial<ServerApiConfig>): ServerCal
 // Cross-render in-flight dedupe: two concurrent page renders that share a
 // queryKey reuse ONE upstream fetch (TanStack only dedupes within a single
 // QueryClient; this dedupes across clients/module instances). Every endpoint's
-// `Resp` extends `JsonValue`, so the widened map type needs no erasure.
-const inFlightFetches = new Map<string, Promise<PrefetchDetailedResult<JsonValue>>>();
+// `Resp` extends `DataValue`, so the widened map type needs no erasure.
+const inFlightFetches = new Map<string, Promise<PrefetchDetailedResult<DataValue>>>();
 
 /** Resolves a spec's `enabled` (static boolean or per-batch function). */
 function isEnabled(spec: PrefetchSpec): boolean {

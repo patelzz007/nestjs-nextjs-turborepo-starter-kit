@@ -2,6 +2,8 @@
 // lib/jwt.ts - JWT decode utility (Edge-safe)
 // ============================================
 
+import { JwtPayloadSchema, type JwtPayload } from "@workspace/shared";
+
 /**
  * Decode a JWT payload without verifying the signature.
  *
@@ -13,13 +15,9 @@
  * rejected by the backend on the next authenticated API call.
  *
  * @param token - The JWT string (three dot-separated base64url parts)
- * @returns The decoded payload object, or `null` if the token is malformed
+ * @returns The decoded payload, or `null` if the token is malformed
  */
-function isRecord(value: unknown): value is Record<string, unknown> {
-	return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-export function decodeJwtPayload(token: string): Record<string, unknown> | null {
+export function decodeJwtPayload(token: string): JwtPayload | null {
 	try {
 		const parts: string[] = token.split(".");
 		if (parts.length !== 3) return null;
@@ -32,8 +30,8 @@ export function decodeJwtPayload(token: string): Record<string, unknown> | null 
 		const decoded: string = atob(base64);
 
 		const parsed: unknown = JSON.parse(decoded);
-		// JWT payloads are JSON objects — narrow via a type guard instead of an assertion.
-		return isRecord(parsed) ? parsed : null;
+		const result = JwtPayloadSchema.safeParse(parsed);
+		return result.success ? result.data : null;
 	} catch {
 		return null;
 	}

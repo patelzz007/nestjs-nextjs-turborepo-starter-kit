@@ -57,3 +57,20 @@ export const BaseResponseSchema = z
 	.strict();
 
 export type BaseResponse = z.output<typeof BaseResponseSchema>;
+
+// ── Recursive data-value schema ──────────────────────────────────────────
+// Used by the response envelope so `data` is typed instead of `z.unknown()`.
+
+/** A JSON-safe primitive. */
+export type DataPrimitive = string | number | boolean | null;
+
+/**
+ * Any JSON-safe value. Object values tolerate `undefined` so optional
+ * shapes satisfy it — `undefined` properties are skipped during serialization.
+ */
+export type DataValue = DataPrimitive | readonly DataValue[] | { readonly [key: string]: DataValue | undefined };
+
+/** Recursive Zod schema for `DataValue` — validates any JSON-safe value. */
+export const DataValueSchema: z.ZodType<DataValue> = z.lazy(() =>
+	z.union([z.string(), z.number(), z.boolean(), z.null(), z.array(DataValueSchema), z.record(z.string(), DataValueSchema)]),
+);

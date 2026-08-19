@@ -9,10 +9,8 @@
 // technical / inconsistent). This catalog is the single place the apps own the
 // wording, keyed by the stable code.
 
-import type { EpochMs } from "@workspace/shared";
+import { ApiErrorBodySchema, AuthErrorCodeSchema, EpochMsSchema, LockedErrorCodeSchema, type EpochMs } from "@workspace/shared";
 import { z } from "zod";
-
-import { AuthErrorCodeSchema } from "@workspace/shared";
 
 import { ApiError } from "../api/use-api";
 
@@ -57,22 +55,45 @@ export const DEFAULT_LOCALE: Locale = "en";
 /** Fallback used when an error has no code at all (network / generic failures). */
 const GENERIC_MESSAGE = "Something went wrong. Please try again.";
 
+const NonEmptyStringSchema = z.string().min(1);
+
+const ErrorWithMessageSchema = z.object({
+	message: NonEmptyStringSchema,
+});
+
+/** Full lockout payload on an `ACCOUNT_LOCKED` response. */
+const AccountLockedErrorSchema = ApiErrorBodySchema.extend({
+	error: LockedErrorCodeSchema,
+	lockedUntil: EpochMsSchema,
+	remainingSeconds: z.number().int().min(0),
+});
+
 /**
  * Normalize an unknown thrown value into a `string | null` message:
- * - `ApiError` → the friendly catalog string (or its server message)
- * - anything with a `.message` → that message
- * - a plain string → itself
+ * - plain string → itself
+ * - `ApiError` / API error body → `message`
+ * - anything else with a `.message` string → that message
  */
 export function extractAuthErrorMessage(error: unknown): string | null {
-	if (typeof error === "string" && error.length > 0) {
-		return error;
+	const asString = NonEmptyStringSchema.safeParse(error);
+	if (asString.success) {
+		return asString.data;
 	}
-	if (typeof error === "object" && error !== null && "message" in error) {
-		const message: unknown = error.message;
-		if (typeof message === "string" && message.length > 0) {
-			return message;
-		}
+
+	if (error instanceof ApiError) {
+		return NonEmptyStringSchema.safeParse(error.message).data ?? null;
 	}
+
+	const apiBody = ApiErrorBodySchema.safeParse(error);
+	if (apiBody.success) {
+		return apiBody.data.message;
+	}
+
+	const withMessage = ErrorWithMessageSchema.safeParse(error);
+	if (withMessage.success) {
+		return withMessage.data.message;
+	}
+
 	return null;
 }
 
@@ -106,6 +127,12 @@ export function resolveAuthErrorMessage(error: unknown, locale: Locale = DEFAULT
  */
 export function isAccountLockedError(error: unknown): error is ApiError & { readonly lockedUntil: EpochMs; readonly remainingSeconds: number } {
 	if (!(error instanceof ApiError)) return false;
-	if (error.error !== "ACCOUNT_LOCKED") return false;
-	return typeof error.lockedUntil === "number" && typeof error.remainingSeconds === "number";
+
+	return AccountLockedErrorSchema.safeParse({
+		message: error.message,
+		error: error.error,
+		statusCode: error.statusCode,
+		lockedUntil: error.lockedUntil,
+		remainingSeconds: error.remainingSeconds,
+	}).success;
 }

@@ -59,7 +59,7 @@ export const EnvSchema = z
 	})
 	.strict();
 
-export type Env = z.infer<typeof EnvSchema>;
+export type Env = z.output<typeof EnvSchema>;
 
 /**
  * Parse a partial env object (e.g. `process.env`) against the schema.

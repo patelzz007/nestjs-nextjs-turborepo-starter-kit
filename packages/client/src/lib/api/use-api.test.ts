@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 import { apiFetch, useApi, type OnRefresh, type OnUnauthorized } from "./use-api";
-import { type JsonValue } from "@workspace/shared";
+import { type DataValue } from "@workspace/shared";
 import { defineQuery } from "./endpoints";
 import { firstFetchCall, headersOf, inputUrl, jsonResponse, type FetchImpl } from "../test-utils";
 
@@ -12,18 +12,18 @@ const BASE_URL = "http://api.test";
 
 interface Envelope {
 	readonly success: true;
-	readonly data: JsonValue;
+	readonly data: DataValue;
 	readonly meta: { readonly timestamp: number };
 }
 
 /** Minimal mirror of the API's ResponseInterceptor envelope. */
 const envelopeSchema = z.object({
 	success: z.literal(true),
-	data: z.custom<JsonValue>(),
+	data: z.custom<DataValue>(),
 	meta: z.object({ timestamp: z.number() }),
 });
 
-function successEnvelope(data: JsonValue): Envelope {
+function successEnvelope(data: DataValue): Envelope {
 	return { success: true, data, meta: { timestamp: 1786428000000 } };
 }
 

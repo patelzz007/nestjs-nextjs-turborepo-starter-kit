@@ -45,11 +45,13 @@ export {
 	StopImpersonationResponseSchema,
 	strongPassword,
 	VerifyEmailResponseSchema,
+	JwtPayloadSchema,
 } from "./auth/auth";
 export type {
 	ForgotPasswordInput,
 	ForgotPasswordResponse,
 	ImpersonateResponse,
+	JwtPayload,
 	LoginInput,
 	LoginResponse,
 	LoginServiceResponse,
@@ -67,8 +69,8 @@ export type {
 	StopImpersonationResponse,
 	VerifyEmailResponse,
 } from "./auth/auth";
-export { ApiErrorResponseSchema, ApiPaginatedMetaSchema, ApiResponseMetaSchema, ApiSuccessResponseSchema } from "./api/api-response";
-export type { ApiErrorResponse, ApiPaginatedMeta, ApiResponseMeta, ApiSuccessResponse } from "./api/api-response";
+export { ApiErrorResponseSchema, ApiErrorBodySchema, ApiPaginatedMetaSchema, ApiResponseMetaSchema, ApiSuccessResponseSchema } from "./api/api-response";
+export type { ApiErrorResponse, ApiErrorBody, ApiPaginatedMeta, ApiResponseMeta, ApiSuccessResponse, Envelope } from "./api/api-response";
 export { AuthErrorCodeSchema, LockedErrorCodeSchema } from "./auth/auth-errors";
 export type { AuthErrorCode, LockedErrorCode } from "./auth/auth-errors";
 export {
@@ -91,8 +93,8 @@ export type {
 	ClickRecordResponse,
 	UrlAnalyticsResponse,
 } from "./domain/clicks";
-export { BaseResponseSchema, EpochMsSchema, epochMs, nowEpochMs } from "./api/common";
-export type { BaseResponse, EpochMs } from "./api/common";
+export { BaseResponseSchema, EpochMsSchema, epochMs, nowEpochMs, DataValueSchema } from "./api/common";
+export type { BaseResponse, EpochMs, DataPrimitive, DataValue } from "./api/common";
 export { SessionStatusSchema } from "./auth/session-status";
 export type { SessionStatus } from "./auth/session-status";
 export { EnvSchema, parseEnv } from "./api/env";
@@ -129,20 +131,8 @@ export type {
 } from "./email/email";
 export { AudienceTypeSchema, DeviceTypeSchema, MenuMatchTypeSchema, PermissionActionSchema, PermissionResourceSchema, PlanSchema, RedirectTypeSchema } from "./domain/enums";
 export type { AudienceType, DeviceType, MenuMatchType, PermissionAction, PermissionResource, Plan, RedirectType } from "./domain/enums";
-export {
-	EmailTemplateKeyParamSchema,
-	TelescopeIdParamSchema,
-	TelescopeScheduleNameParamSchema,
-	UuidParamSchema,
-	VerifyEmailTokenParamSchema,
-} from "./domain/param-schemas";
-export type {
-	EmailTemplateKeyParam,
-	TelescopeIdParam,
-	TelescopeScheduleNameParam,
-	UuidParam,
-	VerifyEmailTokenParam,
-} from "./domain/param-schemas";
+export { EmailTemplateKeyParamSchema, TelescopeIdParamSchema, TelescopeScheduleNameParamSchema, UuidParamSchema, VerifyEmailTokenParamSchema } from "./domain/param-schemas";
+export type { EmailTemplateKeyParam, TelescopeIdParam, TelescopeScheduleNameParam, UuidParam, VerifyEmailTokenParam } from "./domain/param-schemas";
 export {
 	BackupCancelResponseSchema,
 	BackupCreateInputSchema,

@@ -7,14 +7,15 @@
 // a 404 from its pinned version ("deploy-any-or-die" negotiation) and the
 // API returns it from `VersionController`.
 //
-// The version enum mirrors `ApiVersion` in `contracts/index.ts`. Keep the two
-// in sync when adding a major (`"v3"` etc.) — the schema is deliberately
-// self-contained so `contracts` (which imports `schemas`) never sees a cycle.
+// The `ApiVersion` type lives in `contracts/versioning.ts` (zero imports).
+// This file imports only the type (no runtime dep on contracts), so no cycle.
 
 import { z } from "zod";
 
-/** `"v1" | "v2" | …` — must mirror `ApiVersion` in `contracts/index.ts`. */
-const ApiVersionEnum = z.enum(["v1", "v2"]);
+import { type ApiVersion } from "../../contracts/versioning";
+
+/** Zod enum derived from the single `ApiVersion` type source in `contracts/versioning`. */
+const ApiVersionEnum: z.ZodType<ApiVersion> = z.enum(["v1", "v2"]);
 
 export const ApiVersionManifestSchema = z
 	.object({

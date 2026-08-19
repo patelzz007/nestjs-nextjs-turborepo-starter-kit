@@ -94,10 +94,10 @@ pnpm db:reset        # reset + rls + seed (from apps/api)
 | # | Task | Files | Rules |
 |---|------|-------|-------|
 | Q1 | Admin guard on email log + preview (not just `AuthGuard`) | `email-log.controller.ts`, `email-preview.controller.ts` | 24 |
-| Q2 | Point proxy refresh at contract path | `packages/client/src/lib/auth/proxy-refresh.ts` → use `apiRouter.auth.refresh.path` | Data flow |
-| Q3 | Wire 4 missing auth client routes | `packages/client/src/lib/api/endpoints.ts` — `forgotPassword`, `resetPassword`, `resendVerification`, `verifyEmail` | Data flow |
+| Q2 | Point proxy refresh at contract path | `packages/client/src/lib/auth/proxy-refresh.ts` → use `apiRouter.auth.refresh.path` | Data flow | ✅ |
+| Q3 | Wire 4 missing auth client routes | `packages/client/src/lib/api/endpoints.ts` — `forgotPassword`, `resetPassword`, `resendVerification`, `verifyEmail` | Data flow | ✅ |
 | Q4 | Lift mutations out of dumb alerts panel | `apps/admin/components/telescope/alerts-panel.tsx` → parent passes `onAck` / `onSnooze` | 9–11, 19 |
-| Q5 | Replace `z.unknown()` in success envelope | `packages/shared/src/schemas/api/api-response.ts` | 1–2 |
+| Q5 | Replace `z.unknown()` in success envelope | `packages/shared/src/schemas/api/api-response.ts` | 1–2 | ✅ |
 | Q6 | `@EmailVerified()` on `stop-impersonation` | `impersonation.controller.ts` | 24 |
 | Q7 | `GET /admin/users/:userId` + `@RequirePermission("READ", "USER")` | `auth.controller.ts` | 24 |
 
@@ -199,23 +199,23 @@ pnpm db:reset        # reset + rls + seed (from apps/api)
 
 | Task | File | Fix |
 |------|------|-----|
-| [ ] Remove `z.unknown()` from envelope | `schemas/api/api-response.ts` | Generic factory or `JsonValue` recursive schema |
-| [ ] Single `ApiVersion` source | `contracts/versioning.ts` + `schemas/api/version.ts` | Zod enum → `z.output` type only |
-| [ ] `z.infer` → `z.output` | `schemas/api/env.ts`, `schemas/domain/logs.ts` | Consistency |
-| [ ] `as const` → tuples | `contracts/versioning.ts`, `contracts/index.ts` | Rules 4 |
+| [x] Remove `z.unknown()` from envelope | `schemas/api/api-response.ts` | `DataValueSchema` recursive union in `common.ts` |
+| [x] Single `ApiVersion` source | `contracts/versioning.ts` + `schemas/api/version.ts` | `version.ts` imports `ApiVersion` type from `versioning.ts` |
+| [x] `z.infer` → `z.output` | `schemas/api/env.ts`, `schemas/domain/logs.ts` | Consistency |
+| [x] `as const` → tuples | `contracts/versioning.ts`, `contracts/index.ts` | Tuple annotations; `apiContract` no longer ends with `as const` |
 
 ### `packages/client`
 
 | Task | File | Fix |
 |------|------|-----|
-| [ ] Missing router leaves | `lib/api/endpoints.ts` | **Q3** — four auth routes |
-| [ ] Hardcoded refresh URL | `lib/auth/proxy-refresh.ts` | **Q2** |
-| [ ] JWT parsing without `unknown` | `lib/auth/jwt.ts` | Zod schema for payload (`exp`, `sub`, `hasAdminAccess`, …) |
-| [ ] Auth errors | `lib/auth/auth-errors.ts` | Parse `ApiErrorResponseSchema` instead of `typeof` |
-| [ ] Duplicate envelope interface | `lib/api/endpoints.ts` `Envelope<Data>` | Derive from shared schema |
-| [ ] Client `ApiErrorSchema` drift | `lib/api/use-api.ts` | Import from shared |
+| [x] Missing router leaves | `lib/api/endpoints.ts` | **Q3** — four auth routes (+ server/client caller trees) |
+| [x] Hardcoded refresh URL | `lib/auth/proxy-refresh.ts` | **Q2** — `apiContract.auth.refresh.path` |
+| [x] JWT parsing without `unknown` | `lib/auth/jwt.ts` | `JwtPayloadSchema` in shared; `decodeJwtPayload` returns `JwtPayload \| null` |
+| [x] Auth errors | `lib/auth/auth-errors.ts` | Zod schemas (`ApiErrorBodySchema`, `AccountLockedErrorSchema`) replace `typeof` |
+| [x] Duplicate envelope interface | `lib/api/endpoints.ts` `Envelope<Data>` | Moved to `schemas/api/api-response.ts`; client imports type |
+| [x] Client `ApiErrorSchema` drift | `lib/api/use-api.ts` | Re-exports shared `ApiErrorBodySchema` as `ApiErrorSchema` |
 
-**Contract coverage:** 52/56 leaves wired; missing four auth routes above.
+**Contract coverage:** 56/56 leaves wired (was 52/56).
 
 ---
 

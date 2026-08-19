@@ -40,22 +40,22 @@ import {
 } from "../schemas/domain/telescope";
 
 // ── JSON-safe value types (shared by the contract and the client pipeline) ─
+// Canonical definitions live in `schemas/api/common.ts` to avoid duplicate
+// exports. Re-exported here so consumers importing from `@workspace/shared`
+// get them from either path.
+import type { DataPrimitive, DataValue } from "../schemas/api/common";
+export type { DataPrimitive, DataValue };
 
-/** A JSON-serializable primitive. */
-export type JsonPrimitive = string | number | boolean | null;
-
-/**
- * Any JSON-serializable value. The object branch tolerates `undefined` values
- * so optional object shapes (`{ page?: number }`) satisfy it — `undefined`
- * properties are simply skipped during serialization.
- */
-export type JsonValue = JsonPrimitive | readonly JsonValue[] | { readonly [key: string]: JsonValue | undefined };
+/** @deprecated Use `DataValue` instead. */
+export type JsonValue = DataValue;
+/** @deprecated Use `DataPrimitive` instead. */
+export type JsonPrimitive = DataPrimitive;
 
 /**
  * Every procedure input is either a plain JSON object (path params + query
  * keys / body fields) or `undefined` (no-input procedures like `auth.me`).
  */
-export type SerializableInput = Readonly<Record<string, JsonValue | undefined>> | undefined;
+export type SerializableInput = Readonly<Record<string, DataValue | undefined>> | undefined;
 
 // ── API versioning ─────────────────────────────────────────────────────────
 // The version constants (`API_VERSION`, `apiPath`, `apiDocsPath`, …) live in
@@ -244,7 +244,7 @@ export const apiContract = {
 		setExceptionStatus: defineContract({ method: "PUT", path: "/telescope/exceptions/:id/status", input: ExceptionStatusInputSchema }),
 		retryJob: defineContract({ method: "POST", path: "/telescope/jobs/:id/retry", input: z.object({ id: z.string() }).strict() }),
 	},
-} as const;
+};
 
 /** The full contract tree — used to derive the client router + API pipes. */
 export type ApiContract = typeof apiContract;
