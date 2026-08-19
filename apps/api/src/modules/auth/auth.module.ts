@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 import { JwtModule } from "@nestjs/jwt";
 
 import { CookieConfigService } from "./constants/cookie.config";
+import { AdminAccessGuard } from "./guards/admin-access.guard";
 import { AuthGuard } from "./guards/auth.guard";
 import { EmailVerifiedGuard } from "./guards/email-verified.guard";
 import { RefreshTokenGuard } from "./guards/refresh-token.guard";
@@ -32,6 +33,7 @@ import { TokenService } from "./services/token.service";
 		EmailService,
 		TaskScheduleService,
 		AuthGuard,
+		AdminAccessGuard,
 		EmailVerifiedGuard,
 		SuperAdminGuard,
 		RefreshTokenGuard,
@@ -46,6 +48,7 @@ import { TokenService } from "./services/token.service";
 		CryptoService,
 		EmailService,
 		AuthGuard,
+		AdminAccessGuard,
 		EmailVerifiedGuard,
 		SuperAdminGuard,
 		RefreshTokenGuard,

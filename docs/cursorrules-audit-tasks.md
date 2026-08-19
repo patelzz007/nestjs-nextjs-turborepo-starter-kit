@@ -69,6 +69,9 @@ Use this doc when you want to **start a specific improvement task**. It is organ
 - [x] **Prisma query event subscriber** — `subscribePrismaQueryEvents` calls native `$on` with correct `this`; `PrismaQuerySubscriberSchema` uses `z.custom` for `$on` (not `z.function` with `void` output — Prisma returns the client)
 - [x] **P2 UI kit (first slice)** — `packages/ui/README.md`, `field-state.ts` / `field-variants.ts`, forwardRef + CVA `state` on core form controls, z-index tokens (`z-overlay` / `z-popover` / `z-toast`), required `labels` on FormShell / AuthLayout / Pagination / NotFoundContent / LockoutCountdown, `ui-kit-contract.test.ts`; app call sites in `apps/web`, `apps/admin`, `packages/client`
 - [x] **P2 UI kit (second slice)** — forwardRef on popover/sheet/command/menubar/kbd/calendar/chart; CVA `state` on select/combobox triggers; alert-dialog fully controlled + required `labels` bundle (no default OK/Delete); combobox `sessionStorage` lifted to parent; `data-table-prefs.ts` Zod for persisted prefs/cell scalars; row-action menu semantic tokens; partial `DataTableLabels` (`actionsMenuTitle`, `openRowMenu`); contract tests expanded; admin call sites (backup-history, showcase, alert-dialogs, command-palette, search-dialog)
+- [x] **Client quick wins Q2 + Q3** — `proxy-refresh.ts` uses `apiRouter.auth.refresh.path`; four auth router leaves (`forgotPassword`, `resetPassword`, `resendVerification`, `verifyEmail`) wired in `endpoints.ts` + server/client caller trees (56/56 contract leaves)
+- [x] **Admin access guard consolidation** — shared `AdminAccessGuard` + `@AdminAccessOnly(message)` + `requireAdminAccessToken` / `userHasAdminAccess` in `modules/auth/`; `BackupController` migrated (deleted `backup-admin.guard.ts`); `TelescopeAdminGuard` + `SuperAdminGuard` use shared helpers
+- [x] **`secureEquals` consolidation** — `common/utils/secure-equals.ts`; used by `AuthGuard` (telescope Bearer bypass) and `TelescopeAdminGuard` (CI token compare)
 
 ---
 
@@ -221,8 +224,8 @@ pnpm db:reset        # reset + rls + seed (from apps/api)
 
 | Pattern | Locations |
 |---------|-----------|
-| [ ] Admin access guard | `backup-admin.guard.ts`, `telescope-admin.guard.ts`, `super-admin.guard.ts`, `backup.controller.ts` `requireAdminAccessToken` |
-| [ ] `secureEquals` | `auth.guard.ts`, `telescope-admin.guard.ts` |
+| [x] Admin access guard | `admin-access.guard.ts`, `admin-access.decorator.ts`, `utils/admin-access.ts` — replaces `backup-admin.guard.ts`, inline checks in `telescope-admin.guard.ts` / `super-admin.guard.ts`, and `backup.controller.ts` `requireAdminAccessToken` |
+| [x] `secureEquals` | `common/utils/secure-equals.ts` — replaces private copies in `auth.guard.ts`, `telescope-admin.guard.ts` |
 | [x] `ThrownErrorSchema` for errors | `rls-pool.ts`, `backup-scheduler.service.ts`, `backup.service.ts` | Shared `schemas/runtime/primitives.ts` |
 | [x] Thin Swagger DTO wrappers | `apps/api/src/common/dto/response-wrapper.ts` | Envelope shape in shared; wrapper only calls `createZodDto` |
 
@@ -248,7 +251,7 @@ pnpm db:reset        # reset + rls + seed (from apps/api)
 | Task | File | Fix |
 |------|------|-----|
 | [x] Missing router leaves | `lib/api/endpoints.ts` | **Q3** — four auth routes (+ server/client caller trees) |
-| [x] Hardcoded refresh URL | `lib/auth/proxy-refresh.ts` | **Q2** — `apiContract.auth.refresh.path` |
+| [x] Hardcoded refresh URL | `lib/auth/proxy-refresh.ts` | **Q2** — `apiRouter.auth.refresh.path` |
 | [x] JWT parsing without `unknown` | `lib/auth/jwt.ts` | `JwtPayloadSchema` in shared; `decodeJwtPayload` returns `JwtPayload \| null` |
 | [x] Auth errors | `lib/auth/auth-errors.ts` | Zod schemas (`ApiErrorBodySchema`, `AccountLockedErrorSchema`) replace `typeof` |
 | [x] Duplicate envelope interface | `lib/api/endpoints.ts` `Envelope<Data>` | Moved to `schemas/api/api-response.ts`; client imports type |
@@ -432,6 +435,8 @@ Phase 5 — Ops (P1/P3)
 
 - `auth.controller.ts` — ZodValidationPipe params, `@RequirePermission` on get user
 - `impersonation.controller.ts` — param validation, `@EmailVerified` on stop
+- `modules/auth/guards/admin-access.guard.ts`, `decorators/admin-access.decorator.ts`, `utils/admin-access.ts` — shared admin gate (**done**)
+- `common/utils/secure-equals.ts` — constant-time token compare (**done**)
 - `email-log.controller.ts`, `email-preview.controller.ts` — admin guard
 - `email-webhook.controller.ts` — Zod body, minimize DB on public route
 - `telescope.controller.ts` — param pipes, `@EmailVerified` on destructive ops
@@ -461,7 +466,7 @@ Phase 5 — Ops (P1/P3)
 <summary><code>packages/client</code></summary>
 
 - `lib/api/endpoints.ts` — 4 auth leaves, envelope type
-- `lib/auth/proxy-refresh.ts` — contract path
+- `lib/auth/proxy-refresh.ts` — `apiRouter.auth.refresh.path` (**Q2 done**)
 - `lib/auth/jwt.ts`, `auth-errors.ts` — Zod parsing
 
 </details>

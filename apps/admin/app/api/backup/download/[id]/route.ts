@@ -11,7 +11,7 @@
 //     file fetch just rides cookies like every other admin request).
 //   - Auth rides the admin cookies exactly like proxy.ts: the browser sends
 //     `adminAccessToken` to :3001, we forward the `Cookie` header upstream,
-//     and the API's AuthGuard + BackupAdminGuard still enforce access. The
+//     and the API's AuthGuard + AdminAccessGuard still enforce access. The
 //     signed `token` query param is a second, short-lived gate on the file.
 //
 // If the access token is stale we silently rotate it server-side (same

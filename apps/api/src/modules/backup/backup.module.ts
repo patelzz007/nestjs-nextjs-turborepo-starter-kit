@@ -1,6 +1,6 @@
 import { Module } from "@nestjs/common";
 
-import { EmailVerifiedGuard } from "../auth/guards/email-verified.guard";
+import { AuthModule } from "../auth/auth.module";
 import { BackupController } from "./backup.controller";
 import { BackupSchedulerService } from "./backup-scheduler.service";
 import { BackupService } from "./backup.service";
@@ -15,8 +15,9 @@ import { BackupService } from "./backup.service";
  * runs at most a few times a day).
  */
 @Module({
+	imports: [AuthModule],
 	controllers: [BackupController],
-	providers: [BackupService, BackupSchedulerService, EmailVerifiedGuard],
+	providers: [BackupService, BackupSchedulerService],
 	exports: [BackupService],
 })
 export class BackupModule {}

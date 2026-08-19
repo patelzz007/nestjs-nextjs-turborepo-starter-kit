@@ -7,10 +7,10 @@
 // Imported by apps/web/proxy.ts and apps/admin/proxy.ts.
 // ============================================
 
-import { apiContract } from "@workspace/shared";
 import { z } from "zod";
 
 import { API_URL_PREFIX } from "../api/config";
+import { apiRouter } from "../api/endpoints";
 import { decodeJwtPayload } from "./jwt";
 
 /** How early (ms) before `exp` we refresh on navigation (absorbs clock drift). */
@@ -198,7 +198,7 @@ export async function refreshSessionFromProxy(config: ProxyRefreshConfig): Promi
 	}, REFRESH_TIMEOUT_MS);
 
 	try {
-		const response: Response = await fetch(`${config.apiBaseUrl}${API_URL_PREFIX}${apiContract.auth.refresh.path}`, {
+		const response: Response = await fetch(`${config.apiBaseUrl}${API_URL_PREFIX}${apiRouter.auth.refresh.path}`, {
 			method: "POST",
 			headers: {
 				Accept: "application/json",

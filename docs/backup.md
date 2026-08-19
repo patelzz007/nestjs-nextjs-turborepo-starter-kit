@@ -19,7 +19,7 @@ coverImage: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=form
 >
 > **Ground truth** (verified 2026-08-18):
 >
-> - Feature module: `apps/api/src/modules/backup/` (`BackupService` + `BackupController` + `BackupAdminGuard`)
+> - Feature module: `apps/api/src/modules/backup/` (`BackupService` + `BackupController` + shared `AdminAccessGuard` via `@AdminAccessOnly`)
 > - Admin UI: `apps/admin/app/(panel)/backup/backup-panel.tsx`
 > - Shared contracts: `packages/shared/src/schemas/domain/backup.ts` + `packages/shared/src/contracts/`
 > - All routes live under `apiPath("/backup")` → `/api/v1/backup` and are **excluded from the public Swagger doc**
@@ -43,7 +43,7 @@ coverImage: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=form
 | `POST` | `/api/v1/backup/:id/cancel` | Gracefully stop a pending/running job (`CANCELLED`) |
 | `DELETE` | `/api/v1/backup/:id` | Delete the file + row |
 
-Every route requires the global `AuthGuard` **and** `BackupAdminGuard` (admin access). The
+Every route requires the global `AuthGuard` **and** `@AdminAccessOnly` (shared `AdminAccessGuard` — JWT `hasAdminAccess`). The
 `/backup` UI is only reachable by admins via the admin proxy.
 
 ## Rate limits
@@ -118,7 +118,7 @@ for jobs it saw go active while the page was open, so loading history stays sile
                     admin panel (localhost:3001/backup)
                                   |   polls every 2s while a job is active
                                   v
-              BackupController  (/api/v1/backup, BackupAdminGuard)
+              BackupController  (/api/v1/backup, @AdminAccessOnly)
                                   |
                                   v
                         BackupService (queue + DB-backed ops)
@@ -151,9 +151,9 @@ databases are swept, and stale restore locks are cleared.
 
 - `apps/api/src/modules/backup/backup.service.ts` — queue, the dump/restore pipelines, rate
   limits, retention, sweeps (~1,200 lines; the meat of the feature)
-- `apps/api/src/modules/backup/backup.controller.ts` — routes, `BackupAdminGuard`, passes the
-  requesting admin (`sub` + `isSuperAdmin`) down to the service
-- `apps/api/src/modules/backup/backup-admin.guard.ts` — admin-access gate
+- `apps/api/src/modules/backup/backup.controller.ts` — routes, `@AdminAccessOnly`, passes the
+  requesting admin (`sub` + `isSuperAdmin`) down to the service via shared `requireAdminAccessToken`
+- `apps/api/src/modules/auth/guards/admin-access.guard.ts` — shared admin-access gate (also used by backup; telescope keeps its own guard for `TELESCOPE_TOKEN` bypass + enabled check)
 - `apps/admin/app/(panel)/backup/` — `page.tsx` (SSR prefetch) + `backup-panel.tsx` (client UI)
 - `packages/shared/src/schemas/domain/backup.ts` — the zod contract both sides share
 

@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, ForbiddenException, Get, HttpCode, Param, Post, Query, Req, Res, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, HttpCode, Param, Post, Query, Req, Res } from "@nestjs/common";
 import { ApiExcludeController, ApiOperation, ApiTags } from "@nestjs/swagger";
 import type { FastifyReply, FastifyRequest } from "fastify";
 
@@ -22,18 +22,19 @@ import {
 } from "@workspace/shared";
 import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe";
 import { extractClientInfo } from "../../common/utils/client-info";
+import { AdminAccessOnly } from "../auth/decorators/admin-access.decorator";
 import { EmailVerified } from "../auth/decorators/email-verified.decorator";
 import { GetUser } from "../auth/decorators/get-user.decorator";
 import { RequirePermission } from "../auth/decorators/require-permission.decorator";
 import type { AccessTokenPayload, RefreshTokenPayload } from "../auth/services/token.service";
+import { requireAdminAccessToken } from "../auth/utils/admin-access";
 
-import { BackupAdminGuard } from "./backup-admin.guard";
 import { BackupService } from "./backup.service";
 
 /**
  * Database backup admin API — `apiPath("/backup")` → `/api/v1/backup`.
  *
- * Every route requires admin access (global AuthGuard + BackupAdminGuard).
+ * Every route requires admin access (global AuthGuard + AdminAccessGuard).
  * The controller is excluded from the public Swagger document — a backup is
  * the whole database, so the surface stays out of the docs.
  *
@@ -45,7 +46,7 @@ import { BackupService } from "./backup.service";
 @ApiExcludeController()
 @ApiTags("Backup")
 @Controller(apiPath("/backup"))
-@UseGuards(BackupAdminGuard)
+@AdminAccessOnly("Admin access required to manage database backups.")
 export class BackupController {
 	public constructor(private readonly backupService: BackupService) {}
 
@@ -60,7 +61,7 @@ export class BackupController {
 		@GetUser() user: AccessTokenPayload | RefreshTokenPayload | undefined,
 		@Req() req: FastifyRequest,
 	): Promise<BackupCreateResponse> {
-		const admin = requireAdminAccessToken(user);
+		const admin = requireAdminAccessToken(user, "Admin access required to manage database backups.");
 		const { ipAddress } = extractClientInfo(req);
 		return this.backupService.create(body, { sub: admin.sub, fullName: admin.fullName, isSuperAdmin: admin.isSuperAdmin }, ipAddress);
 	}
@@ -70,7 +71,7 @@ export class BackupController {
 	@Get()
 	@ApiOperation({ summary: "List backups + operational facts" })
 	public list(@GetUser() user: AccessTokenPayload | RefreshTokenPayload | undefined): Promise<BackupListResponse> {
-		const admin = requireAdminAccessToken(user);
+		const admin = requireAdminAccessToken(user, "Admin access required to manage database backups.");
 		return this.backupService.list({ sub: admin.sub, isSuperAdmin: admin.isSuperAdmin });
 	}
 
@@ -125,7 +126,7 @@ export class BackupController {
 	@EmailVerified()
 	@ApiOperation({ summary: "Mint a signed download token" })
 	public downloadToken(@Param("id") id: string, @GetUser() user: AccessTokenPayload | RefreshTokenPayload | undefined): Promise<BackupDownloadResponse> {
-		const admin = requireAdminAccessToken(user);
+		const admin = requireAdminAccessToken(user, "Admin access required to manage database backups.");
 		return this.backupService.createDownloadToken(id, admin.sub);
 	}
 
@@ -139,7 +140,7 @@ export class BackupController {
 		@GetUser() user: AccessTokenPayload | RefreshTokenPayload | undefined,
 		@Res() reply: FastifyReply,
 	): Promise<void> {
-		const admin = requireAdminAccessToken(user);
+		const admin = requireAdminAccessToken(user, "Admin access required to manage database backups.");
 		await this.backupService.streamDownload(id, token, admin.sub, reply);
 	}
 
@@ -173,7 +174,7 @@ export class BackupController {
 		@Param("id") id: string,
 		@GetUser() user: AccessTokenPayload | RefreshTokenPayload | undefined,
 	): Promise<BackupRestoreResponse> {
-		const admin = requireAdminAccessToken(user);
+		const admin = requireAdminAccessToken(user, "Admin access required to manage database backups.");
 		return this.backupService.restoreBackup(id, body, admin.sub);
 	}
 
@@ -185,12 +186,4 @@ export class BackupController {
 	public cancel(@Param("id") id: string): Promise<{ readonly cancelled: true }> {
 		return this.backupService.cancelBackup(id);
 	}
-}
-
-/** Narrow the auth payload union to an access token and re-check admin access. */
-function requireAdminAccessToken(user: AccessTokenPayload | RefreshTokenPayload | undefined): AccessTokenPayload {
-	if (user === undefined || !("hasAdminAccess" in user) || !user.hasAdminAccess) {
-		throw new ForbiddenException({ message: "Admin access required to manage database backups.", error: "ADMIN_ACCESS_REQUIRED" });
-	}
-	return user;
 }

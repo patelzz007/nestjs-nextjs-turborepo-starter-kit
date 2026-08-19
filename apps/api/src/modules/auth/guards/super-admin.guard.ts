@@ -1,6 +1,8 @@
 import { CanActivate, type ExecutionContext, ForbiddenException, Injectable } from "@nestjs/common";
 import type { FastifyRequest } from "fastify";
 
+import { userHasElevatedAdminAccess } from "../utils/admin-access";
+
 /**
  * Guard that checks whether the authenticated user can access
  * admin-protected routes.
@@ -26,20 +28,13 @@ export class SuperAdminGuard implements CanActivate {
 			});
 		}
 
-		// Fast path: isSuperAdmin bypasses permission check
-		if ("isSuperAdmin" in user && user.isSuperAdmin) {
+		if (userHasElevatedAdminAccess(user)) {
 			return true;
 		}
 
-		// Use the pre-computed hasAdminAccess flag from the JWT payload
-		// (computed once at login time by AuthService.buildUserResponse)
-		if (!("hasAdminAccess" in user) || !user.hasAdminAccess) {
-			throw new ForbiddenException({
-				message: "Super admin privileges required",
-				error: "SUPER_ADMIN_REQUIRED",
-			});
-		}
-
-		return true;
+		throw new ForbiddenException({
+			message: "Super admin privileges required",
+			error: "SUPER_ADMIN_REQUIRED",
+		});
 	}
 }

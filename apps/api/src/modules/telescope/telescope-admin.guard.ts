@@ -1,8 +1,10 @@
 import { CanActivate, ExecutionContext, ForbiddenException, Inject, Injectable, NotFoundException } from "@nestjs/common";
 import type { FastifyRequest } from "fastify";
-import { createHash, timingSafeEqual } from "node:crypto";
 
 import type { TelescopeOptions } from "@workspace/shared";
+
+import { secureEquals } from "../../common/utils/secure-equals";
+import { ADMIN_ACCESS_ERROR, userHasAdminAccess } from "../auth/utils/admin-access";
 
 import { TELESCOPE_OPTIONS } from "./telescope.options";
 
@@ -35,23 +37,15 @@ export class TelescopeAdminGuard implements CanActivate {
 		const token: string | undefined = this.options.token;
 		if (token !== undefined && request.headers.authorization?.startsWith("Bearer ") === true) {
 			const presented: string = request.headers.authorization.slice("Bearer ".length);
-			if (this.secureEquals(presented, token)) {
+			if (secureEquals(presented, token)) {
 				return true;
 			}
 		}
 
 		const user = request.user;
-		// Narrow the access/refresh payload union: only access tokens carry
-		// `hasAdminAccess`, and the guard requires it to be true.
-		if (user === undefined || !("hasAdminAccess" in user) || !user.hasAdminAccess) {
-			throw new ForbiddenException({ message: "Admin access required to view Telescope data.", error: "ADMIN_ACCESS_REQUIRED" });
+		if (!userHasAdminAccess(user)) {
+			throw new ForbiddenException({ message: "Admin access required to view Telescope data.", error: ADMIN_ACCESS_ERROR });
 		}
 		return true;
-	}
-
-	private secureEquals(a: string, b: string): boolean {
-		const hashA: Buffer = createHash("sha256").update(a).digest();
-		const hashB: Buffer = createHash("sha256").update(b).digest();
-		return timingSafeEqual(hashA, hashB);
 	}
 }

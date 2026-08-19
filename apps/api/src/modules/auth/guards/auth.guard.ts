@@ -1,7 +1,8 @@
 import { CanActivate, type ExecutionContext, Injectable, UnauthorizedException } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
 import type { FastifyRequest } from "fastify";
-import { createHash, timingSafeEqual } from "node:crypto";
+
+import { secureEquals } from "../../../common/utils/secure-equals";
 
 import { TypedConfigService } from "../../../config/typed-config.service";
 import { TokenService } from "../services/token.service";
@@ -45,7 +46,7 @@ export class AuthGuard implements CanActivate {
 		const bearer: string | undefined = authorization?.startsWith("Bearer ") ? authorization.slice(7) : undefined;
 
 		const telescopeToken: string = this.config.telescopeToken;
-		if (telescopeToken.length > 0 && bearer !== undefined && this.secureEquals(bearer, telescopeToken)) {
+		if (telescopeToken.length > 0 && bearer !== undefined && secureEquals(bearer, telescopeToken)) {
 			return true;
 		}
 
@@ -68,11 +69,5 @@ export class AuthGuard implements CanActivate {
 				error: "ACCESS_TOKEN_INVALID",
 			});
 		}
-	}
-
-	private secureEquals(a: string, b: string): boolean {
-		const hashA: Buffer = createHash("sha256").update(a).digest();
-		const hashB: Buffer = createHash("sha256").update(b).digest();
-		return timingSafeEqual(hashA, hashB);
 	}
 }

@@ -1227,7 +1227,7 @@ apps/api/src/modules/telescope/
 ├── n1-detector.ts (+ spec)                          ← N+1 query detector
 ├── telescope.service.ts                             ← read queries against TelescopeStore (§6), compare, replay, annotation
 ├── telescope.controller.ts                          ← /telescope/* (admin-gated, @ApiExcludeController), incl. POST /dump + SSE /stream
-├── telescope-admin.guard.ts                         ← SuperAdmin + admin-access gate + TELESCOPE_TOKEN (§10)
+├── telescope-admin.guard.ts                         ← admin-access gate + TELESCOPE_TOKEN bypass (§10); uses shared `userHasAdminAccess` + `secureEquals`
 ├── telescope-capture.middleware.ts                  ← opens the ALS scope, snapshots the request, applies shouldCapture
 ├── telescope.interceptor.ts                         ← finalizes RequestLog + ExceptionLog + handler span + PII scan (§5.4, §15.4)
 ├── request-span-context.ts                          ← AsyncLocalStorage span store (§5.2)
