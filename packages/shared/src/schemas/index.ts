@@ -109,6 +109,7 @@ export {
 	EmailSendResultSchema,
 	EmailTemplateKeySchema,
 	EmailTemplateMetaSchema,
+	ResendDeliveryDetailSchema,
 	ResendWebhookEventSchema,
 	ResendWebhookEventTypeSchema,
 } from "./email/email";
@@ -122,6 +123,7 @@ export type {
 	EmailSendResult,
 	EmailTemplateKey,
 	EmailTemplateMeta,
+	ResendDeliveryDetail,
 	ResendWebhookEvent,
 	ResendWebhookEventType,
 } from "./email/email";

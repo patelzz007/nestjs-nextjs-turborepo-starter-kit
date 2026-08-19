@@ -30,12 +30,27 @@ export default [
 		},
 	},
 
-	// ── Type tracing override for runtime-type patterns ──────────────
-	// Prisma's complex generic chains, Zod schema metafields (`.meta()`),
-	// and dynamic Express middleware patterns cannot be fully resolved by
-	// strictTypeChecked, causing false-positive no-unsafe-* errors.
+	// ── Type tracing overrides for specific patterns ────────────────
+	// Prisma's generated client has deeply-nested generic chains that
+	// strictTypeChecked cannot resolve. Catch blocks that use
+	// `instanceof` narrowing (the repo convention) are also flagged
+	// because the linter sometimes loses the narrowed type across
+	// branches. These overrides are surgical — the blanket disable
+	// was removed so the remaining modules are fully enforced.
 	{
-		files: ["src/prisma/**/*.ts", "src/modules/**/*.ts", "src/common/**/*.ts", "src/main.ts", "scripts/**/*.ts"],
+		files: ["src/prisma/**/*.ts"],
+		rules: {
+			"@typescript-eslint/no-unsafe-assignment": "off",
+			"@typescript-eslint/no-unsafe-call": "off",
+			"@typescript-eslint/no-unsafe-member-access": "off",
+			"@typescript-eslint/no-unsafe-argument": "off",
+			"@typescript-eslint/no-unsafe-return": "off",
+		},
+	},
+	// Scripts use `import.meta.dirname` and Node APIs whose types
+	// cannot be fully resolved by strictTypeChecked.
+	{
+		files: ["scripts/**/*.ts"],
 		rules: {
 			"@typescript-eslint/no-unsafe-assignment": "off",
 			"@typescript-eslint/no-unsafe-call": "off",

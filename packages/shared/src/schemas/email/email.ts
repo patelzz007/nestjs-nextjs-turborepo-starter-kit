@@ -132,6 +132,31 @@ export const ResendWebhookEventTypeSchema = z.enum([
 
 export type ResendWebhookEventType = z.output<typeof ResendWebhookEventTypeSchema>;
 
+// ── Bounce / complaint detail (extracted from webhook data) ────────────────
+
+/**
+ * The `bounce` or `complaint` sub-object inside a Resend delivery webhook.
+ * Resend's wire format uses `bounce_type` / `complaint_type`; the SDK's
+ * typed models use `type` / `subType` / `message`. This schema covers both
+ * naming conventions with `.loose()` so unknown future fields don't break.
+ */
+export const ResendDeliveryDetailSchema = z
+	.object({
+		/** `bounce_type` or `complaint_type` or `type` — the human-readable category. */
+		bounce_type: z.string().optional(),
+		complaint_type: z.string().optional(),
+		type: z.string().optional(),
+		/** `message` or `reason` — the human-readable detail. */
+		message: z.string().optional(),
+		reason: z.string().optional(),
+		subType: z.string().optional(),
+	})
+	.loose();
+
+export type ResendDeliveryDetail = z.output<typeof ResendDeliveryDetailSchema>;
+
+// ── Webhook event ─────────────────────────────────────────────────────────
+
 /**
  * One delivery event as POSTed by Resend to `/notifications/email-webhook`.
  *
@@ -148,6 +173,10 @@ export const ResendWebhookEventSchema = z
 			.object({
 				/** The Resend id of the outbound email this event is about. */
 				email_id: z.string().min(1),
+				/** Present on `email.bounced` events. */
+				bounce: ResendDeliveryDetailSchema.optional(),
+				/** Present on `email.complained` events. */
+				complaint: ResendDeliveryDetailSchema.optional(),
 			})
 			.loose(),
 	})

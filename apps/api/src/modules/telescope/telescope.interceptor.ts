@@ -89,6 +89,7 @@ export class TelescopeInterceptor implements NestInterceptor {
 		const reply: FastifyReply = context.switchToHttp().getResponse<FastifyReply>();
 		const spanStore: SpanStore | undefined = RequestSpanContext.getStore();
 		if (!spanStore?.captured) {
+			// eslint-disable-next-line @typescript-eslint/no-unsafe-return -- CallHandler defaults to `any`; no generic override without a double-cast.
 			return next.handle();
 		}
 

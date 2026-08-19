@@ -89,13 +89,15 @@ export function scanPii(value: TelescopeJsonValue | null): readonly TelescopePii
 		}
 		if (Array.isArray(node)) {
 			for (const item of node) {
+				// eslint-disable-next-line @typescript-eslint/no-unsafe-argument -- Recursive TelescopeJsonValue array: TS resolves element type as `any`.
 				visit(item);
 			}
 			return;
 		}
 		if (isObject(node)) {
-			for (const item of Object.values(node)) {
-				visit(item);
+			for (const key of Object.keys(node)) {
+				const child = TelescopeJsonValueSchema.parse(node[key]);
+				visit(child);
 			}
 		}
 	};

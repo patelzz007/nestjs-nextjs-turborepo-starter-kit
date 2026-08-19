@@ -7,7 +7,7 @@ import { z } from "zod";
 import type { FastifyRequest } from "fastify";
 
 import type { EmailLogStatus, ResendWebhookEvent } from "@workspace/shared";
-import { ResendWebhookEventSchema } from "@workspace/shared";
+import { ResendDeliveryDetailSchema, ResendWebhookEventSchema } from "@workspace/shared";
 
 import { TypedConfigService } from "../../../config/typed-config.service";
 import { LogService } from "../../logs/logs.service";
@@ -273,7 +273,7 @@ export class EmailWebhookController {
 		}
 		// Bounce / complaint events carry a reason — surface it as the row's
 		// `error` so the admin log shows WHY, not just the status flip.
-		const detail: string | undefined = this.extractDeliveryDetail(eventType, event);
+		const detail: string | undefined = this.extractDeliveryDetail(eventType, resendEvent);
 		const outcome: WebhookUpdateResult = await this.emailLogService.updateStatusByResendId(emailId, status, detail);
 		if (outcome === "not_found") {
 			// Signed event for an email this system never sent (spoofed, or sent
@@ -296,31 +296,20 @@ export class EmailWebhookController {
 	 * capped so it never bloats the `error` column. Delivery events without a
 	 * reason return `undefined`.
 	 */
-	private extractDeliveryDetail(eventType: string, event: unknown): string | undefined {
-		if (typeof event !== "object" || event === null || !("data" in event)) {
+	private extractDeliveryDetail(eventType: string, event: ResendWebhookEvent): string | undefined {
+		const data = event.data;
+		const rawDetail = eventType === "email.bounced" ? data.bounce : eventType === "email.complained" ? data.complaint : undefined;
+		if (rawDetail === undefined) {
 			return undefined;
 		}
-		const data: unknown = event.data;
-		if (typeof data !== "object" || data === null) {
+		const parsed = ResendDeliveryDetailSchema.safeParse(rawDetail);
+		if (!parsed.success) {
 			return undefined;
 		}
-		const detailObject: unknown =
-			eventType === "email.bounced" && "bounce" in data ? data.bounce : eventType === "email.complained" && "complaint" in data ? data.complaint : undefined;
-		if (typeof detailObject !== "object" || detailObject === null) {
-			return undefined;
-		}
-		// Defensive key set: Resend's webhook wire format uses `bounce_type` /
-		// `complaint_type`, the SDK's typed models use `type` / `subType` / `message`.
-		const kind: unknown =
-			"bounce_type" in detailObject
-				? detailObject.bounce_type
-				: "complaint_type" in detailObject
-					? detailObject.complaint_type
-					: "type" in detailObject
-						? detailObject.type
-						: undefined;
-		const message: unknown = "message" in detailObject ? detailObject.message : "reason" in detailObject ? detailObject.reason : undefined;
-		const parts: readonly string[] = [typeof kind === "string" ? kind : "", typeof message === "string" ? message : ""].filter((part: string): boolean => part.length > 0);
+		const d = parsed.data;
+		const kind = d.bounce_type ?? d.complaint_type ?? d.type ?? "";
+		const message = d.message ?? d.reason ?? "";
+		const parts = [kind, message].filter((p): p is string => p.length > 0);
 		return parts.length > 0 ? parts.join(" — ").slice(0, 300) : undefined;
 	}
 }

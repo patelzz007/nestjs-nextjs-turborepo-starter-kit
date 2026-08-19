@@ -86,12 +86,15 @@ export class ResponseInterceptor implements NestInterceptor {
 		// `text/event-stream, */*` or other Accept parameters.
 		const acceptHeader: string | undefined = request.headers.accept;
 		if (acceptHeader?.includes("text/event-stream")) {
+			// eslint-disable-next-line @typescript-eslint/no-unsafe-return -- CallHandler defaults to `any`; SSE bypass passes the raw stream through.
 			return next.handle();
 		}
 		const correlationId: string = request.correlationId ?? "";
 
-		return next.handle().pipe(
-			map((data: JsonValue) => {
+		// CallHandler defaults to `any` — the map callback narrows to `object`.
+		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- NestJS CallHandler has no generic override; this is the narrowest safe cast.
+		return (next.handle() as Observable<JsonValue>).pipe(
+			map((data: JsonValue): object => {
 				// ── Case 1: Paginated result → flatten items into data, pagination into meta ──
 				if (isPaginated(data)) {
 					const { items, total, page, limit, totalPages, hasNext, hasPrevious } = data;
