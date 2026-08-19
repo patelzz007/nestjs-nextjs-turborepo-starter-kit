@@ -1,21 +1,47 @@
 "use client";
 
 import { cn } from "@workspace/ui/lib/utils";
+import { cva, type VariantProps } from "class-variance-authority";
 import { Lock } from "lucide-react";
 import * as React from "react";
 
+const lockoutCountdownVariants = cva("flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium", {
+	variants: {
+		variant: {
+			default: "border-warning/25 bg-warning/5 text-warning",
+		},
+		size: {
+			default: "text-xs",
+			sm: "px-2 py-1.5 text-xs",
+		},
+		state: {
+			default: "",
+			loading: "opacity-60",
+			disabled: "opacity-50",
+			error: "border-destructive/25 bg-destructive/5 text-destructive",
+		},
+	},
+	defaultVariants: {
+		variant: "default",
+		size: "default",
+		state: "default",
+	},
+});
+
+export interface LockoutCountdownLabels {
+	/** Shown while locked, e.g. "Account locked — try again in" (clock appended). */
+	readonly lockedPrefix: string;
+	/** Shown when the countdown reaches zero. */
+	readonly lockedExpired: string;
+}
+
 /**
- * Live "account locked — retry in MM:SS" countdown.
- *
- * Receives the initial `remainingSeconds` from the ACCOUNT_LOCKED error payload
- * and ticks down once per second (pausing while the tab is hidden, like the
- * session badge). When it hits zero the countdown freezes at 00:00 and the
- * caller can clear the lockout state on the next submit.
+ * Live lockout countdown — ticks once per second from `remainingSeconds`.
  */
-export interface LockoutCountdownProps {
+export interface LockoutCountdownProps extends VariantProps<typeof lockoutCountdownVariants> {
 	/** Whole seconds until the lockout expires (from the API error payload). */
 	readonly remainingSeconds: number;
-	/** Optional class for the wrapper. */
+	readonly labels: LockoutCountdownLabels;
 	readonly className?: string;
 }
 
@@ -26,7 +52,10 @@ function formatClock(totalSeconds: number): string {
 	return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 }
 
-export function LockoutCountdown({ remainingSeconds, className }: LockoutCountdownProps): React.JSX.Element {
+export const LockoutCountdown = React.forwardRef<HTMLParagraphElement, LockoutCountdownProps>(function LockoutCountdown(
+	{ remainingSeconds, labels, className, variant, size, state },
+	ref,
+): React.JSX.Element {
 	const [secondsLeft, setSecondsLeft] = React.useState<number>(() => Math.max(0, Math.round(remainingSeconds)));
 
 	React.useEffect(() => {
@@ -36,7 +65,6 @@ export function LockoutCountdown({ remainingSeconds, className }: LockoutCountdo
 		const timer = window.setInterval(tick, 1000);
 		const onVisibilityChange = (): void => {
 			if (document.visibilityState === "visible") {
-				// Resync from the API-provided expiry on tab return.
 				setSecondsLeft(() => Math.max(0, Math.round(remainingSeconds)));
 			}
 		};
@@ -47,18 +75,14 @@ export function LockoutCountdown({ remainingSeconds, className }: LockoutCountdo
 		};
 	}, [remainingSeconds]);
 
-	const label: string = secondsLeft > 0 ? `Account locked — try again in ${formatClock(secondsLeft)}` : "Account locked — you can try again now";
+	const label: string = secondsLeft > 0 ? `${labels.lockedPrefix} ${formatClock(secondsLeft)}` : labels.lockedExpired;
 
 	return (
-		<p
-			role="status"
-			data-slot="lockout-countdown"
-			className={cn(
-				"flex items-center gap-2 rounded-lg border border-amber-500/25 bg-amber-500/5 px-3 py-2 text-xs font-medium text-amber-700 dark:text-amber-400",
-				className,
-			)}>
+		<p ref={ref} role="status" data-slot="lockout-countdown" className={cn(lockoutCountdownVariants({ variant, size, state }), className)}>
 			<Lock className="size-3.5 shrink-0" aria-hidden="true" />
 			<span className="tabular-nums">{label}</span>
 		</p>
 	);
-}
+});
+
+export { lockoutCountdownVariants };

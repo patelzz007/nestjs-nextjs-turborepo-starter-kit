@@ -2,7 +2,7 @@
 title: "Cursorrules audit — task reference"
 description: "Actionable improvement tasks from the full-repo audit against .cursorrules. Pick a section, ship a small PR, tick the checkbox."
 author: "Acme Inc."
-lastUpdated: 1787097600000
+lastUpdated: 1787184000000
 coverImage: "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=1600&q=80"
 tags: ["audit", "cursorrules", "typesafety", "rls", "ui", "tasks"]
 ---
@@ -42,9 +42,9 @@ Use this doc when you want to **start a specific improvement task**. It is organ
 | Type safety (no `any`/`unknown`/`never`/casts) | **Improved** in API | Production `apps/api` paths audited; telescope + email + backup clean; client/UI still have gaps |
 | Access modifiers + return types | **Partial** | Auth/sessions/health loose |
 | RLS | **Done** (first cut) | `prisma/rls.sql` + `pnpm db:rls`; `@RlsBypass()` for cross-tenant public DB routes |
-| Dumb components (`forwardRef`, CVA, tokens) | **Early** | Largest remaining work |
-| RHF + Zod forms | **Sparse** | Backup create/restore, settings |
-| Documentation | **Good** Prisma/backup | Missing `packages/ui/README.md` |
+| Dumb components (`forwardRef`, CVA, tokens) | **Improved** | Core form + overlays (popover/sheet/command/menubar) + display (kbd/calendar/chart); `data-table` partial (prefs Zod, row-menu tokens, partial `labels`) |
+| RHF + Zod forms | **Sparse** | Backup create/restore, settings; UI kit documents RHF peer + patterns |
+| Documentation | **Good** | Prisma/backup + `packages/ui/README.md` |
 
 ---
 
@@ -65,6 +65,10 @@ Use this doc when you want to **start a specific improvement task**. It is organ
 - [x] Shared `schemas/domain/events.ts` — `AuthFlowEvent`, `SessionActionEvent`, `ImpersonationActionEvent`, `EmailLogUpdatedEvent`
 - [x] Shared `schemas/email/email-templates.ts` — all seven template prop schemas + `EmailRenderContext`
 - [x] Swagger envelope factories — `createApiSuccessEnvelopeSchema` / `createApiSuccessArrayEnvelopeSchema` in `api-response.ts`; `response-wrapper.ts` delegates to shared
+- [x] **Auth httpOnly cookies on login/refresh** — `LoginTokenFieldsSchema` must not use `.strict()` (login body includes `user`; refresh includes `message`); `SetAuthCookiesInterceptor` extracts tokens and strips them from JSON; spec in `set-auth-cookies.interceptor.spec.ts`
+- [x] **Prisma query event subscriber** — `subscribePrismaQueryEvents` calls native `$on` with correct `this`; `PrismaQuerySubscriberSchema` uses `z.custom` for `$on` (not `z.function` with `void` output — Prisma returns the client)
+- [x] **P2 UI kit (first slice)** — `packages/ui/README.md`, `field-state.ts` / `field-variants.ts`, forwardRef + CVA `state` on core form controls, z-index tokens (`z-overlay` / `z-popover` / `z-toast`), required `labels` on FormShell / AuthLayout / Pagination / NotFoundContent / LockoutCountdown, `ui-kit-contract.test.ts`; app call sites in `apps/web`, `apps/admin`, `packages/client`
+- [x] **P2 UI kit (second slice)** — forwardRef on popover/sheet/command/menubar/kbd/calendar/chart; CVA `state` on select/combobox triggers; alert-dialog fully controlled + required `labels` bundle (no default OK/Delete); combobox `sessionStorage` lifted to parent; `data-table-prefs.ts` Zod for persisted prefs/cell scalars; row-action menu semantic tokens; partial `DataTableLabels` (`actionsMenuTitle`, `openRowMenu`); contract tests expanded; admin call sites (backup-history, showcase, alert-dialogs, command-palette, search-dialog)
 
 ---
 
@@ -147,10 +151,10 @@ pnpm db:reset        # reset + rls + seed (from apps/api)
 |---------------------|------|--------|
 | [x] JWT access/refresh payloads | `token.service.ts` | `packages/shared/src/schemas/auth/token.ts` |
 | [x] RBAC user/permission shapes | `rbac.interface.ts` (deleted `rbac/schemas/user.schema.ts`) | `packages/shared` |
-| [x] Cookie result | `cookies.service.ts` | `packages/shared/src/schemas/auth/cookies.ts` |
+| [x] Cookie result + login token fields | `cookies.service.ts`, `set-auth-cookies.interceptor.ts` | `packages/shared/src/schemas/auth/cookies.ts` — `LoginTokenFieldsSchema` strips extra keys (`user` / `message`), not `.strict()` |
 | [x] Email log create | `email-log.service.ts` | `packages/shared/src/schemas/email/email.ts` |
 | [x] Response envelope helpers | `response.interceptor.ts` | `PaginatedServiceResultSchema` + `DataValueSchema` from shared |
-| [x] Inline `z.string()` / `z.record()` in utils | `caught-error.ts`, `http-headers.ts`, `prisma-query-events.ts`, `main.ts`, telescope `sanitize.ts` / `pii-scanner.ts` | `schemas/runtime/*` + `TelescopeJsonObjectSchema` / `TelescopeJsonScalarSchema` |
+| [x] Inline `z.string()` / `z.record()` in utils | `caught-error.ts`, `http-headers.ts`, `prisma-query-events.ts`, `main.ts`, telescope `sanitize.ts` / `pii-scanner.ts` | `schemas/runtime/*` + `TelescopeJsonObjectSchema` / `TelescopeJsonScalarSchema`; `prisma-query.ts` `$on` validated with `z.custom` |
 | [x] Event bus payloads | `auth-events`, `sessions-events`, `impersonation-events`, `email-log-events` services | `schemas/domain/events.ts` |
 | [x] Email template props | seven `*.template.ts` files | `schemas/email/email-templates.ts` |
 | [x] Backup SQL row shapes | `backup.service.ts` | `schemas/domain/backup.ts` (`BackupDownloadTokenPayloadSchema`, table-name count rows) |
@@ -260,59 +264,61 @@ pnpm db:reset        # reset + rls + seed (from apps/api)
 
 | Task | Rules | Fix |
 |------|-------|-----|
-| [ ] Add `packages/ui/README.md` | 14 | Controlled API, theming, a11y, RHF `register` / `Controller` |
-| [ ] Optional `react-hook-form` peer | 18 | Document in README |
-| [ ] ESLint/contract: interactive roots need `forwardRef` | 20 | CI or lint rule |
-| [ ] CVA on all styled components: `variant`, `size`, `state` | 23 | `state`: default \| loading \| disabled \| error |
-| [ ] No English defaults in dumb components | 11 | Required `labels` prop maps |
-| [ ] Tokenize z-index | 22 | `--z-overlay`, `--z-popover`, `--z-toast`; ban raw `z-50` |
-| [ ] Ban `unknown`/`never`/`assumeType` at UI boundaries | 1–3 | Zod for persisted prefs, cell values |
-| [ ] Ban inline object/array props | 16 | Module constants + `useMemo` |
+| [x] Add `packages/ui/README.md` | 14 | Controlled API, theming, a11y, RHF `register` / `Controller` |
+| [x] Optional `react-hook-form` peer | 18 | `package.json` peer + README |
+| [x] ESLint/contract: interactive roots need `forwardRef` | 20 | P2 priority roots covered in `ui-kit-contract.test.ts`; full ESLint rule still open |
+| [ ] CVA on all styled components: `variant`, `size`, `state` | 23 | Core form controls + select/combobox triggers done via `field-variants.ts`; overlays/display gaps remain |
+| [x] No English defaults in dumb components (priority surfaces) | 11 | `FormShell`, `AuthLayout`, `Pagination`, `NotFoundContent`, `LockoutCountdown`, `CommandDialog`, `AlertDialog` — required `labels` / copy props |
+| [x] Tokenize z-index | 22 | `tokens.css` + `z-overlay` / `z-popover` / `z-toast`; overlays migrated off raw `z-50` |
+| [x] Ban `unknown`/`never`/`assumeType` at UI boundaries | 1–3 | Zod coercion in `data-table-prefs.ts` + `data-table.tsx`; TanStack values parsed via `DataTableCellValueSchema.safeParse` |
+| [x] Ban inline object/array props | 16 | Module constants (`EMPTY_*`), `useMemo` for row/card interaction props, virtualization styles; contract test in `ui-kit-contract.test.ts` |
 
-**Coverage (approx.):** ~37/74 files use `forwardRef`; ~16/74 use `cva()`; ~7 use `React.memo`.
+**Coverage (approx.):** ~55+/74 component files use `forwardRef`; ~28+ use `cva()` (including shared `field-variants.ts`); contract tests in `ui-kit-contract.test.ts` + existing form/display/overlay tests.
 
 ### `forwardRef` gaps (priority)
 
-- [ ] `display/table.tsx`, `display/data-table.tsx`
-- [ ] `feedback/spinner.tsx`, `feedback/skeleton.tsx`
-- [ ] `navigation/tabs.tsx`, `navigation/pagination.tsx`, `navigation/scroll-area.tsx`
-- [ ] `overlay/popover.tsx`, `overlay/sheet.tsx`, `overlay/command.tsx`, `overlay/menubar.tsx`
-- [ ] `display/chart.tsx`, `display/calendar.tsx`, `display/kbd.tsx`
-- [ ] `feedback/progress.tsx`, `feedback/message.tsx`, `feedback/not-found-content.tsx`
-- [ ] `form/lockout-countdown.tsx`, `layout/auth-layout.tsx`
+- [x] `display/table.tsx`
+- [x] `display/data-table.tsx`
+- [x] `feedback/spinner.tsx`, `feedback/skeleton.tsx`
+- [x] `navigation/tabs.tsx`, `navigation/pagination.tsx`, `navigation/scroll-area.tsx`
+- [x] `overlay/popover.tsx`, `overlay/sheet.tsx`, `overlay/command.tsx`, `overlay/menubar.tsx`
+- [x] `display/chart.tsx`, `display/calendar.tsx`, `display/kbd.tsx`
+- [x] `feedback/progress.tsx`, `feedback/message.tsx`, `feedback/not-found-content.tsx`
+- [x] `form/lockout-countdown.tsx`, `layout/auth-layout.tsx`
 
 ### CVA + form `state` variant
 
-- [ ] `form/input.tsx`, `textarea.tsx`, `checkbox.tsx`, `switch.tsx`, `slider.tsx`
-- [ ] `form/button.tsx` — add `state: loading | disabled | error` + spinner
-- [ ] `form/select.tsx`, `combobox.tsx` — unified `state` in CVA
+- [x] `form/input.tsx`, `textarea.tsx`, `checkbox.tsx`, `switch.tsx`, `slider.tsx` — `resolveFieldState` + `field-variants.ts`
+- [x] `form/button.tsx` — `state: loading | disabled | error` + loading spinner
+- [x] `form/select.tsx`, `combobox.tsx` — unified `state` in CVA via `selectTriggerVariants` / `comboboxInputGroupVariants`
 
 ### Hardcoded colors → tokens
 
 | File | Examples to replace |
 |------|---------------------|
-| [ ] `display/data-table.tsx` | `bg-blue-50`, `bg-green-100`, `bg-red-100`, print hex |
-| [ ] `layout/auth-layout.tsx` | `bg-slate-900`, `bg-emerald-500` |
-| [ ] `form/lockout-countdown.tsx` | `border-amber-500`, `text-amber-700` |
-| [ ] `navigation/sidebar.tsx` | `data-active:bg-slate-800`, `text-white` |
-| [ ] `display/chart.tsx` | `#ccc`, `#fff`; `theme?: never` → Zod discriminated union |
+| [x] `display/data-table.tsx` | Row-action menu + export icon colors use semantic tokens (`text-destructive`, `text-info`, `text-success`); full search/export/empty `labels` still open |
+| [x] `layout/auth-layout.tsx` | Auth panel tokens (`--auth-panel-*`) |
+| [x] `form/lockout-countdown.tsx` | CVA `state` variants (no raw amber utilities) |
+| [x] `navigation/sidebar.tsx` | `sidebar-primary` / `sidebar-primary-foreground` tokens |
+| [x] `display/chart.tsx` | `ChartConfig` union without `theme?: never`; recharts `#ccc`/`#fff` selectors target library SVG attrs only |
 
 ### `data-table.tsx` (2,334 lines)
 
-- [ ] Replace `unknown` / `never` / `assumeType` in memo/export/persist paths
-- [ ] Zod for `localStorage` prefs and cell values
-- [ ] Required `labels` prop (Search, No data, Select all, export formats)
+- [x] Zod for `localStorage` prefs and cell values — `lib/data-table-prefs.ts`
+- [ ] Required `labels` prop (Search, No data, Select all, export formats) — partial: `actionsMenuTitle`, `openRowMenu` only
 - [ ] Lift persistence/selection to smart parent or inject storage adapter
 - [ ] Extract CSV/PDF/Excel exporters to separate modules
-- [ ] `forwardRef` + CVA on table shell
+- [ ] `forwardRef` + CVA on table shell — `DataTableShell` forwards ref to root `Card`; CVA on table shell still open
+- [x] Replace `unknown` / `never` / `assumeType` in memo/export/persist paths
 
 ### Other UI items
 
-- [ ] `overlay/alert-dialog.tsx` — fully controlled; parent uses RHF + Zod; no default OK/Delete strings
-- [ ] `form/form-shell.tsx` — no hardcoded Submit/Submitting; use `Spinner`
-- [ ] `form/select.tsx` / `combobox.tsx` — move `sessionStorage` to parent
-- [ ] `layout/auth-layout.tsx` — domain copy via props; consider move to apps
-- [ ] `tokens.css` — `--background` hex outlier; add overlay z-index tokens
+- [x] `overlay/alert-dialog.tsx` — fully controlled; parent uses RHF + Zod; no default OK/Delete strings; required `labels` bundle
+- [x] `form/form-shell.tsx` — required `submitLabel` / `loadingLabel`; error banner `role="alert"`
+- [x] `form/select.tsx` / `combobox.tsx` — `sessionStorage` removed; draft query persistence is parent-owned via `inputValue` / `onInputValueChange`
+- [x] `layout/auth-layout.tsx` — required `labels` prop; apps pass copy (`apps/web`, `apps/admin` login pages)
+- [x] `tokens.css` — `--background` oklch; z-index tokens (`--z-overlay`, `--z-popover`, `--z-toast`); auth panel + switch sizing tokens
+- [x] App call sites — `NotFoundContent` props (`apps/web/app/not-found.tsx`, `apps/admin/...`); `LockoutCountdown` labels in `login-form.tsx`
 
 ---
 
@@ -361,7 +367,7 @@ pnpm db:reset        # reset + rls + seed (from apps/api)
 |------|------|-----|
 | [ ] Split hello page | `app/hello/hello-view.tsx` | Smart `page.tsx` + dumb `HelloProfileView` props-only |
 | [ ] Badge colors + dark mode | `hello-view.tsx` | Tokens, not `bg-green-100` without `dark:` |
-| [ ] Login all-client + demo copy | `app/auth/login/page.tsx` | Mirror admin server-page pattern |
+| [ ] Login all-client + demo copy | `app/auth/login/page.tsx` | `AuthLayout` labels wired; demo accounts still client bundle when `NEXT_PUBLIC_SHOW_DEMO_ACCOUNTS=true` |
 | [ ] Signup/forgot stubs | auth routes | Shared `AuthLayout` + copy props |
 
 ---
@@ -400,16 +406,17 @@ Phase 2 — API typesafety (P1)
   Tighten eslint no-unsafe-* per module
   ZodValidationPipe on remaining params
 
-Phase 3 — UI foundation (P2)
-  forwardRef on top-used primitives
-  CVA state on Input/Button/Textarea
-  Tokenize data-table + telescope tones
+Phase 3 — UI foundation (P2) — **in progress**
+  ~~forwardRef on top-used primitives~~ (core form + layout/feedback done)
+  ~~CVA state on Input/Button/Textarea~~ (+ checkbox/switch/slider)
+  ~~packages/ui README + z-index tokens~~
+  Remaining: data-table split, overlay forwardRef gaps, chart/calendar tokens
+  Tokenize telescope tones (admin)
   alerts-panel mutation lift (Q4)
 
 Phase 4 — Forms & splits (P2)
   Backup RHF
   Split data-table / backup.service / requests-table
-  packages/ui README
 
 Phase 5 — Ops (P1/P3)
   Document or fix multi-replica backup/telescope
@@ -430,6 +437,8 @@ Phase 5 — Ops (P1/P3)
 - `telescope.controller.ts` — param pipes, `@EmailVerified` on destructive ops
 - `backup.service.ts` — split, tests, catch logging, allowlist excludes
 - `token.service.ts` — move schemas to shared, remove `unknown` in catch
+- `set-auth-cookies.interceptor.ts` — `LoginTokenFieldsSchema` must accept login/refresh bodies with extra keys
+- `common/utils/prisma-query-events.ts` — `$on` binding + shared subscriber schema
 - `zod-validation.pipe.ts` — typed without `unknown` if possible
 - `response.interceptor.ts` — stable client errors
 - `eslint.config.js` — tighten unsafe rules
@@ -443,7 +452,8 @@ Phase 5 — Ops (P1/P3)
 
 - `schemas/api/api-response.ts` — no `z.unknown()`
 - `contracts/versioning.ts` — tuples, single ApiVersion
-- Move auth/RBAC/JWT schemas from API here
+- `schemas/auth/cookies.ts` — `LoginTokenFieldsSchema` (no `.strict()` for interceptor stripping)
+- `schemas/runtime/prisma-query.ts` — `PrismaQuerySubscriberSchema` with `z.custom` `$on`
 
 </details>
 
@@ -459,10 +469,11 @@ Phase 5 — Ops (P1/P3)
 <details>
 <summary><code>packages/ui</code></summary>
 
-- `display/data-table.tsx` — largest hotspot
-- `form/*` — CVA state, forwardRef
-- `layout/auth-layout.tsx` — tokens, props
-- `README.md` — create
+- `display/data-table.tsx` — largest hotspot (split, Zod prefs, forwardRef still open)
+- `form/select.tsx`, `form/combobox.tsx` — unified CVA `state`, sessionStorage lift
+- `overlay/popover.tsx`, `overlay/sheet.tsx`, `overlay/command.tsx`, `overlay/menubar.tsx` — forwardRef gaps
+- `display/chart.tsx`, `display/calendar.tsx` — tokens + types
+- `README.md` — **done** (see package root)
 
 </details>
 
@@ -486,4 +497,4 @@ Phase 5 — Ops (P1/P3)
 
 ---
 
-_Last updated: August 19, 2026. Regenerate sections after large refactors by re-auditing against `.cursorrules`._
+_Last updated: August 20, 2026. Regenerate sections after large refactors by re-auditing against `.cursorrules`._

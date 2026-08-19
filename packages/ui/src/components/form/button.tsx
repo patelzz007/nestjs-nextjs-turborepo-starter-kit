@@ -1,4 +1,6 @@
 import { Button as ButtonPrimitive } from "@base-ui/react/button";
+import { Spinner } from "@workspace/ui/components/feedback/spinner";
+import { resolveFieldState } from "@workspace/ui/lib/field-state";
 import { cn } from "@workspace/ui/lib/utils";
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
@@ -28,19 +30,45 @@ const buttonVariants = cva(
 				"icon-sm": "size-8 rounded-[min(var(--radius-md),10px)] in-data-[slot=button-group]:rounded-md",
 				"icon-lg": "size-10",
 			},
+			state: {
+				default: "",
+				loading: "pointer-events-none opacity-80",
+				disabled: "pointer-events-none opacity-50",
+				error: "border-destructive/40 ring-2 ring-destructive/20",
+			},
 		},
 		defaultVariants: {
 			variant: "default",
 			size: "default",
+			state: "default",
 		},
 	},
 );
 
-const Button = React.forwardRef<HTMLElement, ButtonPrimitive.Props & VariantProps<typeof buttonVariants>>(function Button(
-	{ className, variant = "default", size = "default", ...props },
+type ButtonProps = ButtonPrimitive.Props &
+	VariantProps<typeof buttonVariants> & {
+		readonly loading?: boolean;
+	};
+
+const Button = React.forwardRef<HTMLElement, ButtonProps>(function Button(
+	{ className, variant = "default", size = "default", loading = false, disabled, "aria-invalid": ariaInvalid, children, ...props },
 	ref,
 ): React.JSX.Element {
-	return <ButtonPrimitive ref={ref} data-slot="button" className={cn(buttonVariants({ variant, size, className }))} {...props} />;
+	const state = resolveFieldState({ disabled, loading, ariaInvalid });
+
+	return (
+		<ButtonPrimitive
+			ref={ref}
+			data-slot="button"
+			data-loading={loading ? "" : undefined}
+			disabled={disabled === true || loading}
+			aria-invalid={ariaInvalid}
+			className={cn(buttonVariants({ variant, size, state, className }))}
+			{...props}>
+			{loading ? <Spinner aria-hidden className="size-4" /> : null}
+			{children}
+		</ButtonPrimitive>
+	);
 });
 
 export { Button, buttonVariants };

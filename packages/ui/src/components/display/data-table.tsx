@@ -39,13 +39,11 @@ import {
 	createFilteredRowModel,
 	createPaginatedRowModel,
 	createSortedRowModel,
-	filterFns,
 	flexRender,
 	globalFilteringFeature,
 	rowPaginationFeature,
 	rowSelectionFeature,
 	rowSortingFeature,
-	sortFns,
 	tableFeatures,
 	useTable,
 	Subscribe,
@@ -86,17 +84,30 @@ import {
 import * as React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { assumeType, cn } from "@workspace/ui/lib/utils";
+import { cn } from "@workspace/ui/lib/utils";
+import {
+	DataTableCellScalarSchema,
+	DataTableCellValueSchema,
+	parseDataTableCellValue,
+	normalizeFacetedUniqueValues,
+	parseDataTablePersistedPrefs,
+	readDataTableRowField,
+	toDataTableCellString,
+	type DataTableCellScalar,
+	type DataTablePersistedPrefs,
+	type DataTablePersistedPrefsPatch,
+} from "@workspace/ui/lib/data-table-prefs";
 
 // ── Generic-preserving memo ────────────────────────────────────────────────
 // React's built-in `React.memo` collapses a generic component signature
 // (`<TData extends RowData>(props: P<TData>) => JSX`) down to its constraint
 // (`RowData`), which then breaks TanStack v9's invariant generics at every
 // call site. This wrapper keeps the exact signature while still memoizing.
-function memoGeneric<C extends (props: never) => React.JSX.Element>(Component: C): C {
-	const memoized = React.memo(Component);
-	assumeType<C>(memoized);
-	return memoized;
+function memoGeneric<P extends object>(Component: (props: P) => React.JSX.Element): (props: P) => React.JSX.Element {
+	const Inner = React.memo(Component);
+	return function MemoWrapper(props: P): React.JSX.Element {
+		return <Inner {...props} />;
+	};
 }
 
 // ── The v9 feature set (module scope — built once, shared by every instance) ─
@@ -124,9 +135,6 @@ export const dataTableFeatures = tableFeatures({
 	paginatedRowModel: createPaginatedRowModel(),
 	facetedRowModel: createFacetedRowModel(),
 	facetedUniqueValues: createFacetedUniqueValues(),
-	// Built-in fn registries (keeps string `filterFn`/`sortFn`/`globalFilterFn` typed).
-	filterFns,
-	sortFns,
 });
 
 /** The inferred feature type — used to type `ColumnDef<DataTableFeatures, TData>`. */
@@ -140,6 +148,36 @@ const VIRTUAL_OVERSCAN = 6;
 
 /** Default page-size options when `pageSizeOptions` is not provided. */
 const DEFAULT_PAGE_SIZE_OPTIONS: readonly number[] = [5, 10, 20, 50, 100];
+
+const EMPTY_FILTERS: Filter[] = [];
+const EMPTY_ACTIONS: Action[] = [];
+const EMPTY_SEARCH_KEYS: string[] = [];
+const EMPTY_BULK_ACTIONS: BulkAction[] = [];
+const EMPTY_PINNED_STYLES: React.CSSProperties = {};
+const EMPTY_COLUMN_PINNING: ColumnPinningState = { start: [], end: [] };
+const EMPTY_COLUMN_VISIBILITY: ColumnVisibilityState = {};
+const EMPTY_FACETED_COUNTS: ReadonlyMap<string, number> = new Map<string, number>();
+
+const PIN_SHADOW_START = "2px 0 4px rgba(0,0,0,0.08)";
+const PIN_SHADOW_END = "-2px 0 4px rgba(0,0,0,0.08)";
+
+function buildPinnedColumnStyles(isPinned: false | "start" | "end", start: number, after: number, zIndex: number): React.CSSProperties {
+	if (!isPinned) {
+		return EMPTY_PINNED_STYLES;
+	}
+	return {
+		position: "sticky",
+		left: isPinned === "start" ? `${String(start)}px` : undefined,
+		right: isPinned === "end" ? `${String(after)}px` : undefined,
+		zIndex,
+		backgroundColor: "var(--color-card)",
+		boxShadow: isPinned === "start" ? PIN_SHADOW_START : PIN_SHADOW_END,
+	};
+}
+
+const DataTableShell = React.forwardRef<HTMLDivElement, React.ComponentProps<typeof Card>>(function DataTableShell({ className, ...props }, ref): React.JSX.Element {
+	return <Card ref={ref} className={cn("w-full", className)} {...props} />;
+});
 
 // ── Filter / Action / BulkAction Types ─────────────────────────────────────
 
@@ -181,7 +219,13 @@ export interface EmptyStateConfig {
 
 // ── DataTable Props ────────────────────────────────────────────────────────
 
+export interface DataTableLabels {
+	readonly actionsMenuTitle: string;
+	readonly openRowMenu: string;
+}
+
 export interface DataTableProps<TData extends RowData> {
+	readonly ref?: React.Ref<HTMLDivElement>;
 	// Core
 	readonly data: TData[];
 	readonly columns: ColumnDef<DataTableFeatures, TData>[];
@@ -237,7 +281,7 @@ export interface DataTableProps<TData extends RowData> {
 	// The `row` original is passed alongside the index so consumers can map the
 	// edit back to the record by stable id — indices alone are unreliable once
 	// sorting, filtering or pagination re-orders the row model.
-	readonly onCellEdit?: (rowIndex: number, columnId: string, value: unknown, row: TData) => void;
+	readonly onCellEdit?: (rowIndex: number, columnId: string, value: DataTableCellScalar, row: TData) => void;
 
 	// ── NEW FEATURE 8: Drag-and-drop rows ─────────────────────────────────
 	readonly draggable?: boolean;
@@ -260,6 +304,9 @@ export interface DataTableProps<TData extends RowData> {
 
 	// ── Robustness: Sort cycle ──────────────────────────────────────────
 	readonly sortCycle?: "asc-desc" | "asc-desc-none";
+
+	/** User-visible strings for menus and affordances (rule 11). */
+	readonly labels?: DataTableLabels;
 }
 
 // ── Editable Cell ──────────────────────────────────────────────────────────
@@ -271,13 +318,15 @@ interface EditingCell {
 
 // ── Shared helpers ─────────────────────────────────────────────────────────
 
-/** Safe stringification for cell values — objects become JSON, never `[object Object]`. */
-function toCellString(value: unknown): string {
-	if (value === null || value === undefined) return "";
-	if (typeof value === "string") return value;
-	if (typeof value === "number" || typeof value === "boolean" || typeof value === "bigint") return String(value);
-	// JSON.stringify returns `undefined` for functions/symbols — `|| ""` is the fallback.
-	return JSON.stringify(value) || "";
+/** Coerce a TanStack cell into a display string via Zod at the library boundary. */
+function cellValueDisplayString<TData extends RowData>(cell: Cell<DataTableFeatures, TData>): string {
+	const parsed = DataTableCellValueSchema.safeParse(cell.getValue());
+	return parsed.success ? toDataTableCellString(parsed.data) : "";
+}
+
+/** Display string for a typed row field at export boundaries. */
+function rowFieldDisplayString(row: object, key: string): string {
+	return toDataTableCellString(parseDataTableCellValue(readDataTableRowField(row, key)));
 }
 
 /**
@@ -285,31 +334,17 @@ function toCellString(value: unknown): string {
  * evaluate it as a formula. Cells starting with `=`, `+`, `-`, `@` (or a tab /
  * CR) get a leading apostrophe — the standard CSV injection guard.
  */
-export function sanitizeExportCell(value: unknown): string {
-	const str = toCellString(value);
+export function sanitizeExportCell(value: DataTableCellScalar | object): string {
+	const str = toDataTableCellString(parseDataTableCellValue(value));
 	return /^[=+\-@\t\r]/.test(str) ? `'${str}` : str;
 }
 
-/** The persisted preference shape (kept loose — re-validated at use sites). */
-interface PersistedPrefs {
-	readonly columnVisibility?: ColumnVisibilityState;
-	readonly pageSize?: number;
-	readonly sorting?: SortingState;
-	readonly columnPinning?: ColumnPinningState;
-}
-
 /** Reads + safely parses the `datatable:<persistKey>` localStorage entry. */
-function readPersistedPrefs(persistKey: string | undefined): PersistedPrefs | null {
+function readPersistedPrefs(persistKey: string | undefined): ReturnType<typeof parseDataTablePersistedPrefs> {
 	if (persistKey === undefined || typeof window === "undefined") return null;
-	try {
-		const saved = window.localStorage.getItem(`datatable:${persistKey}`);
-		if (saved === null) return null;
-		const parsed: unknown = JSON.parse(saved);
-		assumeType<PersistedPrefs>(parsed);
-		return parsed;
-	} catch {
-		return null;
-	}
+	const saved = window.localStorage.getItem(`datatable:${persistKey}`);
+	if (saved === null) return null;
+	return parseDataTablePersistedPrefs(saved);
 }
 
 function getSortIcon<TData extends RowData>(column: Column<DataTableFeatures, TData>): React.JSX.Element {
@@ -349,9 +384,7 @@ function exportToCSV<TData extends RowData>(data: TData[], columns: ColumnDef<Da
 	const csvRows = [headers.join(",")];
 	for (const row of data) {
 		const values = headers.map((header) => {
-			const rowRecord = row;
-			assumeType<Record<string, unknown>>(rowRecord);
-			const str = sanitizeExportCell(rowRecord[header]);
+			const str = sanitizeExportCell(readDataTableRowField(row, header));
 			// Escape quotes and wrap in quotes if contains comma or quote
 			return str.includes(",") || str.includes('"') || str.includes("\n") ? `"${str.replace(/"/g, '""')}"` : str;
 		});
@@ -370,13 +403,13 @@ function exportToCSV<TData extends RowData>(data: TData[], columns: ColumnDef<Da
 
 function exportToJSON<TData extends RowData>(rows: TData[], columns: ColumnDef<DataTableFeatures, TData>[], filename: string): void {
 	const jsonData = rows.map((row) => {
-		const rowRecord = row;
-		assumeType<Record<string, unknown>>(rowRecord);
-		const obj: Record<string, unknown> = {};
+		const obj: Record<string, DataTableCellScalar> = {};
 		for (const col of columns) {
 			const key = "id" in col ? String(col.id) : "accessorKey" in col ? String(col.accessorKey) : undefined;
 			if (key !== undefined) {
-				obj[key] = rowRecord[key];
+				const value = readDataTableRowField(row, key);
+				const scalar = DataTableCellScalarSchema.safeParse(value);
+				obj[key] = scalar.success ? scalar.data : toDataTableCellString(value);
 			}
 		}
 		return obj;
@@ -412,14 +445,7 @@ export function exportToSpreadsheet<TData extends RowData>(rows: TData[], column
 	const rowXml = (values: readonly string[]): string =>
 		`<Row>${values.map((value) => `<Cell><Data ss:Type="String">${escapeXml(sanitizeExportCell(value))}</Data></Cell>`).join("")}</Row>`;
 
-	const bodyXml = [
-		rowXml(headers),
-		...rows.map((row) => {
-			const rowRecord = row;
-			assumeType<Record<string, unknown>>(rowRecord);
-			return rowXml(headers.map((header) => toCellString(rowRecord[header])));
-		}),
-	].join("");
+	const bodyXml = [rowXml(headers), ...rows.map((row) => rowXml(headers.map((header) => rowFieldDisplayString(row, header))))].join("");
 
 	const xml = `<?xml version="1.0"?>
 <?mso-application progid="Excel.Sheet"?>
@@ -459,9 +485,7 @@ export function exportToPDF<TData extends RowData>(rows: TData[], columns: Colum
 	const headerRow = `<tr>${headers.map((header) => `<th>${escapeHtml(header)}</th>`).join("")}</tr>`;
 	const bodyRows = rows
 		.map((row) => {
-			const rowRecord = row;
-			assumeType<Record<string, unknown>>(rowRecord);
-			const cells = headers.map((header) => `<td>${escapeHtml(toCellString(rowRecord[header]))}</td>`).join("");
+			const cells = headers.map((header) => `<td>${escapeHtml(rowFieldDisplayString(row, header))}</td>`).join("");
 			return `<tr>${cells}</tr>`;
 		})
 		.join("");
@@ -473,12 +497,12 @@ export function exportToPDF<TData extends RowData>(rows: TData[], columns: Colum
 <title>${escapeHtml(filename)}</title>
 <style>
 	* { box-sizing: border-box; }
-	body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 2rem; color: #1f2937; }
+	body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 2rem; color: var(--print-foreground, oklch(0.21 0.034 264.665)); }
 	h1 { font-size: 1.25rem; font-weight: 600; margin: 0 0 1rem; }
 	table { border-collapse: collapse; width: 100%; font-size: 0.8125rem; }
-	th { background: #f3f4f6; font-weight: 600; text-align: left; }
-	th, td { border: 1px solid #e5e7eb; padding: 0.5rem 0.75rem; }
-	tr:nth-child(even) td { background: #f9fafb; }
+	th { background: var(--print-header-bg, oklch(0.967 0.003 264.542)); font-weight: 600; text-align: left; }
+	th, td { border: 1px solid var(--print-border, oklch(0.928 0.006 264.531)); padding: 0.5rem 0.75rem; }
+	tr:nth-child(even) td { background: var(--print-row-alt, oklch(0.985 0.002 247.839)); }
 	@media print { body { margin: 0.5in; } }
 </style>
 </head>
@@ -649,9 +673,10 @@ const SelectRowCheckbox = memoGeneric(function SelectRowCheckbox<TData extends R
 interface RowActionsMenuProps<TData extends RowData> {
 	readonly row: Row<DataTableFeatures, TData>;
 	readonly actions: Action<TData>[];
+	readonly labels: DataTableLabels;
 }
 
-const RowActionsMenu = memoGeneric(function RowActionsMenu<TData extends RowData>({ row, actions }: RowActionsMenuProps<TData>): React.JSX.Element {
+const RowActionsMenu = memoGeneric(function RowActionsMenu<TData extends RowData>({ row, actions, labels }: RowActionsMenuProps<TData>): React.JSX.Element {
 	const handleStopPropagation = useCallback((e: React.SyntheticEvent): void => {
 		e.stopPropagation();
 	}, []);
@@ -679,21 +704,21 @@ const RowActionsMenu = memoGeneric(function RowActionsMenu<TData extends RowData
 		<div className="text-right" onClick={handleStopPropagation} onKeyDown={handleKeyDown} role="presentation">
 			<DropdownMenu>
 				<DropdownMenuTrigger render={<Button variant="ghost" className="h-8 w-8 p-0" />}>
-					<span className="sr-only">Open menu</span>
+					<span className="sr-only">{labels.openRowMenu}</span>
 					<MoreHorizontal className="h-4 w-4" />
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="end" className="w-64 p-2">
-					<div className="mb-2 px-2 text-xs font-medium text-gray-500 dark:text-gray-400">User Actions</div>
+					<div className="mb-2 px-2 text-xs font-medium text-muted-foreground">{labels.actionsMenuTitle}</div>
 					{actions.map((action) => (
 						<DropdownMenuItem
 							key={action.key}
 							data-action-key={action.key}
 							onClick={handleActionClick}
-							className={cn("flex cursor-pointer items-center gap-3 rounded-md p-3", action.className ?? "hover:bg-blue-50 dark:hover:bg-blue-900/20")}>
-							<div className={cn("flex h-8 w-8 items-center justify-center rounded-full", action.iconBgColor ?? "bg-blue-100 dark:bg-blue-900")}>{action.icon}</div>
+							className={cn("flex cursor-pointer items-center gap-3 rounded-md p-3", action.className ?? "hover:bg-info-soft dark:hover:bg-info-soft")}>
+							<div className={cn("flex h-8 w-8 items-center justify-center rounded-full", action.iconBgColor ?? "bg-info-soft dark:bg-info-soft")}>{action.icon}</div>
 							<div className="flex flex-col">
-								<span className={cn("font-medium", action.isDestructive === true ? "text-red-600 dark:text-red-400" : "text-gray-900 dark:text-white")}>{action.label}</span>
-								{action.description !== undefined ? <span className="text-xs text-gray-500 dark:text-gray-400">{action.description}</span> : null}
+								<span className={cn("font-medium", action.isDestructive === true ? "text-destructive" : "text-foreground")}>{action.label}</span>
+								{action.description !== undefined ? <span className="text-xs text-muted-foreground">{action.description}</span> : null}
 							</div>
 						</DropdownMenuItem>
 					))}
@@ -775,7 +800,7 @@ const ExportMenu = memoGeneric(function ExportMenu<TData extends RowData>({ tabl
 			<DropdownMenuContent align="end" className="w-44 p-1.5">
 				<div className="mb-1 px-2 py-1 text-xs font-medium text-muted-foreground">Export as</div>
 				<DropdownMenuItem onClick={handleExportCSV} className="flex cursor-pointer items-center gap-3 rounded-md p-2.5">
-					<div className="flex h-7 w-7 items-center justify-center rounded-md bg-green-100 dark:bg-green-900/30">
+					<div className="flex h-7 w-7 items-center justify-center rounded-md bg-success-soft dark:bg-success-soft">
 						<FileDown className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
 					</div>
 					<div className="flex flex-col">
@@ -784,8 +809,8 @@ const ExportMenu = memoGeneric(function ExportMenu<TData extends RowData>({ tabl
 					</div>
 				</DropdownMenuItem>
 				<DropdownMenuItem onClick={handleExportJSON} className="flex cursor-pointer items-center gap-3 rounded-md p-2.5">
-					<div className="flex h-7 w-7 items-center justify-center rounded-md bg-blue-100 dark:bg-blue-900/30">
-						<FileDown className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+					<div className="flex h-7 w-7 items-center justify-center rounded-md bg-info-soft dark:bg-info-soft/30">
+						<FileDown className="h-3.5 w-3.5 text-info" />
 					</div>
 					<div className="flex flex-col">
 						<span className="text-sm font-medium">JSON</span>
@@ -793,8 +818,8 @@ const ExportMenu = memoGeneric(function ExportMenu<TData extends RowData>({ tabl
 					</div>
 				</DropdownMenuItem>
 				<DropdownMenuItem onClick={handleExportPDF} className="flex cursor-pointer items-center gap-3 rounded-md p-2.5">
-					<div className="flex h-7 w-7 items-center justify-center rounded-md bg-red-100 dark:bg-red-900/30">
-						<FileDown className="h-3.5 w-3.5 text-red-600 dark:text-red-400" />
+					<div className="flex h-7 w-7 items-center justify-center rounded-md bg-destructive-soft dark:bg-destructive-soft">
+						<FileDown className="h-3.5 w-3.5 text-destructive" />
 					</div>
 					<div className="flex flex-col">
 						<span className="text-sm font-medium">PDF</span>
@@ -802,8 +827,8 @@ const ExportMenu = memoGeneric(function ExportMenu<TData extends RowData>({ tabl
 					</div>
 				</DropdownMenuItem>
 				<DropdownMenuItem onClick={handleExportSpreadsheet} className="flex cursor-pointer items-center gap-3 rounded-md p-2.5">
-					<div className="flex h-7 w-7 items-center justify-center rounded-md bg-emerald-100 dark:bg-emerald-900/30">
-						<FileDown className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+					<div className="flex h-7 w-7 items-center justify-center rounded-md bg-success-soft dark:bg-success-soft">
+						<FileDown className="h-3.5 w-3.5 text-success" />
 					</div>
 					<div className="flex flex-col">
 						<span className="text-sm font-medium">Spreadsheet</span>
@@ -886,7 +911,7 @@ interface ColumnFilterSelectProps {
 	readonly filter: Filter;
 	readonly value: string;
 	readonly totalFilteredRows: number;
-	readonly uniqueValues: ReadonlyMap<unknown, number> | undefined;
+	readonly facetedCounts: ReadonlyMap<string, number>;
 	readonly onFilterChange: (filterKey: string, value: string | null) => void;
 }
 
@@ -894,21 +919,9 @@ const ColumnFilterSelect = React.memo(function ColumnFilterSelect({
 	filter,
 	value,
 	totalFilteredRows,
-	uniqueValues,
+	facetedCounts,
 	onFilterChange,
 }: ColumnFilterSelectProps): React.JSX.Element {
-	const items = useMemo(() => [{ value: "all", label: `All ${filter.label}` }, ...filter.options], [filter]);
-
-	// Faceted counts come from the registered columnFacetingFeature — the count
-	// for a value reflects the rows that remain after the OTHER active filters.
-	const countMap = useMemo((): ReadonlyMap<string, number> => {
-		const map = new Map<string, number>();
-		uniqueValues?.forEach((count, rawValue) => {
-			map.set(toCellString(rawValue), count);
-		});
-		return map;
-	}, [uniqueValues]);
-
 	const handleValueChange = useCallback(
 		(next: string | null): void => {
 			onFilterChange(filter.key, next);
@@ -918,14 +931,14 @@ const ColumnFilterSelect = React.memo(function ColumnFilterSelect({
 
 	const labelFor = useCallback(
 		(option: { readonly value: string; readonly label: string }): string => {
-			const count = countMap.get(option.value);
+			const count = facetedCounts.get(option.value);
 			return count !== undefined ? `${option.label} (${String(count)})` : option.label;
 		},
-		[countMap],
+		[facetedCounts],
 	);
 
 	return (
-		<Select value={value} onValueChange={handleValueChange} items={items}>
+		<Select<string> value={value} onValueChange={handleValueChange}>
 			<SelectTrigger className="h-9 w-full text-sm sm:w-44">
 				<SelectValue placeholder={filter.label} />
 			</SelectTrigger>
@@ -1001,8 +1014,6 @@ interface PageSizeSelectProps {
 }
 
 const PageSizeSelect = React.memo(function PageSizeSelect({ pageSize, options, onPageSizeChange }: PageSizeSelectProps): React.JSX.Element {
-	const items = useMemo(() => options.map((size) => ({ value: String(size), label: String(size) })), [options]);
-
 	const handleValueChange = useCallback(
 		(value: string | null): void => {
 			if (value !== null) {
@@ -1013,7 +1024,7 @@ const PageSizeSelect = React.memo(function PageSizeSelect({ pageSize, options, o
 	);
 
 	return (
-		<Select value={String(pageSize)} onValueChange={handleValueChange} items={items}>
+		<Select<string> value={String(pageSize)} onValueChange={handleValueChange}>
 			<SelectTrigger className="w-20">
 				<SelectValue />
 			</SelectTrigger>
@@ -1059,16 +1070,7 @@ const HeaderCell = memoGeneric(function HeaderCell<TData extends RowData>({ head
 		}
 	}, [column, sortCycle]);
 
-	const pinnedStyles: React.CSSProperties = isPinned
-		? {
-				position: "sticky",
-				left: isPinned === "start" ? `${String(column.getStart())}px` : undefined,
-				right: isPinned === "end" ? `${String(column.getAfter())}px` : undefined,
-				zIndex: 10,
-				backgroundColor: "var(--color-card)",
-				boxShadow: isPinned === "start" ? "2px 0 4px rgba(0,0,0,0.08)" : "-2px 0 4px rgba(0,0,0,0.08)",
-			}
-		: {};
+	const pinnedStyles = buildPinnedColumnStyles(isPinned, column.getStart(), column.getAfter(), 10);
 
 	const handlePinClick = useCallback(
 		(e: React.MouseEvent<HTMLButtonElement>): void => {
@@ -1133,16 +1135,7 @@ const TableCellView = memoGeneric(function TableCellView<TData extends RowData>(
 	const cellId = column.id;
 	const isEditing = editingCell !== null && editingCell.rowIndex === rowIdx && editingCell.columnId === cellId;
 
-	const pinnedStyles: React.CSSProperties = isPinned
-		? {
-				position: "sticky",
-				left: isPinned === "start" ? `${String(column.getStart())}px` : undefined,
-				right: isPinned === "end" ? `${String(column.getAfter())}px` : undefined,
-				zIndex: 5,
-				backgroundColor: "var(--color-card)",
-				boxShadow: isPinned === "start" ? "2px 0 4px rgba(0,0,0,0.08)" : "-2px 0 4px rgba(0,0,0,0.08)",
-			}
-		: {};
+	const pinnedStyles = buildPinnedColumnStyles(isPinned, column.getStart(), column.getAfter(), 5);
 
 	const handleCellDblClick = useCallback((): void => {
 		onCellDoubleClick(rowIdx, cellId);
@@ -1162,7 +1155,7 @@ const TableCellView = memoGeneric(function TableCellView<TData extends RowData>(
 			style={pinnedStyles}
 			onDoubleClick={handleCellDblClick}>
 			{isEditing ? (
-				<InlineEditInput value={toCellString(cell.getValue())} onSave={handleCellSave} onCancel={onCellEditCancel} />
+				<InlineEditInput value={cellValueDisplayString(cell)} onSave={handleCellSave} onCancel={onCellEditCancel} />
 			) : (
 				// w-full lets a column's own `text-end` cell content right-align;
 				// without it the flex wrapper shrink-fits and text-end is a no-op.
@@ -1257,11 +1250,40 @@ const TableRowView = memoGeneric(function TableRowView<TData extends RowData>({
 		[onDrop, rowIdx],
 	);
 
+	const rowStyle = useMemo((): React.CSSProperties | undefined => {
+		return rowHeight !== undefined ? { height: rowHeight } : undefined;
+	}, [rowHeight]);
+
+	const rowInteractionProps = useMemo((): Partial<React.ComponentProps<typeof TableRow>> => {
+		if (onRowClick === undefined) {
+			return {};
+		}
+		return {
+			onClick: handleRowClick,
+			role: "button",
+			tabIndex: 0,
+			onKeyDown: handleRowKeyDown,
+		};
+	}, [onRowClick, handleRowClick, handleRowKeyDown]);
+
+	const rowDragProps = useMemo((): Partial<React.ComponentProps<typeof TableRow>> => {
+		if (!draggable) {
+			return {};
+		}
+		return {
+			draggable: true,
+			onDragStart: handleRowDragStart,
+			onDragOver: handleRowDragOver,
+			onDrop: handleRowDrop,
+			onDragEnd,
+		};
+	}, [draggable, handleRowDragStart, handleRowDragOver, handleRowDrop, onDragEnd]);
+
 	return (
 		<TableRow
 			key={row.id}
 			data-state={isRowSelected ? "selected" : null}
-			style={rowHeight !== undefined ? { height: rowHeight } : undefined}
+			style={rowStyle}
 			className={cn(
 				rowHeight !== undefined ? undefined : "h-18",
 				draggable && "transition-opacity",
@@ -1269,23 +1291,8 @@ const TableRowView = memoGeneric(function TableRowView<TData extends RowData>({
 				isDragOver && "border-t-2 border-t-primary",
 				onRowClick && "cursor-pointer hover:bg-muted/50",
 			)}
-			{...(onRowClick
-				? {
-						onClick: handleRowClick,
-						role: "button",
-						tabIndex: 0,
-						onKeyDown: handleRowKeyDown,
-					}
-				: {})}
-			{...(draggable
-				? {
-						draggable: true,
-						onDragStart: handleRowDragStart,
-						onDragOver: handleRowDragOver,
-						onDrop: handleRowDrop,
-						onDragEnd,
-					}
-				: {})}>
+			{...rowInteractionProps}
+			{...rowDragProps}>
 			{row.getVisibleCells().map((cell) => (
 				<TableCellView
 					key={cell.id}
@@ -1338,18 +1345,20 @@ const MobileCardView = memoGeneric(function MobileCardView<TData extends RowData
 		[onRowClick, rowData],
 	);
 
+	const cardInteractionProps = useMemo((): Partial<React.ComponentProps<"div">> => {
+		if (onRowClick === undefined) {
+			return {};
+		}
+		return {
+			onClick: handleCardClick,
+			role: "button",
+			tabIndex: 0,
+			onKeyDown: handleCardKeyDown,
+		};
+	}, [onRowClick, handleCardClick, handleCardKeyDown]);
+
 	return (
-		<div
-			key={row.id}
-			className="flex items-start gap-3"
-			{...(onRowClick
-				? {
-						onClick: handleCardClick,
-						role: "button",
-						tabIndex: 0,
-						onKeyDown: handleCardKeyDown,
-					}
-				: {})}>
+		<div key={row.id} className="flex items-start gap-3" {...cardInteractionProps}>
 			{enableBulkSelection ? <SelectRowCheckbox row={row} table={table} onAnyDeselect={onAnyDeselect} className="mt-4" /> : null}
 			<div className="flex-1">{mobileCardRender(rowData, actions)}</div>
 		</div>
@@ -1364,11 +1373,15 @@ interface SkeletonRowProps {
 }
 
 const SkeletonRow = React.memo(function SkeletonRow({ cells, height }: SkeletonRowProps): React.JSX.Element {
+	const skeletonStyle = useMemo((): React.CSSProperties | undefined => {
+		return height !== undefined ? { height } : undefined;
+	}, [height]);
+
 	return (
 		<TableRow>
 			{Array.from({ length: cells }, (_, index) => (
 				<TableCell key={index} className="p-4">
-					<div className="h-4 animate-pulse rounded-md bg-muted" style={height !== undefined ? { height } : undefined} />
+					<div className="h-4 animate-pulse rounded-md bg-muted" style={skeletonStyle} />
 				</TableCell>
 			))}
 		</TableRow>
@@ -1401,7 +1414,7 @@ const BulkSelectionBar = memoGeneric(function BulkSelectionBar<TData extends Row
 	compact = false,
 }: BulkSelectionBarProps<TData>): React.JSX.Element {
 	return (
-		<div className={cn("mb-4 rounded-lg border p-3 sm:p-4", compact ? "border-border bg-muted/50" : "border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-900/20")}>
+		<div className={cn("mb-4 rounded-lg border p-3 sm:p-4", compact ? "border-border bg-muted/50" : "border-info/30 bg-info-soft dark:border-info/30 dark:bg-info-soft")}>
 			<div className="flex flex-wrap items-center gap-3">
 				<div className="flex items-center gap-2">
 					<SelectAllCheckbox table={table} onAnyDeselect={onAnyDeselect} />
@@ -1431,12 +1444,13 @@ const BulkSelectionBar = memoGeneric(function BulkSelectionBar<TData extends Row
 // ── DataTable Component ────────────────────────────────────────────────────
 
 export function DataTable<TData extends RowData>({
+	ref,
 	// Core
 	data,
 	columns: initialColumns,
-	filters = [],
-	actions = [],
-	searchKeys = [],
+	filters = EMPTY_FILTERS,
+	actions = EMPTY_ACTIONS,
+	searchKeys = EMPTY_SEARCH_KEYS,
 	pageSize = 10,
 	pageSizeOptions,
 	title,
@@ -1447,7 +1461,7 @@ export function DataTable<TData extends RowData>({
 
 	// Bulk selection
 	enableBulkSelection = false,
-	bulkActions = [],
+	bulkActions = EMPTY_BULK_ACTIONS,
 
 	// Empty state
 	emptyState,
@@ -1501,11 +1515,13 @@ export function DataTable<TData extends RowData>({
 
 	// Robustness: Sort cycle
 	sortCycle = "asc-desc",
+
+	labels,
 }: DataTableProps<TData>): React.JSX.Element {
 	// ── State (persisted prefs load lazily once, from the initializer) ────
 	const finalPageSizeOptions = useMemo(() => pageSizeOptions ?? DEFAULT_PAGE_SIZE_OPTIONS, [pageSizeOptions]);
 
-	const [persistedPrefs] = useState<PersistedPrefs | null>(() => readPersistedPrefs(persistKey));
+	const [persistedPrefs] = useState<DataTablePersistedPrefs | null>(() => readPersistedPrefs(persistKey));
 
 	const [sorting, setSorting] = useState<SortingState>(() => persistedPrefs?.sorting ?? []);
 	const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
@@ -1523,10 +1539,13 @@ export function DataTable<TData extends RowData>({
 	const [selectAllPages, setSelectAllPages] = useState(false);
 
 	// NEW FEATURE 2: Column visibility state
-	const [columnVisibility, setColumnVisibility] = useState<ColumnVisibilityState>(() => persistedPrefs?.columnVisibility ?? {});
+	const [columnVisibility, setColumnVisibility] = useState<ColumnVisibilityState>(() => persistedPrefs?.columnVisibility ?? EMPTY_COLUMN_VISIBILITY);
 
 	// NEW FEATURE 5: Column pinning state (v9: start/end arrays, not a flat map)
-	const [columnPinning, setColumnPinning] = useState<ColumnPinningState>(() => persistedPrefs?.columnPinning ?? { start: [], end: [] });
+	const [columnPinning, setColumnPinning] = useState<ColumnPinningState>(() => ({
+		start: persistedPrefs?.columnPinning?.start ?? EMPTY_COLUMN_PINNING.start,
+		end: persistedPrefs?.columnPinning?.end ?? EMPTY_COLUMN_PINNING.end,
+	}));
 
 	// NEW FEATURE 7: Inline editing state
 	const [editingCell, setEditingCell] = useState<EditingCell | null>(null);
@@ -1552,14 +1571,13 @@ export function DataTable<TData extends RowData>({
 
 	// ── Save preferences ───────────────────────────────────────────────
 	const persistPreferences = useCallback(
-		(updates: Record<string, unknown>): void => {
+		(updates: DataTablePersistedPrefsPatch): void => {
 			if (persistKey === undefined || typeof window === "undefined") return;
 			try {
 				const key = `datatable:${persistKey}`;
 				const existing = window.localStorage.getItem(key);
-				const parsed: unknown = existing === null ? {} : JSON.parse(existing);
-				assumeType<Record<string, unknown>>(parsed);
-				const current = parsed;
+				const parsedPrefs = existing === null ? null : parseDataTablePersistedPrefs(existing);
+				const current: DataTablePersistedPrefsPatch = parsedPrefs ?? {};
 				window.localStorage.setItem(key, JSON.stringify({ ...current, ...updates }));
 			} catch {
 				/* noop */
@@ -1609,11 +1627,11 @@ export function DataTable<TData extends RowData>({
 		cols.push(...initialColumns);
 
 		// Actions column
-		if (actions.length > 0) {
+		if (actions.length > 0 && labels !== undefined) {
 			cols.push({
 				id: "actions",
 				header: "Actions",
-				cell: ({ row }) => <RowActionsMenu row={row} actions={actions} />,
+				cell: ({ row }) => <RowActionsMenu row={row} actions={actions} labels={labels} />,
 				enableSorting: false,
 				enableHiding: false,
 				enablePinning: false,
@@ -1624,7 +1642,7 @@ export function DataTable<TData extends RowData>({
 		}
 
 		return cols;
-	}, [initialColumns, actions, enableBulkSelection, draggable, handleAnyDeselect]);
+	}, [initialColumns, actions, labels, enableBulkSelection, draggable, handleAnyDeselect]);
 
 	// ── Editable Columns Set ────────────────────────────────────────────
 	const editableSet = useMemo<ReadonlySet<string>>(() => {
@@ -1707,9 +1725,12 @@ export function DataTable<TData extends RowData>({
 			pageCount,
 			globalFilterFn: (row, _columnId, filterValue): boolean => {
 				if (!searchKeys.length) return true;
+				const filterParsed = DataTableCellScalarSchema.safeParse(filterValue);
+				const filterText = filterParsed.success ? String(filterParsed.data).toLowerCase() : "";
 				return searchKeys.some((key) => {
-					const value = row.getValue(key);
-					return toCellString(value).toLowerCase().includes(toCellString(filterValue).toLowerCase());
+					const valueParsed = DataTableCellValueSchema.safeParse(row.getValue(key));
+					const valueText = valueParsed.success ? toDataTableCellString(valueParsed.data).toLowerCase() : "";
+					return valueText.includes(filterText);
 				});
 			},
 		}),
@@ -1738,17 +1759,18 @@ export function DataTable<TData extends RowData>({
 	// bars, header box and row checkboxes opt back in through `table.Subscribe`
 	// below, so toggling a row never re-renders the toolbar (search, filters,
 	// export, columns) or the pager.
-	// v9 types the `globalFilter` slice as `any`; we only ever store a string, so
-	// coerce it through `toCellString` (accepts `unknown`) to keep the projection
-	// free of `any` (rule 1) and the toolbar count re-render correct.
-	const table = useTable(tableOptions, (state) => ({
-		columnFilters: state.columnFilters,
-		globalFilter: toCellString(state.globalFilter),
-		pagination: state.pagination,
-		sorting: state.sorting,
-		columnVisibility: state.columnVisibility,
-		columnPinning: state.columnPinning,
-	}));
+	// v9 stores opaque values in `globalFilter`; coerce through Zod to keep projections typed.
+	const table = useTable(tableOptions, (state) => {
+		const globalFilterParsed = DataTableCellScalarSchema.safeParse(state.globalFilter);
+		return {
+			columnFilters: state.columnFilters,
+			globalFilter: globalFilterParsed.success ? String(globalFilterParsed.data) : "",
+			pagination: state.pagination,
+			sorting: state.sorting,
+			columnVisibility: state.columnVisibility,
+			columnPinning: state.columnPinning,
+		};
+	});
 
 	const handleFilterChange = useCallback(
 		(filterKey: string, value: string | null): void => {
@@ -1765,7 +1787,8 @@ export function DataTable<TData extends RowData>({
 	const getFilterValue = useCallback(
 		(filterKey: string): string => {
 			const filterValue = table.getColumn(filterKey)?.getFilterValue();
-			return filterValue ? toCellString(filterValue) : "all";
+			const parsed = DataTableCellScalarSchema.safeParse(filterValue);
+			return parsed.success ? String(parsed.data) : "all";
 		},
 		[table],
 	);
@@ -1990,7 +2013,7 @@ export function DataTable<TData extends RowData>({
 			<>
 				{/* ── SELECT ALL BANNER ─────────────────────────────────── */}
 				{showSelectAllBanner ? (
-					<div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3 dark:border-blue-800 dark:bg-blue-900/20">
+					<div className="mb-4 rounded-lg border border-info/30 bg-info-soft p-3 dark:border-info/30 dark:bg-info-soft">
 						<p className="text-sm text-blue-900 dark:text-blue-100">
 							All {table.getRowModel().rows.length} rows on this page are selected.{" "}
 							<button onClick={handleSelectAllPages} className="font-semibold underline hover:no-underline focus:outline-none">
@@ -2036,9 +2059,29 @@ export function DataTable<TData extends RowData>({
 		);
 	}, [selectAllPages, table, bulkActions, enableBulkSelection, mobileCardRender, handleAnyDeselect, handleBulkActionDone, handleClearSelection, handleSelectAllPages]);
 
+	const filterFacetedCounts = useMemo((): Record<string, ReadonlyMap<string, number>> => {
+		const counts: Record<string, ReadonlyMap<string, number>> = {};
+		for (const filter of filters) {
+			const facetedRaw = table.getColumn(filter.key)?.getFacetedUniqueValues();
+			counts[filter.key] = normalizeFacetedUniqueValues(facetedRaw ?? undefined);
+		}
+		return counts;
+	}, [filters, table]);
+
+	const desktopTableScrollStyle = useMemo((): React.CSSProperties | undefined => {
+		if (!virtualizeRows) {
+			return undefined;
+		}
+		return { maxHeight: maxHeight ?? DEFAULT_ROW_HEIGHT * 8 };
+	}, [virtualizeRows, maxHeight]);
+
+	const virtualTopSpacerStyle = useMemo((): React.CSSProperties => ({ height: virtualStart * effectiveRowHeight }), [virtualStart, effectiveRowHeight]);
+
+	const virtualBottomSpacerStyle = useMemo((): React.CSSProperties => ({ height: (rowCount - virtualEnd) * effectiveRowHeight }), [rowCount, virtualEnd, effectiveRowHeight]);
+
 	// ── Render ─────────────────────────────────────────────────────────
 	return (
-		<Card className={cn("w-full", className)}>
+		<DataTableShell ref={ref} className={className}>
 			{(title ?? description) ? (
 				<CardHeader>
 					{title ? <CardTitle>{title}</CardTitle> : null}
@@ -2082,7 +2125,7 @@ export function DataTable<TData extends RowData>({
 										filter={filter}
 										value={getFilterValue(filter.key)}
 										totalFilteredRows={totalFilteredRows}
-										uniqueValues={table.getColumn(filter.key)?.getFacetedUniqueValues()}
+										facetedCounts={filterFacetedCounts[filter.key] ?? EMPTY_FACETED_COUNTS}
 										onFilterChange={handleFilterChange}
 									/>
 								))
@@ -2187,9 +2230,8 @@ export function DataTable<TData extends RowData>({
 						{/* ── DESKTOP TABLE VIEW (virtualized when opt-in) ── */}
 						<div
 							className={cn("hidden rounded-md border lg:block", virtualizeRows ? "overflow-auto" : "overflow-x-auto")}
-							style={virtualizeRows ? { maxHeight: maxHeight ?? DEFAULT_ROW_HEIGHT * 8 } : undefined}
-							onScroll={virtualizeRows ? handleVirtualScroll : undefined}
-							{...(draggable ? { onDragOver: handleTableDragOver } : {})}>
+							style={desktopTableScrollStyle}
+							onScroll={virtualizeRows ? handleVirtualScroll : undefined}>
 							<Table>
 								<TableHeader>
 									{table.getHeaderGroups().map((headerGroup) => (
@@ -2200,10 +2242,10 @@ export function DataTable<TData extends RowData>({
 										</TableRow>
 									))}
 								</TableHeader>
-								<TableBody>
+								<TableBody onDragOver={draggable ? handleTableDragOver : undefined}>
 									{table.getRowModel().rows.length ? (
 										<>
-											{virtualizeRows && virtualStart > 0 ? <tr aria-hidden="true" style={{ height: virtualStart * effectiveRowHeight }} /> : null}
+											{virtualizeRows && virtualStart > 0 ? <tr aria-hidden="true" style={virtualTopSpacerStyle} /> : null}
 											{visibleRows.map((row, rowIdx) => {
 												const rowIndex = virtualStart + rowIdx;
 												const renderRow = (isRowSelected: boolean): React.JSX.Element => (
@@ -2239,7 +2281,7 @@ export function DataTable<TData extends RowData>({
 													</Subscribe>
 												);
 											})}
-											{virtualizeRows && virtualEnd < rowCount ? <tr aria-hidden="true" style={{ height: (rowCount - virtualEnd) * effectiveRowHeight }} /> : null}
+											{virtualizeRows && virtualEnd < rowCount ? <tr aria-hidden="true" style={virtualBottomSpacerStyle} /> : null}
 										</>
 									) : (
 										<TableRow>
@@ -2329,6 +2371,6 @@ export function DataTable<TData extends RowData>({
 					</>
 				)}
 			</CardContent>
-		</Card>
+		</DataTableShell>
 	);
 }

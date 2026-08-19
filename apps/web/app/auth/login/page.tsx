@@ -38,7 +38,12 @@ export default function WebLoginPage(): React.JSX.Element {
 			features={["Shorten any URL in seconds", "Real-time click analytics", "Secure, fast & reliable"]}
 			title="Login"
 			subtitle="Enter your email below to login to your account"
-			copyright="LinkHub">
+			copyright="LinkHub"
+			labels={{
+				mobileBack: "Back",
+				toggleThemeAria: "Toggle theme",
+				rightsReserved: "All rights reserved.",
+			}}>
 			{/* On SSR + the first client render, auth state isn't established yet.
 			    Rendering the form during that window would flash it on every reload
 			    (and for logged-in users, the proxy is about to bounce them to /hello). */}

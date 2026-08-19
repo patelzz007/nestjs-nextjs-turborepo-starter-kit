@@ -300,7 +300,15 @@ export function LoginForm({ emailPlaceholder, redirectPath, demoAccounts, footer
 					/>
 					<PasswordStrengthMeter score={strength.score} label={strength.label} percent={strength.percent} criteria={strength.criteria} />
 				</div>
-				{lockout !== null ? <LockoutCountdown remainingSeconds={lockout.remainingSeconds} /> : null}
+				{lockout !== null ? (
+					<LockoutCountdown
+						remainingSeconds={lockout.remainingSeconds}
+						labels={{
+							lockedPrefix: "Account locked — try again in",
+							lockedExpired: "Account locked — you can try again now",
+						}}
+					/>
+				) : null}
 			</FormShell>
 
 			{/* ── "Or continue with" divider ─────────────────────────────── */}

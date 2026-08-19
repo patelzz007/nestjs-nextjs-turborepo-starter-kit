@@ -22,8 +22,9 @@ export function AdminNotFoundContent({
 }): React.JSX.Element {
 	return (
 		<SharedNotFoundContent
-			title={title}
-			message={message}
+			code="404"
+			title={title ?? "Page not found"}
+			message={message ?? "The page you're looking for doesn't exist or may have been moved."}
 			backLink={
 				<Link
 					href={backHref}

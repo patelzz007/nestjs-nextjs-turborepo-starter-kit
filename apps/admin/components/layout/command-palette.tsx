@@ -361,7 +361,7 @@ export function CommandPalette({ open: externalOpen, setOpen: externalSetOpen }:
 	/* ── Render ────────────────────────────────────────────────── */
 
 	return (
-		<CommandDialog open={open} onOpenChange={setOpen} className="h-[65dvh] sm:max-w-2xl">
+		<CommandDialog open={open} onOpenChange={setOpen} title="Command palette" description="Search commands, pages, and actions" className="h-[65dvh] sm:max-w-2xl">
 			<Command shouldFilter={false}>
 				{/* Search Input */}
 				<div className="px-4 pt-3 pb-2">

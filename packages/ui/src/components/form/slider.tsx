@@ -1,22 +1,34 @@
 import { Slider as SliderPrimitive } from "@base-ui/react/slider";
+import { resolveFieldState } from "@workspace/ui/lib/field-state";
+import { sliderVariants } from "@workspace/ui/lib/field-variants";
 import { cn } from "@workspace/ui/lib/utils";
+import type { VariantProps } from "class-variance-authority";
 import * as React from "react";
 
-const Slider = React.forwardRef<HTMLDivElement, SliderPrimitive.Root.Props>(function Slider(
-	{ className, defaultValue, value, min = 0, max = 100, ...props },
+type SliderProps = SliderPrimitive.Root.Props &
+	VariantProps<typeof sliderVariants> & {
+		readonly loading?: boolean;
+	};
+
+const Slider = React.forwardRef<HTMLDivElement, SliderProps>(function Slider(
+	{ className, defaultValue, value, min = 0, max = 100, variant, size, loading = false, disabled, "aria-invalid": ariaInvalid, ...props },
 	ref,
 ): React.JSX.Element {
 	const values = Array.isArray(value) ? value : Array.isArray(defaultValue) ? defaultValue : [min, max];
+	const state = resolveFieldState({ disabled, loading, ariaInvalid });
 
 	return (
 		<SliderPrimitive.Root
 			ref={ref}
-			className={cn("data-horizontal:w-full data-vertical:h-full", className)}
+			className={cn(sliderVariants({ variant, size, state }), className)}
 			data-slot="slider"
 			defaultValue={defaultValue}
 			value={value}
 			min={min}
 			max={max}
+			disabled={disabled}
+			aria-invalid={ariaInvalid}
+			data-loading={loading ? "" : undefined}
 			thumbAlignment="edge"
 			{...props}>
 			<SliderPrimitive.Control className="relative flex w-full touch-none items-center select-none data-disabled:opacity-50 data-vertical:h-full data-vertical:min-h-40 data-vertical:w-auto data-vertical:flex-col">
@@ -29,7 +41,7 @@ const Slider = React.forwardRef<HTMLDivElement, SliderPrimitive.Root.Props>(func
 					<SliderPrimitive.Thumb
 						data-slot="slider-thumb"
 						key={index}
-						className="block size-4 shrink-0 rounded-full border border-primary bg-white shadow-sm ring-ring/50 transition-[color,box-shadow] select-none hover:ring-4 focus-visible:ring-4 focus-visible:outline-hidden disabled:pointer-events-none disabled:opacity-50"
+						className="block size-4 shrink-0 rounded-full border border-primary bg-background shadow-sm ring-ring/50 transition-[color,box-shadow] select-none hover:ring-4 focus-visible:ring-4 focus-visible:outline-hidden disabled:pointer-events-none disabled:opacity-50"
 					/>
 				))}
 			</SliderPrimitive.Control>
@@ -37,4 +49,4 @@ const Slider = React.forwardRef<HTMLDivElement, SliderPrimitive.Root.Props>(func
 	);
 });
 
-export { Slider };
+export { Slider, sliderVariants };

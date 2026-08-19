@@ -13,6 +13,8 @@ import { NotFoundContent } from "@workspace/ui/components/feedback/not-found-con
 export default function WebNotFound(): React.JSX.Element {
 	return (
 		<NotFoundContent
+			code="404"
+			title="Page not found"
 			message="This page doesn't exist. Head back to the homepage or check the address you typed."
 			backLink={
 				<Link

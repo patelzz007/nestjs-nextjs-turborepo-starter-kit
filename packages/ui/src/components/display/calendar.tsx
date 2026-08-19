@@ -6,19 +6,25 @@ import { ChevronLeftIcon, ChevronRightIcon, ChevronDownIcon } from "lucide-react
 import * as React from "react";
 import { DayPicker, getDefaultClassNames, type DayButton, type Locale } from "react-day-picker";
 
-function Calendar({
-	className,
-	classNames,
-	showOutsideDays = true,
-	captionLayout = "label",
-	buttonVariant = "ghost",
-	locale,
-	formatters,
-	components,
-	...props
-}: React.ComponentProps<typeof DayPicker> & {
-	buttonVariant?: React.ComponentProps<typeof Button>["variant"];
-}): React.JSX.Element {
+const Calendar = React.forwardRef<
+	HTMLDivElement,
+	React.ComponentProps<typeof DayPicker> & {
+		buttonVariant?: React.ComponentProps<typeof Button>["variant"];
+	}
+>(function Calendar(
+	{
+		className,
+		classNames,
+		showOutsideDays = true,
+		captionLayout = "label",
+		buttonVariant = "ghost",
+		locale,
+		formatters,
+		components,
+		...props
+	},
+	ref,
+): React.JSX.Element {
 	const defaultClassNames = getDefaultClassNames();
 
 	return (
@@ -81,8 +87,26 @@ function Calendar({
 				...classNames,
 			}}
 			components={{
-				Root: ({ className, rootRef, ...props }) => {
-					return <div data-slot="calendar" ref={rootRef} className={cn(className)} {...props} />;
+				Root: ({ className: rootClassName, rootRef, ...rootProps }) => {
+					return (
+						<div
+							data-slot="calendar"
+							ref={(node): void => {
+								if (typeof ref === "function") {
+									ref(node);
+								} else if (ref !== null) {
+									ref.current = node;
+								}
+								if (typeof rootRef === "function") {
+									rootRef(node);
+								} else if (rootRef !== null && rootRef !== undefined) {
+									rootRef.current = node;
+								}
+							}}
+							className={cn(rootClassName)}
+							{...rootProps}
+						/>
+					);
 				},
 				Chevron: ({ className, orientation, ...props }) => {
 					if (orientation === "left") {
@@ -108,7 +132,7 @@ function Calendar({
 			{...props}
 		/>
 	);
-}
+});
 
 function CalendarDayButton({ className, day, modifiers, locale, ...props }: React.ComponentProps<typeof DayButton> & { locale?: Partial<Locale> }): React.JSX.Element {
 	const defaultClassNames = getDefaultClassNames();

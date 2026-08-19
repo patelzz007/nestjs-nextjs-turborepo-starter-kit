@@ -13,8 +13,8 @@
 //   - `maxChips` overflow chip ("+N more") on the chips row (feature 9)
 //   - `shortcut` (e.g. "⌘K") to open + focus the input (feature 11)
 //   - `debounceMs` on `onInputValueChange` for server-side search (feature 8)
-//   - `persistQueryKey` restores + persists the draft query in sessionStorage
-//     (feature 19) — SSR-safe
+//   - draft query persistence is owned by the smart parent via `defaultInputValue`
+//     / controlled `inputValue` + `onInputValueChange` (parent may persist externally)
 //   - `ComboboxEmpty` CTA (`actionLabel` + `onAction`) for zero-result flows
 //     (feature 10)
 //   - an sr-only `aria-live` region announcing the selection count (feature 20)
@@ -45,6 +45,8 @@
 import { Combobox as ComboboxPrimitive } from "@base-ui/react";
 import { Button } from "@workspace/ui/components/form/button";
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "@workspace/ui/components/form/input-group";
+import { resolveFieldState } from "@workspace/ui/lib/field-state";
+import { comboboxInputGroupVariants } from "@workspace/ui/lib/field-variants";
 import { matchesShortcut, parseShortcut } from "@workspace/ui/lib/shortcut";
 import { cn } from "@workspace/ui/lib/utils";
 import { CheckIcon, ChevronDownIcon, Loader2Icon, PlusIcon, XIcon } from "lucide-react";
@@ -93,6 +95,7 @@ const comboboxListMaxHeightStyle: ComboboxListMaxHeightStyle = {
 interface ComboboxContextValue {
 	readonly size: ComboboxSize;
 	readonly loading: boolean;
+	readonly invalid: boolean;
 	/** Cap on visible chips — set on the Root, consumed by `ComboboxChips` (feature 9). */
 	readonly maxChips: number | undefined;
 	/** Registers the rendered input so the Root's shortcut handler can focus it. */
@@ -148,8 +151,8 @@ export interface ComboboxProps<Value, Multiple extends boolean | undefined = fal
 	readonly ariaLabel?: string;
 	/** Debounce `onInputValueChange` by N ms — for server-side search (feature 8). */
 	readonly debounceMs?: number;
-	/** Restore + persist the draft query under this sessionStorage key (feature 19). */
-	readonly persistQueryKey?: string;
+	/** Validation state — threads to the input group as `aria-invalid` (RHF/zod rule 18). */
+	readonly invalid?: boolean;
 }
 
 /**
@@ -175,7 +178,7 @@ function Combobox<Value, Multiple extends boolean | undefined = false>({
 	onMaxSelectedReached,
 	ariaLabel,
 	debounceMs,
-	persistQueryKey,
+	invalid = false,
 	open: openProp,
 	defaultOpen = false,
 	onOpenChange: onOpenChangeProp,
@@ -187,16 +190,6 @@ function Combobox<Value, Multiple extends boolean | undefined = false>({
 	const debounceTimerRef = useRef<number | null>(null);
 	const [openState, setOpenState] = useState<boolean>(defaultOpen);
 	const isOpenControlled = openProp !== undefined;
-
-	// Feature 19: draft-query persistence. The lazy initializer runs once (SSR
-	// guard included), then an effect writes every change back to sessionStorage.
-	const [draftQuery, setDraftQuery] = useState<string | undefined>(() => {
-		if (!isBrowser() || persistQueryKey === undefined) {
-			return undefined;
-		}
-		const stored = window.sessionStorage.getItem(persistQueryKey);
-		return stored ?? undefined;
-	});
 
 	// Feature 20: selection-count live region (announced to screen readers).
 	const [selectionCount, setSelectionCount] = useState<number>(() => {
@@ -238,9 +231,6 @@ function Combobox<Value, Multiple extends boolean | undefined = false>({
 	// every keystroke and on unmount — no stale timeouts after unmount.
 	const handleInputValueChange = useCallback(
 		(value: string, details: ComboboxPrimitive.Root.ChangeEventDetails): void => {
-			if (persistQueryKey !== undefined) {
-				setDraftQuery(value);
-			}
 			if (debounceMs === undefined || debounceMs <= 0) {
 				onInputValueChangeProp?.(value, details);
 				return;
@@ -253,16 +243,8 @@ function Combobox<Value, Multiple extends boolean | undefined = false>({
 				onInputValueChangeProp?.(value, details);
 			}, debounceMs);
 		},
-		[debounceMs, onInputValueChangeProp, persistQueryKey],
+		[debounceMs, onInputValueChangeProp],
 	);
-
-	// Feature 19: persist the draft query on every change (browser only).
-	useEffect(() => {
-		if (!isBrowser() || persistQueryKey === undefined || draftQuery === undefined) {
-			return;
-		}
-		window.sessionStorage.setItem(persistQueryKey, draftQuery);
-	}, [persistQueryKey, draftQuery]);
 
 	// Feature 8: clear a pending debounce on unmount.
 	useEffect(() => {
@@ -335,7 +317,7 @@ function Combobox<Value, Multiple extends boolean | undefined = false>({
 		};
 	}, [shortcut, openCombobox]);
 
-	const contextValue = useMemo<ComboboxContextValue>(() => ({ size, loading, maxChips, registerInput }), [size, loading, maxChips, registerInput]);
+	const contextValue = useMemo<ComboboxContextValue>(() => ({ size, loading, invalid, maxChips, registerInput }), [size, loading, invalid, maxChips, registerInput]);
 
 	return (
 		<ComboboxContext.Provider value={contextValue}>
@@ -345,9 +327,6 @@ function Combobox<Value, Multiple extends boolean | undefined = false>({
 				onOpenChange={handleOpenChange}
 				onValueChange={handleValueChange}
 				onInputValueChange={handleInputValueChange}
-				// Feature 19: seed the input with the persisted draft on first mount.
-				// When no key is set, `draftQuery` stays undefined — passing it is inert.
-				defaultInputValue={draftQuery}
 				{...props}
 			/>
 			{/* Feature 20: sr-only selection-count announcement (multi-select). */}
@@ -434,14 +413,18 @@ export interface ComboboxInputProps extends ComboboxPrimitive.Input.Props {
 	readonly disabled?: boolean;
 	/** Placeholder shown when no value is selected. */
 	readonly placeholder?: string;
+	/** Validation override — falls back to Root `invalid`. */
+	readonly invalid?: boolean;
 }
 
 const ComboboxInput = React.forwardRef<HTMLInputElement, ComboboxInputProps>(function ComboboxInput(
-	{ className, children, disabled = false, showTrigger = true, showClear = false, placeholder, ...props },
+	{ className, children, disabled = false, invalid: invalidProp, showTrigger = true, showClear = false, placeholder, ...props },
 	ref,
 ): React.JSX.Element {
 	const context = useComboboxContext();
-	const { size } = context;
+	const { size, loading, invalid: contextInvalid } = context;
+	const invalid = invalidProp ?? contextInvalid;
+	const fieldState = resolveFieldState({ disabled, loading, ariaInvalid: invalid ? true : undefined });
 
 	const setRefs = useCallback(
 		(node: HTMLInputElement | null): void => {
@@ -456,16 +439,12 @@ const ComboboxInput = React.forwardRef<HTMLInputElement, ComboboxInputProps>(fun
 	);
 
 	return (
-		<InputGroup
-			className={cn(
-				"w-auto",
-				// Improvement 2: sizes. `cn` (tailwind-merge) lets these override the
-				// InputGroup's base `h-9` without `!` battles.
-				size === "sm" && "h-8",
-				size === "lg" && "h-10",
-				className,
-			)}>
-			<ComboboxPrimitive.Input ref={setRefs} render={<InputGroupInput disabled={disabled} aria-disabled={disabled || undefined} placeholder={placeholder} />} {...props} />
+		<InputGroup className={cn(comboboxInputGroupVariants({ size, state: fieldState }), className)}>
+			<ComboboxPrimitive.Input
+				ref={setRefs}
+				render={<InputGroupInput disabled={disabled} aria-disabled={disabled || undefined} aria-invalid={invalid ? true : undefined} placeholder={placeholder} />}
+				{...props}
+			/>
 			<InputGroupAddon align="inline-end">
 				{showTrigger ? (
 					<InputGroupButton
@@ -495,13 +474,13 @@ const ComboboxContent = React.forwardRef<HTMLDivElement, ComboboxContentProps>(f
 ): React.JSX.Element {
 	return (
 		<ComboboxPrimitive.Portal>
-			<ComboboxPrimitive.Positioner side={side} sideOffset={sideOffset} align={align} alignOffset={alignOffset} anchor={anchor} className="isolate z-50">
+			<ComboboxPrimitive.Positioner side={side} sideOffset={sideOffset} align={align} alignOffset={alignOffset} anchor={anchor} className="z-popover isolate">
 				<ComboboxPrimitive.Popup
 					ref={ref}
 					data-slot="combobox-content"
 					data-chips={!!anchor}
 					className={cn(
-						"group/combobox-content relative max-h-(--available-height) w-(--anchor-width) max-w-(--available-width) min-w-[calc(var(--anchor-width)+--spacing(7))] origin-(--transform-origin) overflow-hidden rounded-md bg-popover text-popover-foreground shadow-md ring-1 ring-foreground/10 duration-100 data-[chips=true]:min-w-(--anchor-width) data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-start-2 data-[side=inline-start]:slide-in-from-end-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 *:data-[slot=input-group]:m-1 *:data-[slot=input-group]:mb-0 *:data-[slot=input-group]:h-8 *:data-[slot=input-group]:border-input/30 *:data-[slot=input-group]:bg-input/30 *:data-[slot=input-group]:shadow-none data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+						"group/combobox-content relative max-h-(--available-height) w-(--anchor-width) max-w-(--available-width) min-w-[calc(var(--anchor-width)+(--spacing(7)))] origin-(--transform-origin) overflow-hidden rounded-md bg-popover text-popover-foreground shadow-md ring-1 ring-foreground/10 duration-100 data-[chips=true]:min-w-(--anchor-width) data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-start-2 data-[side=inline-start]:slide-in-from-end-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 *:data-[slot=input-group]:m-1 *:data-[slot=input-group]:mb-0 *:data-[slot=input-group]:h-8 *:data-[slot=input-group]:border-input/30 *:data-[slot=input-group]:bg-input/30 *:data-[slot=input-group]:shadow-none data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
 						className,
 					)}
 					{...props}
@@ -586,7 +565,7 @@ const ComboboxItem = React.forwardRef<HTMLDivElement, ComboboxItemProps>(functio
 				children
 			)}
 			<ComboboxPrimitive.ItemIndicator
-				render={<span data-slot="combobox-item-indicator" className="pointer-events-none absolute end-2 flex size-4 items-center justify-center" />}>
+				render={<span data-slot="combobox-item-indicator" className="pointer-events-none absolute inset-e-2 flex size-4 items-center justify-center" />}>
 				<CheckIcon className="pointer-events-none" />
 			</ComboboxPrimitive.ItemIndicator>
 		</ComboboxPrimitive.Item>

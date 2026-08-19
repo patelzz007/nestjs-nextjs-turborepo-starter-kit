@@ -1,27 +1,48 @@
+import { cn } from "@workspace/ui/lib/utils";
+import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
 
+const notFoundContentVariants = cva("flex min-h-[50vh] flex-col items-center justify-center gap-5 px-6 py-16 text-center", {
+	variants: {
+		variant: {
+			default: "",
+		},
+		size: {
+			default: "",
+			sm: "gap-4 py-12",
+		},
+		state: {
+			default: "",
+			loading: "opacity-60",
+			disabled: "opacity-50",
+			error: "",
+		},
+	},
+	defaultVariants: {
+		variant: "default",
+		size: "default",
+		state: "default",
+	},
+});
+
 /**
- * Shared, presentational 404 content — used by both the admin panel and the
- * web app's not-found pages. Purely rendering (rules 9–11): every string and
- * the "back" link element arrive via props, so nothing here is app-specific
- * or hardcoded.
+ * Shared, presentational 404 content — every string arrives via props (rules 9–11).
  */
-export interface NotFoundContentProps {
-	readonly code?: string;
-	readonly title?: string;
-	readonly message?: string;
+export interface NotFoundContentProps extends VariantProps<typeof notFoundContentVariants> {
+	readonly code: string;
+	readonly title: string;
+	readonly message: string;
 	/** The app-supplied "back" link element (e.g. a Next.js `Link`). */
 	readonly backLink: React.ReactNode;
+	readonly className?: string;
 }
 
-export function NotFoundContent({
-	code = "404",
-	title = "Page not found",
-	message = "The page you're looking for doesn't exist or may have been moved.",
-	backLink,
-}: NotFoundContentProps): React.JSX.Element {
+export const NotFoundContent = React.forwardRef<HTMLDivElement, NotFoundContentProps>(function NotFoundContent(
+	{ code, title, message, backLink, className, variant, size, state },
+	ref,
+): React.JSX.Element {
 	return (
-		<div className="flex min-h-[50vh] flex-col items-center justify-center gap-5 px-6 py-16 text-center">
+		<div ref={ref} className={cn(notFoundContentVariants({ variant, size, state }), className)}>
 			<p className="font-mono text-6xl font-semibold tracking-tight text-muted-foreground/25">{code}</p>
 			<div className="space-y-1.5">
 				<h1 className="text-xl font-semibold tracking-tight text-foreground">{title}</h1>
@@ -30,4 +51,6 @@ export function NotFoundContent({
 			{backLink}
 		</div>
 	);
-}
+});
+
+export { notFoundContentVariants };

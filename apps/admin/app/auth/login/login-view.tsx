@@ -35,7 +35,12 @@ export function LoginView({ redirectPath, webBaseUrl, showDemoAccounts }: LoginV
 			features={["Role-based access control", "Audit & activity logs", "Enterprise-grade security"]}
 			title="Admin Login"
 			subtitle="Sign in with your administrator credentials"
-			copyright="Admin Panel">
+			copyright="Admin Panel"
+			labels={{
+				mobileBack: "Back",
+				toggleThemeAria: "Toggle theme",
+				rightsReserved: "All rights reserved.",
+			}}>
 			{/* On SSR + the first client render, auth state isn't established
 			    yet. Rendering the form during that window would flash it on every
 			    reload (and for admins, the proxy is about to bounce them into the

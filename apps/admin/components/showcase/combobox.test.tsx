@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import * as React from "react";
 import { useCallback, useRef, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -373,26 +374,32 @@ describe("Combobox", () => {
 		expect(onAction).toHaveBeenCalledTimes(1);
 	});
 
-	it("persists and restores the draft query via sessionStorage (feature 19)", () => {
+	it("persists and restores the draft query via parent-controlled input (feature 19)", () => {
 		vi.stubGlobal("ResizeObserver", ResizeObserverStub);
-		const { unmount } = render(
-			<Combobox persistQueryKey="combobox-test-draft">
-				<ComboboxInput placeholder="Persisted" />
-			</Combobox>,
-		);
+		const storageKey = "combobox-test-draft";
+		window.sessionStorage.removeItem(storageKey);
+
+		function PersistedComboboxHarness(): React.JSX.Element {
+			const [draft, setDraft] = React.useState<string>(() => window.sessionStorage.getItem(storageKey) ?? "");
+			const handleInputChange = (value: string): void => {
+				setDraft(value);
+				window.sessionStorage.setItem(storageKey, value);
+			};
+			return (
+				<Combobox inputValue={draft} onInputValueChange={handleInputChange}>
+					<ComboboxInput placeholder="Persisted" />
+				</Combobox>
+			);
+		}
+
+		const { unmount } = render(<PersistedComboboxHarness />);
 		const input = screen.getByPlaceholderText("Persisted");
 		fireEvent.change(input, { target: { value: "draft-query" } });
-		expect(window.sessionStorage.getItem("combobox-test-draft")).toBe("draft-query");
-		// Remount — the draft must be restored into the input (checked by value,
-		// no type assertion — rule 4).
+		expect(window.sessionStorage.getItem(storageKey)).toBe("draft-query");
 		unmount();
-		render(
-			<Combobox persistQueryKey="combobox-test-draft">
-				<ComboboxInput placeholder="Persisted" />
-			</Combobox>,
-		);
+		render(<PersistedComboboxHarness />);
 		expect(screen.getByDisplayValue("draft-query")).toBeTruthy();
-		window.sessionStorage.removeItem("combobox-test-draft");
+		window.sessionStorage.removeItem(storageKey);
 	});
 
 	it("announces the selection count via an sr-only live region (feature 20)", () => {

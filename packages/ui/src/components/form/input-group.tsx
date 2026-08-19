@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@workspace/ui/components/form/button";
-import { Input } from "@workspace/ui/components/form/input";
+import { Input, type InputProps } from "@workspace/ui/components/form/input";
 import { Textarea } from "@workspace/ui/components/form/textarea";
 import { cn } from "@workspace/ui/lib/utils";
 import { cva, type VariantProps } from "class-variance-authority";
@@ -98,7 +98,7 @@ const InputGroupText = React.forwardRef<HTMLSpanElement, React.ComponentProps<"s
 	);
 });
 
-const InputGroupInput = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(function InputGroupInput({ className, ...props }, ref): React.JSX.Element {
+const InputGroupInput = React.forwardRef<HTMLInputElement, InputProps>(function InputGroupInput({ className, ...props }, ref): React.JSX.Element {
 	return (
 		<Input
 			ref={ref}

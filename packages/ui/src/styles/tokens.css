@@ -1,4 +1,22 @@
 :root {
+	--z-overlay: 50;
+	--z-popover: 50;
+	--z-toast: 60;
+	--switch-height: 18.4px;
+	--switch-width: 32px;
+	--switch-height-sm: 14px;
+	--switch-width-sm: 24px;
+	--switch-thumb-size: 16px;
+	--switch-thumb-size-sm: 12px;
+	--auth-panel: oklch(0.21 0.034 264.665);
+	--auth-panel-muted: oklch(0.554 0.046 257.417);
+	--auth-panel-foreground: oklch(0.985 0 0);
+	--auth-brand-from: oklch(0.546 0.245 262.881);
+	--auth-brand-to: oklch(0.488 0.243 264.376);
+	--print-foreground: oklch(0.21 0.034 264.665);
+	--print-border: oklch(0.928 0.006 264.531);
+	--print-header-bg: oklch(0.967 0.003 264.542);
+	--print-row-alt: oklch(0.985 0.002 247.839);
 	--card: oklch(1 0 0);
 	--card-foreground: oklch(0.141 0.005 285.823);
 	--popover: oklch(1 0 0);
@@ -38,7 +56,7 @@
 	--sidebar-ring: oklch(0.705 0.015 286.067);
 	--sidebar-search-mark-bg: oklch(0.9 0.05 250);
 	--sidebar-search-mark-fg: oklch(0.4 0.16 260);
-	--background: #f9fafb;
+	--background: oklch(0.985 0.002 247.839);
 	--foreground: oklch(0.141 0.005 285.823);
 }
 
@@ -86,6 +104,18 @@
 }
 
 @theme inline {
+	--z-overlay: var(--z-overlay);
+	--z-popover: var(--z-popover);
+	--z-toast: var(--z-toast);
+	--color-auth-panel: var(--auth-panel);
+	--color-auth-panel-muted: var(--auth-panel-muted);
+	--color-auth-panel-foreground: var(--auth-panel-foreground);
+	--color-auth-brand-from: var(--auth-brand-from);
+	--color-auth-brand-to: var(--auth-brand-to);
+	--color-print-foreground: var(--print-foreground);
+	--color-print-border: var(--print-border);
+	--color-print-header-bg: var(--print-header-bg);
+	--color-print-row-alt: var(--print-row-alt);
 	--color-background: var(--background);
 	--color-foreground: var(--foreground);
 	--color-card: var(--card);

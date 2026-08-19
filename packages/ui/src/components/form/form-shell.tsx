@@ -16,10 +16,10 @@ export interface FormShellProps {
 	readonly error: string | null;
 	/** Whether the form is currently submitting */
 	readonly isLoading: boolean;
-	/** Label for the submit button (default: "Submit") */
-	readonly submitLabel?: string;
-	/** Label shown while loading (default: "Submitting...") */
-	readonly loadingLabel?: string;
+	/** Label for the submit button */
+	readonly submitLabel: string;
+	/** Label shown while loading */
+	readonly loadingLabel: string;
 	/** Extra classes for the submit button (e.g. `h-11` for auth forms). */
 	readonly submitClassName?: string;
 	/** Form submit handler */
@@ -38,16 +38,15 @@ export interface FormShellProps {
  * Contains no authentication or business logic.
  */
 export const FormShell = forwardRef<HTMLFormElement, FormShellProps>(function FormShell(
-	{ error, isLoading, submitLabel = "Submit", loadingLabel = "Submitting...", submitClassName, onSubmit, children },
+	{ error, isLoading, submitLabel, loadingLabel, submitClassName, onSubmit, children },
 	ref,
 ): JSX.Element {
 	return (
 		<>
-			{/* Error banner */}
 			{error ? (
-				<div className="rounded-lg border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+				<div role="alert" aria-live="polite" className="rounded-lg border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive">
 					<div className="flex items-start gap-3">
-						<svg className="mt-0.5 size-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+						<svg className="mt-0.5 size-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
 							<path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
 						</svg>
 						<span>{error}</span>
@@ -55,22 +54,11 @@ export const FormShell = forwardRef<HTMLFormElement, FormShellProps>(function Fo
 				</div>
 			) : null}
 
-			{/* Form */}
 			<form ref={ref} onSubmit={onSubmit} className="space-y-4">
 				{children}
 
-				<Button type="submit" className={cn("w-full", submitClassName)} disabled={isLoading}>
-					{isLoading ? (
-						<span className="flex items-center gap-2">
-							<svg className="size-4 animate-spin" fill="none" viewBox="0 0 24 24">
-								<circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-								<path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-							</svg>
-							{loadingLabel}
-						</span>
-					) : (
-						submitLabel
-					)}
+				<Button type="submit" className={cn("w-full", submitClassName)} loading={isLoading} disabled={isLoading}>
+					{isLoading ? loadingLabel : submitLabel}
 				</Button>
 			</form>
 		</>

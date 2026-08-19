@@ -17,12 +17,11 @@ export const CookieNamesSchema = z.enum(["accessToken", "refreshToken", "adminAc
 
 export type CookieNames = z.output<typeof CookieNamesSchema>;
 
-/** Login response fields stripped into httpOnly cookies by the API interceptor. */
-export const LoginTokenFieldsSchema = z
-	.object({
-		accessToken: z.string().min(1).optional(),
-		refreshToken: z.string().min(1).optional(),
-	})
-	.strict();
+/** Login response fields stripped into httpOnly cookies by the API interceptor.
+ *  Not `.strict()` — login/refresh bodies include `user` / `message` alongside tokens. */
+export const LoginTokenFieldsSchema = z.object({
+	accessToken: z.string().min(1).optional(),
+	refreshToken: z.string().min(1).optional(),
+});
 
 export type LoginTokenFields = z.output<typeof LoginTokenFieldsSchema>;

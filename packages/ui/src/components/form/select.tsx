@@ -32,6 +32,8 @@
 
 import { Select as SelectPrimitive } from "@base-ui/react/select";
 import { useStopPointerEvents } from "@workspace/ui/hooks/use-stop-pointer-events";
+import { resolveFieldState } from "@workspace/ui/lib/field-state";
+import { selectTriggerVariants } from "@workspace/ui/lib/field-variants";
 import { matchesShortcut, parseShortcut } from "@workspace/ui/lib/shortcut";
 import { cn } from "@workspace/ui/lib/utils";
 import { CheckIcon, ChevronDownIcon, ChevronUpIcon, Loader2Icon, PlusIcon, XIcon } from "lucide-react";
@@ -286,7 +288,7 @@ export interface SelectTriggerProps extends SelectPrimitive.Trigger.Props {
 }
 
 const SelectTrigger = React.forwardRef<HTMLButtonElement, SelectTriggerProps>(function SelectTrigger(
-	{ className, children, size: sizeProp, fullWidth = false, ...props },
+	{ className, children, size: sizeProp, fullWidth = false, disabled, ...props },
 	ref,
 ): React.JSX.Element {
 	const context = useSelectContext();
@@ -297,6 +299,7 @@ const SelectTrigger = React.forwardRef<HTMLButtonElement, SelectTriggerProps>(fu
 	// aria-label always wins (improvement 3). Same for `aria-invalid` (rule 18).
 	const triggerLabel = props["aria-label"] ?? context.ariaLabel;
 	const triggerInvalid = props["aria-invalid"] ?? (context.invalid ? true : undefined);
+	const fieldState = resolveFieldState({ disabled, loading: context.loading, ariaInvalid: triggerInvalid });
 
 	const setRefs = useCallback(
 		(node: HTMLButtonElement | null): void => {
@@ -317,16 +320,7 @@ const SelectTrigger = React.forwardRef<HTMLButtonElement, SelectTriggerProps>(fu
 			aria-invalid={triggerInvalid}
 			data-slot="select-trigger"
 			data-size={size}
-			className={cn(
-				"group/select-trigger flex items-center justify-between gap-1.5 rounded-md border border-input bg-transparent px-2.5 text-sm whitespace-nowrap shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:bg-input/30 dark:hover:bg-input/50 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
-				// Improvement 2: sizes. `cn` (tailwind-merge) lets these override the
-				// base padding without `!` battles.
-				size === "sm" && "h-8",
-				size === "default" && "h-9",
-				size === "lg" && "h-10",
-				fullWidth ? "w-full" : "w-fit",
-				className,
-			)}
+			className={cn(selectTriggerVariants({ size, state: fieldState }), fullWidth ? "w-full" : "w-fit", className)}
 			{...props}>
 			{children}
 			<SelectPrimitive.Icon render={<ChevronDownIcon className="pointer-events-none size-4 shrink-0 text-muted-foreground" />} />
@@ -529,12 +523,12 @@ const SelectContent = React.forwardRef<HTMLDivElement, SelectContentProps>(funct
 				align={align}
 				alignOffset={alignOffset}
 				alignItemWithTrigger={alignItemWithTrigger}
-				className="isolate z-50">
+				className="z-popover isolate">
 				<SelectPrimitive.Popup
 					ref={ref}
 					data-slot="select-content"
 					className={cn(
-						"relative isolate z-50 max-h-(--available-height) w-(--anchor-width) min-w-36 origin-(--transform-origin) overflow-x-hidden overflow-y-auto rounded-md bg-popover text-popover-foreground shadow-md ring-1 ring-foreground/10 duration-100 data-[align-trigger=true]:animate-none data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-start-2 data-[side=inline-start]:slide-in-from-end-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+						"z-popover relative isolate max-h-(--available-height) w-(--anchor-width) min-w-36 origin-(--transform-origin) overflow-x-hidden overflow-y-auto rounded-md bg-popover text-popover-foreground shadow-md ring-1 ring-foreground/10 duration-100 data-[align-trigger=true]:animate-none data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-start-2 data-[side=inline-start]:slide-in-from-end-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
 						className,
 					)}
 					{...props}>
@@ -617,7 +611,7 @@ const SelectItem = React.memo(
 						children
 					)}
 				</SelectPrimitive.ItemText>
-				<SelectPrimitive.ItemIndicator render={<span className="pointer-events-none absolute end-2 flex size-4 items-center justify-center" />}>
+				<SelectPrimitive.ItemIndicator render={<span className="pointer-events-none absolute inset-e-2 flex size-4 items-center justify-center" />}>
 					<CheckIcon className="pointer-events-none" />
 				</SelectPrimitive.ItemIndicator>
 			</SelectPrimitive.Item>

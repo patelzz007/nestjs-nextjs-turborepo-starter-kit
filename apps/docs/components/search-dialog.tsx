@@ -63,7 +63,7 @@ export function DocsSearchDialog({ api = "/api/search", delayMs = 500, links = [
 	}, [setSearch]);
 
 	return (
-		<CommandDialog open={open} onOpenChange={onOpenChange} className="h-[65dvh] sm:max-w-2xl">
+		<CommandDialog open={open} onOpenChange={onOpenChange} title="Search documentation" description="Find pages and headings in the docs" className="h-[65dvh] sm:max-w-2xl">
 			<Command shouldFilter={false}>
 				{/* Search input */}
 				<div className="px-4 pt-3 pb-2">

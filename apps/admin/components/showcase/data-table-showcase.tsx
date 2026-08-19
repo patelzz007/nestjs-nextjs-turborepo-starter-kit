@@ -20,7 +20,7 @@ import { useCallback, useMemo, useState } from "react";
 import { z } from "zod";
 
 import { Badge } from "@workspace/ui/components/feedback/badge";
-import { DataTable, type Action, type BulkAction, type DataTableFeatures, type Filter } from "@workspace/ui/components/display/data-table";
+import { DataTable, type Action, type BulkAction, type DataTableFeatures, type DataTableLabels, type Filter } from "@workspace/ui/components/display/data-table";
 import type { ColumnDef } from "@tanstack/react-table";
 import { CircleCheck, CircleDashed, Copy, Eye, Pencil, Trash2 } from "lucide-react";
 
@@ -313,6 +313,14 @@ export function DataTableShowcase(): React.JSX.Element {
 		[],
 	);
 
+	const dataTableLabels = useMemo(
+		(): DataTableLabels => ({
+			actionsMenuTitle: "Section actions",
+			openRowMenu: "Open section row menu",
+		}),
+		[],
+	);
+
 	return (
 		<DataTable
 			data={rows}
@@ -322,6 +330,7 @@ export function DataTableShowcase(): React.JSX.Element {
 			searchKeys={["header", "reviewer"]}
 			filters={filters}
 			actions={actions}
+			labels={dataTableLabels}
 			bulkActions={bulkActions}
 			enableBulkSelection
 			enableColumnVisibility

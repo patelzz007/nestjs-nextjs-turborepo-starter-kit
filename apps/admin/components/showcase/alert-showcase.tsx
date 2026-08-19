@@ -7,7 +7,9 @@ import {
 	AlertDialogMedia,
 	AlertDialogTitle,
 	AlertDialogTrigger,
+	type AlertDialogLabels,
 } from "@workspace/ui/components/overlay/alert-dialog";
+import { SHOWCASE_ALERT_DIALOG_LABELS } from "@workspace/ui/lib/alert-dialog-labels";
 import { Alert, AlertAction } from "@workspace/ui/components/feedback/alert";
 import { Button } from "@workspace/ui/components/form/button";
 import { Input } from "@workspace/ui/components/form/input";
@@ -41,6 +43,29 @@ export function AlertShowcase(): React.JSX.Element {
 	const [dialogOpen, setDialogOpen] = useState<boolean>(false);
 	const [confirmLoading, setConfirmLoading] = useState<boolean>(false);
 	const [dismissedKeys, setDismissedKeys] = useState<readonly string[]>([]);
+	const [confirmationValue, setConfirmationValue] = useState<string>("");
+	const [reasonValue, setReasonValue] = useState<string>("");
+
+	const deleteDialogLabels: AlertDialogLabels = {
+		...SHOWCASE_ALERT_DIALOG_LABELS,
+		confirm: "Delete users",
+		loading: "Deleting…",
+	};
+
+	const resetDialogLabels: AlertDialogLabels = {
+		...SHOWCASE_ALERT_DIALOG_LABELS,
+		confirm: "Reset database",
+	};
+
+	const lockDialogLabels: AlertDialogLabels = {
+		...SHOWCASE_ALERT_DIALOG_LABELS,
+		confirm: "Lock account",
+	};
+
+	const saveDialogLabels: AlertDialogLabels = {
+		...SHOWCASE_ALERT_DIALOG_LABELS,
+		confirm: "Save changes",
+	};
 
 	const handleDismiss = useCallback((key: string): void => {
 		setDismissedKeys((current) => (current.includes(key) ? current : [...current, key]));
@@ -139,9 +164,8 @@ export function AlertShowcase(): React.JSX.Element {
 						<AlertDialogTrigger render={<Button variant="destructive" />}>Delete users</AlertDialogTrigger>
 						<AlertDialogContent
 							severity="critical"
-							confirmLabel="Delete users"
+							labels={deleteDialogLabels}
 							confirmLoading={confirmLoading}
-							loadingLabel="Deleting…"
 							confirmShortcut="⌘⏎"
 							summary={destructiveSummary}
 							count={12}
@@ -158,7 +182,12 @@ export function AlertShowcase(): React.JSX.Element {
 					{/* Keyword confirmation */}
 					<AlertDialog>
 						<AlertDialogTrigger render={<Button variant="outline" />}>Type-to-confirm</AlertDialogTrigger>
-						<AlertDialogContent severity="warning" requireConfirmation="reset staging" confirmLabel="Reset database">
+						<AlertDialogContent
+							severity="warning"
+							labels={resetDialogLabels}
+							requireConfirmation="reset staging"
+							confirmationValue={confirmationValue}
+							onConfirmationValueChange={setConfirmationValue}>
 							<AlertDialogTitle>Reset staging database?</AlertDialogTitle>
 							<AlertDialogDescription>This wipes all staging data. Type the keyword to enable the confirm button.</AlertDialogDescription>
 						</AlertDialogContent>
@@ -167,7 +196,13 @@ export function AlertShowcase(): React.JSX.Element {
 					{/* Reason gate + countdown */}
 					<AlertDialog>
 						<AlertDialogTrigger render={<Button variant="secondary" />}>Lock account</AlertDialogTrigger>
-						<AlertDialogContent severity="warning" requireReason delaySeconds={3} confirmLabel="Lock account">
+						<AlertDialogContent
+							severity="warning"
+							labels={lockDialogLabels}
+							requireReason
+							reasonValue={reasonValue}
+							onReasonValueChange={setReasonValue}
+							delaySeconds={3}>
 							<AlertDialogTitle>Lock this account?</AlertDialogTitle>
 							<AlertDialogDescription>The user will be signed out immediately and blocked from logging in.</AlertDialogDescription>
 						</AlertDialogContent>
@@ -176,7 +211,7 @@ export function AlertShowcase(): React.JSX.Element {
 					{/* Media + form integration (feature 15) */}
 					<AlertDialog>
 						<AlertDialogTrigger render={<Button />}>Edit profile</AlertDialogTrigger>
-						<AlertDialogContent severity="info" confirmLabel="Save changes">
+						<AlertDialogContent severity="info" labels={saveDialogLabels}>
 							<AlertDialogMedia>
 								<UserRoundPenIcon className="size-5" aria-hidden="true" />
 							</AlertDialogMedia>

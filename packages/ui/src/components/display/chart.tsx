@@ -16,12 +16,20 @@ const THEME_ENTRIES: readonly (readonly [keyof typeof THEMES, string])[] = [
 const INITIAL_DIMENSION: Readonly<{ width: number; height: number }> = { width: 320, height: 200 };
 type TooltipNameType = number | string;
 
+type ChartSeriesColor = {
+	readonly color: string;
+};
+
+type ChartSeriesTheme = {
+	readonly theme: Record<"light" | "dark", string>;
+};
+
 export type ChartConfig = Record<
 	string,
 	{
 		label?: React.ReactNode;
 		icon?: React.ComponentType;
-	} & ({ color?: string; theme?: never } | { color?: never; theme: Record<keyof typeof THEMES, string> })
+	} & (ChartSeriesColor | ChartSeriesTheme)
 >;
 
 interface ChartContextProps {
@@ -40,27 +48,24 @@ function useChart(): ChartContextProps {
 	return context;
 }
 
-function ChartContainer({
-	id,
-	className,
-	children,
-	config,
-	initialDimension = INITIAL_DIMENSION,
-	...props
-}: React.ComponentProps<"div"> & {
-	config: ChartConfig;
-	children: React.ComponentProps<typeof RechartsPrimitive.ResponsiveContainer>["children"];
-	initialDimension?: {
-		width: number;
-		height: number;
-	};
-}): React.JSX.Element {
+const ChartContainer = React.forwardRef<
+	HTMLDivElement,
+	React.ComponentProps<"div"> & {
+		config: ChartConfig;
+		children: React.ComponentProps<typeof RechartsPrimitive.ResponsiveContainer>["children"];
+		initialDimension?: {
+			width: number;
+			height: number;
+		};
+	}
+>(function ChartContainer({ id, className, children, config, initialDimension = INITIAL_DIMENSION, ...props }, ref): React.JSX.Element {
 	const uniqueId = React.useId();
 	const chartId = `chart-${id ?? uniqueId.replace(/:/g, "")}`;
 
 	return (
 		<ChartContext.Provider value={{ config }}>
 			<div
+				ref={ref}
 				data-slot="chart"
 				data-chart={chartId}
 				className={cn(
@@ -73,10 +78,10 @@ function ChartContainer({
 			</div>
 		</ChartContext.Provider>
 	);
-}
+});
 
 const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }): React.JSX.Element | null => {
-	const colorConfig = Object.entries(config).filter(([, itemConfig]) => itemConfig.theme ?? itemConfig.color);
+	const colorConfig = Object.entries(config).filter(([, itemConfig]) => "theme" in itemConfig || "color" in itemConfig);
 
 	if (!colorConfig.length) {
 		return null;
@@ -90,7 +95,12 @@ const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }): React.
 ${prefix} [data-chart=${id}] {
 ${colorConfig
 	.map(([key, itemConfig]) => {
-		const color = itemConfig.theme?.[theme] ?? itemConfig.color;
+		const color =
+			"theme" in itemConfig && itemConfig.theme !== undefined
+				? itemConfig.theme[theme]
+				: "color" in itemConfig
+					? itemConfig.color
+					: undefined;
 		return color ? `  --color-${key}: ${color};` : null;
 	})
 	.join("\n")}

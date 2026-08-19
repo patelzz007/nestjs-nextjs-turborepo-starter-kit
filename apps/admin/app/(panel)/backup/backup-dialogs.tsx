@@ -3,8 +3,20 @@
 import type { BackupEntry } from "@workspace/shared";
 import { Input } from "@workspace/ui/components/form/input";
 import { Label } from "@workspace/ui/components/form/label";
-import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogMedia, AlertDialogTitle } from "@workspace/ui/components/overlay/alert-dialog";
+import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogMedia, AlertDialogTitle, type AlertDialogLabels } from "@workspace/ui/components/overlay/alert-dialog";
 import { DatabaseZap, TriangleAlert } from "lucide-react";
+
+const BACKUP_DIALOG_LABELS: AlertDialogLabels = {
+	confirm: "Confirm",
+	cancel: "Cancel",
+	loading: "Working…",
+	close: "Close dialog",
+	typeKeywordBefore: "Type",
+	typeKeywordAfter: "to confirm",
+	reasonLabel: "Reason (required)",
+	reasonPlaceholder: "Explain why this change is needed…",
+	dontAskAgain: "Don't ask again",
+};
 
 export function BackupDeleteDialog({
 	targets,
@@ -21,9 +33,12 @@ export function BackupDeleteDialog({
 		<AlertDialog open={targets !== null} onOpenChange={onOpenChange}>
 			<AlertDialogContent
 				severity="critical"
-				confirmLabel={targets !== null && targets.length > 1 ? "Delete backups" : "Delete backup"}
+				labels={{
+					...BACKUP_DIALOG_LABELS,
+					confirm: targets !== null && targets.length > 1 ? "Delete backups" : "Delete backup",
+					loading: "Deleting…",
+				}}
 				confirmLoading={pending}
-				loadingLabel="Deleting…"
 				onConfirm={onConfirm}>
 				<AlertDialogHeader align="start">
 					<AlertDialogMedia severity="critical">
@@ -62,7 +77,15 @@ export function BackupRestoreDialog({
 }): React.JSX.Element {
 	return (
 		<AlertDialog open={target !== null} onOpenChange={onOpenChange}>
-			<AlertDialogContent severity="info" confirmLabel="Restore backup" confirmLoading={pending} loadingLabel="Restoring…" onConfirm={onConfirm}>
+			<AlertDialogContent
+				severity="info"
+				labels={{
+					...BACKUP_DIALOG_LABELS,
+					confirm: "Restore backup",
+					loading: "Restoring…",
+				}}
+				confirmLoading={pending}
+				onConfirm={onConfirm}>
 				<AlertDialogHeader align="start">
 					<AlertDialogMedia severity="info">
 						<DatabaseZap className="size-6" />

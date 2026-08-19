@@ -21,9 +21,23 @@ import { cn } from "@workspace/ui/lib/utils";
 import { CheckIcon } from "lucide-react";
 import * as React from "react";
 
-function Menubar({ className, ...props }: MenubarPrimitive.Props): React.JSX.Element {
-	return <MenubarPrimitive data-slot="menubar" className={cn("flex h-9 items-center gap-1 rounded-md border p-1 shadow-xs", className)} {...props} />;
-}
+const Menubar = React.forwardRef<HTMLDivElement, MenubarPrimitive.Props>(function Menubar({ className, ...props }, ref): React.JSX.Element {
+	return <MenubarPrimitive ref={ref} data-slot="menubar" className={cn("flex h-9 items-center gap-1 rounded-md border p-1 shadow-xs", className)} {...props} />;
+});
+
+const MenubarTrigger = React.forwardRef<HTMLButtonElement, React.ComponentProps<typeof DropdownMenuTrigger>>(function MenubarTrigger(
+	{ className, ...props },
+	ref,
+): React.JSX.Element {
+	return (
+		<DropdownMenuTrigger
+			ref={ref}
+			data-slot="menubar-trigger"
+			className={cn("flex items-center rounded-sm px-2 py-1 text-sm font-medium outline-hidden select-none hover:bg-muted aria-expanded:bg-muted", className)}
+			{...props}
+		/>
+	);
+});
 
 function MenubarMenu({ ...props }: React.ComponentProps<typeof DropdownMenu>): React.JSX.Element {
 	return <DropdownMenu data-slot="menubar-menu" {...props} />;
@@ -35,16 +49,6 @@ function MenubarGroup({ ...props }: React.ComponentProps<typeof DropdownMenuGrou
 
 function MenubarPortal({ ...props }: React.ComponentProps<typeof DropdownMenuPortal>): React.JSX.Element {
 	return <DropdownMenuPortal data-slot="menubar-portal" {...props} />;
-}
-
-function MenubarTrigger({ className, ...props }: React.ComponentProps<typeof DropdownMenuTrigger>): React.JSX.Element {
-	return (
-		<DropdownMenuTrigger
-			data-slot="menubar-trigger"
-			className={cn("flex items-center rounded-sm px-2 py-1 text-sm font-medium outline-hidden select-none hover:bg-muted aria-expanded:bg-muted", className)}
-			{...props}
-		/>
-	);
 }
 
 function MenubarContent({ className, align = "start", alignOffset = -4, sideOffset = 8, ...props }: React.ComponentProps<typeof DropdownMenuContent>): React.JSX.Element {
@@ -63,9 +67,13 @@ function MenubarContent({ className, align = "start", alignOffset = -4, sideOffs
 	);
 }
 
-function MenubarItem({ className, inset, variant = "default", ...props }: React.ComponentProps<typeof DropdownMenuItem>): React.JSX.Element {
+const MenubarItem = React.forwardRef<HTMLDivElement, React.ComponentProps<typeof DropdownMenuItem>>(function MenubarItem(
+	{ className, inset, variant = "default", ...props },
+	ref,
+): React.JSX.Element {
 	return (
 		<DropdownMenuItem
+			ref={ref}
 			data-slot="menubar-item"
 			data-inset={inset}
 			data-variant={variant}
@@ -76,7 +84,7 @@ function MenubarItem({ className, inset, variant = "default", ...props }: React.
 			{...props}
 		/>
 	);
-}
+});
 
 function MenubarCheckboxItem({
 	className,
@@ -97,7 +105,7 @@ function MenubarCheckboxItem({
 			)}
 			checked={checked}
 			{...props}>
-			<span className="pointer-events-none absolute start-2 flex size-4 items-center justify-center [&_svg:not([class*='size-'])]:size-4">
+			<span className="pointer-events-none absolute inset-s-2 flex size-4 items-center justify-center [&_svg:not([class*='size-'])]:size-4">
 				<MenuPrimitive.CheckboxItemIndicator>
 					<CheckIcon />
 				</MenuPrimitive.CheckboxItemIndicator>
@@ -128,7 +136,7 @@ function MenubarRadioItem({
 				className,
 			)}
 			{...props}>
-			<span className="pointer-events-none absolute start-2 flex size-4 items-center justify-center [&_svg:not([class*='size-'])]:size-4">
+			<span className="pointer-events-none absolute inset-s-2 flex size-4 items-center justify-center [&_svg:not([class*='size-'])]:size-4">
 				<MenuPrimitive.RadioItemIndicator>
 					<CheckIcon />
 				</MenuPrimitive.RadioItemIndicator>

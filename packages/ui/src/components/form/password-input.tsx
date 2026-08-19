@@ -4,6 +4,7 @@ import { Eye, EyeOff } from "lucide-react";
 import * as React from "react";
 
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "@workspace/ui/components/form/input-group";
+import type { InputProps } from "@workspace/ui/components/form/input";
 
 import { cn } from "@workspace/ui/lib/utils";
 
@@ -26,7 +27,7 @@ import { cn } from "@workspace/ui/lib/utils";
  * caps-lock detector (never clobbered), and `onBlur` also clears the stale
  * caps-lock hint.
  */
-const PasswordInput = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(function PasswordInput(
+const PasswordInput = React.forwardRef<HTMLInputElement, InputProps>(function PasswordInput(
 	{ className, onChange, onBlur, onFocus, onKeyDown, onKeyUp, ...props },
 	ref,
 ): React.JSX.Element {

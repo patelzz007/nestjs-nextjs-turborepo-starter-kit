@@ -1,18 +1,31 @@
+import { resolveFieldState } from "@workspace/ui/lib/field-state";
+import { textareaVariants } from "@workspace/ui/lib/field-variants";
 import { cn } from "@workspace/ui/lib/utils";
+import type { VariantProps } from "class-variance-authority";
 import * as React from "react";
 
-const Textarea = React.forwardRef<HTMLTextAreaElement, React.ComponentProps<"textarea">>(function Textarea({ className, ...props }, ref): React.JSX.Element {
+type TextareaProps = React.ComponentProps<"textarea"> &
+	VariantProps<typeof textareaVariants> & {
+		readonly loading?: boolean;
+	};
+
+const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(function Textarea(
+	{ className, variant, size, loading = false, disabled, "aria-invalid": ariaInvalid, ...props },
+	ref,
+): React.JSX.Element {
+	const state = resolveFieldState({ disabled, loading, ariaInvalid });
+
 	return (
 		<textarea
 			ref={ref}
 			data-slot="textarea"
-			className={cn(
-				"flex field-sizing-content min-h-16 w-full rounded-md border border-input bg-transparent px-2.5 py-2 text-base shadow-xs transition-[color,box-shadow] outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 md:text-sm dark:bg-input/30 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40",
-				className,
-			)}
+			disabled={disabled}
+			aria-invalid={ariaInvalid}
+			data-loading={loading ? "" : undefined}
+			className={cn(textareaVariants({ variant, size, state }), className)}
 			{...props}
 		/>
 	);
 });
 
-export { Textarea };
+export { Textarea, textareaVariants };

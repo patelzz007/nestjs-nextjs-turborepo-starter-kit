@@ -352,7 +352,7 @@ describe("DataTable (shared, TanStack Table v9)", () => {
 	});
 
 	it("edits a cell inline and reports the full row original", () => {
-		const onCellEdit = vi.fn((_rowIndex: number, _columnId: string, _value: unknown, _row: DemoRow): void => undefined);
+		const onCellEdit = vi.fn((_rowIndex: number, _columnId: string, _value: string, _row: DemoRow): void => undefined);
 		render(<DataTable data={makeRows(5)} columns={demoColumns} editable editableColumns={["header"]} onCellEdit={onCellEdit} />);
 
 		// Double-click the first header cell to open the inline editor.
@@ -433,14 +433,14 @@ describe("DataTableShowcase", () => {
 		expect(screen.getByText("Columns")).toBeTruthy();
 
 		// Column filters (status + type) render as selects.
-		expect(screen.getAllByText("All Status").length).toBeGreaterThan(0);
-		expect(screen.getAllByText("All Section type").length).toBeGreaterThan(0);
+		expect(screen.getAllByText("Status").length).toBeGreaterThan(0);
+		expect(screen.getAllByRole("combobox").length).toBeGreaterThanOrEqual(2);
 	});
 
 	it("opens the row action menu from the actions column", () => {
 		render(<DataTableShowcase />);
 
-		const openMenuButton = screen.getAllByRole("button", { name: "Open menu" })[0];
+		const openMenuButton = screen.getAllByRole("button", { name: "Open section row menu" })[0];
 		expect(openMenuButton).toBeDefined();
 		if (openMenuButton !== undefined) {
 			fireEvent.click(openMenuButton);

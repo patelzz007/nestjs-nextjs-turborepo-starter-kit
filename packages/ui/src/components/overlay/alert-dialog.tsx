@@ -66,7 +66,7 @@ type AlertDialogAlign = z.infer<typeof alertDialogAlignSchema>;
 // ── Module-scope style constants (improvement 17 — no GC churn) ─────────────
 
 const CONTENT_BASE_CLASSES =
-	"group/alert-dialog-content fixed start-1/2 top-1/2 z-50 grid w-full max-h-[min(85dvh,640px)] -translate-x-1/2 -translate-y-1/2 gap-4 overflow-hidden rounded-xl bg-popover p-6 text-popover-foreground shadow-xl ring-1 ring-foreground/10 duration-100 outline-none rtl:translate-x-1/2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 motion-safe:data-open:animate-in motion-safe:data-closed:animate-out";
+	"group/alert-dialog-content fixed start-1/2 top-1/2 z-overlay grid w-full max-h-[min(85dvh,640px)] -translate-x-1/2 -translate-y-1/2 gap-4 overflow-hidden rounded-xl bg-popover p-6 text-popover-foreground shadow-xl ring-1 ring-foreground/10 duration-100 outline-none rtl:translate-x-1/2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 motion-safe:data-open:animate-in motion-safe:data-closed:animate-out";
 
 // size → width matrix (improvement 1): sm is compact, lg is roomy.
 const CONTENT_WIDTHS: Readonly<Record<AlertDialogSize, string>> = {
@@ -96,11 +96,17 @@ const SEVERITY_CONFIRM_VARIANTS: Readonly<Record<AlertDialogSeverity, "default" 
 	critical: "destructive",
 };
 
-const DEFAULT_CONFIRM_LABELS: Readonly<Record<AlertDialogSeverity, string>> = {
-	info: "OK",
-	warning: "Continue",
-	critical: "Delete",
-};
+export interface AlertDialogLabels {
+	readonly confirm: string;
+	readonly cancel: string;
+	readonly loading: string;
+	readonly close: string;
+	readonly typeKeywordBefore: string;
+	readonly typeKeywordAfter: string;
+	readonly reasonLabel: string;
+	readonly reasonPlaceholder: string;
+	readonly dontAskAgain: string;
+}
 
 // ── Root (improvement 14: forwarded ref) ────────────────────────────────────
 //
@@ -147,7 +153,7 @@ const AlertDialogOverlay = React.forwardRef<HTMLDivElement, AlertDialogPrimitive
 			data-slot="alert-dialog-overlay"
 			// Improvement 9: token-based overlay (no raw `bg-black/10`).
 			className={cn(
-				"fixed inset-0 isolate z-50 bg-foreground/10 duration-100 supports-backdrop-filter:backdrop-blur-xs data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
+				"z-overlay fixed inset-0 isolate bg-foreground/10 duration-100 supports-backdrop-filter:backdrop-blur-xs data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
 				className,
 			)}
 			{...props}
@@ -164,18 +170,20 @@ export interface AlertDialogContentProps extends AlertDialogPrimitive.Popup.Prop
 	readonly width?: AlertDialogWidth;
 	/** Escalation tier (feature 5). */
 	readonly severity?: AlertDialogSeverity;
-	/** Confirm button label (feature 1). */
-	readonly confirmLabel?: string;
-	/** Cancel button label (feature 1). */
-	readonly cancelLabel?: string;
+	/** All user-visible strings — smart parent owns copy (rules 9/10/11). */
+	readonly labels: AlertDialogLabels;
 	/** Show a loading spinner on the confirm button and disable both (feature 2). */
 	readonly confirmLoading?: boolean;
-	/** Label shown while `confirmLoading` (feature 2). */
-	readonly loadingLabel?: string;
 	/** Disable the confirm button until the keyword is typed (feature 3). */
 	readonly requireConfirmation?: string;
+	/** Controlled keyword input when `requireConfirmation` is set. */
+	readonly confirmationValue?: string;
+	readonly onConfirmationValueChange?: (value: string) => void;
 	/** Disable the confirm button until a reason is typed (feature 9). */
 	readonly requireReason?: boolean;
+	/** Controlled reason textarea when `requireReason` is set. */
+	readonly reasonValue?: string;
+	readonly onReasonValueChange?: (value: string) => void;
 	/** Disable the confirm button with a countdown before it can be pressed (feature 4). */
 	readonly delaySeconds?: number;
 	/** Keyboard shortcut hint shown in the footer (feature 6). */
@@ -200,6 +208,8 @@ export interface AlertDialogContentProps extends AlertDialogPrimitive.Popup.Prop
 	readonly onCancel?: () => void;
 	/** "Don't ask again" state callback (feature 7). */
 	readonly onPreferenceChange?: (remembered: boolean) => void;
+	/** Controlled preference checkbox when `onPreferenceChange` is set. */
+	readonly preferenceRemembered?: boolean;
 }
 
 interface AlertDialogActionContextValue {
@@ -220,12 +230,14 @@ const AlertDialogContent = React.forwardRef<HTMLDivElement, AlertDialogContentPr
 		size = "default",
 		width,
 		severity = "info",
-		confirmLabel,
-		cancelLabel,
+		labels,
 		confirmLoading = false,
-		loadingLabel = "Working…",
 		requireConfirmation,
+		confirmationValue,
+		onConfirmationValueChange,
 		requireReason = false,
+		reasonValue,
+		onReasonValueChange,
 		delaySeconds,
 		confirmShortcut,
 		thirdAction,
@@ -238,23 +250,14 @@ const AlertDialogContent = React.forwardRef<HTMLDivElement, AlertDialogContentPr
 		onConfirm,
 		onCancel,
 		onPreferenceChange,
+		preferenceRemembered = false,
 		children,
 		...props
 	},
 	ref,
 ): React.JSX.Element {
-	const [typedKeyword, setTypedKeyword] = useState<string>("");
-	const [reason, setReason] = useState<string>("");
-	const [remembered, setRemembered] = useState<boolean>(false);
 	const [remaining, setRemaining] = useState<number>(delaySeconds ?? 0);
 
-	// Countdown gate (feature 4) — client-only.
-	//
-	// A deadline ref makes the countdown self-correcting: when `delaySeconds`
-	// changes mid-open (e.g. a prop refresh), the next tick recomputes from the
-	// new deadline instead of continuing a stale decrement. `remaining` is
-	// seeded by the useState initializer above, and the interval callback is
-	// async, so no synchronous setState-in-effect (react-compiler rule).
 	const deadlineRef = useRef<number>(0);
 	useEffect(() => {
 		if (delaySeconds === undefined || delaySeconds <= 0) {
@@ -273,6 +276,10 @@ const AlertDialogContent = React.forwardRef<HTMLDivElement, AlertDialogContentPr
 		};
 	}, [delaySeconds]);
 
+	const typedKeyword = confirmationValue ?? "";
+	const reason = reasonValue ?? "";
+	const remembered = preferenceRemembered;
+
 	const keywordConfirmed = requireConfirmation === undefined || typedKeyword === requireConfirmation;
 	const reasonConfirmed = !requireReason || reason.trim() !== "";
 	const countdownActive = (delaySeconds ?? 0) > 0 && remaining > 0;
@@ -280,23 +287,26 @@ const AlertDialogContent = React.forwardRef<HTMLDivElement, AlertDialogContentPr
 
 	const handlePreferenceChange = useCallback(
 		(next: boolean): void => {
-			setRemembered(next);
 			onPreferenceChange?.(next);
 		},
 		[onPreferenceChange],
 	);
 
-	const handleKeywordChange = useCallback((event: React.ChangeEvent<HTMLInputElement>): void => {
-		setTypedKeyword(event.target.value);
-	}, []);
+	const handleKeywordChange = useCallback(
+		(event: React.ChangeEvent<HTMLInputElement>): void => {
+			onConfirmationValueChange?.(event.target.value);
+		},
+		[onConfirmationValueChange],
+	);
 
-	const handleReasonChange = useCallback((event: React.ChangeEvent<HTMLTextAreaElement>): void => {
-		setReason(event.target.value);
-	}, []);
+	const handleReasonChange = useCallback(
+		(event: React.ChangeEvent<HTMLTextAreaElement>): void => {
+			onReasonValueChange?.(event.target.value);
+		},
+		[onReasonValueChange],
+	);
 
 	const contextValue = useMemo<AlertDialogActionContextValue>(() => ({ confirmLoading, confirmDisabled, onConfirm }), [confirmLoading, confirmDisabled, onConfirm]);
-
-	const resolvedLabel = confirmLabel ?? DEFAULT_CONFIRM_LABELS[severity];
 
 	const widthClass = width !== undefined ? CONTENT_WIDTH_OVERRIDES[width] : CONTENT_WIDTHS[size];
 
@@ -317,7 +327,7 @@ const AlertDialogContent = React.forwardRef<HTMLDivElement, AlertDialogContentPr
 								{requireConfirmation !== undefined ? (
 									<label data-slot="alert-dialog-confirmation" className="block space-y-1.5 text-start text-sm">
 										<span className="text-muted-foreground">
-											Type <Kbd>{requireConfirmation}</Kbd> to confirm
+											{labels.typeKeywordBefore} <Kbd>{requireConfirmation}</Kbd> {labels.typeKeywordAfter}
 										</span>
 										<input
 											type="text"
@@ -333,9 +343,9 @@ const AlertDialogContent = React.forwardRef<HTMLDivElement, AlertDialogContentPr
 								{requireReason ? (
 									<div data-slot="alert-dialog-reason" className="space-y-1.5 text-start">
 										<label htmlFor="alert-dialog-reason-input" className="text-sm text-muted-foreground">
-											Reason (required)
+											{labels.reasonLabel}
 										</label>
-										<Textarea id="alert-dialog-reason-input" value={reason} onChange={handleReasonChange} placeholder="Explain why this change is needed…" rows={2} />
+										<Textarea id="alert-dialog-reason-input" value={reason} onChange={handleReasonChange} placeholder={labels.reasonPlaceholder} rows={2} />
 									</div>
 								) : null}
 								{summary !== undefined && summary.length > 0 ? (
@@ -362,7 +372,7 @@ const AlertDialogContent = React.forwardRef<HTMLDivElement, AlertDialogContentPr
 								{onPreferenceChange !== undefined ? (
 									<label data-slot="alert-dialog-preference" className="flex items-center gap-2 text-start text-sm text-muted-foreground">
 										<Checkbox checked={remembered} onCheckedChange={handlePreferenceChange} />
-										Don&apos;t ask again
+										{labels.dontAskAgain}
 									</label>
 								) : null}
 							</div>
@@ -373,9 +383,9 @@ const AlertDialogContent = React.forwardRef<HTMLDivElement, AlertDialogContentPr
 								stackOrder={stackOrder}
 								confirmShortcut={confirmShortcut}
 								confirmLoading={confirmLoading}
-								loadingLabel={loadingLabel}
-								confirmLabel={resolvedLabel}
-								cancelLabel={cancelLabel ?? "Cancel"}
+								loadingLabel={labels.loading}
+								confirmLabel={labels.confirm}
+								cancelLabel={labels.cancel}
 								countdownLabel={countdownActive ? String(remaining) : undefined}
 								thirdAction={thirdAction}
 								onConfirm={onConfirm}
@@ -457,9 +467,9 @@ export interface AlertDialogFooterProps extends React.ComponentProps<"div"> {
 	readonly stackOrder?: AlertDialogStackOrder;
 	readonly confirmShortcut?: string;
 	readonly confirmLoading?: boolean;
-	readonly loadingLabel?: string;
-	readonly confirmLabel?: string;
-	readonly cancelLabel?: string;
+	readonly loadingLabel: string;
+	readonly confirmLabel: string;
+	readonly cancelLabel: string;
 	readonly countdownLabel?: string;
 	readonly thirdAction?: ReactNode;
 	readonly onConfirm?: () => void;
@@ -473,9 +483,9 @@ function AlertDialogFooter({
 	stackOrder = "confirm-first",
 	confirmShortcut,
 	confirmLoading = false,
-	loadingLabel = "Working…",
-	confirmLabel = "OK",
-	cancelLabel = "Cancel",
+	loadingLabel,
+	confirmLabel,
+	cancelLabel,
 	countdownLabel,
 	thirdAction,
 	onConfirm,
@@ -507,7 +517,7 @@ function AlertDialogFooter({
 				onConfirm={onConfirm}
 				disabled={isConfirmDisabled}
 				severity={severity}
-				className={cn(actionOrder === "cancel-first" && "order-first sm:order-none")}
+				className={cn(actionOrder === "cancel-first" && "order-first sm:order-0")}
 			/>
 		</div>
 	);
@@ -517,8 +527,8 @@ function AlertDialogFooter({
 
 export interface AlertDialogActionProps extends React.ComponentProps<typeof Button> {
 	readonly confirmLoading?: boolean;
-	readonly loadingLabel?: string;
-	readonly confirmLabel?: string;
+	readonly loadingLabel: string;
+	readonly confirmLabel: string;
 	readonly confirmShortcut?: string;
 	readonly countdownLabel?: string;
 	readonly onConfirm?: () => void;
@@ -526,20 +536,7 @@ export interface AlertDialogActionProps extends React.ComponentProps<typeof Butt
 }
 
 const AlertDialogAction = React.forwardRef<HTMLButtonElement, AlertDialogActionProps>(function AlertDialogAction(
-	{
-		className,
-		confirmLoading = false,
-		loadingLabel = "Working…",
-		confirmLabel = "OK",
-		confirmShortcut,
-		countdownLabel,
-		onConfirm,
-		severity = "info",
-		disabled,
-		onClick,
-		children,
-		...props
-	},
+	{ className, confirmLoading = false, loadingLabel, confirmLabel, confirmShortcut, countdownLabel, onConfirm, severity = "info", disabled, onClick, children, ...props },
 	ref,
 ): React.JSX.Element {
 	const context = React.useContext(AlertDialogActionContext);
@@ -637,13 +634,8 @@ export interface ConfirmDialogLabels {
 }
 
 /** Computed ARIA/UI labels for a confirmation dialog — reuse in tests (feature 20). */
-export function confirmDialogLabels(severity: AlertDialogSeverity, customConfirm?: string): ConfirmDialogLabels {
-	return {
-		confirm: customConfirm ?? DEFAULT_CONFIRM_LABELS[severity],
-		cancel: "Cancel",
-		loading: "Working…",
-		close: "Close dialog",
-	};
+export function confirmDialogLabels(labels: AlertDialogLabels): AlertDialogLabels {
+	return labels;
 }
 
 export {

@@ -63,7 +63,7 @@ export function ScrollToTop({ threshold = 300, behavior = "smooth" }: ScrollToTo
 			onClick={handleClick}
 			aria-label="Scroll to top"
 			className={cn(
-				"fixed right-6 bottom-6 z-50 flex h-10 w-10 items-center justify-center rounded-full shadow-lg",
+				"z-overlay fixed right-6 bottom-6 flex h-10 w-10 items-center justify-center rounded-full shadow-lg",
 				"bg-foreground text-background hover:opacity-90 active:scale-95",
 				"transition-all duration-300 ease-out",
 				"focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none",

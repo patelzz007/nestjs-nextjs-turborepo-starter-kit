@@ -11,7 +11,9 @@ import {
 	AlertDialogTitle,
 	AlertDialogTrigger,
 	confirmDialogLabels,
+	type AlertDialogLabels,
 } from "@workspace/ui/components/overlay/alert-dialog";
+import { SHOWCASE_ALERT_DIALOG_LABELS } from "@workspace/ui/lib/alert-dialog-labels";
 
 /** jsdom has no ResizeObserver; base-ui tolerates its absence, stub to be safe. */
 class ResizeObserverStub {
@@ -34,6 +36,7 @@ function ControlledHarness({
 	delaySeconds,
 	confirmLoading,
 	severity,
+	labels = SHOWCASE_ALERT_DIALOG_LABELS,
 }: {
 	readonly onConfirm?: () => void;
 	readonly requireConfirmation?: string;
@@ -41,8 +44,11 @@ function ControlledHarness({
 	readonly delaySeconds?: number;
 	readonly confirmLoading?: boolean;
 	readonly severity?: "info" | "warning" | "critical";
+	readonly labels?: AlertDialogLabels;
 }): React.JSX.Element {
 	const [open, setOpen] = useState<boolean>(false);
+	const [confirmationValue, setConfirmationValue] = useState<string>("");
+	const [reasonValue, setReasonValue] = useState<string>("");
 	const handleOpenChange = useCallback((next: boolean): void => {
 		setOpen(next);
 	}, []);
@@ -52,9 +58,13 @@ function ControlledHarness({
 			<AlertDialogTrigger render={<button type="button">Open dialog</button>} />
 			<AlertDialogContent
 				severity={severity ?? "info"}
-				confirmLabel="Confirm"
+				labels={labels}
 				requireConfirmation={requireConfirmation}
+				confirmationValue={confirmationValue}
+				onConfirmationValueChange={setConfirmationValue}
 				requireReason={requireReason}
+				reasonValue={reasonValue}
+				onReasonValueChange={setReasonValue}
 				delaySeconds={delaySeconds}
 				confirmLoading={confirmLoading}
 				onConfirm={onConfirm}>
@@ -78,7 +88,6 @@ describe("AlertDialog", () => {
 		fireEvent.click(screen.getByRole("button", { name: "Open dialog" }));
 		expect(screen.getByText("Are you sure?")).toBeTruthy();
 		expect(screen.getByText("This action is permanent.")).toBeTruthy();
-		// Auto-generated footer: cancel + confirm buttons (feature 1).
 		expect(screen.getByRole("button", { name: "Cancel" })).toBeTruthy();
 		expect(screen.getByRole("button", { name: /Confirm/ })).toBeTruthy();
 	});
@@ -116,7 +125,7 @@ describe("AlertDialog", () => {
 		fireEvent.click(screen.getByRole("button", { name: "Open dialog" }));
 		const confirm = screen.getByRole("button", { name: /Confirm/ });
 		expect(confirm.getAttribute("disabled")).not.toBeNull();
-		fireEvent.change(screen.getByPlaceholderText(/Explain why/i), { target: { value: "because" } });
+		fireEvent.change(screen.getByPlaceholderText(SHOWCASE_ALERT_DIALOG_LABELS.reasonPlaceholder), { target: { value: "because" } });
 		expect(screen.getByRole("button", { name: /Confirm/ }).getAttribute("disabled")).toBeNull();
 	});
 
@@ -141,7 +150,7 @@ describe("AlertDialog", () => {
 				<AlertDialogTrigger render={<button type="button">Open</button>} />
 				<AlertDialogContent
 					severity="critical"
-					confirmLabel="Delete"
+					labels={{ ...SHOWCASE_ALERT_DIALOG_LABELS, confirm: "Delete" }}
 					summary={[
 						{ label: "Users", value: "12" },
 						{ label: "Sessions", value: "34" },
@@ -160,7 +169,7 @@ describe("AlertDialog", () => {
 		render(
 			<AlertDialog>
 				<AlertDialogTrigger render={<button type="button">Open</button>} />
-				<AlertDialogContent severity="critical" confirmLabel="Delete" undoHint="You can undo for 5 seconds.">
+				<AlertDialogContent severity="critical" labels={{ ...SHOWCASE_ALERT_DIALOG_LABELS, confirm: "Delete" }} undoHint="You can undo for 5 seconds.">
 					<AlertDialogTitle>Delete?</AlertDialogTitle>
 				</AlertDialogContent>
 			</AlertDialog>,
@@ -178,8 +187,7 @@ describe("AlertDialog", () => {
 		});
 	});
 
-	it("confirmDialogLabels computes severity labels (feature 20)", () => {
-		expect(confirmDialogLabels("critical")).toEqual({ confirm: "Delete", cancel: "Cancel", loading: "Working…", close: "Close dialog" });
-		expect(confirmDialogLabels("info", "Save")).toEqual({ confirm: "Save", cancel: "Cancel", loading: "Working…", close: "Close dialog" });
+	it("confirmDialogLabels returns the provided label bundle (feature 20)", () => {
+		expect(confirmDialogLabels(SHOWCASE_ALERT_DIALOG_LABELS)).toEqual(SHOWCASE_ALERT_DIALOG_LABELS);
 	});
 });
