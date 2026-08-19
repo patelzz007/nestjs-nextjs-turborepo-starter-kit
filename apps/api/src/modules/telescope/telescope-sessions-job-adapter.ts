@@ -3,7 +3,8 @@ import type { Subscription } from "rxjs";
 
 import { type TelescopeOptions } from "@workspace/shared";
 
-import { SessionsEventsService, type SessionActionEvent } from "../sessions/sessions-events.service";
+import { SessionsEventsService } from "../sessions/sessions-events.service";
+import { type SessionActionEvent } from "@workspace/shared";
 
 import { TelescopeAlertService } from "./telescope-alert.service";
 import { TelescopeEventBus } from "./telescope-event-bus";

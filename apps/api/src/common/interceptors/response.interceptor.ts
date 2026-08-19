@@ -2,9 +2,7 @@ import { Injectable, type NestInterceptor, type ExecutionContext, type CallHandl
 import type { FastifyRequest } from "fastify";
 import { type Observable, throwError } from "rxjs";
 import { catchError, map } from "rxjs/operators";
-import { z } from "zod";
-
-import { DataValueSchema, PaginatedServiceResultSchema, nowEpochMs, type DataValue, type PaginatedServiceResult } from "@workspace/shared";
+import { ApiResponseShapeSchema, PaginatedServiceResultSchema, nowEpochMs, type ApiResponseShape, type DataValue, type PaginatedServiceResult } from "@workspace/shared";
 
 /**
  * Zod schema for a PaginatedResult shape (from paginate()).
@@ -16,16 +14,6 @@ function parsePaginated(value: DataValue): PaginatedServiceResult | null {
 	const parsed = PaginatedResultSchema.safeParse(value);
 	return parsed.success ? parsed.data : null;
 }
-
-/**
- * Zod schema for an already-wrapped ApiResponse shape.
- */
-const ApiResponseShapeSchema = z.object({
-	success: z.boolean(),
-	meta: z.record(z.string(), DataValueSchema),
-});
-
-type ApiResponseShape = z.output<typeof ApiResponseShapeSchema>;
 
 /** Narrow controller data to an already-wrapped API response. */
 function parseApiResponse(value: DataValue): ApiResponseShape | null {

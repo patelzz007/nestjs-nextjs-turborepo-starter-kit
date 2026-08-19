@@ -100,6 +100,24 @@ export const EmailSendResultSchema = z.discriminatedUnion("ok", [
 
 export type EmailSendResult = z.output<typeof EmailSendResultSchema>;
 
+/** Resend SDK `emails.send()` response shape (parsed at the network boundary). */
+export const ResendSendErrorSchema = z
+	.object({
+		name: z.string().optional(),
+		message: z.string().optional(),
+		code: z.string().optional(),
+	})
+	.strict();
+
+export const ResendSendResponseSchema = z
+	.object({
+		data: z.object({ id: z.string() }).nullable(),
+		error: ResendSendErrorSchema.nullable(),
+	})
+	.strict();
+
+export type ResendSendResponse = z.output<typeof ResendSendResponseSchema>;
+
 // ── Email log status (webhook updates) ────────────────────────────────────
 
 /** Lifecycle of one outbound email, fed by the Resend webhook. */

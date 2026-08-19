@@ -53,6 +53,19 @@ export const PaginatedServiceResultSchema = z.object({
 export type PaginatedServiceResult = z.output<typeof PaginatedServiceResultSchema>;
 
 /**
+ * Partial envelope shape returned by controllers that pre-wrap their own
+ * `meta` before the global ResponseInterceptor adds correlation + timestamp.
+ */
+export const ApiResponseShapeSchema = z
+	.object({
+		success: z.boolean(),
+		meta: z.record(z.string(), DataValueSchema),
+	})
+	.strict();
+
+export type ApiResponseShape = z.output<typeof ApiResponseShapeSchema>;
+
+/**
  * Standard success response envelope.
  * The `data` field contains the actual response payload.
  * Used by every successful endpoint response after the ResponseInterceptor.
@@ -71,6 +84,51 @@ export const ApiSuccessResponseSchema = z
 	.strict();
 
 export type ApiSuccessResponse = z.output<typeof ApiSuccessResponseSchema>;
+
+/**
+ * Swagger/OpenAPI envelope for a single `data` payload — parameterizes the
+ * `data` field while keeping the success literal + meta shape consistent.
+ */
+export function createApiSuccessEnvelopeSchema<DataSchema extends z.ZodType>(dataSchema: DataSchema): z.ZodObject<{
+	success: z.ZodLiteral<true>;
+	data: DataSchema;
+	meta: typeof ApiResponseMetaSchema;
+}> {
+	return z
+		.object({
+			success: z.literal(true).meta({
+				description: "Indicates the request was successful",
+				example: true,
+			}),
+			data: dataSchema.meta({
+				description: "The response payload — structure varies by endpoint",
+			}),
+			meta: ApiResponseMetaSchema,
+		})
+		.strict();
+}
+
+/**
+ * Swagger/OpenAPI envelope for array `data` payloads.
+ */
+export function createApiSuccessArrayEnvelopeSchema<ItemSchema extends z.ZodType>(itemSchema: ItemSchema): z.ZodObject<{
+	success: z.ZodLiteral<true>;
+	data: z.ZodArray<ItemSchema>;
+	meta: typeof ApiResponseMetaSchema;
+}> {
+	return z
+		.object({
+			success: z.literal(true).meta({
+				description: "Indicates the request was successful",
+				example: true,
+			}),
+			data: z.array(itemSchema).meta({
+				description: "Array of response items — structure varies by endpoint",
+			}),
+			meta: ApiResponseMetaSchema,
+		})
+		.strict();
+}
 
 /**
  * Standard error response envelope.

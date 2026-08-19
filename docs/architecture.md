@@ -144,23 +144,27 @@ packages/shared/src/
 ├── index.ts   ← barrel — re-exports everything
 ├── contracts/ ← apiContract — the shared route contract (method + path + input schema)
 └── schemas/
-    ├── auth/    ← auth.ts, auth-errors, session-status, user
+    ├── auth/    ← auth.ts, auth-errors, cookies, session-status, token, user
     ├── api/     ← api-response, common, env, health.schema, message, pagination
-    └── domain/  ← rbac, enums, menu, url, clicks, tags, logs, api-keys, telescope
+    ├── email/   ← email.ts (log/send/webhook), email-templates.ts (render props)
+    ├── runtime/ ← json, caught-error, http-headers, prisma-query, primitives (cross-cutting parse helpers)
+    └── domain/  ← rbac, enums, events, backup, logs, menu, telescope, …
 ```
 
-Schemas are grouped by domain (`auth/`, `api/`, `domain/`). The barrel
+Schemas are grouped by domain (`auth/`, `api/`, `domain/`, `email/`, `runtime/`). The barrel
 (`schemas/index.ts`) is the only import surface — consumers always import from
 `@workspace/shared`, never from deep schema paths.
 
 **Rules:**
 
-- Every schema uses Zod v4 `.strict()` (unknown fields are rejected).
+- Every schema uses Zod v4 `.strict()` (unknown fields are rejected) unless documented otherwise (e.g. JWT decode strips unknown keys).
 - Every schema exports both the schema and its inferred type, e.g.:
   ```ts
   export const LoginSchema = z.object({…}).strict();
   export type LoginInput = z.output<typeof LoginSchema>;
   ```
+- **Application code consumes the type, not the schema** — use `LoginInput` in signatures; import `LoginSchema` only at HTTP boundaries (`ZodValidationPipe`, `createZodDto`), `.parse()` / `.safeParse()`, and tests. Do not re-export schemas from Nest services, email templates, or thin type-alias files. See `docs/typescript.md` §8.
+- **Internal event bus** — services emit `AuthFlowEvent`, `SessionActionEvent`, `ImpersonationActionEvent`, etc. Producers call `XxxEventSchema.parse({…})` once before `emit*` so Telescope subscribers always receive contract-valid payloads.
 - **No `any`, `unknown`, `never`, no type casting.** Infer everything from Zod.
 - **Add new schemas to the barrel** (`src/index.ts`) or they won't be importable.
 

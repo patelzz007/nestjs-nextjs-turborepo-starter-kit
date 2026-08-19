@@ -2,7 +2,8 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import { TelescopeOptionsSchema, type TelescopeOptions, type TelescopeSpan } from "@workspace/shared";
 
-import { AuthEventsService, type AuthFlowEvent } from "../auth/services/auth-events.service";
+import { AuthEventsService } from "../auth/services/auth-events.service";
+import { type AuthFlowEvent } from "@workspace/shared";
 
 import { RequestSpanContext, type SpanStore } from "./request-span-context";
 import { TelescopeAuthJobAdapter } from "./telescope-auth-job-adapter";

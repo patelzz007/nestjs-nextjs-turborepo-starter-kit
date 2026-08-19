@@ -1,6 +1,6 @@
-import { ApiResponseMetaSchema } from "@workspace/shared";
+import { createApiSuccessArrayEnvelopeSchema, createApiSuccessEnvelopeSchema } from "@workspace/shared";
 import { createZodDto } from "nestjs-zod";
-import { z } from "zod";
+import type { z } from "zod";
 
 /**
  * Creates a ZodDto class that wraps a data schema in the standard
@@ -14,18 +14,7 @@ import { z } from "zod";
  *                      This ensures each endpoint gets a distinct OpenAPI component name.
  */
 export function createWrappedDto(dataSchema: z.ZodType, className: string): ReturnType<typeof createZodDto<z.ZodObject<Record<string, z.ZodType>>>> {
-	const envelopeSchema = z
-		.object({
-			success: z.literal(true).meta({
-				description: "Indicates the request was successful",
-				example: true,
-			}),
-			data: dataSchema.meta({
-				description: "The response payload — structure varies by endpoint",
-			}),
-			meta: ApiResponseMetaSchema,
-		})
-		.strict();
+	const envelopeSchema = createApiSuccessEnvelopeSchema(dataSchema);
 
 	const WrappedResponseDto = createZodDto(envelopeSchema);
 
@@ -45,18 +34,7 @@ export function createWrappedDto(dataSchema: z.ZodType, className: string): Retu
  *          → { success, data: Session[], meta }
  */
 export function createWrappedArrayDto(itemSchema: z.ZodType, className: string): ReturnType<typeof createZodDto<z.ZodObject<Record<string, z.ZodType>>>> {
-	const envelopeSchema = z
-		.object({
-			success: z.literal(true).meta({
-				description: "Indicates the request was successful",
-				example: true,
-			}),
-			data: z.array(itemSchema).meta({
-				description: "Array of response items — structure varies by endpoint",
-			}),
-			meta: ApiResponseMetaSchema,
-		})
-		.strict();
+	const envelopeSchema = createApiSuccessArrayEnvelopeSchema(itemSchema);
 
 	const WrappedArrayResponseDto = createZodDto(envelopeSchema);
 

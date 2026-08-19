@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { EmailTemplateKeySchema } from "@workspace/shared";
 
-import { EmailRenderContextSchema } from "./base/email-render-context";
+import { EmailRenderContextSchema } from "@workspace/shared";
 import { buildEmailPreview, EMAIL_TEMPLATE_REGISTRY, listTemplateMeta } from "./email-template.registry";
 
 const context = EmailRenderContextSchema.parse({

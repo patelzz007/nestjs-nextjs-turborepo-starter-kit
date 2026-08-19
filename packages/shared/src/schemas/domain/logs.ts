@@ -46,6 +46,19 @@ export const LogInputSchema = z.object({
 export type LogInput = z.input<typeof LogInputSchema>;
 
 /**
+ * Options for `LogService` methods (context, userId, structured metadata).
+ */
+export const LogServiceOptionsSchema = z
+	.object({
+		context: z.string().optional(),
+		userId: z.string().optional(),
+		metadata: MetadataValueSchema.optional(),
+	})
+	.strict();
+
+export type LogServiceOptions = z.output<typeof LogServiceOptionsSchema>;
+
+/**
  * Schema for a single level count entry used in log statistics.
  */
 export const LevelCountSchema = z.object({

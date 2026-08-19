@@ -48,11 +48,6 @@ import {
 import type { DataPrimitive, DataValue } from "../schemas/api/common";
 export type { DataPrimitive, DataValue };
 
-/** @deprecated Use `DataValue` instead. */
-export type JsonValue = DataValue;
-/** @deprecated Use `DataPrimitive` instead. */
-export type JsonPrimitive = DataPrimitive;
-
 /**
  * Every procedure input is either a plain JSON object (path params + query
  * keys / body fields) or `undefined` (no-input procedures like `auth.me`).

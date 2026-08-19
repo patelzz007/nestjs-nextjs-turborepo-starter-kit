@@ -1,7 +1,6 @@
 import { Controller, Get } from "@nestjs/common";
 import { ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
-import { HealthResponseSchema } from "@workspace/shared";
-import { z } from "zod";
+import { HealthResponseSchema, StringValueSchema, type HealthResponse } from "@workspace/shared";
 
 import { createWrappedDto } from "../../common/dto/response-wrapper";
 // @Public() is metadata-only (no DI) — HealthModule must NOT import AuthModule.
@@ -13,7 +12,7 @@ import { HealthService } from "./health.service";
 
 // ── Wrapped Response DTOs ────────────────────────────────────────────────
 
-const WrappedHelloResponse = createWrappedDto(z.string(), "WrappedHelloResponse");
+const WrappedHelloResponse = createWrappedDto(StringValueSchema, "WrappedHelloResponse");
 const WrappedHealthResponse = createWrappedDto(HealthResponseSchema, "WrappedHealthResponse");
 
 /**
@@ -41,7 +40,7 @@ export class HealthController {
 	@Get("health")
 	@ApiOperation({ summary: "Health check (includes DB status)" })
 	@ApiOkResponse({ type: WrappedHealthResponse, description: "Current service health status" })
-	public async getHealth(): Promise<Record<string, unknown>> {
+	public async getHealth(): Promise<HealthResponse> {
 		return this.healthService.healthCheck();
 	}
 }

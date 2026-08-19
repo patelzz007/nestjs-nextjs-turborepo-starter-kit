@@ -78,17 +78,29 @@ export {
 	UserPermissionsSchema,
 } from "./auth/token";
 export type { AccessTokenPayload, EmailVerificationTokenPayload, FlatUserResponse, JwtPermission, RefreshTokenPayload, UserPermissions } from "./auth/token";
-export { CookieResultSchema } from "./auth/cookies";
-export type { CookieResult } from "./auth/cookies";
+export { CookieNamesSchema, CookieResultSchema, LoginTokenFieldsSchema } from "./auth/cookies";
+export type { CookieNames, CookieResult, LoginTokenFields } from "./auth/cookies";
 export {
 	ApiErrorResponseSchema,
 	ApiErrorBodySchema,
 	ApiPaginatedMetaSchema,
 	ApiResponseMetaSchema,
+	ApiResponseShapeSchema,
 	ApiSuccessResponseSchema,
+	createApiSuccessArrayEnvelopeSchema,
+	createApiSuccessEnvelopeSchema,
 	PaginatedServiceResultSchema,
 } from "./api/api-response";
-export type { ApiErrorResponse, ApiErrorBody, ApiPaginatedMeta, ApiResponseMeta, ApiSuccessResponse, Envelope, PaginatedServiceResult } from "./api/api-response";
+export type {
+	ApiErrorResponse,
+	ApiErrorBody,
+	ApiPaginatedMeta,
+	ApiResponseMeta,
+	ApiResponseShape,
+	ApiSuccessResponse,
+	Envelope,
+	PaginatedServiceResult,
+} from "./api/api-response";
 export { AuthErrorCodeSchema, LockedErrorCodeSchema } from "./auth/auth-errors";
 export type { AuthErrorCode, LockedErrorCode } from "./auth/auth-errors";
 export {
@@ -132,10 +144,26 @@ export {
 	EmailTemplateKeySchema,
 	EmailTemplateMetaSchema,
 	ResendDeliveryDetailSchema,
+	ResendSendErrorSchema,
+	ResendSendResponseSchema,
 	ResendWebhookEventSchema,
 	ResendWebhookEventTypeSchema,
 	ResendWebhookHeadersSchema,
 } from "./email/email";
+export {
+	AccountLockedEmailPropsSchema,
+	AdminAlertEmailPropsSchema,
+	ApiKeyCreatedEmailPropsSchema,
+	BaseEmailPropsSchema,
+	CtaConfigSchema,
+	EmailAccentSchema,
+	EmailAddressSchema,
+	EmailRenderContextSchema,
+	PasswordResetEmailPropsSchema,
+	SecurityAlertEmailPropsSchema,
+	VerificationEmailPropsSchema,
+	WelcomeEmailPropsSchema,
+} from "./email/email-templates";
 export type {
 	EmailLogCreate,
 	EmailLogEntry,
@@ -149,10 +177,25 @@ export type {
 	EmailTemplateKey,
 	EmailTemplateMeta,
 	ResendDeliveryDetail,
+	ResendSendResponse,
 	ResendWebhookEvent,
 	ResendWebhookEventType,
 	ResendWebhookHeaders,
 } from "./email/email";
+export type {
+	AccountLockedEmailProps,
+	AdminAlertEmailProps,
+	ApiKeyCreatedEmailProps,
+	BaseEmailProps,
+	CtaConfig,
+	EmailAccent,
+	EmailAddress,
+	EmailRenderContext,
+	PasswordResetEmailProps,
+	SecurityAlertEmailProps,
+	VerificationEmailProps,
+	WelcomeEmailProps,
+} from "./email/email-templates";
 export { AudienceTypeSchema, DeviceTypeSchema, MenuMatchTypeSchema, PermissionActionSchema, PermissionResourceSchema, PlanSchema, RedirectTypeSchema } from "./domain/enums";
 export type { AudienceType, DeviceType, MenuMatchType, PermissionAction, PermissionResource, Plan, RedirectType } from "./domain/enums";
 export { EmailTemplateKeyParamSchema, TelescopeIdParamSchema, TelescopeScheduleNameParamSchema, UuidParamSchema, VerifyEmailTokenParamSchema } from "./domain/param-schemas";
@@ -163,9 +206,12 @@ export {
 	BackupCreateResponseSchema,
 	BackupDeleteResponseSchema,
 	BackupDownloadResponseSchema,
+	BackupDownloadTokenPayloadSchema,
 	BackupEntrySchema,
 	BackupListResponseSchema,
 	BackupOptionsResponseSchema,
+	BackupPublicTableCountRowSchema,
+	BackupPublicTableCountRowsSchema,
 	BackupRestoreInputSchema,
 	BackupRestoreResponseSchema,
 	BackupScheduleSchema,
@@ -175,6 +221,8 @@ export {
 	BackupStageSchema,
 	BackupStatusResponseSchema,
 	BackupStatusSchema,
+	BackupTableNameQueryRowSchema,
+	BackupTableNameQueryRowsSchema,
 	BackupVerifyResponseSchema,
 } from "./domain/backup";
 export type {
@@ -183,9 +231,11 @@ export type {
 	BackupCreateResponse,
 	BackupDeleteResponse,
 	BackupDownloadResponse,
+	BackupDownloadTokenPayload,
 	BackupEntry,
 	BackupListResponse,
 	BackupOptionsResponse,
+	BackupPublicTableCountRow,
 	BackupRestoreInput,
 	BackupRestoreResponse,
 	BackupSchedule,
@@ -195,8 +245,11 @@ export type {
 	BackupStage,
 	BackupStatus,
 	BackupStatusResponse,
+	BackupTableNameQueryRow,
 	BackupVerifyResponse,
 } from "./domain/backup";
+export { AuthFlowEventSchema, EmailLogUpdatedEventSchema, ImpersonationActionEventSchema, SessionActionEventSchema } from "./domain/events";
+export type { AuthFlowEvent, EmailLogUpdatedEvent, ImpersonationActionEvent, SessionActionEvent } from "./domain/events";
 export { HealthResponseSchema } from "./api/health.schema";
 export type { HealthResponse } from "./api/health.schema";
 export {
@@ -212,6 +265,7 @@ export {
 	LogInputSchema,
 	LogLevelSchema,
 	LogQuerySchema,
+	LogServiceOptionsSchema,
 	LogStatsQuerySchema,
 	LogStatsSchema,
 	MetadataValueSchema,
@@ -229,6 +283,7 @@ export type {
 	LogInput,
 	LogLevel,
 	LogQuery,
+	LogServiceOptions,
 	LogStats,
 	LogStatsQuery,
 } from "./domain/logs";
@@ -348,6 +403,8 @@ export {
 	TelescopeJobsListQuerySchema,
 	TelescopeJobsListResponseSchema,
 	TelescopeJobStreamEventSchema,
+	TelescopeJsonObjectSchema,
+	TelescopeJsonScalarSchema,
 	TelescopeJsonValueSchema,
 	TelescopeLeaderboardEntrySchema,
 	TelescopeLeaderboardQuerySchema,
@@ -511,3 +568,13 @@ export type {
 	UserMessageResponse,
 	UserResponse,
 } from "./auth/user";
+export { CaughtValueSchema, ResendLikeErrorSchema } from "./runtime/caught-error";
+export type { CaughtValue, ResendLikeError } from "./runtime/caught-error";
+export { FastifyQuerySchema, HttpHeaderValueSchema, ReplyHeaderValueSchema } from "./runtime/http-headers";
+export type { FastifyQuery, HttpHeaderValue, ReplyHeaderValue } from "./runtime/http-headers";
+export { JsonObjectSchema, JsonPrimitiveSchema, JsonRecordSchema, JsonValueSchema } from "./runtime/json";
+export type { JsonObject, JsonObjectNode, JsonPrimitive, JsonValue, JsonValueInput, JsonValueNode } from "./runtime/json";
+export { PrismaQueryEventSchema, PrismaQuerySubscriberSchema } from "./runtime/prisma-query";
+export type { PrismaQueryEvent } from "./runtime/prisma-query";
+export { NonEmptyStringSchema, StringRecordNullableSchema, StringRecordSchema, StringValueSchema, ThrownErrorSchema } from "./runtime/primitives";
+export type { NonEmptyString, StringRecord, StringRecordNullable, StringValue, ThrownError } from "./runtime/primitives";

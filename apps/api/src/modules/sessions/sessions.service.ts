@@ -1,5 +1,5 @@
 import { Injectable, UnauthorizedException } from "@nestjs/common";
-import { SessionSchema, epochMs, type EpochMs, type RefreshResponse, type Session, type UserResponse } from "@workspace/shared";
+import { SessionActionEventSchema, SessionSchema, epochMs, type EpochMs, type RefreshResponse, type Session, type UserResponse } from "@workspace/shared";
 
 import { parseExpiryToMilliseconds } from "../../common/utils/expiry";
 import { TypedConfigService } from "../../config/typed-config.service";
@@ -9,7 +9,7 @@ import { RbacService } from "../rbac/rbac.service";
 import { AuthService } from "../auth/auth.service";
 import { CryptoService } from "../auth/services/crypto.service";
 import { TokenService } from "../auth/services/token.service";
-import { SessionActionEventSchema, SessionsEventsService } from "./sessions-events.service";
+import { SessionsEventsService } from "./sessions-events.service";
 
 /**
  * Owns the refresh-token / active-session lifecycle: token rotation,

@@ -234,8 +234,12 @@ So in `apps/web` you can write:
 ```ts
 import { Button } from "@workspace/ui/components/form/button";
 import { useAuth } from "@workspace/client/lib/auth";
-import { LoginSchema } from "@workspace/shared";
+import type { LoginInput } from "@workspace/shared";
 ```
+
+App code imports **types** (`LoginInput`) for annotations and props. Import the
+**schema** (`LoginSchema`) only at validation boundaries — `zodResolver`,
+`ZodValidationPipe`, `.parse()` / `.safeParse()`.
 
 - `@workspace/ui/*` and `@workspace/client/*` resolve straight to the **source**
   files, so package changes are picked up instantly in dev.
@@ -382,6 +386,14 @@ cd packages/ui && npx tsc --noEmit
 `interface`/`type` next to a schema that already describes the same data; the
 schema is the single source of truth and the type can't drift from it.
 
+**Consumption rule:** application code (`apps/api`, `apps/web`, `apps/admin`)
+imports the **type** (`X`) for function signatures, props, state, and return
+types. Import the **schema** (`XSchema`) only where runtime validation happens —
+DTO factories (`createZodDto`), pipes, `.parse()` / `.safeParse()`, enum
+`.options`, and tests that assert schema behaviour. Do not re-export schemas
+from service files, template barrels, or thin type-alias modules; import schemas
+directly from `@workspace/shared` at the validation site.
+
 **What STAYS plain (deliberately — do not "fix" these):**
 
 - **Function contracts** — `OnRefresh`, `AuthChannel`, `FooterAction`, store
@@ -436,6 +448,48 @@ hand-assembled data crosses a trust boundary: JSON imports, JWT decodes,
 localStorage hydration, frontmatter. (See `sidebar-menu.ts`, `token.service.ts`,
 `notifications.ts`, the zustand `merge` fns, `docs/index.ts`.)
 
+**Where schemas live vs where they run**
+
+| Layer | Defines `XxxSchema` + `Xxx` type | Consumes |
+|-------|-------------------------------|----------|
+| `packages/shared` | Every contract / domain / runtime schema | Barrel export only |
+| `apps/api` controllers + `dtos/` | — | `ZodValidationPipe`, `createZodDto`, `createWrappedDto` |
+| `apps/api` services | — | `.parse()` at trust boundaries (JWT decode, event emit, Prisma JSON hydrate) |
+| `apps/api` utils | — | `safeParse` in `caught-error`, `http-headers`, telescope sanitize |
+| `apps/admin` pages/tables | Local UI schemas (sidebar, notifications) in same file as type | `Schema.parse(draft)` for URL/search params; `type` for component props |
+| `apps/web` | — | Types via `@workspace/client` (no direct shared schema imports today) |
+
+**Internal event bus (Nest → Telescope)**
+
+Auth, session, impersonation, and email-log services publish completion events
+through small `*EventsService` classes (`node:events` + rxjs `Observable`).
+Producers validate with the shared schema **before** emit:
+
+```ts
+// impersonation.service.ts — type on the wire; schema at the boundary
+this.impersonationEvents.emitAction(
+  ImpersonationActionEventSchema.parse({
+    action: "start",
+    superAdminId: superAdmin.id,
+    targetUserId: targetUser.id,
+    status: "succeeded",
+    error: null,
+    durationMs: Math.round(performance.now() - actionStartedAt),
+  }),
+);
+```
+
+`ImpersonationEventsService.emitAction` accepts `ImpersonationActionEvent` (the
+type). `.parse()` catches typos, wrong enums, or extra keys before any subscriber
+(Telescope job adapter) sees the payload. Schemas are defined in
+`packages/shared/src/schemas/domain/events.ts`.
+
+**`schemas/runtime/`** — cross-cutting parse helpers used by the API (not HTTP
+contract shapes): `JsonValue` / `JsonValueInput`, `StringRecordSchema`,
+`CaughtValueSchema`, `HttpHeaderValueSchema`, `ThrownErrorSchema`, etc. API
+utility files import these for `safeParse`; they do not redefine local `z.object`
+blocks.
+
 ---
 
-_Last updated: August 9, 2026_
+_Last updated: August 20, 2026_

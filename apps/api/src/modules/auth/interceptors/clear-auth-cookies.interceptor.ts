@@ -3,7 +3,8 @@ import type { FastifyReply, FastifyRequest } from "fastify";
 import { type Observable } from "rxjs";
 import { tap } from "rxjs/operators";
 
-import type { JsonValue } from "../../../common/interfaces/json";
+import type { JsonValue } from "@workspace/shared";
+import { readFirstHeader } from "../../../common/utils/http-headers";
 import {
 	CookieConfigService,
 	ACCESS_TOKEN_COOKIE_NAME,
@@ -40,9 +41,7 @@ export class ClearAuthCookiesInterceptor implements NestInterceptor {
 		const request: FastifyRequest = context.switchToHttp().getRequest<FastifyRequest>();
 		const response: FastifyReply = context.switchToHttp().getResponse<FastifyReply>();
 
-		// Determine which cookie set to clear based on X-Client-Type header.
-		const header: string | string[] | undefined = request.headers["x-client-type"];
-		const clientType: string | undefined = typeof header === "string" ? header : undefined;
+		const clientType: string | undefined = readFirstHeader(request.headers["x-client-type"]);
 		const isAdmin: boolean = clientType === "admin";
 
 		return next.handle().pipe(

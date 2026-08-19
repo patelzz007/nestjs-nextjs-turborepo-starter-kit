@@ -2,7 +2,7 @@
 title: "Cursorrules audit — task reference"
 description: "Actionable improvement tasks from the full-repo audit against .cursorrules. Pick a section, ship a small PR, tick the checkbox."
 author: "Acme Inc."
-lastUpdated: 1787068800000
+lastUpdated: 1787097600000
 coverImage: "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=1600&q=80"
 tags: ["audit", "cursorrules", "typesafety", "rls", "ui", "tasks"]
 ---
@@ -39,7 +39,7 @@ Use this doc when you want to **start a specific improvement task**. It is organ
 | Area | Status | Notes |
 |------|--------|-------|
 | Data flow (Prisma → Zod → API → smart → dumb) | **Strong** on wired domains | Gaps: email/RBAC, some params |
-| Type safety (no `any`/`unknown`/`never`/casts) | **Weak** in API, client auth, UI table/chart | Telescope module is stricter |
+| Type safety (no `any`/`unknown`/`never`/casts) | **Improved** in API | Production `apps/api` paths audited; telescope + email + backup clean; client/UI still have gaps |
 | Access modifiers + return types | **Partial** | Auth/sessions/health loose |
 | RLS | **Done** (first cut) | `prisma/rls.sql` + `pnpm db:rls`; `@RlsBypass()` for cross-tenant public DB routes |
 | Dumb components (`forwardRef`, CVA, tokens) | **Early** | Largest remaining work |
@@ -59,6 +59,12 @@ Use this doc when you want to **start a specific improvement task**. It is organ
 - [x] Auth P1: `@EmailVerified`, `@RequirePermission`, impersonation hardening, paginated admin users, dropped `User.refreshToken`
 - [x] Telescope: replay SSRF guard, `LogService` instead of `console.warn`
 - [x] Backup UI partial split (`backup-panel` + dumb pieces)
+- [x] **Inline Zod → `packages/shared`** — full `apps/api` audit: runtime helpers, domain events, email template props, backup/telescope parse schemas moved to shared; API keeps helpers + `.parse()`/`safeParse()` only
+- [x] **Schema vs type consumption** — app code imports `X` (type) for signatures; `XSchema` only at validation boundaries (pipes, DTOs, `.parse()`). No schema re-exports from services/templates/barrels
+- [x] Shared `schemas/runtime/` — `json`, `caught-error`, `http-headers`, `prisma-query`, `primitives` (+ `JsonValueInput` for Prisma write helpers)
+- [x] Shared `schemas/domain/events.ts` — `AuthFlowEvent`, `SessionActionEvent`, `ImpersonationActionEvent`, `EmailLogUpdatedEvent`
+- [x] Shared `schemas/email/email-templates.ts` — all seven template prop schemas + `EmailRenderContext`
+- [x] Swagger envelope factories — `createApiSuccessEnvelopeSchema` / `createApiSuccessArrayEnvelopeSchema` in `api-response.ts`; `response-wrapper.ts` delegates to shared
 
 ---
 
@@ -144,15 +150,39 @@ pnpm db:reset        # reset + rls + seed (from apps/api)
 | [x] Cookie result | `cookies.service.ts` | `packages/shared/src/schemas/auth/cookies.ts` |
 | [x] Email log create | `email-log.service.ts` | `packages/shared/src/schemas/email/email.ts` |
 | [x] Response envelope helpers | `response.interceptor.ts` | `PaginatedServiceResultSchema` + `DataValueSchema` from shared |
+| [x] Inline `z.string()` / `z.record()` in utils | `caught-error.ts`, `http-headers.ts`, `prisma-query-events.ts`, `main.ts`, telescope `sanitize.ts` / `pii-scanner.ts` | `schemas/runtime/*` + `TelescopeJsonObjectSchema` / `TelescopeJsonScalarSchema` |
+| [x] Event bus payloads | `auth-events`, `sessions-events`, `impersonation-events`, `email-log-events` services | `schemas/domain/events.ts` |
+| [x] Email template props | seven `*.template.ts` files | `schemas/email/email-templates.ts` |
+| [x] Backup SQL row shapes | `backup.service.ts` | `schemas/domain/backup.ts` (`BackupDownloadTokenPayloadSchema`, table-name count rows) |
+| [x] Log service options | `logs.service.ts` | `LogServiceOptionsSchema` in `schemas/domain/logs.ts` |
+| [ ] Prisma `InputJsonValue` bridge | `common/utils/prisma-json.ts` | Stays in API (`z.custom` depends on `@prisma/client`) — params typed via shared `JsonValueInput` |
+
+**Intentionally still in API (not portable to shared):**
+
+- `common/utils/prisma-json.ts` — Prisma-specific `z.custom<Prisma.InputJsonValue>`
+- `common/dto/response-wrapper.ts` — thin NestJS `createZodDto` wrapper (schemas live in shared factories)
+- `*.spec.ts` — local test fixtures
+
+### Type safety — schema vs type consumption (apps)
+
+| Rule | Status | Notes |
+|------|--------|-------|
+| [x] Import **types** for signatures, props, return types | `apps/api` | e.g. `ImpersonationActionEvent`, `EmailRenderContext`, `JsonValue` |
+| [x] Import **schemas** only at validation boundaries | `apps/api` | `ZodValidationPipe`, `createZodDto`, `.parse()` / `.safeParse()`, enum `.options` |
+| [x] No `*Schema` re-exports from services/templates | `apps/api` | Event services, email templates, `cookie.config`, `json.ts`, `email-render-context.ts` export types only |
+| [x] Event emitters validate before publish | `auth.service`, `sessions.service`, `impersonation.service` | `AuthFlowEventSchema.parse({…})` etc. — subscribers (Telescope adapters) always get contract-valid payloads |
+| [x] Docs | `docs/typescript.md` §8 | Consumption rule + web import example uses `type LoginInput` |
+| [x] `apps/web` | — | No `@workspace/shared` schema imports (nothing to change) |
+| [x] `apps/admin` | — | Schema imports only for `parse`/`safeParse` on list queries + SSE frames; local app schemas still define `export type X = z.output<typeof XSchema>` in the same file |
 
 ### Type safety — eliminate banned patterns in production API
 
 | Pattern | Files (start here) |
 |---------|-------------------|
-| [ ] `unknown` | `zod-validation.pipe.ts`, `token.service.ts`, `email-webhook.controller.ts`, `email-sender.service.ts`, `main.ts`, `health.controller.ts`, `backup.service.ts` |
-| [ ] `never` | `backup.service.ts`, `email-sender.service.ts` |
-| [ ] `as` casts | `telescope-postgres.store.ts`, `telescope-prisma-listener.ts`, email template `as const` accents |
-| [ ] `typeof` instead of Zod | `email-webhook.controller.ts`, `set-auth-cookies.interceptor.ts`, `main.ts`, `backup.service.ts` |
+| [x] `unknown` | `zod-validation.pipe.ts`, `token.service.ts`, `email-webhook.controller.ts`, `email-sender.service.ts`, `main.ts`, `health.controller.ts`, `backup.service.ts` |
+| [x] `never` | `backup.service.ts`, `email-sender.service.ts` |
+| [x] `as` casts | `telescope-postgres.store.ts`, `telescope-prisma-listener.ts`, email template `as const` accents |
+| [x] `typeof` instead of Zod | `email-webhook.controller.ts`, `set-auth-cookies.interceptor.ts`, `main.ts`, `backup.service.ts` |
 
 ### ESLint
 
@@ -189,8 +219,8 @@ pnpm db:reset        # reset + rls + seed (from apps/api)
 |---------|-----------|
 | [ ] Admin access guard | `backup-admin.guard.ts`, `telescope-admin.guard.ts`, `super-admin.guard.ts`, `backup.controller.ts` `requireAdminAccessToken` |
 | [ ] `secureEquals` | `auth.guard.ts`, `telescope-admin.guard.ts` |
-| [ ] `ThrownSchema` for errors | `rls-pool.ts`, `backup-scheduler.service.ts`, `backup.service.ts` |
-| [ ] Thin Swagger DTO wrappers | `apps/api/src/modules/**/dtos/` — keep if required by Nest Swagger; avoid duplicating shared shapes |
+| [x] `ThrownErrorSchema` for errors | `rls-pool.ts`, `backup-scheduler.service.ts`, `backup.service.ts` | Shared `schemas/runtime/primitives.ts` |
+| [x] Thin Swagger DTO wrappers | `apps/api/src/common/dto/response-wrapper.ts` | Envelope shape in shared; wrapper only calls `createZodDto` |
 
 ---
 
@@ -204,6 +234,10 @@ pnpm db:reset        # reset + rls + seed (from apps/api)
 | [x] Single `ApiVersion` source | `contracts/versioning.ts` + `schemas/api/version.ts` | `version.ts` imports `ApiVersion` type from `versioning.ts` |
 | [x] `z.infer` → `z.output` | `schemas/api/env.ts`, `schemas/domain/logs.ts` | Consistency |
 | [x] `as const` → tuples | `contracts/versioning.ts`, `contracts/index.ts` | Tuple annotations; `apiContract` no longer ends with `as const` |
+| [x] `schemas/runtime/` barrel | `json`, `caught-error`, `http-headers`, `prisma-query`, `primitives` | API utils import from shared; no inline `z.string()` in production API |
+| [x] Domain events + email template props | `domain/events.ts`, `email/email-templates.ts` | Event bus + seven email templates |
+| [x] Swagger envelope factories | `createApiSuccessEnvelopeSchema`, `createApiSuccessArrayEnvelopeSchema` | `api-response.ts`; `response-wrapper.ts` is a thin Nest wrapper |
+| [x] `JsonValueInput` | `schemas/runtime/json.ts` | Prisma JSON write helpers type params without `z.input<typeof …>` in API |
 
 ### `packages/client`
 

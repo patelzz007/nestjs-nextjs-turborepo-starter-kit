@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { BaseEmailPropsSchema, BaseEmailTemplate, type CtaConfig } from "./base-email-template";
+import { BaseEmailPropsSchema } from "@workspace/shared";
+
+import { BaseEmailTemplate, type CtaConfig } from "./base-email-template";
 import type { EmailRenderContext } from "./email-render-context";
 import { PasswordResetEmailTemplate } from "../templates/password-reset-email.template";
 import { VerificationEmailTemplate } from "../templates/verification-email.template";

@@ -188,6 +188,42 @@ export const BackupDownloadResponseSchema = z
 
 export type BackupDownloadResponse = z.output<typeof BackupDownloadResponseSchema>;
 
+/** JWT payload for a short-lived backup download token. */
+export const BackupDownloadTokenPayloadSchema = z
+	.object({
+		sub: z.string().min(1),
+		/** The admin the token was minted for — tokens can't be replayed by a different user. */
+		uid: z.string().min(1),
+		purpose: z.literal("backup:download"),
+		iat: z.number().optional(),
+		exp: z.number().optional(),
+	})
+	.strict();
+
+export type BackupDownloadTokenPayload = z.output<typeof BackupDownloadTokenPayloadSchema>;
+
+/** One row from `information_schema.tables` (table name query). */
+export const BackupTableNameQueryRowSchema = z
+	.object({
+		tableName: z.string(),
+	})
+	.strict();
+
+export const BackupTableNameQueryRowsSchema = z.array(BackupTableNameQueryRowSchema);
+
+export type BackupTableNameQueryRow = z.output<typeof BackupTableNameQueryRowSchema>;
+
+/** One row from a `count(*)` query against public tables. */
+export const BackupPublicTableCountRowSchema = z
+	.object({
+		count: z.number().int(),
+	})
+	.strict();
+
+export const BackupPublicTableCountRowsSchema = z.array(BackupPublicTableCountRowSchema);
+
+export type BackupPublicTableCountRow = z.output<typeof BackupPublicTableCountRowSchema>;
+
 /** `GET /backup/options` — what the create form may exclude. */
 export const BackupOptionsResponseSchema = z
 	.object({

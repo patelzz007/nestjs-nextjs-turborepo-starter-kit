@@ -19,14 +19,18 @@ import { Transform } from "node:stream";
 import { promisify } from "node:util";
 import * as bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { z } from "zod";
 import {
 	BackupCreateInputSchema,
+	BackupDownloadTokenPayloadSchema,
 	BackupEntrySchema,
+	BackupPublicTableCountRowsSchema,
 	BackupRestoreInputSchema,
+	BackupTableNameQueryRowsSchema,
+	CaughtValueSchema,
 	epochMs,
 	type BackupCreateInput,
 	type BackupDownloadResponse,
+	type BackupDownloadTokenPayload,
 	type BackupEntry,
 	type BackupRestoreInput,
 	type BackupRestoreResponse,
@@ -37,6 +41,8 @@ import {
 } from "@workspace/shared";
 
 import { TypedConfigService } from "../../config/typed-config.service";
+import { readCaughtErrorMessage } from "../../common/utils/caught-error";
+import { rejectAfter } from "../../common/utils/promise-timeout";
 import { LogService } from "../logs/logs.service";
 import { PrismaService } from "../../prisma/prisma.service";
 import { libpqSafeUrl, parseDfRow, quoteIdent, redact, timestampForFilename, type DfRow } from "./backup-utils";
@@ -46,22 +52,6 @@ const execFileAsync = promisify(execFile);
 
 /** Machine-readable failure categories — the UI maps these to actionable copy. */
 type BackupErrorCode = "CANCELLED" | "TIMEOUT" | "DISK_FULL" | "PGDUMP_UNAVAILABLE" | "DUMP_SIZE_MISMATCH" | "RESTORE_FAILED" | "UNKNOWN";
-
-/** Zod contract for the download-token payload (signed JWT). */
-const DownloadTokenPayloadSchema = z
-	.object({
-		sub: z.string().min(1),
-		/** The admin the token was minted for — tokens can't be replayed by a different user. */
-		uid: z.string().min(1),
-		purpose: z.literal("backup:download"),
-		// iat/exp are added by the JWT library itself, not by us.
-		iat: z.number().optional(),
-		exp: z.number().optional(),
-	})
-	.strict();
-
-/** A signed download-token payload. */
-type DownloadTokenPayload = z.output<typeof DownloadTokenPayloadSchema>;
 
 /** Outcome of one dump/restore attempt — a discriminated union, never a bare string. */
 type DumpResult = { readonly ok: true } | { readonly ok: false; readonly reason: "child" | "pipe" | "timeout"; readonly detail: string };
@@ -204,7 +194,7 @@ export class BackupService implements OnModuleInit, OnModuleDestroy {
 		this.logs.info("Backup requested", {
 			context: "BackupService",
 			userId: user.sub,
-			metadata: { backupId: row.id, ipAddress, name, schemaOnly: parsed.schemaOnly, dbSizeBytes: dbSizeBytes !== null ? String(dbSizeBytes) : null },
+			metadata: { backupId: row.id, ipAddress: ipAddress ?? null, name, schemaOnly: parsed.schemaOnly, dbSizeBytes: dbSizeBytes !== null ? String(dbSizeBytes) : null },
 		});
 
 		let position: number | null;
@@ -223,8 +213,9 @@ export class BackupService implements OnModuleInit, OnModuleDestroy {
 			this.runningBackupId = row.id;
 			// Detached execution — deliberately not awaited. Errors are recorded
 			// on the row; the poller sees them.
-			void this.runBackupJob(row.id).catch((error: unknown): void => {
-				this.logs.error(`Backup job crashed: ${error instanceof Error ? error.message : String(error)}`, { context: "BackupService", userId: user.sub });
+			void this.runBackupJob(row.id).catch((error): void => {
+				const caught = CaughtValueSchema.parse(error);
+				this.logs.error(`Backup job crashed: ${readCaughtErrorMessage(caught)}`, { context: "BackupService", userId: user.sub });
 			});
 		}
 		return { backupId: row.id, status: "pending", position };
@@ -460,8 +451,9 @@ export class BackupService implements OnModuleInit, OnModuleDestroy {
 		// Cap progress at 85% during dump (finalize takes it to 100%).
 		const cappedPct = Math.min(85, Math.max(5, pct));
 
-		await this.update(id, { progress: cappedPct }).catch((err: unknown): void => {
-			this.logs.warn(`Progress update failed for backup ${id}: ${err instanceof Error ? err.message : String(err)}`, { context: "BackupService" });
+		await this.update(id, { progress: cappedPct }).catch((err): void => {
+			const caught = CaughtValueSchema.parse(err);
+			this.logs.warn(`Progress update failed for backup ${id}: ${readCaughtErrorMessage(caught)}`, { context: "BackupService" });
 		});
 	}
 
@@ -543,8 +535,8 @@ export class BackupService implements OnModuleInit, OnModuleDestroy {
 			);
 			this.logs.info(`Scheduled backup started: ${name}`, { context: "BackupScheduler" });
 		} catch (error) {
-			const parsed = z.object({ message: z.string() }).safeParse(error);
-			this.logs.error(`Scheduled backup failed to start: ${parsed.success ? parsed.data.message : "unknown error"}`, { context: "BackupScheduler" });
+			const caught = CaughtValueSchema.parse(error);
+			this.logs.error(`Scheduled backup failed to start: ${readCaughtErrorMessage(caught)}`, { context: "BackupScheduler" });
 		}
 	}
 
@@ -587,8 +579,9 @@ export class BackupService implements OnModuleInit, OnModuleDestroy {
 			return;
 		}
 		this.runningBackupId = next;
-		void this.runBackupJob(next).catch((error: unknown): void => {
-			this.logs.error(`Backup job crashed: ${error instanceof Error ? error.message : String(error)}`, { context: "BackupService" });
+		void this.runBackupJob(next).catch((error): void => {
+			const caught = CaughtValueSchema.parse(error);
+			this.logs.error(`Backup job crashed: ${readCaughtErrorMessage(caught)}`, { context: "BackupService" });
 		});
 	}
 
@@ -780,19 +773,7 @@ export class BackupService implements OnModuleInit, OnModuleDestroy {
 
 	/** Resolves a promise or rejects after `ms` — per-stage watchdog helper. */
 	private async withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
-		let timer: NodeJS.Timeout | undefined;
-		try {
-			return await Promise.race([
-				promise,
-				new Promise<never>((_resolve, reject): void => {
-					timer = setTimeout((): void => {
-						reject(new Error(message));
-					}, ms);
-				}),
-			]);
-		} finally {
-			if (timer !== undefined) clearTimeout(timer);
-		}
+		return Promise.race([promise, rejectAfter<T>(ms, new Error(message))]);
 	}
 
 	private sleep(ms: number): Promise<void> {
@@ -809,7 +790,8 @@ export class BackupService implements OnModuleInit, OnModuleDestroy {
 				data: { status: "failed", stage: "failed", progress: 0, error: redacted, errorCode },
 			});
 		} catch (err) {
-			this.logs.warn(`Failed to persist failure state for backup ${id}: ${err instanceof Error ? err.message : String(err)}`, { context: "BackupService" });
+			const caught = CaughtValueSchema.parse(err);
+			this.logs.warn(`Failed to persist failure state for backup ${id}: ${readCaughtErrorMessage(caught)}`, { context: "BackupService" });
 		}
 		void this.recordCircuitFailure();
 		this.auditLog({ event: "failed", backupId: id, userId: "unknown", timestamp: Date.now(), metadata: { errorCode, durationMs: Date.now() - startedAt } });
@@ -948,7 +930,7 @@ export class BackupService implements OnModuleInit, OnModuleDestroy {
 	}> {
 		this.assertEnabled();
 		const raw = await this.prisma.$queryRaw`SELECT table_name AS "tableName" FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name`;
-		const rows: readonly { readonly tableName: string }[] = z.array(z.object({ tableName: z.string() })).parse(raw);
+		const rows = BackupTableNameQueryRowsSchema.parse(raw);
 		const defaults: readonly string[] = this.config.backupExcludeTables;
 		const tables = rows
 			.filter((r): boolean => r.tableName !== "_prisma_migrations" && r.tableName !== "prisma_migrations")
@@ -966,7 +948,7 @@ export class BackupService implements OnModuleInit, OnModuleDestroy {
 		try {
 			const raw = await this.prisma
 				.$queryRaw`SELECT count(*)::int AS count FROM information_schema.tables WHERE table_schema = 'public' AND table_name NOT IN ('_prisma_migrations', 'prisma_migrations')`;
-			const parsed = z.array(z.object({ count: z.number().int() })).parse(raw);
+			const parsed = BackupPublicTableCountRowsSchema.parse(raw);
 			return parsed[0]?.count ?? 0;
 		} catch {
 			return 0;
@@ -1004,7 +986,7 @@ export class BackupService implements OnModuleInit, OnModuleDestroy {
 	): Promise<void> {
 		this.assertEnabled();
 		if (token === undefined) throw new ForbiddenException("A signed download token is required.");
-		const payload: DownloadTokenPayload = this.verifyToken(token);
+		const payload: BackupDownloadTokenPayload = this.verifyToken(token);
 		if (payload.sub !== id) throw new ForbiddenException("This token does not belong to the requested backup.");
 		if (payload.uid !== userSub) throw new ForbiddenException("This download token was issued to a different admin.");
 
@@ -1024,11 +1006,10 @@ export class BackupService implements OnModuleInit, OnModuleDestroy {
 		reply.send(createReadStream(targetPath, { highWaterMark: 64 * 1024 }));
 	}
 
-	private verifyToken(token: string): DownloadTokenPayload {
+	private verifyToken(token: string): BackupDownloadTokenPayload {
 		try {
-			const decoded: string | jwt.JwtPayload = jwt.verify(token, this.config.backupDownloadSecret);
-			if (typeof decoded === "string") throw new Error("invalid token");
-			return DownloadTokenPayloadSchema.parse(decoded);
+			const decoded = jwt.verify(token, this.config.backupDownloadSecret);
+			return BackupDownloadTokenPayloadSchema.parse(decoded);
 		} catch {
 			throw new ForbiddenException("Download token is invalid or has expired.");
 		}

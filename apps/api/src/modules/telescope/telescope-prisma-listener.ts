@@ -3,6 +3,7 @@ import { nanoid } from "nanoid";
 
 import { nowEpochMs, type QueryLogEntry } from "@workspace/shared";
 
+import { subscribePrismaQueryEvents } from "../../common/utils/prisma-query-events";
 import { PrismaService } from "../../prisma/prisma.service";
 
 import { modelFromSql } from "./n1-detector";
@@ -10,24 +11,6 @@ import { RequestSpanContext, type SpanStore } from "./request-span-context";
 import { sanitizeQueryParams } from "./sanitize";
 import { TELESCOPE_STORE } from "./telescope.options";
 import type { TelescopeStore } from "./telescope.store";
-
-/**
- * Structural shape of Prisma's `query` event. The generated client does NOT
- * expose query-event types under driver adapters (Prisma 7) — the callback
- * receives `{ timestamp, query, params, duration, target }` at runtime, and
- * `model`/`operation` are derived from the SQL prefix instead.
- */
-interface PrismaQueryEventLike {
-	readonly timestamp: Date;
-	readonly query: string;
-	readonly params: string;
-	readonly duration: number;
-}
-
-/** The narrow `$on` surface we need — typed structurally at the library boundary. */
-interface PrismaClientWithQueryEvents {
-	$on(event: "query", callback: (event: PrismaQueryEventLike) => void): void;
-}
 
 const SQL_OPERATION_PATTERN = /^\s*(select|insert|update|delete|create|alter|drop|truncate)\b/i;
 
@@ -55,9 +38,7 @@ export class TelescopePrismaListener implements OnModuleInit {
 	) {}
 
 	public onModuleInit(): void {
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Library boundary: the generated client omits query-event types under driver adapters
-		const client = this.prisma as PrismaClientWithQueryEvents;
-		client.$on("query", (event: PrismaQueryEventLike): void => {
+		subscribePrismaQueryEvents(this.prisma, (event): void => {
 			const spanStore: SpanStore | undefined = RequestSpanContext.getStore();
 			// Only queries that ran inside a CAPTURED request are recorded —
 			// queries outside a request (or sampled out) are skipped entirely.

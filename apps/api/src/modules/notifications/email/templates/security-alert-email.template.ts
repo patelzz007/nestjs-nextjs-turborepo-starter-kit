@@ -1,20 +1,11 @@
-import { z } from "zod";
+import {
+	nowEpochMs,
+	SecurityAlertEmailPropsSchema,
+	type SecurityAlertEmailProps,
+} from "@workspace/shared";
 
-import { EpochMsSchema, nowEpochMs } from "@workspace/shared";
-
-import { BaseEmailPropsSchema, BaseEmailTemplate } from "../base/base-email-template";
+import { BaseEmailTemplate, type EmailAccent } from "../base/base-email-template";
 import type { EmailRenderContext } from "../base/email-render-context";
-
-export const SecurityAlertEmailPropsSchema = BaseEmailPropsSchema.extend({
-	/** Human-readable device description (e.g. "Chrome on macOS"). */
-	deviceLabel: z.string().min(1).optional(),
-	/** Approximate location from IP geo (e.g. "Kuala Lumpur, MY"). */
-	location: z.string().min(1).optional(),
-	/** When the sign-in happened (epoch ms). */
-	signedInAt: EpochMsSchema.optional(),
-});
-
-export type SecurityAlertEmailProps = z.output<typeof SecurityAlertEmailPropsSchema>;
 
 /**
  * New-device / new-location sign-in alert. Amber accent — urgent but not
@@ -33,7 +24,7 @@ export class SecurityAlertEmailTemplate extends BaseEmailTemplate<SecurityAlertE
 	public readonly key: string = "security-alert";
 	public readonly propsSchema = SecurityAlertEmailPropsSchema;
 	public readonly subject: string = "New sign-in to your account";
-	protected readonly accent = "amber" as const;
+	protected readonly accent: EmailAccent = "amber";
 	protected readonly eyebrow: string = "Security Alert";
 	protected readonly heading: string = "A new device signed in";
 

@@ -1,12 +1,9 @@
 import { Injectable, NotFoundException, type OnModuleDestroy } from "@nestjs/common";
-import { epochMs, type BackupSchedule, type BackupScheduleToggleResponse } from "@workspace/shared";
-import { z } from "zod";
+import { epochMs, ThrownErrorSchema, type BackupSchedule, type BackupScheduleToggleResponse } from "@workspace/shared";
 
 import { PrismaService } from "../../prisma/prisma.service";
 import { LogService } from "../logs/logs.service";
 import { nextCronRunMs } from "./backup-utils";
-
-const ThrownSchema = z.object({ message: z.string() });
 
 /** Default schedules seeded on first start if the DB table is empty. */
 const DEFAULT_SCHEDULES: readonly { readonly id: string; readonly cron: string; readonly name: string }[] = [
@@ -86,7 +83,7 @@ export class BackupSchedulerService implements OnModuleDestroy {
 				void fire(row.name).then(
 					(): void => undefined,
 					(error: unknown): void => {
-						const parsed = ThrownSchema.safeParse(error);
+						const parsed = ThrownErrorSchema.safeParse(error);
 						this.logs.error(`Scheduled backup failed: ${parsed.success ? parsed.data.message : "unknown error"}`, {
 							context: "BackupScheduler",
 						});

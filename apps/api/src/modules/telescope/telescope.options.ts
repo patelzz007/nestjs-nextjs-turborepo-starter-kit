@@ -1,6 +1,5 @@
-import { z } from "zod";
-
 import {
+	StringRecordSchema,
 	TelescopeBodyCaptureSchema,
 	TelescopeOptionsSchema,
 	TelescopeStorageSchema,
@@ -65,7 +64,7 @@ export function resolveTelescopeOptions(provided: Partial<TelescopeOptions>): Te
 	const envReplayTargets: string | undefined = process.env.TELESCOPE_REPLAY_TARGETS;
 	if (envReplayTargets !== undefined && envReplayTargets.length > 0) {
 		try {
-			const parsed = z.record(z.string(), z.string()).safeParse(JSON.parse(envReplayTargets));
+			const parsed = StringRecordSchema.safeParse(JSON.parse(envReplayTargets));
 			if (parsed.success) {
 				replayTargets = parsed.data;
 			}

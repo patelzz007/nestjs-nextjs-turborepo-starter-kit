@@ -1,12 +1,22 @@
 import { Injectable } from "@nestjs/common";
 import { Resend } from "resend";
 
-import { EmailSendResultSchema, type EmailSendResult } from "@workspace/shared";
+import {
+	CaughtValueSchema,
+	EmailRenderContextSchema,
+	EmailSendResultSchema,
+	ResendSendResponseSchema,
+	type CaughtValue,
+	type EmailRenderContext,
+	type EmailSendResult,
+	type ResendSendResponse,
+} from "@workspace/shared";
 
 import { TypedConfigService } from "../../../config/typed-config.service";
+import { readCaughtErrorCode, readCaughtErrorMessage } from "../../../common/utils/caught-error";
+import { rejectAfter } from "../../../common/utils/promise-timeout";
 import { LogService } from "../../logs/logs.service";
 import { BaseEmailTemplate, type BaseEmailProps } from "./base/base-email-template";
-import { EmailRenderContextSchema, type EmailRenderContext } from "./base/email-render-context";
 import { EmailLogService } from "./email-log.service";
 
 /** Thrown when a send exceeds `EMAIL_TIMEOUT_MS`. */
@@ -138,7 +148,7 @@ export class EmailSenderService {
 			});
 			return EmailSendResultSchema.parse({ ok: true, id: resendId, mode: "send" });
 		} catch (error) {
-			const failure = this.classifyError(error);
+			const failure = this.classifyError(CaughtValueSchema.parse(error));
 			await this.persist(template, effectiveTo, "failed", undefined, failure.detail);
 			this.logService.error(`Failed to send "${template.subject}" to ${this.maskEmail(effectiveTo)}: ${failure.detail}`, {
 				context: "EmailSenderService",
@@ -174,33 +184,23 @@ export class EmailSenderService {
 			}
 
 			// Timeout via Promise.race: Resend's send() takes no AbortSignal,
-			// so a hung network call is cut with a synthetic TimeoutError. The
-			// send promise is widened to a stable shape first so the race result
-			// type stays predictable. `timeoutHandle` is declared here (outside
-			// the try) so the `finally` can clear it — a fast send must not leave
-			// a pending timeout holding the event loop.
-			let timeoutHandle: NodeJS.Timeout | undefined;
+			// so a hung network call is cut with a synthetic TimeoutError.
 			try {
-				const sendPromise: Promise<{ readonly data: { readonly id: string } | null; readonly error: unknown }> = this.resend.emails.send({
-					from: this.fromAddress,
-					to: payload.to,
-					subject: payload.subject,
-					html: payload.html,
-					text: payload.text,
-					cc: payload.cc !== undefined && payload.cc.length > 0 ? [...payload.cc] : undefined,
-					bcc: payload.bcc !== undefined && payload.bcc.length > 0 ? [...payload.bcc] : undefined,
-					replyTo: payload.replyTo,
-				});
-				const result = await Promise.race([
-					sendPromise,
-					new Promise<never>((_resolve: (value: never) => void, reject: (reason: Error) => void): void => {
-						timeoutHandle = setTimeout((): void => {
-							reject(new TimeoutError());
-						}, timeoutMs);
-					}),
-				]);
+				const sendPromise: Promise<ResendSendResponse> = this.resend.emails
+					.send({
+						from: this.fromAddress,
+						to: payload.to,
+						subject: payload.subject,
+						html: payload.html,
+						text: payload.text,
+						cc: payload.cc !== undefined && payload.cc.length > 0 ? [...payload.cc] : undefined,
+						bcc: payload.bcc !== undefined && payload.bcc.length > 0 ? [...payload.bcc] : undefined,
+						replyTo: payload.replyTo,
+					})
+					.then((response) => ResendSendResponseSchema.parse(response));
+				const result: ResendSendResponse = await Promise.race([sendPromise, rejectAfter<ResendSendResponse>(timeoutMs, new TimeoutError())]);
 				if (result.error !== null) {
-					throw this.normalizeError(result.error);
+					throw this.normalizeError(CaughtValueSchema.parse(result.error));
 				}
 				const id: string | undefined = result.data?.id;
 				if (id === undefined) {
@@ -208,14 +208,10 @@ export class EmailSenderService {
 				}
 				return id;
 			} catch (error) {
-				lastError = this.normalizeError(error);
+				lastError = this.normalizeError(CaughtValueSchema.parse(error));
 				// Non-retryable: invalid payloads and auth failures never recover.
 				if (this.isNonRetryable(lastError)) {
 					break;
-				}
-			} finally {
-				if (timeoutHandle !== undefined) {
-					clearTimeout(timeoutHandle);
 				}
 			}
 		}
@@ -226,24 +222,24 @@ export class EmailSenderService {
 	}
 
 	/** Coerce any rejection into an Error, preserving a Resend error code. */
-	private normalizeError(error: unknown): Error {
-		if (error instanceof Error) {
-			return error;
+	private normalizeError(value: CaughtValue): Error {
+		if (value instanceof Error) {
+			return value;
 		}
-		const code: string | undefined = typeof error === "object" && error !== null && "code" in error && typeof error.code === "string" ? error.code : undefined;
-		const message: string = typeof error === "object" && error !== null && "message" in error && typeof error.message === "string" ? error.message : String(error);
+		const code: string | undefined = readCaughtErrorCode(value);
+		const message: string = readCaughtErrorMessage(value);
 		return new ResendError(message, code);
 	}
 
 	/** Map a thrown send error to a user-facing `SendFailureReason`. */
-	private classifyError(error: unknown): { readonly reason: SendFailureReason; readonly detail: string } {
-		if (error instanceof TimeoutError) {
-			return { reason: "timeout", detail: error.message };
+	private classifyError(value: CaughtValue): { readonly reason: SendFailureReason; readonly detail: string } {
+		if (value instanceof TimeoutError) {
+			return { reason: "timeout", detail: value.message };
 		}
-		if (error instanceof ResendError && error.code === "rate_limit_exceeded") {
+		if (value instanceof ResendError && value.code === "rate_limit_exceeded") {
 			return { reason: "rate-limited", detail: "Resend rate limit exceeded" };
 		}
-		const message: string = error instanceof Error ? error.message : String(error);
+		const message: string = readCaughtErrorMessage(value);
 		return { reason: "api-error", detail: message };
 	}
 
@@ -300,8 +296,8 @@ export class EmailSenderService {
 				durationMs,
 			});
 		} catch (persistError) {
-			// Log persistence must never fail the send pipeline.
-			this.logService.warn(`Failed to persist EmailLog row: ${persistError instanceof Error ? persistError.message : String(persistError)}`, {
+			const caught = CaughtValueSchema.parse(persistError);
+			this.logService.warn(`Failed to persist EmailLog row: ${readCaughtErrorMessage(caught)}`, {
 				context: "EmailSenderService",
 			});
 		}

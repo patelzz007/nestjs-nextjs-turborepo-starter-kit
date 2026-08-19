@@ -1,12 +1,11 @@
 import { Pool, type PoolClient, type PoolConfig } from "pg";
-import { z } from "zod";
+
+import { ThrownErrorSchema } from "@workspace/shared";
 
 import { currentRlsContext } from "./rls-context";
 
 /** Fail checkout instead of hanging until Fastify's plugin timeout. */
 const DEFAULT_CONNECT_TIMEOUT_MS = 5_000;
-
-const ThrownSchema = z.object({ message: z.string() });
 
 type ConnectCallback = (err: Error | undefined, client?: PoolClient, done?: (release?: boolean | Error) => void) => void;
 
@@ -41,7 +40,7 @@ export class RlsPool extends Pool {
 				});
 			},
 			(error: object): void => {
-				const parsed = ThrownSchema.safeParse(error);
+				const parsed = ThrownErrorSchema.safeParse(error);
 				callback(parsed.success ? new Error(parsed.data.message) : new Error("Failed to check out a Postgres client."));
 			},
 		);
@@ -54,7 +53,7 @@ export class RlsPool extends Pool {
 			return client;
 		} catch (error) {
 			client.release(true);
-			const parsed = ThrownSchema.safeParse(error);
+			const parsed = ThrownErrorSchema.safeParse(error);
 			if (parsed.success) {
 				throw new Error(parsed.data.message);
 			}

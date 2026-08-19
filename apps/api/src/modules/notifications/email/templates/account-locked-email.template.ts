@@ -1,16 +1,12 @@
-import { z } from "zod";
+import {
+	AccountLockedEmailPropsSchema,
+	epochMs,
+	type AccountLockedEmailProps,
+	type EmailAccent,
+} from "@workspace/shared";
 
-import { EpochMsSchema, epochMs } from "@workspace/shared";
-
-import { BaseEmailPropsSchema, BaseEmailTemplate } from "../base/base-email-template";
+import { BaseEmailTemplate } from "../base/base-email-template";
 import type { EmailRenderContext } from "../base/email-render-context";
-
-/** Locked-until epoch-ms timestamp. */
-export const AccountLockedEmailPropsSchema = BaseEmailPropsSchema.extend({
-	lockedUntil: EpochMsSchema,
-});
-
-export type AccountLockedEmailProps = z.output<typeof AccountLockedEmailPropsSchema>;
 
 /**
  * Sent after brute-force lockout. Uses the red accent and a soft chip to make
@@ -26,7 +22,7 @@ export class AccountLockedEmailTemplate extends BaseEmailTemplate<AccountLockedE
 	public readonly key: string = "account-locked";
 	public readonly propsSchema = AccountLockedEmailPropsSchema;
 	public readonly subject: string = "Your account was temporarily locked";
-	protected readonly accent = "red" as const;
+	protected readonly accent: EmailAccent = "red";
 	protected readonly eyebrow: string = "Security Notice";
 	protected readonly heading: string = "Account temporarily locked";
 

@@ -3,7 +3,9 @@ import type { FastifyReply, FastifyRequest } from "fastify";
 import { type Observable } from "rxjs";
 import { map, tap } from "rxjs/operators";
 
-import type { JsonValue } from "../../../common/interfaces/json";
+import { JsonObjectSchema, LoginTokenFieldsSchema, type JsonValue } from "@workspace/shared";
+
+import { readFirstHeader, readQueryParam } from "../../../common/utils/http-headers";
 import {
 	CookieConfigService,
 	ACCESS_TOKEN_COOKIE_NAME,
@@ -15,36 +17,8 @@ import {
 import { CookieService } from "../services/cookies.service";
 
 /**
- * Reads a query parameter without type assertions: Fastify types the query
- * string as opaque, so iterate the entries and keep only string values.
- */
-function readQueryStringValue(request: FastifyRequest, name: string): string | undefined {
-	if (typeof request.query !== "object" || request.query === null) {
-		return undefined;
-	}
-	for (const [key, value] of Object.entries(request.query)) {
-		if (key === name && typeof value === "string") {
-			return value;
-		}
-	}
-	return undefined;
-}
-
-/**
  * Interceptor that extracts `accessToken` and `refreshToken` from the response
  * body, sets them as httpOnly cookies, and strips them from the JSON response.
- *
- * Used on login and token-refresh endpoints so the controller never touches
- * `res.cookie()` directly — it simply returns tokens in the body.
- *
- * @example
- * ```typescript
- * @UseInterceptors(SetAuthCookiesInterceptor)
- * @Post("/login")
- * public async login(@Body() dto: LoginDto): Promise<LoginServiceResponse> {
- *   return this.authService.login(dto, ...);
- * }
- * ```
  */
 @Injectable()
 export class SetAuthCookiesInterceptor implements NestInterceptor {
@@ -54,13 +28,8 @@ export class SetAuthCookiesInterceptor implements NestInterceptor {
 		const request: FastifyRequest = context.switchToHttp().getRequest<FastifyRequest>();
 		const response: FastifyReply = context.switchToHttp().getResponse<FastifyReply>();
 
-		// Determine which cookie names to use based on X-Client-Type header or
-		// client_type query parameter (used by Swagger UI which cannot send
-		// custom headers in the browser's native fetch to the docs page).
-		// This isolates admin cookies from web cookies on the same host.
-		const headerValue: string | string[] | undefined = request.headers["x-client-type"];
-		const headerType: string | undefined = typeof headerValue === "string" ? headerValue : undefined;
-		const queryValue: string | undefined = readQueryStringValue(request, "client_type");
+		const headerType: string | undefined = readFirstHeader(request.headers["x-client-type"]);
+		const queryValue: string | undefined = readQueryParam(request.query, "client_type");
 		const clientType: string | undefined = headerType ?? queryValue;
 		const isAdmin: boolean = clientType === "admin";
 		const accessTokenName: CookieNames = isAdmin ? ADMIN_ACCESS_TOKEN_COOKIE_NAME : ACCESS_TOKEN_COOKIE_NAME;
@@ -68,31 +37,29 @@ export class SetAuthCookiesInterceptor implements NestInterceptor {
 
 		return next.handle().pipe(
 			tap((data: JsonValue) => {
-				if (data !== null && !Array.isArray(data) && typeof data === "object") {
-					const record: Record<string, JsonValue> = data;
-					const accessToken: JsonValue | undefined = record.accessToken;
-					const refreshToken: JsonValue | undefined = record.refreshToken;
-
-					if (typeof accessToken === "string" && accessToken.length > 0) {
-						CookieService.setCookie(response, accessTokenName, accessToken, this.cookieConfig.accessTokenOptions);
-					}
-					if (typeof refreshToken === "string" && refreshToken.length > 0) {
-						CookieService.setCookie(response, refreshTokenName, refreshToken, this.cookieConfig.refreshTokenOptions);
-					}
+				const body = JsonObjectSchema.safeParse(data);
+				if (!body.success) {
+					return;
+				}
+				const tokens = LoginTokenFieldsSchema.safeParse(body.data);
+				if (!tokens.success) {
+					return;
+				}
+				if (tokens.data.accessToken !== undefined) {
+					CookieService.setCookie(response, accessTokenName, tokens.data.accessToken, this.cookieConfig.accessTokenOptions);
+				}
+				if (tokens.data.refreshToken !== undefined) {
+					CookieService.setCookie(response, refreshTokenName, tokens.data.refreshToken, this.cookieConfig.refreshTokenOptions);
 				}
 			}),
 			map((data: JsonValue) => {
-				if (data !== null && !Array.isArray(data) && typeof data === "object") {
-					const record: Record<string, JsonValue> = data;
-					const rest: Record<string, JsonValue> = {};
-					for (const key of Object.keys(record)) {
-						if (key !== "accessToken" && key !== "refreshToken") {
-							rest[key] = record[key];
-						}
-					}
-					return rest;
+				const body = JsonObjectSchema.safeParse(data);
+				if (!body.success) {
+					return data;
 				}
-				return data;
+				return JsonObjectSchema.parse(
+					Object.fromEntries(Object.entries(body.data).filter(([key]: readonly [string, JsonValue]): boolean => key !== "accessToken" && key !== "refreshToken")),
+				);
 			}),
 		);
 	}

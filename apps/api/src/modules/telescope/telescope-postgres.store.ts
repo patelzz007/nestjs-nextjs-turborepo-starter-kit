@@ -3,23 +3,24 @@ import type { Prisma } from "@prisma/client";
 import { z } from "zod";
 
 import { LogService } from "../logs/logs.service";
-import { epochMs } from "@workspace/shared";
-
 import {
 	DumpEntrySchema,
 	ExceptionLogEntrySchema,
 	QueryLogEntrySchema,
 	RequestLogEntrySchema,
+	StringRecordSchema,
 	TelescopeAlertEntrySchema,
 	TelescopeJobLogEntrySchema,
 	TelescopeJsonValueSchema,
 	TelescopeLogEntrySchema,
 	TelescopeSpanSchema,
+	epochMs,
 	type DumpEntry,
 	type ExceptionLogEntry,
 	type QueryLogEntry,
 	type RequestLogEntry,
 	type RequestLogSummary,
+	type StringRecordNullable,
 	type TelescopeAlertEntry,
 	type TelescopeAlertStatus,
 	type TelescopeAnnotation,
@@ -46,6 +47,8 @@ import {
 } from "@workspace/shared";
 
 import { PrismaService } from "../../prisma/prisma.service";
+
+import { parsePrismaInputJson, parsePrismaNullableJson, parsePrismaRequiredJson } from "../../common/utils/prisma-json";
 
 import { TELESCOPE_OPTIONS } from "./telescope.options";
 import { TelescopeMemoryStore, type ListResult, type OverviewStats, type TelescopeStore } from "./telescope.store";
@@ -384,9 +387,12 @@ export class TelescopePostgresStore implements TelescopeStore, OnModuleInit {
 /** JSON-budget typing: every value that crosses the Prisma boundary is one of these. */
 type StoredJson = TelescopeJsonValue | readonly TelescopeSpan[] | readonly TelescopeLogEntry[] | Record<string, string> | null;
 
-function toJsonInput(value: StoredJson): Prisma.InputJsonValue {
-	// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Library boundary: Prisma's InputJsonValue is the JSON value union; StoredJson is a strict subset.
-	return value as Prisma.InputJsonValue;
+function toJsonInput(value: Exclude<StoredJson, null>): Prisma.InputJsonValue {
+	return parsePrismaInputJson(value);
+}
+
+function toNullableJsonInput(value: StoredJson): Prisma.InputJsonValue | Prisma.NullableJsonNullValueInput {
+	return parsePrismaNullableJson(value);
 }
 
 function toRequestRow(entry: RequestLogEntry): Prisma.TelescopeRequestCreateInput {
@@ -401,9 +407,9 @@ function toRequestRow(entry: RequestLogEntry): Prisma.TelescopeRequestCreateInpu
 		queryString: entry.queryString,
 		ip: entry.ip,
 		userAgent: entry.userAgent,
-		requestBody: toJsonInput(entry.requestBody),
-		responseBody: toJsonInput(entry.responseBody),
-		requestHeaders: toJsonInput(entry.requestHeaders),
+		requestBody: toNullableJsonInput(entry.requestBody),
+		responseBody: toNullableJsonInput(entry.responseBody),
+		requestHeaders: toNullableJsonInput(entry.requestHeaders),
 		spans: toJsonInput(entry.spans),
 		logs: toJsonInput(entry.logs),
 		createdAt: entry.createdAt,
@@ -547,7 +553,7 @@ function toDumpRow(entry: DumpEntry): Prisma.TelescopeDumpCreateInput {
 	return {
 		id: entry.id,
 		name: entry.name,
-		value: toJsonInput(entry.value),
+		value: parsePrismaRequiredJson(entry.value),
 		correlationId: entry.correlationId,
 		createdAt: entry.createdAt,
 	};
@@ -655,8 +661,11 @@ function mapAlertRow(row: {
 }
 
 /** Zod-parse a Json column back into `Record<string, string> | null`. */
-function parseHeaderMap(value: Prisma.JsonValue | null): Record<string, string> | null {
-	const parsed = z.record(z.string(), z.string()).nullable().safeParse(value);
+function parseHeaderMap(value: Prisma.JsonValue | null): StringRecordNullable {
+	if (value === null) {
+		return null;
+	}
+	const parsed = StringRecordSchema.safeParse(value);
 	return parsed.success ? parsed.data : null;
 }
 

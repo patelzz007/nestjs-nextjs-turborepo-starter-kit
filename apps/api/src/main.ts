@@ -11,11 +11,13 @@ import fastifyRateLimit from "@fastify/rate-limit";
 import fastifyRequestContext from "@fastify/request-context";
 import fastifyUnderPressure from "@fastify/under-pressure";
 import { nanoid } from "nanoid";
+import { StringValueSchema } from "@workspace/shared";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { API_DEPRECATED_VERSIONS, API_VERSION, API_VERSION_PREFIX, apiDocsPath, apiVersionPrefix, type ApiVersion } from "@workspace/shared";
 
 import { AppModule } from "./app.module";
 import { setupApiDocs } from "./common/api-docs";
+import { readFirstHeader, readReplyHeader } from "./common/utils/http-headers";
 import { LogService } from "./modules/logs/logs.service";
 import { VersionController } from "./modules/health/version.controller";
 
@@ -35,7 +37,7 @@ interface FastifyBootstrapHooks {
 
 interface FastifyRouteOptions {
 	readonly url?: string;
-	config?: Record<string, unknown>;
+	config?: Record<string, string | number | boolean | { readonly max: number; readonly timeWindow: string }>;
 }
 
 /** Extract the version segment of a versioned URL (`"/api/v1/foo"` → `"v1"`). */
@@ -72,8 +74,8 @@ async function bootstrap(): Promise<void> {
 			},
 		},
 		genReqId: (req: { readonly headers?: Readonly<Record<string, string | string[] | undefined>> }): string => {
-			const header: string | string[] | undefined = req.headers?.["x-request-id"] ?? req.headers?.["x-correlation-id"];
-			if (typeof header === "string" && header.length > 0) {
+			const header: string | undefined = readFirstHeader(req.headers?.["x-request-id"] ?? req.headers?.["x-correlation-id"]);
+			if (header !== undefined) {
 				return header;
 			}
 			return nanoid();
@@ -129,8 +131,8 @@ async function bootstrap(): Promise<void> {
 		max: 300,
 		timeWindow: "1 minute",
 		keyGenerator: (request: FastifyRequest): string => {
-			const acceptVersion: unknown = request.headers["accept-version"];
-			const requested: ApiVersion | undefined = typeof acceptVersion === "string" && acceptVersion.length > 0 ? VersionController.toApiVersion(acceptVersion) : undefined;
+			const acceptVersionHeader: string | undefined = readFirstHeader(request.headers["accept-version"]);
+			const requested: ApiVersion | undefined = acceptVersionHeader !== undefined ? VersionController.toApiVersion(acceptVersionHeader) : undefined;
 			const version: string = requested ?? apiVersionOfUrl(request.url) ?? "unversioned";
 			// `request.ip` is always a string on Fastify (socket or forwarded).
 			return `${request.ip}:${version}`;
@@ -247,8 +249,8 @@ async function bootstrap(): Promise<void> {
 	// major without breaking old clients — a v2 controller needs no client
 	// changes to be reached by header-carrying callers.
 	fastifyInstance.addHook("onRequest", (request, _reply, done): void => {
-		const acceptVersion: unknown = request.headers["accept-version"];
-		if (typeof acceptVersion === "string" && acceptVersion.length > 0) {
+		const acceptVersion: string | undefined = readFirstHeader(request.headers["accept-version"]);
+		if (acceptVersion !== undefined) {
 			const requested: ApiVersion | undefined = VersionController.toApiVersion(acceptVersion);
 			if (requested !== undefined && requested !== API_VERSION) {
 				// Fastify's `request.url` getter reads `raw.url`, so writing the
@@ -293,8 +295,9 @@ async function bootstrap(): Promise<void> {
 				reply.header("Sunset", deprecated.sunsetAt);
 			}
 		}
-		const contentType: unknown = reply.getHeader("content-type");
-		if (typeof payload !== "string" || typeof contentType !== "string" || !contentType.includes("text/html")) {
+		const contentType: string | undefined = readReplyHeader(reply.getHeader("content-type"));
+		const payloadText = StringValueSchema.safeParse(payload);
+		if (!payloadText.success || contentType === undefined || !contentType.includes("text/html")) {
 			done(null, payload);
 			return;
 		}
@@ -308,13 +311,13 @@ async function bootstrap(): Promise<void> {
 		// for this page ONLY (the runtime styles are swagger-ui-dist's own static
 		// CSS-in-JS, not attacker-controlled), while `script-src` stays
 		// nonce-strict — the security property that was actually tightened.
-		const csp: unknown = reply.getHeader("content-security-policy");
-		if (typeof csp === "string") {
+		const csp: string | undefined = readReplyHeader(reply.getHeader("content-security-policy"));
+		if (csp !== undefined) {
 			reply.header("Content-Security-Policy", csp.replace(/style-src 'self' 'nonce-[^;']*'/, "style-src 'self' 'unsafe-inline'"));
 		}
 
 		const nonce = reply.cspNonce;
-		done(null, payload.replace(/<style>/g, `<style nonce="${nonce.style}">`).replace(/<script>/g, `<script nonce="${nonce.script}">`));
+		done(null, payloadText.data.replace(/<style>/g, `<style nonce="${nonce.style}">`).replace(/<script>/g, `<script nonce="${nonce.script}">`));
 	});
 
 	// Access-log every response (method · version · path · status · duration).

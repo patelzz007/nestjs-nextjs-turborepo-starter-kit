@@ -1,15 +1,9 @@
-import { Injectable } from "@nestjs/common";
 import type { CookieSerializeOptions } from "@fastify/cookie";
-import { z } from "zod";
+import { Injectable } from "@nestjs/common";
 
-// ── Exported Constants ─────────────────────────────────────────────────────
+import { type CookieNames } from "@workspace/shared";
 
-/**
- * Zod enum of all supported cookie names — the single source of truth.
- */
-export const CookieNamesSchema = z.enum(["accessToken", "refreshToken", "adminAccessToken", "adminRefreshToken"]);
-
-export type CookieNames = z.output<typeof CookieNamesSchema>;
+export type { CookieNames };
 
 /** Name of the access token cookie */
 export const ACCESS_TOKEN_COOKIE_NAME: CookieNames = "accessToken";

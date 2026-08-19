@@ -1,7 +1,10 @@
 import { BadRequestException, Injectable, type PipeTransform } from "@nestjs/common";
 import Ajv, { type ErrorObject, type ValidateFunction } from "ajv";
-import type { z } from "zod/v4";
+import { z } from "zod";
+import type { z as ZodV4 } from "zod/v4";
 import { toJSONSchema } from "zod/v4";
+
+import { EmailAddressSchema, JsonObjectSchema, type JsonObject, type JsonValue } from "@workspace/shared";
 
 /**
  * Validation pipe backed by a COMPILED JSON-Schema validator instead of a
@@ -19,7 +22,7 @@ import { toJSONSchema } from "zod/v4";
  * and tests that asserted on it keep working unchanged.
  */
 @Injectable()
-export class ZodValidationPipe implements PipeTransform {
+export class ZodValidationPipe implements PipeTransform<JsonValue, JsonValue> {
 	/** Compiled Ajv (matching zod v4's `toJSONSchema` output). */
 	private readonly ajv: Ajv = new Ajv({
 		strict: false,
@@ -33,11 +36,11 @@ export class ZodValidationPipe implements PipeTransform {
 	});
 
 	/** Cache of compiled validators keyed by schema reference. */
-	private readonly cache = new WeakMap<z.ZodType, ValidateFunction>();
+	private readonly cache = new WeakMap<ZodV4.ZodType, ValidateFunction>();
 
-	constructor(private readonly schema: z.ZodType) {}
+	constructor(private readonly schema: ZodV4.ZodType) {}
 
-	public transform(value: unknown): unknown {
+	public transform(value: JsonValue): JsonValue {
 		const validator: ValidateFunction = this.getValidator();
 
 		if (validator(value)) {
@@ -68,20 +71,14 @@ export class ZodValidationPipe implements PipeTransform {
 		// schemas). Zod remains the single source of truth; this is purely a
 		// compiled validation fast-path. The `$schema` header is stripped: Ajv
 		// defaults to draft-07 and can't resolve the 2020-12 meta-schema URI.
-		const schema: Record<string, unknown> = toJSONSchema(this.schema);
-		// Strip the `$schema` header (Ajv defaults to draft-07 and can't resolve
-		// the 2020-12 meta-schema URI) — done via an explicit filter so no
-		// unused destructured binding trips the naming convention.
-		const compiledSchema: Record<string, unknown> = Object.fromEntries(Object.entries(schema).filter(([key]: readonly [string, unknown]): boolean => key !== "$schema"));
+		const schema: JsonObject = JsonObjectSchema.parse(toJSONSchema(this.schema));
+		const compiledSchema: JsonObject = JsonObjectSchema.parse(Object.fromEntries(Object.entries(schema).filter(([key]: readonly [string, JsonValue]): boolean => key !== "$schema")));
 
 		// zod's `.email()` emits `format: "email"`; Ajv doesn't know the format
 		// out of the box, so register the standard one (matches the strictness
 		// of zod's own check closely enough for the wire contract).
-		this.ajv.addFormat("email", (value: unknown): boolean => {
-			if (typeof value !== "string") {
-				return false;
-			}
-			return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+		this.ajv.addFormat("email", (value: JsonValue): boolean => {
+			return EmailAddressSchema.safeParse(value).success;
 		});
 
 		const validator: ValidateFunction = this.ajv.compile(compiledSchema);

@@ -4,9 +4,8 @@ import { nanoid } from "nanoid";
 import { createHash } from "node:crypto";
 import { hostname } from "node:os";
 import { type Observable, tap } from "rxjs";
-import { z } from "zod";
-
 import {
+	StringValueSchema,
 	TelescopeJsonValueSchema,
 	TelescopePiiCategorySchema,
 	nowEpochMs,
@@ -290,7 +289,7 @@ export class TelescopeInterceptor implements NestInterceptor {
 
 	private readUserAgent(request: FastifyRequest): string | null {
 		const raw: string | string[] | undefined = request.headers["user-agent"];
-		const parsed = z.string().safeParse(raw);
+		const parsed = StringValueSchema.safeParse(raw);
 		return parsed.success ? parsed.data : null;
 	}
 

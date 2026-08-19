@@ -1,14 +1,7 @@
-import { z } from "zod";
+import { WelcomeEmailPropsSchema, type WelcomeEmailProps } from "@workspace/shared";
 
-import { BaseEmailPropsSchema, BaseEmailTemplate, type CtaConfig } from "../base/base-email-template";
+import { BaseEmailTemplate, type CtaConfig, type EmailAccent } from "../base/base-email-template";
 import type { EmailRenderContext } from "../base/email-render-context";
-
-export const WelcomeEmailPropsSchema = BaseEmailPropsSchema.extend({
-	/** Recipient's display name (never the subject line — privacy). */
-	fullName: z.string().min(1),
-});
-
-export type WelcomeEmailProps = z.output<typeof WelcomeEmailPropsSchema>;
 
 /**
  * Sent once after the first successful email verification. Onboarding email —
@@ -24,7 +17,7 @@ export class WelcomeEmailTemplate extends BaseEmailTemplate<WelcomeEmailProps> {
 	public readonly key: string = "welcome";
 	public readonly propsSchema = WelcomeEmailPropsSchema;
 	public readonly subject: string = "Welcome aboard!";
-	protected readonly accent = "green" as const;
+	protected readonly accent: EmailAccent = "green";
 	protected readonly eyebrow: string = "Getting Started";
 	protected readonly heading: string = "You're in!";
 

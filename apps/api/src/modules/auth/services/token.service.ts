@@ -11,6 +11,7 @@ import { ZodError } from "zod";
 import {
 	AccessTokenPayloadSchema,
 	EmailVerificationTokenPayloadSchema,
+	type EmailVerificationTokenPayload,
 	RefreshTokenPayloadSchema,
 	type AccessTokenPayload,
 	type FlatUserResponse,
@@ -18,6 +19,7 @@ import {
 	type RefreshTokenPayload,
 } from "@workspace/shared";
 
+import { CaughtValueSchema } from "@workspace/shared";
 import { parseExpiryToSeconds } from "../../../common/utils/expiry";
 import { TypedConfigService } from "../../../config/typed-config.service";
 
@@ -89,15 +91,16 @@ export class TokenService {
 				secret: this.config.jwtAccessSecret,
 			});
 			return AccessTokenPayloadSchema.parse(payload);
-		} catch (error: unknown) {
-			if (error instanceof TokenExpiredError) {
+		} catch (error) {
+			const caught = CaughtValueSchema.parse(error);
+			if (caught instanceof TokenExpiredError) {
 				throw new UnauthorizedException({
 					message: "Access token has expired",
 					error: "ACCESS_TOKEN_EXPIRED",
 				});
 			}
-			if (error instanceof ZodError) {
-				this.logger.error(`Access token payload failed schema validation: ${error.message}`);
+			if (caught instanceof ZodError) {
+				this.logger.error(`Access token payload failed schema validation: ${caught.message}`);
 			}
 			throw new UnauthorizedException({
 				message: "Invalid or malformed access token",
@@ -116,15 +119,16 @@ export class TokenService {
 				secret: this.config.jwtRefreshSecret,
 			});
 			return RefreshTokenPayloadSchema.parse(payload);
-		} catch (error: unknown) {
-			if (error instanceof TokenExpiredError) {
+		} catch (error) {
+			const caught = CaughtValueSchema.parse(error);
+			if (caught instanceof TokenExpiredError) {
 				throw new UnauthorizedException({
 					message: "Refresh token has expired",
 					error: "REFRESH_TOKEN_EXPIRED",
 				});
 			}
-			if (error instanceof ZodError) {
-				this.logger.error(`Refresh token payload failed schema validation: ${error.message}`);
+			if (caught instanceof ZodError) {
+				this.logger.error(`Refresh token payload failed schema validation: ${caught.message}`);
 			}
 			throw new UnauthorizedException({
 				message: "Invalid or malformed refresh token",
@@ -151,13 +155,15 @@ export class TokenService {
 	 */
 	public async verifyEmailToken(token: string): Promise<string> {
 		try {
-			const payload = await this.jwtService.verifyAsync(token, {
-				secret: this.config.emailVerificationSecret,
-			});
-			const parsed = EmailVerificationTokenPayloadSchema.parse(payload);
-			return parsed.sub;
-		} catch (error: unknown) {
-			if (error instanceof UnauthorizedException) throw error;
+			const payload: EmailVerificationTokenPayload = EmailVerificationTokenPayloadSchema.parse(
+				await this.jwtService.verifyAsync(token, {
+					secret: this.config.emailVerificationSecret,
+				}),
+			);
+			return payload.sub;
+		} catch (error) {
+			const caught = CaughtValueSchema.parse(error);
+			if (caught instanceof UnauthorizedException) throw caught;
 			throw new UnauthorizedException("Invalid or expired verification token");
 		}
 	}

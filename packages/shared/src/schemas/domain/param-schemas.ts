@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { EmailTemplateKeySchema } from "../email/email";
+
 /**
  * Shared Zod param validation schemas for route parameters.
  *
@@ -54,10 +56,7 @@ export type TelescopeScheduleNameParam = z.output<typeof TelescopeScheduleNamePa
 
 // ── Email Template Key Param ──────────────────────────────────────────────
 
-/** Validates an email template key param. */
-export const EmailTemplateKeyParamSchema = z
-	.string()
-	.min(1, "Template key is required")
-	.max(128, "Template key too long");
+/** Validates an email template key param — must match a registered template. */
+export const EmailTemplateKeyParamSchema = EmailTemplateKeySchema;
 
 export type EmailTemplateKeyParam = z.output<typeof EmailTemplateKeyParamSchema>;

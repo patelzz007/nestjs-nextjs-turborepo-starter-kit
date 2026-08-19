@@ -1,6 +1,12 @@
-import { z } from "zod";
-
-import { TelescopeJsonValueSchema, type TelescopeJsonValue, type TelescopePiiCategory, type TelescopePiiFlag } from "@workspace/shared";
+import {
+	StringValueSchema,
+	TelescopeJsonObjectSchema,
+	TelescopeJsonScalarSchema,
+	TelescopeJsonValueSchema,
+	type TelescopeJsonValue,
+	type TelescopePiiCategory,
+	type TelescopePiiFlag,
+} from "@workspace/shared";
 
 /**
  * Feature 17 — PII scanner.
@@ -57,15 +63,15 @@ const REDACTED: Readonly<Record<TelescopePiiCategory, string>> = {
 };
 
 function isString(value: TelescopeJsonValue): value is string {
-	return z.string().safeParse(value).success;
+	return StringValueSchema.safeParse(value).success;
 }
 
 function isObject(value: TelescopeJsonValue): value is Record<string, TelescopeJsonValue> {
-	return z.record(z.string(), TelescopeJsonValueSchema).safeParse(value).success;
+	return TelescopeJsonObjectSchema.safeParse(value).success;
 }
 
 function isScalar(value: TelescopeJsonValue): boolean {
-	return z.boolean().safeParse(value).success || z.number().safeParse(value).success || value === null;
+	return TelescopeJsonScalarSchema.safeParse(value).success;
 }
 
 /**

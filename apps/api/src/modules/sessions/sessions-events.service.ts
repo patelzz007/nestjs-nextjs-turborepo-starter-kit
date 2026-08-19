@@ -1,33 +1,11 @@
 import { Injectable } from "@nestjs/common";
 import { EventEmitter } from "node:events";
 import { Observable } from "rxjs";
-import { z } from "zod";
+
+import { type SessionActionEvent } from "@workspace/shared";
 
 /** Event name used on the internal emitter for every session action. */
 export const SESSION_ACTION_EVENT = "session.action";
-
-/**
- * Typed payload for a completed session action (token refresh, device
- * logout, logout-all). `refresh` fires on every token rotation — the
- * telescope adapter throttles those; `logout-*` actions are rare and always
- * recorded.
- *
- * No telescope types live here — this is a plain domain event. The telescope
- * side (TelescopeSessionsJobAdapter) subscribes and records each action as a
- * job.
- */
-export const SessionActionEventSchema = z
-	.object({
-		action: z.enum(["refresh", "logout-device", "logout-all"]),
-		userId: z.string(),
-		status: z.enum(["succeeded", "failed"]),
-		error: z.string().nullable(),
-		/** Wall-clock duration of the whole action in ms. */
-		durationMs: z.number().int().nonnegative(),
-	})
-	.strict();
-
-export type SessionActionEvent = z.output<typeof SessionActionEventSchema>;
 
 /**
  * In-process pub/sub bridge between the session lifecycle and every observer

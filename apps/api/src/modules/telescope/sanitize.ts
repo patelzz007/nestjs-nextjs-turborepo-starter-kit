@@ -1,6 +1,10 @@
-import { z } from "zod";
-
-import { TelescopeJsonValueSchema, type TelescopeJsonValue } from "@workspace/shared";
+import {
+	StringValueSchema,
+	TelescopeJsonObjectSchema,
+	TelescopeJsonScalarSchema,
+	TelescopeJsonValueSchema,
+	type TelescopeJsonValue,
+} from "@workspace/shared";
 
 /**
  * Keys that are ALWAYS stripped from stored data — even when explicitly
@@ -23,15 +27,15 @@ export const MAX_STRING_FIELD_CHARS = 500;
 const REDACT_KEY_PATTERN_FOR_KEY: (key: string) => boolean = (key) => REDACT_KEY_PATTERN.test(key);
 
 function isString(value: TelescopeJsonValue): value is string {
-	return z.string().safeParse(value).success;
+	return StringValueSchema.safeParse(value).success;
 }
 
 function isScalar(value: TelescopeJsonValue): boolean {
-	return z.boolean().safeParse(value).success || z.number().safeParse(value).success || value === null;
+	return TelescopeJsonScalarSchema.safeParse(value).success;
 }
 
 function isObject(value: TelescopeJsonValue): value is Record<string, TelescopeJsonValue> {
-	return z.record(z.string(), TelescopeJsonValueSchema).safeParse(value).success;
+	return TelescopeJsonObjectSchema.safeParse(value).success;
 }
 
 /**

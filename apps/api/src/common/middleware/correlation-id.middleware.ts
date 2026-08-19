@@ -2,7 +2,7 @@ import { Injectable, type NestMiddleware } from "@nestjs/common";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { nanoid } from "nanoid";
 
-import type { JsonValue } from "../interfaces/json";
+import type { JsonValue } from "@workspace/shared";
 
 /**
  * The raw Node request as seen by Nest middleware on the Fastify adapter.

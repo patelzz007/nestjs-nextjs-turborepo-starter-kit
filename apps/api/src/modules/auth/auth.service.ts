@@ -1,7 +1,8 @@
 import { ConflictException, ForbiddenException, Injectable, NotFoundException, UnauthorizedException } from "@nestjs/common";
 import {
-	epochMs,
+	AuthFlowEventSchema,
 	PaginationSchema,
+	epochMs,
 	type AdminUserDetail,
 	type AdminUserListQuery,
 	type EpochMs,
@@ -28,7 +29,7 @@ import { LogService } from "../../modules/logs/logs.service";
 import { PrismaService } from "../../prisma/prisma.service";
 import { RbacService } from "../rbac/rbac.service";
 
-import { AuthEventsService, AuthFlowEventSchema } from "./services/auth-events.service";
+import { AuthEventsService } from "./services/auth-events.service";
 import { CryptoService } from "./services/crypto.service";
 import { EmailService } from "./services/email.service";
 import { TokenService } from "./services/token.service";

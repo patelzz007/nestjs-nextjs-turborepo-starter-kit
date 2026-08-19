@@ -1,12 +1,12 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
-import type { ImpersonateResponse, StopImpersonationResponse, UserResponse } from "@workspace/shared";
+import { ImpersonationActionEventSchema, type ImpersonateResponse, type StopImpersonationResponse, type UserResponse } from "@workspace/shared";
 
 import { LogService } from "../../modules/logs/logs.service";
 import { PrismaService } from "../../prisma/prisma.service";
 import { RbacService } from "../rbac/rbac.service";
 import { AuthService } from "../auth/auth.service";
 import { TokenService } from "../auth/services/token.service";
-import { ImpersonationActionEventSchema, ImpersonationEventsService } from "./impersonation-events.service";
+import { ImpersonationEventsService } from "./impersonation-events.service";
 
 /**
  * SuperAdmin impersonation flows — starting and stopping impersonation,

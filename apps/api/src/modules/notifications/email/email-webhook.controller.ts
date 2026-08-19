@@ -3,12 +3,20 @@ import type { RawBodyRequest } from "@nestjs/common";
 import { ApiBody, ApiHeader, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { ThrottlerGuard } from "@nestjs/throttler";
 import { Resend } from "resend";
-import { z } from "zod";
 import type { FastifyRequest } from "fastify";
 
-import type { EmailLogStatus, ResendWebhookEvent } from "@workspace/shared";
-import { ResendDeliveryDetailSchema, ResendWebhookEventSchema, ResendWebhookHeadersSchema } from "@workspace/shared";
+import {
+	CaughtValueSchema,
+	NonEmptyStringSchema,
+	ResendDeliveryDetailSchema,
+	ResendWebhookEventSchema,
+	ResendWebhookHeadersSchema,
+	StringValueSchema,
+	type EmailLogStatus,
+	type ResendWebhookEvent,
+} from "@workspace/shared";
 
+import { readCaughtErrorMessage } from "../../../common/utils/caught-error";
 import { TypedConfigService } from "../../../config/typed-config.service";
 import { LogService } from "../../logs/logs.service";
 import { Public } from "../../auth/decorators/public.decorator";
@@ -16,8 +24,6 @@ import { RlsBypass } from "../../auth/decorators/rls-bypass.decorator";
 
 import { EmailLogService, type WebhookUpdateResult } from "./email-log.service";
 import { ResendWebhookEventDto } from "./dtos/resend-webhook-event.dto";
-
-const NonEmptyHeaderValueSchema = z.string().min(1);
 
 /**
  * Event type → EmailLog status. Delivery events we don't track return
@@ -176,12 +182,12 @@ export class EmailWebhookController {
 		const rawBody: string = this.readRawBody(req);
 
 		const readWebhookHeader = (name: string): string | undefined => {
-			const direct = NonEmptyHeaderValueSchema.safeParse(headers[name]);
+			const direct = NonEmptyStringSchema.safeParse(headers[name]);
 			if (direct.success) {
 				return direct.data;
 			}
 			const svixName: string = name.replace("webhook-", "svix-");
-			const svix = NonEmptyHeaderValueSchema.safeParse(headers[svixName]);
+			const svix = NonEmptyStringSchema.safeParse(headers[svixName]);
 			return svix.success ? svix.data : undefined;
 		};
 
@@ -198,8 +204,8 @@ export class EmailWebhookController {
 			// Resend delivery always carries one of the two naming schemes, so
 			// this line proves whether the delivery is real (and which names it
 			// used) or a browser/curl probe.
-			const userAgent: string = NonEmptyHeaderValueSchema.safeParse(req.headers["user-agent"]).data ?? "(none)";
-			const remoteIp: string = NonEmptyHeaderValueSchema.safeParse(req.ip).data ?? "(unknown)";
+			const userAgent: string = NonEmptyStringSchema.safeParse(req.headers["user-agent"]).data ?? "(none)";
+			const remoteIp: string = NonEmptyStringSchema.safeParse(req.ip).data ?? "(unknown)";
 			const signatureHeadersSeen: string = Object.keys(req.headers)
 				.filter((headerName: string): boolean => /id|signature|timestamp/i.test(headerName))
 				.join(", ");
@@ -228,8 +234,9 @@ export class EmailWebhookController {
 				return { received: true };
 			}
 			resendEvent = parsed.data;
-		} catch (cause: unknown) {
-			const rawReason: string = cause instanceof Error ? cause.message : "unknown verification error";
+		} catch (cause) {
+			const caught = CaughtValueSchema.parse(cause);
+			const rawReason: string = readCaughtErrorMessage(caught);
 			const reason: string = /too old|too new|matching signature|missing required header/i.test(rawReason) ? rawReason : "unexpected verification error";
 			this.logService.warn(`Webhook signature verification failed: ${rawReason}`, { context: "EmailWebhookController" });
 			const hint: string = /too old|too new/i.test(reason)
@@ -270,7 +277,7 @@ export class EmailWebhookController {
 
 	private readRawBody(req: RawBodyRequest<FastifyRequest>): string {
 		const raw = req.rawBody;
-		const asString = z.string().safeParse(raw);
+		const asString = StringValueSchema.safeParse(raw);
 		if (asString.success) {
 			return asString.data;
 		}

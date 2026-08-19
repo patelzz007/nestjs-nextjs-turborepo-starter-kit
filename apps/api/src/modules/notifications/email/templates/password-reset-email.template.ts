@@ -1,16 +1,10 @@
-import { z } from "zod";
+import {
+	PasswordResetEmailPropsSchema,
+	type PasswordResetEmailProps,
+} from "@workspace/shared";
 
-import { BaseEmailPropsSchema, BaseEmailTemplate, type CtaConfig } from "../base/base-email-template";
+import { BaseEmailTemplate, type CtaConfig, type EmailAccent } from "../base/base-email-template";
 import type { EmailRenderContext } from "../base/email-render-context";
-
-export const PasswordResetEmailPropsSchema = BaseEmailPropsSchema.extend({
-	/** One-time reset token embedded in the link. */
-	resetToken: z.string().min(1),
-	/** Link lifetime shown to the user (default 1h). */
-	expiresInHours: z.number().int().positive().default(1),
-});
-
-export type PasswordResetEmailProps = z.output<typeof PasswordResetEmailPropsSchema>;
 
 /**
  * Sent when a user requests a password reset. The link contains a raw,
@@ -27,7 +21,7 @@ export class PasswordResetEmailTemplate extends BaseEmailTemplate<PasswordResetE
 	public readonly key: string = "password-reset";
 	public readonly propsSchema = PasswordResetEmailPropsSchema;
 	public readonly subject: string = "Reset your password";
-	protected readonly accent = "indigo" as const;
+	protected readonly accent: EmailAccent = "indigo";
 	protected readonly eyebrow: string = "Password Reset";
 	protected readonly heading: string = "Let's get you back in";
 

@@ -16,6 +16,16 @@ export const TelescopeJsonValueSchema: z.ZodType<TelescopeJsonValue> = z.lazy(()
 	z.union([z.string(), z.number(), z.boolean(), z.null(), z.array(TelescopeJsonValueSchema), z.record(z.string(), TelescopeJsonValueSchema)]),
 );
 
+/** Runtime guard: JSON object whose values are {@link TelescopeJsonValue}. */
+export const TelescopeJsonObjectSchema = z.record(z.string(), TelescopeJsonValueSchema);
+
+export type TelescopeJsonObject = z.output<typeof TelescopeJsonObjectSchema>;
+
+/** Runtime guard: boolean, number, or null (excludes strings and nested structures). */
+export const TelescopeJsonScalarSchema = z.union([z.boolean(), z.number(), z.null()]);
+
+export type TelescopeJsonScalar = z.output<typeof TelescopeJsonScalarSchema>;
+
 // ── Per-request console capture (improvement 16) ───────────────────────────
 // Declared before RequestLogEntrySchema, which references it.
 

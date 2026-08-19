@@ -1,8 +1,6 @@
-import { z } from "zod";
-
 import {
 	EmailPreviewPropValueSchema,
-	EmailTemplateKeySchema,
+	EmailTemplateKeyParamSchema,
 	EmailTemplateMetaSchema,
 	type EmailPreview,
 	type EmailTemplateKey,
@@ -134,6 +132,3 @@ export function buildEmailPreview(key: EmailTemplateKey, context: EmailRenderCon
 		props,
 	};
 }
-
-/** Route-param schema for the preview endpoint — rejects unknown keys. */
-export const EmailTemplateKeyParamSchema = z.enum(EmailTemplateKeySchema.options);

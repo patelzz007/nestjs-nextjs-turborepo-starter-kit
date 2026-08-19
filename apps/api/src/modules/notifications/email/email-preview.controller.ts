@@ -3,9 +3,12 @@ import { ApiNotFoundResponse, ApiOkResponse, ApiOperation, ApiTags } from "@nest
 
 import {
 	EmailPreviewSchema,
+	EmailRenderContextSchema,
 	EmailSendResultSchema,
+	EmailTemplateKeyParamSchema,
 	EmailTemplateMetaSchema,
 	type EmailPreview,
+	type EmailRenderContext,
 	type EmailSendResult,
 	type EmailTemplateMeta,
 	apiPath,
@@ -15,8 +18,7 @@ import { ZodValidationPipe } from "../../../common/pipes/zod-validation.pipe";
 import { RequirePermission } from "../../auth/decorators/require-permission.decorator";
 import { createWrappedDto, createWrappedArrayDto } from "../../../common/dto/response-wrapper";
 import { TypedConfigService } from "../../../config/typed-config.service";
-import { EmailRenderContextSchema, type EmailRenderContext } from "./base/email-render-context";
-import { EMAIL_TEMPLATE_REGISTRY, buildEmailPreview, EmailTemplateKeyParamSchema, listTemplateMeta } from "./email-template.registry";
+import { EMAIL_TEMPLATE_REGISTRY, buildEmailPreview, listTemplateMeta } from "./email-template.registry";
 import { EmailSenderService } from "./email-sender.service";
 
 // ── Wrapped Response DTOs ────────────────────────────────────────────────

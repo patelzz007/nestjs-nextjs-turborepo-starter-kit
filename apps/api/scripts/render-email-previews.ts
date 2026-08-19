@@ -23,7 +23,7 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 
-import { EmailRenderContextSchema } from "../src/modules/notifications/email/base/email-render-context";
+import { EmailRenderContextSchema } from "@workspace/shared";
 import { EMAIL_TEMPLATE_REGISTRY, type EmailTemplateEntry } from "../src/modules/notifications/email/email-template.registry";
 
 const CHROME_BIN = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";

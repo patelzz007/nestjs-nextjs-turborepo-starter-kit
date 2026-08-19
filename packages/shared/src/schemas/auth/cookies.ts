@@ -11,3 +11,18 @@ export const CookieResultSchema = z.object({
 });
 
 export type CookieResult = z.output<typeof CookieResultSchema>;
+
+/** Supported httpOnly auth cookie names. */
+export const CookieNamesSchema = z.enum(["accessToken", "refreshToken", "adminAccessToken", "adminRefreshToken"]);
+
+export type CookieNames = z.output<typeof CookieNamesSchema>;
+
+/** Login response fields stripped into httpOnly cookies by the API interceptor. */
+export const LoginTokenFieldsSchema = z
+	.object({
+		accessToken: z.string().min(1).optional(),
+		refreshToken: z.string().min(1).optional(),
+	})
+	.strict();
+
+export type LoginTokenFields = z.output<typeof LoginTokenFieldsSchema>;

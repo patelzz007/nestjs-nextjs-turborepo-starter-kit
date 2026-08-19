@@ -27,6 +27,9 @@ import {
 	TelescopeRequestListResponseSchema,
 	TelescopeSqlListResponseSchema,
 	TelescopeStreamEventSchema,
+	type ApiResponseMeta,
+	type TelescopeReplayInput,
+	type TelescopeStreamEvent,
 } from "@workspace/shared";
 import { z } from "zod";
 
@@ -90,7 +93,7 @@ function envelopeSchema<T extends z.ZodType>(
 ): z.ZodObject<{
 	success: z.ZodLiteral<true>;
 	data: T;
-	meta: typeof ApiResponseMetaSchema;
+	meta: z.ZodType<ApiResponseMeta>;
 }> {
 	return z.object({
 		success: z.literal(true),
@@ -208,7 +211,7 @@ async function main(): Promise<void> {
 				if (dataLine === undefined) {
 					continue;
 				}
-				const parsed: z.ZodSafeParseResult<z.output<typeof TelescopeStreamEventSchema>> = TelescopeStreamEventSchema.safeParse(JSON.parse(dataLine.slice(5).trim()));
+				const parsed: z.ZodSafeParseResult<TelescopeStreamEvent> = TelescopeStreamEventSchema.safeParse(JSON.parse(dataLine.slice(5).trim()));
 				if (!parsed.success) {
 					console.error(`[telescope:cli] non-JSON SSE frame: ${dataLine.slice(5, 125)}`);
 					continue;
@@ -232,7 +235,7 @@ async function main(): Promise<void> {
 			printUsage();
 			return;
 		}
-		const input: z.output<typeof TelescopeReplayInputSchema> = TelescopeReplayInputSchema.parse({ target });
+		const input: TelescopeReplayInput = TelescopeReplayInputSchema.parse({ target });
 		const response: Response = await fetch(`${BASE_URL}${API_PREFIX}/telescope/replay/${encodeURIComponent(id)}`, {
 			method: "POST",
 			headers: { ...headers, "content-type": "application/json" },

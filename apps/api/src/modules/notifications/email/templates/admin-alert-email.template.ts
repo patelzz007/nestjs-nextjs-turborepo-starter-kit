@@ -1,16 +1,10 @@
-import { z } from "zod";
+import {
+	AdminAlertEmailPropsSchema,
+	type AdminAlertEmailProps,
+} from "@workspace/shared";
 
-import { BaseEmailPropsSchema, BaseEmailTemplate, type CtaConfig } from "../base/base-email-template";
+import { BaseEmailTemplate, type CtaConfig, type EmailAccent } from "../base/base-email-template";
 import type { EmailRenderContext } from "../base/email-render-context";
-
-export const AdminAlertEmailPropsSchema = BaseEmailPropsSchema.extend({
-	/** Short alert title (appears in the subject + body). */
-	title: z.string().min(1),
-	/** Full alert body — line breaks are preserved as <br>. */
-	message: z.string().min(1),
-});
-
-export type AdminAlertEmailProps = z.output<typeof AdminAlertEmailPropsSchema>;
 
 /**
  * Ops alert for admins (failed webhook, quota breach, anomalous sign-in rate,
@@ -30,7 +24,7 @@ export class AdminAlertEmailTemplate extends BaseEmailTemplate<AdminAlertEmailPr
 	// Class fields initialize after the base constructor assigns `props`, so
 	// reading `this.props.title` here is safe.
 	public readonly subject: string = `[Admin] ${this.props.title}`;
-	protected readonly accent = "indigo" as const;
+	protected readonly accent: EmailAccent = "indigo";
 	protected readonly eyebrow: string = "Admin Alert";
 	protected readonly heading: string = this.props.title;
 

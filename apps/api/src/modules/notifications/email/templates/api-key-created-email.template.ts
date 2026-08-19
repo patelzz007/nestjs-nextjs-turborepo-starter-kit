@@ -1,19 +1,13 @@
 import { format } from "date-fns";
-import { z } from "zod";
 
-import { EpochMsSchema, nowEpochMs } from "@workspace/shared";
+import {
+	ApiKeyCreatedEmailPropsSchema,
+	nowEpochMs,
+	type ApiKeyCreatedEmailProps,
+} from "@workspace/shared";
 
-import { BaseEmailPropsSchema, BaseEmailTemplate, type CtaConfig } from "../base/base-email-template";
+import { BaseEmailTemplate, type CtaConfig, type EmailAccent } from "../base/base-email-template";
 import type { EmailRenderContext } from "../base/email-render-context";
-
-export const ApiKeyCreatedEmailPropsSchema = BaseEmailPropsSchema.extend({
-	/** Display name of the new API key. */
-	keyName: z.string().min(1),
-	/** When the key was created (epoch ms). */
-	createdAt: EpochMsSchema,
-});
-
-export type ApiKeyCreatedEmailProps = z.output<typeof ApiKeyCreatedEmailPropsSchema>;
 
 /**
  * Confirms a new API key was created. The full key secret is only ever shown
@@ -31,7 +25,7 @@ export class ApiKeyCreatedEmailTemplate extends BaseEmailTemplate<ApiKeyCreatedE
 	public readonly key: string = "api-key-created";
 	public readonly propsSchema = ApiKeyCreatedEmailPropsSchema;
 	public readonly subject: string = "New API key created";
-	protected readonly accent = "sky" as const;
+	protected readonly accent: EmailAccent = "sky";
 	protected readonly eyebrow: string = "API Keys";
 	protected readonly heading: string = "A new API key was created";
 

@@ -3,7 +3,8 @@ import type { Subscription } from "rxjs";
 
 import { type TelescopeOptions } from "@workspace/shared";
 
-import { EmailLogEventsService, type EmailLogUpdatedEvent } from "../notifications/email/email-log-events.service";
+import { EmailLogEventsService } from "../notifications/email/email-log-events.service";
+import { type EmailLogUpdatedEvent } from "@workspace/shared";
 
 import { TelescopeAlertService } from "./telescope-alert.service";
 import { TelescopeEventBus } from "./telescope-event-bus";

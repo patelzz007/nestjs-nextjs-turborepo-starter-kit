@@ -28,7 +28,25 @@ Database → Prisma → Zod Schema (packages/shared) → API (NestJS) → Next.j
 - **PREFER** Generic types (Priority 0)
 - **AVOID** `typeof` checks ( try avoiding typeof xxx === "string" or something along that line ) - use Zod schemas and infer types instead
 - **ALWAYS** use TypeScript access modifiers (`public`, `private`, `protected`) and explicit return types
+- In zod, the type check is always written this way : 
 
+```typescript
+/** Completed impersonation action (start / stop). */
+export const ImpersonationActionEventSchema = z
+	.object({
+		action: z.enum(["start", "stop"]),
+		superAdminId: z.string(),
+		targetUserId: z.string(),
+		status: z.enum(["succeeded", "failed"]),
+		error: z.string().nullable(),
+		/** Wall-clock duration of the whole action in ms. */
+		durationMs: z.number().int().nonnegative(),
+	})
+	.strict();
+
+export type ImpersonationActionEvent = z.output<typeof ImpersonationActionEventSchema>;
+```
+- When inferring to the type, always use `ImpersonationActionEvent` and not the schema itself.. Never ever use the schema for the type / interface.
 ---
 
 ### ✅ DO THIS

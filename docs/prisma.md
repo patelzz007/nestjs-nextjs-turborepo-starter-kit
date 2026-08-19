@@ -138,9 +138,10 @@ pnpm db:generate
 1. **`schema.prisma`** — add the column, relation, or index.
 2. **`pnpm db:migrate`** (from `apps/api`) — writes `migrations/<timestamp>_*/migration.sql`, applies it, runs `prisma generate`.
 3. **`npx prisma generate`** is already part of `db:migrate`. Run `pnpm db:generate` only if you pulled migrations and need the client without creating a new one.
-4. **`packages/shared` Zod** — request/response/query schemas. Types are `z.output<typeof Schema>` (no hand-written twins).
+4. **`packages/shared` Zod** — request/response/query schemas. Types are `z.output<typeof Schema>` (no hand-written twins). Runtime helpers live under `schemas/runtime/`; internal events under `schemas/domain/events.ts`.
 5. **Nest HTTP boundary** — `ZodValidationPipe(apiContract.<domain>.<leaf>.input)` (or the same shared schema). Swagger samples come from `createZodDto` / `createWrappedDto` + `@ApiBody` / `@ApiOkResponse`, not a second DTO shape.
-6. **RLS** — if the table is tenant-scoped, add `ENABLE`/`FORCE ROW LEVEL SECURITY` + policies in SQL (Prisma PSL cannot emit them). See §10.
+6. **Application types** — services, templates, and adapters import `X` (type) from `@workspace/shared`; `XSchema` only where `.parse()` / `safeParse()` runs. See `docs/typescript.md` §8.
+7. **RLS** — if the table is tenant-scoped, add `ENABLE`/`FORCE ROW LEVEL SECURITY` + policies in SQL (Prisma PSL cannot emit them). See §10.
 
 Things Prisma cannot represent (REVOKE, FORCE RLS, `SET ROLE`) stay in SQL **after**
 the schema change they belong to — never as a substitute for a column. In this repo

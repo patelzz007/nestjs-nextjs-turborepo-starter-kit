@@ -1,16 +1,10 @@
-import { z } from "zod";
+import {
+	VerificationEmailPropsSchema,
+	type VerificationEmailProps,
+} from "@workspace/shared";
 
-import { BaseEmailPropsSchema, BaseEmailTemplate, type CtaConfig } from "../base/base-email-template";
+import { BaseEmailTemplate, type CtaConfig, type EmailAccent } from "../base/base-email-template";
 import type { EmailRenderContext } from "../base/email-render-context";
-
-export const VerificationEmailPropsSchema = BaseEmailPropsSchema.extend({
-	/** One-time verification token embedded in the link. */
-	verificationToken: z.string().min(1),
-	/** Link lifetime shown to the user (default 24h). */
-	expiresInHours: z.number().int().positive().default(24),
-});
-
-export type VerificationEmailProps = z.output<typeof VerificationEmailPropsSchema>;
 
 /**
  * Sent after signup — proves the user owns the inbox before they can use
@@ -27,7 +21,7 @@ export class VerificationEmailTemplate extends BaseEmailTemplate<VerificationEma
 	public readonly key: string = "verification";
 	public readonly propsSchema = VerificationEmailPropsSchema;
 	public readonly subject: string = "Verify your email address";
-	protected readonly accent = "green" as const;
+	protected readonly accent: EmailAccent = "green";
 	protected readonly eyebrow: string = "Email Verification";
 	protected readonly heading: string = "Thanks for joining!";
 

@@ -3,7 +3,8 @@ import type { Subscription } from "rxjs";
 
 import { type TelescopeOptions } from "@workspace/shared";
 
-import { AuthEventsService, type AuthFlowEvent } from "../auth/services/auth-events.service";
+import { AuthEventsService } from "../auth/services/auth-events.service";
+import { type AuthFlowEvent } from "@workspace/shared";
 
 import { TelescopeAlertService } from "./telescope-alert.service";
 import { TelescopeEventBus } from "./telescope-event-bus";

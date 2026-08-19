@@ -1,36 +1,11 @@
 import { Injectable } from "@nestjs/common";
 import { EventEmitter } from "node:events";
 import { Observable } from "rxjs";
-import { z } from "zod";
+
+import { type AuthFlowEvent } from "@workspace/shared";
 
 /** Event name used on the internal emitter for every auth flow completion. */
 export const AUTH_FLOW_EVENT = "auth.flow";
-
-/**
- * Typed payload for a finished credential/identity flow (signup, login,
- * password reset, email verification). The flow is identified by `flow`, and
- * the outcome by `status` — failed attempts carry the short machine `error`
- * code (e.g. `INVALID_CREDENTIALS`, `ACCOUNT_LOCKED`) so Telescope can render
- * a failed job with a reason.
- *
- * No telescope types live here: this is a plain domain event. The telescope
- * side (TelescopeAuthJobAdapter) subscribes and records each flow as a job.
- */
-export const AuthFlowEventSchema = z
-	.object({
-		flow: z.enum(["signup", "login", "forgot-password", "reset-password", "verify-email"]),
-		/** The user the flow acted on — null when the flow could not identify one. */
-		userId: z.string().nullable(),
-		/** Login origin ("web" | "admin") — null for flows without a client type. */
-		clientType: z.string().nullable(),
-		status: z.enum(["succeeded", "failed"]),
-		error: z.string().nullable(),
-		/** Wall-clock duration of the whole flow in ms. */
-		durationMs: z.number().int().nonnegative(),
-	})
-	.strict();
-
-export type AuthFlowEvent = z.output<typeof AuthFlowEventSchema>;
 
 /**
  * In-process pub/sub bridge between the auth flows and every observer (today:

@@ -3,7 +3,8 @@ import type { Subscription } from "rxjs";
 
 import { type TelescopeOptions } from "@workspace/shared";
 
-import { ImpersonationEventsService, type ImpersonationActionEvent } from "../impersonation/impersonation-events.service";
+import { ImpersonationEventsService } from "../impersonation/impersonation-events.service";
+import { type ImpersonationActionEvent } from "@workspace/shared";
 
 import { TelescopeAlertService } from "./telescope-alert.service";
 import { TelescopeEventBus } from "./telescope-event-bus";

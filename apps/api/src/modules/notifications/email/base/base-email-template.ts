@@ -1,29 +1,17 @@
-import { z, type ZodType } from "zod";
+import { type ZodType } from "zod";
+
+import {
+	BaseEmailPropsSchema,
+	CtaConfigSchema,
+	EmailAccentSchema,
+	type BaseEmailProps,
+	type CtaConfig,
+	type EmailAccent,
+} from "@workspace/shared";
+
+export type { BaseEmailProps, CtaConfig, EmailAccent };
 
 import type { EmailRenderContext } from "./email-render-context";
-
-/**
- * Base props every email template accepts. Subclasses extend this with their
- * own fields (tokens, names, durations, …) via `.extend()`.
- */
-export const BaseEmailPropsSchema = z
-	.object({
-		to: z.email(),
-		cc: z.array(z.email()).optional(),
-		bcc: z.array(z.email()).optional(),
-		replyTo: z.email().optional(),
-	})
-	.strict();
-
-export type BaseEmailProps = z.output<typeof BaseEmailPropsSchema>;
-
-/**
- * Accent tokens — one per brand color family. Keeps the palette centralized
- * (rule 22: design-token driven) so templates never hardcode colors.
- */
-export const EmailAccentSchema = z.enum(["green", "indigo", "red", "amber", "sky"]);
-
-export type EmailAccent = z.output<typeof EmailAccentSchema>;
 
 /** Colors used by the shared shell for one accent. */
 export interface AccentPalette {
@@ -96,18 +84,6 @@ export const ACCENT_PALETTES: Readonly<Record<EmailAccent, AccentPalette>> = {
 		chipBorder: "#bae6fd",
 	},
 };
-
-/**
- * CTA button config — label + absolute URL.
- */
-export const CtaConfigSchema = z
-	.object({
-		label: z.string().min(1),
-		href: z.url(),
-	})
-	.strict();
-
-export type CtaConfig = z.output<typeof CtaConfigSchema>;
 
 /**
  * Abstract base for every transactional email.
