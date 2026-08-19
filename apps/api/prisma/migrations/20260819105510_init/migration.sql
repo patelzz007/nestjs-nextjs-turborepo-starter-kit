@@ -511,6 +511,52 @@ CREATE TABLE "telescope_annotations" (
     CONSTRAINT "telescope_annotations_pkey" PRIMARY KEY ("requestId")
 );
 
+-- CreateTable
+CREATE TABLE "backup_rate_limits" (
+    "id" TEXT NOT NULL,
+    "user_id" VARCHAR(64) NOT NULL,
+    "action" VARCHAR(16) NOT NULL,
+    "window_start" BIGINT NOT NULL,
+    "created_at" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
+
+    CONSTRAINT "backup_rate_limits_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "backup_circuit_breaker" (
+    "id" TEXT NOT NULL DEFAULT 'singleton',
+    "consecutive_failures" INTEGER NOT NULL DEFAULT 0,
+    "last_failure_at" BIGINT,
+    "tripped_at" BIGINT,
+    "updated_at" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
+
+    CONSTRAINT "backup_circuit_breaker_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "backup_restore_lock" (
+    "id" TEXT NOT NULL DEFAULT 'singleton',
+    "locked" BOOLEAN NOT NULL DEFAULT false,
+    "locked_by" VARCHAR(64),
+    "locked_at" BIGINT,
+    "expires_at" BIGINT,
+
+    CONSTRAINT "backup_restore_lock_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "telescope_backup_schedules" (
+    "id" TEXT NOT NULL,
+    "cron" VARCHAR(64) NOT NULL,
+    "name" VARCHAR(128) NOT NULL,
+    "enabled" BOOLEAN NOT NULL DEFAULT true,
+    "next_run" BIGINT NOT NULL,
+    "updated_at" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
+    "created_at" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
+
+    CONSTRAINT "telescope_backup_schedules_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "users_email_key" ON "users"("email");
 
@@ -714,6 +760,12 @@ CREATE INDEX "telescope_alerts_created_at_idx" ON "telescope_alerts"("created_at
 
 -- CreateIndex
 CREATE INDEX "telescope_annotations_created_at_idx" ON "telescope_annotations"("created_at");
+
+-- CreateIndex
+CREATE INDEX "backup_rate_limits_user_id_action_idx" ON "backup_rate_limits"("user_id", "action");
+
+-- CreateIndex
+CREATE INDEX "backup_rate_limits_window_start_idx" ON "backup_rate_limits"("window_start");
 
 -- AddForeignKey
 ALTER TABLE "roles" ADD CONSTRAINT "roles_parent_id_fkey" FOREIGN KEY ("parent_id") REFERENCES "roles"("id") ON DELETE SET NULL ON UPDATE CASCADE;

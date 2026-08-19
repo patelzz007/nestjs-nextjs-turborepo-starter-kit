@@ -1,7 +1,7 @@
 ---
 title: "Database Backup & Restore"
 tags: ["backup", "database", "pg_dump", "operations", "admin"]
-description: "Admin-triggered pg_dump snapshots with gzip compression, checksums, queueing, signed downloads, restore-to-a-new-database, and verification — plus the role-based rate limits and page-bound progress UI."
+description: "Admin-triggered pg_dump snapshots with gzip compression, checksums, queueing, signed downloads, restore-to-a-new-database, and verification — plus DB-backed rate limits, circuit breaker, restore lock, and cron scheduling."
 order: 19
 author: "Acme Inc."
 lastUpdated: 1787011200000
@@ -32,7 +32,8 @@ coverImage: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=form
 | `POST` | `/api/v1/backup` | Create a backup (202 Accepted, runs in the background) |
 | `GET` | `/api/v1/backup` | List history + operational facts (active flag, retention days) |
 | `GET` | `/api/v1/backup/options` | Excludable tables + env-driven default exclusions |
-| `GET` | `/api/v1/backup/schedules` | In-memory daily/weekly cron rows (static path; registered above `:id`) |
+| `GET` | `/api/v1/backup/schedules` | DB-backed daily/weekly cron rows (static path; registered above `:id`) |
+| `GET` | `/api/v1/backup/scheduler/status` | Scheduler health: DB-backed schedules + circuit breaker state + instance ID |
 | `POST` | `/api/v1/backup/schedules/:id/toggle` | Enable/disable a schedule (`{ enabled }`; typed via `api.backup.toggleSchedule`) |
 | `GET` | `/api/v1/backup/:id` | One backup's status/progress (the poll target) |
 | `POST` | `/api/v1/backup/:id/download` | Mint a signed download token (bound to the requesting admin) |
@@ -47,9 +48,9 @@ Every route requires the global `AuthGuard` **and** `BackupAdminGuard` (admin ac
 
 ## Rate limits
 
-Backup creation is capped per user over a **rolling hour** (in-memory window, reset on API
-restart). The cap is **role-based** — decided from the `isSuperAdmin` claim in the access token
-at request time:
+Backup creation is capped per user over a **rolling hour** (DB-backed via the `backup_rate_limits`
+table — survives restarts and works across multiple API replicas). The cap is **role-based** —
+decided from the `isSuperAdmin` claim in the access token at request time:
 
 | Role | Default cap | Env var |
 | --- | --- | --- |
@@ -120,7 +121,7 @@ for jobs it saw go active while the page was open, so loading history stays sile
               BackupController  (/api/v1/backup, BackupAdminGuard)
                                   |
                                   v
-                        BackupService (in-memory queue, max 3 waiting)
+                        BackupService (queue + DB-backed ops)
                                   |
                  +----------------+------------------+
                  v                                   v
@@ -130,14 +131,21 @@ for jobs it saw go active while the page was open, so loading history stays sile
                  |                                   |
         byte-count check ── rename ──►       count tables ── drop scratch
         SHA-256 ── row update ── prune
+
+  ── DB-backed state (survives restarts, multi-replica safe) ──
+
+  backup_rate_limits         rolling-window rate limiting per user/action
+  backup_circuit_breaker     singleton row: consecutive failure counter
+  backup_restore_lock        cluster-wide mutex for verify/restore (30-min TTL)
+  telescope_backup_schedules cron definitions (daily/weekly, nextRun in DB)
 ```
 
 The whole feature is one injectable service + one guarded controller. There is no queue
 library — the queue is an in-memory FIFO (`string[]`) because backups are single-host
 operations (pg_dump shells out to the same PostgreSQL server). A restart loses the in-memory
 queue, but rows persist: stuck `pending`/`processing` rows are failed at boot with
-`Backup interrupted by a server restart`, and orphaned `.sql.gz` files and leftover
-`verify_%` databases are swept.
+`Backup interrupted by a server restart`, orphaned `.sql.gz` files and leftover `verify_%`
+databases are swept, and stale restore locks are cleared.
 
 ### Module layout
 
@@ -213,9 +221,10 @@ All timestamps are epoch milliseconds stored as `bigint` — the FE formats with
 | `RESTORE_FAILED` | psql restore into scratch/new DB failed | The restore step failed |
 | `UNKNOWN` | Anything else (message is redacted) | The backup failed |
 
-The **circuit breaker** trips after 3 consecutive job failures: new creates return 503 until
-one job succeeds. Error messages are **redacted** (connection URLs / passwords stripped)
-before they reach the row or the logs.
+The **circuit breaker** (DB-backed via the `backup_circuit_breaker` singleton row — survives
+restarts and works across replicas) trips after 3 consecutive job failures: new creates
+return 503 until one succeeds. Error messages are **redacted** (connection URLs / passwords
+stripped) before they reach the row or the logs.
 
 ## Testing guide (local)
 
@@ -246,7 +255,7 @@ The API ships a seeded `admin@example.com` (regular admin, 5/hr) and
   restart mid-job fails the row at boot instead of leaving a ghost.
 - **Retries**: transient dump failures retry with backoff (3 attempts); timeouts never retry.
 - **Watchdogs**: 30 min for the dump, 5 min for finalize, 30 min for restores.
-- **Circuit breaker**: 3 consecutive failures block new creates until one succeeds.
+- **Circuit breaker**: 3 consecutive failures block new creates until one succeeds (DB-backed via `backup_circuit_breaker` — survives restarts, multi-replica safe).
 - **Disk checks**: free space is asserted at create **and** at job start (`df` with a `statfs`
   fallback); below `BACKUP_MIN_FREE_MB` the create is rejected.
 - **Atomic writes**: the dump is streamed to `<name>.part` with a byte-count verification and
@@ -305,9 +314,10 @@ database name interpolated into SQL) to show:
 - **Estimated backup time** (rough heuristic: ~100MB/min for pg_dump)
 - **Large database warning** (>10GB) with advice to consider schema-only or table exclusion
 
-### Backup Scheduling
+### Backup Scheduling (DB-Backed)
 
-Two built-in schedules run as system-level jobs:
+Schedule definitions persist in the `telescope_backup_schedules` table — they survive API
+restarts and work across multiple replicas. Two defaults are auto-seeded on first boot:
 
 | Schedule | Cron | Purpose |
 | --- | --- | --- |
@@ -315,8 +325,15 @@ Two built-in schedules run as system-level jobs:
 | `weekly` | `0 3 * * 0` | Weekly full backup on Sunday at 3 AM UTC |
 
 Schedules are visible in the backup panel (also on `GET /backup` as `schedules`) and
-toggled with `POST /api/v1/backup/schedules/:id/toggle`. The scheduler checks
-every 60 seconds. Scheduled backups are skipped when:
+toggled with `POST /api/v1/backup/schedules/:id/toggle`. The scheduler checks every 60
+seconds and updates `nextRun` in the DB so only one replica fires the backup.
+
+The `GET /backup/scheduler/status` endpoint exposes the full scheduler health:
+- All schedule definitions with enabled/disabled state and next-fire time
+- Circuit breaker state (consecutive failures, last failure, tripped time)
+- Instance ID (which API pod owns the ticker)
+
+Scheduled backups are skipped when:
 - A manual backup is already running
 - The circuit breaker is open (3+ consecutive failures)
 
@@ -365,6 +382,31 @@ finalization (checksum) and 100% on completion.
 | `BACKUP_DOWNLOAD_SECRET` | `backup-download-secret-change-me` | Signs download tokens (set a real secret in prod) |
 | `BACKUP_DOWNLOAD_TTL_MINUTES` | `15` | Download-token lifetime |
 | `BACKUP_DOWNLOAD_RATE_LIMIT` | `10` | Token mints / 15 min per user (`0` = off) |
+
+## DB-Backed Ops State
+
+All operational state that was previously in-memory is now persisted to PostgreSQL via four
+tables. This means state **survives API restarts** and works correctly when running
+**multiple API replicas**.
+
+| Table | Purpose | Key design |
+| --- | --- | --- |
+| `backup_rate_limits` | Rolling-window rate limiting | One row per user per action per creation. Old entries pruned on each check. |
+| `backup_circuit_breaker` | Consecutive failure counter | Singleton row (`id = 'singleton'`). Upserted atomically on each failure/success. |
+| `backup_restore_lock` | Cluster-wide mutex for verify/restore | Singleton row with `lockedBy` (instance ID) + 30-min auto-expiry safety net. |
+| `telescope_backup_schedules` | Cron schedule definitions | One row per schedule (daily/weekly). `nextRun` updated in DB to prevent double-fire. |
+
+All four tables have RLS bypass policies (they are internal system tables, not user data).
+The `prisma/rls.sql` file is the canonical source for their RLS setup.
+
+### Boot Recovery
+
+On startup (`onModuleInit`), the service:
+1. Fails rows stuck in `pending`/`processing` (the owning process is gone)
+2. Clears stale restore locks from crashed instances
+3. Sweeps orphaned dump files and leftover scratch databases
+4. Seeds default backup schedules if the table is empty
+5. Starts the minute ticker (only this instance fires scheduled backups)
 | `BACKUP_MIN_FREE_MB` | `1024` | Abort a new backup below this much free disk |
 
 **Prerequisites:** `pg_dump` and `psql` must be on the API server's `PATH` — the feature shells

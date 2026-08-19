@@ -88,6 +88,13 @@ interface BackupAuditEvent {
 	readonly metadata?: Readonly<Record<string, string | number | boolean | null>>;
 }
 
+/** Scheduler health response shape. */
+interface SchedulerStatusResponse {
+	readonly schedules: readonly { readonly id: string; readonly name: string; readonly enabled: boolean; readonly nextRun: number; readonly cron: string }[];
+	readonly circuitBreaker: { readonly consecutiveFailures: number; readonly lastFailureAt: number | null; readonly trippedAt: number | null };
+	readonly instanceId: string;
+}
+
 /**
  * Database backup jobs (pg_dump → gzip → file) with production hardening.
  *
@@ -104,25 +111,18 @@ interface BackupAuditEvent {
  */
 @Injectable()
 export class BackupService implements OnModuleInit, OnModuleDestroy {
-	/** Ids waiting behind the running job (FIFO, max `MAX_QUEUE_DEPTH`). */
+	/** Ids waiting behind the running job (FIFO, max `MAX_QUEUE_DEPTH`). Recovered from DB on boot. */
 	private readonly queue: string[] = [];
-	/** The job currently dumping (or `null`). */
+	/** The job currently dumping (or `null`). Recovered from DB on boot. */
 	private runningBackupId: string | null = null;
 	/** Handle to the running dump child — used by cancel. */
 	private activeChild: ChildProcessWithoutNullStreams | null = null;
 	/** Jobs cancelled by an admin — the row is failed with `CANCELLED`. */
 	private readonly cancelledIds = new Set<string>();
-	/** userId → timestamps of recent creations (ms) — rolling per-hour window. */
-	private readonly rateBuckets = new Map<string, number[]>();
-	/** userId → timestamps of download-token mints (ms) — rolling 15-min window. */
-	private readonly downloadRateBuckets = new Map<string, number[]>();
-	/** True while a verify/restore is creating or dropping databases. */
-	private restoreInFlight = false;
-	/** Consecutive job failures — trips the circuit breaker at 3. */
-	private consecutiveFailures = 0;
-
 	/** Disk monitoring interval handles — keyed by backup id. */
 	private readonly diskMonitors = new Map<string, NodeJS.Timeout>();
+	/** Unique id for this API instance — used for restore-lock ownership. */
+	private readonly instanceId: string = `api-${String(process.pid)}-${String(Date.now())}`;
 
 	public constructor(
 		private readonly prisma: PrismaService,
@@ -134,18 +134,22 @@ export class BackupService implements OnModuleInit, OnModuleDestroy {
 	public async onModuleInit(): Promise<void> {
 		if (!this.config.backupEnabled) return;
 		mkdirSync(this.config.backupDir, { recursive: true });
-		// A process restart mid-dump leaves rows stuck in pending/processing —
-		// fail them so the panel doesn't poll a ghost forever.
+		// Recover in-flight state from a previous crash:
+		// 1. Fail rows stuck in pending/processing (the process that owned them is gone).
 		await this.prisma.backup.updateMany({
 			where: { status: { in: ["pending", "processing"] } },
 			data: { status: "failed", stage: "failed", progress: 0, error: "Backup interrupted by a server restart", errorCode: "UNKNOWN" },
 		});
-		// Sweep orphaned dump files (a crash between rename and row-update, or a
-		// manual delete of the row) so BACKUP_DIR can't accumulate dead weight.
+		// 2. Clear any stale restore lock (the holder is gone).
+		await this.prisma.backupRestoreLock.updateMany({
+			where: { locked: true },
+			data: { locked: false, lockedBy: null, lockedAt: null, expiresAt: null },
+		});
+		// 3. Sweep orphaned dump files (a crash between rename and row-update).
 		await this.sweepOrphanFiles();
-		// Sweep leftover scratch databases from a crash mid-verify.
+		// 4. Sweep leftover scratch databases from a crash mid-verify.
 		await this.sweepScratchDatabases();
-		this.scheduler.start((name: string): Promise<void> => this.runScheduledBackup(name));
+		await this.scheduler.start((name: string): Promise<void> => this.runScheduledBackup(name));
 	}
 
 	public onModuleDestroy(): void {
@@ -169,8 +173,8 @@ export class BackupService implements OnModuleInit, OnModuleDestroy {
 	): Promise<{ readonly backupId: string; readonly status: "pending"; readonly position: number | null }> {
 		this.assertEnabled();
 		const parsed: BackupCreateInput = BackupCreateInputSchema.parse(input);
-		this.enforceRateLimit(user.sub, user.isSuperAdmin);
-		this.assertCircuitHealthy();
+		await this.enforceRateLimit(user.sub, user.isSuperAdmin);
+		await this.assertCircuitHealthy();
 		// Fail fast on a full disk instead of discovering it mid-job.
 		await this.assertDiskSpace(resolve(this.config.backupDir));
 
@@ -339,7 +343,7 @@ export class BackupService implements OnModuleInit, OnModuleDestroy {
 					expiresAt: Date.now() + retentionMs,
 				},
 			});
-			this.consecutiveFailures = 0;
+			void this.recordCircuitSuccess();
 
 			const durationMs = Date.now() - started;
 			const speedMBps = sizeBytes > 0 ? sizeBytes / 1024 / 1024 / (durationMs / 1000) : 0;
@@ -456,8 +460,8 @@ export class BackupService implements OnModuleInit, OnModuleDestroy {
 		// Cap progress at 85% during dump (finalize takes it to 100%).
 		const cappedPct = Math.min(85, Math.max(5, pct));
 
-		await this.update(id, { progress: cappedPct }).catch((): void => {
-			// Best-effort — don't crash the job if the row update fails.
+		await this.update(id, { progress: cappedPct }).catch((err: unknown): void => {
+			this.logs.warn(`Progress update failed for backup ${id}: ${err instanceof Error ? err.message : String(err)}`, { context: "BackupService" });
 		});
 	}
 
@@ -482,8 +486,8 @@ export class BackupService implements OnModuleInit, OnModuleDestroy {
 							}
 						}
 					}
-				} catch {
-					// Best-effort — don't crash on monitoring failure.
+				} catch (err) {
+					this.logs.warn(`Disk monitor check failed for backup ${backupId}: ${err instanceof Error ? err.message : String(err)}`, { context: "BackupService" });
 				}
 			})();
 		}, DISK_CHECK_INTERVAL_MS);
@@ -525,7 +529,8 @@ export class BackupService implements OnModuleInit, OnModuleDestroy {
 			this.logs.warn("Scheduled backup skipped — a manual backup is already running", { context: "BackupScheduler" });
 			return;
 		}
-		if (this.consecutiveFailures >= 3) {
+		const circuitRow = await this.prisma.backupCircuitBreaker.findUnique({ where: { id: "singleton" } });
+		if ((circuitRow?.consecutiveFailures ?? 0) >= 3) {
 			this.logs.warn("Scheduled backup skipped — circuit breaker is open", { context: "BackupScheduler" });
 			return;
 		}
@@ -544,13 +549,28 @@ export class BackupService implements OnModuleInit, OnModuleDestroy {
 	}
 
 	/** Returns the list of scheduled backups. */
-	public getSchedules(): BackupSchedule[] {
+	public async getSchedules(): Promise<BackupSchedule[]> {
 		return this.scheduler.getSchedules();
 	}
 
 	/** Toggles a scheduled backup on/off. */
-	public toggleSchedule(id: string, enabled: boolean): BackupScheduleToggleResponse {
+	public async toggleSchedule(id: string, enabled: boolean): Promise<BackupScheduleToggleResponse> {
 		return this.scheduler.toggleSchedule(id, enabled);
+	}
+
+	/** Scheduler health: DB-backed schedule state + circuit breaker + instance id. */
+	public async getSchedulerStatus(): Promise<SchedulerStatusResponse> {
+		const schedules = await this.getSchedules();
+		const cb = await this.prisma.backupCircuitBreaker.findUnique({ where: { id: "singleton" } });
+		return {
+			schedules: schedules.map((s) => ({ id: s.id, name: s.name, enabled: s.enabled, nextRun: s.nextRun, cron: s.cron })),
+			circuitBreaker: {
+				consecutiveFailures: cb?.consecutiveFailures ?? 0,
+				lastFailureAt: cb?.lastFailureAt !== null && cb?.lastFailureAt !== undefined ? Number(cb.lastFailureAt) : null,
+				trippedAt: cb?.trippedAt !== null && cb?.trippedAt !== undefined ? Number(cb.trippedAt) : null,
+			},
+			instanceId: this.instanceId,
+		};
 	}
 
 	// ── Runs the next queued job ──────────────────────────────────────────
@@ -686,7 +706,8 @@ export class BackupService implements OnModuleInit, OnModuleDestroy {
 					let finalSize: number;
 					try {
 						finalSize = statSync(partPath).size;
-					} catch {
+					} catch (statErr) {
+						this.logs.warn(`Failed to stat dump file during finalization: ${statErr instanceof Error ? statErr.message : String(statErr)}`, { context: "BackupService" });
 						finalSize = -1;
 					}
 					if (finalSize !== writtenBytes) {
@@ -703,8 +724,8 @@ export class BackupService implements OnModuleInit, OnModuleDestroy {
 					// Failed — remove the partial file so no truncated dump survives.
 					try {
 						if (existsSync(partPath)) unlinkSync(partPath);
-					} catch {
-						// best-effort cleanup
+					} catch (cleanupErr) {
+						this.logs.warn(`Failed to remove partial dump file: ${cleanupErr instanceof Error ? cleanupErr.message : String(cleanupErr)}`, { context: "BackupService" });
 					}
 				}
 				resolvePromise(childExit);
@@ -787,10 +808,10 @@ export class BackupService implements OnModuleInit, OnModuleDestroy {
 				where: { id },
 				data: { status: "failed", stage: "failed", progress: 0, error: redacted, errorCode },
 			});
-		} catch {
-			// Row already gone — nothing to mark.
+		} catch (err) {
+			this.logs.warn(`Failed to persist failure state for backup ${id}: ${err instanceof Error ? err.message : String(err)}`, { context: "BackupService" });
 		}
-		this.consecutiveFailures += 1;
+		void this.recordCircuitFailure();
 		this.auditLog({ event: "failed", backupId: id, userId: "unknown", timestamp: Date.now(), metadata: { errorCode, durationMs: Date.now() - startedAt } });
 		this.logs.error(`Backup failed (${errorCode}): ${redacted}`, {
 			context: "BackupService",
@@ -843,8 +864,8 @@ export class BackupService implements OnModuleInit, OnModuleDestroy {
 				try {
 					unlinkSync(resolve(root, relative));
 					this.logs.info("Removed orphaned backup file", { context: "BackupService", metadata: { filename: relative } });
-				} catch {
-					// best-effort
+				} catch (delErr) {
+					this.logs.warn(`Failed to delete orphaned backup file ${relative}: ${delErr instanceof Error ? delErr.message : String(delErr)}`, { context: "BackupService" });
 				}
 			}
 		}
@@ -865,12 +886,12 @@ export class BackupService implements OnModuleInit, OnModuleDestroy {
 				try {
 					await this.dropDatabase(serverUrl, name);
 					this.logs.info("Dropped leftover scratch database", { context: "BackupService", metadata: { database: name } });
-				} catch {
-					// best-effort — it'll be caught next boot
+				} catch (dropErr) {
+					this.logs.warn(`Failed to drop scratch database ${name}: ${dropErr instanceof Error ? dropErr.message : String(dropErr)}`, { context: "BackupService" });
 				}
 			}
-		} catch {
-			// psql unavailable — skip the sweep rather than crash boot
+		} catch (psqlErr) {
+			this.logs.warn(`psql unavailable for scratch DB sweep: ${psqlErr instanceof Error ? psqlErr.message : String(psqlErr)}`, { context: "BackupService" });
 		}
 	}
 
@@ -907,8 +928,8 @@ export class BackupService implements OnModuleInit, OnModuleDestroy {
 		// The list doubles as the quota source for the create form: the same
 		// rolling-window state the create endpoint enforces, exposed read-only.
 		const rateLimit: { readonly limit: number; readonly used: number; readonly resetsAt: ReturnType<typeof epochMs> } | null =
-			user === undefined ? null : this.rateLimitState(user.sub, user.isSuperAdmin);
-		const schedules = this.getSchedules();
+			user === undefined ? null : await this.rateLimitState(user.sub, user.isSuperAdmin);
+		const schedules = await this.getSchedules();
 		return { backups, active, retentionDays: this.config.backupRetentionDays, rateLimit, schedules };
 	}
 
@@ -957,7 +978,7 @@ export class BackupService implements OnModuleInit, OnModuleDestroy {
 	/** Mints a signed, short-lived, user-bound download token. */
 	public async createDownloadToken(id: string, userSub: string): Promise<BackupDownloadResponse> {
 		this.assertEnabled();
-		this.enforceDownloadRateLimit(userSub);
+		await this.enforceDownloadRateLimit(userSub);
 		const row = await this.requireRow(id);
 		if (row.status !== "completed") {
 			throw new BadRequestException(`Backup is ${row.status} — only completed backups can be downloaded.`);
@@ -1190,7 +1211,7 @@ export class BackupService implements OnModuleInit, OnModuleDestroy {
 		// Corrupted-on-disk files fail fast against the recorded checksum.
 		await this.assertChecksumMatches(row, targetPath);
 
-		this.acquireRestoreSlot();
+		await this.acquireRestoreSlot();
 		const database = `verify_${id.slice(0, 8)}`;
 		const serverUrl: string = this.maintenanceServerUrl();
 		try {
@@ -1208,10 +1229,12 @@ export class BackupService implements OnModuleInit, OnModuleDestroy {
 		} finally {
 			try {
 				await this.dropDatabase(serverUrl, database);
-			} catch {
-				// Best-effort — a leftover scratch DB should never fail the response.
+			} catch (dropErr) {
+				this.logs.warn(`Failed to drop scratch database ${database} after verify: ${dropErr instanceof Error ? dropErr.message : String(dropErr)}`, {
+					context: "BackupService",
+				});
 			}
-			this.releaseRestoreSlot();
+			await this.releaseRestoreSlot();
 		}
 	}
 
@@ -1238,7 +1261,7 @@ export class BackupService implements OnModuleInit, OnModuleDestroy {
 		await this.assertRestorePassword(userSub, parsed.password);
 		const database: string = parsed.name ?? `restored_${row.name}_${timestampForFilename(new Date())}`;
 
-		this.acquireRestoreSlot();
+		await this.acquireRestoreSlot();
 		const serverUrl: string = this.maintenanceServerUrl();
 		try {
 			try {
@@ -1262,7 +1285,7 @@ export class BackupService implements OnModuleInit, OnModuleDestroy {
 			});
 			return { database, tableCount, durationMs: Date.now() - started };
 		} finally {
-			this.releaseRestoreSlot();
+			await this.releaseRestoreSlot();
 		}
 	}
 
@@ -1287,17 +1310,6 @@ export class BackupService implements OnModuleInit, OnModuleDestroy {
 		}
 	}
 
-	private acquireRestoreSlot(): void {
-		if (this.restoreInFlight) {
-			throw new ConflictException("A restore/verify is already running — wait for it to finish.");
-		}
-		this.restoreInFlight = true;
-	}
-
-	private releaseRestoreSlot(): void {
-		this.restoreInFlight = false;
-	}
-
 	// ── Delete / retention ─────────────────────────────────────────────────
 
 	/** Deletes the file (if present) + the row. */
@@ -1307,8 +1319,8 @@ export class BackupService implements OnModuleInit, OnModuleDestroy {
 		if (row.filename.length > 0) {
 			try {
 				unlinkSync(resolve(this.config.backupDir, row.filename));
-			} catch {
-				// File already gone — the row is the source of truth.
+			} catch (delErr) {
+				this.logs.warn(`Backup file already gone on delete: ${delErr instanceof Error ? delErr.message : String(delErr)}`, { context: "BackupService" });
 			}
 		}
 		await this.prisma.backup.delete({ where: { id } });
@@ -1328,8 +1340,10 @@ export class BackupService implements OnModuleInit, OnModuleDestroy {
 			if (row.filename.length > 0) {
 				try {
 					unlinkSync(resolve(this.config.backupDir, row.filename));
-				} catch {
-					// best-effort — the row still goes.
+				} catch (pruneErr) {
+					this.logs.warn(`Failed to delete expired backup file ${row.filename}: ${pruneErr instanceof Error ? pruneErr.message : String(pruneErr)}`, {
+						context: "BackupService",
+					});
 				}
 			}
 			await this.prisma.backup.delete({ where: { id: row.id } });
@@ -1424,50 +1438,107 @@ export class BackupService implements OnModuleInit, OnModuleDestroy {
 		});
 	}
 
-	/**
-	 * The requesting user's rolling-hour creation quota, or `null` when the
-	 * cap is disabled for their tier. `resetsAt` is when the oldest entry in
-	 * the window expires (a fresh window if the user hasn't created anything).
-	 */
-	private rateLimitState(userId: string, isSuperAdmin: boolean): { readonly limit: number; readonly used: number; readonly resetsAt: ReturnType<typeof epochMs> } | null {
+	// ── DB-backed rate limiting ─────────────────────────────────────────────
+
+	/** The requesting user's rolling-hour creation quota from `backup_rate_limits` (DB-backed). */
+	private async rateLimitState(
+		userId: string,
+		isSuperAdmin: boolean,
+	): Promise<{ readonly limit: number; readonly used: number; readonly resetsAt: ReturnType<typeof epochMs> } | null> {
 		// Superadmins get a higher cap (10/hr) than regular admins (5/hr).
 		const limit: number = isSuperAdmin ? this.config.backupRateLimitSuperAdminPerHour : this.config.backupRateLimitPerHour;
 		if (limit <= 0) return null;
 		const now: number = Date.now();
 		const windowMs: number = 60 * 60 * 1000;
-		const timestamps: number[] = (this.rateBuckets.get(userId) ?? []).filter((ts: number): boolean => now - ts < windowMs);
-		const resetsAt: number = timestamps.length > 0 ? Math.min(...timestamps) + windowMs : now;
-		return { limit, used: timestamps.length, resetsAt: epochMs(resetsAt) };
+		const cutoff = BigInt(now - windowMs);
+		const [countResult] = await Promise.all([
+			this.prisma.backupRateLimit.count({ where: { userId, action: "create", windowStart: { gte: cutoff } } }),
+			this.prisma.backupRateLimit.deleteMany({ where: { userId, action: "create", windowStart: { lt: cutoff } } }),
+		]);
+		return { limit, used: countResult, resetsAt: epochMs(now) };
 	}
 
-	private enforceRateLimit(userId: string, isSuperAdmin: boolean): void {
-		const state: { readonly limit: number; readonly used: number; readonly resetsAt: ReturnType<typeof epochMs> } | null = this.rateLimitState(userId, isSuperAdmin);
+	private async enforceRateLimit(userId: string, isSuperAdmin: boolean): Promise<void> {
+		const state = await this.rateLimitState(userId, isSuperAdmin);
 		if (state === null) return;
 		if (state.used >= state.limit) {
 			throw new ServiceUnavailableException(`Backup rate limit reached — max ${String(state.limit)} backups per hour.`);
 		}
-		const timestamps: number[] = [...(this.rateBuckets.get(userId) ?? []), Date.now()];
-		this.rateBuckets.set(userId, timestamps);
+		await this.prisma.backupRateLimit.create({
+			data: { userId, action: "create", windowStart: BigInt(Date.now()) },
+		});
 	}
 
-	private enforceDownloadRateLimit(userId: string): void {
+	private async enforceDownloadRateLimit(userId: string): Promise<void> {
 		const limit: number = this.config.backupDownloadRateLimit;
 		if (limit <= 0) return;
 		const now: number = Date.now();
 		const windowMs: number = 15 * 60 * 1000;
-		const timestamps: number[] = (this.downloadRateBuckets.get(userId) ?? []).filter((ts: number): boolean => now - ts < windowMs);
-		if (timestamps.length >= limit) {
+		const cutoff = BigInt(now - windowMs);
+		const [countResult] = await Promise.all([
+			this.prisma.backupRateLimit.count({ where: { userId, action: "download", windowStart: { gte: cutoff } } }),
+			this.prisma.backupRateLimit.deleteMany({ where: { userId, action: "download", windowStart: { lt: cutoff } } }),
+		]);
+		if (countResult >= limit) {
 			throw new ServiceUnavailableException(`Download rate limit reached — max ${String(limit)} download links per 15 minutes.`);
 		}
-		timestamps.push(now);
-		this.downloadRateBuckets.set(userId, timestamps);
+		await this.prisma.backupRateLimit.create({
+			data: { userId, action: "download", windowStart: BigInt(now) },
+		});
 	}
 
+	// ── DB-backed circuit breaker ───────────────────────────────────────────
+
 	/** Circuit breaker: 3 consecutive failures park creates until one succeeds. */
-	private assertCircuitHealthy(): void {
-		if (this.consecutiveFailures >= 3) {
+	private async assertCircuitHealthy(): Promise<void> {
+		const row = await this.prisma.backupCircuitBreaker.findUnique({ where: { id: "singleton" } });
+		if ((row?.consecutiveFailures ?? 0) >= 3) {
 			throw new ServiceUnavailableException("Backups are temporarily unavailable after repeated failures — check the API logs before trying again.");
 		}
+	}
+
+	private async recordCircuitFailure(): Promise<void> {
+		const now = BigInt(Date.now());
+		await this.prisma.backupCircuitBreaker.upsert({
+			where: { id: "singleton" },
+			create: { id: "singleton", consecutiveFailures: 1, lastFailureAt: now, trippedAt: now },
+			update: { consecutiveFailures: { increment: 1 }, lastFailureAt: now, trippedAt: now },
+		});
+	}
+
+	private async recordCircuitSuccess(): Promise<void> {
+		await this.prisma.backupCircuitBreaker.upsert({
+			where: { id: "singleton" },
+			create: { id: "singleton", consecutiveFailures: 0 },
+			update: { consecutiveFailures: 0 },
+		});
+	}
+
+	// ── DB-backed restore lock ──────────────────────────────────────────────
+
+	/** Tries to acquire the cluster-wide restore lock. Auto-expires after 30 min. */
+	private async acquireRestoreSlot(): Promise<void> {
+		const now = BigInt(Date.now());
+		const expiryMs: number = 30 * 60 * 1000;
+		// Expire stale locks first.
+		await this.prisma.backupRestoreLock.updateMany({
+			where: { locked: true, expiresAt: { not: null, lt: now } },
+			data: { locked: false, lockedBy: null, lockedAt: null, expiresAt: null },
+		});
+		const acquired = await this.prisma.backupRestoreLock.updateMany({
+			where: { id: "singleton", locked: false },
+			data: { locked: true, lockedBy: this.instanceId, lockedAt: now, expiresAt: BigInt(Date.now() + expiryMs) },
+		});
+		if (acquired.count === 0) {
+			throw new ConflictException("A restore/verify is already running — wait for it to finish.");
+		}
+	}
+
+	private async releaseRestoreSlot(): Promise<void> {
+		await this.prisma.backupRestoreLock.updateMany({
+			where: { id: "singleton", lockedBy: this.instanceId },
+			data: { locked: false, lockedBy: null, lockedAt: null, expiresAt: null },
+		});
 	}
 
 	private assertEnabled(): void {

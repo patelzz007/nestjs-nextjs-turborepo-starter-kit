@@ -757,3 +757,53 @@ model TelescopeAnnotation {
   @@index([createdAt])
   @@map("telescope_annotations")
 }
+
+/// Backup rate-limit: one row per user per window. Survives restarts & multi-replica.
+model BackupRateLimit {
+  id        String @id @default(uuid())
+  userId    String @map("user_id") @db.VarChar(64)
+  action    String @db.VarChar(16) // "create" | "download"
+  windowStart BigInt @map("window_start") // epoch ms — start of the rolling window
+  createdAt BigInt @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
+
+  @@index([userId, action])
+  @@index([windowStart])
+  @@map("backup_rate_limits")
+}
+
+/// Backup circuit breaker: single-row sentinel that tracks consecutive failures.
+/// Updated atomically so multi-replica stays in sync.
+model BackupCircuitBreaker {
+  id               String @id @default("singleton")
+  consecutiveFailures Int @default(0) @map("consecutive_failures")
+  lastFailureAt    BigInt? @map("last_failure_at")
+  trippedAt        BigInt? @map("tripped_at")
+  updatedAt        BigInt @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
+
+  @@map("backup_circuit_breaker")
+}
+
+/// Backup restore lock: single-row sentinel for cluster-wide mutual exclusion.
+/// Only one restore/verify can run across all API replicas.
+model BackupRestoreLock {
+  id          String  @id @default("singleton")
+  locked      Boolean @default(false)
+  lockedBy    String? @map("locked_by") @db.VarChar(64) // instance id / pod name
+  lockedAt    BigInt? @map("locked_at")
+  expiresAt   BigInt? @map("expires_at") // auto-release if lock holder crashes
+
+  @@map("backup_restore_lock")
+}
+
+/// Telescope backup schedule: persists cron definitions so they survive restarts.
+model TelescopeBackupSchedule {
+  id        String @id // e.g. "daily", "weekly"
+  cron      String @db.VarChar(64)
+  name      String @db.VarChar(128)
+  enabled   Boolean @default(true)
+  nextRun   BigInt @map("next_run")
+  updatedAt BigInt @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
+  createdAt BigInt @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
+
+  @@map("telescope_backup_schedules")
+}

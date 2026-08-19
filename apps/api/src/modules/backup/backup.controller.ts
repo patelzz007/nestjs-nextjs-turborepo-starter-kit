@@ -86,7 +86,7 @@ export class BackupController {
 	@RequirePermission("LIST", "BACKUP")
 	@Get("schedules")
 	@ApiOperation({ summary: "List scheduled backup jobs" })
-	public schedules(): ReturnType<BackupService["getSchedules"]> {
+	public async schedules(): Promise<ReturnType<BackupService["getSchedules"]>> {
 		return this.backupService.getSchedules();
 	}
 
@@ -96,8 +96,19 @@ export class BackupController {
 	@HttpCode(200)
 	@EmailVerified()
 	@ApiOperation({ summary: "Toggle a scheduled backup on/off" })
-	public toggleSchedule(@Param("id") id: string, @Body(new ZodValidationPipe(BackupScheduleToggleBodySchema)) body: BackupScheduleToggleBody): BackupScheduleToggleResponse {
+	public async toggleSchedule(
+		@Param("id") id: string,
+		@Body(new ZodValidationPipe(BackupScheduleToggleBodySchema)) body: BackupScheduleToggleBody,
+	): Promise<BackupScheduleToggleResponse> {
 		return this.backupService.toggleSchedule(id, body.enabled);
+	}
+
+	/** Scheduler health — shows DB-backed schedule state + circuit breaker. */
+	@RequirePermission("READ", "BACKUP")
+	@Get("scheduler/status")
+	@ApiOperation({ summary: "Scheduler health (DB-backed cron + circuit breaker)" })
+	public schedulerStatus(): ReturnType<BackupService["getSchedulerStatus"]> {
+		return this.backupService.getSchedulerStatus();
 	}
 
 	/** One backup's status/progress — the poll target. */

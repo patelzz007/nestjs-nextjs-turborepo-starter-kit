@@ -14,10 +14,8 @@ export class PermissionGuard implements CanActivate {
 	public constructor(private readonly reflector: Reflector) {}
 
 	public canActivate(context: ExecutionContext): boolean {
-		const required: RequiredPermission | undefined = this.reflector.getAllAndOverride<RequiredPermission>(REQUIRED_PERMISSION_KEY, [
-			context.getHandler(),
-			context.getClass(),
-		]);
+		const required: RequiredPermission | undefined = this.reflector.getAllAndOverride<RequiredPermission>(REQUIRED_PERMISSION_KEY, [context.getHandler(), context.getClass()]);
+		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- getAllAndOverride returns T | undefined; metadata may not be set on every handler.
 		if (required === undefined) {
 			return true;
 		}

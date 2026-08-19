@@ -310,3 +310,29 @@ CREATE POLICY impersonation_audit_logs_insert ON public.impersonation_audit_logs
   FOR INSERT
   TO app_runtime
   WITH CHECK (app_rls_bypass());
+
+-- ── Backup ops persistence tables (bypass-only — internal system tables) ─────
+
+ALTER TABLE IF EXISTS public.backup_rate_limits ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS backup_rate_limits_bypass ON public.backup_rate_limits;
+CREATE POLICY backup_rate_limits_bypass ON public.backup_rate_limits
+  USING (app_rls_bypass())
+  WITH CHECK (app_rls_bypass());
+
+ALTER TABLE IF EXISTS public.backup_circuit_breaker ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS backup_circuit_breaker_bypass ON public.backup_circuit_breaker;
+CREATE POLICY backup_circuit_breaker_bypass ON public.backup_circuit_breaker
+  USING (app_rls_bypass())
+  WITH CHECK (app_rls_bypass());
+
+ALTER TABLE IF EXISTS public.backup_restore_lock ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS backup_restore_lock_bypass ON public.backup_restore_lock;
+CREATE POLICY backup_restore_lock_bypass ON public.backup_restore_lock
+  USING (app_rls_bypass())
+  WITH CHECK (app_rls_bypass());
+
+ALTER TABLE IF EXISTS public.telescope_backup_schedules ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS telescope_backup_schedules_bypass ON public.telescope_backup_schedules;
+CREATE POLICY telescope_backup_schedules_bypass ON public.telescope_backup_schedules
+  USING (app_rls_bypass())
+  WITH CHECK (app_rls_bypass());

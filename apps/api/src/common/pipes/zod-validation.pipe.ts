@@ -24,7 +24,7 @@ export class ZodValidationPipe implements PipeTransform {
 	private readonly ajv: Ajv = new Ajv({
 		strict: false,
 		allErrors: true,
-		coerceTypes: false,
+		coerceTypes: true,
 		useDefaults: true,
 		// `removeAdditional` stays OFF so `.strict()` schemas (which emit
 		// `additionalProperties: false`) REJECT unknown keys — matching the
