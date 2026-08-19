@@ -18,6 +18,8 @@ This document is a **complete audit** of the monorepo against the 25 non-negotia
 - **Why it matters** — what goes wrong for users or for the next engineer
 - **Fix** — the straightforward next step (rule 25: do not overthink)
 
+> **Aug 20, 2026 status:** Many P1/P2 items below are now **done** (RLS, shared schemas, client 56/56 routes, data-table refactor, admin-guard consolidation, UI kit first/second slices). For the **current** prioritized backlog and residual violations, use **[cursorrules-audit-tasks.md](./cursorrules-audit-tasks.md)** — section **Fresh audit — what to improve next**.
+
 **Severity**
 
 - **P0** — security, data loss, or a feature that does not work
@@ -127,20 +129,20 @@ This document is a **complete audit** of the monorepo against the 25 non-negotia
 
 ### Typesafety (repo-wide)
 
-28. **`unknown` is common** (banned): `packages/ui` data-table + chart; `packages/client` jwt/auth-errors; `apps/api` Zod pipe / token catch; `packages/shared` `data: z.unknown()` in envelope.
-29. **`never`:** chart exclusive union; data-table `memoGeneric`; some Promise races.
+28. **`unknown` is common** (banned): **improved** — `packages/client` jwt/auth-errors and `packages/shared` envelope fixed; `apps/api` down to 7 `unknown` (mostly `webhook-throttler.ts`); `packages/ui` residual in `chart.tsx` + `utils.ts` (`assumeType`). ~~data-table~~ **done**.
+29. **`never`:** chart exclusive union; ~~data-table `memoGeneric`~~ **done**; some Promise races; `webhook-rate-limit.probe.ts`.
 30. **Casts / `assumeType`:** `packages/ui/src/lib/utils.ts`; Prisma JSON in telescope stores.
 31. **`as const`:** `packages/shared` `contracts/versioning.ts`, `apiContract`; client `endpoints.ts`; admin telescope `page.tsx` query defaults; email templates accents; docs sitemap.
 32. **Runtime `typeof x === "string"`** instead of Zod: admin searchParams, slider, docs tree, client env checks, API headers.
 33. **`explicit-member-accessibility` only on telescope.** Auth, Prisma, health, RBAC, pipes missing `public`/`private` (rule 15).
 34. **API eslint turns off `no-unsafe-*` for all `src/modules/**`.** Tighten like the telescope override.
-35. **JWT / RBAC / download-token schemas live in the API.** Move to `@workspace/shared`.
+35. **JWT / RBAC / download-token schemas live in the API.** — **done.** Moved to `@workspace/shared`.
 
 ---
 
 ## P2 — UI system (`packages/ui`)
 
-Counts from the audit: **0** `any`; **0** `as const`; **~18** `unknown`; **3** `never`; **~32/69** files missing `forwardRef`; **~53/69** missing CVA; **~9** CVA files have a `state` variant; **no package README**; **no `react-hook-form` peer**.
+Counts from the audit (Aug 2026, refreshed): **0** `any`; **0** `as const` in UI components; **~5** `unknown` (chart + utils); **~7** components still missing `forwardRef` (carousel, collapsible, message-scroller, etc.); **~53** files still missing CVA on overlays/display; **`packages/ui/README.md` done**; **`react-hook-form` peer done**.
 
 ### Package-wide
 
@@ -153,15 +155,9 @@ Counts from the audit: **0** `any`; **0** `as const`; **~18** `unknown`; **3** `
 42. Ban `unknown` / `never` / `assumeType` / runtime `typeof` at UI boundaries — Zod instead.
 43. Ban inline object/array props (rule 16) — module constants + `useMemo`.
 
-### `data-table.tsx` (largest hotspot)
+### `data-table.tsx` — **mostly done** (see cursorrules-audit-tasks.md)
 
-44. Replace `unknown` / `assumeType` / `never` in `memoGeneric` / `toCellString` / export / persist.
-45. Zod for persisted prefs and cell values.
-46. Required `labels` for Search / No data / Select all / export formats / “User Actions”.
-47. Lift persistence and selection to the smart layer (or inject a storage adapter). Dumb table should not own `localStorage`.
-48. Print CSS hex (`#1f2937`) → tokens. Action menu `text-gray-900` / `text-red-600` → `text-foreground` / `text-destructive`.
-49. CVA + `forwardRef` on the table shell.
-50. Extract CSV/PDF/Excel exporters out of the presentational component.
+44–50. ~~unknown/assumeType/never~~, Zod prefs, required labels, storage adapter, export extract, shell CVA + forwardRef — **done**. Residual: pin column labels, raw green/blue colors, optional file split.
 
 ### `chart.tsx`
 
