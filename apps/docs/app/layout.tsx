@@ -52,7 +52,12 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>): React.JSX.Element {
 	return (
-		<html lang="en" suppressHydrationWarning className={cn("antialiased", fontMono.variable, "font-sans", geist.variable, spaceGroteskHeading.variable)}>
+		<html
+			lang="en"
+			suppressHydrationWarning
+			data-scroll-behavior="smooth"
+			className={cn("antialiased", fontMono.variable, "font-sans", geist.variable, spaceGroteskHeading.variable)}
+		>
 			<body>
 				<RootProvider>
 					<DocsSearchProvider meta={buildSearchMeta()}>

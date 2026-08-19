@@ -5,7 +5,7 @@ import * as React from "react";
 
 /**
  * Remaining prose element overrides for the docs renderer — paragraphs, lists,
- * inline code, emphasis and task-list checkboxes, matching the admin docs
+ * inline code, emphasis and task-list markers, matching the admin docs
  * typography.
  */
 
@@ -69,9 +69,10 @@ export function ProseHr({ className, ...props }: React.HTMLAttributes<HTMLHRElem
 	return <hr className={cn("my-10 border-border/60", className)} {...props} />;
 }
 
-export function ProseInput({ className, type, checked, ...props }: React.InputHTMLAttributes<HTMLInputElement>): React.JSX.Element {
+export function ProseInput({ className, type, ...props }: React.InputHTMLAttributes<HTMLInputElement>): React.JSX.Element | null {
+	// Task-list checkboxes are rendered as text markers by remarkTaskCheckboxPlugin.
 	if (type === "checkbox") {
-		return <input type="checkbox" checked={checked} readOnly className={cn("mt-0.5 mr-2 h-4 w-4 shrink-0 rounded border-primary accent-primary", className)} {...props} />;
+		return null;
 	}
 	return <input type={type} className={className} {...props} />;
 }

@@ -118,7 +118,9 @@ export class TelescopeController {
 
 	@RequirePermission("READ", "TELESCOPE")
 	@Get("requests/:id")
-	public async requestDetail(@Param("id", new ZodValidationPipe(TelescopeIdParamSchema)) id: string): Promise<TelescopeRequestDetailResponse> {
+	public async requestDetail(
+		@Param("id", new ZodValidationPipe(TelescopeIdParamSchema)) id: string,
+	): Promise<TelescopeRequestDetailResponse> {
 		return this.telescopeService.getRequestDetail(id);
 	}
 

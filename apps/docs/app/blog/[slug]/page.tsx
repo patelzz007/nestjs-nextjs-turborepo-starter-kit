@@ -68,30 +68,32 @@ export default async function BlogArticlePage({ params }: { readonly params: Pro
 	return (
 		<>
 			<DocsPage toc={page.data.toc}>
-				<BlogBreadcrumb title={page.data.title} />
+				<>
+					<BlogBreadcrumb title={page.data.title} />
 
-				{/* Article meta row — category chip + author · date · reading time */}
-				<div className="text-fd-muted-foreground mb-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs">
-					<span className="bg-fd-primary text-fd-primary-foreground inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium">{page.data.category}</span>
-					<span className="inline-flex items-center gap-1.5">
-						<User className="size-3.5" />
-						{page.data.author}
-					</span>
-					<span className="inline-flex items-center gap-1.5">
-						<CalendarDays className="size-3.5" />
-						{formatEpochDate(page.data.date)}
-					</span>
-					<span className="inline-flex items-center gap-1.5">
-						<Clock className="size-3.5" />
-						{readingMinutes} min read
-					</span>
-				</div>
+					{/* Article meta row — category chip + author · date · reading time */}
+					<div className="text-fd-muted-foreground mb-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs">
+						<span className="bg-fd-primary text-fd-primary-foreground inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium">{page.data.category}</span>
+						<span className="inline-flex items-center gap-1.5">
+							<User className="size-3.5" />
+							{page.data.author}
+						</span>
+						<span className="inline-flex items-center gap-1.5">
+							<CalendarDays className="size-3.5" />
+							{formatEpochDate(page.data.date)}
+						</span>
+						<span className="inline-flex items-center gap-1.5">
+							<Clock className="size-3.5" />
+							{readingMinutes} min read
+						</span>
+					</div>
 
-				<DocsTitle>{page.data.title}</DocsTitle>
-				{page.data.description !== undefined ? <DocsDescription>{page.data.description}</DocsDescription> : null}
-				<DocsBody>
-					<page.data.body components={getMDXComponents()} />
-				</DocsBody>
+					<DocsTitle>{page.data.title}</DocsTitle>
+					{page.data.description !== undefined ? <DocsDescription>{page.data.description}</DocsDescription> : null}
+					<DocsBody>
+						<page.data.body components={getMDXComponents()} />
+					</DocsBody>
+				</>
 			</DocsPage>
 			<SiteFooter />
 		</>

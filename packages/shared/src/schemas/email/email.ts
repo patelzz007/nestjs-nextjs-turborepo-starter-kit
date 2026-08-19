@@ -211,3 +211,50 @@ export const EmailLogListResponseSchema = z
 	.strict();
 
 export type EmailLogListResponse = z.output<typeof EmailLogListResponseSchema>;
+
+// ── Email log create (API persistence) ────────────────────────────────────
+
+const EmailLogMetadataValueSchema = z.union([z.string(), z.number(), z.boolean(), z.null()]);
+
+/** Payload used to create a new `email_logs` row. */
+export const EmailLogCreateSchema = z
+	.object({
+		templateKey: z.string().min(1),
+		to: z.email(),
+		subject: z.string().min(1),
+		status: EmailLogStatusSchema,
+		resendId: z.string().optional(),
+		error: z.string().optional(),
+		/** Send duration in ms — carried on the attempt event for the jobs view. */
+		durationMs: z.number().int().nonnegative().optional(),
+		metadata: z.record(z.string(), EmailLogMetadataValueSchema).optional(),
+	})
+	.strict();
+
+export type EmailLogCreate = z.output<typeof EmailLogCreateSchema>;
+
+/** Query string for `GET /notifications/email-log`. */
+export const EmailLogListQuerySchema = z
+	.object({
+		limit: z
+			.union([z.number().int().min(1).max(500), z.string().regex(/^\d+$/).transform((value: string): number => Number.parseInt(value, 10))])
+			.optional()
+			.default(100)
+			.transform((value: number): number => Math.max(1, Math.min(value, 500))),
+	})
+	.strict();
+
+export type EmailLogListQuery = z.output<typeof EmailLogListQuerySchema>;
+
+// ── Resend webhook signature headers ──────────────────────────────────────
+
+/** Raw webhook headers Resend signs (standard-webhooks / Svix naming). */
+export const ResendWebhookHeadersSchema = z
+	.object({
+		id: z.string().min(1),
+		timestamp: z.string().min(1),
+		signature: z.string().min(1),
+	})
+	.strict();
+
+export type ResendWebhookHeaders = z.output<typeof ResendWebhookHeadersSchema>;

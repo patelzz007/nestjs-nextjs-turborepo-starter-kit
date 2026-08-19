@@ -3,6 +3,7 @@ title: "Cursorrules audit — task reference"
 description: "Actionable improvement tasks from the full-repo audit against .cursorrules. Pick a section, ship a small PR, tick the checkbox."
 author: "Acme Inc."
 lastUpdated: 1787068800000
+coverImage: "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=1600&q=80"
 tags: ["audit", "cursorrules", "typesafety", "rls", "ui", "tasks"]
 ---
 
@@ -126,23 +127,23 @@ pnpm db:reset        # reset + rls + seed (from apps/api)
 
 | Route / input | File | Fix |
 |---------------|------|-----|
-| [ ] `POST /verify-email/:token` | `auth.controller.ts` | `ZodValidationPipe(apiContract.auth.verifyEmail.input)` on param |
-| [ ] `GET/PATCH /admin/users/:userId` | `auth.controller.ts` | Validate `userId` param |
-| [ ] `POST /impersonate/:userId` | `impersonation.controller.ts` | Validate `userId` |
-| [ ] Telescope `@Param("id")` routes | `telescope.controller.ts` | Pipe per `apiContract.telescope.*.input` |
-| [ ] Email log list query | `email-log.controller.ts` | Shared limit/page schema + pipe (not raw `ParseIntPipe`) |
-| [ ] Email preview `:key` | `email-preview.controller.ts` | `ZodValidationPipe` at boundary |
-| [ ] Resend webhook body | `email-webhook.controller.ts` | Shared Zod + pipe (replace manual `unknown` parsing) |
+| [x] `POST /verify-email/:token` | `auth.controller.ts` | `VerifyEmailTokenParamSchema` (same field as `apiContract.auth.verifyEmail.input`) |
+| [x] `GET/PATCH /admin/users/:userId` | `auth.controller.ts` | `UuidParamSchema` on `userId` |
+| [x] `POST /impersonate/:userId` | `impersonation.controller.ts` | `UuidParamSchema` on `userId` |
+| [x] Telescope `@Param("id")` routes | `telescope.controller.ts` | `TelescopeIdParamSchema` (contract `TelescopeIdInputSchema` uses same schema) |
+| [x] Email log list query | `email-log.controller.ts` | `EmailLogListQuerySchema` + `apiContract.email.logList.input` |
+| [x] Email preview `:key` | `email-preview.controller.ts` | `EmailTemplateKeyParamSchema` |
+| [x] Resend webhook body | `email-webhook.controller.ts` | `ResendWebhookHeadersSchema` + `ResendWebhookEventSchema` after verify |
 
 ### Type safety — move schemas to `packages/shared`
 
 | Schema today in API | File | Target |
 |---------------------|------|--------|
-| [ ] JWT access/refresh payloads | `token.service.ts` | `packages/shared/src/schemas/auth/` |
-| [ ] RBAC user/permission shapes | `rbac/schemas/user.schema.ts`, `rbac.interface.ts` | `packages/shared` |
-| [ ] Cookie result | `cookies.service.ts` | shared or keep internal if truly private |
-| [ ] Email log create | `email-log.service.ts` | `packages/shared/src/schemas/email/` |
-| [ ] Response envelope helpers | `response.interceptor.ts` | align with `api-response.ts` (no `z.unknown`) |
+| [x] JWT access/refresh payloads | `token.service.ts` | `packages/shared/src/schemas/auth/token.ts` |
+| [x] RBAC user/permission shapes | `rbac.interface.ts` (deleted `rbac/schemas/user.schema.ts`) | `packages/shared` |
+| [x] Cookie result | `cookies.service.ts` | `packages/shared/src/schemas/auth/cookies.ts` |
+| [x] Email log create | `email-log.service.ts` | `packages/shared/src/schemas/email/email.ts` |
+| [x] Response envelope helpers | `response.interceptor.ts` | `PaginatedServiceResultSchema` + `DataValueSchema` from shared |
 
 ### Type safety — eliminate banned patterns in production API
 

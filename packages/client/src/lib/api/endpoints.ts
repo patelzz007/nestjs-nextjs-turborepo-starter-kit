@@ -367,7 +367,7 @@ export const apiRouter = {
 		}),
 		logList: defineQuery(apiContract.email.logList, {
 			response: envelope(EmailLogListResponseSchema),
-			queryKey: () => ["email", "log-list"],
+			queryKey: ({ limit }) => ["email", "log-list", limit],
 		}),
 	},
 

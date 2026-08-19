@@ -1,4 +1,4 @@
-import type { BlockContent, Blockquote, DefinitionContent, Image, Paragraph, Root, Table, TableCell, TableRow, Text } from "mdast";
+import type { BlockContent, Blockquote, DefinitionContent, Image, ListItem, Paragraph, PhrasingContent, Root, Table, TableCell, TableRow, Text } from "mdast";
 import type { MdxJsxAttribute, MdxJsxFlowElement, MdxJsxTextElement } from "mdast-util-mdx-jsx";
 import { visit } from "unist-util-visit";
 import { z } from "zod";
@@ -91,6 +91,45 @@ function jsxAttribute(name: string, value: string): MdxJsxAttribute {
 
 function jsxFlow(name: string, attributes: readonly MdxJsxAttribute[], children: readonly (BlockContent | DefinitionContent)[] = []): MdxJsxFlowElement {
 	return { type: "mdxJsxFlowElement", name, attributes: [...attributes], children: [...children] };
+}
+
+/** `[x]` / `[ ]` prefix used in audit task tables and GFM task lists. */
+const TASK_MARKER_PATTERN = /^\[(x| )\]\s?(.*)$/s;
+
+const TASK_MARKER_DONE = "✓";
+const TASK_MARKER_PENDING = "☐";
+
+function phrasingFromTaskMarker(text: string): PhrasingContent[] | null {
+	const match = TASK_MARKER_PATTERN.exec(text);
+	if (match === null) {
+		return null;
+	}
+	const checked = match[1] === "x";
+	const label = match[2] ?? "";
+	const marker = checked ? TASK_MARKER_DONE : TASK_MARKER_PENDING;
+	const value = label.length > 0 ? `${marker} ${label}` : `${marker} `;
+	return [{ type: "text", value }];
+}
+
+function paragraphHasTaskMarker(paragraph: Paragraph): boolean {
+	const first = paragraph.children[0];
+	if (first?.type !== "text") {
+		return false;
+	}
+	return first.value.startsWith(TASK_MARKER_DONE) || first.value.startsWith(TASK_MARKER_PENDING) || TASK_MARKER_PATTERN.test(first.value);
+}
+
+function prependTaskMarkerToParagraph(paragraph: Paragraph, checked: boolean): void {
+	if (paragraphHasTaskMarker(paragraph)) {
+		return;
+	}
+	const marker = checked ? TASK_MARKER_DONE : TASK_MARKER_PENDING;
+	const next = paragraph.children[0];
+	if (next?.type === "text") {
+		paragraph.children[0] = { type: "text", value: `${marker} ${next.value}` };
+		return;
+	}
+	paragraph.children = [{ type: "text", value: `${marker} ` }, ...paragraph.children];
 }
 
 /**
@@ -353,6 +392,42 @@ export function remarkImageGalleryPlugin(): (tree: Root) => void {
 }
 
 // ─── remarkStripFirstHeadingPlugin ──────────────────────────────────────────
+
+/**
+ * Renders `[x]` / `[ ]` markers as static text symbols.
+ *
+ * - Table cells: `| [x] Task | … |` (GFM does not support task syntax in tables).
+ * - List items: prepends `✓` / `☐` and clears `listItem.checked` so the MDX
+ *   pipeline does not also emit `<input type="checkbox">` nodes (Fumadocs would
+ *   otherwise output two checkbox inputs per item).
+ */
+export function remarkTaskCheckboxPlugin(): (tree: Root) => void {
+	return function transformer(tree: Root): void {
+		visit(tree, "tableCell", (cell: TableCell) => {
+			const first = cell.children[0];
+			if (first?.type !== "text") {
+				return;
+			}
+			const replacement = phrasingFromTaskMarker(first.value);
+			if (replacement !== null) {
+				cell.children = [...replacement, ...cell.children.slice(1)];
+			}
+		});
+
+		visit(tree, "listItem", (item: ListItem) => {
+			if (typeof item.checked !== "boolean") {
+				return;
+			}
+			const checked = item.checked;
+			item.checked = null;
+			const first = item.children[0];
+			if (first?.type !== "paragraph") {
+				return;
+			}
+			prependTaskMarkerToParagraph(first, checked);
+		});
+	};
+}
 
 /**
  * Removes the leading H1 from the article body — the page title renders from

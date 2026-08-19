@@ -108,12 +108,14 @@ export default async function DocsPageRoute({ params }: { readonly params: Promi
 						</div>
 					),
 				}}>
-				<DocBanner coverImage={page.data.coverImage} author={page.data.author} lastUpdated={lastUpdated} readingMinutes={readingMinutes} />
-				<DocsTitle>{page.data.title}</DocsTitle>
-				{page.data.description !== undefined ? <DocsDescription>{page.data.description}</DocsDescription> : null}
-				<DocsBody>
-					<page.data.body components={getMDXComponents()} />
-				</DocsBody>
+				<>
+					<DocBanner coverImage={page.data.coverImage} author={page.data.author} lastUpdated={lastUpdated} readingMinutes={readingMinutes} />
+					<DocsTitle>{page.data.title}</DocsTitle>
+					{page.data.description !== undefined ? <DocsDescription>{page.data.description}</DocsDescription> : null}
+					<DocsBody>
+						<page.data.body components={getMDXComponents()} />
+					</DocsBody>
+				</>
 			</DocsPage>
 			<SiteFooter />
 		</>

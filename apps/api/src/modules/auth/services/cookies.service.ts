@@ -1,22 +1,10 @@
+import { Injectable } from "@nestjs/common";
 import type { FastifyReply } from "fastify";
-import { z } from "zod";
+
+import { type CookieResult } from "@workspace/shared";
 
 import type { CookieNames, ExtendedCookieOptions } from "../constants/cookie.config";
 import { ACCESS_TOKEN_COOKIE_NAME, REFRESH_TOKEN_COOKIE_NAME, ADMIN_ACCESS_TOKEN_COOKIE_NAME, ADMIN_REFRESH_TOKEN_COOKIE_NAME } from "../constants/cookie.config";
-
-/**
- * Result of a cookie set/clear operation.
- *
- * `error` carries an `Error` instance (not serializable), so it uses a
- * `z.custom` passthrough — the schema exists to keep the type derived from a
- * single source of truth (rule 5), not to validate external input.
- */
-export const CookieResultSchema = z.object({
-	success: z.boolean(),
-	error: z.custom<Error>((value): value is Error => value instanceof Error).optional(),
-});
-
-export type CookieResult = z.output<typeof CookieResultSchema>;
 
 /**
  * Service for setting and clearing httpOnly cookies with validation.

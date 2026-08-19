@@ -7,7 +7,7 @@ import { z } from "zod";
 import type { FastifyRequest } from "fastify";
 
 import type { EmailLogStatus, ResendWebhookEvent } from "@workspace/shared";
-import { ResendDeliveryDetailSchema, ResendWebhookEventSchema } from "@workspace/shared";
+import { ResendDeliveryDetailSchema, ResendWebhookEventSchema, ResendWebhookHeadersSchema } from "@workspace/shared";
 
 import { TypedConfigService } from "../../../config/typed-config.service";
 import { LogService } from "../../logs/logs.service";
@@ -16,14 +16,7 @@ import { Public } from "../../auth/decorators/public.decorator";
 import { EmailLogService, type WebhookUpdateResult } from "./email-log.service";
 import { ResendWebhookEventDto } from "./dtos/resend-webhook-event.dto";
 
-/** Raw webhook headers Resend signs (standard-webhooks). */
-const WebhookHeadersSchema = z
-	.object({
-		id: z.string().min(1),
-		timestamp: z.string().min(1),
-		signature: z.string().min(1),
-	})
-	.strict();
+const NonEmptyHeaderValueSchema = z.string().min(1);
 
 /**
  * Event type → EmailLog status. Delivery events we don't track return
@@ -179,25 +172,19 @@ export class EmailWebhookController {
 			return { received: true };
 		}
 
-		const rawBody: string = typeof req.rawBody === "string" ? req.rawBody : Buffer.isBuffer(req.rawBody) ? req.rawBody.toString("utf8") : JSON.stringify(req.body ?? {});
+		const rawBody: string = this.readRawBody(req);
 
-		// Resend delivers webhooks through Svix's infrastructure (the sender UA is
-		// `Svix-Webhooks/rolling`). Depending on the sender configuration the
-		// signature headers arrive as the standard-webhooks names
-		// (webhook-id/webhook-timestamp/webhook-signature) OR Svix's native names
-		// (svix-id/svix-timestamp/svix-signature). Read BOTH schemes so a genuine
-		// delivery is never mistaken for a header-less request.
 		const readWebhookHeader = (name: string): string | undefined => {
-			const value: string | undefined = headers[name];
-			if (typeof value === "string" && value.length > 0) {
-				return value;
+			const direct = NonEmptyHeaderValueSchema.safeParse(headers[name]);
+			if (direct.success) {
+				return direct.data;
 			}
 			const svixName: string = name.replace("webhook-", "svix-");
-			const svixValue: string | undefined = headers[svixName];
-			return typeof svixValue === "string" && svixValue.length > 0 ? svixValue : undefined;
+			const svix = NonEmptyHeaderValueSchema.safeParse(headers[svixName]);
+			return svix.success ? svix.data : undefined;
 		};
 
-		const parsedHeaders = WebhookHeadersSchema.safeParse({
+		const parsedHeaders = ResendWebhookHeadersSchema.safeParse({
 			id: readWebhookHeader("webhook-id"),
 			timestamp: readWebhookHeader("webhook-timestamp"),
 			signature: readWebhookHeader("webhook-signature"),
@@ -210,8 +197,8 @@ export class EmailWebhookController {
 			// Resend delivery always carries one of the two naming schemes, so
 			// this line proves whether the delivery is real (and which names it
 			// used) or a browser/curl probe.
-			const userAgent: string = typeof req.headers["user-agent"] === "string" ? req.headers["user-agent"] : "(none)";
-			const remoteIp: string = typeof req.ip === "string" ? req.ip : "(unknown)";
+			const userAgent: string = NonEmptyHeaderValueSchema.safeParse(req.headers["user-agent"]).data ?? "(none)";
+			const remoteIp: string = NonEmptyHeaderValueSchema.safeParse(req.ip).data ?? "(unknown)";
 			const signatureHeadersSeen: string = Object.keys(req.headers)
 				.filter((headerName: string): boolean => /id|signature|timestamp/i.test(headerName))
 				.join(", ");
@@ -227,20 +214,20 @@ export class EmailWebhookController {
 		// Keeping this in its own try/catch means a later DB failure propagates
 		// as a 500 (handled by the global filter), never as a misleading
 		// "Invalid webhook signature" that leaks the DB error to a public route.
-		let event: unknown;
+		let resendEvent: ResendWebhookEvent;
 		try {
-			event = this.resend.webhooks.verify({
+			const verified = this.resend.webhooks.verify({
 				payload: rawBody,
 				headers: parsedHeaders.data,
 				webhookSecret: secret,
 			});
+			const parsed = ResendWebhookEventSchema.safeParse(verified);
+			if (!parsed.success) {
+				this.logService.warn(`Webhook payload failed schema validation: ${parsed.error.message}`, { context: "EmailWebhookController" });
+				return { received: true };
+			}
+			resendEvent = parsed.data;
 		} catch (cause: unknown) {
-			// Surface the ACTUAL reason instead of a black-box 403: the
-			// standard-webhooks verifier throws a specific message
-			// ("Message timestamp too old" vs "No matching signature found"),
-			// which maps to two completely different user errors. The reason is
-			// allowlisted to the verifier's known messages so internal errors
-			// never leak into the response.
 			const rawReason: string = cause instanceof Error ? cause.message : "unknown verification error";
 			const reason: string = /too old|too new|matching signature|missing required header/i.test(rawReason) ? rawReason : "unexpected verification error";
 			this.logService.warn(`Webhook signature verification failed: ${rawReason}`, { context: "EmailWebhookController" });
@@ -249,16 +236,6 @@ export class EmailWebhookController {
 				: "the signature does not match the body bytes — the body in the request must be byte-identical to the one that was signed. Swagger's pretty-printed example is NOT byte-identical; paste the single-line body exactly as the script printed it.";
 			throw new ForbiddenException(`Invalid webhook signature (${reason}). ${hint}`);
 		}
-
-		// Validate the verified payload against the shared Zod schema so we
-		// get typed access to `type` and `data.email_id` instead of manual
-		// narrowing on `unknown`.
-		const parsed = ResendWebhookEventSchema.safeParse(event);
-		if (!parsed.success) {
-			this.logService.warn(`Webhook payload failed schema validation: ${parsed.error.message}`, { context: "EmailWebhookController" });
-			return { received: true };
-		}
-		const resendEvent: ResendWebhookEvent = parsed.data;
 		const eventType: string = resendEvent.type;
 		const emailId: string | undefined = resendEvent.data.email_id;
 		if (emailId.length === 0) {
@@ -288,6 +265,18 @@ export class EmailWebhookController {
 			});
 		}
 		return { received: true };
+	}
+
+	private readRawBody(req: RawBodyRequest<FastifyRequest>): string {
+		const raw = req.rawBody;
+		const asString = z.string().safeParse(raw);
+		if (asString.success) {
+			return asString.data;
+		}
+		if (Buffer.isBuffer(raw)) {
+			return raw.toString("utf8");
+		}
+		return JSON.stringify(req.body ?? {});
 	}
 
 	/**

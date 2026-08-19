@@ -69,8 +69,26 @@ export type {
 	StopImpersonationResponse,
 	VerifyEmailResponse,
 } from "./auth/auth";
-export { ApiErrorResponseSchema, ApiErrorBodySchema, ApiPaginatedMetaSchema, ApiResponseMetaSchema, ApiSuccessResponseSchema } from "./api/api-response";
-export type { ApiErrorResponse, ApiErrorBody, ApiPaginatedMeta, ApiResponseMeta, ApiSuccessResponse, Envelope } from "./api/api-response";
+export {
+	AccessTokenPayloadSchema,
+	EmailVerificationTokenPayloadSchema,
+	FlatUserResponseSchema,
+	JwtPermissionSchema,
+	RefreshTokenPayloadSchema,
+	UserPermissionsSchema,
+} from "./auth/token";
+export type { AccessTokenPayload, EmailVerificationTokenPayload, FlatUserResponse, JwtPermission, RefreshTokenPayload, UserPermissions } from "./auth/token";
+export { CookieResultSchema } from "./auth/cookies";
+export type { CookieResult } from "./auth/cookies";
+export {
+	ApiErrorResponseSchema,
+	ApiErrorBodySchema,
+	ApiPaginatedMetaSchema,
+	ApiResponseMetaSchema,
+	ApiSuccessResponseSchema,
+	PaginatedServiceResultSchema,
+} from "./api/api-response";
+export type { ApiErrorResponse, ApiErrorBody, ApiPaginatedMeta, ApiResponseMeta, ApiSuccessResponse, Envelope, PaginatedServiceResult } from "./api/api-response";
 export { AuthErrorCodeSchema, LockedErrorCodeSchema } from "./auth/auth-errors";
 export type { AuthErrorCode, LockedErrorCode } from "./auth/auth-errors";
 export {
@@ -102,7 +120,9 @@ export type { Env } from "./api/env";
 export { ApiVersionManifestSchema } from "./api/version";
 export type { ApiVersionManifest } from "./api/version";
 export {
+	EmailLogCreateSchema,
 	EmailLogEntrySchema,
+	EmailLogListQuerySchema,
 	EmailLogListResponseSchema,
 	EmailLogStatusSchema,
 	EmailPreviewListResponseSchema,
@@ -114,9 +134,12 @@ export {
 	ResendDeliveryDetailSchema,
 	ResendWebhookEventSchema,
 	ResendWebhookEventTypeSchema,
+	ResendWebhookHeadersSchema,
 } from "./email/email";
 export type {
+	EmailLogCreate,
 	EmailLogEntry,
+	EmailLogListQuery,
 	EmailLogListResponse,
 	EmailLogStatus,
 	EmailPreview,
@@ -128,6 +151,7 @@ export type {
 	ResendDeliveryDetail,
 	ResendWebhookEvent,
 	ResendWebhookEventType,
+	ResendWebhookHeaders,
 } from "./email/email";
 export { AudienceTypeSchema, DeviceTypeSchema, MenuMatchTypeSchema, PermissionActionSchema, PermissionResourceSchema, PlanSchema, RedirectTypeSchema } from "./domain/enums";
 export type { AudienceType, DeviceType, MenuMatchType, PermissionAction, PermissionResource, Plan, RedirectType } from "./domain/enums";

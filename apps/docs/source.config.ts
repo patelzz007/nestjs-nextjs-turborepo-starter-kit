@@ -10,6 +10,7 @@ import {
 	remarkImageRewritePlugin,
 	remarkQuoteKindsPlugin,
 	remarkStripFirstHeadingPlugin,
+	remarkTaskCheckboxPlugin,
 } from "./lib/mdx-plugins";
 
 /**
@@ -113,6 +114,7 @@ export default defineConfig({
 			remarkImageRewritePlugin,
 			remarkImageGalleryPlugin,
 			remarkStripFirstHeadingPlugin,
+			remarkTaskCheckboxPlugin,
 			...v,
 		],
 		rehypePlugins: (v) => [rehypeKatex, ...v],

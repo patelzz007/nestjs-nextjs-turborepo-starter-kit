@@ -19,6 +19,7 @@ import type {
 	VerifyEmailResponse,
 } from "@workspace/shared";
 import {
+	apiContract,
 	AdminUserDetailSchema,
 	ForgotPasswordResponseSchema,
 	LoginServiceResponseSchema,
@@ -28,7 +29,6 @@ import {
 	SignupResponseSchema,
 	UserResponseSchema,
 	VerifyEmailResponseSchema,
-	apiContract,
 	apiPath,
 	UuidParamSchema,
 	VerifyEmailTokenParamSchema,

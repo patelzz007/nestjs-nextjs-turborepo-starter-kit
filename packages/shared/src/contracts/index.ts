@@ -18,7 +18,9 @@ import { z, type ZodType } from "zod";
 
 import { ForgotPasswordSchema, LoginSchema, ResendVerificationSchema, ResetPasswordSchema, SignupSchema } from "../schemas/auth/auth";
 import { AdminUserListQuerySchema } from "../schemas/auth/user";
+import { EmailLogListQuerySchema } from "../schemas/email/email";
 import { BackupCreateInputSchema, BackupRestoreInputSchema, BackupScheduleToggleInputSchema } from "../schemas/domain/backup";
+import { TelescopeIdParamSchema, VerifyEmailTokenParamSchema } from "../schemas/domain/param-schemas";
 import type { ApiVersion } from "./versioning";
 import {
 	TelescopeAlertSnoozeInputSchema,
@@ -64,6 +66,7 @@ export type SerializableInput = Readonly<Record<string, DataValue | undefined>> 
 // from the version prefix). Re-exported here for the public `@workspace/shared`
 // surface; anything that only needs the constants can import `./versioning`.
 export * from "./versioning";
+export { contractPathParam } from "./path-param";
 
 // ── Route contract ─────────────────────────────────────────────────────────
 
@@ -106,7 +109,7 @@ export function defineContract<Input extends SerializableInput, M extends RestMe
 /** Path-param + body input for the annotation route (the client sends both). */
 const RequestAnnotationInputSchema = z
 	.object({
-		id: z.string(),
+		id: TelescopeIdParamSchema,
 		...TelescopeAnnotationInputSchema.shape,
 	})
 	.strict();
@@ -114,7 +117,7 @@ const RequestAnnotationInputSchema = z
 /** Path-param + body input for the replay route. */
 const ReplayInputSchema = z
 	.object({
-		id: z.string(),
+		id: TelescopeIdParamSchema,
 		...TelescopeReplayInputSchema.shape,
 	})
 	.strict();
@@ -122,7 +125,7 @@ const ReplayInputSchema = z
 /** Path-param + body input for the alert-snooze route. */
 const AlertSnoozeInputSchema = z
 	.object({
-		id: z.string(),
+		id: TelescopeIdParamSchema,
 		...TelescopeAlertSnoozeInputSchema.shape,
 	})
 	.strict();
@@ -130,7 +133,7 @@ const AlertSnoozeInputSchema = z
 /** Path-param + body input for the exception-status route. */
 const ExceptionStatusInputSchema = z
 	.object({
-		id: z.string(),
+		id: TelescopeIdParamSchema,
 		...TelescopeExceptionStatusInputSchema.shape,
 	})
 	.strict();
@@ -145,6 +148,9 @@ const ForceFlagSchema = z.union([z.boolean(), z.enum(["true", "false"])]);
 
 /** No-input body (refresh/logout send an empty `{}`). */
 const EmptyInputSchema = z.object({}).strict();
+
+/** Path-param input shared by Telescope routes with an `:id` segment. */
+const TelescopeIdInputSchema = z.object({ id: TelescopeIdParamSchema }).strict();
 
 // ── The contract ───────────────────────────────────────────────────────────
 // Groups mirror the client router (auth / email / telescope). Every leaf is
@@ -171,7 +177,7 @@ export const apiContract = {
 		forgotPassword: defineContract({ method: "POST", path: "/auth/forgot-password", input: ForgotPasswordSchema }),
 		resetPassword: defineContract({ method: "POST", path: "/auth/reset-password", input: ResetPasswordSchema }),
 		resendVerification: defineContract({ method: "POST", path: "/auth/resend-verification", input: ResendVerificationSchema }),
-		verifyEmail: defineContract({ method: "POST", path: "/auth/verify-email/:token", input: z.object({ token: z.string() }).strict() }),
+		verifyEmail: defineContract({ method: "POST", path: "/auth/verify-email/:token", input: z.object({ token: VerifyEmailTokenParamSchema }).strict() }),
 		adminUsers: defineContract({ method: "GET", path: "/auth/admin/users", input: AdminUserListQuerySchema }),
 	},
 
@@ -182,7 +188,7 @@ export const apiContract = {
 		previewDetail: defineContract({ method: "GET", path: "/notifications/email-preview/:key", input: z.object({ key: z.string() }).strict() }),
 		/** Sends one template to the configured test address. */
 		previewSend: defineContract({ method: "POST", path: "/notifications/email-preview/:key/send", input: z.object({ key: z.string() }).strict() }),
-		logList: defineContract({ method: "GET", path: "/notifications/email-log", input: z.undefined() }),
+		logList: defineContract({ method: "GET", path: "/notifications/email-log", input: EmailLogListQuerySchema }),
 	},
 
 	// ── Database backup procedures ───────────────────────────────────────
@@ -213,15 +219,15 @@ export const apiContract = {
 	telescope: {
 		overview: defineContract({ method: "GET", path: "/telescope/overview", input: TelescopeOverviewQuerySchema }),
 		requests: defineContract({ method: "GET", path: "/telescope/requests", input: TelescopeRequestListQuerySchema }),
-		requestDetail: defineContract({ method: "GET", path: "/telescope/requests/:id", input: z.object({ id: z.string() }).strict() }),
-		requestSql: defineContract({ method: "GET", path: "/telescope/requests/:id/sql", input: z.object({ id: z.string() }).strict() }),
+		requestDetail: defineContract({ method: "GET", path: "/telescope/requests/:id", input: TelescopeIdInputSchema }),
+		requestSql: defineContract({ method: "GET", path: "/telescope/requests/:id/sql", input: TelescopeIdInputSchema }),
 		compare: defineContract({ method: "GET", path: "/telescope/compare", input: TelescopeCompareQuerySchema }),
 		sql: defineContract({ method: "GET", path: "/telescope/sql", input: TelescopeSqlListQuerySchema }),
 		exceptions: defineContract({ method: "GET", path: "/telescope/exceptions", input: TelescopeExceptionListQuerySchema }),
-		exceptionDetail: defineContract({ method: "GET", path: "/telescope/exceptions/:id", input: z.object({ id: z.string() }).strict() }),
+		exceptionDetail: defineContract({ method: "GET", path: "/telescope/exceptions/:id", input: TelescopeIdInputSchema }),
 		mail: defineContract({ method: "GET", path: "/telescope/mail", input: z.undefined() }),
 		jobs: defineContract({ method: "GET", path: "/telescope/jobs", input: TelescopeJobsListQuerySchema }),
-		jobDetail: defineContract({ method: "GET", path: "/telescope/jobs/:id", input: z.object({ id: z.string() }).strict() }),
+		jobDetail: defineContract({ method: "GET", path: "/telescope/jobs/:id", input: TelescopeIdInputSchema }),
 		schedules: defineContract({ method: "GET", path: "/telescope/schedules", input: z.undefined() }),
 		leaderboard: defineContract({ method: "GET", path: "/telescope/leaderboard", input: TelescopeLeaderboardQuerySchema }),
 		trends: defineContract({ method: "GET", path: "/telescope/trends", input: TelescopeTrendsQuerySchema }),
@@ -239,10 +245,10 @@ export const apiContract = {
 		runSchedule: defineContract({ method: "POST", path: "/telescope/schedules/:name/run", input: z.object({ name: z.string() }).strict() }),
 		prune: defineContract({ method: "POST", path: "/telescope/admin/prune", input: z.object({ force: ForceFlagSchema }).strict() }),
 		clearAll: defineContract({ method: "POST", path: "/telescope/admin/clear", input: z.undefined() }),
-		alertAck: defineContract({ method: "POST", path: "/telescope/alerts/:id/ack", input: z.object({ id: z.string() }).strict() }),
+		alertAck: defineContract({ method: "POST", path: "/telescope/alerts/:id/ack", input: TelescopeIdInputSchema }),
 		alertSnooze: defineContract({ method: "POST", path: "/telescope/alerts/:id/snooze", input: AlertSnoozeInputSchema }),
 		setExceptionStatus: defineContract({ method: "PUT", path: "/telescope/exceptions/:id/status", input: ExceptionStatusInputSchema }),
-		retryJob: defineContract({ method: "POST", path: "/telescope/jobs/:id/retry", input: z.object({ id: z.string() }).strict() }),
+		retryJob: defineContract({ method: "POST", path: "/telescope/jobs/:id/retry", input: TelescopeIdInputSchema }),
 	},
 };
 

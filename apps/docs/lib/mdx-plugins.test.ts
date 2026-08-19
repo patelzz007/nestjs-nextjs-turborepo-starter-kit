@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import type { Root, Table, TableCell } from "mdast";
-import type { MdxJsxFlowElement } from "mdast-util-mdx-jsx";
+import type { ListItem, Root, Table, TableCell } from "mdast";
+import type { MdxJsxFlowElement, MdxJsxTextElement } from "mdast-util-mdx-jsx";
 
-import { detectQuoteKind, remarkImageGalleryPlugin, remarkImageRewritePlugin, remarkQuoteKindsPlugin, remarkStripFirstHeadingPlugin, QUOTE_MARKER_KINDS } from "./mdx-plugins";
+import { detectQuoteKind, remarkImageGalleryPlugin, remarkImageRewritePlugin, remarkQuoteKindsPlugin, remarkStripFirstHeadingPlugin, remarkTaskCheckboxPlugin, QUOTE_MARKER_KINDS } from "./mdx-plugins";
 
 /** Runs a plugin transformer over a synthetic mdast root. */
 function runTransformer(root: Root, transformer: (tree: Root) => void): Root {
@@ -128,6 +128,49 @@ describe("remarkImageGalleryPlugin", () => {
 		const root = rootOf([table]);
 		runTransformer(root, remarkImageGalleryPlugin());
 		expect(root.children[0]?.type).toBe("table");
+	});
+});
+
+describe("remarkTaskCheckboxPlugin", () => {
+	it("converts a table cell [x] marker into a static checkmark", () => {
+		const cell: TableCell = {
+			type: "tableCell",
+			children: [{ type: "text", value: "[x] Done task" }],
+		};
+		const table: Table = {
+			type: "table",
+			align: [null],
+			children: [{ type: "tableRow", children: [cell] }],
+		};
+		const root = rootOf([table]);
+		runTransformer(root, remarkTaskCheckboxPlugin());
+		expect(cell.children[0]).toEqual({ type: "text", value: "✓ Done task" });
+		expect(cell.children).toHaveLength(1);
+	});
+
+	it("prepends a static marker to a GFM list item and clears checked", () => {
+		const listItem: ListItem = {
+			type: "listItem",
+			checked: true,
+			spread: false,
+			children: [{ type: "paragraph", children: [{ type: "text", value: "Completed item" }] }],
+		};
+		const root = rootOf([
+			{
+				type: "list",
+				ordered: false,
+				spread: false,
+				children: [listItem],
+			},
+		]);
+		runTransformer(root, remarkTaskCheckboxPlugin());
+		expect(listItem.checked).toBeNull();
+		const paragraph = listItem.children[0];
+		if (paragraph?.type !== "paragraph") {
+			return;
+		}
+		expect(paragraph.children[0]).toEqual({ type: "text", value: "✓ Completed item" });
+		expect(paragraph.children).toHaveLength(1);
 	});
 });
 

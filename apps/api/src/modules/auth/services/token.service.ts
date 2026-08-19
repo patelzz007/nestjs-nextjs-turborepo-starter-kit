@@ -6,9 +6,18 @@ import { JwtService } from "@nestjs/jwt";
 // the error class at runtime (and is fully typed via `export =` declarations).
 import jwt from "jsonwebtoken";
 
-import { z, ZodError } from "zod";
+import { ZodError } from "zod";
 
-import { FlatUserResponse, JwtPermission, JwtPermissionSchema } from "../../rbac/rbac.interface";
+import {
+	AccessTokenPayloadSchema,
+	EmailVerificationTokenPayloadSchema,
+	RefreshTokenPayloadSchema,
+	type AccessTokenPayload,
+	type FlatUserResponse,
+	type JwtPermission,
+	type RefreshTokenPayload,
+} from "@workspace/shared";
+
 import { parseExpiryToSeconds } from "../../../common/utils/expiry";
 import { TypedConfigService } from "../../../config/typed-config.service";
 
@@ -16,56 +25,7 @@ import { TypedConfigService } from "../../../config/typed-config.service";
 // comment on the `jsonwebtoken` import above for why it can't be named-imported.
 const { TokenExpiredError } = jwt;
 
-/**
- * The shape embedded in the JWT payload (access token).
- *
- * Permissions use the ultra-slim `JwtPermission` type (action + resource only)
- * so the JWT stays under the browser cookie size limit (~4 KB). The full
- * `PermissionDetails` (with id and description) is reconstructed by AuthGuard
- * when attaching the payload to `request.user` — the guards only check
- * action+resource, so the slim format is sufficient.
- */
-export const AccessTokenPayloadSchema = z.object({
-	sub: z.string(),
-	id: z.string(),
-	email: z.string(),
-	fullName: z.string(),
-	isActive: z.boolean(),
-	isSuperAdmin: z.boolean(),
-	isEmailVerified: z.boolean(),
-	hasAdminAccess: z.boolean(),
-	roles: z.array(z.object({ id: z.string(), name: z.string(), description: z.string().nullable() })),
-	permissions: z.array(JwtPermissionSchema),
-
-	/** Set to true when a SuperAdmin is impersonating this user */
-	isImpersonating: z.boolean().optional(),
-	/** The SuperAdmin's original user ID (only set when isImpersonating === true) */
-	originalUserId: z.string().optional(),
-
-	iat: z.number().optional(),
-	exp: z.number().optional(),
-});
-
-export type AccessTokenPayload = z.output<typeof AccessTokenPayloadSchema>;
-
-/**
- * The shape embedded in the refresh token JWT payload.
- * Includes a `jti` (JWT ID) for direct database lookup without iterating all tokens.
- */
-export const RefreshTokenPayloadSchema = z.object({
-	sub: z.string(),
-	email: z.string(),
-	/**
-	 * JWT ID — stored in the RefreshToken model's `id` field.
-	 * Allows direct DB lookup without iterating all tokens.
-	 */
-	jti: z.string(),
-	tokenType: z.literal("refresh"),
-	iat: z.number(),
-	exp: z.number(),
-});
-
-export type RefreshTokenPayload = z.output<typeof RefreshTokenPayloadSchema>;
+export type { AccessTokenPayload, RefreshTokenPayload } from "@workspace/shared";
 
 @Injectable()
 export class TokenService {
@@ -128,10 +88,6 @@ export class TokenService {
 			const payload = await this.jwtService.verifyAsync<AccessTokenPayload>(token, {
 				secret: this.config.jwtAccessSecret,
 			});
-			// Runtime-validate the decoded claims so a structurally-wrong token
-			// (missing fields / wrong types) is rejected here, not deep inside a
-			// guard. A malformed payload lands in the same catch below as an
-			// invalid token.
 			return AccessTokenPayloadSchema.parse(payload);
 		} catch (error: unknown) {
 			if (error instanceof TokenExpiredError) {
@@ -140,9 +96,6 @@ export class TokenService {
 					error: "ACCESS_TOKEN_EXPIRED",
 				});
 			}
-			// A ZodError here means OUR schema drifted from the tokens we sign
-			// (not a client attack) — log it loudly so it's not mistaken for
-			// malicious traffic at 2 AM.
 			if (error instanceof ZodError) {
 				this.logger.error(`Access token payload failed schema validation: ${error.message}`);
 			}
@@ -162,7 +115,6 @@ export class TokenService {
 			const payload = await this.jwtService.verifyAsync<RefreshTokenPayload>(token, {
 				secret: this.config.jwtRefreshSecret,
 			});
-			// Runtime-validate the decoded claims (see verifyAccessToken).
 			return RefreshTokenPayloadSchema.parse(payload);
 		} catch (error: unknown) {
 			if (error instanceof TokenExpiredError) {
@@ -199,13 +151,11 @@ export class TokenService {
 	 */
 	public async verifyEmailToken(token: string): Promise<string> {
 		try {
-			const payload = await this.jwtService.verifyAsync<{ sub: string; purpose: string }>(token, {
+			const payload = await this.jwtService.verifyAsync(token, {
 				secret: this.config.emailVerificationSecret,
 			});
-			if (payload.purpose !== "email_verification") {
-				throw new UnauthorizedException("Invalid verification token");
-			}
-			return payload.sub;
+			const parsed = EmailVerificationTokenPayloadSchema.parse(payload);
+			return parsed.sub;
 		} catch (error: unknown) {
 			if (error instanceof UnauthorizedException) throw error;
 			throw new UnauthorizedException("Invalid or expired verification token");
@@ -238,7 +188,6 @@ export class TokenService {
 			originalUserId,
 		};
 
-		// Impersonation tokens are short-lived (15 minutes) to limit exposure
 		return this.jwtService.signAsync(payload, {
 			secret: this.config.jwtAccessSecret,
 			expiresIn: 900, // 15 minutes
@@ -254,9 +203,6 @@ export class TokenService {
  *   - If MANAGE is present, store ONLY MANAGE (it grants every action on that
  *     resource, so the individual actions are redundant).
  *   - Otherwise store all unique actions.
- *
- * This keeps the access-token cookie under the 4 KB browser limit even for
- * SuperAdmin users with 60+ permission rows.
  */
 function compressPermissions(permissions: readonly { readonly action: string; readonly resource: string }[]): JwtPermission[] {
 	const byResource = new Map<string, Set<string>>();

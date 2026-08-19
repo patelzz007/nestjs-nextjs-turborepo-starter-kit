@@ -37,6 +37,22 @@ export const ApiPaginatedMetaSchema = ApiResponseMetaSchema.extend({
 export type ApiPaginatedMeta = z.output<typeof ApiPaginatedMetaSchema>;
 
 /**
+ * Shape returned by the API `paginate()` helper before the response
+ * interceptor flattens `items` into `data` and moves pagination into `meta`.
+ */
+export const PaginatedServiceResultSchema = z.object({
+	items: z.array(DataValueSchema),
+	total: z.number(),
+	page: z.number(),
+	limit: z.number(),
+	totalPages: z.number().optional(),
+	hasNext: z.boolean().optional(),
+	hasPrevious: z.boolean().optional(),
+});
+
+export type PaginatedServiceResult = z.output<typeof PaginatedServiceResultSchema>;
+
+/**
  * Standard success response envelope.
  * The `data` field contains the actual response payload.
  * Used by every successful endpoint response after the ResponseInterceptor.

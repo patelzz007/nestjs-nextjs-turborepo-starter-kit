@@ -1,31 +1,12 @@
 import { Injectable } from "@nestjs/common";
-import { z } from "zod";
 
-import { EmailLogEntrySchema, EmailLogStatusSchema, epochMs, type EmailLogEntry, type EmailLogStatus } from "@workspace/shared";
+import { EmailLogCreateSchema, EmailLogEntrySchema, EmailLogStatusSchema, epochMs, type EmailLogCreate, type EmailLogEntry, type EmailLogStatus } from "@workspace/shared";
 
 import { PrismaService } from "../../../prisma/prisma.service";
 
 import { EmailLogEventsService } from "./email-log-events.service";
 
-/** Payload used to create a new EmailLog row. */
-export const EmailLogCreateSchema = z
-	.object({
-		templateKey: z.string().min(1),
-		to: z.email(),
-		subject: z.string().min(1),
-		status: EmailLogStatusSchema,
-		resendId: z.string().optional(),
-		error: z.string().optional(),
-		/** Send duration in ms — carried on the attempt event for the jobs view. */
-		durationMs: z.number().int().nonnegative().optional(),
-		metadata: z.record(z.string(), z.union([z.string(), z.number(), z.boolean(), z.null()])).optional(),
-	})
-	.strict();
-
-export type EmailLogCreate = z.output<typeof EmailLogCreateSchema>;
-
-/**
- * Result of applying a webhook delivery event to an EmailLog row.
+/** Result of applying a webhook delivery event to an EmailLog row.
  *
  * - `"updated"`  — the row moved forward (or the same status was re-applied).
  * - `"not_found"` — no row has this resend id — the event references an email

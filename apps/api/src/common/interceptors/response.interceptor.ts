@@ -4,42 +4,33 @@ import { type Observable, throwError } from "rxjs";
 import { catchError, map } from "rxjs/operators";
 import { z } from "zod";
 
-import { nowEpochMs } from "@workspace/shared";
-
-import type { JsonValue } from "../interfaces/json";
+import { DataValueSchema, PaginatedServiceResultSchema, nowEpochMs, type DataValue, type PaginatedServiceResult } from "@workspace/shared";
 
 /**
  * Zod schema for a PaginatedResult shape (from paginate()).
- * All pagination fields except items/total/page/limit are optional
- * since the interceptor should gracefully handle partial matches.
  */
-const PaginatedResultSchema = z.object({
-	items: z.array(z.custom<JsonValue>()),
-	total: z.number(),
-	page: z.number(),
-	limit: z.number(),
-	totalPages: z.number().optional(),
-	hasNext: z.boolean().optional(),
-	hasPrevious: z.boolean().optional(),
-});
+const PaginatedResultSchema = PaginatedServiceResultSchema;
 
-/** Type guard — narrows data to the paginated shape after Zod validation. */
-function isPaginated(value: JsonValue): value is z.infer<typeof PaginatedResultSchema> {
-	return PaginatedResultSchema.safeParse(value).success;
+/** Narrow controller data to a paginated service result. */
+function parsePaginated(value: DataValue): PaginatedServiceResult | null {
+	const parsed = PaginatedResultSchema.safeParse(value);
+	return parsed.success ? parsed.data : null;
 }
 
 /**
  * Zod schema for an already-wrapped ApiResponse shape.
- * Matches objects that have a `success` boolean and a `meta` record.
  */
-const ApiResponseSchema = z.object({
+const ApiResponseShapeSchema = z.object({
 	success: z.boolean(),
-	meta: z.record(z.string(), z.custom<JsonValue>()),
+	meta: z.record(z.string(), DataValueSchema),
 });
 
-/** Type guard — narrows data to the ApiResponse shape after Zod validation. */
-function isApiResponse(value: JsonValue): value is z.infer<typeof ApiResponseSchema> {
-	return ApiResponseSchema.safeParse(value).success;
+type ApiResponseShape = z.output<typeof ApiResponseShapeSchema>;
+
+/** Narrow controller data to an already-wrapped API response. */
+function parseApiResponse(value: DataValue): ApiResponseShape | null {
+	const parsed = ApiResponseShapeSchema.safeParse(value);
+	return parsed.success ? parsed.data : null;
 }
 
 /**
@@ -93,11 +84,11 @@ export class ResponseInterceptor implements NestInterceptor {
 
 		// CallHandler defaults to `any` — the map callback narrows to `object`.
 		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- NestJS CallHandler has no generic override; this is the narrowest safe cast.
-		return (next.handle() as Observable<JsonValue>).pipe(
-			map((data: JsonValue): object => {
-				// ── Case 1: Paginated result → flatten items into data, pagination into meta ──
-				if (isPaginated(data)) {
-					const { items, total, page, limit, totalPages, hasNext, hasPrevious } = data;
+		return (next.handle() as Observable<DataValue>).pipe(
+			map((data: DataValue): object => {
+				const paginated: PaginatedServiceResult | null = parsePaginated(data);
+				if (paginated !== null) {
+					const { items, total, page, limit, totalPages, hasNext, hasPrevious } = paginated;
 
 					const wrapped = {
 						success: true,
@@ -118,12 +109,12 @@ export class ResponseInterceptor implements NestInterceptor {
 					return wrapped;
 				}
 
-				// ── Case 2: Already an ApiResponse-like shape (has success + meta) ──
-				if (isApiResponse(data)) {
-					const { meta } = data;
+				const apiResponse: ApiResponseShape | null = parseApiResponse(data);
+				if (apiResponse !== null) {
+					const { meta } = apiResponse;
 
 					const wrapped = {
-						...data,
+						...apiResponse,
 						meta: {
 							...meta,
 							correlationId,
