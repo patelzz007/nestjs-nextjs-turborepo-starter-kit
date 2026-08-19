@@ -30,6 +30,8 @@ import {
 	VerifyEmailResponseSchema,
 	apiContract,
 	apiPath,
+	UuidParamSchema,
+	VerifyEmailTokenParamSchema,
 } from "@workspace/shared";
 import type { FastifyRequest } from "fastify";
 
@@ -168,7 +170,7 @@ export class AuthController {
 	@Post("/verify-email/:token")
 	@ApiOperation({ summary: "Verify email address using a verification token" })
 	@ApiOkResponse({ type: WrappedVerifyEmailResponse, description: "Email verified" })
-	public async verifyEmail(@Param("token") token: string): Promise<VerifyEmailResponse> {
+	public async verifyEmail(@Param("token", new ZodValidationPipe(VerifyEmailTokenParamSchema)) token: string): Promise<VerifyEmailResponse> {
 		return this.authService.verifyEmail(token);
 	}
 
@@ -184,9 +186,7 @@ export class AuthController {
 	@ApiOperation({ summary: "SuperAdmin: list all users with roles and lockout status" })
 	@ApiOkResponse({ type: WrappedAdminUserList, description: "Admin user list" })
 	@ApiResponse({ status: 403, type: ApiErrorResponseDto, description: "SuperAdmin privileges required" })
-	public async getAdminUsersList(
-		@Query(new ZodValidationPipe(apiContract.auth.adminUsers.input)) query: AdminUserListQuery,
-	): Promise<{
+	public async getAdminUsersList(@Query(new ZodValidationPipe(apiContract.auth.adminUsers.input)) query: AdminUserListQuery): Promise<{
 		readonly items: AdminUserDetail[];
 		readonly total: number;
 		readonly page: number;
@@ -201,11 +201,12 @@ export class AuthController {
 	@SkipThrottle()
 	@ApiBearerAuth()
 	@SuperAdminOnly()
+	@RequirePermission("READ", "USER")
 	@Get("/admin/users/:userId")
 	@ApiOperation({ summary: "SuperAdmin: get detailed user info including security state" })
 	@ApiOkResponse({ type: WrappedAdminUserDetail, description: "Full user detail with lockout status" })
 	@ApiResponse({ status: 404, type: ApiErrorResponseDto, description: "User not found" })
-	public async getAdminUserDetail(@Param("userId") userId: string): Promise<AdminUserDetail> {
+	public async getAdminUserDetail(@Param("userId", new ZodValidationPipe(UuidParamSchema)) userId: string): Promise<AdminUserDetail> {
 		return this.authService.getAdminUserDetail(userId);
 	}
 
@@ -218,7 +219,7 @@ export class AuthController {
 	@ApiOperation({ summary: "SuperAdmin: unlock a locked user account" })
 	@ApiOkResponse({ type: WrappedMessageResponse, description: "Account unlocked" })
 	@ApiResponse({ status: 404, type: ApiErrorResponseDto, description: "User not found" })
-	public async unlockUser(@Param("userId") userId: string): Promise<MessageResponse> {
+	public async unlockUser(@Param("userId", new ZodValidationPipe(UuidParamSchema)) userId: string): Promise<MessageResponse> {
 		return this.authService.unlockUser(userId);
 	}
 }

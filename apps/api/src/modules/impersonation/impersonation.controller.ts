@@ -2,11 +2,13 @@ import { BadRequestException, Controller, Param, Post, Req } from "@nestjs/commo
 import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { Throttle } from "@nestjs/throttler";
 import type { ImpersonateResponse, StopImpersonationResponse } from "@workspace/shared";
-import { ImpersonateResponseSchema, StopImpersonationResponseSchema, apiPath } from "@workspace/shared";
+import { ImpersonateResponseSchema, StopImpersonationResponseSchema, UuidParamSchema, apiPath } from "@workspace/shared";
 import type { FastifyRequest } from "fastify";
 
+import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe";
 import { EmailVerified } from "../auth/decorators/email-verified.decorator";
 import { GetUser } from "../auth/decorators/get-user.decorator";
+import { RequirePermission } from "../auth/decorators/require-permission.decorator";
 import { SuperAdminOnly } from "../auth/decorators/super-admin.decorator";
 import type { AccessTokenPayload, RefreshTokenPayload } from "../auth/services/token.service";
 import { ApiErrorResponseDto } from "../../common/dto/api-response.dto";
@@ -40,13 +42,14 @@ export class ImpersonationController {
 	@ApiBearerAuth()
 	@SuperAdminOnly()
 	@EmailVerified()
+	@RequirePermission("CREATE", "USER")
 	@Post("/impersonate/:userId")
 	@ApiOperation({ summary: "SuperAdmin: impersonate another user" })
 	@ApiOkResponse({ type: WrappedImpersonateResponse, description: "Impersonation started" })
 	@ApiResponse({ status: 403, type: ApiErrorResponseDto, description: "SuperAdmin privileges required" })
 	public async impersonate(
 		@GetUser() user: AccessTokenPayload | RefreshTokenPayload | undefined,
-		@Param("userId") targetUserId: string,
+		@Param("userId", new ZodValidationPipe(UuidParamSchema)) targetUserId: string,
 		@Req() req: FastifyRequest,
 	): Promise<ImpersonateResponse> {
 		const admin = requireAccessToken(user);
@@ -72,10 +75,7 @@ export class ImpersonationController {
 	@Post("/stop-impersonation")
 	@ApiOperation({ summary: "SuperAdmin: stop impersonating" })
 	@ApiOkResponse({ type: WrappedStopImpersonationResponse, description: "Impersonation ended" })
-	public async stopImpersonation(
-		@GetUser() user: AccessTokenPayload | RefreshTokenPayload | undefined,
-		@Req() req: FastifyRequest,
-	): Promise<StopImpersonationResponse> {
+	public async stopImpersonation(@GetUser() user: AccessTokenPayload | RefreshTokenPayload | undefined, @Req() req: FastifyRequest): Promise<StopImpersonationResponse> {
 		const payload = requireAccessToken(user);
 		if (payload.isImpersonating !== true || payload.originalUserId === undefined) {
 			throw new BadRequestException({

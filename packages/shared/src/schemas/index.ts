@@ -128,6 +128,20 @@ export type {
 export { AudienceTypeSchema, DeviceTypeSchema, MenuMatchTypeSchema, PermissionActionSchema, PermissionResourceSchema, PlanSchema, RedirectTypeSchema } from "./domain/enums";
 export type { AudienceType, DeviceType, MenuMatchType, PermissionAction, PermissionResource, Plan, RedirectType } from "./domain/enums";
 export {
+	EmailTemplateKeyParamSchema,
+	TelescopeIdParamSchema,
+	TelescopeScheduleNameParamSchema,
+	UuidParamSchema,
+	VerifyEmailTokenParamSchema,
+} from "./domain/param-schemas";
+export type {
+	EmailTemplateKeyParam,
+	TelescopeIdParam,
+	TelescopeScheduleNameParam,
+	UuidParam,
+	VerifyEmailTokenParam,
+} from "./domain/param-schemas";
+export {
 	BackupCancelResponseSchema,
 	BackupCreateInputSchema,
 	BackupCreateResponseSchema,

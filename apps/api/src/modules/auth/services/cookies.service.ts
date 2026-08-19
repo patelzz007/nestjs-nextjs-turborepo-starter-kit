@@ -57,9 +57,14 @@ export class CookieService {
 
 		// Validate cookie value length (only for non-null values)
 		if (value !== null && value !== undefined && Buffer.byteLength(value, "utf-8") > CookieService.maxCookieValueBytes) {
+			const size = Buffer.byteLength(value, "utf-8");
+			console.error(
+				`[CookieService] REJECTED cookie "${name}": ${String(size)} bytes exceeds ${String(CookieService.maxCookieValueBytes)} byte limit. ` +
+				"The JWT access token is too large for a browser cookie. Reduce the permissions in the token payload.",
+			);
 			return {
 				success: false,
-				error: new Error(`Cookie value for "${name}" exceeds ${String(CookieService.maxCookieValueBytes)} bytes`),
+				error: new Error(`Cookie value for "${name}" exceeds ${String(CookieService.maxCookieValueBytes)} bytes (${String(size)} bytes given)`),
 			};
 		}
 

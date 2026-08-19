@@ -83,12 +83,7 @@ export class TokenService {
 	 * @param refreshTokenId - The UUID of the refresh token record (used as JWT `jti`)
 	 */
 	public async generateTokens(user: FlatUserResponse, refreshTokenId: string): Promise<{ accessToken: string; refreshToken: string }> {
-		// Map full PermissionDetails[] → slim JwtPermission[] for the JWT
-		// to keep the access token cookie under ~4 KB.
-		const slimPermissions: JwtPermission[] = user.permissions.map((p) => ({
-			action: p.action,
-			resource: p.resource,
-		}));
+		const slimPermissions: JwtPermission[] = compressPermissions(user.permissions);
 
 		const accessPayload: AccessTokenPayload = {
 			sub: user.id,
@@ -226,10 +221,7 @@ export class TokenService {
 	 * @param originalUserId - The SuperAdmin's actual user ID
 	 */
 	public async generateImpersonationToken(user: FlatUserResponse, originalUserId: string): Promise<string> {
-		const slimPermissions: JwtPermission[] = user.permissions.map((p) => ({
-			action: p.action,
-			resource: p.resource,
-		}));
+		const slimPermissions: JwtPermission[] = compressPermissions(user.permissions);
 
 		const payload: AccessTokenPayload = {
 			sub: user.id,
@@ -252,4 +244,40 @@ export class TokenService {
 			expiresIn: 900, // 15 minutes
 		});
 	}
+}
+
+// ── Permission compression ─────────────────────────────────────────────────
+
+/**
+ * Compress a full permissions list into the smallest set that still satisfies
+ * the PermissionGuard.  For each resource:
+ *   - If MANAGE is present, store ONLY MANAGE (it grants every action on that
+ *     resource, so the individual actions are redundant).
+ *   - Otherwise store all unique actions.
+ *
+ * This keeps the access-token cookie under the 4 KB browser limit even for
+ * SuperAdmin users with 60+ permission rows.
+ */
+function compressPermissions(permissions: readonly { readonly action: string; readonly resource: string }[]): JwtPermission[] {
+	const byResource = new Map<string, Set<string>>();
+	for (const p of permissions) {
+		let actions = byResource.get(p.resource);
+		if (actions === undefined) {
+			actions = new Set();
+			byResource.set(p.resource, actions);
+		}
+		actions.add(p.action);
+	}
+
+	const result: JwtPermission[] = [];
+	for (const [resource, actions] of byResource) {
+		if (actions.has("MANAGE")) {
+			result.push({ action: "MANAGE", resource });
+		} else {
+			for (const action of actions) {
+				result.push({ action, resource });
+			}
+		}
+	}
+	return result;
 }

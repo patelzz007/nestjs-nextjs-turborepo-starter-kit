@@ -74,7 +74,10 @@ export async function assignPermissionsToRoles(roles: Role[], permissions: Permi
 			(p.resource === "AUDIT_LOG" && (p.action === "READ" || p.action === "LIST")) ||
 			(p.resource === "REPORT" && (p.action === "READ" || p.action === "LIST")) ||
 			p.resource === "TAG" ||
-			p.resource === "ANALYTICS",
+			p.resource === "ANALYTICS" ||
+			p.resource === "TELESCOPE" ||
+			p.resource === "EMAIL" ||
+			p.resource === "BACKUP",
 	);
 
 	const managerPerms = permissions.filter(

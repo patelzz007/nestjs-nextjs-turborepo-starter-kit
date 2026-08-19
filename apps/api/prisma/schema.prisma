@@ -68,6 +68,9 @@ enum PermissionResource {
   ANALYTICS
   AUDIT_LOG
   REPORT
+  TELESCOPE
+  EMAIL
+  BACKUP
 }
 
 // Tables
@@ -590,28 +593,28 @@ model EmailLog {
 
 /// RLS: bypass only (`app_rls_bypass()` — admin backup jobs).
 model Backup {
-  id              String   @id @default(uuid())
-  name            String   @db.VarChar(100)
-  status          String   @db.VarChar(20) // pending | processing | completed | failed
-  progress        Int      @default(0)
-  stage           String   @default("queued") // queued | dumping | compressing | finalizing | done | failed
-  filename        String   @db.VarChar(255)
-  sizeBytes       BigInt?  @map("size_bytes")
-  checksum        String?  @db.VarChar(64) // sha256 hex of the .sql.gz
-  error           String?  @db.Text
-  errorCode       String?  @db.VarChar(32) // machine-readable failure category
-  compressLevel   Int      @default(6) @map("compress_level")
-  schemaOnly      Boolean  @default(false) @map("schema_only")
-  tablesExcluded  String[] @default([]) @map("tables_excluded")
-  requestedBy     String   @map("requested_by")
-  requestedByName String?  @map("requested_by_name") @db.VarChar(100)
-  createdAt       BigInt   @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
-  completedAt     BigInt?  @map("completed_at")
-  expiresAt       BigInt?  @map("expires_at")
-  verifiedAt          BigInt? @map("verified_at") // last successful scratch-DB verify
-  verifiedTableCount  Int?    @map("verified_table_count")
-  restoredAt          BigInt? @map("restored_at") // last successful restore into a new DB
-  restoredDatabase    String? @db.VarChar(63) @map("restored_database")
+  id                 String   @id @default(uuid())
+  name               String   @db.VarChar(100)
+  status             String   @db.VarChar(20) // pending | processing | completed | failed
+  progress           Int      @default(0)
+  stage              String   @default("queued") // queued | dumping | compressing | finalizing | done | failed
+  filename           String   @db.VarChar(255)
+  sizeBytes          BigInt?  @map("size_bytes")
+  checksum           String?  @db.VarChar(64) // sha256 hex of the .sql.gz
+  error              String?  @db.Text
+  errorCode          String?  @db.VarChar(32) // machine-readable failure category
+  compressLevel      Int      @default(6) @map("compress_level")
+  schemaOnly         Boolean  @default(false) @map("schema_only")
+  tablesExcluded     String[] @default([]) @map("tables_excluded")
+  requestedBy        String   @map("requested_by")
+  requestedByName    String?  @map("requested_by_name") @db.VarChar(100)
+  createdAt          BigInt   @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
+  completedAt        BigInt?  @map("completed_at")
+  expiresAt          BigInt?  @map("expires_at")
+  verifiedAt         BigInt?  @map("verified_at") // last successful scratch-DB verify
+  verifiedTableCount Int?     @map("verified_table_count")
+  restoredAt         BigInt?  @map("restored_at") // last successful restore into a new DB
+  restoredDatabase   String?  @map("restored_database") @db.VarChar(63)
 
   @@index([status])
   @@index([createdAt])

@@ -6,7 +6,8 @@ import { Resend } from "resend";
 import { z } from "zod";
 import type { FastifyRequest } from "fastify";
 
-import type { EmailLogStatus } from "@workspace/shared";
+import type { EmailLogStatus, ResendWebhookEvent } from "@workspace/shared";
+import { ResendWebhookEventSchema } from "@workspace/shared";
 
 import { TypedConfigService } from "../../../config/typed-config.service";
 import { LogService } from "../../logs/logs.service";
@@ -249,9 +250,18 @@ export class EmailWebhookController {
 			throw new ForbiddenException(`Invalid webhook signature (${reason}). ${hint}`);
 		}
 
-		const eventType: string = typeof event === "object" && event !== null && "type" in event && typeof event.type === "string" ? event.type : "";
-		const emailId: string | undefined = this.extractEmailId(event);
-		if (emailId === undefined) {
+		// Validate the verified payload against the shared Zod schema so we
+		// get typed access to `type` and `data.email_id` instead of manual
+		// narrowing on `unknown`.
+		const parsed = ResendWebhookEventSchema.safeParse(event);
+		if (!parsed.success) {
+			this.logService.warn(`Webhook payload failed schema validation: ${parsed.error.message}`, { context: "EmailWebhookController" });
+			return { received: true };
+		}
+		const resendEvent: ResendWebhookEvent = parsed.data;
+		const eventType: string = resendEvent.type;
+		const emailId: string | undefined = resendEvent.data.email_id;
+		if (emailId.length === 0) {
 			return { received: true };
 		}
 
@@ -312,18 +322,5 @@ export class EmailWebhookController {
 		const message: unknown = "message" in detailObject ? detailObject.message : "reason" in detailObject ? detailObject.reason : undefined;
 		const parts: readonly string[] = [typeof kind === "string" ? kind : "", typeof message === "string" ? message : ""].filter((part: string): boolean => part.length > 0);
 		return parts.length > 0 ? parts.join(" — ").slice(0, 300) : undefined;
-	}
-
-	/** Pull the Resend email id out of a verified event payload. */
-	private extractEmailId(event: unknown): string | undefined {
-		if (typeof event !== "object" || event === null || !("data" in event)) {
-			return undefined;
-		}
-		const data: unknown = event.data;
-		if (typeof data !== "object" || data === null) {
-			return undefined;
-		}
-		const candidate: unknown = "email_id" in data ? data.email_id : "id" in data ? data.id : undefined;
-		return typeof candidate === "string" && candidate.length > 0 ? candidate : undefined;
 	}
 }

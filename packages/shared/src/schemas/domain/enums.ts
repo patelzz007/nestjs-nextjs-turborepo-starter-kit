@@ -33,6 +33,9 @@ export const PermissionResourceSchema = z.enum([
 	"ANALYTICS",
 	"AUDIT_LOG",
 	"REPORT",
+	"TELESCOPE",
+	"EMAIL",
+	"BACKUP",
 ]);
 export type PermissionResource = z.output<typeof PermissionResourceSchema>;
 

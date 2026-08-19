@@ -358,6 +358,102 @@ export async function createPermissions(): Promise<Permission[]> {
 			description: "Full report management",
 			group: "Reports",
 		},
+
+		// Telescope group (admin-only observability surface)
+		{
+			action: "READ",
+			resource: "TELESCOPE",
+			description: "View Telescope data (requests, SQL, exceptions, jobs, schedules)",
+			group: "Telescope",
+		},
+		{
+			action: "LIST",
+			resource: "TELESCOPE",
+			description: "List Telescope entries",
+			group: "Telescope",
+		},
+		{
+			action: "CREATE",
+			resource: "TELESCOPE",
+			description: "Push dumps, replay requests, run schedules",
+			group: "Telescope",
+		},
+		{
+			action: "UPDATE",
+			resource: "TELESCOPE",
+			description: "Set annotations, snooze alerts, update exception status",
+			group: "Telescope",
+		},
+		{
+			action: "DELETE",
+			resource: "TELESCOPE",
+			description: "Prune and clear Telescope buffers",
+			group: "Telescope",
+		},
+		{
+			action: "MANAGE",
+			resource: "TELESCOPE",
+			description: "Full Telescope management",
+			group: "Telescope",
+		},
+
+		// Email group (admin-only email log + template preview)
+		{
+			action: "READ",
+			resource: "EMAIL",
+			description: "View email logs and template previews",
+			group: "Email",
+		},
+		{
+			action: "LIST",
+			resource: "EMAIL",
+			description: "List email logs",
+			group: "Email",
+		},
+		{
+			action: "CREATE",
+			resource: "EMAIL",
+			description: "Send test emails via template preview",
+			group: "Email",
+		},
+		{
+			action: "MANAGE",
+			resource: "EMAIL",
+			description: "Full email management",
+			group: "Email",
+		},
+
+		// Backup group (admin-only database backup/restore)
+		{
+			action: "READ",
+			resource: "BACKUP",
+			description: "View backup status and history",
+			group: "Backup",
+		},
+		{
+			action: "LIST",
+			resource: "BACKUP",
+			description: "List backups",
+			group: "Backup",
+		},
+		{
+			action: "CREATE",
+			resource: "BACKUP",
+			description: "Create database backups",
+			group: "Backup",
+		},
+		{
+			action: "DELETE",
+			resource: "BACKUP",
+			description: "Delete backups",
+			group: "Backup",
+		},
+		{
+			action: "MANAGE",
+			resource: "BACKUP",
+			description: "Full backup management (create, delete, restore, verify)",
+			group: "Backup",
+		},
 	];
 
 	for (const p of data) {

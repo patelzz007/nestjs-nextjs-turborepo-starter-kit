@@ -24,6 +24,7 @@ import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe";
 import { extractClientInfo } from "../../common/utils/client-info";
 import { EmailVerified } from "../auth/decorators/email-verified.decorator";
 import { GetUser } from "../auth/decorators/get-user.decorator";
+import { RequirePermission } from "../auth/decorators/require-permission.decorator";
 import type { AccessTokenPayload, RefreshTokenPayload } from "../auth/services/token.service";
 
 import { BackupAdminGuard } from "./backup-admin.guard";
@@ -49,6 +50,7 @@ export class BackupController {
 	public constructor(private readonly backupService: BackupService) {}
 
 	/** Starts a backup — 202 Accepted; the job runs in the background. */
+	@RequirePermission("CREATE", "BACKUP")
 	@Post()
 	@HttpCode(202)
 	@EmailVerified()
@@ -64,6 +66,7 @@ export class BackupController {
 	}
 
 	/** History + active flag + the requesting admin's quota — the page's data source. */
+	@RequirePermission("LIST", "BACKUP")
 	@Get()
 	@ApiOperation({ summary: "List backups + operational facts" })
 	public list(@GetUser() user: AccessTokenPayload | RefreshTokenPayload | undefined): Promise<BackupListResponse> {
@@ -72,6 +75,7 @@ export class BackupController {
 	}
 
 	/** What the create form may exclude. */
+	@RequirePermission("READ", "BACKUP")
 	@Get("options")
 	@ApiOperation({ summary: "Excludable tables + form defaults" })
 	public options(): Promise<BackupOptionsResponse> {
@@ -79,6 +83,7 @@ export class BackupController {
 	}
 
 	/** List scheduled backups. Static path — must stay above `:id`. */
+	@RequirePermission("LIST", "BACKUP")
 	@Get("schedules")
 	@ApiOperation({ summary: "List scheduled backup jobs" })
 	public schedules(): ReturnType<BackupService["getSchedules"]> {
@@ -86,6 +91,7 @@ export class BackupController {
 	}
 
 	/** Toggle a scheduled backup on/off. Static prefix — must stay above `:id`. */
+	@RequirePermission("UPDATE", "BACKUP")
 	@Post("schedules/:id/toggle")
 	@HttpCode(200)
 	@EmailVerified()
@@ -95,6 +101,7 @@ export class BackupController {
 	}
 
 	/** One backup's status/progress — the poll target. */
+	@RequirePermission("READ", "BACKUP")
 	@Get(":id")
 	@ApiOperation({ summary: "Backup status" })
 	public status(@Param("id") id: string): Promise<BackupEntry> {
@@ -102,6 +109,7 @@ export class BackupController {
 	}
 
 	/** Mints a short-lived signed download token (bound to the requesting admin). */
+	@RequirePermission("READ", "BACKUP")
 	@Post(":id/download")
 	@EmailVerified()
 	@ApiOperation({ summary: "Mint a signed download token" })
@@ -111,6 +119,7 @@ export class BackupController {
 	}
 
 	/** Streams the backup file (guarded by the signed token). */
+	@RequirePermission("READ", "BACKUP")
 	@Get(":id/download")
 	@ApiOperation({ summary: "Stream the backup file (signed token required)" })
 	public async download(
@@ -124,6 +133,7 @@ export class BackupController {
 	}
 
 	/** Deletes the file + row. */
+	@RequirePermission("DELETE", "BACKUP")
 	@Delete(":id")
 	@EmailVerified()
 	@ApiOperation({ summary: "Delete a backup (file + row)" })
@@ -132,6 +142,7 @@ export class BackupController {
 	}
 
 	/** Restores the dump into a scratch DB, confirms it, drops it. */
+	@RequirePermission("READ", "BACKUP")
 	@Post(":id/verify")
 	@EmailVerified()
 	@ApiOperation({ summary: "Verify a backup restores cleanly (scratch DB, then dropped)" })
@@ -140,6 +151,7 @@ export class BackupController {
 	}
 
 	/** Restores the dump into a NEW database (left in place for inspection). */
+	@RequirePermission("CREATE", "BACKUP")
 	@Post(":id/restore")
 	@EmailVerified()
 	@ApiOperation({ summary: "Restore a backup into a new database" })
@@ -155,6 +167,7 @@ export class BackupController {
 	}
 
 	/** Gracefully stops a pending/running backup job. */
+	@RequirePermission("UPDATE", "BACKUP")
 	@Post(":id/cancel")
 	@EmailVerified()
 	@ApiOperation({ summary: "Cancel a pending or running backup" })

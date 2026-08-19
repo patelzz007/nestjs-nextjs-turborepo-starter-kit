@@ -5,6 +5,7 @@ import { interval, map, merge, type Observable } from "rxjs";
 
 import { EmailLogListResponseSchema, nowEpochMs, type EmailLogEntry, apiPath } from "@workspace/shared";
 
+import { RequirePermission } from "../../auth/decorators/require-permission.decorator";
 import { createWrappedDto } from "../../../common/dto/response-wrapper";
 
 import { EmailLogEventsService } from "./email-log-events.service";
@@ -38,6 +39,7 @@ export class EmailLogController {
 	 * Recent rows, newest first. `?limit=` clamps the page size (default 100,
 	 * max 500) so a rogue value can't 500 the query or dump the whole table.
 	 */
+	@RequirePermission("LIST", "EMAIL")
 	@Get()
 	@ApiOperation({ summary: "List recent sent emails" })
 	@ApiQuery({ name: "limit", required: false, description: "Max rows to return (default 100, max 500)", example: 50 })
@@ -61,6 +63,7 @@ export class EmailLogController {
 	 * sent (EventSource cannot set Authorization headers — cookies are the
 	 * only supported auth transport for SSE).
 	 */
+	@RequirePermission("LIST", "EMAIL")
 	@Sse("events")
 	@ApiOperation({ summary: "Live EmailLog update stream (SSE)" })
 	@ApiOkResponse({ description: "text/event-stream; one `{ updatedAt }` frame per EmailLog write" })

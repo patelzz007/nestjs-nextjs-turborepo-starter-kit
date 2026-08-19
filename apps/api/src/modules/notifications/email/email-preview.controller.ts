@@ -11,6 +11,8 @@ import {
 	apiPath,
 } from "@workspace/shared";
 
+import { ZodValidationPipe } from "../../../common/pipes/zod-validation.pipe";
+import { RequirePermission } from "../../auth/decorators/require-permission.decorator";
 import { createWrappedDto, createWrappedArrayDto } from "../../../common/dto/response-wrapper";
 import { TypedConfigService } from "../../../config/typed-config.service";
 import { EmailRenderContextSchema, type EmailRenderContext } from "./base/email-render-context";
@@ -48,6 +50,7 @@ export class EmailPreviewController {
 	}
 
 	/** Static metadata for every template — powers the admin preview index. */
+	@RequirePermission("READ", "EMAIL")
 	@Get()
 	@ApiOperation({ summary: "List email template metadata" })
 	@ApiOkResponse({ type: WrappedPreviewList, description: "Metadata for every registered email template" })
@@ -56,11 +59,12 @@ export class EmailPreviewController {
 	}
 
 	/** Rendered HTML + plain text for one template (sample props only). */
+	@RequirePermission("READ", "EMAIL")
 	@Get(":key")
 	@ApiOperation({ summary: "Render one email template preview" })
 	@ApiOkResponse({ type: WrappedPreviewDetail, description: "Rendered preview for one template" })
 	@ApiNotFoundResponse({ description: "Unknown template key" })
-	public detail(@Param("key") key: string): EmailPreview {
+	public detail(@Param("key", new ZodValidationPipe(EmailTemplateKeyParamSchema)) key: string): EmailPreview {
 		const parsedKey = EmailTemplateKeyParamSchema.safeParse(key);
 		if (!parsedKey.success) {
 			throw new NotFoundException(`Unknown email template: ${key}`);
@@ -78,11 +82,12 @@ export class EmailPreviewController {
 	 * Returns the same `EmailSendResult` the auth flows get — so the admin can
 	 * see the exact outcome (id / mode / failure reason) for every template.
 	 */
+	@RequirePermission("CREATE", "EMAIL")
 	@Post(":key/send")
 	@ApiOperation({ summary: "Send one email template (sample props)" })
 	@ApiOkResponse({ type: WrappedSendResult, description: "Outcome of the send attempt" })
 	@ApiNotFoundResponse({ description: "Unknown template key" })
-	public async sendTest(@Param("key") key: string): Promise<EmailSendResult> {
+	public async sendTest(@Param("key", new ZodValidationPipe(EmailTemplateKeyParamSchema)) key: string): Promise<EmailSendResult> {
 		const parsedKey = EmailTemplateKeyParamSchema.safeParse(key);
 		if (!parsedKey.success) {
 			throw new NotFoundException(`Unknown email template: ${key}`);
