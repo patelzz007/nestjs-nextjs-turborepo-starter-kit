@@ -12,6 +12,8 @@ import { HealthModule } from "./modules/health/health.module";
 import { ImpersonationModule } from "./modules/impersonation/impersonation.module";
 import { LogsModule } from "./modules/logs/logs.module";
 import { NotificationsModule } from "./modules/notifications/notifications.module";
+import { PermissionGuard } from "./modules/rbac/permission.guard";
+import { RbacModule } from "./modules/rbac/rbac.module";
 import { SessionsModule } from "./modules/sessions/sessions.module";
 import { TelescopeCaptureMiddleware } from "./modules/telescope/telescope-capture.middleware";
 import { TelescopeAuthJobAdapter } from "./modules/telescope/telescope-auth-job-adapter";
@@ -26,6 +28,7 @@ import { RlsInterceptor } from "./common/interceptors/rls.interceptor";
 	imports: [
 		ConfigModule,
 		PrismaModule,
+		RbacModule,
 		ScheduleModule.forRoot(),
 		LogsModule,
 		HealthModule,
@@ -45,9 +48,14 @@ import { RlsInterceptor } from "./common/interceptors/rls.interceptor";
 			provide: APP_INTERCEPTOR,
 			useClass: ResponseInterceptor,
 		},
+		// AuthGuard first (attach `request.user`), then PermissionGuard (`@RequirePermission`).
 		{
 			provide: APP_GUARD,
 			useClass: AuthGuard,
+		},
+		{
+			provide: APP_GUARD,
+			useClass: PermissionGuard,
 		},
 		// Telescope's auto-capture job adapters observe their module's domain
 		// event streams and record real work as jobs — auth flows, impersonation

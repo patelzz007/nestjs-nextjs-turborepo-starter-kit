@@ -3,15 +3,19 @@ import { Reflector } from "@nestjs/core";
 import type { FastifyRequest } from "fastify";
 import { Observable } from "rxjs";
 
-import { IS_PUBLIC_KEY } from "../../modules/auth/decorators/public.decorator";
+import { RLS_BYPASS_KEY } from "../../modules/auth/decorators/rls-bypass.decorator";
 import { rlsStorage, type RlsContext } from "../../prisma/rls-context";
 
 /**
  * Opens the RLS AsyncLocalStorage scope around the rest of the interceptor
  * chain + controller. Register this APP_INTERCEPTOR first so it is outermost.
  *
- * Public routes, telescope-token calls (no `request.user`), and admin JWTs
- * bypass policies. Everyone else is scoped to `sub`.
+ * Bypass (`app.rls_bypass = true`) applies when:
+ * - the handler is decorated with `@RlsBypass()` (explicit public DB work), or
+ * - there is no `request.user` (Telescope token path, pre-auth probes), or
+ * - the JWT carries `hasAdminAccess` / `isSuperAdmin`.
+ *
+ * `@Public()` alone does **not** bypass — only skips `AuthGuard`.
  */
 @Injectable()
 export class RlsInterceptor implements NestInterceptor {
@@ -25,7 +29,7 @@ export class RlsInterceptor implements NestInterceptor {
 	}
 
 	private contextFromRequest(context: ExecutionContext): RlsContext {
-		if (this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [context.getHandler(), context.getClass()])) {
+		if (this.reflector.getAllAndOverride<boolean>(RLS_BYPASS_KEY, [context.getHandler(), context.getClass()])) {
 			return { userId: "", bypass: true };
 		}
 

@@ -471,11 +471,46 @@ RLS even with `FORCE ROW LEVEL SECURITY`**. The API therefore sets `ROLE app_run
 | Setting | Meaning |
 | --- | --- |
 | `app.current_user_id` | JWT `sub`, or empty |
-| `app.rls_bypass` | `true` for `@Public()`, telescope-token calls (no `request.user`), admin JWTs (`hasAdminAccess` / `isSuperAdmin`), and anything with no ALS (cron, `onModuleInit`) |
+| `app.rls_bypass` | `true` when `@RlsBypass()`, no `request.user` (Telescope token / infra probes), or admin JWT (`hasAdminAccess` / `isSuperAdmin`) |
 
 **Who sets ALS:** `RlsInterceptor` (`apps/api/src/common/interceptors/rls.interceptor.ts`,
 outermost `APP_INTERCEPTOR`) wraps `next.handle()` in `rlsStorage.run(...)`. Guards run
 first, so `request.user` is already set on the JWT path.
+
+> [!NOTE] **`@Public()` ≠ RLS bypass.** `@Public()` only skips `AuthGuard`. Routes that
+> must touch the database across tenants (signup, login, signed webhooks) also need
+> `@RlsBypass()`. Session refresh/logout are `@Public()` but use the refresh token's
+> `sub` for scoped RLS — they do **not** use `@RlsBypass()`.
+
+### Public routes and database access
+
+| Route | `@Public()` | `@RlsBypass()` | Touches DB? | Notes |
+| --- | --- | --- | --- | --- |
+| `GET /` | yes | no | no | Welcome string only |
+| `GET /health` | yes | no | yes | `SELECT 1` connectivity probe (no tenant tables) |
+| `GET /version` | yes | no | no | Static version manifest |
+| `POST /api/v1/auth/signup` | yes | yes | yes | Creates user + role links |
+| `POST /api/v1/auth/login` | yes | yes | yes | Lookup by email, lockout counters |
+| `POST /api/v1/auth/resend-verification` | yes | yes | yes | User + verification token rows |
+| `POST /api/v1/auth/forgot-password` | yes | yes | yes | User + reset token rows |
+| `POST /api/v1/auth/reset-password` | yes | yes | yes | User + token rotation |
+| `POST /api/v1/auth/verify-email/:token` | yes | yes | yes | User email-verified flag |
+| `POST /api/v1/auth/refresh` | yes | no | yes | Scoped to refresh token owner (`sub`) |
+| `POST /api/v1/auth/logout` | yes | no | yes | Revokes caller's refresh token row |
+| `POST /api/v1/auth/logout-all` | yes | no | yes | Revokes all refresh tokens for `sub` |
+| `GET /notifications/email-webhook` | yes | no | no | Info endpoint for operators |
+| `POST /notifications/email-webhook` | yes | yes | yes | Updates `email_logs` by Resend id (signature-verified) |
+
+Add new public routes in this table when you ship them. If a route needs cross-tenant
+DB work, add `@RlsBypass()`; if it only touches the caller's rows, keep scoped RLS.
+
+### Permissions (`@RequirePermission`)
+
+JWT access tokens embed a flattened `permissions[]` array. Handlers declare required
+action+resource with `@RequirePermission("READ", "USER")` etc. The global
+`PermissionGuard` (`APP_GUARD` in `apps/api/src/app.module.ts`, registered after
+`AuthGuard`) reads that metadata; `MANAGE` on the same resource grants every action;
+`isSuperAdmin` bypasses. Seed matrix: `apps/api/prisma/seed/permissions.ts`.
 
 **Policies** (also noted as `/// RLS:` on each model in `schema.prisma` — Prisma cannot emit
 `ENABLE ROW LEVEL SECURITY` from PSL, so the SQL lives in
@@ -496,5 +531,5 @@ cd apps/api && pnpm db:deploy
 
 ---
 
-_Last updated: August 18, 2026_
+_Last updated: August 20, 2026_
 

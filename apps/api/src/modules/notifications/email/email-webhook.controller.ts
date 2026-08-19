@@ -12,6 +12,7 @@ import { ResendDeliveryDetailSchema, ResendWebhookEventSchema, ResendWebhookHead
 import { TypedConfigService } from "../../../config/typed-config.service";
 import { LogService } from "../../logs/logs.service";
 import { Public } from "../../auth/decorators/public.decorator";
+import { RlsBypass } from "../../auth/decorators/rls-bypass.decorator";
 
 import { EmailLogService, type WebhookUpdateResult } from "./email-log.service";
 import { ResendWebhookEventDto } from "./dtos/resend-webhook-event.dto";
@@ -56,9 +57,8 @@ function webhookStatusFor(eventType: string): EmailLogStatus | undefined {
  *
  * The route is PUBLIC (Resend cannot send cookies) but the signature is
  * verified via `resend.webhooks.verify()` — requests without a valid
- * `RESEND_WEBHOOK_SECRET` signature get a 403. Requires the Nest app to be
- * booted with `rawBody: true` so the signature covers the exact bytes Resend
- * sent (the JSON parser would otherwise re-encode whitespace).
+ * `RESEND_WEBHOOK_SECRET` signature get a 403. `@RlsBypass()` is required on
+ * POST because `email_logs` SELECT/UPDATE are bypass-only policies.
  */
 @ApiTags("Email Webhook")
 @Controller("notifications/email-webhook")
@@ -99,6 +99,7 @@ export class EmailWebhookController {
 	}
 
 	@Public()
+	@RlsBypass()
 	@Post()
 	// Per-IP rate limiting on the delivery path only (defense-in-depth on top
 	// of signature verification). Deliberately method-scoped: the GET info

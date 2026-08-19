@@ -62,8 +62,10 @@ import { TelescopeService } from "./telescope.service";
 
 /**
  * The Telescope read API (docs/telescope.md §7). Every route requires admin
- * access (global AuthGuard + TelescopeAdminGuard) and is excluded from the
- * public Swagger document — request bodies and SQL must never leak.
+ * access (global AuthGuard + TelescopeAdminGuard), a matching `@RequirePermission`
+ * on the `TELESCOPE` resource (including destructive prune/clear/replay/dump),
+ * and is excluded from the public Swagger document — request bodies and SQL must
+ * never leak. `isSuperAdmin` bypasses permission checks.
  *
  * All responses pass through the standard `ResponseInterceptor` envelope.
  * Every query-string and body is validated STRICTLY at the HTTP boundary via

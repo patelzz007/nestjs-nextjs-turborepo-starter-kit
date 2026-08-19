@@ -40,6 +40,7 @@ import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe";
 import { EmailVerified } from "./decorators/email-verified.decorator";
 import { GetUser } from "./decorators/get-user.decorator";
 import { Public } from "./decorators/public.decorator";
+import { RlsBypass } from "./decorators/rls-bypass.decorator";
 import { RequirePermission } from "./decorators/require-permission.decorator";
 import { SuperAdminOnly } from "./decorators/super-admin.decorator";
 import { ApiErrorResponseDto } from "../../common/dto/api-response.dto";
@@ -83,6 +84,7 @@ export class AuthController {
 
 	@Throttle({ strict: { ttl: 60000, limit: 3 } })
 	@Public()
+	@RlsBypass()
 	@Post("/signup")
 	@ApiOperation({ summary: "Register a new user account" })
 	@ApiBody({ type: SignupDto })
@@ -94,6 +96,7 @@ export class AuthController {
 
 	@Throttle({ strict: { ttl: 60000, limit: 5 } })
 	@Public()
+	@RlsBypass()
 	@Post("/login")
 	@ApiOperation({ summary: "Authenticate with email and password" })
 	@ApiBody({ type: LoginDto })
@@ -122,6 +125,7 @@ export class AuthController {
 
 	@Throttle({ strict: { ttl: 60000, limit: 3 } })
 	@Public()
+	@RlsBypass()
 	@Post("/resend-verification")
 	@HttpCode(200)
 	@ApiOperation({ summary: "Resend email verification link" })
@@ -135,6 +139,7 @@ export class AuthController {
 
 	@Throttle({ strict: { ttl: 60000, limit: 3 } })
 	@Public()
+	@RlsBypass()
 	@Post("/forgot-password")
 	@HttpCode(200)
 	@ApiOperation({ summary: "Request a password reset email" })
@@ -146,6 +151,7 @@ export class AuthController {
 
 	@Throttle({ strict: { ttl: 60000, limit: 5 } })
 	@Public()
+	@RlsBypass()
 	@Post("/reset-password")
 	@HttpCode(200)
 	@ApiOperation({ summary: "Reset password using a valid reset token" })
@@ -167,6 +173,7 @@ export class AuthController {
 	}
 
 	@Public()
+	@RlsBypass()
 	@Post("/verify-email/:token")
 	@ApiOperation({ summary: "Verify email address using a verification token" })
 	@ApiOkResponse({ type: WrappedVerifyEmailResponse, description: "Email verified" })

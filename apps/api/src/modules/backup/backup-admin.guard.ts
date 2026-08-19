@@ -4,11 +4,10 @@ import type { FastifyRequest } from "fastify";
 /**
  * Admin gate for `/backup/*`.
  *
- * The global `AuthGuard` already proves the caller is authenticated; this
- * guard additionally requires `hasAdminAccess === true`. Backup files contain
- * the ENTIRE database (PII included) and the create/download/delete endpoints
- * can move or destroy data, so they must never be reachable by a plain user —
- * the admin panel proxy gating is defense-in-depth, not the boundary.
+ * Layering: global `AuthGuard` → `BackupAdminGuard` (`hasAdminAccess`) →
+ * global `PermissionGuard` (`@RequirePermission` on the `BACKUP` resource).
+ * Backup files contain the ENTIRE database (PII included) — never reachable
+ * by a plain user even if a proxy misroutes.
  */
 @Injectable()
 export class BackupAdminGuard implements CanActivate {

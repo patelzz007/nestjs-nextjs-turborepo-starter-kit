@@ -41,7 +41,7 @@ Use this doc when you want to **start a specific improvement task**. It is organ
 | Data flow (Prisma → Zod → API → smart → dumb) | **Strong** on wired domains | Gaps: email/RBAC, some params |
 | Type safety (no `any`/`unknown`/`never`/casts) | **Weak** in API, client auth, UI table/chart | Telescope module is stricter |
 | Access modifiers + return types | **Partial** | Auth/sessions/health loose |
-| RLS | **Done** (first cut) | `prisma/rls.sql` + `pnpm db:rls`; watch `@Public()` bypass |
+| RLS | **Done** (first cut) | `prisma/rls.sql` + `pnpm db:rls`; `@RlsBypass()` for cross-tenant public DB routes |
 | Dumb components (`forwardRef`, CVA, tokens) | **Early** | Largest remaining work |
 | RHF + Zod forms | **Sparse** | Backup create/restore, settings |
 | Documentation | **Good** Prisma/backup | Missing `packages/ui/README.md` |
@@ -110,18 +110,18 @@ pnpm db:reset        # reset + rls + seed (from apps/api)
 
 | Task | Where | Why | Fix |
 |------|-------|-----|-----|
-| [ ] Audit Prisma calls on `@Public()` routes | `email-webhook.controller.ts`, `rls.interceptor.ts` | Full RLS bypass for request scope | Minimize DB work on public handlers; or narrow bypass |
-| [ ] Document `@Public()` + bypass behavior | `docs/prisma.md` | Juniors will misconfigure new routes | Add table: which public routes touch DB |
+| [x] Audit Prisma calls on `@Public()` routes | `email-webhook.controller.ts`, `rls.interceptor.ts` | Full RLS bypass for request scope | `@RlsBypass()` on cross-tenant public DB routes only; refresh/logout stay scoped |
+| [x] Document `@Public()` + bypass behavior | `docs/prisma.md` | Juniors will misconfigure new routes | Add table: which public routes touch DB |
 | [ ] New table checklist | `schema.prisma`, `rls.sql` | Drift = missing policies | See **Database & RLS workflow** above |
 
 ### Permissions (`@RequirePermission`)
 
 | Task | Where | Fix |
 |------|-------|-----|
-| [ ] Register or document `PermissionGuard` usage | `app.module.ts` | Today only 2 `@RequirePermission` usages on auth controller |
-| [ ] Telescope destructive ops | `telescope.controller.ts` | Add resource permissions or document admin-only as intentional |
-| [ ] Backup mutations | `backup.controller.ts` | Align with `SYSTEM_SETTINGS` / admin dashboard perms |
-| [ ] Email admin surfaces | `email-log.controller.ts`, `email-preview.controller.ts` | **Q1** — dedicated admin guard + permissions |
+| [x] Register or document `PermissionGuard` usage | `app.module.ts` | Today only 2 `@RequirePermission` usages on auth controller |
+| [x] Telescope destructive ops | `telescope.controller.ts` | Add resource permissions or document admin-only as intentional |
+| [x] Backup mutations | `backup.controller.ts` | Align with `SYSTEM_SETTINGS` / admin dashboard perms |
+| [x] Email admin surfaces | `email-log.controller.ts`, `email-preview.controller.ts` | **Q1** — dedicated admin guard + permissions |
 
 ### API boundary — `ZodValidationPipe` + shared contract
 
