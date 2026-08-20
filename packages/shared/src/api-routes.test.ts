@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 
-import { apiRoutes, buildQuery, buildRoute } from "./api-routes";
+import {
+	apiRoutes,
+	buildQuery,
+	buildRoute,
+	isParamRoute,
+	ParamRouteSchema,
+	RouteDefSchema,
+	type RouteDef,
+} from "./api-routes";
 
 // ── apiRoutes shape ────────────────────────────────────────────────────────
 
@@ -19,6 +27,63 @@ describe("apiRoutes", () => {
 		expect(typeof route).not.toBe("string");
 		expect(route).toHaveProperty("path", "/telescope/requests/:id");
 		expect(route).toHaveProperty("params");
+	});
+});
+
+// ── isParamRoute ───────────────────────────────────────────────────────────
+
+describe("isParamRoute", () => {
+	it("returns false for static routes", () => {
+		expect(isParamRoute("/telescope/requests")).toBe(false);
+	});
+
+	it("returns true for parameterized routes", () => {
+		expect(isParamRoute({ path: "/backup/:id", params: ["id"] })).toBe(true);
+	});
+
+	it("returns false for objects missing params", () => {
+		// Pass a malformed route via RouteDef to bypass TS narrowing — tests runtime behaviour.
+		const malformed: RouteDef = { path: "/backup/:id" } as RouteDef;
+		expect(isParamRoute(malformed)).toBe(false);
+	});
+
+	it("returns false for empty params array", () => {
+		const emptyParams: RouteDef = { path: "/backup/:id", params: [] } as RouteDef;
+		expect(isParamRoute(emptyParams)).toBe(false);
+	});
+});
+
+// ── RouteDefSchema ─────────────────────────────────────────────────────────
+
+describe("RouteDefSchema", () => {
+	it("accepts valid static routes", () => {
+		expect(RouteDefSchema.safeParse("/auth/me").success).toBe(true);
+	});
+
+	it("accepts valid parameterized routes", () => {
+		expect(RouteDefSchema.safeParse({ path: "/backup/:id", params: ["id"] }).success).toBe(true);
+	});
+
+	it("rejects empty strings", () => {
+		expect(RouteDefSchema.safeParse("").success).toBe(false);
+	});
+
+	it("rejects param routes with empty params array", () => {
+		expect(RouteDefSchema.safeParse({ path: "/backup/:id", params: [] }).success).toBe(false);
+	});
+
+	it("rejects param routes missing path", () => {
+		expect(RouteDefSchema.safeParse({ params: ["id"] }).success).toBe(false);
+	});
+
+	it("rejects param routes with extra unknown fields", () => {
+		expect(RouteDefSchema.safeParse({ path: "/backup/:id", params: ["id"], extra: true }).success).toBe(false);
+	});
+
+	it("rejects non-string, non-object values", () => {
+		expect(RouteDefSchema.safeParse(42).success).toBe(false);
+		expect(RouteDefSchema.safeParse(null).success).toBe(false);
+		expect(RouteDefSchema.safeParse(undefined).success).toBe(false);
 	});
 });
 

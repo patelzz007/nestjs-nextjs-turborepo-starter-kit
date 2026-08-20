@@ -14,19 +14,34 @@
 //   buildRoute(apiRoutes.telescope.requestDetail, { id: "abc" })
 //   // → "/telescope/requests/abc"
 
-// ── Route definition types ──────────────────────────────────────────────────
+// ── Route definition types (Zod-validated) ─────────────────────────────────
 
-/** A route with path parameters (e.g. "/backup/:id"). */
-export interface ParamRoute<ParamNames extends string[]> {
-	readonly path: string;
-	readonly params: ParamNames;
+import { z } from "zod";
+
+/** A parameterized route: has a `path` with `:param` placeholders and a `params` tuple. */
+export const ParamRouteSchema = z
+	.object({
+		path: z.string(),
+		params: z.array(z.string()).min(1),
+	})
+	.strict();
+export type ParamRoute = z.infer<typeof ParamRouteSchema>;
+
+/** A static route is just a plain string (no params). Empty paths are not valid routes. */
+export const StaticRouteSchema = z.string().min(1);
+export type StaticRoute = z.infer<typeof StaticRouteSchema>;
+
+/** A route is either a static string or a parameterized route object. */
+export const RouteDefSchema = z.union([StaticRouteSchema, ParamRouteSchema]);
+export type RouteDef = z.infer<typeof RouteDefSchema>;
+
+/** True when `route` is a parameterized route (has `.params`). */
+export function isParamRoute(route: RouteDef): route is ParamRoute {
+	return ParamRouteSchema.safeParse(route).success;
 }
 
-/** A static route (no params) or a parametrised route. */
-export type RouteDef = string | ParamRoute<string[]>;
-
 /** Extract the `path` string from any `RouteDef`. */
-export type RoutePath<T extends RouteDef> = T extends ParamRoute<string[]> ? T["path"] : T;
+export type RoutePath<T extends RouteDef> = T extends ParamRoute ? T["path"] : T;
 
 // ── The route tree ─────────────────────────────────────────────────────────
 // Groups mirror the contract tree (auth / email / backup / telescope).
@@ -107,10 +122,52 @@ export const apiRoutes = {
 		setExceptionStatus: { path: "/telescope/exceptions/:id/status", params: ["id"] },
 		retryJob: { path: "/telescope/jobs/:id/retry", params: ["id"] },
 	},
-} as const satisfies Record<string, Record<string, RouteDef>>;
+} satisfies Record<string, Record<string, RouteDef>>;
 
 /** The full route tree — exported for type-level access. */
 export type ApiRoutes = typeof apiRoutes;
+
+// ── Runtime validation (runs once at module load) ──────────────────────────
+// Walks every leaf in the route tree and validates it against RouteDefSchema.
+// For parameterized routes, also checks that :param placeholders match params[].
+// If any route is malformed, the module fails to import.
+
+const PLACEHOLDER_RE = /:([a-zA-Z_][a-zA-Z0-9_]*)/g;
+
+/** Collect all unique param names from a path string. */
+function extractPlaceholders(path: string): string[] {
+	return [...new Set([...path.matchAll(PLACEHOLDER_RE)].map((m) => m[1]))];
+}
+
+/** Validate a single route leaf against the Zod schema + placeholder consistency. */
+function validateLeaf(routeName: string, value: unknown): void {
+	const result = RouteDefSchema.safeParse(value);
+	if (!result.success) {
+		throw new Error(`apiRoutes: invalid route "${routeName}" — ${result.error.message}`);
+	}
+	// Re-parse through ParamRouteSchema — safeParse returns narrowed ParamRoute on success.
+	const paramResult = ParamRouteSchema.safeParse(result.data);
+	if (paramResult.success) {
+		const paramRoute: ParamRoute = paramResult.data;
+		const placeholders: string[] = extractPlaceholders(paramRoute.path);
+		const paramSet: Set<string> = new Set<string>(paramRoute.params);
+		if (placeholders.length !== paramSet.size || !placeholders.every((p) => paramSet.has(p))) {
+			throw new Error(`apiRoutes: param mismatch in "${routeName}" — path placeholders [${placeholders.join(", ")}] do not match params [${paramRoute.params.join(", ")}]`);
+		}
+	}
+}
+
+/** Walk the route tree and validate every leaf. */
+function validateRoutes(): void {
+	const tree = apiRoutes satisfies Record<string, Record<string, RouteDef>>;
+	for (const [group, routes] of Object.entries(tree)) {
+		for (const [name, route] of Object.entries(routes)) {
+			validateLeaf(`${group}.${name}`, route);
+		}
+	}
+}
+
+validateRoutes();
 
 // ── buildRoute() — compile-time param enforcement ──────────────────────────
 
@@ -124,20 +181,14 @@ export type ApiRoutes = typeof apiRoutes;
  *   buildRoute(apiRoutes.telescope.requestDetail, { id: "abc" })
  *   // → "/telescope/requests/abc"
  */
-export function buildRoute<T extends RouteDef>(
-	route: T,
-	...args: T extends ParamRoute<infer P extends string[]>
-		? [params: Record<P[number], string | number>]
-		: []
-): string {
-	const params = args[0] as Record<string, string | number> | undefined;
-
+export function buildRoute<T extends RouteDef>(route: T, ...args: T extends ParamRoute ? [params: Record<T["params"][number], string | number>] : []): string {
 	// Static route — return as-is.
-	if (typeof route === "string") {
+	if (!isParamRoute(route)) {
 		return route;
 	}
 
 	// Parameterized route — substitute each :param placeholder.
+	const params: Record<string, string | number> | undefined = args[0];
 	let resolved: string = route.path;
 	for (const paramName of route.params) {
 		const value: string | number | undefined = params?.[paramName];
@@ -160,10 +211,7 @@ export type QueryValue = string | number | boolean;
  *   buildQuery("/telescope/requests", { sort: "duration", starred: true })
  *   // → "/telescope/requests?sort=duration&starred=true"
  */
-export function buildQuery(
-	base: string,
-	params: Record<string, QueryValue | null | undefined>,
-): string {
+export function buildQuery(base: string, params: Record<string, QueryValue | null | undefined>): string {
 	const parts: string[] = [];
 	for (const [key, value] of Object.entries(params)) {
 		if (value !== null && value !== undefined) {

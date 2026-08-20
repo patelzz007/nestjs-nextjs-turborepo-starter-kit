@@ -36,6 +36,7 @@ coverImage: "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?auto=f
 | **[Reactive core](./reactive-core.md)**             | Historical design doc for the in-house rxjs-like core — **superseded: the package was replaced by RxJS** (`rxjs` in `apps/admin` + `packages/ui`, see `apps/admin/lib/virtual-time-scheduler.ts` for the test scheduler). |
 | **[Performance & DX roadmap](./performance-and-dx.md)** | 20 grounded performance + developer-experience improvements (turbo cache, pino, CI, smoke test…) — each with a priority, effort estimate, and acceptance criteria. |
 | **[Sidebar audit](./sidebar-audit.md)**              | 20 improvements + 20 new features for the admin sidebar (a11y contracts, search, rail mode, favorites, RBAC menu…) — grounded in the actual sidebar code. |
+| **[API Routes](./api-routes.md)**                     | Single source of truth for all API endpoint paths — how `api-routes.ts` works, how contracts/controllers/client consume it, and how to add or remove endpoints. |
 
 ---
 
@@ -50,7 +51,7 @@ Don't read top to bottom. Here's the path we'd walk a new developer through:
 | 3️⃣    | **[Token Refresh](./token-refresh.md)**                             | Read its 30-second TL;DR first (coffee-shop mental model, zero jargon), then the real machinery: the two layers, how to observe them in DevTools / server logs, and the FAQ. |
 | 5️⃣    | **[TypeScript](./typescript.md) · [ESLint](./eslint.md) · [Dependencies](./dependencies.md)** | Read when you touch config or hit a lint/type error — no need up front.          |
 | 6️⃣    | **[Prisma](./prisma.md)**                                           | Read when you touch the database: migrations, seeding, every `db:*` command.                            |
-| 7️⃣    | **[Auth roadmap](./auth-roadmap.md) · [Boilerplate roadmap](./boilerplate-roadmap.md) · [UI component audit](./ui-components.md) · [Performance & DX roadmap](./performance-and-dx.md) · [Sidebar audit](./sidebar-audit.md) | Read when you're *planning* new work — idea lists, the per-component improvement backlog, and the perf/DX backlog. |
+| 7️⃣    | **[Auth roadmap](./auth-roadmap.md) · [Boilerplate roadmap](./boilerplate-roadmap.md) · [UI component audit](./ui-components.md) · [Performance & DX roadmap](./performance-and-dx.md) · [Sidebar audit](./sidebar-audit.md) · [API Routes](./api-routes.md) | Read when you're *planning* new work — idea lists, the per-component improvement backlog, the perf/DX backlog, and the route registry. |
 
 **TL;DR for the common case:** steps 1–4 are required reading; steps 5–7 are
 reference material to reach for when the moment calls for them.
