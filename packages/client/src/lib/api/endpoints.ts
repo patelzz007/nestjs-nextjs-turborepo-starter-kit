@@ -27,7 +27,38 @@
 
 import type { QueryKey } from "@tanstack/react-query";
 import {
+	// ── Contract & shared types ───────────────────────────────────────
 	apiContract,
+	ApiPaginatedMetaSchema,
+	ApiResponseMetaSchema,
+	type Envelope,
+	type ApiContractDef,
+	type ApiResponseMeta,
+	type ApiVersion,
+	type DataValue,
+	type RestMethod,
+	type SerializableInput,
+
+	// ── Auth response schemas ──────────────────────────────────────────
+	AdminUserDetailSchema,
+	ForgotPasswordResponseSchema,
+	LoginResponseSchema,
+	LogoutResponseSchema,
+	RefreshResponseSchema,
+	ResendVerificationResponseSchema,
+	ResetPasswordResponseSchema,
+	SessionStatusSchema,
+	SignupResponseSchema,
+	UserResponseSchema,
+	VerifyEmailResponseSchema,
+
+	// ── Email schemas ─────────────────────────────────────────────────
+	EmailLogListResponseSchema,
+	EmailPreviewListResponseSchema,
+	EmailPreviewSchema,
+	EmailSendResultSchema,
+
+	// ── Backup schemas ────────────────────────────────────────────────
 	BackupCancelResponseSchema,
 	BackupCreateResponseSchema,
 	BackupDeleteResponseSchema,
@@ -38,21 +69,9 @@ import {
 	BackupScheduleToggleResponseSchema,
 	BackupStatusResponseSchema,
 	BackupVerifyResponseSchema,
-	EmailLogListResponseSchema,
-	EmailPreviewListResponseSchema,
-	EmailPreviewSchema,
-	EmailSendResultSchema,
+
+	// ── Telescope schemas ─────────────────────────────────────────────
 	ExceptionLogEntrySchema,
-	ForgotPasswordResponseSchema,
-	LoginResponseSchema,
-	LogoutResponseSchema,
-	RefreshResponseSchema,
-	ResendVerificationResponseSchema,
-	ResetPasswordResponseSchema,
-	SessionStatusSchema,
-	SignupResponseSchema,
-	VerifyEmailResponseSchema,
-	AdminUserDetailSchema,
 	TelescopeAlertEntrySchema,
 	TelescopeAlertsResponseSchema,
 	TelescopeAnnotationSchema,
@@ -77,16 +96,6 @@ import {
 	TelescopeTrendsResponseSchema,
 	TelescopeUsersResponseSchema,
 	TelescopeWebhookDeliveriesResponseSchema,
-	UserResponseSchema,
-	ApiPaginatedMetaSchema,
-	ApiResponseMetaSchema,
-	type Envelope,
-	type ApiContractDef,
-	type ApiResponseMeta,
-	type ApiVersion,
-	type DataValue,
-	type RestMethod,
-	type SerializableInput,
 } from "@workspace/shared";
 import { z, type ZodType } from "zod";
 

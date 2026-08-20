@@ -437,7 +437,10 @@ export class BackupService implements OnModuleInit, OnModuleDestroy {
 			);
 			const size = BigInt(stdout.trim());
 			return size > 0n ? size : null;
-		} catch {
+		} catch (err) {
+			// Intentionally silent: DB size estimation is best-effort; a failure
+			// here shouldn't block the backup — the UI simply won't show the estimate.
+			this.logs.info(`getDatabaseSizeBytes failed: ${readCaughtErrorMessage(err)}`, { context: "BackupService" });
 			return null;
 		}
 	}
@@ -882,11 +885,11 @@ export class BackupService implements OnModuleInit, OnModuleDestroy {
 	private errorMessage(error: unknown): string {
 		return readCaughtErrorMessage(CaughtValueSchema.parse(error));
 	}
-
 	private readDirSafe(dir: string): string[] {
 		try {
 			return readdirSync(dir);
 		} catch {
+			// Intentionally silent: directory may not exist yet on first boot.
 			return [];
 		}
 	}
@@ -895,6 +898,7 @@ export class BackupService implements OnModuleInit, OnModuleDestroy {
 		try {
 			return statSync(path).isDirectory();
 		} catch {
+			// Intentionally silent: path may not exist — caller handles the false case.
 			return false;
 		}
 	}
@@ -956,7 +960,9 @@ export class BackupService implements OnModuleInit, OnModuleDestroy {
 				.$queryRaw`SELECT count(*)::int AS count FROM information_schema.tables WHERE table_schema = 'public' AND table_name NOT IN ('_prisma_migrations', 'prisma_migrations')`;
 			const parsed = BackupPublicTableCountRowsSchema.parse(raw);
 			return parsed[0]?.count ?? 0;
-		} catch {
+		} catch (err) {
+			// Intentionally silent: table count is informational; UI shows 0 on failure.
+			this.logs.info(`getTableCount failed: ${readCaughtErrorMessage(err)}`, { context: "BackupService" });
 			return 0;
 		}
 	}
@@ -1034,6 +1040,7 @@ export class BackupService implements OnModuleInit, OnModuleDestroy {
 				await handle.close();
 			}
 		} catch {
+			// Intentionally silent: file may not exist or be unreadable — caller treats false as "not a gzip".
 			return false;
 		}
 	}

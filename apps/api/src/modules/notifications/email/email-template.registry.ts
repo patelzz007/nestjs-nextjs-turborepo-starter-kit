@@ -24,62 +24,33 @@ export interface EmailTemplateEntry {
 	readonly build: () => BaseEmailTemplate<BaseEmailProps>;
 }
 
+/** Helper: register a template in one line instead of five. */
+function registerTemplate(
+	key: EmailTemplateKey,
+	label: string,
+	description: string,
+	sampleTo: string,
+	build: () => BaseEmailTemplate<BaseEmailProps>,
+): EmailTemplateEntry {
+	return { key, label, description, sampleTo, build };
+}
+
 /**
  * Single source of truth for "which templates exist". The registry is keyed
  * by the shared `EmailTemplateKeySchema` — the completeness test in
  * `email-template.registry.spec.ts` fails if a key is added to the schema
  * without a registry entry (and vice versa).
+ *
+ * To add a new template: add the class import above, then add one line below.
  */
 export const EMAIL_TEMPLATE_REGISTRY: Readonly<Record<EmailTemplateKey, EmailTemplateEntry>> = {
-	verification: {
-		key: "verification",
-		label: "Email Verification",
-		description: "Sent after signup to prove the user owns the inbox.",
-		sampleTo: VerificationEmailTemplate.sampleProps.to,
-		build: (): BaseEmailTemplate<BaseEmailProps> => new VerificationEmailTemplate(VerificationEmailTemplate.sampleProps),
-	},
-	"password-reset": {
-		key: "password-reset",
-		label: "Password Reset",
-		description: "Sent when a user requests a password reset.",
-		sampleTo: PasswordResetEmailTemplate.sampleProps.to,
-		build: (): BaseEmailTemplate<BaseEmailProps> => new PasswordResetEmailTemplate(PasswordResetEmailTemplate.sampleProps),
-	},
-	"account-locked": {
-		key: "account-locked",
-		label: "Account Locked",
-		description: "Sent after brute-force lockout with the remaining duration.",
-		sampleTo: AccountLockedEmailTemplate.sampleProps.to,
-		build: (): BaseEmailTemplate<BaseEmailProps> => new AccountLockedEmailTemplate(AccountLockedEmailTemplate.sampleProps),
-	},
-	welcome: {
-		key: "welcome",
-		label: "Welcome",
-		description: "One-time onboarding email after email verification.",
-		sampleTo: WelcomeEmailTemplate.sampleProps.to,
-		build: (): BaseEmailTemplate<BaseEmailProps> => new WelcomeEmailTemplate(WelcomeEmailTemplate.sampleProps),
-	},
-	"security-alert": {
-		key: "security-alert",
-		label: "Security Alert",
-		description: "New-device / new-location sign-in alert.",
-		sampleTo: SecurityAlertEmailTemplate.sampleProps.to,
-		build: (): BaseEmailTemplate<BaseEmailProps> => new SecurityAlertEmailTemplate(SecurityAlertEmailTemplate.sampleProps),
-	},
-	"admin-alert": {
-		key: "admin-alert",
-		label: "Admin Alert",
-		description: "Ops alert for admins (webhook failure, quota breach, …).",
-		sampleTo: AdminAlertEmailTemplate.sampleProps.to,
-		build: (): BaseEmailTemplate<BaseEmailProps> => new AdminAlertEmailTemplate(AdminAlertEmailTemplate.sampleProps),
-	},
-	"api-key-created": {
-		key: "api-key-created",
-		label: "API Key Created",
-		description: "Confirms a new API key was created (never contains the secret).",
-		sampleTo: ApiKeyCreatedEmailTemplate.sampleProps.to,
-		build: (): BaseEmailTemplate<BaseEmailProps> => new ApiKeyCreatedEmailTemplate(ApiKeyCreatedEmailTemplate.sampleProps),
-	},
+	verification: registerTemplate("verification", "Email Verification", "Sent after signup to prove the user owns the inbox.", VerificationEmailTemplate.sampleProps.to, (): BaseEmailTemplate<BaseEmailProps> => new VerificationEmailTemplate(VerificationEmailTemplate.sampleProps)),
+	"password-reset": registerTemplate("password-reset", "Password Reset", "Sent when a user requests a password reset.", PasswordResetEmailTemplate.sampleProps.to, (): BaseEmailTemplate<BaseEmailProps> => new PasswordResetEmailTemplate(PasswordResetEmailTemplate.sampleProps)),
+	"account-locked": registerTemplate("account-locked", "Account Locked", "Sent after brute-force lockout with the remaining duration.", AccountLockedEmailTemplate.sampleProps.to, (): BaseEmailTemplate<BaseEmailProps> => new AccountLockedEmailTemplate(AccountLockedEmailTemplate.sampleProps)),
+	welcome: registerTemplate("welcome", "Welcome", "One-time onboarding email after email verification.", WelcomeEmailTemplate.sampleProps.to, (): BaseEmailTemplate<BaseEmailProps> => new WelcomeEmailTemplate(WelcomeEmailTemplate.sampleProps)),
+	"security-alert": registerTemplate("security-alert", "Security Alert", "New-device / new-location sign-in alert.", SecurityAlertEmailTemplate.sampleProps.to, (): BaseEmailTemplate<BaseEmailProps> => new SecurityAlertEmailTemplate(SecurityAlertEmailTemplate.sampleProps)),
+	"admin-alert": registerTemplate("admin-alert", "Admin Alert", "Ops alert for admins (webhook failure, quota breach, …).", AdminAlertEmailTemplate.sampleProps.to, (): BaseEmailTemplate<BaseEmailProps> => new AdminAlertEmailTemplate(AdminAlertEmailTemplate.sampleProps)),
+	"api-key-created": registerTemplate("api-key-created", "API Key Created", "Confirms a new API key was created (never contains the secret).", ApiKeyCreatedEmailTemplate.sampleProps.to, (): BaseEmailTemplate<BaseEmailProps> => new ApiKeyCreatedEmailTemplate(ApiKeyCreatedEmailTemplate.sampleProps)),
 };
 
 /** Static metadata list for the admin preview index. */

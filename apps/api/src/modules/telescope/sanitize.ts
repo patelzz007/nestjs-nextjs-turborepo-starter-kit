@@ -1,6 +1,8 @@
 import { StringValueSchema, TelescopeJsonObjectSchema, TelescopeJsonScalarSchema, TelescopeJsonValueSchema, type TelescopeJsonValue } from "@workspace/shared";
 import { Logger } from "@nestjs/common";
 
+import { readCaughtErrorMessage } from "../../common/utils/caught-error";
+
 const logger = new Logger("TelescopeSanitize");
 
 /**
@@ -88,7 +90,7 @@ export function truncateJson(value: TelescopeJsonValue, maxChars: number = MAX_B
 	} catch (err) {
 		// Truncation failure: PII may leak if the partial JSON is served raw.
 		// Log for audit and fall back to a safe preview.
-		logger.warn(`truncateJson failed: ${err instanceof Error ? err.message : "unknown"}`);
+		logger.warn(`truncateJson failed: ${readCaughtErrorMessage(err)}`);
 		return { truncated: true, preview: `${preview}…` };
 	}
 }

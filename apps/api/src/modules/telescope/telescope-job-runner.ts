@@ -1,6 +1,7 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { nanoid } from "nanoid";
 
+import { readCaughtErrorMessage } from "../../common/utils/caught-error";
 import { nowEpochMs, type EpochMs, type TelescopeJobLogEntry } from "@workspace/shared";
 
 import { TelescopeEventBus } from "./telescope-event-bus";
@@ -78,7 +79,7 @@ export class TelescopeJobRunner {
 			entry.status = "failed";
 			entry.durationMs = Math.round(performance.now() - start);
 			entry.finishedAt = nowEpochMs();
-			entry.error = error instanceof Error ? error.message : String(error);
+			entry.error = readCaughtErrorMessage(error);
 			throw error;
 		} finally {
 			this.store.pushJob(entry);

@@ -136,7 +136,7 @@ const PLACEHOLDER_RE = /:([a-zA-Z_][a-zA-Z0-9_]*)/g;
 
 /** Collect all unique param names from a path string. */
 function extractPlaceholders(path: string): string[] {
-	return [...new Set([...path.matchAll(PLACEHOLDER_RE)].map((m) => m[1]))];
+	return [...new Set([...path.matchAll(PLACEHOLDER_RE)].map((m): string => m[1] ?? ""))];
 }
 
 /** Validate a single route leaf against the Zod schema + placeholder consistency. */
@@ -167,9 +167,17 @@ function validateRoutes(): void {
 	}
 }
 
+// ⚠️ RUNTIME VALIDATION — runs once at module load.
+// If you see "apiRoutes: invalid route" in your logs, a route definition in this file is malformed.
+// See docs/api-routes.md for the route schema and how to fix it.
 validateRoutes();
 
 // ── buildRoute() — compile-time param enforcement ──────────────────────────
+// Resolves a route definition to a concrete URL string.
+// For static routes: just returns the path.
+// For parameterized routes: replaces :param placeholders with provided values.
+// Missing required params throw at runtime. Extra params are silently ignored.
+// See docs/api-routes.md §3 for the full API reference.
 
 /**
  * Resolve a route definition to a concrete URL string.

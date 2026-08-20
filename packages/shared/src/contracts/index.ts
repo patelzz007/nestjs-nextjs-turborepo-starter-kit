@@ -16,7 +16,7 @@
 
 import { z, type ZodType } from "zod";
 
-import { apiRoutes, type RoutePath } from "../api-routes";
+import { apiRoutes } from "../api-routes";
 import { ForgotPasswordSchema, LoginSchema, ResendVerificationSchema, ResetPasswordSchema, SignupSchema } from "../schemas/auth/auth";
 import { AdminUserListQuerySchema } from "../schemas/auth/user";
 import { EmailLogListQuerySchema } from "../schemas/email/email";
@@ -155,16 +155,21 @@ const EmptyInputSchema = z.object({}).strict();
 const TelescopeIdInputSchema = z.object({ id: TelescopeIdParamSchema }).strict();
 
 // ── The contract ───────────────────────────────────────────────────────────
-// Groups mirror the client router (auth / email / telescope). Every leaf is
-// the exact method + path + input the client sends on the wire.
+// Groups mirror the client router (auth / email / backup / telescope).
+// Every leaf is the exact method + path + input the client sends on the wire.
+//
+// To add a new feature: see docs/ADDING-A-FEATURE.md
+//
+// NOTE: the version manifest (`GET /version`) is deliberately NOT a
+// contract leaf — it is UNVERSIONED (the thing clients use to FIND the
+// current version must never move when a major bumps). The client transport
+// fetches `${API_BASE_URL}/version` directly and parses it with
+// `ApiVersionManifestSchema` from @workspace/shared.
 
 export const apiContract = {
-	// NOTE: the version manifest (`GET /version`) is deliberately NOT a
-	// contract leaf — it is UNVERSIONED (the thing clients use to FIND the
-	// current version must never move when a major bumps). The client transport
-	// fetches `${API_BASE_URL}/version` directly and parses it with
-	// `ApiVersionManifestSchema` from @workspace/shared.
-
+	// ── Authentication & user management ───────────────────────────────
+	// Login, signup, token refresh, password reset, email verification,
+	// and admin user listing. The admin panel and web app share these.
 	auth: {
 		/** "Who am I?" — full user record. */
 		me: defineContract({ method: "GET", path: apiRoutes.auth.me, input: z.undefined() }),
@@ -183,7 +188,9 @@ export const apiContract = {
 		adminUsers: defineContract({ method: "GET", path: apiRoutes.auth.adminUsers, input: AdminUserListQuerySchema }),
 	},
 
-	// ── Email template preview procedures ─────────────────────────────────
+	// ── Email templates & delivery logs ────────────────────────────────
+	// Preview email templates (admin-only), send test emails, and
+	// query the delivery log. Uses Resend for actual sending.
 	email: {
 		previewList: defineContract({ method: "GET", path: apiRoutes.email.previewList, input: z.undefined() }),
 		/** Preview detail for one template key. */
@@ -193,7 +200,10 @@ export const apiContract = {
 		logList: defineContract({ method: "GET", path: apiRoutes.email.logList, input: EmailLogListQuerySchema }),
 	},
 
-	// ── Database backup procedures ───────────────────────────────────────
+	// ── Database backup & restore ──────────────────────────────────────
+	// pg_dump → gzip → file. Single-job queue, SHA-256 checksums,
+	// signed download tokens, scratch-DB verify, and cron scheduling.
+	// See docs/backup.md for the full architecture.
 	backup: {
 		/** Create a backup — async; the job runs in the background (HTTP 202). */
 		create: defineContract({ method: "POST", path: apiRoutes.backup.create, input: BackupCreateInputSchema }),
@@ -217,7 +227,10 @@ export const apiContract = {
 		toggleSchedule: defineContract({ method: "POST", path: apiRoutes.backup.toggleSchedule.path, input: BackupScheduleToggleInputSchema }),
 	},
 
-	// ── Telescope procedures ──────────────────────────────────────────────
+	// ── Telescope observability ────────────────────────────────────────
+	// HTTP request tracking, exception logging, SQL query monitoring,
+	// email delivery tracking, background job recording, alerts, and
+	// SSE live streaming. See docs/telescope.md for the full architecture.
 	telescope: {
 		overview: defineContract({ method: "GET", path: apiRoutes.telescope.overview, input: TelescopeOverviewQuerySchema }),
 		requests: defineContract({ method: "GET", path: apiRoutes.telescope.requests, input: TelescopeRequestListQuerySchema }),

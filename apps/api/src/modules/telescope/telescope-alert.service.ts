@@ -1,6 +1,8 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { nanoid } from "nanoid";
 
+import { readCaughtErrorMessage } from "../../common/utils/caught-error";
+
 import {
 	epochMs,
 	nowEpochMs,
@@ -271,7 +273,7 @@ export class TelescopeAlertService {
 				statusCode: null,
 				durationMs,
 				attempt,
-				error: caught instanceof Error ? caught.message : String(caught),
+				error: readCaughtErrorMessage(caught),
 				createdAt: nowEpochMs(),
 			};
 		}

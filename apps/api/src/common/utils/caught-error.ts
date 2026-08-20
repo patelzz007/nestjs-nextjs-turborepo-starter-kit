@@ -39,8 +39,8 @@ export function readCaughtErrorCode(value: CaughtValue): string | undefined {
 	return detail.success ? detail.data.code : undefined;
 }
 
-/** Reads a message from a caught value without using `unknown`. */
-export function readCaughtErrorMessage(value: CaughtValue): string {
+/** Reads a message from a caught value. Accepts `unknown` so catch clauses work directly. */
+export function readCaughtErrorMessage(value: CaughtValue | unknown): string {
 	if (value instanceof Error) {
 		return value.message;
 	}
@@ -51,7 +51,7 @@ export function readCaughtErrorMessage(value: CaughtValue): string {
 			return detail.data.message;
 		}
 	}
-	return formatCaughtValue(value);
+	return formatCaughtValue(value as CaughtValue);
 }
 
 export type { CaughtValue };

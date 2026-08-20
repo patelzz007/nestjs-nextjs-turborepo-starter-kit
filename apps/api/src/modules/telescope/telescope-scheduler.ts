@@ -1,5 +1,6 @@
 import { Inject, Injectable, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common";
 
+import { readCaughtErrorMessage } from "../../common/utils/caught-error";
 import { epochMs, nowEpochMs, type EpochMs, type TelescopeScheduleLog, type TelescopeScheduleRun, type TelescopeScheduleStatus } from "@workspace/shared";
 
 import { TelescopeEventBus } from "./telescope-event-bus";
@@ -169,7 +170,7 @@ export class TelescopeSchedulerService implements OnModuleInit, OnModuleDestroy 
 			await schedule.fn();
 		} catch (caught) {
 			status = "failed";
-			error = caught instanceof Error ? caught.message : String(caught);
+			error = readCaughtErrorMessage(caught);
 		}
 		const durationMs: number = Math.round(performance.now() - start);
 		// Improvement 20 — append to this schedule's run history (oldest-first, capped).

@@ -12,10 +12,11 @@ const DEFAULT_SCHEDULES: readonly { readonly id: string; readonly cron: string; 
 ];
 
 /**
- * DB-backed backup cron scheduler. Schedule definitions live in the
- * `telescope_backup_schedules` table so they survive restarts and work
- * across multiple API replicas. The minute ticker still runs per-process
- * (only one replica fires the backup via the `onFire` callback).
+ * DB-backed backup cron scheduler. Schedule definitions AND `nextRun`
+ * timestamps live in the `telescope_backup_schedules` table, so they
+ * survive restarts and work across multiple API replicas. The minute
+ * ticker runs per-process (only one replica fires the backup via the
+ * `onFire` callback). No in-memory state is lost on restart.
  */
 @Injectable()
 export class BackupSchedulerService implements OnModuleDestroy {

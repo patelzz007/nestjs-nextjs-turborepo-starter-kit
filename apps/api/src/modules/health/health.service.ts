@@ -26,6 +26,7 @@ export class HealthService {
 			await this.prisma.$queryRaw`SELECT 1`;
 			dbStatus = "connected";
 		} catch {
+			// Intentionally silent: health check reports the failure state, not the error.
 			dbStatus = "disconnected";
 		}
 
@@ -45,16 +46,17 @@ export class HealthService {
 		const backupDir: string = process.env.BACKUP_DIR ?? "./backups";
 		try {
 			await access(backupDir, fsConstants.W_OK);
-			checks["filesystem"] = "writable";
+			checks.filesystem = "writable";
 		} catch {
-			checks["filesystem"] = "not writable";
+			// Intentionally silent: health check reports the failure state, not the error.
+			checks.filesystem = "not writable";
 		}
 
-		const degraded: boolean = basic.db !== "connected" || checks["filesystem"] !== "writable";
+		const degraded: boolean = basic.db !== "connected" || checks.filesystem !== "writable";
 		return {
 			...basic,
 			status: degraded ? "degraded" : "ok",
-			filesystem: checks["filesystem"],
+			filesystem: checks.filesystem,
 			checks,
 		};
 	}

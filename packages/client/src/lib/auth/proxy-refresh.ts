@@ -166,6 +166,10 @@ export const PROXY_REFRESH_COOLDOWN_MS = 60_000;
  * process, which is what makes the cooldown effective for real navigations.
  * (Dev-mode hot reloads can reset module state; that only re-arms the cooldown
  * window, which is harmless.)
+ *
+ * This is the PROXY-SIDE cooldown (Node runtime). The CLIENT-SIDE cooldown
+ * lives in `use-api.ts` (`createRefreshCooldown`) — same pattern, different
+ * return type. Both are intentionally separate to avoid coupling runtimes.
  */
 export function createProxyRefreshCooldown(
 	refreshAttempt: (refreshToken: string) => Promise<ProxyRefreshResult>,
