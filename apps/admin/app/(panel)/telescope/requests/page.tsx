@@ -1,7 +1,6 @@
-import { PrefetchBoundary } from "@workspace/client/lib/api/prefetch-boundary";
 import { TelescopeRequestListQuerySchema, type TelescopeRequestListQuery } from "@workspace/shared";
 
-import { prefetchPage } from "@workspace/client/lib/api/server-api";
+import { createServerCaller } from "@workspace/client/lib/api/server-api";
 
 import TelescopeRequestsView from "./requests-table";
 
@@ -12,8 +11,8 @@ export const dynamic = "force-dynamic";
  * the same first-page query the client derives from `?method=&status=&min=&…`
  * (the client also consults localStorage table prefs, which the server can't
  * see — any mismatch simply skips the SSR prefetch and the client fetches
- * normally), prefetches it, and hydrates via `HydrationBoundary` so the table
- * renders in the initial HTML.
+ * normally), fetches it directly, and passes as props so the table renders
+ * in the initial HTML.
  */
 export default async function TelescopeRequestsPage({
 	searchParams,
@@ -47,11 +46,8 @@ export default async function TelescopeRequestsPage({
 	if (starredOnly) draft.starred = "true";
 	const query: TelescopeRequestListQuery = TelescopeRequestListQuerySchema.parse(draft);
 
-	const { state, report } = await prefetchPage((server) => [server.telescope.requests(query)]);
+	const server = createServerCaller();
+	const data = await server.telescope.requests.query(query);
 
-	return (
-		<PrefetchBoundary state={state} report={report}>
-			<TelescopeRequestsView />
-		</PrefetchBoundary>
-	);
+	return <TelescopeRequestsView initialEnvelope={data} />;
 }

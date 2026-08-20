@@ -16,6 +16,7 @@
 
 import { z, type ZodType } from "zod";
 
+import { apiRoutes, type RoutePath } from "../api-routes";
 import { ForgotPasswordSchema, LoginSchema, ResendVerificationSchema, ResetPasswordSchema, SignupSchema } from "../schemas/auth/auth";
 import { AdminUserListQuerySchema } from "../schemas/auth/user";
 import { EmailLogListQuerySchema } from "../schemas/email/email";
@@ -99,6 +100,12 @@ export function defineContract<Input extends SerializableInput, M extends RestMe
 	return def;
 }
 
+/**
+ * Convenience: extract the `path` string from a `RouteDef` (static or
+ * parameterized) so contracts can reference `apiRoutes` directly.
+ */
+export type RoutePathOf<T> = T extends { path: string } ? T["path"] : T;
+
 // ── Local helpers ──────────────────────────────────────────────────────────
 
 /** Path-param + body input for the annotation route (the client sends both). */
@@ -160,90 +167,90 @@ export const apiContract = {
 
 	auth: {
 		/** "Who am I?" — full user record. */
-		me: defineContract({ method: "GET", path: "/auth/me", input: z.undefined() }),
+		me: defineContract({ method: "GET", path: apiRoutes.auth.me, input: z.undefined() }),
 		/** Basic protected endpoint — proves the access token is valid. */
-		sessionStatus: defineContract({ method: "GET", path: "/session", input: z.undefined() }),
-		login: defineContract({ method: "POST", path: "/auth/login", input: LoginSchema }),
+		sessionStatus: defineContract({ method: "GET", path: apiRoutes.auth.sessionStatus, input: z.undefined() }),
+		login: defineContract({ method: "POST", path: apiRoutes.auth.login, input: LoginSchema }),
 		/** Admin login — sends `X-Client-Type: admin` for cookie isolation. */
-		adminLogin: defineContract({ method: "POST", path: "/auth/login", input: LoginSchema }),
-		signup: defineContract({ method: "POST", path: "/auth/signup", input: SignupSchema }),
-		refresh: defineContract({ method: "POST", path: "/auth/refresh", input: EmptyInputSchema }),
-		logout: defineContract({ method: "POST", path: "/auth/logout", input: EmptyInputSchema }),
-		forgotPassword: defineContract({ method: "POST", path: "/auth/forgot-password", input: ForgotPasswordSchema }),
-		resetPassword: defineContract({ method: "POST", path: "/auth/reset-password", input: ResetPasswordSchema }),
-		resendVerification: defineContract({ method: "POST", path: "/auth/resend-verification", input: ResendVerificationSchema }),
-		verifyEmail: defineContract({ method: "POST", path: "/auth/verify-email/:token", input: z.object({ token: VerifyEmailTokenParamSchema }).strict() }),
-		adminUsers: defineContract({ method: "GET", path: "/auth/admin/users", input: AdminUserListQuerySchema }),
+		adminLogin: defineContract({ method: "POST", path: apiRoutes.auth.adminLogin, input: LoginSchema }),
+		signup: defineContract({ method: "POST", path: apiRoutes.auth.signup, input: SignupSchema }),
+		refresh: defineContract({ method: "POST", path: apiRoutes.auth.refresh, input: EmptyInputSchema }),
+		logout: defineContract({ method: "POST", path: apiRoutes.auth.logout, input: EmptyInputSchema }),
+		forgotPassword: defineContract({ method: "POST", path: apiRoutes.auth.forgotPassword, input: ForgotPasswordSchema }),
+		resetPassword: defineContract({ method: "POST", path: apiRoutes.auth.resetPassword, input: ResetPasswordSchema }),
+		resendVerification: defineContract({ method: "POST", path: apiRoutes.auth.resendVerification, input: ResendVerificationSchema }),
+		verifyEmail: defineContract({ method: "POST", path: apiRoutes.auth.verifyEmail.path, input: z.object({ token: VerifyEmailTokenParamSchema }).strict() }),
+		adminUsers: defineContract({ method: "GET", path: apiRoutes.auth.adminUsers, input: AdminUserListQuerySchema }),
 	},
 
 	// ── Email template preview procedures ─────────────────────────────────
 	email: {
-		previewList: defineContract({ method: "GET", path: "/notifications/email-preview", input: z.undefined() }),
+		previewList: defineContract({ method: "GET", path: apiRoutes.email.previewList, input: z.undefined() }),
 		/** Preview detail for one template key. */
-		previewDetail: defineContract({ method: "GET", path: "/notifications/email-preview/:key", input: z.object({ key: z.string() }).strict() }),
+		previewDetail: defineContract({ method: "GET", path: apiRoutes.email.previewDetail.path, input: z.object({ key: z.string() }).strict() }),
 		/** Sends one template to the configured test address. */
-		previewSend: defineContract({ method: "POST", path: "/notifications/email-preview/:key/send", input: z.object({ key: z.string() }).strict() }),
-		logList: defineContract({ method: "GET", path: "/notifications/email-log", input: EmailLogListQuerySchema }),
+		previewSend: defineContract({ method: "POST", path: apiRoutes.email.previewSend.path, input: z.object({ key: z.string() }).strict() }),
+		logList: defineContract({ method: "GET", path: apiRoutes.email.logList, input: EmailLogListQuerySchema }),
 	},
 
 	// ── Database backup procedures ───────────────────────────────────────
 	backup: {
 		/** Create a backup — async; the job runs in the background (HTTP 202). */
-		create: defineContract({ method: "POST", path: "/backup", input: BackupCreateInputSchema }),
+		create: defineContract({ method: "POST", path: apiRoutes.backup.create, input: BackupCreateInputSchema }),
 		/** History + operational facts (active flag, retention days). */
-		list: defineContract({ method: "GET", path: "/backup", input: z.undefined() }),
+		list: defineContract({ method: "GET", path: apiRoutes.backup.list, input: z.undefined() }),
 		/** One backup's status/progress — the poll target. */
-		status: defineContract({ method: "GET", path: "/backup/:id", input: z.object({ id: z.string().min(1) }).strict() }),
+		status: defineContract({ method: "GET", path: apiRoutes.backup.status.path, input: z.object({ id: z.string().min(1) }).strict() }),
 		/** Mints a short-lived signed download token. */
-		download: defineContract({ method: "POST", path: "/backup/:id/download", input: z.object({ id: z.string().min(1) }).strict() }),
+		download: defineContract({ method: "POST", path: apiRoutes.backup.download.path, input: z.object({ id: z.string().min(1) }).strict() }),
 		/** Deletes the file + row. */
-		remove: defineContract({ method: "DELETE", path: "/backup/:id", input: z.object({ id: z.string().min(1) }).strict() }),
+		remove: defineContract({ method: "DELETE", path: apiRoutes.backup.remove.path, input: z.object({ id: z.string().min(1) }).strict() }),
 		/** Excludable tables + form defaults for the create form. */
-		options: defineContract({ method: "GET", path: "/backup/options", input: z.undefined() }),
+		options: defineContract({ method: "GET", path: apiRoutes.backup.options, input: z.undefined() }),
 		/** Restores the dump into a throwaway scratch DB, confirms, drops it. */
-		verify: defineContract({ method: "POST", path: "/backup/:id/verify", input: z.object({ id: z.string().min(1) }).strict() }),
+		verify: defineContract({ method: "POST", path: apiRoutes.backup.verify.path, input: z.object({ id: z.string().min(1) }).strict() }),
 		/** Restores the dump into a NEW database (never an existing one). */
-		restore: defineContract({ method: "POST", path: "/backup/:id/restore", input: BackupRestoreInputSchema.extend({ id: z.string().min(1) }).strict() }),
+		restore: defineContract({ method: "POST", path: apiRoutes.backup.restore.path, input: BackupRestoreInputSchema.extend({ id: z.string().min(1) }).strict() }),
 		/** Gracefully stops a pending/running backup job. */
-		cancel: defineContract({ method: "POST", path: "/backup/:id/cancel", input: z.object({ id: z.string().min(1) }).strict() }),
+		cancel: defineContract({ method: "POST", path: apiRoutes.backup.cancel.path, input: z.object({ id: z.string().min(1) }).strict() }),
 		/** Toggle an in-memory backup cron on/off. */
-		toggleSchedule: defineContract({ method: "POST", path: "/backup/schedules/:id/toggle", input: BackupScheduleToggleInputSchema }),
+		toggleSchedule: defineContract({ method: "POST", path: apiRoutes.backup.toggleSchedule.path, input: BackupScheduleToggleInputSchema }),
 	},
 
 	// ── Telescope procedures ──────────────────────────────────────────────
 	telescope: {
-		overview: defineContract({ method: "GET", path: "/telescope/overview", input: TelescopeOverviewQuerySchema }),
-		requests: defineContract({ method: "GET", path: "/telescope/requests", input: TelescopeRequestListQuerySchema }),
-		requestDetail: defineContract({ method: "GET", path: "/telescope/requests/:id", input: TelescopeIdInputSchema }),
-		requestSql: defineContract({ method: "GET", path: "/telescope/requests/:id/sql", input: TelescopeIdInputSchema }),
-		compare: defineContract({ method: "GET", path: "/telescope/compare", input: TelescopeCompareQuerySchema }),
-		sql: defineContract({ method: "GET", path: "/telescope/sql", input: TelescopeSqlListQuerySchema }),
-		exceptions: defineContract({ method: "GET", path: "/telescope/exceptions", input: TelescopeExceptionListQuerySchema }),
-		exceptionDetail: defineContract({ method: "GET", path: "/telescope/exceptions/:id", input: TelescopeIdInputSchema }),
-		mail: defineContract({ method: "GET", path: "/telescope/mail", input: z.undefined() }),
-		jobs: defineContract({ method: "GET", path: "/telescope/jobs", input: TelescopeJobsListQuerySchema }),
-		jobDetail: defineContract({ method: "GET", path: "/telescope/jobs/:id", input: TelescopeIdInputSchema }),
-		schedules: defineContract({ method: "GET", path: "/telescope/schedules", input: z.undefined() }),
-		leaderboard: defineContract({ method: "GET", path: "/telescope/leaderboard", input: TelescopeLeaderboardQuerySchema }),
-		trends: defineContract({ method: "GET", path: "/telescope/trends", input: TelescopeTrendsQuerySchema }),
-		logs: defineContract({ method: "GET", path: "/telescope/logs", input: TelescopeLogsListQuerySchema }),
-		alerts: defineContract({ method: "GET", path: "/telescope/alerts", input: z.undefined() }),
-		search: defineContract({ method: "GET", path: "/telescope/search", input: TelescopeSearchQuerySchema }),
-		users: defineContract({ method: "GET", path: "/telescope/users", input: TelescopeUsersQuerySchema }),
-		status: defineContract({ method: "GET", path: "/telescope/status", input: z.undefined() }),
-		webhookDeliveries: defineContract({ method: "GET", path: "/telescope/webhook-deliveries", input: z.undefined() }),
+		overview: defineContract({ method: "GET", path: apiRoutes.telescope.overview, input: TelescopeOverviewQuerySchema }),
+		requests: defineContract({ method: "GET", path: apiRoutes.telescope.requests, input: TelescopeRequestListQuerySchema }),
+		requestDetail: defineContract({ method: "GET", path: apiRoutes.telescope.requestDetail.path, input: TelescopeIdInputSchema }),
+		requestSql: defineContract({ method: "GET", path: apiRoutes.telescope.requestSql.path, input: TelescopeIdInputSchema }),
+		compare: defineContract({ method: "GET", path: apiRoutes.telescope.compare, input: TelescopeCompareQuerySchema }),
+		sql: defineContract({ method: "GET", path: apiRoutes.telescope.sql, input: TelescopeSqlListQuerySchema }),
+		exceptions: defineContract({ method: "GET", path: apiRoutes.telescope.exceptions, input: TelescopeExceptionListQuerySchema }),
+		exceptionDetail: defineContract({ method: "GET", path: apiRoutes.telescope.exceptionDetail.path, input: TelescopeIdInputSchema }),
+		mail: defineContract({ method: "GET", path: apiRoutes.telescope.mail, input: z.undefined() }),
+		jobs: defineContract({ method: "GET", path: apiRoutes.telescope.jobs, input: TelescopeJobsListQuerySchema }),
+		jobDetail: defineContract({ method: "GET", path: apiRoutes.telescope.jobDetail.path, input: TelescopeIdInputSchema }),
+		schedules: defineContract({ method: "GET", path: apiRoutes.telescope.schedules, input: z.undefined() }),
+		leaderboard: defineContract({ method: "GET", path: apiRoutes.telescope.leaderboard, input: TelescopeLeaderboardQuerySchema }),
+		trends: defineContract({ method: "GET", path: apiRoutes.telescope.trends, input: TelescopeTrendsQuerySchema }),
+		logs: defineContract({ method: "GET", path: apiRoutes.telescope.logs, input: TelescopeLogsListQuerySchema }),
+		alerts: defineContract({ method: "GET", path: apiRoutes.telescope.alerts, input: z.undefined() }),
+		search: defineContract({ method: "GET", path: apiRoutes.telescope.search, input: TelescopeSearchQuerySchema }),
+		users: defineContract({ method: "GET", path: apiRoutes.telescope.users, input: TelescopeUsersQuerySchema }),
+		status: defineContract({ method: "GET", path: apiRoutes.telescope.status, input: z.undefined() }),
+		webhookDeliveries: defineContract({ method: "GET", path: apiRoutes.telescope.webhookDeliveries, input: z.undefined() }),
 
 		// ── Mutations ─────────────────────────────────────────────────────
-		dump: defineContract({ method: "POST", path: "/telescope/dump", input: TelescopeDumpInputSchema }),
-		setAnnotation: defineContract({ method: "PUT", path: "/telescope/requests/:id/annotation", input: RequestAnnotationInputSchema }),
-		replay: defineContract({ method: "POST", path: "/telescope/replay/:id", input: ReplayInputSchema }),
-		runSchedule: defineContract({ method: "POST", path: "/telescope/schedules/:name/run", input: z.object({ name: z.string() }).strict() }),
-		prune: defineContract({ method: "POST", path: "/telescope/admin/prune", input: z.object({ force: ForceFlagSchema }).strict() }),
-		clearAll: defineContract({ method: "POST", path: "/telescope/admin/clear", input: z.undefined() }),
-		alertAck: defineContract({ method: "POST", path: "/telescope/alerts/:id/ack", input: TelescopeIdInputSchema }),
-		alertSnooze: defineContract({ method: "POST", path: "/telescope/alerts/:id/snooze", input: AlertSnoozeInputSchema }),
-		setExceptionStatus: defineContract({ method: "PUT", path: "/telescope/exceptions/:id/status", input: ExceptionStatusInputSchema }),
-		retryJob: defineContract({ method: "POST", path: "/telescope/jobs/:id/retry", input: TelescopeIdInputSchema }),
+		dump: defineContract({ method: "POST", path: apiRoutes.telescope.dump, input: TelescopeDumpInputSchema }),
+		setAnnotation: defineContract({ method: "PUT", path: apiRoutes.telescope.setAnnotation.path, input: RequestAnnotationInputSchema }),
+		replay: defineContract({ method: "POST", path: apiRoutes.telescope.replay.path, input: ReplayInputSchema }),
+		runSchedule: defineContract({ method: "POST", path: apiRoutes.telescope.runSchedule.path, input: z.object({ name: z.string() }).strict() }),
+		prune: defineContract({ method: "POST", path: apiRoutes.telescope.prune, input: z.object({ force: ForceFlagSchema }).strict() }),
+		clearAll: defineContract({ method: "POST", path: apiRoutes.telescope.clearAll, input: z.undefined() }),
+		alertAck: defineContract({ method: "POST", path: apiRoutes.telescope.alertAck.path, input: TelescopeIdInputSchema }),
+		alertSnooze: defineContract({ method: "POST", path: apiRoutes.telescope.alertSnooze.path, input: AlertSnoozeInputSchema }),
+		setExceptionStatus: defineContract({ method: "PUT", path: apiRoutes.telescope.setExceptionStatus.path, input: ExceptionStatusInputSchema }),
+		retryJob: defineContract({ method: "POST", path: apiRoutes.telescope.retryJob.path, input: TelescopeIdInputSchema }),
 	},
 };
 

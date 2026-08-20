@@ -1,18 +1,13 @@
-import { PrefetchBoundary } from "@workspace/client/lib/api/prefetch-boundary";
-
-import { prefetchPage } from "@workspace/client/lib/api/server-api";
+import { createServerCaller } from "@workspace/client/lib/api/server-api";
 
 import EmailLogView from "./email-log-table";
 
 export const dynamic = "force-dynamic";
 
-/** `/email-log` — prefetches the sent-email log server-side; live SSE updates stay client-side. */
+/** `/email-log` — fetches the sent-email log server-side; live SSE updates stay client-side. */
 export default async function EmailLogPage(): Promise<React.JSX.Element> {
-	const { state, report } = await prefetchPage((server) => [server.email.logList({ limit: 100 })]);
+	const server = createServerCaller();
+	const data = await server.email.logList.query({ limit: 100 });
 
-	return (
-		<PrefetchBoundary state={state} report={report}>
-			<EmailLogView />
-		</PrefetchBoundary>
-	);
+	return <EmailLogView initialEnvelope={data} />;
 }

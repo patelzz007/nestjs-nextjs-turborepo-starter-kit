@@ -18,7 +18,7 @@ import { CalendarClock, Eraser, Play, RefreshCw, TriangleAlert } from "lucide-re
 import Link from "next/link";
 import { useCallback } from "react";
 
-import type { TelescopeScheduleLog, TelescopeStatus, TelescopeWebhookDelivery } from "@workspace/shared";
+import type { TelescopeScheduleLog, TelescopeStatus, TelescopeWebhookDelivery, Envelope } from "@workspace/shared";
 
 import { WebhookDeliveries } from "@/components/telescope/webhook-deliveries";
 
@@ -42,16 +42,19 @@ function listLabel(items: readonly string[]): string {
 	return items.length > 0 ? items.join(", ") : "—";
 }
 
-export default function TelescopeStatusPage(): React.JSX.Element {
+interface TelescopeStatusViewProps {
+	readonly initialStatus: Envelope<TelescopeStatus>;
+	readonly initialDeliveries: Envelope<{ readonly items: readonly TelescopeWebhookDelivery[] }>;
+}
+
+export default function TelescopeStatusPage({ initialStatus, initialDeliveries }: TelescopeStatusViewProps): React.JSX.Element {
 	const { api } = useAuth();
 
-	const statusQuery = api.telescope.status.useQuery(undefined);
-	const status: TelescopeStatus | undefined = statusQuery.data?.data;
+	const statusQuery = api.telescope.status.useQuery(undefined, { initialData: initialStatus });
+	const status: TelescopeStatus = statusQuery.data?.data ?? initialStatus.data;
 
-	// Demo wiring: the deliveries strip + "Run demo schedule now" button make
-	// the status page live out of the box (seed rows exist on every boot).
-	const deliveriesQuery = api.telescope.webhookDeliveries.useQuery(undefined);
-	const deliveries: readonly TelescopeWebhookDelivery[] = deliveriesQuery.data?.data.items ?? [];
+	const deliveriesQuery = api.telescope.webhookDeliveries.useQuery(undefined, { initialData: initialDeliveries });
+	const deliveries: readonly TelescopeWebhookDelivery[] = deliveriesQuery.data?.data.items ?? initialDeliveries.data.items;
 	const runScheduleMutation = api.telescope.runSchedule.useMutation();
 
 	const pruneMutation = api.telescope.prune.useMutation();
@@ -105,7 +108,7 @@ export default function TelescopeStatusPage(): React.JSX.Element {
 		});
 	}, [clearAllMutation, statusQuery]);
 
-	if (statusQuery.isLoading || status === undefined) {
+	if (statusQuery.isLoading) {
 		return (
 			<div className="mx-auto w-full max-w-5xl space-y-6">
 				<header className="space-y-1">

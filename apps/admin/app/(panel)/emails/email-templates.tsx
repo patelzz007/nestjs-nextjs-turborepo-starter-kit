@@ -2,7 +2,8 @@
 
 import { useAuth } from "@workspace/client/lib/auth";
 
-import type { EmailPreview, EmailTemplateMeta } from "@workspace/shared";
+import type { EmailPreview, EmailPreviewListResponse, EmailTemplateMeta } from "@workspace/shared";
+import type { Envelope } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/feedback/badge";
 import { Button } from "@workspace/ui/components/form/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
@@ -79,14 +80,20 @@ function ModeTabButton({
  * template's sample props through the real sender — in dev it lands in
  * `EMAIL_TEST_TO` (so it never spams the sample recipient).
  */
-export default function EmailPreviewPage(): React.JSX.Element {
+export default function EmailPreviewPage({
+	initialList,
+	initialDetail,
+}: {
+	readonly initialList: Envelope<EmailPreviewListResponse>;
+	readonly initialDetail?: Envelope<EmailPreview>;
+}): React.JSX.Element {
 	const { api } = useAuth();
 
 	const [selectedKey, setSelectedKey] = React.useState<string | null>(null);
 	const [mode, setMode] = React.useState<PreviewMode>("preview");
 	const [copied, setCopied] = React.useState(false);
 
-	const listQuery = api.email.previewList.useQuery(undefined);
+	const listQuery = api.email.previewList.useQuery(undefined, { initialData: initialList });
 
 	// `templates` is memoized on the query result so its identity is stable
 	// between renders (rule 16: avoid unnecessary re-renders).
@@ -101,6 +108,7 @@ export default function EmailPreviewPage(): React.JSX.Element {
 		{ key: effectiveKey },
 		{
 			enabled: effectiveKey.length > 0,
+			initialData: initialDetail,
 		},
 	);
 

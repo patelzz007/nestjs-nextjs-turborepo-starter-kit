@@ -10,9 +10,21 @@ import { Injectable } from "@nestjs/common";
 export class TypedConfigService {
 	// ── JWT Configuration ──────────────────────────────────────────────
 
+	/** Reads a secret from env; throws in production if missing. */
+	private requireSecret(envKey: string, fallback: string): string {
+		const value: string | undefined = process.env[envKey];
+		if (value === undefined || value.length === 0) {
+			if (process.env.NODE_ENV === "production") {
+				throw new Error(`Missing required environment variable: ${envKey}. Set it in production — fallback defaults are not allowed.`);
+			}
+			return fallback;
+		}
+		return value;
+	}
+
 	/** Secret key for signing access tokens */
 	public get jwtAccessSecret(): string {
-		return process.env.JWT_ACCESS_SECRET ?? "access-secret-change-me";
+		return this.requireSecret("JWT_ACCESS_SECRET", "access-secret-change-me");
 	}
 
 	/** Expiry duration for access tokens (e.g. "15m") */
@@ -22,7 +34,7 @@ export class TypedConfigService {
 
 	/** Secret key for signing refresh tokens */
 	public get jwtRefreshSecret(): string {
-		return process.env.JWT_REFRESH_SECRET ?? "refresh-secret-change-me";
+		return this.requireSecret("JWT_REFRESH_SECRET", "refresh-secret-change-me");
 	}
 
 	/** Expiry duration for refresh tokens (e.g. "7d") */
@@ -32,7 +44,7 @@ export class TypedConfigService {
 
 	/** Secret key for email verification tokens */
 	public get emailVerificationSecret(): string {
-		return process.env.EMAIL_VERIFICATION_SECRET ?? "email-verify-secret-change-me";
+		return this.requireSecret("EMAIL_VERIFICATION_SECRET", "email-verify-secret-change-me");
 	}
 
 	// ── Bcrypt Configuration ───────────────────────────────────────────

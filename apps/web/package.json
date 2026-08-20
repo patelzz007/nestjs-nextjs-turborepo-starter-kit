@@ -15,6 +15,7 @@
 	"dependencies": {
 		"@tanstack/react-query": "^5.101.4",
 		"@workspace/client": "workspace:*",
+		"@workspace/shared": "workspace:*",
 		"@workspace/ui": "workspace:*",
 		"date-fns": "^4.4.0",
 		"lucide-react": "^1.28.0",

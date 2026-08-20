@@ -8,6 +8,7 @@
 		"lint": "eslint",
 		"format": "prettier --write \"**/*.{ts,tsx}\"",
 		"typecheck": "tsc --noEmit",
+		"test": "vitest run",
 		"clean": "rm -rf dist"
 	},
 	"main": "./dist/index.js",
@@ -29,6 +30,7 @@
 		"@workspace/eslint-config": "workspace:*",
 		"@workspace/typescript-config": "workspace:*",
 		"eslint": "^9.39.5",
-		"typescript": "7.0.2"
+		"typescript": "7.0.2",
+		"vitest": "^4.1.10"
 	}
 }

@@ -21,7 +21,19 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, Suspense } from "react";
 
-import { TelescopeRangeSchema, type TelescopeOverview, type TelescopeRange, type TelescopeStreamEvent } from "@workspace/shared";
+import {
+	type Envelope,
+	TelescopeRangeSchema,
+	type TelescopeAlertsResponse,
+	type TelescopeExceptionListResponse,
+	type TelescopeLeaderboardResponse,
+	type TelescopeOverview,
+	type TelescopeRange,
+	type TelescopeRequestListResponse,
+	type TelescopeStreamEvent,
+	type TelescopeTrendsResponse,
+	type TelescopeWebhookDeliveriesResponse,
+} from "@workspace/shared";
 
 import { AlertsPanel } from "@/components/telescope/alerts-panel";
 import { AnimatedNumber } from "@/components/telescope/animated-number";
@@ -37,10 +49,9 @@ import { durationLabel, durationTone, rangeLabel, statusTone, streamEventTarget,
 import { useTelescopeLive } from "@/lib/use-telescope-live";
 
 // ── SSR hydration ───────────────────────────────────────────────────────────
-// The server page prefetches the overview payloads into the QueryClient and
-// hydrates them via <HydrationBoundary>, so the initial SSR HTML renders the
-// real stats (no skeleton flash); the client's background refetch keeps them
-// fresh.
+// The server page fetches the overview payloads directly and passes them as
+// props, so the initial SSR HTML renders the real stats (no skeleton flash);
+// the client's background refetch keeps them fresh.
 
 /** Skeleton block shown while the first overview payload loads. */
 function OverviewSkeleton(): React.JSX.Element {
@@ -66,7 +77,17 @@ function OverviewSkeleton(): React.JSX.Element {
 	);
 }
 
-function OverviewContent(): React.JSX.Element {
+export interface TelescopeOverviewViewProps {
+	readonly initialOverview: Envelope<{ overview: TelescopeOverview }>;
+	readonly initialExceptions: Envelope<{ list: TelescopeExceptionListResponse }>;
+	readonly initialTrends: Envelope<TelescopeTrendsResponse>;
+	readonly initialLeaderboard: Envelope<TelescopeLeaderboardResponse>;
+	readonly initialAlerts: Envelope<TelescopeAlertsResponse>;
+	readonly initialStarred: Envelope<{ list: TelescopeRequestListResponse }>;
+	readonly initialDeliveries: Envelope<TelescopeWebhookDeliveriesResponse>;
+}
+
+function OverviewContent(props: TelescopeOverviewViewProps): React.JSX.Element {
 	const { api } = useAuth();
 	const router = useRouter();
 	const searchParams = useSearchParams();
@@ -84,26 +105,26 @@ function OverviewContent(): React.JSX.Element {
 		[router],
 	);
 
-	const overviewQuery = api.telescope.overview.useQuery({ range }, { placeholderData: (previous) => previous });
+	const overviewQuery = api.telescope.overview.useQuery({ range }, { placeholderData: (previous) => previous, initialData: props.initialOverview });
 
-	const exceptionsQuery = api.telescope.exceptions.useQuery({ page: 1, pageSize: 5 }, { placeholderData: (previous) => previous });
+	const exceptionsQuery = api.telescope.exceptions.useQuery({ page: 1, pageSize: 5 }, { placeholderData: (previous) => previous, initialData: props.initialExceptions });
 
 	// Feature 13 — long-window error-rate trend (6h/24h lens the overview
 	// sparkline cannot show). Kept on the same range state so the header's
 	// RangePicker drives it too.
-	const trendsQuery = api.telescope.trends.useQuery({ range }, { placeholderData: (previous) => previous });
+	const trendsQuery = api.telescope.trends.useQuery({ range }, { placeholderData: (previous) => previous, initialData: props.initialTrends });
 
 	// Feature 12 — slow-endpoint leaderboard for the current window.
-	const leaderboardQuery = api.telescope.leaderboard.useQuery({ range }, { placeholderData: (previous) => previous });
+	const leaderboardQuery = api.telescope.leaderboard.useQuery({ range }, { placeholderData: (previous) => previous, initialData: props.initialLeaderboard });
 
 	// Feature 18 — recently fired threshold alerts.
-	const alertsQuery = api.telescope.alerts.useQuery(undefined, { placeholderData: (previous) => previous });
+	const alertsQuery = api.telescope.alerts.useQuery(undefined, { placeholderData: (previous) => previous, initialData: props.initialAlerts });
 
 	// Feature 4 — the starred requests quick-access panel.
-	const starredQuery = api.telescope.requests.useQuery({ page: 1, pageSize: 5, sort: "newest", starred: "true" }, { placeholderData: (previous) => previous });
+	const starredQuery = api.telescope.requests.useQuery({ page: 1, pageSize: 5, sort: "newest", starred: "true" }, { placeholderData: (previous) => previous, initialData: props.initialStarred });
 
 	// Feature 13 — recent alert-webhook deliveries.
-	const deliveriesQuery = api.telescope.webhookDeliveries.useQuery(undefined, { placeholderData: (previous) => previous });
+	const deliveriesQuery = api.telescope.webhookDeliveries.useQuery(undefined, { placeholderData: (previous) => previous, initialData: props.initialDeliveries });
 
 	// Improvement 5 — after an ack/snooze (handled inside AlertsPanel's per-row
 	// actions, which own their mutations), refetch to reflect the new status.
@@ -523,10 +544,10 @@ function OverviewContent(): React.JSX.Element {
 }
 
 /** `useSearchParams` must render under a Suspense boundary during prerender. */
-export default function TelescopeOverviewPage(): React.JSX.Element {
+export default function TelescopeOverviewPage(props: TelescopeOverviewViewProps): React.JSX.Element {
 	return (
 		<Suspense fallback={null}>
-			<OverviewContent />
+			<OverviewContent {...props} />
 		</Suspense>
 	);
 }

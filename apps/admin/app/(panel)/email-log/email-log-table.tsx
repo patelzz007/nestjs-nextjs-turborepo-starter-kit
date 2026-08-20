@@ -2,7 +2,7 @@
 
 import { useAuth } from "@workspace/client/lib/auth";
 
-import type { EmailLogEntry, EmailLogStatus } from "@workspace/shared";
+import type { EmailLogEntry, EmailLogStatus, EmailLogListResponse, Envelope } from "@workspace/shared";
 import { useEmailLogLive, type LiveState } from "@/lib/email-log-live";
 import { formatDateTime } from "@/lib/dates";
 import { Badge } from "@workspace/ui/components/feedback/badge";
@@ -90,9 +90,9 @@ function LivePill({ state }: { readonly state: LiveState }): React.JSX.Element {
  * (sent → delivered / bounced / complained / failed) — open/click tracking
  * was removed from the system.
  */
-export default function EmailLogPage(): React.JSX.Element {
+export default function EmailLogPage({ initialEnvelope }: { readonly initialEnvelope: Envelope<EmailLogListResponse> }): React.JSX.Element {
 	const { api } = useAuth();
-	const logQuery = api.email.logList.useQuery({ limit: 100 });
+	const logQuery = api.email.logList.useQuery({ limit: 100 }, { initialData: initialEnvelope });
 
 	// Live updates: SSE stream → invalidate the list query on every webhook
 	// write, so delivery status flips appear instantly.

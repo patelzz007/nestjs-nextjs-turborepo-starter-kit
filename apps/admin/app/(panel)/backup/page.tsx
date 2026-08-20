@@ -1,18 +1,13 @@
-import { PrefetchBoundary } from "@workspace/client/lib/api/prefetch-boundary";
-
-import { prefetchPage } from "@workspace/client/lib/api/server-api";
+import { createServerCaller } from "@workspace/client/lib/api/server-api";
 
 import BackupPanel from "./backup-panel";
 
 export const dynamic = "force-dynamic";
 
-/** `/backup` — prefetches the backup history + options server-side; polling stays client-side. */
+/** `/backup` — fetches the backup history + options server-side; polling stays client-side. */
 export default async function BackupPage(): Promise<React.JSX.Element> {
-	const { state, report } = await prefetchPage((server) => [server.backup.list(undefined), server.backup.options(undefined)]);
+	const server = createServerCaller();
+	const [listData, optionsData] = await Promise.all([server.backup.list.query(undefined), server.backup.options.query(undefined)]);
 
-	return (
-		<PrefetchBoundary state={state} report={report}>
-			<BackupPanel />
-		</PrefetchBoundary>
-	);
+	return <BackupPanel initialList={listData} initialOptions={optionsData} />;
 }

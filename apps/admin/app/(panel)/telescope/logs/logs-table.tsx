@@ -17,7 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useState } from "react";
 
-import { TelescopeLogsListQuerySchema, type TelescopeLogRow, type TelescopeLogsListQuery } from "@workspace/shared";
+import { TelescopeLogsListQuerySchema, type TelescopeLogRow, type TelescopeLogsListQuery, type TelescopeLogsListResponse, type Envelope } from "@workspace/shared";
 
 import { formatTime } from "@/lib/telescope";
 
@@ -37,7 +37,7 @@ const LEVEL_TONE: Readonly<Record<string, string>> = {
 	error: "border-red-300/60 bg-red-500/10 text-red-700 dark:border-red-500/40 dark:text-red-400",
 };
 
-export default function TelescopeLogsPage(): React.JSX.Element {
+export default function TelescopeLogsPage({ initialEnvelope }: { readonly initialEnvelope: Envelope<{ readonly list: TelescopeLogsListResponse }> }): React.JSX.Element {
 	const { api } = useAuth();
 	const router = useRouter();
 
@@ -53,8 +53,8 @@ export default function TelescopeLogsPage(): React.JSX.Element {
 		return TelescopeLogsListQuerySchema.parse(draft);
 	}, [page, pageSize, level, q]);
 
-	// const listQuery = api.telescope.logs.useQuery(query, { placeholderData: (previous) => previous });
-	const listQuery = api.telescope.logs.useQuery(query, { placeholderData: (previous) => previous });
+	const isDefaultQuery: boolean = page === 1 && pageSize === 20 && level === "all" && q.trim().length === 0;
+	const listQuery = api.telescope.logs.useQuery(query, { placeholderData: (previous) => previous, initialData: isDefaultQuery ? initialEnvelope : undefined });
 	const rows: readonly TelescopeLogRow[] = useMemo(() => listQuery.data?.data.list.items ?? [], [listQuery.data]);
 	const totalCount: number = listQuery.data?.data.list.total ?? 0;
 

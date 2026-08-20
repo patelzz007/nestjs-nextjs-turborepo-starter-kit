@@ -141,14 +141,48 @@ Key points:
 
 ```
 packages/shared/src/
-├── index.ts   ← barrel — re-exports everything
-├── contracts/ ← apiContract — the shared route contract (method + path + input schema)
+├── index.ts       ← barrel — re-exports everything
+├── api-routes.ts  ← SINGLE SOURCE OF TRUTH for all API path templates
+├── contracts/     ← apiContract — the shared route contract (method + path + input schema)
 └── schemas/
     ├── auth/    ← auth.ts, auth-errors, cookies, session-status, token, user
     ├── api/     ← api-response, common, env, health.schema, message, pagination
     ├── email/   ← email.ts (log/send/webhook), email-templates.ts (render props)
     ├── runtime/ ← json, caught-error, http-headers, prisma-query, primitives (cross-cutting parse helpers)
     └── domain/  ← rbac, enums, events, backup, logs, menu, telescope, …
+```
+
+### api-routes.ts — path template registry
+
+`api-routes.ts` is the **single source of truth** for every API endpoint path template.
+Contracts (`contracts/index.ts`) reference `apiRoutes` instead of hardcoding path strings.
+
+- **Static routes** are plain strings: `apiRoutes.telescope.requests` → `"/telescope/requests"`
+- **Parameterized routes** are objects: `apiRoutes.telescope.requestDetail` → `{ path: "/telescope/requests/:id", params: ["id"] }`
+- **`buildRoute(route, params)`** resolves a route to a concrete URL at compile time (enforces required params)
+- **`buildQuery(base, params)`** appends query parameters safely (URL-encodes, omits null/undefined)
+
+```ts
+import { apiRoutes, buildRoute, buildQuery } from "@workspace/shared";
+
+// Static route:
+apiRoutes.telescope.requests  // → "/telescope/requests"
+
+// Parameterized route:
+buildRoute(apiRoutes.telescope.requestDetail, { id: "abc" })
+// → "/telescope/requests/abc"
+
+// With query string:
+buildQuery(buildRoute(apiRoutes.telescope.requests), { sort: "duration", page: 2 })
+// → "/telescope/requests?sort=duration&page=2"
+```
+
+Contracts consume the path string directly:
+```ts
+import { apiRoutes } from "../api-routes";
+
+requestDetail: defineContract({ method: "GET", path: apiRoutes.telescope.requestDetail.path, input: TelescopeIdInputSchema }),
+requests: defineContract({ method: "GET", path: apiRoutes.telescope.requests, input: TelescopeRequestListQuerySchema }),
 ```
 
 Schemas are grouped by domain (`auth/`, `api/`, `domain/`, `email/`, `runtime/`). The barrel

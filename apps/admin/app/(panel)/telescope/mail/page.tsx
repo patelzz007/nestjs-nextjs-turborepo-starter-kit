@@ -1,18 +1,13 @@
-import { PrefetchBoundary } from "@workspace/client/lib/api/prefetch-boundary";
-
-import { prefetchPage } from "@workspace/client/lib/api/server-api";
+import { createServerCaller } from "@workspace/client/lib/api/server-api";
 
 import TelescopeMailView from "./mail-table";
 
 export const dynamic = "force-dynamic";
 
-/** `/telescope/mail` — prefetches the captured mail list server-side through the admin cookies. */
+/** `/telescope/mail` — fetches the captured mail list server-side. */
 export default async function TelescopeMailPage(): Promise<React.JSX.Element> {
-	const { state, report } = await prefetchPage((server) => [server.telescope.mail(undefined)]);
+	const server = createServerCaller();
+	const data = await server.telescope.mail.query(undefined);
 
-	return (
-		<PrefetchBoundary state={state} report={report}>
-			<TelescopeMailView />
-		</PrefetchBoundary>
-	);
+	return <TelescopeMailView initialData={data.data} />;
 }

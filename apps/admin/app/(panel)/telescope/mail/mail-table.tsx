@@ -7,14 +7,12 @@
 // live-updating view remains `/email-log` (SSE); this is a read-only mirror.
 // ============================================
 
-import { useAuth } from "@workspace/client/lib/auth";
-
 import { Badge } from "@workspace/ui/components/feedback/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@workspace/ui/components/overlay/dialog";
 import type { ColumnDef } from "@tanstack/react-table";
 import { ADMIN_DATA_TABLE_LABELS } from "@/lib/data-table-labels";
 import { DataTable, type DataTableFeatures } from "@workspace/ui/components/display/data-table";
-import { Loader2, Mail, CircleCheck, CircleX, TriangleAlert } from "lucide-react";
+import { Mail, CircleCheck, CircleX, TriangleAlert } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useMemo, useState } from "react";
 import { Input } from "@workspace/ui/components/form/input";
@@ -43,12 +41,14 @@ function StatusBadge({ status }: { readonly status: EmailLogStatus }): React.JSX
 		</Badge>
 	);
 }
-export default function TelescopeMailPage(): React.JSX.Element {
-	const { api } = useAuth();
-	const mailQuery = api.telescope.mail.useQuery(undefined);
+interface TelescopeMailViewProps {
+	readonly initialData: { readonly logs: readonly EmailLogEntry[] };
+}
+
+export default function TelescopeMailPage({ initialData }: TelescopeMailViewProps): React.JSX.Element {
 	const [selected, setSelected] = useState<EmailLogEntry | null>(null);
 
-	const rows = useMemo(() => mailQuery.data?.data.logs ?? [], [mailQuery.data]);
+	const rows: readonly EmailLogEntry[] = initialData.logs;
 
 	// Feature 17 — status filter + template search (client-side; the payload
 	// is bounded at 100 rows, so filtering in-memory beats another round-trip).
@@ -123,17 +123,6 @@ export default function TelescopeMailPage(): React.JSX.Element {
 		],
 		[],
 	);
-
-	if (mailQuery.isLoading) {
-		return (
-			<div className="flex min-h-[60vh] items-center justify-center">
-				<div className="flex flex-col items-center gap-3 text-muted-foreground">
-					<Loader2 className="size-6 animate-spin" />
-					<p className="text-sm">Loading mail…</p>
-				</div>
-			</div>
-		);
-	}
 
 	return (
 		<div className="mx-auto w-full max-w-7xl space-y-6">

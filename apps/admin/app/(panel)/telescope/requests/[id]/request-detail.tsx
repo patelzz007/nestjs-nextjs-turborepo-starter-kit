@@ -34,7 +34,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useMemo, useState } from "react";
 
-import type { TelescopeReplayResponse, TelescopeRequestDetailResponse, TelescopeRequestSqlResponse, TelescopeSpan } from "@workspace/shared";
+import type { TelescopeReplayResponse, TelescopeRequestDetailResponse, TelescopeRequestSqlResponse, TelescopeSpan, Envelope } from "@workspace/shared";
 
 import { CodeBlock } from "@/components/docs/code-block";
 import { AnnotationPanel } from "@/components/telescope/annotation-panel";
@@ -76,12 +76,12 @@ function BodyBlock({ value, emptyLabel }: { readonly value: string | null; reado
 	return <CodeBlock code={value} language="json" fileName="body.json" />;
 }
 
-export default function TelescopeRequestDetailPage(): React.JSX.Element {
+export default function TelescopeRequestDetailPage({ initialEnvelope }: { readonly initialEnvelope: Envelope<TelescopeRequestDetailResponse> }): React.JSX.Element {
 	const { api } = useAuth();
 	const params = useParams<{ readonly id: string }>();
 	const id: string = params.id;
 
-	const detailQuery = api.telescope.requestDetail.useQuery({ id });
+	const detailQuery = api.telescope.requestDetail.useQuery({ id }, { initialData: initialEnvelope });
 	const detail: TelescopeRequestDetailResponse | undefined = detailQuery.data?.data;
 
 	// Feature 14 — star/comment (annotation) + Feature 7 — replay + Feature 16

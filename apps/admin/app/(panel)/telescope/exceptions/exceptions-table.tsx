@@ -19,7 +19,14 @@ import { toastMessage } from "@workspace/ui/components/feedback/toast";
 import { Check, EyeOff, RotateCcw } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 
-import { TelescopeExceptionListQuerySchema, type ExceptionLogEntry, type TelescopeExceptionListQuery, type TelescopeExceptionStatus } from "@workspace/shared";
+import {
+	TelescopeExceptionListQuerySchema,
+	type ExceptionLogEntry,
+	type TelescopeExceptionListQuery,
+	type TelescopeExceptionStatus,
+	type TelescopeExceptionListResponse,
+	type Envelope,
+} from "@workspace/shared";
 
 import { ExceptionCard } from "@/components/telescope/exception-card";
 import { exceptionStatusTone, formatTime, statusTone } from "@/lib/telescope";
@@ -123,7 +130,11 @@ function TriageActions({ entry, onChanged }: { readonly entry: ExceptionLogEntry
 	);
 }
 
-export default function TelescopeExceptionsPage(): React.JSX.Element {
+export default function TelescopeExceptionsPage({
+	initialEnvelope,
+}: {
+	readonly initialEnvelope: Envelope<{ readonly list: TelescopeExceptionListResponse }>;
+}): React.JSX.Element {
 	const { api } = useAuth();
 
 	const [status, setStatus] = useState<string>("all");
@@ -141,7 +152,8 @@ export default function TelescopeExceptionsPage(): React.JSX.Element {
 		return TelescopeExceptionListQuerySchema.parse(draft);
 	}, [page, pageSize, status, triage, errorGroup]);
 
-	const listQuery = api.telescope.exceptions.useQuery(query, { placeholderData: (previous) => previous });
+	const isDefaultQuery: boolean = page === 1 && pageSize === 20 && status === "all" && triage === "all" && errorGroup === "";
+	const listQuery = api.telescope.exceptions.useQuery(query, { placeholderData: (previous) => previous, initialData: isDefaultQuery ? initialEnvelope : undefined });
 
 	const rows: readonly ExceptionLogEntry[] = useMemo(() => listQuery.data?.data.list.items ?? [], [listQuery.data]);
 	const totalCount: number = listQuery.data?.data.list.total ?? 0;

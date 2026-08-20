@@ -14,9 +14,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@work
 import { ArrowLeft, GitCompareArrows, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Suspense, useMemo } from "react";
+import { Suspense, useMemo, createContext, useContext } from "react";
 
-import type { TelescopeCompareResponse, TelescopeDiffField } from "@workspace/shared";
+import type { TelescopeCompareResponse, TelescopeDiffField, Envelope } from "@workspace/shared";
 
 import { Timeline } from "@/components/telescope/timeline";
 import { durationLabel, formatTime, statusTone } from "@/lib/telescope";
@@ -25,6 +25,7 @@ import { durationLabel, formatTime, statusTone } from "@/lib/telescope";
 
 function CompareContent(): React.JSX.Element {
 	const { api } = useAuth();
+	const initialData = useContext(InitialDataContext);
 	const searchParams = useSearchParams();
 	const idA: string | null = searchParams.get("a");
 	const idB: string | null = searchParams.get("b");
@@ -35,6 +36,7 @@ function CompareContent(): React.JSX.Element {
 		{ a: idA ?? "", b: idB ?? "" },
 		{
 			enabled: valid,
+			initialData,
 		},
 	);
 
@@ -191,11 +193,15 @@ function CompareContent(): React.JSX.Element {
 	);
 }
 
+const InitialDataContext = createContext<Envelope<TelescopeCompareResponse> | undefined>(undefined);
+
 /** `useSearchParams` must render under a Suspense boundary during prerender. */
-export default function TelescopeComparePage(): React.JSX.Element {
+export default function TelescopeComparePage({ initialEnvelope }: { readonly initialEnvelope?: Envelope<TelescopeCompareResponse> }): React.JSX.Element {
 	return (
-		<Suspense fallback={null}>
-			<CompareContent />
-		</Suspense>
+		<InitialDataContext.Provider value={initialEnvelope}>
+			<Suspense fallback={null}>
+				<CompareContent />
+			</Suspense>
+		</InitialDataContext.Provider>
 	);
 }

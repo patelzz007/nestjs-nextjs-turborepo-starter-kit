@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuth } from "@workspace/client/lib/auth";
+import type { Envelope, UserResponse } from "@workspace/shared";
 
 import { useCallback, useState, type JSX } from "react";
 
@@ -9,14 +10,14 @@ import { format } from "date-fns";
 import { BreadcrumbTrail } from "@/components/breadcrumb-trail";
 import { LogoutButton } from "@/components/logout-button";
 
-export default function HelloView(): JSX.Element {
+export default function HelloView({ initialEnvelope }: { readonly initialEnvelope: Envelope<UserResponse> }): JSX.Element {
 	const { api, isInitializing } = useAuth();
 	const [showDetails, setShowDetails] = useState(false);
 	const toggleDetails = useCallback((): void => {
 		setShowDetails((prev: boolean) => !prev);
 	}, []);
 
-	const meQuery = api.auth.me.useQuery(undefined);
+	const meQuery = api.auth.me.useQuery(undefined, { initialData: initialEnvelope });
 
 	const user = meQuery.data?.data;
 

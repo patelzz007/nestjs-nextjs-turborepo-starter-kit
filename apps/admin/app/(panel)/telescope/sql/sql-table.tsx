@@ -20,7 +20,14 @@ import { Copy, ExternalLink, RefreshCw, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useState } from "react";
 
-import { TelescopeSqlListQuerySchema, type QueryLogEntry, type TelescopeSqlListQuery, type TelescopeStreamEvent } from "@workspace/shared";
+import {
+	TelescopeSqlListQuerySchema,
+	type QueryLogEntry,
+	type TelescopeSqlListQuery,
+	type TelescopeStreamEvent,
+	type TelescopeSqlListResponse,
+	type Envelope,
+} from "@workspace/shared";
 
 import { durationLabel, formatTime } from "@/lib/telescope";
 import { useTelescopeLive } from "@/lib/use-telescope-live";
@@ -65,12 +72,10 @@ function DurationPresetButton({ preset, active, onSelect }: DurationPresetButton
 	);
 }
 
-export default function TelescopeSqlPage(): React.JSX.Element {
+export default function TelescopeSqlPage({ initialEnvelope }: { readonly initialEnvelope: Envelope<{ readonly list: TelescopeSqlListResponse }> }): React.JSX.Element {
 	const { api } = useAuth();
 	const router = useRouter();
 
-	// Improvement 8: a sane default (100 ms) makes slow queries surface
-	// without forcing the dev to type a filter every visit.
 	const [model, setModel] = useState<string>("");
 	const [minDuration, setMinDuration] = useState<string>("100");
 	const [sort, setSort] = useState<string>("duration");
@@ -84,7 +89,8 @@ export default function TelescopeSqlPage(): React.JSX.Element {
 		return TelescopeSqlListQuerySchema.parse(draft);
 	}, [page, pageSize, sort, model, minDuration]);
 
-	const listQuery = api.telescope.sql.useQuery(query, { placeholderData: (previous) => previous });
+	const isDefaultQuery: boolean = page === 1 && sort === "duration" && minDuration === "100" && model === "";
+	const listQuery = api.telescope.sql.useQuery(query, { placeholderData: (previous) => previous, initialData: isDefaultQuery ? initialEnvelope : undefined });
 
 	const rows: readonly QueryLogEntry[] = useMemo(() => listQuery.data?.data.list.items ?? [], [listQuery.data]);
 	const totalCount: number = listQuery.data?.data.list.total ?? 0;

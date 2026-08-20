@@ -2,7 +2,7 @@
 
 import { useAuth } from "@workspace/client/lib/auth";
 import { useQueryClient } from "@tanstack/react-query";
-import type { BackupEntry, BackupSchedule } from "@workspace/shared";
+import type { BackupEntry, BackupSchedule, BackupListResponse, BackupOptionsResponse, Envelope } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/feedback/badge";
 import { Button } from "@workspace/ui/components/form/button";
 import { toastMessage } from "@workspace/ui/components/feedback/toast";
@@ -23,11 +23,17 @@ import { useEasedProgress } from "./use-eased-progress";
  * download flow mints a signed token (15 min) and streams the file through
  * the same-origin proxy so auth rides the normal admin cookies.
  */
-export default function BackupPanel(): React.JSX.Element {
+interface BackupPanelProps {
+	readonly initialList: Envelope<BackupListResponse>;
+	readonly initialOptions: Envelope<BackupOptionsResponse>;
+}
+
+export default function BackupPanel({ initialList, initialOptions }: BackupPanelProps): React.JSX.Element {
 	const { api } = useAuth();
 	const queryClient = useQueryClient();
 
 	const listQuery = api.backup.list.useQuery(undefined, {
+		initialData: initialList,
 		refetchInterval: (query): number | false => {
 			const payload = query.state.data;
 			const active: boolean =
@@ -35,7 +41,7 @@ export default function BackupPanel(): React.JSX.Element {
 			return active ? 2000 : false;
 		},
 	});
-	const optionsQuery = api.backup.options.useQuery(undefined);
+	const optionsQuery = api.backup.options.useQuery(undefined, { initialData: initialOptions });
 
 	const createMutation = api.backup.create.useMutation();
 	const downloadMutation = api.backup.download.useMutation();

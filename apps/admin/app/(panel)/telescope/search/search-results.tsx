@@ -24,10 +24,11 @@ import {
 	type TelescopeSearchResponse,
 	type TelescopeSearchSqlMatch,
 } from "@workspace/shared";
+import type { Envelope } from "@workspace/shared";
 
 import { durationLabel, durationTone, formatTime, statusTone } from "@/lib/telescope";
 
-function SearchContent(): React.JSX.Element {
+function SearchContent({ initialSearchData }: { readonly initialSearchData?: Envelope<TelescopeSearchResponse> }): React.JSX.Element {
 	const { api } = useAuth();
 	const router = useRouter();
 	const searchParams = useSearchParams();
@@ -50,6 +51,7 @@ function SearchContent(): React.JSX.Element {
 	const searchQuery = api.telescope.search.useQuery(query ?? { q: "", limit: 1 }, {
 		enabled: query !== null,
 		placeholderData: (previous) => previous,
+		initialData: initialSearchData,
 	});
 
 	const results: TelescopeSearchResponse | undefined = searchQuery.data?.data;
@@ -140,7 +142,7 @@ function SearchContent(): React.JSX.Element {
 					{totalMatches(results) === 0 ? (
 						<div className="rounded-lg border border-dashed p-8 text-center">
 							<TriangleAlert className="mx-auto size-6 text-muted-foreground" />
-							<p className="mt-2 text-sm font-medium">No matches for “{query.q}”</p>
+							<p className="mt-2 text-sm font-medium">No matches for "{query.q}"</p>
 							<p className="text-xs text-muted-foreground">Try a broader term — captures are limited to the retention window.</p>
 						</div>
 					) : (
@@ -346,10 +348,14 @@ function SearchLogRow({ row, onOpen }: { readonly row: TelescopeSearchLogMatch; 
 	);
 }
 
-export default function TelescopeSearchPage(): React.JSX.Element {
+export default function TelescopeSearchPage({
+	initialSearchData,
+}: {
+	readonly initialSearchData?: Envelope<TelescopeSearchResponse>;
+}): React.JSX.Element {
 	return (
 		<Suspense fallback={null}>
-			<SearchContent />
+			<SearchContent initialSearchData={initialSearchData} />
 		</Suspense>
 	);
 }

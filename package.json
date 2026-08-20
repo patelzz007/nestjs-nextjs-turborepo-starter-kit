@@ -28,7 +28,7 @@
 		"deps:list": "turbo run deps:list",
 		"kill:api": "PIDS=$(lsof -ti :8080 2>/dev/null); if [ -n \"$PIDS\" ]; then kill -9 $PIDS; echo \"Freed port 8080 (killed $PIDS)\"; else echo \"Port 8080 is already free\"; fi",
 		"kill:admin": "PIDS=$(lsof -ti :3001 2>/dev/null); if [ -n \"$PIDS\" ]; then kill -9 $PIDS; echo \"Freed port 3001 (killed $PIDS)\"; else echo \"Port 3001 is already free\"; fi",
-		"kill:web": "PIDS=$(lsof -ti :3000 2>/dev/null); if [ -n \"$PIDS\" ]; then kill -9 $PIDS; echo \"Freed port 3000 (killed $PIDS)\"; else echo \"Port 3001 is already free\"; fi",
+		"kill:web": "PIDS=$(lsof -ti :3000 2>/dev/null); if [ -n \"$PIDS\" ]; then kill -9 $PIDS; echo \"Freed port 3000 (killed $PIDS)\"; else echo \"Port 3000 is already free\"; fi",
 		"kill:docs": "PIDS=$(lsof -ti :3002 2>/dev/null); if [ -n \"$PIDS\" ]; then kill -9 $PIDS; echo \"Freed port 3002 (killed $PIDS)\"; else echo \"Port 3002 is already free\"; fi",
 		"kill:all": "pnpm kill:api && pnpm kill:admin && pnpm kill:web && pnpm kill:docs"
 	},

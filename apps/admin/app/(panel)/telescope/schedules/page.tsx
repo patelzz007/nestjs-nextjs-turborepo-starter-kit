@@ -1,18 +1,13 @@
-import { PrefetchBoundary } from "@workspace/client/lib/api/prefetch-boundary";
-
-import { prefetchPage } from "@workspace/client/lib/api/server-api";
+import { createServerCaller } from "@workspace/client/lib/api/server-api";
 
 import TelescopeSchedulesView from "./schedules-list";
 
 export const dynamic = "force-dynamic";
 
-/** `/telescope/schedules` — prefetches the registered schedule list server-side; live "run" frames stay client-side via SSE. */
+/** `/telescope/schedules` — fetches the registered schedule list server-side. */
 export default async function TelescopeSchedulesPage(): Promise<React.JSX.Element> {
-	const { state, report } = await prefetchPage((server) => [server.telescope.schedules(undefined)]);
+	const server = createServerCaller();
+	const data = await server.telescope.schedules.query(undefined);
 
-	return (
-		<PrefetchBoundary state={state} report={report}>
-			<TelescopeSchedulesView />
-		</PrefetchBoundary>
-	);
+	return <TelescopeSchedulesView initialEnvelope={data} />;
 }

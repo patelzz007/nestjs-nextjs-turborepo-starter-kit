@@ -1,8 +1,6 @@
 import { EmailTemplateKeySchema } from "@workspace/shared";
 
-import { PrefetchBoundary } from "@workspace/client/lib/api/prefetch-boundary";
-
-import { prefetchPage } from "@workspace/client/lib/api/server-api";
+import { createServerCaller } from "@workspace/client/lib/api/server-api";
 
 import EmailPreviewView from "./email-templates";
 
@@ -13,22 +11,18 @@ export const dynamic = "force-dynamic";
  * template's rendered preview. The view auto-selects `templates[0]` on mount
  * (its `effectiveKey` falls back to the first list entry), so prefetching the
  * same key here means the iframe + HTML tabs render in the initial SSR HTML
- * instead of a second client round-trip. The first registry key is stable
- * (`verification`), referenced via the shared schema rather than a literal.
+ * instead of a second client round-trip.
  */
 export default async function EmailPreviewPage(): Promise<React.JSX.Element> {
+	const server = createServerCaller();
+
+	const listData = await server.email.previewList.query(undefined);
+
 	// `z.enum` guarantees a non-empty options tuple at runtime, so the guard
 	// never drops the detail spec — it just keeps TS (`noUncheckedIndexedAccess`)
 	// happy without a cast or a duplicated literal.
 	const firstKey: string | undefined = EmailTemplateKeySchema.options[0];
-	const { state, report } = await prefetchPage((server) => [
-		server.email.previewList(undefined),
-		...(firstKey !== undefined ? [server.email.previewDetail({ key: firstKey })] : []),
-	]);
+	const detailData = firstKey !== undefined ? await server.email.previewDetail.query({ key: firstKey }) : undefined;
 
-	return (
-		<PrefetchBoundary state={state} report={report}>
-			<EmailPreviewView />
-		</PrefetchBoundary>
-	);
+	return <EmailPreviewView initialList={listData} initialDetail={detailData} />;
 }

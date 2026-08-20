@@ -20,7 +20,14 @@ import { ExternalLink, RotateCcw, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useState } from "react";
 
-import { TelescopeJobsListQuerySchema, type TelescopeJobLogEntry, type TelescopeJobsListQuery, type TelescopeStreamEvent } from "@workspace/shared";
+import {
+	TelescopeJobsListQuerySchema,
+	type TelescopeJobLogEntry,
+	type TelescopeJobsListQuery,
+	type TelescopeStreamEvent,
+	type TelescopeJobsListResponse,
+	type Envelope,
+} from "@workspace/shared";
 
 import { LiveFeedCard } from "@/components/telescope/live-feed-card";
 import { durationLabel, formatTime, jobStatusTone, streamEventTarget } from "@/lib/telescope";
@@ -85,7 +92,7 @@ function RetryAction({ job, onRetried }: { readonly job: TelescopeJobLogEntry; r
 	);
 }
 
-export default function TelescopeJobsPage(): React.JSX.Element {
+export default function TelescopeJobsPage({ initialEnvelope }: { readonly initialEnvelope: Envelope<{ readonly list: TelescopeJobsListResponse }> }): React.JSX.Element {
 	const { api } = useAuth();
 	const router = useRouter();
 
@@ -104,7 +111,8 @@ export default function TelescopeJobsPage(): React.JSX.Element {
 		return TelescopeJobsListQuerySchema.parse(draft);
 	}, [page, pageSize, status, jobName]);
 
-	const listQuery = api.telescope.jobs.useQuery(query, { placeholderData: (previous) => previous });
+	const isDefaultQuery: boolean = page === 1 && pageSize === 20 && status === "all" && jobName.trim().length === 0;
+	const listQuery = api.telescope.jobs.useQuery(query, { placeholderData: (previous) => previous, initialData: isDefaultQuery ? initialEnvelope : undefined });
 
 	const rows: readonly TelescopeJobLogEntry[] = useMemo(() => listQuery.data?.data.list.items ?? [], [listQuery.data]);
 	const totalCount: number = listQuery.data?.data.list.total ?? 0;

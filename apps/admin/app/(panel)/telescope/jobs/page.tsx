@@ -1,19 +1,13 @@
-import { PrefetchBoundary } from "@workspace/client/lib/api/prefetch-boundary";
-
-import { prefetchPage } from "@workspace/client/lib/api/server-api";
+import { createServerCaller } from "@workspace/client/lib/api/server-api";
 
 import TelescopeJobsView from "./jobs-table";
 
 export const dynamic = "force-dynamic";
 
-/** `/telescope/jobs` — prefetches the default first page server-side (client starts with the same defaults). */
+/** `/telescope/jobs` — fetches the default first page server-side. */
 export default async function TelescopeJobsPage(): Promise<React.JSX.Element> {
-	const query = { page: 1, pageSize: 20 } as const;
-	const { state, report } = await prefetchPage((server) => [server.telescope.jobs(query)]);
+	const server = createServerCaller();
+	const data = await server.telescope.jobs.query({ page: 1, pageSize: 20 });
 
-	return (
-		<PrefetchBoundary state={state} report={report}>
-			<TelescopeJobsView />
-		</PrefetchBoundary>
-	);
+	return <TelescopeJobsView initialEnvelope={data} />;
 }

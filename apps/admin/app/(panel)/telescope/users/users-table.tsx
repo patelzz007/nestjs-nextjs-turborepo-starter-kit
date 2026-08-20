@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useState } from "react";
 
-import { TelescopeUsersQuerySchema, type TelescopeUserSummary, type TelescopeUsersQuery } from "@workspace/shared";
+import { TelescopeUsersQuerySchema, type TelescopeUserSummary, type TelescopeUsersQuery, type TelescopeUsersResponse, type Envelope } from "@workspace/shared";
 
 import { durationLabel, formatTime } from "@/lib/telescope";
 
@@ -34,7 +34,7 @@ const SORT_OPTIONS: readonly { readonly value: string; readonly label: string }[
 	{ value: "duration", label: "Slowest p95" },
 ];
 
-export default function TelescopeUsersPage(): React.JSX.Element {
+export default function TelescopeUsersPage({ initialEnvelope }: { readonly initialEnvelope: Envelope<{ readonly list: TelescopeUsersResponse }> }): React.JSX.Element {
 	const { api } = useAuth();
 	const router = useRouter();
 
@@ -48,7 +48,10 @@ export default function TelescopeUsersPage(): React.JSX.Element {
 		return TelescopeUsersQuerySchema.parse(draft);
 	}, [page, pageSize, range, sort]);
 
-	const listQuery = api.telescope.users.useQuery(query, { placeholderData: (previous) => previous });
+	const listQuery = api.telescope.users.useQuery(query, {
+		placeholderData: (previous) => previous,
+		initialData: page === 1 && sort === "count" && range === "24h" ? initialEnvelope : undefined,
+	});
 
 	const rows: readonly TelescopeUserSummary[] = useMemo(() => listQuery.data?.data.list.items ?? [], [listQuery.data]);
 	const totalCount: number = listQuery.data?.data.list.total ?? 0;

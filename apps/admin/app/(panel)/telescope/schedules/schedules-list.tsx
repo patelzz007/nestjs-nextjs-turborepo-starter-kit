@@ -13,22 +13,20 @@ import { Button } from "@workspace/ui/components/form/button";
 import { toastMessage } from "@workspace/ui/components/feedback/toast";
 import { CalendarClock, Loader2, Play } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useCallback, useMemo } from "react";
+import { useCallback } from "react";
 
-import type { TelescopeScheduleLog, TelescopeSchedulesResponse, TelescopeStreamEvent } from "@workspace/shared";
+import type { TelescopeScheduleLog, TelescopeSchedulesResponse, TelescopeStreamEvent, Envelope } from "@workspace/shared";
 
 import { LiveFeedCard } from "@/components/telescope/live-feed-card";
 import { durationLabel, formatTime, scheduleStatusTone, streamEventTarget, timeAgo } from "@/lib/telescope";
 import { useTelescopeLive } from "@/lib/use-telescope-live";
 
-export default function TelescopeSchedulesPage(): React.JSX.Element {
+export default function TelescopeSchedulesPage({ initialEnvelope }: { readonly initialEnvelope: Envelope<TelescopeSchedulesResponse> }): React.JSX.Element {
 	const { api } = useAuth();
 	const router = useRouter();
 
-	const schedulesQuery = api.telescope.schedules.useQuery(undefined);
-
-	const schedules: readonly TelescopeScheduleLog[] = useMemo(() => schedulesQuery.data?.data.items ?? [], [schedulesQuery.data]);
-	const response: TelescopeSchedulesResponse | undefined = schedulesQuery.data?.data;
+	const schedulesQuery = api.telescope.schedules.useQuery(undefined, { initialData: initialEnvelope });
+	const schedules: readonly TelescopeScheduleLog[] = schedulesQuery.data?.data.items ?? initialEnvelope.data.items;
 
 	// Live: the API publishes a `schedule` frame on the SSE stream after each
 	// cron run — refetch on push so a card flips to succeeded/failed live.
@@ -54,7 +52,7 @@ export default function TelescopeSchedulesPage(): React.JSX.Element {
 		void schedulesQuery.refetch();
 	}, [schedulesQuery]);
 
-	if (schedulesQuery.isLoading && response === undefined) {
+	if (schedulesQuery.isLoading) {
 		return (
 			<div className="flex min-h-[50vh] items-center justify-center">
 				<div className="flex flex-col items-center gap-3 text-muted-foreground">
