@@ -14,8 +14,7 @@ export class AdminAccessGuard implements CanActivate {
 
 	public canActivate(context: ExecutionContext): boolean {
 		const message: string =
-			this.reflector.getAllAndOverride<string | undefined>(ADMIN_ACCESS_MESSAGE_KEY, [context.getHandler(), context.getClass()]) ??
-			"Admin access required.";
+			this.reflector.getAllAndOverride<string | undefined>(ADMIN_ACCESS_MESSAGE_KEY, [context.getHandler(), context.getClass()]) ?? "Admin access required.";
 
 		const request: FastifyRequest = context.switchToHttp().getRequest<FastifyRequest>();
 		requireAdminAccessToken(request.user, message);

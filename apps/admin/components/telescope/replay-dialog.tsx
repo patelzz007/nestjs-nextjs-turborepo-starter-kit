@@ -33,6 +33,10 @@ export function ReplayDialog({ open, onClose, targets, replaying, result, onRepl
 		onReplay(target);
 	}, [onReplay, target]);
 
+	const handleTargetChange = useCallback((event: React.ChangeEvent<HTMLSelectElement>): void => {
+		setTarget(event.target.value);
+	}, []);
+
 	if (!open) {
 		return null;
 	}
@@ -52,21 +56,17 @@ export function ReplayDialog({ open, onClose, targets, replaying, result, onRepl
 						<X className="size-4" />
 					</button>
 				</div>
-
 				<div className="mt-4 flex items-center gap-2 rounded-md border border-amber-300/60 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:border-amber-500/40 dark:text-amber-400">
 					<AlertTriangle className="size-3.5 shrink-0" />
 					<span>This sends a real HTTP request. Only use against environments you control.</span>
 				</div>
-
 				<label htmlFor="replay-target" className="mt-4 block text-xs font-medium text-muted-foreground">
 					Target
-				</label>
+				</label>{" "}
 				<select
 					id="replay-target"
 					value={target}
-					onChange={(event: React.ChangeEvent<HTMLSelectElement>): void => {
-						setTarget(event.target.value);
-					}}
+					onChange={handleTargetChange}
 					className="mt-1.5 h-9 w-full rounded-md border bg-card px-2.5 text-sm text-foreground focus:ring-2 focus:ring-ring focus:outline-none">
 					{targets.map((option) => (
 						<option key={option.name} value={option.name}>
@@ -74,7 +74,6 @@ export function ReplayDialog({ open, onClose, targets, replaying, result, onRepl
 						</option>
 					))}
 				</select>
-
 				<div className="mt-4 flex items-center justify-end gap-2">
 					<button
 						type="button"
@@ -91,7 +90,6 @@ export function ReplayDialog({ open, onClose, targets, replaying, result, onRepl
 						{replaying ? "Replaying…" : "Replay"}
 					</button>
 				</div>
-
 				{result !== null ? (
 					<div className="mt-4 rounded-md border bg-muted/30 p-3">
 						<div className="flex items-center gap-2 text-xs">

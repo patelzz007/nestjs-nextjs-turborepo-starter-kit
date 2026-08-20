@@ -1,6 +1,5 @@
 import { BadRequestException, Injectable, type PipeTransform } from "@nestjs/common";
 import Ajv, { type ErrorObject, type ValidateFunction } from "ajv";
-import { z } from "zod";
 import type { z as ZodV4 } from "zod/v4";
 import { toJSONSchema } from "zod/v4";
 
@@ -72,7 +71,9 @@ export class ZodValidationPipe implements PipeTransform<JsonValue, JsonValue> {
 		// compiled validation fast-path. The `$schema` header is stripped: Ajv
 		// defaults to draft-07 and can't resolve the 2020-12 meta-schema URI.
 		const schema: JsonObject = JsonObjectSchema.parse(toJSONSchema(this.schema));
-		const compiledSchema: JsonObject = JsonObjectSchema.parse(Object.fromEntries(Object.entries(schema).filter(([key]: readonly [string, JsonValue]): boolean => key !== "$schema")));
+		const compiledSchema: JsonObject = JsonObjectSchema.parse(
+			Object.fromEntries(Object.entries(schema).filter(([key]: readonly [string, JsonValue]): boolean => key !== "$schema")),
+		);
 
 		// zod's `.email()` emits `format: "email"`; Ajv doesn't know the format
 		// out of the box, so register the standard one (matches the strictness

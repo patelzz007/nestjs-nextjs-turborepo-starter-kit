@@ -1,11 +1,4 @@
-import {
-	EmailPreviewPropValueSchema,
-	EmailTemplateKeyParamSchema,
-	EmailTemplateMetaSchema,
-	type EmailPreview,
-	type EmailTemplateKey,
-	type EmailTemplateMeta,
-} from "@workspace/shared";
+import { EmailPreviewPropValueSchema, EmailTemplateMetaSchema, type EmailPreview, type EmailTemplateKey, type EmailTemplateMeta } from "@workspace/shared";
 
 import { BaseEmailTemplate, type BaseEmailProps } from "./base/base-email-template";
 import type { EmailRenderContext } from "./base/email-render-context";

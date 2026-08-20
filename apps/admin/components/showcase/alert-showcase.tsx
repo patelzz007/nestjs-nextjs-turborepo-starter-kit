@@ -196,13 +196,7 @@ export function AlertShowcase(): React.JSX.Element {
 					{/* Reason gate + countdown */}
 					<AlertDialog>
 						<AlertDialogTrigger render={<Button variant="secondary" />}>Lock account</AlertDialogTrigger>
-						<AlertDialogContent
-							severity="warning"
-							labels={lockDialogLabels}
-							requireReason
-							reasonValue={reasonValue}
-							onReasonValueChange={setReasonValue}
-							delaySeconds={3}>
+						<AlertDialogContent severity="warning" labels={lockDialogLabels} requireReason reasonValue={reasonValue} onReasonValueChange={setReasonValue} delaySeconds={3}>
 							<AlertDialogTitle>Lock this account?</AlertDialogTitle>
 							<AlertDialogDescription>The user will be signed out immediately and blocked from logging in.</AlertDialogDescription>
 						</AlertDialogContent>

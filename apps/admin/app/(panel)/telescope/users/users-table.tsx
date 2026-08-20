@@ -86,20 +86,7 @@ export default function TelescopeUsersPage(): React.JSX.Element {
 				header: "User",
 				cell: ({ row }): React.JSX.Element => (
 					<div className="min-w-0">
-						{row.original.email !== null ? (
-							// Deep-link to the user's requests — mirrors the search-page
-							// email link so the two surfaces behave identically.
-							<button
-								type="button"
-								onClick={(event: React.MouseEvent): void => {
-									event.stopPropagation();
-									router.push(`/telescope/requests?userId=${encodeURIComponent(row.original.userId)}`);
-								}}
-								className="block max-w-full truncate text-sm font-medium text-primary underline-offset-4 hover:underline"
-								title={`Open ${row.original.email}'s requests`}>
-								{row.original.email}
-							</button>
-						) : null}
+						{row.original.email !== null ? <UserEmailLink userId={row.original.userId} email={row.original.email} /> : null}
 						<p
 							className={`truncate font-mono ${row.original.email !== null ? "text-[11px] text-muted-foreground" : "text-sm text-muted-foreground"}`}
 							title={row.original.userId}>
@@ -138,7 +125,7 @@ export default function TelescopeUsersPage(): React.JSX.Element {
 				cell: ({ row }): React.JSX.Element => <span className="text-xs text-muted-foreground">{formatTime(row.original.lastSeenAt)}</span>,
 			},
 		],
-		[router],
+		[],
 	);
 
 	return (
@@ -195,5 +182,27 @@ export default function TelescopeUsersPage(): React.JSX.Element {
 				error={listQuery.error !== null ? "Failed to load users." : null}
 			/>
 		</div>
+	);
+}
+
+/** Child component so onClick can live in a useCallback (eslint react/jsx-no-bind). */
+function UserEmailLink({ userId, email }: { readonly userId: string; readonly email: string }): React.JSX.Element {
+	const router = useRouter();
+	const handleClick = useCallback(
+		(event: React.MouseEvent): void => {
+			event.stopPropagation();
+			router.push(`/telescope/requests?userId=${encodeURIComponent(userId)}`);
+		},
+		[router, userId],
+	);
+
+	return (
+		<button
+			type="button"
+			onClick={handleClick}
+			className="block max-w-full truncate text-sm font-medium text-primary underline-offset-4 hover:underline"
+			title={`Open ${email}'s requests`}>
+			{email}
+		</button>
 	);
 }

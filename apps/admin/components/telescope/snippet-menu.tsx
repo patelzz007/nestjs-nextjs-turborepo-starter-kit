@@ -47,13 +47,15 @@ export function SnippetMenu({ onCopy }: SnippetMenuProps): React.JSX.Element {
 		[onCopy],
 	);
 
+	const handleToggle = useCallback((): void => {
+		setOpen((current: boolean): boolean => !current);
+	}, []);
+
 	return (
 		<div ref={menuRef} className="relative">
 			<button
 				type="button"
-				onClick={(): void => {
-					setOpen((current: boolean): boolean => !current);
-				}}
+				onClick={handleToggle}
 				className="inline-flex h-7 items-center gap-1.5 rounded-md border px-2.5 text-xs font-medium text-foreground transition-colors hover:bg-accent"
 				title="Copy as cURL / fetch / axios">
 				<Braces className="size-3" />
@@ -64,19 +66,35 @@ export function SnippetMenu({ onCopy }: SnippetMenuProps): React.JSX.Element {
 			{open ? (
 				<div className="absolute right-0 z-20 mt-1 w-40 overflow-hidden rounded-md border bg-popover p-1 shadow-md">
 					{SNIPPET_FORMATS.map((format) => (
-						<button
-							key={format}
-							type="button"
-							onClick={(): void => {
-								void handleCopy(format);
-							}}
-							className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-xs text-popover-foreground transition-colors hover:bg-accent">
-							{copied === format ? <Check className="size-3 text-emerald-500" /> : <Copy className="size-3 text-muted-foreground" />}
-							{snippetFormatLabel(format)}
-						</button>
+						<SnippetFormatItem key={format} format={format} copied={copied} onCopy={handleCopy} />
 					))}
 				</div>
 			) : null}
 		</div>
+	);
+}
+
+/** Child component so onClick can live in a useCallback (eslint react/jsx-no-bind). */
+function SnippetFormatItem({
+	format,
+	copied,
+	onCopy,
+}: {
+	readonly format: RequestSnippetFormat;
+	readonly copied: RequestSnippetFormat | null;
+	readonly onCopy: (format: RequestSnippetFormat) => Promise<void>;
+}): React.JSX.Element {
+	const handleClick = useCallback((): void => {
+		void onCopy(format);
+	}, [onCopy, format]);
+
+	return (
+		<button
+			type="button"
+			onClick={handleClick}
+			className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-xs text-popover-foreground transition-colors hover:bg-accent">
+			{copied === format ? <Check className="size-3 text-emerald-500" /> : <Copy className="size-3 text-muted-foreground" />}
+			{snippetFormatLabel(format)}
+		</button>
 	);
 }

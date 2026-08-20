@@ -1,10 +1,9 @@
 import { Inject, Injectable, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common";
 import type { Subscription } from "rxjs";
 
-import { type TelescopeOptions } from "@workspace/shared";
+import { type TelescopeOptions, type ImpersonationActionEvent } from "@workspace/shared";
 
 import { ImpersonationEventsService } from "../impersonation/impersonation-events.service";
-import { type ImpersonationActionEvent } from "@workspace/shared";
 
 import { TelescopeAlertService } from "./telescope-alert.service";
 import { TelescopeEventBus } from "./telescope-event-bus";

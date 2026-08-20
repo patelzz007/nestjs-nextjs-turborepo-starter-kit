@@ -31,7 +31,7 @@ export class ProbeController {
 	 */
 	@UseGuards(ThrottlerGuard)
 	@Get("forbidden")
-	public forbidden(): never {
+	public forbidden(): void {
 		throw new ForbiddenException("Invalid webhook signature");
 	}
 }

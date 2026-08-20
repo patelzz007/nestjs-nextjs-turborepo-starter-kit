@@ -37,38 +37,19 @@ export function SavedFilters({ saved, current, onApply, onSave, onDelete }: Save
 		setDraftName("");
 	}, [draftName, current, onSave]);
 
+	const handleDraftChange = useCallback((event: React.ChangeEvent<HTMLInputElement>): void => {
+		setDraftName(event.target.value);
+	}, []);
+
 	return (
 		<div className="flex flex-wrap items-center gap-2">
 			{saved.map((filter) => (
-				<span
-					key={filter.id}
-					className="group inline-flex items-center gap-1.5 rounded-full border bg-card px-2.5 py-1 text-xs text-foreground shadow-xs transition-colors hover:border-primary/40">
-					<button
-						type="button"
-						onClick={(): void => {
-							onApply(filter.filter);
-						}}
-						className="inline-flex items-center gap-1.5 font-medium hover:underline">
-						<BookmarkCheck className="size-3 text-primary" />
-						{filter.name}
-					</button>
-					<button
-						type="button"
-						onClick={(): void => {
-							onDelete(filter.id);
-						}}
-						className="text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 hover:text-destructive"
-						aria-label={`Delete saved filter ${filter.name}`}>
-						<X className="size-3" />
-					</button>
-				</span>
+				<SavedFilterChip key={filter.id} filter={filter} onApply={onApply} onDelete={onDelete} />
 			))}
 
 			<input
 				value={draftName}
-				onChange={(event: React.ChangeEvent<HTMLInputElement>): void => {
-					setDraftName(event.target.value);
-				}}
+				onChange={handleDraftChange}
 				placeholder="Filter name…"
 				className="h-7 w-36 rounded-full border bg-card px-2.5 text-xs text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-ring focus:outline-none"
 			/>
@@ -80,5 +61,40 @@ export function SavedFilters({ saved, current, onApply, onSave, onDelete }: Save
 				Save filter
 			</button>
 		</div>
+	);
+}
+
+/** Child component so onClick can live in a useCallback (eslint react/jsx-no-bind). */
+function SavedFilterChip({
+	filter,
+	onApply,
+	onDelete,
+}: {
+	readonly filter: SavedFilter;
+	readonly onApply: (filter: SavedFilterValue) => void;
+	readonly onDelete: (id: string) => void;
+}): React.JSX.Element {
+	const handleApply = useCallback((): void => {
+		onApply(filter.filter);
+	}, [onApply, filter.filter]);
+
+	const handleDelete = useCallback((): void => {
+		onDelete(filter.id);
+	}, [onDelete, filter.id]);
+
+	return (
+		<span className="group inline-flex items-center gap-1.5 rounded-full border bg-card px-2.5 py-1 text-xs text-foreground shadow-xs transition-colors hover:border-primary/40">
+			<button type="button" onClick={handleApply} className="inline-flex items-center gap-1.5 font-medium hover:underline">
+				<BookmarkCheck className="size-3 text-primary" />
+				{filter.name}
+			</button>
+			<button
+				type="button"
+				onClick={handleDelete}
+				className="text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 hover:text-destructive"
+				aria-label={`Delete saved filter ${filter.name}`}>
+				<X className="size-3" />
+			</button>
+		</span>
 	);
 }

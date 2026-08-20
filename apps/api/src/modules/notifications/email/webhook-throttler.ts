@@ -1,4 +1,5 @@
 import type { ThrottlerModuleOptions } from "@nestjs/throttler";
+import { HttpHeaderValueSchema, RequestLikeSchema, type RequestLike } from "@workspace/shared";
 
 import type { TypedConfigService } from "../../../config/typed-config.service";
 
@@ -16,23 +17,28 @@ const UNKNOWN_CLIENT = "unknown";
  * 1. `cf-connecting-ip` — set by Cloudflare's edge, forwarded by cloudflared.
  * 2. first value of `x-forwarded-for` — the tunnel's standard forward header.
  * 3. `req.ip` — the direct socket address (local dev without a tunnel).
- */ export function resolveClientIp(req: { readonly headers?: Readonly<Record<string, unknown>>; readonly ip?: string }): string {
-	const headers: Readonly<Record<string, unknown>> = req.headers ?? {};
-	const cfConnectingIp: unknown = headers["cf-connecting-ip"];
-	if (typeof cfConnectingIp === "string") {
-		const trimmed: string = cfConnectingIp.trim();
-		if (trimmed.length > 0) {
-			return trimmed;
-		}
+ */ export function resolveClientIp(req: RequestLike): string {
+	const parsed = RequestLikeSchema.safeParse(req);
+	if (!parsed.success) {
+		return UNKNOWN_CLIENT;
 	}
-	const forwardedFor: unknown = headers["x-forwarded-for"];
-	if (typeof forwardedFor === "string") {
-		const firstHop: string = forwardedFor.split(",")[0]?.trim() ?? "";
-		if (firstHop.length > 0) {
-			return firstHop;
-		}
+	const headers = parsed.data.headers ?? {};
+	// Helper: extract a single string from a header value (string or string[]).
+	const headerStr = (raw: unknown): string => {
+		const v = HttpHeaderValueSchema.safeParse(raw);
+		if (!v.success) return "";
+		return Array.isArray(v.data) ? (v.data[0] ?? "") : v.data;
+	};
+	const cfConnectingIp: string = headerStr(headers["cf-connecting-ip"]).trim();
+	if (cfConnectingIp.length > 0) {
+		return cfConnectingIp;
 	}
-	return typeof req.ip === "string" && req.ip.trim().length > 0 ? req.ip.trim() : UNKNOWN_CLIENT;
+	const forwardedFor: string = headerStr(headers["x-forwarded-for"]).trim();
+	const firstHop: string = forwardedFor.split(",")[0]?.trim() ?? "";
+	if (firstHop.length > 0) {
+		return firstHop;
+	}
+	return parsed.data.ip !== undefined && parsed.data.ip.trim().length > 0 ? parsed.data.ip.trim() : UNKNOWN_CLIENT;
 }
 
 /**
@@ -52,7 +58,7 @@ export function webhookThrottlerOptionsFactory(config: TypedConfigService): Thro
 	const limitPerMinute: number = config.webhookRateLimitPerMinute;
 	return {
 		errorMessage: "Too many webhook requests — this endpoint is rate-limited per IP (WEBHOOK_RATE_LIMIT_PER_MINUTE). Try again shortly.",
-		getTracker: (req: Record<string, unknown>): string => resolveClientIp(req),
+		getTracker: (req: Record<string, string>): string => resolveClientIp(req),
 		throttlers: limitPerMinute > 0 ? [{ name: "webhook", ttl: 60_000, limit: limitPerMinute }] : [],
 	};
 }

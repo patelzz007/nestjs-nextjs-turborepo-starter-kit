@@ -1,3 +1,5 @@
+import { StringValueSchema } from "@workspace/shared";
+
 /**
  * Parse an expiry duration string (e.g. "15m", "7d", "1h") into milliseconds.
  *
@@ -17,7 +19,8 @@ export const parseExpiryToMilliseconds = (expiry: string): number => {
 	}
 
 	const valueStr: string = groups[1];
-	const unit: string = typeof groups[2] === "string" ? groups[2] : "m";
+	const unitParsed = StringValueSchema.safeParse(groups[2]);
+	const unit: string = unitParsed.success ? unitParsed.data : "m";
 
 	const value: number = Number.parseInt(valueStr, 10);
 

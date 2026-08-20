@@ -6,6 +6,7 @@ import { interval, map, merge, type Observable } from "rxjs";
 import { apiContract, EmailLogListResponseSchema, nowEpochMs, type EmailLogEntry, type EmailLogListQuery, apiPath } from "@workspace/shared";
 
 import { ZodValidationPipe } from "../../../common/pipes/zod-validation.pipe";
+import { AdminAccessOnly } from "../../auth/decorators/admin-access.decorator";
 import { RequirePermission } from "../../auth/decorators/require-permission.decorator";
 import { createWrappedDto } from "../../../common/dto/response-wrapper";
 
@@ -29,6 +30,7 @@ const WrappedEmailLogList = createWrappedDto(EmailLogListResponseSchema, "Wrappe
  * up the instant they land, no polling and no manual refresh.
  */
 @ApiTags("Email Log")
+@AdminAccessOnly("Admin access required to view email logs.")
 @Controller(apiPath("/notifications/email-log"))
 export class EmailLogController {
 	constructor(

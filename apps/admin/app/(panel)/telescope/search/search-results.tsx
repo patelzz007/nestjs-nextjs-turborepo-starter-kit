@@ -70,6 +70,41 @@ function SearchContent(): React.JSX.Element {
 		setQ(event.target.value);
 	}, []);
 
+	const handleOpenRequest = useCallback(
+		(id: string): void => {
+			router.push(`/telescope/requests/${id}`);
+		},
+		[router],
+	);
+
+	const handleOpenUser = useCallback(
+		(userId: string): void => {
+			router.push(`/telescope/requests?userId=${encodeURIComponent(userId)}`);
+		},
+		[router],
+	);
+
+	const handleOpenSql = useCallback(
+		(row: TelescopeSearchSqlMatch): void => {
+			router.push(`/telescope/requests?correlation=${row.correlationId}`);
+		},
+		[router],
+	);
+
+	const handleOpenException = useCallback(
+		(row: TelescopeSearchExceptionMatch): void => {
+			router.push(`/telescope/exceptions?group=${row.errorGroup}`);
+		},
+		[router],
+	);
+
+	const handleOpenLog = useCallback(
+		(row: TelescopeSearchLogMatch): void => {
+			router.push(`/telescope/requests/${row.requestId}`);
+		},
+		[router],
+	);
+
 	return (
 		<div className="mx-auto w-full max-w-5xl space-y-6">
 			<header className="space-y-1">
@@ -110,33 +145,10 @@ function SearchContent(): React.JSX.Element {
 						</div>
 					) : (
 						<>
-							<RequestResults
-								rows={results.requests}
-								onOpen={(id: string): void => {
-									router.push(`/telescope/requests/${id}`);
-								}}
-								onOpenUser={(userId: string): void => {
-									router.push(`/telescope/requests?userId=${encodeURIComponent(userId)}`);
-								}}
-							/>
-							<SqlResults
-								rows={results.sql}
-								onOpen={(row: TelescopeSearchSqlMatch): void => {
-									router.push(`/telescope/requests?correlation=${row.correlationId}`);
-								}}
-							/>
-							<ExceptionResults
-								rows={results.exceptions}
-								onOpen={(row: TelescopeSearchExceptionMatch): void => {
-									router.push(`/telescope/exceptions?group=${row.errorGroup}`);
-								}}
-							/>
-							<LogResults
-								rows={results.logs}
-								onOpen={(row: TelescopeSearchLogMatch): void => {
-									router.push(`/telescope/requests/${row.requestId}`);
-								}}
-							/>
+							<RequestResults rows={results.requests} onOpen={handleOpenRequest} onOpenUser={handleOpenUser} />
+							<SqlResults rows={results.sql} onOpen={handleOpenSql} />
+							<ExceptionResults rows={results.exceptions} onOpen={handleOpenException} />
+							<LogResults rows={results.logs} onOpen={handleOpenLog} />
 						</>
 					)}
 				</div>
@@ -162,21 +174,26 @@ function ResultGroup({ title, count, children }: { readonly title: string; reado
 			<div className="overflow-hidden rounded-lg border">{children}</div>
 		</section>
 	);
-}
-
-/** Email/user deep-link inside a search result row (module-level: no hooks). */
+} /** Email/user deep-link inside a search result row. */
 function SearchUserLink({ row, onOpenUser }: { readonly row: TelescopeSearchRequestMatch; readonly onOpenUser: (userId: string) => void }): React.JSX.Element {
 	const userId: string | null = row.userId;
+
+	const handleClick = useCallback(
+		(event: React.MouseEvent): void => {
+			event.stopPropagation();
+			if (userId !== null) onOpenUser(userId);
+		},
+		[onOpenUser, userId],
+	);
+
 	if (userId === null) {
 		return <span>anonymous</span>;
 	}
+
 	return (
 		<button
 			type="button"
-			onClick={(event: React.MouseEvent): void => {
-				event.stopPropagation();
-				onOpenUser(userId);
-			}}
+			onClick={handleClick}
 			className="font-medium text-primary underline-offset-4 hover:underline"
 			title={`Filter requests to ${row.userEmail ?? userId}`}>
 			{row.userEmail ?? userId}
@@ -196,30 +213,43 @@ function RequestResults({
 }): React.JSX.Element {
 	return (
 		<ResultGroup title="Requests" count={rows.length}>
-			{rows.map((row) => {
-				const tone = statusTone(row.statusCode);
-				return (
-					<button
-						key={row.id}
-						type="button"
-						onClick={(): void => {
-							onOpen(row.id);
-						}}
-						className="grid w-full grid-cols-[auto_1fr_auto] items-center gap-3 border-b px-4 py-2.5 text-left text-sm transition-colors last:border-b-0 hover:bg-muted/50">
-						<span className={`inline-flex items-center rounded-full border px-2 py-0.5 font-mono text-xs ${tone.pillClass}`}>{row.method}</span>
-						<span className="min-w-0">
-							<span className="block truncate font-medium">{row.path}</span>
-							<span className="truncate text-xs text-muted-foreground">
-								<SearchUserLink row={row} onOpenUser={onOpenUser} />
-								{" · "}
-								{formatTime(row.createdAt)}
-							</span>
-						</span>
-						<span className={`font-mono text-xs ${durationTone(row.durationMs).textClass}`}>{durationLabel(row.durationMs)}</span>
-					</button>
-				);
-			})}
+			{rows.map((row) => (
+				<SearchRequestRow key={row.id} row={row} onOpen={onOpen} onOpenUser={onOpenUser} />
+			))}
 		</ResultGroup>
+	);
+}
+
+function SearchRequestRow({
+	row,
+	onOpen,
+	onOpenUser,
+}: {
+	readonly row: TelescopeSearchRequestMatch;
+	readonly onOpen: (id: string) => void;
+	readonly onOpenUser: (userId: string) => void;
+}): React.JSX.Element {
+	const tone = statusTone(row.statusCode);
+	const handleClick = useCallback((): void => {
+		onOpen(row.id);
+	}, [onOpen, row.id]);
+
+	return (
+		<button
+			type="button"
+			onClick={handleClick}
+			className="grid w-full grid-cols-[auto_1fr_auto] items-center gap-3 border-b px-4 py-2.5 text-left text-sm transition-colors last:border-b-0 hover:bg-muted/50">
+			<span className={`inline-flex items-center rounded-full border px-2 py-0.5 font-mono text-xs ${tone.pillClass}`}>{row.method}</span>
+			<span className="min-w-0">
+				<span className="block truncate font-medium">{row.path}</span>
+				<span className="truncate text-xs text-muted-foreground">
+					<SearchUserLink row={row} onOpenUser={onOpenUser} />
+					{" · "}
+					{formatTime(row.createdAt)}
+				</span>
+			</span>
+			<span className={`font-mono text-xs ${durationTone(row.durationMs).textClass}`}>{durationLabel(row.durationMs)}</span>
+		</button>
 	);
 }
 
@@ -227,23 +257,27 @@ function SqlResults({ rows, onOpen }: { readonly rows: readonly TelescopeSearchS
 	return (
 		<ResultGroup title="SQL" count={rows.length}>
 			{rows.map((row) => (
-				<button
-					key={row.id}
-					type="button"
-					onClick={(): void => {
-						onOpen(row);
-					}}
-					className="block w-full border-b px-4 py-2.5 text-left text-sm transition-colors last:border-b-0 hover:bg-muted/50">
-					<span className="flex items-center gap-2">
-						<span className="rounded border px-1.5 py-0.5 font-mono text-xs text-muted-foreground">
-							{row.model}.{row.operation}
-						</span>
-						<span className={`font-mono text-xs ${durationTone(row.durationMs).textClass}`}>{durationLabel(row.durationMs)}</span>
-					</span>
-					<span className="mt-1 block truncate font-mono text-xs text-foreground/80">{row.query}</span>
-				</button>
+				<SearchSqlRow key={row.id} row={row} onOpen={onOpen} />
 			))}
 		</ResultGroup>
+	);
+}
+
+function SearchSqlRow({ row, onOpen }: { readonly row: TelescopeSearchSqlMatch; readonly onOpen: (row: TelescopeSearchSqlMatch) => void }): React.JSX.Element {
+	const handleClick = useCallback((): void => {
+		onOpen(row);
+	}, [onOpen, row]);
+
+	return (
+		<button type="button" onClick={handleClick} className="block w-full border-b px-4 py-2.5 text-left text-sm transition-colors last:border-b-0 hover:bg-muted/50">
+			<span className="flex items-center gap-2">
+				<span className="rounded border px-1.5 py-0.5 font-mono text-xs text-muted-foreground">
+					{row.model}.{row.operation}
+				</span>
+				<span className={`font-mono text-xs ${durationTone(row.durationMs).textClass}`}>{durationLabel(row.durationMs)}</span>
+			</span>
+			<span className="mt-1 block truncate font-mono text-xs text-foreground/80">{row.query}</span>
+		</button>
 	);
 }
 
@@ -257,45 +291,58 @@ function ExceptionResults({
 	return (
 		<ResultGroup title="Exceptions" count={rows.length}>
 			{rows.map((row) => (
-				<button
-					key={row.id}
-					type="button"
-					onClick={(): void => {
-						onOpen(row);
-					}}
-					className="block w-full border-b px-4 py-2.5 text-left text-sm transition-colors last:border-b-0 hover:bg-muted/50">
-					<span className="flex items-center gap-2">
-						<span className="font-medium text-red-600 dark:text-red-400">{row.name}</span>
-						<span className="text-xs text-muted-foreground">
-							×{String(row.occurrences)} · {row.path ?? "—"}
-						</span>
-					</span>
-					<span className="mt-0.5 block truncate text-xs text-muted-foreground">{row.message}</span>
-				</button>
+				<SearchExceptionRow key={row.id} row={row} onOpen={onOpen} />
 			))}
 		</ResultGroup>
 	);
 }
 
+function SearchExceptionRow({
+	row,
+	onOpen,
+}: {
+	readonly row: TelescopeSearchExceptionMatch;
+	readonly onOpen: (row: TelescopeSearchExceptionMatch) => void;
+}): React.JSX.Element {
+	const handleClick = useCallback((): void => {
+		onOpen(row);
+	}, [onOpen, row]);
+
+	return (
+		<button type="button" onClick={handleClick} className="block w-full border-b px-4 py-2.5 text-left text-sm transition-colors last:border-b-0 hover:bg-muted/50">
+			<span className="flex items-center gap-2">
+				<span className="font-medium text-red-600 dark:text-red-400">{row.name}</span>
+				<span className="text-xs text-muted-foreground">
+					×{String(row.occurrences)} · {row.path ?? "—"}
+				</span>
+			</span>
+			<span className="mt-0.5 block truncate text-xs text-muted-foreground">{row.message}</span>
+		</button>
+	);
+}
 function LogResults({ rows, onOpen }: { readonly rows: readonly TelescopeSearchLogMatch[]; readonly onOpen: (row: TelescopeSearchLogMatch) => void }): React.JSX.Element {
 	return (
 		<ResultGroup title="Console output" count={rows.length}>
 			{rows.map((row) => (
-				<button
-					key={row.id}
-					type="button"
-					onClick={(): void => {
-						onOpen(row);
-					}}
-					className="block w-full border-b px-4 py-2.5 text-left text-sm transition-colors last:border-b-0 hover:bg-muted/50">
-					<span className="flex items-center gap-2">
-						<span className="rounded border px-1.5 py-0.5 font-mono text-xs text-muted-foreground uppercase">{row.level}</span>
-						<span className="text-xs text-muted-foreground">{row.path ?? "—"}</span>
-					</span>
-					<span className="mt-0.5 block truncate font-mono text-xs text-foreground/80">{row.message}</span>
-				</button>
+				<SearchLogRow key={row.id} row={row} onOpen={onOpen} />
 			))}
 		</ResultGroup>
+	);
+}
+
+function SearchLogRow({ row, onOpen }: { readonly row: TelescopeSearchLogMatch; readonly onOpen: (row: TelescopeSearchLogMatch) => void }): React.JSX.Element {
+	const handleClick = useCallback((): void => {
+		onOpen(row);
+	}, [onOpen, row]);
+
+	return (
+		<button type="button" onClick={handleClick} className="block w-full border-b px-4 py-2.5 text-left text-sm transition-colors last:border-b-0 hover:bg-muted/50">
+			<span className="flex items-center gap-2">
+				<span className="rounded border px-1.5 py-0.5 font-mono text-xs text-muted-foreground uppercase">{row.level}</span>
+				<span className="text-xs text-muted-foreground">{row.path ?? "—"}</span>
+			</span>
+			<span className="mt-0.5 block truncate font-mono text-xs text-foreground/80">{row.message}</span>
+		</button>
 	);
 }
 

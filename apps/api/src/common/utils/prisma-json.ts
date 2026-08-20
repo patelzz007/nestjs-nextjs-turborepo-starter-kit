@@ -3,9 +3,7 @@ import { z } from "zod";
 
 import { JsonValueSchema, type JsonValueInput } from "@workspace/shared";
 
-const PrismaInputJsonValueSchema: z.ZodType<Prisma.InputJsonValue> = z.custom<Prisma.InputJsonValue>(
-	(value) => JsonValueSchema.safeParse(value).success && value !== null,
-);
+const PrismaInputJsonValueSchema: z.ZodType<Prisma.InputJsonValue> = z.custom<Prisma.InputJsonValue>((value) => JsonValueSchema.safeParse(value).success && value !== null);
 
 /** Parses a non-null JSON payload for Prisma `InputJsonValue` columns. */
 export function parsePrismaInputJson(value: Exclude<JsonValueInput, null>): Prisma.InputJsonValue {

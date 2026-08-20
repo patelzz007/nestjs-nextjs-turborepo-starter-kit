@@ -1,8 +1,4 @@
-import {
-	nowEpochMs,
-	SecurityAlertEmailPropsSchema,
-	type SecurityAlertEmailProps,
-} from "@workspace/shared";
+import { nowEpochMs, SecurityAlertEmailPropsSchema, type SecurityAlertEmailProps } from "@workspace/shared";
 
 import { BaseEmailTemplate, type EmailAccent } from "../base/base-email-template";
 import type { EmailRenderContext } from "../base/email-render-context";

@@ -27,10 +27,7 @@ export function userHasElevatedAdminAccess(user: AccessTokenPayload | RefreshTok
 }
 
 /** Narrow the auth payload union to an access token and re-check admin access. */
-export function requireAdminAccessToken(
-	user: AccessTokenPayload | RefreshTokenPayload | undefined,
-	message: string = "Admin access required.",
-): AccessTokenPayload {
+export function requireAdminAccessToken(user: AccessTokenPayload | RefreshTokenPayload | undefined, message = "Admin access required."): AccessTokenPayload {
 	if (!userHasAdminAccess(user)) {
 		throw new ForbiddenException({ message, error: ADMIN_ACCESS_ERROR });
 	}

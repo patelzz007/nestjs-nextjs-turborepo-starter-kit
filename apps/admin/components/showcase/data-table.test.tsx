@@ -149,7 +149,15 @@ describe("DataTable (shared, TanStack Table v9)", () => {
 	});
 
 	it("selects a single row through row.toggleSelected()", () => {
-		render(<DataTable labels={ADMIN_DATA_TABLE_LABELS} data={makeRows(12)} columns={demoColumns} enableBulkSelection bulkActions={[{ key: "delete", label: "Delete", onClick: (): void => undefined }]} />);
+		render(
+			<DataTable
+				labels={ADMIN_DATA_TABLE_LABELS}
+				data={makeRows(12)}
+				columns={demoColumns}
+				enableBulkSelection
+				bulkActions={[{ key: "delete", label: "Delete", onClick: (): void => undefined }]}
+			/>,
+		);
 
 		const rowCheckboxes = screen.getAllByRole("checkbox", { name: "Select row" });
 		const firstRowCheckbox = rowCheckboxes[0];
@@ -163,7 +171,15 @@ describe("DataTable (shared, TanStack Table v9)", () => {
 	});
 
 	it("selects all page rows through toggleAllPageRowsSelected()", () => {
-		render(<DataTable labels={ADMIN_DATA_TABLE_LABELS} data={makeRows(12)} columns={demoColumns} enableBulkSelection bulkActions={[{ key: "delete", label: "Delete", onClick: (): void => undefined }]} />);
+		render(
+			<DataTable
+				labels={ADMIN_DATA_TABLE_LABELS}
+				data={makeRows(12)}
+				columns={demoColumns}
+				enableBulkSelection
+				bulkActions={[{ key: "delete", label: "Delete", onClick: (): void => undefined }]}
+			/>,
+		);
 
 		fireEvent.click(screen.getByRole("checkbox", { name: "Select all" }));
 
@@ -241,7 +257,15 @@ describe("DataTable (shared, TanStack Table v9)", () => {
 
 	it("hides the client-side search and column filters in manual (server-side) mode", () => {
 		render(
-			<DataTable labels={ADMIN_DATA_TABLE_LABELS} data={makeRows(12)} columns={demoColumns} manual totalCount={120} searchKeys={["header"]} filters={[{ key: "status", label: "Status", options: [] }]} />,
+			<DataTable
+				labels={ADMIN_DATA_TABLE_LABELS}
+				data={makeRows(12)}
+				columns={demoColumns}
+				manual
+				totalCount={120}
+				searchKeys={["header"]}
+				filters={[{ key: "status", label: "Status", options: [] }]}
+			/>,
 		);
 
 		// The consumer owns filtering in server-side mode — the toolbar is gone.
@@ -316,7 +340,16 @@ describe("DataTable (shared, TanStack Table v9)", () => {
 
 	it("resets the virtual scroll offset when sorting", () => {
 		const { container } = render(
-			<DataTable labels={ADMIN_DATA_TABLE_LABELS} data={makeRows(200)} columns={demoColumns} pageSize={200} virtualizeRows virtualRowHeight={48} maxHeight={200} sortCycle="asc-desc-none" />,
+			<DataTable
+				labels={ADMIN_DATA_TABLE_LABELS}
+				data={makeRows(200)}
+				columns={demoColumns}
+				pageSize={200}
+				virtualizeRows
+				virtualRowHeight={48}
+				maxHeight={200}
+				sortCycle="asc-desc-none"
+			/>,
 		);
 
 		const scrollContainer = container.querySelector(".overflow-auto");
@@ -335,7 +368,9 @@ describe("DataTable (shared, TanStack Table v9)", () => {
 	});
 
 	it("resets the virtual scroll offset when paginating", () => {
-		const { container } = render(<DataTable labels={ADMIN_DATA_TABLE_LABELS} data={makeRows(200)} columns={demoColumns} virtualizeRows virtualRowHeight={48} maxHeight={200} />);
+		const { container } = render(
+			<DataTable labels={ADMIN_DATA_TABLE_LABELS} data={makeRows(200)} columns={demoColumns} virtualizeRows virtualRowHeight={48} maxHeight={200} />,
+		);
 
 		const scrollContainer = container.querySelector(".overflow-auto");
 		expect(scrollContainer).not.toBeNull();

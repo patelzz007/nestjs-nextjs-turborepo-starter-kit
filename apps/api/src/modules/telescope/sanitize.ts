@@ -1,10 +1,4 @@
-import {
-	StringValueSchema,
-	TelescopeJsonObjectSchema,
-	TelescopeJsonScalarSchema,
-	TelescopeJsonValueSchema,
-	type TelescopeJsonValue,
-} from "@workspace/shared";
+import { StringValueSchema, TelescopeJsonObjectSchema, TelescopeJsonScalarSchema, TelescopeJsonValueSchema, type TelescopeJsonValue } from "@workspace/shared";
 
 /**
  * Keys that are ALWAYS stripped from stored data — even when explicitly

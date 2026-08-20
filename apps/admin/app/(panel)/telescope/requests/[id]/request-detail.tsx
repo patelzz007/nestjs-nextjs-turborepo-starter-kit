@@ -105,6 +105,10 @@ export default function TelescopeRequestDetailPage(): React.JSX.Element {
 	// default behind the toggle so hot-route waterfalls stay scannable.
 	const [showTrivialSpans, setShowTrivialSpans] = useState<boolean>(false);
 
+	const handleTrivialSpansChange = useCallback((event: React.ChangeEvent<HTMLInputElement>): void => {
+		setShowTrivialSpans(event.target.checked);
+	}, []);
+
 	// Replay targets: the API always exposes `local` (its own origin); extra
 	// named targets come from TELESCOPE_REPLAY_TARGETS server-side.
 	const replayTargets = useMemo((): readonly ReplayTargetOption[] => [{ name: "local", url: "API origin (localhost:8080)" }], []);
@@ -124,7 +128,7 @@ export default function TelescopeRequestDetailPage(): React.JSX.Element {
 				},
 			);
 		},
-		[annotationMutation, detailQuery],
+		[annotationMutation, detailQuery, id],
 	);
 
 	const handleSaveComment = useCallback(
@@ -142,7 +146,7 @@ export default function TelescopeRequestDetailPage(): React.JSX.Element {
 				},
 			);
 		},
-		[annotationMutation, detailQuery],
+		[annotationMutation, detailQuery, id],
 	);
 
 	const handleReplay = useCallback(
@@ -159,7 +163,7 @@ export default function TelescopeRequestDetailPage(): React.JSX.Element {
 				},
 			);
 		},
-		[replayMutation],
+		[replayMutation, id],
 	);
 
 	const handleCopySnippet = useCallback(
@@ -406,14 +410,7 @@ export default function TelescopeRequestDetailPage(): React.JSX.Element {
 						</div>
 						{/* Improvement 13 — collapse sub-millisecond noise behind a toggle. */}
 						<label className="inline-flex cursor-pointer items-center gap-1.5 text-xs text-muted-foreground select-none">
-							<input
-								type="checkbox"
-								checked={showTrivialSpans}
-								onChange={(event: React.ChangeEvent<HTMLInputElement>): void => {
-									setShowTrivialSpans(event.target.checked);
-								}}
-								className="size-3.5 rounded border-border accent-primary"
-							/>
+							<input type="checkbox" checked={showTrivialSpans} onChange={handleTrivialSpansChange} className="size-3.5 rounded border-border accent-primary" />
 							Show trivial spans ({"<"}1ms)
 						</label>
 					</div>

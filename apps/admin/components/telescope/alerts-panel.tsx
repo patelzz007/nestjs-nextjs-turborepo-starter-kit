@@ -53,7 +53,7 @@ function AlertRowActions({ alert, onChanged }: { readonly alert: TelescopeAlertE
 				},
 			);
 		},
-		[ackMutation, onChanged],
+		[ackMutation, onChanged, alert.id],
 	);
 	const handleSnooze = useCallback(
 		(event: React.MouseEvent, minutes: number): void => {
@@ -72,57 +72,43 @@ function AlertRowActions({ alert, onChanged }: { readonly alert: TelescopeAlertE
 			);
 			setShowSnooze(false);
 		},
-		[snoozeMutation, onChanged],
+		[snoozeMutation, onChanged, alert.id],
 	);
 
+	const handleStopPropagation = useCallback((event: React.MouseEvent | React.KeyboardEvent): void => {
+		event.stopPropagation();
+	}, []);
+
+	const handleShowSnooze = useCallback((event: React.MouseEvent): void => {
+		event.preventDefault();
+		setShowSnooze(true);
+	}, []);
+
+	const handleCancelSnooze = useCallback((event: React.MouseEvent): void => {
+		event.preventDefault();
+		setShowSnooze(false);
+	}, []);
+
 	return (
-		<span
-			className="flex shrink-0 items-center gap-1"
-			onClick={(event: React.MouseEvent): void => {
-				event.stopPropagation();
-			}}>
+		<span role="button" tabIndex={-1} className="flex shrink-0 items-center gap-1" onClick={handleStopPropagation} onKeyDown={handleStopPropagation}>
 			{!showSnooze ? (
 				<>
 					<Button variant="ghost" size="sm" className="h-6 gap-1 px-1.5 text-[11px] text-muted-foreground" onClick={handleAck} title="Acknowledge (resolve) this alert">
 						<Check className="size-3" />
 						Ack
 					</Button>
-					<Button
-						variant="ghost"
-						size="sm"
-						className="h-6 gap-1 px-1.5 text-[11px] text-muted-foreground"
-						onClick={(event: React.MouseEvent): void => {
-							event.preventDefault();
-							setShowSnooze(true);
-						}}
-						title="Snooze this alert">
+					<Button variant="ghost" size="sm" className="h-6 gap-1 px-1.5 text-[11px] text-muted-foreground" onClick={handleShowSnooze} title="Snooze this alert">
 						<Clock3 className="size-3" />
 						Snooze
 					</Button>
 				</>
 			) : (
 				<span className="inline-flex items-center gap-1">
-					<span className="text-[11px] text-muted-foreground">for</span>
+					<span className="text-[11px] text-muted-foreground">for</span>{" "}
 					{[15, 30, 60].map((minutes: number) => (
-						<Button
-							key={minutes}
-							variant="outline"
-							size="sm"
-							className="h-6 px-1.5 text-[11px]"
-							onClick={(event: React.MouseEvent): void => {
-								handleSnooze(event, minutes);
-							}}>
-							{String(minutes)}m
-						</Button>
+						<SnoozeButton key={minutes} minutes={minutes} onSnooze={handleSnooze} />
 					))}
-					<Button
-						variant="ghost"
-						size="sm"
-						className="h-6 px-1.5 text-[11px] text-muted-foreground"
-						onClick={(event: React.MouseEvent): void => {
-							event.preventDefault();
-							setShowSnooze(false);
-						}}>
+					<Button variant="ghost" size="sm" className="h-6 px-1.5 text-[11px] text-muted-foreground" onClick={handleCancelSnooze}>
 						Cancel
 					</Button>
 				</span>
@@ -172,5 +158,21 @@ export function AlertsPanel({ alerts, onChanged }: AlertsPanelProps): React.JSX.
 				);
 			})}
 		</div>
+	);
+}
+
+/** Child component so onClick can live in a useCallback (eslint react/jsx-no-bind). */
+function SnoozeButton({ minutes, onSnooze }: { readonly minutes: number; readonly onSnooze: (event: React.MouseEvent, minutes: number) => void }): React.JSX.Element {
+	const handleClick = useCallback(
+		(event: React.MouseEvent): void => {
+			onSnooze(event, minutes);
+		},
+		[onSnooze, minutes],
+	);
+
+	return (
+		<Button variant="outline" size="sm" className="h-6 px-1.5 text-[11px]" onClick={handleClick}>
+			{String(minutes)}m
+		</Button>
 	);
 }

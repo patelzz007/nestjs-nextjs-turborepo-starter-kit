@@ -1,7 +1,4 @@
-import {
-	AdminAlertEmailPropsSchema,
-	type AdminAlertEmailProps,
-} from "@workspace/shared";
+import { AdminAlertEmailPropsSchema, type AdminAlertEmailProps } from "@workspace/shared";
 
 import { BaseEmailTemplate, type CtaConfig, type EmailAccent } from "../base/base-email-template";
 import type { EmailRenderContext } from "../base/email-render-context";

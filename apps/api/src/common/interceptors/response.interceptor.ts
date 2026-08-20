@@ -2,7 +2,15 @@ import { Injectable, type NestInterceptor, type ExecutionContext, type CallHandl
 import type { FastifyRequest } from "fastify";
 import { type Observable, throwError } from "rxjs";
 import { catchError, map } from "rxjs/operators";
-import { ApiResponseShapeSchema, PaginatedServiceResultSchema, nowEpochMs, type ApiResponseShape, type DataValue, type PaginatedServiceResult } from "@workspace/shared";
+import {
+	ApiResponseShapeSchema,
+	DataValueSchema,
+	PaginatedServiceResultSchema,
+	nowEpochMs,
+	type ApiResponseShape,
+	type DataValue,
+	type PaginatedServiceResult,
+} from "@workspace/shared";
 
 /**
  * Zod schema for a PaginatedResult shape (from paginate()).
@@ -70,10 +78,11 @@ export class ResponseInterceptor implements NestInterceptor {
 		}
 		const correlationId: string = request.correlationId ?? "";
 
-		// CallHandler defaults to `any` — the map callback narrows to `object`.
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- NestJS CallHandler has no generic override; this is the narrowest safe cast.
-		return (next.handle() as Observable<DataValue>).pipe(
-			map((data: DataValue): object => {
+		// CallHandler defaults to `any`; each emission is validated via DataValueSchema.
+		return next.handle().pipe(
+			map((raw: DataValue): object => {
+				const validated = DataValueSchema.safeParse(raw);
+				const data: DataValue = validated.success ? validated.data : raw;
 				const paginated: PaginatedServiceResult | null = parsePaginated(data);
 				if (paginated !== null) {
 					const { items, total, page, limit, totalPages, hasNext, hasPrevious } = paginated;

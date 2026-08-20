@@ -74,7 +74,7 @@ function RetryAction({ job, onRetried }: { readonly job: TelescopeJobLogEntry; r
 				},
 			);
 		},
-		[retryMutation, onRetried],
+		[retryMutation, onRetried, job.id],
 	);
 
 	return (

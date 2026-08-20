@@ -1,4 +1,3 @@
-import { Injectable } from "@nestjs/common";
 import type { FastifyReply } from "fastify";
 
 import { type CookieResult } from "@workspace/shared";

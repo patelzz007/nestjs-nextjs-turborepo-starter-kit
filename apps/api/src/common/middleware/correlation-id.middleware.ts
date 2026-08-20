@@ -2,7 +2,7 @@ import { Injectable, type NestMiddleware } from "@nestjs/common";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { nanoid } from "nanoid";
 
-import type { JsonValue } from "@workspace/shared";
+import { StringValueSchema, type JsonValue } from "@workspace/shared";
 
 /**
  * The raw Node request as seen by Nest middleware on the Fastify adapter.
@@ -36,7 +36,8 @@ export class CorrelationIdMiddleware implements NestMiddleware {
 	public use(req: RequestWithTrace, res: ServerResponse, next: () => void): void {
 		// Generate or forward correlation ID
 		const headerValue: string | string[] | undefined = req.headers["x-correlation-id"] ?? req.headers["x-request-id"];
-		const correlationId: string = typeof headerValue === "string" ? headerValue : nanoid();
+		const parsed = StringValueSchema.safeParse(headerValue);
+		const correlationId: string = parsed.success ? parsed.data : nanoid();
 
 		req.correlationId = correlationId;
 		req.traceId = correlationId;

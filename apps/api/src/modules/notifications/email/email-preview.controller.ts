@@ -15,6 +15,7 @@ import {
 } from "@workspace/shared";
 
 import { ZodValidationPipe } from "../../../common/pipes/zod-validation.pipe";
+import { AdminAccessOnly } from "../../auth/decorators/admin-access.decorator";
 import { RequirePermission } from "../../auth/decorators/require-permission.decorator";
 import { createWrappedDto, createWrappedArrayDto } from "../../../common/dto/response-wrapper";
 import { TypedConfigService } from "../../../config/typed-config.service";
@@ -36,6 +37,7 @@ const WrappedSendResult = createWrappedDto(EmailSendResultSchema, "WrappedEmailS
  * every template without a real recipient.
  */
 @ApiTags("Email Templates")
+@AdminAccessOnly("Admin access required to preview email templates.")
 @Controller(apiPath("/notifications/email-preview"))
 export class EmailPreviewController {
 	private readonly renderContext: EmailRenderContext;

@@ -62,39 +62,47 @@ function TriageActions({ entry, onChanged }: { readonly entry: ExceptionLogEntry
 				},
 			);
 		},
-		[statusMutation, onChanged],
+		[statusMutation, onChanged, entry.id],
 	);
 
-	const stop = (event: React.MouseEvent): void => {
+	const stop = useCallback((event: React.MouseEvent): void => {
 		event.stopPropagation();
-	};
+	}, []);
+
+	const handleResolve = useCallback(
+		(event: React.MouseEvent): void => {
+			stop(event);
+			apply("resolved");
+		},
+		[stop, apply],
+	);
+
+	const handleIgnore = useCallback(
+		(event: React.MouseEvent): void => {
+			stop(event);
+			apply("ignored");
+		},
+		[stop, apply],
+	);
+
+	const handleReopen = useCallback(
+		(event: React.MouseEvent): void => {
+			stop(event);
+			apply("open");
+		},
+		[stop, apply],
+	);
 
 	return (
 		<div className="flex items-center gap-1.5">
 			<span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium capitalize ${exceptionStatusTone(entry.status)}`}>{entry.status}</span>
 			{entry.status === "open" ? (
 				<>
-					<Button
-						variant="ghost"
-						size="sm"
-						className="h-6 gap-1 px-1.5 text-xs"
-						onClick={(event: React.MouseEvent): void => {
-							stop(event);
-							apply("resolved");
-						}}
-						title="Mark resolved">
+					<Button variant="ghost" size="sm" className="h-6 gap-1 px-1.5 text-xs" onClick={handleResolve} title="Mark resolved">
 						<Check className="size-3" />
 						Resolve
 					</Button>
-					<Button
-						variant="ghost"
-						size="sm"
-						className="h-6 gap-1 px-1.5 text-xs text-muted-foreground"
-						onClick={(event: React.MouseEvent): void => {
-							stop(event);
-							apply("ignored");
-						}}
-						title="Ignore this group">
+					<Button variant="ghost" size="sm" className="h-6 gap-1 px-1.5 text-xs text-muted-foreground" onClick={handleIgnore} title="Ignore this group">
 						<EyeOff className="size-3" />
 						Ignore
 					</Button>
@@ -105,10 +113,7 @@ function TriageActions({ entry, onChanged }: { readonly entry: ExceptionLogEntry
 					variant="ghost"
 					size="sm"
 					className="h-6 gap-1 px-1.5 text-xs text-muted-foreground"
-					onClick={(event: React.MouseEvent): void => {
-						stop(event);
-						apply("open");
-					}}
+					onClick={handleReopen}
 					title="Reopen — new occurrences will surface again">
 					<RotateCcw className="size-3" />
 					Reopen

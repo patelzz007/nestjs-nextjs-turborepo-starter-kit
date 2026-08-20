@@ -13,6 +13,6 @@ import { ADMIN_ACCESS_MESSAGE_KEY } from "../utils/admin-access";
  * export class BackupController { ... }
  * ```
  */
-export function AdminAccessOnly(message: string = "Admin access required."): ReturnType<typeof applyDecorators> {
+export function AdminAccessOnly(message = "Admin access required."): ReturnType<typeof applyDecorators> {
 	return applyDecorators(SetMetadata(ADMIN_ACCESS_MESSAGE_KEY, message), UseGuards(AdminAccessGuard));
 }

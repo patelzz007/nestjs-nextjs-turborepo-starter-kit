@@ -5,6 +5,7 @@ import { createHash } from "node:crypto";
 import { hostname } from "node:os";
 import { type Observable, tap } from "rxjs";
 import {
+	RouteParamsSchema,
 	StringValueSchema,
 	TelescopeJsonValueSchema,
 	TelescopePiiCategorySchema,
@@ -303,19 +304,15 @@ export class TelescopeInterceptor implements NestInterceptor {
 
 	/** Feature 6 — resolved route params, values length-capped. */
 	private readHandlerParams(request: FastifyRequest): Record<string, string> | null {
-		// Fastify types route params as opaque; `typeof` narrowing recovers an
-		// object without a type assertion, then only string values are kept
-		// (route params are always single strings at runtime).
-		const paramsValue: object | null = typeof request.params === "object" ? request.params : null;
-		if (paramsValue === null) {
+		// Zod boundary: Fastify types params as opaque `object`; the schema
+		// validates the shape and extracts only string/number values.
+		const parsed = RouteParamsSchema.safeParse(request.params);
+		if (!parsed.success) {
 			return null;
 		}
 		const params: Record<string, string> = {};
-		for (const [key, rawValue] of Object.entries(paramsValue)) {
-			if (typeof rawValue !== "string") {
-				continue;
-			}
-			params[key] = rawValue.length > 100 ? `${rawValue.slice(0, 97)}…` : rawValue;
+		for (const [key, rawValue] of Object.entries(parsed.data)) {
+			params[key] = String(rawValue).length > 100 ? `${String(rawValue).slice(0, 97)}…` : String(rawValue);
 		}
 		return Object.keys(params).length > 0 ? params : null;
 	}

@@ -128,7 +128,7 @@ function RowStarToggle({ request, onChanged }: { readonly request: RequestLogSum
 				},
 			);
 		},
-		[request.starred, starMutation, onChanged],
+		[request.starred, starMutation, onChanged, request.id],
 	);
 
 	return (
@@ -329,6 +329,19 @@ function RequestsContent(): React.JSX.Element {
 		syncUrl({ userId: null });
 	}, [resetNewCount, syncUrl]);
 
+	const handleRefetch = useCallback((): void => {
+		void listQuery.refetch();
+	}, [listQuery]);
+
+	const handleFilterUser = useCallback(
+		(userId: string): void => {
+			setUserIdFilter(userId);
+			resetNewCount();
+			syncUrl({ userId });
+		},
+		[resetNewCount, syncUrl],
+	);
+
 	// Select's `onValueChange` passes `string | null` — narrow before writing.
 	const handleMethodChange = useCallback(
 		(value: string | null): void => {
@@ -442,18 +455,9 @@ function RequestsContent(): React.JSX.Element {
 				// list, not just the detail page.
 				id: "star",
 				header: (): React.JSX.Element => <span className="sr-only">Star</span>,
-				cell: ({ row }): React.JSX.Element => (
-					<RowStarToggle
-						request={row.original}
-						onChanged={(): void => {
-							void listQuery.refetch();
-						}}
-					/>
-				),
+				cell: ({ row }): React.JSX.Element => <RowStarToggle request={row.original} onChanged={handleRefetch} />,
 			},
 			{
-				// Feature 3 (end-to-end) — the resolved email as its own toggleable
-				// column; click to filter the list to that user.
 				id: "email",
 				header: "Email",
 				cell: ({ row }): React.JSX.Element => {
@@ -465,25 +469,10 @@ function RequestsContent(): React.JSX.Element {
 					if (email === null) {
 						return <span className="font-mono text-xs text-muted-foreground">{userId.slice(0, 8)}…</span>;
 					}
-					return (
-						<button
-							type="button"
-							onClick={(event: React.MouseEvent): void => {
-								event.stopPropagation();
-								setUserIdFilter(userId);
-								resetNewCount();
-								syncUrl({ userId });
-							}}
-							className="inline-flex max-w-[12rem] items-center rounded-md bg-muted/60 px-1.5 py-0.5 text-[11px] font-medium text-foreground transition-colors hover:bg-muted"
-							title={`${email} — click to filter to this user`}>
-							<span className="truncate">{email}</span>
-						</button>
-					);
+					return <RequestEmailCell userId={userId} email={email} onFilter={handleFilterUser} />;
 				},
 			},
 			{
-				// Feature 3 (end-to-end) — the opaque user id, toggleable separately
-				// from the email column; click to filter the list to that user.
 				id: "user",
 				header: "User id",
 				cell: ({ row }): React.JSX.Element => {
@@ -491,20 +480,7 @@ function RequestsContent(): React.JSX.Element {
 					if (userId === null) {
 						return <span className="text-xs text-muted-foreground">—</span>;
 					}
-					return (
-						<button
-							type="button"
-							onClick={(event: React.MouseEvent): void => {
-								event.stopPropagation();
-								setUserIdFilter(userId);
-								resetNewCount();
-								syncUrl({ userId });
-							}}
-							className="inline-flex max-w-[9rem] items-center rounded-md bg-muted/60 px-1.5 py-0.5 font-mono text-[11px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-							title={`${userId} — click to filter to this user`}>
-							<span className="truncate">{userId}</span>
-						</button>
-					);
+					return <RequestUserIdCell userId={userId} onFilter={handleFilterUser} />;
 				},
 			},
 			{
@@ -560,7 +536,7 @@ function RequestsContent(): React.JSX.Element {
 					),
 			},
 		],
-		[listQuery, setUserIdFilter, resetNewCount, syncUrl],
+		[handleFilterUser, handleRefetch],
 	);
 
 	const mobileCardRender = useCallback((item: RequestLogSummary): React.ReactNode => {
@@ -781,5 +757,47 @@ export default function TelescopeRequestsPage(): React.JSX.Element {
 		<Suspense fallback={null}>
 			<RequestsContent />
 		</Suspense>
+	);
+}
+
+/** Email deep-link cell — onClick lives in a useCallback (eslint react/jsx-no-bind). */
+function RequestEmailCell({ userId, email, onFilter }: { readonly userId: string; readonly email: string; readonly onFilter: (userId: string) => void }): React.JSX.Element {
+	const handleClick = useCallback(
+		(event: React.MouseEvent): void => {
+			event.stopPropagation();
+			onFilter(userId);
+		},
+		[onFilter, userId],
+	);
+
+	return (
+		<button
+			type="button"
+			onClick={handleClick}
+			className="inline-flex max-w-[12rem] items-center rounded-md bg-muted/60 px-1.5 py-0.5 text-[11px] font-medium text-foreground transition-colors hover:bg-muted"
+			title={`${email} — click to filter to this user`}>
+			<span className="truncate">{email}</span>
+		</button>
+	);
+}
+
+/** User-id deep-link cell — onClick lives in a useCallback (eslint react/jsx-no-bind). */
+function RequestUserIdCell({ userId, onFilter }: { readonly userId: string; readonly onFilter: (userId: string) => void }): React.JSX.Element {
+	const handleClick = useCallback(
+		(event: React.MouseEvent): void => {
+			event.stopPropagation();
+			onFilter(userId);
+		},
+		[onFilter, userId],
+	);
+
+	return (
+		<button
+			type="button"
+			onClick={handleClick}
+			className="inline-flex max-w-[9rem] items-center rounded-md bg-muted/60 px-1.5 py-0.5 font-mono text-[11px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+			title={`${userId} — click to filter to this user`}>
+			<span className="truncate">{userId}</span>
+		</button>
 	);
 }

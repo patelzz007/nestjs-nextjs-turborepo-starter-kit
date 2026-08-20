@@ -103,22 +103,7 @@ export function LiveFeedCard({
 
 			<div className="mb-3 flex flex-wrap gap-1.5" role="group" aria-label="Filter live activity">
 				{FILTER_OPTIONS.map((option) => (
-					<button
-						key={option}
-						type="button"
-						onClick={(): void => {
-							handleFilterChange(option);
-						}}
-						aria-pressed={activeFilter === option}
-						className={cn(
-							"inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors",
-							activeFilter === option
-								? "border-primary/40 bg-primary/10 text-primary"
-								: "border-border bg-muted/30 text-muted-foreground hover:bg-muted/60 hover:text-foreground",
-						)}>
-						{FILTER_LABELS[option]}
-						<span className="font-mono text-[10px] tabular-nums opacity-70">{String(counts[option])}</span>
-					</button>
+					<FilterChip key={option} option={option} active={activeFilter === option} count={counts[option]} onSelect={handleFilterChange} />
 				))}
 			</div>
 
@@ -136,5 +121,36 @@ export function LiveFeedCard({
 				<LiveFeed events={visibleEvents} onNavigate={onNavigate} />
 			)}
 		</div>
+	);
+}
+
+/** Child component so onClick can live in a useCallback (eslint react/jsx-no-bind). */
+function FilterChip({
+	option,
+	active,
+	count,
+	onSelect,
+}: {
+	readonly option: FeedFilter;
+	readonly active: boolean;
+	readonly count: number;
+	readonly onSelect: (value: FeedFilter) => void;
+}): React.JSX.Element {
+	const handleClick = useCallback((): void => {
+		onSelect(option);
+	}, [onSelect, option]);
+
+	return (
+		<button
+			type="button"
+			onClick={handleClick}
+			aria-pressed={active}
+			className={cn(
+				"inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors",
+				active ? "border-primary/40 bg-primary/10 text-primary" : "border-border bg-muted/30 text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+			)}>
+			{FILTER_LABELS[option]}
+			<span className="font-mono text-[10px] tabular-nums opacity-70">{String(count)}</span>
+		</button>
 	);
 }

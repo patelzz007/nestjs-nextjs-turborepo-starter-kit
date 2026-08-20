@@ -570,8 +570,8 @@ export type {
 } from "./auth/user";
 export { CaughtValueSchema, ResendLikeErrorSchema } from "./runtime/caught-error";
 export type { CaughtValue, ResendLikeError } from "./runtime/caught-error";
-export { FastifyQuerySchema, HttpHeaderValueSchema, ReplyHeaderValueSchema } from "./runtime/http-headers";
-export type { FastifyQuery, HttpHeaderValue, ReplyHeaderValue } from "./runtime/http-headers";
+export { FastifyQuerySchema, ForwardedForHeaderSchema, HeadersRecordSchema, HttpHeaderValueSchema, OptionalStringHeaderSchema, ReplyHeaderValueSchema, RequestLikeSchema, RouteParamsSchema } from "./runtime/http-headers";
+export type { FastifyQuery, ForwardedForHeader, HeadersRecord, HttpHeaderValue, OptionalStringHeader, ReplyHeaderValue, RequestLike, RouteParams } from "./runtime/http-headers";
 export { JsonObjectSchema, JsonPrimitiveSchema, JsonRecordSchema, JsonValueSchema } from "./runtime/json";
 export type { JsonObject, JsonObjectNode, JsonPrimitive, JsonValue, JsonValueInput, JsonValueNode } from "./runtime/json";
 export { PrismaQueryEventSchema, PrismaQuerySubscriberSchema } from "./runtime/prisma-query";

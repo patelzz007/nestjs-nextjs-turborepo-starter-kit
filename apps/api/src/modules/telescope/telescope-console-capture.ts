@@ -2,7 +2,9 @@
 
 import { Inject, Injectable, type OnModuleInit } from "@nestjs/common";
 
-import { nowEpochMs, type TelescopeLogLevel, type TelescopeOptions } from "@workspace/shared";
+import { z } from "zod";
+
+import { nowEpochMs, StringValueSchema, type TelescopeLogLevel, type TelescopeOptions } from "@workspace/shared";
 
 import { RequestSpanContext, type SpanStore } from "./request-span-context";
 import { TELESCOPE_OPTIONS } from "./telescope.options";
@@ -29,11 +31,18 @@ function formatArg(arg: ConsoleArg): string {
 	if (arg === undefined) {
 		return "undefined";
 	}
-	if (typeof arg === "string") {
-		return arg;
+	// Zod boundary: narrow string/number/boolean via schema parse.
+	const strParsed = StringValueSchema.safeParse(arg);
+	if (strParsed.success) {
+		return strParsed.data;
 	}
-	if (typeof arg === "number" || typeof arg === "boolean") {
-		return String(arg);
+	const numParsed = z.number().safeParse(arg);
+	if (numParsed.success) {
+		return String(numParsed.data);
+	}
+	const boolParsed = z.boolean().safeParse(arg);
+	if (boolParsed.success) {
+		return String(boolParsed.data);
 	}
 	// object (includes arrays, Errors, plain objects)
 	if (arg instanceof Error) {
@@ -42,8 +51,6 @@ function formatArg(arg: ConsoleArg): string {
 	try {
 		return JSON.stringify(arg);
 	} catch {
-		// String(arg) would fall back to Object's default "[object Object]" —
-		// a stable marker is more honest for the log line.
 		return "[unserializable object]";
 	}
 }

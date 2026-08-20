@@ -32,7 +32,7 @@ import type {
 	TelescopeUsersQuery,
 	TelescopeWebhookDelivery,
 } from "@workspace/shared";
-import { epochMs } from "@workspace/shared";
+import { epochMs, StringValueSchema } from "@workspace/shared";
 
 import { detectN1Warnings } from "./n1-detector";
 
@@ -193,7 +193,8 @@ function requestBodyText(request: RequestLogEntry): string {
 		return "";
 	}
 	try {
-		return typeof request.requestBody === "string" ? request.requestBody : JSON.stringify(request.requestBody);
+		const parsed = StringValueSchema.safeParse(request.requestBody);
+		return parsed.success ? parsed.data : JSON.stringify(request.requestBody);
 	} catch {
 		return "";
 	}

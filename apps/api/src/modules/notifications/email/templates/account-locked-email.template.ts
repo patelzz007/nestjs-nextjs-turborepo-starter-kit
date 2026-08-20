@@ -1,9 +1,4 @@
-import {
-	AccountLockedEmailPropsSchema,
-	epochMs,
-	type AccountLockedEmailProps,
-	type EmailAccent,
-} from "@workspace/shared";
+import { AccountLockedEmailPropsSchema, epochMs, type AccountLockedEmailProps, type EmailAccent } from "@workspace/shared";
 
 import { BaseEmailTemplate } from "../base/base-email-template";
 import type { EmailRenderContext } from "../base/email-render-context";

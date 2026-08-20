@@ -1,17 +1,10 @@
 import { type ZodType } from "zod";
 
-import {
-	BaseEmailPropsSchema,
-	CtaConfigSchema,
-	EmailAccentSchema,
-	type BaseEmailProps,
-	type CtaConfig,
-	type EmailAccent,
-} from "@workspace/shared";
-
-export type { BaseEmailProps, CtaConfig, EmailAccent };
+import { type BaseEmailProps, type CtaConfig, type EmailAccent } from "@workspace/shared";
 
 import type { EmailRenderContext } from "./email-render-context";
+
+export type { BaseEmailProps, CtaConfig, EmailAccent };
 
 /** Colors used by the shared shell for one accent. */
 export interface AccentPalette {

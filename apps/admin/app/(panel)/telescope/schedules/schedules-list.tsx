@@ -50,6 +50,10 @@ export default function TelescopeSchedulesPage(): React.JSX.Element {
 		[router],
 	);
 
+	const handleRan = useCallback((): void => {
+		void schedulesQuery.refetch();
+	}, [schedulesQuery]);
+
 	if (schedulesQuery.isLoading && response === undefined) {
 		return (
 			<div className="flex min-h-[50vh] items-center justify-center">
@@ -98,7 +102,7 @@ export default function TelescopeSchedulesPage(): React.JSX.Element {
 										{schedule.status}
 									</span>
 									{/* Feature 12 — run this schedule on demand. */}
-									<RunNowButton name={schedule.name} onRan={(): void => void schedulesQuery.refetch()} />
+									<RunNowButton name={schedule.name} onRan={handleRan} />
 								</div>
 							</div>
 							<div className="mt-3 grid grid-cols-2 gap-3 text-xs">

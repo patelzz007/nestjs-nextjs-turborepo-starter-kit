@@ -3,7 +3,7 @@ import type { FastifyReply, FastifyRequest } from "fastify";
 import { type Observable } from "rxjs";
 import { map, tap } from "rxjs/operators";
 
-import { JsonObjectSchema, LoginTokenFieldsSchema, type JsonValue } from "@workspace/shared";
+import { FastifyQuerySchema, JsonObjectSchema, LoginTokenFieldsSchema, type JsonValue } from "@workspace/shared";
 
 import { readFirstHeader, readQueryParam } from "../../../common/utils/http-headers";
 import {
@@ -29,7 +29,8 @@ export class SetAuthCookiesInterceptor implements NestInterceptor {
 		const response: FastifyReply = context.switchToHttp().getResponse<FastifyReply>();
 
 		const headerType: string | undefined = readFirstHeader(request.headers["x-client-type"]);
-		const queryValue: string | undefined = readQueryParam(request.query, "client_type");
+		const queryParsed = FastifyQuerySchema.safeParse(request.query);
+		const queryValue: string | undefined = queryParsed.success ? readQueryParam(queryParsed.data, "client_type") : undefined;
 		const clientType: string | undefined = headerType ?? queryValue;
 		const isAdmin: boolean = clientType === "admin";
 		const accessTokenName: CookieNames = isAdmin ? ADMIN_ACCESS_TOKEN_COOKIE_NAME : ACCESS_TOKEN_COOKIE_NAME;

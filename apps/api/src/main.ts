@@ -297,7 +297,7 @@ async function bootstrap(): Promise<void> {
 		}
 		const contentType: string | undefined = readReplyHeader(reply.getHeader("content-type"));
 		const payloadText = StringValueSchema.safeParse(payload);
-		if (!payloadText.success || contentType === undefined || !contentType.includes("text/html")) {
+		if (!payloadText.success || !contentType?.includes("text/html")) {
 			done(null, payload);
 			return;
 		}

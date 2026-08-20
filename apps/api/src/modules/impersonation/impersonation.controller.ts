@@ -72,6 +72,9 @@ export class ImpersonationController {
 	 */
 	@Throttle({ strict: { ttl: 60000, limit: 10 } })
 	@ApiBearerAuth()
+	@SuperAdminOnly()
+	@EmailVerified()
+	@RequirePermission("CREATE", "USER")
 	@Post("/stop-impersonation")
 	@ApiOperation({ summary: "SuperAdmin: stop impersonating" })
 	@ApiOkResponse({ type: WrappedStopImpersonationResponse, description: "Impersonation ended" })

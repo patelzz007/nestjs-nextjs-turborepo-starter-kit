@@ -213,7 +213,7 @@ export class BackupService implements OnModuleInit, OnModuleDestroy {
 			this.runningBackupId = row.id;
 			// Detached execution — deliberately not awaited. Errors are recorded
 			// on the row; the poller sees them.
-			void this.runBackupJob(row.id).catch((error): void => {
+			void this.runBackupJob(row.id).catch((error: unknown): void => {
 				const caught = CaughtValueSchema.parse(error);
 				this.logs.error(`Backup job crashed: ${readCaughtErrorMessage(caught)}`, { context: "BackupService", userId: user.sub });
 			});
@@ -451,7 +451,7 @@ export class BackupService implements OnModuleInit, OnModuleDestroy {
 		// Cap progress at 85% during dump (finalize takes it to 100%).
 		const cappedPct = Math.min(85, Math.max(5, pct));
 
-		await this.update(id, { progress: cappedPct }).catch((err): void => {
+		await this.update(id, { progress: cappedPct }).catch((err: unknown): void => {
 			const caught = CaughtValueSchema.parse(err);
 			this.logs.warn(`Progress update failed for backup ${id}: ${readCaughtErrorMessage(caught)}`, { context: "BackupService" });
 		});
@@ -579,7 +579,7 @@ export class BackupService implements OnModuleInit, OnModuleDestroy {
 			return;
 		}
 		this.runningBackupId = next;
-		void this.runBackupJob(next).catch((error): void => {
+		void this.runBackupJob(next).catch((error: unknown): void => {
 			const caught = CaughtValueSchema.parse(error);
 			this.logs.error(`Backup job crashed: ${readCaughtErrorMessage(caught)}`, { context: "BackupService" });
 		});

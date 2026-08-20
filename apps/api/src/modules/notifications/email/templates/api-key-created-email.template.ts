@@ -1,10 +1,6 @@
 import { format } from "date-fns";
 
-import {
-	ApiKeyCreatedEmailPropsSchema,
-	nowEpochMs,
-	type ApiKeyCreatedEmailProps,
-} from "@workspace/shared";
+import { ApiKeyCreatedEmailPropsSchema, nowEpochMs, type ApiKeyCreatedEmailProps } from "@workspace/shared";
 
 import { BaseEmailTemplate, type CtaConfig, type EmailAccent } from "../base/base-email-template";
 import type { EmailRenderContext } from "../base/email-render-context";
