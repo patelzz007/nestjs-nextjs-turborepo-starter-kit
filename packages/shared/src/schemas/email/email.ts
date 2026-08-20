@@ -109,12 +109,18 @@ export const ResendSendErrorSchema = z
 	})
 	.strict();
 
+/**
+ * Resend SDK `emails.send()` response shape (parsed at the network boundary).
+ *
+ * `.loose()` — the Resend SDK includes extra fields (e.g. `headers`) that
+ * are not part of our contract but must not cause a parse failure.
+ */
 export const ResendSendResponseSchema = z
 	.object({
 		data: z.object({ id: z.string() }).nullable(),
 		error: ResendSendErrorSchema.nullable(),
 	})
-	.strict();
+	.loose();
 
 export type ResendSendResponse = z.output<typeof ResendSendResponseSchema>;
 
@@ -251,14 +257,22 @@ export const EmailLogCreateSchema = z
 
 export type EmailLogCreate = z.output<typeof EmailLogCreateSchema>;
 
-/** Query string for `GET /notifications/email-log`. */
+/**
+ * Query string for `GET /notifications/email-log`.
+ *
+ * No `.transform()` — Ajv's compiled validators can't represent transforms,
+ * so `toJSONSchema()` in the ZodValidationPipe would throw. Clamping and
+ * string-to-number coercion are handled by the controller instead.
+ */
 export const EmailLogListQuerySchema = z
 	.object({
 		limit: z
-			.union([z.number().int().min(1).max(500), z.string().regex(/^\d+$/).transform((value: string): number => Number.parseInt(value, 10))])
+			.number()
+			.int()
+			.min(1)
+			.max(500)
 			.optional()
-			.default(100)
-			.transform((value: number): number => Math.max(1, Math.min(value, 500))),
+			.default(100),
 	})
 	.strict();
 

@@ -92,7 +92,7 @@ function LivePill({ state }: { readonly state: LiveState }): React.JSX.Element {
  */
 export default function EmailLogPage(): React.JSX.Element {
 	const { api } = useAuth();
-	const logQuery = api.email.logList.useQuery(undefined);
+	const logQuery = api.email.logList.useQuery({ limit: 100 });
 
 	// Live updates: SSE stream → invalidate the list query on every webhook
 	// write, so delivery status flips appear instantly.

@@ -69,7 +69,7 @@ export function useEmailLogLive(): LiveState {
 			setState("open");
 		};
 		const handleMessage = (): void => {
-			void queryClient.invalidateQueries({ queryKey: apiRouter.email.logList.queryKey(undefined) });
+			void queryClient.invalidateQueries({ queryKey: apiRouter.email.logList.queryKey({ limit: 100 }) });
 		};
 		const handleError = (): void => {
 			// A drop flips readyState back to CONNECTING (auto-reconnect); an

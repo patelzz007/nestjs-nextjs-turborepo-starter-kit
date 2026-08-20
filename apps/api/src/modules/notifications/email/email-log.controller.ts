@@ -48,7 +48,8 @@ export class EmailLogController {
 	@ApiQuery({ name: "limit", required: false, description: "Max rows to return (default 100, max 500)", example: 50 })
 	@ApiOkResponse({ type: WrappedEmailLogList, description: "Most recent EmailLog rows" })
 	public async list(@Query(new ZodValidationPipe(apiContract.email.logList.input)) query: EmailLogListQuery): Promise<{ readonly logs: readonly EmailLogEntry[] }> {
-		const logs: EmailLogEntry[] = await this.emailLogService.listRecent(query.limit);
+		const limit: number = Math.max(1, Math.min(query.limit, 500));
+		const logs: EmailLogEntry[] = await this.emailLogService.listRecent(limit);
 		return { logs };
 	}
 
