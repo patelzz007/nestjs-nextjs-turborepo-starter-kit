@@ -22,6 +22,7 @@ export function SnippetMenu({ onCopy }: SnippetMenuProps): React.JSX.Element {
 	const [open, setOpen] = useState<boolean>(false);
 	const [copied, setCopied] = useState<RequestSnippetFormat | null>(null);
 	const menuRef = useRef<HTMLDivElement | null>(null);
+	const copiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
 	useEffect((): (() => void) => {
 		const onClickOutside = (event: MouseEvent): void => {
@@ -35,12 +36,19 @@ export function SnippetMenu({ onCopy }: SnippetMenuProps): React.JSX.Element {
 		};
 	}, []);
 
+	useEffect((): (() => void) => {
+		return (): void => {
+			if (copiedTimerRef.current !== null) clearTimeout(copiedTimerRef.current);
+		};
+	}, []);
+
 	const handleCopy = useCallback(
 		async (format: RequestSnippetFormat): Promise<void> => {
 			await onCopy(format);
 			setCopied(format);
 			setOpen(false);
-			window.setTimeout((): void => {
+			if (copiedTimerRef.current !== null) clearTimeout(copiedTimerRef.current);
+			copiedTimerRef.current = setTimeout((): void => {
 				setCopied(null);
 			}, 1500);
 		},

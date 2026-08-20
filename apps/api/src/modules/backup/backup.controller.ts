@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, Post, Query, Req, Res } from "@nestjs/common";
+import { Body, Controller, Delete, Get, HttpCode, Param, Post, Query, Req, Res, ServiceUnavailableException } from "@nestjs/common";
 import { ApiExcludeController, ApiOperation, ApiTags } from "@nestjs/swagger";
 import type { FastifyReply, FastifyRequest } from "fastify";
 
@@ -60,10 +60,19 @@ export class BackupController {
 		@Body(new ZodValidationPipe(apiContract.backup.create.input)) body: BackupCreateInput,
 		@GetUser() user: AccessTokenPayload | RefreshTokenPayload | undefined,
 		@Req() req: FastifyRequest,
+		@Res() reply: FastifyReply,
 	): Promise<BackupCreateResponse> {
 		const admin = requireAdminAccessToken(user, "Admin access required to manage database backups.");
 		const { ipAddress } = extractClientInfo(req);
-		return this.backupService.create(body, { sub: admin.sub, fullName: admin.fullName, isSuperAdmin: admin.isSuperAdmin }, ipAddress);
+		try {
+			return await this.backupService.create(body, { sub: admin.sub, fullName: admin.fullName, isSuperAdmin: admin.isSuperAdmin }, ipAddress);
+		} catch (error) {
+			if (error instanceof ServiceUnavailableException) {
+				// Rate-limited — tell the client how long to wait.
+				reply.header("Retry-After", "3600");
+			}
+			throw error;
+		}
 	}
 
 	/** History + active flag + the requesting admin's quota — the page's data source. */

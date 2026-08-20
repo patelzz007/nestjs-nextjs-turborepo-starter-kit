@@ -2,8 +2,7 @@
 
 import { useAuth } from "@workspace/client/lib/auth";
 
-import type { EmailPreview, EmailPreviewListResponse, EmailTemplateMeta } from "@workspace/shared";
-import type { Envelope } from "@workspace/shared";
+import type { Envelope, EmailPreview, EmailPreviewListResponse, EmailTemplateMeta } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/feedback/badge";
 import { Button } from "@workspace/ui/components/form/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
@@ -91,6 +90,7 @@ export default function EmailPreviewPage({
 
 	const [selectedKey, setSelectedKey] = React.useState<string | null>(null);
 	const [mode, setMode] = React.useState<PreviewMode>("preview");
+	const copiedTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 	const [copied, setCopied] = React.useState(false);
 
 	const listQuery = api.email.previewList.useQuery(undefined, { initialData: initialList });
@@ -135,11 +135,18 @@ export default function EmailPreviewPage({
 		void navigator.clipboard.writeText(content).then((): void => {
 			setCopied(true);
 			toastMessage.success({ title: "Copied to clipboard" });
-			setTimeout((): void => {
+			if (copiedTimerRef.current !== null) clearTimeout(copiedTimerRef.current);
+			copiedTimerRef.current = setTimeout((): void => {
 				setCopied(false);
 			}, 1600);
 		});
 	}, [preview, mode]);
+
+	React.useEffect((): (() => void) => {
+		return (): void => {
+			if (copiedTimerRef.current !== null) clearTimeout(copiedTimerRef.current);
+		};
+	}, []);
 
 	const handleSendTest = React.useCallback((): void => {
 		if (effectiveKey.length === 0) {

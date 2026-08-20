@@ -10,6 +10,7 @@
 // the filter state already lives entirely in the URL/search-params of the
 // requests page.
 
+import { isServer } from "@workspace/client/lib/is-server";
 import { z } from "zod";
 
 const STORAGE_KEY = "telescope.savedFilters.v1";
@@ -41,7 +42,7 @@ const STORED_LIST_SCHEMA = z.array(SavedFilterSchema);
 
 /** Reads saved filters; invalid/corrupt data degrades to an empty list. */
 export function loadSavedFilters(): readonly SavedFilter[] {
-	if (typeof window === "undefined") {
+	if (isServer) {
 		return [];
 	}
 	try {
@@ -58,7 +59,7 @@ export function loadSavedFilters(): readonly SavedFilter[] {
 
 /** Persists the whole list (callers pass the full list — single source of truth). */
 export function persistSavedFilters(filters: readonly SavedFilter[]): void {
-	if (typeof window === "undefined") {
+	if (isServer) {
 		return;
 	}
 	window.localStorage.setItem(STORAGE_KEY, JSON.stringify(filters));

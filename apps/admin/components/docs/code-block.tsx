@@ -257,6 +257,7 @@ export function CodeBlock({
 	detectLanguage = false,
 	highlightLines = NO_HIGHLIGHTS,
 }: CodeBlockProps): React.JSX.Element {
+	const copiedTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 	const [html, setHtml] = React.useState<string | null>(null);
 	const [copied, setCopied] = React.useState(false);
 	const [wrapped, setWrapped] = React.useState(false);
@@ -316,12 +317,19 @@ export function CodeBlock({
 		};
 	}, [code, lang, isDiff, validHighlights]);
 
+	React.useEffect((): (() => void) => {
+		return (): void => {
+			if (copiedTimerRef.current !== null) clearTimeout(copiedTimerRef.current);
+		};
+	}, []);
+
 	const handleCopy = React.useCallback((): void => {
 		void navigator.clipboard
 			.writeText(code)
 			.then((): void => {
 				setCopied(true);
-				setTimeout((): void => {
+				if (copiedTimerRef.current !== null) clearTimeout(copiedTimerRef.current);
+				copiedTimerRef.current = setTimeout((): void => {
 					setCopied(false);
 				}, 2000);
 				// Name the copy target — "Copied auth.controller.ts" beats a
@@ -411,9 +419,8 @@ export function CodeBlock({
 								style={{ backgroundColor: THEME_BG }}>
 								{/* Diff lines have no stable unique identity (line text can repeat) and
 								    the block is static — the index IS the line number: a legitimate key. */}
-								{/* eslint-disable react/no-array-index-key */}
 								{code.split("\n").map((line, index) => (
-									<span key={index} className={cn("block px-4", wrapped ? "break-words whitespace-pre-wrap" : "whitespace-pre", diffLineClasses(line))}>
+									<span key={`${lang}-${index}-${line.length}`} className={cn("block px-4", wrapped ? "break-words whitespace-pre-wrap" : "whitespace-pre", diffLineClasses(line))}>
 										{line.length === 0 ? " " : line}
 									</span>
 								))}

@@ -1,6 +1,7 @@
 import { BadRequestException, ForbiddenException, Inject, Injectable, NotFoundException } from "@nestjs/common";
 
-import type { RequestLogEntry, TelescopeOptions, TelescopeReplayInput, TelescopeReplayResponse } from "@workspace/shared";
+import { CaughtValueSchema, type RequestLogEntry, type TelescopeOptions, type TelescopeReplayInput, type TelescopeReplayResponse } from "@workspace/shared";
+import { readCaughtErrorMessage } from "../../common/utils/caught-error";
 
 import { TELESCOPE_OPTIONS, TELESCOPE_STORE } from "./telescope.options";
 import type { TelescopeStore } from "./telescope.store";
@@ -59,16 +60,14 @@ export class TelescopeReplayService {
 				responsePreview: rawText.length > 500 ? `${rawText.slice(0, 497)}…` : rawText,
 			};
 		} catch (error) {
-			const messageParsed = { message: "replay failed" };
-			if (error instanceof Error) {
-				messageParsed.message = error.message.slice(0, 500);
-			}
+			const caught = CaughtValueSchema.parse(error);
+			const message: string = readCaughtErrorMessage(caught).slice(0, 500);
 			return {
 				ok: false,
 				status: null,
 				statusText: "fetch failed",
 				durationMs: Math.round(performance.now() - start),
-				responsePreview: messageParsed.message,
+				responsePreview: message,
 			};
 		}
 	}

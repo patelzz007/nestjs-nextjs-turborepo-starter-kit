@@ -1,14 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-	apiRoutes,
-	buildQuery,
-	buildRoute,
-	isParamRoute,
-	ParamRouteSchema,
-	RouteDefSchema,
-	type RouteDef,
-} from "./api-routes";
+import { apiRoutes, buildQuery, buildRoute, isParamRoute, RouteDefSchema, type RouteDef } from "./api-routes";
 
 // ── apiRoutes shape ────────────────────────────────────────────────────────
 
@@ -42,13 +34,15 @@ describe("isParamRoute", () => {
 	});
 
 	it("returns false for objects missing params", () => {
-		// Pass a malformed route via RouteDef to bypass TS narrowing — tests runtime behaviour.
+		// Intentional: tests runtime rejection of a malformed route missing `params`.
+		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- TS requires the cast to test malformed input.
 		const malformed: RouteDef = { path: "/backup/:id" } as RouteDef;
 		expect(isParamRoute(malformed)).toBe(false);
 	});
 
 	it("returns false for empty params array", () => {
-		const emptyParams: RouteDef = { path: "/backup/:id", params: [] } as RouteDef;
+		// Intentional: tests runtime rejection of a route with an empty `params` array.
+		const emptyParams: RouteDef = { path: "/backup/:id", params: [] };
 		expect(isParamRoute(emptyParams)).toBe(false);
 	});
 });
@@ -125,15 +119,18 @@ describe("buildRoute", () => {
 	});
 
 	it("throws on missing param", () => {
-		expect(() => buildRoute(apiRoutes.telescope.requestDetail, {} as Record<string, string | number>)).toThrow("Missing required parameter: id");
+		const emptyParams: Record<string, string | number> = {};
+		expect(() => buildRoute(apiRoutes.telescope.requestDetail, emptyParams)).toThrow("Missing required parameter: id");
 	});
 
 	it("throws on missing multiple params", () => {
-		expect(() => buildRoute(apiRoutes.email.previewSend, {} as Record<string, string | number>)).toThrow("Missing required parameter: key");
+		const emptyParams: Record<string, string | number> = {};
+		expect(() => buildRoute(apiRoutes.email.previewSend, emptyParams)).toThrow("Missing required parameter: key");
 	});
 
 	it("does not throw on extra params (ignored)", () => {
-		const result = buildRoute(apiRoutes.telescope.requestDetail, { id: "x", extra: "ignored" } as Record<string, string | number>);
+		const params: Record<string, string | number> = { id: "x", extra: "ignored" };
+		const result = buildRoute(apiRoutes.telescope.requestDetail, params);
 		expect(result).toBe("/telescope/requests/x");
 	});
 });

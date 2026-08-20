@@ -94,8 +94,8 @@ export function scanPii(value: TelescopeJsonValue | null): readonly TelescopePii
 			return;
 		}
 		if (Array.isArray(node)) {
-			for (const item of node) {
-				// eslint-disable-next-line @typescript-eslint/no-unsafe-argument -- Recursive TelescopeJsonValue array: TS resolves element type as `any`.
+			for (const raw of node) {
+				const item: TelescopeJsonValue = TelescopeJsonValueSchema.parse(raw);
 				visit(item);
 			}
 			return;

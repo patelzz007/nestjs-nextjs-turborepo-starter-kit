@@ -10,6 +10,7 @@ import {
 	type EmailPreview,
 	type EmailRenderContext,
 	type EmailSendResult,
+	type EmailTemplateKey,
 	type EmailTemplateMeta,
 	apiPath,
 } from "@workspace/shared";
@@ -42,6 +43,18 @@ const WrappedSendResult = createWrappedDto(EmailSendResultSchema, "WrappedEmailS
 export class EmailPreviewController {
 	private readonly renderContext: EmailRenderContext;
 
+	/** Validates a template key exists in the registry or throws 404. */
+	private requireTemplate(key: string): EmailTemplateKey {
+		const parsed = EmailTemplateKeyParamSchema.safeParse(key);
+		if (!parsed.success) {
+			throw new NotFoundException(`Unknown email template: ${key}`);
+		}
+		if (!(parsed.data in EMAIL_TEMPLATE_REGISTRY)) {
+			throw new NotFoundException(`Unknown email template: ${key}`);
+		}
+		return parsed.data;
+	}
+
 	constructor(
 		private readonly config: TypedConfigService,
 		private readonly sender: EmailSenderService,
@@ -69,15 +82,8 @@ export class EmailPreviewController {
 	@ApiOkResponse({ type: WrappedPreviewDetail, description: "Rendered preview for one template" })
 	@ApiNotFoundResponse({ description: "Unknown template key" })
 	public detail(@Param("key", new ZodValidationPipe(EmailTemplateKeyParamSchema)) key: string): EmailPreview {
-		const parsedKey = EmailTemplateKeyParamSchema.safeParse(key);
-		if (!parsedKey.success) {
-			throw new NotFoundException(`Unknown email template: ${key}`);
-		}
-		try {
-			return buildEmailPreview(parsedKey.data, this.renderContext);
-		} catch {
-			throw new NotFoundException(`Unknown email template: ${key}`);
-		}
+		const parsedKey = this.requireTemplate(key);
+		return buildEmailPreview(parsedKey, this.renderContext);
 	}
 
 	/**
@@ -92,17 +98,8 @@ export class EmailPreviewController {
 	@ApiOkResponse({ type: WrappedSendResult, description: "Outcome of the send attempt" })
 	@ApiNotFoundResponse({ description: "Unknown template key" })
 	public async sendTest(@Param("key", new ZodValidationPipe(EmailTemplateKeyParamSchema)) key: string): Promise<EmailSendResult> {
-		const parsedKey = EmailTemplateKeyParamSchema.safeParse(key);
-		if (!parsedKey.success) {
-			throw new NotFoundException(`Unknown email template: ${key}`);
-		}
-		// Guard sample-prop construction the same way `detail()` does — a bad
-		// registry entry surfaces as a 404 (missing template), not a 500.
-		try {
-			const template = EMAIL_TEMPLATE_REGISTRY[parsedKey.data].build();
-			return await this.sender.send(template);
-		} catch {
-			throw new NotFoundException(`Unknown email template: ${key}`);
-		}
+		const parsedKey = this.requireTemplate(key);
+		const template = EMAIL_TEMPLATE_REGISTRY[parsedKey].build();
+		return await this.sender.send(template);
 	}
 }

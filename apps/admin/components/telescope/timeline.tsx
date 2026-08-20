@@ -96,13 +96,9 @@ function packLanes(spans: readonly TelescopeSpan[]): readonly Lane[] {
 					{[0, 1, 2, 3].map((quarter: number) => (
 						<div key={quarter} className="h-full flex-1 border-r border-border/40 last:border-r-0" />
 					))}
-				</div>{" "}
-				{/* eslint-disable react/no-array-index-key -- Lanes and spans carry no stable
-						    unique identity (name + start collide for same-ms queries); each lane is
-						    a static snapshot, so the index is the legitimate key. */}
-				{lanes.map((lane, laneIndex) => (
-					<div key={laneIndex} className="relative h-[30px] border-b border-border/20 last:border-b-0" style={{ top: `${String(laneIndex * 34)}px` }}>
-						{lane.spans.map((span, index) => {
+				</div>{" "}					{lanes.map((lane, laneIndex) => (
+						<div key={`lane-${laneIndex}`} className="relative h-[30px] border-b border-border/20 last:border-b-0" style={{ top: `${String(laneIndex * 34)}px` }}>
+							{lane.spans.map((span) => {
 							const meta = spanKindMeta(span.kind);
 							const leftPct: number = totalMs > 0 ? (span.startOffsetMs / totalMs) * 100 : 0;
 							const rawPct: number = totalMs > 0 ? (span.durationMs / totalMs) * 100 : 0;
@@ -111,7 +107,7 @@ function packLanes(spans: readonly TelescopeSpan[]): readonly Lane[] {
 
 							return (
 								<div
-									key={index}
+									key={`span-${span.name}-${span.startOffsetMs}-${span.durationMs}`}
 									className={cn("group absolute top-1/2 h-5 -translate-y-1/2 rounded-md opacity-90 transition-opacity hover:opacity-100", meta.barClass)}
 									style={{ left: `${String(Math.min(99, leftPct))}%`, width: `${String(Math.min(100 - leftPct, widthPct))}%` }}
 									role="img"
@@ -127,7 +123,6 @@ function packLanes(spans: readonly TelescopeSpan[]): readonly Lane[] {
 								</div>
 							);
 						})}
-						{/* eslint-enable react/no-array-index-key */}
 					</div>
 				))}
 				{/* Feature 11 — SQL query overlay: one bar per query on the same axis,
@@ -142,8 +137,7 @@ function packLanes(spans: readonly TelescopeSpan[]): readonly Lane[] {
 
 							return (
 								<div
-									// eslint-disable-next-line react/no-array-index-key -- Same-ms queries collide; the index is the stable key (chronological, static).
-									key={index}
+									key={`query-${overlay.query.operation}-${overlay.query.model}-${overlay.startOffsetMs}`}
 									className="group absolute top-1/2 h-5 -translate-y-1/2 rounded-md bg-violet-400/80 opacity-90 transition-opacity hover:opacity-100 dark:bg-violet-500/70"
 									style={{ left: `${String(Math.min(99, leftPct))}%`, width: `${String(Math.min(100 - leftPct, widthPct))}%` }}
 									role="img"
@@ -165,12 +159,9 @@ function packLanes(spans: readonly TelescopeSpan[]): readonly Lane[] {
 			</div>
 
 			{/* Legend — index keys: name+offset collides for same-ms queries (static list). */}
-			<ul className="flex flex-wrap gap-x-4 gap-y-1.5">
-				{/* eslint-disable react/no-array-index-key -- Same reasoning as the lanes above. */}
-				{spans.map((span, index) => {
+			<ul className="flex flex-wrap gap-x-4 gap-y-1.5">					{spans.map((span) => {
 					const meta = spanKindMeta(span.kind);
-					return (
-						<li key={index} className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+					return (							<li key={`legend-${span.name}-${span.kind}-${span.startOffsetMs}`} className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
 							<span aria-hidden className={cn("size-2 rounded-full", meta.barClass)} />
 							<span className="max-w-40 truncate">{span.name}</span>
 							<span className="tabular-nums">{durationLabel(span.durationMs)}</span>

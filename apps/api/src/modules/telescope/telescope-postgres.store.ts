@@ -87,7 +87,9 @@ export class TelescopePostgresStore implements TelescopeStore, OnModuleInit {
 		if (this.options.storage !== "postgres") {
 			return;
 		}
-		const [requests, queries, exceptions, dumps, jobs, alerts, annotations] = await Promise.all([
+		// Promise.allSettled: if one table query fails (e.g. table doesn't exist
+		// yet), the other sections still load — Telescope degrades gracefully.
+		const [requestsR, queriesR, exceptionsR, dumpsR, jobsR, alertsR, annotationsR] = await Promise.allSettled([
 			this.prisma.telescopeRequest.findMany({ orderBy: { createdAt: "desc" }, take: this.options.maxRequests }),
 			this.prisma.telescopeQuery.findMany({ orderBy: { createdAt: "desc" }, take: this.options.maxRequests * 4 }),
 			this.prisma.telescopeException.findMany({ orderBy: { createdAt: "desc" }, take: this.options.maxRequests }),
@@ -96,6 +98,13 @@ export class TelescopePostgresStore implements TelescopeStore, OnModuleInit {
 			this.prisma.telescopeAlert.findMany({ orderBy: { createdAt: "desc" }, take: 200 }),
 			this.prisma.telescopeAnnotation.findMany(),
 		]);
+		const requests = requestsR.status === "fulfilled" ? requestsR.value : [];
+		const queries = queriesR.status === "fulfilled" ? queriesR.value : [];
+		const exceptions = exceptionsR.status === "fulfilled" ? exceptionsR.value : [];
+		const dumps = dumpsR.status === "fulfilled" ? dumpsR.value : [];
+		const jobs = jobsR.status === "fulfilled" ? jobsR.value : [];
+		const alerts = alertsR.status === "fulfilled" ? alertsR.value : [];
+		const annotations = annotationsR.status === "fulfilled" ? annotationsR.value : [];
 
 		// Oldest-first push restores the same ordering the memory store produces.
 		for (const row of requests.reverse()) {

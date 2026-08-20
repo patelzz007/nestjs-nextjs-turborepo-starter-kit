@@ -51,6 +51,8 @@ function formatArg(arg: ConsoleArg): string {
 	try {
 		return JSON.stringify(arg);
 	} catch {
+		// Fallback: if JSON.stringify fails (circular refs, BigInt, etc.),
+		// return a safe placeholder so the console call still works.
 		return "[unserializable object]";
 	}
 }
@@ -91,7 +93,8 @@ export class TelescopeConsoleCapture implements OnModuleInit {
 				try {
 					this.record(level, args);
 				} catch {
-					// Intentionally silent: the fallthrough is the real console call.
+					// Recording must never break app logging — a serialization or
+					// masking error degrades silently; the original console call still runs.
 				}
 				original(...args);
 			};

@@ -1,3 +1,4 @@
+import { Logger } from "@nestjs/common";
 import type { FastifyReply } from "fastify";
 
 import { type CookieResult } from "@workspace/shared";
@@ -12,6 +13,8 @@ import { ACCESS_TOKEN_COOKIE_NAME, REFRESH_TOKEN_COOKIE_NAME, ADMIN_ACCESS_TOKEN
  * Values longer than 4096 bytes are rejected to respect browser limits.
  */
 export class CookieService {
+	private static readonly logger: Logger = new Logger("CookieService");
+
 	/** Maximum cookie value length in bytes (most browsers: 4096) */
 	private static readonly maxCookieValueBytes: number = 4096;
 
@@ -45,9 +48,9 @@ export class CookieService {
 		// Validate cookie value length (only for non-null values)
 		if (value !== null && value !== undefined && Buffer.byteLength(value, "utf-8") > CookieService.maxCookieValueBytes) {
 			const size = Buffer.byteLength(value, "utf-8");
-			console.error(
-				`[CookieService] REJECTED cookie "${name}": ${String(size)} bytes exceeds ${String(CookieService.maxCookieValueBytes)} byte limit. ` +
-					"The JWT access token is too large for a browser cookie. Reduce the permissions in the token payload.",
+			CookieService.logger.error(
+				`REJECTED cookie "${name}": ${String(size)} bytes exceeds ${String(CookieService.maxCookieValueBytes)} byte limit. ` +
+				"The JWT access token is too large for a browser cookie. Reduce the permissions in the token payload.",
 			);
 			return {
 				success: false,

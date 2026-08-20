@@ -504,10 +504,8 @@ export default function TelescopeRequestDetailPage({ initialEnvelope }: { readon
 						<CardDescription>console.* calls that ran inside this request&apos;s async context ({request.logs.length} lines).</CardDescription>
 					</CardHeader>
 					<CardContent className="space-y-1 overflow-hidden rounded-lg border bg-muted/30 p-2 font-mono text-xs">
-						{/* eslint-disable react/no-array-index-key -- Console lines are chronological
-						    and static per request (no stable id); the index is the legitimate key. */}
 						{request.logs.map((log, index) => (
-							<div key={index} className="flex items-baseline gap-2 px-2 py-0.5">
+							<div key={`${log.timestamp}-${log.level}-${index}`} className="flex items-baseline gap-2 px-2 py-0.5">
 								<span className="shrink-0 text-muted-foreground">{formatTimeOfDay24(log.timestamp)}</span>
 								<span
 									className={`w-10 shrink-0 font-semibold uppercase ${

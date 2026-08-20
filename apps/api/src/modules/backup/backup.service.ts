@@ -359,7 +359,8 @@ export class BackupService implements OnModuleInit, OnModuleDestroy {
 				await this.fail(id, "Cancelled by an administrator", started, "CANCELLED");
 				return;
 			}
-			await this.fail(id, error instanceof Error ? error.message : String(error), started, this.errorCodeFor(error instanceof Error ? error.message : String(error)));
+			const msg: string = this.errorMessage(error);
+			await this.fail(id, msg, started, this.errorCodeFor(msg));
 		} finally {
 			this.stopDiskMonitor(id);
 			this.activeChild = null;
@@ -479,7 +480,7 @@ export class BackupService implements OnModuleInit, OnModuleDestroy {
 						}
 					}
 				} catch (err) {
-					this.logs.warn(`Disk monitor check failed for backup ${backupId}: ${err instanceof Error ? err.message : String(err)}`, { context: "BackupService" });
+					this.logs.warn(`Disk monitor check failed for backup ${backupId}: ${this.errorMessage(err)}`, { context: "BackupService" });
 				}
 			})();
 		}, DISK_CHECK_INTERVAL_MS);
@@ -615,7 +616,7 @@ export class BackupService implements OnModuleInit, OnModuleDestroy {
 			try {
 				child = spawn("pg_dump", args, { stdio: ["pipe", "pipe", "pipe"] });
 			} catch (error) {
-				resolvePromise({ ok: false, reason: "child", detail: error instanceof Error ? error.message : String(error) });
+				resolvePromise({ ok: false, reason: "child", detail: this.errorMessage(error) });
 				return;
 			}
 			this.activeChild = child;
@@ -700,7 +701,7 @@ export class BackupService implements OnModuleInit, OnModuleDestroy {
 					try {
 						finalSize = statSync(partPath).size;
 					} catch (statErr) {
-						this.logs.warn(`Failed to stat dump file during finalization: ${statErr instanceof Error ? statErr.message : String(statErr)}`, { context: "BackupService" });
+						this.logs.warn(`Failed to stat dump file during finalization: ${this.errorMessage(statErr)}`, { context: "BackupService" });
 						finalSize = -1;
 					}
 					if (finalSize !== writtenBytes) {
@@ -709,7 +710,7 @@ export class BackupService implements OnModuleInit, OnModuleDestroy {
 						try {
 							renameSync(partPath, targetPath); // atomic — readers never see a partial dump
 						} catch (error) {
-							childExit = { ok: false, reason: "pipe", detail: `Could not finalize the dump file: ${error instanceof Error ? error.message : String(error)}` };
+							childExit = { ok: false, reason: "pipe", detail: `Could not finalize the dump file: ${this.errorMessage(error)}` };
 						}
 					}
 				}
@@ -718,7 +719,7 @@ export class BackupService implements OnModuleInit, OnModuleDestroy {
 					try {
 						if (existsSync(partPath)) unlinkSync(partPath);
 					} catch (cleanupErr) {
-						this.logs.warn(`Failed to remove partial dump file: ${cleanupErr instanceof Error ? cleanupErr.message : String(cleanupErr)}`, { context: "BackupService" });
+						this.logs.warn(`Failed to remove partial dump file: ${this.errorMessage(cleanupErr)}`, { context: "BackupService" });
 					}
 				}
 				resolvePromise(childExit);
@@ -847,7 +848,7 @@ export class BackupService implements OnModuleInit, OnModuleDestroy {
 					unlinkSync(resolve(root, relative));
 					this.logs.info("Removed orphaned backup file", { context: "BackupService", metadata: { filename: relative } });
 				} catch (delErr) {
-					this.logs.warn(`Failed to delete orphaned backup file ${relative}: ${delErr instanceof Error ? delErr.message : String(delErr)}`, { context: "BackupService" });
+					this.logs.warn(`Failed to delete orphaned backup file ${relative}: ${this.errorMessage(delErr)}`, { context: "BackupService" });
 				}
 			}
 		}
@@ -869,12 +870,17 @@ export class BackupService implements OnModuleInit, OnModuleDestroy {
 					await this.dropDatabase(serverUrl, name);
 					this.logs.info("Dropped leftover scratch database", { context: "BackupService", metadata: { database: name } });
 				} catch (dropErr) {
-					this.logs.warn(`Failed to drop scratch database ${name}: ${dropErr instanceof Error ? dropErr.message : String(dropErr)}`, { context: "BackupService" });
+					this.logs.warn(`Failed to drop scratch database ${name}: ${this.errorMessage(dropErr)}`, { context: "BackupService" });
 				}
 			}
 		} catch (psqlErr) {
-			this.logs.warn(`psql unavailable for scratch DB sweep: ${psqlErr instanceof Error ? psqlErr.message : String(psqlErr)}`, { context: "BackupService" });
+			this.logs.warn(`psql unavailable for scratch DB sweep: ${this.errorMessage(psqlErr)}`, { context: "BackupService" });
 		}
+	}
+
+	/** Reads a human-readable message from any caught value. */
+	private errorMessage(error: unknown): string {
+		return readCaughtErrorMessage(CaughtValueSchema.parse(error));
 	}
 
 	private readDirSafe(dir: string): string[] {
@@ -1122,7 +1128,7 @@ export class BackupService implements OnModuleInit, OnModuleDestroy {
 			try {
 				child = spawn("psql", args, { stdio: ["pipe", "pipe", "pipe"] });
 			} catch (error) {
-				resolvePromise({ ok: false, reason: "child", detail: error instanceof Error ? error.message : String(error) });
+				resolvePromise({ ok: false, reason: "child", detail: this.errorMessage(error) });
 				return;
 			}
 
@@ -1211,7 +1217,7 @@ export class BackupService implements OnModuleInit, OnModuleDestroy {
 			try {
 				await this.dropDatabase(serverUrl, database);
 			} catch (dropErr) {
-				this.logs.warn(`Failed to drop scratch database ${database} after verify: ${dropErr instanceof Error ? dropErr.message : String(dropErr)}`, {
+				this.logs.warn(`Failed to drop scratch database ${database} after verify: ${this.errorMessage(dropErr)}`, {
 					context: "BackupService",
 				});
 			}
@@ -1301,7 +1307,7 @@ export class BackupService implements OnModuleInit, OnModuleDestroy {
 			try {
 				unlinkSync(resolve(this.config.backupDir, row.filename));
 			} catch (delErr) {
-				this.logs.warn(`Backup file already gone on delete: ${delErr instanceof Error ? delErr.message : String(delErr)}`, { context: "BackupService" });
+				this.logs.warn(`Backup file already gone on delete: ${this.errorMessage(delErr)}`, { context: "BackupService" });
 			}
 		}
 		await this.prisma.backup.delete({ where: { id } });
@@ -1322,7 +1328,7 @@ export class BackupService implements OnModuleInit, OnModuleDestroy {
 				try {
 					unlinkSync(resolve(this.config.backupDir, row.filename));
 				} catch (pruneErr) {
-					this.logs.warn(`Failed to delete expired backup file ${row.filename}: ${pruneErr instanceof Error ? pruneErr.message : String(pruneErr)}`, {
+					this.logs.warn(`Failed to delete expired backup file ${row.filename}: ${this.errorMessage(pruneErr)}`, {
 						context: "BackupService",
 					});
 				}
@@ -1432,6 +1438,8 @@ export class BackupService implements OnModuleInit, OnModuleDestroy {
 		const now: number = Date.now();
 		const windowMs: number = 60 * 60 * 1000;
 		const cutoff = BigInt(now - windowMs);
+		// The deleteMany is intentionally fire-and-forget within Promise.all: if it
+		// fails the rate-limit window doesn't shrink, but the count stays correct.
 		const [countResult] = await Promise.all([
 			this.prisma.backupRateLimit.count({ where: { userId, action: "create", windowStart: { gte: cutoff } } }),
 			this.prisma.backupRateLimit.deleteMany({ where: { userId, action: "create", windowStart: { lt: cutoff } } }),

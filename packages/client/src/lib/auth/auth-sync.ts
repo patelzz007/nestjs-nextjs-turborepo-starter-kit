@@ -6,6 +6,7 @@
 // invalidate an in-flight refresh in another.
 // ============================================
 
+import { isServer } from "../is-server";
 import { z } from "zod";
 
 /**
@@ -41,7 +42,7 @@ export interface AuthChannel {
  * environments without BroadcastChannel everything degrades to no-ops.
  */
 export function createAuthChannel(name: string): AuthChannel {
-	if (typeof window === "undefined" || typeof BroadcastChannel === "undefined") {
+	if (isServer || typeof BroadcastChannel === "undefined") {
 		return {
 			name,
 			post: (): void => undefined,

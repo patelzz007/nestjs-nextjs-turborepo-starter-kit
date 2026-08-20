@@ -61,7 +61,7 @@ function parseApiResponse(value: DataValue): ApiResponseShape | null {
  */
 @Injectable()
 export class ResponseInterceptor implements NestInterceptor {
-	public intercept(context: ExecutionContext, next: CallHandler): Observable<object> {
+	public intercept(context: ExecutionContext, next: CallHandler<DataValue>): Observable<DataValue | object> {
 		const request: FastifyRequest = context.switchToHttp().getRequest<FastifyRequest>();
 		// ── SSE routes pass through untouched ──────────────────────────────
 		// The `@Sse()` adapter writes each frame (`data: …`) directly to the
@@ -73,12 +73,10 @@ export class ResponseInterceptor implements NestInterceptor {
 		// `text/event-stream, */*` or other Accept parameters.
 		const acceptHeader: string | undefined = request.headers.accept;
 		if (acceptHeader?.includes("text/event-stream")) {
-			// eslint-disable-next-line @typescript-eslint/no-unsafe-return -- CallHandler defaults to `any`; SSE bypass passes the raw stream through.
 			return next.handle();
 		}
 		const correlationId: string = request.correlationId ?? "";
 
-		// CallHandler defaults to `any`; each emission is validated via DataValueSchema.
 		return next.handle().pipe(
 			map((raw: DataValue): object => {
 				const validated = DataValueSchema.safeParse(raw);

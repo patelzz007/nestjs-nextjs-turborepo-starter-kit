@@ -8,7 +8,7 @@ import { createWrappedDto } from "../../common/dto/response-wrapper";
 // routes. Do not "fix" this into a module import.
 import { Public } from "../auth/decorators/public.decorator";
 
-import { HealthService } from "./health.service";
+import { HealthService, type DeepHealthResponse } from "./health.service";
 
 // ── Wrapped Response DTOs ────────────────────────────────────────────────
 
@@ -42,5 +42,13 @@ export class HealthController {
 	@ApiOkResponse({ type: WrappedHealthResponse, description: "Current service health status" })
 	public async getHealth(): Promise<HealthResponse> {
 		return this.healthService.healthCheck();
+	}
+
+	@Public()
+	@Get("health/deep")
+	@ApiOperation({ summary: "Deep health check (DB + filesystem + external services)" })
+	@ApiOkResponse({ description: "Detailed health status with per-service probes" })
+	public async getDeepHealth(): Promise<DeepHealthResponse> {
+		return this.healthService.deepHealthCheck();
 	}
 }

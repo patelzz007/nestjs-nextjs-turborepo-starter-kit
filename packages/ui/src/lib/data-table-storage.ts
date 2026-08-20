@@ -12,9 +12,9 @@ const STORAGE_PREFIX = "datatable:";
 export function createLocalStorageDataTableStorage(): DataTableStorageAdapter {
 	return {
 		read(key: string): DataTablePersistedPrefs | null {
-			if (typeof window === "undefined") {
-				return null;
-			}
+		if (typeof window === "undefined") {
+			return null;
+		}
 			const saved = window.localStorage.getItem(`${STORAGE_PREFIX}${key}`);
 			if (saved === null) {
 				return null;
@@ -22,9 +22,9 @@ export function createLocalStorageDataTableStorage(): DataTableStorageAdapter {
 			return parseDataTablePersistedPrefs(saved);
 		},
 		write(key: string, patch: DataTablePersistedPrefsPatch): void {
-			if (typeof window === "undefined") {
-				return;
-			}
+		if (typeof window === "undefined") {
+			return;
+		}
 			try {
 				const storageKey = `${STORAGE_PREFIX}${key}`;
 				const existing = window.localStorage.getItem(storageKey);

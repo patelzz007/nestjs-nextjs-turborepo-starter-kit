@@ -1,4 +1,7 @@
 import { StringValueSchema, TelescopeJsonObjectSchema, TelescopeJsonScalarSchema, TelescopeJsonValueSchema, type TelescopeJsonValue } from "@workspace/shared";
+import { Logger } from "@nestjs/common";
+
+const logger = new Logger("TelescopeSanitize");
 
 /**
  * Keys that are ALWAYS stripped from stored data — even when explicitly
@@ -82,7 +85,10 @@ export function truncateJson(value: TelescopeJsonValue, maxChars: number = MAX_B
 	try {
 		const parsed = TelescopeJsonValueSchema.safeParse(JSON.parse(preview));
 		return parsed.success ? parsed.data : { truncated: true, preview: `${preview}…` };
-	} catch {
+	} catch (err) {
+		// Truncation failure: PII may leak if the partial JSON is served raw.
+		// Log for audit and fall back to a safe preview.
+		logger.warn(`truncateJson failed: ${err instanceof Error ? err.message : "unknown"}`);
 		return { truncated: true, preview: `${preview}…` };
 	}
 }
