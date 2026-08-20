@@ -343,7 +343,7 @@ function JobDetailDrawer({
 	return (
 		<div className="fixed inset-0 z-50 flex justify-end" role="dialog" aria-modal="true" aria-label="Job detail">
 			<button type="button" aria-label="Close" className="absolute inset-0 bg-background/60 backdrop-blur-sm" onClick={onClose} />
-			<div className="relative flex h-full w-full max-w-lg flex-col border-l bg-card shadow-xl">
+			<div className="relative z-10 flex h-full w-full max-w-lg flex-col border-l bg-card shadow-xl">
 				<div className="flex items-center justify-between gap-2 border-b px-4 py-3">
 					<div className="min-w-0">
 						<h2 className="truncate text-sm font-semibold">{job.jobName}</h2>

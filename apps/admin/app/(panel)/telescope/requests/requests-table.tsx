@@ -15,38 +15,12 @@ import { Button } from "@workspace/ui/components/form/button";
 import { Input } from "@workspace/ui/components/form/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@workspace/ui/components/form/select";
 import { Skeleton } from "@workspace/ui/components/feedback/skeleton";
-import { toastMessage } from "@workspace/ui/components/feedback/toast";
-import {
-	ArrowUpDown,
-	ChevronDown,
-	ChevronLeft,
-	ChevronRight,
-	Copy,
-	Download,
-	ExternalLink,
-	Eye,
-	Fingerprint,
-	Info,
-	Minus,
-	Pin,
-	Search,
-	Star,
-	StarOff,
-	TableProperties,
-	Trash2,
-	TriangleAlert,
-	X,
-} from "lucide-react";
-import Link from "next/link";
+import { ArrowUpDown, ChevronLeft, ChevronRight, Download, Info, Search, Star, StarOff, TriangleAlert, X } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useMemo, useState } from "react";
 
-import {
-	type Envelope,
-	type TelescopeRequestListQuery,
-	type TelescopeRequestListResponse,
-	TelescopeRequestListQuerySchema,
-} from "@workspace/shared";
+import { type Envelope, type RequestLogSummary, type TelescopeRequestListQuery, type TelescopeRequestListResponse, TelescopeRequestListQuerySchema } from "@workspace/shared";
 
 import { durationLabel, durationTone, formatTime, statusTone } from "@/lib/telescope";
 import { useTelescopeLive } from "@/lib/use-telescope-live";
@@ -74,7 +48,9 @@ function TableErrorState({ message, onRetry }: { readonly message: string; reado
 		<div className="flex flex-col items-center gap-3 py-12 text-center">
 			<TriangleAlert className="size-6 text-destructive" />
 			<p className="text-sm text-destructive">{message}</p>
-			<Button variant="outline" size="sm" onClick={onRetry}>Retry</Button>
+			<Button variant="outline" size="sm" onClick={onRetry}>
+				Retry
+			</Button>
 		</div>
 	);
 }
@@ -93,7 +69,9 @@ function FilterChip({ label, onRemove }: { readonly label: string; readonly onRe
 function ExportCsvButton({ rows, filename }: { readonly rows: readonly RequestLogSummary[]; readonly filename: string }): React.JSX.Element {
 	const handleExport = useCallback((): void => {
 		const header = "Method,Path,Status,Duration,User,Time\n";
-		const csv = rows.map((r) => `${r.method},"${r.path}",${r.statusCode ?? ""},${r.durationMs},${r.userEmail ?? r.userId ?? ""},${new Date(r.createdAt).toISOString()}`).join("\n");
+		const csv = rows
+			.map((r) => `${r.method},"${r.path}",${String(r.statusCode ?? "")},${String(r.durationMs)},${r.userEmail ?? r.userId ?? ""},${new Date(r.createdAt).toISOString()}`)
+			.join("\n");
 		const blob = new Blob([header + csv], { type: "text/csv" });
 		const url = URL.createObjectURL(blob);
 		const a = document.createElement("a");
@@ -126,73 +104,114 @@ function RequestDetailSlideOver({
 	const { api } = useAuth();
 	const detailQuery = api.telescope.requestDetail.useQuery({ id: requestId });
 	const detail = detailQuery.data?.data;
+	const req = detail?.request;
+
+	const handleFilterAndClose = useCallback((): void => {
+		if (req?.userId != null) {
+			onFilterUser(req.userId);
+			onClose();
+		}
+	}, [onFilterUser, onClose, req]);
 
 	return (
-		<div className="fixed inset-0 z-50 flex justify-end">
-			<div className="absolute inset-0 bg-black/40" onClick={onClose} />
-			<div className="relative ml-auto flex h-full w-full max-w-lg flex-col overflow-y-auto bg-background shadow-xl">
+		<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }} className="fixed inset-0 z-50 flex justify-end">
+			<motion.div
+				initial={{ opacity: 0 }}
+				animate={{ opacity: 1 }}
+				exit={{ opacity: 0 }}
+				transition={{ duration: 0.15 }}
+				className="absolute inset-0 bg-black/40"
+				onClick={onClose}
+			/>
+			<motion.div
+				initial={{ x: "100%" }}
+				animate={{ x: 0 }}
+				exit={{ x: "100%" }}
+				transition={{ type: "spring", damping: 30, stiffness: 300 }}
+				className="relative z-10 ml-auto flex h-full w-full max-w-lg flex-col overflow-y-auto bg-background shadow-xl">
 				<div className="flex items-center justify-between border-b px-4 py-3">
 					<h2 className="text-sm font-semibold">Request Detail</h2>
-					<Button variant="ghost" size="sm" onClick={onClose}><X className="size-4" /></Button>
+					<Button variant="ghost" size="sm" onClick={onClose}>
+						<X className="size-4" />
+					</Button>
 				</div>
 				<div className="flex-1 p-4">
 					{detailQuery.isLoading ? (
-						<div className="space-y-3"><Skeleton className="h-4 w-full" /><Skeleton className="h-4 w-3/4" /><Skeleton className="h-20 w-full" /></div>
+						<div className="space-y-3">
+							<Skeleton className="h-4 w-full" />
+							<Skeleton className="h-4 w-3/4" />
+							<Skeleton className="h-20 w-full" />
+						</div>
 					) : detail === undefined ? (
 						<p className="text-sm text-muted-foreground">Not found.</p>
 					) : (
 						<div className="space-y-4 text-sm">
-							{(() => { const req = detail.request; return (
+							{req != null ? (
 								<>
 									<div className="flex items-center gap-2">
 										<span className="font-mono text-xs font-semibold">{req.method}</span>
 										<span className="font-mono text-xs">{req.path}</span>
 									</div>
 									<div className="grid grid-cols-2 gap-2">
-										<div><span className="text-muted-foreground">Status:</span> <span className="font-mono">{req.statusCode ?? "—"}</span></div>
-										<div><span className="text-muted-foreground">Duration:</span> <span className="font-mono">{durationLabel(req.durationMs)}</span></div>
-										<div><span className="text-muted-foreground">User:</span> <span>{req.userEmail ?? req.userId ?? "anon"}</span></div>
-										<div><span className="text-muted-foreground">Time:</span> <span>{formatTime(req.createdAt)}</span></div>
+										<div>
+											<span className="text-muted-foreground">Status:</span> <span className="font-mono">{req.statusCode ?? "—"}</span>
+										</div>
+										<div>
+											<span className="text-muted-foreground">Duration:</span> <span className="font-mono">{durationLabel(req.durationMs)}</span>
+										</div>
+										<div>
+											<span className="text-muted-foreground">User:</span> <span>{req.userEmail ?? req.userId ?? "anon"}</span>
+										</div>
+										<div>
+											<span className="text-muted-foreground">Time:</span> <span>{formatTime(req.createdAt)}</span>
+										</div>
 									</div>
-									{req.queryString !== null && req.queryString !== undefined && req.queryString.length > 0 ? (
+									{req.queryString != null && req.queryString.length > 0 ? (
 										<div>
 											<p className="mb-1 text-xs font-medium text-muted-foreground">Query params</p>
-											<pre className="rounded bg-muted p-2 font-mono text-xs overflow-auto">{req.queryString}</pre>
+											<pre className="overflow-auto rounded bg-muted p-2 font-mono text-xs">{req.queryString}</pre>
 										</div>
 									) : null}
-									{req.requestBody !== null && req.requestBody !== undefined ? (
+									{req.requestBody != null ? (
 										<div>
 											<p className="mb-1 text-xs font-medium text-muted-foreground">Body</p>
-											<pre className="rounded bg-muted p-2 font-mono text-xs overflow-auto">{typeof req.requestBody === "string" ? req.requestBody : JSON.stringify(req.requestBody, null, 2)}</pre>
+											<pre className="overflow-auto rounded bg-muted p-2 font-mono text-xs">
+												{typeof req.requestBody === "string" ? req.requestBody : JSON.stringify(req.requestBody, null, 2)}
+											</pre>
 										</div>
 									) : null}
-									{req.userId !== null && req.userId !== undefined ? (
-										<Button variant="outline" size="sm" className="text-xs" onClick={(): void => { onFilterUser(req.userId); onClose(); }}>
+									{req.userId != null ? (
+										<Button variant="outline" size="sm" className="text-xs" onClick={handleFilterAndClose}>
 											Filter by this user
 										</Button>
 									) : null}
 								</>
-							); })()}
+							) : null}
 						</div>
 					)}
 				</div>
-			</div>
-		</div>
+			</motion.div>
+		</motion.div>
+	);
+} // ── Helper components ────────────────────────────────────────────────────────
+
+function RequestRowInfoButton({ id, onOpen }: { readonly id: string; readonly onOpen: (id: string) => void }): React.JSX.Element {
+	const handleClick = useCallback((): void => {
+		onOpen(id);
+	}, [onOpen, id]);
+
+	return (
+		<Button variant="ghost" size="sm" className="h-6 px-1.5 text-xs" onClick={handleClick}>
+			<Info className="size-3" />
+		</Button>
 	);
 }
 
-// ── Types ────────────────────────────────────────────────────────────────────
-
-import type { RequestLogSummary } from "@workspace/shared";
-
-function MobileRequestCard({
-	row,
-	onOpen,
-}: {
-	readonly row: RequestLogSummary;
-	readonly onOpen: (id: string) => void;
-}): React.JSX.Element {
+function MobileRequestCard({ row, onOpen }: { readonly row: RequestLogSummary; readonly onOpen: (id: string) => void }): React.JSX.Element {
 	const tone = statusTone(row.statusCode);
+	const handleDetailsClick = useCallback((): void => {
+		onOpen(row.id);
+	}, [onOpen, row.id]);
 	return (
 		<div className="space-y-2 rounded-lg border bg-card p-3 shadow-xs">
 			<div className="flex items-center justify-between">
@@ -208,8 +227,8 @@ function MobileRequestCard({
 				<div className="flex items-center gap-2">
 					{row.starred ? <Star className="size-3 text-amber-500" /> : null}
 					{row.n1WarningCount > 0 ? <TriangleAlert className="size-3 text-amber-500" /> : null}
-					
-					<button type="button" onClick={(): void => onOpen(row.id)} className="text-primary hover:underline">
+
+					<button type="button" onClick={handleDetailsClick} className="text-primary hover:underline">
 						Details →
 					</button>
 				</div>
@@ -233,7 +252,7 @@ function RequestsContent({ initialEnvelope }: { readonly initialEnvelope: Envelo
 	const [env, setEnv] = useState<string>(() => searchParams.get("env") ?? "all");
 	const [sort, setSort] = useState<string>(() => searchParams.get("sort") ?? "newest");
 	const [page, setPage] = useState<number>(1);
-	const [pageSize, setPageSize] = useState<number>(20);
+	const pageSize = 20;
 	const [searchQuery, setSearchQuery] = useState<string>(() => searchParams.get("q") ?? "");
 	const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
@@ -250,7 +269,17 @@ function RequestsContent({ initialEnvelope }: { readonly initialEnvelope: Envelo
 		return TelescopeRequestListQuerySchema.parse(draft);
 	}, [page, pageSize, sort, method, status, minDuration, correlationParam, selectedUserId, env, searchQuery, starredOnly]);
 
-	const isDefaultQuery: boolean = page === 1 && sort === "newest" && method === "all" && status === "all" && minDuration === "" && !starredOnly && env === "all" && searchQuery === "" && correlationParam === null && selectedUserId === null;
+	const isDefaultQuery: boolean =
+		page === 1 &&
+		sort === "newest" &&
+		method === "all" &&
+		status === "all" &&
+		minDuration === "" &&
+		!starredOnly &&
+		env === "all" &&
+		searchQuery === "" &&
+		correlationParam === null &&
+		selectedUserId === null;
 	const listQuery = api.telescope.requests.useQuery(query, { placeholderData: (previous) => previous, initialData: isDefaultQuery ? initialEnvelope : undefined });
 
 	const rows: readonly RequestLogSummary[] = useMemo(() => listQuery.data?.data.list.items ?? [], [listQuery.data]);
@@ -272,14 +301,18 @@ function RequestsContent({ initialEnvelope }: { readonly initialEnvelope: Envelo
 		router.replace(`/telescope/requests${qs.length > 0 ? `?${qs}` : ""}`, { scroll: false });
 	}, [method, status, minDuration, sort, starredOnly, env, searchQuery, correlationParam, selectedUserId, router]);
 
-	const resetNewCount = useCallback((): void => { setNewCount(0); }, []);
+	const resetNewCount = useCallback((): void => {
+		setNewCount(0);
+	}, []);
 
 	const refresh = useCallback((): void => {
 		resetNewCount();
 		void listQuery.refetch();
 	}, [resetNewCount, listQuery]);
 
-	const handleRefetch = useCallback((): void => { void listQuery.refetch(); }, [listQuery]);
+	const handleRefetch = useCallback((): void => {
+		void listQuery.refetch();
+	}, [listQuery]);
 
 	const handleFilterUser = useCallback(
 		(userId: string | null): void => {
@@ -291,61 +324,101 @@ function RequestsContent({ initialEnvelope }: { readonly initialEnvelope: Envelo
 	);
 
 	const live = useTelescopeLive(
-		useCallback((): void => { setNewCount((prev) => prev + 1); }, []),
+		useCallback((): void => {
+			setNewCount((prev) => prev + 1);
+		}, []),
 	);
 
-	const [slideOverId, setSlideOverId] = useState<string | null>(() => searchParams.get("id"));
+	// URL-driven open; displayId state holds the id for AnimatePresence exit animation.
+	const [displayId, setDisplayId] = useState<string | null>(() => searchParams.get("id"));
+
 	const openSlideOver = useCallback(
 		(id: string): void => {
-			setSlideOverId(id);
+			setDisplayId(id);
 			const params = new URLSearchParams(searchParams.toString());
 			params.set("id", id);
 			router.replace(`/telescope/requests?${params.toString()}`, { scroll: false });
 		},
 		[router, searchParams],
 	);
+
 	const closeSlideOver = useCallback((): void => {
-		setSlideOverId(null);
-		const params = new URLSearchParams(searchParams.toString());
-		params.delete("id");
-		const qs = params.toString();
-		router.replace(`/telescope/requests${qs.length > 0 ? `?${qs}` : ""}`, { scroll: false });
+		// Let exit animation play, then clear displayId + URL.
+		setTimeout((): void => {
+			setDisplayId(null);
+			const params = new URLSearchParams(searchParams.toString());
+			params.delete("id");
+			const qs = params.toString();
+			router.replace(`/telescope/requests${qs.length > 0 ? `?${qs}` : ""}`, { scroll: false });
+		}, 200);
 	}, [router, searchParams]);
 
-	useEffect((): void => {
-		const idParam = searchParams.get("id");
-		if (idParam !== null && idParam !== slideOverId) {
-			setSlideOverId(idParam);
-		}
-	}, [searchParams, slideOverId]);
+	// Handle browser back/forward (URL loses ?id=).
+	// No useEffect needed — slideOverId is URL-derived, closeSlideOver handles the animation.
 
 	const handleMethodChange = useCallback(
-		(value: string | null): void => { setMethod(value ?? "all"); setPage(1); resetNewCount(); syncUrl(); },
+		(value: string | null): void => {
+			setMethod(value ?? "all");
+			setPage(1);
+			resetNewCount();
+			syncUrl();
+		},
 		[resetNewCount, syncUrl],
 	);
 	const handleStatusChange = useCallback(
-		(value: string | null): void => { setStatus(value ?? "all"); setPage(1); resetNewCount(); syncUrl(); },
+		(value: string | null): void => {
+			setStatus(value ?? "all");
+			setPage(1);
+			resetNewCount();
+			syncUrl();
+		},
 		[resetNewCount, syncUrl],
 	);
 	const handleMinDurationChange = useCallback(
-		(event: React.ChangeEvent<HTMLInputElement>): void => { setMinDuration(event.target.value); setPage(1); resetNewCount(); },
+		(event: React.ChangeEvent<HTMLInputElement>): void => {
+			setMinDuration(event.target.value);
+			setPage(1);
+			resetNewCount();
+		},
 		[resetNewCount],
 	);
-	const handleStarredToggle = useCallback((): void => { setStarredOnly((prev) => !prev); setPage(1); resetNewCount(); }, [resetNewCount]);
+	const handleStarredToggle = useCallback((): void => {
+		setStarredOnly((prev) => !prev);
+		setPage(1);
+		resetNewCount();
+	}, [resetNewCount]);
 	const handleEnvChange = useCallback(
-		(value: string | null): void => { setEnv(value ?? "all"); setPage(1); resetNewCount(); syncUrl(); },
+		(value: string | null): void => {
+			setEnv(value ?? "all");
+			setPage(1);
+			resetNewCount();
+			syncUrl();
+		},
 		[resetNewCount, syncUrl],
 	);
 	const handleSortChange = useCallback(
-		(value: string | null): void => { setSort(value ?? "newest"); setPage(1); resetNewCount(); syncUrl(); },
+		(value: string | null): void => {
+			setSort(value ?? "newest");
+			setPage(1);
+			resetNewCount();
+			syncUrl();
+		},
 		[resetNewCount, syncUrl],
 	);
 	const handleSearchChange = useCallback(
-		(event: React.ChangeEvent<HTMLInputElement>): void => { setSearchQuery(event.target.value); setPage(1); resetNewCount(); },
+		(event: React.ChangeEvent<HTMLInputElement>): void => {
+			setSearchQuery(event.target.value);
+			setPage(1);
+			resetNewCount();
+		},
 		[resetNewCount],
 	);
 	const handleSearchSubmit = useCallback(
-		(event: React.SyntheticEvent<HTMLFormElement>): void => { event.preventDefault(); resetNewCount(); syncUrl(); },
+		(event: React.SyntheticEvent<HTMLFormElement>): void => {
+			event.preventDefault();
+			resetNewCount();
+			syncUrl();
+		},
 		[resetNewCount, syncUrl],
 	);
 	const clearCorrelation = useCallback((): void => {
@@ -354,14 +427,97 @@ function RequestsContent({ initialEnvelope }: { readonly initialEnvelope: Envelo
 		const qs = params.toString();
 		router.replace(`/telescope/requests${qs.length > 0 ? `?${qs}` : ""}`, { scroll: false });
 	}, [router, searchParams]);
-	const clearUserFilter = useCallback((): void => { setSelectedUserId(null); setPage(1); resetNewCount(); }, [resetNewCount]);
+	const clearUserFilter = useCallback((): void => {
+		setSelectedUserId(null);
+		setPage(1);
+		resetNewCount();
+	}, [resetNewCount]);
 	const clearAllFilters = useCallback((): void => {
-		setMethod("all"); setStatus("all"); setMinDuration(""); setStarredOnly(false); setEnv("all"); setSort("newest"); setSearchQuery(""); setSelectedUserId(null); setPage(1); resetNewCount();
+		setMethod("all");
+		setStatus("all");
+		setMinDuration("");
+		setStarredOnly(false);
+		setEnv("all");
+		setSort("newest");
+		setSearchQuery("");
+		setSelectedUserId(null);
+		setPage(1);
+		resetNewCount();
 		router.replace("/telescope/requests", { scroll: false });
 	}, [resetNewCount, router]);
 
-	const hasActiveFilters: boolean = method !== "all" || status !== "all" || minDuration !== "" || starredOnly || env !== "all" || searchQuery.trim().length > 0 || correlationParam !== null || selectedUserId !== null;
+	// ── Filter chip removal handlers ─────────────────────────────────────────────
+	const removeMethodFilter = useCallback((): void => {
+		setMethod("all");
+		setPage(1);
+		resetNewCount();
+		syncUrl();
+	}, [resetNewCount, syncUrl]);
+	const removeStatusFilter = useCallback((): void => {
+		setStatus("all");
+		setPage(1);
+		resetNewCount();
+		syncUrl();
+	}, [resetNewCount, syncUrl]);
+	const removeMinDurationFilter = useCallback((): void => {
+		setMinDuration("");
+		setPage(1);
+		resetNewCount();
+	}, [resetNewCount]);
+	const removeEnvFilter = useCallback((): void => {
+		setEnv("all");
+		setPage(1);
+		resetNewCount();
+		syncUrl();
+	}, [resetNewCount, syncUrl]);
+	const removeStarredFilter = useCallback((): void => {
+		setStarredOnly(false);
+		setPage(1);
+		resetNewCount();
+	}, [resetNewCount]);
+	const removeSearchFilter = useCallback((): void => {
+		setSearchQuery("");
+		setPage(1);
+		resetNewCount();
+	}, [resetNewCount]);
+
+	// ── Sort handlers ───────────────────────────────────────────────────────────
+	const handleTimeSort = useCallback((): void => {
+		handleSortChange(sort === "newest" ? "oldest" : "newest");
+	}, [handleSortChange, sort]);
+	const handleDurationSort = useCallback((): void => {
+		handleSortChange(sort === "duration" ? "newest" : "duration");
+	}, [handleSortChange, sort]);
+
 	const totalPages: number = Math.max(1, Math.ceil(totalCount / pageSize));
+
+	// ── Table row info button ───────────────────────────────────────────────────
+	const handleRowInfo = useCallback(
+		(id: string): void => {
+			openSlideOver(id);
+		},
+		[openSlideOver],
+	);
+
+	// ── Pagination handlers ─────────────────────────────────────────────────────
+	const handlePrevPage = useCallback((): void => {
+		setPage((p) => Math.max(1, p - 1));
+		resetNewCount();
+	}, [resetNewCount]);
+	const handleNextPage = useCallback((): void => {
+		setPage((p) => Math.min(totalPages, p + 1));
+		resetNewCount();
+	}, [resetNewCount, totalPages]);
+
+	const hasActiveFilters: boolean =
+		method !== "all" ||
+		status !== "all" ||
+		minDuration !== "" ||
+		starredOnly ||
+		env !== "all" ||
+		searchQuery.trim().length > 0 ||
+		correlationParam !== null ||
+		selectedUserId !== null;
 
 	return (
 		<div className="mx-auto w-full max-w-7xl space-y-4">
@@ -375,7 +531,10 @@ function RequestsContent({ initialEnvelope }: { readonly initialEnvelope: Envelo
 							</span>
 						) : null}
 						{newCount > 0 ? (
-							<button type="button" onClick={refresh} className="inline-flex items-center gap-1 rounded-full border border-sky-300/60 bg-sky-500/10 px-2 py-0.5 text-[11px] font-medium text-sky-700 transition-colors hover:bg-sky-500/20 dark:border-sky-500/40 dark:text-sky-400">
+							<button
+								type="button"
+								onClick={refresh}
+								className="inline-flex items-center gap-1 rounded-full border border-sky-300/60 bg-sky-500/10 px-2 py-0.5 text-[11px] font-medium text-sky-700 transition-colors hover:bg-sky-500/20 dark:border-sky-500/40 dark:text-sky-400">
 								{String(newCount)} new — click to refresh
 							</button>
 						) : null}
@@ -387,19 +546,22 @@ function RequestsContent({ initialEnvelope }: { readonly initialEnvelope: Envelo
 					</p>
 				</div>
 				<div className="flex items-center gap-2">
-					<Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs" onClick={refresh}>Refresh</Button>
+					<Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs" onClick={refresh}>
+						Refresh
+					</Button>
 					<ExportCsvButton rows={rows} filename="telescope-requests" />
 					<ColumnTogglePanel />
 				</div>
 			</header>
-
 			<div className="flex flex-wrap items-center gap-3">
-				<form onSubmit={handleSearchSubmit} className="relative flex-1 max-w-sm">
+				<form onSubmit={handleSearchSubmit} className="relative max-w-sm flex-1">
 					<Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
 					<Input value={searchQuery} onChange={handleSearchChange} placeholder="Search paths…" className="h-8 pl-9 text-xs" />
 				</form>
 				<Select value={method} onValueChange={handleMethodChange}>
-					<SelectTrigger className="h-8 w-[100px] text-xs"><SelectValue placeholder="Method" /></SelectTrigger>
+					<SelectTrigger className="h-8 w-[100px] text-xs">
+						<SelectValue placeholder="Method" />
+					</SelectTrigger>
 					<SelectContent>
 						<SelectItem value="all">All methods</SelectItem>
 						<SelectItem value="GET">GET</SelectItem>
@@ -410,7 +572,9 @@ function RequestsContent({ initialEnvelope }: { readonly initialEnvelope: Envelo
 					</SelectContent>
 				</Select>
 				<Select value={status} onValueChange={handleStatusChange}>
-					<SelectTrigger className="h-8 w-[100px] text-xs"><SelectValue placeholder="Status" /></SelectTrigger>
+					<SelectTrigger className="h-8 w-[100px] text-xs">
+						<SelectValue placeholder="Status" />
+					</SelectTrigger>
 					<SelectContent>
 						<SelectItem value="all">All statuses</SelectItem>
 						<SelectItem value="2xx">2xx</SelectItem>
@@ -421,7 +585,9 @@ function RequestsContent({ initialEnvelope }: { readonly initialEnvelope: Envelo
 				</Select>
 				<Input value={minDuration} onChange={handleMinDurationChange} placeholder="Min ms" className="h-8 w-[80px] text-xs" type="number" min="0" />
 				<Select value={env} onValueChange={handleEnvChange}>
-					<SelectTrigger className="h-8 w-[80px] text-xs"><SelectValue placeholder="Env" /></SelectTrigger>
+					<SelectTrigger className="h-8 w-[80px] text-xs">
+						<SelectValue placeholder="Env" />
+					</SelectTrigger>
 					<SelectContent>
 						<SelectItem value="all">All envs</SelectItem>
 						<SelectItem value="production">production</SelectItem>
@@ -434,7 +600,9 @@ function RequestsContent({ initialEnvelope }: { readonly initialEnvelope: Envelo
 					{starredOnly ? "Starred" : "Star"}
 				</Button>
 				<Select value={sort} onValueChange={handleSortChange}>
-					<SelectTrigger className="h-8 w-[100px] text-xs"><SelectValue placeholder="Sort" /></SelectTrigger>
+					<SelectTrigger className="h-8 w-[100px] text-xs">
+						<SelectValue placeholder="Sort" />
+					</SelectTrigger>
 					<SelectContent>
 						<SelectItem value="newest">Newest</SelectItem>
 						<SelectItem value="oldest">Oldest</SelectItem>
@@ -442,31 +610,43 @@ function RequestsContent({ initialEnvelope }: { readonly initialEnvelope: Envelo
 						<SelectItem value="errors">Errors</SelectItem>
 					</SelectContent>
 				</Select>
-				{hasActiveFilters ? <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={clearAllFilters}>Clear all</Button> : null}
+				{hasActiveFilters ? (
+					<Button variant="ghost" size="sm" className="h-8 text-xs" onClick={clearAllFilters}>
+						Clear all
+					</Button>
+				) : null}
 			</div>
-
 			{hasActiveFilters ? (
 				<div className="flex flex-wrap items-center gap-2">
-					{method !== "all" ? <FilterChip label={`Method: ${method}`} onRemove={(): void => { setMethod("all"); setPage(1); resetNewCount(); syncUrl(); }} /> : null}
-					{status !== "all" ? <FilterChip label={`Status: ${status}`} onRemove={(): void => { setStatus("all"); setPage(1); resetNewCount(); syncUrl(); }} /> : null}
-					{minDuration !== "" ? <FilterChip label={`Min: ${minDuration}ms`} onRemove={(): void => { setMinDuration(""); setPage(1); resetNewCount(); }} /> : null}
-					{env !== "all" ? <FilterChip label={`Env: ${env}`} onRemove={(): void => { setEnv("all"); setPage(1); resetNewCount(); syncUrl(); }} /> : null}
-					{starredOnly ? <FilterChip label="Starred" onRemove={(): void => { setStarredOnly(false); setPage(1); resetNewCount(); }} /> : null}
+					{method !== "all" ? <FilterChip label={`Method: ${method}`} onRemove={removeMethodFilter} /> : null}
+					{status !== "all" ? <FilterChip label={`Status: ${status}`} onRemove={removeStatusFilter} /> : null}
+					{minDuration !== "" ? <FilterChip label={`Min: ${minDuration}ms`} onRemove={removeMinDurationFilter} /> : null}
+					{env !== "all" ? <FilterChip label={`Env: ${env}`} onRemove={removeEnvFilter} /> : null}
+					{starredOnly ? <FilterChip label="Starred" onRemove={removeStarredFilter} /> : null}
 					{correlationParam !== null ? <FilterChip label={`Correlation: ${correlationParam.slice(0, 8)}…`} onRemove={clearCorrelation} /> : null}
 					{selectedUserId !== null ? <FilterChip label={`User: ${selectedUserId.slice(0, 8)}…`} onRemove={clearUserFilter} /> : null}
-					{searchQuery.trim().length > 0 ? <FilterChip label={`Search: "${searchQuery.trim()}"`} onRemove={(): void => { setSearchQuery(""); setPage(1); resetNewCount(); }} /> : null}
+					{searchQuery.trim().length > 0 ? <FilterChip label={`Search: "${searchQuery.trim()}"`} onRemove={removeSearchFilter} /> : null}
 				</div>
 			) : null}
-
 			<div className="rounded-lg border bg-card text-card-foreground shadow-xs">
 				<div className="overflow-x-auto">
 					<table className="w-full text-sm">
 						<thead>
 							<tr className="border-b text-left text-xs font-medium text-muted-foreground">
-								<th className="px-4 py-3"><Button variant="ghost" size="sm" className="h-6 gap-1 px-1 text-xs" onClick={(): void => handleSortChange(sort === "newest" ? "oldest" : "newest")}>Time <ArrowUpDown className="size-3" /></Button></th>
+								<th className="px-4 py-3">
+									{" "}
+									<Button variant="ghost" size="sm" className="h-6 gap-1 px-1 text-xs" onClick={handleTimeSort}>
+										Time <ArrowUpDown className="size-3" />
+									</Button>
+								</th>
 								<th className="px-4 py-3">Method</th>
 								<th className="px-4 py-3">Path</th>
-								<th className="px-4 py-3"><Button variant="ghost" size="sm" className="h-6 gap-1 px-1 text-xs" onClick={(): void => handleSortChange(sort === "duration" ? "newest" : "duration")}>Duration <ArrowUpDown className="size-3" /></Button></th>
+								<th className="px-4 py-3">
+									{" "}
+									<Button variant="ghost" size="sm" className="h-6 gap-1 px-1 text-xs" onClick={handleDurationSort}>
+										Duration <ArrowUpDown className="size-3" />
+									</Button>
+								</th>
 								<th className="px-4 py-3">Status</th>
 								<th className="px-4 py-3">User</th>
 								<th className="px-4 py-3 text-right">Actions</th>
@@ -476,29 +656,41 @@ function RequestsContent({ initialEnvelope }: { readonly initialEnvelope: Envelo
 							{listQuery.isLoading ? (
 								<SkeletonTable rows={pageSize} cols={7} />
 							) : listQuery.error ? (
-								<tr><td colSpan={7}><TableErrorState message="Failed to load requests." onRetry={handleRefetch} /></td></tr>
+								<tr>
+									<td colSpan={7}>
+										<TableErrorState message="Failed to load requests." onRetry={handleRefetch} />
+									</td>
+								</tr>
 							) : rows.length === 0 ? (
-								<tr><td colSpan={7} className="px-4 py-12 text-center text-sm text-muted-foreground">No requests match the current filters.</td></tr>
+								<tr>
+									<td colSpan={7} className="px-4 py-12 text-center text-sm text-muted-foreground">
+										No requests match the current filters.
+									</td>
+								</tr>
 							) : (
 								rows.map((row) => {
 									const tone = statusTone(row.statusCode);
 									const dur = durationTone(row.durationMs);
 									return (
-										<tr key={row.id} className="border-b last:border-b-0 transition-colors hover:bg-muted/30">
-											<td className="whitespace-nowrap px-4 py-2.5 text-xs text-muted-foreground">{formatTime(row.createdAt)}</td>
-											<td className="px-4 py-2.5"><span className={`inline-flex items-center rounded-full border px-2 py-0.5 font-mono text-xs ${tone.pillClass}`}>{row.method}</span></td>
+										<tr key={row.id} className="border-b transition-colors last:border-b-0 hover:bg-muted/30">
+											<td className="px-4 py-2.5 text-xs whitespace-nowrap text-muted-foreground">{formatTime(row.createdAt)}</td>
+											<td className="px-4 py-2.5">
+												<span className={`inline-flex items-center rounded-full border px-2 py-0.5 font-mono text-xs ${tone.pillClass}`}>{row.method}</span>
+											</td>
 											<td className="max-w-[300px] truncate px-4 py-2.5 font-mono text-xs">{row.path}</td>
-											<td className="whitespace-nowrap px-4 py-2.5"><span className={`font-mono text-xs ${dur.textClass}`}>{durationLabel(row.durationMs)}</span></td>
-											<td className="px-4 py-2.5"><span className={`font-mono text-xs ${tone.pillClass}`}>{row.statusCode ?? "—"}</span></td>
+											<td className="px-4 py-2.5 whitespace-nowrap">
+												<span className={`font-mono text-xs ${dur.textClass}`}>{durationLabel(row.durationMs)}</span>
+											</td>
+											<td className="px-4 py-2.5">
+												<span className={`font-mono text-xs ${tone.pillClass}`}>{row.statusCode ?? "—"}</span>
+											</td>
 											<td className="px-4 py-2.5 text-xs text-muted-foreground">{row.userEmail ?? (row.userId !== null ? row.userId.slice(0, 8) : "anon")}</td>
-											<td className="whitespace-nowrap px-4 py-2.5 text-right">
+											<td className="px-4 py-2.5 text-right whitespace-nowrap">
 												<div className="flex items-center justify-end gap-1">
 													{row.starred ? <Star className="size-3 text-amber-500" /> : null}
 													{row.n1WarningCount > 0 ? <TriangleAlert className="size-3 text-amber-500" /> : null}
-													
-													<Button variant="ghost" size="sm" className="h-6 px-1.5 text-xs" onClick={(): void => openSlideOver(row.id)}>
-														<Info className="size-3" />
-													</Button>
+
+													<RequestRowInfoButton id={row.id} onOpen={handleRowInfo} />
 												</div>
 											</td>
 										</tr>
@@ -511,29 +703,37 @@ function RequestsContent({ initialEnvelope }: { readonly initialEnvelope: Envelo
 
 				{totalCount > pageSize ? (
 					<div className="flex items-center justify-between border-t px-4 py-3">
-						<p className="text-xs text-muted-foreground">Page {String(page)} of {String(totalPages)} ({String(totalCount)} total)</p>
+						<p className="text-xs text-muted-foreground">
+							Page {String(page)} of {String(totalPages)} ({String(totalCount)} total)
+						</p>
 						<div className="flex items-center gap-2">
-							<Button variant="outline" size="sm" className="h-7 text-xs" disabled={page <= 1} onClick={(): void => { setPage((p) => Math.max(1, p - 1)); resetNewCount(); }}>
+							<Button variant="outline" size="sm" className="h-7 text-xs" disabled={page <= 1} onClick={handlePrevPage}>
 								<ChevronLeft className="size-3" /> Previous
 							</Button>
-							<Button variant="outline" size="sm" className="h-7 text-xs" disabled={page >= totalPages} onClick={(): void => { setPage((p) => Math.min(totalPages, p + 1)); resetNewCount(); }}>
+							<Button variant="outline" size="sm" className="h-7 text-xs" disabled={page >= totalPages} onClick={handleNextPage}>
 								Next <ChevronRight className="size-3" />
 							</Button>
 						</div>
 					</div>
 				) : null}
 			</div>
-
 			<div className="space-y-3 lg:hidden">
-				{rows.map((row) => <MobileRequestCard key={row.id} row={row} onOpen={openSlideOver} />)}
-			</div>
-
-			{slideOverId !== null ? <RequestDetailSlideOver requestId={slideOverId} onClose={closeSlideOver} onFilterUser={handleFilterUser} /> : null}
+				{rows.map((row) => (
+					<MobileRequestCard key={row.id} row={row} onOpen={openSlideOver} />
+				))}
+			</div>{" "}
+			<AnimatePresence>
+				{displayId !== null ? <RequestDetailSlideOver key={displayId} requestId={displayId} onClose={closeSlideOver} onFilterUser={handleFilterUser} /> : null}
+			</AnimatePresence>
 		</div>
 	);
 }
 
-export default function TelescopeRequestsPage({ initialEnvelope }: { readonly initialEnvelope: Envelope<{ readonly list: TelescopeRequestListResponse }> }): React.JSX.Element {
+export default function TelescopeRequestsPage({
+	initialEnvelope,
+}: {
+	readonly initialEnvelope: Envelope<{ readonly list: TelescopeRequestListResponse }>;
+}): React.JSX.Element {
 	return (
 		<Suspense fallback={null}>
 			<RequestsContent initialEnvelope={initialEnvelope} />

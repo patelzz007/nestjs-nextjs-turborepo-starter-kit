@@ -42,7 +42,7 @@ export interface ServerApiConfig {
 	readonly gcTimeMs: number;
 	/** Hard per-fetch timeout (aborts the underlying request). */
 	readonly timeoutMs: number;
-	/** Transient (network) retries, exponential backoff. 0 = fail fast on SSR. */
+	/** Transient (network) retries, exponential backoff. Retries only fire on connection errors (API not ready), not HTTP errors. */
 	readonly retries: number;
 	readonly retryDelayMs: number;
 	readonly retryBackoffMs: number;
@@ -59,7 +59,7 @@ export const DEFAULT_SERVER_API_CONFIG: ServerApiConfig = {
 	staleTimeMs: 60 * 1000,
 	gcTimeMs: 5 * 60 * 1000,
 	timeoutMs: 10_000,
-	retries: 0,
+	retries: 3,
 	retryDelayMs: 500,
 	retryBackoffMs: 250,
 	logger: createDefaultLogger("warn"),

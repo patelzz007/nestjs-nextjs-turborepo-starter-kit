@@ -25,6 +25,10 @@ minimumReleaseAgeExclude:
   - '@shikijs/types@4.4.2'
   - mermaid@11.16.1
   - shiki@4.4.2
+  - '@vitejs/plugin-react@6.1.0'
+  - framer-motion@13.1.1
+  - motion-dom@13.1.1
+  - resend@6.21.0
 
 # @darraghor/eslint-plugin-nestjs-typed does `import ts from "typescript"`
 # directly (undisclosed in its manifest), so Node resolves the hoisted TS 7

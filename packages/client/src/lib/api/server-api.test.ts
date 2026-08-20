@@ -160,7 +160,7 @@ describe("resolveConfig", () => {
 
 	it("returns full defaults when no overrides", () => {
 		const config = resolveConfig(undefined);
-		expect(config.retries).toBe(0);
+		expect(config.retries).toBe(3);
 		expect(config.staleTimeMs).toBe(60_000);
 	});
 });

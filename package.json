@@ -33,31 +33,31 @@
 		"kill:all": "pnpm kill:api && pnpm kill:admin && pnpm kill:web && pnpm kill:docs"
 	},
 	"devDependencies": {
-		"@darraghor/eslint-plugin-nestjs-typed": "^7.3.0",
+		"@darraghor/eslint-plugin-nestjs-typed": "^7.3.3",
 		"@eslint/js": "^9.39.5",
-		"@next/eslint-plugin-next": "^16.3.0",
-		"@types/node": "^26.1.2",
+		"@next/eslint-plugin-next": "^16.3.1",
+		"@types/node": "^26.2.0",
 		"@workspace/eslint-config": "workspace:*",
 		"@workspace/typescript-config": "workspace:*",
-		"concurrently": "^10.0.4",
+		"concurrently": "^10.0.5",
 		"eslint": "^9.39.5",
 		"eslint-config-prettier": "^10.1.8",
-		"eslint-plugin-import": "^2.31.0",
+		"eslint-plugin-import": "^2.32.0",
 		"eslint-plugin-jsx-a11y": "^6.10.2",
 		"eslint-plugin-only-warn": "^1.2.1",
 		"eslint-plugin-prettier": "^5.5.6",
 		"eslint-plugin-react": "^7.37.5",
 		"eslint-plugin-react-hooks": "^7.1.1",
-		"eslint-plugin-turbo": "^2.10.8",
-		"globals": "^17.9.0",
+		"eslint-plugin-turbo": "^2.10.11",
+		"globals": "^17.11.0",
 		"prettier": "^3.9.6",
 		"prettier-plugin-tailwindcss": "^0.8.1",
-		"syncpack": "^15.3.2",
-		"turbo": "^2.10.8",
-		"typescript": "7.0.2",
-		"typescript-eslint": "^8.66.0"
+		"syncpack": "^15.3.3",
+		"turbo": "^2.10.11",
+		"typescript": "6.0.2",
+		"typescript-eslint": "^8.67.0"
 	},
-	"packageManager": "pnpm@11.18.0",
+	"packageManager": "pnpm@11.22.0",
 	"engines": {
 		"node": ">=20"
 	},
@@ -66,6 +66,7 @@
 		"esbuild"
 	],
 	"dependencies": {
+		"chokidar": "^5.0.0",
 		"rxjs": "^7.8.2"
 	}
 }

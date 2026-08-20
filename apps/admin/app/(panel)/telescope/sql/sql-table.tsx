@@ -321,7 +321,7 @@ function SqlDetailDrawer({
 	return (
 		<div className="fixed inset-0 z-50 flex justify-end" role="dialog" aria-modal="true" aria-label="SQL detail">
 			<button type="button" aria-label="Close" className="absolute inset-0 bg-background/60 backdrop-blur-sm" onClick={onClose} />
-			<div className="relative flex h-full w-full max-w-xl flex-col border-l bg-card shadow-xl">
+			<div className="relative z-10 flex h-full w-full max-w-xl flex-col border-l bg-card shadow-xl">
 				<div className="flex items-center justify-between gap-2 border-b px-4 py-3">
 					<div>
 						<h2 className="text-sm font-semibold">SQL detail</h2>

@@ -3,6 +3,7 @@ import "@workspace/ui/globals.css";
 import { QueryProvider } from "@workspace/client/lib/api/query-provider";
 import { cn } from "@workspace/ui/lib/utils";
 import type { Metadata } from "next";
+import Script from "next/script";
 import { Geist, Geist_Mono, JetBrains_Mono } from "next/font/google";
 
 import { WebBreadcrumbProvider } from "@/components/breadcrumb-provider";
@@ -36,6 +37,10 @@ export default function RootLayout({
 	return (
 		<html lang="en" suppressHydrationWarning className={cn("antialiased", fontMono.variable, "font-sans", geist.variable, jetbrainsMonoHeading.variable)}>
 			<body>
+				{/* Prevent Redux DevTools extension from serializing React Query / zustand state */}
+				<Script id="redux-devtools-guard" strategy="beforeInteractive">
+					{`window.__REDUX_DEVTOOLS_EXTENSION__ = window.__REDUX_DEVTOOLS_EXTENSION__ || { connect: function(){return {}} };`}
+				</Script>
 				<QueryProvider>
 					<ClientAuthWrapper>
 						<ThemeProvider>
