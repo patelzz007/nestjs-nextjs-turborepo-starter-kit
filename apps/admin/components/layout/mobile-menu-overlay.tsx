@@ -54,9 +54,8 @@ export function MobileMenuOverlay({ open, onClose, children }: MobileMenuOverlay
 	// Both the desktop sidebar and this drawer use Escape-free nav — the only
 	// role here is closing, so no conflict with inner focusable elements.
 	React.useEffect(() => {
-		if (!open) {
-			return;
-		}
+		if (!open) return;
+
 		const onKeyDown = (event: KeyboardEvent): void => {
 			if (event.key === "Escape") {
 				event.preventDefault();

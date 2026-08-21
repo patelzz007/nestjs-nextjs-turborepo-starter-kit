@@ -16,7 +16,7 @@ import { Input } from "@workspace/ui/components/form/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@workspace/ui/components/form/select";
 import { Skeleton } from "@workspace/ui/components/feedback/skeleton";
 import { ArrowUpDown, ChevronLeft, ChevronRight, Download, Info, Search, Star, StarOff, TriangleAlert, X } from "lucide-react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence } from "framer-motion";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useMemo, useState } from "react";
 
@@ -24,6 +24,8 @@ import { type Envelope, type RequestLogSummary, type TelescopeRequestListQuery, 
 
 import { durationLabel, durationTone, formatTime, statusTone } from "@/lib/telescope";
 import { useTelescopeLive } from "@/lib/use-telescope-live";
+
+import { RequestDetailSlideOver } from "@/components/telescope/request-detail-slide-over";
 
 // ── Helper components ────────────────────────────────────────────────────────
 
@@ -91,109 +93,6 @@ function ExportCsvButton({ rows, filename }: { readonly rows: readonly RequestLo
 function ColumnTogglePanel(): React.JSX.Element {
 	return <></>;
 }
-
-function RequestDetailSlideOver({
-	requestId,
-	onClose,
-	onFilterUser,
-}: {
-	readonly requestId: string;
-	readonly onClose: () => void;
-	readonly onFilterUser: (userId: string | null) => void;
-}): React.JSX.Element {
-	const { api } = useAuth();
-	const detailQuery = api.telescope.requestDetail.useQuery({ id: requestId });
-	const detail = detailQuery.data?.data;
-	const req = detail?.request;
-
-	const handleFilterAndClose = useCallback((): void => {
-		if (req?.userId != null) {
-			onFilterUser(req.userId);
-			onClose();
-		}
-	}, [onFilterUser, onClose, req]);
-
-	return (
-		<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }} className="fixed inset-0 z-50 flex justify-end">
-			<motion.div
-				initial={{ opacity: 0 }}
-				animate={{ opacity: 1 }}
-				exit={{ opacity: 0 }}
-				transition={{ duration: 0.15 }}
-				className="absolute inset-0 bg-black/40"
-				onClick={onClose}
-			/>
-			<motion.div
-				initial={{ x: "100%" }}
-				animate={{ x: 0 }}
-				exit={{ x: "100%" }}
-				transition={{ type: "spring", damping: 30, stiffness: 300 }}
-				className="relative z-10 ml-auto flex h-full w-full max-w-lg flex-col overflow-y-auto bg-background shadow-xl">
-				<div className="flex items-center justify-between border-b px-4 py-3">
-					<h2 className="text-sm font-semibold">Request Detail</h2>
-					<Button variant="ghost" size="sm" onClick={onClose}>
-						<X className="size-4" />
-					</Button>
-				</div>
-				<div className="flex-1 p-4">
-					{detailQuery.isLoading ? (
-						<div className="space-y-3">
-							<Skeleton className="h-4 w-full" />
-							<Skeleton className="h-4 w-3/4" />
-							<Skeleton className="h-20 w-full" />
-						</div>
-					) : detail === undefined ? (
-						<p className="text-sm text-muted-foreground">Not found.</p>
-					) : (
-						<div className="space-y-4 text-sm">
-							{req != null ? (
-								<>
-									<div className="flex items-center gap-2">
-										<span className="font-mono text-xs font-semibold">{req.method}</span>
-										<span className="font-mono text-xs">{req.path}</span>
-									</div>
-									<div className="grid grid-cols-2 gap-2">
-										<div>
-											<span className="text-muted-foreground">Status:</span> <span className="font-mono">{req.statusCode ?? "—"}</span>
-										</div>
-										<div>
-											<span className="text-muted-foreground">Duration:</span> <span className="font-mono">{durationLabel(req.durationMs)}</span>
-										</div>
-										<div>
-											<span className="text-muted-foreground">User:</span> <span>{req.userEmail ?? req.userId ?? "anon"}</span>
-										</div>
-										<div>
-											<span className="text-muted-foreground">Time:</span> <span>{formatTime(req.createdAt)}</span>
-										</div>
-									</div>
-									{req.queryString != null && req.queryString.length > 0 ? (
-										<div>
-											<p className="mb-1 text-xs font-medium text-muted-foreground">Query params</p>
-											<pre className="overflow-auto rounded bg-muted p-2 font-mono text-xs">{req.queryString}</pre>
-										</div>
-									) : null}
-									{req.requestBody != null ? (
-										<div>
-											<p className="mb-1 text-xs font-medium text-muted-foreground">Body</p>
-											<pre className="overflow-auto rounded bg-muted p-2 font-mono text-xs">
-												{typeof req.requestBody === "string" ? req.requestBody : JSON.stringify(req.requestBody, null, 2)}
-											</pre>
-										</div>
-									) : null}
-									{req.userId != null ? (
-										<Button variant="outline" size="sm" className="text-xs" onClick={handleFilterAndClose}>
-											Filter by this user
-										</Button>
-									) : null}
-								</>
-							) : null}
-						</div>
-					)}
-				</div>
-			</motion.div>
-		</motion.div>
-	);
-} // ── Helper components ────────────────────────────────────────────────────────
 
 function RequestRowInfoButton({ id, onOpen }: { readonly id: string; readonly onOpen: (id: string) => void }): React.JSX.Element {
 	const handleClick = useCallback((): void => {
@@ -723,7 +622,9 @@ function RequestsContent({ initialEnvelope }: { readonly initialEnvelope: Envelo
 				))}
 			</div>{" "}
 			<AnimatePresence>
-				{displayId !== null ? <RequestDetailSlideOver key={displayId} requestId={displayId} onClose={closeSlideOver} onFilterUser={handleFilterUser} /> : null}
+				{displayId !== null ? (
+					<RequestDetailSlideOver key={displayId} requestId={displayId} onClose={closeSlideOver} onFilterUser={handleFilterUser} onNavigateRequest={openSlideOver} />
+				) : null}
 			</AnimatePresence>
 		</div>
 	);

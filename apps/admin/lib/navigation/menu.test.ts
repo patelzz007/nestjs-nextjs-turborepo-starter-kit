@@ -252,7 +252,7 @@ describe("buildSidebarView", () => {
 
 describe("flattenMenuItems", () => {
 	it("flattens nested items with breadcrumbs and skips disabled ones", () => {
-		const acc: { title: string; url: string; section: string; breadcrumb: readonly string[] }[] = [];
+		const acc: { id: string; title: string; url: string; section: string; breadcrumb: readonly string[] }[] = [];
 		flattenMenuItems(ITEMS, "Main", [], acc);
 		expect(acc.map((entry) => entry.title)).toEqual(["Settings", "General", "Security", "Docs"]);
 		expect(acc[1]?.breadcrumb).toEqual(["Settings", "General"]);

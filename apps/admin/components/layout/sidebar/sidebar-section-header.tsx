@@ -7,6 +7,17 @@ import { cn } from "@workspace/ui/lib/utils";
 
 import { formatSidebarLabel, type AdminSidebarLabels } from "@/lib/sidebar-labels";
 
+export type SectionColor = "blue" | "green" | "amber" | "rose" | "purple" | "teal";
+
+const SECTION_COLOR_MAP: Record<SectionColor, string> = {
+	blue: "bg-blue-500",
+	green: "bg-emerald-500",
+	amber: "bg-amber-500",
+	rose: "bg-rose-500",
+	purple: "bg-purple-500",
+	teal: "bg-teal-500",
+};
+
 export interface SidebarSectionHeaderProps {
 	readonly title: string;
 	readonly index: number;
@@ -15,6 +26,7 @@ export interface SidebarSectionHeaderProps {
 	readonly allTitles: readonly string[];
 	readonly isActiveSection: boolean;
 	readonly labels: AdminSidebarLabels;
+	readonly color?: SectionColor;
 	readonly onMoveSectionUp: (title: string, allTitles: readonly string[]) => void;
 	readonly onMoveSectionDown: (title: string, allTitles: readonly string[]) => void;
 }
@@ -27,6 +39,7 @@ export function SidebarSectionHeader({
 	allTitles,
 	isActiveSection,
 	labels,
+	color,
 	onMoveSectionUp,
 	onMoveSectionDown,
 }: SidebarSectionHeaderProps): React.JSX.Element {
@@ -60,9 +73,10 @@ export function SidebarSectionHeader({
 
 	return (
 		<div data-sidebar-section-header="true" data-active-section={isActiveSection ? true : undefined} className="group/section-header mb-2 flex items-center gap-1 px-2">
+			{color !== undefined ? <span className={cn("inline-block size-1.5 shrink-0 rounded-full", SECTION_COLOR_MAP[color])} aria-hidden="true" /> : null}
 			<span
 				className={cn(
-					"truncate text-[length:var(--text-sidebar-section)] font-semibold transition-colors duration-200",
+					"truncate text-[length:var(--text-sidebar-section)] font-semibold transition-colors duration-200 motion-reduce:transition-none",
 					isActiveSection ? "text-sidebar-foreground" : "text-muted-foreground",
 				)}>
 				{title}

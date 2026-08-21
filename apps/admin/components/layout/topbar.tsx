@@ -3,7 +3,8 @@
 import { Avatar, AvatarFallback } from "@workspace/ui/components/display/avatar";
 import { Button } from "@workspace/ui/components/form/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@workspace/ui/components/overlay/dropdown-menu";
-import { Leaf, Menu, Search, Settings } from "lucide-react";
+import { SidebarTrigger } from "@workspace/ui/components/navigation/sidebar";
+import { Leaf, Search, Settings } from "lucide-react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import * as React from "react";
@@ -15,7 +16,6 @@ import { ThemeToggle } from "@/components/common/theme-toggle";
 import { Profile01 } from "@/components/settings/profile-01";
 import { SIDEBAR_MENU } from "@/lib/navigation/sidebar-menu";
 import { getInitials } from "@/lib/user-initials";
-import { useSidebar } from "@/stores/sidebar-store";
 import type { SidebarUser } from "@/lib/navigation/sidebar";
 
 // The command palette pulls in `cmdk` + the palette search index — code-split
@@ -26,20 +26,15 @@ const CommandPalette = dynamic(() => import("@/components/layout/command-palette
 export interface TopbarProps {
 	readonly user: SidebarUser;
 	readonly onLogout: () => void;
-	readonly setIsMobileMenuOpen: (isOpen: boolean) => void;
 }
 
 /**
- * Top bar shown above the main content: mobile menu + sidebar toggle, brand
- * (when the sidebar is collapsed), command-palette search, notifications,
- * network status, theme toggle, settings, and the profile dropdown.
- */ export function Topbar({ user, onLogout, setIsMobileMenuOpen }: TopbarProps): React.JSX.Element {
-	const { toggle } = useSidebar();
+ * Top bar shown above the main content: sidebar toggle, brand (when collapsed),
+ * command-palette search, notifications, network status, theme toggle, settings,
+ * and the profile dropdown.
+ */
+export function Topbar({ user, onLogout }: TopbarProps): React.JSX.Element {
 	const [commandOpen, setCommandOpen] = React.useState(false);
-
-	const handleOpenMobileMenu = React.useCallback((): void => {
-		setIsMobileMenuOpen(true);
-	}, [setIsMobileMenuOpen]);
 
 	const handleOpenCommand = React.useCallback((): void => {
 		setCommandOpen(true);
@@ -74,15 +69,7 @@ export interface TopbarProps {
 			<div className="flex h-14 w-full items-center justify-between border-b border-sidebar-border bg-background px-2 sm:px-4">
 				{/* Left side */}
 				<div className="flex min-w-0 items-center">
-					{/* Mobile menu button */}
-					<button type="button" onClick={handleOpenMobileMenu} className="mr-2 rounded-md p-2 transition-colors duration-200 hover:bg-muted lg:hidden" aria-label="Open menu">
-						<Menu className="size-5 text-muted-foreground" />
-					</button>
-
-					{/* Desktop sidebar toggle */}
-					<button type="button" onClick={toggle} className="mr-2 hidden rounded-md p-2 transition-colors duration-200 hover:bg-muted lg:block" aria-label="Toggle sidebar">
-						<Menu className="size-5 text-muted-foreground" />
-					</button>
+					<SidebarTrigger className="mr-2" />
 
 					{/* Brand — ALWAYS rendered (no JS media-query flash on reload). Its
 					    visibility is pure CSS and MOBILE-ONLY: shown below `lg` where

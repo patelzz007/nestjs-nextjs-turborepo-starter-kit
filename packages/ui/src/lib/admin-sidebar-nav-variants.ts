@@ -31,7 +31,7 @@ export const adminSidebarNavIconVariants = cva("mr-3 h-4 w-4 shrink-0 transition
 	},
 });
 
-export const adminSidebarNavChevronVariants = cva("h-3.5 w-3.5 shrink-0 transition-[transform,color] duration-200 ease-out", {
+export const adminSidebarNavChevronVariants = cva("h-3.5 w-3.5 shrink-0 transition-[transform,color] duration-200 ease-out motion-reduce:transition-none", {
 	variants: {
 		expanded: {
 			true: "",

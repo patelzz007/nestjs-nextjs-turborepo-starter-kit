@@ -28,6 +28,8 @@ interface SidebarContextProps {
 	isMobile: boolean;
 	toggleSidebar: () => void;
 	labels: SidebarLabels;
+	/** Notification counts keyed by menu item id — consumed by `SidebarMenuBadge`. */
+	badges: Readonly<Record<string, string | number>>;
 }
 
 const SidebarContext = React.createContext<SidebarContextProps | null>(null);
@@ -50,9 +52,10 @@ const SidebarProvider = React.forwardRef<
 		labels: SidebarLabels;
 		storage?: SidebarStorageAdapter;
 		keyboardShortcut?: string;
+		badges?: Readonly<Record<string, string | number>>;
 	}
 >(function SidebarProvider(
-	{ defaultOpen = true, open: openProp, onOpenChange: setOpenProp, className, style, children, labels, storage, keyboardShortcut = SIDEBAR_KEYBOARD_SHORTCUT, ...props },
+	{ defaultOpen = true, open: openProp, onOpenChange: setOpenProp, className, style, children, labels, storage, keyboardShortcut = SIDEBAR_KEYBOARD_SHORTCUT, badges = {}, ...props },
 	ref,
 ): React.JSX.Element {
 	const isMobile = useIsMobile();
@@ -74,9 +77,11 @@ const SidebarProvider = React.forwardRef<
 			} else {
 				setOpenState(nextOpen);
 			}
-			resolvedStorage.write(nextOpen);
+			if (isStorageBacked) {
+				resolvedStorage.write(nextOpen);
+			}
 		},
-		[setOpenProp, resolvedStorage],
+		[setOpenProp, resolvedStorage, isStorageBacked],
 	);
 
 	const toggleSidebar = React.useCallback((): void => {
@@ -112,8 +117,9 @@ const SidebarProvider = React.forwardRef<
 			setOpenMobile,
 			toggleSidebar,
 			labels,
+			badges,
 		}),
-		[state, open, setOpen, isMobile, openMobile, setOpenMobile, toggleSidebar, labels],
+		[state, open, setOpen, isMobile, openMobile, setOpenMobile, toggleSidebar, labels, badges],
 	);
 
 	return (
@@ -259,7 +265,7 @@ const SidebarRail = React.forwardRef<HTMLButtonElement, React.ComponentProps<"bu
 			onClick={toggleSidebar}
 			title={labels.toggleSidebar}
 			className={cn(
-				"z-sidebar-rail absolute inset-y-0 hidden w-4 transition-all ease-linear group-data-[side=left]:-right-4 group-data-[side=right]:left-0 after:absolute after:inset-y-0 after:inset-s-1/2 after:w-0.5 hover:after:bg-sidebar-border sm:flex ltr:-translate-x-1/2 rtl:-translate-x-1/2",
+				"z-sidebar-rail absolute inset-y-0 hidden w-4 transition-all ease-linear group-data-[side=left]:-right-4 group-data-[side=right]:left-0 after:absolute after:inset-y-0 after:inset-s-1/2 after:w-1 hover:after:bg-sidebar-border sm:flex ltr:-translate-x-1/2 rtl:-translate-x-1/2",
 				"in-data-[side=left]:cursor-w-resize in-data-[side=right]:cursor-e-resize rtl:in-data-[side=left]:cursor-e-resize rtl:in-data-[side=right]:cursor-w-resize",
 				"[[data-side=left][data-state=collapsed]_&]:cursor-e-resize rtl:[[data-side=left][data-state=collapsed]_&]:cursor-w-resize [[data-side=right][data-state=collapsed]_&]:cursor-w-resize rtl:[[data-side=right][data-state=collapsed]_&]:cursor-e-resize",
 				"group-data-[collapsible=offcanvas]:translate-x-0 group-data-[collapsible=offcanvas]:after:inset-s-full hover:group-data-[collapsible=offcanvas]:bg-sidebar rtl:group-data-[collapsible=offcanvas]:translate-x-0",
@@ -445,7 +451,22 @@ function SidebarMenuAction({
 	});
 }
 
-function SidebarMenuBadge({ className, ...props }: React.ComponentProps<"div">): React.JSX.Element {
+function SidebarMenuBadge({
+	className,
+	itemId,
+	children,
+	...props
+}: React.ComponentProps<"div"> & {
+	/** When set, reads the badge value from `SidebarProvider` `badges` map. */
+	itemId?: string;
+}): React.JSX.Element | null {
+	const { badges } = useSidebar();
+	const badgeFromContext = itemId !== undefined ? badges[itemId] : undefined;
+	const content = children ?? (badgeFromContext !== undefined ? String(badgeFromContext) : null);
+	if (content === null || content === "") {
+		return null;
+	}
+
 	return (
 		<div
 			data-slot="sidebar-menu-badge"
@@ -454,8 +475,9 @@ function SidebarMenuBadge({ className, ...props }: React.ComponentProps<"div">):
 				"pointer-events-none absolute inset-e-1 flex h-5 min-w-5 items-center justify-center rounded-md px-1 text-xs font-medium text-sidebar-foreground tabular-nums select-none group-data-[collapsible=icon]:hidden peer-hover/menu-button:text-sidebar-accent-foreground peer-data-[size=default]/menu-button:top-1.5 peer-data-[size=lg]/menu-button:top-2.5 peer-data-[size=sm]/menu-button:top-1 peer-data-active/menu-button:text-sidebar-primary-foreground",
 				className,
 			)}
-			{...props}
-		/>
+			{...props}>
+			{content}
+		</div>
 	);
 }
 
@@ -559,5 +581,5 @@ export {
 	useSidebar,
 };
 export type { SidebarLabels } from "@workspace/ui/lib/sidebar-labels";
-export { createCookieSidebarStorage, type SidebarStorageAdapter } from "@workspace/ui/lib/sidebar-storage";
+export { createCookieSidebarStorage, createNoopSidebarStorage, type SidebarStorageAdapter } from "@workspace/ui/lib/sidebar-storage";
 export { sidebarMenuButtonVariants, sidebarMenuSubButtonVariants } from "@workspace/ui/lib/sidebar-variants";

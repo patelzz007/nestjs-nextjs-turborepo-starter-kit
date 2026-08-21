@@ -6,6 +6,7 @@
    "sections": [
       {
          "title": "Main",
+         "color": "blue",
          "items": [
             {
                "title": "Overview",
@@ -189,6 +190,7 @@
 		},
       {
          "title": "Developer",
+         "color": "green",
          "items": [
             {
                "title": "Telescope",
@@ -256,6 +258,7 @@
       },
       {
          "title": "Documents",
+         "color": "amber",
          "items": [
             {
                "title": "Project Alpha",

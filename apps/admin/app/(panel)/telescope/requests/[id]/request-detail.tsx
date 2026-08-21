@@ -8,6 +8,7 @@
 // ============================================
 
 import { useAuth } from "@workspace/client/lib/auth";
+import { API_BASE_URL } from "@workspace/client/lib/api/config";
 
 import { Button } from "@workspace/ui/components/form/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
@@ -43,6 +44,7 @@ import { SnippetMenu } from "@/components/telescope/snippet-menu";
 import { SqlList } from "@/components/telescope/sql-list";
 import { Timeline } from "@/components/telescope/timeline";
 import { buildRequestSnippet, durationLabel, formatTime, snippetFormatLabel, statusTone, type RequestSnippetFormat } from "@/lib/telescope";
+import { fetchSnippetAccessToken } from "@/lib/telescope-snippet-auth";
 import { formatTimeOfDay24 } from "@/lib/dates";
 
 /** Key/value panel (headers) — one table, no per-row hooks. */
@@ -171,7 +173,8 @@ export default function TelescopeRequestDetailPage({ initialEnvelope }: { readon
 			if (detail === undefined) {
 				return;
 			}
-			const snippet: string = buildRequestSnippet(detail.request, format);
+			const accessToken = await fetchSnippetAccessToken();
+			const snippet: string = buildRequestSnippet(detail.request, format, { apiBaseUrl: API_BASE_URL, accessToken });
 			await navigator.clipboard.writeText(snippet);
 			toastMessage.success({ title: `${snippetFormatLabel(format)} snippet copied.` });
 		},
@@ -210,20 +213,12 @@ export default function TelescopeRequestDetailPage({ initialEnvelope }: { readon
 		if (detail === undefined) {
 			return;
 		}
-		const { request } = detail;
-		const url: string = request.queryString !== null ? `${request.path}?${request.queryString}` : request.path;
-		const parts: string[] = [`curl -X ${request.method} '${url}'`];
-		if (request.requestHeaders !== null) {
-			for (const [key, value] of Object.entries(request.requestHeaders)) {
-				parts.push(`  -H '${key}: ${value}'`);
-			}
-		}
-		if (request.requestBody !== null) {
-			parts.push(`  -d '${JSON.stringify(request.requestBody)}'`);
-		}
-		void navigator.clipboard.writeText(parts.join(" \\\n")).then((): void => {
-			toastMessage.success({ title: "cURL command copied." });
-		});
+		void (async (): Promise<void> => {
+			const accessToken = await fetchSnippetAccessToken();
+			const curl = buildRequestSnippet(detail.request, "curl", { apiBaseUrl: API_BASE_URL, accessToken });
+			await navigator.clipboard.writeText(curl);
+			toastMessage.success({ title: accessToken !== null ? "cURL command copied." : "cURL copied (sign in to include your access token)." });
+		})();
 	}, [detail]);
 
 	const headers = useMemo(

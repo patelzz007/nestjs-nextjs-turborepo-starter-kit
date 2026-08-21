@@ -37,6 +37,7 @@ export type SidebarMenuItem = z.output<typeof SidebarMenuItemSchema>;
 export const SidebarMenuSectionSchema = z.object({
 	title: z.string().min(1),
 	items: z.array(SidebarMenuItemSchema),
+	color: z.enum(["blue", "green", "amber", "rose", "purple", "teal"]).optional(),
 });
 
 export type SidebarMenuSection = z.output<typeof SidebarMenuSectionSchema>;
@@ -109,6 +110,7 @@ export type CompiledSidebarMenuItem = z.output<typeof CompiledSidebarMenuItemSch
 export const CompiledSidebarMenuSectionSchema = z.object({
 	title: z.string().min(1),
 	items: z.array(CompiledSidebarMenuItemSchema).readonly(),
+	color: z.enum(["blue", "green", "amber", "rose", "purple", "teal"]).optional(),
 });
 
 export type CompiledSidebarMenuSection = z.output<typeof CompiledSidebarMenuSectionSchema>;

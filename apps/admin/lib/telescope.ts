@@ -6,6 +6,7 @@
 // consistent (rule 22: no hardcoded colors in components).
 
 import type { RequestLogEntry, TelescopePiiCategory, TelescopeRange, TelescopeSpanKind, TelescopeStreamEvent } from "@workspace/shared";
+import { z } from "zod";
 
 import { formatDateTime, timeAgo as timeAgoLabel } from "@/lib/dates";
 
@@ -179,12 +180,55 @@ export function snippetFormatLabel(format: RequestSnippetFormat): string {
 	return SNIPPET_FORMAT_LABELS[format];
 }
 
+export const RequestSnippetContextSchema = z
+	.object({
+		apiBaseUrl: z.string().min(1),
+		accessToken: z.string().nullable(),
+	})
+	.strict();
+
+export type RequestSnippetContext = z.output<typeof RequestSnippetContextSchema>;
+
+/** Absolute API URL for a captured request (`http://localhost:8080/api/v1/...`). */
+export function buildRequestUrl(request: RequestLogEntry, apiBaseUrl: string): string {
+	const base: string = apiBaseUrl.endsWith("/") ? apiBaseUrl.slice(0, -1) : apiBaseUrl;
+	const path: string = request.path.startsWith("/") ? request.path : `/${request.path}`;
+	const absolute = `${base}${path}`;
+	if (request.queryString !== null && request.queryString.length > 0) {
+		return `${absolute}?${request.queryString}`;
+	}
+	return absolute;
+}
+
+const AUTH_HEADER_NAMES: readonly string[] = ["authorization", "cookie"];
+
+function collectSnippetHeaders(request: RequestLogEntry, accessToken: string | null): readonly { readonly key: string; readonly value: string }[] {
+	const headers: { key: string; value: string }[] = [];
+	const seen: Set<string> = new Set<string>();
+
+	if (request.requestHeaders !== null) {
+		for (const [key, value] of Object.entries(request.requestHeaders)) {
+			const lower: string = key.toLowerCase();
+			if (AUTH_HEADER_NAMES.includes(lower)) {
+				continue;
+			}
+			headers.push({ key, value });
+			seen.add(lower);
+		}
+	}
+
+	if (accessToken !== null && !seen.has("authorization")) {
+		headers.unshift({ key: "Authorization", value: `Bearer ${accessToken}` });
+	}
+
+	return headers;
+}
+
 /** Builds a ready-to-run request snippet from a captured request. */
-export function buildRequestSnippet(request: RequestLogEntry, format: RequestSnippetFormat): string {
-	const url: string = request.queryString !== null ? `${request.path}?${request.queryString}` : request.path;
+export function buildRequestSnippet(request: RequestLogEntry, format: RequestSnippetFormat, context: RequestSnippetContext): string {
+	const url: string = buildRequestUrl(request, context.apiBaseUrl);
 	const method: string = request.method.toUpperCase();
-	const headers: readonly { readonly key: string; readonly value: string }[] =
-		request.requestHeaders !== null ? Object.entries(request.requestHeaders).map(([key, value]) => ({ key, value })) : [];
+	const headers: readonly { readonly key: string; readonly value: string }[] = collectSnippetHeaders(request, context.accessToken);
 	const body: string = request.requestBody !== null ? JSON.stringify(request.requestBody) : "";
 
 	if (format === "curl") {

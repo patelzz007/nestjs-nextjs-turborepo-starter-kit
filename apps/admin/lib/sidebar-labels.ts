@@ -17,6 +17,9 @@ export interface AdminSidebarLabels {
 	readonly moveSectionDownAriaLabel: string;
 	readonly moveSectionUpTitle: string;
 	readonly moveSectionDownTitle: string;
+	readonly pinnedSectionTitle: string;
+	readonly workspaceSwitcherAriaLabel: string;
+	readonly workspaceSwitcherPlaceholder: string;
 }
 
 export const ADMIN_SIDEBAR_LABELS: AdminSidebarLabels = {
@@ -33,6 +36,9 @@ export const ADMIN_SIDEBAR_LABELS: AdminSidebarLabels = {
 	moveSectionDownAriaLabel: "Move {title} section down",
 	moveSectionUpTitle: "Move section up (Alt+↑)",
 	moveSectionDownTitle: "Move section down (Alt+↓)",
+	pinnedSectionTitle: "Pinned",
+	workspaceSwitcherAriaLabel: "Switch workspace",
+	workspaceSwitcherPlaceholder: "Select workspace",
 };
 
 export function formatSidebarLabel(template: string, values: Readonly<Record<string, string>>): string {

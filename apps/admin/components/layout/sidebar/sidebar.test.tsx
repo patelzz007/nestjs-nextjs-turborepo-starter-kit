@@ -7,14 +7,40 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 import { compileMenu } from "@/lib/navigation/sidebar-menu";
-import { buildSidebarView, type SidebarView } from "@/lib/navigation/menu";
+import { buildSidebarView, type SidebarView, type SearchableMenuItem } from "@/lib/navigation/menu";
 import { ADMIN_SIDEBAR_LABELS } from "@/lib/sidebar-labels";
 import { useSidebarStore } from "@/stores/sidebar-store";
 import type { SidebarMenuData } from "@/lib/navigation/sidebar";
 
-import { Sidebar } from "@/components/layout/sidebar";
+import { AdminSidebarPanel } from "@/components/layout/sidebar/sidebar";
+import { useRouteExpandedItems } from "@/components/layout/use-route-expanded-items";
+import { SidebarProvider } from "@workspace/ui/components/navigation/sidebar";
+import { DEFAULT_SIDEBAR_LABELS } from "@workspace/ui/lib/sidebar-labels";
+import { createNoopSidebarStorage } from "@workspace/ui/lib/sidebar-storage";
 
-const { pushMock, pathnameMock } = vi.hoisted(() => ({ pushMock: vi.fn<(href: string) => void>(), pathnameMock: vi.fn<() => string>() }));
+const { pushMock, pathnameMock, setOpenMobileMock } = vi.hoisted(() => ({
+	pushMock: vi.fn<(href: string) => void>(),
+	pathnameMock: vi.fn<() => string>(),
+	setOpenMobileMock: vi.fn<(open: boolean) => void>(),
+}));
+
+let harnessIsMobile = false;
+
+vi.mock("@workspace/ui/components/navigation/sidebar", async (importOriginal) => {
+	const actual = await importOriginal<typeof import("@workspace/ui/components/navigation/sidebar")>();
+	const useSidebarActual = actual.useSidebar;
+	return {
+		...actual,
+		useSidebar: (): ReturnType<typeof actual.useSidebar> => {
+			const context = useSidebarActual();
+			return {
+				...context,
+				setOpenMobile: setOpenMobileMock,
+				isMobile: harnessIsMobile,
+			};
+		},
+	};
+});
 
 vi.mock("next/navigation", () => ({
 	usePathname: (): string => pathnameMock(),
@@ -89,10 +115,10 @@ const COMPILED_MENU = compileMenu(MENU);
 
 interface HarnessProps {
 	readonly pathname: string;
-	readonly isMobileMenuOpen?: boolean;
 	readonly onLogout?: () => void;
-	readonly setIsMobileMenuOpen?: (isOpen: boolean) => void;
 	readonly onReportIssue?: () => void;
+	readonly isMobile?: boolean;
+	readonly pinnedItems?: readonly SearchableMenuItem[];
 }
 
 /**
@@ -102,23 +128,22 @@ interface HarnessProps {
  * typing in search / reordering sections re-renders with a fresh view, exactly
  * like the real layout.
  */
-function SidebarHarness({ pathname, isMobileMenuOpen = false, onLogout, setIsMobileMenuOpen, onReportIssue }: HarnessProps): React.JSX.Element {
+function SidebarHarness({ pathname, onLogout, onReportIssue, isMobile = false, pinnedItems = [] }: HarnessProps): React.JSX.Element {
+	harnessIsMobile = isMobile;
 	const searchQuery = useSidebarStore((s) => s.searchQuery);
 	const sectionOrder = useSidebarStore((s) => s.sectionOrder);
 	const setSearchQuery = useSidebarStore((s) => s.setSearchQuery);
 	const clearSearch = useSidebarStore((s) => s.clearSearch);
 	const storeExpandedItems = useSidebarStore((s) => s.expandedItems);
 	const setItemExpanded = useSidebarStore((s) => s.setItemExpanded);
+	const resetExpandedItems = useSidebarStore((s) => s.resetExpandedItems);
 	const moveSectionUp = useSidebarStore((s) => s.moveSectionUp);
 	const moveSectionDown = useSidebarStore((s) => s.moveSectionDown);
 	const view: SidebarView = React.useMemo(
 		() => buildSidebarView({ menu: COMPILED_MENU, pathname, sectionOrder, searchQuery, isHighlightParentItem: false }),
 		[pathname, sectionOrder, searchQuery],
 	);
-	const expandedItems = React.useMemo(
-		() => ({ ...storeExpandedItems, ...view.routeState.autoExpandedItems }),
-		[storeExpandedItems, view.routeState.autoExpandedItems],
-	);
+	const expandedItems = useRouteExpandedItems(pathname, storeExpandedItems, view.routeState.autoExpandedItems, resetExpandedItems);
 	const handleSearchChange = React.useCallback(
 		(event: React.ChangeEvent<HTMLInputElement>): void => {
 			setSearchQuery(event.target.value);
@@ -136,36 +161,71 @@ function SidebarHarness({ pathname, isMobileMenuOpen = false, onLogout, setIsMob
 	}, []);
 
 	return (
-		<Sidebar
-			user={{ name: "Ada Lovelace", email: "ada@example.com" }}
-			onLogout={onLogout ?? vi.fn()}
-			isMobileMenuOpen={isMobileMenuOpen}
-			setIsMobileMenuOpen={setIsMobileMenuOpen ?? vi.fn()}
-			footerActions={[{ icon: AlertCircle, label: "Report issue", onClick: onReportIssue ?? vi.fn() }]}
-			view={view}
-			labels={ADMIN_SIDEBAR_LABELS}
-			searchQuery={searchQuery}
-			onSearchChange={handleSearchChange}
-			onClearSearch={clearSearch}
-			expandedItems={expandedItems}
-			onToggleItem={handleToggleItem}
-			onNavigate={handleNavigate}
-			onMoveSectionUp={moveSectionUp}
-			onMoveSectionDown={moveSectionDown}
-			navigationKey={pathname}
-		/>
+		<SidebarProvider labels={DEFAULT_SIDEBAR_LABELS} storage={createNoopSidebarStorage()}>
+			<AdminSidebarPanel
+				user={{ name: "Ada Lovelace", email: "ada@example.com" }}
+				onLogout={onLogout ?? vi.fn()}
+				footerActions={[{ icon: AlertCircle, label: "Report issue", onClick: onReportIssue ?? vi.fn() }]}
+				view={view}
+				labels={ADMIN_SIDEBAR_LABELS}
+				searchQuery={searchQuery}
+				onSearchChange={handleSearchChange}
+				onClearSearch={clearSearch}
+				expandedItems={expandedItems}
+				onToggleItem={handleToggleItem}
+				onNavigate={handleNavigate}
+				onMoveSectionUp={moveSectionUp}
+				onMoveSectionDown={moveSectionDown}
+				pinnedItems={pinnedItems}
+				workspaces={[{ id: "default", name: "Admin Panel" }]}
+				activeWorkspaceId="default"
+				onWorkspaceChange={vi.fn()}
+				navigationKey={pathname}
+			/>
+		</SidebarProvider>
 	);
 }
 
 describe("Sidebar", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
+		harnessIsMobile = false;
 		pathnameMock.mockReturnValue("/");
 		useSidebarStore.setState({ isOpen: true, sectionOrder: null, expandedItems: {}, searchQuery: "" });
+		Object.defineProperty(window, "matchMedia", {
+			writable: true,
+			value: vi.fn().mockImplementation((query: string) => ({
+				matches: false,
+				media: query,
+				onchange: null,
+				addListener: vi.fn(),
+				removeListener: vi.fn(),
+				addEventListener: vi.fn(),
+				removeEventListener: vi.fn(),
+				dispatchEvent: vi.fn(),
+			})),
+		});
 	});
 
 	afterEach(() => {
 		cleanup();
+	});
+
+	it("renders nested children inside an indented submenu branch", () => {
+		render(<SidebarHarness pathname="/settings/general" />);
+		expect(screen.getByRole("button", { name: "General" })).toBeTruthy();
+	});
+
+	it("renders the pinned section even while the sidebar search is active", () => {
+		useSidebarStore.setState({ searchQuery: "settings" });
+		render(
+			<SidebarHarness
+				pathname="/"
+				pinnedItems={[{ id: "main-settings-general", title: "General", url: "/settings/general", section: "Main", breadcrumb: ["Settings", "General"] }]}
+			/>,
+		);
+		expect(screen.getByText("Pinned")).toBeTruthy();
+		expect(screen.getAllByRole("button", { name: "General" }).length).toBeGreaterThan(0);
 	});
 
 	it("renders sections, bottom items, the footer action and the user row", () => {
@@ -255,11 +315,10 @@ describe("Sidebar", () => {
 	});
 
 	it("navigates on leaf click and closes the mobile menu", () => {
-		const setIsMobileMenuOpen = vi.fn();
-		render(<SidebarHarness pathname="/" isMobileMenuOpen setIsMobileMenuOpen={setIsMobileMenuOpen} />);
+		render(<SidebarHarness pathname="/" isMobile />);
 		fireEvent.click(screen.getByRole("button", { name: "Support" }));
 		expect(pushMock).toHaveBeenCalledWith("/support");
-		expect(setIsMobileMenuOpen).toHaveBeenCalledWith(false);
+		expect(setOpenMobileMock).toHaveBeenCalledWith(false);
 	});
 
 	it("fires footer actions on click", () => {
@@ -273,7 +332,21 @@ describe("Sidebar", () => {
 describe("SidebarSectionHeader", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
+		harnessIsMobile = false;
 		useSidebarStore.setState({ isOpen: true, sectionOrder: null, expandedItems: {}, searchQuery: "" });
+		Object.defineProperty(window, "matchMedia", {
+			writable: true,
+			value: vi.fn().mockImplementation((query: string) => ({
+				matches: false,
+				media: query,
+				onchange: null,
+				addListener: vi.fn(),
+				removeListener: vi.fn(),
+				addEventListener: vi.fn(),
+				removeEventListener: vi.fn(),
+				dispatchEvent: vi.fn(),
+			})),
+		});
 	});
 
 	afterEach(() => {
@@ -344,11 +417,11 @@ describe("SidebarStore persistence", () => {
 		await useSidebarStore.persist.rehydrate();
 
 		const state = useSidebarStore.getState();
-		// Expansions always reset…
-		expect(state.expandedItems).toEqual({});
-		// …and so does the search query…
+		// Expanded items are now persisted (capped at 20) — legacy expansions survive.
+		expect(state.expandedItems).toEqual({ "main-settings": true, "docs-docs-home": true });
+		// Search query is still session-only — resets on reload.
 		expect(state.searchQuery).toBe("");
-		// …while the user's real preferences (rail state, section order) survive.
+		// The user's real preferences (rail state, section order) survive.
 		expect(state.isOpen).toBe(false);
 		expect(state.sectionOrder).toEqual(["Docs", "Main"]);
 	});
@@ -383,7 +456,9 @@ describe("SidebarStore persistence", () => {
 		// tolerates the session-only keys being present so we can assert absence.
 		const parsed = StoredPayloadSchema.safeParse(JSON.parse(raw ?? "{}"));
 		if (parsed.success) {
-			expect(parsed.data.state).not.toHaveProperty("expandedItems");
+			// expandedItems is now persisted (capped at 20).
+			expect(parsed.data.state).toHaveProperty("expandedItems");
+			// searchQuery is still session-only — never persisted.
 			expect(parsed.data.state).not.toHaveProperty("searchQuery");
 			// The user's genuine preferences still persist.
 			expect(parsed.data.state.isOpen).toBe(false);

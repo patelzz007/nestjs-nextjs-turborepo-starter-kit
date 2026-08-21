@@ -4,7 +4,7 @@
 	--z-toast: 60;
 	--z-sidebar: 10;
 	--z-sidebar-rail: 20;
-	--sidebar-width: 16rem;
+	--sidebar-width: 18rem;
 	--sidebar-width-mobile: 18rem;
 	--sidebar-width-icon: 3rem;
 	--text-sidebar-caption: 0.6875rem;
@@ -59,7 +59,7 @@
 	--sidebar-primary-foreground: oklch(1 0 0); /* white */
 	--sidebar-accent: oklch(0.93 0.006 286.375);
 	--sidebar-accent-foreground: oklch(0.21 0.006 285.885);
-	--sidebar-border: oklch(0.92 0.004 286.32);
+	--sidebar-border: oklch(0.82 0.004 286.32);
 	--sidebar-ring: oklch(0.705 0.015 286.067);
 	--sidebar-search-mark-bg: oklch(0.9 0.05 250);
 	--sidebar-search-mark-fg: oklch(0.4 0.16 260);
@@ -104,7 +104,7 @@
 	--sidebar-primary-foreground: oklch(0.279 0.041 260.031); /* slate-800 */
 	--sidebar-accent: oklch(0.274 0.006 286.033);
 	--sidebar-accent-foreground: oklch(0.985 0 0);
-	--sidebar-border: oklch(1 0 0 / 10%);
+	--sidebar-border: oklch(1 0 0 / 18%);
 	--sidebar-ring: oklch(0.552 0.016 285.938);
 	--sidebar-search-mark-bg: oklch(0.3 0.1 260);
 	--sidebar-search-mark-fg: oklch(0.8 0.1 250);
@@ -116,6 +116,9 @@
 	--z-toast: var(--z-toast);
 	--z-sidebar: var(--z-sidebar);
 	--z-sidebar-rail: var(--z-sidebar-rail);
+	--sidebar-width: var(--sidebar-width);
+	--sidebar-width-mobile: var(--sidebar-width-mobile);
+	--sidebar-width-icon: var(--sidebar-width-icon);
 	--color-auth-panel: var(--auth-panel);
 	--color-auth-panel-muted: var(--auth-panel-muted);
 	--color-auth-panel-foreground: var(--auth-panel-foreground);

@@ -64,6 +64,7 @@ export function compileMenu(data: SidebarMenuData): CompiledSidebarMenuData {
 		sections: data.sections.map((section) => ({
 			title: section.title,
 			items: compileItems(section.items, slugify(section.title), used),
+			color: section.color,
 		})),
 		bottomItems: compileItems(data.bottomItems, "", used),
 	};

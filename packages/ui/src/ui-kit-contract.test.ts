@@ -157,7 +157,8 @@ describe("UI kit sidebar contract (rules 9–11, 20, 22, 23)", () => {
 
 	it("forwards refs on layout controls", (): void => {
 		const source = readComponentSource("components/navigation/sidebar.tsx");
-		expect(source.includes("SidebarProvider = React.forwardRef"), "SidebarProvider must forwardRef").toBe(true);
+		expect(source.includes("badges: Readonly<Record<string, string | number>>"), "SidebarContext must expose badges map").toBe(true);
+		expect(source.includes("itemId?: string"), "SidebarMenuBadge must support itemId from context").toBe(true);
 		expect(source.includes("SidebarTrigger = React.forwardRef"), "SidebarTrigger must forwardRef").toBe(true);
 		expect(source.includes("SidebarInset = React.forwardRef"), "SidebarInset must forwardRef").toBe(true);
 	});

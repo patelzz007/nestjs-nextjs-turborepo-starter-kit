@@ -163,6 +163,7 @@ export function sectionHasActiveItem(items: readonly CompiledSidebarMenuItem[], 
 export const SidebarViewSectionSchema = z.object({
 	title: z.string(),
 	items: z.array(CompiledSidebarMenuItemSchema).readonly(),
+	color: z.enum(["blue", "green", "amber", "rose", "purple", "teal"]).optional(),
 });
 
 export type SidebarViewSection = z.output<typeof SidebarViewSectionSchema>;
@@ -207,7 +208,7 @@ export function buildSidebarView({ menu, pathname, sectionOrder, searchQuery, is
 	const routeState = computeRouteState(allItems, pathname, isHighlightParentItem);
 
 	const filteredSections: readonly SidebarViewSection[] = menu.sections
-		.map((section) => ({ title: section.title, items: filterItemsBySearch(section.items, searchQuery) }))
+		.map((section) => ({ title: section.title, items: filterItemsBySearch(section.items, searchQuery), color: section.color }))
 		.filter((section) => section.items.length > 0);
 
 	const bottomItems = filterItemsBySearch(menu.bottomItems, searchQuery);
@@ -246,6 +247,7 @@ export function buildSidebarView({ menu, pathname, sectionOrder, searchQuery, is
 
 /** Flattens the menu tree into searchable entries carrying their breadcrumb trail. */
 export const SearchableMenuItemSchema = z.object({
+	id: z.string(),
 	title: z.string(),
 	url: z.string(),
 	icon: z.string().optional(),
@@ -264,7 +266,7 @@ export function flattenMenuItems(items: readonly CompiledSidebarMenuItem[], sect
 		// The schema-derived `SearchableMenuItem.breadcrumb` is `readonly string[]`
 		// (`.readonly()`), so the spread is a defensive mutable copy that stays
 		// assignable either way.
-		acc.push({ title: item.title, url: item.url, icon: item.icon, section, breadcrumb: [...currentBreadcrumb] });
+		acc.push({ id: item.id, title: item.title, url: item.url, icon: item.icon, section, breadcrumb: [...currentBreadcrumb] });
 		const children = item.children;
 		if (children !== undefined) {
 			flattenMenuItems(children, section, currentBreadcrumb, acc);

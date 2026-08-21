@@ -31,19 +31,20 @@ export interface SidebarState {
 	readonly setItemExpanded: (itemId: string, expanded: boolean) => void;
 	readonly setSearchQuery: (query: string) => void;
 	readonly clearSearch: () => void;
+	readonly resetExpandedItems: () => void;
 }
 
 const STORAGE_KEY = "admin-sidebar-state";
 
 /**
- * The persisted payload, as far as we'll trust it. `expandedItems` is
- * deliberately absent: legacy payloads written before the reset-on-reload
- * behavior still carry it, and the `merge` below drops it so a refresh always
- * restores the default menu.
+ * The persisted payload — `isOpen`, `sectionOrder`, and up to 20
+ * `expandedItems` (top-level branches the user manually opened). Deeper
+ * expansions are dropped on persist to keep storage bounded.
  */
 const PersistedSidebarSchema = z.object({
 	isOpen: z.boolean().optional(),
 	sectionOrder: z.array(z.string()).nullable().optional(),
+	expandedItems: z.record(z.string(), z.boolean()).optional(),
 });
 
 /**
@@ -129,6 +130,9 @@ export const useSidebarStore = create<SidebarState>()(
 			clearSearch: (): void => {
 				set({ searchQuery: "" });
 			},
+			resetExpandedItems: (): void => {
+				set({ expandedItems: {} });
+			},
 		}),
 		{
 			// Defaults to `localStorage` in v5 — no explicit storage needed.
@@ -139,30 +143,35 @@ export const useSidebarStore = create<SidebarState>()(
 			// from the SSR HTML (e.g. a persisted collapsed sidebar vs the default
 			// expanded one) and trigger a React hydration mismatch. Hydration is
 			// instead kicked off once after mount in `DashboardLayout`.
-			skipHydration: true,
-			// `searchQuery` AND `expandedItems` are deliberately NOT persisted —
-			// search and menu expansions reset on every reload (route-driven
-			// auto-expansion still opens the active branch). `isOpen` and
-			// `sectionOrder` survive. Missing keys in old persisted payloads keep
-			// their defaults.
-			partialize: (state): Pick<SidebarState, "isOpen" | "sectionOrder"> => ({
+			skipHydration: true,	// `expandedItems` is now persisted (max 20 entries) so commonly-used
+	// branches survive reloads. `searchQuery` is NOT persisted — search
+	// resets on every reload (route-driven auto-expansion still opens
+	// the active branch). `isOpen` and `sectionOrder` survive.
+	partialize: (state): Pick<SidebarState, "isOpen" | "sectionOrder" | "expandedItems"> => {
+			// Cap at 20 persisted expansions to avoid bloat.
+			const entries = Object.entries(state.expandedItems);
+			const capped = Object.fromEntries(entries.slice(0, 20));
+			return {
 				isOpen: state.isOpen,
 				sectionOrder: state.sectionOrder,
-			}),
-			// zustand's default shallow merge would resurrect `expandedItems` from
-			// legacy localStorage payloads; this merge parses only the allowed keys
-			// (zod — no unchecked casts) and always resets expansions to `{}`.
-			merge: (persistedState, currentState) => {
-				const parsed = PersistedSidebarSchema.safeParse(persistedState);
-				if (!parsed.success) {
-					return currentState;
-				}
-				return {
-					...currentState,
-					...parsed.data,
-					expandedItems: {},
-				};
-			},
+				expandedItems: capped,
+			};
+		},
+		// zustand's default shallow merge would resurrect `expandedItems` from
+		// legacy localStorage payloads; this merge parses only the allowed keys
+		// (zod — no unchecked casts) and caps expansions at 20 entries.
+		merge: (persistedState, currentState) => {
+			const parsed = PersistedSidebarSchema.safeParse(persistedState);
+			if (!parsed.success) {
+				return currentState;
+			}
+			const persistedExpanded = parsed.data.expandedItems ?? {};
+			return {
+				...currentState,
+				...parsed.data,
+				expandedItems: Object.fromEntries(Object.entries(persistedExpanded).slice(0, 20)),
+			};
+		},
 		},
 	),
 );

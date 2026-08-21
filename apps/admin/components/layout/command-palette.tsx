@@ -410,7 +410,7 @@ export function CommandPalette({ open: externalOpen, setOpen: externalSetOpen }:
 						<div className="flex flex-wrap gap-1.5 px-4 pb-1">
 							{pinnedItems.map((pinned) => (
 								<button
-									key={pinned.url}
+									key={pinned.id}
 									type="button"
 									data-url={pinned.url}
 									onClick={handleSelectChip}
@@ -542,7 +542,7 @@ export function CommandPalette({ open: externalOpen, setOpen: externalSetOpen }:
 														const itemIcon = renderMenuIcon(item.icon, "size-4");
 														return (
 															<CommandItem
-																key={item.url}
+																key={item.id}
 																value={item.url}
 																onSelect={handleSelectItem}
 																className="slide-in-from-bottom-0.5 flex animate-in items-center justify-between rounded-xl px-4 py-2.5 transition-all duration-75 fill-mode-both fade-in data-selected:bg-accent/40">

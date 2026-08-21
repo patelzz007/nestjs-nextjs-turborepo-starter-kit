@@ -43,3 +43,15 @@ export function createCookieSidebarStorage(options: CreateCookieSidebarStorageOp
 		},
 	};
 }
+
+/** No-op storage for controlled sidebars (parent owns persistence). */
+export function createNoopSidebarStorage(): SidebarStorageAdapter {
+	return {
+		read(): boolean | null {
+			return null;
+		},
+		write(): void {
+			/* noop */
+		},
+	};
+}
