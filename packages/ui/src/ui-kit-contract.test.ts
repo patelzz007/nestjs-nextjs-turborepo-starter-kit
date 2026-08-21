@@ -50,6 +50,7 @@ describe("UI kit forwardRef contract (rule 20)", () => {
 		"components/navigation/tabs.tsx",
 		"components/navigation/scroll-area.tsx",
 		"components/navigation/pagination.tsx",
+		"components/navigation/sidebar.tsx",
 		"components/form/lockout-countdown.tsx",
 		"components/layout/auth-layout.tsx",
 		"components/feedback/message.tsx",
@@ -114,6 +115,8 @@ describe("UI kit boundary types (rules 1–3)", () => {
 		"lib/data-table-labels.ts",
 		"lib/data-table-storage.ts",
 		"lib/data-table-export.ts",
+		"lib/sidebar-labels.ts",
+		"lib/sidebar-storage.ts",
 		"lib/alert-dialog-labels.ts",
 		"components/overlay/alert-dialog.tsx",
 		"components/form/combobox.tsx",
@@ -135,6 +138,33 @@ describe("UI kit inline prop contract (rule 16)", () => {
 		const source = readComponentSource("components/display/data-table.tsx");
 		expect(source.includes("...(onRowClick"), "data-table must not spread conditional onRowClick props").toBe(false);
 		expect(source.includes("...(draggable"), "data-table must not spread conditional draggable props").toBe(false);
+	});
+});
+
+describe("UI kit sidebar contract (rules 9–11, 20, 22, 23)", () => {
+	it("requires labels and avoids hardcoded toggle copy", (): void => {
+		const source = readComponentSource("components/navigation/sidebar.tsx");
+		expect(source.includes("labels: SidebarLabels"), "SidebarProvider must require labels").toBe(true);
+		expect(source.includes("Toggle Sidebar"), "sidebar must not hardcode toggle label").toBe(false);
+	});
+
+	it("uses z-sidebar tokens instead of raw z-10/z-20", (): void => {
+		const source = readComponentSource("components/navigation/sidebar.tsx");
+		expect(source.includes("z-10"), "sidebar must not use z-10").toBe(false);
+		expect(source.includes("z-20"), "sidebar must not use z-20").toBe(false);
+		expect(source.includes("z-sidebar"), "sidebar must use z-sidebar token").toBe(true);
+	});
+
+	it("forwards refs on layout controls", (): void => {
+		const source = readComponentSource("components/navigation/sidebar.tsx");
+		expect(source.includes("SidebarProvider = React.forwardRef"), "SidebarProvider must forwardRef").toBe(true);
+		expect(source.includes("SidebarTrigger = React.forwardRef"), "SidebarTrigger must forwardRef").toBe(true);
+		expect(source.includes("SidebarInset = React.forwardRef"), "SidebarInset must forwardRef").toBe(true);
+	});
+
+	it("defines CVA state on menu button variants", (): void => {
+		const source = readLibSource("lib/sidebar-variants.ts");
+		expect(source.includes("state:"), "sidebar-variants must define state").toBe(true);
 	});
 });
 

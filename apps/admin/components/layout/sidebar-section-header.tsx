@@ -5,32 +5,20 @@ import * as React from "react";
 
 import { cn } from "@workspace/ui/lib/utils";
 
+import { formatSidebarLabel, type AdminSidebarLabels } from "@/lib/sidebar-labels";
+
 export interface SidebarSectionHeaderProps {
 	readonly title: string;
 	readonly index: number;
 	readonly isLast: boolean;
 	readonly isSearching: boolean;
 	readonly allTitles: readonly string[];
-	/** True when this section contains the currently active route (audit #16). */
 	readonly isActiveSection: boolean;
+	readonly labels: AdminSidebarLabels;
 	readonly onMoveSectionUp: (title: string, allTitles: readonly string[]) => void;
 	readonly onMoveSectionDown: (title: string, allTitles: readonly string[]) => void;
 }
 
-/**
- * Section header. Designed the way a human would lay out a nav: a plain
- * sentence-case label in a quiet gray, with generous spacing — no uppercase,
- * no tracking, no hairline divider, no accent bars (audit #16, third pass).
- * Sections are separated by whitespace, which is how real apps group nav.
- *
- * The active section is signalled by the gentlest possible cue: the label
- * simply brightens to the foreground color. The active *item* underneath is
- * the loud signal; the group label only whispers.
- *
- * The reorder controls stay hidden until hover OR keyboard focus (audit #10 —
- * hover-only made them unreachable on touch and invisible to keyboard users).
- * While either button has focus, `Alt+↑` / `Alt+↓` also move the section.
- */
 export function SidebarSectionHeader({
 	title,
 	index,
@@ -38,6 +26,7 @@ export function SidebarSectionHeader({
 	isSearching,
 	allTitles,
 	isActiveSection,
+	labels,
 	onMoveSectionUp,
 	onMoveSectionDown,
 }: SidebarSectionHeaderProps): React.JSX.Element {
@@ -49,8 +38,6 @@ export function SidebarSectionHeader({
 		onMoveSectionDown(title, allTitles);
 	}, [onMoveSectionDown, title, allTitles]);
 
-	// Alt+↑ / Alt+↓ works from either reorder button (whichever the keyboard
-	// user landed on — the buttons are the only focusable parts of the header).
 	const handleKeyDown = React.useCallback(
 		(event: React.KeyboardEvent<HTMLButtonElement>): void => {
 			if (!event.altKey) {
@@ -68,9 +55,16 @@ export function SidebarSectionHeader({
 		[onMoveSectionUp, onMoveSectionDown, title, allTitles],
 	);
 
+	const moveUpAriaLabel = formatSidebarLabel(labels.moveSectionUpAriaLabel, { title });
+	const moveDownAriaLabel = formatSidebarLabel(labels.moveSectionDownAriaLabel, { title });
+
 	return (
 		<div data-sidebar-section-header="true" data-active-section={isActiveSection ? true : undefined} className="group/section-header mb-2 flex items-center gap-1 px-2">
-			<span className={cn("truncate text-[13px] font-semibold transition-colors duration-200", isActiveSection ? "text-sidebar-foreground" : "text-muted-foreground")}>
+			<span
+				className={cn(
+					"truncate text-[length:var(--text-sidebar-section)] font-semibold transition-colors duration-200",
+					isActiveSection ? "text-sidebar-foreground" : "text-muted-foreground",
+				)}>
 				{title}
 			</span>
 
@@ -85,8 +79,8 @@ export function SidebarSectionHeader({
 							"rounded p-0.5 transition-colors",
 							index === 0 ? "cursor-not-allowed text-muted-foreground/25" : "text-muted-foreground/50 hover:bg-sidebar-accent hover:text-sidebar-foreground",
 						)}
-						title="Move section up (Alt+↑)"
-						aria-label={`Move ${title} section up`}>
+						title={labels.moveSectionUpTitle}
+						aria-label={moveUpAriaLabel}>
 						<ArrowUp className="h-3 w-3" />
 					</button>
 					<button
@@ -98,8 +92,8 @@ export function SidebarSectionHeader({
 							"rounded p-0.5 transition-colors",
 							isLast ? "cursor-not-allowed text-muted-foreground/25" : "text-muted-foreground/50 hover:bg-sidebar-accent hover:text-sidebar-foreground",
 						)}
-						title="Move section down (Alt+↓)"
-						aria-label={`Move ${title} section down`}>
+						title={labels.moveSectionDownTitle}
+						aria-label={moveDownAriaLabel}>
 						<ArrowDown className="h-3 w-3" />
 					</button>
 				</div>

@@ -8,6 +8,7 @@ import { z } from "zod";
 
 import { compileMenu } from "@/lib/navigation/sidebar-menu";
 import { buildSidebarView, type SidebarView } from "@/lib/navigation/menu";
+import { ADMIN_SIDEBAR_LABELS } from "@/lib/sidebar-labels";
 import { useSidebarStore } from "@/stores/sidebar-store";
 import type { SidebarMenuData } from "@/lib/navigation/sidebar";
 
@@ -104,10 +105,35 @@ interface HarnessProps {
 function SidebarHarness({ pathname, isMobileMenuOpen = false, onLogout, setIsMobileMenuOpen, onReportIssue }: HarnessProps): React.JSX.Element {
 	const searchQuery = useSidebarStore((s) => s.searchQuery);
 	const sectionOrder = useSidebarStore((s) => s.sectionOrder);
+	const setSearchQuery = useSidebarStore((s) => s.setSearchQuery);
+	const clearSearch = useSidebarStore((s) => s.clearSearch);
+	const storeExpandedItems = useSidebarStore((s) => s.expandedItems);
+	const setItemExpanded = useSidebarStore((s) => s.setItemExpanded);
+	const moveSectionUp = useSidebarStore((s) => s.moveSectionUp);
+	const moveSectionDown = useSidebarStore((s) => s.moveSectionDown);
 	const view: SidebarView = React.useMemo(
 		() => buildSidebarView({ menu: COMPILED_MENU, pathname, sectionOrder, searchQuery, isHighlightParentItem: false }),
 		[pathname, sectionOrder, searchQuery],
 	);
+	const expandedItems = React.useMemo(
+		() => ({ ...storeExpandedItems, ...view.routeState.autoExpandedItems }),
+		[storeExpandedItems, view.routeState.autoExpandedItems],
+	);
+	const handleSearchChange = React.useCallback(
+		(event: React.ChangeEvent<HTMLInputElement>): void => {
+			setSearchQuery(event.target.value);
+		},
+		[setSearchQuery],
+	);
+	const handleToggleItem = React.useCallback(
+		(itemId: string): void => {
+			setItemExpanded(itemId, !(expandedItems[itemId] ?? false));
+		},
+		[expandedItems, setItemExpanded],
+	);
+	const handleNavigate = React.useCallback((href: string): void => {
+		pushMock(href);
+	}, []);
 
 	return (
 		<Sidebar
@@ -117,6 +143,16 @@ function SidebarHarness({ pathname, isMobileMenuOpen = false, onLogout, setIsMob
 			setIsMobileMenuOpen={setIsMobileMenuOpen ?? vi.fn()}
 			footerActions={[{ icon: AlertCircle, label: "Report issue", onClick: onReportIssue ?? vi.fn() }]}
 			view={view}
+			labels={ADMIN_SIDEBAR_LABELS}
+			searchQuery={searchQuery}
+			onSearchChange={handleSearchChange}
+			onClearSearch={clearSearch}
+			expandedItems={expandedItems}
+			onToggleItem={handleToggleItem}
+			onNavigate={handleNavigate}
+			onMoveSectionUp={moveSectionUp}
+			onMoveSectionDown={moveSectionDown}
+			navigationKey={pathname}
 		/>
 	);
 }

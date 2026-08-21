@@ -2,6 +2,13 @@
 	--z-overlay: 50;
 	--z-popover: 50;
 	--z-toast: 60;
+	--z-sidebar: 10;
+	--z-sidebar-rail: 20;
+	--sidebar-width: 16rem;
+	--sidebar-width-mobile: 18rem;
+	--sidebar-width-icon: 3rem;
+	--text-sidebar-caption: 0.6875rem;
+	--text-sidebar-section: 0.8125rem;
 	--switch-height: 18.4px;
 	--switch-width: 32px;
 	--switch-height-sm: 14px;
@@ -107,6 +114,8 @@
 	--z-overlay: var(--z-overlay);
 	--z-popover: var(--z-popover);
 	--z-toast: var(--z-toast);
+	--z-sidebar: var(--z-sidebar);
+	--z-sidebar-rail: var(--z-sidebar-rail);
 	--color-auth-panel: var(--auth-panel);
 	--color-auth-panel-muted: var(--auth-panel-muted);
 	--color-auth-panel-foreground: var(--auth-panel-foreground);

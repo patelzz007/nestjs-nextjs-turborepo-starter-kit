@@ -7,12 +7,13 @@ import type { BreadcrumbItem } from "@workspace/ui/components/navigation/breadcr
 import { toastMessage } from "@workspace/ui/components/feedback/toast";
 import { cn } from "@workspace/ui/lib/utils";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import * as React from "react";
 
 import { useSidebarControl } from "@/components/layout/use-sidebar-control";
 import { useMediaQuery } from "@workspace/ui/hooks/use-media-query";
 import { buildSidebarView } from "@/lib/navigation/menu";
+import { ADMIN_SIDEBAR_LABELS } from "@/lib/sidebar-labels";
 import {
 	SIDEBAR_ASIDE_TRANSITION,
 	SIDEBAR_CONTENT_CLOSE_TRANSITION,
@@ -99,18 +100,83 @@ function ShellBreadcrumb(): React.JSX.Element {
 export function DashboardLayout({ user, onLogout, footerActions = [], children }: DashboardLayoutProps): React.JSX.Element {
 	useSidebarControl();
 	useTrailDocumentTitle();
+	const router = useRouter();
 	const isOpen = useSidebarStore((s) => s.isOpen);
 	const sectionOrder = useSidebarStore((s) => s.sectionOrder);
 	const searchQuery = useSidebarStore((s) => s.searchQuery);
+	const setSearchQuery = useSidebarStore((s) => s.setSearchQuery);
+	const clearSearch = useSidebarStore((s) => s.clearSearch);
+	const storeExpandedItems = useSidebarStore((s) => s.expandedItems);
+	const setItemExpanded = useSidebarStore((s) => s.setItemExpanded);
+	const moveSectionUp = useSidebarStore((s) => s.moveSectionUp);
+	const moveSectionDown = useSidebarStore((s) => s.moveSectionDown);
 	const pathname = usePathname();
 	const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
 
-	// Single render model shared by BOTH Sidebar instances (audit #20): route
-	// state, search results, and section order are computed once per change,
-	// never once per mounted sidebar.
 	const view = React.useMemo(
 		() => buildSidebarView({ menu: SIDEBAR_MENU, pathname, sectionOrder, searchQuery, isHighlightParentItem: false }),
 		[pathname, sectionOrder, searchQuery],
+	);
+
+	const expandedItems = React.useMemo(() => ({ ...storeExpandedItems, ...view.routeState.autoExpandedItems }), [storeExpandedItems, view.routeState.autoExpandedItems]);
+
+	const handleSearchChange = React.useCallback(
+		(event: React.ChangeEvent<HTMLInputElement>): void => {
+			setSearchQuery(event.target.value);
+		},
+		[setSearchQuery],
+	);
+
+	const handleClearSearch = React.useCallback((): void => {
+		clearSearch();
+	}, [clearSearch]);
+
+	const handleToggleItem = React.useCallback(
+		(itemId: string): void => {
+			setItemExpanded(itemId, !(expandedItems[itemId] ?? false));
+		},
+		[expandedItems, setItemExpanded],
+	);
+
+	const handleNavigate = React.useCallback(
+		(href: string): void => {
+			router.push(href);
+		},
+		[router],
+	);
+
+	const sidebarProps = React.useMemo(
+		() => ({
+			user,
+			onLogout,
+			footerActions,
+			view,
+			labels: ADMIN_SIDEBAR_LABELS,
+			searchQuery,
+			onSearchChange: handleSearchChange,
+			onClearSearch: handleClearSearch,
+			expandedItems,
+			onToggleItem: handleToggleItem,
+			onNavigate: handleNavigate,
+			onMoveSectionUp: moveSectionUp,
+			onMoveSectionDown: moveSectionDown,
+			navigationKey: pathname,
+		}),
+		[
+			user,
+			onLogout,
+			footerActions,
+			view,
+			searchQuery,
+			handleSearchChange,
+			handleClearSearch,
+			expandedItems,
+			handleToggleItem,
+			handleNavigate,
+			moveSectionUp,
+			moveSectionDown,
+			pathname,
+		],
 	);
 
 	// The sidebar store defers its localStorage rehydration (`skipHydration`)
@@ -131,7 +197,7 @@ export function DashboardLayout({ user, onLogout, footerActions = [], children }
 			<a
 				href="#main-content"
 				className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[60] focus:rounded-md focus:bg-background focus:px-3 focus:py-2 focus:text-sm focus:font-medium focus:text-foreground focus:shadow-lg">
-				Skip to content
+				{ADMIN_SIDEBAR_LABELS.skipToContent}
 			</a>
 			<div className={cn("flex h-svh w-full overflow-hidden bg-background")}>
 				{/* Desktop sidebar — animated width via framer-motion. `initial={false}` renders the `animate` values on SSR + the first client render (no entrance animation, no hydration mismatch); the tween only runs when `isOpen` changes afterwards. The inner content fades/slides in as the width reveals it (and fades out FIRST on collapse), so the reveal is a soft coordinated motion instead of a hard clip edge. `MotionConfig reducedMotion="user"` turns it into an instant snap for users who prefer reduced motion. */}
@@ -149,13 +215,13 @@ export function DashboardLayout({ user, onLogout, footerActions = [], children }
 						// constant so the aside tween and the inner layout can't drift.
 						style={{ width: DESKTOP_SIDEBAR_WIDTH }}
 						className={SIDEBAR_INNER_CLASS}>
-						<Sidebar user={user} onLogout={onLogout} isMobileMenuOpen={false} setIsMobileMenuOpen={handleCloseMobileMenu} footerActions={footerActions} view={view} />
+						<Sidebar {...sidebarProps} isMobileMenuOpen={false} setIsMobileMenuOpen={handleCloseMobileMenu} />
 					</motion.div>
 				</motion.aside>
 
 				{/* Mobile drawer */}
 				<MobileMenuOverlay open={isMobileMenuOpen} onClose={handleCloseMobileMenu}>
-					<Sidebar user={user} onLogout={onLogout} isMobileMenuOpen={isMobileMenuOpen} setIsMobileMenuOpen={setIsMobileMenuOpen} footerActions={footerActions} view={view} />
+					<Sidebar {...sidebarProps} isMobileMenuOpen={isMobileMenuOpen} setIsMobileMenuOpen={setIsMobileMenuOpen} />
 				</MobileMenuOverlay>
 
 				{/* Main column */}

@@ -26,8 +26,37 @@ Tokens live in `src/styles/tokens.css`. Z-index layers:
 - `z-overlay` — modal / dialog / sheet backdrops
 - `z-popover` — dropdowns, selects, tooltips
 - `z-toast` — toast stack (above overlays)
+- `z-sidebar` / `z-sidebar-rail` — fixed sidebar shell and resize rail
 
 Wrap the app with `ThemeProvider` from `@workspace/ui/components/theme-provider` for light/dark mode.
+
+## Sidebar (`navigation/sidebar.tsx`)
+
+Composable shadcn-style sidebar primitives. **Admin app uses a bespoke sidebar** (`apps/admin/components/layout/sidebar.tsx`) for search, section reorder, and Zustand — the UI kit sidebar targets simpler apps.
+
+```tsx
+import {
+	SidebarProvider,
+	Sidebar,
+	SidebarTrigger,
+	SidebarContent,
+	DEFAULT_SIDEBAR_LABELS,
+	createCookieSidebarStorage,
+} from "@workspace/ui/components/navigation/sidebar";
+
+<SidebarProvider labels={DEFAULT_SIDEBAR_LABELS} storage={createCookieSidebarStorage()}>
+	<Sidebar>
+		<SidebarContent>{/* menu */}</SidebarContent>
+	</Sidebar>
+	<SidebarTrigger />
+</SidebarProvider>
+```
+
+- **`labels`** (required on `SidebarProvider`) — toggle + mobile sheet copy
+- **`storage`** — optional `SidebarStorageAdapter`; defaults to cookie persistence
+- **`open` / `onOpenChange`** — controlled mode; parent can skip cookie adapter
+- **CVA** — `sidebarMenuButtonVariants` / `sidebarMenuSubButtonVariants` with `state: default | active | disabled`
+
 
 ## React Hook Form
 
@@ -83,7 +112,7 @@ src/
     navigation/ — sidebar, tabs, pagination, …
     feedback/   — alert, toast, spinner, …
     display/    — table, card, chart, …
-  lib/          — utils, field-variants, field-state
+  lib/          — utils, field-variants, field-state, sidebar-labels, sidebar-storage, sidebar-variants
   styles/       — tokens, globals
   hooks/
 ```
