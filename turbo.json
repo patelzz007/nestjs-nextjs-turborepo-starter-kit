@@ -1,0 +1,165 @@
+{
+	"$schema": "https://turbo.build/schema.json",
+	"ui": "tui",
+	"tasks": {
+		"build": {
+			"dependsOn": ["^build"],
+			"inputs": ["$TURBO_DEFAULT$", ".env*"],
+			"outputs": [".next/**", "!.next/cache/**", "dist/**"],
+			"env": [
+				"OBSERVE_APP_KEY",
+				"OBSERVE_APP_SECRET",
+				"OBSERVE_SERVICE_ID",
+				"OBSERVE_ENABLED",
+				"SWAGGER_ENABLED",
+				"HOST",
+				"APP_NAME",
+				"APP_URL",
+				"BACKUP_DOWNLOAD_SECRET",
+				"BACKUP_DOWNLOAD_TTL_MINUTES",
+				"BACKUP_DIR",
+				"BACKUP_ENABLED",
+				"BACKUP_EXCLUDE_TABLES",
+				"BACKUP_MIN_FREE_MB",
+				"BACKUP_RATE_LIMIT",
+				"BACKUP_RATE_LIMIT_SUPERADMIN",
+				"BACKUP_RETENTION_DAYS",
+				"BACKUP_DOWNLOAD_RATE_LIMIT",
+				"BCRYPT_SALT_ROUNDS",
+				"CORS_ORIGINS",
+				"DATABASE_URL",
+				"EMAIL_FROM_ADDRESS",
+				"EMAIL_MAX_ATTEMPTS",
+				"EMAIL_MODE",
+				"EMAIL_RATE_LIMIT_PER_MINUTE",
+				"EMAIL_REPLY_TO",
+				"EMAIL_TEST_TO",
+				"EMAIL_TIMEOUT_MS",
+				"EMAIL_VERIFICATION_SECRET",
+				"JWT_ACCESS_EXPIRY",
+				"JWT_ACCESS_SECRET",
+				"JWT_REFRESH_EXPIRY",
+				"JWT_REFRESH_SECRET",
+				"LOG_LEVEL",
+				"NEXT_PUBLIC_API_URL",
+				"NODE_ENV",
+				"PORT",
+				"TRUST_PROXY",
+				"RESEND_API_KEY",
+				"RESEND_WEBHOOK_SECRET",
+				"WEBHOOK_RATE_LIMIT_PER_MINUTE",
+				"WEBHOOK_URL"
+			]
+		},
+		"lint": {
+			"dependsOn": ["^lint"]
+		},
+		"format": {
+			"dependsOn": ["^format"],
+			"cache": false
+		},
+		"typecheck": {
+			"dependsOn": ["^build", "^typecheck"]
+		},
+		"test": {
+			"dependsOn": ["^build"]
+		},
+		"db:generate": {
+			"cache": false
+		},
+		"db:deploy": {
+			"cache": false,
+			"env": ["DATABASE_URL"]
+		},
+		"db:migrate": {
+			"cache": false,
+			"env": ["DATABASE_URL"],
+			"interactive": true
+		},
+		"db:migrate:create": {
+			"cache": false,
+			"env": ["DATABASE_URL"],
+			"interactive": true
+		},
+		"db:migrate:status": {
+			"cache": false,
+			"env": ["DATABASE_URL"]
+		},
+		"db:push": {
+			"cache": false,
+			"env": ["DATABASE_URL"]
+		},
+		"db:seed": {
+			"cache": false,
+			"env": ["DATABASE_URL"],
+			"dependsOn": ["db:generate", "db:deploy"]
+		},
+		"db:studio": {
+			"cache": false,
+			"env": ["DATABASE_URL"],
+			"persistent": true
+		},
+		"db:reset": {
+			"cache": false,
+			"env": ["DATABASE_URL"],
+			"dependsOn": ["db:generate"]
+		},
+		"deps:check": {
+			"cache": false
+		},
+		"deps:fix": {
+			"cache": false
+		},
+		"deps:list": {
+			"cache": false
+		},
+		"dev": {
+			"dependsOn": ["^build"],
+			"cache": false,
+			"persistent": true,
+			"env": [
+				"OBSERVE_APP_KEY",
+				"OBSERVE_APP_SECRET",
+				"OBSERVE_SERVICE_ID",
+				"OBSERVE_ENABLED",
+				"SWAGGER_ENABLED",
+				"HOST",
+				"NODE_ENV",
+				"DATABASE_URL",
+				"JWT_ACCESS_SECRET",
+				"JWT_ACCESS_EXPIRY",
+				"JWT_REFRESH_SECRET",
+				"JWT_REFRESH_EXPIRY",
+				"EMAIL_VERIFICATION_SECRET",
+				"BCRYPT_SALT_ROUNDS",
+				"RESEND_API_KEY",
+				"EMAIL_FROM_ADDRESS",
+				"EMAIL_MODE",
+				"EMAIL_TEST_TO",
+				"EMAIL_REPLY_TO",
+				"EMAIL_MAX_ATTEMPTS",
+				"EMAIL_TIMEOUT_MS",
+				"EMAIL_RATE_LIMIT_PER_MINUTE",
+				"RESEND_WEBHOOK_SECRET",
+				"WEBHOOK_RATE_LIMIT_PER_MINUTE",
+				"WEBHOOK_URL",
+				"APP_NAME",
+				"APP_URL",
+				"BACKUP_DOWNLOAD_SECRET",
+				"BACKUP_DOWNLOAD_TTL_MINUTES",
+				"BACKUP_DIR",
+				"BACKUP_ENABLED",
+				"BACKUP_EXCLUDE_TABLES",
+				"BACKUP_MIN_FREE_MB",
+				"BACKUP_RATE_LIMIT",
+				"BACKUP_RATE_LIMIT_SUPERADMIN",
+				"BACKUP_RETENTION_DAYS",
+				"PORT",
+				"CORS_ORIGINS",
+				"NEXT_PUBLIC_API_URL",
+				"ADMIN_EMAIL",
+				"ADMIN_PASSWORD"
+			]
+		}
+	}
+}

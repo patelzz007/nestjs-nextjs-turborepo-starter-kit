@@ -1,0 +1,963 @@
+openapi: 3.1.0
+info:
+  title: Rewards Platform API
+  version: 1.0.0-phase1
+  description: |
+    Phase 1 API for multi-merchant rewards marketplace (Malaysia pilot: KL + Melaka).
+    Locked via grill rounds 1–7. See `docs/rewards-platform-prd.md`.
+
+servers:
+  - url: https://api.example.com
+    description: Production
+  - url: https://staging-api.example.com
+    description: Staging
+  - url: http://localhost:3001
+    description: Local
+
+tags:
+  - name: Auth
+  - name: Rewards
+  - name: Claims
+  - name: Notifications
+  - name: Legal
+  - name: Redemptions
+  - name: Merchant Rewards
+  - name: Merchant API Keys
+  - name: Merchant Redemptions
+  - name: Admin
+
+security:
+  - cookieAuth: []
+  - bearerAuth: []
+
+paths:
+  /auth/signup:
+    post:
+      tags: [Auth]
+      security: []
+      summary: Register consumer account (email + password)
+      operationId: authSignup
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignupRequest'
+      responses:
+        '201':
+          description: Account created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      security: []
+      summary: Login with email and password
+      operationId: authLogin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Authenticated
+
+  /auth/me:
+    get:
+      tags: [Auth]
+      summary: Current user profile
+      operationId: authMe
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+
+  /v1/rewards:
+    get:
+      tags: [Rewards]
+      security: []
+      summary: List published rewards (marketplace)
+      operationId: listRewards
+      parameters:
+        - $ref: '#/components/parameters/search'
+        - $ref: '#/components/parameters/category'
+        - $ref: '#/components/parameters/city'
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/pageSize'
+        - name: ref
+          in: query
+          description: Referral attribution token (sets 7-day cookie)
+          schema:
+            type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RewardListResponse'
+
+  /v1/rewards/{rewardId}:
+    get:
+      tags: [Rewards]
+      security: []
+      summary: Reward detail
+      operationId: getReward
+      parameters:
+        - $ref: '#/components/parameters/rewardId'
+        - name: ref
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reward'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /v1/legal/accept:
+    post:
+      tags: [Legal]
+      summary: Accept Terms and Privacy (required before first claim)
+      operationId: acceptLegal
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [termsVersion, privacyVersion]
+              properties:
+                termsVersion:
+                  type: string
+                privacyVersion:
+                  type: string
+      responses:
+        '200':
+          description: Accepted
+
+  /v1/claims/otp:
+    post:
+      tags: [Claims]
+      summary: Request SMS OTP for claim (Twilio, 6 digits, 5 min TTL)
+      operationId: requestClaimOtp
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [rewardId, phone]
+              properties:
+                rewardId:
+                  type: string
+                phone:
+                  type: string
+                  description: E.164 format
+      responses:
+        '200':
+          description: OTP sent
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /v1/claims:
+    post:
+      tags: [Claims]
+      summary: Claim reward after OTP verification
+      operationId: createClaim
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [rewardId, phone, otp]
+              properties:
+                rewardId:
+                  type: string
+                phone:
+                  type: string
+                otp:
+                  type: string
+                  minLength: 6
+                  maxLength: 6
+                captchaToken:
+                  type: string
+                  description: Required after 2 failed OTP attempts
+      responses:
+        '201':
+          description: Claim created; inventory reserved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClaimCreatedResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          description: Terms not accepted
+        '409':
+          description: Already claimed or no inventory
+        '422':
+          description: Reward not claimable (expired, not published)
+    get:
+      tags: [Claims]
+      summary: My Rewards (user claims)
+      operationId: listClaims
+      parameters:
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/pageSize'
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, redeemed, expired]
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClaimListResponse'
+
+  /v1/claims/{claimId}/qr:
+    get:
+      tags: [Claims]
+      summary: QR payload and backup code for display
+      operationId: getClaimQr
+      parameters:
+        - $ref: '#/components/parameters/claimId'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClaimQrResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /v1/notifications:
+    get:
+      tags: [Notifications]
+      summary: List in-app notifications
+      operationId: listNotifications
+      parameters:
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/pageSize'
+        - name: unreadOnly
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationListResponse'
+
+  /v1/notifications/read:
+    post:
+      tags: [Notifications]
+      summary: Mark notifications read
+      operationId: markNotificationsRead
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                notificationIds:
+                  type: array
+                  items:
+                    type: string
+                markAll:
+                  type: boolean
+      responses:
+        '200':
+          description: Updated
+
+  /v1/redemptions/validate:
+    post:
+      tags: [Redemptions]
+      security:
+        - merchantApiKey: []
+      summary: Preview redemption (writes audit log; no state change)
+      operationId: validateRedemption
+      parameters:
+        - $ref: '#/components/parameters/terminalId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RedemptionTokenInput'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RedemptionPreview'
+        '404':
+          description: Invalid token or backup code
+        '409':
+          description: Already redeemed
+        '422':
+          description: Expired or wrong merchant
+
+  /v1/redemptions/confirm:
+    post:
+      tags: [Redemptions]
+      security:
+        - merchantApiKey: []
+      summary: Confirm redemption (idempotent)
+      operationId: confirmRedemption
+      parameters:
+        - $ref: '#/components/parameters/terminalId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/RedemptionTokenInput'
+                - type: object
+                  required: [idempotencyKey]
+                  properties:
+                    idempotencyKey:
+                      type: string
+                      format: uuid
+                      description: Must be stable on retry; mismatch with same token → 409
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RedemptionConfirmed'
+        '409':
+          description: Already redeemed or token/idempotencyKey mismatch
+        '422':
+          description: Expired or wrong merchant
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /v1/merchant/rewards:
+    get:
+      tags: [Merchant Rewards]
+      summary: List merchant rewards
+      operationId: merchantListRewards
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RewardListResponse'
+    post:
+      tags: [Merchant Rewards]
+      summary: Create reward (draft)
+      operationId: merchantCreateReward
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MerchantCreateRewardRequest'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reward'
+
+  /v1/merchant/rewards/{rewardId}:
+    patch:
+      tags: [Merchant Rewards]
+      summary: Update draft reward
+      operationId: merchantUpdateReward
+      parameters:
+        - $ref: '#/components/parameters/rewardId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MerchantUpdateRewardRequest'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reward'
+
+  /v1/merchant/rewards/{rewardId}/publish:
+    post:
+      tags: [Merchant Rewards]
+      summary: Submit for moderation (pending_review)
+      operationId: merchantPublishReward
+      parameters:
+        - $ref: '#/components/parameters/rewardId'
+      responses:
+        '200':
+          description: Moved to pending_review
+
+  /v1/merchant/api-keys:
+    get:
+      tags: [Merchant API Keys]
+      summary: List API keys (owner only)
+      operationId: merchantListApiKeys
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ApiKeySummary'
+    post:
+      tags: [Merchant API Keys]
+      summary: Create API key (plaintext shown once)
+      operationId: merchantCreateApiKey
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiKeyCreated'
+
+  /v1/merchant/api-keys/{keyId}/revoke:
+    post:
+      tags: [Merchant API Keys]
+      summary: Revoke API key
+      operationId: merchantRevokeApiKey
+      parameters:
+        - name: keyId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Revoked
+
+  /v1/merchant/redemptions:
+    get:
+      tags: [Merchant Redemptions]
+      summary: Redemption history (owner + cashier)
+      operationId: merchantListRedemptions
+      parameters:
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/pageSize'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MerchantRedemptionListResponse'
+
+  /v1/admin/invites:
+    post:
+      tags: [Admin]
+      summary: Send merchant invite (email + onboarding wizard)
+      operationId: adminCreateInvite
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, businessName, city]
+              properties:
+                email:
+                  type: string
+                  format: email
+                businessName:
+                  type: string
+                city:
+                  type: string
+                  enum: [Kuala Lumpur, Melaka]
+      responses:
+        '201':
+          description: Invite sent
+
+  /v1/admin/rewards/pending:
+    get:
+      tags: [Admin]
+      summary: Moderation queue
+      operationId: adminListPendingRewards
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RewardListResponse'
+
+  /v1/admin/rewards/{rewardId}/approve:
+    post:
+      tags: [Admin]
+      summary: Approve reward → published
+      operationId: adminApproveReward
+      parameters:
+        - $ref: '#/components/parameters/rewardId'
+      responses:
+        '200':
+          description: Published
+
+  /v1/admin/rewards/{rewardId}/reject:
+    post:
+      tags: [Admin]
+      summary: Reject reward
+      operationId: adminRejectReward
+      parameters:
+        - $ref: '#/components/parameters/rewardId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+      responses:
+        '200':
+          description: Rejected
+
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: access_token
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    merchantApiKey:
+      type: http
+      scheme: bearer
+      description: Merchant org API key
+
+  parameters:
+    rewardId:
+      name: rewardId
+      in: path
+      required: true
+      schema:
+        type: string
+    claimId:
+      name: claimId
+      in: path
+      required: true
+      schema:
+        type: string
+    terminalId:
+      name: X-Terminal-Id
+      in: header
+      required: true
+      schema:
+        type: string
+      description: POS terminal identifier for audit
+    search:
+      name: search
+      in: query
+      schema:
+        type: string
+    category:
+      name: category
+      in: query
+      schema:
+        type: string
+    city:
+      name: city
+      in: query
+      schema:
+        type: string
+        enum: [Kuala Lumpur, Melaka]
+    page:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    pageSize:
+      name: pageSize
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+
+  responses:
+    NotFound:
+      description: Not found
+    BadRequest:
+      description: Bad request
+    RateLimited:
+      description: Rate limit exceeded
+
+  schemas:
+    SignupRequest:
+      type: object
+      required: [email, password, fullName]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+        fullName:
+          type: string
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+
+    UserProfile:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+        fullName:
+          type: string
+        phone:
+          type: string
+          nullable: true
+        phoneVerifiedAt:
+          type: string
+          format: date-time
+          nullable: true
+        legalAcceptedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    RewardType:
+      type: string
+      enum: [discount, free_item]
+
+    RewardStatus:
+      type: string
+      enum: [draft, pending_review, published, expired, disabled]
+
+    Reward:
+      type: object
+      properties:
+        id:
+          type: string
+        merchantOrgId:
+          type: string
+        merchantName:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        rewardType:
+          $ref: '#/components/schemas/RewardType'
+        category:
+          type: string
+        city:
+          type: string
+        placeholderImageKey:
+          type: string
+          description: Stock image by category
+        quantityTotal:
+          type: integer
+        quantityRemaining:
+          type: integer
+        startDate:
+          type: string
+          format: date-time
+        expiryDate:
+          type: string
+          format: date-time
+        status:
+          $ref: '#/components/schemas/RewardStatus'
+        referralsEnabled:
+          type: boolean
+        referralPoolTotal:
+          type: integer
+          nullable: true
+        referralPoolRemaining:
+          type: integer
+          nullable: true
+        referrerRewardId:
+          type: string
+          nullable: true
+          description: Auto-cloned R′ when referrals enabled
+        shareUrl:
+          type: string
+          description: Includes attribution token for referrer
+
+    RewardListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Reward'
+        total:
+          type: integer
+        page:
+          type: integer
+        pageSize:
+          type: integer
+
+    ClaimStatus:
+      type: string
+      enum: [pending, redeemed, expired]
+
+    Claim:
+      type: object
+      properties:
+        id:
+          type: string
+        rewardId:
+          type: string
+        rewardTitle:
+          type: string
+        status:
+          $ref: '#/components/schemas/ClaimStatus'
+        claimedAt:
+          type: string
+          format: date-time
+        claimExpiresAt:
+          type: string
+          format: date-time
+        redeemedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    ClaimCreatedResponse:
+      type: object
+      properties:
+        claim:
+          $ref: '#/components/schemas/Claim'
+        qrDeepLink:
+          type: string
+        backupCode:
+          type: string
+          description: Shown once; 8 chars A-Z2-9 no ambiguous
+
+    ClaimQrResponse:
+      type: object
+      properties:
+        claimId:
+          type: string
+        qrPayload:
+          type: string
+          description: Opaque token for QR encoding
+        backupCode:
+          type: string
+        claimExpiresAt:
+          type: string
+          format: date-time
+        backupLockedUntil:
+          type: string
+          format: date-time
+          nullable: true
+          description: Set after 5 failed backup attempts
+
+    ClaimListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Claim'
+        total:
+          type: integer
+
+    Notification:
+      type: object
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+        title:
+          type: string
+        body:
+          type: string
+        readAt:
+          type: string
+          format: date-time
+          nullable: true
+        metadata:
+          type: object
+          additionalProperties: true
+        createdAt:
+          type: string
+          format: date-time
+
+    NotificationListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Notification'
+        unreadCount:
+          type: integer
+
+    RedemptionTokenInput:
+      type: object
+      properties:
+        token:
+          type: string
+          description: Opaque QR token
+        backupCode:
+          type: string
+          minLength: 8
+          maxLength: 8
+      description: Provide token OR backupCode
+
+    RedemptionPreview:
+      type: object
+      properties:
+        claimId:
+          type: string
+        rewardTitle:
+          type: string
+        rewardType:
+          $ref: '#/components/schemas/RewardType'
+        claimExpiresAt:
+          type: string
+          format: date-time
+        valid:
+          type: boolean
+
+    RedemptionConfirmed:
+      type: object
+      properties:
+        redemptionId:
+          type: string
+        claimId:
+          type: string
+        redeemedAt:
+          type: string
+          format: date-time
+        idempotencyKey:
+          type: string
+
+    MerchantCreateRewardRequest:
+      type: object
+      required: [title, description, rewardType, category, quantityTotal, expiryDate]
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        rewardType:
+          $ref: '#/components/schemas/RewardType'
+        category:
+          type: string
+        quantityTotal:
+          type: integer
+          minimum: 1
+        startDate:
+          type: string
+          format: date-time
+        expiryDate:
+          type: string
+          format: date-time
+        referralsEnabled:
+          type: boolean
+          default: true
+        referralPoolTotal:
+          type: integer
+          description: Required when referralsEnabled
+        referrerRewardTitle:
+          type: string
+          description: Optional override for auto-cloned R′ title
+
+    MerchantUpdateRewardRequest:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        referralsEnabled:
+          type: boolean
+        referralPoolTotal:
+          type: integer
+        referrerRewardTitle:
+          type: string
+
+    ApiKeySummary:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        revokedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    ApiKeyCreated:
+      type: object
+      properties:
+        id:
+          type: string
+        apiKey:
+          type: string
+          description: Plaintext shown once only
+        name:
+          type: string
+
+    MerchantRedemptionListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              redemptionId:
+                type: string
+              rewardTitle:
+                type: string
+              redeemedAt:
+                type: string
+                format: date-time
+              terminalId:
+                type: string
+              redemptionMethod:
+                type: string
+                enum: [scan, manual]
+        total:
+          type: integer

@@ -1,0 +1,54 @@
+import { Controller, Get } from "@nestjs/common";
+import { ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
+import { HealthResponseSchema, StringValueSchema, type HealthResponse } from "@workspace/shared";
+
+import { createWrappedDto } from "../../common/dto/response-wrapper";
+// @Public() is metadata-only (no DI) — HealthModule must NOT import AuthModule.
+// The global AuthGuard reads the public marker via Reflector and skips these
+// routes. Do not "fix" this into a module import.
+import { Public } from "../auth/decorators/public.decorator";
+
+import { HealthService, type DeepHealthResponse } from "./health.service";
+
+// ── Wrapped Response DTOs ────────────────────────────────────────────────
+
+const WrappedHelloResponse = createWrappedDto(StringValueSchema, "WrappedHelloResponse");
+const WrappedHealthResponse = createWrappedDto(HealthResponseSchema, "WrappedHealthResponse");
+
+/**
+ * App-level endpoints: `GET /` welcome message and `GET /health` health check.
+ * Both are public. The old root `AppController` also hosted `GET /session`
+ * (moved to `SessionStatusController` in the sessions module). Signup is only
+ * `POST /auth/signup` (throttled) — there is no root `POST /users` alias.
+ */
+@ApiTags("App")
+@Controller()
+export class HealthController {
+	constructor(private readonly healthService: HealthService) {}
+
+	// `GET /` + `GET /health` are infra plumbing, not versioned business
+	// endpoints — they stay at `/` and `/health` (no `apiPath()` prefix).
+	@Public()
+	@Get()
+	@ApiOperation({ summary: "Welcome message" })
+	@ApiOkResponse({ type: WrappedHelloResponse, description: "Welcome message" })
+	public getHello(): string {
+		return this.healthService.getHello();
+	}
+
+	@Public()
+	@Get("health")
+	@ApiOperation({ summary: "Health check (includes DB status)" })
+	@ApiOkResponse({ type: WrappedHealthResponse, description: "Current service health status" })
+	public async getHealth(): Promise<HealthResponse> {
+		return this.healthService.healthCheck();
+	}
+
+	@Public()
+	@Get("health/deep")
+	@ApiOperation({ summary: "Deep health check (DB + filesystem + external services)" })
+	@ApiOkResponse({ description: "Detailed health status with per-service probes" })
+	public async getDeepHealth(): Promise<DeepHealthResponse> {
+		return this.healthService.deepHealthCheck();
+	}
+}

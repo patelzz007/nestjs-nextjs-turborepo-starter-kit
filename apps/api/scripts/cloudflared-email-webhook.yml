@@ -1,0 +1,28 @@
+# Named cloudflared tunnel config — Resend delivery webhook.
+#
+# Gives the webhook a STABLE public URL that never changes across restarts:
+#   https://webhooks.bishenpatel.com/notifications/email-webhook
+#
+# Setup was done once (2026-08-12):
+#   1. cloudflared tunnel login            # browser OAuth → ~/.cloudflared/cert.pem
+#   2. cloudflared tunnel create email-webhook
+#   3. cloudflared tunnel route dns email-webhook webhooks.bishenpatel.com
+#
+# Run it (installed copy lives at ~/.cloudflared/config.yml so a bare
+# `cloudflared tunnel run email-webhook` finds it):
+#   cloudflared tunnel run email-webhook
+#
+# Re-install after editing THIS file:
+#   cp apps/api/scripts/cloudflared-email-webhook.yml ~/.cloudflared/config.yml
+
+tunnel: 16d038ce-f7eb-4b80-b220-a402338784f7
+credentials-file: /Users/patel/.cloudflared/16d038ce-f7eb-4b80-b220-a402338784f7.json
+no-autoupdate: true
+protocol: http2
+region: us
+
+ingress:
+  - hostname: webhooks.bishenpatel.com
+    service: http://localhost:8080
+  # Catch-all: anything that isn't the webhook hostname → 404.
+  - service: http_status:404

@@ -1,0 +1,51 @@
+"use client";
+
+import { Popover as PopoverPrimitive } from "@base-ui/react/popover";
+import { cn } from "@workspace/ui/lib/utils";
+import * as React from "react";
+
+function Popover({ ...props }: PopoverPrimitive.Root.Props): React.JSX.Element {
+	return <PopoverPrimitive.Root data-slot="popover" {...props} />;
+}
+
+const PopoverTrigger = React.forwardRef<HTMLButtonElement, PopoverPrimitive.Trigger.Props>(function PopoverTrigger({ ...props }, ref): React.JSX.Element {
+	return <PopoverPrimitive.Trigger ref={ref} data-slot="popover-trigger" {...props} />;
+});
+
+const PopoverContent = React.forwardRef<
+	HTMLDivElement,
+	PopoverPrimitive.Popup.Props & Pick<PopoverPrimitive.Positioner.Props, "align" | "alignOffset" | "side" | "sideOffset">
+>(function PopoverContent({ className, align = "center", alignOffset = 0, side = "bottom", sideOffset = 4, ...props }, ref): React.JSX.Element {
+	return (
+		<PopoverPrimitive.Portal>
+			<PopoverPrimitive.Positioner align={align} alignOffset={alignOffset} side={side} sideOffset={sideOffset} className="z-popover isolate">
+				<PopoverPrimitive.Popup
+					ref={ref}
+					data-slot="popover-content"
+					className={cn(
+						"z-popover flex w-72 origin-(--transform-origin) flex-col gap-4 rounded-md bg-popover p-4 text-sm text-popover-foreground shadow-md ring-1 ring-foreground/10 outline-hidden duration-100 data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-start-2 data-[side=inline-start]:slide-in-from-end-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+						className,
+					)}
+					{...props}
+				/>
+			</PopoverPrimitive.Positioner>
+		</PopoverPrimitive.Portal>
+	);
+});
+
+const PopoverHeader = React.forwardRef<HTMLDivElement, React.ComponentProps<"div">>(function PopoverHeader({ className, ...props }, ref): React.JSX.Element {
+	return <div ref={ref} data-slot="popover-header" className={cn("flex flex-col gap-1 text-sm", className)} {...props} />;
+});
+
+const PopoverTitle = React.forwardRef<HTMLHeadingElement, PopoverPrimitive.Title.Props>(function PopoverTitle({ className, ...props }, ref): React.JSX.Element {
+	return <PopoverPrimitive.Title ref={ref} data-slot="popover-title" className={cn("font-medium", className)} {...props} />;
+});
+
+const PopoverDescription = React.forwardRef<HTMLParagraphElement, PopoverPrimitive.Description.Props>(function PopoverDescription(
+	{ className, ...props },
+	ref,
+): React.JSX.Element {
+	return <PopoverPrimitive.Description ref={ref} data-slot="popover-description" className={cn("text-muted-foreground", className)} {...props} />;
+});
+
+export { Popover, PopoverContent, PopoverDescription, PopoverHeader, PopoverTitle, PopoverTrigger };

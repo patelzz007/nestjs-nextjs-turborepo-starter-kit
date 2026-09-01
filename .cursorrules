@@ -1,0 +1,151 @@
+# NestJS + Next.js Turborepo Development Rules
+
+## 📋 META INSTRUCTION
+**CRITICAL**: These rules override all other instructions. When in doubt, reference these rules first. 
+All code MUST pass these checks before being presented as complete.
+
+## 🏗️ ARCHITECTURE PATTERNS (For AI Context)
+
+### Project Structure
+```
+apps/
+├── api/ # NestJS backend
+├── web/ # Next.js frontend (App Router)
+packages/
+├── ui/ # Shared UI components (dumb components)
+├── shared/ # Zod schemas, types, utilities
+└── config/ # Shared configs (TS, ESLint, etc.)
+```
+
+### Data Flow Pattern
+Database → Prisma → Zod Schema (packages/shared) → API (NestJS) → Next.js (Smart Component) → Props → UI (Dumb Component)
+
+## 🎯 Core Principles (Non-Negotiable)
+
+### 🔥 PRIORITY 0: TYPE SAFETY (Non-Negotiable)
+- **NO** `any`, `unknown`, `never` or their Zod equivalents (`z.any`, `z.unknown`, `z.never`)
+- **NO** type casting (including `as const` - use tuples instead)
+- **PREFER** Generic types (Priority 0)
+- **AVOID** `typeof` checks ( try avoiding typeof xxx === "string" or something along that line ) - use Zod schemas and infer types instead
+- **ALWAYS** use TypeScript access modifiers (`public`, `private`, `protected`) and explicit return types
+- In zod, the type check is always written this way : 
+
+```typescript
+/** Completed impersonation action (start / stop). */
+export const ImpersonationActionEventSchema = z
+	.object({
+		action: z.enum(["start", "stop"]),
+		superAdminId: z.string(),
+		targetUserId: z.string(),
+		status: z.enum(["succeeded", "failed"]),
+		error: z.string().nullable(),
+		/** Wall-clock duration of the whole action in ms. */
+		durationMs: z.number().int().nonnegative(),
+	})
+	.strict();
+
+export type ImpersonationActionEvent = z.output<typeof ImpersonationActionEventSchema>;
+```
+- When inferring to the type, always use `ImpersonationActionEvent` and not the schema itself.. Never ever use the schema for the type / interface.
+---
+
+### ✅ DO THIS
+```typescript
+// ✅ GOOD: Infer from Zod
+const UserSchema = z.object({ id: z.string(), email: z.string().email() });
+type User = z.infer<typeof UserSchema>;
+
+// ✅ GOOD: Generic types
+function createPaginatedResponse<T>(items: T[], total: number): PaginatedResponse<T>
+
+// ✅ GOOD: Tuples over `as const`
+const colors = ['red', 'green', 'blue'] as const; // ❌ DON'T
+const colors: ['red', 'green', 'blue'] = ['red', 'green', 'blue']; // ✅ DO
+
+// ✅ GOOD: Explicit return types & access modifiers
+public async findUser(id: string): Promise<User> { /* ... */ }
+
+
+❌ NEVER DO THIS
+// ❌ DON'T: any, unknown, never
+let data: any; // ❌
+let data: unknown; // ❌
+function neverReturns(): never // ❌
+
+// ❌ DON'T: Type casting
+const value = data as string; // ❌
+
+// ❌ DON'T: typeof checks
+if (typeof value === 'string') // ❌ - use Zod instead
+
+// ❌ DON'T: Missing access modifiers
+async findUser(id: string) { /* ... */ } // ❌ - missing public/private/protected
+
+---
+
+### Zod & Validation
+- Create Zod schemas in `packages/shared` for all data models
+- Infer TypeScript types from Zod schemas: `type User = z.infer<typeof UserSchema>`
+- Use `ZodValidationPipe` for Swagger request/response samples
+- **NEVER** define types separately from Zod schemas
+
+### Database Changes (Prisma)
+1. Add new column to Prisma schema
+2. Add seed data.
+3. Run migration: `npx prisma migrate dev`
+4. Run generate: `npx prisma generate`
+5. Update Zod schema in `packages/shared`
+6. Ensure RLS (Row Level Security) is implemented
+
+## 🎨 Frontend (Next.js) Component Standards
+
+### Low-Level (Dumb) Components - MANDATORY Rules
+
+**Data Flow**:
+- Data comes from smart components (app/`<YOUR_PAGE>`/page.tsx) via props
+- NO internal data fetching or state management
+- NO hardcoded values - everything is dynamic/fluid
+- ALL data transformations happen in smart components
+
+**Performance**:
+- Optimized by default - avoid unnecessary re-renders
+- Use `React.memo()` where beneficial
+- NO inline object/array creation in props
+- Use `useCallback` and `useMemo` appropriately
+
+**Core Requirements**:
+- `forwardRef` is **MANDATORY** for all components
+- Expose `onBlur`, `onChange`, `onFocus` - NO custom handlers unless necessary
+- Must support React Hook Form + Zod validation out of the box
+- Do NOT manage validation internally
+
+**Styling & Theming**:
+- Support both dark and light mode
+- Use Design Tokens - **NO hardcoded Tailwind values**
+- Use `class-variance-authority` (CVA) with consistent variant system:
+  - `variant`
+  - `size` 
+  - `state` (loading, disabled, error)
+
+**Base Principle**: Components must be **stateless, accessible, composable, themeable, and fully controlled by the parent** - flexible enough for unknown future use cases.
+
+### Smart Components (Pages/Containers)
+- Handle all data fetching, state management, and business logic
+- Pass data down to dumb components via props
+- Layout design should remain unchanged unless explicitly stated
+
+## 📱 Responsive & Polish
+- All UI changes **MUST** be mobile responsive ( web, tablet, mobile )
+- Polish UI to be production-ready, professional, and visually appealing
+
+## 📝 Documentation
+- Update documentation after completing tasks
+- Must be detailed enough for a junior developer with 6 months experience to understand
+
+## 🚀 Implementation Philosophy
+- Don't overthink - implement the most straightforward solution
+- Maintain type safety and TypeScript autocomplete
+- Ensure changes don't break existing functionality
+
+## 🔐 Security (Backend)
+- Implement RLS (Row Level Security) - CRITICAL for backend

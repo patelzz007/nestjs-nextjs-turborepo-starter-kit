@@ -1,0 +1,60 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+
+allowBuilds:
+  "@prisma/engines": true
+  "@scarf/scarf": true
+  '@swc/core': true
+  bcrypt: true
+  esbuild: true
+  msw: false
+  prisma: true
+  sharp: true
+  unrs-resolver: true
+
+minimumReleaseAgeExclude:
+  - '@types/pg@8.20.4'
+  - tsx@4.23.7
+  - '@shikijs/core@4.4.2'
+  - '@shikijs/engine-javascript@4.4.2'
+  - '@shikijs/engine-oniguruma@4.4.2'
+  - '@shikijs/langs@4.4.2'
+  - '@shikijs/primitive@4.4.2'
+  - '@shikijs/themes@4.4.2'
+  - '@shikijs/types@4.4.2'
+  - mermaid@11.16.1
+  - shiki@4.4.2
+  - '@vitejs/plugin-react@6.1.0'
+  - framer-motion@13.1.1
+  - motion-dom@13.1.1
+  - resend@6.21.0
+  - '@nestjs/observe@0.1.7'
+  - lucide-react@1.38.0
+
+# @darraghor/eslint-plugin-nestjs-typed does `import ts from "typescript"`
+# directly (undisclosed in its manifest), so Node resolves the hoisted TS 7
+# (which has no compiler API) and its rules crash. Inject the TS 6 API shim
+# as an explicit dep of the plugin so its require resolves locally.
+packageExtensions:
+  "@darraghor/eslint-plugin-nestjs-typed":
+    dependencies:
+      typescript: "6.0.2"
+
+# ── Dependency overrides ──────────────────────────────────────────────────
+# Force ONE version of @types/pg for the whole tree. @prisma/adapter-pg ships
+# its own `@types/pg` (a runtime dep of the adapter) and apps/api declares it as
+# a devDependency; when the two resolve to different minors, `Pool` from `pg`
+# is two structurally different types and `new PrismaPg(pool)` fails TS2345
+# (e.g. the `connect` event overload added in 8.20.4 vs 8.20.3).
+overrides:
+  "@types/pg": "8.20.4"
+
+# ── TypeScript 7 side-by-side shim ────────────────────────────────────────
+# TS 7.0 is the Go-native compiler and ships NO JS compiler API (no ts.sys,
+# no createProgram). typescript-eslint still needs the classic API, so we
+# scope-alias ONLY its typescript peer to @typescript/typescript6 (the TS 6
+# API package) while every workspace keeps `typescript: 7.0.2` for `tsc`.
+# See https://devblogs.microsoft.com/typescript/announcing-typescript-7-0/
+# ("Running Side-by-Side with TypeScript 6.0") and
+# https://github.com/typescript-eslint/typescript-eslint/issues/10940

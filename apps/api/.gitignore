@@ -1,0 +1,8 @@
+# Environment
+.env
+
+# Build output
+dist/
+
+# Database backups (pg_dump output — never commit)
+backups/

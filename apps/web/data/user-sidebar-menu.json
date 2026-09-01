@@ -1,0 +1,200 @@
+{
+  "header": {
+    "title": "Rewardly",
+    "subtitle": "My Rewards"
+  },
+  "sections": [
+    {
+      "title": "Overview",
+      "color": "blue",
+      "items": [
+        {
+          "title": "Dashboard",
+          "url": "/rewardhub",
+          "icon": "LayoutDashboard",
+          "disabled": false
+        }
+      ]
+    },
+    {
+      "title": "Rewards",
+      "color": "green",
+      "items": [
+        {
+          "title": "Discover",
+          "url": "/rewardhub",
+          "icon": "Search",
+          "disabled": false,
+          "children": [
+            {
+              "title": "Browse All",
+              "url": "/rewardhub",
+              "icon": "Grid",
+              "disabled": false
+            },
+            {
+              "title": "Near Me",
+              "url": "/rewardhub/nearby",
+              "icon": "MapPin",
+              "disabled": true
+            },
+            {
+              "title": "Trending",
+              "url": "/rewardhub/trending",
+              "icon": "TrendingUp",
+              "disabled": true
+            },
+            {
+              "title": "Categories",
+              "url": "#",
+              "icon": "FolderOpen",
+              "disabled": true
+            }
+          ]
+        },
+        {
+          "title": "My Wallet",
+          "url": "/rewardhub/claims",
+          "icon": "Wallet",
+          "disabled": false,
+          "children": [
+            {
+              "title": "Active Rewards",
+              "url": "/rewardhub/claims",
+              "icon": "Gift",
+              "disabled": false
+            },
+            {
+              "title": "Redeemed",
+              "url": "/rewardhub/claims/redeemed",
+              "icon": "CheckCircle",
+              "disabled": true
+            },
+            {
+              "title": "Expired",
+              "url": "/rewardhub/claims/expired",
+              "icon": "Clock",
+              "disabled": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Insights",
+      "color": "amber",
+      "items": [
+        {
+          "title": "My Activity",
+          "url": "/rewardhub/analytics",
+          "icon": "BarChart2",
+          "disabled": false,
+          "children": [
+            {
+              "title": "Overview",
+              "url": "/rewardhub/analytics",
+              "icon": "PieChart",
+              "disabled": false
+            },
+            {
+              "title": "Claims",
+              "url": "/rewardhub/analytics/claims",
+              "icon": "TrendingUp",
+              "disabled": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Earn More",
+      "color": "purple",
+      "items": [
+        {
+          "title": "Referrals",
+          "url": "#",
+          "icon": "Users",
+          "disabled": false,
+          "children": [
+            {
+              "title": "Invite Friends",
+              "url": "/rewardhub/referrals",
+              "icon": "UserPlus",
+              "disabled": true
+            },
+            {
+              "title": "My Referrals",
+              "url": "/rewardhub/referrals/list",
+              "icon": "Users",
+              "disabled": true
+            },
+            {
+              "title": "Earnings",
+              "url": "/rewardhub/referrals/earnings",
+              "icon": "DollarSign",
+              "disabled": true
+            }
+          ]
+        },
+        {
+          "title": "Points",
+          "url": "#",
+          "icon": "Award",
+          "disabled": false,
+          "children": [
+            {
+              "title": "Balance",
+              "url": "/rewardhub/points",
+              "icon": "Wallet",
+              "disabled": true
+            },
+            {
+              "title": "History",
+              "url": "/rewardhub/points/history",
+              "icon": "FileText",
+              "disabled": true
+            },
+            {
+              "title": "Redeem Points",
+              "url": "/rewardhub/points/redeem",
+              "icon": "Gift",
+              "disabled": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Activity",
+      "color": "teal",
+      "items": [
+        {
+          "title": "History",
+          "url": "/rewardhub/history",
+          "icon": "Clock",
+          "disabled": true
+        },
+        {
+          "title": "Favorites",
+          "url": "/rewardhub/favorites",
+          "icon": "Heart",
+          "disabled": true
+        }
+      ]
+    }
+  ],
+  "bottomItems": [
+    {
+      "title": "Settings",
+      "url": "/rewardhub/settings",
+      "icon": "Settings",
+      "disabled": true
+    },
+    {
+      "title": "Help & Support",
+      "url": "/rewardhub/support",
+      "icon": "HelpCircle",
+      "disabled": true
+    }
+  ]
+}

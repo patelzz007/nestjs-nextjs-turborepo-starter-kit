@@ -1,0 +1,168 @@
+{
+  "header": {
+    "title": "Rewardly",
+    "subtitle": "Merchant Portal"
+  },
+  "sections": [
+    {
+      "title": "Overview",
+      "color": "blue",
+      "items": [
+        {
+          "title": "Dashboard",
+          "url": "/",
+          "icon": "LayoutDashboard",
+          "disabled": false
+        }
+      ]
+    },
+    {
+      "title": "Rewards",
+      "color": "green",
+      "items": [
+        {
+          "title": "My Rewards",
+          "url": "/rewards",
+          "icon": "Gift",
+          "disabled": false,
+          "children": [
+            {
+              "title": "All Rewards",
+              "url": "/rewards",
+              "icon": "List",
+              "disabled": false
+            },
+            {
+              "title": "Create New",
+              "url": "/rewards/new",
+              "icon": "PlusCircle",
+              "disabled": false
+            },
+            {
+              "title": "Archived",
+              "url": "/rewards/archived",
+              "icon": "FolderOpen",
+              "disabled": true
+            }
+          ]
+        },
+        {
+          "title": "Campaigns",
+          "url": "#",
+          "icon": "Zap",
+          "disabled": false,
+          "children": [
+            {
+              "title": "Active Campaigns",
+              "url": "/campaigns",
+              "icon": "Play",
+              "disabled": true
+            },
+            {
+              "title": "Scheduled",
+              "url": "/campaigns/scheduled",
+              "icon": "Calendar",
+              "disabled": true
+            },
+            {
+              "title": "Create Campaign",
+              "url": "/campaigns/new",
+              "icon": "PlusCircle",
+              "disabled": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Operations",
+      "color": "amber",
+      "items": [
+        {
+          "title": "QR Scanner",
+          "url": "/redemptions",
+          "icon": "QrCode",
+          "disabled": false
+        },
+        {
+          "title": "Redemptions",
+          "url": "/redemptions",
+          "icon": "CheckCircle",
+          "disabled": false,
+          "children": [
+            {
+              "title": "Recent",
+              "url": "/redemptions",
+              "icon": "Clock",
+              "disabled": false
+            },
+            {
+              "title": "History",
+              "url": "/redemptions/history",
+              "icon": "FileText",
+              "disabled": true
+            },
+            {
+              "title": "Pending",
+              "url": "/redemptions/pending",
+              "icon": "AlertCircle",
+              "disabled": true
+            }
+          ]
+        },
+        {
+          "title": "API Keys",
+          "url": "/api-keys",
+          "icon": "KeyRound",
+          "disabled": false
+        }
+      ]
+    },
+    {
+      "title": "Insights",
+      "color": "rose",
+      "items": [
+        {
+          "title": "Analytics",
+          "url": "/analytics",
+          "icon": "BarChart2",
+          "disabled": false,
+          "children": [
+            {
+              "title": "Overview",
+              "url": "/analytics",
+              "icon": "PieChart",
+              "disabled": false
+            },
+            {
+              "title": "Reward Performance",
+              "url": "/analytics/rewards",
+              "icon": "TrendingUp",
+              "disabled": true
+            },
+            {
+              "title": "Customer Insights",
+              "url": "/analytics/customers",
+              "icon": "Users",
+              "disabled": true
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "bottomItems": [
+    {
+      "title": "Settings",
+      "url": "/settings",
+      "icon": "Settings",
+      "disabled": true
+    },
+    {
+      "title": "Help & Support",
+      "url": "/support",
+      "icon": "HelpCircle",
+      "disabled": true
+    }
+  ]
+}

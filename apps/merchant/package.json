@@ -1,0 +1,40 @@
+{
+	"name": "@workspace/merchant",
+	"version": "0.0.1",
+	"type": "module",
+	"private": true,
+	"scripts": {
+		"dev": "next dev -p 3003",
+		"build": "next build",
+		"start": "next start -p 3003",
+		"lint": "eslint",
+		"format": "prettier --write \"**/*.{ts,tsx}\"",
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@tanstack/react-query": "^5.102.8",
+		"@workspace/client": "workspace:*",
+		"@workspace/shared": "workspace:*",
+		"@workspace/ui": "workspace:*",
+		"date-fns": "^4.4.0",
+		"lucide-react": "^1.38.0",
+		"next": "16.3.3",
+		"next-themes": "^0.4.6",
+		"react-hook-form": "^7.87.0",
+		"@hookform/resolvers": "^5.9.1",
+		"react-dom": "19.2.8",
+		"zod": "4.5.4",
+		"zustand": "^5.0.15",
+		"recharts": "3.10.1"
+	},
+	"devDependencies": {
+		"@tailwindcss/postcss": "^4.3.3",
+		"@types/node": "^26.4.0",
+		"@types/react": "^19.2.18",
+		"@types/react-dom": "^19.2.5",
+		"@workspace/eslint-config": "workspace:^",
+		"@workspace/typescript-config": "workspace:*",
+		"eslint": "^9.39.5",
+		"typescript": "7.0.2"
+	}
+}

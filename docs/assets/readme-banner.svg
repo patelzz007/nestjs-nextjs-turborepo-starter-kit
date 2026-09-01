@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 320" role="img" aria-label="Reward Hub  Turborepo monorepo">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f766e"/>
+      <stop offset="55%" stop-color="#0d9488"/>
+      <stop offset="100%" stop-color="#115e59"/>
+    </linearGradient>
+    <linearGradient id="glow" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#5eead4" stop-opacity="0"/>
+      <stop offset="50%" stop-color="#5eead4" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#5eead4" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#042f2e" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+
+  <rect width="1200" height="320" fill="url(#bg)"/>
+  <rect width="1200" height="320" fill="url(#glow)"/>
+
+  <!-- subtle grid -->
+  <g stroke="#ffffff" stroke-opacity="0.06" stroke-width="1">
+    <path d="M0 80 H1200 M0 160 H1200 M0 240 H1200"/>
+    <path d="M200 0 V320 M400 0 V320 M600 0 V320 M800 0 V320 M1000 0 V320"/>
+  </g>
+
+  <!-- logo mark -->
+  <g transform="translate(72 72)" filter="url(#shadow)">
+    <rect width="96" height="96" rx="22" fill="#ffffff" fill-opacity="0.12"/>
+    <rect x="8" y="8" width="80" height="80" rx="18" fill="#14b8a6"/>
+    <ellipse cx="36" cy="33" rx="11" ry="9" fill="#ffffff"/>
+    <ellipse cx="64" cy="33" rx="11" ry="9" fill="#ffffff"/>
+    <circle cx="50" cy="35" r="5.5" fill="#ccfbf1"/>
+    <rect x="17" y="40" width="66" height="13" rx="3.5" fill="#ffffff"/>
+    <rect x="20" y="50" width="60" height="34" rx="4.5" fill="#ffffff"/>
+    <rect x="45" y="40" width="10" height="44" rx="2" fill="#0d9488"/>
+  </g>
+
+  <!-- title -->
+  <text x="200" y="118" fill="#ecfdf5" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif" font-size="52" font-weight="700" letter-spacing="-1.5">Reward Hub</text>
+  <text x="200" y="158" fill="#99f6e4" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif" font-size="22" font-weight="500">Turborepo monorepo · Next.js · NestJS · shared Zod contracts</text>
+
+  <!-- architecture pills -->
+  <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="13" font-weight="600">
+    <g transform="translate(200 188)">
+      <rect width="118" height="36" rx="18" fill="#ffffff" fill-opacity="0.14"/>
+      <text x="59" y="23" fill="#ecfdf5" text-anchor="middle">web :3000</text>
+    </g>
+    <g transform="translate(330 188)">
+      <rect width="132" height="36" rx="18" fill="#ffffff" fill-opacity="0.14"/>
+      <text x="66" y="23" fill="#ecfdf5" text-anchor="middle">admin :3001</text>
+    </g>
+    <g transform="translate(474 188)">
+      <rect width="118" height="36" rx="18" fill="#ffffff" fill-opacity="0.14"/>
+      <text x="59" y="23" fill="#ecfdf5" text-anchor="middle">docs :3002</text>
+    </g>
+    <g transform="translate(604 188)">
+      <rect width="148" height="36" rx="18" fill="#ffffff" fill-opacity="0.14"/>
+      <text x="74" y="23" fill="#ecfdf5" text-anchor="middle">merchant :3003</text>
+    </g>
+    <g transform="translate(764 188)">
+      <rect width="118" height="36" rx="18" fill="#ffffff" fill-opacity="0.14"/>
+      <text x="59" y="23" fill="#ecfdf5" text-anchor="middle">api :8080</text>
+    </g>
+  </g>
+
+  <!-- flow hint -->
+  <text x="200" y="268" fill="#a7f3d0" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif" font-size="15">Database ’ Prisma ’ Zod ’ NestJS API ’ Next.js ’ UI components</text>
+</svg>

@@ -1,0 +1,593 @@
+---
+title: "Cursorrules audit — task reference"
+description: "Actionable improvement tasks from the full-repo audit against .cursorrules. Pick a section, ship a small PR, tick the checkbox."
+author: "Acme Inc."
+lastUpdated: 1787191200000
+coverImage: "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=1600&q=80"
+tags: ["audit", "cursorrules", "typesafety", "rls", "ui", "tasks"]
+---
+
+# Cursorrules audit — task reference
+
+Use this doc when you want to **start a specific improvement task**. It is organized by priority and area, with file paths, which `.cursorrules` items each task touches, and a suggested fix.
+
+**Related docs**
+
+- [Improvement backlog](./improvement-backlog.md) — numbered backlog (100+ items), historical P0 “done” notes
+- [Prisma & RLS](./prisma.md) — migration workflow, `db:reset`, RLS
+- [`.cursorrules`](../.cursorrules) — source of truth for rules
+
+**How to use**
+
+1. Pick a **Quick win** or a **P1** slice (one PR per slice).
+2. Read the **Rules** column — those are the `.cursorrules` / 25-rule items you must satisfy.
+3. Run `pnpm typecheck` and `pnpm lint` for touched packages before merging.
+4. Tick `[ ]` → `[x]` when done (commit the checkbox update with the PR).
+
+**Severity**
+
+| Level | Meaning |
+|-------|---------|
+| **P1** | Security, typesafety, RLS/auth holes — fix before production |
+| **P2** | UI kit, smart/dumb split, tokens, CVA, RHF — quality bar |
+| **P3** | Polish, comment drift, tests, file splits |
+
+---
+
+## Scorecard (vs `.cursorrules`)
+
+| Area | Status | Notes |
+|------|--------|-------|
+| Data flow (Prisma → Zod → API → smart → dumb) | **Strong** on wired domains | Client 56/56 contract leaves; admin telescope pages still mix smart/dumb |
+| Type safety (no `any`/`unknown`/`never`/casts) | **Done** in API | 0 `any`/`unknown`/`never`/`as`/`typeof` in production `apps/api` — all 20 violations resolved via shared Zod boundary schemas |
+| Access modifiers + return types | **Partial** | Service methods annotated; constructors in auth/sessions/impersonation/token lack explicit `public` |
+| RLS | **Done** (first cut) | `prisma/rls.sql` + `pnpm db:rls`; `@RlsBypass()` for cross-tenant public DB routes |
+| Dumb components (`forwardRef`, CVA, tokens) | **Improved** | Core form + overlays + display; `data-table` refactor complete; carousel/collapsible/message-scroller still lack `forwardRef` |
+| RHF + Zod forms | **Sparse** | Backup create/restore, settings; shared schemas exist but admin UI not wired |
+| Lint (API + Admin) | **Done** | API: 0 errors/0 warnings; Admin: 0 errors/1 test warning |
+| Documentation | **Good** | This doc + Prisma/backup + `packages/ui/README.md` + `docs/type-safety.md` |
+
+---
+
+## Fresh audit — what to improve next (Aug 20, 2026)
+
+Re-audited against `.cursorrules` after data-table refactor and admin-guard consolidation.
+
+### Highest impact (do first)
+
+| # | Task | Why | Effort |
+|---|------|-----|--------|
+| 1 | ~~**Q1** — `@AdminAccessOnly()` on email log + preview~~ | ~~Backup uses class-level `@AdminAccessOnly`; email routes rely on `@RequirePermission` only — inconsistent admin gate~~ | ~~30 min~~ ✅ Done |
+| 2 | ~~**Q6** — `@EmailVerified()` on `POST /stop-impersonation`~~ | ~~`impersonate` requires verified email; stop does not — asymmetry~~ | ~~10 min~~ ✅ Done |
+| 3 | **Q4** — Lift mutations out of `alerts-panel.tsx` | Dumb component still calls `api.telescope.alertAck` / `alertSnooze` | 1–2 h |
+| 4 | **Backup RHF + Zod** — wire `BackupCreateInputSchema` / `BackupRestoreInputSchema` in `backup-panel.tsx` | Schemas exist in shared; panel still uses raw `useState` | 2–4 h |
+| 5 | **Telescope tone tokenization** — `apps/admin/lib/telescope.ts` | Central maps still use `emerald-500`, `red-600`, `amber-300` instead of semantic tokens + CVA | 1–2 d |
+
+### API — residual type-safety violations (production, excl. specs)
+
+| Pattern | Count | Status |
+|---------|------:|--------|
+| `unknown` | ~~7~~ **0** | ✅ Resolved — shared Zod boundary schemas (`RequestLikeSchema`, `HeadersRecordSchema`, `RouteParamsSchema`, etc.) |
+| `never` | ~~1~~ **0** | ✅ Resolved — `forbidden(): void` |
+| `as` cast | ~~1~~ **0** | ✅ Resolved — `DataValueSchema.safeParse()` in `response.interceptor.ts` |
+| runtime `typeof` | ~~11~~ **0** | ✅ Resolved — Zod `safeParse` at all boundaries |
+
+**Fix pattern (shipped):** Shared boundary schemas in `packages/shared/src/schemas/runtime/http-headers.ts` — `RequestLikeSchema`, `HeadersRecordSchema`, `RouteParamsSchema`, `OptionalStringHeaderSchema`, `ForwardedForHeaderSchema`. Each file validates via `.safeParse()` instead of `typeof` guards.
+
+### UI kit — residual gaps
+
+| Priority | Area | Files |
+|----------|------|-------|
+| P1 | `unknown` in chart helpers | `packages/ui/src/components/display/chart.tsx` |
+| P2 | Hardcoded English defaults | `select.tsx`, `combobox.tsx`, `dialog.tsx`, `toast.tsx`, `alert.tsx`, `password-input.tsx` |
+| P2 | `forwardRef` missing | `carousel.tsx`, `collapsible.tsx`, `message-scroller.tsx`, `scroll-to-top.tsx`, `navigation-menu.tsx`, `resizable.tsx`, `aspect-ratio.tsx` |
+| P2 | Raw palette colors | `data-table.tsx` (pin labels + green/blue), `password-input.tsx` (amber caps-lock) |
+| P2 | CVA on overlays | All 11 `overlay/*` files — inline `cn()` only |
+| P3 | File size | `data-table.tsx` still ~2,250 lines (logic extracted; shell/table body split optional) |
+
+### Admin / web apps — still open
+
+| Area | Status | Key files |
+|------|--------|-----------|
+| Telescope smart/dumb | Partial | `alerts-panel.tsx` ✅ lint clean (child components extracted); oversized `overview.tsx` / `requests-table.tsx` still open |
+| `searchParams` parsing | Open | 5 admin `page.tsx` files use `typeof` before/alongside Zod |
+| Admin lint | ✅ Done | 48 → 1 warning (test file only); all production components clean |
+| Demo credentials in client | Open | `apps/admin/.../login-view.tsx`, `apps/web/app/auth/login/page.tsx` |
+| Hello page split | Open | `apps/web/app/hello/hello-view.tsx` fetches + renders in one client file |
+| Settings / user detail | Open | Fake data, fabricated email on user detail page |
+
+---
+
+## Already shipped (do not redo)
+
+- [x] Backup schedule toggle, route order, retention prune, DB size SQL
+- [x] `TELESCOPE_TOKEN` in global `AuthGuard`
+- [x] `ScheduleModule.forRoot()` for cron jobs
+- [x] RLS: `app_runtime`, policies, `RlsPool`, `RlsInterceptor`
+- [x] Squashed init migration: `prisma/migrations/20260819105510_init/`
+- [x] Standalone RLS: `prisma/rls.sql` + `pnpm db:rls` (runs after migrate/deploy/reset/push)
+- [x] Auth P1: `@EmailVerified`, `@RequirePermission`, impersonation hardening, paginated admin users, dropped `User.refreshToken`
+- [x] Telescope: replay SSRF guard, `LogService` instead of `console.warn`
+- [x] Backup UI partial split (`backup-panel` + dumb pieces)
+- [x] **Inline Zod → `packages/shared`** — full `apps/api` audit: runtime helpers, domain events, email template props, backup/telescope parse schemas moved to shared; API keeps helpers + `.parse()`/`safeParse()` only
+- [x] **Schema vs type consumption** — app code imports `X` (type) for signatures; `XSchema` only at validation boundaries (pipes, DTOs, `.parse()`). No schema re-exports from services/templates/barrels
+- [x] Shared `schemas/runtime/` — `json`, `caught-error`, `http-headers`, `prisma-query`, `primitives` (+ `JsonValueInput` for Prisma write helpers)
+- [x] Shared `schemas/domain/events.ts` — `AuthFlowEvent`, `SessionActionEvent`, `ImpersonationActionEvent`, `EmailLogUpdatedEvent`
+- [x] Shared `schemas/email/email-templates.ts` — all seven template prop schemas + `EmailRenderContext`
+- [x] Swagger envelope factories — `createApiSuccessEnvelopeSchema` / `createApiSuccessArrayEnvelopeSchema` in `api-response.ts`; `response-wrapper.ts` delegates to shared
+- [x] **Auth httpOnly cookies on login/refresh** — `LoginTokenFieldsSchema` must not use `.strict()` (login body includes `user`; refresh includes `message`); `SetAuthCookiesInterceptor` extracts tokens and strips them from JSON; spec in `set-auth-cookies.interceptor.spec.ts`
+- [x] **Prisma query event subscriber** — `subscribePrismaQueryEvents` calls native `$on` with correct `this`; `PrismaQuerySubscriberSchema` uses `z.custom` for `$on` (not `z.function` with `void` output — Prisma returns the client)
+- [x] **P2 UI kit (first slice)** — `packages/ui/README.md`, `field-state.ts` / `field-variants.ts`, forwardRef + CVA `state` on core form controls, z-index tokens (`z-overlay` / `z-popover` / `z-toast`), required `labels` on FormShell / AuthLayout / Pagination / NotFoundContent / LockoutCountdown, `ui-kit-contract.test.ts`; app call sites in `apps/web`, `apps/admin`, `packages/client`
+- [x] **P2 UI kit (second slice)** — forwardRef on popover/sheet/command/menubar/kbd/calendar/chart; CVA `state` on select/combobox triggers; alert-dialog fully controlled + required `labels` bundle (no default OK/Delete); combobox `sessionStorage` lifted to parent; `data-table-prefs.ts` Zod for persisted prefs/cell scalars; row-action menu semantic tokens; partial `DataTableLabels` (`actionsMenuTitle`, `openRowMenu`); contract tests expanded; admin call sites (backup-history, showcase, alert-dialogs, command-palette, search-dialog)
+- [x] **Client quick wins Q2 + Q3** — `proxy-refresh.ts` uses `apiRouter.auth.refresh.path`; four auth router leaves (`forgotPassword`, `resetPassword`, `resendVerification`, `verifyEmail`) wired in `endpoints.ts` + server/client caller trees (56/56 contract leaves)
+- [x] **Admin access guard consolidation** — shared `AdminAccessGuard` + `@AdminAccessOnly(message)` + `requireAdminAccessToken` / `userHasAdminAccess` in `modules/auth/`; `BackupController` migrated (deleted `backup-admin.guard.ts`); `TelescopeAdminGuard` + `SuperAdminGuard` use shared helpers
+- [x] **Q1 — Email admin guard** — `@AdminAccessOnly()` at class level on `EmailLogController` + `EmailPreviewController` (consistent with `BackupController`)
+- [x] **Q6 — Stop-impersonation guards** — `stopImpersonation` uses auth only (no `@SuperAdminOnly`) so it works while JWT `sub` is the impersonated user; returns `accessToken` + cookie via `SetAuthCookiesInterceptor`
+- [x] **API type-safety: 20 violations → 0** — shared boundary schemas in `packages/shared/src/schemas/runtime/http-headers.ts`; all `unknown`/`never`/`as`/`typeof` eliminated
+- [x] **API lint: 33 → 0 errors** — prettier, unused imports, duplicates, catch typing, optional chain
+- [x] **Admin lint: 48 → 1 warning** — prettier auto-fix, `useCallback` extraction, child component extraction for table cells, a11y fix
+- [x] **Documentation** — `docs/type-safety.md` with full audit, fix details, and code examples
+- [x] **`secureEquals` consolidation** — `common/utils/secure-equals.ts`; used by `AuthGuard` (telescope Bearer bypass) and `TelescopeAdminGuard` (CI token compare)
+- [x] **Q1 — `@AdminAccessOnly()` on email log + preview** — class-level decorator on `EmailLogController` + `EmailPreviewController` (matching `BackupController` pattern)
+- [x] **Q6 — `stopImpersonation` guard design** — intentionally **not** `@SuperAdminOnly()` (impersonated JWT lacks super-admin); auth + `isImpersonating` check in controller
+- [x] **API type-safety: 20 violations → 0** — shared boundary schemas (`RequestLikeSchema`, `HeadersRecordSchema`, `RouteParamsSchema`, `OptionalStringHeaderSchema`, `ForwardedForHeaderSchema`) in `packages/shared/src/schemas/runtime/http-headers.ts`; all `unknown`/`never`/`as`/`typeof` eliminated from production API
+- [x] **API lint: 33 → 0 errors** — prettier formatting, unused imports, `import/no-duplicates`, catch callback typing, `prefer-optional-chain`, `no-inferrable-types`
+- [x] **Admin lint: 48 → 1 warning** — 7 prettier errors auto-fixed, 34 `jsx-no-bind` warnings resolved via `useCallback` + child component extraction, 7 `exhaustive-deps` fixed, 1 a11y warning fixed
+- [x] **Documentation** — `docs/type-safety.md` created with full audit + fix details
+
+---
+
+## Database & RLS workflow (read before DB tasks)
+
+**Order (schema-first)**
+
+1. Edit `apps/api/prisma/schema.prisma`
+2. `pnpm db:migrate` (from `apps/api` or `pnpm db:migrate` from root) — applies migration **and** runs `db:rls`
+3. Update Zod in `packages/shared`
+4. Nest: `ZodValidationPipe` + Swagger wrappers
+5. Client: `apiContract` leaf in `endpoints.ts`
+
+**RLS is not in Prisma PSL.** Canonical SQL: `apps/api/prisma/rls.sql`. Applied via:
+
+```bash
+pnpm db:rls          # after migrate deploy / manual schema change
+pnpm db:reset        # reset + rls + seed (from apps/api)
+```
+
+**Do not** squash to schema-only init — `app_runtime` needs `GRANT USAGE ON SCHEMA public` or API gets `42501 permission denied for schema public`.
+
+**When adding a table**
+
+- [ ] Add model + `/// RLS:` comment in `schema.prisma`
+- [ ] Add table to the `FOREACH` array in `prisma/rls.sql` (if new table)
+- [ ] Add policies in `rls.sql` for that table
+- [ ] Run `pnpm db:migrate` or `pnpm db:rls` after push
+
+---
+
+## Quick wins (1–2 days each)
+
+| # | Task | Files | Rules |
+|---|------|-------|-------|
+| Q1 | Admin guard on email log + preview (not just `AuthGuard`) | `email-log.controller.ts`, `email-preview.controller.ts` — add `@AdminAccessOnly()` like `backup.controller.ts` | 24 | ✅ |
+| Q2 | Point proxy refresh at contract path | `packages/client/src/lib/auth/proxy-refresh.ts` → use `apiRouter.auth.refresh.path` | Data flow | ✅ |
+| Q3 | Wire 4 missing auth client routes | `packages/client/src/lib/api/endpoints.ts` — `forgotPassword`, `resetPassword`, `resendVerification`, `verifyEmail` | Data flow | ✅ |
+| Q4 | Lift mutations out of dumb alerts panel | `apps/admin/components/telescope/alerts-panel.tsx` → parent passes `onAck` / `onSnooze` | 9–11, 19 | |
+| Q5 | Replace `z.unknown()` in success envelope | `packages/shared/src/schemas/api/api-response.ts` | 1–2 | ✅ |
+| Q6 | `stop-impersonation` guard design | `impersonation.controller.ts` — auth only; must work while impersonating | 24 | ✅ |
+| Q7 | `GET /admin/users/:userId` + `@RequirePermission("READ", "USER")` | `auth.controller.ts` | 24 | ✅ |
+
+---
+
+## P1 — Security & backend (`apps/api`)
+
+### RLS & public routes
+
+| Task | Where | Why | Fix |
+|------|-------|-----|-----|
+| [x] Audit Prisma calls on `@Public()` routes | `email-webhook.controller.ts`, `rls.interceptor.ts` | Full RLS bypass for request scope | `@RlsBypass()` on cross-tenant public DB routes only; refresh/logout stay scoped |
+| [x] Document `@Public()` + bypass behavior | `docs/prisma.md` | Juniors will misconfigure new routes | Add table: which public routes touch DB |
+| [ ] New table checklist | `schema.prisma`, `rls.sql` | Drift = missing policies | See **Database & RLS workflow** above |
+
+### Permissions (`@RequirePermission`)
+
+| Task | Where | Fix |
+|------|-------|-----|
+| [x] Register or document `PermissionGuard` usage | `app.module.ts` | Today only 2 `@RequirePermission` usages on auth controller |
+| [x] Telescope destructive ops | `telescope.controller.ts` | Add resource permissions or document admin-only as intentional |
+| [x] Backup mutations | `backup.controller.ts` | Align with `SYSTEM_SETTINGS` / admin dashboard perms |
+| [x] Email admin surfaces | `email-log.controller.ts`, `email-preview.controller.ts` | **Q1** — `@AdminAccessOnly()` at class level + existing per-route `@RequirePermission` |
+
+### API boundary — `ZodValidationPipe` + shared contract
+
+| Route / input | File | Fix |
+|---------------|------|-----|
+| [x] `POST /verify-email/:token` | `auth.controller.ts` | `VerifyEmailTokenParamSchema` (same field as `apiContract.auth.verifyEmail.input`) |
+| [x] `GET/PATCH /admin/users/:userId` | `auth.controller.ts` | `UuidParamSchema` on `userId` |
+| [x] `POST /impersonate/:userId` | `impersonation.controller.ts` | `UuidParamSchema` on `userId` |
+| [x] Telescope `@Param("id")` routes | `telescope.controller.ts` | `TelescopeIdParamSchema` (contract `TelescopeIdInputSchema` uses same schema) |
+| [x] Email log list query | `email-log.controller.ts` | `EmailLogListQuerySchema` + `apiContract.email.logList.input` |
+| [x] Email preview `:key` | `email-preview.controller.ts` | `EmailTemplateKeyParamSchema` |
+| [x] Resend webhook body | `email-webhook.controller.ts` | `ResendWebhookHeadersSchema` + `ResendWebhookEventSchema` after verify |
+
+### Type safety — move schemas to `packages/shared`
+
+| Schema today in API | File | Target |
+|---------------------|------|--------|
+| [x] JWT access/refresh payloads | `token.service.ts` | `packages/shared/src/schemas/auth/token.ts` |
+| [x] RBAC user/permission shapes | `rbac.interface.ts` (deleted `rbac/schemas/user.schema.ts`) | `packages/shared` |
+| [x] Cookie result + login token fields | `cookies.service.ts`, `set-auth-cookies.interceptor.ts` | `packages/shared/src/schemas/auth/cookies.ts` — `LoginTokenFieldsSchema` strips extra keys (`user` / `message`), not `.strict()` |
+| [x] Email log create | `email-log.service.ts` | `packages/shared/src/schemas/email/email.ts` |
+| [x] Response envelope helpers | `response.interceptor.ts` | `PaginatedServiceResultSchema` + `DataValueSchema` from shared |
+| [x] Inline `z.string()` / `z.record()` in utils | `caught-error.ts`, `http-headers.ts`, `prisma-query-events.ts`, `main.ts`, telescope `sanitize.ts` / `pii-scanner.ts` | `schemas/runtime/*` + `TelescopeJsonObjectSchema` / `TelescopeJsonScalarSchema`; `prisma-query.ts` `$on` validated with `z.custom` |
+| [x] Event bus payloads | `auth-events`, `sessions-events`, `impersonation-events`, `email-log-events` services | `schemas/domain/events.ts` |
+| [x] Email template props | seven `*.template.ts` files | `schemas/email/email-templates.ts` |
+| [x] Backup SQL row shapes | `backup.service.ts` | `schemas/domain/backup.ts` (`BackupDownloadTokenPayloadSchema`, table-name count rows) |
+| [x] Log service options | `logs.service.ts` | `LogServiceOptionsSchema` in `schemas/domain/logs.ts` |
+| [ ] Prisma `InputJsonValue` bridge | `common/utils/prisma-json.ts` | Stays in API (`z.custom` depends on `@prisma/client`) — params typed via shared `JsonValueInput` |
+
+**Intentionally still in API (not portable to shared):**
+
+- `common/utils/prisma-json.ts` — Prisma-specific `z.custom<Prisma.InputJsonValue>`
+- `common/dto/response-wrapper.ts` — thin NestJS `createZodDto` wrapper (schemas live in shared factories)
+- `*.spec.ts` — local test fixtures
+
+### Type safety — schema vs type consumption (apps)
+
+| Rule | Status | Notes |
+|------|--------|-------|
+| [x] Import **types** for signatures, props, return types | `apps/api` | e.g. `ImpersonationActionEvent`, `EmailRenderContext`, `JsonValue` |
+| [x] Import **schemas** only at validation boundaries | `apps/api` | `ZodValidationPipe`, `createZodDto`, `.parse()` / `.safeParse()`, enum `.options` |
+| [x] No `*Schema` re-exports from services/templates | `apps/api` | Event services, email templates, `cookie.config`, `json.ts`, `email-render-context.ts` export types only |
+| [x] Event emitters validate before publish | `auth.service`, `sessions.service`, `impersonation.service` | `AuthFlowEventSchema.parse({…})` etc. — subscribers (Telescope adapters) always get contract-valid payloads |
+| [x] Docs | `docs/typescript.md` §8 | Consumption rule + web import example uses `type LoginInput` |
+| [x] `apps/web` | — | No `@workspace/shared` schema imports (nothing to change) |
+| [x] `apps/admin` | — | Schema imports only for `parse`/`safeParse` on list queries + SSE frames; local app schemas still define `export type X = z.output<typeof XSchema>` in the same file |
+
+### Type safety — eliminate banned patterns in production API
+
+| Pattern | Files (start here) |
+|---------|-------------------|
+| [x] `unknown` | `zod-validation.pipe.ts`, `token.service.ts`, `email-webhook.controller.ts`, `email-sender.service.ts`, `main.ts`, `health.controller.ts`, `backup.service.ts` |
+| [x] `never` | `backup.service.ts`, `email-sender.service.ts` |
+| [x] `as` casts | `telescope-postgres.store.ts`, `telescope-prisma-listener.ts`, email template `as const` accents |
+| [x] `typeof` instead of Zod | `email-webhook.controller.ts`, `set-auth-cookies.interceptor.ts`, `main.ts`, `backup.service.ts` |
+| [x] Residual `unknown` (Phase 1) | `webhook-throttler.ts` (5), `http-headers.ts`, `backup-scheduler.service.ts` — shared boundary schemas |
+| [x] Residual `never` (Phase 1) | `webhook-rate-limit.probe.ts` — `forbidden(): void` |
+| [x] Residual `as` cast (Phase 1) | `response.interceptor.ts` — `DataValueSchema.safeParse()` replaces `as Observable<DataValue>` |
+| [x] Residual `typeof` (Phase 1) | `webhook-throttler.ts` (3), `telescope-console-capture.ts` (2), `telescope.interceptor.ts` (2), `correlation-id.middleware.ts`, `client-info.ts`, `expiry.ts`, `telescope.store.ts` — Zod at all boundaries |
+
+### ESLint
+
+| Task | Where | Fix |
+|------|-------|-----|
+| [ ] Tighten `no-unsafe-*` | `apps/api/eslint.config.js` | Today off for all `src/modules/**`; scope per module like telescope |
+| [ ] Explicit access modifiers on constructors | `auth.service.ts`, `sessions.service.ts`, `impersonation.service.ts`, `token.service.ts` | Instance methods already `public`/`private`; constructors lack explicit `public` |
+| [x] Residual `unknown` / `typeof` / `as` | `webhook-throttler.ts`, `response.interceptor.ts`, `http-headers.ts`, telescope capture/interceptor | Zod at HTTP/header boundaries; `as Observable<DataValue>` removed via `DataValueSchema.safeParse()` |
+
+### Ops / scale (backup + telescope)
+
+| Task | Where | Fix |
+|------|-------|-----|
+| [ ] Document single-replica constraint | `docs/backup.md`, `docs/telescope.md` | Queue, rate limits, circuit breaker are in-memory |
+| [ ] Or: persist queue/state | `backup.service.ts` | Redis / DB job table |
+| [ ] Empty `catch` blocks | `backup.service.ts` | `logs.warn` at minimum |
+| [ ] User-controlled `--exclude-table-data` | `backup.service.ts` | Allowlist via `information_schema` |
+| [ ] Stable error codes to clients | `response.interceptor.ts` | No raw `Error.message` in public body |
+| [ ] Backup unit tests | `apps/api` | Prune math, route order, rate limit, redact |
+| [ ] Align stale comments | `backup.service.ts`, docs | Remove references to `backup_events`, `pg_basebackup` if absent |
+
+### Large files — split candidates
+
+| File | ~Lines | Suggested split |
+|------|--------|-----------------|
+| [ ] `backup.service.ts` | 1,478 | dump / restore / scheduler / prune modules |
+| [ ] `telescope.store.ts` | 1,092 | read models vs write/capture |
+| [ ] `auth.service.ts` | 852 | already split sessions/impersonation — trim auth.service further |
+| [ ] `telescope-postgres.store.ts` | 676 | list queries vs detail |
+| [ ] `telescope.service.ts` | 563 | overview vs admin mutations |
+
+### Duplicate patterns to consolidate
+
+| Pattern | Locations |
+|---------|-----------|
+| [x] Admin access guard | `admin-access.guard.ts`, `admin-access.decorator.ts`, `utils/admin-access.ts` — replaces `backup-admin.guard.ts`, inline checks in `telescope-admin.guard.ts` / `super-admin.guard.ts`, and `backup.controller.ts` `requireAdminAccessToken` |
+| [x] `secureEquals` | `common/utils/secure-equals.ts` — replaces private copies in `auth.guard.ts`, `telescope-admin.guard.ts` |
+| [x] `ThrownErrorSchema` for errors | `rls-pool.ts`, `backup-scheduler.service.ts`, `backup.service.ts` | Shared `schemas/runtime/primitives.ts` |
+| [x] Thin Swagger DTO wrappers | `apps/api/src/common/dto/response-wrapper.ts` | Envelope shape in shared; wrapper only calls `createZodDto` |
+
+---
+
+## P1 — Shared & client (`packages/shared`, `packages/client`)
+
+### `packages/shared`
+
+| Task | File | Fix |
+|------|------|-----|
+| [x] Remove `z.unknown()` from envelope | `schemas/api/api-response.ts` | `DataValueSchema` recursive union in `common.ts` |
+| [x] Single `ApiVersion` source | `contracts/versioning.ts` + `schemas/api/version.ts` | `version.ts` imports `ApiVersion` type from `versioning.ts` |
+| [x] `z.infer` → `z.output` | `schemas/api/env.ts`, `schemas/domain/logs.ts` | Consistency |
+| [x] `as const` → tuples | `contracts/versioning.ts`, `contracts/index.ts` | Tuple annotations; `apiContract` no longer ends with `as const` |
+| [x] `schemas/runtime/` barrel | `json`, `caught-error`, `http-headers`, `prisma-query`, `primitives` | API utils import from shared; no inline `z.string()` in production API |
+| [x] Boundary schemas (new) | `http-headers.ts` | `RequestLikeSchema`, `HeadersRecordSchema`, `RouteParamsSchema`, `OptionalStringHeaderSchema`, `ForwardedForHeaderSchema` — eliminate all `typeof` guards at HTTP boundaries |
+| [x] Boundary schemas for request parsing | `http-headers.ts` | `RequestLikeSchema`, `HeadersRecordSchema`, `RouteParamsSchema`, `OptionalStringHeaderSchema`, `ForwardedForHeaderSchema` — replace all `typeof` guards at HTTP boundaries |
+| [x] Domain events + email template props | `domain/events.ts`, `email/email-templates.ts` | Event bus + seven email templates |
+| [x] Swagger envelope factories | `createApiSuccessEnvelopeSchema`, `createApiSuccessArrayEnvelopeSchema` | `api-response.ts`; `response-wrapper.ts` is a thin Nest wrapper |
+| [x] `JsonValueInput` | `schemas/runtime/json.ts` | Prisma JSON write helpers type params without `z.input<typeof …>` in API |
+
+### `packages/client`
+
+| Task | File | Fix |
+|------|------|-----|
+| [x] Missing router leaves | `lib/api/endpoints.ts` | **Q3** — four auth routes (+ server/client caller trees) |
+| [x] Hardcoded refresh URL | `lib/auth/proxy-refresh.ts` | **Q2** — `apiRouter.auth.refresh.path` |
+| [x] JWT parsing without `unknown` | `lib/auth/jwt.ts` | `JwtPayloadSchema` in shared; `decodeJwtPayload` returns `JwtPayload \| null` |
+| [x] Auth errors | `lib/auth/auth-errors.ts` | Zod schemas (`ApiErrorBodySchema`, `AccountLockedErrorSchema`) replace `typeof` |
+| [x] Duplicate envelope interface | `lib/api/endpoints.ts` `Envelope<Data>` | Moved to `schemas/api/api-response.ts`; client imports type |
+| [x] Client `ApiErrorSchema` drift | `lib/api/use-api.ts` | Re-exports shared `ApiErrorBodySchema` as `ApiErrorSchema` |
+
+**Contract coverage:** 56/56 leaves wired (was 52/56).
+
+---
+
+## P2 — UI kit (`packages/ui`)
+
+### Package-wide
+
+| Task | Rules | Fix |
+|------|-------|-----|
+| [x] Add `packages/ui/README.md` | 14 | Controlled API, theming, a11y, RHF `register` / `Controller` |
+| [x] Optional `react-hook-form` peer | 18 | `package.json` peer + README |
+| [x] ESLint/contract: interactive roots need `forwardRef` | 20 | P2 priority roots covered in `ui-kit-contract.test.ts`; full ESLint rule still open |
+| [ ] CVA on all styled components: `variant`, `size`, `state` | 23 | Core form controls + select/combobox triggers done via `field-variants.ts`; overlays/display gaps remain |
+| [x] No English defaults in dumb components (priority surfaces) | 11 | `FormShell`, `AuthLayout`, `Pagination`, `NotFoundContent`, `LockoutCountdown`, `CommandDialog`, `AlertDialog` — required `labels` / copy props |
+| [x] Tokenize z-index | 22 | `tokens.css` + `z-overlay` / `z-popover` / `z-toast`; overlays migrated off raw `z-50` |
+| [x] Ban `unknown`/`never`/`assumeType` at UI boundaries | 1–3 | Zod coercion in `data-table-prefs.ts` + `data-table.tsx`; TanStack values parsed via `DataTableCellValueSchema.safeParse` |
+| [x] Ban inline object/array props | 16 | Module constants (`EMPTY_*`), `useMemo` for row/card interaction props, virtualization styles; contract test in `ui-kit-contract.test.ts` |
+
+**Coverage (approx.):** ~55+/74 component files use `forwardRef`; ~28+ use `cva()` (including shared `field-variants.ts`); contract tests in `ui-kit-contract.test.ts` + existing form/display/overlay tests.
+
+### `forwardRef` gaps (priority)
+
+- [x] `display/table.tsx`
+- [x] `display/data-table.tsx`
+- [x] `feedback/spinner.tsx`, `feedback/skeleton.tsx`
+- [x] `navigation/tabs.tsx`, `navigation/pagination.tsx`, `navigation/scroll-area.tsx`
+- [x] `overlay/popover.tsx`, `overlay/sheet.tsx`, `overlay/command.tsx`, `overlay/menubar.tsx`
+- [x] `display/chart.tsx`, `display/calendar.tsx`, `display/kbd.tsx`
+- [x] `feedback/progress.tsx`, `feedback/message.tsx`, `feedback/not-found-content.tsx`
+- [x] `form/lockout-countdown.tsx`, `layout/auth-layout.tsx`
+
+### CVA + form `state` variant
+
+- [x] `form/input.tsx`, `textarea.tsx`, `checkbox.tsx`, `switch.tsx`, `slider.tsx` — `resolveFieldState` + `field-variants.ts`
+- [x] `form/button.tsx` — `state: loading | disabled | error` + loading spinner
+- [x] `form/select.tsx`, `combobox.tsx` — unified `state` in CVA via `selectTriggerVariants` / `comboboxInputGroupVariants`
+
+### Hardcoded colors → tokens
+
+| File | Examples to replace |
+|------|---------------------|
+| [ ] `display/data-table.tsx` | Row-action menu uses semantic tokens; **residual:** pin column `"Pin column"` / `"Unpin column"` not in `labels`; `text-green-600` / `text-blue-900` + inline `zIndex: 10` on pinned columns |
+| [x] `layout/auth-layout.tsx` | Auth panel tokens (`--auth-panel-*`) |
+| [x] `form/lockout-countdown.tsx` | CVA `state` variants (no raw amber utilities) |
+| [x] `navigation/sidebar.tsx` | `sidebar-primary` / `sidebar-primary-foreground` tokens |
+| [x] `display/chart.tsx` | `ChartConfig` union without `theme?: never`; recharts `#ccc`/`#fff` selectors target library SVG attrs only |
+
+### `data-table.tsx` (~2,250 lines — refactor shipped, polish open)
+
+- [x] Zod for `localStorage` prefs and cell values — `lib/data-table-prefs.ts`
+- [x] Required `labels` prop — `lib/data-table-labels.ts` (`searchPlaceholder`, empty states, selection, export formats, pagination); `formatDataTableLabel` for `{count}` templates
+- [x] Lift persistence/selection — `DataTableStorageAdapter` + `createLocalStorageDataTableStorage()` in `lib/data-table-storage.ts`; optional controlled `selectAllPages` / `onSelectAllPagesChange`
+- [x] Extract CSV/PDF/Excel exporters — `lib/data-table-export.ts` (re-exported from `data-table.tsx`)
+- [x] `forwardRef` + CVA on table shell — `DataTableShell` forwards ref to root `Card`; `dataTableShellVariants` with `state: default | loading | error`
+- [x] Replace `unknown` / `never` / `assumeType` in memo/export/persist paths
+- [x] ESLint clean — unused imports, optional-chain, prettier (Aug 20, 2026)
+- [ ] Pin column labels — add `pinColumn` / `unpinColumn` to `DataTableLabels`; wire admin `ADMIN_DATA_TABLE_LABELS`
+- [ ] Tokenize residual raw colors + pinned-column `zIndex` (use semantic tokens / CSS var)
+- [ ] Optional: split table body vs toolbar into sub-files (file still large)
+
+### Other UI items (new gaps from fresh audit)
+
+- [ ] `display/chart.tsx` — replace `unknown` in payload helpers with Zod-parsed boundaries
+- [ ] `form/select.tsx`, `form/combobox.tsx` — hardcoded defaults (`"No options"`, `"Clear selection"`, etc.) → required `labels` bundle or app-level overrides
+- [ ] `overlay/dialog.tsx` — add `closeLabel` prop (parity with `sheet.tsx`)
+- [ ] `form/password-input.tsx` — `labels` for show/hide/caps-lock; replace `text-amber-*` with warning token
+- [ ] `navigation/carousel.tsx`, `collapsible.tsx`, `message-scroller.tsx`, `scroll-to-top.tsx` — `forwardRef` gaps
+- [ ] Overlay primitives — CVA `variant` / `size` / `state` still inline-only in all 11 `overlay/*` files
+
+- [x] `overlay/alert-dialog.tsx` — fully controlled; parent uses RHF + Zod; no default OK/Delete strings; required `labels` bundle
+- [x] `form/form-shell.tsx` — required `submitLabel` / `loadingLabel`; error banner `role="alert"`
+- [x] `form/select.tsx` / `combobox.tsx` — `sessionStorage` removed; draft query persistence is parent-owned via `inputValue` / `onInputValueChange`
+- [x] `layout/auth-layout.tsx` — required `labels` prop; apps pass copy (`apps/web`, `apps/admin` login pages)
+- [x] `tokens.css` — `--background` oklch; z-index tokens (`--z-overlay`, `--z-popover`, `--z-toast`); auth panel + switch sizing tokens
+- [x] App call sites — `NotFoundContent` props (`apps/web/app/not-found.tsx`, `apps/admin/...`); `LockoutCountdown` labels in `login-form.tsx`
+
+---
+
+## P2 — Admin app (`apps/admin`)
+
+### Telescope
+
+| Task | File | Fix |
+|------|------|-----|
+| [ ] Dumb panel, smart parent | `components/telescope/alerts-panel.tsx` | **Q4** |
+| [ ] Tokenize tone maps | `lib/telescope.ts`, `stat-card.tsx`, `exception-card.tsx`, `webhook-deliveries.tsx` | Semantic tokens + CVA `accent` |
+| [ ] Split oversized pages | `overview.tsx` (~532), `requests-table.tsx` (~783), `request-detail.tsx` | One smart container; dumb tables |
+| [ ] searchParams parsing | `requests/page.tsx` | Zod, not `typeof value === "string"` |
+| [ ] Memo list rows | `exception-card.tsx`, `stat-card.tsx`, `live-feed.tsx` pattern | `React.memo` on hot paths |
+| [ ] Drop `as const` on query defaults | telescope `page.tsx` | Tuples / `satisfies` |
+
+### Backup
+
+| Task | File | Fix |
+|------|------|-----|
+| [ ] RHF + Zod on create/restore | `backup-panel.tsx`, forms | `BackupCreateInputSchema`, `BackupRestoreInputSchema` |
+| [ ] Status/schedule pills | backup components | CVA + semantic tokens, not `bg-emerald-100` |
+| [ ] Export `BackupScheduleSchema` from shared | avoid local interface duplicate |
+| [ ] Copy maps from page | `STAGE_LABELS`, `ERROR_CODE_COPY` | i18n-ready props |
+| [ ] Finish split | `backup-panel.tsx` (~480) | dumb cards/table/dialogs complete |
+
+### Auth / settings / users
+
+| Task | File | Fix |
+|------|------|-----|
+| [ ] Demo accounts from server page | login views | Env flag; no passwords in client bundle |
+| [ ] Login searchParams | auth pages | Zod |
+| [ ] General settings fake data | settings pages | RHF + Zod; data from page/API |
+| [ ] User detail fabricated email | user detail page | Real API; URL id ≠ authorization |
+| [ ] Code block hex chrome | `components/docs/code-block.tsx` | Theme tokens light+dark |
+
+### Showcase / gallery (lower priority)
+
+- [ ] Move demo data to server `page.tsx` — `ChartAreaInteractive`, `DataTableShowcase`, combobox/select showcases
+
+---
+
+## P2 — Web app (`apps/web`)
+
+| Task | File | Fix |
+|------|------|-----|
+| [ ] Split hello page | `app/hello/hello-view.tsx` | Smart `page.tsx` + dumb `HelloProfileView` props-only |
+| [ ] Badge colors + dark mode | `hello-view.tsx` | Tokens, not `bg-green-100` without `dark:` |
+| [ ] Login all-client + demo copy | `app/auth/login/page.tsx` | `AuthLayout` labels wired; demo accounts still client bundle when `NEXT_PUBLIC_SHOW_DEMO_ACCOUNTS=true` |
+| [ ] Signup/forgot stubs | auth routes | Shared `AuthLayout` + copy props |
+
+---
+
+## P2 — Docs (`apps/docs`)
+
+| Task | Fix |
+|------|-----|
+| [ ] `typeof` in searchParams / tree parsers | Zod at boundary |
+| [ ] Lightbox / code chrome | Theme tokens |
+
+---
+
+## P3 — Polish & hygiene
+
+| Task | Where |
+|------|-------|
+| [ ] Mark stale items done in `improvement-backlog.md` | `docs/improvement-backlog.md` |
+| [ ] Update `schema.prisma` RLS header to reference `rls.sql` not old migration name | `prisma/schema.prisma` |
+| [ ] Prisma 7 query events blind spot | Document in `docs/telescope.md` |
+| [ ] Proxy tests typed doubles | `apps/admin/proxy.test.ts` — no `as unknown as` |
+| [ ] Domain APIs without client contract | RBAC, menu, tags, URL, clicks — track if/when exposed |
+
+---
+
+## Recommended implementation order
+
+```text
+Phase 1 — Security & contracts (P1) — **Done**
+  Q1 ✅, Q2 ✅, Q3 ✅, Q5 ✅, Q6 ✅, Q7 ✅
+  Residual API `unknown`/`typeof`/`as`/`never` → 0
+  API lint → 0 errors
+  Admin lint → 0 errors (1 test warning acceptable)
+
+Phase 2 — API typesafety (P1) — **Done**
+  All 20 production violations resolved via shared Zod boundary schemas
+  API lint clean (0 errors, 0 warnings)
+
+Phase 3 — UI foundation (P2) — **mostly done; polish open**
+  ~~forwardRef on top-used primitives~~ (core form + layout/feedback done)
+  ~~CVA state on Input/Button/Textarea~~ (+ checkbox/switch/slider)
+  ~~packages/ui README + z-index tokens~~
+  ~~data-table refactor~~ (labels, storage, export, shell CVA — pin labels + raw colors remain)
+  Next: chart `unknown`, select/combobox/dialog labels, carousel/collapsible forwardRef
+  Tokenize telescope tones (admin)
+  alerts-panel mutation lift (Q4)
+
+Phase 4 — Forms & splits (P2)
+  Backup RHF
+  Split data-table / backup.service / requests-table
+
+Phase 5 — Ops (P1/P3)
+  Document or fix multi-replica backup/telescope
+  Backup unit tests
+```
+
+---
+
+## Task index by file (grep-friendly)
+
+<details>
+<summary><code>apps/api</code></summary>
+
+- `auth.controller.ts` — ZodValidationPipe params, `@RequirePermission` on get user
+- `impersonation.controller.ts` — param validation, `@EmailVerified` on stop ✅ `@SuperAdminOnly()` + `@EmailVerified()` + `@RequirePermission` added
+- `modules/auth/guards/admin-access.guard.ts`, `decorators/admin-access.decorator.ts`, `utils/admin-access.ts` — shared admin gate (**done**)
+- `common/utils/secure-equals.ts` — constant-time token compare (**done**)
+- `email-log.controller.ts`, `email-preview.controller.ts` — admin guard ✅ `@AdminAccessOnly()` at class level
+- `email-webhook.controller.ts` — Zod body, minimize DB on public route
+- `telescope.controller.ts` — param pipes, `@EmailVerified` on destructive ops
+- `backup.service.ts` — split, tests, catch logging, allowlist excludes
+- `token.service.ts` — move schemas to shared, remove `unknown` in catch
+- `set-auth-cookies.interceptor.ts` — `LoginTokenFieldsSchema` must accept login/refresh bodies with extra keys
+- `common/utils/prisma-query-events.ts` — `$on` binding + shared subscriber schema
+- `zod-validation.pipe.ts` — typed without `unknown` ✅ unused `z` import removed
+- `response.interceptor.ts` — stable client errors ✅ `as Observable<DataValue>` replaced with `DataValueSchema.safeParse()`
+- `eslint.config.js` — tighten unsafe rules
+- `prisma/schema.prisma` — RLS comments per model
+- `prisma/rls.sql` — canonical policies
+
+</details>
+
+<details>
+<summary><code>packages/shared</code></summary>
+
+- `schemas/api/api-response.ts` — no `z.unknown()`
+- `contracts/versioning.ts` — tuples, single ApiVersion
+- `schemas/auth/cookies.ts` — `LoginTokenFieldsSchema` (no `.strict()` for interceptor stripping)
+- `schemas/runtime/prisma-query.ts` — `PrismaQuerySubscriberSchema` with `z.custom` `$on`
+- `schemas/runtime/http-headers.ts` — boundary schemas: `RequestLikeSchema`, `HeadersRecordSchema`, `RouteParamsSchema`, `OptionalStringHeaderSchema`, `ForwardedForHeaderSchema` ✅
+
+</details>
+
+<details>
+<summary><code>packages/client</code></summary>
+
+- `lib/api/endpoints.ts` — 4 auth leaves, envelope type
+- `lib/auth/proxy-refresh.ts` — `apiRouter.auth.refresh.path` (**Q2 done**)
+- `lib/auth/jwt.ts`, `auth-errors.ts` — Zod parsing
+
+</details>
+
+<details>
+<summary><code>packages/ui</code></summary>
+
+- `display/data-table.tsx` — refactor done; pin labels + raw colors + optional file split remain
+- `form/select.tsx`, `form/combobox.tsx` — CVA `state` done; hardcoded default strings open
+- `overlay/dialog.tsx` — `closeLabel` prop; overlay CVA batch still open
+- `display/chart.tsx` — `unknown` in helpers + tokens
+- `navigation/carousel.tsx`, `collapsible.tsx`, `message-scroller.tsx` — forwardRef gaps
+- `README.md` — **done** (see package root)
+
+</details>
+
+<details>
+<summary><code>apps/admin</code></summary>
+
+- `components/telescope/alerts-panel.tsx` — ✅ lint: `useCallback` extraction + `SnoozeButton` child + a11y fix
+- `lib/telescope.ts`
+- `app/(panel)/backup/backup-panel.tsx`
+- `app/(panel)/telescope/**` — splits, Zod searchParams
+- `app/(panel)/telescope/search/search-results.tsx` — ✅ lint: 5 child components extracted, 5 navigation callbacks added
+- `app/(panel)/telescope/requests/requests-table.tsx` — ✅ lint: `RequestEmailCell` + `RequestUserIdCell` extracted, exhaustive-deps fixed
+- `app/(panel)/telescope/exceptions/exceptions-table.tsx` — ✅ lint: `handleResolve`/`handleIgnore`/`handleReopen` extracted, exhaustive-deps fixed
+- `app/(panel)/telescope/requests/[id]/request-detail.tsx` — ✅ lint: 3 missing deps added, `handleTrivialSpansChange` extracted
+- `app/(panel)/telescope/users/users-table.tsx` — ✅ lint: `UserEmailLink` child extracted, unnecessary dep removed
+
+</details>
+
+<details>
+<summary><code>apps/web</code></summary>
+
+- `app/hello/hello-view.tsx`
+- `app/auth/login/page.tsx`
+
+</details>
+
+---
+
+_Last updated: August 20, 2026 (fresh audit + data-table ESLint fixes + Q1/Q6 security fixes + API type-safety 20→0 + admin lint 48→1). Regenerate sections after large refactors by re-auditing against `.cursorrules`._

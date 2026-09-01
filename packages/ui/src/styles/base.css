@@ -1,0 +1,21 @@
+@layer base {
+	* {
+		@apply border-border outline-ring/50;
+	}
+	body {
+		@apply bg-background text-foreground;
+	}
+	button,
+	[data-slot="button"] {
+		font-family: var(--font-button);
+	}
+}
+
+@layer base {
+	input::placeholder,
+	textarea::placeholder {
+		font-size: 0.8rem;
+		line-height: 1rem;
+	}
+}
+

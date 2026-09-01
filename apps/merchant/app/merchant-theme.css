@@ -1,0 +1,94 @@
+/* Merchant portal — neutral surfaces (like consumer app) with green brand accents. */
+
+.merchant-app {
+	--background: oklch(0.985 0.006 250);
+	--foreground: oklch(0.28 0.03 250);
+	--card: oklch(1 0 0);
+	--card-foreground: oklch(0.28 0.03 250);
+	--popover: oklch(1 0 0);
+	--popover-foreground: oklch(0.28 0.03 250);
+	--primary: oklch(0.52 0.16 145);
+	--primary-foreground: oklch(0.99 0 0);
+	--secondary: oklch(0.95 0.02 250);
+	--secondary-foreground: oklch(0.32 0.04 250);
+	--muted: oklch(0.95 0.012 250);
+	--muted-foreground: oklch(0.5 0.03 250);
+	--accent: oklch(0.94 0.015 250);
+	--accent-foreground: oklch(0.28 0.03 250);
+	--border: oklch(0.88 0.015 250);
+	--input: oklch(0.88 0.015 250);
+	--ring: oklch(0.52 0.16 145);
+	--sidebar: var(--background);
+	--sidebar-foreground: oklch(0.28 0.03 250);
+	--sidebar-primary: oklch(0.52 0.16 145);
+	--sidebar-primary-foreground: oklch(0.99 0 0);
+	--sidebar-accent: oklch(0.95 0.02 250);
+	--sidebar-accent-foreground: oklch(0.28 0.03 250);
+	--sidebar-border: oklch(0.82 0.015 250);
+	--sidebar-ring: oklch(0.52 0.16 145);
+	--chart-1: oklch(0.52 0.16 145);
+	--chart-2: oklch(0.55 0.14 230);
+	--chart-3: oklch(0.68 0.15 75);
+	--chart-4: oklch(0.58 0.12 165);
+	--chart-5: oklch(0.48 0.03 250);
+}
+
+.dark .merchant-app {
+	--background: oklch(0.17 0.02 250);
+	--foreground: oklch(0.96 0.01 250);
+	--card: oklch(0.21 0.025 250);
+	--card-foreground: oklch(0.96 0.01 250);
+	--popover: oklch(0.21 0.025 250);
+	--popover-foreground: oklch(0.96 0.01 250);
+	--primary: oklch(0.68 0.15 145);
+	--primary-foreground: oklch(0.17 0.02 250);
+	--secondary: oklch(0.25 0.03 250);
+	--secondary-foreground: oklch(0.96 0.01 250);
+	--muted: oklch(0.25 0.025 250);
+	--muted-foreground: oklch(0.72 0.03 250);
+	--accent: oklch(0.26 0.03 250);
+	--accent-foreground: oklch(0.96 0.01 250);
+	--border: oklch(1 0 0 / 12%);
+	--input: oklch(1 0 0 / 16%);
+	--ring: oklch(0.68 0.15 145);
+	--sidebar: var(--background);
+	--sidebar-foreground: oklch(0.96 0.01 250);
+	--sidebar-primary: oklch(0.68 0.15 145);
+	--sidebar-primary-foreground: oklch(0.17 0.02 250);
+	--sidebar-accent: oklch(0.25 0.03 250);
+	--sidebar-accent-foreground: oklch(0.96 0.01 250);
+	--sidebar-border: oklch(1 0 0 / 20%);
+	--sidebar-ring: oklch(0.68 0.15 145);
+	--chart-1: oklch(0.68 0.15 145);
+	--chart-2: oklch(0.7 0.12 230);
+	--chart-3: oklch(0.78 0.14 75);
+	--chart-4: oklch(0.72 0.11 165);
+	--chart-5: oklch(0.62 0.03 250);
+}
+
+.merchant-grid-bg {
+	background-color: var(--background);
+}
+
+/* Solid panel chrome — topbar matches sidebar/content; no frosted tint. */
+.merchant-app .panel-shell-topbar {
+	height: 4rem;
+	flex-shrink: 0;
+	background: var(--background);
+	border-bottom: 1px solid var(--sidebar-border);
+	backdrop-filter: none;
+	-webkit-backdrop-filter: none;
+}
+
+.merchant-app .panel-shell-sidebar [data-slot="sidebar-inner"] {
+	background: var(--card);
+}
+
+.merchant-app [data-mobile="true"][data-sidebar="sidebar"] {
+	background: var(--card);
+}
+
+.merchant-app .panel-shell-sidebar .panel-shell-sidebar-header {
+	height: 4rem;
+	flex-shrink: 0;
+}

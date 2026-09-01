@@ -1,0 +1,20 @@
+"use client";
+
+import type { ServerUser } from "@/lib/auth-server";
+import { RewardHubLayout } from "@/components/layout/reward-hub-layout";
+import * as React from "react";
+
+export interface RewardHubShellProps {
+	readonly children: React.ReactNode;
+	readonly initialUser?: ServerUser | null;
+	readonly sessionActive?: boolean;
+}
+
+/** Consumer Reward Hub chrome — sidebar, topbar, and command palette. */
+export function RewardHubShell({ children, initialUser, sessionActive = false }: RewardHubShellProps): React.JSX.Element {
+	return (
+		<RewardHubLayout initialUser={initialUser} sessionActive={sessionActive}>
+			{children}
+		</RewardHubLayout>
+	);
+}

@@ -1,0 +1,36 @@
+/* Toast auto-dismiss countdown — drains 100% → 0% over the toast's `timeout`. */
+@keyframes toast-countdown {
+	from {
+		width: 100%;
+	}
+	to {
+		width: 0%;
+	}
+}
+
+/* Topbar brand visibility — CSS-driven so there's no JS media-query flash on
+   reload (a matchMedia hook only resolves after hydration, which briefly
+   rendered the wrong brand state). The brand is MOBILE-ONLY: below the `lg`
+   breakpoint the sidebar is a mobile drawer, so the brand always shows in the
+   topbar. At `lg` and up it is always hidden — the desktop sidebar header
+   already shows the app title, and showing the brand again (e.g. while the
+   sidebar is collapsed) reads as a stray "mobile" icon on desktop. */
+@media (min-width: 64rem) {
+	.topbar-brand {
+		display: none;
+	}
+}
+
+/* Frosted shell topbar — shared across admin, web, and merchant panels. */
+.app-shell-topbar {
+	border-bottom: 1px solid var(--sidebar-border);
+	background: color-mix(in oklch, var(--background) 82%, transparent);
+	backdrop-filter: blur(10px);
+}
+
+/* Sidebar search-match highlight — token-driven (sidebar audit #17) so theme
+   changes never require hunting hardcoded color literals in components. */
+.sidebar-mark {
+	background-color: var(--sidebar-search-mark-bg);
+	color: var(--sidebar-search-mark-fg);
+}
