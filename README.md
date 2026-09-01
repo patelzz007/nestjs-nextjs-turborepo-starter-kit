@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./docs/assets/readme-banner.png" alt="NestJS + Next.js + PostgreSQL starter kit — Turborepo monorepo with type-safe full-stack TypeScript" width="100%" />
+  <img src="https://raw.githubusercontent.com/patelzz007/nestjs-nextjs-turborepo-starter-kit/main/docs/assets/readme-banner.png" alt="NestJS + Next.js + PostgreSQL starter kit — Turborepo monorepo with type-safe full-stack TypeScript" width="100%" />
 </p>
 
 <p align="center">
