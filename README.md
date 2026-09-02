@@ -88,19 +88,56 @@ packages/
 
 ## Quick start
 
-**Prerequisites:** Node 20+, pnpm 11, PostgreSQL running locally.
+**Prerequisites:** Node 20+, pnpm 11, PostgreSQL running locally, and `psql` available in your system `PATH`.
 
 ```bash
-pnpm install
+# Install dependencies + build shared workspace package
+
+pnpm setup
 
 # One-time env + database setup
-cp apps/api/.env.example apps/api/.env    # fill in secrets
-cp apps/web/.env.example apps/web/.env
-cp apps/admin/.env.example apps/admin/.env
-pnpm db:all                               # generate → deploy → seed (~30s)
 
-pnpm dev                                  # web + admin + api (see turbo for all apps)
+# Windows PowerShell
+Copy-Item apps/api/.env.example apps/api/.env
+Copy-Item apps/web/.env.example apps/web/.env
+Copy-Item apps/admin/.env.example apps/admin/.env
+Copy-Item apps/merchant/.env.example apps/merchant/.env
+
+# macOS / Linux
+# cp apps/api/.env.example apps/api/.env
+# cp apps/web/.env.example apps/web/.env
+# cp apps/admin/.env.example apps/admin/.env
+# cp apps/merchant/.env.example apps/merchant/.env
+
+# Fill in secrets and DATABASE_URL inside apps/api/.env
+
+# Create the PostgreSQL database before running Prisma
+# Example:
+# CREATE DATABASE hello_world;
+
+pnpm setup:db                         # build shared → generate → deploy → RLS → seed
+
+pnpm dev                              # web + admin + merchant + docs + api
 ```
+
+`pnpm setup` runs:
+
+```text
+pnpm install
+→ pnpm --filter @workspace/shared build
+```
+
+`pnpm setup:db` runs the complete database initialization flow:
+
+```text
+@workspace/shared build
+→ Prisma generate
+→ Prisma migrate deploy
+→ Apply PostgreSQL RLS policies
+→ Seed database
+```
+
+The RLS setup is cross-platform and does not require Bash on Windows.
 
 Run individual apps when you need them:
 
@@ -111,7 +148,7 @@ pnpm dev:merchant
 pnpm dev:api
 ```
 
-> **New here?** Follow the full [A-to-Z setup guide](./docs/getting-started.md) — prerequisites, every env var, seeded login accounts, best practices, and troubleshooting.
+> **New here?** Follow the full [A-to-Z setup guide](./docs/getting-started.md) — prerequisites, every env var, PostgreSQL setup, seeded login accounts, best practices, and troubleshooting.
 
 ---
 
@@ -119,7 +156,11 @@ pnpm dev:api
 
 | Command | What it does |
 | ------- | ------------ |
+| `pnpm setup` | Install dependencies and build `@workspace/shared` |
+| `pnpm setup:db` | Build shared package, generate Prisma client, deploy migrations, apply RLS, and seed |
+| `pnpm build:shared` | Build `@workspace/shared` manually |
 | `pnpm dev` | Start dev servers (Turbo) |
+| `pnpm dev:web` / `pnpm dev:admin` / `pnpm dev:merchant` / `pnpm dev:api` | Start individual apps |
 | `pnpm build` | Build all workspaces |
 | `pnpm lint` / `pnpm format` / `pnpm typecheck` / `pnpm test` | Quality gates across the monorepo |
 | `pnpm db:all` / `db:migrate` / `db:generate` / `db:seed` / `db:studio` / `db:reset` | Database — see [docs/prisma.md](./docs/prisma.md) |

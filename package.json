@@ -3,7 +3,10 @@
 	"version": "0.0.1",
 	"private": true,
 	"scripts": {
+		"setup": "pnpm install && pnpm build:shared",
+		"setup:db": "pnpm build:shared && pnpm db:all",
 		"build": "turbo build",
+		"build:shared": "pnpm --filter @workspace/shared build",
 		"dev": "turbo dev",
 		"dev:web": "turbo dev --filter @workspace/web --log-prefix=none",
 		"dev:admin": "turbo dev --filter @workspace/admin --log-prefix=none",

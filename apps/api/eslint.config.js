@@ -24,6 +24,7 @@ export default [
 						"scripts/test-webhook-signature.ts",
 						"scripts/telescope-cli.ts",
 						"scripts/gen-telescope-docs.ts",
+						"scripts/apply-rls.ts",
 					],
 				},
 			},

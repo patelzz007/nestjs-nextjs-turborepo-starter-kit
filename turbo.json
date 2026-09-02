@@ -92,7 +92,7 @@
 		"db:seed": {
 			"cache": false,
 			"env": ["DATABASE_URL"],
-			"dependsOn": ["db:generate", "db:deploy"]
+			"dependsOn": ["^build", "db:generate", "db:deploy"]
 		},
 		"db:studio": {
 			"cache": false,
