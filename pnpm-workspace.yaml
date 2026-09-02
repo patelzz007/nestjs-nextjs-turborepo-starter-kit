@@ -30,7 +30,45 @@ minimumReleaseAgeExclude:
   - motion-dom@13.1.1
   - resend@6.21.0
   - '@nestjs/observe@0.1.7'
-  - lucide-react@1.38.0
+  - lucide-react@1.38.0 || 1.39.0
+  - '@nestjs/terminus@12.0.0'
+  - '@next/bundle-analyzer@16.3.4'
+  - '@next/env@16.3.4'
+  - '@next/eslint-plugin-next@16.3.4'
+  - '@next/swc-darwin-arm64@16.3.4'
+  - '@next/swc-darwin-x64@16.3.4'
+  - '@next/swc-linux-arm64-gnu@16.3.4'
+  - '@next/swc-linux-arm64-musl@16.3.4'
+  - '@next/swc-linux-x64-gnu@16.3.4'
+  - '@next/swc-linux-x64-musl@16.3.4'
+  - '@next/swc-win32-arm64-msvc@16.3.4'
+  - '@next/swc-win32-x64-msvc@16.3.4'
+  - '@rspack/binding-darwin-arm64@2.2.2'
+  - '@rspack/binding-darwin-x64@2.2.2'
+  - '@rspack/binding-linux-arm64-gnu@2.2.2'
+  - '@rspack/binding-linux-arm64-musl@2.2.2'
+  - '@rspack/binding-linux-ppc64-gnu@2.2.2'
+  - '@rspack/binding-linux-riscv64-gnu@2.2.2'
+  - '@rspack/binding-linux-riscv64-musl@2.2.2'
+  - '@rspack/binding-linux-s390x-gnu@2.2.2'
+  - '@rspack/binding-linux-x64-gnu@2.2.2'
+  - '@rspack/binding-linux-x64-musl@2.2.2'
+  - '@rspack/binding-wasm32-wasi@2.2.2'
+  - '@rspack/binding-win32-arm64-msvc@2.2.2'
+  - '@rspack/binding-win32-ia32-msvc@2.2.2'
+  - '@rspack/binding-win32-x64-msvc@2.2.2'
+  - '@rspack/binding@2.2.2'
+  - '@rspack/cli@2.2.2'
+  - '@rspack/core@2.2.2'
+  - '@typescript-eslint/eslint-plugin@8.69.0'
+  - '@typescript-eslint/parser@8.69.0'
+  - '@typescript-eslint/scope-manager@8.69.0'
+  - '@typescript-eslint/tsconfig-utils@8.69.0'
+  - '@typescript-eslint/type-utils@8.69.0'
+  - '@typescript-eslint/visitor-keys@8.69.0'
+  - globals@17.12.0
+  - next@16.3.4
+  - typescript-eslint@8.69.0
 
 # @darraghor/eslint-plugin-nestjs-typed does `import ts from "typescript"`
 # directly (undisclosed in its manifest), so Node resolves the hoisted TS 7
