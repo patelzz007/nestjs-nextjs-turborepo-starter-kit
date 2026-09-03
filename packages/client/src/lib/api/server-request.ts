@@ -19,7 +19,6 @@ import {
 	isErasedProcedureDef,
 	isRouterSubtree,
 	resolveRequest,
-	type ErasedMutationDef,
 	type MutationDef,
 	type ProcedureDef,
 	type QueryDef,
@@ -74,14 +73,29 @@ export const DEFAULT_MERCHANT_SERVER_API_CONFIG: ServerApiConfig = {
 	clientType: "merchant",
 };
 
-/** Runtime context for every SSR procedure call. */
-export interface ServerRequestContext {
-	readonly config: ServerApiConfig;
-	/** Procedure def used by the 401 refresh pipeline (wired at the app boundary). */
-	readonly refreshDef: ErasedMutationDef;
+/**
+ * Minimal mutation metadata required by the 401 refresh pipeline.
+ *
+ * Deliberately does not use ErasedMutationDef because the refresh pipeline
+ * only needs the endpoint path/version. Keeping the full generic mutation
+ * definition here causes function-parameter variance issues with queryKey.
+ */
+export interface RefreshMutationDef {
+	readonly path: string;
+	readonly version?: import("@workspace/shared").ApiVersion;
 }
 
-export function createServerRequestContext(config: ServerApiConfig, refreshDef: ErasedMutationDef): ServerRequestContext {
+export interface ServerRequestContext {
+	readonly config: ServerApiConfig;
+
+	/** Procedure metadata used by the 401 refresh pipeline. */
+	readonly refreshDef: RefreshMutationDef;
+}
+
+export function createServerRequestContext(
+	config: ServerApiConfig,
+	refreshDef: RefreshMutationDef,
+): ServerRequestContext {
 	return { config, refreshDef };
 }
 
@@ -485,21 +499,37 @@ function isCompleteServerCaller<R extends object>(router: R, candidate: Partial<
 	return complete;
 }
 
-function mapServerCallerBranch<V extends object>(context: ServerRequestContext, value: V): ServerCallerBranch<V> {
+function mapServerCallerBranch<V extends object>(
+	context: ServerRequestContext,
+	value: V,
+): ServerCallerBranch<V> {
 	if (isErasedProcedureDef(value)) {
-		return createServerProcedureLeaf(context, value);
+		return createServerProcedureLeaf(
+			context,
+			value,
+		) as ServerCallerBranch<V>;
 	}
+
 	if (isRouterSubtree(value)) {
-		return createServerCallerForRouter(value, context);
+		return createServerCallerForRouter(
+			value,
+			context,
+		) as ServerCallerBranch<V>;
 	}
-	throw new Error("Invalid router node — expected a procedure leaf or nested router.");
+
+	throw new Error(
+		"Invalid router node — expected a procedure leaf or nested router.",
+	);
 }
 
 function buildServerCallerTree<R extends object>(router: R, context: ServerRequestContext): ServerCallerTree<R> {
 	const out: Partial<ServerCallerTree<R>> = {};
 
 	eachRouterEntry(router, (key, value) => {
-		out[key] = mapServerCallerBranch(context, value);
+		out[key] = mapServerCallerBranch(
+			context,
+			value as Extract<R[typeof key], object>,
+		) as ServerCallerTree<R>[typeof key];
 	});
 
 	if (!isCompleteServerCaller(router, out)) {
