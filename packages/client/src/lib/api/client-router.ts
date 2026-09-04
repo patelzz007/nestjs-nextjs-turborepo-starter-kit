@@ -101,14 +101,27 @@ type ClientRouterTreeBranch<V> =
 				? ClientRouterTree<V>
 				: never;
 
-function mapClientRouterBranch<V extends object>(context: ApiRequestContext, value: V): ClientRouterTreeBranch<V> {
+function mapClientRouterBranch<V extends object>(
+	context: ApiRequestContext,
+	value: V,
+): ClientRouterTreeBranch<V> {
 	if (isErasedProcedureDef(value)) {
-		return createProcedureForDef(context, value);
+		return createProcedureForDef(
+			context,
+			value,
+		) as ClientRouterTreeBranch<V>;
 	}
+
 	if (isRouterSubtree(value)) {
-		return buildClientRouter(value, context);
+		return buildClientRouter(
+			value,
+			context,
+		) as ClientRouterTreeBranch<V>;
 	}
-	throw new Error("Invalid router node — expected a procedure leaf or nested router.");
+
+	throw new Error(
+		"Invalid router node — expected a procedure leaf or nested router.",
+	);
 }
 
 function isCompleteClientRouter<R extends object>(router: R, candidate: Partial<ClientRouterTree<R>>): candidate is ClientRouterTree<R> {
@@ -129,7 +142,10 @@ export function buildClientRouter<R extends object>(router: R, context: ApiReque
 	const out: Partial<ClientRouterTree<R>> = {};
 
 	eachRouterEntry(router, (key, value) => {
-		out[key] = mapClientRouterBranch(context, value);
+		out[key] = mapClientRouterBranch(
+			context,
+			value as Extract<R[typeof key], object>,
+		) as ClientRouterTree<R>[typeof key];
 	});
 
 	if (!isCompleteClientRouter(router, out)) {

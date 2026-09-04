@@ -4,7 +4,7 @@ import "./web-theme.css";
 import { QueryProvider } from "@workspace/client/lib/api/query-provider";
 import { cn } from "@workspace/ui/lib/utils";
 import type { Metadata } from "next";
-import Script from "next/script";
+import { ReduxDevToolsGuard } from "@workspace/ui/components/redux-devtools-guard";
 import { bricolageGrotesque } from "@workspace/ui/fonts/bricolage-grotesque";
 import { Inter, Playfair_Display } from "next/font/google";
 
@@ -53,13 +53,7 @@ export default function RootLayout({
 	return (
 		<html lang="en" suppressHydrationWarning className={cn("font-sans antialiased", inter.variable, playfair.variable, bricolageGrotesque.variable)}>
 			<body className="web-app">
-				<Script
-					id="redux-devtools-guard"
-					strategy="beforeInteractive"
-					dangerouslySetInnerHTML={{
-						__html: "window.__REDUX_DEVTOOLS_EXTENSION__ = window.__REDUX_DEVTOOLS_EXTENSION__ || { connect: function(){return {}} };",
-					}}
-				/>
+				<ReduxDevToolsGuard />
 				<QueryProvider>
 					<WebClientAuthWrapper>
 						<WebSessionBootstrap />

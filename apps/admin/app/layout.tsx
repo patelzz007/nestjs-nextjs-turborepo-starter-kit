@@ -5,7 +5,7 @@ import { QueryProvider } from "@workspace/client/lib/api/query-provider";
 import { Toaster } from "@workspace/ui/components/feedback/toast";
 import { cn } from "@workspace/ui/lib/utils";
 import type { Metadata } from "next";
-import Script from "next/script";
+import { ReduxDevToolsGuard } from "@workspace/ui/components/redux-devtools-guard";
 import { bricolageGrotesque } from "@workspace/ui/fonts/bricolage-grotesque";
 import { Geist, Geist_Mono, JetBrains_Mono } from "next/font/google";
 
@@ -57,9 +57,7 @@ export default function RootLayout({
 			className={cn("antialiased", fontMono.variable, "font-sans", geist.variable, jetbrainsMonoHeading.variable, bricolageGrotesque.variable)}>
 			<body className="admin-app">
 				{/* Prevent Redux DevTools extension from serializing React Query / zustand state */}
-				<Script id="redux-devtools-guard" strategy="beforeInteractive">
-					{`window.__REDUX_DEVTOOLS_EXTENSION__ = window.__REDUX_DEVTOOLS_EXTENSION__ || { connect: function(){return {}} };`}
-				</Script>
+				<ReduxDevToolsGuard />
 				<QueryProvider>
 					<ClientAuthWrapper
 						// Isolated cookie names + X-Client-Type: admin so web and admin

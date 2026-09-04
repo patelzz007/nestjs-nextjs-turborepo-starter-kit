@@ -10,7 +10,7 @@ import { Toaster } from "@workspace/ui/components/feedback/toast";
 import { bricolageGrotesque } from "@workspace/ui/fonts/bricolage-grotesque";
 import { Fira_Sans, JetBrains_Mono } from "next/font/google";
 import type { Metadata } from "next";
-import Script from "next/script";
+import { ReduxDevToolsGuard } from "@workspace/ui/components/redux-devtools-guard";
 import * as React from "react";
 
 const firaSans = Fira_Sans({
@@ -39,13 +39,7 @@ export default async function RootLayout({ children }: { readonly children: Reac
 	return (
 		<html lang="en" suppressHydrationWarning className={cn("font-sans antialiased", firaSans.variable, jetbrainsMono.variable, bricolageGrotesque.variable)}>
 			<body className="merchant-app">
-				<Script
-					id="redux-devtools-guard"
-					strategy="beforeInteractive"
-					dangerouslySetInnerHTML={{
-						__html: "window.__REDUX_DEVTOOLS_EXTENSION__ = window.__REDUX_DEVTOOLS_EXTENSION__ || { connect: function(){return {}} };",
-					}}
-				/>
+				<ReduxDevToolsGuard />
 				<QueryProvider>
 					<MerchantRootProvider initialMerchantOrgId={initialMerchantOrgId}>
 						<ThemeProvider>
