@@ -1,9 +1,11 @@
 "use client";
 
 import { MerchantDashboardStatCard } from "@/components/dashboard/merchant-dashboard-stat-card";
+import { useMerchantCapabilities } from "@/lib/merchant-capabilities";
 import { stubApiMeta } from "@/lib/api-envelope";
 import { useAuth } from "@workspace/client/lib/auth";
 import type { AnalyticsMetric, MerchantAnalyticsResponse, RewardResponse } from "@workspace/shared";
+import type { MerchantCapability } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/feedback/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
 import { Button, buttonVariants } from "@workspace/ui/components/form/button";
@@ -34,6 +36,7 @@ interface QuickActionDefinition {
 	readonly icon: LucideIcon;
 	readonly iconClassName: string;
 	readonly hoverClassName: string;
+	readonly requiredCapability?: MerchantCapability;
 }
 
 const QUICK_ACTIONS: readonly QuickActionDefinition[] = [
@@ -44,6 +47,7 @@ const QUICK_ACTIONS: readonly QuickActionDefinition[] = [
 		icon: Plus,
 		iconClassName: "bg-primary/10 text-primary group-hover:bg-primary/20",
 		hoverClassName: "group-hover:text-primary",
+		requiredCapability: "merchant:manage_rewards",
 	},
 	{
 		href: "/analytics",
@@ -52,6 +56,7 @@ const QUICK_ACTIONS: readonly QuickActionDefinition[] = [
 		icon: BarChart3,
 		iconClassName: "bg-info-soft text-info group-hover:bg-info/20",
 		hoverClassName: "group-hover:text-info",
+		requiredCapability: "merchant:view_analytics",
 	},
 	{
 		href: "/redemptions",
@@ -60,6 +65,7 @@ const QUICK_ACTIONS: readonly QuickActionDefinition[] = [
 		icon: ScanLine,
 		iconClassName: "bg-chart-4/10 text-chart-4 group-hover:bg-chart-4/20",
 		hoverClassName: "group-hover:text-chart-4",
+		requiredCapability: "merchant:view_redemptions",
 	},
 	{
 		href: "/api-keys",
@@ -68,6 +74,7 @@ const QUICK_ACTIONS: readonly QuickActionDefinition[] = [
 		icon: Zap,
 		iconClassName: "bg-warning-soft text-warning group-hover:bg-warning/20",
 		hoverClassName: "group-hover:text-warning",
+		requiredCapability: "merchant:manage_api_keys",
 	},
 ];
 
@@ -99,6 +106,12 @@ export interface MerchantDashboardPageViewProps {
 
 export function MerchantDashboardPageView({ businessName, initialAnalytics, initialRewards }: MerchantDashboardPageViewProps): React.JSX.Element {
 	const { api, user } = useAuth();
+	const { hasCapability, canManageRewards, canViewAnalytics } = useMerchantCapabilities();
+
+	const quickActions = React.useMemo(
+		() => QUICK_ACTIONS.filter((action) => action.requiredCapability === undefined || hasCapability(action.requiredCapability)),
+		[hasCapability],
+	);
 
 	const initialAnalyticsData = React.useMemo(
 		() =>
@@ -144,14 +157,18 @@ export function MerchantDashboardPageView({ businessName, initialAnalytics, init
 					<p className="text-muted-foreground">Here is an overview of {displayBusinessName}&apos;s rewards performance.</p>
 				</div>
 				<div className="flex gap-3">
-					<Link href="/analytics" className={cn(buttonVariants({ variant: "outline" }), "gap-2 bg-transparent")}>
-						<BarChart3 className="size-4" aria-hidden="true" />
-						Analytics
-					</Link>
-					<Link href="/rewards/new" className={cn(buttonVariants(), "gap-2")}>
-						<Plus className="size-4" aria-hidden="true" />
-						Create Reward
-					</Link>
+					{canViewAnalytics ? (
+						<Link href="/analytics" className={cn(buttonVariants({ variant: "outline" }), "gap-2 bg-transparent")}>
+							<BarChart3 className="size-4" aria-hidden="true" />
+							Analytics
+						</Link>
+					) : null}
+					{canManageRewards ? (
+						<Link href="/rewards/new" className={cn(buttonVariants(), "gap-2")}>
+							<Plus className="size-4" aria-hidden="true" />
+							Create Reward
+						</Link>
+					) : null}
 				</div>
 			</div>
 
@@ -259,12 +276,14 @@ export function MerchantDashboardPageView({ businessName, initialAnalytics, init
 								</div>
 								<h3 className="mb-1 font-medium text-foreground">No rewards yet</h3>
 								<p className="mb-4 max-w-sm text-sm text-muted-foreground">Create your first reward to start engaging with customers.</p>
-								<Link href="/rewards/new">
-									<Button size="sm">
-										<Plus className="me-2 size-4" aria-hidden="true" />
-										Create your first reward
-									</Button>
-								</Link>
+								{canManageRewards ? (
+									<Link href="/rewards/new">
+										<Button size="sm">
+											<Plus className="me-2 size-4" aria-hidden="true" />
+											Create your first reward
+										</Button>
+									</Link>
+								) : null}
 							</div>
 						)}
 					</CardContent>
@@ -329,7 +348,7 @@ export function MerchantDashboardPageView({ businessName, initialAnalytics, init
 			</div>
 
 			<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-				{QUICK_ACTIONS.map((action) => {
+				{quickActions.map((action) => {
 					const Icon = action.icon;
 
 					return (

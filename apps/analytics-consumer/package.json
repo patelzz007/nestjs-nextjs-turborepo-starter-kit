@@ -1,0 +1,26 @@
+{
+	"name": "@workspace/analytics-consumer",
+	"version": "0.0.1",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"dev": "tsx watch src/main.ts",
+		"start": "tsx src/main.ts",
+		"lint": "eslint",
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@workspace/shared": "workspace:*",
+		"kafkajs": "^2.2.4",
+		"pg": "^8.23.0"
+	},
+	"devDependencies": {
+		"@types/node": "^26.4.0",
+		"@types/pg": "^8.23.1",
+		"@workspace/eslint-config": "workspace:^",
+		"@workspace/typescript-config": "workspace:*",
+		"eslint": "^9.39.5",
+		"tsx": "^4.23.13",
+		"typescript": "6.0.2"
+	}
+}

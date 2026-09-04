@@ -65,11 +65,12 @@ export class RewardOtpService {
 		}
 	}
 
-	public async verifyClaimOtp(userId: string, phone: string, otp: string): Promise<void> {
+	public async verifyClaimOtp(userId: string, phone: string, otp: string, rewardId: string): Promise<void> {
 		const challenge = await this.prisma.rewardOtpChallenge.findFirst({
 			where: {
 				userId,
 				phone,
+				rewardId,
 				purpose: "CLAIM",
 				consumedAt: null,
 				isDeleted: false,

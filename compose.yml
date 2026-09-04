@@ -1,0 +1,123 @@
+# Local infrastructure for development.
+#
+# Usage:
+#   docker compose up -d
+#   docker compose ps
+#   docker compose down
+#
+# BullMQ is a Node.js library — it has no standalone container. It stores jobs in Redis.
+# The bull-board service below is an optional dashboard for monitoring BullMQ queues.
+#
+# Service URLs (from the host machine):
+#   Redis       → localhost:6379
+#   Kafka       → localhost:9092
+#   RabbitMQ    → localhost:5672  (AMQP)  |  http://localhost:15672  (management UI, rabbit / rabbit)
+#   Bull Board  → http://localhost:3030  (BullMQ queue dashboard)
+#
+# PostgreSQL is not included — use your local instance and set DATABASE_URL in apps/api/.env.
+
+name: hello-world
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: hello-world-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes --save 60 1
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - infra
+
+  kafka:
+    image: apache/kafka:3.9.0
+    container_name: hello-world-kafka
+    hostname: kafka
+    restart: unless-stopped
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://kafka:29092,CONTROLLER://kafka:29093,PLAINTEXT_HOST://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:29093
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 > /dev/null 2>&1",
+        ]
+      interval: 10s
+      timeout: 10s
+      retries: 12
+      start_period: 30s
+    networks:
+      - infra
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: hello-world-rabbitmq
+    restart: unless-stopped
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: rabbit
+      RABBITMQ_DEFAULT_PASS: rabbit
+      RABBITMQ_DEFAULT_VHOST: /
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 10s
+      retries: 12
+      start_period: 20s
+    networks:
+      - infra
+
+  bull-board:
+    image: venatum/bull-board:latest
+    container_name: hello-world-bull-board
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+    ports:
+      - "3030:3000"
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_PASSWORD: ""
+      REDIS_USE_TLS: "false"
+      BULL_PREFIX: bull
+      QUEUE_NAMES: email.send,rewards.auto-publish,claims.expire-pending,claims.expire-referrer,outbox.publish
+    networks:
+      - infra
+
+volumes:
+  redis_data:
+  kafka_data:
+  rabbitmq_data:
+
+networks:
+  infra:
+    name: hello-world-infra

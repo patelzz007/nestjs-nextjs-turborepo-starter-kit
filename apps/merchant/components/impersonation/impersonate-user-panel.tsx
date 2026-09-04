@@ -6,6 +6,7 @@ import { useAuth } from "@workspace/client/lib/auth";
 import { Button } from "@workspace/ui/components/form/button";
 import { Input } from "@workspace/ui/components/form/input";
 import { useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 import { UserRoundSearch } from "lucide-react";
 import * as React from "react";
 
@@ -13,6 +14,7 @@ import * as React from "react";
 export function ImpersonateUserPanel(): React.JSX.Element | null {
 	const { api } = useAuth();
 	const queryClient = useQueryClient();
+	const router = useRouter();
 
 	const meQuery = api.auth.me.useQuery(undefined);
 	const permissionsQuery = api.auth.permissions.useQuery(undefined);
@@ -30,6 +32,7 @@ export function ImpersonateUserPanel(): React.JSX.Element | null {
 	const impersonateMutation = api.auth.impersonate.useMutation({
 		onSuccess: async (): Promise<void> => {
 			await invalidateSessionAuth(queryClient);
+			router.refresh();
 		},
 	});
 
@@ -47,7 +50,7 @@ export function ImpersonateUserPanel(): React.JSX.Element | null {
 			</div>
 			<div className="mt-4 space-y-3">
 				<Input placeholder="Search users…" value={search} onChange={(e): void => setSearch(e.target.value)} aria-label="Search users" />
-				<ul className="divide-y rounded-md border">
+				<ul className="max-h-48 divide-y overflow-y-auto rounded-md border">
 					{users.map((user) => (
 						<li key={user.id} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
 							<div className="min-w-0">

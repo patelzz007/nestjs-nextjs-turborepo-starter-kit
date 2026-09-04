@@ -2,12 +2,14 @@
 
 import { ImpersonateUserPanel } from "@/components/impersonation/impersonate-user-panel";
 import { MerchantSidebarNavItem } from "@/components/layout/merchant-sidebar-nav-item";
+import { useMerchantSessionProfile } from "@/lib/merchant-session-profile";
+import { filterCompiledSidebarMenu } from "@/lib/navigation/filter-menu-by-capabilities";
 import { resolveMerchantPinnedMenuItems } from "@/lib/navigation/pinned-items";
 import { MERCHANT_SIDEBAR_LABELS } from "@/lib/sidebar-labels";
 import { renderMerchantPaletteIcon } from "@/lib/palette/nav-items";
 import { useMerchantCommandPaletteStore } from "@/stores/command-palette-store";
 import { useMerchantSidebarStore } from "@/stores/sidebar-store";
-import { useAuth } from "@workspace/client/lib/auth";
+import { useMerchantOrg } from "@/lib/merchant-root-provider";
 import type { MerchantMembershipResponse } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/feedback/badge";
 import { Label } from "@workspace/ui/components/form/label";
@@ -74,7 +76,7 @@ function MerchantSidebarPinnedItem({ title, url, icon, isActive, onNavigate }: M
 export function MerchantSidebarPanel({ memberships, merchantOrgId, onStoreChange, onNavigate }: MerchantSidebarPanelProps): React.JSX.Element {
 	const pathname = usePathname();
 	const router = useRouter();
-	const { user } = useAuth();
+	const sessionProfile = useMerchantSessionProfile();
 	const activeMembership = memberships.find((row) => row.merchantOrgId === merchantOrgId);
 	const searchInputRef = React.useRef<HTMLInputElement>(null);
 	const navContainerRef = React.useRef<HTMLDivElement>(null);
@@ -92,12 +94,16 @@ export function MerchantSidebarPanel({ memberships, merchantOrgId, onStoreChange
 	const moveSectionDown = useMerchantSidebarStore((state) => state.moveSectionDown);
 	const pinnedUrls = useMerchantCommandPaletteStore((state) => state.pinnedUrls);
 
+	const capabilities = React.useMemo(() => activeMembership?.capabilities ?? [], [activeMembership]);
+
+	const filteredMenu = React.useMemo(() => filterCompiledSidebarMenu(menu, capabilities), [menu, capabilities]);
+
 	const view = React.useMemo(
-		() => buildSidebarView({ menu, pathname: currentPage, sectionOrder, searchQuery, isHighlightParentItem: true }),
-		[menu, currentPage, sectionOrder, searchQuery],
+		() => buildSidebarView({ menu: filteredMenu, pathname: currentPage, sectionOrder, searchQuery, isHighlightParentItem: true }),
+		[filteredMenu, currentPage, sectionOrder, searchQuery],
 	);
 
-	const pinnedItems = React.useMemo(() => resolveMerchantPinnedMenuItems(pinnedUrls), [pinnedUrls]);
+	const pinnedItems = React.useMemo(() => resolveMerchantPinnedMenuItems(pinnedUrls, capabilities), [pinnedUrls, capabilities]);
 	const expandedItems = useRouteExpandedItems(currentPage, storeExpandedItems, view.routeState.autoExpandedItems, resetExpandedItems);
 	const activeItems = view.routeState.activeItems;
 
@@ -188,11 +194,15 @@ export function MerchantSidebarPanel({ memberships, merchantOrgId, onStoreChange
 		};
 	}, [currentPage]);
 
-	const userInitials = user !== null ? getUserInitials(user.fullName) : "?";
+	const userInitials = getUserInitials(sessionProfile.fullName);
 	const showPinned = pinnedItems.length > 0 && !view.noResults;
+	const formatStoreValue = React.useCallback(
+		(orgId: string): string => memberships.find((row) => row.merchantOrgId === orgId)?.businessName ?? orgId,
+		[memberships],
+	);
 
 	return (
-		<div className="flex h-full flex-col bg-card text-sidebar-foreground">
+		<div className="flex h-full min-h-0 flex-col overflow-hidden bg-card text-sidebar-foreground">
 			<PanelSidebarHeader title={menu.header.title} subtitle={menu.header.subtitle} icon={<Gift className="size-4 text-primary" aria-hidden="true" />} />
 
 			<SidebarContent ref={navContainerRef} className="[overflow-anchor:none]">
@@ -274,22 +284,20 @@ export function MerchantSidebarPanel({ memberships, merchantOrgId, onStoreChange
 				))}
 			</SidebarContent>
 
-			<SidebarFooter className="border-t border-sidebar-border bg-sidebar-accent/10">
-				{user !== null ? (
-					<div className="flex items-center gap-2.5 px-2 py-2">
-						<div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-sidebar-accent text-[length:var(--text-sidebar-caption)] font-bold text-sidebar-foreground ring-1 ring-sidebar-border/50">
-							{userInitials}
-						</div>
-						<div className="min-w-0 flex-1">
-							<span className="block truncate text-sm leading-tight font-medium text-sidebar-foreground">{user.fullName}</span>
-							<span className="block truncate text-[length:var(--text-sidebar-caption)] leading-tight text-muted-foreground">{user.email}</span>
-						</div>
+			<SidebarFooter className="max-h-[min(45vh,22rem)] shrink-0 overflow-y-auto border-t border-sidebar-border bg-sidebar-accent/10">
+				<div className="flex items-center gap-2.5 px-2 py-2">
+					<div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-sidebar-accent text-[length:var(--text-sidebar-caption)] font-bold text-sidebar-foreground ring-1 ring-sidebar-border/50">
+						{userInitials}
 					</div>
-				) : null}
+					<div className="min-w-0 flex-1">
+						<span className="block truncate text-sm leading-tight font-medium text-sidebar-foreground">{sessionProfile.fullName}</span>
+						<span className="block truncate text-[length:var(--text-sidebar-caption)] leading-tight text-muted-foreground">{sessionProfile.email}</span>
+					</div>
+				</div>
 
 				{activeMembership !== undefined ? (
 					<div className="px-2 pb-2">
-						<div className="rounded-lg border border-sidebar-border bg-background/60 px-3 py-3">
+						<div className="min-w-0 overflow-hidden rounded-lg border border-sidebar-border bg-background/60 px-3 py-3">
 							<p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Active store</p>
 							<p className="mt-1 truncate text-sm font-semibold text-sidebar-foreground">{activeMembership.businessName}</p>
 							<Badge variant="secondary" className="mt-2">
@@ -299,8 +307,8 @@ export function MerchantSidebarPanel({ memberships, merchantOrgId, onStoreChange
 								<div className="mt-3 space-y-1">
 									<Label className="text-xs">Switch store</Label>
 									<Select value={merchantOrgId ?? ""} onValueChange={handleStoreChange}>
-										<SelectTrigger className="w-full">
-											<SelectValue placeholder="Select store" />
+										<SelectTrigger className="w-full min-w-0">
+											<SelectValue placeholder="Select store" formatValue={formatStoreValue} />
 										</SelectTrigger>
 										<SelectContent>
 											{memberships.map((row) => (

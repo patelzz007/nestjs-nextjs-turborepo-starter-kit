@@ -4,6 +4,7 @@ import { MerchantRewardsCatalog } from "@/components/rewards/merchant-rewards-ca
 import { MerchantRewardsSummaryStrip } from "@/components/rewards/merchant-rewards-summary-strip";
 import { MerchantEmptyState } from "@/components/merchant-ui/empty-state";
 import { MerchantPageHeader } from "@/components/merchant-ui/page-header";
+import { useMerchantCapabilities } from "@/lib/merchant-capabilities";
 import { stubApiMeta } from "@/lib/api-envelope";
 import { useAuth } from "@workspace/client/lib/auth";
 import type { RewardResponse, RewardStatus } from "@workspace/shared";
@@ -23,6 +24,7 @@ export interface MerchantRewardsPageViewProps {
 
 export function MerchantRewardsPageView({ initialRewards }: MerchantRewardsPageViewProps): React.JSX.Element {
 	const { api } = useAuth();
+	const { canManageRewards } = useMerchantCapabilities();
 
 	const initialQueryData = React.useMemo(
 		() =>
@@ -82,10 +84,12 @@ export function MerchantRewardsPageView({ initialRewards }: MerchantRewardsPageV
 				title="Rewards"
 				description="Create drafts, submit for review, and monitor live inventory across your store."
 				actions={
-					<Link href="/rewards/new" className={cn(buttonVariants(), "gap-2")}>
-						<Plus className="size-4" aria-hidden="true" />
-						New reward
-					</Link>
+					canManageRewards ? (
+						<Link href="/rewards/new" className={cn(buttonVariants(), "gap-2")}>
+							<Plus className="size-4" aria-hidden="true" />
+							New reward
+						</Link>
+					) : undefined
 				}
 			/>
 
@@ -97,14 +101,16 @@ export function MerchantRewardsPageView({ initialRewards }: MerchantRewardsPageV
 					description="Start with a draft offer — you can refine details and submit for review before it goes live."
 					icon={<Ticket className="size-5" aria-hidden="true" />}
 					action={
-						<Link href="/rewards/new" className={cn(buttonVariants(), "gap-2")}>
-							<Plus className="size-4" aria-hidden="true" />
-							Create first reward
-						</Link>
+						canManageRewards ? (
+							<Link href="/rewards/new" className={cn(buttonVariants(), "gap-2")}>
+								<Plus className="size-4" aria-hidden="true" />
+								Create first reward
+							</Link>
+						) : undefined
 					}
 				/>
 			) : (
-				<MerchantRewardsCatalog rewards={rewards} isLoading={isLoading} />
+				<MerchantRewardsCatalog rewards={rewards} isLoading={isLoading} canManageRewards={canManageRewards} />
 			)}
 		</div>
 	);

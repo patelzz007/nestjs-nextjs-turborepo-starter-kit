@@ -45,7 +45,6 @@ export function AppPanelShell({
 
 	return (
 		<div className={cn("min-h-svh text-foreground", shellClassName)}>
-			{banner}
 			<SidebarProvider
 				defaultOpen={sidebarOpen ?? true}
 				open={isControlledSidebar ? sidebarOpen : undefined}
@@ -57,8 +56,9 @@ export function AppPanelShell({
 					{sidebar}
 				</Sidebar>
 				<SidebarInset className={cn("flex h-svh min-w-0 flex-col overflow-hidden bg-background")}>
+					{banner}
 					{topbar}
-					<main id="main-content" tabIndex={-1} className={cn("flex-1 overflow-y-auto overscroll-none outline-none", mainClassName)}>
+					<main id="main-content" tabIndex={-1} className={cn("min-h-0 flex-1 overflow-y-auto overscroll-none outline-none", mainClassName)}>
 						<PanelShellContent className={contentClassName}>{children}</PanelShellContent>
 					</main>
 				</SidebarInset>

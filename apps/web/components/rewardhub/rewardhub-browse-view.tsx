@@ -105,9 +105,9 @@ export function RewardHubBrowseView({
 	const summaryItems = React.useMemo(
 		() => [
 			{
-				label: "Available",
+				label: "In stock",
 				value: total.toLocaleString(),
-				hint: "Matching filters",
+				hint: "Claimable offers",
 				icon: <Gift className="size-4" aria-hidden="true" />,
 			},
 			{
@@ -176,8 +176,8 @@ export function RewardHubBrowseView({
 
 			{showEmpty ? (
 				<WebEmptyState
-					title="No rewards match"
-					description="Try a different search term, city, or category to discover more local offers."
+					title="No claimable rewards"
+					description="Everything matching your filters is sold out or expired. Try another city or category."
 					icon={<Search className="size-5" aria-hidden="true" />}
 				/>
 			) : (

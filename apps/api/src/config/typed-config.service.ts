@@ -170,9 +170,34 @@ export class TypedConfigService {
 		return this.authorizationCacheBackend === "redis" && this.redisUrl !== undefined;
 	}
 
-	/** Redis connection URL for distributed authorization cache invalidation. */
+	/** Redis connection URL for distributed authorization cache invalidation and BullMQ job queues. */
 	public get redisUrl(): string | undefined {
 		const value: string | undefined = process.env.REDIS_URL;
 		return value !== undefined && value.length > 0 ? value : undefined;
+	}
+
+	/** Whether BullMQ workers and producers should be active. */
+	public get useBullMq(): boolean {
+		return this.redisUrl !== undefined;
+	}
+
+	// ── Kafka ──────────────────────────────────────────────────────────────
+
+	/** Kafka bootstrap servers (comma-separated). */
+	public get kafkaBrokers(): readonly string[] | undefined {
+		const value: string | undefined = process.env.KAFKA_BROKERS;
+		if (value === undefined || value.length === 0) {
+			return undefined;
+		}
+		const brokers: string[] = value
+			.split(",")
+			.map((broker: string): string => broker.trim())
+			.filter((broker: string): boolean => broker.length > 0);
+		return brokers.length > 0 ? brokers : undefined;
+	}
+
+	/** Whether the Kafka producer and event bridge should be active. */
+	public get useKafka(): boolean {
+		return this.kafkaBrokers !== undefined;
 	}
 }

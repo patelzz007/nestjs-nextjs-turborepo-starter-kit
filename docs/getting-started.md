@@ -136,6 +136,16 @@ brew services start postgresql@17
 docker run --name monorepo-pg -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres \
   -e POSTGRES_DB=monorepo -p 5432:5432 -d postgres:17
 
+# Option B2 — Docker Compose (Redis + Kafka + RabbitMQ + Bull Board)
+# From the repo root (PostgreSQL is expected to run locally — not in compose):
+pnpm docker:up
+# Redis:    localhost:6379
+# Kafka:    localhost:9092
+# RabbitMQ: localhost:5672 — management UI at http://localhost:15672 (rabbit/rabbit)
+# BullMQ:   uses Redis; queue dashboard at http://localhost:3030
+# Analytics consumer (optional): pnpm dev:analytics-consumer
+# Messaging architecture: docs/infrastructure/messaging.md
+
 # Option C — Postgres.app (macOS, GUI)
 # Download from https://postgresapp.com and click "Start"
 ```
@@ -468,6 +478,11 @@ Run these from the **repo root**:
 | `pnpm deps:check`                                  | Verify shared deps (React/Zod/TS) are the same everywhere |
 | `pnpm deps:fix`                                    | Auto-align dependency versions                            |
 | `pnpm turbo run db:<task>`                         | Run any db task through turbo explicitly                  |
+| `pnpm docker:up`                                   | Start local infra (Redis, Kafka, RabbitMQ, Bull Board) |
+| `pnpm docker:down`                                 | Stop and remove infra containers                          |
+| `pnpm docker:ps`                                   | Show infra container status                               |
+| `pnpm docker:logs`                                 | Tail infra container logs                                 |
+| `pnpm dev:analytics-consumer`                      | Run Kafka → Postgres analytics staging consumer           |
 
 > [!NOTE] **Add a shadcn component/block:** `pnpm dlx shadcn@latest add <name> -y -o -c apps/admin`
 > (run from the repo root; `-y` skips the confirm prompt and `-o` auto-answers the

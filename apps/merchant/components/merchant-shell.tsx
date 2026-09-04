@@ -8,6 +8,7 @@ import { useMerchantSidebarControl } from "@/components/layout/use-merchant-side
 import { MerchantSidebarPanel } from "@/components/layout/merchant-sidebar-panel";
 import { MerchantTopbar } from "@/components/layout/merchant-topbar";
 import { stubApiMeta } from "@/lib/api-envelope";
+import { MERCHANT_ME_QUERY_KEY } from "@workspace/client/lib/auth/invalidate-session-auth";
 import { useMerchantOrg } from "@/lib/merchant-root-provider";
 import { useAuth } from "@workspace/client/lib/auth";
 import type { MerchantMembershipResponse } from "@workspace/shared";
@@ -17,6 +18,7 @@ import { isMobileViewport } from "@workspace/ui/hooks/use-mobile";
 import { useMerchantCommandPaletteStore } from "@/stores/command-palette-store";
 import { useMerchantSidebarStore } from "@/stores/sidebar-store";
 import { SidebarPathSync } from "@workspace/client/lib/sidebar/sidebar-path-sync";
+import { useQueryClient } from "@tanstack/react-query";
 import * as React from "react";
 
 export interface MerchantShellProps {
@@ -48,6 +50,7 @@ function MerchantSidebarContent({
 /** Merchant portal chrome — custom sidebar + topbar with command palette. */
 export function MerchantShell({ children, initialMemberships, initialMerchantOrgId }: MerchantShellProps): React.JSX.Element {
 	const { api } = useAuth();
+	const queryClient = useQueryClient();
 	const { merchantOrgId, setMerchantOrgId } = useMerchantOrg();
 	const { isOpen: sidebarOpen, open: openSidebar, close: closeSidebar } = useMerchantSidebarControl();
 
@@ -82,6 +85,17 @@ export function MerchantShell({ children, initialMemberships, initialMerchantOrg
 	);
 
 	const memberships = React.useMemo((): readonly MerchantMembershipResponse[] => membershipsQuery.data?.data ?? [], [membershipsQuery.data?.data]);
+
+	React.useEffect((): void => {
+		if (initialMemberships === undefined) {
+			return;
+		}
+		queryClient.setQueryData(MERCHANT_ME_QUERY_KEY, {
+			success: true as const,
+			data: [...initialMemberships],
+			meta: stubApiMeta(),
+		});
+	}, [initialMemberships, queryClient]);
 
 	React.useEffect((): void => {
 		void useMerchantCommandPaletteStore.persist.rehydrate();

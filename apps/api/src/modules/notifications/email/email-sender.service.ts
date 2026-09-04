@@ -1,10 +1,11 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, Optional } from "@nestjs/common";
 import { Resend } from "resend";
 
 import {
 	CaughtValueSchema,
 	EmailRenderContextSchema,
 	EmailSendResultSchema,
+	EmailTemplateKeySchema,
 	ResendSendResponseSchema,
 	type CaughtValue,
 	type EmailRenderContext,
@@ -15,8 +16,10 @@ import {
 import { TypedConfigService } from "../../../config/typed-config.service";
 import { readCaughtErrorCode, readCaughtErrorMessage } from "../../../common/utils/caught-error";
 import { rejectAfter } from "../../../common/utils/promise-timeout";
+import { EmailQueueService } from "./email-queue.service";
 import { LogService } from "../../logs/logs.service";
 import { BaseEmailTemplate, type BaseEmailProps } from "./base/base-email-template";
+import { serializeEmailTemplateProps } from "./email-template.factory";
 import { EmailLogService } from "./email-log.service";
 
 /** Thrown when a send exceeds `EMAIL_TIMEOUT_MS`. */
@@ -40,6 +43,12 @@ class ResendError extends Error {
 		this.name = "ResendError";
 		this.code = code;
 	}
+}
+
+/** Options for {@link EmailSenderService.send}. */
+interface EmailSendOptions {
+	/** When true, bypasses BullMQ and delivers synchronously (used by the queue worker). */
+	readonly skipQueue?: boolean;
 }
 
 /** Outcome kinds understood by `send()` — mirrors `EmailSendResultSchema`. */
@@ -70,6 +79,7 @@ export class EmailSenderService {
 		private readonly config: TypedConfigService,
 		private readonly logService: LogService,
 		private readonly emailLogService: EmailLogService,
+		@Optional() private readonly emailQueue?: EmailQueueService,
 	) {
 		this.resend = new Resend(this.config.resendApiKey);
 		this.fromAddress = this.config.emailFromAddress;
@@ -86,7 +96,7 @@ export class EmailSenderService {
 	 * Validate + deliver one template. Never throws — inspect the result.
 	 * The recipient override + mode switch happen here, transparently.
 	 */
-	public async send<TProps extends BaseEmailProps>(template: BaseEmailTemplate<TProps>): Promise<EmailSendResult> {
+	public async send<TProps extends BaseEmailProps>(template: BaseEmailTemplate<TProps>, options?: EmailSendOptions): Promise<EmailSendResult> {
 		// 1. Re-validate props — the sender is the last line of defense; a
 		//    template constructed with bad props must never reach the network.
 		const parsed = template.propsSchema.safeParse(template.props);
@@ -115,6 +125,18 @@ export class EmailSenderService {
 			});
 			await this.persist(template, effectiveTo, "sent", undefined);
 			return EmailSendResultSchema.parse({ ok: true, id: "log-only", mode });
+		}
+
+		// 3b. Queue real sends when BullMQ is enabled (worker calls back with skipQueue).
+		if (options?.skipQueue !== true && this.emailQueue?.isEnabled() === true) {
+			const keyParsed = EmailTemplateKeySchema.safeParse(template.key);
+			if (keyParsed.success) {
+				const jobId = await this.emailQueue.enqueue({
+					templateKey: keyParsed.data,
+					props: serializeEmailTemplateProps(parsed.data),
+				});
+				return EmailSendResultSchema.parse({ ok: true, id: jobId, mode: "queued" });
+			}
 		}
 
 		// 4. Real send: rate limit → retry/backoff/timeout → persistence.

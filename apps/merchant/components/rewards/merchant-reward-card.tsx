@@ -13,10 +13,11 @@ import * as React from "react";
 
 export interface MerchantRewardCardProps {
 	readonly reward: RewardResponse;
+	readonly canManageRewards: boolean;
 }
 
 /** Grid tile for a merchant reward — scannable KPIs and inventory at a glance. */
-export function MerchantRewardCard({ reward }: MerchantRewardCardProps): React.JSX.Element {
+export function MerchantRewardCard({ reward, canManageRewards }: MerchantRewardCardProps): React.JSX.Element {
 	const expiryLabel = format(new Date(reward.expiryDate), "d MMM yyyy");
 	const isLive = reward.status === "PUBLISHED";
 
@@ -67,7 +68,7 @@ export function MerchantRewardCard({ reward }: MerchantRewardCardProps): React.J
 			<div className="border-t border-border/80 p-3">
 				<Link href={`/rewards/${reward.id}`} className={cn(buttonVariants({ size: "sm", variant: isLive ? "default" : "outline" }), "w-full justify-center gap-2")}>
 					<Ticket className="size-4" aria-hidden="true" />
-					Manage reward
+					{canManageRewards ? "Manage reward" : "View reward"}
 					<ArrowUpRight
 						className="size-3.5 opacity-70 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 motion-reduce:transition-none"
 						aria-hidden="true"

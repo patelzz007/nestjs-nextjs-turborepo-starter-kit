@@ -1,14 +1,16 @@
 import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
-import type { MerchantMembershipResponse } from "@workspace/shared";
+import type { MerchantCapability, MerchantMembershipResponse } from "@workspace/shared";
 
 import { AuthorizationCheckerService } from "../../authorization/services/authorization-checker.service";
 import { PrismaService } from "../../../prisma/prisma.service";
+import { MerchantCapabilityService } from "./merchant-capability.service";
 
 @Injectable()
 export class MerchantContextService {
 	public constructor(
 		private readonly prisma: PrismaService,
 		private readonly authorizationChecker: AuthorizationCheckerService,
+		private readonly merchantCapabilities: MerchantCapabilityService,
 	) {}
 
 	public async resolveOrgIdForUser(userId: string, requestedOrgId: string | undefined): Promise<string> {
@@ -46,25 +48,47 @@ export class MerchantContextService {
 		return memberships[0].merchantOrgId;
 	}
 
-	public async requireOwner(userId: string, merchantOrgId: string): Promise<void> {
+	public async requireCapability(userId: string, merchantOrgId: string, capability: MerchantCapability): Promise<void> {
+		const allowed = await this.userHasCapability(userId, merchantOrgId, capability);
+		if (!allowed) {
+			throw new ForbiddenException({
+				message: "Insufficient merchant permissions",
+				error: "MERCHANT_CAPABILITY_REQUIRED",
+				capability,
+			});
+		}
+	}
+
+	public async userHasCapability(userId: string, merchantOrgId: string, capability: MerchantCapability, options?: { readonly isImpersonating?: boolean }): Promise<boolean> {
 		const membership = await this.prisma.merchantMember.findFirst({
 			where: { userId, merchantOrgId, isDeleted: false },
+			select: { role: true },
 		});
 
-		if (membership !== null && membership.role === "OWNER") {
-			return;
+		if (membership !== null) {
+			const capabilities = await this.merchantCapabilities.getCapabilitiesForRole(membership.role);
+			return capabilities.includes(capability);
 		}
 
 		const canManageMerchants = await this.authorizationChecker.hasPermission(userId, "MANAGE", "MERCHANT_ORG");
-		if (canManageMerchants) {
-			await this.assertMerchantOrgExists(merchantOrgId);
-			return;
+		if (!canManageMerchants || options?.isImpersonating === true) {
+			return false;
 		}
 
-		throw new ForbiddenException({ message: "Owner role required", error: "MERCHANT_OWNER_REQUIRED" });
+		const org = await this.prisma.merchantOrg.findFirst({
+			where: { id: merchantOrgId, isDeleted: false },
+			select: { id: true },
+		});
+
+		if (org === null) {
+			return false;
+		}
+
+		const ownerCapabilities = await this.merchantCapabilities.getOwnerCapabilities();
+		return ownerCapabilities.includes(capability);
 	}
 
-	public async listMembershipsForUser(userId: string): Promise<MerchantMembershipResponse[]> {
+	public async listMembershipsForUser(userId: string, options?: { readonly isImpersonating?: boolean }): Promise<MerchantMembershipResponse[]> {
 		const memberships = await this.prisma.merchantMember.findMany({
 			where: { userId, isDeleted: false },
 			include: {
@@ -82,18 +106,25 @@ export class MerchantContextService {
 			orderBy: { createdAt: "asc" },
 		});
 
-		const memberRows: MerchantMembershipResponse[] = memberships
-			.filter((row) => row.merchantOrg.isDeleted === false)
-			.map((row) => ({
+		const memberRows: MerchantMembershipResponse[] = [];
+		for (const row of memberships.filter((entry) => entry.merchantOrg.isDeleted === false)) {
+			const capabilities = await this.merchantCapabilities.getCapabilitiesForRole(row.role);
+			memberRows.push({
 				merchantOrgId: row.merchantOrgId,
 				businessName: row.merchantOrg.businessName,
 				city: row.merchantOrg.city,
 				role: row.role,
 				kybStatus: row.merchantOrg.kybStatus,
 				status: row.merchantOrg.status,
-			}));
+				capabilities: [...capabilities],
+			});
+		}
 
 		if (memberRows.length > 0) {
+			return memberRows;
+		}
+
+		if (options?.isImpersonating === true) {
 			return memberRows;
 		}
 
@@ -102,6 +133,7 @@ export class MerchantContextService {
 			return memberRows;
 		}
 
+		const ownerCapabilities = await this.merchantCapabilities.getOwnerCapabilities();
 		const orgs = await this.prisma.merchantOrg.findMany({
 			where: { isDeleted: false },
 			orderBy: { businessName: "asc" },
@@ -122,6 +154,7 @@ export class MerchantContextService {
 			role: "OWNER",
 			kybStatus: org.kybStatus,
 			status: org.status,
+			capabilities: [...ownerCapabilities],
 		}));
 	}
 

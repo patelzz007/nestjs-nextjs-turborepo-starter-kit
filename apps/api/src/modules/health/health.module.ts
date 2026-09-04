@@ -4,6 +4,7 @@ import { PrismaModule } from "../../prisma/prisma.module";
 
 import { HealthController } from "./health.controller";
 import { HealthService } from "./health.service";
+import { moduleHealthIndicatorsProvider } from "./module-health-indicators.provider";
 import { VersionController } from "./version.controller";
 
 /**
@@ -15,7 +16,7 @@ import { VersionController } from "./version.controller";
 @Module({
 	imports: [PrismaModule],
 	controllers: [HealthController, VersionController],
-	providers: [HealthService],
+	providers: [HealthService, moduleHealthIndicatorsProvider],
 	exports: [HealthService],
 })
 export class HealthModule {}

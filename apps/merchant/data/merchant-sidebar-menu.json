@@ -12,7 +12,8 @@
           "title": "Dashboard",
           "url": "/",
           "icon": "LayoutDashboard",
-          "disabled": false
+          "disabled": false,
+          "requiredCapability": "merchant:view_dashboard"
         }
       ]
     },
@@ -25,24 +26,28 @@
           "url": "/rewards",
           "icon": "Gift",
           "disabled": false,
+          "requiredCapability": "merchant:view_rewards",
           "children": [
             {
               "title": "All Rewards",
               "url": "/rewards",
               "icon": "List",
-              "disabled": false
+              "disabled": false,
+              "requiredCapability": "merchant:view_rewards"
             },
             {
               "title": "Create New",
               "url": "/rewards/new",
               "icon": "PlusCircle",
-              "disabled": false
+              "disabled": false,
+              "requiredCapability": "merchant:manage_rewards"
             },
             {
               "title": "Archived",
               "url": "/rewards/archived",
               "icon": "FolderOpen",
-              "disabled": true
+              "disabled": true,
+              "requiredCapability": "merchant:view_rewards"
             }
           ]
         },
@@ -51,24 +56,28 @@
           "url": "#",
           "icon": "Zap",
           "disabled": false,
+          "requiredCapability": "merchant:manage_rewards",
           "children": [
             {
               "title": "Active Campaigns",
               "url": "/campaigns",
               "icon": "Play",
-              "disabled": true
+              "disabled": true,
+              "requiredCapability": "merchant:manage_rewards"
             },
             {
               "title": "Scheduled",
               "url": "/campaigns/scheduled",
               "icon": "Calendar",
-              "disabled": true
+              "disabled": true,
+              "requiredCapability": "merchant:manage_rewards"
             },
             {
               "title": "Create Campaign",
               "url": "/campaigns/new",
               "icon": "PlusCircle",
-              "disabled": true
+              "disabled": true,
+              "requiredCapability": "merchant:manage_rewards"
             }
           ]
         }
@@ -82,31 +91,36 @@
           "title": "QR Scanner",
           "url": "/redemptions",
           "icon": "QrCode",
-          "disabled": false
+          "disabled": false,
+          "requiredCapability": "merchant:view_redemptions"
         },
         {
           "title": "Redemptions",
           "url": "/redemptions",
           "icon": "CheckCircle",
           "disabled": false,
+          "requiredCapability": "merchant:view_redemptions",
           "children": [
             {
               "title": "Recent",
               "url": "/redemptions",
               "icon": "Clock",
-              "disabled": false
+              "disabled": false,
+              "requiredCapability": "merchant:view_redemptions"
             },
             {
               "title": "History",
               "url": "/redemptions/history",
               "icon": "FileText",
-              "disabled": true
+              "disabled": true,
+              "requiredCapability": "merchant:view_redemptions"
             },
             {
               "title": "Pending",
               "url": "/redemptions/pending",
               "icon": "AlertCircle",
-              "disabled": true
+              "disabled": true,
+              "requiredCapability": "merchant:view_redemptions"
             }
           ]
         },
@@ -114,7 +128,8 @@
           "title": "API Keys",
           "url": "/api-keys",
           "icon": "KeyRound",
-          "disabled": false
+          "disabled": false,
+          "requiredCapability": "merchant:manage_api_keys"
         }
       ]
     },
@@ -127,24 +142,28 @@
           "url": "/analytics",
           "icon": "BarChart2",
           "disabled": false,
+          "requiredCapability": "merchant:view_analytics",
           "children": [
             {
               "title": "Overview",
               "url": "/analytics",
               "icon": "PieChart",
-              "disabled": false
+              "disabled": false,
+              "requiredCapability": "merchant:view_analytics"
             },
             {
               "title": "Reward Performance",
               "url": "/analytics/rewards",
               "icon": "TrendingUp",
-              "disabled": true
+              "disabled": true,
+              "requiredCapability": "merchant:view_analytics"
             },
             {
               "title": "Customer Insights",
               "url": "/analytics/customers",
               "icon": "Users",
-              "disabled": true
+              "disabled": true,
+              "requiredCapability": "merchant:view_analytics"
             }
           ]
         }

@@ -1,6 +1,4 @@
-import { type ZodType } from "zod";
-
-import { type BaseEmailProps, type CtaConfig, type EmailAccent } from "@workspace/shared";
+import { type BaseEmailProps, type CtaConfig, type EmailAccent, type ZodType } from "@workspace/shared";
 
 import type { EmailRenderContext } from "./email-render-context";
 

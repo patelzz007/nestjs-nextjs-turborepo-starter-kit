@@ -8,6 +8,7 @@ allowBuilds:
   '@swc/core': true
   bcrypt: true
   esbuild: true
+  msgpackr-extract: true
   msw: false
   prisma: true
   sharp: true

@@ -1,5 +1,7 @@
-import { Logger, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common";
-import Redis from "ioredis";
+import { Inject, Logger, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common";
+import type Redis from "ioredis";
+
+import { REDIS_PUBLISHER, REDIS_SUBSCRIBER } from "../../../infrastructure/redis/redis.tokens";
 
 import type { CachedAuthorization } from "./authorization-cache.service";
 import { AuthorizationCacheService } from "./authorization-cache.service";
@@ -10,26 +12,27 @@ type InvalidateMessage = { readonly type: "user"; readonly userId: string } | { 
 
 /**
  * Delegates reads/writes to in-memory cache and publishes invalidations over Redis
- * so every API instance drops stale entries. Created only when Redis is configured.
+ * so every API instance drops stale entries.
  */
 export class RedisAuthorizationCacheService extends AuthorizationCacheService implements OnModuleInit, OnModuleDestroy {
 	private readonly redisLogger: Logger = new Logger(RedisAuthorizationCacheService.name);
-	private readonly publisher: Redis;
-	private readonly subscriber: Redis;
 
 	public constructor(
 		private readonly delegate: AuthorizationCacheService,
-		redisUrl: string,
+		@Inject(REDIS_PUBLISHER) private readonly publisher: Redis,
+		@Inject(REDIS_SUBSCRIBER) private readonly subscriber: Redis,
 	) {
 		super();
-		this.publisher = new Redis(redisUrl, { maxRetriesPerRequest: 1, lazyConnect: true });
-		this.subscriber = new Redis(redisUrl, { maxRetriesPerRequest: 1, lazyConnect: true });
 	}
 
 	public async onModuleInit(): Promise<void> {
 		try {
-			await this.subscriber.connect();
-			await this.publisher.connect();
+			if (this.publisher.status !== "ready") {
+				await this.publisher.connect();
+			}
+			if (this.subscriber.status !== "ready") {
+				await this.subscriber.connect();
+			}
 			await this.subscriber.subscribe(INVALIDATE_CHANNEL);
 			this.subscriber.on("message", (_channel: string, payload: string): void => {
 				this.applyRemoteInvalidate(payload);

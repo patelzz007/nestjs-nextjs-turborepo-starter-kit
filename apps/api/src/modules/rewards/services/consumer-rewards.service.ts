@@ -27,6 +27,8 @@ export class ConsumerRewardsService {
 			isDeleted: false,
 			status: "PUBLISHED",
 			rewardKind: "CONSUMER",
+			quantityRemaining: { gt: 0 },
+			expiryDate: { gte: BigInt(Date.now()) },
 			...(query.category !== undefined ? { category: query.category } : {}),
 			...(query.search !== undefined
 				? {

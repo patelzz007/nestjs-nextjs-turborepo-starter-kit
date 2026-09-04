@@ -97,7 +97,7 @@ export const EmailSendResultSchema = z.discriminatedUnion("ok", [
 		.object({
 			ok: z.literal(true),
 			id: z.string(),
-			mode: z.enum(["send", "log-only", "noop"]),
+			mode: z.enum(["send", "log-only", "noop", "queued"]),
 		})
 		.strict(),
 	z

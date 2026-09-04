@@ -1,0 +1,7 @@
+export const MESSAGING_OPTIONS = Symbol("MESSAGING_OPTIONS");
+
+export const REDIS_PUBLISHER = Symbol("REDIS_PUBLISHER");
+
+export const REDIS_SUBSCRIBER = Symbol("REDIS_SUBSCRIBER");
+
+export const MESSAGING_QUEUE_NAMES = Symbol("MESSAGING_QUEUE_NAMES");

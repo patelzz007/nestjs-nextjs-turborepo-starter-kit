@@ -1,17 +1,17 @@
 "use client";
 
-import { MerchantEmptyState } from "@/components/merchant-ui/empty-state";
+import { MerchantAccessDenied } from "@/components/access/merchant-capability-gate";
 import { MerchantPageHeader } from "@/components/merchant-ui/page-header";
 import { MerchantSurfacePanel } from "@/components/merchant-ui/surface-panel";
+import { useMerchantCapabilities } from "@/lib/merchant-capabilities";
 import { stubApiMeta } from "@/lib/api-envelope";
-import { useMerchantOrg } from "@/lib/merchant-root-provider";
 import { useAuth } from "@workspace/client/lib/auth";
 import type { MerchantApiKeySummary } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/feedback/badge";
 import { Button } from "@workspace/ui/components/form/button";
 import { Input } from "@workspace/ui/components/form/input";
 import { Label } from "@workspace/ui/components/form/label";
-import { KeyRound, ShieldAlert } from "lucide-react";
+import { KeyRound } from "lucide-react";
 import * as React from "react";
 
 interface ApiKeyRowProps {
@@ -44,17 +44,14 @@ function ApiKeyRow({ apiKey, isRevoking, onRevoke }: ApiKeyRowProps): React.JSX.
 }
 
 export interface MerchantApiKeysPageViewProps {
-	readonly initialIsOwner: boolean;
+	readonly initialCanManageApiKeys: boolean;
 	readonly initialKeys?: readonly MerchantApiKeySummary[];
 }
 
-export function MerchantApiKeysPageView({ initialIsOwner, initialKeys }: MerchantApiKeysPageViewProps): React.JSX.Element {
+export function MerchantApiKeysPageView({ initialCanManageApiKeys, initialKeys }: MerchantApiKeysPageViewProps): React.JSX.Element {
 	const { api } = useAuth();
-	const { merchantOrgId } = useMerchantOrg();
-
-	const membershipsQuery = api.merchant.me.useQuery({});
-	const membership = membershipsQuery.data?.data.find((row) => row.merchantOrgId === merchantOrgId);
-	const isOwner = membership !== undefined ? membership.role === "OWNER" : initialIsOwner;
+	const { canManageApiKeys, isLoading } = useMerchantCapabilities();
+	const canManage = isLoading ? initialCanManageApiKeys : canManageApiKeys;
 
 	const initialKeysData = React.useMemo(
 		() =>
@@ -71,7 +68,7 @@ export function MerchantApiKeysPageView({ initialIsOwner, initialKeys }: Merchan
 	const keysQuery = api.merchant.apiKeys.list.useQuery(
 		{},
 		{
-			enabled: isOwner,
+			enabled: canManage,
 			initialData: initialKeysData,
 		},
 	);
@@ -110,14 +107,13 @@ export function MerchantApiKeysPageView({ initialIsOwner, initialKeys }: Merchan
 		[revokeMutation],
 	);
 
-	if (!isOwner) {
+	if (!canManage) {
 		return (
 			<div className="space-y-8">
 				<MerchantPageHeader title="POS API keys" description="Keys for redemption terminals — owner access required." />
-				<MerchantEmptyState
+				<MerchantAccessDenied
 					title="Owner access required"
 					description="API key management is limited to the store owner. Contact your account owner if you need a new terminal key."
-					icon={<ShieldAlert className="size-5" aria-hidden="true" />}
 				/>
 			</div>
 		);

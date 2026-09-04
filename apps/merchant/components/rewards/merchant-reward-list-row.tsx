@@ -13,10 +13,11 @@ import * as React from "react";
 
 export interface MerchantRewardListRowProps {
 	readonly reward: RewardResponse;
+	readonly canManageRewards: boolean;
 }
 
 /** Dense list row for merchant rewards — optimized for scanning many offers. */
-export function MerchantRewardListRow({ reward }: MerchantRewardListRowProps): React.JSX.Element {
+export function MerchantRewardListRow({ reward, canManageRewards }: MerchantRewardListRowProps): React.JSX.Element {
 	const expiryLabel = format(new Date(reward.expiryDate), "d MMM yyyy");
 	const isLive = reward.status === "PUBLISHED";
 
@@ -67,7 +68,7 @@ export function MerchantRewardListRow({ reward }: MerchantRewardListRowProps): R
 
 			<div className="flex shrink-0 items-center justify-end">
 				<Link href={`/rewards/${reward.id}`} className={cn(buttonVariants({ size: "sm", variant: "outline" }), "gap-1.5")}>
-					Manage
+					{canManageRewards ? "Manage" : "View"}
 					<ArrowUpRight className="size-3.5 opacity-70" aria-hidden="true" />
 				</Link>
 			</div>

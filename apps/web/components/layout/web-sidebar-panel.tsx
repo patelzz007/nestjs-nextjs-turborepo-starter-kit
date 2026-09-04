@@ -178,7 +178,7 @@ export function WebSidebarPanel({ userName, sessionActive = false, onNavigate }:
 	const showPinned = pinnedItems.length > 0 && !view.noResults;
 
 	return (
-		<div className="flex h-full flex-col bg-card text-sidebar-foreground">
+		<div className="flex h-full min-h-0 flex-col overflow-hidden bg-card text-sidebar-foreground">
 			<PanelSidebarHeader title={menu.header.title} subtitle={menu.header.subtitle} icon={<Gift className="size-4 text-primary" aria-hidden="true" />} />
 
 			<SidebarContent ref={navContainerRef} className="[overflow-anchor:none]">
@@ -260,7 +260,7 @@ export function WebSidebarPanel({ userName, sessionActive = false, onNavigate }:
 				))}
 			</SidebarContent>
 
-			<SidebarFooter className="border-t border-sidebar-border bg-sidebar-accent/10">
+			<SidebarFooter className="max-h-[min(45vh,22rem)] shrink-0 overflow-y-auto border-t border-sidebar-border bg-sidebar-accent/10">
 				{displayName !== null ? (
 					<div className="flex items-center gap-2.5 px-2 py-2">
 						<div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-sidebar-accent text-[length:var(--text-sidebar-caption)] font-bold text-sidebar-foreground ring-1 ring-sidebar-border/50">

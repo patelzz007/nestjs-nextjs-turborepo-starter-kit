@@ -72,7 +72,7 @@ export function ImpersonateUserPanel({ sessionActive }: { readonly sessionActive
 				) : users.length === 0 ? (
 					<p className="text-sm text-muted-foreground">No users found.</p>
 				) : (
-					<ul className="divide-y rounded-md border">
+					<ul className="max-h-48 divide-y overflow-y-auto rounded-md border">
 						{users.map((user: AdminUserDetail) => {
 							const canImpersonate = user.isActive && !user.isSuperAdmin && user.id !== currentUser.id;
 							return (

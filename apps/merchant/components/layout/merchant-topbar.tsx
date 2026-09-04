@@ -1,6 +1,8 @@
 "use client";
 
 import { MerchantNotificationsDropdown } from "@/components/layout/merchant-notifications-dropdown";
+import { useMerchantCapabilities } from "@/lib/merchant-capabilities";
+import { useMerchantSessionProfile } from "@/lib/merchant-session-profile";
 import { useMerchantSidebarControl } from "@/components/layout/use-merchant-sidebar-control";
 import { useMerchantSidebarStore } from "@/stores/sidebar-store";
 import { useAuth } from "@workspace/client/lib/auth";
@@ -17,7 +19,9 @@ import * as React from "react";
 const CommandPalette = dynamic(() => import("@/components/layout/merchant-command-palette").then((module) => module.MerchantCommandPalette), { ssr: false });
 
 export function MerchantTopbar(): React.JSX.Element {
-	const { user, logout } = useAuth();
+	const { logout } = useAuth();
+	const sessionProfile = useMerchantSessionProfile();
+	const { canManageApiKeys } = useMerchantCapabilities();
 	const router = useRouter();
 	const { isOpen: sidebarOpen } = useMerchantSidebarControl();
 	const menuTitle = useMerchantSidebarStore((state) => state.menu.header.title);
@@ -33,8 +37,8 @@ export function MerchantTopbar(): React.JSX.Element {
 		void logout();
 	}, [logout]);
 
-	const profileMenuItems = React.useMemo(
-		(): readonly { label: string; icon: React.ReactNode; onClick: () => void }[] => [
+	const profileMenuItems = React.useMemo((): readonly { label: string; icon: React.ReactNode; onClick: () => void }[] => {
+		const items: { label: string; icon: React.ReactNode; onClick: () => void }[] = [
 			{
 				label: "Dashboard",
 				icon: <LayoutDashboard className="size-4" aria-hidden="true" />,
@@ -42,16 +46,20 @@ export function MerchantTopbar(): React.JSX.Element {
 					router.push("/");
 				},
 			},
-			{
+		];
+
+		if (canManageApiKeys) {
+			items.push({
 				label: "API keys",
 				icon: <KeyRound className="size-4" aria-hidden="true" />,
 				onClick: (): void => {
 					router.push("/api-keys");
 				},
-			},
-		],
-		[router],
-	);
+			});
+		}
+
+		return items;
+	}, [canManageApiKeys, router]);
 
 	return (
 		<>
@@ -87,9 +95,9 @@ export function MerchantTopbar(): React.JSX.Element {
 					</Link>
 				</div>
 
-				{user !== null ? (
+				{sessionProfile.email.length > 0 ? (
 					<div className="ml-1 md:ml-3">
-						<AppShellProfileDropdown name={user.fullName} email={user.email} menuItems={profileMenuItems} onLogout={handleLogout} />
+						<AppShellProfileDropdown name={sessionProfile.fullName} email={sessionProfile.email} menuItems={profileMenuItems} onLogout={handleLogout} />
 					</div>
 				) : null}
 			</AppShellTopbar>

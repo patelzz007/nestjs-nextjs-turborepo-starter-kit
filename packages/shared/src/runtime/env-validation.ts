@@ -79,5 +79,12 @@ export function validateAdminEnv(env: EnvRecord): ValidationResult<z.infer<typeo
 }
 
 export function validateApiEnv(env: EnvRecord): ValidationResult<z.infer<typeof apiEnvSchema>> {
-	return validateEnv(apiEnvSchema, env);
+	const base = validateEnv(apiEnvSchema, env);
+	if (!base.success) {
+		return base;
+	}
+	if (env.NODE_ENV !== "development" && (env.REDIS_URL === undefined || env.REDIS_URL.length === 0)) {
+		return { success: false, error: "Environment validation failed:\nREDIS_URL: REDIS_URL is required when NODE_ENV is not development" };
+	}
+	return base;
 }

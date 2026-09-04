@@ -1,6 +1,8 @@
 import { Global, Inject, Logger, Module, type OnModuleDestroy } from "@nestjs/common";
+import type Redis from "ioredis";
 
 import { TypedConfigService } from "../../config/typed-config.service";
+import { REDIS_PUBLISHER, REDIS_SUBSCRIBER } from "../../infrastructure/redis/redis.tokens";
 
 import { AuthorizationAuditService } from "./audit/authorization-audit.service";
 import { AuthorizationCacheService } from "./cache/authorization-cache.service";
@@ -47,22 +49,26 @@ import { AuthorizationEventEmitter } from "./events/authorization.events";
 		},
 		{
 			provide: "REDIS_AUTH_CACHE_LIFECYCLE",
-			useFactory: async (config: TypedConfigService, memory: AuthorizationCacheService): Promise<RedisAuthorizationCacheService | null> => {
+			useFactory: async (
+				config: TypedConfigService,
+				memory: AuthorizationCacheService,
+				publisher: Redis | null,
+				subscriber: Redis | null,
+			): Promise<RedisAuthorizationCacheService | null> => {
 				if (!config.useRedisAuthorizationCache) {
 					if (config.authorizationCacheBackend === "redis" && config.redisUrl === undefined) {
 						Logger.warn("AUTHORIZATION_CACHE_BACKEND=redis but REDIS_URL is unset — using in-memory authorization cache", AuthorizationModule.name);
 					}
 					return null;
 				}
-				const redisUrl = config.redisUrl;
-				if (redisUrl === undefined) {
+				if (publisher === null || subscriber === null) {
 					return null;
 				}
-				const redis = new RedisAuthorizationCacheService(memory, redisUrl);
+				const redis = new RedisAuthorizationCacheService(memory, publisher, subscriber);
 				await redis.onModuleInit();
 				return redis;
 			},
-			inject: [TypedConfigService, "IN_MEMORY_AUTH_CACHE"],
+			inject: [TypedConfigService, "IN_MEMORY_AUTH_CACHE", REDIS_PUBLISHER, REDIS_SUBSCRIBER],
 		},
 		{
 			provide: AuthorizationCacheService,

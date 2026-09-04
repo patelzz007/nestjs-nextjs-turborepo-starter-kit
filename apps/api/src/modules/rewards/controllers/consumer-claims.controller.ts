@@ -4,6 +4,7 @@ import { ApiBearerAuth, ApiBody, ApiOkResponse, ApiOperation, ApiTags } from "@n
 import { apiContract, apiPath } from "@workspace/shared";
 import { ZodValidationPipe } from "../../../common/pipes/zod-validation.pipe";
 import { GetUser } from "../../auth/decorators/get-user.decorator";
+import { RlsBypass } from "../../auth/decorators/rls-bypass.decorator";
 import type { AccessTokenPayload } from "../../auth/services/token.service";
 
 import { CreateRewardClaimDto, RequestClaimOtpDto } from "../dtos/rewards.dto";
@@ -20,6 +21,7 @@ export class ConsumerClaimsController {
 	) {}
 
 	@Post("otp")
+	@RlsBypass()
 	@ApiOperation({ summary: "Request claim OTP (emailed to your account — no SMS in dev)" })
 	@ApiBody({ type: RequestClaimOtpDto })
 	@ApiOkResponse({ description: "OTP sent" })
@@ -31,6 +33,7 @@ export class ConsumerClaimsController {
 	}
 
 	@Post()
+	@RlsBypass()
 	@ApiOperation({ summary: "Claim a reward after OTP verification" })
 	@ApiBody({ type: CreateRewardClaimDto })
 	@ApiOkResponse({ description: "Claim created with backup code" })

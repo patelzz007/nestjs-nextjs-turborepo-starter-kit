@@ -482,7 +482,7 @@ RLS even with `FORCE ROW LEVEL SECURITY`**. The API therefore sets `ROLE app_run
 | **Single-tenant** (default) | `TENANCY_ENABLED=false` | `@RlsBypass()`, no `request.user`, `isSuperAdmin`, or **`hasAdminAccess`** |
 | **Multi-tenant** | `TENANCY_ENABLED=true` | `@RlsBypass()`, no `request.user`, or **`isSuperAdmin` only** — staff with admin access operate within org scope |
 
-`DEFAULT_ORGANIZATION_ID` sets the org when tenancy is disabled or when `x-organization-id` is absent (default: `default`). SQL helper: `app_current_organization_id()`. See [ADR 007: Tenancy and RLS bypass](../adr/007-tenancy-and-rls-bypass.md).
+`DEFAULT_ORGANIZATION_ID` sets the org when tenancy is disabled or when `x-organization-id` is absent (default: `default`). SQL helper: `app_current_organization_id()`. See [ADR 007: Tenancy and RLS bypass](./adr/007-tenancy-and-rls-bypass.md).
 
 **Who sets ALS:** `RlsInterceptor` (`apps/api/src/common/interceptors/rls.interceptor.ts`,
 outermost `APP_INTERCEPTOR`) wraps `next.handle()` in `rlsStorage.run(...)`. Guards run

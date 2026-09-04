@@ -32,7 +32,7 @@ export class ClaimService {
 			throw new ForbiddenException({ message: "Accept terms before claiming", error: "LEGAL_ACCEPTANCE_REQUIRED" });
 		}
 
-		await this.otpService.verifyClaimOtp(userId, input.phone, input.otp);
+		await this.otpService.verifyClaimOtp(userId, input.phone, input.otp, input.rewardId);
 
 		const reward = await this.ensureRewardClaimable(input.rewardId);
 		const now = Date.now();
@@ -48,7 +48,7 @@ export class ClaimService {
 		});
 
 		if (reserved.count === 0) {
-			throw new ConflictException({ message: "No inventory remaining", error: "REWARD_OUT_OF_STOCK" });
+			throw new ConflictException({ message: "This reward just sold out", error: "REWARD_OUT_OF_STOCK" });
 		}
 
 		const token = generateOpaqueToken();
@@ -270,7 +270,7 @@ export class ClaimService {
 		}
 
 		if (reward.quantityRemaining <= 0) {
-			throw new ConflictException({ message: "No inventory remaining", error: "REWARD_OUT_OF_STOCK" });
+			throw new ConflictException({ message: "This reward is sold out", error: "REWARD_OUT_OF_STOCK" });
 		}
 
 		return reward;

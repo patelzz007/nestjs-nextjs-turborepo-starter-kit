@@ -1,10 +1,13 @@
 import { z } from "zod";
 
+import { MerchantCapabilitySchema } from "@workspace/shared";
+
 export interface SidebarMenuItemNode {
 	readonly title: string;
 	readonly url: string;
 	readonly icon?: string;
 	readonly disabled?: boolean;
+	readonly requiredCapability?: z.output<typeof MerchantCapabilitySchema>;
 	readonly children?: readonly SidebarMenuItemNode[];
 }
 
@@ -14,6 +17,7 @@ export const SidebarMenuItemSchema: z.ZodType<SidebarMenuItemNode> = z.lazy(() =
 		url: z.string(),
 		icon: z.string().optional(),
 		disabled: z.boolean().optional(),
+		requiredCapability: MerchantCapabilitySchema.optional(),
 		children: z.array(z.lazy(() => SidebarMenuItemSchema)).optional(),
 	}),
 );
@@ -56,6 +60,7 @@ export interface CompiledSidebarMenuItemNode {
 	readonly url: string;
 	readonly icon?: string;
 	readonly disabled?: boolean;
+	readonly requiredCapability?: z.output<typeof MerchantCapabilitySchema>;
 	readonly children?: readonly CompiledSidebarMenuItemNode[];
 }
 
@@ -66,6 +71,7 @@ export const CompiledSidebarMenuItemSchema: z.ZodType<CompiledSidebarMenuItemNod
 		url: z.string(),
 		icon: z.string().optional(),
 		disabled: z.boolean().optional(),
+		requiredCapability: MerchantCapabilitySchema.optional(),
 		children: z.array(z.lazy(() => CompiledSidebarMenuItemSchema)).optional(),
 	}),
 );

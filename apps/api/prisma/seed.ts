@@ -13,6 +13,7 @@ import { assignAdditionalPermissions, assignRolesToUsers, createUsers } from "./
 import { createClicks, createUrlTags, createUrls } from "./seed/urls";
 import { seedGeo } from "./seed/geo-seed";
 import { cleanupRewardSeedData, printRewardSeedCredentials, seedRewards } from "./seed/rewards";
+import { seedMerchantRoleCapabilities } from "./seed/merchant-role-capabilities";
 
 // ---------------------------------------------------------------------------
 // Orchestrator — runs the per-domain seeders in dependency order.
@@ -40,6 +41,11 @@ async function main() {
 	console.log("Creating permissions...");
 	const permissions = await createPermissions();
 	console.log(`✅ ${permissions.length} permissions`);
+
+	console.log("Seeding merchant role capabilities...");
+	await seedMerchantRoleCapabilities();
+	const merchantCapabilityCount = await prisma.merchantRoleCapability.count();
+	console.log(`✅ ${merchantCapabilityCount} merchant role capabilities`);
 
 	console.log("Creating roles...");
 	const roles = await createRoles();

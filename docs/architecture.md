@@ -72,6 +72,7 @@ Think of the monorepo as **three layers**, each depending only on the layer belo
 | `packages/ui`                | `@workspace/ui`                | shadcn/ui components (and `globals.css`)                                                                                               | —    |
 | `packages/client`            | `@workspace/client`            | AuthContext, `useApi`, typed endpoint registry, shared auth UI (`LoginForm`, auth bridge)                                              | —    |
 | `packages/shared`            | `@workspace/shared`            | Zod schemas + shared types (the API contract)                                                                                          | —    |
+| `packages/messaging`         | `@workspace/messaging`         | Generic Redis / BullMQ / Kafka / RabbitMQ Nest wiring (copy to other projects)                                                           | —    |
 | `packages/tooling`           | `@workspace/tooling`           | Repo-wide scripts (syncpack dependency hygiene, turbo-backed `deps:*`, build infra in `scripts/`: check-ui-audit, fix-dist-extensions) | —    |
 | `packages/eslint-config`     | `@workspace/eslint-config`     | Shared ESLint presets                                                                                                                  | —    |
 | `packages/typescript-config` | `@workspace/typescript-config` | Shared tsconfig presets                                                                                                                | —    |

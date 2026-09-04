@@ -2,6 +2,7 @@
 
 import { MerchantInventoryBar, MerchantRewardStatusBadge } from "@/components/merchant-ui/reward-status";
 import { MerchantRewardFormFields } from "@/components/rewards/merchant-reward-form-fields";
+import { useMerchantCapabilities } from "@/lib/merchant-capabilities";
 import { stubApiMeta } from "@/lib/api-envelope";
 import { useAuth } from "@workspace/client/lib/auth";
 import {
@@ -32,6 +33,7 @@ function isRewardEditable(status: RewardResponse["status"]): boolean {
 
 export function MerchantEditRewardPageView({ rewardId, initialRewards }: MerchantEditRewardPageViewProps): React.JSX.Element {
 	const { api } = useAuth();
+	const { canManageRewards } = useMerchantCapabilities();
 
 	const initialQueryData = React.useMemo(
 		() =>
@@ -71,8 +73,8 @@ export function MerchantEditRewardPageView({ rewardId, initialRewards }: Merchan
 	}, [reward, reset]);
 
 	const selectedType = useWatch({ control, name: "rewardType" });
-	const canEdit = reward !== undefined && isRewardEditable(reward.status);
-	const canPublish = reward?.status === "DRAFT";
+	const canEdit = canManageRewards && reward !== undefined && isRewardEditable(reward.status);
+	const canPublish = canManageRewards && reward?.status === "DRAFT";
 
 	const updateMutation = api.merchant.rewards.update.useMutation({
 		onSuccess: (): void => {
@@ -157,7 +159,7 @@ export function MerchantEditRewardPageView({ rewardId, initialRewards }: Merchan
 				</Link>
 				<div className="flex flex-1 flex-wrap items-center gap-3">
 					<div>
-						<h1 className="text-2xl font-bold tracking-tight text-foreground lg:text-3xl">Edit Reward</h1>
+						<h1 className="text-2xl font-bold tracking-tight text-foreground lg:text-3xl">{canManageRewards ? "Edit Reward" : "View Reward"}</h1>
 						<p className="mt-1 text-muted-foreground">{canEdit ? "Update your reward campaign details" : "View reward details and performance"}</p>
 					</div>
 					<MerchantRewardStatusBadge status={reward.status} />

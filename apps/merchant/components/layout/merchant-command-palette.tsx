@@ -1,6 +1,7 @@
 "use client";
 
-import { renderMerchantPaletteIcon, MERCHANT_PALETTE_ITEMS } from "@/lib/palette/nav-items";
+import { useMerchantCapabilities } from "@/lib/merchant-capabilities";
+import { buildMerchantPaletteItems, renderMerchantPaletteIcon } from "@/lib/palette/nav-items";
 import { useMerchantCommandPaletteStore } from "@/stores/command-palette-store";
 import { AppCommandPalette, type AppCommandPaletteQuickAction } from "@workspace/ui/components/navigation/app-command-palette";
 import { SunMoon, Ticket } from "lucide-react";
@@ -16,6 +17,7 @@ export interface MerchantCommandPaletteProps {
 export function MerchantCommandPalette({ open: externalOpen, setOpen: externalSetOpen }: MerchantCommandPaletteProps): React.JSX.Element {
 	const router = useRouter();
 	const { setTheme, resolvedTheme } = useTheme();
+	const { capabilities, canManageRewards } = useMerchantCapabilities();
 
 	const recentSearches = useMerchantCommandPaletteStore((state) => state.recentSearches);
 	const pinnedUrls = useMerchantCommandPaletteStore((state) => state.pinnedUrls);
@@ -26,8 +28,8 @@ export function MerchantCommandPalette({ open: externalOpen, setOpen: externalSe
 		externalSetOpen?.(false);
 	}, [externalSetOpen]);
 
-	const quickActions = React.useMemo(
-		(): readonly AppCommandPaletteQuickAction[] => [
+	const quickActions = React.useMemo((): readonly AppCommandPaletteQuickAction[] => {
+		const actions: AppCommandPaletteQuickAction[] = [
 			{
 				id: "toggle-theme",
 				title: "Toggle theme",
@@ -40,7 +42,10 @@ export function MerchantCommandPalette({ open: externalOpen, setOpen: externalSe
 					setTheme(resolvedTheme === "dark" ? "light" : "dark");
 				},
 			},
-			{
+		];
+
+		if (canManageRewards) {
+			actions.push({
 				id: "open-rewards",
 				title: "Open rewards",
 				description: "Manage offers and inventory",
@@ -51,10 +56,13 @@ export function MerchantCommandPalette({ open: externalOpen, setOpen: externalSe
 					router.push("/rewards");
 					closePalette();
 				},
-			},
-		],
-		[closePalette, resolvedTheme, router, setTheme],
-	);
+			});
+		}
+
+		return actions;
+	}, [canManageRewards, closePalette, resolvedTheme, router, setTheme]);
+
+	const searchableItems = React.useMemo(() => buildMerchantPaletteItems(capabilities), [capabilities]);
 
 	const handleNavigate = React.useCallback(
 		(url: string): void => {
@@ -70,7 +78,7 @@ export function MerchantCommandPalette({ open: externalOpen, setOpen: externalSe
 			title="Search Merchant Portal"
 			description="Navigate pages, pin shortcuts, and run quick actions"
 			placeholder="Search merchant portal pages and actions…"
-			searchableItems={MERCHANT_PALETTE_ITEMS}
+			searchableItems={searchableItems}
 			quickActions={quickActions}
 			recentSearches={recentSearches}
 			pinnedUrls={pinnedUrls}

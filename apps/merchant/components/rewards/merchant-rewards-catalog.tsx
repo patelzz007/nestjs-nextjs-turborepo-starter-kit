@@ -11,6 +11,7 @@ import * as React from "react";
 export interface MerchantRewardsCatalogProps {
 	readonly rewards: readonly RewardResponse[];
 	readonly isLoading: boolean;
+	readonly canManageRewards: boolean;
 }
 
 function RewardsCatalogSkeleton({ viewMode }: { readonly viewMode: "grid" | "list" }): React.JSX.Element {
@@ -34,7 +35,7 @@ function RewardsCatalogSkeleton({ viewMode }: { readonly viewMode: "grid" | "lis
 }
 
 /** Rewards collection with grid/list layout toggle and toolbar. */
-export function MerchantRewardsCatalog({ rewards, isLoading }: MerchantRewardsCatalogProps): React.JSX.Element {
+export function MerchantRewardsCatalog({ rewards, isLoading, canManageRewards }: MerchantRewardsCatalogProps): React.JSX.Element {
 	const { viewMode, setViewMode } = useMerchantRewardsViewMode();
 
 	return (
@@ -52,7 +53,7 @@ export function MerchantRewardsCatalog({ rewards, isLoading }: MerchantRewardsCa
 			) : viewMode === "grid" ? (
 				<div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
 					{rewards.map((reward) => (
-						<MerchantRewardCard key={reward.id} reward={reward} />
+						<MerchantRewardCard key={reward.id} reward={reward} canManageRewards={canManageRewards} />
 					))}
 				</div>
 			) : (
@@ -65,7 +66,7 @@ export function MerchantRewardsCatalog({ rewards, isLoading }: MerchantRewardsCa
 						<span className="text-end">Action</span>
 					</div>
 					{rewards.map((reward) => (
-						<MerchantRewardListRow key={reward.id} reward={reward} />
+						<MerchantRewardListRow key={reward.id} reward={reward} canManageRewards={canManageRewards} />
 					))}
 				</div>
 			)}

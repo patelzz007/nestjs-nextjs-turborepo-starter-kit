@@ -1,0 +1,46 @@
+{
+	"name": "@workspace/messaging",
+	"version": "0.0.1",
+	"type": "module",
+	"private": true,
+	"scripts": {
+		"build": "tsc -p tsconfig.build.json && node ../../packages/tooling/scripts/fix-dist-extensions.mjs dist",
+		"lint": "eslint",
+		"typecheck": "tsc --noEmit",
+		"clean": "rm -rf dist"
+	},
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"exports": {
+		".": {
+			"development": {
+				"types": "./src/index.ts",
+				"default": "./src/index.ts"
+			},
+			"types": "./dist/index.d.ts",
+			"default": "./dist/index.js"
+		},
+		"./nest": {
+			"development": {
+				"types": "./src/nest/index.ts",
+				"default": "./src/nest/index.ts"
+			},
+			"types": "./dist/nest/index.d.ts",
+			"default": "./dist/nest/index.js"
+		}
+	},
+	"dependencies": {
+		"@nestjs/bullmq": "^12.0.0",
+		"@nestjs/common": "^12.0.1",
+		"bullmq": "^6.3.4",
+		"ioredis": "^6.0.0",
+		"kafkajs": "^2.2.4",
+		"zod": "4.5.4"
+	},
+	"devDependencies": {
+		"@workspace/eslint-config": "workspace:*",
+		"@workspace/typescript-config": "workspace:*",
+		"eslint": "^9.39.5",
+		"typescript": "7.0.2"
+	}
+}

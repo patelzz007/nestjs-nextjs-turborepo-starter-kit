@@ -291,10 +291,11 @@ export class RewardsAdminService {
 		});
 	}
 
-	public async runScheduledJobs(): Promise<{ autoPublished: number; expiredClaims: number }> {
+	public async runScheduledJobs(): Promise<{ autoPublished: number; expiredClaims: number; expiredReferrerClaims: number }> {
 		const autoPublished = await this.merchantRewardService.autoPublishPendingRewards();
 		const expiredClaims = await this.merchantRewardService.expirePendingClaims();
-		return { autoPublished, expiredClaims };
+		const expiredReferrerClaims = await this.merchantRewardService.expireReferrerClaims();
+		return { autoPublished, expiredClaims, expiredReferrerClaims };
 	}
 
 	private buildMerchantInviteUrl(token: string): string {

@@ -1,5 +1,6 @@
 "use client";
 
+import { MerchantCapabilityGate } from "@/components/access/merchant-capability-gate";
 import { MerchantRewardFormFields } from "@/components/rewards/merchant-reward-form-fields";
 import { useAuth } from "@workspace/client/lib/auth";
 import {
@@ -111,7 +112,8 @@ export function MerchantCreateRewardPageView({ defaultCategory }: MerchantCreate
 	}, []);
 
 	return (
-		<div className="mx-auto space-y-6">
+		<MerchantCapabilityGate capability="merchant:manage_rewards">
+			<div className="mx-auto space-y-6">
 			<div className="mb-2 flex items-center gap-4">
 				<Link href="/rewards">
 					<Button type="button" variant="ghost" size="icon" aria-label="Back to rewards">
@@ -170,6 +172,7 @@ export function MerchantCreateRewardPageView({ defaultCategory }: MerchantCreate
 					</Button>
 				</div>
 			</form>
-		</div>
+			</div>
+		</MerchantCapabilityGate>
 	);
 }

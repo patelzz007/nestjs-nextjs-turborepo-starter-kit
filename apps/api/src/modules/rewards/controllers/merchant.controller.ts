@@ -33,7 +33,7 @@ export class MerchantProfileController {
 	@ApiOperation({ summary: "List merchant org memberships for the current user" })
 	@ApiOkResponse({ description: "Merchant memberships" })
 	public listMemberships(@GetUser() user: AccessTokenPayload): Promise<MerchantMembershipResponse[]> {
-		return this.merchantContext.listMembershipsForUser(user.sub);
+		return this.merchantContext.listMembershipsForUser(user.sub, { isImpersonating: user.isImpersonating === true });
 	}
 }
 

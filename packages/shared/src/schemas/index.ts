@@ -529,6 +529,13 @@ export {
 	RewardTypeSchema,
 } from "./domain/rewards";
 export {
+	merchantHasCapability,
+	MerchantCapabilitySchema,
+	parseMerchantCapabilities,
+} from "./domain/merchant-capabilities";
+export type { MerchantCapability } from "./domain/merchant-capabilities";
+export { getRewardClaimBlockReason, isRewardClaimable, rewardClaimBlockMessage, type RewardClaimBlockReason } from "./domain/reward-claim-availability";
+export {
 	AnalyticsMetricSchema,
 	MerchantAnalyticsResponseSchema,
 	MerchantAnalyticsTimePointSchema,
@@ -599,3 +606,10 @@ export type {
 	RewardStatus,
 	RewardType,
 } from "./domain/rewards";
+export { KAFKA_TOPICS, KafkaTopicSchema, PlatformEventEnvelopeSchema } from "./infrastructure/kafka";
+export type { KafkaTopic, PlatformEventEnvelope } from "./infrastructure/kafka";
+export { EmailSendJobSchema, QUEUE_NAMES, QueueNameSchema, RewardsMaintenanceJobSchema } from "./infrastructure/queue";
+export type { EmailSendJob, QueueName, RewardsMaintenanceJob } from "./infrastructure/queue";
+export { QUEUE_JOB_OPTIONS } from "./infrastructure/queue-job-options";
+export { OutboxEnqueueInputSchema, OutboxEventRecordSchema, OutboxEventStatusSchema, OUTBOX_EVENT_STATUSES } from "./infrastructure/outbox";
+export type { OutboxEnqueueInput, OutboxEventRecord, OutboxEventStatus } from "./infrastructure/outbox";

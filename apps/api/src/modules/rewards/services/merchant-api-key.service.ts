@@ -16,7 +16,7 @@ export class MerchantApiKeyService {
 
 	public async listKeys(userId: string, merchantOrgId: string | undefined): Promise<MerchantApiKeySummary[]> {
 		const orgId = await this.merchantContext.resolveOrgIdForUser(userId, merchantOrgId);
-		await this.merchantContext.requireOwner(userId, orgId);
+		await this.merchantContext.requireCapability(userId, orgId, "merchant:manage_api_keys");
 
 		const rows = await this.prisma.merchantApiKey.findMany({
 			where: { merchantOrgId: orgId, isDeleted: false },
@@ -36,7 +36,7 @@ export class MerchantApiKeyService {
 
 	public async createKey(userId: string, merchantOrgId: string | undefined, input: MerchantCreateApiKeyInput): Promise<MerchantApiKeyCreated> {
 		const orgId = await this.merchantContext.resolveOrgIdForUser(userId, merchantOrgId);
-		await this.merchantContext.requireOwner(userId, orgId);
+		await this.merchantContext.requireCapability(userId, orgId, "merchant:manage_api_keys");
 
 		const plaintext = generateApiKeyPlaintext();
 		const name = input.name ?? "POS API key";
@@ -68,7 +68,7 @@ export class MerchantApiKeyService {
 
 	public async revokeKey(userId: string, merchantOrgId: string | undefined, keyId: string): Promise<{ ok: true }> {
 		const orgId = await this.merchantContext.resolveOrgIdForUser(userId, merchantOrgId);
-		await this.merchantContext.requireOwner(userId, orgId);
+		await this.merchantContext.requireCapability(userId, orgId, "merchant:manage_api_keys");
 
 		const key = await this.prisma.merchantApiKey.findFirst({
 			where: { id: keyId, merchantOrgId: orgId, isDeleted: false },

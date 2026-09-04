@@ -1,5 +1,6 @@
 "use client";
 
+import { MerchantSessionBootstrap } from "@/components/merchant-session-bootstrap";
 import { writeMerchantOrgCookie } from "@/lib/merchant-org";
 import { ClientAuthWrapper } from "@workspace/client/lib/auth/client-auth-wrapper";
 import { useRouter } from "next/navigation";
@@ -70,6 +71,7 @@ export function MerchantRootProvider({ children, initialMerchantOrgId }: Merchan
 
 	return (
 		<ClientAuthWrapper cookieNames={MERCHANT_COOKIE_NAMES} clientType="merchant" extraHeaders={extraHeaders}>
+			<MerchantSessionBootstrap />
 			<MerchantOrgContext.Provider value={contextValue}>{children}</MerchantOrgContext.Provider>
 		</ClientAuthWrapper>
 	);

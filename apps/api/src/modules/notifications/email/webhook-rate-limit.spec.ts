@@ -141,6 +141,7 @@ describe("Webhook per-IP rate limiting (ThrottlerGuard)", () => {
 			imports: [
 				ConfigModule,
 				ThrottlerModule.forRootAsync({
+					imports: [ConfigModule],
 					inject: [TypedConfigService],
 					useFactory: webhookThrottlerOptionsFactory,
 				}),

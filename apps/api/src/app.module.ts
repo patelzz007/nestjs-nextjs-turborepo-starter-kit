@@ -4,8 +4,13 @@ import { ScheduleModule } from "@nestjs/schedule";
 
 import { ResponseInterceptor } from "./common/interceptors/response.interceptor";
 import { PerformanceInterceptor } from "./common/interceptors/performance.interceptor";
+import { CorrelationContextModule } from "./common/context/correlation-context.module";
+import { CorrelationContextInterceptor } from "./common/context/correlation-context.interceptor";
 import { CorrelationIdMiddleware } from "./common/middleware/correlation-id.middleware";
 import { ConfigModule } from "./config/config.module";
+import { PlatformEventsModule } from "./infrastructure/outbox/platform-events.module";
+import { OutboxModule } from "./infrastructure/outbox/outbox.module";
+import { AppMessagingModule } from "./messaging/app-messaging.module";
 import { AuthorizationAdminModule } from "./modules/authorization/admin/authorization-admin.module";
 import { AuthorizationModule } from "./modules/authorization/authorization.module";
 import { AuthorizationGuard } from "./modules/authorization/guards/authorization.guard";
@@ -46,7 +51,11 @@ if (observeEnabled && observeAppKey !== undefined && observeAppSecret !== undefi
 @Module({
 	imports: [
 		ConfigModule,
+		CorrelationContextModule,
+		AppMessagingModule.register(),
 		PrismaModule,
+		OutboxModule,
+		PlatformEventsModule,
 		AuthorizationModule,
 		AuthorizationAdminModule,
 
@@ -63,6 +72,10 @@ if (observeEnabled && observeAppKey !== undefined && observeAppSecret !== undefi
 		...observeImports,
 	],
 	providers: [
+		{
+			provide: APP_INTERCEPTOR,
+			useClass: CorrelationContextInterceptor,
+		},
 		{
 			provide: APP_INTERCEPTOR,
 			useClass: RlsInterceptor,

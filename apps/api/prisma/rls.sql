@@ -82,7 +82,8 @@ BEGIN
     'impersonation_audit_logs',
     'logs',
     'api_key_usage_logs',
-    'email_logs'
+    'email_logs',
+    'merchant_role_capabilities'
   ]
   LOOP
     EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY', t);
@@ -213,6 +214,17 @@ CREATE POLICY menu_item_roles_read ON public.menu_item_roles
 
 DROP POLICY IF EXISTS menu_item_roles_write ON public.menu_item_roles;
 CREATE POLICY menu_item_roles_write ON public.menu_item_roles
+  FOR ALL
+  USING (app_rls_bypass())
+  WITH CHECK (app_rls_bypass());
+
+DROP POLICY IF EXISTS merchant_role_capabilities_read ON public.merchant_role_capabilities;
+CREATE POLICY merchant_role_capabilities_read ON public.merchant_role_capabilities
+  FOR SELECT
+  USING (true);
+
+DROP POLICY IF EXISTS merchant_role_capabilities_write ON public.merchant_role_capabilities;
+CREATE POLICY merchant_role_capabilities_write ON public.merchant_role_capabilities
   FOR ALL
   USING (app_rls_bypass())
   WITH CHECK (app_rls_bypass());

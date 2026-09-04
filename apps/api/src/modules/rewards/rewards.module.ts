@@ -21,18 +21,19 @@ import { MerchantApiKeyGuard } from "./guards/merchant-api-key.guard";
 import { ClaimService } from "./services/claim.service";
 import { ConsumerRewardsService } from "./services/consumer-rewards.service";
 import { MerchantApiKeyService } from "./services/merchant-api-key.service";
-import { MerchantContextService } from "./services/merchant-context.service";
-import { MerchantRewardService } from "./services/merchant-reward.service";
 import { RedemptionService } from "./services/redemption.service";
 import { RewardLegalService } from "./services/reward-legal.service";
-import { RewardNotificationService } from "./services/reward-notification.service";
 import { RewardOtpService } from "./services/reward-otp.service";
 import { RewardsAdminService } from "./services/rewards-admin.service";
 import { RewardsAnalyticsService } from "./services/rewards-analytics.service";
-import { RewardsJobsService } from "./services/rewards-jobs.service";
+import { RewardsCoreServicesModule } from "./rewards-core-services.module";
+import { RewardsQueueModule } from "./rewards-queue.module";
+
+const redisUrl: string | undefined = process.env.REDIS_URL;
+const rewardsQueueImports = redisUrl !== undefined && redisUrl.length > 0 ? [RewardsQueueModule] : [];
 
 @Module({
-	imports: [PrismaModule, AuthModule, NotificationsModule],
+	imports: [PrismaModule, AuthModule, NotificationsModule, RewardsCoreServicesModule, ...rewardsQueueImports],
 	controllers: [
 		ConsumerRewardsController,
 		ConsumerClaimsController,
@@ -49,20 +50,16 @@ import { RewardsJobsService } from "./services/rewards-jobs.service";
 		RewardsAdminMerchantsController,
 	],
 	providers: [
-		MerchantContextService,
 		ConsumerRewardsService,
 		ClaimService,
 		RewardLegalService,
 		RewardOtpService,
-		RewardNotificationService,
 		RedemptionService,
-		MerchantRewardService,
 		MerchantApiKeyService,
 		RewardsAdminService,
 		RewardsAnalyticsService,
-		RewardsJobsService,
 		MerchantApiKeyGuard,
 	],
-	exports: [ConsumerRewardsService, ClaimService, MerchantRewardService],
+	exports: [RewardsCoreServicesModule, ConsumerRewardsService, ClaimService],
 })
 export class RewardsModule {}

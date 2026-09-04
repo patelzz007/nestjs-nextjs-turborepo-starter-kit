@@ -48,7 +48,10 @@
 				"RESEND_API_KEY",
 				"RESEND_WEBHOOK_SECRET",
 				"WEBHOOK_RATE_LIMIT_PER_MINUTE",
-				"WEBHOOK_URL"
+				"WEBHOOK_URL",
+				"REDIS_URL",
+				"KAFKA_BROKERS",
+				"RABBITMQ_URL"
 			]
 		},
 		"lint": {
@@ -158,7 +161,10 @@
 				"CORS_ORIGINS",
 				"NEXT_PUBLIC_API_URL",
 				"ADMIN_EMAIL",
-				"ADMIN_PASSWORD"
+				"ADMIN_PASSWORD",
+				"REDIS_URL",
+				"KAFKA_BROKERS",
+				"RABBITMQ_URL"
 			]
 		}
 	}

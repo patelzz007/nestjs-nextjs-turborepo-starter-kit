@@ -1,0 +1,15 @@
+import type { AuthUser } from "@workspace/client/lib/auth/auth-store";
+import type { UserResponse } from "@workspace/shared";
+
+/** Maps an API user record into the client auth-store shape. */
+export function toAuthUser(user: UserResponse): AuthUser {
+	return {
+		id: user.id,
+		email: user.email,
+		fullName: user.fullName,
+		isSuperAdmin: user.isSuperAdmin,
+		hasAdminAccess: user.hasAdminAccess,
+		isEmailVerified: user.isEmailVerified,
+		roles: user.roles,
+	};
+}

@@ -1,10 +1,12 @@
 "use client";
 
+import { formatClaimApiError } from "@/lib/rewards/claim-errors";
 import { stubApiMeta } from "@/lib/api-envelope";
 import { WebPageHeader } from "@/components/web-ui/page-header";
 import { WebSurfacePanel } from "@/components/web-ui/surface-panel";
 import { useAuth } from "@workspace/client/lib/auth";
 import type { RewardResponse } from "@workspace/shared";
+import { getRewardClaimBlockReason, rewardClaimBlockMessage } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/feedback/badge";
 import { Button, buttonVariants } from "@workspace/ui/components/form/button";
 import { cn } from "@workspace/ui/lib/utils";
@@ -44,6 +46,7 @@ export function RewardDetailView({ rewardId, initialReward }: RewardDetailViewPr
 		{ rewardId },
 		{
 			initialData: initialQueryData,
+			refetchInterval: 60_000,
 		},
 	);
 	const reward = rewardQuery.data?.data;
@@ -53,6 +56,9 @@ export function RewardDetailView({ rewardId, initialReward }: RewardDetailViewPr
 	const [legalAccepted, setLegalAccepted] = React.useState<boolean>(false);
 	const [step, setStep] = React.useState<"legal" | "otp" | "claim">("legal");
 	const [message, setMessage] = React.useState<string | null>(null);
+
+	const claimBlockReason = React.useMemo(() => (reward === undefined ? null : getRewardClaimBlockReason(reward, Date.now())), [reward]);
+	const canClaim = claimBlockReason === null;
 
 	const acceptLegalMutation = api.legal.accept.useMutation({
 		onSuccess: (): void => {
@@ -67,6 +73,9 @@ export function RewardDetailView({ rewardId, initialReward }: RewardDetailViewPr
 			setStep("claim");
 			setMessage("OTP sent — check your email (dev: API logs). Enter the 6-digit code below.");
 		},
+		onError: (error: Error): void => {
+			setMessage(formatClaimApiError(error));
+		},
 	});
 
 	const claimMutation = api.claims.create.useMutation({
@@ -76,11 +85,12 @@ export function RewardDetailView({ rewardId, initialReward }: RewardDetailViewPr
 			router.push(`/rewardhub/claims/${claimId}`);
 		},
 		onError: (error: Error): void => {
-			if (error.message.includes("LEGAL_ACCEPTANCE_REQUIRED")) {
+			if (error instanceof Error && error.message.includes("LEGAL_ACCEPTANCE_REQUIRED")) {
 				setStep("legal");
 				setLegalAccepted(false);
 			}
-			setMessage(error.message);
+			setMessage(formatClaimApiError(error));
+			void rewardQuery.refetch();
 		},
 	});
 
@@ -89,20 +99,26 @@ export function RewardDetailView({ rewardId, initialReward }: RewardDetailViewPr
 	}, [acceptLegalMutation]);
 
 	const handleRequestOtp = React.useCallback((): void => {
+		if (!canClaim) {
+			return;
+		}
 		if (phone.trim().length < 8) {
 			setMessage("Enter a valid phone number.");
 			return;
 		}
 		void otpMutation.mutateAsync({ rewardId, phone: phone.trim() });
-	}, [otpMutation, phone, rewardId]);
+	}, [canClaim, otpMutation, phone, rewardId]);
 
 	const handleClaim = React.useCallback((): void => {
+		if (!canClaim) {
+			return;
+		}
 		if (otp.length !== 6) {
 			setMessage("Enter the 6-digit OTP.");
 			return;
 		}
 		void claimMutation.mutateAsync({ rewardId, phone: phone.trim(), otp });
-	}, [claimMutation, otp, phone, rewardId]);
+	}, [canClaim, claimMutation, otp, phone, rewardId]);
 
 	if (rewardQuery.isLoading && initialReward === undefined) {
 		return <p className="text-sm text-muted-foreground">Loading reward…</p>;
@@ -112,18 +128,20 @@ export function RewardDetailView({ rewardId, initialReward }: RewardDetailViewPr
 		return (
 			<div className="space-y-6">
 				<WebPageHeader title="Reward unavailable" description="This reward may have expired or been removed." />
-				<Link href="/" className={cn(buttonVariants({ variant: "outline" }))}>
+				<Link href="/rewardhub" className={cn(buttonVariants({ variant: "outline" }))}>
 					Back to browse
 				</Link>
 			</div>
 		);
 	}
 
+	const isSoldOut = reward.quantityRemaining <= 0;
+
 	return (
 		<div className="space-y-8">
 			<WebPageHeader title={reward.title} description={reward.description} />
 
-			<Link href="/" className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "-mt-4")}>
+			<Link href="/rewardhub" className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "-mt-4")}>
 				← Back to browse
 			</Link>
 
@@ -134,6 +152,8 @@ export function RewardDetailView({ rewardId, initialReward }: RewardDetailViewPr
 					</Badge>
 					{reward.merchantName !== undefined ? <Badge variant="outline">{reward.merchantName}</Badge> : null}
 					<Badge variant="outline">{reward.rewardType.replace("_", " ")}</Badge>
+					{isSoldOut ? <Badge variant="destructive">Sold out</Badge> : null}
+					{claimBlockReason === "expired" ? <Badge variant="destructive">Expired</Badge> : null}
 				</div>
 				<p className="mt-4 text-sm text-muted-foreground">
 					<span className="font-medium text-foreground">{reward.quantityRemaining}</span> remaining · Expires {format(new Date(reward.expiryDate), "d MMM yyyy")}
@@ -145,50 +165,61 @@ export function RewardDetailView({ rewardId, initialReward }: RewardDetailViewPr
 				<div className="mt-4 space-y-4">
 					{message !== null ? <p className="rounded-lg border border-border bg-secondary/50 px-3 py-2 text-sm text-muted-foreground">{message}</p> : null}
 
-					{step === "legal" && !legalAccepted ? (
+					{!canClaim ? (
 						<div className="space-y-3">
-							<p className="text-sm text-muted-foreground">
-								Accept the Reward Hub terms (v{TERMS_VERSION}) and privacy policy (v{PRIVACY_VERSION}) before claiming.
-							</p>
-							<Button disabled={acceptLegalMutation.isPending} onClick={handleAcceptLegal}>
-								{acceptLegalMutation.isPending ? "Saving…" : "Accept & continue"}
-							</Button>
+							<p className="text-sm text-muted-foreground">{claimBlockReason !== null ? rewardClaimBlockMessage(claimBlockReason) : null}</p>
+							<Link href="/rewardhub" className={cn(buttonVariants({ variant: "outline" }))}>
+								Browse other offers
+							</Link>
 						</div>
-					) : null}
-
-					{step === "otp" || step === "claim" ? (
-						<div className="space-y-4">
-							<div className="space-y-2">
-								<Label htmlFor="claim-phone">Mobile number</Label>
-								<Input
-									id="claim-phone"
-									type="tel"
-									placeholder="+60123456789"
-									value={phone}
-									onChange={(event: React.ChangeEvent<HTMLInputElement>): void => setPhone(event.target.value)}
-								/>
-							</div>
-							{step === "otp" ? (
-								<Button disabled={otpMutation.isPending} onClick={handleRequestOtp}>
-									{otpMutation.isPending ? "Sending…" : "Send OTP"}
-								</Button>
-							) : (
-								<div className="space-y-2">
-									<Label htmlFor="claim-otp">6-digit OTP</Label>
-									<Input
-										id="claim-otp"
-										inputMode="numeric"
-										maxLength={6}
-										value={otp}
-										onChange={(event: React.ChangeEvent<HTMLInputElement>): void => setOtp(event.target.value)}
-									/>
-									<Button disabled={claimMutation.isPending} onClick={handleClaim}>
-										{claimMutation.isPending ? "Claiming…" : "Verify & claim"}
+					) : (
+						<>
+							{step === "legal" && !legalAccepted ? (
+								<div className="space-y-3">
+									<p className="text-sm text-muted-foreground">
+										Accept the Reward Hub terms (v{TERMS_VERSION}) and privacy policy (v{PRIVACY_VERSION}) before claiming.
+									</p>
+									<Button disabled={acceptLegalMutation.isPending} onClick={handleAcceptLegal}>
+										{acceptLegalMutation.isPending ? "Saving…" : "Accept & continue"}
 									</Button>
 								</div>
-							)}
-						</div>
-					) : null}
+							) : null}
+
+							{step === "otp" || step === "claim" ? (
+								<div className="space-y-4">
+									<div className="space-y-2">
+										<Label htmlFor="claim-phone">Mobile number</Label>
+										<Input
+											id="claim-phone"
+											type="tel"
+											placeholder="+60123456789"
+											value={phone}
+											onChange={(event: React.ChangeEvent<HTMLInputElement>): void => setPhone(event.target.value)}
+										/>
+									</div>
+									{step === "otp" ? (
+										<Button disabled={otpMutation.isPending} onClick={handleRequestOtp}>
+											{otpMutation.isPending ? "Sending…" : "Send OTP"}
+										</Button>
+									) : (
+										<div className="space-y-2">
+											<Label htmlFor="claim-otp">6-digit OTP</Label>
+											<Input
+												id="claim-otp"
+												inputMode="numeric"
+												maxLength={6}
+												value={otp}
+												onChange={(event: React.ChangeEvent<HTMLInputElement>): void => setOtp(event.target.value)}
+											/>
+											<Button disabled={claimMutation.isPending} onClick={handleClaim}>
+												{claimMutation.isPending ? "Claiming…" : "Verify & claim"}
+											</Button>
+										</div>
+									)}
+								</div>
+							) : null}
+						</>
+					)}
 				</div>
 			</WebSurfacePanel>
 		</div>

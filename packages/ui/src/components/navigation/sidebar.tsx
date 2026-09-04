@@ -330,7 +330,7 @@ function SidebarHeader({ className, ...props }: React.ComponentProps<"div">): Re
 }
 
 function SidebarFooter({ className, ...props }: React.ComponentProps<"div">): React.JSX.Element {
-	return <div data-slot="sidebar-footer" data-sidebar="footer" className={cn("flex flex-col gap-2 p-2", className)} {...props} />;
+	return <div data-slot="sidebar-footer" data-sidebar="footer" className={cn("flex shrink-0 flex-col gap-2 p-2", className)} {...props} />;
 }
 
 function SidebarSeparator({ className, ...props }: React.ComponentProps<typeof Separator>): React.JSX.Element {

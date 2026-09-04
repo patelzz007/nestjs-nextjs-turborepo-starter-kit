@@ -24,7 +24,8 @@
 		}
 	},
 	"dependencies": {
-		"zod": "4.4.3"
+		"@workspace/messaging": "workspace:*",
+		"zod": "4.5.4"
 	},
 	"devDependencies": {
 		"@workspace/eslint-config": "workspace:*",

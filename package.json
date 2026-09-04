@@ -31,7 +31,12 @@
 		"kill:web": "PIDS=$(lsof -ti :3000 2>/dev/null); if [ -n \"$PIDS\" ]; then kill -9 $PIDS; echo \"Freed port 3000 (killed $PIDS)\"; else echo \"Port 3000 is already free\"; fi",
 		"kill:docs": "PIDS=$(lsof -ti :3002 2>/dev/null); if [ -n \"$PIDS\" ]; then kill -9 $PIDS; echo \"Freed port 3002 (killed $PIDS)\"; else echo \"Port 3002 is already free\"; fi",
 		"kill:merchant": "PIDS=$(lsof -ti :3003 2>/dev/null); if [ -n \"$PIDS\" ]; then kill -9 $PIDS; echo \"Freed port 3003 (killed $PIDS)\"; else echo \"Port 3003 is already free\"; fi",
-		"kill:all": "pnpm kill:api && pnpm kill:admin && pnpm kill:web && pnpm kill:docs && pnpm kill:merchant"
+		"kill:all": "pnpm kill:api && pnpm kill:admin && pnpm kill:web && pnpm kill:docs && pnpm kill:merchant",
+		"docker:up": "docker compose up -d",
+		"docker:down": "docker compose down",
+		"docker:logs": "docker compose logs -f",
+		"docker:ps": "docker compose ps",
+		"dev:analytics-consumer": "turbo dev --filter @workspace/analytics-consumer --log-prefix=none"
 	},
 	"devDependencies": {
 		"@darraghor/eslint-plugin-nestjs-typed": "^7.3.4",

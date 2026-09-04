@@ -2,12 +2,13 @@ import { BadRequestException, ForbiddenException, Injectable, NotFoundException 
 import type { Prisma } from "@prisma/client";
 
 import type { MerchantCreateRewardInput, MerchantRedemptionListItem, MerchantRedemptionListQuery, MerchantUpdateRewardInput, RewardResponse } from "@workspace/shared";
-import { EpochMsSchema } from "@workspace/shared";
+import { EpochMsSchema, RewardPlatformEventSchema } from "@workspace/shared";
 
 import { PrismaService } from "../../../prisma/prisma.service";
 import { mapRewardToResponse } from "../utils/reward-mapper.util";
 import { MerchantContextService } from "./merchant-context.service";
 import { RewardNotificationService } from "./reward-notification.service";
+import { RewardsPlatformEventsService } from "./rewards-platform-events.service";
 
 const AUTO_PUBLISH_MS = 24 * 60 * 60 * 1000;
 const REFERRER_REWARD_MAX_TTL_MS = 30 * 24 * 60 * 60 * 1000;
@@ -18,6 +19,7 @@ export class MerchantRewardService {
 		private readonly prisma: PrismaService,
 		private readonly merchantContext: MerchantContextService,
 		private readonly notificationService: RewardNotificationService,
+		private readonly rewardsPlatformEvents: RewardsPlatformEventsService,
 	) {}
 
 	public async listRewards(userId: string, merchantOrgId: string | undefined): Promise<RewardResponse[]> {
@@ -34,7 +36,7 @@ export class MerchantRewardService {
 
 	public async createReward(userId: string, merchantOrgId: string | undefined, input: MerchantCreateRewardInput): Promise<RewardResponse> {
 		const orgId = await this.merchantContext.resolveOrgIdForUser(userId, merchantOrgId);
-		await this.merchantContext.requireOwner(userId, orgId);
+		await this.merchantContext.requireCapability(userId, orgId, "merchant:manage_rewards");
 
 		const referralsEnabled = input.referralsEnabled;
 		const referralPoolTotal = referralsEnabled ? input.referralPoolTotal : null;
@@ -110,7 +112,7 @@ export class MerchantRewardService {
 
 	public async updateReward(userId: string, merchantOrgId: string | undefined, rewardId: string, input: MerchantUpdateRewardInput): Promise<RewardResponse> {
 		const orgId = await this.merchantContext.resolveOrgIdForUser(userId, merchantOrgId);
-		await this.merchantContext.requireOwner(userId, orgId);
+		await this.merchantContext.requireCapability(userId, orgId, "merchant:manage_rewards");
 
 		const reward = await this.findOrgConsumerReward(orgId, rewardId);
 
@@ -165,7 +167,7 @@ export class MerchantRewardService {
 
 	public async publishReward(userId: string, merchantOrgId: string | undefined, rewardId: string): Promise<RewardResponse> {
 		const orgId = await this.merchantContext.resolveOrgIdForUser(userId, merchantOrgId);
-		await this.merchantContext.requireOwner(userId, orgId);
+		await this.merchantContext.requireCapability(userId, orgId, "merchant:manage_rewards");
 
 		const reward = await this.findOrgConsumerReward(orgId, rewardId);
 
@@ -292,6 +294,15 @@ export class MerchantRewardService {
 				});
 			});
 
+			this.rewardsPlatformEvents.emit(
+				RewardPlatformEventSchema.parse({
+					event: "reward.auto_published",
+					actorUserId: null,
+					merchantOrgId: reward.merchantOrgId,
+					metadata: { rewardId: reward.id },
+				}),
+			);
+
 			const owners = await this.prisma.merchantMember.findMany({
 				where: { merchantOrgId: reward.merchantOrgId, role: "OWNER", isDeleted: false },
 			});
@@ -311,6 +322,7 @@ export class MerchantRewardService {
 		const expiredClaims = await this.prisma.rewardClaim.findMany({
 			where: {
 				status: "PENDING",
+				isReferrerCredit: false,
 				claimExpiresAt: { lt: now },
 				isDeleted: false,
 			},
@@ -341,10 +353,73 @@ export class MerchantRewardService {
 					data: {
 						merchantOrgId: claim.reward.merchantOrgId,
 						action: "reward.claim_expired",
-						metadata: { claimId: claim.id },
+						metadata: { claimId: claim.id, isReferrerCredit: claim.isReferrerCredit },
 					},
 				});
 			});
+
+			this.rewardsPlatformEvents.emit(
+				RewardPlatformEventSchema.parse({
+					event: "reward.claim_expired",
+					actorUserId: claim.userId,
+					merchantOrgId: claim.reward.merchantOrgId,
+					metadata: { claimId: claim.id, isReferrerCredit: claim.isReferrerCredit },
+				}),
+			);
+		}
+
+		return expiredClaims.length;
+	}
+
+	public async expireReferrerClaims(): Promise<number> {
+		const now = Date.now();
+		const expiredClaims = await this.prisma.rewardClaim.findMany({
+			where: {
+				status: "PENDING",
+				isReferrerCredit: true,
+				claimExpiresAt: { lt: now },
+				isDeleted: false,
+			},
+			include: { reward: true },
+			take: 200,
+		});
+
+		for (const claim of expiredClaims) {
+			await this.prisma.$transaction(async (tx) => {
+				const updated = await tx.rewardClaim.updateMany({
+					where: { id: claim.id, status: "PENDING", isReferrerCredit: true },
+					data: { status: "EXPIRED" },
+				});
+
+				if (updated.count === 0) {
+					return;
+				}
+
+				await tx.reward.update({
+					where: { id: claim.rewardId },
+					data: {
+						quantityReserved: { decrement: 1 },
+						quantityRemaining: { increment: 1 },
+					},
+				});
+
+				await tx.rewardAuditLog.create({
+					data: {
+						merchantOrgId: claim.reward.merchantOrgId,
+						action: "reward.claim_expired",
+						metadata: { claimId: claim.id, isReferrerCredit: true },
+					},
+				});
+			});
+
+			this.rewardsPlatformEvents.emit(
+				RewardPlatformEventSchema.parse({
+					event: "reward.claim_expired",
+					actorUserId: claim.userId,
+					merchantOrgId: claim.reward.merchantOrgId,
+					metadata: { claimId: claim.id, isReferrerCredit: true },
+				}),
+			);
 		}
 
 		return expiredClaims.length;

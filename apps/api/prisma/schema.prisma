@@ -769,6 +769,21 @@ enum MerchantMemberRole {
   CASHIER
 }
 
+/// Maps merchant org roles to portal capability slugs — single source of truth for merchant RBAC.
+model MerchantRoleCapability {
+  id         String             @id @default(uuid())
+  role       MerchantMemberRole
+  capability String             @db.VarChar(100)
+  isDeleted  Boolean            @default(false) @map("is_deleted")
+  deletedAt  BigInt?            @map("deleted_at")
+  createdAt  BigInt             @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
+  updatedAt  BigInt             @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
+
+  @@unique([role, capability])
+  @@index([role])
+  @@map("merchant_role_capabilities")
+}
+
 enum RewardType {
   DISCOUNT
   FREE_ITEM
@@ -1162,4 +1177,45 @@ model RewardRedemptionIdempotencyRecord {
   @@unique([redemptionTokenHash, idempotencyKey])
   @@index([redemptionTokenHash])
   @@map("reward_redemption_idempotency_records")
+}
+
+enum OutboxEventStatus {
+  PENDING
+  PUBLISHED
+  FAILED
+}
+
+/// Transactional outbox for durable Kafka publishing (RLS bypass — infrastructure table).
+model OutboxEvent {
+  id            String            @id @default(uuid())
+  topic         String            @db.VarChar(100)
+  eventType     String            @map("event_type") @db.VarChar(100)
+  partitionKey  String?           @map("partition_key") @db.VarChar(255)
+  correlationId String?           @map("correlation_id") @db.VarChar(64)
+  payload       Json
+  status        OutboxEventStatus @default(PENDING)
+  attempts      Int               @default(0)
+  lastError     String?           @map("last_error") @db.Text
+  publishedAt   BigInt?           @map("published_at")
+  createdAt     BigInt            @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
+  updatedAt     BigInt            @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
+
+  @@index([status, createdAt])
+  @@map("outbox_events")
+}
+
+/// Analytics staging table populated by the analytics-consumer service.
+model AnalyticsEvent {
+  id            String  @id @default(uuid())
+  topic         String  @db.VarChar(100)
+  eventType     String  @map("event_type") @db.VarChar(100)
+  correlationId String? @map("correlation_id") @db.VarChar(64)
+  partitionKey  String? @map("partition_key") @db.VarChar(255)
+  payload       Json
+  occurredAt    BigInt  @map("occurred_at")
+  ingestedAt    BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("ingested_at")
+
+  @@index([topic, occurredAt])
+  @@index([eventType, occurredAt])
+  @@map("analytics_events")
 }
