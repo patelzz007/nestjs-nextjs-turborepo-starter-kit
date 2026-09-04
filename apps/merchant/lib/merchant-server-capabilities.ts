@@ -21,11 +21,7 @@ export function resolveMerchantCapabilities(membership: MerchantMembershipRespon
 	return membership.capabilities;
 }
 
-export function serverHasMerchantCapability(
-	memberships: readonly MerchantMembershipResponse[],
-	merchantOrgId: string | undefined,
-	capability: MerchantCapability,
-): boolean {
+export function serverHasMerchantCapability(memberships: readonly MerchantMembershipResponse[], merchantOrgId: string | undefined, capability: MerchantCapability): boolean {
 	const membership = resolveActiveMerchantMembership(memberships, merchantOrgId);
 	return merchantHasCapability(resolveMerchantCapabilities(membership), capability);
 }

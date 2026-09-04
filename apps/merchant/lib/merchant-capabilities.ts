@@ -30,10 +30,7 @@ export function useMerchantCapabilities(): MerchantCapabilitiesState {
 
 	const capabilities = React.useMemo((): readonly MerchantCapability[] => resolveMerchantCapabilities(membership), [membership]);
 
-	const hasCapability = React.useCallback(
-		(capability: MerchantCapability): boolean => merchantHasCapability(capabilities, capability),
-		[capabilities],
-	);
+	const hasCapability = React.useCallback((capability: MerchantCapability): boolean => merchantHasCapability(capabilities, capability), [capabilities]);
 
 	return {
 		membership,

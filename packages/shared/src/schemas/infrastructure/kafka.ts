@@ -1,11 +1,6 @@
 import { z } from "zod";
 
-import {
-	AuthFlowEventSchema,
-	EmailLogUpdatedEventSchema,
-	ImpersonationActionEventSchema,
-	SessionActionEventSchema,
-} from "../domain/events";
+import { AuthFlowEventSchema, EmailLogUpdatedEventSchema, ImpersonationActionEventSchema, SessionActionEventSchema } from "../domain/events";
 import { RewardPlatformEventSchema } from "../domain/rewards";
 
 /** Kafka topics the API publishes platform events to. */

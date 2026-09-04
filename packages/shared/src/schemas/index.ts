@@ -528,11 +528,7 @@ export {
 	RewardTerminalIdHeaderSchema,
 	RewardTypeSchema,
 } from "./domain/rewards";
-export {
-	merchantHasCapability,
-	MerchantCapabilitySchema,
-	parseMerchantCapabilities,
-} from "./domain/merchant-capabilities";
+export { merchantHasCapability, MerchantCapabilitySchema, parseMerchantCapabilities } from "./domain/merchant-capabilities";
 export type { MerchantCapability } from "./domain/merchant-capabilities";
 export { getRewardClaimBlockReason, isRewardClaimable, rewardClaimBlockMessage, type RewardClaimBlockReason } from "./domain/reward-claim-availability";
 export {

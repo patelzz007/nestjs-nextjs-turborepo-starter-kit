@@ -114,64 +114,64 @@ export function MerchantCreateRewardPageView({ defaultCategory }: MerchantCreate
 	return (
 		<MerchantCapabilityGate capability="merchant:manage_rewards">
 			<div className="mx-auto space-y-6">
-			<div className="mb-2 flex items-center gap-4">
-				<Link href="/rewards">
-					<Button type="button" variant="ghost" size="icon" aria-label="Back to rewards">
-						<ArrowLeft className="size-5" aria-hidden="true" />
-					</Button>
-				</Link>
-				<div>
-					<h1 className="text-2xl font-bold tracking-tight text-foreground lg:text-3xl">Create Reward</h1>
-					<p className="mt-1 text-muted-foreground">Design a new reward campaign</p>
-				</div>
-			</div>
-
-			<form onSubmit={handleFormSubmit} className="space-y-6">
-				<MerchantRewardFormFields
-					register={register}
-					control={control}
-					errors={errors}
-					setValue={setValue}
-					selectedType={selectedType}
-					onTypeSelect={handleTypeSelect}
-					onMaxClaimsChange={handleMaxClaimsChange}
-				/>
-
-				<Card className="border-border/80 bg-card shadow-xs">
-					<CardContent className="p-6">
-						<div className="flex items-center justify-between">
-							<div className="flex items-center gap-3">
-								<Switch id="saveAsDraft" checked={saveAsDraft} onCheckedChange={handleSaveAsDraftChange} />
-								<Label htmlFor="saveAsDraft" className="cursor-pointer">
-									<span className="font-medium">Save as Draft</span>
-									<span className="block text-sm text-muted-foreground">Don&apos;t publish yet, save for later</span>
-								</Label>
-							</div>
-						</div>
-					</CardContent>
-				</Card>
-
-				<div className="flex items-center justify-end gap-4">
+				<div className="mb-2 flex items-center gap-4">
 					<Link href="/rewards">
-						<Button type="button" variant="outline">
-							Cancel
+						<Button type="button" variant="ghost" size="icon" aria-label="Back to rewards">
+							<ArrowLeft className="size-5" aria-hidden="true" />
 						</Button>
 					</Link>
-					<Button type="submit" disabled={createMutation.isPending} className="gap-2">
-						{createMutation.isPending ? (
-							<>
-								<Loader2 className="size-4 animate-spin" aria-hidden="true" />
-								Saving...
-							</>
-						) : (
-							<>
-								<Save className="size-4" aria-hidden="true" />
-								{saveAsDraft ? "Save Draft" : "Create Reward"}
-							</>
-						)}
-					</Button>
+					<div>
+						<h1 className="text-2xl font-bold tracking-tight text-foreground lg:text-3xl">Create Reward</h1>
+						<p className="mt-1 text-muted-foreground">Design a new reward campaign</p>
+					</div>
 				</div>
-			</form>
+
+				<form onSubmit={handleFormSubmit} className="space-y-6">
+					<MerchantRewardFormFields
+						register={register}
+						control={control}
+						errors={errors}
+						setValue={setValue}
+						selectedType={selectedType}
+						onTypeSelect={handleTypeSelect}
+						onMaxClaimsChange={handleMaxClaimsChange}
+					/>
+
+					<Card className="border-border/80 bg-card shadow-xs">
+						<CardContent className="p-6">
+							<div className="flex items-center justify-between">
+								<div className="flex items-center gap-3">
+									<Switch id="saveAsDraft" checked={saveAsDraft} onCheckedChange={handleSaveAsDraftChange} />
+									<Label htmlFor="saveAsDraft" className="cursor-pointer">
+										<span className="font-medium">Save as Draft</span>
+										<span className="block text-sm text-muted-foreground">Don&apos;t publish yet, save for later</span>
+									</Label>
+								</div>
+							</div>
+						</CardContent>
+					</Card>
+
+					<div className="flex items-center justify-end gap-4">
+						<Link href="/rewards">
+							<Button type="button" variant="outline">
+								Cancel
+							</Button>
+						</Link>
+						<Button type="submit" disabled={createMutation.isPending} className="gap-2">
+							{createMutation.isPending ? (
+								<>
+									<Loader2 className="size-4 animate-spin" aria-hidden="true" />
+									Saving...
+								</>
+							) : (
+								<>
+									<Save className="size-4" aria-hidden="true" />
+									{saveAsDraft ? "Save Draft" : "Create Reward"}
+								</>
+							)}
+						</Button>
+					</div>
+				</form>
 			</div>
 		</MerchantCapabilityGate>
 	);

@@ -35,7 +35,5 @@ export const blogSource = loader({
 
 /** All published posts, newest first (listing order for `/blog`). */
 export function getBlogPosts(): ReturnType<typeof blogSource.getPages> {
-	return [...blogSource.getPages()].sort(
-		(a, b) => b.data.date - a.data.date,
-	);
+	return [...blogSource.getPages()].sort((a, b) => b.data.date - a.data.date);
 }

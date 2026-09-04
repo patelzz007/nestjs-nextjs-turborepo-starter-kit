@@ -58,7 +58,11 @@ export function filterCompiledSidebarMenu(menu: CompiledSidebarMenuData, capabil
 }
 
 /** Returns whether a URL is reachable for the given capability set (uses menu item requirements). */
-export function isSidebarUrlAllowed(url: string, items: readonly SidebarMenuItem[] | readonly CompiledSidebarMenuItem[], capabilities: readonly MerchantCapability[]): boolean {
+export function isSidebarUrlAllowed(
+	url: string,
+	items: readonly SidebarMenuItem[] | readonly CompiledSidebarMenuItem[],
+	capabilities: readonly MerchantCapability[],
+): boolean {
 	for (const item of items) {
 		if (item.url === url) {
 			return isMenuItemVisible(item, capabilities);

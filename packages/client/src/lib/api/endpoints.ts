@@ -155,19 +155,11 @@ export interface MutationDef<Input extends SerializableInput, Resp extends DataV
 export type ProcedureDef<Input extends SerializableInput, Resp extends DataValue> = QueryDef<Input, Resp> | MutationDef<Input, Resp>;
 
 /** Erased procedure defs — used when walking a router tree at runtime without per-leaf generics. */
-export type ErasedQueryDef = QueryDef<
-	SerializableInput,
-	DataValue
->;
+export type ErasedQueryDef = QueryDef<SerializableInput, DataValue>;
 
-export type ErasedMutationDef = MutationDef<
-	SerializableInput,
-	DataValue
->;
+export type ErasedMutationDef = MutationDef<SerializableInput, DataValue>;
 
-export type ErasedProcedureDef =
-	| ErasedQueryDef
-	| ErasedMutationDef;
+export type ErasedProcedureDef = ErasedQueryDef | ErasedMutationDef;
 
 /** Nested router record accepted by `createCaller` / `buildClientRouter`. */
 export interface RouterTree {

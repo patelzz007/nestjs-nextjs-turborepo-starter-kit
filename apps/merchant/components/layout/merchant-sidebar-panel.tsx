@@ -196,10 +196,7 @@ export function MerchantSidebarPanel({ memberships, merchantOrgId, onStoreChange
 
 	const userInitials = getUserInitials(sessionProfile.fullName);
 	const showPinned = pinnedItems.length > 0 && !view.noResults;
-	const formatStoreValue = React.useCallback(
-		(orgId: string): string => memberships.find((row) => row.merchantOrgId === orgId)?.businessName ?? orgId,
-		[memberships],
-	);
+	const formatStoreValue = React.useCallback((orgId: string): string => memberships.find((row) => row.merchantOrgId === orgId)?.businessName ?? orgId, [memberships]);
 
 	return (
 		<div className="flex h-full min-h-0 flex-col overflow-hidden bg-card text-sidebar-foreground">

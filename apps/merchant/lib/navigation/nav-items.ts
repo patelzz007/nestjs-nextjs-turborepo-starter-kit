@@ -77,17 +77,11 @@ export const MERCHANT_NAV_ITEMS: readonly MerchantNavItem[] = [
 	},
 ];
 
-export function filterMerchantNavItems(
-	items: readonly MerchantNavItem[],
-	capabilities: readonly MerchantCapability[],
-): readonly MerchantNavItem[] {
+export function filterMerchantNavItems(items: readonly MerchantNavItem[], capabilities: readonly MerchantCapability[]): readonly MerchantNavItem[] {
 	return items.filter((item) => item.requiredCapability === undefined || merchantHasCapability(capabilities, item.requiredCapability));
 }
 
-export function resolvePinnedMerchantNavItems(
-	pinnedUrls: readonly string[],
-	capabilities: readonly MerchantCapability[],
-): readonly MerchantNavItem[] {
+export function resolvePinnedMerchantNavItems(pinnedUrls: readonly string[], capabilities: readonly MerchantCapability[]): readonly MerchantNavItem[] {
 	return pinnedUrls
 		.map((url) => filterMerchantNavItems(MERCHANT_NAV_ITEMS, capabilities).find((item) => item.url === url))
 		.filter((item): item is MerchantNavItem => item !== undefined);

@@ -225,37 +225,23 @@ function bindErasedProcedure(context: ApiRequestContext, def: ErasedProcedureDef
 	return createMutationCaller(context, def);
 }
 
-function mapCallerBranch<V extends object>(
-	value: V,
-	context: ApiRequestContext,
-): CallerTreeBranch<V> {
+function mapCallerBranch<V extends object>(value: V, context: ApiRequestContext): CallerTreeBranch<V> {
 	if (isErasedProcedureDef(value)) {
-		return bindErasedProcedure(
-			context,
-			value,
-		) as CallerTreeBranch<V>;
+		return bindErasedProcedure(context, value) as CallerTreeBranch<V>;
 	}
 
 	if (isRouterSubtree(value)) {
-		return createCaller(
-			value,
-			context,
-		) as CallerTreeBranch<V>;
+		return createCaller(value, context) as CallerTreeBranch<V>;
 	}
 
-	throw new Error(
-		"Invalid router node — expected a procedure leaf or nested router.",
-	);
+	throw new Error("Invalid router node — expected a procedure leaf or nested router.");
 }
 
 function buildCallerTree<R extends object>(router: R, context: ApiRequestContext): CallerTree<R> {
 	const out: Partial<CallerTree<R>> = {};
 
 	eachRouterEntry(router, (key, value) => {
-		out[key] = mapCallerBranch(
-			value as Extract<R[typeof key], object>,
-			context,
-		) as CallerTree<R>[typeof key];
+		out[key] = mapCallerBranch(value as Extract<R[typeof key], object>, context) as CallerTree<R>[typeof key];
 	});
 
 	if (!isCompleteCallerTree(router, out)) {
@@ -423,22 +409,15 @@ function throwOnFailure<T>(res: ApiResponse<T>): T {
 	return res.data;
 }
 
-function procedureHeaders<
-	Input extends SerializableInput,
-	Resp extends DataValue,
->(
+function procedureHeaders<Input extends SerializableInput, Resp extends DataValue>(
 	context: ApiRequestContext | UncheckedApiRequestContext,
 	def: QueryDef<Input, Resp> | MutationDef<Input, Resp>,
 	options?: ProcedureCallOptions,
 ): Record<string, string> {
-	return mergeProcedureHeaders(
-		context.clientType,
-		context.extraHeaders,
-		{
-			...def.baseOptions?.headers,
-			...options?.headers,
-		},
-	);
+	return mergeProcedureHeaders(context.clientType, context.extraHeaders, {
+		...def.baseOptions?.headers,
+		...options?.headers,
+	});
 }
 
 // ── Procedure execution (tRPC-style) ───────────────────────────────────────

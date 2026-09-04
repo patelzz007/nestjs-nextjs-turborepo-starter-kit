@@ -4,9 +4,6 @@ import { resolvePinnedMenuItems } from "@workspace/ui/lib/resolve-pinned-menu-it
 import type { PaletteSearchableItem } from "@workspace/ui/lib/palette-types";
 
 /** Resolves command-palette pinned URLs to flat menu entries for the sidebar favorites row. */
-export function resolveMerchantPinnedMenuItems(
-	pinnedUrls: readonly string[],
-	capabilities: readonly MerchantCapability[],
-): readonly PaletteSearchableItem[] {
+export function resolveMerchantPinnedMenuItems(pinnedUrls: readonly string[], capabilities: readonly MerchantCapability[]): readonly PaletteSearchableItem[] {
 	return resolvePinnedMenuItems(pinnedUrls, buildMerchantPaletteItems(capabilities));
 }

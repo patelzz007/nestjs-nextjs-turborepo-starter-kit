@@ -5,14 +5,7 @@ import { prisma } from "./client";
 
 /** Default grants — runtime reads from `merchant_role_capabilities` after seed. */
 const DEFAULT_MERCHANT_ROLE_CAPABILITIES: Record<MerchantMemberRole, readonly MerchantCapability[]> = {
-	OWNER: [
-		"merchant:view_dashboard",
-		"merchant:view_analytics",
-		"merchant:view_rewards",
-		"merchant:manage_rewards",
-		"merchant:view_redemptions",
-		"merchant:manage_api_keys",
-	],
+	OWNER: ["merchant:view_dashboard", "merchant:view_analytics", "merchant:view_rewards", "merchant:manage_rewards", "merchant:view_redemptions", "merchant:manage_api_keys"],
 	CASHIER: ["merchant:view_dashboard", "merchant:view_analytics", "merchant:view_rewards", "merchant:view_redemptions"],
 };
 

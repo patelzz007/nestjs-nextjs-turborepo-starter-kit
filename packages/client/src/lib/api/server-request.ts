@@ -92,10 +92,7 @@ export interface ServerRequestContext {
 	readonly refreshDef: RefreshMutationDef;
 }
 
-export function createServerRequestContext(
-	config: ServerApiConfig,
-	refreshDef: RefreshMutationDef,
-): ServerRequestContext {
+export function createServerRequestContext(config: ServerApiConfig, refreshDef: RefreshMutationDef): ServerRequestContext {
 	return { config, refreshDef };
 }
 
@@ -499,37 +496,23 @@ function isCompleteServerCaller<R extends object>(router: R, candidate: Partial<
 	return complete;
 }
 
-function mapServerCallerBranch<V extends object>(
-	context: ServerRequestContext,
-	value: V,
-): ServerCallerBranch<V> {
+function mapServerCallerBranch<V extends object>(context: ServerRequestContext, value: V): ServerCallerBranch<V> {
 	if (isErasedProcedureDef(value)) {
-		return createServerProcedureLeaf(
-			context,
-			value,
-		) as ServerCallerBranch<V>;
+		return createServerProcedureLeaf(context, value) as ServerCallerBranch<V>;
 	}
 
 	if (isRouterSubtree(value)) {
-		return createServerCallerForRouter(
-			value,
-			context,
-		) as ServerCallerBranch<V>;
+		return createServerCallerForRouter(value, context) as ServerCallerBranch<V>;
 	}
 
-	throw new Error(
-		"Invalid router node — expected a procedure leaf or nested router.",
-	);
+	throw new Error("Invalid router node — expected a procedure leaf or nested router.");
 }
 
 function buildServerCallerTree<R extends object>(router: R, context: ServerRequestContext): ServerCallerTree<R> {
 	const out: Partial<ServerCallerTree<R>> = {};
 
 	eachRouterEntry(router, (key, value) => {
-		out[key] = mapServerCallerBranch(
-			context,
-			value as Extract<R[typeof key], object>,
-		) as ServerCallerTree<R>[typeof key];
+		out[key] = mapServerCallerBranch(context, value as Extract<R[typeof key], object>) as ServerCallerTree<R>[typeof key];
 	});
 
 	if (!isCompleteServerCaller(router, out)) {
