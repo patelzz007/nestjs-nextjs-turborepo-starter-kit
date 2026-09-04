@@ -49,6 +49,9 @@ CREATE TYPE "RewardReferralStatus" AS ENUM ('PENDING', 'CREDITED', 'BLOCKED');
 -- CreateEnum
 CREATE TYPE "RewardOtpPurpose" AS ENUM ('CLAIM');
 
+-- CreateEnum
+CREATE TYPE "OutboxEventStatus" AS ENUM ('PENDING', 'PUBLISHED', 'FAILED');
+
 -- CreateTable
 CREATE TABLE "users" (
     "id" TEXT NOT NULL,
@@ -517,6 +520,19 @@ CREATE TABLE "cities" (
 );
 
 -- CreateTable
+CREATE TABLE "merchant_role_capabilities" (
+    "id" TEXT NOT NULL,
+    "role" "MerchantMemberRole" NOT NULL,
+    "capability" VARCHAR(100) NOT NULL,
+    "is_deleted" BOOLEAN NOT NULL DEFAULT false,
+    "deleted_at" BIGINT,
+    "created_at" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
+    "updated_at" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
+
+    CONSTRAINT "merchant_role_capabilities_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "merchant_orgs" (
     "id" TEXT NOT NULL,
     "business_name" VARCHAR(200) NOT NULL,
@@ -779,6 +795,38 @@ CREATE TABLE "reward_redemption_idempotency_records" (
     CONSTRAINT "reward_redemption_idempotency_records_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "outbox_events" (
+    "id" TEXT NOT NULL,
+    "topic" VARCHAR(100) NOT NULL,
+    "event_type" VARCHAR(100) NOT NULL,
+    "partition_key" VARCHAR(255),
+    "correlation_id" VARCHAR(64),
+    "payload" JSONB NOT NULL,
+    "status" "OutboxEventStatus" NOT NULL DEFAULT 'PENDING',
+    "attempts" INTEGER NOT NULL DEFAULT 0,
+    "last_error" TEXT,
+    "published_at" BIGINT,
+    "created_at" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
+    "updated_at" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
+
+    CONSTRAINT "outbox_events_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "analytics_events" (
+    "id" TEXT NOT NULL,
+    "topic" VARCHAR(100) NOT NULL,
+    "event_type" VARCHAR(100) NOT NULL,
+    "correlation_id" VARCHAR(64),
+    "partition_key" VARCHAR(255),
+    "payload" JSONB NOT NULL,
+    "occurred_at" BIGINT NOT NULL,
+    "ingested_at" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
+
+    CONSTRAINT "analytics_events_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "users_email_key" ON "users"("email");
 
@@ -960,6 +1008,12 @@ CREATE INDEX "cities_state_id_idx" ON "cities"("state_id");
 CREATE INDEX "cities_country_id_idx" ON "cities"("country_id");
 
 -- CreateIndex
+CREATE INDEX "merchant_role_capabilities_role_idx" ON "merchant_role_capabilities"("role");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "merchant_role_capabilities_role_capability_key" ON "merchant_role_capabilities"("role", "capability");
+
+-- CreateIndex
 CREATE INDEX "merchant_orgs_city_idx" ON "merchant_orgs"("city");
 
 -- CreateIndex
@@ -1093,6 +1147,15 @@ CREATE INDEX "reward_redemption_idempotency_records_redemption_token_hash_idx" O
 
 -- CreateIndex
 CREATE UNIQUE INDEX "reward_redemption_idempotency_records_redemption_token_hash_key" ON "reward_redemption_idempotency_records"("redemption_token_hash", "idempotency_key");
+
+-- CreateIndex
+CREATE INDEX "outbox_events_status_created_at_idx" ON "outbox_events"("status", "created_at");
+
+-- CreateIndex
+CREATE INDEX "analytics_events_topic_occurred_at_idx" ON "analytics_events"("topic", "occurred_at");
+
+-- CreateIndex
+CREATE INDEX "analytics_events_event_type_occurred_at_idx" ON "analytics_events"("event_type", "occurred_at");
 
 -- AddForeignKey
 ALTER TABLE "roles" ADD CONSTRAINT "roles_parent_id_fkey" FOREIGN KEY ("parent_id") REFERENCES "roles"("id") ON DELETE SET NULL ON UPDATE CASCADE;
