@@ -8,6 +8,11 @@ import {
 	type SlimRoleResponse,
 	type UserPermissions,
 	type CheckPermissionResponse,
+	PermissionActionSchema,
+	PermissionResourceSchema,
+	type CapabilitySlug,
+	CapabilitySlugSchema,
+	toPlatformCapabilitySlug,
 } from "@workspace/shared";
 
 import { PrismaService } from "../../../prisma/prisma.service";
@@ -134,6 +139,25 @@ export class AuthorizationCheckerService {
 		mode: "all" | "any" = "all",
 	): Promise<boolean> {
 		return mode === "all" ? this.hasAllPermissions(userId, requirements) : this.hasAnyPermission(userId, requirements);
+	}
+
+	/** Check whether a user has a dynamic capability slug from the catalog. */
+	public async hasCapability(userId: string, slug: CapabilitySlug): Promise<boolean> {
+		const auth: CachedAuthorization = await this.resolve(userId);
+		return auth.capabilities.includes(slug);
+	}
+
+	/** Flat capability slug list for FE gating (`GET /auth/permissions`). */
+	public async getUserCapabilitySlugs(userId: string): Promise<readonly CapabilitySlug[]> {
+		const auth: CachedAuthorization = await this.resolve(userId);
+		const slugs: CapabilitySlug[] = [];
+		for (const entry of auth.capabilities) {
+			const parsed = CapabilitySlugSchema.safeParse(entry);
+			if (parsed.success) {
+				slugs.push(parsed.data);
+			}
+		}
+		return slugs;
 	}
 
 	// ── Generic can() ────────────────────────────────────────────────────
@@ -413,9 +437,19 @@ export class AuthorizationCheckerService {
 			});
 		}
 
+		const capabilitySet = new Set<string>();
+		for (const permission of permissionMap.values()) {
+			const actionParsed = PermissionActionSchema.safeParse(permission.action);
+			const resourceParsed = PermissionResourceSchema.safeParse(permission.resource);
+			if (actionParsed.success && resourceParsed.success) {
+				capabilitySet.add(toPlatformCapabilitySlug(actionParsed.data, resourceParsed.data));
+			}
+		}
+
 		return {
 			roles: roleNames,
 			permissions: Array.from(permissionMap.values()),
+			capabilities: Array.from(capabilitySet.values()),
 			cachedAt: nowMs,
 		};
 	}

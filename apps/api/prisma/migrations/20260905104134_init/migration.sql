@@ -14,6 +14,9 @@ CREATE TYPE "PermissionAction" AS ENUM ('CREATE', 'READ', 'UPDATE', 'DELETE', 'L
 CREATE TYPE "PermissionResource" AS ENUM ('USER', 'PROFILE', 'ROLE', 'PERMISSION', 'ADMIN_DASHBOARD', 'SYSTEM_SETTINGS', 'URL', 'TAG', 'API_KEY', 'ANALYTICS', 'AUDIT_LOG', 'REPORT', 'EMAIL', 'GEO', 'REWARD', 'MERCHANT_ORG', 'REDEMPTION');
 
 -- CreateEnum
+CREATE TYPE "CapabilityScope" AS ENUM ('PLATFORM', 'MERCHANT', 'ADMIN');
+
+-- CreateEnum
 CREATE TYPE "MenuMatchType" AS ENUM ('ANY', 'ALL');
 
 -- CreateEnum
@@ -115,6 +118,26 @@ CREATE TABLE "permissions" (
 );
 
 -- CreateTable
+CREATE TABLE "capability_definitions" (
+    "id" TEXT NOT NULL,
+    "slug" VARCHAR(100) NOT NULL,
+    "scope" "CapabilityScope" NOT NULL,
+    "label" VARCHAR(200) NOT NULL,
+    "description" TEXT,
+    "group_name" VARCHAR(100),
+    "sort_order" INTEGER NOT NULL DEFAULT 0,
+    "is_system" BOOLEAN NOT NULL DEFAULT false,
+    "permission_id" TEXT,
+    "metadata" JSONB,
+    "is_deleted" BOOLEAN NOT NULL DEFAULT false,
+    "deleted_at" BIGINT,
+    "created_at" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
+    "updated_at" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
+
+    CONSTRAINT "capability_definitions_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "permission_audit_logs" (
     "id" TEXT NOT NULL,
     "actor_id" TEXT NOT NULL,
@@ -141,6 +164,7 @@ CREATE TABLE "menu_items" (
     "parent_id" TEXT,
     "order" INTEGER NOT NULL DEFAULT 0,
     "is_active" BOOLEAN NOT NULL DEFAULT true,
+    "app_scope" "CapabilityScope",
     "is_deleted" BOOLEAN NOT NULL DEFAULT false,
     "deleted_at" BIGINT,
     "createdAt" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
@@ -174,6 +198,20 @@ CREATE TABLE "menu_item_roles" (
     "updatedAt" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
 
     CONSTRAINT "menu_item_roles_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "menu_item_capabilities" (
+    "id" TEXT NOT NULL,
+    "menu_item_id" TEXT NOT NULL,
+    "capability_id" TEXT NOT NULL,
+    "match_type" "MenuMatchType" NOT NULL DEFAULT 'ANY',
+    "is_deleted" BOOLEAN NOT NULL DEFAULT false,
+    "deleted_at" BIGINT,
+    "created_at" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
+    "updated_at" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
+
+    CONSTRAINT "menu_item_capabilities_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -523,7 +561,7 @@ CREATE TABLE "cities" (
 CREATE TABLE "merchant_role_capabilities" (
     "id" TEXT NOT NULL,
     "role" "MerchantMemberRole" NOT NULL,
-    "capability" VARCHAR(100) NOT NULL,
+    "capability_id" TEXT NOT NULL,
     "is_deleted" BOOLEAN NOT NULL DEFAULT false,
     "deleted_at" BIGINT,
     "created_at" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
@@ -846,6 +884,15 @@ CREATE INDEX "roles_parent_id_idx" ON "roles"("parent_id");
 CREATE UNIQUE INDEX "permissions_action_resource_key" ON "permissions"("action", "resource");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "capability_definitions_slug_key" ON "capability_definitions"("slug");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "capability_definitions_permission_id_key" ON "capability_definitions"("permission_id");
+
+-- CreateIndex
+CREATE INDEX "capability_definitions_scope_idx" ON "capability_definitions"("scope");
+
+-- CreateIndex
 CREATE INDEX "permission_audit_logs_actor_id_idx" ON "permission_audit_logs"("actor_id");
 
 -- CreateIndex
@@ -861,10 +908,16 @@ CREATE INDEX "permission_audit_logs_created_at_idx" ON "permission_audit_logs"("
 CREATE INDEX "menu_items_parent_id_idx" ON "menu_items"("parent_id");
 
 -- CreateIndex
+CREATE INDEX "menu_items_app_scope_idx" ON "menu_items"("app_scope");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "menu_item_permissions_menu_item_id_permission_id_key" ON "menu_item_permissions"("menu_item_id", "permission_id");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "menu_item_roles_menu_item_id_role_id_key" ON "menu_item_roles"("menu_item_id", "role_id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "menu_item_capabilities_menu_item_id_capability_id_key" ON "menu_item_capabilities"("menu_item_id", "capability_id");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "password_reset_tokens_token_key" ON "password_reset_tokens"("token");
@@ -1011,7 +1064,10 @@ CREATE INDEX "cities_country_id_idx" ON "cities"("country_id");
 CREATE INDEX "merchant_role_capabilities_role_idx" ON "merchant_role_capabilities"("role");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "merchant_role_capabilities_role_capability_key" ON "merchant_role_capabilities"("role", "capability");
+CREATE INDEX "merchant_role_capabilities_capability_id_idx" ON "merchant_role_capabilities"("capability_id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "merchant_role_capabilities_role_capability_id_key" ON "merchant_role_capabilities"("role", "capability_id");
 
 -- CreateIndex
 CREATE INDEX "merchant_orgs_city_idx" ON "merchant_orgs"("city");
@@ -1161,6 +1217,9 @@ CREATE INDEX "analytics_events_event_type_occurred_at_idx" ON "analytics_events"
 ALTER TABLE "roles" ADD CONSTRAINT "roles_parent_id_fkey" FOREIGN KEY ("parent_id") REFERENCES "roles"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "capability_definitions" ADD CONSTRAINT "capability_definitions_permission_id_fkey" FOREIGN KEY ("permission_id") REFERENCES "permissions"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "menu_items" ADD CONSTRAINT "menu_items_parent_id_fkey" FOREIGN KEY ("parent_id") REFERENCES "menu_items"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -1174,6 +1233,12 @@ ALTER TABLE "menu_item_roles" ADD CONSTRAINT "menu_item_roles_menu_item_id_fkey"
 
 -- AddForeignKey
 ALTER TABLE "menu_item_roles" ADD CONSTRAINT "menu_item_roles_role_id_fkey" FOREIGN KEY ("role_id") REFERENCES "roles"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "menu_item_capabilities" ADD CONSTRAINT "menu_item_capabilities_menu_item_id_fkey" FOREIGN KEY ("menu_item_id") REFERENCES "menu_items"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "menu_item_capabilities" ADD CONSTRAINT "menu_item_capabilities_capability_id_fkey" FOREIGN KEY ("capability_id") REFERENCES "capability_definitions"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "password_reset_tokens" ADD CONSTRAINT "password_reset_tokens_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -1243,6 +1308,9 @@ ALTER TABLE "cities" ADD CONSTRAINT "cities_state_id_fkey" FOREIGN KEY ("state_i
 
 -- AddForeignKey
 ALTER TABLE "cities" ADD CONSTRAINT "cities_country_id_fkey" FOREIGN KEY ("country_id") REFERENCES "countries"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "merchant_role_capabilities" ADD CONSTRAINT "merchant_role_capabilities_capability_id_fkey" FOREIGN KEY ("capability_id") REFERENCES "capability_definitions"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "merchant_members" ADD CONSTRAINT "merchant_members_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;

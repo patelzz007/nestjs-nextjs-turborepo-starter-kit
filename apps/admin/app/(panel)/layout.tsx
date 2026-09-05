@@ -1,10 +1,38 @@
 import * as React from "react";
 
 import { DashboardShell } from "@/components/layout/dashboard-shell";
+import { createAdminServerCaller } from "@/lib/admin-server-api";
 import { getServerUser } from "@/lib/auth-server";
+import { CapabilityMenuResponseSchema, SessionPermissionsResponseSchema, type CapabilityMenuResponse, type SessionPermissionsResponse } from "@workspace/shared";
 
 export interface PanelLayoutProps {
 	readonly children: React.ReactNode;
+}
+
+async function loadInitialNavigationMenu(server: ReturnType<typeof createAdminServerCaller>): Promise<CapabilityMenuResponse | undefined> {
+	try {
+		const response = await server.navigation.menu.query({ scope: "ADMIN" });
+		const parsed = CapabilityMenuResponseSchema.safeParse(response.data);
+		if (parsed.success) {
+			return parsed.data;
+		}
+	} catch {
+		return undefined;
+	}
+	return undefined;
+}
+
+async function loadInitialSessionPermissions(server: ReturnType<typeof createAdminServerCaller>): Promise<SessionPermissionsResponse | undefined> {
+	try {
+		const response = await server.auth.permissions.query(undefined);
+		const parsed = SessionPermissionsResponseSchema.safeParse(response.data);
+		if (parsed.success) {
+			return parsed.data;
+		}
+	} catch {
+		return undefined;
+	}
+	return undefined;
 }
 
 /**
@@ -19,7 +47,16 @@ export interface PanelLayoutProps {
  * resets (search, expand/collapse, and animations all persist).
  */
 export default async function PanelLayout({ children }: PanelLayoutProps): Promise<React.JSX.Element> {
-	const initialUser = await getServerUser();
+	const server = createAdminServerCaller();
+	const [initialUser, initialNavigationMenu, initialSessionPermissions] = await Promise.all([
+		getServerUser(),
+		loadInitialNavigationMenu(server),
+		loadInitialSessionPermissions(server),
+	]);
 
-	return <DashboardShell initialUser={initialUser}>{children}</DashboardShell>;
+	return (
+		<DashboardShell initialUser={initialUser} initialNavigationMenu={initialNavigationMenu} initialSessionPermissions={initialSessionPermissions}>
+			{children}
+		</DashboardShell>
+	);
 }

@@ -1,5 +1,5 @@
 import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
-import type { MerchantCapability, MerchantMembershipResponse } from "@workspace/shared";
+import type { CapabilitySlug, MerchantMembershipResponse } from "@workspace/shared";
 
 import { AuthorizationCheckerService } from "../../authorization/services/authorization-checker.service";
 import { PrismaService } from "../../../prisma/prisma.service";
@@ -48,7 +48,7 @@ export class MerchantContextService {
 		return memberships[0].merchantOrgId;
 	}
 
-	public async requireCapability(userId: string, merchantOrgId: string, capability: MerchantCapability): Promise<void> {
+	public async requireCapability(userId: string, merchantOrgId: string, capability: CapabilitySlug): Promise<void> {
 		const allowed = await this.userHasCapability(userId, merchantOrgId, capability);
 		if (!allowed) {
 			throw new ForbiddenException({
@@ -59,7 +59,7 @@ export class MerchantContextService {
 		}
 	}
 
-	public async userHasCapability(userId: string, merchantOrgId: string, capability: MerchantCapability, options?: { readonly isImpersonating?: boolean }): Promise<boolean> {
+	public async userHasCapability(userId: string, merchantOrgId: string, capability: CapabilitySlug, options?: { readonly isImpersonating?: boolean }): Promise<boolean> {
 		const membership = await this.prisma.merchantMember.findFirst({
 			where: { userId, merchantOrgId, isDeleted: false },
 			select: { role: true },

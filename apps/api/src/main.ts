@@ -20,6 +20,7 @@ import { z } from "zod";
 import { AppModule, ObserveInstrument } from "./app.module";
 import { warmupAjvValidators } from "./common/ajv-warmup";
 import { setupApiDocs } from "./common/api-docs";
+import { registerGracefulShutdown } from "./common/lifecycle/graceful-shutdown";
 import { HealthService } from "./modules/health/health.service";
 import { readFirstHeader, readReplyHeader } from "./common/utils/http-headers";
 import { LogService } from "./modules/logs/logs.service";
@@ -121,7 +122,6 @@ async function bootstrap(): Promise<void> {
 	const app = await NestFactory.create<NestFastifyApplication>(AppModule, adapter, nestOptions);
 	markPhase("NestJS app created");
 
-	app.enableShutdownHooks();
 	// Ajv warmup runs AFTER listen — first request compiles on-demand.
 	setImmediate(warmupAjvValidators);
 
@@ -428,7 +428,9 @@ async function bootstrap(): Promise<void> {
 	await app.listen(port, listenHost);
 	markPhase(`Server listening on ${listenHost}:${String(port)}`);
 	const healthService = app.get(HealthService);
+	const logService = app.get(LogService);
 	healthService.markReady();
+	registerGracefulShutdown(app, healthService, logService);
 	if (swaggerEnabled) {
 		// eslint-disable-next-line no-console -- intentional boot banner
 		console.log(`✓ Swagger docs at http://${listenHost}:${String(port)}${apiDocsPath()}`);

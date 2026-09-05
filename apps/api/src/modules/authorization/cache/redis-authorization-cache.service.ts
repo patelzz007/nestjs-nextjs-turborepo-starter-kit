@@ -45,8 +45,12 @@ export class RedisAuthorizationCacheService extends AuthorizationCacheService im
 	}
 
 	public async onModuleDestroy(): Promise<void> {
-		await this.subscriber.quit();
-		await this.publisher.quit();
+		if (this.subscriber.status !== "end") {
+			await this.subscriber.quit();
+		}
+		if (this.publisher.status !== "end") {
+			await this.publisher.quit();
+		}
 	}
 
 	public override get(userId: string): CachedAuthorization | null {

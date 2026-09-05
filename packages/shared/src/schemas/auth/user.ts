@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { CapabilitySlugSchema } from "../domain/capabilities";
 import { PaginationSchema } from "../api/pagination";
 
 import { EpochMsSchema, BaseResponseSchema } from "../api/common";
@@ -67,6 +68,7 @@ export type UserResponse = z.output<typeof UserResponseSchema>;
 export const SessionPermissionsResponseSchema = UserPermissionsSchema.extend({
 	tokenVersion: z.number().int(),
 	hasAdminAccess: z.boolean(),
+	capabilities: z.array(CapabilitySlugSchema),
 	isImpersonating: z.boolean().optional(),
 	originalUserId: z.string().optional(),
 }).strict();

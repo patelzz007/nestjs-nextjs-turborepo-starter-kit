@@ -374,6 +374,12 @@ pnpm dev:admin
 pnpm dev:api
 ```
 
+Press **Ctrl+C** (or **Cmd+C** on macOS) in the terminal running the API to shut down gracefully.
+The server stops accepting new HTTP requests, runs Nest shutdown hooks (Postgres pool, Redis,
+BullMQ, Kafka), and exits. You should see log lines such as `Received SIGINT — shutting down
+gracefully` followed by `Graceful shutdown complete`. Override the wait with
+`SHUTDOWN_TIMEOUT_MS` in `apps/api/.env` (default `15000`).
+
 > [!NOTE] Turbo caching is **disabled** in this repo (`"cache": false`), so dev always runs
 > fresh, and `@workspace/shared` is rebuilt before the apps that depend on it.
 

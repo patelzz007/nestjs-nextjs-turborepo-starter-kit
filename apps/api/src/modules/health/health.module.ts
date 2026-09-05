@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 
+import { GracefulShutdownService } from "../../common/lifecycle/graceful-shutdown.service";
 import { PrismaModule } from "../../prisma/prisma.module";
 
 import { HealthController } from "./health.controller";
@@ -16,7 +17,7 @@ import { VersionController } from "./version.controller";
 @Module({
 	imports: [PrismaModule],
 	controllers: [HealthController, VersionController],
-	providers: [HealthService, moduleHealthIndicatorsProvider],
+	providers: [HealthService, GracefulShutdownService, moduleHealthIndicatorsProvider],
 	exports: [HealthService],
 })
 export class HealthModule {}

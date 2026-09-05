@@ -1,6 +1,7 @@
 "use client";
 
 import { MerchantNotificationsDropdown } from "@/components/layout/merchant-notifications-dropdown";
+import type { ServerUser } from "@/lib/auth-server";
 import { useMerchantCapabilities } from "@/lib/merchant-capabilities";
 import { useMerchantSessionProfile } from "@/lib/merchant-session-profile";
 import { useMerchantSidebarControl } from "@/components/layout/use-merchant-sidebar-control";
@@ -18,10 +19,14 @@ import * as React from "react";
 
 const CommandPalette = dynamic(() => import("@/components/layout/merchant-command-palette").then((module) => module.MerchantCommandPalette), { ssr: false });
 
-export function MerchantTopbar(): React.JSX.Element {
+export interface MerchantTopbarProps {
+	readonly initialUser?: ServerUser | null;
+}
+
+export function MerchantTopbar({ initialUser = null }: MerchantTopbarProps): React.JSX.Element {
 	const { logout } = useAuth();
 	const sessionProfile = useMerchantSessionProfile();
-	const { canManageApiKeys } = useMerchantCapabilities();
+	const { hasCapability } = useMerchantCapabilities();
 	const router = useRouter();
 	const { isOpen: sidebarOpen } = useMerchantSidebarControl();
 	const menuTitle = useMerchantSidebarStore((state) => state.menu.header.title);
@@ -48,7 +53,7 @@ export function MerchantTopbar(): React.JSX.Element {
 			},
 		];
 
-		if (canManageApiKeys) {
+		if (hasCapability("merchant:manage_api_keys")) {
 			items.push({
 				label: "API keys",
 				icon: <KeyRound className="size-4" aria-hidden="true" />,
@@ -59,7 +64,10 @@ export function MerchantTopbar(): React.JSX.Element {
 		}
 
 		return items;
-	}, [canManageApiKeys, router]);
+	}, [hasCapability, router]);
+
+	const profileName = sessionProfile.isLoading && initialUser !== null ? initialUser.name : sessionProfile.fullName;
+	const profileEmail = sessionProfile.isLoading && initialUser !== null ? initialUser.email : sessionProfile.email;
 
 	return (
 		<>
@@ -95,9 +103,9 @@ export function MerchantTopbar(): React.JSX.Element {
 					</Link>
 				</div>
 
-				{sessionProfile.email.length > 0 ? (
+				{profileEmail.length > 0 ? (
 					<div className="ml-1 md:ml-3">
-						<AppShellProfileDropdown name={sessionProfile.fullName} email={sessionProfile.email} menuItems={profileMenuItems} onLogout={handleLogout} />
+						<AppShellProfileDropdown name={profileName} email={profileEmail} menuItems={profileMenuItems} onLogout={handleLogout} />
 					</div>
 				) : null}
 			</AppShellTopbar>

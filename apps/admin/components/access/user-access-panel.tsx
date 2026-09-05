@@ -11,17 +11,19 @@ import {
 } from "@workspace/shared";
 import { invalidateSessionAuth } from "@workspace/client/lib/auth/invalidate-session-auth";
 import { useAuth } from "@workspace/client/lib/auth";
-import { AccessHierarchyGroup, AccessHierarchyRow, AccessHierarchySection } from "@/components/access/access-hierarchy";
+import { AccessHierarchyRow } from "@/components/access/access-hierarchy";
+import { AccessPermissionTree } from "@/components/access/access-permission-tree";
 import { UserDetailButton } from "@/components/users/user-detail-button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
 import { Label } from "@workspace/ui/components/form/label";
 import { Select, SelectContent, SelectEmpty, SelectItem, SelectTrigger, SelectValue } from "@workspace/ui/components/form/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@workspace/ui/components/navigation/tabs";
 import { useQueryClient } from "@tanstack/react-query";
 import { Shield, ShieldCheck, ShieldX } from "lucide-react";
 import * as React from "react";
 
+import { buildPermissionTree } from "@/lib/build-permission-tree";
 import { formatPermissionGrantVia } from "@/lib/format-permission-grant";
-import { groupPermissionsByResource } from "@/lib/group-permissions-by-resource";
 
 const PERMISSION_ACTIONS: readonly PermissionAction[] = ["CREATE", "READ", "UPDATE", "DELETE", "LIST", "MANAGE"];
 
@@ -51,7 +53,6 @@ export function UserAccessPanel({
 	const queryClient = useQueryClient();
 
 	const [assignRoleId, setAssignRoleId] = React.useState<string | null>(null);
-	const [grantPermissionId, setGrantPermissionId] = React.useState<string | null>(null);
 	const [checkAction, setCheckAction] = React.useState<PermissionAction>("READ");
 	const [checkResource, setCheckResource] = React.useState<PermissionResource>("USER");
 	const [checkResult, setCheckResult] = React.useState<{ readonly allowed: boolean; readonly grants: readonly { readonly via: string; readonly detail?: string }[] } | null>(
@@ -75,10 +76,7 @@ export function UserAccessPanel({
 	});
 
 	const grantPermission = api.admin.permissions.userGrant.useMutation({
-		onSuccess: async () => {
-			await invalidateUser();
-			setGrantPermissionId(null);
-		},
+		onSuccess: invalidateUser,
 	});
 
 	const revokePermission = api.admin.permissions.userRevoke.useMutation({
@@ -95,16 +93,25 @@ export function UserAccessPanel({
 	const directPermissionIds: Set<string> = new Set<string>(user.directPermissionIds);
 
 	const availableRoles: readonly RoleListItem[] = rolesCatalog.filter((role) => !assignedRoleIds.has(role.id) && role.isActive);
-	const availablePermissions: readonly PermissionListItem[] = permissionsCatalog.filter((perm) => !directPermissionIds.has(perm.id));
 	const directGrants = permissionsCatalog.filter((perm) => directPermissionIds.has(perm.id));
-	const effectiveByResource = groupPermissionsByResource(user.permissions);
+	const catalogPermissionTree = buildPermissionTree(permissionsCatalog);
+	const effectivePermissionTree = buildPermissionTree(user.permissions);
+
+	const inheritedPermissionIds: Set<string> = React.useMemo((): Set<string> => {
+		const directIds = new Set<string>(user.directPermissionIds);
+		const inherited = new Set<string>();
+		for (const permission of user.permissions) {
+			if (!directIds.has(permission.id)) {
+				inherited.add(permission.id);
+			}
+		}
+		return inherited;
+	}, [user.directPermissionIds, user.permissions]);
+
+	const permissionTogglePending: boolean = grantPermission.isPending || revokePermission.isPending;
 
 	const handleAssignRoleChange = React.useCallback((value: string | null): void => {
 		setAssignRoleId(value);
-	}, []);
-
-	const handleGrantPermissionChange = React.useCallback((value: string | null): void => {
-		setGrantPermissionId(value);
 	}, []);
 
 	const handleCheckActionChange = React.useCallback((value: string | null): void => {
@@ -127,11 +134,16 @@ export function UserAccessPanel({
 		}
 	}, [assignRole, assignRoleId, userId]);
 
-	const handleGrantPermissionClick = React.useCallback((): void => {
-		if (grantPermissionId !== null) {
-			grantPermission.mutate({ userId, permissionId: grantPermissionId });
-		}
-	}, [grantPermission, grantPermissionId, userId]);
+	const handleToggleDirectPermission = React.useCallback(
+		(permissionId: string, selected: boolean): void => {
+			if (selected) {
+				grantPermission.mutate({ userId, permissionId });
+				return;
+			}
+			revokePermission.mutate({ userId, permissionId });
+		},
+		[grantPermission, revokePermission, userId],
+	);
 
 	const handleCheckPermissionClick = React.useCallback((): void => {
 		checkPermission.mutate({ userId, action: checkAction, resource: checkResource });
@@ -144,12 +156,7 @@ export function UserAccessPanel({
 		[removeRole, userId],
 	);
 
-	const handleRevokePermission = React.useCallback(
-		(permissionId: string): void => {
-			revokePermission.mutate({ userId, permissionId });
-		},
-		[revokePermission, userId],
-	);
+	const selectedDirectPermissionIds: Set<string> = directPermissionIds;
 
 	const roleRemoveHandlers = React.useMemo((): Readonly<Record<string, () => void>> => {
 		const handlers: Record<string, () => void> = {};
@@ -161,16 +168,6 @@ export function UserAccessPanel({
 		return handlers;
 	}, [handleRemoveRole, user.roles]);
 
-	const permissionRevokeHandlers = React.useMemo((): Readonly<Record<string, () => void>> => {
-		const handlers: Record<string, () => void> = {};
-		for (const perm of directGrants) {
-			handlers[perm.id] = (): void => {
-				handleRevokePermission(perm.id);
-			};
-		}
-		return handlers;
-	}, [directGrants, handleRevokePermission]);
-
 	return (
 		<div className="space-y-6">
 			<Card>
@@ -179,95 +176,79 @@ export function UserAccessPanel({
 						<Shield className="size-5" />
 						Access hierarchy
 					</CardTitle>
-					<CardDescription>Roles, direct grants, and effective permissions in one tree. Inherited permissions follow assigned roles on the API.</CardDescription>
+					<CardDescription>Manage roles, direct grants, and review effective permissions for this user.</CardDescription>
 				</CardHeader>
-				<CardContent className="space-y-3">
+				<CardContent className="space-y-4">
 					{rolesCatalogError ? <p className="text-sm text-destructive">Could not load the role catalog. Check LIST:ROLE permission and refresh.</p> : null}
-					{permissionsCatalogError ? <p className="text-sm text-destructive">Could not load the permission catalog. Check LIST:PERMISSION permission and refresh.</p> : null}
+					{permissionsCatalogError ? (
+						<p className="text-sm text-destructive">Could not load the permission catalog. Check LIST:PERMISSION permission and refresh.</p>
+					) : null}
 
-					<AccessHierarchySection title="Assigned roles" count={user.roles.length} description="Direct role assignments for this user.">
-						{user.roles.length === 0 ? <p className="py-1 text-sm text-muted-foreground">No roles assigned.</p> : null}
-						{user.roles.map((role) => (
-							<AccessHierarchyRow
-								key={role.id}
-								label={role.name}
-								description={role.description}
-								onRemove={roleRemoveHandlers[role.id]}
-								removeDisabled={removeRole.isPending}
-							/>
-						))}
-						<div className="mt-3 flex flex-wrap items-end gap-3 border-t border-dashed pt-3">
-							<div className="min-w-[200px] flex-1 space-y-1">
-								<Label htmlFor="assign-role">Add role</Label>
-								<Select value={assignRoleId} onValueChange={handleAssignRoleChange}>
-									<SelectTrigger id="assign-role" className="w-full">
-										<SelectValue placeholder="Select role…" />
-									</SelectTrigger>
-									<SelectContent>
-										{availableRoles.length === 0 ? <SelectEmpty text="No roles available to assign" /> : null}
-										{availableRoles.map((role) => (
-											<SelectItem key={role.id} value={role.id}>
-												{role.name}
-											</SelectItem>
-										))}
-									</SelectContent>
-								</Select>
-							</div>
-							<UserDetailButton type="button" disabled={assignRoleId === null || assignRole.isPending} onClick={handleAssignRoleClick}>
-								Assign role
-							</UserDetailButton>
-						</div>
-					</AccessHierarchySection>
+					<Tabs defaultValue="roles">
+						<TabsList className="h-10 w-full">
+							<TabsTrigger value="roles">Assigned Roles ({String(user.roles.length)})</TabsTrigger>
+							<TabsTrigger value="direct-grants">Direct Permission Grants ({String(directGrants.length)})</TabsTrigger>
+							<TabsTrigger value="effective">Effective Permissions ({String(user.permissions.length)})</TabsTrigger>
+						</TabsList>
 
-					<AccessHierarchySection
-						title="Direct permission grants"
-						count={directGrants.length}
-						description="Permissions assigned directly to this user, not via roles."
-						defaultOpen={directGrants.length > 0}>
-						{directGrants.length === 0 ? <p className="py-1 text-sm text-muted-foreground">No direct grants.</p> : null}
-						{directGrants.map((perm) => (
-							<AccessHierarchyRow
-								key={perm.id}
-								label={`${perm.action}:${perm.resource}`}
-								description={perm.description}
-								mono
-								onRemove={permissionRevokeHandlers[perm.id]}
-								removeDisabled={revokePermission.isPending}
-							/>
-						))}
-						<div className="mt-3 flex flex-wrap items-end gap-3 border-t border-dashed pt-3">
-							<div className="min-w-[240px] flex-1 space-y-1">
-								<Label htmlFor="grant-permission">Grant permission</Label>
-								<Select value={grantPermissionId} onValueChange={handleGrantPermissionChange}>
-									<SelectTrigger id="grant-permission" className="w-full">
-										<SelectValue placeholder="Select permission…" />
-									</SelectTrigger>
-									<SelectContent>
-										{availablePermissions.length === 0 ? <SelectEmpty text="No permissions available to grant" /> : null}
-										{availablePermissions.map((perm) => (
-											<SelectItem key={perm.id} value={perm.id}>
-												{perm.action}:{perm.resource}
-											</SelectItem>
-										))}
-									</SelectContent>
-								</Select>
-							</div>
-							<UserDetailButton type="button" disabled={grantPermissionId === null || grantPermission.isPending} onClick={handleGrantPermissionClick}>
-								Grant
-							</UserDetailButton>
-						</div>
-					</AccessHierarchySection>
-
-					<AccessHierarchySection title="Effective permissions" count={user.permissions.length} description="Union of role-based and direct grants, grouped by resource.">
-						{effectiveByResource.length === 0 ? <p className="py-1 text-sm text-muted-foreground">No effective permissions.</p> : null}
-						{effectiveByResource.map((group) => (
-							<AccessHierarchyGroup key={group.resource} title={group.resource} count={group.permissions.length} depth={0}>
-								{group.permissions.map((perm) => (
-									<AccessHierarchyRow key={perm.id} label={perm.action} description={perm.description} mono depth={1} />
+						<TabsContent value="roles" className="mt-4 space-y-4">
+							<p className="text-sm text-muted-foreground">Direct role assignments for this user.</p>
+							{user.roles.length === 0 ? <p className="rounded-md border border-dashed px-4 py-6 text-center text-sm text-muted-foreground">No roles assigned.</p> : null}
+							<div className="space-y-2">
+								{user.roles.map((role) => (
+									<AccessHierarchyRow
+										key={role.id}
+										label={role.name}
+										description={role.description}
+										onRemove={roleRemoveHandlers[role.id]}
+										removeDisabled={removeRole.isPending}
+									/>
 								))}
-							</AccessHierarchyGroup>
-						))}
-					</AccessHierarchySection>
+							</div>
+							<div className="flex flex-wrap items-end gap-3 border-t border-dashed pt-4">
+								<div className="min-w-[200px] flex-1 space-y-1">
+									<Label htmlFor="assign-role">Add role</Label>
+									<Select value={assignRoleId} onValueChange={handleAssignRoleChange}>
+										<SelectTrigger id="assign-role" className="w-full">
+											<SelectValue placeholder="Select role…" />
+										</SelectTrigger>
+										<SelectContent>
+											{availableRoles.length === 0 ? <SelectEmpty text="No roles available to assign" /> : null}
+											{availableRoles.map((role) => (
+												<SelectItem key={role.id} value={role.id}>
+													{role.name}
+												</SelectItem>
+											))}
+										</SelectContent>
+									</Select>
+								</div>
+								<UserDetailButton type="button" disabled={assignRoleId === null || assignRole.isPending} onClick={handleAssignRoleClick}>
+									Assign role
+								</UserDetailButton>
+							</div>
+						</TabsContent>
+
+						<TabsContent value="direct-grants" className="mt-4 space-y-4">
+							<p className="text-sm text-muted-foreground">
+								Check permissions to grant directly to this user. Uncheck to revoke. “Via role” means the user already has it from an assigned role.
+							</p>
+							<AccessPermissionTree
+								groups={catalogPermissionTree}
+								emptyMessage="No permissions in catalog."
+								defaultOpen={false}
+								selectable
+								selectedPermissionIds={selectedDirectPermissionIds}
+								inheritedPermissionIds={inheritedPermissionIds}
+								onTogglePermission={handleToggleDirectPermission}
+								toggleDisabled={permissionTogglePending}
+							/>
+						</TabsContent>
+
+						<TabsContent value="effective" className="mt-4 space-y-4">
+							<p className="text-sm text-muted-foreground">Union of role-based and direct grants. Expand a category to browse actions.</p>
+							<AccessPermissionTree groups={effectivePermissionTree} emptyMessage="No effective permissions." defaultOpen={false} />
+						</TabsContent>
+					</Tabs>
 				</CardContent>
 			</Card>
 

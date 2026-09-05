@@ -65,9 +65,11 @@ BEGIN
     'users',
     'roles',
     'permissions',
+    'capability_definitions',
     'permission_audit_logs',
     'menu_items',
     'menu_item_permissions',
+    'menu_item_capabilities',
     'menu_item_roles',
     'password_reset_tokens',
     'user_roles',
@@ -174,6 +176,17 @@ CREATE POLICY permissions_write ON public.permissions
   USING (app_rls_bypass())
   WITH CHECK (app_rls_bypass());
 
+DROP POLICY IF EXISTS capability_definitions_read ON public.capability_definitions;
+CREATE POLICY capability_definitions_read ON public.capability_definitions
+  FOR SELECT
+  USING (true);
+
+DROP POLICY IF EXISTS capability_definitions_write ON public.capability_definitions;
+CREATE POLICY capability_definitions_write ON public.capability_definitions
+  FOR ALL
+  USING (app_rls_bypass())
+  WITH CHECK (app_rls_bypass());
+
 DROP POLICY IF EXISTS role_permissions_read ON public.role_permissions;
 CREATE POLICY role_permissions_read ON public.role_permissions
   FOR SELECT
@@ -203,6 +216,17 @@ CREATE POLICY menu_item_permissions_read ON public.menu_item_permissions
 
 DROP POLICY IF EXISTS menu_item_permissions_write ON public.menu_item_permissions;
 CREATE POLICY menu_item_permissions_write ON public.menu_item_permissions
+  FOR ALL
+  USING (app_rls_bypass())
+  WITH CHECK (app_rls_bypass());
+
+DROP POLICY IF EXISTS menu_item_capabilities_read ON public.menu_item_capabilities;
+CREATE POLICY menu_item_capabilities_read ON public.menu_item_capabilities
+  FOR SELECT
+  USING (true);
+
+DROP POLICY IF EXISTS menu_item_capabilities_write ON public.menu_item_capabilities;
+CREATE POLICY menu_item_capabilities_write ON public.menu_item_capabilities
   FOR ALL
   USING (app_rls_bypass())
   WITH CHECK (app_rls_bypass());

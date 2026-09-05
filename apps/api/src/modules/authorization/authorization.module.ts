@@ -21,6 +21,8 @@ import { PermissionRegistrySyncBootstrap } from "./migration/permission-registry
 import { PolicyRegistry } from "./policies/policy-registry";
 import { AuditLogCleanup } from "./cleanup/audit-log.cleanup";
 import { AuthorizationEventEmitter } from "./events/authorization.events";
+import { CapabilityDefinitionService } from "./services/capability-definition.service";
+import { NavigationMenuService } from "./services/navigation-menu.service";
 
 /**
  * First-class authorization module for NestJS + Fastify + Prisma.
@@ -90,6 +92,8 @@ import { AuthorizationEventEmitter } from "./events/authorization.events";
 		AuditLogCleanup,
 		AuthRateLimitService,
 		AuthorizationEventEmitter,
+		CapabilityDefinitionService,
+		NavigationMenuService,
 	],
 	exports: [
 		AuthorizationCacheService,
@@ -106,6 +110,8 @@ import { AuthorizationEventEmitter } from "./events/authorization.events";
 		PermissionExpiryCleanup,
 		AuthRateLimitService,
 		AuthorizationEventEmitter,
+		CapabilityDefinitionService,
+		NavigationMenuService,
 	],
 })
 export class AuthorizationModule implements OnModuleDestroy {

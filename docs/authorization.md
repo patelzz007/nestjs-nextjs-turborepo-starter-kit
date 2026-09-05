@@ -1007,7 +1007,7 @@ import { invalidateSessionAuth } from "@workspace/client/lib/auth/invalidate-ses
 await invalidateSessionAuth(queryClient);
 ```
 
-`UserAccessPanel` and impersonation flows call this helper on mutation success. `IdentityService.invalidateMe()` clears the API-side 30s caches for both endpoints when authorization events fire.
+`UserAccessPanel` and impersonation flows call this helper on mutation success. `IdentityService.invalidateMe()` clears the API-side session cache (Redis or in-memory) for both endpoints when authorization events fire.
 
 **Admin user detail** (`GET /auth/admin/users/:id`) still returns full `AdminUserDetail` including `permissions` and `directPermissionIds` — that endpoint is for managing *other* users, not the current session.
 
@@ -1087,7 +1087,18 @@ Web and admin use **the same JWT shape** but **separate httpOnly cookie pairs** 
 
 **Admin login gate:** `POST /auth/login` with `X-Client-Type: admin` requires `READ:ADMIN_DASHBOARD` (or super-admin). Users without admin permissions cannot obtain an admin cookie set even with valid credentials.
 
-**`/auth/me` cache:** Short-lived (30s) in-memory cache per user for profile only. **`/auth/permissions`** has a separate 30s cache. Both cleared via `IdentityService.invalidateMe()` when roles/permissions change.
+**User session cache (login → Redis):** On successful login (web, admin, or merchant — same API, different `X-Client-Type`), `LoginService` calls `IdentityService.warmSessionCache()` which stores:
+
+| Redis key | Payload | Schema |
+|-----------|---------|--------|
+| `auth:me:{userId}` | `GET /auth/me` response | `UserResponse` |
+| `auth:permissions:{userId}` | `GET /auth/permissions` response (without impersonation claims) | `SessionPermissionsResponse` |
+
+- **Backend:** `memory` in development (default), `redis` when `REDIS_URL` is set outside development (override with `USER_SESSION_CACHE_BACKEND=memory|redis`).
+- **TTL:** `USER_SESSION_CACHE_TTL_MS` (default 30 minutes). Invalidated immediately on RBAC changes via `IdentityService.invalidateMe()`.
+- **Read path:** `GET /auth/me` and `GET /auth/permissions` check Redis first, then PostgreSQL on miss.
+
+JWT access/refresh tokens are **not** stored in Redis — only profile + RBAC payloads.
 
 ---
 
@@ -1253,6 +1264,37 @@ npx prisma generate
 ---
 
 ## Advanced Features
+
+### Generic capability catalog (`capability_definitions`)
+
+Platform RBAC, merchant portal grants, and sidebar gating share one **dynamic slug catalog** stored in `capability_definitions`:
+
+| Scope | Example slug | Source |
+|-------|--------------|--------|
+| `PLATFORM` | `platform:user.read` | Synced from `permissions` (`CapabilityDefinitionService.syncPlatformCapabilitiesFromPermissions`) |
+| `MERCHANT` | `merchant:manage_api_keys` | Seeded by `pnpm db:seed` (`prisma/seed/capabilities.ts`) + editable via admin (no redeploy) |
+| `ADMIN` | (reserved) | Future admin-only slugs |
+
+**API**
+
+- `GET /capabilities/catalog?scope=MERCHANT` — list catalog entries (labels, sort order).
+- `GET /navigation/menu?scope=ADMIN|MERCHANT` — DB-driven menu tree with `requiredCapabilities[]` per item.
+
+**Session**
+
+- `GET /auth/permissions` returns `capabilities: string[]` (platform slugs derived from effective permissions).
+- Merchant portal uses `GET /merchant/me` → `memberships[].capabilities[]`.
+
+**Frontend**
+
+- Admin role matrix: `/rewardhub/role-capabilities` loads catalog + grants from the API.
+- Sidebars hydrate from `GET /navigation/menu` and filter client-side with `hasCapability(slug)`.
+- Static JSON menus remain as fallback until the navigation API responds.
+
+**Merchant defaults**
+
+- `merchant_role_capabilities` stores FK → `capability_definitions.id`.
+- CASHIER defaults exclude `merchant:manage_api_keys` and `merchant:manage_rewards` (see seed + admin panel).
 
 ### Permission Expiry
 

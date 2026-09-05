@@ -7,6 +7,7 @@ import { RlsPool } from "./rls-pool";
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
 	private readonly logger: Logger = new Logger(PrismaService.name);
+	private readonly pool: RlsPool;
 
 	/** Resolves when the DB connection is ready. Requests before this settle will wait. */
 	private readonly connected: Promise<void>;
@@ -34,6 +35,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
 			: [{ emit: "event", level: "query" }];
 
 		super({ adapter, log: logConfig });
+		this.pool = pool;
 
 		// Background connect: resolve immediately so the app can boot,
 		// but the first request that needs DB will await this promise.
@@ -67,6 +69,9 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
 	}
 
 	public async onModuleDestroy(): Promise<void> {
+		this.logger.log("Closing database connections…");
 		await this.$disconnect();
+		await this.pool.end();
+		this.logger.log("Database connections closed");
 	}
 }

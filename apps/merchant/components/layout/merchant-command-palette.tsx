@@ -17,7 +17,7 @@ export interface MerchantCommandPaletteProps {
 export function MerchantCommandPalette({ open: externalOpen, setOpen: externalSetOpen }: MerchantCommandPaletteProps): React.JSX.Element {
 	const router = useRouter();
 	const { setTheme, resolvedTheme } = useTheme();
-	const { capabilities, canManageRewards } = useMerchantCapabilities();
+	const { capabilities, hasCapability } = useMerchantCapabilities();
 
 	const recentSearches = useMerchantCommandPaletteStore((state) => state.recentSearches);
 	const pinnedUrls = useMerchantCommandPaletteStore((state) => state.pinnedUrls);
@@ -44,7 +44,7 @@ export function MerchantCommandPalette({ open: externalOpen, setOpen: externalSe
 			},
 		];
 
-		if (canManageRewards) {
+		if (hasCapability("merchant:manage_rewards")) {
 			actions.push({
 				id: "open-rewards",
 				title: "Open rewards",
@@ -60,7 +60,7 @@ export function MerchantCommandPalette({ open: externalOpen, setOpen: externalSe
 		}
 
 		return actions;
-	}, [canManageRewards, closePalette, resolvedTheme, router, setTheme]);
+	}, [closePalette, hasCapability, resolvedTheme, router, setTheme]);
 
 	const searchableItems = React.useMemo(() => buildMerchantPaletteItems(capabilities), [capabilities]);
 

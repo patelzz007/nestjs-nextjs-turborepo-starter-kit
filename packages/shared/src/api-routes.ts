@@ -79,6 +79,14 @@ export const apiRoutes = {
 		stopImpersonation: "/auth/stop-impersonation",
 	},
 
+	// ── Generic capability catalog + navigation ─────────────────────────
+	capabilities: {
+		catalog: "/capabilities/catalog",
+	},
+	navigation: {
+		menu: "/navigation/menu",
+	},
+
 	// ── Email ───────────────────────────────────────────────────────────
 	email: {
 		previewList: "/notifications/email-preview",
@@ -171,6 +179,9 @@ export const apiRoutes = {
 		rewardApprove: { path: "/admin/rewards/:rewardId/approve", params: ["rewardId"] },
 		rewardReject: { path: "/admin/rewards/:rewardId/reject", params: ["rewardId"] },
 		merchantKyb: { path: "/admin/merchants/:merchantOrgId/kyb", params: ["merchantOrgId"] },
+		merchantRoleCapabilities: "/admin/merchant-role-capabilities",
+		merchantRoleCapabilitiesSync: { path: "/admin/merchant-role-capabilities/:role", params: ["role"] },
+		merchantRoleCapabilitiesRestore: { path: "/admin/merchant-role-capabilities/:role/restore-defaults", params: ["role"] },
 	},
 } satisfies Record<string, RouteTree>;
 

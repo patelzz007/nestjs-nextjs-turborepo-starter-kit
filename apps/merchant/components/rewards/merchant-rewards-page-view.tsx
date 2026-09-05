@@ -24,7 +24,8 @@ export interface MerchantRewardsPageViewProps {
 
 export function MerchantRewardsPageView({ initialRewards }: MerchantRewardsPageViewProps): React.JSX.Element {
 	const { api } = useAuth();
-	const { canManageRewards } = useMerchantCapabilities();
+	const { hasCapability } = useMerchantCapabilities();
+	const canManageRewards = hasCapability("merchant:manage_rewards");
 
 	const initialQueryData = React.useMemo(
 		() =>

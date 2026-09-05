@@ -35,7 +35,7 @@ export class HealthService {
 	/** Set to true once the API has fully started (DB connected, Swagger built). */
 	private ready = false;
 
-	constructor(
+	public constructor(
 		private readonly prisma: PrismaService,
 		@Optional()
 		@Inject(MODULE_HEALTH_INDICATORS)
@@ -45,6 +45,11 @@ export class HealthService {
 	/** Mark the API as ready to serve (called from main.ts after startup). */
 	public markReady(): void {
 		this.ready = true;
+	}
+
+	/** Mark the API as shutting down so health probes fail fast during graceful exit. */
+	public markNotReady(): void {
+		this.ready = false;
 	}
 
 	public getHello(): string {

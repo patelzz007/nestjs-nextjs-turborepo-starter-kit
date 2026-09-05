@@ -15,7 +15,10 @@ import * as React from "react";
 
 import { useIsDesktop } from "@workspace/ui/hooks/use-mobile";
 import { buildSidebarView } from "@/lib/navigation/menu";
+import { filterCompiledSidebarMenu } from "@/lib/navigation/filter-menu-by-capabilities";
+import { SIDEBAR_MENU } from "@/lib/navigation/sidebar-menu";
 import { resolvePinnedMenuItems } from "@/lib/navigation/pinned-items";
+import { useSessionCapabilities } from "@/lib/session-capabilities";
 import { ADMIN_SIDEBAR_LABELS } from "@/lib/sidebar-labels";
 import { useAdminBreadcrumb } from "@/components/common/admin-breadcrumb";
 import { AdminSidebarPanel } from "@/components/layout/sidebar/sidebar";
@@ -26,6 +29,10 @@ import { ScrollToTop } from "@workspace/ui/components/navigation/scroll-to-top";
 import { useCommandPaletteStore } from "@/stores/command-palette-store";
 import { useSidebarStore } from "@/stores/sidebar-store";
 import { SidebarPathSync } from "@workspace/client/lib/sidebar/sidebar-path-sync";
+import { useInitialNavigationMenu, useNavigationMenuSync } from "@workspace/client/lib/navigation/use-navigation-menu-sync";
+import { resolveSidebarDisplayMenu } from "@workspace/client/lib/navigation/resolve-sidebar-display-menu";
+import type { CompiledSidebarMenuData } from "@workspace/client/lib/sidebar/sidebar-menu-schema";
+import type { CapabilityMenuResponse, CapabilitySlug, SessionPermissionsResponse } from "@workspace/shared";
 import type { FooterAction, SidebarUser } from "@/lib/navigation/sidebar";
 
 const SIDEBAR_STORAGE = createNoopSidebarStorage();
@@ -45,6 +52,8 @@ export interface DashboardLayoutProps {
 	readonly children: React.ReactNode;
 	/** Optional notification counts keyed by compiled menu item id. */
 	readonly sidebarBadges?: Readonly<Record<string, string | number>>;
+	readonly initialNavigationMenu?: CapabilityMenuResponse;
+	readonly initialSessionPermissions?: SessionPermissionsResponse;
 }
 
 function useTrailDocumentTitle(): void {
@@ -91,7 +100,15 @@ function ShellBreadcrumb(): React.JSX.Element {
 	);
 }
 
-export function DashboardLayout({ user, onLogout, footerActions = [], children, sidebarBadges = {} }: DashboardLayoutProps): React.JSX.Element {
+export function DashboardLayout({
+	user,
+	onLogout,
+	footerActions = [],
+	children,
+	sidebarBadges = {},
+	initialNavigationMenu,
+	initialSessionPermissions,
+}: DashboardLayoutProps): React.JSX.Element {
 	useTrailDocumentTitle();
 	const router = useRouter();
 	const isOpen = useSidebarStore((s) => s.isOpen);
@@ -100,6 +117,7 @@ export function DashboardLayout({ user, onLogout, footerActions = [], children, 
 	const sectionOrder = useSidebarStore((s) => s.sectionOrder);
 	const searchQuery = useSidebarStore((s) => s.searchQuery);
 	const menu = useSidebarStore((s) => s.menu);
+	const setMenu = useSidebarStore((s) => s.setMenu);
 	const setSearchQuery = useSidebarStore((s) => s.setSearchQuery);
 	const clearSearch = useSidebarStore((s) => s.clearSearch);
 	const storeExpandedItems = useSidebarStore((s) => s.expandedItems);
@@ -110,19 +128,37 @@ export function DashboardLayout({ user, onLogout, footerActions = [], children, 
 	const pinnedUrls = useCommandPaletteStore((s) => s.pinnedUrls);
 	const pathname = usePathname();
 	const defaultWorkspaces = useDefaultWorkspaces();
-	const currentPage = useSidebarStore((s) => s.currentPage) ?? pathname;
+	const currentPage = pathname;
 	const [activeWorkspaceId, setActiveWorkspaceId] = React.useState<string>("default");
+	const { capabilities, isReady: isCapabilitiesReady } = useSessionCapabilities(initialSessionPermissions);
+
+	useInitialNavigationMenu(setMenu, initialNavigationMenu);
+	useNavigationMenuSync("ADMIN", setMenu, { initialMenu: initialNavigationMenu });
+
+	const displayMenu = React.useMemo(
+		(): CompiledSidebarMenuData => resolveSidebarDisplayMenu(menu, SIDEBAR_MENU, initialNavigationMenu),
+		[initialNavigationMenu, menu],
+	);
+
+	const filterCapabilities = React.useMemo((): readonly CapabilitySlug[] => {
+		if (isCapabilitiesReady && capabilities.length > 0) {
+			return capabilities;
+		}
+		return initialSessionPermissions?.capabilities ?? [];
+	}, [capabilities, initialSessionPermissions?.capabilities, isCapabilitiesReady]);
+
+	const filteredMenu = React.useMemo(() => filterCompiledSidebarMenu(displayMenu, filterCapabilities), [displayMenu, filterCapabilities]);
 
 	const view = React.useMemo(
-		() => buildSidebarView({ menu, pathname: currentPage, sectionOrder, searchQuery, isHighlightParentItem: false }),
-		[menu, currentPage, sectionOrder, searchQuery],
+		() => buildSidebarView({ menu: filteredMenu, pathname: currentPage, sectionOrder, searchQuery, isHighlightParentItem: false }),
+		[filteredMenu, currentPage, sectionOrder, searchQuery],
 	);
 
 	const pinnedItems = React.useMemo(() => resolvePinnedMenuItems(pinnedUrls), [pinnedUrls]);
 
 	const expandedItems = useRouteExpandedItems(currentPage, storeExpandedItems, view.routeState.autoExpandedItems, resetExpandedItems);
 
-	React.useEffect(() => {
+	React.useLayoutEffect((): void => {
 		void useSidebarStore.persist.rehydrate();
 		void useCommandPaletteStore.persist.rehydrate();
 	}, []);

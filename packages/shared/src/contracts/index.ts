@@ -21,7 +21,7 @@ import { ForgotPasswordSchema, LoginSchema, ResendVerificationSchema, ResetPassw
 import { AdminUserListQuerySchema } from "../schemas/auth/user";
 import { UuidParamSchema, VerifyEmailTokenParamSchema } from "../schemas/domain/param-schemas";
 import { EmailLogListQuerySchema } from "../schemas/email/email";
-import { AssignPermissionToUserSchema, AssignRoleToUserSchema, CheckPermissionSchema, SyncUserPermissionsSchema, SyncUserRolesSchema } from "../schemas/domain/rbac";
+import { CapabilityCatalogQuerySchema, CapabilityDefinitionSchema, CapabilityMenuQuerySchema, CapabilityMenuResponseSchema } from "../schemas/domain/capabilities";
 import {
 	CityListQuerySchema,
 	CountryListQuerySchema,
@@ -68,6 +68,12 @@ import {
 	MarkRewardNotificationsReadSchema,
 } from "../schemas/domain/rewards";
 import { RewardsAnalyticsQuerySchema } from "../schemas/domain/rewards-analytics";
+import {
+	MerchantRoleCapabilityGrantSchema,
+	MerchantRoleCapabilitiesPathInputSchema,
+	SyncMerchantRoleCapabilitiesInputSchema,
+} from "../schemas/domain/merchant-role-capabilities";
+import { AssignPermissionToUserSchema, AssignRoleToUserSchema, CheckPermissionSchema, SyncUserPermissionsSchema, SyncUserRolesSchema } from "../schemas/domain/rbac";
 import type { ApiVersion } from "./versioning";
 
 // ── JSON-safe value types (shared by the contract and the client pipeline) ─
@@ -183,6 +189,14 @@ export const apiContract = {
 			input: z.object({ userId: UuidParamSchema }).strict(),
 		}),
 		stopImpersonation: defineContract({ method: "POST", path: apiRoutes.auth.stopImpersonation, input: EmptyInputSchema }),
+	},
+
+	capabilities: {
+		catalog: defineContract({ method: "GET", path: apiRoutes.capabilities.catalog, input: CapabilityCatalogQuerySchema }),
+	},
+
+	navigation: {
+		menu: defineContract({ method: "GET", path: apiRoutes.navigation.menu, input: CapabilityMenuQuerySchema }),
 	},
 
 	admin: {
@@ -332,6 +346,21 @@ export const apiContract = {
 			method: "PATCH",
 			path: apiRoutes.rewardsAdmin.merchantKyb.path,
 			input: AdminKybUpdatePathInputSchema,
+		}),
+		listMerchantRoleCapabilities: defineContract({
+			method: "GET",
+			path: apiRoutes.rewardsAdmin.merchantRoleCapabilities,
+			input: EmptyInputSchema,
+		}),
+		syncMerchantRoleCapabilities: defineContract({
+			method: "PUT",
+			path: apiRoutes.rewardsAdmin.merchantRoleCapabilitiesSync.path,
+			input: SyncMerchantRoleCapabilitiesInputSchema,
+		}),
+		restoreMerchantRoleCapabilities: defineContract({
+			method: "POST",
+			path: apiRoutes.rewardsAdmin.merchantRoleCapabilitiesRestore.path,
+			input: MerchantRoleCapabilitiesPathInputSchema,
 		}),
 	},
 };

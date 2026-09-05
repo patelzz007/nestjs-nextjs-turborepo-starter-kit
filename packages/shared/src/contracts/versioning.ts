@@ -63,6 +63,9 @@ export const VERSIONED_ROUTE_PREFIXES: readonly [
 	"/admin/invites",
 	"/admin/rewards",
 	"/admin/merchants",
+	"/admin/merchant-role-capabilities",
+	"/capabilities/catalog",
+	"/navigation/menu",
 ] = [
 	"/auth",
 	"/session",
@@ -86,6 +89,9 @@ export const VERSIONED_ROUTE_PREFIXES: readonly [
 	"/admin/invites",
 	"/admin/rewards",
 	"/admin/merchants",
+	"/admin/merchant-role-capabilities",
+	"/capabilities/catalog",
+	"/navigation/menu",
 ];
 
 export type VersionedRoutePrefix = (typeof VERSIONED_ROUTE_PREFIXES)[number];

@@ -104,35 +104,35 @@ model User {
   userRoles       UserRole[]
   userPermissions UserPermission[]
 
-  emailVerifiedAt     BigInt?                 @map("email_verified_at")
-  phone               String?                 @db.VarChar(20)
-  phoneVerifiedAt     BigInt?                 @map("phone_verified_at")
-  lastLoginAt         BigInt?                 @map("last_login_at")
-  pendingAttributionToken      String?        @map("pending_attribution_token") @db.VarChar(64)
-  pendingAttributionExpiresAt  BigInt?        @map("pending_attribution_expires_at")
-  isDeleted           Boolean                 @default(false) @map("is_deleted")
-  deletedAt           BigInt?                 @map("deleted_at")
-  createdAt           BigInt                  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
-  updatedAt           BigInt                  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
-  urls                Url[]
-  tags                Tag[]
-  apiKeys             ApiKey[]
-  passwordResetTokens PasswordResetToken[]
-  impersonatedBy      ImpersonationAuditLog[] @relation("Impersonator")
-  impersonatedUser    ImpersonationAuditLog[] @relation("ImpersonationTarget")
+  emailVerifiedAt             BigInt?                 @map("email_verified_at")
+  phone                       String?                 @db.VarChar(20)
+  phoneVerifiedAt             BigInt?                 @map("phone_verified_at")
+  lastLoginAt                 BigInt?                 @map("last_login_at")
+  pendingAttributionToken     String?                 @map("pending_attribution_token") @db.VarChar(64)
+  pendingAttributionExpiresAt BigInt?                 @map("pending_attribution_expires_at")
+  isDeleted                   Boolean                 @default(false) @map("is_deleted")
+  deletedAt                   BigInt?                 @map("deleted_at")
+  createdAt                   BigInt                  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
+  updatedAt                   BigInt                  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
+  urls                        Url[]
+  tags                        Tag[]
+  apiKeys                     ApiKey[]
+  passwordResetTokens         PasswordResetToken[]
+  impersonatedBy              ImpersonationAuditLog[] @relation("Impersonator")
+  impersonatedUser            ImpersonationAuditLog[] @relation("ImpersonationTarget")
 
-  merchantMembers            MerchantMember[]
-  merchantApiKeysCreated     MerchantApiKey[]         @relation("MerchantApiKeyCreator")
-  merchantInvitesCreated     MerchantInvite[]         @relation("MerchantInviteCreator")
-  merchantInvitesAccepted    MerchantInvite[]         @relation("MerchantInviteAcceptor")
-  rewardClaims               RewardClaim[]
-  rewardRedemptions          RewardRedemption[]
-  rewardReferralsAsReferrer  RewardReferral[]         @relation("ReferrerUser")
-  rewardReferralsAsReferee   RewardReferral[]         @relation("RefereeUser")
-  rewardOtpChallenges        RewardOtpChallenge[]
-  rewardLegalAcceptances     RewardLegalAcceptance[]
-  rewardNotifications        RewardNotification[]
-  rewardAuditLogs            RewardAuditLog[]
+  merchantMembers           MerchantMember[]
+  merchantApiKeysCreated    MerchantApiKey[]        @relation("MerchantApiKeyCreator")
+  merchantInvitesCreated    MerchantInvite[]        @relation("MerchantInviteCreator")
+  merchantInvitesAccepted   MerchantInvite[]        @relation("MerchantInviteAcceptor")
+  rewardClaims              RewardClaim[]
+  rewardRedemptions         RewardRedemption[]
+  rewardReferralsAsReferrer RewardReferral[]        @relation("ReferrerUser")
+  rewardReferralsAsReferee  RewardReferral[]        @relation("RefereeUser")
+  rewardOtpChallenges       RewardOtpChallenge[]
+  rewardLegalAcceptances    RewardLegalAcceptance[]
+  rewardNotifications       RewardNotification[]
+  rewardAuditLogs           RewardAuditLog[]
 
   @@unique([provider, providerId])
   @@index([pendingAttributionToken])
@@ -177,9 +177,10 @@ model Permission {
   conditions Json?
 
   // Relations
-  rolePermissions     RolePermission[]
-  userPermissions     UserPermission[]
-  menuItemPermissions MenuItemPermission[]
+  rolePermissions      RolePermission[]
+  userPermissions      UserPermission[]
+  menuItemPermissions  MenuItemPermission[]
+  capabilityDefinition CapabilityDefinition?
 
   isDeleted Boolean @default(false) @map("is_deleted")
   deletedAt BigInt? @map("deleted_at")
@@ -188,6 +189,42 @@ model Permission {
 
   @@unique([action, resource])
   @@map("permissions")
+}
+
+// ---------------------------------------------------------------------------
+// Capability catalog (generic RBAC slugs — platform + tenant scopes)
+// ---------------------------------------------------------------------------
+
+enum CapabilityScope {
+  PLATFORM
+  MERCHANT
+  ADMIN
+}
+
+/// RLS: catalog — SELECT true; writes need `app_rls_bypass()`.
+model CapabilityDefinition {
+  id           String          @id @default(uuid())
+  slug         String          @unique @db.VarChar(100)
+  scope        CapabilityScope
+  label        String          @db.VarChar(200)
+  description  String?         @db.Text
+  groupName    String?         @map("group_name") @db.VarChar(100)
+  sortOrder    Int             @default(0) @map("sort_order")
+  isSystem     Boolean         @default(false) @map("is_system")
+  permissionId String?         @unique @map("permission_id")
+  metadata     Json?
+
+  permission           Permission?              @relation(fields: [permissionId], references: [id], onDelete: SetNull)
+  merchantRoleGrants   MerchantRoleCapability[]
+  menuItemCapabilities MenuItemCapability[]
+
+  isDeleted Boolean @default(false) @map("is_deleted")
+  deletedAt BigInt? @map("deleted_at")
+  createdAt BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
+  updatedAt BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
+
+  @@index([scope])
+  @@map("capability_definitions")
 }
 
 // ---------------------------------------------------------------------------
@@ -238,8 +275,10 @@ model MenuItem {
   parent   MenuItem?  @relation("MenuHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
   children MenuItem[] @relation("MenuHierarchy")
 
-  menuItemPermissions MenuItemPermission[]
-  menuItemRoles       MenuItemRole[]
+  menuItemPermissions  MenuItemPermission[]
+  menuItemRoles        MenuItemRole[]
+  menuItemCapabilities MenuItemCapability[]
+  scope                CapabilityScope?     @map("app_scope")
 
   isDeleted Boolean @default(false) @map("is_deleted")
   deletedAt BigInt? @map("deleted_at")
@@ -247,6 +286,7 @@ model MenuItem {
   updatedAt BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
 
   @@index([parentId])
+  @@index([scope])
   @@map("menu_items")
 }
 
@@ -285,6 +325,25 @@ model MenuItemRole {
 
   @@unique([menuItemId, roleId])
   @@map("menu_item_roles")
+}
+
+/// RLS: catalog — SELECT true; writes need `app_rls_bypass()`.
+model MenuItemCapability {
+  id           String        @id @default(uuid())
+  menuItemId   String        @map("menu_item_id")
+  capabilityId String        @map("capability_id")
+  matchType    MenuMatchType @default(ANY) @map("match_type")
+
+  menuItem   MenuItem             @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  capability CapabilityDefinition @relation(fields: [capabilityId], references: [id], onDelete: Cascade)
+
+  isDeleted Boolean @default(false) @map("is_deleted")
+  deletedAt BigInt? @map("deleted_at")
+  createdAt BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
+  updatedAt BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
+
+  @@unique([menuItemId, capabilityId])
+  @@map("menu_item_capabilities")
 }
 
 // ---------------------------------------------------------------------------
@@ -769,18 +828,20 @@ enum MerchantMemberRole {
   CASHIER
 }
 
-/// Maps merchant org roles to portal capability slugs — single source of truth for merchant RBAC.
+/// Maps merchant org roles to capability catalog rows — single source of truth for merchant RBAC.
 model MerchantRoleCapability {
-  id         String             @id @default(uuid())
-  role       MerchantMemberRole
-  capability String             @db.VarChar(100)
-  isDeleted  Boolean            @default(false) @map("is_deleted")
-  deletedAt  BigInt?            @map("deleted_at")
-  createdAt  BigInt             @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
-  updatedAt  BigInt             @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
+  id           String               @id @default(uuid())
+  role         MerchantMemberRole
+  capabilityId String               @map("capability_id")
+  capability   CapabilityDefinition @relation(fields: [capabilityId], references: [id], onDelete: Cascade)
+  isDeleted    Boolean              @default(false) @map("is_deleted")
+  deletedAt    BigInt?              @map("deleted_at")
+  createdAt    BigInt               @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
+  updatedAt    BigInt               @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
 
-  @@unique([role, capability])
+  @@unique([role, capabilityId])
   @@index([role])
+  @@index([capabilityId])
   @@map("merchant_role_capabilities")
 }
 
@@ -828,21 +889,21 @@ enum RewardOtpPurpose {
 
 /// RLS: org members + bypass — policies added in migration SQL.
 model MerchantOrg {
-  id           String             @id @default(uuid())
-  businessName String             @map("business_name") @db.VarChar(200)
-  legalName    String?            @map("legal_name") @db.VarChar(200)
-  category     String             @db.VarChar(100)
-  addressText  String?            @map("address_text") @db.Text
+  id           String            @id @default(uuid())
+  businessName String            @map("business_name") @db.VarChar(200)
+  legalName    String?           @map("legal_name") @db.VarChar(200)
+  category     String            @db.VarChar(100)
+  addressText  String?           @map("address_text") @db.Text
   city         PilotCity
-  kybStatus    KybStatus          @default(PENDING) @map("kyb_status")
-  kybFields    Json?              @map("kyb_fields")
-  status       MerchantOrgStatus  @default(ONBOARDING)
-  contactEmail String             @map("contact_email") @db.VarChar(100)
-  contactPhone String?            @map("contact_phone") @db.VarChar(20)
-  isDeleted    Boolean            @default(false) @map("is_deleted")
-  deletedAt    BigInt?            @map("deleted_at")
-  createdAt    BigInt             @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
-  updatedAt    BigInt             @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
+  kybStatus    KybStatus         @default(PENDING) @map("kyb_status")
+  kybFields    Json?             @map("kyb_fields")
+  status       MerchantOrgStatus @default(ONBOARDING)
+  contactEmail String            @map("contact_email") @db.VarChar(100)
+  contactPhone String?           @map("contact_phone") @db.VarChar(20)
+  isDeleted    Boolean           @default(false) @map("is_deleted")
+  deletedAt    BigInt?           @map("deleted_at")
+  createdAt    BigInt            @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
+  updatedAt    BigInt            @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
 
   members     MerchantMember[]
   apiKeys     MerchantApiKey[]
@@ -860,14 +921,14 @@ model MerchantOrg {
 
 /// RLS: via merchant_org_id membership.
 model MerchantMember {
-  id              String             @id @default(uuid())
-  userId          String             @map("user_id")
-  merchantOrgId   String             @map("merchant_org_id")
-  role            MerchantMemberRole
-  isDeleted       Boolean            @default(false) @map("is_deleted")
-  deletedAt       BigInt?            @map("deleted_at")
-  createdAt       BigInt             @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
-  updatedAt       BigInt             @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
+  id            String             @id @default(uuid())
+  userId        String             @map("user_id")
+  merchantOrgId String             @map("merchant_org_id")
+  role          MerchantMemberRole
+  isDeleted     Boolean            @default(false) @map("is_deleted")
+  deletedAt     BigInt?            @map("deleted_at")
+  createdAt     BigInt             @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
+  updatedAt     BigInt             @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
 
   user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   merchantOrg MerchantOrg @relation(fields: [merchantOrgId], references: [id], onDelete: Cascade)
@@ -918,22 +979,22 @@ model MerchantTerminal {
 
 /// RLS: bypass for admin create; accept flow uses token lookup with bypass.
 model MerchantInvite {
-  id                 String     @id @default(uuid())
-  email              String     @db.VarChar(100)
-  tokenHash          String     @unique @map("token_hash") @db.Text
-  businessName       String     @map("business_name") @db.VarChar(200)
-  city               PilotCity
-  merchantOrgId      String?    @map("merchant_org_id")
-  createdByAdminId   String     @map("created_by_admin_id")
-  acceptedByUserId   String?    @map("accepted_by_user_id")
-  expiresAt          BigInt     @map("expires_at")
-  acceptedAt         BigInt?    @map("accepted_at")
-  isDeleted          Boolean    @default(false) @map("is_deleted")
-  deletedAt          BigInt?    @map("deleted_at")
-  createdAt          BigInt     @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
-  updatedAt          BigInt     @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
+  id               String    @id @default(uuid())
+  email            String    @db.VarChar(100)
+  tokenHash        String    @unique @map("token_hash") @db.Text
+  businessName     String    @map("business_name") @db.VarChar(200)
+  city             PilotCity
+  merchantOrgId    String?   @map("merchant_org_id")
+  createdByAdminId String    @map("created_by_admin_id")
+  acceptedByUserId String?   @map("accepted_by_user_id")
+  expiresAt        BigInt    @map("expires_at")
+  acceptedAt       BigInt?   @map("accepted_at")
+  isDeleted        Boolean   @default(false) @map("is_deleted")
+  deletedAt        BigInt?   @map("deleted_at")
+  createdAt        BigInt    @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
+  updatedAt        BigInt    @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
 
-  merchantOrg   MerchantOrg? @relation(fields: [merchantOrgId], references: [id], onDelete: SetNull)
+  merchantOrg    MerchantOrg? @relation(fields: [merchantOrgId], references: [id], onDelete: SetNull)
   createdByAdmin User         @relation("MerchantInviteCreator", fields: [createdByAdminId], references: [id], onDelete: Restrict)
   acceptedByUser User?        @relation("MerchantInviteAcceptor", fields: [acceptedByUserId], references: [id], onDelete: SetNull)
 
@@ -944,46 +1005,46 @@ model MerchantInvite {
 
 /// RLS: merchant org members for writes; public read for published consumer rewards.
 model Reward {
-  id                    String       @id @default(uuid())
-  merchantOrgId         String       @map("merchant_org_id")
-  title                 String       @db.VarChar(200)
-  description           String       @db.Text
-  rewardType            RewardType   @map("reward_type")
-  rewardValue           Int          @default(0) @map("reward_value")
-  termsConditions       String?      @map("terms_conditions") @db.Text
-  rewardKind            RewardKind   @default(CONSUMER) @map("reward_kind")
-  category              String       @db.VarChar(100)
-  placeholderImageKey   String       @map("placeholder_image_key") @db.VarChar(100)
-  rules                 Json?
-  quantityTotal         Int          @map("quantity_total")
-  quantityRemaining     Int          @map("quantity_remaining")
-  quantityReserved      Int          @default(0) @map("quantity_reserved")
-  startDate             BigInt?      @map("start_date")
-  expiryDate            BigInt       @map("expiry_date")
-  status                RewardStatus @default(DRAFT)
-  claimCount            Int          @default(0) @map("claim_count")
-  redemptionCount       Int          @default(0) @map("redemption_count")
-  metadata              Json?
-  referralsEnabled      Boolean      @default(true) @map("referrals_enabled")
-  referralPoolTotal     Int?         @map("referral_pool_total")
-  referralPoolRemaining Int?         @map("referral_pool_remaining")
-  referrerRewardId      String?      @map("referrer_reward_id")
-  parentConsumerRewardId String?     @map("parent_consumer_reward_id")
-  submittedForReviewAt  BigInt?      @map("submitted_for_review_at")
-  autoPublishAt         BigInt?      @map("auto_publish_at")
-  reviewedAt            BigInt?      @map("reviewed_at")
-  reviewedByUserId      String?      @map("reviewed_by_user_id")
-  rejectionReason       String?      @map("rejection_reason") @db.Text
-  isDeleted             Boolean      @default(false) @map("is_deleted")
-  deletedAt             BigInt?      @map("deleted_at")
-  createdAt             BigInt       @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
-  updatedAt             BigInt       @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
+  id                     String       @id @default(uuid())
+  merchantOrgId          String       @map("merchant_org_id")
+  title                  String       @db.VarChar(200)
+  description            String       @db.Text
+  rewardType             RewardType   @map("reward_type")
+  rewardValue            Int          @default(0) @map("reward_value")
+  termsConditions        String?      @map("terms_conditions") @db.Text
+  rewardKind             RewardKind   @default(CONSUMER) @map("reward_kind")
+  category               String       @db.VarChar(100)
+  placeholderImageKey    String       @map("placeholder_image_key") @db.VarChar(100)
+  rules                  Json?
+  quantityTotal          Int          @map("quantity_total")
+  quantityRemaining      Int          @map("quantity_remaining")
+  quantityReserved       Int          @default(0) @map("quantity_reserved")
+  startDate              BigInt?      @map("start_date")
+  expiryDate             BigInt       @map("expiry_date")
+  status                 RewardStatus @default(DRAFT)
+  claimCount             Int          @default(0) @map("claim_count")
+  redemptionCount        Int          @default(0) @map("redemption_count")
+  metadata               Json?
+  referralsEnabled       Boolean      @default(true) @map("referrals_enabled")
+  referralPoolTotal      Int?         @map("referral_pool_total")
+  referralPoolRemaining  Int?         @map("referral_pool_remaining")
+  referrerRewardId       String?      @map("referrer_reward_id")
+  parentConsumerRewardId String?      @map("parent_consumer_reward_id")
+  submittedForReviewAt   BigInt?      @map("submitted_for_review_at")
+  autoPublishAt          BigInt?      @map("auto_publish_at")
+  reviewedAt             BigInt?      @map("reviewed_at")
+  reviewedByUserId       String?      @map("reviewed_by_user_id")
+  rejectionReason        String?      @map("rejection_reason") @db.Text
+  isDeleted              Boolean      @default(false) @map("is_deleted")
+  deletedAt              BigInt?      @map("deleted_at")
+  createdAt              BigInt       @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
+  updatedAt              BigInt       @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
 
-  merchantOrg          MerchantOrg    @relation(fields: [merchantOrgId], references: [id], onDelete: Cascade)
-  referrerReward       Reward?        @relation("ConsumerReferrerReward", fields: [referrerRewardId], references: [id], onDelete: SetNull)
-  consumerRewards      Reward[]       @relation("ConsumerReferrerReward")
-  parentConsumerReward Reward?        @relation("ReferrerCloneParent", fields: [parentConsumerRewardId], references: [id], onDelete: SetNull)
-  referrerClones       Reward[]       @relation("ReferrerCloneParent")
+  merchantOrg          MerchantOrg      @relation(fields: [merchantOrgId], references: [id], onDelete: Cascade)
+  referrerReward       Reward?          @relation("ConsumerReferrerReward", fields: [referrerRewardId], references: [id], onDelete: SetNull)
+  consumerRewards      Reward[]         @relation("ConsumerReferrerReward")
+  parentConsumerReward Reward?          @relation("ReferrerCloneParent", fields: [parentConsumerRewardId], references: [id], onDelete: SetNull)
+  referrerClones       Reward[]         @relation("ReferrerCloneParent")
   claims               RewardClaim[]
   referrals            RewardReferral[]
 
@@ -1016,10 +1077,10 @@ model RewardClaim {
   createdAt            BigInt            @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
   updatedAt            BigInt            @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
 
-  user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  reward      Reward             @relation(fields: [rewardId], references: [id], onDelete: Cascade)
-  referral    RewardReferral?    @relation(fields: [referralId], references: [id], onDelete: SetNull)
-  redemption  RewardRedemption?
+  user       User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reward     Reward            @relation(fields: [rewardId], references: [id], onDelete: Cascade)
+  referral   RewardReferral?   @relation(fields: [referralId], references: [id], onDelete: SetNull)
+  redemption RewardRedemption?
 
   @@index([userId])
   @@index([rewardId])
@@ -1030,18 +1091,18 @@ model RewardClaim {
 
 /// RLS: merchant org + user own row.
 model RewardRedemption {
-  id              String                 @id @default(uuid())
-  claimId         String                 @unique @map("claim_id")
-  merchantOrgId   String                 @map("merchant_org_id")
-  userId          String                 @map("user_id")
-  terminalId      String                 @map("terminal_id") @db.VarChar(100)
+  id               String                 @id @default(uuid())
+  claimId          String                 @unique @map("claim_id")
+  merchantOrgId    String                 @map("merchant_org_id")
+  userId           String                 @map("user_id")
+  terminalId       String                 @map("terminal_id") @db.VarChar(100)
   redemptionMethod RewardRedemptionMethod @map("redemption_method")
-  idempotencyKey  String                 @map("idempotency_key") @db.VarChar(64)
-  redeemedAt      BigInt                 @map("redeemed_at")
-  isDeleted       Boolean                @default(false) @map("is_deleted")
-  deletedAt       BigInt?                @map("deleted_at")
-  createdAt       BigInt                 @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
-  updatedAt       BigInt                 @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
+  idempotencyKey   String                 @map("idempotency_key") @db.VarChar(64)
+  redeemedAt       BigInt                 @map("redeemed_at")
+  isDeleted        Boolean                @default(false) @map("is_deleted")
+  deletedAt        BigInt?                @map("deleted_at")
+  createdAt        BigInt                 @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
+  updatedAt        BigInt                 @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
 
   claim       RewardClaim @relation(fields: [claimId], references: [id], onDelete: Cascade)
   merchantOrg MerchantOrg @relation(fields: [merchantOrgId], references: [id], onDelete: Cascade)
@@ -1056,20 +1117,20 @@ model RewardRedemption {
 
 /// RLS: referrer/referee own rows + bypass.
 model RewardReferral {
-  id                 String               @id @default(uuid())
-  referrerUserId     String               @map("referrer_user_id")
-  refereeUserId      String?              @map("referee_user_id")
-  rewardId           String               @map("reward_id")
-  attributionToken   String               @unique @map("attribution_token") @db.VarChar(64)
-  status             RewardReferralStatus @default(PENDING)
-  refereeDeviceHash  String?              @map("referee_device_hash") @db.VarChar(128)
-  refereeIp          String?              @map("referee_ip") @db.VarChar(45)
-  creditedAt         BigInt?              @map("credited_at")
-  blockedReason      String?              @map("blocked_reason") @db.Text
-  isDeleted          Boolean              @default(false) @map("is_deleted")
-  deletedAt          BigInt?              @map("deleted_at")
-  createdAt          BigInt               @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
-  updatedAt          BigInt               @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
+  id                String               @id @default(uuid())
+  referrerUserId    String               @map("referrer_user_id")
+  refereeUserId     String?              @map("referee_user_id")
+  rewardId          String               @map("reward_id")
+  attributionToken  String               @unique @map("attribution_token") @db.VarChar(64)
+  status            RewardReferralStatus @default(PENDING)
+  refereeDeviceHash String?              @map("referee_device_hash") @db.VarChar(128)
+  refereeIp         String?              @map("referee_ip") @db.VarChar(45)
+  creditedAt        BigInt?              @map("credited_at")
+  blockedReason     String?              @map("blocked_reason") @db.Text
+  isDeleted         Boolean              @default(false) @map("is_deleted")
+  deletedAt         BigInt?              @map("deleted_at")
+  createdAt         BigInt               @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
+  updatedAt         BigInt               @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
 
   referrerUser User          @relation("ReferrerUser", fields: [referrerUserId], references: [id], onDelete: Cascade)
   refereeUser  User?         @relation("RefereeUser", fields: [refereeUserId], references: [id], onDelete: SetNull)
@@ -1085,20 +1146,20 @@ model RewardReferral {
 
 /// RLS: app_owns(user_id).
 model RewardOtpChallenge {
-  id            String           @id @default(uuid())
-  userId        String           @map("user_id")
-  phone         String           @db.VarChar(20)
-  purpose       RewardOtpPurpose
-  rewardId      String?          @map("reward_id")
-  codeHash      String           @map("code_hash") @db.Text
-  expiresAt     BigInt           @map("expires_at")
-  attempts      Int              @default(0)
-  failedAttempts Int             @default(0) @map("failed_attempts")
-  consumedAt    BigInt?          @map("consumed_at")
-  isDeleted     Boolean          @default(false) @map("is_deleted")
-  deletedAt     BigInt?          @map("deleted_at")
-  createdAt     BigInt           @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
-  updatedAt     BigInt           @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
+  id             String           @id @default(uuid())
+  userId         String           @map("user_id")
+  phone          String           @db.VarChar(20)
+  purpose        RewardOtpPurpose
+  rewardId       String?          @map("reward_id")
+  codeHash       String           @map("code_hash") @db.Text
+  expiresAt      BigInt           @map("expires_at")
+  attempts       Int              @default(0)
+  failedAttempts Int              @default(0) @map("failed_attempts")
+  consumedAt     BigInt?          @map("consumed_at")
+  isDeleted      Boolean          @default(false) @map("is_deleted")
+  deletedAt      BigInt?          @map("deleted_at")
+  createdAt      BigInt           @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
+  updatedAt      BigInt           @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -1110,11 +1171,11 @@ model RewardOtpChallenge {
 
 /// RLS: app_owns(user_id).
 model RewardLegalAcceptance {
-  id             String @id @default(uuid())
-  userId         String @map("user_id")
-  termsVersion   String @map("terms_version") @db.VarChar(32)
-  privacyVersion String @map("privacy_version") @db.VarChar(32)
-  acceptedAt     BigInt @map("accepted_at")
+  id             String  @id @default(uuid())
+  userId         String  @map("user_id")
+  termsVersion   String  @map("terms_version") @db.VarChar(32)
+  privacyVersion String  @map("privacy_version") @db.VarChar(32)
+  acceptedAt     BigInt  @map("accepted_at")
   isDeleted      Boolean @default(false) @map("is_deleted")
   deletedAt      BigInt? @map("deleted_at")
   createdAt      BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
@@ -1150,12 +1211,12 @@ model RewardNotification {
 
 /// RLS: bypass for validate audit; org members can read org events.
 model RewardAuditLog {
-  id          String  @id @default(uuid())
-  actorUserId String? @map("actor_user_id")
+  id            String  @id @default(uuid())
+  actorUserId   String? @map("actor_user_id")
   merchantOrgId String? @map("merchant_org_id")
-  action      String  @db.VarChar(64)
-  metadata    Json?
-  createdAt   BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
+  action        String  @db.VarChar(64)
+  metadata      Json?
+  createdAt     BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
 
   actorUser   User?        @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
   merchantOrg MerchantOrg? @relation(fields: [merchantOrgId], references: [id], onDelete: SetNull)
@@ -1168,11 +1229,11 @@ model RewardAuditLog {
 
 /// RLS: bypass — tracks confirm idempotency conflicts (token reused with different key).
 model RewardRedemptionIdempotencyRecord {
-  id             String @id @default(uuid())
-  redemptionTokenHash String @map("redemption_token_hash") @db.Text
-  idempotencyKey String @map("idempotency_key") @db.VarChar(64)
-  redemptionId   String? @map("redemption_id")
-  createdAt      BigInt @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
+  id                  String  @id @default(uuid())
+  redemptionTokenHash String  @map("redemption_token_hash") @db.Text
+  idempotencyKey      String  @map("idempotency_key") @db.VarChar(64)
+  redemptionId        String? @map("redemption_id")
+  createdAt           BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
 
   @@unique([redemptionTokenHash, idempotencyKey])
   @@index([redemptionTokenHash])

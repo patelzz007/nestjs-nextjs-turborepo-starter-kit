@@ -216,6 +216,11 @@
 							"icon": "Send"
 						},
 						{
+							"title": "Merchant roles",
+							"url": "/rewardhub/role-capabilities",
+							"icon": "Shield"
+						},
+						{
 							"title": "KYB review",
 							"url": "/rewardhub/kyb",
 							"icon": "ShieldCheck"

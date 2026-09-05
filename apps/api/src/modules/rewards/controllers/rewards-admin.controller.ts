@@ -1,8 +1,16 @@
-import { Body, Controller, Get, Param, Patch, Post, Query } from "@nestjs/common";
+import { Body, Controller, Get, Param, Patch, Post, Put, Query } from "@nestjs/common";
 import { ApiBearerAuth, ApiBody, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { z } from "zod";
 
-import { AdminKybUpdateSchema, AdminRejectRewardSchema, apiContract, apiPath, UuidParamSchema } from "@workspace/shared";
+import {
+	AdminKybUpdateSchema,
+	AdminRejectRewardSchema,
+	apiContract,
+	apiPath,
+	MerchantRoleCapabilitiesPathInputSchema,
+	SyncMerchantRoleCapabilitiesBodySchema,
+	UuidParamSchema,
+} from "@workspace/shared";
 import { ZodValidationPipe } from "../../../common/pipes/zod-validation.pipe";
 import { RlsBypass } from "../../auth/decorators/rls-bypass.decorator";
 import { RequirePermission } from "../../auth/decorators/require-permission.decorator";
@@ -11,6 +19,7 @@ import type { AccessTokenPayload } from "../../auth/services/token.service";
 
 import { AdminCreateMerchantInviteDto, AdminKybUpdateDto, AdminRejectRewardDto, RewardsEmptyBodyDto } from "../dtos/rewards.dto";
 import { RewardsAdminService } from "../services/rewards-admin.service";
+import { MerchantCapabilityService } from "../services/merchant-capability.service";
 
 @ApiTags("Rewards Admin")
 @ApiBearerAuth()
@@ -112,5 +121,42 @@ export class RewardsAdminMerchantsController {
 	): Promise<{ ok: true }> {
 		await this.rewardsAdminService.updateMerchantKyb(params.merchantOrgId, body);
 		return { ok: true };
+	}
+}
+
+@ApiTags("Rewards Admin")
+@ApiBearerAuth()
+@RlsBypass()
+@Controller(apiPath("/admin/merchant-role-capabilities"))
+export class RewardsAdminMerchantRoleCapabilitiesController {
+	public constructor(private readonly merchantCapabilities: MerchantCapabilityService) {}
+
+	@RequirePermission("MANAGE", "MERCHANT_ORG")
+	@Get()
+	@ApiOperation({ summary: "List merchant portal capabilities per member role" })
+	@ApiOkResponse({ description: "Capability grants for OWNER and CASHIER" })
+	public listRoleCapabilities(): ReturnType<MerchantCapabilityService["listRoleCapabilityGrants"]> {
+		return this.merchantCapabilities.listRoleCapabilityGrants();
+	}
+
+	@RequirePermission("MANAGE", "MERCHANT_ORG")
+	@Put(":role")
+	@ApiOperation({ summary: "Replace capabilities granted to a merchant member role" })
+	@ApiOkResponse({ description: "Updated capability grant" })
+	public syncRoleCapabilities(
+		@Param(new ZodValidationPipe(MerchantRoleCapabilitiesPathInputSchema)) params: { role: Parameters<MerchantCapabilityService["syncRoleCapabilities"]>[0] },
+		@Body(new ZodValidationPipe(SyncMerchantRoleCapabilitiesBodySchema)) body: { capabilities: Parameters<MerchantCapabilityService["syncRoleCapabilities"]>[1] },
+	): ReturnType<MerchantCapabilityService["syncRoleCapabilities"]> {
+		return this.merchantCapabilities.syncRoleCapabilities(params.role, body.capabilities);
+	}
+
+	@RequirePermission("MANAGE", "MERCHANT_ORG")
+	@Post(":role/restore-defaults")
+	@ApiOperation({ summary: "Restore default capabilities for a merchant member role" })
+	@ApiOkResponse({ description: "Default capability grant restored" })
+	public restoreRoleDefaults(
+		@Param(new ZodValidationPipe(MerchantRoleCapabilitiesPathInputSchema)) params: { role: Parameters<MerchantCapabilityService["restoreRoleDefaults"]>[0] },
+	): ReturnType<MerchantCapabilityService["restoreRoleDefaults"]> {
+		return this.merchantCapabilities.restoreRoleDefaults(params.role);
 	}
 }

@@ -27,6 +27,7 @@ export interface CachedPermission {
 export interface CachedAuthorization {
 	readonly roles: readonly string[];
 	readonly permissions: readonly CachedPermission[];
+	readonly capabilities: readonly string[];
 	readonly cachedAt: number;
 }
 

@@ -35,8 +35,8 @@ export const AccessHierarchySection = React.forwardRef<HTMLDivElement, AccessHie
 				</span>
 			</CollapsibleTrigger>
 			{description !== undefined ? <p className="px-3 pb-2 text-xs text-muted-foreground">{description}</p> : null}
-			<CollapsibleContent className="border-t px-3 py-2">
-				<div className="space-y-1">{children}</div>
+			<CollapsibleContent className="border-t px-4 py-4">
+				<div className="space-y-4">{children}</div>
 			</CollapsibleContent>
 		</Collapsible>
 	);

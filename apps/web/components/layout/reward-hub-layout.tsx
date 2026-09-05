@@ -14,15 +14,29 @@ import { isMobileViewport } from "@workspace/ui/hooks/use-mobile";
 import { useWebCommandPaletteStore } from "@/stores/command-palette-store";
 import { useWebSidebarStore } from "@/stores/sidebar-store";
 import { SidebarPathSync } from "@workspace/client/lib/sidebar/sidebar-path-sync";
+import { useInitialNavigationMenu, useNavigationMenuSync } from "@workspace/client/lib/navigation/use-navigation-menu-sync";
+import type { CapabilityMenuResponse, SessionPermissionsResponse } from "@workspace/shared";
 import * as React from "react";
 
 export interface RewardHubLayoutProps {
 	readonly children: React.ReactNode;
 	readonly initialUser?: ServerUser | null;
 	readonly sessionActive?: boolean;
+	readonly initialNavigationMenu?: CapabilityMenuResponse;
+	readonly initialSessionPermissions?: SessionPermissionsResponse;
 }
 
-function RewardHubSidebarContent({ userName, sessionActive }: { readonly userName: string | null; readonly sessionActive: boolean }): React.JSX.Element {
+function RewardHubSidebarContent({
+	userName,
+	sessionActive,
+	initialNavigationMenu,
+	initialSessionPermissions,
+}: {
+	readonly userName: string | null;
+	readonly sessionActive: boolean;
+	readonly initialNavigationMenu?: CapabilityMenuResponse;
+	readonly initialSessionPermissions?: SessionPermissionsResponse;
+}): React.JSX.Element {
 	const { setOpenMobile } = useShellSidebar();
 
 	const handleNavigate = React.useCallback((): void => {
@@ -31,13 +45,31 @@ function RewardHubSidebarContent({ userName, sessionActive }: { readonly userNam
 		}
 	}, [setOpenMobile]);
 
-	return <WebSidebarPanel userName={userName} sessionActive={sessionActive} onNavigate={handleNavigate} />;
+	return (
+		<WebSidebarPanel
+			userName={userName}
+			sessionActive={sessionActive}
+			initialNavigationMenu={initialNavigationMenu}
+			initialSessionPermissions={initialSessionPermissions}
+			onNavigate={handleNavigate}
+		/>
+	);
 }
 
 /** Consumer shell — custom sidebar + topbar with command palette. */
-export function RewardHubLayout({ children, initialUser = null, sessionActive = false }: RewardHubLayoutProps): React.JSX.Element {
+export function RewardHubLayout({
+	children,
+	initialUser = null,
+	sessionActive = false,
+	initialNavigationMenu,
+	initialSessionPermissions,
+}: RewardHubLayoutProps): React.JSX.Element {
 	const { user, login, api } = useAuth();
 	const { isOpen: sidebarOpen, open: openSidebar, close: closeSidebar } = useWebSidebarControl();
+	const setMenu = useWebSidebarStore((state) => state.setMenu);
+
+	useInitialNavigationMenu(setMenu, initialNavigationMenu);
+	useNavigationMenuSync("PLATFORM", setMenu, { initialMenu: initialNavigationMenu });
 
 	const meQuery = api.auth.me.useQuery(undefined, {
 		enabled: sessionActive && user === null,
@@ -63,7 +95,7 @@ export function RewardHubLayout({ children, initialUser = null, sessionActive = 
 		[closeSidebar, openSidebar],
 	);
 
-	React.useEffect((): void => {
+	React.useLayoutEffect((): void => {
 		void useWebCommandPaletteStore.persist.rehydrate();
 		void useWebSidebarStore.persist.rehydrate();
 	}, []);
@@ -76,7 +108,14 @@ export function RewardHubLayout({ children, initialUser = null, sessionActive = 
 			banner={<ImpersonationBanner sessionActive={sessionActive} />}
 			sidebarOpen={sidebarOpen}
 			onSidebarOpenChange={handleSidebarOpenChange}
-			sidebar={<RewardHubSidebarContent userName={sidebarUserName} sessionActive={sessionActive} />}
+			sidebar={
+				<RewardHubSidebarContent
+					userName={sidebarUserName}
+					sessionActive={sessionActive}
+					initialNavigationMenu={initialNavigationMenu}
+					initialSessionPermissions={initialSessionPermissions}
+				/>
+			}
 			topbar={<RewardHubTopbar />}>
 			<SidebarPathSync store={useWebSidebarStore} />
 			<WebShellBreadcrumb />

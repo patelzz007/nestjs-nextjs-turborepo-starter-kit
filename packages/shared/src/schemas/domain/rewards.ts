@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import { BaseResponseSchema, EpochMsSchema, type EpochMs } from "../api/common";
 import { PaginationSchema } from "../api/pagination";
-import { MerchantCapabilitySchema } from "./merchant-capabilities";
+import { CapabilitySlugSchema } from "./capabilities";
 import { JsonObjectSchema } from "../runtime/json";
 
 // ── Enums (mirror Prisma — packages/shared cannot import @prisma/client) ───
@@ -432,7 +432,7 @@ export const MerchantMembershipResponseSchema = z
 		kybStatus: KybStatusSchema,
 		status: MerchantOrgStatusSchema,
 		/** Portal capabilities resolved from `merchant_role_capabilities` for this membership role. */
-		capabilities: z.array(MerchantCapabilitySchema),
+		capabilities: z.array(CapabilitySlugSchema),
 	})
 	.strict();
 

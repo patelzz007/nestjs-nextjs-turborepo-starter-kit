@@ -106,7 +106,7 @@ export interface MerchantDashboardPageViewProps {
 
 export function MerchantDashboardPageView({ businessName, initialAnalytics, initialRewards }: MerchantDashboardPageViewProps): React.JSX.Element {
 	const { api, user } = useAuth();
-	const { hasCapability, canManageRewards, canViewAnalytics } = useMerchantCapabilities();
+	const { hasCapability } = useMerchantCapabilities();
 
 	const quickActions = React.useMemo(
 		() => QUICK_ACTIONS.filter((action) => action.requiredCapability === undefined || hasCapability(action.requiredCapability)),
@@ -157,13 +157,13 @@ export function MerchantDashboardPageView({ businessName, initialAnalytics, init
 					<p className="text-muted-foreground">Here is an overview of {displayBusinessName}&apos;s rewards performance.</p>
 				</div>
 				<div className="flex gap-3">
-					{canViewAnalytics ? (
+					{hasCapability("merchant:view_analytics") ? (
 						<Link href="/analytics" className={cn(buttonVariants({ variant: "outline" }), "gap-2 bg-transparent")}>
 							<BarChart3 className="size-4" aria-hidden="true" />
 							Analytics
 						</Link>
 					) : null}
-					{canManageRewards ? (
+					{hasCapability("merchant:manage_rewards") ? (
 						<Link href="/rewards/new" className={cn(buttonVariants(), "gap-2")}>
 							<Plus className="size-4" aria-hidden="true" />
 							Create Reward
@@ -276,7 +276,7 @@ export function MerchantDashboardPageView({ businessName, initialAnalytics, init
 								</div>
 								<h3 className="mb-1 font-medium text-foreground">No rewards yet</h3>
 								<p className="mb-4 max-w-sm text-sm text-muted-foreground">Create your first reward to start engaging with customers.</p>
-								{canManageRewards ? (
+								{hasCapability("merchant:manage_rewards") ? (
 									<Link href="/rewards/new">
 										<Button size="sm">
 											<Plus className="me-2 size-4" aria-hidden="true" />

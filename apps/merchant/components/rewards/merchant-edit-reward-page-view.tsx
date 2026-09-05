@@ -33,7 +33,7 @@ function isRewardEditable(status: RewardResponse["status"]): boolean {
 
 export function MerchantEditRewardPageView({ rewardId, initialRewards }: MerchantEditRewardPageViewProps): React.JSX.Element {
 	const { api } = useAuth();
-	const { canManageRewards } = useMerchantCapabilities();
+	const { hasCapability } = useMerchantCapabilities();
 
 	const initialQueryData = React.useMemo(
 		() =>
@@ -73,6 +73,7 @@ export function MerchantEditRewardPageView({ rewardId, initialRewards }: Merchan
 	}, [reward, reset]);
 
 	const selectedType = useWatch({ control, name: "rewardType" });
+	const canManageRewards = hasCapability("merchant:manage_rewards");
 	const canEdit = canManageRewards && reward !== undefined && isRewardEditable(reward.status);
 	const canPublish = canManageRewards && reward?.status === "DRAFT";
 

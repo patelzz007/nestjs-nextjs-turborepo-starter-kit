@@ -13,5 +13,5 @@ export const MERCHANT_ME_QUERY_KEY: readonly ["merchant", "me"] = ["merchant", "
 export async function invalidateSessionAuth(queryClient: QueryClient): Promise<void> {
 	await queryClient.invalidateQueries({ queryKey: AUTH_ME_QUERY_KEY });
 	await queryClient.invalidateQueries({ queryKey: AUTH_PERMISSIONS_QUERY_KEY });
-	await queryClient.resetQueries({ queryKey: MERCHANT_ME_QUERY_KEY });
+	await queryClient.invalidateQueries({ queryKey: MERCHANT_ME_QUERY_KEY });
 }

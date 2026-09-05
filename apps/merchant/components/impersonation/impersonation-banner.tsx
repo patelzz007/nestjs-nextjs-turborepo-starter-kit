@@ -8,8 +8,13 @@ import { useRouter } from "next/navigation";
 import { AlertTriangle } from "lucide-react";
 import * as React from "react";
 
+export interface ImpersonationBannerProps {
+	/** Decoded server-side from the merchant JWT so the banner paints in SSR HTML. */
+	readonly initialIsImpersonating?: boolean;
+}
+
 /** Banner shown while a super-admin impersonates another user in the merchant portal. */
-export function ImpersonationBanner(): React.JSX.Element | null {
+export function ImpersonationBanner({ initialIsImpersonating = false }: ImpersonationBannerProps): React.JSX.Element | null {
 	const { api } = useAuth();
 	const queryClient = useQueryClient();
 	const router = useRouter();
@@ -24,7 +29,7 @@ export function ImpersonationBanner(): React.JSX.Element | null {
 	});
 
 	const session = permissionsQuery.data?.data;
-	const isImpersonating = session?.isImpersonating === true;
+	const isImpersonating = permissionsQuery.isFetched ? session?.isImpersonating === true : initialIsImpersonating;
 
 	const handleStop = React.useCallback((): void => {
 		void stopMutation.mutateAsync({});

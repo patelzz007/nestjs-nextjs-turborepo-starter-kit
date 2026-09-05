@@ -2,15 +2,20 @@
 
 import { ImpersonateUserPanel } from "@/components/impersonation/impersonate-user-panel";
 import { MerchantSidebarNavItem } from "@/components/layout/merchant-sidebar-nav-item";
+import { useMerchantCapabilities } from "@/lib/merchant-capabilities";
 import { useMerchantSessionProfile } from "@/lib/merchant-session-profile";
 import { filterCompiledSidebarMenu } from "@/lib/navigation/filter-menu-by-capabilities";
+import { MERCHANT_SIDEBAR_MENU } from "@/lib/navigation/sidebar-menu";
 import { resolveMerchantPinnedMenuItems } from "@/lib/navigation/pinned-items";
 import { MERCHANT_SIDEBAR_LABELS } from "@/lib/sidebar-labels";
 import { renderMerchantPaletteIcon } from "@/lib/palette/nav-items";
 import { useMerchantCommandPaletteStore } from "@/stores/command-palette-store";
 import { useMerchantSidebarStore } from "@/stores/sidebar-store";
 import { useMerchantOrg } from "@/lib/merchant-root-provider";
-import type { MerchantMembershipResponse } from "@workspace/shared";
+import { resolveActiveMerchantMembership, resolveMerchantCapabilities } from "@/lib/merchant-server-capabilities";
+import { resolveSidebarDisplayMenu } from "@workspace/client/lib/navigation/resolve-sidebar-display-menu";
+import type { CompiledSidebarMenuData } from "@workspace/client/lib/sidebar/sidebar-menu-schema";
+import type { CapabilityMenuResponse, CapabilitySlug, MerchantMembershipResponse } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/feedback/badge";
 import { Label } from "@workspace/ui/components/form/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@workspace/ui/components/form/select";
@@ -39,6 +44,7 @@ import * as React from "react";
 export interface MerchantSidebarPanelProps {
 	readonly memberships: readonly MerchantMembershipResponse[];
 	readonly merchantOrgId: string | undefined;
+	readonly initialNavigationMenu?: CapabilityMenuResponse;
 	readonly onStoreChange: (orgId: string) => void;
 	readonly onNavigate?: () => void;
 }
@@ -73,18 +79,28 @@ function MerchantSidebarPinnedItem({ title, url, icon, isActive, onNavigate }: M
 	);
 }
 
-export function MerchantSidebarPanel({ memberships, merchantOrgId, onStoreChange, onNavigate }: MerchantSidebarPanelProps): React.JSX.Element {
+export function MerchantSidebarPanel({ memberships, merchantOrgId, initialNavigationMenu, onStoreChange, onNavigate }: MerchantSidebarPanelProps): React.JSX.Element {
 	const pathname = usePathname();
 	const router = useRouter();
 	const sessionProfile = useMerchantSessionProfile();
-	const activeMembership = memberships.find((row) => row.merchantOrgId === merchantOrgId);
+	const { capabilities, membership: activeMembershipFromCapabilities } = useMerchantCapabilities(memberships);
+	const activeMembership = activeMembershipFromCapabilities ?? resolveActiveMerchantMembership(memberships, merchantOrgId);
+
+	const menuFilterCapabilities = React.useMemo((): readonly CapabilitySlug[] => {
+		const fromMemberships = resolveMerchantCapabilities(resolveActiveMerchantMembership(memberships, merchantOrgId));
+		return fromMemberships.length > 0 ? fromMemberships : capabilities;
+	}, [capabilities, memberships, merchantOrgId]);
 	const searchInputRef = React.useRef<HTMLInputElement>(null);
 	const navContainerRef = React.useRef<HTMLDivElement>(null);
 
 	const sectionOrder = useMerchantSidebarStore((state) => state.sectionOrder);
 	const searchQuery = useMerchantSidebarStore((state) => state.searchQuery);
 	const menu = useMerchantSidebarStore((state) => state.menu);
-	const currentPage = useMerchantSidebarStore((state) => state.currentPage) ?? pathname;
+	const displayMenu = React.useMemo(
+		(): CompiledSidebarMenuData => resolveSidebarDisplayMenu(menu, MERCHANT_SIDEBAR_MENU, initialNavigationMenu),
+		[initialNavigationMenu, menu],
+	);
+	const currentPage = pathname;
 	const setSearchQuery = useMerchantSidebarStore((state) => state.setSearchQuery);
 	const clearSearch = useMerchantSidebarStore((state) => state.clearSearch);
 	const storeExpandedItems = useMerchantSidebarStore((state) => state.expandedItems);
@@ -94,16 +110,14 @@ export function MerchantSidebarPanel({ memberships, merchantOrgId, onStoreChange
 	const moveSectionDown = useMerchantSidebarStore((state) => state.moveSectionDown);
 	const pinnedUrls = useMerchantCommandPaletteStore((state) => state.pinnedUrls);
 
-	const capabilities = React.useMemo(() => activeMembership?.capabilities ?? [], [activeMembership]);
-
-	const filteredMenu = React.useMemo(() => filterCompiledSidebarMenu(menu, capabilities), [menu, capabilities]);
+	const filteredMenu = React.useMemo(() => filterCompiledSidebarMenu(displayMenu, menuFilterCapabilities), [displayMenu, menuFilterCapabilities]);
 
 	const view = React.useMemo(
 		() => buildSidebarView({ menu: filteredMenu, pathname: currentPage, sectionOrder, searchQuery, isHighlightParentItem: true }),
 		[filteredMenu, currentPage, sectionOrder, searchQuery],
 	);
 
-	const pinnedItems = React.useMemo(() => resolveMerchantPinnedMenuItems(pinnedUrls, capabilities), [pinnedUrls, capabilities]);
+	const pinnedItems = React.useMemo(() => resolveMerchantPinnedMenuItems(pinnedUrls, menuFilterCapabilities), [pinnedUrls, menuFilterCapabilities]);
 	const expandedItems = useRouteExpandedItems(currentPage, storeExpandedItems, view.routeState.autoExpandedItems, resetExpandedItems);
 	const activeItems = view.routeState.activeItems;
 
@@ -196,6 +210,7 @@ export function MerchantSidebarPanel({ memberships, merchantOrgId, onStoreChange
 
 	const userInitials = getUserInitials(sessionProfile.fullName);
 	const showPinned = pinnedItems.length > 0 && !view.noResults;
+	const showNoCapabilities = menuFilterCapabilities.length === 0 && activeMembership !== undefined && !view.isSearching && view.sections.length === 0;
 	const formatStoreValue = React.useCallback((orgId: string): string => memberships.find((row) => row.merchantOrgId === orgId)?.businessName ?? orgId, [memberships]);
 
 	return (
@@ -218,6 +233,13 @@ export function MerchantSidebarPanel({ memberships, merchantOrgId, onStoreChange
 						<Search className="mb-2.5 size-7 text-muted-foreground/30" aria-hidden="true" />
 						<p className="text-sm text-muted-foreground">{MERCHANT_SIDEBAR_LABELS.noResultsTitle}</p>
 						<p className="mt-1 text-xs text-muted-foreground/50">{MERCHANT_SIDEBAR_LABELS.noResultsDescription}</p>
+					</div>
+				) : null}
+
+				{showNoCapabilities ? (
+					<div className="flex flex-col items-center justify-center px-3 py-10 text-center">
+						<p className="text-sm text-muted-foreground">No portal access configured for {activeMembership.role}.</p>
+						<p className="mt-1 text-xs text-muted-foreground/60">Ask an admin to grant capabilities under Reward Hub → Merchant roles.</p>
 					</div>
 				) : null}
 

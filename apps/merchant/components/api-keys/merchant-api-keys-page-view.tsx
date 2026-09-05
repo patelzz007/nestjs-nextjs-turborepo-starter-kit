@@ -50,8 +50,8 @@ export interface MerchantApiKeysPageViewProps {
 
 export function MerchantApiKeysPageView({ initialCanManageApiKeys, initialKeys }: MerchantApiKeysPageViewProps): React.JSX.Element {
 	const { api } = useAuth();
-	const { canManageApiKeys, isLoading } = useMerchantCapabilities();
-	const canManage = isLoading ? initialCanManageApiKeys : canManageApiKeys;
+	const { hasCapability, isPolicyReady } = useMerchantCapabilities();
+	const canManage = isPolicyReady ? hasCapability("merchant:manage_api_keys") : initialCanManageApiKeys;
 
 	const initialKeysData = React.useMemo(
 		() =>
@@ -115,6 +115,15 @@ export function MerchantApiKeysPageView({ initialCanManageApiKeys, initialKeys }
 					title="Owner access required"
 					description="API key management is limited to the store owner. Contact your account owner if you need a new terminal key."
 				/>
+			</div>
+		);
+	}
+
+	if (!isPolicyReady) {
+		return (
+			<div className="space-y-8">
+				<MerchantPageHeader title="POS API keys" description="Create keys for in-store terminals. Each key is shown once at creation — copy it immediately." />
+				<p className="text-sm text-muted-foreground">Loading API keys…</p>
 			</div>
 		);
 	}

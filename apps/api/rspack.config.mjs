@@ -89,6 +89,8 @@ export default defineConfig((_env, argv) => {
 						new RunScriptWebpackPlugin({
 							name: "main.js",
 							autoRestart: true,
+							// SIGTERM lets Nest run shutdown hooks before rspack restarts the child.
+							signal: "SIGTERM",
 						}),
 					]
 				: [

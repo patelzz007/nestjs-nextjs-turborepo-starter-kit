@@ -7,6 +7,7 @@ import { ImpersonateUserPanel } from "@/components/impersonation/impersonate-use
 import { useMerchantSidebarControl } from "@/components/layout/use-merchant-sidebar-control";
 import { MerchantSidebarPanel } from "@/components/layout/merchant-sidebar-panel";
 import { MerchantTopbar } from "@/components/layout/merchant-topbar";
+import type { ServerUser } from "@/lib/auth-server";
 import { stubApiMeta } from "@/lib/api-envelope";
 import { MERCHANT_ME_QUERY_KEY } from "@workspace/client/lib/auth/invalidate-session-auth";
 import { useMerchantOrg } from "@/lib/merchant-root-provider";
@@ -18,22 +19,29 @@ import { isMobileViewport } from "@workspace/ui/hooks/use-mobile";
 import { useMerchantCommandPaletteStore } from "@/stores/command-palette-store";
 import { useMerchantSidebarStore } from "@/stores/sidebar-store";
 import { SidebarPathSync } from "@workspace/client/lib/sidebar/sidebar-path-sync";
+import { useInitialNavigationMenu, useNavigationMenuSync } from "@workspace/client/lib/navigation/use-navigation-menu-sync";
 import { useQueryClient } from "@tanstack/react-query";
+import type { CapabilityMenuResponse } from "@workspace/shared";
 import * as React from "react";
 
 export interface MerchantShellProps {
 	readonly children: React.ReactNode;
 	readonly initialMemberships?: readonly MerchantMembershipResponse[];
 	readonly initialMerchantOrgId?: string;
+	readonly initialUser?: ServerUser | null;
+	readonly initialIsImpersonating?: boolean;
+	readonly initialNavigationMenu?: CapabilityMenuResponse;
 }
 
 function MerchantSidebarContent({
 	memberships,
 	merchantOrgId,
+	initialNavigationMenu,
 	onStoreChange,
 }: {
 	readonly memberships: readonly MerchantMembershipResponse[];
 	readonly merchantOrgId: string | undefined;
+	readonly initialNavigationMenu?: CapabilityMenuResponse;
 	readonly onStoreChange: (orgId: string) => void;
 }): React.JSX.Element {
 	const { setOpenMobile } = useShellSidebar();
@@ -44,15 +52,34 @@ function MerchantSidebarContent({
 		}
 	}, [setOpenMobile]);
 
-	return <MerchantSidebarPanel memberships={memberships} merchantOrgId={merchantOrgId} onStoreChange={onStoreChange} onNavigate={handleNavigate} />;
+	return (
+		<MerchantSidebarPanel
+			memberships={memberships}
+			merchantOrgId={merchantOrgId}
+			initialNavigationMenu={initialNavigationMenu}
+			onStoreChange={onStoreChange}
+			onNavigate={handleNavigate}
+		/>
+	);
 }
 
 /** Merchant portal chrome — custom sidebar + topbar with command palette. */
-export function MerchantShell({ children, initialMemberships, initialMerchantOrgId }: MerchantShellProps): React.JSX.Element {
+export function MerchantShell({
+	children,
+	initialMemberships,
+	initialMerchantOrgId,
+	initialUser = null,
+	initialIsImpersonating = false,
+	initialNavigationMenu,
+}: MerchantShellProps): React.JSX.Element {
 	const { api } = useAuth();
 	const queryClient = useQueryClient();
 	const { merchantOrgId, setMerchantOrgId } = useMerchantOrg();
 	const { isOpen: sidebarOpen, open: openSidebar, close: closeSidebar } = useMerchantSidebarControl();
+	const setMenu = useMerchantSidebarStore((state) => state.setMenu);
+
+	useInitialNavigationMenu(setMenu, initialNavigationMenu);
+	useNavigationMenuSync("MERCHANT", setMenu, { initialMenu: initialNavigationMenu });
 
 	const handleSidebarOpenChange = React.useCallback(
 		(open: boolean): void => {
@@ -81,6 +108,7 @@ export function MerchantShell({ children, initialMemberships, initialMerchantOrg
 		{},
 		{
 			initialData: initialMeData,
+			staleTime: 0,
 		},
 	);
 
@@ -97,7 +125,7 @@ export function MerchantShell({ children, initialMemberships, initialMerchantOrg
 		});
 	}, [initialMemberships, queryClient]);
 
-	React.useEffect((): void => {
+	React.useLayoutEffect((): void => {
 		void useMerchantCommandPaletteStore.persist.rehydrate();
 		void useMerchantSidebarStore.persist.rehydrate();
 	}, []);
@@ -130,11 +158,18 @@ export function MerchantShell({ children, initialMemberships, initialMerchantOrg
 			<SidebarPathSync store={useMerchantSidebarStore} />
 			<AppPanelShell
 				shellClassName="merchant-app"
-				banner={<ImpersonationBanner />}
+				banner={<ImpersonationBanner initialIsImpersonating={initialIsImpersonating} />}
 				sidebarOpen={sidebarOpen}
 				onSidebarOpenChange={handleSidebarOpenChange}
-				sidebar={<MerchantSidebarContent memberships={memberships} merchantOrgId={merchantOrgId} onStoreChange={handleStoreChange} />}
-				topbar={<MerchantTopbar />}
+				sidebar={
+					<MerchantSidebarContent
+						memberships={memberships}
+						merchantOrgId={merchantOrgId}
+						initialNavigationMenu={initialNavigationMenu}
+						onStoreChange={handleStoreChange}
+					/>
+				}
+				topbar={<MerchantTopbar initialUser={initialUser} />}
 				contentClassName="space-y-6">
 				{membershipsQuery.isLoading && initialMemberships === undefined ? <p className="text-sm text-muted-foreground">Loading merchant access…</p> : null}
 				{showMembershipGate ? (

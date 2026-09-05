@@ -37,8 +37,10 @@ Operational reference. For the big picture (ELI5 + diagrams), read [architecture
 pnpm docker:up          # Redis, Kafka, RabbitMQ, Bull Board
 pnpm db:migrate         # includes outbox_events + analytics_events
 pnpm dev:api
-pnpm --filter @workspace/analytics-consumer start   # optional
+pnpm dev:analytics-consumer   # optional — loads apps/api/.env and creates Kafka topics if missing
 ```
+
+The analytics consumer reads `DATABASE_URL` and `KAFKA_BROKERS` from `apps/api/.env` automatically. On first start it creates any missing `platform.*` Kafka topics before subscribing (required on KRaft — subscribing to non-existent topics fails).
 
 Required env (API):
 

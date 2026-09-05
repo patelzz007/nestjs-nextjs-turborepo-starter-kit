@@ -1,5 +1,5 @@
-import type { MerchantCapability, MerchantMembershipResponse } from "@workspace/shared";
-import { merchantHasCapability } from "@workspace/shared";
+import type { CapabilitySlug, MerchantMembershipResponse } from "@workspace/shared";
+import { hasCapability } from "@workspace/shared";
 
 export function resolveActiveMerchantMembership(
 	memberships: readonly MerchantMembershipResponse[],
@@ -14,14 +14,18 @@ export function resolveActiveMerchantMembership(
 	return memberships[0];
 }
 
-export function resolveMerchantCapabilities(membership: MerchantMembershipResponse | undefined): readonly MerchantCapability[] {
+export function resolveMerchantCapabilities(membership: MerchantMembershipResponse | undefined): readonly CapabilitySlug[] {
 	if (membership === undefined) {
 		return [];
 	}
 	return membership.capabilities;
 }
 
-export function serverHasMerchantCapability(memberships: readonly MerchantMembershipResponse[], merchantOrgId: string | undefined, capability: MerchantCapability): boolean {
+export function serverHasMerchantCapability(
+	memberships: readonly MerchantMembershipResponse[],
+	merchantOrgId: string | undefined,
+	capability: CapabilitySlug,
+): boolean {
 	const membership = resolveActiveMerchantMembership(memberships, merchantOrgId);
-	return merchantHasCapability(resolveMerchantCapabilities(membership), capability);
+	return hasCapability(resolveMerchantCapabilities(membership), capability);
 }

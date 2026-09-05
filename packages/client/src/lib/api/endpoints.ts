@@ -42,6 +42,8 @@ import {
 	// ── Auth response schemas ──────────────────────────────────────────
 	AdminUserDetailSchema,
 	CheckPermissionResponseSchema,
+	CapabilityDefinitionSchema,
+	DataValueSchema,
 	ForgotPasswordResponseSchema,
 	ImpersonateResponseSchema,
 	LoginResponseSchema,
@@ -75,6 +77,7 @@ import {
 	MerchantApiKeyCreatedSchema,
 	MerchantApiKeySummarySchema,
 	MerchantMembershipResponseSchema,
+	MerchantRoleCapabilityGrantSchema,
 	MerchantOrgResponseSchema,
 	MerchantRedemptionListItemSchema,
 	MerchantAnalyticsResponseSchema,
@@ -430,6 +433,20 @@ export const apiRouter = {
 		}),
 	},
 
+	capabilities: {
+		catalog: defineQuery(apiContract.capabilities.catalog, {
+			response: envelope(z.array(CapabilityDefinitionSchema)),
+			queryKey: ({ scope }) => ["capabilities", "catalog", scope ?? "all"],
+		}),
+	},
+
+	navigation: {
+		menu: defineQuery(apiContract.navigation.menu, {
+			response: envelope(DataValueSchema),
+			queryKey: ({ scope }) => ["navigation", "menu", scope],
+		}),
+	},
+
 	admin: {
 		roles: {
 			list: defineQuery(apiContract.admin.roles.list, {
@@ -637,6 +654,18 @@ export const apiRouter = {
 		updateKyb: defineMutation(apiContract.rewardsAdmin.updateKyb, {
 			response: envelope(z.object({ ok: z.literal(true) }).strict()),
 			queryKey: ({ merchantOrgId }) => ["rewards-admin", "kyb", merchantOrgId],
+		}),
+		listMerchantRoleCapabilities: defineQuery(apiContract.rewardsAdmin.listMerchantRoleCapabilities, {
+			response: envelope(z.array(MerchantRoleCapabilityGrantSchema)),
+			queryKey: () => ["rewards-admin", "merchant-role-capabilities"],
+		}),
+		syncMerchantRoleCapabilities: defineMutation(apiContract.rewardsAdmin.syncMerchantRoleCapabilities, {
+			response: envelope(MerchantRoleCapabilityGrantSchema),
+			queryKey: ({ role }) => ["rewards-admin", "merchant-role-capabilities", role],
+		}),
+		restoreMerchantRoleCapabilities: defineMutation(apiContract.rewardsAdmin.restoreMerchantRoleCapabilities, {
+			response: envelope(MerchantRoleCapabilityGrantSchema),
+			queryKey: ({ role }) => ["rewards-admin", "merchant-role-capabilities", role, "restore"],
 		}),
 	},
 	// NOTE: `as const` is required here — it preserves literal method/path types

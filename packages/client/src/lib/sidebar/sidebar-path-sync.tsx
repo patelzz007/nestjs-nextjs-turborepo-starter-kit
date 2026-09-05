@@ -17,7 +17,7 @@ export interface SidebarPathSyncProps {
 export function SidebarPathSync({ store }: SidebarPathSyncProps): null {
 	const pathname = usePathname();
 
-	React.useEffect((): void => {
+	React.useLayoutEffect((): void => {
 		store.getState().setCurrentPage(pathname);
 	}, [pathname, store]);
 

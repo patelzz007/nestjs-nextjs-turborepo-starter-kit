@@ -2,12 +2,18 @@
 
 import { ImpersonateUserPanel } from "@/components/impersonation/impersonate-user-panel";
 import { WebSidebarNavItem } from "@/components/layout/web-sidebar-nav-item";
+import { filterCompiledSidebarMenu } from "@/lib/navigation/filter-menu-by-capabilities";
+import { USER_SIDEBAR_MENU } from "@/lib/navigation/sidebar-menu";
 import { resolveWebPinnedMenuItems } from "@/lib/navigation/pinned-items";
+import { useSessionCapabilities } from "@/lib/session-capabilities";
 import { WEB_SIDEBAR_LABELS } from "@/lib/sidebar-labels";
 import { renderWebPaletteIcon } from "@/lib/palette/nav-items";
 import { useWebCommandPaletteStore } from "@/stores/command-palette-store";
 import { useWebSidebarStore } from "@/stores/sidebar-store";
 import { useAuth } from "@workspace/client/lib/auth";
+import { resolveSidebarDisplayMenu } from "@workspace/client/lib/navigation/resolve-sidebar-display-menu";
+import type { CompiledSidebarMenuData } from "@workspace/client/lib/sidebar/sidebar-menu-schema";
+import type { CapabilityMenuResponse, CapabilitySlug, SessionPermissionsResponse } from "@workspace/shared";
 import { PanelSidebarHeader } from "@workspace/ui/components/navigation/panel-sidebar-header";
 import { PanelSidebarSearch } from "@workspace/ui/components/navigation/panel-sidebar-search";
 import { PanelSidebarSectionHeader } from "@workspace/ui/components/navigation/panel-sidebar-section-header";
@@ -33,6 +39,8 @@ import * as React from "react";
 export interface WebSidebarPanelProps {
 	readonly userName: string | null;
 	readonly sessionActive?: boolean;
+	readonly initialNavigationMenu?: CapabilityMenuResponse;
+	readonly initialSessionPermissions?: SessionPermissionsResponse;
 	readonly onNavigate?: () => void;
 }
 
@@ -66,17 +74,41 @@ function WebSidebarPinnedItem({ title, url, icon, isActive, onNavigate }: WebSid
 	);
 }
 
-export function WebSidebarPanel({ userName, sessionActive = false, onNavigate }: WebSidebarPanelProps): React.JSX.Element {
+export function WebSidebarPanel({
+	userName,
+	sessionActive = false,
+	initialNavigationMenu,
+	initialSessionPermissions,
+	onNavigate,
+}: WebSidebarPanelProps): React.JSX.Element {
 	const pathname = usePathname();
 	const router = useRouter();
 	const { user } = useAuth();
+	const { capabilities, isReady: isCapabilitiesReady } = useSessionCapabilities(initialSessionPermissions, sessionActive);
 	const searchInputRef = React.useRef<HTMLInputElement>(null);
 	const navContainerRef = React.useRef<HTMLDivElement>(null);
 
 	const sectionOrder = useWebSidebarStore((state) => state.sectionOrder);
 	const searchQuery = useWebSidebarStore((state) => state.searchQuery);
 	const menu = useWebSidebarStore((state) => state.menu);
-	const currentPage = useWebSidebarStore((state) => state.currentPage) ?? pathname;
+	const displayMenu = React.useMemo((): CompiledSidebarMenuData => {
+		const resolved = resolveSidebarDisplayMenu(menu, USER_SIDEBAR_MENU, initialNavigationMenu);
+		return {
+			header: resolved.header,
+			sections: resolved.sections,
+			bottomItems: resolved.bottomItems.length > 0 ? resolved.bottomItems : USER_SIDEBAR_MENU.bottomItems,
+		};
+	}, [initialNavigationMenu, menu]);
+
+	const filterCapabilities = React.useMemo((): readonly CapabilitySlug[] => {
+		if (isCapabilitiesReady && capabilities.length > 0) {
+			return capabilities;
+		}
+		return initialSessionPermissions?.capabilities ?? [];
+	}, [capabilities, initialSessionPermissions?.capabilities, isCapabilitiesReady]);
+
+	const filteredMenu = React.useMemo(() => filterCompiledSidebarMenu(displayMenu, filterCapabilities), [displayMenu, filterCapabilities]);
+	const currentPage = pathname;
 	const setSearchQuery = useWebSidebarStore((state) => state.setSearchQuery);
 	const clearSearch = useWebSidebarStore((state) => state.clearSearch);
 	const storeExpandedItems = useWebSidebarStore((state) => state.expandedItems);
@@ -87,8 +119,8 @@ export function WebSidebarPanel({ userName, sessionActive = false, onNavigate }:
 	const pinnedUrls = useWebCommandPaletteStore((state) => state.pinnedUrls);
 
 	const view = React.useMemo(
-		() => buildSidebarView({ menu, pathname: currentPage, sectionOrder, searchQuery, isHighlightParentItem: true }),
-		[menu, currentPage, sectionOrder, searchQuery],
+		() => buildSidebarView({ menu: filteredMenu, pathname: currentPage, sectionOrder, searchQuery, isHighlightParentItem: true }),
+		[filteredMenu, currentPage, sectionOrder, searchQuery],
 	);
 
 	const pinnedItems = React.useMemo(() => resolveWebPinnedMenuItems(pinnedUrls), [pinnedUrls]);
@@ -179,7 +211,7 @@ export function WebSidebarPanel({ userName, sessionActive = false, onNavigate }:
 
 	return (
 		<div className="flex h-full min-h-0 flex-col overflow-hidden bg-card text-sidebar-foreground">
-			<PanelSidebarHeader title={menu.header.title} subtitle={menu.header.subtitle} icon={<Gift className="size-4 text-primary" aria-hidden="true" />} />
+			<PanelSidebarHeader title={filteredMenu.header.title} subtitle={filteredMenu.header.subtitle} icon={<Gift className="size-4 text-primary" aria-hidden="true" />} />
 
 			<SidebarContent ref={navContainerRef} className="[overflow-anchor:none]">
 				<PanelSidebarSearch

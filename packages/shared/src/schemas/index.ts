@@ -528,8 +528,46 @@ export {
 	RewardTerminalIdHeaderSchema,
 	RewardTypeSchema,
 } from "./domain/rewards";
+export {
+	CapabilityCatalogQuerySchema,
+	CapabilityDefinitionSchema,
+	CapabilityMenuQuerySchema,
+	CapabilityMenuResponseSchema,
+	CapabilityScopeSchema,
+	CapabilitySlugSchema,
+	filterMenuByCapabilities,
+	hasCapability,
+	parseCapabilitySlugs,
+	toPlatformCapabilitySlug,
+	withCapabilityToggled,
+} from "./domain/capabilities";
+export type {
+	CapabilityCatalogQuery,
+	CapabilityDefinition,
+	CapabilityMenuQuery,
+	CapabilityMenuResponse,
+	CapabilityMenuItem,
+	CapabilityMenuSection,
+	CapabilityScope,
+	CapabilitySlug,
+} from "./domain/capabilities";
 export { merchantHasCapability, MerchantCapabilitySchema, parseMerchantCapabilities } from "./domain/merchant-capabilities";
 export type { MerchantCapability } from "./domain/merchant-capabilities";
+export {
+	MerchantRoleCapabilityGrantSchema,
+	MerchantRoleCapabilitiesPathInputSchema,
+	SyncMerchantRoleCapabilitiesBodySchema,
+	SyncMerchantRoleCapabilitiesInputSchema,
+	findMerchantRoleGrant,
+	resolveMerchantRoleCapabilities,
+	withMerchantCapabilityToggled,
+} from "./domain/merchant-role-capabilities";
+export type {
+	MerchantRoleCapabilityGrant,
+	MerchantRoleCapabilitiesPathInput,
+	SyncMerchantRoleCapabilitiesBody,
+	SyncMerchantRoleCapabilitiesInput,
+} from "./domain/merchant-role-capabilities";
 export { getRewardClaimBlockReason, isRewardClaimable, rewardClaimBlockMessage, type RewardClaimBlockReason } from "./domain/reward-claim-availability";
 export {
 	AnalyticsMetricSchema,

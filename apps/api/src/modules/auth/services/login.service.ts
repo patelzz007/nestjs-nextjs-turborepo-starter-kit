@@ -11,6 +11,7 @@ import { UserRepository } from "../repositories/user.repository";
 import { AccountLockoutService } from "./account-lockout.service";
 import { AuthEventsService } from "./auth-events.service";
 import { CryptoService } from "./crypto.service";
+import { IdentityService } from "./identity.service";
 import { TokenService } from "./token.service";
 import { UserResponseMapper } from "./user-response.mapper";
 
@@ -34,6 +35,7 @@ export class LoginService {
 		private readonly logService: LogService,
 		private readonly lockoutService: AccountLockoutService,
 		private readonly mapper: UserResponseMapper,
+		private readonly identityService: IdentityService,
 	) {}
 
 	@TrackAuthFlow({
@@ -151,8 +153,11 @@ export class LoginService {
 				isEmailVerified,
 				device: deviceInfo ?? "Unknown",
 				ip: ipAddress ?? "Unknown",
+				clientType: clientType ?? "web",
 			},
 		});
+
+		await this.identityService.warmSessionCache(user.id, profile);
 
 		return {
 			user: profile,

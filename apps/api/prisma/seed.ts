@@ -2,9 +2,11 @@ import "dotenv/config";
 
 import { prisma } from "./seed/client";
 import { seedAbacConditions } from "./seed/abac";
+import { seedMerchantCapabilities } from "./seed/capabilities";
 import { createApiKeys, createApiKeyUsageLogs } from "./seed/api-keys";
 import { generateAdditionalSeedData } from "./seed/extra-users";
 import { createMenuItems } from "./seed/menu";
+import { seedScopedNavigationMenus } from "./seed/scoped-navigation-menus";
 import { createPermissions } from "./seed/permissions";
 import { assignPermissionsToRoles, assignRoleHierarchy, createRoles } from "./seed/roles";
 import { createTags } from "./seed/tags";
@@ -13,7 +15,6 @@ import { assignAdditionalPermissions, assignRolesToUsers, createUsers } from "./
 import { createClicks, createUrlTags, createUrls } from "./seed/urls";
 import { seedGeo } from "./seed/geo-seed";
 import { cleanupRewardSeedData, printRewardSeedCredentials, seedRewards } from "./seed/rewards";
-import { seedMerchantRoleCapabilities } from "./seed/merchant-role-capabilities";
 
 // ---------------------------------------------------------------------------
 // Orchestrator — runs the per-domain seeders in dependency order.
@@ -41,11 +42,6 @@ async function main() {
 	console.log("Creating permissions...");
 	const permissions = await createPermissions();
 	console.log(`✅ ${permissions.length} permissions`);
-
-	console.log("Seeding merchant role capabilities...");
-	await seedMerchantRoleCapabilities();
-	const merchantCapabilityCount = await prisma.merchantRoleCapability.count();
-	console.log(`✅ ${merchantCapabilityCount} merchant role capabilities`);
 
 	console.log("Creating roles...");
 	const roles = await createRoles();
@@ -109,6 +105,15 @@ async function main() {
 	await createMenuItems(permissions, roles);
 	const menuCount = await prisma.menuItem.count();
 	console.log(`✅ ${menuCount} menu items`);
+
+	console.log("Seeding merchant capability catalog and role grants...");
+	const merchantCapabilitySummary = await seedMerchantCapabilities();
+	console.log(`✅ ${String(merchantCapabilitySummary.definitions)} MERCHANT capabilities, ${String(merchantCapabilitySummary.roleGrantRows)} role grants`);
+
+	console.log("Seeding scoped navigation menus (ADMIN + MERCHANT)...");
+	await seedScopedNavigationMenus();
+	const scopedMenuCount = await prisma.menuItem.count({ where: { scope: { not: null } } });
+	console.log(`✅ ${scopedMenuCount} scoped menu items`);
 
 	console.log("Seeding ABAC demo conditions...");
 	await seedAbacConditions(permissions);

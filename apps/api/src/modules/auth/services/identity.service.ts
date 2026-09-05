@@ -1,9 +1,10 @@
-import { ConflictException, Injectable, NotFoundException } from "@nestjs/common";
+import { ConflictException, Injectable } from "@nestjs/common";
 import type { AccessTokenPayload, SignupInput, SignupResponse, SessionPermissionsResponse, UserResponse, UserPermissions } from "@workspace/shared";
 
 import { LogService } from "../../../modules/logs/logs.service";
 import { PrismaService } from "../../../prisma/prisma.service";
 import { AuthorizationCheckerService } from "../../authorization/services/authorization-checker.service";
+import { UserSessionCacheService } from "../cache/user-session-cache.service";
 import { TrackAuthFlow } from "../decorators/track-auth-flow.decorator";
 import { UserRepository } from "../repositories/user.repository";
 import { AuthEventsService } from "./auth-events.service";
@@ -18,13 +19,7 @@ import { UserResponseMapper } from "./user-response.mapper";
  */
 @Injectable()
 export class IdentityService {
-	/** Short-lived cache for `/auth/me` responses (30s TTL). */
-	private readonly meCache = new Map<string, { readonly value: UserResponse; readonly expiresAt: number }>();
-	/** Short-lived cache for `/auth/permissions` responses (30s TTL). */
-	private readonly permissionsCache = new Map<string, { readonly value: SessionPermissionsResponse; readonly expiresAt: number }>();
-	private static readonly ME_CACHE_TTL_MS = 30_000;
-
-	constructor(
+	public constructor(
 		private readonly prisma: PrismaService,
 		private readonly userRepo: UserRepository,
 		private readonly cryptoService: CryptoService,
@@ -33,6 +28,7 @@ export class IdentityService {
 		private readonly authEvents: AuthEventsService,
 		private readonly logService: LogService,
 		private readonly mapper: UserResponseMapper,
+		private readonly sessionCache: UserSessionCacheService,
 	) {}
 
 	@TrackAuthFlow({ flow: "signup" })
@@ -85,43 +81,47 @@ export class IdentityService {
 			},
 		});
 
+		const profile = this.mapper.build(newUser, userPermissions, false);
+		await this.warmSessionCache(newUser.id, profile);
+
 		return {
-			user: this.mapper.build(newUser, userPermissions, false),
+			user: profile,
 			verificationToken,
 			message: "User registered successfully",
 		};
 	}
 
 	public async getMe(userId: string): Promise<UserResponse> {
-		const now: number = Date.now();
-		const entry = this.meCache.get(userId);
-		if (entry !== undefined && entry.expiresAt > now) {
-			return entry.value;
+		const cached = await this.sessionCache.getMe(userId);
+		if (cached !== null) {
+			return cached;
 		}
 		const response = await this.getUserResponse(userId);
-		this.meCache.set(userId, { value: response, expiresAt: now + IdentityService.ME_CACHE_TTL_MS });
+		await this.sessionCache.setMe(userId, response);
 		return response;
 	}
 
 	public async getSessionPermissions(userId: string, accessPayload?: AccessTokenPayload): Promise<SessionPermissionsResponse> {
-		const now: number = Date.now();
-		const entry = this.permissionsCache.get(userId);
-		if (entry !== undefined && entry.expiresAt > now) {
-			return entry.value;
-		}
-		const user = await this.userRepo.findProfileById(userId);
-		const userPermissions: UserPermissions = await this.authorizationChecker.getUserPermissionDetails(userId);
-		const profile = this.mapper.build(user, userPermissions, user.emailVerifiedAt !== null && user.emailVerifiedAt <= Date.now());
-		const response: SessionPermissionsResponse = {
-			roles: userPermissions.roles,
-			permissions: userPermissions.permissions,
-			tokenVersion: profile.tokenVersion,
-			hasAdminAccess: profile.hasAdminAccess,
+		const cached = await this.sessionCache.getPermissions(userId);
+		const base = cached ?? (await this.buildAndCacheSessionPermissions(userId));
+		return {
+			roles: base.roles,
+			permissions: base.permissions,
+			capabilities: base.capabilities,
+			tokenVersion: base.tokenVersion,
+			hasAdminAccess: base.hasAdminAccess,
 			isImpersonating: accessPayload?.isImpersonating,
 			originalUserId: accessPayload?.originalUserId,
 		};
-		this.permissionsCache.set(userId, { value: response, expiresAt: now + IdentityService.ME_CACHE_TTL_MS });
-		return response;
+	}
+
+	/**
+	 * Warm Redis (or in-memory) session cache after login — shared by web, admin, and merchant.
+	 */
+	public async warmSessionCache(userId: string, profile: UserResponse): Promise<void> {
+		await this.sessionCache.setMe(userId, profile);
+		const permissions = await this.buildSessionPermissions(userId);
+		await this.sessionCache.setPermissions(userId, permissions);
 	}
 
 	/**
@@ -130,8 +130,7 @@ export class IdentityService {
 	 * Called when roles or permissions change so clients refetch fresh data.
 	 */
 	public invalidateMe(userId: string): void {
-		this.meCache.delete(userId);
-		this.permissionsCache.delete(userId);
+		void this.sessionCache.invalidate(userId);
 	}
 
 	/**
@@ -145,5 +144,25 @@ export class IdentityService {
 		const isEmailVerified: boolean = user.emailVerifiedAt !== null && user.emailVerifiedAt <= Date.now();
 
 		return this.mapper.build(user, userPermissions, isEmailVerified);
+	}
+
+	private async buildSessionPermissions(userId: string): Promise<SessionPermissionsResponse> {
+		const user = await this.userRepo.findProfileById(userId);
+		const userPermissions: UserPermissions = await this.authorizationChecker.getUserPermissionDetails(userId);
+		const capabilities = await this.authorizationChecker.getUserCapabilitySlugs(userId);
+		const profile = this.mapper.build(user, userPermissions, user.emailVerifiedAt !== null && user.emailVerifiedAt <= Date.now());
+		return {
+			roles: userPermissions.roles,
+			permissions: userPermissions.permissions,
+			capabilities: [...capabilities],
+			tokenVersion: profile.tokenVersion,
+			hasAdminAccess: profile.hasAdminAccess,
+		};
+	}
+
+	private async buildAndCacheSessionPermissions(userId: string): Promise<SessionPermissionsResponse> {
+		const response = await this.buildSessionPermissions(userId);
+		await this.sessionCache.setPermissions(userId, response);
+		return response;
 	}
 }

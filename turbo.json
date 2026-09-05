@@ -51,7 +51,8 @@
 				"WEBHOOK_URL",
 				"REDIS_URL",
 				"KAFKA_BROKERS",
-				"RABBITMQ_URL"
+				"RABBITMQ_URL",
+				"SHUTDOWN_TIMEOUT_MS"
 			]
 		},
 		"lint": {
@@ -164,7 +165,8 @@
 				"ADMIN_PASSWORD",
 				"REDIS_URL",
 				"KAFKA_BROKERS",
-				"RABBITMQ_URL"
+				"RABBITMQ_URL",
+				"SHUTDOWN_TIMEOUT_MS"
 			]
 		}
 	}

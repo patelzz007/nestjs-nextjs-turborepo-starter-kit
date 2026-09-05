@@ -170,6 +170,37 @@ export class TypedConfigService {
 		return this.authorizationCacheBackend === "redis" && this.redisUrl !== undefined;
 	}
 
+	// ── User session cache (`/auth/me`, `/auth/permissions`) ───────────
+
+	/** TTL for user session cache entries in milliseconds (default 30 minutes). */
+	public get userSessionCacheTtlMs(): number {
+		const value: string | undefined = process.env.USER_SESSION_CACHE_TTL_MS;
+		const parsed: number = value ? Number.parseInt(value, 10) : 30 * 60 * 1000;
+		return parsed > 0 ? parsed : 30 * 60 * 1000;
+	}
+
+	/**
+	 * User session cache backend (login profile + permissions).
+	 * Mirrors {@link authorizationCacheBackend}: `redis` when `REDIS_URL` is set outside development.
+	 */
+	public get userSessionCacheBackend(): "memory" | "redis" {
+		const explicit: string | undefined = process.env.USER_SESSION_CACHE_BACKEND;
+		if (explicit === "memory") {
+			return "memory";
+		}
+		if (explicit === "redis") {
+			return "redis";
+		}
+		if (process.env.NODE_ENV !== "development" && this.redisUrl !== undefined) {
+			return "redis";
+		}
+		return "memory";
+	}
+
+	public get useRedisUserSessionCache(): boolean {
+		return this.userSessionCacheBackend === "redis" && this.redisUrl !== undefined;
+	}
+
 	/** Redis connection URL for distributed authorization cache invalidation and BullMQ job queues. */
 	public get redisUrl(): string | undefined {
 		const value: string | undefined = process.env.REDIS_URL;
