@@ -42,11 +42,11 @@
 		"dev:analytics-consumer": "turbo dev --filter @workspace/analytics-consumer --log-prefix=none"
 	},
 	"devDependencies": {
-		"@darraghor/eslint-plugin-nestjs-typed": "^7.3.4",
+		"@darraghor/eslint-plugin-nestjs-typed": "^7.4.0",
 		"@eslint/js": "^9.39.5",
 		"@next/bundle-analyzer": "^16.3.4",
 		"@next/eslint-plugin-next": "^16.3.4",
-		"@types/node": "^26.4.0",
+		"@types/node": "^26.4.1",
 		"@workspace/eslint-config": "workspace:*",
 		"@workspace/typescript-config": "workspace:*",
 		"concurrently": "^10.0.5",

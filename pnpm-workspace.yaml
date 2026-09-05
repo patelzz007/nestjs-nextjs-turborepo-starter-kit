@@ -70,6 +70,8 @@ minimumReleaseAgeExclude:
   - globals@17.12.0
   - next@16.3.4
   - typescript-eslint@8.69.0
+  - fumadocs-core@16.15.7
+  - fumadocs-ui@16.15.7
 
 # @darraghor/eslint-plugin-nestjs-typed does `import ts from "typescript"`
 # directly (undisclosed in its manifest), so Node resolves the hoisted TS 7

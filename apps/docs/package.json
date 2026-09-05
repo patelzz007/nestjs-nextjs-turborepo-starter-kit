@@ -19,11 +19,11 @@
 		"@workspace/ui": "workspace:*",
 		"cmdk": "^1.1.1",
 		"date-fns": "^4.4.0",
-		"fumadocs-core": "^16.15.4",
+		"fumadocs-core": "^16.15.7",
 		"fumadocs-mdx": "^15.4.0",
-		"fumadocs-ui": "^16.15.4",
+		"fumadocs-ui": "^16.15.7",
 		"katex": "^0.18.5",
-		"lucide-react": "^1.39.0",
+		"lucide-react": "^1.41.0",
 		"mdast-util-mdx-jsx": "^3.2.0",
 		"mermaid": "^11.17.2",
 		"next": "16.3.4",
@@ -41,14 +41,14 @@
 		"@tailwindcss/postcss": "^4.3.3",
 		"@types/mdast": "^4.0.4",
 		"@types/mdx": "^2.0.14",
-		"@types/node": "^26.4.0",
+		"@types/node": "^26.4.1",
 		"@types/react": "^19.2.18",
-		"@types/react-dom": "^19.2.5",
+		"@types/react-dom": "^19.2.7",
 		"@workspace/eslint-config": "workspace:^",
 		"@workspace/typescript-config": "workspace:*",
 		"eslint": "^9.39.5",
 		"tailwindcss": "^4.3.3",
 		"typescript": "7.0.2",
-		"vitest": "^4.1.11"
+		"vitest": "^5.0.0"
 	}
 }
