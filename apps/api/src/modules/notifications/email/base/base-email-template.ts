@@ -186,6 +186,18 @@ export abstract class BaseEmailTemplate<TProps extends BaseEmailProps> {
         <p style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 14px; font-size: 13px; color: #334155; word-break: break-all; margin: 0 0 24px 0;">${this.escape(href)}</p>`;
 	}
 
+	/** Centered numeric OTP block (table layout for email client compatibility). */
+	protected otpCodeBlock(code: string | number): string {
+		return `
+        <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin: 0 0 16px 0;">
+          <tr>
+            <td align="center" style="text-align: center;">
+              <p class="email-otp-code" style="font-size: 32px; font-weight: 700; letter-spacing: 8px; color: #0f172a; margin: 0; font-family: ui-monospace, monospace; text-align: center;">${this.escape(code)}</p>
+            </td>
+          </tr>
+        </table>`;
+	}
+
 	/** Full standalone HTML document (usable in iframe srcdoc + mail clients). */
 	public renderHtml(context: EmailRenderContext): string {
 		const palette: AccentPalette = this.palette;
@@ -206,11 +218,13 @@ export abstract class BaseEmailTemplate<TProps extends BaseEmailProps> {
   <title>${this.escape(this.subject)}</title>
   <style>
     @media (prefers-color-scheme: dark) {
-      .email-body { background-color: #0b1120 !important; }
+      .email-body { background-color: #111a2e !important; }
+      .email-shell { background-color: #111a2e !important; }
       .email-card { background-color: #111a2e !important; }
       .email-heading { color: #f1f5f9 !important; }
       .email-text { color: #cbd5e1 !important; }
       .email-muted { color: #94a3b8 !important; }
+      .email-otp-code { color: #f1f5f9 !important; }
       .email-rule { border-top: 1px solid #243048 !important; }
       .email-link-block { background-color: #0f172a !important; border-color: #243048 !important; color: #cbd5e1 !important; }
       .email-footer { color: #64748b !important; }
@@ -218,9 +232,12 @@ export abstract class BaseEmailTemplate<TProps extends BaseEmailProps> {
     }
   </style>
 </head>
-<body class="email-body" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f4f4f5; margin: 0; padding: 0;">
+<body class="email-body" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #ffffff; margin: 0; padding: 0;">
   <span style="display: none !important; visibility: hidden; opacity: 0; color: transparent; height: 0; width: 0; mso-hide: all;">${this.escape(this.getPreviewText(context))}</span>
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width: 950px; margin: 40px auto; padding: 0 16px;">
+  <table role="presentation" class="email-shell" width="100%" cellpadding="0" cellspacing="0" bgcolor="#ffffff" style="width: 100%; background-color: #ffffff; margin: 0; padding: 0;">
+    <tr>
+      <td align="center" style="padding: 40px 16px;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width: 950px; margin: 0 auto;">
     <tr>									<td style="background: ${palette.headerGradient}; padding: 38px 36px 32px 36px; border-radius: 14px 14px 0 0; text-align: center;">
         <p style="margin: 0 0 6px 0; font-size: 22px; font-weight: 700; letter-spacing: -0.02em; color: #ffffff;">${this.escape(context.appName)}</p>
         <p style="margin: 0; font-size: 13px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: ${palette.eyebrowColor};">${this.escape(this.eyebrow)}</p>
@@ -241,6 +258,9 @@ export abstract class BaseEmailTemplate<TProps extends BaseEmailProps> {
         <p style="margin: 0;">&copy; ${String(year)} ${this.escape(context.appName)}. All rights reserved.</p>
       </td>
     </tr>	  </table>
+      </td>
+    </tr>
+  </table>
 </body>
 </html>`;
 	}

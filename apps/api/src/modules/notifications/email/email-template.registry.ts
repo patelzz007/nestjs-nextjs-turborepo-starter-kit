@@ -5,11 +5,15 @@ import type { EmailRenderContext } from "./base/email-render-context";
 import { AccountLockedEmailTemplate } from "./templates/account-locked-email.template";
 import { AdminAlertEmailTemplate } from "./templates/admin-alert-email.template";
 import { ApiKeyCreatedEmailTemplate } from "./templates/api-key-created-email.template";
+import { LoginVerificationEmailTemplate } from "./templates/login-verification-email.template";
 import { MerchantInviteEmailTemplate } from "./templates/merchant-invite-email.template";
+import { PasswordChangedEmailTemplate } from "./templates/password-changed-email.template";
 import { PasswordResetEmailTemplate } from "./templates/password-reset-email.template";
 import { ReferrerRewardCreditedEmailTemplate } from "./templates/referrer-reward-credited-email.template";
 import { RewardClaimOtpEmailTemplate } from "./templates/reward-claim-otp-email.template";
 import { SecurityAlertEmailTemplate } from "./templates/security-alert-email.template";
+import { TwoFactorDisabledEmailTemplate } from "./templates/two-factor-disabled-email.template";
+import { TwoFactorEnabledEmailTemplate } from "./templates/two-factor-enabled-email.template";
 import { VerificationEmailTemplate } from "./templates/verification-email.template";
 import { WelcomeEmailTemplate } from "./templates/welcome-email.template";
 
@@ -55,6 +59,13 @@ export const EMAIL_TEMPLATE_REGISTRY: Readonly<Record<EmailTemplateKey, EmailTem
 		PasswordResetEmailTemplate.sampleProps.to,
 		(): BaseEmailTemplate<BaseEmailProps> => new PasswordResetEmailTemplate(PasswordResetEmailTemplate.sampleProps),
 	),
+	"password-changed": registerTemplate(
+		"password-changed",
+		"Password Changed",
+		"Sent after an authenticated password change.",
+		PasswordChangedEmailTemplate.sampleProps.to,
+		(): BaseEmailTemplate<BaseEmailProps> => new PasswordChangedEmailTemplate(PasswordChangedEmailTemplate.sampleProps),
+	),
 	"account-locked": registerTemplate(
 		"account-locked",
 		"Account Locked",
@@ -75,6 +86,27 @@ export const EMAIL_TEMPLATE_REGISTRY: Readonly<Record<EmailTemplateKey, EmailTem
 		"New-device / new-location sign-in alert.",
 		SecurityAlertEmailTemplate.sampleProps.to,
 		(): BaseEmailTemplate<BaseEmailProps> => new SecurityAlertEmailTemplate(SecurityAlertEmailTemplate.sampleProps),
+	),
+	"two-factor-enabled": registerTemplate(
+		"two-factor-enabled",
+		"2FA Enabled",
+		"Sent when a user enables authenticator-based 2FA.",
+		TwoFactorEnabledEmailTemplate.sampleProps.to,
+		(): BaseEmailTemplate<BaseEmailProps> => new TwoFactorEnabledEmailTemplate(TwoFactorEnabledEmailTemplate.sampleProps),
+	),
+	"two-factor-disabled": registerTemplate(
+		"two-factor-disabled",
+		"2FA Disabled",
+		"Sent when a user disables authenticator-based 2FA.",
+		TwoFactorDisabledEmailTemplate.sampleProps.to,
+		(): BaseEmailTemplate<BaseEmailProps> => new TwoFactorDisabledEmailTemplate(TwoFactorDisabledEmailTemplate.sampleProps),
+	),
+	"login-verification": registerTemplate(
+		"login-verification",
+		"Login Verification",
+		"OTP sent when signing in from an unrecognized device.",
+		LoginVerificationEmailTemplate.sampleProps.to,
+		(): BaseEmailTemplate<BaseEmailProps> => new LoginVerificationEmailTemplate(LoginVerificationEmailTemplate.sampleProps),
 	),
 	"admin-alert": registerTemplate(
 		"admin-alert",

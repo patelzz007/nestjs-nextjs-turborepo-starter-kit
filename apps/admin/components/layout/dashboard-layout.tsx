@@ -29,10 +29,8 @@ import { ScrollToTop } from "@workspace/ui/components/navigation/scroll-to-top";
 import { useCommandPaletteStore } from "@/stores/command-palette-store";
 import { useSidebarStore } from "@/stores/sidebar-store";
 import { SidebarPathSync } from "@workspace/client/lib/sidebar/sidebar-path-sync";
-import { useInitialNavigationMenu, useNavigationMenuSync } from "@workspace/client/lib/navigation/use-navigation-menu-sync";
-import { resolveSidebarDisplayMenu } from "@workspace/client/lib/navigation/resolve-sidebar-display-menu";
 import type { CompiledSidebarMenuData } from "@workspace/client/lib/sidebar/sidebar-menu-schema";
-import type { CapabilityMenuResponse, CapabilitySlug, SessionPermissionsResponse } from "@workspace/shared";
+import type { CapabilitySlug, SessionPermissionsResponse } from "@workspace/shared";
 import type { FooterAction, SidebarUser } from "@/lib/navigation/sidebar";
 
 const SIDEBAR_STORAGE = createNoopSidebarStorage();
@@ -52,7 +50,6 @@ export interface DashboardLayoutProps {
 	readonly children: React.ReactNode;
 	/** Optional notification counts keyed by compiled menu item id. */
 	readonly sidebarBadges?: Readonly<Record<string, string | number>>;
-	readonly initialNavigationMenu?: CapabilityMenuResponse;
 	readonly initialSessionPermissions?: SessionPermissionsResponse;
 }
 
@@ -106,7 +103,6 @@ export function DashboardLayout({
 	footerActions = [],
 	children,
 	sidebarBadges = {},
-	initialNavigationMenu,
 	initialSessionPermissions,
 }: DashboardLayoutProps): React.JSX.Element {
 	useTrailDocumentTitle();
@@ -117,7 +113,6 @@ export function DashboardLayout({
 	const sectionOrder = useSidebarStore((s) => s.sectionOrder);
 	const searchQuery = useSidebarStore((s) => s.searchQuery);
 	const menu = useSidebarStore((s) => s.menu);
-	const setMenu = useSidebarStore((s) => s.setMenu);
 	const setSearchQuery = useSidebarStore((s) => s.setSearchQuery);
 	const clearSearch = useSidebarStore((s) => s.clearSearch);
 	const storeExpandedItems = useSidebarStore((s) => s.expandedItems);
@@ -132,12 +127,13 @@ export function DashboardLayout({
 	const [activeWorkspaceId, setActiveWorkspaceId] = React.useState<string>("default");
 	const { capabilities, isReady: isCapabilitiesReady } = useSessionCapabilities(initialSessionPermissions);
 
-	useInitialNavigationMenu(setMenu, initialNavigationMenu);
-	useNavigationMenuSync("ADMIN", setMenu, { initialMenu: initialNavigationMenu });
-
 	const displayMenu = React.useMemo(
-		(): CompiledSidebarMenuData => resolveSidebarDisplayMenu(menu, SIDEBAR_MENU, initialNavigationMenu),
-		[initialNavigationMenu, menu],
+		(): CompiledSidebarMenuData => ({
+			header: menu.header,
+			sections: menu.sections,
+			bottomItems: menu.bottomItems.length > 0 ? menu.bottomItems : SIDEBAR_MENU.bottomItems,
+		}),
+		[menu],
 	);
 
 	const filterCapabilities = React.useMemo((): readonly CapabilitySlug[] => {

@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { EpochMsSchema } from "../api/common";
+import { VerifyEmailTokenParamSchema } from "../domain/param-schemas";
 import { UserResponseSchema } from "./user";
 
 // ── Password Validation ──────────────────────────────────────────────────
@@ -56,6 +57,11 @@ export const ForgotPasswordSchema = z
 	.strict();
 
 export type ForgotPasswordInput = z.output<typeof ForgotPasswordSchema>;
+
+/** Which frontend initiated an auth action (matches `X-Client-Type`). */
+export const AuthClientTypeSchema = z.enum(["web", "admin", "merchant"]);
+
+export type AuthClientType = z.output<typeof AuthClientTypeSchema>;
 
 export const ResetPasswordSchema = z
 	.object({
@@ -137,6 +143,27 @@ export const LoginResponseSchema = z
 
 export type LoginResponse = z.output<typeof LoginResponseSchema>;
 
+/** Client-visible login result after cookies are set (or 2FA / verification step required). */
+export const LoginClientResponseSchema = z.union([
+	LoginResponseSchema,
+	z
+		.object({
+			requiresTwoFactor: z.literal(true),
+			tempToken: z.string().min(1),
+			message: z.string(),
+		})
+		.strict(),
+	z
+		.object({
+			requiresVerification: z.literal(true),
+			verificationId: z.string().min(1),
+			message: z.string(),
+		})
+		.strict(),
+]);
+
+export type LoginClientResponse = z.output<typeof LoginClientResponseSchema>;
+
 export const SignupResponseSchema = z
 	.object({
 		user: UserResponseSchema,
@@ -194,6 +221,14 @@ export const ResendVerificationResponseSchema = z
 	.strict();
 
 export type ResendVerificationResponse = z.output<typeof ResendVerificationResponseSchema>;
+
+export const VerifyEmailSchema = z
+	.object({
+		token: VerifyEmailTokenParamSchema,
+	})
+	.strict();
+
+export type VerifyEmailInput = z.output<typeof VerifyEmailSchema>;
 
 export const VerifyEmailResponseSchema = z
 	.object({

@@ -5,28 +5,28 @@ import * as bcrypt from "bcrypt";
 
 import { prisma } from "./client";
 
-/** Deterministic UUIDs for idempotent re-seeds and docs. */
+/** Fixed seed UUIDs for idempotent re-seeds. */
 export const REWARD_SEED_IDS = {
-	klOrg: "10000000-0000-4000-8000-000000000001",
-	mlkOrg: "10000000-0000-4000-8000-000000000002",
-	klOwnerUser: "10000000-0000-4000-8000-000000000010",
-	mlkOwnerUser: "10000000-0000-4000-8000-000000000011",
-	klCashierUser: "10000000-0000-4000-8000-000000000012",
-	mlkCashierUser: "10000000-0000-4000-8000-000000000013",
-	klRewardPublished: "20000000-0000-4000-8000-000000000001",
-	klRewardReferrer: "20000000-0000-4000-8000-000000000002",
-	klRewardPending: "20000000-0000-4000-8000-000000000003",
-	klRewardDraft: "20000000-0000-4000-8000-000000000004",
-	klRewardExpired: "20000000-0000-4000-8000-000000000005",
-	mlkRewardPublished: "20000000-0000-4000-8000-000000000006",
-	mlkRewardReferrer: "20000000-0000-4000-8000-000000000007",
-	mlkRewardDisabled: "20000000-0000-4000-8000-000000000008",
-	claimPendingKl: "30000000-0000-4000-8000-000000000001",
-	claimRedeemedKl: "30000000-0000-4000-8000-000000000002",
-	claimExpiredKl: "30000000-0000-4000-8000-000000000003",
-	claimPendingMlk: "30000000-0000-4000-8000-000000000004",
-	referralPending: "40000000-0000-4000-8000-000000000001",
-	referralCredited: "40000000-0000-4000-8000-000000000002",
+	klOrg: "3178a4d1-6915-4eb3-bf84-6fb14e1feb6c",
+	mlkOrg: "457401d5-536e-464f-9ae9-4756b6dd5f61",
+	klOwnerUser: "326494e1-b45d-4203-b881-05b60ae50b4a",
+	mlkOwnerUser: "b9cda090-b9e8-42e4-b7b1-b6d00294f022",
+	klCashierUser: "937f5e43-9b11-47d0-866c-91fec89bc250",
+	mlkCashierUser: "e79116ab-29e4-40ad-a5c7-f3158f7b1aa1",
+	klRewardPublished: "c1214e16-bf0f-4410-8871-8d1a9970f75e",
+	klRewardReferrer: "bab08148-80f2-4586-b1ea-48241dae1490",
+	klRewardPending: "c25c75db-a700-499b-9649-dc965aa21264",
+	klRewardDraft: "94a8af08-39cf-44ad-b3e7-9de599ad7938",
+	klRewardExpired: "81ae6a7e-cea3-4117-8827-6c01e7754262",
+	mlkRewardPublished: "af18c941-a960-4eaa-b988-9e15ceae6e96",
+	mlkRewardReferrer: "098bb3dc-3121-4232-bbdf-d9ad684eecb8",
+	mlkRewardDisabled: "9509c30b-c09d-4762-809c-7f421813ac36",
+	claimPendingKl: "74199f6f-877f-4d87-8a02-78941a4ae1af",
+	claimRedeemedKl: "df82577e-e756-4751-bf97-4d51fa3fe7be",
+	claimExpiredKl: "83a172f3-76f9-483e-8756-d142e059f9d3",
+	claimPendingMlk: "df2c10eb-7a56-456c-9b8c-5e3d1143c5b2",
+	referralPending: "13d97a9f-cb94-432b-bdb7-9011649cad0c",
+	referralCredited: "594dcffc-3091-4aca-befa-affd618d5c36",
 } as const;
 
 /** Plaintext POS API keys for staging / simulator (seed only). */
@@ -80,6 +80,23 @@ async function upsertMerchantUser(id: string, email: string, fullName: string, p
 	});
 }
 
+async function ensureSeedConsumerRole(userId: string): Promise<void> {
+	const userRole = await prisma.role.findFirst({
+		where: { name: "User", isDeleted: false },
+		select: { id: true },
+	});
+
+	if (userRole === null) {
+		return;
+	}
+
+	await prisma.userRole.upsert({
+		where: { userId_roleId: { userId, roleId: userRole.id } },
+		create: { userId, roleId: userRole.id },
+		update: { isDeleted: false, deletedAt: null },
+	});
+}
+
 export async function cleanupRewardSeedData(): Promise<void> {
 	await prisma.rewardRedemptionIdempotencyRecord.deleteMany();
 	await prisma.rewardAuditLog.deleteMany();
@@ -121,6 +138,10 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 	const mlkOwner = await upsertMerchantUser(REWARD_SEED_IDS.mlkOwnerUser, "jonker.owner@melaka-rewards.demo", "Siti Jonker", "JonkerOwner@123", "+60123456702", now);
 	const klCashier = await upsertMerchantUser(REWARD_SEED_IDS.klCashierUser, "brew.cashier@kl-rewards.demo", "Lee Cashier", "BrewCashier@123", null, null);
 	const mlkCashier = await upsertMerchantUser(REWARD_SEED_IDS.mlkCashierUser, "jonker.cashier@melaka-rewards.demo", "Mira Cashier", "JonkerCashier@123", null, null);
+
+	for (const merchantUser of [klOwner, mlkOwner, klCashier, mlkCashier]) {
+		await ensureSeedConsumerRole(merchantUser.id);
+	}
 
 	const klOrg = await prisma.merchantOrg.create({
 		data: {

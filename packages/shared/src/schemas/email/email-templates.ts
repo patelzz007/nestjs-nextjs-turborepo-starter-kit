@@ -47,6 +47,8 @@ export type EmailRenderContext = z.output<typeof EmailRenderContextSchema>;
 export const VerificationEmailPropsSchema = BaseEmailPropsSchema.extend({
 	verificationToken: z.string().min(1),
 	expiresInHours: z.number().int().positive().default(24),
+	/** Override `EmailRenderContext.appUrl` for client-specific verification links (web / merchant). */
+	appUrl: z.url().optional(),
 }).strict();
 
 export type VerificationEmailProps = z.output<typeof VerificationEmailPropsSchema>;
@@ -54,9 +56,32 @@ export type VerificationEmailProps = z.output<typeof VerificationEmailPropsSchem
 export const PasswordResetEmailPropsSchema = BaseEmailPropsSchema.extend({
 	resetToken: z.string().min(1),
 	expiresInHours: z.number().int().positive().default(1),
+	/** Override `EmailRenderContext.appUrl` for client-specific reset links (admin / merchant / web). */
+	appUrl: z.url().optional(),
 }).strict();
 
 export type PasswordResetEmailProps = z.output<typeof PasswordResetEmailPropsSchema>;
+
+export const PasswordChangedEmailPropsSchema = BaseEmailPropsSchema.extend({
+	changedAt: EpochMsSchema,
+}).strict();
+
+export type PasswordChangedEmailProps = z.output<typeof PasswordChangedEmailPropsSchema>;
+
+export const TwoFactorStatusEmailPropsSchema = BaseEmailPropsSchema.extend({
+	changedAt: EpochMsSchema,
+}).strict();
+
+export type TwoFactorStatusEmailProps = z.output<typeof TwoFactorStatusEmailPropsSchema>;
+
+export const LoginVerificationEmailPropsSchema = BaseEmailPropsSchema.extend({
+	verificationCode: z.string().length(6),
+	expiresInMinutes: z.number().int().positive().default(10),
+	deviceInfo: z.string().min(1),
+	ipAddress: z.string().min(1),
+}).strict();
+
+export type LoginVerificationEmailProps = z.output<typeof LoginVerificationEmailPropsSchema>;
 
 export const AccountLockedEmailPropsSchema = BaseEmailPropsSchema.extend({
 	lockedUntil: EpochMsSchema,

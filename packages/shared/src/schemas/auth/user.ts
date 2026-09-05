@@ -50,6 +50,9 @@ export const UserResponseSchema = BaseResponseSchema.extend({
 	isActive: z.boolean(),
 	isSuperAdmin: z.boolean(),
 	isEmailVerified: z.boolean(),
+	twoFactorEnabled: z.boolean().default(false).meta({
+		description: "Whether TOTP two-factor authentication is enabled",
+	}),
 	hasAdminAccess: z.boolean().meta({
 		description: "Whether the user can access the admin panel",
 	}),

@@ -17,9 +17,6 @@ CREATE TYPE "PermissionResource" AS ENUM ('USER', 'PROFILE', 'ROLE', 'PERMISSION
 CREATE TYPE "CapabilityScope" AS ENUM ('PLATFORM', 'MERCHANT', 'ADMIN');
 
 -- CreateEnum
-CREATE TYPE "MenuMatchType" AS ENUM ('ANY', 'ALL');
-
--- CreateEnum
 CREATE TYPE "PilotCity" AS ENUM ('KUALA_LUMPUR', 'MELAKA');
 
 -- CreateEnum
@@ -66,6 +63,8 @@ CREATE TABLE "users" (
     "token_version" INTEGER NOT NULL DEFAULT 0,
     "failed_login_attempts" INTEGER NOT NULL DEFAULT 0,
     "locked_until" BIGINT,
+    "two_factor_enabled" BOOLEAN NOT NULL DEFAULT false,
+    "two_factor_secret" TEXT,
     "provider" TEXT,
     "provider_id" TEXT,
     "plan" "Plan" NOT NULL DEFAULT 'FREE',
@@ -155,66 +154,6 @@ CREATE TABLE "permission_audit_logs" (
 );
 
 -- CreateTable
-CREATE TABLE "menu_items" (
-    "id" TEXT NOT NULL,
-    "name" VARCHAR(100) NOT NULL,
-    "label" VARCHAR(100),
-    "icon" VARCHAR(50),
-    "path" VARCHAR(255),
-    "parent_id" TEXT,
-    "order" INTEGER NOT NULL DEFAULT 0,
-    "is_active" BOOLEAN NOT NULL DEFAULT true,
-    "app_scope" "CapabilityScope",
-    "is_deleted" BOOLEAN NOT NULL DEFAULT false,
-    "deleted_at" BIGINT,
-    "createdAt" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
-    "updatedAt" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
-
-    CONSTRAINT "menu_items_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "menu_item_permissions" (
-    "id" TEXT NOT NULL,
-    "menu_item_id" TEXT NOT NULL,
-    "permission_id" TEXT NOT NULL,
-    "match_type" "MenuMatchType" NOT NULL DEFAULT 'ANY',
-    "is_deleted" BOOLEAN NOT NULL DEFAULT false,
-    "deleted_at" BIGINT,
-    "createdAt" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
-    "updatedAt" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
-
-    CONSTRAINT "menu_item_permissions_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "menu_item_roles" (
-    "id" TEXT NOT NULL,
-    "menu_item_id" TEXT NOT NULL,
-    "role_id" TEXT NOT NULL,
-    "is_deleted" BOOLEAN NOT NULL DEFAULT false,
-    "deleted_at" BIGINT,
-    "createdAt" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
-    "updatedAt" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
-
-    CONSTRAINT "menu_item_roles_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "menu_item_capabilities" (
-    "id" TEXT NOT NULL,
-    "menu_item_id" TEXT NOT NULL,
-    "capability_id" TEXT NOT NULL,
-    "match_type" "MenuMatchType" NOT NULL DEFAULT 'ANY',
-    "is_deleted" BOOLEAN NOT NULL DEFAULT false,
-    "deleted_at" BIGINT,
-    "created_at" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
-    "updated_at" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
-
-    CONSTRAINT "menu_item_capabilities_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
 CREATE TABLE "password_reset_tokens" (
     "id" TEXT NOT NULL,
     "user_id" TEXT NOT NULL,
@@ -227,6 +166,39 @@ CREATE TABLE "password_reset_tokens" (
     "updated_at" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
 
     CONSTRAINT "password_reset_tokens_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "password_history" (
+    "id" TEXT NOT NULL,
+    "user_id" TEXT NOT NULL,
+    "password_hash" TEXT NOT NULL,
+    "created_at" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
+
+    CONSTRAINT "password_history_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "backup_codes" (
+    "id" TEXT NOT NULL,
+    "user_id" TEXT NOT NULL,
+    "code_hash" TEXT NOT NULL,
+    "used_at" BIGINT,
+    "created_at" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
+
+    CONSTRAINT "backup_codes_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "two_factor_pending_setups" (
+    "id" TEXT NOT NULL,
+    "user_id" TEXT NOT NULL,
+    "secret" TEXT NOT NULL,
+    "backup_codes_hashes" JSONB NOT NULL,
+    "expires_at" BIGINT NOT NULL,
+    "created_at" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
+
+    CONSTRAINT "two_factor_pending_setups_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -905,21 +877,6 @@ CREATE INDEX "permission_audit_logs_target_role_id_idx" ON "permission_audit_log
 CREATE INDEX "permission_audit_logs_created_at_idx" ON "permission_audit_logs"("created_at");
 
 -- CreateIndex
-CREATE INDEX "menu_items_parent_id_idx" ON "menu_items"("parent_id");
-
--- CreateIndex
-CREATE INDEX "menu_items_app_scope_idx" ON "menu_items"("app_scope");
-
--- CreateIndex
-CREATE UNIQUE INDEX "menu_item_permissions_menu_item_id_permission_id_key" ON "menu_item_permissions"("menu_item_id", "permission_id");
-
--- CreateIndex
-CREATE UNIQUE INDEX "menu_item_roles_menu_item_id_role_id_key" ON "menu_item_roles"("menu_item_id", "role_id");
-
--- CreateIndex
-CREATE UNIQUE INDEX "menu_item_capabilities_menu_item_id_capability_id_key" ON "menu_item_capabilities"("menu_item_id", "capability_id");
-
--- CreateIndex
 CREATE UNIQUE INDEX "password_reset_tokens_token_key" ON "password_reset_tokens"("token");
 
 -- CreateIndex
@@ -927,6 +884,18 @@ CREATE INDEX "password_reset_tokens_user_id_idx" ON "password_reset_tokens"("use
 
 -- CreateIndex
 CREATE INDEX "password_reset_tokens_token_idx" ON "password_reset_tokens"("token");
+
+-- CreateIndex
+CREATE INDEX "password_history_user_id_created_at_idx" ON "password_history"("user_id", "created_at");
+
+-- CreateIndex
+CREATE INDEX "backup_codes_user_id_idx" ON "backup_codes"("user_id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "two_factor_pending_setups_user_id_key" ON "two_factor_pending_setups"("user_id");
+
+-- CreateIndex
+CREATE INDEX "two_factor_pending_setups_expires_at_idx" ON "two_factor_pending_setups"("expires_at");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "user_roles_userId_roleId_key" ON "user_roles"("userId", "roleId");
@@ -1220,28 +1189,16 @@ ALTER TABLE "roles" ADD CONSTRAINT "roles_parent_id_fkey" FOREIGN KEY ("parent_i
 ALTER TABLE "capability_definitions" ADD CONSTRAINT "capability_definitions_permission_id_fkey" FOREIGN KEY ("permission_id") REFERENCES "permissions"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "menu_items" ADD CONSTRAINT "menu_items_parent_id_fkey" FOREIGN KEY ("parent_id") REFERENCES "menu_items"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "menu_item_permissions" ADD CONSTRAINT "menu_item_permissions_menu_item_id_fkey" FOREIGN KEY ("menu_item_id") REFERENCES "menu_items"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "menu_item_permissions" ADD CONSTRAINT "menu_item_permissions_permission_id_fkey" FOREIGN KEY ("permission_id") REFERENCES "permissions"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "menu_item_roles" ADD CONSTRAINT "menu_item_roles_menu_item_id_fkey" FOREIGN KEY ("menu_item_id") REFERENCES "menu_items"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "menu_item_roles" ADD CONSTRAINT "menu_item_roles_role_id_fkey" FOREIGN KEY ("role_id") REFERENCES "roles"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "menu_item_capabilities" ADD CONSTRAINT "menu_item_capabilities_menu_item_id_fkey" FOREIGN KEY ("menu_item_id") REFERENCES "menu_items"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "menu_item_capabilities" ADD CONSTRAINT "menu_item_capabilities_capability_id_fkey" FOREIGN KEY ("capability_id") REFERENCES "capability_definitions"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "password_reset_tokens" ADD CONSTRAINT "password_reset_tokens_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "password_history" ADD CONSTRAINT "password_history_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "backup_codes" ADD CONSTRAINT "backup_codes_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "two_factor_pending_setups" ADD CONSTRAINT "two_factor_pending_setups_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "user_roles" ADD CONSTRAINT "user_roles_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;

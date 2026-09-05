@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { BaseResponseSchema, EpochMsSchema, type EpochMs } from "../api/common";
 import { PaginationSchema } from "../api/pagination";
+import { strongPassword } from "../auth/auth";
 import { CapabilitySlugSchema } from "./capabilities";
 import { JsonObjectSchema } from "../runtime/json";
 
@@ -352,6 +353,70 @@ export const MerchantCreateApiKeySchema = z
 	.strict();
 
 export type MerchantCreateApiKeyInput = z.output<typeof MerchantCreateApiKeySchema>;
+
+// ── Merchant onboarding & team ─────────────────────────────────────────────
+
+export const MerchantOnboardingValidateTokenSchema = z
+	.object({
+		token: z.string().min(1),
+	})
+	.strict();
+
+export type MerchantOnboardingValidateTokenInput = z.output<typeof MerchantOnboardingValidateTokenSchema>;
+
+export const MerchantOnboardingInvitePreviewSchema = z
+	.object({
+		email: z.email(),
+		businessName: z.string(),
+		city: PilotCitySchema,
+		expiresAt: EpochMsSchema,
+	})
+	.strict();
+
+export type MerchantOnboardingInvitePreview = z.output<typeof MerchantOnboardingInvitePreviewSchema>;
+
+export const MerchantOnboardingCompleteSchema = z
+	.object({
+		token: z.string().min(1),
+		password: strongPassword,
+		fullName: z.string().min(2).max(200),
+	})
+	.strict();
+
+export type MerchantOnboardingCompleteInput = z.output<typeof MerchantOnboardingCompleteSchema>;
+
+export const MerchantOnboardingCompleteResponseSchema = z
+	.object({
+		merchantOrgId: z.uuid(),
+		businessName: z.string(),
+		role: MerchantMemberRoleSchema,
+	})
+	.strict();
+
+export type MerchantOnboardingCompleteResponse = z.output<typeof MerchantOnboardingCompleteResponseSchema>;
+
+export const MerchantCreateMemberSchema = z
+	.object({
+		email: z.email().max(100),
+		password: strongPassword,
+		fullName: z.string().min(2).max(200),
+		role: z.literal("CASHIER"),
+	})
+	.strict();
+
+export type MerchantCreateMemberInput = z.output<typeof MerchantCreateMemberSchema>;
+
+export const MerchantMemberCreatedResponseSchema = z
+	.object({
+		userId: z.uuid(),
+		email: z.string(),
+		fullName: z.string(),
+		merchantOrgId: z.uuid(),
+		role: MerchantMemberRoleSchema,
+	})
+	.strict();
+
+export type MerchantMemberCreatedResponse = z.output<typeof MerchantMemberCreatedResponseSchema>;
 
 // ── Admin ──────────────────────────────────────────────────────────────────
 

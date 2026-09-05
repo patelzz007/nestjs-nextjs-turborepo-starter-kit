@@ -5,7 +5,7 @@ import { EmailLogStatusSchema } from "../email/email";
 /** Completed credential/identity flow (signup, login, password reset, …). */
 export const AuthFlowEventSchema = z
 	.object({
-		flow: z.enum(["signup", "login", "forgot-password", "reset-password", "verify-email"]),
+		flow: z.enum(["signup", "login", "forgot-password", "reset-password", "change-password", "verify-email"]),
 		/** The user the flow acted on — null when the flow could not identify one. */
 		userId: z.string().nullable(),
 		/** Login origin ("web" | "admin") — null for flows without a client type. */

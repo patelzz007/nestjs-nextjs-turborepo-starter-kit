@@ -56,11 +56,6 @@ export type RedirectType = z.output<typeof RedirectTypeSchema>;
 export const PlanSchema = z.enum(["FREE", "PRO", "ENTERPRISE"]);
 export type Plan = z.output<typeof PlanSchema>;
 
-// ── Menu Match Type ───────────────────────────────────────────────────────
-
-export const MenuMatchTypeSchema = z.enum(["ANY", "ALL"]);
-export type MenuMatchType = z.output<typeof MenuMatchTypeSchema>;
-
 // ── Audience Type (for admin/client auth audience feature) ────────────────
 
 export const AudienceTypeSchema = z.enum(["web", "admin", "both"]);

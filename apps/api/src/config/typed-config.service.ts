@@ -47,6 +47,21 @@ export class TypedConfigService {
 		return this.requireSecret("EMAIL_VERIFICATION_SECRET", "email-verify-secret-change-me");
 	}
 
+	/** Secret key for short-lived 2FA login step tokens */
+	public get twoFactorPendingSecret(): string {
+		return this.requireSecret("TWO_FACTOR_PENDING_SECRET", "two-factor-pending-secret-change-me");
+	}
+
+	/** When true, every login requires the email OTP step (ignores trusted-device cache). */
+	public get forceLoginVerification(): boolean {
+		return process.env.FORCE_LOGIN_VERIFICATION === "true";
+	}
+
+	/** Issuer name shown in authenticator apps */
+	public get twoFactorIssuer(): string {
+		return process.env.TWO_FACTOR_ISSUER ?? this.appName;
+	}
+
 	// ── Bcrypt Configuration ───────────────────────────────────────────
 
 	/** Number of bcrypt salt rounds for password hashing */
@@ -126,15 +141,32 @@ export class TypedConfigService {
 		return process.env.APP_NAME ?? "MyApp";
 	}
 
-	/** Public-facing application URL (used in email links) */
+	/** Public-facing web app URL (used in email links) */
 	public get appUrl(): string {
 		return process.env.APP_URL ?? "http://localhost:3000";
+	}
+
+	/** Admin panel URL for admin-specific email links (falls back to `APP_URL`). */
+	public get adminAppUrl(): string {
+		const value: string | undefined = process.env.ADMIN_APP_URL;
+		return value !== undefined && value.length > 0 ? value : "http://localhost:3001";
 	}
 
 	/** Merchant portal URL for onboarding invite links (falls back to `APP_URL`). */
 	public get merchantAppUrl(): string {
 		const value = process.env.MERCHANT_APP_URL;
-		return value !== undefined && value.length > 0 ? value : this.appUrl;
+		return value !== undefined && value.length > 0 ? value : "http://localhost:3003";
+	}
+
+	/** Resolve the frontend base URL for a given auth client type. */
+	public resolveClientAppUrl(clientType: string | undefined): string {
+		if (clientType === "admin") {
+			return this.adminAppUrl;
+		}
+		if (clientType === "merchant") {
+			return this.merchantAppUrl;
+		}
+		return this.appUrl;
 	}
 
 	// ── Authorization cache ────────────────────────────────────────────

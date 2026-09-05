@@ -17,11 +17,20 @@
 import { z, type ZodType } from "zod";
 
 import { apiRoutes } from "../api-routes";
-import { ForgotPasswordSchema, LoginSchema, ResendVerificationSchema, ResetPasswordSchema, SignupSchema } from "../schemas/auth/auth";
+import { ForgotPasswordSchema, LoginSchema, ResendVerificationSchema, ResetPasswordSchema, SignupSchema, VerifyEmailSchema } from "../schemas/auth/auth";
+import { ChangePasswordSchema } from "../schemas/auth/change-password";
+import { ValidateResetTokenSchema, VerifyLoginSchema } from "../schemas/auth/login-verification";
+import {
+	DisableTwoFactorSchema,
+	EnableTwoFactorSchema,
+	LoginTwoFactorSchema,
+	VerifyBackupCodeLoginSchema,
+	VerifyBackupCodeSchema,
+} from "../schemas/auth/two-factor";
 import { AdminUserListQuerySchema } from "../schemas/auth/user";
-import { UuidParamSchema, VerifyEmailTokenParamSchema } from "../schemas/domain/param-schemas";
+import { UuidParamSchema } from "../schemas/domain/param-schemas";
 import { EmailLogListQuerySchema } from "../schemas/email/email";
-import { CapabilityCatalogQuerySchema, CapabilityDefinitionSchema, CapabilityMenuQuerySchema, CapabilityMenuResponseSchema } from "../schemas/domain/capabilities";
+import { CapabilityCatalogQuerySchema, CapabilityDefinitionSchema } from "../schemas/domain/capabilities";
 import {
 	CityListQuerySchema,
 	CountryListQuerySchema,
@@ -55,7 +64,10 @@ import {
 	AdminRejectRewardSchema,
 	CreateRewardClaimSchema,
 	MerchantCreateApiKeySchema,
+	MerchantCreateMemberSchema,
 	MerchantCreateRewardSchema,
+	MerchantOnboardingCompleteSchema,
+	MerchantOnboardingValidateTokenSchema,
 	MerchantRedemptionListQuerySchema,
 	MerchantUpdateRewardSchema,
 	MerchantUpdateRewardPathInputSchema,
@@ -175,8 +187,17 @@ export const apiContract = {
 		logout: defineContract({ method: "POST", path: apiRoutes.auth.logout, input: EmptyInputSchema }),
 		forgotPassword: defineContract({ method: "POST", path: apiRoutes.auth.forgotPassword, input: ForgotPasswordSchema }),
 		resetPassword: defineContract({ method: "POST", path: apiRoutes.auth.resetPassword, input: ResetPasswordSchema }),
+		validateResetToken: defineContract({ method: "POST", path: apiRoutes.auth.validateResetToken, input: ValidateResetTokenSchema }),
 		resendVerification: defineContract({ method: "POST", path: apiRoutes.auth.resendVerification, input: ResendVerificationSchema }),
-		verifyEmail: defineContract({ method: "POST", path: apiRoutes.auth.verifyEmail.path, input: z.object({ token: VerifyEmailTokenParamSchema }).strict() }),
+		verifyEmail: defineContract({ method: "POST", path: apiRoutes.auth.verifyEmail, input: VerifyEmailSchema }),
+		changePassword: defineContract({ method: "POST", path: apiRoutes.auth.changePassword, input: ChangePasswordSchema }),
+		loginTwoFactor: defineContract({ method: "POST", path: apiRoutes.auth.loginTwoFactor, input: LoginTwoFactorSchema }),
+		loginBackupCode: defineContract({ method: "POST", path: apiRoutes.auth.loginBackupCode, input: VerifyBackupCodeLoginSchema }),
+		verifyLogin: defineContract({ method: "POST", path: apiRoutes.auth.verifyLogin, input: VerifyLoginSchema }),
+		twoFactorSetup: defineContract({ method: "GET", path: apiRoutes.auth.twoFactorSetup, input: z.undefined() }),
+		twoFactorEnable: defineContract({ method: "POST", path: apiRoutes.auth.twoFactorEnable, input: EnableTwoFactorSchema }),
+		twoFactorDisable: defineContract({ method: "POST", path: apiRoutes.auth.twoFactorDisable, input: DisableTwoFactorSchema }),
+		twoFactorVerifyBackupCode: defineContract({ method: "POST", path: apiRoutes.auth.twoFactorVerifyBackupCode, input: VerifyBackupCodeSchema }),
 		adminUsers: defineContract({ method: "GET", path: apiRoutes.auth.adminUsers, input: AdminUserListQuerySchema }),
 		adminUserDetail: defineContract({
 			method: "GET",
@@ -193,10 +214,6 @@ export const apiContract = {
 
 	capabilities: {
 		catalog: defineContract({ method: "GET", path: apiRoutes.capabilities.catalog, input: CapabilityCatalogQuerySchema }),
-	},
-
-	navigation: {
-		menu: defineContract({ method: "GET", path: apiRoutes.navigation.menu, input: CapabilityMenuQuerySchema }),
 	},
 
 	admin: {
@@ -326,6 +343,13 @@ export const apiContract = {
 		},
 		redemptions: defineContract({ method: "GET", path: apiRoutes.merchant.redemptions, input: MerchantRedemptionListQuerySchema }),
 		analytics: defineContract({ method: "GET", path: apiRoutes.merchant.analytics, input: RewardsAnalyticsQuerySchema }),
+		onboarding: {
+			validate: defineContract({ method: "POST", path: apiRoutes.merchant.onboarding.validate, input: MerchantOnboardingValidateTokenSchema }),
+			complete: defineContract({ method: "POST", path: apiRoutes.merchant.onboarding.complete, input: MerchantOnboardingCompleteSchema }),
+		},
+		members: {
+			create: defineContract({ method: "POST", path: apiRoutes.merchant.members.create, input: MerchantCreateMemberSchema }),
+		},
 	},
 	rewardsAdmin: {
 		createInvite: defineContract({ method: "POST", path: apiRoutes.rewardsAdmin.invites, input: AdminCreateMerchantInviteSchema }),

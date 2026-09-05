@@ -4,36 +4,45 @@ import { SkipThrottle, Throttle } from "@nestjs/throttler";
 import type {
 	AdminUserDetail,
 	AdminUserListQuery,
+	ChangePasswordInput,
+	ChangePasswordResponse,
 	ForgotPasswordInput,
 	ForgotPasswordResponse,
 	LoginInput,
 	LoginServiceResponse,
+	LoginTwoFactorPendingResponse,
+	LoginVerificationPendingResponse,
 	MessageResponse,
 	ResendVerificationInput,
 	ResendVerificationResponse,
 	ResetPasswordInput,
 	ResetPasswordResponse,
+	ValidateResetTokenInput,
+	ValidateResetTokenResponse,
 	SessionPermissionsResponse,
 	SignupInput,
 	SignupResponse,
 	UserResponse,
+	VerifyEmailInput,
 	VerifyEmailResponse,
+	VerifyLoginInput,
 } from "@workspace/shared";
 import {
 	apiContract,
 	AdminUserDetailSchema,
+	ChangePasswordResponseSchema,
 	ForgotPasswordResponseSchema,
 	LoginServiceResponseSchema,
 	MessageResponseSchema,
 	ResendVerificationResponseSchema,
 	ResetPasswordResponseSchema,
+	ValidateResetTokenResponseSchema,
 	SignupResponseSchema,
 	SessionPermissionsResponseSchema,
 	UserResponseSchema,
 	VerifyEmailResponseSchema,
 	apiPath,
 	UuidParamSchema,
-	VerifyEmailTokenParamSchema,
 } from "@workspace/shared";
 import type { FastifyRequest } from "fastify";
 
@@ -52,6 +61,7 @@ import { extractClientInfo } from "../../common/utils/client-info";
 
 import { AuthService } from "./auth.service";
 import type { AccessTokenPayload } from "./services/token.service";
+import { ChangePasswordDto } from "./dtos/change-password.dto";
 import { ForgotPasswordDto } from "./dtos/forgot-password.dto";
 import { LoginDto } from "./dtos/login.dto";
 import { ResendVerificationDto } from "./dtos/resend-verification.dto";
@@ -62,11 +72,13 @@ import { SignupDto } from "./dtos/signup.dto";
 // Each constant wraps a data schema in the { success, data, meta } envelope
 // so Swagger sample responses show the full structure.
 
+const WrappedChangePasswordResponse = createWrappedDto(ChangePasswordResponseSchema, "WrappedChangePasswordResponse");
 const WrappedSignupResponse = createWrappedDto(SignupResponseSchema, "WrappedSignupResponse");
 const WrappedLoginResponse = createWrappedDto(LoginServiceResponseSchema, "WrappedLoginResponse");
 const WrappedResendVerificationResponse = createWrappedDto(ResendVerificationResponseSchema, "WrappedResendVerificationResponse");
 const WrappedForgotPasswordResponse = createWrappedDto(ForgotPasswordResponseSchema, "WrappedForgotPasswordResponse");
 const WrappedResetPasswordResponse = createWrappedDto(ResetPasswordResponseSchema, "WrappedResetPasswordResponse");
+const WrappedValidateResetTokenResponse = createWrappedDto(ValidateResetTokenResponseSchema, "WrappedValidateResetTokenResponse");
 const WrappedUserResponse = createWrappedDto(UserResponseSchema, "WrappedUserResponse");
 const WrappedSessionPermissionsResponse = createWrappedDto(SessionPermissionsResponseSchema, "WrappedSessionPermissionsResponse");
 const WrappedVerifyEmailResponse = createWrappedDto(VerifyEmailResponseSchema, "WrappedVerifyEmailResponse");
@@ -94,8 +106,18 @@ export class AuthController {
 	@ApiBody({ type: SignupDto })
 	@ApiCreatedResponse({ type: WrappedSignupResponse, description: "User registered" })
 	@ApiResponse({ status: 409, type: ApiErrorResponseDto, description: "Email already in use" })
-	public async signup(@Body(new ZodValidationPipe(apiContract.auth.signup.input)) body: SignupInput): Promise<SignupResponse> {
-		return this.authService.signup(body);
+	@ApiHeader({
+		name: "x-client-type",
+		required: false,
+		description: "Set to 'merchant' so the verification link targets the merchant app. Defaults to the web app.",
+	})
+	public async signup(
+		@Body(new ZodValidationPipe(apiContract.auth.signup.input)) body: SignupInput,
+		@Headers("x-client-type") headerClientType: string | undefined,
+		@Query("client_type") queryClientType: string | undefined,
+	): Promise<SignupResponse> {
+		const clientType: string | undefined = headerClientType ?? queryClientType;
+		return this.authService.signup(body, clientType);
 	}
 
 	@Throttle({ strict: { ttl: 60000, limit: 5 } })
@@ -118,7 +140,7 @@ export class AuthController {
 		@Headers("x-client-type") headerClientType: string | undefined,
 		@Query("client_type") queryClientType: string | undefined,
 		@Req() req: FastifyRequest,
-	): Promise<LoginServiceResponse> {
+	): Promise<LoginServiceResponse | LoginTwoFactorPendingResponse | LoginVerificationPendingResponse> {
 		// Accept client type from header (browser apps) or query param (Swagger UI)
 		const clientType: string | undefined = headerClientType ?? queryClientType;
 		const { deviceInfo, ipAddress } = extractClientInfo(req);
@@ -135,8 +157,18 @@ export class AuthController {
 	@ApiOperation({ summary: "Resend email verification link" })
 	@ApiBody({ type: ResendVerificationDto })
 	@ApiOkResponse({ type: WrappedResendVerificationResponse, description: "Verification email resent" })
-	public async resendVerification(@Body(new ZodValidationPipe(apiContract.auth.resendVerification.input)) body: ResendVerificationInput): Promise<ResendVerificationResponse> {
-		return this.authService.resendVerificationEmail(body);
+	@ApiHeader({
+		name: "x-client-type",
+		required: false,
+		description: "Set to 'merchant' so the verification link targets the merchant app. Defaults to the web app.",
+	})
+	public async resendVerification(
+		@Body(new ZodValidationPipe(apiContract.auth.resendVerification.input)) body: ResendVerificationInput,
+		@Headers("x-client-type") headerClientType: string | undefined,
+		@Query("client_type") queryClientType: string | undefined,
+	): Promise<ResendVerificationResponse> {
+		const clientType: string | undefined = headerClientType ?? queryClientType;
+		return this.authService.resendVerificationEmail(body, clientType);
 	}
 
 	// ── Password Reset ───────────────────────────────────────────────────
@@ -148,9 +180,19 @@ export class AuthController {
 	@HttpCode(200)
 	@ApiOperation({ summary: "Request a password reset email" })
 	@ApiBody({ type: ForgotPasswordDto })
+	@ApiHeader({
+		name: "x-client-type",
+		required: false,
+		description: "Set to 'admin' or 'merchant' so the reset link targets the correct frontend. Defaults to the web app.",
+	})
 	@ApiOkResponse({ type: WrappedForgotPasswordResponse, description: "Password reset email sent (if account exists)" })
-	public async forgotPassword(@Body(new ZodValidationPipe(apiContract.auth.forgotPassword.input)) body: ForgotPasswordInput): Promise<ForgotPasswordResponse> {
-		return this.authService.forgotPassword(body);
+	public async forgotPassword(
+		@Body(new ZodValidationPipe(apiContract.auth.forgotPassword.input)) body: ForgotPasswordInput,
+		@Headers("x-client-type") headerClientType: string | undefined,
+		@Query("client_type") queryClientType: string | undefined,
+	): Promise<ForgotPasswordResponse> {
+		const clientType: string | undefined = headerClientType ?? queryClientType;
+		return this.authService.forgotPassword(body, clientType);
 	}
 
 	@Throttle({ strict: { ttl: 60000, limit: 5 } })
@@ -164,6 +206,44 @@ export class AuthController {
 	@ApiResponse({ status: 401, type: ApiErrorResponseDto, description: "Invalid or expired reset token" })
 	public async resetPassword(@Body(new ZodValidationPipe(apiContract.auth.resetPassword.input)) body: ResetPasswordInput): Promise<ResetPasswordResponse> {
 		return this.authService.resetPassword(body);
+	}
+
+	@Throttle({ strict: { ttl: 60000, limit: 10 } })
+	@Public()
+	@RlsBypass()
+	@Post("/validate-reset-token")
+	@HttpCode(200)
+	@ApiOperation({ summary: "Validate a password reset token without consuming it" })
+	@ApiOkResponse({ type: WrappedValidateResetTokenResponse, description: "Whether the reset token is valid" })
+	public async validateResetToken(@Body(new ZodValidationPipe(apiContract.auth.validateResetToken.input)) body: ValidateResetTokenInput): Promise<ValidateResetTokenResponse> {
+		return this.authService.validateResetToken(body);
+	}
+
+	@Throttle({ strict: { ttl: 60000, limit: 10 } })
+	@Public()
+	@RlsBypass()
+	@Post("/verify-login")
+	@HttpCode(200)
+	@ApiOperation({ summary: "Complete login with an email verification code" })
+	@ApiOkResponse({ type: WrappedLoginResponse, description: "Login successful after verification" })
+	@UseInterceptors(SetAuthCookiesInterceptor)
+	public async verifyLogin(
+		@Body(new ZodValidationPipe(apiContract.auth.verifyLogin.input)) body: VerifyLoginInput,
+		@Req() req: FastifyRequest,
+	): Promise<LoginServiceResponse> {
+		const { ipAddress } = extractClientInfo(req);
+		return this.authService.verifyLogin(body, ipAddress);
+	}
+
+	@SkipThrottle()
+	@ApiBearerAuth()
+	@Post("/change-password")
+	@HttpCode(200)
+	@ApiOperation({ summary: "Change password for the authenticated user" })
+	@ApiBody({ type: ChangePasswordDto })
+	@ApiOkResponse({ type: WrappedChangePasswordResponse, description: "Password changed successfully" })
+	public async changePassword(@GetUser("sub") userId: string, @Body(new ZodValidationPipe(apiContract.auth.changePassword.input)) body: ChangePasswordInput): Promise<ChangePasswordResponse> {
+		return this.authService.changePassword(userId, body);
 	}
 
 	@SkipThrottle()
@@ -188,11 +268,11 @@ export class AuthController {
 
 	@Public()
 	@RlsBypass()
-	@Post("/verify-email/:token")
+	@Post("/verify-email")
 	@ApiOperation({ summary: "Verify email address using a verification token" })
 	@ApiOkResponse({ type: WrappedVerifyEmailResponse, description: "Email verified" })
-	public async verifyEmail(@Param("token", new ZodValidationPipe(VerifyEmailTokenParamSchema)) token: string): Promise<VerifyEmailResponse> {
-		return this.authService.verifyEmail(token);
+	public async verifyEmail(@Body(new ZodValidationPipe(apiContract.auth.verifyEmail.input)) body: VerifyEmailInput): Promise<VerifyEmailResponse> {
+		return this.authService.verifyEmail(body.token);
 	}
 
 	// ═══════════════════════════════════════════════════════════════════════

@@ -60,12 +60,13 @@ export const VERSIONED_ROUTE_PREFIXES: readonly [
 	"/merchant/api-keys",
 	"/merchant/redemptions",
 	"/merchant/analytics",
+	"/merchant/onboarding",
+	"/merchant/members",
 	"/admin/invites",
 	"/admin/rewards",
 	"/admin/merchants",
 	"/admin/merchant-role-capabilities",
 	"/capabilities/catalog",
-	"/navigation/menu",
 ] = [
 	"/auth",
 	"/session",
@@ -86,12 +87,13 @@ export const VERSIONED_ROUTE_PREFIXES: readonly [
 	"/merchant/api-keys",
 	"/merchant/redemptions",
 	"/merchant/analytics",
+	"/merchant/onboarding",
+	"/merchant/members",
 	"/admin/invites",
 	"/admin/rewards",
 	"/admin/merchants",
 	"/admin/merchant-role-capabilities",
 	"/capabilities/catalog",
-	"/navigation/menu",
 ];
 
 export type VersionedRoutePrefix = (typeof VERSIONED_ROUTE_PREFIXES)[number];

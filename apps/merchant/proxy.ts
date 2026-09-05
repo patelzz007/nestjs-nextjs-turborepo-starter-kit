@@ -16,8 +16,15 @@ import type { NextRequest } from "next/server";
 
 const ACCESS_TOKEN_COOKIE = "merchantAccessToken";
 const REFRESH_TOKEN_COOKIE = "merchantRefreshToken";
-const PROTECTED_ROUTE_PREFIXES: readonly string[] = ["/analytics", "/rewards", "/redemptions", "/api-keys"];
-const AUTH_ROUTES: readonly string[] = ["/auth/login"];
+const PROTECTED_ROUTE_PREFIXES: readonly string[] = ["/analytics", "/rewards", "/redemptions", "/api-keys", "/settings"];
+const AUTH_ROUTES: readonly string[] = ["/auth/login", "/auth/verify-email", "/auth/reset-password"];
+
+/** Token links must run even when the merchant session cookie is already set. */
+const TOKEN_AUTH_ROUTE_PREFIXES: readonly string[] = ["/auth/verify-email", "/auth/reset-password"];
+
+function isTokenAuthRoute(pathname: string): boolean {
+	return TOKEN_AUTH_ROUTE_PREFIXES.some((route) => pathname.startsWith(route));
+}
 
 function isProtectedRoute(pathname: string): boolean {
 	return pathname === "/" || PROTECTED_ROUTE_PREFIXES.some((route) => pathname.startsWith(route));
@@ -95,7 +102,7 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
 		return clearCookies(applyRotatedCookies(NextResponse.redirect(loginUrl), rotatedCookies), [ACCESS_TOKEN_COOKIE, REFRESH_TOKEN_COOKIE]);
 	}
 
-	if (isAuthRoute && isAuthenticated) {
+	if (isAuthRoute && isAuthenticated && !isTokenAuthRoute(pathname)) {
 		const redirect = request.nextUrl.searchParams.get("redirect");
 		const target = redirect !== null && isAllowedPostLoginRedirect(redirect) ? redirect : "/";
 		return applyRotatedCookies(NextResponse.redirect(new URL(target, request.url)), rotatedCookies);

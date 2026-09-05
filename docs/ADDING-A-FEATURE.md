@@ -292,17 +292,19 @@ export function ReportsView({ initialData }: ReportsViewProps): React.JSX.Elemen
 
 ---
 
-## Step 9: Add to the Menu (`apps/admin/lib/menu.ts`)
+## Step 9: Add to the Sidebar Menu (`apps/admin/lib/navigation/sidebar-menu.json`)
 
-```ts
-// apps/admin/lib/menu.ts — add to the menu tree
+```json
 {
-  label: "Reports",
-  href: "/reports",
-  icon: "file-text",
-  permission: "REPORT:LIST",
+  "title": "Reports",
+  "url": "/reports",
+  "icon": "file-text",
+  "requiredCapabilities": ["platform:report.list"]
 }
 ```
+
+Add the item to the appropriate section in `sidebar-menu.json`. Icons are resolved via
+`lib/navigation/menu-icons.ts`.
 
 ---
 

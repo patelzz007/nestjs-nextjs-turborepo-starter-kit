@@ -10,7 +10,7 @@ import { ImpersonationBanner } from "@/components/impersonation/impersonation-ba
 import { AdminBreadcrumbProvider } from "@/components/common/admin-breadcrumb";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import type { FooterAction, SidebarUser } from "@/lib/navigation/sidebar";
-import type { CapabilityMenuResponse, SessionPermissionsResponse } from "@workspace/shared";
+import type { SessionPermissionsResponse } from "@workspace/shared";
 
 export interface DashboardShellProps {
 	readonly footerActions?: readonly FooterAction[];
@@ -22,7 +22,6 @@ export interface DashboardShellProps {
 	 * resolves. `null`/`undefined` falls back to the placeholder.
 	 */
 	readonly initialUser?: SidebarUser | null;
-	readonly initialNavigationMenu?: CapabilityMenuResponse;
 	readonly initialSessionPermissions?: SessionPermissionsResponse;
 }
 
@@ -46,7 +45,7 @@ const PLACEHOLDER_USER: SidebarUser = { name: "Account", email: "Loading profile
  * error screen — a still-loading one renders the full shell with the
  * placeholder identity.
  */
-export function DashboardShell({ footerActions = [], children, initialUser = null, initialNavigationMenu, initialSessionPermissions }: DashboardShellProps): React.JSX.Element {
+export function DashboardShell({ footerActions = [], children, initialUser = null, initialSessionPermissions }: DashboardShellProps): React.JSX.Element {
 	const { api, logout } = useAuth();
 	// The breadcrumb provider must wrap EVERY consumer (the layout's own
 	// `useTrailDocumentTitle` + `ShellBreadcrumb`), so it lives here — one
@@ -103,7 +102,6 @@ export function DashboardShell({ footerActions = [], children, initialUser = nul
 				user={{ name: resolvedUser.name, email: resolvedUser.email }}
 				onLogout={handleLogout}
 				footerActions={footerActions}
-				initialNavigationMenu={initialNavigationMenu}
 				initialSessionPermissions={initialSessionPermissions}
 			>
 				{children}

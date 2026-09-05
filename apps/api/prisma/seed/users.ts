@@ -65,6 +65,17 @@ export async function createUsers(): Promise<User[]> {
 
 		// Dummy users
 		{
+			email: "bishenpatel123@gmail.com",
+			passwordHash: await hash("HelloWorld_123"),
+			fullName: "Bishen Patel",
+			isActive: true,
+			isSuperAdmin: false,
+			plan: "FREE",
+			monthlyUrlLimit: 50,
+			monthlyClickLimit: 10_000,
+			emailVerifiedAt: Date.now(),
+		},
+		{
 			email: "alice.johnson@example.com",
 			passwordHash: await hash("Alice@123"),
 			fullName: "Alice Johnson",
@@ -194,6 +205,7 @@ export async function assignRolesToUsers(users: User[], roles: Role[]): Promise<
 		{ user: get("admin@example.com"), role: role("Admin") },
 		{ user: get("manager@example.com"), role: role("Manager") },
 		{ user: get("user@example.com"), role: role("User") },
+		{ user: get("bishenpatel123@gmail.com"), role: role("User") },
 		{ user: get("alice.johnson@example.com"), role: role("User") },
 		{ user: get("bob.smith@example.com"), role: role("User") },
 		{ user: get("carol.white@example.com"), role: role("User") },

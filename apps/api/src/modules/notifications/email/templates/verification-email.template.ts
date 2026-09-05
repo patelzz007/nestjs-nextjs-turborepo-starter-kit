@@ -26,15 +26,24 @@ export class VerificationEmailTemplate extends BaseEmailTemplate<VerificationEma
 		return `Confirm your ${context.appName} email and you're all set.`;
 	}
 
+	private linkContext(context: EmailRenderContext): EmailRenderContext {
+		if (this.props.appUrl === undefined) {
+			return context;
+		}
+		return { ...context, appUrl: this.props.appUrl };
+	}
+
 	public getCta(context: EmailRenderContext): CtaConfig | null {
+		const linkContext: EmailRenderContext = this.linkContext(context);
 		return {
 			label: "Verify Email",
-			href: this.buildUrl(context, `/auth/verify-email/${this.props.verificationToken}`),
+			href: this.buildUrl(linkContext, "/auth/verify-email", { token: this.props.verificationToken }),
 		};
 	}
 
 	public renderBodyHtml(context: EmailRenderContext): string {
-		const href: string = this.buildUrl(context, `/auth/verify-email/${this.props.verificationToken}`);
+		const linkContext: EmailRenderContext = this.linkContext(context);
+		const href: string = this.buildUrl(linkContext, "/auth/verify-email", { token: this.props.verificationToken });
 		return `
         <p class="email-text" style="color: #334155; font-size: 15px; line-height: 1.7; margin: 0 0 8px 0;">Welcome to <strong>${this.escape(context.appName)}</strong>! Please confirm your email address so we know it's really you.</p>
         <p class="email-text" style="color: #334155; font-size: 15px; line-height: 1.7; margin: 0 0 20px 0;">One click and your account is ready to go.</p>
@@ -44,11 +53,13 @@ export class VerificationEmailTemplate extends BaseEmailTemplate<VerificationEma
 	}
 
 	public renderBodyText(context: EmailRenderContext): string {
+		const linkContext: EmailRenderContext = this.linkContext(context);
+		const href: string = this.buildUrl(linkContext, "/auth/verify-email", { token: this.props.verificationToken });
 		return [
 			`Welcome to ${context.appName}!`,
 			"",
 			"Please confirm your email address by opening the link below:",
-			`${context.appUrl}/auth/verify-email/${this.props.verificationToken}`,
+			href,
 			"",
 			`This link expires in ${String(this.props.expiresInHours)} hours.`,
 			"If you didn't create an account, you can safely ignore this email.",

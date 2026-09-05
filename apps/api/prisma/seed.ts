@@ -5,8 +5,6 @@ import { seedAbacConditions } from "./seed/abac";
 import { seedMerchantCapabilities } from "./seed/capabilities";
 import { createApiKeys, createApiKeyUsageLogs } from "./seed/api-keys";
 import { generateAdditionalSeedData } from "./seed/extra-users";
-import { createMenuItems } from "./seed/menu";
-import { seedScopedNavigationMenus } from "./seed/scoped-navigation-menus";
 import { createPermissions } from "./seed/permissions";
 import { assignPermissionsToRoles, assignRoleHierarchy, createRoles } from "./seed/roles";
 import { createTags } from "./seed/tags";
@@ -26,7 +24,7 @@ async function main() {
 	console.log("🌱 Starting seed...\n");
 
 	// ── Idempotency cleanup ─────────────────────────────────────────────
-	// Reference data (permissions, roles, users, tags, URLs, menu items) is
+	// Reference data (permissions, roles, users, tags, URLs) is
 	// upserted below so it survives re-runs. Rows with random/unique values
 	// (refresh tokens, clicks, API keys, usage logs, reset tokens) have no
 	// stable key to upsert against — wipe them first so re-running db:seed
@@ -101,19 +99,9 @@ async function main() {
 	const usageLogCount = await prisma.apiKeyUsageLog.count();
 	console.log(`✅ ${usageLogCount} API key usage log entries`);
 
-	console.log("Creating menu items...");
-	await createMenuItems(permissions, roles);
-	const menuCount = await prisma.menuItem.count();
-	console.log(`✅ ${menuCount} menu items`);
-
 	console.log("Seeding merchant capability catalog and role grants...");
 	const merchantCapabilitySummary = await seedMerchantCapabilities();
 	console.log(`✅ ${String(merchantCapabilitySummary.definitions)} MERCHANT capabilities, ${String(merchantCapabilitySummary.roleGrantRows)} role grants`);
-
-	console.log("Seeding scoped navigation menus (ADMIN + MERCHANT)...");
-	await seedScopedNavigationMenus();
-	const scopedMenuCount = await prisma.menuItem.count({ where: { scope: { not: null } } });
-	console.log(`✅ ${scopedMenuCount} scoped menu items`);
 
 	console.log("Seeding ABAC demo conditions...");
 	await seedAbacConditions(permissions);
@@ -150,7 +138,6 @@ Clicks        : ${clickCount}
 API Keys      : ${keyCount}
 API Key Logs  : ${usageLogCount}
 Reset Tokens  : ${passwordResetCount}
-Menu Items    : ${menuCount}
 
 👤 Test accounts
 ──────────────────────────────────────────────

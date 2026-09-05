@@ -11,6 +11,7 @@ import { ZodError } from "zod";
 import {
 	AccessTokenPayloadSchema,
 	EmailVerificationTokenPayloadSchema,
+	TwoFactorPendingTokenPayloadSchema,
 	type EmailVerificationTokenPayload,
 	RefreshTokenPayloadSchema,
 	type AccessTokenPayload,
@@ -215,5 +216,63 @@ export class TokenService {
 			secret: this.config.jwtAccessSecret,
 			expiresIn: 900, // 15 minutes
 		});
+	}
+
+	/**
+	 * Generate a short-lived token used between password login and 2FA verification.
+	 */
+	public async generateTwoFactorPendingToken(
+		userId: string,
+		clientType: string | null,
+		deviceInfo: string | null,
+		ipAddress: string | null,
+	): Promise<string> {
+		return this.jwtService.signAsync(
+			{
+				sub: userId,
+				purpose: "two_factor_login",
+				clientType,
+				deviceInfo,
+				ipAddress,
+			},
+			{
+				secret: this.config.twoFactorPendingSecret,
+				expiresIn: 600,
+			},
+		);
+	}
+
+	/**
+	 * Verify a 2FA login step token and return its payload.
+	 */
+	public async verifyTwoFactorPendingToken(token: string): Promise<{
+		readonly sub: string;
+		readonly clientType: string | null;
+		readonly deviceInfo: string | null;
+		readonly ipAddress: string | null;
+	}> {
+		try {
+			const payload = TwoFactorPendingTokenPayloadSchema.parse(
+				await this.jwtService.verifyAsync(token, {
+					secret: this.config.twoFactorPendingSecret,
+				}),
+			);
+			return {
+				sub: payload.sub,
+				clientType: payload.clientType,
+				deviceInfo: payload.deviceInfo,
+				ipAddress: payload.ipAddress,
+			};
+		} catch (error) {
+			const caught = CaughtValueSchema.parse(error);
+			if (caught instanceof UnauthorizedException) throw caught;
+			if (caught instanceof TokenExpiredError) {
+				throw new UnauthorizedException("2FA session expired — sign in again");
+			}
+			if (caught instanceof ZodError) {
+				this.logger.error(`2FA pending token payload failed schema validation: ${caught.message}`);
+			}
+			throw new UnauthorizedException("Invalid or expired 2FA session");
+		}
 	}
 }

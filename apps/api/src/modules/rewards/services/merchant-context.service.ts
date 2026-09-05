@@ -48,6 +48,27 @@ export class MerchantContextService {
 		return memberships[0].merchantOrgId;
 	}
 
+	public async requireOwnerRole(userId: string, merchantOrgId: string): Promise<void> {
+		const membership = await this.prisma.merchantMember.findFirst({
+			where: { userId, merchantOrgId, isDeleted: false },
+			select: { role: true },
+		});
+
+		if (membership?.role === "OWNER") {
+			return;
+		}
+
+		const canManageMerchants = await this.authorizationChecker.hasPermission(userId, "MANAGE", "MERCHANT_ORG");
+		if (canManageMerchants) {
+			return;
+		}
+
+		throw new ForbiddenException({
+			message: "Only merchant owners can perform this action",
+			error: "MERCHANT_OWNER_REQUIRED",
+		});
+	}
+
 	public async requireCapability(userId: string, merchantOrgId: string, capability: CapabilitySlug): Promise<void> {
 		const allowed = await this.userHasCapability(userId, merchantOrgId, capability);
 		if (!allowed) {

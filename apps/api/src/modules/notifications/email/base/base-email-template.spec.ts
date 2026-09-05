@@ -46,12 +46,24 @@ describe("BaseEmailTemplate", () => {
 		expect(html).toContain("&amp;");
 	});
 
-	it("builds absolute, query-encoded action URLs", () => {
+		it("builds absolute, query-encoded action URLs", () => {
 		const template = new PasswordResetEmailTemplate({ to: "a@b.com", resetToken: "tok/+abc 123", expiresInHours: 1 });
 		const href = template.getCta(context)?.href ?? "";
 		expect(href).toContain("https://app.example.com/auth/reset-password");
 		// Query values are percent-encoded via URLSearchParams (safe for tokens).
 		expect(href).toContain("tok%2F%2Babc+123");
+	});
+
+	it("uses props.appUrl for client-specific reset links", () => {
+		const template = new PasswordResetEmailTemplate({
+			to: "a@b.com",
+			resetToken: "abc123",
+			expiresInHours: 1,
+			appUrl: "https://admin.example.com",
+		});
+		const href = template.getCta(context)?.href ?? "";
+		expect(href).toContain("https://admin.example.com/auth/reset-password");
+		expect(href).toContain("token=abc123");
 	});
 
 	it("embeds the subject + preview text in the HTML shell", () => {

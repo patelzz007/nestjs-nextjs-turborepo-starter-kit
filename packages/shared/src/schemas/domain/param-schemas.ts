@@ -23,7 +23,7 @@ export type UuidParam = z.output<typeof UuidParamSchema>;
 // ── Email Verification Token Param ────────────────────────────────────────
 
 /** Validates an email verification token param (non-empty string). */
-export const VerifyEmailTokenParamSchema = z.string().min(1, "Verification token is required").max(512, "Verification token too long");
+export const VerifyEmailTokenParamSchema = z.string().min(1, "Verification token is required");
 
 export type VerifyEmailTokenParam = z.output<typeof VerifyEmailTokenParamSchema>;
 

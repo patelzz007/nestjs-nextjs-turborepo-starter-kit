@@ -37,6 +37,7 @@
 		"kill:all": "pnpm kill:api && pnpm kill:admin && pnpm kill:web && pnpm kill:docs && pnpm kill:merchant",
 		"docker:up": "docker compose up -d",
 		"docker:down": "docker compose down",
+		"docker:restart": "docker compose down && docker compose up -d",
 		"docker:logs": "docker compose logs -f",
 		"docker:ps": "docker compose ps",
 		"dev:analytics-consumer": "turbo dev --filter @workspace/analytics-consumer --log-prefix=none"

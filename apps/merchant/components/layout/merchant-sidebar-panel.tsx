@@ -13,9 +13,8 @@ import { useMerchantCommandPaletteStore } from "@/stores/command-palette-store";
 import { useMerchantSidebarStore } from "@/stores/sidebar-store";
 import { useMerchantOrg } from "@/lib/merchant-root-provider";
 import { resolveActiveMerchantMembership, resolveMerchantCapabilities } from "@/lib/merchant-server-capabilities";
-import { resolveSidebarDisplayMenu } from "@workspace/client/lib/navigation/resolve-sidebar-display-menu";
 import type { CompiledSidebarMenuData } from "@workspace/client/lib/sidebar/sidebar-menu-schema";
-import type { CapabilityMenuResponse, CapabilitySlug, MerchantMembershipResponse } from "@workspace/shared";
+import type { CapabilitySlug, MerchantMembershipResponse } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/feedback/badge";
 import { Label } from "@workspace/ui/components/form/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@workspace/ui/components/form/select";
@@ -44,7 +43,6 @@ import * as React from "react";
 export interface MerchantSidebarPanelProps {
 	readonly memberships: readonly MerchantMembershipResponse[];
 	readonly merchantOrgId: string | undefined;
-	readonly initialNavigationMenu?: CapabilityMenuResponse;
 	readonly onStoreChange: (orgId: string) => void;
 	readonly onNavigate?: () => void;
 }
@@ -79,7 +77,7 @@ function MerchantSidebarPinnedItem({ title, url, icon, isActive, onNavigate }: M
 	);
 }
 
-export function MerchantSidebarPanel({ memberships, merchantOrgId, initialNavigationMenu, onStoreChange, onNavigate }: MerchantSidebarPanelProps): React.JSX.Element {
+export function MerchantSidebarPanel({ memberships, merchantOrgId, onStoreChange, onNavigate }: MerchantSidebarPanelProps): React.JSX.Element {
 	const pathname = usePathname();
 	const router = useRouter();
 	const sessionProfile = useMerchantSessionProfile();
@@ -97,8 +95,12 @@ export function MerchantSidebarPanel({ memberships, merchantOrgId, initialNaviga
 	const searchQuery = useMerchantSidebarStore((state) => state.searchQuery);
 	const menu = useMerchantSidebarStore((state) => state.menu);
 	const displayMenu = React.useMemo(
-		(): CompiledSidebarMenuData => resolveSidebarDisplayMenu(menu, MERCHANT_SIDEBAR_MENU, initialNavigationMenu),
-		[initialNavigationMenu, menu],
+		(): CompiledSidebarMenuData => ({
+			header: menu.header,
+			sections: menu.sections,
+			bottomItems: menu.bottomItems.length > 0 ? menu.bottomItems : MERCHANT_SIDEBAR_MENU.bottomItems,
+		}),
+		[menu],
 	);
 	const currentPage = pathname;
 	const setSearchQuery = useMerchantSidebarStore((state) => state.setSearchQuery);

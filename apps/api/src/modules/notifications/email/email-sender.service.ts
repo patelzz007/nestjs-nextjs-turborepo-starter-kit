@@ -108,6 +108,12 @@ export class EmailSenderService {
 
 		// 2. Resolve the effective recipient (dev override first).
 		const effectiveTo: string = this.config.emailTestTo ?? parsed.data.to;
+		if (this.config.emailTestTo !== undefined && this.config.emailTestTo !== parsed.data.to) {
+			this.logService.info(
+				`EMAIL_TEST_TO override: "${template.subject}" redirected from ${this.maskEmail(parsed.data.to)} to ${this.maskEmail(effectiveTo)}`,
+				{ context: "EmailSenderService" },
+			);
+		}
 
 		// 3. Mode switch — noop / log-only never touch the network.
 		const mode: "send" | "log-only" | "noop" = this.config.emailMode;

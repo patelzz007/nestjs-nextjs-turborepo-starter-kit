@@ -5,6 +5,7 @@ import { TrackAuthFlow } from "../decorators/track-auth-flow.decorator";
 import { UserRepository } from "../repositories/user.repository";
 import { AuthEventsService } from "./auth-events.service";
 import { EmailService } from "./email.service";
+import { IdentityService } from "./identity.service";
 import { TokenService } from "./token.service";
 
 /**
@@ -20,13 +21,14 @@ export class EmailVerificationService {
 		private readonly tokenService: TokenService,
 		private readonly emailService: EmailService,
 		private readonly authEvents: AuthEventsService,
+		private readonly identityService: IdentityService,
 	) {}
 
 	/**
 	 * Resend the email verification link.
 	 * Always returns the same response to prevent email enumeration.
 	 */
-	public async resendVerificationEmail(dto: ResendVerificationInput): Promise<ResendVerificationResponse> {
+	public async resendVerificationEmail(dto: ResendVerificationInput, clientType?: string): Promise<ResendVerificationResponse> {
 		const { email } = dto;
 
 		const user = await this.userRepo.findForVerifyByEmail(email);
@@ -36,9 +38,20 @@ export class EmailVerificationService {
 		}
 
 		const verificationToken = await this.tokenService.generateEmailVerificationToken(email);
-		await this.emailService.sendVerificationEmail(email, verificationToken);
+		await this.emailService.sendVerificationEmail(email, verificationToken, clientType);
 
 		return { message: "If an account with that email exists, a verification email has been sent." };
+	}
+
+	/** Sends a verification email when the account exists and is not yet verified. */
+	public async sendVerificationEmailIfUnverified(email: string, clientType?: string): Promise<void> {
+		const user = await this.userRepo.findForVerifyByEmail(email);
+		if (user === null || !user.isActive || user.emailVerifiedAt !== null) {
+			return;
+		}
+
+		const verificationToken = await this.tokenService.generateEmailVerificationToken(email);
+		await this.emailService.sendVerificationEmail(email, verificationToken, clientType);
 	}
 
 	/**
@@ -58,6 +71,7 @@ export class EmailVerificationService {
 		}
 
 		await this.userRepo.update(user.id, { emailVerifiedAt: Date.now() });
+		this.identityService.invalidateMe(user.id);
 
 		return { message: "Email verified successfully" };
 	}

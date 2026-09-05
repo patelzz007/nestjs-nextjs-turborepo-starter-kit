@@ -26,15 +26,24 @@ export class PasswordResetEmailTemplate extends BaseEmailTemplate<PasswordResetE
 		return `We received a request to reset your ${context.appName} password.`;
 	}
 
+	private linkContext(context: EmailRenderContext): EmailRenderContext {
+		if (this.props.appUrl === undefined) {
+			return context;
+		}
+		return { ...context, appUrl: this.props.appUrl };
+	}
+
 	public getCta(context: EmailRenderContext): CtaConfig | null {
+		const linkContext: EmailRenderContext = this.linkContext(context);
 		return {
 			label: "Reset Password",
-			href: this.buildUrl(context, "/auth/reset-password", { token: this.props.resetToken }),
+			href: this.buildUrl(linkContext, "/auth/reset-password", { token: this.props.resetToken }),
 		};
 	}
 
 	public renderBodyHtml(context: EmailRenderContext): string {
-		const href: string = this.buildUrl(context, "/auth/reset-password", { token: this.props.resetToken });
+		const linkContext: EmailRenderContext = this.linkContext(context);
+		const href: string = this.buildUrl(linkContext, "/auth/reset-password", { token: this.props.resetToken });
 		return `
         <p class="email-text" style="color: #334155; font-size: 15px; line-height: 1.7; margin: 0 0 20px 0;">We received a request to reset your <strong>${this.escape(context.appName)}</strong> password. Click the button below to create a new one.</p>
         ${this.linkBlock(href)}
@@ -43,11 +52,13 @@ export class PasswordResetEmailTemplate extends BaseEmailTemplate<PasswordResetE
 	}
 
 	public renderBodyText(context: EmailRenderContext): string {
+		const linkContext: EmailRenderContext = this.linkContext(context);
+		const href: string = this.buildUrl(linkContext, "/auth/reset-password", { token: this.props.resetToken });
 		return [
 			`We received a request to reset your ${context.appName} password.`,
 			"",
 			"Open the link below to create a new password:",
-			`${context.appUrl}/auth/reset-password?token=${this.props.resetToken}`,
+			href,
 			"",
 			`This link expires in ${String(this.props.expiresInHours)} hour${this.props.expiresInHours === 1 ? "" : "s"}.`,
 			"If you didn't request a password reset, you can safely ignore this email.",

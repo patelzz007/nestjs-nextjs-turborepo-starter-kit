@@ -39,66 +39,6 @@ export const CapabilityCatalogQuerySchema = z
 
 export type CapabilityCatalogQuery = z.output<typeof CapabilityCatalogQuerySchema>;
 
-export const CapabilityMenuQuerySchema = z
-	.object({
-		scope: CapabilityScopeSchema,
-	})
-	.strict();
-
-export type CapabilityMenuQuery = z.output<typeof CapabilityMenuQuerySchema>;
-
-export interface CapabilityMenuItemNode {
-	id: string;
-	title: string;
-	url: string;
-	icon: string | null;
-	disabled: boolean;
-	requiredCapabilities: CapabilitySlug[];
-	matchType: z.output<typeof MenuMatchTypeSchema>;
-	children: CapabilityMenuItemNode[];
-}
-
-const MenuMatchTypeSchema = z.enum(["ANY", "ALL"]);
-
-export const CapabilityMenuItemSchema: z.ZodType<CapabilityMenuItemNode> = z.lazy(() =>
-	z
-		.object({
-			id: z.string(),
-			title: z.string(),
-			url: z.string(),
-			icon: z.string().nullable(),
-			disabled: z.boolean(),
-			requiredCapabilities: z.array(CapabilitySlugSchema),
-			matchType: MenuMatchTypeSchema,
-			children: z.array(z.lazy(() => CapabilityMenuItemSchema)),
-		})
-		.strict(),
-);
-
-export type CapabilityMenuItem = z.output<typeof CapabilityMenuItemSchema>;
-
-export const CapabilityMenuSectionSchema = z
-	.object({
-		title: z.string(),
-		color: z.enum(["blue", "green", "amber", "rose", "purple", "teal"]).optional(),
-		items: z.array(CapabilityMenuItemSchema),
-	})
-	.strict();
-
-export type CapabilityMenuSection = z.output<typeof CapabilityMenuSectionSchema>;
-
-export const CapabilityMenuResponseSchema = z
-	.object({
-		header: z.object({
-			title: z.string(),
-			subtitle: z.string(),
-		}),
-		sections: z.array(CapabilityMenuSectionSchema),
-	})
-	.strict();
-
-export type CapabilityMenuResponse = z.output<typeof CapabilityMenuResponseSchema>;
-
 /** Stable platform slug derived from action × resource (`platform:user.read`). */
 export function toPlatformCapabilitySlug(action: z.output<typeof PermissionActionSchema>, resource: z.output<typeof PermissionResourceSchema>): CapabilitySlug {
 	const parsed = CapabilitySlugSchema.safeParse(`platform:${resource.toLowerCase()}.${action.toLowerCase()}`);
@@ -140,26 +80,4 @@ export function withCapabilityToggled(catalogOrder: readonly CapabilitySlug[], s
 		}
 	}
 	return next;
-}
-
-/** Filter menu tree nodes by granted capability slugs. */
-export function filterMenuByCapabilities<T extends { readonly requiredCapabilities?: readonly CapabilitySlug[]; readonly children?: readonly T[] }>(
-	items: readonly T[],
-	capabilities: readonly CapabilitySlug[],
-): readonly T[] {
-	const filtered: T[] = [];
-	for (const item of items) {
-		const required = item.requiredCapabilities ?? [];
-		const allowed = required.length === 0 || required.some((slug) => hasCapability(capabilities, slug));
-		if (!allowed) {
-			continue;
-		}
-		const children = item.children;
-		if (children !== undefined && children.length > 0) {
-			filtered.push({ ...item, children: filterMenuByCapabilities(children, capabilities) });
-			continue;
-		}
-		filtered.push(item);
-	}
-	return filtered;
 }

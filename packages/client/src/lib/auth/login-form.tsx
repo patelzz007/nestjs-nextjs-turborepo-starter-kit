@@ -28,6 +28,7 @@ import type { EpochMs } from "@workspace/shared";
 import { useCallback, useMemo, useState, type JSX, type ReactNode } from "react";
 
 import { isAccountLockedError, resolveAuthErrorMessage } from "./auth-errors";
+import { isLoginSuccess, isLoginTwoFactorPending, isLoginVerificationPending } from "./login-response";
 import { useAuth } from "./index";
 
 import { passwordStrength } from "./password";
@@ -186,6 +187,10 @@ export function LoginForm({ emailPlaceholder, redirectPath, demoAccounts, footer
 	const [lockout, setLockout] = useState<{ readonly remainingSeconds: number; readonly lockedUntil: EpochMs } | null>(null);
 	// Social login is UI-only for now — clicking a provider shows an honest hint.
 	const [socialHint, setSocialHint] = useState<string | null>(null);
+	const [twoFactorTempToken, setTwoFactorTempToken] = useState<string | null>(null);
+	const [twoFactorCode, setTwoFactorCode] = useState("");
+	const [verificationId, setVerificationId] = useState<string | null>(null);
+	const [verificationCode, setVerificationCode] = useState("");
 	const router = useRouter();
 	const { api, login: authLogin } = useAuth();
 
@@ -208,11 +213,60 @@ export function LoginForm({ emailPlaceholder, redirectPath, demoAccounts, footer
 	// baseOptions) so the backend sets the isolated admin cookie set.
 	const loginProcedure = mode === "admin" ? api.auth.adminLogin : mode === "merchant" ? api.auth.merchantLogin : api.auth.login;
 	const loginMutation = loginProcedure.useMutation();
+	const twoFactorMutation = api.auth.loginTwoFactor.useMutation();
+	const verifyLoginMutation = api.auth.verifyLogin.useMutation();
 
 	// Live password-strength feedback while typing (#27).
 	const strength = useMemo(() => passwordStrength(password), [password]);
 
 	// The actual login call — shared by the form submit and the demo buttons.
+	const completeAuthenticatedLogin = useCallback(
+		(data: { readonly user: Parameters<typeof authLogin>[0] }): void => {
+			if (requireAdminAccess && !data.user.hasAdminAccess) {
+				setError("Admin access required. This account does not have administrator privileges.");
+				return;
+			}
+
+			authLogin({
+				id: data.user.id,
+				email: data.user.email,
+				fullName: data.user.fullName,
+				isSuperAdmin: data.user.isSuperAdmin,
+				hasAdminAccess: data.user.hasAdminAccess,
+				isEmailVerified: data.user.isEmailVerified,
+				roles: data.user.roles,
+			});
+			router.push(resolvedRedirect);
+		},
+		[authLogin, requireAdminAccess, resolvedRedirect, router],
+	);
+
+	const handleLoginResponse = useCallback(
+		(response: Parameters<typeof isLoginSuccess>[0]): void => {
+			if (isLoginTwoFactorPending(response)) {
+				setTwoFactorTempToken(response.tempToken);
+				setVerificationId(null);
+				setError(null);
+				return;
+			}
+
+			if (isLoginVerificationPending(response)) {
+				setVerificationId(response.verificationId);
+				setTwoFactorTempToken(null);
+				setError(null);
+				return;
+			}
+
+			if (!isLoginSuccess(response)) {
+				setError("Unexpected login response. Please try again.");
+				return;
+			}
+
+			completeAuthenticatedLogin(response);
+		},
+		[completeAuthenticatedLogin],
+	);
+
 	const performLogin = useCallback(
 		(emailValue: string, passwordValue: string): void => {
 			setIsLoading(true);
@@ -222,24 +276,7 @@ export function LoginForm({ emailPlaceholder, redirectPath, demoAccounts, footer
 			loginMutation
 				.mutateAsync({ email: emailValue, password: passwordValue })
 				.then((data): void => {
-					// Privilege gate (admin mode only): the API already rejects
-					// non-privileged accounts, but this keeps the client honest.
-					if (requireAdminAccess && !data.data.user.hasAdminAccess) {
-						setError("Admin access required. This account does not have administrator privileges.");
-						return;
-					}
-
-					// Pass user data to the auth store
-					authLogin({
-						id: data.data.user.id,
-						email: data.data.user.email,
-						fullName: data.data.user.fullName,
-						isSuperAdmin: data.data.user.isSuperAdmin,
-						hasAdminAccess: data.data.user.hasAdminAccess,
-						isEmailVerified: data.data.user.isEmailVerified,
-						roles: data.data.user.roles,
-					});
-					router.push(resolvedRedirect);
+					handleLoginResponse(data.data);
 				})
 				.catch((err: unknown): void => {
 					// Map the API's canonical error code to a friendly message;
@@ -254,8 +291,64 @@ export function LoginForm({ emailPlaceholder, redirectPath, demoAccounts, footer
 					setIsLoading(false);
 				});
 		},
-		[loginMutation, authLogin, router, resolvedRedirect, requireAdminAccess],
+		[loginMutation, handleLoginResponse],
 	);
+
+	const handleTwoFactorSubmit = useCallback(
+		(event: React.SyntheticEvent<HTMLFormElement>): void => {
+			event.preventDefault();
+			if (twoFactorTempToken === null || twoFactorCode.length !== 6) {
+				return;
+			}
+
+			setIsLoading(true);
+			setError(null);
+			twoFactorMutation
+				.mutateAsync({ tempToken: twoFactorTempToken, token: twoFactorCode })
+				.then((data): void => {
+					handleLoginResponse(data.data);
+				})
+				.catch((err: unknown): void => {
+					setError(resolveAuthErrorMessage(err));
+				})
+				.finally((): void => {
+					setIsLoading(false);
+				});
+		},
+		[handleLoginResponse, twoFactorCode, twoFactorMutation, twoFactorTempToken],
+	);
+
+	const handleVerificationSubmit = useCallback(
+		(event: React.SyntheticEvent<HTMLFormElement>): void => {
+			event.preventDefault();
+			if (verificationId === null || verificationCode.length !== 6) {
+				return;
+			}
+
+			setIsLoading(true);
+			setError(null);
+			verifyLoginMutation
+				.mutateAsync({ verificationId, code: verificationCode })
+				.then((data): void => {
+					handleLoginResponse(data.data);
+				})
+				.catch((err: unknown): void => {
+					setError(resolveAuthErrorMessage(err));
+				})
+				.finally((): void => {
+					setIsLoading(false);
+				});
+		},
+		[handleLoginResponse, verificationCode, verificationId, verifyLoginMutation],
+	);
+
+	const handleVerificationCodeChange = useCallback((event: React.ChangeEvent<HTMLInputElement>): void => {
+		setVerificationCode(event.target.value.replace(/\D/g, "").slice(0, 6));
+	}, []);
+
+	const handleTwoFactorCodeChange = useCallback((event: React.ChangeEvent<HTMLInputElement>): void => {
+		setTwoFactorCode(event.target.value.replace(/\D/g, "").slice(0, 6));
+	}, []);
 
 	const handleFormSubmit = useCallback(
 		(event: React.SyntheticEvent<HTMLFormElement>): void => {
@@ -277,72 +370,120 @@ export function LoginForm({ emailPlaceholder, redirectPath, demoAccounts, footer
 
 	return (
 		<>
-			<FormShell error={error} isLoading={isLoading} submitLabel="Sign in" loadingLabel="Signing in..." submitClassName="h-11" onSubmit={handleFormSubmit}>
-				<div className="space-y-2">
-					<Label htmlFor="email">Email</Label>
-					<Input
-						id="email"
-						type="email"
-						placeholder={resolvedPlaceholder}
-						value={email}
-						onChange={handleEmailChange}
-						required
-						autoComplete="email"
-						autoFocus
-						className="h-11"
-					/>
-				</div>
-				<div className="space-y-2">
-					<div className="flex items-center justify-between">
-						<Label htmlFor="password">Password</Label>
-						<Link href="/auth/forgot-password" className="text-sm font-medium text-primary hover:underline">
-							Forgot password?
-						</Link>
+			{verificationId !== null ? (
+				<FormShell error={error} isLoading={isLoading} submitLabel="Verify sign-in" loadingLabel="Verifying..." submitClassName="h-11" onSubmit={handleVerificationSubmit}>
+					<div className="space-y-2 text-center">
+						<p className="text-sm text-muted-foreground">
+							Enter the <strong>6-digit code from your email</strong> — not your authenticator app. Check spam or Promotions if you do not see it.
+						</p>
+						<p className="text-xs text-muted-foreground">Use the code from your most recent sign-in attempt. Requesting a new code invalidates older ones.</p>
+						<Label htmlFor="verification-code" className="sr-only">
+							Verification code
+						</Label>
+						<Input
+							id="verification-code"
+							inputMode="numeric"
+							autoComplete="one-time-code"
+							placeholder="000000"
+							value={verificationCode}
+							onChange={handleVerificationCodeChange}
+							className="h-11 text-center text-lg tracking-[0.3em]"
+							maxLength={6}
+						/>
 					</div>
-					<PasswordInput
-						id="password"
-						placeholder="Enter your password"
-						value={password}
-						onChange={handlePasswordChange}
-						required
-						autoComplete="current-password"
-						className="h-11"
-					/>
-					<PasswordStrengthMeter score={strength.score} label={strength.label} percent={strength.percent} criteria={strength.criteria} />
-				</div>
-				{lockout !== null ? (
-					<LockoutCountdown
-						remainingSeconds={lockout.remainingSeconds}
-						labels={{
-							lockedPrefix: "Account locked — try again in",
-							lockedExpired: "Account locked — you can try again now",
-						}}
-					/>
-				) : null}
-			</FormShell>
-
-			{/* ── "Or continue with" divider ─────────────────────────────── */}
-			<div className="mt-6">
-				<div className="relative">
-					<div className="absolute inset-0 flex items-center">
-						<div className="w-full border-t" />
+				</FormShell>
+			) : twoFactorTempToken !== null ? (
+				<FormShell error={error} isLoading={isLoading} submitLabel="Verify code" loadingLabel="Verifying..." submitClassName="h-11" onSubmit={handleTwoFactorSubmit}>
+					<div className="space-y-2 text-center">
+						<p className="text-sm text-muted-foreground">
+							Enter the <strong>6-digit code from your authenticator app</strong> (Google Authenticator, 1Password, etc.). Backup codes are 8 digits and use a separate flow.
+						</p>
+						<Label htmlFor="two-factor-code" className="sr-only">
+							Authenticator code
+						</Label>
+						<Input
+							id="two-factor-code"
+							inputMode="numeric"
+							autoComplete="one-time-code"
+							placeholder="000000"
+							value={twoFactorCode}
+							onChange={handleTwoFactorCodeChange}
+							className="h-11 text-center text-lg tracking-[0.3em]"
+							maxLength={6}
+						/>
 					</div>
-					<div className="relative flex justify-center text-sm">
-						<span className="bg-background px-2 text-muted-foreground">Or continue with</span>
+				</FormShell>
+			) : (
+				<FormShell error={error} isLoading={isLoading} submitLabel="Sign in" loadingLabel="Signing in..." submitClassName="h-11" onSubmit={handleFormSubmit}>
+					<div className="space-y-2">
+						<Label htmlFor="email">Email</Label>
+						<Input
+							id="email"
+							type="email"
+							placeholder={resolvedPlaceholder}
+							value={email}
+							onChange={handleEmailChange}
+							required
+							autoComplete="email"
+							autoFocus
+							className="h-11"
+						/>
+					</div>
+					<div className="space-y-2">
+						<div className="flex items-center justify-between">
+							<Label htmlFor="password">Password</Label>
+							<Link href="/auth/forgot-password" className="text-sm font-medium text-primary hover:underline">
+								Forgot password?
+							</Link>
+						</div>
+						<PasswordInput
+							id="password"
+							placeholder="Enter your password"
+							value={password}
+							onChange={handlePasswordChange}
+							required
+							autoComplete="current-password"
+							className="h-11"
+						/>
+						<PasswordStrengthMeter score={strength.score} label={strength.label} percent={strength.percent} criteria={strength.criteria} />
+					</div>
+					{lockout !== null ? (
+						<LockoutCountdown
+							remainingSeconds={lockout.remainingSeconds}
+							labels={{
+								lockedPrefix: "Account locked — try again in",
+								lockedExpired: "Account locked — you can try again now",
+							}}
+						/>
+					) : null}
+				</FormShell>
+			)}
+
+			{twoFactorTempToken === null ? (
+				<div className="mt-6">
+					<div className="relative">
+						<div className="absolute inset-0 flex items-center">
+							<div className="w-full border-t" />
+						</div>
+						<div className="relative flex justify-center text-sm">
+							<span className="bg-background px-2 text-muted-foreground">Or continue with</span>
+						</div>
 					</div>
 				</div>
-			</div>
+			) : null}
 
-			{/* ── Social login (UI-only until a provider is wired) ─────────── */}
-			<div className="mt-4 grid grid-cols-2 gap-3">
-				{SOCIAL_PROVIDERS.map((provider) => (
-					<SocialButton key={provider.id} provider={provider} disabled={isLoading} onSelect={handleSocialClick} />
-				))}
-			</div>
-			{socialHint ? <p className="mt-3 text-center text-xs text-muted-foreground">{socialHint}</p> : null}
+			{twoFactorTempToken === null ? (
+				<>
+					<div className="mt-4 grid grid-cols-2 gap-3">
+						{SOCIAL_PROVIDERS.map((provider) => (
+							<SocialButton key={provider.id} provider={provider} disabled={isLoading} onSelect={handleSocialClick} />
+						))}
+					</div>
+					{socialHint ? <p className="mt-3 text-center text-xs text-muted-foreground">{socialHint}</p> : null}
+				</>
+			) : null}
 
-			{/* ── Demo accounts (app-provided credentials, one-click login) ── */}
-			{demoAccounts !== undefined && demoAccounts.length > 0 ? (
+			{twoFactorTempToken === null && demoAccounts !== undefined && demoAccounts.length > 0 ? (
 				<div className="mt-4">
 					<Separator />
 					<div className="mt-4 text-center">
@@ -358,8 +499,7 @@ export function LoginForm({ emailPlaceholder, redirectPath, demoAccounts, footer
 				</div>
 			) : null}
 
-			{/* ── Footer (app-provided, e.g. signup link / back to website) ── */}
-			{footer ? <div className="mt-6">{footer}</div> : null}
+			{twoFactorTempToken === null && footer ? <div className="mt-6">{footer}</div> : null}
 		</>
 	);
 }

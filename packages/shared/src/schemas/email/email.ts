@@ -22,13 +22,17 @@ import { EpochMsSchema } from "../api/common";
 export const EmailTemplateKeySchema = z.enum([
 	"verification",
 	"password-reset",
+	"password-changed",
 	"account-locked",
 	"welcome",
 	"security-alert",
+	"two-factor-enabled",
+	"two-factor-disabled",
 	"admin-alert",
 	"api-key-created",
 	"reward-claim-otp",
 	"referrer-reward-credited",
+	"login-verification",
 	"merchant-invite",
 ]);
 

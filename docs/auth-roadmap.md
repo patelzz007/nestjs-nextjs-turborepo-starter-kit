@@ -14,6 +14,25 @@ coverImage: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=f
 >
 > **Jump to:** [📊 Status at a glance](#status-at-a-glance) · [A. Security hardening](#a-security-hardening-api-core) · [B. API & protocol](#b-api--protocol) · [C. Client & apps](#c-client--apps) · [🆕 Beyond the 30](#beyond-the-30--additional-enhancements) · [🧸 The auth flow A→Z](#the-authentication-flow-from-a-to-z-explained-like-im-5)
 
+### Recently shipped (production auth flows)
+
+The following end-to-end flows are implemented across the NestJS API, shared Zod contracts (`packages/shared`), client forms (`packages/client`), and web/admin apps:
+
+| Flow | API | UI |
+| ---- | --- | -- |
+| Forgot password | `POST /auth/forgot-password` | `/auth/forgot-password` (web + admin) |
+| Reset password | `POST /auth/reset-password` | `/auth/reset-password?token=…` |
+| Change password (authenticated) | `POST /auth/change-password` | Admin `/settings/security`, web `/rewardhub/settings` |
+| TOTP 2FA setup / enable / disable | `GET /auth/2fa/setup`, `POST /auth/2fa/enable`, `POST /auth/2fa/disable` | `SecuritySettingsPanel` (shared client component) |
+| Login with 2FA step | `POST /auth/login` → `POST /auth/login/2fa` or `POST /auth/login/backup-code` | `LoginForm` 2FA step |
+| Login verification (new device) | `POST /auth/login` → `POST /auth/verify-login` | `LoginForm` email OTP step |
+| Validate reset token | `POST /auth/validate-reset-token` | `ResetPasswordForm` pre-check on mount |
+| Signup + email verification | `POST /auth/signup`, `POST /auth/verify-email/:token` | `/auth/signup`, `/auth/verify-email/[token]` |
+
+**Data model additions:** `PasswordHistory`, `BackupCode`, `TwoFactorPendingSetup`; `User.twoFactorEnabled` / `User.twoFactorSecret`.
+
+**Still pending from the reference spec:** trusted IP / device persistence tables, login verification resend endpoint, geo-IP suspicious location detection.
+
 ---
 
 ## 🛠 15 Improvements (refine what exists)

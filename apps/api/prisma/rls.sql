@@ -67,11 +67,10 @@ BEGIN
     'permissions',
     'capability_definitions',
     'permission_audit_logs',
-    'menu_items',
-    'menu_item_permissions',
-    'menu_item_capabilities',
-    'menu_item_roles',
     'password_reset_tokens',
+    'password_history',
+    'backup_codes',
+    'two_factor_pending_setups',
     'user_roles',
     'user_permissions',
     'role_permissions',
@@ -142,6 +141,21 @@ CREATE POLICY password_reset_tokens_own ON public.password_reset_tokens
   USING (app_owns(user_id))
   WITH CHECK (app_owns(user_id));
 
+DROP POLICY IF EXISTS password_history_own ON public.password_history;
+CREATE POLICY password_history_own ON public.password_history
+  USING (app_owns(user_id))
+  WITH CHECK (app_owns(user_id));
+
+DROP POLICY IF EXISTS backup_codes_own ON public.backup_codes;
+CREATE POLICY backup_codes_own ON public.backup_codes
+  USING (app_owns(user_id))
+  WITH CHECK (app_owns(user_id));
+
+DROP POLICY IF EXISTS two_factor_pending_setups_own ON public.two_factor_pending_setups;
+CREATE POLICY two_factor_pending_setups_own ON public.two_factor_pending_setups
+  USING (app_owns(user_id))
+  WITH CHECK (app_owns(user_id));
+
 DROP POLICY IF EXISTS user_roles_own ON public.user_roles;
 CREATE POLICY user_roles_own ON public.user_roles
   USING (app_owns("userId"))
@@ -194,50 +208,6 @@ CREATE POLICY role_permissions_read ON public.role_permissions
 
 DROP POLICY IF EXISTS role_permissions_write ON public.role_permissions;
 CREATE POLICY role_permissions_write ON public.role_permissions
-  FOR ALL
-  USING (app_rls_bypass())
-  WITH CHECK (app_rls_bypass());
-
-DROP POLICY IF EXISTS menu_items_read ON public.menu_items;
-CREATE POLICY menu_items_read ON public.menu_items
-  FOR SELECT
-  USING (true);
-
-DROP POLICY IF EXISTS menu_items_write ON public.menu_items;
-CREATE POLICY menu_items_write ON public.menu_items
-  FOR ALL
-  USING (app_rls_bypass())
-  WITH CHECK (app_rls_bypass());
-
-DROP POLICY IF EXISTS menu_item_permissions_read ON public.menu_item_permissions;
-CREATE POLICY menu_item_permissions_read ON public.menu_item_permissions
-  FOR SELECT
-  USING (true);
-
-DROP POLICY IF EXISTS menu_item_permissions_write ON public.menu_item_permissions;
-CREATE POLICY menu_item_permissions_write ON public.menu_item_permissions
-  FOR ALL
-  USING (app_rls_bypass())
-  WITH CHECK (app_rls_bypass());
-
-DROP POLICY IF EXISTS menu_item_capabilities_read ON public.menu_item_capabilities;
-CREATE POLICY menu_item_capabilities_read ON public.menu_item_capabilities
-  FOR SELECT
-  USING (true);
-
-DROP POLICY IF EXISTS menu_item_capabilities_write ON public.menu_item_capabilities;
-CREATE POLICY menu_item_capabilities_write ON public.menu_item_capabilities
-  FOR ALL
-  USING (app_rls_bypass())
-  WITH CHECK (app_rls_bypass());
-
-DROP POLICY IF EXISTS menu_item_roles_read ON public.menu_item_roles;
-CREATE POLICY menu_item_roles_read ON public.menu_item_roles
-  FOR SELECT
-  USING (true);
-
-DROP POLICY IF EXISTS menu_item_roles_write ON public.menu_item_roles;
-CREATE POLICY menu_item_roles_write ON public.menu_item_roles
   FOR ALL
   USING (app_rls_bypass())
   WITH CHECK (app_rls_bypass());

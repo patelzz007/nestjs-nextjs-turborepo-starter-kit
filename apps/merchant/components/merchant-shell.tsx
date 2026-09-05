@@ -19,9 +19,7 @@ import { isMobileViewport } from "@workspace/ui/hooks/use-mobile";
 import { useMerchantCommandPaletteStore } from "@/stores/command-palette-store";
 import { useMerchantSidebarStore } from "@/stores/sidebar-store";
 import { SidebarPathSync } from "@workspace/client/lib/sidebar/sidebar-path-sync";
-import { useInitialNavigationMenu, useNavigationMenuSync } from "@workspace/client/lib/navigation/use-navigation-menu-sync";
 import { useQueryClient } from "@tanstack/react-query";
-import type { CapabilityMenuResponse } from "@workspace/shared";
 import * as React from "react";
 
 export interface MerchantShellProps {
@@ -30,18 +28,15 @@ export interface MerchantShellProps {
 	readonly initialMerchantOrgId?: string;
 	readonly initialUser?: ServerUser | null;
 	readonly initialIsImpersonating?: boolean;
-	readonly initialNavigationMenu?: CapabilityMenuResponse;
 }
 
 function MerchantSidebarContent({
 	memberships,
 	merchantOrgId,
-	initialNavigationMenu,
 	onStoreChange,
 }: {
 	readonly memberships: readonly MerchantMembershipResponse[];
 	readonly merchantOrgId: string | undefined;
-	readonly initialNavigationMenu?: CapabilityMenuResponse;
 	readonly onStoreChange: (orgId: string) => void;
 }): React.JSX.Element {
 	const { setOpenMobile } = useShellSidebar();
@@ -53,13 +48,7 @@ function MerchantSidebarContent({
 	}, [setOpenMobile]);
 
 	return (
-		<MerchantSidebarPanel
-			memberships={memberships}
-			merchantOrgId={merchantOrgId}
-			initialNavigationMenu={initialNavigationMenu}
-			onStoreChange={onStoreChange}
-			onNavigate={handleNavigate}
-		/>
+		<MerchantSidebarPanel memberships={memberships} merchantOrgId={merchantOrgId} onStoreChange={onStoreChange} onNavigate={handleNavigate} />
 	);
 }
 
@@ -70,16 +59,11 @@ export function MerchantShell({
 	initialMerchantOrgId,
 	initialUser = null,
 	initialIsImpersonating = false,
-	initialNavigationMenu,
 }: MerchantShellProps): React.JSX.Element {
 	const { api } = useAuth();
 	const queryClient = useQueryClient();
 	const { merchantOrgId, setMerchantOrgId } = useMerchantOrg();
 	const { isOpen: sidebarOpen, open: openSidebar, close: closeSidebar } = useMerchantSidebarControl();
-	const setMenu = useMerchantSidebarStore((state) => state.setMenu);
-
-	useInitialNavigationMenu(setMenu, initialNavigationMenu);
-	useNavigationMenuSync("MERCHANT", setMenu, { initialMenu: initialNavigationMenu });
 
 	const handleSidebarOpenChange = React.useCallback(
 		(open: boolean): void => {
@@ -161,14 +145,7 @@ export function MerchantShell({
 				banner={<ImpersonationBanner initialIsImpersonating={initialIsImpersonating} />}
 				sidebarOpen={sidebarOpen}
 				onSidebarOpenChange={handleSidebarOpenChange}
-				sidebar={
-					<MerchantSidebarContent
-						memberships={memberships}
-						merchantOrgId={merchantOrgId}
-						initialNavigationMenu={initialNavigationMenu}
-						onStoreChange={handleStoreChange}
-					/>
-				}
+				sidebar={<MerchantSidebarContent memberships={memberships} merchantOrgId={merchantOrgId} onStoreChange={handleStoreChange} />}
 				topbar={<MerchantTopbar initialUser={initialUser} />}
 				contentClassName="space-y-6">
 				{membershipsQuery.isLoading && initialMemberships === undefined ? <p className="text-sm text-muted-foreground">Loading merchant access…</p> : null}

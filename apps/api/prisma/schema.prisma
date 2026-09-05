@@ -93,6 +93,9 @@ model User {
   failedLoginAttempts Int     @default(0) @map("failed_login_attempts")
   lockedUntil         BigInt? @map("locked_until")
 
+  twoFactorEnabled Boolean @default(false) @map("two_factor_enabled")
+  twoFactorSecret  String? @map("two_factor_secret") @db.Text
+
   provider          String? // "google" | "github" | null
   providerId        String? @map("provider_id")
   plan              Plan    @default(FREE)
@@ -118,6 +121,9 @@ model User {
   tags                        Tag[]
   apiKeys                     ApiKey[]
   passwordResetTokens         PasswordResetToken[]
+  passwordHistory             PasswordHistory[]
+  backupCodes                 BackupCode[]
+  twoFactorPendingSetup       TwoFactorPendingSetup?
   impersonatedBy              ImpersonationAuditLog[] @relation("Impersonator")
   impersonatedUser            ImpersonationAuditLog[] @relation("ImpersonationTarget")
 
@@ -154,7 +160,6 @@ model Role {
   // Relations
   userRoles       UserRole[]
   rolePermissions RolePermission[]
-  menuItemRoles   MenuItemRole[]
 
   isDeleted Boolean @default(false) @map("is_deleted")
   deletedAt BigInt? @map("deleted_at")
@@ -179,7 +184,6 @@ model Permission {
   // Relations
   rolePermissions      RolePermission[]
   userPermissions      UserPermission[]
-  menuItemPermissions  MenuItemPermission[]
   capabilityDefinition CapabilityDefinition?
 
   isDeleted Boolean @default(false) @map("is_deleted")
@@ -216,7 +220,6 @@ model CapabilityDefinition {
 
   permission           Permission?              @relation(fields: [permissionId], references: [id], onDelete: SetNull)
   merchantRoleGrants   MerchantRoleCapability[]
-  menuItemCapabilities MenuItemCapability[]
 
   isDeleted Boolean @default(false) @map("is_deleted")
   deletedAt BigInt? @map("deleted_at")
@@ -253,100 +256,6 @@ model PermissionAuditLog {
 }
 
 // ---------------------------------------------------------------------------
-// Sidebar / Menu
-// ---------------------------------------------------------------------------
-
-enum MenuMatchType {
-  ANY
-  ALL
-}
-
-/// RLS: catalog — SELECT true; writes need `app_rls_bypass()`.
-model MenuItem {
-  id       String  @id @default(uuid())
-  name     String  @db.VarChar(100)
-  label    String? @db.VarChar(100)
-  icon     String? @db.VarChar(50)
-  path     String? @db.VarChar(255)
-  parentId String? @map("parent_id")
-  order    Int     @default(0)
-  isActive Boolean @default(true) @map("is_active")
-
-  parent   MenuItem?  @relation("MenuHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
-  children MenuItem[] @relation("MenuHierarchy")
-
-  menuItemPermissions  MenuItemPermission[]
-  menuItemRoles        MenuItemRole[]
-  menuItemCapabilities MenuItemCapability[]
-  scope                CapabilityScope?     @map("app_scope")
-
-  isDeleted Boolean @default(false) @map("is_deleted")
-  deletedAt BigInt? @map("deleted_at")
-  createdAt BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
-  updatedAt BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
-
-  @@index([parentId])
-  @@index([scope])
-  @@map("menu_items")
-}
-
-/// RLS: catalog — SELECT true; writes need `app_rls_bypass()`.
-model MenuItemPermission {
-  id           String        @id @default(uuid())
-  menuItemId   String        @map("menu_item_id")
-  permissionId String        @map("permission_id")
-  matchType    MenuMatchType @default(ANY) @map("match_type")
-
-  menuItem   MenuItem   @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
-  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
-
-  isDeleted Boolean @default(false) @map("is_deleted")
-  deletedAt BigInt? @map("deleted_at")
-  createdAt BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
-  updatedAt BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
-
-  @@unique([menuItemId, permissionId])
-  @@map("menu_item_permissions")
-}
-
-/// RLS: catalog — SELECT true; writes need `app_rls_bypass()`.
-model MenuItemRole {
-  id         String @id @default(uuid())
-  menuItemId String @map("menu_item_id")
-  roleId     String @map("role_id")
-
-  menuItem MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
-  role     Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
-
-  isDeleted Boolean @default(false) @map("is_deleted")
-  deletedAt BigInt? @map("deleted_at")
-  createdAt BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
-  updatedAt BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
-
-  @@unique([menuItemId, roleId])
-  @@map("menu_item_roles")
-}
-
-/// RLS: catalog — SELECT true; writes need `app_rls_bypass()`.
-model MenuItemCapability {
-  id           String        @id @default(uuid())
-  menuItemId   String        @map("menu_item_id")
-  capabilityId String        @map("capability_id")
-  matchType    MenuMatchType @default(ANY) @map("match_type")
-
-  menuItem   MenuItem             @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
-  capability CapabilityDefinition @relation(fields: [capabilityId], references: [id], onDelete: Cascade)
-
-  isDeleted Boolean @default(false) @map("is_deleted")
-  deletedAt BigInt? @map("deleted_at")
-  createdAt BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
-  updatedAt BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
-
-  @@unique([menuItemId, capabilityId])
-  @@map("menu_item_capabilities")
-}
-
-// ---------------------------------------------------------------------------
 // Password Reset Tokens
 // ---------------------------------------------------------------------------
 
@@ -367,6 +276,49 @@ model PasswordResetToken {
   @@index([userId])
   @@index([token])
   @@map("password_reset_tokens")
+}
+
+/// RLS: own row — `app_owns(user_id)`.
+model PasswordHistory {
+  id           String @id @default(uuid())
+  userId       String @map("user_id")
+  passwordHash String @map("password_hash") @db.Text
+  createdAt    BigInt @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("password_history")
+}
+
+/// RLS: own row — `app_owns(user_id)`.
+model BackupCode {
+  id        String  @id @default(uuid())
+  userId    String  @map("user_id")
+  codeHash  String  @map("code_hash") @db.Text
+  usedAt    BigInt? @map("used_at")
+  createdAt BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("backup_codes")
+}
+
+/// Temporary 2FA enrollment state — expires after 15 minutes.
+/// RLS: own row — `app_owns(user_id)`.
+model TwoFactorPendingSetup {
+  id                String @id @default(uuid())
+  userId            String @unique @map("user_id")
+  secret            String @db.Text
+  backupCodesHashes Json   @map("backup_codes_hashes")
+  expiresAt         BigInt @map("expires_at")
+  createdAt         BigInt @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
+  @@map("two_factor_pending_setups")
 }
 
 /// RLS: own row — `app_owns("userId")`.

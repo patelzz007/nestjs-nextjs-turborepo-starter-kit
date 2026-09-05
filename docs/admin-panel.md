@@ -80,7 +80,7 @@ The login page (`/auth/login`) is a server component: it reads `?redirect=` and 
   `useRouter` into the auth context, wires the isolated cookie names + admin client type),
   `ThemeProvider`, and the global `<Toaster />` (see `docs/toast.md`).
 - `(panel)/layout.tsx` → `dashboard-layout.tsx`: sidebar (menu config in
-  `apps/admin/lib/menu.ts` + icon map), topbar with breadcrumbs + theme toggle + command
+  `apps/admin/lib/navigation/sidebar-menu.json` + icon map), topbar with breadcrumbs + theme toggle + command
   palette (`⌘K`), and the panel content area.
 - Command palette: global search across pages, telescope users, status, documents — the docs
   app's palette matches it (`apps/docs`).

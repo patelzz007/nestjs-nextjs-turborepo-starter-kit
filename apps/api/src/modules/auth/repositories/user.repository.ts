@@ -24,6 +24,7 @@ const USER_SELECT_PROFILE = {
 	...USER_SELECT_BASE,
 	emailVerifiedAt: true,
 	tokenVersion: true,
+	twoFactorEnabled: true,
 } as const satisfies Prisma.UserSelect;
 
 const USER_SELECT_LOGIN = {
@@ -31,6 +32,7 @@ const USER_SELECT_LOGIN = {
 	passwordHash: true,
 	failedLoginAttempts: true,
 	lockedUntil: true,
+	twoFactorSecret: true,
 } as const satisfies Prisma.UserSelect;
 
 const USER_SELECT_ADMIN_DETAIL = {
@@ -166,6 +168,14 @@ export class UserRepository {
 		return this.prisma.user.findUnique({
 			where: { email },
 			select: USER_SELECT_PROFILE,
+		});
+	}
+
+	/** Find a user by ID with login fields (passwordHash + lockout). */
+	public async findLoginById(id: string): Promise<UserLogin | null> {
+		return this.prisma.user.findUnique({
+			where: { id },
+			select: USER_SELECT_LOGIN,
 		});
 	}
 

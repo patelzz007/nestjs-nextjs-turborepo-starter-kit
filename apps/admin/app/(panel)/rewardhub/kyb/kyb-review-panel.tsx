@@ -14,11 +14,11 @@ import * as React from "react";
 
 const KYB_STATUSES: readonly KybStatus[] = KybStatusSchema.options;
 
-const DEFAULT_DEMO_MERCHANT_ID = "10000000-0000-4000-8000-000000000001";
+const DEFAULT_DEMO_MERCHANT_ID = "3178a4d1-6915-4eb3-bf84-6fb14e1feb6c";
 
 const DEMO_MERCHANT_IDS: readonly { readonly label: string; readonly id: string }[] = [
 	{ label: "KL Brew House (seed)", id: DEFAULT_DEMO_MERCHANT_ID },
-	{ label: "Melaka Straits Café (seed)", id: "10000000-0000-4000-8000-000000000002" },
+	{ label: "Melaka Straits Café (seed)", id: "457401d5-536e-464f-9ae9-4756b6dd5f61" },
 ];
 
 export interface KybReviewPanelProps {

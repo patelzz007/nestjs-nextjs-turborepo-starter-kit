@@ -13,6 +13,7 @@ import {
 	MerchantRedemptionsController,
 	MerchantRewardsController,
 } from "./controllers/merchant.controller";
+import { MerchantMembersController, MerchantOnboardingController } from "./controllers/merchant-onboarding.controller";
 import { RedemptionsController } from "./controllers/redemptions.controller";
 import { RewardLegalController } from "./controllers/reward-legal.controller";
 import { RewardNotificationsController } from "./controllers/reward-notifications.controller";
@@ -25,6 +26,8 @@ import {
 import { MerchantApiKeyGuard } from "./guards/merchant-api-key.guard";
 import { ClaimService } from "./services/claim.service";
 import { ConsumerRewardsService } from "./services/consumer-rewards.service";
+import { MerchantMemberService } from "./services/merchant-member.service";
+import { MerchantOnboardingService } from "./services/merchant-onboarding.service";
 import { MerchantApiKeyService } from "./services/merchant-api-key.service";
 import { RedemptionService } from "./services/redemption.service";
 import { RewardLegalService } from "./services/reward-legal.service";
@@ -46,6 +49,8 @@ const rewardsQueueImports = redisUrl !== undefined && redisUrl.length > 0 ? [Rew
 		RewardNotificationsController,
 		RedemptionsController,
 		MerchantProfileController,
+		MerchantOnboardingController,
+		MerchantMembersController,
 		MerchantRewardsController,
 		MerchantApiKeysController,
 		MerchantRedemptionsController,
@@ -62,6 +67,8 @@ const rewardsQueueImports = redisUrl !== undefined && redisUrl.length > 0 ? [Rew
 		RewardOtpService,
 		RedemptionService,
 		MerchantApiKeyService,
+		MerchantMemberService,
+		MerchantOnboardingService,
 		RewardsAdminService,
 		RewardsAnalyticsService,
 		MerchantApiKeyGuard,

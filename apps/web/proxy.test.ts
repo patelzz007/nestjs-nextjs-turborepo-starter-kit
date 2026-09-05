@@ -149,6 +149,30 @@ describe("web proxy route protection", () => {
 		expect(redirectTarget()).toBe("http://localhost:3000/rewardhub");
 	});
 
+	it("allows authenticated users to open verify-email links", async () => {
+		const response = await runProxy({
+			pathname: "/auth/verify-email",
+			accessToken: validToken(),
+			query: { token: "test-token" },
+		});
+
+		expect(response.status).toBe(200);
+		expect(nextResponse.next).toHaveBeenCalled();
+		expect(nextResponse.redirect).not.toHaveBeenCalled();
+	});
+
+	it("allows authenticated users to open reset-password links", async () => {
+		const response = await runProxy({
+			pathname: "/auth/reset-password",
+			accessToken: validToken(),
+			query: { token: "test-token" },
+		});
+
+		expect(response.status).toBe(200);
+		expect(nextResponse.next).toHaveBeenCalled();
+		expect(nextResponse.redirect).not.toHaveBeenCalled();
+	});
+
 	it("honours the redirect param on auth routes", async () => {
 		await runProxy({ pathname: "/auth/login", accessToken: validToken(), query: { redirect: "/hello" } });
 

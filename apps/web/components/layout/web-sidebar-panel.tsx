@@ -11,9 +11,8 @@ import { renderWebPaletteIcon } from "@/lib/palette/nav-items";
 import { useWebCommandPaletteStore } from "@/stores/command-palette-store";
 import { useWebSidebarStore } from "@/stores/sidebar-store";
 import { useAuth } from "@workspace/client/lib/auth";
-import { resolveSidebarDisplayMenu } from "@workspace/client/lib/navigation/resolve-sidebar-display-menu";
 import type { CompiledSidebarMenuData } from "@workspace/client/lib/sidebar/sidebar-menu-schema";
-import type { CapabilityMenuResponse, CapabilitySlug, SessionPermissionsResponse } from "@workspace/shared";
+import type { CapabilitySlug, SessionPermissionsResponse } from "@workspace/shared";
 import { PanelSidebarHeader } from "@workspace/ui/components/navigation/panel-sidebar-header";
 import { PanelSidebarSearch } from "@workspace/ui/components/navigation/panel-sidebar-search";
 import { PanelSidebarSectionHeader } from "@workspace/ui/components/navigation/panel-sidebar-section-header";
@@ -39,7 +38,6 @@ import * as React from "react";
 export interface WebSidebarPanelProps {
 	readonly userName: string | null;
 	readonly sessionActive?: boolean;
-	readonly initialNavigationMenu?: CapabilityMenuResponse;
 	readonly initialSessionPermissions?: SessionPermissionsResponse;
 	readonly onNavigate?: () => void;
 }
@@ -77,7 +75,6 @@ function WebSidebarPinnedItem({ title, url, icon, isActive, onNavigate }: WebSid
 export function WebSidebarPanel({
 	userName,
 	sessionActive = false,
-	initialNavigationMenu,
 	initialSessionPermissions,
 	onNavigate,
 }: WebSidebarPanelProps): React.JSX.Element {
@@ -92,13 +89,12 @@ export function WebSidebarPanel({
 	const searchQuery = useWebSidebarStore((state) => state.searchQuery);
 	const menu = useWebSidebarStore((state) => state.menu);
 	const displayMenu = React.useMemo((): CompiledSidebarMenuData => {
-		const resolved = resolveSidebarDisplayMenu(menu, USER_SIDEBAR_MENU, initialNavigationMenu);
 		return {
-			header: resolved.header,
-			sections: resolved.sections,
-			bottomItems: resolved.bottomItems.length > 0 ? resolved.bottomItems : USER_SIDEBAR_MENU.bottomItems,
+			header: menu.header,
+			sections: menu.sections,
+			bottomItems: menu.bottomItems.length > 0 ? menu.bottomItems : USER_SIDEBAR_MENU.bottomItems,
 		};
-	}, [initialNavigationMenu, menu]);
+	}, [menu]);
 
 	const filterCapabilities = React.useMemo((): readonly CapabilitySlug[] => {
 		if (isCapabilitiesReady && capabilities.length > 0) {

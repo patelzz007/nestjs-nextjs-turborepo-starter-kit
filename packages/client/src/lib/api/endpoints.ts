@@ -44,8 +44,10 @@ import {
 	CheckPermissionResponseSchema,
 	CapabilityDefinitionSchema,
 	DataValueSchema,
+	ChangePasswordResponseSchema,
 	ForgotPasswordResponseSchema,
 	ImpersonateResponseSchema,
+	LoginClientResponseSchema,
 	LoginResponseSchema,
 	LogoutResponseSchema,
 	PermissionListResponseSchema,
@@ -53,12 +55,16 @@ import {
 	RefreshResponseSchema,
 	ResendVerificationResponseSchema,
 	ResetPasswordResponseSchema,
+	ValidateResetTokenResponseSchema,
 	RoleListResponseSchema,
 	SessionPermissionsResponseSchema,
 	SessionStatusSchema,
 	SignupResponseSchema,
 	StopImpersonationResponseSchema,
+	TwoFactorMessageResponseSchema,
+	TwoFactorSetupResponseSchema,
 	UserResponseSchema,
+	VerifyBackupCodeResponseSchema,
 	VerifyEmailResponseSchema,
 
 	// ── Email schemas ─────────────────────────────────────────────────
@@ -76,7 +82,10 @@ import {
 	AdminMerchantInviteCreatedResponseSchema,
 	MerchantApiKeyCreatedSchema,
 	MerchantApiKeySummarySchema,
+	MerchantMemberCreatedResponseSchema,
 	MerchantMembershipResponseSchema,
+	MerchantOnboardingCompleteResponseSchema,
+	MerchantOnboardingInvitePreviewSchema,
 	MerchantRoleCapabilityGrantSchema,
 	MerchantOrgResponseSchema,
 	MerchantRedemptionListItemSchema,
@@ -372,18 +381,18 @@ export const apiRouter = {
 			queryKey: () => ["auth", "session-status"],
 		}),
 		login: defineMutation(apiContract.auth.login, {
-			response: envelope(LoginResponseSchema),
+			response: envelope(LoginClientResponseSchema),
 			queryKey: () => ["auth", "login"],
 		}),
 		/** Admin login — sends `X-Client-Type: admin` for cookie isolation. */
 		adminLogin: defineMutation(apiContract.auth.adminLogin, {
-			response: envelope(LoginResponseSchema),
+			response: envelope(LoginClientResponseSchema),
 			queryKey: () => ["auth", "admin-login"],
 			baseOptions: { headers: { "X-Client-Type": "admin" } },
 		}),
 		/** Merchant login — sends `X-Client-Type: merchant` for cookie isolation. */
 		merchantLogin: defineMutation(apiContract.auth.login, {
-			response: envelope(LoginResponseSchema),
+			response: envelope(LoginClientResponseSchema),
 			queryKey: () => ["auth", "merchant-login"],
 			baseOptions: { headers: { "X-Client-Type": "merchant" } },
 		}),
@@ -407,6 +416,10 @@ export const apiRouter = {
 			response: envelope(ResetPasswordResponseSchema),
 			queryKey: () => ["auth", "reset-password"],
 		}),
+		validateResetToken: defineMutation(apiContract.auth.validateResetToken, {
+			response: envelope(ValidateResetTokenResponseSchema),
+			queryKey: () => ["auth", "validate-reset-token"],
+		}),
 		resendVerification: defineMutation(apiContract.auth.resendVerification, {
 			response: envelope(ResendVerificationResponseSchema),
 			queryKey: () => ["auth", "resend-verification"],
@@ -414,6 +427,38 @@ export const apiRouter = {
 		verifyEmail: defineMutation(apiContract.auth.verifyEmail, {
 			response: envelope(VerifyEmailResponseSchema),
 			queryKey: ({ token }) => ["auth", "verify-email", token],
+		}),
+		changePassword: defineMutation(apiContract.auth.changePassword, {
+			response: envelope(ChangePasswordResponseSchema),
+			queryKey: () => ["auth", "change-password"],
+		}),
+		loginTwoFactor: defineMutation(apiContract.auth.loginTwoFactor, {
+			response: envelope(LoginClientResponseSchema),
+			queryKey: () => ["auth", "login-2fa"],
+		}),
+		loginBackupCode: defineMutation(apiContract.auth.loginBackupCode, {
+			response: envelope(LoginClientResponseSchema),
+			queryKey: () => ["auth", "login-backup-code"],
+		}),
+		verifyLogin: defineMutation(apiContract.auth.verifyLogin, {
+			response: envelope(LoginClientResponseSchema),
+			queryKey: () => ["auth", "verify-login"],
+		}),
+		twoFactorSetup: defineQuery(apiContract.auth.twoFactorSetup, {
+			response: envelope(TwoFactorSetupResponseSchema),
+			queryKey: () => ["auth", "2fa-setup"],
+		}),
+		twoFactorEnable: defineMutation(apiContract.auth.twoFactorEnable, {
+			response: envelope(TwoFactorMessageResponseSchema),
+			queryKey: () => ["auth", "2fa-enable"],
+		}),
+		twoFactorDisable: defineMutation(apiContract.auth.twoFactorDisable, {
+			response: envelope(TwoFactorMessageResponseSchema),
+			queryKey: () => ["auth", "2fa-disable"],
+		}),
+		twoFactorVerifyBackupCode: defineMutation(apiContract.auth.twoFactorVerifyBackupCode, {
+			response: envelope(VerifyBackupCodeResponseSchema),
+			queryKey: () => ["auth", "2fa-verify-backup-code"],
 		}),
 		adminUsers: defineQuery(apiContract.auth.adminUsers, {
 			response: envelope(z.array(AdminUserDetailSchema), ApiPaginatedMetaSchema),
@@ -437,13 +482,6 @@ export const apiRouter = {
 		catalog: defineQuery(apiContract.capabilities.catalog, {
 			response: envelope(z.array(CapabilityDefinitionSchema)),
 			queryKey: ({ scope }) => ["capabilities", "catalog", scope ?? "all"],
-		}),
-	},
-
-	navigation: {
-		menu: defineQuery(apiContract.navigation.menu, {
-			response: envelope(DataValueSchema),
-			queryKey: ({ scope }) => ["navigation", "menu", scope],
 		}),
 	},
 
@@ -624,6 +662,22 @@ export const apiRouter = {
 			response: envelope(MerchantAnalyticsResponseSchema),
 			queryKey: ({ from, to }) => ["merchant", "analytics", from, to],
 		}),
+		onboarding: {
+			validate: defineMutation(apiContract.merchant.onboarding.validate, {
+				response: envelope(MerchantOnboardingInvitePreviewSchema),
+				queryKey: ({ token }) => ["merchant", "onboarding", "validate", token],
+			}),
+			complete: defineMutation(apiContract.merchant.onboarding.complete, {
+				response: envelope(MerchantOnboardingCompleteResponseSchema),
+				queryKey: ({ token }) => ["merchant", "onboarding", "complete", token],
+			}),
+		},
+		members: {
+			create: defineMutation(apiContract.merchant.members.create, {
+				response: envelope(MerchantMemberCreatedResponseSchema),
+				queryKey: ({ email }) => ["merchant", "members", "create", email],
+			}),
+		},
 	},
 
 	rewardsAdmin: {

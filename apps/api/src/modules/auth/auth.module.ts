@@ -17,6 +17,7 @@ import { SuperAdminGuard } from "./guards/super-admin.guard";
 import { ClearAuthCookiesInterceptor } from "./interceptors/clear-auth-cookies.interceptor";
 import { SetAuthCookiesInterceptor } from "./interceptors/set-auth-cookies.interceptor";
 import { AuthController } from "./auth.controller";
+import { TwoFactorController } from "./two-factor.controller";
 import { AuthService } from "./auth.service";
 import { RedisUserSessionCacheService } from "./cache/redis-user-session-cache.service";
 import { UserSessionCacheService } from "./cache/user-session-cache.service";
@@ -25,19 +26,25 @@ import { UserRepository } from "./repositories/user.repository";
 import { AccountLockoutService } from "./services/account-lockout.service";
 import { AdminUserService } from "./services/admin-user.service";
 import { AuthEventsService } from "./services/auth-events.service";
+import { AuthSessionService } from "./services/auth-session.service";
+import { ChangePasswordService } from "./services/change-password.service";
 import { CryptoService } from "./services/crypto.service";
 import { EmailService } from "./services/email.service";
 import { EmailVerificationService } from "./services/email-verification.service";
 import { IdentityService } from "./services/identity.service";
+import { UserProvisioningService } from "./services/user-provisioning.service";
 import { LoginService } from "./services/login.service";
+import { LoginVerificationService } from "./services/login-verification.service";
 import { PasswordResetService } from "./services/password-reset.service";
+import { PasswordHistoryService } from "./services/password-history.service";
+import { TwoFactorService } from "./services/two-factor.service";
 import { TaskScheduleService } from "./services/task-schedule.service";
 import { TokenService } from "./services/token.service";
 import { UserResponseMapper } from "./services/user-response.mapper";
 
 @Module({
 	imports: [PrismaModule, JwtModule.register({ global: true }), AuthorizationModule, NotificationsModule],
-	controllers: [AuthController],
+	controllers: [AuthController, TwoFactorController],
 	providers: [
 		// ── Facade ──────────────────────────────────────────────
 		AuthService,
@@ -71,8 +78,15 @@ import { UserResponseMapper } from "./services/user-response.mapper";
 		},
 		// ── Domain services ─────────────────────────────────────
 		IdentityService,
+		UserProvisioningService,
+		AuthSessionService,
 		LoginService,
+		LoginVerificationService,
 		PasswordResetService,
+		ChangePasswordService,
+		PasswordHistoryService,
+		TwoFactorService,
+		EmailVerificationService,
 		EmailVerificationService,
 		AdminUserService,
 		AccountLockoutService,
@@ -100,6 +114,7 @@ import { UserResponseMapper } from "./services/user-response.mapper";
 		AuthService,
 		// ── Domain services (for sibling modules) ───────────────
 		IdentityService,
+		UserProvisioningService,
 		UserResponseMapper,
 		UserSessionCacheService,
 		// ── Infrastructure ──────────────────────────────────────
@@ -107,6 +122,7 @@ import { UserResponseMapper } from "./services/user-response.mapper";
 		TokenService,
 		CryptoService,
 		EmailService,
+		EmailVerificationService,
 		AuthGuard,
 		AdminAccessGuard,
 		EmailVerifiedGuard,

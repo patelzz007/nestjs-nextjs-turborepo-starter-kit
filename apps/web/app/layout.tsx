@@ -12,6 +12,7 @@ import { WebBreadcrumbProvider } from "@/components/breadcrumb-provider";
 import { WebClientAuthWrapper } from "@/components/web-client-auth-wrapper";
 import { WebSessionBootstrap } from "@/components/web-session-bootstrap";
 import { ThemeProvider } from "@workspace/ui/components/theme-provider";
+import { Toaster } from "@workspace/ui/components/feedback/toast";
 import { ScrollToTop } from "@workspace/ui/components/navigation/scroll-to-top";
 import { validateWebEnv } from "@workspace/shared/runtime/index";
 
@@ -59,6 +60,7 @@ export default function RootLayout({
 						<WebSessionBootstrap />
 						<ThemeProvider>
 							<WebBreadcrumbProvider>{children}</WebBreadcrumbProvider>
+							<Toaster position="top-right" />
 							<ScrollToTop />
 						</ThemeProvider>
 					</WebClientAuthWrapper>

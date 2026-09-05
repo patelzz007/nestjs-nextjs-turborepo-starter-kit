@@ -47,14 +47,19 @@ export {
 	StopImpersonationServiceResponseSchema,
 	strongPassword,
 	VerifyEmailResponseSchema,
+	VerifyEmailSchema,
 	JwtPayloadSchema,
+	LoginClientResponseSchema,
 } from "./auth/auth";
 export type {
 	ForgotPasswordInput,
+	AuthClientType,
+	AuthClientTypeSchema,
 	ForgotPasswordResponse,
 	ImpersonateResponse,
 	ImpersonateServiceResponse,
 	JwtPayload,
+	LoginClientResponse,
 	LoginInput,
 	LoginResponse,
 	LoginServiceResponse,
@@ -71,8 +76,56 @@ export type {
 	SignupResponse,
 	StopImpersonationResponse,
 	StopImpersonationServiceResponse,
+	VerifyEmailInput,
 	VerifyEmailResponse,
 } from "./auth/auth";
+export {
+	ChangePasswordResponseSchema,
+	ChangePasswordSchema,
+} from "./auth/change-password";
+export type { ChangePasswordInput, ChangePasswordResponse } from "./auth/change-password";
+export {
+	LoginVerificationCodeSchema,
+	LoginVerificationPendingResponseSchema,
+	ValidateResetTokenResponseSchema,
+	ValidateResetTokenSchema,
+	VerifyLoginSchema,
+} from "./auth/login-verification";
+export type {
+	LoginVerificationCode,
+	LoginVerificationPendingResponse,
+	ValidateResetTokenInput,
+	ValidateResetTokenResponse,
+	VerifyLoginInput,
+} from "./auth/login-verification";
+export {
+	BackupCodeSchema,
+	DisableTwoFactorSchema,
+	EnableTwoFactorSchema,
+	LoginTwoFactorPendingResponseSchema,
+	LoginTwoFactorSchema,
+	TotpCodeSchema,
+	TwoFactorMessageResponseSchema,
+	TwoFactorPendingTokenPayloadSchema,
+	TwoFactorSetupResponseSchema,
+	VerifyBackupCodeLoginSchema,
+	VerifyBackupCodeResponseSchema,
+	VerifyBackupCodeSchema,
+} from "./auth/two-factor";
+export type {
+	BackupCode,
+	DisableTwoFactorInput,
+	EnableTwoFactorInput,
+	LoginTwoFactorInput,
+	LoginTwoFactorPendingResponse,
+	TotpCode,
+	TwoFactorMessageResponse,
+	TwoFactorPendingTokenPayload,
+	TwoFactorSetupResponse,
+	VerifyBackupCodeInput,
+	VerifyBackupCodeLoginInput,
+	VerifyBackupCodeResponse,
+} from "./auth/two-factor";
 export { AccessTokenPayloadSchema, EmailVerificationTokenPayloadSchema, FlatUserResponseSchema, RefreshTokenPayloadSchema } from "./auth/token";
 export type { AccessTokenPayload, EmailVerificationTokenPayload, FlatUserResponse, RefreshTokenPayload } from "./auth/token";
 export { CookieNamesSchema, CookieResultSchema, LoginTokenFieldsSchema } from "./auth/cookies";
@@ -156,11 +209,14 @@ export {
 	EmailAccentSchema,
 	EmailAddressSchema,
 	EmailRenderContextSchema,
+	LoginVerificationEmailPropsSchema,
+	PasswordChangedEmailPropsSchema,
 	PasswordResetEmailPropsSchema,
 	ReferrerRewardCreditedEmailPropsSchema,
 	MerchantInviteEmailPropsSchema,
 	RewardClaimOtpEmailPropsSchema,
 	SecurityAlertEmailPropsSchema,
+	TwoFactorStatusEmailPropsSchema,
 	VerificationEmailPropsSchema,
 	WelcomeEmailPropsSchema,
 } from "./email/email-templates";
@@ -191,16 +247,19 @@ export type {
 	EmailAccent,
 	EmailAddress,
 	EmailRenderContext,
+	LoginVerificationEmailProps,
+	PasswordChangedEmailProps,
 	PasswordResetEmailProps,
 	ReferrerRewardCreditedEmailProps,
 	MerchantInviteEmailProps,
 	RewardClaimOtpEmailProps,
 	SecurityAlertEmailProps,
+	TwoFactorStatusEmailProps,
 	VerificationEmailProps,
 	WelcomeEmailProps,
 } from "./email/email-templates";
-export { AudienceTypeSchema, DeviceTypeSchema, MenuMatchTypeSchema, PermissionActionSchema, PermissionResourceSchema, PlanSchema, RedirectTypeSchema } from "./domain/enums";
-export type { AudienceType, DeviceType, MenuMatchType, PermissionAction, PermissionResource, Plan, RedirectType } from "./domain/enums";
+export { AudienceTypeSchema, DeviceTypeSchema, PermissionActionSchema, PermissionResourceSchema, PlanSchema, RedirectTypeSchema } from "./domain/enums";
+export type { AudienceType, DeviceType, PermissionAction, PermissionResource, Plan, RedirectType } from "./domain/enums";
 export { EmailTemplateKeyParamSchema, UuidParamSchema, VerifyEmailTokenParamSchema } from "./domain/param-schemas";
 export type { EmailTemplateKeyParam, UuidParam, VerifyEmailTokenParam } from "./domain/param-schemas";
 
@@ -243,8 +302,6 @@ export type {
 	LogStats,
 	LogStatsQuery,
 } from "./domain/logs";
-export { CreateMenuItemSchema, MenuItemResponseSchema, MenuMessageResponseSchema, UpdateMenuItemSchema } from "./domain/menu";
-export type { CreateMenuItemInput, MenuItemResponse, MenuMessageResponse, UpdateMenuItemInput } from "./domain/menu";
 export { ErrorResponseSchema, MessageResponseSchema } from "./api/message";
 export type { ErrorResponse, MessageResponse } from "./api/message";
 export { PaginatedResponseSchema, PaginationMetaSchema, PaginationSchema } from "./api/pagination";
@@ -484,8 +541,14 @@ export {
 	MerchantApiKeyCreatedSchema,
 	MerchantApiKeySummarySchema,
 	MerchantCreateApiKeySchema,
+	MerchantCreateMemberSchema,
 	MerchantCreateRewardSchema,
 	MerchantCreateRewardFormSchema,
+	MerchantMemberCreatedResponseSchema,
+	MerchantOnboardingCompleteResponseSchema,
+	MerchantOnboardingCompleteSchema,
+	MerchantOnboardingInvitePreviewSchema,
+	MerchantOnboardingValidateTokenSchema,
 	mapMerchantCreateRewardFormToInput,
 	mapMerchantUpdateRewardFormToInput,
 	mapRewardResponseToFormValues,
@@ -531,26 +594,14 @@ export {
 export {
 	CapabilityCatalogQuerySchema,
 	CapabilityDefinitionSchema,
-	CapabilityMenuQuerySchema,
-	CapabilityMenuResponseSchema,
 	CapabilityScopeSchema,
 	CapabilitySlugSchema,
-	filterMenuByCapabilities,
 	hasCapability,
 	parseCapabilitySlugs,
 	toPlatformCapabilitySlug,
 	withCapabilityToggled,
 } from "./domain/capabilities";
-export type {
-	CapabilityCatalogQuery,
-	CapabilityDefinition,
-	CapabilityMenuQuery,
-	CapabilityMenuResponse,
-	CapabilityMenuItem,
-	CapabilityMenuSection,
-	CapabilityScope,
-	CapabilitySlug,
-} from "./domain/capabilities";
+export type { CapabilityCatalogQuery, CapabilityDefinition, CapabilityScope, CapabilitySlug } from "./domain/capabilities";
 export { merchantHasCapability, MerchantCapabilitySchema, parseMerchantCapabilities } from "./domain/merchant-capabilities";
 export type { MerchantCapability } from "./domain/merchant-capabilities";
 export {
@@ -602,8 +653,14 @@ export type {
 	MerchantApiKeyCreated,
 	MerchantApiKeySummary,
 	MerchantCreateApiKeyInput,
+	MerchantCreateMemberInput,
 	MerchantCreateRewardInput,
 	MerchantCreateRewardFormValues,
+	MerchantMemberCreatedResponse,
+	MerchantOnboardingCompleteInput,
+	MerchantOnboardingCompleteResponse,
+	MerchantOnboardingInvitePreview,
+	MerchantOnboardingValidateTokenInput,
 	MerchantRewardFormValues,
 	MerchantUpdateRewardFormValues,
 	MerchantMemberRole,

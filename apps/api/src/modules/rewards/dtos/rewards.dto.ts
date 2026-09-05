@@ -6,7 +6,10 @@ import {
 	CreateRewardClaimSchema,
 	MarkRewardNotificationsReadSchema,
 	MerchantCreateApiKeySchema,
+	MerchantCreateMemberSchema,
 	MerchantCreateRewardSchema,
+	MerchantOnboardingCompleteSchema,
+	MerchantOnboardingValidateTokenSchema,
 	MerchantUpdateRewardSchema,
 	RedemptionConfirmSchema,
 	RedemptionValidateSchema,
@@ -35,6 +38,12 @@ export class MerchantCreateRewardDto extends createZodDto(MerchantCreateRewardSc
 export class MerchantUpdateRewardDto extends createZodDto(MerchantUpdateRewardSchema) {}
 
 export class MerchantCreateApiKeyDto extends createZodDto(MerchantCreateApiKeySchema) {}
+
+export class MerchantOnboardingValidateTokenDto extends createZodDto(MerchantOnboardingValidateTokenSchema) {}
+
+export class MerchantOnboardingCompleteDto extends createZodDto(MerchantOnboardingCompleteSchema) {}
+
+export class MerchantCreateMemberDto extends createZodDto(MerchantCreateMemberSchema) {}
 
 export class AdminCreateMerchantInviteDto extends createZodDto(AdminCreateMerchantInviteSchema) {}
 

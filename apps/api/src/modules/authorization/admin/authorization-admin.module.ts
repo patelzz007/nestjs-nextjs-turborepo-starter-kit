@@ -4,7 +4,6 @@ import { AuditController } from "./audit.controller";
 import { PermissionsController } from "./permissions.controller";
 import { RolesController } from "./roles.controller";
 import { CapabilitiesCatalogController } from "../controllers/capabilities-catalog.controller";
-import { NavigationMenuController } from "../controllers/navigation-menu.controller";
 
 /**
  * Admin-facing REST endpoints for managing roles and permissions.
@@ -13,6 +12,6 @@ import { NavigationMenuController } from "../controllers/navigation-menu.control
  * the global `AuthGuard` + `AuthorizationGuard` enforce them.
  */
 @Module({
-	controllers: [RolesController, PermissionsController, AuditController, CapabilitiesCatalogController, NavigationMenuController],
+	controllers: [RolesController, PermissionsController, AuditController, CapabilitiesCatalogController],
 })
 export class AuthorizationAdminModule {}

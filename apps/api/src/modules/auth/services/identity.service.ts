@@ -9,6 +9,8 @@ import { TrackAuthFlow } from "../decorators/track-auth-flow.decorator";
 import { UserRepository } from "../repositories/user.repository";
 import { AuthEventsService } from "./auth-events.service";
 import { CryptoService } from "./crypto.service";
+import { EmailService } from "./email.service";
+import { UserProvisioningService } from "./user-provisioning.service";
 import { TokenService } from "./token.service";
 import { UserResponseMapper } from "./user-response.mapper";
 
@@ -29,10 +31,12 @@ export class IdentityService {
 		private readonly logService: LogService,
 		private readonly mapper: UserResponseMapper,
 		private readonly sessionCache: UserSessionCacheService,
+		private readonly emailService: EmailService,
+		private readonly userProvisioning: UserProvisioningService,
 	) {}
 
 	@TrackAuthFlow({ flow: "signup" })
-	public async signup(signupDto: SignupInput): Promise<SignupResponse> {
+	public async signup(signupDto: SignupInput, clientType?: string): Promise<SignupResponse> {
 		const { email, password, fullName } = signupDto;
 
 		const emailTaken: boolean = await this.userRepo.existsByEmail(email);
@@ -43,32 +47,23 @@ export class IdentityService {
 		const hashedPassword = await this.cryptoService.hash(password);
 		const verificationToken = await this.tokenService.generateEmailVerificationToken(email);
 
-		const { user: newUser, userPermissions } = await this.prisma.$transaction(async (tx) => {
-			const created = await tx.user.create({
-				data: { email, passwordHash: hashedPassword, fullName },
-				select: {
-					id: true,
-					email: true,
-					fullName: true,
-					isActive: true,
-					isSuperAdmin: true,
-					createdAt: true,
-					updatedAt: true,
-					isDeleted: true,
-					deletedAt: true,
-				},
-			});
-
-			const userRole = await tx.role.findUnique({ where: { name: "User" } });
-			if (userRole) {
-				await tx.userRole.create({
-					data: { userId: created.id, roleId: userRole.id },
-				});
-			}
-
-			const permissions = await this.authorizationChecker.getUserPermissionDetails(created.id);
-			return { user: created, userPermissions: permissions };
+		const newUser = await this.prisma.user.create({
+			data: { email, passwordHash: hashedPassword, fullName },
+			select: {
+				id: true,
+				email: true,
+				fullName: true,
+				isActive: true,
+				isSuperAdmin: true,
+				createdAt: true,
+				updatedAt: true,
+				isDeleted: true,
+				deletedAt: true,
+			},
 		});
+
+		await this.userProvisioning.assignDefaultConsumerRole(newUser.id);
+		const userPermissions = await this.authorizationChecker.getUserPermissionDetails(newUser.id);
 
 		this.logService.info(`New user registered: ${newUser.email}`, {
 			userId: newUser.id,
@@ -83,6 +78,8 @@ export class IdentityService {
 
 		const profile = this.mapper.build(newUser, userPermissions, false);
 		await this.warmSessionCache(newUser.id, profile);
+
+		await this.emailService.sendVerificationEmail(newUser.email, verificationToken, clientType);
 
 		return {
 			user: profile,

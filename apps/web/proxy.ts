@@ -7,7 +7,7 @@
 // ============================================
 
 import { API_BASE_URL } from "@workspace/client/lib/api/config";
-import { isWebAuthPath, isWebProtectedPath, isWebPublicExactPath } from "@/lib/auth-routes";
+import { isWebAuthPath, isWebProtectedPath, isWebPublicExactPath, isWebTokenAuthPath } from "@/lib/auth-routes";
 import {
 	createProxyRefreshCooldown,
 	extractRotatedAccessToken,
@@ -160,8 +160,9 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
 		return redirectToLogin(request, pathname, rotatedCookies);
 	}
 
-	// If accessing auth routes while authenticated, redirect to home (Reward Hub)
-	if (isAuthRoute && isAuthenticated) {
+	// Login/signup bounce — but token flows (verify email, reset password) must
+	// still run when the user already has a session (common right after signup).
+	if (isAuthRoute && isAuthenticated && !isWebTokenAuthPath(pathname)) {
 		const redirectPath: string | null = request.nextUrl.searchParams.get("redirect");
 		const targetPath: string = redirectPath !== null && (isWebProtectedPath(redirectPath) || redirectPath === "/") ? redirectPath : getDefaultAuthenticatedPath();
 

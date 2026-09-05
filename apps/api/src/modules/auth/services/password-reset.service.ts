@@ -1,5 +1,5 @@
-import { Injectable, UnauthorizedException } from "@nestjs/common";
-import type { ForgotPasswordInput, ForgotPasswordResponse, ResetPasswordInput, ResetPasswordResponse } from "@workspace/shared";
+import { Injectable, BadRequestException, UnauthorizedException } from "@nestjs/common";
+import type { ForgotPasswordInput, ForgotPasswordResponse, ResetPasswordInput, ResetPasswordResponse, ValidateResetTokenResponse } from "@workspace/shared";
 
 import { LogService } from "../../../modules/logs/logs.service";
 import { PrismaService } from "../../../prisma/prisma.service";
@@ -8,6 +8,7 @@ import { UserRepository } from "../repositories/user.repository";
 import { AuthEventsService } from "./auth-events.service";
 import { CryptoService } from "./crypto.service";
 import { EmailService } from "./email.service";
+import { PasswordHistoryService } from "./password-history.service";
 
 /**
  * Handles the password reset flow: initiating a reset (forgot password)
@@ -22,6 +23,7 @@ export class PasswordResetService {
 		private readonly userRepo: UserRepository,
 		private readonly cryptoService: CryptoService,
 		private readonly emailService: EmailService,
+		private readonly passwordHistoryService: PasswordHistoryService,
 		private readonly authEvents: AuthEventsService,
 		private readonly logService: LogService,
 	) {}
@@ -31,8 +33,8 @@ export class PasswordResetService {
 	 * Always returns the same response regardless of whether the email exists,
 	 * to prevent email enumeration attacks.
 	 */
-	@TrackAuthFlow({ flow: "forgot-password" })
-	public async forgotPassword(dto: ForgotPasswordInput): Promise<ForgotPasswordResponse> {
+	@TrackAuthFlow({ flow: "forgot-password", clientType: (_dto: unknown, clientType?: unknown) => (typeof clientType === "string" ? clientType : null) })
+	public async forgotPassword(dto: ForgotPasswordInput, clientType?: string): Promise<ForgotPasswordResponse> {
 		const { email } = dto;
 
 		const user = await this.userRepo.findResetLookupByEmail(email);
@@ -58,9 +60,15 @@ export class PasswordResetService {
 			},
 		});
 
-		await this.emailService.sendPasswordResetEmail(email, rawToken);
+		await this.emailService.sendPasswordResetEmail(email, rawToken, clientType);
 
 		return { message: "If an account with that email exists, a password reset link has been sent." };
+	}
+
+	/** Check whether a raw reset token is valid without consuming it. */
+	public async validateResetToken(rawToken: string): Promise<ValidateResetTokenResponse> {
+		const valid = await this.isResetTokenValid(rawToken);
+		return { valid };
 	}
 
 	/**
@@ -70,25 +78,14 @@ export class PasswordResetService {
 	public async resetPassword(dto: ResetPasswordInput): Promise<ResetPasswordResponse> {
 		const { token: rawToken, password } = dto;
 
-		const candidates = await this.prisma.passwordResetToken.findMany({
-			where: {
-				usedAt: null,
-				expiresAt: { gte: Date.now() },
-			},
-			select: { id: true, userId: true, token: true },
-		});
-
-		let matchedToken: (typeof candidates)[number] | undefined;
-		for (const candidate of candidates) {
-			const isValid = await this.cryptoService.compare(rawToken, candidate.token);
-			if (isValid) {
-				matchedToken = candidate;
-				break;
-			}
-		}
-
+		const matchedToken = await this.findValidResetToken(rawToken);
 		if (!matchedToken) {
 			throw new UnauthorizedException("Invalid or expired reset token");
+		}
+
+		const reused = await this.passwordHistoryService.isPasswordReused(matchedToken.userId, password);
+		if (reused) {
+			throw new BadRequestException("Password cannot be one of your last 5 passwords");
 		}
 
 		const newPasswordHash = await this.cryptoService.hash(password);
@@ -102,6 +99,12 @@ export class PasswordResetService {
 				where: { id: matchedToken.id },
 				data: { usedAt: Date.now(), updatedAt: Date.now() },
 			}),
+			this.prisma.passwordHistory.create({
+				data: {
+					userId: matchedToken.userId,
+					passwordHash: newPasswordHash,
+				},
+			}),
 		]);
 
 		// Revoke all existing refresh tokens (force re-login)
@@ -110,6 +113,15 @@ export class PasswordResetService {
 			data: { isDeleted: true, deletedAt: Date.now(), updatedAt: Date.now() },
 		});
 
+		const user = await this.prisma.user.findUnique({
+			where: { id: matchedToken.userId },
+			select: { email: true },
+		});
+
+		if (user !== null) {
+			await this.emailService.sendPasswordChangedEmail(user.email);
+		}
+
 		this.logService.info("Password reset completed", {
 			userId: matchedToken.userId,
 			context: "PasswordResetService",
@@ -117,5 +129,29 @@ export class PasswordResetService {
 		});
 
 		return { message: "Password has been reset successfully. Please log in with your new password." };
+	}
+
+	private async isResetTokenValid(rawToken: string): Promise<boolean> {
+		const matched = await this.findValidResetToken(rawToken);
+		return matched !== null;
+	}
+
+	private async findValidResetToken(rawToken: string): Promise<{ readonly id: string; readonly userId: string } | null> {
+		const candidates = await this.prisma.passwordResetToken.findMany({
+			where: {
+				usedAt: null,
+				expiresAt: { gte: Date.now() },
+			},
+			select: { id: true, userId: true, token: true },
+		});
+
+		for (const candidate of candidates) {
+			const isValid = await this.cryptoService.compare(rawToken, candidate.token);
+			if (isValid) {
+				return { id: candidate.id, userId: candidate.userId };
+			}
+		}
+
+		return null;
 	}
 }

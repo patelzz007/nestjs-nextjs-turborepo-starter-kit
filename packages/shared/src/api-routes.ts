@@ -72,19 +72,25 @@ export const apiRoutes = {
 		forgotPassword: "/auth/forgot-password",
 		resetPassword: "/auth/reset-password",
 		resendVerification: "/auth/resend-verification",
-		verifyEmail: { path: "/auth/verify-email/:token", params: ["token"] },
+		verifyEmail: "/auth/verify-email",
 		adminUsers: "/auth/admin/users",
 		adminUserDetail: { path: "/auth/admin/users/:userId", params: ["userId"] },
 		impersonate: { path: "/auth/impersonate/:userId", params: ["userId"] },
 		stopImpersonation: "/auth/stop-impersonation",
+		changePassword: "/auth/change-password",
+		loginTwoFactor: "/auth/login/2fa",
+		loginBackupCode: "/auth/login/backup-code",
+		verifyLogin: "/auth/verify-login",
+		validateResetToken: "/auth/validate-reset-token",
+		twoFactorSetup: "/auth/2fa/setup",
+		twoFactorEnable: "/auth/2fa/enable",
+		twoFactorDisable: "/auth/2fa/disable",
+		twoFactorVerifyBackupCode: "/auth/2fa/verify-backup-code",
 	},
 
-	// ── Generic capability catalog + navigation ─────────────────────────
+	// ── Generic capability catalog ──────────────────────────────────────
 	capabilities: {
 		catalog: "/capabilities/catalog",
-	},
-	navigation: {
-		menu: "/navigation/menu",
 	},
 
 	// ── Email ───────────────────────────────────────────────────────────
@@ -170,6 +176,13 @@ export const apiRoutes = {
 		},
 		redemptions: "/merchant/redemptions",
 		analytics: "/merchant/analytics",
+		onboarding: {
+			validate: "/merchant/onboarding/validate",
+			complete: "/merchant/onboarding/complete",
+		},
+		members: {
+			create: "/merchant/members",
+		},
 	},
 	rewardsAdmin: {
 		invites: "/admin/invites",

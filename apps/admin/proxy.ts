@@ -32,7 +32,14 @@ const REFRESH_TOKEN_COOKIE = "adminRefreshToken";
 
 // The whole admin panel lives under `/` (overview, settings, users, …).
 // Only `/auth/*` is open to unauthenticated visitors.
-const AUTH_ROUTES: readonly string[] = ["/auth/login", "/auth/forgot-password"];
+const AUTH_ROUTES: readonly string[] = ["/auth/login", "/auth/forgot-password", "/auth/reset-password", "/auth/verify-email"];
+
+/** Token links must run even when the admin session cookie is already set. */
+const TOKEN_AUTH_ROUTE_PREFIXES: readonly string[] = ["/auth/verify-email", "/auth/reset-password"];
+
+function isTokenAuthRoute(pathname: string): boolean {
+	return TOKEN_AUTH_ROUTE_PREFIXES.some((route) => pathname.startsWith(route));
+}
 
 // Routes accessible without authentication.
 const PUBLIC_ROUTES: readonly string[] = [];
@@ -160,7 +167,7 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
 	// Auth routes (login, forgot-password): bounce already-authenticated
 	// admins back into the panel instead of showing the form again.
 	if (isAuthRoute) {
-		if (isAuthenticated && hasAdminAccess) {
+		if (isAuthenticated && hasAdminAccess && !isTokenAuthRoute(pathname)) {
 			const redirect = request.nextUrl.searchParams.get("redirect");
 			const targetUrl = redirect !== null && isSafeRedirect(redirect) ? redirect : "/";
 			return applyRotatedCookies(NextResponse.redirect(new URL(targetUrl, request.url)), rotatedCookies);

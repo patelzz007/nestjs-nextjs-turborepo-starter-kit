@@ -34,4 +34,13 @@ export class CryptoService {
 	public generateRandomToken(): string {
 		return crypto.randomBytes(32).toString("hex");
 	}
+
+	/** Generate a numeric one-time code (e.g. login verification OTP). */
+	public generateNumericCode(length: number): string {
+		let result = "";
+		for (let index = 0; index < length; index += 1) {
+			result += crypto.randomInt(0, 10).toString();
+		}
+		return result;
+	}
 }

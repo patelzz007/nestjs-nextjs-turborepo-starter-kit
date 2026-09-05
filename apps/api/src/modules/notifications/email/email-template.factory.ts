@@ -4,10 +4,13 @@ import {
 	ApiKeyCreatedEmailPropsSchema,
 	EmailPreviewPropValueSchema,
 	MerchantInviteEmailPropsSchema,
+	LoginVerificationEmailPropsSchema,
+	PasswordChangedEmailPropsSchema,
 	PasswordResetEmailPropsSchema,
 	ReferrerRewardCreditedEmailPropsSchema,
 	RewardClaimOtpEmailPropsSchema,
 	SecurityAlertEmailPropsSchema,
+	TwoFactorStatusEmailPropsSchema,
 	VerificationEmailPropsSchema,
 	WelcomeEmailPropsSchema,
 	type EmailTemplateKey,
@@ -18,10 +21,14 @@ import { AccountLockedEmailTemplate } from "./templates/account-locked-email.tem
 import { AdminAlertEmailTemplate } from "./templates/admin-alert-email.template";
 import { ApiKeyCreatedEmailTemplate } from "./templates/api-key-created-email.template";
 import { MerchantInviteEmailTemplate } from "./templates/merchant-invite-email.template";
+import { LoginVerificationEmailTemplate } from "./templates/login-verification-email.template";
+import { PasswordChangedEmailTemplate } from "./templates/password-changed-email.template";
 import { PasswordResetEmailTemplate } from "./templates/password-reset-email.template";
 import { ReferrerRewardCreditedEmailTemplate } from "./templates/referrer-reward-credited-email.template";
 import { RewardClaimOtpEmailTemplate } from "./templates/reward-claim-otp-email.template";
 import { SecurityAlertEmailTemplate } from "./templates/security-alert-email.template";
+import { TwoFactorDisabledEmailTemplate } from "./templates/two-factor-disabled-email.template";
+import { TwoFactorEnabledEmailTemplate } from "./templates/two-factor-enabled-email.template";
 import { VerificationEmailTemplate } from "./templates/verification-email.template";
 import { WelcomeEmailTemplate } from "./templates/welcome-email.template";
 
@@ -35,12 +42,20 @@ export function buildEmailTemplateFromJobData(templateKey: EmailTemplateKey, pro
 			return new VerificationEmailTemplate(VerificationEmailPropsSchema.parse(props));
 		case "password-reset":
 			return new PasswordResetEmailTemplate(PasswordResetEmailPropsSchema.parse(props));
+		case "password-changed":
+			return new PasswordChangedEmailTemplate(PasswordChangedEmailPropsSchema.parse(props));
 		case "account-locked":
 			return new AccountLockedEmailTemplate(AccountLockedEmailPropsSchema.parse(props));
 		case "welcome":
 			return new WelcomeEmailTemplate(WelcomeEmailPropsSchema.parse(props));
 		case "security-alert":
 			return new SecurityAlertEmailTemplate(SecurityAlertEmailPropsSchema.parse(props));
+		case "two-factor-enabled":
+			return new TwoFactorEnabledEmailTemplate(TwoFactorStatusEmailPropsSchema.parse(props));
+		case "two-factor-disabled":
+			return new TwoFactorDisabledEmailTemplate(TwoFactorStatusEmailPropsSchema.parse(props));
+		case "login-verification":
+			return new LoginVerificationEmailTemplate(LoginVerificationEmailPropsSchema.parse(props));
 		case "admin-alert":
 			return new AdminAlertEmailTemplate(AdminAlertEmailPropsSchema.parse(props));
 		case "api-key-created":

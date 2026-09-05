@@ -985,6 +985,22 @@ The role hierarchy graph is cached separately with a 15-minute TTL. It is invali
 
 ---
 
+## Automatic role & membership provisioning
+
+New accounts receive the correct platform and merchant access at creation time — no manual admin assignment.
+
+| Flow | Platform RBAC | Merchant RBAC |
+| --- | --- | --- |
+| **Consumer signup** (`POST /auth/signup`) | `User` role via `UserProvisioningService` → `RoleService.assignToUser` (audit + `tokenVersion` bump) | — |
+| **Merchant onboarding** (`POST /merchant/onboarding/complete`) | `User` role (new or existing account) | `MerchantMember` with `OWNER` + new `MerchantOrg` |
+| **Cashier creation** (`POST /merchant/members`, owner only) | `User` role (new or existing account) | `MerchantMember` with `CASHIER` |
+
+**Admin merchant invite** (`POST /admin/invites`) only emails an onboarding link. The org and `OWNER` membership are created when the invitee calls `POST /merchant/onboarding/complete` with the token, password, and full name.
+
+Merchant portal capabilities (`merchant:view_dashboard`, etc.) come from `merchant_role_capabilities` by `MerchantMemberRole` — not from platform `Role` rows.
+
+---
+
 ## Session profile vs permissions (`/me` vs `/auth/permissions`)
 
 The API **splits** identity profile from RBAC payload so clients can refetch permissions after admin mutations without reloading the full user record on every navigation.
@@ -1278,7 +1294,6 @@ Platform RBAC, merchant portal grants, and sidebar gating share one **dynamic sl
 **API**
 
 - `GET /capabilities/catalog?scope=MERCHANT` — list catalog entries (labels, sort order).
-- `GET /navigation/menu?scope=ADMIN|MERCHANT` — DB-driven menu tree with `requiredCapabilities[]` per item.
 
 **Session**
 
@@ -1288,8 +1303,11 @@ Platform RBAC, merchant portal grants, and sidebar gating share one **dynamic sl
 **Frontend**
 
 - Admin role matrix: `/rewardhub/role-capabilities` loads catalog + grants from the API.
-- Sidebars hydrate from `GET /navigation/menu` and filter client-side with `hasCapability(slug)`.
-- Static JSON menus remain as fallback until the navigation API responds.
+- **Sidebar menus are JSON-driven** (source of truth per app):
+  - Web: `apps/web/data/user-sidebar-menu.json`
+  - Merchant: `apps/merchant/data/merchant-sidebar-menu.json`
+  - Admin: `apps/admin/lib/navigation/sidebar-menu.json`
+- Sidebars filter client-side with `hasCapability(slug)` / platform permissions from `GET /auth/permissions`.
 
 **Merchant defaults**
 

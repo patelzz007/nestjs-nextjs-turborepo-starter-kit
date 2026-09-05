@@ -67,6 +67,7 @@ export class AdminUserService {
 				isActive: u.isActive,
 				isSuperAdmin: u.isSuperAdmin,
 				isEmailVerified,
+				twoFactorEnabled: u.twoFactorEnabled,
 				hasAdminAccess,
 				tokenVersion: u.tokenVersion,
 				roles,

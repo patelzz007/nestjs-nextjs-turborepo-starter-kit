@@ -16,6 +16,7 @@ export class UserResponseMapper {
 	public build(
 		user: Pick<UserResponse, "id" | "email" | "fullName" | "isActive" | "isSuperAdmin"> & {
 			readonly tokenVersion?: number;
+			readonly twoFactorEnabled?: boolean;
 			readonly createdAt: bigint;
 			readonly updatedAt: bigint;
 			readonly isDeleted: boolean;
@@ -33,6 +34,7 @@ export class UserResponseMapper {
 			isActive: user.isActive,
 			isSuperAdmin: user.isSuperAdmin,
 			isEmailVerified,
+			twoFactorEnabled: user.twoFactorEnabled ?? false,
 			hasAdminAccess,
 			tokenVersion: user.tokenVersion ?? 0,
 			roles: userPermissions.roles.map(({ id, name, description }) => ({ id, name, description })),
@@ -47,6 +49,7 @@ export class UserResponseMapper {
 	public toFlatUser(
 		user: Pick<UserResponse, "id" | "email" | "fullName" | "isActive" | "isSuperAdmin"> & {
 			readonly tokenVersion?: number;
+			readonly twoFactorEnabled?: boolean;
 			readonly createdAt: bigint;
 			readonly updatedAt: bigint;
 			readonly isDeleted: boolean;
