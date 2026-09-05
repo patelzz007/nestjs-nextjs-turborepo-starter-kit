@@ -102,8 +102,7 @@ export function DashboardShell({ footerActions = [], children, initialUser = nul
 				user={{ name: resolvedUser.name, email: resolvedUser.email }}
 				onLogout={handleLogout}
 				footerActions={footerActions}
-				initialSessionPermissions={initialSessionPermissions}
-			>
+				initialSessionPermissions={initialSessionPermissions}>
 				{children}
 			</DashboardLayout>
 		</AdminBreadcrumbProvider>

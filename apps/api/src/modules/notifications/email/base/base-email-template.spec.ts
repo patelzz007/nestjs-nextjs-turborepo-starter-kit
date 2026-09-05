@@ -46,7 +46,7 @@ describe("BaseEmailTemplate", () => {
 		expect(html).toContain("&amp;");
 	});
 
-		it("builds absolute, query-encoded action URLs", () => {
+	it("builds absolute, query-encoded action URLs", () => {
 		const template = new PasswordResetEmailTemplate({ to: "a@b.com", resetToken: "tok/+abc 123", expiresInHours: 1 });
 		const href = template.getCta(context)?.href ?? "";
 		expect(href).toContain("https://app.example.com/auth/reset-password");

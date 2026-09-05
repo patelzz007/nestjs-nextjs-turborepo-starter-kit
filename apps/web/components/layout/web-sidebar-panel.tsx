@@ -72,12 +72,7 @@ function WebSidebarPinnedItem({ title, url, icon, isActive, onNavigate }: WebSid
 	);
 }
 
-export function WebSidebarPanel({
-	userName,
-	sessionActive = false,
-	initialSessionPermissions,
-	onNavigate,
-}: WebSidebarPanelProps): React.JSX.Element {
+export function WebSidebarPanel({ userName, sessionActive = false, initialSessionPermissions, onNavigate }: WebSidebarPanelProps): React.JSX.Element {
 	const pathname = usePathname();
 	const router = useRouter();
 	const { user } = useAuth();

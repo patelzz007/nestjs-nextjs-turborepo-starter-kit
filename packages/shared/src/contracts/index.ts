@@ -20,13 +20,7 @@ import { apiRoutes } from "../api-routes";
 import { ForgotPasswordSchema, LoginSchema, ResendVerificationSchema, ResetPasswordSchema, SignupSchema, VerifyEmailSchema } from "../schemas/auth/auth";
 import { ChangePasswordSchema } from "../schemas/auth/change-password";
 import { ValidateResetTokenSchema, VerifyLoginSchema } from "../schemas/auth/login-verification";
-import {
-	DisableTwoFactorSchema,
-	EnableTwoFactorSchema,
-	LoginTwoFactorSchema,
-	VerifyBackupCodeLoginSchema,
-	VerifyBackupCodeSchema,
-} from "../schemas/auth/two-factor";
+import { DisableTwoFactorSchema, EnableTwoFactorSchema, LoginTwoFactorSchema, VerifyBackupCodeLoginSchema, VerifyBackupCodeSchema } from "../schemas/auth/two-factor";
 import { AdminUserListQuerySchema } from "../schemas/auth/user";
 import { UuidParamSchema } from "../schemas/domain/param-schemas";
 import { EmailLogListQuerySchema } from "../schemas/email/email";

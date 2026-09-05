@@ -47,9 +47,7 @@ function MerchantSidebarContent({
 		}
 	}, [setOpenMobile]);
 
-	return (
-		<MerchantSidebarPanel memberships={memberships} merchantOrgId={merchantOrgId} onStoreChange={onStoreChange} onNavigate={handleNavigate} />
-	);
+	return <MerchantSidebarPanel memberships={memberships} merchantOrgId={merchantOrgId} onStoreChange={onStoreChange} onNavigate={handleNavigate} />;
 }
 
 /** Merchant portal chrome — custom sidebar + topbar with command palette. */

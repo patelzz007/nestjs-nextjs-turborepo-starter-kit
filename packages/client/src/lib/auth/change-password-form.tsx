@@ -64,7 +64,14 @@ export function ChangePasswordForm({ onSuccess }: ChangePasswordFormProps): JSX.
 			{success ? <div className="rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-foreground">{success}</div> : null}
 			<div className="space-y-2">
 				<Label htmlFor="current-password">Current password</Label>
-				<PasswordInput id="current-password" autoComplete="current-password" value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} required className="h-11" />
+				<PasswordInput
+					id="current-password"
+					autoComplete="current-password"
+					value={currentPassword}
+					onChange={(event) => setCurrentPassword(event.target.value)}
+					required
+					className="h-11"
+				/>
 			</div>
 			<div className="space-y-2">
 				<Label htmlFor="new-password">New password</Label>
@@ -73,7 +80,14 @@ export function ChangePasswordForm({ onSuccess }: ChangePasswordFormProps): JSX.
 			</div>
 			<div className="space-y-2">
 				<Label htmlFor="confirm-password">Confirm new password</Label>
-				<PasswordInput id="confirm-password" autoComplete="new-password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} required className="h-11" />
+				<PasswordInput
+					id="confirm-password"
+					autoComplete="new-password"
+					value={confirmPassword}
+					onChange={(event) => setConfirmPassword(event.target.value)}
+					required
+					className="h-11"
+				/>
 			</div>
 		</FormShell>
 	);

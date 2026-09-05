@@ -180,9 +180,7 @@ export function UserAccessPanel({
 				</CardHeader>
 				<CardContent className="space-y-4">
 					{rolesCatalogError ? <p className="text-sm text-destructive">Could not load the role catalog. Check LIST:ROLE permission and refresh.</p> : null}
-					{permissionsCatalogError ? (
-						<p className="text-sm text-destructive">Could not load the permission catalog. Check LIST:PERMISSION permission and refresh.</p>
-					) : null}
+					{permissionsCatalogError ? <p className="text-sm text-destructive">Could not load the permission catalog. Check LIST:PERMISSION permission and refresh.</p> : null}
 
 					<Tabs defaultValue="roles">
 						<TabsList className="h-10 w-full">

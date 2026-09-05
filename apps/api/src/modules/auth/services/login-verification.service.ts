@@ -51,9 +51,7 @@ export class LoginVerificationService {
 		@Inject(REDIS_PUBLISHER) private readonly redis: Redis | null,
 	) {}
 
-	public async maybeRequireVerification(
-		context: PendingLoginContext,
-	): Promise<LoginServiceResponse | LoginVerificationPendingResponse> {
+	public async maybeRequireVerification(context: PendingLoginContext): Promise<LoginServiceResponse | LoginVerificationPendingResponse> {
 		const needsVerification = await this.needsVerification(context.userId, context.deviceInfo);
 		if (!needsVerification) {
 			return this.authSessionService.issueSessionForUser(context.userId, context.clientType ?? undefined, context.deviceInfo ?? undefined, context.ipAddress ?? undefined);
@@ -124,7 +122,12 @@ export class LoginVerificationService {
 		};
 
 		await this.setStoreValue(this.verificationKey(verificationId), JSON.stringify(record), VERIFICATION_TTL_SECONDS);
-		const emailResult = await this.emailService.sendLoginVerificationEmail(user.email, verificationCode, context.deviceInfo ?? "Unknown device", context.ipAddress ?? "Unknown IP");
+		const emailResult = await this.emailService.sendLoginVerificationEmail(
+			user.email,
+			verificationCode,
+			context.deviceInfo ?? "Unknown device",
+			context.ipAddress ?? "Unknown IP",
+		);
 
 		if (process.env.NODE_ENV !== "production") {
 			this.logService.info("Login verification OTP (dev only — use this code, not your authenticator app)", {

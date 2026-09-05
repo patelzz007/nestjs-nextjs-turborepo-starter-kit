@@ -242,7 +242,10 @@ export class AuthController {
 	@ApiOperation({ summary: "Change password for the authenticated user" })
 	@ApiBody({ type: ChangePasswordDto })
 	@ApiOkResponse({ type: WrappedChangePasswordResponse, description: "Password changed successfully" })
-	public async changePassword(@GetUser("sub") userId: string, @Body(new ZodValidationPipe(apiContract.auth.changePassword.input)) body: ChangePasswordInput): Promise<ChangePasswordResponse> {
+	public async changePassword(
+		@GetUser("sub") userId: string,
+		@Body(new ZodValidationPipe(apiContract.auth.changePassword.input)) body: ChangePasswordInput,
+	): Promise<ChangePasswordResponse> {
 		return this.authService.changePassword(userId, body);
 	}
 

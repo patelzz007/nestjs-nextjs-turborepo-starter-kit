@@ -14,8 +14,7 @@ export default async function MerchantPanelLayout({ children }: { readonly child
 			initialMemberships={merchantContext.memberships}
 			initialMerchantOrgId={merchantContext.merchantOrgId}
 			initialUser={session.user}
-			initialIsImpersonating={session.isImpersonating}
-		>
+			initialIsImpersonating={session.isImpersonating}>
 			{children}
 		</MerchantShell>
 	);

@@ -13,12 +13,7 @@ export interface RewardHubShellProps {
 }
 
 /** Consumer Reward Hub chrome — sidebar, topbar, and command palette. */
-export function RewardHubShell({
-	children,
-	initialUser,
-	sessionActive = false,
-	initialSessionPermissions,
-}: RewardHubShellProps): React.JSX.Element {
+export function RewardHubShell({ children, initialUser, sessionActive = false, initialSessionPermissions }: RewardHubShellProps): React.JSX.Element {
 	return (
 		<RewardHubLayout initialUser={initialUser} sessionActive={sessionActive} initialSessionPermissions={initialSessionPermissions}>
 			{children}

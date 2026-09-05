@@ -221,12 +221,7 @@ export class TokenService {
 	/**
 	 * Generate a short-lived token used between password login and 2FA verification.
 	 */
-	public async generateTwoFactorPendingToken(
-		userId: string,
-		clientType: string | null,
-		deviceInfo: string | null,
-		ipAddress: string | null,
-	): Promise<string> {
+	public async generateTwoFactorPendingToken(userId: string, clientType: string | null, deviceInfo: string | null, ipAddress: string | null): Promise<string> {
 		return this.jwtService.signAsync(
 			{
 				sub: userId,

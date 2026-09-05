@@ -74,7 +74,12 @@ export class AuthService {
 
 	// ── Login ───────────────────────────────────────────────────────────
 
-	public async login(loginDto: LoginInput, clientType?: string, deviceInfo?: string, ipAddress?: string): Promise<LoginServiceResponse | LoginTwoFactorPendingResponse | LoginVerificationPendingResponse> {
+	public async login(
+		loginDto: LoginInput,
+		clientType?: string,
+		deviceInfo?: string,
+		ipAddress?: string,
+	): Promise<LoginServiceResponse | LoginTwoFactorPendingResponse | LoginVerificationPendingResponse> {
 		return this.loginService.login(loginDto, clientType, deviceInfo, ipAddress);
 	}
 

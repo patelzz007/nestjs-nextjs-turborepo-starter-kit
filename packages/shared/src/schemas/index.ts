@@ -79,10 +79,7 @@ export type {
 	VerifyEmailInput,
 	VerifyEmailResponse,
 } from "./auth/auth";
-export {
-	ChangePasswordResponseSchema,
-	ChangePasswordSchema,
-} from "./auth/change-password";
+export { ChangePasswordResponseSchema, ChangePasswordSchema } from "./auth/change-password";
 export type { ChangePasswordInput, ChangePasswordResponse } from "./auth/change-password";
 export {
 	LoginVerificationCodeSchema,

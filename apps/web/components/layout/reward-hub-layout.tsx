@@ -41,18 +41,11 @@ function RewardHubSidebarContent({
 		}
 	}, [setOpenMobile]);
 
-	return (
-		<WebSidebarPanel userName={userName} sessionActive={sessionActive} initialSessionPermissions={initialSessionPermissions} onNavigate={handleNavigate} />
-	);
+	return <WebSidebarPanel userName={userName} sessionActive={sessionActive} initialSessionPermissions={initialSessionPermissions} onNavigate={handleNavigate} />;
 }
 
 /** Consumer shell — custom sidebar + topbar with command palette. */
-export function RewardHubLayout({
-	children,
-	initialUser = null,
-	sessionActive = false,
-	initialSessionPermissions,
-}: RewardHubLayoutProps): React.JSX.Element {
+export function RewardHubLayout({ children, initialUser = null, sessionActive = false, initialSessionPermissions }: RewardHubLayoutProps): React.JSX.Element {
 	const { user, login, api } = useAuth();
 	const { isOpen: sidebarOpen, open: openSidebar, close: closeSidebar } = useWebSidebarControl();
 

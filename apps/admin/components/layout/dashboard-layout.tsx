@@ -97,14 +97,7 @@ function ShellBreadcrumb(): React.JSX.Element {
 	);
 }
 
-export function DashboardLayout({
-	user,
-	onLogout,
-	footerActions = [],
-	children,
-	sidebarBadges = {},
-	initialSessionPermissions,
-}: DashboardLayoutProps): React.JSX.Element {
+export function DashboardLayout({ user, onLogout, footerActions = [], children, sidebarBadges = {}, initialSessionPermissions }: DashboardLayoutProps): React.JSX.Element {
 	useTrailDocumentTitle();
 	const router = useRouter();
 	const isOpen = useSidebarStore((s) => s.isOpen);
