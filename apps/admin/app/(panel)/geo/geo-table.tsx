@@ -1,6 +1,7 @@
 "use client";
 
 import { createDataTableLabels, type DataTableLabels } from "@/lib/data-table-labels";
+import { buildReadOnlyTableCheckbox } from "@/lib/data-table-capabilities";
 import { DataTableMobileCard } from "@/lib/data-table-mobile-card";
 import { Badge } from "@workspace/ui/components/feedback/badge";
 import { Button } from "@workspace/ui/components/form/button";
@@ -10,7 +11,7 @@ import { Input } from "@workspace/ui/components/form/input";
 import { cn } from "@workspace/ui/lib/utils";
 import type { ColumnDef, SortingState } from "@tanstack/react-table";
 import { keepPreviousData } from "@tanstack/react-query";
-import { Building2, Download, Globe, Landmark, MapPin, Search, TreePine, Upload } from "lucide-react";
+import { Building2, Globe, Landmark, MapPin, Search, TreePine } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
@@ -148,7 +149,7 @@ function SegmentedTabs({
 	readonly onTabChange: (tab: TabKey) => void;
 	readonly counts: Partial<Record<TabKey, number>>;
 }): React.JSX.Element {
-	const handleTabClick = React.useCallback(
+	const handleTabClick = useCallback(
 		(event: React.MouseEvent<HTMLButtonElement>): void => {
 			const tabKey = event.currentTarget.dataset.tabKey;
 			if (tabKey === "countries" || tabKey === "states" || tabKey === "cities") {
@@ -503,18 +504,12 @@ export default function GeoView({ initialStats }: GeoTableProps): React.JSX.Elem
 				{activeTab === "states" || activeTab === "cities" ? (
 					<Input placeholder="Country code" value={countryFilter} onChange={handleCountryFilterChange} className="w-[120px]" />
 				) : null}
-				<Button variant="outline" size="sm">
-					<Upload className="mr-2 size-4" />
-					Import
-				</Button>
-				<Button variant="outline" size="sm">
-					<Download className="mr-2 size-4" />
-					Export
-				</Button>
 			</div>
 		),
 		[activeTab, search, countryFilter, handleCountryFilterChange, handleSearchChange],
 	);
+
+	const checkbox = useMemo(() => buildReadOnlyTableCheckbox(`geo-${activeTab}.csv`), [activeTab]);
 
 	return (
 		<div className="space-y-6 p-6">
@@ -547,6 +542,8 @@ export default function GeoView({ initialStats }: GeoTableProps): React.JSX.Elem
 							data={[...items]}
 							columns={columns}
 							labels={labels}
+							checkbox={checkbox}
+							enableColumnVisibility
 							mobileCardRender={mobileCardRender}
 							manual
 							totalCount={total}

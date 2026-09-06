@@ -17,12 +17,13 @@
 import { toastMessage } from "@workspace/ui/components/feedback/toast";
 import * as React from "react";
 import { useCallback, useMemo, useState } from "react";
+import type { DataTableBulkSelectionContext } from "@workspace/ui/lib/data-table-checkbox";
 import { z } from "zod";
 
 import { Badge } from "@workspace/ui/components/feedback/badge";
 import { createDataTableLabels, type DataTableLabels } from "@/lib/data-table-labels";
 import { DataTableMobileCard } from "@/lib/data-table-mobile-card";
-import { DataTable, type Action, type BulkAction, type DataTableFeatures, type Filter } from "@workspace/ui/components/display/data-table";
+import { DataTable, type Action, type DataTableCheckboxConfig, type DataTableFeatures, type Filter } from "@workspace/ui/components/display/data-table";
 import type { ColumnDef } from "@tanstack/react-table";
 import { CircleCheck, CircleDashed, Copy, Eye, Pencil, Trash2 } from "lucide-react";
 
@@ -139,12 +140,20 @@ export function DataTableShowcase(): React.JSX.Element {
 	}, []);
 
 	// Bulk actions (feature: bulk selection).
-	const handleBulkExport = useCallback((rows: DashboardRow[]): void => {
-		toastMessage.success({ title: `Exporting ${String(rows.length)} section${rows.length === 1 ? "" : "s"}` });
+	const handleBulkExport = useCallback((rows: DashboardRow[], context: DataTableBulkSelectionContext): void => {
+		const count = context.selectAllPages ? context.totalMatchingRows : rows.length;
+		toastMessage.success({ title: `Exporting ${String(count)} section${count === 1 ? "" : "s"}` });
 	}, []);
 
-	const handleBulkMarkDone = useCallback((rows: DashboardRow[]): void => {
-		toastMessage.success({ title: `Marked ${String(rows.length)} section${rows.length === 1 ? "" : "s"} as done` });
+	const handleBulkMarkDone = useCallback((rows: DashboardRow[], context: DataTableBulkSelectionContext): void => {
+		const count = context.selectAllPages ? context.totalMatchingRows : rows.length;
+		toastMessage.success({ title: `Marked ${String(count)} section${count === 1 ? "" : "s"} as done` });
+	}, []);
+
+	const handleBulkDelete = useCallback((selected: DashboardRow[], context: DataTableBulkSelectionContext): void => {
+		setRows((prev) => prev.filter((row) => !selected.some((item) => item.id === row.id)));
+		const count = context.selectAllPages ? context.totalMatchingRows : selected.length;
+		toastMessage.success({ title: `Removed ${String(count)} section${count === 1 ? "" : "s"}` });
 	}, []);
 
 	// Row click (feature: onRowClick) — same smart-layer contract as the row
@@ -227,22 +236,28 @@ export function DataTableShowcase(): React.JSX.Element {
 		[handleView, handleEdit, handleDuplicate, handleDelete],
 	);
 
-	const bulkActions = useMemo<BulkAction<DashboardRow>[]>(
-		() => [
-			{
-				key: "export",
-				label: "Export selected",
-				icon: <Copy className="size-4" />,
-				onClick: handleBulkExport,
-			},
-			{
-				key: "mark-done",
-				label: "Mark as done",
-				icon: <CircleCheck className="size-4" />,
-				onClick: handleBulkMarkDone,
-			},
-		],
-		[handleBulkExport, handleBulkMarkDone],
+	const checkbox = useMemo(
+		(): DataTableCheckboxConfig<DashboardRow> => ({
+			onDeleteAll: handleBulkDelete,
+			bulkActions: [
+				{
+					key: "export",
+					label: "Export selected",
+					icon: <Copy className="size-4" />,
+					onClick: handleBulkExport,
+				},
+				{
+					key: "mark-done",
+					label: "Mark as done",
+					icon: <CircleCheck className="size-4" />,
+					onClick: handleBulkMarkDone,
+				},
+			],
+			export: true,
+			exportFilename: "document-sections.csv",
+			exportableColumns: ["header", "type", "status", "target", "limit", "reviewer"],
+		}),
+		[handleBulkDelete, handleBulkExport, handleBulkMarkDone],
 	);
 
 	const filters = useMemo<Filter[]>(
@@ -331,13 +346,9 @@ export function DataTableShowcase(): React.JSX.Element {
 			filters={filters}
 			actions={actions}
 			labels={dataTableLabels}
-			bulkActions={bulkActions}
-			enableBulkSelection
+			checkbox={checkbox}
 			enableColumnVisibility
 			enableColumnPinning
-			exportable
-			exportFilename="document-sections.csv"
-			exportableColumns={["header", "type", "status", "target", "limit", "reviewer"]}
 			persistKey="dashboard-sections"
 			pageSize={10}
 			pageSizeOptions={[10, 20, 50]}

@@ -1,13 +1,15 @@
 "use client";
 
 import type { AdminUserDetail } from "@workspace/shared";
+import { z } from "zod";
 import { createDataTableLabels } from "@/lib/data-table-labels";
+import { buildReadOnlyTableCheckbox } from "@/lib/data-table-capabilities";
 import { DataTableMobileCard } from "@/lib/data-table-mobile-card";
 import { readPaginatedTotal, stubPaginatedMeta } from "@/lib/api-envelope";
 import { useAuth } from "@workspace/client/lib/auth";
 import { Badge } from "@workspace/ui/components/feedback/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
-import { DataTable, type Action, type DataTableFeatures } from "@workspace/ui/components/display/data-table";
+import { DataTable, type Action, type DataTableFeatures, type Filter } from "@workspace/ui/components/display/data-table";
 import { Input } from "@workspace/ui/components/form/input";
 import type { ColumnDef, SortingState } from "@tanstack/react-table";
 import { Eye, Search } from "lucide-react";
@@ -24,6 +26,8 @@ export interface UsersAllTableProps {
 }
 
 const PAGE_SIZE_OPTIONS: readonly number[] = [10, 20, 50, 100];
+
+const AdminUserStatusFilterSchema = z.enum(["active", "inactive", "locked"]);
 
 function useDebounce<T>(value: T, delay: number): T {
 	const [debouncedValue, setDebouncedValue] = React.useState(value);
@@ -60,6 +64,7 @@ export default function UsersAllTable({
 	const [page, setPage] = React.useState(1);
 	const [pageLimit, setPageLimit] = React.useState(20);
 	const [search, setSearch] = React.useState("");
+	const [statusFilter, setStatusFilter] = React.useState<string>("all");
 	const debouncedSearch = useDebounce(search, 300);
 	const [sorting, setSorting] = React.useState<SortingState>([]);
 
@@ -77,6 +82,7 @@ export default function UsersAllTable({
 
 	const apiSort = React.useMemo(() => sortingToApiSort(sorting), [sorting]);
 	const trimmedSearch = debouncedSearch.trim();
+	const parsedStatus = statusFilter === "all" ? undefined : AdminUserStatusFilterSchema.safeParse(statusFilter).data;
 
 	const initialQueryData = React.useMemo(
 		() =>
@@ -96,6 +102,7 @@ export default function UsersAllTable({
 			limit: pageLimit,
 			...(trimmedSearch.length > 0 ? { search: trimmedSearch } : {}),
 			...(apiSort !== undefined ? { sort: apiSort } : {}),
+			...(parsedStatus !== undefined ? { status: parsedStatus } : {}),
 		},
 		{
 			placeholderData: keepPreviousData,
@@ -215,6 +222,37 @@ export default function UsersAllTable({
 		setSorting(nextSorting);
 	}, []);
 
+	const handleManualColumnFilterChange = React.useCallback((filterKey: string, value: string | null): void => {
+		if (filterKey === "status") {
+			setStatusFilter(value === null || value === "all" ? "all" : value);
+			setPage(1);
+		}
+	}, []);
+
+	const manualColumnFilters = React.useMemo(
+		(): Readonly<Record<string, string>> => ({
+			status: statusFilter,
+		}),
+		[statusFilter],
+	);
+
+	const tableFilters = React.useMemo(
+		(): Filter[] => [
+			{
+				key: "status",
+				label: "Account status",
+				options: [
+					{ value: "active", label: "Active" },
+					{ value: "inactive", label: "Inactive" },
+					{ value: "locked", label: "Locked" },
+				],
+			},
+		],
+		[],
+	);
+
+	const checkbox = React.useMemo(() => buildReadOnlyTableCheckbox("users.csv", ["fullName", "email"]), []);
+
 	const handleSearchChange = React.useCallback((event: React.ChangeEvent<HTMLInputElement>): void => {
 		setSearch(event.target.value);
 	}, []);
@@ -246,6 +284,11 @@ export default function UsersAllTable({
 						data={[...rows]}
 						labels={tableLabels}
 						actions={actions}
+						checkbox={checkbox}
+						enableColumnVisibility
+						filters={tableFilters}
+						manualColumnFilters={manualColumnFilters}
+						onManualColumnFilterChange={handleManualColumnFilterChange}
 						mobileCardRender={mobileCardRender}
 						manual
 						totalCount={total}

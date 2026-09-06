@@ -556,14 +556,16 @@ const ComboboxItem = React.forwardRef<HTMLDivElement, ComboboxItemProps>(functio
 				)
 			}
 			{...props}>
-			{description !== undefined ? (
-				<span className="flex min-w-0 flex-col">
-					<span className="truncate">{children}</span>
-					<span className="truncate text-xs text-muted-foreground">{description}</span>
-				</span>
-			) : (
-				children
-			)}
+			<span className="min-w-0 flex-1 truncate">
+				{description !== undefined ? (
+					<span className="flex min-w-0 flex-col">
+						<span className="truncate">{children}</span>
+						<span className="truncate text-xs text-muted-foreground">{description}</span>
+					</span>
+				) : (
+					<span className="block truncate">{children}</span>
+				)}
+			</span>
 			<ComboboxPrimitive.ItemIndicator
 				render={<span data-slot="combobox-item-indicator" className="pointer-events-none absolute inset-e-2 flex size-4 items-center justify-center" />}>
 				<CheckIcon className="pointer-events-none" />

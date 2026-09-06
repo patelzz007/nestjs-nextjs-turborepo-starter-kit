@@ -26,8 +26,12 @@ describe("resolveCollectionItemActiveClasses", () => {
 });
 
 describe("resolveMenuItemActiveClasses", () => {
-	it("returns active surface classes when checked", () => {
-		const classes = resolveMenuItemActiveClasses({ highlighted: false, checked: true });
+	it("returns active surface classes when highlighted", () => {
+		const classes = resolveMenuItemActiveClasses({ highlighted: true, checked: false });
 		expect(classes.length).toBeGreaterThan(0);
+	});
+
+	it("returns empty string when only checked (indicator is enough)", () => {
+		expect(resolveMenuItemActiveClasses({ highlighted: false, checked: true })).toBe("");
 	});
 });

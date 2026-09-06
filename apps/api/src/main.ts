@@ -4,65 +4,18 @@ import { type NestApplicationOptions } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import { FastifyAdapter, type NestFastifyApplication } from "@nestjs/platform-fastify";
-import fastifyCookie from "@fastify/cookie";
-import fastifyCompress from "@fastify/compress";
-import fastifyEtag from "@fastify/etag";
-import fastifyHelmet from "@fastify/helmet";
-import fastifyRateLimit from "@fastify/rate-limit";
-import fastifyRequestContext from "@fastify/request-context";
-import fastifyUnderPressure from "@fastify/under-pressure";
 import { nanoid } from "nanoid";
-import {
-	API_DEPRECATED_VERSIONS,
-	API_VERSION,
-	API_VERSION_PREFIX,
-	apiDocsPath,
-	apiVersionPrefix,
-	type ApiVersion,
-	type DataValue,
-	StringValueSchema,
-	validateApiEnv,
-} from "@workspace/shared";
-import type { FastifyReply, FastifyRequest } from "fastify";
+import { apiDocsPath, validateApiEnv } from "@workspace/shared";
 
 import { AppModule, ObserveInstrument } from "./app.module";
+import { registerFastifyHooks } from "./bootstrap/register-fastify-hooks";
+import { registerFastifyPlugins } from "./bootstrap/register-fastify-plugins";
 import { warmupAjvValidators } from "./common/ajv-warmup";
 import { setupApiDocs } from "./common/api-docs";
 import { registerGracefulShutdown } from "./common/lifecycle/graceful-shutdown";
-import { serializePreSerializationValue, type PreSerializationValue } from "./common/utils/serialize-pre-serialization-value";
 import { HealthService } from "./modules/health/health.service";
-import { readFirstHeader, readReplyHeader } from "./common/utils/http-headers";
+import { readFirstHeader } from "./common/utils/http-headers";
 import { LogService } from "./modules/logs/logs.service";
-import { VersionController } from "./modules/health/version.controller";
-
-/** The subset of the Fastify instance surface the bootstrap needs. */
-interface FastifyBootstrapHooks {
-	readonly addHook: {
-		(name: "onRequest" | "onResponse", fn: (request: FastifyRequest, reply: FastifyReply, done: () => void) => void): void;
-		(name: "preHandler", fn: (request: FastifyRequest & { raw: { correlationId?: string; traceId?: string } }, reply: FastifyReply, done: () => void) => void): void;
-		(
-			name: "onSend",
-			fn: (request: FastifyRequest, reply: FastifyReply, payload: string | Buffer | null, done: (error: Error | null, payload?: string | Buffer | null) => void) => void,
-		): void;
-		(name: "onError", fn: (request: FastifyRequest, reply: FastifyReply, error: Error, done: () => void) => void): void;
-		(name: "onRoute", fn: (routeOptions: FastifyRouteOptions) => void): void;
-		(
-			name: "preSerialization",
-			fn: (request: FastifyRequest, reply: FastifyReply, payload: PreSerializationValue, done: (error: Error | null, payload?: DataValue) => void) => void,
-		): void;
-	};
-}
-
-interface FastifyRouteOptions {
-	readonly url?: string;
-	config?: Record<string, string | number | boolean | { readonly max: number; readonly timeWindow: string }>;
-}
-
-/** Extract the version segment of a versioned URL (`"/api/v1/foo"` → `"v1"`). */
-function apiVersionOfUrl(url: string): string | undefined {
-	const match: RegExpExecArray | null = /\/api\/(v\d+)\//.exec(url);
-	return match?.[1];
-}
 
 async function bootstrap(): Promise<void> {
 	const bootStart: number = performance.now();
@@ -155,56 +108,13 @@ async function bootstrap(): Promise<void> {
 
 	// ── Plugins ────────────────────────────────────────────────────
 	// In dev, skip heavy plugins to cut boot time — they add per-route hook overhead.
-
-	// @fastify/cookie — always needed (auth cookies).
-	await app.register(fastifyCookie);
-
-	// @fastify/request-context — always needed (correlation IDs).
-	await app.register(fastifyRequestContext, { hook: "preHandler" });
-
-	if (!isDev) {
-		// @fastify/compress — gzip/brotli on JSON responses.
-		await app.register(fastifyCompress, { global: true, threshold: 1024 });
-
-		// @fastify/etag — ETag/If-None-Match support for idempotent GETs.
-		await app.register(fastifyEtag, { weak: true });
-
-		// @fastify/rate-limit — per-IP defense in depth.
-		await app.register(fastifyRateLimit, {
-			global: true,
-			max: 300,
-			timeWindow: "1 minute",
-			keyGenerator: (request: FastifyRequest): string => {
-				const acceptVersionHeader: string | undefined = readFirstHeader(request.headers["accept-version"]);
-				const requested: ApiVersion | undefined = acceptVersionHeader !== undefined ? VersionController.toApiVersion(acceptVersionHeader) : undefined;
-				const version: string = requested ?? apiVersionOfUrl(request.url) ?? "unversioned";
-				return `${request.ip}:${version}`;
-			},
-			errorResponseBuilder: (
-				_request: FastifyRequest,
-				context: { readonly statusCode: number; readonly after: string },
-			): {
-				readonly statusCode: number;
-				readonly error: string;
-				readonly message: string;
-			} => ({
-				statusCode: context.statusCode,
-				error: "Too Many Requests",
-				message: `Rate limit exceeded — retry after ${context.after}.`,
-			}),
-		});
-
-		// @fastify/under-pressure — event-loop-delay + heap protection.
-		await app.register(fastifyUnderPressure, {
-			maxEventLoopDelay: 1000,
-			maxHeapUsedBytes: 512 * 1024 * 1024,
-		});
-	}
+	await registerFastifyPlugins(app, { isDev });
 
 	// CORS (plugins must be registered before the routes they affect).
 	app.enableCors({
 		origin: corsOrigins,
 		credentials: true,
+		methods: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
 		// `Last-Event-ID` is required for SSE replay reconnects: the Telescope
 		// stream client sends it (fetch-based SSE) to resume from the last
 		// received seq. It is not a CORS-safelisted header, so without it here
@@ -212,189 +122,7 @@ async function bootstrap(): Promise<void> {
 		allowedHeaders: ["Content-Type", "X-Client-Type", "X-Merchant-Org-Id", "Accept", "Last-Event-ID"],
 	});
 
-	// ── Security headers ─────────────────────────────────────────
-	// @fastify/helmet (helmet v8 on Fastify 5) sets CSP, HSTS, nosniff,
-	// X-Frame-Options, Referrer-Policy, CORP… on every response. Tuning notes:
-	//  - `enableCSPNonces` generates a per-request CSP nonce (`reply.cspNonce`)
-	//    and appends `'nonce-…'` to script-src/style-src, so inline HTML is
-	//    allow-listed by nonce instead of `'unsafe-inline'`. Swagger's only
-	//    inline content is two <style> blocks — its three scripts are external
-	//    same-origin files — so script-src drops `'unsafe-inline'` entirely;
-	//    the onSend hook below stamps the nonce onto those <style> tags.
-	//  - `style-src-attr 'unsafe-inline'` — Swagger UI's rendered components set
-	//    inline `style="…"` attributes at runtime, and nonces do not apply to
-	//    attributes; this narrow allowance (attributes only, not <style>
-	//    elements) is what lets the docs page render.
-	//  - `crossOriginResourcePolicy: cross-origin` — the web/admin apps fetch
-	//    JSON from :8080 cross-origin; `same-origin` (helmet's default) would
-	//    block resource embedding across ports.
-	//  - `upgrade-insecure-requests` is removed so plain-http local dev
-	//    (http://localhost:8080) isn't force-upgraded to https.
-	if (!isDev) {
-		// @fastify/helmet — CSP, HSTS, nosniff. Skipped in dev for faster boot.
-		await app.register(fastifyHelmet, {
-			enableCSPNonces: true,
-			contentSecurityPolicy: {
-				useDefaults: true,
-				directives: {
-					scriptSrc: ["'self'"],
-					styleSrc: ["'self'"],
-					styleSrcAttr: ["'unsafe-inline'"],
-					imgSrc: ["'self'", "data:"],
-					fontSrc: ["'self'", "data:"],
-					connectSrc: ["'self'"],
-					objectSrc: ["'none'"],
-					upgradeInsecureRequests: null,
-				},
-			},
-			crossOriginResourcePolicy: { policy: "cross-origin" },
-			referrerPolicy: { policy: "no-referrer" },
-			hsts: {
-				maxAge: 31_536_000,
-				includeSubDomains: true,
-				preload: true,
-			},
-		});
-	}
-
-	// ── Fastify-native hooks (route tweaks + observability) ────────
-	const fastifyInstance: FastifyBootstrapHooks = app.getHttpAdapter().getInstance();
-
-	// Per-route rate limits + SSE request-timeout exemption. The `method`
-	// field can be a string OR a string array, so matching on the URL alone is
-	// the safe discriminator here (routes are registered with unique URLs).
-	fastifyInstance.addHook("onRoute", (routeOptions: FastifyRouteOptions): void => {
-		const url: string = routeOptions.url ?? "";
-
-		// The public delivery webhook gets a tight per-IP cap (60/min) — the
-		// global 300/min baseline is a wide net; the webhook is a DoS target.
-		if (url === "/notifications/email-webhook") {
-			routeOptions.config = {
-				...(routeOptions.config ?? {}),
-				rateLimit: { max: 60, timeWindow: "1 minute" },
-			};
-		}
-
-		// SSE streams must not be killed by the request timeout — `@Sse()` is a
-		// long-lived connection by design.
-		if (url.includes("/stream") || url.includes("/events")) {
-			routeOptions.config = {
-				...(routeOptions.config ?? {}),
-				requestTimeout: 0,
-			};
-		}
-	});
-
-	// Accept-version rewrite — clients that can't change their paths (curl,
-	// legacy scripts, deployed-before-API consumers) pin a version with the
-	// `Accept-version: v2` header; we remap `/api/v1/...` → `/api/v2/...`
-	// before routing. This is the escape hatch that lets the server ship a new
-	// major without breaking old clients — a v2 controller needs no client
-	// changes to be reached by header-carrying callers.
-	fastifyInstance.addHook("onRequest", (request, _reply, done): void => {
-		const acceptVersion: string | undefined = readFirstHeader(request.headers["accept-version"]);
-		if (acceptVersion !== undefined) {
-			const requested: ApiVersion | undefined = VersionController.toApiVersion(acceptVersion);
-			if (requested !== undefined && requested !== API_VERSION) {
-				// Fastify's `request.url` getter reads `raw.url`, so writing the
-				// raw property rewrites the routed URL without fighting the
-				// readonly type on `request.url`.
-				const rewritten: string = request.url.replace(API_VERSION_PREFIX, apiVersionPrefix(requested));
-				request.raw.url = rewritten;
-			}
-		}
-		done();
-	});
-
-	// Correlation-id mirror (Fastify request ↔ raw Node request) — the Nest
-	// middleware (middie) stamps ids on `request.raw`; mirror onto the
-	// FastifyRequest + request-context so guards/interceptors read one source.
-	fastifyInstance.addHook("preHandler", (request, _reply, done): void => {
-		const correlationId: string | undefined = request.raw.correlationId ?? request.id;
-		if (request.raw.correlationId !== undefined) {
-			request.correlationId = request.raw.correlationId;
-		}
-		if (request.raw.traceId !== undefined) {
-			request.traceId = request.raw.traceId;
-		}
-		request.requestContext.set("correlationId", correlationId);
-		request.requestContext.set("traceId", correlationId);
-		done();
-	});
-
-	// Single onSend hook: (1) expose `x-request-id` for client correlation —
-	// headers must be set here, `onResponse` runs after they're committed;
-	// (2) stamp the CSP nonce onto Swagger's inline HTML tags (see helmet
-	// comment above). JSON/Buffer/stream payloads pass through untouched.
-	fastifyInstance.addHook("onSend", (request, reply, payload, done): void => {
-		reply.header("x-request-id", request.id);
-		// Version metadata: which API version answered, plus a `Sunset` notice
-		// for deprecated versions so clients can schedule their migration.
-		const servedVersion: string | undefined = apiVersionOfUrl(request.url);
-		if (servedVersion !== undefined) {
-			reply.header("x-api-version", servedVersion);
-			const deprecated = API_DEPRECATED_VERSIONS.find((entry) => entry.version === servedVersion);
-			if (deprecated !== undefined) {
-				reply.header("Sunset", deprecated.sunsetAt);
-			}
-		}
-		const contentType: string | undefined = readReplyHeader(reply.getHeader("content-type"));
-		const payloadText = StringValueSchema.safeParse(payload);
-		if (!payloadText.success || !contentType?.includes("text/html")) {
-			done(null, payload);
-			return;
-		}
-
-		// The docs page is the ONLY text/html the API serves (Swagger UI).
-		// Nonces cover the static HTML's inline `<style>`/`<script>` tags, but
-		// Swagger UI renders via React and injects `<style>` elements at runtime
-		// (e.g. the topbar logo SVG's `fill` rules) — those carry no nonce and the
-		// strict `style-src 'self' 'nonce-…'` would block them, leaving the header
-		// logo unrendered (dark-on-dark). Relax `style-src` to `'unsafe-inline'`
-		// for this page ONLY (the runtime styles are swagger-ui-dist's own static
-		// CSS-in-JS, not attacker-controlled), while `script-src` stays
-		// nonce-strict — the security property that was actually tightened.
-		const csp: string | undefined = readReplyHeader(reply.getHeader("content-security-policy"));
-		if (csp !== undefined) {
-			reply.header("Content-Security-Policy", csp.replace(/style-src 'self' 'nonce-[^;']*'/, "style-src 'self' 'unsafe-inline'"));
-		}
-
-		const nonce = "cspNonce" in reply ? reply.cspNonce : undefined;
-		if (nonce === undefined) {
-			done(null, payloadText.data);
-			return;
-		}
-
-		done(null, payloadText.data.replace(/<style>/g, `<style nonce="${nonce.style}">`).replace(/<script>/g, `<script nonce="${nonce.script}">`));
-	});
-
-	// Access-log every response (method · version · path · status · duration).
-	fastifyInstance.addHook("onResponse", (request, reply, done): void => {
-		const logService: LogService = app.get(LogService);
-		const servedVersion: string | undefined = apiVersionOfUrl(request.url);
-		logService.info(
-			`HTTP ${request.method} ${servedVersion === undefined ? "" : `${servedVersion} `}${request.url} ${String(reply.statusCode)} ${reply.elapsedTime.toFixed(1)}ms (${request.id})`,
-		);
-		done();
-	});
-
-	// Log every 5xx with request context (the hook fires for unhandled errors).
-	fastifyInstance.addHook("onError", (request, _reply, error, done): void => {
-		const logService: LogService = app.get(LogService);
-		logService.error(`HTTP ${request.method} ${request.url} failed: ${error.message} (${request.id})`, {
-			trace: error.stack,
-			metadata: { requestId: request.id, url: request.url, method: request.method },
-		});
-		done();
-	});
-
-	// BigInt → Number serializer — Prisma returns BigInt for epoch-millis
-	// columns (createdAt, updatedAt, …) but JSON.stringify cannot handle
-	// BigInt.  This preSerialization hook walks the payload tree and
-	// converts every BigInt to a plain number before Fastify serializes.
-	fastifyInstance.addHook("preSerialization", (_request, _reply, payload, done): void => {
-		done(null, serializePreSerializationValue(payload));
-	});
+	registerFastifyHooks(app);
 
 	// ── Favicon + docs redirect ──────────────────────────────────
 	// NestJS logo on dark rounded square
@@ -410,21 +138,21 @@ async function bootstrap(): Promise<void> {
 	// registration order) so both the versioned docs path AND the legacy `/docs`
 	// path bounce to our custom favicon instead.
 	const httpAdapter = app.getHttpAdapter();
-	httpAdapter.get("/docs", (_req: FastifyRequest, reply: FastifyReply): void => {
+	httpAdapter.get("/docs", (_req, reply): void => {
 		reply.redirect(apiDocsPath());
 	});
 	const docsPath: string = apiDocsPath();
 	for (const faviconFile of ["/favicon-32x32.png", "/favicon-16x16.png"]) {
 		// Versioned docs path (what the browser actually requests today).
-		httpAdapter.get(`${docsPath}${faviconFile}`, (_req: FastifyRequest, reply: FastifyReply): void => {
+		httpAdapter.get(`${docsPath}${faviconFile}`, (_req, reply): void => {
 			reply.redirect("/favicon.ico");
 		});
 		// Legacy `/docs` path — keep working for old bookmarks.
-		httpAdapter.get(`/docs${faviconFile}`, (_req: FastifyRequest, reply: FastifyReply): void => {
+		httpAdapter.get(`/docs${faviconFile}`, (_req, reply): void => {
 			reply.redirect("/favicon.ico");
 		});
 	}
-	httpAdapter.get("/favicon.ico", (_req: FastifyRequest, reply: FastifyReply): void => {
+	httpAdapter.get("/favicon.ico", (_req, reply): void => {
 		reply.header("Content-Type", "image/svg+xml").send(faviconSvg);
 	});
 

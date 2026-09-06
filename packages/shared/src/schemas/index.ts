@@ -168,6 +168,7 @@ export {
 	ApiSuccessResponseSchema,
 	createApiSuccessArrayEnvelopeSchema,
 	createApiSuccessEnvelopeSchema,
+	DeleteSuccessDataSchema,
 	PaginatedServiceResultSchema,
 } from "./api/api-response";
 export type {
@@ -177,6 +178,7 @@ export type {
 	ApiResponseMeta,
 	ApiResponseShape,
 	ApiSuccessResponse,
+	DeleteSuccessData,
 	Envelope,
 	PaginatedServiceResult,
 } from "./api/api-response";

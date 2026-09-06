@@ -31,6 +31,7 @@ import {
 	apiContract,
 	ApiPaginatedMetaSchema,
 	ApiResponseMetaSchema,
+	DeleteSuccessDataSchema,
 	type Envelope,
 	type ApiContractDef,
 	type ApiResponseMeta,
@@ -767,7 +768,7 @@ export const apiRouter = {
 			queryKey: ({ id }) => ["sample-category", "update", id],
 		}),
 		delete: defineMutation(apiContract.sampleCategory.delete, {
-			response: envelope(z.object({ success: z.boolean() }).strict()),
+			response: envelope(DeleteSuccessDataSchema),
 			queryKey: ({ id }) => ["sample-category", "delete", id],
 		}),
 		restore: defineMutation(apiContract.sampleCategory.restore, {
@@ -795,7 +796,7 @@ export const apiRouter = {
 			queryKey: ({ id }) => ["product", "update", id],
 		}),
 		delete: defineMutation(apiContract.product.delete, {
-			response: envelope(z.object({ success: z.boolean() }).strict()),
+			response: envelope(DeleteSuccessDataSchema),
 			queryKey: ({ id }) => ["product", "delete", id],
 		}),
 		restore: defineMutation(apiContract.product.restore, {

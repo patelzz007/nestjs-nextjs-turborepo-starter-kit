@@ -24,6 +24,10 @@ export interface DataTableLabels {
 	/** e.g. `All {totalCount} rows selected` */
 	readonly allRowsSelected: string;
 	readonly clearSelection: string;
+	/** Destructive bulk action when `checkbox.onDeleteAll` is set. */
+	readonly deleteSelected: string;
+	/** Mobile selection bar label when no rows are selected yet. */
+	readonly mobileSelectAll: string;
 	readonly export: string;
 	readonly exportAs: string;
 	readonly exportCsv: string;

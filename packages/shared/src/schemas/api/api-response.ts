@@ -73,6 +73,15 @@ export const ApiResponseShapeSchema = z
 
 export type ApiResponseShape = z.output<typeof ApiResponseShapeSchema>;
 
+/** Payload returned by soft-delete endpoints (`DELETE /:id`). */
+export const DeleteSuccessDataSchema = z
+	.object({
+		success: z.literal(true),
+	})
+	.strict();
+
+export type DeleteSuccessData = z.output<typeof DeleteSuccessDataSchema>;
+
 /**
  * Standard success response envelope.
  * The `data` field contains the actual response payload.

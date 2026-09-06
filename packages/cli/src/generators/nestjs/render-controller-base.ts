@@ -73,8 +73,9 @@ export class Generated${model}Controller {
 	@Delete(":id")
 	@ApiOperation({ summary: "Soft delete ${ir.resource.singular}" })
 	@ApiOkResponse({ description: "${ir.resource.singular} deleted" })
-	public delete(@Param(new ZodValidationPipe(${model}IdParamSchema)) params: { id: string }): Promise<void> {
-		return this.service.delete(params.id);
+	public async delete(@Param(new ZodValidationPipe(${model}IdParamSchema)) params: { id: string }): Promise<{ success: true }> {
+		await this.service.delete(params.id);
+		return { success: true };
 	}
 
 	@RequirePermission("UPDATE", "${resource}")

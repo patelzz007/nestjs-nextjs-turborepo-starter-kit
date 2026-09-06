@@ -9,8 +9,9 @@ import { Badge } from "@workspace/ui/components/feedback/badge";
 import { Button } from "@workspace/ui/components/form/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
 import { ADMIN_DATA_TABLE_LABELS } from "@/lib/data-table-labels";
+import { buildReadOnlyTableCheckbox } from "@/lib/data-table-capabilities";
 import { DataTableMobileCard } from "@/lib/data-table-mobile-card";
-import { DataTable, type DataTableFeatures } from "@workspace/ui/components/display/data-table";
+import { DataTable, type DataTableFeatures, type Filter } from "@workspace/ui/components/display/data-table";
 import type { ColumnDef } from "@tanstack/react-table";
 import { CircleCheck, CircleX, Loader2, Mail, RefreshCw, TriangleAlert } from "lucide-react";
 import * as React from "react";
@@ -101,6 +102,25 @@ export default function EmailLogPage({ initialEnvelope }: { readonly initialEnve
 
 	// Stable rows reference (rule 16 — avoid re-renders via new array identity).
 	const rows = React.useMemo(() => logQuery.data?.data.logs ?? [], [logQuery.data]);
+
+	const statusFilters = React.useMemo(
+		(): Filter[] => [
+			{
+				key: "status",
+				label: "Status",
+				options: [
+					{ value: "sent", label: "Sent" },
+					{ value: "delivered", label: "Delivered" },
+					{ value: "bounced", label: "Bounced" },
+					{ value: "complained", label: "Complained" },
+					{ value: "failed", label: "Failed" },
+				],
+			},
+		],
+		[],
+	);
+
+	const checkbox = React.useMemo(() => buildReadOnlyTableCheckbox("email-log.csv", ["subject", "to", "templateKey", "status", "createdAt"]), []);
 
 	const columns = React.useMemo<ColumnDef<DataTableFeatures, EmailLogEntry>[]>(
 		() => [
@@ -215,11 +235,11 @@ export default function EmailLogPage({ initialEnvelope }: { readonly initialEnve
 						data={rows}
 						columns={columns}
 						searchKeys={["subject", "to", "templateKey"]}
+						filters={statusFilters}
+						checkbox={checkbox}
+						enableColumnVisibility
 						pageSize={10}
 						pageSizeOptions={[10, 25, 50, 100]}
-						exportable
-						exportFilename="email-log"
-						enableColumnVisibility
 						mobileCardRender={mobileCardRender}
 					/>
 				</CardContent>

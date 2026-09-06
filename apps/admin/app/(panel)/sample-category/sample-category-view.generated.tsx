@@ -1,6 +1,10 @@
 "use client";
 
 import { createDataTableLabels } from "@/lib/data-table-labels";
+import { buildResourceTableCheckbox, canDeletePlatformResource } from "@/lib/data-table-capabilities";
+import { fetchAllPaginatedListPages, resolveManualBulkSelectionRows } from "@/lib/resolve-manual-bulk-selection";
+import { useSessionCapabilities } from "@/lib/session-capabilities";
+import { useResourceDeleteDialog } from "@/components/common/resource-delete-dialog";
 import { DataTableMobileCard } from "@/lib/data-table-mobile-card";
 import { readPaginatedTotal } from "@/lib/api-envelope";
 import { useAuth } from "@workspace/client/lib/auth";
@@ -17,6 +21,7 @@ import { keepPreviousData, useQueryClient } from "@tanstack/react-query";
 import { toastMessage } from "@workspace/ui/components/feedback/toast";
 
 import { SampleCategoryListSortBySchema, type SampleCategory, type SampleCategoryListSortBy } from "@workspace/shared/schemas/domain/sample-category.generated";
+import type { DataTableBulkSelectionContext } from "@workspace/ui/lib/data-table-checkbox";
 
 function resolveListSortBy(columnId: string | undefined): SampleCategoryListSortBy | undefined {
 	if (columnId === undefined) {
@@ -51,6 +56,9 @@ function useDebouncedValue<T>(value: T, delayMs: number): T {
 
 export default function SampleCategoryView(): React.JSX.Element {
 	const { api } = useAuth();
+	const { hasCapability } = useSessionCapabilities();
+	const canDelete = canDeletePlatformResource(hasCapability, "SAMPLE_CATEGORY");
+	const { requestDelete, resourceDeleteDialog } = useResourceDeleteDialog();
 	const router = useRouter();
 	const queryClient = useQueryClient();
 	const [page, setPage] = useState(1);
@@ -72,6 +80,26 @@ export default function SampleCategoryView(): React.JSX.Element {
 	);
 	const rows: SampleCategory[] = listQuery.data?.data ?? [];
 	const total = readPaginatedTotal(listQuery.data?.meta, rows.length);
+
+	const buildListQuery = useCallback(
+		(pageNumber: number, limit: number) => {
+			const sortDirection: "asc" | "desc" = sort?.desc === true ? "desc" : "asc";
+			return {
+				page: pageNumber,
+				limit,
+				...(sortBy !== undefined ? { sortBy, sortDirection } : {}),
+				...(trimmedSearch.length > 0 ? { search: trimmedSearch } : {}),
+			};
+		},
+		[sortBy, sort?.desc, trimmedSearch],
+	);
+
+	const fetchAllMatchingCategories = useCallback(async (): Promise<readonly SampleCategory[]> => {
+		return fetchAllPaginatedListPages(total, async (pageNumber, limit) => {
+			const response = await api.sampleCategory.list.fetchOrThrow(buildListQuery(pageNumber, limit));
+			return response.data ?? [];
+		});
+	}, [api.sampleCategory.list, buildListQuery, total]);
 
 	const handleEdit = useCallback(
 		(item: SampleCategory): void => {
@@ -99,17 +127,37 @@ export default function SampleCategoryView(): React.JSX.Element {
 
 	const handleDelete = useCallback(
 		(item: SampleCategory): void => {
-			const confirmed = window.confirm(`Delete "${item.name}"? This action soft-deletes the category.`);
-			if (!confirmed) {
-				return;
-			}
-			deleteMutation.mutate({ id: item.id });
+			void requestDelete({
+				title: `Delete "${item.name}"?`,
+				description: "This action soft-deletes the category.",
+				onConfirm: async (): Promise<void> => {
+					await deleteMutation.mutateAsync({ id: item.id });
+				},
+			});
 		},
-		[deleteMutation],
+		[deleteMutation, requestDelete],
+	);
+
+	const handleBulkDelete = useCallback(
+		async (selected: SampleCategory[], context: DataTableBulkSelectionContext): Promise<void> => {
+			const count = context.selectAllPages ? context.totalMatchingRows : selected.length;
+			await requestDelete({
+				title: `Delete ${String(count)} categor${count === 1 ? "y" : "ies"}?`,
+				description: "This action soft-deletes them.",
+				count,
+				onConfirm: async (): Promise<void> => {
+					const rowsToDelete = await resolveManualBulkSelectionRows(selected, context, fetchAllMatchingCategories);
+					for (const row of rowsToDelete) {
+						await deleteMutation.mutateAsync({ id: row.id });
+					}
+				},
+			});
+		},
+		[deleteMutation, fetchAllMatchingCategories, requestDelete],
 	);
 
 	const actions = useMemo((): Action<SampleCategory>[] => {
-		return [
+		const base: Action<SampleCategory>[] = [
 			{
 				key: "view",
 				label: "View",
@@ -124,7 +172,9 @@ export default function SampleCategoryView(): React.JSX.Element {
 				icon: <Pencil className="size-4" />,
 				onClick: handleEdit,
 			},
-			{
+		];
+		if (canDelete) {
+			base.push({
 				key: "delete",
 				label: "Delete",
 				description: "Remove this category",
@@ -132,9 +182,22 @@ export default function SampleCategoryView(): React.JSX.Element {
 				onClick: handleDelete,
 				isDestructive: true,
 				iconBgColor: "bg-red-100 dark:bg-red-900/40",
-			},
-		];
-	}, [handleDelete, handleEdit, handleView]);
+			});
+		}
+		return base;
+	}, [canDelete, handleDelete, handleEdit, handleView]);
+
+	const checkbox = useMemo(
+		() =>
+			buildResourceTableCheckbox<SampleCategory>({
+				hasCapability,
+				resource: "SAMPLE_CATEGORY",
+				exportFilename: "sample-categories.csv",
+				exportableColumns: ["name", "slug", "sortOrder", "isActive", "createdAt"],
+				onDeleteAll: handleBulkDelete,
+			}),
+		[handleBulkDelete, hasCapability],
+	);
 
 	const mobileCardRender = useCallback(
 		(item: SampleCategory, cardActions?: Action<SampleCategory>[]): React.ReactNode => (
@@ -225,6 +288,8 @@ export default function SampleCategoryView(): React.JSX.Element {
 				columns={columns}
 				labels={labels}
 				actions={actions}
+				checkbox={checkbox}
+				enableColumnVisibility
 				mobileCardRender={mobileCardRender}
 				manual
 				totalCount={total}
@@ -238,6 +303,7 @@ export default function SampleCategoryView(): React.JSX.Element {
 				searchKeys={[]}
 				toolbarContent={searchToolbar}
 			/>
+			{resourceDeleteDialog}
 		</div>
 	);
 }

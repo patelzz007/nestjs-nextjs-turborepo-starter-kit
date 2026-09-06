@@ -3,6 +3,7 @@
 import type { AdminMfaRecoveryRequest, MfaRecoveryRecordStatus } from "@workspace/shared";
 import { readPaginatedTotal, stubPaginatedMeta } from "@/lib/api-envelope";
 import { createDataTableLabels } from "@/lib/data-table-labels";
+import { buildReadOnlyTableCheckbox } from "@/lib/data-table-capabilities";
 import { DataTableMobileCard } from "@/lib/data-table-mobile-card";
 import { formatDateTimeWithSeconds } from "@/lib/dates";
 import { MfaRecoveryReviewPanel } from "@/components/security/mfa-recovery-review-panel";
@@ -10,10 +11,8 @@ import { MfaRecoveryStatusBadge } from "@/components/security/mfa-recovery-statu
 import { useAuth } from "@workspace/client/lib/auth";
 import { Badge } from "@workspace/ui/components/feedback/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
-import { DataTable, type Action, type DataTableFeatures } from "@workspace/ui/components/display/data-table";
+import { DataTable, type Action, type DataTableFeatures, type Filter } from "@workspace/ui/components/display/data-table";
 import type { ColumnDef } from "@tanstack/react-table";
-import { Label } from "@workspace/ui/components/form/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@workspace/ui/components/form/select";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Eye } from "lucide-react";
@@ -77,15 +76,42 @@ export const MfaRecoveryQueue = React.forwardRef<HTMLDivElement, MfaRecoveryQueu
 		}
 	}, [rows, selectedRequestId]);
 
-	const handleStatusFilterChange = React.useCallback((value: string | null): void => {
-		if (value === null) {
+	const handleManualColumnFilterChange = React.useCallback((filterKey: string, value: string | null): void => {
+		if (filterKey !== "status") {
 			return;
 		}
-		if (value === "all" || value === "PENDING" || value === "APPROVED" || value === "DENIED" || value === "COMPLETED") {
-			setStatusFilter(value);
+		const next = value === null || value === "all" ? "all" : value;
+		if (next === "all" || next === "PENDING" || next === "APPROVED" || next === "DENIED" || next === "COMPLETED") {
+			setStatusFilter(next);
 			setPage(1);
 		}
 	}, []);
+
+	const manualColumnFilters = React.useMemo(
+		(): Readonly<Record<string, string>> => ({
+			status: statusFilter,
+		}),
+		[statusFilter],
+	);
+
+	const tableFilters = React.useMemo(
+		(): Filter[] => [
+			{
+				key: "status",
+				label: "Status",
+				options: STATUS_FILTER_OPTIONS.filter((option) => option.value !== "all").map((option) => ({
+					value: option.value,
+					label: option.label,
+				})),
+			},
+		],
+		[],
+	);
+
+	const checkbox = React.useMemo(
+		() => buildReadOnlyTableCheckbox("mfa-recovery-requests.csv", ["userFullName", "userEmail", "status", "requestedAt"]),
+		[],
+	);
 
 	const tableLabels = React.useMemo(
 		() =>
@@ -184,26 +210,7 @@ export const MfaRecoveryQueue = React.forwardRef<HTMLDivElement, MfaRecoveryQueu
 						<CardTitle>MFA recovery queue</CardTitle>
 						<CardDescription>Review requests from users who lost access to their authenticator and backup codes.</CardDescription>
 					</div>
-					<div className="flex flex-wrap items-center gap-3">
-						<div className="space-y-1">
-							<Label htmlFor="mfa-status-filter" className="text-xs text-muted-foreground">
-								Status
-							</Label>
-							<Select value={statusFilter} onValueChange={handleStatusFilterChange}>
-								<SelectTrigger id="mfa-status-filter" className="w-[180px]">
-									<SelectValue />
-								</SelectTrigger>
-								<SelectContent>
-									{STATUS_FILTER_OPTIONS.map((option) => (
-										<SelectItem key={option.value} value={option.value}>
-											{option.label}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-						</div>
-						{statusFilter === "PENDING" && total > 0 ? <Badge variant="secondary">{total} pending</Badge> : null}
-					</div>
+					{statusFilter === "PENDING" && total > 0 ? <Badge variant="secondary">{total} pending</Badge> : null}
 				</CardHeader>
 				<CardContent className="space-y-6">
 					<DataTable
@@ -211,6 +218,11 @@ export const MfaRecoveryQueue = React.forwardRef<HTMLDivElement, MfaRecoveryQueu
 						data={[...rows]}
 						labels={tableLabels}
 						actions={actions}
+						checkbox={checkbox}
+						enableColumnVisibility
+						filters={tableFilters}
+						manualColumnFilters={manualColumnFilters}
+						onManualColumnFilterChange={handleManualColumnFilterChange}
 						mobileCardRender={mobileCardRender}
 						manual
 						totalCount={total}

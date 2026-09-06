@@ -47,8 +47,9 @@ export class GeneratedSampleCategoryController {
 	@RequirePermission("DELETE", "SAMPLE_CATEGORY")
 	@Delete(":id")
 	@ApiOperation({ summary: "Soft delete SampleCategory" })
-	public delete(@Param(new ZodValidationPipe(SampleCategoryIdParamSchema)) params: { id: string }): Promise<void> {
-		return this.service.delete(params.id);
+	public async delete(@Param(new ZodValidationPipe(SampleCategoryIdParamSchema)) params: { id: string }): Promise<{ success: true }> {
+		await this.service.delete(params.id);
+		return { success: true };
 	}
 
 	@RequirePermission("UPDATE", "SAMPLE_CATEGORY")

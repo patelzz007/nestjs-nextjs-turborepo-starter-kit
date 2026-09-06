@@ -1,5 +1,6 @@
 import type { AccessTokenPayload, RefreshTokenPayload } from "../modules/auth/services/token.service";
 
+import type { RequestContext } from "@fastify/request-context";
 import type { JsonValue } from "./json";
 
 // Re-export for convenience — consumers can import from either path.
@@ -19,6 +20,8 @@ declare module "fastify" {
 		traceId?: string;
 		/** Response data captured by ResponseInterceptor for logging/audit */
 		responseData?: JsonValue;
+		/** Per-request store from `@fastify/request-context`. */
+		readonly requestContext: RequestContext;
 	}
 }
 

@@ -21,6 +21,8 @@ export const ADMIN_DATA_TABLE_LABELS: DataTableLabels = {
 	selectedRowsCount: "{count} rows selected",
 	allRowsSelected: "All {totalCount} rows selected",
 	clearSelection: "Clear",
+	deleteSelected: "Delete selected",
+	mobileSelectAll: "Select all",
 	export: "Export",
 	exportAs: "Export as",
 	exportCsv: "CSV",

@@ -612,14 +612,14 @@ const SelectItem = React.memo(
 		);
 		return (
 			<SelectPrimitive.Item ref={ref} data-slot="select-item" data-variant={variant} className={resolveItemClassName} {...props}>
-				<SelectPrimitive.ItemText className="flex flex-1 shrink-0 gap-2 whitespace-nowrap">
+				<SelectPrimitive.ItemText className="min-w-0 flex-1 truncate">
 					{description !== undefined ? (
 						<span className="flex min-w-0 flex-col">
 							<span className="truncate">{children}</span>
 							<span className="truncate text-xs text-muted-foreground">{description}</span>
 						</span>
 					) : (
-						children
+						<span className="block truncate">{children}</span>
 					)}
 				</SelectPrimitive.ItemText>
 				<SelectPrimitive.ItemIndicator render={<span className="pointer-events-none absolute inset-e-2 flex size-4 items-center justify-center" />}>

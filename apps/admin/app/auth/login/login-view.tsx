@@ -4,7 +4,10 @@ import { LoginForm, type DemoAccount } from "@workspace/client/lib/auth/login-fo
 import { AuthLayout } from "@workspace/ui/components/layout/auth-layout";
 import Link from "next/link";
 
-const ADMIN_DEMO_ACCOUNT: DemoAccount = { label: "🔐 Admin", email: "admin@example.com", password: "Admin@123" };
+const ADMIN_DEMO_ACCOUNTS: readonly DemoAccount[] = [
+	{ label: "⭐ Super Admin", email: "superadmin@example.com", password: "SuperAdmin@123" },
+	{ label: "🔐 Admin", email: "admin@example.com", password: "Admin@123" },
+];
 
 export interface LoginViewProps {
 	/** Safe in-app path to land on after a successful login (from `?redirect=`). */
@@ -43,7 +46,7 @@ export function LoginView({ redirectPath, webBaseUrl, showDemoAccounts }: LoginV
 			<LoginForm
 				mode="admin"
 				redirectPath={redirectPath}
-				demoAccounts={showDemoAccounts ? [ADMIN_DEMO_ACCOUNT] : undefined}
+				demoAccounts={showDemoAccounts ? ADMIN_DEMO_ACCOUNTS : undefined}
 				footer={
 					<p className="text-center text-xs text-balance text-muted-foreground">
 						Returning to{" "}

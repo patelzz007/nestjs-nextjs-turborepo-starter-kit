@@ -2,13 +2,15 @@
 
 import { invalidateSessionAuth } from "@workspace/client/lib/auth/invalidate-session-auth";
 import { createDataTableLabels } from "@/lib/data-table-labels";
+import { buildReadOnlyTableCheckbox } from "@/lib/data-table-capabilities";
 import { DataTableMobileCard } from "@/lib/data-table-mobile-card";
 import { readPaginatedTotal, stubPaginatedMeta } from "@/lib/api-envelope";
 import { useAuth } from "@workspace/client/lib/auth";
 import type { MerchantOrgResponse } from "@workspace/shared";
+import { KybStatusSchema, MerchantOrgStatusSchema } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/feedback/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
-import { DataTable, type Action, type DataTableFeatures } from "@workspace/ui/components/display/data-table";
+import { DataTable, type Action, type DataTableFeatures, type Filter } from "@workspace/ui/components/display/data-table";
 import { Input } from "@workspace/ui/components/form/input";
 import type { ColumnDef } from "@tanstack/react-table";
 import { keepPreviousData, useQueryClient } from "@tanstack/react-query";
@@ -44,6 +46,8 @@ export default function MerchantsAllTable({ initialMerchants, initialTotal }: Me
 	const [page, setPage] = React.useState(1);
 	const [pageLimit, setPageLimit] = React.useState(20);
 	const [search, setSearch] = React.useState("");
+	const [kybStatusFilter, setKybStatusFilter] = React.useState<string>("all");
+	const [statusFilter, setStatusFilter] = React.useState<string>("all");
 	const debouncedSearch = useDebounce(search, 300);
 
 	const prevSearchRef = React.useRef(debouncedSearch);
@@ -67,11 +71,15 @@ export default function MerchantsAllTable({ initialMerchants, initialTotal }: Me
 	);
 
 	const trimmedSearch = debouncedSearch.trim();
+	const parsedKybStatus = kybStatusFilter === "all" ? undefined : KybStatusSchema.safeParse(kybStatusFilter).data;
+	const parsedOrgStatus = statusFilter === "all" ? undefined : MerchantOrgStatusSchema.safeParse(statusFilter).data;
 	const merchantsQuery = api.rewardsAdmin.listMerchants.useQuery(
 		{
 			page,
 			limit: pageLimit,
 			...(trimmedSearch.length > 0 ? { search: trimmedSearch } : {}),
+			...(parsedKybStatus !== undefined ? { kybStatus: parsedKybStatus } : {}),
+			...(parsedOrgStatus !== undefined ? { status: parsedOrgStatus } : {}),
 		},
 		{
 			placeholderData: keepPreviousData,
@@ -205,6 +213,54 @@ export default function MerchantsAllTable({ initialMerchants, initialTotal }: Me
 		setPageLimit(nextPageSize);
 	}, []);
 
+	const handleManualColumnFilterChange = React.useCallback((filterKey: string, value: string | null): void => {
+		const next = value === null || value === "all" ? "all" : value;
+		if (filterKey === "kybStatus") {
+			setKybStatusFilter(next);
+		}
+		if (filterKey === "status") {
+			setStatusFilter(next);
+		}
+		setPage(1);
+	}, []);
+
+	const manualColumnFilters = React.useMemo(
+		(): Readonly<Record<string, string>> => ({
+			kybStatus: kybStatusFilter,
+			status: statusFilter,
+		}),
+		[kybStatusFilter, statusFilter],
+	);
+
+	const tableFilters = React.useMemo(
+		(): Filter[] => [
+			{
+				key: "kybStatus",
+				label: "KYB status",
+				options: [
+					{ value: "PENDING", label: "Pending" },
+					{ value: "APPROVED", label: "Approved" },
+					{ value: "REJECTED", label: "Rejected" },
+				],
+			},
+			{
+				key: "status",
+				label: "Org status",
+				options: [
+					{ value: "ONBOARDING", label: "Onboarding" },
+					{ value: "ACTIVE", label: "Active" },
+					{ value: "SUSPENDED", label: "Suspended" },
+				],
+			},
+		],
+		[],
+	);
+
+	const checkbox = React.useMemo(
+		() => buildReadOnlyTableCheckbox("merchants.csv", ["businessName", "city", "category", "contactEmail", "kybStatus", "status"]),
+		[],
+	);
+
 	const handleSearchChange = React.useCallback((event: React.ChangeEvent<HTMLInputElement>): void => {
 		setSearch(event.target.value);
 	}, []);
@@ -236,6 +292,11 @@ export default function MerchantsAllTable({ initialMerchants, initialTotal }: Me
 						data={[...rows]}
 						labels={tableLabels}
 						actions={actions}
+						checkbox={checkbox}
+						enableColumnVisibility
+						filters={tableFilters}
+						manualColumnFilters={manualColumnFilters}
+						onManualColumnFilterChange={handleManualColumnFilterChange}
 						mobileCardRender={mobileCardRender}
 						manual
 						totalCount={total}

@@ -52,8 +52,9 @@ export class GeneratedProductController {
 	@Delete(":id")
 	@ApiOperation({ summary: "Soft delete Product" })
 	@ApiOkResponse({ description: "Product deleted" })
-	public delete(@Param(new ZodValidationPipe(ProductIdParamSchema)) params: { id: string }): Promise<void> {
-		return this.service.delete(params.id);
+	public async delete(@Param(new ZodValidationPipe(ProductIdParamSchema)) params: { id: string }): Promise<{ success: true }> {
+		await this.service.delete(params.id);
+		return { success: true };
 	}
 
 	@RequirePermission("UPDATE", "PRODUCT")

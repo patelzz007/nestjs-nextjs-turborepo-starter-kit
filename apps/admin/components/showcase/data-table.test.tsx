@@ -148,6 +148,45 @@ describe("DataTable (shared, TanStack Table v9)", () => {
 		}
 	});
 
+	it("enables row selection through the checkbox prop", () => {
+		render(
+			<DataTable
+				labels={ADMIN_DATA_TABLE_LABELS}
+				data={makeRows(5)}
+				columns={demoColumns}
+				checkbox={{
+					onDeleteAll: (): void => undefined,
+					export: true,
+					exportFilename: "sections.csv",
+				}}
+			/>,
+		);
+
+		fireEvent.click(screen.getByRole("checkbox", { name: "Select all" }));
+
+		expect(screen.getByText("Delete selected")).toBeTruthy();
+		expect(screen.getByText("Export")).toBeTruthy();
+	});
+
+	it("shows the selection summary for export-only checkbox tables", () => {
+		render(
+			<DataTable
+				labels={ADMIN_DATA_TABLE_LABELS}
+				data={makeRows(12)}
+				columns={demoColumns}
+				checkbox={{
+					export: true,
+					exportFilename: "sections.csv",
+				}}
+			/>,
+		);
+
+		fireEvent.click(screen.getByRole("checkbox", { name: "Select all" }));
+
+		expect(screen.getByText(/10 rows selected/)).toBeTruthy();
+		expect(screen.queryByText("Delete selected")).toBeNull();
+	});
+
 	it("selects a single row through row.toggleSelected()", () => {
 		render(
 			<DataTable

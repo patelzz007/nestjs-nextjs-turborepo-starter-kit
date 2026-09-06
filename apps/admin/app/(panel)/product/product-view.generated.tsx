@@ -1,6 +1,10 @@
 "use client";
 
 import { createDataTableLabels } from "@/lib/data-table-labels";
+import { buildResourceTableCheckbox, canDeletePlatformResource } from "@/lib/data-table-capabilities";
+import { fetchAllPaginatedListPages, resolveManualBulkSelectionRows } from "@/lib/resolve-manual-bulk-selection";
+import { useSessionCapabilities } from "@/lib/session-capabilities";
+import { useResourceDeleteDialog } from "@/components/common/resource-delete-dialog";
 import { DataTableMobileCard } from "@/lib/data-table-mobile-card";
 import { readPaginatedTotal } from "@/lib/api-envelope";
 import { useAuth } from "@workspace/client/lib/auth";
@@ -17,6 +21,7 @@ import { keepPreviousData, useQueryClient } from "@tanstack/react-query";
 import { toastMessage } from "@workspace/ui/components/feedback/toast";
 
 import { ProductListSortBySchema, type Product, type ProductListSortBy } from "@workspace/shared/schemas/domain/product.generated";
+import type { DataTableBulkSelectionContext } from "@workspace/ui/lib/data-table-checkbox";
 
 function resolveListSortBy(columnId: string | undefined): ProductListSortBy | undefined {
 	if (columnId === undefined) {
@@ -51,6 +56,9 @@ function useDebouncedValue<T>(value: T, delayMs: number): T {
 
 export default function ProductView(): React.JSX.Element {
 	const { api } = useAuth();
+	const { hasCapability } = useSessionCapabilities();
+	const canDelete = canDeletePlatformResource(hasCapability, "PRODUCT");
+	const { requestDelete, resourceDeleteDialog } = useResourceDeleteDialog();
 	const router = useRouter();
 	const queryClient = useQueryClient();
 	const [page, setPage] = useState(1);
@@ -72,6 +80,26 @@ export default function ProductView(): React.JSX.Element {
 	);
 	const rows: Product[] = listQuery.data?.data ?? [];
 	const total = readPaginatedTotal(listQuery.data?.meta, rows.length);
+
+	const buildListQuery = useCallback(
+		(pageNumber: number, limit: number) => {
+			const sortDirection: "asc" | "desc" = sort?.desc === true ? "desc" : "asc";
+			return {
+				page: pageNumber,
+				limit,
+				...(sortBy !== undefined ? { sortBy, sortDirection } : {}),
+				...(trimmedSearch.length > 0 ? { search: trimmedSearch } : {}),
+			};
+		},
+		[sortBy, sort?.desc, trimmedSearch],
+	);
+
+	const fetchAllMatchingProducts = useCallback(async (): Promise<readonly Product[]> => {
+		return fetchAllPaginatedListPages(total, async (pageNumber, limit) => {
+			const response = await api.product.list.fetchOrThrow(buildListQuery(pageNumber, limit));
+			return response.data ?? [];
+		});
+	}, [api.product.list, buildListQuery, total]);
 
 	const handleView = useCallback(
 		(item: Product): void => {
@@ -99,17 +127,37 @@ export default function ProductView(): React.JSX.Element {
 
 	const handleDelete = useCallback(
 		(item: Product): void => {
-			const confirmed = window.confirm(`Delete "${item.name}"? This action soft-deletes the product.`);
-			if (!confirmed) {
-				return;
-			}
-			deleteMutation.mutate({ id: item.id });
+			void requestDelete({
+				title: `Delete "${item.name}"?`,
+				description: "This action soft-deletes the product.",
+				onConfirm: async (): Promise<void> => {
+					await deleteMutation.mutateAsync({ id: item.id });
+				},
+			});
 		},
-		[deleteMutation],
+		[deleteMutation, requestDelete],
+	);
+
+	const handleBulkDelete = useCallback(
+		async (selected: Product[], context: DataTableBulkSelectionContext): Promise<void> => {
+			const count = context.selectAllPages ? context.totalMatchingRows : selected.length;
+			await requestDelete({
+				title: `Delete ${String(count)} product${count === 1 ? "" : "s"}?`,
+				description: "This action soft-deletes them.",
+				count,
+				onConfirm: async (): Promise<void> => {
+					const rowsToDelete = await resolveManualBulkSelectionRows(selected, context, fetchAllMatchingProducts);
+					for (const row of rowsToDelete) {
+						await deleteMutation.mutateAsync({ id: row.id });
+					}
+				},
+			});
+		},
+		[deleteMutation, fetchAllMatchingProducts, requestDelete],
 	);
 
 	const actions = useMemo((): Action<Product>[] => {
-		return [
+		const base: Action<Product>[] = [
 			{
 				key: "view",
 				label: "View",
@@ -124,7 +172,9 @@ export default function ProductView(): React.JSX.Element {
 				icon: <Pencil className="size-4" />,
 				onClick: handleEdit,
 			},
-			{
+		];
+		if (canDelete) {
+			base.push({
 				key: "delete",
 				label: "Delete",
 				description: "Remove this product",
@@ -132,9 +182,22 @@ export default function ProductView(): React.JSX.Element {
 				onClick: handleDelete,
 				isDestructive: true,
 				iconBgColor: "bg-red-100 dark:bg-red-900/40",
-			},
-		];
-	}, [handleDelete, handleEdit, handleView]);
+			});
+		}
+		return base;
+	}, [canDelete, handleDelete, handleEdit, handleView]);
+
+	const checkbox = useMemo(
+		() =>
+			buildResourceTableCheckbox<Product>({
+				hasCapability,
+				resource: "PRODUCT",
+				exportFilename: "products.csv",
+				exportableColumns: ["sku", "name", "price", "stockQuantity", "categoryId", "isActive", "isFeatured", "createdAt"],
+				onDeleteAll: handleBulkDelete,
+			}),
+		[handleBulkDelete, hasCapability],
+	);
 
 	const mobileCardRender = useCallback(
 		(item: Product, cardActions?: Action<Product>[]): React.ReactNode => (
@@ -245,6 +308,8 @@ export default function ProductView(): React.JSX.Element {
 				columns={columns}
 				labels={labels}
 				actions={actions}
+				checkbox={checkbox}
+				enableColumnVisibility
 				mobileCardRender={mobileCardRender}
 				manual
 				totalCount={total}
@@ -258,6 +323,7 @@ export default function ProductView(): React.JSX.Element {
 				searchKeys={[]}
 				toolbarContent={searchToolbar}
 			/>
+			{resourceDeleteDialog}
 		</div>
 	);
 }

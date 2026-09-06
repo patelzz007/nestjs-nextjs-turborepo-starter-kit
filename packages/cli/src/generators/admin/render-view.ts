@@ -34,10 +34,16 @@ export function renderAdminView(ir: ResourceIR): string {
 	const searchableFields = resolveSearchableFieldNames(ir);
 	const hasServerSearch = searchableFields.length > 0;
 	const mobileCardBlock = renderGeneratedMobileCardBlock(ir, columns);
+	const permissionResource = ir.resource.permissionResource;
+	const exportableColumnsJson = JSON.stringify(columns);
 
 	return `"use client";
 
 import { createDataTableLabels } from "@/lib/data-table-labels";
+import { buildResourceTableCheckbox, canDeletePlatformResource } from "@/lib/data-table-capabilities";
+import { fetchAllPaginatedListPages, resolveManualBulkSelectionRows } from "@/lib/resolve-manual-bulk-selection";
+import { useSessionCapabilities } from "@/lib/session-capabilities";
+import { useResourceDeleteDialog } from "@/components/common/resource-delete-dialog";
 import { DataTableMobileCard } from "@/lib/data-table-mobile-card";
 import { readPaginatedTotal } from "@/lib/api-envelope";
 import { useAuth } from "@workspace/client/lib/auth";
@@ -58,6 +64,7 @@ import {
 	type ${model},
 	type ${model}ListSortBy,
 } from "@workspace/shared/schemas/domain/${slug}.generated";
+import type { DataTableBulkSelectionContext } from "@workspace/ui/lib/data-table-checkbox";
 
 function resolveListSortBy(columnId: string | undefined): ${model}ListSortBy | undefined {
 	if (columnId === undefined) {
@@ -92,6 +99,9 @@ function useDebouncedValue<T>(value: T, delayMs: number): T {
 
 export default function ${model}View(): React.JSX.Element {
 \tconst { api } = useAuth();
+\tconst { hasCapability } = useSessionCapabilities();
+\tconst canDelete = canDeletePlatformResource(hasCapability, "${permissionResource}");
+\tconst { requestDelete, resourceDeleteDialog } = useResourceDeleteDialog();
 \tconst router = useRouter();
 \tconst queryClient = useQueryClient();
 \tconst [page, setPage] = useState(1);
@@ -113,6 +123,26 @@ export default function ${model}View(): React.JSX.Element {
 \t);
 \tconst rows: ${model}[] = listQuery.data?.data ?? [];
 \tconst total = readPaginatedTotal(listQuery.data?.meta, rows.length);
+
+\tconst buildListQuery = useCallback(
+\t\t(pageNumber: number, limit: number) => {
+\t\t\tconst sortDirection: "asc" | "desc" = sort?.desc === true ? "desc" : "asc";
+\t\t\treturn {
+\t\t\t\tpage: pageNumber,
+\t\t\t\tlimit,
+\t\t\t\t...(sortBy !== undefined ? { sortBy, sortDirection } : {}),
+\t\t\t\t...(trimmedSearch.length > 0 ? { search: trimmedSearch } : {}),
+\t\t\t};
+\t\t},
+\t\t[sortBy, sort?.desc, trimmedSearch],
+\t);
+
+\tconst fetchAllMatching${model}s = useCallback(async (): Promise<readonly ${model}[]> => {
+\t\treturn fetchAllPaginatedListPages(total, async (pageNumber, limit) => {
+\t\t\tconst response = await api.${contractKey}.list.fetchOrThrow(buildListQuery(pageNumber, limit));
+\t\t\treturn response.data ?? [];
+\t\t});
+\t}, [api.${contractKey}.list, buildListQuery, total]);
 
 \tconst handleView = useCallback(
 \t\t(item: ${model}): void => {
@@ -140,17 +170,37 @@ export default function ${model}View(): React.JSX.Element {
 
 \tconst handleDelete = useCallback(
 \t\t(item: ${model}): void => {
-\t\t\tconst confirmed = window.confirm(\`Delete "\${item.name}"? This action soft-deletes the ${ir.resource.singular.toLowerCase()}.\`);
-\t\t\tif (!confirmed) {
-\t\t\t\treturn;
-\t\t\t}
-\t\t\tdeleteMutation.mutate({ id: item.id });
+\t\t\tvoid requestDelete({
+\t\t\t\ttitle: \`Delete "\${item.name}"?\`,
+\t\t\t\tdescription: "This action soft-deletes the ${ir.resource.singular.toLowerCase()}.",
+\t\t\t\tonConfirm: async (): Promise<void> => {
+\t\t\t\t\tawait deleteMutation.mutateAsync({ id: item.id });
+\t\t\t\t},
+\t\t\t});
 \t\t},
-\t\t[deleteMutation],
+\t\t[deleteMutation, requestDelete],
+\t);
+
+\tconst handleBulkDelete = useCallback(
+\t\tasync (selected: ${model}[], context: DataTableBulkSelectionContext): Promise<void> => {
+\t\t\tconst count = context.selectAllPages ? context.totalMatchingRows : selected.length;
+\t\t\tawait requestDelete({
+\t\t\t\ttitle: \`Delete \${String(count)} ${ir.resource.singular.toLowerCase()}\${count === 1 ? "" : "s"}?\`,
+\t\t\t\tdescription: "This action soft-deletes them.",
+\t\t\t\tcount,
+\t\t\t\tonConfirm: async (): Promise<void> => {
+\t\t\t\t\tconst rowsToDelete = await resolveManualBulkSelectionRows(selected, context, fetchAllMatching${model}s);
+\t\t\t\t\tfor (const row of rowsToDelete) {
+\t\t\t\t\t\tawait deleteMutation.mutateAsync({ id: row.id });
+\t\t\t\t\t}
+\t\t\t\t},
+\t\t\t});
+\t\t},
+\t\t[deleteMutation, fetchAllMatching${model}s, requestDelete],
 \t);
 
 \tconst actions = useMemo((): Action<${model}>[] => {
-\t\treturn [
+\t\tconst base: Action<${model}>[] = [
 \t\t\t{
 \t\t\t\tkey: "view",
 \t\t\t\tlabel: "View",
@@ -165,7 +215,9 @@ export default function ${model}View(): React.JSX.Element {
 \t\t\t\ticon: <Pencil className="size-4" />,
 \t\t\t\tonClick: handleEdit,
 \t\t\t},
-\t\t\t{
+\t\t];
+\t\tif (canDelete) {
+\t\t\tbase.push({
 \t\t\t\tkey: "delete",
 \t\t\t\tlabel: "Delete",
 \t\t\t\tdescription: "Remove this ${ir.resource.singular.toLowerCase()}",
@@ -173,9 +225,22 @@ export default function ${model}View(): React.JSX.Element {
 \t\t\t\tonClick: handleDelete,
 \t\t\t\tisDestructive: true,
 \t\t\t\ticonBgColor: "bg-red-100 dark:bg-red-900/40",
-\t\t\t},
-\t\t];
-\t}, [handleDelete, handleEdit, handleView]);
+\t\t\t});
+\t\t}
+\t\treturn base;
+\t}, [canDelete, handleDelete, handleEdit, handleView]);
+
+\tconst checkbox = useMemo(
+\t\t() =>
+\t\t\tbuildResourceTableCheckbox<${model}>({
+\t\t\t\thasCapability,
+\t\t\t\tresource: "${permissionResource}",
+\t\t\t\texportFilename: "${slug}.csv",
+\t\t\t\texportableColumns: ${exportableColumnsJson},
+\t\t\t\tonDeleteAll: handleBulkDelete,
+\t\t\t}),
+\t\t[handleBulkDelete, hasCapability],
+\t);
 
 ${mobileCardBlock}
 
@@ -234,6 +299,8 @@ ${columnDefs}
 \t\t\t\tcolumns={columns}
 \t\t\t\tlabels={labels}
 \t\t\t\tactions={actions}
+\t\t\t\tcheckbox={checkbox}
+\t\t\t\tenableColumnVisibility
 \t\t\t\tmobileCardRender={mobileCardRender}
 \t\t\t\tmanual
 \t\t\t\ttotalCount={total}
@@ -247,6 +314,7 @@ ${columnDefs}
 \t\t\t\tsearchKeys={[]}
 \t\t\t\ttoolbarContent={searchToolbar}
 \t\t\t/>
+\t\t\t{resourceDeleteDialog}
 \t\t</div>
 \t);
 }

@@ -230,10 +230,9 @@ export function resolveCollectionItemActiveClasses(state: CollectionItemActiveSt
 	return collectionItemActiveSurfaceClasses;
 }
 
-/** Applies the active surface when a menu row is focused, highlighted, or checked. */
+/** Applies the active surface when a menu row is keyboard-highlighted (checked rows use the indicator only). */
 export function resolveMenuItemActiveClasses(state: MenuItemActiveState, variant: "default" | "destructive" = "default"): string {
-	const isActive = state.highlighted || state.checked === true;
-	if (!isActive) {
+	if (!state.highlighted) {
 		return "";
 	}
 	if (variant === "destructive") {

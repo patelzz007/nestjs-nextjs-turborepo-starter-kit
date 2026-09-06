@@ -22,6 +22,15 @@ const PreSerializationValueSchema: z.ZodType<PreSerializationValue> = z.lazy(() 
 	]),
 );
 
+/** Parses an unknown Fastify pre-serialization payload. */
+export function parsePreSerializationValue(value: unknown): PreSerializationValue | null {
+	const parsed = PreSerializationValueSchema.safeParse(value);
+	if (!parsed.success) {
+		return null;
+	}
+	return parsed.data;
+}
+
 /**
  * Recursively replace every `BigInt` in a pre-serialization payload with its
  * `Number` equivalent so `JSON.stringify` can serialize the result.
