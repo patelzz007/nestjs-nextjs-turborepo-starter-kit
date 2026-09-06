@@ -21,6 +21,16 @@ const DEMO_MERCHANT_IDS: readonly { readonly label: string; readonly id: string 
 	{ label: "Melaka Straits Café (seed)", id: "457401d5-536e-464f-9ae9-4756b6dd5f61" },
 ];
 
+const DEMO_MERCHANT_LABEL_BY_ID: Readonly<Record<string, string>> = Object.fromEntries(DEMO_MERCHANT_IDS.map((demo) => [demo.id, demo.label]));
+
+function resolveSelectedDemoMerchantId(merchantOrgId: string): string | null {
+	return DEMO_MERCHANT_IDS.some((demo) => demo.id === merchantOrgId) ? merchantOrgId : null;
+}
+
+function formatDemoMerchantLabel(merchantId: string): string {
+	return DEMO_MERCHANT_LABEL_BY_ID[merchantId] ?? merchantId;
+}
+
 function resolveInitialMerchantOrgId(initialMerchantOrgId?: string): string {
 	if (initialMerchantOrgId !== undefined && initialMerchantOrgId.length > 0) {
 		return initialMerchantOrgId;
@@ -62,8 +72,10 @@ export default function KybReviewPanel({ initialMerchantOrgId }: KybReviewPanelP
 		setKybFieldsJson(event.target.value);
 	}, []);
 
-	const handleDemoSelect = React.useCallback((event: React.ChangeEvent<HTMLSelectElement>): void => {
-		setMerchantOrgId(event.target.value);
+	const handleDemoSelect = React.useCallback((value: string | null): void => {
+		if (value !== null && value.length > 0) {
+			setMerchantOrgId(value);
+		}
 	}, []);
 
 	const handleSubmit = React.useCallback(
@@ -107,13 +119,18 @@ export default function KybReviewPanel({ initialMerchantOrgId }: KybReviewPanelP
 					<form className="space-y-4" onSubmit={handleSubmit}>
 						<div className="space-y-2">
 							<Label htmlFor="kyb-demo">Quick pick (seed)</Label>
-							<select id="kyb-demo" className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm" value={merchantOrgId} onChange={handleDemoSelect}>
-								{DEMO_MERCHANT_IDS.map((demo) => (
-									<option key={demo.id} value={demo.id}>
-										{demo.label}
-									</option>
-								))}
-							</select>
+							<Select value={resolveSelectedDemoMerchantId(merchantOrgId)} onValueChange={handleDemoSelect}>
+								<SelectTrigger id="kyb-demo">
+									<SelectValue placeholder="Choose a seed merchant" formatValue={formatDemoMerchantLabel} />
+								</SelectTrigger>
+								<SelectContent>
+									{DEMO_MERCHANT_IDS.map((demo) => (
+										<SelectItem key={demo.id} value={demo.id}>
+											{demo.label}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
 						</div>
 						<div className="space-y-2">
 							<Label htmlFor="kyb-merchant-id">Merchant org ID</Label>

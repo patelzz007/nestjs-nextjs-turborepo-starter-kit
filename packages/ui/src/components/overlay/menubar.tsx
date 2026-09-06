@@ -17,6 +17,7 @@ import {
 	DropdownMenuSubTrigger,
 	DropdownMenuTrigger,
 } from "@workspace/ui/components/overlay/dropdown-menu";
+import { menuItemLeadingIndicatorDensityClasses } from "@workspace/ui/lib/field-variants";
 import { cn } from "@workspace/ui/lib/utils";
 import { CheckIcon } from "lucide-react";
 import * as React from "react";
@@ -78,7 +79,7 @@ const MenubarItem = React.forwardRef<HTMLDivElement, React.ComponentProps<typeof
 			data-inset={inset}
 			data-variant={variant}
 			className={cn(
-				"group/menubar-item gap-2 rounded-sm px-2 py-1.5 text-sm focus:bg-muted focus:text-foreground not-data-[variant=destructive]:focus:**:text-foreground data-inset:ps-8 data-[variant=destructive]:text-destructive data-[variant=destructive]:focus:bg-destructive/10 data-[variant=destructive]:focus:text-destructive dark:data-[variant=destructive]:focus:bg-destructive/20 data-disabled:opacity-50 [&_svg:not([class*='size-'])]:size-4 data-[variant=destructive]:*:[svg]:text-destructive!",
+				"group/menubar-item gap-2 rounded-sm text-sm focus:bg-muted focus:text-foreground not-data-[variant=destructive]:focus:**:text-foreground data-inset:ps-8 data-[variant=destructive]:text-destructive data-[variant=destructive]:focus:bg-destructive/10 data-[variant=destructive]:focus:text-destructive dark:data-[variant=destructive]:focus:bg-destructive/20 data-disabled:opacity-50 [&_svg:not([class*='size-'])]:size-4 data-[variant=destructive]:*:[svg]:text-destructive!",
 				className,
 			)}
 			{...props}
@@ -100,7 +101,8 @@ function MenubarCheckboxItem({
 			data-slot="menubar-checkbox-item"
 			data-inset={inset}
 			className={cn(
-				"relative flex cursor-default items-center gap-2 rounded-md py-1.5 ps-8 pe-2 text-sm outline-hidden select-none focus:bg-muted focus:text-foreground focus:**:text-foreground data-inset:ps-8 data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+				"relative flex cursor-default items-center gap-2 rounded-md text-sm outline-hidden select-none focus:bg-muted focus:text-foreground focus:**:text-foreground data-inset:ps-8 data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+				menuItemLeadingIndicatorDensityClasses,
 				className,
 			)}
 			checked={checked}
@@ -132,7 +134,8 @@ function MenubarRadioItem({
 			data-slot="menubar-radio-item"
 			data-inset={inset}
 			className={cn(
-				"relative flex cursor-default items-center gap-2 rounded-md py-1.5 ps-8 pe-2 text-sm outline-hidden select-none focus:bg-muted focus:text-foreground focus:**:text-foreground data-inset:ps-8 data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+				"relative flex cursor-default items-center gap-2 rounded-md text-sm outline-hidden select-none focus:bg-muted focus:text-foreground focus:**:text-foreground data-inset:ps-8 data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+				menuItemLeadingIndicatorDensityClasses,
 				className,
 			)}
 			{...props}>
@@ -185,10 +188,7 @@ function MenubarSubTrigger({
 		<DropdownMenuSubTrigger
 			data-slot="menubar-sub-trigger"
 			data-inset={inset}
-			className={cn(
-				"gap-2 rounded-sm px-2 py-1.5 text-sm focus:bg-muted focus:text-foreground data-inset:ps-8 data-open:bg-muted data-open:text-foreground [&_svg:not([class*='size-'])]:size-4",
-				className,
-			)}
+			className={cn("gap-2 rounded-sm text-sm data-inset:ps-8 [&_svg:not([class*='size-'])]:size-4", className)}
 			{...props}
 		/>
 	);

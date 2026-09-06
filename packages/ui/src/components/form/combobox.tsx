@@ -46,7 +46,7 @@ import { Combobox as ComboboxPrimitive } from "@base-ui/react";
 import { Button } from "@workspace/ui/components/form/button";
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "@workspace/ui/components/form/input-group";
 import { resolveFieldState } from "@workspace/ui/lib/field-state";
-import { comboboxInputGroupVariants } from "@workspace/ui/lib/field-variants";
+import { comboboxInputGroupVariants, resolveCollectionItemActiveClasses, resolveCollectionItemDensityClasses } from "@workspace/ui/lib/field-variants";
 import { matchesShortcut, parseShortcut } from "@workspace/ui/lib/shortcut";
 import { cn } from "@workspace/ui/lib/utils";
 import { CheckIcon, ChevronDownIcon, Loader2Icon, PlusIcon, XIcon } from "lucide-react";
@@ -547,14 +547,14 @@ const ComboboxItem = React.forwardRef<HTMLDivElement, ComboboxItemProps>(functio
 		<ComboboxPrimitive.Item
 			ref={ref}
 			data-slot="combobox-item"
-			className={cn(
-				"relative flex w-full cursor-default items-center gap-2 rounded-sm text-sm outline-hidden select-none data-highlighted:bg-muted data-highlighted:text-foreground not-data-[variant=destructive]:data-highlighted:**:text-foreground data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
-				// Improvement 2: item density follows the root `size`.
-				context.size === "sm" && "py-1 ps-2 pe-8",
-				context.size === "default" && "py-1.5 ps-2 pe-8",
-				context.size === "lg" && "py-2 ps-2.5 pe-8",
-				className,
-			)}
+			className={(state) =>
+				cn(
+					"relative flex w-full cursor-default items-center gap-2 rounded-sm text-sm outline-hidden select-none data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+					resolveCollectionItemActiveClasses(state),
+					resolveCollectionItemDensityClasses(context.size),
+					className,
+				)
+			}
 			{...props}>
 			{description !== undefined ? (
 				<span className="flex min-w-0 flex-col">

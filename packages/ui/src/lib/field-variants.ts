@@ -1,4 +1,5 @@
 import { cva } from "class-variance-authority";
+import { z } from "zod";
 
 /** Shared CVA `state` variants for text inputs, textareas, and similar controls. */
 export const fieldStateVariants: { readonly state: Record<string, string> } = {
@@ -162,3 +163,85 @@ export const sliderVariants = cva("data-horizontal:w-full data-vertical:h-full",
 		state: "default",
 	},
 });
+
+/** Shared list-row density for Select, Combobox, and menu surfaces. */
+export const listItemSizeSchema = z.enum(["sm", "default", "lg"]);
+
+export type ListItemSize = z.output<typeof listItemSizeSchema>;
+
+export const collectionItemDensityVariants = cva("", {
+	variants: {
+		size: {
+			sm: "min-h-8 py-1.5 ps-2 pe-8",
+			default: "min-h-9 py-2 ps-2.5 pe-8",
+			lg: "min-h-10 py-2.5 ps-3 pe-8",
+		},
+	},
+	defaultVariants: {
+		size: "default",
+	},
+});
+
+/** Density classes for Select / Combobox option rows. */
+export function resolveCollectionItemDensityClasses(size: ListItemSize): string {
+	return collectionItemDensityVariants({ size });
+}
+
+/** Density classes for standard menu / command rows. */
+export const menuItemDensityClasses = "min-h-9 px-2.5 py-2";
+
+/** Density classes for menu rows with a trailing check indicator. */
+export const menuItemIndicatorDensityClasses = "min-h-9 py-2 ps-2.5 pe-8";
+
+/** Density classes for menu rows with a leading check indicator (menubar). */
+export const menuItemLeadingIndicatorDensityClasses = "min-h-9 py-2 ps-8 pe-2.5";
+
+/** Active surface colors for highlighted / selected collection rows (Select, Combobox). */
+export const collectionItemActiveSurfaceClasses =
+	"bg-slate-800 text-white [&_svg]:text-white [&_.text-muted-foreground]:text-white/80 dark:bg-white dark:text-slate-800 dark:[&_svg]:text-slate-800 dark:[&_.text-muted-foreground]:text-slate-800/80";
+
+/** Active surface for destructive collection rows. */
+export const collectionItemDestructiveActiveSurfaceClasses = "bg-destructive/10 text-destructive";
+
+/** Active surface colors for focused / checked menu rows. */
+export const menuItemActiveSurfaceClasses = "bg-slate-800 text-white [&_svg]:text-white dark:bg-white dark:text-slate-800 dark:[&_svg]:text-slate-800";
+
+/** Active surface for destructive menu rows. */
+export const menuItemDestructiveActiveSurfaceClasses = "bg-destructive/10 text-destructive";
+
+export interface CollectionItemActiveState {
+	readonly selected: boolean;
+	readonly highlighted: boolean;
+}
+
+export interface MenuItemActiveState {
+	readonly highlighted: boolean;
+	readonly checked?: boolean;
+}
+
+/** Applies the active surface when a select/combobox row is selected or keyboard-highlighted. */
+export function resolveCollectionItemActiveClasses(state: CollectionItemActiveState, variant: "default" | "destructive" = "default"): string {
+	if (!state.selected && !state.highlighted) {
+		return "";
+	}
+	if (variant === "destructive") {
+		return collectionItemDestructiveActiveSurfaceClasses;
+	}
+	return collectionItemActiveSurfaceClasses;
+}
+
+/** Applies the active surface when a menu row is focused, highlighted, or checked. */
+export function resolveMenuItemActiveClasses(state: MenuItemActiveState, variant: "default" | "destructive" = "default"): string {
+	const isActive = state.highlighted || state.checked === true;
+	if (!isActive) {
+		return "";
+	}
+	if (variant === "destructive") {
+		return menuItemDestructiveActiveSurfaceClasses;
+	}
+	return menuItemActiveSurfaceClasses;
+}
+
+/** Open submenu trigger state in menus. */
+export const menuItemOpenClasses =
+	"data-popup-open:bg-slate-800 data-popup-open:text-white data-popup-open:**:text-white data-open:bg-slate-800 data-open:text-white data-open:**:text-white dark:data-popup-open:bg-white dark:data-popup-open:text-slate-800 dark:data-popup-open:**:text-slate-800 dark:data-open:bg-white dark:data-open:text-slate-800 dark:data-open:**:text-slate-800";

@@ -338,7 +338,7 @@ export function SelectShowcase(): React.JSX.Element {
 			<Card>
 				<CardHeader>
 					<CardTitle>Loading, disabled &amp; full-width</CardTitle>
-					<CardDescription>Spinner row (feature 1) · disabled passthrough · w-full trigger (feature 11)</CardDescription>
+					<CardDescription>Spinner row (feature 1) · disabled passthrough · full-width trigger by default (feature 11)</CardDescription>
 				</CardHeader>
 				<CardContent className="grid gap-4">
 					<div className="space-y-2">
@@ -367,10 +367,22 @@ export function SelectShowcase(): React.JSX.Element {
 					</div>
 
 					<div className="space-y-2">
-						<p className="text-sm text-muted-foreground">fullWidth</p>
+						<p className="text-sm text-muted-foreground">full width (default)</p>
 						<Select>
-							<SelectTrigger fullWidth>
+							<SelectTrigger>
 								<SelectValue placeholder="This trigger stretches…" />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="a">Option A</SelectItem>
+							</SelectContent>
+						</Select>
+					</div>
+
+					<div className="space-y-2">
+						<p className="text-sm text-muted-foreground">compact (fullWidth=false)</p>
+						<Select>
+							<SelectTrigger fullWidth={false}>
+								<SelectValue placeholder="Fits content…" />
 							</SelectTrigger>
 							<SelectContent>
 								<SelectItem value="a">Option A</SelectItem>
@@ -391,7 +403,7 @@ export function SelectShowcase(): React.JSX.Element {
 						<p className="text-sm text-muted-foreground">Teams (maxChips=2)</p>
 						<div className="flex items-center gap-2">
 							<Select multiple value={teams} onValueChange={setTeams} itemToStringLabel={formatTeamLabel}>
-								<SelectTrigger fullWidth>
+								<SelectTrigger>
 									{teams.length > 0 ? (
 										<SelectChips maxChips={2}>
 											{teams.map((value) => (

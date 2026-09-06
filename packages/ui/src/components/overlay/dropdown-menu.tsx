@@ -1,9 +1,39 @@
 "use client";
 
 import { Menu as MenuPrimitive } from "@base-ui/react/menu";
+import {
+	menuItemDensityClasses,
+	menuItemIndicatorDensityClasses,
+	menuItemOpenClasses,
+	type MenuItemActiveState,
+	resolveMenuItemActiveClasses,
+} from "@workspace/ui/lib/field-variants";
 import { cn } from "@workspace/ui/lib/utils";
 import { ChevronRightIcon, CheckIcon } from "lucide-react";
 import * as React from "react";
+import { useCallback } from "react";
+import { z } from "zod";
+
+const dropdownMenuItemBaseClasses =
+	"group/dropdown-menu-item relative flex cursor-default items-center gap-2 rounded-sm text-sm outline-hidden select-none data-inset:ps-8 data-[variant=destructive]:text-destructive data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 data-[variant=destructive]:*:[svg]:text-destructive";
+
+const dropdownMenuIndicatorItemBaseClasses =
+	"relative flex cursor-default items-center gap-2 rounded-sm text-sm outline-hidden select-none data-inset:ps-8 data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4";
+
+type MenuSurfaceClassName = MenuPrimitive.Item.Props["className"] | MenuPrimitive.CheckboxItem.Props["className"] | MenuPrimitive.RadioItem.Props["className"];
+
+function resolveMenuExtraClassName(className: MenuSurfaceClassName): string | undefined {
+	const parsed = z.string().safeParse(className);
+	return parsed.success ? parsed.data : undefined;
+}
+
+function buildDropdownMenuItemClasses(state: MenuItemActiveState, variant: "default" | "destructive", className?: string): string {
+	return cn(dropdownMenuItemBaseClasses, menuItemDensityClasses, resolveMenuItemActiveClasses(state, variant), className);
+}
+
+function buildDropdownMenuIndicatorItemClasses(state: MenuItemActiveState, className?: string): string {
+	return cn(dropdownMenuIndicatorItemBaseClasses, menuItemIndicatorDensityClasses, resolveMenuItemActiveClasses(state), className);
+}
 
 // Root/Portal render no DOM element of their own (base-ui providers), so like
 // the Select Root they intentionally stay plain functions — the ref lives on
@@ -69,19 +99,11 @@ const DropdownMenuItem = React.forwardRef<
 		variant?: "default" | "destructive";
 	}
 >(function DropdownMenuItem({ className, inset, variant = "default", ...props }, ref): React.JSX.Element {
-	return (
-		<MenuPrimitive.Item
-			ref={ref}
-			data-slot="dropdown-menu-item"
-			data-inset={inset}
-			data-variant={variant}
-			className={cn(
-				"group/dropdown-menu-item relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none focus:bg-muted focus:text-foreground not-data-[variant=destructive]:focus:**:text-foreground data-inset:ps-8 data-[variant=destructive]:text-destructive data-[variant=destructive]:focus:bg-destructive/10 data-[variant=destructive]:focus:text-destructive dark:data-[variant=destructive]:focus:bg-destructive/20 data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 data-[variant=destructive]:*:[svg]:text-destructive",
-				className,
-			)}
-			{...props}
-		/>
+	const resolveItemClassName = useCallback(
+		(state: MenuItemActiveState): string => buildDropdownMenuItemClasses({ highlighted: state.highlighted }, variant, resolveMenuExtraClassName(className)),
+		[className, variant],
 	);
+	return <MenuPrimitive.Item ref={ref} data-slot="dropdown-menu-item" data-inset={inset} data-variant={variant} className={resolveItemClassName} {...props} />;
 });
 
 // SubmenuRoot renders no DOM of its own — plain function, ref on the parts.
@@ -101,7 +123,9 @@ const DropdownMenuSubTrigger = React.forwardRef<
 			data-slot="dropdown-menu-sub-trigger"
 			data-inset={inset}
 			className={cn(
-				"flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none focus:bg-muted focus:text-foreground not-data-[variant=destructive]:focus:**:text-foreground data-inset:ps-8 data-popup-open:bg-muted data-popup-open:text-foreground data-open:bg-muted data-open:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+				"flex cursor-default items-center gap-2 rounded-sm text-sm outline-hidden select-none data-inset:ps-8 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+				menuItemDensityClasses,
+				menuItemOpenClasses,
 				className,
 			)}
 			{...props}>
@@ -138,17 +162,13 @@ const DropdownMenuCheckboxItem = React.forwardRef<
 		inset?: boolean;
 	}
 >(function DropdownMenuCheckboxItem({ className, children, checked, inset, ...props }, ref): React.JSX.Element {
+	const resolveItemClassName = useCallback(
+		(state: MenuItemActiveState): string =>
+			buildDropdownMenuIndicatorItemClasses({ highlighted: state.highlighted, checked: state.checked }, resolveMenuExtraClassName(className)),
+		[className],
+	);
 	return (
-		<MenuPrimitive.CheckboxItem
-			ref={ref}
-			data-slot="dropdown-menu-checkbox-item"
-			data-inset={inset}
-			className={cn(
-				"relative flex cursor-default items-center gap-2 rounded-sm py-1.5 ps-2 pe-8 text-sm outline-hidden select-none focus:bg-muted focus:text-foreground focus:**:text-foreground data-inset:ps-8 data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
-				className,
-			)}
-			checked={checked}
-			{...props}>
+		<MenuPrimitive.CheckboxItem ref={ref} data-slot="dropdown-menu-checkbox-item" data-inset={inset} className={resolveItemClassName} checked={checked} {...props}>
 			<span className="pointer-events-none absolute inset-e-2 flex items-center justify-center" data-slot="dropdown-menu-checkbox-item-indicator">
 				<MenuPrimitive.CheckboxItemIndicator>
 					<CheckIcon />
@@ -169,16 +189,13 @@ const DropdownMenuRadioItem = React.forwardRef<
 		inset?: boolean;
 	}
 >(function DropdownMenuRadioItem({ className, children, inset, ...props }, ref): React.JSX.Element {
+	const resolveItemClassName = useCallback(
+		(state: MenuItemActiveState): string =>
+			buildDropdownMenuIndicatorItemClasses({ highlighted: state.highlighted, checked: state.checked }, resolveMenuExtraClassName(className)),
+		[className],
+	);
 	return (
-		<MenuPrimitive.RadioItem
-			ref={ref}
-			data-slot="dropdown-menu-radio-item"
-			data-inset={inset}
-			className={cn(
-				"relative flex cursor-default items-center gap-2 rounded-sm py-1.5 ps-2 pe-8 text-sm outline-hidden select-none focus:bg-muted focus:text-foreground focus:**:text-foreground data-inset:ps-8 data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
-				className,
-			)}
-			{...props}>
+		<MenuPrimitive.RadioItem ref={ref} data-slot="dropdown-menu-radio-item" data-inset={inset} className={resolveItemClassName} {...props}>
 			<span className="pointer-events-none absolute inset-e-2 flex items-center justify-center" data-slot="dropdown-menu-radio-item-indicator">
 				<MenuPrimitive.RadioItemIndicator>
 					<CheckIcon />
@@ -198,7 +215,7 @@ const DropdownMenuShortcut = React.forwardRef<HTMLSpanElement, React.ComponentPr
 		<span
 			ref={ref}
 			data-slot="dropdown-menu-shortcut"
-			className={cn("ms-auto text-xs tracking-widest text-muted-foreground group-focus/dropdown-menu-item:text-foreground", className)}
+			className={cn("ms-auto text-xs tracking-widest text-muted-foreground group-focus/dropdown-menu-item:text-inherit group-focus/dropdown-menu-item:opacity-80", className)}
 			{...props}
 		/>
 	);

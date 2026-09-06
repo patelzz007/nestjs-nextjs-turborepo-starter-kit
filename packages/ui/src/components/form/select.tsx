@@ -34,7 +34,12 @@ import { Button } from "@workspace/ui/components/form/button";
 import { Select as SelectPrimitive } from "@base-ui/react/select";
 import { useStopPointerEvents } from "@workspace/ui/hooks/use-stop-pointer-events";
 import { resolveFieldState } from "@workspace/ui/lib/field-state";
-import { selectTriggerVariants } from "@workspace/ui/lib/field-variants";
+import {
+	type CollectionItemActiveState,
+	resolveCollectionItemActiveClasses,
+	resolveCollectionItemDensityClasses,
+	selectTriggerVariants,
+} from "@workspace/ui/lib/field-variants";
 import { matchesShortcut, parseShortcut } from "@workspace/ui/lib/shortcut";
 import { cn } from "@workspace/ui/lib/utils";
 import { CheckIcon, ChevronDownIcon, ChevronUpIcon, Loader2Icon, PlusIcon, XIcon } from "lucide-react";
@@ -284,12 +289,12 @@ function SelectValue({
 export interface SelectTriggerProps extends SelectPrimitive.Trigger.Props {
 	/** Density override — falls back to the Root's `size`. */
 	readonly size?: SelectSize;
-	/** Stretch the trigger to the full width of its container (feature 11). */
+	/** Stretch the trigger to the full width of its container (feature 11). Defaults to true for form fields. */
 	readonly fullWidth?: boolean;
 }
 
 const SelectTrigger = React.forwardRef<HTMLButtonElement, SelectTriggerProps>(function SelectTrigger(
-	{ className, children, size: sizeProp, fullWidth = false, disabled, ...props },
+	{ className, children, size: sizeProp, fullWidth = true, disabled, ...props },
 	ref,
 ): React.JSX.Element {
 	const context = useSelectContext();
@@ -579,6 +584,20 @@ export interface SelectItemProps extends SelectPrimitive.Item.Props {
 	readonly variant?: "default" | "destructive";
 }
 
+function resolveSelectItemExtraClassName(className: SelectItemProps["className"]): string | undefined {
+	const parsed = z.string().safeParse(className);
+	return parsed.success ? parsed.data : undefined;
+}
+
+function buildSelectItemClasses(state: CollectionItemActiveState, size: SelectSize, variant: "default" | "destructive", className?: string): string {
+	return cn(
+		"relative flex w-full cursor-default items-center gap-2 rounded-sm text-sm outline-hidden select-none data-[variant=destructive]:text-destructive data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+		resolveCollectionItemActiveClasses(state, variant),
+		resolveCollectionItemDensityClasses(size),
+		className,
+	);
+}
+
 /**
  * A single option row. `React.memo` (rule 16, improvement 13): select popups
  * re-render on open/highlight, and memoizing keeps unrelated rows from
@@ -587,20 +606,12 @@ export interface SelectItemProps extends SelectPrimitive.Item.Props {
 const SelectItem = React.memo(
 	React.forwardRef<HTMLDivElement, SelectItemProps>(function SelectItem({ className, children, description, variant = "default", ...props }, ref): React.JSX.Element {
 		const context = useSelectContext();
+		const resolveItemClassName = useCallback(
+			(state: CollectionItemActiveState): string => buildSelectItemClasses(state, context.size, variant, resolveSelectItemExtraClassName(className)),
+			[className, context.size, variant],
+		);
 		return (
-			<SelectPrimitive.Item
-				ref={ref}
-				data-slot="select-item"
-				data-variant={variant}
-				className={cn(
-					"relative flex w-full cursor-default items-center gap-2 rounded-sm text-sm outline-hidden select-none data-highlighted:bg-muted data-highlighted:text-foreground data-[variant=destructive]:text-destructive data-[variant=destructive]:data-highlighted:bg-destructive/10 data-[variant=destructive]:data-highlighted:text-destructive data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
-					// Improvement 2: item density follows the root `size`.
-					context.size === "sm" && "py-1 ps-2 pe-8",
-					context.size === "default" && "py-1.5 ps-2 pe-8",
-					context.size === "lg" && "py-2 ps-2.5 pe-8",
-					className,
-				)}
-				{...props}>
+			<SelectPrimitive.Item ref={ref} data-slot="select-item" data-variant={variant} className={resolveItemClassName} {...props}>
 				<SelectPrimitive.ItemText className="flex flex-1 shrink-0 gap-2 whitespace-nowrap">
 					{description !== undefined ? (
 						<span className="flex min-w-0 flex-col">
