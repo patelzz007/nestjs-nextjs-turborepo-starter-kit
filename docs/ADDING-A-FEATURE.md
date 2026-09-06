@@ -18,7 +18,7 @@ If you are adding a **new admin CRUD resource**, use the contract-driven generat
 2. Run `pnpm app generate resource <name>`
 3. Run `pnpm db:migrate` and `pnpm db:rls`
 
-See [`docs/contract-driven-scaffolding.md`](./contract-driven-scaffolding.md).
+See [`docs/cli-guide.md`](./cli-guide.md) (beginner walkthrough) or [`docs/contract-driven-scaffolding.md`](./contract-driven-scaffolding.md) (technical reference).
 
 ---
 

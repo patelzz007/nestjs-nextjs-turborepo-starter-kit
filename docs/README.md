@@ -21,7 +21,9 @@ coverImage: "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?auto=f
 | Guide                                                | What it covers                                                                                                                                          |
 | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **[Quickstart](./QUICKSTART.md)**                    | **Start here.** 5-minute overview: what the project is, tech stack, folder structure, request lifecycle, and how to run it.                            |
+| **[CLI Guide (ELI5)](./cli-guide.md)**               | **Use the generator.** Plain-language guide to `pnpm app` — create admin CRUD resources from a single `.resource.ts` file.                             |
 | **[Adding a Feature](./ADDING-A-FEATURE.md)**        | Step-by-step guide to adding a new feature module — from schema to UI, with a concrete example.                                                        |
+| **[Contract-Driven Scaffolding](./contract-driven-scaffolding.md)** | Technical reference for the generator: architecture, ownership model, platform runtime.                                          |
 | **[Getting Started (A-to-Z)](./getting-started.md)** | Full setup guide. From a fresh clone to running apps: prerequisites, env setup, DB bootstrap, dev servers, best practices, dos & don'ts, troubleshooting. |
 | **[Architecture](./architecture.md)**                | The big picture: what each workspace is for, how data flows between them, and how to decide where new code goes.                                        |
 | **[Token Refresh](./token-refresh.md)**              | How session refresh works — the two layers (server-side proxy + client-side 401), how to observe each, deployment notes, and FAQ. Starts with a no-jargon 30-second TL;DR. |
@@ -52,7 +54,7 @@ Don't read top to bottom. Here's the path we'd walk a new developer through:
 | 1️⃣    | **[Quickstart](./QUICKSTART.md)**                                   | 5-minute overview — get oriented before diving deep.                                                   |
 | 2️⃣    | **[Getting Started](./getting-started.md)**                         | Get the stack running — everything below assumes a working dev setup.                                  |
 | 3️⃣    | **[Architecture](./architecture.md)**                               | The big picture: which workspace owns what, so the later guides have somewhere to hang.                 |
-| 4️⃣    | **[Adding a Feature](./ADDING-A-FEATURE.md)**                       | Step-by-step guide to adding a new module.
+| 4️⃣    | **[CLI Guide (ELI5)](./cli-guide.md)** · **[Adding a Feature](./ADDING-A-FEATURE.md)** | New CRUD module → start with the CLI guide; complex/custom modules → manual feature guide. |
 | 5️⃣    | **[Token Refresh](./token-refresh.md)**                             | Read its 30-second TL;DR first (coffee-shop mental model, zero jargon), then the real machinery: the two layers, how to observe them in DevTools / server logs, and the FAQ. |
 | 6️⃣    | **[TypeScript](./typescript.md) · [ESLint](./eslint.md) · [Dependencies](./dependencies.md)** | Read when you touch config or hit a lint/type error — no need up front.          |
 | 7️⃣    | **[Prisma](./prisma.md) · [Authorization](./authorization.md)**   | Read when you touch the database or RBAC: migrations, RLS tenancy, permissions, cache.                            |

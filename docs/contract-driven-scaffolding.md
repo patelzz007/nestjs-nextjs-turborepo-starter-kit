@@ -2,6 +2,8 @@
 
 This monorepo includes an internal generator at [`packages/cli`](../packages/cli) that turns a restricted TypeScript resource definition into production-oriented API, contract, client, and admin CRUD artifacts.
 
+> **New to the CLI?** Start with the junior-friendly walkthrough: [`docs/cli-guide.md`](./cli-guide.md).
+
 ## Quick start
 
 ```bash
@@ -9,16 +11,16 @@ This monorepo includes an internal generator at [`packages/cli`](../packages/cli
 pnpm app new resource
 
 # Validate a definition
-pnpm app schema validate sample-resource
+pnpm app schema validate sample-category
 
 # Preview planned changes
-pnpm app schema diff sample-resource
+pnpm app schema diff sample-category
 
 # Generate (interactive confirmation unless --non-interactive)
-pnpm app generate resource sample-resource --non-interactive
+pnpm app generate resource sample-category --non-interactive
 
 # Regenerate generator-owned files
-pnpm app sync sample-resource
+pnpm app sync sample-category
 
 # Check project compatibility
 pnpm app doctor
@@ -104,18 +106,18 @@ ProductRepository / ProductService    ← developer-owned extensions (optional)
 
 Manifests are stored in [`.app/manifests/`](../.app/manifests/).
 
-## Sample resource
+## Sample resources
 
-The live acceptance resource is **SampleResource**:
+Live examples in the repo:
 
-- Definition: [`resources/definitions/sample-resource.resource.ts`](../resources/definitions/sample-resource.resource.ts)
-- API module: [`apps/api/src/modules/sample-resource/`](../apps/api/src/modules/sample-resource/)
-- Admin UI: [`apps/admin/app/(panel)/sample-resource/`](../apps/admin/app/(panel)/sample-resource/)
-- Contracts: [`packages/shared/src/schemas/domain/sample-resource.generated.ts`](../packages/shared/src/schemas/domain/sample-resource.generated.ts)
+| Resource | Definition | Notes |
+|----------|------------|-------|
+| **SampleCategory** | [`sample-category.resource.ts`](../resources/definitions/sample-category.resource.ts) | Parent table; soft delete, admin-only RLS |
+| **Product** | [`product.resource.ts`](../resources/definitions/product.resource.ts) | Child with FK to `SampleCategory`; optimistic concurrency |
 
-It exercises soft delete, optimistic concurrency, idempotency hooks, workflow transition schemas, admin-only RLS, typed permissions (`SAMPLE_RESOURCE`), and the shared `DataTable` adapter pattern.
+Generated artifacts follow the slug: `apps/api/src/modules/sample-category/`, `apps/admin/app/(panel)/product/`, etc.
 
-**Exposure policy:** API is protected by SuperAdmin permissions; navigation is hidden in production via the DSL (`hiddenInProduction: true`).
+**Exposure policy:** sample resources use admin-only RLS; navigation is hidden in production via `hiddenInProduction: true` in the DSL.
 
 ## Platform runtime
 
