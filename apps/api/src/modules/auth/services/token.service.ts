@@ -29,6 +29,13 @@ const { TokenExpiredError } = jwt;
 
 export type { AccessTokenPayload, RefreshTokenPayload } from "@workspace/shared";
 
+export type SessionScope = "full" | "restricted";
+
+export interface AccessTokenGenerationOptions {
+	readonly sessionScope?: SessionScope;
+	readonly mfaAssuredAt?: number;
+}
+
 @Injectable()
 export class TokenService {
 	private readonly logger: Logger = new Logger(TokenService.name);
@@ -44,11 +51,12 @@ export class TokenService {
 	 * @param user - The FlatUserResponse to embed (roles and permissions are included)
 	 * @param refreshTokenId - The UUID of the refresh token record (used as JWT `jti`)
 	 */
-	public async generateTokens(user: FlatUserResponse, refreshTokenId: string): Promise<{ accessToken: string; refreshToken: string }> {
-		// JWT carries identity + lightweight flags. Full permission resolution
-		// happens at guard time via AuthorizationCheckerService.
-		// `hasAdminAccess` is included because the Next.js proxy (proxy.ts)
-		// needs it synchronously for route-level gating.
+	public async generateTokens(
+		user: FlatUserResponse,
+		refreshTokenId: string,
+		options: AccessTokenGenerationOptions = {},
+	): Promise<{ accessToken: string; refreshToken: string }> {
+		const sessionScope: SessionScope = options.sessionScope ?? "full";
 		const accessPayload: AccessTokenPayload = {
 			sub: user.id,
 			id: user.id,
@@ -59,6 +67,8 @@ export class TokenService {
 			isEmailVerified: user.isEmailVerified,
 			hasAdminAccess: user.hasAdminAccess,
 			tokenVersion: user.tokenVersion,
+			sessionScope,
+			mfaAssuredAt: options.mfaAssuredAt,
 		};
 
 		const refreshPayload = {
@@ -83,7 +93,8 @@ export class TokenService {
 	}
 
 	/** Generate a fresh access token (no refresh token rotation). */
-	public async generateAccessToken(user: FlatUserResponse): Promise<string> {
+	public async generateAccessToken(user: FlatUserResponse, options: AccessTokenGenerationOptions = {}): Promise<string> {
+		const sessionScope: SessionScope = options.sessionScope ?? "full";
 		const accessPayload: AccessTokenPayload = {
 			sub: user.id,
 			id: user.id,
@@ -94,6 +105,8 @@ export class TokenService {
 			isEmailVerified: user.isEmailVerified,
 			hasAdminAccess: user.hasAdminAccess,
 			tokenVersion: user.tokenVersion,
+			sessionScope,
+			mfaAssuredAt: options.mfaAssuredAt,
 		};
 
 		return this.jwtService.signAsync(accessPayload, {

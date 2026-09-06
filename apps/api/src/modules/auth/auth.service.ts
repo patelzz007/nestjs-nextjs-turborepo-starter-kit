@@ -8,6 +8,7 @@ import type {
 	ForgotPasswordInput,
 	ForgotPasswordResponse,
 	LoginInput,
+	LoginRestrictedEnrollmentResponse,
 	LoginServiceResponse,
 	LoginTwoFactorPendingResponse,
 	LoginVerificationPendingResponse,
@@ -79,11 +80,11 @@ export class AuthService {
 		clientType?: string,
 		deviceInfo?: string,
 		ipAddress?: string,
-	): Promise<LoginServiceResponse | LoginTwoFactorPendingResponse | LoginVerificationPendingResponse> {
+	): Promise<LoginServiceResponse | LoginRestrictedEnrollmentResponse | LoginTwoFactorPendingResponse | LoginVerificationPendingResponse> {
 		return this.loginService.login(loginDto, clientType, deviceInfo, ipAddress);
 	}
 
-	public async verifyLogin(dto: VerifyLoginInput, ipAddress?: string): Promise<LoginServiceResponse> {
+	public async verifyLogin(dto: VerifyLoginInput, ipAddress?: string): Promise<LoginServiceResponse | LoginRestrictedEnrollmentResponse> {
 		return this.loginVerificationService.verifyLoginCode(dto.verificationId, dto.code, ipAddress);
 	}
 

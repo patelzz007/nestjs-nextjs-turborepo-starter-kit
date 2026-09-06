@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { NextRequest } from "next/server";
 
-import { proxy } from "./proxy";
+import { proxy, resetAdminProxyRefreshCooldownForTests } from "./proxy";
 
 // ── Mocks ──────────────────────────────────────────────────────────────────
 // The proxy module imports `next/server` (NextResponse) and
@@ -41,7 +41,7 @@ const nextResponse = vi.hoisted(() => {
 });
 
 vi.mock("next/server", () => ({ NextResponse: nextResponse }));
-vi.mock("@workspace/client/lib/api/config", () => ({ API_BASE_URL: "http://api.test" }));
+vi.mock("@workspace/client/lib/api/config", () => ({ API_BASE_URL: "http://api.test", API_URL_PREFIX: "/api/v1" }));
 
 // ── Request / response plumbing ─────────────────────────────────────────────
 
@@ -117,6 +117,7 @@ const DOC_NAV: Pick<RequestOptions, "secFetchMode"> = { secFetchMode: "navigate"
 
 beforeEach(() => {
 	vi.clearAllMocks();
+	resetAdminProxyRefreshCooldownForTests();
 });
 
 afterEach(() => {
@@ -134,14 +135,14 @@ describe("admin proxy route protection", () => {
 	});
 
 	it("redirects authenticated non-admins back to login", async () => {
-		const response = await runProxy({ pathname: "/", accessToken: nonAdminToken() });
+		const response = await runProxy({ pathname: "/", accessToken: nonAdminToken(), refreshToken: "rt" });
 
 		expect(response.status).toBe(307);
 		expect(redirectTarget()).toBe("http://localhost:3001/auth/login");
 	});
 
 	it("serves the panel to admins", async () => {
-		const response = await runProxy({ pathname: "/users", accessToken: adminToken(3600) });
+		const response = await runProxy({ pathname: "/users", accessToken: adminToken(3600), refreshToken: "rt" });
 
 		expect(response.status).toBe(200);
 		expect(nextResponse.next).toHaveBeenCalled();
@@ -149,18 +150,22 @@ describe("admin proxy route protection", () => {
 	});
 
 	it("bounces admins away from auth routes back into the panel", async () => {
-		const response = await runProxy({ pathname: "/auth/login", accessToken: adminToken(3600) });
+		const live = adminToken(3600);
+		stubRefreshResponse(200, [`adminAccessToken=${live}; Path=/; HttpOnly`, "adminRefreshToken=live-rt; Path=/; HttpOnly"]);
+		const response = await runProxy({ pathname: "/auth/login", accessToken: adminToken(3600), refreshToken: "rt", ...DOC_NAV });
 
 		expect(response.status).toBe(307);
 		expect(redirectTarget()).toBe("http://localhost:3001/");
 	});
 
 	it("blocks open-redirect attempts on auth routes", async () => {
-		await runProxy({ pathname: "/auth/login", accessToken: adminToken(3600), query: { redirect: "//evil.com" } });
+		const live = adminToken(3600);
+		stubRefreshResponse(200, [`adminAccessToken=${live}; Path=/; HttpOnly`, "adminRefreshToken=live-rt; Path=/; HttpOnly"]);
+		await runProxy({ pathname: "/auth/login", accessToken: adminToken(3600), refreshToken: "rt", ...DOC_NAV, query: { redirect: "//evil.com" } });
 		expect(redirectTarget()).toBe("http://localhost:3001/");
 
 		vi.clearAllMocks();
-		await runProxy({ pathname: "/auth/login", accessToken: adminToken(3600), query: { redirect: "/auth/login" } });
+		await runProxy({ pathname: "/auth/login", accessToken: adminToken(3600), refreshToken: "rt", ...DOC_NAV, query: { redirect: "/auth/login" } });
 		expect(redirectTarget()).toBe("http://localhost:3001/");
 	});
 
@@ -177,6 +182,15 @@ describe("admin proxy route protection", () => {
 
 		expect(response.status).toBe(307);
 		expect(redirectTarget()).toBe("http://localhost:3001/auth/login?redirect=%2F");
+	});
+
+	it("clears orphaned access cookies on panel routes", async () => {
+		const response = await runProxy({ pathname: "/users", accessToken: adminToken(3600) });
+
+		expect(response.status).toBe(307);
+		expect(redirectTarget()).toBe("http://localhost:3001/auth/login?redirect=%2Fusers");
+		const cleared = response.cookies.calls.filter((call) => call.value === "");
+		expect(cleared.map((call) => call.name).sort()).toEqual(["adminAccessToken", "adminRefreshToken"]);
 	});
 });
 
@@ -261,5 +275,31 @@ describe("admin proxy server-side refresh", () => {
 		expect(response.status).toBe(200);
 		expect(response.cookies.calls).toHaveLength(0);
 		expect(nextResponse.redirect).not.toHaveBeenCalled();
+	});
+
+	it("clears cookies on login when the refresh token is dead but access is still time-valid", async () => {
+		stubRefreshResponse(401, []);
+
+		const response = await runProxy({
+			pathname: "/auth/login",
+			accessToken: adminToken(3600),
+			refreshToken: "rt-dead",
+			secFetchMode: "cors",
+			accept: "*/*",
+		});
+
+		expect(response.status).toBe(200);
+		expect(nextResponse.redirect).not.toHaveBeenCalled();
+		const cleared = response.cookies.calls.filter((call) => call.value === "");
+		expect(cleared.map((call) => call.name).sort()).toEqual(["adminAccessToken", "adminRefreshToken"]);
+	});
+
+	it("serves login without bounce when only an orphaned access cookie remains", async () => {
+		const response = await runProxy({ pathname: "/auth/login", accessToken: adminToken(3600) });
+
+		expect(response.status).toBe(200);
+		expect(nextResponse.redirect).not.toHaveBeenCalled();
+		const cleared = response.cookies.calls.filter((call) => call.value === "");
+		expect(cleared.map((call) => call.name).sort()).toEqual(["adminAccessToken", "adminRefreshToken"]);
 	});
 });

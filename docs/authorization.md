@@ -1157,6 +1157,8 @@ On protected routes, `AuthorizationGuard` compares JWT `tokenVersion` to the DB 
 - But a user with an old JWT is **forced to refresh/re-login** before accessing protected routes again.
 - Unguarded routes (no authorization decorators) skip the version check.
 
+See the end-to-end flow diagram: [`docs/token-refresh.md` — Session revocation after role or permission change](./token-refresh.md#session-revocation-after-role-or-permission-change).
+
 ### Why `hasAdminAccess` is in the JWT
 
 `hasAdminAccess` is a pre-computed boolean included because the **Next.js proxy** (`proxy.ts`) runs server-side on every page navigation and needs a fast, synchronous way to gate admin panel routes without an async DB call. It is NOT a substitute for the guard-level RBAC check — the API enforces fine-grained permissions.

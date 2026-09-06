@@ -1,13 +1,13 @@
 import { API_BASE_URL } from "@workspace/client/lib/api/config";
+import { decodeJwtPayload } from "@workspace/client/lib/auth/jwt";
+import { getEnrollmentRedirectPath, isEnrollmentAllowedPath, isRestrictedSession } from "@workspace/client/lib/auth/restricted-session";
 import {
 	createProxyRefreshCooldown,
-	extractRotatedAccessToken,
 	hasRouteSession,
-	isAccessTokenExpired,
 	isDocumentNavigation,
-	logProxyRefresh,
 	parseSetCookie,
 	refreshSessionFromProxy,
+	resolveProxySessionRefresh,
 	type ParsedCookie,
 	type ProxyRefreshResult,
 } from "@workspace/client/lib/auth/proxy-refresh";
@@ -67,6 +67,24 @@ function applyRotatedCookies(response: NextResponse, setCookies: readonly string
 	return response;
 }
 
+function redirectToLogin(request: NextRequest, pathname: string, rotatedCookies: readonly string[]): NextResponse {
+	const loginUrl = new URL("/auth/login", request.url);
+	loginUrl.searchParams.set("redirect", pathname);
+	return clearCookies(applyRotatedCookies(NextResponse.redirect(loginUrl), rotatedCookies), [ACCESS_TOKEN_COOKIE, REFRESH_TOKEN_COOKIE]);
+}
+
+function serveGuestResponse(response: NextResponse, rotatedCookies: readonly string[], accessToken: string | undefined): NextResponse {
+	if (accessToken !== undefined) {
+		return clearCookies(applyRotatedCookies(response, rotatedCookies), [ACCESS_TOKEN_COOKIE, REFRESH_TOKEN_COOKIE]);
+	}
+	return applyRotatedCookies(response, rotatedCookies);
+}
+
+/** @internal Clears the module-scope refresh cooldown between tests. */
+export function resetMerchantProxyRefreshCooldownForTests(): void {
+	attemptRefresh.reset();
+}
+
 export async function proxy(request: NextRequest): Promise<NextResponse> {
 	const accessToken = request.cookies.get(ACCESS_TOKEN_COOKIE)?.value;
 	const refreshToken = request.cookies.get(REFRESH_TOKEN_COOKIE)?.value;
@@ -78,34 +96,53 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
 	let rotatedCookies: readonly string[] = [];
 	let effectiveAccessToken: string | undefined = accessToken;
 
-	if (accessToken !== undefined && refreshToken !== undefined && isDocumentNavigation(request.headers) && isAccessTokenExpired(accessToken)) {
-		const refreshStartedAt: number = Date.now();
-		const result = await attemptRefresh(refreshToken);
-		const elapsedMs: number = Date.now() - refreshStartedAt;
-		if (result.ok) {
-			rotatedCookies = result.setCookies;
-			const newAccessToken: string | undefined = extractRotatedAccessToken(result.setCookies, ACCESS_TOKEN_COOKIE);
-			if (newAccessToken !== undefined) effectiveAccessToken = newAccessToken;
-			logProxyRefresh({ app: "merchant", pathname, status: result.status, elapsedMs, outcome: "refreshed", rotatedCookieCount: result.setCookies.length });
-		} else if (result.status === 401 || result.status === 403) {
-			const loginUrl = new URL("/auth/login", request.url);
-			loginUrl.searchParams.set("redirect", pathname);
-			return clearCookies(NextResponse.redirect(loginUrl), [ACCESS_TOKEN_COOKIE, REFRESH_TOKEN_COOKIE]);
+	const refreshResult = await resolveProxySessionRefresh({
+		accessToken,
+		refreshToken,
+		isDocumentNavigation: isDocumentNavigation(request.headers),
+		isAuthRoute,
+		isPublicRoute: false,
+		accessTokenCookieName: ACCESS_TOKEN_COOKIE,
+		app: "merchant",
+		pathname,
+		attemptRefresh,
+	});
+
+	rotatedCookies = refreshResult.rotatedCookies;
+	effectiveAccessToken = refreshResult.effectiveAccessToken;
+
+	if (refreshResult.sessionDead) {
+		if (isProtectedRouteMatch) {
+			return redirectToLogin(request, pathname, rotatedCookies);
 		}
+		return serveGuestResponse(NextResponse.next(), rotatedCookies, accessToken);
 	}
 
 	const isAuthenticated = hasRouteSession(accessToken, refreshToken, effectiveAccessToken);
 
 	if (isProtectedRouteMatch && !isAuthenticated) {
-		const loginUrl = new URL("/auth/login", request.url);
-		loginUrl.searchParams.set("redirect", pathname);
-		return clearCookies(applyRotatedCookies(NextResponse.redirect(loginUrl), rotatedCookies), [ACCESS_TOKEN_COOKIE, REFRESH_TOKEN_COOKIE]);
+		return redirectToLogin(request, pathname, rotatedCookies);
+	}
+
+	if (isProtectedRouteMatch && isAuthenticated && effectiveAccessToken !== undefined && isRestrictedSession(effectiveAccessToken) && !isEnrollmentAllowedPath(pathname)) {
+		const payload = decodeJwtPayload(effectiveAccessToken);
+		const enrollmentReason = payload?.isEmailVerified === false ? "email_verification" : "mfa_enrollment";
+		const enrollmentPath = getEnrollmentRedirectPath("merchant", enrollmentReason);
+		return applyRotatedCookies(NextResponse.redirect(new URL(enrollmentPath, request.url)), rotatedCookies);
 	}
 
 	if (isAuthRoute && isAuthenticated && !isTokenAuthRoute(pathname)) {
 		const redirect = request.nextUrl.searchParams.get("redirect");
 		const target = redirect !== null && isAllowedPostLoginRedirect(redirect) ? redirect : "/";
 		return applyRotatedCookies(NextResponse.redirect(new URL(target, request.url)), rotatedCookies);
+	}
+
+	if (isAuthRoute && !isAuthenticated && accessToken !== undefined) {
+		return serveGuestResponse(NextResponse.next(), rotatedCookies, accessToken);
+	}
+
+	if (!isProtectedRouteMatch && !isAuthRoute && !isAuthenticated && accessToken !== undefined) {
+		return serveGuestResponse(NextResponse.next(), rotatedCookies, accessToken);
 	}
 
 	return applyRotatedCookies(NextResponse.next(), rotatedCookies);

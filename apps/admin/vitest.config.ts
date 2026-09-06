@@ -11,6 +11,7 @@ export default defineConfig({
 		// requires `globalThis.IS_REACT_ACT_ENVIRONMENT = true` in jsdom tests).
 		setupFiles: ["./vitest.setup.ts"],
 		include: ["lib/**/*.test.ts", "components/**/*.test.tsx", "stores/**/*.test.ts", "proxy.test.ts", "e2e/**/*.e2e-spec.ts"],
+		fileParallelism: false,
 	},
 	resolve: {
 		alias: {

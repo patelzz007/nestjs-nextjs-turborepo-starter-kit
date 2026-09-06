@@ -28,13 +28,14 @@ import type { EpochMs } from "@workspace/shared";
 import { useCallback, useMemo, useState, type JSX, type ReactNode } from "react";
 
 import { isAccountLockedError, resolveAuthErrorMessage } from "./auth-errors";
-import { isLoginSuccess, isLoginTwoFactorPending, isLoginVerificationPending } from "./login-response";
+import { isLoginRestrictedEnrollment, isLoginSuccess, isLoginTwoFactorPending, isLoginVerificationPending } from "./login-response";
+import { getEnrollmentRedirectPath, markEnrollmentMessage, type AuthAppMode } from "./restricted-session";
 import { useAuth } from "./index";
 
 import { passwordStrength } from "./password";
 
 /** Which app the form is authenticating for — drives endpoint + defaults. */
-export type LoginFormMode = "web" | "admin" | "merchant";
+export type LoginFormMode = AuthAppMode;
 
 /** A one-click demo account shown as a "Try demo accounts:" button. */
 export interface DemoAccount {
@@ -65,7 +66,19 @@ export interface LoginFormProps {
 	readonly requireAdminAccess?: boolean;
 }
 
-// ── Social provider icons (inline — lucide dropped brand glyphs) ────────────
+/** Allowed characters for MFA backup codes (matches server charset). */
+const BACKUP_CODE_CHARSET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
+
+function sanitizeBackupCodeInput(value: string): string {
+	const upper = value.toUpperCase();
+	let sanitized = "";
+	for (const char of upper) {
+		if (BACKUP_CODE_CHARSET.includes(char)) {
+			sanitized += char;
+		}
+	}
+	return sanitized.slice(0, 16);
+}
 
 interface SocialProvider {
 	readonly id: "google" | "facebook" | "twitter" | "github";
@@ -189,6 +202,8 @@ export function LoginForm({ emailPlaceholder, redirectPath, demoAccounts, footer
 	const [socialHint, setSocialHint] = useState<string | null>(null);
 	const [twoFactorTempToken, setTwoFactorTempToken] = useState<string | null>(null);
 	const [twoFactorCode, setTwoFactorCode] = useState("");
+	const [twoFactorUseBackupCode, setTwoFactorUseBackupCode] = useState(false);
+	const [backupCode, setBackupCode] = useState("");
 	const [verificationId, setVerificationId] = useState<string | null>(null);
 	const [verificationCode, setVerificationCode] = useState("");
 	const router = useRouter();
@@ -214,6 +229,7 @@ export function LoginForm({ emailPlaceholder, redirectPath, demoAccounts, footer
 	const loginProcedure = mode === "admin" ? api.auth.adminLogin : mode === "merchant" ? api.auth.merchantLogin : api.auth.login;
 	const loginMutation = loginProcedure.useMutation();
 	const twoFactorMutation = api.auth.loginTwoFactor.useMutation();
+	const backupCodeMutation = api.auth.loginBackupCode.useMutation();
 	const verifyLoginMutation = api.auth.verifyLogin.useMutation();
 
 	// Live password-strength feedback while typing (#27).
@@ -241,10 +257,32 @@ export function LoginForm({ emailPlaceholder, redirectPath, demoAccounts, footer
 		[authLogin, requireAdminAccess, resolvedRedirect, router],
 	);
 
+	const completeRestrictedEnrollment = useCallback(
+		(response: Extract<Parameters<typeof isLoginRestrictedEnrollment>[0], { requiresEnrollment: true }>): void => {
+			if (response.user !== undefined) {
+				authLogin({
+					id: response.user.id,
+					email: response.user.email,
+					fullName: response.user.fullName,
+					isSuperAdmin: response.user.isSuperAdmin,
+					hasAdminAccess: response.user.hasAdminAccess,
+					isEmailVerified: response.user.isEmailVerified,
+					roles: response.user.roles,
+				});
+			}
+
+			markEnrollmentMessage(response.message);
+			router.push(getEnrollmentRedirectPath(mode, response.enrollmentReason));
+		},
+		[authLogin, mode, router],
+	);
+
 	const handleLoginResponse = useCallback(
 		(response: Parameters<typeof isLoginSuccess>[0]): void => {
 			if (isLoginTwoFactorPending(response)) {
 				setTwoFactorTempToken(response.tempToken);
+				setTwoFactorUseBackupCode(false);
+				setBackupCode("");
 				setVerificationId(null);
 				setError(null);
 				return;
@@ -257,6 +295,11 @@ export function LoginForm({ emailPlaceholder, redirectPath, demoAccounts, footer
 				return;
 			}
 
+			if (isLoginRestrictedEnrollment(response)) {
+				completeRestrictedEnrollment(response);
+				return;
+			}
+
 			if (!isLoginSuccess(response)) {
 				setError("Unexpected login response. Please try again.");
 				return;
@@ -264,7 +307,7 @@ export function LoginForm({ emailPlaceholder, redirectPath, demoAccounts, footer
 
 			completeAuthenticatedLogin(response);
 		},
-		[completeAuthenticatedLogin],
+		[completeAuthenticatedLogin, completeRestrictedEnrollment],
 	);
 
 	const performLogin = useCallback(
@@ -297,12 +340,38 @@ export function LoginForm({ emailPlaceholder, redirectPath, demoAccounts, footer
 	const handleTwoFactorSubmit = useCallback(
 		(event: React.SyntheticEvent<HTMLFormElement>): void => {
 			event.preventDefault();
-			if (twoFactorTempToken === null || twoFactorCode.length !== 6) {
+			if (twoFactorTempToken === null) {
 				return;
 			}
 
 			setIsLoading(true);
 			setError(null);
+
+			if (twoFactorUseBackupCode) {
+				if (backupCode.length !== 16) {
+					setIsLoading(false);
+					return;
+				}
+
+				backupCodeMutation
+					.mutateAsync({ tempToken: twoFactorTempToken, backupCode })
+					.then((data): void => {
+						handleLoginResponse(data.data);
+					})
+					.catch((err: unknown): void => {
+						setError(resolveAuthErrorMessage(err));
+					})
+					.finally((): void => {
+						setIsLoading(false);
+					});
+				return;
+			}
+
+			if (twoFactorCode.length !== 6) {
+				setIsLoading(false);
+				return;
+			}
+
 			twoFactorMutation
 				.mutateAsync({ tempToken: twoFactorTempToken, token: twoFactorCode })
 				.then((data): void => {
@@ -315,7 +384,7 @@ export function LoginForm({ emailPlaceholder, redirectPath, demoAccounts, footer
 					setIsLoading(false);
 				});
 		},
-		[handleLoginResponse, twoFactorCode, twoFactorMutation, twoFactorTempToken],
+		[backupCode, backupCodeMutation, handleLoginResponse, twoFactorCode, twoFactorMutation, twoFactorTempToken, twoFactorUseBackupCode],
 	);
 
 	const handleVerificationSubmit = useCallback(
@@ -348,6 +417,22 @@ export function LoginForm({ emailPlaceholder, redirectPath, demoAccounts, footer
 
 	const handleTwoFactorCodeChange = useCallback((event: React.ChangeEvent<HTMLInputElement>): void => {
 		setTwoFactorCode(event.target.value.replace(/\D/g, "").slice(0, 6));
+	}, []);
+
+	const handleBackupCodeChange = useCallback((event: React.ChangeEvent<HTMLInputElement>): void => {
+		setBackupCode(sanitizeBackupCodeInput(event.target.value));
+	}, []);
+
+	const handleUseAuthenticatorCode = useCallback((): void => {
+		setTwoFactorUseBackupCode(false);
+		setBackupCode("");
+		setError(null);
+	}, []);
+
+	const handleUseBackupCode = useCallback((): void => {
+		setTwoFactorUseBackupCode(true);
+		setTwoFactorCode("");
+		setError(null);
 	}, []);
 
 	const handleFormSubmit = useCallback(
@@ -393,24 +478,58 @@ export function LoginForm({ emailPlaceholder, redirectPath, demoAccounts, footer
 					</div>
 				</FormShell>
 			) : twoFactorTempToken !== null ? (
-				<FormShell error={error} isLoading={isLoading} submitLabel="Verify code" loadingLabel="Verifying..." submitClassName="h-11" onSubmit={handleTwoFactorSubmit}>
+				<FormShell
+					error={error}
+					isLoading={isLoading}
+					submitLabel={twoFactorUseBackupCode ? "Verify backup code" : "Verify code"}
+					loadingLabel="Verifying..."
+					submitClassName="h-11"
+					onSubmit={handleTwoFactorSubmit}>
 					<div className="space-y-2 text-center">
-						<p className="text-sm text-muted-foreground">
-							Enter the <strong>6-digit code from your authenticator app</strong> (Google Authenticator, 1Password, etc.). Backup codes are 8 digits and use a separate flow.
-						</p>
-						<Label htmlFor="two-factor-code" className="sr-only">
-							Authenticator code
-						</Label>
-						<Input
-							id="two-factor-code"
-							inputMode="numeric"
-							autoComplete="one-time-code"
-							placeholder="000000"
-							value={twoFactorCode}
-							onChange={handleTwoFactorCodeChange}
-							className="h-11 text-center text-lg tracking-[0.3em]"
-							maxLength={6}
-						/>
+						{twoFactorUseBackupCode ? (
+							<p className="text-sm text-muted-foreground">
+								Enter one of your <strong>16-character backup codes</strong> (letters A–Z and digits 2–9, excluding ambiguous characters).
+							</p>
+						) : (
+							<p className="text-sm text-muted-foreground">
+								Enter the <strong>6-digit code from your authenticator app</strong> (Google Authenticator, 1Password, etc.).
+							</p>
+						)}
+						{twoFactorUseBackupCode ? (
+							<>
+								<Label htmlFor="backup-code" className="sr-only">
+									Backup code
+								</Label>
+								<Input
+									id="backup-code"
+									autoComplete="one-time-code"
+									placeholder="23456789ABCDEFGH"
+									value={backupCode}
+									onChange={handleBackupCodeChange}
+									className="h-11 text-center font-mono text-sm tracking-widest"
+									maxLength={16}
+								/>
+							</>
+						) : (
+							<>
+								<Label htmlFor="two-factor-code" className="sr-only">
+									Authenticator code
+								</Label>
+								<Input
+									id="two-factor-code"
+									inputMode="numeric"
+									autoComplete="one-time-code"
+									placeholder="000000"
+									value={twoFactorCode}
+									onChange={handleTwoFactorCodeChange}
+									className="h-11 text-center text-lg tracking-[0.3em]"
+									maxLength={6}
+								/>
+							</>
+						)}
+						<Button type="button" variant="link" className="h-auto p-0 text-sm" onClick={twoFactorUseBackupCode ? handleUseAuthenticatorCode : handleUseBackupCode}>
+							{twoFactorUseBackupCode ? "Use authenticator code instead" : "Use a backup code instead"}
+						</Button>
 					</div>
 				</FormShell>
 			) : (

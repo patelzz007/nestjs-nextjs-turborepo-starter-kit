@@ -72,9 +72,151 @@ export function isAccessTokenExpired(accessToken: string, skewMs: number = REFRE
 export function hasRouteSession(accessToken: string | undefined, refreshToken: string | undefined, effectiveAccessToken: string | undefined = accessToken): boolean {
 	const token: string | undefined = effectiveAccessToken ?? accessToken;
 	if (token !== undefined && !isAccessTokenExpired(token)) {
-		return true;
+		// A live-looking access token without a refresh token is an orphaned cookie
+		// (partial logout / post-revocation) — not a recoverable session.
+		return refreshToken !== undefined;
 	}
 	return refreshToken !== undefined;
+}
+
+export const ProxyRefreshTriggerContextSchema = z.object({
+	accessToken: z.string().optional(),
+	refreshToken: z.string().optional(),
+	isDocumentNavigation: z.boolean(),
+	isAuthRoute: z.boolean(),
+	isPublicRoute: z.boolean(),
+});
+
+export type ProxyRefreshTriggerContext = z.output<typeof ProxyRefreshTriggerContextSchema>;
+
+/**
+ * True when the proxy should call `POST /auth/refresh` before route gating.
+ *
+ * - Protected routes: document navigations with an expired access token (existing).
+ * - Auth routes: whenever a refresh token is present and the request would
+ *   otherwise look authenticated — catches revoked sessions before the login-page
+ *   bounce and on RSC `router.refresh()` after client-side logout.
+ */
+export function shouldAttemptProxyRefresh(context: ProxyRefreshTriggerContext): boolean {
+	const accessToken: string | undefined = context.accessToken;
+	const refreshToken: string | undefined = context.refreshToken;
+
+	if (accessToken === undefined && refreshToken === undefined) {
+		return false;
+	}
+
+	if (context.isAuthRoute && refreshToken !== undefined && hasRouteSession(accessToken, refreshToken, accessToken)) {
+		return true;
+	}
+
+	if (!context.isDocumentNavigation || context.isPublicRoute) {
+		return false;
+	}
+
+	if (accessToken === undefined || refreshToken === undefined) {
+		return false;
+	}
+
+	return isAccessTokenExpired(accessToken);
+}
+
+export const ProxySessionRefreshInputSchema = z.object({
+	accessToken: z.string().optional(),
+	refreshToken: z.string().optional(),
+	isDocumentNavigation: z.boolean(),
+	isAuthRoute: z.boolean(),
+	isPublicRoute: z.boolean(),
+	accessTokenCookieName: z.string(),
+	app: z.enum(["web", "admin", "merchant"]),
+	pathname: z.string(),
+});
+
+export type ProxySessionRefreshInput = z.output<typeof ProxySessionRefreshInputSchema> & {
+	readonly attemptRefresh: (refreshToken: string, options?: { readonly bypassCooldown?: boolean }) => Promise<ProxyRefreshResult>;
+};
+
+export const ProxySessionRefreshOutputSchema = z.object({
+	rotatedCookies: z.array(z.string()),
+	effectiveAccessToken: z.string().optional(),
+	sessionDead: z.boolean(),
+});
+
+export type ProxySessionRefreshOutput = z.output<typeof ProxySessionRefreshOutputSchema>;
+
+/**
+ * Shared proxy refresh block used by web / merchant / admin route proxies.
+ * Returns rotated cookies, the effective access token, and whether the refresh
+ * token was rejected (401/403) so the caller can clear cookies / redirect.
+ */
+export async function resolveProxySessionRefresh(input: ProxySessionRefreshInput): Promise<ProxySessionRefreshOutput> {
+	const triggerContext: ProxyRefreshTriggerContext = {
+		accessToken: input.accessToken,
+		refreshToken: input.refreshToken,
+		isDocumentNavigation: input.isDocumentNavigation,
+		isAuthRoute: input.isAuthRoute,
+		isPublicRoute: input.isPublicRoute,
+	};
+
+	let rotatedCookies: string[] = [];
+	let effectiveAccessToken: string | undefined = input.accessToken;
+	let sessionDead = false;
+
+	if (!shouldAttemptProxyRefresh(triggerContext) || input.refreshToken === undefined) {
+		return { rotatedCookies, effectiveAccessToken, sessionDead };
+	}
+
+	const refreshStartedAt: number = Date.now();
+	const result: ProxyRefreshResult = await input.attemptRefresh(input.refreshToken, {
+		bypassCooldown: triggerContext.isAuthRoute,
+	});
+	const elapsedMs: number = Date.now() - refreshStartedAt;
+
+	if (result.ok) {
+		rotatedCookies = [...result.setCookies];
+		const newAccessToken: string | undefined = extractRotatedAccessToken(result.setCookies, input.accessTokenCookieName);
+		if (newAccessToken !== undefined) {
+			effectiveAccessToken = newAccessToken;
+		}
+		logProxyRefresh({
+			app: input.app,
+			pathname: input.pathname,
+			status: result.status,
+			elapsedMs,
+			outcome: "refreshed",
+			rotatedCookieCount: result.setCookies.length,
+		});
+	} else if (result.status === 401 || result.status === 403) {
+		sessionDead = true;
+		logProxyRefresh({
+			app: input.app,
+			pathname: input.pathname,
+			status: result.status,
+			elapsedMs,
+			outcome: "dead-session",
+			rotatedCookieCount: 0,
+		});
+	} else if (result.skipped === true) {
+		logProxyRefresh({
+			app: input.app,
+			pathname: input.pathname,
+			status: result.status,
+			elapsedMs,
+			outcome: "cooldown-active",
+			rotatedCookieCount: 0,
+		});
+	} else {
+		logProxyRefresh({
+			app: input.app,
+			pathname: input.pathname,
+			status: result.status,
+			elapsedMs,
+			outcome: "transient-failure",
+			rotatedCookieCount: 0,
+			errorDetail: result.errorDetail,
+		});
+	}
+
+	return { rotatedCookies, effectiveAccessToken, sessionDead };
 }
 
 /** Pull the rotated access token out of refresh `Set-Cookie` headers. */
@@ -200,11 +342,11 @@ export const PROXY_REFRESH_COOLDOWN_MS = 60_000;
 export function createProxyRefreshCooldown(
 	refreshAttempt: (refreshToken: string) => Promise<ProxyRefreshResult>,
 	cooldownMs: number = PROXY_REFRESH_COOLDOWN_MS,
-): ((refreshToken: string) => Promise<ProxyRefreshResult>) & { reset: () => void } {
+): ((refreshToken: string, options?: { readonly bypassCooldown?: boolean }) => Promise<ProxyRefreshResult>) & { reset: () => void } {
 	let lastTransientFailureAt: number | null = null;
 
-	const attemptRefresh = async (refreshToken: string): Promise<ProxyRefreshResult> => {
-		if (lastTransientFailureAt !== null && Date.now() - lastTransientFailureAt < cooldownMs) {
+	const attemptRefresh = async (refreshToken: string, options?: { readonly bypassCooldown?: boolean }): Promise<ProxyRefreshResult> => {
+		if (options?.bypassCooldown !== true && lastTransientFailureAt !== null && Date.now() - lastTransientFailureAt < cooldownMs) {
 			return { ok: false, status: 0, setCookies: [], skipped: true };
 		}
 

@@ -1,6 +1,7 @@
-import { ConflictException, Injectable } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
 import type { AccessTokenPayload, SignupInput, SignupResponse, SessionPermissionsResponse, UserResponse, UserPermissions } from "@workspace/shared";
 
+import { TypedConfigService } from "../../../config/typed-config.service";
 import { LogService } from "../../../modules/logs/logs.service";
 import { PrismaService } from "../../../prisma/prisma.service";
 import { AuthorizationCheckerService } from "../../authorization/services/authorization-checker.service";
@@ -33,6 +34,7 @@ export class IdentityService {
 		private readonly sessionCache: UserSessionCacheService,
 		private readonly emailService: EmailService,
 		private readonly userProvisioning: UserProvisioningService,
+		private readonly config: TypedConfigService,
 	) {}
 
 	@TrackAuthFlow({ flow: "signup" })
@@ -41,14 +43,22 @@ export class IdentityService {
 
 		const emailTaken: boolean = await this.userRepo.existsByEmail(email);
 		if (emailTaken) {
-			throw new ConflictException("Email already in use");
+			return {
+				message: "If this email is available, check your inbox for verification instructions.",
+			};
 		}
 
 		const hashedPassword = await this.cryptoService.hash(password);
 		const verificationToken = await this.tokenService.generateEmailVerificationToken(email);
+		const enrollmentDeadline: bigint = BigInt(Date.now() + this.config.mfaEnrollmentDeadlineMs);
 
 		const newUser = await this.prisma.user.create({
-			data: { email, passwordHash: hashedPassword, fullName },
+			data: {
+				email,
+				passwordHash: hashedPassword,
+				fullName,
+				mfaEnrollmentDeadline: enrollmentDeadline,
+			},
 			select: {
 				id: true,
 				email: true,
@@ -83,8 +93,7 @@ export class IdentityService {
 
 		return {
 			user: profile,
-			verificationToken,
-			message: "User registered successfully",
+			message: "If this email is available, check your inbox for verification instructions.",
 		};
 	}
 

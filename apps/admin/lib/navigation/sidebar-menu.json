@@ -152,8 +152,12 @@
 							"title": "Security",
 							"url": "/settings/security",
 							"icon": "Shield",
-							"disabled": true,
 							"children": [
+								{
+									"title": "MFA recovery",
+									"url": "/settings/security/mfa-recovery",
+									"icon": "ShieldCheck"
+								},
 								{
 									"title": "Sessions",
 									"url": "/settings/security/sessions",

@@ -84,8 +84,13 @@ export const apiRoutes = {
 		validateResetToken: "/auth/validate-reset-token",
 		twoFactorSetup: "/auth/2fa/setup",
 		twoFactorEnable: "/auth/2fa/enable",
-		twoFactorDisable: "/auth/2fa/disable",
+		twoFactorRotate: "/auth/2fa/rotate",
+		twoFactorBackupCodesRemaining: "/auth/2fa/backup-codes/remaining",
 		twoFactorVerifyBackupCode: "/auth/2fa/verify-backup-code",
+		mfaRecoveryInitiate: "/auth/mfa/recovery",
+		mfaRecoveryStatus: "/auth/mfa/recovery/status",
+		adminMfaRecoveryReview: "/auth/admin/mfa/recovery/review",
+		adminMfaRecoveryRequests: "/auth/admin/mfa/recovery/requests",
 	},
 
 	// ── Generic capability catalog ──────────────────────────────────────

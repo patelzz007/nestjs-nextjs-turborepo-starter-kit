@@ -1,5 +1,12 @@
-import { ForbiddenException, Injectable, UnauthorizedException } from "@nestjs/common";
-import type { LoginInput, LoginServiceResponse, LoginTwoFactorPendingResponse, LoginVerificationPendingResponse, UserPermissions } from "@workspace/shared";
+import { Injectable, UnauthorizedException } from "@nestjs/common";
+import type {
+	LoginInput,
+	LoginRestrictedEnrollmentResponse,
+	LoginServiceResponse,
+	LoginTwoFactorPendingResponse,
+	LoginVerificationPendingResponse,
+	UserPermissions,
+} from "@workspace/shared";
 
 import { LogService } from "../../../modules/logs/logs.service";
 import { AuthorizationCheckerService } from "../../authorization/services/authorization-checker.service";
@@ -37,32 +44,13 @@ export class LoginService {
 		clientType?: string,
 		deviceInfo?: string,
 		ipAddress?: string,
-	): Promise<LoginServiceResponse | LoginTwoFactorPendingResponse | LoginVerificationPendingResponse> {
+	): Promise<LoginServiceResponse | LoginRestrictedEnrollmentResponse | LoginTwoFactorPendingResponse | LoginVerificationPendingResponse> {
 		const { email, password } = loginDto;
 
 		const user = await this.userRepo.findLoginByEmail(email);
 
 		// ── Client-type check: admin-only login ─────────────────────────
-		if (clientType === "admin") {
-			if (!user) {
-				throw new ForbiddenException({
-					message: "Admin access required. This account does not have administrator privileges.",
-					error: "ADMIN_ACCESS_REQUIRED",
-				});
-			}
-
-			if (!user.isSuperAdmin) {
-				const userPerms: UserPermissions = await this.authorizationChecker.getUserPermissionDetails(user.id);
-				const hasDashboardAccess: boolean = userPerms.permissions.some((p) => p.resource === "ADMIN_DASHBOARD");
-
-				if (!hasDashboardAccess) {
-					throw new ForbiddenException({
-						message: "Admin access required. This account does not have administrator privileges.",
-						error: "ADMIN_ACCESS_REQUIRED",
-					});
-				}
-			}
-		}
+		// Uniform INVALID_CREDENTIALS for all failures — no admin-capability probing.
 		// ─────────────────────────────────────────────────────────────────
 
 		// Use consistent dummy hash to prevent timing-based account enumeration
@@ -86,20 +74,30 @@ export class LoginService {
 				error: "INVALID_CREDENTIALS",
 			});
 		}
+
+		if (clientType === "admin" && !user.isSuperAdmin) {
+			const userPerms: UserPermissions = await this.authorizationChecker.getUserPermissionDetails(user.id);
+			const hasDashboardAccess: boolean = userPerms.permissions.some((p) => p.resource === "ADMIN_DASHBOARD");
+			if (!hasDashboardAccess) {
+				throw new UnauthorizedException({
+					message: "Invalid email or password",
+					error: "INVALID_CREDENTIALS",
+				});
+			}
+		}
 		// ─────────────────────────────────────────────────────────────────
 
-		// ── Reset failed attempts on successful login ────────────────────
-		await this.lockoutService.resetAttempts(user.id);
-
-		if (user.twoFactorEnabled) {
-			return this.twoFactorService.createLoginChallenge(user.id, clientType, deviceInfo, ipAddress);
+		// ── Reset failed attempts only after password step when 2FA is not required ──
+		if (!user.twoFactorEnabled) {
+			await this.lockoutService.resetAttempts(user.id);
+			return this.loginVerificationService.maybeRequireVerification({
+				userId: user.id,
+				clientType: clientType ?? null,
+				deviceInfo: deviceInfo ?? null,
+				ipAddress: ipAddress ?? null,
+			});
 		}
 
-		return this.loginVerificationService.maybeRequireVerification({
-			userId: user.id,
-			clientType: clientType ?? null,
-			deviceInfo: deviceInfo ?? null,
-			ipAddress: ipAddress ?? null,
-		});
+		return this.twoFactorService.createLoginChallenge(user.id, clientType, deviceInfo, ipAddress);
 	}
 }

@@ -22,16 +22,7 @@ import {
 import { z, type ZodType } from "zod";
 
 import { API_URL_PREFIX } from "./config";
-import {
-	resolveRequest,
-	eachRouterEntry,
-	isErasedProcedureDef,
-	isRouterSubtree,
-	type ErasedProcedureDef,
-	type MutationDef,
-	type ProcedureDef,
-	type QueryDef,
-} from "./endpoints";
+import { resolveRequest, eachRouterEntry, isRouterSubtree, type MutationDef, type ProcedureDef, type QueryDef, type RouterTree, type RouterTreeValue } from "./endpoints";
 
 // ── Auth callbacks & client config ───────────────────────────────────────────
 
@@ -208,7 +199,12 @@ export type CallerTreeBranch<V> =
 /** Recursively maps a router tree to tRPC-style caller leaves. */
 export type CallerTree<R extends object> = { [K in keyof R]: CallerTreeBranch<R[K]> };
 
-function isCompleteCallerTree<R extends object>(router: R, candidate: Partial<CallerTree<R>>): candidate is CallerTree<R> {
+/** Erased build-time shape — widened so each router key can accept any branch variant. */
+type CallerTreeBuild<R extends RouterTree> = {
+	[K in keyof R]?: CallerTreeBranch<RouterTreeValue>;
+};
+
+function isCompleteCallerTree<R extends RouterTree>(router: R, candidate: CallerTreeBuild<R>): candidate is CallerTree<R> {
 	let complete = true;
 	eachRouterEntry(router, (key) => {
 		if (candidate[key] === undefined) {
@@ -218,30 +214,21 @@ function isCompleteCallerTree<R extends object>(router: R, candidate: Partial<Ca
 	return complete;
 }
 
-function bindErasedProcedure(context: ApiRequestContext, def: ErasedProcedureDef): QueryCaller<SerializableInput, DataValue> | MutationCaller<SerializableInput, DataValue> {
-	if (def.kind === "query") {
-		return createQueryCaller(context, def);
-	}
-	return createMutationCaller(context, def);
-}
-
-function mapCallerBranch<V extends object>(value: V, context: ApiRequestContext): CallerTreeBranch<V> {
-	if (isErasedProcedureDef(value)) {
-		return bindErasedProcedure(context, value) as CallerTreeBranch<V>;
-	}
-
+function mapCallerBranch(value: RouterTreeValue, context: ApiRequestContext): CallerTreeBranch<RouterTreeValue> {
 	if (isRouterSubtree(value)) {
-		return createCaller(value, context) as CallerTreeBranch<V>;
+		return createCaller(value, context);
 	}
-
-	throw new Error("Invalid router node — expected a procedure leaf or nested router.");
+	if (value.kind === "query") {
+		return createQueryCaller(context, value);
+	}
+	return createMutationCaller(context, value);
 }
 
-function buildCallerTree<R extends object>(router: R, context: ApiRequestContext): CallerTree<R> {
-	const out: Partial<CallerTree<R>> = {};
+function buildCallerTree<R extends RouterTree>(router: R, context: ApiRequestContext): CallerTree<R> {
+	const out: CallerTreeBuild<R> = {};
 
 	eachRouterEntry(router, (key, value) => {
-		out[key] = mapCallerBranch(value as Extract<R[typeof key], object>, context) as CallerTree<R>[typeof key];
+		out[key] = mapCallerBranch(value, context);
 	});
 
 	if (!isCompleteCallerTree(router, out)) {
@@ -259,6 +246,15 @@ function extractErrorMessage(error: Error | string, status: number): string {
 		return error.message;
 	}
 	return `Request failed (${String(status)})`;
+}
+
+const SESSION_DEAD_ERROR_CODES: readonly string[] = ["TOKEN_VERSION_MISMATCH", "REFRESH_TOKEN_REVOKED", "TOKEN_THEFT_DETECTED"];
+
+function isDeadSessionError(error: ApiErrorPayload): boolean {
+	if (error instanceof ApiError && error.error !== undefined) {
+		return SESSION_DEAD_ERROR_CODES.includes(error.error);
+	}
+	return false;
 }
 
 async function readErrorPayload(response: Response): Promise<ApiErrorPayload> {
@@ -376,14 +372,14 @@ async function executeHttp<T, Body = undefined>(
 
 	let result: ApiResponse<T> = await execute(url);
 
-	if (result.status === 401 && onRefresh) {
+	if (!result.ok && result.status === 401 && onRefresh && !isDeadSessionError(result.error)) {
 		const refreshed: boolean = await onRefresh();
 		if (refreshed) {
 			result = await execute(url);
 		}
 	}
 
-	if (result.status === 401 && onUnauthorized) {
+	if (!result.ok && result.status === 401 && onUnauthorized) {
 		await onUnauthorized();
 		return { ok: false, status: result.status, data: null, error: "Unauthorized" };
 	}
@@ -535,6 +531,6 @@ export function createProcedureCaller<Input extends SerializableInput, Resp exte
  * Walks a router tree and binds every leaf to a tRPC-style caller.
  * `caller.auth.me.fetchOrThrow(undefined)` — no manual path/method wiring.
  */
-export function createCaller<R extends object>(router: R, context: ApiRequestContext): CallerTree<R> {
+export function createCaller<R extends RouterTree>(router: R, context: ApiRequestContext): CallerTree<R> {
 	return buildCallerTree(router, context);
 }

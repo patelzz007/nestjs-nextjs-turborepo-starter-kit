@@ -30,6 +30,9 @@ export {
 	ImpersonateResponseSchema,
 	ImpersonateServiceResponseSchema,
 	LoginResponseSchema,
+	LoginRestrictedEnrollmentClientResponseSchema,
+	LoginRestrictedEnrollmentResponseSchema,
+	EnrollmentReasonSchema,
 	LoginSchema,
 	LoginServiceResponseSchema,
 	LogoutAllResponseSchema,
@@ -61,6 +64,9 @@ export type {
 	JwtPayload,
 	LoginClientResponse,
 	LoginInput,
+	LoginRestrictedEnrollmentClientResponse,
+	LoginRestrictedEnrollmentResponse,
+	EnrollmentReason,
 	LoginResponse,
 	LoginServiceResponse,
 	LogoutAllResponse,
@@ -82,6 +88,24 @@ export type {
 export { ChangePasswordResponseSchema, ChangePasswordSchema } from "./auth/change-password";
 export type { ChangePasswordInput, ChangePasswordResponse } from "./auth/change-password";
 export {
+	AdminMfaRecoveryListQuerySchema,
+	AdminMfaRecoveryRequestSchema,
+	AdminReviewMfaRecoverySchema,
+	InitiateMfaRecoverySchema,
+	MfaRecoveryRecordStatusSchema,
+	MfaRecoveryRequestStatusSchema,
+	MfaRecoveryStatusResponseSchema,
+} from "./auth/mfa-recovery";
+export type {
+	AdminMfaRecoveryListQuery,
+	AdminMfaRecoveryRequest,
+	AdminReviewMfaRecoveryInput,
+	InitiateMfaRecoveryInput,
+	MfaRecoveryRecordStatus,
+	MfaRecoveryRequestStatus,
+	MfaRecoveryStatusResponse,
+} from "./auth/mfa-recovery";
+export {
 	LoginVerificationCodeSchema,
 	LoginVerificationPendingResponseSchema,
 	ValidateResetTokenResponseSchema,
@@ -97,11 +121,15 @@ export type {
 } from "./auth/login-verification";
 export {
 	BackupCodeSchema,
-	DisableTwoFactorSchema,
+	BackupCodesRemainingResponseSchema,
 	EnableTwoFactorSchema,
 	LoginTwoFactorPendingResponseSchema,
 	LoginTwoFactorSchema,
+	RotateTwoFactorSchema,
+	MfaEncryptionKeysSchema,
 	TotpCodeSchema,
+	TotpSecretEncryptionContextSchema,
+	TwoFactorChallengeRefPayloadSchema,
 	TwoFactorMessageResponseSchema,
 	TwoFactorPendingTokenPayloadSchema,
 	TwoFactorSetupResponseSchema,
@@ -111,11 +139,15 @@ export {
 } from "./auth/two-factor";
 export type {
 	BackupCode,
-	DisableTwoFactorInput,
+	BackupCodesRemainingResponse,
 	EnableTwoFactorInput,
 	LoginTwoFactorInput,
 	LoginTwoFactorPendingResponse,
+	RotateTwoFactorInput,
+	MfaEncryptionKeys,
 	TotpCode,
+	TotpSecretEncryptionContext,
+	TwoFactorChallengeRefPayload,
 	TwoFactorMessageResponse,
 	TwoFactorPendingTokenPayload,
 	TwoFactorSetupResponse,

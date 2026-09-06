@@ -1,6 +1,6 @@
-import { BadRequestException, Inject, Injectable, TooManyRequestsException, UnauthorizedException } from "@nestjs/common";
+import { BadRequestException, HttpException, HttpStatus, Inject, Injectable, UnauthorizedException } from "@nestjs/common";
 import type Redis from "ioredis";
-import type { LoginServiceResponse, LoginVerificationPendingResponse } from "@workspace/shared";
+import type { LoginRestrictedEnrollmentResponse, LoginServiceResponse, LoginVerificationPendingResponse } from "@workspace/shared";
 
 import { z } from "zod";
 
@@ -35,6 +35,7 @@ interface PendingLoginContext {
 	readonly clientType: string | null;
 	readonly deviceInfo: string | null;
 	readonly ipAddress: string | null;
+	readonly mfaAssured?: boolean;
 }
 
 @Injectable()
@@ -51,16 +52,18 @@ export class LoginVerificationService {
 		@Inject(REDIS_PUBLISHER) private readonly redis: Redis | null,
 	) {}
 
-	public async maybeRequireVerification(context: PendingLoginContext): Promise<LoginServiceResponse | LoginVerificationPendingResponse> {
+	public async maybeRequireVerification(context: PendingLoginContext): Promise<LoginServiceResponse | LoginRestrictedEnrollmentResponse | LoginVerificationPendingResponse> {
 		const needsVerification = await this.needsVerification(context.userId, context.deviceInfo);
 		if (!needsVerification) {
-			return this.authSessionService.issueSessionForUser(context.userId, context.clientType ?? undefined, context.deviceInfo ?? undefined, context.ipAddress ?? undefined);
+			return this.authSessionService.issueSessionForUser(context.userId, context.clientType ?? undefined, context.deviceInfo ?? undefined, context.ipAddress ?? undefined, {
+				mfaAssured: context.mfaAssured,
+			});
 		}
 
 		return this.createVerificationChallenge(context);
 	}
 
-	public async verifyLoginCode(verificationId: string, code: string, ipAddress?: string): Promise<LoginServiceResponse> {
+	public async verifyLoginCode(verificationId: string, code: string, ipAddress?: string): Promise<LoginServiceResponse | LoginRestrictedEnrollmentResponse> {
 		const raw = await this.getStoreValue(this.verificationKey(verificationId));
 		if (raw === null) {
 			throw new BadRequestException("Verification session expired or invalid");
@@ -75,7 +78,7 @@ export class LoginVerificationService {
 		const record: LoginVerificationRecord = parsed.data;
 		if (record.attempts >= MAX_VERIFY_ATTEMPTS) {
 			await this.deleteStoreValue(this.verificationKey(verificationId));
-			throw new TooManyRequestsException("Too many verification attempts");
+			throw new HttpException("Too many verification attempts", HttpStatus.TOO_MANY_REQUESTS);
 		}
 
 		const codeValid = await this.cryptoService.compare(code, record.codeHash);

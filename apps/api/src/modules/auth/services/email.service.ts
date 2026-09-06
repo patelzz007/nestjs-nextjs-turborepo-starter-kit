@@ -8,6 +8,7 @@ import type { EmailSendResult } from "@workspace/shared";
 import { TypedConfigService } from "../../../config/typed-config.service";
 import { EmailSenderService } from "../../notifications/email/email-sender.service";
 import { AccountLockedEmailTemplate } from "../../notifications/email/templates/account-locked-email.template";
+import { AdminAlertEmailTemplate } from "../../notifications/email/templates/admin-alert-email.template";
 import { LoginVerificationEmailTemplate } from "../../notifications/email/templates/login-verification-email.template";
 import { PasswordChangedEmailTemplate } from "../../notifications/email/templates/password-changed-email.template";
 import { PasswordResetEmailTemplate } from "../../notifications/email/templates/password-reset-email.template";
@@ -74,5 +75,15 @@ export class EmailService {
 			ipAddress,
 		});
 		return this.sender.send(template);
+	}
+
+	public async sendMfaRecoveryUserNotification(email: string, title: string, message: string): Promise<void> {
+		const template = new AdminAlertEmailTemplate({ to: email, title, message });
+		await this.sender.send(template);
+	}
+
+	public async sendMfaRecoveryAdminNotification(email: string, title: string, message: string): Promise<void> {
+		const template = new AdminAlertEmailTemplate({ to: email, title, message });
+		await this.sender.send(template);
 	}
 }

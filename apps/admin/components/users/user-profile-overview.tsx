@@ -86,7 +86,8 @@ export const UserProfileOverview = React.forwardRef<HTMLDivElement, UserProfileO
 						<UserProfileField label="Deleted at" value={formatOptionalTimestamp(user.deletedAt)} />
 					</UserProfileSection>
 
-					<UserProfileSection title="Security" description="Lockout state and session invalidation version.">
+					<UserProfileSection title="Security" description="Lockout state, MFA enrollment, and session invalidation version.">
+						<UserProfileField label="Two-factor authentication" value={user.twoFactorEnabled ? "Enabled" : "Not enrolled"} />
 						<UserProfileField label="Failed login attempts" value={String(user.failedLoginAttempts)} />
 						<UserProfileField label="Locked until" value={formatLockedUntil(user.lockedUntil)} />
 						<UserProfileField label="Token version" value={String(user.tokenVersion)} mono />

@@ -9,6 +9,7 @@ import type {
 	ForgotPasswordInput,
 	ForgotPasswordResponse,
 	LoginInput,
+	LoginRestrictedEnrollmentResponse,
 	LoginServiceResponse,
 	LoginTwoFactorPendingResponse,
 	LoginVerificationPendingResponse,
@@ -140,7 +141,7 @@ export class AuthController {
 		@Headers("x-client-type") headerClientType: string | undefined,
 		@Query("client_type") queryClientType: string | undefined,
 		@Req() req: FastifyRequest,
-	): Promise<LoginServiceResponse | LoginTwoFactorPendingResponse | LoginVerificationPendingResponse> {
+	): Promise<LoginServiceResponse | LoginRestrictedEnrollmentResponse | LoginTwoFactorPendingResponse | LoginVerificationPendingResponse> {
 		// Accept client type from header (browser apps) or query param (Swagger UI)
 		const clientType: string | undefined = headerClientType ?? queryClientType;
 		const { deviceInfo, ipAddress } = extractClientInfo(req);
@@ -230,7 +231,7 @@ export class AuthController {
 	public async verifyLogin(
 		@Body(new ZodValidationPipe(apiContract.auth.verifyLogin.input)) body: VerifyLoginInput,
 		@Req() req: FastifyRequest,
-	): Promise<LoginServiceResponse> {
+	): Promise<LoginServiceResponse | LoginRestrictedEnrollmentResponse> {
 		const { ipAddress } = extractClientInfo(req);
 		return this.authService.verifyLogin(body, ipAddress);
 	}

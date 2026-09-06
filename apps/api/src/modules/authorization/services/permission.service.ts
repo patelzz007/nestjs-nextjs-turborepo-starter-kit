@@ -6,6 +6,7 @@ import { PrismaService } from "../../../prisma/prisma.service";
 import { AuthorizationAuditService } from "../audit/authorization-audit.service";
 import { AuthorizationCacheService } from "../cache/authorization-cache.service";
 import { AuthorizationEventEmitter } from "../events/authorization.events";
+import { UserSessionRevocationService } from "./user-session-revocation.service";
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -37,6 +38,7 @@ export class PermissionService {
 		private readonly cache: AuthorizationCacheService,
 		private readonly audit: AuthorizationAuditService,
 		private readonly events: AuthorizationEventEmitter,
+		private readonly sessionRevocation: UserSessionRevocationService,
 	) {}
 
 	// ── CRUD ─────────────────────────────────────────────────────────────
@@ -231,7 +233,7 @@ export class PermissionService {
 			},
 		});
 
-		await this.bumpTokenVersion(userId);
+		await this.sessionRevocation.revokeAllSessionsForUser(userId);
 		this.cache.invalidate(userId);
 		this.events.emitUsersMeInvalidate([userId]);
 		await this.audit.logPermissionGrant(actorId, userId, permissionId);
@@ -247,7 +249,7 @@ export class PermissionService {
 			data: { isDeleted: true, deletedAt: nowEpochMs() },
 		});
 
-		await this.bumpTokenVersion(userId);
+		await this.sessionRevocation.revokeAllSessionsForUser(userId);
 		this.cache.invalidate(userId);
 		this.events.emitUsersMeInvalidate([userId]);
 		await this.audit.logPermissionRevocation(actorId, userId, permissionId);
@@ -269,26 +271,11 @@ export class PermissionService {
 					skipDuplicates: true,
 				});
 			}
-
-			await tx.user.update({
-				where: { id: userId },
-				data: { tokenVersion: { increment: 1 } },
-			});
 		});
 
+		await this.sessionRevocation.revokeAllSessionsForUser(userId);
 		this.cache.invalidate(userId);
 		this.events.emitUsersMeInvalidate([userId]);
-	}
-
-	/**
-	 * Increment the user's `tokenVersion` so any outstanding JWTs are
-	 * rejected by the AuthorizationGuard on the next request.
-	 */
-	private async bumpTokenVersion(userId: string): Promise<void> {
-		await this.prisma.user.update({
-			where: { id: userId },
-			data: { tokenVersion: { increment: 1 } },
-		});
 	}
 
 	// ── Internal helpers ─────────────────────────────────────────────────
@@ -327,6 +314,7 @@ export class PermissionService {
 		if (userIds.size > 0) {
 			const ids: string[] = Array.from(userIds);
 			this.cache.invalidateUsers(ids);
+			await this.sessionRevocation.revokeAllSessionsForUsers(ids);
 			this.events.emitUsersMeInvalidate(ids);
 		}
 	}

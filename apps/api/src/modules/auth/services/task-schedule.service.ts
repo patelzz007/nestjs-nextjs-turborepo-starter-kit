@@ -3,6 +3,7 @@ import { Cron, CronExpression } from "@nestjs/schedule";
 
 import { LogService } from "../../../modules/logs/logs.service";
 import { PrismaService } from "../../../prisma/prisma.service";
+import { MfaRecoveryService } from "./mfa-recovery.service";
 
 /**
  * Scheduled tasks for auth module housekeeping.
@@ -14,6 +15,7 @@ export class TaskScheduleService {
 	constructor(
 		private readonly prisma: PrismaService,
 		private readonly logService: LogService,
+		private readonly mfaRecoveryService: MfaRecoveryService,
 	) {}
 
 	/**
@@ -42,5 +44,11 @@ export class TaskScheduleService {
 				metadata: { deleted: result.count },
 			});
 		}
+	}
+
+	/** Processes approved MFA recovery requests whose security delay has elapsed. */
+	@Cron(CronExpression.EVERY_10_MINUTES)
+	public async processMfaRecoveryUnlocks(): Promise<void> {
+		await this.mfaRecoveryService.processScheduledUnlocks();
 	}
 }

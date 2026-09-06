@@ -9,6 +9,7 @@ import { AuthEventsService } from "./auth-events.service";
 import { CryptoService } from "./crypto.service";
 import { EmailService } from "./email.service";
 import { PasswordHistoryService } from "./password-history.service";
+import { AccessTokenStateService } from "./access-token-state.service";
 
 /**
  * Handles the password reset flow: initiating a reset (forgot password)
@@ -24,6 +25,7 @@ export class PasswordResetService {
 		private readonly cryptoService: CryptoService,
 		private readonly emailService: EmailService,
 		private readonly passwordHistoryService: PasswordHistoryService,
+		private readonly accessTokenState: AccessTokenStateService,
 		private readonly authEvents: AuthEventsService,
 		private readonly logService: LogService,
 	) {}
@@ -93,7 +95,7 @@ export class PasswordResetService {
 		await this.prisma.$transaction([
 			this.prisma.user.update({
 				where: { id: matchedToken.userId },
-				data: { passwordHash: newPasswordHash, updatedAt: Date.now() },
+				data: { passwordHash: newPasswordHash, tokenVersion: { increment: 1 }, updatedAt: Date.now() },
 			}),
 			this.prisma.passwordResetToken.update({
 				where: { id: matchedToken.id },
@@ -112,6 +114,8 @@ export class PasswordResetService {
 			where: { userId: matchedToken.userId },
 			data: { isDeleted: true, deletedAt: Date.now(), updatedAt: Date.now() },
 		});
+
+		this.accessTokenState.invalidate(matchedToken.userId);
 
 		const user = await this.prisma.user.findUnique({
 			where: { id: matchedToken.userId },

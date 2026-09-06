@@ -4,6 +4,7 @@ import type { FastifyRequest } from "fastify";
 
 import { readFirstHeader } from "../../../common/utils/http-headers";
 
+import { AccessTokenStateService } from "../services/access-token-state.service";
 import { TokenService } from "../services/token.service";
 import type { AccessTokenPayload } from "../services/token.service";
 import { IS_PUBLIC_KEY } from "../decorators/public.decorator";
@@ -26,6 +27,7 @@ import { IS_PUBLIC_KEY } from "../decorators/public.decorator";
 export class AuthGuard implements CanActivate {
 	public constructor(
 		private readonly tokenService: TokenService,
+		private readonly accessTokenState: AccessTokenStateService,
 		private readonly reflector: Reflector,
 	) {}
 
@@ -59,9 +61,13 @@ export class AuthGuard implements CanActivate {
 
 		try {
 			const payload: AccessTokenPayload = await this.tokenService.verifyAccessToken(token);
+			await this.accessTokenState.assertTokenValid(payload.sub, payload.tokenVersion);
 			request.user = payload;
 			return true;
-		} catch {
+		} catch (error) {
+			if (error instanceof UnauthorizedException) {
+				throw error;
+			}
 			throw new UnauthorizedException({
 				message: "Invalid or expired access token",
 				error: "ACCESS_TOKEN_INVALID",

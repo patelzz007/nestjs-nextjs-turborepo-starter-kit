@@ -9,6 +9,8 @@ import {
 	logProxyRefresh,
 	parseSetCookie,
 	refreshSessionFromProxy,
+	shouldAttemptProxyRefresh,
+	resolveProxySessionRefresh,
 	PROXY_REFRESH_COOLDOWN_MS,
 	REFRESH_TIMEOUT_MS,
 	type ProxyRefreshResult,
@@ -74,9 +76,14 @@ describe("isAccessTokenExpired", () => {
 });
 
 describe("hasRouteSession", () => {
-	it("returns true for a live access token", () => {
+	it("returns true for a live access token with a refresh token", () => {
 		const token = makeJwt({ exp: Math.floor(Date.now() / 1000) + 3600 });
-		expect(hasRouteSession(token, undefined, token)).toBe(true);
+		expect(hasRouteSession(token, "rt", token)).toBe(true);
+	});
+
+	it("returns false for a live access token without a refresh token", () => {
+		const token = makeJwt({ exp: Math.floor(Date.now() / 1000) + 3600 });
+		expect(hasRouteSession(token, undefined, token)).toBe(false);
 	});
 
 	it("returns false for an expired access token with no refresh token", () => {
@@ -91,6 +98,110 @@ describe("hasRouteSession", () => {
 
 	it("returns true when only a refresh token is present", () => {
 		expect(hasRouteSession(undefined, "rt", undefined)).toBe(true);
+	});
+});
+
+describe("shouldAttemptProxyRefresh", () => {
+	const validAccess = makeJwt({ exp: Math.floor(Date.now() / 1000) + 3600 });
+
+	it("returns true on auth routes when the session looks live", () => {
+		expect(
+			shouldAttemptProxyRefresh({
+				accessToken: validAccess,
+				refreshToken: "rt",
+				isDocumentNavigation: false,
+				isAuthRoute: true,
+				isPublicRoute: false,
+			}),
+		).toBe(true);
+	});
+
+	it("returns false on auth routes when only an orphaned access token exists", () => {
+		expect(
+			shouldAttemptProxyRefresh({
+				accessToken: validAccess,
+				refreshToken: undefined,
+				isDocumentNavigation: true,
+				isAuthRoute: true,
+				isPublicRoute: false,
+			}),
+		).toBe(false);
+	});
+
+	it("returns true on protected routes when the access token is expired", () => {
+		const expired = makeJwt({ exp: Math.floor(Date.now() / 1000) - 60 });
+		expect(
+			shouldAttemptProxyRefresh({
+				accessToken: expired,
+				refreshToken: "rt",
+				isDocumentNavigation: true,
+				isAuthRoute: false,
+				isPublicRoute: false,
+			}),
+		).toBe(true);
+	});
+
+	it("returns false on protected routes when the access token is still valid", () => {
+		expect(
+			shouldAttemptProxyRefresh({
+				accessToken: validAccess,
+				refreshToken: "rt",
+				isDocumentNavigation: true,
+				isAuthRoute: false,
+				isPublicRoute: false,
+			}),
+		).toBe(false);
+	});
+});
+
+describe("resolveProxySessionRefresh", () => {
+	it("refreshes an expired access token on a protected route", async () => {
+		const expired = makeJwt({ exp: Math.floor(Date.now() / 1000) - 60 });
+		const attemptRefresh = vi.fn<() => Promise<ProxyRefreshResult>>().mockResolvedValue({
+			ok: true,
+			status: 200,
+			setCookies: ["accessToken=new-at; Path=/; HttpOnly"],
+		});
+
+		const result = await resolveProxySessionRefresh({
+			accessToken: expired,
+			refreshToken: "rt",
+			isDocumentNavigation: true,
+			isAuthRoute: false,
+			isPublicRoute: false,
+			accessTokenCookieName: "accessToken",
+			app: "web",
+			pathname: "/hello",
+			attemptRefresh: attemptRefresh as (refreshToken: string) => Promise<ProxyRefreshResult>,
+		});
+
+		expect(attemptRefresh).toHaveBeenCalledWith("rt", { bypassCooldown: false });
+		expect(result.effectiveAccessToken).toBe("new-at");
+		expect(result.sessionDead).toBe(false);
+	});
+
+	it("marks the session dead when refresh is rejected on an auth route", async () => {
+		const validAccess = makeJwt({ exp: Math.floor(Date.now() / 1000) + 3600 });
+		const attemptRefresh = vi.fn<() => Promise<ProxyRefreshResult>>().mockResolvedValue({
+			ok: false,
+			status: 401,
+			setCookies: [],
+		});
+
+		const result = await resolveProxySessionRefresh({
+			accessToken: validAccess,
+			refreshToken: "rt-dead",
+			isDocumentNavigation: false,
+			isAuthRoute: true,
+			isPublicRoute: false,
+			accessTokenCookieName: "accessToken",
+			app: "web",
+			pathname: "/auth/login",
+			attemptRefresh: attemptRefresh as (refreshToken: string) => Promise<ProxyRefreshResult>,
+		});
+
+		expect(attemptRefresh).toHaveBeenCalledWith("rt-dead", { bypassCooldown: true });
+		expect(result.sessionDead).toBe(true);
 	});
 });
 

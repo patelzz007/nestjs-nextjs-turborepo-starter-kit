@@ -6,8 +6,10 @@ import { TypedConfigService } from "../../config/typed-config.service";
 import { LogService } from "../../modules/logs/logs.service";
 import { PrismaService } from "../../prisma/prisma.service";
 import { AuthorizationCheckerService } from "../authorization/services/authorization-checker.service";
+import { UserSessionRevocationService } from "../authorization/services/user-session-revocation.service";
 import { UserResponseMapper } from "../auth/services/user-response.mapper";
 import { CryptoService } from "../auth/services/crypto.service";
+import { AccessTokenStateService } from "../auth/services/access-token-state.service";
 import { TokenService } from "../auth/services/token.service";
 import { SessionsEventsService } from "./sessions-events.service";
 
@@ -30,6 +32,8 @@ export class SessionsService {
 		private readonly authorizationChecker: AuthorizationCheckerService,
 		private readonly mapper: UserResponseMapper,
 		private readonly sessionsEvents: SessionsEventsService,
+		private readonly accessTokenState: AccessTokenStateService,
+		private readonly sessionRevocation: UserSessionRevocationService,
 	) {}
 
 	public async refreshToken(userId: string, rawRefreshTokenJwt: string, refreshTokenJti: string, deviceInfo?: string, ipAddress?: string): Promise<RefreshResponse> {
@@ -87,6 +91,13 @@ export class SessionsService {
 			throw new UnauthorizedException("Refresh token has expired");
 		}
 
+		if (storedToken.isDeleted) {
+			throw new UnauthorizedException({
+				message: "Refresh token has been revoked. Please log in again.",
+				error: "REFRESH_TOKEN_REVOKED",
+			});
+		}
+
 		// ── Reuse Detection (Strategy 3) ────────────────────────────────────
 		// Compare the incoming raw refresh token JWT against the stored bcrypt hash.
 		// If they DON'T match, someone is using an OLD refresh token that was
@@ -105,6 +116,8 @@ export class SessionsService {
 				where: { userId: user.id },
 				data: { isDeleted: true, deletedAt: Date.now() },
 			});
+
+			await this.accessTokenState.bumpTokenVersion(user.id);
 
 			this.sessionsEvents.emitAction(
 				SessionActionEventSchema.parse({
@@ -189,10 +202,7 @@ export class SessionsService {
 	 */
 	public async logoutAllDevices(userId: string): Promise<void> {
 		const actionStartedAt: number = performance.now();
-		await this.prisma.refreshToken.updateMany({
-			where: { userId },
-			data: { isDeleted: true, deletedAt: Date.now() },
-		});
+		await this.sessionRevocation.revokeAllSessionsForUser(userId);
 
 		this.sessionsEvents.emitAction(
 			SessionActionEventSchema.parse({

@@ -16,6 +16,7 @@ import { AuthorizationModule } from "./modules/authorization/authorization.modul
 import { AuthorizationGuard } from "./modules/authorization/guards/authorization.guard";
 import { AuthModule } from "./modules/auth/auth.module";
 import { AuthGuard } from "./modules/auth/guards/auth.guard";
+import { RestrictedSessionGuard } from "./modules/auth/guards/restricted-session.guard";
 import { GeoModule } from "./modules/geo/geo.module";
 import { HealthModule } from "./modules/health/health.module";
 import { ImpersonationModule } from "./modules/impersonation/impersonation.module";
@@ -94,6 +95,10 @@ if (observeEnabled && observeAppKey !== undefined && observeAppSecret !== undefi
 		{
 			provide: APP_GUARD,
 			useClass: AuthGuard,
+		},
+		{
+			provide: APP_GUARD,
+			useClass: RestrictedSessionGuard,
 		},
 		{
 			provide: APP_GUARD,

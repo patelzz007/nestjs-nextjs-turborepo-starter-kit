@@ -6,6 +6,7 @@ import { PrismaService } from "../../../prisma/prisma.service";
 import { AuthorizationAuditService } from "../audit/authorization-audit.service";
 import { AuthorizationCacheService } from "../cache/authorization-cache.service";
 import { AuthorizationEventEmitter } from "../events/authorization.events";
+import { UserSessionRevocationService } from "./user-session-revocation.service";
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -38,6 +39,7 @@ export class RoleService {
 		private readonly cache: AuthorizationCacheService,
 		private readonly audit: AuthorizationAuditService,
 		private readonly events: AuthorizationEventEmitter,
+		private readonly sessionRevocation: UserSessionRevocationService,
 	) {}
 
 	// ── CRUD ─────────────────────────────────────────────────────────────
@@ -126,12 +128,9 @@ export class RoleService {
 			data: { isDeleted: true, deletedAt: nowEpochMs() },
 		});
 
-		// Bump tokenVersion for all affected users so their JWTs are rejected
+		// Force re-login for every user who held this role.
 		if (affectedUserIds.length > 0) {
-			await this.prisma.user.updateMany({
-				where: { id: { in: affectedUserIds } },
-				data: { tokenVersion: { increment: 1 } },
-			});
+			await this.sessionRevocation.revokeAllSessionsForUsers(affectedUserIds);
 		}
 
 		await this.invalidateRoleUsers(roleId);
@@ -262,7 +261,7 @@ export class RoleService {
 			update: { isDeleted: false, deletedAt: null },
 		});
 
-		await this.bumpTokenVersion(userId);
+		await this.sessionRevocation.revokeAllSessionsForUser(userId);
 		this.cache.invalidate(userId);
 		this.events.emitUsersMeInvalidate([userId]);
 		await this.audit.logRoleAssignment(actorId, userId, roleId);
@@ -278,7 +277,7 @@ export class RoleService {
 			data: { isDeleted: true, deletedAt: nowEpochMs() },
 		});
 
-		await this.bumpTokenVersion(userId);
+		await this.sessionRevocation.revokeAllSessionsForUser(userId);
 		this.cache.invalidate(userId);
 		this.events.emitUsersMeInvalidate([userId]);
 		await this.audit.logRoleRemoval(actorId, userId, roleId);
@@ -303,26 +302,11 @@ export class RoleService {
 					skipDuplicates: true,
 				});
 			}
-
-			await tx.user.update({
-				where: { id: userId },
-				data: { tokenVersion: { increment: 1 } },
-			});
 		});
 
+		await this.sessionRevocation.revokeAllSessionsForUser(userId);
 		this.cache.invalidate(userId);
 		this.events.emitUsersMeInvalidate([userId]);
-	}
-
-	/**
-	 * Increment the user's `tokenVersion` so any outstanding JWTs are
-	 * rejected by the AuthorizationGuard on the next request.
-	 */
-	private async bumpTokenVersion(userId: string): Promise<void> {
-		await this.prisma.user.update({
-			where: { id: userId },
-			data: { tokenVersion: { increment: 1 } },
-		});
 	}
 
 	// ── Restore ──────────────────────────────────────────────────────
@@ -422,7 +406,7 @@ export class RoleService {
 	// ── Internal helpers ─────────────────────────────────────────────────
 
 	/**
-	 * Find all user IDs that hold a given role, then invalidate their caches.
+	 * Find all user IDs that hold a given role, then invalidate their caches and sessions.
 	 */
 	private async invalidateRoleUsers(roleId: string): Promise<void> {
 		const userRoles: Pick<UserRole, "userId">[] = await this.prisma.userRole.findMany({
@@ -433,6 +417,7 @@ export class RoleService {
 		const userIds: string[] = userRoles.map((ur) => ur.userId);
 		if (userIds.length > 0) {
 			this.cache.invalidateUsers(userIds);
+			await this.sessionRevocation.revokeAllSessionsForUsers(userIds);
 			this.events.emitUsersMeInvalidate(userIds);
 		}
 	}

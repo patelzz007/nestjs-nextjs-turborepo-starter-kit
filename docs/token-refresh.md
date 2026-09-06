@@ -198,7 +198,82 @@ This means a stolen refresh token is intended to be **single-use**.
 
 ---
 
-### 2.3 Cookie model
+### 2.3 Global `tokenVersion` validation
+
+Every access token carries a `tokenVersion` claim copied from the `User` row at issuance time.
+
+On **every authenticated request**, `AuthGuard` calls `AccessTokenStateService.assertTokenValid()` which re-checks:
+
+| Field | Effect when stale |
+| --- | --- |
+| `tokenVersion` | `401 TOKEN_VERSION_MISMATCH` — password changes, logout-all, MFA changes, and role updates bump the counter |
+| `isActive` | `401 ACCOUNT_IS_INACTIVE` |
+| `isDeleted` | `401 ACCOUNT_DELETED` |
+
+A short-lived in-process cache (30 seconds) avoids hitting the database on every request while still propagating revocations quickly.
+
+**Logout-all bumps `tokenVersion`:** `POST /auth/logout-all` soft-deletes every refresh token **and** increments `tokenVersion`, so outstanding access tokens die immediately — not only after their 15-minute expiry.
+
+**Revoked refresh rejection:** `POST /auth/refresh` rejects refresh tokens whose database row has `isDeleted: true` with `401 REFRESH_TOKEN_REVOKED` before rotation logic runs. Token-theft detection also revokes all refresh rows and bumps `tokenVersion`.
+
+#### Session revocation after role or permission change
+
+When an admin assigns a role, grants/revokes a permission, or syncs a user's access, `UserSessionRevocationService` runs in the same flow as the RBAC mutation. It does **not** delete cookies in the user's browser — it invalidates the session **server-side** so the next request fails fast.
+
+```mermaid
+flowchart TD
+    subgraph server["Server (on RBAC mutation)"]
+        A["Admin assigns role or changes permission"]
+        B["UserSessionRevocationService"]
+        C["tokenVersion incremented in DB"]
+        D["All refresh tokens soft-deleted"]
+        A --> B --> C
+        B --> D
+    end
+
+    subgraph browser["User browser (unchanged until next request)"]
+        E["httpOnly cookies still hold old access + refresh tokens"]
+    end
+
+    C -.->|"JWT still says v3, DB now v4"| E
+
+    subgraph next["Next protected API call"]
+        F["GET /auth/me, /auth/permissions, …"]
+        G{"AccessTokenStateService:<br/>JWT tokenVersion == DB?"}
+        H["401 TOKEN_VERSION_MISMATCH"]
+        F --> G
+        G -->|No| H
+    end
+
+    E --> F
+
+    subgraph client["Client logout pipeline"]
+        I["api-request: skip silent refresh<br/>(dead session errors)"]
+        J["AuthProvider: POST /auth/logout<br/>clears httpOnly cookies"]
+        K["Navigate to login + router.refresh()"]
+        H --> I --> J --> K
+    end
+
+    subgraph proxy["Next.js proxy (auth routes)"]
+        L["Validate refresh token on /login"]
+        M["Refresh revoked → clear cookies,<br/>serve login without bounce-back"]
+        K --> L --> M
+    end
+
+    subgraph fresh["Fresh session"]
+        N["User signs in again"]
+        O["New JWT with current tokenVersion + permissions"]
+        M --> N --> O
+    end
+```
+
+**Key idea:** the access token may still be within its time expiry (e.g. 15 minutes left), but the embedded `tokenVersion` is checked on every request. After a role change, that version is stale immediately — refresh cannot recover because refresh rows were deleted too.
+
+**Code paths:** `UserSessionRevocationService` (`apps/api/.../user-session-revocation.service.ts`), wired from `RoleService` and `PermissionService`; client handling in `packages/client/src/lib/api/api-request.ts` and `packages/client/src/lib/auth/index.tsx`; proxy hardening in `packages/client/src/lib/auth/proxy-refresh.ts`.
+
+---
+
+### 2.4 Cookie model
 
 Both tokens live in `httpOnly` cookies.
 
@@ -226,7 +301,7 @@ The refresh token still has a server-enforced lifetime of `JWT_REFRESH_EXPIRY` (
 
 ---
 
-### 2.4 Application-specific cookies
+### 2.5 Application-specific cookies
 
 The consumer, admin, and merchant applications use separate cookie names:
 

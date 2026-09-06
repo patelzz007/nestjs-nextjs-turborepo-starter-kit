@@ -19,12 +19,13 @@ import { z, type ZodType } from "zod";
 import { apiRoutes } from "../api-routes";
 import { ForgotPasswordSchema, LoginSchema, ResendVerificationSchema, ResetPasswordSchema, SignupSchema, VerifyEmailSchema } from "../schemas/auth/auth";
 import { ChangePasswordSchema } from "../schemas/auth/change-password";
+import { AdminMfaRecoveryListQuerySchema, AdminReviewMfaRecoverySchema, InitiateMfaRecoverySchema } from "../schemas/auth/mfa-recovery";
 import { ValidateResetTokenSchema, VerifyLoginSchema } from "../schemas/auth/login-verification";
-import { DisableTwoFactorSchema, EnableTwoFactorSchema, LoginTwoFactorSchema, VerifyBackupCodeLoginSchema, VerifyBackupCodeSchema } from "../schemas/auth/two-factor";
+import { EnableTwoFactorSchema, LoginTwoFactorSchema, RotateTwoFactorSchema, VerifyBackupCodeLoginSchema, VerifyBackupCodeSchema } from "../schemas/auth/two-factor";
 import { AdminUserListQuerySchema } from "../schemas/auth/user";
 import { UuidParamSchema } from "../schemas/domain/param-schemas";
 import { EmailLogListQuerySchema } from "../schemas/email/email";
-import { CapabilityCatalogQuerySchema, CapabilityDefinitionSchema } from "../schemas/domain/capabilities";
+import { CapabilityCatalogQuerySchema } from "../schemas/domain/capabilities";
 import {
 	CityListQuerySchema,
 	CountryListQuerySchema,
@@ -52,10 +53,8 @@ import {
 	AcceptRewardLegalSchema,
 	AdminCreateMerchantInviteSchema,
 	AdminKybUpdatePathInputSchema,
-	AdminKybUpdateSchema,
 	AdminMerchantListQuerySchema,
 	AdminRejectRewardPathInputSchema,
-	AdminRejectRewardSchema,
 	CreateRewardClaimSchema,
 	MerchantCreateApiKeySchema,
 	MerchantCreateMemberSchema,
@@ -63,7 +62,6 @@ import {
 	MerchantOnboardingCompleteSchema,
 	MerchantOnboardingValidateTokenSchema,
 	MerchantRedemptionListQuerySchema,
-	MerchantUpdateRewardSchema,
 	MerchantUpdateRewardPathInputSchema,
 	RedemptionConfirmSchema,
 	RedemptionValidateSchema,
@@ -74,11 +72,7 @@ import {
 	MarkRewardNotificationsReadSchema,
 } from "../schemas/domain/rewards";
 import { RewardsAnalyticsQuerySchema } from "../schemas/domain/rewards-analytics";
-import {
-	MerchantRoleCapabilityGrantSchema,
-	MerchantRoleCapabilitiesPathInputSchema,
-	SyncMerchantRoleCapabilitiesInputSchema,
-} from "../schemas/domain/merchant-role-capabilities";
+import { MerchantRoleCapabilitiesPathInputSchema, SyncMerchantRoleCapabilitiesInputSchema } from "../schemas/domain/merchant-role-capabilities";
 import { AssignPermissionToUserSchema, AssignRoleToUserSchema, CheckPermissionSchema, SyncUserPermissionsSchema, SyncUserRolesSchema } from "../schemas/domain/rbac";
 import type { ApiVersion } from "./versioning";
 
@@ -190,8 +184,13 @@ export const apiContract = {
 		verifyLogin: defineContract({ method: "POST", path: apiRoutes.auth.verifyLogin, input: VerifyLoginSchema }),
 		twoFactorSetup: defineContract({ method: "GET", path: apiRoutes.auth.twoFactorSetup, input: z.undefined() }),
 		twoFactorEnable: defineContract({ method: "POST", path: apiRoutes.auth.twoFactorEnable, input: EnableTwoFactorSchema }),
-		twoFactorDisable: defineContract({ method: "POST", path: apiRoutes.auth.twoFactorDisable, input: DisableTwoFactorSchema }),
+		twoFactorRotate: defineContract({ method: "POST", path: apiRoutes.auth.twoFactorRotate, input: RotateTwoFactorSchema }),
+		twoFactorBackupCodesRemaining: defineContract({ method: "GET", path: apiRoutes.auth.twoFactorBackupCodesRemaining, input: z.undefined() }),
 		twoFactorVerifyBackupCode: defineContract({ method: "POST", path: apiRoutes.auth.twoFactorVerifyBackupCode, input: VerifyBackupCodeSchema }),
+		mfaRecoveryInitiate: defineContract({ method: "POST", path: apiRoutes.auth.mfaRecoveryInitiate, input: InitiateMfaRecoverySchema }),
+		mfaRecoveryStatus: defineContract({ method: "GET", path: apiRoutes.auth.mfaRecoveryStatus, input: z.undefined() }),
+		adminMfaRecoveryReview: defineContract({ method: "POST", path: apiRoutes.auth.adminMfaRecoveryReview, input: AdminReviewMfaRecoverySchema }),
+		adminMfaRecoveryRequests: defineContract({ method: "GET", path: apiRoutes.auth.adminMfaRecoveryRequests, input: AdminMfaRecoveryListQuerySchema }),
 		adminUsers: defineContract({ method: "GET", path: apiRoutes.auth.adminUsers, input: AdminUserListQuerySchema }),
 		adminUserDetail: defineContract({
 			method: "GET",

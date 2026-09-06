@@ -1,4 +1,7 @@
+import * as crypto from "crypto";
+
 import { Injectable } from "@nestjs/common";
+import { MfaEncryptionKeysSchema } from "@workspace/shared";
 
 /**
  * Typed configuration service that reads environment variables.
@@ -60,6 +63,67 @@ export class TypedConfigService {
 	/** Issuer name shown in authenticator apps */
 	public get twoFactorIssuer(): string {
 		return process.env.TWO_FACTOR_ISSUER ?? this.appName;
+	}
+
+	// ── MFA hardening ──────────────────────────────────────────────────
+
+	/** Versioned AES key material for MFA secret encryption (`MFA_ENCRYPTION_KEYS` JSON). */
+	public get mfaEncryptionKeys(): Readonly<Record<number, string>> {
+		const raw: string | undefined = process.env.MFA_ENCRYPTION_KEYS;
+		if (raw === undefined || raw.length === 0) {
+			if (process.env.NODE_ENV === "production") {
+				throw new Error("Missing required environment variable: MFA_ENCRYPTION_KEYS. Set it in production — fallback defaults are not allowed.");
+			}
+			return { 1: crypto.createHash("sha256").update("dev-mfa-encryption-key-v1").digest("base64") };
+		}
+
+		let parsedJson: ReturnType<typeof JSON.parse>;
+		try {
+			parsedJson = JSON.parse(raw);
+		} catch {
+			throw new Error("MFA_ENCRYPTION_KEYS must be valid JSON mapping version numbers to key material.");
+		}
+
+		const parsedKeys = MfaEncryptionKeysSchema.safeParse(parsedJson);
+		if (!parsedKeys.success) {
+			throw new Error("MFA_ENCRYPTION_KEYS must be a JSON object mapping version numbers to key material.");
+		}
+
+		const keys: Record<number, string> = {};
+		for (const [versionKey, keyMaterial] of Object.entries(parsedKeys.data)) {
+			const version: number = Number.parseInt(versionKey, 10);
+			if (Number.isNaN(version) || version < 1) {
+				throw new Error(`Invalid MFA encryption key version: ${versionKey}`);
+			}
+			keys[version] = keyMaterial;
+		}
+
+		if (Object.keys(keys).length === 0) {
+			throw new Error("MFA_ENCRYPTION_KEYS must contain at least one key version.");
+		}
+
+		return keys;
+	}
+
+	/** Grace period before MFA enrollment is required (default 30 days). */
+	public get mfaEnrollmentDeadlineMs(): number {
+		const value: string | undefined = process.env.MFA_ENROLLMENT_DEADLINE_MS;
+		const parsed: number = value ? Number.parseInt(value, 10) : 30 * 24 * 60 * 60 * 1000;
+		return parsed > 0 ? parsed : 30 * 24 * 60 * 60 * 1000;
+	}
+
+	/** Delay after recovery approval before MFA is unlocked (default 24 hours). */
+	public get mfaRecoveryDelayMs(): number {
+		const value: string | undefined = process.env.MFA_RECOVERY_DELAY_MS;
+		const parsed: number = value ? Number.parseInt(value, 10) : 24 * 60 * 60 * 1000;
+		return parsed > 0 ? parsed : 24 * 60 * 60 * 1000;
+	}
+
+	/** TTL for step-up MFA assurance after verification (default 5 minutes). */
+	public get mfaStepUpTtlMs(): number {
+		const value: string | undefined = process.env.MFA_STEP_UP_TTL_MS;
+		const parsed: number = value ? Number.parseInt(value, 10) : 5 * 60 * 1000;
+		return parsed > 0 ? parsed : 5 * 60 * 1000;
 	}
 
 	// ── Bcrypt Configuration ───────────────────────────────────────────

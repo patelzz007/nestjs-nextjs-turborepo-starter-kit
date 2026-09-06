@@ -11,7 +11,15 @@ export default defineConfig({
 		// Scoped to the wired suites: notifications/email + the common
 		// pipes. The legacy specs under src/modules/* were never wired to a runner
 		// (jest-style + unresolved Nest DI) and predate this config.
-		include: ["src/modules/notifications/**/*.spec.ts", "src/common/pipes/*.spec.ts"],
+		include: [
+			"src/modules/notifications/**/*.spec.ts",
+			"src/common/pipes/*.spec.ts",
+			"src/modules/auth/services/access-token-state.service.spec.ts",
+			"src/modules/auth/services/secret-encryption.service.spec.ts",
+			"src/modules/auth/services/mfa-challenge.service.spec.ts",
+			"src/modules/authorization/services/user-session-revocation.service.spec.ts",
+			"src/modules/sessions/sessions.service.spec.ts",
+		],
 		// Email/notification specs never touch the network or a real DB — all
 		// external calls (Resend, Prisma) are mocked.
 		testTimeout: 15_000,

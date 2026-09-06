@@ -7,16 +7,16 @@
 // ============================================
 
 import { API_BASE_URL } from "@workspace/client/lib/api/config";
+import { decodeJwtPayload } from "@workspace/client/lib/auth/jwt";
+import { getEnrollmentRedirectPath, isEnrollmentAllowedPath, isRestrictedSession } from "@workspace/client/lib/auth/restricted-session";
 import { isWebAuthPath, isWebProtectedPath, isWebPublicExactPath, isWebTokenAuthPath } from "@/lib/auth-routes";
 import {
 	createProxyRefreshCooldown,
-	extractRotatedAccessToken,
 	hasRouteSession,
-	isAccessTokenExpired,
 	isDocumentNavigation,
-	logProxyRefresh,
 	parseSetCookie,
 	refreshSessionFromProxy,
+	resolveProxySessionRefresh,
 	type ParsedCookie,
 	type ProxyRefreshResult,
 } from "@workspace/client/lib/auth/proxy-refresh";
@@ -107,45 +107,29 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
 	const isPublicRoute = isWebPublicExactPath(pathname);
 	const isGuestBrowsable = !isProtectedRoute && !isAuthRoute;
 
-	// ── Proxy-side silent refresh ──────────────────────────────────────────
-	// The proxy runs server-side, so it CAN read the httpOnly cookies (unlike
-	// browser JS). On a document navigation with an expired access token it
-	// rotates the tokens BEFORE serving the page — the first API call (e.g.
-	// /auth/me) then never 401s. If the refresh token is dead too, it clears
-	// the stale cookies and sends the user to login, breaking the dead-session
-	// bounce loop that neither the client nor the API guard could break.
-	//
-	// NOTE: this refresh and the client's 401-refresh are independent
-	// single-flight domains — a rotation here can invalidate an in-flight
-	// rotation from another tab. That is a deliberate trade-off (worst case:
-	// a spurious re-login) kept in exchange for no cross-tab coordination.
 	let rotatedCookies: readonly string[] = [];
 	let effectiveAccessToken: string | undefined = accessToken;
 
-	if (!isPublicRoute && accessToken !== undefined && refreshToken !== undefined && isDocumentNavigation(request.headers) && isAccessTokenExpired(accessToken)) {
-		const refreshStartedAt: number = Date.now();
-		const result = await attemptRefresh(refreshToken);
-		const elapsedMs: number = Date.now() - refreshStartedAt;
-		if (result.ok) {
-			rotatedCookies = result.setCookies;
-			const newAccessToken: string | undefined = extractRotatedAccessToken(result.setCookies, ACCESS_TOKEN_COOKIE);
-			if (newAccessToken !== undefined) effectiveAccessToken = newAccessToken;
-			logProxyRefresh({ app: "web", pathname, status: result.status, elapsedMs, outcome: "refreshed", rotatedCookieCount: result.setCookies.length });
-		} else if (result.status === 401 || result.status === 403) {
-			logProxyRefresh({ app: "web", pathname, status: result.status, elapsedMs, outcome: "dead-session", rotatedCookieCount: 0 });
-			if (isProtectedRoute) {
-				return redirectToLogin(request, pathname, rotatedCookies);
-			}
-			return serveGuestResponse(NextResponse.next(), rotatedCookies, accessToken);
-		} else if (result.skipped === true) {
-			// A transient failure happened recently — skip the re-attempt so a
-			// dead API isn't hammered on every navigation. Serve the stale page.
-			logProxyRefresh({ app: "web", pathname, status: result.status, elapsedMs, outcome: "cooldown-active", rotatedCookieCount: 0 });
-		} else {
-			// Network error / 5xx: fall through without clearing — don't log the
-			// user out because of a temporary API blip.
-			logProxyRefresh({ app: "web", pathname, status: result.status, elapsedMs, outcome: "transient-failure", rotatedCookieCount: 0, errorDetail: result.errorDetail });
+	const refreshResult = await resolveProxySessionRefresh({
+		accessToken,
+		refreshToken,
+		isDocumentNavigation: isDocumentNavigation(request.headers),
+		isAuthRoute,
+		isPublicRoute,
+		accessTokenCookieName: ACCESS_TOKEN_COOKIE,
+		app: "web",
+		pathname,
+		attemptRefresh,
+	});
+
+	rotatedCookies = refreshResult.rotatedCookies;
+	effectiveAccessToken = refreshResult.effectiveAccessToken;
+
+	if (refreshResult.sessionDead) {
+		if (isProtectedRoute) {
+			return redirectToLogin(request, pathname, rotatedCookies);
 		}
+		return serveGuestResponse(NextResponse.next(), rotatedCookies, accessToken);
 	}
 
 	const isAuthenticated = hasRouteSession(accessToken, refreshToken, effectiveAccessToken);
@@ -160,6 +144,13 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
 		return redirectToLogin(request, pathname, rotatedCookies);
 	}
 
+	if (isProtectedRoute && isAuthenticated && effectiveAccessToken !== undefined && isRestrictedSession(effectiveAccessToken) && !isEnrollmentAllowedPath(pathname)) {
+		const payload = decodeJwtPayload(effectiveAccessToken);
+		const enrollmentReason = payload?.isEmailVerified === false ? "email_verification" : "mfa_enrollment";
+		const enrollmentPath = getEnrollmentRedirectPath("web", enrollmentReason);
+		return applyRotatedCookies(NextResponse.redirect(new URL(enrollmentPath, request.url)), rotatedCookies);
+	}
+
 	// Login/signup bounce — but token flows (verify email, reset password) must
 	// still run when the user already has a session (common right after signup).
 	if (isAuthRoute && isAuthenticated && !isWebTokenAuthPath(pathname)) {
@@ -167,6 +158,10 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
 		const targetPath: string = redirectPath !== null && (isWebProtectedPath(redirectPath) || redirectPath === "/") ? redirectPath : getDefaultAuthenticatedPath();
 
 		return applyRotatedCookies(NextResponse.redirect(new URL(targetPath, request.url)), rotatedCookies);
+	}
+
+	if (isAuthRoute && !isAuthenticated && accessToken !== undefined) {
+		return serveGuestResponse(NextResponse.next(), rotatedCookies, accessToken);
 	}
 
 	if (isGuestBrowsable && !isAuthenticated && accessToken !== undefined) {

@@ -8,6 +8,12 @@ CREATE TYPE "RedirectType" AS ENUM ('PERMANENT', 'TEMPORARY');
 CREATE TYPE "DeviceType" AS ENUM ('DESKTOP', 'MOBILE', 'TABLET', 'BOT', 'UNKNOWN');
 
 -- CreateEnum
+CREATE TYPE "TwoFactorLoginChallengePurpose" AS ENUM ('LOGIN', 'ROTATE');
+
+-- CreateEnum
+CREATE TYPE "MfaRecoveryRequestStatus" AS ENUM ('PENDING', 'APPROVED', 'DENIED', 'COMPLETED');
+
+-- CreateEnum
 CREATE TYPE "PermissionAction" AS ENUM ('CREATE', 'READ', 'UPDATE', 'DELETE', 'LIST', 'MANAGE');
 
 -- CreateEnum
@@ -65,6 +71,13 @@ CREATE TABLE "users" (
     "locked_until" BIGINT,
     "two_factor_enabled" BOOLEAN NOT NULL DEFAULT false,
     "two_factor_secret" TEXT,
+    "two_factor_secret_ciphertext" TEXT,
+    "two_factor_secret_iv" VARCHAR(32),
+    "two_factor_secret_key_version" INTEGER,
+    "two_factor_last_totp_step" BIGINT,
+    "mfa_enrolled_at" BIGINT,
+    "mfa_enrollment_deadline" BIGINT,
+    "mfa_assured_at" BIGINT,
     "provider" TEXT,
     "provider_id" TEXT,
     "plan" "Plan" NOT NULL DEFAULT 'FREE',
@@ -193,12 +206,48 @@ CREATE TABLE "backup_codes" (
 CREATE TABLE "two_factor_pending_setups" (
     "id" TEXT NOT NULL,
     "user_id" TEXT NOT NULL,
-    "secret" TEXT NOT NULL,
+    "secret_ciphertext" TEXT NOT NULL,
+    "secret_iv" VARCHAR(32) NOT NULL,
+    "secret_key_version" INTEGER NOT NULL,
     "backup_codes_hashes" JSONB NOT NULL,
     "expires_at" BIGINT NOT NULL,
     "created_at" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
 
     CONSTRAINT "two_factor_pending_setups_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "two_factor_login_challenges" (
+    "id" TEXT NOT NULL,
+    "user_id" TEXT NOT NULL,
+    "purpose" "TwoFactorLoginChallengePurpose" NOT NULL,
+    "client_type" TEXT,
+    "device_info" VARCHAR(255),
+    "ip_address" VARCHAR(45),
+    "attempt_count" INTEGER NOT NULL DEFAULT 0,
+    "max_attempts" INTEGER NOT NULL DEFAULT 5,
+    "consumed_at" BIGINT,
+    "expires_at" BIGINT NOT NULL,
+    "created_at" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
+
+    CONSTRAINT "two_factor_login_challenges_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "mfa_recovery_requests" (
+    "id" TEXT NOT NULL,
+    "user_id" TEXT NOT NULL,
+    "status" "MfaRecoveryRequestStatus" NOT NULL DEFAULT 'PENDING',
+    "requested_at" BIGINT NOT NULL,
+    "reviewed_by" TEXT,
+    "reviewed_at" BIGINT,
+    "scheduled_unlock_at" BIGINT,
+    "completed_at" BIGINT,
+    "notes" TEXT,
+    "created_at" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
+    "updated_at" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
+
+    CONSTRAINT "mfa_recovery_requests_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -898,6 +947,18 @@ CREATE UNIQUE INDEX "two_factor_pending_setups_user_id_key" ON "two_factor_pendi
 CREATE INDEX "two_factor_pending_setups_expires_at_idx" ON "two_factor_pending_setups"("expires_at");
 
 -- CreateIndex
+CREATE INDEX "two_factor_login_challenges_expires_at_idx" ON "two_factor_login_challenges"("expires_at");
+
+-- CreateIndex
+CREATE INDEX "two_factor_login_challenges_user_id_idx" ON "two_factor_login_challenges"("user_id");
+
+-- CreateIndex
+CREATE INDEX "mfa_recovery_requests_user_id_idx" ON "mfa_recovery_requests"("user_id");
+
+-- CreateIndex
+CREATE INDEX "mfa_recovery_requests_status_idx" ON "mfa_recovery_requests"("status");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "user_roles_userId_roleId_key" ON "user_roles"("userId", "roleId");
 
 -- CreateIndex
@@ -1199,6 +1260,12 @@ ALTER TABLE "backup_codes" ADD CONSTRAINT "backup_codes_user_id_fkey" FOREIGN KE
 
 -- AddForeignKey
 ALTER TABLE "two_factor_pending_setups" ADD CONSTRAINT "two_factor_pending_setups_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "two_factor_login_challenges" ADD CONSTRAINT "two_factor_login_challenges_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "mfa_recovery_requests" ADD CONSTRAINT "mfa_recovery_requests_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "user_roles" ADD CONSTRAINT "user_roles_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;

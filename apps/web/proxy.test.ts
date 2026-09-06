@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { NextRequest } from "next/server";
 
 import { proxy, resetWebProxyRefreshCooldownForTests } from "./proxy";
-import { isAccessTokenExpired } from "@workspace/client/lib/auth/proxy-refresh";
+import { isAccessTokenExpired, resolveProxySessionRefresh, shouldAttemptProxyRefresh } from "@workspace/client/lib/auth/proxy-refresh";
 
 // ── Mocks ──────────────────────────────────────────────────────────────────
 // The proxy module imports `next/server` (NextResponse) and
@@ -42,7 +42,7 @@ const nextResponse = vi.hoisted(() => {
 });
 
 vi.mock("next/server", () => ({ NextResponse: nextResponse }));
-vi.mock("@workspace/client/lib/api/config", () => ({ API_BASE_URL: "http://api.test" }));
+vi.mock("@workspace/client/lib/api/config", () => ({ API_BASE_URL: "http://api.test", API_URL_PREFIX: "/api/v1" }));
 
 // ── Request / response plumbing ─────────────────────────────────────────────
 
@@ -135,15 +135,25 @@ describe("web proxy route protection", () => {
 	});
 
 	it("allows authenticated users at the root without redirect", async () => {
-		const response = await runProxy({ pathname: "/", accessToken: validToken() });
+		const response = await runProxy({ pathname: "/", accessToken: validToken(), refreshToken: "rt" });
 
 		expect(response.status).toBe(200);
 		expect(nextResponse.next).toHaveBeenCalled();
 		expect(nextResponse.redirect).not.toHaveBeenCalled();
 	});
 
+	it("clears orphaned access cookies on protected routes", async () => {
+		const response = await runProxy({ pathname: "/hello", accessToken: validToken() });
+
+		expect(response.status).toBe(307);
+		expect(redirectTarget()).toBe("http://localhost:3000/auth/login?redirect=%2Fhello");
+		const cleared = response.cookies.calls.filter((call) => call.value === "");
+		expect(cleared.map((call) => call.name).sort()).toEqual(["accessToken", "refreshToken"]);
+	});
+
 	it("bounces authenticated users away from auth routes", async () => {
-		const response = await runProxy({ pathname: "/auth/login", accessToken: validToken() });
+		stubRefreshResponse(200, ["accessToken=live-at; Path=/; HttpOnly", "refreshToken=live-rt; Path=/; HttpOnly"]);
+		const response = await runProxy({ pathname: "/auth/login", accessToken: validToken(), refreshToken: "rt", ...DOC_NAV });
 
 		expect(response.status).toBe(307);
 		expect(redirectTarget()).toBe("http://localhost:3000/rewardhub");
@@ -153,6 +163,7 @@ describe("web proxy route protection", () => {
 		const response = await runProxy({
 			pathname: "/auth/verify-email",
 			accessToken: validToken(),
+			refreshToken: "rt",
 			query: { token: "test-token" },
 		});
 
@@ -165,6 +176,7 @@ describe("web proxy route protection", () => {
 		const response = await runProxy({
 			pathname: "/auth/reset-password",
 			accessToken: validToken(),
+			refreshToken: "rt",
 			query: { token: "test-token" },
 		});
 
@@ -174,13 +186,15 @@ describe("web proxy route protection", () => {
 	});
 
 	it("honours the redirect param on auth routes", async () => {
-		await runProxy({ pathname: "/auth/login", accessToken: validToken(), query: { redirect: "/hello" } });
+		stubRefreshResponse(200, ["accessToken=live-at; Path=/; HttpOnly", "refreshToken=live-rt; Path=/; HttpOnly"]);
+		await runProxy({ pathname: "/auth/login", accessToken: validToken(), refreshToken: "rt", ...DOC_NAV, query: { redirect: "/hello" } });
 
 		expect(redirectTarget()).toBe("http://localhost:3000/hello");
 	});
 
 	it("ignores a redirect param that is not a protected route (no open redirects)", async () => {
-		await runProxy({ pathname: "/auth/login", accessToken: validToken(), query: { redirect: "//evil.com" } });
+		stubRefreshResponse(200, ["accessToken=live-at; Path=/; HttpOnly", "refreshToken=live-rt; Path=/; HttpOnly"]);
+		await runProxy({ pathname: "/auth/login", accessToken: validToken(), refreshToken: "rt", ...DOC_NAV, query: { redirect: "//evil.com" } });
 
 		expect(redirectTarget()).toBe("http://localhost:3000/rewardhub");
 	});
@@ -232,6 +246,39 @@ describe("web proxy route protection", () => {
 // ── Server-side refresh ─────────────────────────────────────────────────────
 
 describe("web proxy server-side refresh", () => {
+	it("attempts refresh for expired tokens on protected routes", async () => {
+		expect(
+			shouldAttemptProxyRefresh({
+				accessToken: expiredToken(),
+				refreshToken: "rt",
+				isDocumentNavigation: true,
+				isAuthRoute: false,
+				isPublicRoute: false,
+			}),
+		).toBe(true);
+
+		const attemptRefresh = vi.fn().mockResolvedValue({
+			ok: true,
+			status: 200,
+			setCookies: ["accessToken=new-at; Path=/; HttpOnly"],
+		});
+
+		const result = await resolveProxySessionRefresh({
+			accessToken: expiredToken(),
+			refreshToken: "rt",
+			isDocumentNavigation: true,
+			isAuthRoute: false,
+			isPublicRoute: false,
+			accessTokenCookieName: "accessToken",
+			app: "web",
+			pathname: "/hello",
+			attemptRefresh,
+		});
+
+		expect(attemptRefresh).toHaveBeenCalled();
+		expect(result.effectiveAccessToken).toBe("new-at");
+	});
+
 	it("skips the refresh on a second navigation after a transient failure (cooldown)", async () => {
 		// MUST run FIRST in this describe block: the module-scope cooldown
 		// survives across tests, and a real-time failure elsewhere would arm it
@@ -326,6 +373,32 @@ describe("web proxy server-side refresh", () => {
 		await runProxy({ pathname: "/hello", accessToken: validToken(), refreshToken: "rt", ...DOC_NAV });
 
 		expect(fetchMock).not.toHaveBeenCalled();
+	});
+
+	it("clears cookies on login when the refresh token is dead but access is still time-valid", async () => {
+		stubRefreshResponse(401, []);
+
+		const response = await runProxy({
+			pathname: "/auth/login",
+			accessToken: validToken(),
+			refreshToken: "rt-dead",
+			secFetchMode: "cors",
+			accept: "*/*",
+		});
+
+		expect(response.status).toBe(200);
+		expect(nextResponse.redirect).not.toHaveBeenCalled();
+		const cleared = response.cookies.calls.filter((call) => call.value === "");
+		expect(cleared.map((call) => call.name).sort()).toEqual(["accessToken", "refreshToken"]);
+	});
+
+	it("serves login without bounce when only an orphaned access cookie remains", async () => {
+		const response = await runProxy({ pathname: "/auth/login", accessToken: validToken() });
+
+		expect(response.status).toBe(200);
+		expect(nextResponse.redirect).not.toHaveBeenCalled();
+		const cleared = response.cookies.calls.filter((call) => call.value === "");
+		expect(cleared.map((call) => call.name).sort()).toEqual(["accessToken", "refreshToken"]);
 	});
 
 	it("redirects protected routes to login when the refresh cookie is missing", async () => {

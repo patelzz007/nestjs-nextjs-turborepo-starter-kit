@@ -15,6 +15,7 @@ import { AuthRateLimitService } from "./services/auth-rate-limit.service";
 import { ConflictDetectionService } from "./services/conflict-detection.service";
 import { PermissionService } from "./services/permission.service";
 import { RoleService } from "./services/role.service";
+import { UserSessionRevocationService } from "./services/user-session-revocation.service";
 import { PermissionExpiryCleanup } from "./cleanup/permission-expiry.cleanup";
 import { PermissionMigrationService } from "./migration/permission-migration.service";
 import { PermissionRegistrySyncBootstrap } from "./migration/permission-registry-sync.bootstrap";
@@ -79,6 +80,7 @@ import { CapabilityDefinitionService } from "./services/capability-definition.se
 		AuthorizationCheckerService,
 		RoleService,
 		PermissionService,
+		UserSessionRevocationService,
 		AuthorizationService,
 		AuthorizationGuard,
 		AuthorizationAuditService,
@@ -98,6 +100,7 @@ import { CapabilityDefinitionService } from "./services/capability-definition.se
 		AuthorizationCheckerService,
 		RoleService,
 		PermissionService,
+		UserSessionRevocationService,
 		AuthorizationService,
 		AuthorizationGuard,
 		AuthorizationAuditService,

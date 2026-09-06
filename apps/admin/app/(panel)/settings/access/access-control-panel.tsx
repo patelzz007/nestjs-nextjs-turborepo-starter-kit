@@ -2,6 +2,8 @@
 
 import { stubApiMeta } from "@/lib/api-envelope";
 import { formatPermissionGrantVia } from "@/lib/format-permission-grant";
+import { buildPermissionTree } from "@/lib/build-permission-tree";
+import { AccessPermissionExplorerTree } from "@/components/access/access-permission-explorer-tree";
 import {
 	PermissionActionSchema,
 	PermissionResourceSchema,
@@ -83,6 +85,7 @@ export default function AccessControlPanel({ initialRoles, initialPermissions }:
 
 	const roles = rolesQuery.data?.data.items ?? [];
 	const permissions = permissionsQuery.data?.data.items ?? [];
+	const permissionTree = React.useMemo(() => buildPermissionTree(permissions), [permissions]);
 
 	return (
 		<div className="space-y-6">
@@ -119,17 +122,16 @@ export default function AccessControlPanel({ initialRoles, initialPermissions }:
 				</TabsContent>
 
 				<TabsContent value="permissions" className="mt-4">
-					<Card>
-						<CardHeader>
+					<Card className="overflow-hidden">
+						<CardHeader className="border-b bg-muted/20">
 							<CardTitle>Permissions</CardTitle>
-							<CardDescription>Action + resource pairs. Grant or revoke direct user permissions on user profiles.</CardDescription>
+							<CardDescription>Action + resource pairs grouped by category. Grant or revoke direct user permissions on user profiles.</CardDescription>
 						</CardHeader>
-						<CardContent className="flex flex-wrap gap-2">
-							{permissions.map((perm) => (
-								<Badge key={perm.id} variant="outline" className="font-mono text-xs">
-									{perm.action}:{perm.resource}
-								</Badge>
-							))}
+						<CardContent className="p-4 sm:p-6">
+							{permissionsQuery.isError ? (
+								<p className="text-sm text-destructive">Could not load the permission catalog. Check LIST:PERMISSION permission and refresh.</p>
+							) : null}
+							<AccessPermissionExplorerTree groups={permissionTree} emptyMessage="No permissions in catalog." defaultOpen={false} />
 						</CardContent>
 					</Card>
 				</TabsContent>

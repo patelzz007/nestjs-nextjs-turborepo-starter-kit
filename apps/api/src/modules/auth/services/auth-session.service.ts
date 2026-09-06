@@ -1,16 +1,23 @@
 import { ForbiddenException, Injectable, UnauthorizedException } from "@nestjs/common";
-import { epochMs, type EpochMs, type LoginServiceResponse, type UserPermissions } from "@workspace/shared";
+import { epochMs, type EnrollmentReason, type EpochMs, type LoginRestrictedEnrollmentResponse, type LoginServiceResponse, type UserPermissions } from "@workspace/shared";
 
 import { parseExpiryToMilliseconds } from "../../../common/utils/expiry";
 import { TypedConfigService } from "../../../config/typed-config.service";
 import { LogService } from "../../../modules/logs/logs.service";
 import { PrismaService } from "../../../prisma/prisma.service";
 import { AuthorizationCheckerService } from "../../authorization/services/authorization-checker.service";
+import type { UserLogin } from "../repositories/user.repository";
 import { UserRepository } from "../repositories/user.repository";
 import { IdentityService } from "./identity.service";
-import { TokenService } from "./token.service";
+import { TokenService, type SessionScope } from "./token.service";
 import { CryptoService } from "./crypto.service";
 import { UserResponseMapper } from "./user-response.mapper";
+
+export interface IssueSessionOptions {
+	readonly mfaAssured?: boolean;
+}
+
+type SessionRestriction = { readonly restricted: false } | { readonly restricted: true; readonly reason: EnrollmentReason; readonly message: string };
 
 /**
  * Issues authenticated sessions (refresh token + JWT pair).
@@ -32,7 +39,13 @@ export class AuthSessionService {
 		private readonly identityService: IdentityService,
 	) {}
 
-	public async issueSessionForUser(userId: string, clientType?: string, deviceInfo?: string, ipAddress?: string): Promise<LoginServiceResponse> {
+	public async issueSessionForUser(
+		userId: string,
+		clientType?: string,
+		deviceInfo?: string,
+		ipAddress?: string,
+		options: IssueSessionOptions = {},
+	): Promise<LoginServiceResponse | LoginRestrictedEnrollmentResponse> {
 		const user = await this.userRepo.findLoginById(userId);
 
 		if (user === null || !user.isActive || user.isDeleted) {
@@ -57,12 +70,30 @@ export class AuthSessionService {
 				});
 			}
 		}
-		const isEmailVerified = user.emailVerifiedAt !== null && user.emailVerifiedAt <= Date.now();
+
+		const now: number = Date.now();
+		const isEmailVerified: boolean = user.emailVerifiedAt !== null && user.emailVerifiedAt <= now;
 		const profile = this.mapper.build(user, userPermissions, isEmailVerified);
 		const flatUser = this.mapper.toFlatUser(user, userPermissions, isEmailVerified);
+		const restriction: SessionRestriction = this.resolveSessionRestriction(user, isEmailVerified, now);
+
+		let mfaAssuredAt: number | undefined;
+		if (options.mfaAssured === true) {
+			mfaAssuredAt = now;
+			await this.prisma.user.update({
+				where: { id: user.id },
+				data: { mfaAssuredAt, updatedAt: now },
+			});
+		}
+
+		const sessionScope: SessionScope = restriction.restricted ? "restricted" : "full";
+		const tokenOptions = {
+			sessionScope,
+			mfaAssuredAt,
+		};
 
 		const expiryMs = parseExpiryToMilliseconds(this.config.jwtRefreshExpiry);
-		const expiresAt: EpochMs = epochMs(Date.now() + expiryMs);
+		const expiresAt: EpochMs = epochMs(now + expiryMs);
 
 		const refreshTokenRecord = await this.prisma.refreshToken.create({
 			data: {
@@ -74,13 +105,13 @@ export class AuthSessionService {
 			},
 		});
 
-		const tokens = await this.tokenService.generateTokens(flatUser, refreshTokenRecord.id);
+		const tokens = await this.tokenService.generateTokens(flatUser, refreshTokenRecord.id, tokenOptions);
 
 		const hashedRt = await this.cryptoService.hash(tokens.refreshToken);
 
 		await this.prisma.refreshToken.update({
 			where: { id: refreshTokenRecord.id },
-			data: { token: hashedRt, updatedAt: Date.now() },
+			data: { token: hashedRt, updatedAt: now },
 		});
 
 		await this.cleanupExpiredTokens(user.id);
@@ -94,6 +125,8 @@ export class AuthSessionService {
 				roles: userPermissions.roles.map((r: { name: string }) => r.name).join(","),
 				isSuperAdmin: user.isSuperAdmin,
 				isEmailVerified,
+				sessionScope,
+				enrollmentReason: restriction.restricted ? restriction.reason : null,
 				device: deviceInfo ?? "Unknown",
 				ip: ipAddress ?? "Unknown",
 				clientType: clientType ?? "web",
@@ -102,10 +135,55 @@ export class AuthSessionService {
 
 		await this.identityService.warmSessionCache(user.id, profile);
 
+		if (restriction.restricted) {
+			return {
+				requiresEnrollment: true,
+				enrollmentReason: restriction.reason,
+				message: restriction.message,
+				user: profile,
+				...tokens,
+			};
+		}
+
 		return {
 			user: profile,
 			...tokens,
 		};
+	}
+
+	private resolveSessionRestriction(user: UserLogin, isEmailVerified: boolean, now: number): SessionRestriction {
+		if (!isEmailVerified) {
+			return {
+				restricted: true,
+				reason: "email_verification",
+				message: "Verify your email address to continue.",
+			};
+		}
+
+		if (!user.twoFactorEnabled && this.requiresMfaEnrollment(user, now)) {
+			return {
+				restricted: true,
+				reason: "mfa_enrollment",
+				message: "Set up two-factor authentication to continue.",
+			};
+		}
+
+		return { restricted: false };
+	}
+
+	private requiresMfaEnrollment(user: UserLogin, now: number): boolean {
+		const deadline: bigint | null = user.mfaEnrollmentDeadline;
+		if (deadline !== null && deadline <= BigInt(now)) {
+			return true;
+		}
+
+		// New accounts always receive a deadline at signup; null means a legacy user still in the grace window.
+		const graceMs: number = this.config.mfaEnrollmentDeadlineMs;
+		if (deadline === null && graceMs <= 0) {
+			return true;
+		}
+
+		return false;
 	}
 
 	private async cleanupExpiredTokens(userId: string): Promise<void> {

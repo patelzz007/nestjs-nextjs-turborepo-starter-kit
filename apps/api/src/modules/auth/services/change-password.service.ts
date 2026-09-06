@@ -4,6 +4,7 @@ import type { ChangePasswordInput, ChangePasswordResponse } from "@workspace/sha
 import { LogService } from "../../../modules/logs/logs.service";
 import { PrismaService } from "../../../prisma/prisma.service";
 import { TrackAuthFlow } from "../decorators/track-auth-flow.decorator";
+import { AccessTokenStateService } from "./access-token-state.service";
 import { CryptoService } from "./crypto.service";
 import { EmailService } from "./email.service";
 import { PasswordHistoryService } from "./password-history.service";
@@ -20,6 +21,7 @@ export class ChangePasswordService {
 		private readonly passwordHistoryService: PasswordHistoryService,
 		private readonly emailService: EmailService,
 		private readonly logService: LogService,
+		private readonly accessTokenState: AccessTokenStateService,
 	) {}
 
 	@TrackAuthFlow({ flow: "change-password" })
@@ -66,6 +68,8 @@ export class ChangePasswordService {
 				},
 			}),
 		]);
+
+		this.accessTokenState.invalidate(userId);
 
 		if (currentRefreshTokenId !== undefined) {
 			await this.prisma.refreshToken.updateMany({

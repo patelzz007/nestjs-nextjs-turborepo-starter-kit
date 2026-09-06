@@ -5,6 +5,7 @@ import { nowEpochMs } from "@workspace/shared";
 import { PrismaService } from "../../../prisma/prisma.service";
 import { AuthorizationCacheService } from "../cache/authorization-cache.service";
 import { AuthorizationEventEmitter } from "../events/authorization.events";
+import { UserSessionRevocationService } from "../services/user-session-revocation.service";
 
 /**
  * Scheduled job that cleans up expired direct user permissions.
@@ -24,6 +25,7 @@ export class PermissionExpiryCleanup {
 		private readonly prisma: PrismaService,
 		private readonly cache: AuthorizationCacheService,
 		private readonly events: AuthorizationEventEmitter,
+		private readonly sessionRevocation: UserSessionRevocationService,
 	) {}
 
 	/**
@@ -59,6 +61,7 @@ export class PermissionExpiryCleanup {
 		// Invalidate caches for affected users (deduplicated)
 		const affectedUserIds: string[] = [...new Set(expired.map((ep) => ep.userId))];
 		this.cache.invalidateUsers(affectedUserIds);
+		await this.sessionRevocation.revokeAllSessionsForUsers(affectedUserIds);
 		this.events.emitUsersMeInvalidate(affectedUserIds);
 
 		this.logger.log(`Invalidated cache for ${String(affectedUserIds.length)} user(s) after expiry cleanup`);

@@ -2,11 +2,13 @@ import { Body, Controller, Get, HttpCode, Post, UseInterceptors } from "@nestjs/
 import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { Throttle } from "@nestjs/throttler";
 import type {
-	DisableTwoFactorInput,
+	BackupCodesRemainingResponse,
 	EnableTwoFactorInput,
 	LoginTwoFactorInput,
+	LoginRestrictedEnrollmentResponse,
 	LoginServiceResponse,
 	LoginVerificationPendingResponse,
+	RotateTwoFactorInput,
 	TwoFactorMessageResponse,
 	TwoFactorSetupResponse,
 	VerifyBackupCodeInput,
@@ -16,7 +18,7 @@ import type {
 import {
 	apiContract,
 	apiPath,
-	DisableTwoFactorSchema,
+	BackupCodesRemainingResponseSchema,
 	LoginServiceResponseSchema,
 	TwoFactorMessageResponseSchema,
 	TwoFactorSetupResponseSchema,
@@ -34,6 +36,7 @@ import { TwoFactorService } from "./services/two-factor.service";
 const WrappedTwoFactorSetupResponse = createWrappedDto(TwoFactorSetupResponseSchema, "WrappedTwoFactorSetupResponse");
 const WrappedTwoFactorMessageResponse = createWrappedDto(TwoFactorMessageResponseSchema, "WrappedTwoFactorMessageResponse");
 const WrappedVerifyBackupCodeResponse = createWrappedDto(VerifyBackupCodeResponseSchema, "WrappedVerifyBackupCodeResponse");
+const WrappedBackupCodesRemainingResponse = createWrappedDto(BackupCodesRemainingResponseSchema, "WrappedBackupCodesRemainingResponse");
 const WrappedLoginTwoFactorResponse = createWrappedDto(LoginServiceResponseSchema, "WrappedLoginTwoFactorResponse");
 
 @ApiTags("Auth")
@@ -63,16 +66,25 @@ export class TwoFactorController {
 		return this.twoFactorService.enableTwoFactor(userId, body);
 	}
 
+	@Throttle({ strict: { ttl: 60000, limit: 5 } })
 	@ApiBearerAuth()
-	@Post("/2fa/disable")
+	@Post("/2fa/rotate")
 	@HttpCode(200)
-	@ApiOperation({ summary: "Disable 2FA after confirming the account password" })
-	@ApiOkResponse({ type: WrappedTwoFactorMessageResponse })
-	public async disableTwoFactor(
+	@ApiOperation({ summary: "Rotate 2FA after confirming password and current TOTP or backup code" })
+	@ApiOkResponse({ type: WrappedTwoFactorSetupResponse })
+	public async rotateTwoFactor(
 		@GetUser("sub") userId: string,
-		@Body(new ZodValidationPipe(apiContract.auth.twoFactorDisable.input)) body: DisableTwoFactorInput,
-	): Promise<TwoFactorMessageResponse> {
-		return this.twoFactorService.disableTwoFactor(userId, body);
+		@Body(new ZodValidationPipe(apiContract.auth.twoFactorRotate.input)) body: RotateTwoFactorInput,
+	): Promise<TwoFactorSetupResponse> {
+		return this.twoFactorService.rotateTwoFactor(userId, body);
+	}
+
+	@ApiBearerAuth()
+	@Get("/2fa/backup-codes/remaining")
+	@ApiOperation({ summary: "Count unused backup codes for the authenticated user" })
+	@ApiOkResponse({ type: WrappedBackupCodesRemainingResponse })
+	public async getBackupCodesRemaining(@GetUser("sub") userId: string): Promise<BackupCodesRemainingResponse> {
+		return this.twoFactorService.getBackupCodesRemaining(userId);
 	}
 
 	@ApiBearerAuth()
@@ -97,7 +109,7 @@ export class TwoFactorController {
 	@UseInterceptors(SetAuthCookiesInterceptor)
 	public async loginWithTwoFactor(
 		@Body(new ZodValidationPipe(apiContract.auth.loginTwoFactor.input)) body: LoginTwoFactorInput,
-	): Promise<LoginServiceResponse | LoginVerificationPendingResponse> {
+	): Promise<LoginServiceResponse | LoginRestrictedEnrollmentResponse | LoginVerificationPendingResponse> {
 		return this.twoFactorService.completeLoginWithTotp(body);
 	}
 
@@ -111,7 +123,7 @@ export class TwoFactorController {
 	@UseInterceptors(SetAuthCookiesInterceptor)
 	public async loginWithBackupCode(
 		@Body(new ZodValidationPipe(apiContract.auth.loginBackupCode.input)) body: VerifyBackupCodeLoginInput,
-	): Promise<LoginServiceResponse | LoginVerificationPendingResponse> {
+	): Promise<LoginServiceResponse | LoginRestrictedEnrollmentResponse | LoginVerificationPendingResponse> {
 		return this.twoFactorService.completeLoginWithBackupCode(body);
 	}
 }

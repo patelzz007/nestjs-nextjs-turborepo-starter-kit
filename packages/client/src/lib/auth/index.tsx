@@ -158,11 +158,42 @@ export function AuthProvider({
 		[clearUser, navigate, onUnauthorizedRedirect, queryClient, shouldRedirectOnUnauthorized, syncChannel],
 	);
 
-	// Handle 401 responses from the API — single-flight so parallel failures
-	// don't each clear the cache, broadcast, and redirect.
+	const clearServerSession = useCallback(async (): Promise<void> => {
+		try {
+			const uncheckedContext = createUncheckedApiRequestContext(baseUrl, { clientType });
+			const response = await fetchMutationUnchecked(uncheckedContext, apiRouter.auth.logout, {});
+			if (!response.ok) {
+				console.error("Session clear request failed:", response.status);
+			}
+		} catch (error) {
+			console.error("Session clear request failed:", error);
+		}
+	}, [baseUrl, clientType]);
+
+	const finalizeSessionExit = useCallback(
+		(options?: { readonly broadcast?: boolean }): void => {
+			if (options?.broadcast !== false) {
+				syncChannel.post("logged-out");
+			}
+			navigate?.(onUnauthorizedRedirect);
+			setTimeout(() => {
+				refresh?.();
+			}, 100);
+		},
+		[navigate, onUnauthorizedRedirect, refresh, syncChannel],
+	);
+
+	// Handle 401 responses from the API — clear httpOnly cookies server-side
+	// before navigating so the route proxy does not bounce the user back into
+	// the app with a stale (but not yet time-expired) access token.
 	const handleUnauthorized = useCallback(async (): Promise<void> => {
-		await invalidateSession();
-	}, [invalidateSession]);
+		await invalidateSession({ broadcast: false, navigateAway: false });
+		await clearServerSession();
+		const shouldRedirect = shouldRedirectOnUnauthorized?.() ?? true;
+		if (shouldRedirect) {
+			finalizeSessionExit();
+		}
+	}, [clearServerSession, finalizeSessionExit, invalidateSession, shouldRedirectOnUnauthorized]);
 
 	// Single-flight refresh: concurrent 401s share ONE refresh call so the
 	// refresh token is only rotated once (rotation invalidates the old token).
@@ -231,23 +262,9 @@ export function AuthProvider({
 	const logout = useCallback(async (): Promise<void> => {
 		// Stop mounted queries from retrying/refreshing before cookies are cleared.
 		await invalidateSession({ broadcast: false, navigateAway: false });
-
-		try {
-			const uncheckedContext = createUncheckedApiRequestContext(baseUrl, { clientType });
-			const response = await fetchMutationUnchecked(uncheckedContext, apiRouter.auth.logout, {});
-			if (!response.ok) {
-				console.error("Logout request failed:", response.status);
-			}
-		} catch (error) {
-			console.error("Logout request failed:", error);
-		} finally {
-			syncChannel.post("logged-out");
-			navigate?.(onUnauthorizedRedirect);
-			setTimeout(() => {
-				refresh?.();
-			}, 100);
-		}
-	}, [baseUrl, clientType, invalidateSession, navigate, onUnauthorizedRedirect, refresh, syncChannel]);
+		await clearServerSession();
+		finalizeSessionExit();
+	}, [clearServerSession, finalizeSessionExit, invalidateSession]);
 
 	// Receive cross-tab logout events: another tab cleared the session (shared
 	// cookie jar), so this tab must clear its React Query cache and bounce to

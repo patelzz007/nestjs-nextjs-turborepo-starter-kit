@@ -41,14 +41,13 @@ import {
 
 	// ── Auth response schemas ──────────────────────────────────────────
 	AdminUserDetailSchema,
+	AdminMfaRecoveryRequestSchema,
 	CheckPermissionResponseSchema,
 	CapabilityDefinitionSchema,
-	DataValueSchema,
 	ChangePasswordResponseSchema,
 	ForgotPasswordResponseSchema,
 	ImpersonateResponseSchema,
 	LoginClientResponseSchema,
-	LoginResponseSchema,
 	LogoutResponseSchema,
 	PermissionListResponseSchema,
 	RbacMessageResponseSchema,
@@ -61,8 +60,10 @@ import {
 	SessionStatusSchema,
 	SignupResponseSchema,
 	StopImpersonationResponseSchema,
+	BackupCodesRemainingResponseSchema,
 	TwoFactorMessageResponseSchema,
 	TwoFactorSetupResponseSchema,
+	MfaRecoveryStatusResponseSchema,
 	UserResponseSchema,
 	VerifyBackupCodeResponseSchema,
 	VerifyEmailResponseSchema,
@@ -452,13 +453,33 @@ export const apiRouter = {
 			response: envelope(TwoFactorMessageResponseSchema),
 			queryKey: () => ["auth", "2fa-enable"],
 		}),
-		twoFactorDisable: defineMutation(apiContract.auth.twoFactorDisable, {
-			response: envelope(TwoFactorMessageResponseSchema),
-			queryKey: () => ["auth", "2fa-disable"],
+		twoFactorRotate: defineMutation(apiContract.auth.twoFactorRotate, {
+			response: envelope(TwoFactorSetupResponseSchema),
+			queryKey: () => ["auth", "2fa-rotate"],
+		}),
+		twoFactorBackupCodesRemaining: defineQuery(apiContract.auth.twoFactorBackupCodesRemaining, {
+			response: envelope(BackupCodesRemainingResponseSchema),
+			queryKey: () => ["auth", "2fa-backup-codes-remaining"],
 		}),
 		twoFactorVerifyBackupCode: defineMutation(apiContract.auth.twoFactorVerifyBackupCode, {
 			response: envelope(VerifyBackupCodeResponseSchema),
 			queryKey: () => ["auth", "2fa-verify-backup-code"],
+		}),
+		mfaRecoveryInitiate: defineMutation(apiContract.auth.mfaRecoveryInitiate, {
+			response: envelope(MfaRecoveryStatusResponseSchema),
+			queryKey: () => ["auth", "mfa-recovery-initiate"],
+		}),
+		mfaRecoveryStatus: defineQuery(apiContract.auth.mfaRecoveryStatus, {
+			response: envelope(MfaRecoveryStatusResponseSchema),
+			queryKey: () => ["auth", "mfa-recovery-status"],
+		}),
+		adminMfaRecoveryReview: defineMutation(apiContract.auth.adminMfaRecoveryReview, {
+			response: envelope(MfaRecoveryStatusResponseSchema),
+			queryKey: ({ requestId, action }) => ["auth", "admin-mfa-recovery-review", requestId, action],
+		}),
+		adminMfaRecoveryRequests: defineQuery(apiContract.auth.adminMfaRecoveryRequests, {
+			response: envelope(z.array(AdminMfaRecoveryRequestSchema), ApiPaginatedMetaSchema),
+			queryKey: ({ page, limit, status, userId }) => ["auth", "admin-mfa-recovery-requests", page, limit, status, userId],
 		}),
 		adminUsers: defineQuery(apiContract.auth.adminUsers, {
 			response: envelope(z.array(AdminUserDetailSchema), ApiPaginatedMetaSchema),

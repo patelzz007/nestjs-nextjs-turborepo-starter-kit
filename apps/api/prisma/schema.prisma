@@ -44,6 +44,18 @@ enum DeviceType {
   UNKNOWN
 }
 
+enum TwoFactorLoginChallengePurpose {
+  LOGIN
+  ROTATE
+}
+
+enum MfaRecoveryRequestStatus {
+  PENDING
+  APPROVED
+  DENIED
+  COMPLETED
+}
+
 // Enums
 enum PermissionAction {
   CREATE
@@ -94,7 +106,15 @@ model User {
   lockedUntil         BigInt? @map("locked_until")
 
   twoFactorEnabled Boolean @default(false) @map("two_factor_enabled")
-  twoFactorSecret  String? @map("two_factor_secret") @db.Text
+  /// DEPRECATED: plaintext TOTP secret — migrate to encrypted columns in service layer.
+  twoFactorSecret            String? @map("two_factor_secret") @db.Text
+  twoFactorSecretCiphertext  String? @map("two_factor_secret_ciphertext") @db.Text
+  twoFactorSecretIv          String? @map("two_factor_secret_iv") @db.VarChar(32)
+  twoFactorSecretKeyVersion  Int?    @map("two_factor_secret_key_version")
+  twoFactorLastTotpStep      BigInt? @map("two_factor_last_totp_step")
+  mfaEnrolledAt              BigInt? @map("mfa_enrolled_at")
+  mfaEnrollmentDeadline      BigInt? @map("mfa_enrollment_deadline")
+  mfaAssuredAt               BigInt? @map("mfa_assured_at")
 
   provider          String? // "google" | "github" | null
   providerId        String? @map("provider_id")
@@ -124,6 +144,8 @@ model User {
   passwordHistory             PasswordHistory[]
   backupCodes                 BackupCode[]
   twoFactorPendingSetup       TwoFactorPendingSetup?
+  twoFactorLoginChallenges    TwoFactorLoginChallenge[]
+  mfaRecoveryRequests         MfaRecoveryRequest[]
   impersonatedBy              ImpersonationAuditLog[] @relation("Impersonator")
   impersonatedUser            ImpersonationAuditLog[] @relation("ImpersonationTarget")
 
@@ -310,7 +332,9 @@ model BackupCode {
 model TwoFactorPendingSetup {
   id                String @id @default(uuid())
   userId            String @unique @map("user_id")
-  secret            String @db.Text
+  secretCiphertext  String @map("secret_ciphertext") @db.Text
+  secretIv          String @map("secret_iv") @db.VarChar(32)
+  secretKeyVersion  Int    @map("secret_key_version")
   backupCodesHashes Json   @map("backup_codes_hashes")
   expiresAt         BigInt @map("expires_at")
   createdAt         BigInt @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
@@ -319,6 +343,50 @@ model TwoFactorPendingSetup {
 
   @@index([expiresAt])
   @@map("two_factor_pending_setups")
+}
+
+/// Short-lived MFA verification challenge during login or secret rotation.
+/// RLS: own row — `app_owns(user_id)`.
+model TwoFactorLoginChallenge {
+  id           String                         @id @default(uuid())
+  userId       String                         @map("user_id")
+  purpose      TwoFactorLoginChallengePurpose
+  clientType   String?                        @map("client_type")
+  deviceInfo   String?                        @map("device_info") @db.VarChar(255)
+  ipAddress    String?                        @map("ip_address") @db.VarChar(45)
+  attemptCount Int                            @default(0) @map("attempt_count")
+  maxAttempts  Int                            @default(5) @map("max_attempts")
+  consumedAt   BigInt?                        @map("consumed_at")
+  expiresAt    BigInt                         @map("expires_at")
+  createdAt    BigInt                         @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
+  @@index([userId])
+  @@map("two_factor_login_challenges")
+}
+
+/// Admin-reviewed MFA recovery / account unlock request.
+/// RLS: own row — `app_owns(user_id)`.
+model MfaRecoveryRequest {
+  id                String                   @id @default(uuid())
+  userId            String                   @map("user_id")
+  status            MfaRecoveryRequestStatus @default(PENDING)
+  requestedAt       BigInt                   @map("requested_at")
+  reviewedBy        String?                  @map("reviewed_by")
+  reviewedAt        BigInt?                  @map("reviewed_at")
+  scheduledUnlockAt BigInt?                  @map("scheduled_unlock_at")
+  completedAt       BigInt?                  @map("completed_at")
+  notes             String?                  @db.Text
+  createdAt         BigInt                   @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
+  updatedAt         BigInt                   @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@map("mfa_recovery_requests")
 }
 
 /// RLS: own row — `app_owns("userId")`.

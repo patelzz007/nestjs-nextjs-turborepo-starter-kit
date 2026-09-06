@@ -3,7 +3,11 @@ import * as bcrypt from "bcrypt";
 
 import { prisma } from "./client";
 
+/** Grace period before MFA enrollment is required for existing seed users. */
+const MFA_ENROLLMENT_GRACE_MS = 30 * 24 * 60 * 60 * 1000;
+
 export async function createUsers(): Promise<User[]> {
+	const mfaEnrollmentDeadline: number = Date.now() + MFA_ENROLLMENT_GRACE_MS;
 	const hash = (pw: string): Promise<string> => bcrypt.hash(pw, 10);
 
 	const usersData: {
@@ -18,6 +22,7 @@ export async function createUsers(): Promise<User[]> {
 		failedLoginAttempts?: number;
 		lockedUntil?: number | null;
 		emailVerifiedAt?: number | null;
+		mfaEnrollmentDeadline?: number;
 	}[] = [
 		// System accounts — verified so admin-panel ops pass EmailVerifiedGuard.
 		{
@@ -188,8 +193,12 @@ export async function createUsers(): Promise<User[]> {
 				plan: u.plan ?? "FREE",
 				isSuperAdmin: u.isSuperAdmin,
 				emailVerifiedAt: u.emailVerifiedAt ?? null,
+				mfaEnrollmentDeadline: u.mfaEnrollmentDeadline ?? mfaEnrollmentDeadline,
 			},
-			create: u,
+			create: {
+				...u,
+				mfaEnrollmentDeadline: u.mfaEnrollmentDeadline ?? mfaEnrollmentDeadline,
+			},
 		});
 		users.push(user);
 	}

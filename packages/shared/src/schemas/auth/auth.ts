@@ -120,6 +120,40 @@ export const LoginServiceResponseSchema = z
 
 export type LoginServiceResponse = z.output<typeof LoginServiceResponseSchema>;
 
+/** Enrollment reason carried on a restricted session login response. */
+export const EnrollmentReasonSchema = z.enum(["email_verification", "mfa_enrollment"]);
+
+export type EnrollmentReason = z.output<typeof EnrollmentReasonSchema>;
+
+/**
+ * Login response when the user receives a restricted enrollment session
+ * (tokens are set as httpOnly cookies; stripped from the JSON body).
+ */
+export const LoginRestrictedEnrollmentResponseSchema = z
+	.object({
+		requiresEnrollment: z.literal(true),
+		enrollmentReason: EnrollmentReasonSchema,
+		message: z.string(),
+		user: UserResponseSchema.optional(),
+		accessToken: z.string(),
+		refreshToken: z.string(),
+	})
+	.strict();
+
+export type LoginRestrictedEnrollmentResponse = z.output<typeof LoginRestrictedEnrollmentResponseSchema>;
+
+/** Client-visible restricted enrollment result after cookies are set. */
+export const LoginRestrictedEnrollmentClientResponseSchema = z
+	.object({
+		requiresEnrollment: z.literal(true),
+		enrollmentReason: EnrollmentReasonSchema,
+		message: z.string(),
+		user: UserResponseSchema.optional(),
+	})
+	.strict();
+
+export type LoginRestrictedEnrollmentClientResponse = z.output<typeof LoginRestrictedEnrollmentClientResponseSchema>;
+
 /**
  * Token refresh response returned by AuthService.refreshToken().
  * The controller sets both tokens as httpOnly cookies.
@@ -146,6 +180,7 @@ export type LoginResponse = z.output<typeof LoginResponseSchema>;
 /** Client-visible login result after cookies are set (or 2FA / verification step required). */
 export const LoginClientResponseSchema = z.union([
 	LoginResponseSchema,
+	LoginRestrictedEnrollmentClientResponseSchema,
 	z
 		.object({
 			requiresTwoFactor: z.literal(true),
@@ -166,8 +201,7 @@ export type LoginClientResponse = z.output<typeof LoginClientResponseSchema>;
 
 export const SignupResponseSchema = z
 	.object({
-		user: UserResponseSchema,
-		verificationToken: z.string().optional(),
+		user: UserResponseSchema.optional(),
 		message: z.string(),
 	})
 	.strict();
@@ -286,6 +320,7 @@ export const JwtPayloadSchema = z
 		hasAdminAccess: z.boolean().optional(),
 		isSuperAdmin: z.boolean().optional(),
 		isEmailVerified: z.boolean().optional(),
+		sessionScope: z.enum(["full", "restricted"]).optional(),
 	})
 	.loose();
 

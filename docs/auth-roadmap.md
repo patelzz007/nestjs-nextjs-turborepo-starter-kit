@@ -35,6 +35,65 @@ The following end-to-end flows are implemented across the NestJS API, shared Zod
 
 ---
 
+## MFA Hardening (shipped)
+
+End-to-end MFA hardening is live across the API, shared contracts, and client helpers.
+
+### Encrypted TOTP secrets
+
+- TOTP secrets are encrypted at rest with **AES-256-GCM** via `SecretEncryptionService`.
+- Ciphertext, IV, and `keyVersion` are stored on `User` / `TwoFactorPendingSetup` instead of plaintext secrets.
+- Additional authenticated data (AAD) uses a fixed context enum (`totp-secret` for enabled users, `totp-pending` during setup) so ciphertext cannot be replayed across contexts.
+- Keys are versioned so rotation does not break existing enrollments.
+
+### Challenge state machine
+
+- Login-time MFA uses `TwoFactorLoginChallenge` rows plus signed challenge-ref JWTs (`MfaChallengeService`).
+- Each challenge tracks `attemptCount`, `maxAttempts` (default 5), `expiresAt`, and `consumedAt`.
+- Failed attempts increment the counter; exhausting attempts consumes the challenge and feeds the account lockout service.
+- Successful verification consumes the challenge so codes cannot be reused.
+
+### Restricted sessions
+
+- Users who still need email verification or MFA enrollment receive access tokens with `sessionScope: "restricted"`.
+- `RestrictedSessionGuard` blocks privileged routes while still allowing logout, profile/session reads, email verification, and MFA enrollment endpoints.
+- Client helpers: `isLoginRestrictedEnrollment()` (login response) and `isRestrictedSession()` / `isRestrictedSessionError()` (runtime session checks).
+
+### Backup codes
+
+- Ten single-use backup codes are generated during TOTP setup, stored hashed, and returned once to the user.
+- Login accepts `POST /auth/login/backup-code` as an alternative to TOTP during the MFA challenge step.
+- Remaining backup code count is exposed for settings UI; codes are rotated when MFA is re-enabled.
+
+### Recovery flow
+
+- Users can submit an MFA recovery request (`mfa_recovery_requests` table) when they lose authenticator access.
+- Admin review plus `MFA_RECOVERY_DELAY_MS` (default 24 hours) gates re-enrollment; approval bumps `tokenVersion` and clears MFA state.
+
+### Environment variables
+
+| Variable | Purpose | Default (non-production) |
+| --- | --- | --- |
+| `MFA_ENCRYPTION_KEYS` | JSON map of version → base64 32-byte AES key material | Dev-only derived key when unset |
+| `MFA_ENROLLMENT_DEADLINE_MS` | Grace period before MFA enrollment is required | 30 days |
+| `MFA_RECOVERY_DELAY_MS` | Cooldown after recovery approval before MFA unlock | 24 hours |
+| `MFA_STEP_UP_TTL_MS` | How long step-up MFA assurance lasts on the access token | 5 minutes |
+
+### Redis throttler
+
+- Auth endpoints use `@nestjs/throttler` with `RedisThrottlerStorage` (Redis primary, in-memory fallback).
+- Named profiles: `strict` (10 req/min per IP on credential endpoints) and `default` (60 req/min on authenticated mutations).
+- Tracker resolves client IP from `cf-connecting-ip`, `x-forwarded-for`, then `req.ip`.
+
+### Access-token revocation
+
+- `User.tokenVersion` is embedded in every access token.
+- `AccessTokenStateService` validates `tokenVersion`, `isActive`, and `isDeleted` on each authenticated request (30s in-process cache).
+- Bumps occur on password change, MFA enable/disable, logout-all, token-theft detection, role/permission changes, and recovery approval.
+- Role or direct-permission changes also **revoke all refresh tokens** for the affected user(s) via `UserSessionRevocationService`, so clients cannot silently refresh into a new JWT — they must sign in again.
+
+---
+
 ## 🛠 15 Improvements (refine what exists)
 
 ### 1. Passwordless / Magic Link Login

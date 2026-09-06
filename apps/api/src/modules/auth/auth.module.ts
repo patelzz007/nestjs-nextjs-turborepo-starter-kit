@@ -1,8 +1,11 @@
 import { Inject, Logger, Module, type OnModuleDestroy } from "@nestjs/common";
+import { APP_GUARD } from "@nestjs/core";
+import { ThrottlerGuard, ThrottlerModule, ThrottlerStorage } from "@nestjs/throttler";
 import { JwtModule } from "@nestjs/jwt";
 import type Redis from "ioredis";
 
 import { TypedConfigService } from "../../config/typed-config.service";
+import { ConfigModule } from "../../config/config.module";
 import { REDIS_PUBLISHER } from "../../infrastructure/redis/redis.tokens";
 import { NotificationsModule } from "../notifications/notifications.module";
 import { AuthorizationModule } from "../authorization/authorization.module";
@@ -13,10 +16,12 @@ import { AdminAccessGuard } from "./guards/admin-access.guard";
 import { AuthGuard } from "./guards/auth.guard";
 import { EmailVerifiedGuard } from "./guards/email-verified.guard";
 import { RefreshTokenGuard } from "./guards/refresh-token.guard";
+import { RestrictedSessionGuard } from "./guards/restricted-session.guard";
 import { SuperAdminGuard } from "./guards/super-admin.guard";
 import { ClearAuthCookiesInterceptor } from "./interceptors/clear-auth-cookies.interceptor";
 import { SetAuthCookiesInterceptor } from "./interceptors/set-auth-cookies.interceptor";
 import { AuthController } from "./auth.controller";
+import { MfaRecoveryController } from "./mfa-recovery.controller";
 import { TwoFactorController } from "./two-factor.controller";
 import { AuthService } from "./auth.service";
 import { RedisUserSessionCacheService } from "./cache/redis-user-session-cache.service";
@@ -41,10 +46,26 @@ import { TwoFactorService } from "./services/two-factor.service";
 import { TaskScheduleService } from "./services/task-schedule.service";
 import { TokenService } from "./services/token.service";
 import { UserResponseMapper } from "./services/user-response.mapper";
+import { AccessTokenStateService } from "./services/access-token-state.service";
+import { MfaChallengeService } from "./services/mfa-challenge.service";
+import { MfaRecoveryService } from "./services/mfa-recovery.service";
+import { SecretEncryptionService } from "./services/secret-encryption.service";
+import { authThrottlerOptionsFactory } from "./throttling/auth-throttler.config";
+import { RedisThrottlerStorage } from "./throttling/redis-throttler.storage";
 
 @Module({
-	imports: [PrismaModule, JwtModule.register({ global: true }), AuthorizationModule, NotificationsModule],
-	controllers: [AuthController, TwoFactorController],
+	imports: [
+		PrismaModule,
+		JwtModule.register({ global: true }),
+		AuthorizationModule,
+		NotificationsModule,
+		ThrottlerModule.forRootAsync({
+			imports: [ConfigModule],
+			inject: [TypedConfigService],
+			useFactory: authThrottlerOptionsFactory,
+		}),
+	],
+	controllers: [AuthController, TwoFactorController, MfaRecoveryController],
 	providers: [
 		// ── Facade ──────────────────────────────────────────────
 		AuthService,
@@ -87,15 +108,27 @@ import { UserResponseMapper } from "./services/user-response.mapper";
 		PasswordHistoryService,
 		TwoFactorService,
 		EmailVerificationService,
-		EmailVerificationService,
 		AdminUserService,
 		AccountLockoutService,
+		MfaChallengeService,
+		MfaRecoveryService,
+		SecretEncryptionService,
 		UserResponseMapper,
 		// ── Infrastructure ──────────────────────────────────────
 		UserRepository,
 		AuthEventsService,
 		TokenService,
 		CryptoService,
+		AccessTokenStateService,
+		RedisThrottlerStorage,
+		{
+			provide: ThrottlerStorage,
+			useExisting: RedisThrottlerStorage,
+		},
+		{
+			provide: APP_GUARD,
+			useClass: ThrottlerGuard,
+		},
 		CookieConfigService,
 		EmailService,
 		TaskScheduleService,
@@ -103,6 +136,7 @@ import { UserResponseMapper } from "./services/user-response.mapper";
 		AuthGuard,
 		AdminAccessGuard,
 		EmailVerifiedGuard,
+		RestrictedSessionGuard,
 		SuperAdminGuard,
 		RefreshTokenGuard,
 		SetAuthCookiesInterceptor,
@@ -121,11 +155,15 @@ import { UserResponseMapper } from "./services/user-response.mapper";
 		AuthEventsService,
 		TokenService,
 		CryptoService,
+		AccessTokenStateService,
+		MfaChallengeService,
+		SecretEncryptionService,
 		EmailService,
 		EmailVerificationService,
 		AuthGuard,
 		AdminAccessGuard,
 		EmailVerifiedGuard,
+		RestrictedSessionGuard,
 		SuperAdminGuard,
 		RefreshTokenGuard,
 		SetAuthCookiesInterceptor,

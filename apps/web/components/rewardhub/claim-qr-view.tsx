@@ -61,7 +61,7 @@ export function ClaimQrView({ claimId, initialQr }: ClaimQrViewProps): React.JSX
 	}
 
 	return (
-		<div className="mx-auto max-w-lg space-y-8">
+		<div className="mx-auto max-w-4xl space-y-8">
 			<WebPageHeader title="Show at checkout" description="Let the cashier scan your QR code, or read out the backup code if scanning fails." />
 
 			<Link href="/rewardhub/claims" className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "-mt-4")}>

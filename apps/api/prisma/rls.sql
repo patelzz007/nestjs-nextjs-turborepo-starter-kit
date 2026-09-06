@@ -71,6 +71,8 @@ BEGIN
     'password_history',
     'backup_codes',
     'two_factor_pending_setups',
+    'two_factor_login_challenges',
+    'mfa_recovery_requests',
     'user_roles',
     'user_permissions',
     'role_permissions',
@@ -153,6 +155,16 @@ CREATE POLICY backup_codes_own ON public.backup_codes
 
 DROP POLICY IF EXISTS two_factor_pending_setups_own ON public.two_factor_pending_setups;
 CREATE POLICY two_factor_pending_setups_own ON public.two_factor_pending_setups
+  USING (app_owns(user_id))
+  WITH CHECK (app_owns(user_id));
+
+DROP POLICY IF EXISTS two_factor_login_challenges_own ON public.two_factor_login_challenges;
+CREATE POLICY two_factor_login_challenges_own ON public.two_factor_login_challenges
+  USING (app_owns(user_id))
+  WITH CHECK (app_owns(user_id));
+
+DROP POLICY IF EXISTS mfa_recovery_requests_own ON public.mfa_recovery_requests;
+CREATE POLICY mfa_recovery_requests_own ON public.mfa_recovery_requests
   USING (app_owns(user_id))
   WITH CHECK (app_owns(user_id));
 

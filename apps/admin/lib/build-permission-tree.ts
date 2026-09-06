@@ -5,6 +5,7 @@ export interface PermissionTreeSource {
 	readonly resource: string;
 	readonly description: string | null;
 	readonly group: string | null;
+	readonly isSystem?: boolean;
 }
 
 export interface PermissionTreeLeaf {
@@ -12,6 +13,7 @@ export interface PermissionTreeLeaf {
 	readonly action: string;
 	readonly resource: string;
 	readonly description: string | null;
+	readonly isSystem: boolean;
 }
 
 export interface PermissionTreeResourceNode {
@@ -52,6 +54,7 @@ export function buildPermissionTree(permissions: readonly PermissionTreeSource[]
 			action: permission.action,
 			resource: permission.resource,
 			description: permission.description,
+			isSystem: permission.isSystem ?? false,
 		});
 	}
 

@@ -1,4 +1,4 @@
-import { BadRequestException, Controller, Param, Post, Req, UseInterceptors } from "@nestjs/common";
+import { BadRequestException, Controller, ForbiddenException, Param, Post, Req, UseInterceptors } from "@nestjs/common";
 import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { Throttle } from "@nestjs/throttler";
 import type { ImpersonateServiceResponse, StopImpersonationServiceResponse } from "@workspace/shared";
@@ -6,9 +6,11 @@ import { ImpersonateResponseSchema, StopImpersonationResponseSchema, UuidParamSc
 import type { FastifyRequest } from "fastify";
 
 import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe";
+import { TypedConfigService } from "../../config/typed-config.service";
 import { EmailVerified } from "../auth/decorators/email-verified.decorator";
 import { GetUser } from "../auth/decorators/get-user.decorator";
 import { RequirePermission } from "../auth/decorators/require-permission.decorator";
+import { RequiresFullSession } from "../auth/decorators/requires-full-session.decorator";
 import { SuperAdminOnly } from "../auth/decorators/super-admin.decorator";
 import type { AccessTokenPayload, RefreshTokenPayload } from "../auth/services/token.service";
 import { ApiErrorResponseDto } from "../../common/dto/api-response.dto";
@@ -32,7 +34,10 @@ const WrappedStopImpersonationResponse = createWrappedDto(StopImpersonationRespo
 @ApiTags("Impersonation")
 @Controller(apiPath("/auth"))
 export class ImpersonationController {
-	constructor(private readonly impersonationService: ImpersonationService) {}
+	constructor(
+		private readonly impersonationService: ImpersonationService,
+		private readonly config: TypedConfigService,
+	) {}
 
 	/**
 	 * POST /auth/impersonate/:userId
@@ -43,6 +48,7 @@ export class ImpersonationController {
 	@Throttle({ strict: { ttl: 60000, limit: 10 } })
 	@ApiBearerAuth()
 	@SuperAdminOnly()
+	@RequiresFullSession()
 	@EmailVerified()
 	@RequirePermission("CREATE", "USER")
 	@Post("/impersonate/:userId")
@@ -56,6 +62,7 @@ export class ImpersonationController {
 		@Req() req: FastifyRequest,
 	): Promise<ImpersonateServiceResponse> {
 		const admin = requireAccessToken(user);
+		assertFreshMfaAssurance(admin, this.config.mfaStepUpTtlMs);
 		if (admin.isImpersonating === true) {
 			throw new BadRequestException({
 				message: "Already impersonating; stop the current session first",
@@ -105,4 +112,14 @@ function requireAccessToken(user: AccessTokenPayload | RefreshTokenPayload | und
 		});
 	}
 	return user;
+}
+
+function assertFreshMfaAssurance(admin: AccessTokenPayload, stepUpTtlMs: number): void {
+	const assuredAt: number | undefined = admin.mfaAssuredAt;
+	if (assuredAt === undefined || Date.now() - assuredAt > stepUpTtlMs) {
+		throw new ForbiddenException({
+			message: "Fresh MFA verification required before impersonation.",
+			error: "MFA_STEP_UP_REQUIRED",
+		});
+	}
 }

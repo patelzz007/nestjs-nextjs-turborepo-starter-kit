@@ -1,15 +1,18 @@
 import * as crypto from "crypto";
 
 import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from "@nestjs/common";
+import { TwoFactorLoginChallengePurpose } from "@prisma/client";
 import { generateSecret, generateURI, verifySync } from "otplib";
 import * as QRCode from "qrcode";
 import type {
-	DisableTwoFactorInput,
+	BackupCodesRemainingResponse,
 	EnableTwoFactorInput,
 	LoginTwoFactorInput,
 	LoginTwoFactorPendingResponse,
+	LoginRestrictedEnrollmentResponse,
 	LoginServiceResponse,
 	LoginVerificationPendingResponse,
+	RotateTwoFactorInput,
 	TwoFactorMessageResponse,
 	TwoFactorSetupResponse,
 	VerifyBackupCodeInput,
@@ -22,18 +25,41 @@ import { z } from "zod";
 import { TypedConfigService } from "../../../config/typed-config.service";
 import { LogService } from "../../../modules/logs/logs.service";
 import { PrismaService } from "../../../prisma/prisma.service";
+import { AccessTokenStateService } from "./access-token-state.service";
+import { AccountLockoutService } from "./account-lockout.service";
 import { CryptoService } from "./crypto.service";
 import { EmailService } from "./email.service";
 import { LoginVerificationService } from "./login-verification.service";
-import { TokenService } from "./token.service";
+import { MfaChallengeService } from "./mfa-challenge.service";
+import { SecretEncryptionService } from "./secret-encryption.service";
 
 const SETUP_TTL_MS = 15 * 60 * 1000;
-const BACKUP_CODE_COUNT = 8;
-const MAX_VERIFY_ATTEMPTS = 5;
+const BACKUP_CODE_COUNT = 10;
 /** Allow ±1 TOTP period for clock skew between server and authenticator app. */
 const TOTP_EPOCH_TOLERANCE_SECONDS = 30;
+/** A–Z and 2–9, excluding ambiguous 0/O, 1/I/L. */
+const BACKUP_CODE_CHARSET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
+
+const TOTP_PERIOD_SECONDS = 30;
 
 const BackupCodesHashesSchema = z.array(z.string().min(1));
+
+interface TotpVerificationSuccess {
+	readonly valid: true;
+	readonly timeStep: number;
+}
+
+interface TotpVerificationFailure {
+	readonly valid: false;
+}
+
+type TotpVerificationResult = TotpVerificationSuccess | TotpVerificationFailure;
+
+interface EnabledTotpSecretFields {
+	readonly twoFactorSecretCiphertext: string | null;
+	readonly twoFactorSecretIv: string | null;
+	readonly twoFactorSecretKeyVersion: number | null;
+}
 
 @Injectable()
 export class TwoFactorService {
@@ -41,7 +67,10 @@ export class TwoFactorService {
 		private readonly prisma: PrismaService,
 		private readonly cryptoService: CryptoService,
 		private readonly config: TypedConfigService,
-		private readonly tokenService: TokenService,
+		private readonly secretEncryptionService: SecretEncryptionService,
+		private readonly mfaChallengeService: MfaChallengeService,
+		private readonly accessTokenStateService: AccessTokenStateService,
+		private readonly accountLockoutService: AccountLockoutService,
 		private readonly emailService: EmailService,
 		private readonly loginVerificationService: LoginVerificationService,
 		private readonly logService: LogService,
@@ -64,18 +93,23 @@ export class TwoFactorService {
 		const secret = generateSecret();
 		const backupCodes = this.generateBackupCodes();
 		const backupCodesHashes = await Promise.all(backupCodes.map((code) => this.cryptoService.hash(code)));
+		const encryptedSecret = this.secretEncryptionService.encrypt(secret, "totp-pending");
 		const expiresAt = Date.now() + SETUP_TTL_MS;
 
 		await this.prisma.twoFactorPendingSetup.upsert({
 			where: { userId },
 			update: {
-				secret,
+				secretCiphertext: encryptedSecret.ciphertext,
+				secretIv: encryptedSecret.iv,
+				secretKeyVersion: encryptedSecret.keyVersion,
 				backupCodesHashes,
 				expiresAt,
 			},
 			create: {
 				userId,
-				secret,
+				secretCiphertext: encryptedSecret.ciphertext,
+				secretIv: encryptedSecret.iv,
+				secretKeyVersion: encryptedSecret.keyVersion,
 				backupCodesHashes,
 				expiresAt,
 			},
@@ -104,20 +138,31 @@ export class TwoFactorService {
 			throw new BadRequestException("2FA setup expired or not initiated");
 		}
 
-		const verification = verifySync({ token: dto.token, secret: pending.secret, epochTolerance: TOTP_EPOCH_TOLERANCE_SECONDS });
+		const secret = this.secretEncryptionService.decrypt(pending.secretCiphertext, pending.secretIv, pending.secretKeyVersion, "totp-pending");
+
+		const verification = verifySync({ token: dto.token, secret, epochTolerance: TOTP_EPOCH_TOLERANCE_SECONDS });
 		if (!verification.valid) {
 			throw new UnauthorizedException("Invalid 2FA token");
 		}
 
 		const backupHashes = this.parseBackupCodeHashes(pending.backupCodesHashes);
+		const encryptedSecret = this.secretEncryptionService.encrypt(secret, "totp-secret");
+		const enrolledAt = Date.now();
+		const verifiedTimeStep = this.resolveVerifiedTimeStep(verification.delta);
 
 		await this.prisma.$transaction([
 			this.prisma.user.update({
 				where: { id: userId },
 				data: {
 					twoFactorEnabled: true,
-					twoFactorSecret: pending.secret,
-					updatedAt: Date.now(),
+					twoFactorSecret: null,
+					twoFactorSecretCiphertext: encryptedSecret.ciphertext,
+					twoFactorSecretIv: encryptedSecret.iv,
+					twoFactorSecretKeyVersion: encryptedSecret.keyVersion,
+					twoFactorLastTotpStep: BigInt(verifiedTimeStep),
+					mfaEnrolledAt: enrolledAt,
+					mfaAssuredAt: enrolledAt,
+					updatedAt: enrolledAt,
 				},
 			}),
 			this.prisma.backupCode.deleteMany({ where: { userId } }),
@@ -130,6 +175,8 @@ export class TwoFactorService {
 			this.prisma.twoFactorPendingSetup.delete({ where: { userId } }),
 		]);
 
+		await this.accessTokenStateService.bumpTokenVersion(userId);
+
 		const user = await this.prisma.user.findUnique({
 			where: { id: userId },
 			select: { email: true },
@@ -139,15 +186,26 @@ export class TwoFactorService {
 			await this.emailService.sendTwoFactorEnabledEmail(user.email);
 		}
 
-		this.logService.info("2FA enabled", { userId, context: "TwoFactorService" });
+		this.logService.info("MFA enrollment completed", {
+			userId,
+			context: "TwoFactorService",
+			metadata: { event: "mfa.enrollment", enrolledAt },
+		});
 
 		return { message: "Two-factor authentication enabled successfully" };
 	}
 
-	public async disableTwoFactor(userId: string, dto: DisableTwoFactorInput): Promise<TwoFactorMessageResponse> {
+	public async rotateTwoFactor(userId: string, dto: RotateTwoFactorInput): Promise<TwoFactorSetupResponse> {
 		const user = await this.prisma.user.findUnique({
 			where: { id: userId },
-			select: { email: true, passwordHash: true, twoFactorEnabled: true },
+			select: {
+				passwordHash: true,
+				twoFactorEnabled: true,
+				twoFactorSecretCiphertext: true,
+				twoFactorSecretIv: true,
+				twoFactorSecretKeyVersion: true,
+				twoFactorLastTotpStep: true,
+			},
 		});
 
 		if (user === null) {
@@ -163,31 +221,56 @@ export class TwoFactorService {
 			throw new UnauthorizedException("Invalid password");
 		}
 
-		await this.prisma.$transaction([
-			this.prisma.user.update({
-				where: { id: userId },
-				data: {
-					twoFactorEnabled: false,
-					twoFactorSecret: null,
-					updatedAt: Date.now(),
-				},
-			}),
-			this.prisma.backupCode.deleteMany({ where: { userId } }),
-			this.prisma.twoFactorPendingSetup.deleteMany({ where: { userId } }),
-		]);
+		if (dto.token !== undefined) {
+			const secret = this.decryptEnabledTotpSecret(user);
+			const verification = this.verifyTotpToken(secret, dto.token, user.twoFactorLastTotpStep);
+			if (!verification.valid) {
+				throw new UnauthorizedException("Invalid 2FA token");
+			}
+		} else if (dto.backupCode !== undefined) {
+			const backupValid = await this.matchesUnusedBackupCode(userId, dto.backupCode);
+			if (!backupValid) {
+				throw new UnauthorizedException("Invalid or used backup code");
+			}
+			this.logService.info("MFA backup code used for rotation verification", {
+				userId,
+				context: "TwoFactorService",
+				metadata: { event: "mfa.backup_code.use", context: "rotation_verify" },
+			});
+		}
 
-		await this.emailService.sendTwoFactorDisabledEmail(user.email);
+		await this.clearTwoFactorState(userId);
+		await this.accessTokenStateService.bumpTokenVersion(userId);
 
-		return { message: "Two-factor authentication disabled successfully" };
+		this.logService.info("MFA rotation initiated", {
+			userId,
+			context: "TwoFactorService",
+			metadata: {
+				event: "mfa.rotation",
+				verificationMethod: dto.token !== undefined ? "totp" : "backup_code",
+			},
+		});
+
+		return this.generateSetup(userId);
 	}
 
 	public async verifyBackupCode(userId: string, dto: VerifyBackupCodeInput): Promise<VerifyBackupCodeResponse> {
-		const valid = await this.consumeBackupCode(userId, dto.backupCode);
+		const valid = await this.consumeBackupCode(userId, dto.backupCode, "authenticated_verify");
 		return { valid };
 	}
 
+	public async getBackupCodesRemaining(userId: string): Promise<BackupCodesRemainingResponse> {
+		const remaining = await this.prisma.backupCode.count({
+			where: { userId, usedAt: null },
+		});
+
+		return { remaining };
+	}
+
 	public async createLoginChallenge(userId: string, clientType?: string, deviceInfo?: string, ipAddress?: string): Promise<LoginTwoFactorPendingResponse> {
-		const tempToken = await this.tokenService.generateTwoFactorPendingToken(userId, clientType ?? null, deviceInfo ?? null, ipAddress ?? null);
+		const challengeId = await this.mfaChallengeService.createLoginChallenge(userId, TwoFactorLoginChallengePurpose.LOGIN, clientType, deviceInfo, ipAddress);
+		const tempToken = await this.mfaChallengeService.signChallengeRef(challengeId);
+
 		return {
 			requiresTwoFactor: true,
 			tempToken,
@@ -195,47 +278,180 @@ export class TwoFactorService {
 		};
 	}
 
-	public async completeLoginWithTotp(dto: LoginTwoFactorInput): Promise<LoginServiceResponse | LoginVerificationPendingResponse> {
-		const pending = await this.tokenService.verifyTwoFactorPendingToken(dto.tempToken);
+	public async completeLoginWithTotp(dto: LoginTwoFactorInput): Promise<LoginServiceResponse | LoginRestrictedEnrollmentResponse | LoginVerificationPendingResponse> {
+		const challenge = await this.mfaChallengeService.verifyChallengeRef(dto.tempToken);
+		if (challenge.purpose !== "LOGIN") {
+			throw new UnauthorizedException("Invalid MFA challenge");
+		}
+
+		await this.mfaChallengeService.assertChallengeActive(challenge.challengeId);
+
 		const user = await this.prisma.user.findUnique({
-			where: { id: pending.sub },
-			select: { twoFactorEnabled: true, twoFactorSecret: true },
+			where: { id: challenge.userId },
+			select: {
+				twoFactorEnabled: true,
+				twoFactorSecretCiphertext: true,
+				twoFactorSecretIv: true,
+				twoFactorSecretKeyVersion: true,
+				twoFactorLastTotpStep: true,
+			},
 		});
 
-		if (user === null || !user.twoFactorEnabled || user.twoFactorSecret === null) {
+		if (user === null || !user.twoFactorEnabled) {
 			throw new UnauthorizedException("Two-factor authentication is not enabled for this account");
 		}
 
-		const verification = verifySync({ token: dto.token, secret: user.twoFactorSecret, epochTolerance: TOTP_EPOCH_TOLERANCE_SECONDS });
+		const secret = this.decryptEnabledTotpSecret(user);
+		const verification = this.verifyTotpToken(secret, dto.token, user.twoFactorLastTotpStep);
+
 		if (!verification.valid) {
-			throw new UnauthorizedException("Invalid 2FA code");
+			await this.mfaChallengeService.recordFailedAttempt(challenge.challengeId);
+			this.logService.info("MFA login challenge failed", {
+				userId: challenge.userId,
+				context: "TwoFactorService",
+				metadata: { event: "mfa.challenge.fail", challengeId: challenge.challengeId, method: "totp" },
+			});
+		} else {
+			const assuredAt = Date.now();
+
+			await this.mfaChallengeService.consumeChallenge(challenge.challengeId);
+			await this.accountLockoutService.resetAttempts(challenge.userId);
+			await this.prisma.user.update({
+				where: { id: challenge.userId },
+				data: {
+					twoFactorLastTotpStep: BigInt(verification.timeStep),
+					mfaAssuredAt: assuredAt,
+					updatedAt: assuredAt,
+				},
+			});
+
+			this.logService.info("MFA login challenge succeeded", {
+				userId: challenge.userId,
+				context: "TwoFactorService",
+				metadata: { event: "mfa.challenge.success", challengeId: challenge.challengeId, method: "totp" },
+			});
+
+			return this.loginVerificationService.maybeRequireVerification({
+				userId: challenge.userId,
+				clientType: challenge.clientType,
+				deviceInfo: challenge.deviceInfo,
+				ipAddress: challenge.ipAddress,
+				mfaAssured: true,
+			});
 		}
 
-		return this.loginVerificationService.maybeRequireVerification({
-			userId: pending.sub,
-			clientType: pending.clientType,
-			deviceInfo: pending.deviceInfo,
-			ipAddress: pending.ipAddress,
-		});
+		throw new UnauthorizedException("Invalid 2FA code");
 	}
 
-	public async completeLoginWithBackupCode(dto: VerifyBackupCodeLoginInput): Promise<LoginServiceResponse | LoginVerificationPendingResponse> {
-		const pending = await this.tokenService.verifyTwoFactorPendingToken(dto.tempToken);
-		const valid = await this.consumeBackupCode(pending.sub, dto.backupCode);
+	public async completeLoginWithBackupCode(
+		dto: VerifyBackupCodeLoginInput,
+	): Promise<LoginServiceResponse | LoginRestrictedEnrollmentResponse | LoginVerificationPendingResponse> {
+		const challenge = await this.mfaChallengeService.verifyChallengeRef(dto.tempToken);
+		if (challenge.purpose !== "LOGIN") {
+			throw new UnauthorizedException("Invalid MFA challenge");
+		}
 
+		await this.mfaChallengeService.assertChallengeActive(challenge.challengeId);
+
+		const valid = await this.consumeBackupCode(challenge.userId, dto.backupCode, "login");
 		if (!valid) {
+			this.logService.info("MFA login challenge failed", {
+				userId: challenge.userId,
+				context: "TwoFactorService",
+				metadata: { event: "mfa.challenge.fail", challengeId: challenge.challengeId, method: "backup_code" },
+			});
 			throw new UnauthorizedException("Invalid or used backup code");
 		}
 
+		const assuredAt = Date.now();
+
+		await this.mfaChallengeService.consumeChallenge(challenge.challengeId);
+		await this.accountLockoutService.resetAttempts(challenge.userId);
+		await this.prisma.user.update({
+			where: { id: challenge.userId },
+			data: {
+				mfaAssuredAt: assuredAt,
+				updatedAt: assuredAt,
+			},
+		});
+
+		this.logService.info("MFA login challenge succeeded", {
+			userId: challenge.userId,
+			context: "TwoFactorService",
+			metadata: { event: "mfa.challenge.success", challengeId: challenge.challengeId, method: "backup_code" },
+		});
+
 		return this.loginVerificationService.maybeRequireVerification({
-			userId: pending.sub,
-			clientType: pending.clientType,
-			deviceInfo: pending.deviceInfo,
-			ipAddress: pending.ipAddress,
+			userId: challenge.userId,
+			clientType: challenge.clientType,
+			deviceInfo: challenge.deviceInfo,
+			ipAddress: challenge.ipAddress,
+			mfaAssured: true,
 		});
 	}
 
-	private async consumeBackupCode(userId: string, backupCode: string): Promise<boolean> {
+	private async clearTwoFactorState(userId: string): Promise<void> {
+		await this.prisma.$transaction([
+			this.prisma.user.update({
+				where: { id: userId },
+				data: {
+					twoFactorEnabled: false,
+					twoFactorSecret: null,
+					twoFactorSecretCiphertext: null,
+					twoFactorSecretIv: null,
+					twoFactorSecretKeyVersion: null,
+					twoFactorLastTotpStep: null,
+					mfaAssuredAt: null,
+					mfaEnrolledAt: null,
+					updatedAt: Date.now(),
+				},
+			}),
+			this.prisma.backupCode.deleteMany({ where: { userId } }),
+			this.prisma.twoFactorPendingSetup.deleteMany({ where: { userId } }),
+		]);
+	}
+
+	private decryptEnabledTotpSecret(user: EnabledTotpSecretFields): string {
+		if (user.twoFactorSecretCiphertext === null || user.twoFactorSecretIv === null || user.twoFactorSecretKeyVersion === null) {
+			throw new UnauthorizedException("Two-factor authentication is not configured for this account");
+		}
+
+		return this.secretEncryptionService.decrypt(user.twoFactorSecretCiphertext, user.twoFactorSecretIv, user.twoFactorSecretKeyVersion, "totp-secret");
+	}
+
+	private verifyTotpToken(secret: string, token: string, lastTotpStep: bigint | null): TotpVerificationResult {
+		const afterTimeStep = lastTotpStep !== null ? Number(lastTotpStep) : undefined;
+		const verification = verifySync({
+			token,
+			secret,
+			epochTolerance: TOTP_EPOCH_TOLERANCE_SECONDS,
+			afterTimeStep,
+		});
+
+		if (!verification.valid) {
+			return { valid: false };
+		}
+
+		return { valid: true, timeStep: this.resolveVerifiedTimeStep(verification.delta) };
+	}
+
+	private async matchesUnusedBackupCode(userId: string, backupCode: string): Promise<boolean> {
+		const records = await this.prisma.backupCode.findMany({
+			where: { userId, usedAt: null },
+			select: { codeHash: true },
+		});
+
+		for (const record of records) {
+			const matches = await this.cryptoService.compare(backupCode, record.codeHash);
+			if (matches) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	private async consumeBackupCode(userId: string, backupCode: string, usageContext: string): Promise<boolean> {
 		const records = await this.prisma.backupCode.findMany({
 			where: { userId, usedAt: null },
 			select: { id: true, codeHash: true },
@@ -244,11 +460,24 @@ export class TwoFactorService {
 		for (const record of records) {
 			const matches = await this.cryptoService.compare(backupCode, record.codeHash);
 			if (matches) {
-				await this.prisma.backupCode.update({
-					where: { id: record.id },
-					data: { usedAt: Date.now() },
+				const consumedAt = Date.now();
+				const updatedCount = await this.prisma.$transaction(async (tx) => {
+					const result = await tx.backupCode.updateMany({
+						where: { id: record.id, usedAt: null },
+						data: { usedAt: consumedAt },
+					});
+					return result.count;
 				});
-				return true;
+
+				if (updatedCount === 1) {
+					this.logService.info("MFA backup code consumed", {
+						userId,
+						context: "TwoFactorService",
+						metadata: { event: "mfa.backup_code.use", usageContext, backupCodeId: record.id },
+					});
+				}
+
+				return updatedCount === 1;
 			}
 		}
 
@@ -264,31 +493,21 @@ export class TwoFactorService {
 	}
 
 	private generateBackupCode(): string {
-		const digits: number[] = [];
-		for (let index = 0; index < 7; index += 1) {
-			digits.push(crypto.randomInt(0, 10));
+		const chars: string[] = [];
+		for (let index = 0; index < 16; index += 1) {
+			const charIndex = crypto.randomInt(0, BACKUP_CODE_CHARSET.length);
+			chars.push(BACKUP_CODE_CHARSET.charAt(charIndex));
 		}
-		const checksum = this.calculateLuhnChecksum(digits);
-		return [...digits, checksum].join("");
+		return chars.join("");
 	}
 
-	private calculateLuhnChecksum(digits: readonly number[]): number {
-		const reversed = [...digits].reverse();
-		let sum = 0;
-		for (let index = 0; index < reversed.length; index += 1) {
-			let digit = reversed[index] ?? 0;
-			if (index % 2 === 0) {
-				digit *= 2;
-				if (digit > 9) {
-					digit -= 9;
-				}
-			}
-			sum += digit;
-		}
-		return (10 - (sum % 10)) % 10;
+	private resolveVerifiedTimeStep(delta: number): number {
+		const currentEpoch = Math.floor(Date.now() / 1000);
+		const currentTimeStep = Math.floor(currentEpoch / TOTP_PERIOD_SECONDS);
+		return currentTimeStep + delta;
 	}
 
-	private parseBackupCodeHashes(value: unknown): readonly string[] {
+	private parseBackupCodeHashes(value: Parameters<typeof BackupCodesHashesSchema.parse>[0]): readonly string[] {
 		return BackupCodesHashesSchema.parse(value);
 	}
 }

@@ -289,7 +289,7 @@ describe("AuthProvider logout", () => {
 		expect(result.current.isAuthenticated).toBe(false);
 		expect(navigate).toHaveBeenCalledWith("/auth/login");
 		expect(refreshCalls(fetchMock)).toHaveLength(0);
-		expect(fetchCalls(fetchMock).length).toBeLessThanOrEqual(3);
+		expect(fetchCalls(fetchMock).length).toBeLessThanOrEqual(4);
 	});
 });
 
@@ -353,7 +353,8 @@ describe("AuthProvider silent refresh", () => {
 		const fetchMock = vi
 			.fn<FetchImpl>()
 			.mockResolvedValueOnce(jsonResponse(401, { message: "Unauthorized" }))
-			.mockResolvedValueOnce(jsonResponse(401, { message: "Refresh token expired" }));
+			.mockResolvedValueOnce(jsonResponse(401, { message: "Refresh token expired" }))
+			.mockResolvedValueOnce(jsonResponse(200, { success: true, data: { message: "Logged out" }, meta: { timestamp: 1786428000000 } }));
 		vi.stubGlobal("fetch", fetchMock);
 
 		const { result } = renderHook(() => useAuth(), { wrapper });
@@ -365,6 +366,36 @@ describe("AuthProvider silent refresh", () => {
 		expect(refreshCalls(fetchMock)).toHaveLength(1);
 		expect(navigate).toHaveBeenCalledWith("/auth/login");
 		expect(result.current.isAuthenticated).toBe(false);
+
+		const logoutCall = fetchCalls(fetchMock).find((call) => inputUrl(call.input).endsWith("/auth/logout"));
+		expect(logoutCall).toBeDefined();
+	});
+
+	it("skips silent refresh and clears cookies on TOKEN_VERSION_MISMATCH", async () => {
+		const fetchMock = vi
+			.fn<FetchImpl>()
+			.mockResolvedValueOnce(
+				jsonResponse(401, {
+					message: "Token version mismatch",
+					statusCode: 401,
+					error: "TOKEN_VERSION_MISMATCH",
+				}),
+			)
+			.mockResolvedValueOnce(jsonResponse(200, { success: true, data: { message: "Logged out" }, meta: { timestamp: 1786428000000 } }));
+		vi.stubGlobal("fetch", fetchMock);
+
+		const { result } = renderHook(() => useAuth(), { wrapper });
+		const me = result.current.api.auth.me;
+
+		const response = await me.fetch(undefined);
+
+		expect(response.ok).toBe(false);
+		expect(refreshCalls(fetchMock)).toHaveLength(0);
+		expect(navigate).toHaveBeenCalledWith("/auth/login");
+		expect(result.current.isAuthenticated).toBe(false);
+
+		const logoutCall = fetchCalls(fetchMock).find((call) => inputUrl(call.input).endsWith("/auth/logout"));
+		expect(logoutCall).toBeDefined();
 	});
 
 	it("sends X-Client-Type: admin when refreshing an admin session", async () => {

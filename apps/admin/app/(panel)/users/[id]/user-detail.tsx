@@ -3,6 +3,7 @@
 import type { AdminUserDetail, PermissionListItem, RoleListItem } from "@workspace/shared";
 import { UserAccessPanel } from "@/components/access/user-access-panel";
 import { ImpersonateUserButton } from "@/components/impersonation/impersonate-user-button";
+import { UserMfaRecoveryPanel } from "@/components/users/user-mfa-recovery-panel";
 import { UserProfileOverview } from "@/components/users/user-profile-overview";
 import { stubApiMeta } from "@/lib/api-envelope";
 import { UserDetailBreadcrumb } from "@/components/users/user-detail-breadcrumb";
@@ -74,6 +75,8 @@ export default function UserDetailView({ userId, initialUser, initialRoles, init
 					</header>
 
 					<UserProfileOverview user={user} />
+
+					<UserMfaRecoveryPanel userId={userId} userFullName={user.fullName} userEmail={user.email} twoFactorEnabled={user.twoFactorEnabled} />
 
 					<UserAccessPanel
 						userId={userId}

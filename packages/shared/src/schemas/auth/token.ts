@@ -54,6 +54,10 @@ export const AccessTokenPayloadSchema = z.object({
 	// Incremented on role/permission mutations. The guard rejects tokens
 	// with a stale version, forcing re-auth after authorization changes.
 	tokenVersion: z.number(),
+	/** `restricted` limits the session to enrollment endpoints until email + MFA are complete. */
+	sessionScope: z.enum(["full", "restricted"]).optional(),
+	/** Epoch ms when the user last completed MFA (step-up / login). */
+	mfaAssuredAt: z.number().int().nonnegative().optional(),
 	isImpersonating: z.boolean().optional(),
 	originalUserId: z.string().optional(),
 	iat: z.number().optional(),
