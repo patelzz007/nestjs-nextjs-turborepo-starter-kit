@@ -1,4 +1,5 @@
 import { Inject, Logger, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common";
+import { z } from "zod";
 import type Redis from "ioredis";
 
 import { REDIS_PUBLISHER, REDIS_SUBSCRIBER } from "../../../infrastructure/redis/redis.tokens";
@@ -8,7 +9,13 @@ import { AuthorizationCacheService } from "./authorization-cache.service";
 
 const INVALIDATE_CHANNEL = "rbac:invalidate";
 
-type InvalidateMessage = { readonly type: "user"; readonly userId: string } | { readonly type: "users"; readonly userIds: readonly string[] } | { readonly type: "clear" };
+const InvalidateMessageSchema = z.discriminatedUnion("type", [
+	z.object({ type: z.literal("user"), userId: z.string() }).strict(),
+	z.object({ type: z.literal("users"), userIds: z.array(z.string()) }).strict(),
+	z.object({ type: z.literal("clear") }).strict(),
+]);
+
+type InvalidateMessage = z.output<typeof InvalidateMessageSchema>;
 
 /**
  * Delegates reads/writes to in-memory cache and publishes invalidations over Redis
@@ -99,14 +106,19 @@ export class RedisAuthorizationCacheService extends AuthorizationCacheService im
 	}
 
 	private publish(message: InvalidateMessage): void {
-		void this.publisher.publish(INVALIDATE_CHANNEL, JSON.stringify(message)).catch((error: Error): void => {
-			this.redisLogger.warn(`Redis publish failed: ${error.message}`);
-		});
+		void (async (): Promise<void> => {
+			try {
+				await this.publisher.publish(INVALIDATE_CHANNEL, JSON.stringify(message));
+			} catch (error) {
+				const messageText = error instanceof Error ? error.message : "unknown error";
+				this.redisLogger.warn(`Redis publish failed: ${messageText}`);
+			}
+		})();
 	}
 
 	private applyRemoteInvalidate(payload: string): void {
 		try {
-			const parsed = JSON.parse(payload) as InvalidateMessage;
+			const parsed = InvalidateMessageSchema.parse(JSON.parse(payload));
 			if (parsed.type === "user") {
 				this.delegate.invalidate(parsed.userId);
 				return;
@@ -115,9 +127,7 @@ export class RedisAuthorizationCacheService extends AuthorizationCacheService im
 				this.delegate.invalidateUsers(parsed.userIds);
 				return;
 			}
-			if (parsed.type === "clear") {
-				this.delegate.clear();
-			}
+			this.delegate.clear();
 		} catch (error) {
 			const message = error instanceof Error ? error.message : "unknown error";
 			this.redisLogger.warn(`Invalid Redis invalidate payload: ${message}`);

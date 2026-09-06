@@ -4,27 +4,25 @@ import { SessionActionEventSchema, SessionSchema, epochMs, type EpochMs, type Fl
 import { parseExpiryToMilliseconds } from "../../common/utils/expiry";
 import { TypedConfigService } from "../../config/typed-config.service";
 import { LogService } from "../../modules/logs/logs.service";
-import { PrismaService } from "../../prisma/prisma.service";
 import { AuthorizationCheckerService } from "../authorization/services/authorization-checker.service";
 import { UserSessionRevocationService } from "../authorization/services/user-session-revocation.service";
+import { UserRepository } from "../auth/repositories/user.repository";
 import { UserResponseMapper } from "../auth/services/user-response.mapper";
 import { CryptoService } from "../auth/services/crypto.service";
 import { AccessTokenStateService } from "../auth/services/access-token-state.service";
 import { TokenService } from "../auth/services/token.service";
+import { RefreshTokenRepository } from "./repositories/refresh-token.repository";
 import { SessionsEventsService } from "./sessions-events.service";
 
 /**
  * Owns the refresh-token / active-session lifecycle: token rotation,
  * device logout, logout-all, and the active-session list.
- *
- * Split out of the (previously monolithic) `AuthService` so credentials and
- * session management live in separate modules — see `docs/architecture.md`
- * (module layout convention).
  */
 @Injectable()
 export class SessionsService {
-	constructor(
-		private readonly prisma: PrismaService,
+	public constructor(
+		private readonly repository: RefreshTokenRepository,
+		private readonly users: UserRepository,
 		private readonly tokenService: TokenService,
 		private readonly cryptoService: CryptoService,
 		private readonly config: TypedConfigService,
@@ -38,21 +36,7 @@ export class SessionsService {
 
 	public async refreshToken(userId: string, rawRefreshTokenJwt: string, refreshTokenJti: string, deviceInfo?: string, ipAddress?: string): Promise<RefreshResponse> {
 		const actionStartedAt: number = performance.now();
-		const user = await this.prisma.user.findUnique({
-			where: { id: userId },
-			select: {
-				id: true,
-				email: true,
-				isActive: true,
-				isSuperAdmin: true,
-				fullName: true,
-				emailVerifiedAt: true,
-				createdAt: true,
-				updatedAt: true,
-				isDeleted: true,
-				deletedAt: true,
-			},
-		});
+		const user = await this.users.findLoginById(userId);
 
 		if (!user) {
 			throw new UnauthorizedException({
@@ -75,10 +59,7 @@ export class SessionsService {
 			});
 		}
 
-		// Look up the refresh token record directly by its ID (extracted from JWT jti claim)
-		const storedToken = await this.prisma.refreshToken.findUnique({
-			where: { id: refreshTokenJti },
-		});
+		const storedToken = await this.repository.findByIdIncludingDeleted(refreshTokenJti);
 
 		if (storedToken?.userId !== userId) {
 			throw new UnauthorizedException({
@@ -98,11 +79,6 @@ export class SessionsService {
 			});
 		}
 
-		// ── Reuse Detection (Strategy 3) ────────────────────────────────────
-		// Compare the incoming raw refresh token JWT against the stored bcrypt hash.
-		// If they DON'T match, someone is using an OLD refresh token that was
-		// already rotated — this indicates token theft.
-		// ─────────────────────────────────────────────────────────────────────
 		const tokenMatches = await this.cryptoService.compare(rawRefreshTokenJwt, storedToken.token);
 		if (!tokenMatches) {
 			this.logService.warn("Suspicious activity: token reuse detected — revoking all sessions", {
@@ -111,12 +87,7 @@ export class SessionsService {
 				metadata: { tokenId: storedToken.id },
 			});
 
-			// Token theft detected — revoke ALL refresh tokens for this user
-			await this.prisma.refreshToken.updateMany({
-				where: { userId: user.id },
-				data: { isDeleted: true, deletedAt: Date.now() },
-			});
-
+			await this.repository.revokeAllForUsers([user.id]);
 			await this.accessTokenState.bumpTokenVersion(user.id);
 
 			this.sessionsEvents.emitAction(
@@ -134,27 +105,21 @@ export class SessionsService {
 			});
 		}
 
-		// Get user permissions
 		const userPermissions = await this.authorizationChecker.getUserPermissionDetails(user.id);
 		const isEmailVerified = user.emailVerifiedAt !== null && user.emailVerifiedAt <= Date.now();
 		const flatUser: FlatUserResponse = this.mapper.toFlatUser(user, userPermissions, isEmailVerified);
 
-		// Update the existing refresh token record with new expiry and hashed token (rotation)
 		const expiryMs = parseExpiryToMilliseconds(this.config.jwtRefreshExpiry);
 		const expiresAt: EpochMs = epochMs(Date.now() + expiryMs);
 
 		const tokens = await this.tokenService.generateTokens(flatUser, storedToken.id);
 		const hashedRt = await this.cryptoService.hash(tokens.refreshToken);
 
-		await this.prisma.refreshToken.update({
-			where: { id: storedToken.id },
-			data: {
-				token: hashedRt,
-				deviceInfo: deviceInfo ?? storedToken.deviceInfo,
-				ipAddress: ipAddress ?? storedToken.ipAddress,
-				expiresAt,
-				updatedAt: Date.now(),
-			},
+		await this.repository.rotateToken(storedToken.id, {
+			token: hashedRt,
+			deviceInfo: deviceInfo ?? storedToken.deviceInfo,
+			ipAddress: ipAddress ?? storedToken.ipAddress,
+			expiresAt,
 		});
 
 		this.sessionsEvents.emitAction(
@@ -170,20 +135,12 @@ export class SessionsService {
 		return tokens;
 	}
 
-	/**
-	 * Logout from the specific device identified by the refresh token's jti.
-	 */
 	public async logoutDevice(userId: string, refreshTokenJti: string): Promise<void> {
 		const actionStartedAt: number = performance.now();
-		const storedToken = await this.prisma.refreshToken.findUnique({
-			where: { id: refreshTokenJti },
-		});
+		const storedToken = await this.repository.findByIdIncludingDeleted(refreshTokenJti);
 
 		if (storedToken?.userId === userId) {
-			await this.prisma.refreshToken.update({
-				where: { id: storedToken.id },
-				data: { isDeleted: true, deletedAt: Date.now(), updatedAt: Date.now() },
-			});
+			await this.repository.revokeById(storedToken.id);
 		}
 
 		this.sessionsEvents.emitAction(
@@ -197,9 +154,6 @@ export class SessionsService {
 		);
 	}
 
-	/**
-	 * Logout from all devices — clears every refresh token for this user.
-	 */
 	public async logoutAllDevices(userId: string): Promise<void> {
 		const actionStartedAt: number = performance.now();
 		await this.sessionRevocation.revokeAllSessionsForUser(userId);
@@ -215,38 +169,16 @@ export class SessionsService {
 		);
 	}
 
-	/**
-	 * Get all active sessions (refresh tokens) for the current user.
-	 * Returns device info, IP, creation date, and expiry date.
-	 * Does NOT return the token hash.
-	 */
 	public async getSessions(userId: string): Promise<Session[]> {
-		const tokens = await this.prisma.refreshToken.findMany({
-			where: {
-				userId,
-				isDeleted: false,
-				expiresAt: { gte: Date.now() },
-			},
-			orderBy: { createdAt: "desc" },
-			select: {
-				id: true,
-				deviceInfo: true,
-				ipAddress: true,
-				createdAt: true,
-				expiresAt: true,
-			},
-		});
+		const tokens = await this.repository.listActiveSessionsForUser(userId);
 
-		// Convert Date objects to ISO strings before Zod validation.
-		// SessionSchema expects `expiresAt` and `createdAt` as `z.string()`, but
-		// Prisma returns native Date objects. Without this conversion, Zod throws.
-		return tokens.map((t: { id: string; deviceInfo: string | null; ipAddress: string | null; createdAt: bigint; expiresAt: bigint }) =>
+		return tokens.map((token) =>
 			SessionSchema.parse({
-				id: t.id,
-				deviceInfo: t.deviceInfo,
-				ipAddress: t.ipAddress,
-				createdAt: epochMs(Number(t.createdAt)),
-				expiresAt: epochMs(Number(t.expiresAt)),
+				id: token.id,
+				deviceInfo: token.deviceInfo,
+				ipAddress: token.ipAddress,
+				createdAt: token.createdAt,
+				expiresAt: token.expiresAt,
 			}),
 		);
 	}

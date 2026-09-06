@@ -1,0 +1,47 @@
+{
+	"name": "@workspace/cli",
+	"version": "0.1.0",
+	"type": "module",
+	"private": true,
+	"bin": {
+		"app": "./dist/bin/app.js"
+	},
+	"scripts": {
+		"build": "tsc -p tsconfig.build.json",
+		"dev": "tsc -p tsconfig.build.json --watch --preserveWatchOutput",
+		"start": "tsx src/bin/app.ts",
+		"lint": "eslint",
+		"format": "prettier --write \"**/*.{ts,tsx}\"",
+		"typecheck": "tsc --noEmit",
+		"test": "vitest run",
+		"clean": "rm -rf dist && find src -name '*.js' -delete"
+	},
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"exports": {
+		".": {
+			"development": {
+				"types": "./src/index.ts",
+				"default": "./src/index.ts"
+			},
+			"types": "./dist/index.d.ts",
+			"default": "./dist/index.js"
+		}
+	},
+	"dependencies": {
+		"@clack/prompts": "^1.7.0",
+		"@workspace/shared": "workspace:*",
+		"commander": "^15.0.0",
+		"picocolors": "^1.1.1",
+		"zod": "4.5.4"
+	},
+	"devDependencies": {
+		"@types/node": "^26.4.1",
+		"@workspace/eslint-config": "workspace:*",
+		"@workspace/typescript-config": "workspace:*",
+		"eslint": "^9.39.5",
+		"tsx": "^4.23.13",
+		"typescript": "6.0.2",
+		"vitest": "^5.0.0"
+	}
+}

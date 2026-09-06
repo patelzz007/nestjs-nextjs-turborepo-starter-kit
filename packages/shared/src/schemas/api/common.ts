@@ -72,5 +72,5 @@ export type DataValue = DataPrimitive | readonly DataValue[] | { readonly [key: 
 
 /** Recursive Zod schema for `DataValue` — validates any JSON-safe value. */
 export const DataValueSchema: z.ZodType<DataValue> = z.lazy(() =>
-	z.union([z.string(), z.number(), z.boolean(), z.null(), z.array(DataValueSchema), z.record(z.string(), DataValueSchema)]),
+	z.union([z.string(), z.number(), z.boolean(), z.null(), z.array(DataValueSchema), z.record(z.string(), z.union([DataValueSchema, z.undefined()]))]),
 );

@@ -11,11 +11,10 @@ import { RewardsQueueScheduler } from "./rewards-queue.processors";
 @Injectable()
 export class ClaimsExpireReferrerProcessor extends WorkerHost {
 	public constructor(
-		rewardsQueueScheduler: RewardsQueueScheduler,
+		_rewardsQueueScheduler: RewardsQueueScheduler,
 		private readonly merchantRewardService: MerchantRewardService,
 	) {
 		super();
-		void rewardsQueueScheduler;
 	}
 
 	public async process(job: Job): Promise<void> {

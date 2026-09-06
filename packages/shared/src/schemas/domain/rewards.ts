@@ -242,15 +242,12 @@ export type MerchantUpdateRewardFormValues = z.output<typeof MerchantUpdateRewar
 
 export function parseRewardDateInputToEpochMs(dateInput: string): EpochMs {
 	const segments = dateInput.split("-");
-	const yearSegment = segments[0];
-	const monthSegment = segments[1];
-	const daySegment = segments[2];
-	if (yearSegment === undefined || monthSegment === undefined || daySegment === undefined) {
+	if (segments.length < 3) {
 		return EpochMsSchema.parse(Number.NaN);
 	}
-	const year = Number(yearSegment);
-	const month = Number(monthSegment);
-	const day = Number(daySegment);
+	const year = Number(segments[0]);
+	const month = Number(segments[1]);
+	const day = Number(segments[2]);
 	return EpochMsSchema.parse(Date.UTC(year, month - 1, day));
 }
 
@@ -259,7 +256,7 @@ export function epochMsToDateInput(epoch: EpochMs | null, fallback: string): str
 		return fallback;
 	}
 	const date = new Date(epoch);
-	const year = date.getUTCFullYear();
+	const year = String(date.getUTCFullYear());
 	const month = String(date.getUTCMonth() + 1).padStart(2, "0");
 	const day = String(date.getUTCDate()).padStart(2, "0");
 	return `${year}-${month}-${day}`;

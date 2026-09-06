@@ -27,11 +27,7 @@ export class AccountLockoutService {
 	/**
 	 * Check if the account is currently locked. Throws if locked.
 	 */
-	public async checkLockout(
-		user: { readonly id: string; readonly lockedUntil: bigint | null } | null,
-		_clientType: string | undefined,
-		_flowStartedAt: number,
-	): Promise<void> {
+	public checkLockout(user: { readonly id: string; readonly lockedUntil: bigint | null } | null, _clientType: string | undefined, _flowStartedAt: number): Promise<void> {
 		if (user?.lockedUntil && user.lockedUntil > Date.now()) {
 			const remainingMs: number = Number(user.lockedUntil) - Date.now();
 			const remainingSec: number = Math.max(1, Math.ceil(remainingMs / 1000));
@@ -44,6 +40,7 @@ export class AccountLockoutService {
 				remainingSeconds: remainingSec,
 			});
 		}
+		return Promise.resolve();
 	}
 
 	/**

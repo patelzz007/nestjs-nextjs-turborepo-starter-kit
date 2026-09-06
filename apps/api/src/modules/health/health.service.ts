@@ -15,7 +15,7 @@ interface ModuleHealth {
 export interface DeepHealthResponse extends HealthResponse {
 	readonly filesystem: string;
 	readonly checks: Readonly<Record<string, string>>;
-	readonly modules: ReadonlyArray<ModuleHealth>;
+	readonly modules: readonly ModuleHealth[];
 }
 
 /**
@@ -39,7 +39,7 @@ export class HealthService {
 		private readonly prisma: PrismaService,
 		@Optional()
 		@Inject(MODULE_HEALTH_INDICATORS)
-		private readonly moduleIndicators: ReadonlyArray<{ readonly name: string; readonly indicator: ModuleHealthIndicator }> = [],
+		private readonly moduleIndicators: readonly { readonly name: string; readonly indicator: ModuleHealthIndicator }[] = [],
 	) {}
 
 	/** Mark the API as ready to serve (called from main.ts after startup). */

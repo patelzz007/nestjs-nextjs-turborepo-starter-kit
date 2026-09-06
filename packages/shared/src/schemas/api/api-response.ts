@@ -50,7 +50,15 @@ export const PaginatedServiceResultSchema = z.object({
 	hasPrevious: z.boolean().optional(),
 });
 
-export type PaginatedServiceResult = z.output<typeof PaginatedServiceResultSchema>;
+export interface PaginatedServiceResult<TItem = DataValue> {
+	items: TItem[];
+	total: number;
+	page: number;
+	limit: number;
+	totalPages?: number;
+	hasNext?: boolean;
+	hasPrevious?: boolean;
+}
 
 /**
  * Partial envelope shape returned by controllers that pre-wrap their own

@@ -26,5 +26,5 @@ export function readPaginatedTotal(meta: ApiResponseMeta | undefined, fallback: 
 		return fallback;
 	}
 	const parsed = ApiPaginatedMetaSchema.safeParse(meta);
-	return parsed.success && parsed.data.total !== null ? parsed.data.total : fallback;
+	return parsed.success ? parsed.data.total : fallback;
 }

@@ -1,7 +1,6 @@
 "use client";
 
 import type { AdminMfaRecoveryRequest } from "@workspace/shared";
-import { readPaginatedTotal, stubPaginatedMeta } from "@/lib/api-envelope";
 import { MfaRecoveryReviewPanel } from "@/components/security/mfa-recovery-review-panel";
 import { useAuth } from "@workspace/client/lib/auth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
@@ -29,6 +28,10 @@ export const UserMfaRecoveryPanel = React.forwardRef<HTMLDivElement, UserMfaReco
 
 	const requests: readonly AdminMfaRecoveryRequest[] = requestsQuery.data?.data ?? [];
 	const latestRequest: AdminMfaRecoveryRequest | undefined = requests[0];
+
+	const handleReviewed = React.useCallback((): void => {
+		void requestsQuery.refetch();
+	}, [requestsQuery]);
 
 	if (!twoFactorEnabled) {
 		return (
@@ -61,7 +64,7 @@ export const UserMfaRecoveryPanel = React.forwardRef<HTMLDivElement, UserMfaReco
 					{requestsQuery.isError ? <p className="text-sm text-destructive">Could not load MFA recovery requests.</p> : null}
 
 					{latestRequest !== undefined ? (
-						<MfaRecoveryReviewPanel request={latestRequest} onReviewed={(): void => void requestsQuery.refetch()} />
+						<MfaRecoveryReviewPanel request={latestRequest} onReviewed={handleReviewed} />
 					) : (
 						<p className="rounded-lg border border-dashed px-4 py-6 text-center text-sm text-muted-foreground">
 							No MFA recovery requests for this user. They can submit one from their security settings after verifying their password.

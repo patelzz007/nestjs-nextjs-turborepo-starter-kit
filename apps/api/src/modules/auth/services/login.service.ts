@@ -1,4 +1,5 @@
 import { Injectable, UnauthorizedException } from "@nestjs/common";
+import { z } from "zod";
 import type {
 	LoginInput,
 	LoginRestrictedEnrollmentResponse,
@@ -8,7 +9,6 @@ import type {
 	UserPermissions,
 } from "@workspace/shared";
 
-import { LogService } from "../../../modules/logs/logs.service";
 import { AuthorizationCheckerService } from "../../authorization/services/authorization-checker.service";
 import { TrackAuthFlow } from "../decorators/track-auth-flow.decorator";
 import { UserRepository } from "../repositories/user.repository";
@@ -37,7 +37,10 @@ export class LoginService {
 
 	@TrackAuthFlow({
 		flow: "login",
-		clientType: (_loginDto: unknown, clientType?: unknown) => (typeof clientType === "string" ? clientType : null),
+		clientType: (_loginDto: unknown, clientType?: unknown) => {
+			const parsed = z.string().safeParse(clientType);
+			return parsed.success ? parsed.data : null;
+		},
 	})
 	public async login(
 		loginDto: LoginInput,

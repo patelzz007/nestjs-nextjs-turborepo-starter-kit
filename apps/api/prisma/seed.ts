@@ -13,6 +13,8 @@ import { assignAdditionalPermissions, assignRolesToUsers, createUsers } from "./
 import { createClicks, createUrlTags, createUrls } from "./seed/urls";
 import { seedGeo } from "./seed/geo-seed";
 import { cleanupRewardSeedData, printRewardSeedCredentials, seedRewards } from "./seed/rewards";
+import { seedSamplePlatform } from "./seed/sample-platform";
+import { seedProducts } from "./seed/products";
 
 // ---------------------------------------------------------------------------
 // Orchestrator — runs the per-domain seeders in dependency order.
@@ -115,6 +117,14 @@ async function main() {
 	console.log("Seeding geo data (regions, countries, states, cities)...");
 	await seedGeo();
 
+	console.log("Seeding sample categories...");
+	const sampleSummary = await seedSamplePlatform();
+	console.log(`✅ Categories: ${String(sampleSummary.categories)}`);
+
+	console.log("Seeding demo products...");
+	const productSummary = await seedProducts();
+	console.log(`✅ Products: ${String(productSummary.products)} items`);
+
 	console.log("Cleaning rewards platform seed data...");
 	await cleanupRewardSeedData();
 	console.log("✅ Rewards seed cleanup done");
@@ -138,6 +148,8 @@ Clicks        : ${clickCount}
 API Keys      : ${keyCount}
 API Key Logs  : ${usageLogCount}
 Reset Tokens  : ${passwordResetCount}
+Categories    : ${sampleSummary.categories}
+Products      : ${productSummary.products}
 
 👤 Test accounts
 ──────────────────────────────────────────────

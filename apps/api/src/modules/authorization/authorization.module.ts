@@ -3,6 +3,9 @@ import type Redis from "ioredis";
 
 import { TypedConfigService } from "../../config/typed-config.service";
 import { REDIS_PUBLISHER, REDIS_SUBSCRIBER } from "../../infrastructure/redis/redis.tokens";
+import { PrismaModule } from "../../prisma/prisma.module";
+
+import { SessionsPersistenceModule } from "../sessions/sessions-persistence.module";
 
 import { AuthorizationAuditService } from "./audit/authorization-audit.service";
 import { AuthorizationCacheService } from "./cache/authorization-cache.service";
@@ -23,6 +26,9 @@ import { PolicyRegistry } from "./policies/policy-registry";
 import { AuditLogCleanup } from "./cleanup/audit-log.cleanup";
 import { AuthorizationEventEmitter } from "./events/authorization.events";
 import { CapabilityDefinitionService } from "./services/capability-definition.service";
+import { PermissionRepository } from "./repositories/permission.repository";
+import { RoleAssignmentRepository } from "./repositories/role-assignment.repository";
+import { RoleRepository } from "./repositories/role.repository";
 
 /**
  * First-class authorization module for NestJS + Fastify + Prisma.
@@ -44,6 +50,7 @@ import { CapabilityDefinitionService } from "./services/capability-definition.se
  */
 @Global()
 @Module({
+	imports: [PrismaModule, SessionsPersistenceModule],
 	providers: [
 		{
 			provide: "IN_MEMORY_AUTH_CACHE",
@@ -78,6 +85,9 @@ import { CapabilityDefinitionService } from "./services/capability-definition.se
 			inject: ["IN_MEMORY_AUTH_CACHE", "REDIS_AUTH_CACHE_LIFECYCLE"],
 		},
 		AuthorizationCheckerService,
+		RoleRepository,
+		PermissionRepository,
+		RoleAssignmentRepository,
 		RoleService,
 		PermissionService,
 		UserSessionRevocationService,

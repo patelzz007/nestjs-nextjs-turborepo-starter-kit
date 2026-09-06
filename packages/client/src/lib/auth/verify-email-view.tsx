@@ -28,66 +28,48 @@ export function VerifyEmailView({ token, settingsHref, loginHref = "/auth/login"
 	const { mutateAsync: verifyEmail } = api.auth.verifyEmail.useMutation();
 	const completedRef = useRef(false);
 
-	const loginRef = useRef(login);
-	loginRef.current = login;
-	const userRef = useRef(user);
-	userRef.current = user;
-	const isAuthenticatedRef = useRef(isAuthenticated);
-	isAuthenticatedRef.current = isAuthenticated;
-	const verifyEmailRef = useRef(verifyEmail);
-	verifyEmailRef.current = verifyEmail;
-	const fetchMeRef = useRef(api.auth.me.fetchOrThrow);
-	fetchMeRef.current = api.auth.me.fetchOrThrow;
-	const queryClientRef = useRef(queryClient);
-	queryClientRef.current = queryClient;
-	const routerRef = useRef(router);
-	routerRef.current = router;
-	const settingsHrefRef = useRef(settingsHref);
-	settingsHrefRef.current = settingsHref;
-
-	useEffect((): (() => void) => {
+	useEffect(() => {
 		if (token.length === 0 || completedRef.current) {
-			return (): void => {};
+			return;
 		}
 
-		let cancelled = false;
+		const abortController = new AbortController();
+		const isCancelled = (): boolean => abortController.signal.aborted;
 
 		const redirectToSettings = (): void => {
-			if (cancelled || completedRef.current) {
+			if (isCancelled() || completedRef.current) {
 				return;
 			}
 			completedRef.current = true;
 			setStatus("redirecting");
 			setMessage("Email verified! Taking you to settings…");
 			markEmailVerifiedToast();
-			const target = settingsHrefRef.current;
-			routerRef.current.replace(target);
+			router.replace(settingsHref);
 			window.setTimeout((): void => {
 				if (window.location.pathname.startsWith("/auth/verify-email")) {
-					window.location.assign(target);
+					window.location.assign(settingsHref);
 				}
 			}, 1200);
 		};
 
 		const syncVerifiedSession = async (): Promise<void> => {
-			if (!isAuthenticatedRef.current) {
+			if (!isAuthenticated) {
 				return;
 			}
 
-			const currentUser = userRef.current;
-			if (currentUser !== null) {
-				loginRef.current({ ...currentUser, isEmailVerified: true });
+			if (user !== null) {
+				login({ ...user, isEmailVerified: true });
 			}
 
-			await queryClientRef.current.invalidateQueries({ queryKey: AUTH_ME_QUERY_KEY });
+			await queryClient.invalidateQueries({ queryKey: AUTH_ME_QUERY_KEY });
 
 			try {
-				const meResponse = await fetchMeRef.current(undefined);
-				if (cancelled) {
+				const meResponse = await api.auth.me.fetchOrThrow(undefined);
+				if (isCancelled()) {
 					return;
 				}
-				loginRef.current(toAuthUser(meResponse.data));
-				queryClientRef.current.setQueryData(AUTH_ME_QUERY_KEY, meResponse);
+				login(toAuthUser(meResponse.data));
+				queryClient.setQueryData(AUTH_ME_QUERY_KEY, meResponse);
 			} catch {
 				// Optimistic update remains if the profile refetch fails.
 			}
@@ -95,17 +77,17 @@ export function VerifyEmailView({ token, settingsHref, loginHref = "/auth/login"
 
 		void (async (): Promise<void> => {
 			try {
-				await verifyEmailRef.current({ token });
-				if (cancelled) {
+				await verifyEmail({ token });
+				if (isCancelled()) {
 					return;
 				}
 				await syncVerifiedSession();
-				if (cancelled) {
+				if (isCancelled()) {
 					return;
 				}
 				redirectToSettings();
 			} catch (err: unknown) {
-				if (cancelled) {
+				if (isCancelled()) {
 					return;
 				}
 				setStatus("error");
@@ -114,9 +96,9 @@ export function VerifyEmailView({ token, settingsHref, loginHref = "/auth/login"
 		})();
 
 		return (): void => {
-			cancelled = true;
+			abortController.abort();
 		};
-	}, [token]);
+	}, [api.auth.me, isAuthenticated, login, queryClient, router, settingsHref, token, user, verifyEmail]);
 
 	return (
 		<div className="space-y-4 text-center">

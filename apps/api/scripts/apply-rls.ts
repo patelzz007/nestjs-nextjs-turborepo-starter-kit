@@ -1,12 +1,8 @@
 import { existsSync, readFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-const apiDir = resolve(__dirname, "..");
+const apiDir = resolve(import.meta.dirname, "..");
 const rlsFile = resolve(apiDir, "prisma", "rls.sql");
 const envFile = resolve(apiDir, ".env");
 
@@ -46,6 +42,10 @@ function stripPrismaQueryParams(databaseUrl: string): string {
 	return databaseUrl.slice(0, questionMarkIndex);
 }
 
+function isErrnoException(error: Error): error is NodeJS.ErrnoException {
+	return "code" in error;
+}
+
 function run(): void {
 	if (!existsSync(rlsFile)) {
 		throw new Error(`rls.sql not found at ${rlsFile}`);
@@ -63,7 +63,7 @@ function run(): void {
 	});
 
 	if (result.error) {
-		if ((result.error as NodeJS.ErrnoException).code === "ENOENT") {
+		if (isErrnoException(result.error) && result.error.code === "ENOENT") {
 			throw new Error(
 				[
 					"psql was not found.",
@@ -80,7 +80,7 @@ function run(): void {
 	}
 
 	if (result.status !== 0) {
-		throw new Error(`psql exited with code ${result.status ?? "unknown"}`);
+		throw new Error(`psql exited with code ${String(result.status ?? "unknown")}`);
 	}
 
 	console.log("RLS applied successfully.");

@@ -147,6 +147,20 @@ export const PERMISSION_DEFINITIONS: readonly PermissionDefinition[] = [
 	{ action: "READ", resource: "REDEMPTION", description: "View redemption details", group: "Redemptions" },
 	{ action: "LIST", resource: "REDEMPTION", description: "List redemptions", group: "Redemptions" },
 	{ action: "MANAGE", resource: "REDEMPTION", description: "Full redemption management", group: "Redemptions" },
+
+	// Generated sample resources (SuperAdmin-only; hidden from production navigation)
+	{ action: "CREATE", resource: "SAMPLE_CATEGORY", description: "Create sample categories", group: "Platform Samples", isSystem: true },
+	{ action: "READ", resource: "SAMPLE_CATEGORY", description: "View sample categories", group: "Platform Samples", isSystem: true },
+	{ action: "UPDATE", resource: "SAMPLE_CATEGORY", description: "Update sample categories", group: "Platform Samples", isSystem: true },
+	{ action: "DELETE", resource: "SAMPLE_CATEGORY", description: "Delete sample categories", group: "Platform Samples", isSystem: true },
+	{ action: "LIST", resource: "SAMPLE_CATEGORY", description: "List sample categories", group: "Platform Samples", isSystem: true },
+	{ action: "MANAGE", resource: "SAMPLE_CATEGORY", description: "Full sample category management", group: "Platform Samples", isSystem: true },
+	{ action: "CREATE", resource: "PRODUCT", description: "Create products", group: "Platform Samples", isSystem: true },
+	{ action: "READ", resource: "PRODUCT", description: "View products", group: "Platform Samples", isSystem: true },
+	{ action: "UPDATE", resource: "PRODUCT", description: "Update products", group: "Platform Samples", isSystem: true },
+	{ action: "DELETE", resource: "PRODUCT", description: "Delete products", group: "Platform Samples", isSystem: true },
+	{ action: "LIST", resource: "PRODUCT", description: "List products", group: "Platform Samples", isSystem: true },
+	{ action: "MANAGE", resource: "PRODUCT", description: "Full product management", group: "Platform Samples", isSystem: true },
 ];
 
 type PermissionActionMap = Partial<Record<PermissionAction, string>>;

@@ -52,7 +52,13 @@ const STAT_SECTIONS: readonly { readonly title: string; readonly keys: readonly 
 	},
 ];
 
-const STAT_CARD_BY_KEY = Object.fromEntries(STAT_CARDS.map((stat) => [stat.key, stat])) as Record<StatCardDefinition["key"], StatCardDefinition>;
+function getStatCardDefinition(key: StatCardDefinition["key"]): StatCardDefinition {
+	const stat = STAT_CARDS.find((item) => item.key === key);
+	if (stat === undefined) {
+		throw new Error(`Unknown analytics stat key: ${key}`);
+	}
+	return stat;
+}
 
 const STATUS_BAR_COLORS: Record<RewardClaimStatus, string> = {
 	PENDING: "bg-warning",
@@ -119,7 +125,7 @@ export function RewardHubAnalyticsPageView({ initialAnalytics }: RewardHubAnalyt
 						<h2 className="text-xs font-semibold tracking-[0.14em] text-muted-foreground uppercase">{section.title}</h2>
 						<div className={cn("grid gap-4", section.keys.length === 4 ? "grid-cols-2 lg:grid-cols-4" : "grid-cols-1 sm:grid-cols-3")}>
 							{section.keys.map((key) => {
-								const stat = STAT_CARD_BY_KEY[key];
+								const stat = getStatCardDefinition(key);
 								const metric = analytics?.[stat.key];
 
 								return (

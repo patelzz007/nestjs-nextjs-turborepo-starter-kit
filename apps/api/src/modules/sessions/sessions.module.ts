@@ -7,12 +7,13 @@ import { AuthorizationModule } from "../authorization/authorization.module";
 import { SessionStatusController } from "./session-status.controller";
 import { SessionsController } from "./sessions.controller";
 import { SessionsEventsService } from "./sessions-events.service";
+import { SessionsPersistenceModule } from "./sessions-persistence.module";
 import { SessionsService } from "./sessions.service";
 
 @Module({
-	imports: [PrismaModule, AuthModule, AuthorizationModule],
+	imports: [PrismaModule, SessionsPersistenceModule, AuthModule, AuthorizationModule],
 	controllers: [SessionsController, SessionStatusController],
 	providers: [SessionsService, SessionsEventsService],
-	exports: [SessionsService, SessionsEventsService],
+	exports: [SessionsService, SessionsEventsService, SessionsPersistenceModule],
 })
 export class SessionsModule {}

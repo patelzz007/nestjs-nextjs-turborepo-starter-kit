@@ -9,6 +9,7 @@ import { Badge } from "@workspace/ui/components/feedback/badge";
 import { Button } from "@workspace/ui/components/form/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
 import { ADMIN_DATA_TABLE_LABELS } from "@/lib/data-table-labels";
+import { DataTableMobileCard } from "@/lib/data-table-mobile-card";
 import { DataTable, type DataTableFeatures } from "@workspace/ui/components/display/data-table";
 import type { ColumnDef } from "@tanstack/react-table";
 import { CircleCheck, CircleX, Loader2, Mail, RefreshCw, TriangleAlert } from "lucide-react";
@@ -144,24 +145,17 @@ export default function EmailLogPage({ initialEnvelope }: { readonly initialEnve
 
 	const mobileCardRender = React.useCallback(
 		(item: EmailLogEntry): React.ReactNode => (
-			<div className="rounded-lg border bg-card p-3">
-				<div className="flex items-start justify-between gap-2">
-					<div className="min-w-0">
-						<p className="truncate font-medium">{item.subject}</p>
-						<p className="truncate text-xs text-muted-foreground">{item.to}</p>
-					</div>
-					<StatusBadge entry={item} />
-				</div>
-				{item.error !== undefined && item.error !== null ? (
-					<span title={item.error} className="mt-1.5 block max-w-full truncate text-xs text-destructive">
-						{item.error}
-					</span>
-				) : null}
-				<div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
-					<span className="font-mono">{item.templateKey}</span>
-					<span className="tabular-nums">{formatTime(item.createdAt)}</span>
-				</div>
-			</div>
+			<DataTableMobileCard
+				item={item}
+				title={item.subject}
+				subtitle={item.to}
+				badge={<StatusBadge entry={item} />}
+				fields={[
+					{ label: "Template", value: item.templateKey },
+					{ label: "Sent at", value: formatTime(item.createdAt) },
+					...(item.error !== undefined && item.error !== null ? [{ label: "Error", value: item.error }] : []),
+				]}
+			/>
 		),
 		[],
 	);

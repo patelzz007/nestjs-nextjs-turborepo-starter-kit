@@ -3,7 +3,10 @@ import { Injectable } from "@nestjs/common";
 import type { MerchantAnalyticsResponse, RewardsAnalyticsQuery, UserRewardsAnalyticsResponse } from "@workspace/shared";
 import { EpochMsSchema } from "@workspace/shared";
 
-import { PrismaService } from "../../../prisma/prisma.service";
+import { RewardClaimRepository } from "../repositories/reward-claim.repository";
+import { RewardRedemptionRepository } from "../repositories/reward-redemption.repository";
+import { RewardReferralRepository } from "../repositories/reward-referral.repository";
+import { RewardRepository } from "../repositories/reward.repository";
 import {
 	buildAnalyticsMetric,
 	buildWeeklyTimeSeries,
@@ -17,7 +20,10 @@ import { MerchantContextService } from "./merchant-context.service";
 @Injectable()
 export class RewardsAnalyticsService {
 	public constructor(
-		private readonly prisma: PrismaService,
+		private readonly rewardRepository: RewardRepository,
+		private readonly rewardClaimRepository: RewardClaimRepository,
+		private readonly redemptionRepository: RewardRedemptionRepository,
+		private readonly rewardReferralRepository: RewardReferralRepository,
 		private readonly merchantContext: MerchantContextService,
 	) {}
 
@@ -41,50 +47,17 @@ export class RewardsAnalyticsService {
 			referralPrevious,
 			rewardTitles,
 		] = await Promise.all([
-			this.prisma.reward.count({ where: rewardWhere }),
-			this.prisma.reward.count({ where: { ...rewardWhere, status: "PUBLISHED" } }),
-			this.prisma.reward.count({ where: { ...rewardWhere, createdAt: { gte: period.fromMs, lte: period.toMs } } }),
-			this.prisma.reward.count({ where: { ...rewardWhere, createdAt: { gte: previous.fromMs, lte: previous.toMs } } }),
-			this.prisma.reward.count({
-				where: { ...rewardWhere, status: "PUBLISHED", reviewedAt: { gte: period.fromMs, lte: period.toMs } },
-			}),
-			this.prisma.reward.count({
-				where: { ...rewardWhere, status: "PUBLISHED", reviewedAt: { gte: previous.fromMs, lte: previous.toMs } },
-			}),
-			this.prisma.rewardClaim.findMany({
-				where: {
-					isDeleted: false,
-					claimedAt: { gte: previous.fromMs, lte: period.toMs },
-					reward: { merchantOrgId: orgId, isDeleted: false },
-				},
-				select: { claimedAt: true, status: true, rewardId: true },
-			}),
-			this.prisma.rewardRedemption.findMany({
-				where: {
-					isDeleted: false,
-					merchantOrgId: orgId,
-					redeemedAt: { gte: previous.fromMs, lte: period.toMs },
-				},
-				select: { redeemedAt: true, claim: { select: { rewardId: true } } },
-			}),
-			this.prisma.rewardReferral.count({
-				where: {
-					isDeleted: false,
-					createdAt: { gte: period.fromMs, lte: period.toMs },
-					reward: { merchantOrgId: orgId, isDeleted: false },
-				},
-			}),
-			this.prisma.rewardReferral.count({
-				where: {
-					isDeleted: false,
-					createdAt: { gte: previous.fromMs, lte: previous.toMs },
-					reward: { merchantOrgId: orgId, isDeleted: false },
-				},
-			}),
-			this.prisma.reward.findMany({
-				where: rewardWhere,
-				select: { id: true, title: true },
-			}),
+			this.rewardRepository.count(rewardWhere),
+			this.rewardRepository.count({ ...rewardWhere, status: "PUBLISHED" }),
+			this.rewardRepository.count({ ...rewardWhere, createdAt: { gte: period.fromMs, lte: period.toMs } }),
+			this.rewardRepository.count({ ...rewardWhere, createdAt: { gte: previous.fromMs, lte: previous.toMs } }),
+			this.rewardRepository.count({ ...rewardWhere, status: "PUBLISHED", reviewedAt: { gte: period.fromMs, lte: period.toMs } }),
+			this.rewardRepository.count({ ...rewardWhere, status: "PUBLISHED", reviewedAt: { gte: previous.fromMs, lte: previous.toMs } }),
+			this.rewardClaimRepository.listForMerchantAnalytics(orgId, { gte: previous.fromMs, lte: period.toMs }),
+			this.redemptionRepository.listForMerchantAnalytics(orgId, { gte: previous.fromMs, lte: period.toMs }),
+			this.rewardReferralRepository.countByMerchantOrg(orgId, { gte: period.fromMs, lte: period.toMs }),
+			this.rewardReferralRepository.countByMerchantOrg(orgId, { gte: previous.fromMs, lte: previous.toMs }),
+			this.rewardRepository.listIdAndTitle(rewardWhere),
 		]);
 
 		const currentClaims = claimRows.filter((row) => {
@@ -156,22 +129,8 @@ export class RewardsAnalyticsService {
 		const previous = previousAnalyticsPeriod(period);
 
 		const [claimRows, referralRows] = await Promise.all([
-			this.prisma.rewardClaim.findMany({
-				where: {
-					userId,
-					isDeleted: false,
-					claimedAt: { gte: previous.fromMs, lte: period.toMs },
-				},
-				select: { claimedAt: true, status: true },
-			}),
-			this.prisma.rewardReferral.findMany({
-				where: {
-					referrerUserId: userId,
-					isDeleted: false,
-					createdAt: { gte: previous.fromMs, lte: period.toMs },
-				},
-				select: { createdAt: true, status: true },
-			}),
+			this.rewardClaimRepository.listForUserAnalytics(userId, { gte: previous.fromMs, lte: period.toMs }),
+			this.rewardReferralRepository.listForReferrerAnalytics(userId, { gte: previous.fromMs, lte: period.toMs }),
 		]);
 
 		const currentClaims = claimRows.filter((row) => {

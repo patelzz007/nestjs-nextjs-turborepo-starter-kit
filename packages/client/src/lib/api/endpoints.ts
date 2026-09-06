@@ -96,6 +96,8 @@ import {
 	RewardClaimResponseSchema,
 	RewardNotificationResponseSchema,
 	RewardResponseSchema,
+	ProductSchema,
+	SampleCategorySchema,
 	UserRewardsAnalyticsResponseSchema,
 } from "@workspace/shared";
 import { z, type ZodType } from "zod";
@@ -745,7 +747,63 @@ export const apiRouter = {
 	},
 	// NOTE: `as const` is required here — it preserves literal method/path types
 	// so that `typeof apiRouter` can be used to derive the full client + server
-	// type system. Without it, TypeScript widens all strings to `string`.
+	// type system. Without it, TypeScript widens all strings to `string`.,
+	// @app-generated:begin sampleCategory
+	sampleCategory: {
+		list: defineQuery(apiContract.sampleCategory.list, {
+			response: envelope(z.array(SampleCategorySchema), ApiPaginatedMetaSchema),
+			queryKey: ({ page, limit, sortBy, sortDirection, search }) => ["sample-category", "list", page, limit, sortBy, sortDirection, search],
+		}),
+		detail: defineQuery(apiContract.sampleCategory.detail, {
+			response: envelope(SampleCategorySchema),
+			queryKey: ({ id }) => ["sample-category", "detail", id],
+		}),
+		create: defineMutation(apiContract.sampleCategory.create, {
+			response: envelope(SampleCategorySchema),
+			queryKey: ({ name }) => ["sample-category", "create", name],
+		}),
+		update: defineMutation(apiContract.sampleCategory.update, {
+			response: envelope(SampleCategorySchema),
+			queryKey: ({ id }) => ["sample-category", "update", id],
+		}),
+		delete: defineMutation(apiContract.sampleCategory.delete, {
+			response: envelope(z.object({ success: z.boolean() }).strict()),
+			queryKey: ({ id }) => ["sample-category", "delete", id],
+		}),
+		restore: defineMutation(apiContract.sampleCategory.restore, {
+			response: envelope(SampleCategorySchema),
+			queryKey: ({ id }) => ["sample-category", "restore", id],
+		}),
+	},
+	// @app-generated:end sampleCategory,
+	// @app-generated:begin product
+	product: {
+		list: defineQuery(apiContract.product.list, {
+			response: envelope(z.array(ProductSchema), ApiPaginatedMetaSchema),
+			queryKey: ({ page, limit, sortBy, sortDirection, search }) => ["product", "list", page, limit, sortBy, sortDirection, search],
+		}),
+		detail: defineQuery(apiContract.product.detail, {
+			response: envelope(ProductSchema),
+			queryKey: ({ id }) => ["product", "detail", id],
+		}),
+		create: defineMutation(apiContract.product.create, {
+			response: envelope(ProductSchema),
+			queryKey: ({ name }) => ["product", "create", name],
+		}),
+		update: defineMutation(apiContract.product.update, {
+			response: envelope(ProductSchema),
+			queryKey: ({ id }) => ["product", "update", id],
+		}),
+		delete: defineMutation(apiContract.product.delete, {
+			response: envelope(z.object({ success: z.boolean() }).strict()),
+			queryKey: ({ id }) => ["product", "delete", id],
+		}),
+		restore: defineMutation(apiContract.product.restore, {
+			response: envelope(ProductSchema),
+			queryKey: ({ id }) => ["product", "restore", id],
+		}),
+	},
+	// @app-generated:end product
 } as const;
 
 /** The full router tree — used to derive the client router + server caller types. */

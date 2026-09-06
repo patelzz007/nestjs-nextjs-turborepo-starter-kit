@@ -1,7 +1,7 @@
 import { Controller, Get, Query } from "@nestjs/common";
 import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
 
-import { CapabilityCatalogQuerySchema, apiPath } from "@workspace/shared";
+import { CapabilityCatalogQuerySchema, apiPath, type CapabilityDefinition } from "@workspace/shared";
 import { ZodValidationPipe } from "../../../common/pipes/zod-validation.pipe";
 import { RlsBypass } from "../../auth/decorators/rls-bypass.decorator";
 
@@ -17,7 +17,7 @@ export class CapabilitiesCatalogController {
 	@Get()
 	@ApiOperation({ summary: "List capability catalog entries (optionally filtered by scope)" })
 	@ApiOkResponse({ description: "Capability definitions" })
-	public listCatalog(@Query(new ZodValidationPipe(CapabilityCatalogQuerySchema)) query: { scope?: "PLATFORM" | "MERCHANT" | "ADMIN" }) {
+	public listCatalog(@Query(new ZodValidationPipe(CapabilityCatalogQuerySchema)) query: { scope?: "PLATFORM" | "MERCHANT" | "ADMIN" }): Promise<CapabilityDefinition[]> {
 		return this.capabilityDefinitions.listCatalog(query.scope);
 	}
 }

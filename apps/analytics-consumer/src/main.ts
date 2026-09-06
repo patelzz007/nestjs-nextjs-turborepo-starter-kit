@@ -171,7 +171,8 @@ async function main(): Promise<void> {
 	});
 }
 
-main().catch((error: Error): void => {
-	console.error(error.message);
+main().catch((error: unknown): void => {
+	const message = error instanceof Error ? error.message : String(error);
+	console.error(message);
 	process.exit(1);
 });

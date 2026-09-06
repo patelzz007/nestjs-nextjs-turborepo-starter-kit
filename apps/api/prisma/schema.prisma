@@ -84,6 +84,8 @@ enum PermissionResource {
   REWARD
   MERCHANT_ORG
   REDEMPTION
+  SAMPLE_CATEGORY
+  PRODUCT
 }
 
 // Tables
@@ -105,16 +107,16 @@ model User {
   failedLoginAttempts Int     @default(0) @map("failed_login_attempts")
   lockedUntil         BigInt? @map("locked_until")
 
-  twoFactorEnabled Boolean @default(false) @map("two_factor_enabled")
+  twoFactorEnabled          Boolean @default(false) @map("two_factor_enabled")
   /// DEPRECATED: plaintext TOTP secret — migrate to encrypted columns in service layer.
-  twoFactorSecret            String? @map("two_factor_secret") @db.Text
-  twoFactorSecretCiphertext  String? @map("two_factor_secret_ciphertext") @db.Text
-  twoFactorSecretIv          String? @map("two_factor_secret_iv") @db.VarChar(32)
-  twoFactorSecretKeyVersion  Int?    @map("two_factor_secret_key_version")
-  twoFactorLastTotpStep      BigInt? @map("two_factor_last_totp_step")
-  mfaEnrolledAt              BigInt? @map("mfa_enrolled_at")
-  mfaEnrollmentDeadline      BigInt? @map("mfa_enrollment_deadline")
-  mfaAssuredAt               BigInt? @map("mfa_assured_at")
+  twoFactorSecret           String? @map("two_factor_secret") @db.Text
+  twoFactorSecretCiphertext String? @map("two_factor_secret_ciphertext") @db.Text
+  twoFactorSecretIv         String? @map("two_factor_secret_iv") @db.VarChar(32)
+  twoFactorSecretKeyVersion Int?    @map("two_factor_secret_key_version")
+  twoFactorLastTotpStep     BigInt? @map("two_factor_last_totp_step")
+  mfaEnrolledAt             BigInt? @map("mfa_enrolled_at")
+  mfaEnrollmentDeadline     BigInt? @map("mfa_enrollment_deadline")
+  mfaAssuredAt              BigInt? @map("mfa_assured_at")
 
   provider          String? // "google" | "github" | null
   providerId        String? @map("provider_id")
@@ -127,16 +129,16 @@ model User {
   userRoles       UserRole[]
   userPermissions UserPermission[]
 
-  emailVerifiedAt             BigInt?                 @map("email_verified_at")
-  phone                       String?                 @db.VarChar(20)
-  phoneVerifiedAt             BigInt?                 @map("phone_verified_at")
-  lastLoginAt                 BigInt?                 @map("last_login_at")
-  pendingAttributionToken     String?                 @map("pending_attribution_token") @db.VarChar(64)
-  pendingAttributionExpiresAt BigInt?                 @map("pending_attribution_expires_at")
-  isDeleted                   Boolean                 @default(false) @map("is_deleted")
-  deletedAt                   BigInt?                 @map("deleted_at")
-  createdAt                   BigInt                  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
-  updatedAt                   BigInt                  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
+  emailVerifiedAt             BigInt?                   @map("email_verified_at")
+  phone                       String?                   @db.VarChar(20)
+  phoneVerifiedAt             BigInt?                   @map("phone_verified_at")
+  lastLoginAt                 BigInt?                   @map("last_login_at")
+  pendingAttributionToken     String?                   @map("pending_attribution_token") @db.VarChar(64)
+  pendingAttributionExpiresAt BigInt?                   @map("pending_attribution_expires_at")
+  isDeleted                   Boolean                   @default(false) @map("is_deleted")
+  deletedAt                   BigInt?                   @map("deleted_at")
+  createdAt                   BigInt                    @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
+  updatedAt                   BigInt                    @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
   urls                        Url[]
   tags                        Tag[]
   apiKeys                     ApiKey[]
@@ -146,8 +148,8 @@ model User {
   twoFactorPendingSetup       TwoFactorPendingSetup?
   twoFactorLoginChallenges    TwoFactorLoginChallenge[]
   mfaRecoveryRequests         MfaRecoveryRequest[]
-  impersonatedBy              ImpersonationAuditLog[] @relation("Impersonator")
-  impersonatedUser            ImpersonationAuditLog[] @relation("ImpersonationTarget")
+  impersonatedBy              ImpersonationAuditLog[]   @relation("Impersonator")
+  impersonatedUser            ImpersonationAuditLog[]   @relation("ImpersonationTarget")
 
   merchantMembers           MerchantMember[]
   merchantApiKeysCreated    MerchantApiKey[]        @relation("MerchantApiKeyCreator")
@@ -240,8 +242,8 @@ model CapabilityDefinition {
   permissionId String?         @unique @map("permission_id")
   metadata     Json?
 
-  permission           Permission?              @relation(fields: [permissionId], references: [id], onDelete: SetNull)
-  merchantRoleGrants   MerchantRoleCapability[]
+  permission         Permission?              @relation(fields: [permissionId], references: [id], onDelete: SetNull)
+  merchantRoleGrants MerchantRoleCapability[]
 
   isDeleted Boolean @default(false) @map("is_deleted")
   deletedAt BigInt? @map("deleted_at")
@@ -1300,3 +1302,76 @@ model AnalyticsEvent {
   @@index([eventType, occurredAt])
   @@map("analytics_events")
 }
+
+/// Generic audit log for generated platform resources.
+model PlatformResourceAuditLog {
+  id           String  @id @default(uuid())
+  resourceType String  @map("resource_type") @db.VarChar(120)
+  resourceId   String  @map("resource_id") @db.Uuid
+  action       String  @db.VarChar(120)
+  actorUserId  String? @map("actor_user_id") @db.Uuid
+  changes      Json?
+  createdAt    BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
+
+  @@index([resourceType, resourceId, createdAt])
+  @@map("platform_resource_audit_logs")
+}
+
+/// Idempotency records for generated platform mutations.
+model PlatformResourceIdempotencyRecord {
+  id             String @id @default(uuid())
+  scope          String @db.VarChar(200)
+  idempotencyKey String @map("idempotency_key") @db.VarChar(128)
+  requestHash    String @map("request_hash") @db.VarChar(128)
+  responseBody   Json   @map("response_body")
+  createdAt      BigInt @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
+
+  @@unique([scope, idempotencyKey], map: "platform_resource_idempotency_scope_key")
+  @@map("platform_resource_idempotency_records")
+}
+
+// @app-generated:begin SampleCategory
+/// Generated resource model (SampleCategory).
+model SampleCategory {
+  id          String    @id @default(uuid())
+  description String?   @db.Text
+  isActive    Boolean?  @map("is_active")
+  name        String
+  slug        String
+  sortOrder   Int?      @map("sort_order")
+  deletedAt   BigInt?   @map("deleted_at")
+  createdAt   BigInt    @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
+  updatedAt   BigInt    @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
+  products    Product[]
+
+  @@map("sample_category")
+}
+
+// @app-generated:end SampleCategory
+
+// @app-generated:begin Product
+/// Generated resource model (Product).
+model Product {
+  id String @id @default(uuid())
+  brand String?
+  categoryId String @map("category_id")
+  compareAtPrice Decimal? @map("compare_at_price") @db.Decimal(18, 2)
+  description String? @db.Text
+  imageUrl String? @map("image_url")
+  isActive Boolean? @map("is_active")
+  isFeatured Boolean? @map("is_featured")
+  name String
+  price Decimal @db.Decimal(18, 2)
+  shortDescription String? @map("short_description")
+  sku String
+  slug String
+  stockQuantity Int? @map("stock_quantity")
+  weightGrams Int? @map("weight_grams")
+  version Int @default(0)
+  deletedAt BigInt? @map("deleted_at")
+  createdAt BigInt @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
+  updatedAt BigInt @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
+  category SampleCategory? @relation(fields: [categoryId], references: [id])
+  @@map("product")
+}
+// @app-generated:end Product

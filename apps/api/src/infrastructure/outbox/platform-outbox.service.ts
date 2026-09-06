@@ -3,6 +3,7 @@ import type { Prisma } from "@prisma/client";
 
 import {
 	JsonObjectSchema,
+	KafkaTopicSchema,
 	OutboxEnqueueInputSchema,
 	PlatformEventEnvelopeSchema,
 	type KafkaTopic,
@@ -74,12 +75,12 @@ export class PlatformOutboxService {
 	}
 
 	public async listPendingForPublish(limit: number): Promise<
-		ReadonlyArray<{
+		readonly {
 			readonly id: string;
 			readonly topic: KafkaTopic;
 			readonly partitionKey: string | null;
 			readonly envelope: PlatformEventEnvelope;
-		}>
+		}[]
 	> {
 		const rows = await this.prisma.outboxEvent.findMany({
 			where: { status: "PENDING" },
@@ -89,7 +90,7 @@ export class PlatformOutboxService {
 
 		return rows.map((row) => ({
 			id: row.id,
-			topic: row.topic as KafkaTopic,
+			topic: KafkaTopicSchema.parse(row.topic),
 			partitionKey: row.partitionKey,
 			envelope: PlatformEventEnvelopeSchema.parse(row.payload),
 		}));

@@ -26,6 +26,24 @@ export interface RewardCategoryVisualProps {
 
 /** Category glyph for reward cards and list rows. */
 export function RewardCategoryVisual({ category, className }: RewardCategoryVisualProps): React.JSX.Element {
-	const Icon = getRewardCategoryIcon(category);
-	return <Icon className={className} aria-hidden="true" />;
+	const parsed = RewardCategorySchema.safeParse(category);
+
+	switch (parsed.success ? parsed.data : null) {
+		case "cafe":
+			return <Coffee className={className} aria-hidden="true" />;
+		case "restaurant":
+			return <Utensils className={className} aria-hidden="true" />;
+		case "retail":
+			return <ShoppingBag className={className} aria-hidden="true" />;
+		case "wellness":
+			return <Heart className={className} aria-hidden="true" />;
+		case "entertainment":
+			return <Sparkles className={className} aria-hidden="true" />;
+		case "food":
+			return <UtensilsCrossed className={className} aria-hidden="true" />;
+		case "beverage":
+			return <Coffee className={className} aria-hidden="true" />;
+		default:
+			return <Store className={className} aria-hidden="true" />;
+	}
 }

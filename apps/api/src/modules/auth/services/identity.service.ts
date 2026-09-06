@@ -50,7 +50,7 @@ export class IdentityService {
 
 		const hashedPassword = await this.cryptoService.hash(password);
 		const verificationToken = await this.tokenService.generateEmailVerificationToken(email);
-		const enrollmentDeadline: bigint = BigInt(Date.now() + this.config.mfaEnrollmentDeadlineMs);
+		const enrollmentDeadline = BigInt(Date.now() + this.config.mfaEnrollmentDeadlineMs);
 
 		const newUser = await this.prisma.user.create({
 			data: {

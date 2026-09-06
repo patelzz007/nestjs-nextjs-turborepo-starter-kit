@@ -31,7 +31,7 @@
 		"@workspace/eslint-config": "workspace:*",
 		"@workspace/typescript-config": "workspace:*",
 		"eslint": "^9.39.5",
-		"typescript": "7.0.2",
+		"typescript": "6.0.2",
 		"vitest": "^5.0.0"
 	}
 }

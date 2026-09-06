@@ -1,8 +1,10 @@
 // @vitest-environment jsdom
-import { act, render, renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 import type { ReactNode } from "react";
 
+import { QueryProvider } from "../api/query-provider";
+import { fetchCalls, headersOf, inputUrl, jsonResponse, type FetchCall, type FetchImpl } from "../test-utils";
 import { AuthProvider, useAuth, type CookieNamesConfig } from "./index";
 import type { AuthUser } from "./auth-store";
 
@@ -15,8 +17,6 @@ const MOCK_USER: AuthUser = {
 	isEmailVerified: true,
 	roles: [{ id: "role-1", name: "admin" }],
 };
-import { QueryProvider } from "../api/query-provider";
-import { fetchCalls, headersOf, inputUrl, jsonResponse, type FetchCall, type FetchImpl } from "../test-utils";
 
 /**
  * Minimal BroadcastChannel mock so cross-tab sync can be exercised under jsdom

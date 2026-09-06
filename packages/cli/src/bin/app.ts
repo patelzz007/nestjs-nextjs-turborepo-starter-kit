@@ -1,0 +1,214 @@
+#!/usr/bin/env node
+import { readFile } from "node:fs/promises";
+import { Command } from "commander";
+
+import * as p from "@clack/prompts";
+import pc from "picocolors";
+
+import { runDoctorCommand, runGenerateResourceCommand } from "../commands/generate-resource.js";
+import { inspectResourceDefinition, resolveDefinitionPath, validateResourceDefinition } from "../commands/schema-commands.js";
+import { loadProjectConfig } from "../core/project.js";
+import { normalizeResourceDefinition } from "../ir/normalize.js";
+import { parseResourceDefinitionFile } from "../parser/parse-resource-definition.js";
+import { printAppBanner, CLI_VERSION } from "../ui/brand.js";
+import { printRoutesTable } from "../ui/plan-display.js";
+import { runInteractiveHub, shouldLaunchInteractiveHub } from "../ui/interactive-hub.js";
+
+if (shouldLaunchInteractiveHub(process.argv)) {
+	const code = await runInteractiveHub(process.cwd());
+	process.exit(code);
+}
+
+const program = new Command();
+
+program.name("app").description("Contract-driven application scaffolding CLI").version(CLI_VERSION);
+
+program
+	.command("init")
+	.description("Initialize generator metadata in the current monorepo")
+	.action(async () => {
+		const config = loadProjectConfig(process.cwd());
+		const { ensureCliEslintConfig } = await import("../generators/workspace/ensure-cli-eslint-config.js");
+		printAppBanner();
+		p.intro("Project layout");
+		p.log.info(`Root: ${pc.cyan(config.rootDir)}`);
+		p.log.info(`Definitions: ${pc.cyan(config.definitionsDir)}`);
+		const eslintStatus = await ensureCliEslintConfig(config.rootDir);
+		if (eslintStatus === "repaired") {
+			p.log.success("Repaired packages/cli/eslint.config.js");
+		}
+		p.outro("Ready to scaffold.");
+	});
+
+program
+	.command("interactive")
+	.alias("hub")
+	.description("Launch the interactive CLI menu")
+	.action(async () => {
+		const code = await runInteractiveHub(process.cwd());
+		process.exit(code);
+	});
+
+const generate = program.command("generate").description("Generate application artifacts");
+
+const generateResourceOptions = [
+	["--schema <path>", "Path to resource definition file"],
+	["--dry-run", "Show plan without writing files", false],
+	["--non-interactive", "Skip confirmation prompts", false],
+	["--allow-destructive", "Allow destructive schema changes", false],
+	["--skip-validation", "Skip format/lint/typecheck after generation", false],
+] as const;
+
+function attachGenerateResourceOptions(command: Command): Command {
+	for (const [flags, description, defaultValue] of generateResourceOptions) {
+		if (defaultValue === undefined) {
+			command.option(flags, description);
+		} else {
+			command.option(flags, description, defaultValue);
+		}
+	}
+	return command;
+}
+
+attachGenerateResourceOptions(
+	generate
+		.command("resource <name>")
+		.description("Generate a full resource from a .resource.ts definition")
+		.action(async (name: string, options: { schema?: string; dryRun?: boolean; nonInteractive?: boolean; allowDestructive?: boolean; skipValidation?: boolean }) => {
+			const code = await runGenerateResourceCommand(process.cwd(), name, {
+				dryRun: options.dryRun === true,
+				nonInteractive: options.nonInteractive === true,
+				allowDestructive: options.allowDestructive === true,
+				skipValidation: options.skipValidation === true,
+				schemaPath: options.schema,
+			});
+			process.exit(code);
+		}),
+);
+
+for (const alias of ["module", "model", "page", "component", "api", "permission"]) {
+	attachGenerateResourceOptions(
+		generate
+			.command(`${alias} <name>`)
+			.description(`Alias for generate resource (${alias} slice is included in the full resource plan)`)
+			.action(async (name: string, options: { schema?: string; dryRun?: boolean; nonInteractive?: boolean; allowDestructive?: boolean; skipValidation?: boolean }) => {
+				p.log.info(`Running full resource generation for ${alias} slice.`);
+				const code = await runGenerateResourceCommand(process.cwd(), name, {
+					dryRun: options.dryRun === true,
+					nonInteractive: options.nonInteractive === true,
+					allowDestructive: options.allowDestructive === true,
+					skipValidation: options.skipValidation === true,
+					schemaPath: options.schema,
+				});
+				process.exit(code);
+			}),
+	);
+}
+
+const schema = program.command("schema").description("Resource schema commands");
+
+schema
+	.command("validate [name]")
+	.description("Validate a resource definition")
+	.option("--schema <path>", "Path to resource definition file")
+	.action(async (name: string | undefined, options: { schema?: string }) => {
+		const path = options.schema ?? (name ? resolveDefinitionPath(process.cwd(), name) : undefined);
+		if (path === undefined) {
+			p.log.error("Provide a resource name or --schema path.");
+			process.exit(1);
+		}
+		const ok = await validateResourceDefinition(path, { verbose: true });
+		process.exit(ok ? 0 : 1);
+	});
+
+schema
+	.command("inspect <name>")
+	.description("Print normalized IR for a resource definition")
+	.option("--schema <path>", "Path to resource definition file")
+	.action(async (name: string, options: { schema?: string }) => {
+		const path = options.schema ?? resolveDefinitionPath(process.cwd(), name);
+		await inspectResourceDefinition(path);
+	});
+
+schema
+	.command("diff <name>")
+	.description("Show planned changes for a resource")
+	.action(async (name: string) => {
+		const code = await runGenerateResourceCommand(process.cwd(), name, { dryRun: true, nonInteractive: true, allowDestructive: false, skipValidation: true });
+		process.exit(code);
+	});
+
+program
+	.command("sync <name>")
+	.description("Regenerate a resource from its definition")
+	.option("--allow-destructive", "Allow destructive schema changes", false)
+	.option("--skip-validation", "Skip format/lint/typecheck after generation", false)
+	.action(async (name: string, options: { allowDestructive?: boolean; skipValidation?: boolean }) => {
+		const code = await runGenerateResourceCommand(process.cwd(), name, {
+			dryRun: false,
+			nonInteractive: true,
+			allowDestructive: options.allowDestructive === true,
+			skipValidation: options.skipValidation === true,
+		});
+		process.exit(code);
+	});
+
+program
+	.command("migrate <name>")
+	.description("Run prisma migrate dev for a generated resource")
+	.action((name: string) => {
+		p.note(`pnpm db:migrate`, `Review schema changes for ${name}`);
+	});
+
+const routes = program.command("routes").description("Generated route metadata");
+
+routes
+	.command("list")
+	.description("List generated API routes from definitions")
+	.action(async () => {
+		const config = loadProjectConfig(process.cwd());
+		const { readdir } = await import("node:fs/promises");
+		const entries = await readdir(config.definitionsDir);
+		const rows: { slug: string; contractKey: string; label: string; fieldCount: number }[] = [];
+		for (const entry of entries.filter((file) => file.endsWith(".resource.ts"))) {
+			const source = await readFile(`${config.definitionsDir}/${entry}`, "utf8");
+			const definition = parseResourceDefinitionFile(source, entry);
+			const ir = normalizeResourceDefinition(definition);
+			rows.push({
+				slug: ir.resource.slug,
+				contractKey: ir.resource.contractKey,
+				label: ir.admin?.navigation?.label ?? ir.resource.plural,
+				fieldCount: ir.fields.length,
+			});
+		}
+		printAppBanner();
+		printRoutesTable(rows);
+	});
+
+program
+	.command("doctor")
+	.description("Validate project compatibility for the generator")
+	.action(async () => {
+		const code = await runDoctorCommand(process.cwd(), { verbose: true });
+		process.exit(code);
+	});
+
+const newCommand = program.command("new").description("Create new generator inputs interactively");
+
+newCommand
+	.command("resource")
+	.description("Interactive wizard to create a .resource.ts definition and optionally generate artifacts")
+	.option("--generate", "Generate API, contracts, and admin UI after writing the definition", false)
+	.option("--dry-run", "Show prompts and preview without writing files", false)
+	.option("--skip-validation", "Skip format/lint/typecheck after generation", false)
+	.action(async (options: { generate?: boolean; dryRun?: boolean; skipValidation?: boolean }) => {
+		const { runNewResourceCommand } = await import("../commands/new-resource.js");
+		const code = await runNewResourceCommand(process.cwd(), {
+			generate: options.generate === true,
+			dryRun: options.dryRun === true,
+			skipValidation: options.skipValidation === true,
+		});
+		process.exit(code);
+	});
+
+await program.parseAsync(process.argv);

@@ -5,7 +5,11 @@ import { EpochMsSchema } from "@workspace/shared";
 import { CryptoService } from "../../auth/services/crypto.service";
 import { EmailVerificationService } from "../../auth/services/email-verification.service";
 import { UserProvisioningService } from "../../auth/services/user-provisioning.service";
-import { PrismaService } from "../../../prisma/prisma.service";
+import { MerchantInviteRepository } from "../repositories/merchant-invite.repository";
+import { MerchantMemberRepository } from "../repositories/merchant-member.repository";
+import { MerchantOrgRepository } from "../repositories/merchant-org.repository";
+import { RewardAuditLogRepository } from "../repositories/reward-audit-log.repository";
+import { RewardUserRepository } from "../repositories/reward-user.repository";
 import { sha256Hex } from "../utils/reward-crypto.util";
 
 interface ResolvedMerchantInvite {
@@ -21,7 +25,11 @@ interface ResolvedMerchantInvite {
 @Injectable()
 export class MerchantOnboardingService {
 	public constructor(
-		private readonly prisma: PrismaService,
+		private readonly merchantInviteRepository: MerchantInviteRepository,
+		private readonly merchantOrgRepository: MerchantOrgRepository,
+		private readonly merchantMemberRepository: MerchantMemberRepository,
+		private readonly rewardUserRepository: RewardUserRepository,
+		private readonly auditLogRepository: RewardAuditLogRepository,
 		private readonly cryptoService: CryptoService,
 		private readonly userProvisioning: UserProvisioningService,
 		private readonly emailVerificationService: EmailVerificationService,
@@ -44,10 +52,7 @@ export class MerchantOnboardingService {
 			throw new BadRequestException("This merchant invite has already been accepted");
 		}
 
-		const existingUser = await this.prisma.user.findFirst({
-			where: { email: invite.email, isDeleted: false },
-			select: { id: true, passwordHash: true, fullName: true },
-		});
+		const existingUser = await this.rewardUserRepository.findOnboardingByEmail(invite.email);
 
 		let userId: string;
 
@@ -70,19 +75,13 @@ export class MerchantOnboardingService {
 			userId = existingUser.id;
 
 			if (existingUser.fullName !== input.fullName) {
-				await this.prisma.user.update({
-					where: { id: userId },
-					data: { fullName: input.fullName, updatedAt: Date.now() },
-				});
+				await this.rewardUserRepository.updateFullName(userId, input.fullName);
 			}
 
 			await this.emailVerificationService.sendVerificationEmailIfUnverified(invite.email, "merchant");
 		}
 
-		const existingMembership = await this.prisma.merchantMember.findFirst({
-			where: { userId, isDeleted: false, merchantOrg: { businessName: invite.businessName, city: invite.city, isDeleted: false } },
-			select: { merchantOrgId: true, role: true },
-		});
+		const existingMembership = await this.merchantMemberRepository.findMembershipForOnboarding(userId, invite.businessName, invite.city);
 
 		if (existingMembership !== null) {
 			await this.markInviteAccepted(invite.id, userId, existingMembership.merchantOrgId);
@@ -93,36 +92,19 @@ export class MerchantOnboardingService {
 			};
 		}
 
-		const merchantOrg = await this.prisma.$transaction(async (tx) => {
-			const org = await tx.merchantOrg.create({
-				data: {
-					businessName: invite.businessName,
-					category: "general",
-					city: invite.city,
-					status: "ONBOARDING",
-					contactEmail: invite.email,
-				},
-			});
-
-			await tx.merchantMember.create({
-				data: {
-					userId,
-					merchantOrgId: org.id,
-					role: "OWNER",
-				},
-			});
-
-			return org;
+		const merchantOrg = await this.merchantOrgRepository.createWithOwner({
+			businessName: invite.businessName,
+			city: invite.city,
+			contactEmail: invite.email,
+			userId,
 		});
 
 		await this.markInviteAccepted(invite.id, userId, merchantOrg.id);
 
-		await this.prisma.rewardAuditLog.create({
-			data: {
-				merchantOrgId: merchantOrg.id,
-				action: "merchant.onboarding_completed",
-				metadata: { inviteId: invite.id, userId },
-			},
+		await this.auditLogRepository.create({
+			merchantOrgId: merchantOrg.id,
+			action: "merchant.onboarding_completed",
+			metadata: { inviteId: invite.id, userId },
 		});
 
 		return {
@@ -134,18 +116,7 @@ export class MerchantOnboardingService {
 
 	private async findValidInvite(token: string): Promise<ResolvedMerchantInvite> {
 		const tokenHash = sha256Hex(token);
-		const invite = await this.prisma.merchantInvite.findFirst({
-			where: { tokenHash, isDeleted: false },
-			select: {
-				id: true,
-				email: true,
-				businessName: true,
-				city: true,
-				expiresAt: true,
-				acceptedAt: true,
-				merchantOrgId: true,
-			},
-		});
+		const invite = await this.merchantInviteRepository.findByTokenHash(tokenHash);
 
 		if (invite === null) {
 			throw new NotFoundException({ message: "Invalid merchant invite", error: "MERCHANT_INVITE_NOT_FOUND" });
@@ -167,14 +138,6 @@ export class MerchantOnboardingService {
 	}
 
 	private async markInviteAccepted(inviteId: string, userId: string, merchantOrgId: string): Promise<void> {
-		await this.prisma.merchantInvite.update({
-			where: { id: inviteId },
-			data: {
-				acceptedAt: Date.now(),
-				acceptedByUserId: userId,
-				merchantOrgId,
-				updatedAt: Date.now(),
-			},
-		});
+		await this.merchantInviteRepository.markAccepted(inviteId, userId, merchantOrgId, Date.now());
 	}
 }

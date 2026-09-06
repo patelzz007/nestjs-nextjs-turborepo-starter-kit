@@ -1,11 +1,13 @@
 import { ConflictException, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import type { Permission, UserPermission } from "@prisma/client";
-import { nowEpochMs, type PermissionAction, type PermissionResource } from "@workspace/shared";
+import type { PermissionAction, PermissionResource } from "@workspace/shared";
 
-import { PrismaService } from "../../../prisma/prisma.service";
+import { BaseService } from "../../../platform/persistence/base.service";
 import { AuthorizationAuditService } from "../audit/authorization-audit.service";
 import { AuthorizationCacheService } from "../cache/authorization-cache.service";
 import { AuthorizationEventEmitter } from "../events/authorization.events";
+import { PermissionListQuery, PermissionRepository } from "../repositories/permission.repository";
+import { RoleAssignmentRepository } from "../repositories/role-assignment.repository";
 import { UserSessionRevocationService } from "./user-session-revocation.service";
 
 // ── Types ───────────────────────────────────────────────────────────────────
@@ -30,16 +32,19 @@ export interface UpdatePermissionInput {
  * Permission CRUD and direct user-permission grants.
  */
 @Injectable()
-export class PermissionService {
+export class PermissionService extends BaseService<Permission, CreatePermissionInput, UpdatePermissionInput, PermissionListQuery, PermissionRepository> {
 	private readonly logger: Logger = new Logger(PermissionService.name);
 
 	public constructor(
-		private readonly prisma: PrismaService,
+		repository: PermissionRepository,
+		private readonly assignments: RoleAssignmentRepository,
 		private readonly cache: AuthorizationCacheService,
 		private readonly audit: AuthorizationAuditService,
 		private readonly events: AuthorizationEventEmitter,
 		private readonly sessionRevocation: UserSessionRevocationService,
-	) {}
+	) {
+		super(repository);
+	}
 
 	// ── CRUD ─────────────────────────────────────────────────────────────
 
@@ -48,24 +53,14 @@ export class PermissionService {
 	 *
 	 * @throws ConflictException if the action+resource pair already exists.
 	 */
-	public async create(input: CreatePermissionInput): Promise<Permission> {
-		const existing: Permission | null = await this.prisma.permission.findFirst({
-			where: { action: input.action, resource: input.resource, isDeleted: false },
-		});
+	public override async create(input: CreatePermissionInput): Promise<Permission> {
+		const existing: Permission | null = await this.repository.findByActionResource(input.action, input.resource);
 
 		if (existing !== null) {
 			throw new ConflictException(`Permission ${input.action}:${input.resource} already exists`);
 		}
 
-		const permission: Permission = await this.prisma.permission.create({
-			data: {
-				action: input.action,
-				resource: input.resource,
-				description: input.description ?? null,
-				group: input.group ?? null,
-				isSystem: input.isSystem ?? false,
-			},
-		});
+		const permission: Permission = await this.repository.create(input);
 
 		await this.audit.logPermissionCreation("system", permission.id, `${permission.action}:${permission.resource}`);
 		this.logger.log(`Created permission ${permission.action}:${permission.resource} (${permission.id})`);
@@ -74,25 +69,15 @@ export class PermissionService {
 
 	/**
 	 * Update a permission's metadata (description, group, etc.).
-	 *
-	 * Action and resource are immutable — create a new permission instead.
 	 */
-	public async update(permissionId: string, input: UpdatePermissionInput): Promise<Permission> {
+	public override async update(permissionId: string, input: UpdatePermissionInput): Promise<Permission> {
 		const permission: Permission | null = await this.findById(permissionId);
 		if (permission === null) {
 			throw new NotFoundException(`Permission ${permissionId} not found`);
 		}
 
-		const updated: Permission = await this.prisma.permission.update({
-			where: { id: permissionId },
-			data: {
-				...(input.description !== undefined ? { description: input.description } : {}),
-				...(input.group !== undefined ? { group: input.group } : {}),
-				...(input.isSystem !== undefined ? { isSystem: input.isSystem } : {}),
-			},
-		});
+		const updated: Permission = await this.repository.update(permissionId, input);
 
-		// Invalidate users who hold this permission via roles or directly
 		await this.invalidatePermissionUsers(permissionId);
 
 		this.logger.log(`Updated permission ${updated.action}:${updated.resource} (${updated.id})`);
@@ -108,10 +93,7 @@ export class PermissionService {
 			throw new NotFoundException(`Permission ${permissionId} not found`);
 		}
 
-		await this.prisma.permission.update({
-			where: { id: permissionId },
-			data: { isDeleted: true, deletedAt: nowEpochMs() },
-		});
+		await this.repository.delete(permissionId);
 
 		await this.invalidatePermissionUsers(permissionId);
 
@@ -122,19 +104,14 @@ export class PermissionService {
 	/**
 	 * Restore a soft-deleted permission.
 	 */
-	public async restore(permissionId: string): Promise<Permission> {
-		const permission: Permission | null = await this.prisma.permission.findFirst({
-			where: { id: permissionId, isDeleted: true },
-		});
+	public override async restore(permissionId: string): Promise<Permission> {
+		const permission: Permission | null = await this.repository.findDeletedById(permissionId);
 
 		if (permission === null) {
 			throw new NotFoundException(`Deleted permission ${permissionId} not found`);
 		}
 
-		const updated: Permission = await this.prisma.permission.update({
-			where: { id: permissionId },
-			data: { isDeleted: false, deletedAt: null },
-		});
+		const updated: Permission = await super.restore(permissionId);
 
 		await this.invalidatePermissionUsers(permissionId);
 		this.logger.log(`Restored permission ${updated.action}:${updated.resource} (${updated.id})`);
@@ -145,18 +122,14 @@ export class PermissionService {
 	 * Fetch a permission by ID.
 	 */
 	public async findById(permissionId: string): Promise<Permission | null> {
-		return this.prisma.permission.findFirst({
-			where: { id: permissionId, isDeleted: false },
-		});
+		return this.repository.findById(permissionId);
 	}
 
 	/**
 	 * Fetch a permission by action + resource.
 	 */
 	public async findByActionResource(action: PermissionAction, resource: PermissionResource): Promise<Permission | null> {
-		return this.prisma.permission.findFirst({
-			where: { action, resource, isDeleted: false },
-		});
+		return this.repository.findByActionResource(action, resource);
 	}
 
 	/**
@@ -173,39 +146,21 @@ export class PermissionService {
 	): Promise<{ readonly items: Permission[]; readonly total: number }> {
 		const page: number = filters.page ?? 1;
 		const limit: number = filters.limit ?? 50;
-		const skip: number = (page - 1) * limit;
-
-		const where = {
-			isDeleted: false,
-			...(filters.resource !== undefined ? { resource: filters.resource } : {}),
-			...(filters.action !== undefined ? { action: filters.action } : {}),
-			...(filters.group !== undefined ? { group: filters.group } : {}),
-		};
-
-		const [items, total] = await Promise.all([
-			this.prisma.permission.findMany({
-				where,
-				orderBy: [{ resource: "asc" }, { action: "asc" }],
-				skip,
-				take: limit,
-			}),
-			this.prisma.permission.count({ where }),
-		]);
-
-		return { items, total };
+		const result = await this.repository.list({
+			page,
+			limit,
+			resource: filters.resource,
+			action: filters.action,
+			group: filters.group,
+		});
+		return { items: [...result.items], total: result.total };
 	}
 
 	/**
 	 * List distinct permission groups.
 	 */
 	public async listGroups(): Promise<string[]> {
-		const result = await this.prisma.permission.findMany({
-			where: { isDeleted: false, group: { not: null } },
-			select: { group: true },
-			distinct: ["group"],
-		});
-
-		return result.map((r) => r.group ?? "").filter((g) => g.length > 0);
+		return this.repository.listGroups();
 	}
 
 	// ── Direct user-permission grants ────────────────────────────────────
@@ -219,19 +174,7 @@ export class PermissionService {
 			throw new NotFoundException(`Permission ${permissionId} not found`);
 		}
 
-		const result: UserPermission = await this.prisma.userPermission.upsert({
-			where: { userId_permissionId: { userId, permissionId } },
-			create: {
-				userId,
-				permissionId,
-				expiresAt: expiresAt ?? null,
-			},
-			update: {
-				isDeleted: false,
-				deletedAt: null,
-				...(expiresAt !== undefined ? { expiresAt } : {}),
-			},
-		});
+		const result: UserPermission = await this.assignments.givePermissionToUser(userId, permissionId, expiresAt);
 
 		await this.sessionRevocation.revokeAllSessionsForUser(userId);
 		this.cache.invalidate(userId);
@@ -244,10 +187,7 @@ export class PermissionService {
 	 * Revoke a direct permission from a user.
 	 */
 	public async revokeFromUser(userId: string, permissionId: string, actorId = "system"): Promise<void> {
-		await this.prisma.userPermission.updateMany({
-			where: { userId, permissionId, isDeleted: false },
-			data: { isDeleted: true, deletedAt: nowEpochMs() },
-		});
+		await this.assignments.revokePermissionFromUser(userId, permissionId);
 
 		await this.sessionRevocation.revokeAllSessionsForUser(userId);
 		this.cache.invalidate(userId);
@@ -259,63 +199,20 @@ export class PermissionService {
 	 * Sync (replace) all direct permissions on a user.
 	 */
 	public async syncUserPermissions(userId: string, permissionIds: readonly string[]): Promise<void> {
-		await this.prisma.$transaction(async (tx) => {
-			await tx.userPermission.updateMany({
-				where: { userId, isDeleted: false },
-				data: { isDeleted: true, deletedAt: nowEpochMs() },
-			});
-
-			if (permissionIds.length > 0) {
-				await tx.userPermission.createMany({
-					data: permissionIds.map((pid) => ({ userId, permissionId: pid })),
-					skipDuplicates: true,
-				});
-			}
-		});
+		await this.assignments.syncUserPermissions(userId, permissionIds);
 
 		await this.sessionRevocation.revokeAllSessionsForUser(userId);
 		this.cache.invalidate(userId);
 		this.events.emitUsersMeInvalidate([userId]);
 	}
 
-	// ── Internal helpers ─────────────────────────────────────────────────
-
-	/**
-	 * Find all user IDs affected by a permission change (via roles and direct grants),
-	 * then invalidate their caches.
-	 */
 	private async invalidatePermissionUsers(permissionId: string): Promise<void> {
-		const [rolePerms, directPerms] = await Promise.all([
-			this.prisma.rolePermission.findMany({
-				where: { permissionId, isDeleted: false },
-				select: { roleId: true },
-			}),
-			this.prisma.userPermission.findMany({
-				where: { permissionId, isDeleted: false },
-				select: { userId: true },
-			}),
-		]);
+		const userIds: string[] = await this.assignments.findAffectedUserIdsByPermission(permissionId);
 
-		// Collect user IDs from direct grants
-		const userIds: Set<string> = new Set<string>(directPerms.map((dp) => dp.userId));
-
-		// Collect user IDs from role assignments
-		if (rolePerms.length > 0) {
-			const roleIds: string[] = rolePerms.map((rp) => rp.roleId);
-			const userRoles = await this.prisma.userRole.findMany({
-				where: { roleId: { in: roleIds }, isDeleted: false },
-				select: { userId: true },
-			});
-			for (const ur of userRoles) {
-				userIds.add(ur.userId);
-			}
-		}
-
-		if (userIds.size > 0) {
-			const ids: string[] = Array.from(userIds);
-			this.cache.invalidateUsers(ids);
-			await this.sessionRevocation.revokeAllSessionsForUsers(ids);
-			this.events.emitUsersMeInvalidate(ids);
+		if (userIds.length > 0) {
+			this.cache.invalidateUsers(userIds);
+			await this.sessionRevocation.revokeAllSessionsForUsers(userIds);
+			this.events.emitUsersMeInvalidate(userIds);
 		}
 	}
 }

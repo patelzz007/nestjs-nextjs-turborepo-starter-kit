@@ -22,7 +22,10 @@ import { HealthModule } from "./modules/health/health.module";
 import { ImpersonationModule } from "./modules/impersonation/impersonation.module";
 import { LogsModule } from "./modules/logs/logs.module";
 import { NotificationsModule } from "./modules/notifications/notifications.module";
+import { PlatformResourceModule } from "./platform/platform-resource.module";
 import { RewardsModule } from "./modules/rewards/rewards.module";
+import { ProductModule } from "./modules/product/product.module";
+import { SampleCategoryModule } from "./modules/sample-category/sample-category.module";
 
 import { SessionsModule } from "./modules/sessions/sessions.module";
 import { PrismaModule } from "./prisma/prisma.module";
@@ -68,7 +71,10 @@ if (observeEnabled && observeAppKey !== undefined && observeAppSecret !== undefi
 		ImpersonationModule,
 		NotificationsModule,
 		GeoModule,
+		PlatformResourceModule,
 		RewardsModule,
+		ProductModule,
+		SampleCategoryModule,
 		// Conditionally include ObserveModule
 		...observeImports,
 	],

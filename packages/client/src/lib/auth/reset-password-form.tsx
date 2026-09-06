@@ -23,21 +23,19 @@ export function ResetPasswordForm({ token, loginHref = "/auth/login" }: ResetPas
 	const [confirmPassword, setConfirmPassword] = useState("");
 	const [error, setError] = useState<string | null>(null);
 	const [isLoading, setIsLoading] = useState(false);
-	const [isTokenValid, setIsTokenValid] = useState<boolean | null>(null);
+	const [isTokenValid, setIsTokenValid] = useState<boolean | null>(token.length === 0 ? false : null);
 	const router = useRouter();
 	const { api } = useAuth();
 	const mutation = api.auth.resetPassword.useMutation();
 	const { mutateAsync: validateResetToken } = api.auth.validateResetToken.useMutation();
 	const strength = useMemo(() => passwordStrength(password), [password]);
 
-	useEffect((): (() => void) => {
+	useEffect(() => {
 		if (token.length === 0) {
-			setIsTokenValid(false);
-			return (): void => {};
+			return;
 		}
 
 		let cancelled = false;
-		setIsTokenValid(null);
 
 		void validateResetToken({ token })
 			.then((response): void => {

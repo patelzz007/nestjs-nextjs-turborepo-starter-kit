@@ -9,9 +9,9 @@ import {
 	parseCapabilitySlugs,
 } from "@workspace/shared";
 
-import { PrismaService } from "../../../prisma/prisma.service";
 import { CapabilityDefinitionService } from "../../authorization/services/capability-definition.service";
 import { DEFAULT_MERCHANT_ROLE_CAPABILITY_GRANTS } from "../constants/merchant-role-capability-defaults";
+import { MerchantRoleCapabilityRepository } from "../repositories/merchant-role-capability.repository";
 
 type CapabilityCache = Readonly<Record<MerchantMemberRole, readonly CapabilitySlug[]>>;
 
@@ -24,7 +24,7 @@ export class MerchantCapabilityService implements OnModuleInit {
 	private cache: CapabilityCache | null = null;
 
 	public constructor(
-		private readonly prisma: PrismaService,
+		private readonly merchantRoleCapabilityRepository: MerchantRoleCapabilityRepository,
 		private readonly capabilityDefinitions: CapabilityDefinitionService,
 	) {}
 
@@ -61,14 +61,7 @@ export class MerchantCapabilityService implements OnModuleInit {
 			}
 		}
 
-		const definitions = await this.prisma.capabilityDefinition.findMany({
-			where: {
-				isDeleted: false,
-				scope: "MERCHANT",
-				slug: { in: uniqueCapabilities },
-			},
-			select: { id: true, slug: true },
-		});
+		const definitions = await this.merchantRoleCapabilityRepository.findCapabilityIdsBySlugs(uniqueCapabilities);
 
 		const slugToId = new Map<CapabilitySlug, string>();
 		for (const definition of definitions) {
@@ -87,42 +80,7 @@ export class MerchantCapabilityService implements OnModuleInit {
 		}
 
 		const now: number = Date.now();
-
-		await this.prisma.$transaction(async (tx) => {
-			const existing = await tx.merchantRoleCapability.findMany({
-				where: { role },
-				select: { id: true, capabilityId: true, isDeleted: true },
-			});
-
-			for (const row of existing) {
-				if (!desiredIds.has(row.capabilityId) && !row.isDeleted) {
-					await tx.merchantRoleCapability.update({
-						where: { id: row.id },
-						data: { isDeleted: true, deletedAt: now, updatedAt: now },
-					});
-				}
-			}
-
-			for (const capabilityId of desiredIds) {
-				await tx.merchantRoleCapability.upsert({
-					where: {
-						role_capabilityId: {
-							role,
-							capabilityId,
-						},
-					},
-					create: {
-						role,
-						capabilityId,
-					},
-					update: {
-						isDeleted: false,
-						deletedAt: null,
-						updatedAt: now,
-					},
-				});
-			}
-		});
+		await this.merchantRoleCapabilityRepository.syncRoleCapabilities(role, desiredIds, now);
 
 		this.invalidateCache();
 		this.capabilityDefinitions.invalidateCache();
@@ -148,14 +106,7 @@ export class MerchantCapabilityService implements OnModuleInit {
 
 		await this.bootstrapDefaultsIfTableEmpty();
 
-		const rows = await this.prisma.merchantRoleCapability.findMany({
-			where: { isDeleted: false },
-			select: {
-				role: true,
-				capability: { select: { slug: true } },
-			},
-			orderBy: [{ role: "asc" }, { capability: { slug: "asc" } }],
-		});
+		const rows = await this.merchantRoleCapabilityRepository.listActiveWithSlugs();
 
 		const ownerCapabilities = parseCapabilitySlugs(rows.filter((row) => row.role === "OWNER").map((row) => row.capability.slug));
 		const cashierCapabilities = parseCapabilitySlugs(rows.filter((row) => row.role === "CASHIER").map((row) => row.capability.slug));
@@ -169,9 +120,7 @@ export class MerchantCapabilityService implements OnModuleInit {
 	}
 
 	private async bootstrapDefaultsIfTableEmpty(): Promise<void> {
-		const activeCount = await this.prisma.merchantRoleCapability.count({
-			where: { isDeleted: false },
-		});
+		const activeCount = await this.merchantRoleCapabilityRepository.countActive();
 
 		if (activeCount > 0) {
 			return;

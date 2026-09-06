@@ -1,11 +1,10 @@
-import { Injectable, Logger, OnModuleDestroy } from "@nestjs/common";
+import { Injectable, Logger, OnModuleDestroy, Inject } from "@nestjs/common";
 import type { ThrottlerStorage } from "@nestjs/throttler";
 import type { ThrottlerStorageRecord } from "@nestjs/throttler/dist/throttler-storage-record.interface";
 import type Redis from "ioredis";
 
 import { TypedConfigService } from "../../../config/typed-config.service";
 import { REDIS_PUBLISHER } from "../../../infrastructure/redis/redis.tokens";
-import { Inject } from "@nestjs/common";
 
 interface MemoryRecord {
 	totalHits: number;

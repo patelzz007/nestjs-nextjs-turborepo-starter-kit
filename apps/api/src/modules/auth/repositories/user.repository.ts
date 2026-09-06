@@ -96,10 +96,8 @@ function buildAdminUserListWhere(query: AdminUserListQuery): Prisma.UserWhereInp
 		return {};
 	}
 	if (parts.length === 1) {
-		const single = parts[0];
-		if (single !== undefined) {
-			return single;
-		}
+		const [single] = parts;
+		return single;
 	}
 	return { AND: parts };
 }

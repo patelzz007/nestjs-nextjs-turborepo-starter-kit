@@ -18,9 +18,9 @@ export class LogService {
 	private memoryMonitorInterval: NodeJS.Timeout | null = null;
 	private memoryBaseline: number | null = null;
 	private memorySamples: number[] = [];
-	private readonly MAX_SAMPLES = 60; // Keep last 60 samples (5 minutes if sampling every 5s)
-	private readonly MEMORY_LEAK_THRESHOLD_MB = 50; // Alert if growth > 50MB over baseline
-	private readonly SAMPLE_INTERVAL_MS = 5000; // Sample every 5 seconds
+	private readonly maxSamples = 60; // Keep last 60 samples (5 minutes if sampling every 5s)
+	private readonly memoryLeakThresholdMb = 50; // Alert if growth > 50MB over baseline
+	private readonly sampleIntervalMs = 5000; // Sample every 5 seconds
 
 	constructor() {
 		// Start memory monitoring in production or when explicitly enabled
@@ -66,7 +66,7 @@ export class LogService {
 		// Set up interval sampling
 		this.memoryMonitorInterval = setInterval(() => {
 			this.takeMemorySample(false);
-		}, this.SAMPLE_INTERVAL_MS);
+		}, this.sampleIntervalMs);
 	}
 
 	/**
@@ -83,7 +83,7 @@ export class LogService {
 	/**
 	 * Take a memory sample and check for leaks
 	 */
-	private takeMemorySample(isBaseline: boolean = false): void {
+	private takeMemorySample(isBaseline = false): void {
 		try {
 			const memoryUsage = process.memoryUsage();
 			const heapUsedMB = Math.round(memoryUsage.heapUsed / 1024 / 1024);
@@ -91,7 +91,7 @@ export class LogService {
 			if (isBaseline) {
 				this.memoryBaseline = heapUsedMB;
 				this.memorySamples = [heapUsedMB];
-				this.logger.log(`Memory baseline established: ${heapUsedMB} MB`, {
+				this.logger.log(`Memory baseline established: ${String(heapUsedMB)} MB`, {
 					context: "MemoryMonitor",
 					metadata: { heapUsedMB, rssMB: Math.round(memoryUsage.rss / 1024 / 1024) },
 				});
@@ -100,7 +100,7 @@ export class LogService {
 
 			// Add to samples array (maintain fixed size)
 			this.memorySamples.push(heapUsedMB);
-			if (this.memorySamples.length > this.MAX_SAMPLES) {
+			if (this.memorySamples.length > this.maxSamples) {
 				this.memorySamples.shift();
 			}
 
@@ -111,7 +111,7 @@ export class LogService {
 				// Log memory stats periodically
 				if (this.memorySamples.length % 12 === 0) {
 					// Every minute (12 * 5s)
-					this.logger.log(`Memory usage update: ${heapUsedMB} MB (baseline: ${this.memoryBaseline} MB, growth: ${memoryGrowthMB} MB)`, {
+					this.logger.log(`Memory usage update: ${String(heapUsedMB)} MB (baseline: ${String(this.memoryBaseline)} MB, growth: ${String(memoryGrowthMB)} MB)`, {
 						context: "MemoryMonitor",
 						metadata: {
 							heapUsedMB,
@@ -123,14 +123,14 @@ export class LogService {
 				}
 
 				// Alert if memory growth exceeds threshold
-				if (memoryGrowthMB > this.MEMORY_LEAK_THRESHOLD_MB) {
-					this.logger.warn(`Potential memory leak detected: ${memoryGrowthMB} MB growth since baseline`, {
+				if (memoryGrowthMB > this.memoryLeakThresholdMb) {
+					this.logger.warn(`Potential memory leak detected: ${String(memoryGrowthMB)} MB growth since baseline`, {
 						context: "MemoryMonitor",
 						metadata: {
 							heapUsedMB,
 							baselineMB: this.memoryBaseline,
 							growthMB: memoryGrowthMB,
-							thresholdMB: this.MEMORY_LEAK_THRESHOLD_MB,
+							thresholdMB: this.memoryLeakThresholdMb,
 							samples: this.memorySamples.length,
 							trend: this.calculateMemoryTrend(),
 						},

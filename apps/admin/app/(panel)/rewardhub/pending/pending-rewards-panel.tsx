@@ -101,6 +101,36 @@ export default function PendingRewardsPanel({ initialRewards }: PendingRewardsPa
 		[rejectMutation, rejectReason],
 	);
 
+	const handleApproveClick = React.useCallback(
+		(event: React.MouseEvent<HTMLButtonElement>): void => {
+			const rewardId = event.currentTarget.dataset.rewardId;
+			if (rewardId !== undefined) {
+				handleApprove(rewardId);
+			}
+		},
+		[handleApprove],
+	);
+
+	const handleStartRejectClick = React.useCallback(
+		(event: React.MouseEvent<HTMLButtonElement>): void => {
+			const rewardId = event.currentTarget.dataset.rewardId;
+			if (rewardId !== undefined) {
+				handleStartReject(rewardId);
+			}
+		},
+		[handleStartReject],
+	);
+
+	const handleConfirmRejectClick = React.useCallback(
+		(event: React.MouseEvent<HTMLButtonElement>): void => {
+			const rewardId = event.currentTarget.dataset.rewardId;
+			if (rewardId !== undefined) {
+				handleConfirmReject(rewardId);
+			}
+		},
+		[handleConfirmReject],
+	);
+
 	const isBusy = approveMutation.isPending || rejectMutation.isPending;
 
 	return (
@@ -131,11 +161,11 @@ export default function PendingRewardsPanel({ initialRewards }: PendingRewardsPa
 									</div>
 								</div>
 								<div className="flex shrink-0 gap-2">
-									<Button size="sm" variant="default" disabled={isBusy} onClick={() => handleApprove(reward.id)}>
+									<Button size="sm" variant="default" disabled={isBusy} data-reward-id={reward.id} onClick={handleApproveClick}>
 										<Check className="mr-1 size-4" />
 										Approve
 									</Button>
-									<Button size="sm" variant="outline" disabled={isBusy} onClick={() => handleStartReject(reward.id)}>
+									<Button size="sm" variant="outline" disabled={isBusy} data-reward-id={reward.id} onClick={handleStartRejectClick}>
 										<X className="mr-1 size-4" />
 										Reject
 									</Button>
@@ -166,7 +196,7 @@ export default function PendingRewardsPanel({ initialRewards }: PendingRewardsPa
 									<Label htmlFor={`reject-reason-${reward.id}`}>Rejection reason (optional)</Label>
 									<Textarea id={`reject-reason-${reward.id}`} value={rejectReason} onChange={handleRejectReasonChange} placeholder="Tell the merchant what to fix…" rows={3} />
 									<div className="flex gap-2">
-										<Button size="sm" variant="destructive" disabled={isBusy} onClick={() => handleConfirmReject(reward.id)}>
+										<Button size="sm" variant="destructive" disabled={isBusy} data-reward-id={reward.id} onClick={handleConfirmRejectClick}>
 											Confirm reject
 										</Button>
 										<Button size="sm" variant="ghost" disabled={isBusy} onClick={handleCancelReject}>

@@ -18,6 +18,6 @@ export function cn(...inputs: ClassValue[]): string {
 // `assumeType<Record<string, unknown>>(parsed)`), so the rule is a false
 // positive here.
 // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters
-export function assumeType<T>(value: unknown): asserts value is T {
-	void value;
+export function assumeType<T>(_value: unknown): asserts _value is T {
+	// Compile-time-only assertion — no runtime work.
 }

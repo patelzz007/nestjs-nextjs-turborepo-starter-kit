@@ -100,6 +100,6 @@ export class EmailPreviewController {
 	public async sendTest(@Param("key", new ZodValidationPipe(EmailTemplateKeyParamSchema)) key: string): Promise<EmailSendResult> {
 		const parsedKey = this.requireTemplate(key);
 		const template = EMAIL_TEMPLATE_REGISTRY[parsedKey].build();
-		return await this.sender.send(template);
+		return this.sender.send(template);
 	}
 }

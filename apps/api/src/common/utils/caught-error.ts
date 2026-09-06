@@ -1,4 +1,4 @@
-import { JsonPrimitiveSchema, JsonRecordSchema, ResendLikeErrorSchema, type CaughtValue } from "@workspace/shared";
+import { JsonPrimitiveSchema, JsonRecordSchema, ResendLikeErrorSchema, CaughtValueSchema, type CaughtValue } from "@workspace/shared";
 
 function formatCaughtValue(value: CaughtValue): string {
 	if (value === undefined) {
@@ -39,8 +39,8 @@ export function readCaughtErrorCode(value: CaughtValue): string | undefined {
 	return detail.success ? detail.data.code : undefined;
 }
 
-/** Reads a message from a caught value. Accepts `unknown` so catch clauses work directly. */
-export function readCaughtErrorMessage(value: CaughtValue | unknown): string {
+/** Reads a message from a caught value. */
+export function readCaughtErrorMessage(value: CaughtValue): string {
 	if (value instanceof Error) {
 		return value.message;
 	}
@@ -51,7 +51,8 @@ export function readCaughtErrorMessage(value: CaughtValue | unknown): string {
 			return detail.data.message;
 		}
 	}
-	return formatCaughtValue(value as CaughtValue);
+	const parsed = CaughtValueSchema.safeParse(value);
+	return parsed.success ? formatCaughtValue(parsed.data) : "undefined";
 }
 
 export type { CaughtValue };

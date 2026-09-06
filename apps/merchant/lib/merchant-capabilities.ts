@@ -50,7 +50,7 @@ export function useMerchantCapabilities(initialMemberships?: readonly MerchantMe
 
 	const checkCapability = React.useCallback((capability: CapabilitySlug): boolean => hasCapability(capabilities, capability), [capabilities]);
 
-	const isLoading = membershipsQuery.isPending && membershipsQuery.data === undefined;
+	const isLoading = membershipsQuery.isPending;
 	const isPolicyReady = membership !== undefined;
 
 	return {

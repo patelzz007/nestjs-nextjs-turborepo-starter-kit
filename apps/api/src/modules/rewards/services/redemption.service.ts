@@ -3,9 +3,14 @@ import { ConflictException, Injectable, UnprocessableEntityException } from "@ne
 import type { RedemptionConfirmInput, RedemptionConfirmedResponse, RedemptionPreviewResponse, RedemptionValidateInput } from "@workspace/shared";
 import { EpochMsSchema } from "@workspace/shared";
 
-import { PrismaService } from "../../../prisma/prisma.service";
 import { EmailSenderService } from "../../notifications/email/email-sender.service";
 import { ReferrerRewardCreditedEmailTemplate } from "../../notifications/email/templates/referrer-reward-credited-email.template";
+import { RewardAuditLogRepository } from "../repositories/reward-audit-log.repository";
+import { RewardRedemptionIdempotencyRepository } from "../repositories/reward-redemption-idempotency.repository";
+import { RewardRedemptionRepository } from "../repositories/reward-redemption.repository";
+import { RewardReferralRepository } from "../repositories/reward-referral.repository";
+import { RewardRepository } from "../repositories/reward.repository";
+import { RewardUserRepository } from "../repositories/reward-user.repository";
 import { generateBackupCode, generateOpaqueToken, sha256Hex } from "../utils/reward-crypto.util";
 import { ClaimService } from "./claim.service";
 import { RewardNotificationService } from "./reward-notification.service";
@@ -16,7 +21,12 @@ const REFERRER_CLAIM_EXPIRES_DAYS = 30;
 @Injectable()
 export class RedemptionService {
 	public constructor(
-		private readonly prisma: PrismaService,
+		private readonly auditLogRepository: RewardAuditLogRepository,
+		private readonly redemptionRepository: RewardRedemptionRepository,
+		private readonly idempotencyRepository: RewardRedemptionIdempotencyRepository,
+		private readonly rewardReferralRepository: RewardReferralRepository,
+		private readonly rewardRepository: RewardRepository,
+		private readonly rewardUserRepository: RewardUserRepository,
 		private readonly claimService: ClaimService,
 		private readonly notificationService: RewardNotificationService,
 		private readonly emailSender: EmailSenderService,
@@ -29,12 +39,10 @@ export class RedemptionService {
 			throw new UnprocessableEntityException({ message: "Reward not valid for this merchant", error: "WRONG_MERCHANT" });
 		}
 
-		await this.prisma.rewardAuditLog.create({
-			data: {
-				merchantOrgId,
-				action: "merchant.scan_qr",
-				metadata: { claimId: claim.id, terminalId },
-			},
+		await this.auditLogRepository.create({
+			merchantOrgId,
+			action: "merchant.scan_qr",
+			metadata: { claimId: claim.id, terminalId },
 		});
 
 		const valid = claim.status === "PENDING" && Number(claim.claimExpiresAt) >= Date.now();
@@ -59,9 +67,7 @@ export class RedemptionService {
 			throw new UnprocessableEntityException({ message: "Reward not valid for this merchant", error: "WRONG_MERCHANT" });
 		}
 
-		const existingRedemption = await this.prisma.rewardRedemption.findUnique({
-			where: { claimId: claim.id },
-		});
+		const existingRedemption = await this.redemptionRepository.findByClaimId(claim.id);
 
 		if (existingRedemption !== null) {
 			if (existingRedemption.idempotencyKey !== input.idempotencyKey) {
@@ -87,17 +93,10 @@ export class RedemptionService {
 			throw new UnprocessableEntityException({ message: "Claim expired", error: "CLAIM_EXPIRED" });
 		}
 
-		const idempotencyRecord = await this.prisma.rewardRedemptionIdempotencyRecord.findUnique({
-			where: {
-				redemptionTokenHash_idempotencyKey: {
-					redemptionTokenHash: claim.redemptionTokenHash,
-					idempotencyKey: input.idempotencyKey,
-				},
-			},
-		});
+		const idempotencyRecord = await this.idempotencyRepository.findByTokenAndKey(claim.redemptionTokenHash, input.idempotencyKey);
 
 		if (idempotencyRecord !== null && idempotencyRecord.redemptionId !== null) {
-			const redemption = await this.prisma.rewardRedemption.findUnique({ where: { id: idempotencyRecord.redemptionId } });
+			const redemption = await this.redemptionRepository.findById(idempotencyRecord.redemptionId);
 			if (redemption !== null) {
 				return {
 					redemptionId: redemption.id,
@@ -111,54 +110,21 @@ export class RedemptionService {
 		const now = Date.now();
 		const method = input.backupCode !== undefined ? "MANUAL" : "SCAN";
 
-		const redemption = await this.prisma.$transaction(async (tx) => {
-			const updated = await tx.rewardClaim.updateMany({
-				where: { id: claim.id, status: "PENDING" },
-				data: { status: "REDEEMED", redeemedAt: now },
-			});
-
-			if (updated.count === 0) {
-				throw new ConflictException({ message: "Already redeemed", error: "ALREADY_REDEEMED" });
-			}
-
-			await tx.reward.update({
-				where: { id: reward.id },
-				data: {
-					quantityReserved: { decrement: 1 },
-					redemptionCount: { increment: 1 },
-				},
-			});
-
-			const created = await tx.rewardRedemption.create({
-				data: {
-					claimId: claim.id,
-					merchantOrgId,
-					userId: claim.userId,
-					terminalId,
-					redemptionMethod: method,
-					idempotencyKey: input.idempotencyKey,
-					redeemedAt: now,
-				},
-			});
-
-			await tx.rewardRedemptionIdempotencyRecord.create({
-				data: {
-					redemptionTokenHash: claim.redemptionTokenHash,
-					idempotencyKey: input.idempotencyKey,
-					redemptionId: created.id,
-				},
-			});
-
-			await tx.rewardAuditLog.create({
-				data: {
-					merchantOrgId,
-					action: "merchant.redeem_reward",
-					metadata: { claimId: claim.id, redemptionId: created.id, terminalId },
-				},
-			});
-
-			return created;
+		const redemption = await this.redemptionRepository.confirmInTransaction({
+			claimId: claim.id,
+			rewardId: reward.id,
+			merchantOrgId,
+			userId: claim.userId,
+			terminalId,
+			redemptionMethod: method,
+			idempotencyKey: input.idempotencyKey,
+			redemptionTokenHash: claim.redemptionTokenHash,
+			redeemedAt: now,
 		});
+
+		if (redemption === null) {
+			throw new ConflictException({ message: "Already redeemed", error: "ALREADY_REDEEMED" });
+		}
 
 		await this.processReferralCredit(claim.id, claim.userId, reward.id);
 
@@ -177,20 +143,15 @@ export class RedemptionService {
 	}
 
 	private async processReferralCredit(claimId: string, refereeUserId: string, rewardId: string): Promise<void> {
-		const referral = await this.prisma.rewardReferral.findFirst({
-			where: { rewardId, refereeUserId, status: "PENDING" },
-		});
+		const referral = await this.rewardReferralRepository.findPendingByRewardAndReferee(rewardId, refereeUserId);
 
 		if (referral === null) {
 			return;
 		}
 
-		const parentReward = await this.prisma.reward.findUnique({
-			where: { id: rewardId },
-			include: { referrerReward: true },
-		});
+		const parentReward = await this.rewardRepository.findWithReferrerReward(rewardId);
 
-		if (parentReward === null || parentReward.referrerRewardId === null || parentReward.referrerReward === null) {
+		if (parentReward?.referrerRewardId == null || parentReward.referrerReward == null) {
 			return;
 		}
 
@@ -201,48 +162,18 @@ export class RedemptionService {
 		const referrerReward = parentReward.referrerReward;
 		const now = Date.now();
 		const referrerClaimExpires = Math.min(now + REFERRER_CLAIM_TTL_MS, Number(referrerReward.expiryDate));
+		const token = generateOpaqueToken();
+		const backupCode = generateBackupCode();
 
-		const credited = await this.prisma.$transaction(async (tx) => {
-			await tx.reward.update({
-				where: { id: parentReward.id },
-				data: { referralPoolRemaining: { decrement: 1 } },
-			});
-
-			const reserved = await tx.reward.updateMany({
-				where: { id: referrerReward.id, quantityRemaining: { gt: 0 } },
-				data: {
-					quantityRemaining: { decrement: 1 },
-					quantityReserved: { increment: 1 },
-					claimCount: { increment: 1 },
-				},
-			});
-
-			if (reserved.count === 0) {
-				return false;
-			}
-
-			const token = generateOpaqueToken();
-			const backupCode = generateBackupCode();
-
-			await tx.rewardClaim.create({
-				data: {
-					userId: referral.referrerUserId,
-					rewardId: referrerReward.id,
-					redemptionTokenHash: sha256Hex(token),
-					backupCodeHash: sha256Hex(backupCode),
-					status: "PENDING",
-					isReferrerCredit: true,
-					claimedAt: now,
-					claimExpiresAt: referrerClaimExpires,
-				},
-			});
-
-			await tx.rewardReferral.update({
-				where: { id: referral.id },
-				data: { status: "CREDITED", creditedAt: now },
-			});
-
-			return true;
+		const credited = await this.rewardReferralRepository.creditReferrerInTransaction({
+			parentRewardId: parentReward.id,
+			referrerRewardId: referrerReward.id,
+			referralId: referral.id,
+			referrerUserId: referral.referrerUserId,
+			redemptionTokenHash: sha256Hex(token),
+			backupCodeHash: sha256Hex(backupCode),
+			claimedAt: now,
+			claimExpiresAt: referrerClaimExpires,
 		});
 
 		if (!credited) {
@@ -257,10 +188,7 @@ export class RedemptionService {
 			{ rewardId: referrerReward.id },
 		);
 
-		const referrerUser = await this.prisma.user.findUnique({
-			where: { id: referral.referrerUserId },
-			select: { email: true },
-		});
+		const referrerUser = await this.rewardUserRepository.findEmailById(referral.referrerUserId);
 
 		if (referrerUser !== null) {
 			await this.emailSender.send(

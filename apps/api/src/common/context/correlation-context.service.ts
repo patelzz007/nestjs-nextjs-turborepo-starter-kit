@@ -7,7 +7,7 @@ import { AsyncLocalStorage } from "node:async_hooks";
  */
 @Injectable()
 export class CorrelationContextService {
-	private readonly storage: AsyncLocalStorage<string | undefined> = new AsyncLocalStorage();
+	private readonly storage = new AsyncLocalStorage<string | undefined>();
 
 	public run<T>(correlationId: string | undefined, callback: () => T): T {
 		return this.storage.run(correlationId, callback);

@@ -77,16 +77,14 @@ export class TypedConfigService {
 			return { 1: crypto.createHash("sha256").update("dev-mfa-encryption-key-v1").digest("base64") };
 		}
 
-		let parsedJson: ReturnType<typeof JSON.parse>;
+		let parsedKeys: ReturnType<typeof MfaEncryptionKeysSchema.safeParse>;
 		try {
-			parsedJson = JSON.parse(raw);
+			parsedKeys = MfaEncryptionKeysSchema.safeParse(JSON.parse(raw));
 		} catch {
 			throw new Error("MFA_ENCRYPTION_KEYS must be valid JSON mapping version numbers to key material.");
 		}
-
-		const parsedKeys = MfaEncryptionKeysSchema.safeParse(parsedJson);
 		if (!parsedKeys.success) {
-			throw new Error("MFA_ENCRYPTION_KEYS must be a JSON object mapping version numbers to key material.");
+			throw new Error("MFA_ENCRYPTION_KEYS must be valid JSON mapping version numbers to key material.");
 		}
 
 		const keys: Record<number, string> = {};

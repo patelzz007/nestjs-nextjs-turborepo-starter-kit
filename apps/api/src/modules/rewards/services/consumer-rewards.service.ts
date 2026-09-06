@@ -1,14 +1,18 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
-import type { Prisma } from "@prisma/client";
+import type { Reward } from "@prisma/client";
 
 import type { RewardListQuery, RewardResponse } from "@workspace/shared";
 
-import { PrismaService } from "../../../prisma/prisma.service";
+import { BaseService } from "../../../platform/persistence/base.service";
+import type { EmptyMutationInput } from "../../../platform/persistence/types";
 import { mapRewardToResponse } from "../utils/reward-mapper.util";
+import { RewardRepository } from "../repositories/reward.repository";
 
 @Injectable()
-export class ConsumerRewardsService {
-	public constructor(private readonly prisma: PrismaService) {}
+export class ConsumerRewardsService extends BaseService<Reward, EmptyMutationInput, EmptyMutationInput, RewardListQuery, RewardRepository> {
+	public constructor(repository: RewardRepository) {
+		super(repository);
+	}
 
 	public async listMarketplace(query: RewardListQuery): Promise<{
 		items: RewardResponse[];
@@ -21,59 +25,21 @@ export class ConsumerRewardsService {
 	}> {
 		const page = query.page;
 		const pageSize = query.limit;
-		const skip = (page - 1) * pageSize;
-
-		const where: Prisma.RewardWhereInput = {
-			isDeleted: false,
-			status: "PUBLISHED",
-			rewardKind: "CONSUMER",
-			quantityRemaining: { gt: 0 },
-			expiryDate: { gte: BigInt(Date.now()) },
-			...(query.category !== undefined ? { category: query.category } : {}),
-			...(query.search !== undefined
-				? {
-						OR: [{ title: { contains: query.search, mode: "insensitive" } }, { description: { contains: query.search, mode: "insensitive" } }],
-					}
-				: {}),
-			...(query.city !== undefined
-				? {
-						merchantOrg: { city: query.city },
-					}
-				: {}),
-		};
-
-		const [rows, total] = await this.prisma.$transaction([
-			this.prisma.reward.findMany({
-				where,
-				include: { merchantOrg: { select: { businessName: true } } },
-				orderBy: { createdAt: "desc" },
-				skip,
-				take: pageSize,
-			}),
-			this.prisma.reward.count({ where }),
-		]);
+		const result = await this.repository.listMarketplace(query);
 
 		return {
-			items: rows.map((row) => mapRewardToResponse(row, row.merchantOrg)),
-			total,
+			items: result.items.map((row) => mapRewardToResponse(row, row.merchantOrg)),
+			total: result.total,
 			page,
 			limit: pageSize,
-			totalPages: pageSize === 0 ? 0 : Math.ceil(total / pageSize),
-			hasNext: page * pageSize < total,
+			totalPages: pageSize === 0 ? 0 : Math.ceil(result.total / pageSize),
+			hasNext: page * pageSize < result.total,
 			hasPrevious: page > 1,
 		};
 	}
 
 	public async getPublishedReward(rewardId: string): Promise<RewardResponse> {
-		const reward = await this.prisma.reward.findFirst({
-			where: {
-				id: rewardId,
-				isDeleted: false,
-				status: "PUBLISHED",
-				rewardKind: "CONSUMER",
-			},
-			include: { merchantOrg: { select: { businessName: true } } },
-		});
+		const reward = await this.repository.findPublishedConsumerWithMerchant(rewardId);
 
 		if (reward === null) {
 			throw new NotFoundException({ message: "Reward not found", error: "REWARD_NOT_FOUND" });

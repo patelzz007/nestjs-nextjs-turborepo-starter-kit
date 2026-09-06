@@ -1,0 +1,43 @@
+{
+  "resource": "product",
+  "schemaVersion": 1,
+  "generatorVersion": "0.1.0",
+  "files": {
+    "apps/admin/app/(panel)/product/__tests__/product-view.test.tsx": {
+      "template": "tests/admin-view",
+      "hash": "daee49ad70438982",
+      "ownership": "generated"
+    },
+    "apps/admin/app/(panel)/product/product-view.generated.tsx": {
+      "template": "admin/view",
+      "hash": "400012482887ac2c",
+      "ownership": "generated"
+    },
+    "apps/api/src/modules/product/__tests__/product.repository.spec.ts": {
+      "template": "tests/repository",
+      "hash": "d42ca68ab569fd78",
+      "ownership": "generated"
+    },
+    "apps/api/src/modules/product/product.controller.generated.ts": {
+      "template": "nestjs/controller-base",
+      "hash": "e39860f63e080fcb",
+      "ownership": "generated"
+    },
+    "apps/api/src/modules/product/product.repository.generated.ts": {
+      "template": "nestjs/repository",
+      "hash": "cb067e8212735c1a",
+      "ownership": "generated"
+    },
+    "apps/api/src/modules/product/product.service.generated.ts": {
+      "template": "nestjs/service-base",
+      "hash": "6d6d93a0858b4b18",
+      "ownership": "generated"
+    },
+    "packages/shared/src/schemas/domain/product.generated.ts": {
+      "template": "contracts/zod",
+      "hash": "e8f8c2969e3ba2ce",
+      "ownership": "generated"
+    }
+  },
+  "manualFollowUps": []
+}

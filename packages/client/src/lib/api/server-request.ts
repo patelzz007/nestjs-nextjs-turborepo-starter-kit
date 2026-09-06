@@ -14,17 +14,7 @@ import { catchError, defer, from, map, mergeMap, Observable, of, retry, throwErr
 import { z } from "zod";
 
 import { API_BASE_URL, API_URL_PREFIX } from "./config";
-import {
-	eachRouterEntry,
-	isErasedProcedureDef,
-	isRouterSubtree,
-	resolveRequest,
-	type MutationDef,
-	type ProcedureDef,
-	type QueryDef,
-	type RouterTree,
-	type RouterTreeValue,
-} from "./endpoints";
+import { eachRouterEntry, isErasedProcedureDef, isRouterSubtree, resolveRequest, type MutationDef, type ProcedureDef, type QueryDef } from "./endpoints";
 
 // ── Config ─────────────────────────────────────────────────────────────────
 

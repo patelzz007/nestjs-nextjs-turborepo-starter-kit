@@ -1,4 +1,5 @@
 import { Injectable, BadRequestException, UnauthorizedException } from "@nestjs/common";
+import { z } from "zod";
 import type { ForgotPasswordInput, ForgotPasswordResponse, ResetPasswordInput, ResetPasswordResponse, ValidateResetTokenResponse } from "@workspace/shared";
 
 import { LogService } from "../../../modules/logs/logs.service";
@@ -35,7 +36,13 @@ export class PasswordResetService {
 	 * Always returns the same response regardless of whether the email exists,
 	 * to prevent email enumeration attacks.
 	 */
-	@TrackAuthFlow({ flow: "forgot-password", clientType: (_dto: unknown, clientType?: unknown) => (typeof clientType === "string" ? clientType : null) })
+	@TrackAuthFlow({
+		flow: "forgot-password",
+		clientType: (_dto: unknown, clientType?: unknown) => {
+			const parsed = z.string().safeParse(clientType);
+			return parsed.success ? parsed.data : null;
+		},
+	})
 	public async forgotPassword(dto: ForgotPasswordInput, clientType?: string): Promise<ForgotPasswordResponse> {
 		const { email } = dto;
 

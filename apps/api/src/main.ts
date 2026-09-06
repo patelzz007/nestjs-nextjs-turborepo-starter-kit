@@ -12,15 +12,24 @@ import fastifyRateLimit from "@fastify/rate-limit";
 import fastifyRequestContext from "@fastify/request-context";
 import fastifyUnderPressure from "@fastify/under-pressure";
 import { nanoid } from "nanoid";
-import { StringValueSchema, validateApiEnv } from "@workspace/shared";
+import {
+	API_DEPRECATED_VERSIONS,
+	API_VERSION,
+	API_VERSION_PREFIX,
+	apiDocsPath,
+	apiVersionPrefix,
+	type ApiVersion,
+	type DataValue,
+	StringValueSchema,
+	validateApiEnv,
+} from "@workspace/shared";
 import type { FastifyReply, FastifyRequest } from "fastify";
-import { API_DEPRECATED_VERSIONS, API_VERSION, API_VERSION_PREFIX, apiDocsPath, apiVersionPrefix, type ApiVersion } from "@workspace/shared";
-import { z } from "zod";
 
 import { AppModule, ObserveInstrument } from "./app.module";
 import { warmupAjvValidators } from "./common/ajv-warmup";
 import { setupApiDocs } from "./common/api-docs";
 import { registerGracefulShutdown } from "./common/lifecycle/graceful-shutdown";
+import { serializePreSerializationValue, type PreSerializationValue } from "./common/utils/serialize-pre-serialization-value";
 import { HealthService } from "./modules/health/health.service";
 import { readFirstHeader, readReplyHeader } from "./common/utils/http-headers";
 import { LogService } from "./modules/logs/logs.service";
@@ -37,7 +46,10 @@ interface FastifyBootstrapHooks {
 		): void;
 		(name: "onError", fn: (request: FastifyRequest, reply: FastifyReply, error: Error, done: () => void) => void): void;
 		(name: "onRoute", fn: (routeOptions: FastifyRouteOptions) => void): void;
-		(name: "preSerialization", fn: (request: FastifyRequest, reply: FastifyReply, payload: unknown, done: (error: Error | null, payload?: unknown) => void) => void): void;
+		(
+			name: "preSerialization",
+			fn: (request: FastifyRequest, reply: FastifyReply, payload: PreSerializationValue, done: (error: Error | null, payload?: DataValue) => void) => void,
+		): void;
 	};
 }
 
@@ -381,7 +393,7 @@ async function bootstrap(): Promise<void> {
 	// BigInt.  This preSerialization hook walks the payload tree and
 	// converts every BigInt to a plain number before Fastify serializes.
 	fastifyInstance.addHook("preSerialization", (_request, _reply, payload, done): void => {
-		done(null, serializeBigInt(payload));
+		done(null, serializePreSerializationValue(payload));
 	});
 
 	// ── Favicon + docs redirect ──────────────────────────────────
@@ -439,42 +451,4 @@ async function bootstrap(): Promise<void> {
 	console.log(`\n🚀 API ready in ${(performance.now() - bootStart).toFixed(0)}ms [peak heap: ${heapUsed()}MB]`);
 }
 
-/**
- * Recursively replace every `BigInt` value in a value tree with its
- * `Number` equivalent so `JSON.stringify` can serialize the result.
- *
- * Fast-path: if the value contains no BigInts the original object is
- * returned unchanged (no allocations on the hot path).
- */
-function serializeBigInt(value: unknown): unknown {
-	if (typeof value === "bigint") {
-		return Number(value);
-	}
-	if (Array.isArray(value)) {
-		return value.map(serializeBigInt);
-	}
-	if (value !== null && typeof value === "object") {
-		const objResult = z.record(z.string(), z.unknown()).safeParse(value);
-		if (!objResult.success) {
-			return value;
-		}
-		const entries: [string, unknown][] = Object.entries(objResult.data);
-		let changed = false;
-		const result: Record<string, unknown> = {};
-		for (const [key, val] of entries) {
-			if (typeof val === "bigint") {
-				result[key] = Number(val);
-				changed = true;
-			} else if (val !== null && typeof val === "object") {
-				const next = serializeBigInt(val);
-				result[key] = next;
-				if (next !== val) changed = true;
-			} else {
-				result[key] = val;
-			}
-		}
-		return changed ? result : value;
-	}
-	return value;
-}
 void bootstrap();

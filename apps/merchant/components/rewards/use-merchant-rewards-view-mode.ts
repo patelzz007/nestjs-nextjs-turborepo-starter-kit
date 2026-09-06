@@ -8,13 +8,17 @@ export interface MerchantRewardsViewModeState {
 	readonly setViewMode: (mode: MerchantRewardsViewMode) => void;
 }
 
+function readInitialMerchantRewardsViewMode(): MerchantRewardsViewMode {
+	try {
+		return readMerchantRewardsViewMode();
+	} catch {
+		return "grid";
+	}
+}
+
 /** Persists grid vs list preference for the rewards catalog. */
 export function useMerchantRewardsViewMode(): MerchantRewardsViewModeState {
-	const [viewMode, setViewModeState] = React.useState<MerchantRewardsViewMode>("grid");
-
-	React.useEffect((): void => {
-		setViewModeState(readMerchantRewardsViewMode());
-	}, []);
+	const [viewMode, setViewModeState] = React.useState<MerchantRewardsViewMode>(readInitialMerchantRewardsViewMode);
 
 	const setViewMode = React.useCallback((mode: MerchantRewardsViewMode): void => {
 		setViewModeState(mode);

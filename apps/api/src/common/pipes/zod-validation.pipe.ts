@@ -3,7 +3,7 @@ import Ajv, { type ErrorObject, type ValidateFunction } from "ajv";
 import type { z as ZodV4 } from "zod/v4";
 import { toJSONSchema } from "zod/v4";
 
-import { EmailAddressSchema, JsonObjectSchema, UuidParamSchema, type JsonObject, type JsonValue } from "@workspace/shared";
+import { EmailAddressSchema, JsonObjectSchema, JsonPrimitiveSchema, JsonRecordSchema, UuidParamSchema, type JsonObject, type JsonValue } from "@workspace/shared";
 
 /**
  * Validation pipe backed by a COMPILED JSON-Schema validator instead of a
@@ -46,11 +46,11 @@ export class ZodValidationPipe implements PipeTransform<JsonValue, JsonValue> {
 			return value;
 		}
 
-		const issues: readonly { readonly path: string; readonly message: string; readonly code: string }[] = (validator.errors ?? []).map(
+		const issues: readonly { readonly path: string; readonly message: string; readonly code: string }[] = validator.errors.map(
 			(error: ErrorObject): { readonly path: string; readonly message: string; readonly code: string } => ({
 				path: error.instancePath.replace(/^\//, "").replace(/\//g, ".") || "root",
 				message: this.formatErrorMessage(error),
-				code: error.keyword ?? "unknown",
+				code: error.keyword,
 			}),
 		);
 
@@ -66,37 +66,38 @@ export class ZodValidationPipe implements PipeTransform<JsonValue, JsonValue> {
 	 */
 	private formatErrorMessage(error: ErrorObject): string {
 		const field: string = error.instancePath.replace(/^\//, "").replace(/\//g, ".") || "root";
+		const params = readAjvErrorParams(error.params);
 		switch (error.keyword) {
 			case "type": {
-				return `Field '${field}' must be of type ${String(error.params?.type ?? "unknown")}`;
+				return `Field '${field}' must be of type ${readAjvParam(params, "type")}`;
 			}
 			case "required": {
-				return `Field '${String(error.params?.missingProperty ?? "unknown")}' is required`;
+				return `Field '${readAjvParam(params, "missingProperty")}' is required`;
 			}
 			case "enum": {
-				const allowed: string = (error.params?.allowedValues as ReadonlyArray<string>)?.join(", ") ?? "unknown";
+				const allowed = readAjvParamList(params, "allowedValues");
 				return `Field '${field}' must be one of: ${allowed}`;
 			}
 			case "minLength": {
-				return `Field '${field}' must be at least ${String(error.params?.limit ?? "unknown")} characters`;
+				return `Field '${field}' must be at least ${readAjvParam(params, "limit")} characters`;
 			}
 			case "maxLength": {
-				return `Field '${field}' must be at most ${String(error.params?.limit ?? "unknown")} characters`;
+				return `Field '${field}' must be at most ${readAjvParam(params, "limit")} characters`;
 			}
 			case "minimum": {
-				return `Field '${field}' must be at least ${String(error.params?.limit ?? "unknown")}`;
+				return `Field '${field}' must be at least ${readAjvParam(params, "limit")}`;
 			}
 			case "maximum": {
-				return `Field '${field}' must be at most ${String(error.params?.limit ?? "unknown")}`;
+				return `Field '${field}' must be at most ${readAjvParam(params, "limit")}`;
 			}
 			case "pattern": {
 				return `Field '${field}' does not match the required pattern`;
 			}
 			case "format": {
-				return `Field '${field}' must be a valid ${String(error.params?.format ?? "value")}`;
+				return `Field '${field}' must be a valid ${readAjvParam(params, "format")}`;
 			}
 			case "additionalProperties": {
-				return `Field '${field}' has unknown properties: ${String(error.params?.additionalProperty ?? "unknown")}`;
+				return `Field '${field}' has unknown properties: ${readAjvParam(params, "additionalProperty")}`;
 			}
 			default: {
 				return error.message ?? `Validation failed for field '${field}'`;
@@ -120,6 +121,33 @@ export class ZodValidationPipe implements PipeTransform<JsonValue, JsonValue> {
 /** Shared Ajv instance for pre-compilation (avoids creating a new instance per warmup call). */
 const sharedAjv: Ajv = new Ajv({ strict: false, allErrors: true, coerceTypes: true, useDefaults: true, removeAdditional: false });
 const sharedCache = new WeakMap<ZodV4.ZodType, ValidateFunction>();
+
+function readAjvErrorParams(params: ErrorObject["params"]): Record<string, JsonValue> {
+	const parsed = JsonRecordSchema.safeParse(params);
+	return parsed.success ? parsed.data : {};
+}
+
+function readAjvParam(params: Record<string, JsonValue>, key: string): string {
+	const value = params[key];
+	const primitive = JsonPrimitiveSchema.safeParse(value);
+	if (primitive.success) {
+		return primitive.data === null ? "null" : String(primitive.data);
+	}
+	return "unknown";
+}
+
+function readAjvParamList(params: Record<string, JsonValue>, key: string): string {
+	const value = params[key];
+	if (!Array.isArray(value)) {
+		return "unknown";
+	}
+	return value
+		.map((item): string => {
+			const primitive = JsonPrimitiveSchema.safeParse(item);
+			return primitive.success ? String(primitive.data) : "unknown";
+		})
+		.join(", ");
+}
 
 const ajvWithFormats = new WeakSet<Ajv>();
 

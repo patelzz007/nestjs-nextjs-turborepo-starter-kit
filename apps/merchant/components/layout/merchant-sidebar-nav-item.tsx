@@ -102,7 +102,7 @@ export function MerchantSidebarNavItem({
 	const childBranch = hasChildren ? (
 		<MerchantSidebarNavCollapse open={isExpanded}>
 			<div className="ml-5 border-l border-sidebar-border/80 pl-2">
-				{item.children?.map((child) => (
+				{item.children.map((child) => (
 					<MerchantSidebarNavItem
 						key={child.id}
 						item={child}

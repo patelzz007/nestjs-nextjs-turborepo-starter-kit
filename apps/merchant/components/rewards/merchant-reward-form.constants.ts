@@ -38,13 +38,13 @@ export function getRewardValueLabel(rewardType: RewardType): string {
 export function formatRewardValueSummary(rewardType: RewardType, rewardValue: number): string {
 	switch (rewardType) {
 		case "DISCOUNT":
-			return `${rewardValue}% off`;
+			return `${String(rewardValue)}% off`;
 		case "CASHBACK":
-			return `RM ${rewardValue} cashback`;
+			return `RM ${String(rewardValue)} cashback`;
 		case "POINTS":
-			return `${rewardValue} bonus pts`;
+			return `${String(rewardValue)} bonus pts`;
 		case "FREE_ITEM":
-			return rewardValue > 0 ? `${rewardValue} free` : "Free item";
+			return rewardValue > 0 ? `${String(rewardValue)} free` : "Free item";
 		case "BOGO":
 			return "Buy one get one";
 		default:

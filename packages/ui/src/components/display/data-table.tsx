@@ -1614,7 +1614,11 @@ export function DataTable<TData extends RowData>({
 				sorting,
 				columnFilters,
 				globalFilter,
-				pagination: controlledPageIndex !== undefined ? { ...pagination, pageIndex: controlledPageIndex } : pagination,
+				pagination: {
+					...pagination,
+					pageIndex: controlledPageIndex ?? pagination.pageIndex,
+					pageSize,
+				},
 				columnVisibility,
 				columnPinning,
 			},
@@ -1659,6 +1663,7 @@ export function DataTable<TData extends RowData>({
 			pageCount,
 			searchKeys,
 			controlledPageIndex,
+			pageSize,
 		],
 	);
 
@@ -1681,22 +1686,14 @@ export function DataTable<TData extends RowData>({
 	});
 
 	// Keep React pagination state aligned with parent-controlled server pager props.
-	useEffect((): void => {
-		if (controlledPageIndex !== undefined) {
-			setPagination((prev) => (prev.pageIndex === controlledPageIndex ? prev : { ...prev, pageIndex: controlledPageIndex }));
-		}
-	}, [controlledPageIndex]);
-
-	useEffect((): void => {
-		setPagination((prev) => (prev.pageSize === pageSize ? prev : { ...prev, pageSize }));
-	}, [pageSize]);
+	// Controlled page index and page size are merged into `tableOptions.state.pagination` below.
 
 	// Sync the table's internal sorting state with the controlled sorting prop.
 	useEffect((): void => {
 		if (controlledSorting !== undefined) {
 			const currentSorting = table.state.sorting;
 			const isDifferent =
-				currentSorting.length !== controlledSorting.length || currentSorting.some((s, i) => s.id !== controlledSorting[i]?.id || s.desc !== controlledSorting[i]?.desc);
+				currentSorting.length !== controlledSorting.length || currentSorting.some((s, i) => s.id !== controlledSorting[i].id || s.desc !== controlledSorting[i].desc);
 			if (isDifferent) {
 				table.setSorting(controlledSorting);
 			}
@@ -1765,7 +1762,7 @@ export function DataTable<TData extends RowData>({
 
 	const totalFilteredRows = useMemo(() => table.getFilteredRowModel().rows.length, [table]);
 
-	const effectivePageIndex: number = controlledPageIndex !== undefined ? controlledPageIndex : table.state.pagination.pageIndex;
+	const effectivePageIndex: number = controlledPageIndex ?? table.state.pagination.pageIndex;
 	const effectivePageSize: number = table.state.pagination.pageSize;
 	const maxPagerPageIndex: number = resolveMaxPageIndex(effectivePageSize);
 	const canPreviousPage: boolean = effectivePageIndex > 0;
@@ -1877,7 +1874,7 @@ export function DataTable<TData extends RowData>({
 	const handlePageSizeChange = useCallback(
 		(size: number): void => {
 			setScrollTop(0);
-			handlePaginationChange((prev) => ({ pageIndex: 0, pageSize: size }));
+			handlePaginationChange(() => ({ pageIndex: 0, pageSize: size }));
 			persistPreferences({ pageSize: size });
 		},
 		[handlePaginationChange, persistPreferences],

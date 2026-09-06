@@ -16,7 +16,7 @@ import { EmailTemplateKeySchema } from "../email/email";
 // ── UUID Param ────────────────────────────────────────────────────────────
 
 /** Validates a UUID v4 route param (e.g. `:userId`, `:id`). */
-export const UuidParamSchema = z.string().uuid("Invalid UUID format");
+export const UuidParamSchema = z.uuid("Invalid UUID format");
 
 export type UuidParam = z.output<typeof UuidParamSchema>;
 

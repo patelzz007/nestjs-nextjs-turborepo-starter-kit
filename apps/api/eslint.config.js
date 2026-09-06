@@ -58,6 +58,45 @@ export default [
 			"@typescript-eslint/no-unsafe-member-access": "off",
 			"@typescript-eslint/no-unsafe-argument": "off",
 			"@typescript-eslint/no-unsafe-return": "off",
+			"@typescript-eslint/naming-convention": "off",
+			"@typescript-eslint/restrict-template-expressions": "off",
+			"@typescript-eslint/restrict-plus-operands": "off",
+			"@typescript-eslint/consistent-type-assertions": "off",
+			"no-console": "off",
+		},
+	},
+
+	// Env vars are read at runtime; turbo.json does not enumerate every key.
+	{
+		files: ["src/config/**/*.ts", "src/messaging/**/*.config.ts", "src/modules/auth/constants/**/*.ts", "src/modules/logs/**/*.ts"],
+		rules: {
+			"turbo/no-undeclared-env-vars": "off",
+		},
+	},
+
+	// Repositories are registered via spread arrays in persistence modules.
+	{
+		files: ["src/**/repositories/**/*.repository.ts"],
+		rules: {
+			"@darraghor/nestjs-typed/injectable-should-be-provided": "off",
+		},
+	},
+
+	// Walks the dynamic apiContract tree — Object.values entries are not precisely typed.
+	{
+		files: ["src/common/ajv-warmup.ts"],
+		rules: {
+			"@typescript-eslint/no-unsafe-argument": "off",
+		},
+	},
+	{
+		files: [
+			"src/modules/auth/cache/user-session-cache.service.ts",
+			"src/modules/authorization/cache/authorization-cache.service.ts",
+			"src/modules/notifications/email/email-queue.service.ts",
+		],
+		rules: {
+			"@darraghor/nestjs-typed/injectable-should-be-provided": "off",
 		},
 	},
 
@@ -75,6 +114,16 @@ export default [
 		},
 		rules: {
 			"local-rules/no-unversioned-controller": "error",
+		},
+	},
+
+	// Generated resource controllers are extended by developer-owned shells
+	// that are registered in the module; the base class is not injected directly.
+	{
+		files: ["src/**/*.controller.generated.ts"],
+		rules: {
+			"@darraghor/nestjs-typed/injectable-should-be-provided": "off",
+			"@darraghor/nestjs-typed/api-method-should-specify-api-response": "off",
 		},
 	},
 

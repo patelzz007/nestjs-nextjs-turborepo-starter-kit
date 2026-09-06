@@ -44,12 +44,12 @@ export type AdminReviewMfaRecoveryInput = z.output<typeof AdminReviewMfaRecovery
 export const AdminMfaRecoveryRequestSchema = z
 	.object({
 		id: z.uuid(),
-		userId: z.string().uuid(),
+		userId: z.uuid(),
 		userEmail: z.string(),
 		userFullName: z.string(),
 		status: MfaRecoveryRecordStatusSchema,
 		requestedAt: EpochMsSchema,
-		reviewedBy: z.string().uuid().nullable(),
+		reviewedBy: z.uuid().nullable(),
 		reviewedAt: EpochMsSchema.nullable(),
 		scheduledUnlockAt: EpochMsSchema.nullable(),
 		completedAt: EpochMsSchema.nullable(),
@@ -62,7 +62,7 @@ export type AdminMfaRecoveryRequest = z.output<typeof AdminMfaRecoveryRequestSch
 export const AdminMfaRecoveryListQuerySchema = PaginationSchema.extend({
 	limit: z.coerce.number().int().min(1).max(100).optional().default(20),
 	status: MfaRecoveryRecordStatusSchema.optional(),
-	userId: z.string().uuid().optional(),
+	userId: z.uuid().optional(),
 }).strict();
 
 export type AdminMfaRecoveryListQuery = z.output<typeof AdminMfaRecoveryListQuerySchema>;

@@ -47,7 +47,6 @@ export default function RootLayout({
 			// In Next.js, we can throw to prevent rendering during SSR
 			throw new Error("Admin app environment validation failed");
 		}
-		console.log("✅ Admin app environment variables validated successfully");
 	}
 
 	return (

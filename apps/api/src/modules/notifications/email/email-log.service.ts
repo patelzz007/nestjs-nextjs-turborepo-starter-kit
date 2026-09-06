@@ -2,9 +2,8 @@ import { Injectable } from "@nestjs/common";
 
 import { EmailLogCreateSchema, EmailLogEntrySchema, EmailLogStatusSchema, epochMs, type EmailLogCreate, type EmailLogEntry, type EmailLogStatus } from "@workspace/shared";
 
-import { PrismaService } from "../../../prisma/prisma.service";
-
 import { EmailLogEventsService } from "./email-log-events.service";
+import { EmailLogRepository } from "./email-log.repository";
 
 /** Result of applying a webhook delivery event to an EmailLog row.
  *
@@ -52,26 +51,14 @@ const ALLOWED_FROM: Readonly<Record<EmailLogStatus, readonly EmailLogStatus[]>> 
 @Injectable()
 export class EmailLogService {
 	public constructor(
-		private readonly prisma: PrismaService,
+		private readonly repository: EmailLogRepository,
 		private readonly events: EmailLogEventsService,
 	) {}
 
 	/** Insert a new EmailLog row. Returns the generated id. */
 	public async create(input: EmailLogCreate): Promise<{ readonly id: string }> {
 		const parsed: EmailLogCreate = EmailLogCreateSchema.parse(input);
-		const row = await this.prisma.emailLog.create({
-			data: {
-				templateKey: parsed.templateKey,
-				to: parsed.to,
-				subject: parsed.subject,
-				status: parsed.status,
-				resendId: parsed.resendId,
-				error: parsed.error,
-				metadata: parsed.metadata ?? undefined,
-			},
-			select: { id: true },
-		});
-		// Full attempt payload on creation; bare signal for webhook flips.
+		const row = await this.repository.create(parsed);
 		this.events.emitUpdated({
 			templateKey: parsed.templateKey,
 			status: parsed.status,
@@ -80,7 +67,7 @@ export class EmailLogService {
 			error: parsed.error ?? null,
 			durationMs: parsed.durationMs ?? null,
 		});
-		return { id: row.id };
+		return row;
 	}
 
 	/**
@@ -98,20 +85,12 @@ export class EmailLogService {
 	public async updateStatusByResendId(resendId: string, status: EmailLogStatus, error?: string): Promise<WebhookUpdateResult> {
 		const parsedStatus: EmailLogStatus = EmailLogStatusSchema.parse(status);
 		const allowedCurrentStatuses: EmailLogStatus[] = [...ALLOWED_FROM[parsedStatus]];
-		const result = await this.prisma.emailLog.updateMany({
-			where: { resendId, status: { in: allowedCurrentStatuses } },
-			data: { status: parsedStatus, error, updatedAt: Date.now() },
-		});
-		if (result.count > 0) {
+		const updatedCount = await this.repository.updateStatusByResendId(resendId, parsedStatus, allowedCurrentStatuses, error);
+		if (updatedCount > 0) {
 			this.events.emitUpdated();
 			return "updated";
 		}
-		// Nothing matched: either no row has this resend id, or the row exists
-		// but the event is not an allowed forward transition. The follow-up
-		// count is a best-effort LOG classification only — a concurrent create
-		// between the two queries could at worst mislabel not_found vs stale;
-		// it can never cause a wrong write (the write is the atomic updateMany).
-		const exists: number = await this.prisma.emailLog.count({ where: { resendId } });
+		const exists = await this.repository.countByResendId(resendId);
 		return exists > 0 ? "stale" : "not_found";
 	}
 
@@ -122,10 +101,7 @@ export class EmailLogService {
 	 * so the rows are mapped here before the strict schema validates them.
 	 */
 	public async listRecent(limit = 100): Promise<EmailLogEntry[]> {
-		const rows = await this.prisma.emailLog.findMany({
-			orderBy: { createdAt: "desc" },
-			take: limit,
-		});
+		const rows = await this.repository.listRecent(limit);
 		const mapped = rows.map((row) => ({
 			id: row.id,
 			templateKey: row.templateKey,

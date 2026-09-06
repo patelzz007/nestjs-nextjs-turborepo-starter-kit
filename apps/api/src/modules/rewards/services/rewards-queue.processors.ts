@@ -89,11 +89,10 @@ export class RewardsQueueScheduler implements OnModuleInit {
 @Injectable()
 export class RewardsAutoPublishProcessor extends WorkerHost {
 	public constructor(
-		rewardsQueueScheduler: RewardsQueueScheduler,
+		_rewardsQueueScheduler: RewardsQueueScheduler,
 		private readonly merchantRewardService: MerchantRewardService,
 	) {
 		super();
-		void rewardsQueueScheduler;
 	}
 
 	public async process(job: Job): Promise<void> {
@@ -106,11 +105,10 @@ export class RewardsAutoPublishProcessor extends WorkerHost {
 @Injectable()
 export class ClaimsExpirePendingProcessor extends WorkerHost {
 	public constructor(
-		rewardsQueueScheduler: RewardsQueueScheduler,
+		_rewardsQueueScheduler: RewardsQueueScheduler,
 		private readonly merchantRewardService: MerchantRewardService,
 	) {
 		super();
-		void rewardsQueueScheduler;
 	}
 
 	public async process(job: Job): Promise<void> {

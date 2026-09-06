@@ -1,0 +1,78 @@
+{
+  "resource": "sample-category",
+  "schemaVersion": 1,
+  "generatorVersion": "0.1.0",
+  "files": {
+    "apps/admin/app/(panel)/sample-category/__tests__/sample-category-view.test.tsx": {
+      "template": "tests/admin-view",
+      "hash": "f4f93513f918b99a",
+      "ownership": "generated"
+    },
+    "apps/admin/app/(panel)/sample-category/[id]/edit/page.tsx": {
+      "template": "admin/edit-page",
+      "hash": "438ea5ffd2173ec8",
+      "ownership": "scaffolded"
+    },
+    "apps/admin/app/(panel)/sample-category/create/page.tsx": {
+      "template": "admin/create-page",
+      "hash": "b2b5b8540da916fd",
+      "ownership": "scaffolded"
+    },
+    "apps/admin/app/(panel)/sample-category/page.tsx": {
+      "template": "admin/page",
+      "hash": "9287508526fbdde0",
+      "ownership": "scaffolded"
+    },
+    "apps/admin/app/(panel)/sample-category/sample-category-view.generated.tsx": {
+      "template": "admin/view",
+      "hash": "1d63f2185b38dc88",
+      "ownership": "generated"
+    },
+    "apps/api/src/modules/sample-category/__tests__/sample-category.repository.spec.ts": {
+      "template": "tests/repository",
+      "hash": "8f56cbb87e7682e9",
+      "ownership": "generated"
+    },
+    "apps/api/src/modules/sample-category/__tests__/sample-category.service.spec.ts": {
+      "template": "tests/service",
+      "hash": "07f5b6c2f9f0effb",
+      "ownership": "scaffolded"
+    },
+    "apps/api/src/modules/sample-category/sample-category.controller.generated.ts": {
+      "template": "nestjs/controller-base",
+      "hash": "b634310a02489be9",
+      "ownership": "generated"
+    },
+    "apps/api/src/modules/sample-category/sample-category.controller.ts": {
+      "template": "nestjs/controller",
+      "hash": "da677527bb71d492",
+      "ownership": "scaffolded"
+    },
+    "apps/api/src/modules/sample-category/sample-category.module.ts": {
+      "template": "nestjs/module",
+      "hash": "9036baee8da5726f",
+      "ownership": "scaffolded"
+    },
+    "apps/api/src/modules/sample-category/sample-category.repository.generated.ts": {
+      "template": "nestjs/repository",
+      "hash": "39789def5bed15bd",
+      "ownership": "generated"
+    },
+    "apps/api/src/modules/sample-category/sample-category.service.generated.ts": {
+      "template": "nestjs/service-base",
+      "hash": "66549ea6a0980980",
+      "ownership": "generated"
+    },
+    "apps/api/src/modules/sample-category/sample-category.service.ts": {
+      "template": "nestjs/service",
+      "hash": "aca2ec09782eb739",
+      "ownership": "scaffolded"
+    },
+    "packages/shared/src/schemas/domain/sample-category.generated.ts": {
+      "template": "contracts/zod",
+      "hash": "1cc0515d77bf97b9",
+      "ownership": "generated"
+    }
+  },
+  "manualFollowUps": []
+}

@@ -20,7 +20,7 @@ export function ImpersonateUserPanel(): React.JSX.Element | null {
 	const permissionsQuery = api.auth.permissions.useQuery(undefined);
 
 	const [search, setSearch] = React.useState<string>("");
-	const [page, setPage] = React.useState<number>(1);
+	const page = 1;
 
 	const currentUser = meQuery.data?.data;
 	const session = permissionsQuery.data?.data;
@@ -36,6 +36,27 @@ export function ImpersonateUserPanel(): React.JSX.Element | null {
 		},
 	});
 
+	const handleSearchChange = React.useCallback((event: React.ChangeEvent<HTMLInputElement>): void => {
+		setSearch(event.target.value);
+	}, []);
+
+	const handleImpersonate = React.useCallback(
+		(userId: string): void => {
+			void impersonateMutation.mutateAsync({ userId });
+		},
+		[impersonateMutation],
+	);
+
+	const handleImpersonateClick = React.useCallback(
+		(event: React.MouseEvent<HTMLButtonElement>): void => {
+			const userId = event.currentTarget.dataset.userId;
+			if (userId !== undefined) {
+				handleImpersonate(userId);
+			}
+		},
+		[handleImpersonate],
+	);
+
 	if (currentUser?.isSuperAdmin !== true || isImpersonating) {
 		return null;
 	}
@@ -49,21 +70,24 @@ export function ImpersonateUserPanel(): React.JSX.Element | null {
 				Impersonate merchant user
 			</div>
 			<div className="mt-4 space-y-3">
-				<Input placeholder="Search users…" value={search} onChange={(e): void => setSearch(e.target.value)} aria-label="Search users" />
+				<Input placeholder="Search users…" value={search} onChange={handleSearchChange} aria-label="Search users" />
 				<ul className="max-h-48 divide-y overflow-y-auto rounded-md border">
-					{users.map((user) => (
-						<li key={user.id} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
-							<div className="min-w-0">
-								<p className="truncate font-medium">{user.fullName}</p>
-								<p className="truncate text-xs text-muted-foreground">{user.email}</p>
-							</div>
-							{user.isActive && !user.isSuperAdmin && user.id !== currentUser?.id ? (
-								<Button size="sm" variant="outline" disabled={impersonateMutation.isPending} onClick={(): void => void impersonateMutation.mutateAsync({ userId: user.id })}>
-									Impersonate
-								</Button>
-							) : null}
-						</li>
-					))}
+					{users.map((user) => {
+						const canImpersonate = user.isActive && !user.isSuperAdmin && user.id !== currentUser.id;
+						return (
+							<li key={user.id} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
+								<div className="min-w-0">
+									<p className="truncate font-medium">{user.fullName}</p>
+									<p className="truncate text-xs text-muted-foreground">{user.email}</p>
+								</div>
+								{canImpersonate ? (
+									<Button size="sm" variant="outline" disabled={impersonateMutation.isPending} data-user-id={user.id} onClick={handleImpersonateClick}>
+										Impersonate
+									</Button>
+								) : null}
+							</li>
+						);
+					})}
 				</ul>
 			</div>
 		</div>

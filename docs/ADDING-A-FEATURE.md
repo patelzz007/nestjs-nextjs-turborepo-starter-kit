@@ -8,7 +8,21 @@ lastUpdated: 1787529600000
 coverImage: "https://images.unsplash.com/photo-1555949963-aa79dcee981c?auto=format&fit=crop&w=1600&q=80"
 ---
 
-# Adding a Feature — Step-by-Step Guide
+# Adding a Feature
+
+## Generated resources (preferred for new CRUD modules)
+
+If you are adding a **new admin CRUD resource**, use the contract-driven generator instead of hand-wiring every layer:
+
+1. Add `resources/definitions/<name>.resource.ts`
+2. Run `pnpm app generate resource <name>`
+3. Run `pnpm db:migrate` and `pnpm db:rls`
+
+See [`docs/contract-driven-scaffolding.md`](./contract-driven-scaffolding.md).
+
+---
+
+## Manual workflow (legacy modules) — Step-by-Step Guide
 
 > **Goal:** Walk a new developer through adding a complete feature module (e.g., "reports") from schema to UI.
 

@@ -502,3 +502,29 @@ DROP POLICY IF EXISTS reward_idempotency_bypass ON public.reward_redemption_idem
 CREATE POLICY reward_idempotency_bypass ON public.reward_redemption_idempotency_records
   USING (app_rls_bypass())
   WITH CHECK (app_rls_bypass());
+
+-- @app-generated:begin SampleCategory
+-- Generated RLS for SampleCategory (admin-only)
+ALTER TABLE sample_category ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS sample_category_select ON sample_category;
+DROP POLICY IF EXISTS sample_category_insert ON sample_category;
+DROP POLICY IF EXISTS sample_category_update ON sample_category;
+DROP POLICY IF EXISTS sample_category_delete ON sample_category;
+CREATE POLICY sample_category_select ON sample_category FOR SELECT USING (app_rls_bypass());
+CREATE POLICY sample_category_insert ON sample_category FOR INSERT WITH CHECK (app_rls_bypass());
+CREATE POLICY sample_category_update ON sample_category FOR UPDATE USING (app_rls_bypass()) WITH CHECK (app_rls_bypass());
+CREATE POLICY sample_category_delete ON sample_category FOR DELETE USING (app_rls_bypass());
+-- @app-generated:end SampleCategory
+
+-- @app-generated:begin Product
+-- Generated RLS for Product (admin-only)
+ALTER TABLE product ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS product_select ON product;
+DROP POLICY IF EXISTS product_insert ON product;
+DROP POLICY IF EXISTS product_update ON product;
+DROP POLICY IF EXISTS product_delete ON product;
+CREATE POLICY product_select ON product FOR SELECT USING (app_rls_bypass());
+CREATE POLICY product_insert ON product FOR INSERT WITH CHECK (app_rls_bypass());
+CREATE POLICY product_update ON product FOR UPDATE USING (app_rls_bypass()) WITH CHECK (app_rls_bypass());
+CREATE POLICY product_delete ON product FOR DELETE USING (app_rls_bypass());
+-- @app-generated:end Product

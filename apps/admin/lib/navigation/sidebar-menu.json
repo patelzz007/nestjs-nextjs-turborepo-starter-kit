@@ -234,11 +234,6 @@
 			]
 		},
 		{
-			"title": "Developer",
-			"color": "green",
-			"items": []
-		},
-		{
 			"title": "Documents",
 			"color": "amber",
 			"items": [
@@ -259,6 +254,22 @@
 					"url": "/documents/gamma",
 					"icon": "Table",
 					"disabled": true
+				}
+			]
+		},
+		{
+			"title": "Platform",
+			"color": "purple",
+			"items": [
+				{
+					"title": "Categories",
+					"url": "/sample-category",
+					"icon": "FolderTree"
+				},
+				{
+					"title": "Products",
+					"url": "/product",
+					"icon": "Package"
 				}
 			]
 		}

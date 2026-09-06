@@ -66,6 +66,8 @@ export const VERSIONED_ROUTE_PREFIXES: readonly [
 	"/admin/rewards",
 	"/admin/merchants",
 	"/admin/merchant-role-capabilities",
+	"/sample-category",
+	"/product",
 	"/capabilities/catalog",
 ] = [
 	"/auth",
@@ -93,6 +95,8 @@ export const VERSIONED_ROUTE_PREFIXES: readonly [
 	"/admin/rewards",
 	"/admin/merchants",
 	"/admin/merchant-role-capabilities",
+	"/sample-category",
+	"/product",
 	"/capabilities/catalog",
 ];
 

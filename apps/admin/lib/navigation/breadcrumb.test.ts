@@ -47,6 +47,12 @@ describe("resolveAdminTrail", () => {
 		expect(trail[0]?.href).toBeUndefined();
 	});
 
+	it("resolves generated platform resources from the sidebar menu", () => {
+		const trail = resolveAdminTrail("/product");
+		expect(trail.map((crumb) => crumb.label)).toEqual(["Platform", "Products"]);
+		expect(trail.map((crumb) => crumb.href)).toEqual([undefined, "/product"]);
+	});
+
 	it("falls back to a linked Overview crumb for unknown routes", () => {
 		const trail = resolveAdminTrail("/unknown/route");
 		expect(trail.map((crumb) => crumb.label)).toEqual(["Overview"]);

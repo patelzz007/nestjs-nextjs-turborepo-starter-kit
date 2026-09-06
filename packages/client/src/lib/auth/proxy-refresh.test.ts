@@ -157,7 +157,7 @@ describe("shouldAttemptProxyRefresh", () => {
 describe("resolveProxySessionRefresh", () => {
 	it("refreshes an expired access token on a protected route", async () => {
 		const expired = makeJwt({ exp: Math.floor(Date.now() / 1000) - 60 });
-		const attemptRefresh = vi.fn<() => Promise<ProxyRefreshResult>>().mockResolvedValue({
+		const attemptRefresh = vi.fn<(refreshToken: string, options?: { readonly bypassCooldown?: boolean }) => Promise<ProxyRefreshResult>>().mockResolvedValue({
 			ok: true,
 			status: 200,
 			setCookies: ["accessToken=new-at; Path=/; HttpOnly"],
@@ -172,7 +172,7 @@ describe("resolveProxySessionRefresh", () => {
 			accessTokenCookieName: "accessToken",
 			app: "web",
 			pathname: "/hello",
-			attemptRefresh: attemptRefresh as (refreshToken: string) => Promise<ProxyRefreshResult>,
+			attemptRefresh,
 		});
 
 		expect(attemptRefresh).toHaveBeenCalledWith("rt", { bypassCooldown: false });
@@ -182,7 +182,7 @@ describe("resolveProxySessionRefresh", () => {
 
 	it("marks the session dead when refresh is rejected on an auth route", async () => {
 		const validAccess = makeJwt({ exp: Math.floor(Date.now() / 1000) + 3600 });
-		const attemptRefresh = vi.fn<() => Promise<ProxyRefreshResult>>().mockResolvedValue({
+		const attemptRefresh = vi.fn<(refreshToken: string, options?: { readonly bypassCooldown?: boolean }) => Promise<ProxyRefreshResult>>().mockResolvedValue({
 			ok: false,
 			status: 401,
 			setCookies: [],
@@ -197,7 +197,7 @@ describe("resolveProxySessionRefresh", () => {
 			accessTokenCookieName: "accessToken",
 			app: "web",
 			pathname: "/auth/login",
-			attemptRefresh: attemptRefresh as (refreshToken: string) => Promise<ProxyRefreshResult>,
+			attemptRefresh,
 		});
 
 		expect(attemptRefresh).toHaveBeenCalledWith("rt-dead", { bypassCooldown: true });

@@ -67,7 +67,7 @@ export class MfaRecoveryService {
 		await this.emailService.sendMfaRecoveryUserNotification(user.email, "MFA Recovery Request Submitted", userMessage);
 
 		const adminMessage = [
-			`User ${user.fullName ?? user.email} (${user.email}) submitted an MFA recovery request.`,
+			`User ${user.fullName} (${user.email}) submitted an MFA recovery request.`,
 			`Request ID: ${request.id}`,
 			notes !== null ? `Reason: ${notes}` : "No reason provided.",
 			"",

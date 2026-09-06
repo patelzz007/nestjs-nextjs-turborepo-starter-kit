@@ -2,22 +2,21 @@ import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/commo
 import type { CapabilitySlug, MerchantMembershipResponse } from "@workspace/shared";
 
 import { AuthorizationCheckerService } from "../../authorization/services/authorization-checker.service";
-import { PrismaService } from "../../../prisma/prisma.service";
+import { MerchantMemberRepository } from "../repositories/merchant-member.repository";
+import { MerchantOrgRepository } from "../repositories/merchant-org.repository";
 import { MerchantCapabilityService } from "./merchant-capability.service";
 
 @Injectable()
 export class MerchantContextService {
 	public constructor(
-		private readonly prisma: PrismaService,
+		private readonly merchantMemberRepository: MerchantMemberRepository,
+		private readonly merchantOrgRepository: MerchantOrgRepository,
 		private readonly authorizationChecker: AuthorizationCheckerService,
 		private readonly merchantCapabilities: MerchantCapabilityService,
 	) {}
 
 	public async resolveOrgIdForUser(userId: string, requestedOrgId: string | undefined): Promise<string> {
-		const memberships = await this.prisma.merchantMember.findMany({
-			where: { userId, isDeleted: false },
-			select: { merchantOrgId: true, role: true },
-		});
+		const memberships = await this.merchantMemberRepository.listOrgRefsForUser(userId);
 
 		if (memberships.length === 0) {
 			if (requestedOrgId !== undefined && requestedOrgId.length > 0) {
@@ -49,10 +48,7 @@ export class MerchantContextService {
 	}
 
 	public async requireOwnerRole(userId: string, merchantOrgId: string): Promise<void> {
-		const membership = await this.prisma.merchantMember.findFirst({
-			where: { userId, merchantOrgId, isDeleted: false },
-			select: { role: true },
-		});
+		const membership = await this.merchantMemberRepository.findRoleForUserInOrg(userId, merchantOrgId);
 
 		if (membership?.role === "OWNER") {
 			return;
@@ -81,10 +77,7 @@ export class MerchantContextService {
 	}
 
 	public async userHasCapability(userId: string, merchantOrgId: string, capability: CapabilitySlug, options?: { readonly isImpersonating?: boolean }): Promise<boolean> {
-		const membership = await this.prisma.merchantMember.findFirst({
-			where: { userId, merchantOrgId, isDeleted: false },
-			select: { role: true },
-		});
+		const membership = await this.merchantMemberRepository.findRoleForUserInOrg(userId, merchantOrgId);
 
 		if (membership !== null) {
 			const capabilities = await this.merchantCapabilities.getCapabilitiesForRole(membership.role);
@@ -96,10 +89,7 @@ export class MerchantContextService {
 			return false;
 		}
 
-		const org = await this.prisma.merchantOrg.findFirst({
-			where: { id: merchantOrgId, isDeleted: false },
-			select: { id: true },
-		});
+		const org = await this.merchantOrgRepository.findActiveById(merchantOrgId);
 
 		if (org === null) {
 			return false;
@@ -110,25 +100,10 @@ export class MerchantContextService {
 	}
 
 	public async listMembershipsForUser(userId: string, options?: { readonly isImpersonating?: boolean }): Promise<MerchantMembershipResponse[]> {
-		const memberships = await this.prisma.merchantMember.findMany({
-			where: { userId, isDeleted: false },
-			include: {
-				merchantOrg: {
-					select: {
-						id: true,
-						businessName: true,
-						city: true,
-						kybStatus: true,
-						status: true,
-						isDeleted: true,
-					},
-				},
-			},
-			orderBy: { createdAt: "asc" },
-		});
+		const memberships = await this.merchantMemberRepository.listWithOrgForUser(userId);
 
 		const memberRows: MerchantMembershipResponse[] = [];
-		for (const row of memberships.filter((entry) => entry.merchantOrg.isDeleted === false)) {
+		for (const row of memberships.filter((entry) => !entry.merchantOrg.isDeleted)) {
 			const capabilities = await this.merchantCapabilities.getCapabilitiesForRole(row.role);
 			memberRows.push({
 				merchantOrgId: row.merchantOrgId,
@@ -155,18 +130,7 @@ export class MerchantContextService {
 		}
 
 		const ownerCapabilities = await this.merchantCapabilities.getOwnerCapabilities();
-		const orgs = await this.prisma.merchantOrg.findMany({
-			where: { isDeleted: false },
-			orderBy: { businessName: "asc" },
-			take: 100,
-			select: {
-				id: true,
-				businessName: true,
-				city: true,
-				kybStatus: true,
-				status: true,
-			},
-		});
+		const orgs = await this.merchantOrgRepository.listActiveSummaries(100);
 
 		return orgs.map((org) => ({
 			merchantOrgId: org.id,
@@ -180,10 +144,7 @@ export class MerchantContextService {
 	}
 
 	private async assertMerchantOrgExists(merchantOrgId: string): Promise<void> {
-		const org = await this.prisma.merchantOrg.findFirst({
-			where: { id: merchantOrgId, isDeleted: false },
-			select: { id: true },
-		});
+		const org = await this.merchantOrgRepository.findActiveById(merchantOrgId);
 
 		if (org === null) {
 			throw new NotFoundException({ message: "Merchant not found", error: "MERCHANT_NOT_FOUND" });

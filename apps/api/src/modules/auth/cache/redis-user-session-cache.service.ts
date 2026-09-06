@@ -1,5 +1,6 @@
 import { Inject, Logger, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common";
 import { SessionPermissionsResponseSchema, UserResponseSchema, type SessionPermissionsResponse, type UserResponse } from "@workspace/shared";
+import { z } from "zod";
 import type Redis from "ioredis";
 
 import { TypedConfigService } from "../../../config/typed-config.service";
@@ -112,19 +113,17 @@ export class RedisUserSessionCacheService extends UserSessionCacheService implem
 		const stream = this.redis.scanStream({ match: `${ME_KEY_PREFIX}*`, count: 100 });
 		const meKeys: string[] = [];
 		for await (const batch of stream) {
-			for (const key of batch) {
-				if (typeof key === "string") {
-					meKeys.push(key);
-				}
+			const keysParsed = z.array(z.string()).safeParse(batch);
+			if (keysParsed.success) {
+				meKeys.push(...keysParsed.data);
 			}
 		}
 		const permStream = this.redis.scanStream({ match: `${PERMISSIONS_KEY_PREFIX}*`, count: 100 });
 		const permissionKeys: string[] = [];
 		for await (const batch of permStream) {
-			for (const key of batch) {
-				if (typeof key === "string") {
-					permissionKeys.push(key);
-				}
+			const keysParsed = z.array(z.string()).safeParse(batch);
+			if (keysParsed.success) {
+				permissionKeys.push(...keysParsed.data);
 			}
 		}
 		const allKeys = [...meKeys, ...permissionKeys];

@@ -297,7 +297,7 @@ export class TwoFactorService {
 			},
 		});
 
-		if (user === null || !user.twoFactorEnabled) {
+		if (!user?.twoFactorEnabled) {
 			throw new UnauthorizedException("Two-factor authentication is not enabled for this account");
 		}
 

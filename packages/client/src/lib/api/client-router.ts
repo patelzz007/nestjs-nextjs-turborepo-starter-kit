@@ -14,16 +14,7 @@ import {
 import type { DataValue, SerializableInput } from "@workspace/shared";
 
 import { createMutationCaller, createQueryCaller, type ApiRequestContext, type ApiResponse } from "./api-request";
-import {
-	eachRouterEntry,
-	isErasedProcedureDef,
-	isRouterSubtree,
-	type MutationDef,
-	type ProcedureDef,
-	type QueryDef,
-	type RouterTree,
-	type RouterTreeValue,
-} from "./endpoints";
+import { eachRouterEntry, isErasedProcedureDef, isRouterSubtree, type MutationDef, type ProcedureDef, type QueryDef } from "./endpoints";
 
 /** A GET procedure on the client — `.useQuery()` / `.fetch()` / `.fetchOrThrow()`. */
 export interface ClientQueryProcedure<Input, Resp> {
@@ -66,8 +57,8 @@ export function createQueryProcedure<Input extends SerializableInput, Resp exten
 				...queryOptions,
 			});
 		},
-		fetch: caller.fetch,
-		fetchOrThrow: caller.fetchOrThrow,
+		fetch: (input: Input): Promise<ApiResponse<Resp>> => caller.fetch(input),
+		fetchOrThrow: (input: Input): Promise<Resp> => caller.fetchOrThrow(input),
 	};
 }
 
@@ -77,8 +68,12 @@ export function createMutationProcedure<Input extends SerializableInput, Resp ex
 ): ClientMutationProcedure<Input, Resp> {
 	const caller = createMutationCaller(context, def);
 	return {
-		useMutation: (mutationOptions?): UseMutationResult<Resp, Error, Input> => rqUseMutation<Resp, Error, Input>({ mutationFn: caller.mutate, ...mutationOptions }),
-		mutate: caller.mutate,
+		useMutation: (mutationOptions?): UseMutationResult<Resp, Error, Input> =>
+			rqUseMutation<Resp, Error, Input>({
+				mutationFn: (input: Input): Promise<Resp> => caller.mutate(input),
+				...mutationOptions,
+			}),
+		mutate: (input: Input): Promise<Resp> => caller.mutate(input),
 	};
 }
 

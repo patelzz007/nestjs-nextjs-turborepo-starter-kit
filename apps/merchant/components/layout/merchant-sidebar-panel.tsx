@@ -11,7 +11,6 @@ import { MERCHANT_SIDEBAR_LABELS } from "@/lib/sidebar-labels";
 import { renderMerchantPaletteIcon } from "@/lib/palette/nav-items";
 import { useMerchantCommandPaletteStore } from "@/stores/command-palette-store";
 import { useMerchantSidebarStore } from "@/stores/sidebar-store";
-import { useMerchantOrg } from "@/lib/merchant-root-provider";
 import { resolveActiveMerchantMembership, resolveMerchantCapabilities } from "@/lib/merchant-server-capabilities";
 import type { CompiledSidebarMenuData } from "@workspace/client/lib/sidebar/sidebar-menu-schema";
 import type { CapabilitySlug, MerchantMembershipResponse } from "@workspace/shared";
@@ -184,7 +183,7 @@ export function MerchantSidebarPanel({ memberships, merchantOrgId, onStoreChange
 		};
 	}, []);
 
-	React.useEffect((): (() => void) | void => {
+	React.useEffect((): undefined | (() => void) => {
 		const container = navContainerRef.current;
 		if (container === null) {
 			return;

@@ -3,7 +3,7 @@ import { ApiBody, ApiOkResponse, ApiTags } from "@nestjs/swagger";
 import { SkipThrottle, Throttle } from "@nestjs/throttler";
 
 import { RequirePermission } from "../../auth/decorators/require-permission.decorator";
-import { apiPath, type PermissionListItem, type RoleListItem } from "@workspace/shared";
+import { apiPath, type RoleListItem } from "@workspace/shared";
 import { PrismaService } from "../../../prisma/prisma.service";
 import { ConflictDetectionService } from "../services/conflict-detection.service";
 import { AuthorizationService } from "../services/authorization.service";

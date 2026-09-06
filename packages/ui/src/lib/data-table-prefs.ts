@@ -65,8 +65,11 @@ export function normalizeFacetedUniqueValues(raw: object | undefined): Map<strin
 	if (raw instanceof Map) {
 		for (const [rawKey, count] of raw.entries()) {
 			const cellParsed = DataTableCellValueSchema.safeParse(rawKey);
+			const countParsed = z.number().safeParse(count);
 			const key = cellParsed.success ? toDataTableCellString(cellParsed.data) : "";
-			map.set(key, count);
+			if (countParsed.success) {
+				map.set(key, countParsed.data);
+			}
 		}
 		return map;
 	}

@@ -113,7 +113,7 @@ export function filterItemsBySearch<T extends SidebarMenuItemLike>(items: readon
 		const hasMatchingChild = filteredChildren !== undefined && filteredChildren.length > 0;
 
 		if (titleMatch || hasMatchingChild) {
-			acc.push({ ...item, children: hasMatchingChild ? filteredChildren : children } as T);
+			acc.push({ ...item, children: hasMatchingChild ? filteredChildren : children });
 		}
 
 		return acc;

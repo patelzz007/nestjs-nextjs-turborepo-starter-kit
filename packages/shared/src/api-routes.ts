@@ -201,6 +201,26 @@ export const apiRoutes = {
 		merchantRoleCapabilitiesSync: { path: "/admin/merchant-role-capabilities/:role", params: ["role"] },
 		merchantRoleCapabilitiesRestore: { path: "/admin/merchant-role-capabilities/:role/restore-defaults", params: ["role"] },
 	},
+	// @app-generated:begin sampleCategory
+	sampleCategory: {
+		list: "/sample-category",
+		detail: { path: "/sample-category/:id", params: ["id"] },
+		create: "/sample-category",
+		update: { path: "/sample-category/:id", params: ["id"] },
+		delete: { path: "/sample-category/:id", params: ["id"] },
+		restore: { path: "/sample-category/:id/restore", params: ["id"] },
+	},
+	// @app-generated:end sampleCategory,
+	// @app-generated:begin product
+	product: {
+		list: "/product",
+		detail: { path: "/product/:id", params: ["id"] },
+		create: "/product",
+		update: { path: "/product/:id", params: ["id"] },
+		delete: { path: "/product/:id", params: ["id"] },
+		restore: { path: "/product/:id/restore", params: ["id"] },
+	},
+	// @app-generated:end product
 } satisfies Record<string, RouteTree>;
 
 /** The full route tree — exported for type-level access. */
@@ -211,11 +231,15 @@ export type ApiRoutes = typeof apiRoutes;
 // For parameterized routes, also checks that :param placeholders match params[].
 // If any route is malformed, the module fails to import.
 
-const PLACEHOLDER_RE = /:([a-zA-Z_][a-zA-Z0-9_]*)/g;
-
 /** Collect all unique param names from a path string. */
 function extractPlaceholders(path: string): string[] {
-	return [...new Set([...path.matchAll(PLACEHOLDER_RE)].map((m) => m[1]).filter((segment): segment is string => segment !== undefined && segment.length > 0))];
+	const params: string[] = [];
+	for (const segment of path.split("/")) {
+		if (segment.startsWith(":")) {
+			params.push(segment.slice(1));
+		}
+	}
+	return [...new Set(params)];
 }
 
 /** Validate a single route leaf against the Zod schema + placeholder consistency. */

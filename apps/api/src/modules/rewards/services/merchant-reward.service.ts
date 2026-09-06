@@ -1,10 +1,13 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
 
 import type { MerchantCreateRewardInput, MerchantRedemptionListItem, MerchantRedemptionListQuery, MerchantUpdateRewardInput, RewardResponse } from "@workspace/shared";
 import { EpochMsSchema, RewardPlatformEventSchema } from "@workspace/shared";
 
-import { PrismaService } from "../../../prisma/prisma.service";
+import { MerchantMemberRepository } from "../repositories/merchant-member.repository";
+import { RewardClaimRepository } from "../repositories/reward-claim.repository";
+import { RewardRedemptionRepository } from "../repositories/reward-redemption.repository";
+import { RewardRepository } from "../repositories/reward.repository";
 import { mapRewardToResponse } from "../utils/reward-mapper.util";
 import { MerchantContextService } from "./merchant-context.service";
 import { RewardNotificationService } from "./reward-notification.service";
@@ -16,7 +19,10 @@ const REFERRER_REWARD_MAX_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 @Injectable()
 export class MerchantRewardService {
 	public constructor(
-		private readonly prisma: PrismaService,
+		private readonly rewardRepository: RewardRepository,
+		private readonly rewardClaimRepository: RewardClaimRepository,
+		private readonly redemptionRepository: RewardRedemptionRepository,
+		private readonly merchantMemberRepository: MerchantMemberRepository,
 		private readonly merchantContext: MerchantContextService,
 		private readonly notificationService: RewardNotificationService,
 		private readonly rewardsPlatformEvents: RewardsPlatformEventsService,
@@ -24,13 +30,7 @@ export class MerchantRewardService {
 
 	public async listRewards(userId: string, merchantOrgId: string | undefined): Promise<RewardResponse[]> {
 		const orgId = await this.merchantContext.resolveOrgIdForUser(userId, merchantOrgId);
-
-		const rows = await this.prisma.reward.findMany({
-			where: { merchantOrgId: orgId, isDeleted: false, rewardKind: "CONSUMER" },
-			include: { merchantOrg: { select: { businessName: true } } },
-			orderBy: { createdAt: "desc" },
-		});
-
+		const rows = await this.rewardRepository.listConsumerByMerchantOrg(orgId);
 		return rows.map((row) => mapRewardToResponse(row, row.merchantOrg));
 	}
 
@@ -40,73 +40,61 @@ export class MerchantRewardService {
 
 		const referralsEnabled = input.referralsEnabled;
 		const referralPoolTotal = referralsEnabled ? input.referralPoolTotal : null;
-		const saveAsDraft = input.saveAsDraft ?? true;
+		const saveAsDraft = input.saveAsDraft;
 		const now = Date.now();
 		const autoPublishAt = saveAsDraft ? null : now + AUTO_PUBLISH_MS;
 
-		const reward = await this.prisma.reward.create({
-			data: {
-				merchantOrgId: orgId,
-				title: input.title,
-				description: input.description,
-				rewardType: input.rewardType,
-				rewardValue: input.rewardValue,
-				termsConditions: input.termsConditions ?? null,
-				rewardKind: "CONSUMER",
-				category: input.category,
-				placeholderImageKey: `category-${input.category}`,
-				rules: input.rules ?? undefined,
-				quantityTotal: input.quantityTotal,
-				quantityRemaining: input.quantityTotal,
-				startDate: input.startDate ?? null,
-				expiryDate: input.expiryDate,
-				status: saveAsDraft ? "DRAFT" : "PENDING_REVIEW",
-				submittedForReviewAt: saveAsDraft ? null : now,
-				autoPublishAt,
-				referralsEnabled,
-				referralPoolTotal,
-				referralPoolRemaining: referralPoolTotal,
-			},
-			include: { merchantOrg: { select: { businessName: true } } },
+		const reward = await this.rewardRepository.createConsumerReward({
+			merchantOrgId: orgId,
+			title: input.title,
+			description: input.description,
+			rewardType: input.rewardType,
+			rewardValue: input.rewardValue,
+			termsConditions: input.termsConditions ?? null,
+			rewardKind: "CONSUMER",
+			category: input.category,
+			placeholderImageKey: `category-${input.category}`,
+			rules: input.rules ?? undefined,
+			quantityTotal: input.quantityTotal,
+			quantityRemaining: input.quantityTotal,
+			startDate: input.startDate ?? null,
+			expiryDate: input.expiryDate,
+			status: saveAsDraft ? "DRAFT" : "PENDING_REVIEW",
+			submittedForReviewAt: saveAsDraft ? null : now,
+			autoPublishAt,
+			referralsEnabled,
+			referralPoolTotal,
+			referralPoolRemaining: referralPoolTotal,
 		});
 
 		if (referralsEnabled && referralPoolTotal !== null && referralPoolTotal !== undefined) {
 			const referrerTitle = input.referrerRewardTitle ?? `${input.title} — Referrer bonus`;
 			const referrerExpiry = Math.min(input.expiryDate, Date.now() + REFERRER_REWARD_MAX_TTL_MS);
 
-			const referrerReward = await this.prisma.reward.create({
-				data: {
-					merchantOrgId: orgId,
-					title: referrerTitle,
-					description: `Referrer reward for ${input.title}`,
-					rewardType: input.rewardType,
-					rewardValue: input.rewardValue,
-					termsConditions: input.termsConditions ?? null,
-					rewardKind: "REFERRER",
-					category: input.category,
-					placeholderImageKey: `category-${input.category}`,
-					quantityTotal: referralPoolTotal,
-					quantityRemaining: referralPoolTotal,
-					expiryDate: referrerExpiry,
-					status: saveAsDraft ? "DRAFT" : "PENDING_REVIEW",
-					submittedForReviewAt: saveAsDraft ? null : now,
-					autoPublishAt,
-					referralsEnabled: false,
-					parentConsumerRewardId: reward.id,
-				},
+			const referrerReward = await this.rewardRepository.createReferrerReward({
+				merchantOrgId: orgId,
+				title: referrerTitle,
+				description: `Referrer reward for ${input.title}`,
+				rewardType: input.rewardType,
+				rewardValue: input.rewardValue,
+				termsConditions: input.termsConditions ?? null,
+				rewardKind: "REFERRER",
+				category: input.category,
+				placeholderImageKey: `category-${input.category}`,
+				quantityTotal: referralPoolTotal,
+				quantityRemaining: referralPoolTotal,
+				expiryDate: referrerExpiry,
+				status: saveAsDraft ? "DRAFT" : "PENDING_REVIEW",
+				submittedForReviewAt: saveAsDraft ? null : now,
+				autoPublishAt,
+				referralsEnabled: false,
+				parentConsumerRewardId: reward.id,
 			});
 
-			await this.prisma.reward.update({
-				where: { id: reward.id },
-				data: { referrerRewardId: referrerReward.id },
-			});
+			await this.rewardRepository.updateReward(reward.id, { referrerReward: { connect: { id: referrerReward.id } } });
 		}
 
-		const refreshed = await this.prisma.reward.findUniqueOrThrow({
-			where: { id: reward.id },
-			include: { merchantOrg: { select: { businessName: true } } },
-		});
-
+		const refreshed = await this.rewardRepository.findUniqueOrThrowWithMerchantOrg(reward.id);
 		return mapRewardToResponse(refreshed, refreshed.merchantOrg);
 	}
 
@@ -145,23 +133,13 @@ export class MerchantRewardService {
 			updateData.referralPoolRemaining = input.referralPoolTotal;
 		}
 
-		await this.prisma.reward.update({
-			where: { id: reward.id },
-			data: updateData,
-		});
+		await this.rewardRepository.updateReward(reward.id, updateData);
 
 		if (input.referrerRewardTitle !== undefined && reward.referrerRewardId !== null) {
-			await this.prisma.reward.update({
-				where: { id: reward.referrerRewardId },
-				data: { title: input.referrerRewardTitle },
-			});
+			await this.rewardRepository.updateReward(reward.referrerRewardId, { title: input.referrerRewardTitle });
 		}
 
-		const refreshed = await this.prisma.reward.findUniqueOrThrow({
-			where: { id: reward.id },
-			include: { merchantOrg: { select: { businessName: true } } },
-		});
-
+		const refreshed = await this.rewardRepository.findUniqueOrThrowWithMerchantOrg(reward.id);
 		return mapRewardToResponse(refreshed, refreshed.merchantOrg);
 	}
 
@@ -178,31 +156,21 @@ export class MerchantRewardService {
 		const now = Date.now();
 		const autoPublishAt = now + AUTO_PUBLISH_MS;
 
-		await this.prisma.reward.update({
-			where: { id: reward.id },
-			data: {
-				status: "PENDING_REVIEW",
-				submittedForReviewAt: now,
-				autoPublishAt,
-			},
+		await this.rewardRepository.updateReward(reward.id, {
+			status: "PENDING_REVIEW",
+			submittedForReviewAt: now,
+			autoPublishAt,
 		});
 
 		if (reward.referrerRewardId !== null) {
-			await this.prisma.reward.update({
-				where: { id: reward.referrerRewardId },
-				data: {
-					status: "PENDING_REVIEW",
-					submittedForReviewAt: now,
-					autoPublishAt,
-				},
+			await this.rewardRepository.updateReward(reward.referrerRewardId, {
+				status: "PENDING_REVIEW",
+				submittedForReviewAt: now,
+				autoPublishAt,
 			});
 		}
 
-		const refreshed = await this.prisma.reward.findUniqueOrThrow({
-			where: { id: reward.id },
-			include: { merchantOrg: { select: { businessName: true } } },
-		});
-
+		const refreshed = await this.rewardRepository.findUniqueOrThrowWithMerchantOrg(reward.id);
 		return mapRewardToResponse(refreshed, refreshed.merchantOrg);
 	}
 
@@ -220,23 +188,9 @@ export class MerchantRewardService {
 		hasPrevious: boolean;
 	}> {
 		const orgId = await this.merchantContext.resolveOrgIdForUser(userId, merchantOrgId);
-
 		const page = query.page;
 		const pageSize = query.limit;
-		const skip = (page - 1) * pageSize;
-
-		const where = { merchantOrgId: orgId, isDeleted: false };
-
-		const [rows, total] = await this.prisma.$transaction([
-			this.prisma.rewardRedemption.findMany({
-				where,
-				include: { claim: { include: { reward: { select: { title: true } } } } },
-				orderBy: { redeemedAt: "desc" },
-				skip,
-				take: pageSize,
-			}),
-			this.prisma.rewardRedemption.count({ where }),
-		]);
+		const { rows, total } = await this.redemptionRepository.listForMerchant(orgId, query);
 
 		return {
 			items: rows.map((row) => ({
@@ -257,42 +211,10 @@ export class MerchantRewardService {
 
 	public async autoPublishPendingRewards(): Promise<number> {
 		const now = Date.now();
-		const pending = await this.prisma.reward.findMany({
-			where: {
-				status: "PENDING_REVIEW",
-				autoPublishAt: { lte: now },
-				isDeleted: false,
-				rewardKind: "CONSUMER",
-			},
-			include: { merchantOrg: { select: { businessName: true } } },
-		});
+		const pending = await this.rewardRepository.listPendingAutoPublish(now);
 
 		for (const reward of pending) {
-			await this.prisma.$transaction(async (tx) => {
-				await tx.reward.update({
-					where: { id: reward.id },
-					data: {
-						status: "PUBLISHED",
-						reviewedAt: now,
-						autoPublishAt: null,
-					},
-				});
-
-				if (reward.referrerRewardId !== null) {
-					await tx.reward.update({
-						where: { id: reward.referrerRewardId },
-						data: { status: "PUBLISHED", reviewedAt: now, autoPublishAt: null },
-					});
-				}
-
-				await tx.rewardAuditLog.create({
-					data: {
-						merchantOrgId: reward.merchantOrgId,
-						action: "reward.auto_published",
-						metadata: { rewardId: reward.id },
-					},
-				});
-			});
+			await this.rewardRepository.autoPublishInTransaction(reward.id, reward.referrerRewardId, reward.merchantOrgId, now);
 
 			this.rewardsPlatformEvents.emit(
 				RewardPlatformEventSchema.parse({
@@ -303,9 +225,7 @@ export class MerchantRewardService {
 				}),
 			);
 
-			const owners = await this.prisma.merchantMember.findMany({
-				where: { merchantOrgId: reward.merchantOrgId, role: "OWNER", isDeleted: false },
-			});
+			const owners = await this.merchantMemberRepository.listOwnersByOrgId(reward.merchantOrgId);
 
 			for (const owner of owners) {
 				await this.notificationService.notify(owner.userId, "reward_auto_published", "Reward published", `"${reward.title}" was auto-published after the 24h review window.`, {
@@ -319,44 +239,14 @@ export class MerchantRewardService {
 
 	public async expirePendingClaims(): Promise<number> {
 		const now = Date.now();
-		const expiredClaims = await this.prisma.rewardClaim.findMany({
-			where: {
-				status: "PENDING",
-				isReferrerCredit: false,
-				claimExpiresAt: { lt: now },
-				isDeleted: false,
-			},
-			include: { reward: true },
-			take: 200,
-		});
+		const expiredClaims = await this.rewardClaimRepository.listExpiredPending({ isReferrerCredit: false, now, take: 200 });
 
 		for (const claim of expiredClaims) {
-			await this.prisma.$transaction(async (tx) => {
-				const updated = await tx.rewardClaim.updateMany({
-					where: { id: claim.id, status: "PENDING" },
-					data: { status: "EXPIRED" },
-				});
+			const expired = await this.rewardClaimRepository.expireClaimInTransaction(claim.id, claim.rewardId, claim.reward.merchantOrgId, false);
 
-				if (updated.count === 0) {
-					return;
-				}
-
-				await tx.reward.update({
-					where: { id: claim.rewardId },
-					data: {
-						quantityReserved: { decrement: 1 },
-						quantityRemaining: { increment: 1 },
-					},
-				});
-
-				await tx.rewardAuditLog.create({
-					data: {
-						merchantOrgId: claim.reward.merchantOrgId,
-						action: "reward.claim_expired",
-						metadata: { claimId: claim.id, isReferrerCredit: claim.isReferrerCredit },
-					},
-				});
-			});
+			if (!expired) {
+				continue;
+			}
 
 			this.rewardsPlatformEvents.emit(
 				RewardPlatformEventSchema.parse({
@@ -373,44 +263,14 @@ export class MerchantRewardService {
 
 	public async expireReferrerClaims(): Promise<number> {
 		const now = Date.now();
-		const expiredClaims = await this.prisma.rewardClaim.findMany({
-			where: {
-				status: "PENDING",
-				isReferrerCredit: true,
-				claimExpiresAt: { lt: now },
-				isDeleted: false,
-			},
-			include: { reward: true },
-			take: 200,
-		});
+		const expiredClaims = await this.rewardClaimRepository.listExpiredPending({ isReferrerCredit: true, now, take: 200 });
 
 		for (const claim of expiredClaims) {
-			await this.prisma.$transaction(async (tx) => {
-				const updated = await tx.rewardClaim.updateMany({
-					where: { id: claim.id, status: "PENDING", isReferrerCredit: true },
-					data: { status: "EXPIRED" },
-				});
+			const expired = await this.rewardClaimRepository.expireClaimInTransaction(claim.id, claim.rewardId, claim.reward.merchantOrgId, true);
 
-				if (updated.count === 0) {
-					return;
-				}
-
-				await tx.reward.update({
-					where: { id: claim.rewardId },
-					data: {
-						quantityReserved: { decrement: 1 },
-						quantityRemaining: { increment: 1 },
-					},
-				});
-
-				await tx.rewardAuditLog.create({
-					data: {
-						merchantOrgId: claim.reward.merchantOrgId,
-						action: "reward.claim_expired",
-						metadata: { claimId: claim.id, isReferrerCredit: true },
-					},
-				});
-			});
+			if (!expired) {
+				continue;
+			}
 
 			this.rewardsPlatformEvents.emit(
 				RewardPlatformEventSchema.parse({
@@ -435,10 +295,7 @@ export class MerchantRewardService {
 		quantityTotal: number;
 		quantityRemaining: number;
 	}> {
-		const reward = await this.prisma.reward.findFirst({
-			where: { id: rewardId, merchantOrgId, isDeleted: false, rewardKind: "CONSUMER" },
-			select: { id: true, status: true, referrerRewardId: true, quantityTotal: true, quantityRemaining: true },
-		});
+		const reward = await this.rewardRepository.findOrgConsumerReward(merchantOrgId, rewardId);
 
 		if (reward === null) {
 			throw new NotFoundException({ message: "Reward not found", error: "REWARD_NOT_FOUND" });

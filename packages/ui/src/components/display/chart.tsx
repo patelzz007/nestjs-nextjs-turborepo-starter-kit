@@ -4,6 +4,7 @@ import { cn } from "@workspace/ui/lib/utils";
 import * as React from "react";
 import * as RechartsPrimitive from "recharts";
 import type { TooltipValueType } from "recharts";
+import { z } from "zod";
 
 // Format: { THEME_NAME: CSS_SELECTOR }
 const THEMES: Readonly<{ light: string; dark: string }> = { light: "", dark: ".dark" };
@@ -16,13 +17,13 @@ const THEME_ENTRIES: readonly (readonly [keyof typeof THEMES, string])[] = [
 const INITIAL_DIMENSION: Readonly<{ width: number; height: number }> = { width: 320, height: 200 };
 type TooltipNameType = number | string;
 
-type ChartSeriesColor = {
+interface ChartSeriesColor {
 	readonly color: string;
-};
+}
 
-type ChartSeriesTheme = {
+interface ChartSeriesTheme {
 	readonly theme: Record<"light" | "dark", string>;
-};
+}
 
 export type ChartConfig = Record<
 	string,
@@ -95,7 +96,7 @@ const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }): React.
 ${prefix} [data-chart=${id}] {
 ${colorConfig
 	.map(([key, itemConfig]) => {
-		const color = "theme" in itemConfig && itemConfig.theme !== undefined ? itemConfig.theme[theme] : "color" in itemConfig ? itemConfig.color : undefined;
+		const color = "theme" in itemConfig ? itemConfig.theme[theme] : itemConfig.color;
 		return color ? `  --color-${key}: ${color};` : null;
 	})
 	.join("\n")}
@@ -139,9 +140,10 @@ function ChartTooltipContent({
 		}
 
 		const [item] = payload;
-		const key = toDisplayKey(labelKey ?? item?.dataKey ?? item?.name ?? "value");
-		const itemConfig = getPayloadConfigFromPayload(config, item, key);
-		const value = !labelKey && typeof label === "string" ? (config[label]?.label ?? label) : itemConfig?.label;
+		const key = resolveDisplayKey(labelKey, item?.dataKey, item?.name, "value");
+		const itemConfig = resolvePayloadConfig(config, item, key);
+		const labelStringParsed = z.string().safeParse(label);
+		const value = !labelKey && labelStringParsed.success ? (config[labelStringParsed.data]?.label ?? labelStringParsed.data) : itemConfig?.label;
 
 		if (labelFormatter) {
 			return <div className={cn("font-medium", labelClassName)}>{labelFormatter(value, payload)}</div>;
@@ -167,8 +169,8 @@ function ChartTooltipContent({
 				{payload
 					.filter((item) => item.type !== "none")
 					.map((item, index) => {
-						const key = toDisplayKey(nameKey ?? item.name ?? item.dataKey ?? "value");
-						const itemConfig = getPayloadConfigFromPayload(config, item, key);
+						const key = resolveDisplayKey(nameKey, item.name, item.dataKey, "value");
+						const itemConfig = resolvePayloadConfig(config, item, key);
 						const indicatorColor = color ?? item.fill ?? item.color;
 						const indicatorStyle: React.CSSProperties & Record<`--${string}`, string | undefined> = {
 							"--color-bg": indicatorColor,
@@ -243,8 +245,8 @@ function ChartLegendContent({
 			{payload
 				.filter((item) => item.type !== "none")
 				.map((item) => {
-					const key = toDisplayKey(nameKey ?? item.dataKey ?? "value");
-					const itemConfig = getPayloadConfigFromPayload(config, item, key);
+					const key = resolveDisplayKey(nameKey, item.dataKey, "value");
+					const itemConfig = resolvePayloadConfig(config, item, key);
 
 					return (
 						<div key={key} className={cn("flex items-center gap-1.5 [&>svg]:h-3 [&>svg]:w-3 [&>svg]:text-muted-foreground")}>
@@ -266,36 +268,69 @@ function ChartLegendContent({
 	);
 }
 
-function toDisplayKey(value: unknown): string {
-	if (typeof value === "string") {
-		return value;
+type ChartPayloadPrimitive = string | number | boolean | null;
+
+interface ChartPayloadRecord {
+	readonly [key: string]: ChartPayloadValue | undefined;
+}
+
+type ChartPayloadValue = ChartPayloadPrimitive | readonly ChartPayloadValue[] | ChartPayloadRecord;
+
+const ChartPayloadValueSchema: z.ZodType<ChartPayloadValue> = z.lazy(() =>
+	z.union([z.string(), z.number(), z.boolean(), z.null(), z.array(ChartPayloadValueSchema), z.record(z.string(), ChartPayloadValueSchema)]),
+);
+
+const ChartPayloadRecordSchema: z.ZodType<ChartPayloadRecord> = z.record(z.string(), ChartPayloadValueSchema);
+
+type DisplayKeyCandidate = string | number | boolean | null | object | undefined;
+
+function parseDisplayKeyCandidate(value: DisplayKeyCandidate): string | undefined {
+	const stringParsed = z.string().safeParse(value);
+	if (stringParsed.success) {
+		return stringParsed.data;
 	}
-	if (typeof value === "number") {
-		return String(value);
+	const numberParsed = z.number().safeParse(value);
+	if (numberParsed.success) {
+		return String(numberParsed.data);
+	}
+	return undefined;
+}
+
+function resolveDisplayKey(...candidates: DisplayKeyCandidate[]): string {
+	for (const candidate of candidates) {
+		const parsed = parseDisplayKeyCandidate(candidate);
+		if (parsed !== undefined) {
+			return parsed;
+		}
 	}
 	return "value";
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-	return typeof value === "object" && value !== null;
-}
-
-function getPayloadConfigFromPayload(config: ChartConfig, payload: unknown, key: string): ChartConfig[string] | undefined {
-	if (!isRecord(payload)) {
-		return undefined;
-	}
-
-	const payloadPayload: unknown = payload.payload;
-
+function getPayloadConfigFromPayload(config: ChartConfig, entry: ChartPayloadRecord, key: string): ChartConfig[string] | undefined {
 	let configLabelKey: string = key;
 
-	if (typeof payload[key] === "string") {
-		configLabelKey = payload[key];
-	} else if (isRecord(payloadPayload) && typeof payloadPayload[key] === "string") {
-		configLabelKey = payloadPayload[key];
+	const directKeyParsed = z.string().safeParse(entry[key]);
+	if (directKeyParsed.success) {
+		configLabelKey = directKeyParsed.data;
+	} else {
+		const nestedParsed = ChartPayloadRecordSchema.safeParse(entry.payload);
+		if (nestedParsed.success) {
+			const nestedKeyParsed = z.string().safeParse(nestedParsed.data[key]);
+			if (nestedKeyParsed.success) {
+				configLabelKey = nestedKeyParsed.data;
+			}
+		}
 	}
 
 	return configLabelKey in config ? config[configLabelKey] : config[key];
+}
+
+function resolvePayloadConfig(config: ChartConfig, item: object | undefined, key: string): ChartConfig[string] | undefined {
+	const entryParsed = ChartPayloadRecordSchema.safeParse(item);
+	if (!entryParsed.success) {
+		return undefined;
+	}
+	return getPayloadConfigFromPayload(config, entryParsed.data, key);
 }
 
 export { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent, ChartStyle };

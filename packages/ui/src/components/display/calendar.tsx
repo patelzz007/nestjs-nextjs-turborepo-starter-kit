@@ -1,6 +1,7 @@
 "use client";
 
 import { Button, buttonVariants } from "@workspace/ui/components/form/button";
+import { mergeRefs } from "@workspace/ui/lib/merge-refs";
 import { cn } from "@workspace/ui/lib/utils";
 import { ChevronLeftIcon, ChevronRightIcon, ChevronDownIcon } from "lucide-react";
 import * as React from "react";
@@ -16,6 +17,33 @@ const Calendar = React.forwardRef<
 	ref,
 ): React.JSX.Element {
 	const defaultClassNames = getDefaultClassNames();
+
+	const calendarComponents = React.useMemo(
+		() => ({
+			Root: ({ className: rootClassName, rootRef, ...rootProps }: React.ComponentProps<"div"> & { rootRef?: React.Ref<HTMLDivElement> }): React.JSX.Element => (
+				<div data-slot="calendar" ref={mergeRefs(ref, rootRef)} className={cn(rootClassName)} {...rootProps} />
+			),
+			Chevron: ({ className, orientation, ...chevronProps }: { className?: string; orientation?: "left" | "right" | "down" }): React.JSX.Element => {
+				if (orientation === "left") {
+					return <ChevronLeftIcon className={cn("size-4 rtl:rotate-180", className)} {...chevronProps} />;
+				}
+
+				if (orientation === "right") {
+					return <ChevronRightIcon className={cn("size-4 rtl:rotate-180", className)} {...chevronProps} />;
+				}
+
+				return <ChevronDownIcon className={cn("size-4", className)} {...chevronProps} />;
+			},
+			DayButton: ({ ...dayButtonProps }: React.ComponentProps<typeof DayButton>): React.JSX.Element => <CalendarDayButton locale={locale} {...dayButtonProps} />,
+			WeekNumber: ({ children, ...weekProps }: React.ComponentProps<"td">): React.JSX.Element => (
+				<td {...weekProps}>
+					<div className="flex size-(--cell-size) items-center justify-center text-center">{children}</div>
+				</td>
+			),
+			...components,
+		}),
+		[components, locale, ref],
+	);
 
 	return (
 		<DayPicker
@@ -76,49 +104,7 @@ const Calendar = React.forwardRef<
 				hidden: cn("invisible", defaultClassNames.hidden),
 				...classNames,
 			}}
-			components={{
-				Root: ({ className: rootClassName, rootRef, ...rootProps }) => {
-					return (
-						<div
-							data-slot="calendar"
-							ref={(node): void => {
-								if (typeof ref === "function") {
-									ref(node);
-								} else if (ref !== null) {
-									ref.current = node;
-								}
-								if (typeof rootRef === "function") {
-									rootRef(node);
-								} else if (rootRef !== null && rootRef !== undefined) {
-									rootRef.current = node;
-								}
-							}}
-							className={cn(rootClassName)}
-							{...rootProps}
-						/>
-					);
-				},
-				Chevron: ({ className, orientation, ...props }) => {
-					if (orientation === "left") {
-						return <ChevronLeftIcon className={cn("size-4 rtl:rotate-180", className)} {...props} />;
-					}
-
-					if (orientation === "right") {
-						return <ChevronRightIcon className={cn("size-4 rtl:rotate-180", className)} {...props} />;
-					}
-
-					return <ChevronDownIcon className={cn("size-4", className)} {...props} />;
-				},
-				DayButton: ({ ...props }) => <CalendarDayButton locale={locale} {...props} />,
-				WeekNumber: ({ children, ...props }) => {
-					return (
-						<td {...props}>
-							<div className="flex size-(--cell-size) items-center justify-center text-center">{children}</div>
-						</td>
-					);
-				},
-				...components,
-			}}
+			components={calendarComponents}
 			{...props}
 		/>
 	);

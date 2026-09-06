@@ -21,21 +21,22 @@ const DEMO_MERCHANT_IDS: readonly { readonly label: string; readonly id: string 
 	{ label: "Melaka Straits Café (seed)", id: "457401d5-536e-464f-9ae9-4756b6dd5f61" },
 ];
 
+function resolveInitialMerchantOrgId(initialMerchantOrgId?: string): string {
+	if (initialMerchantOrgId !== undefined && initialMerchantOrgId.length > 0) {
+		return initialMerchantOrgId;
+	}
+	return DEFAULT_DEMO_MERCHANT_ID;
+}
+
 export interface KybReviewPanelProps {
 	readonly initialMerchantOrgId?: string;
 }
 
 export default function KybReviewPanel({ initialMerchantOrgId }: KybReviewPanelProps): React.JSX.Element {
 	const { api } = useAuth();
-	const [merchantOrgId, setMerchantOrgId] = React.useState<string>(initialMerchantOrgId ?? DEFAULT_DEMO_MERCHANT_ID);
+	const [merchantOrgId, setMerchantOrgId] = React.useState<string>(() => resolveInitialMerchantOrgId(initialMerchantOrgId));
 	const [kybStatus, setKybStatus] = React.useState<KybStatus>("APPROVED");
 	const [kybFieldsJson, setKybFieldsJson] = React.useState<string>("");
-
-	React.useEffect(() => {
-		if (initialMerchantOrgId !== undefined && initialMerchantOrgId.length > 0) {
-			setMerchantOrgId(initialMerchantOrgId);
-		}
-	}, [initialMerchantOrgId]);
 
 	const updateKyb = api.rewardsAdmin.updateKyb.useMutation({
 		onSuccess: () => {
@@ -66,7 +67,7 @@ export default function KybReviewPanel({ initialMerchantOrgId }: KybReviewPanelP
 	}, []);
 
 	const handleSubmit = React.useCallback(
-		(event: React.FormEvent<HTMLFormElement>): void => {
+		(event: React.SubmitEvent<HTMLFormElement>): void => {
 			event.preventDefault();
 			const trimmedId = merchantOrgId.trim();
 			if (trimmedId.length === 0) {
@@ -80,17 +81,12 @@ export default function KybReviewPanel({ initialMerchantOrgId }: KybReviewPanelP
 				return;
 			}
 
-			try {
-				const parsedJson = JSON.parse(trimmedFields);
-				const validated = JsonObjectSchema.safeParse(parsedJson);
-				if (!validated.success) {
-					toastMessage.error({ title: "Invalid KYB fields", description: "JSON must be a plain object." });
-					return;
-				}
-				updateKyb.mutate({ merchantOrgId: trimmedId, kybStatus, kybFields: validated.data });
-			} catch {
-				toastMessage.error({ title: "Invalid JSON", description: "KYB fields must be valid JSON." });
+			const validated = JsonObjectSchema.safeParse(JSON.parse(trimmedFields));
+			if (!validated.success) {
+				toastMessage.error({ title: "Invalid KYB fields", description: "JSON must be a valid plain object." });
+				return;
 			}
+			updateKyb.mutate({ merchantOrgId: trimmedId, kybStatus, kybFields: validated.data });
 		},
 		[kybFieldsJson, kybStatus, merchantOrgId, updateKyb],
 	);

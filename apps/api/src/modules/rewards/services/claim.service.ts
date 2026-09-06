@@ -3,7 +3,10 @@ import { BadRequestException, ConflictException, ForbiddenException, Injectable,
 import type { CreateRewardClaimInput, RewardClaimCreatedResponse, RewardClaimListQuery, RewardClaimQrResponse, RewardClaimResponse, RewardType } from "@workspace/shared";
 import { EpochMsSchema, RewardBackupCodeSchema } from "@workspace/shared";
 
-import { PrismaService } from "../../../prisma/prisma.service";
+import { RewardClaimRepository } from "../repositories/reward-claim.repository";
+import { RewardReferralRepository } from "../repositories/reward-referral.repository";
+import { RewardRepository } from "../repositories/reward.repository";
+import { RewardUserRepository } from "../repositories/reward-user.repository";
 import { generateBackupCode, generateOpaqueToken, sha256Hex } from "../utils/reward-crypto.util";
 import { mapClaimToResponse } from "../utils/reward-mapper.util";
 import { RewardLegalService } from "./reward-legal.service";
@@ -16,7 +19,10 @@ const MAX_BACKUP_FAILURES = 5;
 @Injectable()
 export class ClaimService {
 	public constructor(
-		private readonly prisma: PrismaService,
+		private readonly rewardRepository: RewardRepository,
+		private readonly rewardClaimRepository: RewardClaimRepository,
+		private readonly rewardReferralRepository: RewardReferralRepository,
+		private readonly rewardUserRepository: RewardUserRepository,
 		private readonly legalService: RewardLegalService,
 		private readonly otpService: RewardOtpService,
 	) {}
@@ -38,16 +44,9 @@ export class ClaimService {
 		const now = Date.now();
 		const claimExpiresAt = Math.min(now + CLAIM_TTL_MS, Number(reward.expiryDate));
 
-		const reserved = await this.prisma.reward.updateMany({
-			where: { id: reward.id, quantityRemaining: { gt: 0 } },
-			data: {
-				quantityRemaining: { decrement: 1 },
-				quantityReserved: { increment: 1 },
-				claimCount: { increment: 1 },
-			},
-		});
+		const reserved = await this.rewardRepository.reserveQuantity(reward.id);
 
-		if (reserved.count === 0) {
+		if (reserved === 0) {
 			throw new ConflictException({ message: "This reward just sold out", error: "REWARD_OUT_OF_STOCK" });
 		}
 
@@ -55,52 +54,35 @@ export class ClaimService {
 		const backupCode = generateBackupCode();
 
 		let referralId: string | null = null;
-		const user = await this.prisma.user.findUnique({
-			where: { id: userId },
-			select: { pendingAttributionToken: true, pendingAttributionExpiresAt: true },
-		});
+		const user = await this.rewardUserRepository.findAttributionById(userId);
 
 		if (user?.pendingAttributionToken !== null && user?.pendingAttributionToken !== undefined) {
 			const notExpired = user.pendingAttributionExpiresAt === null || Number(user.pendingAttributionExpiresAt) >= now;
 			if (notExpired) {
-				const referral = await this.prisma.rewardReferral.findFirst({
-					where: {
-						attributionToken: user.pendingAttributionToken,
-						rewardId: reward.id,
-						status: "PENDING",
-					},
-				});
+				const referral = await this.rewardReferralRepository.findPendingByTokenAndReward(user.pendingAttributionToken, reward.id);
 				if (referral !== null) {
 					referralId = referral.id;
-					await this.prisma.rewardReferral.update({
-						where: { id: referral.id },
-						data: { refereeUserId: userId },
-					});
+					await this.rewardReferralRepository.assignReferee(referral.id, userId);
 				}
 			}
 		}
 
-		const claim = await this.prisma.rewardClaim.create({
-			data: {
-				userId,
-				rewardId: reward.id,
-				referralId,
-				redemptionTokenHash: sha256Hex(token),
-				backupCodeHash: sha256Hex(backupCode),
-				status: "PENDING",
-				claimedAt: now,
-				claimExpiresAt,
-			},
+		const claim = await this.rewardClaimRepository.create({
+			userId,
+			rewardId: reward.id,
+			referralId,
+			redemptionTokenHash: sha256Hex(token),
+			backupCodeHash: sha256Hex(backupCode),
+			status: "PENDING",
+			claimedAt: now,
+			claimExpiresAt,
 		});
 
-		await this.prisma.user.update({
-			where: { id: userId },
-			data: {
-				phone: input.phone,
-				phoneVerifiedAt: now,
-				pendingAttributionToken: null,
-				pendingAttributionExpiresAt: null,
-			},
+		await this.rewardUserRepository.updateAfterClaim(userId, {
+			phone: input.phone,
+			phoneVerifiedAt: now,
+			pendingAttributionToken: null,
+			pendingAttributionExpiresAt: null,
 		});
 
 		const claimResponse = mapClaimToResponse(claim, reward.title);
@@ -126,24 +108,7 @@ export class ClaimService {
 	}> {
 		const page = query.page;
 		const pageSize = query.limit;
-		const skip = (page - 1) * pageSize;
-
-		const where = {
-			userId,
-			isDeleted: false,
-			...(query.status !== undefined ? { status: query.status } : {}),
-		};
-
-		const [rows, total] = await this.prisma.$transaction([
-			this.prisma.rewardClaim.findMany({
-				where,
-				include: { reward: { select: { title: true } } },
-				orderBy: { claimedAt: "desc" },
-				skip,
-				take: pageSize,
-			}),
-			this.prisma.rewardClaim.count({ where }),
-		]);
+		const { rows, total } = await this.rewardClaimRepository.listForUser(userId, query);
 
 		return {
 			items: rows.map((row) => mapClaimToResponse(row, row.reward.title)),
@@ -157,9 +122,7 @@ export class ClaimService {
 	}
 
 	public async getClaimQr(userId: string, claimId: string): Promise<RewardClaimQrResponse> {
-		const claim = await this.prisma.rewardClaim.findFirst({
-			where: { id: claimId, userId, isDeleted: false },
-		});
+		const claim = await this.rewardClaimRepository.findActiveForUser(claimId, userId);
 
 		if (claim === null) {
 			throw new NotFoundException({ message: "Claim not found", error: "CLAIM_NOT_FOUND" });
@@ -175,13 +138,7 @@ export class ClaimService {
 
 		const token = generateOpaqueToken();
 		const backupCode = generateBackupCode();
-		await this.prisma.rewardClaim.update({
-			where: { id: claim.id },
-			data: {
-				redemptionTokenHash: sha256Hex(token),
-				backupCodeHash: sha256Hex(backupCode),
-			},
-		});
+		await this.rewardClaimRepository.updateTokenHashes(claim.id, sha256Hex(token), sha256Hex(backupCode));
 
 		return {
 			claimId: claim.id,
@@ -209,57 +166,37 @@ export class ClaimService {
 		reward: { id: string; merchantOrgId: string; title: string; rewardType: RewardType; expiryDate: bigint };
 	}> {
 		if (token !== undefined) {
-			const claim = await this.prisma.rewardClaim.findFirst({
-				where: { redemptionTokenHash: sha256Hex(token), isDeleted: false },
-				include: { reward: true },
-			});
+			const claim = await this.rewardClaimRepository.findByRedemptionTokenHash(sha256Hex(token));
 			if (claim === null) {
 				throw new NotFoundException({ message: "Invalid token", error: "REDEMPTION_TOKEN_INVALID" });
 			}
-			return { claim, reward: claim.reward };
+			return this.rewardClaimRepository.toRedemptionLookup(claim);
 		}
 
 		if (backupCode !== undefined) {
 			RewardBackupCodeSchema.parse(backupCode);
-			const claim = await this.prisma.rewardClaim.findFirst({
-				where: { backupCodeHash: sha256Hex(backupCode), isDeleted: false },
-				include: { reward: true },
-			});
+			const claim = await this.rewardClaimRepository.findByBackupCodeHash(sha256Hex(backupCode));
 			if (claim === null) {
 				throw new NotFoundException({ message: "Invalid backup code", error: "REDEMPTION_TOKEN_INVALID" });
 			}
-			return { claim, reward: claim.reward };
+			return this.rewardClaimRepository.toRedemptionLookup(claim);
 		}
 
 		throw new BadRequestException({ message: "token or backupCode required", error: "REDEMPTION_INPUT_REQUIRED" });
 	}
 
 	public async recordBackupFailure(claimId: string): Promise<void> {
-		const claim = await this.prisma.rewardClaim.findUnique({ where: { id: claimId } });
+		const claim = await this.rewardClaimRepository.findById(claimId);
 		if (claim === null) {
 			return;
 		}
 
 		const attempts = claim.backupFailedAttempts + 1;
-		await this.prisma.rewardClaim.update({
-			where: { id: claimId },
-			data: {
-				backupFailedAttempts: attempts,
-				backupLockedUntil: attempts >= MAX_BACKUP_FAILURES ? Date.now() + BACKUP_LOCK_MS : claim.backupLockedUntil,
-			},
-		});
+		await this.rewardClaimRepository.recordBackupFailure(claimId, attempts, attempts >= MAX_BACKUP_FAILURES ? BigInt(Date.now() + BACKUP_LOCK_MS) : claim.backupLockedUntil);
 	}
 
 	private async ensureRewardClaimable(rewardId: string): Promise<{ id: string; title: string; expiryDate: bigint }> {
-		const reward = await this.prisma.reward.findFirst({
-			where: {
-				id: rewardId,
-				isDeleted: false,
-				status: "PUBLISHED",
-				rewardKind: "CONSUMER",
-			},
-			select: { id: true, title: true, expiryDate: true, quantityRemaining: true },
-		});
+		const reward = await this.rewardRepository.findClaimableConsumer(rewardId);
 
 		if (reward === null) {
 			throw new NotFoundException({ message: "Reward not found", error: "REWARD_NOT_FOUND" });

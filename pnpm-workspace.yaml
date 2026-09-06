@@ -1,8 +1,10 @@
 packages:
   - "apps/*"
   - "packages/*"
+  - "resources"
 
 allowBuilds:
+  "@nestjs/swagger": true
   "@prisma/engines": true
   "@scarf/scarf": true
   '@swc/core': true
@@ -92,12 +94,8 @@ packageExtensions:
 # (e.g. the `connect` event overload added in 8.20.4 vs 8.20.3).
 overrides:
   "@types/pg": "8.20.4"
+  typescript: "6.0.2"
 
-# ── TypeScript 7 side-by-side shim ────────────────────────────────────────
-# TS 7.0 is the Go-native compiler and ships NO JS compiler API (no ts.sys,
-# no createProgram). typescript-eslint still needs the classic API, so we
-# scope-alias ONLY its typescript peer to @typescript/typescript6 (the TS 6
-# API package) while every workspace keeps `typescript: 7.0.2` for `tsc`.
-# See https://devblogs.microsoft.com/typescript/announcing-typescript-7-0/
-# ("Running Side-by-Side with TypeScript 6.0") and
-# https://github.com/typescript-eslint/typescript-eslint/issues/10940
+# typescript-eslint@8.x does not support TypeScript 7.0 (no compiler API).
+# Keep the whole workspace on TS 6.0.2 until TS 7.1 + typescript-eslint support
+# land. See https://github.com/typescript-eslint/typescript-eslint/issues/10940

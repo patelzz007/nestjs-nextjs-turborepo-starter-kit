@@ -8,13 +8,17 @@ export interface RewardHubViewModeState {
 	readonly setViewMode: (mode: RewardHubViewMode) => void;
 }
 
+function readInitialRewardHubViewMode(): RewardHubViewMode {
+	try {
+		return readRewardHubViewMode();
+	} catch {
+		return "grid";
+	}
+}
+
 /** Persists grid vs list preference for the consumer rewards catalog. */
 export function useRewardHubViewMode(): RewardHubViewModeState {
-	const [viewMode, setViewModeState] = React.useState<RewardHubViewMode>("grid");
-
-	React.useEffect((): void => {
-		setViewModeState(readRewardHubViewMode());
-	}, []);
+	const [viewMode, setViewModeState] = React.useState<RewardHubViewMode>(readInitialRewardHubViewMode);
 
 	const setViewMode = React.useCallback((mode: RewardHubViewMode): void => {
 		setViewModeState(mode);

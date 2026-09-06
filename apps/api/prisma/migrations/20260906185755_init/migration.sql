@@ -17,7 +17,7 @@ CREATE TYPE "MfaRecoveryRequestStatus" AS ENUM ('PENDING', 'APPROVED', 'DENIED',
 CREATE TYPE "PermissionAction" AS ENUM ('CREATE', 'READ', 'UPDATE', 'DELETE', 'LIST', 'MANAGE');
 
 -- CreateEnum
-CREATE TYPE "PermissionResource" AS ENUM ('USER', 'PROFILE', 'ROLE', 'PERMISSION', 'ADMIN_DASHBOARD', 'SYSTEM_SETTINGS', 'URL', 'TAG', 'API_KEY', 'ANALYTICS', 'AUDIT_LOG', 'REPORT', 'EMAIL', 'GEO', 'REWARD', 'MERCHANT_ORG', 'REDEMPTION');
+CREATE TYPE "PermissionResource" AS ENUM ('USER', 'PROFILE', 'ROLE', 'PERMISSION', 'ADMIN_DASHBOARD', 'SYSTEM_SETTINGS', 'URL', 'TAG', 'API_KEY', 'ANALYTICS', 'AUDIT_LOG', 'REPORT', 'EMAIL', 'GEO', 'REWARD', 'MERCHANT_ORG', 'REDEMPTION', 'SAMPLE_CATEGORY', 'PRODUCT');
 
 -- CreateEnum
 CREATE TYPE "CapabilityScope" AS ENUM ('PLATFORM', 'MERCHANT', 'ADMIN');
@@ -886,6 +886,71 @@ CREATE TABLE "analytics_events" (
     CONSTRAINT "analytics_events_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "platform_resource_audit_logs" (
+    "id" TEXT NOT NULL,
+    "resource_type" VARCHAR(120) NOT NULL,
+    "resource_id" UUID NOT NULL,
+    "action" VARCHAR(120) NOT NULL,
+    "actor_user_id" UUID,
+    "changes" JSONB,
+    "created_at" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
+
+    CONSTRAINT "platform_resource_audit_logs_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "platform_resource_idempotency_records" (
+    "id" TEXT NOT NULL,
+    "scope" VARCHAR(200) NOT NULL,
+    "idempotency_key" VARCHAR(128) NOT NULL,
+    "request_hash" VARCHAR(128) NOT NULL,
+    "response_body" JSONB NOT NULL,
+    "created_at" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
+
+    CONSTRAINT "platform_resource_idempotency_records_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "sample_category" (
+    "id" TEXT NOT NULL,
+    "description" TEXT,
+    "is_active" BOOLEAN,
+    "name" TEXT NOT NULL,
+    "slug" TEXT NOT NULL,
+    "sort_order" INTEGER,
+    "deleted_at" BIGINT,
+    "created_at" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
+    "updated_at" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
+
+    CONSTRAINT "sample_category_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "product" (
+    "id" TEXT NOT NULL,
+    "brand" TEXT,
+    "category_id" TEXT NOT NULL,
+    "compare_at_price" DECIMAL(18,2),
+    "description" TEXT,
+    "image_url" TEXT,
+    "is_active" BOOLEAN,
+    "is_featured" BOOLEAN,
+    "name" TEXT NOT NULL,
+    "price" DECIMAL(18,2) NOT NULL,
+    "short_description" TEXT,
+    "sku" TEXT NOT NULL,
+    "slug" TEXT NOT NULL,
+    "stock_quantity" INTEGER,
+    "weight_grams" INTEGER,
+    "version" INTEGER NOT NULL DEFAULT 0,
+    "deleted_at" BIGINT,
+    "created_at" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
+    "updated_at" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
+
+    CONSTRAINT "product_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "users_email_key" ON "users"("email");
 
@@ -1243,6 +1308,12 @@ CREATE INDEX "analytics_events_topic_occurred_at_idx" ON "analytics_events"("top
 -- CreateIndex
 CREATE INDEX "analytics_events_event_type_occurred_at_idx" ON "analytics_events"("event_type", "occurred_at");
 
+-- CreateIndex
+CREATE INDEX "platform_resource_audit_logs_resource_type_resource_id_crea_idx" ON "platform_resource_audit_logs"("resource_type", "resource_id", "created_at");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "platform_resource_idempotency_scope_key" ON "platform_resource_idempotency_records"("scope", "idempotency_key");
+
 -- AddForeignKey
 ALTER TABLE "roles" ADD CONSTRAINT "roles_parent_id_fkey" FOREIGN KEY ("parent_id") REFERENCES "roles"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
@@ -1410,3 +1481,6 @@ ALTER TABLE "reward_audit_logs" ADD CONSTRAINT "reward_audit_logs_actor_user_id_
 
 -- AddForeignKey
 ALTER TABLE "reward_audit_logs" ADD CONSTRAINT "reward_audit_logs_merchant_org_id_fkey" FOREIGN KEY ("merchant_org_id") REFERENCES "merchant_orgs"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "product" ADD CONSTRAINT "product_category_id_fkey" FOREIGN KEY ("category_id") REFERENCES "sample_category"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

@@ -3,14 +3,16 @@ import { Injectable, NotFoundException } from "@nestjs/common";
 import type { MerchantApiKeyCreated, MerchantApiKeySummary, MerchantCreateApiKeyInput } from "@workspace/shared";
 import { EpochMsSchema } from "@workspace/shared";
 
-import { PrismaService } from "../../../prisma/prisma.service";
+import { MerchantApiKeyRepository } from "../repositories/merchant-api-key.repository";
+import { RewardAuditLogRepository } from "../repositories/reward-audit-log.repository";
 import { generateApiKeyPlaintext, sha256Hex } from "../utils/reward-crypto.util";
 import { MerchantContextService } from "./merchant-context.service";
 
 @Injectable()
 export class MerchantApiKeyService {
 	public constructor(
-		private readonly prisma: PrismaService,
+		private readonly merchantApiKeyRepository: MerchantApiKeyRepository,
+		private readonly auditLogRepository: RewardAuditLogRepository,
 		private readonly merchantContext: MerchantContextService,
 	) {}
 
@@ -18,10 +20,7 @@ export class MerchantApiKeyService {
 		const orgId = await this.merchantContext.resolveOrgIdForUser(userId, merchantOrgId);
 		await this.merchantContext.requireCapability(userId, orgId, "merchant:manage_api_keys");
 
-		const rows = await this.prisma.merchantApiKey.findMany({
-			where: { merchantOrgId: orgId, isDeleted: false },
-			orderBy: { createdAt: "desc" },
-		});
+		const rows = await this.merchantApiKeyRepository.listByOrgId(orgId);
 
 		return rows.map((row) => ({
 			id: row.id,
@@ -41,22 +40,18 @@ export class MerchantApiKeyService {
 		const plaintext = generateApiKeyPlaintext();
 		const name = input.name ?? "POS API key";
 
-		const created = await this.prisma.merchantApiKey.create({
-			data: {
-				merchantOrgId: orgId,
-				name,
-				keyHash: sha256Hex(plaintext),
-				keyPrefix: plaintext.slice(0, 16),
-				createdByUserId: userId,
-			},
+		const created = await this.merchantApiKeyRepository.create({
+			merchantOrgId: orgId,
+			name,
+			keyHash: sha256Hex(plaintext),
+			keyPrefix: plaintext.slice(0, 16),
+			createdByUserId: userId,
 		});
 
-		await this.prisma.rewardAuditLog.create({
-			data: {
-				merchantOrgId: orgId,
-				action: "merchant.api_key_created",
-				metadata: { keyId: created.id, name },
-			},
+		await this.auditLogRepository.create({
+			merchantOrgId: orgId,
+			action: "merchant.api_key_created",
+			metadata: { keyId: created.id, name },
 		});
 
 		return {
@@ -70,26 +65,19 @@ export class MerchantApiKeyService {
 		const orgId = await this.merchantContext.resolveOrgIdForUser(userId, merchantOrgId);
 		await this.merchantContext.requireCapability(userId, orgId, "merchant:manage_api_keys");
 
-		const key = await this.prisma.merchantApiKey.findFirst({
-			where: { id: keyId, merchantOrgId: orgId, isDeleted: false },
-		});
+		const key = await this.merchantApiKeyRepository.findActiveByIdAndOrg(keyId, orgId);
 
 		if (key === null) {
 			throw new NotFoundException({ message: "API key not found", error: "API_KEY_NOT_FOUND" });
 		}
 
 		const now = Date.now();
-		await this.prisma.merchantApiKey.update({
-			where: { id: keyId },
-			data: { revokedAt: now },
-		});
+		await this.merchantApiKeyRepository.revoke(keyId, now);
 
-		await this.prisma.rewardAuditLog.create({
-			data: {
-				merchantOrgId: orgId,
-				action: "merchant.api_key_revoked",
-				metadata: { keyId },
-			},
+		await this.auditLogRepository.create({
+			merchantOrgId: orgId,
+			action: "merchant.api_key_revoked",
+			metadata: { keyId },
 		});
 
 		return { ok: true };

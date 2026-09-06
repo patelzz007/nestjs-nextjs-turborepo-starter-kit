@@ -56,8 +56,18 @@ export function RewardDetailView({ rewardId, initialReward }: RewardDetailViewPr
 	const [legalAccepted, setLegalAccepted] = React.useState<boolean>(false);
 	const [step, setStep] = React.useState<"legal" | "otp" | "claim">("legal");
 	const [message, setMessage] = React.useState<string | null>(null);
+	const [nowMs, setNowMs] = React.useState<number>(() => Date.now());
 
-	const claimBlockReason = React.useMemo(() => (reward === undefined ? null : getRewardClaimBlockReason(reward, Date.now())), [reward]);
+	React.useEffect((): (() => void) => {
+		const intervalId = window.setInterval((): void => {
+			setNowMs(Date.now());
+		}, 60_000);
+		return (): void => {
+			window.clearInterval(intervalId);
+		};
+	}, []);
+
+	const claimBlockReason = React.useMemo(() => (reward === undefined ? null : getRewardClaimBlockReason(reward, nowMs)), [reward, nowMs]);
 	const canClaim = claimBlockReason === null;
 
 	const acceptLegalMutation = api.legal.accept.useMutation({
@@ -93,6 +103,14 @@ export function RewardDetailView({ rewardId, initialReward }: RewardDetailViewPr
 			void rewardQuery.refetch();
 		},
 	});
+
+	const handlePhoneChange = React.useCallback((event: React.ChangeEvent<HTMLInputElement>): void => {
+		setPhone(event.target.value);
+	}, []);
+
+	const handleOtpChange = React.useCallback((event: React.ChangeEvent<HTMLInputElement>): void => {
+		setOtp(event.target.value);
+	}, []);
 
 	const handleAcceptLegal = React.useCallback((): void => {
 		void acceptLegalMutation.mutateAsync({ termsVersion: TERMS_VERSION, privacyVersion: PRIVACY_VERSION });
@@ -167,7 +185,7 @@ export function RewardDetailView({ rewardId, initialReward }: RewardDetailViewPr
 
 					{!canClaim ? (
 						<div className="space-y-3">
-							<p className="text-sm text-muted-foreground">{claimBlockReason !== null ? rewardClaimBlockMessage(claimBlockReason) : null}</p>
+							<p className="text-sm text-muted-foreground">{rewardClaimBlockMessage(claimBlockReason)}</p>
 							<Link href="/rewardhub" className={cn(buttonVariants({ variant: "outline" }))}>
 								Browse other offers
 							</Link>
@@ -189,13 +207,7 @@ export function RewardDetailView({ rewardId, initialReward }: RewardDetailViewPr
 								<div className="space-y-4">
 									<div className="space-y-2">
 										<Label htmlFor="claim-phone">Mobile number</Label>
-										<Input
-											id="claim-phone"
-											type="tel"
-											placeholder="+60123456789"
-											value={phone}
-											onChange={(event: React.ChangeEvent<HTMLInputElement>): void => setPhone(event.target.value)}
-										/>
+										<Input id="claim-phone" type="tel" placeholder="+60123456789" value={phone} onChange={handlePhoneChange} />
 									</div>
 									{step === "otp" ? (
 										<Button disabled={otpMutation.isPending} onClick={handleRequestOtp}>
@@ -204,13 +216,7 @@ export function RewardDetailView({ rewardId, initialReward }: RewardDetailViewPr
 									) : (
 										<div className="space-y-2">
 											<Label htmlFor="claim-otp">6-digit OTP</Label>
-											<Input
-												id="claim-otp"
-												inputMode="numeric"
-												maxLength={6}
-												value={otp}
-												onChange={(event: React.ChangeEvent<HTMLInputElement>): void => setOtp(event.target.value)}
-											/>
+											<Input id="claim-otp" inputMode="numeric" maxLength={6} value={otp} onChange={handleOtpChange} />
 											<Button disabled={claimMutation.isPending} onClick={handleClaim}>
 												{claimMutation.isPending ? "Claiming…" : "Verify & claim"}
 											</Button>

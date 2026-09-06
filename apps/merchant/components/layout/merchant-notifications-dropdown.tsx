@@ -31,7 +31,12 @@ export function MerchantNotificationsDropdown(): React.JSX.Element {
 		<DropdownMenu>
 			<DropdownMenuTrigger
 				render={
-					<Button variant="ghost" size="icon" className="relative rounded-full" aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : "Notifications"} />
+					<Button
+						variant="ghost"
+						size="icon"
+						className="relative rounded-full"
+						aria-label={unreadCount > 0 ? `Notifications, ${String(unreadCount)} unread` : "Notifications"}
+					/>
 				}>
 				<AppShellNotificationBell unreadCount={unreadCount} />
 			</DropdownMenuTrigger>

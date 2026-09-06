@@ -1,7 +1,7 @@
 "use client";
 
 import { z } from "zod";
-import { create } from "zustand";
+import { create, type StoreApi, type UseBoundStore } from "zustand";
 import { devtools, persist } from "zustand/middleware";
 
 import { compileMenu } from "./sidebar-menu-compile";
@@ -83,13 +83,24 @@ function capExpandedItems(expandedItems: Readonly<Record<string, boolean>>): Rea
 	return Object.fromEntries(Object.entries(expandedItems).slice(0, 20));
 }
 
+export type SidebarStore = UseBoundStore<
+	StoreApi<SidebarState> & {
+		persist: {
+			rehydrate: () => Promise<void> | void;
+			getOptions: () => {
+				partialize?: (state: SidebarState) => Pick<SidebarState, "isOpen" | "sectionOrder" | "expandedItems">;
+			};
+		};
+	}
+>;
+
 /**
  * Creates a Zustand sidebar store with persist + Redux DevTools middleware.
  *
  * Each app passes a unique `storageKey`, `devtoolsName`, and its menu JSON so
  * preferences and DevTools traces stay isolated per portal.
  */
-export function createSidebarStore(options: CreateSidebarStoreOptions) {
+function buildSidebarStore(options: CreateSidebarStoreOptions): SidebarStore {
 	const initialMenu = compileMenu(options.initialMenuData);
 
 	return create<SidebarState>()(
@@ -200,4 +211,8 @@ export function createSidebarStore(options: CreateSidebarStoreOptions) {
 			},
 		),
 	);
+}
+
+export function createSidebarStore(options: CreateSidebarStoreOptions): SidebarStore {
+	return buildSidebarStore(options);
 }

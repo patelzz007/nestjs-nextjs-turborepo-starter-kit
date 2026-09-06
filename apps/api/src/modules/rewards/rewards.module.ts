@@ -2,7 +2,6 @@ import { Module } from "@nestjs/common";
 
 import { AuthModule } from "../auth/auth.module";
 import { NotificationsModule } from "../notifications/notifications.module";
-import { PrismaModule } from "../../prisma/prisma.module";
 
 import { ConsumerClaimsController } from "./controllers/consumer-claims.controller";
 import { ConsumerRewardsController } from "./controllers/consumer-rewards.controller";
@@ -35,13 +34,14 @@ import { RewardOtpService } from "./services/reward-otp.service";
 import { RewardsAdminService } from "./services/rewards-admin.service";
 import { RewardsAnalyticsService } from "./services/rewards-analytics.service";
 import { RewardsCoreServicesModule } from "./rewards-core-services.module";
+import { RewardsPersistenceModule } from "./rewards-persistence.module";
 import { RewardsQueueModule } from "./rewards-queue.module";
 
 const redisUrl: string | undefined = process.env.REDIS_URL;
 const rewardsQueueImports = redisUrl !== undefined && redisUrl.length > 0 ? [RewardsQueueModule] : [];
 
 @Module({
-	imports: [PrismaModule, AuthModule, NotificationsModule, RewardsCoreServicesModule, ...rewardsQueueImports],
+	imports: [AuthModule, NotificationsModule, RewardsPersistenceModule, RewardsCoreServicesModule, ...rewardsQueueImports],
 	controllers: [
 		ConsumerRewardsController,
 		ConsumerClaimsController,

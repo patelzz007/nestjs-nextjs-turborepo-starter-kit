@@ -35,11 +35,16 @@ export function useSessionCapabilities(initialSessionPermissions?: SessionPermis
 		initialData: initialPermissionsData,
 	});
 
-	const capabilities = React.useMemo((): readonly CapabilitySlug[] => permissionsQuery.data?.data?.capabilities ?? [], [permissionsQuery.data?.data?.capabilities]);
+	const capabilities = React.useMemo((): readonly CapabilitySlug[] => {
+		if (permissionsQuery.data === undefined) {
+			return [];
+		}
+		return permissionsQuery.data.data.capabilities;
+	}, [permissionsQuery.data]);
 
 	const checkCapability = React.useCallback((slug: CapabilitySlug): boolean => hasCapability(capabilities, slug), [capabilities]);
 
-	const isLoading = permissionsQuery.isPending && permissionsQuery.data === undefined;
+	const isLoading = permissionsQuery.isPending;
 	const isReady = permissionsQuery.data !== undefined;
 
 	return {

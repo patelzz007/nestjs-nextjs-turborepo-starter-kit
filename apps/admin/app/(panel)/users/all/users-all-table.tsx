@@ -2,6 +2,7 @@
 
 import type { AdminUserDetail } from "@workspace/shared";
 import { createDataTableLabels } from "@/lib/data-table-labels";
+import { DataTableMobileCard } from "@/lib/data-table-mobile-card";
 import { readPaginatedTotal, stubPaginatedMeta } from "@/lib/api-envelope";
 import { useAuth } from "@workspace/client/lib/auth";
 import { Badge } from "@workspace/ui/components/feedback/badge";
@@ -125,6 +126,28 @@ export default function UsersAllTable({
 		];
 	}, [handleViewUser]);
 
+	const mobileCardRender = React.useCallback(
+		(user: AdminUserDetail, cardActions?: Action<AdminUserDetail>[]): React.ReactNode => (
+			<DataTableMobileCard
+				item={user}
+				title={user.fullName}
+				subtitle={user.email}
+				fields={[
+					{
+						label: "Roles",
+						value: user.roles.length > 0 ? user.roles.map((role) => role.name).join(", ") : "—",
+					},
+					{
+						label: "Access",
+						value: user.isSuperAdmin ? "Super admin" : user.hasAdminAccess ? "Admin panel" : "Standard",
+					},
+				]}
+				actions={cardActions}
+			/>
+		),
+		[],
+	);
+
 	const columns = React.useMemo((): ColumnDef<DataTableFeatures, AdminUserDetail>[] => {
 		return [
 			{
@@ -223,6 +246,7 @@ export default function UsersAllTable({
 						data={[...rows]}
 						labels={tableLabels}
 						actions={actions}
+						mobileCardRender={mobileCardRender}
 						manual
 						totalCount={total}
 						pageIndex={page - 1}
@@ -231,7 +255,7 @@ export default function UsersAllTable({
 						sorting={sorting}
 						error={tableError}
 						isLoading={usersQuery.isLoading}
-						isRefetching={usersQuery.isFetching && !usersQuery.isLoading}
+						isRefetching={usersQuery.isFetching && !usersQuery.isLoading ? true : false}
 						onManualPaginationChange={handleManualPaginationChange}
 						onManualSortingChange={handleManualSortingChange}
 						toolbarContent={toolbarContent}

@@ -733,3 +733,36 @@ export type { EmailSendJob, QueueName, RewardsMaintenanceJob } from "./infrastru
 export { QUEUE_JOB_OPTIONS } from "./infrastructure/queue-job-options";
 export { OutboxEnqueueInputSchema, OutboxEventRecordSchema, OutboxEventStatusSchema, OUTBOX_EVENT_STATUSES } from "./infrastructure/outbox";
 export type { OutboxEnqueueInput, OutboxEventRecord, OutboxEventStatus } from "./infrastructure/outbox";
+// @app-generated:begin sampleCategory
+export {
+	CreateSampleCategorySchema,
+	SampleCategoryIdParamSchema,
+	SampleCategoryListQuerySchema,
+	SampleCategoryListResponseSchema,
+	SampleCategorySchema,
+	UpdateSampleCategorySchema,
+} from "./domain/sample-category.generated";
+export type {
+	CreateSampleCategoryInput,
+	SampleCategory,
+	SampleCategoryListQuery,
+	SampleCategoryListResponse,
+	UpdateSampleCategoryInput,
+} from "./domain/sample-category.generated";
+// @app-generated:end sampleCategory
+// @app-generated:begin product
+export { CreateProductSchema, ProductIdParamSchema, ProductListQuerySchema, ProductListResponseSchema, ProductSchema, UpdateProductSchema } from "./domain/product.generated";
+export type { CreateProductInput, Product, ProductListQuery, ProductListResponse, UpdateProductInput } from "./domain/product.generated";
+// @app-generated:end product
+export {
+	PlatformResourceAuditInputSchema,
+	PlatformResourceAuditRecordSchema,
+	PlatformResourceIdempotencyInputSchema,
+	PlatformResourceIdempotencyRecordSchema,
+} from "./platform/resource-platform";
+export type {
+	PlatformResourceAuditInput,
+	PlatformResourceAuditRecord,
+	PlatformResourceIdempotencyInput,
+	PlatformResourceIdempotencyRecord,
+} from "./platform/resource-platform";

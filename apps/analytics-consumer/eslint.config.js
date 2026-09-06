@@ -1,3 +1,18 @@
-import baseConfig from "@workspace/eslint-config/base.js";
+import { config as baseConfig } from "@workspace/eslint-config/base";
 
-export default [...baseConfig];
+/**
+ * Standalone Kafka worker — stdout logging for boot, subscribe, and shutdown is intentional.
+ *
+ * @type {import("eslint").Linter.Config}
+ */
+const config = [
+	...baseConfig,
+	{
+		files: ["src/**/*.ts"],
+		rules: {
+			"no-console": ["warn", { allow: ["log", "warn", "error"] }],
+		},
+	},
+];
+
+export default config;

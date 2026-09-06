@@ -21,6 +21,7 @@ import { z } from "zod";
 
 import { Badge } from "@workspace/ui/components/feedback/badge";
 import { createDataTableLabels, type DataTableLabels } from "@/lib/data-table-labels";
+import { DataTableMobileCard } from "@/lib/data-table-mobile-card";
 import { DataTable, type Action, type BulkAction, type DataTableFeatures, type Filter } from "@workspace/ui/components/display/data-table";
 import type { ColumnDef } from "@tanstack/react-table";
 import { CircleCheck, CircleDashed, Copy, Eye, Pencil, Trash2 } from "lucide-react";
@@ -294,22 +295,19 @@ export function DataTableShowcase(): React.JSX.Element {
 	// Mobile card view (feature: responsive) — the smart layer renders cards
 	// from the same rows when the desktop table is hidden.
 	const mobileCardRender = useCallback(
-		(item: DashboardRow): React.ReactNode => (
-			<div className="rounded-lg border bg-card p-3">
-				<div className="flex items-start justify-between gap-2">
-					<div className="min-w-0">
-						<p className="truncate font-medium">{item.header}</p>
-						<p className="text-xs text-muted-foreground">{item.reviewer}</p>
-					</div>
-					<StatusBadge status={item.status} />
-				</div>
-				<div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
-					<span>{item.type}</span>
-					<span className="tabular-nums">
-						Target {item.target} · Limit {item.limit}
-					</span>
-				</div>
-			</div>
+		(item: DashboardRow, cardActions?: Action<DashboardRow>[]): React.ReactNode => (
+			<DataTableMobileCard
+				item={item}
+				title={item.header}
+				subtitle={item.reviewer}
+				badge={<StatusBadge status={item.status} />}
+				fields={[
+					{ label: "Type", value: item.type },
+					{ label: "Target", value: item.target },
+					{ label: "Limit", value: item.limit },
+				]}
+				actions={cardActions}
+			/>
 		),
 		[],
 	);

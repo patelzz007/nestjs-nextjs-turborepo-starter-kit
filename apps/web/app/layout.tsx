@@ -48,7 +48,6 @@ export default function RootLayout({
 			console.error(webEnvResult.error);
 			throw new Error("Web app environment validation failed");
 		}
-		console.log("✅ Web app environment variables validated successfully");
 	}
 
 	return (

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ListItem, Root, Table, TableCell } from "mdast";
-import type { MdxJsxFlowElement, MdxJsxTextElement } from "mdast-util-mdx-jsx";
+import type { MdxJsxFlowElement } from "mdast-util-mdx-jsx";
 
 import {
 	detectQuoteKind,

@@ -1,6 +1,7 @@
 "use client";
 
 import { createDataTableLabels, type DataTableLabels } from "@/lib/data-table-labels";
+import { DataTableMobileCard } from "@/lib/data-table-mobile-card";
 import { Badge } from "@workspace/ui/components/feedback/badge";
 import { Button } from "@workspace/ui/components/form/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
@@ -147,6 +148,16 @@ function SegmentedTabs({
 	readonly onTabChange: (tab: TabKey) => void;
 	readonly counts: Partial<Record<TabKey, number>>;
 }): React.JSX.Element {
+	const handleTabClick = React.useCallback(
+		(event: React.MouseEvent<HTMLButtonElement>): void => {
+			const tabKey = event.currentTarget.dataset.tabKey;
+			if (tabKey === "countries" || tabKey === "states" || tabKey === "cities") {
+				onTabChange(tabKey);
+			}
+		},
+		[onTabChange],
+	);
+
 	return (
 		<div className="inline-flex items-center gap-0.5 rounded-xl border border-border/60 bg-muted/50 p-1">
 			{TAB_CONFIG.map(({ key, label, icon: Icon }) => {
@@ -158,9 +169,8 @@ function SegmentedTabs({
 						type="button"
 						variant={isActive ? "secondary" : "ghost"}
 						size="sm"
-						onClick={(): void => {
-							onTabChange(key);
-						}}
+						data-tab-key={key}
+						onClick={handleTabClick}
 						className={cn(
 							"gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all duration-200",
 							isActive ? "bg-background text-foreground shadow-sm ring-1 ring-border/40" : "text-muted-foreground hover:bg-muted hover:text-foreground",
@@ -398,6 +408,10 @@ export default function GeoView({ initialStats }: GeoTableProps): React.JSX.Elem
 		}
 	}, [activeTab, countryLabels, stateLabels, cityLabels]);
 
+	const handleCountryFilterChange = useCallback((event: React.ChangeEvent<HTMLInputElement>): void => {
+		setCountryFilter(event.target.value);
+	}, []);
+
 	const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
 		setSearch(e.target.value);
 	}, []);
@@ -428,6 +442,57 @@ export default function GeoView({ initialStats }: GeoTableProps): React.JSX.Elem
 		[stats],
 	);
 
+	const mobileCardRender = useCallback(
+		(item: GeoRow): React.ReactNode => {
+			if (activeTab === "countries") {
+				return (
+					<DataTableMobileCard
+						item={item}
+						title={
+							<span className="flex items-center gap-2">
+								{item.emoji !== undefined ? <span>{item.emoji}</span> : null}
+								{item.name}
+							</span>
+						}
+						subtitle={item.countryCode}
+						fields={[{ label: "ID", value: item.id }]}
+					/>
+				);
+			}
+			if (activeTab === "states") {
+				return (
+					<DataTableMobileCard
+						item={item}
+						title={item.name}
+						subtitle={item.countryCode}
+						fields={[
+							{ label: "State code", value: item.stateCode ?? "—" },
+							{
+								label: "Coordinates",
+								value: item.latitude !== undefined && item.longitude !== undefined ? `${item.latitude.toFixed(4)}, ${item.longitude.toFixed(4)}` : "—",
+							},
+						]}
+					/>
+				);
+			}
+			return (
+				<DataTableMobileCard
+					item={item}
+					title={item.name}
+					subtitle={`${item.countryCode ?? "—"} · ${item.stateCode ?? "—"}`}
+					fields={[
+						{ label: "ID", value: item.id },
+						{
+							label: "Coordinates",
+							value: item.latitude !== undefined && item.longitude !== undefined ? `${item.latitude.toFixed(4)}, ${item.longitude.toFixed(4)}` : "—",
+						},
+					]}
+				/>
+			);
+		},
+		[activeTab],
+	);
+
 	const toolbarContent = useMemo(
 		() => (
 			<div className="flex items-center gap-2">
@@ -436,14 +501,7 @@ export default function GeoView({ initialStats }: GeoTableProps): React.JSX.Elem
 					<Input placeholder={`Search ${activeTab}...`} value={search} onChange={handleSearchChange} className="w-[250px] pl-8" />
 				</div>
 				{activeTab === "states" || activeTab === "cities" ? (
-					<Input
-						placeholder="Country code"
-						value={countryFilter}
-						onChange={(e) => {
-							setCountryFilter(e.target.value);
-						}}
-						className="w-[120px]"
-					/>
+					<Input placeholder="Country code" value={countryFilter} onChange={handleCountryFilterChange} className="w-[120px]" />
 				) : null}
 				<Button variant="outline" size="sm">
 					<Upload className="mr-2 size-4" />
@@ -455,7 +513,7 @@ export default function GeoView({ initialStats }: GeoTableProps): React.JSX.Elem
 				</Button>
 			</div>
 		),
-		[activeTab, search, countryFilter, handleSearchChange],
+		[activeTab, search, countryFilter, handleCountryFilterChange, handleSearchChange],
 	);
 
 	return (
@@ -489,6 +547,7 @@ export default function GeoView({ initialStats }: GeoTableProps): React.JSX.Elem
 							data={[...items]}
 							columns={columns}
 							labels={labels}
+							mobileCardRender={mobileCardRender}
 							manual
 							totalCount={total}
 							pageIndex={page - 1}

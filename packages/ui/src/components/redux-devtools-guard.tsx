@@ -2,30 +2,28 @@
 
 import { useEffect } from "react";
 
-export function ReduxDevToolsGuard() {
+const REDUX_DEVTOOLS_EXTENSION = "__REDUX_DEVTOOLS_EXTENSION__";
+const REDUX_DEVTOOLS_EXTENSION_COMPOSE = "__REDUX_DEVTOOLS_EXTENSION_COMPOSE__";
+
+export function ReduxDevToolsGuard(): null {
 	useEffect(() => {
 		if (process.env.NODE_ENV !== "production") {
 			return;
 		}
 
-		const windowWithRedux = window as typeof window & {
-			__REDUX_DEVTOOLS_EXTENSION__?: unknown;
-			__REDUX_DEVTOOLS_EXTENSION_COMPOSE__?: unknown;
-		};
-
 		try {
-			Object.defineProperty(windowWithRedux, "__REDUX_DEVTOOLS_EXTENSION__", {
+			Object.defineProperty(window, REDUX_DEVTOOLS_EXTENSION, {
 				configurable: false,
 				enumerable: false,
-				get: () => undefined,
-				set: () => undefined,
+				get: (): undefined => undefined,
+				set: (): undefined => undefined,
 			});
 
-			Object.defineProperty(windowWithRedux, "__REDUX_DEVTOOLS_EXTENSION_COMPOSE__", {
+			Object.defineProperty(window, REDUX_DEVTOOLS_EXTENSION_COMPOSE, {
 				configurable: false,
 				enumerable: false,
-				get: () => undefined,
-				set: () => undefined,
+				get: (): undefined => undefined,
+				set: (): undefined => undefined,
 			});
 		} catch {
 			// Browser extensions can make these properties non-configurable.

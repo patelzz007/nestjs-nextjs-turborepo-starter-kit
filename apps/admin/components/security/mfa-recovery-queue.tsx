@@ -2,16 +2,21 @@
 
 import type { AdminMfaRecoveryRequest, MfaRecoveryRecordStatus } from "@workspace/shared";
 import { readPaginatedTotal, stubPaginatedMeta } from "@/lib/api-envelope";
+import { createDataTableLabels } from "@/lib/data-table-labels";
+import { DataTableMobileCard } from "@/lib/data-table-mobile-card";
 import { formatDateTimeWithSeconds } from "@/lib/dates";
 import { MfaRecoveryReviewPanel } from "@/components/security/mfa-recovery-review-panel";
 import { MfaRecoveryStatusBadge } from "@/components/security/mfa-recovery-status-badge";
 import { useAuth } from "@workspace/client/lib/auth";
 import { Badge } from "@workspace/ui/components/feedback/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
-import { DataTable, type ColumnDef, type DataTableFeatures } from "@workspace/ui/components/display/data-table";
+import { DataTable, type Action, type DataTableFeatures } from "@workspace/ui/components/display/data-table";
+import type { ColumnDef } from "@tanstack/react-table";
 import { Label } from "@workspace/ui/components/form/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@workspace/ui/components/form/select";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { Eye } from "lucide-react";
 import * as React from "react";
 import { keepPreviousData } from "@tanstack/react-query";
 
@@ -35,6 +40,7 @@ export const MfaRecoveryQueue = React.forwardRef<HTMLDivElement, MfaRecoveryQueu
 	ref,
 ): React.JSX.Element {
 	const { api } = useAuth();
+	const router = useRouter();
 	const [page, setPage] = React.useState(1);
 	const [pageLimit, setPageLimit] = React.useState(20);
 	const [statusFilter, setStatusFilter] = React.useState<"all" | MfaRecoveryRecordStatus>(initialStatus ?? "PENDING");
@@ -57,7 +63,7 @@ export const MfaRecoveryQueue = React.forwardRef<HTMLDivElement, MfaRecoveryQueu
 		},
 	);
 
-	const rows: readonly AdminMfaRecoveryRequest[] = requestsQuery.data?.data ?? [];
+	const rows = React.useMemo((): readonly AdminMfaRecoveryRequest[] => requestsQuery.data?.data ?? [], [requestsQuery.data?.data]);
 	const total: number = readPaginatedTotal(requestsQuery.data?.meta, initialTotal ?? rows.length);
 	const selectedRequest: AdminMfaRecoveryRequest | undefined = rows.find((row) => row.id === selectedRequestId) ?? rows[0];
 
@@ -71,17 +77,70 @@ export const MfaRecoveryQueue = React.forwardRef<HTMLDivElement, MfaRecoveryQueu
 		}
 	}, [rows, selectedRequestId]);
 
-	const handleStatusFilterChange = React.useCallback((value: string): void => {
+	const handleStatusFilterChange = React.useCallback((value: string | null): void => {
+		if (value === null) {
+			return;
+		}
 		if (value === "all" || value === "PENDING" || value === "APPROVED" || value === "DENIED" || value === "COMPLETED") {
 			setStatusFilter(value);
 			setPage(1);
 		}
 	}, []);
 
+	const tableLabels = React.useMemo(
+		() =>
+			createDataTableLabels({
+				actionsMenuTitle: "Recovery request actions",
+				openRowMenu: "Open recovery request row menu",
+			}),
+		[],
+	);
+
 	const handleManualPaginationChange = React.useCallback((nextPage: number, nextPageSize: number): void => {
 		setPage(nextPage + 1);
 		setPageLimit(nextPageSize);
 	}, []);
+
+	const handleRowClick = React.useCallback((row: AdminMfaRecoveryRequest): void => {
+		setSelectedRequestId(row.id);
+	}, []);
+
+	const handleReviewed = React.useCallback((): void => {
+		void requestsQuery.refetch();
+	}, [requestsQuery]);
+
+	const handleViewUser = React.useCallback(
+		(request: AdminMfaRecoveryRequest): void => {
+			router.push(`/users/${request.userId}`);
+		},
+		[router],
+	);
+
+	const actions = React.useMemo((): Action<AdminMfaRecoveryRequest>[] => {
+		return [
+			{
+				key: "view",
+				label: "View user",
+				description: "Open the user profile",
+				icon: <Eye className="size-4" />,
+				onClick: handleViewUser,
+			},
+		];
+	}, [handleViewUser]);
+
+	const mobileCardRender = React.useCallback(
+		(request: AdminMfaRecoveryRequest, cardActions?: Action<AdminMfaRecoveryRequest>[]): React.ReactNode => (
+			<DataTableMobileCard
+				item={request}
+				title={request.userFullName}
+				subtitle={request.userEmail}
+				badge={<MfaRecoveryStatusBadge status={request.status} />}
+				fields={[{ label: "Requested", value: formatDateTimeWithSeconds(request.requestedAt) }]}
+				actions={cardActions}
+			/>
+		),
+		[],
+	);
 
 	const columns = React.useMemo((): ColumnDef<DataTableFeatures, AdminMfaRecoveryRequest>[] => {
 		return [
@@ -150,17 +209,18 @@ export const MfaRecoveryQueue = React.forwardRef<HTMLDivElement, MfaRecoveryQueu
 					<DataTable
 						columns={columns}
 						data={[...rows]}
+						labels={tableLabels}
+						actions={actions}
+						mobileCardRender={mobileCardRender}
 						manual
 						totalCount={total}
 						pageIndex={page - 1}
 						pageSize={pageLimit}
 						pageSizeOptions={PAGE_SIZE_OPTIONS}
 						isLoading={requestsQuery.isLoading}
-						isRefetching={requestsQuery.isFetching && !requestsQuery.isLoading}
+						isRefetching={requestsQuery.isFetching && !requestsQuery.isLoading ? true : false}
 						onManualPaginationChange={handleManualPaginationChange}
-						onRowClick={(row): void => {
-							setSelectedRequestId(row.id);
-						}}
+						onRowClick={handleRowClick}
 						emptyState={{
 							title: "No requests",
 							description: "No MFA recovery requests match this filter.",
@@ -172,7 +232,7 @@ export const MfaRecoveryQueue = React.forwardRef<HTMLDivElement, MfaRecoveryQueu
 			{selectedRequest !== undefined ? (
 				<section className="space-y-3">
 					<h2 className="text-lg font-semibold">Review request</h2>
-					<MfaRecoveryReviewPanel request={selectedRequest} onReviewed={(): void => void requestsQuery.refetch()} />
+					<MfaRecoveryReviewPanel request={selectedRequest} onReviewed={handleReviewed} />
 				</section>
 			) : null}
 		</div>

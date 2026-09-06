@@ -19,7 +19,7 @@ export function RewardInventoryBar({ remaining, total, className, compact = fals
 				<div className="h-1 min-w-0 flex-1 overflow-hidden rounded-full bg-muted">
 					<div
 						className={cn("h-full rounded-full transition-[width] duration-300 motion-reduce:transition-none", isLow ? "bg-warning" : "bg-primary")}
-						style={{ width: `${percentLeft}%` }}
+						style={{ width: `${String(percentLeft)}%` }}
 					/>
 				</div>
 				<span className="shrink-0 text-xs text-muted-foreground tabular-nums">{remaining}</span>
@@ -38,7 +38,7 @@ export function RewardInventoryBar({ remaining, total, className, compact = fals
 			<div className="h-1.5 overflow-hidden rounded-full bg-muted">
 				<div
 					className={cn("h-full rounded-full transition-[width] duration-300 motion-reduce:transition-none", isLow ? "bg-warning" : "bg-primary")}
-					style={{ width: `${percentLeft}%` }}
+					style={{ width: `${String(percentLeft)}%` }}
 				/>
 			</div>
 		</div>

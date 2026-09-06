@@ -4,8 +4,7 @@ import { MerchantDashboardStatCard } from "@/components/dashboard/merchant-dashb
 import { useMerchantCapabilities } from "@/lib/merchant-capabilities";
 import { stubApiMeta } from "@/lib/api-envelope";
 import { useAuth } from "@workspace/client/lib/auth";
-import type { AnalyticsMetric, MerchantAnalyticsResponse, RewardResponse } from "@workspace/shared";
-import type { MerchantCapability } from "@workspace/shared";
+import type { AnalyticsMetric, MerchantAnalyticsResponse, MerchantCapability, RewardResponse } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/feedback/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
 import { Button, buttonVariants } from "@workspace/ui/components/form/button";

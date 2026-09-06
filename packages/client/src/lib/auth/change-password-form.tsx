@@ -26,6 +26,18 @@ export function ChangePasswordForm({ onSuccess }: ChangePasswordFormProps): JSX.
 	const mutation = api.auth.changePassword.useMutation();
 	const strength = useMemo(() => passwordStrength(newPassword), [newPassword]);
 
+	const handleCurrentPasswordChange = useCallback((event: React.ChangeEvent<HTMLInputElement>): void => {
+		setCurrentPassword(event.target.value);
+	}, []);
+
+	const handleNewPasswordChange = useCallback((event: React.ChangeEvent<HTMLInputElement>): void => {
+		setNewPassword(event.target.value);
+	}, []);
+
+	const handleConfirmPasswordChange = useCallback((event: React.ChangeEvent<HTMLInputElement>): void => {
+		setConfirmPassword(event.target.value);
+	}, []);
+
 	const handleSubmit = useCallback(
 		(event: React.SyntheticEvent<HTMLFormElement>): void => {
 			event.preventDefault();
@@ -64,30 +76,16 @@ export function ChangePasswordForm({ onSuccess }: ChangePasswordFormProps): JSX.
 			{success ? <div className="rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-foreground">{success}</div> : null}
 			<div className="space-y-2">
 				<Label htmlFor="current-password">Current password</Label>
-				<PasswordInput
-					id="current-password"
-					autoComplete="current-password"
-					value={currentPassword}
-					onChange={(event) => setCurrentPassword(event.target.value)}
-					required
-					className="h-11"
-				/>
+				<PasswordInput id="current-password" autoComplete="current-password" value={currentPassword} onChange={handleCurrentPasswordChange} required className="h-11" />
 			</div>
 			<div className="space-y-2">
 				<Label htmlFor="new-password">New password</Label>
-				<PasswordInput id="new-password" autoComplete="new-password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} required className="h-11" />
+				<PasswordInput id="new-password" autoComplete="new-password" value={newPassword} onChange={handleNewPasswordChange} required className="h-11" />
 				<PasswordStrengthMeter score={strength.score} label={strength.label} percent={strength.percent} criteria={strength.criteria} />
 			</div>
 			<div className="space-y-2">
 				<Label htmlFor="confirm-password">Confirm new password</Label>
-				<PasswordInput
-					id="confirm-password"
-					autoComplete="new-password"
-					value={confirmPassword}
-					onChange={(event) => setConfirmPassword(event.target.value)}
-					required
-					className="h-11"
-				/>
+				<PasswordInput id="confirm-password" autoComplete="new-password" value={confirmPassword} onChange={handleConfirmPasswordChange} required className="h-11" />
 			</div>
 		</FormShell>
 	);

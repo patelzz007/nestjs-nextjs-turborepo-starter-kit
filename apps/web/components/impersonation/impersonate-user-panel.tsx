@@ -48,6 +48,24 @@ export function ImpersonateUserPanel({ sessionActive }: { readonly sessionActive
 		[impersonateMutation],
 	);
 
+	const handleImpersonateClick = React.useCallback(
+		(event: React.MouseEvent<HTMLButtonElement>): void => {
+			const userId = event.currentTarget.dataset.userId;
+			if (userId !== undefined) {
+				handleImpersonate(userId);
+			}
+		},
+		[handleImpersonate],
+	);
+
+	const handlePreviousPage = React.useCallback((): void => {
+		setPage((prev: number) => Math.max(1, prev - 1));
+	}, []);
+
+	const handleNextPage = React.useCallback((): void => {
+		setPage((prev: number) => prev + 1);
+	}, []);
+
 	if (currentUser?.isSuperAdmin !== true || isImpersonating) {
 		return null;
 	}
@@ -82,7 +100,7 @@ export function ImpersonateUserPanel({ sessionActive }: { readonly sessionActive
 										<p className="truncate text-xs text-muted-foreground">{user.email}</p>
 									</div>
 									{canImpersonate ? (
-										<Button size="sm" variant="outline" disabled={impersonateMutation.isPending} onClick={(): void => handleImpersonate(user.id)}>
+										<Button size="sm" variant="outline" disabled={impersonateMutation.isPending} data-user-id={user.id} onClick={handleImpersonateClick}>
 											Impersonate
 										</Button>
 									) : (
@@ -96,13 +114,13 @@ export function ImpersonateUserPanel({ sessionActive }: { readonly sessionActive
 
 				{totalPages > 1 ? (
 					<div className="flex items-center justify-between text-sm">
-						<Button size="sm" variant="ghost" disabled={page <= 1} onClick={(): void => setPage((prev: number) => Math.max(1, prev - 1))}>
+						<Button size="sm" variant="ghost" disabled={page <= 1} onClick={handlePreviousPage}>
 							Previous
 						</Button>
 						<span className="text-muted-foreground">
 							Page {page} of {totalPages}
 						</span>
-						<Button size="sm" variant="ghost" disabled={page >= totalPages} onClick={(): void => setPage((prev: number) => prev + 1)}>
+						<Button size="sm" variant="ghost" disabled={page >= totalPages} onClick={handleNextPage}>
 							Next
 						</Button>
 					</div>

@@ -1,0 +1,79 @@
+import { z } from "zod";
+
+import type { PaginatedServiceResult } from "../api/api-response";
+
+/** Generated Zod contracts for Product. */
+export const CreateProductSchema = z
+	.object({
+		brand: z.string().nullable().optional(),
+		categoryId: z.uuid(),
+		compareAtPrice: z.coerce.number().nullable().optional(),
+		description: z.string().nullable().optional(),
+		imageUrl: z.string().nullable().optional(),
+		isActive: z.boolean().optional(),
+		isFeatured: z.boolean().optional(),
+		name: z.string(),
+		price: z.coerce.number(),
+		shortDescription: z.string().nullable().optional(),
+		sku: z.string(),
+		slug: z.string(),
+		stockQuantity: z.number().int().optional(),
+		weightGrams: z.number().int().nullable().optional(),
+	})
+	.strict();
+export type CreateProductInput = z.output<typeof CreateProductSchema>;
+
+export const UpdateProductSchema = CreateProductSchema.partial();
+export type UpdateProductInput = z.output<typeof UpdateProductSchema>;
+
+export const ProductIdParamSchema = z.object({ id: z.uuid() }).strict();
+export const ProductListSortBySchema = z.enum(["sku", "name", "price", "stockQuantity", "createdAt"]);
+export type ProductListSortBy = z.output<typeof ProductListSortBySchema>;
+export const ProductListQuerySchema = z
+	.object({
+		page: z.coerce.number().int().positive().default(1),
+		limit: z.coerce.number().int().positive().max(100).default(20),
+		sortBy: ProductListSortBySchema.optional(),
+		sortDirection: z.enum(["asc", "desc"]).optional(),
+		search: z.string().trim().min(1).optional(),
+	})
+	.strict();
+export type ProductListQuery = z.output<typeof ProductListQuerySchema>;
+
+export const ProductSchema = z
+	.object({
+		id: z.uuid(),
+		brand: z.string().nullable(),
+		categoryId: z.uuid(),
+		compareAtPrice: z.coerce.number().nullable(),
+		description: z.string().nullable(),
+		imageUrl: z.string().nullable(),
+		isActive: z.boolean(),
+		isFeatured: z.boolean(),
+		name: z.string(),
+		price: z.coerce.number(),
+		shortDescription: z.string().nullable(),
+		sku: z.string(),
+		slug: z.string(),
+		stockQuantity: z.number().int(),
+		weightGrams: z.number().int().nullable(),
+		version: z.number().int().nonnegative(),
+		deletedAt: z.number().int().nonnegative().nullable(),
+		createdAt: z.number().int().nonnegative(),
+		updatedAt: z.number().int().nonnegative(),
+	})
+	.strict();
+export type Product = z.output<typeof ProductSchema>;
+
+export const ProductListResponseSchema = z
+	.object({
+		items: z.array(ProductSchema),
+		total: z.number().int().nonnegative(),
+		page: z.number().int().positive(),
+		limit: z.number().int().positive(),
+		totalPages: z.number().int().nonnegative().optional(),
+		hasNext: z.boolean().optional(),
+		hasPrevious: z.boolean().optional(),
+	})
+	.strict();
+export type ProductListResponse = PaginatedServiceResult<Product>;

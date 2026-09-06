@@ -31,59 +31,62 @@ export class UserSessionCacheService {
 		this.defaultTtlMs = config.userSessionCacheTtlMs;
 	}
 
-	public async getMe(userId: string): Promise<UserResponse | null> {
+	public getMe(userId: string): Promise<UserResponse | null> {
 		const entry = this.meStore.get(userId);
 		if (entry === undefined) {
-			return null;
+			return Promise.resolve(null);
 		}
 		if (Date.now() > entry.expiresAt) {
 			this.meStore.delete(userId);
-			return null;
+			return Promise.resolve(null);
 		}
-		return entry.value;
+		return Promise.resolve(entry.value);
 	}
 
-	public async setMe(userId: string, value: UserResponse, ttlMs?: number): Promise<void> {
+	public setMe(userId: string, value: UserResponse, ttlMs?: number): Promise<void> {
 		const parsed = UserResponseSchema.safeParse(value);
 		if (!parsed.success) {
 			this.logger.warn(`Skipped caching invalid /auth/me payload for user ${userId}`);
-			return;
+			return Promise.resolve();
 		}
 		const ttl = ttlMs ?? this.defaultTtlMs;
 		this.meStore.set(userId, { value: parsed.data, expiresAt: Date.now() + ttl });
 		this.logger.debug(`Cached /auth/me for user ${userId} (TTL ${String(ttl)}ms)`);
+		return Promise.resolve();
 	}
 
-	public async getPermissions(userId: string): Promise<SessionPermissionsResponse | null> {
+	public getPermissions(userId: string): Promise<SessionPermissionsResponse | null> {
 		const entry = this.permissionsStore.get(userId);
 		if (entry === undefined) {
-			return null;
+			return Promise.resolve(null);
 		}
 		if (Date.now() > entry.expiresAt) {
 			this.permissionsStore.delete(userId);
-			return null;
+			return Promise.resolve(null);
 		}
-		return entry.value;
+		return Promise.resolve(entry.value);
 	}
 
-	public async setPermissions(userId: string, value: SessionPermissionsResponse, ttlMs?: number): Promise<void> {
+	public setPermissions(userId: string, value: SessionPermissionsResponse, ttlMs?: number): Promise<void> {
 		const parsed = SessionPermissionsResponseSchema.safeParse(value);
 		if (!parsed.success) {
 			this.logger.warn(`Skipped caching invalid /auth/permissions payload for user ${userId}`);
-			return;
+			return Promise.resolve();
 		}
 		const ttl = ttlMs ?? this.defaultTtlMs;
 		this.permissionsStore.set(userId, { value: parsed.data, expiresAt: Date.now() + ttl });
 		this.logger.debug(`Cached /auth/permissions for user ${userId} (TTL ${String(ttl)}ms)`);
+		return Promise.resolve();
 	}
 
-	public async invalidate(userId: string): Promise<void> {
+	public invalidate(userId: string): Promise<void> {
 		this.meStore.delete(userId);
 		this.permissionsStore.delete(userId);
 		this.logger.debug(`Invalidated user session cache for ${userId}`);
+		return Promise.resolve();
 	}
 
-	public async invalidateUsers(userIds: readonly string[]): Promise<void> {
+	public invalidateUsers(userIds: readonly string[]): Promise<void> {
 		for (const userId of userIds) {
 			this.meStore.delete(userId);
 			this.permissionsStore.delete(userId);
@@ -91,12 +94,14 @@ export class UserSessionCacheService {
 		if (userIds.length > 0) {
 			this.logger.debug(`Invalidated user session cache for ${String(userIds.length)} user(s)`);
 		}
+		return Promise.resolve();
 	}
 
-	public async clear(): Promise<void> {
+	public clear(): Promise<void> {
 		const size = this.meStore.size + this.permissionsStore.size;
 		this.meStore.clear();
 		this.permissionsStore.clear();
 		this.logger.debug(`Cleared user session cache (${String(size)} entries)`);
+		return Promise.resolve();
 	}
 }

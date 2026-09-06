@@ -14,7 +14,7 @@ export function userHasAdminAccess(user: AccessTokenPayload | RefreshTokenPayloa
 	if (!isAuthenticatedUser(user)) {
 		return false;
 	}
-	return user.hasAdminAccess === true;
+	return user.hasAdminAccess;
 }
 
 /**
@@ -28,7 +28,7 @@ export function userHasElevatedAdminAccess(user: AccessTokenPayload | RefreshTok
 	if (user.isSuperAdmin) {
 		return true;
 	}
-	return user.hasAdminAccess === true;
+	return user.hasAdminAccess;
 }
 
 /** Narrow the auth payload union to an access token and re-check admin access. */

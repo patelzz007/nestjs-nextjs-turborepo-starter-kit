@@ -1,4 +1,6 @@
-import { AuthFlowEventSchema, type AuthFlowEvent } from "@workspace/shared";
+import { z } from "zod";
+
+import { AuthFlowEventSchema, CaughtValueSchema, JsonRecordSchema, JsonValueSchema, type CaughtValue } from "@workspace/shared";
 
 import { AuthEventsService } from "../services/auth-events.service";
 
@@ -22,6 +24,17 @@ interface TrackAuthFlowOptions {
 	 */
 	readonly userId?: UserIdExtractor;
 }
+
+const AsyncMethodSchema = z.custom<(...args: readonly unknown[]) => Promise<unknown>>((value) => {
+	return value !== null && value !== undefined && typeof value === "function";
+});
+
+const AuthResultIdSchema = z.object({ id: z.string() }).strict();
+const AuthResultUserIdSchema = z.object({ userId: z.string() }).strict();
+const AuthResultNestedUserSchema = z.object({ user: z.object({ id: z.string() }).strict() }).strict();
+const AuthErrorCodeSchema = z.object({ error: z.string() }).strict();
+const AuthErrorMessageSchema = z.object({ message: z.string() }).strict();
+const AuthErrorUserIdSchema = z.object({ userId: z.string() }).strict();
 
 /**
  * Declarative decorator that wraps a method and automatically emits an
@@ -48,8 +61,12 @@ interface TrackAuthFlowOptions {
 export function TrackAuthFlow(options: TrackAuthFlowOptions): MethodDecorator {
 	const { flow, clientType: clientTypeExtractor, userId: userIdExtractor } = options;
 
-	return function (_target: unknown, propertyKey: string | symbol, descriptor: PropertyDescriptor): PropertyDescriptor {
-		const originalMethod = descriptor.value as (...args: unknown[]) => Promise<unknown>;
+	return function (_target: object, propertyKey: string | symbol, descriptor: PropertyDescriptor): PropertyDescriptor {
+		const parsedMethod = AsyncMethodSchema.safeParse(descriptor.value);
+		if (!parsedMethod.success) {
+			throw new TypeError(`TrackAuthFlow can only decorate async methods (${String(propertyKey)})`);
+		}
+		const originalMethod = parsedMethod.data;
 
 		descriptor.value = async function (this: { readonly authEvents?: AuthEventsService }, ...args: unknown[]): Promise<unknown> {
 			const flowStartedAt: number = performance.now();
@@ -78,41 +95,27 @@ export function TrackAuthFlow(options: TrackAuthFlowOptions): MethodDecorator {
 			try {
 				const result: unknown = await originalMethod.apply(this, args);
 
-				// Extract userId: explicit extractor → result.id → result.userId → null
 				let userId: string | null = null;
 				if (userIdExtractor !== undefined) {
 					userId = userIdExtractor(...args) ?? null;
-				} else if (result !== null && result !== undefined && typeof result === "object") {
-					const obj = result as Record<string, unknown>;
-					if (typeof obj.id === "string") {
-						userId = obj.id;
-					} else if (typeof obj.userId === "string") {
-						userId = obj.userId;
-					} else if ("user" in obj && obj.user !== null && typeof obj.user === "object") {
-						const user = obj.user as Record<string, unknown>;
-						if (typeof user.id === "string") {
-							userId = user.id;
-						}
-					}
+				} else {
+					userId = extractUserIdFromResult(result);
 				}
 
 				emitEvent("succeeded", null, userId);
 				return result;
-			} catch (error: unknown) {
-				const errorCode = extractErrorCode(error);
-				// For failed flows, try to get userId from args
+			} catch (caught) {
+				const errorValue = CaughtValueSchema.safeParse(caught);
+				const errorCode = errorValue.success ? extractErrorCode(errorValue.data) : "UNKNOWN_ERROR";
 				let userId: string | null = null;
 				if (userIdExtractor !== undefined) {
 					userId = userIdExtractor(...args) ?? null;
-				} else if (error !== null && error !== undefined && typeof error === "object") {
-					const errObj = error as Record<string, unknown>;
-					if (typeof errObj.userId === "string") {
-						userId = errObj.userId;
-					}
+				} else if (errorValue.success) {
+					userId = extractUserIdFromCaught(errorValue.data);
 				}
 
 				emitEvent("failed", errorCode, userId);
-				throw error;
+				throw caught;
 			}
 		};
 
@@ -120,15 +123,51 @@ export function TrackAuthFlow(options: TrackAuthFlowOptions): MethodDecorator {
 	};
 }
 
-function extractErrorCode(error: unknown): string {
-	if (error !== null && error !== undefined && typeof error === "object") {
-		const obj = error as Record<string, unknown>;
-		if (typeof obj.error === "string") {
-			return obj.error;
-		}
-		if (typeof obj.message === "string") {
-			return obj.message;
-		}
+function extractUserIdFromResult(result: unknown): string | null {
+	const jsonValue = JsonValueSchema.safeParse(result);
+	if (!jsonValue.success) {
+		return null;
+	}
+	const value = jsonValue.data;
+	const withId = AuthResultIdSchema.safeParse(value);
+	if (withId.success) {
+		return withId.data.id;
+	}
+	const withUserId = AuthResultUserIdSchema.safeParse(value);
+	if (withUserId.success) {
+		return withUserId.data.userId;
+	}
+	const withNestedUser = AuthResultNestedUserSchema.safeParse(value);
+	if (withNestedUser.success) {
+		return withNestedUser.data.user.id;
+	}
+	return null;
+}
+
+function extractUserIdFromCaught(value: CaughtValue): string | null {
+	const record = JsonRecordSchema.safeParse(value);
+	if (!record.success) {
+		return null;
+	}
+	const withUserId = AuthErrorUserIdSchema.safeParse(record.data);
+	return withUserId.success ? withUserId.data.userId : null;
+}
+
+function extractErrorCode(value: CaughtValue): string {
+	if (value instanceof Error) {
+		return value.message;
+	}
+	const record = JsonRecordSchema.safeParse(value);
+	if (!record.success) {
+		return "UNKNOWN_ERROR";
+	}
+	const withCode = AuthErrorCodeSchema.safeParse(record.data);
+	if (withCode.success) {
+		return withCode.data.error;
+	}
+	const withMessage = AuthErrorMessageSchema.safeParse(record.data);
+	if (withMessage.success) {
+		return withMessage.data.message;
 	}
 	return "UNKNOWN_ERROR";
 }

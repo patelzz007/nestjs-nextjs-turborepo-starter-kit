@@ -84,7 +84,7 @@ export default function AccessControlPanel({ initialRoles, initialPermissions }:
 	}, [checkAction, checkPermission, checkResource, checkUserId]);
 
 	const roles = rolesQuery.data?.data.items ?? [];
-	const permissions = permissionsQuery.data?.data.items ?? [];
+	const permissions = React.useMemo(() => permissionsQuery.data?.data.items ?? [], [permissionsQuery.data?.data.items]);
 	const permissionTree = React.useMemo(() => buildPermissionTree(permissions), [permissions]);
 
 	return (

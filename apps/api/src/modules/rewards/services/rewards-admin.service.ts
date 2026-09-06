@@ -15,7 +15,10 @@ import { LogService } from "../../logs/logs.service";
 import { EmailSenderService } from "../../notifications/email/email-sender.service";
 import { EMAIL_TEMPLATE_REGISTRY, buildEmailPreviewFromTemplate } from "../../notifications/email/email-template.registry";
 import { MerchantInviteEmailTemplate } from "../../notifications/email/templates/merchant-invite-email.template";
-import { PrismaService } from "../../../prisma/prisma.service";
+import { MerchantInviteRepository } from "../repositories/merchant-invite.repository";
+import { MerchantMemberRepository } from "../repositories/merchant-member.repository";
+import { MerchantOrgRepository } from "../repositories/merchant-org.repository";
+import { RewardRepository } from "../repositories/reward.repository";
 import { generateOpaqueToken, sha256Hex } from "../utils/reward-crypto.util";
 import { mapMerchantOrgToResponse, mapRewardToResponse } from "../utils/reward-mapper.util";
 import { MerchantRewardService } from "./merchant-reward.service";
@@ -28,7 +31,10 @@ const INVITE_PREVIEW_TOKEN = "preview-invite-token";
 @Injectable()
 export class RewardsAdminService {
 	public constructor(
-		private readonly prisma: PrismaService,
+		private readonly merchantInviteRepository: MerchantInviteRepository,
+		private readonly merchantOrgRepository: MerchantOrgRepository,
+		private readonly merchantMemberRepository: MerchantMemberRepository,
+		private readonly rewardRepository: RewardRepository,
 		private readonly merchantRewardService: MerchantRewardService,
 		private readonly notificationService: RewardNotificationService,
 		private readonly emailSender: EmailSenderService,
@@ -40,15 +46,13 @@ export class RewardsAdminService {
 		const token = generateOpaqueToken();
 		const expiresAt = Date.now() + INVITE_TTL_MS;
 
-		const invite = await this.prisma.merchantInvite.create({
-			data: {
-				email: input.email,
-				tokenHash: sha256Hex(token),
-				businessName: input.businessName,
-				city: input.city,
-				createdByAdminId: adminUserId,
-				expiresAt,
-			},
+		const invite = await this.merchantInviteRepository.create({
+			email: input.email,
+			tokenHash: sha256Hex(token),
+			businessName: input.businessName,
+			city: input.city,
+			createdByAdminId: adminUserId,
+			expiresAt,
 		});
 
 		const inviteUrl = this.buildMerchantInviteUrl(token);
@@ -115,46 +119,12 @@ export class RewardsAdminService {
 	}> {
 		const page = query.page;
 		const limit = query.limit;
-		const skip = (page - 1) * limit;
-
-		const search = query.search?.trim();
-		const where = {
-			isDeleted: false,
-			...(query.city !== undefined ? { city: query.city } : {}),
-			...(query.kybStatus !== undefined ? { kybStatus: query.kybStatus } : {}),
-			...(query.status !== undefined ? { status: query.status } : {}),
-			...(search !== undefined && search.length > 0
-				? {
-						OR: [
-							{ businessName: { contains: search, mode: "insensitive" as const } },
-							{ legalName: { contains: search, mode: "insensitive" as const } },
-							{ contactEmail: { contains: search, mode: "insensitive" as const } },
-						],
-					}
-				: {}),
-		};
-
-		const [rows, total] = await Promise.all([
-			this.prisma.merchantOrg.findMany({
-				where,
-				orderBy: { createdAt: "desc" },
-				skip,
-				take: limit,
-				include: {
-					members: {
-						where: { role: "OWNER", isDeleted: false },
-						select: { userId: true },
-						take: 1,
-					},
-				},
-			}),
-			this.prisma.merchantOrg.count({ where }),
-		]);
+		const { rows, total } = await this.merchantOrgRepository.listForAdmin(query);
 
 		const items = rows.map((row) => {
 			const base = mapMerchantOrgToResponse(row);
-			const ownerUserId = row.members[0]?.userId ?? null;
-			return ownerUserId === null ? base : { ...base, ownerUserId };
+			const [owner] = row.members;
+			return { ...base, ownerUserId: owner.userId };
 		});
 		const totalPages = limit === 0 ? 0 : Math.ceil(total / limit);
 
@@ -170,12 +140,7 @@ export class RewardsAdminService {
 	}
 
 	public async listPendingRewards(): Promise<RewardResponse[]> {
-		const rows = await this.prisma.reward.findMany({
-			where: { status: "PENDING_REVIEW", isDeleted: false, rewardKind: "CONSUMER" },
-			include: { merchantOrg: { select: { businessName: true } } },
-			orderBy: { submittedForReviewAt: "asc" },
-		});
-
+		const rows = await this.rewardRepository.listPendingReview();
 		return rows.map((row) => mapRewardToResponse(row, row.merchantOrg));
 	}
 
@@ -183,44 +148,15 @@ export class RewardsAdminService {
 		const reward = await this.findPendingConsumerReward(rewardId);
 		const now = Date.now();
 
-		await this.prisma.$transaction(async (tx) => {
-			await tx.reward.update({
-				where: { id: reward.id },
-				data: {
-					status: "PUBLISHED",
-					reviewedAt: now,
-					reviewedByUserId: adminUserId,
-					autoPublishAt: null,
-					rejectionReason: null,
-				},
-			});
+		await this.rewardRepository.approveInTransaction(reward.id, reward.referrerRewardId, adminUserId, now);
 
-			if (reward.referrerRewardId !== null) {
-				await tx.reward.update({
-					where: { id: reward.referrerRewardId },
-					data: {
-						status: "PUBLISHED",
-						reviewedAt: now,
-						reviewedByUserId: adminUserId,
-						autoPublishAt: null,
-					},
-				});
-			}
-		});
-
-		const owners = await this.prisma.merchantMember.findMany({
-			where: { merchantOrgId: reward.merchantOrgId, role: "OWNER", isDeleted: false },
-		});
+		const owners = await this.merchantMemberRepository.listOwnersByOrgId(reward.merchantOrgId);
 
 		for (const owner of owners) {
 			await this.notificationService.notify(owner.userId, "reward_approved", "Reward approved", `"${reward.title}" is now live in the marketplace.`, { rewardId: reward.id });
 		}
 
-		const refreshed = await this.prisma.reward.findUniqueOrThrow({
-			where: { id: reward.id },
-			include: { merchantOrg: { select: { businessName: true } } },
-		});
-
+		const refreshed = await this.rewardRepository.findUniqueOrThrowWithMerchantOrg(reward.id);
 		return mapRewardToResponse(refreshed, refreshed.merchantOrg);
 	}
 
@@ -228,36 +164,9 @@ export class RewardsAdminService {
 		const reward = await this.findPendingConsumerReward(rewardId);
 		const now = Date.now();
 
-		await this.prisma.$transaction(async (tx) => {
-			await tx.reward.update({
-				where: { id: reward.id },
-				data: {
-					status: "DRAFT",
-					reviewedAt: now,
-					reviewedByUserId: adminUserId,
-					autoPublishAt: null,
-					rejectionReason: input.reason ?? null,
-					submittedForReviewAt: null,
-				},
-			});
+		await this.rewardRepository.rejectInTransaction(reward.id, reward.referrerRewardId, adminUserId, input.reason ?? null, now);
 
-			if (reward.referrerRewardId !== null) {
-				await tx.reward.update({
-					where: { id: reward.referrerRewardId },
-					data: {
-						status: "DRAFT",
-						reviewedAt: now,
-						reviewedByUserId: adminUserId,
-						autoPublishAt: null,
-						submittedForReviewAt: null,
-					},
-				});
-			}
-		});
-
-		const owners = await this.prisma.merchantMember.findMany({
-			where: { merchantOrgId: reward.merchantOrgId, role: "OWNER", isDeleted: false },
-		});
+		const owners = await this.merchantMemberRepository.listOwnersByOrgId(reward.merchantOrgId);
 
 		for (const owner of owners) {
 			await this.notificationService.notify(owner.userId, "reward_rejected", "Reward needs changes", input.reason ?? "Your reward was returned to draft for edits.", {
@@ -265,29 +174,20 @@ export class RewardsAdminService {
 			});
 		}
 
-		const refreshed = await this.prisma.reward.findUniqueOrThrow({
-			where: { id: reward.id },
-			include: { merchantOrg: { select: { businessName: true } } },
-		});
-
+		const refreshed = await this.rewardRepository.findUniqueOrThrowWithMerchantOrg(reward.id);
 		return mapRewardToResponse(refreshed, refreshed.merchantOrg);
 	}
 
 	public async updateMerchantKyb(merchantOrgId: string, input: AdminKybUpdateInput): Promise<void> {
-		const org = await this.prisma.merchantOrg.findFirst({
-			where: { id: merchantOrgId, isDeleted: false },
-		});
+		const org = await this.merchantOrgRepository.findById(merchantOrgId);
 
 		if (org === null) {
 			throw new NotFoundException({ message: "Merchant not found", error: "MERCHANT_NOT_FOUND" });
 		}
 
-		await this.prisma.merchantOrg.update({
-			where: { id: merchantOrgId },
-			data: {
-				kybStatus: input.kybStatus,
-				...(input.kybFields !== undefined ? { kybFields: input.kybFields } : {}),
-			},
+		await this.merchantOrgRepository.updateKyb(merchantOrgId, {
+			kybStatus: input.kybStatus,
+			...(input.kybFields !== undefined ? { kybFields: input.kybFields } : {}),
 		});
 	}
 
@@ -314,10 +214,7 @@ export class RewardsAdminService {
 		merchantOrgId: string;
 		referrerRewardId: string | null;
 	}> {
-		const reward = await this.prisma.reward.findFirst({
-			where: { id: rewardId, isDeleted: false, rewardKind: "CONSUMER" },
-			select: { id: true, title: true, merchantOrgId: true, referrerRewardId: true, status: true },
-		});
+		const reward = await this.rewardRepository.findPendingReviewById(rewardId);
 
 		if (reward === null) {
 			throw new NotFoundException({ message: "Reward not found", error: "REWARD_NOT_FOUND" });

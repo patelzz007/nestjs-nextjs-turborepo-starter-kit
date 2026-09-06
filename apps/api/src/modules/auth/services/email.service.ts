@@ -1,9 +1,7 @@
 import { Injectable } from "@nestjs/common";
 
-import type { EpochMs } from "@workspace/shared";
+import type { EpochMs, EmailSendResult } from "@workspace/shared";
 import { epochMs } from "@workspace/shared";
-
-import type { EmailSendResult } from "@workspace/shared";
 
 import { TypedConfigService } from "../../../config/typed-config.service";
 import { EmailSenderService } from "../../notifications/email/email-sender.service";

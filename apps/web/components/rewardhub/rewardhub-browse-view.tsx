@@ -67,7 +67,7 @@ export function RewardHubBrowseView({
 
 	const rewards = rewardsQuery.data?.data ?? [];
 	const metaParsed = ApiPaginatedMetaSchema.safeParse(rewardsQuery.data?.meta);
-	const total = isDefaultQuery && initialTotal !== undefined ? initialTotal : metaParsed.success && metaParsed.data.total !== null ? metaParsed.data.total : rewards.length;
+	const total = isDefaultQuery && initialTotal !== undefined ? initialTotal : metaParsed.success ? metaParsed.data.total : rewards.length;
 	const hasNext = isDefaultQuery && initialHasNext !== undefined ? initialHasNext : metaParsed.success ? metaParsed.data.hasNext === true : false;
 	const hasPrevious = isDefaultQuery && initialHasPrevious !== undefined ? initialHasPrevious : metaParsed.success ? metaParsed.data.hasPrevious === true : page > 1;
 

@@ -4,8 +4,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { classifyError, createServerCallerForRouter, createServerRequestContext, describeFailure, isPrefetchFailure, resolveConfig, type ServerApiConfig } from "./server-api";
-import { apiRouter, defineQuery, resolveRequest, type QueryDef } from "./endpoints";
-import { type DataValue, type SerializableInput } from "@workspace/shared";
+import { apiRouter, defineQuery, resolveRequest } from "./endpoints";
 
 // `server-only` throws outside React Server Components; stub it for tests.
 vi.mock("server-only", () => ({}));
@@ -40,13 +39,6 @@ const endpoint = defineQuery(
 	},
 );
 
-const requestEndpoint = defineQuery(
-	{ method: "GET", path: "/geo/countries", input: z.undefined() },
-	{
-		response: envelopeSchema,
-		queryKey: () => ["geo", "countries", { page: 1 }],
-	},
-);
 const testConfig: ServerApiConfig = {
 	accessTokenCookie: "adminAccessToken",
 	refreshTokenCookie: "adminRefreshToken",

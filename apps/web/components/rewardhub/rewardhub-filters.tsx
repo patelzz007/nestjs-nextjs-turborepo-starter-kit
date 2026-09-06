@@ -38,7 +38,7 @@ export function RewardHubFilters({
 	hasActiveFilters,
 }: RewardHubFiltersProps): React.JSX.Element {
 	const handleSubmit = React.useCallback(
-		(event: React.FormEvent<HTMLFormElement>): void => {
+		(event: React.SubmitEvent<HTMLFormElement>): void => {
 			event.preventDefault();
 			onSearchSubmit();
 		},

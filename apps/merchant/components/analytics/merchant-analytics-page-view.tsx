@@ -96,6 +96,8 @@ export function MerchantAnalyticsPageView({ initialAnalytics }: MerchantAnalytic
 		[analytics],
 	);
 
+	const formatYAxisTickLabel = React.useCallback((value: string): string => (value.length > 15 ? `${value.slice(0, 15)}…` : value), []);
+
 	return (
 		<div className="space-y-8">
 			<AnalyticsPageHeader title="Analytics" description="Track your reward performance and customer engagement" />
@@ -155,15 +157,7 @@ export function MerchantAnalyticsPageView({ initialAnalytics }: MerchantAnalytic
 						<BarChart data={analytics?.topRewards ?? []} layout="vertical" margin={{ left: 4, right: 8 }}>
 							<CartesianGrid strokeDasharray="3 3" horizontal={false} className="stroke-border/60" />
 							<XAxis type="number" tickLine={false} axisLine={false} className="text-xs" />
-							<YAxis
-								dataKey="title"
-								type="category"
-								width={108}
-								tickLine={false}
-								axisLine={false}
-								className="text-xs"
-								tickFormatter={(value: string): string => (value.length > 15 ? `${value.slice(0, 15)}…` : value)}
-							/>
+							<YAxis dataKey="title" type="category" width={108} tickLine={false} axisLine={false} className="text-xs" tickFormatter={formatYAxisTickLabel} />
 							<ChartTooltip content={<ChartTooltipContent />} />
 							<Bar dataKey="claims" fill="var(--color-claims)" name="Claims" radius={[0, 4, 4, 0]} />
 							<Bar dataKey="redemptions" fill="var(--color-redemptions)" name="Redemptions" radius={[0, 4, 4, 0]} />

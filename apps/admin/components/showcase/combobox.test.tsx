@@ -381,10 +381,10 @@ describe("Combobox", () => {
 
 		function PersistedComboboxHarness(): React.JSX.Element {
 			const [draft, setDraft] = React.useState<string>(() => window.sessionStorage.getItem(storageKey) ?? "");
-			const handleInputChange = (value: string): void => {
+			const handleInputChange = React.useCallback((value: string): void => {
 				setDraft(value);
 				window.sessionStorage.setItem(storageKey, value);
-			};
+			}, []);
 			return (
 				<Combobox inputValue={draft} onInputValueChange={handleInputChange}>
 					<ComboboxInput placeholder="Persisted" />

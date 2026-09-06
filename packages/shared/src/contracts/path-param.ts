@@ -1,4 +1,4 @@
-import { z, type ZodObject, type ZodType } from "zod";
+import { type ZodObject, type ZodType } from "zod";
 
 /**
  * Pull a single path-param validator out of a contract leaf's input object.

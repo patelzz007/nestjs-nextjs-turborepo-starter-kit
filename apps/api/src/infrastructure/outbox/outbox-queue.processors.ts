@@ -40,13 +40,12 @@ export class OutboxPublishProcessor extends WorkerHost {
 	private readonly logger: Logger = new Logger(OutboxPublishProcessor.name);
 
 	public constructor(
-		outboxQueueScheduler: OutboxQueueScheduler,
+		_outboxQueueScheduler: OutboxQueueScheduler,
 		private readonly config: TypedConfigService,
 		private readonly outboxService: PlatformOutboxService,
 		private readonly kafkaProducer: KafkaProducerService,
 	) {
 		super();
-		void outboxQueueScheduler;
 	}
 
 	public async process(job: Job): Promise<void> {

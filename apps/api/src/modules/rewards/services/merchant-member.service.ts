@@ -4,13 +4,17 @@ import type { MerchantCreateMemberInput, MerchantMemberCreatedResponse } from "@
 import { CryptoService } from "../../auth/services/crypto.service";
 import { EmailVerificationService } from "../../auth/services/email-verification.service";
 import { UserProvisioningService } from "../../auth/services/user-provisioning.service";
-import { PrismaService } from "../../../prisma/prisma.service";
+import { MerchantMemberRepository } from "../repositories/merchant-member.repository";
+import { RewardAuditLogRepository } from "../repositories/reward-audit-log.repository";
+import { RewardUserRepository } from "../repositories/reward-user.repository";
 import { MerchantContextService } from "./merchant-context.service";
 
 @Injectable()
 export class MerchantMemberService {
 	public constructor(
-		private readonly prisma: PrismaService,
+		private readonly rewardUserRepository: RewardUserRepository,
+		private readonly merchantMemberRepository: MerchantMemberRepository,
+		private readonly auditLogRepository: RewardAuditLogRepository,
 		private readonly cryptoService: CryptoService,
 		private readonly userProvisioning: UserProvisioningService,
 		private readonly merchantContext: MerchantContextService,
@@ -22,10 +26,7 @@ export class MerchantMemberService {
 		const orgId = await this.merchantContext.resolveOrgIdForUser(actorUserId, merchantOrgId);
 		await this.merchantContext.requireOwnerRole(actorUserId, orgId);
 
-		const existingUser = await this.prisma.user.findFirst({
-			where: { email: input.email, isDeleted: false },
-			select: { id: true, email: true, fullName: true },
-		});
+		const existingUser = await this.rewardUserRepository.findActiveByEmail(input.email);
 
 		let userId: string;
 		let fullName: string;
@@ -44,13 +45,9 @@ export class MerchantMemberService {
 			await this.emailVerificationService.sendVerificationEmailIfUnverified(email, "merchant");
 		} else {
 			const passwordHash = await this.cryptoService.hash(input.password);
-			await this.prisma.user.update({
-				where: { id: existingUser.id },
-				data: {
-					passwordHash,
-					fullName: input.fullName,
-					updatedAt: Date.now(),
-				},
+			await this.rewardUserRepository.updateCredentials(existingUser.id, {
+				passwordHash,
+				fullName: input.fullName,
 			});
 			await this.userProvisioning.ensureDefaultConsumerRole(existingUser.id, actorUserId);
 			userId = existingUser.id;
@@ -58,10 +55,7 @@ export class MerchantMemberService {
 			email = existingUser.email;
 		}
 
-		const existingMembership = await this.prisma.merchantMember.findFirst({
-			where: { userId, merchantOrgId: orgId, isDeleted: false },
-			select: { id: true, role: true },
-		});
+		const existingMembership = await this.merchantMemberRepository.findActiveMembership(userId, orgId);
 
 		if (existingMembership !== null) {
 			if (existingMembership.role === input.role) {
@@ -80,20 +74,16 @@ export class MerchantMemberService {
 			});
 		}
 
-		await this.prisma.merchantMember.create({
-			data: {
-				userId,
-				merchantOrgId: orgId,
-				role: input.role,
-			},
+		await this.merchantMemberRepository.create({
+			userId,
+			merchantOrgId: orgId,
+			role: input.role,
 		});
 
-		await this.prisma.rewardAuditLog.create({
-			data: {
-				merchantOrgId: orgId,
-				action: "merchant.member_created",
-				metadata: { userId, role: input.role, createdByUserId: actorUserId },
-			},
+		await this.auditLogRepository.create({
+			merchantOrgId: orgId,
+			action: "merchant.member_created",
+			metadata: { userId, role: input.role, createdByUserId: actorUserId },
 		});
 
 		return {

@@ -52,7 +52,7 @@ export function MerchantInventoryBar({ remaining, total, className }: MerchantIn
 				</span>
 			</div>
 			<div className="h-2 overflow-hidden rounded-full border border-border bg-muted">
-				<div className="h-full rounded-full bg-primary transition-[width] duration-300 motion-reduce:transition-none" style={{ width: `${percent}%` }} />
+				<div className="h-full rounded-full bg-primary transition-[width] duration-300 motion-reduce:transition-none" style={{ width: `${String(percent)}%` }} />
 			</div>
 		</div>
 	);

@@ -40,7 +40,7 @@ interface PendingLoginContext {
 
 @Injectable()
 export class LoginVerificationService {
-	private readonly memoryStore: Map<string, { readonly value: string; readonly expiresAt: number }> = new Map();
+	private readonly memoryStore = new Map<string, { readonly value: string; readonly expiresAt: number }>();
 
 	public constructor(
 		private readonly prisma: PrismaService,

@@ -11,10 +11,10 @@ export const REQUIRES_FULL_SESSION_KEY = "requiresFullSession";
 /** Metadata key for routes that remain accessible on a restricted enrollment session. */
 export const ALLOW_RESTRICTED_SESSION_KEY = "allowRestrictedSession";
 
-type RestrictedRouteRule = {
+interface RestrictedRouteRule {
 	readonly method: string;
 	readonly pathSuffix: string;
-};
+}
 
 /**
  * Routes accessible while `sessionScope === "restricted"`.

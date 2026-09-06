@@ -69,10 +69,10 @@ export default function HelloView({ initialEnvelope }: { readonly initialEnvelop
 
 	// Normalize both sources into DisplayUser, then pick the best available
 	const apiUser: DisplayUser | null = meQuery.data?.data !== undefined ? fromApiResponse(meQuery.data.data) : null;
-	const permissionCount: number | undefined = permissionsQuery.data?.data?.permissions.length;
+	const permissionCount: number | undefined = permissionsQuery.data?.data.permissions.length;
 	const storeUserDisplay: DisplayUser | null = storeUser !== null ? fromStoreUser(storeUser) : null;
 	const user: DisplayUser | null = apiUser ?? storeUserDisplay;
-	const showImpersonatePanel = user?.isSuperAdmin === true && permissionsQuery.isSuccess && permissionsQuery.data?.data?.isImpersonating !== true;
+	const showImpersonatePanel = user?.isSuperAdmin === true && permissionsQuery.isSuccess && permissionsQuery.data.data.isImpersonating !== true;
 
 	if (meQuery.isLoading && user === null) {
 		return (
@@ -195,7 +195,7 @@ export default function HelloView({ initialEnvelope }: { readonly initialEnvelop
 						<LogoutButton variant="destructive" />
 					</div>
 
-					{showImpersonatePanel ? <ImpersonateUserPanel /> : null}
+					{showImpersonatePanel ? <ImpersonateUserPanel sessionActive /> : null}
 				</div>
 			</div>
 		</div>

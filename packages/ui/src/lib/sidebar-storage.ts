@@ -22,8 +22,8 @@ export function createCookieSidebarStorage(options: CreateCookieSidebarStorageOp
 			if (typeof document === "undefined") {
 				return null;
 			}
-			const match = document.cookie.match(new RegExp(`(?:^|; )${cookieName}=([^;]*)`));
-			if (match === null || match[1] === undefined) {
+			const match = new RegExp(`(?:^|; )${cookieName}=([^;]*)`).exec(document.cookie);
+			if (match?.[1] === undefined) {
 				return null;
 			}
 			const value = decodeURIComponent(match[1]);

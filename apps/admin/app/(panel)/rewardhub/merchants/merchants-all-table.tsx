@@ -2,6 +2,7 @@
 
 import { invalidateSessionAuth } from "@workspace/client/lib/auth/invalidate-session-auth";
 import { createDataTableLabels } from "@/lib/data-table-labels";
+import { DataTableMobileCard } from "@/lib/data-table-mobile-card";
 import { readPaginatedTotal, stubPaginatedMeta } from "@/lib/api-envelope";
 import { useAuth } from "@workspace/client/lib/auth";
 import type { MerchantOrgResponse } from "@workspace/shared";
@@ -10,12 +11,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/componen
 import { DataTable, type Action, type DataTableFeatures } from "@workspace/ui/components/display/data-table";
 import { Input } from "@workspace/ui/components/form/input";
 import type { ColumnDef } from "@tanstack/react-table";
-import { keepPreviousData } from "@tanstack/react-query";
+import { keepPreviousData, useQueryClient } from "@tanstack/react-query";
 import { Search, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
-import { useQueryClient } from "@tanstack/react-query";
 
 export interface MerchantsAllTableProps {
 	readonly initialMerchants?: readonly MerchantOrgResponse[];
@@ -137,6 +137,24 @@ export default function MerchantsAllTable({ initialMerchants, initialTotal }: Me
 		return base;
 	}, [canImpersonateOwner, handleImpersonateOwner, handleReviewKyb]);
 
+	const mobileCardRender = React.useCallback(
+		(merchant: MerchantOrgResponse, cardActions?: Action<MerchantOrgResponse>[]): React.ReactNode => (
+			<DataTableMobileCard
+				item={merchant}
+				title={merchant.businessName}
+				subtitle={merchant.contactEmail}
+				badge={<Badge variant="outline">{merchant.kybStatus}</Badge>}
+				fields={[
+					{ label: "City", value: merchant.city.replace("_", " ") },
+					{ label: "Category", value: merchant.category },
+					{ label: "Status", value: merchant.status },
+				]}
+				actions={cardActions}
+			/>
+		),
+		[],
+	);
+
 	const columns = React.useMemo((): ColumnDef<DataTableFeatures, MerchantOrgResponse>[] => {
 		return [
 			{
@@ -218,6 +236,7 @@ export default function MerchantsAllTable({ initialMerchants, initialTotal }: Me
 						data={[...rows]}
 						labels={tableLabels}
 						actions={actions}
+						mobileCardRender={mobileCardRender}
 						manual
 						totalCount={total}
 						pageIndex={page - 1}
@@ -225,7 +244,7 @@ export default function MerchantsAllTable({ initialMerchants, initialTotal }: Me
 						pageSizeOptions={PAGE_SIZE_OPTIONS}
 						error={tableError}
 						isLoading={merchantsQuery.isLoading}
-						isRefetching={merchantsQuery.isFetching && !merchantsQuery.isLoading}
+						isRefetching={merchantsQuery.isFetching && !merchantsQuery.isLoading ? true : false}
 						onManualPaginationChange={handleManualPaginationChange}
 						toolbarContent={toolbarContent}
 					/>

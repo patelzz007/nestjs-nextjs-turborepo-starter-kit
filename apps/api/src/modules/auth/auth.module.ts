@@ -152,6 +152,7 @@ import { RedisThrottlerStorage } from "./throttling/redis-throttler.storage";
 		UserResponseMapper,
 		UserSessionCacheService,
 		// ── Infrastructure ──────────────────────────────────────
+		UserRepository,
 		AuthEventsService,
 		TokenService,
 		CryptoService,
