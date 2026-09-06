@@ -9,6 +9,6 @@
 		"deps:list": "syncpack list"
 	},
 	"devDependencies": {
-		"syncpack": "^15.3.2"
+		"syncpack": "^15.3.3"
 	}
 }
