@@ -48,8 +48,8 @@ export function useCommandPaletteShortcut(commandOpen: boolean, onOpen: () => vo
 
 export function AppShellTopbarSearch({ placeholder, onOpen, mobileAriaLabel = "Search", desktopAriaLabel = "Search pages" }: AppShellTopbarSearchProps): React.JSX.Element {
 	return (
-		<div className="relative mr-1 md:mr-2">
-			<Button type="button" variant="ghost" size="icon-xs" onClick={onOpen} className="rounded-full p-2 md:hidden" aria-label={mobileAriaLabel}>
+		<>
+			<Button type="button" variant="ghost" size="icon-xs" onClick={onOpen} className="shrink-0 rounded-full p-2 md:hidden" aria-label={mobileAriaLabel}>
 				<Search className="size-5 text-muted-foreground" />
 			</Button>
 			<Button
@@ -57,20 +57,20 @@ export function AppShellTopbarSearch({ placeholder, onOpen, mobileAriaLabel = "S
 				variant="outline"
 				size="sm"
 				onClick={onOpen}
-				className="hidden h-9 w-56 gap-2 rounded-lg border-border/60 bg-muted/40 px-3 font-normal text-muted-foreground shadow-xs hover:border-border/80 hover:bg-muted/60 md:flex lg:w-80"
+				className="hidden h-9 w-40 min-w-0 shrink gap-2 rounded-lg border-border/60 bg-muted/40 px-3 font-normal text-muted-foreground shadow-xs hover:border-border/80 hover:bg-muted/60 md:flex lg:w-44 xl:w-56 2xl:w-64"
 				aria-label={desktopAriaLabel}>
 				<Search className="size-4 shrink-0" />
 				<span className="truncate">{placeholder}</span>
-				<span className="ml-auto flex shrink-0 items-center gap-1">
-					<kbd className="hidden h-5 items-center gap-1 rounded border border-border/50 bg-background/80 px-1.5 font-mono text-[10px] font-medium text-muted-foreground sm:inline-flex">
+				<span className="ms-auto flex shrink-0 items-center gap-1">
+					<kbd className="hidden h-5 items-center gap-1 rounded border border-border/50 bg-background/80 px-1.5 font-mono text-[10px] font-medium text-muted-foreground xl:inline-flex">
 						⌘
 					</kbd>
-					<kbd className="hidden h-5 items-center gap-1 rounded border border-border/50 bg-background/80 px-1.5 font-mono text-[10px] font-medium text-muted-foreground sm:inline-flex">
+					<kbd className="hidden h-5 items-center gap-1 rounded border border-border/50 bg-background/80 px-1.5 font-mono text-[10px] font-medium text-muted-foreground xl:inline-flex">
 						K
 					</kbd>
 				</span>
 			</Button>
-		</div>
+		</>
 	);
 }
 
@@ -80,18 +80,17 @@ export function AppShellTopbarSearch({ placeholder, onOpen, mobileAriaLabel = "S
  */
 export function AppShellTopbar({ brand, search, children, className, showBrandOnDesktop = false }: AppShellTopbarProps): React.JSX.Element {
 	return (
-		<div className={cn("app-shell-topbar flex h-14 w-full items-center justify-between px-2 sm:px-4", className)}>
-			<div className="flex min-w-0 items-center">
-				<SidebarTrigger className="mr-2" />
-				<div className={cn("topbar-brand flex items-center", showBrandOnDesktop && "lg:flex!")}>
-					{brand.icon}
-					<span className="text-lg font-semibold text-foreground">{brand.title}</span>
-				</div>
+		<div className={cn("app-shell-topbar flex h-14 w-full min-w-0 items-center gap-2 overflow-hidden px-2 sm:gap-3 sm:px-4", className)}>
+			<SidebarTrigger className="shrink-0" />
+			<div className={cn("topbar-brand flex min-w-0 shrink-0 items-center", showBrandOnDesktop && "lg:flex!")}>
+				{brand.icon}
+				<span className="truncate text-lg font-semibold text-foreground">{brand.title}</span>
 			</div>
 
-			<div className="flex items-center">
+			{/* Search sits in the action cluster (beside notifications), pinned to the end. */}
+			<div className="ms-auto flex min-w-0 items-center gap-1 sm:gap-2">
 				<AppShellTopbarSearch {...search} />
-				{children}
+				{children !== undefined && children !== null ? <div className="flex shrink-0 items-center">{children}</div> : null}
 			</div>
 		</div>
 	);

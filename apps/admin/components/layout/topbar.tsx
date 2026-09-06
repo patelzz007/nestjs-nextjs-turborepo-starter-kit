@@ -65,7 +65,7 @@ export function Topbar({ user, onLogout }: TopbarProps): React.JSX.Element {
 					<NetworkStatusIndicator />
 				</div>
 
-				<div className="mx-1 hidden lg:block">
+				<div className="mx-1 hidden xl:block">
 					<SessionStatusBadge compact />
 				</div>
 
