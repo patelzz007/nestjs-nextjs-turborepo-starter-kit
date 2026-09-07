@@ -182,6 +182,8 @@ export type {
 	Envelope,
 	PaginatedServiceResult,
 } from "./api/api-response";
+export { BULK_MUTATION_MAX_ITEMS, BulkDeleteIdsSchema, BulkDeleteResultSchema } from "./api/bulk-mutation";
+export type { BulkDeleteIdsInput, BulkDeleteResult } from "./api/bulk-mutation";
 export { AuthErrorCodeSchema, LockedErrorCodeSchema } from "./auth/auth-errors";
 export type { AuthErrorCode, LockedErrorCode } from "./auth/auth-errors";
 export {
@@ -737,6 +739,7 @@ export { OutboxEnqueueInputSchema, OutboxEventRecordSchema, OutboxEventStatusSch
 export type { OutboxEnqueueInput, OutboxEventRecord, OutboxEventStatus } from "./infrastructure/outbox";
 // @app-generated:begin sampleCategory
 export {
+	BulkCreateSampleCategorySchema,
 	CreateSampleCategorySchema,
 	SampleCategoryIdParamSchema,
 	SampleCategoryListQuerySchema,
@@ -745,6 +748,7 @@ export {
 	UpdateSampleCategorySchema,
 } from "./domain/sample-category.generated";
 export type {
+	BulkCreateSampleCategoryInput,
 	CreateSampleCategoryInput,
 	SampleCategory,
 	SampleCategoryListQuery,
@@ -753,8 +757,23 @@ export type {
 } from "./domain/sample-category.generated";
 // @app-generated:end sampleCategory
 // @app-generated:begin product
-export { CreateProductSchema, ProductIdParamSchema, ProductListQuerySchema, ProductListResponseSchema, ProductSchema, UpdateProductSchema } from "./domain/product.generated";
-export type { CreateProductInput, Product, ProductListQuery, ProductListResponse, UpdateProductInput } from "./domain/product.generated";
+export {
+	BulkCreateProductSchema,
+	CreateProductSchema,
+	ProductIdParamSchema,
+	ProductListQuerySchema,
+	ProductListResponseSchema,
+	ProductSchema,
+	UpdateProductSchema,
+} from "./domain/product.generated";
+export type {
+	BulkCreateProductInput,
+	CreateProductInput,
+	Product,
+	ProductListQuery,
+	ProductListResponse,
+	UpdateProductInput,
+} from "./domain/product.generated";
 // @app-generated:end product
 export {
 	PlatformResourceAuditInputSchema,

@@ -17,6 +17,9 @@
 // if one survived, so a missed file becomes a build error instead of a
 // runtime crash in production.
 //
+// String/template literal contents are skipped so generator templates that
+// embed import-like text are not rewritten or flagged.
+//
 // Usage (run from the workspace whose dist/ you are fixing):
 //   node ../../scripts/fix-dist-extensions.mjs dist
 // The target dir is resolved relative to process.cwd(). Defaults to "dist".
@@ -30,10 +33,7 @@ import { join, resolve } from "node:path";
 
 const targetDir = resolve(process.cwd(), process.argv[2] ?? "dist");
 
-// Matches a quoted specifier inside `from "..."` / `import "..."` /
-// `export ... from "..."` clauses. Captures the full quote + specifier so we
-// only ever touch relative paths.
-const RELATIVE_SPECIFIER = /(from\s+|import\s*)(["'])(\.{1,2}\/[^"']*?)(["'])/g;
+const CODE_SPECIFIER = /^(from\s+|import\s*\(|import\s+(?=["']))(["'])(\.{1,2}\/[^"']*?)(["'])/;
 const HAS_EXTENSION = /\.(?:js|mjs|cjs|json|css|ts|tsx)$/;
 
 /** Recursively list all files under a directory. */
@@ -51,20 +51,191 @@ async function walk(dir) {
 	return files;
 }
 
-/** Rewrite one file's relative specifiers, appending `.js` where missing. */
-function rewrite(text) {
-	return text.replace(RELATIVE_SPECIFIER, (match, keyword, quote, specifier, endQuote) => {
-		if (HAS_EXTENSION.test(specifier)) {
-			return match;
+function skipQuoted(text, start) {
+	const quote = text[start];
+	let i = start + 1;
+	while (i < text.length) {
+		const ch = text[i];
+		if (ch === "\\") {
+			i += 2;
+			continue;
 		}
-		return `${keyword}${quote}${specifier}.js${endQuote}`;
-	});
+		if (ch === quote) {
+			return i;
+		}
+		i += 1;
+	}
+	return text.length - 1;
 }
 
-/** True when the file still contains an extensionless relative specifier. */
+function skipBraceExpression(text, start) {
+	let depth = 1;
+	let i = start;
+	while (i < text.length && depth > 0) {
+		const ch = text[i];
+		if (ch === "{") {
+			depth += 1;
+			i += 1;
+			continue;
+		}
+		if (ch === "}") {
+			depth -= 1;
+			i += 1;
+			continue;
+		}
+		if (ch === '"' || ch === "'") {
+			i = skipQuoted(text, i) + 1;
+			continue;
+		}
+		if (ch === "`") {
+			i = skipTemplate(text, i) + 1;
+			continue;
+		}
+		if (ch === "/" && text[i + 1] === "/") {
+			const newline = text.indexOf("\n", i);
+			i = newline === -1 ? text.length : newline;
+			continue;
+		}
+		if (ch === "/" && text[i + 1] === "*") {
+			const end = text.indexOf("*/", i + 2);
+			i = end === -1 ? text.length : end + 2;
+			continue;
+		}
+		i += 1;
+	}
+	return i;
+}
+
+function skipTemplate(text, start) {
+	let i = start + 1;
+	while (i < text.length) {
+		const ch = text[i];
+		if (ch === "\\") {
+			i += 2;
+			continue;
+		}
+		if (ch === "`") {
+			return i;
+		}
+		if (ch === "$" && text[i + 1] === "{") {
+			i = skipBraceExpression(text, i + 2);
+			continue;
+		}
+		if (ch === '"' || ch === "'") {
+			i = skipQuoted(text, i) + 1;
+			continue;
+		}
+		i += 1;
+	}
+	return text.length - 1;
+}
+
+function rewriteSpecifierMatch(match) {
+	const keyword = match[1];
+	const quote = match[2];
+	const specifier = match[3];
+	const endQuote = match[4];
+	if (HAS_EXTENSION.test(specifier)) {
+		return match[0];
+	}
+	return `${keyword}${quote}${specifier}.js${endQuote}`;
+}
+
+/** Rewrite relative import specifiers outside of string/template literals. */
+function rewrite(text) {
+	let result = "";
+	let i = 0;
+
+	while (i < text.length) {
+		if (text.startsWith("//", i)) {
+			const newline = text.indexOf("\n", i);
+			const end = newline === -1 ? text.length : newline;
+			result += text.slice(i, end);
+			i = end;
+			continue;
+		}
+
+		const ch = text[i];
+		if (ch === '"' || ch === "'") {
+			const end = skipQuoted(text, i);
+			result += text.slice(i, end + 1);
+			i = end + 1;
+			continue;
+		}
+
+		if (ch === "`") {
+			const end = skipTemplate(text, i);
+			result += text.slice(i, end + 1);
+			i = end + 1;
+			continue;
+		}
+
+		if (text.startsWith("/*", i)) {
+			const end = text.indexOf("*/", i + 2);
+			const sliceEnd = end === -1 ? text.length : end + 2;
+			result += text.slice(i, sliceEnd);
+			i = sliceEnd;
+			continue;
+		}
+
+		const rest = text.slice(i);
+		const match = rest.match(CODE_SPECIFIER);
+		if (match !== null) {
+			result += rewriteSpecifierMatch(match);
+			i += match[0].length;
+			continue;
+		}
+
+		result += ch;
+		i += 1;
+	}
+
+	return result;
+}
+
+/** True when executable code still contains an extensionless relative import specifier. */
 function hasLeftover(text) {
-	const rewritten = rewrite(text);
-	return rewritten !== text;
+	let i = 0;
+
+	while (i < text.length) {
+		if (text.startsWith("//", i)) {
+			const newline = text.indexOf("\n", i);
+			i = newline === -1 ? text.length : newline;
+			continue;
+		}
+
+		const ch = text[i];
+		if (ch === '"' || ch === "'") {
+			i = skipQuoted(text, i) + 1;
+			continue;
+		}
+
+		if (ch === "`") {
+			i = skipTemplate(text, i) + 1;
+			continue;
+		}
+
+		if (text.startsWith("/*", i)) {
+			const end = text.indexOf("*/", i + 2);
+			i = end === -1 ? text.length : end + 2;
+			continue;
+		}
+
+		const rest = text.slice(i);
+		const match = rest.match(CODE_SPECIFIER);
+		if (match !== null) {
+			const specifier = match[3];
+			if (specifier !== undefined && !HAS_EXTENSION.test(specifier)) {
+				return true;
+			}
+			i += match[0].length;
+			continue;
+		}
+
+		i += 1;
+	}
+
+	return false;
 }
 
 let scanned = 0;
@@ -87,8 +258,7 @@ for (const file of files) {
 console.log(`fix-dist-extensions: scanned ${scanned} files, rewrote ${rewritten} (${targetDir})`);
 
 // ── Self-verification ──────────────────────────────────────────────────────
-// A second pass must find zero leftover extensionless specifiers. If one
-// exists, the runtime would crash in production — fail the build loudly here.
+// A second pass must find zero leftover extensionless specifiers in real code.
 const leftovers = [];
 for (const file of files) {
 	if (!/\.(?:js|mjs|cjs|d\.ts)$/.test(file)) {

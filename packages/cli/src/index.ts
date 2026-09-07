@@ -1,4 +1,4 @@
-export { defineResource, ResourceDefinitionSchema } from "./schema/resource-definition.js";
-export { normalizeResourceDefinition } from "./ir/normalize.js";
-export { parseResourceDefinitionFile } from "./parser/parse-resource-definition.js";
-export type { ResourceIR, GenerationPlan } from "./ir/types.js";
+export { defineResource, ResourceDefinitionSchema } from "./schema/resource-definition";
+export { normalizeResourceDefinition } from "./ir/normalize";
+export { parseResourceDefinitionFile } from "./parser/parse-resource-definition";
+export type { ResourceIR, GenerationPlan } from "./ir/types";

@@ -1,7 +1,7 @@
 import { readFile, writeFile } from "node:fs/promises";
 
-import { insertBeforeAnchor } from "../../core/patch-insert.js";
-import type { ResourceIR } from "../../ir/types.js";
+import { insertBeforeAnchor } from "../../core/patch-insert";
+import type { ResourceIR } from "../../ir/types";
 
 const BEGIN = "// @app-generated:begin";
 const END = "// @app-generated:end";
@@ -13,7 +13,7 @@ function buildEndpointsBlock(ir: ResourceIR): string {
 	const transitionMutation = ir.workflow
 		? `\n\t\ttransition: defineMutation(apiContract.${key}.transition, {\n\t\t\tresponse: envelope(${model}Schema),\n\t\t\tqueryKey: ({ id, transition }) => ["${slug}", "transition", id, transition],\n\t\t}),`
 		: "";
-	return `\t${key}: {\n\t\tlist: defineQuery(apiContract.${key}.list, {\n\t\t\tresponse: envelope(z.array(${model}Schema), ApiPaginatedMetaSchema),\n\t\t\tqueryKey: ({ page, limit, sortBy, sortDirection, search }) => ["${slug}", "list", page, limit, sortBy, sortDirection, search],\n\t\t}),\n\t\tdetail: defineQuery(apiContract.${key}.detail, {\n\t\t\tresponse: envelope(${model}Schema),\n\t\t\tqueryKey: ({ id }) => ["${slug}", "detail", id],\n\t\t}),\n\t\tcreate: defineMutation(apiContract.${key}.create, {\n\t\t\tresponse: envelope(${model}Schema),\n\t\t\tqueryKey: ({ name }) => ["${slug}", "create", name],\n\t\t}),\n\t\tupdate: defineMutation(apiContract.${key}.update, {\n\t\t\tresponse: envelope(${model}Schema),\n\t\t\tqueryKey: ({ id }) => ["${slug}", "update", id],\n\t\t}),\n\t\tdelete: defineMutation(apiContract.${key}.delete, {\n\t\t\tresponse: envelope(DeleteSuccessDataSchema),\n\t\t\tqueryKey: ({ id }) => ["${slug}", "delete", id],\n\t\t}),\n\t\trestore: defineMutation(apiContract.${key}.restore, {\n\t\t\tresponse: envelope(${model}Schema),\n\t\t\tqueryKey: ({ id }) => ["${slug}", "restore", id],\n\t\t}),${transitionMutation}\n\t},`;
+	return `\t${key}: {\n\t\tlist: defineQuery(apiContract.${key}.list, {\n\t\t\tresponse: envelope(z.array(${model}Schema), ApiPaginatedMetaSchema),\n\t\t\tqueryKey: ({ page, limit, sortBy, sortDirection, search }) => ["${slug}", "list", page, limit, sortBy, sortDirection, search],\n\t\t}),\n\t\tdetail: defineQuery(apiContract.${key}.detail, {\n\t\t\tresponse: envelope(${model}Schema),\n\t\t\tqueryKey: ({ id }) => ["${slug}", "detail", id],\n\t\t}),\n\t\tcreate: defineMutation(apiContract.${key}.create, {\n\t\t\tresponse: envelope(${model}Schema),\n\t\t\tqueryKey: ({ name }) => ["${slug}", "create", name],\n\t\t}),\n\t\tbulkCreate: defineMutation(apiContract.${key}.bulkCreate, {\n\t\t\tresponse: envelope(z.array(${model}Schema)),\n\t\t\tqueryKey: ({ items }) => ["${slug}", "bulk-create", String(items.length)],\n\t\t}),\n\t\tbulkDelete: defineMutation(apiContract.${key}.bulkDelete, {\n\t\t\tresponse: envelope(BulkDeleteResultSchema),\n\t\t\tqueryKey: ({ ids }) => ["${slug}", "bulk-delete", ...ids],\n\t\t}),\n\t\tupdate: defineMutation(apiContract.${key}.update, {\n\t\t\tresponse: envelope(${model}Schema),\n\t\t\tqueryKey: ({ id }) => ["${slug}", "update", id],\n\t\t}),\n\t\tdelete: defineMutation(apiContract.${key}.delete, {\n\t\t\tresponse: envelope(DeleteSuccessDataSchema),\n\t\t\tqueryKey: ({ id }) => ["${slug}", "delete", id],\n\t\t}),\n\t\trestore: defineMutation(apiContract.${key}.restore, {\n\t\t\tresponse: envelope(${model}Schema),\n\t\t\tqueryKey: ({ id }) => ["${slug}", "restore", id],\n\t\t}),${transitionMutation}\n\t},`;
 }
 
 export async function patchEndpoints(endpointsPath: string, ir: ResourceIR): Promise<void> {
@@ -26,10 +26,20 @@ export async function patchEndpoints(endpointsPath: string, ir: ResourceIR): Pro
 	const wrapped = `${marker}\n${block}\n\t${endMarker}`;
 
 	const schemaImport = `\t${model}Schema,`;
-	if (!current.includes(schemaImport)) {
+	let working = current;
+	if (!working.includes(schemaImport)) {
 		const anchor = "\tRewardResponseSchema,\n";
-		const withImport = current.replace(anchor, `${anchor}${schemaImport}`);
-		await writeFile(endpointsPath, withImport, "utf8");
+		working = working.replace(anchor, `${anchor}${schemaImport}`);
+	}
+
+	const bulkDeleteResultImport = "\tBulkDeleteResultSchema,\n";
+	if (!working.includes(bulkDeleteResultImport)) {
+		const anchor = "\tDeleteSuccessDataSchema,\n";
+		working = working.replace(anchor, `${anchor}${bulkDeleteResultImport}`);
+	}
+
+	if (working !== current) {
+		await writeFile(endpointsPath, working, "utf8");
 	}
 
 	const refreshed = await readFile(endpointsPath, "utf8");

@@ -1,8 +1,8 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
 
-import type { ResourceIR } from "../ir/types.js";
-import type { AppProjectConfig } from "./project.js";
+import type { ResourceIR } from "../ir/types";
+import type { AppProjectConfig } from "./project";
 
 export interface PlannedFile {
 	readonly absolutePath: string;
@@ -33,7 +33,9 @@ export function planResourceFiles(config: AppProjectConfig, ir: ResourceIR): Pla
 	push(`apps/api/src/modules/${moduleName}/${moduleName}.controller.generated.ts`, "generated", "nestjs/controller-base");
 
 	push(`packages/shared/src/schemas/domain/${slug}.generated.ts`, "generated", "contracts/zod");
-	push(`apps/admin/app/(panel)/${slug}/page.tsx`, "scaffolded", "admin/page");
+	push(`apps/admin/app/(panel)/${slug}/page.tsx`, "generated", "admin/page");
+	push(`apps/admin/app/(panel)/${slug}/${slug}-detail-view.generated.tsx`, "generated", "admin/detail-view");
+	push(`apps/admin/app/(panel)/${slug}/[id]/page.tsx`, "generated", "admin/detail-page");
 	push(`apps/admin/app/(panel)/${slug}/${slug}-view.generated.tsx`, "generated", "admin/view");
 	push(`apps/admin/app/(panel)/${slug}/create/page.tsx`, "scaffolded", "admin/create-page");
 	push(`apps/admin/app/(panel)/${slug}/[id]/edit/page.tsx`, "scaffolded", "admin/edit-page");

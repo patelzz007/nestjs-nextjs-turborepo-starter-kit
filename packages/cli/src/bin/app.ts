@@ -5,14 +5,14 @@ import { Command } from "commander";
 import * as p from "@clack/prompts";
 import pc from "picocolors";
 
-import { runDoctorCommand, runGenerateResourceCommand } from "../commands/generate-resource.js";
-import { inspectResourceDefinition, resolveDefinitionPath, validateResourceDefinition } from "../commands/schema-commands.js";
-import { loadProjectConfig } from "../core/project.js";
-import { normalizeResourceDefinition } from "../ir/normalize.js";
-import { parseResourceDefinitionFile } from "../parser/parse-resource-definition.js";
-import { printAppBanner, CLI_VERSION } from "../ui/brand.js";
-import { printRoutesTable } from "../ui/plan-display.js";
-import { runInteractiveHub, shouldLaunchInteractiveHub } from "../ui/interactive-hub.js";
+import { runDoctorCommand, runGenerateResourceCommand } from "../commands/generate-resource";
+import { inspectResourceDefinition, resolveDefinitionPath, validateResourceDefinition } from "../commands/schema-commands";
+import { loadProjectConfig } from "../core/project";
+import { normalizeResourceDefinition } from "../ir/normalize";
+import { parseResourceDefinitionFile } from "../parser/parse-resource-definition";
+import { printAppBanner, CLI_VERSION } from "../ui/brand";
+import { printRoutesTable } from "../ui/plan-display";
+import { runInteractiveHub, shouldLaunchInteractiveHub } from "../ui/interactive-hub";
 
 if (shouldLaunchInteractiveHub(process.argv)) {
 	const code = await runInteractiveHub(process.cwd());
@@ -28,7 +28,7 @@ program
 	.description("Initialize generator metadata in the current monorepo")
 	.action(async () => {
 		const config = loadProjectConfig(process.cwd());
-		const { ensureCliEslintConfig } = await import("../generators/workspace/ensure-cli-eslint-config.js");
+		const { ensureCliEslintConfig } = await import("../generators/workspace/ensure-cli-eslint-config");
 		printAppBanner();
 		p.intro("Project layout");
 		p.log.info(`Root: ${pc.cyan(config.rootDir)}`);
@@ -202,7 +202,7 @@ newCommand
 	.option("--dry-run", "Show prompts and preview without writing files", false)
 	.option("--skip-validation", "Skip format/lint/typecheck after generation", false)
 	.action(async (options: { generate?: boolean; dryRun?: boolean; skipValidation?: boolean }) => {
-		const { runNewResourceCommand } = await import("../commands/new-resource.js");
+		const { runNewResourceCommand } = await import("../commands/new-resource");
 		const code = await runNewResourceCommand(process.cwd(), {
 			generate: options.generate === true,
 			dryRun: options.dryRun === true,

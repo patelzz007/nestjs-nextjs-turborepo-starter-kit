@@ -5,16 +5,16 @@ import path from "node:path";
 import * as p from "@clack/prompts";
 import pc from "picocolors";
 
-import { runGenerateResourceCommand } from "./generate-resource.js";
-import { loadProjectConfig } from "../core/project.js";
-import { normalizeResourceDefinition } from "../ir/normalize.js";
-import { parseResourceDefinitionSource } from "../parser/parse-resource-definition.js";
-import { createClackPrompter } from "../ui/clack-prompter.js";
-import { isInteractiveTerminal } from "../ui/brand.js";
-import { buildResourceDefinition } from "../wizard/build-definition.js";
-import { collectResourceWizardInput } from "../wizard/collect-resource-wizard.js";
-import { renderResourceDefinitionSource } from "../wizard/render-definition-source.js";
-import { printWizardIntro } from "../wizard/terminal-ui.js";
+import { runGenerateResourceCommand } from "./generate-resource";
+import { loadProjectConfig } from "../core/project";
+import { normalizeResourceDefinition } from "../ir/normalize";
+import { parseResourceDefinitionSource } from "../parser/parse-resource-definition";
+import { createClackPrompter } from "../ui/clack-prompter";
+import { isInteractiveTerminal } from "../ui/brand";
+import { buildResourceDefinition } from "../wizard/build-definition";
+import { collectResourceWizardInput } from "../wizard/collect-resource-wizard";
+import { renderResourceDefinitionSource } from "../wizard/render-definition-source";
+import { printWizardIntro } from "../wizard/terminal-ui";
 
 export interface NewResourceCommandOptions {
 	readonly generate: boolean;

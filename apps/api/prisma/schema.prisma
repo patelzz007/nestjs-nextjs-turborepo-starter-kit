@@ -1352,26 +1352,28 @@ model SampleCategory {
 // @app-generated:begin Product
 /// Generated resource model (Product).
 model Product {
-  id String @id @default(uuid())
-  brand String?
-  categoryId String @map("category_id")
-  compareAtPrice Decimal? @map("compare_at_price") @db.Decimal(18, 2)
-  description String? @db.Text
-  imageUrl String? @map("image_url")
-  isActive Boolean? @map("is_active")
-  isFeatured Boolean? @map("is_featured")
-  name String
-  price Decimal @db.Decimal(18, 2)
-  shortDescription String? @map("short_description")
-  sku String
-  slug String
-  stockQuantity Int? @map("stock_quantity")
-  weightGrams Int? @map("weight_grams")
-  version Int @default(0)
-  deletedAt BigInt? @map("deleted_at")
-  createdAt BigInt @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
-  updatedAt BigInt @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
-  category SampleCategory? @relation(fields: [categoryId], references: [id])
+  id               String          @id @default(uuid())
+  brand            String?
+  categoryId       String          @map("category_id")
+  compareAtPrice   Decimal?        @map("compare_at_price") @db.Decimal(18, 2)
+  description      String?         @db.Text
+  imageUrl         String?         @map("image_url")
+  isActive         Boolean?        @map("is_active")
+  isFeatured       Boolean?        @map("is_featured")
+  name             String
+  price            Decimal         @db.Decimal(18, 2)
+  shortDescription String?         @map("short_description")
+  sku              String
+  slug             String
+  stockQuantity    Int?            @map("stock_quantity")
+  weightGrams      Int?            @map("weight_grams")
+  version          Int             @default(0)
+  deletedAt        BigInt?         @map("deleted_at")
+  createdAt        BigInt          @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
+  updatedAt        BigInt          @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
+  category         SampleCategory? @relation(fields: [categoryId], references: [id])
+
   @@map("product")
 }
+
 // @app-generated:end Product

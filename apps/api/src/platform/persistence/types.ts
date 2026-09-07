@@ -2,6 +2,8 @@ import { z } from "zod";
 
 import type { PaginationInput } from "@workspace/shared";
 
+import type { CascadeSoftDeletePorts } from "./cascade-soft-delete";
+
 /** Repositories that expose create/update only through dedicated methods use this input for BaseRepository ports. */
 export const EmptyMutationInputSchema = z.object({}).strict();
 export type EmptyMutationInput = z.output<typeof EmptyMutationInputSchema>;
@@ -26,10 +28,15 @@ export interface RepositoryPorts<TEntity, TCreate, TUpdate, TQuery extends Pagin
 	readonly buildListWhere: (query: TQuery) => TWhere;
 	readonly buildListOrderBy: (query: TQuery) => TOrderBy;
 	readonly buildFindByIdWhere: (id: string) => TWhere;
+	/** Finds a row by id regardless of soft-delete state — required when `cascadeSoftDelete` is set. */
+	readonly buildFindByIdIncludingDeletedWhere?: (id: string) => TWhere;
+	/** Reads `deletedAt` from a persistence row — required when `cascadeSoftDelete` is set. */
+	readonly readDeletedAt?: (row: TRow) => number | null;
 	readonly buildUpdateWhere: (id: string, expectedVersion?: number) => TUpdateWhere;
 	readonly stampUpdate: (data: TUpdateInput) => TUpdateInput;
 	readonly stampSoftDelete: () => TUpdateInput;
 	readonly stampRestore: () => TUpdateInput;
+	readonly cascadeSoftDelete?: CascadeSoftDeletePorts;
 }
 
 /** Repository surface consumed by {@link BaseService}. */
@@ -39,6 +46,8 @@ export interface RepositoryInstance<TEntity, TCreate, TUpdate, TQuery extends Pa
 	readonly create: (input: TCreate) => Promise<TEntity>;
 	readonly update: (id: string, input: TUpdate, expectedVersion?: number) => Promise<TEntity>;
 	readonly delete: (id: string) => Promise<void>;
+	readonly createMany: (inputs: readonly TCreate[]) => Promise<readonly TEntity[]>;
+	readonly deleteMany: (ids: readonly string[]) => Promise<number>;
 	readonly softDelete: (id: string) => Promise<void>;
 	readonly restore: (id: string) => Promise<TEntity>;
 }

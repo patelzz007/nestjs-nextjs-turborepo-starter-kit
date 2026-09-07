@@ -1,7 +1,7 @@
 import { readFile, writeFile } from "node:fs/promises";
 
-import type { ResourceIR } from "../../ir/types.js";
-import type { GenerateOptions } from "../generate-resource.js";
+import type { ResourceIR } from "../../ir/types";
+import type { GenerateOptions } from "../generate-resource";
 
 const BEGIN = "// @app-generated:begin";
 const END = "// @app-generated:end";

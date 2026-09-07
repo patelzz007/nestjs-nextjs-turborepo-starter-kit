@@ -1,4 +1,5 @@
 import type { PaginationInput } from "@workspace/shared";
+import { nowEpochMs } from "@workspace/shared";
 
 import { PrismaService } from "../../prisma/prisma.service";
 
@@ -15,6 +16,21 @@ export abstract class BaseRepository<TEntity, TCreate, TUpdate, TQuery extends P
 	public async create(input: TCreate): Promise<TEntity> {
 		const row = await this.delegate.create({ data: this.ports.toCreateInput(input) });
 		return this.ports.toDomain(row);
+	}
+
+	public async createMany(inputs: readonly TCreate[]): Promise<readonly TEntity[]> {
+		const created: TEntity[] = [];
+		for (const input of inputs) {
+			created.push(await this.create(input));
+		}
+		return created;
+	}
+
+	public async deleteMany(ids: readonly string[]): Promise<number> {
+		for (const id of ids) {
+			await this.delete(id);
+		}
+		return ids.length;
 	}
 
 	public async findById(id: string): Promise<TEntity | null> {
@@ -48,6 +64,15 @@ export abstract class BaseRepository<TEntity, TCreate, TUpdate, TQuery extends P
 
 	public async delete(id: string): Promise<void> {
 		if (this.options.softDelete) {
+			if (this.ports.cascadeSoftDelete !== undefined) {
+				const cascade = this.ports.cascadeSoftDelete;
+				await this.prisma.$transaction(async (transaction) => {
+					const deletedAt = nowEpochMs();
+					await cascade.softDeleteChildren({ parentId: id, deletedAt, transaction });
+					await cascade.softDeleteParent({ parentId: id, deletedAt, transaction });
+				});
+				return;
+			}
 			await this.softDelete(id);
 			return;
 		}
@@ -76,6 +101,31 @@ export abstract class BaseRepository<TEntity, TCreate, TUpdate, TQuery extends P
 	public async restore(id: string): Promise<TEntity> {
 		if (!this.options.softDelete) {
 			throw new Error("softDelete is disabled for this repository");
+		}
+		if (this.ports.cascadeSoftDelete !== undefined) {
+			const cascade = this.ports.cascadeSoftDelete;
+			const buildFindByIdIncludingDeletedWhere = this.ports.buildFindByIdIncludingDeletedWhere;
+			const readDeletedAt = this.ports.readDeletedAt;
+			if (buildFindByIdIncludingDeletedWhere === undefined || readDeletedAt === undefined) {
+				throw new Error("cascadeSoftDelete requires buildFindByIdIncludingDeletedWhere and readDeletedAt ports");
+			}
+			const existing = await this.delegate.findFirst({ where: buildFindByIdIncludingDeletedWhere(id) });
+			if (existing === null) {
+				throw new Error("Resource not found");
+			}
+			const deletedAt = readDeletedAt(existing);
+			if (deletedAt === null) {
+				return this.ports.toDomain(existing);
+			}
+			await this.prisma.$transaction(async (transaction) => {
+				await cascade.restoreChildren({ parentId: id, deletedAt, transaction });
+				await cascade.restoreParent({ parentId: id, transaction });
+			});
+			const restored = await this.delegate.findFirst({ where: this.ports.buildFindByIdWhere(id) });
+			if (restored === null) {
+				throw new Error("Resource not found after restore");
+			}
+			return this.ports.toDomain(restored);
 		}
 		const row = await this.delegate.update({
 			where: this.ports.buildUpdateWhere(id),

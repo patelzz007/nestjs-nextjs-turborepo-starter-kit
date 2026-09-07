@@ -1,6 +1,6 @@
 import * as p from "@clack/prompts";
 
-import type { PromptChoice, WizardPrompter } from "../wizard/prompter.js";
+import type { PromptChoice, WizardPrompter } from "../wizard/prompter";
 
 function exitOnCancel<T>(value: T | symbol): T {
 	if (p.isCancel(value)) {

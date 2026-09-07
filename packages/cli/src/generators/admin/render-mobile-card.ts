@@ -1,4 +1,4 @@
-import type { FieldIR, ResourceIR } from "../../ir/types.js";
+import type { FieldIR, ResourceIR } from "../../ir/types";
 
 export interface MobileCardLayout {
 	readonly titleColumn: string;

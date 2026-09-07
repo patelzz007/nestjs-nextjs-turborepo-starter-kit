@@ -1,3 +1,4 @@
+import { BULK_MUTATION_MAX_ITEMS } from "../api/bulk-mutation";
 import { z } from "zod";
 
 import type { PaginatedServiceResult } from "../api/api-response";
@@ -13,6 +14,13 @@ export const CreateSampleCategorySchema = z
 	})
 	.strict();
 export type CreateSampleCategoryInput = z.output<typeof CreateSampleCategorySchema>;
+
+export const BulkCreateSampleCategorySchema = z
+	.object({
+		items: z.array(CreateSampleCategorySchema).min(1).max(BULK_MUTATION_MAX_ITEMS),
+	})
+	.strict();
+export type BulkCreateSampleCategoryInput = z.output<typeof BulkCreateSampleCategorySchema>;
 
 export const UpdateSampleCategorySchema = CreateSampleCategorySchema.partial();
 export type UpdateSampleCategoryInput = z.output<typeof UpdateSampleCategorySchema>;

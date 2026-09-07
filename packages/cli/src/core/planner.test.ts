@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { planResourceFiles } from "./planner.js";
-import { loadProjectConfig } from "./project.js";
-import { normalizeResourceDefinition } from "../ir/normalize.js";
-import { parseResourceDefinitionSource } from "../parser/parse-resource-definition.js";
+import { planResourceFiles } from "./planner";
+import { loadProjectConfig } from "./project";
+import { normalizeResourceDefinition } from "../ir/normalize";
+import { parseResourceDefinitionSource } from "../parser/parse-resource-definition";
 
 const SAMPLE = `import { defineResource } from "@workspace/cli";
 

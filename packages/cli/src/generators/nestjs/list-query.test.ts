@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import type { ResourceIR } from "../../ir/types.js";
-import { isTextSearchableField, resolveSearchableFieldNames, toSortableCamelNames } from "./list-query.js";
+import type { ResourceIR } from "../../ir/types";
+import { isTextSearchableField, resolveSearchableFieldNames, toSortableCamelNames } from "./list-query";
 
 const sampleResourceIr: ResourceIR = {
 	version: 1,
@@ -54,6 +54,7 @@ const sampleResourceIr: ResourceIR = {
 	concurrency: false,
 	idempotency: false,
 	rls: "admin-only",
+	cascadeSoftDeleteChildren: [],
 	permissions: [],
 	admin: {
 		navigation: undefined,

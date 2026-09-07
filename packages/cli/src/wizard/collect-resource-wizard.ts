@@ -1,10 +1,10 @@
-import type { ResourceScalarType, RlsPolicy } from "../schema/resource-definition.js";
-import { ResourceScalarTypeSchema, RlsPolicySchema } from "../schema/resource-definition.js";
-import { discoverExistingModels } from "./discover-models.js";
-import { SCALAR_FIELD_KIND_CHOICES, type FieldKind, fieldKindToScalarType } from "./field-kinds.js";
-import type { WizardPrompter } from "./prompter.js";
-import { printFieldSummary, printNote, printSection, printSuccess, printWarning, printWizardIntro } from "./terminal-ui.js";
-import type { DiscoveredModel, WizardFieldInput, WizardResourceInput } from "./types.js";
+import type { ResourceScalarType, RlsPolicy } from "../schema/resource-definition";
+import { ResourceScalarTypeSchema, RlsPolicySchema } from "../schema/resource-definition";
+import { discoverExistingModels } from "./discover-models";
+import { SCALAR_FIELD_KIND_CHOICES, type FieldKind, fieldKindToScalarType } from "./field-kinds";
+import type { WizardPrompter } from "./prompter";
+import { printFieldSummary, printNote, printSection, printSuccess, printWarning, printWizardIntro } from "./terminal-ui";
+import type { DiscoveredModel, WizardFieldInput, WizardResourceInput } from "./types";
 import {
 	fieldSupportsFilterable,
 	fieldSupportsSearchable,
@@ -13,7 +13,7 @@ import {
 	suggestForeignKeyFieldName,
 	toNavigationLabel,
 	toPascalCase,
-} from "./validation.js";
+} from "./validation";
 
 const RLS_CHOICES = [
 	{ value: "admin-only", label: "Admin only", hint: "SuperAdmin / staff panels" },

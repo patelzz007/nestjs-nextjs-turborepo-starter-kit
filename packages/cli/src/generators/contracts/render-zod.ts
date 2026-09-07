@@ -1,5 +1,5 @@
-import type { ResourceIR } from "../../ir/types.js";
-import { toSortableCamelNames } from "../nestjs/list-query.js";
+import type { ResourceIR } from "../../ir/types";
+import { toSortableCamelNames } from "../nestjs/list-query";
 
 function zodField(field: ResourceIR["fields"][number]): string {
 	switch (field.type) {
@@ -40,6 +40,7 @@ function prismaEnumValues(ir: ResourceIR): string[] {
 export function renderZodSchemas(ir: ResourceIR): string {
 	const model = ir.resource.modelName;
 	const lines: string[] = [];
+	lines.push('import { BULK_MUTATION_MAX_ITEMS } from "../api/bulk-mutation";');
 	lines.push('import { z } from "zod";');
 	lines.push("");
 	lines.push('import type { PaginatedServiceResult } from "../api/api-response";');
@@ -83,6 +84,13 @@ export function renderZodSchemas(ir: ResourceIR): string {
 	lines.push("\t})");
 	lines.push("\t.strict();");
 	lines.push(`export type Create${model}Input = z.output<typeof Create${model}Schema>;`);
+	lines.push("");
+	lines.push(`export const BulkCreate${model}Schema = z`);
+	lines.push("\t.object({");
+	lines.push(`\t\titems: z.array(Create${model}Schema).min(1).max(BULK_MUTATION_MAX_ITEMS),`);
+	lines.push("\t})");
+	lines.push("\t.strict();");
+	lines.push(`export type BulkCreate${model}Input = z.output<typeof BulkCreate${model}Schema>;`);
 	lines.push("");
 	lines.push(`export const Update${model}Schema = Create${model}Schema.partial();`);
 	lines.push(`export type Update${model}Input = z.output<typeof Update${model}Schema>;`);

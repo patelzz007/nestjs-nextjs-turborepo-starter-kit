@@ -1,7 +1,15 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from "@nestjs/common";
 import { ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
 
-import { apiPath, CreateProductSchema, ProductIdParamSchema, ProductListQuerySchema, UpdateProductSchema } from "@workspace/shared";
+import {
+	apiPath,
+	BulkCreateProductSchema,
+	BulkDeleteIdsSchema,
+	CreateProductSchema,
+	ProductIdParamSchema,
+	ProductListQuerySchema,
+	UpdateProductSchema,
+} from "@workspace/shared";
 
 import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe";
 import { RequirePermission } from "../auth/decorators/require-permission.decorator";
@@ -19,6 +27,24 @@ export class GeneratedProductController {
 	@ApiOkResponse({ description: "Paginated list of products" })
 	public list(@Query(new ZodValidationPipe(ProductListQuerySchema)) query: Parameters<ProductService["list"]>[0]): ReturnType<ProductService["list"]> {
 		return this.service.list(query);
+	}
+
+	@RequirePermission("CREATE", "PRODUCT")
+	@Post("bulk")
+	@ApiOperation({ summary: "Bulk create products" })
+	@ApiOkResponse({ description: "Created products" })
+	public bulkCreate(
+		@Body(new ZodValidationPipe(BulkCreateProductSchema)) body: { items: Parameters<ProductService["createMany"]>[0] },
+	): ReturnType<ProductService["createMany"]> {
+		return this.service.createMany(body.items);
+	}
+
+	@RequirePermission("DELETE", "PRODUCT")
+	@Post("bulk-delete")
+	@ApiOperation({ summary: "Bulk soft delete products" })
+	@ApiOkResponse({ description: "Bulk delete result" })
+	public bulkDelete(@Body(new ZodValidationPipe(BulkDeleteIdsSchema)) body: { ids: string[] }): ReturnType<ProductService["deleteMany"]> {
+		return this.service.deleteMany(body.ids);
 	}
 
 	@RequirePermission("READ", "PRODUCT")

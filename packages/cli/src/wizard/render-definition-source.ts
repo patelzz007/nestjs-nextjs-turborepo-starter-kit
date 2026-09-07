@@ -1,4 +1,4 @@
-import type { ResourceDefinition, ResourceFieldDefinition } from "../schema/resource-definition.js";
+import type { ResourceDefinition, ResourceFieldDefinition } from "../schema/resource-definition";
 
 function renderPrimitive(value: string | number | boolean): string {
 	if (typeof value === "string") {

@@ -1,5 +1,5 @@
-import type { FieldIR, ResourceIR } from "../../ir/types.js";
-import { fieldByName, isTextSearchableField, resolveSearchableFieldNames, toSortableCamelNames } from "./list-query.js";
+import type { FieldIR, ResourceIR } from "../../ir/types";
+import { fieldByName, isTextSearchableField, resolveSearchableFieldNames, toSortableCamelNames } from "./list-query";
 
 function relationPropertyName(fieldName: string): string {
 	if (fieldName.endsWith("Id")) {
@@ -177,10 +177,53 @@ ${softDeleteLine}
 }`;
 }
 
+function renderCascadeSoftDeletePorts(ir: ResourceIR): string {
+	if (!ir.softDelete || ir.cascadeSoftDeleteChildren.length === 0) {
+		return "";
+	}
+
+	const model = ir.resource.modelName;
+	const delegate = model.charAt(0).toLowerCase() + model.slice(1);
+	const childBlocks = ir.cascadeSoftDeleteChildren.map((child) => {
+		return `\t\tawait transaction.${child.childDelegate}.updateMany({
+\t\t\twhere: { ${child.foreignKey}: parentId, deletedAt: null },
+\t\t\tdata: { deletedAt, updatedAt: deletedAt },
+\t\t});`;
+	});
+	const restoreChildBlocks = ir.cascadeSoftDeleteChildren.map((child) => {
+		return `\t\tawait transaction.${child.childDelegate}.updateMany({
+\t\t\twhere: { ${child.foreignKey}: parentId, deletedAt },
+\t\t\tdata: { deletedAt: null, updatedAt: nowEpochMs() },
+\t\t});`;
+	});
+
+	return `,
+\tcascadeSoftDelete: {
+\t\tsoftDeleteChildren: async ({ parentId, deletedAt, transaction }: CascadeSoftDeleteMutationArgs): Promise<void> => {
+${childBlocks.join("\n")}
+\t\t},
+\t\trestoreChildren: async ({ parentId, deletedAt, transaction }: CascadeSoftDeleteMutationArgs): Promise<void> => {
+${restoreChildBlocks.join("\n")}
+\t\t},
+\t\tsoftDeleteParent: async ({ parentId, deletedAt, transaction }: CascadeSoftDeleteMutationArgs): Promise<void> => {
+\t\t\tawait transaction.${delegate}.update({
+\t\t\t\twhere: { id: parentId },
+\t\t\t\tdata: { deletedAt, updatedAt: deletedAt },
+\t\t\t});
+\t\t},
+\t\trestoreParent: async ({ parentId, transaction }: CascadeRestoreParentArgs): Promise<void> => {
+\t\t\tawait transaction.${delegate}.update({
+\t\t\t\twhere: { id: parentId },
+\t\t\t\tdata: { deletedAt: null, updatedAt: nowEpochMs() },
+\t\t\t});
+\t\t},
+\t},`;
+}
+
 function renderRepositoryPorts(ir: ResourceIR): string {
 	const model = ir.resource.modelName;
 	const findByIdWhere = ir.softDelete
-		? `\tbuildFindByIdWhere: (id: string): Prisma.${model}WhereInput => ({ id, deletedAt: null }),`
+		? `\tbuildFindByIdWhere: (id: string): Prisma.${model}WhereInput => ({ id, deletedAt: null }),\n\tbuildFindByIdIncludingDeletedWhere: (id: string): Prisma.${model}WhereInput => ({ id }),\n\treadDeletedAt: (row: Prisma.${model}GetPayload<Record<string, never>>): number | null => row.deletedAt === null ? null : Number(row.deletedAt),`
 		: `\tbuildFindByIdWhere: (id: string): Prisma.${model}WhereInput => ({ id }),`;
 	const updateWhere = ir.concurrency
 		? `\tbuildUpdateWhere: (id: string, expectedVersion?: number): Prisma.${model}WhereUniqueInput => ({ id, version: expectedVersion }),`
@@ -201,7 +244,7 @@ ${findByIdWhere}
 ${updateWhere}
 ${stampUpdate}
 \tstampSoftDelete: (): Prisma.${model}UpdateInput => ({ deletedAt: nowEpochMs(), updatedAt: nowEpochMs() }),
-\tstampRestore: (): Prisma.${model}UpdateInput => ({ deletedAt: null, updatedAt: nowEpochMs() }),
+\tstampRestore: (): Prisma.${model}UpdateInput => ({ deletedAt: null, updatedAt: nowEpochMs() })${renderCascadeSoftDeletePorts(ir)}
 };`;
 }
 
@@ -213,6 +256,10 @@ export function renderNestRepository(ir: ResourceIR): string {
 	const workflowValueImports = ir.workflow !== undefined ? `,\n\t${model}StatusFromPrisma,\n\t${model}StatusToPrisma` : "";
 	const workflowTypeImports = ir.workflow !== undefined ? `, ${model}Status` : "";
 	const mapperBlock = `\n${renderToDomain(ir)}${usesMappers ? `\n\n${renderCreateMapper(ir)}\n\n${renderUpdateMapper(ir)}` : ""}\n`;
+	const cascadeImport =
+		ir.softDelete && ir.cascadeSoftDeleteChildren.length > 0
+			? `import type { CascadeSoftDeleteMutationArgs, CascadeRestoreParentArgs } from "../../platform/persistence/cascade-soft-delete";\n`
+			: "";
 
 	return `import { Injectable } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
@@ -226,7 +273,7 @@ import {
 } from "@workspace/shared";
 
 import { BaseRepository } from "../../platform/persistence/base.repository";
-import { PrismaService } from "../../prisma/prisma.service";
+${cascadeImport}import { PrismaService } from "../../prisma/prisma.service";
 
 ${mapperBlock}${renderListQueryHelpers(ir)}
 

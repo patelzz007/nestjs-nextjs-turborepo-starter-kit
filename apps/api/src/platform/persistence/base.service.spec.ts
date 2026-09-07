@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { PaginatedServiceResult, PaginationInput } from "@workspace/shared";
 
-import { BaseService } from "./base.service.js";
+import { BaseService } from "./base.service";
 
 class TestRepository {
 	public async list(): Promise<{ items: readonly string[]; total: number }> {
@@ -22,6 +22,14 @@ class TestRepository {
 	}
 
 	public async delete(): Promise<void> {}
+
+	public async createMany(inputs: readonly string[]): Promise<readonly string[]> {
+		return [...inputs];
+	}
+
+	public async deleteMany(ids: readonly string[]): Promise<number> {
+		return ids.length;
+	}
 
 	public async softDelete(): Promise<void> {}
 

@@ -1,6 +1,6 @@
-import type { ResourceIR } from "../../ir/types.js";
-import { renderGeneratedMobileCardBlock } from "./render-mobile-card.js";
-import { resolveSearchableFieldNames, toSortableCamelNames } from "../nestjs/list-query.js";
+import type { ResourceIR } from "../../ir/types";
+import { renderGeneratedMobileCardBlock } from "./render-mobile-card";
+import { resolveSearchableFieldNames, toSortableCamelNames } from "../nestjs/list-query";
 
 function renderColumnDef(column: string, sortableColumns: ReadonlySet<string>, ir: ResourceIR): string {
 	const field = ir.fields.find((item) => item.camelName === column);
@@ -23,6 +23,10 @@ function resolveSearchLabel(ir: ResourceIR): string {
 	return ir.admin?.navigation?.label ?? ir.resource.plural;
 }
 
+function renderCascadeListInvalidation(ir: ResourceIR): string {
+	return ir.cascadeSoftDeleteChildren.map((child) => `\t\t\tawait queryClient.invalidateQueries({ queryKey: ["${child.childSlug}", "list"] });`).join("\n");
+}
+
 export function renderAdminView(ir: ResourceIR): string {
 	const model = ir.resource.modelName;
 	const slug = ir.resource.slug;
@@ -36,6 +40,7 @@ export function renderAdminView(ir: ResourceIR): string {
 	const mobileCardBlock = renderGeneratedMobileCardBlock(ir, columns);
 	const permissionResource = ir.resource.permissionResource;
 	const exportableColumnsJson = JSON.stringify(columns);
+	const cascadeListInvalidation = renderCascadeListInvalidation(ir);
 
 	return `"use client";
 
@@ -45,7 +50,7 @@ import { fetchAllPaginatedListPages, resolveManualBulkSelectionRows } from "@/li
 import { useSessionCapabilities } from "@/lib/session-capabilities";
 import { useResourceDeleteDialog } from "@/components/common/resource-delete-dialog";
 import { DataTableMobileCard } from "@/lib/data-table-mobile-card";
-import { readPaginatedTotal } from "@/lib/api-envelope";
+import { readPaginatedTotal, stubPaginatedMeta } from "@/lib/api-envelope";
 import { useAuth } from "@workspace/client/lib/auth";
 import { Badge } from "@workspace/ui/components/feedback/badge";
 import { DataTable, type Action, type DataTableFeatures } from "@workspace/ui/components/display/data-table";
@@ -97,7 +102,12 @@ function useDebouncedValue<T>(value: T, delayMs: number): T {
 \treturn debouncedValue;
 }
 
-export default function ${model}View(): React.JSX.Element {
+export interface ${model}ViewProps {
+\treadonly initialRows?: readonly ${model}[];
+\treadonly initialTotal?: number;
+}
+
+export default function ${model}View({ initialRows, initialTotal }: ${model}ViewProps): React.JSX.Element {
 \tconst { api } = useAuth();
 \tconst { hasCapability } = useSessionCapabilities();
 \tconst canDelete = canDeletePlatformResource(hasCapability, "${permissionResource}");
@@ -112,6 +122,17 @@ export default function ${model}View(): React.JSX.Element {
 \tconst sort = sorting[0];
 \tconst sortBy = resolveListSortBy(sort?.id);
 \tconst trimmedSearch = debouncedSearch.trim();
+\tconst initialQueryData = useMemo(
+\t\t() =>
+\t\t\tinitialRows !== undefined
+\t\t\t\t? {
+\t\t\t\t\t\tsuccess: true as const,
+\t\t\t\t\t\tdata: [...initialRows],
+\t\t\t\t\t\tmeta: stubPaginatedMeta(initialTotal ?? initialRows.length, 1, 20),
+\t\t\t\t\t}
+\t\t\t\t: undefined,
+\t\t[initialRows, initialTotal],
+\t);
 \tconst listQuery = api.${contractKey}.list.useQuery(
 \t\t{
 \t\t\tpage,
@@ -119,10 +140,14 @@ export default function ${model}View(): React.JSX.Element {
 \t\t\t...(sortBy !== undefined ? { sortBy, sortDirection: sort?.desc === true ? "desc" : "asc" } : {}),
 \t\t\t...(trimmedSearch.length > 0 ? { search: trimmedSearch } : {}),
 \t\t},
-\t\t{ placeholderData: keepPreviousData },
+\t\t{
+\t\t\tplaceholderData: keepPreviousData,
+\t\t\tinitialData:
+\t\t\t\tpage === 1 && pageSize === 20 && trimmedSearch.length === 0 && sorting.length === 0 ? initialQueryData : undefined,
+\t\t},
 \t);
 \tconst rows: ${model}[] = listQuery.data?.data ?? [];
-\tconst total = readPaginatedTotal(listQuery.data?.meta, rows.length);
+\tconst total = readPaginatedTotal(listQuery.data?.meta, initialTotal ?? rows.length);
 
 \tconst buildListQuery = useCallback(
 \t\t(pageNumber: number, limit: number) => {
@@ -137,10 +162,10 @@ export default function ${model}View(): React.JSX.Element {
 \t\t[sortBy, sort?.desc, trimmedSearch],
 \t);
 
-\tconst fetchAllMatching${model}s = useCallback(async (): Promise<readonly ${model}[]> => {
+\tconst fetchAllMatching${model}s = useCallback((): Promise<readonly ${model}[]> => {
 \t\treturn fetchAllPaginatedListPages(total, async (pageNumber, limit) => {
 \t\t\tconst response = await api.${contractKey}.list.fetchOrThrow(buildListQuery(pageNumber, limit));
-\t\t\treturn response.data ?? [];
+\t\t\treturn response.data;
 \t\t});
 \t}, [api.${contractKey}.list, buildListQuery, total]);
 
@@ -162,9 +187,25 @@ export default function ${model}View(): React.JSX.Element {
 \t\tonSuccess: async () => {
 \t\t\ttoastMessage.success({ title: "${ir.resource.singular} deleted", description: "The ${ir.resource.singular.toLowerCase()} was removed." });
 \t\t\tawait queryClient.invalidateQueries({ queryKey: ["${slug}", "list"] });
+${cascadeListInvalidation}
 \t\t},
 \t\tonError: (error) => {
 \t\t\ttoastMessage.error({ title: "Delete failed", description: error.message });
+\t\t},
+\t});
+
+\tconst bulkDeleteMutation = api.${contractKey}.bulkDelete.useMutation({
+\t\tonSuccess: async (result) => {
+\t\t\tconst deletedCount = result.data.deletedCount;
+\t\t\ttoastMessage.success({
+\t\t\t\ttitle: \`\${String(deletedCount)} ${ir.resource.singular.toLowerCase()}\${deletedCount === 1 ? "" : "s"} deleted\`,
+\t\t\t\tdescription: "The selected ${ir.resource.plural.toLowerCase()} were removed.",
+\t\t\t});
+\t\t\tawait queryClient.invalidateQueries({ queryKey: ["${slug}", "list"] });
+${cascadeListInvalidation}
+\t\t},
+\t\tonError: (error) => {
+\t\t\ttoastMessage.error({ title: "Bulk delete failed", description: error.message });
 \t\t},
 \t});
 
@@ -190,13 +231,18 @@ export default function ${model}View(): React.JSX.Element {
 \t\t\t\tcount,
 \t\t\t\tonConfirm: async (): Promise<void> => {
 \t\t\t\t\tconst rowsToDelete = await resolveManualBulkSelectionRows(selected, context, fetchAllMatching${model}s);
-\t\t\t\t\tfor (const row of rowsToDelete) {
-\t\t\t\t\t\tawait deleteMutation.mutateAsync({ id: row.id });
+\t\t\t\t\tif (rowsToDelete.length === 1) {
+\t\t\t\t\t\tconst onlyRow = rowsToDelete[0];
+\t\t\t\t\t\tif (onlyRow !== undefined) {
+\t\t\t\t\t\t\tawait deleteMutation.mutateAsync({ id: onlyRow.id });
+\t\t\t\t\t\t}
+\t\t\t\t\t\treturn;
 \t\t\t\t\t}
+\t\t\t\t\tawait bulkDeleteMutation.mutateAsync({ ids: rowsToDelete.map((row) => row.id) });
 \t\t\t\t},
 \t\t\t});
 \t\t},
-\t\t[deleteMutation, fetchAllMatching${model}s, requestDelete],
+\t\t[bulkDeleteMutation, deleteMutation, fetchAllMatching${model}s, requestDelete],
 \t);
 
 \tconst actions = useMemo((): Action<${model}>[] => {

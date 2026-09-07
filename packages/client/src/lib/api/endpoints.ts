@@ -32,6 +32,7 @@ import {
 	ApiPaginatedMetaSchema,
 	ApiResponseMetaSchema,
 	DeleteSuccessDataSchema,
+	BulkDeleteResultSchema,
 	type Envelope,
 	type ApiContractDef,
 	type ApiResponseMeta,
@@ -763,6 +764,14 @@ export const apiRouter = {
 			response: envelope(SampleCategorySchema),
 			queryKey: ({ name }) => ["sample-category", "create", name],
 		}),
+		bulkCreate: defineMutation(apiContract.sampleCategory.bulkCreate, {
+			response: envelope(z.array(SampleCategorySchema)),
+			queryKey: ({ items }) => ["sample-category", "bulk-create", String(items.length)],
+		}),
+		bulkDelete: defineMutation(apiContract.sampleCategory.bulkDelete, {
+			response: envelope(BulkDeleteResultSchema),
+			queryKey: ({ ids }) => ["sample-category", "bulk-delete", ...ids],
+		}),
 		update: defineMutation(apiContract.sampleCategory.update, {
 			response: envelope(SampleCategorySchema),
 			queryKey: ({ id }) => ["sample-category", "update", id],
@@ -790,6 +799,14 @@ export const apiRouter = {
 		create: defineMutation(apiContract.product.create, {
 			response: envelope(ProductSchema),
 			queryKey: ({ name }) => ["product", "create", name],
+		}),
+		bulkCreate: defineMutation(apiContract.product.bulkCreate, {
+			response: envelope(z.array(ProductSchema)),
+			queryKey: ({ items }) => ["product", "bulk-create", String(items.length)],
+		}),
+		bulkDelete: defineMutation(apiContract.product.bulkDelete, {
+			response: envelope(BulkDeleteResultSchema),
+			queryKey: ({ ids }) => ["product", "bulk-delete", ...ids],
 		}),
 		update: defineMutation(apiContract.product.update, {
 			response: envelope(ProductSchema),

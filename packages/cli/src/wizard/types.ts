@@ -1,4 +1,4 @@
-import type { RelationCardinality, ResourceScalarType, RlsPolicy } from "../schema/resource-definition.js";
+import type { RelationCardinality, ResourceScalarType, RlsPolicy } from "../schema/resource-definition";
 
 export interface WizardFieldInput {
 	readonly name: string;

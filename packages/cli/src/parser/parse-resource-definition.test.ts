@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { normalizeResourceDefinition } from "../ir/normalize.js";
-import { parseResourceDefinitionSource } from "../parser/parse-resource-definition.js";
+import { normalizeResourceDefinition } from "../ir/normalize";
+import { parseResourceDefinitionSource } from "../parser/parse-resource-definition";
 
 const SAMPLE = `import { defineResource } from "@workspace/cli";
 

@@ -1,3 +1,4 @@
+import { BULK_MUTATION_MAX_ITEMS } from "../api/bulk-mutation";
 import { z } from "zod";
 
 import type { PaginatedServiceResult } from "../api/api-response";
@@ -22,6 +23,13 @@ export const CreateProductSchema = z
 	})
 	.strict();
 export type CreateProductInput = z.output<typeof CreateProductSchema>;
+
+export const BulkCreateProductSchema = z
+	.object({
+		items: z.array(CreateProductSchema).min(1).max(BULK_MUTATION_MAX_ITEMS),
+	})
+	.strict();
+export type BulkCreateProductInput = z.output<typeof BulkCreateProductSchema>;
 
 export const UpdateProductSchema = CreateProductSchema.partial();
 export type UpdateProductInput = z.output<typeof UpdateProductSchema>;

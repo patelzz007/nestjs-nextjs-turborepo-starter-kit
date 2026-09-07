@@ -75,12 +75,14 @@ import { RewardsAnalyticsQuerySchema } from "../schemas/domain/rewards-analytics
 import { MerchantRoleCapabilitiesPathInputSchema, SyncMerchantRoleCapabilitiesInputSchema } from "../schemas/domain/merchant-role-capabilities";
 import { AssignPermissionToUserSchema, AssignRoleToUserSchema, CheckPermissionSchema, SyncUserPermissionsSchema, SyncUserRolesSchema } from "../schemas/domain/rbac";
 import {
+	BulkCreateSampleCategorySchema,
 	CreateSampleCategorySchema,
 	SampleCategoryIdParamSchema,
 	SampleCategoryListQuerySchema,
 	UpdateSampleCategorySchema,
 } from "../schemas/domain/sample-category.generated";
-import { CreateProductSchema, ProductIdParamSchema, ProductListQuerySchema, UpdateProductSchema } from "../schemas/domain/product.generated";
+import { BulkCreateProductSchema, CreateProductSchema, ProductIdParamSchema, ProductListQuerySchema, UpdateProductSchema } from "../schemas/domain/product.generated";
+import { BulkDeleteIdsSchema } from "../schemas/api/bulk-mutation";
 import type { ApiVersion } from "./versioning";
 
 // ── JSON-safe value types (shared by the contract and the client pipeline) ─
@@ -392,6 +394,8 @@ export const apiContract = {
 		list: defineContract({ method: "GET", path: apiRoutes.sampleCategory.list, input: SampleCategoryListQuerySchema }),
 		detail: defineContract({ method: "GET", path: apiRoutes.sampleCategory.detail.path, input: SampleCategoryIdParamSchema }),
 		create: defineContract({ method: "POST", path: apiRoutes.sampleCategory.create, input: CreateSampleCategorySchema }),
+		bulkCreate: defineContract({ method: "POST", path: apiRoutes.sampleCategory.bulkCreate, input: BulkCreateSampleCategorySchema }),
+		bulkDelete: defineContract({ method: "POST", path: apiRoutes.sampleCategory.bulkDelete, input: BulkDeleteIdsSchema }),
 		update: defineContract({ method: "PATCH", path: apiRoutes.sampleCategory.update.path, input: z.intersection(SampleCategoryIdParamSchema, UpdateSampleCategorySchema) }),
 		delete: defineContract({ method: "DELETE", path: apiRoutes.sampleCategory.delete.path, input: SampleCategoryIdParamSchema }),
 		restore: defineContract({ method: "POST", path: apiRoutes.sampleCategory.restore.path, input: SampleCategoryIdParamSchema }),
@@ -402,6 +406,8 @@ export const apiContract = {
 		list: defineContract({ method: "GET", path: apiRoutes.product.list, input: ProductListQuerySchema }),
 		detail: defineContract({ method: "GET", path: apiRoutes.product.detail.path, input: ProductIdParamSchema }),
 		create: defineContract({ method: "POST", path: apiRoutes.product.create, input: CreateProductSchema }),
+		bulkCreate: defineContract({ method: "POST", path: apiRoutes.product.bulkCreate, input: BulkCreateProductSchema }),
+		bulkDelete: defineContract({ method: "POST", path: apiRoutes.product.bulkDelete, input: BulkDeleteIdsSchema }),
 		update: defineContract({ method: "PATCH", path: apiRoutes.product.update.path, input: z.intersection(ProductIdParamSchema, UpdateProductSchema) }),
 		delete: defineContract({ method: "DELETE", path: apiRoutes.product.delete.path, input: ProductIdParamSchema }),
 		restore: defineContract({ method: "POST", path: apiRoutes.product.restore.path, input: ProductIdParamSchema }),

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { insertBeforeAnchor } from "./patch-insert.js";
+import { insertBeforeAnchor } from "./patch-insert";
 
 describe("insertBeforeAnchor", () => {
 	it("inserts a block before the anchor with a single comma", () => {

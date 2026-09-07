@@ -1,5 +1,6 @@
-import type { ResourceDefinition } from "../schema/resource-definition.js";
-import type { FieldIR, PermissionIR, RelationIR, ResourceIR, WorkflowIR } from "./types.js";
+import type { ResourceDefinition } from "../schema/resource-definition";
+import { buildCascadeSoftDeleteChildren } from "./cascade-soft-delete";
+import type { FieldIR, PermissionIR, RelationIR, ResourceIR, WorkflowIR } from "./types";
 
 function toCamelCase(value: string): string {
 	if (value.length === 0) {
@@ -64,6 +65,7 @@ function buildFieldIR(name: string, definition: ResourceDefinition["model"]["fie
 					model: definition.relation.model,
 					field: definition.relation.field,
 					cardinality: definition.relation.cardinality ?? "one",
+					cascadeSoftDelete: definition.relation.cascadeSoftDelete === true,
 				}
 			: undefined,
 	};
@@ -122,7 +124,7 @@ function buildPermissions(definition: ResourceDefinition): PermissionIR[] {
 	];
 }
 
-export function normalizeResourceDefinition(definition: ResourceDefinition): ResourceIR {
+export function normalizeResourceDefinition(definition: ResourceDefinition, context?: { readonly allDefinitions?: readonly ResourceDefinition[] }): ResourceIR {
 	const modelName = definition.model.name;
 	const singular = definition.name;
 	const slug = toSlug(singular);
@@ -133,6 +135,8 @@ export function normalizeResourceDefinition(definition: ResourceDefinition): Res
 	const listConfig = definition.admin?.list;
 	const formConfig = definition.admin?.form;
 	const defaultScalarFields = fields.filter((field) => field.type !== "relation").map((field) => field.name);
+	const cascadeSoftDeleteChildren =
+		context?.allDefinitions !== undefined ? buildCascadeSoftDeleteChildren(modelName, context.allDefinitions) : [];
 
 	return {
 		version: definition.version,
@@ -152,6 +156,7 @@ export function normalizeResourceDefinition(definition: ResourceDefinition): Res
 		concurrency: definition.model.concurrency === true,
 		idempotency: definition.model.idempotency === true,
 		rls: definition.model.rls,
+		cascadeSoftDeleteChildren,
 		permissions: buildPermissions(definition),
 		admin: definition.admin
 			? {

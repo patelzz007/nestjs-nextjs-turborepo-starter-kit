@@ -60,6 +60,7 @@ export default defineResource({
 					model: "SampleCategory",
 					field: "categoryId",
 					cardinality: "one",
+					cascadeSoftDelete: true,
 				},
 			},
 			brand: {

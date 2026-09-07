@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { normalizeResourceDefinition } from "../ir/normalize.js";
-import { parseResourceDefinitionSource } from "../parser/parse-resource-definition.js";
-import { buildResourceDefinition } from "./build-definition.js";
-import { renderResourceDefinitionSource } from "./render-definition-source.js";
-import type { WizardResourceInput } from "./types.js";
-import { suggestForeignKeyFieldName, toPascalCase } from "./validation.js";
+import { normalizeResourceDefinition } from "../ir/normalize";
+import { parseResourceDefinitionSource } from "../parser/parse-resource-definition";
+import { buildResourceDefinition } from "./build-definition";
+import { renderResourceDefinitionSource } from "./render-definition-source";
+import type { WizardResourceInput } from "./types";
+import { suggestForeignKeyFieldName, toPascalCase } from "./validation";
 
 const wizardInput: WizardResourceInput = {
 	name: "Product",

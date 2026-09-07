@@ -1,8 +1,8 @@
 import { NotFoundException } from "@nestjs/common";
 
-import type { PaginatedServiceResult, PaginationInput } from "@workspace/shared";
+import type { BulkDeleteResult, PaginatedServiceResult, PaginationInput } from "@workspace/shared";
 
-import type { RepositoryInstance, RepositoryListResult } from "./types.js";
+import type { RepositoryInstance, RepositoryListResult } from "./types";
 
 export abstract class BaseService<TEntity, TCreate, TUpdate, TQuery extends PaginationInput, TRepository extends RepositoryInstance<TEntity, TCreate, TUpdate, TQuery>> {
 	public constructor(protected readonly repository: TRepository) {}
@@ -49,6 +49,18 @@ export abstract class BaseService<TEntity, TCreate, TUpdate, TQuery extends Pagi
 	public async delete(id: string): Promise<void> {
 		await this.getById(id);
 		await this.repository.delete(id);
+	}
+
+	public async createMany(inputs: readonly TCreate[]): Promise<readonly TEntity[]> {
+		return this.repository.createMany(inputs);
+	}
+
+	public async deleteMany(ids: readonly string[]): Promise<BulkDeleteResult> {
+		for (const id of ids) {
+			await this.getById(id);
+		}
+		const deletedCount = await this.repository.deleteMany(ids);
+		return { deletedCount };
 	}
 
 	public async restore(id: string): Promise<TEntity> {

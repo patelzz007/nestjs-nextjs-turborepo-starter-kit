@@ -2,7 +2,7 @@ import { existsSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import { renderBaseWorkspaceEslintConfig } from "./render-eslint-config.js";
+import { renderBaseWorkspaceEslintConfig } from "./render-eslint-config";
 
 const VALID_IMPORT = '{ config as baseConfig } from "@workspace/eslint-config/base"';
 

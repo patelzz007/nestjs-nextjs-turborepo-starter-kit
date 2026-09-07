@@ -1,5 +1,5 @@
-import type { ResourceDefinition, ResourceFieldDefinition } from "../schema/resource-definition.js";
-import type { WizardFieldInput, WizardResourceInput } from "./types.js";
+import type { ResourceDefinition, ResourceFieldDefinition } from "../schema/resource-definition";
+import type { WizardFieldInput, WizardResourceInput } from "./types";
 
 function buildFieldDefinition(field: WizardFieldInput): ResourceFieldDefinition {
 	const definition: ResourceFieldDefinition = {

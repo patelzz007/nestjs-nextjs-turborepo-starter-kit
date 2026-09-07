@@ -6,7 +6,7 @@ import { fetchAllPaginatedListPages, resolveManualBulkSelectionRows } from "@/li
 import { useSessionCapabilities } from "@/lib/session-capabilities";
 import { useResourceDeleteDialog } from "@/components/common/resource-delete-dialog";
 import { DataTableMobileCard } from "@/lib/data-table-mobile-card";
-import { readPaginatedTotal } from "@/lib/api-envelope";
+import { readPaginatedTotal, stubPaginatedMeta } from "@/lib/api-envelope";
 import { useAuth } from "@workspace/client/lib/auth";
 import { Badge } from "@workspace/ui/components/feedback/badge";
 import { DataTable, type Action, type DataTableFeatures } from "@workspace/ui/components/display/data-table";
@@ -54,7 +54,12 @@ function useDebouncedValue<T>(value: T, delayMs: number): T {
 	return debouncedValue;
 }
 
-export default function ProductView(): React.JSX.Element {
+export interface ProductViewProps {
+	readonly initialRows?: readonly Product[];
+	readonly initialTotal?: number;
+}
+
+export default function ProductView({ initialRows, initialTotal }: ProductViewProps): React.JSX.Element {
 	const { api } = useAuth();
 	const { hasCapability } = useSessionCapabilities();
 	const canDelete = canDeletePlatformResource(hasCapability, "PRODUCT");
@@ -69,6 +74,17 @@ export default function ProductView(): React.JSX.Element {
 	const sort = sorting[0];
 	const sortBy = resolveListSortBy(sort?.id);
 	const trimmedSearch = debouncedSearch.trim();
+	const initialQueryData = useMemo(
+		() =>
+			initialRows !== undefined
+				? {
+						success: true as const,
+						data: [...initialRows],
+						meta: stubPaginatedMeta(initialTotal ?? initialRows.length, 1, 20),
+					}
+				: undefined,
+		[initialRows, initialTotal],
+	);
 	const listQuery = api.product.list.useQuery(
 		{
 			page,
@@ -76,10 +92,13 @@ export default function ProductView(): React.JSX.Element {
 			...(sortBy !== undefined ? { sortBy, sortDirection: sort?.desc === true ? "desc" : "asc" } : {}),
 			...(trimmedSearch.length > 0 ? { search: trimmedSearch } : {}),
 		},
-		{ placeholderData: keepPreviousData },
+		{
+			placeholderData: keepPreviousData,
+			initialData: page === 1 && pageSize === 20 && trimmedSearch.length === 0 && sorting.length === 0 ? initialQueryData : undefined,
+		},
 	);
 	const rows: Product[] = listQuery.data?.data ?? [];
-	const total = readPaginatedTotal(listQuery.data?.meta, rows.length);
+	const total = readPaginatedTotal(listQuery.data?.meta, initialTotal ?? rows.length);
 
 	const buildListQuery = useCallback(
 		(pageNumber: number, limit: number) => {
@@ -94,10 +113,10 @@ export default function ProductView(): React.JSX.Element {
 		[sortBy, sort?.desc, trimmedSearch],
 	);
 
-	const fetchAllMatchingProducts = useCallback(async (): Promise<readonly Product[]> => {
+	const fetchAllMatchingProducts = useCallback((): Promise<readonly Product[]> => {
 		return fetchAllPaginatedListPages(total, async (pageNumber, limit) => {
 			const response = await api.product.list.fetchOrThrow(buildListQuery(pageNumber, limit));
-			return response.data ?? [];
+			return response.data;
 		});
 	}, [api.product.list, buildListQuery, total]);
 
@@ -125,6 +144,20 @@ export default function ProductView(): React.JSX.Element {
 		},
 	});
 
+	const bulkDeleteMutation = api.product.bulkDelete.useMutation({
+		onSuccess: async (result) => {
+			const deletedCount = result.data.deletedCount;
+			toastMessage.success({
+				title: `${String(deletedCount)} product${deletedCount === 1 ? "" : "s"} deleted`,
+				description: "The selected products were removed.",
+			});
+			await queryClient.invalidateQueries({ queryKey: ["product", "list"] });
+		},
+		onError: (error) => {
+			toastMessage.error({ title: "Bulk delete failed", description: error.message });
+		},
+	});
+
 	const handleDelete = useCallback(
 		(item: Product): void => {
 			void requestDelete({
@@ -147,13 +180,18 @@ export default function ProductView(): React.JSX.Element {
 				count,
 				onConfirm: async (): Promise<void> => {
 					const rowsToDelete = await resolveManualBulkSelectionRows(selected, context, fetchAllMatchingProducts);
-					for (const row of rowsToDelete) {
-						await deleteMutation.mutateAsync({ id: row.id });
+					if (rowsToDelete.length === 1) {
+						const onlyRow = rowsToDelete[0];
+						if (onlyRow !== undefined) {
+							await deleteMutation.mutateAsync({ id: onlyRow.id });
+						}
+						return;
 					}
+					await bulkDeleteMutation.mutateAsync({ ids: rowsToDelete.map((row) => row.id) });
 				},
 			});
 		},
-		[deleteMutation, fetchAllMatchingProducts, requestDelete],
+		[bulkDeleteMutation, deleteMutation, fetchAllMatchingProducts, requestDelete],
 	);
 
 	const actions = useMemo((): Action<Product>[] => {
@@ -192,7 +230,7 @@ export default function ProductView(): React.JSX.Element {
 			buildResourceTableCheckbox<Product>({
 				hasCapability,
 				resource: "PRODUCT",
-				exportFilename: "products.csv",
+				exportFilename: "product.csv",
 				exportableColumns: ["sku", "name", "price", "stockQuantity", "categoryId", "isActive", "isFeatured", "createdAt"],
 				onDeleteAll: handleBulkDelete,
 			}),

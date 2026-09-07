@@ -1,4 +1,4 @@
-import type { FieldIR, ResourceIR } from "../../ir/types.js";
+import type { FieldIR, ResourceIR } from "../../ir/types";
 
 const DEFAULT_SORT_FIELDS: readonly string[] = ["createdAt"];
 

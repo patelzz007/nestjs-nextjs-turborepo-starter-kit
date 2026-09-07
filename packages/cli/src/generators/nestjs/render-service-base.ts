@@ -1,4 +1,4 @@
-import type { ResourceIR } from "../../ir/types.js";
+import type { ResourceIR } from "../../ir/types";
 
 export function renderNestServiceBase(ir: ResourceIR): string {
 	const model = ir.resource.modelName;

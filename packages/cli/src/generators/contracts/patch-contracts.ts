@@ -1,7 +1,7 @@
 import { readFile, writeFile } from "node:fs/promises";
 
-import { insertBeforeAnchor } from "../../core/patch-insert.js";
-import type { ResourceIR } from "../../ir/types.js";
+import { insertBeforeAnchor } from "../../core/patch-insert";
+import type { ResourceIR } from "../../ir/types";
 
 const BEGIN = "// @app-generated:begin";
 const END = "// @app-generated:end";
@@ -12,7 +12,7 @@ function buildContractBlock(ir: ResourceIR): string {
 	const transitionContract = ir.workflow
 		? `\n\t\ttransition: defineContract({ method: "POST", path: apiRoutes.${key}.transition.path, input: z.intersection(${model}TransitionParamSchema, ${model}TransitionBodySchema) }),`
 		: "";
-	return `\t${key}: {\n\t\tlist: defineContract({ method: "GET", path: apiRoutes.${key}.list, input: ${model}ListQuerySchema }),\n\t\tdetail: defineContract({ method: "GET", path: apiRoutes.${key}.detail.path, input: ${model}IdParamSchema }),\n\t\tcreate: defineContract({ method: "POST", path: apiRoutes.${key}.create, input: Create${model}Schema }),\n\t\tupdate: defineContract({ method: "PATCH", path: apiRoutes.${key}.update.path, input: z.intersection(${model}IdParamSchema, Update${model}Schema) }),\n\t\tdelete: defineContract({ method: "DELETE", path: apiRoutes.${key}.delete.path, input: ${model}IdParamSchema }),\n\t\trestore: defineContract({ method: "POST", path: apiRoutes.${key}.restore.path, input: ${model}IdParamSchema }),${transitionContract}\n\t},`;
+	return `\t${key}: {\n\t\tlist: defineContract({ method: "GET", path: apiRoutes.${key}.list, input: ${model}ListQuerySchema }),\n\t\tdetail: defineContract({ method: "GET", path: apiRoutes.${key}.detail.path, input: ${model}IdParamSchema }),\n\t\tcreate: defineContract({ method: "POST", path: apiRoutes.${key}.create, input: Create${model}Schema }),\n\t\tbulkCreate: defineContract({ method: "POST", path: apiRoutes.${key}.bulkCreate, input: BulkCreate${model}Schema }),\n\t\tbulkDelete: defineContract({ method: "POST", path: apiRoutes.${key}.bulkDelete, input: BulkDeleteIdsSchema }),\n\t\tupdate: defineContract({ method: "PATCH", path: apiRoutes.${key}.update.path, input: z.intersection(${model}IdParamSchema, Update${model}Schema) }),\n\t\tdelete: defineContract({ method: "DELETE", path: apiRoutes.${key}.delete.path, input: ${model}IdParamSchema }),\n\t\trestore: defineContract({ method: "POST", path: apiRoutes.${key}.restore.path, input: ${model}IdParamSchema }),${transitionContract}\n\t},`;
 }
 
 export async function patchContractsIndex(contractsPath: string, ir: ResourceIR): Promise<void> {
@@ -22,7 +22,7 @@ export async function patchContractsIndex(contractsPath: string, ir: ResourceIR)
 	const marker = `${BEGIN} ${key}`;
 	const endMarker = `${END} ${key}`;
 	const model = ir.resource.modelName;
-	const importLine = `import { Create${model}Schema, ${model}IdParamSchema, ${model}ListQuerySchema, Update${model}Schema${ir.workflow ? `, ${model}TransitionBodySchema, ${model}TransitionParamSchema` : ""} } from "../schemas/domain/${slug}.generated";`;
+	const importLine = `import { BulkCreate${model}Schema, Create${model}Schema, ${model}IdParamSchema, ${model}ListQuerySchema, Update${model}Schema${ir.workflow ? `, ${model}TransitionBodySchema, ${model}TransitionParamSchema` : ""} } from "../schemas/domain/${slug}.generated";\nimport { BulkDeleteIdsSchema } from "../schemas/api/bulk-mutation";`;
 
 	const importSuffix = `} from "../schemas/domain/${slug}.generated";`;
 	if (!current.includes(importSuffix)) {

@@ -30,6 +30,7 @@ export const ResourceFieldDefinitionSchema = z
 				model: z.string().min(1),
 				field: z.string().min(1),
 				cardinality: RelationCardinalitySchema.optional(),
+				cascadeSoftDelete: z.boolean().optional(),
 			})
 			.optional(),
 	})

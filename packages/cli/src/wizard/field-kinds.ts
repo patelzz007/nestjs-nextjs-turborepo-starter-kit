@@ -1,5 +1,5 @@
-import type { ResourceScalarType } from "../schema/resource-definition.js";
-import type { PromptChoice } from "./prompter.js";
+import type { ResourceScalarType } from "../schema/resource-definition";
+import type { PromptChoice } from "./prompter";
 
 export type FieldKind = "short-text" | "long-text" | "number" | "decimal" | "boolean" | "enum" | "datetime" | "foreign-key";
 

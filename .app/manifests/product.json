@@ -8,9 +8,24 @@
       "hash": "daee49ad70438982",
       "ownership": "generated"
     },
+    "apps/admin/app/(panel)/product/[id]/page.tsx": {
+      "template": "admin/detail-page",
+      "hash": "6ef6c457fb57fab2",
+      "ownership": "generated"
+    },
+    "apps/admin/app/(panel)/product/page.tsx": {
+      "template": "admin/page",
+      "hash": "4df67f928ba223b5",
+      "ownership": "generated"
+    },
+    "apps/admin/app/(panel)/product/product-detail-view.generated.tsx": {
+      "template": "admin/detail-view",
+      "hash": "09c895ccd1d526d7",
+      "ownership": "generated"
+    },
     "apps/admin/app/(panel)/product/product-view.generated.tsx": {
       "template": "admin/view",
-      "hash": "400012482887ac2c",
+      "hash": "a5b4d65134a73ead",
       "ownership": "generated"
     },
     "apps/api/src/modules/product/__tests__/product.repository.spec.ts": {
@@ -20,12 +35,12 @@
     },
     "apps/api/src/modules/product/product.controller.generated.ts": {
       "template": "nestjs/controller-base",
-      "hash": "e39860f63e080fcb",
+      "hash": "97b8ba007283d2e0",
       "ownership": "generated"
     },
     "apps/api/src/modules/product/product.repository.generated.ts": {
       "template": "nestjs/repository",
-      "hash": "cb067e8212735c1a",
+      "hash": "c63c2aaf5080d73a",
       "ownership": "generated"
     },
     "apps/api/src/modules/product/product.service.generated.ts": {
@@ -35,7 +50,7 @@
     },
     "packages/shared/src/schemas/domain/product.generated.ts": {
       "template": "contracts/zod",
-      "hash": "e8f8c2969e3ba2ce",
+      "hash": "e981daee4701d7dc",
       "ownership": "generated"
     }
   },

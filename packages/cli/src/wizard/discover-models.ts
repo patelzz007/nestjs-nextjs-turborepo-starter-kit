@@ -1,9 +1,9 @@
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
-import { normalizeResourceDefinition } from "../ir/normalize.js";
-import { parseResourceDefinitionFile } from "../parser/parse-resource-definition.js";
-import type { DiscoveredModel } from "./types.js";
+import { normalizeResourceDefinition } from "../ir/normalize";
+import { parseResourceDefinitionFile } from "../parser/parse-resource-definition";
+import type { DiscoveredModel } from "./types";
 
 export async function discoverExistingModels(definitionsDir: string): Promise<DiscoveredModel[]> {
 	let entries: string[] = [];

@@ -1,6 +1,6 @@
 import { readFile, writeFile } from "node:fs/promises";
 
-import type { ResourceIR } from "../../ir/types.js";
+import type { ResourceIR } from "../../ir/types";
 
 export async function patchAppModule(appModulePath: string, ir: ResourceIR): Promise<void> {
 	const current = await readFile(appModulePath, "utf8");

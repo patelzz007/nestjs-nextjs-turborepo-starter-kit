@@ -5,16 +5,17 @@ import path from "node:path";
 import * as p from "@clack/prompts";
 import pc from "picocolors";
 
-import { loadProjectConfig } from "../core/project.js";
-import { buildPlanActions, planResourceFiles } from "../core/planner.js";
-import { generateResource } from "../generators/generate-resource.js";
-import { isCliEslintConfigValid } from "../generators/workspace/ensure-cli-eslint-config.js";
-import { normalizeResourceDefinition } from "../ir/normalize.js";
-import { parseResourceDefinitionFile } from "../parser/parse-resource-definition.js";
-import { printAppBanner, isInteractiveTerminal } from "../ui/brand.js";
-import { printDoctorResults, printGenerationPlan, printResourceSummary } from "../ui/plan-display.js";
-import { runPostGenerateValidation } from "../validation/post-generate.js";
-import { resolveDefinitionPath, validateResourceDefinition } from "./schema-commands.js";
+import { loadProjectConfig } from "../core/project";
+import { buildPlanActions, planResourceFiles } from "../core/planner";
+import { generateResource } from "../generators/generate-resource";
+import { isCliEslintConfigValid } from "../generators/workspace/ensure-cli-eslint-config";
+import { normalizeResourceDefinition } from "../ir/normalize";
+import { loadAllResourceDefinitions } from "../parser/load-all-resource-definitions";
+import { parseResourceDefinitionFile } from "../parser/parse-resource-definition";
+import { printAppBanner, isInteractiveTerminal } from "../ui/brand";
+import { printDoctorResults, printGenerationPlan, printResourceSummary } from "../ui/plan-display";
+import { runPostGenerateValidation } from "../validation/post-generate";
+import { resolveDefinitionPath, validateResourceDefinition } from "./schema-commands";
 
 export interface GenerateResourceCommandOptions {
 	readonly dryRun: boolean;
@@ -49,7 +50,8 @@ export async function runGenerateResourceCommand(cwd: string, resourceName: stri
 
 	const source = await readFile(definitionPath, "utf8");
 	const definition = parseResourceDefinitionFile(source, definitionPath);
-	const ir = normalizeResourceDefinition(definition);
+	const allDefinitions = await loadAllResourceDefinitions(config.definitionsDir);
+	const ir = normalizeResourceDefinition(definition, { allDefinitions });
 	const planned = planResourceFiles(config, ir);
 	const actions = buildPlanActions(planned, new Set());
 

@@ -1,7 +1,7 @@
 import pc from "picocolors";
 
-import type { PlanAction } from "../core/planner.js";
-import type { ResourceIR } from "../ir/types.js";
+import type { PlanAction } from "../core/planner";
+import type { ResourceIR } from "../ir/types";
 
 const ACTION_ICONS: Record<PlanAction["action"], string> = {
 	create: pc.green("＋"),

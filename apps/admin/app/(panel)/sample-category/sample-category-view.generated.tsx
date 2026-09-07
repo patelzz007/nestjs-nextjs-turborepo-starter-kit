@@ -6,21 +6,25 @@ import { fetchAllPaginatedListPages, resolveManualBulkSelectionRows } from "@/li
 import { useSessionCapabilities } from "@/lib/session-capabilities";
 import { useResourceDeleteDialog } from "@/components/common/resource-delete-dialog";
 import { DataTableMobileCard } from "@/lib/data-table-mobile-card";
-import { readPaginatedTotal } from "@/lib/api-envelope";
+import { readPaginatedTotal, stubPaginatedMeta } from "@/lib/api-envelope";
 import { useAuth } from "@workspace/client/lib/auth";
 import { Badge } from "@workspace/ui/components/feedback/badge";
 import { DataTable, type Action, type DataTableFeatures } from "@workspace/ui/components/display/data-table";
 import { Button } from "@workspace/ui/components/form/button";
 import { Input } from "@workspace/ui/components/form/input";
 import type { ColumnDef, SortingState } from "@tanstack/react-table";
-import { Pencil, Eye, Search, Trash2 } from "lucide-react";
+import { Eye, Pencil, Search, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { keepPreviousData, useQueryClient } from "@tanstack/react-query";
 import { toastMessage } from "@workspace/ui/components/feedback/toast";
 
-import { SampleCategoryListSortBySchema, type SampleCategory, type SampleCategoryListSortBy } from "@workspace/shared/schemas/domain/sample-category.generated";
+import {
+	SampleCategoryListSortBySchema,
+	type SampleCategory,
+	type SampleCategoryListSortBy,
+} from "@workspace/shared/schemas/domain/sample-category.generated";
 import type { DataTableBulkSelectionContext } from "@workspace/ui/lib/data-table-checkbox";
 
 function resolveListSortBy(columnId: string | undefined): SampleCategoryListSortBy | undefined {
@@ -54,7 +58,12 @@ function useDebouncedValue<T>(value: T, delayMs: number): T {
 	return debouncedValue;
 }
 
-export default function SampleCategoryView(): React.JSX.Element {
+export interface SampleCategoryViewProps {
+	readonly initialRows?: readonly SampleCategory[];
+	readonly initialTotal?: number;
+}
+
+export default function SampleCategoryView({ initialRows, initialTotal }: SampleCategoryViewProps): React.JSX.Element {
 	const { api } = useAuth();
 	const { hasCapability } = useSessionCapabilities();
 	const canDelete = canDeletePlatformResource(hasCapability, "SAMPLE_CATEGORY");
@@ -69,6 +78,17 @@ export default function SampleCategoryView(): React.JSX.Element {
 	const sort = sorting[0];
 	const sortBy = resolveListSortBy(sort?.id);
 	const trimmedSearch = debouncedSearch.trim();
+	const initialQueryData = useMemo(
+		() =>
+			initialRows !== undefined
+				? {
+						success: true as const,
+						data: [...initialRows],
+						meta: stubPaginatedMeta(initialTotal ?? initialRows.length, 1, 20),
+					}
+				: undefined,
+		[initialRows, initialTotal],
+	);
 	const listQuery = api.sampleCategory.list.useQuery(
 		{
 			page,
@@ -76,10 +96,14 @@ export default function SampleCategoryView(): React.JSX.Element {
 			...(sortBy !== undefined ? { sortBy, sortDirection: sort?.desc === true ? "desc" : "asc" } : {}),
 			...(trimmedSearch.length > 0 ? { search: trimmedSearch } : {}),
 		},
-		{ placeholderData: keepPreviousData },
+		{
+			placeholderData: keepPreviousData,
+			initialData:
+				page === 1 && pageSize === 20 && trimmedSearch.length === 0 && sorting.length === 0 ? initialQueryData : undefined,
+		},
 	);
 	const rows: SampleCategory[] = listQuery.data?.data ?? [];
-	const total = readPaginatedTotal(listQuery.data?.meta, rows.length);
+	const total = readPaginatedTotal(listQuery.data?.meta, initialTotal ?? rows.length);
 
 	const buildListQuery = useCallback(
 		(pageNumber: number, limit: number) => {
@@ -94,19 +118,12 @@ export default function SampleCategoryView(): React.JSX.Element {
 		[sortBy, sort?.desc, trimmedSearch],
 	);
 
-	const fetchAllMatchingCategories = useCallback(async (): Promise<readonly SampleCategory[]> => {
+	const fetchAllMatchingSampleCategorys = useCallback((): Promise<readonly SampleCategory[]> => {
 		return fetchAllPaginatedListPages(total, async (pageNumber, limit) => {
 			const response = await api.sampleCategory.list.fetchOrThrow(buildListQuery(pageNumber, limit));
-			return response.data ?? [];
+			return response.data;
 		});
 	}, [api.sampleCategory.list, buildListQuery, total]);
-
-	const handleEdit = useCallback(
-		(item: SampleCategory): void => {
-			router.push(`/sample-category/${item.id}/edit`);
-		},
-		[router],
-	);
 
 	const handleView = useCallback(
 		(item: SampleCategory): void => {
@@ -115,13 +132,36 @@ export default function SampleCategoryView(): React.JSX.Element {
 		[router],
 	);
 
+	const handleEdit = useCallback(
+		(item: SampleCategory): void => {
+			router.push(`/sample-category/${item.id}/edit`);
+		},
+		[router],
+	);
+
 	const deleteMutation = api.sampleCategory.delete.useMutation({
 		onSuccess: async () => {
-			toastMessage.success({ title: "Category deleted", description: "The category was removed from the catalog." });
+			toastMessage.success({ title: "SampleCategory deleted", description: "The samplecategory was removed." });
 			await queryClient.invalidateQueries({ queryKey: ["sample-category", "list"] });
+			await queryClient.invalidateQueries({ queryKey: ["product", "list"] });
 		},
 		onError: (error) => {
 			toastMessage.error({ title: "Delete failed", description: error.message });
+		},
+	});
+
+	const bulkDeleteMutation = api.sampleCategory.bulkDelete.useMutation({
+		onSuccess: async (result) => {
+			const deletedCount = result.data.deletedCount;
+			toastMessage.success({
+				title: `${String(deletedCount)} samplecategory${deletedCount === 1 ? "" : "s"} deleted`,
+				description: "The selected samplecategories were removed.",
+			});
+			await queryClient.invalidateQueries({ queryKey: ["sample-category", "list"] });
+			await queryClient.invalidateQueries({ queryKey: ["product", "list"] });
+		},
+		onError: (error) => {
+			toastMessage.error({ title: "Bulk delete failed", description: error.message });
 		},
 	});
 
@@ -129,7 +169,7 @@ export default function SampleCategoryView(): React.JSX.Element {
 		(item: SampleCategory): void => {
 			void requestDelete({
 				title: `Delete "${item.name}"?`,
-				description: "This action soft-deletes the category.",
+				description: "This action soft-deletes the samplecategory.",
 				onConfirm: async (): Promise<void> => {
 					await deleteMutation.mutateAsync({ id: item.id });
 				},
@@ -142,18 +182,23 @@ export default function SampleCategoryView(): React.JSX.Element {
 		async (selected: SampleCategory[], context: DataTableBulkSelectionContext): Promise<void> => {
 			const count = context.selectAllPages ? context.totalMatchingRows : selected.length;
 			await requestDelete({
-				title: `Delete ${String(count)} categor${count === 1 ? "y" : "ies"}?`,
+				title: `Delete ${String(count)} samplecategory${count === 1 ? "" : "s"}?`,
 				description: "This action soft-deletes them.",
 				count,
 				onConfirm: async (): Promise<void> => {
-					const rowsToDelete = await resolveManualBulkSelectionRows(selected, context, fetchAllMatchingCategories);
-					for (const row of rowsToDelete) {
-						await deleteMutation.mutateAsync({ id: row.id });
+					const rowsToDelete = await resolveManualBulkSelectionRows(selected, context, fetchAllMatchingSampleCategorys);
+					if (rowsToDelete.length === 1) {
+						const onlyRow = rowsToDelete[0];
+						if (onlyRow !== undefined) {
+							await deleteMutation.mutateAsync({ id: onlyRow.id });
+						}
+						return;
 					}
+					await bulkDeleteMutation.mutateAsync({ ids: rowsToDelete.map((row) => row.id) });
 				},
 			});
 		},
-		[deleteMutation, fetchAllMatchingCategories, requestDelete],
+		[bulkDeleteMutation, deleteMutation, fetchAllMatchingSampleCategorys, requestDelete],
 	);
 
 	const actions = useMemo((): Action<SampleCategory>[] => {
@@ -161,7 +206,7 @@ export default function SampleCategoryView(): React.JSX.Element {
 			{
 				key: "view",
 				label: "View",
-				description: "View category details",
+				description: "View samplecategory details",
 				icon: <Eye className="size-4" />,
 				onClick: handleView,
 			},
@@ -177,7 +222,7 @@ export default function SampleCategoryView(): React.JSX.Element {
 			base.push({
 				key: "delete",
 				label: "Delete",
-				description: "Remove this category",
+				description: "Remove this samplecategory",
 				icon: <Trash2 className="size-4" />,
 				onClick: handleDelete,
 				isDestructive: true,
@@ -192,8 +237,8 @@ export default function SampleCategoryView(): React.JSX.Element {
 			buildResourceTableCheckbox<SampleCategory>({
 				hasCapability,
 				resource: "SAMPLE_CATEGORY",
-				exportFilename: "sample-categories.csv",
-				exportableColumns: ["name", "slug", "sortOrder", "isActive", "createdAt"],
+				exportFilename: "sample-category.csv",
+				exportableColumns: ["name","slug","sortOrder","isActive","createdAt"],
 				onDeleteAll: handleBulkDelete,
 			}),
 		[handleBulkDelete, hasCapability],
@@ -204,11 +249,11 @@ export default function SampleCategoryView(): React.JSX.Element {
 			<DataTableMobileCard
 				item={item}
 				title={item.name}
-				subtitle={item.slug}
-				badge={item.isActive ? <Badge variant="secondary">Active</Badge> : <Badge variant="outline">Inactive</Badge>}
+			subtitle={item.slug}
+			badge={item.isActive ? <Badge variant="secondary">Active</Badge> : <Badge variant="outline">Inactive</Badge>}
 				fields={[
-					{ label: "SortOrder", value: item.sortOrder },
-					{ label: "CreatedAt", value: Number.isFinite(item.createdAt) ? new Date(item.createdAt).toLocaleString() : "—" },
+				{ label: "SortOrder", value: String(item.sortOrder) },
+				{ label: "CreatedAt", value: Number.isFinite(item.createdAt) ? new Date(item.createdAt).toLocaleString() : "—" },
 				]}
 				actions={cardActions}
 			/>
@@ -218,34 +263,34 @@ export default function SampleCategoryView(): React.JSX.Element {
 
 	const columns = useMemo<ColumnDef<DataTableFeatures, SampleCategory>[]>(
 		() => [
-			{
-				accessorKey: "name",
-				header: "Name",
-				enableSorting: true,
-			},
-			{
-				accessorKey: "slug",
-				header: "Slug",
-				enableSorting: true,
-			},
-			{
-				accessorKey: "sortOrder",
-				header: "SortOrder",
-				enableSorting: true,
-			},
-			{
-				accessorKey: "isActive",
-				header: "IsActive",
-			},
-			{
-				accessorKey: "createdAt",
-				header: "CreatedAt",
-				enableSorting: true,
-				cell: ({ row }): React.JSX.Element => {
-					const value = row.original.createdAt;
-					return <span>{Number.isFinite(value) ? new Date(value).toLocaleString() : "—"}</span>;
-				},
-			},
+	{
+		accessorKey: "name",
+		header: "Name",
+		enableSorting: true,
+	},
+	{
+		accessorKey: "slug",
+		header: "Slug",
+		enableSorting: true,
+	},
+	{
+		accessorKey: "sortOrder",
+		header: "SortOrder",
+		enableSorting: true,
+	},
+	{
+		accessorKey: "isActive",
+		header: "IsActive",
+	},
+	{
+		accessorKey: "createdAt",
+		header: "CreatedAt",
+		enableSorting: true,
+		cell: ({ row }): React.JSX.Element => {
+			const value = row.original.createdAt;
+			return <span>{Number.isFinite(value) ? new Date(value).toLocaleString() : "—"}</span>;
+		},
+	},
 		],
 		[],
 	);
@@ -269,7 +314,13 @@ export default function SampleCategoryView(): React.JSX.Element {
 		(): React.JSX.Element => (
 			<div className="relative w-full sm:max-w-xs">
 				<Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
-				<Input aria-label={labels.searchAriaLabel} placeholder={labels.searchPlaceholder} value={search} onChange={handleSearchChange} className="h-9 pl-8" />
+				<Input
+					aria-label={labels.searchAriaLabel}
+					placeholder={labels.searchPlaceholder}
+					value={search}
+					onChange={handleSearchChange}
+					className="h-9 pl-8"
+				/>
 			</div>
 		),
 		[handleSearchChange, search],

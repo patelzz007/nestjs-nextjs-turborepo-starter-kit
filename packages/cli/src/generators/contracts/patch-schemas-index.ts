@@ -1,6 +1,6 @@
 import { readFile, writeFile } from "node:fs/promises";
 
-import type { ResourceIR } from "../../ir/types.js";
+import type { ResourceIR } from "../../ir/types";
 
 const BEGIN = "// @app-generated:begin";
 const END = "// @app-generated:end";
@@ -12,7 +12,7 @@ function buildExportBlock(ir: ResourceIR): string {
 	const enumSchema = ir.workflow ? `,\n\t${ir.fields.find((field) => field.name === ir.workflow?.field)?.camelName ?? "status"}Schema` : "";
 	const workflowValueExports = ir.workflow ? `,\n\t${model}StatusFromPrisma,\n\t${model}StatusToPrisma` : "";
 	const workflowTypeExports = ir.workflow ? `,\n\t${model}PrismaStatus,\n\t${model}Status` : "";
-	return `${BEGIN} ${ir.resource.contractKey}\nexport {\n\tCreate${model}Schema,\n\t${model}IdParamSchema,\n\t${model}ListQuerySchema,\n\t${model}ListResponseSchema,\n\t${model}Schema,\n\tUpdate${model}Schema${workflowSchemaExports}${enumSchema}${workflowValueExports},\n} from "./domain/${slug}.generated";\nexport type {\n\tCreate${model}Input,\n\t${model},\n\t${model}ListQuery,\n\t${model}ListResponse,\n\tUpdate${model}Input${workflowTypeExports},\n} from "./domain/${slug}.generated";\n${END} ${ir.resource.contractKey}`;
+	return `${BEGIN} ${ir.resource.contractKey}\nexport {\n\tBulkCreate${model}Schema,\n\tCreate${model}Schema,\n\t${model}IdParamSchema,\n\t${model}ListQuerySchema,\n\t${model}ListResponseSchema,\n\t${model}Schema,\n\tUpdate${model}Schema${workflowSchemaExports}${enumSchema}${workflowValueExports},\n} from "./domain/${slug}.generated";\nexport type {\n\tBulkCreate${model}Input,\n\tCreate${model}Input,\n\t${model},\n\t${model}ListQuery,\n\t${model}ListResponse,\n\tUpdate${model}Input${workflowTypeExports},\n} from "./domain/${slug}.generated";\n${END} ${ir.resource.contractKey}`;
 }
 
 export async function patchSchemasIndex(schemasIndexPath: string, ir: ResourceIR): Promise<void> {

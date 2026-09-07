@@ -1,4 +1,4 @@
-import type { ResourceIR } from "../../ir/types.js";
+import type { ResourceIR } from "../../ir/types";
 
 function prismaScalarType(fieldType: string): string {
 	switch (fieldType) {
@@ -21,6 +21,21 @@ function prismaScalarType(fieldType: string): string {
 		default:
 			return "String";
 	}
+}
+
+function toPlural(singular: string): string {
+	if (singular.endsWith("y") && singular.length > 1) {
+		return `${singular.slice(0, -1)}ies`;
+	}
+	if (singular.endsWith("s")) {
+		return `${singular}es`;
+	}
+	return `${singular}s`;
+}
+
+function inverseRelationCollectionName(modelName: string): string {
+	const plural = toPlural(modelName);
+	return `${plural.charAt(0).toLowerCase()}${plural.slice(1)}`;
 }
 
 function relationPropertyName(fieldName: string): string {
@@ -81,8 +96,9 @@ export function renderPrismaModelBlock(ir: ResourceIR): string {
 		}
 	}
 
-	if (ir.resource.modelName === "SampleCategory") {
-		lines.push("  sampleResources SampleResource[]");
+	for (const child of ir.cascadeSoftDeleteChildren) {
+		const propertyName = inverseRelationCollectionName(child.childModelName);
+		lines.push(`  ${propertyName} ${child.childModelName}[]`);
 	}
 
 	lines.push(`  @@map("${ir.resource.slug.replace(/-/g, "_")}")`);

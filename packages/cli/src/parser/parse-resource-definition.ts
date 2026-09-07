@@ -1,4 +1,4 @@
-import { ResourceDefinitionSchema, type ResourceDefinition } from "../schema/resource-definition.js";
+import { ResourceDefinitionSchema, type ResourceDefinition } from "../schema/resource-definition";
 
 export class ResourceParseError extends Error {
 	public constructor(message: string) {

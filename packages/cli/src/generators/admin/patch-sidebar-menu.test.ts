@@ -3,8 +3,8 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import type { ResourceIR } from "../../ir/types.js";
-import { patchSidebarMenu } from "./patch-sidebar-menu.js";
+import type { ResourceIR } from "../../ir/types";
+import { patchSidebarMenu } from "./patch-sidebar-menu";
 
 const BASE_MENU = {
 	header: { title: "Acme Inc.", subtitle: "Admin Panel" },
@@ -34,6 +34,7 @@ function buildIr(overrides: Partial<ResourceIR> & { slug: string; label: string;
 		concurrency: false,
 		idempotency: false,
 		rls: "admin-only",
+		cascadeSoftDeleteChildren: [],
 		permissions: [],
 		admin: {
 			navigation: {

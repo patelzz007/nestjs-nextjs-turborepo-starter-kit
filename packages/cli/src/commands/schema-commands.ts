@@ -4,9 +4,9 @@ import path from "node:path";
 import * as p from "@clack/prompts";
 import pc from "picocolors";
 
-import { loadProjectConfig } from "../core/project.js";
-import { normalizeResourceDefinition } from "../ir/normalize.js";
-import { parseResourceDefinitionFile } from "../parser/parse-resource-definition.js";
+import { loadProjectConfig } from "../core/project";
+import { normalizeResourceDefinition } from "../ir/normalize";
+import { parseResourceDefinitionFile } from "../parser/parse-resource-definition";
 
 export interface ValidateDefinitionOptions {
 	readonly verbose?: boolean;

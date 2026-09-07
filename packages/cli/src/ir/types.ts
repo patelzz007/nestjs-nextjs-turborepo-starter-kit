@@ -1,4 +1,4 @@
-import type { ResourceFieldDefinition, RlsPolicy } from "../schema/resource-definition.js";
+import type { ResourceFieldDefinition, RlsPolicy } from "../schema/resource-definition";
 
 export interface ResourceIdentityIR {
 	readonly name: string;
@@ -29,8 +29,16 @@ export interface FieldIR {
 				readonly model: string;
 				readonly field: string;
 				readonly cardinality: "one" | "many";
+				readonly cascadeSoftDelete: boolean;
 		  }
 		| undefined;
+}
+
+export interface CascadeSoftDeleteChildIR {
+	readonly childModelName: string;
+	readonly childDelegate: string;
+	readonly childSlug: string;
+	readonly foreignKey: string;
 }
 
 export interface RelationIR {
@@ -83,6 +91,7 @@ export interface ResourceIR {
 	readonly concurrency: boolean;
 	readonly idempotency: boolean;
 	readonly rls: RlsPolicy;
+	readonly cascadeSoftDeleteChildren: readonly CascadeSoftDeleteChildIR[];
 	readonly permissions: readonly PermissionIR[];
 	readonly admin:
 		| {

@@ -1,4 +1,4 @@
-import type { ResourceIR } from "../../ir/types.js";
+import type { ResourceIR } from "../../ir/types";
 
 export function renderNestControllerBase(ir: ResourceIR): string {
 	const model = ir.resource.modelName;
@@ -22,7 +22,7 @@ export function renderNestControllerBase(ir: ResourceIR): string {
 	return `import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from "@nestjs/common";
 import { ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
 
-import { apiPath, Create${model}Schema, ${model}IdParamSchema, ${model}ListQuerySchema, Update${model}Schema${workflowImports}${ir.workflow ? `, type ${model}Status` : ""} } from "@workspace/shared";
+import { apiPath, BulkCreate${model}Schema, BulkDeleteIdsSchema, Create${model}Schema, ${model}IdParamSchema, ${model}ListQuerySchema, Update${model}Schema${workflowImports}${ir.workflow ? `, type ${model}Status` : ""} } from "@workspace/shared";
 
 import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe";
 import { RequirePermission } from "../auth/decorators/require-permission.decorator";
@@ -40,6 +40,22 @@ export class Generated${model}Controller {
 	@ApiOkResponse({ description: "Paginated list of ${ir.resource.plural.toLowerCase()}" })
 	public list(@Query(new ZodValidationPipe(${model}ListQuerySchema)) query: Parameters<${model}Service["list"]>[0]): ReturnType<${model}Service["list"]> {
 		return this.service.list(query);
+	}
+
+	@RequirePermission("CREATE", "${resource}")
+	@Post("bulk")
+	@ApiOperation({ summary: "Bulk create ${ir.resource.plural.toLowerCase()}" })
+	@ApiOkResponse({ description: "Created ${ir.resource.plural.toLowerCase()}" })
+	public bulkCreate(@Body(new ZodValidationPipe(BulkCreate${model}Schema)) body: { items: Parameters<${model}Service["createMany"]>[0] }): ReturnType<${model}Service["createMany"]> {
+		return this.service.createMany(body.items);
+	}
+
+	@RequirePermission("DELETE", "${resource}")
+	@Post("bulk-delete")
+	@ApiOperation({ summary: "Bulk soft delete ${ir.resource.plural.toLowerCase()}" })
+	@ApiOkResponse({ description: "Bulk delete result" })
+	public bulkDelete(@Body(new ZodValidationPipe(BulkDeleteIdsSchema)) body: { ids: string[] }): ReturnType<${model}Service["deleteMany"]> {
+		return this.service.deleteMany(body.ids);
 	}
 
 	@RequirePermission("READ", "${resource}")

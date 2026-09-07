@@ -1,6 +1,6 @@
 import pc from "picocolors";
 
-import { printAppBanner } from "../ui/brand.js";
+import { printAppBanner } from "../ui/brand";
 
 export interface WizardStep {
 	readonly current: number;

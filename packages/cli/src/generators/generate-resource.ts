@@ -1,35 +1,37 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import type { ResourceIR } from "../ir/types.js";
-import type { AppProjectConfig } from "../core/project.js";
-import { GENERATOR_VERSION, hashContent, writeManifest, type ResourceManifest } from "../core/manifest.js";
-import { planResourceFiles } from "../core/planner.js";
-import { renderPrismaModelBlock, renderRlsBlock } from "./prisma/render-prisma.js";
-import { renderZodSchemas } from "./contracts/render-zod.js";
-import { renderNestRepository } from "./nestjs/render-repository.js";
-import { renderNestServiceBase } from "./nestjs/render-service-base.js";
-import { renderNestServiceWrapper } from "./nestjs/render-service.js";
-import { renderNestControllerBase } from "./nestjs/render-controller-base.js";
-import { renderNestControllerWrapper } from "./nestjs/render-controller.js";
-import { renderNestModule } from "./nestjs/render-module.js";
-import { renderAdminView } from "./admin/render-view.js";
-import { renderAdminPage } from "./admin/render-page.js";
-import { renderAdminCreatePage } from "./admin/render-create-page.js";
-import { renderAdminEditPage } from "./admin/render-edit-page.js";
-import { renderServiceTest } from "./tests/render-service-test.js";
-import { renderRepositoryTest } from "./tests/render-repository-test.js";
-import { renderAdminViewTest } from "./tests/render-admin-view-test.js";
-import { patchPrismaSchema } from "./prisma/patch-schema.js";
-import { patchRlsSql } from "./prisma/patch-rls.js";
-import { patchPermissionEnum } from "./contracts/patch-permissions.js";
-import { patchApiRoutes } from "./contracts/patch-api-routes.js";
-import { patchContractsIndex } from "./contracts/patch-contracts.js";
-import { patchEndpoints } from "./client/patch-endpoints.js";
-import { patchSchemasIndex } from "./contracts/patch-schemas-index.js";
-import { patchVersionedRoutes } from "./contracts/patch-versioned-routes.js";
-import { patchAppModule } from "./nestjs/patch-app-module.js";
-import { patchSidebarMenu } from "./admin/patch-sidebar-menu.js";
+import type { ResourceIR } from "../ir/types";
+import type { AppProjectConfig } from "../core/project";
+import { GENERATOR_VERSION, hashContent, writeManifest, type ResourceManifest } from "../core/manifest";
+import { planResourceFiles } from "../core/planner";
+import { renderPrismaModelBlock, renderRlsBlock } from "./prisma/render-prisma";
+import { renderZodSchemas } from "./contracts/render-zod";
+import { renderNestRepository } from "./nestjs/render-repository";
+import { renderNestServiceBase } from "./nestjs/render-service-base";
+import { renderNestServiceWrapper } from "./nestjs/render-service";
+import { renderNestControllerBase } from "./nestjs/render-controller-base";
+import { renderNestControllerWrapper } from "./nestjs/render-controller";
+import { renderNestModule } from "./nestjs/render-module";
+import { renderAdminView } from "./admin/render-view";
+import { renderAdminPage } from "./admin/render-page";
+import { renderAdminDetailPage } from "./admin/render-detail-page";
+import { renderAdminDetailView } from "./admin/render-detail-view";
+import { renderAdminCreatePage } from "./admin/render-create-page";
+import { renderAdminEditPage } from "./admin/render-edit-page";
+import { renderServiceTest } from "./tests/render-service-test";
+import { renderRepositoryTest } from "./tests/render-repository-test";
+import { renderAdminViewTest } from "./tests/render-admin-view-test";
+import { patchPrismaSchema } from "./prisma/patch-schema";
+import { patchRlsSql } from "./prisma/patch-rls";
+import { patchPermissionEnum } from "./contracts/patch-permissions";
+import { patchApiRoutes } from "./contracts/patch-api-routes";
+import { patchContractsIndex } from "./contracts/patch-contracts";
+import { patchEndpoints } from "./client/patch-endpoints";
+import { patchSchemasIndex } from "./contracts/patch-schemas-index";
+import { patchVersionedRoutes } from "./contracts/patch-versioned-routes";
+import { patchAppModule } from "./nestjs/patch-app-module";
+import { patchSidebarMenu } from "./admin/patch-sidebar-menu";
 
 export interface GenerateOptions {
 	readonly dryRun: boolean;
@@ -71,6 +73,9 @@ export async function generateResource(config: AppProjectConfig, ir: ResourceIR,
 		[`apps/api/src/modules/${moduleName}/${moduleName}.controller.generated.ts`]: renderNestControllerBase(ir),
 		[`packages/shared/src/schemas/domain/${slug}.generated.ts`]: renderZodSchemas(ir),
 		[`apps/admin/app/(panel)/${slug}/${slug}-view.generated.tsx`]: renderAdminView(ir),
+		[`apps/admin/app/(panel)/${slug}/page.tsx`]: renderAdminPage(ir),
+		[`apps/admin/app/(panel)/${slug}/${slug}-detail-view.generated.tsx`]: renderAdminDetailView(ir),
+		[`apps/admin/app/(panel)/${slug}/[id]/page.tsx`]: renderAdminDetailPage(ir),
 		[`apps/api/src/modules/${moduleName}/__tests__/${moduleName}.repository.spec.ts`]: renderRepositoryTest(ir),
 		[`apps/admin/app/(panel)/${slug}/__tests__/${slug}-view.test.tsx`]: renderAdminViewTest(ir),
 	};
@@ -79,7 +84,6 @@ export async function generateResource(config: AppProjectConfig, ir: ResourceIR,
 		[`apps/api/src/modules/${moduleName}/${moduleName}.module.ts`]: renderNestModule(ir),
 		[`apps/api/src/modules/${moduleName}/${moduleName}.service.ts`]: renderNestServiceWrapper(ir),
 		[`apps/api/src/modules/${moduleName}/${moduleName}.controller.ts`]: renderNestControllerWrapper(ir),
-		[`apps/admin/app/(panel)/${slug}/page.tsx`]: renderAdminPage(ir),
 		[`apps/admin/app/(panel)/${slug}/create/page.tsx`]: renderAdminCreatePage(ir),
 		[`apps/admin/app/(panel)/${slug}/[id]/edit/page.tsx`]: renderAdminEditPage(ir),
 		[`apps/api/src/modules/${moduleName}/__tests__/${moduleName}.service.spec.ts`]: renderServiceTest(ir),

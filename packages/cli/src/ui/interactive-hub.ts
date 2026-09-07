@@ -3,14 +3,14 @@ import { existsSync } from "node:fs";
 
 import * as p from "@clack/prompts";
 
-import { runDoctorCommand, runGenerateResourceCommand } from "../commands/generate-resource.js";
-import { runNewResourceCommand } from "../commands/new-resource.js";
-import { resolveDefinitionPath, validateResourceDefinition } from "../commands/schema-commands.js";
-import { loadProjectConfig } from "../core/project.js";
-import { normalizeResourceDefinition } from "../ir/normalize.js";
-import { parseResourceDefinitionFile } from "../parser/parse-resource-definition.js";
-import { printAppBanner, isInteractiveTerminal } from "./brand.js";
-import { printRoutesTable } from "./plan-display.js";
+import { runDoctorCommand, runGenerateResourceCommand } from "../commands/generate-resource";
+import { runNewResourceCommand } from "../commands/new-resource";
+import { resolveDefinitionPath, validateResourceDefinition } from "../commands/schema-commands";
+import { loadProjectConfig } from "../core/project";
+import { normalizeResourceDefinition } from "../ir/normalize";
+import { parseResourceDefinitionFile } from "../parser/parse-resource-definition";
+import { printAppBanner, isInteractiveTerminal } from "./brand";
+import { printRoutesTable } from "./plan-display";
 
 type HubAction = "new" | "generate" | "routes" | "validate" | "doctor" | "exit";
 

@@ -7,7 +7,7 @@
 		"app": "./dist/bin/app.js"
 	},
 	"scripts": {
-		"build": "tsc -p tsconfig.build.json",
+		"build": "tsc -p tsconfig.build.json && node ../../packages/tooling/scripts/fix-dist-extensions.mjs dist",
 		"dev": "tsc -p tsconfig.build.json --watch --preserveWatchOutput",
 		"start": "tsx src/bin/app.ts",
 		"lint": "eslint",
