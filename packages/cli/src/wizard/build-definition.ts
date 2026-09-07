@@ -1,4 +1,4 @@
-import type { ResourceDefinition, ResourceFieldDefinition } from "../schema/resource-definition";
+import type { ResourceDefinition, ResourceFieldDefinition, UiModuleConfig } from "../schema/resource-definition";
 import type { WizardFieldInput, WizardResourceInput } from "./types";
 
 function buildFieldDefinition(field: WizardFieldInput): ResourceFieldDefinition {
@@ -38,6 +38,24 @@ function buildFieldDefinition(field: WizardFieldInput): ResourceFieldDefinition 
 	return definition;
 }
 
+function buildUiModuleConfig(input: WizardResourceInput, searchableFields: string[], sortableFields: string[], filterableFields: string[], columnFields: string[]): UiModuleConfig {
+	return {
+		navigation: {
+			label: input.navigationLabel,
+		},
+		list: {
+			searchable: searchableFields,
+			sortable: sortableFields.includes("createdAt") ? sortableFields : [...sortableFields, "createdAt"],
+			filters: filterableFields,
+			columns: columnFields,
+		},
+		form: {
+			layout: columnFields.length > 4 ? "two-column" : "single-column",
+			fields: columnFields,
+		},
+	};
+}
+
 export function buildResourceDefinition(input: WizardResourceInput): ResourceDefinition {
 	const fields: Record<string, ResourceFieldDefinition> = {};
 	for (const field of input.fields) {
@@ -49,9 +67,24 @@ export function buildResourceDefinition(input: WizardResourceInput): ResourceDef
 	const filterableFields = input.fields.filter((field) => field.filterable).map((field) => field.name);
 	const columnFields = input.fields.map((field) => field.name);
 
+	const uiModules = input.generateUi ? input.uiModules : [];
+	const ui: Record<string, UiModuleConfig> = {};
+	if (input.generateUi) {
+		const moduleConfig = buildUiModuleConfig(input, searchableFields, sortableFields, filterableFields, columnFields);
+		for (const moduleId of uiModules) {
+			ui[moduleId] = moduleConfig;
+		}
+	}
+
 	const definition: ResourceDefinition = {
-		version: 1,
+		version: 2,
 		name: input.name,
+		scope: {
+			api: true,
+			shared: true,
+			client: true,
+			ui: uiModules,
+		},
 		model: {
 			name: input.name,
 			softDelete: input.softDelete,
@@ -67,21 +100,7 @@ export function buildResourceDefinition(input: WizardResourceInput): ResourceDef
 			delete: true,
 			list: true,
 		},
-		admin: {
-			navigation: {
-				label: input.navigationLabel,
-			},
-			list: {
-				searchable: searchableFields,
-				sortable: sortableFields.includes("createdAt") ? sortableFields : [...sortableFields, "createdAt"],
-				filters: filterableFields,
-				columns: columnFields,
-			},
-			form: {
-				layout: columnFields.length > 4 ? "two-column" : "single-column",
-				fields: columnFields,
-			},
-		},
+		ui: uiModules.length > 0 ? ui : undefined,
 	};
 
 	return definition;

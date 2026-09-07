@@ -14,6 +14,7 @@ import type {
 	LoginTwoFactorPendingResponse,
 	LoginVerificationPendingResponse,
 	MessageResponse,
+	PaginatedServiceResult,
 	ResendVerificationInput,
 	ResendVerificationResponse,
 	ResetPasswordInput,
@@ -291,15 +292,7 @@ export class AuthController {
 	@ApiOperation({ summary: "SuperAdmin: list all users with roles and lockout status" })
 	@ApiOkResponse({ type: WrappedAdminUserList, description: "Admin user list" })
 	@ApiResponse({ status: 403, type: ApiErrorResponseDto, description: "SuperAdmin privileges required" })
-	public async getAdminUsersList(@Query(new ZodValidationPipe(apiContract.auth.adminUsers.input)) query: AdminUserListQuery): Promise<{
-		readonly items: AdminUserDetail[];
-		readonly total: number;
-		readonly page: number;
-		readonly limit: number;
-		readonly totalPages: number;
-		readonly hasNext: boolean;
-		readonly hasPrevious: boolean;
-	}> {
+	public async getAdminUsersList(@Query(new ZodValidationPipe(apiContract.auth.adminUsers.input)) query: AdminUserListQuery): Promise<PaginatedServiceResult<AdminUserDetail>> {
 		return this.authService.getAdminUsersList(query);
 	}
 

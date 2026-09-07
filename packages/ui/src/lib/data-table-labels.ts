@@ -45,10 +45,22 @@ export interface DataTableLabels {
 	readonly showingResults: string;
 	readonly showPerPage: string;
 	readonly perPage: string;
+	/** e.g. `Showing {count} results` — used for cursor-paginated server tables without a total. */
+	readonly showingPageCount: string;
+	/** e.g. `Page {page} of {totalPages}` */
+	readonly pageOfTotal: string;
 	readonly firstPageAriaLabel: string;
 	readonly previousPageAriaLabel: string;
 	readonly nextPageAriaLabel: string;
 	readonly lastPageAriaLabel: string;
+	/** e.g. `Go to page {page}` */
+	readonly goToPageAriaLabel: string;
+	readonly pinColumnAriaLabel: string;
+	readonly unpinColumnAriaLabel: string;
+	/** Shown when server export falls back to the current page only. */
+	readonly exportCurrentPage: string;
+	readonly exportCurrentPageDescription: string;
+	readonly loadingTableAriaLabel: string;
 }
 
 /** Replaces `{key}` placeholders in a label template. */

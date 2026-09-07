@@ -1,9 +1,10 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
 
-import type { MerchantCreateRewardInput, MerchantRedemptionListItem, MerchantRedemptionListQuery, MerchantUpdateRewardInput, RewardResponse } from "@workspace/shared";
+import type { MerchantCreateRewardInput, MerchantRedemptionListItem, MerchantRedemptionListQuery, MerchantUpdateRewardInput, PaginatedServiceResult, RewardResponse } from "@workspace/shared";
 import { EpochMsSchema, RewardPlatformEventSchema } from "@workspace/shared";
 
+import { paginateCursorListResult } from "../../../platform/persistence/cursor-list";
 import { MerchantMemberRepository } from "../repositories/merchant-member.repository";
 import { RewardClaimRepository } from "../repositories/reward-claim.repository";
 import { RewardRedemptionRepository } from "../repositories/reward-redemption.repository";
@@ -178,35 +179,23 @@ export class MerchantRewardService {
 		userId: string,
 		merchantOrgId: string | undefined,
 		query: MerchantRedemptionListQuery,
-	): Promise<{
-		items: MerchantRedemptionListItem[];
-		total: number;
-		page: number;
-		limit: number;
-		totalPages: number;
-		hasNext: boolean;
-		hasPrevious: boolean;
-	}> {
+	): Promise<PaginatedServiceResult<MerchantRedemptionListItem>> {
 		const orgId = await this.merchantContext.resolveOrgIdForUser(userId, merchantOrgId);
-		const page = query.page;
-		const pageSize = query.limit;
-		const { rows, total } = await this.redemptionRepository.listForMerchant(orgId, query);
+		const result = await this.redemptionRepository.listForMerchant(orgId, query);
 
-		return {
-			items: rows.map((row) => ({
-				redemptionId: row.id,
-				rewardTitle: row.claim.reward.title,
-				redeemedAt: EpochMsSchema.parse(Number(row.redeemedAt)),
-				terminalId: row.terminalId,
-				redemptionMethod: row.redemptionMethod,
-			})),
-			total,
-			page,
-			limit: pageSize,
-			totalPages: pageSize === 0 ? 0 : Math.ceil(total / pageSize),
-			hasNext: page * pageSize < total,
-			hasPrevious: page > 1,
-		};
+		return paginateCursorListResult(
+			{
+				...result,
+				items: result.items.map((row) => ({
+					redemptionId: row.id,
+					rewardTitle: row.claim.reward.title,
+					redeemedAt: EpochMsSchema.parse(Number(row.redeemedAt)),
+					terminalId: row.terminalId,
+					redemptionMethod: row.redemptionMethod,
+				})),
+			},
+			query,
+		);
 	}
 
 	public async autoPublishPendingRewards(): Promise<number> {

@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 
+import ProductView from "../product-view.generated";
+
 describe("ProductView", () => {
-	it("placeholder contract test", () => {
-		expect(true).toBe(true);
+	it("exports a default view component", () => {
+		expect(ProductView).toBeDefined();
+		expect(typeof ProductView).toBe("function");
 	});
 });

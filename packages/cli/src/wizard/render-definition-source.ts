@@ -41,20 +41,51 @@ function renderFieldDefinition(field: ResourceFieldDefinition): string {
 	return lines.map((line) => `\t\t\t\t${line}`).join(",\n");
 }
 
+function renderUiModuleBlock(moduleId: string, definition: ResourceDefinition): string {
+	const moduleConfig = definition.ui?.[moduleId];
+	if (moduleConfig === undefined) {
+		return "";
+	}
+	const navigation = moduleConfig.navigation;
+	const list = moduleConfig.list;
+	const form = moduleConfig.form;
+
+	return `\t\t${moduleId}: {
+\t\t\tnavigation: {
+\t\t\t\tlabel: ${JSON.stringify(navigation?.label ?? definition.name)},
+\t\t\t},
+\t\t\tlist: {
+\t\t\t\tsearchable: [${(list?.searchable ?? []).map((item) => JSON.stringify(item)).join(", ")}],
+\t\t\t\tsortable: [${(list?.sortable ?? []).map((item) => JSON.stringify(item)).join(", ")}],
+\t\t\t\tfilters: [${(list?.filters ?? []).map((item) => JSON.stringify(item)).join(", ")}],
+\t\t\t\tcolumns: [${(list?.columns ?? []).map((item) => JSON.stringify(item)).join(", ")}],
+\t\t\t},
+\t\t\tform: {
+\t\t\t\tlayout: ${JSON.stringify(form?.layout ?? "single-column")},
+\t\t\t\tfields: [${(form?.fields ?? []).map((item) => JSON.stringify(item)).join(", ")}],
+\t\t\t},
+\t\t}`;
+}
+
 export function renderResourceDefinitionSource(definition: ResourceDefinition): string {
 	const fieldBlocks = Object.entries(definition.model.fields)
 		.map(([name, field]) => `\t\t\t${name}: {\n${renderFieldDefinition(field)}\n\t\t\t}`)
 		.join(",\n");
 
-	const adminList = definition.admin?.list;
-	const adminNavigation = definition.admin?.navigation;
-	const adminForm = definition.admin?.form;
+	const uiBlocks = definition.scope.ui.map((moduleId) => renderUiModuleBlock(moduleId, definition)).filter((block) => block.length > 0).join(",\n");
+	const uiSection = uiBlocks.length > 0 ? `\tui: {\n${uiBlocks}\n\t},` : "";
 
 	return `import { defineResource } from "@workspace/cli";
 
 export default defineResource({
-\tversion: 1,
+\tversion: 2,
 \tname: ${JSON.stringify(definition.name)},
+\tscope: {
+\t\tapi: ${String(definition.scope.api)},
+\t\tshared: ${String(definition.scope.shared)},
+\t\tclient: ${String(definition.scope.client)},
+\t\tui: [${definition.scope.ui.map((moduleId) => JSON.stringify(moduleId)).join(", ")}],
+\t},
 \tmodel: {
 \t\tname: ${JSON.stringify(definition.model.name)},
 \t\tsoftDelete: ${String(definition.model.softDelete === true)},
@@ -72,21 +103,7 @@ ${fieldBlocks}
 \t\tdelete: true,
 \t\tlist: true,
 \t},
-\tadmin: {
-\t\tnavigation: {
-\t\t\tlabel: ${JSON.stringify(adminNavigation?.label ?? definition.name)},
-\t\t},
-\t\tlist: {
-\t\t\tsearchable: [${(adminList?.searchable ?? []).map((item) => JSON.stringify(item)).join(", ")}],
-\t\t\tsortable: [${(adminList?.sortable ?? []).map((item) => JSON.stringify(item)).join(", ")}],
-\t\t\tfilters: [${(adminList?.filters ?? []).map((item) => JSON.stringify(item)).join(", ")}],
-\t\t\tcolumns: [${(adminList?.columns ?? []).map((item) => JSON.stringify(item)).join(", ")}],
-\t\t},
-\t\tform: {
-\t\t\tlayout: ${JSON.stringify(adminForm?.layout ?? "single-column")},
-\t\t\tfields: [${(adminForm?.fields ?? []).map((item) => JSON.stringify(item)).join(", ")}],
-\t\t},
-\t},
+${uiSection}
 });
 `;
 }

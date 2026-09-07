@@ -1,4 +1,5 @@
 import type { FieldIR, ResourceIR } from "../../ir/types";
+import { renderListWhereFilterLines, resolveListFilterFields } from "../admin/list-filters";
 import { fieldByName, isTextSearchableField, resolveSearchableFieldNames, toSortableCamelNames } from "./list-query";
 
 function relationPropertyName(fieldName: string): string {
@@ -24,8 +25,11 @@ function defaultIntLiteral(field: FieldIR): string {
 
 function renderDomainFieldLine(field: FieldIR, ir: ResourceIR, model: string): string {
 	const { camelName } = field;
-	if (ir.workflow !== undefined && field.name === ir.workflow.field) {
-		return `\t\t${camelName}: row.${camelName} === null ? "${ir.workflow.initial}" : ${model}StatusFromPrisma[row.${camelName}],`;
+	if (field.type === "enum") {
+		if (ir.workflow !== undefined && field.name === ir.workflow.field) {
+			return `\t\t${camelName}: row.${camelName} === null ? ${JSON.stringify(ir.workflow.initial)} : ${model}StatusFromPrisma[row.${camelName}],`;
+		}
+		return `\t\t${camelName}: ${camelName}FromPrisma[row.${camelName}],`;
 	}
 	if (field.type === "datetime") {
 		if (field.nullable) {
@@ -39,8 +43,10 @@ function renderDomainFieldLine(field: FieldIR, ir: ResourceIR, model: string): s
 		}
 		return `\t\t${camelName}: Number(row.${camelName}),`;
 	}
-	if (field.type === "boolean" && field.nullable) {
-		return `\t\t${camelName}: row.${camelName} ?? ${defaultBooleanLiteral(field)},`;
+	if (field.type === "boolean") {
+		if (field.nullable || field.defaultValue !== undefined) {
+			return `\t\t${camelName}: row.${camelName} ?? ${defaultBooleanLiteral(field)},`;
+		}
 	}
 	if (field.type === "int") {
 		if (field.nullable) {
@@ -77,7 +83,7 @@ ${tailLines.join("\n")}
 }
 
 function needsInputMappers(ir: ResourceIR): boolean {
-	return ir.workflow !== undefined || ir.fields.some((field) => field.relation !== undefined);
+	return ir.workflow !== undefined || ir.fields.some((field) => field.relation !== undefined || field.type === "enum");
 }
 
 function renderCreateMapper(ir: ResourceIR): string {
@@ -94,8 +100,12 @@ function renderCreateMapper(ir: ResourceIR): string {
 			}
 			continue;
 		}
-		if (ir.workflow !== undefined && field.name === ir.workflow.field) {
-			lines.push(`\t\t${field.camelName}: input.${field.camelName} === undefined ? undefined : ${model}StatusToPrisma[input.${field.camelName}],`);
+		if (field.type === "enum") {
+			if (ir.workflow !== undefined && field.name === ir.workflow.field) {
+				lines.push(`\t\t${field.camelName}: input.${field.camelName} === undefined ? undefined : ${model}StatusToPrisma[input.${field.camelName}],`);
+			} else {
+				lines.push(`\t\t${field.camelName}: input.${field.camelName} === undefined ? undefined : ${field.camelName}ToPrisma[input.${field.camelName}],`);
+			}
 			continue;
 		}
 		lines.push(`\t\t${field.camelName}: input.${field.camelName},`);
@@ -118,8 +128,11 @@ function renderUpdateMapper(ir: ResourceIR): string {
 			}
 			return `\tif (input.${field.camelName} !== undefined) {\n\t\tdata.${propertyName} = { connect: { id: input.${field.camelName} } };\n\t}`;
 		}
-		if (ir.workflow !== undefined && field.name === ir.workflow.field) {
-			return `\tif (input.${field.camelName} !== undefined) {\n\t\tdata.${field.camelName} = input.${field.camelName} === null ? null : ${model}StatusToPrisma[input.${field.camelName}];\n\t}`;
+		if (field.type === "enum") {
+			if (ir.workflow !== undefined && field.name === ir.workflow.field) {
+				return `\tif (input.${field.camelName} !== undefined) {\n\t\tdata.${field.camelName} = input.${field.camelName} === null ? null : ${model}StatusToPrisma[input.${field.camelName}];\n\t}`;
+			}
+			return `\tif (input.${field.camelName} !== undefined) {\n\t\tdata.${field.camelName} = input.${field.camelName} === null ? null : ${field.camelName}ToPrisma[input.${field.camelName}];\n\t}`;
 		}
 		return `\tif (input.${field.camelName} !== undefined) {\n\t\tdata.${field.camelName} = input.${field.camelName};\n\t}`;
 	});
@@ -133,6 +146,7 @@ ${lines.join("\n")}
 function renderListQueryHelpers(ir: ResourceIR): string {
 	const model = ir.resource.modelName;
 	const sortableFields = toSortableCamelNames(ir);
+	const idSortable = sortableFields.includes("id");
 	const searchableFields = resolveSearchableFieldNames(ir);
 	const searchLines: string[] = [];
 	for (const fieldName of searchableFields) {
@@ -144,6 +158,22 @@ function renderListQueryHelpers(ir: ResourceIR): string {
 	}
 
 	const softDeleteLine = ir.softDelete ? "\t\tdeletedAt: null," : "";
+	const filterWhereLines = renderListWhereFilterLines(resolveListFilterFields(ir));
+	const idCursorOrderBranch = idSortable
+		? `\tif (sortBy === "id") {\n\t\treturn { id: sortDirection };\n\t}\n`
+		: "";
+	const idMergeDescBranch = idSortable
+		? `\tif (sortBy === "id" && sortDirection === "desc") {\n\t\treturn { ...where, id: { lt: cursorId } };\n\t}\n`
+		: "";
+	const mergeListCursorFn = idSortable
+		? `function mergeListCursor(where: Prisma.${model}WhereInput, cursorId: string, query?: ${model}ListQuery): Prisma.${model}WhereInput {
+\tconst sortBy = query?.sortBy ?? "createdAt";
+\tconst sortDirection = query?.sortDirection ?? "desc";
+${idMergeDescBranch}\treturn { ...where, id: { gt: cursorId } };
+}`
+		: `function mergeListCursor(where: Prisma.${model}WhereInput, cursorId: string): Prisma.${model}WhereInput {
+\treturn { ...where, id: { gt: cursorId } };
+}`;
 
 	return `const SORTABLE_FIELDS: ReadonlySet<string> = new Set([${sortableFields.map((field) => `"${field}"`).join(", ")}]);
 
@@ -162,6 +192,17 @@ function resolveOrderBy(query: ${model}ListQuery): Prisma.${model}OrderByWithRel
 \treturn { [sortBy]: sortDirection };
 }
 
+function buildListCursorOrderBy(query: ${model}ListQuery): Prisma.${model}OrderByWithRelationInput {
+\tconst sortBy = query.sortBy ?? "createdAt";
+\tconst sortDirection = query.sortDirection ?? "desc";
+\tif (!SORTABLE_FIELDS.has(sortBy)) {
+\t\treturn { createdAt: "desc", id: "asc" };
+\t}
+${idCursorOrderBranch}\treturn { [sortBy]: sortDirection, id: "asc" };
+}
+
+${mergeListCursorFn}
+
 function buildListWhere(query: ${model}ListQuery): Prisma.${model}WhereInput {
 \tconst where: Prisma.${model}WhereInput = {
 ${softDeleteLine}
@@ -173,7 +214,7 @@ ${softDeleteLine}
 \t\t\twhere.OR = searchConditions;
 \t\t}
 \t}
-\treturn where;
+${filterWhereLines.length > 0 ? `${filterWhereLines}\n` : ""}\treturn where;
 }`;
 }
 
@@ -197,7 +238,7 @@ function renderCascadeSoftDeletePorts(ir: ResourceIR): string {
 \t\t});`;
 	});
 
-	return `,
+	return `
 \tcascadeSoftDelete: {
 \t\tsoftDeleteChildren: async ({ parentId, deletedAt, transaction }: CascadeSoftDeleteMutationArgs): Promise<void> => {
 ${childBlocks.join("\n")}
@@ -220,6 +261,32 @@ ${restoreChildBlocks.join("\n")}
 \t},`;
 }
 
+function renderEnumValueImports(ir: ResourceIR): string {
+	const model = ir.resource.modelName;
+	const importNames: string[] = [];
+	for (const field of ir.fields) {
+		if (field.type !== "enum") {
+			continue;
+		}
+		if (ir.workflow?.field === field.name) {
+			importNames.push(`${model}StatusFromPrisma`, `${model}StatusToPrisma`);
+			continue;
+		}
+		importNames.push(`${field.camelName}FromPrisma`, `${field.camelName}ToPrisma`);
+	}
+	if (importNames.length === 0) {
+		return "";
+	}
+	return `,\n\t${importNames.join(",\n\t")}`;
+}
+
+function renderEnumTypeImports(ir: ResourceIR): string {
+	if (ir.workflow === undefined) {
+		return "";
+	}
+	return `, ${ir.resource.modelName}Status`;
+}
+
 function renderRepositoryPorts(ir: ResourceIR): string {
 	const model = ir.resource.modelName;
 	const findByIdWhere = ir.softDelete
@@ -234,17 +301,26 @@ function renderRepositoryPorts(ir: ResourceIR): string {
 	const createInput = needsInputMappers(ir) ? "toPrismaCreateInput" : `(input: Create${model}Input): Prisma.${model}CreateInput => input`;
 	const updateInput = needsInputMappers(ir) ? "toPrismaUpdateInput" : `(input: Update${model}Input): Prisma.${model}UpdateInput => input`;
 
+	const stampSoftDelete = ir.softDelete
+		? `\tstampSoftDelete: (): Prisma.${model}UpdateInput => ({ deletedAt: nowEpochMs(), updatedAt: nowEpochMs() }),`
+		: `\tstampSoftDelete: (): Prisma.${model}UpdateInput => ({ updatedAt: nowEpochMs() }),`;
+	const stampRestore = ir.softDelete
+		? `\n\tstampRestore: (): Prisma.${model}UpdateInput => ({ deletedAt: null, updatedAt: nowEpochMs() }),`
+		: `\n\tstampRestore: (): Prisma.${model}UpdateInput => ({ updatedAt: nowEpochMs() }),`;
+
 	return `const ${model}RepositoryPorts = {
 \ttoDomain,
 \ttoCreateInput: ${createInput},
 \ttoUpdateInput: ${updateInput},
 \tbuildListWhere,
 \tbuildListOrderBy: resolveOrderBy,
+\tbuildListCursorOrderBy,
+\tmergeListCursor,
+\treadListCursorId: (row: Prisma.${model}GetPayload<Record<string, never>>): string => row.id,
 ${findByIdWhere}
 ${updateWhere}
 ${stampUpdate}
-\tstampSoftDelete: (): Prisma.${model}UpdateInput => ({ deletedAt: nowEpochMs(), updatedAt: nowEpochMs() }),
-\tstampRestore: (): Prisma.${model}UpdateInput => ({ deletedAt: null, updatedAt: nowEpochMs() })${renderCascadeSoftDeletePorts(ir)}
+${stampSoftDelete}${stampRestore}${renderCascadeSoftDeletePorts(ir)}
 };`;
 }
 
@@ -253,8 +329,8 @@ export function renderNestRepository(ir: ResourceIR): string {
 	const delegate = model.charAt(0).toLowerCase() + model.slice(1);
 	const workflowFieldCamel = ir.fields.find((field) => field.name === ir.workflow?.field)?.camelName;
 	const usesMappers = needsInputMappers(ir);
-	const workflowValueImports = ir.workflow !== undefined ? `,\n\t${model}StatusFromPrisma,\n\t${model}StatusToPrisma` : "";
-	const workflowTypeImports = ir.workflow !== undefined ? `, ${model}Status` : "";
+	const workflowValueImports = renderEnumValueImports(ir);
+	const workflowTypeImports = renderEnumTypeImports(ir);
 	const mapperBlock = `\n${renderToDomain(ir)}${usesMappers ? `\n\n${renderCreateMapper(ir)}\n\n${renderUpdateMapper(ir)}` : ""}\n`;
 	const cascadeImport =
 		ir.softDelete && ir.cascadeSoftDeleteChildren.length > 0

@@ -81,9 +81,29 @@ export interface AdminNavigationIR {
 	readonly hiddenInProduction: boolean;
 }
 
+export interface UiTargetIR {
+	readonly moduleId: string;
+	readonly navigation: AdminNavigationIR | undefined;
+	readonly list: AdminListIR;
+	readonly form: AdminFormIR;
+}
+
+export interface ResourceScopeIR {
+	readonly api: boolean;
+	readonly shared: boolean;
+	readonly client: boolean;
+	readonly ui: readonly string[];
+}
+
+export interface ActiveUiContextIR {
+	readonly moduleId: string;
+	readonly routePrefix: string;
+}
+
 export interface ResourceIR {
 	readonly version: number;
 	readonly resource: ResourceIdentityIR;
+	readonly scope: ResourceScopeIR;
 	readonly fields: readonly FieldIR[];
 	readonly relations: readonly RelationIR[];
 	readonly workflow: WorkflowIR | undefined;
@@ -93,6 +113,8 @@ export interface ResourceIR {
 	readonly rls: RlsPolicy;
 	readonly cascadeSoftDeleteChildren: readonly CascadeSoftDeleteChildIR[];
 	readonly permissions: readonly PermissionIR[];
+	readonly uiTargets: Readonly<Record<string, UiTargetIR>>;
+	/** Populated during UI rendering for the active module. */
 	readonly admin:
 		| {
 				readonly navigation: AdminNavigationIR | undefined;
@@ -100,6 +122,7 @@ export interface ResourceIR {
 				readonly form: AdminFormIR;
 		  }
 		| undefined;
+	readonly activeUi: ActiveUiContextIR | undefined;
 	readonly events: {
 		readonly created: boolean;
 		readonly updated: boolean;

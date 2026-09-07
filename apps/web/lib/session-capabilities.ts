@@ -36,7 +36,7 @@ export function useSessionCapabilities(initialSessionPermissions: SessionPermiss
 		initialData: initialPermissionsData,
 	});
 
-	const capabilities = React.useMemo((): readonly CapabilitySlug[] => permissionsQuery.data.data.capabilities, [permissionsQuery.data.data.capabilities]);
+	const capabilities = React.useMemo((): readonly CapabilitySlug[] => permissionsQuery.data?.data.capabilities ?? [], [permissionsQuery.data?.data.capabilities]);
 
 	const checkCapability = React.useCallback((slug: CapabilitySlug): boolean => hasCapability(capabilities, slug), [capabilities]);
 

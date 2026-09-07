@@ -73,6 +73,12 @@ if (observeEnabled && observeAppKey !== undefined && observeAppSecret !== undefi
 		GeoModule,
 		PlatformResourceModule,
 		RewardsModule,
+		// @app-generated:begin module:sample-category
+		SampleCategoryModule,
+		// @app-generated:end module:sample-category
+		// @app-generated:begin module:product
+		ProductModule,
+		// @app-generated:end module:product
 		ProductModule,
 		SampleCategoryModule,
 		// Conditionally include ObserveModule

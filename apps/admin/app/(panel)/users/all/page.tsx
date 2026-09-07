@@ -1,5 +1,5 @@
 import { createAdminServerCaller } from "@/lib/admin-server-api";
-import { readPaginatedTotal } from "@/lib/api-envelope";
+import { readPaginatedHasNext, readPaginatedTotal, readPaginatedTotalPages } from "@/lib/api-envelope";
 
 import UsersAllTable from "./users-all-table";
 
@@ -12,7 +12,9 @@ export default async function UsersAllPage(): Promise<React.JSX.Element> {
 
 	const first = result[0];
 	const initialUsers = first.status === "fulfilled" ? first.value.data : undefined;
-	const initialTotal = first.status === "fulfilled" ? readPaginatedTotal(first.value.meta, first.value.data.length) : undefined;
+	const initialTotal = first.status === "fulfilled" ? readPaginatedTotal(first.value.meta) : undefined;
+	const initialTotalPages = first.status === "fulfilled" ? readPaginatedTotalPages(first.value.meta) : undefined;
+	const initialHasNext = first.status === "fulfilled" ? readPaginatedHasNext(first.value.meta) : undefined;
 
-	return <UsersAllTable initialUsers={initialUsers} initialTotal={initialTotal} />;
+	return <UsersAllTable initialUsers={initialUsers} initialTotal={initialTotal} initialTotalPages={initialTotalPages} initialHasNext={initialHasNext} />;
 }

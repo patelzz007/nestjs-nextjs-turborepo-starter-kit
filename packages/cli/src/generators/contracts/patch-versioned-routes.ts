@@ -1,26 +1,52 @@
 import { readFile, writeFile } from "node:fs/promises";
 
+import { hasGeneratedBlock, removeGeneratedBlock, upsertGeneratedBlock } from "../../core/generated-marker";
 import type { ResourceIR } from "../../ir/types";
+
+function buildVersionedRouteBlock(ir: ResourceIR): string {
+	return `\t"/${ir.resource.slug}",`;
+}
+
+function insertRouteBeforeCapabilitiesCatalog(content: string, routeLine: string): string {
+	const typeAnchor = `\t"/capabilities/catalog",\n] = [`;
+	const typeIndex = content.indexOf(typeAnchor);
+	if (typeIndex === -1) {
+		throw new Error("patchVersionedRoutes: type tuple anchor not found");
+	}
+	let next = `${content.slice(0, typeIndex)}${routeLine}\n${content.slice(typeIndex)}`;
+
+	const runtimeAnchor = `\t"/capabilities/catalog",\n];`;
+	const runtimeIndex = next.indexOf(runtimeAnchor);
+	if (runtimeIndex === -1) {
+		throw new Error("patchVersionedRoutes: runtime array anchor not found");
+	}
+	next = `${next.slice(0, runtimeIndex)}${routeLine}\n${next.slice(runtimeIndex)}`;
+	return next;
+}
 
 export async function patchVersionedRoutes(versioningPath: string, ir: ResourceIR): Promise<void> {
 	const current = await readFile(versioningPath, "utf8");
-	const prefix = `"/${ir.resource.slug}"`;
-	if (current.includes(prefix)) {
+	const markerKey = `route:${ir.resource.slug}`;
+	const routeEntry = `\t"/${ir.resource.slug}",`;
+	if (current.includes(routeEntry) || hasGeneratedBlock(current, markerKey)) {
 		return;
 	}
-	const updated = current
-		.replace('"/capabilities/catalog",\n] = [', `"/capabilities/catalog",\n\t${prefix},\n] = [`)
-		.replace('"/capabilities/catalog",\n\t"/capabilities/catalog",', `"/capabilities/catalog",\n\t${prefix},\n\t"/capabilities/catalog",`);
-	if (updated === current) {
-		const marker = '"/capabilities/catalog",';
-		const withArray = updated.replace(`${marker}\n] = [`, `${marker}\n\t${prefix},\n] = [`);
-		const withUnion = withArray.replace(`${marker}\n] = [`, `${marker}\n\t${prefix},\n] = [`);
-		await writeFile(
-			versioningPath,
-			withUnion.replace(`${marker}\n] = [`, `${marker}\n\t${prefix},\n] = [`).replace(`readonly [\n${marker}`, `readonly [\n\t${prefix},\n${marker}`),
-			"utf8",
-		);
-		return;
+	const block = buildVersionedRouteBlock(ir);
+	const markerWrapped = upsertGeneratedBlock("", markerKey, block, 0, { linePrefix: "\t" });
+	const routeLine = markerWrapped.trim();
+	const next = insertRouteBeforeCapabilitiesCatalog(current, routeLine);
+	await writeFile(versioningPath, next, "utf8");
+}
+
+/** Removes a versioned route entry during rollback. */
+export async function unpatchVersionedRoutes(versioningPath: string, slug: string): Promise<void> {
+	const current = await readFile(versioningPath, "utf8");
+	const markerKey = `route:${slug}`;
+	let next = current;
+	if (hasGeneratedBlock(next, markerKey)) {
+		next = removeGeneratedBlock(next, markerKey);
 	}
-	await writeFile(versioningPath, updated.replace(`readonly [\n\t"/auth",`, `readonly [\n\t${prefix},\n\t"/auth",`), "utf8");
+	const routeLine = `\t"/${slug}",`;
+	next = next.replace(`${routeLine}\n`, "");
+	await writeFile(versioningPath, next, "utf8");
 }

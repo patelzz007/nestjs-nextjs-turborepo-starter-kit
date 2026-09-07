@@ -8,8 +8,14 @@ export function renderRepositoryTest(ir: ResourceIR): string {
 import { Generated${model}Repository } from "../${slug}.repository.generated";
 
 describe("Generated${model}Repository", () => {
-\tit("is defined", () => {
-\t\texpect(Generated${model}Repository).toBeDefined();
+\tit("exposes list and findById repository methods", () => {
+\t\texpect(Generated${model}Repository.prototype.list).toBeDefined();
+\t\texpect(Generated${model}Repository.prototype.findById).toBeDefined();
+\t});
+
+\tit("exposes create and delete repository methods", () => {
+\t\texpect(Generated${model}Repository.prototype.create).toBeDefined();
+\t\texpect(Generated${model}Repository.prototype.delete).toBeDefined();
 \t});
 });
 `;

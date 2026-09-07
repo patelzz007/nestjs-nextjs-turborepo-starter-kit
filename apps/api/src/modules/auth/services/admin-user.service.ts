@@ -1,5 +1,7 @@
 import { Injectable } from "@nestjs/common";
-import { epochMs, type AdminUserDetail, type AdminUserListQuery, type MessageResponse, type UserPermissions, type UserResponse } from "@workspace/shared";
+import { epochMs, type AdminUserDetail, type AdminUserListQuery, type MessageResponse, type PaginatedServiceResult, type UserPermissions, type UserResponse } from "@workspace/shared";
+
+import { paginateCursorListResult } from "../../../platform/persistence/cursor-list";
 
 import { LogService } from "../../../modules/logs/logs.service";
 import { PrismaService } from "../../../prisma/prisma.service";
@@ -23,19 +25,9 @@ export class AdminUserService {
 		private readonly mapper: UserResponseMapper,
 	) {}
 
-	public async getAdminUsersList(query: AdminUserListQuery): Promise<{
-		readonly items: AdminUserDetail[];
-		readonly total: number;
-		readonly page: number;
-		readonly limit: number;
-		readonly totalPages: number;
-		readonly hasNext: boolean;
-		readonly hasPrevious: boolean;
-	}> {
-		const page: number = query.page;
-		const limit: number = query.limit;
-
-		const [users, total] = await Promise.all([this.userRepo.listAdminUsers(query), this.userRepo.countAdminUsers(query)]);
+	public async getAdminUsersList(query: AdminUserListQuery): Promise<PaginatedServiceResult<AdminUserDetail>> {
+		const listResult = await this.userRepo.listAdminUsers(query);
+		const users = listResult.items;
 
 		const userIds: string[] = users.map((u) => u.id);
 		const userRoles = await this.prisma.userRole.findMany({
@@ -82,16 +74,7 @@ export class AdminUserService {
 			};
 		});
 
-		const totalPages: number = limit === 0 ? 0 : Math.ceil(total / limit);
-		return {
-			items,
-			total,
-			page,
-			limit,
-			totalPages,
-			hasNext: page < totalPages,
-			hasPrevious: page > 1,
-		};
+		return paginateCursorListResult({ ...listResult, items }, query);
 	}
 
 	public async getAdminUserDetail(userId: string): Promise<AdminUserDetail> {

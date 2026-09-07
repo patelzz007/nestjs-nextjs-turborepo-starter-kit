@@ -1,6 +1,6 @@
 import { ConflictException, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import type { Permission, Role, UserRole } from "@prisma/client";
-import type { PaginationInput } from "@workspace/shared";
+import type { PaginatedServiceResult, PaginationInput } from "@workspace/shared";
 
 import { BaseService } from "../../../platform/persistence/base.service";
 import { AuthorizationAuditService } from "../audit/authorization-audit.service";
@@ -139,14 +139,11 @@ export class RoleService extends BaseService<Role, CreateRoleInput, UpdateRoleIn
 	/**
 	 * List all active roles with pagination.
 	 */
-	public async findAll(options: { readonly page?: number; readonly limit?: number } = {}): Promise<{
-		readonly items: Role[];
-		readonly total: number;
-	}> {
-		const page: number = options.page ?? 1;
+	public async findAll(options: { readonly page?: number; readonly cursor?: string; readonly limit?: number } = {}): Promise<PaginatedServiceResult<Role>> {
 		const limit: number = options.limit ?? 50;
-		const result = await this.repository.list({ page, limit });
-		return { items: [...result.items], total: result.total };
+		const query = { page: options.page ?? 1, limit, cursor: options.cursor };
+		const result = await this.repository.list(query);
+		return this.paginateListResult(result, query);
 	}
 
 	// ── Role → Permission management ─────────────────────────────────────

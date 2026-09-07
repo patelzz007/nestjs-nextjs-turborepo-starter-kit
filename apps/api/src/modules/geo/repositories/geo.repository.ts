@@ -9,10 +9,12 @@ import type {
 	GeoImportInput,
 	GeoImportValidateInput,
 	CascadePreviewInput,
+	PaginationInput,
 	RegionListQuery,
 	StateListQuery,
 	SubregionListQuery,
 } from "@workspace/shared";
+import { buildOffsetPaginationMeta } from "@workspace/shared";
 import type { City, Country, Prisma, Region, State, Subregion } from "@prisma/client";
 
 import { PrismaService } from "../../../prisma/prisma.service";
@@ -46,17 +48,16 @@ function sanitizeForDataValue<T>(obj: T): T {
 	return toDataValue(obj) as T;
 }
 
-/** Paginated list response shape — supports both offset and cursor modes. */
+/** Hybrid list response shape (matches {@link PaginatedServiceResult} for the response interceptor). */
 export interface ListResult<T> {
 	readonly items: readonly T[];
-	readonly total: number;
-	/** Present in offset mode. */
-	readonly page: number | null;
 	readonly limit: number;
-	/** Present in cursor mode. */
+	readonly total: number;
+	readonly page: number;
+	readonly totalPages: number;
 	readonly nextCursor: string | null;
-	readonly hasMore: boolean;
 	readonly hasNext: boolean;
+	readonly hasPrevious: boolean;
 }
 
 /** Encode an id into an opaque cursor string. */
@@ -72,6 +73,81 @@ function decodeCursor(cursor: string): number | null {
 	} catch {
 		return null;
 	}
+}
+
+type GeoCursorOrder = { readonly id: "asc" };
+
+async function fetchGeoCursorPage<TWhere, TRow extends { id: number }>(options: {
+	readonly limit: number;
+	readonly cursor?: string;
+	readonly where: TWhere;
+	readonly findMany: (args: { where: TWhere; take: number; skip?: number; orderBy: GeoCursorOrder }) => Promise<TRow[]>;
+}): Promise<{ readonly items: readonly TRow[]; readonly nextCursor: string | null; readonly hasNext: boolean }> {
+	const cursorId = options.cursor !== undefined ? decodeCursor(options.cursor) : null;
+	const mergedWhere: TWhere =
+		cursorId !== null ? ({ ...options.where, id: { gt: cursorId } } as TWhere) : options.where;
+	const rows = await options.findMany({ where: mergedWhere, take: options.limit + 1, orderBy: { id: "asc" } });
+	const hasNext = rows.length > options.limit;
+	const items = hasNext ? rows.slice(0, options.limit) : rows;
+	const lastItem = items[items.length - 1];
+	const nextCursor = hasNext && lastItem !== undefined ? encodeCursor(lastItem.id) : null;
+	return { items: sanitizeForDataValue(items), nextCursor, hasNext };
+}
+
+interface FetchGeoListPageOptions<TWhere, TRow extends { id: number }> {
+	readonly where: TWhere;
+	readonly count: (where: TWhere) => Promise<number>;
+	readonly findMany: (args: { where: TWhere; take: number; skip?: number; orderBy: GeoCursorOrder }) => Promise<TRow[]>;
+}
+
+/** Offset + cursor list pagination for geo entities keyed by ascending numeric `id`. */
+async function fetchGeoListPage<TWhere, TRow extends { id: number }>(
+	query: PaginationInput,
+	options: FetchGeoListPageOptions<TWhere, TRow>,
+): Promise<ListResult<TRow>> {
+	const total = await options.count(options.where);
+	const useCursor = query.cursor !== undefined;
+	const page = query.page ?? 1;
+	const offsetMeta = buildOffsetPaginationMeta(total, page, query.limit);
+
+	if (useCursor) {
+		const cursorResult = await fetchGeoCursorPage({
+			limit: query.limit,
+			cursor: query.cursor,
+			where: options.where,
+			findMany: options.findMany,
+		});
+		return {
+			items: cursorResult.items,
+			limit: query.limit,
+			total,
+			page: offsetMeta.page,
+			totalPages: offsetMeta.totalPages,
+			nextCursor: cursorResult.nextCursor,
+			hasNext: cursorResult.hasNext,
+			hasPrevious: false,
+		};
+	}
+
+	const skip = (offsetMeta.page - 1) * query.limit;
+	const rows = await options.findMany({
+		where: options.where,
+		skip,
+		take: query.limit,
+		orderBy: { id: "asc" },
+	});
+	const lastRow = rows[rows.length - 1];
+	const nextCursor = offsetMeta.hasNext && lastRow !== undefined ? encodeCursor(lastRow.id) : null;
+	return {
+		items: sanitizeForDataValue(rows),
+		limit: query.limit,
+		total,
+		page: offsetMeta.page,
+		totalPages: offsetMeta.totalPages,
+		nextCursor,
+		hasNext: offsetMeta.hasNext,
+		hasPrevious: offsetMeta.hasPrevious,
+	};
 }
 
 /** Geo entity counts. */
@@ -278,9 +354,8 @@ export class GeoRepository {
 	// ── Region ──────────────────────────────────────────────────────────
 
 	public async listRegions(query: RegionListQuery): Promise<ListResult<Region>> {
-		const { page, limit, search, flag, ids, sort, cursor, include } = query;
+		const { search, flag, ids, include } = query;
 		const idList = parseIds(ids);
-		const { field, dir } = parseSort(sort, ["id", "name", "createdAt", "updatedAt"]);
 		const searchIds = search !== undefined ? await this.fuzzySearchIds("regions", search, 200) : null;
 		const where: Prisma.RegionWhereInput = {
 			...(searchIds !== null ? { id: { in: searchIds } } : {}),
@@ -288,24 +363,11 @@ export class GeoRepository {
 			...(idList !== null ? { id: { in: idList } } : {}),
 		};
 		const includeObj = this.parseRegionInclude(include);
-		const cursorId = cursor !== undefined ? decodeCursor(cursor) : null;
-
-		if (cursorId !== null) {
-			// Cursor-based: fetch limit+1 to detect hasMore
-			const cursorWhere: Prisma.RegionWhereInput = { ...where, id: { gt: cursorId } };
-			const items: Region[] = await this.prisma.region.findMany({ where: cursorWhere, take: limit + 1, orderBy: { id: "asc" }, include: includeObj });
-			const hasMore: boolean = items.length > limit;
-			const sliced = hasMore ? items.slice(0, limit) : items;
-			const nextCursor = hasMore ? encodeCursor(sliced[sliced.length - 1].id) : null;
-			return { items: sanitizeForDataValue(sliced), total: sliced.length, page: null, limit, nextCursor, hasMore, hasNext: hasMore };
-		}
-
-		// Offset-based
-		const [items, total]: [Region[], number] = await Promise.all([
-			this.prisma.region.findMany({ where, skip: (page - 1) * limit, take: limit, orderBy: { [field]: dir }, include: includeObj }),
-			this.prisma.region.count({ where }),
-		]);
-		return { items: sanitizeForDataValue(items), total, page, limit, nextCursor: null, hasMore: page * limit < total, hasNext: page * limit < total };
+		return fetchGeoListPage(query, {
+			where,
+			count: (listWhere) => this.prisma.region.count({ where: listWhere }),
+			findMany: (args) => this.prisma.region.findMany({ ...args, include: includeObj }),
+		});
 	}
 
 	public async getRegion(id: number): Promise<Region> {
@@ -334,9 +396,8 @@ export class GeoRepository {
 	// ── Subregion ───────────────────────────────────────────────────────
 
 	public async listSubregions(query: SubregionListQuery): Promise<ListResult<Subregion>> {
-		const { page, limit, search, regionId, flag, ids, sort, cursor, include } = query;
+		const { search, regionId, flag, ids, include } = query;
 		const idList = parseIds(ids);
-		const { field, dir } = parseSort(sort, ["id", "name", "createdAt", "updatedAt"]);
 		const searchIds = search !== undefined ? await this.fuzzySearchIds("subregions", search, 200) : null;
 		const where: Prisma.SubregionWhereInput = {
 			...(searchIds !== null ? { id: { in: searchIds } } : {}),
@@ -345,22 +406,11 @@ export class GeoRepository {
 			...(idList !== null ? { id: { in: idList } } : {}),
 		};
 		const includeObj = this.parseSubregionInclude(include);
-		const cursorId = cursor !== undefined ? decodeCursor(cursor) : null;
-
-		if (cursorId !== null) {
-			const cursorWhere: Prisma.SubregionWhereInput = { ...where, id: { gt: cursorId } };
-			const items: Subregion[] = await this.prisma.subregion.findMany({ where: cursorWhere, take: limit + 1, orderBy: { id: "asc" }, include: includeObj });
-			const hasMore: boolean = items.length > limit;
-			const sliced = hasMore ? items.slice(0, limit) : items;
-			const nextCursor = hasMore ? encodeCursor(sliced[sliced.length - 1].id) : null;
-			return { items: sanitizeForDataValue(sliced), total: sliced.length, page: null, limit, nextCursor, hasMore, hasNext: hasMore };
-		}
-
-		const [items, total]: [Subregion[], number] = await Promise.all([
-			this.prisma.subregion.findMany({ where, skip: (page - 1) * limit, take: limit, orderBy: { [field]: dir }, include: includeObj }),
-			this.prisma.subregion.count({ where }),
-		]);
-		return { items: sanitizeForDataValue(items), total, page, limit, nextCursor: null, hasMore: page * limit < total, hasNext: page * limit < total };
+		return fetchGeoListPage(query, {
+			where,
+			count: (listWhere) => this.prisma.subregion.count({ where: listWhere }),
+			findMany: (args) => this.prisma.subregion.findMany({ ...args, include: includeObj }),
+		});
 	}
 
 	public async getSubregion(id: number): Promise<Subregion> {
@@ -389,9 +439,8 @@ export class GeoRepository {
 	// ── Country ─────────────────────────────────────────────────────────
 
 	public async listCountries(query: CountryListQuery): Promise<ListResult<Country>> {
-		const { page, limit, search, iso2, regionId, subregionId, flag, ids, sort, cursor, include } = query;
+		const { search, iso2, regionId, subregionId, flag, ids, include } = query;
 		const idList = parseIds(ids);
-		const { field, dir } = parseSort(sort, ["id", "name", "iso2", "iso3", "population", "createdAt", "updatedAt"]);
 		const searchIds = search !== undefined ? await this.fuzzySearchIds("countries", search, 200) : null;
 		const where: Prisma.CountryWhereInput = {
 			...(searchIds !== null ? { id: { in: searchIds } } : {}),
@@ -402,22 +451,11 @@ export class GeoRepository {
 			...(idList !== null ? { id: { in: idList } } : {}),
 		};
 		const includeObj = this.parseCountryInclude(include);
-		const cursorId = cursor !== undefined ? decodeCursor(cursor) : null;
-
-		if (cursorId !== null) {
-			const cursorWhere: Prisma.CountryWhereInput = { ...where, id: { gt: cursorId } };
-			const items: Country[] = await this.prisma.country.findMany({ where: cursorWhere, take: limit + 1, orderBy: { id: "asc" }, include: includeObj });
-			const hasMore: boolean = items.length > limit;
-			const sliced = hasMore ? items.slice(0, limit) : items;
-			const nextCursor = hasMore ? encodeCursor(sliced[sliced.length - 1].id) : null;
-			return { items: sanitizeForDataValue(sliced), total: sliced.length, page: null, limit, nextCursor, hasMore, hasNext: hasMore };
-		}
-
-		const [items, total]: [Country[], number] = await Promise.all([
-			this.prisma.country.findMany({ where, skip: (page - 1) * limit, take: limit, orderBy: { [field]: dir }, include: includeObj }),
-			this.prisma.country.count({ where }),
-		]);
-		return { items: sanitizeForDataValue(items), total, page, limit, nextCursor: null, hasMore: page * limit < total, hasNext: page * limit < total };
+		return fetchGeoListPage(query, {
+			where,
+			count: (listWhere) => this.prisma.country.count({ where: listWhere }),
+			findMany: (args) => this.prisma.country.findMany({ ...args, include: includeObj }),
+		});
 	}
 
 	public async getCountry(id: number): Promise<Country> {
@@ -446,9 +484,8 @@ export class GeoRepository {
 	// ── State ───────────────────────────────────────────────────────────
 
 	public async listStates(query: StateListQuery): Promise<ListResult<State>> {
-		const { page, limit, search, countryId, countryCode, flag, ids, sort, cursor, include } = query;
+		const { search, countryId, countryCode, flag, ids, include } = query;
 		const idList = parseIds(ids);
-		const { field, dir } = parseSort(sort, ["id", "name", "countryCode", "iso2", "createdAt", "updatedAt"]);
 		const searchIds = search !== undefined ? await this.fuzzySearchIds("states", search, 200) : null;
 		const where: Prisma.StateWhereInput = {
 			...(searchIds !== null ? { id: { in: searchIds } } : {}),
@@ -458,22 +495,11 @@ export class GeoRepository {
 			...(idList !== null ? { id: { in: idList } } : {}),
 		};
 		const includeObj = this.parseStateInclude(include);
-		const cursorId = cursor !== undefined ? decodeCursor(cursor) : null;
-
-		if (cursorId !== null) {
-			const cursorWhere: Prisma.StateWhereInput = { ...where, id: { gt: cursorId } };
-			const items: State[] = await this.prisma.state.findMany({ where: cursorWhere, take: limit + 1, orderBy: { id: "asc" }, include: includeObj });
-			const hasMore: boolean = items.length > limit;
-			const sliced = hasMore ? items.slice(0, limit) : items;
-			const nextCursor = hasMore ? encodeCursor(sliced[sliced.length - 1].id) : null;
-			return { items: sanitizeForDataValue(sliced), total: sliced.length, page: null, limit, nextCursor, hasMore, hasNext: hasMore };
-		}
-
-		const [items, total]: [State[], number] = await Promise.all([
-			this.prisma.state.findMany({ where, skip: (page - 1) * limit, take: limit, orderBy: { [field]: dir }, include: includeObj }),
-			this.prisma.state.count({ where }),
-		]);
-		return { items: sanitizeForDataValue(items), total, page, limit, nextCursor: null, hasMore: page * limit < total, hasNext: page * limit < total };
+		return fetchGeoListPage(query, {
+			where,
+			count: (listWhere) => this.prisma.state.count({ where: listWhere }),
+			findMany: (args) => this.prisma.state.findMany({ ...args, include: includeObj }),
+		});
 	}
 
 	public async getState(id: number): Promise<State> {
@@ -502,9 +528,8 @@ export class GeoRepository {
 	// ── City ────────────────────────────────────────────────────────────
 
 	public async listCities(query: CityListQuery): Promise<ListResult<City>> {
-		const { page, limit, search, stateId, countryId, countryCode, stateCode, flag, ids, sort, cursor, include } = query;
+		const { search, stateId, countryId, countryCode, stateCode, flag, ids, include } = query;
 		const idList = parseIds(ids);
-		const { field, dir } = parseSort(sort, ["id", "name", "countryCode", "stateCode", "latitude", "longitude", "createdAt", "updatedAt"]);
 		const searchIds = search !== undefined ? await this.fuzzySearchIds("cities", search, 200) : null;
 		const where: Prisma.CityWhereInput = {
 			...(searchIds !== null ? { id: { in: searchIds } } : {}),
@@ -516,22 +541,11 @@ export class GeoRepository {
 			...(idList !== null ? { id: { in: idList } } : {}),
 		};
 		const includeObj = this.parseCityInclude(include);
-		const cursorId = cursor !== undefined ? decodeCursor(cursor) : null;
-
-		if (cursorId !== null) {
-			const cursorWhere: Prisma.CityWhereInput = { ...where, id: { gt: cursorId } };
-			const items: City[] = await this.prisma.city.findMany({ where: cursorWhere, take: limit + 1, orderBy: { id: "asc" }, include: includeObj });
-			const hasMore: boolean = items.length > limit;
-			const sliced = hasMore ? items.slice(0, limit) : items;
-			const nextCursor = hasMore ? encodeCursor(sliced[sliced.length - 1].id) : null;
-			return { items: sanitizeForDataValue(sliced), total: sliced.length, page: null, limit, nextCursor, hasMore, hasNext: hasMore };
-		}
-
-		const [items, total]: [City[], number] = await Promise.all([
-			this.prisma.city.findMany({ where, skip: (page - 1) * limit, take: limit, orderBy: { [field]: dir }, include: includeObj }),
-			this.prisma.city.count({ where }),
-		]);
-		return { items: sanitizeForDataValue(items), total, page, limit, nextCursor: null, hasMore: page * limit < total, hasNext: page * limit < total };
+		return fetchGeoListPage(query, {
+			where,
+			count: (listWhere) => this.prisma.city.count({ where: listWhere }),
+			findMany: (args) => this.prisma.city.findMany({ ...args, include: includeObj }),
+		});
 	}
 
 	public async getCity(id: number): Promise<City> {

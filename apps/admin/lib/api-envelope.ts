@@ -6,25 +6,62 @@ export function stubApiMeta(): ApiResponseMeta {
 }
 
 /** Paginated meta stub for list endpoints hydrated from the server. */
-export function stubPaginatedMeta(total: number, page: number, limit: number): ApiPaginatedMeta {
-	const totalPages = limit > 0 ? Math.ceil(total / limit) : 0;
+export function stubPaginatedMeta(
+	limit: number,
+	total: number,
+	page: number,
+	totalPages: number,
+	hasNext: boolean,
+	nextCursor: string | null = null,
+	hasPrevious: boolean = page > 1,
+): ApiPaginatedMeta {
 	return ApiPaginatedMetaSchema.parse({
 		correlationId: "",
 		timestamp: nowEpochMs(),
+		limit,
 		total,
 		page,
-		limit,
 		totalPages,
-		hasNext: page < totalPages,
-		hasPrevious: page > 1,
+		nextCursor,
+		hasNext,
+		hasPrevious,
 	});
 }
 
-/** Read `total` from a paginated envelope meta object (runtime shape may exceed `ApiResponseMeta`). */
-export function readPaginatedTotal(meta: ApiResponseMeta | undefined, fallback: number): number {
+function parsePaginatedMeta(meta: ApiResponseMeta | undefined): ApiPaginatedMeta | null {
 	if (meta === undefined) {
-		return fallback;
+		return null;
 	}
 	const parsed = ApiPaginatedMetaSchema.safeParse(meta);
-	return parsed.success ? parsed.data.total : fallback;
+	return parsed.success ? parsed.data : null;
+}
+
+/** Read `total` from a paginated envelope meta object. */
+export function readPaginatedTotal(meta: ApiResponseMeta | undefined, fallback: number = 0): number {
+	return parsePaginatedMeta(meta)?.total ?? fallback;
+}
+
+/** Read `page` (1-indexed) from a paginated envelope meta object. */
+export function readPaginatedPage(meta: ApiResponseMeta | undefined, fallback: number = 1): number {
+	return parsePaginatedMeta(meta)?.page ?? fallback;
+}
+
+/** Read `totalPages` from a paginated envelope meta object. */
+export function readPaginatedTotalPages(meta: ApiResponseMeta | undefined, fallback: number = 1): number {
+	return parsePaginatedMeta(meta)?.totalPages ?? fallback;
+}
+
+/** Read `hasNext` from a paginated envelope meta object. */
+export function readPaginatedHasNext(meta: ApiResponseMeta | undefined, fallback: boolean = false): boolean {
+	return parsePaginatedMeta(meta)?.hasNext ?? fallback;
+}
+
+/** Read `hasPrevious` from a paginated envelope meta object. */
+export function readPaginatedHasPrevious(meta: ApiResponseMeta | undefined, fallback: boolean = false): boolean {
+	return parsePaginatedMeta(meta)?.hasPrevious ?? fallback;
+}
+
+/** Read `nextCursor` from a paginated envelope meta object. */
+export function readPaginatedNextCursor(meta: ApiResponseMeta | undefined): string | null {
+	return parsePaginatedMeta(meta)?.nextCursor ?? null;
 }

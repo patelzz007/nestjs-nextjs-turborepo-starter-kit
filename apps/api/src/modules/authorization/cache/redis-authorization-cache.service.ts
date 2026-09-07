@@ -76,7 +76,7 @@ export class RedisAuthorizationCacheService extends AuthorizationCacheService im
 	public override invalidateUsers(userIds: readonly string[]): void {
 		this.delegate.invalidateUsers(userIds);
 		if (userIds.length > 0) {
-			this.publish({ type: "users", userIds });
+			this.publish({ type: "users", userIds: [...userIds] });
 		}
 	}
 

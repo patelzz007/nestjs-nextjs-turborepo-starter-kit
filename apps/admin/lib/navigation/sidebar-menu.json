@@ -272,6 +272,18 @@
 					"icon": "Package"
 				}
 			]
+		},
+		{
+			"title": "Developer",
+			"color": "green",
+			"items": [
+				{
+					"title": "Generator",
+					"url": "/devtools/generator",
+					"icon": "Hammer",
+					"requiredCapability": "platform:devtools.manage"
+				}
+			]
 		}
 	],
 	"bottomItems": [

@@ -3,11 +3,12 @@ import type { ResourceIR } from "../../ir/types";
 export function renderNestServiceBase(ir: ResourceIR): string {
 	const model = ir.resource.modelName;
 	const slug = ir.resource.slug;
+	const workflowFieldCamel = ir.fields.find((field) => field.name === ir.workflow?.field)?.camelName ?? ir.workflow?.field ?? "status";
 	const transitionMethod = ir.workflow
 		? `
 	public async transition(id: string, transition: ${model}Status, body: { expectedVersion: number; idempotencyKey: string }): Promise<${model}> {
 		const current = await this.getById(id);
-		const currentStatus = current.status;
+		const currentStatus = current.${workflowFieldCamel};
 		const allowed = this.transitionTargets[currentStatus] ?? [];
 		if (!allowed.includes(transition)) {
 			throw new NotFoundException("Invalid workflow transition");

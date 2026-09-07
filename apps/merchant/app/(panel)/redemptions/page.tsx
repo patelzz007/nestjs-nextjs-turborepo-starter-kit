@@ -3,7 +3,6 @@ import { loadMerchantServerContext } from "@/lib/merchant-server-api";
 import type { MerchantRedemptionListItem } from "@workspace/shared";
 import * as React from "react";
 
-const REDEMPTIONS_PAGE = 1;
 const REDEMPTIONS_LIMIT = 20;
 
 export const dynamic = "force-dynamic";
@@ -14,7 +13,7 @@ export default async function RedemptionsPage(): Promise<React.JSX.Element> {
 
 	let initialRows: readonly MerchantRedemptionListItem[] | undefined;
 	try {
-		const response = await server.merchant.redemptions.query({ page: REDEMPTIONS_PAGE, limit: REDEMPTIONS_LIMIT }, { headers: merchantHeaders });
+		const response = await server.merchant.redemptions.query({ limit: REDEMPTIONS_LIMIT }, { headers: merchantHeaders });
 		initialRows = response.data;
 	} catch {
 		initialRows = undefined;

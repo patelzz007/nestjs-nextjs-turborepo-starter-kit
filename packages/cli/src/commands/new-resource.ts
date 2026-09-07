@@ -35,7 +35,7 @@ export async function runNewResourceCommand(cwd: string, options: NewResourceCom
 	p.intro("Let's define your new resource");
 
 	try {
-		const wizardInput = await collectResourceWizardInput(prompter, config.definitionsDir);
+		const wizardInput = await collectResourceWizardInput(prompter, config.definitionsDir, config.rootDir);
 		const definition = buildResourceDefinition(wizardInput);
 		const source = renderResourceDefinitionSource(definition);
 
@@ -68,7 +68,7 @@ export async function runNewResourceCommand(cwd: string, options: NewResourceCom
 		await writeFile(definitionPath, source, "utf8");
 		writeSpinner.stop(`Wrote ${definitionPath}`);
 
-		const shouldGenerate = options.generate || (await prompter.confirm("Generate API, contracts, and admin UI now?", { defaultValue: true }));
+		const shouldGenerate = options.generate || (await prompter.confirm("Generate artifacts now?", { defaultValue: true }));
 		if (!shouldGenerate) {
 			p.note(`pnpm app generate resource ${ir.resource.slug}`, "When you're ready");
 			p.outro("Definition saved.");

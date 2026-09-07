@@ -1,6 +1,9 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
 
+import { resolveModuleResourceDir } from "./discover-modules";
+import { resolveModulesForIr } from "./load-modules";
+import type { GeneratorModulesManifest } from "../schema/generator-modules";
 import type { ResourceIR } from "../ir/types";
 import type { AppProjectConfig } from "./project";
 
@@ -11,10 +14,15 @@ export interface PlannedFile {
 	readonly template: string;
 }
 
-export function planResourceFiles(config: AppProjectConfig, ir: ResourceIR): PlannedFile[] {
+export function planResourceFiles(
+	config: AppProjectConfig,
+	ir: ResourceIR,
+	modulesManifest: GeneratorModulesManifest,
+): PlannedFile[] {
 	const slug = ir.resource.slug;
 	const moduleName = slug;
 	const files: PlannedFile[] = [];
+	const uiModules = resolveModulesForIr(modulesManifest, ir.scope.ui);
 
 	const push = (relativePath: string, ownership: "generated" | "scaffolded", template: string): void => {
 		files.push({
@@ -25,24 +33,31 @@ export function planResourceFiles(config: AppProjectConfig, ir: ResourceIR): Pla
 		});
 	};
 
-	push(`apps/api/src/modules/${moduleName}/${moduleName}.module.ts`, "scaffolded", "nestjs/module");
-	push(`apps/api/src/modules/${moduleName}/${moduleName}.controller.ts`, "scaffolded", "nestjs/controller");
-	push(`apps/api/src/modules/${moduleName}/${moduleName}.service.ts`, "scaffolded", "nestjs/service");
-	push(`apps/api/src/modules/${moduleName}/${moduleName}.repository.generated.ts`, "generated", "nestjs/repository");
-	push(`apps/api/src/modules/${moduleName}/${moduleName}.service.generated.ts`, "generated", "nestjs/service-base");
-	push(`apps/api/src/modules/${moduleName}/${moduleName}.controller.generated.ts`, "generated", "nestjs/controller-base");
+	if (ir.scope.api) {
+		push(`apps/api/src/modules/${moduleName}/${moduleName}.module.ts`, "scaffolded", "nestjs/module");
+		push(`apps/api/src/modules/${moduleName}/${moduleName}.controller.ts`, "scaffolded", "nestjs/controller");
+		push(`apps/api/src/modules/${moduleName}/${moduleName}.service.ts`, "scaffolded", "nestjs/service");
+		push(`apps/api/src/modules/${moduleName}/${moduleName}.repository.generated.ts`, "generated", "nestjs/repository");
+		push(`apps/api/src/modules/${moduleName}/${moduleName}.service.generated.ts`, "generated", "nestjs/service-base");
+		push(`apps/api/src/modules/${moduleName}/${moduleName}.controller.generated.ts`, "generated", "nestjs/controller-base");
+		push(`apps/api/src/modules/${moduleName}/__tests__/${moduleName}.service.spec.ts`, "scaffolded", "tests/service");
+		push(`apps/api/src/modules/${moduleName}/__tests__/${moduleName}.repository.spec.ts`, "generated", "tests/repository");
+	}
 
-	push(`packages/shared/src/schemas/domain/${slug}.generated.ts`, "generated", "contracts/zod");
-	push(`apps/admin/app/(panel)/${slug}/page.tsx`, "generated", "admin/page");
-	push(`apps/admin/app/(panel)/${slug}/${slug}-detail-view.generated.tsx`, "generated", "admin/detail-view");
-	push(`apps/admin/app/(panel)/${slug}/[id]/page.tsx`, "generated", "admin/detail-page");
-	push(`apps/admin/app/(panel)/${slug}/${slug}-view.generated.tsx`, "generated", "admin/view");
-	push(`apps/admin/app/(panel)/${slug}/create/page.tsx`, "scaffolded", "admin/create-page");
-	push(`apps/admin/app/(panel)/${slug}/[id]/edit/page.tsx`, "scaffolded", "admin/edit-page");
+	if (ir.scope.shared) {
+		push(`packages/shared/src/schemas/domain/${slug}.generated.ts`, "generated", "contracts/zod");
+	}
 
-	push(`apps/api/src/modules/${moduleName}/__tests__/${moduleName}.service.spec.ts`, "scaffolded", "tests/service");
-	push(`apps/api/src/modules/${moduleName}/__tests__/${moduleName}.repository.spec.ts`, "generated", "tests/repository");
-	push(`apps/admin/app/(panel)/${slug}/__tests__/${slug}-view.test.tsx`, "generated", "tests/admin-view");
+	for (const uiModule of uiModules) {
+		const resourceDir = resolveModuleResourceDir(uiModule, slug);
+		push(`${resourceDir}/page.tsx`, "generated", "ui/page");
+		push(`${resourceDir}/${slug}-detail-view.generated.tsx`, "generated", "ui/detail-view");
+		push(`${resourceDir}/[id]/page.tsx`, "generated", "ui/detail-page");
+		push(`${resourceDir}/${slug}-view.generated.tsx`, "generated", "ui/view");
+		push(`${resourceDir}/create/page.tsx`, "scaffolded", "ui/create-page");
+		push(`${resourceDir}/[id]/edit/page.tsx`, "scaffolded", "ui/edit-page");
+		push(`${resourceDir}/__tests__/${slug}-view.test.tsx`, "generated", "tests/ui-view");
+	}
 
 	return files.sort((left, right) => left.relativePath.localeCompare(right.relativePath));
 }

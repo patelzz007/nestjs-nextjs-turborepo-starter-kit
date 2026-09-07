@@ -6,11 +6,13 @@ import type {
 	AdminMerchantListQuery,
 	AdminRejectRewardInput,
 	MerchantOrgResponse,
+	PaginatedServiceResult,
 	RewardResponse,
 } from "@workspace/shared";
 import { EmailPreview, EmailRenderContextSchema, EpochMsSchema } from "@workspace/shared";
 
 import { TypedConfigService } from "../../../config/typed-config.service";
+import { paginateCursorListResult } from "../../../platform/persistence/cursor-list";
 import { LogService } from "../../logs/logs.service";
 import { EmailSenderService } from "../../notifications/email/email-sender.service";
 import { EMAIL_TEMPLATE_REGISTRY, buildEmailPreviewFromTemplate } from "../../notifications/email/email-template.registry";
@@ -108,35 +110,16 @@ export class RewardsAdminService {
 		return buildEmailPreviewFromTemplate(entry, template, context, input.email);
 	}
 
-	public async listMerchants(query: AdminMerchantListQuery): Promise<{
-		readonly items: MerchantOrgResponse[];
-		readonly total: number;
-		readonly page: number;
-		readonly limit: number;
-		readonly totalPages: number;
-		readonly hasNext: boolean;
-		readonly hasPrevious: boolean;
-	}> {
-		const page = query.page;
-		const limit = query.limit;
-		const { rows, total } = await this.merchantOrgRepository.listForAdmin(query);
+	public async listMerchants(query: AdminMerchantListQuery): Promise<PaginatedServiceResult<MerchantOrgResponse>> {
+		const result = await this.merchantOrgRepository.listForAdmin(query);
 
-		const items = rows.map((row) => {
+		const items = result.items.map((row) => {
 			const base = mapMerchantOrgToResponse(row);
 			const [owner] = row.members;
 			return { ...base, ownerUserId: owner.userId };
 		});
-		const totalPages = limit === 0 ? 0 : Math.ceil(total / limit);
 
-		return {
-			items,
-			total,
-			page,
-			limit,
-			totalPages,
-			hasNext: page < totalPages,
-			hasPrevious: page > 1,
-		};
+		return paginateCursorListResult({ ...result, items }, query);
 	}
 
 	public async listPendingRewards(): Promise<RewardResponse[]> {

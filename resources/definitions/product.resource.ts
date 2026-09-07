@@ -1,8 +1,14 @@
 import { defineResource } from "@workspace/cli";
 
 export default defineResource({
-	version: 1,
+	version: 2,
 	name: "Product",
+	scope: {
+		api: true,
+		shared: true,
+		client: true,
+		ui: ["admin"],
+	},
 	model: {
 		name: "Product",
 		softDelete: true,
@@ -96,37 +102,39 @@ export default defineResource({
 		delete: true,
 		list: true,
 	},
-	admin: {
-		navigation: {
-			label: "Products",
-			group: "Platform",
-			icon: "Package",
-			hiddenInProduction: true,
-		},
-		list: {
-			searchable: ["sku", "name", "slug", "brand"],
-			sortable: ["sku", "name", "price", "stockQuantity", "createdAt"],
-			filters: ["isActive", "isFeatured", "categoryId", "brand"],
-			columns: ["sku", "name", "price", "stockQuantity", "categoryId", "isActive", "isFeatured", "createdAt"],
-		},
-		form: {
-			layout: "two-column",
-			fields: [
-				"sku",
-				"name",
-				"slug",
-				"shortDescription",
-				"description",
-				"price",
-				"compareAtPrice",
-				"stockQuantity",
-				"categoryId",
-				"brand",
-				"weightGrams",
-				"imageUrl",
-				"isActive",
-				"isFeatured",
-			],
+	ui: {
+		admin: {
+			navigation: {
+				label: "Products",
+				group: "Platform",
+				icon: "Package",
+				hiddenInProduction: true,
+			},
+			list: {
+				searchable: ["sku", "name", "slug", "brand"],
+				sortable: ["sku", "name", "price", "stockQuantity", "createdAt"],
+				filters: ["isActive", "isFeatured", "categoryId", "brand"],
+				columns: ["sku", "name", "price", "stockQuantity", "categoryId", "isActive", "isFeatured", "createdAt"],
+			},
+			form: {
+				layout: "two-column",
+				fields: [
+					"sku",
+					"name",
+					"slug",
+					"shortDescription",
+					"description",
+					"price",
+					"compareAtPrice",
+					"stockQuantity",
+					"categoryId",
+					"brand",
+					"weightGrams",
+					"imageUrl",
+					"isActive",
+					"isFeatured",
+				],
+			},
 		},
 	},
 });

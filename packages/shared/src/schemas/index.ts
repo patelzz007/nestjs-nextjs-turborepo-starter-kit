@@ -339,6 +339,9 @@ export { ErrorResponseSchema, MessageResponseSchema } from "./api/message";
 export type { ErrorResponse, MessageResponse } from "./api/message";
 export { PaginatedResponseSchema, PaginationMetaSchema, PaginationSchema } from "./api/pagination";
 export type { PaginatedResponse, PaginationInput, PaginationMeta } from "./api/pagination";
+export { BooleanQueryParamSchema } from "./api/query-params";
+export type { BooleanQueryParam } from "./api/query-params";
+export { decodeListCursor, encodeListCursor } from "../lib/list-cursor";
 export {
 	AssignPermissionsToUserBulkSchema,
 	AssignPermissionToRoleSchema,
@@ -766,14 +769,7 @@ export {
 	ProductSchema,
 	UpdateProductSchema,
 } from "./domain/product.generated";
-export type {
-	BulkCreateProductInput,
-	CreateProductInput,
-	Product,
-	ProductListQuery,
-	ProductListResponse,
-	UpdateProductInput,
-} from "./domain/product.generated";
+export type { BulkCreateProductInput, CreateProductInput, Product, ProductListQuery, ProductListResponse, UpdateProductInput } from "./domain/product.generated";
 // @app-generated:end product
 export {
 	PlatformResourceAuditInputSchema,

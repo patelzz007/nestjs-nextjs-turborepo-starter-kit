@@ -1,26 +1,24 @@
 import { readFile, writeFile } from "node:fs/promises";
 
+import { hasGeneratedBlock, removeGeneratedBlock, SQL_MARKER_PREFIXES, upsertGeneratedBlock } from "../../core/generated-marker";
 import type { ResourceIR } from "../../ir/types";
-
-const BEGIN = "-- @app-generated:begin";
-const END = "-- @app-generated:end";
 
 export async function patchRlsSql(rlsPath: string, ir: ResourceIR, block: string): Promise<void> {
 	const current = await readFile(rlsPath, "utf8");
-	const marker = `${BEGIN} ${ir.resource.modelName}`;
-	const endMarker = `${END} ${ir.resource.modelName}`;
-	const wrapped = `${marker}\n${block}\n${endMarker}`;
+	const markerKey = ir.resource.modelName;
+	const next = hasGeneratedBlock(current, markerKey, SQL_MARKER_PREFIXES)
+		? upsertGeneratedBlock(current, markerKey, block, 0, { prefixes: SQL_MARKER_PREFIXES })
+		: `${current.trimEnd()}\n\n${upsertGeneratedBlock("", markerKey, block, 0, { prefixes: SQL_MARKER_PREFIXES }).trim()}\n`;
+	await writeFile(rlsPath, next, "utf8");
+}
 
-	if (current.includes(marker)) {
-		const start = current.indexOf(marker);
-		const end = current.indexOf(endMarker);
-		if (start === -1 || end === -1) {
-			throw new Error(`Malformed generated RLS block for ${ir.resource.modelName}`);
-		}
-		const next = `${current.slice(0, start)}${wrapped}${current.slice(end + endMarker.length)}`;
-		await writeFile(rlsPath, next, "utf8");
+/** Removes an RLS block during rollback. */
+export async function unpatchRlsSql(rlsPath: string, modelName: string): Promise<void> {
+	const current = await readFile(rlsPath, "utf8");
+	if (!hasGeneratedBlock(current, modelName, SQL_MARKER_PREFIXES)) {
 		return;
 	}
-
-	await writeFile(rlsPath, `${current.trimEnd()}\n\n${wrapped}\n`, "utf8");
+	await writeFile(rlsPath, removeGeneratedBlock(current, modelName, SQL_MARKER_PREFIXES), "utf8");
 }
+
+

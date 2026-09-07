@@ -3,6 +3,8 @@ import type { MerchantOrg, Prisma } from "@prisma/client";
 
 import type { AdminMerchantListQuery } from "@workspace/shared";
 
+import { fetchStringIdListPage } from "../../../platform/persistence/cursor-list";
+import type { RepositoryListResult } from "../../../platform/persistence/types";
 import { PrismaService } from "../../../prisma/prisma.service";
 
 const ADMIN_MERCHANT_LIST_INCLUDE = {
@@ -47,8 +49,7 @@ export class MerchantOrgRepository {
 		});
 	}
 
-	public async listForAdmin(query: AdminMerchantListQuery): Promise<{ readonly rows: MerchantOrgAdminListRow[]; readonly total: number }> {
-		const skip = (query.page - 1) * query.limit;
+	public async listForAdmin(query: AdminMerchantListQuery): Promise<RepositoryListResult<MerchantOrgAdminListRow>> {
 		const search = query.search?.trim();
 		const where: Prisma.MerchantOrgWhereInput = {
 			isDeleted: false,
@@ -66,18 +67,17 @@ export class MerchantOrgRepository {
 				: {}),
 		};
 
-		const [rows, total] = await Promise.all([
-			this.prisma.merchantOrg.findMany({
-				where,
-				orderBy: { createdAt: "desc" },
-				skip,
-				take: query.limit,
-				include: ADMIN_MERCHANT_LIST_INCLUDE,
-			}),
-			this.prisma.merchantOrg.count({ where }),
-		]);
-
-		return { rows, total };
+		return fetchStringIdListPage(query, {
+			where,
+			mergeCursor: (baseWhere, cursorId) => ({ ...baseWhere, id: { gt: cursorId } }),
+			readId: (row) => row.id,
+			findMany: (args): Promise<MerchantOrgAdminListRow[]> =>
+				this.prisma.merchantOrg.findMany({
+					...args,
+					include: ADMIN_MERCHANT_LIST_INCLUDE,
+				}),
+			count: (listWhere) => this.prisma.merchantOrg.count({ where: listWhere }),
+		});
 	}
 
 	public async updateKyb(merchantOrgId: string, data: { readonly kybStatus: MerchantOrg["kybStatus"]; readonly kybFields?: Prisma.InputJsonValue }): Promise<void> {

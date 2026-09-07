@@ -12,6 +12,7 @@ import {
 } from "@workspace/shared";
 
 import { PrismaService } from "../prisma/prisma.service";
+import { parsePrismaNullableJson } from "../common/utils/prisma-json";
 
 @Injectable()
 export class PlatformResourceAuditService {
@@ -29,7 +30,7 @@ export class PlatformResourceAuditService {
 					resourceId: parsed.resourceId,
 					action: parsed.action,
 					actorUserId: parsed.actorUserId,
-					changes: parsed.changes,
+					changes: parsePrismaNullableJson(parsed.changes),
 				},
 			});
 		} catch (error) {
@@ -85,7 +86,7 @@ export class PlatformResourceMutationService {
 		readonly resourceId: string;
 		readonly action: string;
 		readonly actorUserId: string | null;
-		readonly changes: Record<string, unknown> | null;
+		readonly changes: JsonObject | null;
 		readonly responseSchema: z.ZodType<T>;
 		readonly execute: (tx: Prisma.TransactionClient) => Promise<T>;
 		readonly toResponse: (result: T) => JsonObject;

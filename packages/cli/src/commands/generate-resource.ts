@@ -1,14 +1,15 @@
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
-import path from "node:path";
 
 import * as p from "@clack/prompts";
 import pc from "picocolors";
 
+import { loadGeneratorModules } from "../core/load-modules";
 import { loadProjectConfig } from "../core/project";
+import { runGeneratorDoctor } from "../generator/environment";
 import { buildPlanActions, planResourceFiles } from "../core/planner";
+import { collectManifestPaths, readManifest } from "../core/manifest";
 import { generateResource } from "../generators/generate-resource";
-import { isCliEslintConfigValid } from "../generators/workspace/ensure-cli-eslint-config";
 import { normalizeResourceDefinition } from "../ir/normalize";
 import { loadAllResourceDefinitions } from "../parser/load-all-resource-definitions";
 import { parseResourceDefinitionFile } from "../parser/parse-resource-definition";
@@ -50,10 +51,12 @@ export async function runGenerateResourceCommand(cwd: string, resourceName: stri
 
 	const source = await readFile(definitionPath, "utf8");
 	const definition = parseResourceDefinitionFile(source, definitionPath);
+	const modulesManifest = await loadGeneratorModules(config, { seedIfMissing: true });
 	const allDefinitions = await loadAllResourceDefinitions(config.definitionsDir);
-	const ir = normalizeResourceDefinition(definition, { allDefinitions });
-	const planned = planResourceFiles(config, ir);
-	const actions = buildPlanActions(planned, new Set());
+	const ir = normalizeResourceDefinition(definition, { allDefinitions, modules: modulesManifest.modules });
+	const planned = planResourceFiles(config, ir, modulesManifest);
+	const existingManifest = await readManifest(config.rootDir, ir.resource.slug);
+	const actions = buildPlanActions(planned, collectManifestPaths(existingManifest));
 
 	if (interactive) {
 		printAppBanner();
@@ -104,7 +107,7 @@ export async function runGenerateResourceCommand(cwd: string, resourceName: stri
 	const spinner = interactive ? p.spinner() : undefined;
 	spinner?.start("Generating artifacts…");
 
-	const result = await generateResource(config, ir, {
+	const result = await generateResource(config, ir, modulesManifest, {
 		dryRun: false,
 		allowDestructive: options.allowDestructive,
 		runMigrate: !options.dryRun,
@@ -123,7 +126,11 @@ export async function runGenerateResourceCommand(cwd: string, resourceName: stri
 	}
 
 	if (!options.skipValidation) {
-		const validation = await runPostGenerateValidation(config.rootDir, { useSpinner: interactive, resourceSlug: ir.resource.slug });
+		const validation = await runPostGenerateValidation(config.rootDir, {
+			useSpinner: interactive,
+			resourceSlug: ir.resource.slug,
+			writtenPaths: [...result.writtenFiles, ...result.patchedFiles],
+		});
 		const failed = validation.some((step) => !step.success);
 		if (failed) {
 			if (interactive) {
@@ -144,49 +151,24 @@ export async function runGenerateResourceCommand(cwd: string, resourceName: stri
 }
 
 export async function runDoctorCommand(cwd: string, display: CommandDisplayOptions = {}): Promise<number> {
-	const config = loadProjectConfig(cwd);
 	const verbose = display.verbose === true && isInteractiveTerminal();
-	const cliEslintOk = await isCliEslintConfigValid(config.rootDir);
-
-	const checks: { label: string; ok: boolean; detail?: string }[] = [
-		{ label: "NestJS API", ok: existsSync(config.apiDir), detail: config.apiDir },
-		{ label: "Prisma schema", ok: existsSync(config.prismaSchemaPath), detail: config.prismaSchemaPath },
-		{ label: "Next.js admin", ok: existsSync(config.adminDir), detail: config.adminDir },
-		{
-			label: "Shared contracts",
-			ok: existsSync(path.join(config.sharedDir, "src/contracts/index.ts")),
-			detail: path.join(config.sharedDir, "src/contracts"),
-		},
-		{
-			label: "Client router",
-			ok: existsSync(path.join(config.clientDir, "src/lib/api/endpoints.ts")),
-			detail: path.join(config.clientDir, "src/lib/api"),
-		},
-		{ label: "Resource definitions", ok: existsSync(config.definitionsDir), detail: config.definitionsDir },
-		{
-			label: "CLI eslint config",
-			ok: cliEslintOk,
-			detail: path.join(config.rootDir, "packages/cli/eslint.config.js"),
-		},
-	];
-
-	const allOk = checks.every((check) => check.ok);
+	const result = await runGeneratorDoctor(cwd);
 
 	if (verbose) {
 		printAppBanner();
 		p.intro("Environment check");
-		printDoctorResults(checks.map((check) => ({ label: check.label, ok: check.ok })));
-		if (allOk) {
+		printDoctorResults(result.checks.map((check) => ({ label: check.label, ok: check.ok })));
+		if (result.success) {
 			p.outro(pc.green("Everything looks good — you're ready to scaffold."));
 		} else {
 			p.log.error("Some checks failed. Fix the paths above and run doctor again.");
 			p.outro(pc.red("Environment is not ready."));
 		}
 	} else {
-		for (const check of checks) {
+		for (const check of result.checks) {
 			process.stdout.write(`${check.ok ? pc.green("✓") : pc.red("✗")} ${check.label}\n`);
 		}
 	}
 
-	return allOk ? 0 : 1;
+	return result.success ? 0 : 1;
 }

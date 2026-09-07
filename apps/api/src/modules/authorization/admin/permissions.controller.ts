@@ -28,7 +28,7 @@ export class PermissionsController {
 	@RequirePermission("LIST", "PERMISSION")
 	@ApiOkResponse({ description: "List of permissions" })
 	public async list(): Promise<{ readonly items: readonly PermissionListItem[]; readonly total: number }> {
-		const { items, total } = await this.authorization.permissions.findAll({ limit: 500 });
+		const { items } = await this.authorization.permissions.findAll({ limit: 500 });
 		return {
 			items: items.map((permission): PermissionListItem => ({
 				id: permission.id,
@@ -38,7 +38,7 @@ export class PermissionsController {
 				group: permission.group,
 				isSystem: permission.isSystem,
 			})),
-			total,
+			total: items.length,
 		};
 	}
 

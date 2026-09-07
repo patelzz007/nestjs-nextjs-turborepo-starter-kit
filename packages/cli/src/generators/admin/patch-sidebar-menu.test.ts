@@ -17,7 +17,7 @@ const BASE_MENU = {
 
 function buildIr(overrides: Partial<ResourceIR> & { slug: string; label: string; group?: string }): ResourceIR {
 	return {
-		version: 1,
+		version: 2,
 		resource: {
 			name: "Product",
 			singular: "Product",
@@ -27,6 +27,7 @@ function buildIr(overrides: Partial<ResourceIR> & { slug: string; label: string;
 			modelName: "Product",
 			permissionResource: "PRODUCT",
 		},
+		scope: { api: true, shared: true, client: true, ui: ["admin"] },
 		fields: [],
 		relations: [],
 		workflow: undefined,
@@ -36,6 +37,7 @@ function buildIr(overrides: Partial<ResourceIR> & { slug: string; label: string;
 		rls: "admin-only",
 		cascadeSoftDeleteChildren: [],
 		permissions: [],
+		uiTargets: {},
 		admin: {
 			navigation: {
 				label: overrides.label,
@@ -47,6 +49,7 @@ function buildIr(overrides: Partial<ResourceIR> & { slug: string; label: string;
 			list: { searchable: [], filters: [], sortable: [], columns: [] },
 			form: { layout: "single-column", fields: [] },
 		},
+		activeUi: undefined,
 		events: { created: false, updated: false, deleted: false },
 		audit: false,
 	};
@@ -66,7 +69,7 @@ describe("patchSidebarMenu", () => {
 
 	it("adds a new item under a new Platform section", async () => {
 		const menuPath = path.join(tempDir, "sidebar-menu.json");
-		await patchSidebarMenu(menuPath, buildIr({ slug: "product", label: "Products", group: "Platform" }));
+		await patchSidebarMenu(menuPath, buildIr({ slug: "product", label: "Products", group: "Platform" }), "");
 		const parsed = JSON.parse(await readFile(menuPath, "utf8")) as { sections: { title: string; items: { url: string; title: string }[] }[] };
 		const platform = parsed.sections.find((section) => section.title === "Platform");
 		expect(platform?.items).toEqual([{ title: "Products", url: "/product", icon: "Package" }]);
@@ -74,8 +77,8 @@ describe("patchSidebarMenu", () => {
 
 	it("updates an existing item in the Developer section for Generated group", async () => {
 		const menuPath = path.join(tempDir, "sidebar-menu.json");
-		await patchSidebarMenu(menuPath, buildIr({ slug: "sample-category", label: "Sample Categories", group: "Generated" }));
-		await patchSidebarMenu(menuPath, buildIr({ slug: "sample-category", label: "Sample Categories Renamed", group: "Generated" }));
+		await patchSidebarMenu(menuPath, buildIr({ slug: "sample-category", label: "Sample Categories", group: "Generated" }), "");
+		await patchSidebarMenu(menuPath, buildIr({ slug: "sample-category", label: "Sample Categories Renamed", group: "Generated" }), "");
 		const parsed = JSON.parse(await readFile(menuPath, "utf8")) as { sections: { title: string; items: { url: string; title: string }[] }[] };
 		const developer = parsed.sections.find((section) => section.title === "Developer");
 		expect(developer?.items).toEqual([{ title: "Sample Categories Renamed", url: "/sample-category", icon: "Package" }]);

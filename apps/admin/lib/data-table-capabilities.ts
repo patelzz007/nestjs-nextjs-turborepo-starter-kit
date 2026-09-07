@@ -1,5 +1,5 @@
 import type { RowData } from "@tanstack/react-table";
-import type { DataTableCheckboxConfig } from "@workspace/ui/components/display/data-table";
+import type { DataTableCheckboxConfig } from "@workspace/ui/lib/data-table-checkbox";
 import type { DataTableBulkSelectionContext } from "@workspace/ui/lib/data-table-checkbox";
 import { toPlatformCapabilitySlug, type CapabilitySlug, type PermissionResource } from "@workspace/shared";
 
@@ -15,17 +15,23 @@ export interface ResourceTableCheckboxOptions<TData extends RowData> {
 	readonly exportableColumns?: readonly string[];
 	readonly onDeleteAll?: (selectedRows: TData[], context: DataTableBulkSelectionContext) => void | Promise<void>;
 	readonly bulkActions?: DataTableCheckboxConfig<TData>["bulkActions"];
+	readonly requiredCapabilityForBulkActions?: CapabilitySlug;
 }
 
 /** Checkbox + multi-format export; bulk delete only when the user has DELETE permission. */
 export function buildResourceTableCheckbox<TData extends RowData>(options: ResourceTableCheckboxOptions<TData>): DataTableCheckboxConfig<TData> {
 	const includeDelete = options.onDeleteAll !== undefined && canDeletePlatformResource(options.hasCapability, options.resource);
+	const capabilitySlug = options.requiredCapabilityForBulkActions;
+	const filteredBulkActions =
+		options.bulkActions !== undefined && capabilitySlug !== undefined
+			? options.bulkActions.filter(() => options.hasCapability(capabilitySlug))
+			: options.bulkActions;
 
 	return {
 		export: true,
 		exportFilename: options.exportFilename,
 		...(options.exportableColumns !== undefined ? { exportableColumns: [...options.exportableColumns] } : {}),
-		...(options.bulkActions !== undefined ? { bulkActions: options.bulkActions } : {}),
+		...(filteredBulkActions !== undefined && filteredBulkActions.length > 0 ? { bulkActions: filteredBulkActions } : {}),
 		...(includeDelete ? { onDeleteAll: options.onDeleteAll } : {}),
 	};
 }

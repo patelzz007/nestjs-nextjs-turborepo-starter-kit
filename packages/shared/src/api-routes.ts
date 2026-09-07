@@ -212,7 +212,7 @@ export const apiRoutes = {
 		delete: { path: "/sample-category/:id", params: ["id"] },
 		restore: { path: "/sample-category/:id/restore", params: ["id"] },
 	},
-	// @app-generated:end sampleCategory,
+	// @app-generated:end sampleCategory
 	// @app-generated:begin product
 	product: {
 		list: "/product",

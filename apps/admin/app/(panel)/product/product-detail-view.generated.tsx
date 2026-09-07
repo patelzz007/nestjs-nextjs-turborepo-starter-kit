@@ -45,7 +45,7 @@ export default function ProductDetailView({ id, initialProduct }: ProductDetailV
 	const entity: Product | undefined = detailQuery.data?.data;
 
 	if (detailQuery.isLoading && entity === undefined) {
-		return <p className="text-muted-foreground">Loading product…</p>;
+		return <p className="text-muted-foreground">{"Loading product…"}</p>;
 	}
 
 	if (detailQuery.isError || entity === undefined) {
@@ -53,9 +53,9 @@ export default function ProductDetailView({ id, initialProduct }: ProductDetailV
 			<div className="space-y-4">
 				<Button variant="outline" nativeButton={false} render={<Link href="/product" />}>
 					<ArrowLeft className="mr-2 size-4" />
-					Back to products
+					{"Back to products"}
 				</Button>
-				<p className="text-destructive">Could not load this product.</p>
+				<p className="text-destructive">{"Could not load this product."}</p>
 			</div>
 		);
 	}
@@ -65,7 +65,7 @@ export default function ProductDetailView({ id, initialProduct }: ProductDetailV
 			<div className="flex flex-wrap items-center justify-between gap-3">
 				<Button variant="outline" nativeButton={false} render={<Link href="/product" />}>
 					<ArrowLeft className="mr-2 size-4" />
-					Back to products
+					{"Back to products"}
 				</Button>
 				<Button nativeButton={false} render={<Link href={`/product/${entity.id}/edit`} />}>
 					<Pencil className="mr-2 size-4" />
@@ -87,7 +87,7 @@ export default function ProductDetailView({ id, initialProduct }: ProductDetailV
 				<CardContent className="grid gap-4 sm:grid-cols-2">
 					<DetailField label="ID" value={entity.id} />
 					<DetailField label="Brand" value={entity.brand ?? "—"} />
-					<DetailField label="Category Id" value={String(entity.categoryId)} />
+					<DetailField label="Category Id" value={entity.categoryId} />
 					<DetailField label="Compare At Price" value={entity.compareAtPrice !== null && Number.isFinite(entity.compareAtPrice) ? entity.compareAtPrice.toFixed(2) : "—"} />
 					<DetailField label="Description" value={entity.description ?? "—"} />
 					<DetailField label="Image Url" value={entity.imageUrl ?? "—"} />
@@ -95,7 +95,7 @@ export default function ProductDetailView({ id, initialProduct }: ProductDetailV
 					<DetailField label="Is Featured" value={entity.isFeatured ? "Yes" : "No"} />
 					<DetailField label="Price" value={Number.isFinite(entity.price) ? entity.price.toFixed(2) : "—"} />
 					<DetailField label="Short Description" value={entity.shortDescription ?? "—"} />
-					<DetailField label="Sku" value={String(entity.sku)} />
+					<DetailField label="Sku" value={entity.sku} />
 					<DetailField label="Stock Quantity" value={String(entity.stockQuantity)} />
 					<DetailField label="Weight Grams" value={entity.weightGrams !== null ? String(entity.weightGrams) : "—"} />
 					<DetailField label="Created" value={formatEpoch(entity.createdAt)} />

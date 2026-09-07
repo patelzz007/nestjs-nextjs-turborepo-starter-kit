@@ -13,12 +13,11 @@ import { BaseRepository } from "../../platform/persistence/base.repository";
 import type { CascadeSoftDeleteMutationArgs, CascadeRestoreParentArgs } from "../../platform/persistence/cascade-soft-delete";
 import { PrismaService } from "../../prisma/prisma.service";
 
-
 function toDomain(row: Prisma.SampleCategoryGetPayload<Record<string, never>>): SampleCategoryEntity {
 	return {
 		id: row.id,
 		description: row.description,
-		isActive: row.isActive,
+		isActive: row.isActive ?? true,
 		name: row.name,
 		slug: row.slug,
 		sortOrder: row.sortOrder ?? 0,
@@ -30,10 +29,7 @@ function toDomain(row: Prisma.SampleCategoryGetPayload<Record<string, never>>): 
 const SORTABLE_FIELDS: ReadonlySet<string> = new Set(["name", "slug", "sortOrder", "createdAt"]);
 
 function buildSearchConditions(trimmedSearch: string): Prisma.SampleCategoryWhereInput[] {
-	return [
-		{ name: { contains: trimmedSearch, mode: "insensitive" } },
-		{ slug: { contains: trimmedSearch, mode: "insensitive" } },
-	];
+	return [{ name: { contains: trimmedSearch, mode: "insensitive" } }, { slug: { contains: trimmedSearch, mode: "insensitive" } }];
 }
 
 function resolveOrderBy(query: SampleCategoryListQuery): Prisma.SampleCategoryOrderByWithRelationInput {
@@ -43,6 +39,19 @@ function resolveOrderBy(query: SampleCategoryListQuery): Prisma.SampleCategoryOr
 		return { createdAt: "desc" };
 	}
 	return { [sortBy]: sortDirection };
+}
+
+function buildListCursorOrderBy(query: SampleCategoryListQuery): Prisma.SampleCategoryOrderByWithRelationInput {
+	const sortBy = query.sortBy ?? "createdAt";
+	const sortDirection = query.sortDirection ?? "desc";
+	if (!SORTABLE_FIELDS.has(sortBy)) {
+		return { createdAt: "desc", id: "asc" };
+	}
+	return { [sortBy]: sortDirection, id: "asc" };
+}
+
+function mergeListCursor(where: Prisma.SampleCategoryWhereInput, cursorId: string): Prisma.SampleCategoryWhereInput {
+	return { ...where, id: { gt: cursorId } };
 }
 
 function buildListWhere(query: SampleCategoryListQuery): Prisma.SampleCategoryWhereInput {
@@ -56,6 +65,9 @@ function buildListWhere(query: SampleCategoryListQuery): Prisma.SampleCategoryWh
 			where.OR = searchConditions;
 		}
 	}
+	if (query.isActive !== undefined) {
+		where.isActive = query.isActive === true || query.isActive === "true";
+	}
 	return where;
 }
 
@@ -65,25 +77,28 @@ const SampleCategoryRepositoryPorts = {
 	toUpdateInput: (input: UpdateSampleCategoryInput): Prisma.SampleCategoryUpdateInput => input,
 	buildListWhere,
 	buildListOrderBy: resolveOrderBy,
+	buildListCursorOrderBy,
+	mergeListCursor,
+	readListCursorId: (row: Prisma.SampleCategoryGetPayload<Record<string, never>>): string => row.id,
 	buildFindByIdWhere: (id: string): Prisma.SampleCategoryWhereInput => ({ id, deletedAt: null }),
 	buildFindByIdIncludingDeletedWhere: (id: string): Prisma.SampleCategoryWhereInput => ({ id }),
-	readDeletedAt: (row: Prisma.SampleCategoryGetPayload<Record<string, never>>): number | null => row.deletedAt === null ? null : Number(row.deletedAt),
+	readDeletedAt: (row: Prisma.SampleCategoryGetPayload<Record<string, never>>): number | null => (row.deletedAt === null ? null : Number(row.deletedAt)),
 	buildUpdateWhere: (id: string): Prisma.SampleCategoryWhereUniqueInput => ({ id }),
 	stampUpdate: (data: Prisma.SampleCategoryUpdateInput): Prisma.SampleCategoryUpdateInput => ({ ...data, updatedAt: nowEpochMs() }),
 	stampSoftDelete: (): Prisma.SampleCategoryUpdateInput => ({ deletedAt: nowEpochMs(), updatedAt: nowEpochMs() }),
 	stampRestore: (): Prisma.SampleCategoryUpdateInput => ({ deletedAt: null, updatedAt: nowEpochMs() }),
 	cascadeSoftDelete: {
 		softDeleteChildren: async ({ parentId, deletedAt, transaction }: CascadeSoftDeleteMutationArgs): Promise<void> => {
-		await transaction.product.updateMany({
-			where: { categoryId: parentId, deletedAt: null },
-			data: { deletedAt, updatedAt: deletedAt },
-		});
+			await transaction.product.updateMany({
+				where: { categoryId: parentId, deletedAt: null },
+				data: { deletedAt, updatedAt: deletedAt },
+			});
 		},
 		restoreChildren: async ({ parentId, deletedAt, transaction }: CascadeSoftDeleteMutationArgs): Promise<void> => {
-		await transaction.product.updateMany({
-			where: { categoryId: parentId, deletedAt },
-			data: { deletedAt: null, updatedAt: nowEpochMs() },
-		});
+			await transaction.product.updateMany({
+				where: { categoryId: parentId, deletedAt },
+				data: { deletedAt: null, updatedAt: nowEpochMs() },
+			});
 		},
 		softDeleteParent: async ({ parentId, deletedAt, transaction }: CascadeSoftDeleteMutationArgs): Promise<void> => {
 			await transaction.sampleCategory.update({
@@ -116,5 +131,4 @@ export class GeneratedSampleCategoryRepository extends BaseRepository<
 	public constructor(prisma: PrismaService) {
 		super(prisma, SampleCategoryRepositoryPorts, prisma.sampleCategory, { softDelete: true, concurrency: false });
 	}
-
 }

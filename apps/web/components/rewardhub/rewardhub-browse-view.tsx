@@ -2,7 +2,7 @@
 
 import { RewardHubCatalog } from "@/components/rewardhub/rewardhub-catalog";
 import { RewardHubFilters } from "@/components/rewardhub/rewardhub-filters";
-import { stubPaginatedMeta } from "@/lib/api-envelope";
+import { readPaginatedHasNext, readPaginatedNextCursor, stubPaginatedMeta } from "@/lib/api-envelope";
 import { WebEmptyState } from "@/components/web-ui/empty-state";
 import { useAuth } from "@workspace/client/lib/auth";
 import { ApiPaginatedMetaSchema, type ApiPaginatedMeta, type PilotCity, type RewardCategory, type RewardResponse } from "@workspace/shared";
@@ -13,9 +13,7 @@ const CATEGORIES: readonly RewardCategory[] = ["cafe", "restaurant", "retail", "
 
 export interface RewardHubBrowseViewProps {
 	readonly initialRewards?: readonly RewardResponse[];
-	readonly initialTotal?: number;
 	readonly initialHasNext?: boolean;
-	readonly initialHasPrevious?: boolean;
 	readonly initialListMeta?: ApiPaginatedMeta;
 	readonly variant?: "landing" | "dashboard";
 	readonly detailPathPrefix?: string;
@@ -24,21 +22,25 @@ export interface RewardHubBrowseViewProps {
 /** Consumer Reward Hub browse experience — filters, summary, and grid/list catalog. */
 export function RewardHubBrowseView({
 	initialRewards,
-	initialTotal,
 	initialHasNext,
-	initialHasPrevious,
 	initialListMeta,
 	variant = "dashboard",
 	detailPathPrefix = "/rewardhub",
 }: RewardHubBrowseViewProps): React.JSX.Element {
 	const { api } = useAuth();
-	const [page, setPage] = React.useState<number>(1);
+	const [cursor, setCursor] = React.useState<string | null>(null);
+	const [cursorHistory, setCursorHistory] = React.useState<readonly (string | null)[]>([null]);
 	const [search, setSearch] = React.useState<string>("");
 	const [searchDraft, setSearchDraft] = React.useState<string>("");
 	const [city, setCity] = React.useState<PilotCity | "ALL">("ALL");
 	const [category, setCategory] = React.useState<RewardCategory | "ALL">("ALL");
 
-	const isDefaultQuery = page === 1 && search.length === 0 && city === "ALL" && category === "ALL";
+	const isDefaultQuery = cursor === null && search.length === 0 && city === "ALL" && category === "ALL";
+
+	const resetCursor = React.useCallback((): void => {
+		setCursor(null);
+		setCursorHistory([null]);
+	}, []);
 
 	const initialQueryData = React.useMemo(
 		() =>
@@ -46,16 +48,16 @@ export function RewardHubBrowseView({
 				? {
 						success: true as const,
 						data: [...initialRewards],
-						meta: initialListMeta ?? stubPaginatedMeta(initialTotal ?? initialRewards.length, 1, 12),
+						meta: initialListMeta ?? stubPaginatedMeta(12, initialHasNext ?? false),
 					}
 				: undefined,
-		[initialListMeta, initialRewards, initialTotal, isDefaultQuery],
+		[initialHasNext, initialListMeta, initialRewards, isDefaultQuery],
 	);
 
 	const rewardsQuery = api.rewards.list.useQuery(
 		{
-			page,
 			limit: 12,
+			...(cursor !== null ? { cursor } : {}),
 			...(search.length > 0 ? { search } : {}),
 			...(city !== "ALL" ? { city } : {}),
 			...(category !== "ALL" ? { category } : {}),
@@ -66,37 +68,56 @@ export function RewardHubBrowseView({
 	);
 
 	const rewards = rewardsQuery.data?.data ?? [];
-	const metaParsed = ApiPaginatedMetaSchema.safeParse(rewardsQuery.data?.meta);
-	const total = isDefaultQuery && initialTotal !== undefined ? initialTotal : metaParsed.success ? metaParsed.data.total : rewards.length;
-	const hasNext = isDefaultQuery && initialHasNext !== undefined ? initialHasNext : metaParsed.success ? metaParsed.data.hasNext === true : false;
-	const hasPrevious = isDefaultQuery && initialHasPrevious !== undefined ? initialHasPrevious : metaParsed.success ? metaParsed.data.hasPrevious === true : page > 1;
+	const hasNext = readPaginatedHasNext(rewardsQuery.data?.meta, isDefaultQuery && initialHasNext !== undefined ? initialHasNext : false);
+	const nextCursor = readPaginatedNextCursor(rewardsQuery.data?.meta);
+	const hasPrevious = cursorHistory.length > 1;
 
 	const handleSearchSubmit = React.useCallback((): void => {
 		setSearch(searchDraft.trim());
-		setPage(1);
-	}, [searchDraft]);
+		resetCursor();
+	}, [resetCursor, searchDraft]);
 
-	const handleCityChange = React.useCallback((nextCity: PilotCity | "ALL"): void => {
-		setCity(nextCity);
-		setPage(1);
-	}, []);
+	const handleCityChange = React.useCallback(
+		(nextCity: PilotCity | "ALL"): void => {
+			setCity(nextCity);
+			resetCursor();
+		},
+		[resetCursor],
+	);
 
-	const handleCategoryChange = React.useCallback((nextCategory: RewardCategory | "ALL"): void => {
-		setCategory(nextCategory);
-		setPage(1);
-	}, []);
+	const handleCategoryChange = React.useCallback(
+		(nextCategory: RewardCategory | "ALL"): void => {
+			setCategory(nextCategory);
+			resetCursor();
+		},
+		[resetCursor],
+	);
 
 	const handleClearFilters = React.useCallback((): void => {
 		setSearch("");
 		setSearchDraft("");
 		setCity("ALL");
 		setCategory("ALL");
-		setPage(1);
-	}, []);
+		resetCursor();
+	}, [resetCursor]);
 
-	const handlePageChange = React.useCallback((nextPage: number): void => {
-		setPage(nextPage);
-	}, []);
+	const handleNext = React.useCallback((): void => {
+		if (nextCursor === null) {
+			return;
+		}
+		setCursorHistory((history) => [...history, nextCursor]);
+		setCursor(nextCursor);
+	}, [nextCursor]);
+
+	const handlePrevious = React.useCallback((): void => {
+		if (cursorHistory.length <= 1) {
+			return;
+		}
+		const nextHistory = cursorHistory.slice(0, -1);
+		const previousCursor = nextHistory[nextHistory.length - 1] ?? null;
+		setCursorHistory(nextHistory);
+		setCursor(previousCursor);
+	}, [cursorHistory]);
 
 	const hasActiveFilters = search.length > 0 || city !== "ALL" || category !== "ALL";
 	const isLoading = rewardsQuery.isLoading && !(isDefaultQuery && initialRewards !== undefined);
@@ -105,9 +126,9 @@ export function RewardHubBrowseView({
 	const summaryItems = React.useMemo(
 		() => [
 			{
-				label: "In stock",
-				value: total.toLocaleString(),
-				hint: "Claimable offers",
+				label: "Showing",
+				value: String(rewards.length),
+				hint: "Offers on this page",
 				icon: <Gift className="size-4" aria-hidden="true" />,
 			},
 			{
@@ -123,7 +144,7 @@ export function RewardHubBrowseView({
 				icon: <Sparkles className="size-4" aria-hidden="true" />,
 			},
 		],
-		[total],
+		[rewards.length],
 	);
 
 	const isLanding = variant === "landing";
@@ -184,11 +205,10 @@ export function RewardHubBrowseView({
 				<RewardHubCatalog
 					rewards={rewards}
 					isLoading={isLoading}
-					total={total}
-					page={page}
 					hasNext={hasNext}
 					hasPrevious={hasPrevious}
-					onPageChange={handlePageChange}
+					onNext={handleNext}
+					onPrevious={handlePrevious}
 					detailPathPrefix={detailPathPrefix}
 				/>
 			)}

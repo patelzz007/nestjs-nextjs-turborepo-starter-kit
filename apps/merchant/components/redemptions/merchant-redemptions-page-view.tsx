@@ -12,7 +12,6 @@ import { format } from "date-fns";
 import { CalendarClock, Receipt, ScanLine } from "lucide-react";
 import * as React from "react";
 
-const REDEMPTIONS_PAGE = 1;
 const REDEMPTIONS_LIMIT = 20;
 
 export interface MerchantRedemptionsPageViewProps {
@@ -28,14 +27,14 @@ export function MerchantRedemptionsPageView({ initialRows }: MerchantRedemptions
 				? {
 						success: true as const,
 						data: [...initialRows],
-						meta: stubPaginatedMeta(initialRows.length, REDEMPTIONS_PAGE, REDEMPTIONS_LIMIT),
+						meta: stubPaginatedMeta(REDEMPTIONS_LIMIT, false),
 					}
 				: undefined,
 		[initialRows],
 	);
 
 	const redemptionsQuery = api.merchant.redemptions.useQuery(
-		{ page: REDEMPTIONS_PAGE, limit: REDEMPTIONS_LIMIT },
+		{ limit: REDEMPTIONS_LIMIT },
 		{
 			initialData: initialQueryData,
 		},

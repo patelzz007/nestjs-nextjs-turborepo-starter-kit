@@ -1,4 +1,5 @@
-import type { ResourceIR } from "../../ir/types";
+import { pluralizeLabel } from "../../core/humanize";
+import type { FieldIR, ResourceIR } from "../../ir/types";
 
 function prismaScalarType(fieldType: string): string {
 	switch (fieldType) {
@@ -24,13 +25,7 @@ function prismaScalarType(fieldType: string): string {
 }
 
 function toPlural(singular: string): string {
-	if (singular.endsWith("y") && singular.length > 1) {
-		return `${singular.slice(0, -1)}ies`;
-	}
-	if (singular.endsWith("s")) {
-		return `${singular}es`;
-	}
-	return `${singular}s`;
+	return pluralizeLabel(singular);
 }
 
 function inverseRelationCollectionName(modelName: string): string {
@@ -45,39 +40,84 @@ function relationPropertyName(fieldName: string): string {
 	return fieldName;
 }
 
-function prismaFieldLine(field: ResourceIR["fields"][number], workflowEnumName: string | undefined): string {
+function prismaEnumName(field: FieldIR, modelName: string, workflowEnumName: string | undefined): string | undefined {
+	if (field.type !== "enum") {
+		return undefined;
+	}
+	if (workflowEnumName !== undefined) {
+		return workflowEnumName;
+	}
+	return `${modelName}${field.name.charAt(0).toUpperCase()}${field.name.slice(1)}`;
+}
+
+function prismaFieldLine(field: ResourceIR["fields"][number], enumName: string | undefined): string {
 	const optional = field.nullable || !field.required ? "?" : "";
-	const prismaType = field.type === "enum" && workflowEnumName !== undefined ? workflowEnumName : prismaScalarType(field.type);
+	const prismaType = enumName !== undefined ? enumName : prismaScalarType(field.type);
 	const baseType = prismaType.split(" ")[0];
 	const attributes = prismaType.includes("@") ? ` ${prismaType.slice(prismaType.indexOf("@"))}` : "";
 	const mapAttribute = field.camelName !== field.prismaName ? ` @map("${field.prismaName}")` : "";
 	return `  ${field.camelName} ${baseType}${optional}${mapAttribute}${attributes}`;
 }
 
-export function renderPrismaModelBlock(ir: ResourceIR): string {
-	const lines: string[] = [];
+function renderPrismaEnumBlocks(ir: ResourceIR): string[] {
+	const blocks: string[] = [];
+	const emittedEnumNames = new Set<string>();
+
 	if (ir.workflow !== undefined) {
-		lines.push(`enum ${ir.workflow.enumName} {`);
 		const values = new Set<string>([ir.workflow.initial]);
 		for (const targets of Object.values(ir.workflow.transitions)) {
 			for (const target of targets) {
 				values.add(target);
 			}
 		}
+		blocks.push(`enum ${ir.workflow.enumName} {`);
 		for (const value of [...values].sort()) {
-			lines.push(`  ${value.toUpperCase()}`);
+			blocks.push(`  ${value.toUpperCase()}`);
 		}
-		lines.push("}");
-		lines.push("");
+		blocks.push("}");
+		blocks.push("");
+		emittedEnumNames.add(ir.workflow.enumName);
 	}
+
+	for (const field of ir.fields) {
+		if (field.type !== "enum" || field.enumValues === undefined || field.enumValues.length === 0) {
+			continue;
+		}
+		const workflowEnumName = ir.workflow?.field === field.name ? ir.workflow.enumName : undefined;
+		const enumName = prismaEnumName(field, ir.resource.modelName, workflowEnumName);
+		if (enumName === undefined || emittedEnumNames.has(enumName)) {
+			continue;
+		}
+		blocks.push(`enum ${enumName} {`);
+		for (const value of [...field.enumValues].sort()) {
+			blocks.push(`  ${value.toUpperCase()}`);
+		}
+		blocks.push("}");
+		blocks.push("");
+		emittedEnumNames.add(enumName);
+	}
+
+	return blocks;
+}
+
+export function renderPrismaModelBlock(ir: ResourceIR): string {
+	const lines: string[] = [...renderPrismaEnumBlocks(ir)];
 
 	lines.push(`/// Generated resource model (${ir.resource.name}).`);
 	lines.push(`model ${ir.resource.modelName} {`);
 	lines.push("  id String @id @default(uuid())");
 
+	if (ir.rls === "user-owned") {
+		lines.push('  ownerUserId String @map("owner_user_id")');
+	}
+	if (ir.rls === "organization-scoped") {
+		lines.push('  organizationId String @map("organization_id")');
+	}
+
 	for (const field of ir.fields) {
 		const workflowEnumName = field.type === "enum" && ir.workflow?.field === field.name ? ir.workflow.enumName : undefined;
-		lines.push(prismaFieldLine(field, workflowEnumName));
+		const enumName = prismaEnumName(field, ir.resource.modelName, workflowEnumName);
+		lines.push(prismaFieldLine(field, enumName));
 	}
 
 	if (ir.concurrency) {

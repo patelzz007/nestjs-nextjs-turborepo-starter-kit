@@ -4,17 +4,19 @@ import { invalidateSessionAuth } from "@workspace/client/lib/auth/invalidate-ses
 import { createDataTableLabels } from "@/lib/data-table-labels";
 import { buildReadOnlyTableCheckbox } from "@/lib/data-table-capabilities";
 import { DataTableMobileCard } from "@/lib/data-table-mobile-card";
-import { readPaginatedTotal, stubPaginatedMeta } from "@/lib/api-envelope";
+import { readPaginatedNextCursor, readPaginatedTotal, stubPaginatedMeta } from "@/lib/api-envelope";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
+import { useManualHybridPagination } from "@/lib/use-manual-cursor-pagination";
+import { DataTableSearchToolbar } from "@/components/common/data-table-search-toolbar";
 import { useAuth } from "@workspace/client/lib/auth";
 import type { MerchantOrgResponse } from "@workspace/shared";
 import { KybStatusSchema, MerchantOrgStatusSchema } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/feedback/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
 import { DataTable, type Action, type DataTableFeatures, type Filter } from "@workspace/ui/components/display/data-table";
-import { Input } from "@workspace/ui/components/form/input";
 import type { ColumnDef } from "@tanstack/react-table";
 import { keepPreviousData, useQueryClient } from "@tanstack/react-query";
-import { Search, ShieldCheck } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
@@ -22,41 +24,41 @@ import * as React from "react";
 export interface MerchantsAllTableProps {
 	readonly initialMerchants?: readonly MerchantOrgResponse[];
 	readonly initialTotal?: number;
+	readonly initialTotalPages?: number;
+	readonly initialHasNext?: boolean;
 }
 
 const PAGE_SIZE_OPTIONS: readonly number[] = [10, 20, 50, 100];
 
-function useDebounce<T>(value: T, delay: number): T {
-	const [debouncedValue, setDebouncedValue] = React.useState(value);
-	React.useEffect((): (() => void) => {
-		const handler = setTimeout(() => {
-			setDebouncedValue(value);
-		}, delay);
-		return (): void => {
-			clearTimeout(handler);
-		};
-	}, [value, delay]);
-	return debouncedValue;
-}
-
-export default function MerchantsAllTable({ initialMerchants, initialTotal }: MerchantsAllTableProps): React.JSX.Element {
+export default function MerchantsAllTable({ initialMerchants, initialTotal, initialTotalPages, initialHasNext }: MerchantsAllTableProps): React.JSX.Element {
 	const { api } = useAuth();
 	const queryClient = useQueryClient();
 	const router = useRouter();
-	const [page, setPage] = React.useState(1);
-	const [pageLimit, setPageLimit] = React.useState(20);
 	const [search, setSearch] = React.useState("");
 	const [kybStatusFilter, setKybStatusFilter] = React.useState<string>("all");
 	const [statusFilter, setStatusFilter] = React.useState<string>("all");
-	const debouncedSearch = useDebounce(search, 300);
+	const debouncedSearch = useDebouncedValue(search, 300);
 
-	const prevSearchRef = React.useRef(debouncedSearch);
-	React.useEffect((): void => {
-		if (debouncedSearch !== prevSearchRef.current) {
-			setPage(1);
-		}
-		prevSearchRef.current = debouncedSearch;
-	}, [debouncedSearch]);
+	const trimmedSearch = debouncedSearch.trim();
+	const parsedKybStatus = kybStatusFilter === "all" ? undefined : KybStatusSchema.safeParse(kybStatusFilter).data;
+	const parsedOrgStatus = statusFilter === "all" ? undefined : MerchantOrgStatusSchema.safeParse(statusFilter).data;
+	const isFiltered = trimmedSearch.length > 0 || kybStatusFilter !== "all" || statusFilter !== "all";
+
+	const handleClearFilters = React.useCallback((): void => {
+		setSearch("");
+		setKybStatusFilter("all");
+		setStatusFilter("all");
+	}, []);
+
+	const { pageIndex, pageSize, listQuery, bindListMeta, pagination: basePagination } = useManualHybridPagination<MerchantOrgResponse>(
+		20,
+		[debouncedSearch, kybStatusFilter, statusFilter],
+		(merchant) => merchant.id,
+		{
+			onClearFilters: handleClearFilters,
+			isFiltered,
+		},
+	);
 
 	const initialQueryData = React.useMemo(
 		() =>
@@ -64,31 +66,41 @@ export default function MerchantsAllTable({ initialMerchants, initialTotal }: Me
 				? {
 						success: true as const,
 						data: [...initialMerchants],
-						meta: stubPaginatedMeta(initialTotal ?? initialMerchants.length, 1, 20),
+						meta: stubPaginatedMeta(
+							20,
+							initialTotal ?? initialMerchants.length,
+							1,
+							initialTotalPages ?? 1,
+							initialHasNext ?? false,
+						),
 					}
 				: undefined,
-		[initialMerchants, initialTotal],
+		[initialMerchants, initialHasNext, initialTotal, initialTotalPages],
 	);
 
-	const trimmedSearch = debouncedSearch.trim();
-	const parsedKybStatus = kybStatusFilter === "all" ? undefined : KybStatusSchema.safeParse(kybStatusFilter).data;
-	const parsedOrgStatus = statusFilter === "all" ? undefined : MerchantOrgStatusSchema.safeParse(statusFilter).data;
 	const merchantsQuery = api.rewardsAdmin.listMerchants.useQuery(
 		{
-			page,
-			limit: pageLimit,
+			...listQuery,
 			...(trimmedSearch.length > 0 ? { search: trimmedSearch } : {}),
 			...(parsedKybStatus !== undefined ? { kybStatus: parsedKybStatus } : {}),
 			...(parsedOrgStatus !== undefined ? { status: parsedOrgStatus } : {}),
 		},
 		{
 			placeholderData: keepPreviousData,
-			initialData: page === 1 && pageLimit === 20 && trimmedSearch.length === 0 ? initialQueryData : undefined,
+			initialData:
+				pageIndex === 0 && pageSize === 20 && trimmedSearch.length === 0 && kybStatusFilter === "all" && statusFilter === "all"
+					? initialQueryData
+					: undefined,
 		},
 	);
 
 	const rows: readonly MerchantOrgResponse[] = merchantsQuery.data?.data ?? [];
-	const total: number = readPaginatedTotal(merchantsQuery.data?.meta, initialTotal ?? rows.length);
+	const totalCount = readPaginatedTotal(merchantsQuery.data?.meta, initialTotal ?? initialMerchants?.length ?? 0);
+	const pagination = React.useMemo(() => ({ ...basePagination, totalCount }), [basePagination, totalCount]);
+
+	React.useEffect((): void => {
+		bindListMeta(readPaginatedNextCursor(merchantsQuery.data?.meta) ?? null);
+	}, [bindListMeta, merchantsQuery.data?.meta]);
 	const tableError: string | null = merchantsQuery.isError ? "Could not load merchants. Clear search and try again." : null;
 
 	const handleReviewKyb = React.useCallback(
@@ -208,11 +220,6 @@ export default function MerchantsAllTable({ initialMerchants, initialTotal }: Me
 		[],
 	);
 
-	const handleManualPaginationChange = React.useCallback((nextPage: number, nextPageSize: number): void => {
-		setPage(nextPage);
-		setPageLimit(nextPageSize);
-	}, []);
-
 	const handleManualColumnFilterChange = React.useCallback((filterKey: string, value: string | null): void => {
 		const next = value === null || value === "all" ? "all" : value;
 		if (filterKey === "kybStatus") {
@@ -221,7 +228,6 @@ export default function MerchantsAllTable({ initialMerchants, initialTotal }: Me
 		if (filterKey === "status") {
 			setStatusFilter(next);
 		}
-		setPage(1);
 	}, []);
 
 	const manualColumnFilters = React.useMemo(
@@ -261,16 +267,18 @@ export default function MerchantsAllTable({ initialMerchants, initialTotal }: Me
 		[],
 	);
 
-	const handleSearchChange = React.useCallback((event: React.ChangeEvent<HTMLInputElement>): void => {
-		setSearch(event.target.value);
+	const handleSearchChange = React.useCallback((value: string): void => {
+		setSearch(value);
 	}, []);
 
 	const toolbarContent = React.useMemo(
 		() => (
-			<div className="relative w-full sm:max-w-xs">
-				<Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
-				<Input aria-label={tableLabels.searchAriaLabel} placeholder={tableLabels.searchPlaceholder} value={search} onChange={handleSearchChange} className="h-9 pl-8" />
-			</div>
+			<DataTableSearchToolbar
+				value={search}
+				onChange={handleSearchChange}
+				placeholder={tableLabels.searchPlaceholder}
+				ariaLabel={tableLabels.searchAriaLabel}
+			/>
 		),
 		[handleSearchChange, search, tableLabels.searchAriaLabel, tableLabels.searchPlaceholder],
 	);
@@ -284,7 +292,9 @@ export default function MerchantsAllTable({ initialMerchants, initialTotal }: Me
 
 			<Card>
 				<CardHeader>
-					<CardTitle className="text-base">{total.toLocaleString()} merchants</CardTitle>
+					<CardTitle className="text-base">
+						{rows.length > 0 ? `${String(rows.length)} merchants on this page` : "Merchant organizations"}
+					</CardTitle>
 				</CardHeader>
 				<CardContent>
 					<DataTable
@@ -298,15 +308,11 @@ export default function MerchantsAllTable({ initialMerchants, initialTotal }: Me
 						manualColumnFilters={manualColumnFilters}
 						onManualColumnFilterChange={handleManualColumnFilterChange}
 						mobileCardRender={mobileCardRender}
-						manual
-						totalCount={total}
-						pageIndex={page - 1}
-						pageSize={pageLimit}
+						pagination={pagination}
 						pageSizeOptions={PAGE_SIZE_OPTIONS}
 						error={tableError}
 						isLoading={merchantsQuery.isLoading}
 						isRefetching={merchantsQuery.isFetching && !merchantsQuery.isLoading ? true : false}
-						onManualPaginationChange={handleManualPaginationChange}
 						toolbarContent={toolbarContent}
 					/>
 					<p className="mt-4 text-xs text-muted-foreground">

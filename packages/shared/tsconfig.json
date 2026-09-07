@@ -6,7 +6,8 @@
 		"noUncheckedIndexedAccess": false,
 		"lib": ["es2022"],
 		"stripInternal": true,
-		"noEmit": true
+		"noEmit": true,
+		"types": ["node"]
 	},
 	"include": ["src"],
 	"exclude": ["node_modules", "dist"]

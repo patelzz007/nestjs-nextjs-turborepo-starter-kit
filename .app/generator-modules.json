@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "modules": [
+    {
+      "id": "admin",
+      "appDir": "apps/admin",
+      "routePrefix": "",
+      "panelSegment": "(panel)",
+      "sidebarMenuPath": "apps/admin/lib/navigation/sidebar-menu.json",
+      "resourceRouteTemplate": "apps/admin/app/(panel)/{slug}"
+    },
+    {
+      "id": "merchant",
+      "appDir": "apps/merchant",
+      "routePrefix": "",
+      "panelSegment": "(panel)",
+      "sidebarMenuPath": "apps/merchant/data/merchant-sidebar-menu.json",
+      "resourceRouteTemplate": "apps/merchant/app/(panel)/{slug}"
+    },
+    {
+      "id": "web",
+      "appDir": "apps/web",
+      "routePrefix": "/rewardhub",
+      "panelSegment": null,
+      "sidebarMenuPath": "apps/web/data/user-sidebar-menu.json",
+      "resourceRouteTemplate": "apps/web/app/rewardhub/{slug}"
+    }
+  ]
+}

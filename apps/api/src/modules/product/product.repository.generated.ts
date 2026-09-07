@@ -1,17 +1,10 @@
 import { Injectable } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
 
-import {
-	nowEpochMs,
-	type CreateProductInput,
-	type Product as ProductEntity,
-	type ProductListQuery,
-	type UpdateProductInput,
-} from "@workspace/shared";
+import { nowEpochMs, type CreateProductInput, type Product as ProductEntity, type ProductListQuery, type UpdateProductInput } from "@workspace/shared";
 
 import { BaseRepository } from "../../platform/persistence/base.repository";
 import { PrismaService } from "../../prisma/prisma.service";
-
 
 function toDomain(row: Prisma.ProductGetPayload<Record<string, never>>): ProductEntity {
 	return {
@@ -21,8 +14,8 @@ function toDomain(row: Prisma.ProductGetPayload<Record<string, never>>): Product
 		compareAtPrice: row.compareAtPrice === null ? null : Number(row.compareAtPrice),
 		description: row.description,
 		imageUrl: row.imageUrl,
-		isActive: row.isActive,
-		isFeatured: row.isFeatured,
+		isActive: row.isActive ?? true,
+		isFeatured: row.isFeatured ?? false,
 		name: row.name,
 		price: Number(row.price),
 		shortDescription: row.shortDescription,
@@ -102,14 +95,14 @@ function toPrismaUpdateInput(input: UpdateProductInput): Prisma.ProductUpdateInp
 	}
 	return data;
 }
-const SORTABLE_FIELDS: ReadonlySet<string> = new Set(["sku", "name", "price", "stockQuantity", "createdAt"]);
+const SORTABLE_FIELDS: ReadonlySet<string> = new Set(["compareAtPrice", "name", "price", "sku", "slug", "stockQuantity", "createdAt"]);
 
 function buildSearchConditions(trimmedSearch: string): Prisma.ProductWhereInput[] {
 	return [
-		{ sku: { contains: trimmedSearch, mode: "insensitive" } },
-		{ name: { contains: trimmedSearch, mode: "insensitive" } },
-		{ slug: { contains: trimmedSearch, mode: "insensitive" } },
 		{ brand: { contains: trimmedSearch, mode: "insensitive" } },
+		{ name: { contains: trimmedSearch, mode: "insensitive" } },
+		{ sku: { contains: trimmedSearch, mode: "insensitive" } },
+		{ slug: { contains: trimmedSearch, mode: "insensitive" } },
 	];
 }
 
@@ -120,6 +113,19 @@ function resolveOrderBy(query: ProductListQuery): Prisma.ProductOrderByWithRelat
 		return { createdAt: "desc" };
 	}
 	return { [sortBy]: sortDirection };
+}
+
+function buildListCursorOrderBy(query: ProductListQuery): Prisma.ProductOrderByWithRelationInput {
+	const sortBy = query.sortBy ?? "createdAt";
+	const sortDirection = query.sortDirection ?? "desc";
+	if (!SORTABLE_FIELDS.has(sortBy)) {
+		return { createdAt: "desc", id: "asc" };
+	}
+	return { [sortBy]: sortDirection, id: "asc" };
+}
+
+function mergeListCursor(where: Prisma.ProductWhereInput, cursorId: string): Prisma.ProductWhereInput {
+	return { ...where, id: { gt: cursorId } };
 }
 
 function buildListWhere(query: ProductListQuery): Prisma.ProductWhereInput {
@@ -133,6 +139,18 @@ function buildListWhere(query: ProductListQuery): Prisma.ProductWhereInput {
 			where.OR = searchConditions;
 		}
 	}
+	if (query.isActive !== undefined) {
+		where.isActive = query.isActive === true || query.isActive === "true";
+	}
+	if (query.isFeatured !== undefined) {
+		where.isFeatured = query.isFeatured === true || query.isFeatured === "true";
+	}
+	if (query.categoryId !== undefined) {
+		where.categoryId = query.categoryId;
+	}
+	if (query.brand !== undefined) {
+		where.brand = { contains: query.brand, mode: "insensitive" };
+	}
 	return where;
 }
 
@@ -142,13 +160,16 @@ const ProductRepositoryPorts = {
 	toUpdateInput: toPrismaUpdateInput,
 	buildListWhere,
 	buildListOrderBy: resolveOrderBy,
+	buildListCursorOrderBy,
+	mergeListCursor,
+	readListCursorId: (row: Prisma.ProductGetPayload<Record<string, never>>): string => row.id,
 	buildFindByIdWhere: (id: string): Prisma.ProductWhereInput => ({ id, deletedAt: null }),
 	buildFindByIdIncludingDeletedWhere: (id: string): Prisma.ProductWhereInput => ({ id }),
-	readDeletedAt: (row: Prisma.ProductGetPayload<Record<string, never>>): number | null => row.deletedAt === null ? null : Number(row.deletedAt),
+	readDeletedAt: (row: Prisma.ProductGetPayload<Record<string, never>>): number | null => (row.deletedAt === null ? null : Number(row.deletedAt)),
 	buildUpdateWhere: (id: string, expectedVersion?: number): Prisma.ProductWhereUniqueInput => ({ id, version: expectedVersion }),
 	stampUpdate: (data: Prisma.ProductUpdateInput): Prisma.ProductUpdateInput => ({ ...data, version: { increment: 1 }, updatedAt: nowEpochMs() }),
 	stampSoftDelete: (): Prisma.ProductUpdateInput => ({ deletedAt: nowEpochMs(), updatedAt: nowEpochMs() }),
-	stampRestore: (): Prisma.ProductUpdateInput => ({ deletedAt: null, updatedAt: nowEpochMs() })
+	stampRestore: (): Prisma.ProductUpdateInput => ({ deletedAt: null, updatedAt: nowEpochMs() }),
 };
 
 @Injectable()
@@ -167,5 +188,4 @@ export class GeneratedProductRepository extends BaseRepository<
 	public constructor(prisma: PrismaService) {
 		super(prisma, ProductRepositoryPorts, prisma.product, { softDelete: true, concurrency: true });
 	}
-
 }

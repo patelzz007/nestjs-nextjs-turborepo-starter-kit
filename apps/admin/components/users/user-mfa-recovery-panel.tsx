@@ -21,8 +21,8 @@ export const UserMfaRecoveryPanel = React.forwardRef<HTMLDivElement, UserMfaReco
 	const { api } = useAuth();
 
 	const requestsQuery = api.auth.adminMfaRecoveryRequests.useQuery({
-		userId,
 		page: 1,
+		userId,
 		limit: 5,
 	});
 

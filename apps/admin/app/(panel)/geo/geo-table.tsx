@@ -3,6 +3,10 @@
 import { createDataTableLabels, type DataTableLabels } from "@/lib/data-table-labels";
 import { buildReadOnlyTableCheckbox } from "@/lib/data-table-capabilities";
 import { DataTableMobileCard } from "@/lib/data-table-mobile-card";
+import { readPaginatedNextCursor, readPaginatedTotal } from "@/lib/api-envelope";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
+import { useManualHybridPagination } from "@/lib/use-manual-cursor-pagination";
+import { DataTableSearchToolbar } from "@/components/common/data-table-search-toolbar";
 import { Badge } from "@workspace/ui/components/feedback/badge";
 import { Button } from "@workspace/ui/components/form/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
@@ -11,9 +15,9 @@ import { Input } from "@workspace/ui/components/form/input";
 import { cn } from "@workspace/ui/lib/utils";
 import type { ColumnDef, SortingState } from "@tanstack/react-table";
 import { keepPreviousData } from "@tanstack/react-query";
-import { Building2, Globe, Landmark, MapPin, Search, TreePine } from "lucide-react";
+import { Building2, Globe, Landmark, MapPin, TreePine } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { useAuth } from "@workspace/client/lib/auth";
 
@@ -30,14 +34,8 @@ interface GeoRow {
 	readonly flag?: boolean;
 }
 
-interface PageMeta {
-	readonly total: number;
-	readonly hasNext: boolean;
-}
-
 interface ExtractedData {
 	readonly rows: readonly unknown[];
-	readonly meta: PageMeta;
 }
 
 interface GeoTableStats {
@@ -77,19 +75,8 @@ function readNumN(obj: Record<string, unknown>, key: string): number | undefined
 	return typeof v === "number" ? v : typeof v === "string" ? Number(v) : undefined;
 }
 
-function readMeta(m: unknown): PageMeta {
-	if (m === null || typeof m !== "object") return { total: 0, hasNext: false };
-	const obj: Record<string, unknown> = {};
-	for (const [k, v] of Object.entries(m)) {
-		obj[k] = v;
-	}
-	const total = typeof obj.total === "number" ? obj.total : 0;
-	const hasNext = obj.hasNext === true || obj.hasMore === true;
-	return { total, hasNext };
-}
-
-function extractFromQuery(raw: unknown): ExtractedData {
-	if (raw === null || typeof raw !== "object") return { rows: [], meta: { total: 0, hasNext: false } };
+function extractRows(raw: unknown): ExtractedData {
+	if (raw === null || typeof raw !== "object") return { rows: [] };
 
 	const env: Record<string, unknown> = {};
 	for (const [k, v] of Object.entries(raw)) {
@@ -98,7 +85,7 @@ function extractFromQuery(raw: unknown): ExtractedData {
 	const data = env.data;
 
 	if (Array.isArray(data)) {
-		return { rows: data, meta: readMeta(env.meta) };
+		return { rows: data };
 	}
 
 	if (data !== null && typeof data === "object" && "items" in data) {
@@ -107,13 +94,10 @@ function extractFromQuery(raw: unknown): ExtractedData {
 			dataObj[k] = v;
 		}
 		const rawItems: unknown[] = Array.isArray(dataObj.items) ? dataObj.items : [];
-		return {
-			rows: rawItems,
-			meta: { total: readNum(dataObj, "total"), hasNext: dataObj.hasNext === true || dataObj.hasMore === true },
-		};
+		return { rows: rawItems };
 	}
 
-	return { rows: [], meta: { total: 0, hasNext: false } };
+	return { rows: [] };
 }
 
 // ── Stat card ──────────────────────────────────────────────────────────────
@@ -264,19 +248,6 @@ function useCityColumns(): ColumnDef<DataTableFeatures, GeoRow>[] {
 
 // ── Hooks ──────────────────────────────────────────────────────────────────
 
-function useDebounce<T>(value: T, delay: number): T {
-	const [debouncedValue, setDebouncedValue] = useState(value);
-	useEffect(() => {
-		const handler = setTimeout(() => {
-			setDebouncedValue(value);
-		}, delay);
-		return (): void => {
-			clearTimeout(handler);
-		};
-	}, [value, delay]);
-	return debouncedValue;
-}
-
 function sortingToApiSort(sorting: SortingState): string | undefined {
 	if (sorting.length === 0) return undefined;
 	const first = sorting[0];
@@ -296,45 +267,52 @@ export default function GeoView({ initialStats }: GeoTableProps): React.JSX.Elem
 
 	const [activeTab, setActiveTab] = useState<TabKey>("countries");
 	const [search, setSearch] = useState("");
-	const debouncedSearch = useDebounce(search, 300);
-	const [page, setPage] = useState(1);
-	const [pageLimit, setPageLimit] = useState(20);
+	const debouncedSearch = useDebouncedValue(search, 300);
 	const [countryFilter, setCountryFilter] = useState("");
 	const [sorting, setSorting] = useState<SortingState>([]);
+	const isFiltered = debouncedSearch.trim().length > 0 || countryFilter.trim().length > 0;
 
-	const prevSearchRef = useRef(debouncedSearch);
-	const prevCountryRef = useRef(countryFilter);
-	const prevSortRef = useRef(sorting);
-	useEffect(() => {
-		const searchChanged = debouncedSearch !== prevSearchRef.current;
-		const countryChanged = countryFilter !== prevCountryRef.current;
-		const sortChanged = sorting !== prevSortRef.current;
-		if (searchChanged || countryChanged || sortChanged) {
-			setPage(1);
-		}
-		prevSearchRef.current = debouncedSearch;
-		prevCountryRef.current = countryFilter;
-		prevSortRef.current = sorting;
-	}, [debouncedSearch, countryFilter, sorting]);
+	const handleClearFilters = useCallback((): void => {
+		setSearch("");
+		setCountryFilter("");
+	}, []);
+
+	const { listQuery: paginationQuery, bindListMeta, pagination: basePagination } = useManualHybridPagination<GeoRow>(
+		20,
+		[activeTab, debouncedSearch, countryFilter, sorting],
+		(row) => String(row.id),
+		{
+			onClearFilters: handleClearFilters,
+			isFiltered,
+		},
+	);
 
 	const apiSort = useMemo(() => sortingToApiSort(sorting), [sorting]);
+	const listQueryInput = useMemo(
+		() => ({
+			...paginationQuery,
+			search: debouncedSearch || undefined,
+			sort: apiSort,
+		}),
+		[paginationQuery, debouncedSearch, apiSort],
+	);
 
-	const countriesQuery = api.geo.countries.useQuery({ page, limit: pageLimit, search: debouncedSearch || undefined, sort: apiSort }, { placeholderData: keepPreviousData });
+	const countriesQuery = api.geo.countries.useQuery(listQueryInput, { placeholderData: keepPreviousData });
 	const statesQuery = api.geo.states.useQuery(
-		{ page, limit: pageLimit, search: debouncedSearch || undefined, sort: apiSort, countryCode: countryFilter || undefined },
+		{ ...listQueryInput, countryCode: countryFilter || undefined },
 		{ placeholderData: keepPreviousData },
 	);
 	const citiesQuery = api.geo.cities.useQuery(
-		{ page, limit: pageLimit, search: debouncedSearch || undefined, sort: apiSort, countryCode: countryFilter || undefined },
+		{ ...listQueryInput, countryCode: countryFilter || undefined },
 		{ placeholderData: keepPreviousData },
 	);
 
 	const activeQuery = activeTab === "countries" ? countriesQuery : activeTab === "states" ? statesQuery : citiesQuery;
 	const tableError: string | null = activeQuery.isError ? "Could not load geographic data. Clear search or sort and try again." : null;
 
-	const countriesExtracted = useMemo((): ExtractedData => extractFromQuery(countriesQuery.data), [countriesQuery.data]);
-	const statesExtracted = useMemo((): ExtractedData => extractFromQuery(statesQuery.data), [statesQuery.data]);
-	const citiesExtracted = useMemo((): ExtractedData => extractFromQuery(citiesQuery.data), [citiesQuery.data]);
+	const countriesExtracted = useMemo((): ExtractedData => extractRows(countriesQuery.data), [countriesQuery.data]);
+	const statesExtracted = useMemo((): ExtractedData => extractRows(statesQuery.data), [statesQuery.data]);
+	const citiesExtracted = useMemo((): ExtractedData => extractRows(citiesQuery.data), [citiesQuery.data]);
 
 	const countryItems = useMemo(
 		(): GeoRow[] =>
@@ -376,8 +354,12 @@ export default function GeoView({ initialStats }: GeoTableProps): React.JSX.Elem
 
 	const items = activeTab === "countries" ? countryItems : activeTab === "states" ? stateItems : cityItems;
 
-	const activeExtracted = activeTab === "countries" ? countriesExtracted : activeTab === "states" ? statesExtracted : citiesExtracted;
-	const { total } = activeExtracted.meta;
+	const totalCount = readPaginatedTotal(activeQuery.data?.meta, 0);
+	const pagination = useMemo(() => ({ ...basePagination, totalCount }), [basePagination, totalCount]);
+
+	useEffect((): void => {
+		bindListMeta(readPaginatedNextCursor(activeQuery.data?.meta) ?? null);
+	}, [activeQuery.data?.meta, bindListMeta]);
 
 	const countryColumns = useCountryColumns();
 	const stateColumns = useStateColumns();
@@ -413,21 +395,15 @@ export default function GeoView({ initialStats }: GeoTableProps): React.JSX.Elem
 		setCountryFilter(event.target.value);
 	}, []);
 
-	const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-		setSearch(e.target.value);
+	const handleSearchChange = useCallback((value: string): void => {
+		setSearch(value);
 	}, []);
 
 	const handleTabChange = useCallback((tab: TabKey) => {
 		setActiveTab(tab);
-		setPage(1);
 		setSearch("");
 		setCountryFilter("");
 		setSorting([]);
-	}, []);
-
-	const handleManualPaginationChange = useCallback((newPage: number, newPageSize: number) => {
-		setPage(newPage);
-		setPageLimit(newPageSize);
 	}, []);
 
 	const handleManualSortingChange = useCallback((newSorting: SortingState) => {
@@ -497,10 +473,12 @@ export default function GeoView({ initialStats }: GeoTableProps): React.JSX.Elem
 	const toolbarContent = useMemo(
 		() => (
 			<div className="flex items-center gap-2">
-				<div className="relative">
-					<Search className="absolute top-2.5 left-2.5 size-4 text-muted-foreground" />
-					<Input placeholder={`Search ${activeTab}...`} value={search} onChange={handleSearchChange} className="w-[250px] pl-8" />
-				</div>
+				<DataTableSearchToolbar
+					value={search}
+					onChange={handleSearchChange}
+					placeholder={`Search ${activeTab}...`}
+					className="relative w-[250px]"
+				/>
 				{activeTab === "states" || activeTab === "cities" ? (
 					<Input placeholder="Country code" value={countryFilter} onChange={handleCountryFilterChange} className="w-[120px]" />
 				) : null}
@@ -545,13 +523,9 @@ export default function GeoView({ initialStats }: GeoTableProps): React.JSX.Elem
 							checkbox={checkbox}
 							enableColumnVisibility
 							mobileCardRender={mobileCardRender}
-							manual
-							totalCount={total}
-							pageIndex={page - 1}
+							pagination={pagination}
 							sorting={sorting}
-							pageSize={pageLimit}
 							pageSizeOptions={PAGE_SIZE_OPTIONS}
-							onManualPaginationChange={handleManualPaginationChange}
 							onManualSortingChange={handleManualSortingChange}
 							toolbarContent={toolbarContent}
 							error={tableError}

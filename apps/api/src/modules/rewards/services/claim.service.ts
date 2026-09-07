@@ -1,8 +1,9 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 
-import type { CreateRewardClaimInput, RewardClaimCreatedResponse, RewardClaimListQuery, RewardClaimQrResponse, RewardClaimResponse, RewardType } from "@workspace/shared";
+import type { CreateRewardClaimInput, PaginatedServiceResult, RewardClaimCreatedResponse, RewardClaimListQuery, RewardClaimQrResponse, RewardClaimResponse, RewardType } from "@workspace/shared";
 import { EpochMsSchema, RewardBackupCodeSchema } from "@workspace/shared";
 
+import { paginateCursorListResult } from "../../../platform/persistence/cursor-list";
 import { RewardClaimRepository } from "../repositories/reward-claim.repository";
 import { RewardReferralRepository } from "../repositories/reward-referral.repository";
 import { RewardRepository } from "../repositories/reward.repository";
@@ -94,31 +95,12 @@ export class ClaimService {
 		};
 	}
 
-	public async listClaims(
-		userId: string,
-		query: RewardClaimListQuery,
-	): Promise<{
-		items: RewardClaimResponse[];
-		total: number;
-		page: number;
-		limit: number;
-		totalPages: number;
-		hasNext: boolean;
-		hasPrevious: boolean;
-	}> {
-		const page = query.page;
-		const pageSize = query.limit;
-		const { rows, total } = await this.rewardClaimRepository.listForUser(userId, query);
-
-		return {
-			items: rows.map((row) => mapClaimToResponse(row, row.reward.title)),
-			total,
-			page,
-			limit: pageSize,
-			totalPages: pageSize === 0 ? 0 : Math.ceil(total / pageSize),
-			hasNext: page * pageSize < total,
-			hasPrevious: page > 1,
-		};
+	public async listClaims(userId: string, query: RewardClaimListQuery): Promise<PaginatedServiceResult<RewardClaimResponse>> {
+		const result = await this.rewardClaimRepository.listForUser(userId, query);
+		return paginateCursorListResult(
+			{ ...result, items: result.items.map((row) => mapClaimToResponse(row, row.reward.title)) },
+			query,
+		);
 	}
 
 	public async getClaimQr(userId: string, claimId: string): Promise<RewardClaimQrResponse> {

@@ -4,7 +4,7 @@ const withBundleAnalyzer = require("@next/bundle-analyzer")({
 });
 
 const nextConfig: NextConfig = {
-	transpilePackages: ["@workspace/client", "@workspace/ui", "@workspace/shared"],
+	transpilePackages: ["@workspace/client", "@workspace/ui", "@workspace/shared", "@workspace/cli"],
 	images: {
 		// Cover art for the `/docs` banners is served from Unsplash's CDN.
 		remotePatterns: [{ protocol: "https", hostname: "images.unsplash.com" }],

@@ -11,9 +11,7 @@ export abstract class GeneratedSampleCategoryService extends BaseService<
 	SampleCategoryListQuery,
 	GeneratedSampleCategoryRepository
 > {
-
 	public constructor(repository: GeneratedSampleCategoryRepository) {
 		super(repository);
 	}
-
 }

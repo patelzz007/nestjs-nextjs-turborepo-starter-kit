@@ -13,11 +13,10 @@ import * as React from "react";
 export interface RewardHubCatalogProps {
 	readonly rewards: readonly RewardResponse[];
 	readonly isLoading: boolean;
-	readonly total: number;
-	readonly page: number;
 	readonly hasNext: boolean;
 	readonly hasPrevious: boolean;
-	readonly onPageChange: (page: number) => void;
+	readonly onNext: () => void;
+	readonly onPrevious: () => void;
 	readonly detailPathPrefix?: string;
 }
 
@@ -41,28 +40,19 @@ function CatalogSkeleton({ viewMode }: { readonly viewMode: "grid" | "list" }): 
 	);
 }
 
-/** Consumer rewards collection with grid/list toggle and pagination. */
+/** Consumer rewards collection with grid/list toggle and cursor pagination. */
 export function RewardHubCatalog({
 	rewards,
 	isLoading,
-	total,
-	page,
 	hasNext,
 	hasPrevious,
-	onPageChange,
+	onNext,
+	onPrevious,
 	detailPathPrefix = "/rewardhub",
 }: RewardHubCatalogProps): React.JSX.Element {
 	const { viewMode, setViewMode } = useRewardHubViewMode();
 
-	const handlePrevious = React.useCallback((): void => {
-		onPageChange(page - 1);
-	}, [onPageChange, page]);
-
-	const handleNext = React.useCallback((): void => {
-		onPageChange(page + 1);
-	}, [onPageChange, page]);
-
-	const resultLabel = isLoading ? "Loading offers…" : `${String(rewards.length)} on this page · ${total.toLocaleString()} total`;
+	const resultLabel = isLoading ? "Loading offers…" : `Showing ${String(rewards.length)} offers`;
 
 	return (
 		<section className="space-y-4" aria-label="Rewards catalog">
@@ -92,12 +82,12 @@ export function RewardHubCatalog({
 
 			{hasPrevious || hasNext ? (
 				<div className="flex items-center justify-between gap-3 border-t border-border pt-4">
-					<Button type="button" variant="outline" disabled={!hasPrevious} onClick={handlePrevious} className="gap-1.5">
+					<Button type="button" variant="outline" disabled={!hasPrevious} onClick={onPrevious} className="gap-1.5">
 						<ChevronLeft className="size-4" aria-hidden="true" />
 						Previous
 					</Button>
-					<p className="text-sm text-muted-foreground tabular-nums">Page {page}</p>
-					<Button type="button" variant="outline" disabled={!hasNext} onClick={handleNext} className="gap-1.5">
+					<p className="text-sm text-muted-foreground tabular-nums">{rewards.length} results</p>
+					<Button type="button" variant="outline" disabled={!hasNext} onClick={onNext} className="gap-1.5">
 						Next
 						<ChevronRight className="size-4" aria-hidden="true" />
 					</Button>

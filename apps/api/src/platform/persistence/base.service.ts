@@ -7,21 +7,17 @@ import type { RepositoryInstance, RepositoryListResult } from "./types";
 export abstract class BaseService<TEntity, TCreate, TUpdate, TQuery extends PaginationInput, TRepository extends RepositoryInstance<TEntity, TCreate, TUpdate, TQuery>> {
 	public constructor(protected readonly repository: TRepository) {}
 
-	protected paginate(items: readonly TEntity[], total: number, query: PaginationInput): PaginatedServiceResult<TEntity> {
-		const totalPages = query.limit > 0 ? Math.ceil(total / query.limit) : 0;
-		return {
-			items: [...items],
-			total,
-			page: query.page,
-			limit: query.limit,
-			totalPages,
-			hasNext: query.page < totalPages,
-			hasPrevious: query.page > 1,
-		};
-	}
-
 	protected paginateListResult(result: RepositoryListResult<TEntity>, query: PaginationInput): PaginatedServiceResult<TEntity> {
-		return this.paginate(result.items, result.total, query);
+		return {
+			items: [...result.items],
+			limit: query.limit,
+			total: result.total,
+			page: result.page,
+			totalPages: result.totalPages,
+			nextCursor: result.nextCursor,
+			hasNext: result.hasNext,
+			hasPrevious: result.hasPrevious,
+		};
 	}
 
 	public async list(query: TQuery): Promise<PaginatedServiceResult<TEntity>> {

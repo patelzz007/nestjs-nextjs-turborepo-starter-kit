@@ -1,4 +1,8 @@
+import { humanizeFieldLabel } from "../../core/humanize";
+import { tsStringLiteral } from "../../core/ts-literal";
 import type { FieldIR, ResourceIR } from "../../ir/types";
+import { resolveUiResourceBasePath } from "../../ir/ui-context";
+import { resolveTitleField } from "./list-filters";
 
 function renderDetailFieldValue(field: FieldIR): string {
 	const accessor = `entity.${field.camelName}`;
@@ -20,19 +24,25 @@ function renderDetailFieldValue(field: FieldIR): string {
 		}
 		return `String(${accessor})`;
 	}
+	if (field.type === "string" || field.type === "text" || field.type === "uuid" || field.type === "enum") {
+		if (field.nullable) {
+			return `${accessor} ?? "—"`;
+		}
+		return accessor;
+	}
 	if (field.nullable) {
 		return `${accessor} ?? "—"`;
 	}
-	return `String(${accessor})`;
+	return accessor;
 }
 
 function renderDetailField(field: FieldIR): string {
-	const label = `${field.camelName.charAt(0).toUpperCase()}${field.camelName.slice(1).replace(/([A-Z])/g, " $1")}`;
-	return `\t\t\t\t\t<DetailField label="${label}" value={${renderDetailFieldValue(field)}} />`;
+	const label = humanizeFieldLabel(field.camelName);
+	return `\t\t\t\t\t<DetailField label=${tsStringLiteral(label)} value={${renderDetailFieldValue(field)}} />`;
 }
 
 function resolveSubtitleField(ir: ResourceIR): string | undefined {
-	const formFields = ir.admin?.form.fields ?? [];
+	const formFields = ir.admin?.form.fields ?? ir.uiTargets.admin?.form.fields ?? [];
 	if (formFields.includes("slug")) {
 		return "slug";
 	}
@@ -40,14 +50,6 @@ function resolveSubtitleField(ir: ResourceIR): string | undefined {
 		return "sku";
 	}
 	return undefined;
-}
-
-function resolveTitleField(ir: ResourceIR): string {
-	const formFields = ir.admin?.form.fields ?? [];
-	if (formFields.includes("name")) {
-		return "name";
-	}
-	return formFields[0] ?? "id";
 }
 
 function resolveStatusBadges(ir: ResourceIR): string {
@@ -69,12 +71,13 @@ function resolveStatusBadges(ir: ResourceIR): string {
 export function renderAdminDetailView(ir: ResourceIR): string {
 	const model = ir.resource.modelName;
 	const slug = ir.resource.slug;
+	const basePath = resolveUiResourceBasePath(ir);
 	const contractKey = ir.resource.contractKey;
 	const pluralLabel = ir.admin?.navigation?.label ?? ir.resource.plural;
 	const singularLabel = ir.resource.singular.toLowerCase();
 	const titleField = resolveTitleField(ir);
 	const subtitleField = resolveSubtitleField(ir);
-	const formFieldNames = ir.admin?.form.fields ?? [];
+	const formFieldNames = ir.admin?.form.fields ?? ir.uiTargets.admin?.form.fields ?? [];
 	const detailFields = ir.fields.filter(
 		(field) => formFieldNames.includes(field.camelName) && field.camelName !== titleField && field.camelName !== subtitleField,
 	);
@@ -129,17 +132,17 @@ export default function ${model}DetailView({ id, initial${model} }: ${model}Deta
 \tconst entity: ${model} | undefined = detailQuery.data?.data;
 
 \tif (detailQuery.isLoading && entity === undefined) {
-\t\treturn <p className="text-muted-foreground">Loading ${singularLabel}…</p>;
+\t\treturn <p className="text-muted-foreground">{${tsStringLiteral(`Loading ${singularLabel}…`)}}</p>;
 \t}
 
 \tif (detailQuery.isError || entity === undefined) {
 \t\treturn (
 \t\t\t<div className="space-y-4">
-\t\t\t\t<Button variant="outline" nativeButton={false} render={<Link href="/${slug}" />}>
+\t\t\t\t<Button variant="outline" nativeButton={false} render={<Link href="${basePath}" />}>
 \t\t\t\t\t<ArrowLeft className="mr-2 size-4" />
-\t\t\t\t\tBack to ${pluralLabel.toLowerCase()}
+\t\t\t\t\t{${tsStringLiteral(`Back to ${pluralLabel.toLowerCase()}`)}}
 \t\t\t\t</Button>
-\t\t\t\t<p className="text-destructive">Could not load this ${singularLabel}.</p>
+\t\t\t\t<p className="text-destructive">{${tsStringLiteral(`Could not load this ${singularLabel}.`)}}</p>
 \t\t\t</div>
 \t\t);
 \t}
@@ -147,11 +150,11 @@ export default function ${model}DetailView({ id, initial${model} }: ${model}Deta
 \treturn (
 \t\t<div className="space-y-4">
 \t\t\t<div className="flex flex-wrap items-center justify-between gap-3">
-\t\t\t\t<Button variant="outline" nativeButton={false} render={<Link href="/${slug}" />}>
+\t\t\t\t<Button variant="outline" nativeButton={false} render={<Link href="${basePath}" />}>
 \t\t\t\t\t<ArrowLeft className="mr-2 size-4" />
-\t\t\t\t\tBack to ${pluralLabel.toLowerCase()}
+\t\t\t\t\t{${tsStringLiteral(`Back to ${pluralLabel.toLowerCase()}`)}}
 \t\t\t\t</Button>
-\t\t\t\t<Button nativeButton={false} render={<Link href={\`/${slug}/\${entity.id}/edit\`} />}>
+\t\t\t\t<Button nativeButton={false} render={<Link href={\`${basePath}/\${entity.id}/edit\`} />}>
 \t\t\t\t\t<Pencil className="mr-2 size-4" />
 \t\t\t\t\tEdit
 \t\t\t\t</Button>

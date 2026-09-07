@@ -1,5 +1,7 @@
 import type { ResourceScalarType, RlsPolicy } from "../schema/resource-definition";
 import { ResourceScalarTypeSchema, RlsPolicySchema } from "../schema/resource-definition";
+import { loadGeneratorModules } from "../core/load-modules";
+import { loadProjectConfig } from "../core/project";
 import { discoverExistingModels } from "./discover-models";
 import { SCALAR_FIELD_KIND_CHOICES, type FieldKind, fieldKindToScalarType } from "./field-kinds";
 import type { WizardPrompter } from "./prompter";
@@ -258,10 +260,10 @@ async function collectField(
 	return collectScalarField(prompter, existingFieldNames, kind);
 }
 
-export async function collectResourceWizardInput(prompter: WizardPrompter, definitionsDir: string): Promise<WizardResourceInput> {
+export async function collectResourceWizardInput(prompter: WizardPrompter, definitionsDir: string, rootDir: string): Promise<WizardResourceInput> {
 	printWizardIntro();
 
-	printSection("Basics", { current: 1, total: 4 });
+	printSection("Basics", { current: 1, total: 5 });
 	const rawName = await prompter.text("Resource name", {
 		hint: "PascalCase or kebab-case, e.g. Product or product-category",
 		validate: (value) => {
@@ -273,12 +275,36 @@ export async function collectResourceWizardInput(prompter: WizardPrompter, defin
 		},
 	});
 	const name = toPascalCase(rawName);
-	const navigationLabel = await prompter.text("Admin menu label", {
+	const navigationLabel = await prompter.text("Sidebar menu label", {
 		defaultValue: toNavigationLabel(name),
-		hint: "Shown in the admin sidebar",
+		hint: "Shown in panel sidebars when UI is generated",
 	});
 
-	printSection("Access & lifecycle", { current: 2, total: 4 });
+	printSection("Scope", { current: 2, total: 5 });
+	const config = loadProjectConfig(rootDir);
+	const modulesManifest = await loadGeneratorModules(config, { seedIfMissing: true });
+	const generateUi = await prompter.confirm("Generate UI panels?", {
+		defaultValue: true,
+		hint: "API + shared + client are always generated",
+	});
+
+	let uiModules: string[] = [];
+	if (generateUi) {
+		const selected = await prompter.multiselect(
+			"Which UI modules should receive pages?",
+			modulesManifest.modules.map((module) => ({
+				value: module.id,
+				label: module.id,
+				hint: module.resourceRouteTemplate,
+			})),
+		);
+		uiModules = selected;
+		if (uiModules.length === 0) {
+			throw new Error("Select at least one UI module or disable UI generation.");
+		}
+	}
+
+	printSection("Access & lifecycle", { current: 3, total: 5 });
 	const rls = resolveRlsPolicy(await prompter.select("Who can access this data?", RLS_CHOICES));
 	const softDelete = await prompter.confirm("Enable soft delete?", {
 		defaultValue: true,
@@ -295,7 +321,7 @@ export async function collectResourceWizardInput(prompter: WizardPrompter, defin
 
 	const existingModels = await discoverExistingModels(definitionsDir);
 
-	printSection("Columns", { current: 3, total: 4 });
+	printSection("Columns", { current: 4, total: 5 });
 	printNote("Each resource becomes one database table.");
 	printNote("id, createdAt, and updatedAt are automatic — do not add them.");
 	const linkableParents = existingModels.filter((model) => model.modelName !== name);
@@ -333,8 +359,8 @@ export async function collectResourceWizardInput(prompter: WizardPrompter, defin
 		throw new Error("At least one column is required.");
 	}
 
-	printSection("Review", { current: 4, total: 4 });
-	process.stdout.write(`${pcResourceSummary(name, navigationLabel, rls, softDelete, fields)}\n`);
+	printSection("Review", { current: 5, total: 5 });
+	process.stdout.write(`${pcResourceSummary(name, navigationLabel, rls, softDelete, generateUi, uiModules, fields)}\n`);
 	printFieldSummary(
 		fields.map((field) => ({
 			name: field.name,
@@ -350,11 +376,29 @@ export async function collectResourceWizardInput(prompter: WizardPrompter, defin
 		concurrency,
 		idempotency,
 		fields,
+		generateUi,
+		uiModules,
 		navigationLabel,
 	};
 }
 
-function pcResourceSummary(name: string, navigationLabel: string, rls: RlsPolicy, softDelete: boolean, fields: readonly WizardFieldInput[]): string {
-	const lines = [`Resource: ${name}`, `Admin label: ${navigationLabel}`, `Access: ${rls}`, `Soft delete: ${softDelete ? "yes" : "no"}`, `Columns: ${String(fields.length)}`];
+function pcResourceSummary(
+	name: string,
+	navigationLabel: string,
+	rls: RlsPolicy,
+	softDelete: boolean,
+	generateUi: boolean,
+	uiModules: readonly string[],
+	fields: readonly WizardFieldInput[],
+): string {
+	const scopeLine = generateUi ? `UI modules: ${uiModules.join(", ")}` : "Scope: API + shared + client only";
+	const lines = [
+		`Resource: ${name}`,
+		`Menu label: ${navigationLabel}`,
+		scopeLine,
+		`Access: ${rls}`,
+		`Soft delete: ${softDelete ? "yes" : "no"}`,
+		`Columns: ${String(fields.length)}`,
+	];
 	return lines.join("\n");
 }

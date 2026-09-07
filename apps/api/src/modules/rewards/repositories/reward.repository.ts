@@ -3,6 +3,7 @@ import type { Prisma, Reward } from "@prisma/client";
 
 import { nowEpochMs, type RewardListQuery } from "@workspace/shared";
 
+import { fetchStringIdListPage } from "../../../platform/persistence/cursor-list";
 import { BaseRepository } from "../../../platform/persistence/base.repository";
 import type { EmptyMutationInput, RepositoryListResult } from "../../../platform/persistence/types";
 import { PrismaService } from "../../../prisma/prisma.service";
@@ -60,6 +61,9 @@ const RewardRepositoryPorts = {
 	toUpdateInput,
 	buildListWhere: buildMarketplaceWhere,
 	buildListOrderBy: (): Prisma.RewardOrderByWithRelationInput => ({ createdAt: "desc" }),
+	buildListCursorOrderBy: (): Prisma.RewardOrderByWithRelationInput => ({ id: "asc" }),
+	mergeListCursor: (where: Prisma.RewardWhereInput, cursorId: string): Prisma.RewardWhereInput => ({ ...where, id: { gt: cursorId } }),
+	readListCursorId: (row: Reward): string => row.id,
 	buildFindByIdWhere: (id: string): Prisma.RewardWhereInput => ({
 		id,
 		isDeleted: false,
@@ -91,20 +95,17 @@ export class RewardRepository extends BaseRepository<
 
 	public async listMarketplace(query: RewardListQuery): Promise<RepositoryListResult<RewardWithMerchantOrg>> {
 		const where = buildMarketplaceWhere(query);
-		const skip = (query.page - 1) * query.limit;
-
-		const [rows, total] = await this.prisma.$transaction([
-			this.prisma.reward.findMany({
-				where,
-				include: REWARD_WITH_MERCHANT_ORG_INCLUDE,
-				orderBy: { createdAt: "desc" },
-				skip,
-				take: query.limit,
-			}),
-			this.prisma.reward.count({ where }),
-		]);
-
-		return { items: rows, total };
+		return fetchStringIdListPage(query, {
+			where,
+			mergeCursor: (baseWhere, cursorId) => ({ ...baseWhere, id: { gt: cursorId } }),
+			readId: (row) => row.id,
+			findMany: (args): Promise<RewardWithMerchantOrg[]> =>
+				this.prisma.reward.findMany({
+					...args,
+					include: REWARD_WITH_MERCHANT_ORG_INCLUDE,
+				}),
+			count: (listWhere) => this.prisma.reward.count({ where: listWhere }),
+		});
 	}
 
 	public async findPublishedConsumerWithMerchant(rewardId: string): Promise<RewardWithMerchantOrg | null> {

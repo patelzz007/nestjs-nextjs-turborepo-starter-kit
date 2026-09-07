@@ -1,7 +1,15 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from "@nestjs/common";
 import { ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
 
-import { apiPath, BulkCreateSampleCategorySchema, BulkDeleteIdsSchema, CreateSampleCategorySchema, SampleCategoryIdParamSchema, SampleCategoryListQuerySchema, UpdateSampleCategorySchema } from "@workspace/shared";
+import {
+	apiPath,
+	BulkCreateSampleCategorySchema,
+	BulkDeleteIdsSchema,
+	CreateSampleCategorySchema,
+	SampleCategoryIdParamSchema,
+	SampleCategoryListQuerySchema,
+	UpdateSampleCategorySchema,
+} from "@workspace/shared";
 
 import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe";
 import { RequirePermission } from "../auth/decorators/require-permission.decorator";
@@ -25,7 +33,9 @@ export class GeneratedSampleCategoryController {
 	@Post("bulk")
 	@ApiOperation({ summary: "Bulk create samplecategories" })
 	@ApiOkResponse({ description: "Created samplecategories" })
-	public bulkCreate(@Body(new ZodValidationPipe(BulkCreateSampleCategorySchema)) body: { items: Parameters<SampleCategoryService["createMany"]>[0] }): ReturnType<SampleCategoryService["createMany"]> {
+	public bulkCreate(
+		@Body(new ZodValidationPipe(BulkCreateSampleCategorySchema)) body: { items: Parameters<SampleCategoryService["createMany"]>[0] },
+	): ReturnType<SampleCategoryService["createMany"]> {
 		return this.service.createMany(body.items);
 	}
 
@@ -80,5 +90,4 @@ export class GeneratedSampleCategoryController {
 	public restore(@Param(new ZodValidationPipe(SampleCategoryIdParamSchema)) params: { id: string }): ReturnType<SampleCategoryService["restore"]> {
 		return this.service.restore(params.id);
 	}
-
 }

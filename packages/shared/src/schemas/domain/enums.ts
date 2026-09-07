@@ -40,6 +40,7 @@ export const PermissionResourceSchema = z.enum([
 	"REDEMPTION",
 	"SAMPLE_CATEGORY",
 	"PRODUCT",
+	"DEVTOOLS",
 ]);
 export type PermissionResource = z.output<typeof PermissionResourceSchema>;
 

@@ -15,7 +15,6 @@ import { Gift, QrCode, Ticket } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
 
-const CLAIMS_PAGE = 1;
 const CLAIMS_LIMIT = 20;
 
 export interface MyClaimsPageViewProps {
@@ -32,14 +31,14 @@ export function MyClaimsPageView({ initialClaims }: MyClaimsPageViewProps): Reac
 				? {
 						success: true as const,
 						data: [...initialClaims],
-						meta: stubPaginatedMeta(initialClaims.length, CLAIMS_PAGE, CLAIMS_LIMIT),
+						meta: stubPaginatedMeta(CLAIMS_LIMIT, false),
 					}
 				: undefined,
 		[initialClaims],
 	);
 
 	const claimsQuery = api.claims.list.useQuery(
-		{ page: CLAIMS_PAGE, limit: CLAIMS_LIMIT },
+		{ limit: CLAIMS_LIMIT },
 		{
 			initialData: initialQueryData,
 		},

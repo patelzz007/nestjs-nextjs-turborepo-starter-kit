@@ -8,7 +8,7 @@
 	},
 	"scripts": {
 		"build": "tsc -p tsconfig.build.json && node ../../packages/tooling/scripts/fix-dist-extensions.mjs dist",
-		"dev": "tsc -p tsconfig.build.json --watch --preserveWatchOutput",
+		"dev": "tsx watch src/bin/app.ts",
 		"start": "tsx src/bin/app.ts",
 		"lint": "eslint",
 		"format": "prettier --write \"**/*.{ts,tsx}\"",
@@ -26,6 +26,22 @@
 			},
 			"types": "./dist/index.d.ts",
 			"default": "./dist/index.js"
+		},
+		"./generator": {
+			"development": {
+				"types": "./src/generator/browser.ts",
+				"default": "./src/generator/browser.ts"
+			},
+			"types": "./dist/generator/browser.d.ts",
+			"default": "./dist/generator/browser.js"
+		},
+		"./generator/server": {
+			"development": {
+				"types": "./src/generator/server.ts",
+				"default": "./src/generator/server.ts"
+			},
+			"types": "./dist/generator/server.d.ts",
+			"default": "./dist/generator/server.js"
 		}
 	},
 	"dependencies": {

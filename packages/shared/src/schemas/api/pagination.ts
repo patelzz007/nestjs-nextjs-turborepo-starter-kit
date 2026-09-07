@@ -3,26 +3,33 @@ import { z } from "zod";
 export const PaginationSchema = z
 	.object({
 		page: z.coerce.number().int().min(1).optional().default(1).meta({
-			description: "Page number (1-based)",
+			description: "Page number (1-indexed) for offset navigation",
 			example: 1,
 		}),
+		cursor: z.string().min(1).optional().meta({
+			description: "Opaque cursor returned by the previous list response (sequential navigation)",
+			example: "Y2x1c18x",
+		}),
 		limit: z.coerce.number().int().min(1).max(100).optional().default(10).meta({
-			description: "Results per page",
-			example: 10,
+			description: "Maximum number of results to return",
+			example: 20,
 		}),
 	})
 	.strict();
 
 export type PaginationInput = z.output<typeof PaginationSchema>;
 
-export const PaginationMetaSchema = z.object({
-	total: z.number(),
-	page: z.number(),
-	limit: z.number(),
-	totalPages: z.number(),
-	hasNext: z.boolean(),
-	hasPrevious: z.boolean(),
-});
+export const PaginationMetaSchema = z
+	.object({
+		limit: z.number().int().min(1).max(100),
+		total: z.number().int().nonnegative(),
+		page: z.number().int().min(1),
+		totalPages: z.number().int().min(1),
+		nextCursor: z.string().nullable(),
+		hasNext: z.boolean(),
+		hasPrevious: z.boolean(),
+	})
+	.strict();
 
 export type PaginationMeta = z.output<typeof PaginationMetaSchema>;
 

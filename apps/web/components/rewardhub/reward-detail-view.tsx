@@ -6,7 +6,7 @@ import { WebPageHeader } from "@/components/web-ui/page-header";
 import { WebSurfacePanel } from "@/components/web-ui/surface-panel";
 import { useAuth } from "@workspace/client/lib/auth";
 import type { RewardResponse } from "@workspace/shared";
-import { getRewardClaimBlockReason, rewardClaimBlockMessage } from "@workspace/shared";
+import { getRewardClaimBlockReason, rewardClaimBlockMessage, epochMs } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/feedback/badge";
 import { Button, buttonVariants } from "@workspace/ui/components/form/button";
 import { cn } from "@workspace/ui/lib/utils";
@@ -67,7 +67,7 @@ export function RewardDetailView({ rewardId, initialReward }: RewardDetailViewPr
 		};
 	}, []);
 
-	const claimBlockReason = React.useMemo(() => (reward === undefined ? null : getRewardClaimBlockReason(reward, nowMs)), [reward, nowMs]);
+	const claimBlockReason = React.useMemo(() => (reward === undefined ? null : getRewardClaimBlockReason(reward, epochMs(nowMs))), [reward, nowMs]);
 	const canClaim = claimBlockReason === null;
 
 	const acceptLegalMutation = api.legal.accept.useMutation({

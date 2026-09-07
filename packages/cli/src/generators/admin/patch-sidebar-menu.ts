@@ -1,6 +1,7 @@
 import { readFile, writeFile } from "node:fs/promises";
 
 import type { ResourceIR } from "../../ir/types";
+import { resolveUiResourceBasePath } from "../../ir/ui-context";
 
 interface SidebarMenuItemNode {
 	readonly title: string;
@@ -43,14 +44,15 @@ function resolveSectionColor(group: string): string {
 	}
 }
 
-function buildMenuItem(ir: ResourceIR): SidebarMenuItemNode {
+function buildMenuItem(ir: ResourceIR, routePrefix: string): SidebarMenuItemNode {
 	const navigation = ir.admin?.navigation;
 	if (navigation === undefined) {
-		throw new Error("Cannot patch sidebar menu without admin.navigation");
+		throw new Error("Cannot patch sidebar menu without ui.navigation");
 	}
+	const basePath = resolveUiResourceBasePath({ ...ir, activeUi: { moduleId: "", routePrefix } });
 	return {
 		title: navigation.label,
-		url: `/${ir.resource.slug}`,
+		url: basePath,
 		icon: navigation.icon,
 	};
 }
@@ -84,7 +86,7 @@ function findOrCreateSection(menu: SidebarMenuDataNode, group: string): SidebarM
 	return created;
 }
 
-export async function patchSidebarMenu(menuPath: string, ir: ResourceIR): Promise<void> {
+export async function patchSidebarMenu(menuPath: string, ir: ResourceIR, routePrefix: string): Promise<void> {
 	const navigation = ir.admin?.navigation;
 	if (navigation === undefined) {
 		return;
@@ -92,7 +94,7 @@ export async function patchSidebarMenu(menuPath: string, ir: ResourceIR): Promis
 
 	const current = await readFile(menuPath, "utf8");
 	const menu = JSON.parse(current) as SidebarMenuDataNode;
-	const item = buildMenuItem(ir);
+	const item = buildMenuItem(ir, routePrefix);
 	const section = findOrCreateSection(menu, navigation.group);
 	const existingIndex = findItemIndex(section.items, item.url);
 	if (existingIndex >= 0) {
@@ -101,5 +103,20 @@ export async function patchSidebarMenu(menuPath: string, ir: ResourceIR): Promis
 		section.items = upsertMenuItem(section.items, item);
 	}
 
+	await writeFile(menuPath, `${JSON.stringify(menu, null, "\t")}\n`, "utf8");
+}
+
+/** Removes a resource menu item from the sidebar during rollback. */
+export async function unpatchSidebarMenu(menuPath: string, ir: ResourceIR, routePrefix: string): Promise<void> {
+	const navigation = ir.admin?.navigation;
+	if (navigation === undefined) {
+		return;
+	}
+	const current = await readFile(menuPath, "utf8");
+	const menu = JSON.parse(current) as SidebarMenuDataNode;
+	const basePath = resolveUiResourceBasePath({ ...ir, activeUi: { moduleId: "", routePrefix } });
+	for (const section of menu.sections) {
+		section.items = section.items.filter((item) => item.url !== basePath);
+	}
 	await writeFile(menuPath, `${JSON.stringify(menu, null, "\t")}\n`, "utf8");
 }

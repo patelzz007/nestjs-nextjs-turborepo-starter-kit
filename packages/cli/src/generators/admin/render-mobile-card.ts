@@ -1,3 +1,5 @@
+import { humanizeFieldLabel } from "../../core/humanize";
+import { tsStringLiteral } from "../../core/ts-literal";
 import type { FieldIR, ResourceIR } from "../../ir/types";
 
 export interface MobileCardLayout {
@@ -12,7 +14,7 @@ function fieldByColumn(ir: ResourceIR, column: string): FieldIR | undefined {
 }
 
 function columnHeader(column: string): string {
-	return `${column.charAt(0).toUpperCase()}${column.slice(1)}`;
+	return humanizeFieldLabel(column);
 }
 
 function isBadgeColumn(ir: ResourceIR, column: string): boolean {
@@ -52,7 +54,7 @@ export function renderMobileFieldValue(column: string, ir: ResourceIR): string {
 		return `item.${column} ? "Yes" : "No"`;
 	}
 	if (field?.type === "enum") {
-		return `String(item.${column})`;
+		return `item.${column}`;
 	}
 	if (field?.nullable) {
 		return `item.${column} ?? "—"`;
@@ -69,14 +71,14 @@ export function renderMobileBadge(column: string, ir: ResourceIR): string {
 		return `item.${column} ? <Badge variant="secondary">Active</Badge> : <Badge variant="outline">Inactive</Badge>`;
 	}
 	if (field?.type === "enum") {
-		return `<Badge variant="outline">{String(item.${column})}</Badge>`;
+		return `<Badge variant="outline">{item.${column}}</Badge>`;
 	}
-	return `<Badge variant="outline">{String(item.${column})}</Badge>`;
+	return `<Badge variant="outline">{${field?.type === "int" ? `String(item.${column})` : `item.${column}`}}</Badge>`;
 }
 
 export function renderGeneratedMobileCardBlock(ir: ResourceIR, columns: readonly string[]): string {
 	const layout = resolveMobileCardLayout(ir, columns);
-	const gridFieldLines = layout.gridColumns.map((column) => `\t\t\t\t{ label: "${columnHeader(column)}", value: ${renderMobileFieldValue(column, ir)} },`).join("\n");
+	const gridFieldLines = layout.gridColumns.map((column) => `\t\t\t\t{ label: ${tsStringLiteral(columnHeader(column))}, value: ${renderMobileFieldValue(column, ir)} },`).join("\n");
 	const subtitleLine = layout.subtitleColumn === undefined ? "" : `\n\t\t\tsubtitle={${renderMobileFieldValue(layout.subtitleColumn, ir)}}`;
 	const badgeLine = layout.badgeColumn === undefined ? "" : `\n\t\t\tbadge={${renderMobileBadge(layout.badgeColumn, ir)}}`;
 

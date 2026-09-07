@@ -27,7 +27,7 @@ export class RolesController {
 	@RequirePermission("LIST", "ROLE")
 	@ApiOkResponse({ description: "List of roles" })
 	public async list(): Promise<{ readonly items: readonly RoleListItem[]; readonly total: number }> {
-		const { items, total } = await this.authorization.roles.findAll({ limit: 200 });
+		const { items } = await this.authorization.roles.findAll({ limit: 200 });
 		return {
 			items: items.map((role): RoleListItem => ({
 				id: role.id,
@@ -36,7 +36,7 @@ export class RolesController {
 				isActive: role.isActive,
 				parentId: role.parentId,
 			})),
-			total,
+			total: items.length,
 		};
 	}
 

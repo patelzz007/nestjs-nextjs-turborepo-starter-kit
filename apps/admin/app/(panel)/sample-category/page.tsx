@@ -1,5 +1,5 @@
 import { createAdminServerCaller } from "@/lib/admin-server-api";
-import { readPaginatedTotal } from "@/lib/api-envelope";
+import { readPaginatedHasNext, readPaginatedTotal, readPaginatedTotalPages } from "@/lib/api-envelope";
 
 import SampleCategoryView from "./sample-category-view.generated";
 
@@ -11,7 +11,9 @@ export default async function SampleCategoryPage(): Promise<React.JSX.Element> {
 
 	const first = result[0];
 	const initialRows = first.status === "fulfilled" ? first.value.data : undefined;
-	const initialTotal = first.status === "fulfilled" ? readPaginatedTotal(first.value.meta, first.value.data.length) : undefined;
+	const initialTotal = first.status === "fulfilled" ? readPaginatedTotal(first.value.meta) : undefined;
+	const initialTotalPages = first.status === "fulfilled" ? readPaginatedTotalPages(first.value.meta) : undefined;
+	const initialHasNext = first.status === "fulfilled" ? readPaginatedHasNext(first.value.meta, false) : undefined;
 
-	return <SampleCategoryView initialRows={initialRows} initialTotal={initialTotal} />;
+	return <SampleCategoryView initialRows={initialRows} initialTotal={initialTotal} initialTotalPages={initialTotalPages} initialHasNext={initialHasNext} />;
 }

@@ -1,5 +1,6 @@
 import type { RowData } from "@tanstack/react-table";
 import type * as React from "react";
+import { z } from "zod";
 
 import type { DataTableLabels } from "@workspace/ui/lib/data-table-labels";
 
@@ -7,6 +8,8 @@ import type { DataTableLabels } from "@workspace/ui/lib/data-table-labels";
 export type DataTableExportFormat = "csv" | "json" | "pdf" | "xlsx";
 
 export const DATA_TABLE_EXPORT_FORMATS: readonly DataTableExportFormat[] = ["csv", "json", "pdf", "xlsx"];
+
+const exportFormatSchema = z.enum(["csv", "json", "pdf", "xlsx"]);
 
 /** Selection scope passed to bulk actions (page selection vs all matching server rows). */
 export interface DataTableBulkSelectionContext {
@@ -66,9 +69,19 @@ function resolveExportFormats(exportOption: boolean | readonly DataTableExportFo
 		return DATA_TABLE_EXPORT_FORMATS;
 	}
 	if (Array.isArray(exportOption)) {
-		return exportOption.length > 0 ? exportOption : DATA_TABLE_EXPORT_FORMATS;
+		if (exportOption.length === 0) {
+			return [];
+		}
+		return exportOption.filter((format): format is DataTableExportFormat => exportFormatSchema.safeParse(format).success);
 	}
 	return [];
+}
+
+function parseCheckboxConfig<TData extends RowData>(checkbox: boolean | DataTableCheckboxConfig<TData>): DataTableCheckboxConfig<TData> {
+	if (checkbox === true || checkbox === false) {
+		return {};
+	}
+	return checkbox;
 }
 
 /** Normalises the `checkbox` prop (and legacy bulk/export props) into one config. */
@@ -84,6 +97,17 @@ export function resolveDataTableCheckboxConfig<TData extends RowData>(input: Res
 		deleteSelectedIcon,
 	} = input;
 
+	if (checkbox === false) {
+		return {
+			enableBulkSelection: false,
+			bulkActions: [],
+			exportable: false,
+			exportFormats: [],
+			exportFilename: legacyExportFilename,
+			exportableColumns: legacyExportableColumns,
+		};
+	}
+
 	if (checkbox === undefined) {
 		return {
 			enableBulkSelection: legacyEnableBulkSelection,
@@ -95,16 +119,17 @@ export function resolveDataTableCheckboxConfig<TData extends RowData>(input: Res
 		};
 	}
 
-	const checkboxConfig: DataTableCheckboxConfig<TData> = typeof checkbox === "object" ? checkbox : {};
+	const checkboxConfig = parseCheckboxConfig(checkbox);
 	const resolvedBulkActions: DataTableBulkAction<TData>[] = [];
 
-	if (checkboxConfig.onDeleteAll !== undefined) {
+	const onDeleteAll = checkboxConfig.onDeleteAll;
+	if (onDeleteAll !== undefined) {
 		resolvedBulkActions.push({
 			key: "delete-selected",
 			label: labels.deleteSelected,
 			icon: deleteSelectedIcon,
 			variant: "destructive",
-			onClick: (selectedRows, context): void | Promise<void> => checkboxConfig.onDeleteAll!(selectedRows, context),
+			onClick: (selectedRows, context): void | Promise<void> => onDeleteAll(selectedRows, context),
 		});
 	}
 

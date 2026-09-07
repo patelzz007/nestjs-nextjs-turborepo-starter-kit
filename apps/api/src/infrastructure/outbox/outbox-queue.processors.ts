@@ -2,9 +2,9 @@ import { Processor, InjectQueue, WorkerHost } from "@nestjs/bullmq";
 import { Injectable, Logger, type OnModuleInit } from "@nestjs/common";
 import { Job, Queue } from "bullmq";
 
-import { EmptyQueuePayloadSchema } from "@workspace/messaging";
+import { EmptyQueuePayloadSchema, MessageEnvelopeSchema, type MessageEnvelope } from "@workspace/messaging";
 import { KafkaProducerService } from "@workspace/messaging/nest";
-import { QUEUE_NAMES, QUEUE_JOB_OPTIONS } from "@workspace/shared";
+import { QUEUE_NAMES, QUEUE_JOB_OPTIONS, type PlatformEventEnvelope } from "@workspace/shared";
 
 import { TypedConfigService } from "../../config/typed-config.service";
 import { PlatformOutboxService } from "./platform-outbox.service";
@@ -12,6 +12,16 @@ import { PlatformOutboxService } from "./platform-outbox.service";
 const OUTBOX_SCHEDULER_ID = "outbox-publish";
 const OUTBOX_SWEEP_INTERVAL_MS = 5_000;
 const OUTBOX_BATCH_SIZE = 50;
+
+function toKafkaMessageEnvelope(envelope: PlatformEventEnvelope): MessageEnvelope {
+	const serialized: MessageEnvelope = MessageEnvelopeSchema.parse({
+		type: envelope.type,
+		correlationId: envelope.correlationId,
+		occurredAt: envelope.occurredAt,
+		payload: envelope.payload,
+	});
+	return serialized;
+}
 
 /** Periodically sweeps pending outbox rows and publishes them to Kafka. */
 @Injectable()
@@ -57,7 +67,7 @@ export class OutboxPublishProcessor extends WorkerHost {
 		const pending = await this.outboxService.listPendingForPublish(OUTBOX_BATCH_SIZE);
 		for (const row of pending) {
 			try {
-				await this.kafkaProducer.publish(row.topic, row.envelope, row.partitionKey);
+				await this.kafkaProducer.publish(row.topic, toKafkaMessageEnvelope(row.envelope), row.partitionKey);
 				await this.outboxService.markPublished(row.id);
 			} catch (error) {
 				const message = error instanceof Error ? error.message : String(error);

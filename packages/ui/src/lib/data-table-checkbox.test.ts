@@ -38,12 +38,20 @@ const labels: DataTableLabels = {
 	columnsToggle: "Columns",
 	resultsCount: "{filtered} of {total} results",
 	showingResults: "Showing {from} to {to} of {total} results",
+	showingPageCount: "Showing {count} results",
+	pageOfTotal: "Page {page} of {totalPages}",
 	showPerPage: "Show",
 	perPage: "per page",
 	firstPageAriaLabel: "First page",
 	previousPageAriaLabel: "Previous page",
 	nextPageAriaLabel: "Next page",
 	lastPageAriaLabel: "Last page",
+	goToPageAriaLabel: "Go to page {page}",
+	pinColumnAriaLabel: "Pin column",
+	unpinColumnAriaLabel: "Unpin column",
+	exportCurrentPage: "Current page (CSV)",
+	exportCurrentPageDescription: "Exports only the rows visible on this page",
+	loadingTableAriaLabel: "Loading table data",
 };
 
 interface DemoRow {
@@ -107,5 +115,19 @@ describe("resolveDataTableCheckboxConfig", () => {
 		expect(resolved.exportable).toBe(true);
 		expect(resolved.exportFormats).toEqual(["csv", "json"]);
 		expect(resolved.exportFilename).toBe("rows.csv");
+	});
+
+	it("disables selection when checkbox is false", () => {
+		const resolved = resolveDataTableCheckboxConfig<DemoRow>({
+			checkbox: false,
+			enableBulkSelection: true,
+			bulkActions: [{ key: "custom", label: "Custom", onClick: (): void => undefined }],
+			exportable: true,
+			labels,
+			deleteSelectedIcon: null,
+		});
+
+		expect(resolved.enableBulkSelection).toBe(false);
+		expect(resolved.exportable).toBe(false);
 	});
 });

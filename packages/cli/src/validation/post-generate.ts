@@ -1,7 +1,10 @@
 import { spawn } from "node:child_process";
+import path from "node:path";
 
 import * as p from "@clack/prompts";
 import pc from "picocolors";
+
+import { resolveWorkspaceBin } from "../core/resolve-workspace-bin";
 
 export interface ValidationResult {
 	readonly success: boolean;
@@ -11,30 +14,53 @@ export interface ValidationResult {
 export interface PostGenerateValidationOptions {
 	readonly useSpinner?: boolean;
 	readonly resourceSlug?: string;
+	readonly writtenPaths?: readonly string[];
 }
 
-async function runCommand(command: string, args: string[], cwd: string): Promise<ValidationResult> {
-	return new Promise((resolve) => {
-		const child = spawn(command, args, { cwd, stdio: ["ignore", "pipe", "pipe"], shell: false });
+const COMMAND_TIMEOUT_MS = 300_000;
+
+async function runCommand(executable: string, args: string[], cwd: string): Promise<ValidationResult> {
+	return new Promise((resolve, reject) => {
+		const child = spawn(executable, args, { cwd, stdio: ["ignore", "pipe", "pipe"], shell: false });
 		let output = "";
+		let settled = false;
+		const timeout = setTimeout(() => {
+			if (!settled) {
+				settled = true;
+				child.kill("SIGTERM");
+				resolve({ success: false, output: `${output}\nCommand timed out after ${String(COMMAND_TIMEOUT_MS)}ms` });
+			}
+		}, COMMAND_TIMEOUT_MS);
 		child.stdout.on("data", (chunk: Buffer) => {
 			output += chunk.toString();
 		});
 		child.stderr.on("data", (chunk: Buffer) => {
 			output += chunk.toString();
 		});
+		child.on("error", (error) => {
+			if (!settled) {
+				settled = true;
+				clearTimeout(timeout);
+				reject(error);
+			}
+		});
 		child.on("close", (code) => {
-			resolve({ success: code === 0, output });
+			if (!settled) {
+				settled = true;
+				clearTimeout(timeout);
+				resolve({ success: code === 0, output });
+			}
 		});
 	});
 }
 
 async function runScopedLint(repoRoot: string, resourceSlug: string | undefined): Promise<ValidationResult> {
 	const outputs: string[] = [];
+	const turboBin = resolveWorkspaceBin(repoRoot, "turbo");
 
 	const packageLint = await runCommand(
-		"pnpm",
-		["exec", "turbo", "lint", "--only", "--filter=@workspace/shared", "--filter=@workspace/client", "--filter=@workspace/cli"],
+		turboBin,
+		["lint", "--only", "--filter=@workspace/shared", "--filter=@workspace/client"],
 		repoRoot,
 	);
 	outputs.push(packageLint.output);
@@ -46,25 +72,42 @@ async function runScopedLint(repoRoot: string, resourceSlug: string | undefined)
 		return { success: true, output: outputs.join("\n") };
 	}
 
-	const apiModuleLint = await runCommand("pnpm", ["--filter", "@workspace/api", "exec", "eslint", `src/modules/${resourceSlug}`], repoRoot);
+	const apiEslintBin = resolveWorkspaceBin(repoRoot, "eslint", "apps/api");
+	const apiModuleLint = await runCommand(apiEslintBin, [`src/modules/${resourceSlug}`], path.join(repoRoot, "apps/api"));
 	outputs.push(apiModuleLint.output);
 	if (!apiModuleLint.success) {
 		return { success: false, output: outputs.join("\n") };
 	}
 
-	const adminPanelLint = await runCommand("pnpm", ["--filter", "@workspace/admin", "exec", "eslint", `app/(panel)/${resourceSlug}`], repoRoot);
+	const adminEslintBin = resolveWorkspaceBin(repoRoot, "eslint", "apps/admin");
+	const adminPanelLint = await runCommand(adminEslintBin, [`app/(panel)/${resourceSlug}`], path.join(repoRoot, "apps/admin"));
 	outputs.push(adminPanelLint.output);
 
 	return { success: adminPanelLint.success, output: outputs.join("\n") };
 }
 
 async function runScopedTypecheck(repoRoot: string): Promise<ValidationResult> {
-	return runCommand("pnpm", ["exec", "turbo", "typecheck", "--only", "--filter=@workspace/shared", "--filter=@workspace/client", "--filter=@workspace/cli"], repoRoot);
+	const turboBin = resolveWorkspaceBin(repoRoot, "turbo");
+	return runCommand(
+		turboBin,
+		["typecheck", "--only", "--filter=@workspace/shared", "--filter=@workspace/client", "--filter=@workspace/api", "--filter=@workspace/admin"],
+		repoRoot,
+	);
+}
+
+async function runScopedFormat(repoRoot: string, writtenPaths: readonly string[]): Promise<ValidationResult> {
+	const formattablePaths = writtenPaths.filter((filePath) => /\.(?:tsx?|json|mjs|cjs)$/.test(filePath));
+	if (formattablePaths.length === 0) {
+		return { success: true, output: "" };
+	}
+	const prettierBin = resolveWorkspaceBin(repoRoot, "prettier");
+	return runCommand(prettierBin, ["--write", ...formattablePaths], repoRoot);
 }
 
 export async function runPostGenerateValidation(repoRoot: string, options: PostGenerateValidationOptions = {}): Promise<ValidationResult[]> {
+	const writtenPaths = options.writtenPaths ?? [];
 	const steps: { label: string; run: () => Promise<ValidationResult> }[] = [
-		{ label: "format", run: () => runCommand("pnpm", ["run", "format"], repoRoot) },
+		{ label: "format", run: () => runScopedFormat(repoRoot, writtenPaths) },
 		{ label: "lint", run: () => runScopedLint(repoRoot, options.resourceSlug) },
 		{ label: "typecheck", run: () => runScopedTypecheck(repoRoot) },
 	];
@@ -78,7 +121,13 @@ export async function runPostGenerateValidation(repoRoot: string, options: PostG
 			process.stdout.write(`${pc.cyan(`Running ${step.label}...`)}\n`);
 		}
 
-		const result = await step.run();
+		let result: ValidationResult;
+		try {
+			result = await step.run();
+		} catch (error) {
+			const message = error instanceof Error ? error.message : String(error);
+			result = { success: false, output: message };
+		}
 		results.push(result);
 
 		if (!result.success) {

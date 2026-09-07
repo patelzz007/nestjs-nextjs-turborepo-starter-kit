@@ -3,6 +3,8 @@ import type { Prisma, RewardRedemption } from "@prisma/client";
 
 import type { MerchantRedemptionListQuery } from "@workspace/shared";
 
+import { fetchStringIdListPage } from "../../../platform/persistence/cursor-list";
+import type { RepositoryListResult } from "../../../platform/persistence/types";
 import { PrismaService } from "../../../prisma/prisma.service";
 
 const REDEMPTION_LIST_INCLUDE = {
@@ -25,22 +27,22 @@ export class RewardRedemptionRepository {
 		return this.prisma.rewardRedemption.findUnique({ where: { id: redemptionId } });
 	}
 
-	public async listForMerchant(merchantOrgId: string, query: MerchantRedemptionListQuery): Promise<{ readonly rows: RewardRedemptionListRow[]; readonly total: number }> {
-		const skip = (query.page - 1) * query.limit;
+	public async listForMerchant(
+		merchantOrgId: string,
+		query: MerchantRedemptionListQuery,
+	): Promise<RepositoryListResult<RewardRedemptionListRow>> {
 		const where: Prisma.RewardRedemptionWhereInput = { merchantOrgId, isDeleted: false };
-
-		const [rows, total] = await this.prisma.$transaction([
-			this.prisma.rewardRedemption.findMany({
-				where,
-				include: REDEMPTION_LIST_INCLUDE,
-				orderBy: { redeemedAt: "desc" },
-				skip,
-				take: query.limit,
-			}),
-			this.prisma.rewardRedemption.count({ where }),
-		]);
-
-		return { rows, total };
+		return fetchStringIdListPage(query, {
+			where,
+			mergeCursor: (baseWhere, cursorId) => ({ ...baseWhere, id: { gt: cursorId } }),
+			readId: (row) => row.id,
+			findMany: (args): Promise<RewardRedemptionListRow[]> =>
+				this.prisma.rewardRedemption.findMany({
+					...args,
+					include: REDEMPTION_LIST_INCLUDE,
+				}),
+			count: (listWhere) => this.prisma.rewardRedemption.count({ where: listWhere }),
+		});
 	}
 
 	public async listForMerchantAnalytics(

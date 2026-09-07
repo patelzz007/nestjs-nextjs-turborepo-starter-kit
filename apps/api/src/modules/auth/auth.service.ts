@@ -13,6 +13,7 @@ import type {
 	LoginTwoFactorPendingResponse,
 	LoginVerificationPendingResponse,
 	MessageResponse,
+	PaginatedServiceResult,
 	ResendVerificationInput,
 	ResendVerificationResponse,
 	ResetPasswordInput,
@@ -118,15 +119,7 @@ export class AuthService {
 
 	// ── Admin User Management ───────────────────────────────────────────
 
-	public async getAdminUsersList(query: AdminUserListQuery): Promise<{
-		readonly items: AdminUserDetail[];
-		readonly total: number;
-		readonly page: number;
-		readonly limit: number;
-		readonly totalPages: number;
-		readonly hasNext: boolean;
-		readonly hasPrevious: boolean;
-	}> {
+	public async getAdminUsersList(query: AdminUserListQuery): Promise<PaginatedServiceResult<AdminUserDetail>> {
 		return this.adminUserService.getAdminUsersList(query);
 	}
 

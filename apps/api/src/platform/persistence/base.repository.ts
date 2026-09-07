@@ -1,8 +1,9 @@
-import type { PaginationInput } from "@workspace/shared";
+import type { PaginationInput, PaginatedServiceResult } from "@workspace/shared";
 import { nowEpochMs } from "@workspace/shared";
 
 import { PrismaService } from "../../prisma/prisma.service";
 
+import { fetchListPage } from "./list-page";
 import type { BaseRepositoryOptions, PrismaModelDelegate, RepositoryListResult, RepositoryPorts } from "./types";
 
 export abstract class BaseRepository<TEntity, TCreate, TUpdate, TQuery extends PaginationInput, TRow, TWhere, TOrderBy, TCreateInput, TUpdateInput, TUpdateWhere> {
@@ -39,18 +40,21 @@ export abstract class BaseRepository<TEntity, TCreate, TUpdate, TQuery extends P
 	}
 
 	public async list(query: TQuery): Promise<RepositoryListResult<TEntity>> {
-		const where = this.ports.buildListWhere(query);
-		const orderBy = this.ports.buildListOrderBy(query);
-		const [rows, total]: [TRow[], number] = await Promise.all([
-			this.delegate.findMany({
-				where,
-				skip: (query.page - 1) * query.limit,
-				take: query.limit,
-				orderBy,
-			}),
-			this.delegate.count({ where }),
-		]);
-		return { items: rows.map((row) => this.ports.toDomain(row)), total };
+		return fetchListPage<TQuery, TWhere, TOrderBy, TRow, TEntity>(
+			query,
+			{
+				buildListWhere: (listQuery) => this.ports.buildListWhere(listQuery),
+				buildListOrderBy: (listQuery) => this.ports.buildListOrderBy(listQuery),
+				buildListCursorOrderBy: (listQuery) => this.ports.buildListCursorOrderBy(listQuery),
+				mergeListCursor: (baseWhere, cursorId) => this.ports.mergeListCursor(baseWhere, cursorId),
+				readListCursorId: (row: TRow) => this.ports.readListCursorId(row),
+				count: (where) => this.delegate.count({ where }),
+				findMany: (args) => this.delegate.findMany(args),
+			},
+			{
+				toDomain: (row: TRow) => this.ports.toDomain(row),
+			},
+		);
 	}
 
 	public async update(id: string, input: TUpdate, expectedVersion?: number): Promise<TEntity> {

@@ -30,6 +30,7 @@
 	"devDependencies": {
 		"@workspace/eslint-config": "workspace:*",
 		"@workspace/typescript-config": "workspace:*",
+		"@types/node": "^26.4.1",
 		"eslint": "^9.39.5",
 		"typescript": "6.0.2",
 		"vitest": "^5.0.0"

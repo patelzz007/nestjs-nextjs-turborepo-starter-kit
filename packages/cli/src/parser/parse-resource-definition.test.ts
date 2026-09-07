@@ -6,8 +6,14 @@ import { parseResourceDefinitionSource } from "../parser/parse-resource-definiti
 const SAMPLE = `import { defineResource } from "@workspace/cli";
 
 export default defineResource({
-	version: 1,
+	version: 2,
 	name: "SampleResource",
+	scope: {
+		api: true,
+		shared: true,
+		client: true,
+		ui: ["admin"],
+	},
 	model: {
 		name: "SampleResource",
 		softDelete: true,
@@ -17,6 +23,13 @@ export default defineResource({
 		fields: {
 			name: { type: "string", required: true, searchable: true, sortable: true },
 			status: { type: "enum", values: ["draft", "published"], default: "draft" },
+		},
+	},
+	ui: {
+		admin: {
+			navigation: { label: "Sample Resources" },
+			list: { searchable: ["name"], sortable: ["name"], filters: [], columns: ["name"] },
+			form: { layout: "single-column", fields: ["name"] },
 		},
 	},
 	workflow: {

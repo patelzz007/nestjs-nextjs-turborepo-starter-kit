@@ -91,18 +91,19 @@ export class ResponseInterceptor implements NestInterceptor {
 				const data: DataValue = validated.success ? validated.data : raw;
 				const paginated: PaginatedServiceResult | null = parsePaginated(data);
 				if (paginated !== null) {
-					const { items, total, page, limit, totalPages, hasNext, hasPrevious } = paginated;
+					const { items, limit, total, page, totalPages, nextCursor, hasNext, hasPrevious } = paginated;
 
 					const wrapped = {
 						success: true,
 						data: items,
 						meta: {
+							limit,
 							total,
 							page,
-							limit,
-							totalPages: totalPages ?? null,
-							hasNext: hasNext ?? null,
-							hasPrevious: hasPrevious ?? null,
+							totalPages,
+							nextCursor,
+							hasNext,
+							hasPrevious,
 							correlationId,
 							timestamp: nowEpochMs(),
 						},

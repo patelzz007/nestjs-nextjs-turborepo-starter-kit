@@ -1,5 +1,7 @@
 import type { NestFastifyApplication } from "@nestjs/platform-fastify";
 
+import { CaughtValueSchema } from "@workspace/shared";
+
 import { readCaughtErrorMessage } from "../utils/caught-error";
 import { LogService } from "../../modules/logs/logs.service";
 
@@ -52,7 +54,9 @@ export function registerGracefulShutdown(app: NestFastifyApplication, healthServ
 			process.exit(0);
 		} catch (error) {
 			clearTimeout(forceExitTimer);
-			logService.error(`Graceful shutdown failed: ${readCaughtErrorMessage(error)}`);
+			const parsed = CaughtValueSchema.safeParse(error);
+			const message = parsed.success ? readCaughtErrorMessage(parsed.data) : "unknown error";
+			logService.error(`Graceful shutdown failed: ${message}`);
 			process.exit(1);
 		}
 	};

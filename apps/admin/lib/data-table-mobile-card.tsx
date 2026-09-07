@@ -42,8 +42,8 @@ export function DataTableMobileCard<T extends RowData>({ item, title, subtitle, 
 			</div>
 			{fields.length > 0 ? (
 				<div className="grid grid-cols-2 gap-2 text-sm">
-					{fields.map((field) => (
-						<div key={field.label}>
+					{fields.map((field, index) => (
+						<div key={`${field.label}-${String(index)}`}>
 							<div className="text-muted-foreground">{field.label}</div>
 							<div className="font-medium">{field.value}</div>
 						</div>

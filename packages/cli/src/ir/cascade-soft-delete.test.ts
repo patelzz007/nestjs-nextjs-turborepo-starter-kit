@@ -4,8 +4,9 @@ import { defineResource } from "../schema/resource-definition";
 import { buildCascadeSoftDeleteChildren } from "./cascade-soft-delete";
 
 const sampleCategoryDefinition = defineResource({
-	version: 1,
+	version: 2,
 	name: "SampleCategory",
+	scope: { api: true, shared: true, client: true, ui: [] },
 	model: {
 		name: "SampleCategory",
 		softDelete: true,
@@ -20,8 +21,9 @@ const sampleCategoryDefinition = defineResource({
 });
 
 const productDefinition = defineResource({
-	version: 1,
+	version: 2,
 	name: "Product",
+	scope: { api: true, shared: true, client: true, ui: [] },
 	model: {
 		name: "Product",
 		softDelete: true,

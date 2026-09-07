@@ -1,9 +1,25 @@
+import { tsStringLiteral } from "../../core/ts-literal";
 import type { ResourceIR } from "../../ir/types";
 
 export function renderNestControllerBase(ir: ResourceIR): string {
 	const model = ir.resource.modelName;
 	const slug = ir.resource.slug;
 	const resource = ir.resource.permissionResource;
+	const pluralLower = ir.resource.plural.toLowerCase();
+	const singularLower = ir.resource.singular.toLowerCase();
+	const deleteVerb = ir.softDelete ? "Soft delete" : "Delete";
+	const bulkDeleteSummary = ir.softDelete ? `Bulk soft delete ${pluralLower}` : `Bulk delete ${pluralLower}`;
+	const restoreEndpoint = ir.softDelete
+		? `
+	@RequirePermission("UPDATE", "${resource}")
+	@Post(":id/restore")
+	@ApiOperation({ summary: "Restore ${ir.resource.singular}" })
+	@ApiOkResponse({ description: ${tsStringLiteral(`Restored ${singularLower}`)} })
+	public restore(@Param(new ZodValidationPipe(${model}IdParamSchema)) params: { id: string }): ReturnType<${model}Service["restore"]> {
+		return this.service.restore(params.id);
+	}
+`
+		: "";
 	const transitionEndpoint = ir.workflow
 		? `
 	@RequirePermission("UPDATE", "${resource}")
@@ -36,23 +52,23 @@ export class Generated${model}Controller {
 
 	@RequirePermission("LIST", "${resource}")
 	@Get()
-	@ApiOperation({ summary: "List ${ir.resource.plural}" })
-	@ApiOkResponse({ description: "Paginated list of ${ir.resource.plural.toLowerCase()}" })
+	@ApiOperation({ summary: ${tsStringLiteral(`List ${ir.resource.plural}`)} })
+	@ApiOkResponse({ description: ${tsStringLiteral(`Paginated list of ${pluralLower}`)} })
 	public list(@Query(new ZodValidationPipe(${model}ListQuerySchema)) query: Parameters<${model}Service["list"]>[0]): ReturnType<${model}Service["list"]> {
 		return this.service.list(query);
 	}
 
 	@RequirePermission("CREATE", "${resource}")
 	@Post("bulk")
-	@ApiOperation({ summary: "Bulk create ${ir.resource.plural.toLowerCase()}" })
-	@ApiOkResponse({ description: "Created ${ir.resource.plural.toLowerCase()}" })
+	@ApiOperation({ summary: ${tsStringLiteral(`Bulk create ${pluralLower}`)} })
+	@ApiOkResponse({ description: ${tsStringLiteral(`Created ${pluralLower}`)} })
 	public bulkCreate(@Body(new ZodValidationPipe(BulkCreate${model}Schema)) body: { items: Parameters<${model}Service["createMany"]>[0] }): ReturnType<${model}Service["createMany"]> {
 		return this.service.createMany(body.items);
 	}
 
 	@RequirePermission("DELETE", "${resource}")
 	@Post("bulk-delete")
-	@ApiOperation({ summary: "Bulk soft delete ${ir.resource.plural.toLowerCase()}" })
+	@ApiOperation({ summary: ${tsStringLiteral(bulkDeleteSummary)} })
 	@ApiOkResponse({ description: "Bulk delete result" })
 	public bulkDelete(@Body(new ZodValidationPipe(BulkDeleteIdsSchema)) body: { ids: string[] }): ReturnType<${model}Service["deleteMany"]> {
 		return this.service.deleteMany(body.ids);
@@ -60,24 +76,24 @@ export class Generated${model}Controller {
 
 	@RequirePermission("READ", "${resource}")
 	@Get(":id")
-	@ApiOperation({ summary: "Get ${ir.resource.singular} by id" })
-	@ApiOkResponse({ description: "${ir.resource.singular} detail" })
+	@ApiOperation({ summary: ${tsStringLiteral(`Get ${ir.resource.singular} by id`)} })
+	@ApiOkResponse({ description: ${tsStringLiteral(`${ir.resource.singular} detail`)} })
 	public get(@Param(new ZodValidationPipe(${model}IdParamSchema)) params: { id: string }): ReturnType<${model}Service["getById"]> {
 		return this.service.getById(params.id);
 	}
 
 	@RequirePermission("CREATE", "${resource}")
 	@Post()
-	@ApiOperation({ summary: "Create ${ir.resource.singular}" })
-	@ApiOkResponse({ description: "Created ${ir.resource.singular.toLowerCase()}" })
+	@ApiOperation({ summary: ${tsStringLiteral(`Create ${ir.resource.singular}`)} })
+	@ApiOkResponse({ description: ${tsStringLiteral(`Created ${singularLower}`)} })
 	public create(@Body(new ZodValidationPipe(Create${model}Schema)) body: Parameters<${model}Service["create"]>[0]): ReturnType<${model}Service["create"]> {
 		return this.service.create(body);
 	}
 
 	@RequirePermission("UPDATE", "${resource}")
 	@Patch(":id")
-	@ApiOperation({ summary: "Update ${ir.resource.singular}" })
-	@ApiOkResponse({ description: "Updated ${ir.resource.singular.toLowerCase()}" })
+	@ApiOperation({ summary: ${tsStringLiteral(`Update ${ir.resource.singular}`)} })
+	@ApiOkResponse({ description: ${tsStringLiteral(`Updated ${singularLower}`)} })
 	public update(
 		@Param(new ZodValidationPipe(${model}IdParamSchema)) params: { id: string },
 		@Body(new ZodValidationPipe(Update${model}Schema)) body: Parameters<${model}Service["update"]>[1],
@@ -87,21 +103,13 @@ export class Generated${model}Controller {
 
 	@RequirePermission("DELETE", "${resource}")
 	@Delete(":id")
-	@ApiOperation({ summary: "Soft delete ${ir.resource.singular}" })
-	@ApiOkResponse({ description: "${ir.resource.singular} deleted" })
+	@ApiOperation({ summary: ${tsStringLiteral(`${deleteVerb} ${ir.resource.singular}`)} })
+	@ApiOkResponse({ description: ${tsStringLiteral(`${ir.resource.singular} deleted`)} })
 	public async delete(@Param(new ZodValidationPipe(${model}IdParamSchema)) params: { id: string }): Promise<{ success: true }> {
 		await this.service.delete(params.id);
 		return { success: true };
 	}
-
-	@RequirePermission("UPDATE", "${resource}")
-	@Post(":id/restore")
-	@ApiOperation({ summary: "Restore ${ir.resource.singular}" })
-	@ApiOkResponse({ description: "Restored ${ir.resource.singular.toLowerCase()}" })
-	public restore(@Param(new ZodValidationPipe(${model}IdParamSchema)) params: { id: string }): ReturnType<${model}Service["restore"]> {
-		return this.service.restore(params.id);
-	}
-${transitionEndpoint}
+${restoreEndpoint}${transitionEndpoint}
 }
 `;
 }

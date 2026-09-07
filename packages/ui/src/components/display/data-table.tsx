@@ -89,18 +89,27 @@ import { cva, type VariantProps } from "class-variance-authority";
 
 import { cn } from "@workspace/ui/lib/utils";
 import { buildExportColumns, exportToCSV, exportToJSON, exportToPDF, exportToSpreadsheet } from "@workspace/ui/lib/data-table-export";
-import { includesExportFormat, resolveDataTableCheckboxConfig, type DataTableBulkSelectionContext, type DataTableCheckboxConfig, type DataTableExportFormat } from "@workspace/ui/lib/data-table-checkbox";
+import {
+	includesExportFormat,
+	resolveDataTableCheckboxConfig,
+	type DataTableBulkSelectionContext,
+	type DataTableCheckboxConfig,
+	type DataTableExportFormat,
+} from "@workspace/ui/lib/data-table-checkbox";
 import { formatDataTableLabel, type DataTableLabels } from "@workspace/ui/lib/data-table-labels";
 import {
 	DataTableCellScalarSchema,
 	DataTableCellValueSchema,
 	normalizeFacetedUniqueValues,
+	reconcileDataTablePrefs,
 	toDataTableCellString,
 	type DataTableCellScalar,
 	type DataTablePersistedPrefs,
 	type DataTablePersistedPrefsPatch,
 } from "@workspace/ui/lib/data-table-prefs";
+import { isServerPagination, type DataTablePagination } from "@workspace/ui/lib/data-table-pagination";
 import { createLocalStorageDataTableStorage, type DataTableStorageAdapter } from "@workspace/ui/lib/data-table-storage";
+import { z } from "zod";
 
 // ── Generic-preserving memo ────────────────────────────────────────────────
 // React's built-in `React.memo` collapses a generic component signature
@@ -112,6 +121,30 @@ function memoGeneric<P extends object>(Component: (props: P) => React.JSX.Elemen
 	return function MemoWrapper(props: P): React.JSX.Element {
 		return <Inner {...props} />;
 	};
+}
+
+function applyTableUpdater<T>(updater: T | ((previous: T) => T), previous: T): T {
+	if (updater instanceof Function) return updater(previous);
+
+	return updater;
+}
+
+const columnHeaderLabelSchema = z.string();
+
+function useIsDesktopViewport(): boolean {
+	const [isDesktop, setIsDesktop] = useState(true);
+	useEffect((): (() => void) => {
+		const mediaQuery = globalThis.matchMedia("(min-width: 1024px)");
+		const handleChange = (): void => {
+			setIsDesktop(mediaQuery.matches);
+		};
+		handleChange();
+		mediaQuery.addEventListener("change", handleChange);
+		return (): void => {
+			mediaQuery.removeEventListener("change", handleChange);
+		};
+	}, []);
+	return isDesktop;
 }
 
 // ── The v9 feature set (module scope — built once, shared by every instance) ─
@@ -158,8 +191,6 @@ const EMPTY_ACTIONS: Action[] = [];
 const EMPTY_SEARCH_KEYS: string[] = [];
 const EMPTY_BULK_ACTIONS: BulkAction[] = [];
 const EMPTY_PINNED_STYLES: React.CSSProperties = {};
-const EMPTY_COLUMN_PINNING: ColumnPinningState = { start: [], end: [] };
-const EMPTY_COLUMN_VISIBILITY: ColumnVisibilityState = {};
 const EMPTY_FACETED_COUNTS: ReadonlyMap<string, number> = new Map<string, number>();
 
 const PIN_SHADOW_START = "2px 0 4px rgba(0,0,0,0.08)";
@@ -243,6 +274,8 @@ export type { DataTableStorageAdapter } from "@workspace/ui/lib/data-table-stora
 export { createLocalStorageDataTableStorage } from "@workspace/ui/lib/data-table-storage";
 export type { DataTableBulkSelectionContext, DataTableCheckboxConfig, DataTableExportFormat } from "@workspace/ui/lib/data-table-checkbox";
 export { DATA_TABLE_EXPORT_FORMATS, resolveDataTableCheckboxConfig } from "@workspace/ui/lib/data-table-checkbox";
+export type { DataTablePagination, DataTableClientPagination, DataTableServerPagination } from "@workspace/ui/lib/data-table-pagination";
+export { isServerPagination } from "@workspace/ui/lib/data-table-pagination";
 export { sanitizeExportCell, exportToCSV, exportToJSON, exportToPDF, exportToSpreadsheet, buildExportColumns } from "@workspace/ui/lib/data-table-export";
 
 // ── DataTable Props ────────────────────────────────────────────────────────
@@ -257,6 +290,7 @@ export interface DataTableProps<TData extends RowData> {
 	readonly searchKeys?: string[];
 	readonly pageSize?: number;
 	readonly pageSizeOptions?: readonly number[];
+	readonly pagination?: DataTablePagination<TData>;
 	readonly title?: string;
 	readonly description?: string;
 
@@ -293,23 +327,14 @@ export interface DataTableProps<TData extends RowData> {
 	readonly selectAllPages?: boolean;
 	readonly onSelectAllPagesChange?: (selectAllPages: boolean) => void;
 
-	// ── NEW FEATURE 5: Column pinning ──────────────────────────────────────
+	// ── Column pinning ──────────────────────────────────────────────────────
 	readonly enableColumnPinning?: boolean;
 
-	// ── NEW FEATURE 6: Server-side mode ───────────────────────────────────
-	readonly manual?: boolean;
-	readonly totalCount?: number;
-	// Manual-mode pager round-trip: fires with the 1-based page + page size the
-	// consumer must fetch. `totalCount` comes back in the response; the table
-	// never mutates external data, so the parent owns the refetch.
-	readonly onManualPaginationChange?: (page: number, pageSize: number) => void;
-	/** Fires when the user clicks a column header in manual mode. The parent owns the sort state and must re-fetch data. */
+	/** Fires when the user clicks a column header in server mode. The parent owns the sort state and must re-fetch data. */
 	readonly onManualSortingChange?: (sorting: SortingState) => void;
 	/** Controlled column-filter values when `manual` is true (server owns the row set). */
 	readonly manualColumnFilters?: Readonly<Record<string, string>>;
 	readonly onManualColumnFilterChange?: (filterKey: string, value: string | null) => void;
-	/** Controlled page index (0-based) — overrides the internal pagination state so the pager stays in sync with the parent's server-side page. */
-	readonly pageIndex?: number;
 	/** Controlled sorting state — overrides the internal sorting so header sort indicators stay in sync with the parent's server-side sort. */
 	readonly sorting?: SortingState;
 
@@ -503,8 +528,13 @@ const SelectRowCheckbox = memoGeneric(function SelectRowCheckbox<TData extends R
 	// identity), so without the atom subscription a memoized row would never
 	// pick up a `toggleAllPageRowsSelected` from the header box.
 	const isRowSelected = useCallback((selection: RowSelectionState): boolean => selection[row.id] === true, [row.id]);
+	const handleStopPropagation = useCallback((event: React.SyntheticEvent): void => {
+		event.stopPropagation();
+	}, []);
 	const renderCheckbox = (isSelected: boolean): React.JSX.Element => (
-		<Checkbox checked={isSelected} onCheckedChange={handleCheckedChange} aria-label={labels.selectRowAriaLabel} className={className} />
+		<div onClick={handleStopPropagation} onKeyDown={handleStopPropagation} role="presentation">
+			<Checkbox checked={isSelected} onCheckedChange={handleCheckedChange} aria-label={labels.selectRowAriaLabel} className={className} />
+		</div>
 	);
 	return (
 		<Subscribe source={table.atoms.rowSelection} selector={isRowSelected}>
@@ -582,15 +612,24 @@ interface ExportMenuProps<TData extends RowData> {
 	readonly exportableColumns?: string[];
 	readonly exportFormats: readonly DataTableExportFormat[];
 	readonly labels: DataTableLabels;
+	readonly isServerMode: boolean;
+	readonly onFetchAllMatching?: () => Promise<TData[]>;
 }
 
 /** Selection-aware row projection used by every export format. */
-function getExportRows<TData extends RowData>(table: TanStackTable<DataTableFeatures, TData>): TData[] {
+function resolveExportRows<TData extends RowData>(
+	table: TanStackTable<DataTableFeatures, TData>,
+	isServerMode: boolean,
+	onFetchAllMatching?: () => Promise<TData[]>,
+): Promise<TData[]> {
 	const selectedRows = table.getSelectedRowModel().rows;
 	if (selectedRows.length > 0) {
-		return selectedRows.map((row) => row.original);
+		return Promise.resolve(selectedRows.map((row) => row.original));
 	}
-	return table.getFilteredRowModel().rows.map((row) => row.original);
+	if (isServerMode && onFetchAllMatching !== undefined) {
+		return onFetchAllMatching();
+	}
+	return Promise.resolve(table.getFilteredRowModel().rows.map((row) => row.original));
 }
 
 /** Selector factory: `true` when the row with `rowId` is in the selection set. */
@@ -606,6 +645,8 @@ const ExportMenu = memoGeneric(function ExportMenu<TData extends RowData>({
 	exportableColumns,
 	exportFormats,
 	labels,
+	isServerMode,
+	onFetchAllMatching,
 }: ExportMenuProps<TData>): React.JSX.Element {
 	const exportCols = useMemo((): ColumnDef<DataTableFeatures, TData>[] => {
 		const base = buildExportColumns(columns);
@@ -628,20 +669,28 @@ const ExportMenu = memoGeneric(function ExportMenu<TData extends RowData>({
 	// time, so the menu never ships stale rows even though the parent doesn't
 	// re-render on selection changes (#6).
 	const handleExportCSV = useCallback((): void => {
-		exportToCSV(getExportRows(table), exportCols, csvFilename);
-	}, [table, exportCols, csvFilename]);
+		void resolveExportRows(table, isServerMode, onFetchAllMatching).then((rows) => {
+			exportToCSV(rows, exportCols, csvFilename);
+		});
+	}, [table, exportCols, csvFilename, isServerMode, onFetchAllMatching]);
 
 	const handleExportJSON = useCallback((): void => {
-		exportToJSON(getExportRows(table), exportCols, filename);
-	}, [table, exportCols, filename]);
+		void resolveExportRows(table, isServerMode, onFetchAllMatching).then((rows) => {
+			exportToJSON(rows, exportCols, filename);
+		});
+	}, [table, exportCols, filename, isServerMode, onFetchAllMatching]);
 
 	const handleExportPDF = useCallback((): void => {
-		exportToPDF(getExportRows(table), exportCols, filename);
-	}, [table, exportCols, filename]);
+		void resolveExportRows(table, isServerMode, onFetchAllMatching).then((rows) => {
+			exportToPDF(rows, exportCols, filename);
+		});
+	}, [table, exportCols, filename, isServerMode, onFetchAllMatching]);
 
 	const handleExportSpreadsheet = useCallback((): void => {
-		exportToSpreadsheet(getExportRows(table), exportCols, filename);
-	}, [table, exportCols, filename]);
+		void resolveExportRows(table, isServerMode, onFetchAllMatching).then((rows) => {
+			exportToSpreadsheet(rows, exportCols, filename);
+		});
+	}, [table, exportCols, filename, isServerMode, onFetchAllMatching]);
 
 	// Re-render the menu (and thus recompute the exported row set) whenever the
 	// selection slice changes — the parent does not subscribe to it (#6).
@@ -727,7 +776,8 @@ const ColumnVisibilityItem = memoGeneric(function ColumnVisibilityItem<TData ext
 	}, [col, onToggle]);
 
 	const header = col.columnDef.header;
-	const label = typeof header === "string" ? header : col.id;
+	const parsedHeader = columnHeaderLabelSchema.safeParse(header);
+	const label = parsedHeader.success ? parsedHeader.data : col.id;
 
 	return (
 		<DropdownMenuCheckboxItem checked={col.getIsVisible()} onCheckedChange={handleCheckedChange}>
@@ -814,13 +864,11 @@ const ColumnFilterSelect = React.memo(function ColumnFilterSelect({
 
 	return (
 		<Select<string> value={value} onValueChange={handleValueChange}>
-			<SelectTrigger className="h-9 w-full text-sm sm:w-44">
+			<SelectTrigger className="h-9 w-full text-sm sm:w-44" aria-label={filter.label}>
 				<SelectValue placeholder={filter.label} formatValue={formatFilterValue} />
 			</SelectTrigger>
 			<SelectContent>
-				<SelectItem value="all">
-					All ({String(totalFilteredRows)})
-				</SelectItem>
+				<SelectItem value="all">All ({String(totalFilteredRows)})</SelectItem>
 				{filter.options.map((option) => (
 					<SelectItem key={option.value} value={option.value}>
 						{labelFor(option)}
@@ -878,9 +926,10 @@ interface PageNumberButtonProps {
 	readonly pageNumber: number;
 	readonly currentPage: number;
 	readonly onPageSelect: (pageNumber: number) => void;
+	readonly goToPageAriaLabel: string;
 }
 
-const PageNumberButton = React.memo(function PageNumberButton({ pageNumber, currentPage, onPageSelect }: PageNumberButtonProps): React.JSX.Element {
+const PageNumberButton = React.memo(function PageNumberButton({ pageNumber, currentPage, onPageSelect, goToPageAriaLabel }: PageNumberButtonProps): React.JSX.Element {
 	const handleClick = useCallback((): void => {
 		onPageSelect(pageNumber);
 	}, [onPageSelect, pageNumber]);
@@ -891,7 +940,8 @@ const PageNumberButton = React.memo(function PageNumberButton({ pageNumber, curr
 			size="sm"
 			onClick={handleClick}
 			className="h-8 w-8 p-0"
-			aria-label={`Go to page ${String(pageNumber)}`}>
+			aria-label={formatDataTableLabel(goToPageAriaLabel, { page: pageNumber })}
+			aria-current={currentPage === pageNumber ? "page" : undefined}>
 			{pageNumber}
 		</Button>
 	);
@@ -938,9 +988,16 @@ interface HeaderCellProps<TData extends RowData> {
 	readonly enableColumnPinning: boolean;
 	readonly sortCycle: "asc-desc" | "asc-desc-none";
 	readonly onTogglePin: (columnId: string) => void;
+	readonly labels: DataTableLabels;
 }
 
-const HeaderCell = memoGeneric(function HeaderCell<TData extends RowData>({ header, enableColumnPinning, sortCycle, onTogglePin }: HeaderCellProps<TData>): React.JSX.Element {
+const HeaderCell = memoGeneric(function HeaderCell<TData extends RowData>({
+	header,
+	enableColumnPinning,
+	sortCycle,
+	onTogglePin,
+	labels,
+}: HeaderCellProps<TData>): React.JSX.Element {
 	const column = header.column;
 	const isPinned = column.getIsPinned();
 
@@ -963,6 +1020,8 @@ const HeaderCell = memoGeneric(function HeaderCell<TData extends RowData>({ head
 	}, [column, sortCycle]);
 
 	const pinnedStyles = buildPinnedColumnStyles(isPinned, column.getStart(), column.getAfter(), 10);
+	const sorted = column.getIsSorted();
+	const ariaSort = sorted === "asc" ? "ascending" : sorted === "desc" ? "descending" : "none";
 
 	const handlePinClick = useCallback(
 		(e: React.MouseEvent<HTMLButtonElement>): void => {
@@ -975,19 +1034,18 @@ const HeaderCell = memoGeneric(function HeaderCell<TData extends RowData>({ head
 	return (
 		<TableHead
 			style={pinnedStyles}
-			className={cn(
-				"h-11 bg-muted/30 px-4 text-xs font-semibold tracking-wider text-muted-foreground uppercase",
-				column.getCanSort() && "cursor-pointer hover:bg-muted/50",
-				isPinned && "sticky",
-			)}
-			onClick={handleHeaderClick}>
-			{/* Sort icon sits right after the label (shrink-0) so it never gets pushed
-			    to the right edge by a wide header child or a stretched column. */}
+			aria-sort={column.getCanSort() ? ariaSort : undefined}
+			className={cn("h-11 bg-muted/30 px-4 text-xs font-semibold tracking-wider text-muted-foreground uppercase", isPinned && "sticky")}>
 			<div className="flex w-full items-center gap-1.5">
-				{header.isPlaceholder ? null : flexRender(column.columnDef.header, header.getContext())}
-				{column.getCanSort() ? <span className="flex shrink-0 items-center">{getSortIcon(column)}</span> : null}
+				{header.isPlaceholder ? null : column.getCanSort() ? (
+					<button type="button" onClick={handleHeaderClick} className="flex w-full items-center gap-1.5 text-left hover:text-foreground">
+						{flexRender(column.columnDef.header, header.getContext())}
+						<span className="flex shrink-0 items-center">{getSortIcon(column)}</span>
+					</button>
+				) : (
+					flexRender(column.columnDef.header, header.getContext())
+				)}
 
-				{/* NEW FEATURE 5: Pin indicator */}
 				{enableColumnPinning && column.getCanPin() ? (
 					<Button
 						type="button"
@@ -995,7 +1053,7 @@ const HeaderCell = memoGeneric(function HeaderCell<TData extends RowData>({ head
 						size="icon-xs"
 						onClick={handlePinClick}
 						className="ml-1 opacity-0 transition-opacity hover:opacity-100 focus-visible:opacity-100"
-						title={column.getIsPinned() ? "Unpin column" : "Pin column"}>
+						aria-label={column.getIsPinned() ? labels.unpinColumnAriaLabel : labels.pinColumnAriaLabel}>
 						{column.getIsPinned() ? <PinOff className="h-3 w-3 text-muted-foreground" /> : <Pin className="h-3 w-3 text-muted-foreground" />}
 					</Button>
 				) : null}
@@ -1118,6 +1176,9 @@ const TableRowView = memoGeneric(function TableRowView<TData extends RowData>({
 	const handleRowKeyDown = useCallback(
 		(e: React.KeyboardEvent): void => {
 			if (e.key === "Enter" || e.key === " ") {
+				if (e.key === " ") {
+					e.preventDefault();
+				}
 				onRowClick?.(rowData);
 			}
 		},
@@ -1155,7 +1216,6 @@ const TableRowView = memoGeneric(function TableRowView<TData extends RowData>({
 		}
 		return {
 			onClick: handleRowClick,
-			role: "button",
 			tabIndex: 0,
 			onKeyDown: handleRowKeyDown,
 		};
@@ -1390,6 +1450,7 @@ export function DataTable<TData extends RowData>({
 	searchKeys = EMPTY_SEARCH_KEYS,
 	pageSize = 10,
 	pageSizeOptions,
+	pagination: paginationProp,
 	title,
 	description,
 
@@ -1426,17 +1487,12 @@ export function DataTable<TData extends RowData>({
 	selectAllPages: selectAllPagesProp,
 	onSelectAllPagesChange,
 
-	// NEW FEATURE 5: Column pinning
+	// Column pinning
 	enableColumnPinning = false,
 
-	// NEW FEATURE 6: Server-side mode
-	manual = false,
-	totalCount,
-	onManualPaginationChange,
 	onManualSortingChange,
 	manualColumnFilters,
 	onManualColumnFilterChange,
-	pageIndex: controlledPageIndex,
 	sorting: controlledSorting,
 
 	// NEW FEATURE 7: Inline editing
@@ -1470,6 +1526,23 @@ export function DataTable<TData extends RowData>({
 
 	labels,
 }: DataTableProps<TData>): React.JSX.Element {
+	const isDesktopViewport = useIsDesktopViewport();
+	const resolvedPagination = useMemo((): DataTablePagination<TData> => {
+		if (paginationProp !== undefined) {
+			return paginationProp;
+		}
+		return { mode: "client", defaultPageSize: pageSize };
+	}, [paginationProp, pageSize]);
+	const isServerMode = isServerPagination(resolvedPagination);
+	const serverPagination = isServerMode ? resolvedPagination : null;
+	const controlledPageIndex = serverPagination?.pageIndex ?? 0;
+	const serverPageSize = serverPagination?.pageSize;
+	const serverTotalCount = serverPagination?.totalCount;
+	const serverResetKey = serverPagination?.resetKey ?? "";
+	const onFetchAllMatching = serverPagination?.onFetchAllMatching;
+	const onClearServerFilters = serverPagination?.onClearFilters;
+	const serverIsFiltered = serverPagination?.isFiltered ?? false;
+
 	const deleteSelectedIcon = useMemo((): React.JSX.Element => <Trash2 className="h-4 w-4" />, []);
 
 	const resolvedCheckbox = useMemo(
@@ -1508,6 +1581,25 @@ export function DataTable<TData extends RowData>({
 
 	// ── State (persisted prefs load lazily once, from the initializer) ────
 	const finalPageSizeOptions = useMemo(() => pageSizeOptions ?? DEFAULT_PAGE_SIZE_OPTIONS, [pageSizeOptions]);
+	const defaultClientPageSize = resolvedPagination.mode === "client" ? (resolvedPagination.defaultPageSize ?? pageSize) : pageSize;
+
+	const columnIds = useMemo((): string[] => {
+		return initialColumns
+			.map((column) => {
+				if ("id" in column && column.id !== undefined) {
+					return column.id;
+				}
+				if ("accessorKey" in column) {
+					const accessorKey = column.accessorKey;
+					if (typeof accessorKey === "number") {
+						return accessorKey.toString();
+					}
+					return accessorKey;
+				}
+				return undefined;
+			})
+			.filter((columnId): columnId is string => columnId !== undefined);
+	}, [initialColumns]);
 
 	const [persistedPrefs] = useState<DataTablePersistedPrefs | null>(() => {
 		if (persistKey === undefined || resolvedStorage === null) {
@@ -1516,12 +1608,24 @@ export function DataTable<TData extends RowData>({
 		return resolvedStorage.read(persistKey);
 	});
 
-	const [sorting, setSorting] = useState<SortingState>(() => persistedPrefs?.sorting ?? []);
+	const reconciledPrefs = useMemo(
+		() =>
+			reconcileDataTablePrefs({
+				prefs: persistedPrefs,
+				columnIds,
+				pageSizeOptions: finalPageSizeOptions,
+				defaultPageSize: defaultClientPageSize,
+				isServerMode,
+			}),
+		[persistedPrefs, columnIds, finalPageSizeOptions, defaultClientPageSize, isServerMode],
+	);
+
+	const [sorting, setSorting] = useState<SortingState>(() => reconciledPrefs.sorting);
 	const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
 	const [globalFilter, setGlobalFilter] = useState("");
 	const [pagination, setPagination] = useState<PaginationState>(() => ({
-		pageIndex: controlledPageIndex ?? 0,
-		pageSize: persistedPrefs?.pageSize ?? pageSize,
+		pageIndex: 0,
+		pageSize: isServerMode ? (serverPageSize ?? defaultClientPageSize) : reconciledPrefs.pageSize,
 	}));
 	// NOTE (#6): `rowSelection` is intentionally NOT a controlled slice here.
 	// The v9 table owns it internally through its `rowSelection` atom, and the
@@ -1545,13 +1649,10 @@ export function DataTable<TData extends RowData>({
 	);
 
 	// NEW FEATURE 2: Column visibility state
-	const [columnVisibility, setColumnVisibility] = useState<ColumnVisibilityState>(() => persistedPrefs?.columnVisibility ?? EMPTY_COLUMN_VISIBILITY);
+	const [columnVisibility, setColumnVisibility] = useState<ColumnVisibilityState>(() => reconciledPrefs.columnVisibility);
 
 	// NEW FEATURE 5: Column pinning state (v9: start/end arrays, not a flat map)
-	const [columnPinning, setColumnPinning] = useState<ColumnPinningState>(() => ({
-		start: persistedPrefs?.columnPinning?.start ?? EMPTY_COLUMN_PINNING.start,
-		end: persistedPrefs?.columnPinning?.end ?? EMPTY_COLUMN_PINNING.end,
-	}));
+	const [columnPinning, setColumnPinning] = useState<ColumnPinningState>(() => reconciledPrefs.columnPinning);
 
 	// NEW FEATURE 7: Inline editing state
 	const [editingCell, setEditingCell] = useState<EditingCell | null>(null);
@@ -1651,7 +1752,19 @@ export function DataTable<TData extends RowData>({
 	}, [editable, editableColumns]);
 
 	// ── Table instance ─────────────────────────────────────────────────
-	const pageCount = manual && totalCount !== undefined ? Math.ceil(totalCount / pagination.pageSize) : undefined;
+	const pageCount = isServerMode ? Math.max(1, Math.ceil((serverTotalCount ?? 0) / (serverPageSize ?? pagination.pageSize))) : undefined;
+	const resolvedGetRowId = useCallback(
+		(row: TData, index: number): string => {
+			if (isServerPagination(resolvedPagination)) {
+				return resolvedPagination.getRowId(row);
+			}
+			if (resolvedPagination.getRowId !== undefined) {
+				return resolvedPagination.getRowId(row);
+			}
+			return String(index);
+		},
+		[resolvedPagination],
+	);
 
 	// Mirror of `pagination` for the manual-mode notification callback. The
 	// handler below is memoized with a stable identity (it feeds TanStack's
@@ -1663,58 +1776,56 @@ export function DataTable<TData extends RowData>({
 		paginationRef.current = pagination;
 	}, [pagination]);
 
-	const readPaginationState = useCallback((): PaginationState => {
-		if (controlledPageIndex === undefined) {
-			return paginationRef.current;
-		}
-		return { ...paginationRef.current, pageIndex: controlledPageIndex };
-	}, [controlledPageIndex]);
+	const readPaginationState = useCallback((): PaginationState => paginationRef.current, []);
 
 	// Sorting is loaded from persisted prefs, so writes go through this
 	// handler to keep the round-trip symmetric (persistKey is opt-in).
 	const handleSortingChange = useCallback(
 		(updater: SortingState | ((prev: SortingState) => SortingState)): void => {
-			const next = typeof updater === "function" ? updater(sorting) : updater;
+			const next = applyTableUpdater(updater, sorting);
 			setSorting(next);
-			// A new sort order invalidates the virtual scroll offset.
 			setScrollTop(0);
-			persistPreferences({ sorting: next });
-			// Server-side mode: the consumer owns the data, so the sort must
-			// round-trip through it.
-			if (manual) {
+			if (!isServerMode) {
+				persistPreferences({ sorting: next });
+			}
+			if (isServerMode) {
 				onManualSortingChange?.(next);
 			}
 		},
-		[manual, sorting, persistPreferences, onManualSortingChange],
+		[isServerMode, sorting, persistPreferences, onManualSortingChange],
 	);
 
 	// Pagination also invalidates the virtual scroll offset (same reason).
 	const handlePaginationChange = useCallback(
 		(updater: PaginationState | ((prev: PaginationState) => PaginationState)): void => {
 			const current: PaginationState = readPaginationState();
-			const next: PaginationState = typeof updater === "function" ? updater(current) : updater;
+			const next: PaginationState = applyTableUpdater(updater, current);
+			if (isServerMode) {
+				if (next.pageSize !== current.pageSize) {
+					setPagination(next);
+					setScrollTop(0);
+					serverPagination?.onPageChange(0, next.pageSize);
+				}
+				return;
+			}
 			setPagination(next);
 			setScrollTop(0);
-			// Server-side mode: the consumer owns the data, so the pager must
-			// round-trip through it — report the page + size to fetch (1-based).
-			if (manual && (next.pageIndex !== current.pageIndex || next.pageSize !== current.pageSize)) {
-				onManualPaginationChange?.(next.pageIndex + 1, next.pageSize);
-				setSelectAllPages(false);
-			}
 		},
-		[manual, onManualPaginationChange, readPaginationState, setSelectAllPages],
+		[isServerMode, readPaginationState, serverPagination],
 	);
 
 	// Pinning changes flow through this handler so persistence mirrors the
 	// sorting/visibility pattern (v9's `table.state` is intentionally opaque).
 	const handlePinningChange = useCallback(
 		(updater: ColumnPinningState | ((prev: ColumnPinningState) => ColumnPinningState)): void => {
-			const next = typeof updater === "function" ? updater(columnPinning) : updater;
+			const next = applyTableUpdater(updater, columnPinning);
 			setColumnPinning(next);
 			persistPreferences({ columnPinning: next });
 		},
 		[columnPinning, persistPreferences],
 	);
+
+	const effectivePageSizeState = isServerMode ? (serverPageSize ?? pagination.pageSize) : pagination.pageSize;
 
 	// The options object is memoized so the `table` wrapper keeps a stable
 	// identity between state changes — that is what lets the memoized leaf
@@ -1724,14 +1835,14 @@ export function DataTable<TData extends RowData>({
 			features: dataTableFeatures,
 			data,
 			columns,
+			getRowId: resolvedGetRowId,
 			state: {
-				sorting,
+				sorting: controlledSorting ?? sorting,
 				columnFilters,
 				globalFilter,
 				pagination: {
-					...pagination,
-					pageIndex: controlledPageIndex ?? pagination.pageIndex,
-					pageSize,
+					pageIndex: isServerMode ? 0 : pagination.pageIndex,
+					pageSize: effectivePageSizeState,
 				},
 				columnVisibility,
 				columnPinning,
@@ -1744,9 +1855,9 @@ export function DataTable<TData extends RowData>({
 			onColumnPinningChange: handlePinningChange,
 			enableRowSelection: resolvedEnableBulkSelection,
 			enableColumnPinning,
-			manualPagination: manual,
-			manualSorting: manual,
-			manualFiltering: manual,
+			manualPagination: isServerMode,
+			manualSorting: isServerMode,
+			manualFiltering: isServerMode,
 			pageCount,
 			globalFilterFn: (row, _columnId, filterValue): boolean => {
 				if (!searchKeys.length) return true;
@@ -1762,10 +1873,13 @@ export function DataTable<TData extends RowData>({
 		[
 			data,
 			columns,
+			resolvedGetRowId,
 			sorting,
+			controlledSorting,
 			columnFilters,
 			globalFilter,
-			pagination,
+			pagination.pageIndex,
+			effectivePageSizeState,
 			columnVisibility,
 			columnPinning,
 			handleSortingChange,
@@ -1773,11 +1887,9 @@ export function DataTable<TData extends RowData>({
 			handlePinningChange,
 			resolvedEnableBulkSelection,
 			enableColumnPinning,
-			manual,
+			isServerMode,
 			pageCount,
 			searchKeys,
-			controlledPageIndex,
-			pageSize,
 		],
 	);
 
@@ -1798,6 +1910,19 @@ export function DataTable<TData extends RowData>({
 			columnPinning: state.columnPinning,
 		};
 	});
+
+	useEffect((): (() => void) => {
+		if (!isServerMode) {
+			return (): void => undefined;
+		}
+		table.resetRowSelection();
+		const frame = globalThis.requestAnimationFrame((): void => {
+			setSelectAllPages(false);
+		});
+		return (): void => {
+			globalThis.cancelAnimationFrame(frame);
+		};
+	}, [controlledPageIndex, serverResetKey, serverPageSize, data, isServerMode, table, setSelectAllPages]);
 
 	// Keep React pagination state aligned with parent-controlled server pager props.
 	// Controlled page index and page size are merged into `tableOptions.state.pagination` below.
@@ -1824,8 +1949,13 @@ export function DataTable<TData extends RowData>({
 	const handleFilterChange = useCallback(
 		(filterKey: string, value: string | null): void => {
 			setScrollTop(0);
-			if (manual && onManualColumnFilterChange !== undefined) {
+			if (isServerMode && onManualColumnFilterChange !== undefined) {
 				onManualColumnFilterChange(filterKey, value);
+				table.resetRowSelection();
+				setSelectAllPages(false);
+				if (serverPagination !== null) {
+					serverPagination.onPageChange(0, serverPageSize ?? pagination.pageSize);
+				}
 				return;
 			}
 			if (value === "all" || value === null) {
@@ -1834,22 +1964,22 @@ export function DataTable<TData extends RowData>({
 				table.getColumn(filterKey)?.setFilterValue(value);
 			}
 		},
-		[manual, onManualColumnFilterChange, table],
+		[isServerMode, onManualColumnFilterChange, pagination.pageSize, serverPageSize, serverPagination, table, setSelectAllPages],
 	);
 
 	const getFilterValue = useCallback(
 		(filterKey: string): string => {
-			if (manual && manualColumnFilters !== undefined) {
+			if (isServerMode && manualColumnFilters !== undefined) {
 				return manualColumnFilters[filterKey] ?? "all";
 			}
 			const filterValue = table.getColumn(filterKey)?.getFilterValue();
 			const parsed = DataTableCellScalarSchema.safeParse(filterValue);
 			return parsed.success ? String(parsed.data) : "all";
 		},
-		[manual, manualColumnFilters, table],
+		[isServerMode, manualColumnFilters, table],
 	);
 
-	const showColumnFilters = filters.length > 0 && (!manual || onManualColumnFilterChange !== undefined);
+	const showColumnFilters = filters.length > 0 && (!isServerMode || onManualColumnFilterChange !== undefined);
 
 	// ── Pinning handlers ───────────────────────────────────────────────
 	const togglePin = useCallback(
@@ -1874,29 +2004,25 @@ export function DataTable<TData extends RowData>({
 	// the `table.Subscribe` island below (bulk bars + select-all banner) — the
 	// parent does not subscribe to `rowSelection`, so those values would be
 	// stale here. Only filter/sort/pagination-derived values live at this level.
-	const isEmptyData = data.length === 0;
-	const isEmptyFiltered = useMemo(() => table.getRowModel().rows.length === 0 && !isEmptyData, [table, isEmptyData]);
+	const isEmptyData = !isServerMode && data.length === 0 && !serverIsFiltered;
+	const isServerEmptyPage = isServerMode && data.length === 0 && !serverIsFiltered;
+	const filteredRowCount = table.getFilteredRowModel().rows.length;
+	const isEmptyFiltered = filteredRowCount === 0 && !isEmptyData && !isServerEmptyPage;
 
-	// The pager is always rendered when there are rows (compulsory), but an
-	// empty row set shows one of the Empty states instead — a "Showing 1 to 0
-	// of 0 results" bar under an empty table would be noise, not information.
-	const pagerRowCount = manual && totalCount !== undefined ? totalCount : table.getFilteredRowModel().rows.length;
+	const pagerRowCount = isServerMode ? data.length : filteredRowCount;
+	const showPager = isServerMode ? (serverTotalCount ?? 0) > 0 || controlledPageIndex > 0 || data.length > 0 : pagerRowCount > 0;
 
-	const resolveMaxPageIndex = useCallback(
-		(pageSizeValue: number): number => {
-			const total: number = manual && totalCount !== undefined ? totalCount : table.getFilteredRowModel().rows.length;
-			return Math.max(Math.ceil(total / pageSizeValue) - 1, 0);
-		},
-		[manual, totalCount, table],
-	);
+	const totalFilteredRows = filteredRowCount;
 
-	const totalFilteredRows = useMemo(() => table.getFilteredRowModel().rows.length, [table]);
-
-	const effectivePageIndex: number = controlledPageIndex ?? table.state.pagination.pageIndex;
 	const effectivePageSize: number = table.state.pagination.pageSize;
-	const maxPagerPageIndex: number = resolveMaxPageIndex(effectivePageSize);
-	const canPreviousPage: boolean = effectivePageIndex > 0;
-	const canNextPage: boolean = effectivePageIndex < maxPagerPageIndex;
+	const usePagePager: boolean = isServerMode;
+	const effectiveTotalPages: number = usePagePager ? Math.max(1, Math.ceil((serverTotalCount ?? 0) / effectivePageSize)) : table.getPageCount();
+	const canPreviousPage: boolean = usePagePager ? controlledPageIndex > 0 : table.state.pagination.pageIndex > 0;
+	const canNextPage: boolean = usePagePager
+		? controlledPageIndex < effectiveTotalPages - 1
+		: table.state.pagination.pageIndex < Math.max(Math.ceil(filteredRowCount / effectivePageSize) - 1, 0);
+	const manualRangeFrom: number = serverTotalCount === undefined || serverTotalCount === 0 ? 0 : controlledPageIndex * effectivePageSize + 1;
+	const manualRangeTo: number = serverTotalCount === undefined ? table.getRowModel().rows.length : Math.min((controlledPageIndex + 1) * effectivePageSize, serverTotalCount);
 
 	// ── Drag-and-drop handlers (NEW FEATURE 8) ─────────────────────────
 	const handleDragStart = useCallback((e: React.DragEvent, index: number): void => {
@@ -1984,8 +2110,12 @@ export function DataTable<TData extends RowData>({
 		setScrollTop(0);
 		if (searchTimerRef.current !== null) clearTimeout(searchTimerRef.current);
 		setGlobalFilter("");
+		if (isServerMode) {
+			onClearServerFilters?.();
+			return;
+		}
 		table.resetColumnFilters();
-	}, [table]);
+	}, [isServerMode, onClearServerFilters, table]);
 
 	const handleSelectAllPages = useCallback((): void => {
 		setSelectAllPages(true);
@@ -2004,49 +2134,100 @@ export function DataTable<TData extends RowData>({
 	const handlePageSizeChange = useCallback(
 		(size: number): void => {
 			setScrollTop(0);
-			handlePaginationChange(() => ({ pageIndex: 0, pageSize: size }));
-			persistPreferences({ pageSize: size });
+			if (isServerMode) {
+				setPagination((prev) => ({ ...prev, pageSize: size }));
+				serverPagination?.onPageChange(0, size);
+			} else {
+				handlePaginationChange(() => ({ pageIndex: 0, pageSize: size }));
+			}
+			if (!isServerMode) {
+				persistPreferences({ pageSize: size });
+			}
 		},
-		[handlePaginationChange, persistPreferences],
+		[handlePaginationChange, isServerMode, persistPreferences, serverPagination],
+	);
+
+	const handleManualPageChange = useCallback(
+		(nextPageIndex: number): void => {
+			if (!usePagePager) {
+				return;
+			}
+			setScrollTop(0);
+			serverPagination?.onPageChange(nextPageIndex, effectivePageSize);
+		},
+		[effectivePageSize, serverPagination, usePagePager],
 	);
 
 	const handleFirstPage = useCallback((): void => {
+		if (isServerMode) {
+			if (controlledPageIndex <= 0) {
+				return;
+			}
+			handleManualPageChange(0);
+			return;
+		}
 		setScrollTop(0);
 		handlePaginationChange((prev) => (prev.pageIndex === 0 ? prev : { ...prev, pageIndex: 0 }));
-	}, [handlePaginationChange]);
+	}, [controlledPageIndex, handleManualPageChange, handlePaginationChange, isServerMode]);
 
 	const handlePreviousPage = useCallback((): void => {
+		if (isServerMode) {
+			if (controlledPageIndex <= 0) {
+				return;
+			}
+			handleManualPageChange(controlledPageIndex - 1);
+			return;
+		}
 		setScrollTop(0);
 		handlePaginationChange((prev) => (prev.pageIndex <= 0 ? prev : { ...prev, pageIndex: prev.pageIndex - 1 }));
-	}, [handlePaginationChange]);
+	}, [controlledPageIndex, handleManualPageChange, handlePaginationChange, isServerMode]);
 
 	const handleNextPage = useCallback((): void => {
+		if (isServerMode) {
+			if (controlledPageIndex >= effectiveTotalPages - 1) {
+				return;
+			}
+			handleManualPageChange(controlledPageIndex + 1);
+			return;
+		}
 		setScrollTop(0);
 		handlePaginationChange((prev) => {
-			const maxIndex = resolveMaxPageIndex(prev.pageSize);
+			const maxIndex = Math.max(Math.ceil(filteredRowCount / prev.pageSize) - 1, 0);
 			return prev.pageIndex >= maxIndex ? prev : { ...prev, pageIndex: prev.pageIndex + 1 };
 		});
-	}, [handlePaginationChange, resolveMaxPageIndex]);
+	}, [controlledPageIndex, effectiveTotalPages, filteredRowCount, handleManualPageChange, handlePaginationChange, isServerMode]);
 
 	const handleLastPage = useCallback((): void => {
+		if (isServerMode) {
+			const lastPageIndex = effectiveTotalPages - 1;
+			if (controlledPageIndex >= lastPageIndex) {
+				return;
+			}
+			handleManualPageChange(lastPageIndex);
+			return;
+		}
 		setScrollTop(0);
 		handlePaginationChange((prev) => {
-			const maxIndex = resolveMaxPageIndex(prev.pageSize);
+			const maxIndex = Math.max(Math.ceil(filteredRowCount / prev.pageSize) - 1, 0);
 			return prev.pageIndex === maxIndex ? prev : { ...prev, pageIndex: maxIndex };
 		});
-	}, [handlePaginationChange, resolveMaxPageIndex]);
+	}, [controlledPageIndex, effectiveTotalPages, filteredRowCount, handleManualPageChange, handlePaginationChange, isServerMode]);
 
 	const handlePageSelect = useCallback(
 		(pageNumber: number): void => {
+			if (isServerMode) {
+				handleManualPageChange(pageNumber - 1);
+				return;
+			}
 			setScrollTop(0);
 			const targetIndex = pageNumber - 1;
 			handlePaginationChange((prev) => {
-				const maxIndex = resolveMaxPageIndex(prev.pageSize);
+				const maxIndex = Math.max(Math.ceil(filteredRowCount / prev.pageSize) - 1, 0);
 				const clampedIndex = Math.min(Math.max(targetIndex, 0), maxIndex);
 				return prev.pageIndex === clampedIndex ? prev : { ...prev, pageIndex: clampedIndex };
 			});
 		},
-		[handlePaginationChange, resolveMaxPageIndex],
+		[filteredRowCount, handleManualPageChange, handlePaginationChange, isServerMode],
 	);
 
 	const handleTableDragOver = useCallback(
@@ -2089,14 +2270,15 @@ export function DataTable<TData extends RowData>({
 		const selectedData = selectedRows.map((row) => row.original);
 		const pageRowCount = table.getRowModel().rows.length;
 		const clientFilteredRowCount = table.getFilteredRowModel().rows.length;
-		const effectiveTotalFiltered = manual && totalCount !== undefined ? totalCount : clientFilteredRowCount;
+		const effectiveTotalFiltered = isServerMode ? (serverTotalCount ?? clientFilteredRowCount) : clientFilteredRowCount;
 		const selectionContext: DataTableBulkSelectionContext = {
 			selectAllPages,
 			totalMatchingRows: selectAllPages ? effectiveTotalFiltered : selectedData.length,
 		};
 		const hasSelection = selectAllPages || selectedData.length > 0;
 		const allPageRowsSelected = table.getIsAllPageRowsSelected();
-		const showSelectAllBanner = resolvedEnableBulkSelection && allPageRowsSelected && !selectAllPages && effectiveTotalFiltered > pageRowCount;
+		const showSelectAllBanner =
+			resolvedEnableBulkSelection && allPageRowsSelected && !selectAllPages && effectiveTotalFiltered > pageRowCount && (!isServerMode || onFetchAllMatching !== undefined);
 
 		return (
 			<>
@@ -2169,8 +2351,9 @@ export function DataTable<TData extends RowData>({
 		table,
 		resolvedBulkActions,
 		resolvedEnableBulkSelection,
-		manual,
-		totalCount,
+		isServerMode,
+		onFetchAllMatching,
+		serverTotalCount,
 		mobileCardRender,
 		labels,
 		handleAnyDeselect,
@@ -2221,7 +2404,7 @@ export function DataTable<TData extends RowData>({
 				{searchKeys.length > 0 || showColumnFilters || toolbarContent !== undefined || enableColumnVisibility || resolvedExportable ? (
 					<div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center">
 						{/* Search (with clear button + live result count) */}
-						{searchKeys.length > 0 ? (
+						{searchKeys.length > 0 && !isServerMode ? (
 							<div className="relative flex-1 sm:max-w-64">
 								<Search className="absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
 								<Input
@@ -2252,8 +2435,8 @@ export function DataTable<TData extends RowData>({
 										key={filter.key}
 										filter={filter}
 										value={getFilterValue(filter.key)}
-										totalFilteredRows={manual && totalCount !== undefined ? totalCount : totalFilteredRows}
-										facetedCounts={manual ? EMPTY_FACETED_COUNTS : (filterFacetedCounts[filter.key] ?? EMPTY_FACETED_COUNTS)}
+										totalFilteredRows={totalFilteredRows}
+										facetedCounts={isServerMode ? EMPTY_FACETED_COUNTS : (filterFacetedCounts[filter.key] ?? EMPTY_FACETED_COUNTS)}
 										onFilterChange={handleFilterChange}
 									/>
 								))
@@ -2263,7 +2446,7 @@ export function DataTable<TData extends RowData>({
 						{toolbarContent}
 
 						{/* Live result count (search or a column filter is active) */}
-						{!manual && (searchInput !== "" || columnFilters.length > 0) ? (
+						{!isServerMode && (searchInput !== "" || columnFilters.length > 0) ? (
 							<span className="text-xs whitespace-nowrap text-muted-foreground">
 								{formatDataTableLabel(labels.resultsCount, { filtered: totalFilteredRows, total: data.length })}
 							</span>
@@ -2278,6 +2461,8 @@ export function DataTable<TData extends RowData>({
 									exportableColumns={resolvedExportableColumns}
 									exportFormats={resolvedExportFormats}
 									labels={labels}
+									isServerMode={isServerMode}
+									onFetchAllMatching={onFetchAllMatching}
 								/>
 							) : null}
 
@@ -2290,12 +2475,12 @@ export function DataTable<TData extends RowData>({
 
 				{/* ── MAIN CONTENT ────────────────────────────────────────── */}
 				{error !== undefined && error !== null && error !== "" ? (
-					<div className="my-8 flex flex-col items-center gap-3 rounded-md border border-destructive/30 bg-destructive/5 p-8 text-center">
+					<div role="alert" className="my-8 flex flex-col items-center gap-3 rounded-md border border-destructive/30 bg-destructive/5 p-8 text-center">
 						<CircleAlert className="h-6 w-6 text-destructive" />
 						<p className="text-sm font-medium text-destructive">{error}</p>
 					</div>
 				) : isLoading ? (
-					<div className="hidden overflow-x-auto rounded-md border lg:block">
+					<div role="status" aria-busy="true" aria-label={labels.loadingTableAriaLabel} className="hidden overflow-x-auto rounded-md border lg:block">
 						<Table>
 							<TableHeader>
 								{table.getHeaderGroups().map((headerGroup) => (
@@ -2315,7 +2500,7 @@ export function DataTable<TData extends RowData>({
 							</TableBody>
 						</Table>
 					</div>
-				) : isEmptyData ? (
+				) : isEmptyData || isServerEmptyPage ? (
 					<Empty className="my-12">
 						<EmptyHeader>
 							<EmptyMedia variant="icon">{emptyState?.icon ?? <Search className="h-6 w-6" />}</EmptyMedia>
@@ -2331,8 +2516,8 @@ export function DataTable<TData extends RowData>({
 				) : (
 					<>
 						{/* ── MOBILE CARD VIEW ────────────────────────────── */}
-						{mobileCardRender ? (
-							<div className={cn("space-y-4 transition-opacity duration-150 lg:hidden", isRefetching && "opacity-60")}>
+						{mobileCardRender && !isDesktopViewport ? (
+							<div className={cn("space-y-4 transition-opacity duration-150", isRefetching && "opacity-60")}>
 								{isEmptyFiltered ? (
 									<Empty>
 										<EmptyHeader>
@@ -2369,109 +2554,126 @@ export function DataTable<TData extends RowData>({
 						) : null}
 
 						{/* ── DESKTOP TABLE VIEW (virtualized when opt-in) ── */}
-						<div
-							className={cn(
-								"hidden rounded-md border transition-opacity duration-150 lg:block",
-								virtualizeRows ? "overflow-auto" : "overflow-x-auto",
-								isRefetching && "opacity-60",
-							)}
-							style={desktopTableScrollStyle}
-							onScroll={virtualizeRows ? handleVirtualScroll : undefined}>
-							<Table>
-								<TableHeader>
-									{table.getHeaderGroups().map((headerGroup) => (
-										<TableRow key={headerGroup.id}>
-											{headerGroup.headers.map((header) => (
-												<HeaderCell key={header.id} header={header} enableColumnPinning={enableColumnPinning} sortCycle={sortCycle} onTogglePin={togglePin} />
-											))}
-										</TableRow>
-									))}
-								</TableHeader>
-								<TableBody onDragOver={draggable ? handleTableDragOver : undefined}>
-									{table.getRowModel().rows.length ? (
-										<>
-											{virtualizeRows && virtualStart > 0 ? <tr aria-hidden="true" style={virtualTopSpacerStyle} /> : null}
-											{visibleRows.map((row, rowIdx) => {
-												const rowIndex = virtualStart + rowIdx;
-												const renderRow = (isRowSelected: boolean): React.JSX.Element => (
-													<TableRowView
-														key={row.id}
-														row={row}
-														rowIdx={rowIndex}
-														rowHeight={virtualizeRows ? effectiveRowHeight : undefined}
-														isRowSelected={isRowSelected}
-														draggable={draggable}
-														editableSet={editableSet}
-														editingCell={editingCell}
-														dragIndex={dragIndex}
-														dragOverIndex={dragOverIndex}
-														onRowClick={onRowClick}
-														onDragStart={handleDragStart}
-														onDragOver={handleDragOver}
-														onDrop={handleDrop}
-														onDragEnd={handleDragEnd}
-														onCellDoubleClick={handleCellDoubleClick}
-														onCellEditSave={handleCellEditSave}
-														onCellEditCancel={handleCellEditCancel}
+						{isDesktopViewport || !mobileCardRender ? (
+							<div
+								className={cn(
+									mobileCardRender ? "rounded-md border" : "hidden rounded-md border lg:block",
+									virtualizeRows ? "overflow-auto" : "overflow-x-auto",
+									"transition-opacity duration-150",
+									isRefetching && "opacity-60",
+								)}
+								style={desktopTableScrollStyle}
+								onScroll={virtualizeRows ? handleVirtualScroll : undefined}>
+								<Table>
+									<TableHeader>
+										{table.getHeaderGroups().map((headerGroup) => (
+											<TableRow key={headerGroup.id}>
+												{headerGroup.headers.map((header) => (
+													<HeaderCell
+														key={header.id}
+														header={header}
+														enableColumnPinning={enableColumnPinning}
+														sortCycle={sortCycle}
+														onTogglePin={togglePin}
+														labels={labels}
 													/>
-												);
+												))}
+											</TableRow>
+										))}
+									</TableHeader>
+									<TableBody onDragOver={draggable ? handleTableDragOver : undefined}>
+										{table.getRowModel().rows.length ? (
+											<>
+												{virtualizeRows && virtualStart > 0 ? <tr aria-hidden="true" style={virtualTopSpacerStyle} /> : null}
+												{visibleRows.map((row, rowIdx) => {
+													const rowIndex = virtualStart + rowIdx;
+													const renderRow = (isRowSelected: boolean): React.JSX.Element => (
+														<TableRowView
+															key={row.id}
+															row={row}
+															rowIdx={rowIndex}
+															rowHeight={virtualizeRows ? effectiveRowHeight : undefined}
+															isRowSelected={isRowSelected}
+															draggable={draggable}
+															editableSet={editableSet}
+															editingCell={editingCell}
+															dragIndex={dragIndex}
+															dragOverIndex={dragOverIndex}
+															onRowClick={onRowClick}
+															onDragStart={handleDragStart}
+															onDragOver={handleDragOver}
+															onDrop={handleDrop}
+															onDragEnd={handleDragEnd}
+															onCellDoubleClick={handleCellDoubleClick}
+															onCellEditSave={handleCellEditSave}
+															onCellEditCancel={handleCellEditCancel}
+														/>
+													);
 
-												// Per-row granular subscription: the memoized row re-renders only
-												// when THIS row's selection flips (row objects are cached by the
-												// row model, so `row.getIsSelected()` would otherwise go stale).
-												const isRowSelected = rowSelectionSelector(row.id);
-												return (
-													<Subscribe key={row.id} source={table.atoms.rowSelection} selector={isRowSelected}>
-														{renderRow}
-													</Subscribe>
-												);
-											})}
-											{virtualizeRows && virtualEnd < rowCount ? <tr aria-hidden="true" style={virtualBottomSpacerStyle} /> : null}
-										</>
-									) : (
-										<TableRow>
-											<TableCell colSpan={columns.length} className="h-64">
-												<Empty>
-													<EmptyHeader>
-														<EmptyMedia variant="icon">
-															<Search className="h-6 w-6" />
-														</EmptyMedia>
-														<EmptyTitle>{labels.noResultsTitle}</EmptyTitle>
-														<EmptyDescription>{labels.noResultsDescription}</EmptyDescription>
-													</EmptyHeader>
-													<EmptyContent>
-														<Button variant="outline" onClick={handleClearFilters}>
-															{labels.clearFilters}
-														</Button>
-													</EmptyContent>
-												</Empty>
-											</TableCell>
-										</TableRow>
-									)}
-								</TableBody>
-							</Table>
-						</div>
+													// Per-row granular subscription: the memoized row re-renders only
+													// when THIS row's selection flips (row objects are cached by the
+													// row model, so `row.getIsSelected()` would otherwise go stale).
+													const isRowSelected = rowSelectionSelector(row.id);
+													return (
+														<Subscribe key={row.id} source={table.atoms.rowSelection} selector={isRowSelected}>
+															{renderRow}
+														</Subscribe>
+													);
+												})}
+												{virtualizeRows && virtualEnd < rowCount ? <tr aria-hidden="true" style={virtualBottomSpacerStyle} /> : null}
+											</>
+										) : (
+											<TableRow>
+												<TableCell colSpan={columns.length} className="h-64">
+													<Empty>
+														<EmptyHeader>
+															<EmptyMedia variant="icon">
+																<Search className="h-6 w-6" />
+															</EmptyMedia>
+															<EmptyTitle>{labels.noResultsTitle}</EmptyTitle>
+															<EmptyDescription>{labels.noResultsDescription}</EmptyDescription>
+														</EmptyHeader>
+														<EmptyContent>
+															<Button variant="outline" onClick={handleClearFilters}>
+																{labels.clearFilters}
+															</Button>
+														</EmptyContent>
+													</Empty>
+												</TableCell>
+											</TableRow>
+										)}
+									</TableBody>
+								</Table>
+							</div>
+						) : null}
 
-						{/* ── PAGINATION (always visible when there are rows — the pager is
-						    a core part of every data table, even when the data fits on one
-						    page; the page-number strip is only hidden on a single page.
-						    With an empty row set the Empty states already communicate the
-						    case, so the pager is skipped.) ── */}
-						{pagerRowCount > 0 ? (
+						{/* ── PAGINATION ── */}
+						{showPager ? (
 							<div className="flex flex-col items-center justify-center gap-6 py-6 sm:flex-row md:justify-center lg:justify-between">
 								<div className="flex items-center gap-4">
-									<div className="flex items-center gap-2 text-sm text-muted-foreground">
+									<div className="flex items-center gap-2 text-sm text-muted-foreground" aria-live="polite">
 										{isRefetching ? <Loader2 className="size-3.5 shrink-0 animate-spin" aria-hidden="true" /> : null}
 										<span>
-											{formatDataTableLabel(labels.showingResults, {
-												from: table.state.pagination.pageIndex * table.state.pagination.pageSize + 1,
-												to: Math.min(
-													(table.state.pagination.pageIndex + 1) * table.state.pagination.pageSize,
-													manual && totalCount !== undefined ? totalCount : table.getFilteredRowModel().rows.length,
-												),
-												total: manual && totalCount !== undefined ? totalCount : table.getFilteredRowModel().rows.length,
-											})}
+											{usePagePager
+												? formatDataTableLabel(labels.showingResults, {
+														from: manualRangeFrom,
+														to: manualRangeTo,
+														total: serverTotalCount ?? 0,
+													})
+												: formatDataTableLabel(labels.showingResults, {
+														from: table.state.pagination.pageIndex * table.state.pagination.pageSize + 1,
+														to: Math.min((table.state.pagination.pageIndex + 1) * table.state.pagination.pageSize, filteredRowCount),
+														total: filteredRowCount,
+													})}
 										</span>
+										{usePagePager ? (
+											<span className="text-sm text-muted-foreground">
+												{formatDataTableLabel(labels.pageOfTotal, {
+													page: controlledPageIndex + 1,
+													totalPages: effectiveTotalPages,
+												})}
+											</span>
+										) : null}
 									</div>
 								</div>
 								<div className="flex items-center space-x-4">
@@ -2488,12 +2690,12 @@ export function DataTable<TData extends RowData>({
 									<Button variant="outline" size="sm" onClick={handlePreviousPage} disabled={!canPreviousPage} aria-label={labels.previousPageAriaLabel}>
 										<ChevronLeft className="h-4 w-4" />
 									</Button>{" "}
-									{table.getPageCount() > 1 ? (
+									{(!isServerMode && table.getPageCount() > 1) || (usePagePager && effectiveTotalPages > 1) ? (
 										<div className="flex items-center gap-1">
-											{Array.from({ length: Math.min(5, table.getPageCount()) }, (_, i) => {
+											{Array.from({ length: Math.min(5, usePagePager ? effectiveTotalPages : table.getPageCount()) }, (_, i) => {
 												let pageNumber: number;
-												const currentPage = table.state.pagination.pageIndex + 1;
-												const totalPages = table.getPageCount();
+												const currentPage = usePagePager ? controlledPageIndex + 1 : table.state.pagination.pageIndex + 1;
+												const totalPages = usePagePager ? effectiveTotalPages : table.getPageCount();
 
 												if (totalPages <= 5) {
 													pageNumber = i + 1;
@@ -2505,7 +2707,15 @@ export function DataTable<TData extends RowData>({
 													pageNumber = currentPage - 2 + i;
 												}
 
-												return <PageNumberButton key={pageNumber} pageNumber={pageNumber} currentPage={currentPage} onPageSelect={handlePageSelect} />;
+												return (
+													<PageNumberButton
+														key={pageNumber}
+														pageNumber={pageNumber}
+														currentPage={currentPage}
+														onPageSelect={handlePageSelect}
+														goToPageAriaLabel={labels.goToPageAriaLabel}
+													/>
+												);
 											})}
 										</div>
 									) : null}

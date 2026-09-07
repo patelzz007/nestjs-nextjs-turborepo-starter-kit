@@ -502,7 +502,6 @@ DROP POLICY IF EXISTS reward_idempotency_bypass ON public.reward_redemption_idem
 CREATE POLICY reward_idempotency_bypass ON public.reward_redemption_idempotency_records
   USING (app_rls_bypass())
   WITH CHECK (app_rls_bypass());
-
 -- @app-generated:begin SampleCategory
 -- Generated RLS for SampleCategory (admin-only)
 ALTER TABLE sample_category ENABLE ROW LEVEL SECURITY;
@@ -515,7 +514,6 @@ CREATE POLICY sample_category_insert ON sample_category FOR INSERT WITH CHECK (a
 CREATE POLICY sample_category_update ON sample_category FOR UPDATE USING (app_rls_bypass()) WITH CHECK (app_rls_bypass());
 CREATE POLICY sample_category_delete ON sample_category FOR DELETE USING (app_rls_bypass());
 -- @app-generated:end SampleCategory
-
 -- @app-generated:begin Product
 -- Generated RLS for Product (admin-only)
 ALTER TABLE product ENABLE ROW LEVEL SECURITY;

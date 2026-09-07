@@ -1,7 +1,7 @@
 "use client";
 
 import type { AdminUserDetail } from "@workspace/shared";
-import { ApiPaginatedMetaSchema } from "@workspace/shared";
+import { readPaginatedHasNext, readPaginatedNextCursor } from "@/lib/api-envelope";
 import { invalidateSessionAuth } from "@workspace/client/lib/auth/invalidate-session-auth";
 import { useAuth } from "@workspace/client/lib/auth";
 import { Button } from "@workspace/ui/components/form/button";
@@ -21,14 +21,22 @@ export function ImpersonateUserPanel({ sessionActive }: { readonly sessionActive
 	const permissionsQuery = api.auth.permissions.useQuery(undefined, { enabled: sessionActive });
 
 	const [search, setSearch] = React.useState<string>("");
-	const [page, setPage] = React.useState<number>(1);
+	const [cursor, setCursor] = React.useState<string | null>(null);
+	const [cursorHistory, setCursorHistory] = React.useState<readonly (string | null)[]>([null]);
 
 	const currentUser = meQuery.data?.data;
 	const session = permissionsQuery.data?.data;
 	const isImpersonating = session?.isImpersonating === true;
 	const canLoadUsers = meQuery.isSuccess && permissionsQuery.isSuccess && currentUser?.isSuperAdmin === true && !isImpersonating;
 
-	const usersQuery = api.auth.adminUsers.useQuery({ page, limit: 10, search: search.length > 0 ? search : undefined }, { enabled: canLoadUsers });
+	const usersQuery = api.auth.adminUsers.useQuery(
+		{
+			limit: 10,
+			...(cursor !== null ? { cursor } : {}),
+			...(search.length > 0 ? { search } : {}),
+		},
+		{ enabled: canLoadUsers },
+	);
 
 	const impersonateMutation = api.auth.impersonate.useMutation({
 		onSuccess: async (): Promise<void> => {
@@ -38,7 +46,8 @@ export function ImpersonateUserPanel({ sessionActive }: { readonly sessionActive
 
 	const handleSearchChange = React.useCallback((event: React.ChangeEvent<HTMLInputElement>): void => {
 		setSearch(event.target.value);
-		setPage(1);
+		setCursor(null);
+		setCursorHistory([null]);
 	}, []);
 
 	const handleImpersonate = React.useCallback(
@@ -58,21 +67,32 @@ export function ImpersonateUserPanel({ sessionActive }: { readonly sessionActive
 		[handleImpersonate],
 	);
 
+	const nextCursor = readPaginatedNextCursor(usersQuery.data?.meta);
+	const hasNext = readPaginatedHasNext(usersQuery.data?.meta, false);
+	const hasPrevious = cursorHistory.length > 1;
+
 	const handlePreviousPage = React.useCallback((): void => {
-		setPage((prev: number) => Math.max(1, prev - 1));
-	}, []);
+		if (cursorHistory.length <= 1) {
+			return;
+		}
+		const nextHistory = cursorHistory.slice(0, -1);
+		setCursorHistory(nextHistory);
+		setCursor(nextHistory[nextHistory.length - 1] ?? null);
+	}, [cursorHistory]);
 
 	const handleNextPage = React.useCallback((): void => {
-		setPage((prev: number) => prev + 1);
-	}, []);
+		if (nextCursor === null) {
+			return;
+		}
+		setCursorHistory((history) => [...history, nextCursor]);
+		setCursor(nextCursor);
+	}, [nextCursor]);
 
 	if (currentUser?.isSuperAdmin !== true || isImpersonating) {
 		return null;
 	}
 
 	const users: readonly AdminUserDetail[] = usersQuery.data?.data ?? [];
-	const metaParsed = ApiPaginatedMetaSchema.safeParse(usersQuery.data?.meta);
-	const totalPages: number = metaParsed.success && metaParsed.data.totalPages !== null ? metaParsed.data.totalPages : 1;
 
 	return (
 		<div className="rounded-lg border bg-card p-6 text-card-foreground shadow-xs">
@@ -112,15 +132,13 @@ export function ImpersonateUserPanel({ sessionActive }: { readonly sessionActive
 					</ul>
 				)}
 
-				{totalPages > 1 ? (
+				{hasPrevious || hasNext ? (
 					<div className="flex items-center justify-between text-sm">
-						<Button size="sm" variant="ghost" disabled={page <= 1} onClick={handlePreviousPage}>
+						<Button size="sm" variant="ghost" disabled={!hasPrevious} onClick={handlePreviousPage}>
 							Previous
 						</Button>
-						<span className="text-muted-foreground">
-							Page {page} of {totalPages}
-						</span>
-						<Button size="sm" variant="ghost" disabled={page >= totalPages} onClick={handleNextPage}>
+						<span className="text-muted-foreground">{users.length} users</span>
+						<Button size="sm" variant="ghost" disabled={!hasNext} onClick={handleNextPage}>
 							Next
 						</Button>
 					</div>

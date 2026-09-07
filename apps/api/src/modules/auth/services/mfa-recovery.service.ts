@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
-import { MfaRecoveryRequestStatus } from "@prisma/client";
+import { MfaRecoveryRequestStatus, type Prisma } from "@prisma/client";
 import {
 	epochMs,
 	type AdminMfaRecoveryListQuery,
@@ -7,7 +7,10 @@ import {
 	type AdminReviewMfaRecoveryInput,
 	type InitiateMfaRecoveryInput,
 	type MfaRecoveryStatusResponse,
+	type PaginatedServiceResult,
 } from "@workspace/shared";
+
+import { fetchStringIdListPage, paginateCursorListResult } from "../../../platform/persistence/cursor-list";
 
 import { TypedConfigService } from "../../../config/typed-config.service";
 import { LogService } from "../../../modules/logs/logs.service";
@@ -104,22 +107,8 @@ export class MfaRecoveryService {
 		return this.toStatusResponse(request);
 	}
 
-	public async listAdminRecoveryRequests(query: AdminMfaRecoveryListQuery): Promise<{
-		readonly items: AdminMfaRecoveryRequest[];
-		readonly total: number;
-		readonly page: number;
-		readonly limit: number;
-		readonly totalPages: number;
-		readonly hasNext: boolean;
-		readonly hasPrevious: boolean;
-	}> {
-		const page: number = query.page;
-		const limit: number = query.limit;
-
-		const where: {
-			readonly status?: MfaRecoveryRequestStatus;
-			readonly userId?: string;
-		} = {};
+	public async listAdminRecoveryRequests(query: AdminMfaRecoveryListQuery): Promise<PaginatedServiceResult<AdminMfaRecoveryRequest>> {
+		const where: Prisma.MfaRecoveryRequestWhereInput = {};
 
 		if (query.status !== undefined) {
 			where.status = query.status;
@@ -129,36 +118,40 @@ export class MfaRecoveryService {
 			where.userId = query.userId;
 		}
 
-		const [requests, total] = await Promise.all([
-			this.prisma.mfaRecoveryRequest.findMany({
-				where,
-				orderBy: { requestedAt: "desc" },
-				skip: (page - 1) * limit,
-				take: limit,
-				include: {
-					user: {
-						select: {
-							email: true,
-							fullName: true,
+		type MfaRecoveryAdminRow = Prisma.MfaRecoveryRequestGetPayload<{
+			include: {
+				user: {
+					select: {
+						email: true;
+						fullName: true;
+					};
+				};
+			};
+		}>;
+
+		const result = await fetchStringIdListPage<Prisma.MfaRecoveryRequestWhereInput, MfaRecoveryAdminRow>(query, {
+			where,
+			mergeCursor: (baseWhere, cursorId) => ({ ...baseWhere, id: { gt: cursorId } }),
+			readId: (row) => row.id,
+			findMany: (args): Promise<MfaRecoveryAdminRow[]> =>
+				this.prisma.mfaRecoveryRequest.findMany({
+					...args,
+					include: {
+						user: {
+							select: {
+								email: true,
+								fullName: true,
+							},
 						},
 					},
-				},
-			}),
-			this.prisma.mfaRecoveryRequest.count({ where }),
-		]);
+				}),
+			count: (listWhere) => this.prisma.mfaRecoveryRequest.count({ where: listWhere }),
+		});
 
-		const items: AdminMfaRecoveryRequest[] = requests.map((request) => this.toAdminRequest(request));
-		const totalPages: number = limit === 0 ? 0 : Math.ceil(total / limit);
-
-		return {
-			items,
-			total,
-			page,
-			limit,
-			totalPages,
-			hasNext: page < totalPages,
-			hasPrevious: page > 1,
-		};
+		return paginateCursorListResult(
+			{ ...result, items: result.items.map((request) => this.toAdminRequest(request)) },
+			query,
+		);
 	}
 
 	public async adminApprove(adminUserId: string, dto: AdminReviewMfaRecoveryInput): Promise<MfaRecoveryStatusResponse> {

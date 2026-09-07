@@ -73,6 +73,10 @@ export const PERMISSION_DEFINITIONS: readonly PermissionDefinition[] = [
 	{ action: "UPDATE", resource: "SYSTEM_SETTINGS", description: "Update system settings", group: "System Settings" },
 	{ action: "MANAGE", resource: "SYSTEM_SETTINGS", description: "Full system management", group: "System Settings", isSystem: true },
 
+	// Developer Tools
+	{ action: "READ", resource: "DEVTOOLS", description: "View developer tools and generator status", group: "Developer Tools", isSystem: true },
+	{ action: "MANAGE", resource: "DEVTOOLS", description: "Run resource generator, rollback, and module init", group: "Developer Tools", isSystem: true },
+
 	// URL Management
 	{ action: "CREATE", resource: "URL", description: "Create short links", group: "URL Management" },
 	{ action: "LIST", resource: "URL", description: "List all URLs", group: "URL Management" },

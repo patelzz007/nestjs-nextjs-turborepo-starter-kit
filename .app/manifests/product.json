@@ -1,36 +1,36 @@
 {
   "resource": "product",
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "generatorVersion": "0.1.0",
   "files": {
     "apps/admin/app/(panel)/product/__tests__/product-view.test.tsx": {
-      "template": "tests/admin-view",
-      "hash": "daee49ad70438982",
+      "template": "tests/ui-view",
+      "hash": "fc8ee3ec3d21e7ef",
       "ownership": "generated"
     },
     "apps/admin/app/(panel)/product/[id]/page.tsx": {
-      "template": "admin/detail-page",
+      "template": "ui/detail-page",
       "hash": "6ef6c457fb57fab2",
       "ownership": "generated"
     },
     "apps/admin/app/(panel)/product/page.tsx": {
-      "template": "admin/page",
-      "hash": "4df67f928ba223b5",
+      "template": "ui/page",
+      "hash": "6817ba698d479ee5",
       "ownership": "generated"
     },
     "apps/admin/app/(panel)/product/product-detail-view.generated.tsx": {
-      "template": "admin/detail-view",
-      "hash": "09c895ccd1d526d7",
+      "template": "ui/detail-view",
+      "hash": "3529d2f13ee84465",
       "ownership": "generated"
     },
     "apps/admin/app/(panel)/product/product-view.generated.tsx": {
-      "template": "admin/view",
-      "hash": "a5b4d65134a73ead",
+      "template": "ui/view",
+      "hash": "30af34879918b8c2",
       "ownership": "generated"
     },
     "apps/api/src/modules/product/__tests__/product.repository.spec.ts": {
       "template": "tests/repository",
-      "hash": "d42ca68ab569fd78",
+      "hash": "ed7fbaf63faebc34",
       "ownership": "generated"
     },
     "apps/api/src/modules/product/product.controller.generated.ts": {
@@ -40,7 +40,7 @@
     },
     "apps/api/src/modules/product/product.repository.generated.ts": {
       "template": "nestjs/repository",
-      "hash": "c63c2aaf5080d73a",
+      "hash": "423bb81b7522a31e",
       "ownership": "generated"
     },
     "apps/api/src/modules/product/product.service.generated.ts": {
@@ -50,7 +50,7 @@
     },
     "packages/shared/src/schemas/domain/product.generated.ts": {
       "template": "contracts/zod",
-      "hash": "e981daee4701d7dc",
+      "hash": "7e3b12bde8952f5c",
       "ownership": "generated"
     }
   },

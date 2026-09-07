@@ -3,6 +3,8 @@ import type { Prisma, Reward, RewardClaim, RewardType } from "@prisma/client";
 
 import type { RewardClaimListQuery } from "@workspace/shared";
 
+import { fetchStringIdListPage } from "../../../platform/persistence/cursor-list";
+import type { RepositoryListResult } from "../../../platform/persistence/types";
 import { PrismaService } from "../../../prisma/prisma.service";
 
 const CLAIM_WITH_REWARD_TITLE_INCLUDE = {
@@ -64,26 +66,27 @@ export class RewardClaimRepository {
 		});
 	}
 
-	public async listForUser(userId: string, query: RewardClaimListQuery): Promise<{ readonly rows: RewardClaimWithRewardTitle[]; readonly total: number }> {
-		const skip = (query.page - 1) * query.limit;
+	public async listForUser(
+		userId: string,
+		query: RewardClaimListQuery,
+	): Promise<RepositoryListResult<RewardClaimWithRewardTitle>> {
 		const where: Prisma.RewardClaimWhereInput = {
 			userId,
 			isDeleted: false,
 			...(query.status !== undefined ? { status: query.status } : {}),
 		};
 
-		const [rows, total] = await this.prisma.$transaction([
-			this.prisma.rewardClaim.findMany({
-				where,
-				include: CLAIM_WITH_REWARD_TITLE_INCLUDE,
-				orderBy: { claimedAt: "desc" },
-				skip,
-				take: query.limit,
-			}),
-			this.prisma.rewardClaim.count({ where }),
-		]);
-
-		return { rows, total };
+		return fetchStringIdListPage(query, {
+			where,
+			mergeCursor: (baseWhere, cursorId) => ({ ...baseWhere, id: { gt: cursorId } }),
+			readId: (row) => row.id,
+			findMany: (args): Promise<RewardClaimWithRewardTitle[]> =>
+				this.prisma.rewardClaim.findMany({
+					...args,
+					include: CLAIM_WITH_REWARD_TITLE_INCLUDE,
+				}),
+			count: (listWhere) => this.prisma.rewardClaim.count({ where: listWhere }),
+		});
 	}
 
 	public async findActiveForUser(claimId: string, userId: string): Promise<RewardClaim | null> {

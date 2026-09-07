@@ -1,13 +1,18 @@
 #!/usr/bin/env node
-import { readFile } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import { Command } from "commander";
 
 import * as p from "@clack/prompts";
 import pc from "picocolors";
 
+import { loadGeneratorModules } from "../core/load-modules";
+import { runInitModulesCommand } from "../commands/init-modules";
 import { runDoctorCommand, runGenerateResourceCommand } from "../commands/generate-resource";
+import { runRollbackResourceCommand } from "../commands/rollback-resource";
+import { runNewResourceCommand } from "../commands/new-resource";
 import { inspectResourceDefinition, resolveDefinitionPath, validateResourceDefinition } from "../commands/schema-commands";
 import { loadProjectConfig } from "../core/project";
+import { ensureCliEslintConfig } from "../generators/workspace/ensure-cli-eslint-config";
 import { normalizeResourceDefinition } from "../ir/normalize";
 import { parseResourceDefinitionFile } from "../parser/parse-resource-definition";
 import { printAppBanner, CLI_VERSION } from "../ui/brand";
@@ -28,7 +33,6 @@ program
 	.description("Initialize generator metadata in the current monorepo")
 	.action(async () => {
 		const config = loadProjectConfig(process.cwd());
-		const { ensureCliEslintConfig } = await import("../generators/workspace/ensure-cli-eslint-config");
 		printAppBanner();
 		p.intro("Project layout");
 		p.log.info(`Root: ${pc.cyan(config.rootDir)}`);
@@ -37,7 +41,22 @@ program
 		if (eslintStatus === "repaired") {
 			p.log.success("Repaired packages/cli/eslint.config.js");
 		}
+		try {
+			const modules = await loadGeneratorModules(config, { seedIfMissing: true });
+			p.log.success(`UI modules manifest ready (${String(modules.modules.length)} module(s))`);
+		} catch (error) {
+			const message = error instanceof Error ? error.message : String(error);
+			p.log.warn(message);
+		}
 		p.outro("Ready to scaffold.");
+	});
+
+program
+	.command("init-modules")
+	.description("Discover and write .app/generator-modules.json")
+	.action(async () => {
+		const code = await runInitModulesCommand(process.cwd());
+		process.exit(code);
 	});
 
 program
@@ -126,26 +145,56 @@ schema
 	.description("Print normalized IR for a resource definition")
 	.option("--schema <path>", "Path to resource definition file")
 	.action(async (name: string, options: { schema?: string }) => {
-		const path = options.schema ?? resolveDefinitionPath(process.cwd(), name);
-		await inspectResourceDefinition(path);
+		try {
+			const definitionPath = options.schema ?? resolveDefinitionPath(process.cwd(), name);
+			await inspectResourceDefinition(definitionPath);
+		} catch (error) {
+			const message = error instanceof Error ? error.message : String(error);
+			p.log.error(message);
+			process.exit(1);
+		}
 	});
 
 schema
 	.command("diff <name>")
 	.description("Show planned changes for a resource")
-	.action(async (name: string) => {
-		const code = await runGenerateResourceCommand(process.cwd(), name, { dryRun: true, nonInteractive: true, allowDestructive: false, skipValidation: true });
+	.option("--schema <path>", "Path to resource definition file")
+	.action(async (name: string, options: { schema?: string }) => {
+		const code = await runGenerateResourceCommand(process.cwd(), name, {
+			dryRun: true,
+			nonInteractive: true,
+			allowDestructive: false,
+			skipValidation: true,
+			schemaPath: options.schema,
+		});
+		process.exit(code);
+	});
+
+program
+	.command("rollback <name>")
+	.description("Rollback generator artifacts for a resource (dry-run by default)")
+	.option("--apply", "Execute the rollback plan", false)
+	.option("--include-definition", "Also delete the .resource.ts definition file", false)
+	.option("--non-interactive", "Skip confirmation prompts", false)
+	.action(async (name: string, options: { apply?: boolean; includeDefinition?: boolean; nonInteractive?: boolean }) => {
+		const code = await runRollbackResourceCommand(process.cwd(), name, {
+			dryRun: options.apply !== true,
+			apply: options.apply === true,
+			includeDefinition: options.includeDefinition === true,
+			nonInteractive: options.nonInteractive === true,
+		});
 		process.exit(code);
 	});
 
 program
 	.command("sync <name>")
 	.description("Regenerate a resource from its definition")
+	.option("--dry-run", "Show plan without writing files", false)
 	.option("--allow-destructive", "Allow destructive schema changes", false)
 	.option("--skip-validation", "Skip format/lint/typecheck after generation", false)
-	.action(async (name: string, options: { allowDestructive?: boolean; skipValidation?: boolean }) => {
+	.action(async (name: string, options: { dryRun?: boolean; allowDestructive?: boolean; skipValidation?: boolean }) => {
 		const code = await runGenerateResourceCommand(process.cwd(), name, {
-			dryRun: false,
+			dryRun: options.dryRun === true,
 			nonInteractive: true,
 			allowDestructive: options.allowDestructive === true,
 			skipValidation: options.skipValidation === true,
@@ -166,23 +215,31 @@ routes
 	.command("list")
 	.description("List generated API routes from definitions")
 	.action(async () => {
-		const config = loadProjectConfig(process.cwd());
-		const { readdir } = await import("node:fs/promises");
-		const entries = await readdir(config.definitionsDir);
-		const rows: { slug: string; contractKey: string; label: string; fieldCount: number }[] = [];
-		for (const entry of entries.filter((file) => file.endsWith(".resource.ts"))) {
-			const source = await readFile(`${config.definitionsDir}/${entry}`, "utf8");
-			const definition = parseResourceDefinitionFile(source, entry);
-			const ir = normalizeResourceDefinition(definition);
-			rows.push({
-				slug: ir.resource.slug,
-				contractKey: ir.resource.contractKey,
-				label: ir.admin?.navigation?.label ?? ir.resource.plural,
-				fieldCount: ir.fields.length,
-			});
+		try {
+			const config = loadProjectConfig(process.cwd());
+			const entries = await readdir(config.definitionsDir);
+			const rows: { slug: string; contractKey: string; label: string; fieldCount: number }[] = [];
+			for (const entry of entries.filter((file) => file.endsWith(".resource.ts"))) {
+				const source = await readFile(`${config.definitionsDir}/${entry}`, "utf8");
+				const definition = parseResourceDefinitionFile(source, entry);
+				const modulesManifest = await loadGeneratorModules(config, { seedIfMissing: true });
+				const ir = normalizeResourceDefinition(definition, { modules: modulesManifest.modules });
+				const firstUi = ir.scope.ui[0];
+				const label = firstUi !== undefined ? ir.uiTargets[firstUi]?.navigation?.label ?? ir.resource.plural : ir.resource.plural;
+				rows.push({
+					slug: ir.resource.slug,
+					contractKey: ir.resource.contractKey,
+					label,
+					fieldCount: ir.fields.length,
+				});
+			}
+			printAppBanner();
+			printRoutesTable(rows);
+		} catch (error) {
+			const message = error instanceof Error ? error.message : String(error);
+			process.stderr.write(`${message}\n`);
+			process.exit(1);
 		}
-		printAppBanner();
-		printRoutesTable(rows);
 	});
 
 program
@@ -202,7 +259,6 @@ newCommand
 	.option("--dry-run", "Show prompts and preview without writing files", false)
 	.option("--skip-validation", "Skip format/lint/typecheck after generation", false)
 	.action(async (options: { generate?: boolean; dryRun?: boolean; skipValidation?: boolean }) => {
-		const { runNewResourceCommand } = await import("../commands/new-resource");
 		const code = await runNewResourceCommand(process.cwd(), {
 			generate: options.generate === true,
 			dryRun: options.dryRun === true,

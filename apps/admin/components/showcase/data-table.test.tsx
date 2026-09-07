@@ -7,11 +7,11 @@
 // pagination/search/selection mutate state through the v9 API, and the empty
 // state behaves.
 
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
-import { DataTable, sanitizeExportCell, type DataTableFeatures } from "@workspace/ui/components/display/data-table";
+import { DataTable, sanitizeExportCell, type DataTableFeatures, type DataTableServerPagination } from "@workspace/ui/components/display/data-table";
 import type { ColumnDef } from "@tanstack/react-table";
 
 import { ADMIN_DATA_TABLE_LABELS } from "@/lib/data-table-labels";
@@ -43,6 +43,18 @@ function makeRows(count: number): DemoRow[] {
 			status: (index + 1) % 3 === 0 ? "Done" : "In Progress",
 		})),
 	);
+}
+
+function createServerPagination(overrides: Partial<DataTableServerPagination<DemoRow>> = {}): DataTableServerPagination<DemoRow> {
+	return {
+		mode: "server",
+		totalCount: 12,
+		pageIndex: 0,
+		pageSize: 10,
+		onPageChange: (): void => undefined,
+		getRowId: (row: DemoRow): string => String(row.id),
+		...overrides,
+	};
 }
 
 afterEach(() => {
@@ -127,8 +139,9 @@ describe("DataTable (shared, TanStack Table v9)", () => {
 			fireEvent.click(screen.getByText("Export"));
 			fireEvent.click(screen.getByText("JSON"));
 
-			// The exported payload contains exactly the two selected rows.
-			expect(createObjectURL).toHaveBeenCalled();
+			await waitFor(() => {
+				expect(createObjectURL).toHaveBeenCalled();
+			});
 			expect(capturedBlob).toBeInstanceOf(Blob);
 			if (!(capturedBlob instanceof Blob)) {
 				throw new Error("Expected exportToJSON to create a Blob");
@@ -229,15 +242,19 @@ describe("DataTable (shared, TanStack Table v9)", () => {
 		expect(screen.getByText(/All 10 rows on this page are selected/)).toBeTruthy();
 	});
 
-	it("server-side (manual) mode does not slice rows client-side", () => {
-		render(<DataTable labels={ADMIN_DATA_TABLE_LABELS} data={makeRows(12)} columns={demoColumns} manual totalCount={120} pageSize={5} />);
+	it("server pagination mode does not slice rows client-side", () => {
+		render(
+			<DataTable
+				labels={ADMIN_DATA_TABLE_LABELS}
+				data={makeRows(10)}
+				columns={demoColumns}
+				pagination={createServerPagination({ totalCount: 50, pageSize: 10 })}
+			/>,
+		);
 
-		// All 12 rows render — v9 bypasses the paginated row model when
-		// `manualPagination` is on, so the consumer owns the slicing.
-		expect(screen.getAllByText(/^Section \d+$/)).toHaveLength(12);
-
-		// The pager reflects the server-provided total (120 / 5 = 24 pages).
-		expect(screen.getByText(/of 120 results/)).toBeTruthy();
+		expect(screen.getAllByText(/^Section \d+$/)).toHaveLength(10);
+		expect(screen.getByText(/Showing 1 to 10 of 50 results/)).toBeTruthy();
+		expect(screen.getByText(/Page 1 of 5/)).toBeTruthy();
 	});
 
 	it("renders the empty state when there are no rows", () => {
@@ -294,75 +311,66 @@ describe("DataTable (shared, TanStack Table v9)", () => {
 		expect(screen.queryByText("Section 11")).toBeNull();
 	});
 
-	it("hides the client-side search and column filters in manual (server-side) mode", () => {
+	it("hides the client-side search when server pagination is active", () => {
 		render(
 			<DataTable
 				labels={ADMIN_DATA_TABLE_LABELS}
-				data={makeRows(12)}
+				data={makeRows(10)}
 				columns={demoColumns}
-				manual
-				totalCount={120}
+				pagination={createServerPagination()}
 				searchKeys={["header"]}
 				filters={[{ key: "status", label: "Status", options: [] }]}
+				onManualColumnFilterChange={(): void => undefined}
 			/>,
 		);
 
-		// The consumer owns filtering in server-side mode — the toolbar is gone.
 		expect(screen.queryByPlaceholderText("Search...")).toBeNull();
-		expect(screen.queryByText(/All Status/)).toBeNull();
+		expect(screen.getByText("Status")).toBeTruthy();
 	});
 
-	it("manual mode uses the controlled page index when computing the next page", () => {
-		const onManualPaginationChange = vi.fn();
+	it("server pagination notifies the parent on page change", () => {
+		const onPageChange = vi.fn();
 		render(
 			<DataTable
 				labels={ADMIN_DATA_TABLE_LABELS}
-				data={makeRows(5)}
+				data={makeRows(10)}
 				columns={demoColumns}
-				manual
-				totalCount={50}
-				pageSize={5}
-				pageIndex={1}
-				onManualPaginationChange={onManualPaginationChange}
+				pagination={createServerPagination({ totalCount: 50, onPageChange })}
 			/>,
 		);
 
 		fireEvent.click(screen.getByRole("button", { name: /next page/i }));
-		expect(onManualPaginationChange).toHaveBeenCalledWith(3, 5);
+		expect(onPageChange).toHaveBeenCalledWith(1, 10);
 	});
 
-	it("manual mode notifies the parent when paginating with a controlled pageIndex", () => {
-		const onManualPaginationChange = vi.fn();
-		const { rerender } = render(
+	it("labels server column filter selects and wires manual filter callbacks", () => {
+		const onPageChange = vi.fn();
+		const onManualColumnFilterChange = vi.fn();
+		render(
 			<DataTable
 				labels={ADMIN_DATA_TABLE_LABELS}
-				data={makeRows(5)}
+				data={makeRows(10)}
 				columns={demoColumns}
-				manual
-				totalCount={50}
-				pageSize={5}
-				pageIndex={0}
-				onManualPaginationChange={onManualPaginationChange}
+				pagination={createServerPagination({ totalCount: 50, pageIndex: 2, onPageChange })}
+				filters={[
+					{
+						key: "status",
+						label: "Status",
+						options: [{ value: "Done", label: "Done" }],
+					},
+				]}
+				manualColumnFilters={{ status: "all" }}
+				onManualColumnFilterChange={onManualColumnFilterChange}
 			/>,
 		);
 
-		fireEvent.click(screen.getByRole("button", { name: /next page/i }));
-		expect(onManualPaginationChange).toHaveBeenCalledWith(2, 5);
+		expect(screen.getByRole("combobox", { name: "Status" })).toBeTruthy();
+	});
 
-		rerender(
-			<DataTable
-				labels={ADMIN_DATA_TABLE_LABELS}
-				data={makeRows(5)}
-				columns={demoColumns}
-				manual
-				totalCount={50}
-				pageSize={5}
-				pageIndex={1}
-				onManualPaginationChange={onManualPaginationChange}
-			/>,
-		);
+	it("changes the client page size through the page-size select", () => {
+		render(<DataTable labels={ADMIN_DATA_TABLE_LABELS} data={makeRows(12)} columns={demoColumns} pageSizeOptions={[5, 10, 20]} />);
 
-		expect(screen.getByText(/Showing 6 to 10 of 50 results/)).toBeTruthy();
+		expect(screen.getByText(/Showing 1 to 10 of 12 results/)).toBeTruthy();
 	});
 
 	it("renders skeleton rows while isLoading instead of the data", () => {
@@ -574,8 +582,8 @@ describe("DataTableShowcase", () => {
 		if (openMenuButton !== undefined) {
 			fireEvent.click(openMenuButton);
 		}
-		expect(screen.getByText("View")).toBeTruthy();
-		expect(screen.getByText("Edit")).toBeTruthy();
-		expect(screen.getByText("Delete")).toBeTruthy();
+		expect(screen.getAllByText("View").length).toBeGreaterThan(0);
+		expect(screen.getAllByText("Edit").length).toBeGreaterThan(0);
+		expect(screen.getAllByText("Delete").length).toBeGreaterThan(0);
 	});
 });

@@ -1,6 +1,9 @@
-import type { ResourceDefinition } from "../schema/resource-definition";
+import { pluralizeLabel } from "../core/humanize";
+import type { ResourceDefinition, UiModuleConfig } from "../schema/resource-definition";
+import type { GeneratorModule } from "../schema/generator-modules";
 import { buildCascadeSoftDeleteChildren } from "./cascade-soft-delete";
-import type { FieldIR, PermissionIR, RelationIR, ResourceIR, WorkflowIR } from "./types";
+import { buildUiTargetIR } from "./ui-context";
+import type { FieldIR, PermissionIR, RelationIR, ResourceIR, UiTargetIR, WorkflowIR } from "./types";
 
 function toCamelCase(value: string): string {
 	if (value.length === 0) {
@@ -11,19 +14,14 @@ function toCamelCase(value: string): string {
 
 function toSlug(value: string): string {
 	return value
+		.replace(/[/\\.:]+/g, "")
 		.replace(/([a-z0-9])([A-Z])/g, "$1-$2")
 		.replace(/[\s_]+/g, "-")
 		.toLowerCase();
 }
 
 function toPlural(singular: string): string {
-	if (singular.endsWith("y") && singular.length > 1) {
-		return `${singular.slice(0, -1)}ies`;
-	}
-	if (singular.endsWith("s")) {
-		return `${singular}es`;
-	}
-	return `${singular}s`;
+	return pluralizeLabel(singular);
 }
 
 function toSnakeCase(value: string): string {
@@ -124,7 +122,48 @@ function buildPermissions(definition: ResourceDefinition): PermissionIR[] {
 	];
 }
 
-export function normalizeResourceDefinition(definition: ResourceDefinition, context?: { readonly allDefinitions?: readonly ResourceDefinition[] }): ResourceIR {
+function buildUiTargetFromConfig(moduleId: string, config: UiModuleConfig, defaultScalarFields: readonly string[], fields: readonly FieldIR[]): UiTargetIR {
+	const listConfig = config.list;
+	const formConfig = config.form;
+	return buildUiTargetIR(moduleId, {
+		navigation: config.navigation
+			? {
+					label: config.navigation.label,
+					icon: config.navigation.icon ?? "Package",
+					group: config.navigation.group ?? "Generated",
+					order: config.navigation.order ?? 100,
+					hiddenInProduction: config.navigation.hiddenInProduction === true,
+				}
+			: undefined,
+		list: {
+			searchable: listConfig?.searchable ?? fields.filter((field) => field.searchable).map((field) => field.name),
+			filters: listConfig?.filters ?? fields.filter((field) => field.filterable).map((field) => field.name),
+			sortable: listConfig?.sortable ?? fields.filter((field) => field.sortable).map((field) => field.name),
+			columns: listConfig?.columns ?? defaultScalarFields,
+		},
+		form: {
+			layout: formConfig?.layout ?? "single-column",
+			fields: formConfig?.fields ?? defaultScalarFields,
+		},
+	});
+}
+
+function validateScopeModules(scopeUi: readonly string[], modules: readonly GeneratorModule[]): void {
+	for (const moduleId of scopeUi) {
+		const found = modules.some((module) => module.id === moduleId);
+		if (!found) {
+			throw new Error(`scope.ui references unknown module "${moduleId}". Run "app init modules" to refresh the manifest.`);
+		}
+	}
+}
+
+export function normalizeResourceDefinition(
+	definition: ResourceDefinition,
+	context?: {
+		readonly allDefinitions?: readonly ResourceDefinition[];
+		readonly modules?: readonly GeneratorModule[];
+	},
+): ResourceIR {
 	const modelName = definition.model.name;
 	const singular = definition.name;
 	const slug = toSlug(singular);
@@ -132,11 +171,23 @@ export function normalizeResourceDefinition(definition: ResourceDefinition, cont
 		.map(([name, fieldDef]) => buildFieldIR(name, fieldDef))
 		.sort((left, right) => left.name.localeCompare(right.name));
 
-	const listConfig = definition.admin?.list;
-	const formConfig = definition.admin?.form;
 	const defaultScalarFields = fields.filter((field) => field.type !== "relation").map((field) => field.name);
 	const cascadeSoftDeleteChildren =
 		context?.allDefinitions !== undefined ? buildCascadeSoftDeleteChildren(modelName, context.allDefinitions) : [];
+
+	const scopeUi = definition.scope.ui;
+	if (context?.modules !== undefined) {
+		validateScopeModules(scopeUi, context.modules);
+	}
+
+	const uiTargets: Record<string, UiTargetIR> = {};
+	for (const moduleId of scopeUi) {
+		const moduleConfig = definition.ui?.[moduleId];
+		if (moduleConfig === undefined) {
+			throw new Error(`Missing ui.${moduleId} block for scope.ui entry.`);
+		}
+		uiTargets[moduleId] = buildUiTargetFromConfig(moduleId, moduleConfig, defaultScalarFields, fields);
+	}
 
 	return {
 		version: definition.version,
@@ -149,6 +200,12 @@ export function normalizeResourceDefinition(definition: ResourceDefinition, cont
 			modelName,
 			permissionResource: toPermissionResourceEnum(modelName),
 		},
+		scope: {
+			api: definition.scope.api,
+			shared: definition.scope.shared,
+			client: definition.scope.client,
+			ui: scopeUi,
+		},
 		fields,
 		relations: buildRelations(fields),
 		workflow: buildWorkflowIR(definition, modelName),
@@ -158,29 +215,9 @@ export function normalizeResourceDefinition(definition: ResourceDefinition, cont
 		rls: definition.model.rls,
 		cascadeSoftDeleteChildren,
 		permissions: buildPermissions(definition),
-		admin: definition.admin
-			? {
-					navigation: definition.admin.navigation
-						? {
-								label: definition.admin.navigation.label,
-								icon: definition.admin.navigation.icon ?? "Package",
-								group: definition.admin.navigation.group ?? "Generated",
-								order: definition.admin.navigation.order ?? 100,
-								hiddenInProduction: definition.admin.navigation.hiddenInProduction === true,
-							}
-						: undefined,
-					list: {
-						searchable: listConfig?.searchable ?? fields.filter((f) => f.searchable).map((f) => f.name),
-						filters: listConfig?.filters ?? fields.filter((f) => f.filterable).map((f) => f.name),
-						sortable: listConfig?.sortable ?? fields.filter((f) => f.sortable).map((f) => f.name),
-						columns: listConfig?.columns ?? defaultScalarFields,
-					},
-					form: {
-						layout: formConfig?.layout ?? "single-column",
-						fields: formConfig?.fields ?? defaultScalarFields,
-					},
-				}
-			: undefined,
+		uiTargets,
+		admin: undefined,
+		activeUi: undefined,
 		events: {
 			created: definition.events?.created === true,
 			updated: definition.events?.updated === true,

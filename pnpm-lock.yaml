@@ -207,6 +207,9 @@ importers:
       '@tanstack/react-table':
         specifier: ^9.2.4
         version: 9.2.4(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      '@workspace/cli':
+        specifier: workspace:*
+        version: link:../../packages/cli
       '@workspace/client':
         specifier: workspace:*
         version: link:../../packages/client
@@ -988,6 +991,9 @@ importers:
         specifier: 4.5.4
         version: 4.5.4
     devDependencies:
+      '@types/node':
+        specifier: ^26.4.1
+        version: 26.4.1
       '@workspace/eslint-config':
         specifier: workspace:*
         version: link:../eslint-config

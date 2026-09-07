@@ -12,6 +12,11 @@ export type EmptyMutationInput = z.output<typeof EmptyMutationInputSchema>;
 export interface RepositoryListResult<TEntity> {
 	readonly items: readonly TEntity[];
 	readonly total: number;
+	readonly page: number;
+	readonly totalPages: number;
+	readonly nextCursor: string | null;
+	readonly hasNext: boolean;
+	readonly hasPrevious: boolean;
 }
 
 /** Lifecycle flags shared by generated and manual repositories. */
@@ -27,6 +32,9 @@ export interface RepositoryPorts<TEntity, TCreate, TUpdate, TQuery extends Pagin
 	readonly toUpdateInput: (input: TUpdate) => TUpdateInput;
 	readonly buildListWhere: (query: TQuery) => TWhere;
 	readonly buildListOrderBy: (query: TQuery) => TOrderBy;
+	readonly buildListCursorOrderBy: (query: TQuery) => TOrderBy;
+	readonly mergeListCursor: (where: TWhere, cursorId: string) => TWhere;
+	readonly readListCursorId: (row: TRow) => string;
 	readonly buildFindByIdWhere: (id: string) => TWhere;
 	/** Finds a row by id regardless of soft-delete state — required when `cascadeSoftDelete` is set. */
 	readonly buildFindByIdIncludingDeletedWhere?: (id: string) => TWhere;
@@ -52,7 +60,7 @@ export interface RepositoryInstance<TEntity, TCreate, TUpdate, TQuery extends Pa
 	readonly restore: (id: string) => Promise<TEntity>;
 }
 export interface PrismaModelDelegate<TRow, TWhere, TOrderBy, TCreateInput, TUpdateInput, TUpdateWhere, TDeleteWhere = TUpdateWhere> {
-	findMany(args: { where: TWhere; skip: number; take: number; orderBy: TOrderBy }): Promise<TRow[]>;
+	findMany(args: { where: TWhere; take: number; skip?: number; orderBy: TOrderBy }): Promise<TRow[]>;
 	findFirst(args: { where: TWhere }): Promise<TRow | null>;
 	count(args: { where: TWhere }): Promise<number>;
 	create(args: { data: TCreateInput }): Promise<TRow>;

@@ -1,0 +1,32 @@
+{
+  "resource": "product",
+  "createdAt": "2026-09-07T13:39:19.018Z",
+  "definitionRelativePath": "resources/definitions/product.resource.ts",
+  "stashedPaths": [
+    "apps/api/prisma/schema.prisma",
+    "apps/api/prisma/rls.sql",
+    "apps/api/src/app.module.ts",
+    "packages/shared/src/schemas/domain/enums.ts",
+    "packages/shared/src/api-routes.ts",
+    "packages/shared/src/contracts/index.ts",
+    "packages/shared/src/schemas/index.ts",
+    "packages/shared/src/contracts/versioning.ts",
+    "packages/client/src/lib/api/endpoints.ts",
+    "apps/admin/lib/navigation/sidebar-menu.json"
+  ],
+  "gitStashRef": null,
+  "gitStashMessage": null,
+  "hasSyncedSinceGenerate": true,
+  "trackedFiles": [
+    "apps/admin/app/(panel)/product/__tests__/product-view.test.tsx",
+    "apps/admin/app/(panel)/product/[id]/page.tsx",
+    "apps/admin/app/(panel)/product/page.tsx",
+    "apps/admin/app/(panel)/product/product-detail-view.generated.tsx",
+    "apps/admin/app/(panel)/product/product-view.generated.tsx",
+    "apps/api/src/modules/product/__tests__/product.repository.spec.ts",
+    "apps/api/src/modules/product/product.controller.generated.ts",
+    "apps/api/src/modules/product/product.repository.generated.ts",
+    "apps/api/src/modules/product/product.service.generated.ts",
+    "packages/shared/src/schemas/domain/product.generated.ts"
+  ]
+}

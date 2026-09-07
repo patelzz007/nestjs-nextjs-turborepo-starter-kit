@@ -1,3 +1,4 @@
+import type { ColumnPinningState, ColumnVisibilityState, SortingState } from "@tanstack/react-table";
 import { z } from "zod";
 
 const sortingStateEntrySchema = z.object({
@@ -105,13 +106,80 @@ export function toDataTableCellString(value: DataTableCellScalar | object): stri
 	return JSON.stringify(value) || "";
 }
 
-const dataTableRowRecordSchema = z.record(z.string(), z.union([DataTableCellScalarSchema, z.record(z.string(), DataTableCellScalarSchema)]));
+const dataTableRowFieldSchema = z.union([DataTableCellScalarSchema, DataTableStructuredCellSchema]);
 
 export function readDataTableRowField(row: object, key: string): DataTableCellScalar | object {
-	const parsed = dataTableRowRecordSchema.safeParse(row);
-	if (!parsed.success) {
+	const recordParsed = z.record(z.string(), dataTableRowFieldSchema).safeParse(row);
+	if (!recordParsed.success) {
 		return "";
 	}
-	const value = parsed.data[key];
+	const value = recordParsed.data[key];
 	return value ?? "";
+}
+
+export interface ReconcileDataTablePrefsInput {
+	readonly prefs: DataTablePersistedPrefs | null;
+	readonly columnIds: readonly string[];
+	readonly pageSizeOptions: readonly number[];
+	readonly defaultPageSize: number;
+	readonly isServerMode: boolean;
+}
+
+export interface ReconciledDataTablePrefs {
+	readonly columnVisibility: ColumnVisibilityState;
+	readonly pageSize: number;
+	readonly sorting: SortingState;
+	readonly columnPinning: ColumnPinningState;
+}
+
+function reconcilePageSize(saved: number | undefined, pageSizeOptions: readonly number[], defaultPageSize: number): number {
+	if (saved === undefined) {
+		return defaultPageSize;
+	}
+	if (pageSizeOptions.includes(saved)) {
+		return saved;
+	}
+	return pageSizeOptions[0] ?? defaultPageSize;
+}
+
+function reconcileColumnVisibility(saved: ColumnVisibilityState | undefined, columnIds: readonly string[]): ColumnVisibilityState {
+	if (saved === undefined) {
+		return {};
+	}
+	const allowed = new Set(columnIds);
+	const next: ColumnVisibilityState = {};
+	for (const [columnId, visible] of Object.entries(saved)) {
+		if (allowed.has(columnId)) {
+			next[columnId] = visible;
+		}
+	}
+	return next;
+}
+
+function reconcileSorting(saved: SortingState | undefined, columnIds: readonly string[], isServerMode: boolean): SortingState {
+	if (isServerMode || saved === undefined) {
+		return [];
+	}
+	const allowed = new Set(columnIds);
+	return saved.filter((entry) => allowed.has(entry.id));
+}
+
+function reconcileColumnPinning(saved: DataTablePersistedPrefs["columnPinning"], columnIds: readonly string[]): ColumnPinningState {
+	const allowed = new Set(columnIds);
+	const filterIds = (ids: string[] | undefined): string[] => (ids ?? []).filter((id) => allowed.has(id));
+	return {
+		start: filterIds(saved?.start),
+		end: filterIds(saved?.end),
+	};
+}
+
+/** Validates persisted prefs against the live table configuration. */
+export function reconcileDataTablePrefs(input: ReconcileDataTablePrefsInput): ReconciledDataTablePrefs {
+	const prefs = input.prefs;
+	return {
+		columnVisibility: reconcileColumnVisibility(prefs?.columnVisibility, input.columnIds),
+		pageSize: reconcilePageSize(prefs?.pageSize, input.pageSizeOptions, input.defaultPageSize),
+		sorting: reconcileSorting(prefs?.sorting, input.columnIds, input.isServerMode),
+		columnPinning: reconcileColumnPinning(prefs?.columnPinning, input.columnIds),
+	};
 }

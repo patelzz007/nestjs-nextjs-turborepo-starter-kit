@@ -46,7 +46,16 @@ export class ZodValidationPipe implements PipeTransform<JsonValue, JsonValue> {
 			return value;
 		}
 
-		const issues: readonly { readonly path: string; readonly message: string; readonly code: string }[] = validator.errors.map(
+		const validationErrors = validator.errors;
+		if (validationErrors === null || validationErrors === undefined) {
+			throw new BadRequestException({
+				message: "Validation failed",
+				errors: [],
+				statusCode: 400,
+			});
+		}
+
+		const issues: readonly { readonly path: string; readonly message: string; readonly code: string }[] = validationErrors.map(
 			(error: ErrorObject): { readonly path: string; readonly message: string; readonly code: string } => ({
 				path: error.instancePath.replace(/^\//, "").replace(/\//g, ".") || "root",
 				message: this.formatErrorMessage(error),

@@ -3,31 +3,36 @@ import type { Prisma, RewardNotification } from "@prisma/client";
 
 import type { RewardNotificationListQuery } from "@workspace/shared";
 
+import { fetchStringIdCursorPage } from "../../../platform/persistence/cursor-list";
 import { PrismaService } from "../../../prisma/prisma.service";
 
 @Injectable()
 export class RewardNotificationRepository {
 	public constructor(private readonly prisma: PrismaService) {}
 
-	public async listForUser(userId: string, query: RewardNotificationListQuery): Promise<{ readonly rows: RewardNotification[]; readonly unreadCount: number }> {
-		const skip = (query.page - 1) * query.limit;
+	public async listForUser(
+		userId: string,
+		query: RewardNotificationListQuery,
+	): Promise<{ readonly rows: RewardNotification[]; readonly unreadCount: number; readonly nextCursor: string | null; readonly hasNext: boolean }> {
 		const where: Prisma.RewardNotificationWhereInput = {
 			userId,
 			isDeleted: false,
 			...(query.unreadOnly === true ? { readAt: null } : {}),
 		};
 
-		const [rows, unreadCount] = await this.prisma.$transaction([
-			this.prisma.rewardNotification.findMany({
+		const [result, unreadCount] = await Promise.all([
+			fetchStringIdCursorPage<Prisma.RewardNotificationWhereInput, RewardNotification>({
+				limit: query.limit,
+				cursor: query.cursor,
 				where,
-				orderBy: { createdAt: "desc" },
-				skip,
-				take: query.limit,
+				mergeCursor: (baseWhere, cursorId) => ({ ...baseWhere, id: { gt: cursorId } }),
+				readId: (row) => row.id,
+				findMany: (args): Promise<RewardNotification[]> => this.prisma.rewardNotification.findMany(args),
 			}),
 			this.prisma.rewardNotification.count({ where: { userId, isDeleted: false, readAt: null } }),
 		]);
 
-		return { rows, unreadCount };
+		return { rows: [...result.items], unreadCount, nextCursor: result.nextCursor, hasNext: result.hasNext };
 	}
 
 	public async markAllRead(userId: string, readAt: number): Promise<void> {

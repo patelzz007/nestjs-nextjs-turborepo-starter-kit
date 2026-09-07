@@ -400,7 +400,7 @@ export const apiContract = {
 		delete: defineContract({ method: "DELETE", path: apiRoutes.sampleCategory.delete.path, input: SampleCategoryIdParamSchema }),
 		restore: defineContract({ method: "POST", path: apiRoutes.sampleCategory.restore.path, input: SampleCategoryIdParamSchema }),
 	},
-	// @app-generated:end sampleCategory,
+	// @app-generated:end sampleCategory
 	// @app-generated:begin product
 	product: {
 		list: defineContract({ method: "GET", path: apiRoutes.product.list, input: ProductListQuerySchema }),

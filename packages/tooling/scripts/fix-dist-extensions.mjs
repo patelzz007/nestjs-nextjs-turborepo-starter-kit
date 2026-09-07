@@ -238,36 +238,83 @@ function hasLeftover(text) {
 	return false;
 }
 
-let scanned = 0;
+function rewriteUntilStable(text) {
+	let current = text;
+	for (let pass = 0; pass < 8; pass += 1) {
+		const next = rewrite(current);
+		if (next === current) {
+			return current;
+		}
+		current = next;
+	}
+	return rewrite(current);
+}
+
+function isTargetFile(file) {
+	return /\.(?:js|mjs|cjs|d\.ts)$/.test(file);
+}
+
+async function listTargetFiles(rootDir) {
+	const files = await walk(rootDir);
+	return files.filter(isTargetFile);
+}
+
+async function rewriteFileIfNeeded(file) {
+	const original = await readFile(file, "utf8");
+	const fixed = rewriteUntilStable(original);
+	if (fixed === original) {
+		return false;
+	}
+	await writeFile(file, fixed);
+	return true;
+}
+
+async function rewriteAll(files) {
+	let changed = 0;
+	for (const file of files) {
+		if (await rewriteFileIfNeeded(file)) {
+			changed += 1;
+		}
+	}
+	return changed;
+}
+
+async function findLeftovers(files) {
+	const leftovers = [];
+	for (const file of files) {
+		const text = await readFile(file, "utf8");
+		if (hasLeftover(text)) {
+			leftovers.push(file);
+		}
+	}
+	return leftovers;
+}
+
+const files = await listTargetFiles(targetDir);
+const scanned = files.length;
 let rewritten = 0;
 
-const files = await walk(targetDir);
-for (const file of files) {
-	if (!/\.(?:js|mjs|cjs|d\.ts)$/.test(file)) {
-		continue;
-	}
-	scanned += 1;
-	const original = await readFile(file, "utf8");
-	const fixed = rewrite(original);
-	if (fixed !== original) {
-		await writeFile(file, fixed);
-		rewritten += 1;
+// Global passes — some files only stabilize after dependents are rewritten first.
+for (let pass = 0; pass < 5; pass += 1) {
+	const changed = await rewriteAll(files);
+	rewritten += changed;
+	if (changed === 0) {
+		break;
 	}
 }
 
 console.log(`fix-dist-extensions: scanned ${scanned} files, rewrote ${rewritten} (${targetDir})`);
 
-// ── Self-verification ──────────────────────────────────────────────────────
-// A second pass must find zero leftover extensionless specifiers in real code.
-const leftovers = [];
-for (const file of files) {
-	if (!/\.(?:js|mjs|cjs|d\.ts)$/.test(file)) {
-		continue;
+// Self-verification with repair retries. `tsc --watch` (or turbo cache restore) can
+// briefly rewrite dist/ between our pass and the check — repair instead of failing.
+const MAX_REPAIR_ROUNDS = 5;
+let leftovers = await findLeftovers(files);
+
+for (let round = 0; round < MAX_REPAIR_ROUNDS && leftovers.length > 0; round += 1) {
+	for (const file of leftovers) {
+		await rewriteFileIfNeeded(file);
 	}
-	const text = await readFile(file, "utf8");
-	if (hasLeftover(text)) {
-		leftovers.push(file);
-	}
+	leftovers = await findLeftovers(files);
 }
 
 if (leftovers.length > 0) {
@@ -275,5 +322,6 @@ if (leftovers.length > 0) {
 	for (const file of leftovers) {
 		console.error(`  - ${file}`);
 	}
+	console.error("Stop any process that writes to dist/ without .js extensions (e.g. an old `tsc --watch` on @workspace/cli).");
 	process.exit(1);
 }

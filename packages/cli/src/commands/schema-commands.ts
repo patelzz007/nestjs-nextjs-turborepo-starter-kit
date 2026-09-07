@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
@@ -48,7 +49,7 @@ export function resolveDefinitionPath(cwd: string, resourceName: string): string
 		path.isAbsolute(resourceName) ? resourceName : path.join(cwd, resourceName),
 	];
 	for (const candidate of candidates) {
-		if (candidate.endsWith(".resource.ts")) {
+		if (existsSync(candidate)) {
 			return candidate;
 		}
 	}

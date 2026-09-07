@@ -56,7 +56,13 @@ function fromApiResponse(user: UserResponse): DisplayUser {
 	};
 }
 
-export default function HelloView({ initialEnvelope }: { readonly initialEnvelope: Envelope<UserResponse> }): JSX.Element {
+export default function HelloView({
+	initialEnvelope,
+	sessionActive,
+}: {
+	readonly initialEnvelope: Envelope<UserResponse>;
+	readonly sessionActive: boolean;
+}): JSX.Element {
 	const { api } = useAuth();
 	const storeUser = useAuthUser();
 	const [showDetails, setShowDetails] = useState(false);
@@ -102,7 +108,7 @@ export default function HelloView({ initialEnvelope }: { readonly initialEnvelop
 
 	return (
 		<div className="flex min-h-svh flex-col">
-			<ImpersonationBanner />
+			<ImpersonationBanner sessionActive={sessionActive} />
 			<div className="flex flex-1 items-center justify-center p-8">
 				<div className="w-full max-w-lg space-y-8">
 					{/* Breadcrumb (context-driven, with mandatory icons) */}

@@ -1,6 +1,6 @@
 import { ConflictException, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import type { Permission, UserPermission } from "@prisma/client";
-import type { PermissionAction, PermissionResource } from "@workspace/shared";
+import type { PaginatedServiceResult, PermissionAction, PermissionResource } from "@workspace/shared";
 
 import { BaseService } from "../../../platform/persistence/base.service";
 import { AuthorizationAuditService } from "../audit/authorization-audit.service";
@@ -141,19 +141,20 @@ export class PermissionService extends BaseService<Permission, CreatePermissionI
 			readonly action?: PermissionAction;
 			readonly group?: string;
 			readonly page?: number;
+			readonly cursor?: string;
 			readonly limit?: number;
 		} = {},
-	): Promise<{ readonly items: Permission[]; readonly total: number }> {
-		const page: number = filters.page ?? 1;
+	): Promise<PaginatedServiceResult<Permission>> {
 		const limit: number = filters.limit ?? 50;
 		const result = await this.repository.list({
-			page,
+			page: filters.page ?? 1,
 			limit,
+			cursor: filters.cursor,
 			resource: filters.resource,
 			action: filters.action,
 			group: filters.group,
 		});
-		return { items: [...result.items], total: result.total };
+		return this.paginateListResult(result, { page: filters.page ?? 1, limit, cursor: filters.cursor });
 	}
 
 	/**

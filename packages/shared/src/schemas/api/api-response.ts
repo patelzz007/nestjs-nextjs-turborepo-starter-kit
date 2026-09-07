@@ -23,15 +23,16 @@ export const ApiResponseMetaSchema = z
 export type ApiResponseMeta = z.output<typeof ApiResponseMetaSchema>;
 
 /**
- * Paginated meta — extended metadata returned for paginated list endpoints.
+ * Paginated meta — extended metadata returned for cursor-paginated list endpoints.
  */
 export const ApiPaginatedMetaSchema = ApiResponseMetaSchema.extend({
-	total: z.number().int().min(0).meta({ description: "Total number of items across all pages", example: 42 }),
-	page: z.number().int().min(1).meta({ description: "Current page number (1-based)", example: 1 }),
 	limit: z.number().int().min(1).max(100).meta({ description: "Items per page", example: 20 }),
-	totalPages: z.number().int().min(0).nullable().meta({ description: "Total number of pages", example: 3 }),
-	hasNext: z.boolean().nullable().meta({ description: "Whether a next page exists", example: true }),
-	hasPrevious: z.boolean().nullable().meta({ description: "Whether a previous page exists", example: false }),
+	total: z.number().int().nonnegative().meta({ description: "Total rows matching the current filters", example: 156 }),
+	page: z.number().int().min(1).meta({ description: "Current page (1-indexed)", example: 1 }),
+	totalPages: z.number().int().min(1).meta({ description: "Total pages for the current filters and page size", example: 8 }),
+	nextCursor: z.string().nullable().meta({ description: "Opaque cursor for the next page, or null when there are no more rows", example: "Y2x1c18x" }),
+	hasNext: z.boolean().meta({ description: "Whether a next page exists", example: true }),
+	hasPrevious: z.boolean().meta({ description: "Whether a previous page exists", example: false }),
 }).strict();
 
 export type ApiPaginatedMeta = z.output<typeof ApiPaginatedMetaSchema>;
@@ -42,22 +43,24 @@ export type ApiPaginatedMeta = z.output<typeof ApiPaginatedMetaSchema>;
  */
 export const PaginatedServiceResultSchema = z.object({
 	items: z.array(DataValueSchema),
+	limit: z.number(),
 	total: z.number(),
 	page: z.number(),
-	limit: z.number(),
-	totalPages: z.number().optional(),
-	hasNext: z.boolean().optional(),
-	hasPrevious: z.boolean().optional(),
+	totalPages: z.number(),
+	nextCursor: z.string().nullable(),
+	hasNext: z.boolean(),
+	hasPrevious: z.boolean(),
 });
 
 export interface PaginatedServiceResult<TItem = DataValue> {
 	items: TItem[];
+	limit: number;
 	total: number;
 	page: number;
-	limit: number;
-	totalPages?: number;
-	hasNext?: boolean;
-	hasPrevious?: boolean;
+	totalPages: number;
+	nextCursor: string | null;
+	hasNext: boolean;
+	hasPrevious: boolean;
 }
 
 /**

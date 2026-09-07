@@ -4,7 +4,7 @@ import type { ResourceIR } from "../../ir/types";
 import { isTextSearchableField, resolveSearchableFieldNames, toSortableCamelNames } from "./list-query";
 
 const sampleResourceIr: ResourceIR = {
-	version: 1,
+	version: 2,
 	resource: {
 		name: "SampleResource",
 		singular: "SampleResource",
@@ -14,6 +14,7 @@ const sampleResourceIr: ResourceIR = {
 		modelName: "SampleResource",
 		permissionResource: "SAMPLE_RESOURCE",
 	},
+	scope: { api: true, shared: true, client: true, ui: ["admin"] },
 	fields: [
 		{
 			name: "name",
@@ -56,6 +57,19 @@ const sampleResourceIr: ResourceIR = {
 	rls: "admin-only",
 	cascadeSoftDeleteChildren: [],
 	permissions: [],
+	uiTargets: {
+		admin: {
+			moduleId: "admin",
+			navigation: undefined,
+			list: {
+				searchable: ["name"],
+				filters: [],
+				sortable: ["name", "createdAt"],
+				columns: ["name"],
+			},
+			form: { layout: "single-column", fields: ["name"] },
+		},
+	},
 	admin: {
 		navigation: undefined,
 		list: {
@@ -66,6 +80,7 @@ const sampleResourceIr: ResourceIR = {
 		},
 		form: { layout: "single-column", fields: ["name"] },
 	},
+	activeUi: undefined,
 	events: { created: false, updated: false, deleted: false },
 	audit: false,
 };

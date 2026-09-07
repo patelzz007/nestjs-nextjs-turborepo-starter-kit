@@ -5,14 +5,16 @@ import { z } from "zod";
 import { createDataTableLabels } from "@/lib/data-table-labels";
 import { buildReadOnlyTableCheckbox } from "@/lib/data-table-capabilities";
 import { DataTableMobileCard } from "@/lib/data-table-mobile-card";
-import { readPaginatedTotal, stubPaginatedMeta } from "@/lib/api-envelope";
+import { readPaginatedNextCursor, readPaginatedTotal, stubPaginatedMeta } from "@/lib/api-envelope";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
+import { useManualHybridPagination } from "@/lib/use-manual-cursor-pagination";
+import { DataTableSearchToolbar } from "@/components/common/data-table-search-toolbar";
 import { useAuth } from "@workspace/client/lib/auth";
 import { Badge } from "@workspace/ui/components/feedback/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
 import { DataTable, type Action, type DataTableFeatures, type Filter } from "@workspace/ui/components/display/data-table";
-import { Input } from "@workspace/ui/components/form/input";
 import type { ColumnDef, SortingState } from "@tanstack/react-table";
-import { Eye, Search } from "lucide-react";
+import { Eye } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
@@ -21,6 +23,8 @@ import { keepPreviousData } from "@tanstack/react-query";
 export interface UsersAllTableProps {
 	readonly initialUsers?: readonly AdminUserDetail[];
 	readonly initialTotal?: number;
+	readonly initialTotalPages?: number;
+	readonly initialHasNext?: boolean;
 	readonly heading?: string;
 	readonly description?: string;
 }
@@ -28,19 +32,6 @@ export interface UsersAllTableProps {
 const PAGE_SIZE_OPTIONS: readonly number[] = [10, 20, 50, 100];
 
 const AdminUserStatusFilterSchema = z.enum(["active", "inactive", "locked"]);
-
-function useDebounce<T>(value: T, delay: number): T {
-	const [debouncedValue, setDebouncedValue] = React.useState(value);
-	React.useEffect((): (() => void) => {
-		const handler = setTimeout(() => {
-			setDebouncedValue(value);
-		}, delay);
-		return (): void => {
-			clearTimeout(handler);
-		};
-	}, [value, delay]);
-	return debouncedValue;
-}
 
 function sortingToApiSort(sorting: SortingState): string | undefined {
 	if (sorting.length === 0) {
@@ -56,33 +47,37 @@ function sortingToApiSort(sorting: SortingState): string | undefined {
 export default function UsersAllTable({
 	initialUsers,
 	initialTotal,
+	initialTotalPages,
+	initialHasNext,
 	heading = "Users",
 	description = "Manage accounts, roles, and direct permissions.",
 }: UsersAllTableProps): React.JSX.Element {
 	const { api } = useAuth();
 	const router = useRouter();
-	const [page, setPage] = React.useState(1);
-	const [pageLimit, setPageLimit] = React.useState(20);
 	const [search, setSearch] = React.useState("");
 	const [statusFilter, setStatusFilter] = React.useState<string>("all");
-	const debouncedSearch = useDebounce(search, 300);
+	const debouncedSearch = useDebouncedValue(search, 300);
 	const [sorting, setSorting] = React.useState<SortingState>([]);
-
-	const prevSearchRef = React.useRef(debouncedSearch);
-	const prevSortRef = React.useRef(sorting);
-	React.useEffect((): void => {
-		const searchChanged = debouncedSearch !== prevSearchRef.current;
-		const sortChanged = sorting !== prevSortRef.current;
-		if (searchChanged || sortChanged) {
-			setPage(1);
-		}
-		prevSearchRef.current = debouncedSearch;
-		prevSortRef.current = sorting;
-	}, [debouncedSearch, sorting]);
 
 	const apiSort = React.useMemo(() => sortingToApiSort(sorting), [sorting]);
 	const trimmedSearch = debouncedSearch.trim();
 	const parsedStatus = statusFilter === "all" ? undefined : AdminUserStatusFilterSchema.safeParse(statusFilter).data;
+	const isFiltered = trimmedSearch.length > 0 || statusFilter !== "all";
+
+	const handleClearFilters = React.useCallback((): void => {
+		setSearch("");
+		setStatusFilter("all");
+	}, []);
+
+	const { pageIndex, pageSize, listQuery, handlePaginationChange, bindListMeta, pagination: basePagination } = useManualHybridPagination<AdminUserDetail>(
+		20,
+		[debouncedSearch, sorting, statusFilter],
+		(user) => user.id,
+		{
+			onClearFilters: handleClearFilters,
+			isFiltered,
+		},
+	);
 
 	const initialQueryData = React.useMemo(
 		() =>
@@ -90,28 +85,32 @@ export default function UsersAllTable({
 				? {
 						success: true as const,
 						data: [...initialUsers],
-						meta: stubPaginatedMeta(initialTotal ?? initialUsers.length, 1, 20),
+						meta: stubPaginatedMeta(20, initialTotal ?? initialUsers.length, 1, initialTotalPages ?? 1, initialHasNext ?? false),
 					}
 				: undefined,
-		[initialUsers, initialTotal],
+		[initialUsers, initialHasNext, initialTotal, initialTotalPages],
 	);
 
 	const usersQuery = api.auth.adminUsers.useQuery(
 		{
-			page,
-			limit: pageLimit,
+			...listQuery,
 			...(trimmedSearch.length > 0 ? { search: trimmedSearch } : {}),
 			...(apiSort !== undefined ? { sort: apiSort } : {}),
 			...(parsedStatus !== undefined ? { status: parsedStatus } : {}),
 		},
 		{
 			placeholderData: keepPreviousData,
-			initialData: page === 1 && pageLimit === 20 && trimmedSearch.length === 0 && sorting.length === 0 ? initialQueryData : undefined,
+			initialData: pageIndex === 0 && pageSize === 20 && trimmedSearch.length === 0 && sorting.length === 0 && statusFilter === "all" ? initialQueryData : undefined,
 		},
 	);
 
 	const rows: readonly AdminUserDetail[] = usersQuery.data?.data ?? [];
-	const total: number = readPaginatedTotal(usersQuery.data?.meta, initialTotal ?? rows.length);
+	const totalCount = readPaginatedTotal(usersQuery.data?.meta, initialTotal ?? initialUsers?.length ?? 0);
+	const pagination = React.useMemo(() => ({ ...basePagination, totalCount }), [basePagination, totalCount]);
+
+	React.useEffect((): void => {
+		bindListMeta(readPaginatedNextCursor(usersQuery.data?.meta) ?? null);
+	}, [bindListMeta, usersQuery.data?.meta]);
 	const tableError: string | null = usersQuery.isError ? "Could not load users. Clear search or sort and try again." : null;
 
 	const handleViewUser = React.useCallback(
@@ -213,11 +212,6 @@ export default function UsersAllTable({
 		[],
 	);
 
-	const handleManualPaginationChange = React.useCallback((nextPage: number, nextPageSize: number): void => {
-		setPage(nextPage);
-		setPageLimit(nextPageSize);
-	}, []);
-
 	const handleManualSortingChange = React.useCallback((nextSorting: SortingState): void => {
 		setSorting(nextSorting);
 	}, []);
@@ -225,7 +219,6 @@ export default function UsersAllTable({
 	const handleManualColumnFilterChange = React.useCallback((filterKey: string, value: string | null): void => {
 		if (filterKey === "status") {
 			setStatusFilter(value === null || value === "all" ? "all" : value);
-			setPage(1);
 		}
 	}, []);
 
@@ -253,16 +246,18 @@ export default function UsersAllTable({
 
 	const checkbox = React.useMemo(() => buildReadOnlyTableCheckbox("users.csv", ["fullName", "email"]), []);
 
-	const handleSearchChange = React.useCallback((event: React.ChangeEvent<HTMLInputElement>): void => {
-		setSearch(event.target.value);
+	const handleSearchChange = React.useCallback((value: string): void => {
+		setSearch(value);
 	}, []);
 
 	const toolbarContent = React.useMemo(
 		() => (
-			<div className="relative w-full sm:max-w-xs">
-				<Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
-				<Input aria-label={tableLabels.searchAriaLabel} placeholder={tableLabels.searchPlaceholder} value={search} onChange={handleSearchChange} className="h-9 pl-8" />
-			</div>
+			<DataTableSearchToolbar
+				value={search}
+				onChange={handleSearchChange}
+				placeholder={tableLabels.searchPlaceholder}
+				ariaLabel={tableLabels.searchAriaLabel}
+			/>
 		),
 		[handleSearchChange, search, tableLabels.searchAriaLabel, tableLabels.searchPlaceholder],
 	);
@@ -276,7 +271,7 @@ export default function UsersAllTable({
 
 			<Card>
 				<CardHeader>
-					<CardTitle className="text-base">{total.toLocaleString()} users</CardTitle>
+					<CardTitle className="text-base">{rows.length > 0 ? `${String(rows.length)} users on this page` : "User directory"}</CardTitle>
 				</CardHeader>
 				<CardContent>
 					<DataTable
@@ -290,16 +285,12 @@ export default function UsersAllTable({
 						manualColumnFilters={manualColumnFilters}
 						onManualColumnFilterChange={handleManualColumnFilterChange}
 						mobileCardRender={mobileCardRender}
-						manual
-						totalCount={total}
-						pageIndex={page - 1}
-						pageSize={pageLimit}
+						pagination={pagination}
 						pageSizeOptions={PAGE_SIZE_OPTIONS}
 						sorting={sorting}
 						error={tableError}
 						isLoading={usersQuery.isLoading}
 						isRefetching={usersQuery.isFetching && !usersQuery.isLoading ? true : false}
-						onManualPaginationChange={handleManualPaginationChange}
 						onManualSortingChange={handleManualSortingChange}
 						toolbarContent={toolbarContent}
 					/>

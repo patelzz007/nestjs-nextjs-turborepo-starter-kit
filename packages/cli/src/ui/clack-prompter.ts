@@ -50,6 +50,18 @@ export function createClackPrompter(): WizardPrompter {
 			return exitOnCancel(result);
 		},
 
+		async multiselect(message, choices: readonly PromptChoice<string>[]): Promise<string[]> {
+			const result = await p.multiselect({
+				message,
+				options: choices.map((choice) => ({
+					value: choice.value,
+					label: choice.label,
+					hint: choice.hint,
+				})),
+			});
+			return exitOnCancel(result);
+		},
+
 		close(): void {
 			// Clack manages its own readline lifecycle.
 		},

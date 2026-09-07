@@ -3,7 +3,6 @@ import { createWebServerCaller } from "@/lib/web-server-api";
 import type { RewardClaimResponse } from "@workspace/shared";
 import * as React from "react";
 
-const CLAIMS_PAGE = 1;
 const CLAIMS_LIMIT = 20;
 
 export const dynamic = "force-dynamic";
@@ -14,7 +13,7 @@ export default async function MyClaimsPage(): Promise<React.JSX.Element> {
 
 	let initialClaims: readonly RewardClaimResponse[] | undefined;
 	try {
-		const response = await server.claims.list.query({ page: CLAIMS_PAGE, limit: CLAIMS_LIMIT });
+		const response = await server.claims.list.query({ limit: CLAIMS_LIMIT });
 		initialClaims = response.data;
 	} catch {
 		initialClaims = undefined;

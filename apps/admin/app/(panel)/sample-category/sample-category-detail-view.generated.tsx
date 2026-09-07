@@ -45,7 +45,7 @@ export default function SampleCategoryDetailView({ id, initialSampleCategory }: 
 	const entity: SampleCategory | undefined = detailQuery.data?.data;
 
 	if (detailQuery.isLoading && entity === undefined) {
-		return <p className="text-muted-foreground">Loading samplecategory…</p>;
+		return <p className="text-muted-foreground">{"Loading samplecategory…"}</p>;
 	}
 
 	if (detailQuery.isError || entity === undefined) {
@@ -53,9 +53,9 @@ export default function SampleCategoryDetailView({ id, initialSampleCategory }: 
 			<div className="space-y-4">
 				<Button variant="outline" nativeButton={false} render={<Link href="/sample-category" />}>
 					<ArrowLeft className="mr-2 size-4" />
-					Back to categories
+					{"Back to categories"}
 				</Button>
-				<p className="text-destructive">Could not load this samplecategory.</p>
+				<p className="text-destructive">{"Could not load this samplecategory."}</p>
 			</div>
 		);
 	}
@@ -65,7 +65,7 @@ export default function SampleCategoryDetailView({ id, initialSampleCategory }: 
 			<div className="flex flex-wrap items-center justify-between gap-3">
 				<Button variant="outline" nativeButton={false} render={<Link href="/sample-category" />}>
 					<ArrowLeft className="mr-2 size-4" />
-					Back to categories
+					{"Back to categories"}
 				</Button>
 				<Button nativeButton={false} render={<Link href={`/sample-category/${entity.id}/edit`} />}>
 					<Pencil className="mr-2 size-4" />

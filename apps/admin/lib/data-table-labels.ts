@@ -38,10 +38,18 @@ export const ADMIN_DATA_TABLE_LABELS: DataTableLabels = {
 	showingResults: "Showing {from} to {to} of {total} results",
 	showPerPage: "Show",
 	perPage: "per page",
+	showingPageCount: "Showing {count} results",
+	pageOfTotal: "Page {page} of {totalPages}",
 	firstPageAriaLabel: "Go to first page",
 	previousPageAriaLabel: "Go to previous page",
 	nextPageAriaLabel: "Go to next page",
 	lastPageAriaLabel: "Go to last page",
+	goToPageAriaLabel: "Go to page {page}",
+	pinColumnAriaLabel: "Pin column",
+	unpinColumnAriaLabel: "Unpin column",
+	exportCurrentPage: "Current page (CSV)",
+	exportCurrentPageDescription: "Exports only the rows visible on this page",
+	loadingTableAriaLabel: "Loading table data",
 };
 
 /** Merge admin defaults with surface-specific overrides (e.g. custom actions menu title). */

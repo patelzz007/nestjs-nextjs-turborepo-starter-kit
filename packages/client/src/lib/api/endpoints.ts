@@ -483,11 +483,11 @@ export const apiRouter = {
 		}),
 		adminMfaRecoveryRequests: defineQuery(apiContract.auth.adminMfaRecoveryRequests, {
 			response: envelope(z.array(AdminMfaRecoveryRequestSchema), ApiPaginatedMetaSchema),
-			queryKey: ({ page, limit, status, userId }) => ["auth", "admin-mfa-recovery-requests", page, limit, status, userId],
+			queryKey: ({ page, cursor, limit, status, userId }) => ["auth", "admin-mfa-recovery-requests", page, cursor, limit, status, userId],
 		}),
 		adminUsers: defineQuery(apiContract.auth.adminUsers, {
 			response: envelope(z.array(AdminUserDetailSchema), ApiPaginatedMetaSchema),
-			queryKey: ({ page, limit, search, sort, role, status }) => ["auth", "admin-users", page, limit, search, sort, role, status],
+			queryKey: ({ page, cursor, limit, search, sort, role, status }) => ["auth", "admin-users", page, cursor, limit, search, sort, role, status],
 		}),
 		adminUserDetail: defineQuery(apiContract.auth.adminUserDetail, {
 			response: envelope(AdminUserDetailSchema),
@@ -582,22 +582,22 @@ export const apiRouter = {
 		}),
 		countries: defineQuery(apiContract.geo.countries, {
 			response: envelope(z.array(CountrySchema), ApiPaginatedMetaSchema),
-			queryKey: ({ page, limit, search }) => ["geo", "countries", page, limit, search],
+			queryKey: ({ page, cursor, limit, search }) => ["geo", "countries", page, cursor, limit, search],
 		}),
 		states: defineQuery(apiContract.geo.states, {
 			response: envelope(z.array(StateSchema), ApiPaginatedMetaSchema),
-			queryKey: ({ page, limit, search, countryCode }) => ["geo", "states", page, limit, search, countryCode],
+			queryKey: ({ page, cursor, limit, search, countryCode }) => ["geo", "states", page, cursor, limit, search, countryCode],
 		}),
 		cities: defineQuery(apiContract.geo.cities, {
 			response: envelope(z.array(CitySchema), ApiPaginatedMetaSchema),
-			queryKey: ({ page, limit, search, countryCode }) => ["geo", "cities", page, limit, search, countryCode],
+			queryKey: ({ page, cursor, limit, search, countryCode }) => ["geo", "cities", page, cursor, limit, search, countryCode],
 		}),
 	},
 
 	rewards: {
 		list: defineQuery(apiContract.rewards.list, {
 			response: envelope(z.array(RewardResponseSchema), ApiPaginatedMetaSchema),
-			queryKey: ({ page, limit, search, category, city }) => ["rewards", "list", page, limit, search, category, city],
+			queryKey: ({ cursor, limit, search, category, city }) => ["rewards", "list", cursor, limit, search, category, city],
 		}),
 		detail: defineQuery(apiContract.rewards.detail, {
 			response: envelope(RewardResponseSchema),
@@ -621,7 +621,7 @@ export const apiRouter = {
 		}),
 		list: defineQuery(apiContract.claims.list, {
 			response: envelope(z.array(RewardClaimResponseSchema), ApiPaginatedMetaSchema),
-			queryKey: ({ page, limit, status }) => ["claims", "list", page, limit, status],
+			queryKey: ({ cursor, limit, status }) => ["claims", "list", cursor, limit, status],
 		}),
 		analytics: defineQuery(apiContract.claims.analytics, {
 			response: envelope(UserRewardsAnalyticsResponseSchema),
@@ -635,7 +635,7 @@ export const apiRouter = {
 	rewardNotifications: {
 		list: defineQuery(apiContract.rewardNotifications.list, {
 			response: envelope(RewardNotificationListResponseSchema),
-			queryKey: ({ page, limit, unreadOnly }) => ["reward-notifications", "list", page, limit, unreadOnly],
+			queryKey: ({ cursor, limit, unreadOnly }) => ["reward-notifications", "list", cursor, limit, unreadOnly],
 		}),
 		read: defineMutation(apiContract.rewardNotifications.read, {
 			response: envelope(OkResponseSchema),
@@ -681,7 +681,7 @@ export const apiRouter = {
 		},
 		redemptions: defineQuery(apiContract.merchant.redemptions, {
 			response: envelope(z.array(MerchantRedemptionListItemSchema), ApiPaginatedMetaSchema),
-			queryKey: ({ page, limit }) => ["merchant", "redemptions", page, limit],
+			queryKey: ({ cursor, limit }) => ["merchant", "redemptions", cursor, limit],
 		}),
 		analytics: defineQuery(apiContract.merchant.analytics, {
 			response: envelope(MerchantAnalyticsResponseSchema),
@@ -712,7 +712,7 @@ export const apiRouter = {
 		}),
 		listMerchants: defineQuery(apiContract.rewardsAdmin.listMerchants, {
 			response: envelope(z.array(MerchantOrgResponseSchema), ApiPaginatedMetaSchema),
-			queryKey: ({ page, limit, search, city, kybStatus, status }) => ["rewards-admin", "merchants", page, limit, search, city, kybStatus, status],
+			queryKey: ({ page, cursor, limit, search, city, kybStatus, status }) => ["rewards-admin", "merchants", page, cursor, limit, search, city, kybStatus, status],
 		}),
 		createInvite: defineMutation(apiContract.rewardsAdmin.createInvite, {
 			response: envelope(AdminMerchantInviteCreatedResponseSchema),
@@ -754,7 +754,17 @@ export const apiRouter = {
 	sampleCategory: {
 		list: defineQuery(apiContract.sampleCategory.list, {
 			response: envelope(z.array(SampleCategorySchema), ApiPaginatedMetaSchema),
-			queryKey: ({ page, limit, sortBy, sortDirection, search }) => ["sample-category", "list", page, limit, sortBy, sortDirection, search],
+			queryKey: ({ page, cursor, limit, sortBy, sortDirection, search, isActive }) => [
+				"sample-category",
+				"list",
+				page,
+				cursor,
+				limit,
+				sortBy,
+				sortDirection,
+				search,
+				isActive,
+			],
 		}),
 		detail: defineQuery(apiContract.sampleCategory.detail, {
 			response: envelope(SampleCategorySchema),
@@ -785,12 +795,25 @@ export const apiRouter = {
 			queryKey: ({ id }) => ["sample-category", "restore", id],
 		}),
 	},
-	// @app-generated:end sampleCategory,
+	// @app-generated:end sampleCategory
 	// @app-generated:begin product
 	product: {
 		list: defineQuery(apiContract.product.list, {
 			response: envelope(z.array(ProductSchema), ApiPaginatedMetaSchema),
-			queryKey: ({ page, limit, sortBy, sortDirection, search }) => ["product", "list", page, limit, sortBy, sortDirection, search],
+			queryKey: ({ page, cursor, limit, sortBy, sortDirection, search, isActive, isFeatured, categoryId, brand }) => [
+				"product",
+				"list",
+				page,
+				cursor,
+				limit,
+				sortBy,
+				sortDirection,
+				search,
+				isActive,
+				isFeatured,
+				categoryId,
+				brand,
+			],
 		}),
 		detail: defineQuery(apiContract.product.detail, {
 			response: envelope(ProductSchema),

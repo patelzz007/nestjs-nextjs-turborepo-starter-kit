@@ -1,9 +1,10 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import type { Reward } from "@prisma/client";
 
-import type { RewardListQuery, RewardResponse } from "@workspace/shared";
+import type { PaginatedServiceResult, RewardListQuery, RewardResponse } from "@workspace/shared";
 
 import { BaseService } from "../../../platform/persistence/base.service";
+import { paginateCursorListResult } from "../../../platform/persistence/cursor-list";
 import type { EmptyMutationInput } from "../../../platform/persistence/types";
 import { mapRewardToResponse } from "../utils/reward-mapper.util";
 import { RewardRepository } from "../repositories/reward.repository";
@@ -14,28 +15,9 @@ export class ConsumerRewardsService extends BaseService<Reward, EmptyMutationInp
 		super(repository);
 	}
 
-	public async listMarketplace(query: RewardListQuery): Promise<{
-		items: RewardResponse[];
-		total: number;
-		page: number;
-		limit: number;
-		totalPages: number;
-		hasNext: boolean;
-		hasPrevious: boolean;
-	}> {
-		const page = query.page;
-		const pageSize = query.limit;
+	public async listMarketplace(query: RewardListQuery): Promise<PaginatedServiceResult<RewardResponse>> {
 		const result = await this.repository.listMarketplace(query);
-
-		return {
-			items: result.items.map((row) => mapRewardToResponse(row, row.merchantOrg)),
-			total: result.total,
-			page,
-			limit: pageSize,
-			totalPages: pageSize === 0 ? 0 : Math.ceil(result.total / pageSize),
-			hasNext: page * pageSize < result.total,
-			hasPrevious: page > 1,
-		};
+		return paginateCursorListResult({ ...result, items: result.items.map((row) => mapRewardToResponse(row, row.merchantOrg)) }, query);
 	}
 
 	public async getPublishedReward(rewardId: string): Promise<RewardResponse> {

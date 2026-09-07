@@ -13,6 +13,7 @@ export interface WizardPrompter {
 	text(message: string, options?: { defaultValue?: string; hint?: string; validate?: (value: string) => string | undefined }): Promise<string>;
 	confirm(message: string, options?: { defaultValue?: boolean; hint?: string }): Promise<boolean>;
 	select(message: string, choices: readonly PromptChoice<string>[], options?: { hint?: string }): Promise<string>;
+	multiselect(message: string, choices: readonly PromptChoice<string>[], options?: { hint?: string }): Promise<string[]>;
 	close(): void;
 }
 
@@ -81,6 +82,34 @@ export function createReadlinePrompter(): WizardPrompter {
 					}
 				}
 				output.write(`${pc.red(`Enter a number between 1 and ${String(choices.length)}.`)}\n`);
+			}
+		},
+
+		async multiselect(message, choices, options): Promise<string[]> {
+			if (options?.hint !== undefined) {
+				output.write(`${pc.dim(`  ${options.hint}`)}\n`);
+			}
+			output.write(`${pc.bold(message)}\n`);
+			for (let index = 0; index < choices.length; index += 1) {
+				const choice = choices[index];
+				if (choice !== undefined) {
+					const hint = choice.hint !== undefined ? pc.dim(` — ${choice.hint}`) : "";
+					output.write(`  ${pc.cyan(String(index + 1))}. ${choice.label}${hint}\n`);
+				}
+			}
+			while (true) {
+				const raw = await rl.question(`${pc.dim("Enter numbers separated by commas (e.g. 1,2)")}\n${pc.cyan(">")} `);
+				const indexes = raw
+					.split(",")
+					.map((part) => Number.parseInt(part.trim(), 10))
+					.filter((value) => !Number.isNaN(value));
+				const selected = indexes
+					.map((index) => choices[index - 1]?.value)
+					.filter((value): value is string => value !== undefined);
+				if (selected.length > 0) {
+					return selected;
+				}
+				output.write(`${pc.red("Select at least one module.")}\n`);
 			}
 		},
 

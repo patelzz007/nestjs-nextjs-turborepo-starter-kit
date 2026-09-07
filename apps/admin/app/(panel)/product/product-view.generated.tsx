@@ -1,19 +1,24 @@
 "use client";
+import { z } from "zod";
 
 import { createDataTableLabels } from "@/lib/data-table-labels";
 import { buildResourceTableCheckbox, canDeletePlatformResource } from "@/lib/data-table-capabilities";
-import { fetchAllPaginatedListPages, resolveManualBulkSelectionRows } from "@/lib/resolve-manual-bulk-selection";
+import { fetchAllListPages, resolveManualBulkSelectionRows } from "@/lib/resolve-manual-bulk-selection";
 import { useSessionCapabilities } from "@/lib/session-capabilities";
 import { useResourceDeleteDialog } from "@/components/common/resource-delete-dialog";
 import { DataTableMobileCard } from "@/lib/data-table-mobile-card";
-import { readPaginatedTotal, stubPaginatedMeta } from "@/lib/api-envelope";
+import { readPaginatedHasNext, readPaginatedNextCursor, readPaginatedTotal, stubPaginatedMeta } from "@/lib/api-envelope";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
+import { useManualHybridPagination } from "@/lib/use-manual-cursor-pagination";
+import { DataTableSearchToolbar } from "@/components/common/data-table-search-toolbar";
 import { useAuth } from "@workspace/client/lib/auth";
 import { Badge } from "@workspace/ui/components/feedback/badge";
-import { DataTable, type Action, type DataTableFeatures } from "@workspace/ui/components/display/data-table";
+import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
+import { DataTable, type Action, type DataTableFeatures, type Filter } from "@workspace/ui/components/display/data-table";
 import { Button } from "@workspace/ui/components/form/button";
 import { Input } from "@workspace/ui/components/form/input";
 import type { ColumnDef, SortingState } from "@tanstack/react-table";
-import { Eye, Pencil, Search, Trash2 } from "lucide-react";
+import { Eye, Pencil, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -34,6 +39,10 @@ function resolveListSortBy(columnId: string | undefined): ProductListSortBy | un
 	return parsed.data;
 }
 
+const BooleanColumnFilterSchema = z.enum(["true", "false"]);
+
+const PAGE_SIZE_OPTIONS: readonly number[] = [10, 20, 50, 100];
+
 const labels = createDataTableLabels({
 	actionsMenuTitle: "Product actions",
 	openRowMenu: "Open product row menu",
@@ -41,84 +50,129 @@ const labels = createDataTableLabels({
 	searchAriaLabel: "Search Products",
 });
 
-function useDebouncedValue<T>(value: T, delayMs: number): T {
-	const [debouncedValue, setDebouncedValue] = useState(value);
-	useEffect((): (() => void) => {
-		const timer = setTimeout(() => {
-			setDebouncedValue(value);
-		}, delayMs);
-		return (): void => {
-			clearTimeout(timer);
-		};
-	}, [value, delayMs]);
-	return debouncedValue;
-}
-
 export interface ProductViewProps {
 	readonly initialRows?: readonly Product[];
 	readonly initialTotal?: number;
+	readonly initialTotalPages?: number;
+	readonly initialHasNext?: boolean;
 }
 
-export default function ProductView({ initialRows, initialTotal }: ProductViewProps): React.JSX.Element {
+export default function ProductView({ initialRows, initialTotal, initialTotalPages, initialHasNext }: ProductViewProps): React.JSX.Element {
 	const { api } = useAuth();
 	const { hasCapability } = useSessionCapabilities();
 	const canDelete = canDeletePlatformResource(hasCapability, "PRODUCT");
 	const { requestDelete, resourceDeleteDialog } = useResourceDeleteDialog();
 	const router = useRouter();
 	const queryClient = useQueryClient();
-	const [page, setPage] = useState(1);
-	const [pageSize, setPageSize] = useState(20);
 	const [search, setSearch] = useState("");
 	const debouncedSearch = useDebouncedValue(search, 300);
 	const [sorting, setSorting] = useState<SortingState>([]);
+	const [isActiveFilter, setIsActiveFilter] = useState<string>("all");
+	const [isFeaturedFilter, setIsFeaturedFilter] = useState<string>("all");
+	const [categoryIdFilter, setCategoryIdFilter] = useState("");
+	const [brandFilter, setBrandFilter] = useState("");
 	const sort = sorting[0];
 	const sortBy = resolveListSortBy(sort?.id);
 	const trimmedSearch = debouncedSearch.trim();
+	const parsedIsActive = isActiveFilter === "all" ? undefined : BooleanColumnFilterSchema.safeParse(isActiveFilter).success ? isActiveFilter === "true" : undefined;
+	const parsedIsFeatured = isFeaturedFilter === "all" ? undefined : BooleanColumnFilterSchema.safeParse(isFeaturedFilter).success ? isFeaturedFilter === "true" : undefined;
+	const debouncedCategoryIdFilter = useDebouncedValue(categoryIdFilter, 300);
+	const parsedCategoryId = debouncedCategoryIdFilter.trim().length === 0 ? undefined : z.uuid().safeParse(debouncedCategoryIdFilter.trim()).data;
+	const debouncedBrandFilter = useDebouncedValue(brandFilter, 300);
+	const parsedBrand = debouncedBrandFilter.trim().length === 0 ? undefined : debouncedBrandFilter.trim();
+	const isFiltered = trimmedSearch.length > 0 || isActiveFilter !== "all" || isFeaturedFilter !== "all" || categoryIdFilter.trim().length > 0 || brandFilter.trim().length > 0;
+
+	const handleClearFilters = useCallback((): void => {
+		setSearch("");
+		setIsActiveFilter("all");
+		setIsFeaturedFilter("all");
+		setCategoryIdFilter("");
+		setBrandFilter("");
+	}, []);
+
+	const buildListQuery = useCallback(
+		(listPage: number, limit: number) => {
+			const sortDirection: "asc" | "desc" = sort?.desc === true ? "desc" : "asc";
+			return {
+				page: listPage,
+				limit,
+				...(sortBy !== undefined ? { sortBy, sortDirection } : {}),
+				...(trimmedSearch.length > 0 ? { search: trimmedSearch } : {}),
+				...(parsedIsActive !== undefined ? { isActive: parsedIsActive } : {}),
+				...(parsedIsFeatured !== undefined ? { isFeatured: parsedIsFeatured } : {}),
+				...(parsedCategoryId !== undefined ? { categoryId: parsedCategoryId } : {}),
+				...(parsedBrand !== undefined ? { brand: parsedBrand } : {}),
+			};
+		},
+		[sortBy, sort?.desc, trimmedSearch, parsedIsActive, parsedIsFeatured, parsedCategoryId, parsedBrand],
+	);
+
+	const fetchAllMatchingProducts = useCallback(async (): Promise<Product[]> => {
+		const rows = await fetchAllListPages(async (listPage, limit) => {
+			const response = await api.product.list.fetchOrThrow(buildListQuery(listPage, limit));
+			return {
+				items: response.data,
+				hasNext: readPaginatedHasNext(response.meta),
+			};
+		});
+		return [...rows];
+	}, [api.product.list, buildListQuery]);
+
+	const {
+		pageIndex,
+		pageSize,
+		listQuery: paginationQuery,
+		bindListMeta,
+		pagination: basePagination,
+	} = useManualHybridPagination<Product>(20, [debouncedSearch, sorting, isActiveFilter, isFeaturedFilter, categoryIdFilter, brandFilter], (item) => item.id, {
+		onClearFilters: handleClearFilters,
+		isFiltered,
+		onFetchAllMatching: fetchAllMatchingProducts,
+	});
 	const initialQueryData = useMemo(
 		() =>
 			initialRows !== undefined
 				? {
 						success: true as const,
 						data: [...initialRows],
-						meta: stubPaginatedMeta(initialTotal ?? initialRows.length, 1, 20),
+						meta: stubPaginatedMeta(20, initialTotal ?? initialRows.length, 1, initialTotalPages ?? 1, initialHasNext ?? false),
 					}
 				: undefined,
-		[initialRows, initialTotal],
+		[initialRows, initialHasNext, initialTotal, initialTotalPages],
 	);
-	const listQuery = api.product.list.useQuery(
+	const resourceListQuery = api.product.list.useQuery(
 		{
-			page,
-			limit: pageSize,
+			...paginationQuery,
 			...(sortBy !== undefined ? { sortBy, sortDirection: sort?.desc === true ? "desc" : "asc" } : {}),
 			...(trimmedSearch.length > 0 ? { search: trimmedSearch } : {}),
+			...(parsedIsActive !== undefined ? { isActive: parsedIsActive } : {}),
+			...(parsedIsFeatured !== undefined ? { isFeatured: parsedIsFeatured } : {}),
+			...(parsedCategoryId !== undefined ? { categoryId: parsedCategoryId } : {}),
+			...(parsedBrand !== undefined ? { brand: parsedBrand } : {}),
 		},
 		{
 			placeholderData: keepPreviousData,
-			initialData: page === 1 && pageSize === 20 && trimmedSearch.length === 0 && sorting.length === 0 ? initialQueryData : undefined,
+			initialData:
+				pageIndex === 0 &&
+				pageSize === 20 &&
+				trimmedSearch.length === 0 &&
+				sorting.length === 0 &&
+				isActiveFilter === "all" &&
+				isFeaturedFilter === "all" &&
+				categoryIdFilter.trim().length === 0 &&
+				brandFilter.trim().length === 0
+					? initialQueryData
+					: undefined,
 		},
 	);
-	const rows: Product[] = listQuery.data?.data ?? [];
-	const total = readPaginatedTotal(listQuery.data?.meta, initialTotal ?? rows.length);
+	const rows: Product[] = resourceListQuery.data?.data ?? [];
+	const totalCount = readPaginatedTotal(resourceListQuery.data?.meta, initialTotal ?? initialRows?.length ?? 0);
+	const pagination = useMemo(() => ({ ...basePagination, totalCount }), [basePagination, totalCount]);
+	const tableError: string | null = resourceListQuery.isError ? "Could not load products. Clear search or filters and try again." : null;
 
-	const buildListQuery = useCallback(
-		(pageNumber: number, limit: number) => {
-			const sortDirection: "asc" | "desc" = sort?.desc === true ? "desc" : "asc";
-			return {
-				page: pageNumber,
-				limit,
-				...(sortBy !== undefined ? { sortBy, sortDirection } : {}),
-				...(trimmedSearch.length > 0 ? { search: trimmedSearch } : {}),
-			};
-		},
-		[sortBy, sort?.desc, trimmedSearch],
-	);
-
-	const fetchAllMatchingProducts = useCallback((): Promise<readonly Product[]> => {
-		return fetchAllPaginatedListPages(total, async (pageNumber, limit) => {
-			const response = await api.product.list.fetchOrThrow(buildListQuery(pageNumber, limit));
-			return response.data;
-		});
-	}, [api.product.list, buildListQuery, total]);
+	useEffect((): void => {
+		bindListMeta(readPaginatedNextCursor(resourceListQuery.data?.meta) ?? null);
+	}, [bindListMeta, resourceListQuery.data?.meta]);
 
 	const handleView = useCallback(
 		(item: Product): void => {
@@ -246,10 +300,10 @@ export default function ProductView({ initialRows, initialTotal }: ProductViewPr
 				badge={item.isActive ? <Badge variant="secondary">Active</Badge> : <Badge variant="outline">Inactive</Badge>}
 				fields={[
 					{ label: "Price", value: Number.isFinite(item.price) ? item.price.toFixed(2) : "—" },
-					{ label: "StockQuantity", value: String(item.stockQuantity) },
-					{ label: "CategoryId", value: item.categoryId },
-					{ label: "IsFeatured", value: item.isFeatured ? "Yes" : "No" },
-					{ label: "CreatedAt", value: Number.isFinite(item.createdAt) ? new Date(item.createdAt).toLocaleString() : "—" },
+					{ label: "Stock Quantity", value: String(item.stockQuantity) },
+					{ label: "Category Id", value: item.categoryId },
+					{ label: "Is Featured", value: item.isFeatured ? "Yes" : "No" },
+					{ label: "Created At", value: Number.isFinite(item.createdAt) ? new Date(item.createdAt).toLocaleString() : "—" },
 				]}
 				actions={cardActions}
 			/>
@@ -268,6 +322,11 @@ export default function ProductView({ initialRows, initialTotal }: ProductViewPr
 				accessorKey: "name",
 				header: "Name",
 				enableSorting: true,
+				cell: ({ row }): React.JSX.Element => (
+					<Link href={`/product/${row.original.id}`} className="font-medium text-primary hover:underline">
+						{row.original.name}
+					</Link>
+				),
 			},
 			{
 				accessorKey: "price",
@@ -280,24 +339,26 @@ export default function ProductView({ initialRows, initialTotal }: ProductViewPr
 			},
 			{
 				accessorKey: "stockQuantity",
-				header: "StockQuantity",
+				header: "Stock Quantity",
 				enableSorting: true,
 			},
 			{
 				accessorKey: "categoryId",
-				header: "CategoryId",
+				header: "Category Id",
 			},
 			{
 				accessorKey: "isActive",
-				header: "IsActive",
+				header: "Is Active",
+				cell: ({ row }): React.JSX.Element => (row.original.isActive ? <Badge variant="secondary">Active</Badge> : <Badge variant="outline">Inactive</Badge>),
 			},
 			{
 				accessorKey: "isFeatured",
-				header: "IsFeatured",
+				header: "Is Featured",
+				cell: ({ row }): React.JSX.Element => (row.original.isFeatured ? <Badge variant="secondary">Featured</Badge> : <Badge variant="outline">Not featured</Badge>),
 			},
 			{
 				accessorKey: "createdAt",
-				header: "CreatedAt",
+				header: "Created At",
 				enableSorting: true,
 				cell: ({ row }): React.JSX.Element => {
 					const value = row.original.createdAt;
@@ -308,59 +369,146 @@ export default function ProductView({ initialRows, initialTotal }: ProductViewPr
 		[],
 	);
 
-	const handleManualPaginationChange = useCallback((nextPage: number, nextPageSize: number): void => {
-		setPage(nextPage);
-		setPageSize(nextPageSize);
-	}, []);
-
 	const handleManualSortingChange = useCallback((nextSorting: SortingState): void => {
 		setSorting(nextSorting);
-		setPage(1);
 	}, []);
 
-	const handleSearchChange = useCallback((event: React.ChangeEvent<HTMLInputElement>): void => {
-		setSearch(event.target.value);
-		setPage(1);
+	const handleSearchChange = useCallback((value: string): void => {
+		setSearch(value);
 	}, []);
+
+	const handleManualColumnFilterChange = useCallback((filterKey: string, value: string | null): void => {
+		if (filterKey === "isActive") {
+			setIsActiveFilter(value === null || value === "all" ? "all" : value);
+		}
+		if (filterKey === "isFeatured") {
+			setIsFeaturedFilter(value === null || value === "all" ? "all" : value);
+		}
+		if (filterKey === "categoryId") {
+			setCategoryIdFilter(value ?? "");
+		}
+		if (filterKey === "brand") {
+			setBrandFilter(value ?? "");
+		}
+	}, []);
+
+	const manualColumnFilters = useMemo(
+		(): Readonly<Record<string, string>> => ({
+			isActive: isActiveFilter,
+			isFeatured: isFeaturedFilter,
+			categoryId: categoryIdFilter,
+			brand: brandFilter,
+		}),
+		[isActiveFilter, isFeaturedFilter, categoryIdFilter, brandFilter],
+	);
+
+	const tableFilters = useMemo(
+		(): Filter[] => [
+			{
+				key: "isActive",
+				label: "Is Active",
+				options: [
+					{ value: "true", label: "Active" },
+					{ value: "false", label: "Inactive" },
+				],
+			},
+			{
+				key: "isFeatured",
+				label: "Is Featured",
+				options: [
+					{ value: "true", label: "Featured" },
+					{ value: "false", label: "Not featured" },
+				],
+			},
+		],
+		[],
+	);
+
+	const textFilterToolbar = useMemo(
+		(): React.JSX.Element => (
+			<div className="flex flex-wrap gap-2">
+				<Input
+					key="categoryId"
+					aria-label="Category Id"
+					placeholder="Filter by category id"
+					value={categoryIdFilter}
+					onChange={(event): void => {
+						setCategoryIdFilter(event.target.value);
+					}}
+					className="h-9 w-full text-sm sm:w-44"
+				/>
+				,
+				<Input
+					key="brand"
+					aria-label="Brand"
+					placeholder="Filter by brand"
+					value={brandFilter}
+					onChange={(event): void => {
+						setBrandFilter(event.target.value);
+					}}
+					className="h-9 w-full text-sm sm:w-44"
+				/>
+				,
+			</div>
+		),
+		[categoryIdFilter, brandFilter],
+	);
 
 	const searchToolbar = useMemo(
 		(): React.JSX.Element => (
-			<div className="relative w-full sm:max-w-xs">
-				<Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
-				<Input aria-label={labels.searchAriaLabel} placeholder={labels.searchPlaceholder} value={search} onChange={handleSearchChange} className="h-9 pl-8" />
+			<div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+				<DataTableSearchToolbar value={search} onChange={handleSearchChange} placeholder={labels.searchPlaceholder} ariaLabel={labels.searchAriaLabel} />
+				{textFilterToolbar}
 			</div>
 		),
-		[handleSearchChange, search],
+		[handleSearchChange, search, labels.searchAriaLabel, labels.searchPlaceholder, textFilterToolbar],
 	);
 
 	return (
-		<div className="space-y-4">
-			<div className="flex items-center justify-between">
-				<h1 className="text-2xl font-semibold">Products</h1>
+		<div className="space-y-6">
+			<header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+				<div>
+					<h1 className="text-2xl font-semibold tracking-tight">Products</h1>
+					<p className="text-sm text-muted-foreground">Browse and manage products.</p>
+				</div>
 				<Button nativeButton={false} render={<Link href="/product/create" />}>
 					New Product
 				</Button>
-			</div>
-			<DataTable
-				data={rows}
-				columns={columns}
-				labels={labels}
-				actions={actions}
-				checkbox={checkbox}
-				enableColumnVisibility
-				mobileCardRender={mobileCardRender}
-				manual
-				totalCount={total}
-				pageIndex={page - 1}
-				pageSize={pageSize}
-				sorting={sorting}
-				onManualPaginationChange={handleManualPaginationChange}
-				onManualSortingChange={handleManualSortingChange}
-				isLoading={listQuery.isLoading}
-				error={listQuery.error?.message ?? null}
-				searchKeys={[]}
-				toolbarContent={searchToolbar}
-			/>
+			</header>
+
+			<Card>
+				<CardHeader>
+					<CardTitle className="text-base">{rows.length > 0 ? `${String(rows.length)} products on this page` : "Products"}</CardTitle>
+				</CardHeader>
+				<CardContent>
+					<DataTable
+						data={[...rows]}
+						columns={columns}
+						labels={labels}
+						actions={actions}
+						checkbox={checkbox}
+						enableColumnVisibility
+						filters={tableFilters}
+						manualColumnFilters={manualColumnFilters}
+						onManualColumnFilterChange={handleManualColumnFilterChange}
+						mobileCardRender={mobileCardRender}
+						onRowClick={handleView}
+						pagination={pagination}
+						pageSizeOptions={PAGE_SIZE_OPTIONS}
+						sorting={sorting}
+						onManualSortingChange={handleManualSortingChange}
+						isLoading={resourceListQuery.isLoading}
+						isRefetching={resourceListQuery.isFetching && !resourceListQuery.isLoading ? true : false}
+						error={tableError}
+						searchKeys={[]}
+						toolbarContent={searchToolbar}
+						emptyState={{
+							title: isFiltered ? "No matching products" : "No products yet",
+							description: isFiltered ? "Clear search or filters to see more results." : "Create your first product to get started.",
+						}}
+					/>
+				</CardContent>
+			</Card>
 			{resourceDeleteDialog}
 		</div>
 	);

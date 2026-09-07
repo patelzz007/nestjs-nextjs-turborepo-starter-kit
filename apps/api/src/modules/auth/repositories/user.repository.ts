@@ -2,6 +2,8 @@ import { Injectable, NotFoundException } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
 import type { AdminUserListQuery } from "@workspace/shared";
 
+import { fetchStringIdListPage } from "../../../platform/persistence/cursor-list";
+import type { RepositoryListResult } from "../../../platform/persistence/types";
 import { PrismaService } from "../../../prisma/prisma.service";
 
 /**
@@ -219,21 +221,18 @@ export class UserRepository {
 	}
 
 	/** List users with admin detail fields, filtered and paginated. */
-	public async listAdminUsers(query: AdminUserListQuery): Promise<readonly UserAdminDetail[]> {
-		const skip = (query.page - 1) * query.limit;
-		return this.prisma.user.findMany({
-			where: buildAdminUserListWhere(query),
-			orderBy: parseAdminUserListOrderBy(query.sort),
-			skip,
-			take: query.limit,
-			select: USER_SELECT_ADMIN_DETAIL,
-		});
-	}
-
-	/** Count users matching admin list filters. */
-	public async countAdminUsers(query: AdminUserListQuery): Promise<number> {
-		return this.prisma.user.count({
-			where: buildAdminUserListWhere(query),
+	public async listAdminUsers(query: AdminUserListQuery): Promise<RepositoryListResult<UserAdminDetail>> {
+		const where = buildAdminUserListWhere(query);
+		return fetchStringIdListPage(query, {
+			where,
+			mergeCursor: (baseWhere, cursorId) => ({ ...baseWhere, id: { gt: cursorId } }),
+			readId: (row) => row.id,
+			findMany: (args): Promise<UserAdminDetail[]> =>
+				this.prisma.user.findMany({
+					...args,
+					select: USER_SELECT_ADMIN_DETAIL,
+				}),
+			count: (listWhere) => this.prisma.user.count({ where: listWhere }),
 		});
 	}
 
