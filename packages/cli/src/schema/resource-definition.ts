@@ -138,7 +138,7 @@ export const ResourceDefinitionSchema = z
 		for (const moduleId of scopeUi) {
 			if (!uiKeys.includes(moduleId)) {
 				ctx.addIssue({
-					code: z.ZodIssueCode.custom,
+					code: "custom",
 					message: `scope.ui includes "${moduleId}" but ui.${moduleId} is missing`,
 					path: ["scope", "ui"],
 				});
@@ -147,7 +147,7 @@ export const ResourceDefinitionSchema = z
 		for (const moduleId of uiKeys) {
 			if (!scopeUi.includes(moduleId)) {
 				ctx.addIssue({
-					code: z.ZodIssueCode.custom,
+					code: "custom",
 					message: `ui.${moduleId} is defined but not listed in scope.ui`,
 					path: ["ui", moduleId],
 				});
@@ -155,7 +155,7 @@ export const ResourceDefinitionSchema = z
 		}
 		if (scopeUi.length > 0 && (definition.ui === undefined || Object.keys(definition.ui).length === 0)) {
 			ctx.addIssue({
-				code: z.ZodIssueCode.custom,
+				code: "custom",
 				message: "scope.ui is non-empty but no ui module blocks were provided",
 				path: ["ui"],
 			});

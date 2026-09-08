@@ -18,12 +18,7 @@ export interface GeneratorScopeStepProps {
 	readonly onDraftChange: (draft: GeneratorWizardDraft) => void;
 }
 
-export const GeneratorScopeStep = React.memo(function GeneratorScopeStep({
-	draft,
-	uiModules,
-	error,
-	onDraftChange,
-}: GeneratorScopeStepProps): React.JSX.Element {
+export const GeneratorScopeStep = React.memo(function GeneratorScopeStep({ draft, uiModules, error, onDraftChange }: GeneratorScopeStepProps): React.JSX.Element {
 	const handleGenerateUiChange = (checked: boolean): void => {
 		onDraftChange({
 			...draft,
@@ -71,7 +66,7 @@ export const GeneratorScopeStep = React.memo(function GeneratorScopeStep({
 										id={`generator-ui-module-${module.id}`}
 										checked={checked}
 										onCheckedChange={(value) => {
-											toggleModule(module.id, value === true);
+											toggleModule(module.id, value);
 										}}
 									/>
 									<div className="grid gap-1">

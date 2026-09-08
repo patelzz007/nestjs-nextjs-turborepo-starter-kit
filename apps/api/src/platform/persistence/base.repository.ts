@@ -1,4 +1,4 @@
-import type { PaginationInput, PaginatedServiceResult } from "@workspace/shared";
+import type { PaginationInput } from "@workspace/shared";
 import { nowEpochMs } from "@workspace/shared";
 
 import { PrismaService } from "../../prisma/prisma.service";

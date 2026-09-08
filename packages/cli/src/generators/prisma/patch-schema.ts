@@ -23,4 +23,3 @@ export async function unpatchPrismaSchema(schemaPath: string, modelName: string)
 	}
 	await writeFile(schemaPath, removeGeneratedBlock(current, modelName), "utf8");
 }
-

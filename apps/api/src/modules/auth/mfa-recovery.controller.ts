@@ -1,7 +1,14 @@
 import { Body, Controller, Get, HttpCode, Post, Query } from "@nestjs/common";
 import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { Throttle } from "@nestjs/throttler";
-import type { AdminMfaRecoveryListQuery, AdminMfaRecoveryRequest, AdminReviewMfaRecoveryInput, InitiateMfaRecoveryInput, MfaRecoveryStatusResponse, PaginatedServiceResult } from "@workspace/shared";
+import type {
+	AdminMfaRecoveryListQuery,
+	AdminMfaRecoveryRequest,
+	AdminReviewMfaRecoveryInput,
+	InitiateMfaRecoveryInput,
+	MfaRecoveryStatusResponse,
+	PaginatedServiceResult,
+} from "@workspace/shared";
 import { apiContract, apiPath, AdminMfaRecoveryRequestSchema, MfaRecoveryStatusResponseSchema } from "@workspace/shared";
 
 import { createWrappedArrayDto, createWrappedDto } from "../../common/dto/response-wrapper";
@@ -45,7 +52,9 @@ export class MfaRecoveryController {
 	@Get("/admin/mfa/recovery/requests")
 	@ApiOperation({ summary: "SuperAdmin: list MFA recovery requests" })
 	@ApiOkResponse({ type: WrappedAdminMfaRecoveryRequestList })
-	public async listRecoveryRequests(@Query(new ZodValidationPipe(apiContract.auth.adminMfaRecoveryRequests.input)) query: AdminMfaRecoveryListQuery): Promise<PaginatedServiceResult<AdminMfaRecoveryRequest>> {
+	public async listRecoveryRequests(
+		@Query(new ZodValidationPipe(apiContract.auth.adminMfaRecoveryRequests.input)) query: AdminMfaRecoveryListQuery,
+	): Promise<PaginatedServiceResult<AdminMfaRecoveryRequest>> {
 		return this.mfaRecoveryService.listAdminRecoveryRequests(query);
 	}
 

@@ -172,8 +172,7 @@ export function normalizeResourceDefinition(
 		.sort((left, right) => left.name.localeCompare(right.name));
 
 	const defaultScalarFields = fields.filter((field) => field.type !== "relation").map((field) => field.name);
-	const cascadeSoftDeleteChildren =
-		context?.allDefinitions !== undefined ? buildCascadeSoftDeleteChildren(modelName, context.allDefinitions) : [];
+	const cascadeSoftDeleteChildren = context?.allDefinitions !== undefined ? buildCascadeSoftDeleteChildren(modelName, context.allDefinitions) : [];
 
 	const scopeUi = definition.scope.ui;
 	if (context?.modules !== undefined) {

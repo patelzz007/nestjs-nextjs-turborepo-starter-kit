@@ -58,11 +58,7 @@ async function runScopedLint(repoRoot: string, resourceSlug: string | undefined)
 	const outputs: string[] = [];
 	const turboBin = resolveWorkspaceBin(repoRoot, "turbo");
 
-	const packageLint = await runCommand(
-		turboBin,
-		["lint", "--only", "--filter=@workspace/shared", "--filter=@workspace/client"],
-		repoRoot,
-	);
+	const packageLint = await runCommand(turboBin, ["lint", "--only", "--filter=@workspace/shared", "--filter=@workspace/client"], repoRoot);
 	outputs.push(packageLint.output);
 	if (!packageLint.success) {
 		return { success: false, output: outputs.join("\n") };

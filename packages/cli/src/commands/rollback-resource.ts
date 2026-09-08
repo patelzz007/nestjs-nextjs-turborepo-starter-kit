@@ -44,7 +44,7 @@ export async function runRollbackResourceCommand(cwd: string, resourceName: stri
 	const config = loadProjectConfig(cwd);
 	const interactive = !options.nonInteractive && isInteractiveTerminal();
 	const slug = resourceName.trim();
-	const dryRun = options.apply !== true;
+	const dryRun = !options.apply;
 
 	if (interactive) {
 		printAppBanner();

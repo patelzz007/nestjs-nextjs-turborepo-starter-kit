@@ -17,7 +17,7 @@ export function stubPaginatedMeta(limit: number, hasNext: boolean, nextCursor: s
 }
 
 /** Read `hasNext` from a paginated envelope meta object. */
-export function readPaginatedHasNext(meta: ApiResponseMeta | undefined, fallback: boolean = false): boolean {
+export function readPaginatedHasNext(meta: ApiResponseMeta | undefined, fallback = false): boolean {
 	if (meta === undefined) {
 		return fallback;
 	}

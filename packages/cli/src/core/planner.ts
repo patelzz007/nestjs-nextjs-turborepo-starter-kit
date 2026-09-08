@@ -14,11 +14,7 @@ export interface PlannedFile {
 	readonly template: string;
 }
 
-export function planResourceFiles(
-	config: AppProjectConfig,
-	ir: ResourceIR,
-	modulesManifest: GeneratorModulesManifest,
-): PlannedFile[] {
+export function planResourceFiles(config: AppProjectConfig, ir: ResourceIR, modulesManifest: GeneratorModulesManifest): PlannedFile[] {
 	const slug = ir.resource.slug;
 	const moduleName = slug;
 	const files: PlannedFile[] = [];

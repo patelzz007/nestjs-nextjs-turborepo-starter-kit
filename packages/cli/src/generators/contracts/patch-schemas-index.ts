@@ -9,9 +9,7 @@ function buildExportBlockContent(ir: ResourceIR): string {
 	const workflowSchemaExports = ir.workflow ? `,\n\t${model}TransitionBodySchema,\n\t${model}TransitionParamSchema` : "";
 	const enumFields = ir.fields.filter((field) => field.type === "enum" && field.name !== ir.workflow?.field);
 	const enumSchemaExports = enumFields.length > 0 ? `,\n\t${enumFields.map((field) => `${field.camelName}Schema`).join(",\n\t")}` : "";
-	const workflowEnumSchema = ir.workflow
-		? `,\n\t${ir.fields.find((field) => field.name === ir.workflow?.field)?.camelName ?? "status"}Schema`
-		: "";
+	const workflowEnumSchema = ir.workflow ? `,\n\t${ir.fields.find((field) => field.name === ir.workflow?.field)?.camelName ?? "status"}Schema` : "";
 	const workflowValueExports = ir.workflow ? `,\n\t${model}StatusFromPrisma,\n\t${model}StatusToPrisma` : "";
 	const workflowTypeExports = ir.workflow ? `,\n\t${model}PrismaStatus,\n\t${model}Status` : "";
 	const enumTypeExports =

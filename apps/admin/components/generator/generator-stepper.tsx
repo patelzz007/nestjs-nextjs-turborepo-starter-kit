@@ -13,12 +13,7 @@ export interface GeneratorStepperProps {
 	readonly onStepSelect?: (stepId: WizardStepId["id"]) => void;
 }
 
-export const GeneratorStepper = React.memo(function GeneratorStepper({
-	steps,
-	currentStepId,
-	completedStepIds,
-	onStepSelect,
-}: GeneratorStepperProps): React.JSX.Element {
+export const GeneratorStepper = React.memo(function GeneratorStepper({ steps, currentStepId, completedStepIds, onStepSelect }: GeneratorStepperProps): React.JSX.Element {
 	const currentIndex = steps.findIndex((step) => step.id === currentStepId);
 
 	const handleStepKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>, stepId: WizardStepId["id"]): void => {
@@ -67,7 +62,7 @@ export const GeneratorStepper = React.memo(function GeneratorStepper({
 									type="button"
 									className="flex w-full items-start gap-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
 									onClick={() => {
-										onStepSelect?.(step.id);
+										onStepSelect(step.id);
 									}}
 									onKeyDown={(event) => {
 										handleStepKeyDown(event, step.id);

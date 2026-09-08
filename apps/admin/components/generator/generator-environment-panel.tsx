@@ -99,19 +99,13 @@ export function GeneratorEnvironmentPanel({ initialModules }: GeneratorEnvironme
 							))}
 						</div>
 					)}
-					{initResult !== null && initResult.success ? (
-						<p className="text-xs text-muted-foreground">Updated {initResult.manifestPath}</p>
-					) : null}
+					{initResult?.success ? <p className="text-xs text-muted-foreground">Updated {initResult.manifestPath}</p> : null}
 				</div>
 
 				{doctorResult !== null ? (
 					<div className="grid gap-2 rounded-xl border p-4">
 						<div className="flex items-center gap-2">
-							{doctorResult.success ? (
-								<CheckCircle2 className="size-4 text-primary" aria-hidden="true" />
-							) : (
-								<XCircle className="size-4 text-destructive" aria-hidden="true" />
-							)}
+							{doctorResult.success ? <CheckCircle2 className="size-4 text-primary" aria-hidden="true" /> : <XCircle className="size-4 text-destructive" aria-hidden="true" />}
 							<p className="text-sm font-medium">{doctorResult.success ? "All checks passed" : "Some checks failed"}</p>
 						</div>
 						<ul className="grid gap-2">

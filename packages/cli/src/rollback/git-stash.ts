@@ -6,7 +6,7 @@ export interface GitCommandResult {
 	readonly stderr: string;
 }
 
-export async function runGit(repoRoot: string, args: readonly string[]): Promise<GitCommandResult> {
+export function runGit(repoRoot: string, args: readonly string[]): Promise<GitCommandResult> {
 	return new Promise((resolve) => {
 		const child = spawn("git", args, {
 			cwd: repoRoot,

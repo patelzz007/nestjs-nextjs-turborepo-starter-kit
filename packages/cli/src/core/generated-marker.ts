@@ -42,23 +42,19 @@ function buildEndLinePattern(markerKey: string, prefixes: MarkerPrefixes): RegEx
 }
 
 /** Finds all exact generated blocks for a marker key (handles legacy duplicate blocks). */
-export function findAllGeneratedBlocks(
-	content: string,
-	markerKey: string,
-	prefixes: MarkerPrefixes = TS_MARKER_PREFIXES,
-): GeneratedBlockRange[] {
+export function findAllGeneratedBlocks(content: string, markerKey: string, prefixes: MarkerPrefixes = TS_MARKER_PREFIXES): GeneratedBlockRange[] {
 	const blocks: GeneratedBlockRange[] = [];
 	let offset = 0;
 	while (offset < content.length) {
 		const remainder = content.slice(offset);
 		const beginMatch = buildBeginLinePattern(markerKey, prefixes).exec(remainder);
-		if (beginMatch === null || beginMatch.index === undefined) {
+		if (!beginMatch) {
 			break;
 		}
 		const blockStart = offset + beginMatch.index;
 		const afterBegin = blockStart + beginMatch[0].length;
 		const endMatch = buildEndLinePattern(markerKey, prefixes).exec(content.slice(afterBegin));
-		if (endMatch === null || endMatch.index === undefined) {
+		if (!endMatch) {
 			throw new Error(`Malformed generated block for "${markerKey}": missing end marker`);
 		}
 		const blockEnd = afterBegin + endMatch.index + endMatch[0].length;
@@ -73,11 +69,7 @@ export function findAllGeneratedBlocks(
 }
 
 /** Finds an exact generated block by marker key (full-line match, no prefix collisions). */
-export function findGeneratedBlock(
-	content: string,
-	markerKey: string,
-	prefixes: MarkerPrefixes = TS_MARKER_PREFIXES,
-): GeneratedBlockRange | null {
+export function findGeneratedBlock(content: string, markerKey: string, prefixes: MarkerPrefixes = TS_MARKER_PREFIXES): GeneratedBlockRange | null {
 	const blocks = findAllGeneratedBlocks(content, markerKey, prefixes);
 	return blocks[0] ?? null;
 }
@@ -93,13 +85,7 @@ function wrapGeneratedBlock(markerKey: string, block: string, prefixes: MarkerPr
 }
 
 /** Replaces an existing generated block or inserts wrapped content at insertIndex. */
-export function upsertGeneratedBlock(
-	content: string,
-	markerKey: string,
-	block: string,
-	insertIndex: number,
-	options: GeneratedBlockOptions = {},
-): string {
+export function upsertGeneratedBlock(content: string, markerKey: string, block: string, insertIndex: number, options: GeneratedBlockOptions = {}): string {
 	const prefixes = options.prefixes ?? TS_MARKER_PREFIXES;
 	const linePrefix = options.linePrefix ?? "";
 	const wrapped = wrapGeneratedBlock(markerKey, block, prefixes, linePrefix);

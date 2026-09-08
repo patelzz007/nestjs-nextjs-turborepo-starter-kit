@@ -5,11 +5,7 @@ import { REWARD_SEED_IDS } from "../prisma/seed/rewards";
 
 const DATABASE_URL: string = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/monorepo";
 
-async function withRlsSession(
-	pool: Pool,
-	input: { readonly userId: string; readonly bypass: boolean },
-	run: (client: PoolClient) => Promise<void>,
-): Promise<void> {
+async function withRlsSession(pool: Pool, input: { readonly userId: string; readonly bypass: boolean }, run: (client: PoolClient) => Promise<void>): Promise<void> {
 	const client = await pool.connect();
 	try {
 		await client.query("SET ROLE app_runtime");
@@ -46,10 +42,10 @@ describe("RLS hardening (integration)", () => {
 
 	it("allows merchant members to read their own org rewards without bypass", async () => {
 		await withRlsSession(pool, { userId: REWARD_SEED_IDS.klOwnerUser, bypass: false }, async (client) => {
-			const result = await client.query<{ id: string }>(
-				`SELECT id FROM public.rewards WHERE id = $1 AND merchant_org_id = $2 LIMIT 1`,
-				[REWARD_SEED_IDS.klRewardPublished, REWARD_SEED_IDS.klOrg],
-			);
+			const result = await client.query<{ id: string }>(`SELECT id FROM public.rewards WHERE id = $1 AND merchant_org_id = $2 LIMIT 1`, [
+				REWARD_SEED_IDS.klRewardPublished,
+				REWARD_SEED_IDS.klOrg,
+			]);
 			expect(result.rowCount).toBe(1);
 		});
 	});

@@ -243,14 +243,7 @@ describe("DataTable (shared, TanStack Table v9)", () => {
 	});
 
 	it("server pagination mode does not slice rows client-side", () => {
-		render(
-			<DataTable
-				labels={ADMIN_DATA_TABLE_LABELS}
-				data={makeRows(10)}
-				columns={demoColumns}
-				pagination={createServerPagination({ totalCount: 50, pageSize: 10 })}
-			/>,
-		);
+		render(<DataTable labels={ADMIN_DATA_TABLE_LABELS} data={makeRows(10)} columns={demoColumns} pagination={createServerPagination({ totalCount: 50, pageSize: 10 })} />);
 
 		expect(screen.getAllByText(/^Section \d+$/)).toHaveLength(10);
 		expect(screen.getByText(/Showing 1 to 10 of 50 results/)).toBeTruthy();
@@ -330,14 +323,7 @@ describe("DataTable (shared, TanStack Table v9)", () => {
 
 	it("server pagination notifies the parent on page change", () => {
 		const onPageChange = vi.fn();
-		render(
-			<DataTable
-				labels={ADMIN_DATA_TABLE_LABELS}
-				data={makeRows(10)}
-				columns={demoColumns}
-				pagination={createServerPagination({ totalCount: 50, onPageChange })}
-			/>,
-		);
+		render(<DataTable labels={ADMIN_DATA_TABLE_LABELS} data={makeRows(10)} columns={demoColumns} pagination={createServerPagination({ totalCount: 50, onPageChange })} />);
 
 		fireEvent.click(screen.getByRole("button", { name: /next page/i }));
 		expect(onPageChange).toHaveBeenCalledWith(1, 10);

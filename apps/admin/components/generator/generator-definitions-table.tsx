@@ -75,23 +75,20 @@ export function GeneratorDefinitionsTable({ resources, onRollbackSuccess }: Gene
 		];
 	}, [handleRollback]);
 
-	const mobileCardRender = React.useCallback(
-		(item: ResourceGeneratorListItem, cardActions?: Action<ResourceGeneratorListItem>[]): React.ReactNode => {
-			return (
-				<DataTableMobileCard
-					item={item}
-					title={item.slug}
-					subtitle={item.label}
-					fields={[
-						{ label: "Contract", value: <span className="font-mono text-xs">{item.contractKey}</span> },
-						{ label: "Fields", value: String(item.fieldCount) },
-					]}
-					actions={cardActions}
-				/>
-			);
-		},
-		[],
-	);
+	const mobileCardRender = React.useCallback((item: ResourceGeneratorListItem, cardActions?: Action<ResourceGeneratorListItem>[]): React.ReactNode => {
+		return (
+			<DataTableMobileCard
+				item={item}
+				title={item.slug}
+				subtitle={item.label}
+				fields={[
+					{ label: "Contract", value: <span className="font-mono text-xs">{item.contractKey}</span> },
+					{ label: "Fields", value: String(item.fieldCount) },
+				]}
+				actions={cardActions}
+			/>
+		);
+	}, []);
 
 	const handleRollbackOpenChange = React.useCallback((open: boolean): void => {
 		if (!open) {
@@ -118,7 +115,7 @@ export function GeneratorDefinitionsTable({ resources, onRollbackSuccess }: Gene
 				<GeneratorRollbackDialog
 					slug={rollbackTarget.slug}
 					label={rollbackTarget.label}
-					open={true}
+					open
 					onOpenChange={handleRollbackOpenChange}
 					showTrigger={false}
 					onSuccess={onRollbackSuccess}

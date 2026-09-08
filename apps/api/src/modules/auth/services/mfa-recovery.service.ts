@@ -148,10 +148,7 @@ export class MfaRecoveryService {
 			count: (listWhere) => this.prisma.mfaRecoveryRequest.count({ where: listWhere }),
 		});
 
-		return paginateCursorListResult(
-			{ ...result, items: result.items.map((request) => this.toAdminRequest(request)) },
-			query,
-		);
+		return paginateCursorListResult({ ...result, items: result.items.map((request) => this.toAdminRequest(request)) }, query);
 	}
 
 	public async adminApprove(adminUserId: string, dto: AdminReviewMfaRecoveryInput): Promise<MfaRecoveryStatusResponse> {

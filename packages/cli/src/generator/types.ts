@@ -1,4 +1,5 @@
 import type { PlanAction } from "../core/planner";
+import type { RollbackPlan } from "../rollback/rollback-schema";
 
 export type { PlanAction };
 
@@ -80,8 +81,6 @@ export interface InitGeneratorModulesResult {
 	readonly manifestPath: string;
 	readonly error: string | null;
 }
-
-import type { RollbackPlan } from "../rollback/rollback-schema";
 
 export type { RollbackAction, RollbackPlan, RollbackPlanStep } from "../rollback/rollback-schema";
 

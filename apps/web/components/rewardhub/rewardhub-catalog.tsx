@@ -41,15 +41,7 @@ function CatalogSkeleton({ viewMode }: { readonly viewMode: "grid" | "list" }): 
 }
 
 /** Consumer rewards collection with grid/list toggle and cursor pagination. */
-export function RewardHubCatalog({
-	rewards,
-	isLoading,
-	hasNext,
-	hasPrevious,
-	onNext,
-	onPrevious,
-	detailPathPrefix = "/rewardhub",
-}: RewardHubCatalogProps): React.JSX.Element {
+export function RewardHubCatalog({ rewards, isLoading, hasNext, hasPrevious, onNext, onPrevious, detailPathPrefix = "/rewardhub" }: RewardHubCatalogProps): React.JSX.Element {
 	const { viewMode, setViewMode } = useRewardHubViewMode();
 
 	const resultLabel = isLoading ? "Loading offers…" : `Showing ${String(rewards.length)} offers`;

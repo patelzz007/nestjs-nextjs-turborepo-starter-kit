@@ -75,22 +75,25 @@ function decodeCursor(cursor: string): number | null {
 	}
 }
 
-type GeoCursorOrder = { readonly id: "asc" };
+interface GeoCursorOrder {
+	readonly id: "asc";
+}
+
+const GEO_CURSOR_ORDER: GeoCursorOrder = { id: "asc" };
 
 async function fetchGeoCursorPage<TWhere, TRow extends { id: number }>(options: {
 	readonly limit: number;
 	readonly cursor?: string;
 	readonly where: TWhere;
+	readonly mergeCursor: (where: TWhere, cursorId: number) => TWhere;
 	readonly findMany: (args: { where: TWhere; take: number; skip?: number; orderBy: GeoCursorOrder }) => Promise<TRow[]>;
 }): Promise<{ readonly items: readonly TRow[]; readonly nextCursor: string | null; readonly hasNext: boolean }> {
 	const cursorId = options.cursor !== undefined ? decodeCursor(options.cursor) : null;
-	const mergedWhere: TWhere =
-		cursorId !== null ? ({ ...options.where, id: { gt: cursorId } } as TWhere) : options.where;
-	const rows = await options.findMany({ where: mergedWhere, take: options.limit + 1, orderBy: { id: "asc" } });
+	const mergedWhere = cursorId !== null ? options.mergeCursor(options.where, cursorId) : options.where;
+	const rows = await options.findMany({ where: mergedWhere, take: options.limit + 1, orderBy: GEO_CURSOR_ORDER });
 	const hasNext = rows.length > options.limit;
 	const items = hasNext ? rows.slice(0, options.limit) : rows;
-	const lastItem = items[items.length - 1];
-	const nextCursor = hasNext && lastItem !== undefined ? encodeCursor(lastItem.id) : null;
+	const nextCursor = hasNext ? encodeCursor(items[items.length - 1].id) : null;
 	return { items: sanitizeForDataValue(items), nextCursor, hasNext };
 }
 
@@ -101,13 +104,10 @@ interface FetchGeoListPageOptions<TWhere, TRow extends { id: number }> {
 }
 
 /** Offset + cursor list pagination for geo entities keyed by ascending numeric `id`. */
-async function fetchGeoListPage<TWhere, TRow extends { id: number }>(
-	query: PaginationInput,
-	options: FetchGeoListPageOptions<TWhere, TRow>,
-): Promise<ListResult<TRow>> {
+async function fetchGeoListPage<TWhere, TRow extends { id: number }>(query: PaginationInput, options: FetchGeoListPageOptions<TWhere, TRow>): Promise<ListResult<TRow>> {
 	const total = await options.count(options.where);
 	const useCursor = query.cursor !== undefined;
-	const page = query.page ?? 1;
+	const page = query.page;
 	const offsetMeta = buildOffsetPaginationMeta(total, page, query.limit);
 
 	if (useCursor) {
@@ -115,6 +115,7 @@ async function fetchGeoListPage<TWhere, TRow extends { id: number }>(
 			limit: query.limit,
 			cursor: query.cursor,
 			where: options.where,
+			mergeCursor: (where, cursorId) => ({ ...where, id: { gt: cursorId } }),
 			findMany: options.findMany,
 		});
 		return {
@@ -134,10 +135,9 @@ async function fetchGeoListPage<TWhere, TRow extends { id: number }>(
 		where: options.where,
 		skip,
 		take: query.limit,
-		orderBy: { id: "asc" },
+		orderBy: GEO_CURSOR_ORDER,
 	});
-	const lastRow = rows[rows.length - 1];
-	const nextCursor = offsetMeta.hasNext && lastRow !== undefined ? encodeCursor(lastRow.id) : null;
+	const nextCursor = offsetMeta.hasNext ? encodeCursor(rows[rows.length - 1].id) : null;
 	return {
 		items: sanitizeForDataValue(rows),
 		limit: query.limit,
@@ -201,15 +201,6 @@ export interface ImportValidationResult {
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────
-
-/** Parse a sort string like "-name" into { field: "name", direction: "desc" }. */
-function parseSort(sort: string | undefined, allowedFields: readonly string[]): { readonly field: string; readonly dir: Prisma.SortOrder } {
-	if (!sort) return { field: "name", dir: "asc" };
-	const desc = sort.startsWith("-");
-	const field = desc ? sort.slice(1) : sort;
-	const dir: Prisma.SortOrder = desc ? "desc" : "asc";
-	return { field: allowedFields.includes(field) ? field : "name", dir };
-}
 
 /** Parse comma-separated IDs into a number array. */
 function parseIds(ids: string | undefined): number[] | null {

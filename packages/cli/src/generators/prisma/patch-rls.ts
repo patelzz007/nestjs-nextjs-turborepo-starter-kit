@@ -20,5 +20,3 @@ export async function unpatchRlsSql(rlsPath: string, modelName: string): Promise
 	}
 	await writeFile(rlsPath, removeGeneratedBlock(current, modelName, SQL_MARKER_PREFIXES), "utf8");
 }
-
-

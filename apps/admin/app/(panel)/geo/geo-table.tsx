@@ -277,15 +277,14 @@ export default function GeoView({ initialStats }: GeoTableProps): React.JSX.Elem
 		setCountryFilter("");
 	}, []);
 
-	const { listQuery: paginationQuery, bindListMeta, pagination: basePagination } = useManualHybridPagination<GeoRow>(
-		20,
-		[activeTab, debouncedSearch, countryFilter, sorting],
-		(row) => String(row.id),
-		{
-			onClearFilters: handleClearFilters,
-			isFiltered,
-		},
-	);
+	const {
+		listQuery: paginationQuery,
+		bindListMeta,
+		pagination: basePagination,
+	} = useManualHybridPagination<GeoRow>(20, [activeTab, debouncedSearch, countryFilter, sorting], (row) => String(row.id), {
+		onClearFilters: handleClearFilters,
+		isFiltered,
+	});
 
 	const apiSort = useMemo(() => sortingToApiSort(sorting), [sorting]);
 	const listQueryInput = useMemo(
@@ -298,14 +297,8 @@ export default function GeoView({ initialStats }: GeoTableProps): React.JSX.Elem
 	);
 
 	const countriesQuery = api.geo.countries.useQuery(listQueryInput, { placeholderData: keepPreviousData });
-	const statesQuery = api.geo.states.useQuery(
-		{ ...listQueryInput, countryCode: countryFilter || undefined },
-		{ placeholderData: keepPreviousData },
-	);
-	const citiesQuery = api.geo.cities.useQuery(
-		{ ...listQueryInput, countryCode: countryFilter || undefined },
-		{ placeholderData: keepPreviousData },
-	);
+	const statesQuery = api.geo.states.useQuery({ ...listQueryInput, countryCode: countryFilter || undefined }, { placeholderData: keepPreviousData });
+	const citiesQuery = api.geo.cities.useQuery({ ...listQueryInput, countryCode: countryFilter || undefined }, { placeholderData: keepPreviousData });
 
 	const activeQuery = activeTab === "countries" ? countriesQuery : activeTab === "states" ? statesQuery : citiesQuery;
 	const tableError: string | null = activeQuery.isError ? "Could not load geographic data. Clear search or sort and try again." : null;
@@ -473,12 +466,7 @@ export default function GeoView({ initialStats }: GeoTableProps): React.JSX.Elem
 	const toolbarContent = useMemo(
 		() => (
 			<div className="flex items-center gap-2">
-				<DataTableSearchToolbar
-					value={search}
-					onChange={handleSearchChange}
-					placeholder={`Search ${activeTab}...`}
-					className="relative w-[250px]"
-				/>
+				<DataTableSearchToolbar value={search} onChange={handleSearchChange} placeholder={`Search ${activeTab}...`} className="relative w-[250px]" />
 				{activeTab === "states" || activeTab === "cities" ? (
 					<Input placeholder="Country code" value={countryFilter} onChange={handleCountryFilterChange} className="w-[120px]" />
 				) : null}

@@ -225,7 +225,7 @@ routes
 				const modulesManifest = await loadGeneratorModules(config, { seedIfMissing: true });
 				const ir = normalizeResourceDefinition(definition, { modules: modulesManifest.modules });
 				const firstUi = ir.scope.ui[0];
-				const label = firstUi !== undefined ? ir.uiTargets[firstUi]?.navigation?.label ?? ir.resource.plural : ir.resource.plural;
+				const label = firstUi !== undefined ? (ir.uiTargets[firstUi]?.navigation?.label ?? ir.resource.plural) : ir.resource.plural;
 				rows.push({
 					slug: ir.resource.slug,
 					contractKey: ir.resource.contractKey,

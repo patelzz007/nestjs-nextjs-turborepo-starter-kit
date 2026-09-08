@@ -293,7 +293,9 @@ export class AuthController {
 	@ApiOperation({ summary: "SuperAdmin: list all users with roles and lockout status" })
 	@ApiOkResponse({ type: WrappedAdminUserList, description: "Admin user list" })
 	@ApiResponse({ status: 403, type: ApiErrorResponseDto, description: "SuperAdmin privileges required" })
-	public async getAdminUsersList(@Query(new ZodValidationPipe(apiContract.auth.adminUsers.input)) query: AdminUserListQuery): Promise<PaginatedServiceResult<AdminUserDetail>> {
+	public async getAdminUsersList(
+		@Query(new ZodValidationPipe(apiContract.auth.adminUsers.input)) query: AdminUserListQuery,
+	): Promise<PaginatedServiceResult<AdminUserDetail>> {
 		return this.authService.getAdminUsersList(query);
 	}
 

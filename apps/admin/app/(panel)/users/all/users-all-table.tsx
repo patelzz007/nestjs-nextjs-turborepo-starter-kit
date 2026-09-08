@@ -69,15 +69,16 @@ export default function UsersAllTable({
 		setStatusFilter("all");
 	}, []);
 
-	const { pageIndex, pageSize, listQuery, handlePaginationChange, bindListMeta, pagination: basePagination } = useManualHybridPagination<AdminUserDetail>(
-		20,
-		[debouncedSearch, sorting, statusFilter],
-		(user) => user.id,
-		{
-			onClearFilters: handleClearFilters,
-			isFiltered,
-		},
-	);
+	const {
+		pageIndex,
+		pageSize,
+		listQuery,
+		bindListMeta,
+		pagination: basePagination,
+	} = useManualHybridPagination<AdminUserDetail>(20, [debouncedSearch, sorting, statusFilter], (user) => user.id, {
+		onClearFilters: handleClearFilters,
+		isFiltered,
+	});
 
 	const initialQueryData = React.useMemo(
 		() =>
@@ -251,14 +252,7 @@ export default function UsersAllTable({
 	}, []);
 
 	const toolbarContent = React.useMemo(
-		() => (
-			<DataTableSearchToolbar
-				value={search}
-				onChange={handleSearchChange}
-				placeholder={tableLabels.searchPlaceholder}
-				ariaLabel={tableLabels.searchAriaLabel}
-			/>
-		),
+		() => <DataTableSearchToolbar value={search} onChange={handleSearchChange} placeholder={tableLabels.searchPlaceholder} ariaLabel={tableLabels.searchAriaLabel} />,
 		[handleSearchChange, search, tableLabels.searchAriaLabel, tableLabels.searchPlaceholder],
 	);
 

@@ -26,7 +26,7 @@ export async function fetchListPage<TQuery extends PaginationInput, TWhere, TOrd
 	const where = ports.buildListWhere(query);
 	const total = await ports.count(where);
 	const useCursor = query.cursor !== undefined;
-	const page = query.page ?? 1;
+	const page = query.page;
 	const offsetMeta = buildOffsetPaginationMeta(total, page, query.limit);
 
 	if (useCursor) {

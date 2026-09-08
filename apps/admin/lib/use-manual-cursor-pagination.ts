@@ -61,10 +61,15 @@ export function useManualHybridPagination<TData extends object>(
 	const pageIndex = pageState.resetKey === paginationResetKey ? pageState.pageIndex : 0;
 	const requestCursor = pageState.resetKey === paginationResetKey ? pageState.cursor : undefined;
 
-	React.useEffect((): void => {
+	React.useEffect((): (() => void) => {
 		cursorForPageRef.current = new Map();
 		latestNextCursorRef.current = null;
-		setPageState({ pageIndex: 0, cursor: undefined, resetKey: paginationResetKey });
+		const timeoutId = window.setTimeout((): void => {
+			setPageState({ pageIndex: 0, cursor: undefined, resetKey: paginationResetKey });
+		}, 0);
+		return (): void => {
+			window.clearTimeout(timeoutId);
+		};
 	}, [paginationResetKey]);
 
 	const bindListMeta = React.useCallback(
@@ -124,21 +129,18 @@ export function useManualHybridPagination<TData extends object>(
 		return base;
 	}, [pageIndex, pageSize, requestCursor]);
 
-	const pagination = React.useMemo(
-		(): DataTableServerPagination<TData> => ({
-			mode: "server",
-			totalCount: options?.totalCount ?? 0,
-			pageIndex,
-			pageSize,
-			onPageChange: handlePaginationChange,
-			resetKey: paginationResetKey,
-			getRowId,
-			...(options?.onFetchAllMatching !== undefined ? { onFetchAllMatching: options.onFetchAllMatching } : {}),
-			...(options?.onClearFilters !== undefined ? { onClearFilters: options.onClearFilters } : {}),
-			...(options?.isFiltered !== undefined ? { isFiltered: options.isFiltered } : {}),
-		}),
-		[pageIndex, pageSize, handlePaginationChange, paginationResetKey, getRowId, options?.totalCount, options?.onFetchAllMatching, options?.onClearFilters, options?.isFiltered],
-	);
+	const pagination: DataTableServerPagination<TData> = {
+		mode: "server",
+		totalCount: options?.totalCount ?? 0,
+		pageIndex,
+		pageSize,
+		onPageChange: handlePaginationChange,
+		resetKey: paginationResetKey,
+		getRowId,
+		...(options?.onFetchAllMatching !== undefined ? { onFetchAllMatching: options.onFetchAllMatching } : {}),
+		...(options?.onClearFilters !== undefined ? { onClearFilters: options.onClearFilters } : {}),
+		...(options?.isFiltered !== undefined ? { isFiltered: options.isFiltered } : {}),
+	};
 
 	return {
 		pageIndex,

@@ -72,7 +72,10 @@ export function renderResourceDefinitionSource(definition: ResourceDefinition): 
 		.map(([name, field]) => `\t\t\t${name}: {\n${renderFieldDefinition(field)}\n\t\t\t}`)
 		.join(",\n");
 
-	const uiBlocks = definition.scope.ui.map((moduleId) => renderUiModuleBlock(moduleId, definition)).filter((block) => block.length > 0).join(",\n");
+	const uiBlocks = definition.scope.ui
+		.map((moduleId) => renderUiModuleBlock(moduleId, definition))
+		.filter((block) => block.length > 0)
+		.join(",\n");
 	const uiSection = uiBlocks.length > 0 ? `\tui: {\n${uiBlocks}\n\t},` : "";
 
 	return `import { defineResource } from "@workspace/cli";

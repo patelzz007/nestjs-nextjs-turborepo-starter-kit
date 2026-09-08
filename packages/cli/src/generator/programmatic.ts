@@ -83,9 +83,9 @@ function summarizeResource(ir: ResourceIR): ResourceGeneratorSummary {
 	};
 }
 
-export async function listResourceGeneratorModels(cwd: string): Promise<readonly DiscoveredModel[]> {
+export function listResourceGeneratorModels(cwd: string): Promise<readonly DiscoveredModel[]> {
 	const config = loadProjectConfig(cwd);
-	return discoverExistingModels(config.definitionsDir);
+	return Promise.resolve(discoverExistingModels(config.definitionsDir));
 }
 
 export interface GeneratorUiModuleListItem {
@@ -260,7 +260,8 @@ async function readRepoFileIfExists(rootDir: string, relativePath: string): Prom
 	if (!existsSync(absolutePath)) {
 		return "";
 	}
-	return readFile(absolutePath, "utf8");
+	const content = await readFile(absolutePath, "utf8");
+	return content;
 }
 
 export async function previewGenerationPlanFileDiff(cwd: string, input: WizardResourceInput, filePath: string): Promise<GenerationPlanFileDiff> {

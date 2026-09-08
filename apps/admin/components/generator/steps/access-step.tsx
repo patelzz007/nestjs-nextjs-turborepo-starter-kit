@@ -43,10 +43,7 @@ export const GeneratorAccessStep = React.memo(function GeneratorAccessStep({ dra
 									onClick={() => {
 										onDraftChange({ ...draft, rls: option.value });
 									}}
-									className={cn(
-										"rounded-xl border px-4 py-3 text-left transition-colors",
-										selected ? "border-primary bg-primary/5" : "border-border hover:bg-muted/40",
-									)}>
+									className={cn("rounded-xl border px-4 py-3 text-left transition-colors", selected ? "border-primary bg-primary/5" : "border-border hover:bg-muted/40")}>
 									<p className="text-sm font-medium">{option.label}</p>
 									<p className="text-xs text-muted-foreground">{option.description}</p>
 								</button>

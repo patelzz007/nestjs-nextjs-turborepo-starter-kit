@@ -57,12 +57,6 @@ export type UserLogin = Prisma.UserGetPayload<{ select: typeof USER_SELECT_LOGIN
 /** Admin detail fields (profile + lockout fields). */
 export type UserAdminDetail = Prisma.UserGetPayload<{ select: typeof USER_SELECT_ADMIN_DETAIL }>;
 
-const ADMIN_USER_SORT_FIELDS: readonly ["fullName", "email", "createdAt", "isActive", "isSuperAdmin"] = ["fullName", "email", "createdAt", "isActive", "isSuperAdmin"];
-
-function isAdminUserSortField(field: string): field is (typeof ADMIN_USER_SORT_FIELDS)[number] {
-	return ADMIN_USER_SORT_FIELDS.some((allowed) => allowed === field);
-}
-
 function buildAdminUserListWhere(query: AdminUserListQuery): Prisma.UserWhereInput {
 	const parts: Prisma.UserWhereInput[] = [];
 	const search = query.search?.trim();
@@ -103,30 +97,6 @@ function buildAdminUserListWhere(query: AdminUserListQuery): Prisma.UserWhereInp
 		return single;
 	}
 	return { AND: parts };
-}
-
-function parseAdminUserListOrderBy(sort: string | undefined): Prisma.UserOrderByWithRelationInput {
-	if (sort === undefined || sort.length === 0) {
-		return { createdAt: "desc" };
-	}
-	const desc = sort.startsWith("-");
-	const field = desc ? sort.slice(1) : sort;
-	const direction: Prisma.SortOrder = desc ? "desc" : "asc";
-	if (!isAdminUserSortField(field)) {
-		return { createdAt: "desc" };
-	}
-	switch (field) {
-		case "fullName":
-			return { fullName: direction };
-		case "email":
-			return { email: direction };
-		case "createdAt":
-			return { createdAt: direction };
-		case "isActive":
-			return { isActive: direction };
-		case "isSuperAdmin":
-			return { isSuperAdmin: direction };
-	}
 }
 
 /**

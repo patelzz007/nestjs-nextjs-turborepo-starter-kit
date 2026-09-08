@@ -1,5 +1,13 @@
 import { Injectable } from "@nestjs/common";
-import { epochMs, type AdminUserDetail, type AdminUserListQuery, type MessageResponse, type PaginatedServiceResult, type UserPermissions, type UserResponse } from "@workspace/shared";
+import {
+	epochMs,
+	type AdminUserDetail,
+	type AdminUserListQuery,
+	type MessageResponse,
+	type PaginatedServiceResult,
+	type UserPermissions,
+	type UserResponse,
+} from "@workspace/shared";
 
 import { paginateCursorListResult } from "../../../platform/persistence/cursor-list";
 

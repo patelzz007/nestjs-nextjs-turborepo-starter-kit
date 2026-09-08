@@ -78,9 +78,7 @@ export function renderAdminDetailView(ir: ResourceIR): string {
 	const titleField = resolveTitleField(ir);
 	const subtitleField = resolveSubtitleField(ir);
 	const formFieldNames = ir.admin?.form.fields ?? ir.uiTargets.admin?.form.fields ?? [];
-	const detailFields = ir.fields.filter(
-		(field) => formFieldNames.includes(field.camelName) && field.camelName !== titleField && field.camelName !== subtitleField,
-	);
+	const detailFields = ir.fields.filter((field) => formFieldNames.includes(field.camelName) && field.camelName !== titleField && field.camelName !== subtitleField);
 	const detailFieldBlocks = detailFields.map((field) => renderDetailField(field)).join("\n");
 	const statusBadges = resolveStatusBadges(ir);
 	const subtitleLine = subtitleField !== undefined ? `\n\t\t\t\t\t\t<p className="text-sm text-muted-foreground">{entity.${subtitleField}}</p>` : "";

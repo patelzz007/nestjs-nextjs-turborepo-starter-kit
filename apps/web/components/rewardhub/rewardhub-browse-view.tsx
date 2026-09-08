@@ -5,7 +5,7 @@ import { RewardHubFilters } from "@/components/rewardhub/rewardhub-filters";
 import { readPaginatedHasNext, readPaginatedNextCursor, stubPaginatedMeta } from "@/lib/api-envelope";
 import { WebEmptyState } from "@/components/web-ui/empty-state";
 import { useAuth } from "@workspace/client/lib/auth";
-import { ApiPaginatedMetaSchema, type ApiPaginatedMeta, type PilotCity, type RewardCategory, type RewardResponse } from "@workspace/shared";
+import { ApiPaginatedMeta, type PilotCity, type RewardCategory, type RewardResponse } from "@workspace/shared";
 import { Gift, MapPin, Search, Sparkles } from "lucide-react";
 import * as React from "react";
 

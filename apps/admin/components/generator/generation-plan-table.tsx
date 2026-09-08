@@ -152,9 +152,7 @@ export const GenerationPlanTable = React.memo(function GenerationPlanTable({ act
 						</div>
 					) : null}
 					{diffError !== null ? <p className="text-sm text-destructive">{diffError}</p> : null}
-					{diffContent !== null ? (
-						<pre className="max-h-[32rem] overflow-auto rounded-lg bg-muted p-4 text-xs leading-relaxed">{diffContent}</pre>
-					) : null}
+					{diffContent !== null ? <pre className="max-h-[32rem] overflow-auto rounded-lg bg-muted p-4 text-xs leading-relaxed">{diffContent}</pre> : null}
 				</DialogContent>
 			</Dialog>
 		</>

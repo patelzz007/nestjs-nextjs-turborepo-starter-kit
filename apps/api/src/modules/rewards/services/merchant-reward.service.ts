@@ -1,7 +1,14 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
 
-import type { MerchantCreateRewardInput, MerchantRedemptionListItem, MerchantRedemptionListQuery, MerchantUpdateRewardInput, PaginatedServiceResult, RewardResponse } from "@workspace/shared";
+import type {
+	MerchantCreateRewardInput,
+	MerchantRedemptionListItem,
+	MerchantRedemptionListQuery,
+	MerchantUpdateRewardInput,
+	PaginatedServiceResult,
+	RewardResponse,
+} from "@workspace/shared";
 import { EpochMsSchema, RewardPlatformEventSchema } from "@workspace/shared";
 
 import { paginateCursorListResult } from "../../../platform/persistence/cursor-list";

@@ -60,11 +60,16 @@ export function GeneratorWizard({ parentModels, uiModules }: GeneratorWizardProp
 	}, [draft, currentStepId]);
 
 	React.useEffect(() => {
-		setPreview(null);
-		setPreviewError(null);
-		setApplyResult(null);
-		setApplyError(null);
-		setCompletedStepIds(new Set());
+		const timeoutId = window.setTimeout((): void => {
+			setPreview(null);
+			setPreviewError(null);
+			setApplyResult(null);
+			setApplyError(null);
+			setCompletedStepIds(new Set());
+		}, 0);
+		return (): void => {
+			window.clearTimeout(timeoutId);
+		};
 	}, [draft]);
 
 	const loadPreview = React.useCallback(async (nextDraft: GeneratorWizardDraft): Promise<ResourceGeneratorPreview | null> => {
@@ -192,20 +197,13 @@ export function GeneratorWizard({ parentModels, uiModules }: GeneratorWizardProp
 				</Button>
 			</div>
 
-			<GeneratorStepper
-				steps={GENERATOR_WIZARD_STEPS}
-				currentStepId={currentStepId}
-				completedStepIds={completedStepIds}
-				onStepSelect={goToStep}
-			/>
+			<GeneratorStepper steps={GENERATOR_WIZARD_STEPS} currentStepId={currentStepId} completedStepIds={completedStepIds} onStepSelect={goToStep} />
 
 			<div className="min-h-[24rem]">
 				{currentStepId === "basics" ? <GeneratorBasicsStep draft={draft} error={basicsError} onDraftChange={setDraft} /> : null}
 				{currentStepId === "scope" ? <GeneratorScopeStep draft={draft} uiModules={uiModules} error={scopeError} onDraftChange={setDraft} /> : null}
 				{currentStepId === "access" ? <GeneratorAccessStep draft={draft} onDraftChange={setDraft} /> : null}
-				{currentStepId === "fields" ? (
-					<GeneratorFieldsStep draft={draft} parentModels={parentModels} error={fieldsError} onDraftChange={setDraft} />
-				) : null}
+				{currentStepId === "fields" ? <GeneratorFieldsStep draft={draft} parentModels={parentModels} error={fieldsError} onDraftChange={setDraft} /> : null}
 				{currentStepId === "preview" ? <GeneratorPreviewStep preview={preview} loading={previewLoading} error={previewError} /> : null}
 				{currentStepId === "generate" ? (
 					<GeneratorGenerateStep

@@ -20,7 +20,7 @@ export default async function ${model}DetailPage({ params }: ${model}DetailPageP
 \tconst first = result[0];
 \tconst initial${model} = first.status === "fulfilled" ? first.value.data : undefined;
 
-\treturn <${model}DetailView id={id} initial${model}={initial${model}\} />;
+\treturn <${model}DetailView id={id} initial${model}={initial${model}} />;
 }
 `;
 }

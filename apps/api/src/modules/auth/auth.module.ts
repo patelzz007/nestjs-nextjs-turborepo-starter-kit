@@ -49,7 +49,6 @@ import { TwoFactorService } from "./services/two-factor.service";
 import { TaskScheduleService } from "./services/task-schedule.service";
 import { TokenService } from "./services/token.service";
 import { UserResponseMapper } from "./services/user-response.mapper";
-import { AccessTokenStateService } from "./services/access-token-state.service";
 import { MfaChallengeService } from "./services/mfa-challenge.service";
 import { MfaRecoveryService } from "./services/mfa-recovery.service";
 import { SecretEncryptionService } from "./services/secret-encryption.service";

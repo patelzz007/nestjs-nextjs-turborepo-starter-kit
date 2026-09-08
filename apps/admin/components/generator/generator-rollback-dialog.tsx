@@ -1,13 +1,7 @@
 "use client";
 
 import type { RollbackPlan } from "@workspace/cli/generator";
-import {
-	AlertDialog,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogTitle,
-	confirmDialogLabels,
-} from "@workspace/ui/components/overlay/alert-dialog";
+import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogTitle, confirmDialogLabels } from "@workspace/ui/components/overlay/alert-dialog";
 import { Alert, AlertDescription, AlertTitle } from "@workspace/ui/components/feedback/alert";
 import { Badge } from "@workspace/ui/components/feedback/badge";
 import { Spinner } from "@workspace/ui/components/feedback/spinner";
@@ -42,14 +36,7 @@ export interface GeneratorRollbackDialogProps {
 	readonly onSuccess?: () => void;
 }
 
-export function GeneratorRollbackDialog({
-	slug,
-	label,
-	open: openProp,
-	onOpenChange,
-	showTrigger = true,
-	onSuccess,
-}: GeneratorRollbackDialogProps): React.JSX.Element {
+export function GeneratorRollbackDialog({ slug, label, open: openProp, onOpenChange, showTrigger = true, onSuccess }: GeneratorRollbackDialogProps): React.JSX.Element {
 	const [internalOpen, setInternalOpen] = React.useState(false);
 	const isControlled = openProp !== undefined && onOpenChange !== undefined;
 	const open = isControlled ? openProp : internalOpen;
@@ -78,7 +65,12 @@ export function GeneratorRollbackDialog({
 		if (!open) {
 			return;
 		}
-		void loadPlan();
+		const timeoutId = window.setTimeout((): void => {
+			void loadPlan();
+		}, 0);
+		return (): void => {
+			window.clearTimeout(timeoutId);
+		};
 	}, [open, includeDefinition, loadPlan]);
 
 	const handleOpen = (): void => {
@@ -144,17 +136,10 @@ export function GeneratorRollbackDialog({
 			) : null}
 
 			<AlertDialog open={open} onOpenChange={handleOpenChange}>
-				<AlertDialogContent
-					className="max-w-2xl"
-					severity="critical"
-					labels={ROLLBACK_DIALOG_LABELS}
-					confirmLoading={applying}
-					onConfirm={handleConfirm}
-				>
+				<AlertDialogContent className="max-w-2xl" severity="critical" labels={ROLLBACK_DIALOG_LABELS} confirmLoading={applying} onConfirm={handleConfirm}>
 					<AlertDialogTitle>Rollback {label}</AlertDialogTitle>
 					<AlertDialogDescription>
-						This removes generator artifacts for <code className="rounded bg-muted px-1">{slug}</code> and restores shared files to their pre-generate
-						state.
+						This removes generator artifacts for <code className="rounded bg-muted px-1">{slug}</code> and restores shared files to their pre-generate state.
 					</AlertDialogDescription>
 
 					<div className="grid gap-4">
@@ -163,7 +148,7 @@ export function GeneratorRollbackDialog({
 								id={`rollback-include-definition-${slug}`}
 								checked={includeDefinition}
 								onCheckedChange={(checked) => {
-									setIncludeDefinition(checked === true);
+									setIncludeDefinition(checked);
 								}}
 							/>
 							<Label htmlFor={`rollback-include-definition-${slug}`}>Also delete the .resource.ts definition</Label>
@@ -174,7 +159,7 @@ export function GeneratorRollbackDialog({
 								id={`rollback-dry-run-${slug}`}
 								checked={dryRun}
 								onCheckedChange={(checked) => {
-									setDryRun(checked === true);
+									setDryRun(checked);
 								}}
 							/>
 							<Label htmlFor={`rollback-dry-run-${slug}`}>Dry-run only (preview without applying)</Label>

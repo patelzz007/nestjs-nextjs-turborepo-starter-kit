@@ -119,7 +119,7 @@ describe("list-filters helpers", () => {
 			throw new Error("expected product-like IR fields");
 		}
 		expect(renderZodListQueryFilterField(isActiveField)).toContain("isActive: BooleanQueryParamSchema");
-		expect(renderZodListQueryFilterField(brandField)).toContain('brand: z.string().trim().min(1).optional()');
+		expect(renderZodListQueryFilterField(brandField)).toContain("brand: z.string().trim().min(1).optional()");
 	});
 
 	it("generates select filters only for boolean and enum fields", () => {

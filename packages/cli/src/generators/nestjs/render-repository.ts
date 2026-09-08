@@ -159,12 +159,8 @@ function renderListQueryHelpers(ir: ResourceIR): string {
 
 	const softDeleteLine = ir.softDelete ? "\t\tdeletedAt: null," : "";
 	const filterWhereLines = renderListWhereFilterLines(resolveListFilterFields(ir));
-	const idCursorOrderBranch = idSortable
-		? `\tif (sortBy === "id") {\n\t\treturn { id: sortDirection };\n\t}\n`
-		: "";
-	const idMergeDescBranch = idSortable
-		? `\tif (sortBy === "id" && sortDirection === "desc") {\n\t\treturn { ...where, id: { lt: cursorId } };\n\t}\n`
-		: "";
+	const idCursorOrderBranch = idSortable ? `\tif (sortBy === "id") {\n\t\treturn { id: sortDirection };\n\t}\n` : "";
+	const idMergeDescBranch = idSortable ? `\tif (sortBy === "id" && sortDirection === "desc") {\n\t\treturn { ...where, id: { lt: cursorId } };\n\t}\n` : "";
 	const mergeListCursorFn = idSortable
 		? `function mergeListCursor(where: Prisma.${model}WhereInput, cursorId: string, query?: ${model}ListQuery): Prisma.${model}WhereInput {
 \tconst sortBy = query?.sortBy ?? "createdAt";

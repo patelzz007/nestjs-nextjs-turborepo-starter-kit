@@ -312,7 +312,7 @@ ${cascadeListInvalidation}
 \tconst handleDelete = useCallback(
 \t\t(item: ${model}): void => {
 \t\t\tvoid requestDelete({
-\t\t\t\ttitle: \`Delete "\${item.${titleField}}"\?\`,
+\t\t\t\ttitle: \`Delete "\${item.${titleField}}"\` + "?",
 \t\t\t\tdescription: ${tsStringLiteral(deleteDescription)},
 \t\t\t\tonConfirm: async (): Promise<void> => {
 \t\t\t\t\tawait deleteMutation.mutateAsync({ id: item.id });
@@ -410,12 +410,16 @@ ${handleManualColumnFilterChangeBlock.length > 0 ? `${handleManualColumnFilterCh
 			? `useMemo(
 \t\t(): React.JSX.Element => (
 \t\t\t<div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-${hasServerSearch ? `\t\t\t\t<DataTableSearchToolbar
+${
+	hasServerSearch
+		? `\t\t\t\t<DataTableSearchToolbar
 \t\t\t\t\tvalue={search}
 \t\t\t\t\tonChange={handleSearchChange}
 \t\t\t\t\tplaceholder={labels.searchPlaceholder}
 \t\t\t\t\tariaLabel={labels.searchAriaLabel}
-\t\t\t\t/>\n` : ""}${hasTextFilters ? "\t\t\t\t{textFilterToolbar}\n" : ""}\t\t\t</div>
+\t\t\t\t/>\n`
+		: ""
+}${hasTextFilters ? "\t\t\t\t{textFilterToolbar}\n" : ""}\t\t\t</div>
 \t\t),
 \t\t[${[hasServerSearch ? "handleSearchChange, search, labels.searchAriaLabel, labels.searchPlaceholder" : "", hasTextFilters ? "textFilterToolbar" : ""].filter((part) => part.length > 0).join(", ")}],
 \t)`
@@ -474,5 +478,3 @@ ${dataTableFilterProps.length > 0 ? `${dataTableFilterProps}\n` : ""}\t\t\t\t\t\
 }
 `;
 }
-
-

@@ -78,7 +78,9 @@ export function renderMobileBadge(column: string, ir: ResourceIR): string {
 
 export function renderGeneratedMobileCardBlock(ir: ResourceIR, columns: readonly string[]): string {
 	const layout = resolveMobileCardLayout(ir, columns);
-	const gridFieldLines = layout.gridColumns.map((column) => `\t\t\t\t{ label: ${tsStringLiteral(columnHeader(column))}, value: ${renderMobileFieldValue(column, ir)} },`).join("\n");
+	const gridFieldLines = layout.gridColumns
+		.map((column) => `\t\t\t\t{ label: ${tsStringLiteral(columnHeader(column))}, value: ${renderMobileFieldValue(column, ir)} },`)
+		.join("\n");
 	const subtitleLine = layout.subtitleColumn === undefined ? "" : `\n\t\t\tsubtitle={${renderMobileFieldValue(layout.subtitleColumn, ir)}}`;
 	const badgeLine = layout.badgeColumn === undefined ? "" : `\n\t\t\tbadge={${renderMobileBadge(layout.badgeColumn, ir)}}`;
 

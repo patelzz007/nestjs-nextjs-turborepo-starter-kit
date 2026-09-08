@@ -50,15 +50,16 @@ export default function MerchantsAllTable({ initialMerchants, initialTotal, init
 		setStatusFilter("all");
 	}, []);
 
-	const { pageIndex, pageSize, listQuery, bindListMeta, pagination: basePagination } = useManualHybridPagination<MerchantOrgResponse>(
-		20,
-		[debouncedSearch, kybStatusFilter, statusFilter],
-		(merchant) => merchant.id,
-		{
-			onClearFilters: handleClearFilters,
-			isFiltered,
-		},
-	);
+	const {
+		pageIndex,
+		pageSize,
+		listQuery,
+		bindListMeta,
+		pagination: basePagination,
+	} = useManualHybridPagination<MerchantOrgResponse>(20, [debouncedSearch, kybStatusFilter, statusFilter], (merchant) => merchant.id, {
+		onClearFilters: handleClearFilters,
+		isFiltered,
+	});
 
 	const initialQueryData = React.useMemo(
 		() =>
@@ -66,13 +67,7 @@ export default function MerchantsAllTable({ initialMerchants, initialTotal, init
 				? {
 						success: true as const,
 						data: [...initialMerchants],
-						meta: stubPaginatedMeta(
-							20,
-							initialTotal ?? initialMerchants.length,
-							1,
-							initialTotalPages ?? 1,
-							initialHasNext ?? false,
-						),
+						meta: stubPaginatedMeta(20, initialTotal ?? initialMerchants.length, 1, initialTotalPages ?? 1, initialHasNext ?? false),
 					}
 				: undefined,
 		[initialMerchants, initialHasNext, initialTotal, initialTotalPages],
@@ -87,10 +82,7 @@ export default function MerchantsAllTable({ initialMerchants, initialTotal, init
 		},
 		{
 			placeholderData: keepPreviousData,
-			initialData:
-				pageIndex === 0 && pageSize === 20 && trimmedSearch.length === 0 && kybStatusFilter === "all" && statusFilter === "all"
-					? initialQueryData
-					: undefined,
+			initialData: pageIndex === 0 && pageSize === 20 && trimmedSearch.length === 0 && kybStatusFilter === "all" && statusFilter === "all" ? initialQueryData : undefined,
 		},
 	);
 
@@ -262,24 +254,14 @@ export default function MerchantsAllTable({ initialMerchants, initialTotal, init
 		[],
 	);
 
-	const checkbox = React.useMemo(
-		() => buildReadOnlyTableCheckbox("merchants.csv", ["businessName", "city", "category", "contactEmail", "kybStatus", "status"]),
-		[],
-	);
+	const checkbox = React.useMemo(() => buildReadOnlyTableCheckbox("merchants.csv", ["businessName", "city", "category", "contactEmail", "kybStatus", "status"]), []);
 
 	const handleSearchChange = React.useCallback((value: string): void => {
 		setSearch(value);
 	}, []);
 
 	const toolbarContent = React.useMemo(
-		() => (
-			<DataTableSearchToolbar
-				value={search}
-				onChange={handleSearchChange}
-				placeholder={tableLabels.searchPlaceholder}
-				ariaLabel={tableLabels.searchAriaLabel}
-			/>
-		),
+		() => <DataTableSearchToolbar value={search} onChange={handleSearchChange} placeholder={tableLabels.searchPlaceholder} ariaLabel={tableLabels.searchAriaLabel} />,
 		[handleSearchChange, search, tableLabels.searchAriaLabel, tableLabels.searchPlaceholder],
 	);
 
@@ -292,9 +274,7 @@ export default function MerchantsAllTable({ initialMerchants, initialTotal, init
 
 			<Card>
 				<CardHeader>
-					<CardTitle className="text-base">
-						{rows.length > 0 ? `${String(rows.length)} merchants on this page` : "Merchant organizations"}
-					</CardTitle>
+					<CardTitle className="text-base">{rows.length > 0 ? `${String(rows.length)} merchants on this page` : "Merchant organizations"}</CardTitle>
 				</CardHeader>
 				<CardContent>
 					<DataTable

@@ -79,8 +79,8 @@ export const GeneratorGenerateStep = React.memo(function GeneratorGenerateStep({
 							<AlertTitle>Partial generation</AlertTitle>
 							<AlertDescription className="grid gap-2">
 								<p>
-									{String(applyResult.writtenFiles.length)} file(s) were written before the pipeline failed. Review validation output, fix issues, then retry apply or roll back from the
-									generator hub.
+									{String(applyResult.writtenFiles.length)} file(s) were written before the pipeline failed. Review validation output, fix issues, then retry apply or roll
+									back from the generator hub.
 								</p>
 								<p className="font-mono text-xs">{applyResult.writtenFiles.join(", ")}</p>
 							</AlertDescription>

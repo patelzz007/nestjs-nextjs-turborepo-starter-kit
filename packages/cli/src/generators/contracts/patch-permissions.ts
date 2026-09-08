@@ -14,7 +14,7 @@ export async function patchPermissionEnum(enumsPath: string, ir: ResourceIR): Pr
 	if (hasGeneratedBlock(current, markerKey) || current.includes(`"${resource}"`)) {
 		return;
 	}
-	const anchor = 'export const PermissionResourceSchema = z.enum([';
+	const anchor = "export const PermissionResourceSchema = z.enum([";
 	const anchorIndex = current.indexOf(anchor);
 	if (anchorIndex === -1) {
 		throw new Error(`patchPermissionEnum: PermissionResourceSchema anchor not found in ${enumsPath}`);

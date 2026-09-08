@@ -4,12 +4,7 @@ import path from "node:path";
 
 import { discoverGeneratorModules } from "./discover-modules";
 import type { AppProjectConfig } from "./project";
-import {
-	GENERATOR_MODULES_MANIFEST_RELATIVE_PATH,
-	GeneratorModulesManifestSchema,
-	type GeneratorModule,
-	type GeneratorModulesManifest,
-} from "../schema/generator-modules";
+import { GENERATOR_MODULES_MANIFEST_RELATIVE_PATH, GeneratorModulesManifestSchema, type GeneratorModule, type GeneratorModulesManifest } from "../schema/generator-modules";
 
 export interface LoadGeneratorModulesOptions {
 	readonly seedIfMissing?: boolean;
@@ -46,10 +41,7 @@ export async function readGeneratorModulesManifest(rootDir: string): Promise<Gen
 	return parsed.data;
 }
 
-export async function loadGeneratorModules(
-	config: AppProjectConfig,
-	options: LoadGeneratorModulesOptions = {},
-): Promise<GeneratorModulesManifest> {
+export async function loadGeneratorModules(config: AppProjectConfig, options: LoadGeneratorModulesOptions = {}): Promise<GeneratorModulesManifest> {
 	const seedIfMissing = options.seedIfMissing === true;
 	const refresh = options.refresh === true;
 	const existing = await readGeneratorModulesManifest(config.rootDir);
@@ -64,9 +56,7 @@ export async function loadGeneratorModules(
 	}
 
 	if (existing === null) {
-		throw new Error(
-			`Generator modules manifest not found at ${GENERATOR_MODULES_MANIFEST_RELATIVE_PATH}. Run "app init-modules" or "app doctor".`,
-		);
+		throw new Error(`Generator modules manifest not found at ${GENERATOR_MODULES_MANIFEST_RELATIVE_PATH}. Run "app init-modules" or "app doctor".`);
 	}
 
 	return existing;
@@ -76,10 +66,7 @@ export function listUiModuleIds(manifest: GeneratorModulesManifest): string[] {
 	return manifest.modules.map((module) => module.id);
 }
 
-export function resolveModulesForIr(
-	manifest: GeneratorModulesManifest,
-	uiModuleIds: readonly string[],
-): GeneratorModule[] {
+export function resolveModulesForIr(manifest: GeneratorModulesManifest, uiModuleIds: readonly string[]): GeneratorModule[] {
 	const resolved: GeneratorModule[] = [];
 	for (const moduleId of uiModuleIds) {
 		const module = manifest.modules.find((entry) => entry.id === moduleId);

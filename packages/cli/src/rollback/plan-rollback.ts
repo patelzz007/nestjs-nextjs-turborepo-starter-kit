@@ -7,12 +7,7 @@ import { loadGeneratorModules } from "../core/load-modules";
 import type { AppProjectConfig } from "../core/project";
 import { normalizeResourceDefinition } from "../ir/normalize";
 import { parseResourceDefinitionFile } from "../parser/parse-resource-definition";
-import {
-	definitionRelativePath,
-	normalizeRepoRelativePath,
-	resourceModuleRelativeDir,
-	resourceUiRelativeDirs,
-} from "./generator-paths";
+import { definitionRelativePath, normalizeRepoRelativePath, resourceModuleRelativeDir, resourceUiRelativeDirs } from "./generator-paths";
 import { readRollbackRecord } from "./prepare-rollback";
 import type { RollbackPlan, RollbackPlanStep } from "./rollback-schema";
 
@@ -20,11 +15,7 @@ export interface BuildRollbackPlanOptions {
 	readonly includeDefinition: boolean;
 }
 
-export async function buildRollbackPlan(
-	config: AppProjectConfig,
-	slug: string,
-	options: BuildRollbackPlanOptions,
-): Promise<RollbackPlan> {
+export async function buildRollbackPlan(config: AppProjectConfig, slug: string, options: BuildRollbackPlanOptions): Promise<RollbackPlan> {
 	const warnings: string[] = [];
 	const steps: RollbackPlanStep[] = [];
 	const record = await readRollbackRecord(config, slug);

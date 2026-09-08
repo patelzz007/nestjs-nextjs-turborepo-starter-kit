@@ -13,7 +13,16 @@ import { createAuthChannel } from "./auth-sync";
 import { toAuthUser } from "./map-auth-user";
 import { API_BASE_URL } from "../api/config";
 import { apiRouter } from "../api/endpoints";
-import { createApiRequestContext, createRefreshCooldown, createUncheckedApiRequestContext, fetchMutationUnchecked, fetchQuery, useApi, type ApiClient, type RefreshResult } from "../api/use-api";
+import {
+	createApiRequestContext,
+	createRefreshCooldown,
+	createUncheckedApiRequestContext,
+	fetchMutationUnchecked,
+	fetchQuery,
+	useApi,
+	type ApiClient,
+	type RefreshResult,
+} from "../api/use-api";
 import type { ApiRouter } from "../api/endpoints";
 import { useAuthStore, type AuthUser } from "./auth-store";
 
@@ -108,7 +117,7 @@ export function AuthProvider({
 		const meResponse = await fetchQuery(requestContext, apiRouter.auth.me, undefined);
 		if (meResponse.ok) {
 			sessionInvalidatedRef.current = false;
-			setUser(toAuthUser(meResponse.data));
+			setUser(toAuthUser(meResponse.data.data));
 			setIsAuthenticated(true);
 			return;
 		}
@@ -117,15 +126,17 @@ export function AuthProvider({
 	}, [baseUrl, clearUser, clientType, extraHeaders, setUser]);
 
 	useEffect((): (() => void) => {
-		let cancelled = false;
+		const abortController = new AbortController();
+		const isCancelled = (): boolean => abortController.signal.aborted;
+
 		void (async (): Promise<void> => {
 			await revalidateSession();
-			if (!cancelled) {
+			if (!isCancelled()) {
 				setIsLoading(false);
 			}
 		})();
 		return (): void => {
-			cancelled = true;
+			abortController.abort();
 		};
 	}, [revalidateSession]);
 

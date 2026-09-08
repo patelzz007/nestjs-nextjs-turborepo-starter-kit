@@ -16,7 +16,7 @@ export const dynamic = "force-dynamic";
 export default async function ${model}Page(): Promise<React.JSX.Element> {
 \tconst server = createAdminServerCaller();
 \tconst result = await Promise.allSettled([
-\t\tserver.${contractKey}.list.query({ page: 1, limit: ${DEFAULT_LIST_LIMIT} }),
+\t\tserver.${contractKey}.list.query({ page: 1, limit: ${String(DEFAULT_LIST_LIMIT)} }),
 \t]);
 
 \tconst first = result[0];

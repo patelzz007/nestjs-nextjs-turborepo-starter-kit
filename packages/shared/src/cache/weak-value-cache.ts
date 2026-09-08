@@ -18,53 +18,53 @@ export function finalizeWeakValueEntry<K, V extends object>(store: Map<K, WeakRe
  * replacement so a stale finalizer cannot delete a live entry.
  */
 export class WeakValueCache<K, V extends object> {
-	private readonly store = new Map<K, WeakRef<V>>();
-	private readonly registry = new FinalizationRegistry<RegistryHeld<K>>((held): void => {
-		finalizeWeakValueEntry(this.store, held);
+	private readonly _store = new Map<K, WeakRef<V>>();
+	private readonly _registry = new FinalizationRegistry<RegistryHeld<K>>((held): void => {
+		finalizeWeakValueEntry(this._store, held);
 	});
 
 	public get(key: K): V | undefined {
-		const ref = this.store.get(key);
+		const ref = this._store.get(key);
 		if (ref === undefined) {
 			return undefined;
 		}
 		const value = ref.deref();
 		if (value === undefined) {
-			this.store.delete(key);
+			this._store.delete(key);
 			return undefined;
 		}
 		return value;
 	}
 
 	public set(key: K, value: V): void {
-		const existing = this.store.get(key);
+		const existing = this._store.get(key);
 		if (existing !== undefined) {
-			this.registry.unregister(existing);
+			this._registry.unregister(existing);
 		}
 
 		const ref = new WeakRef(value);
-		this.store.set(key, ref);
-		this.registry.register(value, { key, ref }, ref);
+		this._store.set(key, ref);
+		this._registry.register(value, { key, ref }, ref);
 	}
 
 	public delete(key: K): boolean {
-		const existing = this.store.get(key);
+		const existing = this._store.get(key);
 		if (existing === undefined) {
 			return false;
 		}
-		this.registry.unregister(existing);
-		this.store.delete(key);
+		this._registry.unregister(existing);
+		this._store.delete(key);
 		return true;
 	}
 
 	public clear(): void {
-		for (const ref of this.store.values()) {
-			this.registry.unregister(ref);
+		for (const ref of this._store.values()) {
+			this._registry.unregister(ref);
 		}
-		this.store.clear();
+		this._store.clear();
 	}
 
 	public get size(): number {
-		return this.store.size;
+		return this._store.size;
 	}
 }

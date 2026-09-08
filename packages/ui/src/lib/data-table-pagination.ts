@@ -25,14 +25,10 @@ export interface DataTableServerPagination<TData extends RowData> {
 
 export type DataTablePagination<TData extends RowData> = DataTableClientPagination<TData> | DataTableServerPagination<TData>;
 
-export function isServerPagination<TData extends RowData>(
-	pagination: DataTablePagination<TData> | undefined,
-): pagination is DataTableServerPagination<TData> {
+export function isServerPagination<TData extends RowData>(pagination: DataTablePagination<TData> | undefined): pagination is DataTableServerPagination<TData> {
 	return pagination?.mode === "server";
 }
 
-export function isClientPagination<TData extends RowData>(
-	pagination: DataTablePagination<TData> | undefined,
-): pagination is DataTableClientPagination<TData> {
+export function isClientPagination<TData extends RowData>(pagination: DataTablePagination<TData> | undefined): pagination is DataTableClientPagination<TData> {
 	return pagination?.mode === "client" || pagination === undefined;
 }

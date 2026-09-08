@@ -56,13 +56,7 @@ function fromApiResponse(user: UserResponse): DisplayUser {
 	};
 }
 
-export default function HelloView({
-	initialEnvelope,
-	sessionActive,
-}: {
-	readonly initialEnvelope: Envelope<UserResponse>;
-	readonly sessionActive: boolean;
-}): JSX.Element {
+export default function HelloView({ initialEnvelope, sessionActive }: { readonly initialEnvelope: Envelope<UserResponse>; readonly sessionActive: boolean }): JSX.Element {
 	const { api } = useAuth();
 	const storeUser = useAuthUser();
 	const [showDetails, setShowDetails] = useState(false);

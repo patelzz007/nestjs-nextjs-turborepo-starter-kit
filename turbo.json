@@ -8,6 +8,7 @@
 			"outputs": [".next/**", "!.next/cache/**", "dist/**"],
 			"env": [
 				"OBSERVE_APP_KEY",
+				"COOKIE_DOMAIN",
 				"OBSERVE_APP_SECRET",
 				"OBSERVE_SERVICE_ID",
 				"OBSERVE_ENABLED",
@@ -123,6 +124,7 @@
 			"cache": false,
 			"persistent": true,
 			"env": [
+				"COOKIE_DOMAIN",
 				"OBSERVE_APP_KEY",
 				"OBSERVE_APP_SECRET",
 				"OBSERVE_SERVICE_ID",

@@ -22,7 +22,7 @@ export class SuperAdminGuard implements CanActivate {
 			});
 		}
 
-		if (isAuthenticatedUser(user) && user.isSuperAdmin === true) {
+		if (isAuthenticatedUser(user) && user.isSuperAdmin) {
 			return true;
 		}
 

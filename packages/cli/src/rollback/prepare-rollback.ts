@@ -75,11 +75,7 @@ async function writeSharedPatchSnapshot(config: AppProjectConfig, slug: string, 
 	await writeFile(filePath, `${JSON.stringify(snapshot, null, 2)}\n`, "utf8");
 }
 
-export async function prepareResourceGeneration(
-	config: AppProjectConfig,
-	ir: ResourceIR,
-	modulesManifest: GeneratorModulesManifest,
-): Promise<void> {
+export async function prepareResourceGeneration(config: AppProjectConfig, ir: ResourceIR, modulesManifest: GeneratorModulesManifest): Promise<void> {
 	const slug = ir.resource.slug;
 	const existingManifest = await readManifest(config.rootDir, slug);
 	const existingRecord = await readRollbackRecord(config, slug);

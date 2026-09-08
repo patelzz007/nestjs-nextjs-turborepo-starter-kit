@@ -16,11 +16,7 @@ import { unpatchSidebarMenu } from "../generators/admin/patch-sidebar-menu";
 import { resolveModulesForIr } from "../core/load-modules";
 
 /** Removes all generator blocks for a resource from shared patched files. */
-export async function unpatchSharedFiles(
-	config: AppProjectConfig,
-	ir: ResourceIR,
-	modulesManifest: GeneratorModulesManifest,
-): Promise<void> {
+export async function unpatchSharedFiles(config: AppProjectConfig, ir: ResourceIR, modulesManifest: GeneratorModulesManifest): Promise<void> {
 	const slug = ir.resource.slug;
 	const contractKey = ir.resource.contractKey;
 	const modelName = ir.resource.modelName;

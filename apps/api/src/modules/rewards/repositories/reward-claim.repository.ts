@@ -66,10 +66,7 @@ export class RewardClaimRepository {
 		});
 	}
 
-	public async listForUser(
-		userId: string,
-		query: RewardClaimListQuery,
-	): Promise<RepositoryListResult<RewardClaimWithRewardTitle>> {
+	public async listForUser(userId: string, query: RewardClaimListQuery): Promise<RepositoryListResult<RewardClaimWithRewardTitle>> {
 		const where: Prisma.RewardClaimWhereInput = {
 			userId,
 			isDeleted: false,

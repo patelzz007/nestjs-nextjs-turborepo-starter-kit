@@ -12,6 +12,7 @@ import {
 	type WizardFieldInput,
 	type WizardResourceInput,
 } from "@workspace/cli/generator";
+import { z } from "zod";
 
 export type ListBehavior = "search-sort" | "sort-only" | "none";
 
@@ -213,6 +214,17 @@ export interface PersistedWizardDraft {
 	readonly savedAt: string;
 }
 
+const WizardStepIdSchema = z.enum(["basics", "scope", "access", "fields", "preview", "generate"]);
+
+const PersistedWizardDraftSchema = z
+	.object({
+		version: z.literal(WIZARD_DRAFT_VERSION),
+		currentStepId: WizardStepIdSchema,
+		savedAt: z.string(),
+		draft: z.custom<GeneratorWizardDraft>((value) => typeof value === "object" && value !== null),
+	})
+	.strict();
+
 export function validateBasicsStep(draft: GeneratorWizardDraft): string | null {
 	const modelName = resolveModelName(draft.name);
 	if (modelName.length === 0) {
@@ -263,12 +275,12 @@ export function loadWizardDraftFromStorage(): PersistedWizardDraft | null {
 		if (raw === null || raw.length === 0) {
 			return null;
 		}
-		const parsed = JSON.parse(raw) as PersistedWizardDraft;
-		if (parsed.version !== WIZARD_DRAFT_VERSION) {
+		const parsed = PersistedWizardDraftSchema.safeParse(JSON.parse(raw));
+		if (!parsed.success) {
 			window.localStorage.removeItem(WIZARD_DRAFT_STORAGE_KEY);
 			return null;
 		}
-		return parsed;
+		return parsed.data;
 	} catch {
 		window.localStorage.removeItem(WIZARD_DRAFT_STORAGE_KEY);
 		return null;

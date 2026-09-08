@@ -53,15 +53,15 @@ export const MfaRecoveryQueue = React.forwardRef<HTMLDivElement, MfaRecoveryQueu
 		setStatusFilter("all");
 	}, []);
 
-	const { pageIndex, pageSize, listQuery, bindListMeta, pagination: basePagination } = useManualHybridPagination<AdminMfaRecoveryRequest>(
-		20,
-		[statusFilter],
-		(request) => request.id,
-		{
-			onClearFilters: handleClearFilters,
-			isFiltered,
-		},
-	);
+	const {
+		pageSize,
+		listQuery,
+		bindListMeta,
+		pagination: basePagination,
+	} = useManualHybridPagination<AdminMfaRecoveryRequest>(20, [statusFilter], (request) => request.id, {
+		onClearFilters: handleClearFilters,
+		isFiltered,
+	});
 
 	const requestsQuery = api.auth.adminMfaRecoveryRequests.useQuery(
 		{
@@ -75,13 +75,7 @@ export const MfaRecoveryQueue = React.forwardRef<HTMLDivElement, MfaRecoveryQueu
 					? {
 							success: true,
 							data: [...initialRequests],
-							meta: stubPaginatedMeta(
-								pageSize,
-								initialTotal ?? initialRequests.length,
-								1,
-								initialTotalPages ?? 1,
-								initialHasNext ?? false,
-							),
+							meta: stubPaginatedMeta(pageSize, initialTotal ?? initialRequests.length, 1, initialTotalPages ?? 1, initialHasNext ?? false),
 						}
 					: undefined,
 		},
@@ -137,10 +131,7 @@ export const MfaRecoveryQueue = React.forwardRef<HTMLDivElement, MfaRecoveryQueu
 		[],
 	);
 
-	const checkbox = React.useMemo(
-		() => buildReadOnlyTableCheckbox("mfa-recovery-requests.csv", ["userFullName", "userEmail", "status", "requestedAt"]),
-		[],
-	);
+	const checkbox = React.useMemo(() => buildReadOnlyTableCheckbox("mfa-recovery-requests.csv", ["userFullName", "userEmail", "status", "requestedAt"]), []);
 
 	const tableLabels = React.useMemo(
 		() =>

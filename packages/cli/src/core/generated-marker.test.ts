@@ -1,11 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-	findGeneratedBlock,
-	hasGeneratedBlock,
-	removeGeneratedBlock,
-	upsertGeneratedBlock,
-} from "./generated-marker";
+import { findGeneratedBlock, hasGeneratedBlock, removeGeneratedBlock, upsertGeneratedBlock } from "./generated-marker";
 import { parseGeneratorSlug } from "../schema/generator-slug";
 
 describe("generated-marker", () => {

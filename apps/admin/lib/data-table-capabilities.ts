@@ -1,6 +1,5 @@
 import type { RowData } from "@tanstack/react-table";
-import type { DataTableCheckboxConfig } from "@workspace/ui/lib/data-table-checkbox";
-import type { DataTableBulkSelectionContext } from "@workspace/ui/lib/data-table-checkbox";
+import type { DataTableCheckboxConfig, DataTableBulkSelectionContext } from "@workspace/ui/lib/data-table-checkbox";
 import { toPlatformCapabilitySlug, type CapabilitySlug, type PermissionResource } from "@workspace/shared";
 
 /** Returns true when the session includes `DELETE` on the given platform resource. */
@@ -23,9 +22,7 @@ export function buildResourceTableCheckbox<TData extends RowData>(options: Resou
 	const includeDelete = options.onDeleteAll !== undefined && canDeletePlatformResource(options.hasCapability, options.resource);
 	const capabilitySlug = options.requiredCapabilityForBulkActions;
 	const filteredBulkActions =
-		options.bulkActions !== undefined && capabilitySlug !== undefined
-			? options.bulkActions.filter(() => options.hasCapability(capabilitySlug))
-			: options.bulkActions;
+		options.bulkActions !== undefined && capabilitySlug !== undefined ? options.bulkActions.filter(() => options.hasCapability(capabilitySlug)) : options.bulkActions;
 
 	return {
 		export: true,

@@ -27,10 +27,7 @@ export class RewardRedemptionRepository {
 		return this.prisma.rewardRedemption.findUnique({ where: { id: redemptionId } });
 	}
 
-	public async listForMerchant(
-		merchantOrgId: string,
-		query: MerchantRedemptionListQuery,
-	): Promise<RepositoryListResult<RewardRedemptionListRow>> {
+	public async listForMerchant(merchantOrgId: string, query: MerchantRedemptionListQuery): Promise<RepositoryListResult<RewardRedemptionListRow>> {
 		const where: Prisma.RewardRedemptionWhereInput = { merchantOrgId, isDeleted: false };
 		return fetchStringIdListPage(query, {
 			where,

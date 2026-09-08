@@ -8,8 +8,9 @@ export interface DataTableStorageAdapter {
 
 const STORAGE_PREFIX = "datatable:v1:";
 
+/** True when running in a browser — `window` is undefined during SSR. */
 function isBrowserEnvironment(): boolean {
-	return globalThis.window !== undefined && globalThis.localStorage !== undefined;
+	return typeof window !== "undefined";
 }
 
 /** Default adapter backed by `window.localStorage` (browser only). */
@@ -21,7 +22,7 @@ export function createLocalStorageDataTableStorage(namespace = "default"): DataT
 			if (!isBrowserEnvironment()) {
 				return null;
 			}
-			const saved = globalThis.localStorage.getItem(`${prefix}${key}`);
+			const saved = window.localStorage.getItem(`${prefix}${key}`);
 			if (saved === null) {
 				return null;
 			}
@@ -37,10 +38,10 @@ export function createLocalStorageDataTableStorage(namespace = "default"): DataT
 			}
 			try {
 				const storageKey = `${prefix}${key}`;
-				const existing = globalThis.localStorage.getItem(storageKey);
+				const existing = window.localStorage.getItem(storageKey);
 				const parsedPrefs = existing === null ? null : parseDataTablePersistedPrefs(existing);
 				const current: DataTablePersistedPrefsPatch = parsedPrefs ?? {};
-				globalThis.localStorage.setItem(storageKey, JSON.stringify({ ...current, ...validatedPatch }));
+				window.localStorage.setItem(storageKey, JSON.stringify({ ...current, ...validatedPatch }));
 			} catch (error) {
 				console.warn("[DataTable] Failed to persist preferences:", error);
 			}

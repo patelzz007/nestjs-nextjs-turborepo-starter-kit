@@ -15,12 +15,5 @@ export default async function RewardHubMerchantsPage(): Promise<React.JSX.Elemen
 	const initialTotalPages = first.status === "fulfilled" ? readPaginatedTotalPages(first.value.meta) : undefined;
 	const initialHasNext = first.status === "fulfilled" ? readPaginatedHasNext(first.value.meta) : undefined;
 
-	return (
-		<MerchantsAllTable
-			initialMerchants={initialMerchants}
-			initialTotal={initialTotal}
-			initialTotalPages={initialTotalPages}
-			initialHasNext={initialHasNext}
-		/>
-	);
+	return <MerchantsAllTable initialMerchants={initialMerchants} initialTotal={initialTotal} initialTotalPages={initialTotalPages} initialHasNext={initialHasNext} />;
 }

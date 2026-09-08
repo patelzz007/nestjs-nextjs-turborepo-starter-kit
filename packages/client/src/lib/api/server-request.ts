@@ -339,8 +339,7 @@ export async function refreshAccessToken(context: ServerRequestContext): Promise
 			});
 			if (response.status === 401 || response.status === 403) return null;
 			if (!response.ok) return null;
-			const setCookies: readonly string[] =
-				typeof response.headers.getSetCookie === "function" ? response.headers.getSetCookie() : collectSetCookies(response.headers);
+			const setCookies: readonly string[] = typeof response.headers.getSetCookie === "function" ? response.headers.getSetCookie() : collectSetCookies(response.headers);
 			if (!hasRotatedAuthCookies(setCookies, config.accessTokenCookie, config.refreshTokenCookie)) {
 				return null;
 			}

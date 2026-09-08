@@ -31,9 +31,7 @@ function downloadBlob(blob: Blob, filename: string): void {
 
 function escapeCsvField(str: string): string {
 	const sanitized = sanitizeExportCell(str);
-	return sanitized.includes(",") || sanitized.includes('"') || sanitized.includes("\n") || sanitized.includes("\r")
-		? `"${sanitized.replace(/"/g, '""')}"`
-		: sanitized;
+	return sanitized.includes(",") || sanitized.includes('"') || sanitized.includes("\n") || sanitized.includes("\r") ? `"${sanitized.replace(/"/g, '""')}"` : sanitized;
 }
 
 /**
@@ -58,9 +56,9 @@ export function buildExportColumns<TFeatures extends object, TData extends RowDa
 
 function resolveColumnKey<TFeatures extends object, TData extends RowData>(col: ColumnDef<TFeatures, TData>): string | undefined {
 	if ("id" in col && col.id !== undefined) {
-		return String(col.id);
+		return col.id;
 	}
-	if ("accessorKey" in col && col.accessorKey !== undefined) {
+	if ("accessorKey" in col) {
 		return String(col.accessorKey);
 	}
 	return undefined;
@@ -72,9 +70,7 @@ export function exportToCSV<TFeatures extends object, TData extends RowData>(dat
 	}
 
 	const exportColumns = buildExportColumns(columns);
-	const headers = exportColumns
-		.map((col): string | undefined => resolveColumnKey(col))
-		.filter((id): id is string => id !== undefined);
+	const headers = exportColumns.map((col): string | undefined => resolveColumnKey(col)).filter((id): id is string => id !== undefined);
 
 	const csvRows = [headers.map((header) => escapeCsvField(header)).join(",")];
 	for (const row of data) {
@@ -113,9 +109,7 @@ function escapeXml(value: string): string {
 /** Emits a SpreadsheetML 2003 document (`.xls`) Excel opens natively. */
 export function exportToSpreadsheet<TFeatures extends object, TData extends RowData>(rows: TData[], columns: ColumnDef<TFeatures, TData>[], filename: string): void {
 	const exportColumns = buildExportColumns(columns);
-	const headers = exportColumns
-		.map((col): string | undefined => resolveColumnKey(col))
-		.filter((id): id is string => id !== undefined);
+	const headers = exportColumns.map((col): string | undefined => resolveColumnKey(col)).filter((id): id is string => id !== undefined);
 
 	const rowXml = (values: readonly string[]): string =>
 		`<Row>${values.map((value) => `<Cell><Data ss:Type="String">${escapeXml(sanitizeExportCell(value))}</Data></Cell>`).join("")}</Row>`;
@@ -137,9 +131,7 @@ export function exportToSpreadsheet<TFeatures extends object, TData extends RowD
 /** Exports rows as a print-ready PDF via a hidden iframe print dialog. */
 export function exportToPDF<TFeatures extends object, TData extends RowData>(rows: TData[], columns: ColumnDef<TFeatures, TData>[], filename: string): void {
 	const exportColumns = buildExportColumns(columns);
-	const headers = exportColumns
-		.map((col): string | undefined => resolveColumnKey(col))
-		.filter((id): id is string => id !== undefined);
+	const headers = exportColumns.map((col): string | undefined => resolveColumnKey(col)).filter((id): id is string => id !== undefined);
 
 	const escapeHtml = (value: string): string => value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 

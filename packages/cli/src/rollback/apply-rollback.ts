@@ -32,10 +32,8 @@ async function applyRollbackStep(config: AppProjectConfig, step: RollbackPlanSte
 		}
 		return;
 	}
-	if (step.action === "remove-directory") {
-		if (existsSync(absolutePath)) {
-			await rm(absolutePath, { recursive: true, force: true });
-		}
+	if (existsSync(absolutePath)) {
+		await rm(absolutePath, { recursive: true, force: true });
 	}
 }
 
@@ -83,7 +81,7 @@ export async function rollbackResource(config: AppProjectConfig, slug: string, o
 	return { plan, applied: true };
 }
 
-export async function previewResourceRollback(config: AppProjectConfig, slug: string, options: BuildRollbackPlanOptions): Promise<RollbackPlan> {
+export function previewResourceRollback(config: AppProjectConfig, slug: string, options: BuildRollbackPlanOptions): Promise<RollbackPlan> {
 	const safeSlug = validateResourceSlug(slug);
 	return buildRollbackPlan(config, safeSlug, options);
 }

@@ -38,7 +38,13 @@ function buildFieldDefinition(field: WizardFieldInput): ResourceFieldDefinition 
 	return definition;
 }
 
-function buildUiModuleConfig(input: WizardResourceInput, searchableFields: string[], sortableFields: string[], filterableFields: string[], columnFields: string[]): UiModuleConfig {
+function buildUiModuleConfig(
+	input: WizardResourceInput,
+	searchableFields: string[],
+	sortableFields: string[],
+	filterableFields: string[],
+	columnFields: string[],
+): UiModuleConfig {
 	return {
 		navigation: {
 			label: input.navigationLabel,

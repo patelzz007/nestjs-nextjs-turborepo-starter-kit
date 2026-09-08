@@ -30,11 +30,7 @@ export const WizardFieldInputSchema = z
 
 export const WizardResourceInputSchema = z
 	.object({
-		name: z
-			.string()
-			.min(1)
-			.max(64)
-			.regex(RESOURCE_NAME_PATTERN, "Name must start with a letter and contain only letters, numbers, spaces, hyphens, and underscores"),
+		name: z.string().min(1).max(64).regex(RESOURCE_NAME_PATTERN, "Name must start with a letter and contain only letters, numbers, spaces, hyphens, and underscores"),
 		rls: RlsPolicySchema,
 		softDelete: z.boolean(),
 		concurrency: z.boolean(),
@@ -48,14 +44,14 @@ export const WizardResourceInputSchema = z
 	.superRefine((input, ctx) => {
 		if (input.generateUi && input.uiModules.length === 0) {
 			ctx.addIssue({
-				code: z.ZodIssueCode.custom,
+				code: "custom",
 				message: "Select at least one UI module when generating UI",
 				path: ["uiModules"],
 			});
 		}
 		if (!input.generateUi && input.uiModules.length > 0) {
 			ctx.addIssue({
-				code: z.ZodIssueCode.custom,
+				code: "custom",
 				message: "uiModules must be empty when generateUi is false",
 				path: ["uiModules"],
 			});

@@ -1,22 +1,17 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { WeakValueCache, finalizeWeakValueEntry } from "@workspace/shared";
 
-import {
-	getCachedHighlighterForTests,
-	getSharedHighlighter,
-	resetSharedHighlighterForTests,
-	type ShikiHighlighterConfig,
-} from "@/components/docs/highlighter-cache";
+import { getCachedHighlighterForTests, getSharedHighlighter, resetSharedHighlighterForTests, type ShikiHighlighterConfig } from "@/components/docs/highlighter-cache";
 
 const TEST_CONFIG: ShikiHighlighterConfig = {
 	theme: "one-dark-pro",
 	langs: ["typescript"],
 };
 
-const createHighlighterMock = vi.fn();
+const createHighlighterMock = vi.fn<(config: ShikiHighlighterConfig) => Promise<{ codeToHtml: (code: string) => string }>>();
 
 vi.mock("shiki", () => ({
-	createHighlighter: (...args: unknown[]): Promise<{ codeToHtml: (code: string) => string }> => createHighlighterMock(...args),
+	createHighlighter: (config: ShikiHighlighterConfig): Promise<{ codeToHtml: (code: string) => string }> => createHighlighterMock(config),
 }));
 
 describe("highlighter-cache", () => {

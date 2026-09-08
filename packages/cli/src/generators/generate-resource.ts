@@ -6,8 +6,7 @@ import { resolveWorkspaceBin } from "../core/resolve-workspace-bin";
 
 import { resolveModuleResourceDir } from "../core/discover-modules";
 import { resolveModulesForIr } from "../core/load-modules";
-import type { GeneratorModule } from "../schema/generator-modules";
-import type { GeneratorModulesManifest } from "../schema/generator-modules";
+import type { GeneratorModule, GeneratorModulesManifest } from "../schema/generator-modules";
 import type { ResourceIR } from "../ir/types";
 import { withActiveUiModule } from "../ir/ui-context";
 import type { AppProjectConfig } from "../core/project";

@@ -10,7 +10,9 @@ export interface CursorListResult<TItem> {
 }
 
 /** Stable ascending-id order used by all string-id cursor lists. */
-type StringIdCursorOrder = { readonly id: "asc" };
+interface StringIdCursorOrder {
+	readonly id: "asc";
+}
 
 const STRING_ID_CURSOR_ORDER: StringIdCursorOrder = { id: "asc" };
 
@@ -51,7 +53,7 @@ export interface FetchStringIdListPageOptions<TWhere, TRow> {
 export async function fetchStringIdListPage<TWhere, TRow>(query: PaginationInput, options: FetchStringIdListPageOptions<TWhere, TRow>): Promise<RepositoryListResult<TRow>> {
 	const total = await options.count(options.where);
 	const useCursor = query.cursor !== undefined;
-	const page = query.page ?? 1;
+	const page = query.page;
 	const offsetMeta = buildOffsetPaginationMeta(total, page, query.limit);
 
 	if (useCursor) {

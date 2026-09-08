@@ -16,11 +16,11 @@ export interface SecurityKeyStoreDiagnostics {
  * another principal's active limit window.
  */
 export class SecurityKeyStore<K> {
-	private readonly maxKeys: number;
-	private readonly expiresAtByKey = new Map<K, number>();
+	private readonly _maxKeys: number;
+	private readonly _expiresAtByKey = new Map<K, number>();
 
 	public constructor(options: SecurityKeyStoreOptions) {
-		this.maxKeys = options.maxKeys;
+		this._maxKeys = options.maxKeys;
 	}
 
 	/**
@@ -31,49 +31,49 @@ export class SecurityKeyStore<K> {
 	public reserveKey(key: K, expiresAt: number, now: number = Date.now()): boolean {
 		this.sweepExpired(now);
 
-		const existingExpiry = this.expiresAtByKey.get(key);
+		const existingExpiry = this._expiresAtByKey.get(key);
 		if (existingExpiry !== undefined) {
-			this.expiresAtByKey.set(key, expiresAt);
+			this._expiresAtByKey.set(key, expiresAt);
 			return true;
 		}
 
-		if (this.expiresAtByKey.size >= this.maxKeys) {
+		if (this._expiresAtByKey.size >= this._maxKeys) {
 			return false;
 		}
 
-		this.expiresAtByKey.set(key, expiresAt);
+		this._expiresAtByKey.set(key, expiresAt);
 		return true;
 	}
 
 	public touchKey(key: K, expiresAt: number): void {
-		this.expiresAtByKey.set(key, expiresAt);
+		this._expiresAtByKey.set(key, expiresAt);
 	}
 
 	public has(key: K, now: number = Date.now()): boolean {
-		const expiresAt = this.expiresAtByKey.get(key);
+		const expiresAt = this._expiresAtByKey.get(key);
 		if (expiresAt === undefined) {
 			return false;
 		}
 		if (now > expiresAt) {
-			this.expiresAtByKey.delete(key);
+			this._expiresAtByKey.delete(key);
 			return false;
 		}
 		return true;
 	}
 
 	public delete(key: K): boolean {
-		return this.expiresAtByKey.delete(key);
+		return this._expiresAtByKey.delete(key);
 	}
 
 	public clear(): void {
-		this.expiresAtByKey.clear();
+		this._expiresAtByKey.clear();
 	}
 
 	public sweepExpired(now: number = Date.now()): number {
 		let removed = 0;
-		for (const [key, expiresAt] of this.expiresAtByKey) {
+		for (const [key, expiresAt] of this._expiresAtByKey) {
 			if (now > expiresAt) {
-				this.expiresAtByKey.delete(key);
+				this._expiresAtByKey.delete(key);
 				removed += 1;
 			}
 		}
@@ -81,13 +81,13 @@ export class SecurityKeyStore<K> {
 	}
 
 	public get size(): number {
-		return this.expiresAtByKey.size;
+		return this._expiresAtByKey.size;
 	}
 
 	public getDiagnostics(): SecurityKeyStoreDiagnostics {
 		return {
-			keys: this.expiresAtByKey.size,
-			maxKeys: this.maxKeys,
+			keys: this._expiresAtByKey.size,
+			maxKeys: this._maxKeys,
 		};
 	}
 }

@@ -9,9 +9,7 @@ function buildContractBlock(ir: ResourceIR): string {
 	const transitionContract = ir.workflow
 		? `\n\t\ttransition: defineContract({ method: "POST", path: apiRoutes.${key}.transition.path, input: z.intersection(${model}TransitionParamSchema, ${model}TransitionBodySchema) }),`
 		: "";
-	const restoreContract = ir.softDelete
-		? `\n\t\trestore: defineContract({ method: "POST", path: apiRoutes.${key}.restore.path, input: ${model}IdParamSchema }),`
-		: "";
+	const restoreContract = ir.softDelete ? `\n\t\trestore: defineContract({ method: "POST", path: apiRoutes.${key}.restore.path, input: ${model}IdParamSchema }),` : "";
 	return `\t${key}: {\n\t\tlist: defineContract({ method: "GET", path: apiRoutes.${key}.list, input: ${model}ListQuerySchema }),\n\t\tdetail: defineContract({ method: "GET", path: apiRoutes.${key}.detail.path, input: ${model}IdParamSchema }),\n\t\tcreate: defineContract({ method: "POST", path: apiRoutes.${key}.create, input: Create${model}Schema }),\n\t\tbulkCreate: defineContract({ method: "POST", path: apiRoutes.${key}.bulkCreate, input: BulkCreate${model}Schema }),\n\t\tbulkDelete: defineContract({ method: "POST", path: apiRoutes.${key}.bulkDelete, input: BulkDeleteIdsSchema }),\n\t\tupdate: defineContract({ method: "PATCH", path: apiRoutes.${key}.update.path, input: z.intersection(${model}IdParamSchema, Update${model}Schema) }),\n\t\tdelete: defineContract({ method: "DELETE", path: apiRoutes.${key}.delete.path, input: ${model}IdParamSchema }),${restoreContract}${transitionContract}\n\t},`;
 }
 

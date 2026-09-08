@@ -1,8 +1,7 @@
-import type { GeneratorModulesManifest } from "../schema/generator-modules";
+import type { GeneratorModule, GeneratorModulesManifest } from "../schema/generator-modules";
 import type { ResourceIR } from "../ir/types";
 import { resolveModuleResourceDir } from "../core/discover-modules";
 import { resolveModulesForIr } from "../core/load-modules";
-import type { GeneratorModule } from "../schema/generator-modules";
 import { withActiveUiModule } from "../ir/ui-context";
 import { renderNestRepository } from "../generators/nestjs/render-repository";
 import { renderNestServiceBase } from "../generators/nestjs/render-service-base";

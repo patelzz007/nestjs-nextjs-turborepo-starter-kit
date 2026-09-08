@@ -103,9 +103,7 @@ export function createReadlinePrompter(): WizardPrompter {
 					.split(",")
 					.map((part) => Number.parseInt(part.trim(), 10))
 					.filter((value) => !Number.isNaN(value));
-				const selected = indexes
-					.map((index) => choices[index - 1]?.value)
-					.filter((value): value is string => value !== undefined);
+				const selected = indexes.map((index) => choices[index - 1]?.value).filter((value): value is string => value !== undefined);
 				if (selected.length > 0) {
 					return selected;
 				}

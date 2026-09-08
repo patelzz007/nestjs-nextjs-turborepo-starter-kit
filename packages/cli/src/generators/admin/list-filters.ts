@@ -144,10 +144,10 @@ export function renderViewFilterSchemas(ir: ResourceIR): string {
 	const hasBoolean = uiFilters.some((field) => field.type === "boolean");
 	const enumSchemas = uiFilters
 		.filter((field) => field.type === "enum" && field.enumValues !== undefined && field.enumValues.length > 0)
-		.map(
-			(field) =>
-				`const ${field.camelName.charAt(0).toUpperCase()}${field.camelName.slice(1)}FilterSchema = z.enum([${field.enumValues?.map((value) => tsStringLiteral(value)).join(", ")}]);`,
-		);
+		.map((field) => {
+			const enumValues = field.enumValues ?? [];
+			return `const ${field.camelName.charAt(0).toUpperCase()}${field.camelName.slice(1)}FilterSchema = z.enum([${enumValues.map((value) => tsStringLiteral(value)).join(", ")}]);`;
+		});
 	const booleanSchema = hasBoolean ? `const ${BOOLEAN_COLUMN_FILTER_SCHEMA} = z.enum(["true", "false"]);` : "";
 	const blocks = [booleanSchema, ...enumSchemas].filter((block) => block.length > 0);
 	if (blocks.length === 0) {
@@ -193,15 +193,11 @@ export function renderViewTextFilterParsing(ir: ResourceIR): string {
 		const debouncedName = `debounced${field.camelName.charAt(0).toUpperCase()}${field.camelName.slice(1)}Filter`;
 		lines.push(`\tconst ${debouncedName} = useDebouncedValue(${state}, 300);`);
 		if (field.type === "uuid") {
-			lines.push(
-				`\tconst ${parsedFilterName(field)} = ${debouncedName}.trim().length === 0 ? undefined : z.uuid().safeParse(${debouncedName}.trim()).data;`,
-			);
+			lines.push(`\tconst ${parsedFilterName(field)} = ${debouncedName}.trim().length === 0 ? undefined : z.uuid().safeParse(${debouncedName}.trim()).data;`);
 			continue;
 		}
 		if (field.type === "int") {
-			lines.push(
-				`\tconst ${parsedFilterName(field)} = ${debouncedName}.trim().length === 0 ? undefined : z.coerce.number().int().safeParse(${debouncedName}.trim()).data;`,
-			);
+			lines.push(`\tconst ${parsedFilterName(field)} = ${debouncedName}.trim().length === 0 ? undefined : z.coerce.number().int().safeParse(${debouncedName}.trim()).data;`);
 			continue;
 		}
 		lines.push(`\tconst ${parsedFilterName(field)} = ${debouncedName}.trim().length === 0 ? undefined : ${debouncedName}.trim();`);
@@ -230,9 +226,7 @@ export function renderViewClearFiltersBody(ir: ResourceIR, baseBody: string): st
 }
 
 export function renderViewPaginationResetDeps(ir: ResourceIR): string {
-	return [...resolveUiSelectFilterFields(ir), ...resolveUiTextFilterFields(ir)]
-		.map((field) => filterStateName(field))
-		.join(", ");
+	return [...resolveUiSelectFilterFields(ir), ...resolveUiTextFilterFields(ir)].map((field) => filterStateName(field)).join(", ");
 }
 
 function renderFilterSpreadLine(field: FieldIR): string {
@@ -262,9 +256,7 @@ export function renderViewManualColumnFilters(ir: ResourceIR): string {
 	if (entries.length === 0) {
 		return "";
 	}
-	const deps = [...resolveUiSelectFilterFields(ir), ...resolveUiTextFilterFields(ir)]
-		.map((field) => filterStateName(field))
-		.join(", ");
+	const deps = [...resolveUiSelectFilterFields(ir), ...resolveUiTextFilterFields(ir)].map((field) => filterStateName(field)).join(", ");
 	return `\tconst manualColumnFilters = useMemo(
 \t\t(): Readonly<Record<string, string>> => ({
 ${entries.join("\n")}
@@ -345,7 +337,9 @@ export function renderViewTextFilterToolbar(ir: ResourceIR): string {
 	if (textBlocks.length === 0) {
 		return "";
 	}
-	const deps = resolveUiTextFilterFields(ir).map((field) => filterStateName(field)).join(", ");
+	const deps = resolveUiTextFilterFields(ir)
+		.map((field) => filterStateName(field))
+		.join(", ");
 	return `\tconst textFilterToolbar = useMemo(
 \t\t(): React.JSX.Element => (
 \t\t\t<div className="flex flex-wrap gap-2">

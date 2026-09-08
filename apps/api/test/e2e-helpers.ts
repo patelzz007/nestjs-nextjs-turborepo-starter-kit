@@ -19,7 +19,7 @@ let nextClientIpSuffix = 1;
 export function uniqueClientIp(): string {
 	const suffix = nextClientIpSuffix;
 	nextClientIpSuffix += 1;
-	return `203.0.113.${String(suffix % 250 + 1)}`;
+	return `203.0.113.${String((suffix % 250) + 1)}`;
 }
 
 export function mutationHeaders(extra: Record<string, string> = {}): Record<string, string> {
@@ -57,12 +57,7 @@ export async function createE2eApp(): Promise<NestFastifyApplication> {
 	return app;
 }
 
-export async function login(
-	app: NestFastifyApplication,
-	email: string,
-	password: string,
-	clientType?: "admin" | "merchant" | "web",
-): Promise<LoginResult> {
+export async function login(app: NestFastifyApplication, email: string, password: string, clientType?: "admin" | "merchant" | "web"): Promise<LoginResult> {
 	const response = await app.inject({
 		method: "POST",
 		url: `${API_VERSION_PREFIX}/auth/login`,
