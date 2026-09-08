@@ -1,8 +1,9 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post } from "@nestjs/common";
 import { ApiBody, ApiOkResponse, ApiTags } from "@nestjs/swagger";
-import { SkipThrottle, Throttle } from "@nestjs/throttler";
+import { Throttle } from "@nestjs/throttler";
 
 import { RequirePermission } from "../../auth/decorators/require-permission.decorator";
+import { SkipAuthThrottle } from "../../auth/decorators/skip-auth-throttle.decorator";
 import { apiPath, type RoleListItem } from "@workspace/shared";
 import { PrismaService } from "../../../prisma/prisma.service";
 import { ConflictDetectionService } from "../services/conflict-detection.service";
@@ -23,7 +24,7 @@ export class RolesController {
 	) {}
 
 	@Get()
-	@SkipThrottle()
+	@SkipAuthThrottle()
 	@RequirePermission("LIST", "ROLE")
 	@ApiOkResponse({ description: "List of roles" })
 	public async list(): Promise<{ readonly items: readonly RoleListItem[]; readonly total: number }> {

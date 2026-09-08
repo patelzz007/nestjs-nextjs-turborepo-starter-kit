@@ -4,6 +4,7 @@ import { MAX_CLAIMS_OPTIONS, REWARD_TYPE_OPTIONS, getRewardValueLabel } from "@/
 import type { MerchantRewardFormValues, RewardType } from "@workspace/shared";
 import { Button } from "@workspace/ui/components/form/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
+import { DatePicker } from "@workspace/ui/components/form/date-picker";
 import { Input } from "@workspace/ui/components/form/input";
 import { Label } from "@workspace/ui/components/form/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@workspace/ui/components/form/select";
@@ -11,8 +12,8 @@ import { Textarea } from "@workspace/ui/components/form/textarea";
 import { cn } from "@workspace/ui/lib/utils";
 import { Tag } from "lucide-react";
 import * as React from "react";
-import type { Control, FieldErrors, UseFormRegister, UseFormSetValue } from "react-hook-form";
-import { useWatch } from "react-hook-form";
+import type { Control, ControllerRenderProps, FieldErrors, UseFormRegister, UseFormSetValue } from "react-hook-form";
+import { Controller, useWatch } from "react-hook-form";
 
 interface RewardTypeOptionButtonProps {
 	readonly type: (typeof REWARD_TYPE_OPTIONS)[number];
@@ -70,7 +71,30 @@ export function MerchantRewardFormFields({
 	readOnly = false,
 }: MerchantRewardFormFieldsProps): React.JSX.Element {
 	const maxClaimsPerUser = useWatch({ control, name: "maxClaimsPerUser" });
+	const startDate = useWatch({ control, name: "startDate" });
 	const fieldDisabled = readOnly;
+
+	const renderStartDateField = React.useCallback(
+		({ field }: { readonly field: ControllerRenderProps<MerchantRewardFormValues, "startDate"> }): React.JSX.Element => (
+			<DatePicker id="startDate" value={field.value} onValueChange={field.onChange} onBlur={field.onBlur} disabled={fieldDisabled} placeholder="Select start date" />
+		),
+		[fieldDisabled],
+	);
+
+	const renderExpiryDateField = React.useCallback(
+		({ field }: { readonly field: ControllerRenderProps<MerchantRewardFormValues, "expiryDate"> }): React.JSX.Element => (
+			<DatePicker
+				id="expiryDate"
+				value={field.value}
+				onValueChange={field.onChange}
+				onBlur={field.onBlur}
+				disabled={fieldDisabled}
+				fromDate={startDate}
+				placeholder="Select expiry date"
+			/>
+		),
+		[fieldDisabled, startDate],
+	);
 
 	return (
 		<>
@@ -141,13 +165,13 @@ export function MerchantRewardFormFields({
 					<div className="grid gap-4 sm:grid-cols-2">
 						<div className="space-y-2">
 							<Label htmlFor="startDate">Start Date</Label>
-							<Input id="startDate" type="date" disabled={fieldDisabled} {...register("startDate")} />
+							<Controller name="startDate" control={control} render={renderStartDateField} />
 							{errors.startDate ? <p className="text-sm text-destructive">{errors.startDate.message}</p> : null}
 						</div>
 
 						<div className="space-y-2">
 							<Label htmlFor="expiryDate">Expiry Date</Label>
-							<Input id="expiryDate" type="date" disabled={fieldDisabled} {...register("expiryDate")} />
+							<Controller name="expiryDate" control={control} render={renderExpiryDateField} />
 							{errors.expiryDate ? <p className="text-sm text-destructive">{errors.expiryDate.message}</p> : null}
 						</div>
 					</div>

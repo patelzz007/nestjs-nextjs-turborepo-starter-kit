@@ -1,8 +1,9 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post } from "@nestjs/common";
 import { ApiBody, ApiOkResponse, ApiTags } from "@nestjs/swagger";
-import { SkipThrottle, Throttle } from "@nestjs/throttler";
+import { Throttle } from "@nestjs/throttler";
 
 import { RequirePermission } from "../../auth/decorators/require-permission.decorator";
+import { SkipAuthThrottle } from "../../auth/decorators/skip-auth-throttle.decorator";
 import { apiPath, type PermissionListItem } from "@workspace/shared";
 import { AuthorizationService } from "../services/authorization.service";
 import { ZodValidationPipe } from "../../../common/pipes/zod-validation.pipe";
@@ -24,7 +25,7 @@ export class PermissionsController {
 	public constructor(private readonly authorization: AuthorizationService) {}
 
 	@Get()
-	@SkipThrottle()
+	@SkipAuthThrottle()
 	@RequirePermission("LIST", "PERMISSION")
 	@ApiOkResponse({ description: "List of permissions" })
 	public async list(): Promise<{ readonly items: readonly PermissionListItem[]; readonly total: number }> {

@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Headers, HttpCode, Param, Patch, Post, Query, Req, UseInterceptors } from "@nestjs/common";
 import { ApiBearerAuth, ApiBody, ApiCreatedResponse, ApiHeader, ApiOkResponse, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
-import { SkipThrottle, Throttle } from "@nestjs/throttler";
+import { Throttle } from "@nestjs/throttler";
 import type {
 	AdminUserDetail,
 	AdminUserListQuery,
@@ -55,6 +55,7 @@ import { GetUser } from "./decorators/get-user.decorator";
 import { Public } from "./decorators/public.decorator";
 import { RlsBypass } from "./decorators/rls-bypass.decorator";
 import { RequirePermission } from "./decorators/require-permission.decorator";
+import { SkipAuthThrottle } from "./decorators/skip-auth-throttle.decorator";
 import { SuperAdminOnly } from "./decorators/super-admin.decorator";
 import { ApiErrorResponseDto } from "../../common/dto/api-response.dto";
 import { createWrappedArrayDto, createWrappedDto } from "../../common/dto/response-wrapper";
@@ -237,7 +238,7 @@ export class AuthController {
 		return this.authService.verifyLogin(body, ipAddress);
 	}
 
-	@SkipThrottle()
+	@SkipAuthThrottle()
 	@ApiBearerAuth()
 	@Post("/change-password")
 	@HttpCode(200)
@@ -251,7 +252,7 @@ export class AuthController {
 		return this.authService.changePassword(userId, body);
 	}
 
-	@SkipThrottle()
+	@SkipAuthThrottle()
 	@ApiBearerAuth()
 	@Get("/me")
 	@ApiOperation({ summary: "Get the currently authenticated user's profile" })
@@ -261,7 +262,7 @@ export class AuthController {
 		return this.authService.getMe(userId);
 	}
 
-	@SkipThrottle()
+	@SkipAuthThrottle()
 	@ApiBearerAuth()
 	@Get("/permissions")
 	@ApiOperation({ summary: "Get the current session's roles and permissions" })
@@ -285,7 +286,7 @@ export class AuthController {
 	// Admin User Management  (SuperAdmin only)
 	// ═══════════════════════════════════════════════════════════════════════
 
-	@SkipThrottle()
+	@SkipAuthThrottle()
 	@ApiBearerAuth()
 	@SuperAdminOnly()
 	@RequirePermission("LIST", "USER")
@@ -299,7 +300,7 @@ export class AuthController {
 		return this.authService.getAdminUsersList(query);
 	}
 
-	@SkipThrottle()
+	@SkipAuthThrottle()
 	@ApiBearerAuth()
 	@SuperAdminOnly()
 	@RequirePermission("READ", "USER")
@@ -311,7 +312,7 @@ export class AuthController {
 		return this.authService.getAdminUserDetail(userId);
 	}
 
-	@SkipThrottle()
+	@SkipAuthThrottle()
 	@ApiBearerAuth()
 	@SuperAdminOnly()
 	@EmailVerified()

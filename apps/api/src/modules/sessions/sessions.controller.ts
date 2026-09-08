@@ -1,11 +1,12 @@
 import { Controller, Get, HttpCode, HttpStatus, Post, Req, UseGuards, UseInterceptors } from "@nestjs/common";
 import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
-import { SkipThrottle, Throttle } from "@nestjs/throttler";
+import { Throttle } from "@nestjs/throttler";
 import type { LogoutAllResponse, LogoutResponse, RefreshResponse, RefreshResponseMessage, Session } from "@workspace/shared";
 import { LogoutAllResponseSchema, LogoutResponseSchema, RefreshResponseMessageSchema, SessionSchema, apiPath } from "@workspace/shared";
 import type { FastifyRequest } from "fastify";
 
 import { GetUser } from "../auth/decorators/get-user.decorator";
+import { SkipAuthThrottle } from "../auth/decorators/skip-auth-throttle.decorator";
 import { Public } from "../auth/decorators/public.decorator";
 import { ApiErrorResponseDto } from "../../common/dto/api-response.dto";
 import { createWrappedArrayDto, createWrappedDto } from "../../common/dto/response-wrapper";
@@ -88,7 +89,7 @@ export class SessionsController {
 		return { message: "Logged out from all devices" };
 	}
 
-	@SkipThrottle()
+	@SkipAuthThrottle()
 	@ApiBearerAuth()
 	@Get("/sessions")
 	@ApiOperation({ summary: "Get all active sessions for the current user" })
