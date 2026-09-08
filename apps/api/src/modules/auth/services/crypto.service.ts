@@ -35,6 +35,11 @@ export class CryptoService {
 		return crypto.randomBytes(32).toString("hex");
 	}
 
+	/** Deterministic SHA-256 digest for indexed one-time token lookup. */
+	public hashTokenDigest(rawToken: string): string {
+		return crypto.createHash("sha256").update(rawToken).digest("hex");
+	}
+
 	/** Generate a numeric one-time code (e.g. login verification OTP). */
 	public generateNumericCode(length: number): string {
 		let result = "";

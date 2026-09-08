@@ -201,7 +201,6 @@ export type LoginClientResponse = z.output<typeof LoginClientResponseSchema>;
 
 export const SignupResponseSchema = z
 	.object({
-		user: UserResponseSchema.optional(),
 		message: z.string(),
 	})
 	.strict();

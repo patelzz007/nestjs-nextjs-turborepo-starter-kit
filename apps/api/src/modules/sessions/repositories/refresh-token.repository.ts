@@ -46,6 +46,8 @@ const RefreshTokenRepositoryPorts = {
 	stampRestore: (): Prisma.RefreshTokenUpdateInput => ({ isDeleted: false, deletedAt: null, updatedAt: nowEpochMs() }),
 };
 
+export type RotateTokenResult = "rotated" | "superseded" | "missing";
+
 @Injectable()
 export class RefreshTokenRepository extends BaseRepository<
 	RefreshToken,
@@ -107,6 +109,52 @@ export class RefreshTokenRepository extends BaseRepository<
 				updatedAt: nowEpochMs(),
 			},
 		});
+	}
+
+	/**
+	 * Atomically rotate a refresh token only when the stored hash still matches.
+	 * Returns `superseded` when another request already rotated the token recently.
+	 */
+	public async rotateTokenIfHashMatches(
+		id: string,
+		expectedTokenHash: string,
+		data: { readonly token: string; readonly deviceInfo: string | null; readonly ipAddress: string | null; readonly expiresAt: EpochMs },
+	): Promise<RotateTokenResult> {
+		const now: number = nowEpochMs();
+
+		const updated = await this.prisma.refreshToken.updateMany({
+			where: {
+				id,
+				token: expectedTokenHash,
+				isDeleted: false,
+				expiresAt: { gte: now },
+			},
+			data: {
+				previousTokenHash: expectedTokenHash,
+				token: data.token,
+				deviceInfo: data.deviceInfo,
+				ipAddress: data.ipAddress,
+				expiresAt: data.expiresAt,
+				rotationVersion: { increment: 1 },
+				updatedAt: now,
+			},
+		});
+
+		if (updated.count === 1) {
+			return "rotated";
+		}
+
+		const current = await this.findByIdIncludingDeleted(id);
+		if (current === null || current.isDeleted) {
+			return "missing";
+		}
+
+		const supersededGraceMs = 30_000;
+		if (current.updatedAt >= now - supersededGraceMs && current.token !== expectedTokenHash) {
+			return "superseded";
+		}
+
+		return "missing";
 	}
 
 	public async revokeAllForUsers(userIds: readonly string[]): Promise<void> {

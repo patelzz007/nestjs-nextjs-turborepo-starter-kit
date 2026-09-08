@@ -10,13 +10,13 @@ import { API_BASE_URL } from "@workspace/client/lib/api/config";
 import { decodeJwtPayload } from "@workspace/client/lib/auth/jwt";
 import { getEnrollmentRedirectPath, isEnrollmentAllowedPath, isRestrictedSession } from "@workspace/client/lib/auth/restricted-session";
 import {
+	applyRotatedSetCookies,
+	clearAuthCookies,
 	createProxyRefreshCooldown,
 	hasRouteSession,
 	isDocumentNavigation,
-	parseSetCookie,
 	refreshSessionFromProxy,
 	resolveProxySessionRefresh,
-	type ParsedCookie,
 	type ProxyRefreshResult,
 } from "@workspace/client/lib/auth/proxy-refresh";
 import { NextResponse } from "next/server";
@@ -28,6 +28,13 @@ import type { NextRequest } from "next/server";
 // have their cookies recognized by the admin app.
 const ACCESS_TOKEN_COOKIE = "adminAccessToken";
 const REFRESH_TOKEN_COOKIE = "adminRefreshToken";
+const CLIENT_ORIGIN: string = process.env.NEXT_PUBLIC_ADMIN_URL ?? "http://localhost:3001";
+const COOKIE_CLEAR_OPTIONS = {
+	domain: process.env.COOKIE_DOMAIN,
+	path: "/",
+	secure: process.env.NODE_ENV === "production",
+	sameSite: "lax" as const,
+};
 
 // The whole admin panel lives under `/` (overview, settings, users, …).
 // Only `/auth/*` is open to unauthenticated visitors.
@@ -53,8 +60,10 @@ const attemptRefresh = createProxyRefreshCooldown((refreshToken: string): Promis
 	refreshSessionFromProxy({
 		apiBaseUrl: API_BASE_URL,
 		refreshTokenName: REFRESH_TOKEN_COOKIE,
+		accessTokenName: ACCESS_TOKEN_COOKIE,
 		refreshToken,
 		clientType: "admin",
+		clientOrigin: CLIENT_ORIGIN,
 	}),
 );
 
@@ -87,27 +96,13 @@ function serveGuestResponse(response: NextResponse, rotatedCookies: readonly str
  * and the login page.
  */
 function clearCookies(response: NextResponse, names: readonly string[]): NextResponse {
-	for (const name of names) {
-		response.cookies.set(name, "", { maxAge: 0, path: "/" });
-	}
+	clearAuthCookies(response.cookies, names, COOKIE_CLEAR_OPTIONS);
 	return response;
 }
 
 /** Forward the rotated `Set-Cookie` headers from the refresh response to the browser. */
 function applyRotatedCookies(response: NextResponse, setCookies: readonly string[]): NextResponse {
-	for (const header of setCookies) {
-		const cookie: ParsedCookie | null = parseSetCookie(header);
-		if (cookie === null) continue;
-		response.cookies.set(cookie.name, cookie.value, {
-			httpOnly: cookie.httpOnly,
-			secure: cookie.secure,
-			sameSite: cookie.sameSite,
-			path: cookie.path,
-			domain: cookie.domain ?? undefined,
-			maxAge: cookie.maxAge ?? undefined,
-			expires: cookie.expires ?? undefined,
-		});
-	}
+	applyRotatedSetCookies(response.cookies, setCookies);
 	return response;
 }
 
@@ -130,6 +125,7 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
 		isAuthRoute,
 		isPublicRoute,
 		accessTokenCookieName: ACCESS_TOKEN_COOKIE,
+		refreshTokenCookieName: REFRESH_TOKEN_COOKIE,
 		app: "admin",
 		pathname,
 		attemptRefresh,

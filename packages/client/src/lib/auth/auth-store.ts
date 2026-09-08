@@ -1,7 +1,7 @@
 "use client";
 
 import { create } from "zustand";
-import { devtools, persist } from "zustand/middleware";
+import { devtools } from "zustand/middleware";
 
 /**
  * User object stored in the auth store after login.
@@ -43,45 +43,25 @@ export interface AuthActions {
 export type AuthStore = AuthState & AuthActions;
 
 /**
- * Zustand store for auth state with Redux DevTools support.
- *
- * The user object is persisted to sessionStorage so it survives page reloads
- * without an extra API call. On logout, the store is cleared.
- *
- * Usage:
- * ```ts
- * const { user, setUser, clearUser } = useAuthStore();
- * ```
+ * In-memory Zustand store for auth state. User identity is never persisted —
+ * each document bootstraps from `/auth/me` or server-provided state.
  */
 export const useAuthStore = create<AuthStore>()(
 	devtools(
-		persist(
-			(set) => ({
-				// ── State ──────────────────────────────────────────────────
-				user: null,
-				isAuthenticated: false,
+		(set) => ({
+			user: null,
+			isAuthenticated: false,
 
-				// ── Actions ────────────────────────────────────────────────
-				setUser: (user: AuthUser): void => {
-					set({ user, isAuthenticated: true }, false, "setUser");
-				},
-
-				clearUser: (): void => {
-					set({ user: null, isAuthenticated: false }, false, "clearUser");
-				},
-			}),
-			{
-				name: "auth-store",
-				// Only persist user + isAuthenticated, not actions
-				partialize: (state: AuthStore): AuthState => ({
-					user: state.user,
-					isAuthenticated: state.isAuthenticated,
-				}),
+			setUser: (user: AuthUser): void => {
+				set({ user, isAuthenticated: true }, false, "setUser");
 			},
-		),
+
+			clearUser: (): void => {
+				set({ user: null, isAuthenticated: false }, false, "clearUser");
+			},
+		}),
 		{
 			name: "AuthStore",
-			// Limit serialized depth to avoid oversized payloads in DevTools.
 			serialize: { depth: 3 },
 		},
 	),
@@ -89,16 +69,6 @@ export const useAuthStore = create<AuthStore>()(
 
 /**
  * Convenience hook to access just the user object from the auth store.
- *
- * Returns `null` when not authenticated.
- *
- * Usage:
- * ```ts
- * const user = useAuthUser();
- * if (user) {
- *   console.log(user.fullName);
- * }
- * ```
  */
 export function useAuthUser(): AuthUser | null {
 	return useAuthStore((state: AuthStore): AuthUser | null => state.user);

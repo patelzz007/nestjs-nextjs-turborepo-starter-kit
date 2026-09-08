@@ -171,6 +171,7 @@ CREATE TABLE "password_reset_tokens" (
     "id" TEXT NOT NULL,
     "user_id" TEXT NOT NULL,
     "token" TEXT NOT NULL,
+    "token_digest" VARCHAR(64),
     "expires_at" BIGINT NOT NULL,
     "used_at" BIGINT,
     "is_deleted" BOOLEAN NOT NULL DEFAULT false,
@@ -300,6 +301,8 @@ CREATE TABLE "role_permissions" (
 CREATE TABLE "refresh_tokens" (
     "id" TEXT NOT NULL,
     "token" TEXT NOT NULL,
+    "previous_token_hash" TEXT,
+    "rotation_version" INTEGER NOT NULL DEFAULT 0,
     "userId" TEXT NOT NULL,
     "deviceInfo" VARCHAR(255),
     "ipAddress" VARCHAR(45),
@@ -994,10 +997,16 @@ CREATE INDEX "permission_audit_logs_created_at_idx" ON "permission_audit_logs"("
 CREATE UNIQUE INDEX "password_reset_tokens_token_key" ON "password_reset_tokens"("token");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "password_reset_tokens_token_digest_key" ON "password_reset_tokens"("token_digest");
+
+-- CreateIndex
 CREATE INDEX "password_reset_tokens_user_id_idx" ON "password_reset_tokens"("user_id");
 
 -- CreateIndex
 CREATE INDEX "password_reset_tokens_token_idx" ON "password_reset_tokens"("token");
+
+-- CreateIndex
+CREATE INDEX "password_reset_tokens_token_digest_idx" ON "password_reset_tokens"("token_digest");
 
 -- CreateIndex
 CREATE INDEX "password_history_user_id_created_at_idx" ON "password_history"("user_id", "created_at");

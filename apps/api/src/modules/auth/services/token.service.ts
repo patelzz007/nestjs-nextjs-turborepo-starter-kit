@@ -36,6 +36,11 @@ export interface AccessTokenGenerationOptions {
 	readonly mfaAssuredAt?: number;
 }
 
+export interface SessionTokenGenerationOptions {
+	readonly sessionScope: SessionScope;
+	readonly mfaAssuredAt?: number;
+}
+
 @Injectable()
 export class TokenService {
 	private readonly logger: Logger = new Logger(TokenService.name);
@@ -90,6 +95,18 @@ export class TokenService {
 		]);
 
 		return { accessToken, refreshToken };
+	}
+
+	/**
+	 * Generate rotated session tokens with an explicit scope (login / refresh).
+	 * Callers must pass `sessionScope` — refresh must never default to `full`.
+	 */
+	public async generateSessionTokens(
+		user: FlatUserResponse,
+		refreshTokenId: string,
+		options: SessionTokenGenerationOptions,
+	): Promise<{ accessToken: string; refreshToken: string }> {
+		return this.generateTokens(user, refreshTokenId, options);
 	}
 
 	/** Generate a fresh access token (no refresh token rotation). */

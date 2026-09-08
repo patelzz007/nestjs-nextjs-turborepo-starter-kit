@@ -5,11 +5,12 @@ import { NestFactory } from "@nestjs/core";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import { FastifyAdapter, type NestFastifyApplication } from "@nestjs/platform-fastify";
 import { nanoid } from "nanoid";
-import { apiDocsPath, validateApiEnv } from "@workspace/shared";
+import { MUTATION_INTENT_HEADER, apiDocsPath, validateApiEnv } from "@workspace/shared";
 
 import { AppModule, ObserveInstrument } from "./app.module";
 import { registerFastifyHooks } from "./bootstrap/register-fastify-hooks";
 import { registerFastifyPlugins } from "./bootstrap/register-fastify-plugins";
+import { TypedConfigService } from "./config/typed-config.service";
 import { warmupAjvValidators } from "./common/ajv-warmup";
 import { setupApiDocs } from "./common/api-docs";
 import { registerGracefulShutdown } from "./common/lifecycle/graceful-shutdown";
@@ -108,7 +109,8 @@ async function bootstrap(): Promise<void> {
 
 	// ── Plugins ────────────────────────────────────────────────────
 	// In dev, skip heavy plugins to cut boot time — they add per-route hook overhead.
-	await registerFastifyPlugins(app, { isDev });
+	const typedConfig = new TypedConfigService();
+	await registerFastifyPlugins(app, { isDev }, typedConfig);
 
 	// CORS (plugins must be registered before the routes they affect).
 	app.enableCors({
@@ -119,7 +121,7 @@ async function bootstrap(): Promise<void> {
 		// stream client sends it (fetch-based SSE) to resume from the last
 		// received seq. It is not a CORS-safelisted header, so without it here
 		// every reconnect preflight is rejected.
-		allowedHeaders: ["Content-Type", "X-Client-Type", "X-Merchant-Org-Id", "Accept", "Last-Event-ID"],
+		allowedHeaders: ["Content-Type", "X-Client-Type", "X-Merchant-Org-Id", MUTATION_INTENT_HEADER, "Accept", "Last-Event-ID"],
 	});
 
 	registerFastifyHooks(app);

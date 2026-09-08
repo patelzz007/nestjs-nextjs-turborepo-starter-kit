@@ -11,12 +11,14 @@ import { NotificationsModule } from "../notifications/notifications.module";
 import { AuthorizationModule } from "../authorization/authorization.module";
 import { PrismaModule } from "../../prisma/prisma.module";
 
+import { AccessTokenModule } from "./access-token.module";
 import { CookieConfigService } from "./constants/cookie.config";
 import { AdminAccessGuard } from "./guards/admin-access.guard";
 import { AuthGuard } from "./guards/auth.guard";
 import { EmailVerifiedGuard } from "./guards/email-verified.guard";
 import { RefreshTokenGuard } from "./guards/refresh-token.guard";
 import { RestrictedSessionGuard } from "./guards/restricted-session.guard";
+import { MutationIntentGuard } from "./guards/mutation-intent.guard";
 import { SuperAdminGuard } from "./guards/super-admin.guard";
 import { ClearAuthCookiesInterceptor } from "./interceptors/clear-auth-cookies.interceptor";
 import { SetAuthCookiesInterceptor } from "./interceptors/set-auth-cookies.interceptor";
@@ -42,6 +44,7 @@ import { LoginService } from "./services/login.service";
 import { LoginVerificationService } from "./services/login-verification.service";
 import { PasswordResetService } from "./services/password-reset.service";
 import { PasswordHistoryService } from "./services/password-history.service";
+import { SessionRestrictionService } from "./services/session-restriction.service";
 import { TwoFactorService } from "./services/two-factor.service";
 import { TaskScheduleService } from "./services/task-schedule.service";
 import { TokenService } from "./services/token.service";
@@ -56,6 +59,7 @@ import { RedisThrottlerStorage } from "./throttling/redis-throttler.storage";
 @Module({
 	imports: [
 		PrismaModule,
+		AccessTokenModule,
 		JwtModule.register({ global: true }),
 		AuthorizationModule,
 		NotificationsModule,
@@ -101,6 +105,7 @@ import { RedisThrottlerStorage } from "./throttling/redis-throttler.storage";
 		IdentityService,
 		UserProvisioningService,
 		AuthSessionService,
+		SessionRestrictionService,
 		LoginService,
 		LoginVerificationService,
 		PasswordResetService,
@@ -119,7 +124,6 @@ import { RedisThrottlerStorage } from "./throttling/redis-throttler.storage";
 		AuthEventsService,
 		TokenService,
 		CryptoService,
-		AccessTokenStateService,
 		RedisThrottlerStorage,
 		{
 			provide: ThrottlerStorage,
@@ -128,6 +132,10 @@ import { RedisThrottlerStorage } from "./throttling/redis-throttler.storage";
 		{
 			provide: APP_GUARD,
 			useClass: ThrottlerGuard,
+		},
+		{
+			provide: APP_GUARD,
+			useClass: MutationIntentGuard,
 		},
 		CookieConfigService,
 		EmailService,
@@ -155,8 +163,9 @@ import { RedisThrottlerStorage } from "./throttling/redis-throttler.storage";
 		UserRepository,
 		AuthEventsService,
 		TokenService,
+		SessionRestrictionService,
 		CryptoService,
-		AccessTokenStateService,
+		AccessTokenModule,
 		MfaChallengeService,
 		SecretEncryptionService,
 		EmailService,

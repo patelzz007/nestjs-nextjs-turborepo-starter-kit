@@ -60,11 +60,13 @@ export class PasswordResetService {
 
 		const rawToken = this.cryptoService.generateRandomToken();
 		const tokenHash = await this.cryptoService.hash(rawToken);
+		const tokenDigest = this.cryptoService.hashTokenDigest(rawToken);
 
 		await this.prisma.passwordResetToken.create({
 			data: {
 				userId: user.id,
 				token: tokenHash,
+				tokenDigest,
 				expiresAt: Date.now() + 3_600_000, // 1 hour
 			},
 		});
@@ -148,21 +150,26 @@ export class PasswordResetService {
 	}
 
 	private async findValidResetToken(rawToken: string): Promise<{ readonly id: string; readonly userId: string } | null> {
-		const candidates = await this.prisma.passwordResetToken.findMany({
+		const tokenDigest = this.cryptoService.hashTokenDigest(rawToken);
+		const candidate = await this.prisma.passwordResetToken.findFirst({
 			where: {
+				tokenDigest,
 				usedAt: null,
 				expiresAt: { gte: Date.now() },
+				isDeleted: false,
 			},
 			select: { id: true, userId: true, token: true },
 		});
 
-		for (const candidate of candidates) {
-			const isValid = await this.cryptoService.compare(rawToken, candidate.token);
-			if (isValid) {
-				return { id: candidate.id, userId: candidate.userId };
-			}
+		if (candidate === null) {
+			return null;
 		}
 
-		return null;
+		const isValid = await this.cryptoService.compare(rawToken, candidate.token);
+		if (!isValid) {
+			return null;
+		}
+
+		return { id: candidate.id, userId: candidate.userId };
 	}
 }

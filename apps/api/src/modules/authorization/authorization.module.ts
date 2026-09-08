@@ -7,6 +7,8 @@ import { PrismaModule } from "../../prisma/prisma.module";
 
 import { SessionsPersistenceModule } from "../sessions/sessions-persistence.module";
 
+import { AccessTokenModule } from "../auth/access-token.module";
+
 import { AuthorizationAuditService } from "./audit/authorization-audit.service";
 import { AuthorizationCacheService } from "./cache/authorization-cache.service";
 import { RedisAuthorizationCacheService } from "./cache/redis-authorization-cache.service";
@@ -50,7 +52,7 @@ import { RoleRepository } from "./repositories/role.repository";
  */
 @Global()
 @Module({
-	imports: [PrismaModule, SessionsPersistenceModule],
+	imports: [PrismaModule, SessionsPersistenceModule, AccessTokenModule],
 	providers: [
 		{
 			provide: "IN_MEMORY_AUTH_CACHE",

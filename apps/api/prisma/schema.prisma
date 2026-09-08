@@ -286,10 +286,11 @@ model PermissionAuditLog {
 
 /// RLS: own row — `app_owns(user_id)`.
 model PasswordResetToken {
-  id        String  @id @default(uuid())
-  userId    String  @map("user_id")
-  token     String  @unique @db.Text
-  expiresAt BigInt  @map("expires_at")
+  id          String  @id @default(uuid())
+  userId      String  @map("user_id")
+  token       String  @unique @db.Text
+  tokenDigest String? @unique @map("token_digest") @db.VarChar(64)
+  expiresAt   BigInt  @map("expires_at")
   usedAt    BigInt? @map("used_at")
   isDeleted Boolean @default(false) @map("is_deleted")
   deletedAt BigInt? @map("deleted_at")
@@ -300,6 +301,7 @@ model PasswordResetToken {
 
   @@index([userId])
   @@index([token])
+  @@index([tokenDigest])
   @@map("password_reset_tokens")
 }
 
@@ -460,6 +462,8 @@ model RolePermission {
 model RefreshToken {
   id     String @id @default(uuid())
   token  String @db.Text
+  previousTokenHash String? @map("previous_token_hash") @db.Text
+  rotationVersion   Int     @default(0) @map("rotation_version")
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 

@@ -53,7 +53,7 @@ import {
 	LogoutResponseSchema,
 	PermissionListResponseSchema,
 	RbacMessageResponseSchema,
-	RefreshResponseSchema,
+	RefreshResponseMessageSchema,
 	ResendVerificationResponseSchema,
 	ResetPasswordResponseSchema,
 	ValidateResetTokenResponseSchema,
@@ -406,7 +406,7 @@ export const apiRouter = {
 			queryKey: () => ["auth", "signup"],
 		}),
 		refresh: defineMutation(apiContract.auth.refresh, {
-			response: envelope(RefreshResponseSchema),
+			response: envelope(RefreshResponseMessageSchema),
 			queryKey: () => ["auth", "refresh"],
 		}),
 		logout: defineMutation(apiContract.auth.logout, {

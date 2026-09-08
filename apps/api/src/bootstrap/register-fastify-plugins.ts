@@ -9,6 +9,7 @@ import fastifyUnderPressure from "@fastify/under-pressure";
 import type { FastifyRequest } from "fastify";
 import { type ApiVersion } from "@workspace/shared";
 
+import { TypedConfigService } from "../config/typed-config.service";
 import { readFirstHeader } from "../common/utils/http-headers";
 import { VersionController } from "../modules/health/version.controller";
 import { apiVersionOfUrl } from "./fastify-api-version";
@@ -24,8 +25,9 @@ export interface RegisterFastifyPluginsOptions {
  * `@fastify/*` plugins are typed against their module augmentations — registering
  * on `getInstance()` keeps runtime behaviour identical and avoids the mismatch.
  */
-export async function registerFastifyPlugins(app: NestFastifyApplication, options: RegisterFastifyPluginsOptions): Promise<void> {
+export async function registerFastifyPlugins(app: NestFastifyApplication, options: RegisterFastifyPluginsOptions, config: TypedConfigService): Promise<void> {
 	const server = app.getHttpAdapter().getInstance();
+	const hardeningEnabled: boolean = config.securityHardeningEnabled;
 
 	await server.register(fastifyCookie);
 	await server.register(fastifyRequestContext, { hook: "preHandler" });
@@ -33,6 +35,9 @@ export async function registerFastifyPlugins(app: NestFastifyApplication, option
 	if (!options.isDev) {
 		await server.register(fastifyCompress, { global: true, threshold: 1024 });
 		await server.register(fastifyEtag, { weak: true });
+	}
+
+	if (hardeningEnabled) {
 		await server.register(fastifyRateLimit, {
 			global: true,
 			max: 300,

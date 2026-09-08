@@ -1,23 +1,21 @@
 import { ForbiddenException, Injectable, UnauthorizedException } from "@nestjs/common";
-import { epochMs, type EnrollmentReason, type EpochMs, type LoginRestrictedEnrollmentResponse, type LoginServiceResponse, type UserPermissions } from "@workspace/shared";
+import { epochMs, type EpochMs, type LoginRestrictedEnrollmentResponse, type LoginServiceResponse, type UserPermissions } from "@workspace/shared";
 
 import { parseExpiryToMilliseconds } from "../../../common/utils/expiry";
 import { TypedConfigService } from "../../../config/typed-config.service";
 import { LogService } from "../../../modules/logs/logs.service";
 import { PrismaService } from "../../../prisma/prisma.service";
 import { AuthorizationCheckerService } from "../../authorization/services/authorization-checker.service";
-import type { UserLogin } from "../repositories/user.repository";
 import { UserRepository } from "../repositories/user.repository";
 import { IdentityService } from "./identity.service";
-import { TokenService, type SessionScope } from "./token.service";
+import { SessionRestrictionService } from "./session-restriction.service";
+import { TokenService, type SessionScope, type SessionTokenGenerationOptions } from "./token.service";
 import { CryptoService } from "./crypto.service";
 import { UserResponseMapper } from "./user-response.mapper";
 
 export interface IssueSessionOptions {
 	readonly mfaAssured?: boolean;
 }
-
-type SessionRestriction = { readonly restricted: false } | { readonly restricted: true; readonly reason: EnrollmentReason; readonly message: string };
 
 /**
  * Issues authenticated sessions (refresh token + JWT pair).
@@ -37,6 +35,7 @@ export class AuthSessionService {
 		private readonly logService: LogService,
 		private readonly mapper: UserResponseMapper,
 		private readonly identityService: IdentityService,
+		private readonly sessionRestriction: SessionRestrictionService,
 	) {}
 
 	public async issueSessionForUser(
@@ -75,7 +74,7 @@ export class AuthSessionService {
 		const isEmailVerified: boolean = user.emailVerifiedAt !== null && user.emailVerifiedAt <= now;
 		const profile = this.mapper.build(user, userPermissions, isEmailVerified);
 		const flatUser = this.mapper.toFlatUser(user, userPermissions, isEmailVerified);
-		const restriction: SessionRestriction = this.resolveSessionRestriction(user, isEmailVerified, now);
+		const restriction = this.sessionRestriction.resolveSessionRestriction(user, isEmailVerified, now);
 
 		let mfaAssuredAt: number | undefined;
 		if (options.mfaAssured === true) {
@@ -84,10 +83,13 @@ export class AuthSessionService {
 				where: { id: user.id },
 				data: { mfaAssuredAt, updatedAt: now },
 			});
+		} else {
+			const resolved = this.sessionRestriction.resolveSessionTokens(user, now);
+			mfaAssuredAt = resolved.mfaAssuredAt;
 		}
 
 		const sessionScope: SessionScope = restriction.restricted ? "restricted" : "full";
-		const tokenOptions = {
+		const tokenOptions: SessionTokenGenerationOptions = {
 			sessionScope,
 			mfaAssuredAt,
 		};
@@ -105,7 +107,7 @@ export class AuthSessionService {
 			},
 		});
 
-		const tokens = await this.tokenService.generateTokens(flatUser, refreshTokenRecord.id, tokenOptions);
+		const tokens = await this.tokenService.generateSessionTokens(flatUser, refreshTokenRecord.id, tokenOptions);
 
 		const hashedRt = await this.cryptoService.hash(tokens.refreshToken);
 
@@ -149,41 +151,6 @@ export class AuthSessionService {
 			user: profile,
 			...tokens,
 		};
-	}
-
-	private resolveSessionRestriction(user: UserLogin, isEmailVerified: boolean, now: number): SessionRestriction {
-		if (!isEmailVerified) {
-			return {
-				restricted: true,
-				reason: "email_verification",
-				message: "Verify your email address to continue.",
-			};
-		}
-
-		if (!user.twoFactorEnabled && this.requiresMfaEnrollment(user, now)) {
-			return {
-				restricted: true,
-				reason: "mfa_enrollment",
-				message: "Set up two-factor authentication to continue.",
-			};
-		}
-
-		return { restricted: false };
-	}
-
-	private requiresMfaEnrollment(user: UserLogin, now: number): boolean {
-		const deadline: bigint | null = user.mfaEnrollmentDeadline;
-		if (deadline !== null && deadline <= BigInt(now)) {
-			return true;
-		}
-
-		// New accounts always receive a deadline at signup; null means a legacy user still in the grace window.
-		const graceMs: number = this.config.mfaEnrollmentDeadlineMs;
-		if (deadline === null && graceMs <= 0) {
-			return true;
-		}
-
-		return false;
 	}
 
 	private async cleanupExpiredTokens(userId: string): Promise<void> {

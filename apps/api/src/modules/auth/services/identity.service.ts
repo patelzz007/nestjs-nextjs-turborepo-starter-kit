@@ -86,13 +86,9 @@ export class IdentityService {
 			},
 		});
 
-		const profile = this.mapper.build(newUser, userPermissions, false);
-		await this.warmSessionCache(newUser.id, profile);
-
 		await this.emailService.sendVerificationEmail(newUser.email, verificationToken, clientType);
 
 		return {
-			user: profile,
 			message: "If this email is available, check your inbox for verification instructions.",
 		};
 	}

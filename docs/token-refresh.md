@@ -1085,6 +1085,29 @@ The previous refresh token is invalidated during each rotation.
 
 ---
 
+#### Restricted sessions stay restricted on refresh
+
+Refresh recomputes `sessionScope` from the user's current enrollment state (email verification, MFA deadline). A restricted session may refresh but never escalates to `full` until enrollment completes.
+
+---
+
+#### Atomic rotation & superseded detection
+
+Refresh rotation uses a compare-and-swap update (`rotateTokenIfHashMatches`). Concurrent refreshes with the same valid token produce `REFRESH_TOKEN_SUPERSEDED` instead of false theft detection. SSR and proxy paths single-flight refresh per refresh-token identity.
+
+---
+
+#### Mutation intent (CSRF layer)
+
+Cookie-authenticated `POST`/`PUT`/`PATCH`/`DELETE` requests require:
+
+- `X-Mutation-Intent: same-origin`
+- `Origin` or `Referer` matching `CORS_ORIGINS`
+
+Bearer-authenticated and `@SkipMutationIntent()` routes (webhooks) are exempt.
+
+---
+
 #### Web/admin isolation
 
 Separate cookie names prevent a normal web session from being treated as an admin session.

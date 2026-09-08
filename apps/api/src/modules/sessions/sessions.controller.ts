@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Req, UseGuards, UseInterceptors } from "@nestjs/common";
+import { Controller, Get, HttpCode, HttpStatus, Post, Req, UseGuards, UseInterceptors } from "@nestjs/common";
 import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { SkipThrottle, Throttle } from "@nestjs/throttler";
 import type { LogoutAllResponse, LogoutResponse, RefreshResponse, RefreshResponseMessage, Session } from "@workspace/shared";
@@ -41,6 +41,7 @@ export class SessionsController {
 	@Public()
 	@UseGuards(RefreshTokenGuard)
 	@Post("/refresh")
+	@HttpCode(HttpStatus.OK)
 	@ApiOperation({ summary: "Refresh access token using refresh token cookie" })
 	@ApiOkResponse({ type: WrappedRefreshResponse, description: "Tokens refreshed" })
 	@ApiResponse({ status: 401, type: ApiErrorResponseDto, description: "Invalid or expired refresh token" })

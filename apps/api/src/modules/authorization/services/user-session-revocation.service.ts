@@ -1,5 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 
+import { AccessTokenStateService } from "../../auth/services/access-token-state.service";
 import { RefreshTokenRepository } from "../../sessions/repositories/refresh-token.repository";
 import { SessionUserRepository } from "../../sessions/repositories/session-user.repository";
 
@@ -13,6 +14,7 @@ export class UserSessionRevocationService {
 	public constructor(
 		private readonly refreshTokens: RefreshTokenRepository,
 		private readonly sessionUsers: SessionUserRepository,
+		private readonly accessTokenState: AccessTokenStateService,
 	) {}
 
 	public async revokeAllSessionsForUser(userId: string): Promise<void> {
@@ -28,6 +30,10 @@ export class UserSessionRevocationService {
 
 		await this.refreshTokens.revokeAllForUsers(uniqueUserIds);
 		await this.sessionUsers.bumpTokenVersions(uniqueUserIds);
+
+		for (const userId of uniqueUserIds) {
+			this.accessTokenState.invalidate(userId);
+		}
 
 		this.logger.log(`Revoked all sessions for ${String(uniqueUserIds.length)} user(s) after authorization change`);
 	}

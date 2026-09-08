@@ -2,13 +2,13 @@ import { API_BASE_URL } from "@workspace/client/lib/api/config";
 import { decodeJwtPayload } from "@workspace/client/lib/auth/jwt";
 import { getEnrollmentRedirectPath, isEnrollmentAllowedPath, isRestrictedSession } from "@workspace/client/lib/auth/restricted-session";
 import {
+	applyRotatedSetCookies,
+	clearAuthCookies,
 	createProxyRefreshCooldown,
 	hasRouteSession,
 	isDocumentNavigation,
-	parseSetCookie,
 	refreshSessionFromProxy,
 	resolveProxySessionRefresh,
-	type ParsedCookie,
 	type ProxyRefreshResult,
 } from "@workspace/client/lib/auth/proxy-refresh";
 import { NextResponse } from "next/server";
@@ -16,6 +16,13 @@ import type { NextRequest } from "next/server";
 
 const ACCESS_TOKEN_COOKIE = "merchantAccessToken";
 const REFRESH_TOKEN_COOKIE = "merchantRefreshToken";
+const CLIENT_ORIGIN: string = process.env.NEXT_PUBLIC_MERCHANT_URL ?? "http://localhost:3003";
+const COOKIE_CLEAR_OPTIONS = {
+	domain: process.env.COOKIE_DOMAIN,
+	path: "/",
+	secure: process.env.NODE_ENV === "production",
+	sameSite: "lax" as const,
+};
 const PROTECTED_ROUTE_PREFIXES: readonly string[] = ["/analytics", "/rewards", "/redemptions", "/api-keys", "/settings"];
 const AUTH_ROUTES: readonly string[] = ["/auth/login", "/auth/verify-email", "/auth/reset-password"];
 
@@ -38,32 +45,20 @@ const attemptRefresh = createProxyRefreshCooldown((refreshToken: string): Promis
 	refreshSessionFromProxy({
 		apiBaseUrl: API_BASE_URL,
 		refreshTokenName: REFRESH_TOKEN_COOKIE,
+		accessTokenName: ACCESS_TOKEN_COOKIE,
 		refreshToken,
 		clientType: "merchant",
+		clientOrigin: CLIENT_ORIGIN,
 	}),
 );
 
 function clearCookies(response: NextResponse, names: readonly string[]): NextResponse {
-	for (const name of names) {
-		response.cookies.set(name, "", { maxAge: 0, path: "/" });
-	}
+	clearAuthCookies(response.cookies, names, COOKIE_CLEAR_OPTIONS);
 	return response;
 }
 
 function applyRotatedCookies(response: NextResponse, setCookies: readonly string[]): NextResponse {
-	for (const header of setCookies) {
-		const cookie: ParsedCookie | null = parseSetCookie(header);
-		if (cookie === null) continue;
-		response.cookies.set(cookie.name, cookie.value, {
-			httpOnly: cookie.httpOnly,
-			secure: cookie.secure,
-			sameSite: cookie.sameSite,
-			path: cookie.path,
-			domain: cookie.domain ?? undefined,
-			maxAge: cookie.maxAge ?? undefined,
-			expires: cookie.expires ?? undefined,
-		});
-	}
+	applyRotatedSetCookies(response.cookies, setCookies);
 	return response;
 }
 
@@ -103,6 +98,7 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
 		isAuthRoute,
 		isPublicRoute: false,
 		accessTokenCookieName: ACCESS_TOKEN_COOKIE,
+		refreshTokenCookieName: REFRESH_TOKEN_COOKIE,
 		app: "merchant",
 		pathname,
 		attemptRefresh,

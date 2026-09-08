@@ -10,9 +10,10 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { z } from "zod";
 
 import { createAuthChannel } from "./auth-sync";
+import { toAuthUser } from "./map-auth-user";
 import { API_BASE_URL } from "../api/config";
 import { apiRouter } from "../api/endpoints";
-import { createRefreshCooldown, createUncheckedApiRequestContext, fetchMutationUnchecked, useApi, type ApiClient, type RefreshResult } from "../api/use-api";
+import { createApiRequestContext, createRefreshCooldown, createUncheckedApiRequestContext, fetchMutationUnchecked, fetchQuery, useApi, type ApiClient, type RefreshResult } from "../api/use-api";
 import type { ApiRouter } from "../api/endpoints";
 import { useAuthStore, type AuthUser } from "./auth-store";
 
@@ -42,27 +43,6 @@ const DEFAULT_COOKIE_NAMES: Readonly<CookieNamesConfig> = {
 	accessToken: "accessToken",
 	refreshToken: "refreshToken",
 };
-
-function getCookie(name: string): string | null {
-	if (typeof window === "undefined") return null;
-
-	const cookies = document.cookie.split("; ");
-	const cookie = cookies.find((c) => c.startsWith(`${name}=`));
-	return cookie ? (cookie.split("=")[1] ?? null) : null;
-}
-
-/**
- * True when the session access-token cookie is present.
- *
- * Note: this reads the *httpOnly* access-token cookie, which browser JS cannot
- * actually see via `document.cookie` — so it returns `false` in practice. The
- * route proxies perform the real presence check server-side (where httpOnly
- * cookies ARE readable); `isAuthenticated` is only for client-side state
- * consistency (cleared on logout / failed refresh). Nothing gates on it.
- */
-function checkAuthStatus(accessTokenName: string): boolean {
-	return getCookie(accessTokenName) !== null;
-}
 
 export interface AuthProviderProps {
 	readonly children: ReactNode;
@@ -107,15 +87,12 @@ export function AuthProvider({
 	shouldRedirectOnUnauthorized,
 }: AuthProviderProps): JSX.Element {
 	const queryClient = useQueryClient();
-	const [isLoading] = useState(false);
+	const [isLoading, setIsLoading] = useState(true);
 	const { user, setUser, clearUser } = useAuthStore();
 
-	// Memoize so checkAuthStatus only re-runs when cookieNames changes
-	const [isAuthenticated, setIsAuthenticated] = useState(() => checkAuthStatus(cookieNames.accessToken));
+	const [isAuthenticated, setIsAuthenticated] = useState(false);
 
 	// Cross-tab sync: one channel per auth context (web vs admin cookie set).
-	// Each provider owns its channel and closes it on unmount so a fresh
-	// provider (new tab / re-mount) gets a clean channel with no stale listeners.
 	const syncChannel = useMemo(() => createAuthChannel(`freebuff:auth:${cookieNames.accessToken}`), [cookieNames.accessToken]);
 
 	useEffect((): (() => void) => {
@@ -124,8 +101,33 @@ export function AuthProvider({
 		};
 	}, [syncChannel]);
 
-	// Once true, in-flight queries must not trigger refresh/unauthorized storms.
 	const sessionInvalidatedRef = useRef<boolean>(false);
+
+	const revalidateSession = useCallback(async (): Promise<void> => {
+		const requestContext = createApiRequestContext(baseUrl, undefined, undefined, { clientType, extraHeaders });
+		const meResponse = await fetchQuery(requestContext, apiRouter.auth.me, undefined);
+		if (meResponse.ok) {
+			sessionInvalidatedRef.current = false;
+			setUser(toAuthUser(meResponse.data));
+			setIsAuthenticated(true);
+			return;
+		}
+		clearUser();
+		setIsAuthenticated(false);
+	}, [baseUrl, clearUser, clientType, extraHeaders, setUser]);
+
+	useEffect((): (() => void) => {
+		let cancelled = false;
+		void (async (): Promise<void> => {
+			await revalidateSession();
+			if (!cancelled) {
+				setIsLoading(false);
+			}
+		})();
+		return (): void => {
+			cancelled = true;
+		};
+	}, [revalidateSession]);
 
 	interface InvalidateSessionOptions {
 		readonly broadcast?: boolean;
@@ -207,9 +209,7 @@ export function AuthProvider({
 			const uncheckedContext = createUncheckedApiRequestContext(baseUrl, { clientType });
 			const response = await fetchMutationUnchecked(uncheckedContext, apiRouter.auth.refresh, {});
 			if (response.ok) return "ok";
-			// The server rejected the refresh (expired/invalid refresh token) — the
-			// session is genuinely dead, not just unreachable.
-			if (response.status === 401) return "expired";
+			if (response.status === 401 || response.status === 403) return "expired";
 			// Server reachable but broken (5xx) or a non-401 error.
 			return "transient";
 		} catch {
@@ -273,13 +273,15 @@ export function AuthProvider({
 	useEffect((): (() => void) => {
 		return syncChannel.subscribe((event): void => {
 			if (event === "logged-out") {
-				void invalidateSession({ broadcast: false });
-			} else {
-				sessionInvalidatedRef.current = false;
-				setIsAuthenticated(true);
+				void (async (): Promise<void> => {
+					await clearServerSession();
+					await invalidateSession({ broadcast: false });
+				})();
+				return;
 			}
+			void revalidateSession();
 		});
-	}, [syncChannel, invalidateSession]);
+	}, [clearServerSession, invalidateSession, revalidateSession, syncChannel]);
 
 	const value: AuthContextType = useMemo(
 		() => ({

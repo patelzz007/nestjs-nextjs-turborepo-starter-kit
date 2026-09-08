@@ -10,9 +10,13 @@ import { UserRepository } from "../auth/repositories/user.repository";
 import { UserResponseMapper } from "../auth/services/user-response.mapper";
 import { CryptoService } from "../auth/services/crypto.service";
 import { AccessTokenStateService } from "../auth/services/access-token-state.service";
+import { SessionRestrictionService } from "../auth/services/session-restriction.service";
 import { TokenService } from "../auth/services/token.service";
 import { RefreshTokenRepository } from "./repositories/refresh-token.repository";
 import { SessionsEventsService } from "./sessions-events.service";
+
+/** Grace window after rotation where a stale presentation is treated as superseded, not theft. */
+const REFRESH_SUPERSEDED_GRACE_MS = 30_000;
 
 /**
  * Owns the refresh-token / active-session lifecycle: token rotation,
@@ -32,6 +36,7 @@ export class SessionsService {
 		private readonly sessionsEvents: SessionsEventsService,
 		private readonly accessTokenState: AccessTokenStateService,
 		private readonly sessionRevocation: UserSessionRevocationService,
+		private readonly sessionRestriction: SessionRestrictionService,
 	) {}
 
 	public async refreshToken(userId: string, rawRefreshTokenJwt: string, refreshTokenJti: string, deviceInfo?: string, ipAddress?: string): Promise<RefreshResponse> {
@@ -81,6 +86,42 @@ export class SessionsService {
 
 		const tokenMatches = await this.cryptoService.compare(rawRefreshTokenJwt, storedToken.token);
 		if (!tokenMatches) {
+			const recentlyRotated: boolean = storedToken.updatedAt >= Date.now() - REFRESH_SUPERSEDED_GRACE_MS;
+			if (recentlyRotated && storedToken.previousTokenHash !== null) {
+				const matchesPrevious = await this.cryptoService.compare(rawRefreshTokenJwt, storedToken.previousTokenHash);
+				if (matchesPrevious) {
+					this.sessionsEvents.emitAction(
+						SessionActionEventSchema.parse({
+							action: "refresh",
+							userId: user.id,
+							status: "failed",
+							error: "REFRESH_TOKEN_SUPERSEDED",
+							durationMs: Math.round(performance.now() - actionStartedAt),
+						}),
+					);
+					throw new UnauthorizedException({
+						message: "Refresh token was already rotated. Please retry with the latest session.",
+						error: "REFRESH_TOKEN_SUPERSEDED",
+					});
+				}
+			}
+
+			if (recentlyRotated) {
+				this.sessionsEvents.emitAction(
+					SessionActionEventSchema.parse({
+						action: "refresh",
+						userId: user.id,
+						status: "failed",
+						error: "REFRESH_TOKEN_SUPERSEDED",
+						durationMs: Math.round(performance.now() - actionStartedAt),
+					}),
+				);
+				throw new UnauthorizedException({
+					message: "Refresh token was already rotated. Please retry with the latest session.",
+					error: "REFRESH_TOKEN_SUPERSEDED",
+				});
+			}
+
 			this.logService.warn("Suspicious activity: token reuse detected — revoking all sessions", {
 				userId: user.id,
 				context: "SessionsService",
@@ -108,19 +149,47 @@ export class SessionsService {
 		const userPermissions = await this.authorizationChecker.getUserPermissionDetails(user.id);
 		const isEmailVerified = user.emailVerifiedAt !== null && user.emailVerifiedAt <= Date.now();
 		const flatUser: FlatUserResponse = this.mapper.toFlatUser(user, userPermissions, isEmailVerified);
+		const now: number = Date.now();
+		const { sessionScope, mfaAssuredAt } = this.sessionRestriction.resolveSessionTokens(user, now);
 
 		const expiryMs = parseExpiryToMilliseconds(this.config.jwtRefreshExpiry);
-		const expiresAt: EpochMs = epochMs(Date.now() + expiryMs);
+		const expiresAt: EpochMs = epochMs(now + expiryMs);
 
-		const tokens = await this.tokenService.generateTokens(flatUser, storedToken.id);
+		const tokens = await this.tokenService.generateSessionTokens(flatUser, storedToken.id, {
+			sessionScope,
+			mfaAssuredAt,
+		});
 		const hashedRt = await this.cryptoService.hash(tokens.refreshToken);
 
-		await this.repository.rotateToken(storedToken.id, {
+		const rotationResult = await this.repository.rotateTokenIfHashMatches(storedToken.id, storedToken.token, {
 			token: hashedRt,
 			deviceInfo: deviceInfo ?? storedToken.deviceInfo,
 			ipAddress: ipAddress ?? storedToken.ipAddress,
 			expiresAt,
 		});
+
+		if (rotationResult === "superseded") {
+			this.sessionsEvents.emitAction(
+				SessionActionEventSchema.parse({
+					action: "refresh",
+					userId: user.id,
+					status: "failed",
+					error: "REFRESH_TOKEN_SUPERSEDED",
+					durationMs: Math.round(performance.now() - actionStartedAt),
+				}),
+			);
+			throw new UnauthorizedException({
+				message: "Refresh token was already rotated. Please retry with the latest session.",
+				error: "REFRESH_TOKEN_SUPERSEDED",
+			});
+		}
+
+		if (rotationResult === "missing") {
+			throw new UnauthorizedException({
+				message: "Invalid refresh token",
+				error: "REFRESH_TOKEN_INVALID",
+			});
+		}
 
 		this.sessionsEvents.emitAction(
 			SessionActionEventSchema.parse({

@@ -8,12 +8,13 @@ import "server-only";
 // prefetch and client hydration share URLs and react-query keys.
 
 import { type QueryKey } from "@tanstack/react-query";
-import { apiVersionPrefix, type DataValue, type SerializableInput } from "@workspace/shared";
+import { apiVersionPrefix, MUTATION_INTENT_HEADER, MUTATION_INTENT_VALUE, type DataValue, type SerializableInput } from "@workspace/shared";
 import { cookies, headers } from "next/headers";
 import { catchError, defer, from, map, mergeMap, Observable, of, retry, throwError, timer, timeout, firstValueFrom } from "rxjs";
 import { z } from "zod";
 
 import { API_BASE_URL, API_URL_PREFIX } from "./config";
+import { applyRotatedSetCookies, collectSetCookies, hasRotatedAuthCookies } from "../auth/proxy-refresh";
 import { eachRouterEntry, isErasedProcedureDef, isRouterSubtree, resolveRequest, type MutationDef, type ProcedureDef, type QueryDef } from "./endpoints";
 
 // ── Config ─────────────────────────────────────────────────────────────────
@@ -24,6 +25,7 @@ export interface ServerApiConfig {
 	readonly accessTokenCookie: string;
 	readonly refreshTokenCookie: string;
 	readonly clientType: "web" | "admin" | "merchant";
+	readonly clientOrigin: string;
 	readonly staleTimeMs: number;
 	readonly gcTimeMs: number;
 	readonly timeoutMs: number;
@@ -39,6 +41,7 @@ export const DEFAULT_SERVER_API_CONFIG: ServerApiConfig = {
 	accessTokenCookie: "adminAccessToken",
 	refreshTokenCookie: "adminRefreshToken",
 	clientType: "admin",
+	clientOrigin: process.env.NEXT_PUBLIC_ADMIN_URL ?? "http://localhost:3001",
 	staleTimeMs: 60 * 1000,
 	gcTimeMs: 5 * 60 * 1000,
 	timeoutMs: 10_000,
@@ -54,6 +57,7 @@ export const DEFAULT_WEB_SERVER_API_CONFIG: ServerApiConfig = {
 	accessTokenCookie: "accessToken",
 	refreshTokenCookie: "refreshToken",
 	clientType: "web",
+	clientOrigin: process.env.NEXT_PUBLIC_APP_URL ?? process.env.APP_URL ?? "http://localhost:3000",
 };
 
 export const DEFAULT_MERCHANT_SERVER_API_CONFIG: ServerApiConfig = {
@@ -61,6 +65,7 @@ export const DEFAULT_MERCHANT_SERVER_API_CONFIG: ServerApiConfig = {
 	accessTokenCookie: "merchantAccessToken",
 	refreshTokenCookie: "merchantRefreshToken",
 	clientType: "merchant",
+	clientOrigin: process.env.NEXT_PUBLIC_MERCHANT_URL ?? "http://localhost:3003",
 };
 
 /**
@@ -303,33 +308,57 @@ function backoffDelay(attempt: number, config: ServerApiConfig): number {
 	return Math.round(base);
 }
 
+const ssrRefreshInFlight = new Map<string, Promise<string | null>>();
+
 export async function refreshAccessToken(context: ServerRequestContext): Promise<string | null> {
 	const { config, refreshDef } = context;
 	const cookieStore = await cookies();
 	const refreshToken: string | undefined = cookieStore.get(config.refreshTokenCookie)?.value;
 	if (refreshToken === undefined) return null;
 
-	const prefix: string = refreshDef.version === undefined ? API_URL_PREFIX : apiVersionPrefix(refreshDef.version);
-	const url: URL = new URL(`${prefix}${refreshDef.path}`, API_BASE_URL);
-	const fetchImpl: typeof fetch = config.fetchImpl ?? globalThis.fetch;
+	const existing = ssrRefreshInFlight.get(refreshToken);
+	if (existing !== undefined) {
+		return existing;
+	}
+
+	const refreshPromise = (async (): Promise<string | null> => {
+		const prefix: string = refreshDef.version === undefined ? API_URL_PREFIX : apiVersionPrefix(refreshDef.version);
+		const url: URL = new URL(`${prefix}${refreshDef.path}`, API_BASE_URL);
+		const fetchImpl: typeof fetch = config.fetchImpl ?? globalThis.fetch;
+		try {
+			const response: Response = await fetchImpl(url, {
+				method: "POST",
+				headers: {
+					Accept: "application/json",
+					Cookie: `${config.refreshTokenCookie}=${refreshToken}`,
+					"X-Client-Type": config.clientType,
+					Origin: config.clientOrigin,
+					[MUTATION_INTENT_HEADER]: MUTATION_INTENT_VALUE,
+				},
+				cache: "no-store",
+			});
+			if (response.status === 401 || response.status === 403) return null;
+			if (!response.ok) return null;
+			const setCookies: readonly string[] =
+				typeof response.headers.getSetCookie === "function" ? response.headers.getSetCookie() : collectSetCookies(response.headers);
+			if (!hasRotatedAuthCookies(setCookies, config.accessTokenCookie, config.refreshTokenCookie)) {
+				return null;
+			}
+			applyRotatedSetCookies(cookieStore, setCookies);
+			const accessCookie: string | undefined = setCookies.find((cookie) => cookie.startsWith(`${config.accessTokenCookie}=`));
+			if (accessCookie === undefined) return null;
+			const value: string = accessCookie.split(";")[0] ?? "";
+			return decodeURIComponent(value.slice(config.accessTokenCookie.length + 1));
+		} catch {
+			return null;
+		}
+	})();
+
+	ssrRefreshInFlight.set(refreshToken, refreshPromise);
 	try {
-		const response: Response = await fetchImpl(url, {
-			method: "POST",
-			headers: {
-				Accept: "application/json",
-				Cookie: `${encodeURIComponent(config.refreshTokenCookie)}=${encodeURIComponent(refreshToken)}`,
-				"X-Client-Type": config.clientType,
-			},
-			cache: "no-store",
-		});
-		if (!response.ok) return null;
-		const setCookies: readonly string[] = response.headers.getSetCookie();
-		const accessCookie: string | undefined = setCookies.find((cookie) => cookie.startsWith(`${config.accessTokenCookie}=`));
-		if (accessCookie === undefined) return null;
-		const value: string = accessCookie.split(";")[0] ?? "";
-		return decodeURIComponent(value.slice(config.accessTokenCookie.length + 1));
-	} catch {
-		return null;
+		return await refreshPromise;
+	} finally {
+		ssrRefreshInFlight.delete(refreshToken);
 	}
 }
 

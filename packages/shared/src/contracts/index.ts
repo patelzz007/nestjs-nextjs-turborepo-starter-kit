@@ -104,6 +104,7 @@ export type SerializableInput = Readonly<Record<string, DataValue | undefined>> 
 // Re-exported here for the public `@workspace/shared`
 // surface; anything that only needs the constants can import `./versioning`.
 export * from "./versioning";
+export * from "./mutation-intent";
 export { contractPathParam } from "./path-param";
 
 // ── Route contract ─────────────────────────────────────────────────────────

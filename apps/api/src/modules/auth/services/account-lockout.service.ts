@@ -29,15 +29,9 @@ export class AccountLockoutService {
 	 */
 	public checkLockout(user: { readonly id: string; readonly lockedUntil: bigint | null } | null, _clientType: string | undefined, _flowStartedAt: number): Promise<void> {
 		if (user?.lockedUntil && user.lockedUntil > Date.now()) {
-			const remainingMs: number = Number(user.lockedUntil) - Date.now();
-			const remainingSec: number = Math.max(1, Math.ceil(remainingMs / 1000));
-			const remainingMin: number = Math.ceil(remainingSec / 60);
-
 			throw new UnauthorizedException({
-				message: `Account temporarily locked. Try again in ${String(remainingMin)} minute(s).`,
-				error: "ACCOUNT_LOCKED",
-				lockedUntil: epochMs(Number(user.lockedUntil)),
-				remainingSeconds: remainingSec,
+				message: "Invalid email or password",
+				error: "INVALID_CREDENTIALS",
 			});
 		}
 		return Promise.resolve();

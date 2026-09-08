@@ -27,14 +27,15 @@ Production-oriented Spatie-style authorization architecture for NestJS + Fastify
 11. [Impersonation (super-admin)](#impersonation-super-admin)
 12. [Request Lifecycle](#request-lifecycle)
 13. [Web vs Admin Sessions (Dual Cookies)](#web-vs-admin-sessions-dual-cookies)
-14. [JWT Design](#jwt-design)
-15. [Admin API](#admin-api)
-16. [Admin panel UI](#admin-panel-ui)
-17. [Seeding](#seeding)
-18. [Advanced Features](#advanced-features)
-19. [Directory Structure](#directory-structure)
-20. [Key Design Decisions](#key-design-decisions)
-21. [Troubleshooting](#troubleshooting)
+14. [Mutation intent / CSRF (cookie auth)](#mutation-intent--csrf-cookie-auth)
+15. [JWT Design](#jwt-design)
+16. [Admin API](#admin-api)
+17. [Admin panel UI](#admin-panel-ui)
+18. [Seeding](#seeding)
+19. [Advanced Features](#advanced-features)
+20. [Directory Structure](#directory-structure)
+21. [Key Design Decisions](#key-design-decisions)
+22. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -1118,6 +1119,88 @@ JWT access/refresh tokens are **not** stored in Redis — only profile + RBAC pa
 
 ---
 
+## Mutation intent / CSRF (cookie auth)
+
+> **ELI5:** Your browser keeps a secret login cookie (like a hall pass). A mean website on another tab cannot read that cookie — but sometimes it can still *trick* your browser into *using* it (for example by submitting a form). **Mutation intent** is our extra question before any “change something” request: *“Did **our** app really mean to do this?”*
+
+### The hall-pass analogy
+
+| Piece | What it is in this repo |
+|-------|-------------------------|
+| Hall pass | `httpOnly` session cookies (`accessToken`, `refreshToken`, …) |
+| “Only use the pass inside our school” | `SameSite=Lax` on cookies |
+| “Show me your student ID from our school” | `X-Mutation-Intent: same-origin` header |
+| “Which school are you from?” | `Origin` or `Referer` must match `CORS_ORIGINS` |
+
+Cookies alone are good. Mutation intent is the **second lock** on the door for anything that **changes** data.
+
+### When does the API check?
+
+`MutationIntentGuard` runs on **every** `POST`, `PUT`, `PATCH`, and `DELETE` unless the route is exempt.
+
+**Read-only traffic is left alone:** `GET`, `HEAD`, and `OPTIONS` never need the header.
+
+### What must a first-party browser request send?
+
+Defined once in `packages/shared/src/contracts/mutation-intent.ts`:
+
+| Constant | Value |
+|----------|-------|
+| Header name | `X-Mutation-Intent` |
+| Header value | `same-origin` |
+
+Plus **one** of:
+
+- `Origin: https://your-app.example.com` (must be listed in `CORS_ORIGINS`), or
+- `Referer: https://your-app.example.com/some/page` (same allowlist)
+
+Our own clients add the header automatically:
+
+- Browser app → `packages/client/src/lib/api/api-request.ts` (`mutationIntentHeaders()`)
+- SSR prefetch / refresh → `packages/client/src/lib/api/server-request.ts`
+- Next.js proxy refresh → `packages/client/src/lib/auth/proxy-refresh.ts`
+
+You should **not** hand-roll this in React components — use the shared API client.
+
+### Who is exempt? (does not need the header)
+
+| Caller | Why |
+|--------|-----|
+| `GET` / `HEAD` / `OPTIONS` | Not changing anything |
+| `Authorization: Bearer …` | Not cookie session auth (machine clients, scripts) |
+| Routes with `@SkipMutationIntent()` | Documented non-browser integrations (e.g. Resend webhook) |
+
+A missing `Origin` on its own is **not** an exemption. Random sites cannot skip the check just because they omit headers.
+
+### What errors will I see?
+
+| HTTP | `error` code | Plain English |
+|------|--------------|---------------|
+| `403` | `MUTATION_INTENT_REQUIRED` | You tried to change something but didn’t send `X-Mutation-Intent: same-origin` |
+| `403` | `MUTATION_ORIGIN_REJECTED` | The request didn’t come from an allowed frontend URL (`CORS_ORIGINS`) |
+
+### Environment checklist (local dev)
+
+```env
+# Every app origin that may call the API (comma-separated, no spaces after commas)
+CORS_ORIGINS=http://localhost:3000,http://localhost:3001,http://localhost:3003
+
+# So cookies work across API :8080 and apps :3000/:3001/:3003
+COOKIE_DOMAIN=localhost
+```
+
+Production: replace with real `https://` app URLs. Staging should mirror production rules (`SECURITY_HARDENING_ENABLED=1` enables Helmet + rate limits outside prod-only mode).
+
+### Quick debug flow
+
+1. **403 on login or logout after hardening?** Open DevTools → Network → failing request → confirm `X-Mutation-Intent: same-origin` is present. If you called the API with `curl` or Postman without cookies + header, that is expected.
+2. **403 only from one app?** That app’s origin is probably missing from `CORS_ORIGINS`.
+3. **Webhook broken?** Add `@SkipMutationIntent()` only on verified server-to-server routes — never on user-facing auth.
+
+See also: [Token refresh — Security & trade-offs](./token-refresh.md#101-security-properties) and [Auth hardening audit](./auth-hardening-audit.md).
+
+---
+
 ## JWT Design
 
 The JWT carries **identity + lightweight flags** — no permission lists, no role lists:
@@ -1476,6 +1559,7 @@ const result = await this.authorizationHealth.isHealthy("authz");
 | Super-admin bypass | Short-circuits all permission checks; logged for audit trail |
 | `hasRoles` / `hasPermissions` delegate to explicit methods | Guarantees consistent empty-array and AND/OR semantics |
 | `COOKIE_DOMAIN=localhost` | Required for local dev where API and apps run on different ports |
+| Mutation intent header + `CORS_ORIGINS` | Extra CSRF lock on cookie-authenticated mutations — see [Mutation intent / CSRF](#mutation-intent--csrf-cookie-auth) |
 
 ---
 

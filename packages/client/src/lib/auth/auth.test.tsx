@@ -95,13 +95,21 @@ const USER_FIXTURE = {
 	deletedAt: null,
 };
 
+const UNAUTHORIZED_ME = jsonResponse(401, { message: "Unauthorized" });
+
 const ME_BODY = { success: true, data: USER_FIXTURE, meta: { timestamp: 1786428000000 } };
 
 const REFRESH_BODY = {
 	success: true,
-	data: { accessToken: "new-access-token", refreshToken: "new-refresh-token" },
+	data: { message: "Tokens refreshed successfully" },
 	meta: { timestamp: 1786428000000 },
 };
+
+async function waitForBootstrap(result: { current: ReturnType<typeof useAuth> }): Promise<void> {
+	await waitFor(() => {
+		expect(result.current.isLoading).toBe(false);
+	});
+}
 
 function refreshCalls(mock: Mock<FetchImpl>): FetchCall[] {
 	return fetchCalls(mock).filter((call) => inputUrl(call.input).endsWith("/auth/refresh"));
@@ -136,6 +144,21 @@ beforeEach(() => {
 	refresh = vi.fn<RefreshFn>();
 	MockBroadcastChannel.instances.length = 0;
 	vi.stubGlobal("BroadcastChannel", MockBroadcastChannel);
+	vi.stubGlobal(
+		"fetch",
+		vi.fn<FetchImpl>(async (input, init) => {
+			const url = inputUrl({ input, init });
+			if (url.endsWith("/auth/me")) {
+				const hasSessionCookie =
+					document.cookie.includes("accessToken=") || document.cookie.includes("adminAccessToken=") || document.cookie.includes("merchantAccessToken=");
+				if (hasSessionCookie) {
+					return jsonResponse(200, ME_BODY);
+				}
+				return jsonResponse(401, { success: false, error: { message: "Unauthorized", error: "ACCESS_TOKEN_INVALID" } });
+			}
+			return jsonResponse(404, { success: false, error: { message: "Not found" } });
+		}),
+	);
 });
 
 afterEach(() => {
@@ -151,14 +174,22 @@ describe("useAuth", () => {
 		expect(() => renderHook(() => useAuth())).toThrow(/useAuth must be used within AuthProvider/);
 	});
 
-	it("starts unauthenticated without an access-token cookie", () => {
+	it("starts unauthenticated without an access-token cookie", async () => {
 		const { result } = renderHook(() => useAuth(), { wrapper });
+		await waitFor(() => {
+			expect(result.current.isLoading).toBe(false);
+		});
 		expect(result.current.isAuthenticated).toBe(false);
 	});
 
-	it("starts authenticated when the access-token cookie is present", () => {
+	it("starts authenticated when the access-token cookie is present", async () => {
+		const fetchMock = vi.fn<FetchImpl>().mockResolvedValue(jsonResponse(200, ME_BODY));
+		vi.stubGlobal("fetch", fetchMock);
 		document.cookie = "accessToken=abc123";
 		const { result } = renderHook(() => useAuth(), { wrapper });
+		await waitFor(() => {
+			expect(result.current.isLoading).toBe(false);
+		});
 		expect(result.current.isAuthenticated).toBe(true);
 	});
 
@@ -173,7 +204,13 @@ describe("useAuth", () => {
 });
 describe("AuthProvider logout", () => {
 	it("clears the React Query cache on logout", async () => {
-		const fetchMock = vi.fn<FetchImpl>().mockResolvedValue(jsonResponse(200, { success: true, data: { message: "Logged out" }, meta: { timestamp: 1786428000000 } }));
+		const fetchMock = vi.fn<FetchImpl>(async (input, init) => {
+			const url = inputUrl({ input, init });
+			if (url.endsWith("/auth/me")) {
+				return jsonResponse(200, ME_BODY);
+			}
+			return jsonResponse(200, { success: true, data: { message: "Logged out" }, meta: { timestamp: 1786428000000 } });
+		});
 		vi.stubGlobal("fetch", fetchMock);
 
 		const { result } = renderHook(() => useAuth(), { wrapper });
@@ -192,12 +229,18 @@ describe("AuthProvider logout", () => {
 		});
 
 		expect(result.current.isAuthenticated).toBe(false);
-		// The logout endpoint call is the only one after the me fetch.
-		expect(fetchCalls(fetchMock)).toHaveLength(2);
+		const logoutCall = fetchCalls(fetchMock).find((call) => inputUrl(call.input).endsWith("/auth/logout"));
+		expect(logoutCall).toBeDefined();
 	});
 
 	it("broadcasts logged-out to other tabs so they clear their sessions too", async () => {
-		const fetchMock = vi.fn<FetchImpl>().mockResolvedValue(jsonResponse(200, { success: true, data: { message: "Logged out" }, meta: { timestamp: 1786428000000 } }));
+		const fetchMock = vi.fn<FetchImpl>(async (input, init) => {
+			const url = inputUrl({ input, init });
+			if (url.endsWith("/auth/me")) {
+				return jsonResponse(200, ME_BODY);
+			}
+			return jsonResponse(200, { success: true, data: { message: "Logged out" }, meta: { timestamp: 1786428000000 } });
+		});
 		vi.stubGlobal("fetch", fetchMock);
 
 		const { result } = renderHook(() => useAuth(), { wrapper });
@@ -219,11 +262,18 @@ describe("AuthProvider logout", () => {
 	});
 
 	it("calls the logout endpoint, clears state and navigates to login", async () => {
-		const fetchMock = vi.fn<FetchImpl>().mockResolvedValue(jsonResponse(200, { success: true, data: { message: "Logged out" }, meta: { timestamp: 1786428000000 } }));
+		const fetchMock = vi.fn<FetchImpl>(async (input, init) => {
+			const url = inputUrl({ input, init });
+			if (url.endsWith("/auth/me")) {
+				return jsonResponse(200, ME_BODY);
+			}
+			return jsonResponse(200, { success: true, data: { message: "Logged out" }, meta: { timestamp: 1786428000000 } });
+		});
 		vi.stubGlobal("fetch", fetchMock);
 
 		document.cookie = "accessToken=abc123";
 		const { result } = renderHook(() => useAuth(), { wrapper });
+		await waitForBootstrap(result);
 		act(() => {
 			result.current.login(MOCK_USER);
 		});
@@ -235,13 +285,11 @@ describe("AuthProvider logout", () => {
 		expect(result.current.isAuthenticated).toBe(false);
 		expect(navigate).toHaveBeenCalledWith("/auth/login");
 
-		const calls = fetchCalls(fetchMock);
-		expect(calls).toHaveLength(1);
-		const call = calls[0];
-		if (call === undefined) throw new Error("logout fetch was never called");
-		expect(inputUrl(call.input)).toBe("http://api.test/api/v1/auth/logout");
-		expect(call.init.method).toBe("POST");
-		expect(call.init.credentials).toBe("include");
+		const logoutCall = fetchCalls(fetchMock).find((call) => inputUrl(call.input).endsWith("/auth/logout"));
+		if (logoutCall === undefined) throw new Error("logout fetch was never called");
+		expect(inputUrl(logoutCall.input)).toBe("http://api.test/api/v1/auth/logout");
+		expect(logoutCall.init.method).toBe("POST");
+		expect(logoutCall.init.credentials).toBe("include");
 
 		// The proxy re-check is scheduled shortly after logout.
 		await waitFor(() => {
@@ -250,7 +298,13 @@ describe("AuthProvider logout", () => {
 	});
 
 	it("sends X-Client-Type: admin on logout for admin sessions", async () => {
-		const fetchMock = vi.fn<FetchImpl>().mockResolvedValue(jsonResponse(200, { success: true, data: { message: "Logged out" }, meta: { timestamp: 1786428000000 } }));
+		const fetchMock = vi.fn<FetchImpl>(async (input, init) => {
+			const url = inputUrl({ input, init });
+			if (url.endsWith("/auth/me")) {
+				return jsonResponse(200, ME_BODY);
+			}
+			return jsonResponse(200, { success: true, data: { message: "Logged out" }, meta: { timestamp: 1786428000000 } });
+		});
 		vi.stubGlobal("fetch", fetchMock);
 
 		const { result } = renderHook(() => useAuth(), { wrapper: adminWrapper });
@@ -259,21 +313,22 @@ describe("AuthProvider logout", () => {
 			await result.current.logout();
 		});
 
-		const calls = fetchCalls(fetchMock);
-		const call = calls[0];
-		if (call === undefined) throw new Error("logout fetch was never called");
-		expect(call.init.method).toBe("POST");
-		expect(headersOf(call.init)["X-Client-Type"]).toBe("admin");
+		const logoutCall = fetchCalls(fetchMock).find((call) => inputUrl(call.input).endsWith("/auth/logout"));
+		if (logoutCall === undefined) throw new Error("logout fetch was never called");
+		expect(logoutCall.init.method).toBe("POST");
+		expect(headersOf(logoutCall.init)["X-Client-Type"]).toBe("admin");
 	});
 
 	it("does not storm refresh/unauthorized when parallel queries fail during logout", async () => {
 		const fetchMock = vi
 			.fn<FetchImpl>()
+			.mockResolvedValueOnce(UNAUTHORIZED_ME)
 			.mockResolvedValueOnce(jsonResponse(200, { success: true, data: { message: "Logged out" }, meta: { timestamp: 1786428000000 } }))
 			.mockResolvedValue(jsonResponse(401, { message: "Unauthorized" }));
 		vi.stubGlobal("fetch", fetchMock);
 
 		const { result } = renderHook(() => useAuth(), { wrapper });
+		await waitForBootstrap(result);
 		act(() => {
 			result.current.login(MOCK_USER);
 		});
@@ -289,39 +344,57 @@ describe("AuthProvider logout", () => {
 		expect(result.current.isAuthenticated).toBe(false);
 		expect(navigate).toHaveBeenCalledWith("/auth/login");
 		expect(refreshCalls(fetchMock)).toHaveLength(0);
-		expect(fetchCalls(fetchMock).length).toBeLessThanOrEqual(4);
+		expect(fetchCalls(fetchMock).length).toBeLessThanOrEqual(6);
 	});
 });
 
 describe("AuthProvider cross-tab sync", () => {
-	it("logs out locally when another tab broadcasts logged-out", () => {
-		const fetchMock = vi.fn<FetchImpl>().mockResolvedValue(jsonResponse(200, { success: true, data: { message: "OK" }, meta: { timestamp: 1786428000000 } }));
+	it("logs out locally when another tab broadcasts logged-out", async () => {
+		const fetchMock = vi.fn<FetchImpl>(async (input, init) => {
+			const url = inputUrl({ input, init });
+			if (url.endsWith("/auth/me")) {
+				return jsonResponse(200, ME_BODY);
+			}
+			return jsonResponse(200, { success: true, data: { message: "Logged out" }, meta: { timestamp: 1786428000000 } });
+		});
 		vi.stubGlobal("fetch", fetchMock);
 
 		document.cookie = "accessToken=abc123";
 		const { result } = renderHook(() => useAuth(), { wrapper });
+		await waitForBootstrap(result);
 		act(() => {
 			result.current.login(MOCK_USER);
 		});
 		expect(result.current.isAuthenticated).toBe(true);
 
-		act(() => {
+		await act(async () => {
 			postFromOtherTab("logged-out");
 		});
 
-		expect(result.current.isAuthenticated).toBe(false);
+		await waitFor(() => {
+			expect(result.current.isAuthenticated).toBe(false);
+		});
 		expect(navigate).toHaveBeenCalledWith("/auth/login");
 	});
 
-	it("marks itself authenticated when another tab broadcasts logged-in", () => {
+	it("revalidates session when another tab broadcasts logged-in", async () => {
+		const fetchMock = vi
+			.fn<FetchImpl>()
+			.mockResolvedValueOnce(UNAUTHORIZED_ME)
+			.mockResolvedValue(jsonResponse(200, ME_BODY));
+		vi.stubGlobal("fetch", fetchMock);
+
 		const { result } = renderHook(() => useAuth(), { wrapper });
+		await waitForBootstrap(result);
 		expect(result.current.isAuthenticated).toBe(false);
 
-		act(() => {
+		await act(async () => {
 			postFromOtherTab("logged-in");
 		});
 
-		expect(result.current.isAuthenticated).toBe(true);
+		await waitFor(() => {
+			expect(result.current.isAuthenticated).toBe(true);
+		});
 	});
 });
 
@@ -329,6 +402,7 @@ describe("AuthProvider silent refresh", () => {
 	it("single-flights concurrent refreshes from parallel 401s", async () => {
 		const fetchMock = vi
 			.fn<FetchImpl>()
+			.mockResolvedValueOnce(UNAUTHORIZED_ME)
 			.mockResolvedValueOnce(jsonResponse(401, { message: "Unauthorized" }))
 			.mockResolvedValueOnce(jsonResponse(401, { message: "Unauthorized" }))
 			.mockResolvedValueOnce(jsonResponse(200, REFRESH_BODY))
@@ -337,27 +411,28 @@ describe("AuthProvider silent refresh", () => {
 		vi.stubGlobal("fetch", fetchMock);
 
 		const { result } = renderHook(() => useAuth(), { wrapper });
+		await waitForBootstrap(result);
 		const me = result.current.api.auth.me;
 
 		const [first, second] = await Promise.all([me.fetch(undefined), me.fetch(undefined)]);
 
 		expect(first.ok).toBe(true);
 		expect(second.ok).toBe(true);
-		// One refresh call shared by both 401s (rotation invalidates the old token,
-		// so a second refresh would break the session).
 		expect(refreshCalls(fetchMock)).toHaveLength(1);
-		expect(fetchMock).toHaveBeenCalledTimes(5);
+		expect(fetchMock).toHaveBeenCalledTimes(6);
 	});
 
 	it("navigates to login and clears state when the refresh fails", async () => {
 		const fetchMock = vi
 			.fn<FetchImpl>()
+			.mockResolvedValueOnce(UNAUTHORIZED_ME)
 			.mockResolvedValueOnce(jsonResponse(401, { message: "Unauthorized" }))
 			.mockResolvedValueOnce(jsonResponse(401, { message: "Refresh token expired" }))
 			.mockResolvedValueOnce(jsonResponse(200, { success: true, data: { message: "Logged out" }, meta: { timestamp: 1786428000000 } }));
 		vi.stubGlobal("fetch", fetchMock);
 
 		const { result } = renderHook(() => useAuth(), { wrapper });
+		await waitForBootstrap(result);
 		const me = result.current.api.auth.me;
 
 		const response = await me.fetch(undefined);
@@ -374,6 +449,7 @@ describe("AuthProvider silent refresh", () => {
 	it("skips silent refresh and clears cookies on TOKEN_VERSION_MISMATCH", async () => {
 		const fetchMock = vi
 			.fn<FetchImpl>()
+			.mockResolvedValueOnce(UNAUTHORIZED_ME)
 			.mockResolvedValueOnce(
 				jsonResponse(401, {
 					message: "Token version mismatch",
@@ -385,6 +461,7 @@ describe("AuthProvider silent refresh", () => {
 		vi.stubGlobal("fetch", fetchMock);
 
 		const { result } = renderHook(() => useAuth(), { wrapper });
+		await waitForBootstrap(result);
 		const me = result.current.api.auth.me;
 
 		const response = await me.fetch(undefined);
@@ -401,12 +478,14 @@ describe("AuthProvider silent refresh", () => {
 	it("sends X-Client-Type: admin when refreshing an admin session", async () => {
 		const fetchMock = vi
 			.fn<FetchImpl>()
+			.mockResolvedValueOnce(UNAUTHORIZED_ME)
 			.mockResolvedValueOnce(jsonResponse(401, { message: "Unauthorized" }))
 			.mockResolvedValueOnce(jsonResponse(200, REFRESH_BODY))
 			.mockResolvedValueOnce(jsonResponse(200, ME_BODY));
 		vi.stubGlobal("fetch", fetchMock);
 
 		const { result } = renderHook(() => useAuth(), { wrapper: adminWrapper });
+		await waitForBootstrap(result);
 		const me = result.current.api.auth.me;
 
 		const response = await me.fetch(undefined);

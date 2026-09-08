@@ -255,7 +255,7 @@ export class TwoFactorService {
 	}
 
 	public async verifyBackupCode(userId: string, dto: VerifyBackupCodeInput): Promise<VerifyBackupCodeResponse> {
-		const valid = await this.consumeBackupCode(userId, dto.backupCode, "authenticated_verify");
+		const valid = await this.matchesUnusedBackupCode(userId, dto.backupCode);
 		return { valid };
 	}
 

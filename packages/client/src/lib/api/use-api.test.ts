@@ -119,6 +119,25 @@ describe("fetchQuery / fetchMutation (tRPC-style caller)", () => {
 		expect(result.ok).toBe(false);
 		expect(result.status).toBe(0);
 	});
+
+	it("accepts message-only refresh responses after cookies are set server-side", async () => {
+		const fetchMock = vi.fn<FetchImpl>().mockResolvedValue(
+			jsonResponse(200, {
+				success: true,
+				data: { message: "Tokens refreshed successfully" },
+				meta: { timestamp: 1786428000000 },
+			}),
+		);
+		vi.stubGlobal("fetch", fetchMock);
+
+		const unchecked = createUncheckedApiRequestContext(BASE_URL, { clientType: "admin" });
+		const result = await fetchMutationUnchecked(unchecked, apiRouter.auth.refresh, {});
+
+		expect(result.ok).toBe(true);
+		if (result.ok) {
+			expect(result.data.data).toEqual({ message: "Tokens refreshed successfully" });
+		}
+	});
 });
 
 describe("useApi 401 pipeline", () => {

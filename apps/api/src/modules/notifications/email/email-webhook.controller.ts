@@ -20,6 +20,7 @@ import { readCaughtErrorMessage } from "../../../common/utils/caught-error";
 import { TypedConfigService } from "../../../config/typed-config.service";
 import { LogService } from "../../logs/logs.service";
 import { Public } from "../../auth/decorators/public.decorator";
+import { SkipMutationIntent } from "../../auth/decorators/skip-mutation-intent.decorator";
 import { RlsBypass } from "../../auth/decorators/rls-bypass.decorator";
 
 import { EmailLogService, type WebhookUpdateResult } from "./email-log.service";
@@ -106,6 +107,7 @@ export class EmailWebhookController {
 
 	@Public()
 	@RlsBypass()
+	@SkipMutationIntent()
 	@Post()
 	// Per-IP rate limiting on the delivery path only (defense-in-depth on top
 	// of signature verification). Deliberately method-scoped: the GET info

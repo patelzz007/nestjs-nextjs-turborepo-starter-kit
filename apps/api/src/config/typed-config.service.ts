@@ -325,4 +325,21 @@ export class TypedConfigService {
 	public get useKafka(): boolean {
 		return this.kafkaBrokers !== undefined;
 	}
+
+	/** Allowed browser origins for CORS and mutation-intent validation. */
+	public get corsOrigins(): readonly string[] {
+		const raw: string = process.env.CORS_ORIGINS ?? "http://localhost:3000,http://localhost:3001,http://localhost:3003";
+		return raw
+			.split(",")
+			.map((origin: string): string => origin.trim())
+			.filter((origin: string): boolean => origin.length > 0);
+	}
+
+	/** When true, enable Helmet and global rate limiting outside production-only branches. */
+	public get securityHardeningEnabled(): boolean {
+		if (process.env.SECURITY_HARDENING_ENABLED === "0") {
+			return false;
+		}
+		return process.env.SECURITY_HARDENING_ENABLED === "1" || process.env.NODE_ENV === "production";
+	}
 }

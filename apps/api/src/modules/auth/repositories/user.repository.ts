@@ -28,6 +28,7 @@ const USER_SELECT_PROFILE = {
 	tokenVersion: true,
 	twoFactorEnabled: true,
 	mfaEnrollmentDeadline: true,
+	mfaAssuredAt: true,
 } as const satisfies Prisma.UserSelect;
 
 const USER_SELECT_LOGIN = {

@@ -9,6 +9,8 @@
 
 import { z } from "zod";
 
+import { MUTATION_INTENT_HEADER, MUTATION_INTENT_VALUE } from "@workspace/shared";
+
 import { API_URL_PREFIX } from "../api/config";
 import { apiRouter } from "../api/endpoints";
 import { decodeJwtPayload } from "./jwt";
@@ -23,8 +25,10 @@ export const ProxyRefreshConfigSchema = z.object({
 	apiBaseUrl: z.string(),
 	/** Cookie name carrying the refresh token (`refreshToken` | `adminRefreshToken`). */
 	refreshTokenName: z.string(),
+	accessTokenName: z.string(),
 	refreshToken: z.string(),
 	clientType: z.enum(["web", "admin", "merchant"]),
+	clientOrigin: z.string(),
 });
 
 export type ProxyRefreshConfig = z.output<typeof ProxyRefreshConfigSchema>;
@@ -127,6 +131,7 @@ export const ProxySessionRefreshInputSchema = z.object({
 	isAuthRoute: z.boolean(),
 	isPublicRoute: z.boolean(),
 	accessTokenCookieName: z.string(),
+	refreshTokenCookieName: z.string(),
 	app: z.enum(["web", "admin", "merchant"]),
 	pathname: z.string(),
 });
@@ -172,6 +177,20 @@ export async function resolveProxySessionRefresh(input: ProxySessionRefreshInput
 	const elapsedMs: number = Date.now() - refreshStartedAt;
 
 	if (result.ok) {
+		const hasBothCookies = hasRotatedAuthCookies(result.setCookies, input.accessTokenCookieName, input.refreshTokenCookieName);
+		if (!hasBothCookies) {
+			logProxyRefresh({
+				app: input.app,
+				pathname: input.pathname,
+				status: result.status,
+				elapsedMs,
+				outcome: "transient-failure",
+				rotatedCookieCount: result.setCookies.length,
+				errorDetail: "refresh response missing rotated auth cookies",
+			});
+			return { rotatedCookies, effectiveAccessToken, sessionDead };
+		}
+
 		rotatedCookies = [...result.setCookies];
 		const newAccessToken: string | undefined = extractRotatedAccessToken(result.setCookies, input.accessTokenCookieName);
 		if (newAccessToken !== undefined) {
@@ -217,6 +236,19 @@ export async function resolveProxySessionRefresh(input: ProxySessionRefreshInput
 	}
 
 	return { rotatedCookies, effectiveAccessToken, sessionDead };
+}
+
+/** True when refresh returned both rotated access and refresh token cookies. */
+export function hasRotatedAuthCookies(setCookies: readonly string[], accessTokenName: string, refreshTokenName: string): boolean {
+	let hasAccess = false;
+	let hasRefresh = false;
+	for (const header of setCookies) {
+		const cookie: ParsedCookie | null = parseSetCookie(header);
+		if (cookie === null) continue;
+		if (cookie.name === accessTokenName) hasAccess = true;
+		if (cookie.name === refreshTokenName) hasRefresh = true;
+	}
+	return hasAccess && hasRefresh;
 }
 
 /** Pull the rotated access token out of refresh `Set-Cookie` headers. */
@@ -381,6 +413,8 @@ export async function refreshSessionFromProxy(config: ProxyRefreshConfig): Promi
 			headers: {
 				Accept: "application/json",
 				Cookie: `${config.refreshTokenName}=${config.refreshToken}`,
+				Origin: config.clientOrigin,
+				[MUTATION_INTENT_HEADER]: MUTATION_INTENT_VALUE,
 				...(config.clientType === "web" ? {} : { "X-Client-Type": config.clientType }),
 			},
 			signal: controller.signal,
@@ -460,4 +494,61 @@ export function parseSetCookie(header: string): ParsedCookie | null {
 	}
 
 	return { name, value, httpOnly, secure, sameSite, path, domain, maxAge, expires };
+}
+
+/** Minimal cookie writer used by SSR refresh and Next.js proxy forwarding. */
+export interface RotatedCookieWriter {
+	set(
+		name: string,
+		value: string,
+		options: {
+			httpOnly?: boolean;
+			secure?: boolean;
+			sameSite?: "lax" | "strict" | "none";
+			path?: string;
+			domain?: string;
+			maxAge?: number;
+			expires?: Date;
+		},
+	): void;
+}
+
+/** Persist rotated auth cookies from raw `Set-Cookie` header strings. */
+export function applyRotatedSetCookies(writer: RotatedCookieWriter, setCookies: readonly string[]): void {
+	for (const header of setCookies) {
+		const cookie: ParsedCookie | null = parseSetCookie(header);
+		if (cookie === null) {
+			continue;
+		}
+		writer.set(cookie.name, cookie.value, {
+			httpOnly: cookie.httpOnly,
+			secure: cookie.secure,
+			sameSite: cookie.sameSite,
+			path: cookie.path,
+			domain: cookie.domain ?? undefined,
+			maxAge: cookie.maxAge ?? undefined,
+			expires: cookie.expires ?? undefined,
+		});
+	}
+}
+
+export interface AuthCookieClearOptions {
+	readonly domain?: string;
+	readonly path?: string;
+	readonly secure?: boolean;
+	readonly sameSite?: "lax" | "strict" | "none";
+}
+
+/** Clear auth cookies with the same attributes the API uses when setting them. */
+export function clearAuthCookies(writer: RotatedCookieWriter, names: readonly string[], options: AuthCookieClearOptions): void {
+	for (const name of names) {
+		writer.set(name, "", {
+			httpOnly: true,
+			secure: options.secure ?? process.env.NODE_ENV === "production",
+			sameSite: options.sameSite ?? "lax",
+			path: options.path ?? "/",
+			domain: options.domain,
+			maxAge: 0,
+		});
+	}
 }

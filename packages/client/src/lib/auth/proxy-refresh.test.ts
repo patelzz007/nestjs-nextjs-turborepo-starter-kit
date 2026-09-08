@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi, type Mock } from "vitest";
 
 import {
+	applyRotatedSetCookies,
 	collectSetCookies,
 	createProxyRefreshCooldown,
 	hasRouteSession,
@@ -160,7 +161,7 @@ describe("resolveProxySessionRefresh", () => {
 		const attemptRefresh = vi.fn<(refreshToken: string, options?: { readonly bypassCooldown?: boolean }) => Promise<ProxyRefreshResult>>().mockResolvedValue({
 			ok: true,
 			status: 200,
-			setCookies: ["accessToken=new-at; Path=/; HttpOnly"],
+			setCookies: ["accessToken=new-at; Path=/; HttpOnly", "refreshToken=new-rt; Path=/; HttpOnly"],
 		});
 
 		const result = await resolveProxySessionRefresh({
@@ -170,6 +171,7 @@ describe("resolveProxySessionRefresh", () => {
 			isAuthRoute: false,
 			isPublicRoute: false,
 			accessTokenCookieName: "accessToken",
+			refreshTokenCookieName: "refreshToken",
 			app: "web",
 			pathname: "/hello",
 			attemptRefresh,
@@ -195,6 +197,7 @@ describe("resolveProxySessionRefresh", () => {
 			isAuthRoute: true,
 			isPublicRoute: false,
 			accessTokenCookieName: "accessToken",
+			refreshTokenCookieName: "refreshToken",
 			app: "web",
 			pathname: "/auth/login",
 			attemptRefresh,
@@ -319,6 +322,35 @@ describe("collectSetCookies", () => {
 
 	it("returns an empty array when no set-cookie headers are present", () => {
 		expect(collectSetCookies({ get: (): string | null => null })).toEqual([]);
+	});
+});
+
+describe("applyRotatedSetCookies", () => {
+	it("writes parsed cookie attributes to the target store", () => {
+		const written: Array<{ name: string; value: string; options: Record<string, unknown> }> = [];
+		const writer = {
+			set(name: string, value: string, options: Record<string, unknown>): void {
+				written.push({ name, value, options });
+			},
+		};
+
+		applyRotatedSetCookies(writer, ["adminAccessToken=new-at; Path=/; HttpOnly; Secure; SameSite=Lax; Domain=localhost"]);
+
+		expect(written).toEqual([
+			{
+				name: "adminAccessToken",
+				value: "new-at",
+				options: {
+					httpOnly: true,
+					secure: true,
+					sameSite: "lax",
+					path: "/",
+					domain: "localhost",
+					maxAge: undefined,
+					expires: undefined,
+				},
+			},
+		]);
 	});
 });
 

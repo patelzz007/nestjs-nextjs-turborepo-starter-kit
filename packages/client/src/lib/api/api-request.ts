@@ -12,6 +12,8 @@ import {
 	ApiErrorBodySchema as ApiErrorSchema,
 	ApiVersionManifestSchema,
 	apiVersionPrefix,
+	MUTATION_INTENT_HEADER,
+	MUTATION_INTENT_VALUE,
 	type ApiErrorBody,
 	type ApiVersion,
 	type ApiVersionManifest,
@@ -82,12 +84,16 @@ export function clientTypeHeaders(clientType: ApiClientType | undefined): Record
 	return clientType === undefined || clientType === "web" ? {} : { "X-Client-Type": clientType };
 }
 
+export function mutationIntentHeaders(): Record<string, string> {
+	return { [MUTATION_INTENT_HEADER]: MUTATION_INTENT_VALUE };
+}
+
 export function mergeProcedureHeaders(
 	clientType: ApiClientType | undefined,
 	extraHeaders: Record<string, string> | undefined,
 	headers: Record<string, string> | undefined,
 ): Record<string, string> {
-	return { ...clientTypeHeaders(clientType), ...extraHeaders, ...headers };
+	return { ...mutationIntentHeaders(), ...clientTypeHeaders(clientType), ...extraHeaders, ...headers };
 }
 
 export const RefreshResultSchema = z.enum(["ok", "expired", "transient"]);
