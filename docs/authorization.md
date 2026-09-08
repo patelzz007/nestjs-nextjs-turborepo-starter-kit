@@ -935,9 +935,20 @@ The next API request with an old JWT gets `401 TOKEN_VERSION_MISMATCH`. The clie
 
 ## Cache Layer
 
+Authorization and session caches use shared **`BoundedTtlCache`** primitives from `@workspace/shared` — strongly held values, per-entry TTL, and deterministic oldest-entry eviction when capacity is reached. **Security counters** (rate limits, throttler memory fallback) use **`SecurityKeyStore`**, which sweeps expired keys and **rejects new keys when full** (fail-closed) so cardinality pressure cannot evict an active limit window.
+
+### Cache selection guide (ELI5)
+
+| Need | Use | Never use for |
+| --- | --- | --- |
+| Derived data with a TTL (RBAC, `/auth/me`, token-version checks) | `BoundedTtlCache` (`evict-oldest`) | Rate limits |
+| Rebuildable heavy objects (Shiki highlighter) | `WeakValueCache` + strong in-flight promise | Auth state |
+| Security counters / sliding windows | `SecurityKeyStore` (`reject-new` at capacity) | Ordinary caches |
+| Request coordination, React Query, Zustand | Explicit lifecycle / framework cache | GC-dependent eviction |
+
 ### In-memory cache (default)
 
-`AuthorizationCacheService` uses a `Map<string, CacheEntry>` with configurable TTL (default 5 minutes). This is the **default backend** for local development (`NODE_ENV=development` or `AUTHORIZATION_CACHE_BACKEND=memory`).
+`AuthorizationCacheService` uses `BoundedTtlCache<string, CachedAuthorization>` with configurable TTL (default 5 minutes) and max entries (default 10,000). This is the **default backend** for local development (`NODE_ENV=development` or `AUTHORIZATION_CACHE_BACKEND=memory`).
 
 **Cache key:** `userId`  
 **Cache value:** `{ roles: string[], permissions: CachedPermission[], cachedAt: EpochMs }`
@@ -953,6 +964,14 @@ Reads are synchronous on the hot path (`AuthorizationCheckerService` → `cache.
 | `AUTHORIZATION_CACHE_BACKEND` | `auto` | `memory`, `redis`, or `auto` (redis when `REDIS_URL` is set and `NODE_ENV !== development`) |
 | `REDIS_URL` | unset | Redis connection URL (required when backend is `redis`) |
 | `AUTHORIZATION_CACHE_TTL_MS` | `300000` | Entry TTL in milliseconds |
+| `AUTHORIZATION_CACHE_MAX_ENTRIES` | `10000` | Max in-memory authorization entries per API instance |
+| `USER_SESSION_CACHE_TTL_MS` | `1800000` | `/auth/me` + `/auth/permissions` TTL (30 min) |
+| `USER_SESSION_CACHE_MAX_ENTRIES` | `10000` | Max session cache entries per instance |
+| `ACCESS_TOKEN_STATE_CACHE_TTL_MS` | `30000` | Access-token account-state cache TTL |
+| `ACCESS_TOKEN_STATE_CACHE_MAX_ENTRIES` | `50000` | Max token-state entries per instance |
+| `SECURITY_COUNTER_MAX_KEYS` | `50000` | Max in-memory rate-limit / throttler-fallback keys; new keys rejected when full |
+
+> **Weak-value eviction is never used for authorization or rate limiting.** Only rebuildable UI resources (e.g. Shiki) may use `WeakValueCache`.
 
 **Why pub/sub instead of Redis-as-primary-store?** Permission checks stay sync and fast (local Map). Redis is only for **cross-instance invalidation** — no blocking Redis reads on every request.
 

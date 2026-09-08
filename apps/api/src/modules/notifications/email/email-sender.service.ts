@@ -1,5 +1,6 @@
 import { Injectable, Optional } from "@nestjs/common";
 import { Resend } from "resend";
+import { SecurityKeyStore } from "@workspace/shared";
 
 import {
 	CaughtValueSchema,
@@ -74,6 +75,7 @@ export class EmailSenderService {
 	private readonly renderContext: EmailRenderContext;
 	/** Recipient → timestamps of recent sends (sliding window rate limit). */
 	private readonly rateBuckets = new Map<string, readonly number[]>();
+	private readonly rateBucketKeys: SecurityKeyStore<string>;
 
 	public constructor(
 		private readonly config: TypedConfigService,
@@ -88,6 +90,7 @@ export class EmailSenderService {
 			appUrl: this.config.appUrl,
 			supportEmail: this.config.emailFromAddress,
 		});
+		this.rateBucketKeys = new SecurityKeyStore<string>({ maxKeys: this.config.securityCounterMaxKeys });
 	}
 
 	// ── Public API ─────────────────────────────────────────────────────────
@@ -292,12 +295,30 @@ export class EmailSenderService {
 		}
 		const now: number = Date.now();
 		const windowStart: number = now - 60_000;
+		const keyExpiresAt: number = now + 60_000;
+
+		if (!this.rateBucketKeys.has(recipient, now) && !this.rateBucketKeys.reserveKey(recipient, keyExpiresAt, now)) {
+			this.logService.warn(`Email rate-limit key store at capacity — rejecting send for ${this.maskEmail(recipient)}`, {
+				context: "EmailSenderService",
+			});
+			return false;
+		}
+
 		const recent: readonly number[] = (this.rateBuckets.get(recipient) ?? []).filter((timestamp: number): boolean => timestamp > windowStart);
+		if (recent.length === 0) {
+			this.rateBucketKeys.delete(recipient);
+			if (!this.rateBucketKeys.reserveKey(recipient, keyExpiresAt, now)) {
+				return false;
+			}
+		}
+
 		if (recent.length >= limit) {
 			this.rateBuckets.set(recipient, recent);
+			this.rateBucketKeys.touchKey(recipient, keyExpiresAt);
 			return false;
 		}
 		this.rateBuckets.set(recipient, [...recent, now]);
+		this.rateBucketKeys.touchKey(recipient, keyExpiresAt);
 		return true;
 	}
 

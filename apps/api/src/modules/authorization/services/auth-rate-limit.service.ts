@@ -1,5 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
-import { nowEpochMs } from "@workspace/shared";
+import { nowEpochMs, SecurityKeyStore } from "@workspace/shared";
+
+import { TypedConfigService } from "../../../config/typed-config.service";
 
 /**
  * In-memory rate limiter for authorization checks.
@@ -29,7 +31,12 @@ export class AuthRateLimitService {
 	private readonly maxChecks: number = 1000;
 
 	/** Per-user sliding windows. userId → array of timestamps. */
-	private readonly windows: Map<string, number[]> = new Map<string, number[]>();
+	private readonly windows = new Map<string, number[]>();
+	private readonly keyStore: SecurityKeyStore<string>;
+
+	public constructor(config: TypedConfigService) {
+		this.keyStore = new SecurityKeyStore<string>({ maxKeys: config.securityCounterMaxKeys });
+	}
 
 	/**
 	 * Check if a user has exceeded the rate limit.
@@ -39,16 +46,30 @@ export class AuthRateLimitService {
 	public isAllowed(userId: string): boolean {
 		const now = nowEpochMs();
 		const cutoff: number = now - this.windowMs;
+		const keyExpiresAt: number = now + this.windowMs;
+
+		if (!this.keyStore.has(userId, now) && !this.keyStore.reserveKey(userId, keyExpiresAt, now)) {
+			this.logger.warn(`Authorization rate-limit key store at capacity — rejecting new key ${userId}`);
+			return false;
+		}
 
 		let timestamps: number[] | undefined = this.windows.get(userId);
 		if (timestamps === undefined) {
 			timestamps = [];
 			this.windows.set(userId, timestamps);
+			this.keyStore.touchKey(userId, keyExpiresAt);
 		}
 
-		// Prune expired entries
 		while (timestamps.length > 0 && timestamps[0] < cutoff) {
 			timestamps.shift();
+		}
+
+		if (timestamps.length === 0) {
+			this.keyStore.delete(userId);
+			if (!this.keyStore.reserveKey(userId, keyExpiresAt, now)) {
+				this.logger.warn(`Authorization rate-limit key store at capacity — rejecting key ${userId}`);
+				return false;
+			}
 		}
 
 		if (timestamps.length >= this.maxChecks) {
@@ -57,6 +78,7 @@ export class AuthRateLimitService {
 		}
 
 		timestamps.push(now);
+		this.keyStore.touchKey(userId, keyExpiresAt);
 		return true;
 	}
 
@@ -77,5 +99,6 @@ export class AuthRateLimitService {
 	 */
 	public clear(): void {
 		this.windows.clear();
+		this.keyStore.clear();
 	}
 }

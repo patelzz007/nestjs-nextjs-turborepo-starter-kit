@@ -1,5 +1,7 @@
-import { Injectable, Logger, UnauthorizedException } from "@nestjs/common";
+import { Injectable, UnauthorizedException } from "@nestjs/common";
+import { BoundedTtlCache } from "@workspace/shared";
 
+import { TypedConfigService } from "../../../config/typed-config.service";
 import { PrismaService } from "../../../prisma/prisma.service";
 
 /** Cached account state used to reject stale or revoked access tokens. */
@@ -7,11 +9,6 @@ export interface AccessTokenAccountState {
 	readonly tokenVersion: number;
 	readonly isActive: boolean;
 	readonly isDeleted: boolean;
-}
-
-interface CacheEntry {
-	readonly value: AccessTokenAccountState;
-	readonly expiresAt: number;
 }
 
 /**
@@ -23,11 +20,20 @@ interface CacheEntry {
  */
 @Injectable()
 export class AccessTokenStateService {
-	private readonly logger: Logger = new Logger(AccessTokenStateService.name);
-	private readonly store = new Map<string, CacheEntry>();
-	private readonly ttlMs: number = 30_000;
+	private readonly store: BoundedTtlCache<string, AccessTokenAccountState>;
+	private readonly ttlMs: number;
 
-	public constructor(private readonly prisma: PrismaService) {}
+	public constructor(
+		private readonly prisma: PrismaService,
+		config: TypedConfigService,
+	) {
+		this.ttlMs = config.accessTokenStateCacheTtlMs;
+		this.store = new BoundedTtlCache<string, AccessTokenAccountState>({
+			maxEntries: config.accessTokenStateCacheMaxEntries,
+			defaultTtlMs: this.ttlMs,
+			capacityPolicy: "evict-oldest",
+		});
+	}
 
 	public async assertTokenValid(userId: string, tokenVersion: number): Promise<void> {
 		const state = await this.getAccountState(userId);
@@ -70,8 +76,8 @@ export class AccessTokenStateService {
 
 	private async getAccountState(userId: string): Promise<AccessTokenAccountState> {
 		const cached = this.store.get(userId);
-		if (cached !== undefined && Date.now() <= cached.expiresAt) {
-			return cached.value;
+		if (cached !== null) {
+			return cached;
 		}
 
 		const user = await this.prisma.user.findUnique({
@@ -92,7 +98,7 @@ export class AccessTokenStateService {
 			isDeleted: user.isDeleted,
 		};
 
-		this.store.set(userId, { value, expiresAt: Date.now() + this.ttlMs });
+		this.store.set(userId, value, this.ttlMs);
 		return value;
 	}
 }

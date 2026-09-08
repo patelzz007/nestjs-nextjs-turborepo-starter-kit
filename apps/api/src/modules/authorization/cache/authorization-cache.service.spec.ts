@@ -1,12 +1,21 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
+
+import type { TypedConfigService } from "../../../config/typed-config.service";
 
 import { AuthorizationCacheService, type CachedAuthorization } from "./authorization-cache.service";
+
+function createConfigMock(): TypedConfigService {
+	return {
+		authorizationCacheTtlMs: 5 * 60 * 1000,
+		authorizationCacheMaxEntries: 10_000,
+	} as TypedConfigService;
+}
 
 describe("AuthorizationCacheService", () => {
 	let service: AuthorizationCacheService;
 
 	beforeEach(() => {
-		service = new AuthorizationCacheService();
+		service = new AuthorizationCacheService(createConfigMock());
 		vi.useFakeTimers();
 	});
 

@@ -1,17 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
-import { SessionPermissionsResponseSchema, UserResponseSchema, type SessionPermissionsResponse, type UserResponse } from "@workspace/shared";
+import { BoundedTtlCache, SessionPermissionsResponseSchema, UserResponseSchema, type SessionPermissionsResponse, type UserResponse } from "@workspace/shared";
 
 import { TypedConfigService } from "../../../config/typed-config.service";
-
-interface MeCacheEntry {
-	readonly value: UserResponse;
-	readonly expiresAt: number;
-}
-
-interface PermissionsCacheEntry {
-	readonly value: SessionPermissionsResponse;
-	readonly expiresAt: number;
-}
 
 /**
  * In-memory `/auth/me` + `/auth/permissions` cache.
@@ -24,23 +14,25 @@ export class UserSessionCacheService {
 	protected readonly logger: Logger = new Logger(UserSessionCacheService.name);
 	protected readonly defaultTtlMs: number;
 
-	private readonly meStore = new Map<string, MeCacheEntry>();
-	private readonly permissionsStore = new Map<string, PermissionsCacheEntry>();
+	private readonly meStore: BoundedTtlCache<string, UserResponse>;
+	private readonly permissionsStore: BoundedTtlCache<string, SessionPermissionsResponse>;
 
 	public constructor(protected readonly config: TypedConfigService) {
 		this.defaultTtlMs = config.userSessionCacheTtlMs;
+		this.meStore = new BoundedTtlCache<string, UserResponse>({
+			maxEntries: config.userSessionCacheMaxEntries,
+			defaultTtlMs: this.defaultTtlMs,
+			capacityPolicy: "evict-oldest",
+		});
+		this.permissionsStore = new BoundedTtlCache<string, SessionPermissionsResponse>({
+			maxEntries: config.userSessionCacheMaxEntries,
+			defaultTtlMs: this.defaultTtlMs,
+			capacityPolicy: "evict-oldest",
+		});
 	}
 
 	public getMe(userId: string): Promise<UserResponse | null> {
-		const entry = this.meStore.get(userId);
-		if (entry === undefined) {
-			return Promise.resolve(null);
-		}
-		if (Date.now() > entry.expiresAt) {
-			this.meStore.delete(userId);
-			return Promise.resolve(null);
-		}
-		return Promise.resolve(entry.value);
+		return Promise.resolve(this.meStore.get(userId));
 	}
 
 	public setMe(userId: string, value: UserResponse, ttlMs?: number): Promise<void> {
@@ -50,21 +42,13 @@ export class UserSessionCacheService {
 			return Promise.resolve();
 		}
 		const ttl = ttlMs ?? this.defaultTtlMs;
-		this.meStore.set(userId, { value: parsed.data, expiresAt: Date.now() + ttl });
+		this.meStore.set(userId, parsed.data, ttl);
 		this.logger.debug(`Cached /auth/me for user ${userId} (TTL ${String(ttl)}ms)`);
 		return Promise.resolve();
 	}
 
 	public getPermissions(userId: string): Promise<SessionPermissionsResponse | null> {
-		const entry = this.permissionsStore.get(userId);
-		if (entry === undefined) {
-			return Promise.resolve(null);
-		}
-		if (Date.now() > entry.expiresAt) {
-			this.permissionsStore.delete(userId);
-			return Promise.resolve(null);
-		}
-		return Promise.resolve(entry.value);
+		return Promise.resolve(this.permissionsStore.get(userId));
 	}
 
 	public setPermissions(userId: string, value: SessionPermissionsResponse, ttlMs?: number): Promise<void> {
@@ -74,7 +58,7 @@ export class UserSessionCacheService {
 			return Promise.resolve();
 		}
 		const ttl = ttlMs ?? this.defaultTtlMs;
-		this.permissionsStore.set(userId, { value: parsed.data, expiresAt: Date.now() + ttl });
+		this.permissionsStore.set(userId, parsed.data, ttl);
 		this.logger.debug(`Cached /auth/permissions for user ${userId} (TTL ${String(ttl)}ms)`);
 		return Promise.resolve();
 	}
@@ -87,10 +71,8 @@ export class UserSessionCacheService {
 	}
 
 	public invalidateUsers(userIds: readonly string[]): Promise<void> {
-		for (const userId of userIds) {
-			this.meStore.delete(userId);
-			this.permissionsStore.delete(userId);
-		}
+		this.meStore.deleteMany(userIds);
+		this.permissionsStore.deleteMany(userIds);
 		if (userIds.length > 0) {
 			this.logger.debug(`Invalidated user session cache for ${String(userIds.length)} user(s)`);
 		}
@@ -103,5 +85,9 @@ export class UserSessionCacheService {
 		this.permissionsStore.clear();
 		this.logger.debug(`Cleared user session cache (${String(size)} entries)`);
 		return Promise.resolve();
+	}
+
+	public get maxEntries(): number {
+		return this.meStore.getDiagnostics().maxEntries;
 	}
 }

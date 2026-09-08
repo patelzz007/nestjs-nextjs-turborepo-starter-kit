@@ -1,8 +1,10 @@
 import { Injectable, Logger } from "@nestjs/common";
-import { nowEpochMs, epochMs } from "@workspace/shared";
+import { BoundedTtlCache, nowEpochMs } from "@workspace/shared";
+
+import { TypedConfigService } from "../../../config/typed-config.service";
 
 /**
- * In-memory authorization cache backed by a `Map`.
+ * In-memory authorization cache backed by a bounded TTL store.
  *
  * Each entry stores the effective authorization state (roles + flattened
  * permissions) for a single user.  The cache is keyed by user ID and
@@ -10,7 +12,7 @@ import { nowEpochMs, epochMs } from "@workspace/shared";
  *
  * ## Redis migration path
  *
- * Replace the internal `Map` with a Redis client that exposes the same
+ * Replace the internal store with a Redis client that exposes the same
  * `get / set / invalidate / invalidateRole` contract.  The NestJS module
  * wiring stays identical — swap the provider at the module level.
  */
@@ -31,26 +33,28 @@ export interface CachedAuthorization {
 	readonly cachedAt: number;
 }
 
-interface CacheEntry {
-	readonly value: CachedAuthorization;
-	readonly expiresAt: number;
-}
-
 // ── Service ─────────────────────────────────────────────────────────────────
 
 @Injectable()
 export class AuthorizationCacheService {
 	private readonly logger: Logger = new Logger(AuthorizationCacheService.name);
 
-	private readonly store: Map<string, CacheEntry> = new Map<string, CacheEntry>();
-
-	/** Default TTL: 5 minutes in milliseconds. */
-	private readonly defaultTtlMs: number = 5 * 60 * 1000;
+	private readonly store: BoundedTtlCache<string, CachedAuthorization>;
+	private readonly defaultTtlMs: number;
 
 	/** Cached role hierarchy graph: roleId → parentRoleId. */
 	private readonly roleHierarchy: Map<string, string | null> = new Map<string, string | null>();
 	private hierarchyLoadedAt = 0;
 	private readonly hierarchyTtlMs: number = 15 * 60 * 1000;
+
+	public constructor(config?: TypedConfigService) {
+		this.defaultTtlMs = config?.authorizationCacheTtlMs ?? 5 * 60 * 1000;
+		this.store = new BoundedTtlCache<string, CachedAuthorization>({
+			maxEntries: config?.authorizationCacheMaxEntries ?? 10_000,
+			defaultTtlMs: this.defaultTtlMs,
+			capacityPolicy: "evict-oldest",
+		});
+	}
 
 	/**
 	 * Retrieve the cached authorization state for a user.
@@ -58,15 +62,7 @@ export class AuthorizationCacheService {
 	 * @returns The cached state, or `null` on miss / expiry.
 	 */
 	public get(userId: string): CachedAuthorization | null {
-		const entry: CacheEntry | undefined = this.store.get(userId);
-		if (entry === undefined) {
-			return null;
-		}
-		if (nowEpochMs() > entry.expiresAt) {
-			this.store.delete(userId);
-			return null;
-		}
-		return entry.value;
+		return this.store.get(userId, nowEpochMs());
 	}
 
 	/**
@@ -78,12 +74,10 @@ export class AuthorizationCacheService {
 	 */
 	public set(userId: string, auth: CachedAuthorization, ttlMs?: number): void {
 		const ttl: number = ttlMs ?? this.defaultTtlMs;
-		const entry: CacheEntry = {
-			value: auth,
-			expiresAt: epochMs(Date.now() + ttl),
-		};
-		this.store.set(userId, entry);
-		this.logger.debug(`Cached authorization for user ${userId} (TTL ${String(ttl)}ms)`);
+		const stored = this.store.set(userId, auth, ttl, nowEpochMs());
+		if (stored) {
+			this.logger.debug(`Cached authorization for user ${userId} (TTL ${String(ttl)}ms)`);
+		}
 	}
 
 	/**
@@ -109,9 +103,7 @@ export class AuthorizationCacheService {
 	 * @param affectedUserIds - The user IDs whose authorization changed.
 	 */
 	public invalidateUsers(affectedUserIds: readonly string[]): void {
-		for (const userId of affectedUserIds) {
-			this.store.delete(userId);
-		}
+		this.store.deleteMany(affectedUserIds);
 		this.logger.debug(`Invalidated authorization cache for ${String(affectedUserIds.length)} user(s)`);
 	}
 
@@ -125,6 +117,10 @@ export class AuthorizationCacheService {
 	/** Current number of entries (including possibly-expired ones). */
 	public get size(): number {
 		return this.store.size;
+	}
+
+	public get maxEntries(): number {
+		return this.store.getDiagnostics().maxEntries;
 	}
 
 	// ── Role hierarchy cache ────────────────────────────────────────────

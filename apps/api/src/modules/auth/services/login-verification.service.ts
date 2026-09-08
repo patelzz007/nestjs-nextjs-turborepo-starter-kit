@@ -1,6 +1,6 @@
 import { BadRequestException, HttpException, HttpStatus, Inject, Injectable, UnauthorizedException } from "@nestjs/common";
 import type Redis from "ioredis";
-import type { LoginRestrictedEnrollmentResponse, LoginServiceResponse, LoginVerificationPendingResponse } from "@workspace/shared";
+import { BoundedTtlCache, type LoginRestrictedEnrollmentResponse, type LoginServiceResponse, type LoginVerificationPendingResponse } from "@workspace/shared";
 
 import { z } from "zod";
 
@@ -40,7 +40,7 @@ interface PendingLoginContext {
 
 @Injectable()
 export class LoginVerificationService {
-	private readonly memoryStore = new Map<string, { readonly value: string; readonly expiresAt: number }>();
+	private readonly memoryStore: BoundedTtlCache<string, string>;
 
 	public constructor(
 		private readonly prisma: PrismaService,
@@ -50,7 +50,12 @@ export class LoginVerificationService {
 		private readonly config: TypedConfigService,
 		private readonly logService: LogService,
 		@Inject(REDIS_PUBLISHER) private readonly redis: Redis | null,
-	) {}
+	) {
+		this.memoryStore = new BoundedTtlCache<string, string>({
+			maxEntries: config.securityCounterMaxKeys,
+			capacityPolicy: "evict-oldest",
+		});
+	}
 
 	public async maybeRequireVerification(context: PendingLoginContext): Promise<LoginServiceResponse | LoginRestrictedEnrollmentResponse | LoginVerificationPendingResponse> {
 		const needsVerification = await this.needsVerification(context.userId, context.deviceInfo);
@@ -216,13 +221,7 @@ export class LoginVerificationService {
 			return this.redis.get(key);
 		}
 
-		const entry = this.memoryStore.get(key);
-		if (entry === undefined || entry.expiresAt <= Date.now()) {
-			this.memoryStore.delete(key);
-			return null;
-		}
-
-		return entry.value;
+		return this.memoryStore.get(key);
 	}
 
 	private async setStoreValue(key: string, value: string, ttlSeconds: number): Promise<void> {
@@ -231,7 +230,7 @@ export class LoginVerificationService {
 			return;
 		}
 
-		this.memoryStore.set(key, { value, expiresAt: Date.now() + ttlSeconds * 1000 });
+		this.memoryStore.set(key, value, ttlSeconds * 1000);
 	}
 
 	private async deleteStoreValue(key: string): Promise<void> {

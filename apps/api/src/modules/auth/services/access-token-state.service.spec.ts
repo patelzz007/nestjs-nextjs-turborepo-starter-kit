@@ -1,9 +1,17 @@
 import { UnauthorizedException } from "@nestjs/common";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { TypedConfigService } from "../../../config/typed-config.service";
 import type { PrismaService } from "../../../prisma/prisma.service";
 
 import { AccessTokenStateService } from "./access-token-state.service";
+
+function createConfigMock(): TypedConfigService {
+	return {
+		accessTokenStateCacheTtlMs: 30_000,
+		accessTokenStateCacheMaxEntries: 50_000,
+	} as TypedConfigService;
+}
 
 describe("AccessTokenStateService", () => {
 	let service: AccessTokenStateService;
@@ -29,7 +37,7 @@ describe("AccessTokenStateService", () => {
 			},
 		};
 
-		service = new AccessTokenStateService(prisma as unknown as PrismaService);
+		service = new AccessTokenStateService(prisma as unknown as PrismaService, createConfigMock());
 	});
 
 	it("uses the cache on a second validation for the same user", async () => {

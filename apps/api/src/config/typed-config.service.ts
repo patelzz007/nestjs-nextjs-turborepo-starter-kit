@@ -240,6 +240,13 @@ export class TypedConfigService {
 		return parsed > 0 ? parsed : 5 * 60 * 1000;
 	}
 
+	/** Maximum in-memory authorization cache entries per API instance (default 10_000). */
+	public get authorizationCacheMaxEntries(): number {
+		const value: string | undefined = process.env.AUTHORIZATION_CACHE_MAX_ENTRIES;
+		const parsed: number = value ? Number.parseInt(value, 10) : 10_000;
+		return parsed > 0 ? parsed : 10_000;
+	}
+
 	/**
 	 * Authorization cache backend.
 	 * - `memory` — local Map only (default for development).
@@ -271,6 +278,13 @@ export class TypedConfigService {
 		const value: string | undefined = process.env.USER_SESSION_CACHE_TTL_MS;
 		const parsed: number = value ? Number.parseInt(value, 10) : 30 * 60 * 1000;
 		return parsed > 0 ? parsed : 30 * 60 * 1000;
+	}
+
+	/** Maximum in-memory `/auth/me` + `/auth/permissions` entries per instance (default 10_000). */
+	public get userSessionCacheMaxEntries(): number {
+		const value: string | undefined = process.env.USER_SESSION_CACHE_MAX_ENTRIES;
+		const parsed: number = value ? Number.parseInt(value, 10) : 10_000;
+		return parsed > 0 ? parsed : 10_000;
 	}
 
 	/**
@@ -341,5 +355,29 @@ export class TypedConfigService {
 			return false;
 		}
 		return process.env.SECURITY_HARDENING_ENABLED === "1" || process.env.NODE_ENV === "production";
+	}
+
+	/** TTL for access-token account-state cache entries in milliseconds (default 30 seconds). */
+	public get accessTokenStateCacheTtlMs(): number {
+		const value: string | undefined = process.env.ACCESS_TOKEN_STATE_CACHE_TTL_MS;
+		const parsed: number = value ? Number.parseInt(value, 10) : 30_000;
+		return parsed > 0 ? parsed : 30_000;
+	}
+
+	/** Maximum in-memory access-token state entries per instance (default 50_000). */
+	public get accessTokenStateCacheMaxEntries(): number {
+		const value: string | undefined = process.env.ACCESS_TOKEN_STATE_CACHE_MAX_ENTRIES;
+		const parsed: number = value ? Number.parseInt(value, 10) : 50_000;
+		return parsed > 0 ? parsed : 50_000;
+	}
+
+	/**
+	 * Maximum distinct security-counter keys (rate limits, throttler fallback)
+	 * tracked in memory per instance. New keys are rejected when full (fail-closed).
+	 */
+	public get securityCounterMaxKeys(): number {
+		const value: string | undefined = process.env.SECURITY_COUNTER_MAX_KEYS;
+		const parsed: number = value ? Number.parseInt(value, 10) : 50_000;
+		return parsed > 0 ? parsed : 50_000;
 	}
 }

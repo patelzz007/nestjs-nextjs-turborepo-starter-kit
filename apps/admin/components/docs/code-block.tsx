@@ -8,6 +8,7 @@ import { Button } from "@workspace/ui/components/form/button";
 import { toastMessage } from "@workspace/ui/components/feedback/toast";
 import { cn } from "@/lib/utils";
 import { CodeLanguage } from "@/lib/docs/code-block";
+import { getSharedHighlighter } from "@/components/docs/highlighter-cache";
 
 /**
  * CodeBlock — a polished, shiki-powered code viewer used by the markdown
@@ -100,32 +101,20 @@ const HIGHLIGHT_CLASS = "highlight-line";
 /** Shared empty highlight list — a stable identity keeps the effect deps stable. */
 const NO_HIGHLIGHTS: readonly number[] = [];
 
-let highlighterPromise: Promise<Highlighter> | undefined;
-
 /**
  * Lazily loads the shiki highlighter. `shiki` (~300 KB) is a runtime
  * `import()` — the type-only import above is erased at build time, so the
  * shiki chunk is NOT part of the docs page bundle. It only downloads when the
  * first code block mounts, and the component renders the plain `<pre>` code
  * until the highlight finishes (the docs body is readable immediately, then
- * colors slide in). The highlighter is created once and shared.
+ * colors slide in). The in-flight promise is shared; resolved highlighters
+ * live in a weak-value cache so memory can be reclaimed when unused.
  */
 function getHighlighter(): Promise<Highlighter> {
-	highlighterPromise ??= (async (): Promise<Highlighter> => {
-		try {
-			const { createHighlighter } = await import("shiki");
-			return await createHighlighter({
-				themes: [THEME],
-				langs: [...new Set(Object.values(SHIKI_LANG))],
-			});
-		} catch (error) {
-			// A failed network load must not poison the page for its whole
-			// lifetime: reset the promise so a LATER code block retries.
-			highlighterPromise = undefined;
-			throw error;
-		}
-	})();
-	return highlighterPromise;
+	return getSharedHighlighter({
+		theme: THEME,
+		langs: [...new Set(Object.values(SHIKI_LANG))],
+	});
 }
 
 /**
