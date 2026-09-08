@@ -268,6 +268,22 @@ secret vars):
 openssl rand -base64 32
 ```
 
+### If you copied real secrets into `.env.example`
+
+Tracked example files must contain **placeholders only**. If you ever pasted real JWT signing secrets or a Resend webhook secret into `apps/api/.env.example` (or copied that file into a deployed environment), rotate them immediately:
+
+1. Generate new values for `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, and `RESEND_WEBHOOK_SECRET`.
+2. Update the live environment variables (never commit the real values).
+3. Restart the API so the new secrets load.
+4. Expect every existing session to become invalid — users must sign in again.
+5. Rotate the webhook signing secret in the Resend dashboard and update `RESEND_WEBHOOK_SECRET` on the server.
+
+Run the repository secret scan locally before opening a PR:
+
+```bash
+pnpm secrets:scan
+```
+
 > [!NOTE] Email sending is **optional** for local dev. If you don't have a Resend key yet,
 > leave `RESEND_API_KEY` empty — auth still works; only the actual email delivery
 > will fail (you'll see the error in the API logs).

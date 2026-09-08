@@ -16,6 +16,7 @@
 		"format": "turbo format",
 		"typecheck": "turbo typecheck",
 		"test": "turbo test",
+		"secrets:scan": "node packages/tooling/scripts/check-env-example-secrets.mjs",
 		"db:all": "turbo run db:seed",
 		"db:deploy": "pnpm --filter @workspace/api db:deploy",
 		"db:migrate": "pnpm --filter @workspace/api db:migrate",

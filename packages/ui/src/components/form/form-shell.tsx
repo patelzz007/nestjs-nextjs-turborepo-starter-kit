@@ -42,7 +42,7 @@ export const FormShell = forwardRef<HTMLFormElement, FormShellProps>(function Fo
 	ref,
 ): JSX.Element {
 	return (
-		<>
+		<div className="space-y-4">
 			{error ? (
 				<div role="alert" aria-live="polite" className="rounded-lg border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive">
 					<div className="flex items-start gap-3">
@@ -61,6 +61,6 @@ export const FormShell = forwardRef<HTMLFormElement, FormShellProps>(function Fo
 					{isLoading ? loadingLabel : submitLabel}
 				</Button>
 			</form>
-		</>
+		</div>
 	);
 });
