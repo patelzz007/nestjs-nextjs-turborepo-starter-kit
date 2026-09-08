@@ -1,3 +1,13 @@
+---
+title: "Contract-Driven Scaffolding Platform"
+tags: ["cli", "generator", "scaffolding"]
+description: "How the internal resource generator turns TypeScript definitions into API, contract, client, and admin CRUD artifacts."
+order: 6
+author: "Acme Inc."
+lastUpdated: 1788825600000
+coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=1600&q=80"
+---
+
 # Contract-Driven Scaffolding Platform
 
 This monorepo includes an internal generator at [`packages/cli`](../packages/cli) that turns a restricted TypeScript resource definition into production-oriented API, contract, client, and admin CRUD artifacts.

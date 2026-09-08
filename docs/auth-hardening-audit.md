@@ -1,3 +1,13 @@
+---
+title: "Authentication Module Hardening — Security Audit"
+tags: ["auth", "security", "audit"]
+description: "Findings, remediations, and verification evidence from the authentication module hardening audit."
+order: 4
+author: "Acme Inc."
+lastUpdated: 1788825600000
+coverImage: "https://images.unsplash.com/photo-1555949963-aa79dcee981c?w=1200&h=630&fit=crop"
+---
+
 # Authentication Module Hardening — Security Audit
 
 **Date:** 2026-09-08  

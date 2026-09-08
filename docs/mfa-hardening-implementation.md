@@ -1,3 +1,13 @@
+---
+title: "MFA Hardening — What We Built and How to Work With It"
+tags: ["auth", "mfa", "security"]
+description: "Plain-language guide to the MFA hardening work: what changed, where the code lives, and what to do when touching auth."
+order: 5
+author: "Acme Inc."
+lastUpdated: 1788825600000
+coverImage: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=1600&q=80"
+---
+
 # MFA Hardening — What We Built and How to Work With It
 
 This document explains the **Harden Authentication and MFA** work in plain language. It is meant for junior developers who need to understand what changed, where the code lives, and what to do (or avoid) when touching auth.
@@ -9,7 +19,7 @@ For deeper operational detail, also read:
 - [`docs/auth-roadmap.md`](./auth-roadmap.md) — MFA Hardening section
 - [`docs/token-refresh.md`](./token-refresh.md) — refresh + `tokenVersion` behavior
 
----
+***
 
 ## What problem were we solving?
 
@@ -23,7 +33,7 @@ Before this work, authentication had gaps that are risky in production:
 
 The goal was **mandatory TOTP MFA for every account**, with encrypted storage, safe recovery, and clear UX — without leaking whether an account exists.
 
----
+***
 
 ## Conversation summary (what we discussed)
 
@@ -52,7 +62,7 @@ These came up while building and testing:
 - **Stale shared package builds** — after changing Zod schemas in `packages/shared`, run `pnpm --filter @workspace/shared build` or client imports break.
 - **Admin permissions catalog UI** — `/settings/access` Permissions tab uses a file-explorer tree (`TreeView`) instead of chips, with a detail panel when you click a permission.
 
----
+***
 
 ## How authentication works now (simple flows)
 
@@ -96,7 +106,7 @@ Full diagram and code references: [`docs/token-refresh.md` — Session revocatio
 
 The user must have completed MFA **within the last few minutes** (step-up). Configured via `MFA_STEP_UP_TTL_MS` (default 5 minutes).
 
----
+***
 
 ## What was implemented (by layer)
 
@@ -139,7 +149,7 @@ The user must have completed MFA **within the last few minutes** (step-up). Conf
 | `/settings/access` Permissions tab | Explorer tree + detail panel for permission catalog |
 | `packages/ui/.../tree-view.tsx` | Reusable tree with optional checkboxes |
 
----
+***
 
 ## Environment variables you must know
 
@@ -154,7 +164,7 @@ Set these in `apps/api/.env` (see `.env.example`):
 
 **Production:** always set `MFA_ENCRYPTION_KEYS` explicitly. Do not rely on dev fallbacks.
 
----
+***
 
 ## Dos and Don'ts
 
@@ -202,7 +212,7 @@ Set these in `apps/api/.env` (see `.env.example`):
 
 - **Don't forget RLS** when adding Prisma tables that hold user-specific auth data. Update `schema.prisma`, migration, seed, `rls.sql`, and shared Zod.
 
----
+***
 
 ## Common junior troubleshooting
 
@@ -215,7 +225,7 @@ Set these in `apps/api/.env` (see `.env.example`):
 | Recovery approved but MFA still locked | Delay not elapsed | Wait for `MFA_RECOVERY_DELAY_MS`; check scheduled job |
 | Permissions tab looks broken / old UI | Wrong component or cache | Use `AccessPermissionExplorerTree`; hard refresh |
 
----
+***
 
 ## Security principles (remember these)
 
@@ -225,7 +235,7 @@ Set these in `apps/api/.env` (see `.env.example`):
 4. **Recovery is slow and audited** — fast MFA bypass is a common attack path.
 5. **Uniform public errors** — attackers should not learn which emails are registered.
 
----
+***
 
 ## Quick file map (start here when debugging)
 
@@ -258,7 +268,7 @@ apps/admin/
   components/access/access-permission-explorer-tree.tsx
 ```
 
----
+***
 
 ## Related UI components (permissions catalog)
 
@@ -270,7 +280,7 @@ The permissions work is separate from MFA but was built in the same effort on th
 
 User-specific grant/revoke still happens on the **user profile** page via `AccessPermissionTree` (selectable mode with checkboxes).
 
----
+***
 
 ## When you change something in this area
 
@@ -281,6 +291,6 @@ User-specific grant/revoke still happens on the **user profile** page via `Acces
 5. Add or update tests.
 6. Update `docs/auth-roadmap.md` or this file if behavior or env vars change.
 
----
+***
 
 *Last updated: September 2026 — covers MFA hardening plan implementation and follow-up admin/client work from the same delivery cycle.*
