@@ -111,6 +111,19 @@ export const AcceptRewardLegalSchema = z
 
 export type AcceptRewardLegalInput = z.output<typeof AcceptRewardLegalSchema>;
 
+/** Claim checkout state for the signed-in user (legal acceptance + verified phone). */
+export const RewardClaimCheckoutStatusSchema = z
+	.object({
+		hasAcceptedLegal: z.boolean(),
+		termsVersion: z.string().nullable(),
+		privacyVersion: z.string().nullable(),
+		phone: z.string().nullable(),
+		phoneVerified: z.boolean(),
+	})
+	.strict();
+
+export type RewardClaimCheckoutStatus = z.output<typeof RewardClaimCheckoutStatusSchema>;
+
 export const RequestClaimOtpSchema = z
 	.object({
 		rewardId: z.uuid(),
@@ -127,7 +140,8 @@ export const CreateRewardClaimSchema = z
 		otp: z
 			.string()
 			.length(6)
-			.regex(/^\d{6}$/),
+			.regex(/^\d{6}$/)
+			.optional(),
 		captchaToken: z.string().min(1).optional(),
 	})
 	.strict();

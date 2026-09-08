@@ -15,6 +15,9 @@ export function formatClaimApiError(error: Error): string {
 		if (error.error === "OTP_RATE_LIMITED") {
 			return "Too many OTP attempts. Request a new code and try again.";
 		}
+		if (error.error === "OTP_REQUIRED") {
+			return "Verify your phone with an OTP before claiming.";
+		}
 		if (error.error === "LEGAL_ACCEPTANCE_REQUIRED") {
 			return "Accept the Reward Hub terms before claiming.";
 		}

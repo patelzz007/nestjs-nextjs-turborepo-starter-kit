@@ -17,7 +17,7 @@ export default async function RewardHubBrowsePage(): Promise<React.JSX.Element> 
 	let initialListMeta: ReturnType<typeof ApiPaginatedMetaSchema.parse> | undefined;
 
 	try {
-		const response = await server.rewards.list.query({ limit: REWARDS_LIMIT });
+		const response = await server.rewards.list.query({ page: 1, limit: REWARDS_LIMIT });
 		initialRewards = response.data;
 		initialHasNext = readPaginatedHasNext(response.meta, false);
 		const metaParsed = ApiPaginatedMetaSchema.safeParse(response.meta);

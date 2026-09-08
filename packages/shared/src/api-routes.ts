@@ -150,6 +150,7 @@ export const apiRoutes = {
 	},
 	legal: {
 		accept: "/legal/accept",
+		status: "/legal/status",
 	},
 	claims: {
 		otp: "/claims/otp",

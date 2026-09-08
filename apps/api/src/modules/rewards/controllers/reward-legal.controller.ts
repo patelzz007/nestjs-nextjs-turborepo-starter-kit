@@ -1,4 +1,4 @@
-import { Body, Controller, Post } from "@nestjs/common";
+import { Body, Controller, Get, Post } from "@nestjs/common";
 import { ApiBearerAuth, ApiBody, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
 
 import { apiContract, apiPath } from "@workspace/shared";
@@ -14,6 +14,13 @@ import { RewardLegalService } from "../services/reward-legal.service";
 @Controller(apiPath("/legal"))
 export class RewardLegalController {
 	public constructor(private readonly legalService: RewardLegalService) {}
+
+	@Get("status")
+	@ApiOperation({ summary: "Get rewards legal acceptance and verified phone status" })
+	@ApiOkResponse({ description: "Claim checkout status for the signed-in user" })
+	public getStatus(@GetUser() user: AccessTokenPayload): ReturnType<RewardLegalService["getCheckoutStatus"]> {
+		return this.legalService.getCheckoutStatus(user.sub);
+	}
 
 	@Post("accept")
 	@ApiOperation({ summary: "Accept rewards terms and privacy policy" })

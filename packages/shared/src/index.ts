@@ -5,4 +5,4 @@ export * from "./runtime/index";
 export * from "./cache/index";
 export * from "./zod";
 export { decodeListCursor, encodeListCursor } from "./lib/list-cursor";
-export { buildOffsetPaginationMeta, type OffsetPaginationMeta } from "./lib/pagination-meta";
+export { buildOffsetPaginationMeta, stubPaginatedMeta, stubPaginatedMetaFromHydration, type OffsetPaginationMeta } from "./lib/pagination-meta";

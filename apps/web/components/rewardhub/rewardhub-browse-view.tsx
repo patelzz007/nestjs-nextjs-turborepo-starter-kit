@@ -2,7 +2,7 @@
 
 import { RewardHubCatalog } from "@/components/rewardhub/rewardhub-catalog";
 import { RewardHubFilters } from "@/components/rewardhub/rewardhub-filters";
-import { readPaginatedHasNext, readPaginatedNextCursor, stubPaginatedMeta } from "@/lib/api-envelope";
+import { readPaginatedHasNext, readPaginatedNextCursor, stubPaginatedMetaFromHydration } from "@/lib/api-envelope";
 import { WebEmptyState } from "@/components/web-ui/empty-state";
 import { useAuth } from "@workspace/client/lib/auth";
 import { ApiPaginatedMeta, type PilotCity, type RewardCategory, type RewardResponse } from "@workspace/shared";
@@ -48,7 +48,7 @@ export function RewardHubBrowseView({
 				? {
 						success: true as const,
 						data: [...initialRewards],
-						meta: initialListMeta ?? stubPaginatedMeta(12, initialHasNext ?? false),
+						meta: initialListMeta ?? stubPaginatedMetaFromHydration(12, initialRewards.length, initialHasNext ?? false),
 					}
 				: undefined,
 		[initialHasNext, initialListMeta, initialRewards, isDefaultQuery],
@@ -56,6 +56,7 @@ export function RewardHubBrowseView({
 
 	const rewardsQuery = api.rewards.list.useQuery(
 		{
+			page: cursorHistory.length,
 			limit: 12,
 			...(cursor !== null ? { cursor } : {}),
 			...(search.length > 0 ? { search } : {}),

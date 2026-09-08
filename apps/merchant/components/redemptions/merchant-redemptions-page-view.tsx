@@ -4,7 +4,7 @@ import { MerchantEmptyState } from "@/components/merchant-ui/empty-state";
 import { MerchantPageHeader } from "@/components/merchant-ui/page-header";
 import { MerchantStatCard } from "@/components/merchant-ui/stat-card";
 import { MerchantSurfacePanel } from "@/components/merchant-ui/surface-panel";
-import { stubPaginatedMeta } from "@/lib/api-envelope";
+import { stubPaginatedMetaFromHydration } from "@/lib/api-envelope";
 import { useAuth } from "@workspace/client/lib/auth";
 import type { MerchantRedemptionListItem } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/feedback/badge";
@@ -27,14 +27,14 @@ export function MerchantRedemptionsPageView({ initialRows }: MerchantRedemptions
 				? {
 						success: true as const,
 						data: [...initialRows],
-						meta: stubPaginatedMeta(REDEMPTIONS_LIMIT, false),
+						meta: stubPaginatedMetaFromHydration(REDEMPTIONS_LIMIT, initialRows.length, false),
 					}
 				: undefined,
 		[initialRows],
 	);
 
 	const redemptionsQuery = api.merchant.redemptions.useQuery(
-		{ limit: REDEMPTIONS_LIMIT },
+		{ page: 1, limit: REDEMPTIONS_LIMIT },
 		{
 			initialData: initialQueryData,
 		},

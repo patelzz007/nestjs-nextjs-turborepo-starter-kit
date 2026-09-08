@@ -29,6 +29,13 @@ export type UserEmailFields = Prisma.UserGetPayload<{ select: typeof USER_EMAIL_
 export type UserActiveByEmail = Prisma.UserGetPayload<{ select: typeof USER_ACTIVE_BY_EMAIL_SELECT }>;
 export type UserOnboardingFields = Prisma.UserGetPayload<{ select: typeof USER_ONBOARDING_SELECT }>;
 
+const USER_CLAIM_CHECKOUT_SELECT = {
+	phone: true,
+	phoneVerifiedAt: true,
+} as const satisfies Prisma.UserSelect;
+
+export type UserClaimCheckoutFields = Prisma.UserGetPayload<{ select: typeof USER_CLAIM_CHECKOUT_SELECT }>;
+
 @Injectable()
 export class RewardUserRepository {
 	public constructor(private readonly prisma: PrismaService) {}
@@ -69,6 +76,13 @@ export class RewardUserRepository {
 				fullName: data.fullName,
 				updatedAt: Date.now(),
 			},
+		});
+	}
+
+	public async findClaimCheckoutById(userId: string): Promise<UserClaimCheckoutFields | null> {
+		return this.prisma.user.findUnique({
+			where: { id: userId },
+			select: USER_CLAIM_CHECKOUT_SELECT,
 		});
 	}
 

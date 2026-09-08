@@ -13,7 +13,7 @@ export default async function RedemptionsPage(): Promise<React.JSX.Element> {
 
 	let initialRows: readonly MerchantRedemptionListItem[] | undefined;
 	try {
-		const response = await server.merchant.redemptions.query({ limit: REDEMPTIONS_LIMIT }, { headers: merchantHeaders });
+		const response = await server.merchant.redemptions.query({ page: 1, limit: REDEMPTIONS_LIMIT }, { headers: merchantHeaders });
 		initialRows = response.data;
 	} catch {
 		initialRows = undefined;

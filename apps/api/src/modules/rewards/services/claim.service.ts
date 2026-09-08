@@ -47,7 +47,7 @@ export class ClaimService {
 			throw new ForbiddenException({ message: "Accept terms before claiming", error: "LEGAL_ACCEPTANCE_REQUIRED" });
 		}
 
-		await this.otpService.verifyClaimOtp(userId, input.phone, input.otp, input.rewardId);
+		await this.verifyClaimOtpIfNeeded(userId, input.phone, input.otp, input.rewardId);
 
 		const reward = await this.ensureRewardClaimable(input.rewardId);
 		const now = Date.now();
@@ -180,6 +180,20 @@ export class ClaimService {
 
 		const attempts = claim.backupFailedAttempts + 1;
 		await this.rewardClaimRepository.recordBackupFailure(claimId, attempts, attempts >= MAX_BACKUP_FAILURES ? BigInt(Date.now() + BACKUP_LOCK_MS) : claim.backupLockedUntil);
+	}
+
+	private async verifyClaimOtpIfNeeded(userId: string, phone: string, otp: string | undefined, rewardId: string): Promise<void> {
+		const profile = await this.rewardUserRepository.findClaimCheckoutById(userId);
+
+		if (profile !== null && profile.phoneVerifiedAt !== null && profile.phone === phone) {
+			return;
+		}
+
+		if (otp === undefined) {
+			throw new BadRequestException({ message: "OTP required for this phone number", error: "OTP_REQUIRED" });
+		}
+
+		await this.otpService.verifyClaimOtp(userId, phone, otp, rewardId);
 	}
 
 	private async ensureRewardClaimable(rewardId: string): Promise<{ id: string; title: string; expiryDate: bigint }> {

@@ -93,6 +93,7 @@ import {
 	MerchantOrgResponseSchema,
 	MerchantRedemptionListItemSchema,
 	MerchantAnalyticsResponseSchema,
+	RewardClaimCheckoutStatusSchema,
 	RewardClaimCreatedResponseSchema,
 	RewardClaimQrResponseSchema,
 	RewardClaimResponseSchema,
@@ -608,6 +609,10 @@ export const apiRouter = {
 		accept: defineMutation(apiContract.legal.accept, {
 			response: envelope(OkResponseSchema),
 			queryKey: ({ termsVersion, privacyVersion }) => ["legal", "accept", termsVersion, privacyVersion],
+		}),
+		status: defineQuery(apiContract.legal.status, {
+			response: envelope(RewardClaimCheckoutStatusSchema),
+			queryKey: () => ["legal", "status"],
 		}),
 	},
 	claims: {

@@ -1,12 +1,12 @@
 "use client";
 
-import { stubPaginatedMeta } from "@/lib/api-envelope";
+import { stubPaginatedMetaFromHydration } from "@/lib/api-envelope";
 import { WebEmptyState } from "@/components/web-ui/empty-state";
 import { WebPageHeader } from "@/components/web-ui/page-header";
 import { WebStatCard } from "@/components/web-ui/stat-card";
 import { WebSurfacePanel } from "@/components/web-ui/surface-panel";
 import { useAuth } from "@workspace/client/lib/auth";
-import type { RewardClaimResponse } from "@workspace/shared";
+import type { ApiPaginatedMeta, RewardClaimResponse } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/feedback/badge";
 import { buttonVariants } from "@workspace/ui/components/form/button";
 import { cn } from "@workspace/ui/lib/utils";
@@ -19,10 +19,11 @@ const CLAIMS_LIMIT = 20;
 
 export interface MyClaimsPageViewProps {
 	readonly initialClaims?: readonly RewardClaimResponse[];
+	readonly initialListMeta?: ApiPaginatedMeta;
 }
 
 /** List of the signed-in user's reward claims. */
-export function MyClaimsPageView({ initialClaims }: MyClaimsPageViewProps): React.JSX.Element {
+export function MyClaimsPageView({ initialClaims, initialListMeta }: MyClaimsPageViewProps): React.JSX.Element {
 	const { api } = useAuth();
 
 	const initialQueryData = React.useMemo(
@@ -31,14 +32,14 @@ export function MyClaimsPageView({ initialClaims }: MyClaimsPageViewProps): Reac
 				? {
 						success: true as const,
 						data: [...initialClaims],
-						meta: stubPaginatedMeta(CLAIMS_LIMIT, false),
+						meta: initialListMeta ?? stubPaginatedMetaFromHydration(CLAIMS_LIMIT, initialClaims.length, false),
 					}
 				: undefined,
-		[initialClaims],
+		[initialClaims, initialListMeta],
 	);
 
 	const claimsQuery = api.claims.list.useQuery(
-		{ limit: CLAIMS_LIMIT },
+		{ page: 1, limit: CLAIMS_LIMIT },
 		{
 			initialData: initialQueryData,
 		},

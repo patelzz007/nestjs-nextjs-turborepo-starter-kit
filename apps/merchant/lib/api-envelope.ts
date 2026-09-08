@@ -1,19 +1,10 @@
-import { ApiPaginatedMetaSchema, ApiResponseMetaSchema, nowEpochMs, type ApiPaginatedMeta, type ApiResponseMeta } from "@workspace/shared";
+import { ApiPaginatedMetaSchema, ApiResponseMetaSchema, nowEpochMs, stubPaginatedMeta, stubPaginatedMetaFromHydration, type ApiResponseMeta } from "@workspace/shared";
+
+export { stubPaginatedMeta, stubPaginatedMetaFromHydration };
 
 /** Placeholder envelope meta for react-query `initialData` (SSR prefetch hydration). */
 export function stubApiMeta(): ApiResponseMeta {
 	return ApiResponseMetaSchema.parse({ correlationId: "", timestamp: nowEpochMs() });
-}
-
-/** Cursor-paginated meta stub for list endpoints hydrated from the server. */
-export function stubPaginatedMeta(limit: number, hasNext: boolean, nextCursor: string | null = null): ApiPaginatedMeta {
-	return ApiPaginatedMetaSchema.parse({
-		correlationId: "",
-		timestamp: nowEpochMs(),
-		limit,
-		nextCursor,
-		hasNext,
-	});
 }
 
 /** Read `hasNext` from a paginated envelope meta object. */

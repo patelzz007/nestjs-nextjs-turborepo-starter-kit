@@ -20,6 +20,8 @@ import * as React from "react";
 const TERMS_VERSION = "1.0";
 const PRIVACY_VERSION = "1.0";
 
+type ClaimStep = "legal" | "otp" | "claim";
+
 export interface RewardDetailViewProps {
 	readonly rewardId: string;
 	readonly initialReward?: RewardResponse;
@@ -51,10 +53,13 @@ export function RewardDetailView({ rewardId, initialReward }: RewardDetailViewPr
 	);
 	const reward = rewardQuery.data?.data;
 
+	const checkoutQuery = api.legal.status.useQuery(undefined);
+	const checkout = checkoutQuery.data?.data;
+
 	const [phone, setPhone] = React.useState<string>("");
 	const [otp, setOtp] = React.useState<string>("");
 	const [legalAccepted, setLegalAccepted] = React.useState<boolean>(false);
-	const [step, setStep] = React.useState<"legal" | "otp" | "claim">("legal");
+	const [step, setStep] = React.useState<ClaimStep | null>(null);
 	const [message, setMessage] = React.useState<string | null>(null);
 	const [nowMs, setNowMs] = React.useState<number>(() => Date.now());
 
@@ -67,14 +72,55 @@ export function RewardDetailView({ rewardId, initialReward }: RewardDetailViewPr
 		};
 	}, []);
 
+	React.useEffect((): void => {
+		if (checkout === undefined) {
+			return;
+		}
+
+		if (!checkout.hasAcceptedLegal) {
+			setLegalAccepted(false);
+			setStep("legal");
+			return;
+		}
+
+		setLegalAccepted(true);
+		if (checkout.phoneVerified && checkout.phone !== null) {
+			setPhone(checkout.phone);
+			setStep("claim");
+			return;
+		}
+
+		setStep("otp");
+	}, [checkout]);
+
+	const requiresOtp = React.useMemo((): boolean => {
+		if (checkout === undefined) {
+			return true;
+		}
+		if (!checkout.phoneVerified || checkout.phone === null) {
+			return true;
+		}
+		return phone.trim() !== checkout.phone;
+	}, [checkout, phone]);
+
+	React.useEffect((): void => {
+		if (!requiresOtp && step === "otp") {
+			setStep("claim");
+		}
+		if (requiresOtp && checkout?.phoneVerified === true && checkout.phone !== null && phone.trim() !== checkout.phone && phone.trim().length > 0) {
+			setStep("otp");
+			setOtp("");
+		}
+	}, [checkout, phone, requiresOtp, step]);
+
 	const claimBlockReason = React.useMemo(() => (reward === undefined ? null : getRewardClaimBlockReason(reward, epochMs(nowMs))), [reward, nowMs]);
 	const canClaim = claimBlockReason === null;
 
 	const acceptLegalMutation = api.legal.accept.useMutation({
 		onSuccess: (): void => {
 			setLegalAccepted(true);
-			setStep("otp");
-			setMessage("Terms accepted. Request an OTP to continue.");
+			setMessage("Terms accepted.");
+			void checkoutQuery.refetch();
 		},
 	});
 
@@ -131,12 +177,20 @@ export function RewardDetailView({ rewardId, initialReward }: RewardDetailViewPr
 		if (!canClaim) {
 			return;
 		}
-		if (otp.length !== 6) {
+		if (phone.trim().length < 8) {
+			setMessage("Enter a valid phone number.");
+			return;
+		}
+		if (requiresOtp && otp.length !== 6) {
 			setMessage("Enter the 6-digit OTP.");
 			return;
 		}
-		void claimMutation.mutateAsync({ rewardId, phone: phone.trim(), otp });
-	}, [canClaim, claimMutation, otp, phone, rewardId]);
+		void claimMutation.mutateAsync({
+			rewardId,
+			phone: phone.trim(),
+			...(requiresOtp ? { otp } : {}),
+		});
+	}, [canClaim, claimMutation, otp, phone, requiresOtp, rewardId]);
 
 	if (rewardQuery.isLoading && initialReward === undefined) {
 		return <p className="text-sm text-muted-foreground">Loading reward…</p>;
@@ -190,6 +244,8 @@ export function RewardDetailView({ rewardId, initialReward }: RewardDetailViewPr
 								Browse other offers
 							</Link>
 						</div>
+					) : step === null ? (
+						<p className="text-sm text-muted-foreground">Loading claim options…</p>
 					) : (
 						<>
 							{step === "legal" && !legalAccepted ? (
@@ -203,22 +259,31 @@ export function RewardDetailView({ rewardId, initialReward }: RewardDetailViewPr
 								</div>
 							) : null}
 
-							{step === "otp" || step === "claim" ? (
+							{(step === "otp" || step === "claim") && legalAccepted ? (
 								<div className="space-y-4">
 									<div className="space-y-2">
 										<Label htmlFor="claim-phone">Mobile number</Label>
 										<Input id="claim-phone" type="tel" placeholder="+60123456789" value={phone} onChange={handlePhoneChange} />
 									</div>
-									{step === "otp" ? (
-										<Button disabled={otpMutation.isPending} onClick={handleRequestOtp}>
-											{otpMutation.isPending ? "Sending…" : "Send OTP"}
-										</Button>
+									{requiresOtp ? (
+										step === "otp" ? (
+											<Button disabled={otpMutation.isPending} onClick={handleRequestOtp}>
+												{otpMutation.isPending ? "Sending…" : "Send OTP"}
+											</Button>
+										) : (
+											<div className="space-y-2">
+												<Label htmlFor="claim-otp">6-digit OTP</Label>
+												<Input id="claim-otp" inputMode="numeric" maxLength={6} value={otp} onChange={handleOtpChange} />
+												<Button disabled={claimMutation.isPending} onClick={handleClaim}>
+													{claimMutation.isPending ? "Claiming…" : "Verify & claim"}
+												</Button>
+											</div>
+										)
 									) : (
 										<div className="space-y-2">
-											<Label htmlFor="claim-otp">6-digit OTP</Label>
-											<Input id="claim-otp" inputMode="numeric" maxLength={6} value={otp} onChange={handleOtpChange} />
+											<p className="text-sm text-muted-foreground">Your phone is already verified — claim directly without another OTP.</p>
 											<Button disabled={claimMutation.isPending} onClick={handleClaim}>
-												{claimMutation.isPending ? "Claiming…" : "Verify & claim"}
+												{claimMutation.isPending ? "Claiming…" : "Claim reward"}
 											</Button>
 										</div>
 									)}

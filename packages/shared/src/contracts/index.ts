@@ -299,6 +299,7 @@ export const apiContract = {
 	},
 	legal: {
 		accept: defineContract({ method: "POST", path: apiRoutes.legal.accept, input: AcceptRewardLegalSchema }),
+		status: defineContract({ method: "GET", path: apiRoutes.legal.status, input: z.undefined() }),
 	},
 	claims: {
 		otp: defineContract({ method: "POST", path: apiRoutes.claims.otp, input: RequestClaimOtpSchema }),
