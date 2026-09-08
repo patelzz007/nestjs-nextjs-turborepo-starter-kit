@@ -20,12 +20,12 @@ const MERCHANT_ORG_HEADER = {
 } as const;
 
 @ApiTags("Merchant Onboarding")
-@RlsBypass()
 @Controller(apiPath("/merchant/onboarding"))
 export class MerchantOnboardingController {
 	public constructor(private readonly merchantOnboarding: MerchantOnboardingService) {}
 
 	@Public()
+	@RlsBypass()
 	@Post("validate")
 	@ApiOperation({ summary: "Validate a merchant onboarding invite token" })
 	@ApiBody({ type: MerchantOnboardingValidateTokenDto })
@@ -37,6 +37,7 @@ export class MerchantOnboardingController {
 	}
 
 	@Public()
+	@RlsBypass()
 	@Post("complete")
 	@ApiOperation({ summary: "Complete merchant onboarding — creates org, OWNER membership, and platform User role" })
 	@ApiBody({ type: MerchantOnboardingCompleteDto })
@@ -50,12 +51,12 @@ export class MerchantOnboardingController {
 
 @ApiTags("Merchant Team")
 @ApiBearerAuth()
-@RlsBypass()
 @Controller(apiPath("/merchant/members"))
 export class MerchantMembersController {
 	public constructor(private readonly merchantMembers: MerchantMemberService) {}
 
 	@Post()
+	@RlsBypass()
 	@ApiHeader(MERCHANT_ORG_HEADER)
 	@ApiOperation({ summary: "Create a cashier account for the merchant org (owner only)" })
 	@ApiBody({ type: MerchantCreateMemberDto })

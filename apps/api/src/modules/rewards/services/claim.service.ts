@@ -1,6 +1,14 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 
-import type { CreateRewardClaimInput, PaginatedServiceResult, RewardClaimCreatedResponse, RewardClaimListQuery, RewardClaimQrResponse, RewardClaimResponse, RewardType } from "@workspace/shared";
+import type {
+	CreateRewardClaimInput,
+	PaginatedServiceResult,
+	RewardClaimCreatedResponse,
+	RewardClaimListQuery,
+	RewardClaimQrResponse,
+	RewardClaimResponse,
+	RewardType,
+} from "@workspace/shared";
 import { EpochMsSchema, RewardBackupCodeSchema } from "@workspace/shared";
 
 import { paginateCursorListResult } from "../../../platform/persistence/cursor-list";
@@ -97,10 +105,7 @@ export class ClaimService {
 
 	public async listClaims(userId: string, query: RewardClaimListQuery): Promise<PaginatedServiceResult<RewardClaimResponse>> {
 		const result = await this.rewardClaimRepository.listForUser(userId, query);
-		return paginateCursorListResult(
-			{ ...result, items: result.items.map((row) => mapClaimToResponse(row, row.reward.title)) },
-			query,
-		);
+		return paginateCursorListResult({ ...result, items: result.items.map((row) => mapClaimToResponse(row, row.reward.title)) }, query);
 	}
 
 	public async getClaimQr(userId: string, claimId: string): Promise<RewardClaimQrResponse> {
@@ -120,7 +125,7 @@ export class ClaimService {
 
 		const token = generateOpaqueToken();
 		const backupCode = generateBackupCode();
-		await this.rewardClaimRepository.updateTokenHashes(claim.id, sha256Hex(token), sha256Hex(backupCode));
+		await this.rewardClaimRepository.updateTokenHashes(claim.id, userId, sha256Hex(token), sha256Hex(backupCode));
 
 		return {
 			claimId: claim.id,

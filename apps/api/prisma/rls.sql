@@ -86,7 +86,11 @@ BEGIN
     'logs',
     'api_key_usage_logs',
     'email_logs',
-    'merchant_role_capabilities'
+    'merchant_role_capabilities',
+    'outbox_events',
+    'analytics_events',
+    'platform_resource_audit_logs',
+    'platform_resource_idempotency_records'
   ]
   LOOP
     EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY', t);
@@ -500,6 +504,27 @@ CREATE POLICY reward_audit_select ON public.reward_audit_logs
 
 DROP POLICY IF EXISTS reward_idempotency_bypass ON public.reward_redemption_idempotency_records;
 CREATE POLICY reward_idempotency_bypass ON public.reward_redemption_idempotency_records
+  USING (app_rls_bypass())
+  WITH CHECK (app_rls_bypass());
+
+-- Internal infrastructure tables — bypass-only (never user-scoped reads/writes).
+DROP POLICY IF EXISTS outbox_events_bypass ON public.outbox_events;
+CREATE POLICY outbox_events_bypass ON public.outbox_events
+  USING (app_rls_bypass())
+  WITH CHECK (app_rls_bypass());
+
+DROP POLICY IF EXISTS analytics_events_bypass ON public.analytics_events;
+CREATE POLICY analytics_events_bypass ON public.analytics_events
+  USING (app_rls_bypass())
+  WITH CHECK (app_rls_bypass());
+
+DROP POLICY IF EXISTS platform_resource_audit_logs_bypass ON public.platform_resource_audit_logs;
+CREATE POLICY platform_resource_audit_logs_bypass ON public.platform_resource_audit_logs
+  USING (app_rls_bypass())
+  WITH CHECK (app_rls_bypass());
+
+DROP POLICY IF EXISTS platform_resource_idempotency_bypass ON public.platform_resource_idempotency_records;
+CREATE POLICY platform_resource_idempotency_bypass ON public.platform_resource_idempotency_records
   USING (app_rls_bypass())
   WITH CHECK (app_rls_bypass());
 -- @app-generated:begin SampleCategory

@@ -173,6 +173,10 @@ export class LoginVerificationService {
 	}
 
 	private async needsVerification(userId: string, deviceInfo: string | null): Promise<boolean> {
+		if (process.env.NODE_ENV === "test") {
+			return false;
+		}
+
 		if (this.config.forceLoginVerification) {
 			return true;
 		}

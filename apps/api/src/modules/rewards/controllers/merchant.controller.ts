@@ -7,7 +7,6 @@ import { apiContract, apiPath, MerchantUpdateRewardSchema, UuidParamSchema } fro
 import { ZodValidationPipe } from "../../../common/pipes/zod-validation.pipe";
 import { readFirstHeader } from "../../../common/utils/http-headers";
 import { GetUser } from "../../auth/decorators/get-user.decorator";
-import { RlsBypass } from "../../auth/decorators/rls-bypass.decorator";
 import type { AccessTokenPayload } from "../../auth/services/token.service";
 
 import { MerchantCreateApiKeyDto, MerchantCreateRewardDto, MerchantUpdateRewardDto, RewardsEmptyBodyDto } from "../dtos/rewards.dto";
@@ -24,7 +23,6 @@ const MERCHANT_ORG_HEADER = {
 
 @ApiTags("Merchant")
 @ApiBearerAuth()
-@RlsBypass()
 @Controller(apiPath("/merchant/me"))
 export class MerchantProfileController {
 	public constructor(private readonly merchantContext: MerchantContextService) {}
@@ -39,7 +37,6 @@ export class MerchantProfileController {
 
 @ApiTags("Merchant Rewards")
 @ApiBearerAuth()
-@RlsBypass()
 @Controller(apiPath("/merchant/rewards"))
 export class MerchantRewardsController {
 	public constructor(private readonly merchantRewardService: MerchantRewardService) {}
@@ -102,7 +99,6 @@ export class MerchantRewardsController {
 
 @ApiTags("Merchant API Keys")
 @ApiBearerAuth()
-@RlsBypass()
 @Controller(apiPath("/merchant/api-keys"))
 export class MerchantApiKeysController {
 	public constructor(private readonly merchantApiKeyService: MerchantApiKeyService) {}
@@ -147,7 +143,6 @@ export class MerchantApiKeysController {
 
 @ApiTags("Merchant Redemptions")
 @ApiBearerAuth()
-@RlsBypass()
 @Controller(apiPath("/merchant/redemptions"))
 export class MerchantRedemptionsController {
 	public constructor(private readonly merchantRewardService: MerchantRewardService) {}
@@ -168,7 +163,6 @@ export class MerchantRedemptionsController {
 
 @ApiTags("Merchant Analytics")
 @ApiBearerAuth()
-@RlsBypass()
 @Controller(apiPath("/merchant/analytics"))
 export class MerchantAnalyticsController {
 	public constructor(private readonly rewardsAnalyticsService: RewardsAnalyticsService) {}

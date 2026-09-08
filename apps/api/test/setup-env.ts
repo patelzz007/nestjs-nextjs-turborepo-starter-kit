@@ -6,7 +6,17 @@
 //
 //   DATABASE_URL=postgresql://postgres:postgres@localhost:5432/hello_world \
 //   pnpm --filter @workspace/api test:e2e
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+import { config as loadEnv } from "dotenv";
+
+const apiRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+loadEnv({ path: path.join(apiRoot, ".env") });
+
 process.env.NODE_ENV ??= "test";
+// E2E specs exercise cookie login directly; OTP verification would block every helper login.
+process.env.FORCE_LOGIN_VERIFICATION = "false";
 process.env.DATABASE_URL ??= "postgresql://postgres:postgres@localhost:5432/monorepo";
 process.env.JWT_ACCESS_SECRET ??= "e2e-access-secret";
 process.env.JWT_ACCESS_EXPIRY ??= "15m";

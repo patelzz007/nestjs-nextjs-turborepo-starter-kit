@@ -44,14 +44,9 @@ export class MerchantMemberService {
 			email = created.email;
 			await this.emailVerificationService.sendVerificationEmailIfUnverified(email, "merchant");
 		} else {
-			const passwordHash = await this.cryptoService.hash(input.password);
-			await this.rewardUserRepository.updateCredentials(existingUser.id, {
-				passwordHash,
-				fullName: input.fullName,
-			});
 			await this.userProvisioning.ensureDefaultConsumerRole(existingUser.id, actorUserId);
 			userId = existingUser.id;
-			fullName = input.fullName;
+			fullName = existingUser.fullName;
 			email = existingUser.email;
 		}
 

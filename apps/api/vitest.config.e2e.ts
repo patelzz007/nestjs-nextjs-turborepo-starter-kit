@@ -10,5 +10,6 @@ export default defineConfig({
 		// e2e boots the real Nest app against a live Postgres — allow slow boots.
 		testTimeout: 30_000,
 		hookTimeout: 30_000,
+		fileParallelism: false,
 	},
 });

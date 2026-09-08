@@ -95,9 +95,9 @@ export class RewardClaimRepository {
 		});
 	}
 
-	public async updateTokenHashes(claimId: string, redemptionTokenHash: string, backupCodeHash: string): Promise<void> {
-		await this.prisma.rewardClaim.update({
-			where: { id: claimId },
+	public async updateTokenHashes(claimId: string, userId: string, redemptionTokenHash: string, backupCodeHash: string): Promise<void> {
+		await this.prisma.rewardClaim.updateMany({
+			where: { id: claimId, userId },
 			data: { redemptionTokenHash, backupCodeHash },
 		});
 	}
