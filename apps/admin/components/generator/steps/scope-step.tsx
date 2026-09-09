@@ -18,27 +18,59 @@ export interface GeneratorScopeStepProps {
 	readonly onDraftChange: (draft: GeneratorWizardDraft) => void;
 }
 
-export const GeneratorScopeStep = React.memo(function GeneratorScopeStep({ draft, uiModules, error, onDraftChange }: GeneratorScopeStepProps): React.JSX.Element {
-	const handleGenerateUiChange = (checked: boolean): void => {
-		onDraftChange({
-			...draft,
-			generateUi: checked,
-			uiModules: checked && draft.uiModules.length === 0 ? ["admin"] : draft.uiModules,
-		});
-	};
+interface UiModuleOptionProps {
+	readonly module: GeneratorUiModuleListItem;
+	readonly checked: boolean;
+	readonly onToggle: (moduleId: string, checked: boolean) => void;
+}
 
-	const toggleModule = (moduleId: string, checked: boolean): void => {
-		const next = new Set(draft.uiModules);
-		if (checked) {
-			next.add(moduleId);
-		} else {
-			next.delete(moduleId);
-		}
-		onDraftChange({
-			...draft,
-			uiModules: [...next],
-		});
-	};
+function UiModuleOption({ module, checked, onToggle }: UiModuleOptionProps): React.JSX.Element {
+	const handleCheckedChange = React.useCallback(
+		function handleCheckedChange(value: boolean): void {
+			onToggle(module.id, value);
+		},
+		[module.id, onToggle],
+	);
+
+	return (
+		<div className="flex items-start gap-3 rounded-xl border p-4">
+			<Checkbox id={`generator-ui-module-${module.id}`} checked={checked} onCheckedChange={handleCheckedChange} />
+			<div className="grid gap-1">
+				<Label htmlFor={`generator-ui-module-${module.id}`}>{module.id}</Label>
+				<p className="font-mono text-xs text-muted-foreground">{module.resourceRouteTemplate}</p>
+			</div>
+			{module.id === "admin" ? <Badge variant="secondary">default</Badge> : null}
+		</div>
+	);
+}
+
+export const GeneratorScopeStep = React.memo(function GeneratorScopeStep({ draft, uiModules, error, onDraftChange }: GeneratorScopeStepProps): React.JSX.Element {
+	const handleGenerateUiChange = React.useCallback(
+		function handleGenerateUiChange(checked: boolean): void {
+			onDraftChange({
+				...draft,
+				generateUi: checked,
+				uiModules: checked && draft.uiModules.length === 0 ? ["admin"] : draft.uiModules,
+			});
+		},
+		[draft, onDraftChange],
+	);
+
+	const toggleModule = React.useCallback(
+		function toggleModule(moduleId: string, checked: boolean): void {
+			const next = new Set(draft.uiModules);
+			if (checked) {
+				next.add(moduleId);
+			} else {
+				next.delete(moduleId);
+			}
+			onDraftChange({
+				...draft,
+				uiModules: [...next],
+			});
+		},
+		[draft, onDraftChange],
+	);
 
 	return (
 		<Card>
@@ -58,25 +90,9 @@ export const GeneratorScopeStep = React.memo(function GeneratorScopeStep({ draft
 				{draft.generateUi ? (
 					<div className="grid gap-3">
 						<p className="text-sm font-medium">Target panels</p>
-						{uiModules.map((module) => {
-							const checked = draft.uiModules.includes(module.id);
-							return (
-								<div key={module.id} className="flex items-start gap-3 rounded-xl border p-4">
-									<Checkbox
-										id={`generator-ui-module-${module.id}`}
-										checked={checked}
-										onCheckedChange={(value) => {
-											toggleModule(module.id, value);
-										}}
-									/>
-									<div className="grid gap-1">
-										<Label htmlFor={`generator-ui-module-${module.id}`}>{module.id}</Label>
-										<p className="font-mono text-xs text-muted-foreground">{module.resourceRouteTemplate}</p>
-									</div>
-									{module.id === "admin" ? <Badge variant="secondary">default</Badge> : null}
-								</div>
-							);
-						})}
+						{uiModules.map((module) => (
+							<UiModuleOption key={module.id} module={module} checked={draft.uiModules.includes(module.id)} onToggle={toggleModule} />
+						))}
 						{error !== null ? <FieldError errors={[{ message: error }]} /> : null}
 					</div>
 				) : (

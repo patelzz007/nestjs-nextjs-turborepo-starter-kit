@@ -50,6 +50,38 @@ export interface GenerationPlanTableProps {
 	readonly wizardInput: WizardResourceInput | null;
 }
 
+interface PlanActionRowProps {
+	readonly action: PlanAction;
+	readonly wizardInput: WizardResourceInput | null;
+	readonly onPreviewDiff: (filePath: string) => void;
+}
+
+function PlanActionRow({ action, wizardInput, onPreviewDiff }: PlanActionRowProps): React.JSX.Element {
+	const handlePreviewClick = React.useCallback(
+		function handlePreviewClick(): void {
+			onPreviewDiff(action.path);
+		},
+		[action.path, onPreviewDiff],
+	);
+
+	return (
+		<TableRow>
+			<TableCell>
+				<Badge variant={ACTION_VARIANT[action.action]}>{action.action}</Badge>
+			</TableCell>
+			<TableCell className="font-mono text-xs">{action.path}</TableCell>
+			<TableCell className={cn("hidden text-xs text-muted-foreground lg:table-cell")}>{action.reason}</TableCell>
+			<TableCell className="text-right">
+				{action.action === "modify" ? (
+					<Button type="button" variant="ghost" size="icon-xs" aria-label={`Preview diff for ${action.path}`} disabled={wizardInput === null} onClick={handlePreviewClick}>
+						<Eye className="size-4" />
+					</Button>
+				) : null}
+			</TableCell>
+		</TableRow>
+	);
+}
+
 export const GenerationPlanTable = React.memo(function GenerationPlanTable({ actions, wizardInput }: GenerationPlanTableProps): React.JSX.Element {
 	const grouped: Record<PlanAction["action"], PlanAction[]> = {
 		create: [],
@@ -67,34 +99,37 @@ export const GenerationPlanTable = React.memo(function GenerationPlanTable({ act
 	const [diffLoading, setDiffLoading] = React.useState(false);
 	const [diffError, setDiffError] = React.useState<string | null>(null);
 
-	const handlePreviewDiff = (filePath: string): void => {
-		if (wizardInput === null) {
-			return;
-		}
-		setDiffPath(filePath);
-		setDiffLoading(true);
-		setDiffError(null);
-		setDiffContent(null);
-		void (async (): Promise<void> => {
-			try {
-				const diff = await fetchGenerationPlanDiffAction(wizardInput, filePath);
-				setDiffContent(buildUnifiedDiff(diff.before, diff.after));
-			} catch (error) {
-				const message = error instanceof Error ? error.message : "Failed to load diff.";
-				setDiffError(message);
-			} finally {
-				setDiffLoading(false);
+	const handlePreviewDiff = React.useCallback(
+		function handlePreviewDiff(filePath: string): void {
+			if (wizardInput === null) {
+				return;
 			}
-		})();
-	};
+			setDiffPath(filePath);
+			setDiffLoading(true);
+			setDiffError(null);
+			setDiffContent(null);
+			void (async (): Promise<void> => {
+				try {
+					const diff = await fetchGenerationPlanDiffAction(wizardInput, filePath);
+					setDiffContent(buildUnifiedDiff(diff.before, diff.after));
+				} catch (error) {
+					const message = error instanceof Error ? error.message : "Failed to load diff.";
+					setDiffError(message);
+				} finally {
+					setDiffLoading(false);
+				}
+			})();
+		},
+		[wizardInput],
+	);
 
-	const handleDiffOpenChange = (open: boolean): void => {
+	const handleDiffOpenChange = React.useCallback(function handleDiffOpenChange(open: boolean): void {
 		if (!open) {
 			setDiffPath(null);
 			setDiffContent(null);
 			setDiffError(null);
 		}
-	};
+	}, []);
 
 	return (
 		<>
@@ -111,28 +146,7 @@ export const GenerationPlanTable = React.memo(function GenerationPlanTable({ act
 					<TableBody>
 						{order.flatMap((actionType) =>
 							grouped[actionType].map((action) => (
-								<TableRow key={`${action.action}-${action.path}`}>
-									<TableCell>
-										<Badge variant={ACTION_VARIANT[action.action]}>{action.action}</Badge>
-									</TableCell>
-									<TableCell className="font-mono text-xs">{action.path}</TableCell>
-									<TableCell className={cn("hidden text-xs text-muted-foreground lg:table-cell")}>{action.reason}</TableCell>
-									<TableCell className="text-right">
-										{action.action === "modify" ? (
-											<Button
-												type="button"
-												variant="ghost"
-												size="icon-xs"
-												aria-label={`Preview diff for ${action.path}`}
-												disabled={wizardInput === null}
-												onClick={() => {
-													handlePreviewDiff(action.path);
-												}}>
-												<Eye className="size-4" />
-											</Button>
-										) : null}
-									</TableCell>
-								</TableRow>
+								<PlanActionRow key={`${action.action}-${action.path}`} action={action} wizardInput={wizardInput} onPreviewDiff={handlePreviewDiff} />
 							)),
 						)}
 					</TableBody>

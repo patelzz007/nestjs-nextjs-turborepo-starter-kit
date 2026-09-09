@@ -22,7 +22,7 @@ export function GeneratorEnvironmentPanel({ initialModules }: GeneratorEnvironme
 	const [doctorLoading, setDoctorLoading] = React.useState(false);
 	const [initLoading, setInitLoading] = React.useState(false);
 
-	const handleDoctor = (): void => {
+	function handleDoctor(): void {
 		void (async (): Promise<void> => {
 			setDoctorLoading(true);
 			try {
@@ -40,9 +40,9 @@ export function GeneratorEnvironmentPanel({ initialModules }: GeneratorEnvironme
 				setDoctorLoading(false);
 			}
 		})();
-	};
+	}
 
-	const handleInitModules = (): void => {
+	function handleInitModules(): void {
 		void (async (): Promise<void> => {
 			setInitLoading(true);
 			try {
@@ -64,7 +64,7 @@ export function GeneratorEnvironmentPanel({ initialModules }: GeneratorEnvironme
 				setInitLoading(false);
 			}
 		})();
-	};
+	}
 
 	return (
 		<Card>

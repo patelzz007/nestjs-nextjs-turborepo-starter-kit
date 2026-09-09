@@ -72,6 +72,13 @@ export function useResourceDeleteDialog(labels: AlertDialogLabels = ADMIN_RESOUR
 		}
 	}, [dialogState, finish]);
 
+	const handleConfirmClick = useCallback(
+		function handleConfirmClick(): void {
+			void handleConfirm();
+		},
+		[handleConfirm],
+	);
+
 	const resourceDeleteDialog = (
 		<AlertDialog open={open} onOpenChange={handleOpenChange}>
 			<AlertDialogContent
@@ -81,9 +88,7 @@ export function useResourceDeleteDialog(labels: AlertDialogLabels = ADMIN_RESOUR
 				labels={labels}
 				confirmLoading={confirmLoading}
 				count={dialogState?.count}
-				onConfirm={(): void => {
-					void handleConfirm();
-				}}>
+				onConfirm={handleConfirmClick}>
 				<AlertDialogMedia severity="critical">
 					<Trash2 aria-hidden="true" />
 				</AlertDialogMedia>

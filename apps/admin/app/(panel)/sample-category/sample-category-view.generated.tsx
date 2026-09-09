@@ -363,7 +363,7 @@ export default function SampleCategoryView({ initialRows, initialTotal, initialT
 				<DataTableSearchToolbar value={search} onChange={handleSearchChange} placeholder={labels.searchPlaceholder} ariaLabel={labels.searchAriaLabel} />
 			</div>
 		),
-		[handleSearchChange, search, labels.searchAriaLabel, labels.searchPlaceholder],
+		[handleSearchChange, search],
 	);
 
 	return (

@@ -424,6 +424,14 @@ export default function ProductView({ initialRows, initialTotal, initialTotalPag
 		[],
 	);
 
+	const handleCategoryIdTextFilterChange = useCallback(function handleCategoryIdTextFilterChange(event: React.ChangeEvent<HTMLInputElement>): void {
+		setCategoryIdFilter(event.target.value);
+	}, []);
+
+	const handleBrandTextFilterChange = useCallback(function handleBrandTextFilterChange(event: React.ChangeEvent<HTMLInputElement>): void {
+		setBrandFilter(event.target.value);
+	}, []);
+
 	const textFilterToolbar = useMemo(
 		(): React.JSX.Element => (
 			<div className="flex flex-wrap gap-2">
@@ -432,9 +440,7 @@ export default function ProductView({ initialRows, initialTotal, initialTotalPag
 					aria-label="Category Id"
 					placeholder="Filter by category id"
 					value={categoryIdFilter}
-					onChange={(event): void => {
-						setCategoryIdFilter(event.target.value);
-					}}
+					onChange={handleCategoryIdTextFilterChange}
 					className="h-9 w-full text-sm sm:w-44"
 				/>
 				,
@@ -443,15 +449,13 @@ export default function ProductView({ initialRows, initialTotal, initialTotalPag
 					aria-label="Brand"
 					placeholder="Filter by brand"
 					value={brandFilter}
-					onChange={(event): void => {
-						setBrandFilter(event.target.value);
-					}}
+					onChange={handleBrandTextFilterChange}
 					className="h-9 w-full text-sm sm:w-44"
 				/>
 				,
 			</div>
 		),
-		[categoryIdFilter, brandFilter],
+		[brandFilter, categoryIdFilter, handleBrandTextFilterChange, handleCategoryIdTextFilterChange],
 	);
 
 	const searchToolbar = useMemo(
@@ -461,7 +465,7 @@ export default function ProductView({ initialRows, initialTotal, initialTotalPag
 				{textFilterToolbar}
 			</div>
 		),
-		[handleSearchChange, search, labels.searchAriaLabel, labels.searchPlaceholder, textFilterToolbar],
+		[handleSearchChange, search, textFilterToolbar],
 	);
 
 	return (

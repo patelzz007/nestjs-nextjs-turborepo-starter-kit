@@ -56,12 +56,7 @@ export function stubPaginatedMeta(
  * First-page hydration helper when only the current slice + `hasNext` are known.
  * Prefer passing real API meta from the server when available.
  */
-export function stubPaginatedMetaFromHydration(
-	limit: number,
-	itemCount: number,
-	hasNext: boolean,
-	nextCursor: string | null = null,
-): ApiPaginatedMeta {
+export function stubPaginatedMetaFromHydration(limit: number, itemCount: number, hasNext: boolean, nextCursor: string | null = null): ApiPaginatedMeta {
 	const safeLimit = Math.max(1, limit);
 	const total = hasNext ? Math.max(itemCount + 1, safeLimit) : itemCount;
 	const offset = buildOffsetPaginationMeta(total, 1, safeLimit);

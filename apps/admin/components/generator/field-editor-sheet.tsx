@@ -59,35 +59,163 @@ export const GeneratorFieldEditorSheet = React.memo(function GeneratorFieldEdito
 	const supportsListBehavior = scalarType !== null && (fieldSupportsSearchable(scalarType) || fieldSupportsSortable(scalarType));
 	const supportsFilter = scalarType !== null && fieldSupportsFilterable(scalarType);
 
-	const handleSave = (): void => {
-		if (draft === null) {
+	const handleRelationModelChange = React.useCallback(function handleRelationModelChange(value: string | null): void {
+		if (value === null) {
 			return;
 		}
-		if (!isValidFieldName(draft.name)) {
-			setNameError("Use camelCase starting with a lowercase letter (e.g. name, categoryId).");
+		setDraft(function updateRelationModel(previous): GeneratorFieldDraft | null {
+			if (previous === null) {
+				return previous;
+			}
+			return { ...previous, relationModel: value };
+		});
+	}, []);
+
+	const handleKindChange = React.useCallback(function handleKindChange(value: FieldKind | null): void {
+		if (value === null) {
 			return;
 		}
-		const otherNames = new Set(existingFieldNames);
-		if (field !== null) {
-			otherNames.delete(field.name);
-		}
-		if (otherNames.has(draft.name)) {
-			setNameError(`Column "${draft.name}" already exists on this resource.`);
+		const kind = SCALAR_KINDS.find((item) => item === value);
+		if (kind === undefined) {
 			return;
 		}
-		if (draft.entryType === "scalar" && draft.kind === "enum") {
-			if (draft.enumValues.length < 2) {
-				setNameError("Enum fields need at least two values.");
+		const type = fieldKindToScalarType(kind);
+		setDraft(function updateKind(previous): GeneratorFieldDraft | null {
+			if (previous?.entryType !== "scalar") {
+				return previous;
+			}
+			return {
+				...previous,
+				kind,
+				required: type !== "text",
+				nullable: type === "text",
+				listBehavior: fieldSupportsSearchable(type) ? "search-sort" : fieldSupportsSortable(type) ? "sort-only" : "none",
+				filterable: fieldSupportsFilterable(type),
+				enumValues: kind === "enum" ? previous.enumValues : [],
+			};
+		});
+	}, []);
+
+	const handleNameChange = React.useCallback(function handleNameChange(event: React.ChangeEvent<HTMLInputElement>): void {
+		const nextName = event.target.value;
+		setNameError(null);
+		setDraft(function updateName(previous): GeneratorFieldDraft | null {
+			if (previous === null) {
+				return previous;
+			}
+			return { ...previous, name: nextName };
+		});
+	}, []);
+
+	const handleRelationOptionalChange = React.useCallback(function handleRelationOptionalChange(checked: boolean): void {
+		setDraft(function updateRelationOptional(previous): GeneratorFieldDraft | null {
+			if (previous === null) {
+				return previous;
+			}
+			return {
+				...previous,
+				relationOptional: checked,
+				required: !checked,
+				nullable: checked,
+			};
+		});
+	}, []);
+
+	const handleRequiredChange = React.useCallback(function handleRequiredChange(checked: boolean): void {
+		setDraft(function updateRequired(previous): GeneratorFieldDraft | null {
+			if (previous === null) {
+				return previous;
+			}
+			return {
+				...previous,
+				required: checked,
+				nullable: checked ? false : previous.nullable,
+			};
+		});
+	}, []);
+
+	const handleNullableChange = React.useCallback(function handleNullableChange(checked: boolean): void {
+		setDraft(function updateNullable(previous): GeneratorFieldDraft | null {
+			if (previous === null) {
+				return previous;
+			}
+			return { ...previous, nullable: checked };
+		});
+	}, []);
+
+	const handleEnumValuesChange = React.useCallback(function handleEnumValuesChange(event: React.ChangeEvent<HTMLInputElement>): void {
+		const values = event.target.value
+			.split(",")
+			.map((item) => item.trim())
+			.filter((item) => item.length > 0);
+		setDraft(function updateEnumValues(previous): GeneratorFieldDraft | null {
+			if (previous === null) {
+				return previous;
+			}
+			return { ...previous, enumValues: values };
+		});
+	}, []);
+
+	const handleListBehaviorChange = React.useCallback(function handleListBehaviorChange(value: ListBehavior | null): void {
+		if (value === null) {
+			return;
+		}
+		setDraft(function updateListBehavior(previous): GeneratorFieldDraft | null {
+			if (previous === null) {
+				return previous;
+			}
+			return { ...previous, listBehavior: value };
+		});
+	}, []);
+
+	const handleFilterableChange = React.useCallback(function handleFilterableChange(checked: boolean): void {
+		setDraft(function updateFilterable(previous): GeneratorFieldDraft | null {
+			if (previous === null) {
+				return previous;
+			}
+			return { ...previous, filterable: checked };
+		});
+	}, []);
+
+	const handleCancelClick = React.useCallback(
+		function handleCancelClick(): void {
+			onOpenChange(false);
+		},
+		[onOpenChange],
+	);
+
+	const handleSave = React.useCallback(
+		function handleSave(): void {
+			if (draft === null) {
 				return;
 			}
-		}
-		if (draft.entryType === "foreign-key" && (draft.relationModel === null || draft.relationModel.length === 0)) {
-			setNameError("Select a parent table for the foreign key.");
-			return;
-		}
-		onSave(draft);
-		onOpenChange(false);
-	};
+			if (!isValidFieldName(draft.name)) {
+				setNameError("Use camelCase starting with a lowercase letter (e.g. name, categoryId).");
+				return;
+			}
+			const otherNames = new Set(existingFieldNames);
+			if (field !== null) {
+				otherNames.delete(field.name);
+			}
+			if (otherNames.has(draft.name)) {
+				setNameError(`Column "${draft.name}" already exists on this resource.`);
+				return;
+			}
+			if (draft.entryType === "scalar" && draft.kind === "enum") {
+				if (draft.enumValues.length < 2) {
+					setNameError("Enum fields need at least two values.");
+					return;
+				}
+			}
+			if (draft.entryType === "foreign-key" && !draft.relationModel?.length) {
+				setNameError("Select a parent table for the foreign key.");
+				return;
+			}
+			onSave(draft);
+			onOpenChange(false);
+		},
+		[draft, existingFieldNames, field, onOpenChange, onSave],
+	);
 
 	return (
 		<Sheet open={open} onOpenChange={onOpenChange}>
@@ -102,11 +230,7 @@ export const GeneratorFieldEditorSheet = React.memo(function GeneratorFieldEdito
 						{draft.entryType === "foreign-key" ? (
 							<div className="grid gap-2">
 								<Label>Parent table</Label>
-								<Select
-									value={draft.relationModel ?? ""}
-									onValueChange={(value) => {
-										setDraft({ ...draft, relationModel: value });
-									}}>
+								<Select value={draft.relationModel ?? ""} onValueChange={handleRelationModelChange}>
 									<SelectTrigger>
 										<SelectValue placeholder="Choose parent model" />
 									</SelectTrigger>
@@ -124,24 +248,7 @@ export const GeneratorFieldEditorSheet = React.memo(function GeneratorFieldEdito
 						) : (
 							<div className="grid gap-2">
 								<Label>Column type</Label>
-								<Select
-									value={draft.kind}
-									onValueChange={(value) => {
-										const kind = SCALAR_KINDS.find((item) => item === value);
-										if (kind === undefined) {
-											return;
-										}
-										const type = fieldKindToScalarType(kind);
-										setDraft({
-											...draft,
-											kind,
-											required: type !== "text",
-											nullable: type === "text",
-											listBehavior: fieldSupportsSearchable(type) ? "search-sort" : fieldSupportsSortable(type) ? "sort-only" : "none",
-											filterable: fieldSupportsFilterable(type),
-											enumValues: kind === "enum" ? draft.enumValues : [],
-										});
-									}}>
+								<Select value={draft.kind} onValueChange={handleKindChange}>
 									<SelectTrigger>
 										<SelectValue />
 									</SelectTrigger>
@@ -158,15 +265,7 @@ export const GeneratorFieldEditorSheet = React.memo(function GeneratorFieldEdito
 
 						<div className="grid gap-2">
 							<Label htmlFor="field-name">Column name</Label>
-							<Input
-								id="field-name"
-								value={draft.name}
-								onChange={(event) => {
-									setNameError(null);
-									setDraft({ ...draft, name: event.target.value });
-								}}
-								placeholder="name, categoryId"
-							/>
+							<Input id="field-name" value={draft.name} onChange={handleNameChange} placeholder="name, categoryId" />
 							{nameError !== null ? <p className="text-xs text-destructive">{nameError}</p> : null}
 						</div>
 
@@ -176,17 +275,7 @@ export const GeneratorFieldEditorSheet = React.memo(function GeneratorFieldEdito
 									<Label>Optional parent link</Label>
 									<p className="text-xs text-muted-foreground">Allow rows without a parent (nullable FK).</p>
 								</div>
-								<Switch
-									checked={draft.relationOptional}
-									onCheckedChange={(checked) => {
-										setDraft({
-											...draft,
-											relationOptional: checked,
-											required: !checked,
-											nullable: checked,
-										});
-									}}
-								/>
+								<Switch checked={draft.relationOptional} onCheckedChange={handleRelationOptionalChange} />
 							</div>
 						) : (
 							<>
@@ -195,16 +284,7 @@ export const GeneratorFieldEditorSheet = React.memo(function GeneratorFieldEdito
 										<Label>Required on create</Label>
 										<p className="text-xs text-muted-foreground">Reject creates when this column is missing.</p>
 									</div>
-									<Switch
-										checked={draft.required}
-										onCheckedChange={(checked) => {
-											setDraft({
-												...draft,
-												required: checked,
-												nullable: checked ? false : draft.nullable,
-											});
-										}}
-									/>
+									<Switch checked={draft.required} onCheckedChange={handleRequiredChange} />
 								</div>
 
 								{!draft.required ? (
@@ -212,45 +292,21 @@ export const GeneratorFieldEditorSheet = React.memo(function GeneratorFieldEdito
 										<div>
 											<Label>Allow null / empty</Label>
 										</div>
-										<Switch
-											checked={draft.nullable}
-											onCheckedChange={(checked) => {
-												setDraft({ ...draft, nullable: checked });
-											}}
-										/>
+										<Switch checked={draft.nullable} onCheckedChange={handleNullableChange} />
 									</div>
 								) : null}
 
 								{draft.kind === "enum" ? (
 									<div className="grid gap-2">
 										<Label htmlFor="enum-values">Pick-list values (comma-separated)</Label>
-										<Input
-											id="enum-values"
-											value={draft.enumValues.join(", ")}
-											onChange={(event) => {
-												const values = event.target.value
-													.split(",")
-													.map((item) => item.trim())
-													.filter((item) => item.length > 0);
-												setDraft({ ...draft, enumValues: values });
-											}}
-											placeholder="draft, published, archived"
-										/>
+										<Input id="enum-values" value={draft.enumValues.join(", ")} onChange={handleEnumValuesChange} placeholder="draft, published, archived" />
 									</div>
 								) : null}
 
 								{supportsListBehavior ? (
 									<div className="grid gap-2">
 										<Label>List page behavior</Label>
-										<Select
-											value={draft.listBehavior}
-											onValueChange={(value) => {
-												const option = LIST_BEHAVIOR_OPTIONS.find((item) => item.value === value);
-												if (option === undefined) {
-													return;
-												}
-												setDraft({ ...draft, listBehavior: option.value });
-											}}>
+										<Select value={draft.listBehavior} onValueChange={handleListBehaviorChange}>
 											<SelectTrigger>
 												<SelectValue />
 											</SelectTrigger>
@@ -270,12 +326,7 @@ export const GeneratorFieldEditorSheet = React.memo(function GeneratorFieldEdito
 										<div>
 											<Label>Admin list filter</Label>
 										</div>
-										<Switch
-											checked={draft.filterable}
-											onCheckedChange={(checked) => {
-												setDraft({ ...draft, filterable: checked });
-											}}
-										/>
+										<Switch checked={draft.filterable} onCheckedChange={handleFilterableChange} />
 									</div>
 								) : null}
 							</>
@@ -284,12 +335,7 @@ export const GeneratorFieldEditorSheet = React.memo(function GeneratorFieldEdito
 				)}
 
 				<SheetFooter className="mt-6">
-					<Button
-						type="button"
-						variant="outline"
-						onClick={() => {
-							onOpenChange(false);
-						}}>
+					<Button type="button" variant="outline" onClick={handleCancelClick}>
 						Cancel
 					</Button>
 					<Button type="button" onClick={handleSave}>

@@ -90,91 +90,94 @@ export function GeneratorWizard({ parentModels, uiModules }: GeneratorWizardProp
 		}
 	}, []);
 
-	const validateCurrentStep = (): string | null => {
-		if (currentStepId === "basics") {
-			return validateBasicsStep(draft);
-		}
-		if (currentStepId === "scope") {
-			return validateScopeStep(draft);
-		}
-		if (currentStepId === "fields") {
-			return validateFieldsStep(draft);
-		}
-		return null;
-	};
-
-	const goToStep = (stepId: WizardStepId["id"]): void => {
+	const goToStep = React.useCallback(function goToStep(stepId: WizardStepId["id"]): void {
 		setCurrentStepId(stepId);
-	};
+	}, []);
 
-	const handleNext = async (): Promise<void> => {
-		setAttemptedSteps((previous) => new Set([...previous, currentStepId]));
-		const validationError = validateCurrentStep();
-		if (validationError !== null) {
-			toastMessage.error({ title: "Check your input", description: validationError });
-			return;
-		}
-
-		setCompletedStepIds((previous) => new Set([...previous, currentStepId]));
-
-		if (currentStepId === "fields") {
-			const nextStep = GENERATOR_WIZARD_STEPS[currentStepIndex + 1];
-			if (nextStep !== undefined) {
-				goToStep(nextStep.id);
+	const handleNext = React.useCallback(
+		async function handleNext(): Promise<void> {
+			setAttemptedSteps((previous) => new Set([...previous, currentStepId]));
+			let validationError: string | null = null;
+			if (currentStepId === "basics") {
+				validationError = validateBasicsStep(draft);
+			} else if (currentStepId === "scope") {
+				validationError = validateScopeStep(draft);
+			} else if (currentStepId === "fields") {
+				validationError = validateFieldsStep(draft);
 			}
-			await loadPreview(draft);
-			return;
-		}
-
-		if (currentStepId === "preview") {
-			const nextStep = GENERATOR_WIZARD_STEPS[currentStepIndex + 1];
-			if (nextStep !== undefined) {
-				goToStep(nextStep.id);
-			}
-			if (preview === null) {
-				await loadPreview(draft);
-			}
-			return;
-		}
-
-		const nextStep = GENERATOR_WIZARD_STEPS[currentStepIndex + 1];
-		if (nextStep !== undefined) {
-			goToStep(nextStep.id);
-		}
-	};
-
-	const handleBack = (): void => {
-		const previousStep = GENERATOR_WIZARD_STEPS[currentStepIndex - 1];
-		if (previousStep !== undefined) {
-			goToStep(previousStep.id);
-		}
-	};
-
-	const handleApply = async (): Promise<void> => {
-		setApplying(true);
-		setApplyError(null);
-		try {
-			const input = wizardDraftToInput(draft);
-			const result = await applyGeneratorResourceAction(input);
-			setApplyResult(result);
-			if (!result.success) {
-				setApplyError(result.error ?? "Generation failed.");
-				toastMessage.error({ title: "Generation failed", description: result.error ?? "Check the validation output." });
+			if (validationError !== null) {
+				toastMessage.error({ title: "Check your input", description: validationError });
 				return;
 			}
-			clearWizardDraftFromStorage();
-			toastMessage.success({
-				title: "Resource generated",
-				description: `${result.slug} is ready. Run pnpm db:migrate next.`,
-			});
-		} catch (error) {
-			const message = error instanceof Error ? error.message : "Generation failed.";
-			setApplyError(message);
-			toastMessage.error({ title: "Generation failed", description: message });
-		} finally {
-			setApplying(false);
-		}
-	};
+
+			setCompletedStepIds((previous) => new Set([...previous, currentStepId]));
+
+			if (currentStepId === "fields") {
+				const nextStep = GENERATOR_WIZARD_STEPS[currentStepIndex + 1];
+				if (nextStep !== undefined) {
+					goToStep(nextStep.id);
+				}
+				await loadPreview(draft);
+				return;
+			}
+
+			if (currentStepId === "preview") {
+				const nextStep = GENERATOR_WIZARD_STEPS[currentStepIndex + 1];
+				if (nextStep !== undefined) {
+					goToStep(nextStep.id);
+				}
+				if (preview === null) {
+					await loadPreview(draft);
+				}
+				return;
+			}
+
+			const nextStep = GENERATOR_WIZARD_STEPS[currentStepIndex + 1];
+			if (nextStep !== undefined) {
+				goToStep(nextStep.id);
+			}
+		},
+		[currentStepId, currentStepIndex, draft, goToStep, loadPreview, preview],
+	);
+
+	const handleBack = React.useCallback(
+		function handleBack(): void {
+			const previousStep = GENERATOR_WIZARD_STEPS[currentStepIndex - 1];
+			if (previousStep !== undefined) {
+				goToStep(previousStep.id);
+			}
+		},
+		[currentStepIndex, goToStep],
+	);
+
+	const handleApply = React.useCallback(
+		async function handleApply(): Promise<void> {
+			setApplying(true);
+			setApplyError(null);
+			try {
+				const input = wizardDraftToInput(draft);
+				const result = await applyGeneratorResourceAction(input);
+				setApplyResult(result);
+				if (!result.success) {
+					setApplyError(result.error ?? "Generation failed.");
+					toastMessage.error({ title: "Generation failed", description: result.error ?? "Check the validation output." });
+					return;
+				}
+				clearWizardDraftFromStorage();
+				toastMessage.success({
+					title: "Resource generated",
+					description: `${result.slug} is ready. Run pnpm db:migrate next.`,
+				});
+			} catch (error) {
+				const message = error instanceof Error ? error.message : "Generation failed.";
+				setApplyError(message);
+				toastMessage.error({ title: "Generation failed", description: message });
+			} finally {
+				setApplying(false);
+			}
+		},
+		[draft],
+	);
 
 	const wizardInput = React.useMemo(() => {
 		try {
@@ -183,6 +186,20 @@ export function GeneratorWizard({ parentModels, uiModules }: GeneratorWizardProp
 			return null;
 		}
 	}, [draft]);
+
+	const handleApplyClick = React.useCallback(
+		function handleApplyClick(): void {
+			void handleApply();
+		},
+		[handleApply],
+	);
+
+	const handleContinueClick = React.useCallback(
+		function handleContinueClick(): void {
+			void handleNext();
+		},
+		[handleNext],
+	);
 
 	return (
 		<div className="mx-auto flex w-full max-w-6xl flex-col gap-8">
@@ -206,16 +223,7 @@ export function GeneratorWizard({ parentModels, uiModules }: GeneratorWizardProp
 				{currentStepId === "fields" ? <GeneratorFieldsStep draft={draft} parentModels={parentModels} error={fieldsError} onDraftChange={setDraft} /> : null}
 				{currentStepId === "preview" ? <GeneratorPreviewStep preview={preview} loading={previewLoading} error={previewError} /> : null}
 				{currentStepId === "generate" ? (
-					<GeneratorGenerateStep
-						preview={preview}
-						wizardInput={wizardInput}
-						applyResult={applyResult}
-						applying={applying}
-						error={applyError}
-						onApply={() => {
-							void handleApply();
-						}}
-					/>
+					<GeneratorGenerateStep preview={preview} wizardInput={wizardInput} applyResult={applyResult} applying={applying} error={applyError} onApply={handleApplyClick} />
 				) : null}
 			</div>
 
@@ -225,7 +233,7 @@ export function GeneratorWizard({ parentModels, uiModules }: GeneratorWizardProp
 					Back
 				</Button>
 				{isLastStep ? null : (
-					<Button type="button" onClick={() => void handleNext()}>
+					<Button type="button" onClick={handleContinueClick}>
 						Continue
 						<ArrowRight className="size-4" aria-hidden="true" />
 					</Button>

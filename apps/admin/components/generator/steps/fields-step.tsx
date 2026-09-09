@@ -26,6 +26,48 @@ function describeField(field: GeneratorFieldDraft): string {
 	return fieldKindLabel(field.kind);
 }
 
+interface FieldListItemProps {
+	readonly field: GeneratorFieldDraft;
+	readonly onEdit: (field: GeneratorFieldDraft) => void;
+	readonly onDelete: (fieldId: string) => void;
+}
+
+function FieldListItem({ field, onEdit, onDelete }: FieldListItemProps): React.JSX.Element {
+	const handleEdit = React.useCallback(
+		function handleEdit(): void {
+			onEdit(field);
+		},
+		[field, onEdit],
+	);
+
+	const handleDelete = React.useCallback(
+		function handleDelete(): void {
+			onDelete(field.id);
+		},
+		[field.id, onDelete],
+	);
+
+	return (
+		<li className="flex items-center justify-between gap-3 rounded-xl border px-4 py-3">
+			<div className="min-w-0">
+				<div className="flex flex-wrap items-center gap-2">
+					<p className="font-medium">{field.name.length > 0 ? field.name : "Untitled column"}</p>
+					<Badge variant="secondary">{describeField(field)}</Badge>
+					{field.required ? <Badge variant="outline">required</Badge> : null}
+				</div>
+			</div>
+			<div className="flex shrink-0 gap-1">
+				<Button type="button" variant="ghost" size="icon-xs" aria-label={`Edit ${field.name}`} onClick={handleEdit}>
+					<Pencil className="size-4" />
+				</Button>
+				<Button type="button" variant="ghost" size="icon-xs" aria-label={`Remove ${field.name}`} onClick={handleDelete}>
+					<Trash2 className="size-4" />
+				</Button>
+			</div>
+		</li>
+	);
+}
+
 export const GeneratorFieldsStep = React.memo(function GeneratorFieldsStep({ draft, parentModels, error, onDraftChange }: GeneratorFieldsStepProps): React.JSX.Element {
 	const [editorOpen, setEditorOpen] = React.useState(false);
 	const [editingField, setEditingField] = React.useState<GeneratorFieldDraft | null>(null);
@@ -33,32 +75,44 @@ export const GeneratorFieldsStep = React.memo(function GeneratorFieldsStep({ dra
 	const existingFieldNames = React.useMemo(() => new Set(draft.fields.map((field) => field.name)), [draft.fields]);
 	const linkableParents = parentModels.filter((model) => model.modelName !== currentResourceName);
 
-	const openEditor = (field: GeneratorFieldDraft): void => {
+	const openEditor = React.useCallback(function openEditor(field: GeneratorFieldDraft): void {
 		setEditingField(field);
 		setEditorOpen(true);
-	};
+	}, []);
 
-	const handleAddScalar = (): void => {
-		openEditor(openNewScalarFieldEditor());
-	};
+	const handleAddScalar = React.useCallback(
+		function handleAddScalar(): void {
+			openEditor(openNewScalarFieldEditor());
+		},
+		[openEditor],
+	);
 
-	const handleAddForeignKey = (): void => {
-		const firstParent = linkableParents[0];
-		if (firstParent === undefined) {
-			return;
-		}
-		openEditor(openNewForeignKeyFieldEditor(firstParent.modelName));
-	};
+	const handleAddForeignKey = React.useCallback(
+		function handleAddForeignKey(): void {
+			const firstParent = linkableParents[0];
+			if (firstParent === undefined) {
+				return;
+			}
+			openEditor(openNewForeignKeyFieldEditor(firstParent.modelName));
+		},
+		[linkableParents, openEditor],
+	);
 
-	const handleSaveField = (field: GeneratorFieldDraft): void => {
-		const existingIndex = draft.fields.findIndex((item) => item.id === field.id);
-		const nextFields = existingIndex >= 0 ? draft.fields.map((item, index) => (index === existingIndex ? field : item)) : [...draft.fields, field];
-		onDraftChange({ ...draft, fields: nextFields });
-	};
+	const handleSaveField = React.useCallback(
+		function handleSaveField(field: GeneratorFieldDraft): void {
+			const existingIndex = draft.fields.findIndex((item) => item.id === field.id);
+			const nextFields = existingIndex >= 0 ? draft.fields.map((item, index) => (index === existingIndex ? field : item)) : [...draft.fields, field];
+			onDraftChange({ ...draft, fields: nextFields });
+		},
+		[draft, onDraftChange],
+	);
 
-	const handleDeleteField = (fieldId: string): void => {
-		onDraftChange({ ...draft, fields: draft.fields.filter((field) => field.id !== fieldId) });
-	};
+	const handleDeleteField = React.useCallback(
+		function handleDeleteField(fieldId: string): void {
+			onDraftChange({ ...draft, fields: draft.fields.filter((field) => field.id !== fieldId) });
+		},
+		[draft, onDraftChange],
+	);
 
 	return (
 		<div className="grid gap-6">
@@ -94,37 +148,7 @@ export const GeneratorFieldsStep = React.memo(function GeneratorFieldsStep({ dra
 					) : (
 						<ul className="grid gap-3">
 							{draft.fields.map((field) => (
-								<li key={field.id} className="flex items-center justify-between gap-3 rounded-xl border px-4 py-3">
-									<div className="min-w-0">
-										<div className="flex flex-wrap items-center gap-2">
-											<p className="font-medium">{field.name.length > 0 ? field.name : "Untitled column"}</p>
-											<Badge variant="secondary">{describeField(field)}</Badge>
-											{field.required ? <Badge variant="outline">required</Badge> : null}
-										</div>
-									</div>
-									<div className="flex shrink-0 gap-1">
-										<Button
-											type="button"
-											variant="ghost"
-											size="icon-xs"
-											aria-label={`Edit ${field.name}`}
-											onClick={() => {
-												openEditor(field);
-											}}>
-											<Pencil className="size-4" />
-										</Button>
-										<Button
-											type="button"
-											variant="ghost"
-											size="icon-xs"
-											aria-label={`Remove ${field.name}`}
-											onClick={() => {
-												handleDeleteField(field.id);
-											}}>
-											<Trash2 className="size-4" />
-										</Button>
-									</div>
-								</li>
+								<FieldListItem key={field.id} field={field} onEdit={openEditor} onDelete={handleDeleteField} />
 							))}
 						</ul>
 					)}

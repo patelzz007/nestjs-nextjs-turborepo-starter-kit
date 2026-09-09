@@ -318,19 +318,37 @@ ${filterBlocks.join("\n")}
 \t);`;
 }
 
+function textFilterChangeHandlerName(field: FieldIR): string {
+	return `handle${field.camelName.charAt(0).toUpperCase()}${field.camelName.slice(1)}TextFilterChange`;
+}
+
+export function renderViewTextFilterHandlers(ir: ResourceIR): string {
+	const textFields = resolveUiTextFilterFields(ir);
+	if (textFields.length === 0) {
+		return "";
+	}
+	return textFields
+		.map(
+			(
+				field,
+			) => `\tconst ${textFilterChangeHandlerName(field)} = useCallback(function ${textFilterChangeHandlerName(field)}(event: React.ChangeEvent<HTMLInputElement>): void {
+\t\t${setterName(field)}(event.target.value);
+\t}, []);`,
+		)
+		.join("\n\n");
+}
+
 export function renderViewTextFilterToolbar(ir: ResourceIR): string {
 	const textBlocks = resolveUiTextFilterFields(ir).map((field) => {
 		const label = humanizeFieldLabel(field.camelName);
 		const state = filterStateName(field);
-		const setter = setterName(field);
+		const handler = textFilterChangeHandlerName(field);
 		return `\t\t\t<Input
 \t\t\t\tkey="${field.camelName}"
 \t\t\t\taria-label=${tsStringLiteral(label)}
 \t\t\t\tplaceholder=${tsStringLiteral(`Filter by ${label.toLowerCase()}`)}
 \t\t\t\tvalue={${state}}
-\t\t\t\tonChange={(event): void => {
-\t\t\t\t\t${setter}(event.target.value);
-\t\t\t\t}}
+\t\t\t\tonChange={${handler}}
 \t\t\t\tclassName="h-9 w-full text-sm sm:w-44"
 \t\t\t/>,`;
 	});

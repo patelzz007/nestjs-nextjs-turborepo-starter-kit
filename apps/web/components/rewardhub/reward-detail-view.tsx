@@ -20,7 +20,7 @@ import * as React from "react";
 const TERMS_VERSION = "1.0";
 const PRIVACY_VERSION = "1.0";
 
-type ClaimStep = "legal" | "otp" | "claim";
+type ClaimDisplayStep = "loading" | "legal" | "otp" | "claim";
 
 export interface RewardDetailViewProps {
 	readonly rewardId: string;
@@ -56,10 +56,11 @@ export function RewardDetailView({ rewardId, initialReward }: RewardDetailViewPr
 	const checkoutQuery = api.legal.status.useQuery(undefined);
 	const checkout = checkoutQuery.data?.data;
 
-	const [phone, setPhone] = React.useState<string>("");
+	const [phoneDraft, setPhoneDraft] = React.useState<string | null>(null);
 	const [otp, setOtp] = React.useState<string>("");
-	const [legalAccepted, setLegalAccepted] = React.useState<boolean>(false);
-	const [step, setStep] = React.useState<ClaimStep | null>(null);
+	const [otpSent, setOtpSent] = React.useState<boolean>(false);
+	const [legalAcceptedLocally, setLegalAcceptedLocally] = React.useState<boolean>(false);
+	const [forceLegalStep, setForceLegalStep] = React.useState<boolean>(false);
 	const [message, setMessage] = React.useState<string | null>(null);
 	const [nowMs, setNowMs] = React.useState<number>(() => Date.now());
 
@@ -72,26 +73,11 @@ export function RewardDetailView({ rewardId, initialReward }: RewardDetailViewPr
 		};
 	}, []);
 
-	React.useEffect((): void => {
-		if (checkout === undefined) {
-			return;
-		}
+	const checkoutReady = checkout !== undefined;
+	const verifiedPhone = checkout?.phoneVerified === true && checkout.phone !== null ? checkout.phone : null;
+	const phone = phoneDraft ?? verifiedPhone ?? "";
 
-		if (!checkout.hasAcceptedLegal) {
-			setLegalAccepted(false);
-			setStep("legal");
-			return;
-		}
-
-		setLegalAccepted(true);
-		if (checkout.phoneVerified && checkout.phone !== null) {
-			setPhone(checkout.phone);
-			setStep("claim");
-			return;
-		}
-
-		setStep("otp");
-	}, [checkout]);
+	const hasAcceptedLegal = forceLegalStep ? false : legalAcceptedLocally || checkout?.hasAcceptedLegal === true;
 
 	const requiresOtp = React.useMemo((): boolean => {
 		if (checkout === undefined) {
@@ -103,22 +89,29 @@ export function RewardDetailView({ rewardId, initialReward }: RewardDetailViewPr
 		return phone.trim() !== checkout.phone;
 	}, [checkout, phone]);
 
-	React.useEffect((): void => {
-		if (!requiresOtp && step === "otp") {
-			setStep("claim");
+	const displayStep = React.useMemo((): ClaimDisplayStep => {
+		if (!checkoutReady) {
+			return "loading";
 		}
-		if (requiresOtp && checkout?.phoneVerified === true && checkout.phone !== null && phone.trim() !== checkout.phone && phone.trim().length > 0) {
-			setStep("otp");
-			setOtp("");
+		if (!hasAcceptedLegal) {
+			return "legal";
 		}
-	}, [checkout, phone, requiresOtp, step]);
+		if (!requiresOtp) {
+			return "claim";
+		}
+		if (otpSent) {
+			return "claim";
+		}
+		return "otp";
+	}, [checkoutReady, hasAcceptedLegal, otpSent, requiresOtp]);
 
 	const claimBlockReason = React.useMemo(() => (reward === undefined ? null : getRewardClaimBlockReason(reward, epochMs(nowMs))), [reward, nowMs]);
 	const canClaim = claimBlockReason === null;
 
 	const acceptLegalMutation = api.legal.accept.useMutation({
 		onSuccess: (): void => {
-			setLegalAccepted(true);
+			setForceLegalStep(false);
+			setLegalAcceptedLocally(true);
 			setMessage("Terms accepted.");
 			void checkoutQuery.refetch();
 		},
@@ -126,7 +119,7 @@ export function RewardDetailView({ rewardId, initialReward }: RewardDetailViewPr
 
 	const otpMutation = api.claims.otp.useMutation({
 		onSuccess: (): void => {
-			setStep("claim");
+			setOtpSent(true);
 			setMessage("OTP sent — check your email (dev: API logs). Enter the 6-digit code below.");
 		},
 		onError: (error: Error): void => {
@@ -142,8 +135,8 @@ export function RewardDetailView({ rewardId, initialReward }: RewardDetailViewPr
 		},
 		onError: (error: Error): void => {
 			if (error instanceof Error && error.message.includes("LEGAL_ACCEPTANCE_REQUIRED")) {
-				setStep("legal");
-				setLegalAccepted(false);
+				setForceLegalStep(true);
+				setLegalAcceptedLocally(false);
 			}
 			setMessage(formatClaimApiError(error));
 			void rewardQuery.refetch();
@@ -151,7 +144,9 @@ export function RewardDetailView({ rewardId, initialReward }: RewardDetailViewPr
 	});
 
 	const handlePhoneChange = React.useCallback((event: React.ChangeEvent<HTMLInputElement>): void => {
-		setPhone(event.target.value);
+		setPhoneDraft(event.target.value);
+		setOtpSent(false);
+		setOtp("");
 	}, []);
 
 	const handleOtpChange = React.useCallback((event: React.ChangeEvent<HTMLInputElement>): void => {
@@ -244,11 +239,11 @@ export function RewardDetailView({ rewardId, initialReward }: RewardDetailViewPr
 								Browse other offers
 							</Link>
 						</div>
-					) : step === null ? (
+					) : displayStep === "loading" ? (
 						<p className="text-sm text-muted-foreground">Loading claim options…</p>
 					) : (
 						<>
-							{step === "legal" && !legalAccepted ? (
+							{displayStep === "legal" ? (
 								<div className="space-y-3">
 									<p className="text-sm text-muted-foreground">
 										Accept the Reward Hub terms (v{TERMS_VERSION}) and privacy policy (v{PRIVACY_VERSION}) before claiming.
@@ -259,14 +254,14 @@ export function RewardDetailView({ rewardId, initialReward }: RewardDetailViewPr
 								</div>
 							) : null}
 
-							{(step === "otp" || step === "claim") && legalAccepted ? (
+							{displayStep === "otp" || displayStep === "claim" ? (
 								<div className="space-y-4">
 									<div className="space-y-2">
 										<Label htmlFor="claim-phone">Mobile number</Label>
 										<Input id="claim-phone" type="tel" placeholder="+60123456789" value={phone} onChange={handlePhoneChange} />
 									</div>
 									{requiresOtp ? (
-										step === "otp" ? (
+										displayStep === "otp" ? (
 											<Button disabled={otpMutation.isPending} onClick={handleRequestOtp}>
 												{otpMutation.isPending ? "Sending…" : "Send OTP"}
 											</Button>

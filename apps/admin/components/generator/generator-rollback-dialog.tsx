@@ -73,12 +73,15 @@ export function GeneratorRollbackDialog({ slug, label, open: openProp, onOpenCha
 		};
 	}, [open, includeDefinition, loadPlan]);
 
-	const handleOpen = (): void => {
-		setOpen(true);
-	};
+	const handleOpen = React.useCallback(
+		function handleOpen(): void {
+			setOpen(true);
+		},
+		[setOpen],
+	);
 
 	const handleOpenChange = React.useCallback(
-		(nextOpen: boolean): void => {
+		function handleOpenChange(nextOpen: boolean): void {
 			if (!nextOpen) {
 				setPlan(null);
 				setIncludeDefinition(false);
@@ -89,42 +92,53 @@ export function GeneratorRollbackDialog({ slug, label, open: openProp, onOpenCha
 		[setOpen],
 	);
 
-	const handleConfirm = (): void => {
-		if (!canConfirm) {
-			return;
-		}
-		void (async (): Promise<void> => {
-			setApplying(true);
-			try {
-				const result = await applyResourceRollbackAction(slug, includeDefinition, dryRun);
-				if (dryRun) {
-					setPlan(result.plan);
-					toastMessage.success({
-						title: "Dry-run complete",
-						description: `${String(result.plan.steps.length)} rollback step(s) would run for ${label}.`,
-					});
-					return;
-				}
-				if (!result.applied) {
-					toastMessage.error({ title: "Rollback failed", description: "No changes were applied." });
-					return;
-				}
-				toastMessage.success({
-					title: "Rollback complete",
-					description: `${label} generator artifacts were removed.`,
-				});
-				onSuccess?.();
-				setOpen(false);
-			} catch (error) {
-				const message = error instanceof Error ? error.message : "Rollback failed.";
-				toastMessage.error({ title: "Rollback failed", description: message });
-			} finally {
-				setApplying(false);
-			}
-		})();
-	};
+	const handleIncludeDefinitionChange = React.useCallback(function handleIncludeDefinitionChange(checked: boolean): void {
+		setIncludeDefinition(checked);
+	}, []);
+
+	const handleDryRunChange = React.useCallback(function handleDryRunChange(checked: boolean): void {
+		setDryRun(checked);
+	}, []);
 
 	const canConfirm = plan !== null && plan.canRollback && !loading;
+
+	const handleConfirm = React.useCallback(
+		function handleConfirm(): void {
+			if (!canConfirm) {
+				return;
+			}
+			void (async (): Promise<void> => {
+				setApplying(true);
+				try {
+					const result = await applyResourceRollbackAction(slug, includeDefinition, dryRun);
+					if (dryRun) {
+						setPlan(result.plan);
+						toastMessage.success({
+							title: "Dry-run complete",
+							description: `${String(result.plan.steps.length)} rollback step(s) would run for ${label}.`,
+						});
+						return;
+					}
+					if (!result.applied) {
+						toastMessage.error({ title: "Rollback failed", description: "No changes were applied." });
+						return;
+					}
+					toastMessage.success({
+						title: "Rollback complete",
+						description: `${label} generator artifacts were removed.`,
+					});
+					onSuccess?.();
+					setOpen(false);
+				} catch (error) {
+					const message = error instanceof Error ? error.message : "Rollback failed.";
+					toastMessage.error({ title: "Rollback failed", description: message });
+				} finally {
+					setApplying(false);
+				}
+			})();
+		},
+		[canConfirm, dryRun, includeDefinition, label, onSuccess, setOpen, slug],
+	);
 
 	return (
 		<>
@@ -144,24 +158,12 @@ export function GeneratorRollbackDialog({ slug, label, open: openProp, onOpenCha
 
 					<div className="grid gap-4">
 						<div className="flex items-center gap-2">
-							<Checkbox
-								id={`rollback-include-definition-${slug}`}
-								checked={includeDefinition}
-								onCheckedChange={(checked) => {
-									setIncludeDefinition(checked);
-								}}
-							/>
+							<Checkbox id={`rollback-include-definition-${slug}`} checked={includeDefinition} onCheckedChange={handleIncludeDefinitionChange} />
 							<Label htmlFor={`rollback-include-definition-${slug}`}>Also delete the .resource.ts definition</Label>
 						</div>
 
 						<div className="flex items-center gap-2">
-							<Checkbox
-								id={`rollback-dry-run-${slug}`}
-								checked={dryRun}
-								onCheckedChange={(checked) => {
-									setDryRun(checked);
-								}}
-							/>
+							<Checkbox id={`rollback-dry-run-${slug}`} checked={dryRun} onCheckedChange={handleDryRunChange} />
 							<Label htmlFor={`rollback-dry-run-${slug}`}>Dry-run only (preview without applying)</Label>
 						</div>
 

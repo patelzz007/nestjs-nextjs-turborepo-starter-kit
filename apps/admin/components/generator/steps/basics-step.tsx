@@ -21,22 +21,28 @@ export const GeneratorBasicsStep = React.memo(function GeneratorBasicsStep({ dra
 	const nameInvalid = error !== null && modelName.length === 0;
 	const labelInvalid = error !== null && draft.navigationLabel.trim().length === 0;
 
-	const handleNameChange = (event: React.ChangeEvent<HTMLInputElement>): void => {
-		const nextName = event.target.value;
-		onDraftChange({
-			...draft,
-			name: nextName,
-			navigationLabel: draft.navigationLabelTouched ? draft.navigationLabel : suggestNavigationLabel(nextName),
-		});
-	};
+	const handleNameChange = React.useCallback(
+		function handleNameChange(event: React.ChangeEvent<HTMLInputElement>): void {
+			const nextName = event.target.value;
+			onDraftChange({
+				...draft,
+				name: nextName,
+				navigationLabel: draft.navigationLabelTouched ? draft.navigationLabel : suggestNavigationLabel(nextName),
+			});
+		},
+		[draft, onDraftChange],
+	);
 
-	const handleNavigationLabelChange = (event: React.ChangeEvent<HTMLInputElement>): void => {
-		onDraftChange({
-			...draft,
-			navigationLabel: event.target.value,
-			navigationLabelTouched: true,
-		});
-	};
+	const handleNavigationLabelChange = React.useCallback(
+		function handleNavigationLabelChange(event: React.ChangeEvent<HTMLInputElement>): void {
+			onDraftChange({
+				...draft,
+				navigationLabel: event.target.value,
+				navigationLabelTouched: true,
+			});
+		},
+		[draft, onDraftChange],
+	);
 
 	return (
 		<Card>

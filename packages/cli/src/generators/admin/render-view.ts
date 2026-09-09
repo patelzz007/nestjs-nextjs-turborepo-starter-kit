@@ -20,6 +20,7 @@ import {
 	renderViewTableFilters,
 	renderViewTextFilterParsing,
 	renderViewTextFilterState,
+	renderViewTextFilterHandlers,
 	renderViewTextFilterToolbar,
 	resolveTitleField,
 	resolveViewBuildListQueryDeps,
@@ -113,6 +114,7 @@ export function renderAdminView(ir: ResourceIR): string {
 	const manualColumnFiltersBlock = renderViewManualColumnFilters(ir);
 	const handleManualColumnFilterChangeBlock = renderViewHandleManualColumnFilterChange(ir);
 	const tableFiltersBlock = renderViewTableFilters(ir);
+	const textFilterHandlersBlock = renderViewTextFilterHandlers(ir);
 	const textFilterToolbarBlock = renderViewTextFilterToolbar(ir);
 	const dataTableFilterProps = renderViewDataTableFilterProps(ir);
 	const hasTableFilters = hasViewTableFilters(ir);
@@ -405,7 +407,7 @@ ${columnDefs}
 \t\tsetSearch(value);
 \t}, []);
 
-${handleManualColumnFilterChangeBlock.length > 0 ? `${handleManualColumnFilterChangeBlock}\n\n` : ""}${manualColumnFiltersBlock.length > 0 ? `${manualColumnFiltersBlock}\n\n` : ""}${tableFiltersBlock.length > 0 ? `${tableFiltersBlock}\n\n` : ""}${textFilterToolbarBlock.length > 0 ? `${textFilterToolbarBlock}\n\n` : ""}\tconst searchToolbar = ${
+${handleManualColumnFilterChangeBlock.length > 0 ? `${handleManualColumnFilterChangeBlock}\n\n` : ""}${manualColumnFiltersBlock.length > 0 ? `${manualColumnFiltersBlock}\n\n` : ""}${tableFiltersBlock.length > 0 ? `${tableFiltersBlock}\n\n` : ""}${textFilterHandlersBlock.length > 0 ? `${textFilterHandlersBlock}\n\n` : ""}${textFilterToolbarBlock.length > 0 ? `${textFilterToolbarBlock}\n\n` : ""}\tconst searchToolbar = ${
 		hasServerSearch || hasTextFilters
 			? `useMemo(
 \t\t(): React.JSX.Element => (
@@ -421,7 +423,7 @@ ${
 		: ""
 }${hasTextFilters ? "\t\t\t\t{textFilterToolbar}\n" : ""}\t\t\t</div>
 \t\t),
-\t\t[${[hasServerSearch ? "handleSearchChange, search, labels.searchAriaLabel, labels.searchPlaceholder" : "", hasTextFilters ? "textFilterToolbar" : ""].filter((part) => part.length > 0).join(", ")}],
+\t\t[${[hasServerSearch ? "handleSearchChange, search" : "", hasTextFilters ? "textFilterToolbar" : ""].filter((part) => part.length > 0).join(", ")}],
 \t)`
 			: "undefined"
 	};

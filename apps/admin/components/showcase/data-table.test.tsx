@@ -304,6 +304,10 @@ describe("DataTable (shared, TanStack Table v9)", () => {
 		expect(screen.queryByText("Section 11")).toBeNull();
 	});
 
+	function noopManualColumnFilterChange(): void {
+		return undefined;
+	}
+
 	it("hides the client-side search when server pagination is active", () => {
 		render(
 			<DataTable
@@ -313,7 +317,7 @@ describe("DataTable (shared, TanStack Table v9)", () => {
 				pagination={createServerPagination()}
 				searchKeys={["header"]}
 				filters={[{ key: "status", label: "Status", options: [] }]}
-				onManualColumnFilterChange={(): void => undefined}
+				onManualColumnFilterChange={noopManualColumnFilterChange}
 			/>,
 		);
 

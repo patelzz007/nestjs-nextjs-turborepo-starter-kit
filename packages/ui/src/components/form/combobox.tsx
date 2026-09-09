@@ -543,19 +543,20 @@ export interface ComboboxItemProps extends ComboboxPrimitive.Item.Props {
 
 const ComboboxItem = React.forwardRef<HTMLDivElement, ComboboxItemProps>(function ComboboxItem({ className, children, description, ...props }, ref): React.JSX.Element {
 	const context = useComboboxContext();
+
+	const resolveItemClassName = useCallback(
+		(state: ComboboxPrimitive.Item.State): string =>
+			cn(
+				"relative flex w-full cursor-default items-center gap-2 rounded-sm text-sm outline-hidden select-none data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+				resolveCollectionItemActiveClasses(state),
+				resolveCollectionItemDensityClasses(context.size),
+				className,
+			),
+		[context.size, className],
+	);
+
 	return (
-		<ComboboxPrimitive.Item
-			ref={ref}
-			data-slot="combobox-item"
-			className={(state) =>
-				cn(
-					"relative flex w-full cursor-default items-center gap-2 rounded-sm text-sm outline-hidden select-none data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
-					resolveCollectionItemActiveClasses(state),
-					resolveCollectionItemDensityClasses(context.size),
-					className,
-				)
-			}
-			{...props}>
+		<ComboboxPrimitive.Item ref={ref} data-slot="combobox-item" className={resolveItemClassName} {...props}>
 			<span className="min-w-0 flex-1 truncate">
 				{description !== undefined ? (
 					<span className="flex min-w-0 flex-col">
