@@ -3,6 +3,7 @@ import { BadRequestException, Injectable, NotFoundException } from "@nestjs/comm
 import type {
 	AdminCreateMerchantInviteInput,
 	AdminKybUpdateInput,
+	AdminMerchantDetailResponse,
 	AdminMerchantListQuery,
 	AdminRejectRewardInput,
 	MerchantOrgResponse,
@@ -22,7 +23,7 @@ import { MerchantMemberRepository } from "../repositories/merchant-member.reposi
 import { MerchantOrgRepository } from "../repositories/merchant-org.repository";
 import { RewardRepository } from "../repositories/reward.repository";
 import { generateOpaqueToken, sha256Hex } from "../utils/reward-crypto.util";
-import { mapMerchantOrgToResponse, mapRewardToResponse } from "../utils/reward-mapper.util";
+import { mapMerchantOrgToAdminDetailResponse, mapMerchantOrgToResponse, mapRewardToResponse } from "../utils/reward-mapper.util";
 import { MerchantRewardService } from "./merchant-reward.service";
 import { RewardNotificationService } from "./reward-notification.service";
 
@@ -108,6 +109,16 @@ export class RewardsAdminService {
 			supportEmail: this.config.emailFromAddress,
 		});
 		return buildEmailPreviewFromTemplate(entry, template, context, input.email);
+	}
+
+	public async getMerchantDetail(merchantOrgId: string): Promise<AdminMerchantDetailResponse> {
+		const org = await this.merchantOrgRepository.findForAdminDetail(merchantOrgId);
+
+		if (org === null) {
+			throw new NotFoundException({ message: "Merchant not found", error: "MERCHANT_NOT_FOUND" });
+		}
+
+		return mapMerchantOrgToAdminDetailResponse(org);
 	}
 
 	public async listMerchants(query: AdminMerchantListQuery): Promise<PaginatedServiceResult<MerchantOrgResponse>> {

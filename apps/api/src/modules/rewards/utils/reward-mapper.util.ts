@@ -1,6 +1,18 @@
 import type { MerchantOrg, Prisma, Reward } from "@prisma/client";
 
-import { EpochMsSchema, RewardRulesSchema, type EpochMs, type MerchantOrgResponse, type RewardClaimResponse, type RewardResponse, type RewardRules } from "@workspace/shared";
+import {
+	EpochMsSchema,
+	JsonObjectSchema,
+	RewardRulesSchema,
+	type AdminMerchantDetailResponse,
+	type EpochMs,
+	type JsonObject,
+	type MerchantOrgResponse,
+	type RewardClaimResponse,
+	type RewardResponse,
+	type RewardRules,
+} from "@workspace/shared";
+import type { MerchantOrgAdminDetailRow } from "../repositories/merchant-org.repository";
 
 function epochFromDb(value: bigint | number | null | undefined): EpochMs | null {
 	if (value === null || value === undefined) {
@@ -21,6 +33,14 @@ function parseRewardRulesFromDb(value: Prisma.JsonValue | null): RewardRules | n
 	return parsed.success ? parsed.data : null;
 }
 
+function parseKybFieldsFromDb(value: Prisma.JsonValue | null): JsonObject | null {
+	if (value === null) {
+		return null;
+	}
+	const parsed = JsonObjectSchema.safeParse(value);
+	return parsed.success ? parsed.data : null;
+}
+
 export function mapMerchantOrgToResponse(org: MerchantOrg): MerchantOrgResponse {
 	return {
 		id: org.id,
@@ -37,6 +57,20 @@ export function mapMerchantOrgToResponse(org: MerchantOrg): MerchantOrgResponse 
 		updatedAt: epochRequired(org.updatedAt),
 		isDeleted: org.isDeleted,
 		deletedAt: epochFromDb(org.deletedAt),
+	};
+}
+
+export function mapMerchantOrgToAdminDetailResponse(org: MerchantOrgAdminDetailRow): AdminMerchantDetailResponse {
+	const ownerMember = org.members.find((member) => member.role === "OWNER");
+	const base = mapMerchantOrgToResponse(org);
+
+	return {
+		...base,
+		kybFields: parseKybFieldsFromDb(org.kybFields),
+		ownerUserId: ownerMember?.userId ?? null,
+		ownerEmail: ownerMember?.user.email ?? null,
+		ownerFullName: ownerMember?.user.fullName ?? null,
+		memberCount: org._count.members,
 	};
 }
 

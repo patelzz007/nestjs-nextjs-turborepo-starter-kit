@@ -53,12 +53,14 @@ import {
 	AcceptRewardLegalSchema,
 	AdminCreateMerchantInviteSchema,
 	AdminKybUpdatePathInputSchema,
+	AdminMerchantIdParamSchema,
 	AdminMerchantListQuerySchema,
 	AdminRejectRewardPathInputSchema,
 	CreateRewardClaimSchema,
 	MerchantCreateApiKeySchema,
 	MerchantCreateMemberSchema,
 	MerchantCreateRewardSchema,
+	MerchantKybSubmissionSchema,
 	MerchantOnboardingCompleteSchema,
 	MerchantOnboardingValidateTokenSchema,
 	MerchantRedemptionListQuerySchema,
@@ -322,6 +324,10 @@ export const apiContract = {
 	},
 	merchant: {
 		me: defineContract({ method: "GET", path: apiRoutes.merchant.me, input: EmptyInputSchema }),
+		kyb: {
+			get: defineContract({ method: "GET", path: apiRoutes.merchant.kyb, input: EmptyInputSchema }),
+			submit: defineContract({ method: "PATCH", path: apiRoutes.merchant.kyb, input: MerchantKybSubmissionSchema }),
+		},
 		rewards: {
 			list: defineContract({ method: "GET", path: apiRoutes.merchant.rewards.list, input: EmptyInputSchema }),
 			create: defineContract({ method: "POST", path: apiRoutes.merchant.rewards.create, input: MerchantCreateRewardSchema }),
@@ -360,6 +366,11 @@ export const apiContract = {
 		previewInviteEmail: defineContract({ method: "POST", path: apiRoutes.rewardsAdmin.invitesPreviewEmail, input: AdminCreateMerchantInviteSchema }),
 		pendingRewards: defineContract({ method: "GET", path: apiRoutes.rewardsAdmin.rewardsPending, input: EmptyInputSchema }),
 		listMerchants: defineContract({ method: "GET", path: apiRoutes.rewardsAdmin.merchants, input: AdminMerchantListQuerySchema }),
+		getMerchant: defineContract({
+			method: "GET",
+			path: apiRoutes.rewardsAdmin.merchantDetail.path,
+			input: AdminMerchantIdParamSchema,
+		}),
 		approveReward: defineContract({
 			method: "POST",
 			path: apiRoutes.rewardsAdmin.rewardApprove.path,

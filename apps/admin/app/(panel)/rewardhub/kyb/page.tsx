@@ -1,8 +1,10 @@
+import { createAdminServerCaller } from "@/lib/admin-server-api";
+
 import KybReviewPanel from "./kyb-review-panel";
 
 export const dynamic = "force-dynamic";
 
-/** `/rewardhub/kyb` — update merchant KYB verification status. */
+/** `/rewardhub/kyb` — review merchant KYB submissions and update verification status. */
 export default async function RewardHubKybPage({
 	searchParams,
 }: {
@@ -12,5 +14,9 @@ export default async function RewardHubKybPage({
 	const merchantOrgIdParam = params.merchantOrgId;
 	const initialMerchantOrgId = typeof merchantOrgIdParam === "string" ? merchantOrgIdParam : undefined;
 
-	return <KybReviewPanel initialMerchantOrgId={initialMerchantOrgId} />;
+	const server = createAdminServerCaller();
+	const pendingResult = await Promise.allSettled([server.rewardsAdmin.listMerchants.query({ page: 1, limit: 50, kybStatus: "PENDING" })]);
+	const pendingMerchants = pendingResult[0].status === "fulfilled" ? pendingResult[0].value.data : undefined;
+
+	return <KybReviewPanel initialMerchantOrgId={initialMerchantOrgId} initialPendingMerchants={pendingMerchants} />;
 }

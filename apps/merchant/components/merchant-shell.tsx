@@ -9,7 +9,7 @@ import { MerchantSidebarPanel } from "@/components/layout/merchant-sidebar-panel
 import { MerchantTopbar } from "@/components/layout/merchant-topbar";
 import type { ServerUser } from "@/lib/auth-server";
 import { stubApiMeta } from "@/lib/api-envelope";
-import { MERCHANT_ME_QUERY_KEY } from "@workspace/client/lib/auth/invalidate-session-auth";
+import { MERCHANT_ME_QUERY_OPTIONS } from "@/lib/merchant-me-query";
 import { useMerchantOrg } from "@/lib/merchant-root-provider";
 import { useAuth } from "@workspace/client/lib/auth";
 import type { MerchantMembershipResponse } from "@workspace/shared";
@@ -19,7 +19,6 @@ import { isMobileViewport } from "@workspace/ui/hooks/use-mobile";
 import { useMerchantCommandPaletteStore } from "@/stores/command-palette-store";
 import { useMerchantSidebarStore } from "@/stores/sidebar-store";
 import { SidebarPathSync } from "@workspace/client/lib/sidebar/sidebar-path-sync";
-import { useQueryClient } from "@tanstack/react-query";
 import * as React from "react";
 
 export interface MerchantShellProps {
@@ -59,7 +58,6 @@ export function MerchantShell({
 	initialIsImpersonating = false,
 }: MerchantShellProps): React.JSX.Element {
 	const { api } = useAuth();
-	const queryClient = useQueryClient();
 	const { merchantOrgId, setMerchantOrgId } = useMerchantOrg();
 	const { isOpen: sidebarOpen, open: openSidebar, close: closeSidebar } = useMerchantSidebarControl();
 
@@ -76,7 +74,7 @@ export function MerchantShell({
 
 	const initialMeData = React.useMemo(
 		() =>
-			initialMemberships !== undefined
+			initialMemberships !== undefined && initialMemberships.length > 0
 				? {
 						success: true as const,
 						data: [...initialMemberships],
@@ -90,50 +88,44 @@ export function MerchantShell({
 		{},
 		{
 			initialData: initialMeData,
-			staleTime: 0,
+			...MERCHANT_ME_QUERY_OPTIONS,
 		},
 	);
 
 	const memberships = React.useMemo((): readonly MerchantMembershipResponse[] => membershipsQuery.data?.data ?? [], [membershipsQuery.data?.data]);
-
-	React.useEffect((): void => {
-		if (initialMemberships === undefined) {
-			return;
-		}
-		queryClient.setQueryData(MERCHANT_ME_QUERY_KEY, {
-			success: true as const,
-			data: [...initialMemberships],
-			meta: stubApiMeta(),
-		});
-	}, [initialMemberships, queryClient]);
 
 	React.useLayoutEffect((): void => {
 		void useMerchantCommandPaletteStore.persist.rehydrate();
 		void useMerchantSidebarStore.persist.rehydrate();
 	}, []);
 
+	const syncedOrgRef = React.useRef<string | undefined>(undefined);
+
 	React.useEffect((): void => {
 		if (initialMerchantOrgId !== undefined) {
-			if (merchantOrgId !== initialMerchantOrgId) {
+			if (syncedOrgRef.current !== initialMerchantOrgId && merchantOrgId !== initialMerchantOrgId) {
+				syncedOrgRef.current = initialMerchantOrgId;
 				setMerchantOrgId(initialMerchantOrgId);
 			}
 			return;
 		}
 		const firstMembership = memberships[0];
-		if (merchantOrgId === undefined && firstMembership !== undefined) {
+		if (firstMembership !== undefined && merchantOrgId === undefined && syncedOrgRef.current !== firstMembership.merchantOrgId) {
+			syncedOrgRef.current = firstMembership.merchantOrgId;
 			setMerchantOrgId(firstMembership.merchantOrgId);
 		}
 	}, [initialMerchantOrgId, memberships, merchantOrgId, setMerchantOrgId]);
 
 	const handleStoreChange = React.useCallback(
 		(orgId: string): void => {
-			setMerchantOrgId(orgId);
+			setMerchantOrgId(orgId, { refresh: true });
 		},
 		[setMerchantOrgId],
 	);
 
 	const hasMemberships = memberships.length > 0;
-	const showMembershipGate = initialMemberships !== undefined ? !hasMemberships : membershipsQuery.isSuccess && !hasMemberships;
+	const showMembershipGate = membershipsQuery.isFetched && !hasMemberships;
+	const showMembershipLoading = !hasMemberships && membershipsQuery.isLoading;
 
 	return (
 		<MerchantBreadcrumbProvider>
@@ -146,8 +138,9 @@ export function MerchantShell({
 				sidebar={<MerchantSidebarContent memberships={memberships} merchantOrgId={merchantOrgId} onStoreChange={handleStoreChange} />}
 				topbar={<MerchantTopbar initialUser={initialUser} />}
 				contentClassName="space-y-6">
-				{membershipsQuery.isLoading && initialMemberships === undefined ? <p className="text-sm text-muted-foreground">Loading merchant access…</p> : null}
-				{showMembershipGate ? (
+				{showMembershipLoading ? (
+					<p className="text-sm text-muted-foreground">Loading merchant access…</p>
+				) : showMembershipGate ? (
 					<div className="rounded-xl border border-dashed border-border bg-card p-10 text-center">
 						<p className="text-sm font-medium text-foreground">No merchant membership found</p>
 						<p className="mt-2 text-sm text-muted-foreground">Ask an admin for an invite, or impersonate a merchant owner from the panel below.</p>

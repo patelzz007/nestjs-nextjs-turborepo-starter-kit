@@ -24,10 +24,10 @@ const COOKIE_CLEAR_OPTIONS = {
 	sameSite: "lax" as const,
 };
 const PROTECTED_ROUTE_PREFIXES: readonly string[] = ["/analytics", "/rewards", "/redemptions", "/api-keys", "/settings"];
-const AUTH_ROUTES: readonly string[] = ["/auth/login", "/auth/verify-email", "/auth/reset-password"];
+const AUTH_ROUTES: readonly string[] = ["/auth/login", "/auth/verify-email", "/auth/reset-password", "/onboarding"];
 
 /** Token links must run even when the merchant session cookie is already set. */
-const TOKEN_AUTH_ROUTE_PREFIXES: readonly string[] = ["/auth/verify-email", "/auth/reset-password"];
+const TOKEN_AUTH_ROUTE_PREFIXES: readonly string[] = ["/auth/verify-email", "/auth/reset-password", "/onboarding"];
 
 function isTokenAuthRoute(pathname: string): boolean {
 	return TOKEN_AUTH_ROUTE_PREFIXES.some((route) => pathname.startsWith(route));

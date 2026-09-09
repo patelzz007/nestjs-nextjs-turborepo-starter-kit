@@ -212,6 +212,18 @@ export function LoginForm({ emailPlaceholder, redirectPath, demoAccounts, footer
 	const resolvedPlaceholder: string = emailPlaceholder ?? (mode === "admin" ? "admin@example.com" : "m@example.com");
 	const resolvedRedirect: string = redirectPath ?? (mode === "admin" ? "/" : "/hello");
 
+	const navigateAfterLogin = useCallback(
+		(targetPath: string): void => {
+			if (mode === "merchant") {
+				router.push(targetPath);
+				router.refresh();
+				return;
+			}
+			router.push(targetPath);
+		},
+		[mode, router],
+	);
+
 	const handleEmailChange = useCallback((e: React.ChangeEvent<HTMLInputElement>): void => {
 		setEmail(e.target.value);
 	}, []);
@@ -252,9 +264,9 @@ export function LoginForm({ emailPlaceholder, redirectPath, demoAccounts, footer
 				isEmailVerified: data.user.isEmailVerified,
 				roles: data.user.roles,
 			});
-			router.push(resolvedRedirect);
+			navigateAfterLogin(resolvedRedirect);
 		},
-		[authLogin, requireAdminAccess, resolvedRedirect, router],
+		[authLogin, navigateAfterLogin, requireAdminAccess, resolvedRedirect],
 	);
 
 	const completeRestrictedEnrollment = useCallback(
@@ -272,9 +284,9 @@ export function LoginForm({ emailPlaceholder, redirectPath, demoAccounts, footer
 			}
 
 			markEnrollmentMessage(response.message);
-			router.push(getEnrollmentRedirectPath(mode, response.enrollmentReason));
+			navigateAfterLogin(getEnrollmentRedirectPath(mode, response.enrollmentReason));
 		},
-		[authLogin, mode, router],
+		[authLogin, mode, navigateAfterLogin],
 	);
 
 	const handleLoginResponse = useCallback(

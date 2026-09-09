@@ -2,6 +2,7 @@
 
 import { useMerchantOrg } from "@/lib/merchant-root-provider";
 import { stubApiMeta } from "@/lib/api-envelope";
+import { MERCHANT_ME_QUERY_OPTIONS } from "@/lib/merchant-me-query";
 import { resolveActiveMerchantMembership, resolveMerchantCapabilities } from "@/lib/merchant-server-capabilities";
 import { useAuth } from "@workspace/client/lib/auth";
 import { hasCapability, type CapabilitySlug, type MerchantMembershipResponse } from "@workspace/shared";
@@ -23,7 +24,7 @@ export function useMerchantCapabilities(initialMemberships?: readonly MerchantMe
 
 	const initialMeData = React.useMemo(
 		() =>
-			initialMemberships !== undefined
+			initialMemberships !== undefined && initialMemberships.length > 0
 				? {
 						success: true as const,
 						data: [...initialMemberships],
@@ -37,7 +38,7 @@ export function useMerchantCapabilities(initialMemberships?: readonly MerchantMe
 		{},
 		{
 			initialData: initialMeData,
-			staleTime: 0,
+			...MERCHANT_ME_QUERY_OPTIONS,
 		},
 	);
 

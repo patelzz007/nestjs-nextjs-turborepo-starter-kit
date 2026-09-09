@@ -85,11 +85,13 @@ import {
 	AdminMerchantInviteCreatedResponseSchema,
 	MerchantApiKeyCreatedSchema,
 	MerchantApiKeySummarySchema,
+	MerchantKybProfileResponseSchema,
 	MerchantMemberCreatedResponseSchema,
 	MerchantMembershipResponseSchema,
 	MerchantOnboardingCompleteResponseSchema,
 	MerchantOnboardingInvitePreviewSchema,
 	MerchantRoleCapabilityGrantSchema,
+	AdminMerchantDetailResponseSchema,
 	MerchantOrgResponseSchema,
 	MerchantRedemptionListItemSchema,
 	MerchantAnalyticsResponseSchema,
@@ -652,6 +654,16 @@ export const apiRouter = {
 			response: envelope(z.array(MerchantMembershipResponseSchema)),
 			queryKey: () => ["merchant", "me"],
 		}),
+		kyb: {
+			get: defineQuery(apiContract.merchant.kyb.get, {
+				response: envelope(MerchantKybProfileResponseSchema),
+				queryKey: () => ["merchant", "kyb"],
+			}),
+			submit: defineMutation(apiContract.merchant.kyb.submit, {
+				response: envelope(MerchantKybProfileResponseSchema),
+				queryKey: () => ["merchant", "kyb", "submit"],
+			}),
+		},
 		rewards: {
 			list: defineQuery(apiContract.merchant.rewards.list, {
 				response: envelope(z.array(RewardResponseSchema)),
@@ -718,6 +730,10 @@ export const apiRouter = {
 		listMerchants: defineQuery(apiContract.rewardsAdmin.listMerchants, {
 			response: envelope(z.array(MerchantOrgResponseSchema), ApiPaginatedMetaSchema),
 			queryKey: ({ page, cursor, limit, search, city, kybStatus, status }) => ["rewards-admin", "merchants", page, cursor, limit, search, city, kybStatus, status],
+		}),
+		getMerchant: defineQuery(apiContract.rewardsAdmin.getMerchant, {
+			response: envelope(AdminMerchantDetailResponseSchema),
+			queryKey: ({ merchantOrgId }) => ["rewards-admin", "merchant", merchantOrgId],
 		}),
 		createInvite: defineMutation(apiContract.rewardsAdmin.createInvite, {
 			response: envelope(AdminMerchantInviteCreatedResponseSchema),

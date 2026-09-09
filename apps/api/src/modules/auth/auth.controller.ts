@@ -274,7 +274,7 @@ export class AuthController {
 
 	@Public()
 	@RlsBypass()
-	@Throttle({ strict: { ttl: 60000, limit: 10 } })
+	@SkipAuthThrottle()
 	@Post("/verify-email")
 	@ApiOperation({ summary: "Verify email address using a verification token" })
 	@ApiOkResponse({ type: WrappedVerifyEmailResponse, description: "Email verified" })

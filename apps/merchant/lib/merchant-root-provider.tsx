@@ -1,14 +1,20 @@
 "use client";
 
 import { MerchantSessionBootstrap } from "@/components/merchant-session-bootstrap";
+import { isMerchantAuthPath } from "@/lib/auth-routes";
 import { writeMerchantOrgCookie } from "@/lib/merchant-org";
 import { ClientAuthWrapper } from "@workspace/client/lib/auth/client-auth-wrapper";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import * as React from "react";
+
+export interface SetMerchantOrgIdOptions {
+	/** When true, re-runs server components after switching org. Defaults to false. */
+	readonly refresh?: boolean;
+}
 
 export interface MerchantOrgContextValue {
 	readonly merchantOrgId: string | undefined;
-	readonly setMerchantOrgId: (orgId: string) => void;
+	readonly setMerchantOrgId: (orgId: string, options?: SetMerchantOrgIdOptions) => void;
 }
 
 const MerchantOrgContext = React.createContext<MerchantOrgContextValue | null>(null);
@@ -37,6 +43,7 @@ export interface MerchantRootProviderProps {
  */
 export function MerchantRootProvider({ children, initialMerchantOrgId }: MerchantRootProviderProps): React.JSX.Element {
 	const router = useRouter();
+	const pathname = usePathname();
 	const [merchantOrgId, setMerchantOrgIdState] = React.useState<string | undefined>(initialMerchantOrgId);
 
 	React.useEffect((): void => {
@@ -46,12 +53,17 @@ export function MerchantRootProvider({ children, initialMerchantOrgId }: Merchan
 	}, [initialMerchantOrgId]);
 
 	const setMerchantOrgId = React.useCallback(
-		(orgId: string): void => {
+		(orgId: string, options?: SetMerchantOrgIdOptions): void => {
+			if (merchantOrgId === orgId) {
+				return;
+			}
 			setMerchantOrgIdState(orgId);
 			writeMerchantOrgCookie(orgId);
-			router.refresh();
+			if (options?.refresh === true) {
+				router.refresh();
+			}
 		},
-		[router],
+		[merchantOrgId, router],
 	);
 
 	const extraHeaders = React.useMemo((): Record<string, string> | undefined => {
@@ -69,8 +81,12 @@ export function MerchantRootProvider({ children, initialMerchantOrgId }: Merchan
 		[merchantOrgId, setMerchantOrgId],
 	);
 
+	const shouldRedirectOnUnauthorized = React.useCallback((): boolean => {
+		return !isMerchantAuthPath(pathname);
+	}, [pathname]);
+
 	return (
-		<ClientAuthWrapper cookieNames={MERCHANT_COOKIE_NAMES} clientType="merchant" extraHeaders={extraHeaders}>
+		<ClientAuthWrapper cookieNames={MERCHANT_COOKIE_NAMES} clientType="merchant" extraHeaders={extraHeaders} shouldRedirectOnUnauthorized={shouldRedirectOnUnauthorized}>
 			<MerchantSessionBootstrap />
 			<MerchantOrgContext.Provider value={contextValue}>{children}</MerchantOrgContext.Provider>
 		</ClientAuthWrapper>

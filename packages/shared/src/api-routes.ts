@@ -169,6 +169,7 @@ export const apiRoutes = {
 	},
 	merchant: {
 		me: "/merchant/me",
+		kyb: "/merchant/kyb",
 		rewards: {
 			list: "/merchant/rewards",
 			create: "/merchant/rewards",
@@ -195,6 +196,7 @@ export const apiRoutes = {
 		invitesPreviewEmail: "/admin/invites/preview-email",
 		rewardsPending: "/admin/rewards/pending",
 		merchants: "/admin/merchants",
+		merchantDetail: { path: "/admin/merchants/:merchantOrgId", params: ["merchantOrgId"] },
 		rewardApprove: { path: "/admin/rewards/:rewardId/approve", params: ["rewardId"] },
 		rewardReject: { path: "/admin/rewards/:rewardId/reject", params: ["rewardId"] },
 		merchantKyb: { path: "/admin/merchants/:merchantOrgId/kyb", params: ["merchantOrgId"] },

@@ -8,6 +8,7 @@ import {
 	MerchantCreateApiKeySchema,
 	MerchantCreateMemberSchema,
 	MerchantCreateRewardSchema,
+	MerchantKybSubmissionSchema,
 	MerchantOnboardingCompleteSchema,
 	MerchantOnboardingValidateTokenSchema,
 	MerchantUpdateRewardSchema,
@@ -42,6 +43,8 @@ export class MerchantCreateApiKeyDto extends createZodDto(MerchantCreateApiKeySc
 export class MerchantOnboardingValidateTokenDto extends createZodDto(MerchantOnboardingValidateTokenSchema) {}
 
 export class MerchantOnboardingCompleteDto extends createZodDto(MerchantOnboardingCompleteSchema) {}
+
+export class MerchantKybSubmissionDto extends createZodDto(MerchantKybSubmissionSchema) {}
 
 export class MerchantCreateMemberDto extends createZodDto(MerchantCreateMemberSchema) {}
 

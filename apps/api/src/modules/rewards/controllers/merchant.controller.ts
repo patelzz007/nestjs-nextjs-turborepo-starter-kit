@@ -1,17 +1,19 @@
 import { Body, Controller, Get, Headers, Param, Patch, Post, Query } from "@nestjs/common";
 import { ApiBearerAuth, ApiBody, ApiHeader, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { z } from "zod";
-import type { MerchantMembershipResponse } from "@workspace/shared";
+import type { MerchantKybProfileResponse, MerchantKybSubmissionInput, MerchantMembershipResponse } from "@workspace/shared";
 
 import { apiContract, apiPath, MerchantUpdateRewardSchema, UuidParamSchema } from "@workspace/shared";
 import { ZodValidationPipe } from "../../../common/pipes/zod-validation.pipe";
 import { readFirstHeader } from "../../../common/utils/http-headers";
+import { SkipAuthThrottle } from "../../auth/decorators/skip-auth-throttle.decorator";
 import { GetUser } from "../../auth/decorators/get-user.decorator";
 import type { AccessTokenPayload } from "../../auth/services/token.service";
 
-import { MerchantCreateApiKeyDto, MerchantCreateRewardDto, MerchantUpdateRewardDto, RewardsEmptyBodyDto } from "../dtos/rewards.dto";
+import { MerchantCreateApiKeyDto, MerchantCreateRewardDto, MerchantKybSubmissionDto, MerchantUpdateRewardDto, RewardsEmptyBodyDto } from "../dtos/rewards.dto";
 import { MerchantApiKeyService } from "../services/merchant-api-key.service";
 import { MerchantContextService } from "../services/merchant-context.service";
+import { MerchantKybService } from "../services/merchant-kyb.service";
 import { MerchantRewardService } from "../services/merchant-reward.service";
 import { RewardsAnalyticsService } from "../services/rewards-analytics.service";
 
@@ -27,11 +29,43 @@ const MERCHANT_ORG_HEADER = {
 export class MerchantProfileController {
 	public constructor(private readonly merchantContext: MerchantContextService) {}
 
+	@SkipAuthThrottle()
 	@Get()
 	@ApiOperation({ summary: "List merchant org memberships for the current user" })
 	@ApiOkResponse({ description: "Merchant memberships" })
 	public listMemberships(@GetUser() user: AccessTokenPayload): Promise<MerchantMembershipResponse[]> {
 		return this.merchantContext.listMembershipsForUser(user.sub, { isImpersonating: user.isImpersonating === true });
+	}
+}
+
+@ApiTags("Merchant KYB")
+@ApiBearerAuth()
+@Controller(apiPath("/merchant/kyb"))
+export class MerchantKybController {
+	public constructor(private readonly merchantKyb: MerchantKybService) {}
+
+	@SkipAuthThrottle()
+	@Get()
+	@ApiHeader(MERCHANT_ORG_HEADER)
+	@ApiOperation({ summary: "Get the active merchant org KYB profile" })
+	@ApiOkResponse({ description: "Merchant KYB profile" })
+	public getProfile(@GetUser() user: AccessTokenPayload, @Headers() headers: Record<string, string | string[] | undefined>): Promise<MerchantKybProfileResponse> {
+		const orgId = readFirstHeader(headers["x-merchant-org-id"]);
+		return this.merchantKyb.getProfile(user.sub, orgId);
+	}
+
+	@Patch()
+	@ApiHeader(MERCHANT_ORG_HEADER)
+	@ApiOperation({ summary: "Submit or resubmit business verification details (owner only)" })
+	@ApiBody({ type: MerchantKybSubmissionDto })
+	@ApiOkResponse({ description: "Updated merchant KYB profile" })
+	public submitKyb(
+		@GetUser() user: AccessTokenPayload,
+		@Headers() headers: Record<string, string | string[] | undefined>,
+		@Body(new ZodValidationPipe(apiContract.merchant.kyb.submit.input)) body: MerchantKybSubmissionInput,
+	): Promise<MerchantKybProfileResponse> {
+		const orgId = readFirstHeader(headers["x-merchant-org-id"]);
+		return this.merchantKyb.submitKyb(user.sub, orgId, body);
 	}
 }
 

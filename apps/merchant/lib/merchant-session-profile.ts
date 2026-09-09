@@ -16,6 +16,7 @@ export function useMerchantSessionProfile(): MerchantSessionProfile {
 	const meQuery = api.auth.me.useQuery(undefined, {
 		enabled: user !== null,
 		retry: false,
+		staleTime: 60_000,
 	});
 
 	const profile = meQuery.data?.data;

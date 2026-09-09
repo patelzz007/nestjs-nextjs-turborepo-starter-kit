@@ -14,6 +14,7 @@ export function MerchantSessionBootstrap(): null {
 	const meQuery = api.auth.me.useQuery(undefined, {
 		enabled: user !== null,
 		retry: false,
+		staleTime: 60_000,
 	});
 
 	React.useEffect((): void => {
@@ -21,8 +22,11 @@ export function MerchantSessionBootstrap(): null {
 		if (profile === undefined) {
 			return;
 		}
+		if (user?.id === profile.id && user.isEmailVerified === profile.isEmailVerified) {
+			return;
+		}
 		login(toAuthUser(profile));
-	}, [login, meQuery.data?.data]);
+	}, [login, meQuery.data?.data, user?.id, user?.isEmailVerified]);
 
 	return null;
 }

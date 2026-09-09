@@ -8,6 +8,7 @@ import { ConsumerRewardsController } from "./controllers/consumer-rewards.contro
 import {
 	MerchantApiKeysController,
 	MerchantAnalyticsController,
+	MerchantKybController,
 	MerchantProfileController,
 	MerchantRedemptionsController,
 	MerchantRewardsController,
@@ -25,6 +26,7 @@ import {
 import { MerchantApiKeyGuard } from "./guards/merchant-api-key.guard";
 import { ClaimService } from "./services/claim.service";
 import { ConsumerRewardsService } from "./services/consumer-rewards.service";
+import { MerchantKybService } from "./services/merchant-kyb.service";
 import { MerchantMemberService } from "./services/merchant-member.service";
 import { MerchantOnboardingService } from "./services/merchant-onboarding.service";
 import { MerchantApiKeyService } from "./services/merchant-api-key.service";
@@ -49,6 +51,7 @@ const rewardsQueueImports = redisUrl !== undefined && redisUrl.length > 0 ? [Rew
 		RewardNotificationsController,
 		RedemptionsController,
 		MerchantProfileController,
+		MerchantKybController,
 		MerchantOnboardingController,
 		MerchantMembersController,
 		MerchantRewardsController,
@@ -67,6 +70,7 @@ const rewardsQueueImports = redisUrl !== undefined && redisUrl.length > 0 ? [Rew
 		RewardOtpService,
 		RedemptionService,
 		MerchantApiKeyService,
+		MerchantKybService,
 		MerchantMemberService,
 		MerchantOnboardingService,
 		RewardsAdminService,

@@ -381,10 +381,25 @@ export const MerchantOnboardingInvitePreviewSchema = z
 		businessName: z.string(),
 		city: PilotCitySchema,
 		expiresAt: EpochMsSchema,
+		hasExistingAccount: z.boolean(),
 	})
 	.strict();
 
 export type MerchantOnboardingInvitePreview = z.output<typeof MerchantOnboardingInvitePreviewSchema>;
+
+/** Business verification fields merchants submit for KYB review. */
+export const MerchantKybSubmissionSchema = z
+	.object({
+		legalName: z.string().min(1).max(200),
+		addressText: z.string().min(1).max(500),
+		contactPhone: z.string().min(5).max(20),
+		registrationNo: z.string().min(1).max(100),
+		taxId: z.string().min(1).max(100),
+		documentType: z.string().min(1).max(100),
+	})
+	.strict();
+
+export type MerchantKybSubmissionInput = z.output<typeof MerchantKybSubmissionSchema>;
 
 export const MerchantOnboardingCompleteSchema = z
 	.object({
@@ -392,9 +407,27 @@ export const MerchantOnboardingCompleteSchema = z
 		password: strongPassword,
 		fullName: z.string().min(2).max(200),
 	})
+	.extend(MerchantKybSubmissionSchema.shape)
 	.strict();
 
 export type MerchantOnboardingCompleteInput = z.output<typeof MerchantOnboardingCompleteSchema>;
+
+export const MerchantKybProfileResponseSchema = z
+	.object({
+		merchantOrgId: z.uuid(),
+		businessName: z.string(),
+		legalName: z.string().nullable(),
+		addressText: z.string().nullable(),
+		contactPhone: z.string().nullable(),
+		contactEmail: z.string(),
+		city: PilotCitySchema,
+		kybStatus: KybStatusSchema,
+		kybFields: JsonObjectSchema.nullable(),
+		status: MerchantOrgStatusSchema,
+	})
+	.strict();
+
+export type MerchantKybProfileResponse = z.output<typeof MerchantKybProfileResponseSchema>;
 
 export const MerchantOnboardingCompleteResponseSchema = z
 	.object({
@@ -470,6 +503,14 @@ export const AdminKybUpdatePathInputSchema = AdminKybUpdateSchema.extend({
 
 export type AdminKybUpdatePathInput = z.output<typeof AdminKybUpdatePathInputSchema>;
 
+export const AdminMerchantIdParamSchema = z
+	.object({
+		merchantOrgId: z.uuid(),
+	})
+	.strict();
+
+export type AdminMerchantIdParam = z.output<typeof AdminMerchantIdParamSchema>;
+
 export const AdminMerchantInviteCreatedResponseSchema = z
 	.object({
 		inviteId: z.uuid(),
@@ -498,6 +539,17 @@ export const MerchantOrgResponseSchema = BaseResponseSchema.extend({
 });
 
 export type MerchantOrgResponse = z.output<typeof MerchantOrgResponseSchema>;
+
+/** Admin merchant detail for KYB review — includes verification payload and owner context. */
+export const AdminMerchantDetailResponseSchema = MerchantOrgResponseSchema.extend({
+	kybFields: JsonObjectSchema.nullable(),
+	ownerUserId: z.uuid().nullable(),
+	ownerEmail: z.string().nullable(),
+	ownerFullName: z.string().nullable(),
+	memberCount: z.number().int().nonnegative(),
+});
+
+export type AdminMerchantDetailResponse = z.output<typeof AdminMerchantDetailResponseSchema>;
 
 export const MerchantMembershipResponseSchema = z
 	.object({

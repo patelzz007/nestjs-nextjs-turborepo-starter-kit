@@ -1,6 +1,6 @@
-import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from "@nestjs/common";
-import type { MerchantOnboardingCompleteInput, MerchantOnboardingCompleteResponse, MerchantOnboardingInvitePreview } from "@workspace/shared";
-import { EpochMsSchema } from "@workspace/shared";
+import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import type { JsonObject, MerchantOnboardingCompleteInput, MerchantOnboardingCompleteResponse, MerchantOnboardingInvitePreview } from "@workspace/shared";
+import { EpochMsSchema, JsonObjectSchema, nowEpochMs } from "@workspace/shared";
 
 import { CryptoService } from "../../auth/services/crypto.service";
 import { EmailVerificationService } from "../../auth/services/email-verification.service";
@@ -37,11 +37,13 @@ export class MerchantOnboardingService {
 
 	public async validateInviteToken(token: string): Promise<MerchantOnboardingInvitePreview> {
 		const invite = await this.findValidInvite(token);
+		const existingUser = await this.rewardUserRepository.findOnboardingByEmail(invite.email);
 		return {
 			email: invite.email,
 			businessName: invite.businessName,
 			city: invite.city,
 			expiresAt: EpochMsSchema.parse(invite.expiresAt),
+			hasExistingAccount: existingUser !== null,
 		};
 	}
 
@@ -68,7 +70,7 @@ export class MerchantOnboardingService {
 		} else {
 			const passwordMatches = await this.cryptoService.compare(input.password, existingUser.passwordHash);
 			if (!passwordMatches) {
-				throw new UnauthorizedException("Invalid password for this email address");
+				throw new BadRequestException("Invalid password for this email address");
 			}
 
 			await this.userProvisioning.ensureDefaultConsumerRole(existingUser.id);
@@ -92,11 +94,21 @@ export class MerchantOnboardingService {
 			};
 		}
 
+		const kybFields: JsonObject = JsonObjectSchema.parse({
+			registrationNo: input.registrationNo.trim(),
+			taxId: input.taxId.trim(),
+			documentType: input.documentType.trim(),
+			submittedAt: nowEpochMs(),
+		});
 		const merchantOrg = await this.merchantOrgRepository.createWithOwner({
 			businessName: invite.businessName,
 			city: invite.city,
 			contactEmail: invite.email,
 			userId,
+			legalName: input.legalName.trim(),
+			addressText: input.addressText.trim(),
+			contactPhone: input.contactPhone.trim(),
+			kybFields,
 		});
 
 		await this.markInviteAccepted(invite.id, userId, merchantOrg.id);

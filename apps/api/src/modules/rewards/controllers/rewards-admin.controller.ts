@@ -110,6 +110,16 @@ export class RewardsAdminMerchantsController {
 		return this.rewardsAdminService.listMerchants(query);
 	}
 
+	@RequirePermission("LIST", "MERCHANT_ORG")
+	@Get(":merchantOrgId")
+	@ApiOperation({ summary: "Get merchant organization detail for KYB review" })
+	@ApiOkResponse({ description: "Merchant org detail with KYB payload" })
+	public getMerchant(
+		@Param(new ZodValidationPipe(z.object({ merchantOrgId: UuidParamSchema }).strict())) params: { merchantOrgId: string },
+	): ReturnType<RewardsAdminService["getMerchantDetail"]> {
+		return this.rewardsAdminService.getMerchantDetail(params.merchantOrgId);
+	}
+
 	@RequirePermission("MANAGE", "MERCHANT_ORG")
 	@Patch(":merchantOrgId/kyb")
 	@ApiOperation({ summary: "Update merchant KYB status" })
