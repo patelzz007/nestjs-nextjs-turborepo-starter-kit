@@ -1,7 +1,7 @@
 "use client";
 
-import { useAuth } from "@workspace/client/lib/auth";
 import { toAuthUser } from "@/lib/map-auth-user";
+import { useAuth } from "@workspace/client/lib/auth";
 import * as React from "react";
 
 /**
@@ -12,10 +12,11 @@ import * as React from "react";
  * Without this check the UI can look "logged in" while no session exists.
  */
 export function WebSessionBootstrap(): null {
-	const { user, login, api } = useAuth();
+	const { user, login, api, sessionRevalidationEnabled } = useAuth();
+	const sessionSyncEnabled = user !== null && sessionRevalidationEnabled;
 
 	const meQuery = api.auth.me.useQuery(undefined, {
-		enabled: user !== null,
+		enabled: sessionSyncEnabled,
 		retry: false,
 	});
 

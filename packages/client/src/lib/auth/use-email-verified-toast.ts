@@ -6,14 +6,12 @@ import { useEffect, useRef } from "react";
 
 import { consumeEmailVerifiedToast } from "./email-verified-toast";
 import { useAuth } from "./index";
-import { toAuthUser } from "./map-auth-user";
-
-const AUTH_ME_QUERY_KEY: readonly ["auth", "me"] = ["auth", "me"];
+import { syncSessionAfterEmailVerification } from "./sync-session-after-email-verification";
 
 /** Shows a one-time success toast and refreshes the session after email verification. */
 export function useEmailVerifiedToast(): void {
 	const queryClient = useQueryClient();
-	const { api, login, user } = useAuth();
+	const { api, login } = useAuth();
 	const handledRef = useRef(false);
 
 	useEffect((): void => {
@@ -27,19 +25,8 @@ export function useEmailVerifiedToast(): void {
 			description: "Your email address has been successfully verified.",
 		});
 
-		if (user !== null) {
-			login({ ...user, isEmailVerified: true });
-		}
-
 		void (async (): Promise<void> => {
-			await queryClient.invalidateQueries({ queryKey: AUTH_ME_QUERY_KEY });
-			try {
-				const meResponse = await api.auth.me.fetchOrThrow(undefined);
-				login(toAuthUser(meResponse.data));
-				queryClient.setQueryData(AUTH_ME_QUERY_KEY, meResponse);
-			} catch {
-				// Optimistic badge update remains when refetch fails.
-			}
+			await syncSessionAfterEmailVerification(api, login, queryClient);
 		})();
-	}, [api.auth.me, login, queryClient, user]);
+	}, [api, login, queryClient]);
 }

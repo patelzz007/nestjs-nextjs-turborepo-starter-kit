@@ -18,39 +18,40 @@ export const MerchantOnboardingStepper = React.memo(function MerchantOnboardingS
 	steps,
 	currentStepId,
 	completedStepIds,
-}: MerchantOnboardingStepperProps): React.JSX.Element {
-	const currentIndex = steps.findIndex((step) => step.id === currentStepId);
+}: MerchantOnboardingStepperProps): React.JSX.Element | null {
+	const currentIndex = Math.max(
+		0,
+		steps.findIndex((step) => step.id === currentStepId),
+	);
+	const currentStep = steps[currentIndex];
+
+	if (currentStep === undefined || steps.length === 0) {
+		return null;
+	}
 
 	return (
-		<nav aria-label="Onboarding progress" className="w-full">
-			<ol className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+		<nav aria-label={`Onboarding step ${String(currentIndex + 1)} of ${String(steps.length)}: ${currentStep.label}`} className="w-full space-y-2">
+			<div className="flex items-baseline justify-between gap-3">
+				<p className="text-sm font-medium text-foreground">{currentStep.label}</p>
+				<p className="shrink-0 text-xs text-muted-foreground tabular-nums">
+					{currentIndex + 1} / {steps.length}
+				</p>
+			</div>
+
+			<ol className="flex gap-1">
 				{steps.map((step, index) => {
 					const isComplete = completedStepIds.has(step.id);
 					const isCurrent = step.id === currentStepId;
-					const isUpcoming = index > currentIndex;
+					const isFilled = index <= currentIndex;
 
-					const stepClassName = isCurrent
-						? "rounded-xl border border-primary bg-primary/5 px-3 py-3 shadow-xs transition-colors"
-						: isUpcoming
-							? "rounded-xl border border-border bg-card px-3 py-3 opacity-70 transition-colors"
-							: "rounded-xl border border-border bg-card px-3 py-3 transition-colors";
-					const indicatorClassName = isComplete
-						? "mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-medium text-primary-foreground"
-						: isCurrent
-							? "mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/15 text-xs font-medium text-primary"
-							: "mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium text-muted-foreground";
+					const segmentClassName = isFilled ? "bg-primary" : "bg-muted";
 
 					return (
-						<li key={step.id} aria-current={isCurrent ? "step" : undefined} className={stepClassName}>
-							<div className="flex items-start gap-2">
-								<div className={indicatorClassName} aria-hidden="true">
-									{isComplete ? "✓" : index + 1}
-								</div>
-								<div className="min-w-0">
-									<p className="text-sm font-medium">{step.label}</p>
-									<p className="text-xs text-muted-foreground">{step.description}</p>
-								</div>
-							</div>
+						<li key={step.id} aria-current={isCurrent ? "step" : undefined} className={`h-1 flex-1 rounded-full transition-colors duration-300 ${segmentClassName}`}>
+							<span className="sr-only">
+								{step.label}
+								{isComplete ? " (completed)" : isCurrent ? " (current)" : ""}
+							</span>
 						</li>
 					);
 				})}

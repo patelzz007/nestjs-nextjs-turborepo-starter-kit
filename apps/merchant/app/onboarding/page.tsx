@@ -29,10 +29,10 @@ export default function MerchantOnboardingPage(): JSX.Element {
 				</svg>
 			}
 			brandName="Merchant Portal"
-			tagline="Accept your invite and set up the owner account for your store."
-			features={["Secure one-time invite links", "Create your owner login", "Submit business verification documents", "Start publishing rewards after sign-in"]}
-			title="Merchant onboarding"
-			subtitle="Complete setup for your store"
+			tagline="Accept your invite and set up your store."
+			features={["Secure invite verification", "Owner account & KYB", "Start publishing after sign-in"]}
+			title="Set up your store"
+			subtitle="Owner account and business verification"
 			copyright="Reward Hub"
 			labels={{ mobileBack: "Back", toggleThemeAria: "Toggle theme", rightsReserved: "All rights reserved." }}>
 			<Suspense fallback={<p className="text-center text-sm text-muted-foreground">Loading…</p>}>

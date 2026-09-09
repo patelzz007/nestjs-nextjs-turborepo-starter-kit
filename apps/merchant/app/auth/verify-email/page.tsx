@@ -17,7 +17,7 @@ function VerifyEmailContent(): JSX.Element {
 		);
 	}
 
-	return <VerifyEmailView token={token} settingsHref="/settings" loginHref="/auth/login" />;
+	return <VerifyEmailView token={token} settingsHref="/settings" successRedirectHref="/" loginHref="/auth/login" />;
 }
 
 export default function MerchantVerifyEmailPage(): JSX.Element {

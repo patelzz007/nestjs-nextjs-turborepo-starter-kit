@@ -9,7 +9,7 @@ import { ReduxDevToolsGuard } from "@workspace/ui/components/redux-devtools-guar
 import { bricolageGrotesque } from "@workspace/ui/fonts/bricolage-grotesque";
 import { Geist, Geist_Mono, JetBrains_Mono } from "next/font/google";
 
-import { ClientAuthWrapper } from "@workspace/client/lib/auth/client-auth-wrapper";
+import { AdminClientAuthWrapper } from "@/components/admin-client-auth-wrapper";
 import { ThemeProvider } from "@workspace/ui/components/theme-provider";
 import { validateAdminEnv } from "@workspace/shared/runtime/index";
 
@@ -58,16 +58,12 @@ export default function RootLayout({
 				{/* Prevent Redux DevTools extension from serializing React Query / zustand state */}
 				<ReduxDevToolsGuard />
 				<QueryProvider>
-					<ClientAuthWrapper
-						// Isolated cookie names + X-Client-Type: admin so web and admin
-						// sessions never share cookies on the same host.
-						cookieNames={{ accessToken: "adminAccessToken", refreshToken: "adminRefreshToken" }}
-						clientType="admin">
+					<AdminClientAuthWrapper>
 						<ThemeProvider>
 							{children}
 							<Toaster />
 						</ThemeProvider>
-					</ClientAuthWrapper>
+					</AdminClientAuthWrapper>
 				</QueryProvider>
 			</body>
 		</html>

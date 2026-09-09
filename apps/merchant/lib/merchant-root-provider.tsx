@@ -85,8 +85,15 @@ export function MerchantRootProvider({ children, initialMerchantOrgId }: Merchan
 		return !isMerchantAuthPath(pathname);
 	}, [pathname]);
 
+	const revalidateSessionEnabled = !isMerchantAuthPath(pathname);
+
 	return (
-		<ClientAuthWrapper cookieNames={MERCHANT_COOKIE_NAMES} clientType="merchant" extraHeaders={extraHeaders} shouldRedirectOnUnauthorized={shouldRedirectOnUnauthorized}>
+		<ClientAuthWrapper
+			cookieNames={MERCHANT_COOKIE_NAMES}
+			clientType="merchant"
+			extraHeaders={extraHeaders}
+			shouldRedirectOnUnauthorized={shouldRedirectOnUnauthorized}
+			revalidateSessionEnabled={revalidateSessionEnabled}>
 			<MerchantSessionBootstrap />
 			<MerchantOrgContext.Provider value={contextValue}>{children}</MerchantOrgContext.Provider>
 		</ClientAuthWrapper>

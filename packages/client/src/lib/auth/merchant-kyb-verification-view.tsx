@@ -1,7 +1,7 @@
 "use client";
 
 import type { MerchantKybDocument, MerchantKybProfileResponse } from "@workspace/shared";
-import { JsonPrimitiveSchema, MerchantKybSubmissionSchema } from "@workspace/shared";
+import { JsonPrimitiveSchema, MerchantKybBusinessFieldsSchema, MerchantKybRegistrationFieldsSchema, MerchantKybSubmissionSchema } from "@workspace/shared";
 import { z } from "zod";
 import { Badge } from "@workspace/ui/components/feedback/badge";
 import { Button } from "@workspace/ui/components/form/button";
@@ -45,6 +45,7 @@ function readKybStringField(profile: MerchantKybProfileResponse, key: string): s
 
 function profileToFieldValues(profile: MerchantKybProfileResponse): MerchantKybFieldValues {
 	return {
+		businessName: profile.businessName,
 		legalName: readOrgString(profile.legalName),
 		addressText: readOrgString(profile.addressText),
 		contactPhone: readOrgString(profile.contactPhone),
@@ -115,7 +116,7 @@ function MerchantKybVerificationContent({ profile }: MerchantKybVerificationCont
 		return completed;
 	}, [step]);
 
-	const handleBusinessFieldChange = React.useCallback((field: "legalName" | "addressText" | "contactPhone", value: string): void => {
+	const handleBusinessFieldChange = React.useCallback((field: "businessName" | "legalName" | "addressText" | "contactPhone", value: string): void => {
 		setValues((current) => ({ ...current, [field]: value }));
 	}, []);
 
@@ -132,7 +133,8 @@ function MerchantKybVerificationContent({ profile }: MerchantKybVerificationCont
 			event.preventDefault();
 			setError(null);
 
-			const parsed = MerchantKybSubmissionSchema.pick({ legalName: true, addressText: true, contactPhone: true }).safeParse({
+			const parsed = MerchantKybBusinessFieldsSchema.safeParse({
+				businessName: values.businessName,
 				legalName: values.legalName,
 				addressText: values.addressText,
 				contactPhone: values.contactPhone,
@@ -152,7 +154,7 @@ function MerchantKybVerificationContent({ profile }: MerchantKybVerificationCont
 			event.preventDefault();
 			setError(null);
 
-			const parsed = MerchantKybSubmissionSchema.pick({ registrationNo: true, taxId: true, documentType: true }).safeParse({
+			const parsed = MerchantKybRegistrationFieldsSchema.safeParse({
 				registrationNo: values.registrationNo,
 				taxId: values.taxId,
 				documentType: values.documentType,
@@ -215,10 +217,7 @@ function MerchantKybVerificationContent({ profile }: MerchantKybVerificationCont
 
 	return (
 		<div className="space-y-6">
-			<div className="flex flex-wrap items-center gap-2">
-				<Badge variant={kybStatusVariant(profile.kybStatus)}>{profile.kybStatus}</Badge>
-				<span className="text-sm text-muted-foreground">{profile.businessName}</span>
-			</div>
+			<Badge variant={kybStatusVariant(profile.kybStatus)}>{profile.kybStatus}</Badge>
 
 			{profile.kybStatus === "REJECTED" && rejectionReason !== null ? (
 				<div className="rounded-lg border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive">{rejectionReason}</div>

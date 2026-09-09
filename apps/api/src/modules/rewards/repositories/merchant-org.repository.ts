@@ -125,6 +125,7 @@ export class MerchantOrgRepository {
 	public async updateMerchantKybSubmission(
 		merchantOrgId: string,
 		data: {
+			readonly businessName: string;
 			readonly legalName: string;
 			readonly addressText: string;
 			readonly contactPhone: string;
@@ -135,6 +136,7 @@ export class MerchantOrgRepository {
 		return this.prisma.merchantOrg.update({
 			where: { id: merchantOrgId },
 			data: {
+				businessName: data.businessName,
 				legalName: data.legalName,
 				addressText: data.addressText,
 				contactPhone: data.contactPhone,

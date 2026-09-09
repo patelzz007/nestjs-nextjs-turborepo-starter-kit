@@ -23,12 +23,13 @@ type OnboardingStep = "loading" | "invalid" | "account" | "business" | "registra
 
 const ONBOARDING_STEPS: readonly MerchantOnboardingStep[] = [
 	{ id: "account", label: "Account", description: "Owner login" },
-	{ id: "business", label: "Business", description: "Registered details" },
+	{ id: "business", label: "Business", description: "Address & contact" },
 	{ id: "registration", label: "Registration", description: "SSM & tax ID" },
 	{ id: "documents", label: "Documents", description: "Upload certificates" },
 ];
 
 const EMPTY_KYB_VALUES: MerchantKybFieldValues = {
+	businessName: "",
 	legalName: "",
 	addressText: "",
 	contactPhone: "",
@@ -106,6 +107,11 @@ export function MerchantOnboardingView({ token, loginHref = "/auth/login" }: Mer
 			.then((response): void => {
 				if (!cancelled) {
 					setInvite(response.data);
+					setKybValues((current) => ({
+						...current,
+						businessName: response.data.businessName,
+						legalName: response.data.businessName,
+					}));
 					setStep("account");
 				}
 			})
@@ -129,7 +135,7 @@ export function MerchantOnboardingView({ token, loginHref = "/auth/login" }: Mer
 		setPassword(event.target.value);
 	}, []);
 
-	const handleBusinessFieldChange = useCallback((field: "legalName" | "addressText" | "contactPhone", value: string): void => {
+	const handleBusinessFieldChange = useCallback((field: "businessName" | "legalName" | "addressText" | "contactPhone", value: string): void => {
 		setKybValues((current) => ({ ...current, [field]: value }));
 	}, []);
 
@@ -166,8 +172,7 @@ export function MerchantOnboardingView({ token, loginHref = "/auth/login" }: Mer
 			event.preventDefault();
 			setError(null);
 
-			const parsed = MerchantKybSubmissionSchema.pick({ legalName: true, addressText: true, contactPhone: true }).safeParse({
-				legalName: kybValues.legalName,
+			const parsed = MerchantKybSubmissionSchema.pick({ addressText: true, contactPhone: true }).safeParse({
 				addressText: kybValues.addressText,
 				contactPhone: kybValues.contactPhone,
 			});
@@ -206,11 +211,22 @@ export function MerchantOnboardingView({ token, loginHref = "/auth/login" }: Mer
 			event.preventDefault();
 			setError(null);
 
+			if (invite === null) {
+				setError("Invite details are missing. Open your invite link again.");
+				return;
+			}
+
 			const parsed = MerchantOnboardingCompleteSchema.safeParse({
 				token,
 				fullName,
 				password,
-				...kybValues,
+				legalName: invite.businessName,
+				addressText: kybValues.addressText,
+				contactPhone: kybValues.contactPhone,
+				registrationNo: kybValues.registrationNo,
+				taxId: kybValues.taxId,
+				documentType: kybValues.documentType,
+				documents: kybValues.documents,
 			});
 
 			if (!parsed.success) {
@@ -228,7 +244,7 @@ export function MerchantOnboardingView({ token, loginHref = "/auth/login" }: Mer
 					setError(resolveAuthErrorMessage(err));
 				});
 		},
-		[completeMutation, fullName, kybValues, password, token],
+		[completeMutation, fullName, invite, kybValues, password, token],
 	);
 
 	const handleBack = useCallback((): void => {
@@ -290,22 +306,13 @@ export function MerchantOnboardingView({ token, loginHref = "/auth/login" }: Mer
 	}
 
 	return (
-		<div className="space-y-6">
-			<div className="rounded-xl border bg-muted/30 p-4">
-				<div className="flex items-start gap-3">
-					<div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary" aria-hidden="true">
-						<svg className="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-							<path strokeLinecap="round" strokeLinejoin="round" d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
-						</svg>
-					</div>
-					<div className="min-w-0 space-y-2">
-						<div className="flex flex-wrap items-center gap-2">
-							<p className="font-medium break-words">{invite.businessName}</p>
-							<Badge variant="secondary">{formatPilotCity(invite.city)}</Badge>
-						</div>
-						<p className="text-sm break-words text-muted-foreground">{invite.email}</p>
-						<p className="text-xs text-muted-foreground">Invite expires {formatExpiry(invite.expiresAt)}</p>
-					</div>
+		<div className="space-y-4 sm:space-y-5">
+			<div className="rounded-lg border bg-muted/30 p-3 sm:rounded-xl sm:p-4">
+				<div className="flex flex-wrap items-center justify-between gap-2">
+					<Badge variant="secondary" className="text-[10px] sm:text-xs">
+						{formatPilotCity(invite.city)}
+					</Badge>
+					<p className="text-[11px] text-muted-foreground sm:text-xs">Invite expires {formatExpiry(invite.expiresAt)}</p>
 				</div>
 			</div>
 
@@ -313,6 +320,10 @@ export function MerchantOnboardingView({ token, loginHref = "/auth/login" }: Mer
 
 			{step === "account" ? (
 				<FormShell error={error} isLoading={false} submitLabel="Continue" loadingLabel="Continue" submitClassName="h-11" onSubmit={handleAccountContinue}>
+					<div className="space-y-2">
+						<Label htmlFor="merchant-onboarding-business-name">Business name</Label>
+						<Input id="merchant-onboarding-business-name" value={invite.businessName} readOnly disabled className="h-11" />
+					</div>
 					<div className="space-y-2">
 						<Label htmlFor="merchant-onboarding-email">Work email</Label>
 						<Input id="merchant-onboarding-email" value={invite.email} readOnly disabled className="h-11" />
@@ -342,8 +353,7 @@ export function MerchantOnboardingView({ token, loginHref = "/auth/login" }: Mer
 
 			{step === "business" ? (
 				<FormShell error={error} isLoading={false} submitLabel="Continue" loadingLabel="Continue" submitClassName="h-11" onSubmit={handleBusinessContinue}>
-					<p className="text-sm text-muted-foreground">Tell us how your business is registered. You can update these later from settings only if review is rejected.</p>
-					<MerchantKybBusinessFields values={kybValues} onChange={handleBusinessFieldChange} idPrefix="merchant-onboarding" />
+					<MerchantKybBusinessFields values={kybValues} onChange={handleBusinessFieldChange} idPrefix="merchant-onboarding" businessNameReadOnly showLegalName={false} />
 					<Button type="button" variant="outline" className="h-11 w-full" onClick={handleBack}>
 						Back
 					</Button>
@@ -352,7 +362,6 @@ export function MerchantOnboardingView({ token, loginHref = "/auth/login" }: Mer
 
 			{step === "registration" ? (
 				<FormShell error={error} isLoading={false} submitLabel="Continue" loadingLabel="Continue" submitClassName="h-11" onSubmit={handleRegistrationContinue}>
-					<p className="text-sm text-muted-foreground">Add your SSM registration and tax details for platform KYB review.</p>
 					<MerchantKybRegistrationFields values={kybValues} onChange={handleRegistrationFieldChange} idPrefix="merchant-onboarding" />
 					<Button type="button" variant="outline" className="h-11 w-full" onClick={handleBack}>
 						Back
@@ -368,9 +377,6 @@ export function MerchantOnboardingView({ token, loginHref = "/auth/login" }: Mer
 					loadingLabel="Creating store…"
 					submitClassName="h-11"
 					onSubmit={handleDocumentsSubmit}>
-					<p className="text-sm text-muted-foreground">
-						Upload your business registration documents. These are submitted once during onboarding — you only need settings if review is rejected.
-					</p>
 					<MerchantKybDocumentUpload documents={kybValues.documents} onChange={handleDocumentsChange} idPrefix="merchant-onboarding-documents" />
 					<Button type="button" variant="outline" className="h-11 w-full" onClick={handleBack}>
 						Back
@@ -378,7 +384,7 @@ export function MerchantOnboardingView({ token, loginHref = "/auth/login" }: Mer
 				</FormShell>
 			) : null}
 
-			<p className="text-center text-sm text-muted-foreground">
+			<p className="text-center text-xs text-muted-foreground sm:text-sm">
 				Already have an account?{" "}
 				<Link href={loginUrl} className="font-medium text-primary hover:underline">
 					Sign in

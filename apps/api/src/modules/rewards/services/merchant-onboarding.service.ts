@@ -113,7 +113,7 @@ export class MerchantOnboardingService {
 			city: invite.city,
 			contactEmail: invite.email,
 			userId,
-			legalName: input.legalName.trim(),
+			legalName: invite.businessName.trim(),
 			addressText: input.addressText.trim(),
 			contactPhone: input.contactPhone.trim(),
 			kybFields,

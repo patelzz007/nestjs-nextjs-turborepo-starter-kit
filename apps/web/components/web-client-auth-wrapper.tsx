@@ -1,6 +1,6 @@
 "use client";
 
-import { isWebGuestBrowsablePath } from "@/lib/auth-routes";
+import { isWebAuthPath, isWebGuestBrowsablePath } from "@/lib/auth-routes";
 import { ClientAuthWrapper } from "@workspace/client/lib/auth/client-auth-wrapper";
 import { usePathname } from "next/navigation";
 import { useCallback, type JSX, type ReactNode } from "react";
@@ -17,5 +17,11 @@ export function WebClientAuthWrapper({ children }: WebClientAuthWrapperProps): J
 		return !isWebGuestBrowsablePath(pathname);
 	}, [pathname]);
 
-	return <ClientAuthWrapper shouldRedirectOnUnauthorized={shouldRedirectOnUnauthorized}>{children}</ClientAuthWrapper>;
+	const revalidateSessionEnabled = !isWebAuthPath(pathname);
+
+	return (
+		<ClientAuthWrapper shouldRedirectOnUnauthorized={shouldRedirectOnUnauthorized} revalidateSessionEnabled={revalidateSessionEnabled}>
+			{children}
+		</ClientAuthWrapper>
+	);
 }

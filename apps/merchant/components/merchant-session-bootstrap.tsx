@@ -9,10 +9,11 @@ import * as React from "react";
  * Required after impersonation so the sidebar shows the impersonated user.
  */
 export function MerchantSessionBootstrap(): null {
-	const { user, login, api } = useAuth();
+	const { user, login, api, sessionRevalidationEnabled } = useAuth();
+	const sessionSyncEnabled = user !== null && sessionRevalidationEnabled;
 
 	const meQuery = api.auth.me.useQuery(undefined, {
-		enabled: user !== null,
+		enabled: sessionSyncEnabled,
 		retry: false,
 		staleTime: 60_000,
 	});

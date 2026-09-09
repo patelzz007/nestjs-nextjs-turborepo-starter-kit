@@ -420,6 +420,7 @@ export type MerchantKybStoredDocument = z.output<typeof MerchantKybStoredDocumen
 /** Business verification fields merchants submit for KYB review. */
 export const MerchantKybSubmissionSchema = z
 	.object({
+		businessName: z.string().min(1).max(200),
 		legalName: z.string().min(1).max(200),
 		addressText: z.string().min(1).max(500),
 		contactPhone: z.string().min(5).max(20),
@@ -432,13 +433,37 @@ export const MerchantKybSubmissionSchema = z
 
 export type MerchantKybSubmissionInput = z.output<typeof MerchantKybSubmissionSchema>;
 
+/** Business details step for KYB settings verification. */
+export const MerchantKybBusinessFieldsSchema = MerchantKybSubmissionSchema.pick({
+	businessName: true,
+	legalName: true,
+	addressText: true,
+	contactPhone: true,
+});
+
+export type MerchantKybBusinessFieldsInput = z.output<typeof MerchantKybBusinessFieldsSchema>;
+
+/** Registration step for KYB forms. */
+export const MerchantKybRegistrationFieldsSchema = MerchantKybSubmissionSchema.pick({
+	registrationNo: true,
+	taxId: true,
+	documentType: true,
+});
+
+export type MerchantKybRegistrationFieldsInput = z.output<typeof MerchantKybRegistrationFieldsSchema>;
+
+/** KYB fields collected during onboarding — business name comes from the invite, not the request body. */
+export const MerchantOnboardingKybFieldsSchema = MerchantKybSubmissionSchema.omit({ businessName: true });
+
+export type MerchantOnboardingKybFieldsInput = z.output<typeof MerchantOnboardingKybFieldsSchema>;
+
 export const MerchantOnboardingCompleteSchema = z
 	.object({
 		token: z.string().min(1),
 		password: strongPassword,
 		fullName: z.string().min(2).max(200),
 	})
-	.extend(MerchantKybSubmissionSchema.shape)
+	.extend(MerchantOnboardingKybFieldsSchema.shape)
 	.strict();
 
 export type MerchantOnboardingCompleteInput = z.output<typeof MerchantOnboardingCompleteSchema>;

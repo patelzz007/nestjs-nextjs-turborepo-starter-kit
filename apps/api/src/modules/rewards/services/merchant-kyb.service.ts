@@ -54,6 +54,7 @@ export class MerchantKybService {
 			})),
 		});
 		const updated = await this.merchantOrgRepository.updateMerchantKybSubmission(merchantOrgId, {
+			businessName: input.businessName.trim(),
 			legalName: input.legalName.trim(),
 			addressText: input.addressText.trim(),
 			contactPhone: input.contactPhone.trim(),

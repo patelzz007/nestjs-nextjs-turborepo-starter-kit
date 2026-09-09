@@ -29,6 +29,8 @@ import { useAuthStore, type AuthUser } from "./auth-store";
 export interface AuthContextType {
 	isAuthenticated: boolean;
 	isLoading: boolean;
+	/** When false, child hooks should not call `GET /auth/me` (login / onboarding routes). */
+	readonly sessionRevalidationEnabled: boolean;
 	/** The currently authenticated user, or null if not authenticated. */
 	readonly user: AuthUser | null;
 	/** Set the user after successful login. */
@@ -82,6 +84,11 @@ export interface AuthProviderProps {
 	 * only happens if this returns true. Defaults to always redirect.
 	 */
 	readonly shouldRedirectOnUnauthorized?: () => boolean;
+	/**
+	 * When false, skips the initial `GET /auth/me` on mount (e.g. login / onboarding).
+	 * Re-runs when this transitions to true (navigating into the app).
+	 */
+	readonly revalidateSessionEnabled?: boolean;
 }
 
 export function AuthProvider({
@@ -94,6 +101,7 @@ export function AuthProvider({
 	clientType,
 	extraHeaders,
 	shouldRedirectOnUnauthorized,
+	revalidateSessionEnabled = true,
 }: AuthProviderProps): JSX.Element {
 	const queryClient = useQueryClient();
 	const [isLoading, setIsLoading] = useState(true);
@@ -130,7 +138,9 @@ export function AuthProvider({
 		const isCancelled = (): boolean => abortController.signal.aborted;
 
 		void (async (): Promise<void> => {
-			await revalidateSession();
+			if (revalidateSessionEnabled) {
+				await revalidateSession();
+			}
 			if (!isCancelled()) {
 				setIsLoading(false);
 			}
@@ -138,7 +148,7 @@ export function AuthProvider({
 		return (): void => {
 			abortController.abort();
 		};
-	}, [revalidateSession]);
+	}, [revalidateSession, revalidateSessionEnabled]);
 
 	interface InvalidateSessionOptions {
 		readonly broadcast?: boolean;
@@ -290,20 +300,23 @@ export function AuthProvider({
 				})();
 				return;
 			}
-			void revalidateSession();
+			if (revalidateSessionEnabled) {
+				void revalidateSession();
+			}
 		});
-	}, [clearServerSession, invalidateSession, revalidateSession, syncChannel]);
+	}, [clearServerSession, invalidateSession, revalidateSession, revalidateSessionEnabled, syncChannel]);
 
 	const value: AuthContextType = useMemo(
 		() => ({
 			isAuthenticated,
 			isLoading,
+			sessionRevalidationEnabled: revalidateSessionEnabled,
 			user,
 			login,
 			logout,
 			api,
 		}),
-		[isAuthenticated, isLoading, user, login, logout, api],
+		[isAuthenticated, isLoading, revalidateSessionEnabled, user, login, logout, api],
 	);
 
 	return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

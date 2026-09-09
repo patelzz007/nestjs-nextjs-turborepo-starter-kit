@@ -9,6 +9,7 @@ import * as React from "react";
 import { MerchantKybDocumentUpload } from "./merchant-kyb-document-upload";
 
 export interface MerchantKybFieldValues {
+	readonly businessName: string;
 	readonly legalName: string;
 	readonly addressText: string;
 	readonly contactPhone: string;
@@ -19,10 +20,16 @@ export interface MerchantKybFieldValues {
 }
 
 export interface MerchantKybBusinessFieldsProps {
-	readonly values: Pick<MerchantKybFieldValues, "legalName" | "addressText" | "contactPhone">;
-	readonly onChange?: (field: "legalName" | "addressText" | "contactPhone", value: string) => void;
+	readonly values: Pick<MerchantKybFieldValues, "businessName" | "legalName" | "addressText" | "contactPhone">;
+	readonly onChange?: (field: "businessName" | "legalName" | "addressText" | "contactPhone", value: string) => void;
 	readonly idPrefix?: string;
 	readonly readOnly?: boolean;
+	/** When false, hides the store name field. @default true */
+	readonly showBusinessName?: boolean;
+	/** When true, store name is shown but cannot be edited (onboarding invite). @default false */
+	readonly businessNameReadOnly?: boolean;
+	/** When false, hides registered legal name. @default true */
+	readonly showLegalName?: boolean;
 }
 
 export interface MerchantKybRegistrationFieldsProps {
@@ -39,7 +46,24 @@ export interface MerchantKybFieldsProps {
 	readonly showDocuments?: boolean;
 }
 
-export function MerchantKybBusinessFields({ values, onChange, idPrefix = "merchant-kyb", readOnly = false }: MerchantKybBusinessFieldsProps): React.JSX.Element {
+export function MerchantKybBusinessFields({
+	values,
+	onChange,
+	idPrefix = "merchant-kyb",
+	readOnly = false,
+	showBusinessName = true,
+	businessNameReadOnly = false,
+	showLegalName = true,
+}: MerchantKybBusinessFieldsProps): React.JSX.Element {
+	const isBusinessNameLocked = readOnly || businessNameReadOnly;
+
+	const handleBusinessNameChange = React.useCallback(
+		(event: React.ChangeEvent<HTMLInputElement>): void => {
+			onChange?.("businessName", event.target.value);
+		},
+		[onChange],
+	);
+
 	const handleLegalNameChange = React.useCallback(
 		(event: React.ChangeEvent<HTMLInputElement>): void => {
 			onChange?.("legalName", event.target.value);
@@ -63,20 +87,41 @@ export function MerchantKybBusinessFields({ values, onChange, idPrefix = "mercha
 
 	return (
 		<div className="space-y-4">
-			<div className="space-y-2">
-				<Label htmlFor={`${idPrefix}-legal-name`}>Registered legal name</Label>
-				<Input
-					id={`${idPrefix}-legal-name`}
-					value={values.legalName}
-					onChange={handleLegalNameChange}
-					readOnly={readOnly}
-					disabled={readOnly}
-					required={!readOnly}
-					autoComplete="organization"
-					className="h-11"
-					placeholder="Brew & Bean KL Sdn Bhd"
-				/>
-			</div>
+			{showBusinessName ? (
+				<div className="space-y-2">
+					<Label htmlFor={`${idPrefix}-business-name`}>Business name</Label>
+					<Input
+						id={`${idPrefix}-business-name`}
+						value={values.businessName}
+						onChange={handleBusinessNameChange}
+						readOnly={isBusinessNameLocked}
+						disabled={isBusinessNameLocked}
+						required={!isBusinessNameLocked}
+						autoComplete="organization"
+						className="h-11"
+						placeholder="Sunrise Café"
+					/>
+					{businessNameReadOnly ? (
+						<p className="text-xs text-muted-foreground">Set on your invite by the platform admin. Update later from Settings → Verification if needed.</p>
+					) : null}
+				</div>
+			) : null}
+			{showLegalName ? (
+				<div className="space-y-2">
+					<Label htmlFor={`${idPrefix}-legal-name`}>Registered legal name</Label>
+					<Input
+						id={`${idPrefix}-legal-name`}
+						value={values.legalName}
+						onChange={handleLegalNameChange}
+						readOnly={readOnly}
+						disabled={readOnly}
+						required={!readOnly}
+						autoComplete="organization"
+						className="h-11"
+						placeholder="Brew & Bean KL Sdn Bhd"
+					/>
+				</div>
+			) : null}
 			<div className="space-y-2">
 				<Label htmlFor={`${idPrefix}-address`}>Business address</Label>
 				<Textarea
@@ -180,7 +225,7 @@ export function MerchantKybRegistrationFields({ values, onChange, idPrefix = "me
 
 export function MerchantKybFields({ values, onChange, idPrefix = "merchant-kyb", showDocuments = true }: MerchantKybFieldsProps): React.JSX.Element {
 	const handleBusinessChange = React.useCallback(
-		(field: "legalName" | "addressText" | "contactPhone", value: string): void => {
+		(field: "businessName" | "legalName" | "addressText" | "contactPhone", value: string): void => {
 			onChange(field, value);
 		},
 		[onChange],

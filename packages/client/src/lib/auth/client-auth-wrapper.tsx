@@ -38,6 +38,8 @@ export interface ClientAuthWrapperProps {
 	 * happens if this returns true. Defaults to always redirect.
 	 */
 	readonly shouldRedirectOnUnauthorized?: () => boolean;
+	/** Skip `GET /auth/me` on mount when false (auth / onboarding routes). @default true */
+	readonly revalidateSessionEnabled?: boolean;
 }
 
 export function ClientAuthWrapper({
@@ -47,6 +49,7 @@ export function ClientAuthWrapper({
 	clientType,
 	extraHeaders,
 	shouldRedirectOnUnauthorized,
+	revalidateSessionEnabled,
 }: ClientAuthWrapperProps): JSX.Element {
 	const router = useRouter();
 
@@ -71,6 +74,7 @@ export function ClientAuthWrapper({
 			clientType={clientType}
 			extraHeaders={extraHeaders}
 			shouldRedirectOnUnauthorized={shouldRedirectOnUnauthorized}
+			revalidateSessionEnabled={revalidateSessionEnabled}
 		/>
 	);
 }
