@@ -117,6 +117,7 @@ export class MerchantOrgRepository {
 			data: {
 				kybStatus: data.kybStatus,
 				...(data.kybFields !== undefined ? { kybFields: data.kybFields } : {}),
+				...(data.kybStatus === "APPROVED" ? { status: "ACTIVE" } : {}),
 			},
 		});
 	}

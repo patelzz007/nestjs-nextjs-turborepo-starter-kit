@@ -27,6 +27,7 @@ const RESTRICTED_SESSION_ALLOWLIST: readonly RestrictedRouteRule[] = [
 	{ method: "POST", pathSuffix: "/auth/logout" },
 	{ method: "POST", pathSuffix: "/auth/logout-all" },
 	{ method: "GET", pathSuffix: "/auth/2fa/setup" },
+	{ method: "GET", pathSuffix: "/auth/2fa/backup-codes/remaining" },
 	{ method: "POST", pathSuffix: "/auth/2fa/enable" },
 	{ method: "POST", pathSuffix: "/auth/resend-verification" },
 	{ method: "POST", pathSuffix: "/auth/verify-email" },
@@ -76,8 +77,12 @@ export class RestrictedSessionGuard implements CanActivate {
 			return true;
 		}
 
+		const message: string = accessUser.isEmailVerified
+			? "Set up two-factor authentication to access this resource."
+			: "Verify your email address and set up two-factor authentication to access this resource.";
+
 		throw new ForbiddenException({
-			message: "Complete email verification and MFA enrollment to access this resource.",
+			message,
 			error: "RESTRICTED_SESSION",
 		});
 	}

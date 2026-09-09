@@ -30,7 +30,7 @@ export default function MerchantOnboardingPage(): JSX.Element {
 			}
 			brandName="Merchant Portal"
 			tagline="Accept your invite and set up the owner account for your store."
-			features={["Secure one-time invite links", "Create your owner login", "Start publishing rewards after sign-in"]}
+			features={["Secure one-time invite links", "Create your owner login", "Submit business verification documents", "Start publishing rewards after sign-in"]}
 			title="Merchant onboarding"
 			subtitle="Complete setup for your store"
 			copyright="Reward Hub"

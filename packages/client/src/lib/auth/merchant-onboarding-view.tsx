@@ -1,7 +1,7 @@
 "use client";
 
 import type { MerchantOnboardingInvitePreview } from "@workspace/shared";
-import { MerchantOnboardingCompleteSchema } from "@workspace/shared";
+import { MerchantKybSubmissionSchema, MerchantOnboardingCompleteSchema } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/feedback/badge";
 import { Button } from "@workspace/ui/components/form/button";
 import { FormShell } from "@workspace/ui/components/form/form-shell";
@@ -14,10 +14,19 @@ import { useCallback, useEffect, useMemo, useState, type JSX } from "react";
 
 import { resolveAuthErrorMessage } from "./auth-errors";
 import { useAuth } from "./index";
-import { MerchantKybFields, type MerchantKybFieldValues } from "./merchant-kyb-fields";
+import { MerchantKybDocumentUpload } from "./merchant-kyb-document-upload";
+import { MerchantKybBusinessFields, MerchantKybRegistrationFields, type MerchantKybFieldValues } from "./merchant-kyb-fields";
+import { MerchantOnboardingStepper, type MerchantOnboardingStep } from "./merchant-onboarding-stepper";
 import { passwordStrength } from "./password";
 
-type OnboardingStep = "loading" | "invalid" | "account" | "kyb" | "success";
+type OnboardingStep = "loading" | "invalid" | "account" | "business" | "registration" | "documents" | "success";
+
+const ONBOARDING_STEPS: readonly MerchantOnboardingStep[] = [
+	{ id: "account", label: "Account", description: "Owner login" },
+	{ id: "business", label: "Business", description: "Registered details" },
+	{ id: "registration", label: "Registration", description: "SSM & tax ID" },
+	{ id: "documents", label: "Documents", description: "Upload certificates" },
+];
 
 const EMPTY_KYB_VALUES: MerchantKybFieldValues = {
 	legalName: "",
@@ -26,6 +35,7 @@ const EMPTY_KYB_VALUES: MerchantKybFieldValues = {
 	registrationNo: "",
 	taxId: "",
 	documentType: "",
+	documents: [],
 };
 
 function formatPilotCity(city: string): string {
@@ -34,6 +44,10 @@ function formatPilotCity(city: string): string {
 
 function formatExpiry(value: number): string {
 	return new Date(value).toLocaleString();
+}
+
+function isWizardStep(step: OnboardingStep): step is "account" | "business" | "registration" | "documents" {
+	return step === "account" || step === "business" || step === "registration" || step === "documents";
 }
 
 export interface MerchantOnboardingViewProps {
@@ -62,6 +76,23 @@ export function MerchantOnboardingView({ token, loginHref = "/auth/login" }: Mer
 		const params = new URLSearchParams({ email: invite.email });
 		return `${loginHref}?${params.toString()}`;
 	}, [invite, loginHref]);
+
+	const completedStepIds = useMemo((): ReadonlySet<string> => {
+		const completed = new Set<string>();
+		if (step === "business" || step === "registration" || step === "documents" || step === "success") {
+			completed.add("account");
+		}
+		if (step === "registration" || step === "documents" || step === "success") {
+			completed.add("business");
+		}
+		if (step === "documents" || step === "success") {
+			completed.add("registration");
+		}
+		if (step === "success") {
+			completed.add("documents");
+		}
+		return completed;
+	}, [step]);
 
 	useEffect((): (() => void) => {
 		if (token.length === 0) {
@@ -98,8 +129,16 @@ export function MerchantOnboardingView({ token, loginHref = "/auth/login" }: Mer
 		setPassword(event.target.value);
 	}, []);
 
-	const handleKybFieldChange = useCallback((field: keyof MerchantKybFieldValues, value: string): void => {
+	const handleBusinessFieldChange = useCallback((field: "legalName" | "addressText" | "contactPhone", value: string): void => {
 		setKybValues((current) => ({ ...current, [field]: value }));
+	}, []);
+
+	const handleRegistrationFieldChange = useCallback((field: "registrationNo" | "taxId" | "documentType", value: string): void => {
+		setKybValues((current) => ({ ...current, [field]: value }));
+	}, []);
+
+	const handleDocumentsChange = useCallback((documents: MerchantKybFieldValues["documents"]): void => {
+		setKybValues((current) => ({ ...current, documents }));
 	}, []);
 
 	const handleAccountContinue = useCallback(
@@ -117,12 +156,52 @@ export function MerchantOnboardingView({ token, loginHref = "/auth/login" }: Mer
 				return;
 			}
 
-			setStep("kyb");
+			setStep("business");
 		},
 		[fullName, password],
 	);
 
-	const handleKybSubmit = useCallback(
+	const handleBusinessContinue = useCallback(
+		(event: React.SyntheticEvent<HTMLFormElement>): void => {
+			event.preventDefault();
+			setError(null);
+
+			const parsed = MerchantKybSubmissionSchema.pick({ legalName: true, addressText: true, contactPhone: true }).safeParse({
+				legalName: kybValues.legalName,
+				addressText: kybValues.addressText,
+				contactPhone: kybValues.contactPhone,
+			});
+			if (!parsed.success) {
+				setError(parsed.error.issues[0]?.message ?? "Check your business details and try again.");
+				return;
+			}
+
+			setStep("registration");
+		},
+		[kybValues],
+	);
+
+	const handleRegistrationContinue = useCallback(
+		(event: React.SyntheticEvent<HTMLFormElement>): void => {
+			event.preventDefault();
+			setError(null);
+
+			const parsed = MerchantKybSubmissionSchema.pick({ registrationNo: true, taxId: true, documentType: true }).safeParse({
+				registrationNo: kybValues.registrationNo,
+				taxId: kybValues.taxId,
+				documentType: kybValues.documentType,
+			});
+			if (!parsed.success) {
+				setError(parsed.error.issues[0]?.message ?? "Check your registration details and try again.");
+				return;
+			}
+
+			setStep("documents");
+		},
+		[kybValues],
+	);
+
+	const handleDocumentsSubmit = useCallback(
 		(event: React.SyntheticEvent<HTMLFormElement>): void => {
 			event.preventDefault();
 			setError(null);
@@ -152,10 +231,20 @@ export function MerchantOnboardingView({ token, loginHref = "/auth/login" }: Mer
 		[completeMutation, fullName, kybValues, password, token],
 	);
 
-	const handleBackToAccount = useCallback((): void => {
+	const handleBack = useCallback((): void => {
 		setError(null);
-		setStep("account");
-	}, []);
+		if (step === "business") {
+			setStep("account");
+			return;
+		}
+		if (step === "registration") {
+			setStep("business");
+			return;
+		}
+		if (step === "documents") {
+			setStep("registration");
+		}
+	}, [step]);
 
 	if (step === "loading") {
 		return <p className="text-center text-sm text-muted-foreground">Checking your invite link…</p>;
@@ -185,8 +274,8 @@ export function MerchantOnboardingView({ token, loginHref = "/auth/login" }: Mer
 				<div className="space-y-2">
 					<h2 className="text-lg font-semibold">Store ready</h2>
 					<p className="text-sm text-muted-foreground">
-						{businessName.length > 0 ? businessName : "Your merchant organization"} is set up with business verification submitted for review. Sign in with the email from your
-						invite to open the merchant portal.
+						{businessName.length > 0 ? businessName : "Your merchant organization"} is set up with business verification and documents submitted for review. Sign in with the
+						email from your invite to open the merchant portal.
 					</p>
 				</div>
 				<Button className="w-full" render={<Link href={loginUrl} />}>
@@ -220,11 +309,7 @@ export function MerchantOnboardingView({ token, loginHref = "/auth/login" }: Mer
 				</div>
 			</div>
 
-			<div className="flex items-center gap-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">
-				<span className={step === "account" ? "text-primary" : ""}>1. Account</span>
-				<span aria-hidden="true">→</span>
-				<span className={step === "kyb" ? "text-primary" : ""}>2. Business verification</span>
-			</div>
+			{isWizardStep(step) ? <MerchantOnboardingStepper steps={ONBOARDING_STEPS} currentStepId={step} completedStepIds={completedStepIds} /> : null}
 
 			{step === "account" ? (
 				<FormShell error={error} isLoading={false} submitLabel="Continue" loadingLabel="Continue" submitClassName="h-11" onSubmit={handleAccountContinue}>
@@ -253,21 +338,45 @@ export function MerchantOnboardingView({ token, loginHref = "/auth/login" }: Mer
 						)}
 					</div>
 				</FormShell>
-			) : (
+			) : null}
+
+			{step === "business" ? (
+				<FormShell error={error} isLoading={false} submitLabel="Continue" loadingLabel="Continue" submitClassName="h-11" onSubmit={handleBusinessContinue}>
+					<p className="text-sm text-muted-foreground">Tell us how your business is registered. You can update these later from settings only if review is rejected.</p>
+					<MerchantKybBusinessFields values={kybValues} onChange={handleBusinessFieldChange} idPrefix="merchant-onboarding" />
+					<Button type="button" variant="outline" className="h-11 w-full" onClick={handleBack}>
+						Back
+					</Button>
+				</FormShell>
+			) : null}
+
+			{step === "registration" ? (
+				<FormShell error={error} isLoading={false} submitLabel="Continue" loadingLabel="Continue" submitClassName="h-11" onSubmit={handleRegistrationContinue}>
+					<p className="text-sm text-muted-foreground">Add your SSM registration and tax details for platform KYB review.</p>
+					<MerchantKybRegistrationFields values={kybValues} onChange={handleRegistrationFieldChange} idPrefix="merchant-onboarding" />
+					<Button type="button" variant="outline" className="h-11 w-full" onClick={handleBack}>
+						Back
+					</Button>
+				</FormShell>
+			) : null}
+
+			{step === "documents" ? (
 				<FormShell
 					error={error}
 					isLoading={completeMutation.isPending}
 					submitLabel="Submit and create store"
 					loadingLabel="Creating store…"
 					submitClassName="h-11"
-					onSubmit={handleKybSubmit}>
-					<p className="text-sm text-muted-foreground">Provide your registered business details for platform KYB review. These appear in the admin verification queue.</p>
-					<MerchantKybFields values={kybValues} onChange={handleKybFieldChange} idPrefix="merchant-onboarding" />
-					<Button type="button" variant="outline" className="h-11 w-full" onClick={handleBackToAccount}>
+					onSubmit={handleDocumentsSubmit}>
+					<p className="text-sm text-muted-foreground">
+						Upload your business registration documents. These are submitted once during onboarding — you only need settings if review is rejected.
+					</p>
+					<MerchantKybDocumentUpload documents={kybValues.documents} onChange={handleDocumentsChange} idPrefix="merchant-onboarding-documents" />
+					<Button type="button" variant="outline" className="h-11 w-full" onClick={handleBack}>
 						Back
 					</Button>
 				</FormShell>
-			)}
+			) : null}
 
 			<p className="text-center text-sm text-muted-foreground">
 				Already have an account?{" "}

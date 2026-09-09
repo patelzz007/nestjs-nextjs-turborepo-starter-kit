@@ -11,7 +11,7 @@ export default function MerchantVerificationPage(): JSX.Element {
 		<div className="space-y-8">
 			<AnalyticsPageHeader
 				title="Business verification"
-				description="Submit your registered business details for platform KYB review. Required before your store can be fully activated."
+				description="Review what you submitted during onboarding and update your business details or documents while verification is pending or after rejection."
 			/>
 			<p className="text-sm text-muted-foreground">
 				Account security settings live on{" "}

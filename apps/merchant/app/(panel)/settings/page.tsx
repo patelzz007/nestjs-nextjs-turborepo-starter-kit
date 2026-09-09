@@ -15,10 +15,10 @@ export default function MerchantSettingsPage(): JSX.Element {
 				<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 					<div className="space-y-1">
 						<p className="font-medium">Business verification (KYB)</p>
-						<p className="text-sm text-muted-foreground">Submit SSM registration, tax ID, and business address for platform review.</p>
+						<p className="text-sm text-muted-foreground">Review your KYB submission and update details or documents while verification is pending.</p>
 					</div>
 					<Button variant="outline" className="shrink-0" render={<Link href="/settings/verification" />}>
-						Manage verification
+						View verification
 					</Button>
 				</div>
 			</div>

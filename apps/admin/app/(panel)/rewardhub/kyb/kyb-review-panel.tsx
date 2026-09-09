@@ -3,6 +3,7 @@
 import { stubPaginatedMeta } from "@/lib/api-envelope";
 import { apiRouter } from "@workspace/client/lib/api/endpoints";
 import { useAuth } from "@workspace/client/lib/auth";
+import { buildKybDocumentDataUrl, formatKybDocumentSize, readStoredKybDocuments } from "@workspace/client/lib/auth/merchant-kyb-document-utils";
 import type { AdminMerchantDetailResponse, JsonObject, JsonValue, KybStatus, MerchantOrgResponse } from "@workspace/shared";
 import { EpochMsSchema, JsonObjectSchema, JsonPrimitiveSchema, KybStatusSchema, nowEpochMs } from "@workspace/shared";
 import { z } from "zod";
@@ -37,6 +38,7 @@ const KYB_FIELD_LABELS: Readonly<Record<string, string>> = {
 };
 
 const FORM_KYB_KEYS: readonly string[] = ["registrationNo", "taxId", "documentType", "reviewNotes", "rejectionReason"];
+const DISPLAY_EXCLUDED_KYB_KEYS: readonly string[] = [...FORM_KYB_KEYS, "documents"];
 
 function formatPilotCity(city: string): string {
 	return city.replaceAll("_", " ");
@@ -598,17 +600,36 @@ export default function KybReviewPanel({ initialMerchantOrgId, initialPendingMer
 										{merchant.kybFields === null ? (
 											<p className="text-sm text-muted-foreground">No KYB payload has been submitted yet.</p>
 										) : (
-											<div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-												{Object.entries(merchant.kybFields)
-													.filter(([key]) => !FORM_KYB_KEYS.includes(key))
-													.map(([key, value]) => (
-														<DetailField
-															key={key}
-															label={formatKybFieldLabel(key)}
-															value={formatKybDisplayValue(key, formatJsonFieldValue(value))}
-															mono={key === "reviewedAt" || key === "submittedAt"}
-														/>
-													))}
+											<div className="space-y-4">
+												<div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+													{Object.entries(merchant.kybFields)
+														.filter(([key]) => !DISPLAY_EXCLUDED_KYB_KEYS.includes(key))
+														.map(([key, value]) => (
+															<DetailField
+																key={key}
+																label={formatKybFieldLabel(key)}
+																value={formatKybDisplayValue(key, formatJsonFieldValue(value))}
+																mono={key === "reviewedAt" || key === "submittedAt"}
+															/>
+														))}
+												</div>
+												{readStoredKybDocuments(merchant.kybFields).length > 0 ? (
+													<div className="space-y-2">
+														<p className="text-sm font-medium">Uploaded documents</p>
+														<ul className="space-y-2">
+															{readStoredKybDocuments(merchant.kybFields).map((document) => (
+																<li
+																	key={`${document.fileName}-${String(document.uploadedAt)}`}
+																	className="flex items-center justify-between gap-3 rounded-lg border bg-muted/20 px-3 py-2 text-sm">
+																	<a href={buildKybDocumentDataUrl(document)} download={document.fileName} className="truncate font-medium text-primary hover:underline">
+																		{document.fileName}
+																	</a>
+																	<span className="shrink-0 text-muted-foreground">{formatKybDocumentSize(document.sizeBytes)}</span>
+																</li>
+															))}
+														</ul>
+													</div>
+												) : null}
 											</div>
 										)}
 									</div>

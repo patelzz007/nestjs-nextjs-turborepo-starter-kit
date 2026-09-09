@@ -387,6 +387,36 @@ export const MerchantOnboardingInvitePreviewSchema = z
 
 export type MerchantOnboardingInvitePreview = z.output<typeof MerchantOnboardingInvitePreviewSchema>;
 
+/** Allowed MIME types for KYB document uploads (PDF and common image formats). */
+export const MerchantKybDocumentMimeTypeSchema = z.enum(["application/pdf", "image/jpeg", "image/png", "image/webp"]);
+
+export type MerchantKybDocumentMimeType = z.output<typeof MerchantKybDocumentMimeTypeSchema>;
+
+/** Maximum single KYB document size in bytes (5 MiB). */
+export const MERCHANT_KYB_MAX_DOCUMENT_BYTES = 5_242_880;
+
+/** Maximum number of KYB documents per submission. */
+export const MERCHANT_KYB_MAX_DOCUMENT_COUNT = 5;
+
+/** Merchant-uploaded KYB document payload (base64 content for pilot storage in `kyb_fields`). */
+export const MerchantKybDocumentSchema = z
+	.object({
+		fileName: z.string().min(1).max(255),
+		mimeType: MerchantKybDocumentMimeTypeSchema,
+		sizeBytes: z.number().int().positive().max(MERCHANT_KYB_MAX_DOCUMENT_BYTES),
+		contentBase64: z.string().min(1).max(7_000_000),
+	})
+	.strict();
+
+export type MerchantKybDocument = z.output<typeof MerchantKybDocumentSchema>;
+
+/** KYB document as stored in `merchant_orgs.kyb_fields.documents`. */
+export const MerchantKybStoredDocumentSchema = MerchantKybDocumentSchema.extend({
+	uploadedAt: EpochMsSchema,
+}).strict();
+
+export type MerchantKybStoredDocument = z.output<typeof MerchantKybStoredDocumentSchema>;
+
 /** Business verification fields merchants submit for KYB review. */
 export const MerchantKybSubmissionSchema = z
 	.object({
@@ -396,6 +426,7 @@ export const MerchantKybSubmissionSchema = z
 		registrationNo: z.string().min(1).max(100),
 		taxId: z.string().min(1).max(100),
 		documentType: z.string().min(1).max(100),
+		documents: z.array(MerchantKybDocumentSchema).min(1).max(MERCHANT_KYB_MAX_DOCUMENT_COUNT),
 	})
 	.strict();
 

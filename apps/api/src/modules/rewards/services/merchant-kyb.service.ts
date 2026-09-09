@@ -39,11 +39,19 @@ export class MerchantKybService {
 			throw new BadRequestException("Business verification is already approved");
 		}
 
+		const submittedAt = nowEpochMs();
 		const kybFields: JsonObject = JsonObjectSchema.parse({
 			registrationNo: input.registrationNo.trim(),
 			taxId: input.taxId.trim(),
 			documentType: input.documentType.trim(),
-			submittedAt: nowEpochMs(),
+			submittedAt,
+			documents: input.documents.map((document) => ({
+				fileName: document.fileName.trim(),
+				mimeType: document.mimeType,
+				sizeBytes: document.sizeBytes,
+				contentBase64: document.contentBase64,
+				uploadedAt: submittedAt,
+			})),
 		});
 		const updated = await this.merchantOrgRepository.updateMerchantKybSubmission(merchantOrgId, {
 			legalName: input.legalName.trim(),

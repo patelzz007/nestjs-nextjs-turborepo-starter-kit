@@ -94,11 +94,19 @@ export class MerchantOnboardingService {
 			};
 		}
 
+		const submittedAt = nowEpochMs();
 		const kybFields: JsonObject = JsonObjectSchema.parse({
 			registrationNo: input.registrationNo.trim(),
 			taxId: input.taxId.trim(),
 			documentType: input.documentType.trim(),
-			submittedAt: nowEpochMs(),
+			submittedAt,
+			documents: input.documents.map((document) => ({
+				fileName: document.fileName.trim(),
+				mimeType: document.mimeType,
+				sizeBytes: document.sizeBytes,
+				contentBase64: document.contentBase64,
+				uploadedAt: submittedAt,
+			})),
 		});
 		const merchantOrg = await this.merchantOrgRepository.createWithOwner({
 			businessName: invite.businessName,
