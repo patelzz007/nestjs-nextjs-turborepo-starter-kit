@@ -2,7 +2,16 @@ import { z } from "zod";
 
 const JsonPrimitiveSchema = z.union([z.string(), z.number(), z.boolean(), z.null()]);
 
-const JsonObjectSchema = z.record(z.string(), JsonPrimitiveSchema);
+type JsonValueNode = z.output<typeof JsonPrimitiveSchema> | JsonValueNode[] | JsonObjectNode;
+
+interface JsonObjectNode {
+	readonly [key: string]: JsonValueNode;
+}
+
+/** Recursive JSON object — matches nested event payloads (e.g. reward metadata). */
+const JsonValueSchema: z.ZodType<JsonValueNode> = z.lazy(() => z.union([JsonPrimitiveSchema, z.array(JsonValueSchema), JsonObjectSchema]));
+
+const JsonObjectSchema: z.ZodType<JsonObjectNode> = z.lazy(() => z.record(z.string(), JsonValueSchema));
 
 export const OUTBOX_EVENT_STATUSES: ["PENDING", "PUBLISHED", "FAILED"] = ["PENDING", "PUBLISHED", "FAILED"];
 
