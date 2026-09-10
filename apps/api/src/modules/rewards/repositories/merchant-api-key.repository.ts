@@ -32,9 +32,26 @@ export class MerchantApiKeyRepository {
 		});
 	}
 
+	public async findActiveByHash(keyHash: string): Promise<MerchantApiKey | null> {
+		return this.prisma.merchantApiKey.findFirst({
+			where: {
+				keyHash,
+				isDeleted: false,
+				revokedAt: null,
+			},
+		});
+	}
+
 	public async findActiveByIdAndOrg(keyId: string, merchantOrgId: string): Promise<MerchantApiKey | null> {
 		return this.prisma.merchantApiKey.findFirst({
 			where: { id: keyId, merchantOrgId, isDeleted: false },
+		});
+	}
+
+	public async touchLastUsed(keyId: string, lastUsedAt: number): Promise<void> {
+		await this.prisma.merchantApiKey.update({
+			where: { id: keyId },
+			data: { lastUsedAt },
 		});
 	}
 

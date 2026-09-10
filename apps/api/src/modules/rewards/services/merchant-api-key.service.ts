@@ -38,7 +38,7 @@ export class MerchantApiKeyService {
 		await this.merchantContext.requireCapability(userId, orgId, "merchant:manage_api_keys");
 
 		const plaintext = generateApiKeyPlaintext();
-		const name = input.name ?? "POS API key";
+		const name = input.name ?? "API key";
 
 		const created = await this.merchantApiKeyRepository.create({
 			merchantOrgId: orgId,

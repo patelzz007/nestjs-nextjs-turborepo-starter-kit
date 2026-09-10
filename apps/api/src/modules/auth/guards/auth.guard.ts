@@ -3,6 +3,7 @@ import { Reflector } from "@nestjs/core";
 import type { FastifyRequest } from "fastify";
 
 import { readFirstHeader } from "../../../common/utils/http-headers";
+import { hasApiKeyAuthOnRequest } from "../../api-keys/types/api-key-auth-request";
 
 import { AccessTokenStateService } from "../services/access-token-state.service";
 import { TokenService } from "../services/token.service";
@@ -37,6 +38,10 @@ export class AuthGuard implements CanActivate {
 		if (isPublic) return true;
 
 		const request: FastifyRequest = context.switchToHttp().getRequest<FastifyRequest>();
+
+		if (hasApiKeyAuthOnRequest(request)) {
+			return true;
+		}
 
 		const authorization: string | undefined = request.headers.authorization;
 		const bearer: string | undefined = authorization?.startsWith("Bearer ") ? authorization.slice(7) : undefined;

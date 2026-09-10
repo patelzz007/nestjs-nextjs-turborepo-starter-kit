@@ -17,6 +17,7 @@ const EXAMPLE_FILES = [
 
 const ALLOWED_PATTERNS = [
 	/^change-me-/i,
+	/^change-me-run-pnpm-secrets-generate$/i,
 	/^dev-/i,
 	/^e2e-/i,
 	/^re_[x]+$/i,

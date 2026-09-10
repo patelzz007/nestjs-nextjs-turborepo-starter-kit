@@ -15,6 +15,7 @@ import {
 	previousAnalyticsPeriod,
 	resolveAnalyticsPeriod,
 } from "../utils/rewards-analytics.util";
+import type { MerchantActor } from "../../api-keys/types/merchant-actor.types";
 import { MerchantContextService } from "./merchant-context.service";
 
 @Injectable()
@@ -27,8 +28,9 @@ export class RewardsAnalyticsService {
 		private readonly merchantContext: MerchantContextService,
 	) {}
 
-	public async getMerchantAnalytics(userId: string, merchantOrgId: string | undefined, query: RewardsAnalyticsQuery): Promise<MerchantAnalyticsResponse> {
-		const orgId = await this.merchantContext.resolveOrgIdForUser(userId, merchantOrgId);
+	public async getMerchantAnalytics(actor: MerchantActor, query: RewardsAnalyticsQuery): Promise<MerchantAnalyticsResponse> {
+		await this.merchantContext.requireActorCapability(actor, "merchant:view_analytics");
+		const orgId = actor.merchantOrgId;
 		const period = resolveAnalyticsPeriod(query.from, query.to);
 		const previous = previousAnalyticsPeriod(period);
 

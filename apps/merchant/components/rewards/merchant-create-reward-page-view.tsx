@@ -2,7 +2,9 @@
 
 import { MerchantCapabilityGate } from "@/components/access/merchant-capability-gate";
 import { MerchantRewardFormFields } from "@/components/rewards/merchant-reward-form-fields";
+import { upsertMerchantRewardInListCache } from "@/lib/rewards/query-cache";
 import { useAuth } from "@workspace/client/lib/auth";
+import { useQueryClient } from "@tanstack/react-query";
 import {
 	mapMerchantCreateRewardFormToInput,
 	MerchantRewardFormFieldsSchema,
@@ -46,6 +48,7 @@ export interface MerchantCreateRewardPageViewProps {
 
 export function MerchantCreateRewardPageView({ defaultCategory }: MerchantCreateRewardPageViewProps): React.JSX.Element {
 	const { api } = useAuth();
+	const queryClient = useQueryClient();
 	const router = useRouter();
 	const [saveAsDraft, setSaveAsDraft] = React.useState<boolean>(false);
 
@@ -64,6 +67,7 @@ export function MerchantCreateRewardPageView({ defaultCategory }: MerchantCreate
 
 	const createMutation = api.merchant.rewards.create.useMutation({
 		onSuccess: (response): void => {
+			upsertMerchantRewardInListCache(queryClient, response.data);
 			toastMessage.success({
 				title: saveAsDraft ? "Draft saved" : "Reward created",
 				description: saveAsDraft ? "Your draft is ready to edit." : "Redirecting to reward details.",

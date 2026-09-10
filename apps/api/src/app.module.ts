@@ -14,6 +14,8 @@ import { AppMessagingModule } from "./messaging/app-messaging.module";
 import { AuthorizationAdminModule } from "./modules/authorization/admin/authorization-admin.module";
 import { AuthorizationModule } from "./modules/authorization/authorization.module";
 import { AuthorizationGuard } from "./modules/authorization/guards/authorization.guard";
+import { ApiKeysModule } from "./modules/api-keys/api-keys.module";
+import { ApiKeyAuthGuard } from "./modules/api-keys/guards/api-key-auth.guard";
 import { AuthModule } from "./modules/auth/auth.module";
 import { AuthGuard } from "./modules/auth/guards/auth.guard";
 import { RestrictedSessionGuard } from "./modules/auth/guards/restricted-session.guard";
@@ -66,6 +68,7 @@ if (observeEnabled && observeAppKey !== undefined && observeAppSecret !== undefi
 		ScheduleModule.forRoot(),
 		LogsModule,
 		HealthModule,
+		ApiKeysModule,
 		AuthModule,
 		SessionsModule,
 		ImpersonationModule,
@@ -101,9 +104,12 @@ if (observeEnabled && observeAppKey !== undefined && observeAppSecret !== undefi
 			provide: APP_INTERCEPTOR,
 			useClass: PerformanceInterceptor,
 		},
-		// AuthGuard first (attach `request.user`), then AuthorizationGuard
-		// (evaluates @RequirePermission, @RequireAllPermissions, @RequireAnyPermission,
-		// @RequireAllRoles, @RequireAnyRole).
+		// ApiKeyAuthGuard first (optional API key on @AllowApiKeyAuth routes),
+		// then AuthGuard (JWT), then AuthorizationGuard.
+		{
+			provide: APP_GUARD,
+			useClass: ApiKeyAuthGuard,
+		},
 		{
 			provide: APP_GUARD,
 			useClass: AuthGuard,

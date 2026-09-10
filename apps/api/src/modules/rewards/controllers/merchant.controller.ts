@@ -1,11 +1,15 @@
-import { Body, Controller, Get, Headers, Param, Patch, Post, Query } from "@nestjs/common";
-import { ApiBearerAuth, ApiBody, ApiHeader, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
+import { Body, Controller, Get, Headers, Param, Patch, Post, Query, UseInterceptors } from "@nestjs/common";
+import { ApiBearerAuth, ApiBody, ApiHeader, ApiOkResponse, ApiOperation, ApiSecurity, ApiTags } from "@nestjs/swagger";
 import { z } from "zod";
 import type { MerchantKybProfileResponse, MerchantKybSubmissionInput, MerchantMembershipResponse } from "@workspace/shared";
 
 import { apiContract, apiPath, MerchantUpdateRewardSchema, UuidParamSchema } from "@workspace/shared";
 import { ZodValidationPipe } from "../../../common/pipes/zod-validation.pipe";
 import { readFirstHeader } from "../../../common/utils/http-headers";
+import { AllowApiKeyAuth } from "../../api-keys/decorators/allow-api-key-auth.decorator";
+import { GetMerchantActor } from "../../api-keys/decorators/get-merchant-actor.decorator";
+import { MerchantActorInterceptor } from "../../api-keys/interceptors/merchant-actor.interceptor";
+import type { MerchantActor } from "../../api-keys/types/merchant-actor.types";
 import { SkipAuthThrottle } from "../../auth/decorators/skip-auth-throttle.decorator";
 import { GetUser } from "../../auth/decorators/get-user.decorator";
 import type { AccessTokenPayload } from "../../auth/services/token.service";
@@ -71,6 +75,9 @@ export class MerchantKybController {
 
 @ApiTags("Merchant Rewards")
 @ApiBearerAuth()
+@ApiSecurity("merchantApiKey")
+@AllowApiKeyAuth()
+@UseInterceptors(MerchantActorInterceptor)
 @Controller(apiPath("/merchant/rewards"))
 export class MerchantRewardsController {
 	public constructor(private readonly merchantRewardService: MerchantRewardService) {}
@@ -79,12 +86,8 @@ export class MerchantRewardsController {
 	@ApiHeader(MERCHANT_ORG_HEADER)
 	@ApiOperation({ summary: "List merchant rewards" })
 	@ApiOkResponse({ description: "Rewards for the merchant org" })
-	public listRewards(
-		@GetUser() user: AccessTokenPayload,
-		@Headers() headers: Record<string, string | string[] | undefined>,
-	): ReturnType<MerchantRewardService["listRewards"]> {
-		const orgId = readFirstHeader(headers["x-merchant-org-id"]);
-		return this.merchantRewardService.listRewards(user.sub, orgId);
+	public listRewards(@GetMerchantActor() actor: MerchantActor): ReturnType<MerchantRewardService["listRewards"]> {
+		return this.merchantRewardService.listRewards(actor);
 	}
 
 	@Post()
@@ -93,12 +96,10 @@ export class MerchantRewardsController {
 	@ApiBody({ type: MerchantCreateRewardDto })
 	@ApiOkResponse({ description: "Created reward" })
 	public createReward(
-		@GetUser() user: AccessTokenPayload,
-		@Headers() headers: Record<string, string | string[] | undefined>,
-		@Body(new ZodValidationPipe(apiContract.merchant.rewards.create.input)) body: Parameters<MerchantRewardService["createReward"]>[2],
+		@GetMerchantActor() actor: MerchantActor,
+		@Body(new ZodValidationPipe(apiContract.merchant.rewards.create.input)) body: Parameters<MerchantRewardService["createReward"]>[1],
 	): ReturnType<MerchantRewardService["createReward"]> {
-		const orgId = readFirstHeader(headers["x-merchant-org-id"]);
-		return this.merchantRewardService.createReward(user.sub, orgId, body);
+		return this.merchantRewardService.createReward(actor, body);
 	}
 
 	@Patch(":rewardId")
@@ -107,13 +108,11 @@ export class MerchantRewardsController {
 	@ApiBody({ type: MerchantUpdateRewardDto })
 	@ApiOkResponse({ description: "Updated reward" })
 	public updateReward(
-		@GetUser() user: AccessTokenPayload,
-		@Headers() headers: Record<string, string | string[] | undefined>,
+		@GetMerchantActor() actor: MerchantActor,
 		@Param(new ZodValidationPipe(z.object({ rewardId: UuidParamSchema }).strict())) params: { rewardId: string },
-		@Body(new ZodValidationPipe(MerchantUpdateRewardSchema)) body: Parameters<MerchantRewardService["updateReward"]>[3],
+		@Body(new ZodValidationPipe(MerchantUpdateRewardSchema)) body: Parameters<MerchantRewardService["updateReward"]>[2],
 	): ReturnType<MerchantRewardService["updateReward"]> {
-		const orgId = readFirstHeader(headers["x-merchant-org-id"]);
-		return this.merchantRewardService.updateReward(user.sub, orgId, params.rewardId, body);
+		return this.merchantRewardService.updateReward(actor, params.rewardId, body);
 	}
 
 	@Post(":rewardId/publish")
@@ -122,12 +121,10 @@ export class MerchantRewardsController {
 	@ApiBody({ type: RewardsEmptyBodyDto, required: false })
 	@ApiOkResponse({ description: "Reward pending review" })
 	public publishReward(
-		@GetUser() user: AccessTokenPayload,
-		@Headers() headers: Record<string, string | string[] | undefined>,
+		@GetMerchantActor() actor: MerchantActor,
 		@Param(new ZodValidationPipe(apiContract.merchant.rewards.publish.input)) params: { rewardId: string },
 	): ReturnType<MerchantRewardService["publishReward"]> {
-		const orgId = readFirstHeader(headers["x-merchant-org-id"]);
-		return this.merchantRewardService.publishReward(user.sub, orgId, params.rewardId);
+		return this.merchantRewardService.publishReward(actor, params.rewardId);
 	}
 }
 
@@ -177,6 +174,9 @@ export class MerchantApiKeysController {
 
 @ApiTags("Merchant Redemptions")
 @ApiBearerAuth()
+@ApiSecurity("merchantApiKey")
+@AllowApiKeyAuth()
+@UseInterceptors(MerchantActorInterceptor)
 @Controller(apiPath("/merchant/redemptions"))
 export class MerchantRedemptionsController {
 	public constructor(private readonly merchantRewardService: MerchantRewardService) {}
@@ -186,17 +186,18 @@ export class MerchantRedemptionsController {
 	@ApiOperation({ summary: "List merchant redemptions" })
 	@ApiOkResponse({ description: "Paginated redemption history" })
 	public listRedemptions(
-		@GetUser() user: AccessTokenPayload,
-		@Headers() headers: Record<string, string | string[] | undefined>,
-		@Query(new ZodValidationPipe(apiContract.merchant.redemptions.input)) query: Parameters<MerchantRewardService["listRedemptions"]>[2],
+		@GetMerchantActor() actor: MerchantActor,
+		@Query(new ZodValidationPipe(apiContract.merchant.redemptions.input)) query: Parameters<MerchantRewardService["listRedemptions"]>[1],
 	): ReturnType<MerchantRewardService["listRedemptions"]> {
-		const orgId = readFirstHeader(headers["x-merchant-org-id"]);
-		return this.merchantRewardService.listRedemptions(user.sub, orgId, query);
+		return this.merchantRewardService.listRedemptions(actor, query);
 	}
 }
 
 @ApiTags("Merchant Analytics")
 @ApiBearerAuth()
+@ApiSecurity("merchantApiKey")
+@AllowApiKeyAuth()
+@UseInterceptors(MerchantActorInterceptor)
 @Controller(apiPath("/merchant/analytics"))
 export class MerchantAnalyticsController {
 	public constructor(private readonly rewardsAnalyticsService: RewardsAnalyticsService) {}
@@ -206,11 +207,9 @@ export class MerchantAnalyticsController {
 	@ApiOperation({ summary: "Merchant reward performance analytics" })
 	@ApiOkResponse({ description: "Summary metrics, trends, and top rewards" })
 	public getAnalytics(
-		@GetUser() user: AccessTokenPayload,
-		@Headers() headers: Record<string, string | string[] | undefined>,
-		@Query(new ZodValidationPipe(apiContract.merchant.analytics.input)) query: Parameters<RewardsAnalyticsService["getMerchantAnalytics"]>[2],
+		@GetMerchantActor() actor: MerchantActor,
+		@Query(new ZodValidationPipe(apiContract.merchant.analytics.input)) query: Parameters<RewardsAnalyticsService["getMerchantAnalytics"]>[1],
 	): ReturnType<RewardsAnalyticsService["getMerchantAnalytics"]> {
-		const orgId = readFirstHeader(headers["x-merchant-org-id"]);
-		return this.rewardsAnalyticsService.getMerchantAnalytics(user.sub, orgId, query);
+		return this.rewardsAnalyticsService.getMerchantAnalytics(actor, query);
 	}
 }

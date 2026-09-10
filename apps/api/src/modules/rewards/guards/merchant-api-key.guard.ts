@@ -1,21 +1,24 @@
 import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from "@nestjs/common";
 import type { FastifyRequest } from "fastify";
 
-import { PrismaService } from "../../../prisma/prisma.service";
+import { MerchantApiKeyVerificationService } from "../../api-keys/services/merchant-api-key-verification.service";
+import { extractApiKeyFromRequest } from "../../api-keys/utils/extract-api-key.util";
 import { readFirstHeader } from "../../../common/utils/http-headers";
-import { sha256Hex } from "../utils/reward-crypto.util";
+import { PrismaService } from "../../../prisma/prisma.service";
 import { MERCHANT_POS_CONTEXT_KEY, type MerchantPosContext } from "../types/merchant-pos-context";
 
+/** POS redemption guard — API key plus terminal binding. */
 @Injectable()
 export class MerchantApiKeyGuard implements CanActivate {
-	public constructor(private readonly prisma: PrismaService) {}
+	public constructor(
+		private readonly merchantApiKeyVerification: MerchantApiKeyVerificationService,
+		private readonly prisma: PrismaService,
+	) {}
 
 	public async canActivate(context: ExecutionContext): Promise<boolean> {
 		const request = context.switchToHttp().getRequest<FastifyRequest>();
 
-		const authorization = request.headers.authorization;
-		const apiKey = authorization?.startsWith("Bearer ") ? authorization.slice(7) : undefined;
-
+		const apiKey = extractApiKeyFromRequest(request);
 		if (apiKey === undefined || apiKey.length === 0) {
 			throw new UnauthorizedException({ message: "Merchant API key required", error: "MERCHANT_API_KEY_REQUIRED" });
 		}
@@ -25,22 +28,14 @@ export class MerchantApiKeyGuard implements CanActivate {
 			throw new UnauthorizedException({ message: "X-Terminal-Id header required", error: "TERMINAL_ID_REQUIRED" });
 		}
 
-		const keyHash = sha256Hex(apiKey);
-		const keyRecord = await this.prisma.merchantApiKey.findFirst({
-			where: {
-				keyHash,
-				isDeleted: false,
-				revokedAt: null,
-			},
-		});
-
-		if (keyRecord === null) {
+		const keyContext = await this.merchantApiKeyVerification.verify(apiKey);
+		if (keyContext === null) {
 			throw new UnauthorizedException({ message: "Invalid API key", error: "MERCHANT_API_KEY_INVALID" });
 		}
 
 		const terminal = await this.prisma.merchantTerminal.findFirst({
 			where: {
-				merchantOrgId: keyRecord.merchantOrgId,
+				merchantOrgId: keyContext.merchantOrgId,
 				terminalId,
 				isDeleted: false,
 			},
@@ -51,17 +46,12 @@ export class MerchantApiKeyGuard implements CanActivate {
 		}
 
 		const posContext: MerchantPosContext = {
-			merchantOrgId: keyRecord.merchantOrgId,
+			merchantOrgId: keyContext.merchantOrgId,
 			terminalId,
-			apiKeyId: keyRecord.id,
+			apiKeyId: keyContext.apiKeyId,
 		};
 
 		Object.assign(request, { [MERCHANT_POS_CONTEXT_KEY]: posContext });
-
-		await this.prisma.merchantApiKey.update({
-			where: { id: keyRecord.id },
-			data: { lastUsedAt: Date.now() },
-		});
 
 		return true;
 	}

@@ -11,6 +11,7 @@ import type {
 } from "@workspace/shared";
 import { EpochMsSchema, RewardPlatformEventSchema } from "@workspace/shared";
 
+import type { MerchantActor } from "../../api-keys/types/merchant-actor.types";
 import { paginateCursorListResult } from "../../../platform/persistence/cursor-list";
 import { MerchantMemberRepository } from "../repositories/merchant-member.repository";
 import { RewardClaimRepository } from "../repositories/reward-claim.repository";
@@ -36,15 +37,15 @@ export class MerchantRewardService {
 		private readonly rewardsPlatformEvents: RewardsPlatformEventsService,
 	) {}
 
-	public async listRewards(userId: string, merchantOrgId: string | undefined): Promise<RewardResponse[]> {
-		const orgId = await this.merchantContext.resolveOrgIdForUser(userId, merchantOrgId);
-		const rows = await this.rewardRepository.listConsumerByMerchantOrg(orgId);
+	public async listRewards(actor: MerchantActor): Promise<RewardResponse[]> {
+		await this.merchantContext.requireActorCapability(actor, "merchant:view_rewards");
+		const rows = await this.rewardRepository.listConsumerByMerchantOrg(actor.merchantOrgId);
 		return rows.map((row) => mapRewardToResponse(row, row.merchantOrg));
 	}
 
-	public async createReward(userId: string, merchantOrgId: string | undefined, input: MerchantCreateRewardInput): Promise<RewardResponse> {
-		const orgId = await this.merchantContext.resolveOrgIdForUser(userId, merchantOrgId);
-		await this.merchantContext.requireCapability(userId, orgId, "merchant:manage_rewards");
+	public async createReward(actor: MerchantActor, input: MerchantCreateRewardInput): Promise<RewardResponse> {
+		await this.merchantContext.requireActorCapability(actor, "merchant:manage_rewards");
+		const orgId = actor.merchantOrgId;
 
 		const referralsEnabled = input.referralsEnabled;
 		const referralPoolTotal = referralsEnabled ? input.referralPoolTotal : null;
@@ -106,9 +107,9 @@ export class MerchantRewardService {
 		return mapRewardToResponse(refreshed, refreshed.merchantOrg);
 	}
 
-	public async updateReward(userId: string, merchantOrgId: string | undefined, rewardId: string, input: MerchantUpdateRewardInput): Promise<RewardResponse> {
-		const orgId = await this.merchantContext.resolveOrgIdForUser(userId, merchantOrgId);
-		await this.merchantContext.requireCapability(userId, orgId, "merchant:manage_rewards");
+	public async updateReward(actor: MerchantActor, rewardId: string, input: MerchantUpdateRewardInput): Promise<RewardResponse> {
+		await this.merchantContext.requireActorCapability(actor, "merchant:manage_rewards");
+		const orgId = actor.merchantOrgId;
 
 		const reward = await this.findOrgConsumerReward(orgId, rewardId);
 
@@ -151,9 +152,9 @@ export class MerchantRewardService {
 		return mapRewardToResponse(refreshed, refreshed.merchantOrg);
 	}
 
-	public async publishReward(userId: string, merchantOrgId: string | undefined, rewardId: string): Promise<RewardResponse> {
-		const orgId = await this.merchantContext.resolveOrgIdForUser(userId, merchantOrgId);
-		await this.merchantContext.requireCapability(userId, orgId, "merchant:manage_rewards");
+	public async publishReward(actor: MerchantActor, rewardId: string): Promise<RewardResponse> {
+		await this.merchantContext.requireActorCapability(actor, "merchant:manage_rewards");
+		const orgId = actor.merchantOrgId;
 
 		const reward = await this.findOrgConsumerReward(orgId, rewardId);
 
@@ -182,13 +183,9 @@ export class MerchantRewardService {
 		return mapRewardToResponse(refreshed, refreshed.merchantOrg);
 	}
 
-	public async listRedemptions(
-		userId: string,
-		merchantOrgId: string | undefined,
-		query: MerchantRedemptionListQuery,
-	): Promise<PaginatedServiceResult<MerchantRedemptionListItem>> {
-		const orgId = await this.merchantContext.resolveOrgIdForUser(userId, merchantOrgId);
-		const result = await this.redemptionRepository.listForMerchant(orgId, query);
+	public async listRedemptions(actor: MerchantActor, query: MerchantRedemptionListQuery): Promise<PaginatedServiceResult<MerchantRedemptionListItem>> {
+		await this.merchantContext.requireActorCapability(actor, "merchant:view_redemptions");
+		const result = await this.redemptionRepository.listForMerchant(actor.merchantOrgId, query);
 
 		return paginateCursorListResult(
 			{

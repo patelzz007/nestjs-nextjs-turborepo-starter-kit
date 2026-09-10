@@ -29,10 +29,13 @@ export const REWARD_SEED_IDS = {
 	referralCredited: "594dcffc-3091-4aca-befa-affd618d5c36",
 } as const;
 
-/** Plaintext POS API keys for staging / simulator (seed only). */
+/**
+ * Plaintext merchant API keys for staging / simulator (seed only).
+ * Suffix matches production format: `openssl rand -base64 128` (fixed here for idempotent seeds).
+ */
 export const DEMO_MERCHANT_API_KEYS = {
-	kl: "mk_live_demo_kl_brew_terminal",
-	mlk: "mk_live_demo_mlk_jonker_terminal",
+	kl: "mk_live_IwgbQID2Csq4nbnfwUxVUrQT8lwrlhEz7bzagwasKyFtZYSQ42LSH43lzTfRdBkV7tZArdHQQE4EW0wDHpVAroL57w/+5AzsCxRpax2fmu3JqITATsJKJRi4+fifNVj1E3WswonhsleEBinxwcMOlqccH0suhUq6mJWVvaWYkf8=",
+	mlk: "mk_live_Dx20Nsn5K79wGXWaTYbEvUyVLQrXWIwExA7zsK4jGyMMKxVPxsmJHoIrGimviO7RBtbb5ZdLsEcT0vxGeBVhV7NP72FoIRxFcF17juhUiMxrHxfAMuIy5NuYIK/eMqDdpWY5KNYxMGNCy/iT20Kc7813y2bMoOjZTCJJ/84JMQY=",
 } as const;
 
 /** Plaintext QR token for pending KL claim (hash stored in DB). */

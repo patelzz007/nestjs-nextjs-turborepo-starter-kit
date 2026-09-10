@@ -3,7 +3,9 @@
 import { MerchantInventoryBar, MerchantRewardStatusBadge } from "@/components/merchant-ui/reward-status";
 import { MerchantRewardFormFields } from "@/components/rewards/merchant-reward-form-fields";
 import { useMerchantCapabilities } from "@/lib/merchant-capabilities";
+import { invalidateMerchantRewardsListCache, upsertMerchantRewardInListCache } from "@/lib/rewards/query-cache";
 import { stubApiMeta } from "@/lib/api-envelope";
+import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@workspace/client/lib/auth";
 import {
 	mapMerchantUpdateRewardFormToInput,
@@ -33,6 +35,7 @@ function isRewardEditable(status: RewardResponse["status"]): boolean {
 
 export function MerchantEditRewardPageView({ rewardId, initialRewards }: MerchantEditRewardPageViewProps): React.JSX.Element {
 	const { api } = useAuth();
+	const queryClient = useQueryClient();
 	const { hasCapability } = useMerchantCapabilities();
 
 	const initialQueryData = React.useMemo(
@@ -51,9 +54,12 @@ export function MerchantEditRewardPageView({ rewardId, initialRewards }: Merchan
 		{},
 		{
 			initialData: initialQueryData,
+			staleTime: 0,
+			refetchOnMount: "always",
 		},
 	);
 	const reward = rewardsQuery.data?.data.find((row) => row.id === rewardId);
+	const isResolvingReward = reward === undefined && (rewardsQuery.isLoading || rewardsQuery.isFetching);
 
 	const {
 		register,
@@ -78,7 +84,8 @@ export function MerchantEditRewardPageView({ rewardId, initialRewards }: Merchan
 	const canPublish = canManageRewards && reward?.status === "DRAFT";
 
 	const updateMutation = api.merchant.rewards.update.useMutation({
-		onSuccess: (): void => {
+		onSuccess: (response): void => {
+			upsertMerchantRewardInListCache(queryClient, response.data);
 			toastMessage.success({ title: "Reward updated", description: "Your changes have been saved." });
 			void rewardsQuery.refetch();
 		},
@@ -88,9 +95,10 @@ export function MerchantEditRewardPageView({ rewardId, initialRewards }: Merchan
 	});
 
 	const publishMutation = api.merchant.rewards.publish.useMutation({
-		onSuccess: (): void => {
+		onSuccess: (response): void => {
+			upsertMerchantRewardInListCache(queryClient, response.data);
 			toastMessage.success({ title: "Submitted for review", description: "Your reward is now pending approval." });
-			void rewardsQuery.refetch();
+			void invalidateMerchantRewardsListCache(queryClient);
 		},
 		onError: (): void => {
 			toastMessage.error({ title: "Submit failed", description: "Could not submit reward for review." });
@@ -132,7 +140,7 @@ export function MerchantEditRewardPageView({ rewardId, initialRewards }: Merchan
 		void publishMutation.mutateAsync({ rewardId });
 	}, [publishMutation, rewardId]);
 
-	if (rewardsQuery.isLoading && initialRewards === undefined) {
+	if (isResolvingReward) {
 		return <p className="text-sm text-muted-foreground">Loading reward…</p>;
 	}
 

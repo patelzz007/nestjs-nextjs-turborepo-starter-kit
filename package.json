@@ -17,6 +17,7 @@
 		"typecheck": "turbo typecheck",
 		"test": "turbo test",
 		"secrets:scan": "node packages/tooling/scripts/check-env-example-secrets.mjs",
+		"secrets:generate": "node packages/tooling/scripts/generate-app-secrets.mjs",
 		"db:all": "turbo run db:seed",
 		"db:deploy": "pnpm --filter @workspace/api db:deploy",
 		"db:migrate": "pnpm --filter @workspace/api db:migrate",

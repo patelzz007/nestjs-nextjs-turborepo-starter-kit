@@ -1,6 +1,9 @@
 import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import type { CapabilitySlug, MerchantMembershipResponse } from "@workspace/shared";
 
+import type { MerchantActor } from "../../api-keys/types/merchant-actor.types";
+import type { MerchantApiKeyAuthContext } from "../../api-keys/types/api-key-auth.types";
+import { MERCHANT_API_KEY_CAPABILITIES } from "../constants/merchant-api-key-capabilities";
 import { AuthorizationCheckerService } from "../../authorization/services/authorization-checker.service";
 import { MerchantMemberRepository } from "../repositories/merchant-member.repository";
 import { MerchantOrgRepository } from "../repositories/merchant-org.repository";
@@ -14,6 +17,39 @@ export class MerchantContextService {
 		private readonly authorizationChecker: AuthorizationCheckerService,
 		private readonly merchantCapabilities: MerchantCapabilityService,
 	) {}
+
+	public resolveOrgIdFromApiKey(apiKeyAuth: MerchantApiKeyAuthContext, requestedOrgId: string | undefined): string {
+		if (requestedOrgId !== undefined && requestedOrgId.length > 0 && requestedOrgId !== apiKeyAuth.merchantOrgId) {
+			throw new ForbiddenException({
+				message: "API key cannot access another merchant org",
+				error: "MERCHANT_ORG_FORBIDDEN",
+			});
+		}
+
+		return apiKeyAuth.merchantOrgId;
+	}
+
+	public async requireActorCapability(actor: MerchantActor, capability: CapabilitySlug): Promise<void> {
+		if (actor.kind === "api_key") {
+			if (!MERCHANT_API_KEY_CAPABILITIES.includes(capability)) {
+				throw new ForbiddenException({
+					message: "Insufficient merchant API key permissions",
+					error: "MERCHANT_API_KEY_CAPABILITY_REQUIRED",
+					capability,
+				});
+			}
+			return;
+		}
+
+		if (actor.userId === null) {
+			throw new ForbiddenException({
+				message: "Merchant authentication required",
+				error: "MERCHANT_AUTH_REQUIRED",
+			});
+		}
+
+		await this.requireCapability(actor.userId, actor.merchantOrgId, capability);
+	}
 
 	public async resolveOrgIdForUser(userId: string, requestedOrgId: string | undefined): Promise<string> {
 		const memberships = await this.merchantMemberRepository.listOrgRefsForUser(userId);

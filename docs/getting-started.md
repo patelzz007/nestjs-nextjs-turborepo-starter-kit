@@ -241,11 +241,13 @@ Open `apps/api/.env` and fill in real values:
 | `PORT`                      | `8080`                                                                 | Port the API listens on                                  |
 | `CORS_ORIGINS`              | `http://localhost:3000,http://localhost:3001`                          | Comma-separated frontend origins allowed to call the API |
 | `DATABASE_URL`              | `postgresql://postgres:postgres@localhost:5432/monorepo?schema=public` | Postgres connection string                               |
-| `JWT_ACCESS_SECRET`         | (random ≥ 32 chars)                                                    | Signs access tokens                                      |
+| `JWT_ACCESS_SECRET`         | (`openssl rand -base64 128`)                                           | Signs access tokens                                      |
 | `JWT_ACCESS_EXPIRY`         | `15m`                                                                  | Access token lifetime (e.g. `15m`, `1h`)                 |
-| `JWT_REFRESH_SECRET`        | (random ≥ 32 chars)                                                    | Signs refresh tokens                                     |
+| `JWT_REFRESH_SECRET`        | (`openssl rand -base64 128`)                                           | Signs refresh tokens                                     |
 | `JWT_REFRESH_EXPIRY`        | `7d`                                                                   | Refresh token lifetime                                   |
-| `EMAIL_VERIFICATION_SECRET` | (random ≥ 32 chars)                                                    | Signs email-verification tokens                          |
+| `EMAIL_VERIFICATION_SECRET`   | (`openssl rand -base64 128`)                                           | Signs email-verification tokens                          |
+| `TWO_FACTOR_PENDING_SECRET` | (`openssl rand -base64 128`)                                           | Signs short-lived 2FA login step tokens                    |
+| `MFA_ENCRYPTION_KEYS`         | (`{"1":"<openssl rand -base64 128>"}`)                                 | AES key material for encrypted MFA secrets                 |
 | `BCRYPT_SALT_ROUNDS`        | `10`                                                                   | Password hashing cost                                    |
 | `RESEND_API_KEY`            | `re_...`                                                               | Sends transactional emails (signup, password reset)      |
 | `EMAIL_FROM_ADDRESS`        | `noreply@example.com`                                                  | "From" address for emails                                |
@@ -261,18 +263,23 @@ Open `apps/api/.env` and fill in real values:
 > value above is for — add any frontend origin that should be allowed to call
 > the API.
 
-**Generate strong secrets** (run this 3 times, paste each result into the three
-secret vars):
+**Generate strong secrets** (writes all app-owned signing keys into `apps/api/.env`):
 
 ```bash
-openssl rand -base64 32
+pnpm secrets:generate apps/api/.env
+```
+
+Or generate one value at a time:
+
+```bash
+openssl rand -base64 128
 ```
 
 ### If you copied real secrets into `.env.example`
 
 Tracked example files must contain **placeholders only**. If you ever pasted real JWT signing secrets or a Resend webhook secret into `apps/api/.env.example` (or copied that file into a deployed environment), rotate them immediately:
 
-1. Generate new values for `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, and `RESEND_WEBHOOK_SECRET`.
+1. Generate new values for `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `EMAIL_VERIFICATION_SECRET`, `TWO_FACTOR_PENDING_SECRET`, and `MFA_ENCRYPTION_KEYS` (`pnpm secrets:generate apps/api/.env`). Rotate `RESEND_WEBHOOK_SECRET` in the Resend dashboard separately.
 2. Update the live environment variables (never commit the real values).
 3. Restart the API so the new secrets load.
 4. Expect every existing session to become invalid — users must sign in again.
