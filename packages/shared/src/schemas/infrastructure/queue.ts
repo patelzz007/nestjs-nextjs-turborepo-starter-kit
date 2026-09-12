@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { EmailPreviewPropValueSchema, EmailTemplateKeySchema } from "../email/email";
+import { StorageProviderSchema } from "../domain/storage";
 
 /** BullMQ queue names used by the API (must match compose Bull Board prefix). */
 export const QUEUE_NAMES: ["email.send", "rewards.auto-publish", "claims.expire-pending", "claims.expire-referrer", "outbox.publish", "storage.cleanup", "storage.delete"] = [
@@ -35,7 +36,8 @@ export type RewardsMaintenanceJob = z.output<typeof RewardsMaintenanceJobSchema>
 export const StorageDeleteJobSchema = z
 	.object({
 		fileId: z.uuid(),
-		bucket: z.string().min(1),
+		provider: StorageProviderSchema,
+		container: z.string().min(1),
 		path: z.string().min(1),
 	})
 	.strict();

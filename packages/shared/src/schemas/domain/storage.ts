@@ -59,7 +59,6 @@ export const FileCategoryPolicySchema = z
 		visibility: FileVisibilitySchema,
 		maxBytes: z.number().int().positive(),
 		allowedMimeTypes: z.array(DocumentMimeTypeSchema).min(1),
-		requiresScanning: z.boolean(),
 		generatesVariants: z.boolean(),
 	})
 	.strict();
@@ -72,7 +71,6 @@ export const FILE_CATEGORY_POLICIES: Record<FileCategory, FileCategoryPolicy> = 
 		visibility: "PUBLIC",
 		maxBytes: 26_214_400,
 		allowedMimeTypes: ["image/jpeg", "image/png", "image/webp", "image/avif"],
-		requiresScanning: true,
 		generatesVariants: true,
 	},
 	STORE_LOGO: {
@@ -80,7 +78,6 @@ export const FILE_CATEGORY_POLICIES: Record<FileCategory, FileCategoryPolicy> = 
 		visibility: "PUBLIC",
 		maxBytes: 10_485_760,
 		allowedMimeTypes: ["image/jpeg", "image/png", "image/webp", "image/avif"],
-		requiresScanning: true,
 		generatesVariants: true,
 	},
 	STORE_BANNER: {
@@ -88,7 +85,6 @@ export const FILE_CATEGORY_POLICIES: Record<FileCategory, FileCategoryPolicy> = 
 		visibility: "PUBLIC",
 		maxBytes: 26_214_400,
 		allowedMimeTypes: ["image/jpeg", "image/png", "image/webp", "image/avif"],
-		requiresScanning: true,
 		generatesVariants: true,
 	},
 	USER_AVATAR: {
@@ -96,7 +92,6 @@ export const FILE_CATEGORY_POLICIES: Record<FileCategory, FileCategoryPolicy> = 
 		visibility: "PUBLIC",
 		maxBytes: 10_485_760,
 		allowedMimeTypes: ["image/jpeg", "image/png", "image/webp", "image/avif"],
-		requiresScanning: true,
 		generatesVariants: true,
 	},
 	MERCHANT_KYB: {
@@ -104,7 +99,6 @@ export const FILE_CATEGORY_POLICIES: Record<FileCategory, FileCategoryPolicy> = 
 		visibility: "PRIVATE",
 		maxBytes: 26_214_400,
 		allowedMimeTypes: ["application/pdf", "image/jpeg", "image/png", "image/webp"],
-		requiresScanning: true,
 		generatesVariants: false,
 	},
 };
@@ -192,21 +186,54 @@ export const CreateFileUploadUrlSchema = z
 
 export type CreateFileUploadUrlInput = z.output<typeof CreateFileUploadUrlSchema>;
 
-export const PresignedPostFieldSchema = z.record(z.string(), z.string());
+/** Active object-storage backend for a deployment or stored file row. */
+export const StorageProviderSchema = z.enum(["local", "s3", "firebase"]);
 
-export type PresignedPostField = z.output<typeof PresignedPostFieldSchema>;
+export type StorageProvider = z.output<typeof StorageProviderSchema>;
 
-export const CreateFileUploadUrlResponseSchema = z
+/** Provider-neutral pointer to a stored object. */
+export const StorageObjectLocatorSchema = z
 	.object({
-		fileId: z.uuid(),
-		uploadUrl: z.url(),
-		fields: PresignedPostFieldSchema,
-		objectKey: z.string().min(1),
-		expiresIn: z.number().int().positive(),
+		provider: StorageProviderSchema,
+		container: z.string().min(1),
+		path: z.string().min(1),
+		revision: z.string().nullable().optional(),
 	})
 	.strict();
 
-export type CreateFileUploadUrlResponse = z.output<typeof CreateFileUploadUrlResponseSchema>;
+export type StorageObjectLocator = z.output<typeof StorageObjectLocatorSchema>;
+
+/** Browser upload transport supported by upload tickets. */
+export const BrowserUploadMethodSchema = z.enum(["POST_MULTIPART", "PUT"]);
+
+export type BrowserUploadMethod = z.output<typeof BrowserUploadMethodSchema>;
+
+export const BrowserUploadTicketFieldsSchema = z.record(z.string(), z.string());
+
+export type BrowserUploadTicketFields = z.output<typeof BrowserUploadTicketFieldsSchema>;
+
+export const BrowserUploadTicketHeadersSchema = z.record(z.string(), z.string());
+
+export type BrowserUploadTicketHeaders = z.output<typeof BrowserUploadTicketHeadersSchema>;
+
+/** API-issued upload ticket consumed by the browser before `/files/:id/complete`. */
+export const BrowserUploadTicketSchema = z
+	.object({
+		fileId: z.uuid(),
+		objectPath: z.string().min(1),
+		expiresIn: z.number().int().positive(),
+		method: BrowserUploadMethodSchema,
+		uploadUrl: z.url(),
+		fields: BrowserUploadTicketFieldsSchema.optional(),
+		headers: BrowserUploadTicketHeadersSchema.optional(),
+	})
+	.strict();
+
+export type BrowserUploadTicket = z.output<typeof BrowserUploadTicketSchema>;
+
+export const CreateFileUploadUrlResponseSchema = BrowserUploadTicketSchema;
+
+export type CreateFileUploadUrlResponse = BrowserUploadTicket;
 
 export const CompleteFileUploadSchema = z
 	.object({
@@ -243,7 +270,7 @@ export const FileProcessingResultSchema = z
 	.object({
 		fileId: z.uuid(),
 		status: z.enum(["READY", "FAILED", "QUARANTINED"]),
-		/** Set when the scanner Lambda already copied the object to its final flat key. */
+		/** Set when an external worker already copied the object to its final flat key. */
 		finalStoragePath: z.string().min(1).optional(),
 		scanStatus: StoredObjectScanStatusSchema.optional(),
 		scanResult: z.string().optional(),
@@ -252,23 +279,3 @@ export const FileProcessingResultSchema = z
 	.strict();
 
 export type FileProcessingResult = z.output<typeof FileProcessingResultSchema>;
-
-/** Synchronous scanner adapter result (Lambda invoke or ClamAV INSTREAM). */
-export const FileScannerResultSchema = z
-	.object({
-		clean: z.boolean(),
-		scanResult: z.string().optional(),
-	})
-	.strict();
-
-export type FileScannerResult = z.output<typeof FileScannerResultSchema>;
-
-export const FileScannerInvokePayloadSchema = z
-	.object({
-		bucket: z.string().min(1),
-		key: z.string().min(1),
-		fileId: z.uuid(),
-	})
-	.strict();
-
-export type FileScannerInvokePayload = z.output<typeof FileScannerInvokePayloadSchema>;

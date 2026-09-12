@@ -1184,17 +1184,21 @@ need signup/verification emails to send.
 **Q: How do merchant KYB (SSM) documents work locally?**
 A: Merchant onboarding creates the account first; KYB documents upload after login via
 **direct presigned POST** (`POST /files/upload-url` → S3/local shim → `POST /files/:fileId/complete`).
-Without `STORAGE_S3_PRIVATE_BUCKET`, files land under `apps/api/.object-storage/` and
-are scanned via ClamAV (`STORAGE_SCANNER_MODE=clamav`, default) before promotion to a flat final key.
+Without `STORAGE_S3_PRIVATE_BUCKET` or `STORAGE_S3_BUCKET`, files land under
+`apps/api/.object-storage/` and are promoted to a flat final key when
+`POST /files/:id/complete` succeeds.
 
-The **same setup steps** apply locally and in production (database → storage → env vars → verify).
-See the unified checklist in [Storage Platform — Setup & Operations](./infrastructure/storage.md#3-unified-setup-checklist).
+A **single S3 bucket** (e.g. `STORAGE_S3_BUCKET=rewardhub`) is enough — you do not
+need separate public and private buckets. See
+[Storage — One bucket vs two buckets](./infrastructure/storage.md#5-one-bucket-vs-two-buckets-s3).
 
 | Mode | When to use |
 |------|-------------|
 | **Local filesystem** (default) | Everyday dev — no AWS needed |
-| **Local + real S3** | Test presigned POST / CORS before prod — deploy CDK `development` stack |
+| **Local + real S3** | Existing bucket (`STORAGE_S3_BUCKET=…`) or CDK `development` stack |
 | **Production** | CDK `production` stack + env vars from stack outputs |
+
+Full CDK walkthrough: [Storage §8 — A to Z](./infrastructure/storage.md#8-cdk-deploy-guide--a-to-z-beginner-friendly).
 
 Migrate legacy rows with `pnpm --filter @workspace/api kyb:backfill -- --dry-run`.
 

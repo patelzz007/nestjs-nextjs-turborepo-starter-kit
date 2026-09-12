@@ -13,14 +13,15 @@ export class StorageQueueService {
 		@InjectQueue(QUEUE_NAMES[6]) private readonly deleteQueue: Queue<StorageDeleteJob>,
 	) {}
 
-	public async enqueuePhysicalDelete(input: { fileId: string; bucket: string; path: string }): Promise<void> {
+	public async enqueuePhysicalDelete(input: { fileId: string; provider: StorageDeleteJob["provider"]; container: string; path: string }): Promise<void> {
 		if (!this.config.useBullMq) {
 			return;
 		}
 
 		const payload = StorageDeleteJobSchema.parse({
 			fileId: input.fileId,
-			bucket: input.bucket,
+			provider: input.provider,
+			container: input.container,
 			path: input.path,
 		});
 

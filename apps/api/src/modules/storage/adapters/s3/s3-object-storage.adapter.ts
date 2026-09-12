@@ -2,24 +2,22 @@ import { CopyObjectCommand, DeleteObjectCommand, GetObjectCommand, HeadObjectCom
 import { createPresignedPost } from "@aws-sdk/s3-presigned-post";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { NodeHttpHandler } from "@smithy/node-http-handler";
-import { Injectable } from "@nestjs/common";
+import type { StorageObjectLocator } from "@workspace/shared";
 
-import { TypedConfigService } from "../../config/typed-config.service";
-import { sha256HexToBase64 } from "./utils/checksum.util";
-
+import { TypedConfigService } from "../../../../config/typed-config.service";
 import type {
-	ObjectStorageService,
-	StorageHeadObjectInput,
+	ObjectStorage,
+	StorageBrowserUploadTicketInput,
+	StorageBrowserUploadTicketResult,
 	StorageHeadObjectResult,
-	StoragePresignedPostInput,
-	StoragePresignedPostResult,
 	StorageSignedUrlInput,
 	StorageUploadInput,
 	StorageUploadResult,
-} from "./storage.types";
+} from "../../domain/object-storage.port";
+import type { PublicAssetPublicationInput, PublicAssetPublicationResult, PublicDelivery } from "../../domain/public-delivery.port";
+import { sha256Base64ToHex, sha256HexToBase64 } from "../../utils/checksum.util";
 
-@Injectable()
-export class S3ObjectStorageService implements ObjectStorageService {
+export class S3ObjectStorageAdapter implements ObjectStorage, PublicDelivery {
 	private readonly client: S3Client;
 
 	public constructor(private readonly config: TypedConfigService) {
@@ -46,27 +44,24 @@ export class S3ObjectStorageService implements ObjectStorageService {
 	public async upload(input: StorageUploadInput): Promise<StorageUploadResult> {
 		const result = await this.client.send(
 			new PutObjectCommand({
-				Bucket: input.bucket,
-				Key: input.path,
+				Bucket: input.locator.container,
+				Key: input.locator.path,
 				Body: input.buffer,
 				ContentType: input.mimeType,
 				ServerSideEncryption: "AES256",
 				Metadata: input.metadata ?? {},
 			}),
 		);
-		return {
-			bucket: input.bucket,
-			path: input.path,
-			generation: result.ETag !== undefined ? result.ETag.replaceAll('"', "") : null,
-		};
+		const revision = result.ETag !== undefined ? result.ETag.replaceAll('"', "") : null;
+		return { locator: { ...input.locator, revision }, revision };
 	}
 
-	public async getObject(input: StorageHeadObjectInput): Promise<Buffer | null> {
+	public async getObject(locator: StorageObjectLocator): Promise<Buffer | null> {
 		try {
 			const result = await this.client.send(
 				new GetObjectCommand({
-					Bucket: input.bucket,
-					Key: input.path,
+					Bucket: locator.container,
+					Key: locator.path,
 				}),
 			);
 			if (result.Body === undefined) {
@@ -79,48 +74,45 @@ export class S3ObjectStorageService implements ObjectStorageService {
 		}
 	}
 
-	public async deleteObject(bucket: string, path: string): Promise<void> {
+	public async deleteObject(locator: StorageObjectLocator): Promise<void> {
 		await this.client.send(
 			new DeleteObjectCommand({
-				Bucket: bucket,
-				Key: path,
+				Bucket: locator.container,
+				Key: locator.path,
 			}),
 		);
 	}
 
-	public async copyObject(sourceBucket: string, sourcePath: string, destBucket: string, destPath: string): Promise<StorageUploadResult> {
+	public async copyObject(source: StorageObjectLocator, destination: StorageObjectLocator): Promise<StorageUploadResult> {
 		const result = await this.client.send(
 			new CopyObjectCommand({
-				Bucket: destBucket,
-				Key: destPath,
-				CopySource: `${sourceBucket}/${sourcePath}`,
+				Bucket: destination.container,
+				Key: destination.path,
+				CopySource: `${source.container}/${source.path}`,
 				ServerSideEncryption: "AES256",
 				MetadataDirective: "COPY",
 			}),
 		);
-		return {
-			bucket: destBucket,
-			path: destPath,
-			generation: result.CopyObjectResult?.ETag !== undefined ? result.CopyObjectResult.ETag.replaceAll('"', "") : null,
-		};
+		const revision = result.CopyObjectResult?.ETag !== undefined ? result.CopyObjectResult.ETag.replaceAll('"', "") : null;
+		return { locator: { ...destination, revision }, revision };
 	}
 
 	public async getSignedDownloadUrl(input: StorageSignedUrlInput): Promise<string> {
 		const responseContentDisposition =
 			input.disposition !== undefined && input.fileName !== undefined ? `${input.disposition}; filename="${input.fileName.replaceAll('"', "_")}"` : undefined;
 		const command = new GetObjectCommand({
-			Bucket: input.bucket,
-			Key: input.path,
+			Bucket: input.locator.container,
+			Key: input.locator.path,
 			ResponseContentDisposition: responseContentDisposition,
 		});
 		return getSignedUrl(this.client, command, { expiresIn: input.expiresInSeconds });
 	}
 
-	public async createPresignedPost(input: StoragePresignedPostInput): Promise<StoragePresignedPostResult> {
+	public async createBrowserUploadTicket(input: StorageBrowserUploadTicketInput): Promise<StorageBrowserUploadTicketResult> {
 		const checksumBase64 = sha256HexToBase64(input.checksumSha256);
 		const result = await createPresignedPost(this.client, {
-			Bucket: input.bucket,
-			Key: input.path,
+			Bucket: input.locator.container,
+			Key: input.locator.path,
 			Conditions: [
 				["content-length-range", 1, input.maxBytes],
 				["eq", "$Content-Type", input.mimeType],
@@ -139,25 +131,35 @@ export class S3ObjectStorageService implements ObjectStorageService {
 			},
 			Expires: input.expiresInSeconds,
 		});
-		return { url: result.url, fields: result.fields };
+		return { method: "POST_MULTIPART", uploadUrl: result.url, fields: result.fields };
 	}
 
-	public async headObject(input: StorageHeadObjectInput): Promise<StorageHeadObjectResult | null> {
+	public async headObject(locator: StorageObjectLocator): Promise<StorageHeadObjectResult | null> {
 		try {
 			const result = await this.client.send(
 				new HeadObjectCommand({
-					Bucket: input.bucket,
-					Key: input.path,
+					Bucket: locator.container,
+					Key: locator.path,
 				}),
 			);
 			return {
 				sizeBytes: result.ContentLength ?? 0,
 				mimeType: result.ContentType ?? null,
-				checksumSha256: result.ChecksumSHA256 ?? null,
-				etag: result.ETag !== undefined ? result.ETag.replaceAll('"', "") : null,
+				checksumSha256Hex: result.ChecksumSHA256 !== undefined ? sha256Base64ToHex(result.ChecksumSHA256) : null,
+				revision: result.ETag !== undefined ? result.ETag.replaceAll('"', "") : null,
 			};
 		} catch {
 			return null;
 		}
+	}
+
+	public publishAsset(input: PublicAssetPublicationInput): Promise<PublicAssetPublicationResult> {
+		const cdnDomain = this.config.cloudfrontPublicDomain;
+		const publicUrl =
+			cdnDomain !== null ? `https://${cdnDomain}/${input.locator.path}` : `https://${input.locator.container}.s3.${this.config.awsRegion}.amazonaws.com/${input.locator.path}`;
+		return Promise.resolve({
+			publicUrl,
+			revision: input.locator.revision ?? null,
+		});
 	}
 }

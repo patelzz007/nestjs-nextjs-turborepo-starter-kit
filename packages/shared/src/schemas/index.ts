@@ -207,6 +207,10 @@ export type {
 	UrlAnalyticsResponse,
 } from "./domain/clicks";
 export {
+	BrowserUploadMethodSchema,
+	BrowserUploadTicketFieldsSchema,
+	BrowserUploadTicketHeadersSchema,
+	BrowserUploadTicketSchema,
 	CompleteFileUploadResponseSchema,
 	CompleteFileUploadSchema,
 	CreateFileUploadUrlResponseSchema,
@@ -218,8 +222,6 @@ export {
 	FileDownloadDispositionSchema,
 	FileDownloadResponseSchema,
 	FileProcessingResultSchema,
-	FileScannerInvokePayloadSchema,
-	FileScannerResultSchema,
 	FileRecordSchema,
 	FileStatusSchema,
 	FileUploadPolicySchema,
@@ -230,11 +232,16 @@ export {
 	ImageMimeTypeSchema,
 	MERCHANT_KYB_UPLOAD_POLICY,
 	MerchantAssetTypeSchema,
-	PresignedPostFieldSchema,
+	StorageObjectLocatorSchema,
+	StorageProviderSchema,
 	StoredObjectScanStatusSchema,
 	toFileUploadPolicy,
 } from "./domain/storage";
 export type {
+	BrowserUploadMethod,
+	BrowserUploadTicket,
+	BrowserUploadTicketFields,
+	BrowserUploadTicketHeaders,
 	CompleteFileUploadInput,
 	CompleteFileUploadResponse,
 	CreateFileUploadUrlInput,
@@ -245,8 +252,6 @@ export type {
 	FileDownloadDisposition,
 	FileDownloadResponse,
 	FileProcessingResult,
-	FileScannerInvokePayload,
-	FileScannerResult,
 	FileRecord,
 	FileStatus,
 	FileUploadPolicy,
@@ -255,7 +260,8 @@ export type {
 	FileVisibility,
 	ImageMimeType,
 	MerchantAssetType,
-	PresignedPostField,
+	StorageObjectLocator,
+	StorageProvider,
 	StoredObjectScanStatus,
 } from "./domain/storage";
 export { BaseResponseSchema, EpochMsSchema, epochMs, nowEpochMs, DataValueSchema } from "./api/common";

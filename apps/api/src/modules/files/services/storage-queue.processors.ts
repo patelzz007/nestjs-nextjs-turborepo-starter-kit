@@ -5,8 +5,9 @@ import { Job, Queue, hasLegacyRepeatableKeyShape } from "bullmq";
 import { QUEUE_NAMES, StorageCleanupJobSchema, StorageDeleteJobSchema } from "@workspace/shared";
 
 import { TypedConfigService } from "../../../config/typed-config.service";
-import { OBJECT_STORAGE } from "../../storage/storage.tokens";
-import type { ObjectStorageService } from "../../storage/storage.types";
+import type { ObjectStorage } from "../../storage/domain/object-storage.port";
+import { OBJECT_STORAGE } from "../../storage/domain/storage.tokens";
+import { toStorageObjectLocator } from "../../storage/utils/storage-locator.util";
 import { StoredFileRepository } from "../repositories/stored-file.repository";
 
 const STORAGE_CLEANUP_INTERVAL_MS = 60 * 60 * 1000;
@@ -53,7 +54,7 @@ export class StorageCleanupProcessor extends WorkerHost {
 
 	public constructor(
 		private readonly repository: StoredFileRepository,
-		@Inject(OBJECT_STORAGE) private readonly storage: ObjectStorageService,
+		@Inject(OBJECT_STORAGE) private readonly storage: ObjectStorage,
 	) {
 		super();
 	}
@@ -63,7 +64,13 @@ export class StorageCleanupProcessor extends WorkerHost {
 		const staleFiles = await this.repository.listStalePending(STALE_PENDING_MAX_AGE_MS);
 		for (const file of staleFiles) {
 			try {
-				await this.storage.deleteObject(file.storageBucket, file.storagePath);
+				const locator = toStorageObjectLocator(
+					file.storageProvider ?? "s3",
+					file.storageContainer ?? file.storageBucket,
+					file.storagePath,
+					file.objectRevision ?? file.objectGeneration,
+				);
+				await this.storage.deleteObject(locator);
 				await this.repository.markDeleted(file.id);
 				this.logger.log(`Cleaned stale pending file ${file.id}`);
 			} catch (error) {
@@ -78,14 +85,15 @@ export class StorageCleanupProcessor extends WorkerHost {
 export class StorageDeleteProcessor extends WorkerHost {
 	private readonly logger: Logger = new Logger(StorageDeleteProcessor.name);
 
-	public constructor(@Inject(OBJECT_STORAGE) private readonly storage: ObjectStorageService) {
+	public constructor(@Inject(OBJECT_STORAGE) private readonly storage: ObjectStorage) {
 		super();
 	}
 
 	public async process(job: Job): Promise<void> {
 		const payload = StorageDeleteJobSchema.parse(job.data);
+		const locator = toStorageObjectLocator(payload.provider, payload.container, payload.path);
 		try {
-			await this.storage.deleteObject(payload.bucket, payload.path);
+			await this.storage.deleteObject(locator);
 			this.logger.log(`Physically deleted object for file ${payload.fileId}`);
 		} catch (error) {
 			this.logger.warn(`Physical delete failed for file ${payload.fileId}: ${String(error)}`);

@@ -44,6 +44,9 @@ CREATE TYPE "FileCategory" AS ENUM ('PRODUCT_IMAGE', 'STORE_LOGO', 'STORE_BANNER
 CREATE TYPE "FileVisibility" AS ENUM ('PUBLIC', 'PRIVATE');
 
 -- CreateEnum
+CREATE TYPE "StorageProvider" AS ENUM ('local', 's3', 'firebase');
+
+-- CreateEnum
 CREATE TYPE "MerchantAssetType" AS ENUM ('LOGO', 'BANNER');
 
 -- CreateEnum
@@ -643,6 +646,9 @@ CREATE TABLE "stored_files" (
     "size_bytes" INTEGER NOT NULL,
     "expected_checksum" VARCHAR(64) NOT NULL,
     "actual_checksum" VARCHAR(64),
+    "storage_provider" "StorageProvider",
+    "storage_container" VARCHAR(255),
+    "object_revision" VARCHAR(64),
     "storage_bucket" VARCHAR(255) NOT NULL,
     "storage_path" VARCHAR(500) NOT NULL,
     "public_path" VARCHAR(500),
@@ -668,6 +674,9 @@ CREATE TABLE "file_variants" (
     "kind" "FileVariantKind" NOT NULL,
     "mime_type" VARCHAR(100) NOT NULL,
     "size_bytes" INTEGER NOT NULL,
+    "storage_provider" "StorageProvider",
+    "storage_container" VARCHAR(255),
+    "object_revision" VARCHAR(64),
     "storage_bucket" VARCHAR(255) NOT NULL,
     "storage_path" VARCHAR(500) NOT NULL,
     "public_path" VARCHAR(500),

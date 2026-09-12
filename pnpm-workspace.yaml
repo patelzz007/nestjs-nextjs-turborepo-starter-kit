@@ -4,6 +4,7 @@ packages:
   - "resources"
 
 allowBuilds:
+  '@firebase/util': set this to true or false
   "@nestjs/swagger": true
   "@prisma/engines": true
   "@scarf/scarf": true

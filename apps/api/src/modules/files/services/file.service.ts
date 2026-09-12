@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 
 import { BadRequestException, ForbiddenException, Inject, Injectable, Logger, NotFoundException, Optional } from "@nestjs/common";
 import type { StoredFile } from "@prisma/client";
@@ -16,15 +16,16 @@ import {
 	type FileDownloadResponse,
 	type FileProcessingResult,
 	type FileRecord,
+	type StorageObjectLocator,
 } from "@workspace/shared";
 
 import { TypedConfigService } from "../../../config/typed-config.service";
-import { OBJECT_STORAGE } from "../../storage/storage.tokens";
-import type { ObjectStorageService } from "../../storage/storage.types";
-import { sha256Base64ToHex } from "../../storage/utils/checksum.util";
+import { OBJECT_STORAGE, PUBLIC_DELIVERY } from "../../storage/domain/storage.tokens";
+import type { ObjectStorage } from "../../storage/domain/object-storage.port";
+import type { PublicDelivery } from "../../storage/domain/public-delivery.port";
 import { buildFinalStoragePath, buildStagingPath, isStagingPath, type BuildFileObjectPathInput } from "../../storage/utils/file-path.util";
+import { legacyBucketFieldsFromLocator, locatorFromStoredFile, toStorageObjectLocator } from "../../storage/utils/storage-locator.util";
 import { StoredFileRepository } from "../repositories/stored-file.repository";
-import { FileScanService } from "./file-scan.service";
 import { StorageQueueService } from "./storage-queue.service";
 
 const PRESIGNED_UPLOAD_TTL_SECONDS = 300;
@@ -36,9 +37,9 @@ export class FileService {
 	public constructor(
 		private readonly config: TypedConfigService,
 		private readonly repository: StoredFileRepository,
-		@Inject(OBJECT_STORAGE) private readonly storage: ObjectStorageService,
+		@Inject(OBJECT_STORAGE) private readonly storage: ObjectStorage,
+		@Inject(PUBLIC_DELIVERY) private readonly publicDelivery: PublicDelivery,
 		@Optional() private readonly storageQueue: StorageQueueService | null,
-		private readonly fileScanService: FileScanService,
 	) {}
 
 	public async createUploadUrl(userId: string, input: CreateFileUploadUrlInput): Promise<CreateFileUploadUrlResponse> {
@@ -56,25 +57,24 @@ export class FileService {
 			fileName: parsed.fileName,
 			mimeType: parsed.mimeType,
 		});
-		const bucket = this.config.storagePrivateBucket;
+		const locator = toStorageObjectLocator(this.config.storageProvider, this.config.storagePrivateBucket, storagePath);
 
 		await this.repository.create({
 			id: fileId,
+			...legacyBucketFieldsFromLocator(locator),
 			category: parsed.category,
 			visibility: policy.visibility,
 			originalName: parsed.fileName,
 			mimeType: parsed.mimeType,
 			sizeBytes: parsed.sizeBytes,
 			expectedChecksum: parsed.checksumSha256,
-			storageBucket: bucket,
 			storagePath,
 			uploadedById: userId,
 			merchantOrgId: parsed.merchantOrgId,
 		});
 
-		const presigned = await this.storage.createPresignedPost({
-			bucket,
-			path: storagePath,
+		const ticket = await this.storage.createBrowserUploadTicket({
+			locator,
 			mimeType: parsed.mimeType,
 			maxBytes: policy.maxBytes,
 			checksumSha256: parsed.checksumSha256,
@@ -88,10 +88,12 @@ export class FileService {
 
 		return {
 			fileId,
-			uploadUrl: presigned.url,
-			fields: presigned.fields,
-			objectKey: storagePath,
+			objectPath: storagePath,
 			expiresIn: PRESIGNED_UPLOAD_TTL_SECONDS,
+			method: ticket.method,
+			uploadUrl: ticket.uploadUrl,
+			...(ticket.fields !== undefined ? { fields: ticket.fields } : {}),
+			...(ticket.headers !== undefined ? { headers: ticket.headers } : {}),
 		};
 	}
 
@@ -110,36 +112,49 @@ export class FileService {
 			throw new BadRequestException({ message: "Checksum mismatch", error: "FILE_CHECKSUM_MISMATCH" });
 		}
 
-		const head = await this.storage.headObject({ bucket: file.storageBucket, path: file.storagePath });
+		const locator = locatorFromStoredFile(file, this.config.storageProvider);
+		const head = await this.storage.headObject(locator);
 		if (head === null) {
 			throw new BadRequestException({ message: "Uploaded object not found", error: "FILE_OBJECT_MISSING" });
 		}
 		if (head.sizeBytes !== file.sizeBytes) {
 			throw new BadRequestException({ message: "Uploaded size mismatch", error: "FILE_SIZE_MISMATCH" });
 		}
-		if (head.checksumSha256 !== null && sha256Base64ToHex(head.checksumSha256) !== input.checksumSha256) {
-			throw new BadRequestException({ message: "S3 checksum mismatch", error: "FILE_S3_CHECKSUM_MISMATCH" });
+
+		const resolvedChecksum = head.checksumSha256Hex ?? (await this.resolveChecksumFromObject(locator));
+		if (resolvedChecksum !== input.checksumSha256) {
+			throw new BadRequestException({ message: "Object checksum mismatch", error: "FILE_OBJECT_CHECKSUM_MISMATCH" });
 		}
 
-		const nextStatus = getFileCategoryPolicy(file.category).requiresScanning ? "SCANNING" : "PROCESSING";
-		const updated = await this.repository.updateStatus(fileId, nextStatus, {
+		const updated = await this.repository.updateStatus(fileId, "PROCESSING", {
 			actualChecksum: input.checksumSha256,
-			objectGeneration: head.etag,
-			scanStatus: nextStatus === "SCANNING" ? "SCANNING" : undefined,
+			objectGeneration: head.revision,
+			objectRevision: head.revision,
 		});
 
 		await this.bindFileToResource(updated);
 
-		if (nextStatus === "SCANNING") {
-			await this.runScanAndFinalize(fileId);
-			const scanned = await this.repository.findById(fileId);
-			if (scanned === null) {
-				throw new NotFoundException({ message: "File not found", error: "FILE_NOT_FOUND" });
-			}
-			return { file: this.mapFileRecord(scanned) };
+		try {
+			await this.applyProcessingResult({
+				fileId,
+				status: "READY",
+				scanStatus: "CLEAN",
+				scanResult: "ready",
+			});
+		} catch (error) {
+			this.logger.error(`Finalize failed for file ${fileId}: ${String(error)}`);
+			await this.applyProcessingResult({
+				fileId,
+				status: "FAILED",
+				scanResult: error instanceof Error ? error.message : "finalize-failed",
+			});
 		}
 
-		return { file: this.mapFileRecord(updated) };
+		const finalized = await this.repository.findById(fileId);
+		if (finalized === null) {
+			throw new NotFoundException({ message: "File not found", error: "FILE_NOT_FOUND" });
+		}
+		return { file: this.mapFileRecord(finalized) };
 	}
 
 	public async getFile(userId: string, fileId: string): Promise<FileRecord> {
@@ -168,9 +183,9 @@ export class FileService {
 			return { fileId, status: file.status, downloadUrl: null, expiresAt: null };
 		}
 
+		const locator = locatorFromStoredFile(file, this.config.storageProvider);
 		const downloadUrl = await this.storage.getSignedDownloadUrl({
-			bucket: file.storageBucket,
-			path: file.storagePath,
+			locator,
 			expiresInSeconds: this.config.storageDownloadTtlSeconds,
 			disposition,
 			fileName: file.originalName,
@@ -192,39 +207,13 @@ export class FileService {
 			throw new ForbiddenException({ message: "Not allowed to delete this file", error: "FILE_DELETE_FORBIDDEN" });
 		}
 		await this.repository.markDeleted(fileId);
+		const locator = locatorFromStoredFile(file, this.config.storageProvider);
 		await this.storageQueue?.enqueuePhysicalDelete({
 			fileId,
-			bucket: file.storageBucket,
-			path: file.storagePath,
+			provider: locator.provider,
+			container: locator.container,
+			path: locator.path,
 		});
-	}
-
-	public async runScanAndFinalize(fileId: string): Promise<void> {
-		const file = await this.repository.findById(fileId);
-		if (file === null) {
-			throw new NotFoundException({ message: "File not found", error: "FILE_NOT_FOUND" });
-		}
-		if (file.status !== "SCANNING" && file.status !== "PROCESSING") {
-			this.logger.warn(`Skipping scan for file ${fileId} with status ${file.status}`);
-			return;
-		}
-
-		try {
-			const scanResult = await this.fileScanService.scanFile(fileId);
-			await this.applyProcessingResult({
-				fileId,
-				status: scanResult.clean ? "READY" : "QUARANTINED",
-				scanStatus: scanResult.clean ? "CLEAN" : "INFECTED",
-				scanResult: scanResult.scanResult ?? (scanResult.clean ? "clean" : "infected"),
-			});
-		} catch (error) {
-			this.logger.error(`Scan failed for file ${fileId}: ${String(error)}`);
-			await this.applyProcessingResult({
-				fileId,
-				status: "FAILED",
-				scanResult: error instanceof Error ? error.message : "scan-failed",
-			});
-		}
 	}
 
 	public async applyProcessingResult(input: FileProcessingResult): Promise<void> {
@@ -253,9 +242,12 @@ export class FileService {
 		}
 
 		const promoted = await this.promoteToFinalStorage(file, parsed.finalStoragePath);
+		const publicPath = file.visibility === "PUBLIC" ? await this.publishPublicAsset(file, promoted.locator) : null;
 		await this.repository.updateStatus(parsed.fileId, "READY", {
-			storagePath: promoted.path,
-			objectGeneration: promoted.generation,
+			storagePath: promoted.locator.path,
+			objectGeneration: promoted.revision,
+			objectRevision: promoted.revision,
+			publicPath,
 			scanStatus: parsed.scanStatus ?? "CLEAN",
 			scannedAt: BigInt(Date.now()),
 			scanResult: parsed.scanResult ?? "ready",
@@ -274,6 +266,23 @@ export class FileService {
 			publicUrl: file.publicPath,
 			uploadedAt: EpochMsSchema.parse(Number(file.createdAt)),
 		});
+	}
+
+	private async resolveChecksumFromObject(locator: StorageObjectLocator): Promise<string> {
+		const buffer = await this.storage.getObject(locator);
+		if (buffer === null) {
+			throw new BadRequestException({ message: "Uploaded object not found", error: "FILE_OBJECT_MISSING" });
+		}
+		return createHash("sha256").update(buffer).digest("hex");
+	}
+
+	private async publishPublicAsset(file: StoredFile, locator: StorageObjectLocator): Promise<string> {
+		const published = await this.publicDelivery.publishAsset({
+			locator,
+			mimeType: DocumentMimeTypeSchema.parse(file.mimeType),
+			fileName: file.originalName,
+		});
+		return published.publicUrl;
 	}
 
 	private assertUploadAuthorized(userId: string, input: CreateFileUploadUrlInput): void {
@@ -355,31 +364,34 @@ export class FileService {
 		throw new BadRequestException({ message: "Unable to resolve storage owner", error: "FILE_RESOURCE_REQUIRED" });
 	}
 
-	private async promoteToFinalStorage(file: StoredFile, finalStoragePath?: string): Promise<{ path: string; generation: string | null }> {
+	private async promoteToFinalStorage(file: StoredFile, finalStoragePath?: string): Promise<{ locator: StorageObjectLocator; revision: string | null }> {
+		const sourceLocator = locatorFromStoredFile(file, this.config.storageProvider);
 		const destinationPath = finalStoragePath ?? buildFinalStoragePath(this.buildPathInputFromFile(file));
+		const destinationLocator = toStorageObjectLocator(sourceLocator.provider, sourceLocator.container, destinationPath);
 
 		if (!isStagingPath(file.storagePath)) {
 			if (file.storagePath === destinationPath) {
-				return { path: file.storagePath, generation: file.objectGeneration };
+				return { locator: sourceLocator, revision: file.objectRevision ?? file.objectGeneration };
 			}
-			const copied = await this.storage.copyObject(file.storageBucket, file.storagePath, file.storageBucket, destinationPath);
-			return { path: copied.path, generation: copied.generation };
+			const copied = await this.storage.copyObject(sourceLocator, destinationLocator);
+			return { locator: copied.locator, revision: copied.revision };
 		}
 
 		if (finalStoragePath !== undefined && file.storagePath !== finalStoragePath) {
 			await this.deleteStagingObjectIfPresent(file);
-			return { path: finalStoragePath, generation: file.objectGeneration };
+			return { locator: destinationLocator, revision: file.objectRevision ?? file.objectGeneration };
 		}
 
-		const copied = await this.storage.copyObject(file.storageBucket, file.storagePath, file.storageBucket, destinationPath);
-		await this.storage.deleteObject(file.storageBucket, file.storagePath);
-		return { path: copied.path, generation: copied.generation };
+		const copied = await this.storage.copyObject(sourceLocator, destinationLocator);
+		await this.storage.deleteObject(sourceLocator);
+		return { locator: copied.locator, revision: copied.revision };
 	}
 
 	private async deleteStagingObjectIfPresent(file: StoredFile): Promise<void> {
 		if (!isStagingPath(file.storagePath)) {
 			return;
 		}
-		await this.storage.deleteObject(file.storageBucket, file.storagePath);
+		const locator = locatorFromStoredFile(file, this.config.storageProvider);
+		await this.storage.deleteObject(locator);
 	}
 }

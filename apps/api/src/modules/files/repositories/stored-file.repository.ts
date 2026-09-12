@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import { Injectable } from "@nestjs/common";
-import type { FileCategory, FileStatus, StoredObjectScanStatus } from "@workspace/shared";
+import type { FileCategory, FileStatus, StorageProvider, StoredObjectScanStatus } from "@workspace/shared";
 import type { FileVariantKind, Prisma, StoredFile } from "@prisma/client";
 
 import { PrismaService } from "../../../prisma/prisma.service";
@@ -17,6 +17,9 @@ export interface CreateStoredFileInput {
 	readonly mimeType: string;
 	readonly sizeBytes: number;
 	readonly expectedChecksum: string;
+	readonly storageProvider: StorageProvider;
+	readonly storageContainer: string;
+	readonly objectRevision?: string | null;
 	readonly storageBucket: string;
 	readonly storagePath: string;
 	readonly uploadedById: string;
@@ -29,9 +32,12 @@ export interface CreateFileVariantInput {
 	readonly kind: FileVariantKind;
 	readonly mimeType: string;
 	readonly sizeBytes: number;
+	readonly storageProvider: StorageProvider;
+	readonly storageContainer: string;
 	readonly storageBucket: string;
 	readonly storagePath: string;
 	readonly publicPath?: string;
+	readonly objectRevision?: string | null;
 	readonly objectGeneration?: string | null;
 }
 
@@ -49,8 +55,12 @@ export class StoredFileRepository {
 				mimeType: input.mimeType,
 				sizeBytes: input.sizeBytes,
 				expectedChecksum: input.expectedChecksum,
+				storageProvider: input.storageProvider,
+				storageContainer: input.storageContainer,
+				objectRevision: input.objectRevision ?? null,
 				storageBucket: input.storageBucket,
 				storagePath: input.storagePath,
+				objectGeneration: input.objectRevision ?? null,
 				uploadedById: input.uploadedById,
 				merchantOrgId: input.merchantOrgId ?? null,
 				status: "PENDING",
@@ -70,6 +80,7 @@ export class StoredFileRepository {
 		data?: Partial<{
 			actualChecksum: string;
 			objectGeneration: string | null;
+			objectRevision: string | null;
 			storagePath: string;
 			publicPath: string | null;
 			scanStatus: StoredObjectScanStatus;
@@ -120,10 +131,13 @@ export class StoredFileRepository {
 				kind: input.kind,
 				mimeType: input.mimeType,
 				sizeBytes: input.sizeBytes,
+				storageProvider: input.storageProvider,
+				storageContainer: input.storageContainer,
 				storageBucket: input.storageBucket,
 				storagePath: input.storagePath,
 				publicPath: input.publicPath ?? null,
-				objectGeneration: input.objectGeneration ?? null,
+				objectRevision: input.objectRevision ?? null,
+				objectGeneration: input.objectRevision ?? input.objectGeneration ?? null,
 			},
 		});
 	}

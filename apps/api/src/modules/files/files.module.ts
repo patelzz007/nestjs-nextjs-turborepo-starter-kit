@@ -5,7 +5,6 @@ import { StorageModule } from "../storage/storage.module";
 
 import { FilesController } from "./controllers/files.controller";
 import { StoredFileRepository } from "./repositories/stored-file.repository";
-import { FileScanService } from "./services/file-scan.service";
 import { FileService } from "./services/file.service";
 import { StorageCleanupProcessor, StorageDeleteProcessor, StorageQueueScheduler } from "./services/storage-queue.processors";
 import { StorageQueueModule } from "./storage-queue.module";
@@ -18,7 +17,7 @@ const storageQueueProviders = hasRedis ? [StorageQueueScheduler, StorageCleanupP
 @Module({
 	imports: [PrismaModule, StorageModule, ...storageQueueImports],
 	controllers: [FilesController],
-	providers: [StoredFileRepository, FileService, FileScanService, ...storageQueueProviders],
-	exports: [StoredFileRepository, FileService, FileScanService],
+	providers: [StoredFileRepository, FileService, ...storageQueueProviders],
+	exports: [StoredFileRepository, FileService],
 })
 export class FilesModule {}

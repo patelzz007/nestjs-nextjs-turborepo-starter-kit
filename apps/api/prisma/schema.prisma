@@ -883,6 +883,12 @@ enum FileVisibility {
   PRIVATE
 }
 
+enum StorageProvider {
+  local
+  s3
+  firebase
+}
+
 enum MerchantAssetType {
   LOGO
   BANNER
@@ -1005,6 +1011,9 @@ model StoredFile {
   sizeBytes        Int            @map("size_bytes")
   expectedChecksum String         @map("expected_checksum") @db.VarChar(64)
   actualChecksum   String?        @map("actual_checksum") @db.VarChar(64)
+  storageProvider  StorageProvider? @map("storage_provider")
+  storageContainer String?        @map("storage_container") @db.VarChar(255)
+  objectRevision   String?        @map("object_revision") @db.VarChar(64)
   storageBucket    String         @map("storage_bucket") @db.VarChar(255)
   storagePath      String         @map("storage_path") @db.VarChar(500)
   publicPath       String?        @map("public_path") @db.VarChar(500)
@@ -1042,6 +1051,9 @@ model FileVariant {
   kind             FileVariantKind
   mimeType         String          @map("mime_type") @db.VarChar(100)
   sizeBytes        Int             @map("size_bytes")
+  storageProvider  StorageProvider? @map("storage_provider")
+  storageContainer String?         @map("storage_container") @db.VarChar(255)
+  objectRevision   String?         @map("object_revision") @db.VarChar(64)
   storageBucket    String          @map("storage_bucket") @db.VarChar(255)
   storagePath      String          @map("storage_path") @db.VarChar(500)
   publicPath       String?         @map("public_path") @db.VarChar(500)

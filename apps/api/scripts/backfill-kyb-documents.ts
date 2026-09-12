@@ -6,9 +6,10 @@ import { Pool } from "pg";
 import { z } from "zod";
 
 import { TypedConfigService } from "../src/config/typed-config.service";
-import { LocalObjectStorageService } from "../src/modules/storage/local-object-storage.service";
+import { LocalObjectStorageAdapter } from "../src/modules/storage/adapters/local/local-object-storage.adapter";
 import { buildKybQuarantinePath } from "../src/modules/rewards/utils/kyb-storage-path.util";
 import { verifyMagicBytes } from "../src/modules/storage/utils/magic-bytes.util";
+import { toStorageObjectLocator } from "../src/modules/storage/utils/storage-locator.util";
 
 const LegacyDocumentsSchema = z.array(MerchantKybLegacyDocumentSchema);
 
@@ -33,8 +34,10 @@ async function main(): Promise<void> {
 
 	const pool = new Pool({ connectionString: databaseUrl });
 	const prisma = new PrismaClient({ adapter: new PrismaPg(pool) });
-	const storage = new LocalObjectStorageService(new TypedConfigService());
-	const bucket = process.env.STORAGE_S3_BUCKET ?? "local-object-bucket";
+	const config = new TypedConfigService();
+	const storage = new LocalObjectStorageAdapter(config);
+	const container = config.storagePrivateBucket;
+	const provider = config.storageProvider;
 
 	const orgs = await prisma.merchantOrg.findMany({
 		where: { isDeleted: false, kybFields: { not: Prisma.DbNull } },
@@ -76,7 +79,8 @@ async function main(): Promise<void> {
 			const documentId = randomUUID();
 			const storagePath = buildKybQuarantinePath(org.id, submissionId, legacy.fileName);
 			if (!options.dryRun) {
-				await storage.upload({ bucket, path: storagePath, buffer, mimeType: legacy.mimeType });
+				const locator = toStorageObjectLocator(provider, container, storagePath);
+				await storage.upload({ locator, buffer, mimeType: legacy.mimeType });
 				await prisma.merchantKybDocument.create({
 					data: {
 						id: documentId,
@@ -86,7 +90,7 @@ async function main(): Promise<void> {
 						mimeType: legacy.mimeType,
 						sizeBytes: legacy.sizeBytes,
 						checksumSha256: createHash("sha256").update(buffer).digest("hex"),
-						storageBucket: bucket,
+						storageBucket: container,
 						storagePath,
 						scanStatus: "SCANNING",
 						isActive: true,

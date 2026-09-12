@@ -381,18 +381,49 @@ export class TypedConfigService {
 		return parsed > 0 ? parsed : 50_000;
 	}
 
-	// ── Object storage (AWS S3 / local filesystem) ───────────────────
+	// ── Object storage (local / S3 / Firebase) ───────────────────────
+
+	public get storageProvider(): "local" | "s3" | "firebase" {
+		const explicit: string | undefined = process.env.STORAGE_PROVIDER;
+		if (explicit === "local" || explicit === "s3" || explicit === "firebase") {
+			return explicit;
+		}
+		if (explicit !== undefined && explicit.length > 0) {
+			throw new Error(`Invalid STORAGE_PROVIDER value: ${explicit}. Expected local, s3, or firebase.`);
+		}
+		const legacyBucket: string | undefined = process.env.STORAGE_S3_PRIVATE_BUCKET ?? process.env.STORAGE_S3_BUCKET;
+		if (legacyBucket !== undefined && legacyBucket.length > 0 && !legacyBucket.startsWith("local-")) {
+			return "s3";
+		}
+		return "local";
+	}
 
 	public get storageBucket(): string {
 		return this.storagePrivateBucket;
 	}
 
 	public get storagePrivateBucket(): string {
-		return process.env.STORAGE_S3_PRIVATE_BUCKET ?? process.env.STORAGE_S3_BUCKET ?? "local-private-bucket";
+		return (
+			process.env.STORAGE_PRIVATE_CONTAINER ??
+			process.env.STORAGE_S3_PRIVATE_BUCKET ??
+			process.env.STORAGE_S3_BUCKET ??
+			process.env.FIREBASE_STORAGE_BUCKET ??
+			"local-private-bucket"
+		);
 	}
 
 	public get storagePublicBucket(): string {
-		return process.env.STORAGE_S3_PUBLIC_BUCKET ?? "local-public-bucket";
+		return process.env.STORAGE_PUBLIC_CONTAINER ?? process.env.STORAGE_S3_PUBLIC_BUCKET ?? "local-public-bucket";
+	}
+
+	public get firebaseProjectId(): string | null {
+		const value: string | undefined = process.env.FIREBASE_PROJECT_ID;
+		return value !== undefined && value.length > 0 ? value : null;
+	}
+
+	public get firebaseStorageBucket(): string | null {
+		const value: string | undefined = process.env.FIREBASE_STORAGE_BUCKET;
+		return value !== undefined && value.length > 0 ? value : null;
 	}
 
 	public get cloudfrontPublicDomain(): string | null {
@@ -424,34 +455,15 @@ export class TypedConfigService {
 	}
 
 	public get useS3Storage(): boolean {
-		const bucket: string | undefined = process.env.STORAGE_S3_PRIVATE_BUCKET ?? process.env.STORAGE_S3_BUCKET;
-		return bucket !== undefined && bucket.length > 0 && !bucket.startsWith("local-");
+		return this.storageProvider === "s3";
 	}
 
-	public get storageAutoScanInDev(): boolean {
-		return process.env.STORAGE_AUTO_SCAN_IN_DEV !== "false" && process.env.KYB_AUTO_SCAN_IN_DEV !== "false";
+	public get useFirebaseStorage(): boolean {
+		return this.storageProvider === "firebase";
 	}
 
-	public get storageScannerMode(): "lambda" | "clamav" {
-		const value: string | undefined = process.env.STORAGE_SCANNER_MODE;
-		if (value === "lambda") {
-			return "lambda";
-		}
-		return "clamav";
-	}
-
-	public get storageScannerLambdaArn(): string | null {
-		const value: string | undefined = process.env.STORAGE_SCANNER_LAMBDA_ARN;
-		return value !== undefined && value.length > 0 ? value : null;
-	}
-
-	public get clamAvHost(): string {
-		return process.env.STORAGE_CLAMAV_HOST ?? "127.0.0.1";
-	}
-
-	public get clamAvPort(): number {
-		const parsed: number = Number.parseInt(process.env.STORAGE_CLAMAV_PORT ?? "3310", 10);
-		return parsed > 0 ? parsed : 3310;
+	public get useLocalStorage(): boolean {
+		return this.storageProvider === "local";
 	}
 
 	public get storageDownloadTtlSeconds(): number {

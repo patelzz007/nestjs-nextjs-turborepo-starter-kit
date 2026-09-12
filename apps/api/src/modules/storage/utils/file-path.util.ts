@@ -47,7 +47,7 @@ const STAGING_PREFIX = "staging";
 
 /**
  * Ephemeral object key for browser direct uploads.
- * Bytes live here only until the scanner promotes a clean copy to the final path.
+ * Bytes live here only until upload completion promotes a copy to the final path.
  */
 export function buildStagingPath(input: BuildFileObjectPathInput): string {
 	const baseName = stripFileExtension(sanitizeFileName(input.fileName));
@@ -70,7 +70,7 @@ export function buildStagingPath(input: BuildFileObjectPathInput): string {
 }
 
 /**
- * Flat durable object key written only after a clean scan.
+ * Flat durable object key written after upload completion.
  * No quarantine/clean lifecycle segments — final keys are stable and easy to browse.
  */
 export function buildFinalStoragePath(input: BuildFileObjectPathInput): string {

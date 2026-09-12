@@ -21,6 +21,7 @@ export default defineConfig({
 			"src/modules/authorization/cache/authorization-cache.service.spec.ts",
 			"src/modules/sessions/sessions.service.spec.ts",
 			"src/modules/rewards/services/merchant-member.service.spec.ts",
+			"src/modules/storage/utils/*.spec.ts",
 		],
 		// Email/notification specs never touch the network or a real DB — all
 		// external calls (Resend, Prisma) are mocked.

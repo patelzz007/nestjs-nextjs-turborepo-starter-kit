@@ -57,17 +57,21 @@ export const EnvSchema = z
 		// ── Frontend (apps/web, apps/admin) ────────────────────────────
 		NEXT_PUBLIC_API_URL: z.url().optional(),
 
-		// ── Object storage (apps/api — AWS S3) ──────────────────────────
+		// ── Object storage (apps/api — local / S3 / Firebase) ───────────
+		STORAGE_PROVIDER: z.enum(["local", "s3", "firebase"]).optional(),
+		STORAGE_PRIVATE_CONTAINER: z.string().min(1).optional(),
+		STORAGE_PUBLIC_CONTAINER: z.string().min(1).optional(),
+		FIREBASE_PROJECT_ID: z.string().min(1).optional(),
+		FIREBASE_STORAGE_BUCKET: z.string().min(1).optional(),
+		GOOGLE_APPLICATION_CREDENTIALS: z.string().min(1).optional(),
 		STORAGE_S3_BUCKET: z.string().min(1).optional(),
+		STORAGE_S3_PRIVATE_BUCKET: z.string().min(1).optional(),
+		STORAGE_S3_PUBLIC_BUCKET: z.string().min(1).optional(),
+		STORAGE_CLOUDFRONT_PUBLIC_DOMAIN: z.string().min(1).optional(),
 		AWS_REGION: z.string().min(1).optional(),
 		AWS_ACCESS_KEY_ID: z.string().min(1).optional(),
 		AWS_SECRET_ACCESS_KEY: z.string().min(1).optional(),
 		STORAGE_DOWNLOAD_TTL_SECONDS: z.coerce.number().int().positive().optional(),
-		STORAGE_AUTO_SCAN_IN_DEV: z.enum(["true", "false"]).optional(),
-		STORAGE_SCANNER_MODE: z.enum(["lambda", "clamav"]).optional(),
-		STORAGE_SCANNER_LAMBDA_ARN: z.string().min(1).optional(),
-		STORAGE_CLAMAV_HOST: z.string().min(1).optional(),
-		STORAGE_CLAMAV_PORT: z.coerce.number().int().positive().optional(),
 		/** Legacy alias for STORAGE_DOWNLOAD_TTL_SECONDS. */
 		KYB_DOCUMENT_DOWNLOAD_TTL_SECONDS: z.coerce.number().int().positive().optional(),
 	})

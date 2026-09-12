@@ -493,6 +493,10 @@ export default function KybReviewPanel({ initialMerchantOrgId, initialPendingMer
 		[fetchMerchantDocumentUrl],
 	);
 
+	const handleCloseDocumentPreview = React.useCallback(function handleCloseDocumentPreview(): void {
+		setDocumentPreview(null);
+	}, []);
+
 	const updateKyb = api.rewardsAdmin.updateKyb.useMutation({
 		onSuccess: async (_data, variables) => {
 			toastMessage.success({ title: "KYB updated", description: "Merchant verification status saved." });
@@ -740,12 +744,7 @@ export default function KybReviewPanel({ initialMerchantOrgId, initialPendingMer
 					) : null}
 				</div>
 			</div>
-			<MerchantKybDocumentPreviewDialog
-				preview={documentPreview}
-				onClose={(): void => {
-					setDocumentPreview(null);
-				}}
-			/>
+			<MerchantKybDocumentPreviewDialog preview={documentPreview} onClose={handleCloseDocumentPreview} />
 		</div>
 	);
 }

@@ -1,0 +1,3 @@
+export const ACTIVE_STORAGE_ADAPTER = Symbol("ACTIVE_STORAGE_ADAPTER");
+export const OBJECT_STORAGE = Symbol("OBJECT_STORAGE");
+export const PUBLIC_DELIVERY = Symbol("PUBLIC_DELIVERY");

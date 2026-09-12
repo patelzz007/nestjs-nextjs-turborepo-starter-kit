@@ -4,7 +4,7 @@ import type { Multipart, MultipartFile } from "@fastify/multipart";
 import { DocumentMimeTypeSchema } from "@workspace/shared";
 import { z } from "zod";
 
-import type { UploadedFileBuffer } from "../../modules/storage/file-upload.types";
+import type { UploadedFileBuffer } from "../../modules/storage/application/file-upload.types";
 
 export interface ParsedMultipartRequest<TFields> {
 	readonly fields: TFields;
