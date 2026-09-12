@@ -29,7 +29,25 @@ CREATE TYPE "PilotCity" AS ENUM ('KUALA_LUMPUR', 'MELAKA');
 CREATE TYPE "MerchantOrgStatus" AS ENUM ('ONBOARDING', 'ACTIVE', 'SUSPENDED');
 
 -- CreateEnum
-CREATE TYPE "KybStatus" AS ENUM ('PENDING', 'APPROVED', 'REJECTED');
+CREATE TYPE "KybStatus" AS ENUM ('PENDING', 'APPROVED', 'REJECTED', 'ACTION_REQUIRED');
+
+-- CreateEnum
+CREATE TYPE "KybDocumentScanStatus" AS ENUM ('SCANNING', 'CLEAN', 'INFECTED');
+
+-- CreateEnum
+CREATE TYPE "FileStatus" AS ENUM ('PENDING', 'UPLOADED', 'PROCESSING', 'SCANNING', 'READY', 'FAILED', 'QUARANTINED', 'DELETED');
+
+-- CreateEnum
+CREATE TYPE "FileCategory" AS ENUM ('PRODUCT_IMAGE', 'STORE_LOGO', 'STORE_BANNER', 'USER_AVATAR', 'MERCHANT_KYB');
+
+-- CreateEnum
+CREATE TYPE "FileVisibility" AS ENUM ('PUBLIC', 'PRIVATE');
+
+-- CreateEnum
+CREATE TYPE "MerchantAssetType" AS ENUM ('LOGO', 'BANNER');
+
+-- CreateEnum
+CREATE TYPE "FileVariantKind" AS ENUM ('ORIGINAL', 'THUMBNAIL', 'MEDIUM', 'LARGE');
 
 -- CreateEnum
 CREATE TYPE "MerchantMemberRole" AS ENUM ('OWNER', 'CASHIER');
@@ -616,6 +634,134 @@ CREATE TABLE "merchant_orgs" (
 );
 
 -- CreateTable
+CREATE TABLE "stored_files" (
+    "id" TEXT NOT NULL,
+    "category" "FileCategory" NOT NULL,
+    "visibility" "FileVisibility" NOT NULL,
+    "original_name" VARCHAR(255) NOT NULL,
+    "mime_type" VARCHAR(100) NOT NULL,
+    "size_bytes" INTEGER NOT NULL,
+    "expected_checksum" VARCHAR(64) NOT NULL,
+    "actual_checksum" VARCHAR(64),
+    "storage_bucket" VARCHAR(255) NOT NULL,
+    "storage_path" VARCHAR(500) NOT NULL,
+    "public_path" VARCHAR(500),
+    "object_generation" VARCHAR(64),
+    "status" "FileStatus" NOT NULL DEFAULT 'PENDING',
+    "scan_status" "KybDocumentScanStatus",
+    "scanned_at" BIGINT,
+    "scan_result" VARCHAR(500),
+    "uploaded_by_id" TEXT NOT NULL,
+    "merchant_org_id" TEXT,
+    "is_deleted" BOOLEAN NOT NULL DEFAULT false,
+    "deleted_at" BIGINT,
+    "created_at" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
+    "updated_at" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
+
+    CONSTRAINT "stored_files_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "file_variants" (
+    "id" TEXT NOT NULL,
+    "file_id" TEXT NOT NULL,
+    "kind" "FileVariantKind" NOT NULL,
+    "mime_type" VARCHAR(100) NOT NULL,
+    "size_bytes" INTEGER NOT NULL,
+    "storage_bucket" VARCHAR(255) NOT NULL,
+    "storage_path" VARCHAR(500) NOT NULL,
+    "public_path" VARCHAR(500),
+    "object_generation" VARCHAR(64),
+    "is_deleted" BOOLEAN NOT NULL DEFAULT false,
+    "deleted_at" BIGINT,
+    "created_at" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
+    "updated_at" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
+
+    CONSTRAINT "file_variants_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "product_images" (
+    "id" TEXT NOT NULL,
+    "product_id" TEXT NOT NULL,
+    "file_id" TEXT NOT NULL,
+    "sort_order" INTEGER NOT NULL DEFAULT 0,
+    "is_primary" BOOLEAN NOT NULL DEFAULT false,
+    "is_deleted" BOOLEAN NOT NULL DEFAULT false,
+    "deleted_at" BIGINT,
+    "created_at" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
+    "updated_at" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
+
+    CONSTRAINT "product_images_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "merchant_assets" (
+    "id" TEXT NOT NULL,
+    "merchant_org_id" TEXT NOT NULL,
+    "asset_type" "MerchantAssetType" NOT NULL,
+    "file_id" TEXT NOT NULL,
+    "is_deleted" BOOLEAN NOT NULL DEFAULT false,
+    "deleted_at" BIGINT,
+    "created_at" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
+    "updated_at" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
+
+    CONSTRAINT "merchant_assets_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "user_avatars" (
+    "id" TEXT NOT NULL,
+    "user_id" TEXT NOT NULL,
+    "file_id" TEXT NOT NULL,
+    "is_deleted" BOOLEAN NOT NULL DEFAULT false,
+    "deleted_at" BIGINT,
+    "created_at" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
+    "updated_at" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
+
+    CONSTRAINT "user_avatars_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "merchant_kyb_files" (
+    "id" TEXT NOT NULL,
+    "merchant_org_id" TEXT NOT NULL,
+    "file_id" TEXT NOT NULL,
+    "submission_id" TEXT NOT NULL,
+    "is_active" BOOLEAN NOT NULL DEFAULT true,
+    "is_deleted" BOOLEAN NOT NULL DEFAULT false,
+    "deleted_at" BIGINT,
+    "created_at" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
+    "updated_at" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
+
+    CONSTRAINT "merchant_kyb_files_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "merchant_kyb_documents" (
+    "id" TEXT NOT NULL,
+    "merchant_org_id" TEXT NOT NULL,
+    "submission_id" TEXT NOT NULL,
+    "file_name" VARCHAR(255) NOT NULL,
+    "mime_type" VARCHAR(100) NOT NULL,
+    "size_bytes" INTEGER NOT NULL,
+    "checksum_sha256" VARCHAR(64) NOT NULL,
+    "storage_bucket" VARCHAR(255) NOT NULL,
+    "storage_path" VARCHAR(500) NOT NULL,
+    "object_generation" VARCHAR(64),
+    "scan_status" "KybDocumentScanStatus" NOT NULL DEFAULT 'SCANNING',
+    "scanned_at" BIGINT,
+    "scan_result" VARCHAR(500),
+    "is_active" BOOLEAN NOT NULL DEFAULT true,
+    "is_deleted" BOOLEAN NOT NULL DEFAULT false,
+    "deleted_at" BIGINT,
+    "created_at" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
+    "updated_at" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
+
+    CONSTRAINT "merchant_kyb_documents_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "merchant_members" (
     "id" TEXT NOT NULL,
     "user_id" TEXT NOT NULL,
@@ -1183,6 +1329,63 @@ CREATE INDEX "merchant_orgs_status_idx" ON "merchant_orgs"("status");
 CREATE INDEX "merchant_orgs_kyb_status_idx" ON "merchant_orgs"("kyb_status");
 
 -- CreateIndex
+CREATE INDEX "stored_files_uploaded_by_id_idx" ON "stored_files"("uploaded_by_id");
+
+-- CreateIndex
+CREATE INDEX "stored_files_merchant_org_id_idx" ON "stored_files"("merchant_org_id");
+
+-- CreateIndex
+CREATE INDEX "stored_files_status_idx" ON "stored_files"("status");
+
+-- CreateIndex
+CREATE INDEX "stored_files_category_idx" ON "stored_files"("category");
+
+-- CreateIndex
+CREATE INDEX "file_variants_file_id_idx" ON "file_variants"("file_id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "file_variants_file_id_kind_key" ON "file_variants"("file_id", "kind");
+
+-- CreateIndex
+CREATE INDEX "product_images_product_id_idx" ON "product_images"("product_id");
+
+-- CreateIndex
+CREATE INDEX "product_images_file_id_idx" ON "product_images"("file_id");
+
+-- CreateIndex
+CREATE INDEX "merchant_assets_file_id_idx" ON "merchant_assets"("file_id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "merchant_assets_merchant_org_id_asset_type_key" ON "merchant_assets"("merchant_org_id", "asset_type");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "user_avatars_user_id_key" ON "user_avatars"("user_id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "user_avatars_file_id_key" ON "user_avatars"("file_id");
+
+-- CreateIndex
+CREATE INDEX "merchant_kyb_files_merchant_org_id_idx" ON "merchant_kyb_files"("merchant_org_id");
+
+-- CreateIndex
+CREATE INDEX "merchant_kyb_files_merchant_org_id_is_active_idx" ON "merchant_kyb_files"("merchant_org_id", "is_active");
+
+-- CreateIndex
+CREATE INDEX "merchant_kyb_files_submission_id_idx" ON "merchant_kyb_files"("submission_id");
+
+-- CreateIndex
+CREATE INDEX "merchant_kyb_files_file_id_idx" ON "merchant_kyb_files"("file_id");
+
+-- CreateIndex
+CREATE INDEX "merchant_kyb_documents_merchant_org_id_idx" ON "merchant_kyb_documents"("merchant_org_id");
+
+-- CreateIndex
+CREATE INDEX "merchant_kyb_documents_merchant_org_id_is_active_idx" ON "merchant_kyb_documents"("merchant_org_id", "is_active");
+
+-- CreateIndex
+CREATE INDEX "merchant_kyb_documents_submission_id_idx" ON "merchant_kyb_documents"("submission_id");
+
+-- CreateIndex
 CREATE INDEX "merchant_members_merchant_org_id_idx" ON "merchant_members"("merchant_org_id");
 
 -- CreateIndex
@@ -1415,6 +1618,42 @@ ALTER TABLE "cities" ADD CONSTRAINT "cities_country_id_fkey" FOREIGN KEY ("count
 
 -- AddForeignKey
 ALTER TABLE "merchant_role_capabilities" ADD CONSTRAINT "merchant_role_capabilities_capability_id_fkey" FOREIGN KEY ("capability_id") REFERENCES "capability_definitions"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "stored_files" ADD CONSTRAINT "stored_files_uploaded_by_id_fkey" FOREIGN KEY ("uploaded_by_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "stored_files" ADD CONSTRAINT "stored_files_merchant_org_id_fkey" FOREIGN KEY ("merchant_org_id") REFERENCES "merchant_orgs"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "file_variants" ADD CONSTRAINT "file_variants_file_id_fkey" FOREIGN KEY ("file_id") REFERENCES "stored_files"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "product_images" ADD CONSTRAINT "product_images_product_id_fkey" FOREIGN KEY ("product_id") REFERENCES "product"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "product_images" ADD CONSTRAINT "product_images_file_id_fkey" FOREIGN KEY ("file_id") REFERENCES "stored_files"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "merchant_assets" ADD CONSTRAINT "merchant_assets_merchant_org_id_fkey" FOREIGN KEY ("merchant_org_id") REFERENCES "merchant_orgs"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "merchant_assets" ADD CONSTRAINT "merchant_assets_file_id_fkey" FOREIGN KEY ("file_id") REFERENCES "stored_files"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "user_avatars" ADD CONSTRAINT "user_avatars_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "user_avatars" ADD CONSTRAINT "user_avatars_file_id_fkey" FOREIGN KEY ("file_id") REFERENCES "stored_files"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "merchant_kyb_files" ADD CONSTRAINT "merchant_kyb_files_merchant_org_id_fkey" FOREIGN KEY ("merchant_org_id") REFERENCES "merchant_orgs"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "merchant_kyb_files" ADD CONSTRAINT "merchant_kyb_files_file_id_fkey" FOREIGN KEY ("file_id") REFERENCES "stored_files"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "merchant_kyb_documents" ADD CONSTRAINT "merchant_kyb_documents_merchant_org_id_fkey" FOREIGN KEY ("merchant_org_id") REFERENCES "merchant_orgs"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "merchant_members" ADD CONSTRAINT "merchant_members_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;

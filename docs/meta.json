@@ -10,6 +10,7 @@
   "--- Infrastructure ---",
   "infrastructure/architecture-eli5",
   "infrastructure/messaging",
+  "infrastructure/storage",
   "--- Tooling & DX ---",
   "typescript",
   "eslint",

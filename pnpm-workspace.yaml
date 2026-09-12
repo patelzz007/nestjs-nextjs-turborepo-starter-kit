@@ -13,6 +13,7 @@ allowBuilds:
   msgpackr-extract: true
   msw: false
   prisma: true
+  protobufjs: true
   sharp: true
   unrs-resolver: true
 
@@ -33,11 +34,11 @@ minimumReleaseAgeExclude:
   - motion-dom@13.1.1
   - resend@6.21.0
   - '@nestjs/observe@0.1.7'
-  - lucide-react@1.38.0 || 1.39.0
+  - lucide-react@1.38.0 || 1.39.0 || 1.45.0
   - '@nestjs/terminus@12.0.0'
-  - '@next/bundle-analyzer@16.3.4'
+  - '@next/bundle-analyzer@16.3.4 || 16.3.5'
   - '@next/env@16.3.4'
-  - '@next/eslint-plugin-next@16.3.4'
+  - '@next/eslint-plugin-next@16.3.4 || 16.3.5'
   - '@next/swc-darwin-arm64@16.3.4'
   - '@next/swc-darwin-x64@16.3.4'
   - '@next/swc-linux-arm64-gnu@16.3.4'
@@ -76,6 +77,10 @@ minimumReleaseAgeExclude:
   - fumadocs-ui@16.15.7
   - '@darraghor/eslint-plugin-nestjs-typed@7.5.1'
   - react-resizable-panels@4.12.4
+  - '@aws-sdk/client-s3@3.1130.0'
+  - '@aws-sdk/s3-request-presigner@3.1130.0'
+  - '@nestjs/schematics@12.0.1'
+  - zod@4.6.2
 
 # @darraghor/eslint-plugin-nestjs-typed does `import ts from "typescript"`
 # directly (undisclosed in its manifest), so Node resolves the hoisted TS 7

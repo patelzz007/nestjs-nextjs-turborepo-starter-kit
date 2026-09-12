@@ -1,0 +1,1440 @@
+{
+ "Description": "Private/public S3 buckets, CloudFront, processing queues, and scanners for development",
+ "Resources": {
+  "PrivateBucket35D9C6C6": {
+   "Type": "AWS::S3::Bucket",
+   "Properties": {
+    "BucketEncryption": {
+     "ServerSideEncryptionConfiguration": [
+      {
+       "ServerSideEncryptionByDefault": {
+        "SSEAlgorithm": "AES256"
+       }
+      }
+     ]
+    },
+    "BucketName": "app-development-private",
+    "CorsConfiguration": {
+     "CorsRules": [
+      {
+       "AllowedHeaders": [
+        "*"
+       ],
+       "AllowedMethods": [
+        "POST",
+        "PUT",
+        "HEAD",
+        "GET"
+       ],
+       "AllowedOrigins": [
+        "http://localhost:3000",
+        "http://localhost:3001",
+        "http://localhost:3003"
+       ],
+       "ExposedHeaders": [
+        "ETag",
+        "x-amz-checksum-sha256",
+        "x-amz-version-id"
+       ],
+       "MaxAge": 3600
+      }
+     ]
+    },
+    "LifecycleConfiguration": {
+     "Rules": [
+      {
+       "AbortIncompleteMultipartUpload": {
+        "DaysAfterInitiation": 7
+       },
+       "NoncurrentVersionExpiration": {
+        "NoncurrentDays": 30
+       },
+       "Status": "Enabled"
+      },
+      {
+       "ExpirationInDays": 1,
+       "Prefix": "staging/",
+       "Status": "Enabled"
+      }
+     ]
+    },
+    "PublicAccessBlockConfiguration": {
+     "BlockPublicAcls": true,
+     "BlockPublicPolicy": true,
+     "IgnorePublicAcls": true,
+     "RestrictPublicBuckets": true
+    },
+    "VersioningConfiguration": {
+     "Status": "Enabled"
+    }
+   },
+   "UpdateReplacePolicy": "Retain",
+   "DeletionPolicy": "Retain",
+   "Metadata": {
+    "aws:cdk:path": "StoragePlatform-development/PrivateBucket/Resource"
+   }
+  },
+  "PrivateBucketPolicy76F05644": {
+   "Type": "AWS::S3::BucketPolicy",
+   "Properties": {
+    "Bucket": {
+     "Ref": "PrivateBucket35D9C6C6"
+    },
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": "s3:*",
+       "Condition": {
+        "Bool": {
+         "aws:SecureTransport": "false"
+        }
+       },
+       "Effect": "Deny",
+       "Principal": {
+        "AWS": "*"
+       },
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "PrivateBucket35D9C6C6",
+          "Arn"
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::GetAtt": [
+             "PrivateBucket35D9C6C6",
+             "Arn"
+            ]
+           },
+           "/*"
+          ]
+         ]
+        }
+       ]
+      }
+     ],
+     "Version": "2012-10-17"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "StoragePlatform-development/PrivateBucket/Policy/Resource"
+   }
+  },
+  "PrivateBucketNotificationsHandlerPolicyDAA3C308": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": "s3:PutBucketNotification",
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::GetAtt": [
+         "PrivateBucket35D9C6C6",
+         "Arn"
+        ]
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "PrivateBucketNotificationsHandlerPolicyDAA3C308",
+    "Roles": [
+     {
+      "Ref": "BucketNotificationsHandler050a0587b7544547bf325f094a3db834RoleB6FB88EC"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "StoragePlatform-development/PrivateBucket/Notifications/HandlerPolicy/Resource"
+   }
+  },
+  "PrivateBucketNotificationsF04C53AC": {
+   "Type": "Custom::S3BucketNotifications",
+   "Properties": {
+    "ServiceToken": {
+     "Fn::GetAtt": [
+      "BucketNotificationsHandler050a0587b7544547bf325f094a3db8347ECC3691",
+      "Arn"
+     ]
+    },
+    "BucketName": {
+     "Ref": "PrivateBucket35D9C6C6"
+    },
+    "NotificationConfiguration": {
+     "QueueConfigurations": [
+      {
+       "Events": [
+        "s3:ObjectCreated:*"
+       ],
+       "Filter": {
+        "Key": {
+         "FilterRules": [
+          {
+           "Name": "prefix",
+           "Value": "staging/products/"
+          }
+         ]
+        }
+       },
+       "QueueArn": {
+        "Fn::GetAtt": [
+         "ProcessingQueue6DC600C3",
+         "Arn"
+        ]
+       }
+      }
+     ]
+    },
+    "Managed": true,
+    "SkipDestinationValidation": false
+   },
+   "DependsOn": [
+    "PrivateBucketNotificationsHandlerPolicyDAA3C308",
+    "PrivateBucketPolicy76F05644",
+    "ProcessingQueuePolicyDDFFDBBA",
+    "ProcessingQueue6DC600C3"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "StoragePlatform-development/PrivateBucket/Notifications/Resource"
+   }
+  },
+  "PublicOriginBucketAD441DB0": {
+   "Type": "AWS::S3::Bucket",
+   "Properties": {
+    "BucketEncryption": {
+     "ServerSideEncryptionConfiguration": [
+      {
+       "ServerSideEncryptionByDefault": {
+        "SSEAlgorithm": "AES256"
+       }
+      }
+     ]
+    },
+    "BucketName": "app-development-public-origin",
+    "LifecycleConfiguration": {
+     "Rules": [
+      {
+       "NoncurrentVersionExpiration": {
+        "NoncurrentDays": 30
+       },
+       "Status": "Enabled"
+      }
+     ]
+    },
+    "PublicAccessBlockConfiguration": {
+     "BlockPublicAcls": true,
+     "BlockPublicPolicy": true,
+     "IgnorePublicAcls": true,
+     "RestrictPublicBuckets": true
+    },
+    "VersioningConfiguration": {
+     "Status": "Enabled"
+    }
+   },
+   "UpdateReplacePolicy": "Retain",
+   "DeletionPolicy": "Retain",
+   "Metadata": {
+    "aws:cdk:path": "StoragePlatform-development/PublicOriginBucket/Resource"
+   }
+  },
+  "PublicOriginBucketPolicy8E4CC20F": {
+   "Type": "AWS::S3::BucketPolicy",
+   "Properties": {
+    "Bucket": {
+     "Ref": "PublicOriginBucketAD441DB0"
+    },
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": "s3:*",
+       "Condition": {
+        "Bool": {
+         "aws:SecureTransport": "false"
+        }
+       },
+       "Effect": "Deny",
+       "Principal": {
+        "AWS": "*"
+       },
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "PublicOriginBucketAD441DB0",
+          "Arn"
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::GetAtt": [
+             "PublicOriginBucketAD441DB0",
+             "Arn"
+            ]
+           },
+           "/*"
+          ]
+         ]
+        }
+       ]
+      },
+      {
+       "Action": "s3:GetObject",
+       "Condition": {
+        "StringEquals": {
+         "AWS:SourceArn": {
+          "Fn::Join": [
+           "",
+           [
+            "arn:",
+            {
+             "Ref": "AWS::Partition"
+            },
+            ":cloudfront::",
+            {
+             "Ref": "AWS::AccountId"
+            },
+            ":distribution/",
+            {
+             "Ref": "PublicDistributionDA9149C2"
+            }
+           ]
+          ]
+         }
+        }
+       },
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "cloudfront.amazonaws.com"
+       },
+       "Resource": {
+        "Fn::Join": [
+         "",
+         [
+          {
+           "Fn::GetAtt": [
+            "PublicOriginBucketAD441DB0",
+            "Arn"
+           ]
+          },
+          "/*"
+         ]
+        ]
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "StoragePlatform-development/PublicOriginBucket/Policy/Resource"
+   }
+  },
+  "ProcessingDlq24E71A3D": {
+   "Type": "AWS::SQS::Queue",
+   "Properties": {
+    "MessageRetentionPeriod": 1209600,
+    "QueueName": "app-development-processing-dlq"
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "StoragePlatform-development/ProcessingDlq/Resource"
+   }
+  },
+  "ProcessingDlqPolicy920CDA7C": {
+   "Type": "AWS::SQS::QueuePolicy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sqs:*",
+       "Condition": {
+        "Bool": {
+         "aws:SecureTransport": "false"
+        }
+       },
+       "Effect": "Deny",
+       "Principal": {
+        "AWS": "*"
+       },
+       "Resource": {
+        "Fn::GetAtt": [
+         "ProcessingDlq24E71A3D",
+         "Arn"
+        ]
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "Queues": [
+     {
+      "Ref": "ProcessingDlq24E71A3D"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "StoragePlatform-development/ProcessingDlq/Policy/Resource"
+   }
+  },
+  "ProcessingQueue6DC600C3": {
+   "Type": "AWS::SQS::Queue",
+   "Properties": {
+    "QueueName": "app-development-processing",
+    "RedrivePolicy": {
+     "deadLetterTargetArn": {
+      "Fn::GetAtt": [
+       "ProcessingDlq24E71A3D",
+       "Arn"
+      ]
+     },
+     "maxReceiveCount": 5
+    },
+    "VisibilityTimeout": 900
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "StoragePlatform-development/ProcessingQueue/Resource"
+   }
+  },
+  "ProcessingQueuePolicyDDFFDBBA": {
+   "Type": "AWS::SQS::QueuePolicy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sqs:*",
+       "Condition": {
+        "Bool": {
+         "aws:SecureTransport": "false"
+        }
+       },
+       "Effect": "Deny",
+       "Principal": {
+        "AWS": "*"
+       },
+       "Resource": {
+        "Fn::GetAtt": [
+         "ProcessingQueue6DC600C3",
+         "Arn"
+        ]
+       }
+      },
+      {
+       "Action": [
+        "sqs:SendMessage",
+        "sqs:GetQueueAttributes",
+        "sqs:GetQueueUrl"
+       ],
+       "Condition": {
+        "ArnLike": {
+         "aws:SourceArn": {
+          "Fn::GetAtt": [
+           "PrivateBucket35D9C6C6",
+           "Arn"
+          ]
+         }
+        }
+       },
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "s3.amazonaws.com"
+       },
+       "Resource": {
+        "Fn::GetAtt": [
+         "ProcessingQueue6DC600C3",
+         "Arn"
+        ]
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "Queues": [
+     {
+      "Ref": "ProcessingQueue6DC600C3"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "StoragePlatform-development/ProcessingQueue/Policy/Resource"
+   }
+  },
+  "ScannerDlqA8EBA6EE": {
+   "Type": "AWS::SQS::Queue",
+   "Properties": {
+    "MessageRetentionPeriod": 1209600,
+    "QueueName": "app-development-scanner-dlq"
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "StoragePlatform-development/ScannerDlq/Resource"
+   }
+  },
+  "ScannerDlqPolicy4E73990E": {
+   "Type": "AWS::SQS::QueuePolicy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sqs:*",
+       "Condition": {
+        "Bool": {
+         "aws:SecureTransport": "false"
+        }
+       },
+       "Effect": "Deny",
+       "Principal": {
+        "AWS": "*"
+       },
+       "Resource": {
+        "Fn::GetAtt": [
+         "ScannerDlqA8EBA6EE",
+         "Arn"
+        ]
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "Queues": [
+     {
+      "Ref": "ScannerDlqA8EBA6EE"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "StoragePlatform-development/ScannerDlq/Policy/Resource"
+   }
+  },
+  "ScannerQueue93784183": {
+   "Type": "AWS::SQS::Queue",
+   "Properties": {
+    "QueueName": "app-development-scanner",
+    "RedrivePolicy": {
+     "deadLetterTargetArn": {
+      "Fn::GetAtt": [
+       "ScannerDlqA8EBA6EE",
+       "Arn"
+      ]
+     },
+     "maxReceiveCount": 5
+    },
+    "VisibilityTimeout": 900
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "StoragePlatform-development/ScannerQueue/Resource"
+   }
+  },
+  "ScannerQueuePolicy88D17741": {
+   "Type": "AWS::SQS::QueuePolicy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sqs:*",
+       "Condition": {
+        "Bool": {
+         "aws:SecureTransport": "false"
+        }
+       },
+       "Effect": "Deny",
+       "Principal": {
+        "AWS": "*"
+       },
+       "Resource": {
+        "Fn::GetAtt": [
+         "ScannerQueue93784183",
+         "Arn"
+        ]
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "Queues": [
+     {
+      "Ref": "ScannerQueue93784183"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "StoragePlatform-development/ScannerQueue/Policy/Resource"
+   }
+  },
+  "ImageProcessorServiceRole607FFD33": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "lambda.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+       ]
+      ]
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "StoragePlatform-development/ImageProcessor/ServiceRole/Resource"
+   }
+  },
+  "ImageProcessorServiceRoleDefaultPolicy951A81DE": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "s3:GetObject*",
+        "s3:GetBucket*",
+        "s3:List*"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "PrivateBucket35D9C6C6",
+          "Arn"
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::GetAtt": [
+             "PrivateBucket35D9C6C6",
+             "Arn"
+            ]
+           },
+           "/*"
+          ]
+         ]
+        }
+       ]
+      },
+      {
+       "Action": [
+        "s3:GetObject*",
+        "s3:GetBucket*",
+        "s3:List*",
+        "s3:DeleteObject*",
+        "s3:PutObject",
+        "s3:PutObjectLegalHold",
+        "s3:PutObjectRetention",
+        "s3:PutObjectTagging",
+        "s3:PutObjectVersionTagging",
+        "s3:Abort*"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "PrivateBucket35D9C6C6",
+          "Arn"
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::GetAtt": [
+             "PrivateBucket35D9C6C6",
+             "Arn"
+            ]
+           },
+           "/*"
+          ]
+         ]
+        }
+       ]
+      },
+      {
+       "Action": [
+        "s3:GetObject*",
+        "s3:GetBucket*",
+        "s3:List*",
+        "s3:DeleteObject*",
+        "s3:PutObject",
+        "s3:PutObjectLegalHold",
+        "s3:PutObjectRetention",
+        "s3:PutObjectTagging",
+        "s3:PutObjectVersionTagging",
+        "s3:Abort*"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "PublicOriginBucketAD441DB0",
+          "Arn"
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::GetAtt": [
+             "PublicOriginBucketAD441DB0",
+             "Arn"
+            ]
+           },
+           "/*"
+          ]
+         ]
+        }
+       ]
+      },
+      {
+       "Action": [
+        "sqs:ReceiveMessage",
+        "sqs:ChangeMessageVisibility",
+        "sqs:GetQueueUrl",
+        "sqs:DeleteMessage",
+        "sqs:GetQueueAttributes"
+       ],
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::GetAtt": [
+         "ProcessingQueue6DC600C3",
+         "Arn"
+        ]
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "ImageProcessorServiceRoleDefaultPolicy951A81DE",
+    "Roles": [
+     {
+      "Ref": "ImageProcessorServiceRole607FFD33"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "StoragePlatform-development/ImageProcessor/ServiceRole/DefaultPolicy/Resource"
+   }
+  },
+  "ImageProcessor5D0B0257": {
+   "Type": "AWS::Lambda::Function",
+   "Properties": {
+    "Code": {
+     "ZipFile": "\nexports.handler = async (event) => {\n  console.log(\"Image processor placeholder\", JSON.stringify(event));\n  return { ok: true };\n};\n"
+    },
+    "Environment": {
+     "Variables": {
+      "PRIVATE_BUCKET": {
+       "Ref": "PrivateBucket35D9C6C6"
+      },
+      "PUBLIC_BUCKET": {
+       "Ref": "PublicOriginBucketAD441DB0"
+      }
+     }
+    },
+    "FunctionName": "app-development-image-processor",
+    "Handler": "index.handler",
+    "MemorySize": 1024,
+    "Role": {
+     "Fn::GetAtt": [
+      "ImageProcessorServiceRole607FFD33",
+      "Arn"
+     ]
+    },
+    "Runtime": "nodejs22.x",
+    "Timeout": 300
+   },
+   "DependsOn": [
+    "ImageProcessorServiceRoleDefaultPolicy951A81DE",
+    "ImageProcessorServiceRole607FFD33"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "StoragePlatform-development/ImageProcessor/Resource"
+   }
+  },
+  "ImageProcessorSqsEventSourceStoragePlatformdevelopmentProcessingQueueBD257307062201A7": {
+   "Type": "AWS::Lambda::EventSourceMapping",
+   "Properties": {
+    "BatchSize": 5,
+    "EventSourceArn": {
+     "Fn::GetAtt": [
+      "ProcessingQueue6DC600C3",
+      "Arn"
+     ]
+    },
+    "FunctionName": {
+     "Ref": "ImageProcessor5D0B0257"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "StoragePlatform-development/ImageProcessor/SqsEventSource:StoragePlatformdevelopmentProcessingQueueBD257307/Resource"
+   }
+  },
+  "ClamAvScannerServiceRole559F68FC": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "lambda.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+       ]
+      ]
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "StoragePlatform-development/ClamAvScanner/ServiceRole/Resource"
+   }
+  },
+  "ClamAvScannerServiceRoleDefaultPolicy8F8A0A02": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "s3:GetObject*",
+        "s3:GetBucket*",
+        "s3:List*"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "PrivateBucket35D9C6C6",
+          "Arn"
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::GetAtt": [
+             "PrivateBucket35D9C6C6",
+             "Arn"
+            ]
+           },
+           "/*"
+          ]
+         ]
+        }
+       ]
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "ClamAvScannerServiceRoleDefaultPolicy8F8A0A02",
+    "Roles": [
+     {
+      "Ref": "ClamAvScannerServiceRole559F68FC"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "StoragePlatform-development/ClamAvScanner/ServiceRole/DefaultPolicy/Resource"
+   }
+  },
+  "ClamAvScanner2C8BC9B2": {
+   "Type": "AWS::Lambda::Function",
+   "Properties": {
+    "Code": {
+     "ZipFile": "\nconst { S3Client, GetObjectCommand } = require(\"@aws-sdk/client-s3\");\n\nconst EICAR_SIGNATURE = \"X5O!P%@AP[4\\\\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*\";\n\nfunction resolvePayload(event) {\n  if (event.bucket && event.key && event.fileId) {\n    return { bucket: event.bucket, key: event.key, fileId: event.fileId };\n  }\n  throw new Error(\"Invalid scanner invoke payload\");\n}\n\nasync function readObjectBody(stream) {\n  const chunks = [];\n  for await (const chunk of stream) {\n    chunks.push(chunk);\n  }\n  return Buffer.concat(chunks);\n}\n\nexports.handler = async (event) => {\n  const { bucket, key } = resolvePayload(event);\n  const s3 = new S3Client({});\n  const object = await s3.send(new GetObjectCommand({ Bucket: bucket, Key: key }));\n  const body = await readObjectBody(object.Body);\n  const haystack = body.toString(\"utf8\");\n  const infected = haystack.includes(EICAR_SIGNATURE);\n  return {\n    clean: !infected,\n    scanResult: infected ? \"EICAR-TEST-SIGNATURE\" : \"OK\",\n  };\n};\n"
+    },
+    "Environment": {
+     "Variables": {
+      "PRIVATE_BUCKET": {
+       "Ref": "PrivateBucket35D9C6C6"
+      }
+     }
+    },
+    "FunctionName": "app-development-clamav-scanner",
+    "Handler": "index.handler",
+    "MemorySize": 2048,
+    "Role": {
+     "Fn::GetAtt": [
+      "ClamAvScannerServiceRole559F68FC",
+      "Arn"
+     ]
+    },
+    "Runtime": "nodejs22.x",
+    "Timeout": 600
+   },
+   "DependsOn": [
+    "ClamAvScannerServiceRoleDefaultPolicy8F8A0A02",
+    "ClamAvScannerServiceRole559F68FC"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "StoragePlatform-development/ClamAvScanner/Resource"
+   }
+  },
+  "BucketNotificationsHandler050a0587b7544547bf325f094a3db834RoleB6FB88EC": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "lambda.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+       ]
+      ]
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "StoragePlatform-development/BucketNotificationsHandler050a0587b7544547bf325f094a3db834/Role/Resource"
+   }
+  },
+  "BucketNotificationsHandler050a0587b7544547bf325f094a3db8347ECC3691": {
+   "Type": "AWS::Lambda::Function",
+   "Properties": {
+    "Description": "AWS CloudFormation handler for \"Custom::S3BucketNotifications\" resources (@aws-cdk/aws-s3)",
+    "Code": {
+     "ZipFile": "import boto3  # type: ignore\nimport json\nimport logging\nimport urllib.request\n\ns3 = boto3.client(\"s3\")\n\nEVENTBRIDGE_CONFIGURATION = 'EventBridgeConfiguration'\nCONFIGURATION_TYPES = [\"TopicConfigurations\", \"QueueConfigurations\", \"LambdaFunctionConfigurations\"]\n\ndef handler(event: dict, context):\n  response_status = \"SUCCESS\"\n  error_message = \"\"\n  try:\n    props = event[\"ResourceProperties\"]\n    notification_configuration = props[\"NotificationConfiguration\"]\n    managed = props.get('Managed', 'true').lower() == 'true'\n    skipDestinationValidation = props.get('SkipDestinationValidation', 'false').lower() == 'true'\n    stack_id = event['StackId']\n    old = event.get(\"OldResourceProperties\", {}).get(\"NotificationConfiguration\", {})\n    if managed:\n      config = handle_managed(event[\"RequestType\"], notification_configuration)\n    else:\n      config = handle_unmanaged(props[\"BucketName\"], stack_id, event[\"RequestType\"], notification_configuration, old)\n    s3.put_bucket_notification_configuration(Bucket=props[\"BucketName\"], NotificationConfiguration=config, SkipDestinationValidation=skipDestinationValidation)\n  except Exception as e:\n    logging.exception(\"Failed to put bucket notification configuration\")\n    response_status = \"FAILED\"\n    error_message = f\"Error: {str(e)}. \"\n  finally:\n    submit_response(event, context, response_status, error_message)\n\ndef handle_managed(request_type, notification_configuration):\n  if request_type == 'Delete':\n    return {}\n  return notification_configuration\n\ndef handle_unmanaged(bucket, stack_id, request_type, notification_configuration, old):\n  def get_id(n):\n    n['Id'] = ''\n    sorted_notifications = sort_filter_rules(n)\n    strToHash=json.dumps(sorted_notifications, sort_keys=True).replace('\"Name\": \"prefix\"', '\"Name\": \"Prefix\"').replace('\"Name\": \"suffix\"', '\"Name\": \"Suffix\"')\n    return f\"{stack_id}-{hash(strToHash)}\"\n  def with_id(n):\n    n['Id'] = get_id(n)\n    return n\n\n  external_notifications = {}\n  existing_notifications = s3.get_bucket_notification_configuration(Bucket=bucket)\n  for t in CONFIGURATION_TYPES:\n    if request_type == 'Update':\n        old_incoming_ids = [get_id(n) for n in old.get(t, [])]\n        external_notifications[t] = [n for n in existing_notifications.get(t, []) if not get_id(n) in old_incoming_ids]      \n    elif request_type == 'Delete':\n        external_notifications[t] = [n for n in existing_notifications.get(t, []) if not n['Id'].startswith(f\"{stack_id}-\")]\n    elif request_type == 'Create':\n        external_notifications[t] = [n for n in existing_notifications.get(t, [])]\n  if EVENTBRIDGE_CONFIGURATION in existing_notifications:\n    external_notifications[EVENTBRIDGE_CONFIGURATION] = existing_notifications[EVENTBRIDGE_CONFIGURATION]\n\n  if request_type == 'Delete':\n    return external_notifications\n\n  notifications = {}\n  for t in CONFIGURATION_TYPES:\n    external = external_notifications.get(t, [])\n    incoming = [with_id(n) for n in notification_configuration.get(t, [])]\n    notifications[t] = external + incoming\n\n  if EVENTBRIDGE_CONFIGURATION in notification_configuration:\n    notifications[EVENTBRIDGE_CONFIGURATION] = notification_configuration[EVENTBRIDGE_CONFIGURATION]\n  elif EVENTBRIDGE_CONFIGURATION in external_notifications:\n    notifications[EVENTBRIDGE_CONFIGURATION] = external_notifications[EVENTBRIDGE_CONFIGURATION]\n\n  return notifications\n\ndef submit_response(event: dict, context, response_status: str, error_message: str):\n  response_body = json.dumps(\n    {\n      \"Status\": response_status,\n      \"Reason\": f\"{error_message}See the details in CloudWatch Log Stream: {context.log_stream_name}\",\n      \"PhysicalResourceId\": event.get(\"PhysicalResourceId\") or event[\"LogicalResourceId\"],\n      \"StackId\": event[\"StackId\"],\n      \"RequestId\": event[\"RequestId\"],\n      \"LogicalResourceId\": event[\"LogicalResourceId\"],\n      \"NoEcho\": False,\n    }\n  ).encode(\"utf-8\")\n  headers = {\"content-type\": \"\", \"content-length\": str(len(response_body))}\n  try:\n    req = urllib.request.Request(url=event[\"ResponseURL\"], headers=headers, data=response_body, method=\"PUT\")\n    with urllib.request.urlopen(req) as response:\n      print(response.read().decode(\"utf-8\"))\n    print(\"Status code: \" + response.reason)\n  except Exception as e:\n      print(\"send(..) failed executing request.urlopen(..): \" + str(e))\n\ndef sort_filter_rules(json_obj):\n  if not isinstance(json_obj, dict):\n      return json_obj\n  for key, value in json_obj.items():\n      if isinstance(value, dict):\n          json_obj[key] = sort_filter_rules(value)\n      elif isinstance(value, list):\n          json_obj[key] = [sort_filter_rules(item) for item in value]\n  if \"Filter\" in json_obj and \"Key\" in json_obj[\"Filter\"] and \"FilterRules\" in json_obj[\"Filter\"][\"Key\"]:\n      filter_rules = json_obj[\"Filter\"][\"Key\"][\"FilterRules\"]\n      sorted_filter_rules = sorted(filter_rules, key=lambda x: x[\"Name\"])\n      json_obj[\"Filter\"][\"Key\"][\"FilterRules\"] = sorted_filter_rules\n  return json_obj"
+    },
+    "Handler": "index.handler",
+    "Role": {
+     "Fn::GetAtt": [
+      "BucketNotificationsHandler050a0587b7544547bf325f094a3db834RoleB6FB88EC",
+      "Arn"
+     ]
+    },
+    "Runtime": "python3.13",
+    "Timeout": 300
+   },
+   "DependsOn": [
+    "BucketNotificationsHandler050a0587b7544547bf325f094a3db834RoleB6FB88EC"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "StoragePlatform-development/BucketNotificationsHandler050a0587b7544547bf325f094a3db834/Resource"
+   }
+  },
+  "PublicOriginOacA72BB1CD": {
+   "Type": "AWS::CloudFront::OriginAccessControl",
+   "Properties": {
+    "OriginAccessControlConfig": {
+     "Description": "OAC for app-development public origin bucket",
+     "Name": "app-development-public-oac",
+     "OriginAccessControlOriginType": "s3",
+     "SigningBehavior": "always",
+     "SigningProtocol": "sigv4"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "StoragePlatform-development/PublicOriginOac/Resource"
+   }
+  },
+  "PublicDistributionDA9149C2": {
+   "Type": "AWS::CloudFront::Distribution",
+   "Properties": {
+    "DistributionConfig": {
+     "Comment": "app-development public asset CDN",
+     "DefaultCacheBehavior": {
+      "AllowedMethods": [
+       "GET",
+       "HEAD",
+       "OPTIONS"
+      ],
+      "CachePolicyId": "658327ea-f89d-4fab-a63d-7e88639e58f6",
+      "Compress": true,
+      "TargetOriginId": "StoragePlatformdevelopmentPublicDistributionOrigin14750AC22",
+      "ViewerProtocolPolicy": "redirect-to-https"
+     },
+     "Enabled": true,
+     "HttpVersion": "http2",
+     "IPV6Enabled": true,
+     "Origins": [
+      {
+       "DomainName": {
+        "Fn::GetAtt": [
+         "PublicOriginBucketAD441DB0",
+         "RegionalDomainName"
+        ]
+       },
+       "Id": "StoragePlatformdevelopmentPublicDistributionOrigin14750AC22",
+       "OriginAccessControlId": {
+        "Fn::GetAtt": [
+         "PublicOriginOacA72BB1CD",
+         "Id"
+        ]
+       },
+       "S3OriginConfig": {
+        "OriginAccessIdentity": ""
+       }
+      }
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "StoragePlatform-development/PublicDistribution/Resource"
+   }
+  },
+  "ApiUploadUser6675C79D": {
+   "Type": "AWS::IAM::User",
+   "Properties": {
+    "UserName": "app-development-api-upload"
+   },
+   "Metadata": {
+    "aws:cdk:path": "StoragePlatform-development/ApiUploadUser/Resource"
+   }
+  },
+  "ApiUploadUserDefaultPolicy7EF97EC8": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "s3:GetObject*",
+        "s3:GetBucket*",
+        "s3:List*",
+        "s3:DeleteObject*",
+        "s3:PutObject",
+        "s3:PutObjectLegalHold",
+        "s3:PutObjectRetention",
+        "s3:PutObjectTagging",
+        "s3:PutObjectVersionTagging",
+        "s3:Abort*"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "PrivateBucket35D9C6C6",
+          "Arn"
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::GetAtt": [
+             "PrivateBucket35D9C6C6",
+             "Arn"
+            ]
+           },
+           "/staging/*"
+          ]
+         ]
+        }
+       ]
+      },
+      {
+       "Action": [
+        "s3:GetObject*",
+        "s3:GetBucket*",
+        "s3:List*",
+        "s3:DeleteObject*",
+        "s3:PutObject",
+        "s3:PutObjectLegalHold",
+        "s3:PutObjectRetention",
+        "s3:PutObjectTagging",
+        "s3:PutObjectVersionTagging",
+        "s3:Abort*"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "PrivateBucket35D9C6C6",
+          "Arn"
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::GetAtt": [
+             "PrivateBucket35D9C6C6",
+             "Arn"
+            ]
+           },
+           "/products/*"
+          ]
+         ]
+        }
+       ]
+      },
+      {
+       "Action": [
+        "s3:GetObject*",
+        "s3:GetBucket*",
+        "s3:List*",
+        "s3:DeleteObject*",
+        "s3:PutObject",
+        "s3:PutObjectLegalHold",
+        "s3:PutObjectRetention",
+        "s3:PutObjectTagging",
+        "s3:PutObjectVersionTagging",
+        "s3:Abort*"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "PrivateBucket35D9C6C6",
+          "Arn"
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::GetAtt": [
+             "PrivateBucket35D9C6C6",
+             "Arn"
+            ]
+           },
+           "/stores/*"
+          ]
+         ]
+        }
+       ]
+      },
+      {
+       "Action": [
+        "s3:GetObject*",
+        "s3:GetBucket*",
+        "s3:List*",
+        "s3:DeleteObject*",
+        "s3:PutObject",
+        "s3:PutObjectLegalHold",
+        "s3:PutObjectRetention",
+        "s3:PutObjectTagging",
+        "s3:PutObjectVersionTagging",
+        "s3:Abort*"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "PrivateBucket35D9C6C6",
+          "Arn"
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::GetAtt": [
+             "PrivateBucket35D9C6C6",
+             "Arn"
+            ]
+           },
+           "/users/*"
+          ]
+         ]
+        }
+       ]
+      },
+      {
+       "Action": [
+        "s3:GetObject*",
+        "s3:GetBucket*",
+        "s3:List*",
+        "s3:DeleteObject*",
+        "s3:PutObject",
+        "s3:PutObjectLegalHold",
+        "s3:PutObjectRetention",
+        "s3:PutObjectTagging",
+        "s3:PutObjectVersionTagging",
+        "s3:Abort*"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "PrivateBucket35D9C6C6",
+          "Arn"
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::GetAtt": [
+             "PrivateBucket35D9C6C6",
+             "Arn"
+            ]
+           },
+           "/kyb/*"
+          ]
+         ]
+        }
+       ]
+      },
+      {
+       "Action": [
+        "s3:GetObject*",
+        "s3:GetBucket*",
+        "s3:List*"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "PublicOriginBucketAD441DB0",
+          "Arn"
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::GetAtt": [
+             "PublicOriginBucketAD441DB0",
+             "Arn"
+            ]
+           },
+           "/*"
+          ]
+         ]
+        }
+       ]
+      },
+      {
+       "Action": "lambda:InvokeFunction",
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "ClamAvScanner2C8BC9B2",
+          "Arn"
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::GetAtt": [
+             "ClamAvScanner2C8BC9B2",
+             "Arn"
+            ]
+           },
+           ":*"
+          ]
+         ]
+        }
+       ]
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "ApiUploadUserDefaultPolicy7EF97EC8",
+    "Users": [
+     {
+      "Ref": "ApiUploadUser6675C79D"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "StoragePlatform-development/ApiUploadUser/DefaultPolicy/Resource"
+   }
+  },
+  "ProcessingDlqAlarmB1017AC5": {
+   "Type": "AWS::CloudWatch::Alarm",
+   "Properties": {
+    "AlarmName": "app-development-processing-dlq-depth",
+    "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+    "Dimensions": [
+     {
+      "Name": "QueueName",
+      "Value": {
+       "Fn::GetAtt": [
+        "ProcessingDlq24E71A3D",
+        "QueueName"
+       ]
+      }
+     }
+    ],
+    "EvaluationPeriods": 1,
+    "MetricName": "ApproximateNumberOfMessagesVisible",
+    "Namespace": "AWS/SQS",
+    "Period": 300,
+    "Statistic": "Maximum",
+    "Threshold": 1,
+    "TreatMissingData": "notBreaching"
+   },
+   "Metadata": {
+    "aws:cdk:path": "StoragePlatform-development/ProcessingDlqAlarm/Resource"
+   }
+  },
+  "ScannerDlqAlarm1483A132": {
+   "Type": "AWS::CloudWatch::Alarm",
+   "Properties": {
+    "AlarmName": "app-development-scanner-dlq-depth",
+    "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+    "Dimensions": [
+     {
+      "Name": "QueueName",
+      "Value": {
+       "Fn::GetAtt": [
+        "ScannerDlqA8EBA6EE",
+        "QueueName"
+       ]
+      }
+     }
+    ],
+    "EvaluationPeriods": 1,
+    "MetricName": "ApproximateNumberOfMessagesVisible",
+    "Namespace": "AWS/SQS",
+    "Period": 300,
+    "Statistic": "Maximum",
+    "Threshold": 1,
+    "TreatMissingData": "notBreaching"
+   },
+   "Metadata": {
+    "aws:cdk:path": "StoragePlatform-development/ScannerDlqAlarm/Resource"
+   }
+  }
+ },
+ "Outputs": {
+  "PrivateBucketName": {
+   "Value": {
+    "Ref": "PrivateBucket35D9C6C6"
+   }
+  },
+  "PublicOriginBucketName": {
+   "Value": {
+    "Ref": "PublicOriginBucketAD441DB0"
+   }
+  },
+  "CloudFrontDomain": {
+   "Value": {
+    "Fn::GetAtt": [
+     "PublicDistributionDA9149C2",
+     "DomainName"
+    ]
+   }
+  },
+  "ProcessingQueueUrl": {
+   "Value": {
+    "Ref": "ProcessingQueue6DC600C3"
+   }
+  },
+  "ScannerQueueUrl": {
+   "Value": {
+    "Ref": "ScannerQueue93784183"
+   }
+  },
+  "ClamAvScannerArn": {
+   "Value": {
+    "Fn::GetAtt": [
+     "ClamAvScanner2C8BC9B2",
+     "Arn"
+    ]
+   }
+  },
+  "ApiUploadUserName": {
+   "Value": {
+    "Ref": "ApiUploadUser6675C79D"
+   }
+  }
+ },
+ "Parameters": {
+  "BootstrapVersion": {
+   "Type": "AWS::SSM::Parameter::Value<String>",
+   "Default": "/cdk-bootstrap/hnb659fds/version",
+   "Description": "Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]"
+  }
+ },
+ "Rules": {
+  "CheckBootstrapVersion": {
+   "Assertions": [
+    {
+     "Assert": {
+      "Fn::Not": [
+       {
+        "Fn::Contains": [
+         [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5"
+         ],
+         {
+          "Ref": "BootstrapVersion"
+         }
+        ]
+       }
+      ]
+     },
+     "AssertDescription": "CDK bootstrap stack version 6 required. Please run 'cdk bootstrap' with a recent version of the CDK CLI."
+    }
+   ]
+  }
+ }
+}

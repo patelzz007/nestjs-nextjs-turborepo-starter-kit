@@ -25,6 +25,8 @@ import { ImpersonationModule } from "./modules/impersonation/impersonation.modul
 import { LogsModule } from "./modules/logs/logs.module";
 import { NotificationsModule } from "./modules/notifications/notifications.module";
 import { PlatformResourceModule } from "./platform/platform-resource.module";
+import { FilesModule } from "./modules/files/files.module";
+import { StorageModule } from "./modules/storage/storage.module";
 import { RewardsModule } from "./modules/rewards/rewards.module";
 import { ProductModule } from "./modules/product/product.module";
 import { SampleCategoryModule } from "./modules/sample-category/sample-category.module";
@@ -75,6 +77,8 @@ if (observeEnabled && observeAppKey !== undefined && observeAppSecret !== undefi
 		NotificationsModule,
 		GeoModule,
 		PlatformResourceModule,
+		StorageModule,
+		FilesModule,
 		RewardsModule,
 		// @app-generated:begin module:sample-category
 		SampleCategoryModule,

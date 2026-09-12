@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import type { MerchantOrg, Prisma } from "@prisma/client";
+import { Prisma, type MerchantOrg } from "@prisma/client";
 
 import type { AdminMerchantListQuery } from "@workspace/shared";
 
@@ -152,9 +152,9 @@ export class MerchantOrgRepository {
 		readonly contactEmail: string;
 		readonly userId: string;
 		readonly legalName: string;
-		readonly addressText: string;
-		readonly contactPhone: string;
-		readonly kybFields: Prisma.InputJsonValue;
+		readonly addressText: string | null;
+		readonly contactPhone: string | null;
+		readonly kybFields: Prisma.InputJsonValue | null;
 	}): Promise<MerchantOrg> {
 		return this.prisma.$transaction(async (tx) => {
 			const org = await tx.merchantOrg.create({
@@ -163,7 +163,7 @@ export class MerchantOrgRepository {
 					legalName: input.legalName,
 					addressText: input.addressText,
 					contactPhone: input.contactPhone,
-					kybFields: input.kybFields,
+					kybFields: input.kybFields ?? Prisma.JsonNull,
 					kybStatus: "PENDING",
 					category: "general",
 					city: input.city,

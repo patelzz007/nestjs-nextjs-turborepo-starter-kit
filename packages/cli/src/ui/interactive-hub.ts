@@ -12,6 +12,10 @@ import { parseResourceDefinitionFile } from "../parser/parse-resource-definition
 import { printAppBanner, isInteractiveTerminal } from "./brand";
 import { printRoutesTable } from "./plan-display";
 
+function isNotCancel<T>(value: T | symbol): value is T {
+	return !p.isCancel(value);
+}
+
 type HubAction = "new" | "generate" | "routes" | "validate" | "doctor" | "exit";
 
 async function listResourceSlugs(definitionsDir: string): Promise<string[]> {
@@ -54,7 +58,7 @@ async function runValidatePicker(cwd: string): Promise<number> {
 		message: "Which definition should we validate?",
 		options: slugs.map((name) => ({ value: name, label: name })),
 	});
-	if (p.isCancel(slug)) {
+	if (!isNotCancel(slug)) {
 		p.cancel("Cancelled.");
 		return 0;
 	}
@@ -73,7 +77,7 @@ async function runGeneratePicker(cwd: string): Promise<number> {
 		message: "Which resource should we generate?",
 		options: slugs.map((name) => ({ value: name, label: name })),
 	});
-	if (p.isCancel(slug)) {
+	if (!isNotCancel(slug)) {
 		p.cancel("Cancelled.");
 		return 0;
 	}
@@ -81,7 +85,7 @@ async function runGeneratePicker(cwd: string): Promise<number> {
 		message: "Dry run only (preview plan, no writes)?",
 		initialValue: false,
 	});
-	if (p.isCancel(dryRun)) {
+	if (!isNotCancel(dryRun)) {
 		p.cancel("Cancelled.");
 		return 0;
 	}
@@ -135,7 +139,7 @@ export async function runInteractiveHub(cwd: string): Promise<number> {
 		],
 	});
 
-	if (p.isCancel(action)) {
+	if (!isNotCancel(action)) {
 		p.cancel("Cancelled.");
 		return 0;
 	}
@@ -147,7 +151,7 @@ export async function runInteractiveHub(cwd: string): Promise<number> {
 			message: "Do something else?",
 			initialValue: false,
 		});
-		if (!p.isCancel(again) && again) {
+		if (isNotCancel(again) && again) {
 			return runInteractiveHub(cwd);
 		}
 		p.outro("Done.");

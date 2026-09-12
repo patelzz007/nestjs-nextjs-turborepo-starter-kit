@@ -1,9 +1,29 @@
 import type * as React from "react";
 import { z } from "zod";
 
-const refCallbackSchema = z.custom<React.RefCallback<HTMLElement>>((value) => typeof value === "function");
+const HTMLElementRefValueSchema = z.union([z.instanceof(HTMLElement), z.null()]);
 
-const refObjectSchema = z.custom<React.RefObject<HTMLElement>>((value) => typeof value === "object" && value !== null && "current" in value);
+const RefCallbackSchema = z.function({
+	input: [HTMLElementRefValueSchema],
+	output: z.void(),
+});
+
+const RefObjectSchema = z.object({
+	current: HTMLElementRefValueSchema,
+});
+
+type ParsedRefCallback = z.output<typeof RefCallbackSchema>;
+type ParsedRefObject = z.output<typeof RefObjectSchema>;
+
+function parseRefCallback<T extends HTMLElement>(ref: React.Ref<T>): ParsedRefCallback | null {
+	const parsed = RefCallbackSchema.safeParse(ref);
+	return parsed.success ? parsed.data : null;
+}
+
+function parseRefObject<T extends HTMLElement>(ref: React.Ref<T>): ParsedRefObject | null {
+	const parsed = RefObjectSchema.safeParse(ref);
+	return parsed.success ? parsed.data : null;
+}
 
 /** Assign a DOM node to a React ref (callback or object). */
 export function assignRef<T extends HTMLElement>(ref: React.Ref<T> | undefined | null, value: T | null): void {
@@ -11,15 +31,15 @@ export function assignRef<T extends HTMLElement>(ref: React.Ref<T> | undefined |
 		return;
 	}
 
-	const callbackParsed = refCallbackSchema.safeParse(ref);
-	if (callbackParsed.success) {
-		callbackParsed.data(value);
+	const callbackRef = parseRefCallback(ref);
+	if (callbackRef !== null) {
+		callbackRef(value);
 		return;
 	}
 
-	const objectParsed = refObjectSchema.safeParse(ref);
-	if (objectParsed.success) {
-		objectParsed.data.current = value;
+	const objectRef = parseRefObject(ref);
+	if (objectRef !== null) {
+		objectRef.current = value;
 	}
 }
 

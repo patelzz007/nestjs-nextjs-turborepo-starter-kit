@@ -1,7 +1,7 @@
 "use client";
 
 import type { MerchantOnboardingInvitePreview } from "@workspace/shared";
-import { MerchantKybSubmissionSchema, MerchantOnboardingCompleteSchema } from "@workspace/shared";
+import { MerchantOnboardingCompleteFieldsSchema } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/feedback/badge";
 import { Button } from "@workspace/ui/components/form/button";
 import { FormShell } from "@workspace/ui/components/form/form-shell";
@@ -12,32 +12,16 @@ import { PasswordStrengthMeter } from "@workspace/ui/components/form/password-st
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState, type JSX } from "react";
 
+import { API_BASE_URL } from "../api/config";
 import { resolveAuthErrorMessage } from "./auth-errors";
 import { useAuth } from "./index";
-import { MerchantKybDocumentUpload } from "./merchant-kyb-document-upload";
-import { MerchantKybBusinessFields, MerchantKybRegistrationFields, type MerchantKybFieldValues } from "./merchant-kyb-fields";
+import { submitMerchantOnboardingComplete } from "./merchant-kyb-multipart";
 import { MerchantOnboardingStepper, type MerchantOnboardingStep } from "./merchant-onboarding-stepper";
 import { passwordStrength } from "./password";
 
-type OnboardingStep = "loading" | "invalid" | "account" | "business" | "registration" | "documents" | "success";
+type OnboardingStep = "loading" | "invalid" | "account" | "success";
 
-const ONBOARDING_STEPS: readonly MerchantOnboardingStep[] = [
-	{ id: "account", label: "Account", description: "Owner login" },
-	{ id: "business", label: "Business", description: "Address & contact" },
-	{ id: "registration", label: "Registration", description: "SSM & tax ID" },
-	{ id: "documents", label: "Documents", description: "Upload certificates" },
-];
-
-const EMPTY_KYB_VALUES: MerchantKybFieldValues = {
-	businessName: "",
-	legalName: "",
-	addressText: "",
-	contactPhone: "",
-	registrationNo: "",
-	taxId: "",
-	documentType: "",
-	documents: [],
-};
+const ONBOARDING_STEPS: readonly MerchantOnboardingStep[] = [{ id: "account", label: "Account", description: "Owner login" }];
 
 function formatPilotCity(city: string): string {
 	return city.replaceAll("_", " ");
@@ -47,10 +31,6 @@ function formatExpiry(value: number): string {
 	return new Date(value).toLocaleString();
 }
 
-function isWizardStep(step: OnboardingStep): step is "account" | "business" | "registration" | "documents" {
-	return step === "account" || step === "business" || step === "registration" || step === "documents";
-}
-
 export interface MerchantOnboardingViewProps {
 	readonly token: string;
 	readonly loginHref?: string;
@@ -58,15 +38,14 @@ export interface MerchantOnboardingViewProps {
 
 export function MerchantOnboardingView({ token, loginHref = "/auth/login" }: MerchantOnboardingViewProps): JSX.Element {
 	const { api } = useAuth();
-	const completeMutation = api.merchant.onboarding.complete.useMutation();
 
 	const [step, setStep] = useState<OnboardingStep>("loading");
 	const [error, setError] = useState<string | null>(null);
 	const [invite, setInvite] = useState<MerchantOnboardingInvitePreview | null>(null);
 	const [fullName, setFullName] = useState<string>("");
 	const [password, setPassword] = useState<string>("");
-	const [kybValues, setKybValues] = useState<MerchantKybFieldValues>(EMPTY_KYB_VALUES);
 	const [businessName, setBusinessName] = useState<string>("");
+	const [isSubmitting, setIsSubmitting] = useState(false);
 
 	const strength = useMemo(() => passwordStrength(password), [password]);
 
@@ -80,17 +59,8 @@ export function MerchantOnboardingView({ token, loginHref = "/auth/login" }: Mer
 
 	const completedStepIds = useMemo((): ReadonlySet<string> => {
 		const completed = new Set<string>();
-		if (step === "business" || step === "registration" || step === "documents" || step === "success") {
-			completed.add("account");
-		}
-		if (step === "registration" || step === "documents" || step === "success") {
-			completed.add("business");
-		}
-		if (step === "documents" || step === "success") {
-			completed.add("registration");
-		}
 		if (step === "success") {
-			completed.add("documents");
+			completed.add("account");
 		}
 		return completed;
 	}, [step]);
@@ -107,11 +77,6 @@ export function MerchantOnboardingView({ token, loginHref = "/auth/login" }: Mer
 			.then((response): void => {
 				if (!cancelled) {
 					setInvite(response.data);
-					setKybValues((current) => ({
-						...current,
-						businessName: response.data.businessName,
-						legalName: response.data.businessName,
-					}));
 					setStep("account");
 				}
 			})
@@ -135,98 +100,15 @@ export function MerchantOnboardingView({ token, loginHref = "/auth/login" }: Mer
 		setPassword(event.target.value);
 	}, []);
 
-	const handleBusinessFieldChange = useCallback((field: "businessName" | "legalName" | "addressText" | "contactPhone", value: string): void => {
-		setKybValues((current) => ({ ...current, [field]: value }));
-	}, []);
-
-	const handleRegistrationFieldChange = useCallback((field: "registrationNo" | "taxId" | "documentType", value: string): void => {
-		setKybValues((current) => ({ ...current, [field]: value }));
-	}, []);
-
-	const handleDocumentsChange = useCallback((documents: MerchantKybFieldValues["documents"]): void => {
-		setKybValues((current) => ({ ...current, documents }));
-	}, []);
-
-	const handleAccountContinue = useCallback(
+	const handleAccountSubmit = useCallback(
 		(event: React.SyntheticEvent<HTMLFormElement>): void => {
 			event.preventDefault();
 			setError(null);
 
-			if (fullName.trim().length < 2) {
-				setError("Enter your full name.");
-				return;
-			}
-
-			if (password.length === 0) {
-				setError("Enter a password.");
-				return;
-			}
-
-			setStep("business");
-		},
-		[fullName, password],
-	);
-
-	const handleBusinessContinue = useCallback(
-		(event: React.SyntheticEvent<HTMLFormElement>): void => {
-			event.preventDefault();
-			setError(null);
-
-			const parsed = MerchantKybSubmissionSchema.pick({ addressText: true, contactPhone: true }).safeParse({
-				addressText: kybValues.addressText,
-				contactPhone: kybValues.contactPhone,
-			});
-			if (!parsed.success) {
-				setError(parsed.error.issues[0]?.message ?? "Check your business details and try again.");
-				return;
-			}
-
-			setStep("registration");
-		},
-		[kybValues],
-	);
-
-	const handleRegistrationContinue = useCallback(
-		(event: React.SyntheticEvent<HTMLFormElement>): void => {
-			event.preventDefault();
-			setError(null);
-
-			const parsed = MerchantKybSubmissionSchema.pick({ registrationNo: true, taxId: true, documentType: true }).safeParse({
-				registrationNo: kybValues.registrationNo,
-				taxId: kybValues.taxId,
-				documentType: kybValues.documentType,
-			});
-			if (!parsed.success) {
-				setError(parsed.error.issues[0]?.message ?? "Check your registration details and try again.");
-				return;
-			}
-
-			setStep("documents");
-		},
-		[kybValues],
-	);
-
-	const handleDocumentsSubmit = useCallback(
-		(event: React.SyntheticEvent<HTMLFormElement>): void => {
-			event.preventDefault();
-			setError(null);
-
-			if (invite === null) {
-				setError("Invite details are missing. Open your invite link again.");
-				return;
-			}
-
-			const parsed = MerchantOnboardingCompleteSchema.safeParse({
+			const parsed = MerchantOnboardingCompleteFieldsSchema.safeParse({
 				token,
 				fullName,
 				password,
-				legalName: invite.businessName,
-				addressText: kybValues.addressText,
-				contactPhone: kybValues.contactPhone,
-				registrationNo: kybValues.registrationNo,
-				taxId: kybValues.taxId,
-				documentType: kybValues.documentType,
-				documents: kybValues.documents,
 			});
 
 			if (!parsed.success) {
@@ -234,33 +116,21 @@ export function MerchantOnboardingView({ token, loginHref = "/auth/login" }: Mer
 				return;
 			}
 
-			void completeMutation
-				.mutateAsync(parsed.data)
+			setIsSubmitting(true);
+			void submitMerchantOnboardingComplete(API_BASE_URL, parsed.data)
 				.then((response): void => {
-					setBusinessName(response.data.businessName);
+					setBusinessName(response.businessName);
 					setStep("success");
 				})
 				.catch((err: unknown): void => {
 					setError(resolveAuthErrorMessage(err));
+				})
+				.finally((): void => {
+					setIsSubmitting(false);
 				});
 		},
-		[completeMutation, fullName, invite, kybValues, password, token],
+		[fullName, password, token],
 	);
-
-	const handleBack = useCallback((): void => {
-		setError(null);
-		if (step === "business") {
-			setStep("account");
-			return;
-		}
-		if (step === "registration") {
-			setStep("business");
-			return;
-		}
-		if (step === "documents") {
-			setStep("registration");
-		}
-	}, [step]);
 
 	if (step === "loading") {
 		return <p className="text-center text-sm text-muted-foreground">Checking your invite link…</p>;
@@ -290,8 +160,8 @@ export function MerchantOnboardingView({ token, loginHref = "/auth/login" }: Mer
 				<div className="space-y-2">
 					<h2 className="text-lg font-semibold">Store ready</h2>
 					<p className="text-sm text-muted-foreground">
-						{businessName.length > 0 ? businessName : "Your merchant organization"} is set up with business verification and documents submitted for review. Sign in with the
-						email from your invite to open the merchant portal.
+						{businessName.length > 0 ? businessName : "Your merchant organization"} is ready. Sign in with the email from your invite, then complete business verification and
+						upload KYB documents in Settings.
 					</p>
 				</div>
 				<Button className="w-full" render={<Link href={loginUrl} />}>
@@ -316,73 +186,38 @@ export function MerchantOnboardingView({ token, loginHref = "/auth/login" }: Mer
 				</div>
 			</div>
 
-			{isWizardStep(step) ? <MerchantOnboardingStepper steps={ONBOARDING_STEPS} currentStepId={step} completedStepIds={completedStepIds} /> : null}
+			<MerchantOnboardingStepper steps={ONBOARDING_STEPS} currentStepId={step} completedStepIds={completedStepIds} />
 
-			{step === "account" ? (
-				<FormShell error={error} isLoading={false} submitLabel="Continue" loadingLabel="Continue" submitClassName="h-11" onSubmit={handleAccountContinue}>
-					<div className="space-y-2">
-						<Label htmlFor="merchant-onboarding-business-name">Business name</Label>
-						<Input id="merchant-onboarding-business-name" value={invite.businessName} readOnly disabled className="h-11" />
-					</div>
-					<div className="space-y-2">
-						<Label htmlFor="merchant-onboarding-email">Work email</Label>
-						<Input id="merchant-onboarding-email" value={invite.email} readOnly disabled className="h-11" />
-					</div>
-					<div className="space-y-2">
-						<Label htmlFor="merchant-onboarding-full-name">Your full name</Label>
-						<Input id="merchant-onboarding-full-name" value={fullName} onChange={handleFullNameChange} required autoComplete="name" className="h-11" />
-					</div>
-					<div className="space-y-2">
-						<Label htmlFor="merchant-onboarding-password">{invite.hasExistingAccount ? "Account password" : "Password"}</Label>
-						<PasswordInput
-							id="merchant-onboarding-password"
-							value={password}
-							onChange={handlePasswordChange}
-							required
-							autoComplete={invite.hasExistingAccount ? "current-password" : "new-password"}
-							className="h-11"
-						/>
-						{invite.hasExistingAccount ? (
-							<p className="text-xs text-muted-foreground">This email already has an account. Enter your existing password to link this store — it will not be changed.</p>
-						) : (
-							<PasswordStrengthMeter score={strength.score} label={strength.label} percent={strength.percent} criteria={strength.criteria} />
-						)}
-					</div>
-				</FormShell>
-			) : null}
-
-			{step === "business" ? (
-				<FormShell error={error} isLoading={false} submitLabel="Continue" loadingLabel="Continue" submitClassName="h-11" onSubmit={handleBusinessContinue}>
-					<MerchantKybBusinessFields values={kybValues} onChange={handleBusinessFieldChange} idPrefix="merchant-onboarding" businessNameReadOnly showLegalName={false} />
-					<Button type="button" variant="outline" className="h-11 w-full" onClick={handleBack}>
-						Back
-					</Button>
-				</FormShell>
-			) : null}
-
-			{step === "registration" ? (
-				<FormShell error={error} isLoading={false} submitLabel="Continue" loadingLabel="Continue" submitClassName="h-11" onSubmit={handleRegistrationContinue}>
-					<MerchantKybRegistrationFields values={kybValues} onChange={handleRegistrationFieldChange} idPrefix="merchant-onboarding" />
-					<Button type="button" variant="outline" className="h-11 w-full" onClick={handleBack}>
-						Back
-					</Button>
-				</FormShell>
-			) : null}
-
-			{step === "documents" ? (
-				<FormShell
-					error={error}
-					isLoading={completeMutation.isPending}
-					submitLabel="Submit and create store"
-					loadingLabel="Creating store…"
-					submitClassName="h-11"
-					onSubmit={handleDocumentsSubmit}>
-					<MerchantKybDocumentUpload documents={kybValues.documents} onChange={handleDocumentsChange} idPrefix="merchant-onboarding-documents" />
-					<Button type="button" variant="outline" className="h-11 w-full" onClick={handleBack}>
-						Back
-					</Button>
-				</FormShell>
-			) : null}
+			<FormShell error={error} isLoading={isSubmitting} submitLabel="Create store" loadingLabel="Creating store…" submitClassName="h-11" onSubmit={handleAccountSubmit}>
+				<div className="space-y-2">
+					<Label htmlFor="merchant-onboarding-business-name">Business name</Label>
+					<Input id="merchant-onboarding-business-name" value={invite.businessName} readOnly disabled className="h-11" />
+				</div>
+				<div className="space-y-2">
+					<Label htmlFor="merchant-onboarding-email">Work email</Label>
+					<Input id="merchant-onboarding-email" value={invite.email} readOnly disabled className="h-11" />
+				</div>
+				<div className="space-y-2">
+					<Label htmlFor="merchant-onboarding-full-name">Your full name</Label>
+					<Input id="merchant-onboarding-full-name" value={fullName} onChange={handleFullNameChange} required autoComplete="name" className="h-11" />
+				</div>
+				<div className="space-y-2">
+					<Label htmlFor="merchant-onboarding-password">{invite.hasExistingAccount ? "Account password" : "Password"}</Label>
+					<PasswordInput
+						id="merchant-onboarding-password"
+						value={password}
+						onChange={handlePasswordChange}
+						required
+						autoComplete={invite.hasExistingAccount ? "current-password" : "new-password"}
+						className="h-11"
+					/>
+					{invite.hasExistingAccount ? (
+						<p className="text-xs text-muted-foreground">This email already has an account. Enter your existing password to link this store — it will not be changed.</p>
+					) : (
+						<PasswordStrengthMeter score={strength.score} label={strength.label} percent={strength.percent} criteria={strength.criteria} />
+					)}
+				</div>
+			</FormShell>
 
 			<p className="text-center text-xs text-muted-foreground sm:text-sm">
 				Already have an account?{" "}

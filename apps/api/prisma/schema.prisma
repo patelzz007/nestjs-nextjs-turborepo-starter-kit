@@ -164,6 +164,8 @@ model User {
   rewardLegalAcceptances    RewardLegalAcceptance[]
   rewardNotifications       RewardNotification[]
   rewardAuditLogs           RewardAuditLog[]
+  avatar                    UserAvatar?
+  storedFilesUploaded       StoredFile[] @relation("StoredFileUploader")
 
   @@unique([provider, providerId])
   @@index([pendingAttributionToken])
@@ -848,6 +850,49 @@ enum KybStatus {
   PENDING
   APPROVED
   REJECTED
+  ACTION_REQUIRED
+}
+
+enum KybDocumentScanStatus {
+  SCANNING
+  CLEAN
+  INFECTED
+}
+
+enum FileStatus {
+  PENDING
+  UPLOADED
+  PROCESSING
+  SCANNING
+  READY
+  FAILED
+  QUARANTINED
+  DELETED
+}
+
+enum FileCategory {
+  PRODUCT_IMAGE
+  STORE_LOGO
+  STORE_BANNER
+  USER_AVATAR
+  MERCHANT_KYB
+}
+
+enum FileVisibility {
+  PUBLIC
+  PRIVATE
+}
+
+enum MerchantAssetType {
+  LOGO
+  BANNER
+}
+
+enum FileVariantKind {
+  ORIGINAL
+  THUMBNAIL
+  MEDIUM
+  LARGE
 }
 
 enum MerchantMemberRole {
@@ -932,18 +977,191 @@ model MerchantOrg {
   createdAt    BigInt            @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
   updatedAt    BigInt            @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
 
-  members     MerchantMember[]
-  apiKeys     MerchantApiKey[]
-  terminals   MerchantTerminal[]
-  invites     MerchantInvite[]
-  rewards     Reward[]
-  redemptions RewardRedemption[]
-  auditLogs   RewardAuditLog[]
+  members       MerchantMember[]
+  apiKeys       MerchantApiKey[]
+  terminals     MerchantTerminal[]
+  invites       MerchantInvite[]
+  rewards       Reward[]
+  redemptions   RewardRedemption[]
+  auditLogs     RewardAuditLog[]
+  kybDocuments  MerchantKybDocument[]
+  kybFiles      MerchantKybFile[]
+  assets        MerchantAsset[]
+  storedFiles   StoredFile[] @relation("StoredFileMerchantOrg")
 
   @@index([city])
   @@index([status])
   @@index([kybStatus])
   @@map("merchant_orgs")
+}
+
+/// RLS: owner-scoped via uploaded_by_id and relation tables.
+model StoredFile {
+  id               String         @id @default(uuid())
+  category         FileCategory
+  visibility       FileVisibility
+  originalName     String         @map("original_name") @db.VarChar(255)
+  mimeType         String         @map("mime_type") @db.VarChar(100)
+  sizeBytes        Int            @map("size_bytes")
+  expectedChecksum String         @map("expected_checksum") @db.VarChar(64)
+  actualChecksum   String?        @map("actual_checksum") @db.VarChar(64)
+  storageBucket    String         @map("storage_bucket") @db.VarChar(255)
+  storagePath      String         @map("storage_path") @db.VarChar(500)
+  publicPath       String?        @map("public_path") @db.VarChar(500)
+  objectGeneration String?        @map("object_generation") @db.VarChar(64)
+  status           FileStatus     @default(PENDING)
+  scanStatus       KybDocumentScanStatus? @map("scan_status")
+  scannedAt        BigInt?        @map("scanned_at")
+  scanResult       String?        @map("scan_result") @db.VarChar(500)
+  uploadedById     String         @map("uploaded_by_id")
+  merchantOrgId    String?        @map("merchant_org_id")
+  isDeleted        Boolean        @default(false) @map("is_deleted")
+  deletedAt        BigInt?        @map("deleted_at")
+  createdAt        BigInt         @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
+  updatedAt        BigInt         @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
+
+  uploadedBy  User          @relation("StoredFileUploader", fields: [uploadedById], references: [id], onDelete: Restrict)
+  merchantOrg MerchantOrg?  @relation("StoredFileMerchantOrg", fields: [merchantOrgId], references: [id], onDelete: SetNull)
+  variants    FileVariant[]
+  productImages ProductImage[]
+  merchantAssets MerchantAsset[]
+  userAvatar  UserAvatar?
+  kybFiles    MerchantKybFile[]
+
+  @@index([uploadedById])
+  @@index([merchantOrgId])
+  @@index([status])
+  @@index([category])
+  @@map("stored_files")
+}
+
+/// RLS: via stored_files ownership.
+model FileVariant {
+  id               String          @id @default(uuid())
+  fileId           String          @map("file_id")
+  kind             FileVariantKind
+  mimeType         String          @map("mime_type") @db.VarChar(100)
+  sizeBytes        Int             @map("size_bytes")
+  storageBucket    String          @map("storage_bucket") @db.VarChar(255)
+  storagePath      String          @map("storage_path") @db.VarChar(500)
+  publicPath       String?         @map("public_path") @db.VarChar(500)
+  objectGeneration String?         @map("object_generation") @db.VarChar(64)
+  isDeleted        Boolean         @default(false) @map("is_deleted")
+  deletedAt        BigInt?         @map("deleted_at")
+  createdAt        BigInt          @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
+  updatedAt        BigInt          @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
+
+  file StoredFile @relation(fields: [fileId], references: [id], onDelete: Cascade)
+
+  @@unique([fileId, kind])
+  @@index([fileId])
+  @@map("file_variants")
+}
+
+/// RLS: via product ownership (catalog).
+model ProductImage {
+  id         String  @id @default(uuid())
+  productId  String  @map("product_id")
+  fileId     String  @map("file_id")
+  sortOrder  Int     @default(0) @map("sort_order")
+  isPrimary  Boolean @default(false) @map("is_primary")
+  isDeleted  Boolean @default(false) @map("is_deleted")
+  deletedAt  BigInt? @map("deleted_at")
+  createdAt  BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
+  updatedAt  BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
+
+  product Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+  file    StoredFile @relation(fields: [fileId], references: [id], onDelete: Restrict)
+
+  @@index([productId])
+  @@index([fileId])
+  @@map("product_images")
+}
+
+/// RLS: via merchant_org_id.
+model MerchantAsset {
+  id            String            @id @default(uuid())
+  merchantOrgId String            @map("merchant_org_id")
+  assetType     MerchantAssetType @map("asset_type")
+  fileId        String            @map("file_id")
+  isDeleted     Boolean           @default(false) @map("is_deleted")
+  deletedAt     BigInt?           @map("deleted_at")
+  createdAt     BigInt            @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
+  updatedAt     BigInt            @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
+
+  merchantOrg MerchantOrg @relation(fields: [merchantOrgId], references: [id], onDelete: Cascade)
+  file        StoredFile  @relation(fields: [fileId], references: [id], onDelete: Restrict)
+
+  @@unique([merchantOrgId, assetType])
+  @@index([fileId])
+  @@map("merchant_assets")
+}
+
+/// RLS: via user ownership.
+model UserAvatar {
+  id        String  @id @default(uuid())
+  userId    String  @unique @map("user_id")
+  fileId    String  @unique @map("file_id")
+  isDeleted Boolean @default(false) @map("is_deleted")
+  deletedAt BigInt? @map("deleted_at")
+  createdAt BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
+  updatedAt BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
+
+  user User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  file StoredFile @relation(fields: [fileId], references: [id], onDelete: Restrict)
+
+  @@map("user_avatars")
+}
+
+/// RLS: via merchant_org_id membership.
+model MerchantKybFile {
+  id            String  @id @default(uuid())
+  merchantOrgId String  @map("merchant_org_id")
+  fileId        String  @map("file_id")
+  submissionId  String  @map("submission_id")
+  isActive      Boolean @default(true) @map("is_active")
+  isDeleted     Boolean @default(false) @map("is_deleted")
+  deletedAt     BigInt? @map("deleted_at")
+  createdAt     BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
+  updatedAt     BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
+
+  merchantOrg MerchantOrg @relation(fields: [merchantOrgId], references: [id], onDelete: Cascade)
+  file        StoredFile  @relation(fields: [fileId], references: [id], onDelete: Restrict)
+
+  @@index([merchantOrgId])
+  @@index([merchantOrgId, isActive])
+  @@index([submissionId])
+  @@index([fileId])
+  @@map("merchant_kyb_files")
+}
+
+/// RLS: via merchant_org_id membership — legacy KYB document metadata (migrated to stored_files).
+model MerchantKybDocument {
+  id               String                @id @default(uuid())
+  merchantOrgId    String                @map("merchant_org_id")
+  submissionId     String                @map("submission_id")
+  fileName         String                @map("file_name") @db.VarChar(255)
+  mimeType         String                @map("mime_type") @db.VarChar(100)
+  sizeBytes        Int                   @map("size_bytes")
+  checksumSha256   String                @map("checksum_sha256") @db.VarChar(64)
+  storageBucket    String                @map("storage_bucket") @db.VarChar(255)
+  storagePath      String                @map("storage_path") @db.VarChar(500)
+  objectGeneration String?               @map("object_generation") @db.VarChar(64)
+  scanStatus       KybDocumentScanStatus @default(SCANNING) @map("scan_status")
+  scannedAt        BigInt?               @map("scanned_at")
+  scanResult       String?               @map("scan_result") @db.VarChar(500)
+  isActive         Boolean               @default(true) @map("is_active")
+  isDeleted        Boolean               @default(false) @map("is_deleted")
+  deletedAt        BigInt?               @map("deleted_at")
+  createdAt        BigInt                @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
+  updatedAt        BigInt                @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
+
+  merchantOrg MerchantOrg @relation(fields: [merchantOrgId], references: [id], onDelete: Cascade)
+
+  @@index([merchantOrgId])
+  @@index([merchantOrgId, isActive])
+  @@index([submissionId])
+  @@map("merchant_kyb_documents")
 }
 
 /// RLS: via merchant_org_id membership.
@@ -1373,6 +1591,7 @@ model Product {
   createdAt BigInt @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
   updatedAt BigInt @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
   category SampleCategory? @relation(fields: [categoryId], references: [id])
+  images   ProductImage[]
   @@map("product")
 }
 // @app-generated:end Product

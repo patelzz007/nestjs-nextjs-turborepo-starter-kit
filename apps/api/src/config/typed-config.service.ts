@@ -380,4 +380,95 @@ export class TypedConfigService {
 		const parsed: number = value ? Number.parseInt(value, 10) : 50_000;
 		return parsed > 0 ? parsed : 50_000;
 	}
+
+	// ── Object storage (AWS S3 / local filesystem) ───────────────────
+
+	public get storageBucket(): string {
+		return this.storagePrivateBucket;
+	}
+
+	public get storagePrivateBucket(): string {
+		return process.env.STORAGE_S3_PRIVATE_BUCKET ?? process.env.STORAGE_S3_BUCKET ?? "local-private-bucket";
+	}
+
+	public get storagePublicBucket(): string {
+		return process.env.STORAGE_S3_PUBLIC_BUCKET ?? "local-public-bucket";
+	}
+
+	public get cloudfrontPublicDomain(): string | null {
+		const value: string | undefined = process.env.STORAGE_CLOUDFRONT_PUBLIC_DOMAIN;
+		return value !== undefined && value.length > 0 ? value : null;
+	}
+
+	public get apiPublicUrl(): string {
+		return process.env.APP_URL ?? "http://localhost:3001";
+	}
+
+	public get storageProcessingCallbackSecret(): string | null {
+		const value: string | undefined = process.env.STORAGE_PROCESSING_CALLBACK_SECRET;
+		return value !== undefined && value.length > 0 ? value : null;
+	}
+
+	public get awsRegion(): string {
+		return process.env.AWS_REGION ?? "ap-southeast-1";
+	}
+
+	public get awsAccessKeyId(): string | null {
+		const value: string | undefined = process.env.AWS_ACCESS_KEY_ID;
+		return value !== undefined && value.length > 0 ? value : null;
+	}
+
+	public get awsSecretAccessKey(): string | null {
+		const value: string | undefined = process.env.AWS_SECRET_ACCESS_KEY;
+		return value !== undefined && value.length > 0 ? value : null;
+	}
+
+	public get useS3Storage(): boolean {
+		const bucket: string | undefined = process.env.STORAGE_S3_PRIVATE_BUCKET ?? process.env.STORAGE_S3_BUCKET;
+		return bucket !== undefined && bucket.length > 0 && !bucket.startsWith("local-");
+	}
+
+	public get storageAutoScanInDev(): boolean {
+		return process.env.STORAGE_AUTO_SCAN_IN_DEV !== "false" && process.env.KYB_AUTO_SCAN_IN_DEV !== "false";
+	}
+
+	public get storageScannerMode(): "lambda" | "clamav" {
+		const value: string | undefined = process.env.STORAGE_SCANNER_MODE;
+		if (value === "lambda") {
+			return "lambda";
+		}
+		return "clamav";
+	}
+
+	public get storageScannerLambdaArn(): string | null {
+		const value: string | undefined = process.env.STORAGE_SCANNER_LAMBDA_ARN;
+		return value !== undefined && value.length > 0 ? value : null;
+	}
+
+	public get clamAvHost(): string {
+		return process.env.STORAGE_CLAMAV_HOST ?? "127.0.0.1";
+	}
+
+	public get clamAvPort(): number {
+		const parsed: number = Number.parseInt(process.env.STORAGE_CLAMAV_PORT ?? "3310", 10);
+		return parsed > 0 ? parsed : 3310;
+	}
+
+	public get storageDownloadTtlSeconds(): number {
+		const value: string | undefined = process.env.STORAGE_DOWNLOAD_TTL_SECONDS ?? process.env.KYB_DOCUMENT_DOWNLOAD_TTL_SECONDS;
+		const parsed: number = value ? Number.parseInt(value, 10) : 300;
+		return parsed > 0 ? parsed : 300;
+	}
+
+	/** Delay before physically deleting soft-deleted S3 objects (default 30 days; 1 hour in development). */
+	public get storagePhysicalDeleteDelayMs(): number {
+		const value: string | undefined = process.env.STORAGE_PHYSICAL_DELETE_DELAY_MS;
+		if (value !== undefined && value.length > 0) {
+			const parsed: number = Number.parseInt(value, 10);
+			if (parsed > 0) {
+				return parsed;
+			}
+		}
+		return process.env.NODE_ENV === "production" ? 30 * 24 * 60 * 60 * 1000 : 60 * 60 * 1000;
+	}
 }

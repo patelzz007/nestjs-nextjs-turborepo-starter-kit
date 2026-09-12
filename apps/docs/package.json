@@ -17,7 +17,6 @@
 	"dependencies": {
 		"@fumadocs/satteri": "^0.5.0",
 		"@workspace/ui": "workspace:*",
-		"cmdk": "^1.1.1",
 		"date-fns": "^4.4.0",
 		"fumadocs-core": "^16.15.7",
 		"fumadocs-mdx": "^15.4.0",

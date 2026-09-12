@@ -7,6 +7,7 @@ import {
 	type AdminMerchantDetailResponse,
 	type EpochMs,
 	type JsonObject,
+	type MerchantKybDocumentRecord,
 	type MerchantOrgResponse,
 	type RewardClaimResponse,
 	type RewardResponse,
@@ -60,13 +61,14 @@ export function mapMerchantOrgToResponse(org: MerchantOrg): MerchantOrgResponse 
 	};
 }
 
-export function mapMerchantOrgToAdminDetailResponse(org: MerchantOrgAdminDetailRow): AdminMerchantDetailResponse {
+export function mapMerchantOrgToAdminDetailResponse(org: MerchantOrgAdminDetailRow, documents: readonly MerchantKybDocumentRecord[]): AdminMerchantDetailResponse {
 	const ownerMember = org.members.find((member) => member.role === "OWNER");
 	const base = mapMerchantOrgToResponse(org);
 
 	return {
 		...base,
 		kybFields: parseKybFieldsFromDb(org.kybFields),
+		documents: [...documents],
 		ownerUserId: ownerMember?.userId ?? null,
 		ownerEmail: ownerMember?.user.email ?? null,
 		ownerFullName: ownerMember?.user.fullName ?? null,

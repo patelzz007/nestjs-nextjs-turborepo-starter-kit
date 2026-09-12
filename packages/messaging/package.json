@@ -35,7 +35,7 @@
 		"bullmq": "^6.3.4",
 		"ioredis": "^6.0.0",
 		"kafkajs": "^2.2.4",
-		"zod": "4.5.4"
+		"zod": "4.6.2"
 	},
 	"devDependencies": {
 		"@workspace/eslint-config": "workspace:*",

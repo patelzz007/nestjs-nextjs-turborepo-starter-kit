@@ -1,16 +1,18 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import type { MerchantOrg } from "@prisma/client";
-import { JsonObjectSchema, nowEpochMs, type JsonObject, type MerchantKybProfileResponse, type MerchantKybSubmissionInput } from "@workspace/shared";
+import { JsonObjectSchema, buildMerchantSubmittedKybFields, type JsonObject, type MerchantKybProfileResponse, type MerchantKybSubmissionFieldsInput } from "@workspace/shared";
 
 import { MerchantContextService } from "./merchant-context.service";
 import { MerchantOrgRepository } from "../repositories/merchant-org.repository";
 import { RewardAuditLogRepository } from "../repositories/reward-audit-log.repository";
+import { MerchantKybDocumentService } from "./merchant-kyb-document.service";
 
 @Injectable()
 export class MerchantKybService {
 	public constructor(
 		private readonly merchantContext: MerchantContextService,
 		private readonly merchantOrgRepository: MerchantOrgRepository,
+		private readonly kybDocumentService: MerchantKybDocumentService,
 		private readonly auditLogRepository: RewardAuditLogRepository,
 	) {}
 
@@ -25,7 +27,7 @@ export class MerchantKybService {
 		return this.mapProfile(org);
 	}
 
-	public async submitKyb(userId: string, requestedOrgId: string | undefined, input: MerchantKybSubmissionInput): Promise<MerchantKybProfileResponse> {
+	public async submitKyb(userId: string, requestedOrgId: string | undefined, input: MerchantKybSubmissionFieldsInput): Promise<MerchantKybProfileResponse> {
 		const merchantOrgId = await this.merchantContext.resolveOrgIdForUser(userId, requestedOrgId);
 		await this.merchantContext.requireOwnerRole(userId, merchantOrgId);
 
@@ -39,20 +41,7 @@ export class MerchantKybService {
 			throw new BadRequestException("Business verification is already approved");
 		}
 
-		const submittedAt = nowEpochMs();
-		const kybFields: JsonObject = JsonObjectSchema.parse({
-			registrationNo: input.registrationNo.trim(),
-			taxId: input.taxId.trim(),
-			documentType: input.documentType.trim(),
-			submittedAt,
-			documents: input.documents.map((document) => ({
-				fileName: document.fileName.trim(),
-				mimeType: document.mimeType,
-				sizeBytes: document.sizeBytes,
-				contentBase64: document.contentBase64,
-				uploadedAt: submittedAt,
-			})),
-		});
+		const kybFields: JsonObject = JsonObjectSchema.parse(buildMerchantSubmittedKybFields(input));
 		const updated = await this.merchantOrgRepository.updateMerchantKybSubmission(merchantOrgId, {
 			businessName: input.businessName.trim(),
 			legalName: input.legalName.trim(),
@@ -61,6 +50,8 @@ export class MerchantKybService {
 			kybFields,
 			kybStatus: "PENDING",
 		});
+
+		await this.kybDocumentService.attachSubmittedFileIds(merchantOrgId, input.documentFileIds);
 
 		await this.auditLogRepository.create({
 			merchantOrgId,
@@ -71,9 +62,10 @@ export class MerchantKybService {
 		return this.mapProfile(updated);
 	}
 
-	private mapProfile(org: MerchantOrg): MerchantKybProfileResponse {
+	private async mapProfile(org: MerchantOrg): Promise<MerchantKybProfileResponse> {
 		const parsedKybFieldsResult = org.kybFields === null ? null : JsonObjectSchema.safeParse(org.kybFields);
 		const parsedKybFields = parsedKybFieldsResult === null ? null : parsedKybFieldsResult.success ? parsedKybFieldsResult.data : null;
+		const documents = await this.kybDocumentService.mapDocumentRecordsFromOrg(org.id);
 
 		return {
 			merchantOrgId: org.id,
@@ -85,6 +77,7 @@ export class MerchantKybService {
 			city: org.city,
 			kybStatus: org.kybStatus,
 			kybFields: parsedKybFields,
+			documents,
 			status: org.status,
 		};
 	}

@@ -3,12 +3,14 @@ import { z } from "zod";
 import { EmailPreviewPropValueSchema, EmailTemplateKeySchema } from "../email/email";
 
 /** BullMQ queue names used by the API (must match compose Bull Board prefix). */
-export const QUEUE_NAMES: ["email.send", "rewards.auto-publish", "claims.expire-pending", "claims.expire-referrer", "outbox.publish"] = [
+export const QUEUE_NAMES: ["email.send", "rewards.auto-publish", "claims.expire-pending", "claims.expire-referrer", "outbox.publish", "storage.cleanup", "storage.delete"] = [
 	"email.send",
 	"rewards.auto-publish",
 	"claims.expire-pending",
 	"claims.expire-referrer",
 	"outbox.publish",
+	"storage.cleanup",
+	"storage.delete",
 ];
 
 export const QueueNameSchema = z.enum(QUEUE_NAMES);
@@ -29,3 +31,17 @@ export type EmailSendJob = z.output<typeof EmailSendJobSchema>;
 export const RewardsMaintenanceJobSchema = z.object({}).strict();
 
 export type RewardsMaintenanceJob = z.output<typeof RewardsMaintenanceJobSchema>;
+
+export const StorageDeleteJobSchema = z
+	.object({
+		fileId: z.uuid(),
+		bucket: z.string().min(1),
+		path: z.string().min(1),
+	})
+	.strict();
+
+export type StorageDeleteJob = z.output<typeof StorageDeleteJobSchema>;
+
+export const StorageCleanupJobSchema = z.object({}).strict();
+
+export type StorageCleanupJob = z.output<typeof StorageCleanupJobSchema>;

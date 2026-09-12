@@ -43,6 +43,7 @@ const testConfig: ServerApiConfig = {
 	accessTokenCookie: "adminAccessToken",
 	refreshTokenCookie: "adminRefreshToken",
 	clientType: "admin",
+	clientOrigin: "http://localhost:3001",
 	timeoutMs: 5_000,
 	retries: 0,
 	retryDelayMs: 5,

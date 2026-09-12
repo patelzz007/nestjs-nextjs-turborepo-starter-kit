@@ -46,10 +46,10 @@
 		"app": "pnpm --filter @workspace/cli start"
 	},
 	"devDependencies": {
-		"@darraghor/eslint-plugin-nestjs-typed": "^7.5.1",
+		"@darraghor/eslint-plugin-nestjs-typed": "^7.5.2",
 		"@eslint/js": "^9.39.5",
-		"@next/bundle-analyzer": "^16.3.4",
-		"@next/eslint-plugin-next": "^16.3.4",
+		"@next/bundle-analyzer": "^16.3.5",
+		"@next/eslint-plugin-next": "^16.3.5",
 		"@types/node": "^26.4.1",
 		"@workspace/eslint-config": "workspace:*",
 		"@workspace/typescript-config": "workspace:*",
@@ -69,9 +69,9 @@
 		"syncpack": "^15.3.3",
 		"turbo": "^2.10.12",
 		"typescript": "6.0.2",
-		"typescript-eslint": "^8.69.0"
+		"typescript-eslint": "^8.70.0"
 	},
-	"packageManager": "pnpm@12.3.4",
+	"packageManager": "pnpm@12.4.1",
 	"engines": {
 		"node": ">=20.19"
 	},

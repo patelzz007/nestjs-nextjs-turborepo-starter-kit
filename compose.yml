@@ -13,6 +13,7 @@
 #   Kafka       → localhost:9092
 #   RabbitMQ    → localhost:5672  (AMQP)  |  http://localhost:15672  (management UI, rabbit / rabbit)
 #   Bull Board  → http://localhost:3030  (BullMQ queue dashboard)
+#   ClamAV      → localhost:3310  (virus scan — STORAGE_SCANNER_MODE=clamav in apps/api/.env)
 #
 # PostgreSQL is not included — use your local instance and set DATABASE_URL in apps/api/.env.
 
@@ -109,7 +110,25 @@ services:
       REDIS_PASSWORD: ""
       REDIS_USE_TLS: "false"
       BULL_PREFIX: bull
-      QUEUE_NAMES: email.send,rewards.auto-publish,claims.expire-pending,claims.expire-referrer,outbox.publish
+      QUEUE_NAMES: email.send,rewards.auto-publish,claims.expire-pending,claims.expire-referrer,outbox.publish,storage.cleanup,storage.delete
+    networks:
+      - infra
+
+  clamav:
+    # Alpine-based clamav/clamav:stable is amd64-only; debian image supports arm64 (Apple Silicon).
+    image: clamav/clamav-debian:1.4
+    container_name: hello-world-clamav
+    restart: unless-stopped
+    ports:
+      - "3310:3310"
+    volumes:
+      - clamav_data:/var/lib/clamav
+    healthcheck:
+      test: ["CMD", "clamdcheck.sh"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 300s
     networks:
       - infra
 
@@ -117,6 +136,7 @@ volumes:
   redis_data:
   kafka_data:
   rabbitmq_data:
+  clamav_data:
 
 networks:
   infra:

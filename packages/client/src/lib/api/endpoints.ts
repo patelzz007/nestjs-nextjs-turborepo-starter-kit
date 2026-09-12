@@ -85,6 +85,7 @@ import {
 	AdminMerchantInviteCreatedResponseSchema,
 	MerchantApiKeyCreatedSchema,
 	MerchantApiKeySummarySchema,
+	MerchantKybDocumentDownloadResponseSchema,
 	MerchantKybProfileResponseSchema,
 	MerchantMemberCreatedResponseSchema,
 	MerchantMembershipResponseSchema,
@@ -104,6 +105,10 @@ import {
 	ProductSchema,
 	SampleCategorySchema,
 	UserRewardsAnalyticsResponseSchema,
+	CompleteFileUploadResponseSchema,
+	CreateFileUploadUrlResponseSchema,
+	FileDownloadResponseSchema,
+	FileRecordSchema,
 } from "@workspace/shared";
 import { z, type ZodType } from "zod";
 
@@ -649,6 +654,28 @@ export const apiRouter = {
 			queryKey: () => ["reward-notifications", "read"],
 		}),
 	},
+	files: {
+		uploadUrl: defineMutation(apiContract.files.uploadUrl, {
+			response: envelope(CreateFileUploadUrlResponseSchema),
+			queryKey: ({ category, fileName }) => ["files", "upload-url", category, fileName],
+		}),
+		complete: defineMutation(apiContract.files.complete, {
+			response: envelope(CompleteFileUploadResponseSchema),
+			queryKey: ({ fileId }) => ["files", "complete", fileId],
+		}),
+		detail: defineQuery(apiContract.files.detail, {
+			response: envelope(z.object({ file: FileRecordSchema }).strict()),
+			queryKey: ({ fileId }) => ["files", "detail", fileId],
+		}),
+		downloadUrl: defineQuery(apiContract.files.downloadUrl, {
+			response: envelope(FileDownloadResponseSchema),
+			queryKey: ({ fileId }) => ["files", "download-url", fileId],
+		}),
+		delete: defineMutation(apiContract.files.delete, {
+			response: envelope(z.object({ success: z.literal(true) }).strict()),
+			queryKey: ({ fileId }) => ["files", "delete", fileId],
+		}),
+	},
 	merchant: {
 		me: defineQuery(apiContract.merchant.me, {
 			response: envelope(z.array(MerchantMembershipResponseSchema)),
@@ -662,6 +689,10 @@ export const apiRouter = {
 			submit: defineMutation(apiContract.merchant.kyb.submit, {
 				response: envelope(MerchantKybProfileResponseSchema),
 				queryKey: () => ["merchant", "kyb", "submit"],
+			}),
+			downloadDocument: defineQuery(apiContract.merchant.kyb.downloadDocument, {
+				response: envelope(MerchantKybDocumentDownloadResponseSchema),
+				queryKey: ({ documentId, disposition }) => ["merchant", "kyb", "documents", "download", documentId, disposition],
 			}),
 		},
 		rewards: {
@@ -734,6 +765,10 @@ export const apiRouter = {
 		getMerchant: defineQuery(apiContract.rewardsAdmin.getMerchant, {
 			response: envelope(AdminMerchantDetailResponseSchema),
 			queryKey: ({ merchantOrgId }) => ["rewards-admin", "merchant", merchantOrgId],
+		}),
+		downloadMerchantDocument: defineQuery(apiContract.rewardsAdmin.downloadMerchantDocument, {
+			response: envelope(MerchantKybDocumentDownloadResponseSchema),
+			queryKey: ({ merchantOrgId, documentId, disposition }) => ["rewards-admin", "merchant", merchantOrgId, "documents", "download", documentId, disposition],
 		}),
 		createInvite: defineMutation(apiContract.rewardsAdmin.createInvite, {
 			response: envelope(AdminMerchantInviteCreatedResponseSchema),

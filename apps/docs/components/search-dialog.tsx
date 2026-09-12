@@ -1,6 +1,5 @@
 "use client";
 
-import { Command as CommandPrimitive } from "cmdk";
 import { FileText, Search, SearchX } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef } from "react";
@@ -10,7 +9,7 @@ import type { SearchItemType } from "fumadocs-ui/components/dialog/search";
 import type { DefaultSearchDialogProps } from "fumadocs-ui/components/dialog/search-default";
 
 import { Button } from "@workspace/ui/components/form/button";
-import { Command, CommandDialog, CommandEmpty, CommandGroup, CommandItem, CommandList } from "@workspace/ui/components/overlay/command";
+import { Command, CommandDialog, CommandEmpty, CommandGroup, CommandItem, CommandList, CommandPrimitive } from "@workspace/ui/components/overlay/command";
 
 import { useSearchMeta } from "@/components/search-meta-context";
 

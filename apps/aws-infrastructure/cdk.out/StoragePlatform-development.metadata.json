@@ -1,0 +1,576 @@
+{
+  "/StoragePlatform-development": [
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "<anonymous> (/Users/patel/Desktop/Bishen/NextJS/nestjs-nextjs-turborepo-starter-kit/apps/aws-infrastructure/bin/app.ts:13:1)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/StoragePlatform-development/PublicDistribution": [
+    {
+      "type": "aws:cdk:warning",
+      "data": "Ignoring 'minimumProtocolVersion': it has no effect without a custom 'certificate'. The distribution uses the CloudFront default certificate, whose security policy is fixed at TLSv1. [ack: @aws-cdk/aws-cloudfront:minimumProtocolVersionWithoutCertificate]",
+      "trace": [
+        "Annotations.addMessage (/Users/patel/Desktop/Bishen/NextJS/nestjs-nextjs-turborepo-starter-kit/node_modules/.pnpm/aws-cdk-lib@2.269.0_constructs@10.8.1/node_modules/aws-cdk-lib/core/lib/annotations.js:1:3506)",
+        "Annotations.addWarningV2 (/Users/patel/Desktop/Bishen/NextJS/nestjs-nextjs-turborepo-starter-kit/node_modules/.pnpm/aws-cdk-lib@2.269.0_constructs@10.8.1/node_modules/aws-cdk-lib/core/lib/annotations.js:1:2194)",
+        "new Distribution2 (/Users/patel/Desktop/Bishen/NextJS/nestjs-nextjs-turborepo-starter-kit/node_modules/.pnpm/aws-cdk-lib@2.269.0_constructs@10.8.1/node_modules/aws-cdk-lib/aws-cloudfront/lib/distribution.js:1:14567)",
+        "new Distribution2 (/Users/patel/Desktop/Bishen/NextJS/nestjs-nextjs-turborepo-starter-kit/node_modules/.pnpm/aws-cdk-lib@2.269.0_constructs@10.8.1/node_modules/aws-cdk-lib/core/lib/no-box-stack-traces.js:1:345)",
+        "new Distribution2 (/Users/patel/Desktop/Bishen/NextJS/nestjs-nextjs-turborepo-starter-kit/node_modules/.pnpm/aws-cdk-lib@2.269.0_constructs@10.8.1/node_modules/aws-cdk-lib/core/lib/prop-injectable.js:1:855)",
+        "new StoragePlatformStack (/Users/patel/Desktop/Bishen/NextJS/nestjs-nextjs-turborepo-starter-kit/apps/aws-infrastructure/lib/storage-platform-stack.ts:192:24)",
+        "<anonymous> (/Users/patel/Desktop/Bishen/NextJS/nestjs-nextjs-turborepo-starter-kit/apps/aws-infrastructure/bin/app.ts:13:1)",
+        "ModuleJob.run (node:internal/modules/esm/module_job:561:25)",
+        "async node:internal/modules/esm/loader:647:26",
+        "async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)"
+      ]
+    }
+  ],
+  "/StoragePlatform-development/PrivateBucketName": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "PrivateBucketName"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "new StoragePlatformStack (/Users/patel/Desktop/Bishen/NextJS/nestjs-nextjs-turborepo-starter-kit/apps/aws-infrastructure/lib/storage-platform-stack.ts:233:3)",
+        "<anonymous> (/Users/patel/Desktop/Bishen/NextJS/nestjs-nextjs-turborepo-starter-kit/apps/aws-infrastructure/bin/app.ts:13:1)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/StoragePlatform-development/PublicOriginBucketName": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "PublicOriginBucketName"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "new StoragePlatformStack (/Users/patel/Desktop/Bishen/NextJS/nestjs-nextjs-turborepo-starter-kit/apps/aws-infrastructure/lib/storage-platform-stack.ts:234:3)",
+        "<anonymous> (/Users/patel/Desktop/Bishen/NextJS/nestjs-nextjs-turborepo-starter-kit/apps/aws-infrastructure/bin/app.ts:13:1)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/StoragePlatform-development/CloudFrontDomain": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "CloudFrontDomain"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "new StoragePlatformStack (/Users/patel/Desktop/Bishen/NextJS/nestjs-nextjs-turborepo-starter-kit/apps/aws-infrastructure/lib/storage-platform-stack.ts:235:3)",
+        "<anonymous> (/Users/patel/Desktop/Bishen/NextJS/nestjs-nextjs-turborepo-starter-kit/apps/aws-infrastructure/bin/app.ts:13:1)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/StoragePlatform-development/ProcessingQueueUrl": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "ProcessingQueueUrl"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "new StoragePlatformStack (/Users/patel/Desktop/Bishen/NextJS/nestjs-nextjs-turborepo-starter-kit/apps/aws-infrastructure/lib/storage-platform-stack.ts:236:3)",
+        "<anonymous> (/Users/patel/Desktop/Bishen/NextJS/nestjs-nextjs-turborepo-starter-kit/apps/aws-infrastructure/bin/app.ts:13:1)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/StoragePlatform-development/ScannerQueueUrl": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "ScannerQueueUrl"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "new StoragePlatformStack (/Users/patel/Desktop/Bishen/NextJS/nestjs-nextjs-turborepo-starter-kit/apps/aws-infrastructure/lib/storage-platform-stack.ts:237:3)",
+        "<anonymous> (/Users/patel/Desktop/Bishen/NextJS/nestjs-nextjs-turborepo-starter-kit/apps/aws-infrastructure/bin/app.ts:13:1)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/StoragePlatform-development/ClamAvScannerArn": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "ClamAvScannerArn"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "new StoragePlatformStack (/Users/patel/Desktop/Bishen/NextJS/nestjs-nextjs-turborepo-starter-kit/apps/aws-infrastructure/lib/storage-platform-stack.ts:238:3)",
+        "<anonymous> (/Users/patel/Desktop/Bishen/NextJS/nestjs-nextjs-turborepo-starter-kit/apps/aws-infrastructure/bin/app.ts:13:1)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/StoragePlatform-development/ApiUploadUserName": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "ApiUploadUserName"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "new StoragePlatformStack (/Users/patel/Desktop/Bishen/NextJS/nestjs-nextjs-turborepo-starter-kit/apps/aws-infrastructure/lib/storage-platform-stack.ts:239:3)",
+        "<anonymous> (/Users/patel/Desktop/Bishen/NextJS/nestjs-nextjs-turborepo-starter-kit/apps/aws-infrastructure/bin/app.ts:13:1)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/StoragePlatform-development/BootstrapVersion": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "BootstrapVersion"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "....pnpm...",
+        "(no user code in 10 frames, use --stack-trace-limit to capture more)"
+      ]
+    }
+  ],
+  "/StoragePlatform-development/CheckBootstrapVersion": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "CheckBootstrapVersion"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "....pnpm...",
+        "(no user code in 10 frames, use --stack-trace-limit to capture more)"
+      ]
+    }
+  ],
+  "/StoragePlatform-development/PrivateBucket/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "PrivateBucket35D9C6C6"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new Bucket2 in .pnpm...",
+        "new StoragePlatformStack (/Users/patel/Desktop/Bishen/NextJS/nestjs-nextjs-turborepo-starter-kit/apps/aws-infrastructure/lib/storage-platform-stack.ts:54:25)",
+        "<anonymous> (/Users/patel/Desktop/Bishen/NextJS/nestjs-nextjs-turborepo-starter-kit/apps/aws-infrastructure/bin/app.ts:13:1)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/StoragePlatform-development/PublicOriginBucket/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "PublicOriginBucketAD441DB0"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new Bucket2 in .pnpm...",
+        "new StoragePlatformStack (/Users/patel/Desktop/Bishen/NextJS/nestjs-nextjs-turborepo-starter-kit/apps/aws-infrastructure/lib/storage-platform-stack.ts:74:30)",
+        "<anonymous> (/Users/patel/Desktop/Bishen/NextJS/nestjs-nextjs-turborepo-starter-kit/apps/aws-infrastructure/bin/app.ts:13:1)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/StoragePlatform-development/ProcessingDlq/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "ProcessingDlq24E71A3D"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new Queue2 in .pnpm...",
+        "new StoragePlatformStack (/Users/patel/Desktop/Bishen/NextJS/nestjs-nextjs-turborepo-starter-kit/apps/aws-infrastructure/lib/storage-platform-stack.ts:88:25)",
+        "<anonymous> (/Users/patel/Desktop/Bishen/NextJS/nestjs-nextjs-turborepo-starter-kit/apps/aws-infrastructure/bin/app.ts:13:1)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/StoragePlatform-development/ProcessingQueue/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "ProcessingQueue6DC600C3"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new Queue2 in .pnpm...",
+        "new StoragePlatformStack (/Users/patel/Desktop/Bishen/NextJS/nestjs-nextjs-turborepo-starter-kit/apps/aws-infrastructure/lib/storage-platform-stack.ts:94:27)",
+        "<anonymous> (/Users/patel/Desktop/Bishen/NextJS/nestjs-nextjs-turborepo-starter-kit/apps/aws-infrastructure/bin/app.ts:13:1)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/StoragePlatform-development/ScannerDlq/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "ScannerDlqA8EBA6EE"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new Queue2 in .pnpm...",
+        "new StoragePlatformStack (/Users/patel/Desktop/Bishen/NextJS/nestjs-nextjs-turborepo-starter-kit/apps/aws-infrastructure/lib/storage-platform-stack.ts:101:22)",
+        "<anonymous> (/Users/patel/Desktop/Bishen/NextJS/nestjs-nextjs-turborepo-starter-kit/apps/aws-infrastructure/bin/app.ts:13:1)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/StoragePlatform-development/ScannerQueue/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "ScannerQueue93784183"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new Queue2 in .pnpm...",
+        "new StoragePlatformStack (/Users/patel/Desktop/Bishen/NextJS/nestjs-nextjs-turborepo-starter-kit/apps/aws-infrastructure/lib/storage-platform-stack.ts:107:24)",
+        "<anonymous> (/Users/patel/Desktop/Bishen/NextJS/nestjs-nextjs-turborepo-starter-kit/apps/aws-infrastructure/bin/app.ts:13:1)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/StoragePlatform-development/ImageProcessor/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "ImageProcessor5D0B0257"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new Function2 in .pnpm...",
+        "new StoragePlatformStack (/Users/patel/Desktop/Bishen/NextJS/nestjs-nextjs-turborepo-starter-kit/apps/aws-infrastructure/lib/storage-platform-stack.ts:114:26)",
+        "<anonymous> (/Users/patel/Desktop/Bishen/NextJS/nestjs-nextjs-turborepo-starter-kit/apps/aws-infrastructure/bin/app.ts:13:1)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/StoragePlatform-development/ClamAvScanner/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "ClamAvScanner2C8BC9B2"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new Function2 in .pnpm...",
+        "new StoragePlatformStack (/Users/patel/Desktop/Bishen/NextJS/nestjs-nextjs-turborepo-starter-kit/apps/aws-infrastructure/lib/storage-platform-stack.ts:132:25)",
+        "<anonymous> (/Users/patel/Desktop/Bishen/NextJS/nestjs-nextjs-turborepo-starter-kit/apps/aws-infrastructure/bin/app.ts:13:1)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/StoragePlatform-development/BucketNotificationsHandler050a0587b7544547bf325f094a3db834/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "BucketNotificationsHandler050a0587b7544547bf325f094a3db8347ECC3691"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...WrappedClass.addEventNotification in .pnpm...",
+        "new StoragePlatformStack (/Users/patel/Desktop/Bishen/NextJS/nestjs-nextjs-turborepo-starter-kit/apps/aws-infrastructure/lib/storage-platform-stack.ts:183:17)",
+        "<anonymous> (/Users/patel/Desktop/Bishen/NextJS/nestjs-nextjs-turborepo-starter-kit/apps/aws-infrastructure/bin/app.ts:13:1)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/StoragePlatform-development/PublicOriginOac/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "PublicOriginOacA72BB1CD"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new S3OriginAccessControl2 in .pnpm...",
+        "new StoragePlatformStack (/Users/patel/Desktop/Bishen/NextJS/nestjs-nextjs-turborepo-starter-kit/apps/aws-infrastructure/lib/storage-platform-stack.ts:187:31)",
+        "<anonymous> (/Users/patel/Desktop/Bishen/NextJS/nestjs-nextjs-turborepo-starter-kit/apps/aws-infrastructure/bin/app.ts:13:1)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/StoragePlatform-development/PublicDistribution/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "PublicDistributionDA9149C2"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new Distribution2 in .pnpm...",
+        "new StoragePlatformStack (/Users/patel/Desktop/Bishen/NextJS/nestjs-nextjs-turborepo-starter-kit/apps/aws-infrastructure/lib/storage-platform-stack.ts:192:24)",
+        "<anonymous> (/Users/patel/Desktop/Bishen/NextJS/nestjs-nextjs-turborepo-starter-kit/apps/aws-infrastructure/bin/app.ts:13:1)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/StoragePlatform-development/ApiUploadUser/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "ApiUploadUser6675C79D"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new User2 in .pnpm...",
+        "new StoragePlatformStack (/Users/patel/Desktop/Bishen/NextJS/nestjs-nextjs-turborepo-starter-kit/apps/aws-infrastructure/lib/storage-platform-stack.ts:205:25)",
+        "<anonymous> (/Users/patel/Desktop/Bishen/NextJS/nestjs-nextjs-turborepo-starter-kit/apps/aws-infrastructure/bin/app.ts:13:1)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/StoragePlatform-development/ProcessingDlqAlarm/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "ProcessingDlqAlarmB1017AC5"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new Alarm2 in .pnpm...",
+        "new StoragePlatformStack (/Users/patel/Desktop/Bishen/NextJS/nestjs-nextjs-turborepo-starter-kit/apps/aws-infrastructure/lib/storage-platform-stack.ts:217:3)",
+        "<anonymous> (/Users/patel/Desktop/Bishen/NextJS/nestjs-nextjs-turborepo-starter-kit/apps/aws-infrastructure/bin/app.ts:13:1)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/StoragePlatform-development/ScannerDlqAlarm/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "ScannerDlqAlarm1483A132"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new Alarm2 in .pnpm...",
+        "new StoragePlatformStack (/Users/patel/Desktop/Bishen/NextJS/nestjs-nextjs-turborepo-starter-kit/apps/aws-infrastructure/lib/storage-platform-stack.ts:225:3)",
+        "<anonymous> (/Users/patel/Desktop/Bishen/NextJS/nestjs-nextjs-turborepo-starter-kit/apps/aws-infrastructure/bin/app.ts:13:1)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/StoragePlatform-development/PrivateBucket/Policy/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "PrivateBucketPolicy76F05644"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new Bucket2 in .pnpm...",
+        "new StoragePlatformStack (/Users/patel/Desktop/Bishen/NextJS/nestjs-nextjs-turborepo-starter-kit/apps/aws-infrastructure/lib/storage-platform-stack.ts:54:25)",
+        "<anonymous> (/Users/patel/Desktop/Bishen/NextJS/nestjs-nextjs-turborepo-starter-kit/apps/aws-infrastructure/bin/app.ts:13:1)"
+      ]
+    }
+  ],
+  "/StoragePlatform-development/PrivateBucket/Notifications/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "PrivateBucketNotificationsF04C53AC"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...WrappedClass.addEventNotification in .pnpm...",
+        "new StoragePlatformStack (/Users/patel/Desktop/Bishen/NextJS/nestjs-nextjs-turborepo-starter-kit/apps/aws-infrastructure/lib/storage-platform-stack.ts:183:17)",
+        "<anonymous> (/Users/patel/Desktop/Bishen/NextJS/nestjs-nextjs-turborepo-starter-kit/apps/aws-infrastructure/bin/app.ts:13:1)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/StoragePlatform-development/PublicOriginBucket/Policy/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "PublicOriginBucketPolicy8E4CC20F"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new Bucket2 in .pnpm...",
+        "new StoragePlatformStack (/Users/patel/Desktop/Bishen/NextJS/nestjs-nextjs-turborepo-starter-kit/apps/aws-infrastructure/lib/storage-platform-stack.ts:74:30)",
+        "<anonymous> (/Users/patel/Desktop/Bishen/NextJS/nestjs-nextjs-turborepo-starter-kit/apps/aws-infrastructure/bin/app.ts:13:1)"
+      ]
+    }
+  ],
+  "/StoragePlatform-development/ProcessingDlq/Policy/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "ProcessingDlqPolicy920CDA7C"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new Queue2 in .pnpm...",
+        "new StoragePlatformStack (/Users/patel/Desktop/Bishen/NextJS/nestjs-nextjs-turborepo-starter-kit/apps/aws-infrastructure/lib/storage-platform-stack.ts:88:25)",
+        "<anonymous> (/Users/patel/Desktop/Bishen/NextJS/nestjs-nextjs-turborepo-starter-kit/apps/aws-infrastructure/bin/app.ts:13:1)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/StoragePlatform-development/ProcessingQueue/Policy/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "ProcessingQueuePolicyDDFFDBBA"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new Queue2 in .pnpm...",
+        "new StoragePlatformStack (/Users/patel/Desktop/Bishen/NextJS/nestjs-nextjs-turborepo-starter-kit/apps/aws-infrastructure/lib/storage-platform-stack.ts:94:27)",
+        "<anonymous> (/Users/patel/Desktop/Bishen/NextJS/nestjs-nextjs-turborepo-starter-kit/apps/aws-infrastructure/bin/app.ts:13:1)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/StoragePlatform-development/ScannerDlq/Policy/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "ScannerDlqPolicy4E73990E"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new Queue2 in .pnpm...",
+        "new StoragePlatformStack (/Users/patel/Desktop/Bishen/NextJS/nestjs-nextjs-turborepo-starter-kit/apps/aws-infrastructure/lib/storage-platform-stack.ts:101:22)",
+        "<anonymous> (/Users/patel/Desktop/Bishen/NextJS/nestjs-nextjs-turborepo-starter-kit/apps/aws-infrastructure/bin/app.ts:13:1)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/StoragePlatform-development/ScannerQueue/Policy/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "ScannerQueuePolicy88D17741"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new Queue2 in .pnpm...",
+        "new StoragePlatformStack (/Users/patel/Desktop/Bishen/NextJS/nestjs-nextjs-turborepo-starter-kit/apps/aws-infrastructure/lib/storage-platform-stack.ts:107:24)",
+        "<anonymous> (/Users/patel/Desktop/Bishen/NextJS/nestjs-nextjs-turborepo-starter-kit/apps/aws-infrastructure/bin/app.ts:13:1)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/StoragePlatform-development/ImageProcessor/ServiceRole/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "ImageProcessorServiceRole607FFD33"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new Function2 in .pnpm...",
+        "new StoragePlatformStack (/Users/patel/Desktop/Bishen/NextJS/nestjs-nextjs-turborepo-starter-kit/apps/aws-infrastructure/lib/storage-platform-stack.ts:114:26)",
+        "<anonymous> (/Users/patel/Desktop/Bishen/NextJS/nestjs-nextjs-turborepo-starter-kit/apps/aws-infrastructure/bin/app.ts:13:1)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/StoragePlatform-development/ImageProcessor/SqsEventSource:StoragePlatformdevelopmentProcessingQueueBD257307/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "ImageProcessorSqsEventSourceStoragePlatformdevelopmentProcessingQueueBD257307062201A7"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...WrappedClass.addEventSource in .pnpm...",
+        "new StoragePlatformStack (/Users/patel/Desktop/Bishen/NextJS/nestjs-nextjs-turborepo-starter-kit/apps/aws-infrastructure/lib/storage-platform-stack.ts:181:18)",
+        "<anonymous> (/Users/patel/Desktop/Bishen/NextJS/nestjs-nextjs-turborepo-starter-kit/apps/aws-infrastructure/bin/app.ts:13:1)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/StoragePlatform-development/ClamAvScanner/ServiceRole/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "ClamAvScannerServiceRole559F68FC"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new Function2 in .pnpm...",
+        "new StoragePlatformStack (/Users/patel/Desktop/Bishen/NextJS/nestjs-nextjs-turborepo-starter-kit/apps/aws-infrastructure/lib/storage-platform-stack.ts:132:25)",
+        "<anonymous> (/Users/patel/Desktop/Bishen/NextJS/nestjs-nextjs-turborepo-starter-kit/apps/aws-infrastructure/bin/app.ts:13:1)",
+        "...node internals..."
+      ]
+    }
+  ],
+  "/StoragePlatform-development/BucketNotificationsHandler050a0587b7544547bf325f094a3db834/Role/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "BucketNotificationsHandler050a0587b7544547bf325f094a3db834RoleB6FB88EC"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...WrappedClass.addEventNotification in .pnpm...",
+        "new StoragePlatformStack (/Users/patel/Desktop/Bishen/NextJS/nestjs-nextjs-turborepo-starter-kit/apps/aws-infrastructure/lib/storage-platform-stack.ts:183:17)"
+      ]
+    }
+  ],
+  "/StoragePlatform-development/ApiUploadUser/DefaultPolicy/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "ApiUploadUserDefaultPolicy7EF97EC8"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "....pnpm...",
+        "(no user code in 10 frames, use --stack-trace-limit to capture more)"
+      ]
+    }
+  ],
+  "/StoragePlatform-development/PrivateBucket/Notifications/HandlerPolicy/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "PrivateBucketNotificationsHandlerPolicyDAA3C308"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...WrappedClass.addEventNotification in .pnpm...",
+        "new StoragePlatformStack (/Users/patel/Desktop/Bishen/NextJS/nestjs-nextjs-turborepo-starter-kit/apps/aws-infrastructure/lib/storage-platform-stack.ts:183:17)"
+      ]
+    }
+  ],
+  "/StoragePlatform-development/ImageProcessor/ServiceRole/DefaultPolicy/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "ImageProcessorServiceRoleDefaultPolicy951A81DE"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "....pnpm...",
+        "(no user code in 10 frames, use --stack-trace-limit to capture more)"
+      ]
+    }
+  ],
+  "/StoragePlatform-development/ClamAvScanner/ServiceRole/DefaultPolicy/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "ClamAvScannerServiceRoleDefaultPolicy8F8A0A02"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "....pnpm...",
+        "(no user code in 10 frames, use --stack-trace-limit to capture more)"
+      ]
+    }
+  ]
+}

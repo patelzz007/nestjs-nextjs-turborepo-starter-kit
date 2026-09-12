@@ -423,8 +423,8 @@ curl http://localhost:8080/health
 > in `packages/shared/src/contracts/versioning.ts`) and used by BOTH the server
 > controller decorators and the client transport — they can never drift. `GET /`,
 > `GET /health`, `GET /version` (the machine-readable version manifest) and
-> `POST /notifications/email-webhook` are unversioned by design (infra plumbing + a
-> URL registered in the Resend dashboard). Swagger lives at `/v1/docs` (`/docs`
+> `POST /notifications/email-webhook` are
+> unversioned by design (infra plumbing + external callbacks). Swagger lives at `/v1/docs` (`/docs`
 > 302-redirects there). Full invariants — including how to add a v2 and the
 > deploy-any-or-die 404 negotiation — are in `docs/architecture.md` §5.
 
@@ -1181,6 +1181,23 @@ owns auth + fetching. Crossing them couples concerns and breaks the architecture
 A: No. Auth works without it — only actual email delivery fails. Add a key when you
 need signup/verification emails to send.
 
+**Q: How do merchant KYB (SSM) documents work locally?**
+A: Merchant onboarding creates the account first; KYB documents upload after login via
+**direct presigned POST** (`POST /files/upload-url` → S3/local shim → `POST /files/:fileId/complete`).
+Without `STORAGE_S3_PRIVATE_BUCKET`, files land under `apps/api/.object-storage/` and
+are scanned via ClamAV (`STORAGE_SCANNER_MODE=clamav`, default) before promotion to a flat final key.
+
+The **same setup steps** apply locally and in production (database → storage → env vars → verify).
+See the unified checklist in [Storage Platform — Setup & Operations](./infrastructure/storage.md#3-unified-setup-checklist).
+
+| Mode | When to use |
+|------|-------------|
+| **Local filesystem** (default) | Everyday dev — no AWS needed |
+| **Local + real S3** | Test presigned POST / CORS before prod — deploy CDK `development` stack |
+| **Production** | CDK `production` stack + env vars from stack outputs |
+
+Migrate legacy rows with `pnpm --filter @workspace/api kyb:backfill -- --dry-run`.
+
 **Q: I changed `schema.prisma` — what now?**
 A: Prisma first, then generate, then Zod, then the pipe. 1) Edit `apps/api/prisma/schema.prisma`.
 2) `pnpm db:migrate` (applies SQL **and** `prisma generate`). 3) Add/update Zod in
@@ -1208,6 +1225,7 @@ A: If it needs a new column, Prisma migrate + generate **before** Zod. Then:
 - **[TypeScript configs](./typescript.md)** — how tsconfig inheritance works.
 - **[ESLint setup](./eslint.md)** — the rules, per-repo configs, and how to run it.
 - **[Prisma & database](./prisma.md)** — every `db:*` command in detail, seeding, migrations.
+- **[Storage platform](./infrastructure/storage.md)** — S3 file uploads, local vs production setup, KYB documents, CDK deploy.
 - **[Dependency hygiene](./dependencies.md)** — how syncpack pins shared deps.
 - **[Auth roadmap](./auth-roadmap.md)** — auth/RBAC/multi-tenancy design decisions.
 - **[Boilerplate roadmap](./boilerplate-roadmap.md)** — 15 improvements + 15 features for the template itself.

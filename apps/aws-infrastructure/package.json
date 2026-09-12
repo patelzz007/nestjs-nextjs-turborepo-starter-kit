@@ -1,0 +1,32 @@
+{
+	"name": "@workspace/aws-infrastructure",
+	"version": "0.0.1",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"build": "tsc -p tsconfig.json",
+		"watch": "tsc -w -p tsconfig.json",
+		"cdk": "cdk",
+		"synth": "cdk synth",
+		"deploy": "cdk deploy --all",
+		"diff": "cdk diff",
+		"test": "vitest run",
+		"typecheck": "tsc -p tsconfig.json --noEmit",
+		"lint": "eslint ."
+	},
+	"dependencies": {
+		"aws-cdk-lib": "^2.269.0",
+		"constructs": "^10.8.1"
+	},
+	"devDependencies": {
+		"@types/node": "^26.4.1",
+		"@workspace/eslint-config": "workspace:*",
+		"@workspace/typescript-config": "workspace:*",
+		"aws-cdk": "^2.1141.0",
+		"eslint": "^9.39.5",
+		"tsx": "^4.23.13",
+		"typescript": "6.0.2",
+		"vitest": "^5.0.0",
+		"zod": "^4.1.12"
+	}
+}

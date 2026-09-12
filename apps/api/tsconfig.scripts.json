@@ -1,0 +1,10 @@
+{
+	"extends": "@workspace/typescript-config/nestjs.json",
+	"compilerOptions": {
+		"noEmit": true,
+		"rootDir": ".",
+		"incremental": false,
+		"emitDecoratorMetadata": false
+	},
+	"include": ["scripts/**/*.ts"]
+}

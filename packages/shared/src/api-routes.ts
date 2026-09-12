@@ -167,9 +167,18 @@ export const apiRoutes = {
 		validate: "/redemptions/validate",
 		confirm: "/redemptions/confirm",
 	},
+	files: {
+		uploadUrl: "/files/upload-url",
+		complete: { path: "/files/:fileId/complete", params: ["fileId"] },
+		detail: { path: "/files/:fileId", params: ["fileId"] },
+		downloadUrl: { path: "/files/:fileId/download-url", params: ["fileId"] },
+		delete: { path: "/files/:fileId", params: ["fileId"] },
+		processingCallback: "/files/processing-callback",
+	},
 	merchant: {
 		me: "/merchant/me",
 		kyb: "/merchant/kyb",
+		kybDocumentDownload: { path: "/merchant/kyb/documents/:documentId/download", params: ["documentId"] },
 		rewards: {
 			list: "/merchant/rewards",
 			create: "/merchant/rewards",
@@ -200,6 +209,10 @@ export const apiRoutes = {
 		rewardApprove: { path: "/admin/rewards/:rewardId/approve", params: ["rewardId"] },
 		rewardReject: { path: "/admin/rewards/:rewardId/reject", params: ["rewardId"] },
 		merchantKyb: { path: "/admin/merchants/:merchantOrgId/kyb", params: ["merchantOrgId"] },
+		merchantKybDocumentDownload: {
+			path: "/admin/merchants/:merchantOrgId/documents/:documentId/download",
+			params: ["merchantOrgId", "documentId"],
+		},
 		merchantRoleCapabilities: "/admin/merchant-role-capabilities",
 		merchantRoleCapabilitiesSync: { path: "/admin/merchant-role-capabilities/:role", params: ["role"] },
 		merchantRoleCapabilitiesRestore: { path: "/admin/merchant-role-capabilities/:role/restore-defaults", params: ["role"] },

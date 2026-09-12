@@ -143,4 +143,4 @@ const CommandShortcut = React.forwardRef<HTMLSpanElement, React.ComponentProps<"
 	);
 });
 
-export { Command, CommandDialog, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem, CommandShortcut, CommandSeparator };
+export { Command, CommandDialog, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem, CommandShortcut, CommandSeparator, CommandPrimitive };

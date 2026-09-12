@@ -7,6 +7,7 @@ import {
 	AdminRejectRewardSchema,
 	apiContract,
 	apiPath,
+	FileDownloadDispositionSchema,
 	MerchantRoleCapabilitiesPathInputSchema,
 	SyncMerchantRoleCapabilitiesBodySchema,
 	UuidParamSchema,
@@ -18,6 +19,9 @@ import { GetUser } from "../../auth/decorators/get-user.decorator";
 import type { AccessTokenPayload } from "../../auth/services/token.service";
 
 import { AdminCreateMerchantInviteDto, AdminKybUpdateDto, AdminRejectRewardDto, RewardsEmptyBodyDto } from "../dtos/rewards.dto";
+import type { MerchantKybDocumentDownloadResponse } from "@workspace/shared";
+
+import { MerchantKybDocumentService } from "../services/merchant-kyb-document.service";
 import { RewardsAdminService } from "../services/rewards-admin.service";
 import { MerchantCapabilityService } from "../services/merchant-capability.service";
 
@@ -98,7 +102,10 @@ export class RewardsAdminRewardsController {
 @RlsBypass()
 @Controller(apiPath("/admin/merchants"))
 export class RewardsAdminMerchantsController {
-	public constructor(private readonly rewardsAdminService: RewardsAdminService) {}
+	public constructor(
+		private readonly rewardsAdminService: RewardsAdminService,
+		private readonly kybDocuments: MerchantKybDocumentService,
+	) {}
 
 	@RequirePermission("LIST", "MERCHANT_ORG")
 	@Get()
@@ -118,6 +125,24 @@ export class RewardsAdminMerchantsController {
 		@Param(new ZodValidationPipe(z.object({ merchantOrgId: UuidParamSchema }).strict())) params: { merchantOrgId: string },
 	): ReturnType<RewardsAdminService["getMerchantDetail"]> {
 		return this.rewardsAdminService.getMerchantDetail(params.merchantOrgId);
+	}
+
+	@RequirePermission("LIST", "MERCHANT_ORG")
+	@Get(":merchantOrgId/documents/:documentId/download")
+	@ApiOperation({ summary: "Get a short-lived signed download URL for a merchant KYB document" })
+	@ApiOkResponse({ description: "Signed download URL or scan status" })
+	public downloadDocument(
+		@Param(new ZodValidationPipe(z.object({ merchantOrgId: UuidParamSchema, documentId: UuidParamSchema }).strict()))
+		params: {
+			merchantOrgId: string;
+			documentId: string;
+		},
+		@Query(new ZodValidationPipe(z.object({ disposition: FileDownloadDispositionSchema.optional() }).strict()))
+		query: {
+			disposition?: "inline" | "attachment";
+		},
+	): Promise<MerchantKybDocumentDownloadResponse> {
+		return this.kybDocuments.getDownloadUrl(params.documentId, params.merchantOrgId, query.disposition ?? "inline");
 	}
 
 	@RequirePermission("MANAGE", "MERCHANT_ORG")

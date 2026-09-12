@@ -1,0 +1,21 @@
+{
+  "version": "54.0.0",
+  "files": {
+    "d28bd364bad290b58f151d4f401b240a998cc2f2e3df1076ce969d782b8f48f8": {
+      "displayName": "StoragePlatform-development Template",
+      "source": {
+        "path": "StoragePlatform-development.template.json",
+        "packaging": "file"
+      },
+      "destinations": {
+        "530665474681-ap-southeast-5-b113e805": {
+          "bucketName": "cdk-hnb659fds-assets-530665474681-ap-southeast-5",
+          "objectKey": "d28bd364bad290b58f151d4f401b240a998cc2f2e3df1076ce969d782b8f48f8.json",
+          "region": "ap-southeast-5",
+          "assumeRoleArn": "arn:${AWS::Partition}:iam::530665474681:role/cdk-hnb659fds-file-publishing-role-530665474681-ap-southeast-5"
+        }
+      }
+    }
+  },
+  "dockerImages": {}
+}

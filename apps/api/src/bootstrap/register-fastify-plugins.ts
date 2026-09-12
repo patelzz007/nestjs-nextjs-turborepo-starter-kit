@@ -1,5 +1,6 @@
 import type { NestFastifyApplication } from "@nestjs/platform-fastify";
 import fastifyCookie from "@fastify/cookie";
+import fastifyMultipart from "@fastify/multipart";
 import fastifyCompress from "@fastify/compress";
 import fastifyEtag from "@fastify/etag";
 import fastifyHelmet from "@fastify/helmet";
@@ -30,6 +31,12 @@ export async function registerFastifyPlugins(app: NestFastifyApplication, option
 	const hardeningEnabled: boolean = config.securityHardeningEnabled;
 
 	await server.register(fastifyCookie);
+	await server.register(fastifyMultipart, {
+		limits: {
+			files: 5,
+			fileSize: 5_242_880,
+		},
+	});
 	await server.register(fastifyRequestContext, { hook: "preHandler" });
 
 	if (!options.isDev) {

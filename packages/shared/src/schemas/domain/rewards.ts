@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { BaseResponseSchema, EpochMsSchema, type EpochMs } from "../api/common";
+import { DocumentMimeTypeSchema, MERCHANT_KYB_UPLOAD_POLICY, StoredObjectScanStatusSchema, type StoredObjectScanStatus } from "./storage";
 import { PaginationSchema } from "../api/pagination";
 import { strongPassword } from "../auth/auth";
 import { CapabilitySlugSchema } from "./capabilities";
@@ -14,8 +15,11 @@ export type PilotCity = z.output<typeof PilotCitySchema>;
 export const MerchantOrgStatusSchema = z.enum(["ONBOARDING", "ACTIVE", "SUSPENDED"]);
 export type MerchantOrgStatus = z.output<typeof MerchantOrgStatusSchema>;
 
-export const KybStatusSchema = z.enum(["PENDING", "APPROVED", "REJECTED"]);
+export const KybStatusSchema = z.enum(["PENDING", "APPROVED", "REJECTED", "ACTION_REQUIRED"]);
 export type KybStatus = z.output<typeof KybStatusSchema>;
+
+export const KybDocumentScanStatusSchema = StoredObjectScanStatusSchema;
+export type KybDocumentScanStatus = StoredObjectScanStatus;
 
 export const MerchantMemberRoleSchema = z.enum(["OWNER", "CASHIER"]);
 export type MerchantMemberRole = z.output<typeof MerchantMemberRoleSchema>;
@@ -387,38 +391,67 @@ export const MerchantOnboardingInvitePreviewSchema = z
 
 export type MerchantOnboardingInvitePreview = z.output<typeof MerchantOnboardingInvitePreviewSchema>;
 
-/** Allowed MIME types for KYB document uploads (PDF and common image formats). */
-export const MerchantKybDocumentMimeTypeSchema = z.enum(["application/pdf", "image/jpeg", "image/png", "image/webp"]);
-
-export type MerchantKybDocumentMimeType = z.output<typeof MerchantKybDocumentMimeTypeSchema>;
-
 /** Maximum single KYB document size in bytes (5 MiB). */
-export const MERCHANT_KYB_MAX_DOCUMENT_BYTES = 5_242_880;
+export const MERCHANT_KYB_MAX_DOCUMENT_BYTES = MERCHANT_KYB_UPLOAD_POLICY.maxBytesPerFile;
 
 /** Maximum number of KYB documents per submission. */
-export const MERCHANT_KYB_MAX_DOCUMENT_COUNT = 5;
+export const MERCHANT_KYB_MAX_DOCUMENT_COUNT = MERCHANT_KYB_UPLOAD_POLICY.maxCount;
 
-/** Merchant-uploaded KYB document payload (base64 content for pilot storage in `kyb_fields`). */
-export const MerchantKybDocumentSchema = z
+/** Legacy inline document shape (pre-object-storage migration — `kyb_fields.documents`). */
+export const MerchantKybLegacyDocumentSchema = z
 	.object({
 		fileName: z.string().min(1).max(255),
-		mimeType: MerchantKybDocumentMimeTypeSchema,
+		mimeType: DocumentMimeTypeSchema,
 		sizeBytes: z.number().int().positive().max(MERCHANT_KYB_MAX_DOCUMENT_BYTES),
 		contentBase64: z.string().min(1).max(7_000_000),
 	})
 	.strict();
 
-export type MerchantKybDocument = z.output<typeof MerchantKybDocumentSchema>;
+export type MerchantKybLegacyDocument = z.output<typeof MerchantKybLegacyDocumentSchema>;
 
-/** KYB document as stored in `merchant_orgs.kyb_fields.documents`. */
-export const MerchantKybStoredDocumentSchema = MerchantKybDocumentSchema.extend({
-	uploadedAt: EpochMsSchema,
-}).strict();
+/** KYB document metadata returned by the API (object storage reference). */
+export const MerchantKybDocumentRecordSchema = z
+	.object({
+		id: z.uuid(),
+		fileName: z.string().min(1).max(255),
+		mimeType: DocumentMimeTypeSchema,
+		sizeBytes: z.number().int().positive().max(MERCHANT_KYB_MAX_DOCUMENT_BYTES),
+		scanStatus: KybDocumentScanStatusSchema,
+		uploadedAt: EpochMsSchema,
+	})
+	.strict();
 
-export type MerchantKybStoredDocument = z.output<typeof MerchantKybStoredDocumentSchema>;
+export type MerchantKybDocumentRecord = z.output<typeof MerchantKybDocumentRecordSchema>;
 
-/** Business verification fields merchants submit for KYB review. */
-export const MerchantKybSubmissionSchema = z
+/** Signed download URL for a CLEAN KYB document. */
+export const MerchantKybDocumentDownloadResponseSchema = z
+	.object({
+		documentId: z.uuid(),
+		scanStatus: KybDocumentScanStatusSchema,
+		downloadUrl: z.url().nullable(),
+		expiresAt: EpochMsSchema.nullable(),
+	})
+	.strict();
+
+export type MerchantKybDocumentDownloadResponse = z.output<typeof MerchantKybDocumentDownloadResponseSchema>;
+
+/** Scanner callback payload (Google OIDC-authenticated). */
+export const KybScanResultSchema = z
+	.object({
+		documentId: z.uuid(),
+		merchantOrgId: z.uuid(),
+		storagePath: z.string().min(1).max(500),
+		objectGeneration: z.string().min(1).max(64).optional(),
+		scanStatus: z.enum(["CLEAN", "INFECTED"]),
+		scanResult: z.string().max(500).optional(),
+		cleanStoragePath: z.string().min(1).max(500).optional(),
+	})
+	.strict();
+
+export type KybScanResult = z.output<typeof KybScanResultSchema>;
+
+/** Business verification fields merchants submit for KYB review (files uploaded via presigned POST). */
+export const MerchantKybSubmissionFieldsSchema = z
 	.object({
 		businessName: z.string().min(1).max(200),
 		legalName: z.string().min(1).max(200),
@@ -427,14 +460,25 @@ export const MerchantKybSubmissionSchema = z
 		registrationNo: z.string().min(1).max(100),
 		taxId: z.string().min(1).max(100),
 		documentType: z.string().min(1).max(100),
-		documents: z.array(MerchantKybDocumentSchema).min(1).max(MERCHANT_KYB_MAX_DOCUMENT_COUNT),
+		documentFileIds: z.array(z.uuid()).min(1).max(MERCHANT_KYB_MAX_DOCUMENT_COUNT),
 	})
 	.strict();
 
-export type MerchantKybSubmissionInput = z.output<typeof MerchantKybSubmissionSchema>;
+export type MerchantKybSubmissionFieldsInput = z.output<typeof MerchantKybSubmissionFieldsSchema>;
+
+/** Client form fields before direct uploads produce `documentFileIds`. */
+export const MerchantKybSubmissionFormSchema = MerchantKybSubmissionFieldsSchema.omit({ documentFileIds: true });
+
+export type MerchantKybSubmissionFormInput = z.output<typeof MerchantKybSubmissionFormSchema>;
+
+/** @deprecated Use {@link MerchantKybSubmissionFieldsSchema} — documents are multipart file uploads. */
+export const MerchantKybSubmissionSchema = MerchantKybSubmissionFieldsSchema;
+
+/** @deprecated Use {@link MerchantKybSubmissionFieldsInput} */
+export type MerchantKybSubmissionInput = MerchantKybSubmissionFieldsInput;
 
 /** Business details step for KYB settings verification. */
-export const MerchantKybBusinessFieldsSchema = MerchantKybSubmissionSchema.pick({
+export const MerchantKybBusinessFieldsSchema = MerchantKybSubmissionFieldsSchema.pick({
 	businessName: true,
 	legalName: true,
 	addressText: true,
@@ -444,7 +488,7 @@ export const MerchantKybBusinessFieldsSchema = MerchantKybSubmissionSchema.pick(
 export type MerchantKybBusinessFieldsInput = z.output<typeof MerchantKybBusinessFieldsSchema>;
 
 /** Registration step for KYB forms. */
-export const MerchantKybRegistrationFieldsSchema = MerchantKybSubmissionSchema.pick({
+export const MerchantKybRegistrationFieldsSchema = MerchantKybSubmissionFieldsSchema.pick({
 	registrationNo: true,
 	taxId: true,
 	documentType: true,
@@ -453,20 +497,25 @@ export const MerchantKybRegistrationFieldsSchema = MerchantKybSubmissionSchema.p
 export type MerchantKybRegistrationFieldsInput = z.output<typeof MerchantKybRegistrationFieldsSchema>;
 
 /** KYB fields collected during onboarding — business name comes from the invite, not the request body. */
-export const MerchantOnboardingKybFieldsSchema = MerchantKybSubmissionSchema.omit({ businessName: true });
+export const MerchantOnboardingKybFieldsSchema = MerchantKybSubmissionFieldsSchema.omit({ businessName: true });
 
 export type MerchantOnboardingKybFieldsInput = z.output<typeof MerchantOnboardingKybFieldsSchema>;
 
-export const MerchantOnboardingCompleteSchema = z
+export const MerchantOnboardingCompleteFieldsSchema = z
 	.object({
 		token: z.string().min(1),
 		password: strongPassword,
 		fullName: z.string().min(2).max(200),
 	})
-	.extend(MerchantOnboardingKybFieldsSchema.shape)
 	.strict();
 
-export type MerchantOnboardingCompleteInput = z.output<typeof MerchantOnboardingCompleteSchema>;
+export type MerchantOnboardingCompleteFieldsInput = z.output<typeof MerchantOnboardingCompleteFieldsSchema>;
+
+/** @deprecated Use {@link MerchantOnboardingCompleteFieldsSchema} — documents are multipart file uploads. */
+export const MerchantOnboardingCompleteSchema = MerchantOnboardingCompleteFieldsSchema;
+
+/** @deprecated Use {@link MerchantOnboardingCompleteFieldsInput} */
+export type MerchantOnboardingCompleteInput = MerchantOnboardingCompleteFieldsInput;
 
 export const MerchantKybProfileResponseSchema = z
 	.object({
@@ -479,6 +528,7 @@ export const MerchantKybProfileResponseSchema = z
 		city: PilotCitySchema,
 		kybStatus: KybStatusSchema,
 		kybFields: JsonObjectSchema.nullable(),
+		documents: z.array(MerchantKybDocumentRecordSchema),
 		status: MerchantOrgStatusSchema,
 	})
 	.strict();
@@ -599,6 +649,7 @@ export type MerchantOrgResponse = z.output<typeof MerchantOrgResponseSchema>;
 /** Admin merchant detail for KYB review — includes verification payload and owner context. */
 export const AdminMerchantDetailResponseSchema = MerchantOrgResponseSchema.extend({
 	kybFields: JsonObjectSchema.nullable(),
+	documents: z.array(MerchantKybDocumentRecordSchema),
 	ownerUserId: z.uuid().nullable(),
 	ownerEmail: z.string().nullable(),
 	ownerFullName: z.string().nullable(),

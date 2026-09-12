@@ -1,9 +1,9 @@
 import { Body, Controller, Get, Headers, Param, Patch, Post, Query, UseInterceptors } from "@nestjs/common";
 import { ApiBearerAuth, ApiBody, ApiHeader, ApiOkResponse, ApiOperation, ApiSecurity, ApiTags } from "@nestjs/swagger";
 import { z } from "zod";
-import type { MerchantKybProfileResponse, MerchantKybSubmissionInput, MerchantMembershipResponse } from "@workspace/shared";
+import type { MerchantKybDocumentDownloadResponse, MerchantKybProfileResponse, MerchantMembershipResponse } from "@workspace/shared";
 
-import { apiContract, apiPath, MerchantUpdateRewardSchema, UuidParamSchema } from "@workspace/shared";
+import { FileDownloadDispositionSchema, MerchantKybSubmissionFieldsSchema, apiContract, apiPath, MerchantUpdateRewardSchema, UuidParamSchema } from "@workspace/shared";
 import { ZodValidationPipe } from "../../../common/pipes/zod-validation.pipe";
 import { readFirstHeader } from "../../../common/utils/http-headers";
 import { AllowApiKeyAuth } from "../../api-keys/decorators/allow-api-key-auth.decorator";
@@ -14,9 +14,10 @@ import { SkipAuthThrottle } from "../../auth/decorators/skip-auth-throttle.decor
 import { GetUser } from "../../auth/decorators/get-user.decorator";
 import type { AccessTokenPayload } from "../../auth/services/token.service";
 
-import { MerchantCreateApiKeyDto, MerchantCreateRewardDto, MerchantKybSubmissionDto, MerchantUpdateRewardDto, RewardsEmptyBodyDto } from "../dtos/rewards.dto";
+import { MerchantCreateApiKeyDto, MerchantCreateRewardDto, MerchantUpdateRewardDto, RewardsEmptyBodyDto } from "../dtos/rewards.dto";
 import { MerchantApiKeyService } from "../services/merchant-api-key.service";
 import { MerchantContextService } from "../services/merchant-context.service";
+import { MerchantKybDocumentService } from "../services/merchant-kyb-document.service";
 import { MerchantKybService } from "../services/merchant-kyb.service";
 import { MerchantRewardService } from "../services/merchant-reward.service";
 import { RewardsAnalyticsService } from "../services/rewards-analytics.service";
@@ -46,7 +47,11 @@ export class MerchantProfileController {
 @ApiBearerAuth()
 @Controller(apiPath("/merchant/kyb"))
 export class MerchantKybController {
-	public constructor(private readonly merchantKyb: MerchantKybService) {}
+	public constructor(
+		private readonly merchantKyb: MerchantKybService,
+		private readonly merchantContext: MerchantContextService,
+		private readonly kybDocuments: MerchantKybDocumentService,
+	) {}
 
 	@SkipAuthThrottle()
 	@Get()
@@ -61,15 +66,31 @@ export class MerchantKybController {
 	@Patch()
 	@ApiHeader(MERCHANT_ORG_HEADER)
 	@ApiOperation({ summary: "Submit or resubmit business verification details (owner only)" })
-	@ApiBody({ type: MerchantKybSubmissionDto })
 	@ApiOkResponse({ description: "Updated merchant KYB profile" })
 	public submitKyb(
 		@GetUser() user: AccessTokenPayload,
 		@Headers() headers: Record<string, string | string[] | undefined>,
-		@Body(new ZodValidationPipe(apiContract.merchant.kyb.submit.input)) body: MerchantKybSubmissionInput,
+		@Body(new ZodValidationPipe(MerchantKybSubmissionFieldsSchema)) body: z.output<typeof MerchantKybSubmissionFieldsSchema>,
 	): Promise<MerchantKybProfileResponse> {
 		const orgId = readFirstHeader(headers["x-merchant-org-id"]);
 		return this.merchantKyb.submitKyb(user.sub, orgId, body);
+	}
+
+	@Get("documents/:documentId/download")
+	@ApiHeader(MERCHANT_ORG_HEADER)
+	@ApiOperation({ summary: "Get a short-lived signed download URL for a CLEAN KYB document" })
+	@ApiOkResponse({ description: "Signed download URL or scan status" })
+	public async downloadDocument(
+		@GetUser() user: AccessTokenPayload,
+		@Headers() headers: Record<string, string | string[] | undefined>,
+		@Param(new ZodValidationPipe(z.object({ documentId: UuidParamSchema }).strict())) params: { documentId: string },
+		@Query(new ZodValidationPipe(z.object({ disposition: FileDownloadDispositionSchema.optional() }).strict()))
+		query: {
+			disposition?: "inline" | "attachment";
+		},
+	): Promise<MerchantKybDocumentDownloadResponse> {
+		const orgId = await this.merchantContext.resolveOrgIdForUser(user.sub, readFirstHeader(headers["x-merchant-org-id"]));
+		return this.kybDocuments.getDownloadUrl(params.documentId, orgId, query.disposition ?? "inline");
 	}
 }
 

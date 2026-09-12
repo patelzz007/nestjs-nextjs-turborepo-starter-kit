@@ -20,11 +20,12 @@ export default [
 				projectService: {
 					allowDefaultProject: [
 						"src/modules/auth/*.spec.ts",
-						"scripts/render-email-previews.ts",
-						"scripts/test-webhook-signature.ts",
-						"scripts/telescope-cli.ts",
-						"scripts/gen-telescope-docs.ts",
 						"scripts/apply-rls.ts",
+						"scripts/backfill-kyb-documents.ts",
+						"scripts/gen-telescope-docs.ts",
+						"scripts/render-email-previews.ts",
+						"scripts/telescope-cli.ts",
+						"scripts/test-webhook-signature.ts",
 					],
 				},
 			},
@@ -68,7 +69,13 @@ export default [
 
 	// Env vars are read at runtime; turbo.json does not enumerate every key.
 	{
-		files: ["src/config/**/*.ts", "src/messaging/**/*.config.ts", "src/modules/auth/constants/**/*.ts", "src/modules/logs/**/*.ts"],
+		files: [
+			"scripts/**/*.ts",
+			"src/config/**/*.ts",
+			"src/messaging/**/*.config.ts",
+			"src/modules/auth/constants/**/*.ts",
+			"src/modules/logs/**/*.ts",
+		],
 		rules: {
 			"turbo/no-undeclared-env-vars": "off",
 		},
@@ -77,6 +84,14 @@ export default [
 	// Repositories are registered via spread arrays in persistence modules.
 	{
 		files: ["src/**/repositories/**/*.repository.ts"],
+		rules: {
+			"@darraghor/nestjs-typed/injectable-should-be-provided": "off",
+		},
+	},
+
+	// Storage queue workers are registered conditionally when REDIS_URL is set.
+	{
+		files: ["src/modules/files/services/storage-queue.processors.ts"],
 		rules: {
 			"@darraghor/nestjs-typed/injectable-should-be-provided": "off",
 		},

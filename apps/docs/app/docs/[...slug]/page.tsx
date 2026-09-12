@@ -15,17 +15,17 @@ import { BASE_URL, SITE_NAME, githubEditUrl } from "@/lib/site";
 import { source } from "@/lib/source";
 
 interface DocsRouteParams {
-	readonly slug: string;
+	readonly slug: readonly string[];
 }
 
 /** Statically pre-renders every guide at build time (SSG/SSR by default). */
-export function generateStaticParams(): { slug: string }[] {
-	return source.getPages().map((page) => ({ slug: page.slugs.join("/") }));
+export function generateStaticParams(): { slug: readonly string[] }[] {
+	return source.getPages().map((page) => ({ slug: page.slugs }));
 }
 
 export async function generateMetadata({ params }: { readonly params: Promise<DocsRouteParams> }): Promise<Metadata> {
 	const { slug } = await params;
-	const page = source.getPage([slug]);
+	const page = source.getPage([...slug]);
 	if (page === undefined) {
 		return { title: "Guide not found" };
 	}
@@ -49,21 +49,14 @@ export async function generateMetadata({ params }: { readonly params: Promise<Do
 
 /**
  * `/docs/…` — renders one guide through the Fumadocs `DocsPage` shell (ToC,
- * full breadcrumb, footer). The banner shows the cover image + author/date +
- * reading time; the date prefers the git-derived last-commit time and falls
- * back to the frontmatter `lastUpdated`. The footer carries the "Was this
- * helpful?" widget and an "Edit on GitHub" link, and a JSON-LD `TechArticle`
- * block gives search engines structured metadata.
- *
- * The route is a single `[slug]` segment (every guide lives flat in `docs/`)
- * so the colocated `opengraph-image.tsx` can generate a per-page social card —
- * Next.js forbids files after an optional catch-all, hence no `[[...slug]]`.
- * `/docs` itself redirects via the root `page.tsx` in this folder.
+ * full breadcrumb, footer). Nested guides such as `/docs/infrastructure/storage`
+ * use the catch-all `[...slug]` segment so fumadocs folder paths resolve to
+ * real multi-segment URLs. `/docs` itself is served by `page.tsx` in the
+ * parent folder.
  */
 export default async function DocsPageRoute({ params }: { readonly params: Promise<DocsRouteParams> }): Promise<React.JSX.Element> {
 	const { slug } = await params;
-
-	const page = source.getPage([slug]);
+	const page = source.getPage([...slug]);
 	if (page === undefined) {
 		notFound();
 	}

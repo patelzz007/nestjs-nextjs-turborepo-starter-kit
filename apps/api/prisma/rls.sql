@@ -380,7 +380,14 @@ BEGIN
     'reward_legal_acceptances',
     'reward_notifications',
     'reward_audit_logs',
-    'reward_redemption_idempotency_records'
+    'reward_redemption_idempotency_records',
+    'merchant_kyb_documents',
+    'stored_files',
+    'file_variants',
+    'product_images',
+    'merchant_assets',
+    'user_avatars',
+    'merchant_kyb_files'
   ]
   LOOP
     EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY', t);
@@ -406,6 +413,55 @@ CREATE POLICY merchant_api_keys_org ON public.merchant_api_keys
 
 DROP POLICY IF EXISTS merchant_terminals_org ON public.merchant_terminals;
 CREATE POLICY merchant_terminals_org ON public.merchant_terminals
+  USING (app_merchant_member_of(merchant_org_id) OR app_rls_bypass())
+  WITH CHECK (app_merchant_member_of(merchant_org_id) OR app_rls_bypass());
+
+DROP POLICY IF EXISTS merchant_kyb_documents_org ON public.merchant_kyb_documents;
+CREATE POLICY merchant_kyb_documents_org ON public.merchant_kyb_documents
+  USING (app_merchant_member_of(merchant_org_id) OR app_rls_bypass())
+  WITH CHECK (app_merchant_member_of(merchant_org_id) OR app_rls_bypass());
+
+DROP POLICY IF EXISTS stored_files_owner ON public.stored_files;
+CREATE POLICY stored_files_owner ON public.stored_files
+  USING (app_owns(uploaded_by_id) OR (merchant_org_id IS NOT NULL AND app_merchant_member_of(merchant_org_id)) OR app_rls_bypass())
+  WITH CHECK (app_owns(uploaded_by_id) OR (merchant_org_id IS NOT NULL AND app_merchant_member_of(merchant_org_id)) OR app_rls_bypass());
+
+DROP POLICY IF EXISTS file_variants_file ON public.file_variants;
+CREATE POLICY file_variants_file ON public.file_variants
+  USING (
+    app_rls_bypass()
+    OR EXISTS (
+      SELECT 1 FROM public.stored_files sf
+      WHERE sf.id = file_id
+        AND (app_owns(sf.uploaded_by_id) OR (sf.merchant_org_id IS NOT NULL AND app_merchant_member_of(sf.merchant_org_id)))
+    )
+  )
+  WITH CHECK (
+    app_rls_bypass()
+    OR EXISTS (
+      SELECT 1 FROM public.stored_files sf
+      WHERE sf.id = file_id
+        AND (app_owns(sf.uploaded_by_id) OR (sf.merchant_org_id IS NOT NULL AND app_merchant_member_of(sf.merchant_org_id)))
+    )
+  );
+
+DROP POLICY IF EXISTS product_images_catalog ON public.product_images;
+CREATE POLICY product_images_catalog ON public.product_images
+  USING (app_rls_bypass())
+  WITH CHECK (app_rls_bypass());
+
+DROP POLICY IF EXISTS merchant_assets_org ON public.merchant_assets;
+CREATE POLICY merchant_assets_org ON public.merchant_assets
+  USING (app_merchant_member_of(merchant_org_id) OR app_rls_bypass())
+  WITH CHECK (app_merchant_member_of(merchant_org_id) OR app_rls_bypass());
+
+DROP POLICY IF EXISTS user_avatars_owner ON public.user_avatars;
+CREATE POLICY user_avatars_owner ON public.user_avatars
+  USING (app_owns(user_id) OR app_rls_bypass())
+  WITH CHECK (app_owns(user_id) OR app_rls_bypass());
+
+DROP POLICY IF EXISTS merchant_kyb_files_org ON public.merchant_kyb_files;
+CREATE POLICY merchant_kyb_files_org ON public.merchant_kyb_files
   USING (app_merchant_member_of(merchant_org_id) OR app_rls_bypass())
   WITH CHECK (app_merchant_member_of(merchant_org_id) OR app_rls_bypass());
 

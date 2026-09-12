@@ -1,6 +1,6 @@
 "use client";
 
-import type { MerchantKybDocument } from "@workspace/shared";
+import type { MerchantKybPendingDocument } from "./merchant-kyb-pending-document";
 import { Input } from "@workspace/ui/components/form/input";
 import { Label } from "@workspace/ui/components/form/label";
 import { Textarea } from "@workspace/ui/components/form/textarea";
@@ -16,7 +16,7 @@ export interface MerchantKybFieldValues {
 	readonly registrationNo: string;
 	readonly taxId: string;
 	readonly documentType: string;
-	readonly documents: MerchantKybDocument[];
+	readonly documents: MerchantKybPendingDocument[];
 }
 
 export interface MerchantKybBusinessFieldsProps {
@@ -41,7 +41,7 @@ export interface MerchantKybRegistrationFieldsProps {
 
 export interface MerchantKybFieldsProps {
 	readonly values: MerchantKybFieldValues;
-	readonly onChange: (field: keyof MerchantKybFieldValues, value: string | MerchantKybDocument[]) => void;
+	readonly onChange: (field: keyof MerchantKybFieldValues, value: string | MerchantKybPendingDocument[]) => void;
 	readonly idPrefix?: string;
 	readonly showDocuments?: boolean;
 }
@@ -239,7 +239,7 @@ export function MerchantKybFields({ values, onChange, idPrefix = "merchant-kyb",
 	);
 
 	const handleDocumentsChange = React.useCallback(
-		(documents: MerchantKybDocument[]): void => {
+		(documents: MerchantKybPendingDocument[]): void => {
 			onChange("documents", documents);
 		},
 		[onChange],

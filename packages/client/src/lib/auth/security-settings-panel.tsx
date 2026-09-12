@@ -44,7 +44,7 @@ function downloadBackupCodes(codes: readonly string[]): void {
 
 function TwoFactorSetupPanel(): JSX.Element {
 	const { api } = useAuth();
-	const meQuery = api.auth.me.useQuery();
+	const meQuery = api.auth.me.useQuery(undefined, { retry: 1 });
 	const twoFactorEnabled = meQuery.data?.data.twoFactorEnabled === true;
 	const [isLoadingSetup, setIsLoadingSetup] = useState(false);
 	const enableMutation = api.auth.twoFactorEnable.useMutation();

@@ -38,12 +38,15 @@ import { RewardsAnalyticsService } from "./services/rewards-analytics.service";
 import { RewardsCoreServicesModule } from "./rewards-core-services.module";
 import { RewardsPersistenceModule } from "./rewards-persistence.module";
 import { RewardsQueueModule } from "./rewards-queue.module";
+import { FilesModule } from "../files/files.module";
+import { StorageModule } from "../storage/storage.module";
+import { MerchantKybDocumentService } from "./services/merchant-kyb-document.service";
 
 const redisUrl: string | undefined = process.env.REDIS_URL;
 const rewardsQueueImports = redisUrl !== undefined && redisUrl.length > 0 ? [RewardsQueueModule] : [];
 
 @Module({
-	imports: [AuthModule, NotificationsModule, RewardsPersistenceModule, RewardsCoreServicesModule, ...rewardsQueueImports],
+	imports: [AuthModule, NotificationsModule, RewardsPersistenceModule, RewardsCoreServicesModule, StorageModule, FilesModule, ...rewardsQueueImports],
 	controllers: [
 		ConsumerRewardsController,
 		ConsumerClaimsController,
@@ -71,6 +74,7 @@ const rewardsQueueImports = redisUrl !== undefined && redisUrl.length > 0 ? [Rew
 		RedemptionService,
 		MerchantApiKeyService,
 		MerchantKybService,
+		MerchantKybDocumentService,
 		MerchantMemberService,
 		MerchantOnboardingService,
 		RewardsAdminService,

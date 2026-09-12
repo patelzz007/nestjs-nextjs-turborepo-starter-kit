@@ -345,9 +345,13 @@ async function executeHttp<T, Body = undefined>(
 	};
 
 	if (method !== "GET" && options && "body" in options) {
-		if (bodySchema) bodySchema.parse(options.body);
-		headers["Content-Type"] = "application/json";
-		init.body = typeof options.body === "string" ? options.body : JSON.stringify(options.body);
+		if (options.body instanceof FormData) {
+			init.body = options.body;
+		} else {
+			if (bodySchema) bodySchema.parse(options.body);
+			headers["Content-Type"] = "application/json";
+			init.body = typeof options.body === "string" ? options.body : JSON.stringify(options.body);
+		}
 	}
 
 	const execute = async (targetUrl: string): Promise<ApiResponse<T>> => {

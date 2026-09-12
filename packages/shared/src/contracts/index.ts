@@ -60,8 +60,8 @@ import {
 	MerchantCreateApiKeySchema,
 	MerchantCreateMemberSchema,
 	MerchantCreateRewardSchema,
-	MerchantKybSubmissionSchema,
-	MerchantOnboardingCompleteSchema,
+	MerchantKybSubmissionFieldsSchema,
+	MerchantOnboardingCompleteFieldsSchema,
 	MerchantOnboardingValidateTokenSchema,
 	MerchantRedemptionListQuerySchema,
 	MerchantUpdateRewardPathInputSchema,
@@ -85,6 +85,7 @@ import {
 } from "../schemas/domain/sample-category.generated";
 import { BulkCreateProductSchema, CreateProductSchema, ProductIdParamSchema, ProductListQuerySchema, UpdateProductSchema } from "../schemas/domain/product.generated";
 import { BulkDeleteIdsSchema } from "../schemas/api/bulk-mutation";
+import { CompleteFileUploadSchema, CreateFileUploadUrlSchema, FileDownloadDispositionSchema } from "../schemas/domain/storage";
 import type { ApiVersion } from "./versioning";
 
 // ── JSON-safe value types (shared by the contract and the client pipeline) ─
@@ -322,11 +323,44 @@ export const apiContract = {
 		validate: defineContract({ method: "POST", path: apiRoutes.redemptions.validate, input: RedemptionValidateSchema }),
 		confirm: defineContract({ method: "POST", path: apiRoutes.redemptions.confirm, input: RedemptionConfirmSchema }),
 	},
+	files: {
+		uploadUrl: defineContract({ method: "POST", path: apiRoutes.files.uploadUrl, input: CreateFileUploadUrlSchema }),
+		complete: defineContract({
+			method: "POST",
+			path: apiRoutes.files.complete.path,
+			input: z.intersection(z.object({ fileId: UuidParamSchema }).strict(), CompleteFileUploadSchema),
+		}),
+		detail: defineContract({
+			method: "GET",
+			path: apiRoutes.files.detail.path,
+			input: z.object({ fileId: UuidParamSchema }).strict(),
+		}),
+		downloadUrl: defineContract({
+			method: "GET",
+			path: apiRoutes.files.downloadUrl.path,
+			input: z.object({ fileId: UuidParamSchema }).strict(),
+		}),
+		delete: defineContract({
+			method: "DELETE",
+			path: apiRoutes.files.delete.path,
+			input: z.object({ fileId: UuidParamSchema }).strict(),
+		}),
+	},
 	merchant: {
 		me: defineContract({ method: "GET", path: apiRoutes.merchant.me, input: EmptyInputSchema }),
 		kyb: {
 			get: defineContract({ method: "GET", path: apiRoutes.merchant.kyb, input: EmptyInputSchema }),
-			submit: defineContract({ method: "PATCH", path: apiRoutes.merchant.kyb, input: MerchantKybSubmissionSchema }),
+			submit: defineContract({ method: "PATCH", path: apiRoutes.merchant.kyb, input: MerchantKybSubmissionFieldsSchema }),
+			downloadDocument: defineContract({
+				method: "GET",
+				path: apiRoutes.merchant.kybDocumentDownload.path,
+				input: z
+					.object({
+						documentId: UuidParamSchema,
+						disposition: FileDownloadDispositionSchema.optional(),
+					})
+					.strict(),
+			}),
 		},
 		rewards: {
 			list: defineContract({ method: "GET", path: apiRoutes.merchant.rewards.list, input: EmptyInputSchema }),
@@ -355,7 +389,7 @@ export const apiContract = {
 		analytics: defineContract({ method: "GET", path: apiRoutes.merchant.analytics, input: RewardsAnalyticsQuerySchema }),
 		onboarding: {
 			validate: defineContract({ method: "POST", path: apiRoutes.merchant.onboarding.validate, input: MerchantOnboardingValidateTokenSchema }),
-			complete: defineContract({ method: "POST", path: apiRoutes.merchant.onboarding.complete, input: MerchantOnboardingCompleteSchema }),
+			complete: defineContract({ method: "POST", path: apiRoutes.merchant.onboarding.complete, input: MerchantOnboardingCompleteFieldsSchema }),
 		},
 		members: {
 			create: defineContract({ method: "POST", path: apiRoutes.merchant.members.create, input: MerchantCreateMemberSchema }),
@@ -370,6 +404,17 @@ export const apiContract = {
 			method: "GET",
 			path: apiRoutes.rewardsAdmin.merchantDetail.path,
 			input: AdminMerchantIdParamSchema,
+		}),
+		downloadMerchantDocument: defineContract({
+			method: "GET",
+			path: apiRoutes.rewardsAdmin.merchantKybDocumentDownload.path,
+			input: z
+				.object({
+					merchantOrgId: UuidParamSchema,
+					documentId: UuidParamSchema,
+					disposition: FileDownloadDispositionSchema.optional(),
+				})
+				.strict(),
 		}),
 		approveReward: defineContract({
 			method: "POST",

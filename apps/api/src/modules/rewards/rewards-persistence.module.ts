@@ -3,6 +3,7 @@ import { Module } from "@nestjs/common";
 import { PrismaModule } from "../../prisma/prisma.module";
 
 import { MerchantApiKeyRepository } from "./repositories/merchant-api-key.repository";
+import { MerchantKybDocumentRepository } from "./repositories/merchant-kyb-document.repository";
 import { MerchantInviteRepository } from "./repositories/merchant-invite.repository";
 import { MerchantMemberRepository } from "./repositories/merchant-member.repository";
 import { MerchantOrgRepository } from "./repositories/merchant-org.repository";
@@ -30,6 +31,7 @@ const REWARD_REPOSITORIES = [
 	RewardRedemptionIdempotencyRepository,
 	RewardUserRepository,
 	MerchantOrgRepository,
+	MerchantKybDocumentRepository,
 	MerchantMemberRepository,
 	MerchantApiKeyRepository,
 	MerchantInviteRepository,

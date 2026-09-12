@@ -1,19 +1,28 @@
 "use client";
 
-import type { MerchantKybDocument, MerchantKybProfileResponse } from "@workspace/shared";
-import { JsonPrimitiveSchema, MerchantKybBusinessFieldsSchema, MerchantKybRegistrationFieldsSchema, MerchantKybSubmissionSchema } from "@workspace/shared";
-import { z } from "zod";
+import type { FileDownloadDisposition, MerchantKybDocumentRecord, MerchantKybProfileResponse } from "@workspace/shared";
+import {
+	JsonPrimitiveSchema,
+	MERCHANT_KYB_MAX_DOCUMENT_COUNT,
+	MerchantKybBusinessFieldsSchema,
+	MerchantKybRegistrationFieldsSchema,
+	MerchantKybSubmissionFormSchema,
+} from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/feedback/badge";
 import { Button } from "@workspace/ui/components/form/button";
 import { FormShell } from "@workspace/ui/components/form/form-shell";
 import { useQueryClient } from "@tanstack/react-query";
 import * as React from "react";
+import { z } from "zod";
 
 import { resolveAuthErrorMessage } from "./auth-errors";
 import { useAuth } from "./index";
 import { MERCHANT_ME_QUERY_KEY } from "./invalidate-session-auth";
-import { hasSubmittedMerchantKyb, readStoredKybDocuments } from "./merchant-kyb-document-utils";
+import { hasSubmittedMerchantKyb, openExternalDocument, readProfileKybDocuments, triggerBrowserDownload } from "./merchant-kyb-document-utils";
+import { MerchantKybDocumentPreviewDialog, type MerchantKybDocumentPreviewState } from "./merchant-kyb-document-preview-dialog";
 import { MerchantKybDocumentUpload } from "./merchant-kyb-document-upload";
+import { submitMerchantKyb } from "./merchant-kyb-multipart";
+import { MerchantKybStoredDocumentList } from "./merchant-kyb-stored-document-list";
 import { MerchantKybBusinessFields, MerchantKybRegistrationFields, type MerchantKybFieldValues } from "./merchant-kyb-fields";
 import { MerchantOnboardingStepper, type MerchantOnboardingStep } from "./merchant-onboarding-stepper";
 
@@ -52,12 +61,7 @@ function profileToFieldValues(profile: MerchantKybProfileResponse): MerchantKybF
 		registrationNo: readKybStringField(profile, "registrationNo"),
 		taxId: readKybStringField(profile, "taxId"),
 		documentType: readKybStringField(profile, "documentType"),
-		documents: readStoredKybDocuments(profile.kybFields).map((document): MerchantKybDocument => ({
-			fileName: document.fileName,
-			mimeType: document.mimeType,
-			sizeBytes: document.sizeBytes,
-			contentBase64: document.contentBase64,
-		})),
+		documents: [],
 	};
 }
 
@@ -65,7 +69,7 @@ function kybStatusVariant(status: MerchantKybProfileResponse["kybStatus"]): "def
 	if (status === "APPROVED") {
 		return "default";
 	}
-	if (status === "REJECTED") {
+	if (status === "REJECTED" || status === "ACTION_REQUIRED") {
 		return "destructive";
 	}
 	return "outline";
@@ -73,7 +77,17 @@ function kybStatusVariant(status: MerchantKybProfileResponse["kybStatus"]): "def
 
 export function MerchantKybVerificationView(): React.JSX.Element {
 	const { api } = useAuth();
-	const profileQuery = api.merchant.kyb.get.useQuery({}, { staleTime: 0 });
+	const profileQuery = api.merchant.kyb.get.useQuery(
+		{},
+		{
+			staleTime: 0,
+			refetchInterval: (query): number | false => {
+				const documents = query.state.data?.data.documents ?? [];
+				const hasPending = documents.some((document) => document.scanStatus === "SCANNING");
+				return hasPending ? 5_000 : false;
+			},
+		},
+	);
 	const profile = profileQuery.data?.data;
 
 	if (profileQuery.isLoading && profile === undefined) {
@@ -94,16 +108,17 @@ interface MerchantKybVerificationContentProps {
 function MerchantKybVerificationContent({ profile }: MerchantKybVerificationContentProps): React.JSX.Element {
 	const { api } = useAuth();
 	const queryClient = useQueryClient();
-	const submitMutation = api.merchant.kyb.submit.useMutation();
-
 	const hasSubmitted = hasSubmittedMerchantKyb(profile);
 	const isApproved = profile.kybStatus === "APPROVED";
 	const canUpdate = !isApproved;
+	const storedDocuments = readProfileKybDocuments(profile);
 
 	const [step, setStep] = React.useState<UpdateStep>("business");
 	const [values, setValues] = React.useState<MerchantKybFieldValues>(() => profileToFieldValues(profile));
 	const [error, setError] = React.useState<string | null>(null);
 	const [successMessage, setSuccessMessage] = React.useState<string | null>(null);
+	const [isSubmitting, setIsSubmitting] = React.useState(false);
+	const [documentPreview, setDocumentPreview] = React.useState<MerchantKybDocumentPreviewState | null>(null);
 
 	const completedStepIds = React.useMemo((): ReadonlySet<string> => {
 		const completed = new Set<string>();
@@ -127,6 +142,74 @@ function MerchantKybVerificationContent({ profile }: MerchantKybVerificationCont
 	const handleDocumentsChange = React.useCallback((documents: MerchantKybFieldValues["documents"]): void => {
 		setValues((current) => ({ ...current, documents }));
 	}, []);
+
+	const fetchStoredDocumentUrl = React.useCallback(
+		async (document: MerchantKybDocumentRecord, disposition: FileDownloadDisposition): Promise<string | null> => {
+			const response = await api.merchant.kyb.downloadDocument.fetchOrThrow({ documentId: document.id, disposition });
+			return response.data.downloadUrl;
+		},
+		[api],
+	);
+
+	const handleCloseDocumentPreview = React.useCallback((): void => {
+		setDocumentPreview(null);
+	}, []);
+
+	const handleViewStoredDocument = React.useCallback(
+		(document: MerchantKybDocumentRecord): void => {
+			void Promise.all([fetchStoredDocumentUrl(document, "inline"), fetchStoredDocumentUrl(document, "attachment")])
+				.then(([viewUrl, downloadUrl]): void => {
+					if (viewUrl === null || downloadUrl === null) {
+						setError("This document is still scanning or was rejected.");
+						return;
+					}
+					setDocumentPreview({
+						fileName: document.fileName,
+						mimeType: document.mimeType,
+						viewUrl,
+						downloadUrl,
+					});
+				})
+				.catch((err: unknown): void => {
+					setError(resolveAuthErrorMessage(err));
+				});
+		},
+		[fetchStoredDocumentUrl],
+	);
+
+	const handleDownloadStoredDocument = React.useCallback(
+		(document: MerchantKybDocumentRecord): void => {
+			void fetchStoredDocumentUrl(document, "attachment")
+				.then((downloadUrl): void => {
+					if (downloadUrl === null) {
+						setError("This document is still scanning or was rejected.");
+						return;
+					}
+					triggerBrowserDownload(downloadUrl, document.fileName);
+				})
+				.catch((err: unknown): void => {
+					setError(resolveAuthErrorMessage(err));
+				});
+		},
+		[fetchStoredDocumentUrl],
+	);
+
+	const handleViewStoredDocumentSource = React.useCallback(
+		(document: MerchantKybDocumentRecord): void => {
+			void fetchStoredDocumentUrl(document, "inline")
+				.then((viewUrl): void => {
+					if (viewUrl === null) {
+						setError("This document is still scanning or was rejected.");
+						return;
+					}
+					openExternalDocument(viewUrl);
+				})
+				.catch((err: unknown): void => {
+					setError(resolveAuthErrorMessage(err));
+				});
+		},
+		[fetchStoredDocumentUrl],
+	);
 
 	const handleBusinessContinue = React.useCallback(
 		(event: React.SyntheticEvent<HTMLFormElement>): void => {
@@ -175,20 +258,37 @@ function MerchantKybVerificationContent({ profile }: MerchantKybVerificationCont
 			setError(null);
 			setSuccessMessage(null);
 
-			const parsed = MerchantKybSubmissionSchema.safeParse(values);
+			if (values.documents.length === 0) {
+				setError("Upload at least one business registration document.");
+				return;
+			}
+			if (values.documents.length > MERCHANT_KYB_MAX_DOCUMENT_COUNT) {
+				setError(`You can upload up to ${String(MERCHANT_KYB_MAX_DOCUMENT_COUNT)} documents.`);
+				return;
+			}
+
+			const parsed = MerchantKybSubmissionFormSchema.safeParse({
+				businessName: values.businessName,
+				legalName: values.legalName,
+				addressText: values.addressText,
+				contactPhone: values.contactPhone,
+				registrationNo: values.registrationNo,
+				taxId: values.taxId,
+				documentType: values.documentType,
+			});
 			if (!parsed.success) {
 				setError(parsed.error.issues[0]?.message ?? "Check your business details and try again.");
 				return;
 			}
 
-			void submitMutation
-				.mutateAsync(parsed.data)
+			setIsSubmitting(true);
+			void submitMerchantKyb(api, parsed.data, values.documents, profile.merchantOrgId)
 				.then((response): void => {
-					setValues(profileToFieldValues(response.data));
+					setValues(profileToFieldValues(response));
 					setStep("business");
 					setSuccessMessage(
-						profile.kybStatus === "PENDING"
-							? "Your submission has been updated. Our team will review the latest details."
+						profile.kybStatus === "PENDING" || profile.kybStatus === "ACTION_REQUIRED"
+							? "Your submission has been updated. Documents are being scanned before review."
 							: "Business verification updated. Our team will review your details.",
 					);
 					void queryClient.invalidateQueries({ queryKey: MERCHANT_ME_QUERY_KEY });
@@ -196,9 +296,12 @@ function MerchantKybVerificationContent({ profile }: MerchantKybVerificationCont
 				})
 				.catch((err: unknown): void => {
 					setError(resolveAuthErrorMessage(err));
+				})
+				.finally((): void => {
+					setIsSubmitting(false);
 				});
 		},
-		[profile.kybStatus, queryClient, submitMutation, values],
+		[api, profile.kybStatus, profile.merchantOrgId, queryClient, values],
 	);
 
 	const handleBack = React.useCallback((): void => {
@@ -218,6 +321,12 @@ function MerchantKybVerificationContent({ profile }: MerchantKybVerificationCont
 	return (
 		<div className="space-y-6">
 			<Badge variant={kybStatusVariant(profile.kybStatus)}>{profile.kybStatus}</Badge>
+
+			{profile.kybStatus === "ACTION_REQUIRED" ? (
+				<div className="rounded-lg border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+					A security scan flagged one or more documents. Please upload a clean set of files and resubmit.
+				</div>
+			) : null}
 
 			{profile.kybStatus === "REJECTED" && rejectionReason !== null ? (
 				<div className="rounded-lg border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive">{rejectionReason}</div>
@@ -239,7 +348,13 @@ function MerchantKybVerificationContent({ profile }: MerchantKybVerificationCont
 						<MerchantKybRegistrationFields values={values} idPrefix="merchant-verification" readOnly />
 					</section>
 					<section className="space-y-4">
-						<MerchantKybDocumentUpload documents={values.documents} idPrefix="merchant-verification-documents" readOnly />
+						<h2 className="text-sm font-semibold">Business registration documents</h2>
+						<MerchantKybStoredDocumentList
+							documents={storedDocuments}
+							onView={handleViewStoredDocument}
+							onDownload={handleDownloadStoredDocument}
+							onViewSource={handleViewStoredDocumentSource}
+						/>
 					</section>
 				</div>
 			) : null}
@@ -247,12 +362,25 @@ function MerchantKybVerificationContent({ profile }: MerchantKybVerificationCont
 			{canUpdate ? (
 				<div className="space-y-6">
 					<p className="text-sm text-muted-foreground">
-						{profile.kybStatus === "REJECTED"
+						{profile.kybStatus === "REJECTED" || profile.kybStatus === "ACTION_REQUIRED"
 							? "Update your business details and documents, then resubmit for review."
 							: hasSubmitted
-								? "Your submission is under review. Review what you submitted during onboarding below and update anything that needs correcting before an admin approves it."
+								? "Your submission is under review. Review what you submitted below and update anything that needs correcting before an admin approves it."
 								: "Complete your business verification by submitting the details and documents below."}
 					</p>
+
+					{storedDocuments.length > 0 ? (
+						<section className="space-y-3">
+							<h2 className="text-sm font-semibold">Documents on file</h2>
+							<MerchantKybStoredDocumentList
+								documents={storedDocuments}
+								onView={handleViewStoredDocument}
+								onDownload={handleDownloadStoredDocument}
+								onViewSource={handleViewStoredDocumentSource}
+							/>
+						</section>
+					) : null}
+
 					<MerchantOnboardingStepper steps={UPDATE_STEPS} currentStepId={step} completedStepIds={completedStepIds} />
 
 					{step === "business" ? (
@@ -262,35 +390,41 @@ function MerchantKybVerificationContent({ profile }: MerchantKybVerificationCont
 					) : null}
 
 					{step === "registration" ? (
-						<FormShell error={error} isLoading={false} submitLabel="Continue" loadingLabel="Continue" submitClassName="h-11" onSubmit={handleRegistrationContinue}>
+						<FormShell
+							error={error}
+							isLoading={false}
+							submitLabel="Continue"
+							loadingLabel="Continue"
+							submitClassName="h-11"
+							onSubmit={handleRegistrationContinue}
+							secondaryAction={
+								<Button type="button" variant="outline" className="h-11" onClick={handleBack}>
+									Back
+								</Button>
+							}>
 							<MerchantKybRegistrationFields values={values} onChange={handleRegistrationFieldChange} idPrefix="merchant-verification" />
-							<Button type="button" variant="outline" className="h-11 w-full" onClick={handleBack}>
-								Back
-							</Button>
 						</FormShell>
 					) : null}
 
 					{step === "documents" ? (
 						<FormShell
 							error={error}
-							isLoading={submitMutation.isPending}
-							submitLabel={profile.kybStatus === "REJECTED" ? "Resubmit for review" : hasSubmitted ? "Update submission" : "Submit for review"}
+							isLoading={isSubmitting}
+							submitLabel="Submit for review"
 							loadingLabel="Submitting…"
 							submitClassName="h-11"
-							onSubmit={handleDocumentsSubmit}>
-							<MerchantKybDocumentUpload
-								documents={values.documents}
-								onChange={handleDocumentsChange}
-								idPrefix="merchant-verification-documents"
-								helperText="Review your uploaded documents or replace them before saving. PDF, JPEG, PNG, or WebP up to 5 MB each."
-							/>
-							<Button type="button" variant="outline" className="h-11 w-full" onClick={handleBack}>
-								Back
-							</Button>
+							onSubmit={handleDocumentsSubmit}
+							secondaryAction={
+								<Button type="button" variant="outline" className="h-11" onClick={handleBack}>
+									Back
+								</Button>
+							}>
+							<MerchantKybDocumentUpload documents={values.documents} onChange={handleDocumentsChange} idPrefix="merchant-verification-documents" />
 						</FormShell>
 					) : null}
 				</div>
 			) : null}
+			<MerchantKybDocumentPreviewDialog preview={documentPreview} onClose={handleCloseDocumentPreview} />
 		</div>
 	);
 }

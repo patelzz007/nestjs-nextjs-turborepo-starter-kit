@@ -1,35 +1,40 @@
 "use client";
 
-import type { MerchantKybDocument } from "@workspace/shared";
 import { MERCHANT_KYB_MAX_DOCUMENT_COUNT } from "@workspace/shared";
 import { Button } from "@workspace/ui/components/form/button";
 import * as React from "react";
 
-import { buildKybDocumentDataUrl, formatKybDocumentSize, readMerchantKybDocument } from "./merchant-kyb-document-utils";
+import { formatKybDocumentSize } from "./merchant-kyb-document-utils";
+import type { MerchantKybPendingDocument } from "./merchant-kyb-pending-document";
+import { validateMerchantKybFile } from "./merchant-kyb-pending-document";
 
 interface MerchantKybDocumentListItemProps {
-	readonly document: MerchantKybDocument;
+	readonly document: MerchantKybPendingDocument;
 	readonly index: number;
 	readonly onRemoveAtIndex?: (index: number) => void;
 	readonly readOnly?: boolean;
+	readonly onOpen?: (index: number) => void;
 }
 
-function MerchantKybDocumentListItem({ document, index, onRemoveAtIndex, readOnly = false }: MerchantKybDocumentListItemProps): React.JSX.Element {
+function MerchantKybDocumentListItem({ document, index, onRemoveAtIndex, readOnly = false, onOpen }: MerchantKybDocumentListItemProps): React.JSX.Element {
 	const handleRemove = React.useCallback((): void => {
 		onRemoveAtIndex?.(index);
 	}, [index, onRemoveAtIndex]);
 
+	const handleOpen = React.useCallback((): void => {
+		onOpen?.(index);
+	}, [index, onOpen]);
+
 	return (
 		<li className="flex items-center gap-3 rounded-lg border bg-card px-3 py-2">
 			<div className="min-w-0 flex-1">
-				<a
-					href={buildKybDocumentDataUrl(document)}
-					download={document.fileName}
-					target="_blank"
-					rel="noreferrer"
-					className="truncate text-sm font-medium text-primary hover:underline">
-					{document.fileName}
-				</a>
+				{readOnly && onOpen !== undefined ? (
+					<button type="button" className="truncate text-sm font-medium text-primary hover:underline" onClick={handleOpen}>
+						{document.fileName}
+					</button>
+				) : (
+					<p className="truncate text-sm font-medium">{document.fileName}</p>
+				)}
 				<p className="text-xs text-muted-foreground">{formatKybDocumentSize(document.sizeBytes)}</p>
 			</div>
 			{readOnly ? null : (
@@ -42,17 +47,18 @@ function MerchantKybDocumentListItem({ document, index, onRemoveAtIndex, readOnl
 }
 
 export interface MerchantKybDocumentUploadProps {
-	readonly documents: readonly MerchantKybDocument[];
-	readonly onChange?: (documents: MerchantKybDocument[]) => void;
+	readonly documents: readonly MerchantKybPendingDocument[];
+	readonly onChange?: (documents: MerchantKybPendingDocument[]) => void;
 	readonly idPrefix?: string;
 	readonly helperText?: string;
 	readonly className?: string;
 	readonly readOnly?: boolean;
+	readonly onOpenDocument?: (index: number) => void;
 }
 
 export const MerchantKybDocumentUpload = React.memo(
 	React.forwardRef<HTMLDivElement, MerchantKybDocumentUploadProps>(function MerchantKybDocumentUpload(
-		{ documents, onChange, idPrefix = "merchant-kyb-documents", helperText, className, readOnly = false },
+		{ documents, onChange, idPrefix = "merchant-kyb-documents", helperText, className, readOnly = false, onOpenDocument },
 		ref,
 	): React.JSX.Element {
 		const inputRef = React.useRef<HTMLInputElement>(null);
@@ -78,16 +84,15 @@ export const MerchantKybDocumentUpload = React.memo(
 				}
 
 				const selectedFiles = Array.from(fileList).slice(0, remainingSlots);
-				void Promise.all(selectedFiles.map((file) => readMerchantKybDocument(file)))
-					.then((uploaded): void => {
-						onChange?.([...documents, ...uploaded]);
-						event.target.value = "";
-					})
-					.catch((err: unknown): void => {
-						const message = err instanceof Error ? err.message : "Unable to upload document.";
-						setLocalError(message);
-						event.target.value = "";
-					});
+				try {
+					const uploaded = selectedFiles.map((file) => validateMerchantKybFile(file));
+					onChange?.([...documents, ...uploaded]);
+					event.target.value = "";
+				} catch (err) {
+					const message = err instanceof Error ? err.message : "Unable to upload document.";
+					setLocalError(message);
+					event.target.value = "";
+				}
 			},
 			[documents, onChange],
 		);
@@ -137,11 +142,12 @@ export const MerchantKybDocumentUpload = React.memo(
 					<ul className="space-y-2">
 						{documents.map((document, index) => (
 							<MerchantKybDocumentListItem
-								key={`${document.fileName}-${String(document.sizeBytes)}`}
+								key={`${document.fileName}-${String(document.sizeBytes)}-${String(index)}`}
 								document={document}
 								index={index}
 								onRemoveAtIndex={handleRemoveDocument}
 								readOnly={readOnly}
+								onOpen={onOpenDocument}
 							/>
 						))}
 					</ul>

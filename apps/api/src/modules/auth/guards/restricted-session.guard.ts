@@ -34,6 +34,7 @@ const RESTRICTED_SESSION_ALLOWLIST: readonly RestrictedRouteRule[] = [
 	{ method: "GET", pathSuffix: "/merchant/me" },
 	{ method: "GET", pathSuffix: "/merchant/kyb" },
 	{ method: "PATCH", pathSuffix: "/merchant/kyb" },
+	{ method: "POST", pathSuffix: "/files/upload-url" },
 	{ method: "POST", pathSuffix: "/auth/mfa/recovery" },
 	{ method: "GET", pathSuffix: "/auth/mfa/recovery/status" },
 ];
@@ -90,6 +91,22 @@ export class RestrictedSessionGuard implements CanActivate {
 	private isAllowlistedRoute(request: FastifyRequest): boolean {
 		const method: string = request.method.toUpperCase();
 		const path: string = request.url.split("?")[0] ?? request.url;
+
+		if (method === "GET" && path.includes("/merchant/kyb/documents/") && path.endsWith("/download")) {
+			return true;
+		}
+
+		if (path.includes("/files/")) {
+			if (method === "POST" && (path.endsWith("/complete") || path.endsWith("/local-upload"))) {
+				return true;
+			}
+			if (method === "GET" && path.endsWith("/download-url")) {
+				return true;
+			}
+			if (method === "GET" && /\/files\/[0-9a-f-]{36}$/i.test(path)) {
+				return true;
+			}
+		}
 
 		return RESTRICTED_SESSION_ALLOWLIST.some((rule: RestrictedRouteRule): boolean => method === rule.method && path.endsWith(rule.pathSuffix));
 	}

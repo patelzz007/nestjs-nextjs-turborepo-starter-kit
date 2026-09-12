@@ -56,6 +56,20 @@ export const EnvSchema = z
 
 		// ── Frontend (apps/web, apps/admin) ────────────────────────────
 		NEXT_PUBLIC_API_URL: z.url().optional(),
+
+		// ── Object storage (apps/api — AWS S3) ──────────────────────────
+		STORAGE_S3_BUCKET: z.string().min(1).optional(),
+		AWS_REGION: z.string().min(1).optional(),
+		AWS_ACCESS_KEY_ID: z.string().min(1).optional(),
+		AWS_SECRET_ACCESS_KEY: z.string().min(1).optional(),
+		STORAGE_DOWNLOAD_TTL_SECONDS: z.coerce.number().int().positive().optional(),
+		STORAGE_AUTO_SCAN_IN_DEV: z.enum(["true", "false"]).optional(),
+		STORAGE_SCANNER_MODE: z.enum(["lambda", "clamav"]).optional(),
+		STORAGE_SCANNER_LAMBDA_ARN: z.string().min(1).optional(),
+		STORAGE_CLAMAV_HOST: z.string().min(1).optional(),
+		STORAGE_CLAMAV_PORT: z.coerce.number().int().positive().optional(),
+		/** Legacy alias for STORAGE_DOWNLOAD_TTL_SECONDS. */
+		KYB_DOCUMENT_DOWNLOAD_TTL_SECONDS: z.coerce.number().int().positive().optional(),
 	})
 	.strict();
 

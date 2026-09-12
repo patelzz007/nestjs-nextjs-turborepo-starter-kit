@@ -24,6 +24,7 @@ import { MerchantOrgRepository } from "../repositories/merchant-org.repository";
 import { RewardRepository } from "../repositories/reward.repository";
 import { generateOpaqueToken, sha256Hex } from "../utils/reward-crypto.util";
 import { mapMerchantOrgToAdminDetailResponse, mapMerchantOrgToResponse, mapRewardToResponse } from "../utils/reward-mapper.util";
+import { MerchantKybDocumentService } from "./merchant-kyb-document.service";
 import { MerchantRewardService } from "./merchant-reward.service";
 import { RewardNotificationService } from "./reward-notification.service";
 
@@ -36,6 +37,7 @@ export class RewardsAdminService {
 	public constructor(
 		private readonly merchantInviteRepository: MerchantInviteRepository,
 		private readonly merchantOrgRepository: MerchantOrgRepository,
+		private readonly kybDocumentService: MerchantKybDocumentService,
 		private readonly merchantMemberRepository: MerchantMemberRepository,
 		private readonly rewardRepository: RewardRepository,
 		private readonly merchantRewardService: MerchantRewardService,
@@ -118,7 +120,8 @@ export class RewardsAdminService {
 			throw new NotFoundException({ message: "Merchant not found", error: "MERCHANT_NOT_FOUND" });
 		}
 
-		return mapMerchantOrgToAdminDetailResponse(org);
+		const documents = await this.kybDocumentService.mapDocumentRecordsFromOrg(merchantOrgId);
+		return mapMerchantOrgToAdminDetailResponse(org, documents);
 	}
 
 	public async listMerchants(query: AdminMerchantListQuery): Promise<PaginatedServiceResult<MerchantOrgResponse>> {

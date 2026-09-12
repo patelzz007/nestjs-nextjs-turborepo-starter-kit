@@ -18,4 +18,10 @@ export const QUEUE_JOB_OPTIONS = {
 		removeOnComplete: 200,
 		removeOnFail: 1_000,
 	},
+	storageDelete: {
+		attempts: 5,
+		backoff: { type: "exponential" as const, delay: 5_000 },
+		removeOnComplete: 100,
+		removeOnFail: 500,
+	},
 } as const;

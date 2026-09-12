@@ -1,7 +1,12 @@
 import { Body, Controller, Headers, Post } from "@nestjs/common";
 import { ApiBearerAuth, ApiBody, ApiHeader, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
-
-import { apiContract, apiPath, type MerchantCreateMemberInput, type MerchantOnboardingCompleteInput, type MerchantOnboardingValidateTokenInput } from "@workspace/shared";
+import {
+	apiContract,
+	apiPath,
+	type MerchantCreateMemberInput,
+	type MerchantOnboardingCompleteFieldsInput,
+	type MerchantOnboardingValidateTokenInput,
+} from "@workspace/shared";
 import { ZodValidationPipe } from "../../../common/pipes/zod-validation.pipe";
 import { readFirstHeader } from "../../../common/utils/http-headers";
 import { GetUser } from "../../auth/decorators/get-user.decorator";
@@ -9,7 +14,7 @@ import { Public } from "../../auth/decorators/public.decorator";
 import { RlsBypass } from "../../auth/decorators/rls-bypass.decorator";
 import type { AccessTokenPayload } from "../../auth/services/token.service";
 
-import { MerchantCreateMemberDto, MerchantOnboardingCompleteDto, MerchantOnboardingValidateTokenDto } from "../dtos/rewards.dto";
+import { MerchantCreateMemberDto, MerchantOnboardingValidateTokenDto } from "../dtos/rewards.dto";
 import { MerchantMemberService } from "../services/merchant-member.service";
 import { MerchantOnboardingService } from "../services/merchant-onboarding.service";
 
@@ -40,10 +45,9 @@ export class MerchantOnboardingController {
 	@RlsBypass()
 	@Post("complete")
 	@ApiOperation({ summary: "Complete merchant onboarding — creates org, OWNER membership, and platform User role" })
-	@ApiBody({ type: MerchantOnboardingCompleteDto })
 	@ApiOkResponse({ description: "Merchant org created and linked to the account" })
 	public completeOnboarding(
-		@Body(new ZodValidationPipe(apiContract.merchant.onboarding.complete.input)) body: MerchantOnboardingCompleteInput,
+		@Body(new ZodValidationPipe(apiContract.merchant.onboarding.complete.input)) body: MerchantOnboardingCompleteFieldsInput,
 	): ReturnType<MerchantOnboardingService["completeOnboarding"]> {
 		return this.merchantOnboarding.completeOnboarding(body);
 	}

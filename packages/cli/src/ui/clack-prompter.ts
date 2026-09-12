@@ -2,8 +2,12 @@ import * as p from "@clack/prompts";
 
 import type { PromptChoice, WizardPrompter } from "../wizard/prompter";
 
+function isNotCancel<T>(value: T | symbol): value is T {
+	return !p.isCancel(value);
+}
+
 function exitOnCancel<T>(value: T | symbol): T {
-	if (p.isCancel(value)) {
+	if (!isNotCancel(value)) {
 		p.cancel("Cancelled.");
 		process.exit(0);
 	}

@@ -26,6 +26,8 @@ export interface FormShellProps {
 	readonly onSubmit: (event: React.SyntheticEvent<HTMLFormElement>) => void;
 	/** Form fields rendered inside the shell */
 	readonly children: ReactNode;
+	/** Optional secondary action rendered beside the submit button */
+	readonly secondaryAction?: ReactNode;
 }
 
 /**
@@ -38,7 +40,7 @@ export interface FormShellProps {
  * Contains no authentication or business logic.
  */
 export const FormShell = forwardRef<HTMLFormElement, FormShellProps>(function FormShell(
-	{ error, isLoading, submitLabel, loadingLabel, submitClassName, onSubmit, children },
+	{ error, isLoading, submitLabel, loadingLabel, submitClassName, onSubmit, children, secondaryAction },
 	ref,
 ): JSX.Element {
 	return (
@@ -57,9 +59,12 @@ export const FormShell = forwardRef<HTMLFormElement, FormShellProps>(function Fo
 			<form ref={ref} onSubmit={onSubmit} className="space-y-4">
 				{children}
 
-				<Button type="submit" className={cn("w-full", submitClassName)} loading={isLoading} disabled={isLoading}>
-					{isLoading ? loadingLabel : submitLabel}
-				</Button>
+				<div className={cn("flex gap-2", secondaryAction === undefined ? "flex-col" : "flex-col sm:flex-row")}>
+					{secondaryAction}
+					<Button type="submit" className={cn(secondaryAction === undefined ? "w-full" : "w-full sm:flex-1", submitClassName)} loading={isLoading} disabled={isLoading}>
+						{isLoading ? loadingLabel : submitLabel}
+					</Button>
+				</div>
 			</form>
 		</div>
 	);
