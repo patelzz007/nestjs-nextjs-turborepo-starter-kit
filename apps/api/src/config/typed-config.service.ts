@@ -196,6 +196,29 @@ export class TypedConfigService {
 		return parsed >= 0 ? parsed : 0;
 	}
 
+	// ── HTTP throttling ─────────────────────────────────────────────────
+
+	/** Authenticated mutation throttle — requests per IP per minute (`default` throttler). */
+	public get throttleDefaultLimit(): number {
+		const value: string | undefined = process.env.THROTTLE_DEFAULT_LIMIT;
+		const parsed: number = value ? Number.parseInt(value, 10) : 300;
+		return parsed >= 1 ? parsed : 300;
+	}
+
+	/** Credential / sensitive endpoint throttle — requests per IP per minute (`strict` throttler). */
+	public get throttleStrictLimit(): number {
+		const value: string | undefined = process.env.THROTTLE_STRICT_LIMIT;
+		const parsed: number = value ? Number.parseInt(value, 10) : 30;
+		return parsed >= 1 ? parsed : 30;
+	}
+
+	/** Throttle window in milliseconds for both named throttlers. */
+	public get throttleTtlMs(): number {
+		const value: string | undefined = process.env.THROTTLE_TTL_MS;
+		const parsed: number = value ? Number.parseInt(value, 10) : 60_000;
+		return parsed >= 1_000 ? parsed : 60_000;
+	}
+
 	// ── App Configuration ──────────────────────────────────────────────
 
 	/** Application name (used in email templates) */

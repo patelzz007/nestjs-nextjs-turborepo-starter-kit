@@ -1,6 +1,8 @@
 "use client";
 
+import { MerchantLocationScopeBanner } from "@/components/layout/merchant-location-scope-banner";
 import { stubApiMeta } from "@/lib/api-envelope";
+import { useActiveLocationFilter } from "@/lib/org/location-context";
 import { useAuth } from "@workspace/client/lib/auth";
 import type { AnalyticsMetric, MerchantAnalyticsResponse } from "@workspace/shared";
 import { AnalyticsChartCard, AnalyticsChartLegendItem } from "@workspace/ui/components/display/analytics-chart-card";
@@ -46,11 +48,13 @@ function formatMetricValue(metric: AnalyticsMetric, suffix?: string): string {
 }
 
 export interface MerchantAnalyticsPageViewProps {
+	readonly orgSlug: string;
 	readonly initialAnalytics?: MerchantAnalyticsResponse;
 }
 
-export function MerchantAnalyticsPageView({ initialAnalytics }: MerchantAnalyticsPageViewProps): React.JSX.Element {
+export function MerchantAnalyticsPageView({ orgSlug, initialAnalytics }: MerchantAnalyticsPageViewProps): React.JSX.Element {
 	const { api } = useAuth();
+	const { locationId } = useActiveLocationFilter();
 
 	const initialQueryData = React.useMemo(
 		() =>
@@ -64,10 +68,10 @@ export function MerchantAnalyticsPageView({ initialAnalytics }: MerchantAnalytic
 		[initialAnalytics],
 	);
 
-	const analyticsQuery = api.merchant.analytics.useQuery(
-		{},
+	const analyticsQuery = api.organizations.analytics.useQuery(
+		{ orgSlug, locationId },
 		{
-			initialData: initialQueryData,
+			initialData: locationId === undefined ? initialQueryData : undefined,
 		},
 	);
 
@@ -101,6 +105,7 @@ export function MerchantAnalyticsPageView({ initialAnalytics }: MerchantAnalytic
 	return (
 		<div className="space-y-8">
 			<AnalyticsPageHeader title="Analytics" description="Track your reward performance and customer engagement" />
+			<MerchantLocationScopeBanner />
 
 			<div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
 				{STAT_CARDS.map((stat) => {

@@ -2,12 +2,11 @@ import { z } from "zod";
 
 import { BaseResponseSchema, EpochMsSchema, type EpochMs } from "../../api/common";
 import { PaginationSchema } from "../../api/pagination";
-import { OrganizationSlugSchema } from "../organization/organization";
-import { CapabilitySlugSchema } from "../rbac/capabilities";
+import { OrganizationLocationFilterSchema } from "../organization/location-filter";
+import { OrganizationLocationScopeTypeSchema, OrganizationSlugSchema } from "../organization/organization";
 import { JsonObjectSchema } from "../../runtime/json";
 import {
 	KybStatusSchema,
-	MerchantMemberRoleSchema,
 	MerchantOrgStatusSchema,
 	PilotCitySchema,
 	RewardBackupCodeSchema,
@@ -40,7 +39,7 @@ export const RewardClaimListQuerySchema = PaginationSchema.extend({
 
 export type RewardClaimListQuery = z.output<typeof RewardClaimListQuerySchema>;
 
-export const MerchantRedemptionListQuerySchema = PaginationSchema.strict();
+export const MerchantRedemptionListQuerySchema = PaginationSchema.extend(OrganizationLocationFilterSchema.shape).strict();
 
 export type MerchantRedemptionListQuery = z.output<typeof MerchantRedemptionListQuerySchema>;
 
@@ -145,6 +144,24 @@ export type RedemptionConfirmInput = z.output<typeof RedemptionConfirmSchema>;
 
 // ── Merchant reward CRUD ─────────────────────────────────────────────────
 
+export const RewardLocationScopeFieldsSchema = z
+	.object({
+		locationScopeType: OrganizationLocationScopeTypeSchema.optional().default("ALL_LOCATIONS"),
+		locationIds: z.array(z.uuid()).optional().default([]),
+	})
+	.strict()
+	.superRefine((value, ctx) => {
+		if (value.locationScopeType === "SELECTED" && value.locationIds.length === 0) {
+			ctx.addIssue({
+				code: "custom",
+				message: "Select at least one store when limiting reward availability",
+				path: ["locationIds"],
+			});
+		}
+	});
+
+export type RewardLocationScopeFields = z.output<typeof RewardLocationScopeFieldsSchema>;
+
 export const MerchantCreateRewardSchema = z
 	.object({
 		title: z.string().min(1).max(200),
@@ -161,6 +178,8 @@ export const MerchantCreateRewardSchema = z
 		referralPoolTotal: z.number().int().min(1).optional(),
 		referrerRewardTitle: z.string().min(1).max(200).optional(),
 		saveAsDraft: z.boolean().optional().default(true),
+		locationScopeType: OrganizationLocationScopeTypeSchema.optional().default("ALL_LOCATIONS"),
+		locationIds: z.array(z.uuid()).optional().default([]),
 	})
 	.strict()
 	.superRefine((value, ctx) => {
@@ -169,6 +188,13 @@ export const MerchantCreateRewardSchema = z
 				code: "custom",
 				message: "referralPoolTotal is required when referrals are enabled",
 				path: ["referralPoolTotal"],
+			});
+		}
+		if (value.locationScopeType === "SELECTED" && value.locationIds.length === 0) {
+			ctx.addIssue({
+				code: "custom",
+				message: "Select at least one store when limiting reward availability",
+				path: ["locationIds"],
 			});
 		}
 	});
@@ -189,6 +215,8 @@ export const MerchantRewardFormFieldsSchema = z
 		expiryDate: z.string().regex(DATE_INPUT_PATTERN),
 		quantityTotal: z.number().int().min(1),
 		maxClaimsPerUser: z.number().int().min(1).max(10),
+		locationScopeType: OrganizationLocationScopeTypeSchema.optional(),
+		locationIds: z.array(z.uuid()).optional(),
 	})
 	.strict()
 	.superRefine((value, ctx) => {
@@ -197,6 +225,13 @@ export const MerchantRewardFormFieldsSchema = z
 				code: "custom",
 				message: "Expiry date must be on or after the start date",
 				path: ["expiryDate"],
+			});
+		}
+		if (value.locationScopeType === "SELECTED" && (value.locationIds === undefined || value.locationIds.length === 0)) {
+			ctx.addIssue({
+				code: "custom",
+				message: "Select at least one store when limiting reward availability",
+				path: ["locationIds"],
 			});
 		}
 	});
@@ -243,6 +278,9 @@ function mapRewardFormFieldsToRules(form: MerchantRewardFormValues): RewardRules
 }
 
 export function mapMerchantCreateRewardFormToInput(form: MerchantCreateRewardFormValues, category: RewardCategory): MerchantCreateRewardInput {
+	const locationScopeType = form.locationScopeType ?? "ALL_LOCATIONS";
+	const locationIds = form.locationIds ?? [];
+
 	return {
 		title: form.title,
 		description: form.description,
@@ -256,6 +294,8 @@ export function mapMerchantCreateRewardFormToInput(form: MerchantCreateRewardFor
 		rules: mapRewardFormFieldsToRules(form),
 		referralsEnabled: false,
 		saveAsDraft: form.saveAsDraft,
+		locationScopeType,
+		locationIds: locationScopeType === "SELECTED" ? locationIds : [],
 	};
 }
 
@@ -319,8 +359,17 @@ export type MerchantUpdateRewardPathInput = z.output<typeof MerchantUpdateReward
 export const MerchantCreateApiKeySchema = z
 	.object({
 		name: z.string().min(1).max(100).optional(),
+		locationId: z.uuid().optional(),
 	})
 	.strict();
+
+export const MerchantApiKeyListQuerySchema = OrganizationLocationFilterSchema;
+
+export type MerchantApiKeyListQuery = z.output<typeof MerchantApiKeyListQuerySchema>;
+
+export const MerchantRewardListQuerySchema = OrganizationLocationFilterSchema;
+
+export type MerchantRewardListQuery = z.output<typeof MerchantRewardListQuerySchema>;
 
 export type MerchantCreateApiKeyInput = z.output<typeof MerchantCreateApiKeySchema>;
 
@@ -352,7 +401,7 @@ export type AdminRejectRewardPathInput = z.output<typeof AdminRejectRewardPathIn
 
 export const AdminMerchantIdParamSchema = z
 	.object({
-		merchantOrgId: z.uuid(),
+		organizationId: z.uuid(),
 	})
 	.strict();
 
@@ -399,29 +448,25 @@ export const AdminMerchantDetailResponseSchema = MerchantOrgResponseSchema.exten
 
 export type AdminMerchantDetailResponse = z.output<typeof AdminMerchantDetailResponseSchema>;
 
-export const MerchantMembershipResponseSchema = z
+/** Organization-scoped RewardHub membership list item (replaces legacy OrganizationRewardMembershipResponse). */
+export const OrganizationRewardMembershipResponseSchema = z
 	.object({
-		merchantOrgId: z.uuid(),
-		/** Canonical organization id — null when the merchant org is not linked yet. */
-		organizationId: z.uuid().nullable(),
-		/** Canonical URL slug for `/orgs/:slug` — null when the merchant org is not linked yet. */
-		organizationSlug: OrganizationSlugSchema.nullable(),
-		businessName: z.string(),
-		city: PilotCitySchema,
-		role: MerchantMemberRoleSchema,
+		organizationId: z.uuid(),
+		organizationSlug: OrganizationSlugSchema,
+		displayName: z.string(),
+		role: z.enum(["OWNER", "ADMIN", "MEMBER", "POLICY_ADMIN", "CASHIER"]),
 		kybStatus: KybStatusSchema,
-		status: MerchantOrgStatusSchema,
-		/** Portal capabilities resolved from `merchant_role_capabilities` for this membership role. */
-		capabilities: z.array(CapabilitySlugSchema),
+		lifecycleState: z.enum(["PROVISIONING", "ACTIVE", "RESTRICTED", "SUSPENDED", "PENDING_DELETION", "DELETED"]),
+		createdAt: EpochMsSchema.optional(),
 	})
 	.strict();
 
-export type MerchantMembershipResponse = z.output<typeof MerchantMembershipResponseSchema>;
+export type OrganizationRewardMembershipResponse = z.output<typeof OrganizationRewardMembershipResponseSchema>;
 
 export const RewardResponseSchema = BaseResponseSchema.extend({
 	id: z.uuid(),
-	merchantOrgId: z.uuid(),
-	merchantName: z.string().optional(),
+	organizationId: z.uuid(),
+	organizationName: z.string().optional(),
 	title: z.string(),
 	description: z.string(),
 	rewardType: RewardTypeSchema,
@@ -444,6 +489,9 @@ export const RewardResponseSchema = BaseResponseSchema.extend({
 	referrerRewardId: z.uuid().nullable(),
 	rules: RewardRulesSchema.nullable(),
 	shareUrl: z.url().optional(),
+	locationScopeType: OrganizationLocationScopeTypeSchema,
+	locationIds: z.array(z.uuid()),
+	locationNames: z.array(z.string()).optional(),
 });
 
 export type RewardResponse = z.output<typeof RewardResponseSchema>;
@@ -520,6 +568,8 @@ export type RedemptionConfirmedResponse = z.output<typeof RedemptionConfirmedRes
 export const MerchantApiKeySummarySchema = BaseResponseSchema.extend({
 	id: z.uuid(),
 	name: z.string(),
+	locationId: z.uuid().nullable(),
+	locationName: z.string().nullable(),
 	revokedAt: EpochMsSchema.nullable(),
 });
 
@@ -562,7 +612,7 @@ export const RewardPlatformEventSchema = z
 			"reward.claim_expired",
 		]),
 		actorUserId: z.uuid().nullable(),
-		merchantOrgId: z.uuid().nullable(),
+		organizationId: z.uuid().nullable(),
 		metadata: JsonObjectSchema,
 		durationMs: z.number().int().nonnegative().optional(),
 	})

@@ -8,17 +8,41 @@ import { BaseRepository } from "../../../platform/persistence/base.repository";
 import type { EmptyMutationInput, RepositoryListResult } from "../../../platform/persistence/types";
 import { PrismaService } from "../../../prisma/prisma.service";
 
-const REWARD_WITH_MERCHANT_ORG_INCLUDE = {
-	merchantOrg: { select: { businessName: true } },
+const REWARD_WITH_ORGANIZATION_INCLUDE = {
+	organization: { select: { displayName: true } },
+	locationScopes: {
+		where: { location: { isDeleted: false } },
+		select: {
+			locationId: true,
+			location: { select: { name: true } },
+		},
+	},
 } as const satisfies Prisma.RewardInclude;
 
-export type RewardWithMerchantOrg = Prisma.RewardGetPayload<{ include: typeof REWARD_WITH_MERCHANT_ORG_INCLUDE }>;
+export type RewardWithOrganization = Prisma.RewardGetPayload<{ include: typeof REWARD_WITH_ORGANIZATION_INCLUDE }>;
+
+function buildOrganizationRewardWhere(organizationId: string, locationId?: string): Prisma.RewardWhereInput {
+	const baseWhere: Prisma.RewardWhereInput = {
+		organizationId,
+		isDeleted: false,
+		rewardKind: "CONSUMER",
+	};
+
+	if (locationId === undefined) {
+		return baseWhere;
+	}
+
+	return {
+		...baseWhere,
+		OR: [{ locationScopeType: "ALL_LOCATIONS" }, { locationScopes: { some: { locationId } } }],
+	};
+}
 
 export type RewardClaimableSummary = Pick<Reward, "id" | "title" | "expiryDate" | "quantityRemaining">;
 
 export type RewardOrgConsumerSummary = Pick<Reward, "id" | "status" | "referrerRewardId" | "quantityTotal" | "quantityRemaining">;
 
-export type RewardPendingReviewSummary = Pick<Reward, "id" | "title" | "merchantOrgId" | "referrerRewardId" | "status">;
+export type RewardPendingReviewSummary = Pick<Reward, "id" | "title" | "organizationId" | "referrerRewardId" | "status">;
 
 export type RewardWithReferrerReward = Prisma.RewardGetPayload<{ include: { referrerReward: true } }>;
 
@@ -49,7 +73,7 @@ function buildMarketplaceWhere(query: RewardListQuery): Prisma.RewardWhereInput 
 			: {}),
 		...(query.city !== undefined
 			? {
-					merchantOrg: { city: query.city },
+					organization: { merchantProfile: { city: query.city } },
 				}
 			: {}),
 	};
@@ -93,22 +117,22 @@ export class RewardRepository extends BaseRepository<
 		super(prisma, RewardRepositoryPorts, prisma.reward, { softDelete: true, concurrency: false });
 	}
 
-	public async listMarketplace(query: RewardListQuery): Promise<RepositoryListResult<RewardWithMerchantOrg>> {
+	public async listMarketplace(query: RewardListQuery): Promise<RepositoryListResult<RewardWithOrganization>> {
 		const where = buildMarketplaceWhere(query);
 		return fetchStringIdListPage(query, {
 			where,
 			mergeCursor: (baseWhere, cursorId) => ({ ...baseWhere, id: { gt: cursorId } }),
 			readId: (row) => row.id,
-			findMany: (args): Promise<RewardWithMerchantOrg[]> =>
+			findMany: (args): Promise<RewardWithOrganization[]> =>
 				this.prisma.reward.findMany({
 					...args,
-					include: REWARD_WITH_MERCHANT_ORG_INCLUDE,
+					include: REWARD_WITH_ORGANIZATION_INCLUDE,
 				}),
 			count: (listWhere) => this.prisma.reward.count({ where: listWhere }),
 		});
 	}
 
-	public async findPublishedConsumerWithMerchant(rewardId: string): Promise<RewardWithMerchantOrg | null> {
+	public async findPublishedConsumerWithOrganization(rewardId: string): Promise<RewardWithOrganization | null> {
 		return this.prisma.reward.findFirst({
 			where: {
 				id: rewardId,
@@ -116,7 +140,7 @@ export class RewardRepository extends BaseRepository<
 				status: "PUBLISHED",
 				rewardKind: "CONSUMER",
 			},
-			include: REWARD_WITH_MERCHANT_ORG_INCLUDE,
+			include: REWARD_WITH_ORGANIZATION_INCLUDE,
 		});
 	}
 
@@ -151,19 +175,68 @@ export class RewardRepository extends BaseRepository<
 		return result.count;
 	}
 
-	public async listConsumerByMerchantOrg(merchantOrgId: string): Promise<RewardWithMerchantOrg[]> {
+	public async listConsumerByOrganization(organizationId: string, locationId?: string): Promise<RewardWithOrganization[]> {
 		return this.prisma.reward.findMany({
-			where: { merchantOrgId, isDeleted: false, rewardKind: "CONSUMER" },
-			include: REWARD_WITH_MERCHANT_ORG_INCLUDE,
+			where: buildOrganizationRewardWhere(organizationId, locationId),
+			include: REWARD_WITH_ORGANIZATION_INCLUDE,
 			orderBy: { createdAt: "desc" },
 		});
 	}
 
-	public async createConsumerReward(data: Prisma.RewardUncheckedCreateInput): Promise<RewardWithMerchantOrg> {
-		return this.prisma.reward.create({
-			data,
-			include: REWARD_WITH_MERCHANT_ORG_INCLUDE,
+	public async createConsumerReward(data: Prisma.RewardUncheckedCreateInput, locationIds: readonly string[]): Promise<RewardWithOrganization> {
+		return this.prisma.$transaction(async (tx) => {
+			const reward = await tx.reward.create({
+				data,
+				include: REWARD_WITH_ORGANIZATION_INCLUDE,
+			});
+
+			if (reward.locationScopeType === "SELECTED" && locationIds.length > 0) {
+				await tx.rewardLocationScope.createMany({
+					data: locationIds.map((locationId) => ({
+						organizationId: reward.organizationId,
+						rewardId: reward.id,
+						locationId,
+					})),
+				});
+
+				return tx.reward.findUniqueOrThrow({
+					where: { id: reward.id },
+					include: REWARD_WITH_ORGANIZATION_INCLUDE,
+				});
+			}
+
+			return reward;
 		});
+	}
+
+	public async replaceLocationScopes(rewardId: string, organizationId: string, locationIds: readonly string[]): Promise<void> {
+		await this.prisma.$transaction(async (tx) => {
+			await tx.rewardLocationScope.deleteMany({ where: { rewardId } });
+
+			if (locationIds.length > 0) {
+				await tx.rewardLocationScope.createMany({
+					data: locationIds.map((locationId) => ({
+						organizationId,
+						rewardId,
+						locationId,
+					})),
+				});
+			}
+		});
+	}
+
+	public async countOrganizationLocations(organizationId: string): Promise<number> {
+		return this.prisma.organizationLocation.count({
+			where: { organizationId, isDeleted: false },
+		});
+	}
+
+	public async findOrganizationLocationIds(organizationId: string, locationIds: readonly string[]): Promise<string[]> {
+		const rows = await this.prisma.organizationLocation.findMany({
+			where: { organizationId, isDeleted: false, id: { in: [...locationIds] } },
+			select: { id: true },
+		});
+		return rows.map((row) => row.id);
 	}
 
 	public async createReferrerReward(data: Prisma.RewardUncheckedCreateInput): Promise<Reward> {
@@ -177,24 +250,24 @@ export class RewardRepository extends BaseRepository<
 		});
 	}
 
-	public async findUniqueOrThrowWithMerchantOrg(rewardId: string): Promise<RewardWithMerchantOrg> {
+	public async findUniqueOrThrowWithOrganization(rewardId: string): Promise<RewardWithOrganization> {
 		return this.prisma.reward.findUniqueOrThrow({
 			where: { id: rewardId },
-			include: REWARD_WITH_MERCHANT_ORG_INCLUDE,
+			include: REWARD_WITH_ORGANIZATION_INCLUDE,
 		});
 	}
 
-	public async findOrgConsumerReward(merchantOrgId: string, rewardId: string): Promise<RewardOrgConsumerSummary | null> {
+	public async findOrgConsumerReward(organizationId: string, rewardId: string): Promise<RewardOrgConsumerSummary | null> {
 		return this.prisma.reward.findFirst({
-			where: { id: rewardId, merchantOrgId, isDeleted: false, rewardKind: "CONSUMER" },
+			where: { id: rewardId, organizationId, isDeleted: false, rewardKind: "CONSUMER" },
 			select: { id: true, status: true, referrerRewardId: true, quantityTotal: true, quantityRemaining: true },
 		});
 	}
 
-	public async listPendingReview(): Promise<RewardWithMerchantOrg[]> {
+	public async listPendingReview(): Promise<RewardWithOrganization[]> {
 		return this.prisma.reward.findMany({
 			where: { status: "PENDING_REVIEW", isDeleted: false, rewardKind: "CONSUMER" },
-			include: REWARD_WITH_MERCHANT_ORG_INCLUDE,
+			include: REWARD_WITH_ORGANIZATION_INCLUDE,
 			orderBy: { submittedForReviewAt: "asc" },
 		});
 	}
@@ -202,11 +275,11 @@ export class RewardRepository extends BaseRepository<
 	public async findPendingReviewById(rewardId: string): Promise<RewardPendingReviewSummary | null> {
 		return this.prisma.reward.findFirst({
 			where: { id: rewardId, isDeleted: false, rewardKind: "CONSUMER" },
-			select: { id: true, title: true, merchantOrgId: true, referrerRewardId: true, status: true },
+			select: { id: true, title: true, organizationId: true, referrerRewardId: true, status: true },
 		});
 	}
 
-	public async listPendingAutoPublish(now: number): Promise<RewardWithMerchantOrg[]> {
+	public async listPendingAutoPublish(now: number): Promise<RewardWithOrganization[]> {
 		return this.prisma.reward.findMany({
 			where: {
 				status: "PENDING_REVIEW",
@@ -214,11 +287,11 @@ export class RewardRepository extends BaseRepository<
 				isDeleted: false,
 				rewardKind: "CONSUMER",
 			},
-			include: REWARD_WITH_MERCHANT_ORG_INCLUDE,
+			include: REWARD_WITH_ORGANIZATION_INCLUDE,
 		});
 	}
 
-	public async autoPublishInTransaction(rewardId: string, referrerRewardId: string | null, merchantOrgId: string, now: number): Promise<void> {
+	public async autoPublishInTransaction(rewardId: string, referrerRewardId: string | null, organizationId: string, now: number): Promise<void> {
 		await this.prisma.$transaction(async (tx) => {
 			await tx.reward.update({
 				where: { id: rewardId },
@@ -238,7 +311,7 @@ export class RewardRepository extends BaseRepository<
 
 			await tx.rewardAuditLog.create({
 				data: {
-					merchantOrgId,
+					organizationId,
 					action: "reward.auto_published",
 					metadata: { rewardId },
 				},

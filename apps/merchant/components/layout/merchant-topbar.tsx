@@ -1,8 +1,10 @@
 "use client";
 
+import { MerchantLocationSwitcher, MerchantLocationSwitcherMobile } from "@/components/layout/merchant-location-switcher";
 import { MerchantNotificationsDropdown } from "@/components/layout/merchant-notifications-dropdown";
 import type { ServerUser } from "@/lib/auth/server";
 import { useMerchantCapabilities } from "@/lib/org/capabilities";
+import { useOrganizationPath } from "@/lib/org/use-organization-path";
 import { useMerchantSessionProfile } from "@/lib/session/profile";
 import { useMerchantSidebarControl } from "@/components/layout/use-merchant-sidebar-control";
 import { useMerchantSidebarStore } from "@/stores/sidebar-store";
@@ -30,6 +32,9 @@ export function MerchantTopbar({ initialUser = null }: MerchantTopbarProps): Rea
 	const sessionProfile = useMerchantSessionProfile();
 	const { hasCapability } = useMerchantCapabilities();
 	const router = useRouter();
+	const settingsPath = useOrganizationPath("settings");
+	const dashboardPath = useOrganizationPath("dashboard");
+	const apiKeysPath = useOrganizationPath("api-keys");
 	const { isOpen: sidebarOpen } = useMerchantSidebarControl();
 	const menuTitle = useMerchantSidebarStore((state) => state.menu.header.title);
 	const [commandOpen, setCommandOpen] = React.useState<boolean>(false);
@@ -54,7 +59,7 @@ export function MerchantTopbar({ initialUser = null }: MerchantTopbarProps): Rea
 				label: "Dashboard",
 				icon: <LayoutDashboard className="size-4" aria-hidden="true" />,
 				onClick: (): void => {
-					router.push("/");
+					router.push(dashboardPath);
 				},
 			},
 		];
@@ -64,13 +69,13 @@ export function MerchantTopbar({ initialUser = null }: MerchantTopbarProps): Rea
 				label: "API keys",
 				icon: <KeyRound className="size-4" aria-hidden="true" />,
 				onClick: (): void => {
-					router.push("/api-keys");
+					router.push(apiKeysPath);
 				},
 			});
 		}
 
 		return items;
-	}, [hasCapability, isEnrollmentLocked, router]);
+	}, [apiKeysPath, dashboardPath, hasCapability, isEnrollmentLocked, router]);
 
 	const profileName = sessionProfile.isLoading && initialUser !== null ? initialUser.name : sessionProfile.fullName;
 	const profileEmail = sessionProfile.isLoading && initialUser !== null ? initialUser.email : sessionProfile.email;
@@ -93,7 +98,9 @@ export function MerchantTopbar({ initialUser = null }: MerchantTopbarProps): Rea
 					placeholder: "Search...",
 					onOpen: handleOpenCommand,
 				}}>
-				<div className="mx-1 md:mx-2">
+				<div className="mx-1 flex items-center gap-2 md:mx-2">
+					<MerchantLocationSwitcher />
+					<MerchantLocationSwitcherMobile />
 					<MerchantNotificationsDropdown />
 				</div>
 
@@ -102,7 +109,7 @@ export function MerchantTopbar({ initialUser = null }: MerchantTopbarProps): Rea
 				</div>
 
 				<div className="mx-1 hidden sm:mx-2 sm:block">
-					<Link href="/settings" aria-label="Settings">
+					<Link href={settingsPath} aria-label="Settings">
 						<Button variant="ghost" size="icon" className="rounded-full">
 							<Settings className="size-5 text-muted-foreground" />
 						</Button>

@@ -1,10 +1,12 @@
 "use client";
 
+import { MerchantLocationScopeBanner } from "@/components/layout/merchant-location-scope-banner";
 import { MerchantEmptyState } from "@/components/merchant-ui/empty-state";
 import { MerchantPageHeader } from "@/components/merchant-ui/page-header";
 import { MerchantStatCard } from "@/components/merchant-ui/stat-card";
 import { MerchantSurfacePanel } from "@/components/merchant-ui/surface-panel";
 import { stubPaginatedMetaFromHydration } from "@/lib/api-envelope";
+import { useActiveLocationFilter } from "@/lib/org/location-context";
 import { useAuth } from "@workspace/client/lib/auth";
 import type { MerchantRedemptionListItem } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/feedback/badge";
@@ -15,32 +17,34 @@ import * as React from "react";
 const REDEMPTIONS_LIMIT = 20;
 
 export interface MerchantRedemptionsPageViewProps {
-	readonly initialRows?: readonly MerchantRedemptionListItem[];
+	readonly orgSlug: string;
+	readonly initialRedemptions?: readonly MerchantRedemptionListItem[];
 }
 
-export function MerchantRedemptionsPageView({ initialRows }: MerchantRedemptionsPageViewProps): React.JSX.Element {
+export function MerchantRedemptionsPageView({ orgSlug, initialRedemptions }: MerchantRedemptionsPageViewProps): React.JSX.Element {
 	const { api } = useAuth();
+	const { locationId } = useActiveLocationFilter();
 
 	const initialQueryData = React.useMemo(
 		() =>
-			initialRows !== undefined
+			initialRedemptions !== undefined
 				? {
 						success: true as const,
-						data: [...initialRows],
-						meta: stubPaginatedMetaFromHydration(REDEMPTIONS_LIMIT, initialRows.length, false),
+						data: [...initialRedemptions],
+						meta: stubPaginatedMetaFromHydration(REDEMPTIONS_LIMIT, initialRedemptions.length, false),
 					}
 				: undefined,
-		[initialRows],
+		[initialRedemptions],
 	);
 
-	const redemptionsQuery = api.merchant.redemptions.useQuery(
-		{ page: 1, limit: REDEMPTIONS_LIMIT },
+	const redemptionsQuery = api.organizations.redemptions.useQuery(
+		{ orgSlug, page: 1, limit: REDEMPTIONS_LIMIT, locationId },
 		{
-			initialData: initialQueryData,
+			initialData: locationId === undefined ? initialQueryData : undefined,
 		},
 	);
 	const rows: readonly MerchantRedemptionListItem[] = redemptionsQuery.data?.data ?? [];
-	const isLoading = redemptionsQuery.isLoading && initialRows === undefined;
+	const isLoading = redemptionsQuery.isLoading && initialRedemptions === undefined;
 
 	const todayCount = rows.filter((row) => {
 		const redeemed = new Date(row.redeemedAt);
@@ -51,6 +55,7 @@ export function MerchantRedemptionsPageView({ initialRows }: MerchantRedemptions
 	return (
 		<div className="space-y-8">
 			<MerchantPageHeader title="Redemptions" description="Recent POS redemptions for the selected store — newest first." />
+			<MerchantLocationScopeBanner />
 
 			<div className="grid gap-4 sm:grid-cols-2">
 				<MerchantStatCard label="Showing" value={String(rows.length)} hint="Latest page of activity" icon={<Receipt className="size-4" aria-hidden="true" />} />

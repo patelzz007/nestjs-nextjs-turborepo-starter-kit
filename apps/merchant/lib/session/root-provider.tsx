@@ -2,22 +2,22 @@
 
 import { MerchantSessionBootstrap } from "@/components/merchant-session-bootstrap";
 import { isMerchantAuthPath } from "@/lib/auth/routes";
-import { writeMerchantOrgCookie } from "@/lib/org/org";
+import { clearOrganizationLocationCookie } from "@/lib/org/location";
 import { organizationPath, writeOrganizationSlugCookie } from "@/lib/org/slug";
 import { ClientAuthWrapper } from "@workspace/client/lib/auth/session/client-auth-wrapper";
 import { usePathname, useRouter } from "next/navigation";
 import * as React from "react";
 
-export interface SetMerchantOrgIdOptions {
+export interface SetOrganizationSlugOptions {
 	/** When true, re-runs server components after switching org. Defaults to false. */
 	readonly refresh?: boolean;
 }
 
 export interface MerchantOrgContextValue {
-	readonly merchantOrgId: string | undefined;
 	readonly organizationSlug: string | undefined;
-	readonly setMerchantOrgId: (orgId: string, options?: SetMerchantOrgIdOptions) => void;
-	readonly setOrganizationSlug: (slug: string, options?: SetMerchantOrgIdOptions) => void;
+	readonly setOrganizationSlug: (slug: string, options?: SetOrganizationSlugOptions) => void;
+	/** Sync org slug from URL/layout without navigating away from the current page. */
+	readonly syncOrganizationSlug: (slug: string) => void;
 }
 
 const MerchantOrgContext = React.createContext<MerchantOrgContextValue | null>(null);
@@ -37,50 +37,40 @@ export function useMerchantOrg(): MerchantOrgContextValue {
 
 export interface MerchantRootProviderProps {
 	readonly children: React.ReactNode;
-	readonly initialMerchantOrgId?: string;
 	readonly initialOrganizationSlug?: string;
 }
 
-/**
- * Merchant portal root — wires `X-Merchant-Org-Id` into every API call via AuthProvider extra headers.
- * Org selection is stored in a cookie so server components can prefetch with the same context.
- */
-export function MerchantRootProvider({ children, initialMerchantOrgId, initialOrganizationSlug }: MerchantRootProviderProps): React.JSX.Element {
+/** Merchant portal root — org context is URL-scoped via organizationSlug cookie. */
+export function MerchantRootProvider({ children, initialOrganizationSlug }: MerchantRootProviderProps): React.JSX.Element {
 	const router = useRouter();
 	const pathname = usePathname();
-	const [merchantOrgId, setMerchantOrgIdState] = React.useState<string | undefined>(initialMerchantOrgId);
 	const [organizationSlug, setOrganizationSlugState] = React.useState<string | undefined>(initialOrganizationSlug);
 
 	React.useEffect((): void => {
-		if (initialMerchantOrgId !== undefined) {
-			writeMerchantOrgCookie(initialMerchantOrgId);
-		}
 		if (initialOrganizationSlug !== undefined) {
 			writeOrganizationSlugCookie(initialOrganizationSlug);
 		}
-	}, [initialMerchantOrgId, initialOrganizationSlug]);
+	}, [initialOrganizationSlug]);
 
-	const setMerchantOrgId = React.useCallback(
-		(orgId: string, options?: SetMerchantOrgIdOptions): void => {
-			if (merchantOrgId === orgId) {
-				return;
-			}
-			setMerchantOrgIdState(orgId);
-			writeMerchantOrgCookie(orgId);
-			if (options?.refresh === true) {
-				router.refresh();
-			}
-		},
-		[merchantOrgId, router],
-	);
-
-	const setOrganizationSlug = React.useCallback(
-		(slug: string, options?: SetMerchantOrgIdOptions): void => {
+	const syncOrganizationSlug = React.useCallback(
+		(slug: string): void => {
 			if (organizationSlug === slug) {
 				return;
 			}
 			setOrganizationSlugState(slug);
 			writeOrganizationSlugCookie(slug);
+		},
+		[organizationSlug],
+	);
+
+	const setOrganizationSlug = React.useCallback(
+		(slug: string, options?: SetOrganizationSlugOptions): void => {
+			if (organizationSlug === slug) {
+				return;
+			}
+			setOrganizationSlugState(slug);
+			writeOrganizationSlugCookie(slug);
+			clearOrganizationLocationCookie();
 			router.push(organizationPath(slug, "dashboard"));
 			if (options?.refresh === true) {
 				router.refresh();
@@ -89,21 +79,13 @@ export function MerchantRootProvider({ children, initialMerchantOrgId, initialOr
 		[organizationSlug, router],
 	);
 
-	const extraHeaders = React.useMemo((): Record<string, string> | undefined => {
-		if (merchantOrgId === undefined) {
-			return undefined;
-		}
-		return { "X-Merchant-Org-Id": merchantOrgId };
-	}, [merchantOrgId]);
-
 	const contextValue = React.useMemo(
 		(): MerchantOrgContextValue => ({
-			merchantOrgId,
 			organizationSlug,
-			setMerchantOrgId,
 			setOrganizationSlug,
+			syncOrganizationSlug,
 		}),
-		[merchantOrgId, organizationSlug, setMerchantOrgId, setOrganizationSlug],
+		[organizationSlug, setOrganizationSlug, syncOrganizationSlug],
 	);
 
 	const shouldRedirectOnUnauthorized = React.useCallback((): boolean => {
@@ -116,7 +98,6 @@ export function MerchantRootProvider({ children, initialMerchantOrgId, initialOr
 		<ClientAuthWrapper
 			cookieNames={MERCHANT_COOKIE_NAMES}
 			clientType="merchant"
-			extraHeaders={extraHeaders}
 			shouldRedirectOnUnauthorized={shouldRedirectOnUnauthorized}
 			revalidateSessionEnabled={revalidateSessionEnabled}>
 			<MerchantSessionBootstrap />

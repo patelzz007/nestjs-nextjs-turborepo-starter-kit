@@ -46,7 +46,7 @@ export function RewardCard({ reward, detailPathPrefix = "/rewardhub" }: RewardCa
 						{isLowStock && !isSoldOut ? <Badge className="border-transparent bg-warning-soft text-warning">Almost gone</Badge> : null}
 						{isSoldOut ? <Badge variant="destructive">Sold out</Badge> : null}
 					</div>
-					{reward.merchantName !== undefined ? <p className="truncate text-xs font-medium text-muted-foreground">{reward.merchantName}</p> : null}
+					{reward.organizationName !== undefined ? <p className="truncate text-xs font-medium text-muted-foreground">{reward.organizationName}</p> : null}
 				</div>
 			</div>
 

@@ -56,8 +56,13 @@ export class AuthSessionService {
 
 		const userPermissions: UserPermissions = await this.authorizationChecker.getUserPermissionDetails(user.id);
 		if (clientType === "merchant") {
-			const membership = await this.prisma.merchantMember.findFirst({
-				where: { userId: user.id, isDeleted: false },
+			const membership = await this.prisma.organizationMembership.findFirst({
+				where: {
+					userId: user.id,
+					isDeleted: false,
+					status: "ACTIVE",
+					organization: { merchantProfile: { isNot: null }, isDeleted: false },
+				},
 				select: { id: true },
 			});
 			const canManageMerchants: boolean = userPermissions.permissions.some((permission) => permission.action === "MANAGE" && permission.resource === "MERCHANT_ORG");

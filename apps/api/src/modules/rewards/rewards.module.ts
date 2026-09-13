@@ -7,30 +7,26 @@ import { NotificationsModule } from "../notifications/notifications.module";
 import { ConsumerClaimsController } from "./controllers/consumer-claims.controller";
 import { ConsumerRewardsController } from "./controllers/consumer-rewards.controller";
 import {
-	MerchantApiKeysController,
-	MerchantAnalyticsController,
-	MerchantKybController,
-	MerchantProfileController,
-	MerchantRedemptionsController,
-	MerchantRewardsController,
-} from "./controllers/merchant.controller";
-import { MerchantMembersController, MerchantOnboardingController } from "./controllers/merchant-onboarding.controller";
+	OrganizationAnalyticsController,
+	OrganizationApiKeysController,
+	OrganizationKybController,
+	OrganizationMembershipsBootstrapController,
+	OrganizationRedemptionsController,
+	OrganizationRewardMembershipsController,
+	OrganizationRewardsController,
+} from "./controllers/organization-rewards.controller";
+import { MerchantOnboardingController } from "./controllers/merchant-onboarding.controller";
 import { RedemptionsController } from "./controllers/redemptions.controller";
 import { RewardLegalController } from "./controllers/reward-legal.controller";
 import { RewardNotificationsController } from "./controllers/reward-notifications.controller";
-import {
-	RewardsAdminInvitesController,
-	RewardsAdminMerchantsController,
-	RewardsAdminMerchantRoleCapabilitiesController,
-	RewardsAdminRewardsController,
-} from "./controllers/rewards-admin.controller";
+import { RewardsAdminInvitesController, RewardsAdminMerchantsController, RewardsAdminRewardsController } from "./controllers/rewards-admin.controller";
 import { MerchantApiKeyGuard } from "./guards/merchant-api-key.guard";
 import { ClaimService } from "./services/claim.service";
 import { ConsumerRewardsService } from "./services/consumer-rewards.service";
 import { MerchantKybService } from "./services/merchant-kyb.service";
-import { MerchantMemberService } from "./services/merchant-member.service";
 import { MerchantOnboardingService } from "./services/merchant-onboarding.service";
 import { MerchantApiKeyService } from "./services/merchant-api-key.service";
+import { MerchantContextService } from "./services/merchant-context.service";
 import { RedemptionService } from "./services/redemption.service";
 import { RewardLegalService } from "./services/reward-legal.service";
 import { RewardOtpService } from "./services/reward-otp.service";
@@ -54,18 +50,17 @@ const rewardsQueueImports = redisUrl !== undefined && redisUrl.length > 0 ? [Rew
 		RewardLegalController,
 		RewardNotificationsController,
 		RedemptionsController,
-		MerchantProfileController,
-		MerchantKybController,
+		OrganizationMembershipsBootstrapController,
+		OrganizationRewardMembershipsController,
+		OrganizationKybController,
 		MerchantOnboardingController,
-		MerchantMembersController,
-		MerchantRewardsController,
-		MerchantApiKeysController,
-		MerchantRedemptionsController,
-		MerchantAnalyticsController,
+		OrganizationRewardsController,
+		OrganizationApiKeysController,
+		OrganizationRedemptionsController,
+		OrganizationAnalyticsController,
 		RewardsAdminInvitesController,
 		RewardsAdminRewardsController,
 		RewardsAdminMerchantsController,
-		RewardsAdminMerchantRoleCapabilitiesController,
 	],
 	providers: [
 		ConsumerRewardsService,
@@ -76,7 +71,7 @@ const rewardsQueueImports = redisUrl !== undefined && redisUrl.length > 0 ? [Rew
 		MerchantApiKeyService,
 		MerchantKybService,
 		MerchantKybDocumentService,
-		MerchantMemberService,
+		MerchantContextService,
 		MerchantOnboardingService,
 		RewardsAdminService,
 		RewardsAnalyticsService,

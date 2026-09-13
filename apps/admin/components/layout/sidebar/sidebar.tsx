@@ -345,6 +345,3 @@ export function AdminSidebarPanel({
 		</>
 	);
 }
-
-/** @deprecated Use `AdminSidebarPanel` — kept for tests and gradual migration. */
-export const Sidebar = AdminSidebarPanel;

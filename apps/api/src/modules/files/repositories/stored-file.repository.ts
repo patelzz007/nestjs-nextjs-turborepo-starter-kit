@@ -23,7 +23,7 @@ export interface CreateStoredFileInput {
 	readonly storageBucket: string;
 	readonly storagePath: string;
 	readonly uploadedById: string;
-	readonly merchantOrgId?: string;
+	readonly organizationId?: string;
 }
 
 export interface CreateFileVariantInput {
@@ -62,7 +62,7 @@ export class StoredFileRepository {
 				storagePath: input.storagePath,
 				objectGeneration: input.objectRevision ?? null,
 				uploadedById: input.uploadedById,
-				merchantOrgId: input.merchantOrgId ?? null,
+				organizationId: input.organizationId ?? null,
 				status: "PENDING",
 			},
 		});
@@ -154,12 +154,12 @@ export class StoredFileRepository {
 		});
 	}
 
-	public async upsertMerchantAsset(merchantOrgId: string, assetType: "LOGO" | "BANNER", fileId: string): Promise<void> {
-		await this.prisma.merchantAsset.upsert({
-			where: { merchantOrgId_assetType: { merchantOrgId, assetType } },
+	public async upsertMerchantAsset(organizationId: string, assetType: "LOGO" | "BANNER", fileId: string): Promise<void> {
+		await this.prisma.organizationAsset.upsert({
+			where: { organizationId_assetType: { organizationId, assetType } },
 			create: {
 				id: randomUUID(),
-				merchantOrgId,
+				organizationId,
 				assetType,
 				fileId,
 			},
@@ -187,11 +187,11 @@ export class StoredFileRepository {
 		});
 	}
 
-	public async createMerchantKybFile(merchantOrgId: string, fileId: string, submissionId: string): Promise<void> {
-		await this.prisma.merchantKybFile.create({
+	public async createOrganizationKybFile(organizationId: string, fileId: string, submissionId: string): Promise<void> {
+		await this.prisma.organizationKybFile.create({
 			data: {
 				id: randomUUID(),
-				merchantOrgId,
+				organizationId,
 				fileId,
 				submissionId,
 				isActive: true,
@@ -199,16 +199,16 @@ export class StoredFileRepository {
 		});
 	}
 
-	public async deactivateMerchantKybFiles(merchantOrgId: string): Promise<readonly { fileId: string; storageBucket: string; storagePath: string }[]> {
-		const active = await this.prisma.merchantKybFile.findMany({
-			where: { merchantOrgId, isActive: true, isDeleted: false },
+	public async deactivateOrganizationKybFiles(organizationId: string): Promise<readonly { fileId: string; storageBucket: string; storagePath: string }[]> {
+		const active = await this.prisma.organizationKybFile.findMany({
+			where: { organizationId, isActive: true, isDeleted: false },
 			include: { file: true },
 		});
 		if (active.length === 0) {
 			return [];
 		}
-		await this.prisma.merchantKybFile.updateMany({
-			where: { merchantOrgId, isActive: true, isDeleted: false },
+		await this.prisma.organizationKybFile.updateMany({
+			where: { organizationId, isActive: true, isDeleted: false },
 			data: { isActive: false },
 		});
 		return active.map((row) => ({
@@ -218,9 +218,9 @@ export class StoredFileRepository {
 		}));
 	}
 
-	public async listActiveMerchantKybFiles(merchantOrgId: string): Promise<Prisma.MerchantKybFileGetPayload<{ include: { file: true } }>[]> {
-		return this.prisma.merchantKybFile.findMany({
-			where: { merchantOrgId, isActive: true, isDeleted: false },
+	public async listActiveOrganizationKybFiles(organizationId: string): Promise<Prisma.OrganizationKybFileGetPayload<{ include: { file: true } }>[]> {
+		return this.prisma.organizationKybFile.findMany({
+			where: { organizationId, isActive: true, isDeleted: false },
 			include: { file: true },
 			orderBy: { createdAt: "asc" },
 		});

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMerchantCapabilities } from "@/lib/org/capabilities";
-import type { MerchantCapability } from "@workspace/shared";
+import type { CapabilitySlug } from "@workspace/shared";
 import { ShieldAlert } from "lucide-react";
 import * as React from "react";
 
@@ -27,7 +27,7 @@ export function MerchantAccessDenied({
 }
 
 export interface MerchantCapabilityGateProps {
-	readonly capability: MerchantCapability;
+	readonly capability: CapabilitySlug;
 	readonly children: React.ReactNode;
 	readonly fallback?: React.ReactNode;
 }

@@ -70,7 +70,7 @@ export class FileService {
 			expectedChecksum: parsed.checksumSha256,
 			storagePath,
 			uploadedById: userId,
-			merchantOrgId: parsed.merchantOrgId,
+			organizationId: parsed.organizationId,
 		});
 
 		const ticket = await this.storage.createBrowserUploadTicket({
@@ -173,7 +173,7 @@ export class FileService {
 		if (file === null) {
 			throw new NotFoundException({ message: "File not found", error: "FILE_NOT_FOUND" });
 		}
-		if (file.uploadedById !== userId && file.merchantOrgId === null) {
+		if (file.uploadedById !== userId && file.organizationId === null) {
 			throw new ForbiddenException({ message: "Not allowed to download this file", error: "FILE_DOWNLOAD_FORBIDDEN" });
 		}
 		if (file.status === "SCANNING" || file.status === "PROCESSING" || file.status === "PENDING" || file.status === "UPLOADED") {
@@ -304,8 +304,8 @@ export class FileService {
 		if (input.category === "PRODUCT_IMAGE" && input.productId !== undefined) {
 			return input.productId;
 		}
-		if (input.merchantOrgId !== undefined) {
-			return input.merchantOrgId;
+		if (input.organizationId !== undefined) {
+			return input.organizationId;
 		}
 		if (input.userId !== undefined) {
 			return input.userId;
@@ -321,12 +321,12 @@ export class FileService {
 			}
 			return;
 		}
-		if (file.category === "STORE_LOGO" && file.merchantOrgId !== null) {
-			await this.repository.upsertMerchantAsset(file.merchantOrgId, "LOGO", file.id);
+		if (file.category === "STORE_LOGO" && file.organizationId !== null) {
+			await this.repository.upsertMerchantAsset(file.organizationId, "LOGO", file.id);
 			return;
 		}
-		if (file.category === "STORE_BANNER" && file.merchantOrgId !== null) {
-			await this.repository.upsertMerchantAsset(file.merchantOrgId, "BANNER", file.id);
+		if (file.category === "STORE_BANNER" && file.organizationId !== null) {
+			await this.repository.upsertMerchantAsset(file.organizationId, "BANNER", file.id);
 			return;
 		}
 		if (file.category === "USER_AVATAR") {
@@ -354,8 +354,8 @@ export class FileService {
 		if (file.category === "USER_AVATAR") {
 			return file.uploadedById;
 		}
-		if (file.merchantOrgId !== null) {
-			return file.merchantOrgId;
+		if (file.organizationId !== null) {
+			return file.organizationId;
 		}
 		const productId = this.extractProductIdFromPath(file.storagePath);
 		if (productId !== null) {

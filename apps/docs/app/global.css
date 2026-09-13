@@ -203,12 +203,12 @@ h6 {
  */
 @media (width >= 64rem) {
 	#nd-docs-layout:has(.md\:layout\:\[--fd-sidebar-width\:268px\]) {
-		--fd-sidebar-width: 300px;
+		--fd-sidebar-width: 325px;
 	}
 }
 @media (width >= 80rem) {
 	#nd-docs-layout:has(.xl\:layout\:\[--fd-toc-width\:268px\]) {
-		--fd-toc-width: 236px;
+		--fd-toc-width: 250px;
 	}
 }
 

@@ -5,12 +5,13 @@ import { MerchantRewardsSummaryStrip } from "@/components/rewards/merchant-rewar
 import { MerchantEmptyState } from "@/components/merchant-ui/empty-state";
 import { MerchantPageHeader } from "@/components/merchant-ui/page-header";
 import { useMerchantCapabilities } from "@/lib/org/capabilities";
-import { stubApiMeta } from "@/lib/api-envelope";
+import { useMerchantLocation } from "@/lib/org/location-context";
+import { organizationPath } from "@/lib/org/slug";
 import { useAuth } from "@workspace/client/lib/auth";
 import type { RewardResponse, RewardStatus } from "@workspace/shared";
-import { buttonVariants } from "@workspace/ui/components/form/button";
+import { Button, buttonVariants } from "@workspace/ui/components/form/button";
 import { cn } from "@workspace/ui/lib/core/utils";
-import { Gift, Plus, Sparkles, Ticket } from "lucide-react";
+import { AlertCircle, Gift, Plus, Sparkles, Ticket } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
 
@@ -19,35 +20,36 @@ function countByStatus(rewards: readonly RewardResponse[], status: RewardStatus)
 }
 
 export interface MerchantRewardsPageViewProps {
-	readonly initialRewards?: readonly RewardResponse[];
+	readonly orgSlug: string;
 }
 
-export function MerchantRewardsPageView({ initialRewards }: MerchantRewardsPageViewProps): React.JSX.Element {
+export function MerchantRewardsPageView({ orgSlug }: MerchantRewardsPageViewProps): React.JSX.Element {
 	const { api } = useAuth();
+	const createRewardPath = organizationPath(orgSlug, "rewards/new");
 	const { hasCapability } = useMerchantCapabilities();
+	const { locationId, isLoading: isLocationLoading } = useMerchantLocation();
 	const canManageRewards = hasCapability("merchant:manage_rewards");
 
-	const initialQueryData = React.useMemo(
-		() =>
-			initialRewards !== undefined
-				? {
-						success: true as const,
-						data: [...initialRewards],
-						meta: stubApiMeta(),
-					}
-				: undefined,
-		[initialRewards],
-	);
-
-	const rewardsQuery = api.merchant.rewards.list.useQuery(
-		{},
+	const rewardsQuery = api.organizations.rewards.list.useQuery(
+		{ orgSlug, locationId },
 		{
-			initialData: initialQueryData,
+			enabled: orgSlug.length > 0 && !isLocationLoading,
+			staleTime: 0,
+			gcTime: 0,
+			refetchOnMount: "always",
+			retry: 1,
 		},
 	);
 
-	const rewards: readonly RewardResponse[] = rewardsQuery.data?.data ?? [];
-	const isLoading = rewardsQuery.isLoading && initialRewards === undefined;
+	const rewards: readonly RewardResponse[] = rewardsQuery.isSuccess ? rewardsQuery.data.data : [];
+	const isLoading = isLocationLoading || rewardsQuery.isPending || (rewardsQuery.isFetching && !rewardsQuery.isSuccess);
+	const showError = rewardsQuery.isError;
+	const showEmpty = rewardsQuery.isSuccess && rewards.length === 0;
+	const loadErrorMessage = rewardsQuery.error instanceof Error ? rewardsQuery.error.message : "The rewards catalog failed to load. Try again.";
+
+	const handleRetry = React.useCallback((): void => {
+		void rewardsQuery.refetch();
+	}, [rewardsQuery]);
 
 	const liveCount = countByStatus(rewards, "PUBLISHED");
 	const draftCount = countByStatus(rewards, "DRAFT") + countByStatus(rewards, "PENDING_REVIEW");
@@ -77,8 +79,6 @@ export function MerchantRewardsPageView({ initialRewards }: MerchantRewardsPageV
 		[draftCount, liveCount, totalRemaining],
 	);
 
-	const showEmpty = !isLoading && rewards.length === 0;
-
 	return (
 		<div className="space-y-8">
 			<MerchantPageHeader
@@ -86,7 +86,7 @@ export function MerchantRewardsPageView({ initialRewards }: MerchantRewardsPageV
 				description="Create drafts, submit for review, and monitor live inventory across your store."
 				actions={
 					canManageRewards ? (
-						<Link href="/rewards/new" className={cn(buttonVariants(), "gap-2")}>
+						<Link href={createRewardPath} className={cn(buttonVariants(), "gap-2")}>
 							<Plus className="size-4" aria-hidden="true" />
 							New reward
 						</Link>
@@ -96,14 +96,25 @@ export function MerchantRewardsPageView({ initialRewards }: MerchantRewardsPageV
 
 			<MerchantRewardsSummaryStrip items={summaryItems} />
 
-			{showEmpty ? (
+			{showError ? (
+				<MerchantEmptyState
+					title="Could not load rewards"
+					description={loadErrorMessage}
+					icon={<AlertCircle className="size-5" aria-hidden="true" />}
+					action={
+						<Button type="button" onClick={handleRetry}>
+							Retry
+						</Button>
+					}
+				/>
+			) : showEmpty ? (
 				<MerchantEmptyState
 					title="No rewards yet"
 					description="Start with a draft offer — you can refine details and submit for review before it goes live."
 					icon={<Ticket className="size-5" aria-hidden="true" />}
 					action={
 						canManageRewards ? (
-							<Link href="/rewards/new" className={cn(buttonVariants(), "gap-2")}>
+							<Link href={createRewardPath} className={cn(buttonVariants(), "gap-2")}>
 								<Plus className="size-4" aria-hidden="true" />
 								Create first reward
 							</Link>

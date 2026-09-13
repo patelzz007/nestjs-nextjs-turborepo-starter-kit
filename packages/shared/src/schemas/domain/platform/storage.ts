@@ -161,7 +161,7 @@ export const CreateFileUploadUrlSchema = z
 		sizeBytes: z.number().int().positive(),
 		checksumSha256: z.string().length(64),
 		productId: z.uuid().optional(),
-		merchantOrgId: z.uuid().optional(),
+		organizationId: z.uuid().optional(),
 		userId: z.uuid().optional(),
 		assetType: MerchantAssetTypeSchema.optional(),
 	})
@@ -170,8 +170,8 @@ export const CreateFileUploadUrlSchema = z
 		if (value.category === "PRODUCT_IMAGE" && value.productId === undefined) {
 			ctx.addIssue({ code: "custom", message: "productId is required for PRODUCT_IMAGE uploads", path: ["productId"] });
 		}
-		if ((value.category === "STORE_LOGO" || value.category === "STORE_BANNER") && value.merchantOrgId === undefined) {
-			ctx.addIssue({ code: "custom", message: "merchantOrgId is required for store asset uploads", path: ["merchantOrgId"] });
+		if ((value.category === "STORE_LOGO" || value.category === "STORE_BANNER") && value.organizationId === undefined) {
+			ctx.addIssue({ code: "custom", message: "organizationId is required for store asset uploads", path: ["organizationId"] });
 		}
 		if ((value.category === "STORE_LOGO" || value.category === "STORE_BANNER") && value.assetType === undefined) {
 			ctx.addIssue({ code: "custom", message: "assetType is required for store asset uploads", path: ["assetType"] });
@@ -179,8 +179,8 @@ export const CreateFileUploadUrlSchema = z
 		if (value.category === "USER_AVATAR" && value.userId === undefined) {
 			ctx.addIssue({ code: "custom", message: "userId is required for USER_AVATAR uploads", path: ["userId"] });
 		}
-		if (value.category === "MERCHANT_KYB" && value.merchantOrgId === undefined) {
-			ctx.addIssue({ code: "custom", message: "merchantOrgId is required for MERCHANT_KYB uploads", path: ["merchantOrgId"] });
+		if (value.category === "MERCHANT_KYB" && value.organizationId === undefined) {
+			ctx.addIssue({ code: "custom", message: "organizationId is required for MERCHANT_KYB uploads", path: ["organizationId"] });
 		}
 	});
 

@@ -87,12 +87,10 @@ import {
 	MerchantApiKeySummarySchema,
 	MerchantKybDocumentDownloadResponseSchema,
 	MerchantKybProfileResponseSchema,
-	MerchantMemberCreatedResponseSchema,
-	MerchantMembershipResponseSchema,
 	OrganizationContextResponseSchema,
+	OrganizationRewardMembershipResponseSchema,
 	MerchantOnboardingCompleteResponseSchema,
 	MerchantOnboardingInvitePreviewSchema,
-	MerchantRoleCapabilityGrantSchema,
 	AdminMerchantDetailResponseSchema,
 	MerchantOrgResponseSchema,
 	MerchantRedemptionListItemSchema,
@@ -678,96 +676,92 @@ export const apiRouter = {
 		}),
 	},
 	organizations: {
+		membershipsBootstrap: defineQuery(apiContract.organizations.membershipsBootstrap, {
+			response: envelope(z.array(OrganizationRewardMembershipResponseSchema)),
+			queryKey: () => ["organizations", "memberships"],
+		}),
 		context: defineQuery(apiContract.organizations.context, {
 			response: envelope(OrganizationContextResponseSchema),
 			queryKey: ({ orgSlug }) => ["organization", orgSlug, "context"],
 		}),
-	},
-	merchant: {
-		me: defineQuery(apiContract.merchant.me, {
-			response: envelope(z.array(MerchantMembershipResponseSchema)),
-			queryKey: () => ["merchant", "me"],
+		inviteMember: defineMutation(apiContract.organizations.inviteMember, {
+			response: envelope(z.object({ message: z.string() }).strict()),
+			queryKey: ({ orgSlug, email }) => ["organization", orgSlug, "members", "invite", email],
 		}),
 		kyb: {
-			get: defineQuery(apiContract.merchant.kyb.get, {
+			get: defineQuery(apiContract.organizations.kyb.get, {
 				response: envelope(MerchantKybProfileResponseSchema),
-				queryKey: () => ["merchant", "kyb"],
+				queryKey: ({ orgSlug }) => ["organization", orgSlug, "kyb"],
 			}),
-			submit: defineMutation(apiContract.merchant.kyb.submit, {
+			submit: defineMutation(apiContract.organizations.kyb.submit, {
 				response: envelope(MerchantKybProfileResponseSchema),
-				queryKey: () => ["merchant", "kyb", "submit"],
+				queryKey: ({ orgSlug }) => ["organization", orgSlug, "kyb", "submit"],
 			}),
-			downloadDocument: defineQuery(apiContract.merchant.kyb.downloadDocument, {
+			downloadDocument: defineQuery(apiContract.organizations.kyb.downloadDocument, {
 				response: envelope(MerchantKybDocumentDownloadResponseSchema),
-				queryKey: ({ documentId, disposition }) => ["merchant", "kyb", "documents", "download", documentId, disposition],
+				queryKey: ({ orgSlug, documentId, disposition }) => ["organization", orgSlug, "kyb", "documents", "download", documentId, disposition],
 			}),
 		},
 		rewards: {
-			list: defineQuery(apiContract.merchant.rewards.list, {
+			list: defineQuery(apiContract.organizations.rewards.list, {
 				response: envelope(z.array(RewardResponseSchema)),
-				queryKey: () => ["merchant", "rewards", "list"],
+				queryKey: ({ orgSlug, locationId }) => ["organization", orgSlug, "rewards", "list", locationId],
 			}),
-			create: defineMutation(apiContract.merchant.rewards.create, {
+			create: defineMutation(apiContract.organizations.rewards.create, {
 				response: envelope(RewardResponseSchema),
-				queryKey: ({ title }) => ["merchant", "rewards", "create", title],
+				queryKey: ({ orgSlug, title }) => ["organization", orgSlug, "rewards", "create", title],
 			}),
-			update: defineMutation(apiContract.merchant.rewards.update, {
+			update: defineMutation(apiContract.organizations.rewards.update, {
 				response: envelope(RewardResponseSchema),
-				queryKey: ({ rewardId }) => ["merchant", "rewards", "update", rewardId],
+				queryKey: ({ orgSlug, rewardId }) => ["organization", orgSlug, "rewards", "update", rewardId],
 			}),
-			publish: defineMutation(apiContract.merchant.rewards.publish, {
+			publish: defineMutation(apiContract.organizations.rewards.publish, {
 				response: envelope(RewardResponseSchema),
-				queryKey: ({ rewardId }) => ["merchant", "rewards", "publish", rewardId],
+				queryKey: ({ orgSlug, rewardId }) => ["organization", orgSlug, "rewards", "publish", rewardId],
 			}),
 		},
 		apiKeys: {
-			list: defineQuery(apiContract.merchant.apiKeys.list, {
+			list: defineQuery(apiContract.organizations.apiKeys.list, {
 				response: envelope(z.array(MerchantApiKeySummarySchema)),
-				queryKey: () => ["merchant", "api-keys", "list"],
+				queryKey: ({ orgSlug, locationId }) => ["organization", orgSlug, "api-keys", "list", locationId],
 			}),
-			create: defineMutation(apiContract.merchant.apiKeys.create, {
+			create: defineMutation(apiContract.organizations.apiKeys.create, {
 				response: envelope(MerchantApiKeyCreatedSchema),
-				queryKey: ({ name }) => ["merchant", "api-keys", "create", name],
+				queryKey: ({ orgSlug, name }) => ["organization", orgSlug, "api-keys", "create", name],
 			}),
-			revoke: defineMutation(apiContract.merchant.apiKeys.revoke, {
+			revoke: defineMutation(apiContract.organizations.apiKeys.revoke, {
 				response: envelope(OkResponseSchema),
-				queryKey: ({ keyId }) => ["merchant", "api-keys", "revoke", keyId],
+				queryKey: ({ orgSlug, keyId }) => ["organization", orgSlug, "api-keys", "revoke", keyId],
 			}),
 		},
-		redemptions: defineQuery(apiContract.merchant.redemptions, {
+		redemptions: defineQuery(apiContract.organizations.redemptions, {
 			response: envelope(z.array(MerchantRedemptionListItemSchema), ApiPaginatedMetaSchema),
-			queryKey: ({ cursor, limit }) => ["merchant", "redemptions", cursor, limit],
+			queryKey: ({ orgSlug, cursor, limit, locationId }) => ["organization", orgSlug, "redemptions", locationId, cursor, limit],
 		}),
-		analytics: defineQuery(apiContract.merchant.analytics, {
+		analytics: defineQuery(apiContract.organizations.analytics, {
 			response: envelope(MerchantAnalyticsResponseSchema),
-			queryKey: ({ from, to }) => ["merchant", "analytics", from, to],
+			queryKey: ({ orgSlug, from, to, locationId }) => ["organization", orgSlug, "analytics", locationId, from, to],
 		}),
 		onboarding: {
-			validate: defineMutation(apiContract.merchant.onboarding.validate, {
+			validate: defineMutation(apiContract.organizations.onboarding.validate, {
 				response: envelope(MerchantOnboardingInvitePreviewSchema),
-				queryKey: ({ token }) => ["merchant", "onboarding", "validate", token],
+				queryKey: ({ token }) => ["organization", "onboarding", "validate", token],
 			}),
-			complete: defineMutation(apiContract.merchant.onboarding.complete, {
+			complete: defineMutation(apiContract.organizations.onboarding.complete, {
 				response: envelope(MerchantOnboardingCompleteResponseSchema),
-				queryKey: ({ token }) => ["merchant", "onboarding", "complete", token],
+				queryKey: ({ token }) => ["organization", "onboarding", "complete", token],
 			}),
-			documentUploadUrl: defineMutation(apiContract.merchant.onboarding.documentUploadUrl, {
+			documentUploadUrl: defineMutation(apiContract.organizations.onboarding.documentUploadUrl, {
 				response: envelope(CreateFileUploadUrlResponseSchema),
-				queryKey: ({ token, fileName }) => ["merchant", "onboarding", "document-upload-url", token, fileName],
+				queryKey: ({ token, fileName }) => ["organization", "onboarding", "document-upload-url", token, fileName],
 			}),
-			documentUploadComplete: defineMutation(apiContract.merchant.onboarding.documentUploadComplete, {
+			documentUploadComplete: defineMutation(apiContract.organizations.onboarding.documentUploadComplete, {
 				response: envelope(CompleteFileUploadResponseSchema),
-				queryKey: ({ token, fileId }) => ["merchant", "onboarding", "document-upload-complete", token, fileId],
+				queryKey: ({ token, fileId }) => ["organization", "onboarding", "document-upload-complete", token, fileId],
 			}),
-			documentsSubmit: defineMutation(apiContract.merchant.onboarding.documentsSubmit, {
+			documentsSubmit: defineMutation(apiContract.organizations.onboarding.documentsSubmit, {
 				response: envelope(z.object({ success: z.literal(true) }).strict()),
-				queryKey: ({ token }) => ["merchant", "onboarding", "documents-submit", token],
-			}),
-		},
-		members: {
-			create: defineMutation(apiContract.merchant.members.create, {
-				response: envelope(MerchantMemberCreatedResponseSchema),
-				queryKey: ({ email }) => ["merchant", "members", "create", email],
+				queryKey: ({ token }) => ["organization", "onboarding", "documents-submit", token],
 			}),
 		},
 	},
@@ -777,17 +771,17 @@ export const apiRouter = {
 			response: envelope(z.array(RewardResponseSchema)),
 			queryKey: () => ["rewards-admin", "pending"],
 		}),
-		listMerchants: defineQuery(apiContract.rewardsAdmin.listMerchants, {
+		listOrganizations: defineQuery(apiContract.rewardsAdmin.listOrganizations, {
 			response: envelope(z.array(MerchantOrgResponseSchema), ApiPaginatedMetaSchema),
-			queryKey: ({ page, cursor, limit, search, city, kybStatus, status }) => ["rewards-admin", "merchants", page, cursor, limit, search, city, kybStatus, status],
+			queryKey: ({ page, cursor, limit, search, city, kybStatus, status }) => ["rewards-admin", "organizations", page, cursor, limit, search, city, kybStatus, status],
 		}),
-		getMerchant: defineQuery(apiContract.rewardsAdmin.getMerchant, {
+		getOrganization: defineQuery(apiContract.rewardsAdmin.getOrganization, {
 			response: envelope(AdminMerchantDetailResponseSchema),
-			queryKey: ({ merchantOrgId }) => ["rewards-admin", "merchant", merchantOrgId],
+			queryKey: ({ organizationId }) => ["rewards-admin", "organization", organizationId],
 		}),
-		downloadMerchantDocument: defineQuery(apiContract.rewardsAdmin.downloadMerchantDocument, {
+		downloadOrganizationDocument: defineQuery(apiContract.rewardsAdmin.downloadOrganizationDocument, {
 			response: envelope(MerchantKybDocumentDownloadResponseSchema),
-			queryKey: ({ merchantOrgId, documentId, disposition }) => ["rewards-admin", "merchant", merchantOrgId, "documents", "download", documentId, disposition],
+			queryKey: ({ organizationId, documentId, disposition }) => ["rewards-admin", "organization", organizationId, "documents", "download", documentId, disposition],
 		}),
 		createInvite: defineMutation(apiContract.rewardsAdmin.createInvite, {
 			response: envelope(AdminMerchantInviteCreatedResponseSchema),
@@ -807,19 +801,7 @@ export const apiRouter = {
 		}),
 		updateKyb: defineMutation(apiContract.rewardsAdmin.updateKyb, {
 			response: envelope(z.object({ ok: z.literal(true) }).strict()),
-			queryKey: ({ merchantOrgId }) => ["rewards-admin", "kyb", merchantOrgId],
-		}),
-		listMerchantRoleCapabilities: defineQuery(apiContract.rewardsAdmin.listMerchantRoleCapabilities, {
-			response: envelope(z.array(MerchantRoleCapabilityGrantSchema)),
-			queryKey: () => ["rewards-admin", "merchant-role-capabilities"],
-		}),
-		syncMerchantRoleCapabilities: defineMutation(apiContract.rewardsAdmin.syncMerchantRoleCapabilities, {
-			response: envelope(MerchantRoleCapabilityGrantSchema),
-			queryKey: ({ role }) => ["rewards-admin", "merchant-role-capabilities", role],
-		}),
-		restoreMerchantRoleCapabilities: defineMutation(apiContract.rewardsAdmin.restoreMerchantRoleCapabilities, {
-			response: envelope(MerchantRoleCapabilityGrantSchema),
-			queryKey: ({ role }) => ["rewards-admin", "merchant-role-capabilities", role, "restore"],
+			queryKey: ({ organizationId }) => ["rewards-admin", "kyb", organizationId],
 		}),
 	},
 	// NOTE: `as const` is required here — it preserves literal method/path types

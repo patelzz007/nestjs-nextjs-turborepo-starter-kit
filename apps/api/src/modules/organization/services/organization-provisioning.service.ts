@@ -4,6 +4,11 @@ import { createHash, randomBytes } from "node:crypto";
 
 import { TenantTransactionService } from "../../../prisma/tenant-transaction.service";
 import { allocateUniqueOrganizationSlug } from "../utils/organization-slug.util";
+import { seedRewardHubTenantPolicies } from "../utils/rewardhub-policy-seed.util";
+
+function sha256Hex(value: string): string {
+	return createHash("sha256").update(value).digest("hex");
+}
 
 export interface ProvisionedOrganization {
 	readonly organizationId: string;
@@ -23,6 +28,13 @@ export interface MerchantOnboardingProvisionResult {
 	readonly organizationId: string;
 	readonly locationId: string;
 	readonly slug: string;
+}
+
+export interface RewardHubAdminInviteProvisionResult {
+	readonly organizationId: string;
+	readonly inviteId: string;
+	readonly inviteToken: string;
+	readonly expiresAt: number;
 }
 
 @Injectable()
@@ -183,7 +195,124 @@ export class OrganizationProvisioningService {
 					},
 				});
 
+				await seedRewardHubTenantPolicies(tx, org.id, input.userId);
+
 				return { organizationId: org.id, locationId: primaryLocation.id, slug: org.slug };
+			},
+		);
+	}
+
+	/** Pre-provision organization + invitation for RewardHub admin merchant invite flow. */
+	public async provisionFromRewardHubAdminInvite(
+		adminUserId: string,
+		input: { readonly email: string; readonly businessName: string; readonly city: PilotCity },
+	): Promise<RewardHubAdminInviteProvisionResult> {
+		const rawToken = randomBytes(32).toString("hex");
+		const tokenHash = sha256Hex(rawToken);
+		const expiresAt = Date.now() + 7 * 24 * 60 * 60 * 1000;
+
+		const result = await this.tenantTx.withSystemOperation(
+			{
+				operation: "organization.provision",
+				reason: "RewardHub admin merchant invite",
+				correlationId: `rewardhub-invite:${input.email}`,
+				actorUserId: adminUserId,
+			},
+			async (tx) => {
+				const slug = await allocateUniqueOrganizationSlug(tx, input.businessName);
+				const now = BigInt(Date.now());
+
+				const org = await tx.organization.create({
+					data: {
+						slug,
+						displayName: input.businessName,
+						lifecycleState: "PROVISIONING",
+						locations: {
+							create: {
+								name: `${input.businessName} — Primary`,
+								code: "primary",
+								isPrimary: true,
+							},
+						},
+						merchantProfile: {
+							create: {
+								category: "retail",
+								city: input.city,
+								contactEmail: input.email,
+								kybStatus: "PENDING",
+							},
+						},
+						placement: { create: { kind: "SHARED", regionCode: "default" } },
+						entitlements: {
+							create: {
+								planCode: "pilot",
+								features: { rewards: true, apiKeys: true },
+								version: 1,
+								effectiveFrom: now,
+							},
+						},
+						lifecycleEvents: {
+							create: {
+								fromState: null,
+								toState: "PROVISIONING",
+								actorUserId: adminUserId,
+								reason: "RewardHub admin invite created",
+							},
+						},
+					},
+				});
+
+				const invite = await tx.organizationInvitation.create({
+					data: {
+						organizationId: org.id,
+						email: input.email,
+						tokenHash,
+						intendedRole: "OWNER",
+						status: "PENDING",
+						createdByAdminId: adminUserId,
+						expiresAt: BigInt(expiresAt),
+					},
+				});
+
+				await seedRewardHubTenantPolicies(tx, org.id, adminUserId);
+
+				return { organizationId: org.id, inviteId: invite.id };
+			},
+		);
+
+		return { ...result, inviteToken: rawToken, expiresAt };
+	}
+
+	public async ensureOwnerMembership(organizationId: string, userId: string): Promise<void> {
+		await this.tenantTx.withSystemOperation(
+			{
+				operation: "organization.provision",
+				reason: "Ensure RewardHub owner membership",
+				correlationId: `rewardhub-owner:${organizationId}:${userId}`,
+				actorUserId: userId,
+			},
+			async (tx) => {
+				const existing = await tx.organizationMembership.findFirst({
+					where: { organizationId, userId, isDeleted: false },
+				});
+				if (existing !== null) {
+					return;
+				}
+				const membership = await tx.organizationMembership.create({
+					data: {
+						organizationId,
+						userId,
+						role: "OWNER",
+						status: "ACTIVE",
+					},
+				});
+				await tx.organizationMembershipLocationScope.create({
+					data: {
+						organizationId,
+						membershipId: membership.id,
+						scopeType: "ALL_LOCATIONS",
+					},
+				});
 			},
 		);
 	}

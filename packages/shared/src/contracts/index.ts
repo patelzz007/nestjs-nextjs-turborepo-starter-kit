@@ -49,7 +49,12 @@ import {
 	UpdateStateSchema,
 	UpdateSubregionSchema,
 } from "../schemas/domain/platform/geo";
-import { AdminCreateOrganizationInviteSchema, OrganizationAccessRequestCreateSchema, OrganizationSlugParamSchema } from "../schemas/domain/organization/organization";
+import {
+	AdminCreateOrganizationInviteSchema,
+	OrganizationAccessRequestCreateSchema,
+	OrganizationMemberInviteSchema,
+	OrganizationSlugParamSchema,
+} from "../schemas/domain/organization/organization";
 import {
 	AcceptRewardLegalSchema,
 	AdminCreateMerchantInviteSchema,
@@ -58,9 +63,10 @@ import {
 	AdminMerchantListQuerySchema,
 	AdminRejectRewardPathInputSchema,
 	CreateRewardClaimSchema,
+	MerchantApiKeyListQuerySchema,
 	MerchantCreateApiKeySchema,
-	MerchantCreateMemberSchema,
 	MerchantCreateRewardSchema,
+	MerchantRewardListQuerySchema,
 	MerchantKybSubmissionFieldsSchema,
 	MerchantOnboardingCompleteFieldsSchema,
 	MerchantOnboardingDocumentsSubmitSchema,
@@ -78,7 +84,6 @@ import {
 	MarkRewardNotificationsReadSchema,
 } from "../schemas/domain/rewards/rewards";
 import { RewardsAnalyticsQuerySchema } from "../schemas/domain/rewards/analytics";
-import { MerchantRoleCapabilitiesPathInputSchema, SyncMerchantRoleCapabilitiesInputSchema } from "../schemas/domain/rewards/merchant-role-capabilities";
 import { AssignPermissionToUserSchema, AssignRoleToUserSchema, CheckPermissionSchema, SyncUserPermissionsSchema, SyncUserRolesSchema } from "../schemas/domain/rbac/rbac";
 import {
 	BulkCreateSampleCategorySchema,
@@ -357,6 +362,11 @@ export const apiContract = {
 		}),
 	},
 	organizations: {
+		membershipsBootstrap: defineContract({
+			method: "GET",
+			path: apiRoutes.organizations.membershipsBootstrap,
+			input: EmptyInputSchema,
+		}),
 		context: defineContract({
 			method: "GET",
 			path: apiRoutes.organizations.context.path,
@@ -367,6 +377,95 @@ export const apiContract = {
 			path: apiRoutes.organizations.accessRequests.path,
 			input: z.intersection(OrganizationSlugParamSchema, OrganizationAccessRequestCreateSchema),
 		}),
+		inviteMember: defineContract({
+			method: "POST",
+			path: apiRoutes.organizations.inviteMember.path,
+			input: z.intersection(OrganizationSlugParamSchema, OrganizationMemberInviteSchema),
+		}),
+		memberships: defineContract({
+			method: "GET",
+			path: apiRoutes.organizations.memberships.path,
+			input: OrganizationSlugParamSchema,
+		}),
+		kyb: {
+			get: defineContract({ method: "GET", path: apiRoutes.organizations.kyb.path, input: OrganizationSlugParamSchema }),
+			submit: defineContract({
+				method: "PATCH",
+				path: apiRoutes.organizations.kyb.path,
+				input: z.intersection(OrganizationSlugParamSchema, MerchantKybSubmissionFieldsSchema),
+			}),
+			downloadDocument: defineContract({
+				method: "GET",
+				path: apiRoutes.organizations.kybDocumentDownload.path,
+				input: z
+					.object({
+						orgSlug: OrganizationSlugParamSchema.shape.orgSlug,
+						documentId: UuidParamSchema,
+						disposition: FileDownloadDispositionSchema.optional(),
+					})
+					.strict(),
+			}),
+		},
+		rewards: {
+			list: defineContract({
+				method: "GET",
+				path: apiRoutes.organizations.rewards.list.path,
+				input: z.intersection(OrganizationSlugParamSchema, MerchantRewardListQuerySchema),
+			}),
+			create: defineContract({
+				method: "POST",
+				path: apiRoutes.organizations.rewards.create.path,
+				input: z.intersection(OrganizationSlugParamSchema, MerchantCreateRewardSchema),
+			}),
+			update: defineContract({
+				method: "PATCH",
+				path: apiRoutes.organizations.rewards.update.path,
+				input: MerchantUpdateRewardPathInputSchema.extend({ orgSlug: OrganizationSlugParamSchema.shape.orgSlug }),
+			}),
+			publish: defineContract({
+				method: "POST",
+				path: apiRoutes.organizations.rewards.publish.path,
+				input: z.object({ orgSlug: OrganizationSlugParamSchema.shape.orgSlug, rewardId: UuidParamSchema }).strict(),
+			}),
+		},
+		apiKeys: {
+			list: defineContract({
+				method: "GET",
+				path: apiRoutes.organizations.apiKeys.list.path,
+				input: z.intersection(OrganizationSlugParamSchema, MerchantApiKeyListQuerySchema),
+			}),
+			create: defineContract({
+				method: "POST",
+				path: apiRoutes.organizations.apiKeys.create.path,
+				input: z.intersection(OrganizationSlugParamSchema, MerchantCreateApiKeySchema),
+			}),
+			revoke: defineContract({
+				method: "POST",
+				path: apiRoutes.organizations.apiKeys.revoke.path,
+				input: z.object({ orgSlug: OrganizationSlugParamSchema.shape.orgSlug, keyId: UuidParamSchema }).strict(),
+			}),
+		},
+		redemptions: defineContract({
+			method: "GET",
+			path: apiRoutes.organizations.redemptions.path,
+			input: z.intersection(OrganizationSlugParamSchema, MerchantRedemptionListQuerySchema),
+		}),
+		analytics: defineContract({
+			method: "GET",
+			path: apiRoutes.organizations.analytics.path,
+			input: z.intersection(OrganizationSlugParamSchema, RewardsAnalyticsQuerySchema),
+		}),
+		onboarding: {
+			validate: defineContract({ method: "POST", path: apiRoutes.organizations.onboarding.validate, input: MerchantOnboardingValidateTokenSchema }),
+			complete: defineContract({ method: "POST", path: apiRoutes.organizations.onboarding.complete, input: MerchantOnboardingCompleteFieldsSchema }),
+			documentUploadUrl: defineContract({ method: "POST", path: apiRoutes.organizations.onboarding.documentUploadUrl, input: MerchantOnboardingDocumentUploadUrlSchema }),
+			documentUploadComplete: defineContract({
+				method: "POST",
+				path: apiRoutes.organizations.onboarding.documentUploadComplete,
+				input: MerchantOnboardingDocumentUploadCompleteSchema,
+			}),
+			documentsSubmit: defineContract({ method: "POST", path: apiRoutes.organizations.onboarding.documentsSubmit, input: MerchantOnboardingDocumentsSubmitSchema }),
+		},
 	},
 	adminOrganizations: {
 		createInvite: defineContract({
@@ -375,78 +474,22 @@ export const apiContract = {
 			input: AdminCreateOrganizationInviteSchema,
 		}),
 	},
-	merchant: {
-		me: defineContract({ method: "GET", path: apiRoutes.merchant.me, input: EmptyInputSchema }),
-		kyb: {
-			get: defineContract({ method: "GET", path: apiRoutes.merchant.kyb, input: EmptyInputSchema }),
-			submit: defineContract({ method: "PATCH", path: apiRoutes.merchant.kyb, input: MerchantKybSubmissionFieldsSchema }),
-			downloadDocument: defineContract({
-				method: "GET",
-				path: apiRoutes.merchant.kybDocumentDownload.path,
-				input: z
-					.object({
-						documentId: UuidParamSchema,
-						disposition: FileDownloadDispositionSchema.optional(),
-					})
-					.strict(),
-			}),
-		},
-		rewards: {
-			list: defineContract({ method: "GET", path: apiRoutes.merchant.rewards.list, input: EmptyInputSchema }),
-			create: defineContract({ method: "POST", path: apiRoutes.merchant.rewards.create, input: MerchantCreateRewardSchema }),
-			update: defineContract({
-				method: "PATCH",
-				path: apiRoutes.merchant.rewards.update.path,
-				input: MerchantUpdateRewardPathInputSchema,
-			}),
-			publish: defineContract({
-				method: "POST",
-				path: apiRoutes.merchant.rewards.publish.path,
-				input: z.object({ rewardId: UuidParamSchema }).strict(),
-			}),
-		},
-		apiKeys: {
-			list: defineContract({ method: "GET", path: apiRoutes.merchant.apiKeys.list, input: EmptyInputSchema }),
-			create: defineContract({ method: "POST", path: apiRoutes.merchant.apiKeys.create, input: MerchantCreateApiKeySchema }),
-			revoke: defineContract({
-				method: "POST",
-				path: apiRoutes.merchant.apiKeys.revoke.path,
-				input: z.object({ keyId: UuidParamSchema }).strict(),
-			}),
-		},
-		redemptions: defineContract({ method: "GET", path: apiRoutes.merchant.redemptions, input: MerchantRedemptionListQuerySchema }),
-		analytics: defineContract({ method: "GET", path: apiRoutes.merchant.analytics, input: RewardsAnalyticsQuerySchema }),
-		onboarding: {
-			validate: defineContract({ method: "POST", path: apiRoutes.merchant.onboarding.validate, input: MerchantOnboardingValidateTokenSchema }),
-			complete: defineContract({ method: "POST", path: apiRoutes.merchant.onboarding.complete, input: MerchantOnboardingCompleteFieldsSchema }),
-			documentUploadUrl: defineContract({ method: "POST", path: apiRoutes.merchant.onboarding.documentUploadUrl, input: MerchantOnboardingDocumentUploadUrlSchema }),
-			documentUploadComplete: defineContract({
-				method: "POST",
-				path: apiRoutes.merchant.onboarding.documentUploadComplete,
-				input: MerchantOnboardingDocumentUploadCompleteSchema,
-			}),
-			documentsSubmit: defineContract({ method: "POST", path: apiRoutes.merchant.onboarding.documentsSubmit, input: MerchantOnboardingDocumentsSubmitSchema }),
-		},
-		members: {
-			create: defineContract({ method: "POST", path: apiRoutes.merchant.members.create, input: MerchantCreateMemberSchema }),
-		},
-	},
 	rewardsAdmin: {
 		createInvite: defineContract({ method: "POST", path: apiRoutes.rewardsAdmin.invites, input: AdminCreateMerchantInviteSchema }),
 		previewInviteEmail: defineContract({ method: "POST", path: apiRoutes.rewardsAdmin.invitesPreviewEmail, input: AdminCreateMerchantInviteSchema }),
 		pendingRewards: defineContract({ method: "GET", path: apiRoutes.rewardsAdmin.rewardsPending, input: EmptyInputSchema }),
-		listMerchants: defineContract({ method: "GET", path: apiRoutes.rewardsAdmin.merchants, input: AdminMerchantListQuerySchema }),
-		getMerchant: defineContract({
+		listOrganizations: defineContract({ method: "GET", path: apiRoutes.rewardsAdmin.merchants, input: AdminMerchantListQuerySchema }),
+		getOrganization: defineContract({
 			method: "GET",
-			path: apiRoutes.rewardsAdmin.merchantDetail.path,
+			path: apiRoutes.rewardsAdmin.organizationDetail.path,
 			input: AdminMerchantIdParamSchema,
 		}),
-		downloadMerchantDocument: defineContract({
+		downloadOrganizationDocument: defineContract({
 			method: "GET",
-			path: apiRoutes.rewardsAdmin.merchantKybDocumentDownload.path,
+			path: apiRoutes.rewardsAdmin.organizationKybDocumentDownload.path,
 			input: z
 				.object({
-					merchantOrgId: UuidParamSchema,
+					organizationId: UuidParamSchema,
 					documentId: UuidParamSchema,
 					disposition: FileDownloadDispositionSchema.optional(),
 				})
@@ -464,23 +507,8 @@ export const apiContract = {
 		}),
 		updateKyb: defineContract({
 			method: "PATCH",
-			path: apiRoutes.rewardsAdmin.merchantKyb.path,
+			path: apiRoutes.rewardsAdmin.organizationKyb.path,
 			input: AdminKybUpdatePathInputSchema,
-		}),
-		listMerchantRoleCapabilities: defineContract({
-			method: "GET",
-			path: apiRoutes.rewardsAdmin.merchantRoleCapabilities,
-			input: EmptyInputSchema,
-		}),
-		syncMerchantRoleCapabilities: defineContract({
-			method: "PUT",
-			path: apiRoutes.rewardsAdmin.merchantRoleCapabilitiesSync.path,
-			input: SyncMerchantRoleCapabilitiesInputSchema,
-		}),
-		restoreMerchantRoleCapabilities: defineContract({
-			method: "POST",
-			path: apiRoutes.rewardsAdmin.merchantRoleCapabilitiesRestore.path,
-			input: MerchantRoleCapabilitiesPathInputSchema,
 		}),
 	},
 	// @app-generated:begin sampleCategory

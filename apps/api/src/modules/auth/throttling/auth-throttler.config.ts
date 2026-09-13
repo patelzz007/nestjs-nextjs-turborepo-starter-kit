@@ -36,13 +36,13 @@ export function resolveAuthClientIp(req: RequestLike): string {
  * on auth controllers. `strict` guards credential endpoints; `default` covers
  * authenticated mutations.
  */
-export function authThrottlerOptionsFactory(_config: TypedConfigService): ThrottlerModuleOptions {
+export function authThrottlerOptionsFactory(config: TypedConfigService): ThrottlerModuleOptions {
 	return {
 		errorMessage: "Too many requests — please try again shortly.",
 		getTracker: (req: Record<string, string>): string => resolveAuthClientIp(req),
 		throttlers: [
-			{ name: "strict", ttl: 60_000, limit: 10 },
-			{ name: "default", ttl: 60_000, limit: 60 },
+			{ name: "strict", ttl: config.throttleTtlMs, limit: config.throttleStrictLimit },
+			{ name: "default", ttl: config.throttleTtlMs, limit: config.throttleDefaultLimit },
 		],
 	};
 }

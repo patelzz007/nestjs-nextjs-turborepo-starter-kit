@@ -1,5 +1,6 @@
 "use client";
 
+import { useOrganizationPath } from "@/lib/org/use-organization-path";
 import { VerifyEmailView } from "@workspace/client/lib/auth/email/verify-email-view";
 import { AuthLayout } from "@workspace/ui/components/layout/auth-layout";
 import { useSearchParams } from "next/navigation";
@@ -7,6 +8,7 @@ import { Suspense, type JSX } from "react";
 
 function VerifyEmailContent(): JSX.Element {
 	const searchParams = useSearchParams();
+	const settingsPath = useOrganizationPath("settings");
 	const token = searchParams.get("token");
 
 	if (token === null || token.length === 0) {
@@ -17,7 +19,7 @@ function VerifyEmailContent(): JSX.Element {
 		);
 	}
 
-	return <VerifyEmailView token={token} settingsHref="/settings" successRedirectHref="/" loginHref="/auth/login" />;
+	return <VerifyEmailView token={token} settingsHref={settingsPath} successRedirectHref="/" loginHref="/auth/login" />;
 }
 
 export default function MerchantVerifyEmailPage(): JSX.Element {

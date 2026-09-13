@@ -1,7 +1,7 @@
 import { BarChart3, KeyRound, LayoutDashboard, ScanLine, Ticket, type LucideIcon } from "lucide-react";
 
-import type { MerchantCapability } from "@workspace/shared";
-import { merchantHasCapability } from "@workspace/shared";
+import type { CapabilitySlug } from "@workspace/shared";
+import { hasCapability } from "@workspace/shared";
 
 export interface MerchantNavItem {
 	readonly id: string;
@@ -11,7 +11,7 @@ export interface MerchantNavItem {
 	readonly description: string;
 	readonly icon: LucideIcon;
 	readonly keywords: readonly string[];
-	readonly requiredCapability?: MerchantCapability;
+	readonly requiredCapability?: CapabilitySlug;
 }
 
 export const MERCHANT_NAV_ITEMS: readonly MerchantNavItem[] = [
@@ -77,11 +77,11 @@ export const MERCHANT_NAV_ITEMS: readonly MerchantNavItem[] = [
 	},
 ];
 
-export function filterMerchantNavItems(items: readonly MerchantNavItem[], capabilities: readonly MerchantCapability[]): readonly MerchantNavItem[] {
-	return items.filter((item) => item.requiredCapability === undefined || merchantHasCapability(capabilities, item.requiredCapability));
+export function filterMerchantNavItems(items: readonly MerchantNavItem[], capabilities: readonly CapabilitySlug[]): readonly MerchantNavItem[] {
+	return items.filter((item) => item.requiredCapability === undefined || hasCapability(capabilities, item.requiredCapability));
 }
 
-export function resolvePinnedMerchantNavItems(pinnedUrls: readonly string[], capabilities: readonly MerchantCapability[]): readonly MerchantNavItem[] {
+export function resolvePinnedMerchantNavItems(pinnedUrls: readonly string[], capabilities: readonly CapabilitySlug[]): readonly MerchantNavItem[] {
 	return pinnedUrls
 		.map((url) => filterMerchantNavItems(MERCHANT_NAV_ITEMS, capabilities).find((item) => item.url === url))
 		.filter((item): item is MerchantNavItem => item !== undefined);

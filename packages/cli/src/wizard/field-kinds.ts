@@ -13,12 +13,6 @@ export const SCALAR_FIELD_KIND_CHOICES: readonly PromptChoice<string>[] = [
 	{ value: "datetime", label: "Date / time", hint: "stored as epoch ms" },
 ];
 
-/** @deprecated Use SCALAR_FIELD_KIND_CHOICES + top-level link menu in the wizard. */
-export const FIELD_KIND_CHOICES: readonly PromptChoice<string>[] = [
-	...SCALAR_FIELD_KIND_CHOICES,
-	{ value: "foreign-key", label: "Link to another table", hint: "belongs to Category, User, etc." },
-];
-
 export function fieldKindToScalarType(kind: FieldKind): ResourceScalarType {
 	switch (kind) {
 		case "short-text":

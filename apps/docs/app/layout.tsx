@@ -9,12 +9,9 @@ import { bricolageGrotesque } from "@workspace/ui/fonts/bricolage-grotesque";
 import { Geist_Mono, IBM_Plex_Sans, Space_Grotesk } from "next/font/google";
 import type { Metadata } from "next";
 
-import { DocsLayout } from "fumadocs-ui/layouts/docs";
 import { RootProvider } from "fumadocs-ui/provider/next";
 
 import { DocsSearchProvider } from "@/components/search-provider";
-import { getDocsTree } from "@/lib/docs-tree";
-import { baseOptions } from "@/lib/layout.shared";
 import { buildSearchMeta } from "@/lib/search-meta";
 import { BASE_URL, SITE_NAME, SITE_DESCRIPTION } from "@/lib/site";
 
@@ -58,15 +55,9 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>): React.JSX.Element {
 	return (
-		<AppDocumentShell
-			htmlClassName={cn("antialiased", fontMono.variable, "font-sans", ibmPlexSans.variable, spaceGroteskHeading.variable, bricolageGrotesque.variable)}
-			htmlProps={{ "data-scroll-behavior": "smooth" }}>
+		<AppDocumentShell htmlClassName={cn("antialiased", fontMono.variable, "font-sans", ibmPlexSans.variable, spaceGroteskHeading.variable, bricolageGrotesque.variable)}>
 			<RootProvider>
-				<DocsSearchProvider meta={buildSearchMeta()}>
-					<DocsLayout {...baseOptions()} tree={getDocsTree()}>
-						{children}
-					</DocsLayout>
-				</DocsSearchProvider>
+				<DocsSearchProvider meta={buildSearchMeta()}>{children}</DocsSearchProvider>
 				<Toaster />
 			</RootProvider>
 		</AppDocumentShell>

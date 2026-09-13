@@ -1,7 +1,10 @@
 "use client";
 
 import { isMerchantEnrollmentAllowedPath, useMerchantEnrollmentLock } from "@/lib/auth/enrollment";
+import { createMerchantNavHrefResolver } from "@/lib/navigation/resolve-nav-href";
 import { useMerchantCapabilities } from "@/lib/org/capabilities";
+import { useOrganizationSlug } from "@/lib/org/use-organization-slug";
+import { useOrganizationPath } from "@/lib/org/use-organization-path";
 import { buildMerchantPaletteItems, renderMerchantPaletteIcon } from "@/lib/palette/nav-items";
 import { toastMessage } from "@workspace/ui/components/feedback/toast";
 import { useMerchantCommandPaletteStore } from "@/stores/command-palette-store";
@@ -21,6 +24,10 @@ export function MerchantCommandPalette({ open: externalOpen, setOpen: externalSe
 	const { setTheme, resolvedTheme } = useTheme();
 	const { capabilities, hasCapability } = useMerchantCapabilities();
 	const { isLocked: isEnrollmentLocked, disabledTooltip: enrollmentDisabledTooltip } = useMerchantEnrollmentLock();
+	const organizationSlug = useOrganizationSlug();
+	const settingsPath = useOrganizationPath("settings");
+	const rewardsPath = useOrganizationPath("rewards");
+	const resolveNavHref = React.useMemo(() => createMerchantNavHrefResolver(organizationSlug), [organizationSlug]);
 
 	const recentSearches = useMerchantCommandPaletteStore((state) => state.recentSearches);
 	const pinnedUrls = useMerchantCommandPaletteStore((state) => state.pinnedUrls);
@@ -56,14 +63,14 @@ export function MerchantCommandPalette({ open: externalOpen, setOpen: externalSe
 				color: "text-emerald-600 bg-emerald-100 dark:text-emerald-300 dark:bg-emerald-900/40",
 				keywords: ["home", "offers", "inventory"],
 				run: (): void => {
-					router.push("/rewards");
+					router.push(rewardsPath);
 					closePalette();
 				},
 			});
 		}
 
 		return actions;
-	}, [closePalette, hasCapability, isEnrollmentLocked, resolvedTheme, router, setTheme]);
+	}, [closePalette, hasCapability, isEnrollmentLocked, resolvedTheme, rewardsPath, router, setTheme]);
 
 	const searchableItems = React.useMemo(() => {
 		const items = buildMerchantPaletteItems(capabilities);
@@ -81,13 +88,13 @@ export function MerchantCommandPalette({ open: externalOpen, setOpen: externalSe
 					title: "Account setup required",
 					description: enrollmentDisabledTooltip,
 				});
-				router.push("/settings");
+				router.push(settingsPath);
 				return;
 			}
-			router.push(url);
+			router.push(resolveNavHref(url));
 			closePalette();
 		},
-		[closePalette, enrollmentDisabledTooltip, isEnrollmentLocked, router],
+		[closePalette, enrollmentDisabledTooltip, isEnrollmentLocked, resolveNavHref, router, settingsPath],
 	);
 
 	return (

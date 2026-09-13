@@ -1,7 +1,9 @@
 "use client";
 
 import { formatRewardTypeLabel, formatRewardValueSummary } from "@/components/rewards/merchant-reward-form.constants";
+import { MerchantRewardLocationLabel } from "@/components/rewards/merchant-reward-location-label";
 import { MerchantInventoryBar, MerchantRewardStatusBadge } from "@/components/merchant-ui/reward-status";
+import { useOrganizationPath } from "@/lib/org/use-organization-path";
 import type { RewardResponse } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/feedback/badge";
 import { buttonVariants } from "@workspace/ui/components/form/button";
@@ -18,6 +20,7 @@ export interface MerchantRewardListRowProps {
 
 /** Dense list row for merchant rewards — optimized for scanning many offers. */
 export function MerchantRewardListRow({ reward, canManageRewards }: MerchantRewardListRowProps): React.JSX.Element {
+	const rewardPath = useOrganizationPath(`rewards/${reward.id}`);
 	const expiryLabel = format(new Date(reward.expiryDate), "d MMM yyyy");
 	const isLive = reward.status === "PUBLISHED";
 
@@ -36,6 +39,7 @@ export function MerchantRewardListRow({ reward, canManageRewards }: MerchantRewa
 					<Badge variant="outline" className="hidden sm:inline-flex">
 						{formatRewardTypeLabel(reward.rewardType)}
 					</Badge>
+					<MerchantRewardLocationLabel reward={reward} />
 				</div>
 				<p className="text-sm font-medium text-primary">{formatRewardValueSummary(reward.rewardType, reward.rewardValue)}</p>
 				<p className="line-clamp-1 text-sm text-muted-foreground">{reward.description}</p>
@@ -67,7 +71,7 @@ export function MerchantRewardListRow({ reward, canManageRewards }: MerchantRewa
 			</div>
 
 			<div className="flex shrink-0 items-center justify-end">
-				<Link href={`/rewards/${reward.id}`} className={cn(buttonVariants({ size: "sm", variant: "outline" }), "gap-1.5")}>
+				<Link href={rewardPath} className={cn(buttonVariants({ size: "sm", variant: "outline" }), "gap-1.5")}>
 					{canManageRewards ? "Manage" : "View"}
 					<ArrowUpRight className="size-3.5 opacity-70" aria-hidden="true" />
 				</Link>

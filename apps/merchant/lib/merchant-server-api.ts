@@ -9,10 +9,12 @@ import {
 	type ServerApiConfig,
 	type ServerCallerTree,
 } from "@workspace/client/lib/api/server-api";
-import type { MerchantMembershipResponse } from "@workspace/shared";
+import type { OrganizationRewardMembershipResponse } from "@workspace/shared";
 import { cookies } from "next/headers";
 
-import { MERCHANT_ORG_COOKIE_NAME, merchantOrgHeaders } from "@/lib/org/org";
+import { resolveOrganizationSlugFromContext } from "@/lib/org/resolve-slug";
+import { ORGANIZATION_LOCATION_ID_COOKIE_NAME } from "@/lib/org/location";
+import { ORGANIZATION_SLUG_COOKIE_NAME } from "@/lib/org/slug";
 
 export type MerchantServerCaller = ServerCallerTree<ApiRouter>;
 
@@ -32,48 +34,47 @@ export function createMerchantServerCaller(config?: Partial<ServerApiConfig>): M
 
 export interface MerchantServerContext {
 	readonly server: MerchantServerCaller;
-	readonly memberships: readonly MerchantMembershipResponse[];
-	readonly merchantOrgId: string | undefined;
-	readonly merchantHeaders: Readonly<Record<string, string>> | undefined;
+	readonly memberships: readonly OrganizationRewardMembershipResponse[];
+	readonly organizationSlug: string | undefined;
 }
 
-export async function readMerchantOrgIdCookie(): Promise<string | undefined> {
+export async function readOrganizationSlugCookie(): Promise<string | undefined> {
 	const cookieStore = await cookies();
-	const value = cookieStore.get(MERCHANT_ORG_COOKIE_NAME)?.value;
+	const value = cookieStore.get(ORGANIZATION_SLUG_COOKIE_NAME)?.value;
 	if (value === undefined || value.length === 0) {
 		return undefined;
 	}
 	return value;
 }
 
-export function resolveMerchantOrgId(memberships: readonly MerchantMembershipResponse[], preferredOrgId: string | undefined): string | undefined {
-	if (preferredOrgId !== undefined && memberships.some((row) => row.merchantOrgId === preferredOrgId)) {
-		return preferredOrgId;
+export async function readOrganizationLocationCookie(): Promise<string | undefined> {
+	const cookieStore = await cookies();
+	const value = cookieStore.get(ORGANIZATION_LOCATION_ID_COOKIE_NAME)?.value;
+	if (value === undefined || value.length === 0) {
+		return undefined;
 	}
-	const first = memberships[0];
-	return first?.merchantOrgId;
+	return value;
 }
 
-/** Loads memberships + active org context for SSR panel routes. */
+/** Loads memberships + active organization slug for SSR panel routes. */
 export async function loadMerchantServerContext(): Promise<MerchantServerContext> {
 	const server = createMerchantServerCaller();
-	const preferredOrgId = await readMerchantOrgIdCookie();
+	const preferredSlug = await readOrganizationSlugCookie();
 
-	let memberships: readonly MerchantMembershipResponse[] = [];
+	let memberships: readonly OrganizationRewardMembershipResponse[] = [];
 	try {
-		const response = await server.merchant.me.query({});
+		const response = await server.organizations.membershipsBootstrap.query({});
 		memberships = response.data;
 	} catch {
 		memberships = [];
 	}
 
-	const merchantOrgId = resolveMerchantOrgId(memberships, preferredOrgId);
+	const organizationSlug = resolveOrganizationSlugFromContext(memberships, preferredSlug);
 
 	return {
 		server,
 		memberships,
-		merchantOrgId,
-		merchantHeaders: merchantOrgHeaders(merchantOrgId),
+		organizationSlug,
 	};
 }
 

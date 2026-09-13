@@ -7,7 +7,7 @@ export type ApiKeyProvider = "merchant";
 export interface MerchantApiKeyAuthContext {
 	readonly provider: "merchant";
 	readonly apiKeyId: string;
-	readonly merchantOrgId: string;
+	readonly organizationId: string;
 	readonly capabilities: readonly CapabilitySlug[];
 }
 

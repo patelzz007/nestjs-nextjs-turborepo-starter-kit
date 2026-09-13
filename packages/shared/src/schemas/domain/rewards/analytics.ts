@@ -1,10 +1,11 @@
 import { z } from "zod";
 
 import { EpochMsSchema } from "../../api/common";
+import { OrganizationLocationFilterSchema } from "../organization/location-filter";
 import { AnalyticsQuerySchema } from "../platform/clicks";
 import { RewardClaimStatusSchema } from "./rewards";
 
-export const RewardsAnalyticsQuerySchema = AnalyticsQuerySchema.strict();
+export const RewardsAnalyticsQuerySchema = AnalyticsQuerySchema.extend(OrganizationLocationFilterSchema.shape).strict();
 
 export type RewardsAnalyticsQuery = z.output<typeof RewardsAnalyticsQuerySchema>;
 

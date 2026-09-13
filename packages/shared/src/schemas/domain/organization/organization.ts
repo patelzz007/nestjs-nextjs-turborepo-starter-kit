@@ -82,6 +82,9 @@ export const OrganizationLocationResponseSchema = z
 		organizationId: z.uuid(),
 		name: z.string(),
 		code: z.string(),
+		addressText: z.string().nullable(),
+		city: PilotCitySchema.nullable(),
+		contactPhone: z.string().nullable(),
 		isPrimary: z.boolean(),
 		createdAt: EpochMsSchema,
 		updatedAt: EpochMsSchema,
@@ -268,3 +271,5 @@ export const OrganizationQuotaStatusSchema = z
 	.strict();
 
 export type OrganizationQuotaStatus = z.output<typeof OrganizationQuotaStatusSchema>;
+
+export { OrganizationLocationFilterSchema, type OrganizationLocationFilter } from "./location-filter";

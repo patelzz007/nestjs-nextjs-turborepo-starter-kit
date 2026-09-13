@@ -73,7 +73,7 @@ export default function MerchantsAllTable({ initialMerchants, initialTotal, init
 		[initialMerchants, initialHasNext, initialTotal, initialTotalPages],
 	);
 
-	const merchantsQuery = api.rewardsAdmin.listMerchants.useQuery(
+	const merchantsQuery = api.rewardsAdmin.listOrganizations.useQuery(
 		{
 			...listQuery,
 			...(trimmedSearch.length > 0 ? { search: trimmedSearch } : {}),
@@ -97,7 +97,7 @@ export default function MerchantsAllTable({ initialMerchants, initialTotal, init
 
 	const handleReviewKyb = React.useCallback(
 		(merchant: MerchantOrgResponse): void => {
-			router.push(`/rewardhub/kyb?merchantOrgId=${merchant.id}`);
+			router.push(`/rewardhub/kyb?organizationId=${merchant.id}`);
 		},
 		[router],
 	);

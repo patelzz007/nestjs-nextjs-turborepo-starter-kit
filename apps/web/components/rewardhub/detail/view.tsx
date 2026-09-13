@@ -217,7 +217,7 @@ export function RewardDetailView({ rewardId, initialReward }: RewardDetailViewPr
 					<Badge variant="secondary" className="capitalize">
 						{reward.category}
 					</Badge>
-					{reward.merchantName !== undefined ? <Badge variant="outline">{reward.merchantName}</Badge> : null}
+					{reward.organizationName !== undefined ? <Badge variant="outline">{reward.organizationName}</Badge> : null}
 					<Badge variant="outline">{reward.rewardType.replace("_", " ")}</Badge>
 					{isSoldOut ? <Badge variant="destructive">Sold out</Badge> : null}
 					{claimBlockReason === "expired" ? <Badge variant="destructive">Expired</Badge> : null}

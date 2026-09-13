@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 export default async function RewardHubMerchantsPage(): Promise<React.JSX.Element> {
 	const server = createAdminServerCaller();
-	const result = await Promise.allSettled([server.rewardsAdmin.listMerchants.query({ page: 1, limit: 20 })]);
+	const result = await Promise.allSettled([server.rewardsAdmin.listOrganizations.query({ page: 1, limit: 20 })]);
 
 	const first = result[0];
 	const initialMerchants = first.status === "fulfilled" ? first.value.data : undefined;

@@ -1,21 +1,18 @@
 import { createHash } from "node:crypto";
 
-import type { MerchantOrg, Organization, User } from "@prisma/client";
+import type { Organization, User } from "@prisma/client";
+
+import { seedRewardHubTenantPolicies } from "../../src/modules/organization/utils/rewardhub-policy-seed.util";
 
 import { prisma } from "./client";
-
-/** Merchant org IDs — must match `REWARD_SEED_IDS.klOrg` / `mlkOrg` in rewards.ts. */
-export const MERCHANT_ORG_SEED_IDS = {
-	kl: "3178a4d1-6915-4eb3-bf84-6fb14e1feb6c",
-	mlk: "457401d5-536e-464f-9ae9-4756b6dd5f61",
-} as const;
 
 /** Fixed seed UUIDs for canonical organizations (URL slugs are the merchant entry point). */
 export const ORGANIZATION_SEED_IDS = {
 	klOrganization: "a178a4d1-6915-4eb3-bf84-6fb14e1feb6c",
 	mlkOrganization: "b57401d5-536e-464f-9ae9-4756b6dd5f61",
 	klLocation: "c178a4d1-6915-4eb3-bf84-6fb14e1feb6d",
-	mlkLocation: "d57401d5-536e-464f-9ae9-4756b6dd5f62",
+	mlkLocationKatil: "d57401d5-536e-464f-9ae9-4756b6dd5f62",
+	mlkLocationBeruang: "257401d5-536e-464f-9ae9-4756b6dd5f65",
 	klOwnerMembership: "e178a4d1-6915-4eb3-bf84-6fb14e1feb6e",
 	mlkOwnerMembership: "f57401d5-536e-464f-9ae9-4756b6dd5f63",
 	klCashierMembership: "0178a4d1-6915-4eb3-bf84-6fb14e1feb6f",
@@ -98,11 +95,9 @@ export async function seedPlatformGuardrails(superAdmin: User): Promise<void> {
 	});
 }
 
-export interface SeededMerchantOrganizations {
+export interface SeededOrganizations {
 	readonly klOrganization: Organization;
 	readonly mlkOrganization: Organization;
-	readonly klOrg: MerchantOrg;
-	readonly mlkOrg: MerchantOrg;
 }
 
 export async function seedOrganizationsAndMerchants(
@@ -112,7 +107,7 @@ export async function seedOrganizationsAndMerchants(
 	klCashier: User,
 	mlkCashier: User,
 	accessRequestUser: User,
-): Promise<SeededMerchantOrganizations> {
+): Promise<SeededOrganizations> {
 	const now = BigInt(Date.now());
 
 	const klOrganization = await prisma.organization.create({
@@ -176,18 +171,32 @@ export async function seedOrganizationsAndMerchants(
 			displayName: "Jonker Street Kitchen",
 			lifecycleState: "ACTIVE",
 			locations: {
-				create: {
-					id: ORGANIZATION_SEED_IDS.mlkLocation,
-					name: "Jonker Street Kitchen — Jonker Walk",
-					code: "primary",
-					isPrimary: true,
-				},
+				create: [
+					{
+						id: ORGANIZATION_SEED_IDS.mlkLocationKatil,
+						name: "Jonker Street Kitchen — Bukit Katil",
+						code: "bukit-katil",
+						addressText: "12 Jalan Bukit Katil, 75450 Melaka",
+						city: "MELAKA",
+						contactPhone: "+6062812345",
+						isPrimary: true,
+					},
+					{
+						id: ORGANIZATION_SEED_IDS.mlkLocationBeruang,
+						name: "Jonker Street Kitchen — Bukit Beruang",
+						code: "bukit-beruang",
+						addressText: "88 Jalan Bukit Beruang, 75450 Melaka",
+						city: "MELAKA",
+						contactPhone: "+6062815678",
+						isPrimary: false,
+					},
+				],
 			},
 			merchantProfile: {
 				create: {
 					legalName: "Jonker Kitchen Melaka",
 					category: "restaurant",
-					addressText: "45 Jonker Walk, Melaka",
+					addressText: "12 Jalan Bukit Katil, 75450 Melaka",
 					city: "MELAKA",
 					kybStatus: "PENDING",
 					kybFields: {
@@ -219,47 +228,6 @@ export async function seedOrganizationsAndMerchants(
 					reason: "Seed: organization provisioned",
 				},
 			},
-		},
-	});
-
-	const klOrg = await prisma.merchantOrg.create({
-		data: {
-			id: MERCHANT_ORG_SEED_IDS.kl,
-			organizationId: klOrganization.id,
-			locationId: ORGANIZATION_SEED_IDS.klLocation,
-			businessName: "Brew & Bean KL",
-			legalName: "Brew & Bean KL Sdn Bhd",
-			category: "cafe",
-			addressText: "12 Jalan Bukit Bintang, Kuala Lumpur",
-			city: "KUALA_LUMPUR",
-			kybStatus: "APPROVED",
-			kybFields: {
-				registrationNo: "201901012345",
-				taxId: "C12345678",
-			},
-			status: "ACTIVE",
-			contactEmail: klOwner.email,
-			contactPhone: "+60321456789",
-		},
-	});
-
-	const mlkOrg = await prisma.merchantOrg.create({
-		data: {
-			id: MERCHANT_ORG_SEED_IDS.mlk,
-			organizationId: mlkOrganization.id,
-			locationId: ORGANIZATION_SEED_IDS.mlkLocation,
-			businessName: "Jonker Street Kitchen",
-			legalName: "Jonker Kitchen Melaka",
-			category: "restaurant",
-			addressText: "45 Jonker Walk, Melaka",
-			city: "MELAKA",
-			kybStatus: "PENDING",
-			kybFields: {
-				registrationNo: "202002023456",
-			},
-			status: "ACTIVE",
-			contactEmail: mlkOwner.email,
-			contactPhone: "+6062821234",
 		},
 	});
 
@@ -318,7 +286,7 @@ export async function seedOrganizationsAndMerchants(
 				organizationId: mlkOrganization.id,
 				membershipId: ORGANIZATION_SEED_IDS.mlkCashierMembership,
 				scopeType: "SELECTED",
-				locationId: ORGANIZATION_SEED_IDS.mlkLocation,
+				locationId: ORGANIZATION_SEED_IDS.mlkLocationBeruang,
 			},
 		],
 	});
@@ -388,7 +356,10 @@ export async function seedOrganizationsAndMerchants(
 		],
 	});
 
-	return { klOrganization, mlkOrganization, klOrg, mlkOrg };
+	await seedRewardHubTenantPolicies(prisma, klOrganization.id, adminUser.id);
+	await seedRewardHubTenantPolicies(prisma, mlkOrganization.id, adminUser.id);
+
+	return { klOrganization, mlkOrganization };
 }
 
 export function printOrganizationSeedCredentials(): void {
@@ -398,12 +369,11 @@ export function printOrganizationSeedCredentials(): void {
 Brew & Bean KL — brew.owner@kl-rewards.demo / BrewOwner@123
   Canonical:  /orgs/${ORGANIZATION_SEED_SLUGS.kl}/dashboard
   By org id:  /orgs/${ORGANIZATION_SEED_IDS.klOrganization}/dashboard
-  By m-org:   /orgs/${MERCHANT_ORG_SEED_IDS.kl}/dashboard
 
 Jonker Street Kitchen — jonker.owner@melaka-rewards.demo / JonkerOwner@123
+  Locations:  Bukit Katil (primary), Bukit Beruang
   Canonical:  /orgs/${ORGANIZATION_SEED_SLUGS.mlk}/dashboard
   By org id:  /orgs/${ORGANIZATION_SEED_IDS.mlkOrganization}/dashboard
-  By m-org:   /orgs/${MERCHANT_ORG_SEED_IDS.mlk}/dashboard
 
 UUID paths redirect to the canonical slug URL after login.
 `);

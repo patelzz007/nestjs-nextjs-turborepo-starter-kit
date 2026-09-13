@@ -1,6 +1,13 @@
 /* Merchant portal — neutral surfaces (like consumer app) with green brand accents. */
 
+html:has(body.merchant-app) {
+	height: 100%;
+	overflow: hidden;
+}
+
 .merchant-app {
+	height: 100svh;
+	overflow: hidden;
 	--background: oklch(0.985 0.006 250);
 	--foreground: oklch(0.28 0.03 250);
 	--card: oklch(1 0 0);
@@ -96,4 +103,10 @@
 .merchant-app .panel-shell-sidebar .panel-shell-sidebar-header {
 	height: 4rem;
 	flex-shrink: 0;
+}
+
+.merchant-panel-shell {
+	height: 100svh;
+	min-height: 100svh;
+	overflow: hidden;
 }

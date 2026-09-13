@@ -153,18 +153,3 @@ export function useManualHybridPagination<TData extends object>(
 		pagination,
 	};
 }
-
-/** @deprecated Use {@link useManualHybridPagination}. */
-export function useManualListPagination<TData extends object>(
-	initialPageSize: number,
-	resetDependencies: React.DependencyList,
-	getRowId: (row: TData) => string,
-): ManualHybridPaginationState<TData> {
-	return useManualHybridPagination(initialPageSize, resetDependencies, getRowId);
-}
-
-/** @deprecated Use {@link useManualHybridPagination}. */
-export const useManualCursorPagination = useManualHybridPagination;
-
-export type ManualListPaginationState<TData extends object> = ManualHybridPaginationState<TData>;
-export type ManualCursorPaginationState<TData extends object> = ManualHybridPaginationState<TData>;

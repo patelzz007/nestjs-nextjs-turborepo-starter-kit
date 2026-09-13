@@ -102,7 +102,7 @@ export function MerchantOnboardingView({ token, loginHref = "/auth/login" }: Mer
 
 	useEffect((): (() => void) => {
 		let cancelled = false;
-		void api.merchant.onboarding.validate
+		void api.organizations.onboarding.validate
 			.mutate({ token })
 			.then((response): void => {
 				if (cancelled) {
@@ -121,7 +121,7 @@ export function MerchantOnboardingView({ token, loginHref = "/auth/login" }: Mer
 		return (): void => {
 			cancelled = true;
 		};
-	}, [api.merchant.onboarding.validate, token]);
+	}, [api.organizations.onboarding.validate, token]);
 
 	const handleBusinessFieldChange = useCallback((field: "businessName" | "legalName" | "addressText" | "contactPhone", value: string): void => {
 		setValues((current) => ({ ...current, [field]: value }));

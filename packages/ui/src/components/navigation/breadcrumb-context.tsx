@@ -133,12 +133,18 @@ export interface BreadcrumbContextValue {
 	readonly subscribe: (listener: (status: BreadcrumbStatus) => void) => () => void;
 }
 
+export interface BreadcrumbProviderProps {
+	readonly pathname: string;
+	/** When this changes, the trail is re-resolved even if `pathname` is unchanged (e.g. tenant context). */
+	readonly revalidateKey?: string;
+	/** Optional per-mount resolver override (e.g. tenant-scoped href mapping). */
+	readonly resolve?: (pathname: string) => readonly BreadcrumbItem[];
+	readonly children: React.ReactNode;
+}
+
 export interface BreadcrumbContextInstance {
 	/** Renders the provider. `pathname` is passed by the app (from `usePathname`). */
-	readonly provider: React.ComponentType<{
-		readonly pathname: string;
-		readonly children: React.ReactNode;
-	}>;
+	readonly provider: React.ComponentType<BreadcrumbProviderProps>;
 	/** Reads the trail. Throws when used outside the provider. */
 	readonly useBreadcrumb: () => BreadcrumbContextValue;
 }
@@ -161,15 +167,14 @@ export interface BreadcrumbContextInstance {
  * prop (the app supplies `usePathname()` from `next/navigation`), so this
  * package never needs to depend on Next.js.
  */
-export function createBreadcrumbContext(resolve: (pathname: string) => readonly BreadcrumbItem[]): BreadcrumbContextInstance {
+export function createBreadcrumbContext(defaultResolve: (pathname: string) => readonly BreadcrumbItem[]): BreadcrumbContextInstance {
 	const BreadcrumbContext = React.createContext<BreadcrumbContextValue | null>(null);
 
-	function BreadcrumbProvider({ pathname, children }: { readonly pathname: string; readonly children: React.ReactNode }): React.JSX.Element {
+	function BreadcrumbProvider({ pathname, revalidateKey, resolve, children }: BreadcrumbProviderProps): React.JSX.Element {
 		const [trail, setTrail] = React.useState<BreadcrumbStatus>(INITIAL_STATUS);
 		const listenersRef = React.useRef<Set<(status: BreadcrumbStatus) => void>>(new Set());
-		// The resolver is captured once (module scope) and never changes — a ref
-		// keeps it out of effect/callback deps while still being always-current.
-		const resolveRef = React.useRef(resolve);
+		const resolveRef = React.useRef(resolve ?? defaultResolve);
+		resolveRef.current = resolve ?? defaultResolve;
 		// Latest status for subscribe-time delivery. Written in an effect (never
 		// during render — React Compiler rule), so callbacks stay fresh without
 		// re-creating `subscribe` on every status change.
@@ -193,7 +198,7 @@ export function createBreadcrumbContext(resolve: (pathname: string) => readonly 
 			const next = toReady(resolveRef.current(pathname));
 			setTrail(next);
 			notify(next);
-		}, [pathname, notify]);
+		}, [pathname, revalidateKey, notify]);
 
 		const subscribe = React.useCallback((listener: (status: BreadcrumbStatus) => void): (() => void) => {
 			listenersRef.current.add(listener);

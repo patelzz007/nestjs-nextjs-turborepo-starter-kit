@@ -3,24 +3,23 @@
 import { useMerchantOrg } from "@/lib/session/root-provider";
 import { stubApiMeta } from "@/lib/api-envelope";
 import { MERCHANT_ME_QUERY_OPTIONS } from "@/lib/session/me-query";
-import { resolveActiveMerchantMembership, resolveMerchantCapabilities } from "@/lib/session/server-capabilities";
+import { resolveActiveOrganizationMembership, resolveMerchantCapabilities } from "@/lib/session/server-capabilities";
 import { useAuth } from "@workspace/client/lib/auth";
-import { hasCapability, type CapabilitySlug, type MerchantMembershipResponse } from "@workspace/shared";
+import { hasCapability, type CapabilitySlug, type OrganizationRewardMembershipResponse } from "@workspace/shared";
 import * as React from "react";
 
 export interface MerchantCapabilitiesState {
-	readonly membership: MerchantMembershipResponse | undefined;
+	readonly membership: OrganizationRewardMembershipResponse | undefined;
 	readonly capabilities: readonly CapabilitySlug[];
 	readonly hasCapability: (capability: CapabilitySlug) => boolean;
 	readonly isLoading: boolean;
-	/** When true, navigation and gates may apply DB-backed capability checks. */
 	readonly isPolicyReady: boolean;
 }
 
-/** Client hook — capabilities come from `GET /merchant/me` (DB-backed). */
-export function useMerchantCapabilities(initialMemberships?: readonly MerchantMembershipResponse[]): MerchantCapabilitiesState {
+/** Client hook — capabilities derived from organization membership role (Cedar-backed on API). */
+export function useMerchantCapabilities(initialMemberships?: readonly OrganizationRewardMembershipResponse[]): MerchantCapabilitiesState {
 	const { api } = useAuth();
-	const { merchantOrgId } = useMerchantOrg();
+	const { organizationSlug } = useMerchantOrg();
 
 	const initialMeData = React.useMemo(
 		() =>
@@ -34,7 +33,7 @@ export function useMerchantCapabilities(initialMemberships?: readonly MerchantMe
 		[initialMemberships],
 	);
 
-	const membershipsQuery = api.merchant.me.useQuery(
+	const membershipsQuery = api.organizations.membershipsBootstrap.useQuery(
 		{},
 		{
 			initialData: initialMeData,
@@ -43,8 +42,8 @@ export function useMerchantCapabilities(initialMemberships?: readonly MerchantMe
 	);
 
 	const membership = React.useMemo(
-		(): MerchantMembershipResponse | undefined => resolveActiveMerchantMembership(membershipsQuery.data?.data ?? [], merchantOrgId),
-		[membershipsQuery.data?.data, merchantOrgId],
+		(): OrganizationRewardMembershipResponse | undefined => resolveActiveOrganizationMembership(membershipsQuery.data?.data ?? [], organizationSlug),
+		[membershipsQuery.data?.data, organizationSlug],
 	);
 
 	const capabilities = React.useMemo((): readonly CapabilitySlug[] => resolveMerchantCapabilities(membership), [membership]);

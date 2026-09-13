@@ -4,6 +4,7 @@ tags: ["security", "tenancy", "threat-model"]
 description: "Abuse cases and mitigations for organization-scoped multi-tenancy."
 author: "Backend Team"
 lastUpdated: 1773000000000
+coverImage: "https://images.unsplash.com/photo-1555949963-aa79dcee981c?w=1200&h=630&fit=crop"
 order: 1
 ---
 

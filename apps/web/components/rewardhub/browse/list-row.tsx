@@ -22,8 +22,8 @@ function rewardTypeLabel(rewardType: RewardResponse["rewardType"]): string {
 
 function buildMetaLine(reward: RewardResponse, expiryLabel: string): string {
 	const parts: string[] = [];
-	if (reward.merchantName !== undefined) {
-		parts.push(reward.merchantName);
+	if (reward.organizationName !== undefined) {
+		parts.push(reward.organizationName);
 	}
 	parts.push(rewardTypeLabel(reward.rewardType));
 	parts.push(`Until ${expiryLabel}`);

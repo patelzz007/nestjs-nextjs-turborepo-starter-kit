@@ -27,11 +27,12 @@ export class RewardRedemptionRepository {
 		return this.prisma.rewardRedemption.findUnique({ where: { id: redemptionId } });
 	}
 
-	public async listForMerchant(merchantOrgId: string, query: MerchantRedemptionListQuery): Promise<RepositoryListResult<RewardRedemptionListRow>> {
+	public async listForMerchant(organizationId: string, query: MerchantRedemptionListQuery): Promise<RepositoryListResult<RewardRedemptionListRow>> {
 		const where: Prisma.RewardRedemptionWhereInput = {
-			merchantOrgId,
+			organizationId,
 			isDeleted: false,
 			claim: { isDeleted: false, reward: { isDeleted: false } },
+			...(query.locationId !== undefined ? { locationId: query.locationId } : {}),
 		};
 		return fetchStringIdListPage(query, {
 			where,
@@ -47,15 +48,17 @@ export class RewardRedemptionRepository {
 	}
 
 	public async listForMerchantAnalytics(
-		merchantOrgId: string,
+		organizationId: string,
 		redeemedAtRange: { readonly gte: number; readonly lte: number },
+		locationId?: string,
 	): Promise<{ readonly redeemedAt: bigint; readonly claim: { readonly rewardId: string } }[]> {
 		return this.prisma.rewardRedemption.findMany({
 			where: {
 				isDeleted: false,
-				merchantOrgId,
+				organizationId,
 				redeemedAt: redeemedAtRange,
 				claim: { isDeleted: false },
+				...(locationId !== undefined ? { locationId } : {}),
 			},
 			select: { redeemedAt: true, claim: { select: { rewardId: true } } },
 		});
@@ -64,7 +67,7 @@ export class RewardRedemptionRepository {
 	public async confirmInTransaction(input: {
 		readonly claimId: string;
 		readonly rewardId: string;
-		readonly merchantOrgId: string;
+		readonly organizationId: string;
 		readonly userId: string;
 		readonly terminalId: string;
 		readonly redemptionMethod: "SCAN" | "MANUAL";
@@ -93,7 +96,7 @@ export class RewardRedemptionRepository {
 			const created = await tx.rewardRedemption.create({
 				data: {
 					claimId: input.claimId,
-					merchantOrgId: input.merchantOrgId,
+					organizationId: input.organizationId,
 					userId: input.userId,
 					terminalId: input.terminalId,
 					redemptionMethod: input.redemptionMethod,
@@ -112,7 +115,7 @@ export class RewardRedemptionRepository {
 
 			await tx.rewardAuditLog.create({
 				data: {
-					merchantOrgId: input.merchantOrgId,
+					organizationId: input.organizationId,
 					action: "merchant.redeem_reward",
 					metadata: { claimId: input.claimId, redemptionId: created.id, terminalId: input.terminalId },
 				},

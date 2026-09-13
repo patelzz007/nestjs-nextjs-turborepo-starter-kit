@@ -1,6 +1,12 @@
 "use client";
 
-import { readMerchantRewardsViewMode, writeMerchantRewardsViewMode, type MerchantRewardsViewMode } from "@/lib/rewards/view-mode";
+import {
+	getMerchantRewardsViewModeServerSnapshot,
+	readMerchantRewardsViewMode,
+	subscribeMerchantRewardsViewMode,
+	writeMerchantRewardsViewMode,
+	type MerchantRewardsViewMode,
+} from "@/lib/rewards/view-mode";
 import * as React from "react";
 
 export interface MerchantRewardsViewModeState {
@@ -8,20 +14,11 @@ export interface MerchantRewardsViewModeState {
 	readonly setViewMode: (mode: MerchantRewardsViewMode) => void;
 }
 
-function readInitialMerchantRewardsViewMode(): MerchantRewardsViewMode {
-	try {
-		return readMerchantRewardsViewMode();
-	} catch {
-		return "grid";
-	}
-}
-
 /** Persists grid vs list preference for the rewards catalog. */
 export function useMerchantRewardsViewMode(): MerchantRewardsViewModeState {
-	const [viewMode, setViewModeState] = React.useState<MerchantRewardsViewMode>(readInitialMerchantRewardsViewMode);
+	const viewMode = React.useSyncExternalStore(subscribeMerchantRewardsViewMode, readMerchantRewardsViewMode, getMerchantRewardsViewModeServerSnapshot);
 
 	const setViewMode = React.useCallback((mode: MerchantRewardsViewMode): void => {
-		setViewModeState(mode);
 		writeMerchantRewardsViewMode(mode);
 	}, []);
 

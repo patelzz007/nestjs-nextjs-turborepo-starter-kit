@@ -645,10 +645,12 @@ export {
 	KybStatusSchema,
 	MarkRewardNotificationsReadSchema,
 	MerchantApiKeyCreatedSchema,
+	MerchantApiKeyListQuerySchema,
 	MerchantApiKeySummarySchema,
 	MerchantCreateApiKeySchema,
 	MerchantCreateMemberSchema,
 	MerchantCreateRewardSchema,
+	MerchantRewardListQuerySchema,
 	MerchantCreateRewardFormSchema,
 	MerchantMemberCreatedResponseSchema,
 	KybDocumentScanStatusSchema,
@@ -680,7 +682,7 @@ export {
 	MERCHANT_BUSINESS_CATEGORY_LABELS,
 	MerchantBusinessCategorySchema,
 	MerchantMemberRoleSchema,
-	MerchantMembershipResponseSchema,
+	OrganizationRewardMembershipResponseSchema,
 	MerchantOrgResponseSchema,
 	MerchantOrgStatusSchema,
 	MerchantRedemptionListItemSchema,
@@ -726,23 +728,6 @@ export {
 	withCapabilityToggled,
 } from "./domain/rbac/capabilities";
 export type { CapabilityCatalogQuery, CapabilityDefinition, CapabilityScope, CapabilitySlug } from "./domain/rbac/capabilities";
-export { merchantHasCapability, MerchantCapabilitySchema, parseMerchantCapabilities } from "./domain/rewards/merchant-capabilities";
-export type { MerchantCapability } from "./domain/rewards/merchant-capabilities";
-export {
-	MerchantRoleCapabilityGrantSchema,
-	MerchantRoleCapabilitiesPathInputSchema,
-	SyncMerchantRoleCapabilitiesBodySchema,
-	SyncMerchantRoleCapabilitiesInputSchema,
-	findMerchantRoleGrant,
-	resolveMerchantRoleCapabilities,
-	withMerchantCapabilityToggled,
-} from "./domain/rewards/merchant-role-capabilities";
-export type {
-	MerchantRoleCapabilityGrant,
-	MerchantRoleCapabilitiesPathInput,
-	SyncMerchantRoleCapabilitiesBody,
-	SyncMerchantRoleCapabilitiesInput,
-} from "./domain/rewards/merchant-role-capabilities";
 export { getRewardClaimBlockReason, isRewardClaimable, rewardClaimBlockMessage, type RewardClaimBlockReason } from "./domain/rewards/claim-availability";
 export {
 	AnalyticsMetricSchema,
@@ -778,7 +763,9 @@ export type {
 	KybStatus,
 	MarkRewardNotificationsReadInput,
 	MerchantApiKeyCreated,
+	MerchantApiKeyListQuery,
 	MerchantApiKeySummary,
+	MerchantRewardListQuery,
 	MerchantCreateApiKeyInput,
 	MerchantCreateMemberInput,
 	MerchantCreateRewardInput,
@@ -805,7 +792,7 @@ export type {
 	MerchantUpdateRewardFormValues,
 	MerchantBusinessCategory,
 	MerchantMemberRole,
-	MerchantMembershipResponse,
+	OrganizationRewardMembershipResponse,
 	MerchantOrgResponse,
 	MerchantOrgStatus,
 	MerchantRedemptionListItem,
@@ -851,6 +838,7 @@ export {
 	OrganizationIdParamSchema,
 	OrganizationInvitationStatusSchema,
 	OrganizationLifecycleStateSchema,
+	OrganizationLocationFilterSchema,
 	OrganizationLocationResponseSchema,
 	OrganizationLocationScopeTypeSchema,
 	OrganizationMemberInviteSchema,
@@ -884,6 +872,7 @@ export type {
 	OrganizationIdParam,
 	OrganizationInvitationStatus,
 	OrganizationLifecycleState,
+	OrganizationLocationFilter,
 	OrganizationLocationResponse,
 	OrganizationLocationScopeType,
 	OrganizationMemberInviteInput,

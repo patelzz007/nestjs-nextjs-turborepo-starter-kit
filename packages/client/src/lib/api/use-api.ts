@@ -55,9 +55,6 @@ export interface ApiClientProcedureBinding {
 /** `procedure()` binder + the typed router tree for `R`. */
 export type ApiClient<R extends object = RouterTree> = ApiClientProcedureBinding & ClientRouterTree<R>;
 
-/** @deprecated alias — use `ApiClient`. */
-export type UseApiReturn<R extends object = RouterTree> = ApiClient<R>;
-
 /**
  * Generic API hook — pass any endpoint router; this module has no endpoint dependencies.
  *

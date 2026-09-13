@@ -17,10 +17,14 @@ import { profileToFieldValues, readKybStringField } from "./verification-profile
 import { MerchantKybVerificationStatusBanners } from "./verification-status-banners";
 import { MerchantKybVerificationUpdateSection, type MerchantKybVerificationUpdateStep } from "./verification-update-section";
 
-export function MerchantKybVerificationView(): React.JSX.Element {
+export interface MerchantKybVerificationViewProps {
+	readonly orgSlug: string;
+}
+
+export function MerchantKybVerificationView({ orgSlug }: MerchantKybVerificationViewProps): React.JSX.Element {
 	const { api } = useAuth();
-	const profileQuery = api.merchant.kyb.get.useQuery(
-		{},
+	const profileQuery = api.organizations.kyb.get.useQuery(
+		{ orgSlug },
 		{
 			staleTime: 0,
 			refetchInterval: (query): number | false => {
@@ -40,14 +44,15 @@ export function MerchantKybVerificationView(): React.JSX.Element {
 		return <p className="text-sm text-destructive">Unable to load business verification details.</p>;
 	}
 
-	return <MerchantKybVerificationContent profile={profile} />;
+	return <MerchantKybVerificationContent orgSlug={orgSlug} profile={profile} />;
 }
 
 interface MerchantKybVerificationContentProps {
+	readonly orgSlug: string;
 	readonly profile: MerchantKybProfileResponse;
 }
 
-function MerchantKybVerificationContent({ profile }: MerchantKybVerificationContentProps): React.JSX.Element {
+function MerchantKybVerificationContent({ orgSlug, profile }: MerchantKybVerificationContentProps): React.JSX.Element {
 	const { api } = useAuth();
 	const queryClient = useQueryClient();
 	const hasSubmitted = hasSubmittedMerchantKyb(profile);
@@ -87,10 +92,10 @@ function MerchantKybVerificationContent({ profile }: MerchantKybVerificationCont
 
 	const fetchStoredDocumentUrl = React.useCallback(
 		async (document: MerchantKybDocumentRecord, disposition: FileDownloadDisposition): Promise<string | null> => {
-			const response = await api.merchant.kyb.downloadDocument.fetchOrThrow({ documentId: document.id, disposition });
+			const response = await api.organizations.kyb.downloadDocument.fetchOrThrow({ orgSlug, documentId: document.id, disposition });
 			return response.data.downloadUrl;
 		},
-		[api],
+		[api, orgSlug],
 	);
 
 	const handleCloseDocumentPreview = React.useCallback((): void => {
@@ -224,7 +229,7 @@ function MerchantKybVerificationContent({ profile }: MerchantKybVerificationCont
 			}
 
 			setIsSubmitting(true);
-			void submitMerchantKyb(api, parsed.data, values.documents, profile.merchantOrgId)
+			void submitMerchantKyb(api, orgSlug, parsed.data, values.documents, profile.organizationId)
 				.then((response): void => {
 					setValues(profileToFieldValues(response));
 					setStep("business");
@@ -243,7 +248,7 @@ function MerchantKybVerificationContent({ profile }: MerchantKybVerificationCont
 					setIsSubmitting(false);
 				});
 		},
-		[api, profile.kybStatus, profile.merchantOrgId, queryClient, values],
+		[api, orgSlug, profile.kybStatus, profile.organizationId, queryClient, values],
 	);
 
 	const handleBack = React.useCallback((): void => {

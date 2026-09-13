@@ -2,6 +2,8 @@
 
 import { MerchantCapabilityGate } from "@/components/access/merchant-capability-gate";
 import { MerchantRewardFormFields } from "@/components/rewards/merchant-reward-form-fields";
+import { MerchantRewardLocationFields } from "@/components/rewards/merchant-reward-location-fields";
+import { useMerchantLocation } from "@/lib/org/location-context";
 import { upsertMerchantRewardInListCache } from "@/lib/rewards/query-cache";
 import { useAuth } from "@workspace/client/lib/auth";
 import { useQueryClient } from "@tanstack/react-query";
@@ -21,12 +23,13 @@ import { Switch } from "@workspace/ui/components/form/switch";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { addDays, format } from "date-fns";
 import { ArrowLeft, Loader2, Save } from "lucide-react";
+import { organizationPath } from "@/lib/org/slug";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 import { useForm, useWatch } from "react-hook-form";
 
-function buildDefaultFormValues(): MerchantRewardFormValues {
+function buildDefaultFormValues(activeLocationId: string | undefined, hasMultipleLocations: boolean): MerchantRewardFormValues {
 	const startDate = new Date();
 	const expiryDate = addDays(startDate, 30);
 
@@ -39,17 +42,23 @@ function buildDefaultFormValues(): MerchantRewardFormValues {
 		expiryDate: format(expiryDate, "yyyy-MM-dd"),
 		quantityTotal: 100,
 		maxClaimsPerUser: 1,
+		locationScopeType: hasMultipleLocations && activeLocationId !== undefined ? "SELECTED" : "ALL_LOCATIONS",
+		locationIds: hasMultipleLocations && activeLocationId !== undefined ? [activeLocationId] : [],
 	};
 }
 
 export interface MerchantCreateRewardPageViewProps {
+	readonly orgSlug: string;
 	readonly defaultCategory: RewardCategory;
 }
 
-export function MerchantCreateRewardPageView({ defaultCategory }: MerchantCreateRewardPageViewProps): React.JSX.Element {
+export function MerchantCreateRewardPageView({ orgSlug, defaultCategory }: MerchantCreateRewardPageViewProps): React.JSX.Element {
 	const { api } = useAuth();
 	const queryClient = useQueryClient();
 	const router = useRouter();
+	const { locationId: activeLocationId, accessibleLocations } = useMerchantLocation();
+	const hasMultipleLocations = accessibleLocations.length > 1;
+	const rewardsPath = organizationPath(orgSlug, "rewards");
 	const [saveAsDraft, setSaveAsDraft] = React.useState<boolean>(false);
 
 	const {
@@ -60,19 +69,19 @@ export function MerchantCreateRewardPageView({ defaultCategory }: MerchantCreate
 		formState: { errors },
 	} = useForm<MerchantRewardFormValues>({
 		resolver: zodResolver(MerchantRewardFormFieldsSchema),
-		defaultValues: buildDefaultFormValues(),
+		defaultValues: buildDefaultFormValues(activeLocationId, hasMultipleLocations),
 	});
 
 	const selectedType = useWatch({ control, name: "rewardType" });
 
-	const createMutation = api.merchant.rewards.create.useMutation({
+	const createMutation = api.organizations.rewards.create.useMutation({
 		onSuccess: (response): void => {
-			upsertMerchantRewardInListCache(queryClient, response.data);
+			upsertMerchantRewardInListCache(queryClient, orgSlug, response.data);
 			toastMessage.success({
 				title: saveAsDraft ? "Draft saved" : "Reward created",
 				description: saveAsDraft ? "Your draft is ready to edit." : "Redirecting to reward details.",
 			});
-			router.push(`/rewards/${response.data.id}`);
+			router.push(organizationPath(orgSlug, `rewards/${response.data.id}`), { scroll: false });
 		},
 		onError: (): void => {
 			toastMessage.error({ title: "Create failed", description: "Could not create reward." });
@@ -90,9 +99,9 @@ export function MerchantCreateRewardPageView({ defaultCategory }: MerchantCreate
 		(form: MerchantRewardFormValues): void => {
 			const createForm: MerchantCreateRewardFormValues = { ...form, saveAsDraft };
 			const payload = mapMerchantCreateRewardFormToInput(createForm, defaultCategory);
-			void createMutation.mutateAsync(payload);
+			void createMutation.mutateAsync({ orgSlug, ...payload });
 		},
-		[createMutation, defaultCategory, saveAsDraft],
+		[createMutation, defaultCategory, orgSlug, saveAsDraft],
 	);
 
 	const handleFormSubmit = React.useCallback(
@@ -119,7 +128,7 @@ export function MerchantCreateRewardPageView({ defaultCategory }: MerchantCreate
 		<MerchantCapabilityGate capability="merchant:manage_rewards">
 			<div className="mx-auto space-y-6">
 				<div className="mb-2 flex items-center gap-4">
-					<Link href="/rewards">
+					<Link href={rewardsPath}>
 						<Button type="button" variant="ghost" size="icon" aria-label="Back to rewards">
 							<ArrowLeft className="size-5" aria-hidden="true" />
 						</Button>
@@ -141,6 +150,8 @@ export function MerchantCreateRewardPageView({ defaultCategory }: MerchantCreate
 						onMaxClaimsChange={handleMaxClaimsChange}
 					/>
 
+					<MerchantRewardLocationFields control={control} errors={errors} setValue={setValue} disabled={createMutation.isPending} />
+
 					<Card className="border-border/80 bg-card shadow-xs">
 						<CardContent className="p-6">
 							<div className="flex items-center justify-between">
@@ -156,7 +167,7 @@ export function MerchantCreateRewardPageView({ defaultCategory }: MerchantCreate
 					</Card>
 
 					<div className="flex items-center justify-end gap-4">
-						<Link href="/rewards">
+						<Link href={rewardsPath}>
 							<Button type="button" variant="outline">
 								Cancel
 							</Button>

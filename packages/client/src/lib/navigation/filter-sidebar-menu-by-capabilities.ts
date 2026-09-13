@@ -3,7 +3,6 @@ import { hasCapability, type CapabilitySlug } from "@workspace/shared";
 import type { CompiledSidebarMenuData, CompiledSidebarMenuItem, SidebarMenuData, SidebarMenuItem } from "../sidebar/sidebar-menu-schema";
 
 interface CapabilityGatedMenuItem {
-	readonly requiredCapability?: CapabilitySlug;
 	readonly requiredCapabilities?: readonly CapabilitySlug[];
 	readonly children?: readonly CapabilityGatedMenuItem[];
 }
@@ -11,9 +10,6 @@ interface CapabilityGatedMenuItem {
 function resolveRequiredCapabilities(item: CapabilityGatedMenuItem): readonly CapabilitySlug[] | undefined {
 	if (item.requiredCapabilities !== undefined && item.requiredCapabilities.length > 0) {
 		return item.requiredCapabilities;
-	}
-	if (item.requiredCapability !== undefined) {
-		return [item.requiredCapability];
 	}
 	return undefined;
 }

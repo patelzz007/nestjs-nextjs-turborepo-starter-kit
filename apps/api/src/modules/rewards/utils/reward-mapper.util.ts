@@ -1,4 +1,4 @@
-import type { MerchantOrg, Prisma, Reward } from "@prisma/client";
+import type { Organization, OrganizationLifecycleState, OrganizationMerchantProfile, Prisma, Reward } from "@prisma/client";
 
 import {
 	EpochMsSchema,
@@ -13,7 +13,7 @@ import {
 	type RewardResponse,
 	type RewardRules,
 } from "@workspace/shared";
-import type { MerchantOrgAdminDetailRow } from "../repositories/merchant-org.repository";
+import type { OrganizationAdminDetailRow } from "../../organization/repositories/organization.repository";
 
 function epochFromDb(value: bigint | number | null | undefined): EpochMs | null {
 	if (value === null || value === undefined) {
@@ -34,6 +34,16 @@ function parseRewardRulesFromDb(value: Prisma.JsonValue | null): RewardRules | n
 	return parsed.success ? parsed.data : null;
 }
 
+export function mapLifecycleToMerchantStatus(lifecycleState: OrganizationLifecycleState): "ONBOARDING" | "ACTIVE" | "SUSPENDED" {
+	if (lifecycleState === "ACTIVE") {
+		return "ACTIVE";
+	}
+	if (lifecycleState === "SUSPENDED") {
+		return "SUSPENDED";
+	}
+	return "ONBOARDING";
+}
+
 function parseKybFieldsFromDb(value: Prisma.JsonValue | null): JsonObject | null {
 	if (value === null) {
 		return null;
@@ -42,18 +52,19 @@ function parseKybFieldsFromDb(value: Prisma.JsonValue | null): JsonObject | null
 	return parsed.success ? parsed.data : null;
 }
 
-export function mapMerchantOrgToResponse(org: MerchantOrg): MerchantOrgResponse {
+export function mapOrganizationToAdminResponse(org: Organization & { merchantProfile: OrganizationMerchantProfile | null }): MerchantOrgResponse {
+	const profile = org.merchantProfile;
 	return {
 		id: org.id,
-		businessName: org.businessName,
-		legalName: org.legalName,
-		category: org.category,
-		addressText: org.addressText,
-		city: org.city,
-		kybStatus: org.kybStatus,
-		status: org.status,
-		contactEmail: org.contactEmail,
-		contactPhone: org.contactPhone,
+		businessName: org.displayName,
+		legalName: profile?.legalName ?? null,
+		category: profile?.category ?? "",
+		addressText: profile?.addressText ?? null,
+		city: profile?.city ?? "KUALA_LUMPUR",
+		kybStatus: profile?.kybStatus ?? "PENDING",
+		status: mapLifecycleToMerchantStatus(org.lifecycleState),
+		contactEmail: profile?.contactEmail ?? "",
+		contactPhone: profile?.contactPhone ?? null,
 		createdAt: epochRequired(org.createdAt),
 		updatedAt: epochRequired(org.updatedAt),
 		isDeleted: org.isDeleted,
@@ -61,26 +72,46 @@ export function mapMerchantOrgToResponse(org: MerchantOrg): MerchantOrgResponse 
 	};
 }
 
-export function mapMerchantOrgToAdminDetailResponse(org: MerchantOrgAdminDetailRow, documents: readonly MerchantKybDocumentRecord[]): AdminMerchantDetailResponse {
-	const ownerMember = org.members.find((member) => member.role === "OWNER");
-	const base = mapMerchantOrgToResponse(org);
+export function mapOrganizationToAdminDetailResponse(org: OrganizationAdminDetailRow, documents: readonly MerchantKybDocumentRecord[]): AdminMerchantDetailResponse {
+	const ownerMember = org.memberships.find((member) => member.role === "OWNER");
+	const base = mapOrganizationToAdminResponse({ ...org, merchantProfile: org.merchantProfile });
 
 	return {
 		...base,
-		kybFields: parseKybFieldsFromDb(org.kybFields),
+		kybFields: parseKybFieldsFromDb(org.merchantProfile?.kybFields ?? null),
 		documents: [...documents],
 		ownerUserId: ownerMember?.userId ?? null,
 		ownerEmail: ownerMember?.user.email ?? null,
 		ownerFullName: ownerMember?.user.fullName ?? null,
-		memberCount: org._count.members,
+		memberCount: org._count.memberships,
 	};
 }
 
-export function mapRewardToResponse(reward: Reward, merchant?: Pick<MerchantOrg, "businessName">): RewardResponse {
+interface RewardLocationScopeRow {
+	readonly locationId: string;
+	readonly location: { readonly name: string } | null;
+}
+
+type RewardWithLocationScopes = Reward & {
+	readonly locationScopes?: readonly RewardLocationScopeRow[];
+};
+
+export function mapRewardToResponse(reward: RewardWithLocationScopes, organization?: Pick<Organization, "displayName">): RewardResponse {
+	const locationScopes = reward.locationScopes ?? [];
+	const resolvedScopes = locationScopes.flatMap((scope) => {
+		if (scope.location === null) {
+			return [];
+		}
+
+		return [{ locationId: scope.locationId, name: scope.location.name }];
+	});
+	const locationIds = resolvedScopes.map((scope) => scope.locationId);
+	const locationNames = resolvedScopes.map((scope) => scope.name);
+
 	return {
 		id: reward.id,
-		merchantOrgId: reward.merchantOrgId,
-		merchantName: merchant?.businessName,
+		organizationId: reward.organizationId,
+		organizationName: organization?.displayName,
 		title: reward.title,
 		description: reward.description,
 		rewardType: reward.rewardType,
@@ -102,6 +133,9 @@ export function mapRewardToResponse(reward: Reward, merchant?: Pick<MerchantOrg,
 		referralPoolRemaining: reward.referralPoolRemaining,
 		referrerRewardId: reward.referrerRewardId,
 		rules: parseRewardRulesFromDb(reward.rules),
+		locationScopeType: reward.locationScopeType,
+		locationIds,
+		locationNames: locationNames.length > 0 ? locationNames : undefined,
 		createdAt: epochRequired(reward.createdAt),
 		updatedAt: epochRequired(reward.updatedAt),
 		isDeleted: reward.isDeleted,

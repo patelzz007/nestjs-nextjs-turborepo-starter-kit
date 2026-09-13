@@ -14,7 +14,7 @@ import { calculateFileSha256Hex, uploadFileDirect, uploadFileWithTicket, toDocum
 import { buildVersionedApiUrl, multipartMutationHeaders, parseApiEnvelope } from "../../storage/multipart";
 import type { MerchantKybPendingDocument } from "./pending-document";
 
-async function uploadKybDocuments(api: ApiClient<ApiRouter>, merchantOrgId: string, documents: readonly MerchantKybPendingDocument[]): Promise<string[]> {
+async function uploadKybDocuments(api: ApiClient<ApiRouter>, organizationId: string, documents: readonly MerchantKybPendingDocument[]): Promise<string[]> {
 	const fileIds: string[] = [];
 	for (const document of documents) {
 		const result = await uploadFileDirect(
@@ -23,7 +23,7 @@ async function uploadKybDocuments(api: ApiClient<ApiRouter>, merchantOrgId: stri
 				category: "MERCHANT_KYB",
 				fileName: document.fileName,
 				mimeType: toDocumentMimeType(document.file),
-				merchantOrgId,
+				organizationId,
 			},
 			document.file,
 		);
@@ -33,7 +33,7 @@ async function uploadKybDocuments(api: ApiClient<ApiRouter>, merchantOrgId: stri
 }
 
 export async function submitMerchantOnboardingComplete(baseUrl: string, fields: MerchantOnboardingCompleteFieldsInput): Promise<MerchantOnboardingCompleteResponse> {
-	const response = await fetch(buildVersionedApiUrl(baseUrl, "/merchant/onboarding/complete"), {
+	const response = await fetch(buildVersionedApiUrl(baseUrl, "/orgs/onboarding/complete"), {
 		method: "POST",
 		body: JSON.stringify(fields),
 		credentials: "include",
@@ -46,7 +46,7 @@ export async function submitMerchantOnboardingDocuments(api: ApiClient<ApiRouter
 	const fileIds: string[] = [];
 	for (const document of documents) {
 		const checksumSha256 = await calculateFileSha256Hex(document.file);
-		const ticketEnvelope = await api.merchant.onboarding.documentUploadUrl.mutate({
+		const ticketEnvelope = await api.organizations.onboarding.documentUploadUrl.mutate({
 			token,
 			fileName: document.fileName,
 			mimeType: toDocumentMimeType(document.file),
@@ -54,24 +54,25 @@ export async function submitMerchantOnboardingDocuments(api: ApiClient<ApiRouter
 			checksumSha256,
 		});
 		await uploadFileWithTicket(ticketEnvelope.data, document.file);
-		await api.merchant.onboarding.documentUploadComplete.mutate({
+		await api.organizations.onboarding.documentUploadComplete.mutate({
 			token,
 			fileId: ticketEnvelope.data.fileId,
 			checksumSha256,
 		});
 		fileIds.push(ticketEnvelope.data.fileId);
 	}
-	await api.merchant.onboarding.documentsSubmit.mutate({ token, documentFileIds: fileIds });
+	await api.organizations.onboarding.documentsSubmit.mutate({ token, documentFileIds: fileIds });
 }
 
 export async function submitMerchantKyb(
 	api: ApiClient<ApiRouter>,
+	orgSlug: string,
 	fields: MerchantKybSubmissionFormInput,
 	documents: readonly MerchantKybPendingDocument[],
-	merchantOrgId: string,
+	organizationId: string,
 ): Promise<MerchantKybProfileResponse> {
-	const uploadedIds = await uploadKybDocuments(api, merchantOrgId, documents);
+	const uploadedIds = await uploadKybDocuments(api, organizationId, documents);
 	const submission: MerchantKybSubmissionFieldsInput = { ...fields, documentFileIds: uploadedIds };
-	const response = await api.merchant.kyb.submit.mutate(submission);
+	const response = await api.organizations.kyb.submit.mutate({ orgSlug, ...submission });
 	return MerchantKybProfileResponseSchema.parse(response.data);
 }

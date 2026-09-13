@@ -22,7 +22,7 @@ export class MerchantApiKeyVerificationService {
 		return {
 			provider: "merchant",
 			apiKeyId: keyRecord.id,
-			merchantOrgId: keyRecord.merchantOrgId,
+			organizationId: keyRecord.organizationId,
 			capabilities: MERCHANT_API_KEY_CAPABILITIES,
 		};
 	}

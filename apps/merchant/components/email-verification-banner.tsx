@@ -1,6 +1,7 @@
 "use client";
 
 import { useMerchantEnrollmentLock } from "@/lib/auth/enrollment";
+import { useOrganizationPath } from "@/lib/org/use-organization-path";
 import { Button } from "@workspace/ui/components/form/button";
 import { Mail, ShieldAlert } from "lucide-react";
 import Link from "next/link";
@@ -9,6 +10,7 @@ import * as React from "react";
 /** Persistent banner shown while a merchant account still needs enrollment. */
 export function EmailVerificationBanner(): React.JSX.Element | null {
 	const { isLocked, enrollmentReason } = useMerchantEnrollmentLock();
+	const settingsPath = useOrganizationPath("settings");
 
 	if (!isLocked) {
 		return null;
@@ -27,7 +29,7 @@ export function EmailVerificationBanner(): React.JSX.Element | null {
 							: "Verify your email to unlock the merchant portal. Other pages stay locked and redirect here until verification is complete."}
 					</span>
 				</div>
-				<Button size="sm" variant="outline" className="shrink-0" nativeButton={false} render={<Link href="/settings" />}>
+				<Button size="sm" variant="outline" className="shrink-0" nativeButton={false} render={<Link href={settingsPath} />}>
 					Account settings
 				</Button>
 			</div>

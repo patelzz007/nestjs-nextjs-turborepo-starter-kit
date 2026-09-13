@@ -4,6 +4,7 @@ tags: ["tenancy", "organization", "rls", "cedar"]
 description: "Developer guide for organization-scoped multi-tenancy — architecture, data flow, and operations."
 author: "Backend Team"
 lastUpdated: 1773000000000
+coverImage: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=1200&h=630&fit=crop"
 order: 12
 ---
 

@@ -1,8 +1,9 @@
-/** Resolved merchant actor for dashboard and machine-to-machine routes. */
+/** Resolved organization actor for RewardHub dashboard and machine-to-machine routes. */
 export interface MerchantActor {
 	readonly kind: "user" | "api_key";
 	readonly userId: string | null;
-	readonly merchantOrgId: string;
+	readonly organizationId: string;
+	readonly orgSlug: string | null;
 	readonly apiKeyId: string | null;
 }
 

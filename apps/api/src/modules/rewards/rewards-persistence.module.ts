@@ -3,11 +3,7 @@ import { Module } from "@nestjs/common";
 import { PrismaModule } from "../../prisma/prisma.module";
 
 import { MerchantApiKeyRepository } from "./repositories/merchant-api-key.repository";
-import { MerchantKybDocumentRepository } from "./repositories/merchant-kyb-document.repository";
-import { MerchantInviteRepository } from "./repositories/merchant-invite.repository";
-import { MerchantMemberRepository } from "./repositories/merchant-member.repository";
-import { MerchantOrgRepository } from "./repositories/merchant-org.repository";
-import { MerchantRoleCapabilityRepository } from "./repositories/merchant-role-capability.repository";
+import { OrganizationKybDocumentRepository } from "./repositories/organization-kyb-document.repository";
 import { RewardAuditLogRepository } from "./repositories/reward-audit-log.repository";
 import { RewardClaimRepository } from "./repositories/reward-claim.repository";
 import { RewardLegalAcceptanceRepository } from "./repositories/reward-legal-acceptance.repository";
@@ -30,12 +26,8 @@ const REWARD_REPOSITORIES = [
 	RewardOtpChallengeRepository,
 	RewardRedemptionIdempotencyRepository,
 	RewardUserRepository,
-	MerchantOrgRepository,
-	MerchantKybDocumentRepository,
-	MerchantMemberRepository,
+	OrganizationKybDocumentRepository,
 	MerchantApiKeyRepository,
-	MerchantInviteRepository,
-	MerchantRoleCapabilityRepository,
 ] as const;
 
 @Module({

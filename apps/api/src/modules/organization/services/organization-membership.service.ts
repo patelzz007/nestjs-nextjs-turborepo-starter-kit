@@ -123,17 +123,34 @@ export class OrganizationMembershipService {
 				if (user === null) {
 					throw new BadRequestException("User must sign up before invite can be accepted");
 				}
+
+				const existingMembership = await tx.organizationMembership.findFirst({
+					where: { organizationId, userId: user.id, isDeleted: false },
+				});
+				if (existingMembership !== null) {
+					throw new BadRequestException("User is already a member of this organization");
+				}
+
+				const locationScopeRows =
+					input.locationScopeType === "ALL_LOCATIONS"
+						? [{ organizationId, scopeType: "ALL_LOCATIONS" as const, locationId: null }]
+						: input.locationIds.map((locationId) => ({
+								organizationId,
+								scopeType: "SELECTED" as const,
+								locationId,
+							}));
+
+				if (input.locationScopeType === "SELECTED" && locationScopeRows.length === 0) {
+					throw new BadRequestException("Select at least one location");
+				}
+
 				await tx.organizationMembership.create({
 					data: {
 						organizationId,
 						userId: user.id,
 						role: input.role,
 						locationScopes: {
-							create: {
-								organizationId,
-								scopeType: input.locationScopeType,
-								locationId: null,
-							},
+							create: locationScopeRows,
 						},
 					},
 				});

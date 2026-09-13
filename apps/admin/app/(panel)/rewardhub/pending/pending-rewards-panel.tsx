@@ -155,7 +155,7 @@ export default function PendingRewardsPanel({ initialRewards }: PendingRewardsPa
 									<p className="font-medium">{reward.title}</p>
 									<p className="text-sm text-muted-foreground">{reward.description}</p>
 									<div className="flex flex-wrap gap-2 pt-1">
-										<Badge variant="outline">{reward.merchantName ?? "Merchant"}</Badge>
+										<Badge variant="outline">{reward.organizationName ?? "Merchant"}</Badge>
 										<Badge variant="secondary">{reward.rewardType}</Badge>
 										<Badge variant="outline">{reward.status}</Badge>
 									</div>

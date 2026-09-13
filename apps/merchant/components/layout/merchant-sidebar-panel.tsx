@@ -5,6 +5,7 @@ import { MerchantSidebarNavItem } from "@/components/layout/merchant-sidebar-nav
 import { isMerchantEnrollmentAllowedPath, useMerchantEnrollmentLock } from "@/lib/auth/enrollment";
 import { useMerchantCapabilities } from "@/lib/org/capabilities";
 import { applyEnrollmentNavLock } from "@/lib/navigation/apply-enrollment-nav-lock";
+import { createMerchantNavHrefResolver } from "@/lib/navigation/resolve-nav-href";
 import { useMerchantSessionProfile } from "@/lib/session/profile";
 import { filterCompiledSidebarMenu } from "@/lib/navigation/filter-menu-by-capabilities";
 import { MERCHANT_SIDEBAR_MENU } from "@/lib/navigation/sidebar-menu";
@@ -13,9 +14,9 @@ import { MERCHANT_SIDEBAR_LABELS } from "@/lib/navigation/sidebar-labels";
 import { renderMerchantPaletteIcon } from "@/lib/palette/nav-items";
 import { useMerchantCommandPaletteStore } from "@/stores/command-palette-store";
 import { useMerchantSidebarStore } from "@/stores/sidebar-store";
-import { resolveActiveMerchantMembership, resolveMerchantCapabilities } from "@/lib/session/server-capabilities";
+import { resolveActiveOrganizationMembership, resolveMerchantCapabilities } from "@/lib/session/server-capabilities";
 import type { CompiledSidebarMenuData } from "@workspace/client/lib/sidebar/sidebar-menu-schema";
-import type { CapabilitySlug, MerchantMembershipResponse } from "@workspace/shared";
+import type { CapabilitySlug, OrganizationRewardMembershipResponse } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/feedback/badge";
 import { Label } from "@workspace/ui/components/form/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@workspace/ui/components/form/select";
@@ -36,15 +37,16 @@ import {
 import { useDebouncedCallback } from "@workspace/ui/hooks/use-debounced-callback";
 import { useRouteExpandedItems } from "@workspace/ui/hooks/use-route-expanded-items";
 import { buildSidebarView, isRouteActive, sectionHasActiveItem } from "@workspace/ui/lib/sidebar/menu-view";
+import { withResolvedSidebarMenuUrls } from "@workspace/ui/lib/sidebar/resolve-menu-hrefs";
 import { getUserInitials } from "@workspace/ui/lib/core/user-initials";
 import { Gift, Search } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import * as React from "react";
 
 export interface MerchantSidebarPanelProps {
-	readonly memberships: readonly MerchantMembershipResponse[];
-	readonly merchantOrgId: string | undefined;
-	readonly onStoreChange: (orgId: string) => void;
+	readonly memberships: readonly OrganizationRewardMembershipResponse[];
+	readonly organizationSlug: string | undefined;
+	readonly onStoreChange: (slug: string) => void;
 	readonly onNavigate?: () => void;
 }
 
@@ -82,18 +84,18 @@ function MerchantSidebarPinnedItem({ title, url, icon, isActive, disabled, disab
 	);
 }
 
-export function MerchantSidebarPanel({ memberships, merchantOrgId, onStoreChange, onNavigate }: MerchantSidebarPanelProps): React.JSX.Element {
+export function MerchantSidebarPanel({ memberships, organizationSlug, onStoreChange, onNavigate }: MerchantSidebarPanelProps): React.JSX.Element {
 	const pathname = usePathname();
 	const router = useRouter();
 	const sessionProfile = useMerchantSessionProfile();
 	const { isLocked: isEnrollmentLocked, disabledTooltip: enrollmentDisabledTooltip, enrollmentReason } = useMerchantEnrollmentLock();
 	const { capabilities, membership: activeMembershipFromCapabilities } = useMerchantCapabilities(memberships);
-	const activeMembership = activeMembershipFromCapabilities ?? resolveActiveMerchantMembership(memberships, merchantOrgId);
+	const activeMembership = activeMembershipFromCapabilities ?? resolveActiveOrganizationMembership(memberships, organizationSlug);
 
 	const menuFilterCapabilities = React.useMemo((): readonly CapabilitySlug[] => {
-		const fromMemberships = resolveMerchantCapabilities(resolveActiveMerchantMembership(memberships, merchantOrgId));
+		const fromMemberships = resolveMerchantCapabilities(resolveActiveOrganizationMembership(memberships, organizationSlug));
 		return fromMemberships.length > 0 ? fromMemberships : capabilities;
-	}, [capabilities, memberships, merchantOrgId]);
+	}, [capabilities, memberships, organizationSlug]);
 	const searchInputRef = React.useRef<HTMLInputElement>(null);
 	const navContainerRef = React.useRef<HTMLDivElement>(null);
 
@@ -108,6 +110,7 @@ export function MerchantSidebarPanel({ memberships, merchantOrgId, onStoreChange
 		}),
 		[menu],
 	);
+	const resolveNavHref = React.useMemo(() => createMerchantNavHrefResolver(organizationSlug), [organizationSlug]);
 	const currentPage = pathname;
 	const setSearchQuery = useMerchantSidebarStore((state) => state.setSearchQuery);
 	const clearSearch = useMerchantSidebarStore((state) => state.clearSearch);
@@ -121,9 +124,11 @@ export function MerchantSidebarPanel({ memberships, merchantOrgId, onStoreChange
 	const filteredMenu = React.useMemo(() => filterCompiledSidebarMenu(displayMenu, menuFilterCapabilities), [displayMenu, menuFilterCapabilities]);
 	const enrollmentLockedMenu = React.useMemo(() => applyEnrollmentNavLock(filteredMenu, isEnrollmentLocked), [filteredMenu, isEnrollmentLocked]);
 
+	const resolvedMenu = React.useMemo(() => withResolvedSidebarMenuUrls(enrollmentLockedMenu, resolveNavHref), [enrollmentLockedMenu, resolveNavHref]);
+
 	const view = React.useMemo(
-		() => buildSidebarView({ menu: enrollmentLockedMenu, pathname: currentPage, sectionOrder, searchQuery, isHighlightParentItem: true }),
-		[enrollmentLockedMenu, currentPage, sectionOrder, searchQuery],
+		() => buildSidebarView({ menu: resolvedMenu, pathname: currentPage, sectionOrder, searchQuery, isHighlightParentItem: true }),
+		[resolvedMenu, currentPage, sectionOrder, searchQuery],
 	);
 
 	const pinnedItems = React.useMemo(() => resolveMerchantPinnedMenuItems(pinnedUrls, menuFilterCapabilities), [pinnedUrls, menuFilterCapabilities]);
@@ -160,9 +165,9 @@ export function MerchantSidebarPanel({ memberships, merchantOrgId, onStoreChange
 	const handleNavigate = React.useCallback(
 		(href: string): void => {
 			onNavigate?.();
-			router.push(href);
+			router.push(resolveNavHref(href));
 		},
-		[onNavigate, router],
+		[onNavigate, resolveNavHref, router],
 	);
 
 	const handleStoreChange = React.useCallback(
@@ -220,7 +225,7 @@ export function MerchantSidebarPanel({ memberships, merchantOrgId, onStoreChange
 	const userInitials = getUserInitials(sessionProfile.fullName);
 	const showPinned = pinnedItems.length > 0 && !view.noResults;
 	const showNoCapabilities = menuFilterCapabilities.length === 0 && activeMembership !== undefined && !view.isSearching && view.sections.length === 0;
-	const formatStoreValue = React.useCallback((orgId: string): string => memberships.find((row) => row.merchantOrgId === orgId)?.businessName ?? orgId, [memberships]);
+	const formatStoreValue = React.useCallback((slug: string): string => memberships.find((row) => row.organizationSlug === slug)?.displayName ?? slug, [memberships]);
 
 	return (
 		<div className="flex h-full min-h-0 flex-col overflow-hidden bg-card text-sidebar-foreground">
@@ -274,7 +279,7 @@ export function MerchantSidebarPanel({ memberships, merchantOrgId, onStoreChange
 												title={pinned.title}
 												url={pinned.url}
 												icon={pinned.icon}
-												isActive={isRouteActive(pinned.url, currentPage)}
+												isActive={isRouteActive(resolveNavHref(pinned.url), currentPage)}
 												disabled={isPinnedDisabled}
 												disabledTooltip={enrollmentDisabledTooltip}
 												onNavigate={handleNavigate}
@@ -341,21 +346,21 @@ export function MerchantSidebarPanel({ memberships, merchantOrgId, onStoreChange
 					<div className="px-2 pb-2">
 						<div className="min-w-0 overflow-hidden rounded-lg border border-sidebar-border bg-background/60 px-3 py-3">
 							<p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Active store</p>
-							<p className="mt-1 truncate text-sm font-semibold text-sidebar-foreground">{activeMembership.businessName}</p>
+							<p className="mt-1 truncate text-sm font-semibold text-sidebar-foreground">{activeMembership.displayName}</p>
 							<Badge variant="secondary" className="mt-2">
 								{activeMembership.role}
 							</Badge>
 							{memberships.length > 1 ? (
 								<div className="mt-3 space-y-1">
 									<Label className="text-xs">Switch store</Label>
-									<Select<string> value={merchantOrgId ?? ""} onValueChange={handleStoreChange}>
+									<Select<string> value={organizationSlug ?? ""} onValueChange={handleStoreChange}>
 										<SelectTrigger className="w-full min-w-0">
 											<SelectValue placeholder="Select store" formatValue={formatStoreValue} />
 										</SelectTrigger>
 										<SelectContent>
 											{memberships.map((row) => (
-												<SelectItem key={row.merchantOrgId} value={row.merchantOrgId}>
-													{row.businessName}
+												<SelectItem key={row.organizationId} value={row.organizationSlug}>
+													{row.displayName}
 												</SelectItem>
 											))}
 										</SelectContent>

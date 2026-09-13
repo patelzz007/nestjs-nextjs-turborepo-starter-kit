@@ -172,7 +172,7 @@ function DetailField({ label, value, mono = false, className }: DetailFieldProps
 interface MerchantQueueItemProps {
 	readonly merchant: MerchantOrgResponse;
 	readonly selected: boolean;
-	readonly onSelect: (merchantOrgId: string) => void;
+	readonly onSelect: (organizationId: string) => void;
 }
 
 function MerchantQueueItem({ merchant, selected, onSelect }: MerchantQueueItemProps): React.JSX.Element {
@@ -376,7 +376,7 @@ export default function KybReviewPanel({ initialMerchantOrgId, initialPendingMer
 	const router = useRouter();
 	const queryClient = useQueryClient();
 
-	const [merchantOrgId, setMerchantOrgId] = React.useState<string>(initialMerchantOrgId ?? "");
+	const [organizationId, setMerchantOrgId] = React.useState<string>(initialMerchantOrgId ?? "");
 	const [documentPreview, setDocumentPreview] = React.useState<MerchantKybDocumentPreviewState | null>(null);
 
 	const pendingInitialData = React.useMemo(
@@ -391,14 +391,14 @@ export default function KybReviewPanel({ initialMerchantOrgId, initialPendingMer
 		[initialPendingMerchants],
 	);
 
-	const pendingMerchantsQuery = api.rewardsAdmin.listMerchants.useQuery({ page: 1, limit: 50, kybStatus: "PENDING" }, { initialData: pendingInitialData });
+	const pendingMerchantsQuery = api.rewardsAdmin.listOrganizations.useQuery({ page: 1, limit: 50, kybStatus: "PENDING" }, { initialData: pendingInitialData });
 
-	const allMerchantsQuery = api.rewardsAdmin.listMerchants.useQuery({ page: 1, limit: 100 });
+	const allMerchantsQuery = api.rewardsAdmin.listOrganizations.useQuery({ page: 1, limit: 100 });
 
-	const merchantDetailQuery = api.rewardsAdmin.getMerchant.useQuery(
-		{ merchantOrgId },
+	const merchantDetailQuery = api.rewardsAdmin.getOrganization.useQuery(
+		{ organizationId },
 		{
-			enabled: merchantOrgId.length > 0,
+			enabled: organizationId.length > 0,
 			refetchInterval: (query): number | false => {
 				const documents = query.state.data?.data.documents ?? [];
 				const hasPending = documents.some((document) => document.scanStatus === "SCANNING");
@@ -410,9 +410,9 @@ export default function KybReviewPanel({ initialMerchantOrgId, initialPendingMer
 	const merchant = merchantDetailQuery.data?.data ?? null;
 
 	const invalidateMerchantQueries = React.useCallback(
-		async (targetMerchantOrgId: string): Promise<void> => {
+		async (targetOrganizationOrgId: string): Promise<void> => {
 			await Promise.all([
-				queryClient.invalidateQueries({ queryKey: apiRouter.rewardsAdmin.getMerchant.queryKey({ merchantOrgId: targetMerchantOrgId }) }),
+				queryClient.invalidateQueries({ queryKey: apiRouter.rewardsAdmin.getOrganization.queryKey({ organizationId: targetOrganizationOrgId }) }),
 				queryClient.invalidateQueries({ queryKey: ["rewards-admin", "merchants"] }),
 			]);
 		},
@@ -421,17 +421,17 @@ export default function KybReviewPanel({ initialMerchantOrgId, initialPendingMer
 
 	const fetchMerchantDocumentUrl = React.useCallback(
 		async (document: MerchantKybDocumentRecord, disposition: FileDownloadDisposition): Promise<string | null> => {
-			if (merchantOrgId.length === 0) {
+			if (organizationId.length === 0) {
 				return null;
 			}
-			const response = await api.rewardsAdmin.downloadMerchantDocument.fetchOrThrow({
-				merchantOrgId,
+			const response = await api.rewardsAdmin.downloadOrganizationDocument.fetchOrThrow({
+				organizationId,
 				documentId: document.id,
 				disposition,
 			});
 			return response.data.downloadUrl;
 		},
-		[api, merchantOrgId],
+		[api, organizationId],
 	);
 
 	const handleViewDocument = React.useCallback(
@@ -500,7 +500,7 @@ export default function KybReviewPanel({ initialMerchantOrgId, initialPendingMer
 	const updateKyb = api.rewardsAdmin.updateKyb.useMutation({
 		onSuccess: async (_data, variables) => {
 			toastMessage.success({ title: "KYB updated", description: "Merchant verification status saved." });
-			await invalidateMerchantQueries(variables.merchantOrgId);
+			await invalidateMerchantQueries(variables.organizationId);
 		},
 		onError: (error) => {
 			toastMessage.error({ title: "KYB update failed", description: error.message });
@@ -516,7 +516,7 @@ export default function KybReviewPanel({ initialMerchantOrgId, initialPendingMer
 				return;
 			}
 			setMerchantOrgId(value);
-			router.replace(`/rewardhub/kyb?merchantOrgId=${value}`);
+			router.replace(`/rewardhub/kyb?organizationId=${value}`);
 		},
 		[router],
 	);
@@ -530,7 +530,7 @@ export default function KybReviewPanel({ initialMerchantOrgId, initialPendingMer
 			readonly reviewNotes: string;
 			readonly rejectionReason: string;
 		}): void {
-			if (merchantOrgId.length === 0 || merchant === null) {
+			if (organizationId.length === 0 || merchant === null) {
 				toastMessage.error({ title: "Select a merchant", description: "Choose a merchant from the queue or dropdown." });
 				return;
 			}
@@ -545,12 +545,12 @@ export default function KybReviewPanel({ initialMerchantOrgId, initialPendingMer
 			});
 
 			updateKyb.mutate({
-				merchantOrgId,
+				organizationId,
 				kybStatus: input.kybStatus,
 				kybFields,
 			});
 		},
-		[merchant, merchantOrgId, updateKyb],
+		[merchant, organizationId, updateKyb],
 	);
 
 	return (
@@ -582,7 +582,7 @@ export default function KybReviewPanel({ initialMerchantOrgId, initialPendingMer
 							<p className="text-sm text-muted-foreground">No merchants are currently pending KYB review.</p>
 						) : null}
 						{pendingMerchants.map((item) => (
-							<MerchantQueueItem key={item.id} merchant={item} selected={item.id === merchantOrgId} onSelect={handleMerchantSelect} />
+							<MerchantQueueItem key={item.id} merchant={item} selected={item.id === organizationId} onSelect={handleMerchantSelect} />
 						))}
 					</CardContent>
 				</Card>
@@ -596,7 +596,7 @@ export default function KybReviewPanel({ initialMerchantOrgId, initialPendingMer
 						<CardContent>
 							<div className="space-y-2">
 								<Label htmlFor="kyb-merchant-select">Merchant organization</Label>
-								<Select value={merchantOrgId.length > 0 ? merchantOrgId : null} onValueChange={handleMerchantSelect}>
+								<Select value={organizationId.length > 0 ? organizationId : null} onValueChange={handleMerchantSelect}>
 									<SelectTrigger id="kyb-merchant-select">
 										<SelectValue placeholder="Choose a merchant" />
 									</SelectTrigger>
@@ -612,13 +612,13 @@ export default function KybReviewPanel({ initialMerchantOrgId, initialPendingMer
 						</CardContent>
 					</Card>
 
-					{merchantOrgId.length === 0 ? (
+					{organizationId.length === 0 ? (
 						<Card>
 							<CardContent className="py-10 text-center text-sm text-muted-foreground">Select a merchant to load KYB details.</CardContent>
 						</Card>
 					) : null}
 
-					{merchantOrgId.length > 0 && merchantDetailQuery.isLoading ? (
+					{organizationId.length > 0 && merchantDetailQuery.isLoading ? (
 						<Card>
 							<CardContent className="grid gap-4 py-6">
 								<Skeleton className="h-6 w-48" />
@@ -628,7 +628,7 @@ export default function KybReviewPanel({ initialMerchantOrgId, initialPendingMer
 						</Card>
 					) : null}
 
-					{merchantOrgId.length > 0 && merchantDetailQuery.isError ? (
+					{organizationId.length > 0 && merchantDetailQuery.isError ? (
 						<Card>
 							<CardContent className="py-10 text-center text-sm text-destructive">Could not load merchant details. Check the org ID and try again.</CardContent>
 						</Card>

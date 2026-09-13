@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 
-import type { MerchantApiKeyCreated, MerchantApiKeySummary, MerchantCreateApiKeyInput } from "@workspace/shared";
+import type { MerchantApiKeyCreated, MerchantApiKeyListQuery, MerchantApiKeySummary, MerchantCreateApiKeyInput } from "@workspace/shared";
 import { EpochMsSchema } from "@workspace/shared";
 
 import { MerchantApiKeyRepository } from "../repositories/merchant-api-key.repository";
@@ -16,15 +16,21 @@ export class MerchantApiKeyService {
 		private readonly merchantContext: MerchantContextService,
 	) {}
 
-	public async listKeys(userId: string, merchantOrgId: string | undefined): Promise<MerchantApiKeySummary[]> {
-		const orgId = await this.merchantContext.resolveOrgIdForUser(userId, merchantOrgId);
-		await this.merchantContext.requireCapability(userId, orgId, "merchant:manage_api_keys");
+	public async listKeys(userId: string, orgSlug: string, query: MerchantApiKeyListQuery): Promise<MerchantApiKeySummary[]> {
+		await this.merchantContext.requireUserCapability(userId, orgSlug, "merchant:manage_api_keys");
+		const orgId = await this.merchantContext.resolveOrgIdForUser(userId, orgSlug);
+		const locationId = query.locationId;
+		if (locationId !== undefined) {
+			await this.merchantContext.assertAccessibleLocationForUser(userId, orgSlug, locationId);
+		}
 
-		const rows = await this.merchantApiKeyRepository.listByOrgId(orgId);
+		const rows = await this.merchantApiKeyRepository.listByOrgId(orgId, locationId);
 
 		return rows.map((row) => ({
 			id: row.id,
 			name: row.name,
+			locationId: row.locationId,
+			locationName: row.location?.name ?? null,
 			revokedAt: row.revokedAt === null ? null : EpochMsSchema.parse(Number(row.revokedAt)),
 			createdAt: EpochMsSchema.parse(Number(row.createdAt)),
 			updatedAt: EpochMsSchema.parse(Number(row.updatedAt)),
@@ -33,15 +39,19 @@ export class MerchantApiKeyService {
 		}));
 	}
 
-	public async createKey(userId: string, merchantOrgId: string | undefined, input: MerchantCreateApiKeyInput): Promise<MerchantApiKeyCreated> {
-		const orgId = await this.merchantContext.resolveOrgIdForUser(userId, merchantOrgId);
-		await this.merchantContext.requireCapability(userId, orgId, "merchant:manage_api_keys");
+	public async createKey(userId: string, orgSlug: string, input: MerchantCreateApiKeyInput): Promise<MerchantApiKeyCreated> {
+		await this.merchantContext.requireUserCapability(userId, orgSlug, "merchant:manage_api_keys");
+		const orgId = await this.merchantContext.resolveOrgIdForUser(userId, orgSlug);
+		if (input.locationId !== undefined) {
+			await this.merchantContext.assertAccessibleLocationForUser(userId, orgSlug, input.locationId);
+		}
 
 		const plaintext = generateApiKeyPlaintext();
 		const name = input.name ?? "API key";
 
 		const created = await this.merchantApiKeyRepository.create({
-			merchantOrgId: orgId,
+			organizationId: orgId,
+			locationId: input.locationId,
 			name,
 			keyHash: sha256Hex(plaintext),
 			keyPrefix: plaintext.slice(0, 16),
@@ -49,7 +59,7 @@ export class MerchantApiKeyService {
 		});
 
 		await this.auditLogRepository.create({
-			merchantOrgId: orgId,
+			organizationId: orgId,
 			action: "merchant.api_key_created",
 			metadata: { keyId: created.id, name },
 		});
@@ -61,9 +71,9 @@ export class MerchantApiKeyService {
 		};
 	}
 
-	public async revokeKey(userId: string, merchantOrgId: string | undefined, keyId: string): Promise<{ ok: true }> {
-		const orgId = await this.merchantContext.resolveOrgIdForUser(userId, merchantOrgId);
-		await this.merchantContext.requireCapability(userId, orgId, "merchant:manage_api_keys");
+	public async revokeKey(userId: string, orgSlug: string, keyId: string): Promise<{ ok: true }> {
+		await this.merchantContext.requireUserCapability(userId, orgSlug, "merchant:manage_api_keys");
+		const orgId = await this.merchantContext.resolveOrgIdForUser(userId, orgSlug);
 
 		const key = await this.merchantApiKeyRepository.findActiveByIdAndOrg(keyId, orgId);
 
@@ -75,7 +85,7 @@ export class MerchantApiKeyService {
 		await this.merchantApiKeyRepository.revoke(keyId, now);
 
 		await this.auditLogRepository.create({
-			merchantOrgId: orgId,
+			organizationId: orgId,
 			action: "merchant.api_key_revoked",
 			metadata: { keyId },
 		});

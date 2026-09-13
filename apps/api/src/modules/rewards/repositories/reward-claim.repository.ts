@@ -31,7 +31,7 @@ export interface RewardClaimRedemptionLookup {
 	};
 	readonly reward: {
 		readonly id: string;
-		readonly merchantOrgId: string;
+		readonly organizationId: string;
 		readonly title: string;
 		readonly rewardType: RewardType;
 		readonly expiryDate: bigint;
@@ -141,7 +141,7 @@ export class RewardClaimRepository {
 			},
 			reward: {
 				id: claim.reward.id,
-				merchantOrgId: claim.reward.merchantOrgId,
+				organizationId: claim.reward.organizationId,
 				title: claim.reward.title,
 				rewardType: claim.reward.rewardType,
 				expiryDate: claim.reward.expiryDate,
@@ -162,7 +162,7 @@ export class RewardClaimRepository {
 		});
 	}
 
-	public async expireClaimInTransaction(claimId: string, rewardId: string, merchantOrgId: string, isReferrerCredit: boolean): Promise<boolean> {
+	public async expireClaimInTransaction(claimId: string, rewardId: string, organizationId: string, isReferrerCredit: boolean): Promise<boolean> {
 		return this.prisma.$transaction(async (tx) => {
 			const updated = await tx.rewardClaim.updateMany({
 				where: { id: claimId, status: "PENDING", ...(isReferrerCredit ? { isReferrerCredit: true } : { isReferrerCredit: false }) },
@@ -183,7 +183,7 @@ export class RewardClaimRepository {
 
 			await tx.rewardAuditLog.create({
 				data: {
-					merchantOrgId,
+					organizationId,
 					action: "reward.claim_expired",
 					metadata: { claimId, isReferrerCredit },
 				},
@@ -194,14 +194,14 @@ export class RewardClaimRepository {
 	}
 
 	public async listForMerchantAnalytics(
-		merchantOrgId: string,
+		organizationId: string,
 		claimedAtRange: { readonly gte: number; readonly lte: number },
 	): Promise<Pick<RewardClaim, "claimedAt" | "status" | "rewardId">[]> {
 		return this.prisma.rewardClaim.findMany({
 			where: {
 				isDeleted: false,
 				claimedAt: claimedAtRange,
-				reward: { merchantOrgId, isDeleted: false },
+				reward: { organizationId, isDeleted: false },
 			},
 			select: { claimedAt: true, status: true, rewardId: true },
 		});

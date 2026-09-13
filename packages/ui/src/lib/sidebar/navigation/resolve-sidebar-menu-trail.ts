@@ -10,6 +10,7 @@ import {
 	updateLastTrailItem,
 	walkNavTreeForPath,
 } from "@workspace/ui/lib/sidebar/navigation/breadcrumb-tree";
+import { identitySidebarResolveHref, type SidebarResolveHref } from "@workspace/ui/lib/sidebar/resolve-menu-hrefs";
 import { FileText, type LucideIcon } from "lucide-react";
 
 export interface SidebarMenuTrailNode {
@@ -33,6 +34,7 @@ export interface ResolveSidebarMenuTrailConfig {
 	readonly menu: SidebarMenuTrailData;
 	readonly pathname: string;
 	readonly resolveIcon: (iconName: string | undefined) => LucideIcon;
+	readonly resolveHref?: SidebarResolveHref;
 	readonly rootCurrentLabel: string;
 	readonly rootIcon: LucideIcon;
 	readonly unknownFallbackLabel: string;
@@ -47,13 +49,13 @@ function getSidebarChildren(item: SidebarMenuTrailNode): readonly SidebarMenuTra
 	return item.children ?? [];
 }
 
-function createNavAdapter(resolveIcon: (iconName: string | undefined) => LucideIcon): NavTreeAdapter<SidebarMenuTrailNode> {
+function createNavAdapter(resolveIcon: (iconName: string | undefined) => LucideIcon, resolveHref: SidebarResolveHref): NavTreeAdapter<SidebarMenuTrailNode> {
 	return {
-		getUrl: (node: SidebarMenuTrailNode): string => node.url,
+		getUrl: (node: SidebarMenuTrailNode): string => resolveHref(node.url),
 		getChildren: getSidebarChildren,
 		toLinkedCrumb: (node: SidebarMenuTrailNode): BreadcrumbItem => ({
 			label: node.title,
-			href: node.url,
+			href: resolveHref(node.url),
 			icon: resolveIcon(node.icon),
 		}),
 		toCurrentCrumb: (node: SidebarMenuTrailNode): BreadcrumbItem => ({
@@ -130,31 +132,32 @@ export function withTrailTailLabel(trail: readonly BreadcrumbItem[], label: stri
  * Returns crumbs with mandatory icons; the final crumb has no `href`.
  */
 export function resolveSidebarMenuTrail(config: ResolveSidebarMenuTrailConfig): readonly BreadcrumbItem[] {
-	const { menu, pathname, resolveIcon, rootCurrentLabel, rootIcon, unknownFallbackLabel } = config;
+	const { menu, pathname, resolveIcon, resolveHref = identitySidebarResolveHref, rootCurrentLabel, rootIcon, unknownFallbackLabel } = config;
 	const normalizedPath = normalizePath(pathname);
 	const snapshot = createSidebarMenuSnapshot(menu);
-	const adapter = createNavAdapter(resolveIcon);
+	const adapter = createNavAdapter(resolveIcon, resolveHref);
 	const trail: BreadcrumbItem[] = [];
 
 	for (const section of menu.sections) {
 		for (const item of section.items) {
 			const icon = resolveIcon(item.icon);
-			if (item.url === normalizedPath) {
+			const itemHref = adapter.getUrl(item);
+			if (itemHref === normalizedPath) {
 				if (shouldPrependSectionTitle(section, item)) {
 					return [
 						{ label: section.title, icon },
-						{ label: item.title, href: item.url, icon },
+						{ label: item.title, href: itemHref, icon },
 					];
 				}
 				return [{ label: item.title, icon }];
 			}
 			const children = item.children;
-			if (children !== undefined && (isPathAncestor(item.url, normalizedPath) || sharesPathSegmentRoot(item.url, normalizedPath))) {
+			if (children !== undefined && (isPathAncestor(itemHref, normalizedPath) || sharesPathSegmentRoot(itemHref, normalizedPath))) {
 				const sectionTrail: BreadcrumbItem[] = [adapter.toLinkedCrumb(item)];
 				if (walkNavTreeForPath(children, normalizedPath, sectionTrail, adapter)) {
 					return appendUnresolvedSegments(normalizedPath, [...withSectionContext(section, item, sectionTrail, resolveIcon)], snapshot.flatNodes, adapter);
 				}
-				if (sharesPathSegmentRoot(item.url, normalizedPath)) {
+				if (sharesPathSegmentRoot(itemHref, normalizedPath)) {
 					return appendUnresolvedSegments(normalizedPath, [...withSectionContext(section, item, sectionTrail, resolveIcon)], snapshot.flatNodes, adapter);
 				}
 			}

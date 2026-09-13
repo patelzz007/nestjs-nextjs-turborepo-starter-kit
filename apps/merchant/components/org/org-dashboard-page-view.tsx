@@ -2,6 +2,7 @@
 
 import { MerchantStatCard } from "@/components/merchant-ui/stat-card";
 import { MerchantSurfacePanel } from "@/components/merchant-ui/surface-panel";
+import { OrganizationLocationList } from "@/components/org/organization-location-list";
 import { organizationPath } from "@/lib/org/slug";
 import type { KybStatus, OrganizationContextResponse, OrganizationLifecycleState, OrganizationMembershipRole } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/feedback/badge";
@@ -185,17 +186,22 @@ export function OrgDashboardPageView({ orgSlug, context, contextError = false }:
 					</div>
 					<div className="space-y-3">
 						<OrgNavLink
+							href={organizationPath(orgSlug, "settings/locations")}
+							title="Store locations"
+							description="View every store site under this organization and your location access scope."
+							icon={<MapPin className="size-5" aria-hidden="true" />}
+						/>
+						<OrgNavLink
 							href={organizationPath(orgSlug, "settings/team")}
 							title="Team & access"
 							description="Invite members, manage roles, and review access requests."
 							icon={<Users className="size-5" aria-hidden="true" />}
 						/>
 						<OrgNavLink
-							href="/settings/verification"
+							href={organizationPath(orgSlug, "settings/verification")}
 							title="Business verification"
-							description="Submit or update KYB documents for this merchant organization."
+							description="Submit or update KYB documents for this organization."
 							icon={<ShieldCheck className="size-5" aria-hidden="true" />}
-							external
 						/>
 					</div>
 				</section>
@@ -203,33 +209,53 @@ export function OrgDashboardPageView({ orgSlug, context, contextError = false }:
 				<section className="space-y-4">
 					<div className="space-y-1">
 						<h2 className="text-lg font-semibold text-foreground">Merchant operations</h2>
-						<p className="text-sm text-muted-foreground">Routes on the merchant home — rewards, analytics, and POS activity.</p>
+						<p className="text-sm text-muted-foreground">Rewards, analytics, and POS activity for this organization.</p>
 					</div>
 					<div className="space-y-3">
 						<OrgNavLink
-							href="/"
-							title="Rewards dashboard"
+							href={organizationPath(orgSlug, "rewards")}
+							title="Rewards"
 							description="Claims, redemptions, conversion metrics, and active campaigns."
 							icon={<Gift className="size-5" aria-hidden="true" />}
-							external
 						/>
 						<OrgNavLink
-							href="/analytics"
+							href={organizationPath(orgSlug, "analytics")}
 							title="Analytics"
 							description="Performance trends and top-performing rewards."
 							icon={<BarChart3 className="size-5" aria-hidden="true" />}
-							external
 						/>
 						<OrgNavLink
-							href="/redemptions"
+							href={organizationPath(orgSlug, "redemptions")}
 							title="Redemptions log"
 							description="Recent POS scans and redemption confirmations."
 							icon={<LayoutDashboard className="size-5" aria-hidden="true" />}
-							external
 						/>
 					</div>
 				</section>
 			</div>
+
+			{context !== null && context.locations.length > 0 ? (
+				<section className="space-y-4">
+					<div className="flex flex-wrap items-end justify-between gap-3">
+						<div className="space-y-1">
+							<h2 className="text-lg font-semibold text-foreground">Store locations</h2>
+							<p className="text-sm text-muted-foreground">
+								{context.locations.length} location{context.locations.length === 1 ? "" : "s"} under this organization.
+							</p>
+						</div>
+						<Link href={organizationPath(orgSlug, "settings/locations")} className={cn(buttonVariants({ variant: "outline", size: "sm" }), "gap-2 bg-transparent")}>
+							<MapPin className="size-4" aria-hidden="true" />
+							Manage locations
+						</Link>
+					</div>
+					<OrganizationLocationList
+						locations={context.locations}
+						membershipLocationScopeType={context.membership.locationScopeType}
+						membershipLocationIds={context.membership.locationIds}
+						showAccessHints
+					/>
+				</section>
+			) : null}
 
 			{context !== null ? (
 				<MerchantSurfacePanel className="p-5 sm:p-6">

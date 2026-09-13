@@ -1,25 +1,17 @@
 "use client";
 
-import { isCanonicalOrganizationSlug } from "@/lib/org/resolve-slug";
-import { writeMerchantOrgCookie } from "@/lib/org/org";
-import { clearOrganizationSlugCookie, writeOrganizationSlugCookie } from "@/lib/org/slug";
+import { writeOrganizationSlugCookie } from "@/lib/org/slug";
 import * as React from "react";
 
 export interface OrgTenantBootstrapProps {
-	readonly merchantOrgId: string;
-	readonly orgSlug: string | null;
+	readonly orgSlug: string;
 }
 
-/** Persists org-scoped cookies from the resolved URL tenant (client-only — Next.js forbids writes in layouts). */
-export function OrgTenantBootstrap({ merchantOrgId, orgSlug }: OrgTenantBootstrapProps): null {
+/** Persists the URL tenant slug for SSR + client consistency (no navigation side effects). */
+export function OrgTenantBootstrap({ orgSlug }: OrgTenantBootstrapProps): null {
 	React.useEffect((): void => {
-		writeMerchantOrgCookie(merchantOrgId);
-		if (orgSlug !== null && isCanonicalOrganizationSlug(orgSlug)) {
-			writeOrganizationSlugCookie(orgSlug);
-			return;
-		}
-		clearOrganizationSlugCookie();
-	}, [merchantOrgId, orgSlug]);
+		writeOrganizationSlugCookie(orgSlug);
+	}, [orgSlug]);
 
 	return null;
 }

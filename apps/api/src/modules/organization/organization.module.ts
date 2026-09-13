@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 
+import { PrismaModule } from "../../prisma/prisma.module";
 import { AuthModule } from "../auth/auth.module";
 import { AuthorizationCedarModule } from "../authorization-cedar/authorization-cedar.module";
 import { OrganizationAdminController } from "./controllers/organization-admin.controller";
@@ -11,11 +12,16 @@ import { OrganizationMembershipService } from "./services/organization-membershi
 import { OrganizationProvisioningService } from "./services/organization-provisioning.service";
 import { OrganizationErasureService } from "./services/organization-erasure.service";
 import { OrganizationQuotaService } from "./services/organization-quota.service";
+import { OrganizationInviteRepository } from "./repositories/organization-invite.repository";
+import { OrganizationRepository } from "./repositories/organization.repository";
+import { OrganizationRewardAuthService } from "./services/organization-reward-auth.service";
 
 @Module({
-	imports: [AuthModule, AuthorizationCedarModule],
+	imports: [PrismaModule, AuthModule, AuthorizationCedarModule],
 	controllers: [OrganizationController, OrganizationAdminController],
 	providers: [
+		OrganizationRepository,
+		OrganizationInviteRepository,
 		OrganizationAuditService,
 		OrganizationContextService,
 		OrganizationProvisioningService,
@@ -23,7 +29,15 @@ import { OrganizationQuotaService } from "./services/organization-quota.service"
 		OrganizationMembershipService,
 		OrganizationQuotaService,
 		OrganizationErasureService,
+		OrganizationRewardAuthService,
 	],
-	exports: [OrganizationContextService, OrganizationProvisioningService, OrganizationQuotaService],
+	exports: [
+		OrganizationContextService,
+		OrganizationProvisioningService,
+		OrganizationQuotaService,
+		OrganizationRewardAuthService,
+		OrganizationRepository,
+		OrganizationInviteRepository,
+	],
 })
 export class OrganizationModule {}

@@ -3,13 +3,12 @@ import { createHash } from "node:crypto";
 import type { User } from "@prisma/client";
 import * as bcrypt from "bcrypt";
 
-import { cleanupOrganizationSeedData, seedOrganizationsAndMerchants } from "./organizations";
+import { cleanupOrganizationSeedData, ORGANIZATION_SEED_IDS, seedOrganizationsAndMerchants } from "./organizations";
 import { prisma } from "./client";
+import { deterministicUuid } from "./deterministic-uuid";
 
 /** Fixed seed UUIDs for idempotent re-seeds. */
 export const REWARD_SEED_IDS = {
-	klOrg: "3178a4d1-6915-4eb3-bf84-6fb14e1feb6c",
-	mlkOrg: "457401d5-536e-464f-9ae9-4756b6dd5f61",
 	klOwnerUser: "326494e1-b45d-4203-b881-05b60ae50b4a",
 	mlkOwnerUser: "b9cda090-b9e8-42e4-b7b1-b6d00294f022",
 	klCashierUser: "937f5e43-9b11-47d0-866c-91fec89bc250",
@@ -20,6 +19,8 @@ export const REWARD_SEED_IDS = {
 	klRewardDraft: "94a8af08-39cf-44ad-b3e7-9de599ad7938",
 	klRewardExpired: "81ae6a7e-cea3-4117-8827-6c01e7754262",
 	mlkRewardPublished: "af18c941-a960-4eaa-b988-9e15ceae6e96",
+	mlkRewardKatilOnly: deterministicUuid("reward-seed", "mlk-katil-only"),
+	mlkRewardBeruangOnly: deterministicUuid("reward-seed", "mlk-beruang-only"),
 	mlkRewardReferrer: "098bb3dc-3121-4232-bbdf-d9ad684eecb8",
 	mlkRewardDisabled: "9509c30b-c09d-4762-809c-7f421813ac36",
 	claimPendingKl: "74199f6f-877f-4d87-8a02-78941a4ae1af",
@@ -85,6 +86,25 @@ async function upsertMerchantUser(id: string, email: string, fullName: string, p
 	});
 }
 
+async function setRewardLocationScopes(rewardId: string, organizationId: string, locationIds: readonly string[]): Promise<void> {
+	if (locationIds.length === 0) {
+		return;
+	}
+
+	await prisma.reward.update({
+		where: { id: rewardId },
+		data: { locationScopeType: "SELECTED" },
+	});
+
+	await prisma.rewardLocationScope.createMany({
+		data: locationIds.map((locationId) => ({
+			rewardId,
+			organizationId,
+			locationId,
+		})),
+	});
+}
+
 async function ensureSeedConsumerRole(userId: string): Promise<void> {
 	const userRole = await prisma.role.findFirst({
 		where: { name: "User", isDeleted: false },
@@ -111,17 +131,16 @@ export async function cleanupRewardSeedData(): Promise<void> {
 	await prisma.rewardRedemption.deleteMany();
 	await prisma.rewardClaim.deleteMany();
 	await prisma.rewardReferral.deleteMany();
+	await prisma.rewardLocationScope.deleteMany();
 	await prisma.reward.deleteMany();
-	await prisma.merchantInvite.deleteMany();
-	await prisma.merchantApiKey.deleteMany();
-	await prisma.merchantTerminal.deleteMany();
-	await prisma.merchantMember.deleteMany();
-	await prisma.merchantOrg.deleteMany();
+	await prisma.organizationInvitation.deleteMany();
+	await prisma.organizationApiKey.deleteMany();
+	await prisma.organizationTerminal.deleteMany();
 	await cleanupOrganizationSeedData();
 }
 
 export interface RewardSeedSummary {
-	merchantOrgs: number;
+	organizations: number;
 	rewards: number;
 	claims: number;
 	redemptions: number;
@@ -149,40 +168,54 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 		await ensureSeedConsumerRole(merchantUser.id);
 	}
 
-	const { klOrg, mlkOrg } = await seedOrganizationsAndMerchants(adminUser, klOwner, mlkOwner, klCashier, mlkCashier, user);
+	const { klOrganization, mlkOrganization } = await seedOrganizationsAndMerchants(adminUser, klOwner, mlkOwner, klCashier, mlkCashier, user);
 
-	await prisma.merchantMember.createMany({
+	await prisma.organizationTerminal.createMany({
 		data: [
-			{ userId: klOwner.id, merchantOrgId: klOrg.id, role: "OWNER" },
-			{ userId: klCashier.id, merchantOrgId: klOrg.id, role: "CASHIER" },
-			{ userId: mlkOwner.id, merchantOrgId: mlkOrg.id, role: "OWNER" },
-			{ userId: mlkCashier.id, merchantOrgId: mlkOrg.id, role: "CASHIER" },
-		],
-	});
-
-	await prisma.merchantTerminal.createMany({
-		data: [
-			{ merchantOrgId: klOrg.id, terminalId: "KL-REGISTER-01", label: "Front counter" },
-			{ merchantOrgId: klOrg.id, terminalId: "KL-REGISTER-02", label: "Drive-through" },
-			{ merchantOrgId: mlkOrg.id, terminalId: "MLK-REGISTER-01", label: "Main floor" },
+			{
+				organizationId: klOrganization.id,
+				locationId: ORGANIZATION_SEED_IDS.klLocation,
+				terminalId: "KL-REGISTER-01",
+				label: "Front counter",
+			},
+			{
+				organizationId: klOrganization.id,
+				locationId: ORGANIZATION_SEED_IDS.klLocation,
+				terminalId: "KL-REGISTER-02",
+				label: "Drive-through",
+			},
+			{
+				organizationId: mlkOrganization.id,
+				locationId: ORGANIZATION_SEED_IDS.mlkLocationKatil,
+				terminalId: "MLK-KATIL-01",
+				label: "Bukit Katil counter",
+			},
+			{
+				organizationId: mlkOrganization.id,
+				locationId: ORGANIZATION_SEED_IDS.mlkLocationBeruang,
+				terminalId: "MLK-BERUANG-01",
+				label: "Bukit Beruang counter",
+			},
 		],
 	});
 
 	const klKeyHash = sha256Hex(DEMO_MERCHANT_API_KEYS.kl);
 	const mlkKeyHash = sha256Hex(DEMO_MERCHANT_API_KEYS.mlk);
 
-	await prisma.merchantApiKey.createMany({
+	await prisma.organizationApiKey.createMany({
 		data: [
 			{
-				merchantOrgId: klOrg.id,
+				organizationId: klOrganization.id,
+				locationId: ORGANIZATION_SEED_IDS.klLocation,
 				name: "KL POS Simulator",
 				keyHash: klKeyHash,
 				keyPrefix: DEMO_MERCHANT_API_KEYS.kl.slice(0, 16),
 				createdByUserId: klOwner.id,
 			},
 			{
-				merchantOrgId: mlkOrg.id,
-				name: "Melaka POS Simulator",
+				organizationId: mlkOrganization.id,
+				locationId: ORGANIZATION_SEED_IDS.mlkLocationKatil,
+				name: "Melaka Bukit Katil POS",
 				keyHash: mlkKeyHash,
 				keyPrefix: DEMO_MERCHANT_API_KEYS.mlk.slice(0, 16),
 				createdByUserId: mlkOwner.id,
@@ -190,23 +223,12 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 		],
 	});
 
-	await prisma.merchantInvite.create({
-		data: {
-			email: "pending.invite@melaka-rewards.demo",
-			tokenHash: sha256Hex("seed_invite_token_mlk_pending"),
-			businessName: "Pending Nyonya Café",
-			city: "MELAKA",
-			createdByAdminId: adminUser.id,
-			expiresAt: msFromNow(7),
-		},
-	});
-
 	// Consumer rewards first (referrer FK added after R′ rows exist)
 	await prisma.reward.createMany({
 		data: [
 			{
 				id: REWARD_SEED_IDS.klRewardPublished,
-				merchantOrgId: klOrg.id,
+				organizationId: klOrganization.id,
 				title: "Free coffee — Grand Opening",
 				description: "One free regular coffee. Show QR at counter. Valid 7 days after claim.",
 				rewardType: "FREE_ITEM",
@@ -230,9 +252,9 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 			},
 			{
 				id: REWARD_SEED_IDS.mlkRewardPublished,
-				merchantOrgId: mlkOrg.id,
+				organizationId: mlkOrganization.id,
 				title: "RM10 off Jonker lunch set",
-				description: "Weekday lunch 11am–3pm. Min spend RM35.",
+				description: "Weekday lunch 11am–3pm. Min spend RM35. Available at both Bukit Katil and Bukit Beruang.",
 				rewardType: "DISCOUNT",
 				rewardValue: 10,
 				termsConditions: "Minimum spend RM35. Weekdays 11am–3pm only.",
@@ -251,14 +273,67 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 				referralsEnabled: true,
 				referralPoolTotal: 30,
 				referralPoolRemaining: 28,
+				locationScopeType: "SELECTED",
+			},
+			{
+				id: REWARD_SEED_IDS.mlkRewardKatilOnly,
+				organizationId: mlkOrganization.id,
+				title: "Free iced tea — Bukit Katil opening",
+				description: "Complimentary iced tea with any main course at Bukit Katil only.",
+				rewardType: "FREE_ITEM",
+				rewardValue: 1,
+				termsConditions: "Bukit Katil store only. One per customer per day.",
+				rewardKind: "CONSUMER",
+				category: "beverage",
+				placeholderImageKey: "category-beverage",
+				quantityTotal: 80,
+				quantityRemaining: 64,
+				quantityReserved: 3,
+				startDate: msDaysAgo(3),
+				expiryDate: msFromNow(40),
+				status: "PUBLISHED",
+				claimCount: 16,
+				redemptionCount: 11,
+				referralsEnabled: false,
+				locationScopeType: "SELECTED",
+			},
+			{
+				id: REWARD_SEED_IDS.mlkRewardBeruangOnly,
+				organizationId: mlkOrganization.id,
+				title: "RM8 off weekend dinner — Bukit Beruang",
+				description: "Friday and Saturday dinner from 6pm. Bukit Beruang store only.",
+				rewardType: "DISCOUNT",
+				rewardValue: 8,
+				termsConditions: "Bukit Beruang store only. Fri–Sat 6pm–10pm.",
+				rewardKind: "CONSUMER",
+				category: "restaurant",
+				placeholderImageKey: "category-restaurant",
+				rules: { minSpendMyr: 25 },
+				quantityTotal: 60,
+				quantityRemaining: 48,
+				quantityReserved: 2,
+				startDate: msDaysAgo(5),
+				expiryDate: msFromNow(45),
+				status: "PUBLISHED",
+				claimCount: 12,
+				redemptionCount: 8,
+				referralsEnabled: false,
+				locationScopeType: "SELECTED",
 			},
 		],
 	});
 
+	await setRewardLocationScopes(REWARD_SEED_IDS.mlkRewardPublished, mlkOrganization.id, [
+		ORGANIZATION_SEED_IDS.mlkLocationKatil,
+		ORGANIZATION_SEED_IDS.mlkLocationBeruang,
+	]);
+	await setRewardLocationScopes(REWARD_SEED_IDS.mlkRewardKatilOnly, mlkOrganization.id, [ORGANIZATION_SEED_IDS.mlkLocationKatil]);
+	await setRewardLocationScopes(REWARD_SEED_IDS.mlkRewardBeruangOnly, mlkOrganization.id, [ORGANIZATION_SEED_IDS.mlkLocationBeruang]);
+
 	const klReferrerReward = await prisma.reward.create({
 		data: {
 			id: REWARD_SEED_IDS.klRewardReferrer,
-			merchantOrgId: klOrg.id,
+			organizationId: klOrganization.id,
 			title: "Referrer: Free pastry (Brew & Bean)",
 			description: "Auto-cloned referrer reward when friends redeem the free coffee campaign.",
 			rewardType: "FREE_ITEM",
@@ -278,7 +353,7 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 	const mlkReferrerReward = await prisma.reward.create({
 		data: {
 			id: REWARD_SEED_IDS.mlkRewardReferrer,
-			merchantOrgId: mlkOrg.id,
+			organizationId: mlkOrganization.id,
 			title: "Referrer: 15% off next meal",
 			description: "Referrer bonus for Jonker lunch campaign.",
 			rewardType: "DISCOUNT",
@@ -305,11 +380,16 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 		data: { referrerRewardId: mlkReferrerReward.id },
 	});
 
+	await setRewardLocationScopes(mlkReferrerReward.id, mlkOrganization.id, [
+		ORGANIZATION_SEED_IDS.mlkLocationKatil,
+		ORGANIZATION_SEED_IDS.mlkLocationBeruang,
+	]);
+
 	await prisma.reward.createMany({
 		data: [
 			{
 				id: REWARD_SEED_IDS.klRewardPending,
-				merchantOrgId: klOrg.id,
+				organizationId: klOrganization.id,
 				title: "20% off weekend brunch",
 				description: "Awaiting admin moderation or auto-publish.",
 				rewardType: "DISCOUNT",
@@ -327,7 +407,7 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 			},
 			{
 				id: REWARD_SEED_IDS.klRewardDraft,
-				merchantOrgId: klOrg.id,
+				organizationId: klOrganization.id,
 				title: "Draft: Matcha latte trial",
 				description: "Not submitted for review yet.",
 				rewardType: "FREE_ITEM",
@@ -343,7 +423,7 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 			},
 			{
 				id: REWARD_SEED_IDS.klRewardExpired,
-				merchantOrgId: klOrg.id,
+				organizationId: klOrganization.id,
 				title: "Expired: Merdeka promo",
 				description: "Past campaign for expiry job testing.",
 				rewardType: "DISCOUNT",
@@ -359,7 +439,7 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 			},
 			{
 				id: REWARD_SEED_IDS.mlkRewardDisabled,
-				merchantOrgId: mlkOrg.id,
+				organizationId: mlkOrganization.id,
 				title: "Disabled: Cendol giveaway",
 				description: "Merchant disabled after stock issue.",
 				rewardType: "FREE_ITEM",
@@ -446,7 +526,7 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 	for (const [index, row] of extraKlRewards.entries()) {
 		await prisma.reward.create({
 			data: {
-				merchantOrgId: klOrg.id,
+				organizationId: klOrganization.id,
 				title: row.title,
 				description: row.description,
 				rewardType: row.rewardType,
@@ -468,22 +548,24 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 	const extraMlkRewards = [
 		{
 			title: "Nyonya kuih sampler",
-			description: "Three-piece kuih platter.",
+			description: "Three-piece kuih platter. Bukit Katil only.",
 			category: "food",
 			placeholderImageKey: "category-food",
+			locationIds: [ORGANIZATION_SEED_IDS.mlkLocationKatil],
 		},
 		{
 			title: "Friday night entertainment discount",
-			description: "RM15 off live music dinner.",
+			description: "RM15 off live music dinner. Bukit Beruang only.",
 			category: "entertainment",
 			placeholderImageKey: "category-entertainment",
+			locationIds: [ORGANIZATION_SEED_IDS.mlkLocationBeruang],
 		},
 	];
 
 	for (const row of extraMlkRewards) {
-		await prisma.reward.create({
+		const reward = await prisma.reward.create({
 			data: {
-				merchantOrgId: mlkOrg.id,
+				organizationId: mlkOrganization.id,
 				title: row.title,
 				description: row.description,
 				rewardType: "FREE_ITEM",
@@ -498,8 +580,10 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 				expiryDate: msFromNow(35),
 				status: "PUBLISHED",
 				referralsEnabled: false,
+				locationScopeType: "SELECTED",
 			},
 		});
+		await setRewardLocationScopes(reward.id, mlkOrganization.id, row.locationIds);
 	}
 
 	await prisma.rewardReferral.create({
@@ -560,7 +644,7 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 	await prisma.rewardRedemption.create({
 		data: {
 			claimId: REWARD_SEED_IDS.claimRedeemedKl,
-			merchantOrgId: klOrg.id,
+			organizationId: klOrganization.id,
 			userId: bob.id,
 			terminalId: "KL-REGISTER-01",
 			redemptionMethod: "SCAN",
@@ -613,7 +697,7 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 	await prisma.rewardRedemption.create({
 		data: {
 			claimId: REWARD_SEED_IDS.claimRedeemedMlk,
-			merchantOrgId: mlkOrg.id,
+			organizationId: mlkOrganization.id,
 			userId: carol.id,
 			terminalId: "MLK-REGISTER-01",
 			redemptionMethod: "SCAN",
@@ -644,7 +728,7 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 			await prisma.rewardRedemption.create({
 				data: {
 					claimId: claim.id,
-					merchantOrgId: klOrg.id,
+					organizationId: klOrganization.id,
 					userId: consumer.id,
 					terminalId: "KL-REGISTER-01",
 					redemptionMethod: "SCAN",
@@ -736,28 +820,28 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 		data: [
 			{
 				actorUserId: klCashier.id,
-				merchantOrgId: klOrg.id,
+				organizationId: klOrganization.id,
 				action: "merchant.scan_qr",
 				metadata: { claimId: REWARD_SEED_IDS.claimPendingKl, terminalId: "KL-REGISTER-01" },
 				createdAt: msDaysAgo(1),
 			},
 			{
 				actorUserId: null,
-				merchantOrgId: klOrg.id,
+				organizationId: klOrganization.id,
 				action: "merchant.redeem_reward",
 				metadata: { claimId: REWARD_SEED_IDS.claimRedeemedKl, redemptionMethod: "SCAN" },
 				createdAt: msDaysAgo(4),
 			},
 			{
 				actorUserId: klOwner.id,
-				merchantOrgId: klOrg.id,
+				organizationId: klOrganization.id,
 				action: "self_redeem_audit",
 				metadata: { note: "Owner self-redeem allowed with audit flag" },
 				createdAt: msDaysAgo(6),
 			},
 			{
 				actorUserId: null,
-				merchantOrgId: mlkOrg.id,
+				organizationId: mlkOrganization.id,
 				action: "merchant.redeem_reward",
 				metadata: { claimId: REWARD_SEED_IDS.claimRedeemedMlk, redemptionMethod: "SCAN" },
 				createdAt: msDaysAgo(3),
@@ -779,7 +863,7 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 		},
 	});
 
-	const merchantOrgs = await prisma.merchantOrg.count();
+	const organizations = await prisma.organization.count({ where: { merchantProfile: { isNot: null } } });
 	const rewards = await prisma.reward.count();
 	const claims = await prisma.rewardClaim.count();
 	const redemptions = await prisma.rewardRedemption.count();
@@ -787,7 +871,7 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 	const notifications = await prisma.rewardNotification.count();
 
 	return {
-		merchantOrgs,
+		organizations,
 		rewards,
 		claims,
 		redemptions,

@@ -30,11 +30,12 @@ export class RewardsAnalyticsService {
 
 	public async getMerchantAnalytics(actor: MerchantActor, query: RewardsAnalyticsQuery): Promise<MerchantAnalyticsResponse> {
 		await this.merchantContext.requireActorCapability(actor, "merchant:view_analytics");
-		const orgId = actor.merchantOrgId;
+		const orgId = actor.organizationId;
+		const locationId = await this.merchantContext.resolveLocationFilter(actor, query.locationId);
 		const period = resolveAnalyticsPeriod(query.from, query.to);
 		const previous = previousAnalyticsPeriod(period);
 
-		const rewardWhere = { merchantOrgId: orgId, isDeleted: false, rewardKind: "CONSUMER" as const };
+		const rewardWhere = { organizationId: orgId, isDeleted: false, rewardKind: "CONSUMER" as const };
 
 		const [
 			totalRewards,
@@ -56,7 +57,7 @@ export class RewardsAnalyticsService {
 			this.rewardRepository.count({ ...rewardWhere, status: "PUBLISHED", reviewedAt: { gte: period.fromMs, lte: period.toMs } }),
 			this.rewardRepository.count({ ...rewardWhere, status: "PUBLISHED", reviewedAt: { gte: previous.fromMs, lte: previous.toMs } }),
 			this.rewardClaimRepository.listForMerchantAnalytics(orgId, { gte: previous.fromMs, lte: period.toMs }),
-			this.redemptionRepository.listForMerchantAnalytics(orgId, { gte: previous.fromMs, lte: period.toMs }),
+			this.redemptionRepository.listForMerchantAnalytics(orgId, { gte: previous.fromMs, lte: period.toMs }, locationId),
 			this.rewardReferralRepository.countByMerchantOrg(orgId, { gte: period.fromMs, lte: period.toMs }),
 			this.rewardReferralRepository.countByMerchantOrg(orgId, { gte: previous.fromMs, lte: previous.toMs }),
 			this.rewardRepository.listIdAndTitle(rewardWhere),

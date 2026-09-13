@@ -19,12 +19,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@work
 import { toastMessage } from "@workspace/ui/components/feedback/toast";
 import { Button } from "@workspace/ui/components/form/button";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { organizationPath } from "@/lib/org/slug";
 import { ArrowLeft, BarChart3, Loader2, Save } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
 import { useForm, useWatch } from "react-hook-form";
 
 export interface MerchantEditRewardPageViewProps {
+	readonly orgSlug: string;
 	readonly rewardId: string;
 	readonly initialRewards?: readonly RewardResponse[];
 }
@@ -33,7 +35,7 @@ function isRewardEditable(status: RewardResponse["status"]): boolean {
 	return status === "DRAFT" || status === "PENDING_REVIEW";
 }
 
-export function MerchantEditRewardPageView({ rewardId, initialRewards }: MerchantEditRewardPageViewProps): React.JSX.Element {
+export function MerchantEditRewardPageView({ orgSlug, rewardId, initialRewards }: MerchantEditRewardPageViewProps): React.JSX.Element {
 	const { api } = useAuth();
 	const queryClient = useQueryClient();
 	const { hasCapability } = useMerchantCapabilities();
@@ -50,8 +52,8 @@ export function MerchantEditRewardPageView({ rewardId, initialRewards }: Merchan
 		[initialRewards],
 	);
 
-	const rewardsQuery = api.merchant.rewards.list.useQuery(
-		{},
+	const rewardsQuery = api.organizations.rewards.list.useQuery(
+		{ orgSlug },
 		{
 			initialData: initialQueryData,
 			staleTime: 0,
@@ -82,10 +84,11 @@ export function MerchantEditRewardPageView({ rewardId, initialRewards }: Merchan
 	const canManageRewards = hasCapability("merchant:manage_rewards");
 	const canEdit = canManageRewards && reward !== undefined && isRewardEditable(reward.status);
 	const canPublish = canManageRewards && reward?.status === "DRAFT";
+	const rewardsPath = organizationPath(orgSlug, "rewards");
 
-	const updateMutation = api.merchant.rewards.update.useMutation({
+	const updateMutation = api.organizations.rewards.update.useMutation({
 		onSuccess: (response): void => {
-			upsertMerchantRewardInListCache(queryClient, response.data);
+			upsertMerchantRewardInListCache(queryClient, orgSlug, response.data);
 			toastMessage.success({ title: "Reward updated", description: "Your changes have been saved." });
 			void rewardsQuery.refetch();
 		},
@@ -94,11 +97,11 @@ export function MerchantEditRewardPageView({ rewardId, initialRewards }: Merchan
 		},
 	});
 
-	const publishMutation = api.merchant.rewards.publish.useMutation({
+	const publishMutation = api.organizations.rewards.publish.useMutation({
 		onSuccess: (response): void => {
-			upsertMerchantRewardInListCache(queryClient, response.data);
+			upsertMerchantRewardInListCache(queryClient, orgSlug, response.data);
 			toastMessage.success({ title: "Submitted for review", description: "Your reward is now pending approval." });
-			void invalidateMerchantRewardsListCache(queryClient);
+			void invalidateMerchantRewardsListCache(queryClient, orgSlug);
 		},
 		onError: (): void => {
 			toastMessage.error({ title: "Submit failed", description: "Could not submit reward for review." });
@@ -115,9 +118,9 @@ export function MerchantEditRewardPageView({ rewardId, initialRewards }: Merchan
 	const onSubmit = React.useCallback(
 		(form: MerchantRewardFormValues): void => {
 			const payload = mapMerchantUpdateRewardFormToInput(form);
-			void updateMutation.mutateAsync({ rewardId, ...payload });
+			void updateMutation.mutateAsync({ orgSlug, rewardId, ...payload });
 		},
-		[rewardId, updateMutation],
+		[orgSlug, rewardId, updateMutation],
 	);
 
 	const handleFormSubmit = React.useCallback(
@@ -137,8 +140,8 @@ export function MerchantEditRewardPageView({ rewardId, initialRewards }: Merchan
 	);
 
 	const handlePublish = React.useCallback((): void => {
-		void publishMutation.mutateAsync({ rewardId });
-	}, [publishMutation, rewardId]);
+		void publishMutation.mutateAsync({ orgSlug, rewardId });
+	}, [orgSlug, publishMutation, rewardId]);
 
 	if (isResolvingReward) {
 		return <p className="text-sm text-muted-foreground">Loading reward…</p>;
@@ -149,7 +152,7 @@ export function MerchantEditRewardPageView({ rewardId, initialRewards }: Merchan
 			<div className="mx-auto space-y-6">
 				<h1 className="text-2xl font-bold tracking-tight text-foreground">Reward not found</h1>
 				<p className="text-muted-foreground">This reward may have been removed or you may not have access.</p>
-				<Link href="/rewards">
+				<Link href={rewardsPath}>
 					<Button type="button" variant="outline">
 						Back to rewards
 					</Button>
@@ -161,7 +164,7 @@ export function MerchantEditRewardPageView({ rewardId, initialRewards }: Merchan
 	return (
 		<div className="mx-auto space-y-6">
 			<div className="mb-2 flex flex-wrap items-center gap-4">
-				<Link href="/rewards">
+				<Link href={rewardsPath}>
 					<Button type="button" variant="ghost" size="icon" aria-label="Back to rewards">
 						<ArrowLeft className="size-5" aria-hidden="true" />
 					</Button>
@@ -216,7 +219,7 @@ export function MerchantEditRewardPageView({ rewardId, initialRewards }: Merchan
 
 				{canEdit ? (
 					<div className="flex flex-wrap items-center justify-end gap-4">
-						<Link href="/rewards">
+						<Link href={rewardsPath}>
 							<Button type="button" variant="outline">
 								Cancel
 							</Button>
@@ -242,7 +245,7 @@ export function MerchantEditRewardPageView({ rewardId, initialRewards }: Merchan
 					</div>
 				) : (
 					<div className="flex justify-end">
-						<Link href="/rewards">
+						<Link href={rewardsPath}>
 							<Button type="button" variant="outline">
 								Back to rewards
 							</Button>

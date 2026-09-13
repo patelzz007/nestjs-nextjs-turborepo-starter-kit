@@ -12,6 +12,18 @@ import { GITHUB_URL, SITE_NAME } from "@/lib/site";
  */
 export function baseOptions(): BaseLayoutProps {
 	return {
+		links: [
+			{
+				text: "Guides",
+				url: "/docs",
+				active: "nested-url",
+			},
+			{
+				text: "Blog",
+				url: "/blog",
+				active: "nested-url",
+			},
+		],
 		nav: {
 			title: (
 				<div className="flex items-center gap-2.5">

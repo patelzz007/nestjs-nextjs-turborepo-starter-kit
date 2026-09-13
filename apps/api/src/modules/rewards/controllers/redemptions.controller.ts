@@ -30,7 +30,7 @@ export class RedemptionsController {
 		@MerchantPos() pos: MerchantPosContext,
 		@Body(new ZodValidationPipe(apiContract.redemptions.validate.input)) body: Parameters<RedemptionService["validate"]>[2],
 	): ReturnType<RedemptionService["validate"]> {
-		return this.redemptionService.validate(pos.merchantOrgId, pos.terminalId, body);
+		return this.redemptionService.validate(pos.organizationId, pos.terminalId, body);
 	}
 
 	@Public()
@@ -46,6 +46,6 @@ export class RedemptionsController {
 		@MerchantPos() pos: MerchantPosContext,
 		@Body(new ZodValidationPipe(apiContract.redemptions.confirm.input)) body: Parameters<RedemptionService["confirm"]>[2],
 	): ReturnType<RedemptionService["confirm"]> {
-		return this.redemptionService.confirm(pos.merchantOrgId, pos.terminalId, body);
+		return this.redemptionService.confirm(pos.organizationId, pos.terminalId, body);
 	}
 }

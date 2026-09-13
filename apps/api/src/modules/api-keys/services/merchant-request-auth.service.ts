@@ -10,15 +10,16 @@ import type { MerchantActor } from "../types/merchant-actor.types";
 export class MerchantRequestAuthService {
 	public constructor(private readonly merchantContext: MerchantContextService) {}
 
-	public async resolveFromRequest(request: FastifyRequest, requestedOrgId: string | undefined): Promise<MerchantActor> {
+	public async resolveFromRequest(request: FastifyRequest, orgSlug: string | undefined): Promise<MerchantActor> {
 		const apiKeyAuth = getApiKeyAuthFromRequest(request);
 
 		if (apiKeyAuth !== undefined) {
-			const merchantOrgId = this.merchantContext.resolveOrgIdFromApiKey(apiKeyAuth, requestedOrgId);
+			const organizationId = this.merchantContext.resolveOrgIdFromApiKey(apiKeyAuth, undefined);
 			return {
 				kind: "api_key",
 				userId: null,
-				merchantOrgId,
+				organizationId,
+				orgSlug: orgSlug ?? null,
 				apiKeyId: apiKeyAuth.apiKeyId,
 			};
 		}
@@ -26,17 +27,25 @@ export class MerchantRequestAuthService {
 		const user = request.user;
 		if (!isAuthenticatedUser(user)) {
 			throw new UnauthorizedException({
-				message: "Merchant authentication required",
-				error: "MERCHANT_AUTH_REQUIRED",
+				message: "Organization authentication required",
+				error: "ORGANIZATION_AUTH_REQUIRED",
 			});
 		}
 
-		const merchantOrgId = await this.merchantContext.resolveOrgIdForUser(user.sub, requestedOrgId);
+		if (orgSlug === undefined || orgSlug.length === 0) {
+			throw new UnauthorizedException({
+				message: "Organization slug required",
+				error: "ORGANIZATION_SLUG_REQUIRED",
+			});
+		}
+
+		const organizationId = await this.merchantContext.resolveOrgIdForUser(user.sub, orgSlug);
 
 		return {
 			kind: "user",
 			userId: user.sub,
-			merchantOrgId,
+			organizationId,
+			orgSlug,
 			apiKeyId: null,
 		};
 	}

@@ -1,6 +1,5 @@
 import { OrgDashboardPageView } from "@/components/org/org-dashboard-page-view";
 import { OrgSlugBootstrap } from "@/components/org/org-slug-bootstrap";
-import { MerchantShell } from "@/components/merchant-shell";
 import { loadMerchantServerContext } from "@/lib/merchant-server-api";
 import { resolveOrganizationTenantFromUrlSegment } from "@/lib/org/resolve-slug";
 import type { OrganizationContextResponse } from "@workspace/shared";
@@ -30,9 +29,9 @@ export default async function OrgDashboardPage({ params }: OrgDashboardPageProps
 	const displaySlug = context?.organization.slug ?? resolvedTenant?.slug ?? orgSlug;
 
 	return (
-		<MerchantShell initialMemberships={ctx.memberships} initialMerchantOrgId={resolvedTenant?.merchantOrgId ?? ctx.merchantOrgId}>
+		<>
 			<OrgSlugBootstrap orgSlug={displaySlug} />
 			<OrgDashboardPageView orgSlug={displaySlug} context={context} contextError={contextError} />
-		</MerchantShell>
+		</>
 	);
 }

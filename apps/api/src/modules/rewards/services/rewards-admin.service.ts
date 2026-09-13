@@ -19,27 +19,23 @@ import { LogService } from "../../logs/logs.service";
 import { EmailSenderService } from "../../notifications/email/email-sender.service";
 import { EMAIL_TEMPLATE_REGISTRY, buildEmailPreviewFromTemplate } from "../../notifications/email/email-template.registry";
 import { MerchantInviteEmailTemplate } from "../../notifications/email/templates/merchant-invite-email.template";
-import { MerchantInviteRepository } from "../repositories/merchant-invite.repository";
-import { MerchantMemberRepository } from "../repositories/merchant-member.repository";
-import { MerchantOrgRepository } from "../repositories/merchant-org.repository";
+import { OrganizationRepository } from "../../organization/repositories/organization.repository";
+import { OrganizationProvisioningService } from "../../organization/services/organization-provisioning.service";
 import { RewardRepository } from "../repositories/reward.repository";
-import { generateOpaqueToken, sha256Hex } from "../utils/reward-crypto.util";
-import { mapMerchantOrgToAdminDetailResponse, mapMerchantOrgToResponse, mapRewardToResponse } from "../utils/reward-mapper.util";
+import { mapOrganizationToAdminDetailResponse, mapOrganizationToAdminResponse, mapRewardToResponse } from "../utils/reward-mapper.util";
 import { MerchantKybDocumentService } from "./merchant-kyb-document.service";
 import { MerchantRewardService } from "./merchant-reward.service";
 import { RewardNotificationService } from "./reward-notification.service";
 
-const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const INVITE_TTL_DAYS = 7;
 const INVITE_PREVIEW_TOKEN = "preview-invite-token";
 
 @Injectable()
 export class RewardsAdminService {
 	public constructor(
-		private readonly merchantInviteRepository: MerchantInviteRepository,
-		private readonly merchantOrgRepository: MerchantOrgRepository,
+		private readonly organizationRepository: OrganizationRepository,
+		private readonly organizationProvisioning: OrganizationProvisioningService,
 		private readonly kybDocumentService: MerchantKybDocumentService,
-		private readonly merchantMemberRepository: MerchantMemberRepository,
 		private readonly rewardRepository: RewardRepository,
 		private readonly merchantRewardService: MerchantRewardService,
 		private readonly notificationService: RewardNotificationService,
@@ -49,19 +45,9 @@ export class RewardsAdminService {
 	) {}
 
 	public async createMerchantInvite(adminUserId: string, input: AdminCreateMerchantInviteInput): Promise<{ inviteId: string; inviteToken: string; expiresAt: number }> {
-		const token = generateOpaqueToken();
-		const expiresAt = Date.now() + INVITE_TTL_MS;
+		const provisioned = await this.organizationProvisioning.provisionFromRewardHubAdminInvite(adminUserId, input);
 
-		const invite = await this.merchantInviteRepository.create({
-			email: input.email,
-			tokenHash: sha256Hex(token),
-			businessName: input.businessName,
-			city: input.city,
-			createdByAdminId: adminUserId,
-			expiresAt,
-		});
-
-		const inviteUrl = this.buildMerchantInviteUrl(token);
+		const inviteUrl = this.buildMerchantInviteUrl(provisioned.inviteToken);
 		const sendResult = await this.emailSender.send(
 			new MerchantInviteEmailTemplate({
 				to: input.email,
@@ -76,7 +62,7 @@ export class RewardsAdminService {
 			this.logService.warn("Merchant invite email failed", {
 				context: "RewardsAdminService",
 				metadata: {
-					inviteId: invite.id,
+					inviteId: provisioned.inviteId,
 					email: input.email,
 					reason: sendResult.reason,
 					...(sendResult.detail !== undefined ? { detail: sendResult.detail } : {}),
@@ -90,9 +76,9 @@ export class RewardsAdminService {
 		}
 
 		return {
-			inviteId: invite.id,
-			inviteToken: token,
-			expiresAt: EpochMsSchema.parse(Number(invite.expiresAt)),
+			inviteId: provisioned.inviteId,
+			inviteToken: provisioned.inviteToken,
+			expiresAt: EpochMsSchema.parse(provisioned.expiresAt),
 		};
 	}
 
@@ -114,24 +100,23 @@ export class RewardsAdminService {
 		return buildEmailPreviewFromTemplate(entry, template, context, input.email);
 	}
 
-	public async getMerchantDetail(merchantOrgId: string): Promise<AdminMerchantDetailResponse> {
-		const org = await this.merchantOrgRepository.findForAdminDetail(merchantOrgId);
+	public async getMerchantDetail(organizationId: string): Promise<AdminMerchantDetailResponse> {
+		const org = await this.organizationRepository.findForAdminDetail(organizationId);
 
 		if (org === null) {
 			throw new NotFoundException({ message: "Merchant not found", error: "MERCHANT_NOT_FOUND" });
 		}
 
-		const documents = await this.kybDocumentService.mapDocumentRecordsFromOrg(merchantOrgId);
-		return mapMerchantOrgToAdminDetailResponse(org, documents);
+		const documents = await this.kybDocumentService.mapDocumentRecordsFromOrg(organizationId);
+		return mapOrganizationToAdminDetailResponse(org, documents);
 	}
 
 	public async listMerchants(query: AdminMerchantListQuery): Promise<PaginatedServiceResult<MerchantOrgResponse>> {
-		const result = await this.merchantOrgRepository.listForAdmin(query);
+		const result = await this.organizationRepository.listForAdmin(query);
 
 		const items = result.items.map((row) => {
-			const base = mapMerchantOrgToResponse(row);
-			const [owner] = row.members;
-			return { ...base, ownerUserId: owner.userId };
+			const base = mapOrganizationToAdminResponse({ ...row, merchantProfile: row.merchantProfile });
+			return { ...base, ownerUserId: row.memberships[0]?.userId ?? null };
 		});
 
 		return paginateCursorListResult({ ...result, items }, query);
@@ -139,7 +124,7 @@ export class RewardsAdminService {
 
 	public async listPendingRewards(): Promise<RewardResponse[]> {
 		const rows = await this.rewardRepository.listPendingReview();
-		return rows.map((row) => mapRewardToResponse(row, row.merchantOrg));
+		return rows.map((row) => mapRewardToResponse(row, row.organization));
 	}
 
 	public async approveReward(adminUserId: string, rewardId: string): Promise<RewardResponse> {
@@ -148,14 +133,14 @@ export class RewardsAdminService {
 
 		await this.rewardRepository.approveInTransaction(reward.id, reward.referrerRewardId, adminUserId, now);
 
-		const owners = await this.merchantMemberRepository.listOwnersByOrgId(reward.merchantOrgId);
+		const ownerUserIds = await this.organizationRepository.listOwnerUserIds(reward.organizationId);
 
-		for (const owner of owners) {
-			await this.notificationService.notify(owner.userId, "reward_approved", "Reward approved", `"${reward.title}" is now live in the marketplace.`, { rewardId: reward.id });
+		for (const ownerUserId of ownerUserIds) {
+			await this.notificationService.notify(ownerUserId, "reward_approved", "Reward approved", `"${reward.title}" is now live in the marketplace.`, { rewardId: reward.id });
 		}
 
-		const refreshed = await this.rewardRepository.findUniqueOrThrowWithMerchantOrg(reward.id);
-		return mapRewardToResponse(refreshed, refreshed.merchantOrg);
+		const refreshed = await this.rewardRepository.findUniqueOrThrowWithOrganization(reward.id);
+		return mapRewardToResponse(refreshed, refreshed.organization);
 	}
 
 	public async rejectReward(adminUserId: string, rewardId: string, input: AdminRejectRewardInput): Promise<RewardResponse> {
@@ -164,26 +149,26 @@ export class RewardsAdminService {
 
 		await this.rewardRepository.rejectInTransaction(reward.id, reward.referrerRewardId, adminUserId, input.reason ?? null, now);
 
-		const owners = await this.merchantMemberRepository.listOwnersByOrgId(reward.merchantOrgId);
+		const ownerUserIds = await this.organizationRepository.listOwnerUserIds(reward.organizationId);
 
-		for (const owner of owners) {
-			await this.notificationService.notify(owner.userId, "reward_rejected", "Reward needs changes", input.reason ?? "Your reward was returned to draft for edits.", {
+		for (const ownerUserId of ownerUserIds) {
+			await this.notificationService.notify(ownerUserId, "reward_rejected", "Reward needs changes", input.reason ?? "Your reward was returned to draft for edits.", {
 				rewardId: reward.id,
 			});
 		}
 
-		const refreshed = await this.rewardRepository.findUniqueOrThrowWithMerchantOrg(reward.id);
-		return mapRewardToResponse(refreshed, refreshed.merchantOrg);
+		const refreshed = await this.rewardRepository.findUniqueOrThrowWithOrganization(reward.id);
+		return mapRewardToResponse(refreshed, refreshed.organization);
 	}
 
-	public async updateMerchantKyb(merchantOrgId: string, input: AdminKybUpdateInput): Promise<void> {
-		const org = await this.merchantOrgRepository.findById(merchantOrgId);
+	public async updateMerchantKyb(organizationId: string, input: AdminKybUpdateInput): Promise<void> {
+		const org = await this.organizationRepository.findById(organizationId);
 
 		if (org === null) {
 			throw new NotFoundException({ message: "Merchant not found", error: "MERCHANT_NOT_FOUND" });
 		}
 
-		await this.merchantOrgRepository.updateKyb(merchantOrgId, {
+		await this.organizationRepository.updateMerchantProfileKyb(organizationId, {
 			kybStatus: input.kybStatus,
 			...(input.kybFields !== undefined ? { kybFields: parsePrismaInputJson(input.kybFields) } : {}),
 		});
@@ -209,7 +194,7 @@ export class RewardsAdminService {
 	private async findPendingConsumerReward(rewardId: string): Promise<{
 		id: string;
 		title: string;
-		merchantOrgId: string;
+		organizationId: string;
 		referrerRewardId: string | null;
 	}> {
 		const reward = await this.rewardRepository.findPendingReviewById(rewardId);

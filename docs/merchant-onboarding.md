@@ -2,6 +2,9 @@
 title: "Merchant Onboarding"
 tags: ["merchant", "onboarding", "kyb", "files"]
 description: "How invite-based merchant onboarding collects one complete application for admin review."
+author: "Backend Team"
+lastUpdated: 1773000000000
+coverImage: "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=1200&h=630&fit=crop"
 ---
 
 # Merchant onboarding

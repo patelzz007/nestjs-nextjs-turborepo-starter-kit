@@ -1,9 +1,8 @@
-import type { MerchantMembershipResponse } from "@workspace/shared";
+import type { OrganizationRewardMembershipResponse } from "@workspace/shared";
 import { OrganizationSlugSchema, UuidParamSchema } from "@workspace/shared";
 
 export interface ResolvedOrganizationTenant {
-	readonly slug: string | null;
-	readonly merchantOrgId: string;
+	readonly slug: string;
 	readonly organizationId: string;
 }
 
@@ -15,37 +14,22 @@ export function isCanonicalOrganizationSlug(value: string): boolean {
 	return OrganizationSlugSchema.safeParse(value).success;
 }
 
-function toResolvedTenant(membership: MerchantMembershipResponse, requireSlug: boolean): ResolvedOrganizationTenant | undefined {
-	const organizationId = membership.organizationId;
-	if (organizationId === null) {
-		return undefined;
-	}
-
-	const slug = membership.organizationSlug;
-	if (slug !== null && !isCanonicalOrganizationSlug(slug)) {
-		return undefined;
-	}
-
-	if (requireSlug && slug === null) {
-		return undefined;
-	}
-
+function toResolvedTenant(membership: OrganizationRewardMembershipResponse): ResolvedOrganizationTenant {
 	return {
-		slug,
-		merchantOrgId: membership.merchantOrgId,
-		organizationId,
+		slug: membership.organizationSlug,
+		organizationId: membership.organizationId,
 	};
 }
 
-/**
- * Resolves `/orgs/:segment` to a canonical slug.
- * `segment` may be a slug, organization id, or merchant org id.
- */
-export function resolveOrganizationTenantFromUrlSegment(memberships: readonly MerchantMembershipResponse[], segment: string): ResolvedOrganizationTenant | undefined {
+/** Resolves `/orgs/:segment` to a canonical slug (segment may be slug or organization id). */
+export function resolveOrganizationTenantFromUrlSegment(
+	memberships: readonly OrganizationRewardMembershipResponse[],
+	segment: string,
+): ResolvedOrganizationTenant | undefined {
 	if (isCanonicalOrganizationSlug(segment)) {
 		const bySlug = memberships.find((row) => row.organizationSlug === segment);
 		if (bySlug !== undefined) {
-			return toResolvedTenant(bySlug, true);
+			return toResolvedTenant(bySlug);
 		}
 		return undefined;
 	}
@@ -56,21 +40,15 @@ export function resolveOrganizationTenantFromUrlSegment(memberships: readonly Me
 
 	const byOrganizationId = memberships.find((row) => row.organizationId === segment);
 	if (byOrganizationId !== undefined) {
-		return toResolvedTenant(byOrganizationId, false);
-	}
-
-	const byMerchantOrgId = memberships.find((row) => row.merchantOrgId === segment);
-	if (byMerchantOrgId !== undefined) {
-		return toResolvedTenant(byMerchantOrgId, false);
+		return toResolvedTenant(byOrganizationId);
 	}
 
 	return undefined;
 }
 
-export function resolveOrganizationSlugForMerchantOrg(memberships: readonly MerchantMembershipResponse[], merchantOrgId: string | undefined): string | undefined {
-	const activeMembership = merchantOrgId !== undefined ? memberships.find((row) => row.merchantOrgId === merchantOrgId) : memberships[0];
-	if (activeMembership === undefined) {
-		return undefined;
+export function resolveOrganizationSlugFromContext(memberships: readonly OrganizationRewardMembershipResponse[], preferredSlug: string | undefined): string | undefined {
+	if (preferredSlug !== undefined && memberships.some((row) => row.organizationSlug === preferredSlug)) {
+		return preferredSlug;
 	}
-	return toResolvedTenant(activeMembership, true)?.slug ?? undefined;
+	return memberships[0]?.organizationSlug;
 }

@@ -2,7 +2,6 @@ import { CallHandler, ExecutionContext, Injectable, type NestInterceptor } from 
 import type { FastifyRequest } from "fastify";
 import { Observable, from, switchMap } from "rxjs";
 
-import { readFirstHeader } from "../../../common/utils/http-headers";
 import { MerchantRequestAuthService } from "../services/merchant-request-auth.service";
 import { setMerchantActorOnRequest } from "../types/api-key-auth-request";
 
@@ -13,9 +12,11 @@ export class MerchantActorInterceptor implements NestInterceptor {
 
 	public intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
 		const request: FastifyRequest = context.switchToHttp().getRequest<FastifyRequest>();
-		const requestedOrgId = readFirstHeader(request.headers["x-merchant-org-id"]);
+		const routeParams = request.params;
+		const orgSlug =
+			typeof routeParams === "object" && routeParams !== null && "orgSlug" in routeParams && typeof routeParams.orgSlug === "string" ? routeParams.orgSlug : undefined;
 
-		return from(this.merchantRequestAuth.resolveFromRequest(request, requestedOrgId)).pipe(
+		return from(this.merchantRequestAuth.resolveFromRequest(request, orgSlug)).pipe(
 			switchMap((actor) => {
 				setMerchantActorOnRequest(request, actor);
 				return next.handle();

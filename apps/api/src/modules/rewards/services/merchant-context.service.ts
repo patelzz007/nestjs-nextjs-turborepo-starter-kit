@@ -1,40 +1,45 @@
-import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
-import type { CapabilitySlug, MerchantMembershipResponse } from "@workspace/shared";
+import { ForbiddenException, Injectable } from "@nestjs/common";
+import type { CapabilitySlug, OrganizationRewardMembershipResponse } from "@workspace/shared";
 
 import type { MerchantActor } from "../../api-keys/types/merchant-actor.types";
 import type { MerchantApiKeyAuthContext } from "../../api-keys/types/api-key-auth.types";
+import { OrganizationContextService } from "../../organization/services/organization-context.service";
+import { OrganizationRewardAuthService } from "../../organization/services/organization-reward-auth.service";
 import { MERCHANT_API_KEY_CAPABILITIES } from "../constants/merchant-api-key-capabilities";
-import { AuthorizationCheckerService } from "../../authorization/services/authorization-checker.service";
-import { MerchantMemberRepository } from "../repositories/merchant-member.repository";
-import { MerchantOrgRepository } from "../repositories/merchant-org.repository";
-import { MerchantCapabilityService } from "./merchant-capability.service";
+
+const CAPABILITY_TO_CEDAR_ACTION: Partial<Record<CapabilitySlug, string>> = {
+	"merchant:view_rewards": "rewardhub:view_rewards",
+	"merchant:manage_rewards": "rewardhub:manage_rewards",
+	"merchant:view_redemptions": "rewardhub:view_redemptions",
+	"merchant:manage_api_keys": "rewardhub:manage_api_keys",
+	"merchant:view_analytics": "rewardhub:view_analytics",
+	"merchant:manage_kyb": "rewardhub:manage_kyb",
+};
 
 @Injectable()
 export class MerchantContextService {
 	public constructor(
-		private readonly merchantMemberRepository: MerchantMemberRepository,
-		private readonly merchantOrgRepository: MerchantOrgRepository,
-		private readonly authorizationChecker: AuthorizationCheckerService,
-		private readonly merchantCapabilities: MerchantCapabilityService,
+		private readonly organizationRewardAuth: OrganizationRewardAuthService,
+		private readonly organizationContext: OrganizationContextService,
 	) {}
 
 	public resolveOrgIdFromApiKey(apiKeyAuth: MerchantApiKeyAuthContext, requestedOrgId: string | undefined): string {
-		if (requestedOrgId !== undefined && requestedOrgId.length > 0 && requestedOrgId !== apiKeyAuth.merchantOrgId) {
+		if (requestedOrgId !== undefined && requestedOrgId.length > 0 && requestedOrgId !== apiKeyAuth.organizationId) {
 			throw new ForbiddenException({
-				message: "API key cannot access another merchant org",
-				error: "MERCHANT_ORG_FORBIDDEN",
+				message: "API key cannot access another organization",
+				error: "ORGANIZATION_FORBIDDEN",
 			});
 		}
 
-		return apiKeyAuth.merchantOrgId;
+		return apiKeyAuth.organizationId;
 	}
 
 	public async requireActorCapability(actor: MerchantActor, capability: CapabilitySlug): Promise<void> {
 		if (actor.kind === "api_key") {
 			if (!MERCHANT_API_KEY_CAPABILITIES.includes(capability)) {
 				throw new ForbiddenException({
-					message: "Insufficient merchant API key permissions",
-					error: "MERCHANT_API_KEY_CAPABILITY_REQUIRED",
+					message: "Insufficient organization API key permissions",
+					error: "ORGANIZATION_API_KEY_CAPABILITY_REQUIRED",
 					capability,
 				});
 			}
@@ -43,152 +48,80 @@ export class MerchantContextService {
 
 		if (actor.userId === null) {
 			throw new ForbiddenException({
-				message: "Merchant authentication required",
-				error: "MERCHANT_AUTH_REQUIRED",
+				message: "Organization authentication required",
+				error: "ORGANIZATION_AUTH_REQUIRED",
 			});
 		}
 
-		await this.requireCapability(actor.userId, actor.merchantOrgId, capability);
-	}
-
-	public async resolveOrgIdForUser(userId: string, requestedOrgId: string | undefined): Promise<string> {
-		const memberships = await this.merchantMemberRepository.listOrgRefsForUser(userId);
-
-		if (memberships.length === 0) {
-			if (requestedOrgId !== undefined && requestedOrgId.length > 0) {
-				const canManageMerchants = await this.authorizationChecker.hasPermission(userId, "MANAGE", "MERCHANT_ORG");
-				if (canManageMerchants) {
-					await this.assertMerchantOrgExists(requestedOrgId);
-					return requestedOrgId;
-				}
-			}
-
-			throw new ForbiddenException({ message: "Not a merchant member", error: "MERCHANT_MEMBER_REQUIRED" });
-		}
-
-		if (requestedOrgId !== undefined && requestedOrgId.length > 0) {
-			const match = memberships.find((row) => row.merchantOrgId === requestedOrgId);
-			if (match === undefined) {
-				const canManageMerchants = await this.authorizationChecker.hasPermission(userId, "MANAGE", "MERCHANT_ORG");
-				if (canManageMerchants) {
-					await this.assertMerchantOrgExists(requestedOrgId);
-					return requestedOrgId;
-				}
-
-				throw new ForbiddenException({ message: "Invalid merchant org", error: "MERCHANT_ORG_FORBIDDEN" });
-			}
-			return requestedOrgId;
-		}
-
-		return memberships[0].merchantOrgId;
-	}
-
-	public async requireOwnerRole(userId: string, merchantOrgId: string): Promise<void> {
-		const membership = await this.merchantMemberRepository.findRoleForUserInOrg(userId, merchantOrgId);
-
-		if (membership?.role === "OWNER") {
-			return;
-		}
-
-		const canManageMerchants = await this.authorizationChecker.hasPermission(userId, "MANAGE", "MERCHANT_ORG");
-		if (canManageMerchants) {
-			return;
-		}
-
-		throw new ForbiddenException({
-			message: "Only merchant owners can perform this action",
-			error: "MERCHANT_OWNER_REQUIRED",
-		});
-	}
-
-	public async requireCapability(userId: string, merchantOrgId: string, capability: CapabilitySlug): Promise<void> {
-		const allowed = await this.userHasCapability(userId, merchantOrgId, capability);
-		if (!allowed) {
+		const cedarAction = CAPABILITY_TO_CEDAR_ACTION[capability];
+		if (cedarAction === undefined) {
 			throw new ForbiddenException({
-				message: "Insufficient merchant permissions",
-				error: "MERCHANT_CAPABILITY_REQUIRED",
+				message: "Unknown reward hub capability",
+				error: "ORGANIZATION_CAPABILITY_UNKNOWN",
 				capability,
 			});
 		}
+
+		const resolved = await this.organizationRewardAuth.resolveOrganizationFromSlug(actor.userId, actor.orgSlug ?? actor.organizationId);
+		await this.organizationRewardAuth.requireCedarAction(actor.userId, actor.organizationId, cedarAction, "RewardHub", actor.organizationId, resolved.membership);
 	}
 
-	public async userHasCapability(userId: string, merchantOrgId: string, capability: CapabilitySlug, options?: { readonly isImpersonating?: boolean }): Promise<boolean> {
-		const membership = await this.merchantMemberRepository.findRoleForUserInOrg(userId, merchantOrgId);
-
-		if (membership !== null) {
-			const capabilities = await this.merchantCapabilities.getCapabilitiesForRole(membership.role);
-			return capabilities.includes(capability);
-		}
-
-		const canManageMerchants = await this.authorizationChecker.hasPermission(userId, "MANAGE", "MERCHANT_ORG");
-		if (!canManageMerchants || options?.isImpersonating === true) {
-			return false;
-		}
-
-		const org = await this.merchantOrgRepository.findActiveById(merchantOrgId);
-
-		if (org === null) {
-			return false;
-		}
-
-		const ownerCapabilities = await this.merchantCapabilities.getOwnerCapabilities();
-		return ownerCapabilities.includes(capability);
+	public async resolveOrgIdForUser(userId: string, orgSlug: string): Promise<string> {
+		const resolved = await this.organizationRewardAuth.resolveOrganizationFromSlug(userId, orgSlug);
+		return resolved.organizationId;
 	}
 
-	public async listMembershipsForUser(userId: string, options?: { readonly isImpersonating?: boolean }): Promise<MerchantMembershipResponse[]> {
-		const memberships = await this.merchantMemberRepository.listWithOrgForUser(userId);
-
-		const memberRows: MerchantMembershipResponse[] = [];
-		for (const row of memberships.filter((entry) => !entry.merchantOrg.isDeleted)) {
-			const capabilities = await this.merchantCapabilities.getCapabilitiesForRole(row.role);
-			const organizationId = row.merchantOrg.organizationId ?? row.merchantOrg.organization?.id ?? null;
-			memberRows.push({
-				merchantOrgId: row.merchantOrgId,
-				organizationId,
-				organizationSlug: row.merchantOrg.organization?.slug ?? null,
-				businessName: row.merchantOrg.businessName,
-				city: row.merchantOrg.city,
-				role: row.role,
-				kybStatus: row.merchantOrg.kybStatus,
-				status: row.merchantOrg.status,
-				capabilities: [...capabilities],
+	public async requireUserCapability(userId: string, orgSlug: string, capability: CapabilitySlug): Promise<void> {
+		const resolved = await this.organizationRewardAuth.resolveOrganizationFromSlug(userId, orgSlug);
+		const cedarAction = CAPABILITY_TO_CEDAR_ACTION[capability];
+		if (cedarAction === undefined) {
+			throw new ForbiddenException({
+				message: "Unknown reward hub capability",
+				error: "ORGANIZATION_CAPABILITY_UNKNOWN",
+				capability,
 			});
 		}
-
-		if (memberRows.length > 0) {
-			return memberRows;
-		}
-
-		if (options?.isImpersonating === true) {
-			return memberRows;
-		}
-
-		const canManageMerchants = await this.authorizationChecker.hasPermission(userId, "MANAGE", "MERCHANT_ORG");
-		if (!canManageMerchants) {
-			return memberRows;
-		}
-
-		const ownerCapabilities = await this.merchantCapabilities.getOwnerCapabilities();
-		const orgs = await this.merchantOrgRepository.listActiveSummaries(100);
-
-		return orgs.map((org) => ({
-			merchantOrgId: org.id,
-			organizationId: org.organization?.id ?? null,
-			organizationSlug: org.organization?.slug ?? null,
-			businessName: org.businessName,
-			city: org.city,
-			role: "OWNER",
-			kybStatus: org.kybStatus,
-			status: org.status,
-			capabilities: [...ownerCapabilities],
-		}));
+		await this.organizationRewardAuth.requireCedarAction(userId, resolved.organizationId, cedarAction, "RewardHub", resolved.organizationId, resolved.membership);
 	}
 
-	private async assertMerchantOrgExists(merchantOrgId: string): Promise<void> {
-		const org = await this.merchantOrgRepository.findActiveById(merchantOrgId);
-
-		if (org === null) {
-			throw new NotFoundException({ message: "Merchant not found", error: "MERCHANT_NOT_FOUND" });
+	public async requireOwnerRole(userId: string, organizationId: string, orgSlug: string): Promise<void> {
+		const resolved = await this.organizationRewardAuth.resolveOrganizationFromSlug(userId, orgSlug);
+		if (resolved.organizationId !== organizationId) {
+			throw new ForbiddenException({ message: "Invalid organization", error: "ORGANIZATION_FORBIDDEN" });
 		}
+		if (resolved.membership.role !== "OWNER") {
+			throw new ForbiddenException({
+				message: "Only organization owners can perform this action",
+				error: "ORGANIZATION_OWNER_REQUIRED",
+			});
+		}
+	}
+
+	public async listMembershipsForUser(userId: string): Promise<OrganizationRewardMembershipResponse[]> {
+		return this.organizationRewardAuth.listMembershipsForUser(userId);
+	}
+
+	public async assertAccessibleLocationForUser(userId: string, orgSlug: string, locationId: string): Promise<void> {
+		await this.organizationContext.assertAccessibleLocation(userId, orgSlug, locationId);
+	}
+
+	public async resolveLocationFilter(actor: MerchantActor, locationId: string | undefined): Promise<string | undefined> {
+		if (locationId === undefined) {
+			return undefined;
+		}
+
+		if (actor.kind === "user") {
+			if (actor.userId === null || actor.orgSlug === null) {
+				throw new ForbiddenException({
+					message: "Organization authentication required",
+					error: "ORGANIZATION_AUTH_REQUIRED",
+				});
+			}
+
+			await this.organizationContext.assertAccessibleLocation(actor.userId, actor.orgSlug, locationId);
+			return locationId;
+		}
+
+		return locationId;
 	}
 }

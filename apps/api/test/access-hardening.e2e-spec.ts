@@ -3,6 +3,7 @@ import { type NestFastifyApplication } from "@nestjs/platform-fastify";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { API_VERSION_PREFIX } from "@workspace/shared";
 
+import { ORGANIZATION_SEED_IDS, ORGANIZATION_SEED_SLUGS } from "../prisma/seed/organizations";
 import { REWARD_SEED_IDS } from "../prisma/seed/rewards";
 import { createE2eApp, login, mutationHeaders, uniqueClientIp } from "./e2e-helpers";
 
@@ -17,11 +18,11 @@ describe("Access hardening (e2e)", () => {
 
 		const pool = new Pool({ connectionString: DATABASE_URL });
 		await pool.query(`UPDATE public.users SET email_verified_at = $1 WHERE email = $2`, [Date.now(), "alice.johnson@example.com"]);
-		const result = await pool.query<{ id: string }>(`SELECT id FROM public.merchant_api_keys WHERE merchant_org_id = $1 LIMIT 1`, [REWARD_SEED_IDS.mlkOrg]);
+		const result = await pool.query<{ id: string }>(`SELECT id FROM public.organization_api_keys WHERE organization_id = $1 LIMIT 1`, [ORGANIZATION_SEED_IDS.mlkOrganization]);
 		await pool.end();
 		const keyId = result.rows[0]?.id;
 		if (keyId === undefined) {
-			throw new Error("Seed data missing MLK merchant API key — run pnpm db:seed");
+			throw new Error("Seed data missing MLK organization API key — run pnpm db:seed");
 		}
 		mlkApiKeyId = keyId;
 	});
@@ -95,11 +96,10 @@ describe("Access hardening (e2e)", () => {
 
 		const response = await app.inject({
 			method: "PATCH",
-			url: `${API_VERSION_PREFIX}/merchant/rewards/${REWARD_SEED_IDS.mlkRewardDisabled}`,
+			url: `${API_VERSION_PREFIX}/orgs/${ORGANIZATION_SEED_SLUGS.mlk}/rewards/${REWARD_SEED_IDS.mlkRewardDisabled}`,
 			headers: mutationHeaders({
 				cookie: `merchantAccessToken=${klOwner.accessToken}; merchantRefreshToken=${klOwner.refreshToken}`,
 				"x-client-type": "merchant",
-				"x-merchant-org-id": REWARD_SEED_IDS.klOrg,
 			}),
 			payload: { title: "Cross-org takeover attempt" },
 		});
@@ -112,32 +112,28 @@ describe("Access hardening (e2e)", () => {
 
 		const response = await app.inject({
 			method: "POST",
-			url: `${API_VERSION_PREFIX}/merchant/api-keys/${mlkApiKeyId}/revoke`,
+			url: `${API_VERSION_PREFIX}/orgs/${ORGANIZATION_SEED_SLUGS.mlk}/api-keys/${mlkApiKeyId}/revoke`,
 			headers: mutationHeaders({
 				cookie: `merchantAccessToken=${klOwner.accessToken}; merchantRefreshToken=${klOwner.refreshToken}`,
 				"x-client-type": "merchant",
-				"x-merchant-org-id": REWARD_SEED_IDS.klOrg,
 			}),
 		});
 
 		expect([403, 404]).toContain(response.statusCode);
 	});
 
-	it("does not change credentials when adding an existing user as a merchant member", async () => {
+	it("does not change credentials when adding an existing user as an organization member", async () => {
 		const klOwner = await login(app, "brew.owner@kl-rewards.demo", "BrewOwner@123", "merchant");
 
 		const createResponse = await app.inject({
 			method: "POST",
-			url: `${API_VERSION_PREFIX}/merchant/members`,
+			url: `${API_VERSION_PREFIX}/orgs/${ORGANIZATION_SEED_SLUGS.kl}/members/invite`,
 			headers: mutationHeaders({
 				cookie: `merchantAccessToken=${klOwner.accessToken}; merchantRefreshToken=${klOwner.refreshToken}`,
 				"x-client-type": "merchant",
-				"x-merchant-org-id": REWARD_SEED_IDS.klOrg,
 			}),
 			payload: {
 				email: "user@example.com",
-				password: "Attacker@123",
-				fullName: "Attacker Name",
 				role: "CASHIER",
 			},
 		});

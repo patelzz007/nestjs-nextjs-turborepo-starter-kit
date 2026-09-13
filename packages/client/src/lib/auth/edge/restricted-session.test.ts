@@ -36,8 +36,15 @@ describe("getEnrollmentRedirectPath", () => {
 		expect(getEnrollmentRedirectPath("web", "mfa_enrollment")).toBe("/rewardhub/settings");
 	});
 
-	it("returns /settings for merchant and admin apps", () => {
+	it("returns org-scoped settings for merchant when organization slug is known", () => {
+		expect(getEnrollmentRedirectPath("merchant", "email_verification", "brew-bean-kl")).toBe("/orgs/brew-bean-kl/settings");
+	});
+
+	it("returns /settings fallback for merchant without organization slug", () => {
 		expect(getEnrollmentRedirectPath("merchant", "email_verification")).toBe("/settings");
+	});
+
+	it("returns /settings for admin apps", () => {
 		expect(getEnrollmentRedirectPath("admin", "mfa_enrollment")).toBe("/settings");
 	});
 });
@@ -49,6 +56,12 @@ describe("isEnrollmentAllowedPath", () => {
 		expect(isEnrollmentAllowedPath("/auth/login")).toBe(true);
 		expect(isEnrollmentAllowedPath("/rewardhub/settings")).toBe(true);
 		expect(isEnrollmentAllowedPath("/settings/security")).toBe(true);
+	});
+
+	it("allows organization-scoped merchant settings routes", () => {
+		expect(isEnrollmentAllowedPath("/orgs/brew-bean-kl/settings")).toBe(true);
+		expect(isEnrollmentAllowedPath("/orgs/brew-bean-kl/settings/verification")).toBe(true);
+		expect(isEnrollmentAllowedPath("/orgs/jonker-street-kitchen/settings/team")).toBe(true);
 	});
 
 	it("blocks protected dashboard routes", () => {

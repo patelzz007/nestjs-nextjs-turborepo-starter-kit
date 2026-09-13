@@ -33,9 +33,9 @@ export class MerchantApiKeyGuard implements CanActivate {
 			throw new UnauthorizedException({ message: "Invalid API key", error: "MERCHANT_API_KEY_INVALID" });
 		}
 
-		const terminal = await this.prisma.merchantTerminal.findFirst({
+		const terminal = await this.prisma.organizationTerminal.findFirst({
 			where: {
-				merchantOrgId: keyContext.merchantOrgId,
+				organizationId: keyContext.organizationId,
 				terminalId,
 				isDeleted: false,
 			},
@@ -46,7 +46,7 @@ export class MerchantApiKeyGuard implements CanActivate {
 		}
 
 		const posContext: MerchantPosContext = {
-			merchantOrgId: keyContext.merchantOrgId,
+			organizationId: keyContext.organizationId,
 			terminalId,
 			apiKeyId: keyContext.apiKeyId,
 		};

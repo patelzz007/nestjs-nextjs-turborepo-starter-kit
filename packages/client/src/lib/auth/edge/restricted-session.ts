@@ -9,6 +9,8 @@ const ENROLLMENT_MESSAGE_KEY = "auth:enrollment-message";
 
 const ENROLLMENT_ALLOWED_PREFIXES: readonly string[] = ["/auth/verify-email", "/auth/login", "/rewardhub/settings", "/settings"];
 
+const ORG_SETTINGS_PATH_PATTERN = /^\/orgs\/[^/]+\/settings(?:\/|$)/;
+
 /** Whether the access token represents a restricted enrollment session. */
 export function isRestrictedSession(token: string): boolean {
 	const payload = decodeJwtPayload(token);
@@ -16,17 +18,23 @@ export function isRestrictedSession(token: string): boolean {
 }
 
 /** Settings path where the user completes email verification or MFA enrollment. */
-export function getEnrollmentRedirectPath(mode: AuthAppMode, _enrollmentReason: EnrollmentReason): string {
-	if (mode === "web") {
-		return "/rewardhub/settings";
-	}
+export function getEnrollmentRedirectPath(mode: AuthAppMode, _enrollmentReason: EnrollmentReason, organizationSlug?: string): string {
+	if (mode === "web") return "/rewardhub/settings";
+
+	if (mode === "merchant" && organizationSlug !== undefined && organizationSlug.length > 0) return `/orgs/${organizationSlug}/settings`;
+
+	if (mode === "merchant") return "/settings";
 
 	return "/settings";
 }
 
 /** Frontend routes a restricted session may visit without being redirected. */
 export function isEnrollmentAllowedPath(pathname: string): boolean {
-	return ENROLLMENT_ALLOWED_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
+	if (ENROLLMENT_ALLOWED_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`))) {
+		return true;
+	}
+
+	return ORG_SETTINGS_PATH_PATTERN.test(pathname);
 }
 
 /** Persist an enrollment banner message across the post-login redirect. */

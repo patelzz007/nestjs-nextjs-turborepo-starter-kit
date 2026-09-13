@@ -36,12 +36,12 @@ export class RewardReferralRepository {
 		});
 	}
 
-	public async countByMerchantOrg(merchantOrgId: string, createdAtRange: { readonly gte: number; readonly lte: number }): Promise<number> {
+	public async countByMerchantOrg(organizationId: string, createdAtRange: { readonly gte: number; readonly lte: number }): Promise<number> {
 		return this.prisma.rewardReferral.count({
 			where: {
 				isDeleted: false,
 				createdAt: createdAtRange,
-				reward: { merchantOrgId, isDeleted: false },
+				reward: { organizationId, isDeleted: false },
 			},
 		});
 	}

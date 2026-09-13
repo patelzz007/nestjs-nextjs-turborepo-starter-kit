@@ -5,7 +5,9 @@ import type {
 	MerchantCreateRewardInput,
 	MerchantRedemptionListItem,
 	MerchantRedemptionListQuery,
+	MerchantRewardListQuery,
 	MerchantUpdateRewardInput,
+	OrganizationLocationScopeType,
 	PaginatedServiceResult,
 	RewardResponse,
 } from "@workspace/shared";
@@ -13,11 +15,11 @@ import { EpochMsSchema, RewardPlatformEventSchema } from "@workspace/shared";
 
 import type { MerchantActor } from "../../api-keys/types/merchant-actor.types";
 import { paginateCursorListResult } from "../../../platform/persistence/cursor-list";
-import { MerchantMemberRepository } from "../repositories/merchant-member.repository";
 import { RewardClaimRepository } from "../repositories/reward-claim.repository";
 import { RewardRedemptionRepository } from "../repositories/reward-redemption.repository";
 import { RewardRepository } from "../repositories/reward.repository";
 import { mapRewardToResponse } from "../utils/reward-mapper.util";
+import { OrganizationRepository } from "../../organization/repositories/organization.repository";
 import { MerchantContextService } from "./merchant-context.service";
 import { RewardNotificationService } from "./reward-notification.service";
 import { RewardsPlatformEventsService } from "./rewards-platform-events.service";
@@ -31,21 +33,23 @@ export class MerchantRewardService {
 		private readonly rewardRepository: RewardRepository,
 		private readonly rewardClaimRepository: RewardClaimRepository,
 		private readonly redemptionRepository: RewardRedemptionRepository,
-		private readonly merchantMemberRepository: MerchantMemberRepository,
 		private readonly merchantContext: MerchantContextService,
+		private readonly organizationRepository: OrganizationRepository,
 		private readonly notificationService: RewardNotificationService,
 		private readonly rewardsPlatformEvents: RewardsPlatformEventsService,
 	) {}
 
-	public async listRewards(actor: MerchantActor): Promise<RewardResponse[]> {
+	public async listRewards(actor: MerchantActor, query: MerchantRewardListQuery = {}): Promise<RewardResponse[]> {
 		await this.merchantContext.requireActorCapability(actor, "merchant:view_rewards");
-		const rows = await this.rewardRepository.listConsumerByMerchantOrg(actor.merchantOrgId);
-		return rows.map((row) => mapRewardToResponse(row, row.merchantOrg));
+		const locationId = await this.merchantContext.resolveLocationFilter(actor, query.locationId);
+		const rows = await this.rewardRepository.listConsumerByOrganization(actor.organizationId, locationId);
+		return rows.map((row) => mapRewardToResponse(row, row.organization));
 	}
 
 	public async createReward(actor: MerchantActor, input: MerchantCreateRewardInput): Promise<RewardResponse> {
 		await this.merchantContext.requireActorCapability(actor, "merchant:manage_rewards");
-		const orgId = actor.merchantOrgId;
+		const orgId = actor.organizationId;
+		const { locationScopeType, locationIds } = await this.resolveRewardLocationScope(actor, input.locationScopeType, input.locationIds);
 
 		const referralsEnabled = input.referralsEnabled;
 		const referralPoolTotal = referralsEnabled ? input.referralPoolTotal : null;
@@ -53,35 +57,39 @@ export class MerchantRewardService {
 		const now = Date.now();
 		const autoPublishAt = saveAsDraft ? null : now + AUTO_PUBLISH_MS;
 
-		const reward = await this.rewardRepository.createConsumerReward({
-			merchantOrgId: orgId,
-			title: input.title,
-			description: input.description,
-			rewardType: input.rewardType,
-			rewardValue: input.rewardValue,
-			termsConditions: input.termsConditions ?? null,
-			rewardKind: "CONSUMER",
-			category: input.category,
-			placeholderImageKey: `category-${input.category}`,
-			rules: input.rules ?? undefined,
-			quantityTotal: input.quantityTotal,
-			quantityRemaining: input.quantityTotal,
-			startDate: input.startDate ?? null,
-			expiryDate: input.expiryDate,
-			status: saveAsDraft ? "DRAFT" : "PENDING_REVIEW",
-			submittedForReviewAt: saveAsDraft ? null : now,
-			autoPublishAt,
-			referralsEnabled,
-			referralPoolTotal,
-			referralPoolRemaining: referralPoolTotal,
-		});
+		const reward = await this.rewardRepository.createConsumerReward(
+			{
+				organizationId: orgId,
+				title: input.title,
+				description: input.description,
+				rewardType: input.rewardType,
+				rewardValue: input.rewardValue,
+				termsConditions: input.termsConditions ?? null,
+				rewardKind: "CONSUMER",
+				category: input.category,
+				placeholderImageKey: `category-${input.category}`,
+				rules: input.rules ?? undefined,
+				quantityTotal: input.quantityTotal,
+				quantityRemaining: input.quantityTotal,
+				startDate: input.startDate ?? null,
+				expiryDate: input.expiryDate,
+				status: saveAsDraft ? "DRAFT" : "PENDING_REVIEW",
+				submittedForReviewAt: saveAsDraft ? null : now,
+				autoPublishAt,
+				referralsEnabled,
+				referralPoolTotal,
+				referralPoolRemaining: referralPoolTotal,
+				locationScopeType,
+			},
+			locationIds,
+		);
 
 		if (referralsEnabled && referralPoolTotal !== null && referralPoolTotal !== undefined) {
 			const referrerTitle = input.referrerRewardTitle ?? `${input.title} — Referrer bonus`;
 			const referrerExpiry = Math.min(input.expiryDate, Date.now() + REFERRER_REWARD_MAX_TTL_MS);
 
 			const referrerReward = await this.rewardRepository.createReferrerReward({
-				merchantOrgId: orgId,
+				organizationId: orgId,
 				title: referrerTitle,
 				description: `Referrer reward for ${input.title}`,
 				rewardType: input.rewardType,
@@ -98,18 +106,57 @@ export class MerchantRewardService {
 				autoPublishAt,
 				referralsEnabled: false,
 				parentConsumerRewardId: reward.id,
+				locationScopeType,
 			});
+
+			if (locationScopeType === "SELECTED" && locationIds.length > 0) {
+				await this.rewardRepository.replaceLocationScopes(referrerReward.id, orgId, locationIds);
+			}
 
 			await this.rewardRepository.updateReward(reward.id, { referrerReward: { connect: { id: referrerReward.id } } });
 		}
 
-		const refreshed = await this.rewardRepository.findUniqueOrThrowWithMerchantOrg(reward.id);
-		return mapRewardToResponse(refreshed, refreshed.merchantOrg);
+		const refreshed = await this.rewardRepository.findUniqueOrThrowWithOrganization(reward.id);
+		return mapRewardToResponse(refreshed, refreshed.organization);
+	}
+
+	private async resolveRewardLocationScope(
+		actor: MerchantActor,
+		requestedScopeType: OrganizationLocationScopeType,
+		requestedLocationIds: readonly string[],
+	): Promise<{ readonly locationScopeType: OrganizationLocationScopeType; readonly locationIds: string[] }> {
+		const locationCount = await this.rewardRepository.countOrganizationLocations(actor.organizationId);
+
+		if (locationCount <= 1) {
+			return { locationScopeType: "ALL_LOCATIONS", locationIds: [] };
+		}
+
+		if (requestedScopeType === "ALL_LOCATIONS") {
+			return { locationScopeType: "ALL_LOCATIONS", locationIds: [] };
+		}
+
+		const uniqueLocationIds = [...new Set(requestedLocationIds)];
+		const validLocationIds = await this.rewardRepository.findOrganizationLocationIds(actor.organizationId, uniqueLocationIds);
+
+		if (validLocationIds.length !== uniqueLocationIds.length) {
+			throw new BadRequestException({
+				message: "One or more selected stores are invalid for this organization",
+				error: "REWARD_LOCATION_INVALID",
+			});
+		}
+
+		if (actor.kind === "user" && actor.userId !== null && actor.orgSlug !== null) {
+			for (const locationId of validLocationIds) {
+				await this.merchantContext.assertAccessibleLocationForUser(actor.userId, actor.orgSlug, locationId);
+			}
+		}
+
+		return { locationScopeType: "SELECTED", locationIds: validLocationIds };
 	}
 
 	public async updateReward(actor: MerchantActor, rewardId: string, input: MerchantUpdateRewardInput): Promise<RewardResponse> {
 		await this.merchantContext.requireActorCapability(actor, "merchant:manage_rewards");
-		const orgId = actor.merchantOrgId;
+		const orgId = actor.organizationId;
 
 		const reward = await this.findOrgConsumerReward(orgId, rewardId);
 
@@ -148,13 +195,13 @@ export class MerchantRewardService {
 			await this.rewardRepository.updateReward(reward.referrerRewardId, { title: input.referrerRewardTitle });
 		}
 
-		const refreshed = await this.rewardRepository.findUniqueOrThrowWithMerchantOrg(reward.id);
-		return mapRewardToResponse(refreshed, refreshed.merchantOrg);
+		const refreshed = await this.rewardRepository.findUniqueOrThrowWithOrganization(reward.id);
+		return mapRewardToResponse(refreshed, refreshed.organization);
 	}
 
 	public async publishReward(actor: MerchantActor, rewardId: string): Promise<RewardResponse> {
 		await this.merchantContext.requireActorCapability(actor, "merchant:manage_rewards");
-		const orgId = actor.merchantOrgId;
+		const orgId = actor.organizationId;
 
 		const reward = await this.findOrgConsumerReward(orgId, rewardId);
 
@@ -179,13 +226,14 @@ export class MerchantRewardService {
 			});
 		}
 
-		const refreshed = await this.rewardRepository.findUniqueOrThrowWithMerchantOrg(reward.id);
-		return mapRewardToResponse(refreshed, refreshed.merchantOrg);
+		const refreshed = await this.rewardRepository.findUniqueOrThrowWithOrganization(reward.id);
+		return mapRewardToResponse(refreshed, refreshed.organization);
 	}
 
 	public async listRedemptions(actor: MerchantActor, query: MerchantRedemptionListQuery): Promise<PaginatedServiceResult<MerchantRedemptionListItem>> {
 		await this.merchantContext.requireActorCapability(actor, "merchant:view_redemptions");
-		const result = await this.redemptionRepository.listForMerchant(actor.merchantOrgId, query);
+		const locationId = await this.merchantContext.resolveLocationFilter(actor, query.locationId);
+		const result = await this.redemptionRepository.listForMerchant(actor.organizationId, { ...query, locationId });
 
 		return paginateCursorListResult(
 			{
@@ -207,21 +255,21 @@ export class MerchantRewardService {
 		const pending = await this.rewardRepository.listPendingAutoPublish(now);
 
 		for (const reward of pending) {
-			await this.rewardRepository.autoPublishInTransaction(reward.id, reward.referrerRewardId, reward.merchantOrgId, now);
+			await this.rewardRepository.autoPublishInTransaction(reward.id, reward.referrerRewardId, reward.organizationId, now);
 
 			this.rewardsPlatformEvents.emit(
 				RewardPlatformEventSchema.parse({
 					event: "reward.auto_published",
 					actorUserId: null,
-					merchantOrgId: reward.merchantOrgId,
+					organizationId: reward.organizationId,
 					metadata: { rewardId: reward.id },
 				}),
 			);
 
-			const owners = await this.merchantMemberRepository.listOwnersByOrgId(reward.merchantOrgId);
+			const ownerUserIds = await this.organizationRepository.listOwnerUserIds(reward.organizationId);
 
-			for (const owner of owners) {
-				await this.notificationService.notify(owner.userId, "reward_auto_published", "Reward published", `"${reward.title}" was auto-published after the 24h review window.`, {
+			for (const ownerUserId of ownerUserIds) {
+				await this.notificationService.notify(ownerUserId, "reward_auto_published", "Reward published", `"${reward.title}" was auto-published after the 24h review window.`, {
 					rewardId: reward.id,
 				});
 			}
@@ -235,7 +283,7 @@ export class MerchantRewardService {
 		const expiredClaims = await this.rewardClaimRepository.listExpiredPending({ isReferrerCredit: false, now, take: 200 });
 
 		for (const claim of expiredClaims) {
-			const expired = await this.rewardClaimRepository.expireClaimInTransaction(claim.id, claim.rewardId, claim.reward.merchantOrgId, false);
+			const expired = await this.rewardClaimRepository.expireClaimInTransaction(claim.id, claim.rewardId, claim.reward.organizationId, false);
 
 			if (!expired) {
 				continue;
@@ -245,7 +293,7 @@ export class MerchantRewardService {
 				RewardPlatformEventSchema.parse({
 					event: "reward.claim_expired",
 					actorUserId: claim.userId,
-					merchantOrgId: claim.reward.merchantOrgId,
+					organizationId: claim.reward.organizationId,
 					metadata: { claimId: claim.id, isReferrerCredit: claim.isReferrerCredit },
 				}),
 			);
@@ -259,7 +307,7 @@ export class MerchantRewardService {
 		const expiredClaims = await this.rewardClaimRepository.listExpiredPending({ isReferrerCredit: true, now, take: 200 });
 
 		for (const claim of expiredClaims) {
-			const expired = await this.rewardClaimRepository.expireClaimInTransaction(claim.id, claim.rewardId, claim.reward.merchantOrgId, true);
+			const expired = await this.rewardClaimRepository.expireClaimInTransaction(claim.id, claim.rewardId, claim.reward.organizationId, true);
 
 			if (!expired) {
 				continue;
@@ -269,7 +317,7 @@ export class MerchantRewardService {
 				RewardPlatformEventSchema.parse({
 					event: "reward.claim_expired",
 					actorUserId: claim.userId,
-					merchantOrgId: claim.reward.merchantOrgId,
+					organizationId: claim.reward.organizationId,
 					metadata: { claimId: claim.id, isReferrerCredit: true },
 				}),
 			);
@@ -279,7 +327,7 @@ export class MerchantRewardService {
 	}
 
 	private async findOrgConsumerReward(
-		merchantOrgId: string,
+		organizationId: string,
 		rewardId: string,
 	): Promise<{
 		id: string;
@@ -288,7 +336,7 @@ export class MerchantRewardService {
 		quantityTotal: number;
 		quantityRemaining: number;
 	}> {
-		const reward = await this.rewardRepository.findOrgConsumerReward(merchantOrgId, rewardId);
+		const reward = await this.rewardRepository.findOrgConsumerReward(organizationId, rewardId);
 
 		if (reward === null) {
 			throw new NotFoundException({ message: "Reward not found", error: "REWARD_NOT_FOUND" });

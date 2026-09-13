@@ -61,7 +61,7 @@ export type MerchantKybDocumentDownloadResponse = z.output<typeof MerchantKybDoc
 export const KybScanResultSchema = z
 	.object({
 		documentId: z.uuid(),
-		merchantOrgId: z.uuid(),
+		organizationId: z.uuid(),
 		storagePath: z.string().min(1).max(500),
 		objectGeneration: z.string().min(1).max(64).optional(),
 		scanStatus: z.enum(["CLEAN", "INFECTED"]),
@@ -92,12 +92,6 @@ export type MerchantKybSubmissionFieldsInput = z.output<typeof MerchantKybSubmis
 export const MerchantKybSubmissionFormSchema = MerchantKybSubmissionFieldsSchema.omit({ documentFileIds: true });
 
 export type MerchantKybSubmissionFormInput = z.output<typeof MerchantKybSubmissionFormSchema>;
-
-/** @deprecated Use {@link MerchantKybSubmissionFieldsSchema} — documents are multipart file uploads. */
-export const MerchantKybSubmissionSchema = MerchantKybSubmissionFieldsSchema;
-
-/** @deprecated Use {@link MerchantKybSubmissionFieldsInput} */
-export type MerchantKybSubmissionInput = MerchantKybSubmissionFieldsInput;
 
 /** Business details step for KYB settings verification. */
 export const MerchantKybBusinessFieldsSchema = MerchantKybSubmissionFieldsSchema.pick({
@@ -194,15 +188,9 @@ export const MerchantOnboardingDocumentsSubmitSchema = z
 
 export type MerchantOnboardingDocumentsSubmitInput = z.output<typeof MerchantOnboardingDocumentsSubmitSchema>;
 
-/** @deprecated Use {@link MerchantOnboardingCompleteFieldsSchema} — documents are multipart file uploads. */
-export const MerchantOnboardingCompleteSchema = MerchantOnboardingCompleteFieldsSchema;
-
-/** @deprecated Use {@link MerchantOnboardingCompleteFieldsInput} */
-export type MerchantOnboardingCompleteInput = MerchantOnboardingCompleteFieldsInput;
-
 export const MerchantKybProfileResponseSchema = z
 	.object({
-		merchantOrgId: z.uuid(),
+		organizationId: z.uuid(),
 		businessName: z.string(),
 		legalName: z.string().nullable(),
 		addressText: z.string().nullable(),
@@ -220,7 +208,6 @@ export type MerchantKybProfileResponse = z.output<typeof MerchantKybProfileRespo
 
 export const MerchantOnboardingCompleteResponseSchema = z
 	.object({
-		merchantOrgId: z.uuid(),
 		organizationId: z.uuid(),
 		organizationSlug: z
 			.string()
@@ -250,7 +237,7 @@ export const MerchantMemberCreatedResponseSchema = z
 		userId: z.uuid(),
 		email: z.string(),
 		fullName: z.string(),
-		merchantOrgId: z.uuid(),
+		organizationId: z.uuid(),
 		role: MerchantMemberRoleSchema,
 	})
 	.strict();
@@ -267,7 +254,7 @@ export const AdminKybUpdateSchema = z
 export type AdminKybUpdateInput = z.output<typeof AdminKybUpdateSchema>;
 
 export const AdminKybUpdatePathInputSchema = AdminKybUpdateSchema.extend({
-	merchantOrgId: z.uuid(),
+	organizationId: z.uuid(),
 }).strict();
 
 export type AdminKybUpdatePathInput = z.output<typeof AdminKybUpdatePathInputSchema>;

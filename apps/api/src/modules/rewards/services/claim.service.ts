@@ -150,7 +150,7 @@ export class ClaimService {
 			backupFailedAttempts: number;
 			backupLockedUntil: bigint | null;
 		};
-		reward: { id: string; merchantOrgId: string; title: string; rewardType: RewardType; expiryDate: bigint };
+		reward: { id: string; organizationId: string; title: string; rewardType: RewardType; expiryDate: bigint };
 	}> {
 		if (token !== undefined) {
 			const claim = await this.rewardClaimRepository.findByRedemptionTokenHash(sha256Hex(token));

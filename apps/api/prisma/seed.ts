@@ -102,9 +102,9 @@ async function main() {
 	const usageLogCount = await prisma.apiKeyUsageLog.count();
 	console.log(`✅ ${usageLogCount} API key usage log entries`);
 
-	console.log("Seeding merchant capability catalog and role grants...");
+	console.log("Seeding merchant capability catalog...");
 	const merchantCapabilitySummary = await seedMerchantCapabilities();
-	console.log(`✅ ${String(merchantCapabilitySummary.definitions)} MERCHANT capabilities, ${String(merchantCapabilitySummary.roleGrantRows)} role grants`);
+	console.log(`✅ ${String(merchantCapabilitySummary.definitions)} MERCHANT capability definitions`);
 
 	console.log("Seeding ABAC demo conditions...");
 	await seedAbacConditions(permissions);
@@ -139,7 +139,7 @@ async function main() {
 	console.log("Seeding rewards platform (organizations, merchants, rewards, claims)...");
 	const rewardSummary = await seedRewards(adminUser, allUsers);
 	console.log(
-		`✅ Rewards: ${rewardSummary.merchantOrgs} merchant orgs, ${rewardSummary.rewards} rewards, ${rewardSummary.claims} claims, ${rewardSummary.redemptions} redemptions`,
+		`✅ Rewards: ${rewardSummary.organizations} organizations, ${rewardSummary.rewards} rewards, ${rewardSummary.claims} claims, ${rewardSummary.redemptions} redemptions`,
 	);
 	console.log(
 		`✅ Organizations: ${ORGANIZATION_SEED_SLUGS.kl}, ${ORGANIZATION_SEED_SLUGS.mlk} (${ORGANIZATION_SEED_IDS.klOrganization}, ${ORGANIZATION_SEED_IDS.mlkOrganization})`,

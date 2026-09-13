@@ -40,9 +40,6 @@ export type ClientRouterTree<R extends object> = {
 				: never;
 };
 
-/** @deprecated alias — use `ApiRequestContext` from `api-request`. */
-export type BuildClientRouterContext = ApiRequestContext;
-
 export function createQueryProcedure<Input extends SerializableInput, Resp extends DataValue>(
 	context: ApiRequestContext,
 	def: QueryDef<Input, Resp>,

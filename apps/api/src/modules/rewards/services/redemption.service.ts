@@ -32,15 +32,15 @@ export class RedemptionService {
 		private readonly emailSender: EmailSenderService,
 	) {}
 
-	public async validate(merchantOrgId: string, terminalId: string, input: RedemptionValidateInput): Promise<RedemptionPreviewResponse> {
+	public async validate(organizationId: string, terminalId: string, input: RedemptionValidateInput): Promise<RedemptionPreviewResponse> {
 		const { claim, reward } = await this.claimService.findClaimByTokenOrBackup(input.token, input.backupCode);
 
-		if (reward.merchantOrgId !== merchantOrgId) {
+		if (reward.organizationId !== organizationId) {
 			throw new UnprocessableEntityException({ message: "Reward not valid for this merchant", error: "WRONG_MERCHANT" });
 		}
 
 		await this.auditLogRepository.create({
-			merchantOrgId,
+			organizationId,
 			action: "merchant.scan_qr",
 			metadata: { claimId: claim.id, terminalId },
 		});
@@ -56,14 +56,14 @@ export class RedemptionService {
 		};
 	}
 
-	public async confirm(merchantOrgId: string, terminalId: string, input: RedemptionConfirmInput): Promise<RedemptionConfirmedResponse> {
+	public async confirm(organizationId: string, terminalId: string, input: RedemptionConfirmInput): Promise<RedemptionConfirmedResponse> {
 		const { claim, reward } = await this.claimService.findClaimByTokenOrBackup(input.token, input.backupCode);
 
 		if (input.backupCode !== undefined) {
 			this.assertBackupNotLocked(claim);
 		}
 
-		if (reward.merchantOrgId !== merchantOrgId) {
+		if (reward.organizationId !== organizationId) {
 			throw new UnprocessableEntityException({ message: "Reward not valid for this merchant", error: "WRONG_MERCHANT" });
 		}
 
@@ -113,7 +113,7 @@ export class RedemptionService {
 		const redemption = await this.redemptionRepository.confirmInTransaction({
 			claimId: claim.id,
 			rewardId: reward.id,
-			merchantOrgId,
+			organizationId,
 			userId: claim.userId,
 			terminalId,
 			redemptionMethod: method,

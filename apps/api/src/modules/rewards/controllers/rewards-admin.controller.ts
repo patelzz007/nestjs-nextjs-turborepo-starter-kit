@@ -1,17 +1,8 @@
-import { Body, Controller, Get, Param, Patch, Post, Put, Query } from "@nestjs/common";
+import { Body, Controller, Get, Param, Patch, Post, Query } from "@nestjs/common";
 import { ApiBearerAuth, ApiBody, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { z } from "zod";
 
-import {
-	AdminKybUpdateSchema,
-	AdminRejectRewardSchema,
-	apiContract,
-	apiPath,
-	FileDownloadDispositionSchema,
-	MerchantRoleCapabilitiesPathInputSchema,
-	SyncMerchantRoleCapabilitiesBodySchema,
-	UuidParamSchema,
-} from "@workspace/shared";
+import { AdminKybUpdateSchema, apiContract, apiPath, FileDownloadDispositionSchema, UuidParamSchema } from "@workspace/shared";
 import { ZodValidationPipe } from "../../../common/pipes/zod-validation.pipe";
 import { RlsBypass } from "../../auth/decorators/rls-bypass.decorator";
 import { RequirePermission } from "../../auth/decorators/require-permission.decorator";
@@ -23,7 +14,6 @@ import type { MerchantKybDocumentDownloadResponse } from "@workspace/shared";
 
 import { MerchantKybDocumentService } from "../services/merchant-kyb-document.service";
 import { RewardsAdminService } from "../services/rewards-admin.service";
-import { MerchantCapabilityService } from "../services/merchant-capability.service";
 
 @ApiTags("Rewards Admin")
 @ApiBearerAuth()
@@ -91,7 +81,7 @@ export class RewardsAdminRewardsController {
 	public rejectReward(
 		@GetUser() user: AccessTokenPayload,
 		@Param(new ZodValidationPipe(z.object({ rewardId: UuidParamSchema }).strict())) params: { rewardId: string },
-		@Body(new ZodValidationPipe(AdminRejectRewardSchema)) body: Parameters<RewardsAdminService["rejectReward"]>[2],
+		@Body(new ZodValidationPipe(apiContract.rewardsAdmin.rejectReward.input)) body: Parameters<RewardsAdminService["rejectReward"]>[2],
 	): ReturnType<RewardsAdminService["rejectReward"]> {
 		return this.rewardsAdminService.rejectReward(user.sub, params.rewardId, body);
 	}
@@ -112,29 +102,29 @@ export class RewardsAdminMerchantsController {
 	@ApiOperation({ summary: "List merchant organizations" })
 	@ApiOkResponse({ description: "Paginated merchant org list" })
 	public listMerchants(
-		@Query(new ZodValidationPipe(apiContract.rewardsAdmin.listMerchants.input)) query: Parameters<RewardsAdminService["listMerchants"]>[0],
+		@Query(new ZodValidationPipe(apiContract.rewardsAdmin.listOrganizations.input)) query: Parameters<RewardsAdminService["listMerchants"]>[0],
 	): ReturnType<RewardsAdminService["listMerchants"]> {
 		return this.rewardsAdminService.listMerchants(query);
 	}
 
 	@RequirePermission("LIST", "MERCHANT_ORG")
-	@Get(":merchantOrgId")
+	@Get(":organizationId")
 	@ApiOperation({ summary: "Get merchant organization detail for KYB review" })
 	@ApiOkResponse({ description: "Merchant org detail with KYB payload" })
 	public getMerchant(
-		@Param(new ZodValidationPipe(z.object({ merchantOrgId: UuidParamSchema }).strict())) params: { merchantOrgId: string },
+		@Param(new ZodValidationPipe(apiContract.rewardsAdmin.getOrganization.input)) params: { organizationId: string },
 	): ReturnType<RewardsAdminService["getMerchantDetail"]> {
-		return this.rewardsAdminService.getMerchantDetail(params.merchantOrgId);
+		return this.rewardsAdminService.getMerchantDetail(params.organizationId);
 	}
 
 	@RequirePermission("LIST", "MERCHANT_ORG")
-	@Get(":merchantOrgId/documents/:documentId/download")
+	@Get(":organizationId/documents/:documentId/download")
 	@ApiOperation({ summary: "Get a short-lived signed download URL for a merchant KYB document" })
 	@ApiOkResponse({ description: "Signed download URL or scan status" })
 	public downloadDocument(
-		@Param(new ZodValidationPipe(z.object({ merchantOrgId: UuidParamSchema, documentId: UuidParamSchema }).strict()))
+		@Param(new ZodValidationPipe(z.object({ organizationId: UuidParamSchema, documentId: UuidParamSchema }).strict()))
 		params: {
-			merchantOrgId: string;
+			organizationId: string;
 			documentId: string;
 		},
 		@Query(new ZodValidationPipe(z.object({ disposition: FileDownloadDispositionSchema.optional() }).strict()))
@@ -142,56 +132,19 @@ export class RewardsAdminMerchantsController {
 			disposition?: "inline" | "attachment";
 		},
 	): Promise<MerchantKybDocumentDownloadResponse> {
-		return this.kybDocuments.getDownloadUrl(params.documentId, params.merchantOrgId, query.disposition ?? "inline");
+		return this.kybDocuments.getDownloadUrl(params.documentId, params.organizationId, query.disposition ?? "inline");
 	}
 
 	@RequirePermission("MANAGE", "MERCHANT_ORG")
-	@Patch(":merchantOrgId/kyb")
+	@Patch(":organizationId/kyb")
 	@ApiOperation({ summary: "Update merchant KYB status" })
 	@ApiBody({ type: AdminKybUpdateDto })
 	@ApiOkResponse({ description: "KYB updated" })
 	public async updateKyb(
-		@Param(new ZodValidationPipe(z.object({ merchantOrgId: UuidParamSchema }).strict())) params: { merchantOrgId: string },
+		@Param(new ZodValidationPipe(apiContract.rewardsAdmin.updateKyb.input)) params: { organizationId: string },
 		@Body(new ZodValidationPipe(AdminKybUpdateSchema)) body: Parameters<RewardsAdminService["updateMerchantKyb"]>[1],
 	): Promise<{ ok: true }> {
-		await this.rewardsAdminService.updateMerchantKyb(params.merchantOrgId, body);
+		await this.rewardsAdminService.updateMerchantKyb(params.organizationId, body);
 		return { ok: true };
-	}
-}
-
-@ApiTags("Rewards Admin")
-@ApiBearerAuth()
-@RlsBypass()
-@Controller(apiPath("/admin/merchant-role-capabilities"))
-export class RewardsAdminMerchantRoleCapabilitiesController {
-	public constructor(private readonly merchantCapabilities: MerchantCapabilityService) {}
-
-	@RequirePermission("MANAGE", "MERCHANT_ORG")
-	@Get()
-	@ApiOperation({ summary: "List merchant portal capabilities per member role" })
-	@ApiOkResponse({ description: "Capability grants for OWNER and CASHIER" })
-	public listRoleCapabilities(): ReturnType<MerchantCapabilityService["listRoleCapabilityGrants"]> {
-		return this.merchantCapabilities.listRoleCapabilityGrants();
-	}
-
-	@RequirePermission("MANAGE", "MERCHANT_ORG")
-	@Put(":role")
-	@ApiOperation({ summary: "Replace capabilities granted to a merchant member role" })
-	@ApiOkResponse({ description: "Updated capability grant" })
-	public syncRoleCapabilities(
-		@Param(new ZodValidationPipe(MerchantRoleCapabilitiesPathInputSchema)) params: { role: Parameters<MerchantCapabilityService["syncRoleCapabilities"]>[0] },
-		@Body(new ZodValidationPipe(SyncMerchantRoleCapabilitiesBodySchema)) body: { capabilities: Parameters<MerchantCapabilityService["syncRoleCapabilities"]>[1] },
-	): ReturnType<MerchantCapabilityService["syncRoleCapabilities"]> {
-		return this.merchantCapabilities.syncRoleCapabilities(params.role, body.capabilities);
-	}
-
-	@RequirePermission("MANAGE", "MERCHANT_ORG")
-	@Post(":role/restore-defaults")
-	@ApiOperation({ summary: "Restore default capabilities for a merchant member role" })
-	@ApiOkResponse({ description: "Default capability grant restored" })
-	public restoreRoleDefaults(
-		@Param(new ZodValidationPipe(MerchantRoleCapabilitiesPathInputSchema)) params: { role: Parameters<MerchantCapabilityService["restoreRoleDefaults"]>[0] },
-	): ReturnType<MerchantCapabilityService["restoreRoleDefaults"]> {
-		return this.merchantCapabilities.restoreRoleDefaults(params.role);
 	}
 }

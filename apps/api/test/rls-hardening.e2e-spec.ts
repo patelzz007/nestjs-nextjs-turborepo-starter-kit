@@ -1,6 +1,7 @@
 import { Pool, type PoolClient } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
+import { ORGANIZATION_SEED_IDS } from "../prisma/seed/organizations";
 import { REWARD_SEED_IDS } from "../prisma/seed/rewards";
 
 const DATABASE_URL: string = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/monorepo";
@@ -40,17 +41,17 @@ describe("RLS hardening (integration)", () => {
 		}
 	});
 
-	it("allows merchant members to read their own org rewards without bypass", async () => {
+	it("allows organization members to read their own org rewards without bypass", async () => {
 		await withRlsSession(pool, { userId: REWARD_SEED_IDS.klOwnerUser, bypass: false }, async (client) => {
-			const result = await client.query<{ id: string }>(`SELECT id FROM public.rewards WHERE id = $1 AND merchant_org_id = $2 LIMIT 1`, [
+			const result = await client.query<{ id: string }>(`SELECT id FROM public.rewards WHERE id = $1 AND organization_id = $2 LIMIT 1`, [
 				REWARD_SEED_IDS.klRewardPublished,
-				REWARD_SEED_IDS.klOrg,
+				ORGANIZATION_SEED_IDS.klOrganization,
 			]);
 			expect(result.rowCount).toBe(1);
 		});
 	});
 
-	it("prevents merchant members from reading another org non-public rewards without bypass", async () => {
+	it("prevents organization members from reading another org non-public rewards without bypass", async () => {
 		await withRlsSession(pool, { userId: REWARD_SEED_IDS.klOwnerUser, bypass: false }, async (client) => {
 			const result = await client.query<{ id: string }>(`SELECT id FROM public.rewards WHERE id = $1 LIMIT 1`, [REWARD_SEED_IDS.mlkRewardDisabled]);
 			expect(result.rowCount).toBe(0);

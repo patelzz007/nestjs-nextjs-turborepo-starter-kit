@@ -281,7 +281,7 @@
 					"title": "Generator",
 					"url": "/devtools/generator",
 					"icon": "Hammer",
-					"requiredCapability": "platform:devtools.manage"
+					"requiredCapabilities": ["platform:devtools.manage"]
 				}
 			]
 		}

@@ -15,6 +15,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 const ACCESS_TOKEN_COOKIE = "merchantAccessToken";
+const ORGANIZATION_SLUG_COOKIE = "organizationSlug";
 const REFRESH_TOKEN_COOKIE = "merchantRefreshToken";
 const CLIENT_ORIGIN: string = process.env.NEXT_PUBLIC_MERCHANT_URL ?? "http://localhost:3003";
 const COOKIE_CLEAR_OPTIONS = {
@@ -123,7 +124,8 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
 	if (isProtectedRouteMatch && isAuthenticated && effectiveAccessToken !== undefined && isRestrictedSession(effectiveAccessToken) && !isEnrollmentAllowedPath(pathname)) {
 		const payload = decodeJwtPayload(effectiveAccessToken);
 		const enrollmentReason = payload?.isEmailVerified === false ? "email_verification" : "mfa_enrollment";
-		const enrollmentPath = getEnrollmentRedirectPath("merchant", enrollmentReason);
+		const organizationSlug = request.cookies.get(ORGANIZATION_SLUG_COOKIE)?.value;
+		const enrollmentPath = getEnrollmentRedirectPath("merchant", enrollmentReason, organizationSlug);
 		return applyRotatedCookies(NextResponse.redirect(new URL(enrollmentPath, request.url)), rotatedCookies);
 	}
 

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
 import { epochMs, UuidParamSchema, type OrganizationContextResponse, type OrganizationMembershipResponse } from "@workspace/shared";
 
@@ -146,6 +146,9 @@ export class OrganizationContextService {
 						organizationId: l.organizationId,
 						name: l.name,
 						code: l.code,
+						addressText: l.addressText,
+						city: l.city,
+						contactPhone: l.contactPhone,
 						isPrimary: l.isPrimary,
 						createdAt: epochMs(Number(l.createdAt)),
 						updatedAt: epochMs(Number(l.updatedAt)),
@@ -183,6 +186,36 @@ export class OrganizationContextService {
 			lifecycleState: { notIn: ["DELETED", "PENDING_DELETION"] },
 			OR: slugMatches,
 		};
+	}
+
+	/** Ensures a location belongs to the org and is within the caller's membership scope. */
+	public async assertAccessibleLocation(userId: string, orgSlug: string, locationId: string): Promise<void> {
+		const resolved = await this.resolveBySlug(userId, orgSlug);
+
+		const location = await this.tenantTx.withSystemOperation(
+			{
+				operation: "auth.pre_login",
+				reason: "Validate organization location access",
+				correlationId: `org-location:${locationId}`,
+				actorUserId: userId,
+			},
+			async (tx) =>
+				tx.organizationLocation.findFirst({
+					where: { id: locationId, organizationId: resolved.organizationId, isDeleted: false },
+					select: { id: true },
+				}),
+		);
+
+		if (location === null) {
+			throw new NotFoundException();
+		}
+
+		if (resolved.membership.locationScopeType === "SELECTED" && !resolved.membership.locationIds.includes(locationId)) {
+			throw new ForbiddenException({
+				message: "Location is outside your membership scope",
+				error: "ORGANIZATION_LOCATION_FORBIDDEN",
+			});
+		}
 	}
 
 	public async assertActionAllowed(resolved: ResolvedOrganizationContext, action: string, resourceType: string, resourceId: string): Promise<void> {

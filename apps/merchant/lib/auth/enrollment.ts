@@ -8,11 +8,13 @@ import * as React from "react";
 export const MERCHANT_EMAIL_ENROLLMENT_DISABLED_TOOLTIP = "Verify your email to access this page";
 export const MERCHANT_MFA_ENROLLMENT_DISABLED_TOOLTIP = "Set up two-factor authentication to access this page";
 
-const ENROLLMENT_ALLOWED_PATH_PREFIXES: readonly string[] = ["/settings"];
-
 /** Whether a merchant route stays reachable while enrollment is pending. */
 export function isMerchantEnrollmentAllowedPath(pathname: string): boolean {
-	return ENROLLMENT_ALLOWED_PATH_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
+	if (pathname === "/settings" || pathname.startsWith("/settings/")) {
+		return true;
+	}
+
+	return /\/orgs\/[^/]+\/settings(?:\/|$)/.test(pathname);
 }
 
 export interface MerchantEnrollmentLock {
@@ -43,9 +45,4 @@ export function useMerchantEnrollmentLock(): MerchantEnrollmentLock {
 		}),
 		[enrollmentReason, isLocked],
 	);
-}
-
-/** @deprecated Use `useMerchantEnrollmentLock` instead. */
-export function useMerchantEmailEnrollmentLock(): MerchantEnrollmentLock {
-	return useMerchantEnrollmentLock();
 }

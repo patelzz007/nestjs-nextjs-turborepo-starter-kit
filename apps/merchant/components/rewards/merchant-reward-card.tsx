@@ -1,7 +1,9 @@
 "use client";
 
 import { formatRewardTypeLabel, formatRewardValueSummary } from "@/components/rewards/merchant-reward-form.constants";
+import { MerchantRewardLocationLabel } from "@/components/rewards/merchant-reward-location-label";
 import { MerchantInventoryBar, MerchantRewardStatusBadge } from "@/components/merchant-ui/reward-status";
+import { useOrganizationPath } from "@/lib/org/use-organization-path";
 import type { RewardResponse } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/feedback/badge";
 import { buttonVariants } from "@workspace/ui/components/form/button";
@@ -18,6 +20,7 @@ export interface MerchantRewardCardProps {
 
 /** Grid tile for a merchant reward — scannable KPIs and inventory at a glance. */
 export function MerchantRewardCard({ reward, canManageRewards }: MerchantRewardCardProps): React.JSX.Element {
+	const rewardPath = useOrganizationPath(`rewards/${reward.id}`);
 	const expiryLabel = format(new Date(reward.expiryDate), "d MMM yyyy");
 	const isLive = reward.status === "PUBLISHED";
 
@@ -32,6 +35,7 @@ export function MerchantRewardCard({ reward, canManageRewards }: MerchantRewardC
 					<Badge variant="secondary" className="capitalize">
 						{reward.category}
 					</Badge>
+					<MerchantRewardLocationLabel reward={reward} />
 					<span className="text-xs text-muted-foreground capitalize">{reward.rewardKind.replaceAll("_", " ").toLowerCase()}</span>
 				</div>
 				<MerchantRewardStatusBadge status={reward.status} />
@@ -66,7 +70,7 @@ export function MerchantRewardCard({ reward, canManageRewards }: MerchantRewardC
 			</div>
 
 			<div className="border-t border-border/80 p-3">
-				<Link href={`/rewards/${reward.id}`} className={cn(buttonVariants({ size: "sm", variant: isLive ? "default" : "outline" }), "w-full justify-center gap-2")}>
+				<Link href={rewardPath} className={cn(buttonVariants({ size: "sm", variant: isLive ? "default" : "outline" }), "w-full justify-center gap-2")}>
 					<Ticket className="size-4" aria-hidden="true" />
 					{canManageRewards ? "Manage reward" : "View reward"}
 					<ArrowUpRight

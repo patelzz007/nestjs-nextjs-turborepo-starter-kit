@@ -1,9 +1,11 @@
 "use client";
 
+import { MerchantLocationScopeBanner } from "@/components/layout/merchant-location-scope-banner";
 import { MerchantAccessDenied } from "@/components/access/merchant-capability-gate";
 import { MerchantPageHeader } from "@/components/merchant-ui/page-header";
 import { MerchantSurfacePanel } from "@/components/merchant-ui/surface-panel";
 import { useMerchantCapabilities } from "@/lib/org/capabilities";
+import { useActiveLocationFilter, useMerchantLocation } from "@/lib/org/location-context";
 import { stubApiMeta } from "@/lib/api-envelope";
 import { useAuth } from "@workspace/client/lib/auth";
 import type { MerchantApiKeySummary } from "@workspace/shared";
@@ -29,7 +31,7 @@ function ApiKeyRow({ apiKey, isRevoking, onRevoke }: ApiKeyRowProps): React.JSX.
 		<div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-background px-4 py-3">
 			<div>
 				<p className="font-medium">{apiKey.name}</p>
-				<p className="text-xs text-muted-foreground">Terminal credential</p>
+				<p className="text-xs text-muted-foreground">{apiKey.locationName ?? "Organization-wide terminal"}</p>
 			</div>
 			<div className="flex items-center gap-2">
 				<Badge variant={apiKey.revokedAt === null ? "secondary" : "outline"}>{apiKey.revokedAt === null ? "Active" : "Revoked"}</Badge>
@@ -44,14 +46,17 @@ function ApiKeyRow({ apiKey, isRevoking, onRevoke }: ApiKeyRowProps): React.JSX.
 }
 
 export interface MerchantApiKeysPageViewProps {
-	readonly initialCanManageApiKeys: boolean;
+	readonly orgSlug: string;
+	readonly canManageApiKeys: boolean;
 	readonly initialKeys?: readonly MerchantApiKeySummary[];
 }
 
-export function MerchantApiKeysPageView({ initialCanManageApiKeys, initialKeys }: MerchantApiKeysPageViewProps): React.JSX.Element {
+export function MerchantApiKeysPageView({ orgSlug, canManageApiKeys, initialKeys }: MerchantApiKeysPageViewProps): React.JSX.Element {
 	const { api } = useAuth();
 	const { hasCapability, isPolicyReady } = useMerchantCapabilities();
-	const canManage = isPolicyReady ? hasCapability("merchant:manage_api_keys") : initialCanManageApiKeys;
+	const { locationId } = useActiveLocationFilter();
+	const { activeLocation } = useMerchantLocation();
+	const canManage = isPolicyReady ? hasCapability("merchant:manage_api_keys") : canManageApiKeys;
 
 	const initialKeysData = React.useMemo(
 		() =>
@@ -65,11 +70,11 @@ export function MerchantApiKeysPageView({ initialCanManageApiKeys, initialKeys }
 		[initialKeys],
 	);
 
-	const keysQuery = api.merchant.apiKeys.list.useQuery(
-		{},
+	const keysQuery = api.organizations.apiKeys.list.useQuery(
+		{ orgSlug, locationId },
 		{
 			enabled: canManage,
-			initialData: initialKeysData,
+			initialData: locationId === undefined ? initialKeysData : undefined,
 		},
 	);
 	const keys: readonly MerchantApiKeySummary[] = keysQuery.data?.data ?? [];
@@ -77,14 +82,14 @@ export function MerchantApiKeysPageView({ initialCanManageApiKeys, initialKeys }
 	const [name, setName] = React.useState<string>("POS Terminal");
 	const [createdKey, setCreatedKey] = React.useState<string | null>(null);
 
-	const createMutation = api.merchant.apiKeys.create.useMutation({
+	const createMutation = api.organizations.apiKeys.create.useMutation({
 		onSuccess: (response): void => {
 			setCreatedKey(response.data.apiKey);
 			void keysQuery.refetch();
 		},
 	});
 
-	const revokeMutation = api.merchant.apiKeys.revoke.useMutation({
+	const revokeMutation = api.organizations.apiKeys.revoke.useMutation({
 		onSuccess: (): void => {
 			void keysQuery.refetch();
 		},
@@ -97,14 +102,14 @@ export function MerchantApiKeysPageView({ initialCanManageApiKeys, initialKeys }
 	}, []);
 
 	const handleCreateClick = React.useCallback((): void => {
-		void createMutation.mutateAsync({ name });
-	}, [createMutation, name]);
+		void createMutation.mutateAsync({ orgSlug, name, locationId });
+	}, [createMutation, locationId, name, orgSlug]);
 
 	const handleRevokeKey = React.useCallback(
 		(keyId: string): void => {
-			void revokeMutation.mutateAsync({ keyId });
+			void revokeMutation.mutateAsync({ orgSlug, keyId });
 		},
-		[revokeMutation],
+		[orgSlug, revokeMutation],
 	);
 
 	if (!canManage) {
@@ -131,6 +136,7 @@ export function MerchantApiKeysPageView({ initialCanManageApiKeys, initialKeys }
 	return (
 		<div className="space-y-8">
 			<MerchantPageHeader title="POS API keys" description="Create keys for in-store terminals. Each key is shown once at creation — copy it immediately." />
+			<MerchantLocationScopeBanner />
 
 			<div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
 				<MerchantSurfacePanel accent className="p-6">
@@ -143,6 +149,11 @@ export function MerchantApiKeysPageView({ initialCanManageApiKeys, initialKeys }
 							<Label htmlFor="key-name">Terminal name</Label>
 							<Input id="key-name" value={name} onChange={handleNameChange} placeholder="Front counter POS" />
 						</div>
+						{activeLocation !== undefined ? (
+							<p className="text-sm text-muted-foreground">
+								New keys will be assigned to <strong className="font-medium text-foreground">{activeLocation.name}</strong>.
+							</p>
+						) : null}
 						<Button disabled={createMutation.isPending} onClick={handleCreateClick}>
 							{createMutation.isPending ? "Creating…" : "Create API key"}
 						</Button>
