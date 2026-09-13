@@ -4,6 +4,7 @@ import { CapabilitySlugSchema } from "../domain/capabilities";
 import { PaginationSchema } from "../api/pagination";
 
 import { EpochMsSchema, BaseResponseSchema } from "../api/common";
+import { EnrollmentReasonSchema, SessionScopeSchema } from "./enrollment";
 
 // ── Shared role shape ──────────────────────────────────────────────────────
 
@@ -74,6 +75,10 @@ export const SessionPermissionsResponseSchema = UserPermissionsSchema.extend({
 	capabilities: z.array(CapabilitySlugSchema),
 	isImpersonating: z.boolean().optional(),
 	originalUserId: z.string().optional(),
+	/** Mirrors the current access token's `sessionScope` claim. */
+	sessionScope: SessionScopeSchema.default("full"),
+	/** Present when `sessionScope` is `restricted`. */
+	enrollmentReason: EnrollmentReasonSchema.optional(),
 }).strict();
 
 export type SessionPermissionsResponse = z.output<typeof SessionPermissionsResponseSchema>;

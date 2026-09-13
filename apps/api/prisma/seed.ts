@@ -12,6 +12,7 @@ import { createPasswordResetTokens, createRefreshTokens } from "./seed/tokens";
 import { assignAdditionalPermissions, assignRolesToUsers, createUsers } from "./seed/users";
 import { createClicks, createUrlTags, createUrls } from "./seed/urls";
 import { seedGeo } from "./seed/geo-seed";
+import { printOrganizationSeedCredentials, seedPlatformGuardrails } from "./seed/organizations";
 import { cleanupRewardSeedData, printRewardSeedCredentials, seedRewards } from "./seed/rewards";
 import { seedSamplePlatform } from "./seed/sample-platform";
 import { seedProducts } from "./seed/products";
@@ -130,9 +131,14 @@ async function main() {
 	console.log("✅ Rewards seed cleanup done");
 
 	const adminUser = users.find((u) => u.email === "admin@example.com")!;
-	console.log("Seeding rewards platform (merchants, rewards, claims)...");
+
+	console.log("Seeding platform guardrail policies...");
+	await seedPlatformGuardrails(adminUser);
+	console.log("✅ Platform guardrails seeded");
+
+	console.log("Seeding rewards platform (organizations, merchants, rewards, claims)...");
 	const rewardSummary = await seedRewards(adminUser, allUsers);
-	console.log(`✅ Rewards: ${rewardSummary.merchantOrgs} orgs, ${rewardSummary.rewards} rewards, ${rewardSummary.claims} claims, ${rewardSummary.redemptions} redemptions`);
+	console.log(`✅ Rewards: ${rewardSummary.merchantOrgs} merchant orgs, ${rewardSummary.rewards} rewards, ${rewardSummary.claims} claims, ${rewardSummary.redemptions} redemptions`);
 
 	console.log(`
 🎉 Seed complete!
@@ -168,6 +174,7 @@ henry.moore@example.com   /  Henry@123       (User role · PRO)
 isla.taylor@example.com   /  Isla@123        (User role · FREE)
 jack.anderson@example.com /  Jack@123        (User role · PRO)
 `);
+	printOrganizationSeedCredentials();
 	printRewardSeedCredentials();
 }
 

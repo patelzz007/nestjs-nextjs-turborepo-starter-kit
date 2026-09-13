@@ -1,6 +1,10 @@
 import { z } from "zod";
 
+import { SessionScopeSchema } from "./enrollment";
 import { PermissionDetailsSchema, SlimRoleSchema } from "./user";
+
+export { SessionScopeSchema } from "./enrollment";
+export type { SessionScope } from "./enrollment";
 
 /**
  * Flattened user object used internally by `TokenService` to generate JWT tokens.
@@ -55,7 +59,7 @@ export const AccessTokenPayloadSchema = z.object({
 	// with a stale version, forcing re-auth after authorization changes.
 	tokenVersion: z.number(),
 	/** `restricted` limits the session to enrollment endpoints until email + MFA are complete. */
-	sessionScope: z.enum(["full", "restricted"]).optional(),
+	sessionScope: SessionScopeSchema.optional(),
 	/** Epoch ms when the user last completed MFA (step-up / login). */
 	mfaAssuredAt: z.number().int().nonnegative().optional(),
 	isImpersonating: z.boolean().optional(),

@@ -24,7 +24,7 @@ import { PasswordStrengthMeter } from "@workspace/ui/components/form/password-st
 import { Separator } from "@workspace/ui/components/display/separator";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type { EpochMs } from "@workspace/shared";
+import type { EpochMs, UserResponse } from "@workspace/shared";
 import { useCallback, useMemo, useState, type JSX, type ReactNode } from "react";
 
 import { isAccountLockedError, resolveAuthErrorMessage } from "./auth-errors";
@@ -236,8 +236,7 @@ export function LoginForm({ emailPlaceholder, redirectPath, demoAccounts, footer
 		setSocialHint(`${provider.label} sign-in is coming soon.`);
 	}, []);
 
-	// Admin logins send `X-Client-Type: admin` (handled by the def's
-	// baseOptions) so the backend sets the isolated admin cookie set.
+	// Admin logins send `X-Client-Type: admin` (handled by the def's baseOptions) so the backend sets the isolated admin cookie set.
 	const loginProcedure = mode === "admin" ? api.auth.adminLogin : mode === "merchant" ? api.auth.merchantLogin : api.auth.login;
 	const loginMutation = loginProcedure.useMutation();
 	const twoFactorMutation = api.auth.loginTwoFactor.useMutation();
@@ -249,7 +248,9 @@ export function LoginForm({ emailPlaceholder, redirectPath, demoAccounts, footer
 
 	// The actual login call — shared by the form submit and the demo buttons.
 	const completeAuthenticatedLogin = useCallback(
-		(data: { readonly user: Parameters<typeof authLogin>[0] }): void => {
+		(data: { readonly user: UserResponse }): void => {
+			// eslint-disable-next-line no-console
+			console.log("data", data);
 			if (requireAdminAccess && !data.user.hasAdminAccess) {
 				setError("Admin access required. This account does not have administrator privileges.");
 				return;
@@ -262,6 +263,8 @@ export function LoginForm({ emailPlaceholder, redirectPath, demoAccounts, footer
 				isSuperAdmin: data.user.isSuperAdmin,
 				hasAdminAccess: data.user.hasAdminAccess,
 				isEmailVerified: data.user.isEmailVerified,
+				sessionScope: "full",
+				enrollmentReason: null,
 				roles: data.user.roles,
 			});
 			navigateAfterLogin(resolvedRedirect);
@@ -279,6 +282,8 @@ export function LoginForm({ emailPlaceholder, redirectPath, demoAccounts, footer
 					isSuperAdmin: response.user.isSuperAdmin,
 					hasAdminAccess: response.user.hasAdminAccess,
 					isEmailVerified: response.user.isEmailVerified,
+					sessionScope: "restricted",
+					enrollmentReason: response.enrollmentReason,
 					roles: response.user.roles,
 				});
 			}

@@ -11,6 +11,7 @@ import { Inter, Playfair_Display } from "next/font/google";
 import { WebBreadcrumbProvider } from "@/components/breadcrumb-provider";
 import { WebClientAuthWrapper } from "@/components/web-client-auth-wrapper";
 import { WebSessionBootstrap } from "@/components/web-session-bootstrap";
+import { AppDocumentShell } from "@workspace/ui/components/app-document-shell";
 import { ThemeProvider } from "@workspace/ui/components/theme-provider";
 import { Toaster } from "@workspace/ui/components/feedback/toast";
 import { ScrollToTop } from "@workspace/ui/components/navigation/scroll-to-top";
@@ -51,20 +52,18 @@ export default function RootLayout({
 	}
 
 	return (
-		<html lang="en" suppressHydrationWarning className={cn("font-sans antialiased", inter.variable, playfair.variable, bricolageGrotesque.variable)}>
-			<body className="web-app">
-				<ReduxDevToolsGuard />
-				<QueryProvider>
-					<WebClientAuthWrapper>
-						<WebSessionBootstrap />
-						<ThemeProvider>
-							<WebBreadcrumbProvider>{children}</WebBreadcrumbProvider>
-							<Toaster position="top-right" />
-							<ScrollToTop />
-						</ThemeProvider>
-					</WebClientAuthWrapper>
-				</QueryProvider>
-			</body>
-		</html>
+		<AppDocumentShell htmlClassName={cn("font-sans antialiased", inter.variable, playfair.variable, bricolageGrotesque.variable)} bodyClassName="web-app">
+			<ReduxDevToolsGuard />
+			<QueryProvider>
+				<WebClientAuthWrapper>
+					<WebSessionBootstrap />
+					<ThemeProvider>
+						<WebBreadcrumbProvider>{children}</WebBreadcrumbProvider>
+						<Toaster position="top-right" />
+						<ScrollToTop />
+					</ThemeProvider>
+				</WebClientAuthWrapper>
+			</QueryProvider>
+		</AppDocumentShell>
 	);
 }

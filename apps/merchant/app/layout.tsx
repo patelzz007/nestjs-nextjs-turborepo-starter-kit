@@ -5,6 +5,7 @@ import { QueryProvider } from "@workspace/client/lib/api/query-provider";
 import { MerchantRootProvider } from "@/lib/merchant-root-provider";
 import { readMerchantOrgIdCookie } from "@/lib/merchant-server-api";
 import { cn } from "@workspace/ui/lib/utils";
+import { AppDocumentShell } from "@workspace/ui/components/app-document-shell";
 import { ThemeProvider } from "@workspace/ui/components/theme-provider";
 import { Toaster } from "@workspace/ui/components/feedback/toast";
 import { bricolageGrotesque } from "@workspace/ui/fonts/bricolage-grotesque";
@@ -37,18 +38,16 @@ export default async function RootLayout({ children }: { readonly children: Reac
 	const initialMerchantOrgId = await readMerchantOrgIdCookie();
 
 	return (
-		<html lang="en" suppressHydrationWarning className={cn("font-sans antialiased", firaSans.variable, jetbrainsMono.variable, bricolageGrotesque.variable)}>
-			<body className="merchant-app">
-				<ReduxDevToolsGuard />
-				<QueryProvider>
-					<MerchantRootProvider initialMerchantOrgId={initialMerchantOrgId}>
-						<ThemeProvider>
-							{children}
-							<Toaster position="top-right" />
-						</ThemeProvider>
-					</MerchantRootProvider>
-				</QueryProvider>
-			</body>
-		</html>
+		<AppDocumentShell htmlClassName={cn("font-sans antialiased", firaSans.variable, jetbrainsMono.variable, bricolageGrotesque.variable)} bodyClassName="merchant-app">
+			<ReduxDevToolsGuard />
+			<QueryProvider>
+				<MerchantRootProvider initialMerchantOrgId={initialMerchantOrgId}>
+					<ThemeProvider>
+						{children}
+						<Toaster position="top-right" />
+					</ThemeProvider>
+				</MerchantRootProvider>
+			</QueryProvider>
+		</AppDocumentShell>
 	);
 }

@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common";
 
 import { AuthModule } from "../auth/auth.module";
+import { OrganizationModule } from "../organization/organization.module";
 import { NotificationsModule } from "../notifications/notifications.module";
 
 import { ConsumerClaimsController } from "./controllers/consumer-claims.controller";
@@ -46,7 +47,7 @@ const redisUrl: string | undefined = process.env.REDIS_URL;
 const rewardsQueueImports = redisUrl !== undefined && redisUrl.length > 0 ? [RewardsQueueModule] : [];
 
 @Module({
-	imports: [AuthModule, NotificationsModule, RewardsPersistenceModule, RewardsCoreServicesModule, StorageModule, FilesModule, ...rewardsQueueImports],
+	imports: [AuthModule, OrganizationModule, NotificationsModule, RewardsPersistenceModule, RewardsCoreServicesModule, StorageModule, FilesModule, ...rewardsQueueImports],
 	controllers: [
 		ConsumerRewardsController,
 		ConsumerClaimsController,

@@ -49,6 +49,7 @@ import {
 	UpdateStateSchema,
 	UpdateSubregionSchema,
 } from "../schemas/domain/geo";
+import { AdminCreateOrganizationInviteSchema, OrganizationAccessRequestCreateSchema, OrganizationSlugParamSchema } from "../schemas/domain/organization";
 import {
 	AcceptRewardLegalSchema,
 	AdminCreateMerchantInviteSchema,
@@ -62,6 +63,9 @@ import {
 	MerchantCreateRewardSchema,
 	MerchantKybSubmissionFieldsSchema,
 	MerchantOnboardingCompleteFieldsSchema,
+	MerchantOnboardingDocumentsSubmitSchema,
+	MerchantOnboardingDocumentUploadCompleteSchema,
+	MerchantOnboardingDocumentUploadUrlSchema,
 	MerchantOnboardingValidateTokenSchema,
 	MerchantRedemptionListQuerySchema,
 	MerchantUpdateRewardPathInputSchema,
@@ -346,6 +350,25 @@ export const apiContract = {
 			input: z.object({ fileId: UuidParamSchema }).strict(),
 		}),
 	},
+	organizations: {
+		context: defineContract({
+			method: "GET",
+			path: apiRoutes.organizations.context.path,
+			input: OrganizationSlugParamSchema,
+		}),
+		createAccessRequest: defineContract({
+			method: "POST",
+			path: apiRoutes.organizations.accessRequests.path,
+			input: z.intersection(OrganizationSlugParamSchema, OrganizationAccessRequestCreateSchema),
+		}),
+	},
+	adminOrganizations: {
+		createInvite: defineContract({
+			method: "POST",
+			path: apiRoutes.adminOrganizations.invites,
+			input: AdminCreateOrganizationInviteSchema,
+		}),
+	},
 	merchant: {
 		me: defineContract({ method: "GET", path: apiRoutes.merchant.me, input: EmptyInputSchema }),
 		kyb: {
@@ -390,6 +413,13 @@ export const apiContract = {
 		onboarding: {
 			validate: defineContract({ method: "POST", path: apiRoutes.merchant.onboarding.validate, input: MerchantOnboardingValidateTokenSchema }),
 			complete: defineContract({ method: "POST", path: apiRoutes.merchant.onboarding.complete, input: MerchantOnboardingCompleteFieldsSchema }),
+			documentUploadUrl: defineContract({ method: "POST", path: apiRoutes.merchant.onboarding.documentUploadUrl, input: MerchantOnboardingDocumentUploadUrlSchema }),
+			documentUploadComplete: defineContract({
+				method: "POST",
+				path: apiRoutes.merchant.onboarding.documentUploadComplete,
+				input: MerchantOnboardingDocumentUploadCompleteSchema,
+			}),
+			documentsSubmit: defineContract({ method: "POST", path: apiRoutes.merchant.onboarding.documentsSubmit, input: MerchantOnboardingDocumentsSubmitSchema }),
 		},
 		members: {
 			create: defineContract({ method: "POST", path: apiRoutes.merchant.members.create, input: MerchantCreateMemberSchema }),

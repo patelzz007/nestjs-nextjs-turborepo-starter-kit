@@ -2,7 +2,7 @@
 
 import { MerchantBreadcrumbProvider } from "@/components/common/merchant-breadcrumb";
 import { MerchantShellBreadcrumb } from "@/components/layout/merchant-shell-breadcrumb";
-import { ImpersonationBanner } from "@/components/impersonation/impersonation-banner";
+import { MerchantShellBanners } from "@/components/merchant-shell-banners";
 import { ImpersonateUserPanel } from "@/components/impersonation/impersonate-user-panel";
 import { useMerchantSidebarControl } from "@/components/layout/use-merchant-sidebar-control";
 import { MerchantSidebarPanel } from "@/components/layout/merchant-sidebar-panel";
@@ -132,7 +132,7 @@ export function MerchantShell({
 			<SidebarPathSync store={useMerchantSidebarStore} />
 			<AppPanelShell
 				shellClassName="merchant-app"
-				banner={<ImpersonationBanner initialIsImpersonating={initialIsImpersonating} />}
+				banner={<MerchantShellBanners initialIsImpersonating={initialIsImpersonating} />}
 				sidebarOpen={sidebarOpen}
 				onSidebarOpenChange={handleSidebarOpenChange}
 				sidebar={<MerchantSidebarContent memberships={memberships} merchantOrgId={merchantOrgId} onStoreChange={handleStoreChange} />}

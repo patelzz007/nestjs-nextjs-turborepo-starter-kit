@@ -10,6 +10,7 @@ const INVITE_PREVIEW_SELECT = {
 	city: true,
 	expiresAt: true,
 	acceptedAt: true,
+	acceptedByUserId: true,
 	merchantOrgId: true,
 } as const;
 
@@ -20,6 +21,7 @@ export interface MerchantInvitePreview {
 	readonly city: "KUALA_LUMPUR" | "MELAKA";
 	readonly expiresAt: bigint;
 	readonly acceptedAt: bigint | null;
+	readonly acceptedByUserId: string | null;
 	readonly merchantOrgId: string | null;
 }
 

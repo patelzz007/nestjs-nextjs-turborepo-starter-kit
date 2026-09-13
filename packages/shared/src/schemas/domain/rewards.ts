@@ -49,6 +49,20 @@ export type RewardOtpPurpose = z.output<typeof RewardOtpPurposeSchema>;
 export const RewardCategorySchema = z.enum(["cafe", "restaurant", "retail", "wellness", "entertainment", "food", "beverage"]);
 export type RewardCategory = z.output<typeof RewardCategorySchema>;
 
+/** Merchant business type — same vocabulary as reward categories. */
+export const MerchantBusinessCategorySchema = RewardCategorySchema;
+export type MerchantBusinessCategory = z.output<typeof MerchantBusinessCategorySchema>;
+
+export const MERCHANT_BUSINESS_CATEGORY_LABELS: Record<MerchantBusinessCategory, string> = {
+	cafe: "Café",
+	restaurant: "Restaurant",
+	retail: "Retail",
+	wellness: "Wellness",
+	entertainment: "Entertainment",
+	food: "Food",
+	beverage: "Beverage",
+};
+
 export const RewardRulesSchema = z
 	.object({
 		minSpendMyr: z.number().nonnegative().optional(),
@@ -496,8 +510,8 @@ export const MerchantKybRegistrationFieldsSchema = MerchantKybSubmissionFieldsSc
 
 export type MerchantKybRegistrationFieldsInput = z.output<typeof MerchantKybRegistrationFieldsSchema>;
 
-/** KYB fields collected during onboarding — business name comes from the invite, not the request body. */
-export const MerchantOnboardingKybFieldsSchema = MerchantKybSubmissionFieldsSchema.omit({ businessName: true });
+/** KYB details collected during onboarding — business name comes from the invite and documents upload after organization creation. */
+export const MerchantOnboardingKybFieldsSchema = MerchantKybSubmissionFormSchema.omit({ businessName: true });
 
 export type MerchantOnboardingKybFieldsInput = z.output<typeof MerchantOnboardingKybFieldsSchema>;
 
@@ -506,10 +520,51 @@ export const MerchantOnboardingCompleteFieldsSchema = z
 		token: z.string().min(1),
 		password: strongPassword,
 		fullName: z.string().min(2).max(200),
+		category: MerchantBusinessCategorySchema,
+		legalName: MerchantOnboardingKybFieldsSchema.shape.legalName,
+		addressText: MerchantOnboardingKybFieldsSchema.shape.addressText,
+		contactPhone: MerchantOnboardingKybFieldsSchema.shape.contactPhone,
+		registrationNo: MerchantOnboardingKybFieldsSchema.shape.registrationNo,
+		taxId: MerchantOnboardingKybFieldsSchema.shape.taxId,
+		documentType: MerchantOnboardingKybFieldsSchema.shape.documentType,
 	})
 	.strict();
 
 export type MerchantOnboardingCompleteFieldsInput = z.output<typeof MerchantOnboardingCompleteFieldsSchema>;
+
+/** Invite-authorized upload ticket request used before the merchant can sign in. */
+export const MerchantOnboardingDocumentUploadUrlSchema = z
+	.object({
+		token: z.string().min(1),
+		fileName: z.string().min(1).max(255),
+		mimeType: DocumentMimeTypeSchema,
+		sizeBytes: z.number().int().positive(),
+		checksumSha256: z.string().length(64),
+	})
+	.strict();
+
+export type MerchantOnboardingDocumentUploadUrlInput = z.output<typeof MerchantOnboardingDocumentUploadUrlSchema>;
+
+/** Confirms an invite-authorized direct upload. */
+export const MerchantOnboardingDocumentUploadCompleteSchema = z
+	.object({
+		token: z.string().min(1),
+		fileId: z.uuid(),
+		checksumSha256: z.string().length(64),
+	})
+	.strict();
+
+export type MerchantOnboardingDocumentUploadCompleteInput = z.output<typeof MerchantOnboardingDocumentUploadCompleteSchema>;
+
+/** Attaches completed onboarding documents to the newly provisioned merchant. */
+export const MerchantOnboardingDocumentsSubmitSchema = z
+	.object({
+		token: z.string().min(1),
+		documentFileIds: z.array(z.uuid()).min(1).max(MERCHANT_KYB_MAX_DOCUMENT_COUNT),
+	})
+	.strict();
+
+export type MerchantOnboardingDocumentsSubmitInput = z.output<typeof MerchantOnboardingDocumentsSubmitSchema>;
 
 /** @deprecated Use {@link MerchantOnboardingCompleteFieldsSchema} — documents are multipart file uploads. */
 export const MerchantOnboardingCompleteSchema = MerchantOnboardingCompleteFieldsSchema;
@@ -538,6 +593,12 @@ export type MerchantKybProfileResponse = z.output<typeof MerchantKybProfileRespo
 export const MerchantOnboardingCompleteResponseSchema = z
 	.object({
 		merchantOrgId: z.uuid(),
+		organizationId: z.uuid(),
+		organizationSlug: z
+			.string()
+			.min(2)
+			.max(64)
+			.regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
 		businessName: z.string(),
 		role: MerchantMemberRoleSchema,
 	})

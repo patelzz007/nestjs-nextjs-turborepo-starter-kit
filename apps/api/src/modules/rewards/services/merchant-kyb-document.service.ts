@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import {
 	DocumentMimeTypeSchema,
 	EpochMsSchema,
@@ -71,6 +71,15 @@ export class MerchantKybDocumentService {
 
 	public async attachSubmittedFileIds(merchantOrgId: string, fileIds: readonly string[]): Promise<void> {
 		const submissionId = randomUUID();
+		for (const fileId of fileIds) {
+			const file = await this.repository.findById(fileId);
+			if (file === null || file.category !== "MERCHANT_KYB" || file.merchantOrgId !== merchantOrgId || file.isDeleted) {
+				throw new BadRequestException({ message: "Invalid KYB document", error: "KYB_DOCUMENT_INVALID" });
+			}
+			if (file.status === "PENDING") {
+				throw new BadRequestException({ message: "KYB document upload is incomplete", error: "KYB_DOCUMENT_INCOMPLETE" });
+			}
+		}
 		await this.repository.deactivateMerchantKybFiles(merchantOrgId);
 		for (const fileId of fileIds) {
 			await this.repository.createMerchantKybFile(merchantOrgId, fileId, submissionId);

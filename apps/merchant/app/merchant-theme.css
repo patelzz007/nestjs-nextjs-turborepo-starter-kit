@@ -68,6 +68,11 @@
 
 .merchant-grid-bg {
 	background-color: var(--background);
+	background-image:
+		linear-gradient(to right, color-mix(in oklch, var(--border) 55%, transparent) 1px, transparent 1px),
+		linear-gradient(to bottom, color-mix(in oklch, var(--border) 55%, transparent) 1px, transparent 1px);
+	background-size: 28px 28px;
+	mask-image: radial-gradient(ellipse 80% 70% at 50% 0%, black 20%, transparent 100%);
 }
 
 /* Solid panel chrome — topbar matches sidebar/content; no frosted tint. */

@@ -116,11 +116,11 @@
 }
 
 @theme inline {
-	--z-overlay: var(--z-overlay);
-	--z-popover: var(--z-popover);
-	--z-toast: var(--z-toast);
-	--z-sidebar: var(--z-sidebar);
-	--z-sidebar-rail: var(--z-sidebar-rail);
+	--z-index-overlay: var(--z-overlay);
+	--z-index-popover: var(--z-popover);
+	--z-index-toast: var(--z-toast);
+	--z-index-sidebar: var(--z-sidebar);
+	--z-index-sidebar-rail: var(--z-sidebar-rail);
 	--sidebar-width: var(--sidebar-width);
 	--sidebar-width-mobile: var(--sidebar-width-mobile);
 	--sidebar-width-icon: var(--sidebar-width-icon);

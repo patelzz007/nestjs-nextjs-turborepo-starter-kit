@@ -27,7 +27,11 @@ import { NotificationsModule } from "./modules/notifications/notifications.modul
 import { PlatformResourceModule } from "./platform/platform-resource.module";
 import { FilesModule } from "./modules/files/files.module";
 import { StorageModule } from "./modules/storage/storage.module";
+import { AuthorizationCedarModule } from "./modules/authorization-cedar/authorization-cedar.module";
+import { EncryptionModule } from "./modules/encryption/encryption.module";
+import { OrganizationModule } from "./modules/organization/organization.module";
 import { RewardsModule } from "./modules/rewards/rewards.module";
+import { SupportAccessModule } from "./modules/support-access/support-access.module";
 import { ProductModule } from "./modules/product/product.module";
 import { SampleCategoryModule } from "./modules/sample-category/sample-category.module";
 
@@ -79,6 +83,10 @@ if (observeEnabled && observeAppKey !== undefined && observeAppSecret !== undefi
 		PlatformResourceModule,
 		StorageModule,
 		FilesModule,
+		AuthorizationCedarModule,
+		OrganizationModule,
+		SupportAccessModule,
+		EncryptionModule,
 		RewardsModule,
 		// @app-generated:begin module:sample-category
 		SampleCategoryModule,

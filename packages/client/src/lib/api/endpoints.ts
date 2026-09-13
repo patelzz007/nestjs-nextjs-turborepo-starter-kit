@@ -89,6 +89,7 @@ import {
 	MerchantKybProfileResponseSchema,
 	MerchantMemberCreatedResponseSchema,
 	MerchantMembershipResponseSchema,
+	OrganizationContextResponseSchema,
 	MerchantOnboardingCompleteResponseSchema,
 	MerchantOnboardingInvitePreviewSchema,
 	MerchantRoleCapabilityGrantSchema,
@@ -676,6 +677,12 @@ export const apiRouter = {
 			queryKey: ({ fileId }) => ["files", "delete", fileId],
 		}),
 	},
+	organizations: {
+		context: defineQuery(apiContract.organizations.context, {
+			response: envelope(OrganizationContextResponseSchema),
+			queryKey: ({ orgSlug }) => ["organization", orgSlug, "context"],
+		}),
+	},
 	merchant: {
 		me: defineQuery(apiContract.merchant.me, {
 			response: envelope(z.array(MerchantMembershipResponseSchema)),
@@ -743,6 +750,18 @@ export const apiRouter = {
 			complete: defineMutation(apiContract.merchant.onboarding.complete, {
 				response: envelope(MerchantOnboardingCompleteResponseSchema),
 				queryKey: ({ token }) => ["merchant", "onboarding", "complete", token],
+			}),
+			documentUploadUrl: defineMutation(apiContract.merchant.onboarding.documentUploadUrl, {
+				response: envelope(CreateFileUploadUrlResponseSchema),
+				queryKey: ({ token, fileName }) => ["merchant", "onboarding", "document-upload-url", token, fileName],
+			}),
+			documentUploadComplete: defineMutation(apiContract.merchant.onboarding.documentUploadComplete, {
+				response: envelope(CompleteFileUploadResponseSchema),
+				queryKey: ({ token, fileId }) => ["merchant", "onboarding", "document-upload-complete", token, fileId],
+			}),
+			documentsSubmit: defineMutation(apiContract.merchant.onboarding.documentsSubmit, {
+				response: envelope(z.object({ success: z.literal(true) }).strict()),
+				queryKey: ({ token }) => ["merchant", "onboarding", "documents-submit", token],
 			}),
 		},
 		members: {

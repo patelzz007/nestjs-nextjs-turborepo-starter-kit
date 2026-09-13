@@ -43,26 +43,26 @@ export class RlsInterceptor implements NestInterceptor {
 		const organizationId: string = this.resolveOrganizationId(context);
 
 		if (this.reflector.getAllAndOverride<boolean>(RLS_BYPASS_KEY, [context.getHandler(), context.getClass()])) {
-			return { userId: "", bypass: true, organizationId };
+			return { userId: "", bypass: true, organizationId, requireExplicitContext: false };
 		}
 
 		const request: FastifyRequest = context.switchToHttp().getRequest<FastifyRequest>();
 
 		if (!isAuthenticatedUser(request.user)) {
-			return { userId: "", bypass: true, organizationId };
+			return { userId: "", bypass: true, organizationId, requireExplicitContext: false };
 		}
 
 		const user: AuthenticatedUser = request.user;
 
 		if (user.isSuperAdmin) {
-			return { userId: user.sub, bypass: true, organizationId };
+			return { userId: user.sub, bypass: true, organizationId, requireExplicitContext: false };
 		}
 
 		if (this.tenancy.staffBypassesRls && user.hasAdminAccess) {
-			return { userId: user.sub, bypass: true, organizationId };
+			return { userId: user.sub, bypass: true, organizationId, requireExplicitContext: false };
 		}
 
-		return { userId: user.sub, bypass: false, organizationId };
+		return { userId: user.sub, bypass: false, organizationId, requireExplicitContext: true };
 	}
 
 	private resolveOrganizationId(context: ExecutionContext): string {

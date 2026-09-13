@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import type { User } from "@prisma/client";
 import * as bcrypt from "bcrypt";
 
+import { cleanupOrganizationSeedData, seedOrganizationsAndMerchants } from "./organizations";
 import { prisma } from "./client";
 
 /** Fixed seed UUIDs for idempotent re-seeds. */
@@ -115,6 +116,7 @@ export async function cleanupRewardSeedData(): Promise<void> {
 	await prisma.merchantTerminal.deleteMany();
 	await prisma.merchantMember.deleteMany();
 	await prisma.merchantOrg.deleteMany();
+	await cleanupOrganizationSeedData();
 }
 
 export interface RewardSeedSummary {
@@ -146,42 +148,7 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 		await ensureSeedConsumerRole(merchantUser.id);
 	}
 
-	const klOrg = await prisma.merchantOrg.create({
-		data: {
-			id: REWARD_SEED_IDS.klOrg,
-			businessName: "Brew & Bean KL",
-			legalName: "Brew & Bean KL Sdn Bhd",
-			category: "cafe",
-			addressText: "12 Jalan Bukit Bintang, Kuala Lumpur",
-			city: "KUALA_LUMPUR",
-			kybStatus: "APPROVED",
-			kybFields: {
-				registrationNo: "201901012345",
-				taxId: "C12345678",
-			},
-			status: "ACTIVE",
-			contactEmail: klOwner.email,
-			contactPhone: "+60321456789",
-		},
-	});
-
-	const mlkOrg = await prisma.merchantOrg.create({
-		data: {
-			id: REWARD_SEED_IDS.mlkOrg,
-			businessName: "Jonker Street Kitchen",
-			legalName: "Jonker Kitchen Melaka",
-			category: "restaurant",
-			addressText: "45 Jonker Walk, Melaka",
-			city: "MELAKA",
-			kybStatus: "PENDING",
-			kybFields: {
-				registrationNo: "202002023456",
-			},
-			status: "ACTIVE",
-			contactEmail: mlkOwner.email,
-			contactPhone: "+6062821234",
-		},
-	});
+	const { klOrg, mlkOrg } = await seedOrganizationsAndMerchants(adminUser, klOwner, mlkOwner, klCashier, mlkCashier, user);
 
 	await prisma.merchantMember.createMany({
 		data: [

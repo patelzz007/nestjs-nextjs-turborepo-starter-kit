@@ -516,7 +516,7 @@ export interface SelectContentProps
 }
 
 const SelectContent = React.forwardRef<HTMLDivElement, SelectContentProps>(function SelectContent(
-	{ className, children, side = "bottom", sideOffset = 4, align = "center", alignOffset = 0, alignItemWithTrigger = true, loadingLabel = "Loading options…", ...props },
+	{ className, children, side = "bottom", sideOffset = 4, align = "center", alignOffset = 0, alignItemWithTrigger = false, loadingLabel = "Loading options…", ...props },
 	ref,
 ): React.JSX.Element {
 	const context = useSelectContext();
@@ -528,12 +528,12 @@ const SelectContent = React.forwardRef<HTMLDivElement, SelectContentProps>(funct
 				align={align}
 				alignOffset={alignOffset}
 				alignItemWithTrigger={alignItemWithTrigger}
-				className="z-popover isolate">
+				className="isolate z-popover">
 				<SelectPrimitive.Popup
 					ref={ref}
 					data-slot="select-content"
 					className={cn(
-						"z-popover relative isolate max-h-(--available-height) w-(--anchor-width) min-w-36 origin-(--transform-origin) overflow-x-hidden overflow-y-auto rounded-md bg-popover text-popover-foreground shadow-md ring-1 ring-foreground/10 duration-100 data-[align-trigger=true]:animate-none data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-start-2 data-[side=inline-start]:slide-in-from-end-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+						"relative isolate z-popover max-h-(--available-height) w-(--anchor-width) min-w-36 origin-(--transform-origin) overflow-x-hidden overflow-y-auto rounded-md bg-popover text-popover-foreground shadow-md ring-1 ring-foreground/10 duration-100 data-[align-trigger=true]:animate-none data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-start-2 data-[side=inline-start]:slide-in-from-end-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
 						className,
 					)}
 					{...props}>

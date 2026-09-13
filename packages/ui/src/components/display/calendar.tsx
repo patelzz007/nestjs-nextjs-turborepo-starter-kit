@@ -3,9 +3,9 @@
 import { Button, buttonVariants } from "@workspace/ui/components/form/button";
 import { mergeRefs } from "@workspace/ui/lib/merge-refs";
 import { cn } from "@workspace/ui/lib/utils";
-import { ChevronLeftIcon, ChevronRightIcon, ChevronDownIcon } from "lucide-react";
+import { ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, ChevronUpIcon } from "lucide-react";
 import * as React from "react";
-import { DayPicker, getDefaultClassNames, type DayButton, type Locale } from "react-day-picker";
+import { DayPicker, getDefaultClassNames, type ChevronProps, type DayButton, type Locale } from "react-day-picker";
 
 const Calendar = React.forwardRef<
 	HTMLDivElement,
@@ -23,14 +23,12 @@ const Calendar = React.forwardRef<
 			Root: ({ className: rootClassName, rootRef, ...rootProps }: React.ComponentProps<"div"> & { rootRef?: React.Ref<HTMLDivElement> }): React.JSX.Element => (
 				<div data-slot="calendar" ref={mergeRefs(ref, rootRef)} className={cn(rootClassName)} {...rootProps} />
 			),
-			Chevron: ({ className, orientation, ...chevronProps }: { className?: string; orientation?: "left" | "right" | "down" }): React.JSX.Element => {
-				if (orientation === "left") {
-					return <ChevronLeftIcon className={cn("size-4 rtl:rotate-180", className)} {...chevronProps} />;
-				}
+			Chevron: ({ className, orientation, ...chevronProps }: ChevronProps): React.JSX.Element => {
+				if (orientation === "left") return <ChevronLeftIcon className={cn("size-4 rtl:rotate-180", className)} {...chevronProps} />;
 
-				if (orientation === "right") {
-					return <ChevronRightIcon className={cn("size-4 rtl:rotate-180", className)} {...chevronProps} />;
-				}
+				if (orientation === "right") return <ChevronRightIcon className={cn("size-4 rtl:rotate-180", className)} {...chevronProps} />;
+
+				if (orientation === "up") return <ChevronUpIcon className={cn("size-4", className)} {...chevronProps} />;
 
 				return <ChevronDownIcon className={cn("size-4", className)} {...chevronProps} />;
 			},

@@ -122,10 +122,15 @@ export function AuthProvider({
 
 	const revalidateSession = useCallback(async (): Promise<void> => {
 		const requestContext = createApiRequestContext(baseUrl, undefined, undefined, { clientType, extraHeaders });
-		const meResponse = await fetchQuery(requestContext, apiRouter.auth.me, undefined);
+		const [meResponse, permissionsResponse] = await Promise.all([
+			fetchQuery(requestContext, apiRouter.auth.me, undefined),
+			fetchQuery(requestContext, apiRouter.auth.permissions, undefined),
+		]);
+
 		if (meResponse.ok) {
 			sessionInvalidatedRef.current = false;
-			setUser(toAuthUser(meResponse.data.data));
+			const session = permissionsResponse.ok ? permissionsResponse.data.data : null;
+			setUser(toAuthUser(meResponse.data.data, session));
 			setIsAuthenticated(true);
 			return;
 		}

@@ -185,7 +185,7 @@ export function MerchantRewardFormFields({
 
 						<div className="space-y-2">
 							<Label htmlFor="maxClaimsPerUser">Max Claims Per User</Label>
-							<Select value={String(maxClaimsPerUser)} onValueChange={onMaxClaimsChange} disabled={fieldDisabled}>
+							<Select<string> value={String(maxClaimsPerUser)} onValueChange={onMaxClaimsChange} disabled={fieldDisabled}>
 								<SelectTrigger id="maxClaimsPerUser">
 									<SelectValue />
 								</SelectTrigger>

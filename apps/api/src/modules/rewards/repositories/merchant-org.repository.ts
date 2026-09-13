@@ -146,6 +146,22 @@ export class MerchantOrgRepository {
 		});
 	}
 
+	public async findOrganizationLink(merchantOrgId: string): Promise<{ readonly organizationId: string; readonly organizationSlug: string } | null> {
+		const row = await this.prisma.merchantOrg.findUnique({
+			where: { id: merchantOrgId },
+			select: {
+				organizationId: true,
+				organization: { select: { slug: true } },
+			},
+		});
+
+		if (row === null || row.organizationId === null || row.organization === null) {
+			return null;
+		}
+
+		return { organizationId: row.organizationId, organizationSlug: row.organization.slug };
+	}
+
 	public async createWithOwner(input: {
 		readonly businessName: string;
 		readonly city: "KUALA_LUMPUR" | "MELAKA";
@@ -155,17 +171,22 @@ export class MerchantOrgRepository {
 		readonly addressText: string | null;
 		readonly contactPhone: string | null;
 		readonly kybFields: Prisma.InputJsonValue | null;
+		readonly category: string;
+		readonly organizationId: string;
+		readonly locationId: string;
 	}): Promise<MerchantOrg> {
 		return this.prisma.$transaction(async (tx) => {
 			const org = await tx.merchantOrg.create({
 				data: {
+					organizationId: input.organizationId,
+					locationId: input.locationId,
 					businessName: input.businessName,
 					legalName: input.legalName,
 					addressText: input.addressText,
 					contactPhone: input.contactPhone,
 					kybFields: input.kybFields ?? Prisma.JsonNull,
 					kybStatus: "PENDING",
-					category: "general",
+					category: input.category,
 					city: input.city,
 					status: "ONBOARDING",
 					contactEmail: input.contactEmail,

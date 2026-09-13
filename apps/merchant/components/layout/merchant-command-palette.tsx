@@ -1,7 +1,9 @@
 "use client";
 
+import { isMerchantEnrollmentAllowedPath, useMerchantEnrollmentLock } from "@/lib/merchant-email-enrollment";
 import { useMerchantCapabilities } from "@/lib/merchant-capabilities";
 import { buildMerchantPaletteItems, renderMerchantPaletteIcon } from "@/lib/palette/nav-items";
+import { toastMessage } from "@workspace/ui/components/feedback/toast";
 import { useMerchantCommandPaletteStore } from "@/stores/command-palette-store";
 import { AppCommandPalette, type AppCommandPaletteQuickAction } from "@workspace/ui/components/navigation/app-command-palette";
 import { SunMoon, Ticket } from "lucide-react";
@@ -18,6 +20,7 @@ export function MerchantCommandPalette({ open: externalOpen, setOpen: externalSe
 	const router = useRouter();
 	const { setTheme, resolvedTheme } = useTheme();
 	const { capabilities, hasCapability } = useMerchantCapabilities();
+	const { isLocked: isEnrollmentLocked, disabledTooltip: enrollmentDisabledTooltip } = useMerchantEnrollmentLock();
 
 	const recentSearches = useMerchantCommandPaletteStore((state) => state.recentSearches);
 	const pinnedUrls = useMerchantCommandPaletteStore((state) => state.pinnedUrls);
@@ -44,7 +47,7 @@ export function MerchantCommandPalette({ open: externalOpen, setOpen: externalSe
 			},
 		];
 
-		if (hasCapability("merchant:manage_rewards")) {
+		if (!isEnrollmentLocked && hasCapability("merchant:manage_rewards")) {
 			actions.push({
 				id: "open-rewards",
 				title: "Open rewards",
@@ -60,15 +63,31 @@ export function MerchantCommandPalette({ open: externalOpen, setOpen: externalSe
 		}
 
 		return actions;
-	}, [closePalette, hasCapability, resolvedTheme, router, setTheme]);
+	}, [closePalette, hasCapability, isEnrollmentLocked, resolvedTheme, router, setTheme]);
 
-	const searchableItems = React.useMemo(() => buildMerchantPaletteItems(capabilities), [capabilities]);
+	const searchableItems = React.useMemo(() => {
+		const items = buildMerchantPaletteItems(capabilities);
+		if (!isEnrollmentLocked) {
+			return items;
+		}
+		return items.filter((item) => isMerchantEnrollmentAllowedPath(item.url));
+	}, [capabilities, isEnrollmentLocked]);
 
 	const handleNavigate = React.useCallback(
 		(url: string): void => {
+			if (isEnrollmentLocked && !isMerchantEnrollmentAllowedPath(url)) {
+				closePalette();
+				toastMessage.info({
+					title: "Account setup required",
+					description: enrollmentDisabledTooltip,
+				});
+				router.push("/settings");
+				return;
+			}
 			router.push(url);
+			closePalette();
 		},
-		[router],
+		[closePalette, enrollmentDisabledTooltip, isEnrollmentLocked, router],
 	);
 
 	return (

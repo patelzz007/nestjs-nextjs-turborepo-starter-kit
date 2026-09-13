@@ -1,5 +1,6 @@
 "use client";
 
+import type { EnrollmentReason, SessionScope } from "@workspace/shared";
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 
@@ -14,6 +15,10 @@ export interface AuthUser {
 	readonly isSuperAdmin: boolean;
 	readonly hasAdminAccess: boolean;
 	readonly isEmailVerified: boolean;
+	/** Mirrors the current access token's `sessionScope` claim. */
+	readonly sessionScope: SessionScope;
+	/** Present when `sessionScope` is `restricted`. */
+	readonly enrollmentReason: EnrollmentReason | null;
 	readonly roles: readonly { readonly id: string; readonly name: string }[];
 }
 

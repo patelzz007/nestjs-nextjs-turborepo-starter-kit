@@ -106,6 +106,14 @@ export class IdentityService {
 	public async getSessionPermissions(userId: string, accessPayload?: AccessTokenPayload): Promise<SessionPermissionsResponse> {
 		const cached = await this.sessionCache.getPermissions(userId);
 		const base = cached ?? (await this.buildAndCacheSessionPermissions(userId));
+		const sessionScope = accessPayload?.sessionScope ?? "full";
+		const enrollmentReason =
+			sessionScope === "restricted"
+				? accessPayload?.isEmailVerified === false
+					? "email_verification"
+					: "mfa_enrollment"
+				: undefined;
+
 		return {
 			roles: base.roles,
 			permissions: base.permissions,
@@ -114,6 +122,8 @@ export class IdentityService {
 			hasAdminAccess: base.hasAdminAccess,
 			isImpersonating: accessPayload?.isImpersonating,
 			originalUserId: accessPayload?.originalUserId,
+			sessionScope,
+			enrollmentReason,
 		};
 	}
 
@@ -159,6 +169,7 @@ export class IdentityService {
 			capabilities: [...capabilities],
 			tokenVersion: profile.tokenVersion,
 			hasAdminAccess: profile.hasAdminAccess,
+			sessionScope: "full",
 		};
 	}
 

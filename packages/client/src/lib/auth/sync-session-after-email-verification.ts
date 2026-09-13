@@ -21,14 +21,19 @@ export async function syncSessionAfterEmailVerification(api: ApiClient<ApiRouter
 	await invalidateSessionAuth(queryClient);
 
 	try {
-		const meResponse = await api.auth.me.fetchOrThrow(undefined);
-		login(toAuthUser(meResponse.data));
+		const [meResponse, permissionsResponse] = await Promise.all([api.auth.me.fetchOrThrow(undefined), api.auth.permissions.fetchOrThrow(undefined)]);
+		login(toAuthUser(meResponse.data, permissionsResponse.data));
 		queryClient.setQueryData(AUTH_ME_QUERY_KEY, meResponse);
 		return;
 	} catch {
 		const currentUser = useAuthStore.getState().user;
 		if (currentUser !== null) {
-			login({ ...currentUser, isEmailVerified: true });
+			login({
+				...currentUser,
+				isEmailVerified: true,
+				sessionScope: currentUser.enrollmentReason === "mfa_enrollment" ? "restricted" : "full",
+				enrollmentReason: currentUser.enrollmentReason === "mfa_enrollment" ? "mfa_enrollment" : null,
+			});
 		}
 	}
 }

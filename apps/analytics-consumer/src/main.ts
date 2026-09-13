@@ -66,11 +66,44 @@ const consumer = kafka.consumer({ groupId: "analytics-warehouse" });
 
 let shutdownStarted = false;
 
+function extractOrganizationId(payload: Record<string, string | number | boolean | null>): string | null {
+	const raw = payload.organizationId;
+	if (typeof raw === "string" && raw.length > 0) {
+		return raw;
+	}
+	return null;
+}
+
+/** Metadata-only ingest — tenant id tagged when present in envelope payload (no content). */
 async function ingest(topic: string, envelope: ReturnType<typeof PlatformEventEnvelopeSchema.parse>): Promise<void> {
+	const payloadRecord: Record<string, string | number | boolean | null> = {};
+	if (envelope.payload !== null && typeof envelope.payload === "object" && !Array.isArray(envelope.payload)) {
+		for (const [key, value] of Object.entries(envelope.payload)) {
+			if (typeof value === "string" || typeof value === "number" || typeof value === "boolean" || value === null) {
+				payloadRecord[key] = value;
+			}
+		}
+	}
+	const organizationId = extractOrganizationId(payloadRecord);
+	const metadataPayload = {
+		type: envelope.type,
+		correlationId: envelope.correlationId,
+		organizationId,
+		occurredAt: envelope.occurredAt,
+	};
+
 	await pool.query(
 		`INSERT INTO analytics_events (id, topic, event_type, correlation_id, partition_key, payload, occurred_at)
      VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7)`,
-		[randomUUID(), topic, envelope.type, envelope.correlationId, envelope.type, JSON.stringify(envelope), envelope.occurredAt],
+		[
+			randomUUID(),
+			topic,
+			envelope.type,
+			envelope.correlationId,
+			organizationId ?? envelope.type,
+			JSON.stringify(metadataPayload),
+			envelope.occurredAt,
+		],
 	);
 }
 

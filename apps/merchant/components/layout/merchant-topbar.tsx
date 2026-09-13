@@ -7,6 +7,7 @@ import { useMerchantSessionProfile } from "@/lib/merchant-session-profile";
 import { useMerchantSidebarControl } from "@/components/layout/use-merchant-sidebar-control";
 import { useMerchantSidebarStore } from "@/stores/sidebar-store";
 import { useAuth } from "@workspace/client/lib/auth";
+import { isRestrictedAuthUser } from "@workspace/client/lib/auth/map-auth-user";
 import { AppShellProfileDropdown } from "@workspace/ui/components/navigation/app-shell-profile-dropdown";
 import { AppShellTopbar, useCommandPaletteShortcut } from "@workspace/ui/components/navigation/app-shell-topbar";
 import { ShellThemeToggle } from "@workspace/ui/components/navigation/shell-theme-toggle";
@@ -24,7 +25,8 @@ export interface MerchantTopbarProps {
 }
 
 export function MerchantTopbar({ initialUser = null }: MerchantTopbarProps): React.JSX.Element {
-	const { logout } = useAuth();
+	const { logout, user } = useAuth();
+	const isEnrollmentLocked = isRestrictedAuthUser(user);
 	const sessionProfile = useMerchantSessionProfile();
 	const { hasCapability } = useMerchantCapabilities();
 	const router = useRouter();
@@ -43,6 +45,10 @@ export function MerchantTopbar({ initialUser = null }: MerchantTopbarProps): Rea
 	}, [logout]);
 
 	const profileMenuItems = React.useMemo((): readonly { label: string; icon: React.ReactNode; onClick: () => void }[] => {
+		if (isEnrollmentLocked) {
+			return [];
+		}
+
 		const items: { label: string; icon: React.ReactNode; onClick: () => void }[] = [
 			{
 				label: "Dashboard",
@@ -64,7 +70,7 @@ export function MerchantTopbar({ initialUser = null }: MerchantTopbarProps): Rea
 		}
 
 		return items;
-	}, [hasCapability, router]);
+	}, [hasCapability, isEnrollmentLocked, router]);
 
 	const profileName = sessionProfile.isLoading && initialUser !== null ? initialUser.name : sessionProfile.fullName;
 	const profileEmail = sessionProfile.isLoading && initialUser !== null ? initialUser.email : sessionProfile.email;

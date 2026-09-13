@@ -10,6 +10,7 @@ import { bricolageGrotesque } from "@workspace/ui/fonts/bricolage-grotesque";
 import { Geist, Geist_Mono, JetBrains_Mono } from "next/font/google";
 
 import { AdminClientAuthWrapper } from "@/components/admin-client-auth-wrapper";
+import { AppDocumentShell } from "@workspace/ui/components/app-document-shell";
 import { ThemeProvider } from "@workspace/ui/components/theme-provider";
 import { validateAdminEnv } from "@workspace/shared/runtime/index";
 
@@ -50,22 +51,19 @@ export default function RootLayout({
 	}
 
 	return (
-		<html
-			lang="en"
-			suppressHydrationWarning
-			className={cn("antialiased", fontMono.variable, "font-sans", geist.variable, jetbrainsMonoHeading.variable, bricolageGrotesque.variable)}>
-			<body className="admin-app">
-				{/* Prevent Redux DevTools extension from serializing React Query / zustand state */}
-				<ReduxDevToolsGuard />
-				<QueryProvider>
-					<AdminClientAuthWrapper>
-						<ThemeProvider>
-							{children}
-							<Toaster />
-						</ThemeProvider>
-					</AdminClientAuthWrapper>
-				</QueryProvider>
-			</body>
-		</html>
+		<AppDocumentShell
+			htmlClassName={cn("antialiased", fontMono.variable, "font-sans", geist.variable, jetbrainsMonoHeading.variable, bricolageGrotesque.variable)}
+			bodyClassName="admin-app">
+			{/* Prevent Redux DevTools extension from serializing React Query / zustand state */}
+			<ReduxDevToolsGuard />
+			<QueryProvider>
+				<AdminClientAuthWrapper>
+					<ThemeProvider>
+						{children}
+						<Toaster />
+					</ThemeProvider>
+				</AdminClientAuthWrapper>
+			</QueryProvider>
+		</AppDocumentShell>
 	);
 }

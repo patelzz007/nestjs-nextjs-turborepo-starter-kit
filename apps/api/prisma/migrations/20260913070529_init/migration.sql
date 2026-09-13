@@ -26,10 +26,46 @@ CREATE TYPE "CapabilityScope" AS ENUM ('PLATFORM', 'MERCHANT', 'ADMIN');
 CREATE TYPE "PilotCity" AS ENUM ('KUALA_LUMPUR', 'MELAKA');
 
 -- CreateEnum
-CREATE TYPE "MerchantOrgStatus" AS ENUM ('ONBOARDING', 'ACTIVE', 'SUSPENDED');
+CREATE TYPE "KybStatus" AS ENUM ('PENDING', 'APPROVED', 'REJECTED', 'ACTION_REQUIRED');
 
 -- CreateEnum
-CREATE TYPE "KybStatus" AS ENUM ('PENDING', 'APPROVED', 'REJECTED', 'ACTION_REQUIRED');
+CREATE TYPE "OrganizationLifecycleState" AS ENUM ('PROVISIONING', 'ACTIVE', 'RESTRICTED', 'SUSPENDED', 'PENDING_DELETION', 'DELETED');
+
+-- CreateEnum
+CREATE TYPE "OrganizationMembershipRole" AS ENUM ('OWNER', 'ADMIN', 'MEMBER', 'POLICY_ADMIN', 'CASHIER');
+
+-- CreateEnum
+CREATE TYPE "OrganizationMembershipStatus" AS ENUM ('ACTIVE', 'SUSPENDED', 'PENDING');
+
+-- CreateEnum
+CREATE TYPE "OrganizationLocationScopeType" AS ENUM ('ALL_LOCATIONS', 'SELECTED');
+
+-- CreateEnum
+CREATE TYPE "OrganizationInvitationStatus" AS ENUM ('PENDING', 'ACCEPTED', 'EXPIRED', 'REVOKED');
+
+-- CreateEnum
+CREATE TYPE "OrganizationAccessRequestStatus" AS ENUM ('PENDING', 'APPROVED', 'REJECTED', 'CANCELLED');
+
+-- CreateEnum
+CREATE TYPE "AuthorizationPolicyScope" AS ENUM ('PLATFORM_GUARDRAIL', 'PLATFORM', 'TENANT');
+
+-- CreateEnum
+CREATE TYPE "AuthorizationPolicyStatus" AS ENUM ('DRAFT', 'PENDING_APPROVAL', 'APPROVED', 'PUBLISHED', 'SUPERSEDED', 'ROLLED_BACK');
+
+-- CreateEnum
+CREATE TYPE "SupportAccessGrantMode" AS ENUM ('READ_ONLY', 'WRITE_ELEVATED');
+
+-- CreateEnum
+CREATE TYPE "SupportAccessGrantStatus" AS ENUM ('PENDING_APPROVAL', 'PENDING_TENANT_APPROVAL', 'ACTIVE', 'EXPIRED', 'REVOKED', 'DENIED');
+
+-- CreateEnum
+CREATE TYPE "TenantPlacementKind" AS ENUM ('SHARED', 'DEDICATED');
+
+-- CreateEnum
+CREATE TYPE "TenantEncryptionKeyStatus" AS ENUM ('ACTIVE', 'ROTATING', 'REVOKED');
+
+-- CreateEnum
+CREATE TYPE "MerchantOrgStatus" AS ENUM ('ONBOARDING', 'ACTIVE', 'SUSPENDED');
 
 -- CreateEnum
 CREATE TYPE "KybDocumentScanStatus" AS ENUM ('SCANNING', 'CLEAN', 'INFECTED');
@@ -603,6 +639,281 @@ CREATE TABLE "cities" (
 );
 
 -- CreateTable
+CREATE TABLE "organizations" (
+    "id" TEXT NOT NULL,
+    "slug" VARCHAR(64) NOT NULL,
+    "display_name" VARCHAR(200) NOT NULL,
+    "lifecycle_state" "OrganizationLifecycleState" NOT NULL DEFAULT 'PROVISIONING',
+    "deletion_grace_ends_at" BIGINT,
+    "is_deleted" BOOLEAN NOT NULL DEFAULT false,
+    "deleted_at" BIGINT,
+    "created_at" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
+    "updated_at" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
+
+    CONSTRAINT "organizations_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "organization_slug_history" (
+    "id" TEXT NOT NULL,
+    "organization_id" TEXT NOT NULL,
+    "slug" VARCHAR(64) NOT NULL,
+    "reserved_until" BIGINT,
+    "created_at" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
+
+    CONSTRAINT "organization_slug_history_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "organization_locations" (
+    "id" TEXT NOT NULL,
+    "organization_id" TEXT NOT NULL,
+    "name" VARCHAR(200) NOT NULL,
+    "code" VARCHAR(64) NOT NULL,
+    "is_primary" BOOLEAN NOT NULL DEFAULT false,
+    "is_deleted" BOOLEAN NOT NULL DEFAULT false,
+    "deleted_at" BIGINT,
+    "created_at" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
+    "updated_at" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
+
+    CONSTRAINT "organization_locations_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "organization_memberships" (
+    "id" TEXT NOT NULL,
+    "organization_id" TEXT NOT NULL,
+    "user_id" TEXT NOT NULL,
+    "role" "OrganizationMembershipRole" NOT NULL,
+    "status" "OrganizationMembershipStatus" NOT NULL DEFAULT 'ACTIVE',
+    "display_name" VARCHAR(100),
+    "attributes" JSONB,
+    "is_deleted" BOOLEAN NOT NULL DEFAULT false,
+    "deleted_at" BIGINT,
+    "created_at" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
+    "updated_at" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
+
+    CONSTRAINT "organization_memberships_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "organization_membership_location_scopes" (
+    "id" TEXT NOT NULL,
+    "organization_id" TEXT NOT NULL,
+    "membership_id" TEXT NOT NULL,
+    "scope_type" "OrganizationLocationScopeType" NOT NULL,
+    "location_id" TEXT,
+    "created_at" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
+
+    CONSTRAINT "organization_membership_location_scopes_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "organization_merchant_profiles" (
+    "id" TEXT NOT NULL,
+    "organization_id" TEXT NOT NULL,
+    "legal_name" VARCHAR(200),
+    "category" VARCHAR(100) NOT NULL,
+    "address_text" TEXT,
+    "city" "PilotCity" NOT NULL,
+    "kyb_status" "KybStatus" NOT NULL DEFAULT 'PENDING',
+    "kyb_fields" JSONB,
+    "contact_email" VARCHAR(100) NOT NULL,
+    "contact_phone" VARCHAR(20),
+    "created_at" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
+    "updated_at" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
+
+    CONSTRAINT "organization_merchant_profiles_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "organization_invitations" (
+    "id" TEXT NOT NULL,
+    "organization_id" TEXT,
+    "email" VARCHAR(100) NOT NULL,
+    "token_hash" TEXT NOT NULL,
+    "intended_role" "OrganizationMembershipRole" NOT NULL,
+    "status" "OrganizationInvitationStatus" NOT NULL DEFAULT 'PENDING',
+    "created_by_admin_id" TEXT NOT NULL,
+    "accepted_by_user_id" TEXT,
+    "expires_at" BIGINT NOT NULL,
+    "accepted_at" BIGINT,
+    "created_at" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
+    "updated_at" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
+
+    CONSTRAINT "organization_invitations_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "organization_access_requests" (
+    "id" TEXT NOT NULL,
+    "organization_id" TEXT NOT NULL,
+    "user_id" TEXT NOT NULL,
+    "status" "OrganizationAccessRequestStatus" NOT NULL DEFAULT 'PENDING',
+    "message" TEXT,
+    "reviewed_by_id" TEXT,
+    "reviewed_at" BIGINT,
+    "created_at" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
+    "updated_at" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
+
+    CONSTRAINT "organization_access_requests_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "organization_lifecycle_events" (
+    "id" TEXT NOT NULL,
+    "organization_id" TEXT NOT NULL,
+    "from_state" "OrganizationLifecycleState",
+    "to_state" "OrganizationLifecycleState" NOT NULL,
+    "actor_user_id" TEXT,
+    "reason" TEXT,
+    "correlation_id" VARCHAR(64),
+    "created_at" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
+
+    CONSTRAINT "organization_lifecycle_events_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "tenant_placements" (
+    "id" TEXT NOT NULL,
+    "organization_id" TEXT NOT NULL,
+    "kind" "TenantPlacementKind" NOT NULL DEFAULT 'SHARED',
+    "region_code" VARCHAR(32) NOT NULL DEFAULT 'default',
+    "shard_key" VARCHAR(64),
+    "created_at" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
+    "updated_at" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
+
+    CONSTRAINT "tenant_placements_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "organization_entitlements" (
+    "id" TEXT NOT NULL,
+    "organization_id" TEXT NOT NULL,
+    "plan_code" VARCHAR(64) NOT NULL,
+    "features" JSONB NOT NULL,
+    "version" INTEGER NOT NULL DEFAULT 1,
+    "effective_from" BIGINT NOT NULL,
+    "effective_until" BIGINT,
+    "created_at" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
+
+    CONSTRAINT "organization_entitlements_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "organization_quotas" (
+    "id" TEXT NOT NULL,
+    "organization_id" TEXT NOT NULL,
+    "quota_key" VARCHAR(64) NOT NULL,
+    "limit_value" BIGINT NOT NULL,
+    "used_value" BIGINT NOT NULL DEFAULT 0,
+    "window_start" BIGINT NOT NULL,
+    "window_end" BIGINT NOT NULL,
+    "created_at" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
+    "updated_at" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
+
+    CONSTRAINT "organization_quotas_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "authorization_policy_drafts" (
+    "id" TEXT NOT NULL,
+    "organization_id" TEXT,
+    "scope" "AuthorizationPolicyScope" NOT NULL,
+    "name" VARCHAR(120) NOT NULL,
+    "description" TEXT,
+    "builder_payload" JSONB NOT NULL,
+    "cedar_source" TEXT NOT NULL,
+    "sql_predicate" TEXT,
+    "status" "AuthorizationPolicyStatus" NOT NULL DEFAULT 'DRAFT',
+    "created_by_id" TEXT NOT NULL,
+    "approved_by_id" TEXT,
+    "created_at" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
+    "updated_at" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
+
+    CONSTRAINT "authorization_policy_drafts_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "authorization_policy_versions" (
+    "id" TEXT NOT NULL,
+    "organization_id" TEXT,
+    "draft_id" TEXT NOT NULL,
+    "scope" "AuthorizationPolicyScope" NOT NULL,
+    "version" INTEGER NOT NULL,
+    "cedar_source" TEXT NOT NULL,
+    "sql_predicate" TEXT,
+    "content_hash" VARCHAR(64) NOT NULL,
+    "published_at" BIGINT NOT NULL,
+    "published_by_id" TEXT NOT NULL,
+    "superseded_at" BIGINT,
+
+    CONSTRAINT "authorization_policy_versions_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "authorization_policy_simulations" (
+    "id" TEXT NOT NULL,
+    "draft_id" TEXT NOT NULL,
+    "actor_user_id" TEXT NOT NULL,
+    "result" JSONB NOT NULL,
+    "passed" BOOLEAN NOT NULL,
+    "created_at" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
+
+    CONSTRAINT "authorization_policy_simulations_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "support_access_grants" (
+    "id" TEXT NOT NULL,
+    "organization_id" TEXT NOT NULL,
+    "support_user_id" TEXT NOT NULL,
+    "target_membership_id" TEXT,
+    "mode" "SupportAccessGrantMode" NOT NULL DEFAULT 'READ_ONLY',
+    "status" "SupportAccessGrantStatus" NOT NULL DEFAULT 'PENDING_TENANT_APPROVAL',
+    "reason" TEXT NOT NULL,
+    "ticket_ref" VARCHAR(120),
+    "tenant_approved_by_id" TEXT,
+    "emergency_approved_by" VARCHAR(120),
+    "expires_at" BIGINT NOT NULL,
+    "revoked_at" BIGINT,
+    "created_at" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
+
+    CONSTRAINT "support_access_grants_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "tenant_encryption_keys" (
+    "id" TEXT NOT NULL,
+    "organization_id" TEXT NOT NULL,
+    "key_version" INTEGER NOT NULL,
+    "wrapped_key" TEXT NOT NULL,
+    "kms_key_id" VARCHAR(255) NOT NULL,
+    "status" "TenantEncryptionKeyStatus" NOT NULL DEFAULT 'ACTIVE',
+    "rotated_at" BIGINT,
+    "created_at" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
+
+    CONSTRAINT "tenant_encryption_keys_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "organization_audit_logs" (
+    "id" TEXT NOT NULL,
+    "organization_id" TEXT NOT NULL,
+    "actor_user_id" TEXT,
+    "action" VARCHAR(120) NOT NULL,
+    "resource_type" VARCHAR(120) NOT NULL,
+    "resource_id" VARCHAR(64),
+    "decision" VARCHAR(32),
+    "policy_version" INTEGER,
+    "correlation_id" VARCHAR(64),
+    "metadata" JSONB,
+    "created_at" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
+
+    CONSTRAINT "organization_audit_logs_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "merchant_role_capabilities" (
     "id" TEXT NOT NULL,
     "role" "MerchantMemberRole" NOT NULL,
@@ -618,6 +929,8 @@ CREATE TABLE "merchant_role_capabilities" (
 -- CreateTable
 CREATE TABLE "merchant_orgs" (
     "id" TEXT NOT NULL,
+    "organization_id" TEXT,
+    "location_id" TEXT,
     "business_name" VARCHAR(200) NOT NULL,
     "legal_name" VARCHAR(200),
     "category" VARCHAR(100) NOT NULL,
@@ -1320,6 +1633,99 @@ CREATE INDEX "cities_state_id_idx" ON "cities"("state_id");
 CREATE INDEX "cities_country_id_idx" ON "cities"("country_id");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "organizations_slug_key" ON "organizations"("slug");
+
+-- CreateIndex
+CREATE INDEX "organizations_lifecycle_state_idx" ON "organizations"("lifecycle_state");
+
+-- CreateIndex
+CREATE INDEX "organization_slug_history_organization_id_idx" ON "organization_slug_history"("organization_id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "organization_slug_history_slug_key" ON "organization_slug_history"("slug");
+
+-- CreateIndex
+CREATE INDEX "organization_locations_organization_id_idx" ON "organization_locations"("organization_id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "organization_locations_organization_id_code_key" ON "organization_locations"("organization_id", "code");
+
+-- CreateIndex
+CREATE INDEX "organization_memberships_user_id_idx" ON "organization_memberships"("user_id");
+
+-- CreateIndex
+CREATE INDEX "organization_memberships_organization_id_status_idx" ON "organization_memberships"("organization_id", "status");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "organization_memberships_organization_id_user_id_key" ON "organization_memberships"("organization_id", "user_id");
+
+-- CreateIndex
+CREATE INDEX "organization_membership_location_scopes_organization_id_idx" ON "organization_membership_location_scopes"("organization_id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "organization_membership_location_scopes_membership_id_locat_key" ON "organization_membership_location_scopes"("membership_id", "location_id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "organization_merchant_profiles_organization_id_key" ON "organization_merchant_profiles"("organization_id");
+
+-- CreateIndex
+CREATE INDEX "organization_merchant_profiles_kyb_status_idx" ON "organization_merchant_profiles"("kyb_status");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "organization_invitations_token_hash_key" ON "organization_invitations"("token_hash");
+
+-- CreateIndex
+CREATE INDEX "organization_invitations_email_idx" ON "organization_invitations"("email");
+
+-- CreateIndex
+CREATE INDEX "organization_invitations_organization_id_idx" ON "organization_invitations"("organization_id");
+
+-- CreateIndex
+CREATE INDEX "organization_access_requests_organization_id_user_id_status_idx" ON "organization_access_requests"("organization_id", "user_id", "status");
+
+-- CreateIndex
+CREATE INDEX "organization_access_requests_organization_id_status_idx" ON "organization_access_requests"("organization_id", "status");
+
+-- CreateIndex
+CREATE INDEX "organization_lifecycle_events_organization_id_created_at_idx" ON "organization_lifecycle_events"("organization_id", "created_at");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "tenant_placements_organization_id_key" ON "tenant_placements"("organization_id");
+
+-- CreateIndex
+CREATE INDEX "organization_entitlements_organization_id_effective_from_idx" ON "organization_entitlements"("organization_id", "effective_from");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "organization_quotas_organization_id_quota_key_window_start_key" ON "organization_quotas"("organization_id", "quota_key", "window_start");
+
+-- CreateIndex
+CREATE INDEX "authorization_policy_drafts_organization_id_status_idx" ON "authorization_policy_drafts"("organization_id", "status");
+
+-- CreateIndex
+CREATE INDEX "authorization_policy_versions_organization_id_published_at_idx" ON "authorization_policy_versions"("organization_id", "published_at");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "authorization_policy_versions_organization_id_scope_version_key" ON "authorization_policy_versions"("organization_id", "scope", "version");
+
+-- CreateIndex
+CREATE INDEX "authorization_policy_simulations_draft_id_created_at_idx" ON "authorization_policy_simulations"("draft_id", "created_at");
+
+-- CreateIndex
+CREATE INDEX "support_access_grants_organization_id_status_idx" ON "support_access_grants"("organization_id", "status");
+
+-- CreateIndex
+CREATE INDEX "support_access_grants_support_user_id_status_idx" ON "support_access_grants"("support_user_id", "status");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "tenant_encryption_keys_organization_id_key_version_key" ON "tenant_encryption_keys"("organization_id", "key_version");
+
+-- CreateIndex
+CREATE INDEX "organization_audit_logs_organization_id_created_at_idx" ON "organization_audit_logs"("organization_id", "created_at");
+
+-- CreateIndex
+CREATE INDEX "organization_audit_logs_organization_id_action_idx" ON "organization_audit_logs"("organization_id", "action");
+
+-- CreateIndex
 CREATE INDEX "merchant_role_capabilities_role_idx" ON "merchant_role_capabilities"("role");
 
 -- CreateIndex
@@ -1327,6 +1733,12 @@ CREATE INDEX "merchant_role_capabilities_capability_id_idx" ON "merchant_role_ca
 
 -- CreateIndex
 CREATE UNIQUE INDEX "merchant_role_capabilities_role_capability_id_key" ON "merchant_role_capabilities"("role", "capability_id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "merchant_orgs_location_id_key" ON "merchant_orgs"("location_id");
+
+-- CreateIndex
+CREATE INDEX "merchant_orgs_organization_id_idx" ON "merchant_orgs"("organization_id");
 
 -- CreateIndex
 CREATE INDEX "merchant_orgs_city_idx" ON "merchant_orgs"("city");
@@ -1626,7 +2038,103 @@ ALTER TABLE "cities" ADD CONSTRAINT "cities_state_id_fkey" FOREIGN KEY ("state_i
 ALTER TABLE "cities" ADD CONSTRAINT "cities_country_id_fkey" FOREIGN KEY ("country_id") REFERENCES "countries"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "organization_slug_history" ADD CONSTRAINT "organization_slug_history_organization_id_fkey" FOREIGN KEY ("organization_id") REFERENCES "organizations"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "organization_locations" ADD CONSTRAINT "organization_locations_organization_id_fkey" FOREIGN KEY ("organization_id") REFERENCES "organizations"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "organization_memberships" ADD CONSTRAINT "organization_memberships_organization_id_fkey" FOREIGN KEY ("organization_id") REFERENCES "organizations"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "organization_memberships" ADD CONSTRAINT "organization_memberships_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "organization_membership_location_scopes" ADD CONSTRAINT "organization_membership_location_scopes_organization_id_fkey" FOREIGN KEY ("organization_id") REFERENCES "organizations"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "organization_membership_location_scopes" ADD CONSTRAINT "organization_membership_location_scopes_membership_id_fkey" FOREIGN KEY ("membership_id") REFERENCES "organization_memberships"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "organization_membership_location_scopes" ADD CONSTRAINT "organization_membership_location_scopes_location_id_fkey" FOREIGN KEY ("location_id") REFERENCES "organization_locations"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "organization_merchant_profiles" ADD CONSTRAINT "organization_merchant_profiles_organization_id_fkey" FOREIGN KEY ("organization_id") REFERENCES "organizations"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "organization_invitations" ADD CONSTRAINT "organization_invitations_organization_id_fkey" FOREIGN KEY ("organization_id") REFERENCES "organizations"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "organization_invitations" ADD CONSTRAINT "organization_invitations_created_by_admin_id_fkey" FOREIGN KEY ("created_by_admin_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "organization_invitations" ADD CONSTRAINT "organization_invitations_accepted_by_user_id_fkey" FOREIGN KEY ("accepted_by_user_id") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "organization_access_requests" ADD CONSTRAINT "organization_access_requests_organization_id_fkey" FOREIGN KEY ("organization_id") REFERENCES "organizations"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "organization_access_requests" ADD CONSTRAINT "organization_access_requests_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "organization_access_requests" ADD CONSTRAINT "organization_access_requests_reviewed_by_id_fkey" FOREIGN KEY ("reviewed_by_id") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "organization_lifecycle_events" ADD CONSTRAINT "organization_lifecycle_events_organization_id_fkey" FOREIGN KEY ("organization_id") REFERENCES "organizations"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "tenant_placements" ADD CONSTRAINT "tenant_placements_organization_id_fkey" FOREIGN KEY ("organization_id") REFERENCES "organizations"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "organization_entitlements" ADD CONSTRAINT "organization_entitlements_organization_id_fkey" FOREIGN KEY ("organization_id") REFERENCES "organizations"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "organization_quotas" ADD CONSTRAINT "organization_quotas_organization_id_fkey" FOREIGN KEY ("organization_id") REFERENCES "organizations"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "authorization_policy_drafts" ADD CONSTRAINT "authorization_policy_drafts_organization_id_fkey" FOREIGN KEY ("organization_id") REFERENCES "organizations"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "authorization_policy_drafts" ADD CONSTRAINT "authorization_policy_drafts_created_by_id_fkey" FOREIGN KEY ("created_by_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "authorization_policy_drafts" ADD CONSTRAINT "authorization_policy_drafts_approved_by_id_fkey" FOREIGN KEY ("approved_by_id") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "authorization_policy_versions" ADD CONSTRAINT "authorization_policy_versions_organization_id_fkey" FOREIGN KEY ("organization_id") REFERENCES "organizations"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "authorization_policy_versions" ADD CONSTRAINT "authorization_policy_versions_draft_id_fkey" FOREIGN KEY ("draft_id") REFERENCES "authorization_policy_drafts"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "authorization_policy_versions" ADD CONSTRAINT "authorization_policy_versions_published_by_id_fkey" FOREIGN KEY ("published_by_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "authorization_policy_simulations" ADD CONSTRAINT "authorization_policy_simulations_draft_id_fkey" FOREIGN KEY ("draft_id") REFERENCES "authorization_policy_drafts"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "authorization_policy_simulations" ADD CONSTRAINT "authorization_policy_simulations_actor_user_id_fkey" FOREIGN KEY ("actor_user_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "support_access_grants" ADD CONSTRAINT "support_access_grants_organization_id_fkey" FOREIGN KEY ("organization_id") REFERENCES "organizations"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "support_access_grants" ADD CONSTRAINT "support_access_grants_support_user_id_fkey" FOREIGN KEY ("support_user_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "tenant_encryption_keys" ADD CONSTRAINT "tenant_encryption_keys_organization_id_fkey" FOREIGN KEY ("organization_id") REFERENCES "organizations"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "organization_audit_logs" ADD CONSTRAINT "organization_audit_logs_organization_id_fkey" FOREIGN KEY ("organization_id") REFERENCES "organizations"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "merchant_role_capabilities" ADD CONSTRAINT "merchant_role_capabilities_capability_id_fkey" FOREIGN KEY ("capability_id") REFERENCES "capability_definitions"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "merchant_orgs" ADD CONSTRAINT "merchant_orgs_organization_id_fkey" FOREIGN KEY ("organization_id") REFERENCES "organizations"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "merchant_orgs" ADD CONSTRAINT "merchant_orgs_location_id_fkey" FOREIGN KEY ("location_id") REFERENCES "organization_locations"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "stored_files" ADD CONSTRAINT "stored_files_uploaded_by_id_fkey" FOREIGN KEY ("uploaded_by_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

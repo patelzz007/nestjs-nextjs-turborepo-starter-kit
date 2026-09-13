@@ -175,6 +175,20 @@ export const apiRoutes = {
 		delete: { path: "/files/:fileId", params: ["fileId"] },
 		processingCallback: "/files/processing-callback",
 	},
+	organizations: {
+		context: { path: "/orgs/:orgSlug/context", params: ["orgSlug"] },
+		accessRequests: { path: "/orgs/:orgSlug/access-requests", params: ["orgSlug"] },
+		reviewAccessRequest: { path: "/orgs/:orgSlug/access-requests/:requestId/review", params: ["orgSlug", "requestId"] },
+		inviteMember: { path: "/orgs/:orgSlug/members/invite", params: ["orgSlug"] },
+	},
+	adminOrganizations: {
+		invites: "/admin/organizations/invites",
+	},
+	supportAccess: {
+		request: "/support-access/request",
+		approve: { path: "/support-access/:grantId/approve", params: ["grantId"] },
+		revoke: { path: "/support-access/:grantId/revoke", params: ["grantId"] },
+	},
 	merchant: {
 		me: "/merchant/me",
 		kyb: "/merchant/kyb",
@@ -195,6 +209,9 @@ export const apiRoutes = {
 		onboarding: {
 			validate: "/merchant/onboarding/validate",
 			complete: "/merchant/onboarding/complete",
+			documentUploadUrl: "/merchant/onboarding/documents/upload-url",
+			documentUploadComplete: "/merchant/onboarding/documents/upload-complete",
+			documentsSubmit: "/merchant/onboarding/documents/submit",
 		},
 		members: {
 			create: "/merchant/members",

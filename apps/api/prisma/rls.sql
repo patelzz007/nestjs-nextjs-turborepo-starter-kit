@@ -583,6 +583,129 @@ DROP POLICY IF EXISTS platform_resource_idempotency_bypass ON public.platform_re
 CREATE POLICY platform_resource_idempotency_bypass ON public.platform_resource_idempotency_records
   USING (app_rls_bypass())
   WITH CHECK (app_rls_bypass());
+-- ── Organization multi-tenancy (docs/multi-tenancy.md) ───────────────────
+
+CREATE OR REPLACE FUNCTION app_organization_member_of(org_id text) RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT app_rls_bypass()
+    OR (
+      app_current_user_id() IS NOT NULL
+      AND app_current_organization_id() IS NOT NULL
+      AND app_current_organization_id() = org_id
+      AND EXISTS (
+        SELECT 1 FROM public.organization_memberships m
+        WHERE m.organization_id = org_id
+          AND m.user_id = app_current_user_id()
+          AND m.status = 'ACTIVE'
+          AND m.is_deleted = false
+      )
+    );
+$$;
+
+GRANT EXECUTE ON FUNCTION app_organization_member_of(text) TO app_runtime;
+
+DO $$
+DECLARE
+  t text;
+BEGIN
+  FOREACH t IN ARRAY ARRAY[
+    'organizations',
+    'organization_slug_history',
+    'organization_locations',
+    'organization_memberships',
+    'organization_membership_location_scopes',
+    'organization_merchant_profiles',
+    'organization_invitations',
+    'organization_access_requests',
+    'organization_lifecycle_events',
+    'tenant_placements',
+    'organization_entitlements',
+    'organization_quotas',
+    'authorization_policy_drafts',
+    'authorization_policy_versions',
+    'support_access_grants',
+    'tenant_encryption_keys',
+    'organization_audit_logs'
+  ]
+  LOOP
+    EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY', t);
+    EXECUTE format('ALTER TABLE public.%I FORCE ROW LEVEL SECURITY', t);
+  END LOOP;
+END $$;
+
+DROP POLICY IF EXISTS organizations_member ON public.organizations;
+CREATE POLICY organizations_member ON public.organizations
+  FOR SELECT
+  USING (app_rls_bypass() OR app_organization_member_of(id));
+
+DROP POLICY IF EXISTS organizations_write ON public.organizations;
+CREATE POLICY organizations_write ON public.organizations
+  FOR ALL
+  USING (app_rls_bypass())
+  WITH CHECK (app_rls_bypass());
+
+DROP POLICY IF EXISTS organization_tenant_tables ON public.organization_locations;
+CREATE POLICY organization_locations_member ON public.organization_locations
+  USING (app_rls_bypass() OR app_organization_member_of(organization_id))
+  WITH CHECK (app_rls_bypass() OR app_organization_member_of(organization_id));
+
+DROP POLICY IF EXISTS organization_memberships_member ON public.organization_memberships;
+CREATE POLICY organization_memberships_member ON public.organization_memberships
+  USING (app_rls_bypass() OR app_organization_member_of(organization_id))
+  WITH CHECK (app_rls_bypass() OR app_organization_member_of(organization_id));
+
+DROP POLICY IF EXISTS organization_audit_logs_member ON public.organization_audit_logs;
+CREATE POLICY organization_audit_logs_member ON public.organization_audit_logs
+  USING (app_rls_bypass() OR app_organization_member_of(organization_id))
+  WITH CHECK (app_rls_bypass() OR app_organization_member_of(organization_id));
+
+DROP POLICY IF EXISTS organization_access_requests_policy ON public.organization_access_requests;
+CREATE POLICY organization_access_requests_select ON public.organization_access_requests
+  FOR SELECT
+  USING (app_rls_bypass() OR app_organization_member_of(organization_id) OR user_id = app_current_user_id());
+CREATE POLICY organization_access_requests_insert ON public.organization_access_requests
+  FOR INSERT
+  WITH CHECK (app_rls_bypass() OR user_id = app_current_user_id());
+
+-- Remaining organization tables: tenant member read, bypass write for sagas.
+DO $$
+DECLARE
+  tbl text;
+BEGIN
+  FOREACH tbl IN ARRAY ARRAY[
+    'organization_slug_history',
+    'organization_membership_location_scopes',
+    'organization_merchant_profiles',
+    'organization_invitations',
+    'organization_lifecycle_events',
+    'tenant_placements',
+    'organization_entitlements',
+    'organization_quotas',
+    'authorization_policy_drafts',
+    'authorization_policy_versions',
+    'support_access_grants',
+    'tenant_encryption_keys'
+  ]
+  LOOP
+    EXECUTE format('DROP POLICY IF EXISTS %I_member ON public.%I', tbl, tbl);
+    EXECUTE format(
+      'CREATE POLICY %I_member ON public.%I USING (app_rls_bypass() OR app_organization_member_of(organization_id)) WITH CHECK (app_rls_bypass())',
+      tbl, tbl
+    );
+  END LOOP;
+END $$;
+
+ALTER TABLE public.authorization_policy_simulations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.authorization_policy_simulations FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS authorization_policy_simulations_bypass ON public.authorization_policy_simulations;
+CREATE POLICY authorization_policy_simulations_bypass ON public.authorization_policy_simulations
+  USING (app_rls_bypass())
+  WITH CHECK (app_rls_bypass());
+
 -- @app-generated:begin SampleCategory
 -- Generated RLS for SampleCategory (admin-only)
 ALTER TABLE sample_category ENABLE ROW LEVEL SECURITY;

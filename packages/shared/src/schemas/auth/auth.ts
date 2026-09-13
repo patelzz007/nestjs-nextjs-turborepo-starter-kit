@@ -120,10 +120,10 @@ export const LoginServiceResponseSchema = z
 
 export type LoginServiceResponse = z.output<typeof LoginServiceResponseSchema>;
 
-/** Enrollment reason carried on a restricted session login response. */
-export const EnrollmentReasonSchema = z.enum(["email_verification", "mfa_enrollment"]);
+import { EnrollmentReasonSchema, SessionScopeSchema } from "./enrollment";
 
-export type EnrollmentReason = z.output<typeof EnrollmentReasonSchema>;
+export { EnrollmentReasonSchema, SessionScopeSchema };
+export type { EnrollmentReason, SessionScope } from "./enrollment";
 
 /**
  * Login response when the user receives a restricted enrollment session

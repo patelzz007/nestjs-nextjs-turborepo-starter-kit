@@ -26,7 +26,7 @@ export function ImpersonateUserPanel(): React.JSX.Element | null {
 	const isImpersonating = session?.isImpersonating === true;
 	const canLoadUsers = meQuery.isSuccess && permissionsQuery.isSuccess && currentUser?.isSuperAdmin === true && !isImpersonating;
 
-	const usersQuery = api.auth.adminUsers.useQuery({ limit: 10, ...(search.length > 0 ? { search } : {}) }, { enabled: canLoadUsers });
+	const usersQuery = api.auth.adminUsers.useQuery({ page: 1, limit: 10, ...(search.length > 0 ? { search } : {}) }, { enabled: canLoadUsers });
 
 	const impersonateMutation = api.auth.impersonate.useMutation({
 		onSuccess: async (): Promise<void> => {

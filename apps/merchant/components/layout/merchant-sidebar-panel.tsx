@@ -2,7 +2,9 @@
 
 import { ImpersonateUserPanel } from "@/components/impersonation/impersonate-user-panel";
 import { MerchantSidebarNavItem } from "@/components/layout/merchant-sidebar-nav-item";
+import { isMerchantEnrollmentAllowedPath, useMerchantEnrollmentLock } from "@/lib/merchant-email-enrollment";
 import { useMerchantCapabilities } from "@/lib/merchant-capabilities";
+import { applyEnrollmentNavLock } from "@/lib/navigation/apply-enrollment-nav-lock";
 import { useMerchantSessionProfile } from "@/lib/merchant-session-profile";
 import { filterCompiledSidebarMenu } from "@/lib/navigation/filter-menu-by-capabilities";
 import { MERCHANT_SIDEBAR_MENU } from "@/lib/navigation/sidebar-menu";
@@ -58,17 +60,21 @@ interface MerchantSidebarPinnedItemProps {
 	readonly url: string;
 	readonly icon: string | undefined;
 	readonly isActive: boolean;
+	readonly disabled: boolean;
+	readonly disabledTooltip: string;
 	readonly onNavigate: (href: string) => void;
 }
 
-function MerchantSidebarPinnedItem({ title, url, icon, isActive, onNavigate }: MerchantSidebarPinnedItemProps): React.JSX.Element {
+function MerchantSidebarPinnedItem({ title, url, icon, isActive, disabled, disabledTooltip, onNavigate }: MerchantSidebarPinnedItemProps): React.JSX.Element {
 	const handleClick = React.useCallback((): void => {
-		onNavigate(url);
-	}, [onNavigate, url]);
+		if (!disabled) {
+			onNavigate(url);
+		}
+	}, [disabled, onNavigate, url]);
 
 	return (
 		<SidebarMenuItem>
-			<SidebarMenuButton isActive={isActive} onClick={handleClick} tooltip={{ children: title }}>
+			<SidebarMenuButton isActive={isActive} disabled={disabled} onClick={handleClick} tooltip={{ children: disabled ? disabledTooltip : title }}>
 				{renderMerchantPaletteIcon(icon, "size-4")}
 				<span className="truncate">{title}</span>
 			</SidebarMenuButton>
@@ -80,6 +86,7 @@ export function MerchantSidebarPanel({ memberships, merchantOrgId, onStoreChange
 	const pathname = usePathname();
 	const router = useRouter();
 	const sessionProfile = useMerchantSessionProfile();
+	const { isLocked: isEnrollmentLocked, disabledTooltip: enrollmentDisabledTooltip, enrollmentReason } = useMerchantEnrollmentLock();
 	const { capabilities, membership: activeMembershipFromCapabilities } = useMerchantCapabilities(memberships);
 	const activeMembership = activeMembershipFromCapabilities ?? resolveActiveMerchantMembership(memberships, merchantOrgId);
 
@@ -112,10 +119,11 @@ export function MerchantSidebarPanel({ memberships, merchantOrgId, onStoreChange
 	const pinnedUrls = useMerchantCommandPaletteStore((state) => state.pinnedUrls);
 
 	const filteredMenu = React.useMemo(() => filterCompiledSidebarMenu(displayMenu, menuFilterCapabilities), [displayMenu, menuFilterCapabilities]);
+	const enrollmentLockedMenu = React.useMemo(() => applyEnrollmentNavLock(filteredMenu, isEnrollmentLocked), [filteredMenu, isEnrollmentLocked]);
 
 	const view = React.useMemo(
-		() => buildSidebarView({ menu: filteredMenu, pathname: currentPage, sectionOrder, searchQuery, isHighlightParentItem: true }),
-		[filteredMenu, currentPage, sectionOrder, searchQuery],
+		() => buildSidebarView({ menu: enrollmentLockedMenu, pathname: currentPage, sectionOrder, searchQuery, isHighlightParentItem: true }),
+		[enrollmentLockedMenu, currentPage, sectionOrder, searchQuery],
 	);
 
 	const pinnedItems = React.useMemo(() => resolveMerchantPinnedMenuItems(pinnedUrls, menuFilterCapabilities), [pinnedUrls, menuFilterCapabilities]);
@@ -229,6 +237,14 @@ export function MerchantSidebarPanel({ memberships, merchantOrgId, onStoreChange
 					onClear={handleClearSearch}
 				/>
 
+				{isEnrollmentLocked ? (
+					<div className="mx-2 mb-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2.5 text-xs leading-relaxed text-amber-950 dark:text-amber-100">
+						{enrollmentReason === "mfa_enrollment"
+							? "Set up two-factor authentication to unlock navigation. Account settings stays available until enrollment is complete."
+							: "Verify your email to unlock navigation. Account settings stays available until verification is complete."}
+					</div>
+				) : null}
+
 				{view.noResults ? (
 					<div className="flex flex-col items-center justify-center px-2 py-10 text-center">
 						<Search className="mb-2.5 size-7 text-muted-foreground/30" aria-hidden="true" />
@@ -250,16 +266,21 @@ export function MerchantSidebarPanel({ memberships, merchantOrgId, onStoreChange
 							<SidebarGroupLabel>{MERCHANT_SIDEBAR_LABELS.pinnedSectionTitle}</SidebarGroupLabel>
 							<SidebarGroupContent>
 								<SidebarMenu className="gap-0.5">
-									{pinnedItems.map((pinned) => (
-										<MerchantSidebarPinnedItem
-											key={pinned.url}
-											title={pinned.title}
-											url={pinned.url}
-											icon={pinned.icon}
-											isActive={isRouteActive(pinned.url, currentPage)}
-											onNavigate={handleNavigate}
-										/>
-									))}
+									{pinnedItems.map((pinned) => {
+										const isPinnedDisabled = isEnrollmentLocked && !isMerchantEnrollmentAllowedPath(pinned.url);
+										return (
+											<MerchantSidebarPinnedItem
+												key={pinned.url}
+												title={pinned.title}
+												url={pinned.url}
+												icon={pinned.icon}
+												isActive={isRouteActive(pinned.url, currentPage)}
+												disabled={isPinnedDisabled}
+												disabledTooltip={enrollmentDisabledTooltip}
+												onNavigate={handleNavigate}
+											/>
+										);
+									})}
 								</SidebarMenu>
 							</SidebarGroupContent>
 						</SidebarGroup>
@@ -296,6 +317,7 @@ export function MerchantSidebarPanel({ memberships, merchantOrgId, onStoreChange
 										onNavigate={handleNavigate}
 										searchQuery={searchQuery}
 										isSearching={view.isSearching}
+										disabledTooltip={enrollmentDisabledTooltip}
 									/>
 								))}
 							</SidebarMenu>
@@ -326,7 +348,7 @@ export function MerchantSidebarPanel({ memberships, merchantOrgId, onStoreChange
 							{memberships.length > 1 ? (
 								<div className="mt-3 space-y-1">
 									<Label className="text-xs">Switch store</Label>
-									<Select value={merchantOrgId ?? ""} onValueChange={handleStoreChange}>
+									<Select<string> value={merchantOrgId ?? ""} onValueChange={handleStoreChange}>
 										<SelectTrigger className="w-full min-w-0">
 											<SelectValue placeholder="Select store" formatValue={formatStoreValue} />
 										</SelectTrigger>
@@ -356,6 +378,7 @@ export function MerchantSidebarPanel({ memberships, merchantOrgId, onStoreChange
 								onNavigate={handleNavigate}
 								searchQuery={searchQuery}
 								isSearching={view.isSearching}
+								disabledTooltip={enrollmentDisabledTooltip}
 							/>
 						))}
 					</SidebarMenu>

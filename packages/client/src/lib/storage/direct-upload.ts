@@ -3,7 +3,7 @@ import { type CompleteFileUploadResponse, type CreateFileUploadUrlInput, type Cr
 import type { ApiClient } from "../api/use-api";
 import type { ApiRouter } from "../api/endpoints";
 
-async function sha256Hex(file: File): Promise<string> {
+export async function calculateFileSha256Hex(file: File): Promise<string> {
 	const buffer = await file.arrayBuffer();
 	const digest = await crypto.subtle.digest("SHA-256", buffer);
 	return Array.from(new Uint8Array(digest))
@@ -54,7 +54,7 @@ async function putSignedUploadToStorage(uploadUrl: string, file: File, headers: 
 	throw new Error(errorBody.length > 0 ? `Direct upload to object storage failed: ${errorBody}` : "Direct upload to object storage failed");
 }
 
-async function uploadWithTicket(ticket: CreateFileUploadUrlResponse, file: File): Promise<void> {
+export async function uploadFileWithTicket(ticket: CreateFileUploadUrlResponse, file: File): Promise<void> {
 	if (ticket.method === "PUT") {
 		const headers = ticket.headers ?? {};
 		await putSignedUploadToStorage(ticket.uploadUrl, file, headers);
@@ -71,7 +71,7 @@ async function uploadWithTicket(ticket: CreateFileUploadUrlResponse, file: File)
 }
 
 export async function uploadFileDirect(api: ApiClient<ApiRouter>, input: DirectUploadInput, file: File): Promise<DirectUploadResult> {
-	const checksumSha256 = await sha256Hex(file);
+	const checksumSha256 = await calculateFileSha256Hex(file);
 	const presignBody: CreateFileUploadUrlInput = {
 		...input,
 		checksumSha256,
@@ -81,7 +81,7 @@ export async function uploadFileDirect(api: ApiClient<ApiRouter>, input: DirectU
 	const presignedEnvelope = await api.files.uploadUrl.mutate(presignBody);
 	const ticket: CreateFileUploadUrlResponse = presignedEnvelope.data;
 
-	await uploadWithTicket(ticket, file);
+	await uploadFileWithTicket(ticket, file);
 
 	const completedEnvelope = await api.files.complete.mutate({
 		fileId: ticket.fileId,

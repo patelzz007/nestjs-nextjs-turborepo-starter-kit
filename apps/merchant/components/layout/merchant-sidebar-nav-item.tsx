@@ -21,7 +21,10 @@ export interface MerchantSidebarNavItemProps {
 	readonly searchQuery?: string;
 	readonly isSearching?: boolean;
 	readonly depth?: number;
+	readonly disabledTooltip?: string;
 }
+
+const DEFAULT_DISABLED_TOOLTIP = "This feature is currently unavailable";
 
 type NavRowState = "active" | "disabled" | "default";
 
@@ -49,6 +52,7 @@ export function MerchantSidebarNavItem({
 	searchQuery = "",
 	isSearching = false,
 	depth = 0,
+	disabledTooltip = DEFAULT_DISABLED_TOOLTIP,
 }: MerchantSidebarNavItemProps): React.JSX.Element {
 	const hasChildren = item.children !== undefined && item.children.length > 0;
 	const isDisabled = item.disabled === true;
@@ -76,7 +80,7 @@ export function MerchantSidebarNavItem({
 			onClick={handleToggleExpand}
 			className={panelSidebarNavItemVariants({ state: navState })}
 			data-active={isActive ? true : undefined}
-			title={isDisabled ? "This feature is currently unavailable" : undefined}>
+			title={isDisabled ? disabledTooltip : undefined}>
 			<span className="flex min-w-0 items-center">
 				{resolveMenuIcon(item.icon, navState)}
 				<span className="truncate">{title}</span>
@@ -91,7 +95,7 @@ export function MerchantSidebarNavItem({
 			disabled={isDisabled}
 			className={panelSidebarNavItemVariants({ state: navState })}
 			data-active={isActive ? true : undefined}
-			title={isDisabled ? "This feature is currently unavailable" : undefined}>
+			title={isDisabled ? disabledTooltip : undefined}>
 			<span className="flex min-w-0 items-center">
 				{resolveMenuIcon(item.icon, navState)}
 				<span className="truncate">{title}</span>
@@ -113,6 +117,7 @@ export function MerchantSidebarNavItem({
 						searchQuery={searchQuery}
 						isSearching={isSearching}
 						depth={depth + 1}
+						disabledTooltip={disabledTooltip}
 					/>
 				))}
 			</div>

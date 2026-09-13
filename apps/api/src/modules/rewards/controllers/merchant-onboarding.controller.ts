@@ -5,6 +5,9 @@ import {
 	apiPath,
 	type MerchantCreateMemberInput,
 	type MerchantOnboardingCompleteFieldsInput,
+	type MerchantOnboardingDocumentsSubmitInput,
+	type MerchantOnboardingDocumentUploadCompleteInput,
+	type MerchantOnboardingDocumentUploadUrlInput,
 	type MerchantOnboardingValidateTokenInput,
 } from "@workspace/shared";
 import { ZodValidationPipe } from "../../../common/pipes/zod-validation.pipe";
@@ -50,6 +53,36 @@ export class MerchantOnboardingController {
 		@Body(new ZodValidationPipe(apiContract.merchant.onboarding.complete.input)) body: MerchantOnboardingCompleteFieldsInput,
 	): ReturnType<MerchantOnboardingService["completeOnboarding"]> {
 		return this.merchantOnboarding.completeOnboarding(body);
+	}
+
+	@Public()
+	@RlsBypass()
+	@Post("documents/upload-url")
+	@ApiOperation({ summary: "Create an invite-authorized KYB document upload ticket" })
+	public createDocumentUploadUrl(
+		@Body(new ZodValidationPipe(apiContract.merchant.onboarding.documentUploadUrl.input)) body: MerchantOnboardingDocumentUploadUrlInput,
+	): ReturnType<MerchantOnboardingService["createDocumentUploadUrl"]> {
+		return this.merchantOnboarding.createDocumentUploadUrl(body);
+	}
+
+	@Public()
+	@RlsBypass()
+	@Post("documents/upload-complete")
+	@ApiOperation({ summary: "Complete an invite-authorized KYB document upload" })
+	public completeDocumentUpload(
+		@Body(new ZodValidationPipe(apiContract.merchant.onboarding.documentUploadComplete.input)) body: MerchantOnboardingDocumentUploadCompleteInput,
+	): ReturnType<MerchantOnboardingService["completeDocumentUpload"]> {
+		return this.merchantOnboarding.completeDocumentUpload(body);
+	}
+
+	@Public()
+	@RlsBypass()
+	@Post("documents/submit")
+	@ApiOperation({ summary: "Attach onboarding KYB documents and submit the merchant for admin review" })
+	public submitDocuments(
+		@Body(new ZodValidationPipe(apiContract.merchant.onboarding.documentsSubmit.input)) body: MerchantOnboardingDocumentsSubmitInput,
+	): ReturnType<MerchantOnboardingService["submitDocuments"]> {
+		return this.merchantOnboarding.submitDocuments(body);
 	}
 }
 

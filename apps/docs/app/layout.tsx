@@ -2,6 +2,7 @@ import "@workspace/ui/globals.css";
 import "./global.css";
 import "katex/dist/katex.min.css";
 
+import { AppDocumentShell } from "@workspace/ui/components/app-document-shell";
 import { cn } from "@workspace/ui/lib/utils";
 import { Toaster } from "@workspace/ui/components/feedback/toast";
 import { bricolageGrotesque } from "@workspace/ui/fonts/bricolage-grotesque";
@@ -57,21 +58,17 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>): React.JSX.Element {
 	return (
-		<html
-			lang="en"
-			suppressHydrationWarning
-			data-scroll-behavior="smooth"
-			className={cn("antialiased", fontMono.variable, "font-sans", ibmPlexSans.variable, spaceGroteskHeading.variable, bricolageGrotesque.variable)}>
-			<body>
-				<RootProvider>
-					<DocsSearchProvider meta={buildSearchMeta()}>
-						<DocsLayout {...baseOptions()} tree={getDocsTree()}>
-							{children}
-						</DocsLayout>
-					</DocsSearchProvider>
-					<Toaster />
-				</RootProvider>
-			</body>
-		</html>
+		<AppDocumentShell
+			htmlClassName={cn("antialiased", fontMono.variable, "font-sans", ibmPlexSans.variable, spaceGroteskHeading.variable, bricolageGrotesque.variable)}
+			htmlProps={{ "data-scroll-behavior": "smooth" }}>
+			<RootProvider>
+				<DocsSearchProvider meta={buildSearchMeta()}>
+					<DocsLayout {...baseOptions()} tree={getDocsTree()}>
+						{children}
+					</DocsLayout>
+				</DocsSearchProvider>
+				<Toaster />
+			</RootProvider>
+		</AppDocumentShell>
 	);
 }
