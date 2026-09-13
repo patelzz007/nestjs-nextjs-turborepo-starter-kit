@@ -107,12 +107,7 @@ export class IdentityService {
 		const cached = await this.sessionCache.getPermissions(userId);
 		const base = cached ?? (await this.buildAndCacheSessionPermissions(userId));
 		const sessionScope = accessPayload?.sessionScope ?? "full";
-		const enrollmentReason =
-			sessionScope === "restricted"
-				? accessPayload?.isEmailVerified === false
-					? "email_verification"
-					: "mfa_enrollment"
-				: undefined;
+		const enrollmentReason = sessionScope === "restricted" ? (accessPayload?.isEmailVerified === false ? "email_verification" : "mfa_enrollment") : undefined;
 
 		return {
 			roles: base.roles,
