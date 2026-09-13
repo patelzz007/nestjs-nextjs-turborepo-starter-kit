@@ -15,11 +15,7 @@ export class PolicyControlPlaneService {
 		private readonly cedar: CedarPolicyEvaluatorService,
 	) {}
 
-	public async createDraft(
-		actorUserId: string,
-		organizationId: string | null,
-		input: CreatePolicyDraftInput,
-	): Promise<{ draftId: string }> {
+	public async createDraft(actorUserId: string, organizationId: string | null, input: CreatePolicyDraftInput): Promise<{ draftId: string }> {
 		const compiled = this.compiler.compile(input.builderPayload, organizationId);
 
 		const draft = await this.tenantTx.withSystemOperation(

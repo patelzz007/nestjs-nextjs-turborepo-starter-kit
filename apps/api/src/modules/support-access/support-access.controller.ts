@@ -24,11 +24,7 @@ export class SupportAccessController {
 
 	@Post(":grantId/approve")
 	@RequirePermission("UPDATE", "MERCHANT_ORG")
-	public async approve(
-		@GetUser() user: AccessTokenPayload,
-		@Param("grantId") grantId: string,
-		@Body() body: { organizationId: string },
-	): Promise<{ message: string }> {
+	public async approve(@GetUser() user: AccessTokenPayload, @Param("grantId") grantId: string, @Body() body: { organizationId: string }): Promise<{ message: string }> {
 		await this.supportAccess.tenantApprove(grantId, user.sub, body.organizationId);
 		return { message: "Support access approved" };
 	}

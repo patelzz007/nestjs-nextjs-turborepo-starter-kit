@@ -17,11 +17,7 @@ export class OrganizationMembershipService {
 		private readonly audit: OrganizationAuditService,
 	) {}
 
-	public async createAccessRequest(
-		userId: string,
-		organizationId: string,
-		input: OrganizationAccessRequestCreateInput,
-	): Promise<OrganizationAccessRequestResponse> {
+	public async createAccessRequest(userId: string, organizationId: string, input: OrganizationAccessRequestCreateInput): Promise<OrganizationAccessRequestResponse> {
 		return this.tenantTx.withSystemOperation(
 			{
 				operation: "organization.provision",
@@ -68,12 +64,7 @@ export class OrganizationMembershipService {
 		);
 	}
 
-	public async reviewAccessRequest(
-		reviewerId: string,
-		organizationId: string,
-		requestId: string,
-		input: ReviewOrganizationAccessRequestInput,
-	): Promise<void> {
+	public async reviewAccessRequest(reviewerId: string, organizationId: string, requestId: string, input: ReviewOrganizationAccessRequestInput): Promise<void> {
 		await this.tenantTx.withTenantTransaction(
 			{
 				userId: reviewerId,
@@ -119,11 +110,7 @@ export class OrganizationMembershipService {
 		);
 	}
 
-	public async inviteMember(
-		inviterId: string,
-		organizationId: string,
-		input: OrganizationMemberInviteInput,
-	): Promise<void> {
+	public async inviteMember(inviterId: string, organizationId: string, input: OrganizationMemberInviteInput): Promise<void> {
 		await this.tenantTx.withTenantTransaction(
 			{
 				userId: inviterId,

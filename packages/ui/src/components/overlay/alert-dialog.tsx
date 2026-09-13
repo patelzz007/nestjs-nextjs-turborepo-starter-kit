@@ -153,7 +153,7 @@ const AlertDialogOverlay = React.forwardRef<HTMLDivElement, AlertDialogPrimitive
 			data-slot="alert-dialog-overlay"
 			// Improvement 9: token-based overlay (no raw `bg-black/10`).
 			className={cn(
-				"z-overlay fixed inset-0 isolate bg-foreground/10 duration-100 supports-backdrop-filter:backdrop-blur-xs data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
+				"fixed inset-0 isolate z-overlay bg-foreground/10 duration-100 supports-backdrop-filter:backdrop-blur-xs data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
 				className,
 			)}
 			{...props}

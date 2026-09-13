@@ -5,14 +5,7 @@ import { PilotCitySchema } from "./rewards";
 import { KybStatusSchema } from "./rewards";
 
 /** Organization lifecycle states — authoritative across API, workers, billing. */
-export const OrganizationLifecycleStateSchema = z.enum([
-	"PROVISIONING",
-	"ACTIVE",
-	"RESTRICTED",
-	"SUSPENDED",
-	"PENDING_DELETION",
-	"DELETED",
-]);
+export const OrganizationLifecycleStateSchema = z.enum(["PROVISIONING", "ACTIVE", "RESTRICTED", "SUSPENDED", "PENDING_DELETION", "DELETED"]);
 
 export type OrganizationLifecycleState = z.output<typeof OrganizationLifecycleStateSchema>;
 
@@ -40,14 +33,7 @@ export const AuthorizationPolicyScopeSchema = z.enum(["PLATFORM_GUARDRAIL", "PLA
 
 export type AuthorizationPolicyScope = z.output<typeof AuthorizationPolicyScopeSchema>;
 
-export const AuthorizationPolicyStatusSchema = z.enum([
-	"DRAFT",
-	"PENDING_APPROVAL",
-	"APPROVED",
-	"PUBLISHED",
-	"SUPERSEDED",
-	"ROLLED_BACK",
-]);
+export const AuthorizationPolicyStatusSchema = z.enum(["DRAFT", "PENDING_APPROVAL", "APPROVED", "PUBLISHED", "SUPERSEDED", "ROLLED_BACK"]);
 
 export type AuthorizationPolicyStatus = z.output<typeof AuthorizationPolicyStatusSchema>;
 
@@ -55,14 +41,7 @@ export const SupportAccessGrantModeSchema = z.enum(["READ_ONLY", "WRITE_ELEVATED
 
 export type SupportAccessGrantMode = z.output<typeof SupportAccessGrantModeSchema>;
 
-export const SupportAccessGrantStatusSchema = z.enum([
-	"PENDING_APPROVAL",
-	"PENDING_TENANT_APPROVAL",
-	"ACTIVE",
-	"EXPIRED",
-	"REVOKED",
-	"DENIED",
-]);
+export const SupportAccessGrantStatusSchema = z.enum(["PENDING_APPROVAL", "PENDING_TENANT_APPROVAL", "ACTIVE", "EXPIRED", "REVOKED", "DENIED"]);
 
 export type SupportAccessGrantStatus = z.output<typeof SupportAccessGrantStatusSchema>;
 

@@ -129,21 +129,21 @@ export class CedarPolicyEvaluatorService {
 		if (whenIdx === -1) {
 			return null;
 		}
-		return line.slice(whenIdx + 6).replace(/;$/, "").replace(/^\{ /, "").replace(/ \}$/, "");
+		return line
+			.slice(whenIdx + 6)
+			.replace(/;$/, "")
+			.replace(/^\{ /, "")
+			.replace(/ \}$/, "");
 	}
 
-	private evaluateRule(
-		rule: ParsedPolicyRule,
-		action: string,
-		context: { role: string; locationScope: string; locationIds: readonly string[] },
-	): boolean {
+	private evaluateRule(rule: ParsedPolicyRule, action: string, context: { role: string; locationScope: string; locationIds: readonly string[] }): boolean {
 		if (rule.condition === null) {
 			return true;
 		}
 		if (rule.condition.includes("removeLastOwner") && action.includes("removeLastOwner")) {
 			return true;
 		}
-		if (rule.condition.includes('assignPolicyAdmin') && action.includes("assignPolicyAdmin")) {
+		if (rule.condition.includes("assignPolicyAdmin") && action.includes("assignPolicyAdmin")) {
 			return context.role !== "OWNER";
 		}
 		if (rule.condition.includes("principal.role")) {

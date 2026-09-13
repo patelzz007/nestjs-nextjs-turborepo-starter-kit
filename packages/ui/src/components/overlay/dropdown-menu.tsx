@@ -56,7 +56,7 @@ const DropdownMenuContent = React.forwardRef<
 >(function DropdownMenuContent({ align = "start", alignOffset = 0, side = "bottom", sideOffset = 4, className, ...props }, ref): React.JSX.Element {
 	return (
 		<MenuPrimitive.Portal>
-			<MenuPrimitive.Positioner className="z-popover isolate outline-none" align={align} alignOffset={alignOffset} side={side} sideOffset={sideOffset}>
+			<MenuPrimitive.Positioner className="isolate z-popover outline-none" align={align} alignOffset={alignOffset} side={side} sideOffset={sideOffset}>
 				<MenuPrimitive.Popup
 					ref={ref}
 					data-slot="dropdown-menu-content"

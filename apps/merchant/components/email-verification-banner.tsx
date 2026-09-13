@@ -20,11 +20,7 @@ export function EmailVerificationBanner(): React.JSX.Element | null {
 		<div className="shrink-0 border-b border-amber-500/40 bg-amber-500/15 px-4 py-2.5">
 			<div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
 				<div className="flex min-w-0 items-start gap-2 text-sm leading-snug text-amber-950 dark:text-amber-100">
-					{isMfaEnrollment ? (
-						<ShieldAlert className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-					) : (
-						<Mail className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-					)}
+					{isMfaEnrollment ? <ShieldAlert className="mt-0.5 size-4 shrink-0" aria-hidden="true" /> : <Mail className="mt-0.5 size-4 shrink-0" aria-hidden="true" />}
 					<span className="min-w-0">
 						{isMfaEnrollment
 							? "Set up two-factor authentication to unlock the merchant portal. Other pages stay locked and redirect here until enrollment is complete."

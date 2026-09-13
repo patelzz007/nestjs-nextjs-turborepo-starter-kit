@@ -11,9 +11,8 @@ export default function OrganizationTeamPage(): React.JSX.Element {
 	return (
 		<div className="space-y-4 p-6">
 			<h1 className="text-xl font-semibold">Team</h1>
-			<p className="text-muted-foreground text-sm">
-				Invite members and review access requests for this organization. API:{" "}
-				<code className="text-xs">POST /orgs/{orgSlug}/members/invite</code>
+			<p className="text-sm text-muted-foreground">
+				Invite members and review access requests for this organization. API: <code className="text-xs">POST /orgs/{orgSlug}/members/invite</code>
 			</p>
 			<a href={organizationPath(orgSlug, "dashboard")} className="text-sm underline">
 				Back to dashboard

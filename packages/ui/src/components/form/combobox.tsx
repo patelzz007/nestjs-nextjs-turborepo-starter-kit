@@ -474,7 +474,7 @@ const ComboboxContent = React.forwardRef<HTMLDivElement, ComboboxContentProps>(f
 ): React.JSX.Element {
 	return (
 		<ComboboxPrimitive.Portal>
-			<ComboboxPrimitive.Positioner side={side} sideOffset={sideOffset} align={align} alignOffset={alignOffset} anchor={anchor} className="z-popover isolate">
+			<ComboboxPrimitive.Positioner side={side} sideOffset={sideOffset} align={align} alignOffset={alignOffset} anchor={anchor} className="isolate z-popover">
 				<ComboboxPrimitive.Popup
 					ref={ref}
 					data-slot="combobox-content"

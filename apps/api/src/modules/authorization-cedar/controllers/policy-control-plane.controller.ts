@@ -28,10 +28,7 @@ export class PolicyControlPlaneController {
 
 	@Post("drafts/:draftId/simulate")
 	@RequirePermission("MANAGE", "SYSTEM_SETTINGS")
-	public async simulate(
-		@GetUser() user: AccessTokenPayload,
-		@Param("draftId") draftId: string,
-	): Promise<PolicySimulationResult> {
+	public async simulate(@GetUser() user: AccessTokenPayload, @Param("draftId") draftId: string): Promise<PolicySimulationResult> {
 		return this.policies.simulate(draftId, user.sub);
 	}
 

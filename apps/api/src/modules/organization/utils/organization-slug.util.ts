@@ -30,10 +30,7 @@ export async function allocateUniqueOrganizationSlug(tx: SlugLookupClient, displ
 	const base = slugifyOrganizationName(displayName);
 
 	for (let attempt = 0; attempt < 100; attempt += 1) {
-		const candidate =
-			attempt === 0
-				? base
-				: OrganizationSlugSchema.parse(`${base}-${String(attempt + 1)}`.slice(0, 64));
+		const candidate = attempt === 0 ? base : OrganizationSlugSchema.parse(`${base}-${String(attempt + 1)}`.slice(0, 64));
 
 		const taken =
 			(await tx.organization.findFirst({ where: { slug: candidate }, select: { id: true } })) !== null ||

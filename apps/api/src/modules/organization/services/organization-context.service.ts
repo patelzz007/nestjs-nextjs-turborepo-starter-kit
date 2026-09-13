@@ -81,9 +81,7 @@ export class OrganizationContextService {
 			const membership = row.memberships[0];
 			const scope = membership.locationScopes[0];
 			const locationScopeType = scope?.scopeType ?? "ALL_LOCATIONS";
-			const locationIds = membership.locationScopes
-				.filter((s) => s.locationId !== null)
-				.map((s) => s.locationId as string);
+			const locationIds = membership.locationScopes.filter((s) => s.locationId !== null).map((s) => s.locationId as string);
 
 			const policyVersion = await this.cedar.getActivePolicyVersion(row.id);
 
@@ -177,12 +175,7 @@ export class OrganizationContextService {
 		);
 	}
 
-	public async assertActionAllowed(
-		resolved: ResolvedOrganizationContext,
-		action: string,
-		resourceType: string,
-		resourceId: string,
-	): Promise<void> {
+	public async assertActionAllowed(resolved: ResolvedOrganizationContext, action: string, resourceType: string, resourceId: string): Promise<void> {
 		const decision = await this.cedar.evaluate({
 			organizationId: resolved.organizationId,
 			principal: `User::"${resolved.userId}"`,

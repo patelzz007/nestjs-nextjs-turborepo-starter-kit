@@ -22,5 +22,4 @@ export class OrganizationAdminController {
 		const result = await this.provisioning.provisionFromPlatformInvite(user.sub, body);
 		return { organizationId: result.organizationId, inviteToken: result.inviteToken };
 	}
-
 }

@@ -138,7 +138,9 @@ async function main() {
 
 	console.log("Seeding rewards platform (organizations, merchants, rewards, claims)...");
 	const rewardSummary = await seedRewards(adminUser, allUsers);
-	console.log(`✅ Rewards: ${rewardSummary.merchantOrgs} merchant orgs, ${rewardSummary.rewards} rewards, ${rewardSummary.claims} claims, ${rewardSummary.redemptions} redemptions`);
+	console.log(
+		`✅ Rewards: ${rewardSummary.merchantOrgs} merchant orgs, ${rewardSummary.rewards} rewards, ${rewardSummary.claims} claims, ${rewardSummary.redemptions} redemptions`,
+	);
 
 	console.log(`
 🎉 Seed complete!

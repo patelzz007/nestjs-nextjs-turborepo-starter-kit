@@ -21,7 +21,7 @@ const HoverCardContent = React.forwardRef<
 >(function HoverCardContent({ className, side = "bottom", sideOffset = 4, align = "center", alignOffset = 4, ...props }, ref): React.JSX.Element {
 	return (
 		<PreviewCardPrimitive.Portal data-slot="hover-card-portal">
-			<PreviewCardPrimitive.Positioner align={align} alignOffset={alignOffset} side={side} sideOffset={sideOffset} className="z-popover isolate">
+			<PreviewCardPrimitive.Positioner align={align} alignOffset={alignOffset} side={side} sideOffset={sideOffset} className="isolate z-popover">
 				<PreviewCardPrimitive.Popup
 					ref={ref}
 					data-slot="hover-card-content"

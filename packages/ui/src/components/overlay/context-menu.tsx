@@ -27,7 +27,7 @@ const ContextMenuContent = React.forwardRef<
 >(function ContextMenuContent({ className, align = "start", alignOffset = 4, side = "inline-end", sideOffset = 0, ...props }, ref): React.JSX.Element {
 	return (
 		<ContextMenuPrimitive.Portal>
-			<ContextMenuPrimitive.Positioner className="z-popover isolate outline-none" align={align} alignOffset={alignOffset} side={side} sideOffset={sideOffset}>
+			<ContextMenuPrimitive.Positioner className="isolate z-popover outline-none" align={align} alignOffset={alignOffset} side={side} sideOffset={sideOffset}>
 				<ContextMenuPrimitive.Popup
 					ref={ref}
 					data-slot="context-menu-content"

@@ -9,13 +9,7 @@ export type QuotaBehavior = "reject" | "queue" | "degrade" | "grace";
 export class OrganizationQuotaService {
 	public constructor(private readonly tenantTx: TenantTransactionService) {}
 
-	public async checkAndConsume(
-		organizationId: string,
-		userId: string,
-		quotaKey: string,
-		amount: bigint,
-		behavior: QuotaBehavior,
-	): Promise<void> {
+	public async checkAndConsume(organizationId: string, userId: string, quotaKey: string, amount: bigint, behavior: QuotaBehavior): Promise<void> {
 		const windowStart = BigInt(Math.floor(Date.now() / 86_400_000) * 86_400_000);
 		const windowEnd = windowStart + BigInt(86_400_000);
 
@@ -51,10 +45,7 @@ export class OrganizationQuotaService {
 
 		if (status.usedValue > status.limitValue) {
 			if (behavior === "reject") {
-				throw new HttpException(
-					{ message: "Quota exceeded", quotaKey, limit: status.limitValue },
-					HttpStatus.TOO_MANY_REQUESTS,
-				);
+				throw new HttpException({ message: "Quota exceeded", quotaKey, limit: status.limitValue }, HttpStatus.TOO_MANY_REQUESTS);
 			}
 		}
 	}

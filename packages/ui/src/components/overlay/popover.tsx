@@ -18,7 +18,7 @@ const PopoverContent = React.forwardRef<
 >(function PopoverContent({ className, align = "center", alignOffset = 0, side = "bottom", sideOffset = 4, ...props }, ref): React.JSX.Element {
 	return (
 		<PopoverPrimitive.Portal>
-			<PopoverPrimitive.Positioner align={align} alignOffset={alignOffset} side={side} sideOffset={sideOffset} className="z-popover isolate">
+			<PopoverPrimitive.Positioner align={align} alignOffset={alignOffset} side={side} sideOffset={sideOffset} className="isolate z-popover">
 				<PopoverPrimitive.Popup
 					ref={ref}
 					data-slot="popover-content"

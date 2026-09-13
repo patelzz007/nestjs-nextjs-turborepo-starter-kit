@@ -45,11 +45,7 @@ export interface MerchantRootProviderProps {
  * Merchant portal root — wires `X-Merchant-Org-Id` into every API call via AuthProvider extra headers.
  * Org selection is stored in a cookie so server components can prefetch with the same context.
  */
-export function MerchantRootProvider({
-	children,
-	initialMerchantOrgId,
-	initialOrganizationSlug,
-}: MerchantRootProviderProps): React.JSX.Element {
+export function MerchantRootProvider({ children, initialMerchantOrgId, initialOrganizationSlug }: MerchantRootProviderProps): React.JSX.Element {
 	const router = useRouter();
 	const pathname = usePathname();
 	const [merchantOrgId, setMerchantOrgIdState] = React.useState<string | undefined>(initialMerchantOrgId);

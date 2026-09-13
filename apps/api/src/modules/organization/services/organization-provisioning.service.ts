@@ -30,10 +30,7 @@ export class OrganizationProvisioningService {
 	public constructor(private readonly tenantTx: TenantTransactionService) {}
 
 	/** Idempotent saga step: create organization + primary location + invite. */
-	public async provisionFromPlatformInvite(
-		adminUserId: string,
-		input: AdminCreateOrganizationInviteInput,
-	): Promise<ProvisionedOrganization> {
+	public async provisionFromPlatformInvite(adminUserId: string, input: AdminCreateOrganizationInviteInput): Promise<ProvisionedOrganization> {
 		const rawToken = randomBytes(32).toString("hex");
 		const tokenHash = createHash("sha256").update(rawToken).digest("hex");
 

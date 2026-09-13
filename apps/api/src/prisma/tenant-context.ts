@@ -14,6 +14,4 @@ export interface SystemDatabaseContext {
 	readonly actorUserId: string | null;
 }
 
-export type DatabaseAccessMode =
-	| { readonly kind: "tenant"; readonly tenant: TenantDatabaseContext }
-	| { readonly kind: "system"; readonly system: SystemDatabaseContext };
+export type DatabaseAccessMode = { readonly kind: "tenant"; readonly tenant: TenantDatabaseContext } | { readonly kind: "system"; readonly system: SystemDatabaseContext };

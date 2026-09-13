@@ -13,10 +13,7 @@ export class TenantTransactionService {
 
 	public constructor(private readonly prisma: PrismaService) {}
 
-	public async withTenantTransaction<T>(
-		context: TenantDatabaseContext,
-		handler: (tx: TransactionClient) => Promise<T>,
-	): Promise<T> {
+	public async withTenantTransaction<T>(context: TenantDatabaseContext, handler: (tx: TransactionClient) => Promise<T>): Promise<T> {
 		await this.prisma.ensureConnected();
 		return this.prisma.$transaction(async (tx: TransactionClient): Promise<T> => {
 			await this.applyTenantSession(tx, context);
@@ -24,10 +21,7 @@ export class TenantTransactionService {
 		});
 	}
 
-	public async withSystemOperation<T>(
-		context: SystemDatabaseContext,
-		handler: (tx: TransactionClient) => Promise<T>,
-	): Promise<T> {
+	public async withSystemOperation<T>(context: SystemDatabaseContext, handler: (tx: TransactionClient) => Promise<T>): Promise<T> {
 		if (!isAllowlistedSystemOperation(context.operation)) {
 			throw new ForbiddenException(`System operation not allowlisted: ${context.operation}`);
 		}

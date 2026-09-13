@@ -291,7 +291,7 @@ const ToastViewport = React.forwardRef<HTMLDivElement, ToastViewportProps>(funct
 				ref={ref}
 				data-slot="toast-viewport"
 				aria-label={viewportLabel}
-				className={cn("z-toast pointer-events-none fixed inset-x-4 mx-auto w-auto max-w-sm outline-none", TOAST_POSITION_CLASSES[position], className)}
+				className={cn("pointer-events-none fixed inset-x-4 z-toast mx-auto w-auto max-w-sm outline-none", TOAST_POSITION_CLASSES[position], className)}
 				{...props}
 			/>
 		</ToastViewportPositionContext.Provider>

@@ -1,10 +1,6 @@
 import { z } from "zod";
 
-import {
-	AuthorizationPolicyScopeSchema,
-	AuthorizationPolicyStatusSchema,
-	PolicyBuilderPayloadSchema,
-} from "./organization";
+import { AuthorizationPolicyScopeSchema, AuthorizationPolicyStatusSchema, PolicyBuilderPayloadSchema } from "./organization";
 
 /** Cedar authorization request entity bundle. */
 export const CedarAuthorizationRequestSchema = z

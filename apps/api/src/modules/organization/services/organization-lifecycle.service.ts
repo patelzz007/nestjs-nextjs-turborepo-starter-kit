@@ -43,12 +43,7 @@ export class OrganizationLifecycleService {
 		);
 	}
 
-	public async transitionState(
-		organizationId: string,
-		toState: OrganizationLifecycleState,
-		actorUserId: string | null,
-		reason: string,
-	): Promise<void> {
+	public async transitionState(organizationId: string, toState: OrganizationLifecycleState, actorUserId: string | null, reason: string): Promise<void> {
 		await this.tenantTx.withSystemOperation(
 			{
 				operation: "organization.provision",

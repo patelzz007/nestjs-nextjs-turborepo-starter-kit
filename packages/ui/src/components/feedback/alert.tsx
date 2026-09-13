@@ -459,7 +459,7 @@ function Alert({
 	// Modal mode (feature 18): a fixed overlay behind the focused dialog.
 	if (modal) {
 		return (
-			<div className="z-overlay fixed inset-0 grid place-items-center bg-black/40 p-4 backdrop-blur-xs" role="presentation">
+			<div className="fixed inset-0 z-overlay grid place-items-center bg-black/40 p-4 backdrop-blur-xs" role="presentation">
 				{rootContent}
 			</div>
 		);
@@ -544,7 +544,7 @@ function AlertGroup({ className, floating = false, ...props }: AlertGroupProps):
 	return (
 		<div
 			data-slot="alert-group"
-			className={cn("flex flex-col gap-2", floating && "z-overlay fixed inset-x-4 bottom-4 sm:inset-x-auto sm:inset-e-4 sm:w-full sm:max-w-sm", className)}
+			className={cn("flex flex-col gap-2", floating && "fixed inset-x-4 bottom-4 z-overlay sm:inset-x-auto sm:inset-e-4 sm:w-full sm:max-w-sm", className)}
 			{...props}
 		/>
 	);
