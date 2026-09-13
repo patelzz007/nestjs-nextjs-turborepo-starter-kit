@@ -16,14 +16,14 @@ export function slugifyOrganizationName(displayName: string): string {
 	return OrganizationSlugSchema.parse("merchant");
 }
 
-type SlugLookupClient = {
+interface SlugLookupClient {
 	organization: {
 		findFirst(args: { where: { slug: string }; select: { id: true } }): Promise<{ id: string } | null>;
 	};
 	organizationSlugHistory: {
 		findFirst(args: { where: { slug: string }; select: { id: true } }): Promise<{ id: string } | null>;
 	};
-};
+}
 
 /** Pick the first unused slug, appending `-2`, `-3`, … when needed. */
 export async function allocateUniqueOrganizationSlug(tx: SlugLookupClient, displayName: string): Promise<string> {

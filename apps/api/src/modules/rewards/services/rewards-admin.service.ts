@@ -12,6 +12,7 @@ import type {
 } from "@workspace/shared";
 import { EmailPreview, EmailRenderContextSchema, EpochMsSchema } from "@workspace/shared";
 
+import { parsePrismaInputJson } from "../../../common/utils/prisma-json";
 import { TypedConfigService } from "../../../config/typed-config.service";
 import { paginateCursorListResult } from "../../../platform/persistence/cursor-list";
 import { LogService } from "../../logs/logs.service";
@@ -184,7 +185,7 @@ export class RewardsAdminService {
 
 		await this.merchantOrgRepository.updateKyb(merchantOrgId, {
 			kybStatus: input.kybStatus,
-			...(input.kybFields !== undefined ? { kybFields: input.kybFields } : {}),
+			...(input.kybFields !== undefined ? { kybFields: parsePrismaInputJson(input.kybFields) } : {}),
 		});
 	}
 

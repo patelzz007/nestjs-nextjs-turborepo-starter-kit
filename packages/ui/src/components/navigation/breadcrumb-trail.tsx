@@ -16,7 +16,7 @@ import {
 } from "@workspace/ui/components/navigation/breadcrumb";
 import { Popover, PopoverContent, PopoverTrigger } from "@workspace/ui/components/overlay/popover";
 import type { BreadcrumbItem as BreadcrumbItemData, BreadcrumbStatus } from "@workspace/ui/components/navigation/breadcrumb-context";
-import { cn } from "@workspace/ui/lib/utils";
+import { cn } from "@workspace/ui/lib/core/utils";
 
 // ════════════════════════════════════════════════════════════════════════════
 // BreadcrumbTrail — memoized, presentational trail.

@@ -2,7 +2,7 @@
 
 import { Toast as ToastPrimitive, type ToastObject } from "@base-ui/react/toast";
 import { Button } from "@workspace/ui/components/form/button";
-import { cn } from "@workspace/ui/lib/utils";
+import { cn } from "@workspace/ui/lib/core/utils";
 import { CircleCheckIcon, InfoIcon, Loader2Icon, OctagonXIcon, TriangleAlertIcon, XIcon } from "lucide-react";
 import * as React from "react";
 import { createContext, memo, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";

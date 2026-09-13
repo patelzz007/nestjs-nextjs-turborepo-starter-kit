@@ -6,7 +6,7 @@ import * as React from "react";
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "@workspace/ui/components/form/input-group";
 import type { InputProps } from "@workspace/ui/components/form/input";
 
-import { cn } from "@workspace/ui/lib/utils";
+import { cn } from "@workspace/ui/lib/core/utils";
 
 /**
  * Password input with two UX affordances:

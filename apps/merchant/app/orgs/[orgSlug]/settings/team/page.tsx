@@ -1,6 +1,6 @@
 "use client";
 
-import { organizationPath } from "@/lib/organization-slug";
+import { organizationPath } from "@/lib/org/slug";
 import { useParams } from "next/navigation";
 import * as React from "react";
 

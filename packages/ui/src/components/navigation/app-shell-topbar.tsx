@@ -2,7 +2,7 @@
 
 import { Button } from "@workspace/ui/components/form/button";
 import { SidebarTrigger } from "@workspace/ui/components/navigation/sidebar";
-import { cn } from "@workspace/ui/lib/utils";
+import { cn } from "@workspace/ui/lib/core/utils";
 import { Search } from "lucide-react";
 import * as React from "react";
 

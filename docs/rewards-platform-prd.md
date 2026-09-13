@@ -536,7 +536,7 @@ pnpm db:migrate
 
 RLS policies for new tables must be added in migration SQL (see `docs/prisma.md` §10).
 
-**Zod:** `packages/shared/src/schemas/domain/rewards.ts` (exported from `@workspace/shared`).
+**Zod:** `packages/shared/src/schemas/domain/rewards/rewards.ts` (exported from `@workspace/shared`).
 
 **Seed:** `apps/api/prisma/seed/rewards.ts` — run via `pnpm db:seed` after migrate + `pnpm db:rls`.
 

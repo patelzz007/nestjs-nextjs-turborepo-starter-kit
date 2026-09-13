@@ -9,7 +9,7 @@ import {
 	AlertDialogTrigger,
 	type AlertDialogLabels,
 } from "@workspace/ui/components/overlay/alert-dialog";
-import { SHOWCASE_ALERT_DIALOG_LABELS } from "@workspace/ui/lib/alert-dialog-labels";
+import { SHOWCASE_ALERT_DIALOG_LABELS } from "@workspace/ui/lib/form/alert-dialog-labels";
 import { Alert, AlertAction } from "@workspace/ui/components/feedback/alert";
 import { Button } from "@workspace/ui/components/form/button";
 import { Input } from "@workspace/ui/components/form/input";

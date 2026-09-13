@@ -1,6 +1,6 @@
 "use client";
 
-import { VerifyEmailView } from "@workspace/client/lib/auth/verify-email-view";
+import { VerifyEmailView } from "@workspace/client/lib/auth/email/verify-email-view";
 import { AuthLayout } from "@workspace/ui/components/layout/auth-layout";
 import { useSearchParams } from "next/navigation";
 import { Suspense, type JSX } from "react";

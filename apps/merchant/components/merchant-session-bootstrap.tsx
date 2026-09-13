@@ -1,6 +1,6 @@
 "use client";
 
-import { AuthSessionBootstrap } from "@workspace/client/lib/auth/auth-session-bootstrap";
+import { AuthSessionBootstrap } from "@workspace/client/lib/auth/session/bootstrap";
 import * as React from "react";
 
 /** Keeps merchant auth state aligned with the httpOnly cookie session. */

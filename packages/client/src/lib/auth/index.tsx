@@ -9,8 +9,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type JSX, type ReactNode } from "react";
 import { z } from "zod";
 
-import { createAuthChannel } from "./auth-sync";
-import { toAuthUser } from "./map-auth-user";
+import { createAuthChannel } from "./session/sync";
+import { toAuthUser } from "./session/map-auth-user";
 import { API_BASE_URL } from "../api/config";
 import { apiRouter } from "../api/endpoints";
 import {
@@ -24,7 +24,7 @@ import {
 	type RefreshResult,
 } from "../api/use-api";
 import type { ApiRouter } from "../api/endpoints";
-import { useAuthStore, type AuthUser } from "./auth-store";
+import { useAuthStore, type AuthUser } from "./session/store";
 
 export interface AuthContextType {
 	isAuthenticated: boolean;

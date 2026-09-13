@@ -1,1 +1,1 @@
-export { highlightText } from "@workspace/ui/lib/highlight-text";
+export { highlightText } from "@workspace/ui/lib/core/highlight-text";

@@ -3,7 +3,7 @@
 import { USER_DETAIL_PAGE_BUTTON_CLASS } from "@/components/users/user-detail-button";
 import { Button } from "@workspace/ui/components/form/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@workspace/ui/components/navigation/collapsible";
-import { cn } from "@workspace/ui/lib/utils";
+import { cn } from "@workspace/ui/lib/core/utils";
 import { ChevronRight } from "lucide-react";
 import * as React from "react";
 

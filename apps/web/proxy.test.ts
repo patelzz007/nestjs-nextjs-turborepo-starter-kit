@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { NextRequest } from "next/server";
 
 import { proxy, resetWebProxyRefreshCooldownForTests } from "./proxy";
-import { isAccessTokenExpired, resolveProxySessionRefresh, shouldAttemptProxyRefresh } from "@workspace/client/lib/auth/proxy-refresh";
+import { isAccessTokenExpired, resolveProxySessionRefresh, shouldAttemptProxyRefresh } from "@workspace/client/lib/auth/edge/proxy-refresh";
 
 // ── Mocks ──────────────────────────────────────────────────────────────────
 // The proxy module imports `next/server` (NextResponse) and

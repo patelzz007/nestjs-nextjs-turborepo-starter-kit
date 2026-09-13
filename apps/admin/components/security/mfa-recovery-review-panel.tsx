@@ -1,9 +1,9 @@
 "use client";
 
 import type { AdminMfaRecoveryRequest } from "@workspace/shared";
-import { resolveAuthErrorMessage } from "@workspace/client/lib/auth/auth-errors";
+import { resolveAuthErrorMessage } from "@workspace/client/lib/auth/errors";
 import { useAuth } from "@workspace/client/lib/auth";
-import { formatDateTimeWithSeconds } from "@/lib/dates";
+import { formatDateTimeWithSeconds } from "@/lib/format/dates";
 import { MfaRecoveryStatusBadge } from "@/components/security/mfa-recovery-status-badge";
 import { Button } from "@workspace/ui/components/form/button";
 import { Label } from "@workspace/ui/components/form/label";

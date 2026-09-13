@@ -1,11 +1,11 @@
 "use client";
 
-import { stubPaginatedMeta } from "@/lib/api-envelope";
+import { stubPaginatedMeta } from "@/lib/format/api-envelope";
 import { apiRouter } from "@workspace/client/lib/api/endpoints";
 import { useAuth } from "@workspace/client/lib/auth";
-import { MerchantKybDocumentPreviewDialog, type MerchantKybDocumentPreviewState } from "@workspace/client/lib/auth/merchant-kyb-document-preview-dialog";
-import { openExternalDocument, triggerBrowserDownload } from "@workspace/client/lib/auth/merchant-kyb-document-utils";
-import { MerchantKybStoredDocumentList } from "@workspace/client/lib/auth/merchant-kyb-stored-document-list";
+import { MerchantKybDocumentPreviewDialog, type MerchantKybDocumentPreviewState } from "@workspace/client/lib/merchant/kyb/document-preview-dialog";
+import { openExternalDocument, triggerBrowserDownload } from "@workspace/client/lib/merchant/kyb/document-utils";
+import { MerchantKybStoredDocumentList } from "@workspace/client/lib/merchant/kyb/stored-document-list";
 import type {
 	AdminMerchantDetailResponse,
 	FileDownloadDisposition,
@@ -27,7 +27,7 @@ import { Separator } from "@workspace/ui/components/display/separator";
 import { Skeleton } from "@workspace/ui/components/feedback/skeleton";
 import { Textarea } from "@workspace/ui/components/form/textarea";
 import { toastMessage } from "@workspace/ui/components/feedback/toast";
-import { cn } from "@/lib/utils";
+import { cn } from "@workspace/ui/lib/core/utils";
 import { useQueryClient } from "@tanstack/react-query";
 import { Building2, Check, Clock, MapPin, ShieldCheck, User, X } from "lucide-react";
 import Link from "next/link";

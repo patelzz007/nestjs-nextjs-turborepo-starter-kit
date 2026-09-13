@@ -7,9 +7,9 @@
 // ============================================
 
 import { API_BASE_URL } from "@workspace/client/lib/api/config";
-import { decodeJwtPayload } from "@workspace/client/lib/auth/jwt";
-import { getEnrollmentRedirectPath, isEnrollmentAllowedPath, isRestrictedSession } from "@workspace/client/lib/auth/restricted-session";
-import { isWebAuthPath, isWebProtectedPath, isWebPublicExactPath, isWebTokenAuthPath } from "@/lib/auth-routes";
+import { decodeJwtPayload } from "@workspace/client/lib/auth/edge/jwt";
+import { getEnrollmentRedirectPath, isEnrollmentAllowedPath, isRestrictedSession } from "@workspace/client/lib/auth/edge/restricted-session";
+import { isWebAuthPath, isWebProtectedPath, isWebPublicExactPath, isWebTokenAuthPath } from "@/lib/auth/routes";
 import {
 	applyRotatedSetCookies,
 	clearAuthCookies,
@@ -19,7 +19,7 @@ import {
 	refreshSessionFromProxy,
 	resolveProxySessionRefresh,
 	type ProxyRefreshResult,
-} from "@workspace/client/lib/auth/proxy-refresh";
+} from "@workspace/client/lib/auth/edge/proxy-refresh";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 

@@ -3,7 +3,7 @@ import "./global.css";
 import "katex/dist/katex.min.css";
 
 import { AppDocumentShell } from "@workspace/ui/components/app-document-shell";
-import { cn } from "@workspace/ui/lib/utils";
+import { cn } from "@workspace/ui/lib/core/utils";
 import { Toaster } from "@workspace/ui/components/feedback/toast";
 import { bricolageGrotesque } from "@workspace/ui/fonts/bricolage-grotesque";
 import { Geist_Mono, IBM_Plex_Sans, Space_Grotesk } from "next/font/google";

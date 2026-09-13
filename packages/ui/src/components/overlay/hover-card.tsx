@@ -1,7 +1,7 @@
 "use client";
 
 import { PreviewCard as PreviewCardPrimitive } from "@base-ui/react/preview-card";
-import { cn } from "@workspace/ui/lib/utils";
+import { cn } from "@workspace/ui/lib/core/utils";
 import * as React from "react";
 
 // Root renders no DOM element of its own (a base-ui provider), so like the

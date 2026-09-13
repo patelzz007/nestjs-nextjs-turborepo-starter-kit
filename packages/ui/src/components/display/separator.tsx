@@ -1,7 +1,7 @@
 "use client";
 
 import { Separator as SeparatorPrimitive } from "@base-ui/react/separator";
-import { cn } from "@workspace/ui/lib/utils";
+import { cn } from "@workspace/ui/lib/core/utils";
 import * as React from "react";
 
 const Separator = React.forwardRef<HTMLDivElement, SeparatorPrimitive.Props>(function Separator({ className, orientation = "horizontal", ...props }, ref): React.JSX.Element {

@@ -1,8 +1,8 @@
 import { SIDEBAR_MENU } from "@/lib/navigation/sidebar-menu";
 import { flattenMenuItems } from "@/lib/navigation/menu";
-import { findSuggestion, matchesQuery as matchesQueryBase, parseInput, ParsedInputSchema, ScopeTypeSchema, scopeConfig } from "@workspace/ui/lib/palette-search";
-import type { ParsedInput, ScopeType } from "@workspace/ui/lib/palette-search";
-import type { PaletteSearchableItem } from "@workspace/ui/lib/palette-types";
+import { findSuggestion, matchesQuery as matchesQueryBase, parseInput, ParsedInputSchema, ScopeTypeSchema, scopeConfig } from "@workspace/ui/lib/palette/search";
+import type { ParsedInput, ScopeType } from "@workspace/ui/lib/palette/search";
+import type { PaletteSearchableItem } from "@workspace/ui/lib/palette/types";
 
 export type { PaletteSearchableItem, ParsedInput, ScopeType };
 export { findSuggestion, parseInput, scopeConfig, ScopeTypeSchema, ParsedInputSchema };

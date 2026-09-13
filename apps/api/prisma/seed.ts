@@ -12,7 +12,7 @@ import { createPasswordResetTokens, createRefreshTokens } from "./seed/tokens";
 import { assignAdditionalPermissions, assignRolesToUsers, createUsers } from "./seed/users";
 import { createClicks, createUrlTags, createUrls } from "./seed/urls";
 import { seedGeo } from "./seed/geo-seed";
-import { printOrganizationSeedCredentials, seedPlatformGuardrails } from "./seed/organizations";
+import { ORGANIZATION_SEED_IDS, ORGANIZATION_SEED_SLUGS, printOrganizationSeedCredentials, seedPlatformGuardrails } from "./seed/organizations";
 import { cleanupRewardSeedData, printRewardSeedCredentials, seedRewards } from "./seed/rewards";
 import { seedSamplePlatform } from "./seed/sample-platform";
 import { seedProducts } from "./seed/products";
@@ -140,6 +140,9 @@ async function main() {
 	const rewardSummary = await seedRewards(adminUser, allUsers);
 	console.log(
 		`✅ Rewards: ${rewardSummary.merchantOrgs} merchant orgs, ${rewardSummary.rewards} rewards, ${rewardSummary.claims} claims, ${rewardSummary.redemptions} redemptions`,
+	);
+	console.log(
+		`✅ Organizations: ${ORGANIZATION_SEED_SLUGS.kl}, ${ORGANIZATION_SEED_SLUGS.mlk} (${ORGANIZATION_SEED_IDS.klOrganization}, ${ORGANIZATION_SEED_IDS.mlkOrganization})`,
 	);
 
 	console.log(`

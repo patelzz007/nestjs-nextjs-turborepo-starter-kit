@@ -273,7 +273,7 @@ Example: `@RequirePermission("CREATE", "USER")` requires the `CREATE` action on 
 
 ### Permission registry (code catalog)
 
-`packages/shared/src/schemas/domain/permissions-registry.ts` is the **single source of truth** for permissions that routes protect in code:
+`packages/shared/src/schemas/domain/rbac/rbac/permissions-registry.ts` is the **single source of truth** for permissions that routes protect in code:
 
 | Artifact | Purpose |
 |----------|---------|
@@ -462,7 +462,7 @@ import type { PermissionAction, PermissionResource } from "@workspace/shared";
 | `ADMIN_DASHBOARD` | Admin panel access (`hasAdminAccess` is derived from `READ:ADMIN_DASHBOARD`) |
 | `REPORT`, `TELESCOPE`, `EMAIL`, `BACKUP`, … | Feature-specific resources |
 
-Full list: `packages/shared/src/schemas/domain/enums.ts` → `PermissionResourceSchema`.
+Full list: `packages/shared/src/schemas/domain/platform/enums.ts` → `PermissionResourceSchema`.
 
 ### Single permission (most common)
 

@@ -6,7 +6,7 @@ import { useCallback, useState, type ComponentProps, type ReactNode } from "reac
 
 import { CodeBlock, Pre } from "fumadocs-ui/components/codeblock";
 
-import { cn } from "@workspace/ui/lib/utils";
+import { cn } from "@workspace/ui/lib/core/utils";
 
 /** The wrap-toggle button shown next to the copy button in the action bar. */
 function WrapToggleButton({ wrapped, onToggle }: { readonly wrapped: boolean; readonly onToggle: () => void }): React.JSX.Element {

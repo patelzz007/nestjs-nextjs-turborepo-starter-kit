@@ -104,7 +104,7 @@ export class PolicyControlPlaneService {
 			async (tx) => tx.authorizationPolicyDraft.findUnique({ where: { id: draftId } }),
 		);
 
-		if (draft === null || draft.status !== "DRAFT") {
+		if (draft?.status !== "DRAFT") {
 			throw new BadRequestException("Draft not publishable");
 		}
 

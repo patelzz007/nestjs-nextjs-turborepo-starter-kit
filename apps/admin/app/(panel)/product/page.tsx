@@ -1,5 +1,5 @@
 import { createAdminServerCaller } from "@/lib/admin-server-api";
-import { readPaginatedHasNext, readPaginatedTotal, readPaginatedTotalPages } from "@/lib/api-envelope";
+import { readPaginatedHasNext, readPaginatedTotal, readPaginatedTotalPages } from "@/lib/format/api-envelope";
 
 import ProductView from "./product-view.generated";
 

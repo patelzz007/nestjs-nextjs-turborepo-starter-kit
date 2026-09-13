@@ -1,15 +1,15 @@
 "use client";
 import { z } from "zod";
 
-import { createDataTableLabels } from "@/lib/data-table-labels";
-import { buildResourceTableCheckbox, canDeletePlatformResource } from "@/lib/data-table-capabilities";
-import { fetchAllListPages, resolveManualBulkSelectionRows } from "@/lib/resolve-manual-bulk-selection";
-import { useSessionCapabilities } from "@/lib/session-capabilities";
+import { createDataTableLabels } from "@/lib/data-table/labels";
+import { buildResourceTableCheckbox, canDeletePlatformResource } from "@/lib/data-table/capabilities";
+import { fetchAllListPages, resolveManualBulkSelectionRows } from "@/lib/data-table/resolve-manual-bulk-selection";
+import { useSessionCapabilities } from "@/lib/session/capabilities";
 import { useResourceDeleteDialog } from "@/components/common/resource-delete-dialog";
-import { DataTableMobileCard } from "@/lib/data-table-mobile-card";
-import { readPaginatedHasNext, readPaginatedNextCursor, readPaginatedTotal, stubPaginatedMeta } from "@/lib/api-envelope";
+import { DataTableMobileCard } from "@/lib/data-table/mobile-card";
+import { readPaginatedHasNext, readPaginatedNextCursor, readPaginatedTotal, stubPaginatedMeta } from "@/lib/format/api-envelope";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
-import { useManualHybridPagination } from "@/lib/use-manual-cursor-pagination";
+import { useManualHybridPagination } from "@/lib/data-table/use-manual-cursor-pagination";
 import { DataTableSearchToolbar } from "@/components/common/data-table-search-toolbar";
 import { useAuth } from "@workspace/client/lib/auth";
 import { Badge } from "@workspace/ui/components/feedback/badge";
@@ -24,8 +24,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { keepPreviousData, useQueryClient } from "@tanstack/react-query";
 import { toastMessage } from "@workspace/ui/components/feedback/toast";
 
-import { SampleCategoryListSortBySchema, type SampleCategory, type SampleCategoryListSortBy } from "@workspace/shared/schemas/domain/sample-category.generated";
-import type { DataTableBulkSelectionContext } from "@workspace/ui/lib/data-table-checkbox";
+import { SampleCategoryListSortBySchema, type SampleCategory, type SampleCategoryListSortBy } from "@workspace/shared/schemas/domain/generated/sample-category.generated";
+import type { DataTableBulkSelectionContext } from "@workspace/ui/lib/data-table/checkbox";
 
 function resolveListSortBy(columnId: string | undefined): SampleCategoryListSortBy | undefined {
 	if (columnId === undefined) {

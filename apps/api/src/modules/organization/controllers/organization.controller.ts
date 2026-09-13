@@ -1,5 +1,7 @@
 import { Body, Controller, Get, Param, Post } from "@nestjs/common";
+import { ApiOkResponse, ApiTags } from "@nestjs/swagger";
 import {
+	apiPath,
 	OrganizationAccessRequestCreateSchema,
 	OrganizationMemberInviteSchema,
 	OrganizationSlugParamSchema,
@@ -17,7 +19,8 @@ import type { AccessTokenPayload } from "../../auth/services/token.service";
 import { OrganizationContextService } from "../services/organization-context.service";
 import { OrganizationMembershipService } from "../services/organization-membership.service";
 
-@Controller("orgs")
+@ApiTags("Organizations")
+@Controller(apiPath("/orgs"))
 export class OrganizationController {
 	public constructor(
 		private readonly context: OrganizationContextService,
@@ -25,6 +28,7 @@ export class OrganizationController {
 	) {}
 
 	@Get(":orgSlug/context")
+	@ApiOkResponse({ description: "Organization context for the signed-in member" })
 	public async getContext(
 		@GetUser() user: AccessTokenPayload,
 		@Param(new ZodValidationPipe(OrganizationSlugParamSchema)) params: { orgSlug: string },
@@ -33,6 +37,7 @@ export class OrganizationController {
 	}
 
 	@Post(":orgSlug/access-requests")
+	@ApiOkResponse({ description: "Organization access request created" })
 	public async requestAccess(
 		@GetUser() user: AccessTokenPayload,
 		@Param(new ZodValidationPipe(OrganizationSlugParamSchema)) params: { orgSlug: string },
@@ -43,6 +48,7 @@ export class OrganizationController {
 	}
 
 	@Post(":orgSlug/members/invite")
+	@ApiOkResponse({ description: "Organization member invited" })
 	public async inviteMember(
 		@GetUser() user: AccessTokenPayload,
 		@Param(new ZodValidationPipe(OrganizationSlugParamSchema)) params: { orgSlug: string },
@@ -54,6 +60,7 @@ export class OrganizationController {
 	}
 
 	@Post(":orgSlug/access-requests/:requestId/review")
+	@ApiOkResponse({ description: "Organization access request reviewed" })
 	public async reviewAccessRequest(
 		@GetUser() user: AccessTokenPayload,
 		@Param(new ZodValidationPipe(OrganizationSlugParamSchema)) params: { orgSlug: string },

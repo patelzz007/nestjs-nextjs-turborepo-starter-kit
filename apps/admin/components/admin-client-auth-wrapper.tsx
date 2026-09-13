@@ -1,7 +1,7 @@
 "use client";
 
 import { isAdminAuthPath } from "@/lib/auth-routes";
-import { ClientAuthWrapper } from "@workspace/client/lib/auth/client-auth-wrapper";
+import { ClientAuthWrapper } from "@workspace/client/lib/auth/session/client-auth-wrapper";
 import { usePathname } from "next/navigation";
 import { useCallback, type JSX, type ReactNode } from "react";
 

@@ -65,7 +65,11 @@ export class MerchantOrgRepository {
 		});
 	}
 
-	public async listActiveSummaries(limit: number): Promise<Pick<MerchantOrg, "id" | "businessName" | "city" | "kybStatus" | "status">[]> {
+	public async listActiveSummaries(limit: number): Promise<
+		(Pick<MerchantOrg, "id" | "businessName" | "city" | "kybStatus" | "status"> & {
+			organization: { id: string; slug: string } | null;
+		})[]
+	> {
 		return this.prisma.merchantOrg.findMany({
 			where: { isDeleted: false },
 			orderBy: { businessName: "asc" },
@@ -76,6 +80,7 @@ export class MerchantOrgRepository {
 				city: true,
 				kybStatus: true,
 				status: true,
+				organization: { select: { id: true, slug: true } },
 			},
 		});
 	}
@@ -155,7 +160,7 @@ export class MerchantOrgRepository {
 			},
 		});
 
-		if (row === null || row.organizationId === null || row.organization === null) {
+		if (row?.organizationId == null || row.organization == null) {
 			return null;
 		}
 

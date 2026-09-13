@@ -59,6 +59,7 @@ export class MerchantOnboardingController {
 	@RlsBypass()
 	@Post("documents/upload-url")
 	@ApiOperation({ summary: "Create an invite-authorized KYB document upload ticket" })
+	@ApiOkResponse({ description: "Signed upload ticket for onboarding KYB documents" })
 	public createDocumentUploadUrl(
 		@Body(new ZodValidationPipe(apiContract.merchant.onboarding.documentUploadUrl.input)) body: MerchantOnboardingDocumentUploadUrlInput,
 	): ReturnType<MerchantOnboardingService["createDocumentUploadUrl"]> {
@@ -69,6 +70,7 @@ export class MerchantOnboardingController {
 	@RlsBypass()
 	@Post("documents/upload-complete")
 	@ApiOperation({ summary: "Complete an invite-authorized KYB document upload" })
+	@ApiOkResponse({ description: "Onboarding KYB document upload finalized" })
 	public completeDocumentUpload(
 		@Body(new ZodValidationPipe(apiContract.merchant.onboarding.documentUploadComplete.input)) body: MerchantOnboardingDocumentUploadCompleteInput,
 	): ReturnType<MerchantOnboardingService["completeDocumentUpload"]> {
@@ -79,6 +81,7 @@ export class MerchantOnboardingController {
 	@RlsBypass()
 	@Post("documents/submit")
 	@ApiOperation({ summary: "Attach onboarding KYB documents and submit the merchant for admin review" })
+	@ApiOkResponse({ description: "Onboarding KYB documents submitted for review" })
 	public submitDocuments(
 		@Body(new ZodValidationPipe(apiContract.merchant.onboarding.documentsSubmit.input)) body: MerchantOnboardingDocumentsSubmitInput,
 	): ReturnType<MerchantOnboardingService["submitDocuments"]> {

@@ -6,7 +6,7 @@ import { ChevronDown, List } from "lucide-react";
 import { useCallback, useState } from "react";
 
 import { Button } from "@workspace/ui/components/form/button";
-import { cn } from "@workspace/ui/lib/utils";
+import { cn } from "@workspace/ui/lib/core/utils";
 
 /**
  * Fully custom table of contents — replaces Fumadocs' TOC renderer via the

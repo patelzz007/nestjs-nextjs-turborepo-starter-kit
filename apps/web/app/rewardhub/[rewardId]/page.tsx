@@ -1,4 +1,4 @@
-import { RewardDetailView } from "@/components/rewardhub/reward-detail-view";
+import { RewardDetailView } from "@/components/rewardhub/detail/view";
 import { createWebServerCaller } from "@/lib/web-server-api";
 import type { RewardResponse } from "@workspace/shared";
 import * as React from "react";

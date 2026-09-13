@@ -1,6 +1,6 @@
 "use client";
 
-import { MerchantOnboardingView } from "@workspace/client/lib/auth/merchant-onboarding-view";
+import { MerchantOnboardingView } from "@workspace/client/lib/merchant/onboarding/view";
 import { Button } from "@workspace/ui/components/form/button";
 import { useTheme } from "next-themes";
 import Link from "next/link";
@@ -13,8 +13,12 @@ function OnboardingThemeToggle(): JSX.Element {
 	const [mounted, setMounted] = useState(false);
 
 	useEffect((): (() => void) => {
-		const frame = window.requestAnimationFrame(() => setMounted(true));
-		return (): void => window.cancelAnimationFrame(frame);
+		const frame = window.requestAnimationFrame((): void => {
+			setMounted(true);
+		});
+		return (): void => {
+			window.cancelAnimationFrame(frame);
+		};
 	}, []);
 
 	const handleToggle = useCallback((): void => {

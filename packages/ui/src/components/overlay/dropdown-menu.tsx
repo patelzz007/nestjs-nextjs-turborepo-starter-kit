@@ -7,8 +7,8 @@ import {
 	menuItemOpenClasses,
 	type MenuItemActiveState,
 	resolveMenuItemActiveClasses,
-} from "@workspace/ui/lib/field-variants";
-import { cn } from "@workspace/ui/lib/utils";
+} from "@workspace/ui/lib/form/field-variants";
+import { cn } from "@workspace/ui/lib/core/utils";
 import { ChevronRightIcon, CheckIcon } from "lucide-react";
 import * as React from "react";
 import { useCallback } from "react";

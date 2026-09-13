@@ -62,5 +62,5 @@ Constrained policy templates compile to tenant-scoped SQL visibility predicates.
 ## References
 
 - `apps/api/src/modules/authorization-cedar/`
-- `packages/shared/src/schemas/domain/authorization-policy.ts`
+- `packages/shared/src/schemas/domain/organization/organization/authorization-policy.ts`
 - ADR 001 (RBAC remains for platform catalog; Cedar layers on organization resources)

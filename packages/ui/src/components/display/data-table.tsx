@@ -87,16 +87,16 @@ import * as React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 
-import { cn } from "@workspace/ui/lib/utils";
-import { buildExportColumns, exportToCSV, exportToJSON, exportToPDF, exportToSpreadsheet } from "@workspace/ui/lib/data-table-export";
+import { cn } from "@workspace/ui/lib/core/utils";
+import { buildExportColumns, exportToCSV, exportToJSON, exportToPDF, exportToSpreadsheet } from "@workspace/ui/lib/data-table/export";
 import {
 	includesExportFormat,
 	resolveDataTableCheckboxConfig,
 	type DataTableBulkSelectionContext,
 	type DataTableCheckboxConfig,
 	type DataTableExportFormat,
-} from "@workspace/ui/lib/data-table-checkbox";
-import { formatDataTableLabel, type DataTableLabels } from "@workspace/ui/lib/data-table-labels";
+} from "@workspace/ui/lib/data-table/checkbox";
+import { formatDataTableLabel, type DataTableLabels } from "@workspace/ui/lib/data-table/labels";
 import {
 	DataTableCellScalarSchema,
 	DataTableCellValueSchema,
@@ -106,9 +106,9 @@ import {
 	type DataTableCellScalar,
 	type DataTablePersistedPrefs,
 	type DataTablePersistedPrefsPatch,
-} from "@workspace/ui/lib/data-table-prefs";
-import { isServerPagination, type DataTablePagination } from "@workspace/ui/lib/data-table-pagination";
-import { createLocalStorageDataTableStorage, type DataTableStorageAdapter } from "@workspace/ui/lib/data-table-storage";
+} from "@workspace/ui/lib/data-table/prefs";
+import { isServerPagination, type DataTablePagination } from "@workspace/ui/lib/data-table/pagination";
+import { createLocalStorageDataTableStorage, type DataTableStorageAdapter } from "@workspace/ui/lib/data-table/storage";
 import { z } from "zod";
 
 // ── Generic-preserving memo ────────────────────────────────────────────────
@@ -269,14 +269,14 @@ export interface EmptyStateConfig {
 	};
 }
 
-export type { DataTableLabels } from "@workspace/ui/lib/data-table-labels";
-export type { DataTableStorageAdapter } from "@workspace/ui/lib/data-table-storage";
-export { createLocalStorageDataTableStorage } from "@workspace/ui/lib/data-table-storage";
-export type { DataTableBulkSelectionContext, DataTableCheckboxConfig, DataTableExportFormat } from "@workspace/ui/lib/data-table-checkbox";
-export { DATA_TABLE_EXPORT_FORMATS, resolveDataTableCheckboxConfig } from "@workspace/ui/lib/data-table-checkbox";
-export type { DataTablePagination, DataTableClientPagination, DataTableServerPagination } from "@workspace/ui/lib/data-table-pagination";
-export { isServerPagination } from "@workspace/ui/lib/data-table-pagination";
-export { sanitizeExportCell, exportToCSV, exportToJSON, exportToPDF, exportToSpreadsheet, buildExportColumns } from "@workspace/ui/lib/data-table-export";
+export type { DataTableLabels } from "@workspace/ui/lib/data-table/labels";
+export type { DataTableStorageAdapter } from "@workspace/ui/lib/data-table/storage";
+export { createLocalStorageDataTableStorage } from "@workspace/ui/lib/data-table/storage";
+export type { DataTableBulkSelectionContext, DataTableCheckboxConfig, DataTableExportFormat } from "@workspace/ui/lib/data-table/checkbox";
+export { DATA_TABLE_EXPORT_FORMATS, resolveDataTableCheckboxConfig } from "@workspace/ui/lib/data-table/checkbox";
+export type { DataTablePagination, DataTableClientPagination, DataTableServerPagination } from "@workspace/ui/lib/data-table/pagination";
+export { isServerPagination } from "@workspace/ui/lib/data-table/pagination";
+export { sanitizeExportCell, exportToCSV, exportToJSON, exportToPDF, exportToSpreadsheet, buildExportColumns } from "@workspace/ui/lib/data-table/export";
 
 // ── DataTable Props ────────────────────────────────────────────────────────
 

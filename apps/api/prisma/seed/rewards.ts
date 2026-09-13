@@ -26,6 +26,7 @@ export const REWARD_SEED_IDS = {
 	claimRedeemedKl: "df82577e-e756-4751-bf97-4d51fa3fe7be",
 	claimExpiredKl: "83a172f3-76f9-483e-8756-d142e059f9d3",
 	claimPendingMlk: "df2c10eb-7a56-456c-9b8c-5e3d1143c5b2",
+	claimRedeemedMlk: "a2c10eb7-7a56-456c-9b8c-5e3d1143c5c3",
 	referralPending: "13d97a9f-cb94-432b-bdb7-9011649cad0c",
 	referralCredited: "594dcffc-3091-4aca-befa-affd618d5c36",
 } as const;
@@ -595,21 +596,63 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 		},
 	});
 
-	// Bulk pending claims for inventory stress demo
+	await prisma.rewardClaim.create({
+		data: {
+			id: REWARD_SEED_IDS.claimRedeemedMlk,
+			userId: carol.id,
+			rewardId: REWARD_SEED_IDS.mlkRewardPublished,
+			redemptionTokenHash: sha256Hex("seed_qr_token_mlk_redeemed_carol_001"),
+			backupCodeHash: sha256Hex("JKLM2345"),
+			status: "REDEEMED",
+			claimedAt: msDaysAgo(6),
+			claimExpiresAt: msDaysAgo(2),
+			redeemedAt: msDaysAgo(3),
+		},
+	});
+
+	await prisma.rewardRedemption.create({
+		data: {
+			claimId: REWARD_SEED_IDS.claimRedeemedMlk,
+			merchantOrgId: mlkOrg.id,
+			userId: carol.id,
+			terminalId: "MLK-REGISTER-01",
+			redemptionMethod: "SCAN",
+			idempotencyKey: "50000000-0000-4000-8000-000000000002",
+			redeemedAt: msDaysAgo(3),
+		},
+	});
+
+	// Bulk claims for inventory stress demo — every REDEEMED claim has a matching redemption row.
 	const bulkClaimUsers = consumerUsers.slice(0, 6);
 	for (const [index, consumer] of bulkClaimUsers.entries()) {
-		await prisma.rewardClaim.create({
+		const isRedeemed = index % 3 === 0;
+		const redeemedAt = isRedeemed ? msDaysAgo(index) : null;
+		const claim = await prisma.rewardClaim.create({
 			data: {
 				userId: consumer.id,
 				rewardId: REWARD_SEED_IDS.klRewardPublished,
 				redemptionTokenHash: sha256Hex(`seed_qr_bulk_kl_${consumer.id}_${index}`),
 				backupCodeHash: sha256Hex(`seed_backup_bulk_${consumer.id}_${index}`),
-				status: index % 3 === 0 ? "REDEEMED" : "PENDING",
+				status: isRedeemed ? "REDEEMED" : "PENDING",
 				claimedAt: msDaysAgo(index + 1),
 				claimExpiresAt: msFromNow(6 - index),
-				redeemedAt: index % 3 === 0 ? msDaysAgo(index) : null,
+				redeemedAt,
 			},
 		});
+
+		if (isRedeemed && redeemedAt !== null) {
+			await prisma.rewardRedemption.create({
+				data: {
+					claimId: claim.id,
+					merchantOrgId: klOrg.id,
+					userId: consumer.id,
+					terminalId: "KL-REGISTER-01",
+					redemptionMethod: "SCAN",
+					idempotencyKey: `50000000-0000-4000-8000-${String(index + 10).padStart(12, "0")}`,
+					redeemedAt,
+				},
+			});
+		}
 	}
 
 	// Referrer credit claim for carol (R′)
@@ -711,6 +754,13 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 				action: "self_redeem_audit",
 				metadata: { note: "Owner self-redeem allowed with audit flag" },
 				createdAt: msDaysAgo(6),
+			},
+			{
+				actorUserId: null,
+				merchantOrgId: mlkOrg.id,
+				action: "merchant.redeem_reward",
+				metadata: { claimId: REWARD_SEED_IDS.claimRedeemedMlk, redemptionMethod: "SCAN" },
+				createdAt: msDaysAgo(3),
 			},
 		],
 	});

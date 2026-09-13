@@ -12,7 +12,7 @@ import {
 import type { MerchantMembershipResponse } from "@workspace/shared";
 import { cookies } from "next/headers";
 
-import { MERCHANT_ORG_COOKIE_NAME, merchantOrgHeaders } from "@/lib/merchant-org";
+import { MERCHANT_ORG_COOKIE_NAME, merchantOrgHeaders } from "@/lib/org/org";
 
 export type MerchantServerCaller = ServerCallerTree<ApiRouter>;
 

@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
-import { epochMs, type OrganizationContextResponse, type OrganizationMembershipResponse } from "@workspace/shared";
+import type { Prisma } from "@prisma/client";
+import { epochMs, UuidParamSchema, type OrganizationContextResponse, type OrganizationMembershipResponse } from "@workspace/shared";
 
 import { TenantTransactionService } from "../../../prisma/tenant-transaction.service";
 import { CedarPolicyEvaluatorService } from "../../authorization-cedar/services/cedar-policy-evaluator.service";
@@ -21,22 +22,18 @@ export class OrganizationContextService {
 		private readonly audit: OrganizationAuditService,
 	) {}
 
-	/** Resolve slug → organization id for pre-membership flows (uniform not-found). */
-	public async resolveOrganizationIdBySlug(orgSlug: string): Promise<string> {
+	/** Resolve slug or organization id → organization id for pre-membership flows (uniform not-found). */
+	public async resolveOrganizationIdBySlug(routeKey: string): Promise<string> {
 		const org = await this.tenantTx.withSystemOperation(
 			{
 				operation: "auth.pre_login",
-				reason: "Resolve organization slug",
-				correlationId: `org-id:${orgSlug}`,
+				reason: "Resolve organization route key",
+				correlationId: `org-id:${routeKey}`,
 				actorUserId: null,
 			},
 			async (tx) =>
 				tx.organization.findFirst({
-					where: {
-						OR: [{ slug: orgSlug }, { slugHistory: { some: { slug: orgSlug } } }],
-						isDeleted: false,
-						lifecycleState: { notIn: ["DELETED", "PENDING_DELETION"] },
-					},
+					where: this.buildActiveOrganizationWhere(routeKey),
 					select: { id: true },
 				}),
 		);
@@ -46,23 +43,19 @@ export class OrganizationContextService {
 		return org.id;
 	}
 
-	/** Resolve slug → organization; uniform not-found for missing/unauthorized. */
-	public async resolveBySlug(userId: string, orgSlug: string): Promise<ResolvedOrganizationContext> {
+	/** Resolve slug or organization id → organization; uniform not-found for missing/unauthorized. */
+	public async resolveBySlug(userId: string, routeKey: string): Promise<ResolvedOrganizationContext> {
 		try {
 			const row = await this.tenantTx.withSystemOperation(
 				{
 					operation: "auth.pre_login",
-					reason: "Resolve organization slug for URL context",
-					correlationId: `org-slug:${orgSlug}`,
+					reason: "Resolve organization route key for URL context",
+					correlationId: `org-route:${routeKey}`,
 					actorUserId: userId,
 				},
 				async (tx) => {
 					const org = await tx.organization.findFirst({
-						where: {
-							OR: [{ slug: orgSlug }, { slugHistory: { some: { slug: orgSlug } } }],
-							isDeleted: false,
-							lifecycleState: { notIn: ["DELETED", "PENDING_DELETION"] },
-						},
+						where: this.buildActiveOrganizationWhere(routeKey),
 						include: {
 							memberships: {
 								where: { userId, status: "ACTIVE", isDeleted: false },
@@ -79,9 +72,8 @@ export class OrganizationContextService {
 			}
 
 			const membership = row.memberships[0];
-			const scope = membership.locationScopes[0];
-			const locationScopeType = scope?.scopeType ?? "ALL_LOCATIONS";
-			const locationIds = membership.locationScopes.filter((s) => s.locationId !== null).map((s) => s.locationId as string);
+			const locationScopeType = membership.locationScopes.length === 0 ? "ALL_LOCATIONS" : membership.locationScopes[0].scopeType;
+			const locationIds = membership.locationScopes.flatMap((s) => (s.locationId === null ? [] : [s.locationId]));
 
 			const policyVersion = await this.cedar.getActivePolicyVersion(row.id);
 
@@ -144,7 +136,7 @@ export class OrganizationContextService {
 						slug: org.slug,
 						displayName: org.displayName,
 						lifecycleState: org.lifecycleState,
-						primaryLocationId: primary?.id ?? null,
+						primaryLocationId: primary.id,
 						createdAt: epochMs(Number(org.createdAt)),
 						updatedAt: epochMs(Number(org.updatedAt)),
 					},
@@ -173,6 +165,24 @@ export class OrganizationContextService {
 				};
 			},
 		);
+	}
+
+	private buildActiveOrganizationWhere(routeKey: string): Prisma.OrganizationWhereInput {
+		const slugMatches: Prisma.OrganizationWhereInput[] = [{ slug: routeKey }, { slugHistory: { some: { slug: routeKey } } }];
+
+		if (UuidParamSchema.safeParse(routeKey).success) {
+			return {
+				isDeleted: false,
+				lifecycleState: { notIn: ["DELETED", "PENDING_DELETION"] },
+				OR: [{ id: routeKey }, ...slugMatches],
+			};
+		}
+
+		return {
+			isDeleted: false,
+			lifecycleState: { notIn: ["DELETED", "PENDING_DELETION"] },
+			OR: slugMatches,
+		};
 	}
 
 	public async assertActionAllowed(resolved: ResolvedOrganizationContext, action: string, resourceType: string, resourceId: string): Promise<void> {

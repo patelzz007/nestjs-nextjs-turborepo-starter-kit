@@ -1,4 +1,4 @@
-import { formatDataTableLabel } from "@workspace/ui/lib/data-table-labels";
+import { formatDataTableLabel } from "@workspace/ui/lib/data-table/labels";
 
 /** Admin sidebar copy — parent/layout supplies strings (rule 11). */
 export interface AdminSidebarLabels {

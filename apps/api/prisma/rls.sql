@@ -585,6 +585,31 @@ CREATE POLICY platform_resource_idempotency_bypass ON public.platform_resource_i
   WITH CHECK (app_rls_bypass());
 -- ── Organization multi-tenancy (docs/multi-tenancy.md) ───────────────────
 
+-- Merchant portal membership listing runs before an active tenant is selected.
+-- Allow reading basic organization rows linked to merchant orgs the user belongs to.
+CREATE OR REPLACE FUNCTION app_merchant_organization_visible(org_id text) RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT app_rls_bypass()
+    OR (
+      app_current_user_id() IS NOT NULL
+      AND EXISTS (
+        SELECT 1
+        FROM public.merchant_orgs mo
+        INNER JOIN public.merchant_members mm ON mm.merchant_org_id = mo.id
+        WHERE mo.organization_id = org_id
+          AND mo.is_deleted = false
+          AND mm.user_id = app_current_user_id()
+          AND mm.is_deleted = false
+      )
+    );
+$$;
+
+GRANT EXECUTE ON FUNCTION app_merchant_organization_visible(text) TO app_runtime;
+
 CREATE OR REPLACE FUNCTION app_organization_member_of(org_id text) RETURNS boolean
 LANGUAGE sql
 STABLE
@@ -640,7 +665,22 @@ END $$;
 DROP POLICY IF EXISTS organizations_member ON public.organizations;
 CREATE POLICY organizations_member ON public.organizations
   FOR SELECT
-  USING (app_rls_bypass() OR app_organization_member_of(id));
+  USING (
+    app_rls_bypass()
+    OR app_organization_member_of(id)
+    OR app_merchant_organization_visible(id)
+    OR (
+      app_current_user_id() IS NOT NULL
+      AND EXISTS (
+        SELECT 1
+        FROM public.organization_memberships m
+        WHERE m.organization_id = organizations.id
+          AND m.user_id = app_current_user_id()
+          AND m.status = 'ACTIVE'
+          AND m.is_deleted = false
+      )
+    )
+  );
 
 DROP POLICY IF EXISTS organizations_write ON public.organizations;
 CREATE POLICY organizations_write ON public.organizations

@@ -228,7 +228,7 @@ describe("admin proxy server-side refresh", () => {
 			// to re-evaluate hasAdminAccess, and a non-JWT would bounce to login.
 			await vi.advanceTimersByTimeAsync(60_001);
 			const rotated = adminToken(3600);
-			stubRefreshResponse(200, [`adminAccessToken=${rotated}; Path=/; HttpOnly`]);
+			stubRefreshResponse(200, [`adminAccessToken=${rotated}; Path=/; HttpOnly`, `adminRefreshToken=rt-admin-cooldown-rotated; Path=/; HttpOnly`]);
 			const thirdResponse = await runProxy({ pathname: "/", accessToken: adminToken(-60), refreshToken: "rt-admin-cooldown", ...DOC_NAV });
 
 			expect(thirdResponse.status).toBe(200);
@@ -243,7 +243,7 @@ describe("admin proxy server-side refresh", () => {
 		// an admin token — the proxy must gate on the ROTATED session, not the
 		// stale one, and serve the panel instead of bouncing to login.
 		const rotated = adminToken(3600);
-		stubRefreshResponse(200, [`adminAccessToken=${rotated}; Path=/; HttpOnly`]);
+		stubRefreshResponse(200, [`adminAccessToken=${rotated}; Path=/; HttpOnly`, `adminRefreshToken=rt-rotated; Path=/; HttpOnly`]);
 
 		const response = await runProxy({ pathname: "/", accessToken: expiredNonAdminToken(), refreshToken: "rt-old", ...DOC_NAV });
 

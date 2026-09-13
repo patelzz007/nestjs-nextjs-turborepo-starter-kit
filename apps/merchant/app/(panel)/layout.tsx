@@ -1,5 +1,5 @@
 import { MerchantShell } from "@/components/merchant-shell";
-import { getMerchantServerSession } from "@/lib/auth-server";
+import { getMerchantServerSession } from "@/lib/auth/server";
 import { loadMerchantServerContext } from "@/lib/merchant-server-api";
 import * as React from "react";
 

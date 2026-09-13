@@ -1,6 +1,6 @@
 "use client";
 
-import { stubApiMeta } from "@/lib/api-envelope";
+import { stubApiMeta } from "@/lib/format/api-envelope";
 import { apiRouter } from "@workspace/client/lib/api/endpoints";
 import { useAuth } from "@workspace/client/lib/auth";
 import type { RewardResponse } from "@workspace/shared";

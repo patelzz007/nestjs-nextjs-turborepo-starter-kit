@@ -1,6 +1,6 @@
 "use client";
 
-import { useMerchantEnrollmentLock } from "@/lib/merchant-email-enrollment";
+import { useMerchantEnrollmentLock } from "@/lib/auth/enrollment";
 import { Button } from "@workspace/ui/components/form/button";
 import { Mail, ShieldAlert } from "lucide-react";
 import Link from "next/link";

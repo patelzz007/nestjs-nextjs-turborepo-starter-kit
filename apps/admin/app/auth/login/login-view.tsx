@@ -1,6 +1,6 @@
 "use client";
 
-import { LoginForm, type DemoAccount } from "@workspace/client/lib/auth/login-form";
+import { LoginForm, type DemoAccount } from "@workspace/client/lib/auth/forms/login-form";
 import { AuthLayout } from "@workspace/ui/components/layout/auth-layout";
 import Link from "next/link";
 

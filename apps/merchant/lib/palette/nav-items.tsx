@@ -1,6 +1,6 @@
 import { filterMerchantNavItems, MERCHANT_NAV_ITEMS, type MerchantNavItem } from "@/lib/navigation/nav-items";
 import type { MerchantCapability } from "@workspace/shared";
-import type { PaletteSearchableItem } from "@workspace/ui/lib/palette-types";
+import type { PaletteSearchableItem } from "@workspace/ui/lib/palette/types";
 import type { LucideIcon } from "lucide-react";
 import * as React from "react";
 

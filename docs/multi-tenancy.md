@@ -33,7 +33,7 @@ URL orgSlug → OrganizationContext → Cedar → withTenantTransaction → Post
 | Tenant transactions | `apps/api/src/prisma/tenant-transaction.service.ts` |
 | Cedar control plane | `apps/api/src/modules/authorization-cedar/` |
 | Support access (JIT) | `apps/api/src/modules/support-access/` |
-| Shared schemas | `packages/shared/src/schemas/domain/organization.ts` |
+| Shared schemas | `packages/shared/src/schemas/domain/organization/organization.ts` |
 
 ## Local / fresh database
 

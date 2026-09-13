@@ -1,7 +1,7 @@
 "use client";
 
-import { isMerchantEnrollmentAllowedPath, useMerchantEnrollmentLock } from "@/lib/merchant-email-enrollment";
-import { useMerchantCapabilities } from "@/lib/merchant-capabilities";
+import { isMerchantEnrollmentAllowedPath, useMerchantEnrollmentLock } from "@/lib/auth/enrollment";
+import { useMerchantCapabilities } from "@/lib/org/capabilities";
 import { buildMerchantPaletteItems, renderMerchantPaletteIcon } from "@/lib/palette/nav-items";
 import { toastMessage } from "@workspace/ui/components/feedback/toast";
 import { useMerchantCommandPaletteStore } from "@/stores/command-palette-store";

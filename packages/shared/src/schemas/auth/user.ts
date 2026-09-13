@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { CapabilitySlugSchema } from "../domain/capabilities";
+import { CapabilitySlugSchema } from "../domain/rbac/capabilities";
 import { PaginationSchema } from "../api/pagination";
 
 import { EpochMsSchema, BaseResponseSchema } from "../api/common";

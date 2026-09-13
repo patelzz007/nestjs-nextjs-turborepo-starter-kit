@@ -1,12 +1,12 @@
 "use client";
 
 import type { AdminMfaRecoveryRequest, MfaRecoveryRecordStatus } from "@workspace/shared";
-import { readPaginatedNextCursor, readPaginatedTotal, stubPaginatedMeta } from "@/lib/api-envelope";
-import { useManualHybridPagination } from "@/lib/use-manual-cursor-pagination";
-import { createDataTableLabels } from "@/lib/data-table-labels";
-import { buildReadOnlyTableCheckbox } from "@/lib/data-table-capabilities";
-import { DataTableMobileCard } from "@/lib/data-table-mobile-card";
-import { formatDateTimeWithSeconds } from "@/lib/dates";
+import { readPaginatedNextCursor, readPaginatedTotal, stubPaginatedMeta } from "@/lib/format/api-envelope";
+import { useManualHybridPagination } from "@/lib/data-table/use-manual-cursor-pagination";
+import { createDataTableLabels } from "@/lib/data-table/labels";
+import { buildReadOnlyTableCheckbox } from "@/lib/data-table/capabilities";
+import { DataTableMobileCard } from "@/lib/data-table/mobile-card";
+import { formatDateTimeWithSeconds } from "@/lib/format/dates";
 import { MfaRecoveryReviewPanel } from "@/components/security/mfa-recovery-review-panel";
 import { MfaRecoveryStatusBadge } from "@/components/security/mfa-recovery-status-badge";
 import { useAuth } from "@workspace/client/lib/auth";

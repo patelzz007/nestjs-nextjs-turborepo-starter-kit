@@ -4,7 +4,7 @@ import { Badge } from "@workspace/ui/components/feedback/badge";
 import { Checkbox } from "@workspace/ui/components/form/checkbox";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@workspace/ui/components/navigation/collapsible";
 import { ScrollArea } from "@workspace/ui/components/navigation/scroll-area";
-import { cn } from "@workspace/ui/lib/utils";
+import { cn } from "@workspace/ui/lib/core/utils";
 import { cva, type VariantProps } from "class-variance-authority";
 import { ChevronRight, File, Folder, FolderOpen, type LucideIcon } from "lucide-react";
 import * as React from "react";

@@ -1,9 +1,9 @@
 "use client";
 
 import type { ResourceGeneratorListItem } from "@workspace/cli/generator";
-import { createDataTableLabels } from "@/lib/data-table-labels";
-import { buildReadOnlyTableCheckbox } from "@/lib/data-table-capabilities";
-import { DataTableMobileCard } from "@/lib/data-table-mobile-card";
+import { createDataTableLabels } from "@/lib/data-table/labels";
+import { buildReadOnlyTableCheckbox } from "@/lib/data-table/capabilities";
+import { DataTableMobileCard } from "@/lib/data-table/mobile-card";
 import { GeneratorRollbackDialog } from "@/components/generator/generator-rollback-dialog";
 import { DataTable, type Action, type DataTableFeatures } from "@workspace/ui/components/display/data-table";
 import type { ColumnDef } from "@tanstack/react-table";

@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuth } from "@workspace/client/lib/auth";
-import { toAuthUser } from "@/lib/map-auth-user";
+import { toAuthUser } from "@/lib/auth/map-auth-user";
 import { AppShellProfileDropdown } from "@workspace/ui/components/navigation/app-shell-profile-dropdown";
 import { ShellThemeToggle } from "@workspace/ui/components/navigation/shell-theme-toggle";
 import { Button } from "@workspace/ui/components/form/button";

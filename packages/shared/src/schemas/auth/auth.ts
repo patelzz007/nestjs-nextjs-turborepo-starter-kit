@@ -1,7 +1,7 @@
 import { z } from "zod";
-
+import { EnrollmentReasonSchema, SessionScopeSchema } from "./enrollment";
 import { EpochMsSchema } from "../api/common";
-import { VerifyEmailTokenParamSchema } from "../domain/param-schemas";
+import { VerifyEmailTokenParamSchema } from "../domain/platform/param-schemas";
 import { UserResponseSchema } from "./user";
 
 // ── Password Validation ──────────────────────────────────────────────────
@@ -119,8 +119,6 @@ export const LoginServiceResponseSchema = z
 	.strict();
 
 export type LoginServiceResponse = z.output<typeof LoginServiceResponseSchema>;
-
-import { EnrollmentReasonSchema, SessionScopeSchema } from "./enrollment";
 
 export { EnrollmentReasonSchema, SessionScopeSchema };
 export type { EnrollmentReason, SessionScope } from "./enrollment";

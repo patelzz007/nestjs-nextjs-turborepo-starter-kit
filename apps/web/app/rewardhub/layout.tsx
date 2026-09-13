@@ -1,6 +1,6 @@
-import { RewardHubShell } from "@/components/rewardhub/reward-hub-shell";
-import { getServerUser, hasServerSession } from "@/lib/auth-server";
-import { loadWebInitialSessionPermissions } from "@/lib/web-navigation-server";
+import { RewardHubShell } from "@/components/rewardhub/shared/shell";
+import { getServerUser, hasServerSession } from "@/lib/auth/server";
+import { loadWebInitialSessionPermissions } from "@/lib/navigation/server";
 import * as React from "react";
 
 export const dynamic = "force-dynamic";

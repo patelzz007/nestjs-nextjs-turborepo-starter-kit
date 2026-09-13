@@ -4,7 +4,7 @@ import * as React from "react";
 import dynamic from "next/dynamic";
 
 import { Button } from "@workspace/ui/components/form/button";
-import { cn } from "@workspace/ui/lib/utils";
+import { cn } from "@workspace/ui/lib/core/utils";
 
 import type { AccordionDemoItem } from "@/components/showcase/accordion-showcase";
 import { ChartSkeleton } from "@/components/dashboard/chart-skeleton";

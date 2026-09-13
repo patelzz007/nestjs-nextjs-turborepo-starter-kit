@@ -1,4 +1,4 @@
-import { SecuritySettingsPanel } from "@workspace/client/lib/auth/security-settings-panel";
+import { SecuritySettingsPanel } from "@workspace/client/lib/auth/mfa/security-settings-panel";
 
 export default function SecuritySettingsPage(): React.JSX.Element {
 	return (

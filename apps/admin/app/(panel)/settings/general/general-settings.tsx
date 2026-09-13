@@ -1,6 +1,6 @@
 "use client";
 
-import { useAuthUser } from "@workspace/client/lib/auth/auth-store";
+import { useAuthUser } from "@workspace/client/lib/auth/session/store";
 import { Button } from "@workspace/ui/components/form/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
 import { Input } from "@workspace/ui/components/form/input";

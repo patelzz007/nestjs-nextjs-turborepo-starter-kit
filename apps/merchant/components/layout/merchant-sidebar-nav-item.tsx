@@ -5,8 +5,8 @@ import { MERCHANT_MENU_ICON_MAP } from "@/lib/navigation/menu-icons";
 import type { CompiledSidebarMenuItem } from "@/lib/navigation/sidebar";
 import { Button } from "@workspace/ui/components/form/button";
 import { SidebarMenuBadge, SidebarMenuItem } from "@workspace/ui/components/navigation/sidebar";
-import { highlightText } from "@workspace/ui/lib/highlight-text";
-import { panelSidebarNavChevronVariants, panelSidebarNavIconVariants, panelSidebarNavItemVariants } from "@workspace/ui/lib/panel-sidebar-nav-variants";
+import { highlightText } from "@workspace/ui/lib/core/highlight-text";
+import { panelSidebarNavChevronVariants, panelSidebarNavIconVariants, panelSidebarNavItemVariants } from "@workspace/ui/lib/sidebar/panel-nav-variants";
 import { AlertCircle, ChevronRight } from "lucide-react";
 import * as React from "react";
 

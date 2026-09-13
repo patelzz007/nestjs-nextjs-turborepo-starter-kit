@@ -1,7 +1,7 @@
 import { Slider as SliderPrimitive } from "@base-ui/react/slider";
-import { resolveFieldState } from "@workspace/ui/lib/field-state";
-import { sliderVariants } from "@workspace/ui/lib/field-variants";
-import { cn } from "@workspace/ui/lib/utils";
+import { resolveFieldState } from "@workspace/ui/lib/form/field-state";
+import { sliderVariants } from "@workspace/ui/lib/form/field-variants";
+import { cn } from "@workspace/ui/lib/core/utils";
 import type { VariantProps } from "class-variance-authority";
 import * as React from "react";
 

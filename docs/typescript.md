@@ -479,7 +479,7 @@ this.impersonationEvents.emitAction(
 `ImpersonationEventsService.emitAction` accepts `ImpersonationActionEvent` (the
 type). `.parse()` catches typos, wrong enums, or extra keys before any subscriber
 (Telescope job adapter) sees the payload. Schemas are defined in
-`packages/shared/src/schemas/domain/events.ts`.
+`packages/shared/src/schemas/domain/platform/events.ts`.
 
 **`schemas/runtime/`** — cross-cutting parse helpers used by the API (not HTTP
 contract shapes): `JsonValue` / `JsonValueInput`, `StringRecordSchema`,

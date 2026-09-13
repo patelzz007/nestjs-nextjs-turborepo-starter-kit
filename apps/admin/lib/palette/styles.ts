@@ -1,1 +1,1 @@
-export { getDefaultIconColor, getItemColor, getSectionBadgeColor } from "@workspace/ui/lib/palette-styles";
+export { getDefaultIconColor, getItemColor, getSectionBadgeColor } from "@workspace/ui/lib/palette/styles";

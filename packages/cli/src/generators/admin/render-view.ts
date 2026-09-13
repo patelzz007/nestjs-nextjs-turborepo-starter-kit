@@ -151,7 +151,7 @@ import {
 	type ${model},
 	type ${model}ListSortBy,
 } from "@workspace/shared/schemas/domain/${slug}.generated";
-import type { DataTableBulkSelectionContext } from "@workspace/ui/lib/data-table-checkbox";
+import type { DataTableBulkSelectionContext } from "@workspace/ui/lib/data-table/checkbox";
 
 function resolveListSortBy(columnId: string | undefined): ${model}ListSortBy | undefined {
 	if (columnId === undefined) {

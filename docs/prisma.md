@@ -138,7 +138,7 @@ pnpm db:generate
 1. **`schema.prisma`** — add the column, relation, or index.
 2. **`pnpm db:migrate`** (from `apps/api`) — writes `migrations/<timestamp>_*/migration.sql`, applies it, runs `prisma generate`.
 3. **`npx prisma generate`** is already part of `db:migrate`. Run `pnpm db:generate` only if you pulled migrations and need the client without creating a new one.
-4. **`packages/shared` Zod** — request/response/query schemas. Types are `z.output<typeof Schema>` (no hand-written twins). Runtime helpers live under `schemas/runtime/`; internal events under `schemas/domain/events.ts`.
+4. **`packages/shared` Zod** — request/response/query schemas. Types are `z.output<typeof Schema>` (no hand-written twins). Runtime helpers live under `schemas/runtime/`; internal events under `schemas/domain/platform/events.ts`.
 5. **Nest HTTP boundary** — `ZodValidationPipe(apiContract.<domain>.<leaf>.input)` (or the same shared schema). Swagger samples come from `createZodDto` / `createWrappedDto` + `@ApiBody` / `@ApiOkResponse`, not a second DTO shape.
 6. **Application types** — services, templates, and adapters import `X` (type) from `@workspace/shared`; `XSchema` only where `.parse()` / `safeParse()` runs. See `docs/typescript.md` §8.
 7. **RLS** — if the table is tenant-scoped, add `ENABLE`/`FORCE ROW LEVEL SECURITY` + policies in SQL (Prisma PSL cannot emit them). See §10.
@@ -523,7 +523,7 @@ Handlers declare required action+resource with `@RequirePermission("READ", "USER
 `AuthorizationGuard` reads route metadata; `MANAGE` on the same resource grants every action;
 `isSuperAdmin` bypasses. Effective permissions are resolved at guard time via
 `AuthorizationCheckerService` (cached) — **not** from JWT claims. Seed matrix:
-`packages/shared/src/schemas/domain/permissions-registry.ts` (synced to DB on startup).
+`packages/shared/src/schemas/domain/rbac/rbac/permissions-registry.ts` (synced to DB on startup).
 
 **Policies** (also noted as `/// RLS:` on each model in `schema.prisma` — Prisma cannot emit
 `ENABLE ROW LEVEL SECURITY` from PSL, so the SQL lives in

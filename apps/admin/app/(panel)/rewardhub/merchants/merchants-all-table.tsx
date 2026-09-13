@@ -1,12 +1,12 @@
 "use client";
 
-import { invalidateSessionAuth } from "@workspace/client/lib/auth/invalidate-session-auth";
-import { createDataTableLabels } from "@/lib/data-table-labels";
-import { buildReadOnlyTableCheckbox } from "@/lib/data-table-capabilities";
-import { DataTableMobileCard } from "@/lib/data-table-mobile-card";
-import { readPaginatedNextCursor, readPaginatedTotal, stubPaginatedMeta } from "@/lib/api-envelope";
+import { invalidateSessionAuth } from "@workspace/client/lib/auth/session/invalidate-auth";
+import { createDataTableLabels } from "@/lib/data-table/labels";
+import { buildReadOnlyTableCheckbox } from "@/lib/data-table/capabilities";
+import { DataTableMobileCard } from "@/lib/data-table/mobile-card";
+import { readPaginatedNextCursor, readPaginatedTotal, stubPaginatedMeta } from "@/lib/format/api-envelope";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
-import { useManualHybridPagination } from "@/lib/use-manual-cursor-pagination";
+import { useManualHybridPagination } from "@/lib/data-table/use-manual-cursor-pagination";
 import { DataTableSearchToolbar } from "@/components/common/data-table-search-toolbar";
 import { useAuth } from "@workspace/client/lib/auth";
 import type { MerchantOrgResponse } from "@workspace/shared";

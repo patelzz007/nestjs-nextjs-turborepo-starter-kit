@@ -20,11 +20,13 @@ export class MerchantMemberRepository {
 		merchantOrg: {
 			select: {
 				id: true,
+				organizationId: true,
 				businessName: true,
 				city: true,
 				kybStatus: true,
 				status: true,
 				isDeleted: true,
+				organization: { select: { id: true, slug: true } },
 			},
 		},
 	} as const satisfies Prisma.MerchantMemberInclude;
@@ -45,7 +47,9 @@ export class MerchantMemberRepository {
 
 	public async listWithOrgForUser(userId: string): Promise<
 		(MerchantMember & {
-			merchantOrg: Pick<MerchantOrg, "id" | "businessName" | "city" | "kybStatus" | "status" | "isDeleted">;
+			merchantOrg: Pick<MerchantOrg, "id" | "organizationId" | "businessName" | "city" | "kybStatus" | "status" | "isDeleted"> & {
+				organization: { id: string; slug: string } | null;
+			};
 		})[]
 	> {
 		return this.prisma.merchantMember.findMany({

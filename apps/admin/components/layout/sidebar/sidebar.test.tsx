@@ -15,8 +15,8 @@ import type { SidebarMenuData } from "@/lib/navigation/sidebar";
 import { AdminSidebarPanel } from "@/components/layout/sidebar/sidebar";
 import { useRouteExpandedItems } from "@/components/layout/use-route-expanded-items";
 import { SidebarProvider } from "@workspace/ui/components/navigation/sidebar";
-import { DEFAULT_SIDEBAR_LABELS } from "@workspace/ui/lib/sidebar-labels";
-import { createNoopSidebarStorage } from "@workspace/ui/lib/sidebar-storage";
+import { DEFAULT_SIDEBAR_LABELS } from "@workspace/ui/lib/sidebar/labels";
+import { createNoopSidebarStorage } from "@workspace/ui/lib/sidebar/storage";
 
 const { pushMock, pathnameMock, setOpenMobileMock } = vi.hoisted(() => ({
 	pushMock: vi.fn<(href: string) => void>(),

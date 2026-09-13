@@ -1,7 +1,7 @@
 "use client";
 
 import { MerchantDashboardStatCard } from "@/components/dashboard/merchant-dashboard-stat-card";
-import { useMerchantCapabilities } from "@/lib/merchant-capabilities";
+import { useMerchantCapabilities } from "@/lib/org/capabilities";
 import { stubApiMeta } from "@/lib/api-envelope";
 import { useAuth } from "@workspace/client/lib/auth";
 import type { AnalyticsMetric, MerchantAnalyticsResponse, MerchantCapability, RewardResponse } from "@workspace/shared";
@@ -9,7 +9,7 @@ import { Badge } from "@workspace/ui/components/feedback/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
 import { Button, buttonVariants } from "@workspace/ui/components/form/button";
 import { Skeleton } from "@workspace/ui/components/feedback/skeleton";
-import { cn } from "@workspace/ui/lib/utils";
+import { cn } from "@workspace/ui/lib/core/utils";
 import { ArrowRight, BarChart3, CheckCircle, Eye, Gift, Plus, ScanLine, Tag, TrendingUp, Users, Zap, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";

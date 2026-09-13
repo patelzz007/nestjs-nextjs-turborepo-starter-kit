@@ -70,13 +70,16 @@
 				"AWS_SECRET_ACCESS_KEY",
 				"SHUTDOWN_TIMEOUT_MS",
 				"SWAGGER_ENABLED",
+				"TENANT_ENCRYPTION_MASTER_KEY",
+				"TENANT_JOB_HMAC_SECRET",
 				"TRUST_PROXY",
 				"WEBHOOK_RATE_LIMIT_PER_MINUTE",
 				"WEBHOOK_URL"
 			]
 		},
 		"lint": {
-			"dependsOn": ["^lint"]
+			"dependsOn": ["^lint"],
+			"env": ["TENANT_ENCRYPTION_MASTER_KEY", "TENANT_JOB_HMAC_SECRET"]
 		},
 		"format": {
 			"dependsOn": ["^format"],

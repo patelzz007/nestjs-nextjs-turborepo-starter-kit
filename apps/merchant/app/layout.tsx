@@ -2,9 +2,9 @@ import "@workspace/ui/globals.css";
 import "./merchant-theme.css";
 
 import { QueryProvider } from "@workspace/client/lib/api/query-provider";
-import { MerchantRootProvider } from "@/lib/merchant-root-provider";
+import { MerchantRootProvider } from "@/lib/session/root-provider";
 import { readMerchantOrgIdCookie } from "@/lib/merchant-server-api";
-import { cn } from "@workspace/ui/lib/utils";
+import { cn } from "@workspace/ui/lib/core/utils";
 import { AppDocumentShell } from "@workspace/ui/components/app-document-shell";
 import { ThemeProvider } from "@workspace/ui/components/theme-provider";
 import { Toaster } from "@workspace/ui/components/feedback/toast";

@@ -23,9 +23,9 @@ import { AdminMfaRecoveryListQuerySchema, AdminReviewMfaRecoverySchema, Initiate
 import { ValidateResetTokenSchema, VerifyLoginSchema } from "../schemas/auth/login-verification";
 import { EnableTwoFactorSchema, LoginTwoFactorSchema, RotateTwoFactorSchema, VerifyBackupCodeLoginSchema, VerifyBackupCodeSchema } from "../schemas/auth/two-factor";
 import { AdminUserListQuerySchema } from "../schemas/auth/user";
-import { UuidParamSchema } from "../schemas/domain/param-schemas";
+import { UuidParamSchema } from "../schemas/domain/platform/param-schemas";
 import { EmailLogListQuerySchema } from "../schemas/email/email";
-import { CapabilityCatalogQuerySchema } from "../schemas/domain/capabilities";
+import { CapabilityCatalogQuerySchema } from "../schemas/domain/rbac/capabilities";
 import {
 	CityListQuerySchema,
 	CountryListQuerySchema,
@@ -48,8 +48,8 @@ import {
 	UpdateRegionSchema,
 	UpdateStateSchema,
 	UpdateSubregionSchema,
-} from "../schemas/domain/geo";
-import { AdminCreateOrganizationInviteSchema, OrganizationAccessRequestCreateSchema, OrganizationSlugParamSchema } from "../schemas/domain/organization";
+} from "../schemas/domain/platform/geo";
+import { AdminCreateOrganizationInviteSchema, OrganizationAccessRequestCreateSchema, OrganizationSlugParamSchema } from "../schemas/domain/organization/organization";
 import {
 	AcceptRewardLegalSchema,
 	AdminCreateMerchantInviteSchema,
@@ -76,20 +76,26 @@ import {
 	RewardListQuerySchema,
 	RewardNotificationListQuerySchema,
 	MarkRewardNotificationsReadSchema,
-} from "../schemas/domain/rewards";
-import { RewardsAnalyticsQuerySchema } from "../schemas/domain/rewards-analytics";
-import { MerchantRoleCapabilitiesPathInputSchema, SyncMerchantRoleCapabilitiesInputSchema } from "../schemas/domain/merchant-role-capabilities";
-import { AssignPermissionToUserSchema, AssignRoleToUserSchema, CheckPermissionSchema, SyncUserPermissionsSchema, SyncUserRolesSchema } from "../schemas/domain/rbac";
+} from "../schemas/domain/rewards/rewards";
+import { RewardsAnalyticsQuerySchema } from "../schemas/domain/rewards/analytics";
+import { MerchantRoleCapabilitiesPathInputSchema, SyncMerchantRoleCapabilitiesInputSchema } from "../schemas/domain/rewards/merchant-role-capabilities";
+import { AssignPermissionToUserSchema, AssignRoleToUserSchema, CheckPermissionSchema, SyncUserPermissionsSchema, SyncUserRolesSchema } from "../schemas/domain/rbac/rbac";
 import {
 	BulkCreateSampleCategorySchema,
 	CreateSampleCategorySchema,
 	SampleCategoryIdParamSchema,
 	SampleCategoryListQuerySchema,
 	UpdateSampleCategorySchema,
-} from "../schemas/domain/sample-category.generated";
-import { BulkCreateProductSchema, CreateProductSchema, ProductIdParamSchema, ProductListQuerySchema, UpdateProductSchema } from "../schemas/domain/product.generated";
+} from "../schemas/domain/generated/sample-category.generated";
+import {
+	BulkCreateProductSchema,
+	CreateProductSchema,
+	ProductIdParamSchema,
+	ProductListQuerySchema,
+	UpdateProductSchema,
+} from "../schemas/domain/generated/product.generated";
 import { BulkDeleteIdsSchema } from "../schemas/api/bulk-mutation";
-import { CompleteFileUploadSchema, CreateFileUploadUrlSchema, FileDownloadDispositionSchema } from "../schemas/domain/storage";
+import { CompleteFileUploadSchema, CreateFileUploadUrlSchema, FileDownloadDispositionSchema } from "../schemas/domain/platform/storage";
 import type { ApiVersion } from "./versioning";
 
 // ── JSON-safe value types (shared by the contract and the client pipeline) ─

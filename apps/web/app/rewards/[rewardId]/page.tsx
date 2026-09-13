@@ -1,8 +1,8 @@
 import { LandingShell } from "@/components/landing/landing-shell";
-import { RewardDetailView } from "@/components/rewardhub/reward-detail-view";
+import { RewardDetailView } from "@/components/rewardhub/detail/view";
 import { createWebServerCaller } from "@/lib/web-server-api";
 import { buttonVariants } from "@workspace/ui/components/form/button";
-import { cn } from "@workspace/ui/lib/utils";
+import { cn } from "@workspace/ui/lib/core/utils";
 import type { RewardResponse } from "@workspace/shared";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";

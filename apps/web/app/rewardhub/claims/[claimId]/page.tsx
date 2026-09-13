@@ -1,4 +1,4 @@
-import { ClaimQrView } from "@/components/rewardhub/claim-qr-view";
+import { ClaimQrView } from "@/components/rewardhub/claims/qr-view";
 import { createWebServerCaller } from "@/lib/web-server-api";
 import type { RewardClaimQrResponse } from "@workspace/shared";
 import * as React from "react";

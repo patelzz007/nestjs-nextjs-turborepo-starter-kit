@@ -8,6 +8,7 @@ import { CorrelationContextModule } from "./common/context/correlation-context.m
 import { CorrelationContextInterceptor } from "./common/context/correlation-context.interceptor";
 import { CorrelationIdMiddleware } from "./common/middleware/correlation-id.middleware";
 import { ConfigModule } from "./config/config.module";
+import { JobsModule } from "./infrastructure/jobs/jobs.module";
 import { PlatformEventsModule } from "./infrastructure/outbox/platform-events.module";
 import { OutboxModule } from "./infrastructure/outbox/outbox.module";
 import { AppMessagingModule } from "./messaging/app-messaging.module";
@@ -66,6 +67,7 @@ if (observeEnabled && observeAppKey !== undefined && observeAppSecret !== undefi
 		CorrelationContextModule,
 		AppMessagingModule.register(),
 		PrismaModule,
+		JobsModule,
 		OutboxModule,
 		PlatformEventsModule,
 		AuthorizationModule,

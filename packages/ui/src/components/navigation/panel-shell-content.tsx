@@ -1,7 +1,7 @@
 "use client";
 
 import { useSidebar } from "@workspace/ui/components/navigation/sidebar";
-import { cn } from "@workspace/ui/lib/utils";
+import { cn } from "@workspace/ui/lib/core/utils";
 import * as React from "react";
 
 export interface PanelShellContentProps {

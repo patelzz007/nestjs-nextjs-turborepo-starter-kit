@@ -1,6 +1,6 @@
 import type { RewardStatus } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/feedback/badge";
-import { cn } from "@workspace/ui/lib/utils";
+import { cn } from "@workspace/ui/lib/core/utils";
 import * as React from "react";
 
 const STATUS_LABELS: Record<RewardStatus, string> = {

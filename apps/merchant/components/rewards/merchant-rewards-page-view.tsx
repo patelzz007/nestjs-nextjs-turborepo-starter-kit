@@ -4,12 +4,12 @@ import { MerchantRewardsCatalog } from "@/components/rewards/merchant-rewards-ca
 import { MerchantRewardsSummaryStrip } from "@/components/rewards/merchant-rewards-summary-strip";
 import { MerchantEmptyState } from "@/components/merchant-ui/empty-state";
 import { MerchantPageHeader } from "@/components/merchant-ui/page-header";
-import { useMerchantCapabilities } from "@/lib/merchant-capabilities";
+import { useMerchantCapabilities } from "@/lib/org/capabilities";
 import { stubApiMeta } from "@/lib/api-envelope";
 import { useAuth } from "@workspace/client/lib/auth";
 import type { RewardResponse, RewardStatus } from "@workspace/shared";
 import { buttonVariants } from "@workspace/ui/components/form/button";
-import { cn } from "@workspace/ui/lib/utils";
+import { cn } from "@workspace/ui/lib/core/utils";
 import { Gift, Plus, Sparkles, Ticket } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";

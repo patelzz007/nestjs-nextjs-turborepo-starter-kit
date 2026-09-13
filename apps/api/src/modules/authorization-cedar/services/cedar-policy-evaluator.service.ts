@@ -20,7 +20,7 @@ interface ParsedPolicyRule {
 
 @Injectable()
 export class CedarPolicyEvaluatorService {
-	private readonly bundleCache: Map<string, { version: number; rules: ParsedPolicyRule[] }> = new Map();
+	private readonly bundleCache = new Map<string, { version: number; rules: ParsedPolicyRule[] }>();
 
 	public constructor(private readonly tenantTx: TenantTransactionService) {}
 

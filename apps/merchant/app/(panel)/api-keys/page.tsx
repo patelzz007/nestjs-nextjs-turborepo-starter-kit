@@ -1,6 +1,6 @@
 import { MerchantApiKeysPageView } from "@/components/api-keys/merchant-api-keys-page-view";
 import { loadMerchantServerContext } from "@/lib/merchant-server-api";
-import { serverHasMerchantCapability } from "@/lib/merchant-server-capabilities";
+import { serverHasMerchantCapability } from "@/lib/session/server-capabilities";
 import type { MerchantApiKeySummary } from "@workspace/shared";
 import * as React from "react";
 

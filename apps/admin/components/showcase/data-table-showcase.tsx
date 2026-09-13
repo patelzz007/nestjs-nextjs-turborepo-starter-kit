@@ -17,12 +17,12 @@
 import { toastMessage } from "@workspace/ui/components/feedback/toast";
 import * as React from "react";
 import { useCallback, useMemo, useState } from "react";
-import type { DataTableBulkSelectionContext } from "@workspace/ui/lib/data-table-checkbox";
+import type { DataTableBulkSelectionContext } from "@workspace/ui/lib/data-table/checkbox";
 import { z } from "zod";
 
 import { Badge } from "@workspace/ui/components/feedback/badge";
-import { createDataTableLabels, type DataTableLabels } from "@/lib/data-table-labels";
-import { DataTableMobileCard } from "@/lib/data-table-mobile-card";
+import { createDataTableLabels, type DataTableLabels } from "@/lib/data-table/labels";
+import { DataTableMobileCard } from "@/lib/data-table/mobile-card";
 import { DataTable, type Action, type DataTableCheckboxConfig, type DataTableFeatures, type Filter } from "@workspace/ui/components/display/data-table";
 import type { ColumnDef } from "@tanstack/react-table";
 import { CircleCheck, CircleDashed, Copy, Eye, Pencil, Trash2 } from "lucide-react";

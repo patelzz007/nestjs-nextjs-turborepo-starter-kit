@@ -2,12 +2,12 @@
 
 import type { AdminUserDetail } from "@workspace/shared";
 import { z } from "zod";
-import { createDataTableLabels } from "@/lib/data-table-labels";
-import { buildReadOnlyTableCheckbox } from "@/lib/data-table-capabilities";
-import { DataTableMobileCard } from "@/lib/data-table-mobile-card";
-import { readPaginatedNextCursor, readPaginatedTotal, stubPaginatedMeta } from "@/lib/api-envelope";
+import { createDataTableLabels } from "@/lib/data-table/labels";
+import { buildReadOnlyTableCheckbox } from "@/lib/data-table/capabilities";
+import { DataTableMobileCard } from "@/lib/data-table/mobile-card";
+import { readPaginatedNextCursor, readPaginatedTotal, stubPaginatedMeta } from "@/lib/format/api-envelope";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
-import { useManualHybridPagination } from "@/lib/use-manual-cursor-pagination";
+import { useManualHybridPagination } from "@/lib/data-table/use-manual-cursor-pagination";
 import { DataTableSearchToolbar } from "@/components/common/data-table-search-toolbar";
 import { useAuth } from "@workspace/client/lib/auth";
 import { Badge } from "@workspace/ui/components/feedback/badge";

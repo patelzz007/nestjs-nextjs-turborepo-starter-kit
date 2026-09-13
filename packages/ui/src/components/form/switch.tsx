@@ -1,9 +1,9 @@
 "use client";
 
 import { Switch as SwitchPrimitive } from "@base-ui/react/switch";
-import { resolveFieldState } from "@workspace/ui/lib/field-state";
-import { switchVariants } from "@workspace/ui/lib/field-variants";
-import { cn } from "@workspace/ui/lib/utils";
+import { resolveFieldState } from "@workspace/ui/lib/form/field-state";
+import { switchVariants } from "@workspace/ui/lib/form/field-variants";
+import { cn } from "@workspace/ui/lib/core/utils";
 import type { VariantProps } from "class-variance-authority";
 import * as React from "react";
 

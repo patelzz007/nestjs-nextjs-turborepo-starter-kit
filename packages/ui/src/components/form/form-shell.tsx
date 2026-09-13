@@ -7,7 +7,7 @@
 
 import { forwardRef, type JSX, type ReactNode } from "react";
 
-import { cn } from "@workspace/ui/lib/utils";
+import { cn } from "@workspace/ui/lib/core/utils";
 
 import { Button } from "./button";
 

@@ -204,7 +204,7 @@ export async function generateResource(
 
 		if (ir.scope.shared) {
 			patchedFiles.push(...listSharedPatchRelativePaths(ir, modulesManifest));
-			await patchPermissionEnum(path.join(config.sharedDir, "src/schemas/domain/enums.ts"), ir);
+			await patchPermissionEnum(path.join(config.sharedDir, "src/schemas/domain/platform/enums.ts"), ir);
 			await patchApiRoutes(path.join(config.sharedDir, "src/api-routes.ts"), ir);
 			await patchContractsIndex(path.join(config.sharedDir, "src/contracts/index.ts"), ir);
 			await patchSchemasIndex(path.join(config.sharedDir, "src/schemas/index.ts"), ir);

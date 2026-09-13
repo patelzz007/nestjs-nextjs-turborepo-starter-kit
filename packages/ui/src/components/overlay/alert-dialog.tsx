@@ -30,7 +30,7 @@ import { Button } from "@workspace/ui/components/form/button";
 import { Checkbox } from "@workspace/ui/components/form/checkbox";
 import { Kbd } from "@workspace/ui/components/display/kbd";
 import { Textarea } from "@workspace/ui/components/form/textarea";
-import { cn } from "@workspace/ui/lib/utils";
+import { cn } from "@workspace/ui/lib/core/utils";
 import { Loader2Icon } from "lucide-react";
 import * as React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";

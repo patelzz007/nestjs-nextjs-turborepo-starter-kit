@@ -10,7 +10,7 @@ import { highlightText } from "@/components/common/highlight";
 import { SidebarNavCollapse } from "@/components/layout/sidebar/sidebar-nav-collapse";
 import type { CompiledSidebarMenuItem } from "@/lib/navigation/sidebar";
 import type { AdminSidebarLabels } from "@/lib/sidebar-labels";
-import { adminSidebarNavChevronVariants, adminSidebarNavIconVariants, adminSidebarNavItemVariants } from "@workspace/ui/lib/admin-sidebar-nav-variants";
+import { adminSidebarNavChevronVariants, adminSidebarNavIconVariants, adminSidebarNavItemVariants } from "@workspace/ui/lib/sidebar/admin-nav-variants";
 
 export interface SidebarNavItemProps {
 	readonly item: CompiledSidebarMenuItem;

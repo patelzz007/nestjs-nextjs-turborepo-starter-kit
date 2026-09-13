@@ -62,7 +62,7 @@ export class TenantEncryptionService {
 				}),
 		);
 
-		this.logger.log(`Created tenant DEK v${row.keyVersion} for org ${organizationId}`);
+		this.logger.log(`Created tenant DEK v${String(row.keyVersion)} for org ${organizationId}`);
 		return row.keyVersion;
 	}
 
@@ -73,7 +73,7 @@ export class TenantEncryptionService {
 		const cipher = createCipheriv(ALGORITHM, dataKey, iv);
 		const encrypted = Buffer.concat([cipher.update(plaintext, "utf8"), cipher.final()]);
 		const tag = cipher.getAuthTag();
-		return `${keyVersion}:${iv.toString("base64")}:${tag.toString("base64")}:${encrypted.toString("base64")}`;
+		return `${String(keyVersion)}:${iv.toString("base64")}:${tag.toString("base64")}:${encrypted.toString("base64")}`;
 	}
 
 	public async decrypt(organizationId: string, payload: string, actorUserId: string | null, purpose: string): Promise<string> {
@@ -116,7 +116,7 @@ export class TenantEncryptionService {
 			{
 				operation: "organization.provision",
 				reason: "Unwrap tenant DEK",
-				correlationId: `dek-unwrap:${organizationId}:${keyVersion}`,
+				correlationId: `dek-unwrap:${organizationId}:${String(keyVersion)}`,
 				actorUserId,
 			},
 			async (tx) =>
@@ -125,7 +125,7 @@ export class TenantEncryptionService {
 				}),
 		);
 		if (row === null) {
-			throw new Error(`Tenant encryption key not found: ${organizationId} v${keyVersion}`);
+			throw new Error(`Tenant encryption key not found: ${organizationId} v${String(keyVersion)}`);
 		}
 		return this.unwrapWrappedKey(row.wrappedKey);
 	}

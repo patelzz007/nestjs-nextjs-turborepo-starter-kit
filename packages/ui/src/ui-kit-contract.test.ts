@@ -50,15 +50,15 @@ describe("UI kit forwardRef contract (rule 20)", () => {
 		"components/navigation/tabs.tsx",
 		"components/navigation/scroll-area.tsx",
 		"components/navigation/pagination.tsx",
-		"components/navigation/sidebar.tsx",
+		"components/navigation/sidebar-parts.tsx",
 		"components/form/lockout-countdown.tsx",
 		"components/layout/auth-layout.tsx",
 		"components/feedback/message.tsx",
 		"components/feedback/not-found-content.tsx",
 		"components/form/button.tsx",
 		"components/form/input.tsx",
-		"components/form/select.tsx",
-		"components/form/combobox.tsx",
+		"components/form/select-parts.tsx",
+		"components/form/combobox-parts.tsx",
 		"components/overlay/popover.tsx",
 		"components/overlay/sheet.tsx",
 		"components/overlay/command.tsx",
@@ -78,15 +78,15 @@ describe("UI kit forwardRef contract (rule 20)", () => {
 
 describe("UI kit CVA state contract (rule 23)", () => {
 	const cvaStateSources: readonly string[] = [
-		"lib/field-variants.ts",
+		"lib/form/field-variants.ts",
 		"components/form/button.tsx",
 		"components/form/input.tsx",
 		"components/form/textarea.tsx",
 		"components/form/checkbox.tsx",
 		"components/form/switch.tsx",
 		"components/form/slider.tsx",
-		"components/form/select.tsx",
-		"components/form/combobox.tsx",
+		"components/form/select-parts.tsx",
+		"components/form/combobox-parts.tsx",
 		"components/feedback/spinner.tsx",
 	];
 
@@ -110,14 +110,14 @@ describe("UI kit CVA state contract (rule 23)", () => {
 
 describe("UI kit boundary types (rules 1–3)", () => {
 	const boundarySources: readonly string[] = [
-		"lib/field-state.ts",
-		"lib/data-table-prefs.ts",
-		"lib/data-table-labels.ts",
-		"lib/data-table-storage.ts",
-		"lib/data-table-export.ts",
-		"lib/sidebar-labels.ts",
-		"lib/sidebar-storage.ts",
-		"lib/alert-dialog-labels.ts",
+		"lib/form/field-state.ts",
+		"lib/data-table/prefs.ts",
+		"lib/data-table/labels.ts",
+		"lib/data-table/storage.ts",
+		"lib/data-table/export.ts",
+		"lib/sidebar/labels.ts",
+		"lib/sidebar/storage.ts",
+		"lib/form/alert-dialog-labels.ts",
 		"components/overlay/alert-dialog.tsx",
 		"components/form/combobox.tsx",
 		"components/display/data-table.tsx",
@@ -143,28 +143,29 @@ describe("UI kit inline prop contract (rule 16)", () => {
 
 describe("UI kit sidebar contract (rules 9–11, 20, 22, 23)", () => {
 	it("requires labels and avoids hardcoded toggle copy", (): void => {
-		const source = readComponentSource("components/navigation/sidebar.tsx");
+		const source = readComponentSource("components/navigation/sidebar-context.tsx");
 		expect(source.includes("labels: SidebarLabels"), "SidebarProvider must require labels").toBe(true);
 		expect(source.includes("Toggle Sidebar"), "sidebar must not hardcode toggle label").toBe(false);
 	});
 
 	it("uses z-sidebar tokens instead of raw z-10/z-20", (): void => {
-		const source = readComponentSource("components/navigation/sidebar.tsx");
+		const source = readComponentSource("components/navigation/sidebar-parts.tsx");
 		expect(source.includes("z-10"), "sidebar must not use z-10").toBe(false);
 		expect(source.includes("z-20"), "sidebar must not use z-20").toBe(false);
 		expect(source.includes("z-sidebar"), "sidebar must use z-sidebar token").toBe(true);
 	});
 
 	it("forwards refs on layout controls", (): void => {
-		const source = readComponentSource("components/navigation/sidebar.tsx");
-		expect(source.includes("badges: Readonly<Record<string, string | number>>"), "SidebarContext must expose badges map").toBe(true);
-		expect(source.includes("itemId?: string"), "SidebarMenuBadge must support itemId from context").toBe(true);
-		expect(source.includes("SidebarTrigger = React.forwardRef"), "SidebarTrigger must forwardRef").toBe(true);
-		expect(source.includes("SidebarInset = React.forwardRef"), "SidebarInset must forwardRef").toBe(true);
+		const contextSource = readComponentSource("components/navigation/sidebar-context.tsx");
+		const partsSource = readComponentSource("components/navigation/sidebar-parts.tsx");
+		expect(contextSource.includes("badges: Readonly<Record<string, string | number>>"), "SidebarContext must expose badges map").toBe(true);
+		expect(partsSource.includes("itemId?: string"), "SidebarMenuBadge must support itemId from context").toBe(true);
+		expect(partsSource.includes("SidebarTrigger = React.forwardRef"), "SidebarTrigger must forwardRef").toBe(true);
+		expect(partsSource.includes("SidebarInset = React.forwardRef"), "SidebarInset must forwardRef").toBe(true);
 	});
 
 	it("defines CVA state on menu button variants", (): void => {
-		const source = readLibSource("lib/sidebar-variants.ts");
+		const source = readLibSource("lib/sidebar/variants.ts");
 		expect(source.includes("state:"), "sidebar-variants must define state").toBe(true);
 	});
 });

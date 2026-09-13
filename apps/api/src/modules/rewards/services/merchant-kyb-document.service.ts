@@ -73,7 +73,7 @@ export class MerchantKybDocumentService {
 		const submissionId = randomUUID();
 		for (const fileId of fileIds) {
 			const file = await this.repository.findById(fileId);
-			if (file === null || file.category !== "MERCHANT_KYB" || file.merchantOrgId !== merchantOrgId || file.isDeleted) {
+			if (file?.category !== "MERCHANT_KYB" || file.merchantOrgId !== merchantOrgId || file.isDeleted) {
 				throw new BadRequestException({ message: "Invalid KYB document", error: "KYB_DOCUMENT_INVALID" });
 			}
 			if (file.status === "PENDING") {

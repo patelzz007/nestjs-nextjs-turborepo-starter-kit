@@ -1,4 +1,4 @@
-import { cn } from "@workspace/ui/lib/utils";
+import { cn } from "@workspace/ui/lib/core/utils";
 
 function AspectRatio({ ratio, className, ...props }: React.ComponentProps<"div"> & { ratio: number }): React.JSX.Element {
 	const aspectStyle: React.CSSProperties & Record<`--${string}`, string | number> = {

@@ -2,7 +2,7 @@
 
 import * as React from "react";
 
-import { cn } from "@workspace/ui/lib/utils";
+import { cn } from "@workspace/ui/lib/core/utils";
 
 export interface LazySectionProps {
 	/** Reserved height while hidden (prevents layout shift, e.g. `h-40`). */

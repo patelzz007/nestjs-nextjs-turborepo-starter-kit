@@ -141,8 +141,11 @@ export class MerchantContextService {
 		const memberRows: MerchantMembershipResponse[] = [];
 		for (const row of memberships.filter((entry) => !entry.merchantOrg.isDeleted)) {
 			const capabilities = await this.merchantCapabilities.getCapabilitiesForRole(row.role);
+			const organizationId = row.merchantOrg.organizationId ?? row.merchantOrg.organization?.id ?? null;
 			memberRows.push({
 				merchantOrgId: row.merchantOrgId,
+				organizationId,
+				organizationSlug: row.merchantOrg.organization?.slug ?? null,
 				businessName: row.merchantOrg.businessName,
 				city: row.merchantOrg.city,
 				role: row.role,
@@ -170,6 +173,8 @@ export class MerchantContextService {
 
 		return orgs.map((org) => ({
 			merchantOrgId: org.id,
+			organizationId: org.organization?.id ?? null,
+			organizationSlug: org.organization?.slug ?? null,
 			businessName: org.businessName,
 			city: org.city,
 			role: "OWNER",

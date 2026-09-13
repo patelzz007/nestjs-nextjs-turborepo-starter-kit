@@ -2,7 +2,7 @@
 
 import { Label } from "@workspace/ui/components/form/label";
 import { Separator } from "@workspace/ui/components/display/separator";
-import { cn } from "@workspace/ui/lib/utils";
+import { cn } from "@workspace/ui/lib/core/utils";
 import { cva, type VariantProps } from "class-variance-authority";
 import { forwardRef, useMemo } from "react";
 

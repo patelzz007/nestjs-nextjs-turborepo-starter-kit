@@ -1,6 +1,6 @@
 "use client";
 
-import { ResetPasswordForm } from "@workspace/client/lib/auth/reset-password-form";
+import { ResetPasswordForm } from "@workspace/client/lib/auth/forms/reset-password-form";
 import { AuthLayout } from "@workspace/ui/components/layout/auth-layout";
 import { useSearchParams } from "next/navigation";
 import { Suspense, type JSX } from "react";

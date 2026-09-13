@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@workspace/ui/components/form/button";
-import { cn } from "@workspace/ui/lib/utils";
+import { cn } from "@workspace/ui/lib/core/utils";
 import { Check, Copy } from "lucide-react";
 import * as React from "react";
 import { useCallback, useState } from "react";

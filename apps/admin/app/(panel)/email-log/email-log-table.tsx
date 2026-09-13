@@ -3,14 +3,14 @@
 import { useAuth } from "@workspace/client/lib/auth";
 
 import type { EmailLogEntry, EmailLogStatus, EmailLogListResponse, Envelope } from "@workspace/shared";
-import { useEmailLogLive, type LiveState } from "@/lib/email-log-live";
-import { formatDateTime } from "@/lib/dates";
+import { useEmailLogLive, type LiveState } from "@/lib/notifications/email-log-live";
+import { formatDateTime } from "@/lib/format/dates";
 import { Badge } from "@workspace/ui/components/feedback/badge";
 import { Button } from "@workspace/ui/components/form/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
-import { ADMIN_DATA_TABLE_LABELS } from "@/lib/data-table-labels";
-import { buildReadOnlyTableCheckbox } from "@/lib/data-table-capabilities";
-import { DataTableMobileCard } from "@/lib/data-table-mobile-card";
+import { ADMIN_DATA_TABLE_LABELS } from "@/lib/data-table/labels";
+import { buildReadOnlyTableCheckbox } from "@/lib/data-table/capabilities";
+import { DataTableMobileCard } from "@/lib/data-table/mobile-card";
 import { DataTable, type DataTableFeatures, type Filter } from "@workspace/ui/components/display/data-table";
 import type { ColumnDef } from "@tanstack/react-table";
 import { CircleCheck, CircleX, Loader2, Mail, RefreshCw, TriangleAlert } from "lucide-react";

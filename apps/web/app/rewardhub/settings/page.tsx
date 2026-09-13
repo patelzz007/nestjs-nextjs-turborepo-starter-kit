@@ -1,4 +1,4 @@
-import { RewardHubSettingsView } from "@/components/rewardhub/rewardhub-settings-view";
+import { RewardHubSettingsView } from "@/components/rewardhub/shared/settings-view";
 import * as React from "react";
 
 export const dynamic = "force-dynamic";

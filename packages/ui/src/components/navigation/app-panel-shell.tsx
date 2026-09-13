@@ -2,9 +2,9 @@
 
 import { PanelShellContent } from "@workspace/ui/components/navigation/panel-shell-content";
 import { Sidebar, SidebarInset, SidebarProvider } from "@workspace/ui/components/navigation/sidebar";
-import { DEFAULT_SIDEBAR_LABELS } from "@workspace/ui/lib/sidebar-labels";
-import { createNoopSidebarStorage } from "@workspace/ui/lib/sidebar-storage";
-import { cn } from "@workspace/ui/lib/utils";
+import { DEFAULT_SIDEBAR_LABELS } from "@workspace/ui/lib/sidebar/labels";
+import { createNoopSidebarStorage } from "@workspace/ui/lib/sidebar/storage";
+import { cn } from "@workspace/ui/lib/core/utils";
 import * as React from "react";
 
 const PANEL_SIDEBAR_STORAGE = createNoopSidebarStorage();

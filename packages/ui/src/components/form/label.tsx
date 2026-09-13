@@ -1,6 +1,6 @@
 "use client";
 
-import { cn } from "@workspace/ui/lib/utils";
+import { cn } from "@workspace/ui/lib/core/utils";
 import * as React from "react";
 
 const Label = React.forwardRef<HTMLLabelElement, React.ComponentProps<"label">>(function Label({ className, ...props }, ref): React.JSX.Element {

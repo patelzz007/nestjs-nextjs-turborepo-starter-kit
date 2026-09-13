@@ -6,7 +6,7 @@ import type { BundledLanguage, BundledTheme, Highlighter, ShikiTransformer } fro
 
 import { Button } from "@workspace/ui/components/form/button";
 import { toastMessage } from "@workspace/ui/components/feedback/toast";
-import { cn } from "@/lib/utils";
+import { cn } from "@workspace/ui/lib/core/utils";
 import { CodeLanguage } from "@/lib/docs/code-block";
 import { getSharedHighlighter } from "@/components/docs/highlighter-cache";
 

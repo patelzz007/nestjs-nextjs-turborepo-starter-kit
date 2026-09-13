@@ -1,6 +1,6 @@
 "use client";
 
-import { cn } from "@workspace/ui/lib/utils";
+import { cn } from "@workspace/ui/lib/core/utils";
 import { AlertOctagon, AlertTriangle, Check, Info, Lightbulb } from "lucide-react";
 import * as React from "react";
 import { isValidElement, type ReactElement, type ReactNode } from "react";

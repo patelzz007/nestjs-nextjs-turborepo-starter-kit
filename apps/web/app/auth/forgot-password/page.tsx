@@ -1,6 +1,6 @@
 "use client";
 
-import { ForgotPasswordForm } from "@workspace/client/lib/auth/forgot-password-form";
+import { ForgotPasswordForm } from "@workspace/client/lib/auth/forms/forgot-password-form";
 import { AuthLayout } from "@workspace/ui/components/layout/auth-layout";
 
 export default function WebForgotPasswordPage(): React.JSX.Element {

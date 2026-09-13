@@ -4,8 +4,8 @@ import { Button } from "@workspace/ui/components/form/button";
 import { ChevronUp } from "lucide-react";
 import * as React from "react";
 
-import { findPageScrollContainer } from "../../lib/scroll-container";
-import { cn } from "../../lib/utils";
+import { findPageScrollContainer } from "../../lib/core/scroll-container";
+import { cn } from "../../lib/core/utils";
 
 export interface ScrollToTopProps {
 	/** Scroll threshold in pixels before the button appears (default: 300). */

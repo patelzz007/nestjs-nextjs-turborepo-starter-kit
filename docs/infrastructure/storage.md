@@ -1153,7 +1153,7 @@ pnpm --filter @workspace/api kyb:backfill -- --dry-run
 | Firebase adapter | `apps/api/src/modules/storage/adapters/firebase/firebase-object-storage.adapter.ts` |
 | Upload orchestration | `apps/api/src/modules/files/services/file.service.ts` |
 | Browser upload client | `packages/client/src/lib/storage/direct-upload.ts` |
-| Shared schemas | `packages/shared/src/schemas/domain/storage.ts` |
+| Shared schemas | `packages/shared/src/schemas/domain/platform/storage.ts` |
 | CDK stack (S3 only) | `apps/aws-infrastructure/lib/storage-platform-stack.ts` |
 | Env template | `apps/api/.env.example` |
 

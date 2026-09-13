@@ -1,5 +1,6 @@
 import { Body, Controller, Post } from "@nestjs/common";
-import { AdminCreateOrganizationInviteSchema, type AdminCreateOrganizationInviteInput } from "@workspace/shared";
+import { ApiOkResponse, ApiTags } from "@nestjs/swagger";
+import { AdminCreateOrganizationInviteSchema, apiPath, type AdminCreateOrganizationInviteInput } from "@workspace/shared";
 
 import { ZodValidationPipe } from "../../../common/pipes/zod-validation.pipe";
 import { GetUser } from "../../auth/decorators/get-user.decorator";
@@ -8,13 +9,15 @@ import { SuperAdminOnly } from "../../auth/decorators/super-admin.decorator";
 import type { AccessTokenPayload } from "../../auth/services/token.service";
 import { OrganizationProvisioningService } from "../services/organization-provisioning.service";
 
-@Controller("admin/organizations")
+@ApiTags("Organizations")
+@Controller(apiPath("/admin/organizations"))
 export class OrganizationAdminController {
 	public constructor(private readonly provisioning: OrganizationProvisioningService) {}
 
 	@Post("invites")
 	@SuperAdminOnly()
 	@RequirePermission("CREATE", "MERCHANT_ORG")
+	@ApiOkResponse({ description: "Organization invite created" })
 	public async createInvite(
 		@GetUser() user: AccessTokenPayload,
 		@Body(new ZodValidationPipe(AdminCreateOrganizationInviteSchema)) body: AdminCreateOrganizationInviteInput,

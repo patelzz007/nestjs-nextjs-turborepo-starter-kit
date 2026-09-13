@@ -2,7 +2,7 @@
 
 import { MerchantInventoryBar, MerchantRewardStatusBadge } from "@/components/merchant-ui/reward-status";
 import { MerchantRewardFormFields } from "@/components/rewards/merchant-reward-form-fields";
-import { useMerchantCapabilities } from "@/lib/merchant-capabilities";
+import { useMerchantCapabilities } from "@/lib/org/capabilities";
 import { invalidateMerchantRewardsListCache, upsertMerchantRewardInListCache } from "@/lib/rewards/query-cache";
 import { stubApiMeta } from "@/lib/api-envelope";
 import { useQueryClient } from "@tanstack/react-query";

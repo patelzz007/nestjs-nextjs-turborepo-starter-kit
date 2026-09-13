@@ -1,9 +1,9 @@
 "use client";
 
 import { Checkbox as CheckboxPrimitive } from "@base-ui/react/checkbox";
-import { resolveFieldState } from "@workspace/ui/lib/field-state";
-import { checkboxVariants } from "@workspace/ui/lib/field-variants";
-import { cn } from "@workspace/ui/lib/utils";
+import { resolveFieldState } from "@workspace/ui/lib/form/field-state";
+import { checkboxVariants } from "@workspace/ui/lib/form/field-variants";
+import { cn } from "@workspace/ui/lib/core/utils";
 import { CheckIcon } from "lucide-react";
 import type { VariantProps } from "class-variance-authority";
 import * as React from "react";

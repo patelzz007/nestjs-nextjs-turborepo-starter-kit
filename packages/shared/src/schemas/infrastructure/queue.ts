@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { EmailPreviewPropValueSchema, EmailTemplateKeySchema } from "../email/email";
-import { StorageProviderSchema } from "../domain/storage";
+import { StorageProviderSchema } from "../domain/platform/storage";
 
 /** BullMQ queue names used by the API (must match compose Bull Board prefix). */
 export const QUEUE_NAMES: ["email.send", "rewards.auto-publish", "claims.expire-pending", "claims.expire-referrer", "outbox.publish", "storage.cleanup", "storage.delete"] = [

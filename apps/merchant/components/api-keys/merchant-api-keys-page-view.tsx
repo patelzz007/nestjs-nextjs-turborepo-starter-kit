@@ -3,7 +3,7 @@
 import { MerchantAccessDenied } from "@/components/access/merchant-capability-gate";
 import { MerchantPageHeader } from "@/components/merchant-ui/page-header";
 import { MerchantSurfacePanel } from "@/components/merchant-ui/surface-panel";
-import { useMerchantCapabilities } from "@/lib/merchant-capabilities";
+import { useMerchantCapabilities } from "@/lib/org/capabilities";
 import { stubApiMeta } from "@/lib/api-envelope";
 import { useAuth } from "@workspace/client/lib/auth";
 import type { MerchantApiKeySummary } from "@workspace/shared";

@@ -1,6 +1,6 @@
 "use client";
 
-import { invalidateSessionAuth } from "@workspace/client/lib/auth/invalidate-session-auth";
+import { invalidateSessionAuth } from "@workspace/client/lib/auth/session/invalidate-auth";
 import { useAuth } from "@workspace/client/lib/auth";
 import { Button } from "@workspace/ui/components/form/button";
 import { useQueryClient } from "@tanstack/react-query";

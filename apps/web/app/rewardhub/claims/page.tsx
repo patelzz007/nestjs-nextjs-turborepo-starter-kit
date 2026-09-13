@@ -1,4 +1,4 @@
-import { MyClaimsPageView } from "@/components/rewardhub/my-claims-page-view";
+import { MyClaimsPageView } from "@/components/rewardhub/claims/my-claims-page-view";
 import { createWebServerCaller } from "@/lib/web-server-api";
 import { ApiPaginatedMetaSchema, type RewardClaimResponse } from "@workspace/shared";
 import * as React from "react";

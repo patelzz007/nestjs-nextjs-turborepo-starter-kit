@@ -1,5 +1,5 @@
-import { RewardHubAnalyticsPageView } from "@/components/rewardhub/rewardhub-analytics-page-view";
-import { getServerUser } from "@/lib/auth-server";
+import { RewardHubAnalyticsPageView } from "@/components/rewardhub/shared/analytics-page-view";
+import { getServerUser } from "@/lib/auth/server";
 import { createWebServerCaller } from "@/lib/web-server-api";
 import type { UserRewardsAnalyticsResponse } from "@workspace/shared";
 import { redirect } from "next/navigation";

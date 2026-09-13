@@ -1,6 +1,6 @@
 "use client";
 
-import { SignupForm } from "@workspace/client/lib/auth/signup-form";
+import { SignupForm } from "@workspace/client/lib/auth/forms/signup-form";
 import { AuthLayout } from "@workspace/ui/components/layout/auth-layout";
 
 export default function WebSignupPage(): React.JSX.Element {

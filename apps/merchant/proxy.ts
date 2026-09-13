@@ -1,6 +1,6 @@
 import { API_BASE_URL } from "@workspace/client/lib/api/config";
-import { decodeJwtPayload } from "@workspace/client/lib/auth/jwt";
-import { getEnrollmentRedirectPath, isEnrollmentAllowedPath, isRestrictedSession } from "@workspace/client/lib/auth/restricted-session";
+import { decodeJwtPayload } from "@workspace/client/lib/auth/edge/jwt";
+import { getEnrollmentRedirectPath, isEnrollmentAllowedPath, isRestrictedSession } from "@workspace/client/lib/auth/edge/restricted-session";
 import {
 	applyRotatedSetCookies,
 	clearAuthCookies,
@@ -10,7 +10,7 @@ import {
 	refreshSessionFromProxy,
 	resolveProxySessionRefresh,
 	type ProxyRefreshResult,
-} from "@workspace/client/lib/auth/proxy-refresh";
+} from "@workspace/client/lib/auth/edge/proxy-refresh";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
@@ -34,7 +34,7 @@ function isTokenAuthRoute(pathname: string): boolean {
 }
 
 function isProtectedRoute(pathname: string): boolean {
-	return pathname === "/" || PROTECTED_ROUTE_PREFIXES.some((route) => pathname.startsWith(route));
+	return pathname === "/" || pathname.startsWith("/orgs/") || PROTECTED_ROUTE_PREFIXES.some((route) => pathname.startsWith(route));
 }
 
 function isAllowedPostLoginRedirect(pathname: string): boolean {

@@ -1,6 +1,6 @@
 "use client";
 
-import { MerchantKybVerificationView } from "@workspace/client/lib/auth/merchant-kyb-verification-view";
+import { MerchantKybVerificationView } from "@workspace/client/lib/merchant/kyb/verification-view";
 import { AnalyticsPageHeader } from "@workspace/ui/components/display/analytics-page-header";
 import Link from "next/link";
 import type { JSX } from "react";

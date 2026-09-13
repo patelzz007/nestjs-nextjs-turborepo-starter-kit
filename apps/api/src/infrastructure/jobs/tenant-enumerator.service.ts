@@ -15,7 +15,7 @@ export class TenantEnumeratorService {
 			{
 				operation: "tenant.enumerate",
 				reason: "Scheduler fan-out",
-				correlationId: `enumerate:${Date.now()}`,
+				correlationId: `enumerate:${String(Date.now())}`,
 				actorUserId: null,
 			},
 			async (tx) =>
@@ -34,7 +34,7 @@ export class TenantEnumeratorService {
 			initiatingActorId: null,
 			purpose,
 			policyVersion,
-			correlationId: `${purpose}:${organizationId}:${now}`,
+			correlationId: `${purpose}:${organizationId}:${String(now)}`,
 			issuedAt: now,
 			expiresAt: now + 300_000,
 		});

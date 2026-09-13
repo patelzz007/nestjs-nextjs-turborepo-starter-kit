@@ -1,4 +1,4 @@
-import { isMerchantEnrollmentAllowedPath } from "@/lib/merchant-email-enrollment";
+import { isMerchantEnrollmentAllowedPath } from "@/lib/auth/enrollment";
 import type { CompiledSidebarMenuData, CompiledSidebarMenuItem } from "@workspace/client/lib/sidebar/sidebar-menu-schema";
 
 function lockMenuItem(item: CompiledSidebarMenuItem, isLocked: boolean): CompiledSidebarMenuItem {

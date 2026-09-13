@@ -19,7 +19,7 @@ export class OrganizationLifecycleService {
 			},
 			async (tx) => {
 				const org = await tx.organization.findUnique({ where: { id: organizationId } });
-				if (org === null || org.displayName !== confirmDisplayName) {
+				if (org?.displayName !== confirmDisplayName) {
 					throw new BadRequestException("Display name confirmation does not match");
 				}
 				const graceEnds = BigInt(Date.now() + DELETION_GRACE_MS);

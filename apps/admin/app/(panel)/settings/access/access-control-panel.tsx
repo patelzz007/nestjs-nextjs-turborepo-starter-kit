@@ -1,8 +1,8 @@
 "use client";
 
-import { stubApiMeta } from "@/lib/api-envelope";
-import { formatPermissionGrantVia } from "@/lib/format-permission-grant";
-import { buildPermissionTree } from "@/lib/build-permission-tree";
+import { stubApiMeta } from "@/lib/format/api-envelope";
+import { formatPermissionGrantVia } from "@/lib/permissions/format-permission-grant";
+import { buildPermissionTree } from "@/lib/permissions/build-permission-tree";
 import { AccessPermissionExplorerTree } from "@/components/access/access-permission-explorer-tree";
 import {
 	PermissionActionSchema,

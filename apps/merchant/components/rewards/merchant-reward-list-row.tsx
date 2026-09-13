@@ -5,7 +5,7 @@ import { MerchantInventoryBar, MerchantRewardStatusBadge } from "@/components/me
 import type { RewardResponse } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/feedback/badge";
 import { buttonVariants } from "@workspace/ui/components/form/button";
-import { cn } from "@workspace/ui/lib/utils";
+import { cn } from "@workspace/ui/lib/core/utils";
 import { format } from "date-fns";
 import { ArrowUpRight } from "lucide-react";
 import Link from "next/link";

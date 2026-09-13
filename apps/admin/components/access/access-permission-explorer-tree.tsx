@@ -1,8 +1,8 @@
 "use client";
 
-import { permissionActionFallbackIcon, permissionActionIcon, permissionActionIconClassName } from "@/lib/permission-action-style";
-import { isRedundantResourceLabel } from "@/lib/permission-label-utils";
-import type { PermissionTreeGroupNode, PermissionTreeLeaf, PermissionTreeResourceNode } from "@/lib/build-permission-tree";
+import { permissionActionFallbackIcon, permissionActionIcon, permissionActionIconClassName } from "@/lib/permissions/permission-action-style";
+import { isRedundantResourceLabel } from "@/lib/permissions/permission-label-utils";
+import type { PermissionTreeGroupNode, PermissionTreeLeaf, PermissionTreeResourceNode } from "@/lib/permissions/build-permission-tree";
 import { AccessPermissionDetailPanel, type AccessPermissionDetailItem } from "@/components/access/access-permission-detail-panel";
 import { PermissionActionSchema, type PermissionAction } from "@workspace/shared";
 import { Button } from "@workspace/ui/components/form/button";

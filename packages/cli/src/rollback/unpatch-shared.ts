@@ -29,7 +29,7 @@ export async function unpatchSharedFiles(config: AppProjectConfig, ir: ResourceI
 	}
 
 	if (ir.scope.shared) {
-		await unpatchPermissionEnum(path.join(config.sharedDir, "src/schemas/domain/enums.ts"), permissionResource);
+		await unpatchPermissionEnum(path.join(config.sharedDir, "src/schemas/domain/platform/enums.ts"), permissionResource);
 		await unpatchApiRoutes(path.join(config.sharedDir, "src/api-routes.ts"), contractKey);
 		await unpatchContractsIndex(path.join(config.sharedDir, "src/contracts/index.ts"), contractKey);
 		await unpatchSchemasIndex(path.join(config.sharedDir, "src/schemas/index.ts"), contractKey);

@@ -1,6 +1,6 @@
 import "server-only";
 
-import { decodeJwtPayload } from "@workspace/client/lib/auth/jwt";
+import { decodeJwtPayload } from "@workspace/client/lib/auth/edge/jwt";
 import { cookies } from "next/headers";
 import { z } from "zod";
 

@@ -28,7 +28,11 @@ export class RewardRedemptionRepository {
 	}
 
 	public async listForMerchant(merchantOrgId: string, query: MerchantRedemptionListQuery): Promise<RepositoryListResult<RewardRedemptionListRow>> {
-		const where: Prisma.RewardRedemptionWhereInput = { merchantOrgId, isDeleted: false };
+		const where: Prisma.RewardRedemptionWhereInput = {
+			merchantOrgId,
+			isDeleted: false,
+			claim: { isDeleted: false, reward: { isDeleted: false } },
+		};
 		return fetchStringIdListPage(query, {
 			where,
 			mergeCursor: (baseWhere, cursorId) => ({ ...baseWhere, id: { gt: cursorId } }),
@@ -51,6 +55,7 @@ export class RewardRedemptionRepository {
 				isDeleted: false,
 				merchantOrgId,
 				redeemedAt: redeemedAtRange,
+				claim: { isDeleted: false },
 			},
 			select: { redeemedAt: true, claim: { select: { rewardId: true } } },
 		});

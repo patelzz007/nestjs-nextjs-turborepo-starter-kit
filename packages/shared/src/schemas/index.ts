@@ -11,7 +11,7 @@ export {
 	UsageLogQuerySchema,
 	UsageStatsResponseSchema,
 	VerifiedApiKeySchema,
-} from "./domain/api-keys";
+} from "./domain/platform/api-keys";
 export type {
 	AdminApiKey,
 	ApiKeyMessageResponse,
@@ -23,7 +23,7 @@ export type {
 	UsageLogQueryInput,
 	UsageStatsResponse,
 	VerifiedApiKey,
-} from "./domain/api-keys";
+} from "./domain/platform/api-keys";
 export {
 	ForgotPasswordResponseSchema,
 	ForgotPasswordSchema,
@@ -197,7 +197,7 @@ export {
 	ClickQuerySchema,
 	ClickRecordResponseSchema,
 	UrlAnalyticsResponseSchema,
-} from "./domain/clicks";
+} from "./domain/platform/clicks";
 export type {
 	AccountAnalyticsResponse,
 	AdminOverviewResponse,
@@ -207,7 +207,7 @@ export type {
 	ClickQueryInput,
 	ClickRecordResponse,
 	UrlAnalyticsResponse,
-} from "./domain/clicks";
+} from "./domain/platform/clicks";
 export {
 	BrowserUploadMethodSchema,
 	BrowserUploadTicketFieldsSchema,
@@ -238,7 +238,7 @@ export {
 	StorageProviderSchema,
 	StoredObjectScanStatusSchema,
 	toFileUploadPolicy,
-} from "./domain/storage";
+} from "./domain/platform/storage";
 export type {
 	BrowserUploadMethod,
 	BrowserUploadTicket,
@@ -265,7 +265,7 @@ export type {
 	StorageObjectLocator,
 	StorageProvider,
 	StoredObjectScanStatus,
-} from "./domain/storage";
+} from "./domain/platform/storage";
 export { BaseResponseSchema, EpochMsSchema, epochMs, nowEpochMs, DataValueSchema } from "./api/common";
 export type { BaseResponse, EpochMs, DataPrimitive, DataValue } from "./api/common";
 export { SessionStatusSchema } from "./auth/session-status";
@@ -351,13 +351,13 @@ export type {
 	VerificationEmailProps,
 	WelcomeEmailProps,
 } from "./email/email-templates";
-export { AudienceTypeSchema, DeviceTypeSchema, PermissionActionSchema, PermissionResourceSchema, PlanSchema, RedirectTypeSchema } from "./domain/enums";
-export type { AudienceType, DeviceType, PermissionAction, PermissionResource, Plan, RedirectType } from "./domain/enums";
-export { EmailTemplateKeyParamSchema, UuidParamSchema, VerifyEmailTokenParamSchema } from "./domain/param-schemas";
-export type { EmailTemplateKeyParam, UuidParam, VerifyEmailTokenParam } from "./domain/param-schemas";
+export { AudienceTypeSchema, DeviceTypeSchema, PermissionActionSchema, PermissionResourceSchema, PlanSchema, RedirectTypeSchema } from "./domain/platform/enums";
+export type { AudienceType, DeviceType, PermissionAction, PermissionResource, Plan, RedirectType } from "./domain/platform/enums";
+export { EmailTemplateKeyParamSchema, UuidParamSchema, VerifyEmailTokenParamSchema } from "./domain/platform/param-schemas";
+export type { EmailTemplateKeyParam, UuidParam, VerifyEmailTokenParam } from "./domain/platform/param-schemas";
 
-export { AuthFlowEventSchema, EmailLogUpdatedEventSchema, ImpersonationActionEventSchema, SessionActionEventSchema } from "./domain/events";
-export type { AuthFlowEvent, EmailLogUpdatedEvent, ImpersonationActionEvent, SessionActionEvent } from "./domain/events";
+export { AuthFlowEventSchema, EmailLogUpdatedEventSchema, ImpersonationActionEventSchema, SessionActionEventSchema } from "./domain/platform/events";
+export type { AuthFlowEvent, EmailLogUpdatedEvent, ImpersonationActionEvent, SessionActionEvent } from "./domain/platform/events";
 export { HealthResponseSchema } from "./api/health.schema";
 export type { HealthResponse } from "./api/health.schema";
 export {
@@ -377,7 +377,7 @@ export {
 	LogStatsQuerySchema,
 	LogStatsSchema,
 	MetadataValueSchema,
-} from "./domain/logs";
+} from "./domain/platform/logs";
 export type {
 	AggregatedLog,
 	ErrorGroup,
@@ -394,7 +394,7 @@ export type {
 	LogServiceOptions,
 	LogStats,
 	LogStatsQuery,
-} from "./domain/logs";
+} from "./domain/platform/logs";
 export { ErrorResponseSchema, MessageResponseSchema } from "./api/message";
 export type { ErrorResponse, MessageResponse } from "./api/message";
 export { PaginatedResponseSchema, PaginationMetaSchema, PaginationSchema } from "./api/pagination";
@@ -445,7 +445,7 @@ export {
 	SyncUserRolesSchema,
 	UpdateRoleSchema,
 	ValidateRoleAssignmentSchema,
-} from "./domain/rbac";
+} from "./domain/rbac/rbac";
 export type {
 	AssignPermissionsToUserBulkInput,
 	AssignPermissionToRoleInput,
@@ -490,11 +490,19 @@ export type {
 	SyncUserRolesInput,
 	UpdateRoleInput,
 	ValidateRoleAssignmentInput,
-} from "./domain/rbac";
-export { CreateTagSchema, TagAssignResponseSchema, TagMessageResponseSchema, TagResponseSchema, TagWithUrlsResponseSchema, UpdateTagSchema } from "./domain/tags";
-export type { CreateTagInput, TagAssignResponse, TagMessageResponse, TagResponse, TagWithUrlsResponse, UpdateTagInput } from "./domain/tags";
-export { CreateUrlSchema, RedirectResponseSchema, UpdateUrlSchema, UrlMessageResponseSchema, UrlQuerySchema, UrlResponseSchema, UrlStatsResponseSchema } from "./domain/url";
-export type { CreateUrlInput, RedirectResponse, UpdateUrlInput, UrlMessageResponse, UrlQueryInput, UrlResponse, UrlStatsResponse } from "./domain/url";
+} from "./domain/rbac/rbac";
+export { CreateTagSchema, TagAssignResponseSchema, TagMessageResponseSchema, TagResponseSchema, TagWithUrlsResponseSchema, UpdateTagSchema } from "./domain/platform/tags";
+export type { CreateTagInput, TagAssignResponse, TagMessageResponse, TagResponse, TagWithUrlsResponse, UpdateTagInput } from "./domain/platform/tags";
+export {
+	CreateUrlSchema,
+	RedirectResponseSchema,
+	UpdateUrlSchema,
+	UrlMessageResponseSchema,
+	UrlQuerySchema,
+	UrlResponseSchema,
+	UrlStatsResponseSchema,
+} from "./domain/platform/url";
+export type { CreateUrlInput, RedirectResponse, UpdateUrlInput, UrlMessageResponse, UrlQueryInput, UrlResponse, UrlStatsResponse } from "./domain/platform/url";
 export {
 	CitySchema,
 	CountrySchema,
@@ -530,7 +538,7 @@ export {
 	GeoIncludeSchema,
 	GeoIdsSchema,
 	GeoCursorSchema,
-} from "./domain/geo";
+} from "./domain/platform/geo";
 export type {
 	City,
 	CityListQuery,
@@ -566,7 +574,7 @@ export type {
 	GeoInclude,
 	GeoIds,
 	GeoCursor,
-} from "./domain/geo";
+} from "./domain/platform/geo";
 
 export {
 	AdminUserDetailSchema,
@@ -620,8 +628,8 @@ export { PrismaQueryEventSchema, PrismaQuerySubscriberSchema } from "./runtime/p
 export type { PrismaQueryEvent } from "./runtime/prisma-query";
 export { NonEmptyStringSchema, StringRecordNullableSchema, StringRecordSchema, StringValueSchema, ThrownErrorSchema } from "./runtime/primitives";
 export type { NonEmptyString, StringRecord, StringRecordNullable, StringValue, ThrownError } from "./runtime/primitives";
-export { PERMISSIONS, getAllPermissionNames, getPermissionDefinitions, toPermissionRegistryName } from "./domain/permissions-registry";
-export type { PermissionDefinition, PermissionName } from "./domain/permissions-registry";
+export { PERMISSIONS, getAllPermissionNames, getPermissionDefinitions, toPermissionRegistryName } from "./domain/rbac/permissions-registry";
+export type { PermissionDefinition, PermissionName } from "./domain/rbac/permissions-registry";
 export {
 	AcceptRewardLegalSchema,
 	AdminCreateMerchantInviteSchema,
@@ -706,7 +714,7 @@ export {
 	RewardStatusSchema,
 	RewardTerminalIdHeaderSchema,
 	RewardTypeSchema,
-} from "./domain/rewards";
+} from "./domain/rewards/rewards";
 export {
 	CapabilityCatalogQuerySchema,
 	CapabilityDefinitionSchema,
@@ -716,10 +724,10 @@ export {
 	parseCapabilitySlugs,
 	toPlatformCapabilitySlug,
 	withCapabilityToggled,
-} from "./domain/capabilities";
-export type { CapabilityCatalogQuery, CapabilityDefinition, CapabilityScope, CapabilitySlug } from "./domain/capabilities";
-export { merchantHasCapability, MerchantCapabilitySchema, parseMerchantCapabilities } from "./domain/merchant-capabilities";
-export type { MerchantCapability } from "./domain/merchant-capabilities";
+} from "./domain/rbac/capabilities";
+export type { CapabilityCatalogQuery, CapabilityDefinition, CapabilityScope, CapabilitySlug } from "./domain/rbac/capabilities";
+export { merchantHasCapability, MerchantCapabilitySchema, parseMerchantCapabilities } from "./domain/rewards/merchant-capabilities";
+export type { MerchantCapability } from "./domain/rewards/merchant-capabilities";
 export {
 	MerchantRoleCapabilityGrantSchema,
 	MerchantRoleCapabilitiesPathInputSchema,
@@ -728,14 +736,14 @@ export {
 	findMerchantRoleGrant,
 	resolveMerchantRoleCapabilities,
 	withMerchantCapabilityToggled,
-} from "./domain/merchant-role-capabilities";
+} from "./domain/rewards/merchant-role-capabilities";
 export type {
 	MerchantRoleCapabilityGrant,
 	MerchantRoleCapabilitiesPathInput,
 	SyncMerchantRoleCapabilitiesBody,
 	SyncMerchantRoleCapabilitiesInput,
-} from "./domain/merchant-role-capabilities";
-export { getRewardClaimBlockReason, isRewardClaimable, rewardClaimBlockMessage, type RewardClaimBlockReason } from "./domain/reward-claim-availability";
+} from "./domain/rewards/merchant-role-capabilities";
+export { getRewardClaimBlockReason, isRewardClaimable, rewardClaimBlockMessage, type RewardClaimBlockReason } from "./domain/rewards/claim-availability";
 export {
 	AnalyticsMetricSchema,
 	MerchantAnalyticsResponseSchema,
@@ -744,7 +752,7 @@ export {
 	RewardsAnalyticsQuerySchema,
 	UserAnalyticsStatusBreakdownSchema,
 	UserRewardsAnalyticsResponseSchema,
-} from "./domain/rewards-analytics";
+} from "./domain/rewards/analytics";
 export type {
 	AnalyticsMetric,
 	MerchantAnalyticsResponse,
@@ -753,7 +761,7 @@ export type {
 	RewardsAnalyticsQuery,
 	UserAnalyticsStatusBreakdown,
 	UserRewardsAnalyticsResponse,
-} from "./domain/rewards-analytics";
+} from "./domain/rewards/analytics";
 export type {
 	AcceptRewardLegalInput,
 	AdminCreateMerchantInviteInput,
@@ -829,7 +837,7 @@ export type {
 	RewardRules,
 	RewardStatus,
 	RewardType,
-} from "./domain/rewards";
+} from "./domain/rewards/rewards";
 export {
 	AdminCreateOrganizationInviteSchema,
 	AuthorizationPolicyDraftResponseSchema,
@@ -851,6 +859,7 @@ export {
 	OrganizationMembershipStatusSchema,
 	OrganizationMerchantProfileResponseSchema,
 	OrganizationQuotaStatusSchema,
+	OrganizationRouteKeySchema,
 	OrganizationSlugParamSchema,
 	OrganizationSlugSchema,
 	OrganizationSummaryResponseSchema,
@@ -861,7 +870,7 @@ export {
 	SupportAccessGrantResponseSchema,
 	SupportAccessGrantStatusSchema,
 	TenantPlacementKindSchema,
-} from "./domain/organization";
+} from "./domain/organization/organization";
 export type {
 	AdminCreateOrganizationInviteInput,
 	AuthorizationPolicyDraftResponse,
@@ -883,6 +892,7 @@ export type {
 	OrganizationMembershipStatus,
 	OrganizationMerchantProfileResponse,
 	OrganizationQuotaStatus,
+	OrganizationRouteKey,
 	OrganizationSlug,
 	OrganizationSlugParam,
 	OrganizationSummaryResponse,
@@ -893,7 +903,7 @@ export type {
 	SupportAccessGrantResponse,
 	SupportAccessGrantStatus,
 	TenantPlacementKind,
-} from "./domain/organization";
+} from "./domain/organization/organization";
 export {
 	CedarAuthorizationDecisionSchema,
 	CedarAuthorizationRequestSchema,
@@ -901,7 +911,7 @@ export {
 	PolicyPublishRequestSchema,
 	PolicySimulationResultSchema,
 	PublishedPolicyBundleSchema,
-} from "./domain/authorization-policy";
+} from "./domain/organization/authorization-policy";
 export type {
 	CedarAuthorizationDecision,
 	CedarAuthorizationRequest,
@@ -909,11 +919,11 @@ export type {
 	PolicyPublishRequestInput,
 	PolicySimulationResult,
 	PublishedPolicyBundle,
-} from "./domain/authorization-policy";
+} from "./domain/organization/authorization-policy";
 export { SystemOperationContextSchema, TenantJobContextSchema } from "./infrastructure/tenant-job-context";
 export type { SystemOperationContext, TenantJobContext } from "./infrastructure/tenant-job-context";
-export { KAFKA_TOPICS, KafkaTopicSchema, PlatformEventEnvelopeSchema } from "./infrastructure/kafka";
-export type { KafkaTopic, PlatformEventEnvelope } from "./infrastructure/kafka";
+export { KAFKA_TOPICS, KafkaTopicSchema, PlatformEventEnvelopeSchema, PlatformEventOrganizationIdSchema, readPlatformEventOrganizationId } from "./infrastructure/kafka";
+export type { KafkaTopic, PlatformEventEnvelope, PlatformEventOrganizationId, PlatformEventPayload } from "./infrastructure/kafka";
 export { EmailSendJobSchema, QUEUE_NAMES, QueueNameSchema, RewardsMaintenanceJobSchema, StorageCleanupJobSchema, StorageDeleteJobSchema } from "./infrastructure/queue";
 export type { EmailSendJob, QueueName, RewardsMaintenanceJob, StorageCleanupJob, StorageDeleteJob } from "./infrastructure/queue";
 export { QUEUE_JOB_OPTIONS } from "./infrastructure/queue-job-options";
@@ -928,7 +938,7 @@ export {
 	SampleCategoryListResponseSchema,
 	SampleCategorySchema,
 	UpdateSampleCategorySchema,
-} from "./domain/sample-category.generated";
+} from "./domain/generated/sample-category.generated";
 export type {
 	BulkCreateSampleCategoryInput,
 	CreateSampleCategoryInput,
@@ -936,7 +946,7 @@ export type {
 	SampleCategoryListQuery,
 	SampleCategoryListResponse,
 	UpdateSampleCategoryInput,
-} from "./domain/sample-category.generated";
+} from "./domain/generated/sample-category.generated";
 // @app-generated:end sampleCategory
 // @app-generated:begin product
 export {
@@ -947,8 +957,8 @@ export {
 	ProductListResponseSchema,
 	ProductSchema,
 	UpdateProductSchema,
-} from "./domain/product.generated";
-export type { BulkCreateProductInput, CreateProductInput, Product, ProductListQuery, ProductListResponse, UpdateProductInput } from "./domain/product.generated";
+} from "./domain/generated/product.generated";
+export type { BulkCreateProductInput, CreateProductInput, Product, ProductListQuery, ProductListResponse, UpdateProductInput } from "./domain/generated/product.generated";
 // @app-generated:end product
 export {
 	PlatformResourceAuditInputSchema,

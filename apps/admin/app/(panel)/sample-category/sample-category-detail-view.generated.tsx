@@ -1,8 +1,8 @@
 "use client";
 
-import { stubApiMeta } from "@/lib/api-envelope";
+import { stubApiMeta } from "@/lib/format/api-envelope";
 import { useAuth } from "@workspace/client/lib/auth";
-import type { SampleCategory } from "@workspace/shared/schemas/domain/sample-category.generated";
+import type { SampleCategory } from "@workspace/shared/schemas/domain/generated/sample-category.generated";
 import { Badge } from "@workspace/ui/components/feedback/badge";
 import { Button } from "@workspace/ui/components/form/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/display/card";

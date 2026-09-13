@@ -9,7 +9,7 @@ import {
 	type PermissionResource,
 	type RoleListItem,
 } from "@workspace/shared";
-import { invalidateSessionAuth } from "@workspace/client/lib/auth/invalidate-session-auth";
+import { invalidateSessionAuth } from "@workspace/client/lib/auth/session/invalidate-auth";
 import { useAuth } from "@workspace/client/lib/auth";
 import { AccessHierarchyRow } from "@/components/access/access-hierarchy";
 import { AccessPermissionTree } from "@/components/access/access-permission-tree";
@@ -22,8 +22,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Shield, ShieldCheck, ShieldX } from "lucide-react";
 import * as React from "react";
 
-import { buildPermissionTree } from "@/lib/build-permission-tree";
-import { formatPermissionGrantVia } from "@/lib/format-permission-grant";
+import { buildPermissionTree } from "@/lib/permissions/build-permission-tree";
+import { formatPermissionGrantVia } from "@/lib/permissions/format-permission-grant";
 
 const PERMISSION_ACTIONS: readonly PermissionAction[] = ["CREATE", "READ", "UPDATE", "DELETE", "LIST", "MANAGE"];
 

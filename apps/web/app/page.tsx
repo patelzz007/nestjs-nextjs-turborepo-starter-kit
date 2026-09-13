@@ -1,7 +1,7 @@
 import { LandingHowItWorks } from "@/components/landing/landing-how-it-works";
 import { LandingHero } from "@/components/landing/landing-hero";
 import { LandingShell } from "@/components/landing/landing-shell";
-import { RewardHubBrowseView } from "@/components/rewardhub/rewardhub-browse-view";
+import { RewardHubBrowseView } from "@/components/rewardhub/browse/view";
 import { readPaginatedHasNext } from "@/lib/api-envelope";
 import { createWebServerCaller } from "@/lib/web-server-api";
 import { ApiPaginatedMetaSchema, type RewardResponse } from "@workspace/shared";

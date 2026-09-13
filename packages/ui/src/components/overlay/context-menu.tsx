@@ -1,8 +1,8 @@
 "use client";
 
 import { ContextMenu as ContextMenuPrimitive } from "@base-ui/react/context-menu";
-import { menuItemDensityClasses, menuItemIndicatorDensityClasses, menuItemOpenClasses } from "@workspace/ui/lib/field-variants";
-import { cn } from "@workspace/ui/lib/utils";
+import { menuItemDensityClasses, menuItemIndicatorDensityClasses, menuItemOpenClasses } from "@workspace/ui/lib/form/field-variants";
+import { cn } from "@workspace/ui/lib/core/utils";
 import { ChevronRightIcon, CheckIcon } from "lucide-react";
 import * as React from "react";
 

@@ -2,7 +2,7 @@
 
 import { Radio as RadioPrimitive } from "@base-ui/react/radio";
 import { RadioGroup as RadioGroupPrimitive } from "@base-ui/react/radio-group";
-import { cn } from "@workspace/ui/lib/utils";
+import { cn } from "@workspace/ui/lib/core/utils";
 import * as React from "react";
 
 const RadioGroup = React.forwardRef<HTMLDivElement, RadioGroupPrimitive.Props>(function RadioGroup({ className, ...props }, ref): React.JSX.Element {

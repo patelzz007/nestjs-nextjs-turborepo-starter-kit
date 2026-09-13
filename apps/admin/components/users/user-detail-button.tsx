@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@workspace/ui/components/form/button";
-import { cn } from "@workspace/ui/lib/utils";
+import { cn } from "@workspace/ui/lib/core/utils";
 import * as React from "react";
 
 /** Black / white inverted buttons for the user detail page (light: black bg, dark: white bg). */

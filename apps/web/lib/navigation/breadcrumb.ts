@@ -1,8 +1,8 @@
 import { FileText, LayoutDashboard, type LucideIcon } from "lucide-react";
 
 import type { BreadcrumbItem } from "@workspace/ui/components/navigation/breadcrumb-context";
-import { normalizePath } from "@workspace/ui/lib/navigation/breadcrumb-tree";
-import { resolveSidebarMenuTrail, withTrailTailLabel } from "@workspace/ui/lib/navigation/resolve-sidebar-menu-trail";
+import { normalizePath } from "@workspace/ui/lib/sidebar/navigation/breadcrumb-tree";
+import { resolveSidebarMenuTrail, withTrailTailLabel } from "@workspace/ui/lib/sidebar/navigation/resolve-sidebar-menu-trail";
 
 import { WEB_MENU_ICON_MAP } from "@/lib/navigation/menu-icons";
 import { useWebSidebarStore } from "@/stores/sidebar-store";

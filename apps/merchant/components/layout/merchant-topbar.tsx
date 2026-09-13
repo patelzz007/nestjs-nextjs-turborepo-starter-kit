@@ -1,13 +1,13 @@
 "use client";
 
 import { MerchantNotificationsDropdown } from "@/components/layout/merchant-notifications-dropdown";
-import type { ServerUser } from "@/lib/auth-server";
-import { useMerchantCapabilities } from "@/lib/merchant-capabilities";
-import { useMerchantSessionProfile } from "@/lib/merchant-session-profile";
+import type { ServerUser } from "@/lib/auth/server";
+import { useMerchantCapabilities } from "@/lib/org/capabilities";
+import { useMerchantSessionProfile } from "@/lib/session/profile";
 import { useMerchantSidebarControl } from "@/components/layout/use-merchant-sidebar-control";
 import { useMerchantSidebarStore } from "@/stores/sidebar-store";
 import { useAuth } from "@workspace/client/lib/auth";
-import { isRestrictedAuthUser } from "@workspace/client/lib/auth/map-auth-user";
+import { isRestrictedAuthUser } from "@workspace/client/lib/auth/session/map-auth-user";
 import { AppShellProfileDropdown } from "@workspace/ui/components/navigation/app-shell-profile-dropdown";
 import { AppShellTopbar, useCommandPaletteShortcut } from "@workspace/ui/components/navigation/app-shell-topbar";
 import { ShellThemeToggle } from "@workspace/ui/components/navigation/shell-theme-toggle";

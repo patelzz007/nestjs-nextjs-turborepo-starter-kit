@@ -1,7 +1,7 @@
 "use client";
 
 import { EmailVerificationGateDialog } from "@/components/email-verification-gate-dialog";
-import { SecuritySettingsPanel } from "@workspace/client/lib/auth/security-settings-panel";
+import { SecuritySettingsPanel } from "@workspace/client/lib/auth/mfa/security-settings-panel";
 import { AnalyticsPageHeader } from "@workspace/ui/components/display/analytics-page-header";
 import { Button } from "@workspace/ui/components/form/button";
 import Link from "next/link";

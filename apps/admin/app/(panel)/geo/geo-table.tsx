@@ -1,18 +1,18 @@
 "use client";
 
-import { createDataTableLabels, type DataTableLabels } from "@/lib/data-table-labels";
-import { buildReadOnlyTableCheckbox } from "@/lib/data-table-capabilities";
-import { DataTableMobileCard } from "@/lib/data-table-mobile-card";
-import { readPaginatedNextCursor, readPaginatedTotal } from "@/lib/api-envelope";
+import { createDataTableLabels, type DataTableLabels } from "@/lib/data-table/labels";
+import { buildReadOnlyTableCheckbox } from "@/lib/data-table/capabilities";
+import { DataTableMobileCard } from "@/lib/data-table/mobile-card";
+import { readPaginatedNextCursor, readPaginatedTotal } from "@/lib/format/api-envelope";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
-import { useManualHybridPagination } from "@/lib/use-manual-cursor-pagination";
+import { useManualHybridPagination } from "@/lib/data-table/use-manual-cursor-pagination";
 import { DataTableSearchToolbar } from "@/components/common/data-table-search-toolbar";
 import { Badge } from "@workspace/ui/components/feedback/badge";
 import { Button } from "@workspace/ui/components/form/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
 import { DataTable, type DataTableFeatures } from "@workspace/ui/components/display/data-table";
 import { Input } from "@workspace/ui/components/form/input";
-import { cn } from "@workspace/ui/lib/utils";
+import { cn } from "@workspace/ui/lib/core/utils";
 import type { ColumnDef, SortingState } from "@tanstack/react-table";
 import { keepPreviousData } from "@tanstack/react-query";
 import { Building2, Globe, Landmark, MapPin, TreePine } from "lucide-react";

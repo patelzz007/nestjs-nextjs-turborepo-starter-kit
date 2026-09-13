@@ -57,7 +57,7 @@ export class OrganizationProvisioningService {
 						merchantProfile: {
 							create: {
 								category: input.category,
-								city: input.city as PilotCity,
+								city: input.city,
 								contactEmail: input.email,
 								kybStatus: "PENDING",
 							},

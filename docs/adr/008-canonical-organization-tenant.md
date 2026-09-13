@@ -59,6 +59,6 @@ Existing `MerchantOrg` rows map **one-to-one** to `Organization` + initial `Orga
 ## References
 
 - `apps/api/prisma/schema.prisma` — Organization models
-- `packages/shared/src/schemas/domain/organization.ts` — shared contracts
+- `packages/shared/src/schemas/domain/organization/organization.ts` — shared contracts
 - [Data classification inventory](../security/data-classification-inventory.md)
 - [Threat model](../security/multi-tenancy-threat-model.md)

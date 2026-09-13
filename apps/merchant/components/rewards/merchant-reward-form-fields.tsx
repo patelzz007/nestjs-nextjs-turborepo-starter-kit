@@ -9,7 +9,7 @@ import { Input } from "@workspace/ui/components/form/input";
 import { Label } from "@workspace/ui/components/form/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@workspace/ui/components/form/select";
 import { Textarea } from "@workspace/ui/components/form/textarea";
-import { cn } from "@workspace/ui/lib/utils";
+import { cn } from "@workspace/ui/lib/core/utils";
 import { Tag } from "lucide-react";
 import * as React from "react";
 import type { Control, ControllerRenderProps, FieldErrors, UseFormRegister, UseFormSetValue } from "react-hook-form";

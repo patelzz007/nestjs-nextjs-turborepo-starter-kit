@@ -1,7 +1,7 @@
 import { Button as ButtonPrimitive } from "@base-ui/react/button";
 import { Spinner } from "@workspace/ui/components/feedback/spinner";
-import { resolveFieldState } from "@workspace/ui/lib/field-state";
-import { cn } from "@workspace/ui/lib/utils";
+import { resolveFieldState } from "@workspace/ui/lib/form/field-state";
+import { cn } from "@workspace/ui/lib/core/utils";
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
 

@@ -7,10 +7,12 @@ import { ImpersonateUserPanel } from "@/components/impersonation/impersonate-use
 import { useMerchantSidebarControl } from "@/components/layout/use-merchant-sidebar-control";
 import { MerchantSidebarPanel } from "@/components/layout/merchant-sidebar-panel";
 import { MerchantTopbar } from "@/components/layout/merchant-topbar";
-import type { ServerUser } from "@/lib/auth-server";
+import type { ServerUser } from "@/lib/auth/server";
 import { stubApiMeta } from "@/lib/api-envelope";
-import { MERCHANT_ME_QUERY_OPTIONS } from "@/lib/merchant-me-query";
-import { useMerchantOrg } from "@/lib/merchant-root-provider";
+import { resolveOrganizationSlugForMerchantOrg } from "@/lib/org/resolve-slug";
+import { clearOrganizationSlugCookie, writeOrganizationSlugCookie } from "@/lib/org/slug";
+import { MERCHANT_ME_QUERY_OPTIONS } from "@/lib/session/me-query";
+import { useMerchantOrg } from "@/lib/session/root-provider";
 import { useAuth } from "@workspace/client/lib/auth";
 import type { MerchantMembershipResponse } from "@workspace/shared";
 import { AppPanelShell } from "@workspace/ui/components/navigation/app-panel-shell";
@@ -116,11 +118,28 @@ export function MerchantShell({
 		}
 	}, [initialMerchantOrgId, memberships, merchantOrgId, setMerchantOrgId]);
 
+	const syncOrganizationSlugCookie = React.useCallback(
+		(orgId: string | undefined): void => {
+			const slug = resolveOrganizationSlugForMerchantOrg(memberships, orgId);
+			if (slug !== undefined) {
+				writeOrganizationSlugCookie(slug);
+				return;
+			}
+			clearOrganizationSlugCookie();
+		},
+		[memberships],
+	);
+
+	React.useEffect((): void => {
+		syncOrganizationSlugCookie(merchantOrgId);
+	}, [merchantOrgId, syncOrganizationSlugCookie]);
+
 	const handleStoreChange = React.useCallback(
 		(orgId: string): void => {
 			setMerchantOrgId(orgId, { refresh: true });
+			syncOrganizationSlugCookie(orgId);
 		},
-		[setMerchantOrgId],
+		[setMerchantOrgId, syncOrganizationSlugCookie],
 	);
 
 	const hasMemberships = memberships.length > 0;

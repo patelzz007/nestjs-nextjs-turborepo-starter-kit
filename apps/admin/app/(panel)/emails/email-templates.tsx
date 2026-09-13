@@ -8,7 +8,7 @@ import { Button } from "@workspace/ui/components/form/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
 import { Skeleton } from "@workspace/ui/components/feedback/skeleton";
 import { toastMessage } from "@workspace/ui/components/feedback/toast";
-import { cn } from "@workspace/ui/lib/utils";
+import { cn } from "@workspace/ui/lib/core/utils";
 import { Check, Copy, FileCode2, Loader2, Mail, Send } from "lucide-react";
 import * as React from "react";
 

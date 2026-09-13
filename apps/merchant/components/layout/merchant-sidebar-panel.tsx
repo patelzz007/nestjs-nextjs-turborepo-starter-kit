@@ -2,18 +2,18 @@
 
 import { ImpersonateUserPanel } from "@/components/impersonation/impersonate-user-panel";
 import { MerchantSidebarNavItem } from "@/components/layout/merchant-sidebar-nav-item";
-import { isMerchantEnrollmentAllowedPath, useMerchantEnrollmentLock } from "@/lib/merchant-email-enrollment";
-import { useMerchantCapabilities } from "@/lib/merchant-capabilities";
+import { isMerchantEnrollmentAllowedPath, useMerchantEnrollmentLock } from "@/lib/auth/enrollment";
+import { useMerchantCapabilities } from "@/lib/org/capabilities";
 import { applyEnrollmentNavLock } from "@/lib/navigation/apply-enrollment-nav-lock";
-import { useMerchantSessionProfile } from "@/lib/merchant-session-profile";
+import { useMerchantSessionProfile } from "@/lib/session/profile";
 import { filterCompiledSidebarMenu } from "@/lib/navigation/filter-menu-by-capabilities";
 import { MERCHANT_SIDEBAR_MENU } from "@/lib/navigation/sidebar-menu";
 import { resolveMerchantPinnedMenuItems } from "@/lib/navigation/pinned-items";
-import { MERCHANT_SIDEBAR_LABELS } from "@/lib/sidebar-labels";
+import { MERCHANT_SIDEBAR_LABELS } from "@/lib/navigation/sidebar-labels";
 import { renderMerchantPaletteIcon } from "@/lib/palette/nav-items";
 import { useMerchantCommandPaletteStore } from "@/stores/command-palette-store";
 import { useMerchantSidebarStore } from "@/stores/sidebar-store";
-import { resolveActiveMerchantMembership, resolveMerchantCapabilities } from "@/lib/merchant-server-capabilities";
+import { resolveActiveMerchantMembership, resolveMerchantCapabilities } from "@/lib/session/server-capabilities";
 import type { CompiledSidebarMenuData } from "@workspace/client/lib/sidebar/sidebar-menu-schema";
 import type { CapabilitySlug, MerchantMembershipResponse } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/feedback/badge";
@@ -35,8 +35,8 @@ import {
 } from "@workspace/ui/components/navigation/sidebar";
 import { useDebouncedCallback } from "@workspace/ui/hooks/use-debounced-callback";
 import { useRouteExpandedItems } from "@workspace/ui/hooks/use-route-expanded-items";
-import { buildSidebarView, isRouteActive, sectionHasActiveItem } from "@workspace/ui/lib/sidebar-menu-view";
-import { getUserInitials } from "@workspace/ui/lib/user-initials";
+import { buildSidebarView, isRouteActive, sectionHasActiveItem } from "@workspace/ui/lib/sidebar/menu-view";
+import { getUserInitials } from "@workspace/ui/lib/core/user-initials";
 import { Gift, Search } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import * as React from "react";

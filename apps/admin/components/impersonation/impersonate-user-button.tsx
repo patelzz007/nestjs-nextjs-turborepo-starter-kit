@@ -1,7 +1,7 @@
 "use client";
 
 import type { AdminUserDetail } from "@workspace/shared";
-import { invalidateSessionAuth } from "@workspace/client/lib/auth/invalidate-session-auth";
+import { invalidateSessionAuth } from "@workspace/client/lib/auth/session/invalidate-auth";
 import { useAuth } from "@workspace/client/lib/auth";
 import { UserDetailButton } from "@/components/users/user-detail-button";
 import { useQueryClient } from "@tanstack/react-query";

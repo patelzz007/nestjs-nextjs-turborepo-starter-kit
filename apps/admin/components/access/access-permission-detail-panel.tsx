@@ -6,13 +6,13 @@ import {
 	permissionActionIcon,
 	permissionActionIconClassName,
 	permissionActionSummary,
-} from "@/lib/permission-action-style";
+} from "@/lib/permissions/permission-action-style";
 import { PermissionActionSchema, type PermissionAction } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/feedback/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
 import { Separator } from "@workspace/ui/components/display/separator";
 import { ScrollArea } from "@workspace/ui/components/navigation/scroll-area";
-import { cn } from "@workspace/ui/lib/utils";
+import { cn } from "@workspace/ui/lib/core/utils";
 import { FolderTree, KeyRound, Layers3, ShieldCheck } from "lucide-react";
 import * as React from "react";
 

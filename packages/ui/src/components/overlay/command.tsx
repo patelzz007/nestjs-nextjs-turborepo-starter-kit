@@ -2,8 +2,8 @@
 
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@workspace/ui/components/overlay/dialog";
 import { InputGroup, InputGroupAddon } from "@workspace/ui/components/form/input-group";
-import { menuItemDensityClasses } from "@workspace/ui/lib/field-variants";
-import { cn } from "@workspace/ui/lib/utils";
+import { menuItemDensityClasses } from "@workspace/ui/lib/form/field-variants";
+import { cn } from "@workspace/ui/lib/core/utils";
 import { Command as CommandPrimitive } from "cmdk";
 import { SearchIcon, CheckIcon } from "lucide-react";
 import * as React from "react";

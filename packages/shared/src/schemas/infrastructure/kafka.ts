@@ -1,7 +1,7 @@
 import { z } from "zod";
 
-import { AuthFlowEventSchema, EmailLogUpdatedEventSchema, ImpersonationActionEventSchema, SessionActionEventSchema } from "../domain/events";
-import { RewardPlatformEventSchema } from "../domain/rewards";
+import { AuthFlowEventSchema, EmailLogUpdatedEventSchema, ImpersonationActionEventSchema, SessionActionEventSchema } from "../domain/platform/events";
+import { RewardPlatformEventSchema } from "../domain/rewards/rewards-entities";
 
 /** Kafka topics the API publishes platform events to. */
 export const KAFKA_TOPICS: ["platform.auth", "platform.sessions", "platform.impersonation", "platform.email", "platform.rewards"] = [
@@ -61,3 +61,21 @@ export const PlatformEventEnvelopeSchema = z.discriminatedUnion("type", [
 ]);
 
 export type PlatformEventEnvelope = z.output<typeof PlatformEventEnvelopeSchema>;
+
+export type PlatformEventPayload = PlatformEventEnvelope["payload"];
+
+/** Optional tenant tag publishers may include on any platform event payload. */
+export const PlatformEventOrganizationIdSchema = z.object({
+	organizationId: z.uuid(),
+});
+
+export type PlatformEventOrganizationId = z.output<typeof PlatformEventOrganizationIdSchema>;
+
+/** Returns the tenant id when the publisher tagged the payload; otherwise null. */
+export function readPlatformEventOrganizationId(payload: PlatformEventPayload): string | null {
+	const parsed = PlatformEventOrganizationIdSchema.safeParse(payload);
+	if (!parsed.success) {
+		return null;
+	}
+	return parsed.data.organizationId;
+}

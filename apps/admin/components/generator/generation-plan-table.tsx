@@ -10,7 +10,7 @@ import { Eye } from "lucide-react";
 import * as React from "react";
 
 import { fetchGenerationPlanDiffAction } from "@/lib/generator/actions";
-import { cn } from "@/lib/utils";
+import { cn } from "@workspace/ui/lib/core/utils";
 
 const ACTION_VARIANT: Record<PlanAction["action"], "default" | "secondary" | "outline" | "destructive"> = {
 	create: "default",

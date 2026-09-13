@@ -1,8 +1,8 @@
 "use client";
 
 import { Button, buttonVariants } from "@workspace/ui/components/form/button";
-import { mergeRefs } from "@workspace/ui/lib/merge-refs";
-import { cn } from "@workspace/ui/lib/utils";
+import { mergeRefs } from "@workspace/ui/lib/core/merge-refs";
+import { cn } from "@workspace/ui/lib/core/utils";
 import { ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, ChevronUpIcon } from "lucide-react";
 import * as React from "react";
 import { DayPicker, getDefaultClassNames, type ChevronProps, type DayButton, type Locale } from "react-day-picker";

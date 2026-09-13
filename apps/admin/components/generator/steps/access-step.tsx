@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@work
 import { Label } from "@workspace/ui/components/form/label";
 import { Switch } from "@workspace/ui/components/form/switch";
 import type { RlsPolicy } from "@workspace/cli/generator";
-import { cn } from "@/lib/utils";
+import { cn } from "@workspace/ui/lib/core/utils";
 
 import type { GeneratorWizardDraft } from "@/lib/generator/wizard-draft";
 

@@ -9,7 +9,7 @@ import { toastMessage } from "@workspace/ui/components/feedback/toast";
 import { Button } from "@workspace/ui/components/form/button";
 import { Checkbox } from "@workspace/ui/components/form/checkbox";
 import { Label } from "@workspace/ui/components/form/label";
-import { SHOWCASE_ALERT_DIALOG_LABELS } from "@workspace/ui/lib/alert-dialog-labels";
+import { SHOWCASE_ALERT_DIALOG_LABELS } from "@workspace/ui/lib/form/alert-dialog-labels";
 import { Undo2 } from "lucide-react";
 import * as React from "react";
 

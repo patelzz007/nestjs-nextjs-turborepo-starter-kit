@@ -18,7 +18,7 @@ import { LogOut, Search } from "lucide-react";
 import * as React from "react";
 
 import { ICON_MAP } from "@/lib/navigation/menu-icons";
-import { getInitials } from "@/lib/user-initials";
+import { getUserInitials } from "@workspace/ui/lib/core/user-initials";
 import { useSidebarStore } from "@/stores/sidebar-store";
 import { sectionHasActiveItem, isRouteActive, type SidebarView, type SearchableMenuItem } from "@/lib/navigation/menu";
 import type { AdminSidebarLabels } from "@/lib/sidebar-labels";
@@ -200,7 +200,7 @@ export function AdminSidebarPanel({
 			<SidebarHeader className="h-14 border-b border-sidebar-border">
 				<div className="flex h-full min-w-0 items-center gap-3 px-2">
 					<div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-sidebar-accent ring-1 ring-sidebar-border/50">
-						<span className="text-sm font-bold text-sidebar-foreground">{getInitials(menu.header.title)}</span>
+						<span className="text-sm font-bold text-sidebar-foreground">{getUserInitials(menu.header.title)}</span>
 					</div>{" "}
 					<div className="min-w-0 flex-1">
 						<span className="block truncate text-sm font-semibold text-sidebar-foreground">{menu.header.title}</span>
@@ -320,7 +320,7 @@ export function AdminSidebarPanel({
 				<div className="flex items-center justify-between px-2 py-2">
 					<div className="flex min-w-0 items-center gap-2.5">
 						<div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-sidebar-accent text-[length:var(--text-sidebar-caption)] font-bold text-sidebar-foreground ring-1 ring-sidebar-border/50">
-							{getInitials(user.name)}
+							{getUserInitials(user.name)}
 						</div>
 						<div className="min-w-0">
 							<span className="block truncate text-sm leading-tight font-medium text-sidebar-foreground">{user.name}</span>

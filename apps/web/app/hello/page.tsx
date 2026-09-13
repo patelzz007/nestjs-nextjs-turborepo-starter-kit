@@ -1,5 +1,5 @@
 import { createWebServerCaller } from "@/lib/web-server-api";
-import { hasServerSession } from "@/lib/auth-server";
+import { hasServerSession } from "@/lib/auth/server";
 
 import HelloView from "./hello-view";
 

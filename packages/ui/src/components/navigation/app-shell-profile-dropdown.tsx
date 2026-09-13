@@ -3,7 +3,7 @@
 import { Avatar, AvatarFallback } from "@workspace/ui/components/display/avatar";
 import { Button } from "@workspace/ui/components/form/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@workspace/ui/components/overlay/dropdown-menu";
-import { getUserInitials } from "@workspace/ui/lib/user-initials";
+import { getUserInitials } from "@workspace/ui/lib/core/user-initials";
 import { LogOut, MoveUpRight } from "lucide-react";
 import * as React from "react";
 

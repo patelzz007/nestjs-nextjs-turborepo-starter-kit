@@ -12,7 +12,7 @@ import {
 	segmentsOfPath,
 	walkNavTreeForPath,
 	replaceLastTrailItem,
-} from "@workspace/ui/lib/navigation/breadcrumb-tree";
+} from "@workspace/ui/lib/sidebar/navigation/breadcrumb-tree";
 
 interface TestNode {
 	readonly id: string;

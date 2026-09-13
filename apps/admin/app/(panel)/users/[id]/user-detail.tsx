@@ -5,7 +5,7 @@ import { UserAccessPanel } from "@/components/access/user-access-panel";
 import { ImpersonateUserButton } from "@/components/impersonation/impersonate-user-button";
 import { UserMfaRecoveryPanel } from "@/components/users/user-mfa-recovery-panel";
 import { UserProfileOverview } from "@/components/users/user-profile-overview";
-import { stubApiMeta } from "@/lib/api-envelope";
+import { stubApiMeta } from "@/lib/format/api-envelope";
 import { UserDetailBreadcrumb } from "@/components/users/user-detail-breadcrumb";
 import { useAuth } from "@workspace/client/lib/auth";
 import Link from "next/link";

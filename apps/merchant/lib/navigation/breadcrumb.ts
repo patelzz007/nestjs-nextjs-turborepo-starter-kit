@@ -1,7 +1,7 @@
 import { FileText, LayoutDashboard, type LucideIcon } from "lucide-react";
 
 import type { BreadcrumbItem } from "@workspace/ui/components/navigation/breadcrumb-context";
-import { resolveSidebarMenuTrail, withTrailTailLabel } from "@workspace/ui/lib/navigation/resolve-sidebar-menu-trail";
+import { resolveSidebarMenuTrail, withTrailTailLabel } from "@workspace/ui/lib/sidebar/navigation/resolve-sidebar-menu-trail";
 
 import { MERCHANT_MENU_ICON_MAP } from "@/lib/navigation/menu-icons";
 import { useMerchantSidebarStore } from "@/stores/sidebar-store";

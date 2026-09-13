@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
 import { Skeleton } from "@workspace/ui/components/feedback/skeleton";
-import { cn } from "@workspace/ui/lib/utils";
+import { cn } from "@workspace/ui/lib/core/utils";
 import * as React from "react";
 
 export type AnalyticsFunnelAccent = "primary" | "info" | "success" | "warning";

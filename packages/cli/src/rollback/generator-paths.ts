@@ -16,7 +16,7 @@ export function listSharedPatchRelativePaths(ir: ResourceIR, modulesManifest: Ge
 	}
 
 	if (ir.scope.shared) {
-		patchPaths.push("packages/shared/src/schemas/domain/enums.ts");
+		patchPaths.push("packages/shared/src/schemas/domain/platform/enums.ts");
 		patchPaths.push("packages/shared/src/api-routes.ts");
 		patchPaths.push("packages/shared/src/contracts/index.ts");
 		patchPaths.push("packages/shared/src/schemas/index.ts");

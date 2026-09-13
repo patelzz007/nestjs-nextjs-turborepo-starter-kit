@@ -15,7 +15,7 @@ import { NotificationsDropdown } from "@/components/notifications/notifications-
 import { SessionStatusBadge } from "@/components/common/session-status-badge";
 import { Profile01 } from "@/components/settings/profile-01";
 import { useSidebarStore } from "@/stores/sidebar-store";
-import { getInitials } from "@/lib/user-initials";
+import { getUserInitials } from "@workspace/ui/lib/core/user-initials";
 import type { SidebarUser } from "@/lib/navigation/sidebar";
 
 const CommandPalette = dynamic(() => import("@/components/layout/command-palette").then((m) => m.CommandPalette), { ssr: false });
@@ -85,7 +85,7 @@ export function Topbar({ user, onLogout }: TopbarProps): React.JSX.Element {
 					<DropdownMenu>
 						<DropdownMenuTrigger render={<Button variant="ghost" size="icon" className="rounded-full" />} aria-label="Open profile menu">
 							<Avatar className="size-8">
-								<AvatarFallback className="rounded-full text-xs">{getInitials(user.name)}</AvatarFallback>
+								<AvatarFallback className="rounded-full text-xs">{getUserInitials(user.name)}</AvatarFallback>
 							</Avatar>
 						</DropdownMenuTrigger>
 						<DropdownMenuContent align="end" sideOffset={8} className="w-[320px] overflow-hidden p-0 sm:w-96">

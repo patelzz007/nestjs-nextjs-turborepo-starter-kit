@@ -112,7 +112,7 @@ Re-audited against `.cursorrules` after data-table refactor and admin-guard cons
 - [x] **Inline Zod → `packages/shared`** — full `apps/api` audit: runtime helpers, domain events, email template props, backup/telescope parse schemas moved to shared; API keeps helpers + `.parse()`/`safeParse()` only
 - [x] **Schema vs type consumption** — app code imports `X` (type) for signatures; `XSchema` only at validation boundaries (pipes, DTOs, `.parse()`). No schema re-exports from services/templates/barrels
 - [x] Shared `schemas/runtime/` — `json`, `caught-error`, `http-headers`, `prisma-query`, `primitives` (+ `JsonValueInput` for Prisma write helpers)
-- [x] Shared `schemas/domain/events.ts` — `AuthFlowEvent`, `SessionActionEvent`, `ImpersonationActionEvent`, `EmailLogUpdatedEvent`
+- [x] Shared `schemas/domain/platform/events.ts` — `AuthFlowEvent`, `SessionActionEvent`, `ImpersonationActionEvent`, `EmailLogUpdatedEvent`
 - [x] Shared `schemas/email/email-templates.ts` — all seven template prop schemas + `EmailRenderContext`
 - [x] Swagger envelope factories — `createApiSuccessEnvelopeSchema` / `createApiSuccessArrayEnvelopeSchema` in `api-response.ts`; `response-wrapper.ts` delegates to shared
 - [x] **Auth httpOnly cookies on login/refresh** — `LoginTokenFieldsSchema` must not use `.strict()` (login body includes `user`; refresh includes `message`); `SetAuthCookiesInterceptor` extracts tokens and strips them from JSON; spec in `set-auth-cookies.interceptor.spec.ts`
@@ -220,10 +220,10 @@ pnpm db:reset        # reset + rls + seed (from apps/api)
 | [x] Email log create | `email-log.service.ts` | `packages/shared/src/schemas/email/email.ts` |
 | [x] Response envelope helpers | `response.interceptor.ts` | `PaginatedServiceResultSchema` + `DataValueSchema` from shared |
 | [x] Inline `z.string()` / `z.record()` in utils | `caught-error.ts`, `http-headers.ts`, `prisma-query-events.ts`, `main.ts`, telescope `sanitize.ts` / `pii-scanner.ts` | `schemas/runtime/*` + `TelescopeJsonObjectSchema` / `TelescopeJsonScalarSchema`; `prisma-query.ts` `$on` validated with `z.custom` |
-| [x] Event bus payloads | `auth-events`, `sessions-events`, `impersonation-events`, `email-log-events` services | `schemas/domain/events.ts` |
+| [x] Event bus payloads | `auth-events`, `sessions-events`, `impersonation-events`, `email-log-events` services | `schemas/domain/platform/events.ts` |
 | [x] Email template props | seven `*.template.ts` files | `schemas/email/email-templates.ts` |
 | [x] Backup SQL row shapes | `backup.service.ts` | `schemas/domain/backup.ts` (`BackupDownloadTokenPayloadSchema`, table-name count rows) |
-| [x] Log service options | `logs.service.ts` | `LogServiceOptionsSchema` in `schemas/domain/logs.ts` |
+| [x] Log service options | `logs.service.ts` | `LogServiceOptionsSchema` in `schemas/domain/platform/logs.ts` |
 | [ ] Prisma `InputJsonValue` bridge | `common/utils/prisma-json.ts` | Stays in API (`z.custom` depends on `@prisma/client`) — params typed via shared `JsonValueInput` |
 
 **Intentionally still in API (not portable to shared):**
@@ -306,7 +306,7 @@ pnpm db:reset        # reset + rls + seed (from apps/api)
 |------|------|-----|
 | [x] Remove `z.unknown()` from envelope | `schemas/api/api-response.ts` | `DataValueSchema` recursive union in `common.ts` |
 | [x] Single `ApiVersion` source | `contracts/versioning.ts` + `schemas/api/version.ts` | `version.ts` imports `ApiVersion` type from `versioning.ts` |
-| [x] `z.infer` → `z.output` | `schemas/api/env.ts`, `schemas/domain/logs.ts` | Consistency |
+| [x] `z.infer` → `z.output` | `schemas/api/env.ts`, `schemas/domain/platform/logs.ts` | Consistency |
 | [x] `as const` → tuples | `contracts/versioning.ts`, `contracts/index.ts` | Tuple annotations; `apiContract` no longer ends with `as const` |
 | [x] `schemas/runtime/` barrel | `json`, `caught-error`, `http-headers`, `prisma-query`, `primitives` | API utils import from shared; no inline `z.string()` in production API |
 | [x] Boundary schemas (new) | `http-headers.ts` | `RequestLikeSchema`, `HeadersRecordSchema`, `RouteParamsSchema`, `OptionalStringHeaderSchema`, `ForwardedForHeaderSchema` — eliminate all `typeof` guards at HTTP boundaries |

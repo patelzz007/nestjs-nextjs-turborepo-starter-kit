@@ -5,7 +5,7 @@ import type { MerchantOrg, Organization, User } from "@prisma/client";
 import { prisma } from "./client";
 
 /** Merchant org IDs — must match `REWARD_SEED_IDS.klOrg` / `mlkOrg` in rewards.ts. */
-const MERCHANT_ORG_SEED_IDS = {
+export const MERCHANT_ORG_SEED_IDS = {
 	kl: "3178a4d1-6915-4eb3-bf84-6fb14e1feb6c",
 	mlk: "457401d5-536e-464f-9ae9-4756b6dd5f61",
 } as const;
@@ -326,6 +326,7 @@ export async function seedOrganizationsAndMerchants(
 	await prisma.organizationInvitation.create({
 		data: {
 			id: ORGANIZATION_SEED_IDS.pendingNyonyaInvitation,
+			organizationId: mlkOrganization.id,
 			email: "pending.invite@melaka-rewards.demo",
 			tokenHash: sha256Hex("seed_invite_token_mlk_pending"),
 			intendedRole: "OWNER",
@@ -392,9 +393,18 @@ export async function seedOrganizationsAndMerchants(
 
 export function printOrganizationSeedCredentials(): void {
 	console.log(`
-🏢 Organization URL context (merchant portal)
+🏢 Organization workspace (merchant portal)
 ──────────────────────────────────────────────
-  /orgs/${ORGANIZATION_SEED_SLUGS.kl}/dashboard     → Brew & Bean KL
-  /orgs/${ORGANIZATION_SEED_SLUGS.mlk}/dashboard   → Jonker Street Kitchen
+Brew & Bean KL — brew.owner@kl-rewards.demo / BrewOwner@123
+  Canonical:  /orgs/${ORGANIZATION_SEED_SLUGS.kl}/dashboard
+  By org id:  /orgs/${ORGANIZATION_SEED_IDS.klOrganization}/dashboard
+  By m-org:   /orgs/${MERCHANT_ORG_SEED_IDS.kl}/dashboard
+
+Jonker Street Kitchen — jonker.owner@melaka-rewards.demo / JonkerOwner@123
+  Canonical:  /orgs/${ORGANIZATION_SEED_SLUGS.mlk}/dashboard
+  By org id:  /orgs/${ORGANIZATION_SEED_IDS.mlkOrganization}/dashboard
+  By m-org:   /orgs/${MERCHANT_ORG_SEED_IDS.mlk}/dashboard
+
+UUID paths redirect to the canonical slug URL after login.
 `);
 }

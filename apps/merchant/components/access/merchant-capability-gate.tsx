@@ -1,6 +1,6 @@
 "use client";
 
-import { useMerchantCapabilities } from "@/lib/merchant-capabilities";
+import { useMerchantCapabilities } from "@/lib/org/capabilities";
 import type { MerchantCapability } from "@workspace/shared";
 import { ShieldAlert } from "lucide-react";
 import * as React from "react";

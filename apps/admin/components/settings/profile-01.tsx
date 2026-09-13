@@ -7,7 +7,7 @@ import { CreditCard, FileText, LogOut, MoveUpRight, Settings, Sparkles } from "l
 import { useRouter } from "next/navigation";
 import * as React from "react";
 
-import { getInitials } from "@/lib/user-initials";
+import { getUserInitials } from "@workspace/ui/lib/core/user-initials";
 import type { SidebarUser } from "@/lib/navigation/sidebar";
 
 export interface Profile01Props {
@@ -31,7 +31,7 @@ interface ProfileMenuItem {
  */
 export function Profile01({ user, onLogout, subscription = "Free Trial" }: Profile01Props): React.JSX.Element {
 	const router = useRouter();
-	const initials = getInitials(user.name);
+	const initials = getUserInitials(user.name);
 
 	const menuItems: readonly ProfileMenuItem[] = [
 		{ label: "Billing", href: "/settings/billing", icon: <CreditCard className="size-4" /> },

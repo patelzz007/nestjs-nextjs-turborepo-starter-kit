@@ -2,7 +2,7 @@
 
 import type { AdminUserDetail } from "@workspace/shared";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
-import { formatDateTimeWithSeconds } from "@/lib/dates";
+import { formatDateTimeWithSeconds } from "@/lib/format/dates";
 import * as React from "react";
 
 export interface UserProfileFieldProps {

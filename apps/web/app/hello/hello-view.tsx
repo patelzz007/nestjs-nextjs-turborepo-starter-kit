@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuth } from "@workspace/client/lib/auth";
-import { useAuthUser, type AuthUser } from "@workspace/client/lib/auth/auth-store";
+import { useAuthUser, type AuthUser } from "@workspace/client/lib/auth/session/store";
 import type { Envelope, UserResponse } from "@workspace/shared";
 
 import { useCallback, useState, type JSX } from "react";

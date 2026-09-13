@@ -19,4 +19,17 @@ declare global {
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
+if (typeof globalThis.matchMedia !== "function") {
+	globalThis.matchMedia = (query: string): MediaQueryList => ({
+		matches: false,
+		media: query,
+		onchange: null,
+		addListener: (): void => undefined,
+		removeListener: (): void => undefined,
+		addEventListener: (): void => undefined,
+		removeEventListener: (): void => undefined,
+		dispatchEvent: (): boolean => false,
+	});
+}
+
 export {};

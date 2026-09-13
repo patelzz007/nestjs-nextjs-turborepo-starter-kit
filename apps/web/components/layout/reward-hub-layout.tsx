@@ -1,7 +1,7 @@
 "use client";
 
-import type { ServerUser } from "@/lib/auth-server";
-import { toAuthUser } from "@/lib/map-auth-user";
+import type { ServerUser } from "@/lib/auth/server";
+import { toAuthUser } from "@/lib/auth/map-auth-user";
 import { ImpersonationBanner } from "@/components/impersonation/impersonation-banner";
 import { useWebSidebarControl } from "@/components/layout/use-web-sidebar-control";
 import { WebSidebarPanel } from "@/components/layout/web-sidebar-panel";

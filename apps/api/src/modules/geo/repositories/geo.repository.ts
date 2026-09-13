@@ -9,12 +9,13 @@ import type {
 	GeoImportInput,
 	GeoImportValidateInput,
 	CascadePreviewInput,
+	JsonObject,
 	PaginationInput,
 	RegionListQuery,
 	StateListQuery,
 	SubregionListQuery,
 } from "@workspace/shared";
-import { buildOffsetPaginationMeta } from "@workspace/shared";
+import { buildOffsetPaginationMeta, JsonObjectSchema } from "@workspace/shared";
 import type { City, Country, Prisma, Region, State, Subregion } from "@prisma/client";
 
 import { PrismaService } from "../../../prisma/prisma.service";
@@ -228,7 +229,7 @@ function sanitizePrismaNameField(input: { name?: unknown }): void {
 	}
 }
 
-function parseImportName(row: Record<string, unknown>): string | null {
+function parseImportName(row: JsonObject): string | null {
 	const parsed = geoNameFieldSchema.safeParse(row.name);
 	if (!parsed.success) {
 		return null;
@@ -236,12 +237,12 @@ function parseImportName(row: Record<string, unknown>): string | null {
 	return sanitize(parsed.data);
 }
 
-function parseImportIntField(row: Record<string, unknown>, field: string): number | null {
+function parseImportIntField(row: JsonObject, field: string): number | null {
 	const parsed = geoNonNegativeIntSchema.safeParse(row[field]);
 	return parsed.success ? parsed.data : null;
 }
 
-function parseImportStringField(row: Record<string, unknown>, field: string, fallback = ""): string {
+function parseImportStringField(row: JsonObject, field: string, fallback = ""): string {
 	const parsed = geoNameFieldSchema.safeParse(row[field]);
 	return parsed.success ? parsed.data : fallback;
 }
@@ -572,7 +573,7 @@ export class GeoRepository {
 		const errors: { row: number; message: string }[] = [];
 
 		for (let i = 0; i < data.length; i++) {
-			const row = data[i];
+			const row = JsonObjectSchema.parse(data[i]);
 			try {
 				const result = await this.importRow(entity, row, upsert);
 				if (result === "created") created++;
@@ -592,7 +593,7 @@ export class GeoRepository {
 		let validRows = 0;
 
 		for (let i = 0; i < data.length; i++) {
-			const row = data[i];
+			const row = JsonObjectSchema.parse(data[i]);
 			const rowErrors = this.validateRow(entity, row);
 			if (rowErrors.length === 0) {
 				validRows++;
@@ -719,7 +720,7 @@ export class GeoRepository {
 		return Object.keys(result).length > 0 ? result : undefined;
 	}
 
-	private async importRow(entity: string, row: Record<string, unknown>, upsert: boolean): Promise<"created" | "updated" | "skipped"> {
+	private async importRow(entity: string, row: JsonObject, upsert: boolean): Promise<"created" | "updated" | "skipped"> {
 		const name = parseImportName(row);
 		if (name === null) throw new Error("name is required");
 
@@ -794,7 +795,7 @@ export class GeoRepository {
 		}
 	}
 
-	private validateRow(entity: string, row: Record<string, unknown>): readonly { readonly field: string | null; readonly message: string }[] {
+	private validateRow(entity: string, row: JsonObject): readonly { readonly field: string | null; readonly message: string }[] {
 		const errors: { field: string | null; message: string }[] = [];
 		if (!geoNonEmptyNameSchema.safeParse(row.name).success) {
 			errors.push({ field: "name", message: "name is required and must be a non-empty string" });

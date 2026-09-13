@@ -2,7 +2,7 @@ import "@workspace/ui/globals.css";
 import "./web-theme.css";
 
 import { QueryProvider } from "@workspace/client/lib/api/query-provider";
-import { cn } from "@workspace/ui/lib/utils";
+import { cn } from "@workspace/ui/lib/core/utils";
 import type { Metadata } from "next";
 import { ReduxDevToolsGuard } from "@workspace/ui/components/redux-devtools-guard";
 import { bricolageGrotesque } from "@workspace/ui/fonts/bricolage-grotesque";

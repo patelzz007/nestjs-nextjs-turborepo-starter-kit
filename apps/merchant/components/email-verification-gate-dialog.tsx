@@ -1,7 +1,7 @@
 "use client";
 
-import { useMerchantEnrollmentLock } from "@/lib/merchant-email-enrollment";
-import { EmailVerificationPanel } from "@workspace/client/lib/auth/email-verification-panel";
+import { useMerchantEnrollmentLock } from "@/lib/auth/enrollment";
+import { EmailVerificationPanel } from "@workspace/client/lib/auth/email/verification-panel";
 import { Button } from "@workspace/ui/components/form/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@workspace/ui/components/overlay/dialog";
 import { Mail, ShieldAlert } from "lucide-react";

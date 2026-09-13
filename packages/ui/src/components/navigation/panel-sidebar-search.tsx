@@ -2,7 +2,7 @@
 
 import { Button } from "@workspace/ui/components/form/button";
 import { Input } from "@workspace/ui/components/form/input";
-import { cn } from "@workspace/ui/lib/utils";
+import { cn } from "@workspace/ui/lib/core/utils";
 import { Search, X } from "lucide-react";
 import * as React from "react";
 
