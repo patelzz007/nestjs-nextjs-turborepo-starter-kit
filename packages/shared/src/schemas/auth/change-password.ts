@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { strongPassword } from "./auth";
+import { strongPassword } from "./password";
 
 export const ChangePasswordSchema = z
 	.object({

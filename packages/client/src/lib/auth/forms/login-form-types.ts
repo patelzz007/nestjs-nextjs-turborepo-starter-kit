@@ -16,6 +16,8 @@ export interface DemoAccount {
 export interface LoginFormProps {
 	/** @default mode === "admin" ? "admin@example.com" : "m@example.com" */
 	readonly emailPlaceholder?: string;
+	/** Prefills the email field (e.g. team invite or onboarding return links). */
+	readonly defaultEmail?: string;
 	/** @default mode === "admin" ? "/" : "/hello" */
 	readonly redirectPath?: string;
 	/** One-click demo accounts rendered under the social buttons. */

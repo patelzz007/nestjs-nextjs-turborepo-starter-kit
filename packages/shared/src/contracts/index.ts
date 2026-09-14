@@ -59,8 +59,11 @@ import {
 	OrganizationLocationCreateSchema,
 	OrganizationLocationIdParamSchema,
 	OrganizationLocationUpdateSchema,
+	OrganizationMemberInviteIdParamSchema,
 	OrganizationMemberInviteSchema,
 	OrganizationSlugParamSchema,
+	OrganizationTeamInviteRegisterAcceptSchema,
+	OrganizationTeamInviteTokenSchema,
 } from "../schemas/domain/organization/organization";
 import {
 	AcceptRewardLegalSchema,
@@ -390,6 +393,36 @@ export const apiContract = {
 			method: "POST",
 			path: apiRoutes.organizations.inviteMember.path,
 			input: z.intersection(OrganizationSlugParamSchema, OrganizationMemberInviteSchema),
+		}),
+		listMembers: defineContract({
+			method: "GET",
+			path: apiRoutes.organizations.listMembers.path,
+			input: OrganizationSlugParamSchema,
+		}),
+		listMemberInvites: defineContract({
+			method: "GET",
+			path: apiRoutes.organizations.listMemberInvites.path,
+			input: OrganizationSlugParamSchema,
+		}),
+		revokeMemberInvite: defineContract({
+			method: "POST",
+			path: apiRoutes.organizations.revokeMemberInvite.path,
+			input: OrganizationMemberInviteIdParamSchema,
+		}),
+		validateTeamInvite: defineContract({
+			method: "POST",
+			path: apiRoutes.organizations.teamInvites.validate,
+			input: OrganizationTeamInviteTokenSchema,
+		}),
+		acceptTeamInvite: defineContract({
+			method: "POST",
+			path: apiRoutes.organizations.teamInvites.accept,
+			input: OrganizationTeamInviteTokenSchema,
+		}),
+		registerAndAcceptTeamInvite: defineContract({
+			method: "POST",
+			path: apiRoutes.organizations.teamInvites.registerAndAccept,
+			input: OrganizationTeamInviteRegisterAcceptSchema,
 		}),
 		memberships: defineContract({
 			method: "GET",

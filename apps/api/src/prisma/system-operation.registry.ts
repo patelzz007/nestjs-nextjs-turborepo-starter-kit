@@ -3,6 +3,8 @@ export const SYSTEM_OPERATIONS: Readonly<Record<string, { readonly description: 
 	"outbox.publish": { description: "Publish outbox events to Kafka", role: "app_runtime" },
 	"tenant.enumerate": { description: "List active organization IDs for schedulers", role: "app_enumerator" },
 	"organization.provision": { description: "Organization provisioning saga steps", role: "app_runtime" },
+	"organization.membership.invite": { description: "Create, revoke, and resolve team member invitations", role: "app_runtime" },
+	"organization.membership.accept": { description: "Accept a team member invitation and create membership", role: "app_runtime" },
 	"organization.location.onboarding_finalize": { description: "Finalize primary and additional stores after merchant onboarding", role: "app_runtime" },
 	"organization.location.admin_create": { description: "RewardHub admin creates an organization store location", role: "app_runtime" },
 	"organization.location.admin_review": { description: "RewardHub admin approves or rejects a store location request", role: "app_runtime" },

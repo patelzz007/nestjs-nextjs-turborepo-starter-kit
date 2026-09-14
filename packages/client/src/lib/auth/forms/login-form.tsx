@@ -52,8 +52,16 @@ function sanitizeBackupCodeInput(value: string): string {
 	return sanitized.slice(0, 16);
 }
 
-export function LoginForm({ emailPlaceholder, redirectPath, demoAccounts, footer, mode = "web", requireAdminAccess = mode === "admin" }: LoginFormProps): JSX.Element {
-	const [email, setEmail] = useState("");
+export function LoginForm({
+	emailPlaceholder,
+	defaultEmail,
+	redirectPath,
+	demoAccounts,
+	footer,
+	mode = "web",
+	requireAdminAccess = mode === "admin",
+}: LoginFormProps): JSX.Element {
+	const [email, setEmail] = useState(defaultEmail ?? "");
 	const [password, setPassword] = useState("");
 	const [isLoading, setIsLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);

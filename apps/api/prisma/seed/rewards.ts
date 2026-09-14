@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import type { User } from "@prisma/client";
 import * as bcrypt from "bcrypt";
 
-import { cleanupOrganizationSeedData, ORGANIZATION_SEED_IDS, seedOrganizationsAndMerchants } from "./organizations";
+import { cleanupOrganizationSeedData, ORGANIZATION_SEED_IDS, SEED_TEAM_INVITE_TOKEN_KL_ALICE, seedOrganizationsAndMerchants } from "./organizations";
 import { prisma } from "./client";
 import { deterministicUuid } from "./deterministic-uuid";
 
@@ -12,6 +12,7 @@ export const REWARD_SEED_IDS = {
 	klOwnerUser: "326494e1-b45d-4203-b881-05b60ae50b4a",
 	mlkOwnerUser: "b9cda090-b9e8-42e4-b7b1-b6d00294f022",
 	klCashierUser: "937f5e43-9b11-47d0-866c-91fec89bc250",
+	klPendingCashierUser: "a378a4d1-6915-4eb3-bf84-6fb14e1feb72",
 	mlkCashierUser: "e79116ab-29e4-40ad-a5c7-f3158f7b1aa1",
 	klRewardPublished: "c1214e16-bf0f-4410-8871-8d1a9970f75e",
 	klRewardReferrer: "bab08148-80f2-4586-b1ea-48241dae1490",
@@ -133,6 +134,7 @@ export async function cleanupRewardSeedData(): Promise<void> {
 	await prisma.rewardReferral.deleteMany();
 	await prisma.rewardLocationScope.deleteMany();
 	await prisma.reward.deleteMany();
+	await prisma.organizationInvitationLocationScope.deleteMany();
 	await prisma.organizationInvitation.deleteMany();
 	await prisma.organizationApiKey.deleteMany();
 	await prisma.organizationTerminal.deleteMany();
@@ -162,13 +164,14 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 	const klOwner = await upsertMerchantUser(REWARD_SEED_IDS.klOwnerUser, "brew.owner@kl-rewards.demo", "Ahmad Brew", "BrewOwner@123", "+60123456701", now);
 	const mlkOwner = await upsertMerchantUser(REWARD_SEED_IDS.mlkOwnerUser, "jonker.owner@melaka-rewards.demo", "Siti Jonker", "JonkerOwner@123", "+60123456702", now);
 	const klCashier = await upsertMerchantUser(REWARD_SEED_IDS.klCashierUser, "brew.cashier@kl-rewards.demo", "Lee Cashier", "BrewCashier@123", null, null);
+	const klPendingCashier = await upsertMerchantUser(REWARD_SEED_IDS.klPendingCashierUser, "alice.kl@kl-rewards.demo", "Alice Tan", "AliceKl@123", null, null);
 	const mlkCashier = await upsertMerchantUser(REWARD_SEED_IDS.mlkCashierUser, "jonker.cashier@melaka-rewards.demo", "Mira Cashier", "JonkerCashier@123", null, null);
 
-	for (const merchantUser of [klOwner, mlkOwner, klCashier, mlkCashier]) {
+	for (const merchantUser of [klOwner, mlkOwner, klCashier, klPendingCashier, mlkCashier]) {
 		await ensureSeedConsumerRole(merchantUser.id);
 	}
 
-	const { klOrganization, mlkOrganization } = await seedOrganizationsAndMerchants(adminUser, klOwner, mlkOwner, klCashier, mlkCashier, user);
+	const { klOrganization, mlkOrganization } = await seedOrganizationsAndMerchants(adminUser, klOwner, mlkOwner, klCashier, mlkCashier, user, klPendingCashier);
 
 	await prisma.organizationTerminal.createMany({
 		data: [
@@ -885,6 +888,11 @@ Merchant owners
 Cashiers
   brew.cashier@kl-rewards.demo   / BrewCashier@123
   jonker.cashier@melaka-rewards.demo / JonkerCashier@123
+
+Pending team invite (sign in as invitee, then open accept URL)
+  alice.kl@kl-rewards.demo       / AliceKl@123
+  Token:  ${SEED_TEAM_INVITE_TOKEN_KL_ALICE}
+  URL:    /team-invite?token=${SEED_TEAM_INVITE_TOKEN_KL_ALICE}
 
 POS API keys (X-Terminal-Id: KL-REGISTER-01 or MLK-REGISTER-01)
   KL:   ${DEMO_MERCHANT_API_KEYS.kl}

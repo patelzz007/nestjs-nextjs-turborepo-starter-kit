@@ -50,9 +50,9 @@ function OnboardingContent(): JSX.Element {
 export default function MerchantOnboardingPage(): JSX.Element {
 	return (
 		<div className="merchant-onboarding relative min-h-svh overflow-x-hidden bg-background">
-			<div className="merchant-grid-bg pointer-events-none absolute inset-0" aria-hidden="true" />
-			<div className="pointer-events-none absolute -top-24 right-0 size-80 rounded-full bg-primary/10 blur-3xl" aria-hidden="true" />
-			<div className="pointer-events-none absolute bottom-0 left-0 size-72 rounded-full bg-chart-2/10 blur-3xl" aria-hidden="true" />
+			<div className="merchant-grid-bg-subtle pointer-events-none absolute inset-0" aria-hidden="true" />
+			<div className="pointer-events-none absolute -top-24 right-0 size-80 rounded-full bg-primary/6 blur-3xl" aria-hidden="true" />
+			<div className="pointer-events-none absolute bottom-0 left-0 size-72 rounded-full bg-chart-2/6 blur-3xl" aria-hidden="true" />
 
 			<div className="relative z-10 mx-auto flex min-h-svh w-full max-w-6xl flex-col px-4 py-6 sm:px-6 lg:px-8">
 				<header className="mb-8 flex items-center justify-between gap-4">

@@ -6,6 +6,7 @@ import {
 	OrganizationLocationCreateSchema,
 	OrganizationLocationIdParamSchema,
 	OrganizationLocationUpdateSchema,
+	OrganizationMemberInviteIdParamSchema,
 	OrganizationMemberInviteSchema,
 	OrganizationSlugParamSchema,
 	type OrganizationAccessRequestCreateInput,
@@ -14,7 +15,10 @@ import {
 	type OrganizationLocationCreateInput,
 	type OrganizationLocationResponse,
 	type OrganizationLocationUpdateInput,
+	type OrganizationMemberInviteCreatedResponse,
 	type OrganizationMemberInviteInput,
+	type OrganizationMemberInviteResponse,
+	type OrganizationMemberRosterResponse,
 	type ReviewOrganizationAccessRequestInput,
 	ReviewOrganizationAccessRequestSchema,
 } from "@workspace/shared";
@@ -75,16 +79,47 @@ export class OrganizationController {
 		return this.locations.resubmitMerchantLocation(user.sub, params.orgSlug, params.locationId, body);
 	}
 
+	@Get(":orgSlug/members")
+	@ApiOkResponse({ description: "Organization member roster" })
+	public async listMembers(
+		@GetUser() user: AccessTokenPayload,
+		@Param(new ZodValidationPipe(OrganizationSlugParamSchema)) params: { orgSlug: string },
+	): Promise<OrganizationMemberRosterResponse[]> {
+		const resolved = await this.context.resolveBySlug(user.sub, params.orgSlug);
+		return this.membership.listMembers(user.sub, resolved.membership.role, resolved.organizationId);
+	}
+
+	@Get(":orgSlug/members/invites")
+	@ApiOkResponse({ description: "Pending organization team invitations" })
+	public async listMemberInvites(
+		@GetUser() user: AccessTokenPayload,
+		@Param(new ZodValidationPipe(OrganizationSlugParamSchema)) params: { orgSlug: string },
+	): Promise<OrganizationMemberInviteResponse[]> {
+		const resolved = await this.context.resolveBySlug(user.sub, params.orgSlug);
+		return this.membership.listPendingInvites(user.sub, resolved.membership.role, resolved.organizationId);
+	}
+
 	@Post(":orgSlug/members/invite")
-	@ApiOkResponse({ description: "Organization member invited" })
+	@ApiOkResponse({ description: "Organization team invitation sent" })
 	public async inviteMember(
 		@GetUser() user: AccessTokenPayload,
 		@Param(new ZodValidationPipe(OrganizationSlugParamSchema)) params: { orgSlug: string },
 		@Body(new ZodValidationPipe(OrganizationMemberInviteSchema)) body: OrganizationMemberInviteInput,
+	): Promise<OrganizationMemberInviteCreatedResponse> {
+		const resolved = await this.context.resolveBySlug(user.sub, params.orgSlug);
+		const orgContext = await this.context.getContext(user.sub, params.orgSlug);
+		return this.membership.inviteMember(user.sub, resolved.membership.role, resolved.organizationId, orgContext.organization.displayName, body);
+	}
+
+	@Post(":orgSlug/members/invites/:inviteId/revoke")
+	@ApiOkResponse({ description: "Organization team invitation revoked" })
+	public async revokeMemberInvite(
+		@GetUser() user: AccessTokenPayload,
+		@Param(new ZodValidationPipe(OrganizationMemberInviteIdParamSchema)) params: { orgSlug: string; inviteId: string },
 	): Promise<{ message: string }> {
 		const resolved = await this.context.resolveBySlug(user.sub, params.orgSlug);
-		await this.membership.inviteMember(user.sub, resolved.organizationId, body);
-		return { message: "Member invited" };
+		await this.membership.revokeInvite(user.sub, resolved.membership.role, resolved.organizationId, params.inviteId);
+		return { message: "Invitation revoked" };
 	}
 
 	@Post(":orgSlug/access-requests/:requestId/review")

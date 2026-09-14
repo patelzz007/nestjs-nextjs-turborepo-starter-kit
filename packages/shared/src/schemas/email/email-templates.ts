@@ -144,3 +144,13 @@ export const MerchantInviteEmailPropsSchema = BaseEmailPropsSchema.extend({
 }).strict();
 
 export type MerchantInviteEmailProps = z.output<typeof MerchantInviteEmailPropsSchema>;
+
+export const TeamMemberInviteEmailPropsSchema = BaseEmailPropsSchema.extend({
+	organizationName: z.string().min(1),
+	roleLabel: z.string().min(1),
+	locationSummary: z.string().min(1),
+	inviteUrl: z.url(),
+	expiresInDays: z.number().int().positive().default(7),
+}).strict();
+
+export type TeamMemberInviteEmailProps = z.output<typeof TeamMemberInviteEmailPropsSchema>;

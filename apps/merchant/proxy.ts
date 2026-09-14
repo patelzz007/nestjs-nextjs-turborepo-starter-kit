@@ -39,6 +39,9 @@ function isProtectedRoute(pathname: string): boolean {
 }
 
 function isAllowedPostLoginRedirect(pathname: string): boolean {
+	if (pathname.startsWith("/team-invite")) {
+		return true;
+	}
 	return isProtectedRoute(pathname);
 }
 

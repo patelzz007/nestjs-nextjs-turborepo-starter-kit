@@ -7,6 +7,7 @@ import { AdminAlertEmailTemplate } from "./templates/admin-alert-email.template"
 import { ApiKeyCreatedEmailTemplate } from "./templates/api-key-created-email.template";
 import { LoginVerificationEmailTemplate } from "./templates/login-verification-email.template";
 import { MerchantInviteEmailTemplate } from "./templates/merchant-invite-email.template";
+import { TeamMemberInviteEmailTemplate } from "./templates/team-member-invite-email.template";
 import { PasswordChangedEmailTemplate } from "./templates/password-changed-email.template";
 import { PasswordResetEmailTemplate } from "./templates/password-reset-email.template";
 import { ReferrerRewardCreditedEmailTemplate } from "./templates/referrer-reward-credited-email.template";
@@ -142,6 +143,13 @@ export const EMAIL_TEMPLATE_REGISTRY: Readonly<Record<EmailTemplateKey, EmailTem
 		"Onboarding invite sent when an admin creates a merchant invite.",
 		MerchantInviteEmailTemplate.sampleProps.to,
 		(): BaseEmailTemplate<BaseEmailProps> => new MerchantInviteEmailTemplate(MerchantInviteEmailTemplate.sampleProps),
+	),
+	"team-member-invite": registerTemplate(
+		"team-member-invite",
+		"Team Member Invite",
+		"Invitation sent when an organization owner or admin invites a colleague.",
+		TeamMemberInviteEmailTemplate.sampleProps.to,
+		(): BaseEmailTemplate<BaseEmailProps> => new TeamMemberInviteEmailTemplate(TeamMemberInviteEmailTemplate.sampleProps),
 	),
 };
 

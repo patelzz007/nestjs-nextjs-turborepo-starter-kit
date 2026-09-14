@@ -2,12 +2,10 @@
 
 html:has(body.merchant-app) {
 	height: 100%;
-	overflow: hidden;
 }
 
 .merchant-app {
-	height: 100svh;
-	overflow: hidden;
+	min-height: 100svh;
 	--background: oklch(0.985 0.006 250);
 	--foreground: oklch(0.28 0.03 250);
 	--card: oklch(1 0 0);
@@ -80,6 +78,15 @@ html:has(body.merchant-app) {
 		linear-gradient(to bottom, color-mix(in oklch, var(--border) 55%, transparent) 1px, transparent 1px);
 	background-size: 28px 28px;
 	mask-image: radial-gradient(ellipse 80% 70% at 50% 0%, black 20%, transparent 100%);
+}
+
+.merchant-grid-bg-subtle {
+	background-color: transparent;
+	background-image:
+		linear-gradient(to right, color-mix(in oklch, var(--border) 20%, transparent) 1px, transparent 1px),
+		linear-gradient(to bottom, color-mix(in oklch, var(--border) 20%, transparent) 1px, transparent 1px);
+	background-size: 36px 36px;
+	mask-image: radial-gradient(ellipse 95% 85% at 50% 38%, black 8%, transparent 72%);
 }
 
 /* Solid panel chrome — topbar matches sidebar/content; no frosted tint. */

@@ -4,6 +4,7 @@ import {
 	ApiKeyCreatedEmailPropsSchema,
 	EmailPreviewPropValueSchema,
 	MerchantInviteEmailPropsSchema,
+	TeamMemberInviteEmailPropsSchema,
 	LoginVerificationEmailPropsSchema,
 	PasswordChangedEmailPropsSchema,
 	PasswordResetEmailPropsSchema,
@@ -21,6 +22,7 @@ import { AccountLockedEmailTemplate } from "./templates/account-locked-email.tem
 import { AdminAlertEmailTemplate } from "./templates/admin-alert-email.template";
 import { ApiKeyCreatedEmailTemplate } from "./templates/api-key-created-email.template";
 import { MerchantInviteEmailTemplate } from "./templates/merchant-invite-email.template";
+import { TeamMemberInviteEmailTemplate } from "./templates/team-member-invite-email.template";
 import { LoginVerificationEmailTemplate } from "./templates/login-verification-email.template";
 import { PasswordChangedEmailTemplate } from "./templates/password-changed-email.template";
 import { PasswordResetEmailTemplate } from "./templates/password-reset-email.template";
@@ -66,6 +68,8 @@ export function buildEmailTemplateFromJobData(templateKey: EmailTemplateKey, pro
 			return new ReferrerRewardCreditedEmailTemplate(ReferrerRewardCreditedEmailPropsSchema.parse(props));
 		case "merchant-invite":
 			return new MerchantInviteEmailTemplate(MerchantInviteEmailPropsSchema.parse(props));
+		case "team-member-invite":
+			return new TeamMemberInviteEmailTemplate(TeamMemberInviteEmailPropsSchema.parse(props));
 		default: {
 			const exhaustive: never = templateKey;
 			throw new Error(`Unknown email template key: ${String(exhaustive)}`);

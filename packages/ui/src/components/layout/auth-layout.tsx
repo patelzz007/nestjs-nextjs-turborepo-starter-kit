@@ -62,8 +62,8 @@ export const AuthLayout = React.forwardRef<HTMLDivElement, AuthLayoutProps>(func
 	ref,
 ): React.JSX.Element {
 	return (
-		<div ref={ref} className="flex min-h-svh bg-background">
-			<div className="relative hidden flex-col items-center justify-center overflow-hidden bg-auth-panel md:flex md:w-1/2 dark:bg-auth-panel/90">
+		<div ref={ref} className="flex min-h-svh bg-background md:h-svh md:max-h-svh md:overflow-hidden">
+			<div className="relative hidden flex-col items-center justify-center overflow-y-auto bg-auth-panel md:flex md:min-h-0 md:w-1/2 dark:bg-auth-panel/90">
 				<div className="absolute inset-0 bg-linear-to-br from-auth-panel-foreground/3 to-transparent" />
 
 				<div className="absolute top-0 left-0 h-full w-full">
@@ -105,7 +105,7 @@ export const AuthLayout = React.forwardRef<HTMLDivElement, AuthLayoutProps>(func
 				</div>
 			</div>
 
-			<div className="relative flex w-full flex-col bg-background md:w-1/2">
+			<div className="relative flex min-h-svh w-full flex-col bg-background md:min-h-0 md:w-1/2 md:overflow-y-auto">
 				<div className="absolute top-0 right-0 size-64 rounded-full bg-linear-to-bl from-info/5 to-transparent blur-3xl dark:from-info/5" />
 				<div className="absolute bottom-0 left-0 size-48 rounded-full bg-linear-to-tr from-success/5 to-transparent blur-3xl dark:from-success/5" />
 
@@ -138,8 +138,8 @@ export const AuthLayout = React.forwardRef<HTMLDivElement, AuthLayoutProps>(func
 					</div>
 				</div>
 
-				<div className="relative z-10 flex flex-1 items-center justify-center p-6">
-					<div className="w-full max-w-md">
+				<div className="relative z-10 flex flex-1 flex-col px-6 py-8 md:min-h-0">
+					<div className="mx-auto flex min-h-full w-full max-w-md flex-col justify-center">
 						{showBackButton && backLabel ? (
 							<div className="mb-6 hidden md:block">
 								{onBack ? (

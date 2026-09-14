@@ -18,7 +18,11 @@ export const ORGANIZATION_SEED_IDS = {
 	klCashierMembership: "0178a4d1-6915-4eb3-bf84-6fb14e1feb6f",
 	mlkCashierMembership: "157401d5-536e-464f-9ae9-4756b6dd5f64",
 	pendingNyonyaInvitation: "2178a4d1-6915-4eb3-bf84-6fb14e1feb70",
+	pendingKlTeamInvitation: "3178a4d1-6915-4eb3-bf84-6fb14e1feb71",
 } as const;
+
+/** Plaintext team invite token for Brew & Bean KL pending cashier invite (seed only). */
+export const SEED_TEAM_INVITE_TOKEN_KL_ALICE = "seed_team_invite_token_kl_alice";
 
 export const ORGANIZATION_SEED_SLUGS = {
 	kl: "brew-bean-kl",
@@ -47,6 +51,7 @@ export async function cleanupOrganizationSeedData(): Promise<void> {
 	await prisma.organizationEntitlement.deleteMany();
 	await prisma.organizationLifecycleEvent.deleteMany();
 	await prisma.organizationAccessRequest.deleteMany();
+	await prisma.organizationInvitationLocationScope.deleteMany();
 	await prisma.organizationInvitation.deleteMany();
 	await prisma.organizationMembershipLocationScope.deleteMany();
 	await prisma.organizationMembership.deleteMany();
@@ -107,6 +112,7 @@ export async function seedOrganizationsAndMerchants(
 	klCashier: User,
 	mlkCashier: User,
 	accessRequestUser: User,
+	klPendingCashier: User,
 ): Promise<SeededOrganizations> {
 	const now = BigInt(Date.now());
 
@@ -325,10 +331,33 @@ export async function seedOrganizationsAndMerchants(
 			organizationId: mlkOrganization.id,
 			email: "pending.invite@melaka-rewards.demo",
 			tokenHash: sha256Hex("seed_invite_token_mlk_pending"),
+			kind: "PLATFORM_ONBOARDING",
 			intendedRole: "OWNER",
+			locationScopeType: "ALL_LOCATIONS",
 			status: "PENDING",
 			createdByAdminId: adminUser.id,
 			expiresAt: BigInt(msFromNow(7)),
+		},
+	});
+
+	await prisma.organizationInvitation.create({
+		data: {
+			id: ORGANIZATION_SEED_IDS.pendingKlTeamInvitation,
+			organizationId: klOrganization.id,
+			email: klPendingCashier.email,
+			tokenHash: sha256Hex(SEED_TEAM_INVITE_TOKEN_KL_ALICE),
+			kind: "TEAM_MEMBER",
+			intendedRole: "CASHIER",
+			locationScopeType: "SELECTED",
+			status: "PENDING",
+			createdByAdminId: klOwner.id,
+			expiresAt: BigInt(msFromNow(7)),
+			locationScopes: {
+				create: {
+					organizationId: klOrganization.id,
+					locationId: ORGANIZATION_SEED_IDS.klLocation,
+				},
+			},
 		},
 	});
 
@@ -403,6 +432,10 @@ Jonker Street Kitchen — jonker.owner@melaka-rewards.demo / JonkerOwner@123
   Stores:        Bukit Katil (primary), Bukit Beruang (active), Ayer Keroh (pending approval)
   Canonical:     /orgs/${ORGANIZATION_SEED_SLUGS.mlk}/dashboard
   By org id:     /orgs/${ORGANIZATION_SEED_IDS.mlkOrganization}/dashboard
+
+Pending team invite (Brew & Bean KL → Bukit Bintang cashier)
+  Invitee:       alice.kl@kl-rewards.demo / AliceKl@123
+  Accept URL:    /team-invite?token=${SEED_TEAM_INVITE_TOKEN_KL_ALICE}
 
 UUID paths redirect to the canonical slug URL after login.
 `);

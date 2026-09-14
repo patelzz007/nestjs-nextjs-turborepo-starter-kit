@@ -47,6 +47,9 @@ CREATE TYPE "OrganizationLocationStatus" AS ENUM ('PENDING_APPROVAL', 'ACTIVE', 
 CREATE TYPE "OrganizationInvitationStatus" AS ENUM ('PENDING', 'ACCEPTED', 'EXPIRED', 'REVOKED');
 
 -- CreateEnum
+CREATE TYPE "OrganizationInvitationKind" AS ENUM ('PLATFORM_ONBOARDING', 'TEAM_MEMBER');
+
+-- CreateEnum
 CREATE TYPE "OrganizationAccessRequestStatus" AS ENUM ('PENDING', 'APPROVED', 'REJECTED', 'CANCELLED');
 
 -- CreateEnum
@@ -737,7 +740,9 @@ CREATE TABLE "organization_invitations" (
     "organization_id" TEXT,
     "email" VARCHAR(100) NOT NULL,
     "token_hash" TEXT NOT NULL,
+    "kind" "OrganizationInvitationKind" NOT NULL DEFAULT 'PLATFORM_ONBOARDING',
     "intended_role" "OrganizationMembershipRole" NOT NULL,
+    "location_scope_type" "OrganizationLocationScopeType" NOT NULL DEFAULT 'ALL_LOCATIONS',
     "status" "OrganizationInvitationStatus" NOT NULL DEFAULT 'PENDING',
     "created_by_admin_id" TEXT NOT NULL,
     "accepted_by_user_id" TEXT,
@@ -747,6 +752,17 @@ CREATE TABLE "organization_invitations" (
     "updated_at" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
 
     CONSTRAINT "organization_invitations_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "organization_invitation_location_scopes" (
+    "id" TEXT NOT NULL,
+    "organization_id" TEXT NOT NULL,
+    "invitation_id" TEXT NOT NULL,
+    "location_id" TEXT NOT NULL,
+    "created_at" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
+
+    CONSTRAINT "organization_invitation_location_scopes_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -1634,6 +1650,15 @@ CREATE INDEX "organization_invitations_email_idx" ON "organization_invitations"(
 CREATE INDEX "organization_invitations_organization_id_idx" ON "organization_invitations"("organization_id");
 
 -- CreateIndex
+CREATE INDEX "organization_invitations_organization_id_kind_status_idx" ON "organization_invitations"("organization_id", "kind", "status");
+
+-- CreateIndex
+CREATE INDEX "organization_invitation_location_scopes_organization_id_idx" ON "organization_invitation_location_scopes"("organization_id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "organization_invitation_location_scopes_invitation_id_locat_key" ON "organization_invitation_location_scopes"("invitation_id", "location_id");
+
+-- CreateIndex
 CREATE INDEX "organization_access_requests_organization_id_user_id_status_idx" ON "organization_access_requests"("organization_id", "user_id", "status");
 
 -- CreateIndex
@@ -2007,6 +2032,15 @@ ALTER TABLE "organization_invitations" ADD CONSTRAINT "organization_invitations_
 
 -- AddForeignKey
 ALTER TABLE "organization_invitations" ADD CONSTRAINT "organization_invitations_accepted_by_user_id_fkey" FOREIGN KEY ("accepted_by_user_id") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "organization_invitation_location_scopes" ADD CONSTRAINT "organization_invitation_location_scopes_organization_id_fkey" FOREIGN KEY ("organization_id") REFERENCES "organizations"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "organization_invitation_location_scopes" ADD CONSTRAINT "organization_invitation_location_scopes_invitation_id_fkey" FOREIGN KEY ("invitation_id") REFERENCES "organization_invitations"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "organization_invitation_location_scopes" ADD CONSTRAINT "organization_invitation_location_scopes_location_id_fkey" FOREIGN KEY ("location_id") REFERENCES "organization_locations"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "organization_access_requests" ADD CONSTRAINT "organization_access_requests_organization_id_fkey" FOREIGN KEY ("organization_id") REFERENCES "organizations"("id") ON DELETE CASCADE ON UPDATE CASCADE;

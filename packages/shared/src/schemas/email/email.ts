@@ -34,6 +34,7 @@ export const EmailTemplateKeySchema = z.enum([
 	"referrer-reward-credited",
 	"login-verification",
 	"merchant-invite",
+	"team-member-invite",
 ]);
 
 export type EmailTemplateKey = z.output<typeof EmailTemplateKeySchema>;

@@ -3,17 +3,10 @@ import { EnrollmentReasonSchema, SessionScopeSchema } from "./enrollment";
 import { EpochMsSchema } from "../api/common";
 import { OrganizationSlugSchema } from "../domain/organization/organization";
 import { VerifyEmailTokenParamSchema } from "../domain/platform/param-schemas";
+import { strongPassword } from "./password";
 import { UserResponseSchema } from "./user";
 
-// ── Password Validation ──────────────────────────────────────────────────
-
-export const strongPassword = z
-	.string()
-	.min(8, "Password must be at least 8 characters")
-	.regex(/[A-Z]/, "Password must contain at least one uppercase letter")
-	.regex(/[a-z]/, "Password must contain at least one lowercase letter")
-	.regex(/[0-9]/, "Password must contain at least one number")
-	.regex(/[^a-zA-Z0-9]/, "Password must contain at least one special character");
+export { strongPassword } from "./password";
 
 // ── Input Schemas ────────────────────────────────────────────────────────
 

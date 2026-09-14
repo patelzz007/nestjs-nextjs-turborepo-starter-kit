@@ -1,35 +1,21 @@
 "use client";
 
+import { buildTocTree, type TocTreeNode } from "@/lib/toc-tree";
+import { Button } from "@workspace/ui/components/form/button";
+import { cn } from "@workspace/ui/lib/core/utils";
 import { useItems, type TOCItemType } from "fumadocs-core/toc";
 import { useTOCItems } from "fumadocs-ui/components/toc";
 import { ChevronDown, List } from "lucide-react";
-import { useCallback, useState } from "react";
-
-import { Button } from "@workspace/ui/components/form/button";
-import { cn } from "@workspace/ui/lib/core/utils";
+import { useCallback, useMemo, useState } from "react";
 
 /**
- * Fully custom table of contents — replaces Fumadocs' TOC renderer via the
- * `slots.toc` escape hatch on `DocsPage`. The layout keeps Fumadocs'
- * `TOCProvider` (the right rail + the scroll-spy context), but the markup and
- * visuals below are 100% ours: `useTOCItems()` reads the provider's item list
- * and `useItems()` reports which anchors are currently in view.
- *
- * Desktop (`TableOfContentsMain`): a sticky right-rail with "On this page",
- * one continuous rail drawn on the list, a horizontal stub from the rail to
- * each nested item's text, and an inverted slate pill on the active/hover row.
- * Mobile (`TableOfContentsMobile`): a sticky bar in the `toc-popover` grid row
- * showing the current heading, expanding into a scrollable sheet.
- *
- * Nesting depth is conveyed via the `data-depth` attribute (0 for the
- * shallowest heading, +1 per deeper level); the CSS keys the rail stubs, text
- * indentation and pill offset off those values — no inline custom properties.
+ * Custom table of contents — nested tree with vertical guide lines on the left
+ * of each branch. Replaces Fumadocs' default renderer via `slots.toc` on
+ * `DocsPage` while keeping `TOCProvider` for scroll-spy context.
  */
 
 interface TocItemLinkProps {
 	readonly item: TOCItemType;
-	/** 0 for the shallowest heading; +1 per deeper level. */
-	readonly depthOffset: number;
 	readonly active: boolean;
 	readonly onNavigate?: () => void;
 }
@@ -39,40 +25,60 @@ function anchorIdOf(url: string): string {
 	return url.startsWith("#") ? url.slice(1) : url;
 }
 
-function TocItemLink({ item, depthOffset, active, onNavigate }: TocItemLinkProps): React.JSX.Element {
+function TocItemLink({ item, active, onNavigate }: TocItemLinkProps): React.JSX.Element {
 	return (
-		<li className="toc-item" data-depth={depthOffset}>
-			<a href={item.url} className={cn("toc-link", active ? "is-active" : undefined)} onClick={onNavigate}>
-				{item.title}
-			</a>
-		</li>
+		<a href={item.url} className={cn("toc-link", active ? "is-active" : undefined)} onClick={onNavigate}>
+			<span className="toc-link-label">{item.title}</span>
+		</a>
 	);
+}
+
+interface TocTreeBranchProps {
+	readonly nodes: readonly TocTreeNode[];
+	readonly activeIds: ReadonlySet<string>;
+	readonly depth: number;
+	readonly onNavigate?: () => void;
+}
+
+function TocTreeBranch({ nodes, activeIds, depth, onNavigate }: TocTreeBranchProps): React.JSX.Element {
+	return (
+		<ul className={cn("toc-tree", depth > 0 && "toc-tree-nested")} data-depth={depth}>
+			{nodes.map((node) => (
+				<li key={node.item.url} className="toc-tree-node">
+					<TocItemLink item={node.item} active={activeIds.has(anchorIdOf(node.item.url))} onNavigate={onNavigate} />
+					{node.children.length > 0 ? <TocTreeBranch nodes={node.children} activeIds={activeIds} depth={depth + 1} onNavigate={onNavigate} /> : null}
+				</li>
+			))}
+		</ul>
+	);
+}
+
+interface TocTreeProps {
+	readonly items: readonly TOCItemType[];
+	readonly activeIds: ReadonlySet<string>;
+	readonly onNavigate?: () => void;
+}
+
+function TocTree({ items, activeIds, onNavigate }: TocTreeProps): React.JSX.Element {
+	const tree = useMemo(() => buildTocTree(items), [items]);
+	return <TocTreeBranch nodes={tree} activeIds={activeIds} depth={0} onNavigate={onNavigate} />;
 }
 
 /** Desktop TOC — fills the right `toc` grid column, hidden below `xl`. */
 export function TableOfContentsMain(): React.JSX.Element {
 	const items = useTOCItems();
-	const activeIds = new Set(
-		useItems()
-			.filter((info) => info.active)
-			.map((info) => info.id),
-	);
+	const itemsInfo = useItems();
+	const activeIds = useMemo(() => new Set(itemsInfo.filter((info) => info.active).map((info) => info.id)), [itemsInfo]);
 
 	if (items.length === 0) {
 		return <aside className="toc-sticky flex flex-col [grid-area:toc] max-xl:hidden" aria-label="On this page" />;
 	}
 
-	const minDepth: number = Math.min(...items.map((item) => item.depth));
-
 	return (
 		<aside className="toc-sticky flex flex-col [grid-area:toc] max-xl:hidden" aria-label="On this page">
 			<p className="toc-title">On this page</p>
 			<nav className="toc-nav">
-				<ol className="toc-list">
-					{items.map((item) => (
-						<TocItemLink key={item.url} item={item} depthOffset={item.depth - minDepth} active={activeIds.has(anchorIdOf(item.url))} />
-					))}
-				</ol>
+				<TocTree items={items} activeIds={activeIds} />
 			</nav>
 		</aside>
 	);
@@ -97,7 +103,6 @@ export function TableOfContentsMobile(): React.JSX.Element | null {
 
 	const activeIds = new Set(itemsInfo.filter((info) => info.active).map((info) => info.id));
 	const activeTitle = itemsInfo.find((info) => info.active)?.original.title;
-	const minDepth: number = Math.min(...items.map((item) => item.depth));
 
 	return (
 		<div className="toc-mobile">
@@ -108,11 +113,7 @@ export function TableOfContentsMobile(): React.JSX.Element | null {
 			</Button>
 			{open ? (
 				<div className="toc-mobile-panel">
-					<ol className="toc-list">
-						{items.map((item) => (
-							<TocItemLink key={item.url} item={item} depthOffset={item.depth - minDepth} active={activeIds.has(anchorIdOf(item.url))} onNavigate={close} />
-						))}
-					</ol>
+					<TocTree items={items} activeIds={activeIds} onNavigate={close} />
 				</div>
 			) : null}
 		</div>

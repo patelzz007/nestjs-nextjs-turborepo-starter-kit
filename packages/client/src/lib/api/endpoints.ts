@@ -88,7 +88,12 @@ import {
 	MerchantKybDocumentDownloadResponseSchema,
 	MerchantKybProfileResponseSchema,
 	OrganizationContextResponseSchema,
+	OrganizationMemberInviteCreatedResponseSchema,
+	OrganizationMemberInviteResponseSchema,
+	OrganizationMemberRosterResponseSchema,
 	OrganizationRewardMembershipResponseSchema,
+	OrganizationTeamInviteAcceptResponseSchema,
+	OrganizationTeamInvitePreviewSchema,
 	MerchantOnboardingCompleteResponseSchema,
 	MerchantOnboardingDocumentBatchUploadCompleteResponseSchema,
 	MerchantOnboardingDocumentBatchUploadUrlResponseSchema,
@@ -688,9 +693,34 @@ export const apiRouter = {
 			response: envelope(OrganizationContextResponseSchema),
 			queryKey: ({ orgSlug }) => ["organization", orgSlug, "context"],
 		}),
+		listMembers: defineQuery(apiContract.organizations.listMembers, {
+			response: envelope(z.array(OrganizationMemberRosterResponseSchema)),
+			queryKey: ({ orgSlug }) => ["organization", orgSlug, "members"],
+		}),
+		listMemberInvites: defineQuery(apiContract.organizations.listMemberInvites, {
+			response: envelope(z.array(OrganizationMemberInviteResponseSchema)),
+			queryKey: ({ orgSlug }) => ["organization", orgSlug, "members", "invites"],
+		}),
 		inviteMember: defineMutation(apiContract.organizations.inviteMember, {
-			response: envelope(z.object({ message: z.string() }).strict()),
+			response: envelope(OrganizationMemberInviteCreatedResponseSchema),
 			queryKey: ({ orgSlug, email }) => ["organization", orgSlug, "members", "invite", email],
+		}),
+		revokeMemberInvite: defineMutation(apiContract.organizations.revokeMemberInvite, {
+			response: envelope(z.object({ message: z.string() }).strict()),
+			queryKey: ({ orgSlug, inviteId }) => ["organization", orgSlug, "members", "invites", "revoke", inviteId],
+		}),
+		validateTeamInvite: defineMutation(apiContract.organizations.validateTeamInvite, {
+			response: envelope(OrganizationTeamInvitePreviewSchema),
+			queryKey: ({ token }) => ["organization", "team-invite", "validate", token],
+		}),
+		acceptTeamInvite: defineMutation(apiContract.organizations.acceptTeamInvite, {
+			response: envelope(OrganizationTeamInviteAcceptResponseSchema),
+			queryKey: ({ token }) => ["organization", "team-invite", "accept", token],
+		}),
+		registerAndAcceptTeamInvite: defineMutation(apiContract.organizations.registerAndAcceptTeamInvite, {
+			response: envelope(LoginClientResponseSchema),
+			queryKey: ({ token }) => ["organization", "team-invite", "register-and-accept", token],
+			baseOptions: { headers: { "X-Client-Type": "merchant" } },
 		}),
 		kyb: {
 			get: defineQuery(apiContract.organizations.kyb.get, {

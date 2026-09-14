@@ -73,10 +73,22 @@ export class AuthSessionService {
 			const canManageMerchants: boolean = userPermissions.permissions.some((permission) => permission.action === "MANAGE" && permission.resource === "MERCHANT_ORG");
 
 			if (membership === null && !canManageMerchants) {
-				throw new ForbiddenException({
-					message: "Merchant access required. This account is not linked to a merchant organization.",
-					error: "MERCHANT_ACCESS_REQUIRED",
+				const nowMs = Date.now();
+				const pendingTeamInviteCount = await this.prisma.organizationInvitation.count({
+					where: {
+						email: user.email,
+						kind: "TEAM_MEMBER",
+						status: "PENDING",
+						expiresAt: { gt: BigInt(nowMs) },
+					},
 				});
+
+				if (pendingTeamInviteCount === 0) {
+					throw new ForbiddenException({
+						message: "Merchant access required. This account is not linked to a merchant organization.",
+						error: "MERCHANT_ACCESS_REQUIRED",
+					});
+				}
 			}
 
 			merchantOrganizationSlug = membership?.organization.slug;

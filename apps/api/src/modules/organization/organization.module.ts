@@ -3,8 +3,10 @@ import { Module } from "@nestjs/common";
 import { PrismaModule } from "../../prisma/prisma.module";
 import { AuthModule } from "../auth/auth.module";
 import { AuthorizationCedarModule } from "../authorization-cedar/authorization-cedar.module";
+import { NotificationsModule } from "../notifications/notifications.module";
 import { OrganizationAdminController } from "./controllers/organization-admin.controller";
 import { OrganizationController } from "./controllers/organization.controller";
+import { OrganizationTeamInviteController } from "./controllers/organization-team-invite.controller";
 import { OrganizationAuditService } from "./services/organization-audit.service";
 import { OrganizationContextService } from "./services/organization-context.service";
 import { OrganizationLifecycleService } from "./services/organization-lifecycle.service";
@@ -19,8 +21,8 @@ import { OrganizationLocationService } from "./services/organization-location.se
 import { OrganizationRewardAuthService } from "./services/organization-reward-auth.service";
 
 @Module({
-	imports: [PrismaModule, AuthModule, AuthorizationCedarModule],
-	controllers: [OrganizationController, OrganizationAdminController],
+	imports: [PrismaModule, AuthModule, AuthorizationCedarModule, NotificationsModule],
+	controllers: [OrganizationController, OrganizationTeamInviteController, OrganizationAdminController],
 	providers: [
 		OrganizationRepository,
 		OrganizationLocationRepository,

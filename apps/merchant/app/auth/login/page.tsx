@@ -2,6 +2,8 @@
 
 import { LoginForm, type DemoAccount } from "@workspace/client/lib/auth/forms/login-form";
 import { AuthLayout } from "@workspace/ui/components/layout/auth-layout";
+import { useSearchParams } from "next/navigation";
+import { Suspense, type JSX } from "react";
 
 const MERCHANT_DEMO_ACCOUNTS: readonly DemoAccount[] = [
 	{ label: "Super Admin", email: "superadmin@example.com", password: "SuperAdmin@123" },
@@ -12,7 +14,16 @@ const MERCHANT_DEMO_ACCOUNTS: readonly DemoAccount[] = [
 
 const SHOW_DEMO: boolean = process.env.NEXT_PUBLIC_SHOW_DEMO_ACCOUNTS === "true";
 
-export default function MerchantLoginPage(): React.JSX.Element {
+function MerchantLoginContent(): JSX.Element {
+	const searchParams = useSearchParams();
+	const redirect = searchParams.get("redirect");
+	const email = searchParams.get("email");
+	const redirectPath = redirect !== null && redirect.length > 0 ? redirect : "/";
+
+	return <LoginForm mode="merchant" demoAccounts={SHOW_DEMO ? MERCHANT_DEMO_ACCOUNTS : undefined} redirectPath={redirectPath} defaultEmail={email ?? undefined} />;
+}
+
+export default function MerchantLoginPage(): JSX.Element {
 	return (
 		<AuthLayout
 			logo={
@@ -31,7 +42,9 @@ export default function MerchantLoginPage(): React.JSX.Element {
 				toggleThemeAria: "Toggle theme",
 				rightsReserved: "All rights reserved.",
 			}}>
-			<LoginForm mode="merchant" demoAccounts={SHOW_DEMO ? MERCHANT_DEMO_ACCOUNTS : undefined} redirectPath="/" />
+			<Suspense fallback={<p className="text-sm text-muted-foreground">Loading sign in…</p>}>
+				<MerchantLoginContent />
+			</Suspense>
 		</AuthLayout>
 	);
 }

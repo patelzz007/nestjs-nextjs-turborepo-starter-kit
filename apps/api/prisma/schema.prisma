@@ -897,6 +897,11 @@ enum OrganizationInvitationStatus {
   REVOKED
 }
 
+enum OrganizationInvitationKind {
+  PLATFORM_ONBOARDING
+  TEAM_MEMBER
+}
+
 enum OrganizationAccessRequestStatus {
   PENDING
   APPROVED
@@ -980,8 +985,9 @@ model Organization {
   assets                   OrganizationAsset[]
   terminals                OrganizationTerminal[]
   storedFiles              StoredFile[]                          @relation("StoredFileOrganization")
-  membershipLocationScopes OrganizationMembershipLocationScope[]
-  rewardLocationScopes     RewardLocationScope[]
+  membershipLocationScopes         OrganizationMembershipLocationScope[]
+  invitationLocationScopes         OrganizationInvitationLocationScope[]
+  rewardLocationScopes             RewardLocationScope[]
 
   @@index([lifecycleState])
   @@map("organizations")
@@ -1025,10 +1031,11 @@ model OrganizationLocation {
   organization      Organization                          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   requestedBy       User?                                 @relation("OrganizationLocationRequestedBy", fields: [requestedByUserId], references: [id], onDelete: SetNull)
   reviewedBy        User?                                 @relation("OrganizationLocationReviewedBy", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
-  locationScopes         OrganizationMembershipLocationScope[]
-  rewardLocationScopes   RewardLocationScope[]
-  terminals              OrganizationTerminal[]
-  redemptions            RewardRedemption[]
+  locationScopes              OrganizationMembershipLocationScope[]
+  invitationLocationScopes    OrganizationInvitationLocationScope[]
+  rewardLocationScopes        RewardLocationScope[]
+  terminals                   OrganizationTerminal[]
+  redemptions                 RewardRedemption[]
   apiKeys                OrganizationApiKey[]
 
   @@unique([organizationId, code])
@@ -1100,28 +1107,49 @@ model OrganizationMerchantProfile {
   @@map("organization_merchant_profiles")
 }
 
-/// RLS: TENANT — platform-invited organization join.
+/// RLS: TENANT — platform onboarding or team-member invite.
 model OrganizationInvitation {
-  id               String                       @id @default(uuid())
-  organizationId   String?                      @map("organization_id")
-  email            String                       @db.VarChar(100)
-  tokenHash        String                       @unique @map("token_hash") @db.Text
-  intendedRole     OrganizationMembershipRole   @map("intended_role")
-  status           OrganizationInvitationStatus @default(PENDING)
-  createdByAdminId String                       @map("created_by_admin_id")
-  acceptedByUserId String?                      @map("accepted_by_user_id")
-  expiresAt        BigInt                       @map("expires_at")
-  acceptedAt       BigInt?                      @map("accepted_at")
-  createdAt        BigInt                       @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
-  updatedAt        BigInt                       @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
+  id                String                        @id @default(uuid())
+  organizationId    String?                       @map("organization_id")
+  email             String                        @db.VarChar(100)
+  tokenHash         String                        @unique @map("token_hash") @db.Text
+  kind              OrganizationInvitationKind    @default(PLATFORM_ONBOARDING) @map("kind")
+  intendedRole      OrganizationMembershipRole    @map("intended_role")
+  locationScopeType OrganizationLocationScopeType @default(ALL_LOCATIONS) @map("location_scope_type")
+  status            OrganizationInvitationStatus  @default(PENDING)
+  createdByAdminId  String                        @map("created_by_admin_id")
+  acceptedByUserId  String?                       @map("accepted_by_user_id")
+  expiresAt         BigInt                        @map("expires_at")
+  acceptedAt        BigInt?                       @map("accepted_at")
+  createdAt         BigInt                        @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
+  updatedAt         BigInt                        @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
 
-  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
-  createdByAdmin User          @relation("OrganizationInvitationCreator", fields: [createdByAdminId], references: [id], onDelete: Restrict)
-  acceptedByUser User?         @relation("OrganizationInvitationAcceptor", fields: [acceptedByUserId], references: [id], onDelete: SetNull)
+  organization   Organization?                       @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  createdByAdmin User                                @relation("OrganizationInvitationCreator", fields: [createdByAdminId], references: [id], onDelete: Restrict)
+  acceptedByUser User?                               @relation("OrganizationInvitationAcceptor", fields: [acceptedByUserId], references: [id], onDelete: SetNull)
+  locationScopes OrganizationInvitationLocationScope[]
 
   @@index([email])
   @@index([organizationId])
+  @@index([organizationId, kind, status])
   @@map("organization_invitations")
+}
+
+/// RLS: TENANT — selected locations on a pending team invite.
+model OrganizationInvitationLocationScope {
+  id             String @id @default(uuid())
+  organizationId String @map("organization_id")
+  invitationId   String @map("invitation_id")
+  locationId     String @map("location_id")
+  createdAt      BigInt @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
+
+  organization Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  invitation   OrganizationInvitation @relation(fields: [invitationId], references: [id], onDelete: Cascade)
+  location     OrganizationLocation   @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  @@unique([invitationId, locationId])
+  @@index([organizationId])
+  @@map("organization_invitation_location_scopes")
 }
 
 /// RLS: TENANT — user-requested access to an organization.

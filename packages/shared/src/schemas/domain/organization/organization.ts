@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { EpochMsSchema } from "../../api/common";
+import { strongPassword } from "../../auth/password";
 import { KybStatusSchema, PilotCitySchema } from "../rewards/rewards-enums";
 
 /** Organization lifecycle states — authoritative across API, workers, billing. */
@@ -27,6 +28,10 @@ export type OrganizationLocationStatus = z.output<typeof OrganizationLocationSta
 export const OrganizationInvitationStatusSchema = z.enum(["PENDING", "ACCEPTED", "EXPIRED", "REVOKED"]);
 
 export type OrganizationInvitationStatus = z.output<typeof OrganizationInvitationStatusSchema>;
+
+export const OrganizationInvitationKindSchema = z.enum(["PLATFORM_ONBOARDING", "TEAM_MEMBER"]);
+
+export type OrganizationInvitationKind = z.output<typeof OrganizationInvitationKindSchema>;
 
 export const OrganizationAccessRequestStatusSchema = z.enum(["PENDING", "APPROVED", "REJECTED", "CANCELLED"]);
 
@@ -300,12 +305,24 @@ export const ReviewOrganizationAccessRequestSchema = z
 		approve: z.boolean(),
 		role: OrganizationMembershipRoleSchema.optional(),
 		locationScopeType: OrganizationLocationScopeTypeSchema.optional(),
+		locationIds: z.array(z.uuid()).default([]),
 	})
-	.strict();
+	.strict()
+	.superRefine((value, ctx): void => {
+		if (value.approve && value.locationScopeType === "SELECTED" && value.locationIds.length === 0) {
+			ctx.addIssue({
+				code: "custom",
+				message: "Select at least one location",
+				path: ["locationIds"],
+			});
+		}
+	});
 
 export type ReviewOrganizationAccessRequestInput = z.output<typeof ReviewOrganizationAccessRequestSchema>;
 
-export const OrganizationMemberInviteSchema = z
+const TEAM_INVITE_ROLES: readonly OrganizationMembershipRole[] = ["ADMIN", "MEMBER", "POLICY_ADMIN", "CASHIER"];
+
+export const OrganizationMemberInviteFieldsSchema = z
 	.object({
 		email: z.email(),
 		role: OrganizationMembershipRoleSchema,
@@ -314,7 +331,132 @@ export const OrganizationMemberInviteSchema = z
 	})
 	.strict();
 
+export type OrganizationMemberInviteFields = z.output<typeof OrganizationMemberInviteFieldsSchema>;
+
+export const OrganizationMemberInviteSchema = OrganizationMemberInviteFieldsSchema.superRefine((value, ctx): void => {
+	if (!TEAM_INVITE_ROLES.includes(value.role)) {
+		ctx.addIssue({
+			code: "custom",
+			message: "Owner role cannot be assigned via team invite",
+			path: ["role"],
+		});
+	}
+
+	if (value.locationScopeType === "SELECTED" && value.locationIds.length === 0) {
+		ctx.addIssue({
+			code: "custom",
+			message: "Select at least one location",
+			path: ["locationIds"],
+		});
+	}
+});
+
 export type OrganizationMemberInviteInput = z.output<typeof OrganizationMemberInviteSchema>;
+
+export const OrganizationMemberRosterResponseSchema = z
+	.object({
+		id: z.uuid(),
+		organizationId: z.uuid(),
+		userId: z.uuid(),
+		email: z.email(),
+		fullName: z.string(),
+		role: OrganizationMembershipRoleSchema,
+		status: OrganizationMembershipStatusSchema,
+		displayName: z.string().nullable(),
+		locationScopeType: OrganizationLocationScopeTypeSchema,
+		locationIds: z.array(z.uuid()),
+		createdAt: EpochMsSchema,
+		updatedAt: EpochMsSchema,
+	})
+	.strict();
+
+export type OrganizationMemberRosterResponse = z.output<typeof OrganizationMemberRosterResponseSchema>;
+
+export const OrganizationMemberInviteResponseSchema = z
+	.object({
+		id: z.uuid(),
+		organizationId: z.uuid(),
+		email: z.email(),
+		intendedRole: OrganizationMembershipRoleSchema,
+		locationScopeType: OrganizationLocationScopeTypeSchema,
+		locationIds: z.array(z.uuid()),
+		status: OrganizationInvitationStatusSchema,
+		invitedByUserId: z.uuid(),
+		invitedByName: z.string(),
+		expiresAt: EpochMsSchema,
+		createdAt: EpochMsSchema,
+	})
+	.strict();
+
+export type OrganizationMemberInviteResponse = z.output<typeof OrganizationMemberInviteResponseSchema>;
+
+export const OrganizationMemberInviteCreatedResponseSchema = z
+	.object({
+		inviteId: z.uuid(),
+		message: z.string(),
+	})
+	.strict();
+
+export type OrganizationMemberInviteCreatedResponse = z.output<typeof OrganizationMemberInviteCreatedResponseSchema>;
+
+export const OrganizationMemberInviteIdParamSchema = z
+	.object({
+		orgSlug: OrganizationSlugSchema,
+		inviteId: z.uuid(),
+	})
+	.strict();
+
+export type OrganizationMemberInviteIdParam = z.output<typeof OrganizationMemberInviteIdParamSchema>;
+
+export const OrganizationTeamInviteTokenSchema = z
+	.object({
+		token: z.string().min(16).max(256),
+	})
+	.strict();
+
+export type OrganizationTeamInviteTokenInput = z.output<typeof OrganizationTeamInviteTokenSchema>;
+
+export const OrganizationTeamInviteRegisterAcceptSchema = z
+	.object({
+		token: z.string().min(16).max(256),
+		fullName: z.string().min(2, "Full name must be at least 2 characters"),
+		password: strongPassword,
+	})
+	.strict();
+
+export type OrganizationTeamInviteRegisterAcceptInput = z.output<typeof OrganizationTeamInviteRegisterAcceptSchema>;
+
+export const OrganizationTeamInvitePreviewSchema = z
+	.object({
+		email: z.email(),
+		organizationDisplayName: z.string(),
+		organizationSlug: OrganizationSlugSchema,
+		intendedRole: OrganizationMembershipRoleSchema,
+		locationScopeType: OrganizationLocationScopeTypeSchema,
+		locationIds: z.array(z.uuid()),
+		locationLabels: z.array(
+			z
+				.object({
+					id: z.uuid(),
+					name: z.string(),
+				})
+				.strict(),
+		),
+		expiresAt: EpochMsSchema,
+		hasExistingAccount: z.boolean(),
+	})
+	.strict();
+
+export type OrganizationTeamInvitePreview = z.output<typeof OrganizationTeamInvitePreviewSchema>;
+
+export const OrganizationTeamInviteAcceptResponseSchema = z
+	.object({
+		organizationSlug: OrganizationSlugSchema,
+		message: z.string(),
+	})
+	.strict();
+
+export type OrganizationTeamInviteAcceptResponse = z.output<typeof OrganizationTeamInviteAcceptResponseSchema>;
 
 export const PolicyBuilderPayloadSchema = z
 	.object({

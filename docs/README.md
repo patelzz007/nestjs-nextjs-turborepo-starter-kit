@@ -44,6 +44,7 @@ coverImage: "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?auto=f
 | **[API Routes](./api-routes.md)**                     | Single source of truth for all API endpoint paths — how `api-routes.ts` works, how contracts/controllers/client consume it, and how to add or remove endpoints. |
 | **[Multi-Tenancy](./multi-tenancy.md)**               | Organization-scoped tenancy: URL context, RLS transaction contract, Cedar ABAC, lifecycle, and pilot limits. |
 | **[Merchant Onboarding](./merchant-onboarding.md)**    | Single-pass merchant account setup and KYB submission, including invite-authorized document uploads and retry behavior. |
+| **[Team Member Invitations](./team-invite.md)**        | End-to-end staff invite flow: admin send, public validate/accept, new-account registration, email verification, RLS bypass, and local testing. |
 | **[Threat model](./security/multi-tenancy-threat-model.md)** · **[Data classification](./security/data-classification-inventory.md)** | Security inventory for tenant isolation — required reading before touching tenant-owned models. |
 | **[Multi-tenancy runbook](./operations/multi-tenancy-runbook.md)** | Incident response, kill switches, backup/restore, and tenant deletion procedures. |
 

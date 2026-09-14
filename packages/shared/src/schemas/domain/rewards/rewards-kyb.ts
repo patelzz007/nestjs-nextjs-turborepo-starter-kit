@@ -3,7 +3,7 @@ import { z } from "zod";
 import { OrganizationLocationDraftSchema, OrganizationPrimaryLocationDraftSchema } from "../organization/organization";
 import { EpochMsSchema } from "../../api/common";
 import { CreateFileUploadUrlResponseSchema, DocumentMimeTypeSchema, MERCHANT_KYB_UPLOAD_POLICY } from "../platform/storage";
-import { strongPassword } from "../../auth/auth";
+import { strongPassword } from "../../auth/password";
 import { JsonObjectSchema } from "../../runtime/json";
 import {
 	KybDocumentScanStatusSchema,

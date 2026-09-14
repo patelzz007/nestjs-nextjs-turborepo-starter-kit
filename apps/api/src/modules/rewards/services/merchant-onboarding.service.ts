@@ -23,6 +23,7 @@ import { EmailVerificationService } from "../../auth/services/email-verification
 import { UserProvisioningService } from "../../auth/services/user-provisioning.service";
 import { FileService } from "../../files/services/file.service";
 import { OrganizationInviteRepository } from "../../organization/repositories/organization-invite.repository";
+import { TenantTransactionService } from "../../../prisma/tenant-transaction.service";
 import { OrganizationRepository } from "../../organization/repositories/organization.repository";
 import { OrganizationLocationService } from "../../organization/services/organization-location.service";
 import { OrganizationProvisioningService } from "../../organization/services/organization-provisioning.service";
@@ -57,6 +58,7 @@ export class MerchantOnboardingService {
 		private readonly organizationLocationService: OrganizationLocationService,
 		private readonly fileService: FileService,
 		private readonly kybDocumentService: MerchantKybDocumentService,
+		private readonly tenantTx: TenantTransactionService,
 	) {}
 
 	public async validateInviteToken(token: string): Promise<MerchantOnboardingInvitePreview> {
@@ -128,7 +130,17 @@ export class MerchantOnboardingService {
 		);
 
 		await this.organizationProvisioning.activateOrganization(invite.organizationId, userId);
-		await this.organizationInviteRepository.markAccepted(invite.id, userId, Date.now());
+		await this.tenantTx.withSystemOperation(
+			{
+				operation: "organization.provision",
+				reason: "Mark merchant onboarding invitation accepted",
+				correlationId: `merchant-onboarding-accept:${invite.id}`,
+				actorUserId: userId,
+			},
+			async (tx) => {
+				await this.organizationInviteRepository.markAcceptedInTx(tx, invite.id, userId, Date.now());
+			},
+		);
 
 		await this.auditLogRepository.create({
 			organizationId: invite.organizationId,
