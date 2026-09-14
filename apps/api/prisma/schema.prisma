@@ -163,6 +163,8 @@ model User {
   authorizationPolicySimulations       AuthorizationPolicySimulation[] @relation("AuthorizationPolicySimulator")
   supportAccessGrants                  SupportAccessGrant[]            @relation("SupportAccessGrantSupportUser")
   organizationApiKeysCreated           OrganizationApiKey[]            @relation("OrganizationApiKeyCreator")
+  organizationLocationsRequested       OrganizationLocation[]          @relation("OrganizationLocationRequestedBy")
+  organizationLocationsReviewed        OrganizationLocation[]          @relation("OrganizationLocationReviewedBy")
   rewardClaims                         RewardClaim[]
   rewardRedemptions                    RewardRedemption[]
   rewardReferralsAsReferrer            RewardReferral[]                @relation("ReferrerUser")
@@ -881,6 +883,13 @@ enum OrganizationLocationScopeType {
   SELECTED
 }
 
+enum OrganizationLocationStatus {
+  PENDING_APPROVAL
+  ACTIVE
+  REJECTED
+  INACTIVE
+}
+
 enum OrganizationInvitationStatus {
   PENDING
   ACCEPTED
@@ -995,20 +1004,27 @@ model OrganizationSlugHistory {
 
 /// RLS: TENANT — store/site within an organization.
 model OrganizationLocation {
-  id             String     @id @default(uuid())
-  organizationId String     @map("organization_id")
-  name           String     @db.VarChar(200)
-  code           String     @db.VarChar(64)
-  addressText    String?    @map("address_text") @db.Text
-  city           PilotCity?
-  contactPhone   String?    @map("contact_phone") @db.VarChar(20)
-  isPrimary      Boolean    @default(false) @map("is_primary")
-  isDeleted      Boolean    @default(false) @map("is_deleted")
-  deletedAt      BigInt?    @map("deleted_at")
-  createdAt      BigInt     @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
-  updatedAt      BigInt     @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
+  id                String                     @id @default(uuid())
+  organizationId    String                     @map("organization_id")
+  name              String                     @db.VarChar(200)
+  code              String                     @db.VarChar(64)
+  addressText       String?                    @map("address_text") @db.Text
+  city              PilotCity?
+  contactPhone      String?                    @map("contact_phone") @db.VarChar(20)
+  status            OrganizationLocationStatus @default(PENDING_APPROVAL)
+  rejectionReason   String?                    @map("rejection_reason") @db.Text
+  requestedByUserId String?                    @map("requested_by_user_id")
+  reviewedByUserId  String?                    @map("reviewed_by_user_id")
+  reviewedAt        BigInt?                    @map("reviewed_at")
+  isPrimary         Boolean                    @default(false) @map("is_primary")
+  isDeleted         Boolean                    @default(false) @map("is_deleted")
+  deletedAt         BigInt?                    @map("deleted_at")
+  createdAt         BigInt                     @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
+  updatedAt         BigInt                     @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
 
-  organization   Organization                          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization      Organization                          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  requestedBy       User?                                 @relation("OrganizationLocationRequestedBy", fields: [requestedByUserId], references: [id], onDelete: SetNull)
+  reviewedBy        User?                                 @relation("OrganizationLocationReviewedBy", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
   locationScopes         OrganizationMembershipLocationScope[]
   rewardLocationScopes   RewardLocationScope[]
   terminals              OrganizationTerminal[]
@@ -1017,6 +1033,7 @@ model OrganizationLocation {
 
   @@unique([organizationId, code])
   @@index([organizationId])
+  @@index([organizationId, status])
   @@map("organization_locations")
 }
 

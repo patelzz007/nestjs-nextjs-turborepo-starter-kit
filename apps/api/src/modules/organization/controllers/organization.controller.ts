@@ -1,13 +1,19 @@
-import { Body, Controller, Get, Param, Post } from "@nestjs/common";
+import { Body, Controller, Get, Param, Patch, Post } from "@nestjs/common";
 import { ApiOkResponse, ApiTags } from "@nestjs/swagger";
 import {
 	apiPath,
 	OrganizationAccessRequestCreateSchema,
+	OrganizationLocationCreateSchema,
+	OrganizationLocationIdParamSchema,
+	OrganizationLocationUpdateSchema,
 	OrganizationMemberInviteSchema,
 	OrganizationSlugParamSchema,
 	type OrganizationAccessRequestCreateInput,
 	type OrganizationAccessRequestResponse,
 	type OrganizationContextResponse,
+	type OrganizationLocationCreateInput,
+	type OrganizationLocationResponse,
+	type OrganizationLocationUpdateInput,
 	type OrganizationMemberInviteInput,
 	type ReviewOrganizationAccessRequestInput,
 	ReviewOrganizationAccessRequestSchema,
@@ -17,6 +23,7 @@ import { ZodValidationPipe } from "../../../common/pipes/zod-validation.pipe";
 import { GetUser } from "../../auth/decorators/get-user.decorator";
 import type { AccessTokenPayload } from "../../auth/services/token.service";
 import { OrganizationContextService } from "../services/organization-context.service";
+import { OrganizationLocationService } from "../services/organization-location.service";
 import { OrganizationMembershipService } from "../services/organization-membership.service";
 
 @ApiTags("Organizations")
@@ -25,6 +32,7 @@ export class OrganizationController {
 	public constructor(
 		private readonly context: OrganizationContextService,
 		private readonly membership: OrganizationMembershipService,
+		private readonly locations: OrganizationLocationService,
 	) {}
 
 	@Get(":orgSlug/context")
@@ -45,6 +53,26 @@ export class OrganizationController {
 	): Promise<OrganizationAccessRequestResponse> {
 		const organizationId = await this.context.resolveOrganizationIdBySlug(params.orgSlug);
 		return this.membership.createAccessRequest(user.sub, organizationId, body);
+	}
+
+	@Post(":orgSlug/locations")
+	@ApiOkResponse({ description: "Organization store location requested" })
+	public async createLocation(
+		@GetUser() user: AccessTokenPayload,
+		@Param(new ZodValidationPipe(OrganizationSlugParamSchema)) params: { orgSlug: string },
+		@Body(new ZodValidationPipe(OrganizationLocationCreateSchema)) body: OrganizationLocationCreateInput,
+	): Promise<OrganizationLocationResponse> {
+		return this.locations.createMerchantLocation(user.sub, params.orgSlug, body);
+	}
+
+	@Patch(":orgSlug/locations/:locationId")
+	@ApiOkResponse({ description: "Rejected organization store location resubmitted" })
+	public async updateLocation(
+		@GetUser() user: AccessTokenPayload,
+		@Param(new ZodValidationPipe(OrganizationLocationIdParamSchema)) params: { orgSlug: string; locationId: string },
+		@Body(new ZodValidationPipe(OrganizationLocationUpdateSchema)) body: OrganizationLocationUpdateInput,
+	): Promise<OrganizationLocationResponse> {
+		return this.locations.resubmitMerchantLocation(user.sub, params.orgSlug, params.locationId, body);
 	}
 
 	@Post(":orgSlug/members/invite")

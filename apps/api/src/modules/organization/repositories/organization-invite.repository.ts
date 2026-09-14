@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import type { OrganizationInvitation } from "@prisma/client";
+import type { OrganizationInvitation, OrganizationInvitationStatus } from "@prisma/client";
 
 import { PrismaService } from "../../../prisma/prisma.service";
 
@@ -27,7 +27,10 @@ export class OrganizationInviteRepository {
 		});
 	}
 
-	public async findByTokenHash(tokenHash: string): Promise<
+	public async findByTokenHash(
+		tokenHash: string,
+		statuses: readonly OrganizationInvitationStatus[] = ["PENDING"],
+	): Promise<
 		| (OrganizationInvitation & {
 				organization: {
 					id: string;
@@ -39,7 +42,7 @@ export class OrganizationInviteRepository {
 		| null
 	> {
 		return this.prisma.organizationInvitation.findFirst({
-			where: { tokenHash, status: "PENDING" },
+			where: { tokenHash, status: { in: [...statuses] } },
 			include: {
 				organization: {
 					select: {

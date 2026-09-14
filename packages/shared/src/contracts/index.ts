@@ -51,7 +51,14 @@ import {
 } from "../schemas/domain/platform/geo";
 import {
 	AdminCreateOrganizationInviteSchema,
+	AdminLocationRequestListQuerySchema,
+	AdminOrganizationLocationCreateSchema,
+	AdminOrganizationLocationReviewPathInputSchema,
+	AdminOrganizationLocationReviewSchema,
 	OrganizationAccessRequestCreateSchema,
+	OrganizationLocationCreateSchema,
+	OrganizationLocationIdParamSchema,
+	OrganizationLocationUpdateSchema,
 	OrganizationMemberInviteSchema,
 	OrganizationSlugParamSchema,
 } from "../schemas/domain/organization/organization";
@@ -70,6 +77,8 @@ import {
 	MerchantKybSubmissionFieldsSchema,
 	MerchantOnboardingCompleteFieldsSchema,
 	MerchantOnboardingDocumentsSubmitSchema,
+	MerchantOnboardingDocumentBatchUploadCompleteSchema,
+	MerchantOnboardingDocumentBatchUploadUrlSchema,
 	MerchantOnboardingDocumentUploadCompleteSchema,
 	MerchantOnboardingDocumentUploadUrlSchema,
 	MerchantOnboardingValidateTokenSchema,
@@ -455,14 +464,36 @@ export const apiContract = {
 			path: apiRoutes.organizations.analytics.path,
 			input: z.intersection(OrganizationSlugParamSchema, RewardsAnalyticsQuerySchema),
 		}),
+		locations: {
+			create: defineContract({
+				method: "POST",
+				path: apiRoutes.organizations.locations.create.path,
+				input: z.intersection(OrganizationSlugParamSchema, OrganizationLocationCreateSchema),
+			}),
+			update: defineContract({
+				method: "PATCH",
+				path: apiRoutes.organizations.locations.update.path,
+				input: z.intersection(OrganizationLocationIdParamSchema, OrganizationLocationUpdateSchema),
+			}),
+		},
 		onboarding: {
 			validate: defineContract({ method: "POST", path: apiRoutes.organizations.onboarding.validate, input: MerchantOnboardingValidateTokenSchema }),
 			complete: defineContract({ method: "POST", path: apiRoutes.organizations.onboarding.complete, input: MerchantOnboardingCompleteFieldsSchema }),
 			documentUploadUrl: defineContract({ method: "POST", path: apiRoutes.organizations.onboarding.documentUploadUrl, input: MerchantOnboardingDocumentUploadUrlSchema }),
+			documentBatchUploadUrl: defineContract({
+				method: "POST",
+				path: apiRoutes.organizations.onboarding.documentBatchUploadUrl,
+				input: MerchantOnboardingDocumentBatchUploadUrlSchema,
+			}),
 			documentUploadComplete: defineContract({
 				method: "POST",
 				path: apiRoutes.organizations.onboarding.documentUploadComplete,
 				input: MerchantOnboardingDocumentUploadCompleteSchema,
+			}),
+			documentBatchUploadComplete: defineContract({
+				method: "POST",
+				path: apiRoutes.organizations.onboarding.documentBatchUploadComplete,
+				input: MerchantOnboardingDocumentBatchUploadCompleteSchema,
 			}),
 			documentsSubmit: defineContract({ method: "POST", path: apiRoutes.organizations.onboarding.documentsSubmit, input: MerchantOnboardingDocumentsSubmitSchema }),
 		},
@@ -509,6 +540,21 @@ export const apiContract = {
 			method: "PATCH",
 			path: apiRoutes.rewardsAdmin.organizationKyb.path,
 			input: AdminKybUpdatePathInputSchema,
+		}),
+		listLocationRequests: defineContract({
+			method: "GET",
+			path: apiRoutes.rewardsAdmin.locationRequests,
+			input: AdminLocationRequestListQuerySchema,
+		}),
+		createOrganizationLocation: defineContract({
+			method: "POST",
+			path: apiRoutes.rewardsAdmin.organizationLocationCreate.path,
+			input: z.intersection(AdminMerchantIdParamSchema, AdminOrganizationLocationCreateSchema),
+		}),
+		reviewOrganizationLocation: defineContract({
+			method: "PATCH",
+			path: apiRoutes.rewardsAdmin.organizationLocationReview.path,
+			input: z.intersection(AdminOrganizationLocationReviewPathInputSchema, AdminOrganizationLocationReviewSchema),
 		}),
 	},
 	// @app-generated:begin sampleCategory

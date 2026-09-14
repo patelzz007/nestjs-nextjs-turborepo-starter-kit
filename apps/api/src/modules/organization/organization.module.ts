@@ -13,7 +13,9 @@ import { OrganizationProvisioningService } from "./services/organization-provisi
 import { OrganizationErasureService } from "./services/organization-erasure.service";
 import { OrganizationQuotaService } from "./services/organization-quota.service";
 import { OrganizationInviteRepository } from "./repositories/organization-invite.repository";
+import { OrganizationLocationRepository } from "./repositories/organization-location.repository";
 import { OrganizationRepository } from "./repositories/organization.repository";
+import { OrganizationLocationService } from "./services/organization-location.service";
 import { OrganizationRewardAuthService } from "./services/organization-reward-auth.service";
 
 @Module({
@@ -21,8 +23,10 @@ import { OrganizationRewardAuthService } from "./services/organization-reward-au
 	controllers: [OrganizationController, OrganizationAdminController],
 	providers: [
 		OrganizationRepository,
+		OrganizationLocationRepository,
 		OrganizationInviteRepository,
 		OrganizationAuditService,
+		OrganizationLocationService,
 		OrganizationContextService,
 		OrganizationProvisioningService,
 		OrganizationLifecycleService,
@@ -37,6 +41,8 @@ import { OrganizationRewardAuthService } from "./services/organization-reward-au
 		OrganizationQuotaService,
 		OrganizationRewardAuthService,
 		OrganizationRepository,
+		OrganizationLocationRepository,
+		OrganizationLocationService,
 		OrganizationInviteRepository,
 	],
 })

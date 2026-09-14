@@ -197,11 +197,17 @@ export const apiRoutes = {
 		},
 		redemptions: { path: "/orgs/:orgSlug/redemptions", params: ["orgSlug"] },
 		analytics: { path: "/orgs/:orgSlug/analytics", params: ["orgSlug"] },
+		locations: {
+			create: { path: "/orgs/:orgSlug/locations", params: ["orgSlug"] },
+			update: { path: "/orgs/:orgSlug/locations/:locationId", params: ["orgSlug", "locationId"] },
+		},
 		onboarding: {
 			validate: "/orgs/onboarding/validate",
 			complete: "/orgs/onboarding/complete",
 			documentUploadUrl: "/orgs/onboarding/documents/upload-url",
+			documentBatchUploadUrl: "/orgs/onboarding/documents/upload-urls",
 			documentUploadComplete: "/orgs/onboarding/documents/upload-complete",
+			documentBatchUploadComplete: "/orgs/onboarding/documents/upload-complete-batch",
 			documentsSubmit: "/orgs/onboarding/documents/submit",
 		},
 	},
@@ -222,6 +228,9 @@ export const apiRoutes = {
 		rewardApprove: { path: "/admin/rewards/:rewardId/approve", params: ["rewardId"] },
 		rewardReject: { path: "/admin/rewards/:rewardId/reject", params: ["rewardId"] },
 		organizationKyb: { path: "/admin/merchants/:organizationId/kyb", params: ["organizationId"] },
+		locationRequests: "/admin/location-requests",
+		organizationLocationCreate: { path: "/admin/merchants/:organizationId/locations", params: ["organizationId"] },
+		organizationLocationReview: { path: "/admin/merchants/:organizationId/locations/:locationId/review", params: ["organizationId", "locationId"] },
 		organizationKybDocumentDownload: {
 			path: "/admin/merchants/:organizationId/documents/:documentId/download",
 			params: ["organizationId", "documentId"],

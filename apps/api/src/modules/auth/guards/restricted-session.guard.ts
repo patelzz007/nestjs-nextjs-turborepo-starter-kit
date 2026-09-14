@@ -32,6 +32,7 @@ const RESTRICTED_SESSION_ALLOWLIST: readonly RestrictedRouteRule[] = [
 	{ method: "POST", pathSuffix: "/auth/resend-verification" },
 	{ method: "POST", pathSuffix: "/auth/verify-email" },
 	{ method: "GET", pathSuffix: "/merchant/me" },
+	{ method: "GET", pathSuffix: "/orgs/memberships" },
 	{ method: "GET", pathSuffix: "/merchant/kyb" },
 	{ method: "PATCH", pathSuffix: "/merchant/kyb" },
 	{ method: "POST", pathSuffix: "/files/upload-url" },

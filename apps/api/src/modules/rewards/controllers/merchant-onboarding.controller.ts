@@ -5,6 +5,8 @@ import {
 	apiPath,
 	type MerchantOnboardingCompleteFieldsInput,
 	type MerchantOnboardingDocumentsSubmitInput,
+	type MerchantOnboardingDocumentBatchUploadCompleteInput,
+	type MerchantOnboardingDocumentBatchUploadUrlInput,
 	type MerchantOnboardingDocumentUploadCompleteInput,
 	type MerchantOnboardingDocumentUploadUrlInput,
 	type MerchantOnboardingValidateTokenInput,
@@ -57,6 +59,17 @@ export class MerchantOnboardingController {
 
 	@Public()
 	@RlsBypass()
+	@Post("documents/upload-urls")
+	@ApiOperation({ summary: "Create invite-authorized KYB document upload tickets in one request" })
+	@ApiOkResponse({ description: "Signed upload tickets for onboarding KYB documents" })
+	public createDocumentUploadUrls(
+		@Body(new ZodValidationPipe(apiContract.organizations.onboarding.documentBatchUploadUrl.input)) body: MerchantOnboardingDocumentBatchUploadUrlInput,
+	): ReturnType<MerchantOnboardingService["createDocumentUploadUrls"]> {
+		return this.merchantOnboarding.createDocumentUploadUrls(body);
+	}
+
+	@Public()
+	@RlsBypass()
 	@Post("documents/upload-complete")
 	@ApiOperation({ summary: "Complete an invite-authorized KYB document upload" })
 	@ApiOkResponse({ description: "Onboarding KYB document upload finalized" })
@@ -64,6 +77,17 @@ export class MerchantOnboardingController {
 		@Body(new ZodValidationPipe(apiContract.organizations.onboarding.documentUploadComplete.input)) body: MerchantOnboardingDocumentUploadCompleteInput,
 	): ReturnType<MerchantOnboardingService["completeDocumentUpload"]> {
 		return this.merchantOnboarding.completeDocumentUpload(body);
+	}
+
+	@Public()
+	@RlsBypass()
+	@Post("documents/upload-complete-batch")
+	@ApiOperation({ summary: "Complete invite-authorized KYB document uploads in one request" })
+	@ApiOkResponse({ description: "Onboarding KYB document uploads finalized" })
+	public completeDocumentUploads(
+		@Body(new ZodValidationPipe(apiContract.organizations.onboarding.documentBatchUploadComplete.input)) body: MerchantOnboardingDocumentBatchUploadCompleteInput,
+	): ReturnType<MerchantOnboardingService["completeDocumentUploads"]> {
+		return this.merchantOnboarding.completeDocumentUploads(body);
 	}
 
 	@Public()

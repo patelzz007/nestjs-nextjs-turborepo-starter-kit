@@ -110,8 +110,6 @@ export function LoginForm({ emailPlaceholder, redirectPath, demoAccounts, footer
 	// The actual login call — shared by the form submit and the demo buttons.
 	const completeAuthenticatedLogin = useCallback(
 		(data: { readonly user: UserResponse }): void => {
-			// eslint-disable-next-line no-console
-			console.log("data", data);
 			if (requireAdminAccess && !data.user.hasAdminAccess) {
 				setError("Admin access required. This account does not have administrator privileges.");
 				return;
@@ -150,7 +148,7 @@ export function LoginForm({ emailPlaceholder, redirectPath, demoAccounts, footer
 			}
 
 			markEnrollmentMessage(response.message);
-			navigateAfterLogin(getEnrollmentRedirectPath(mode, response.enrollmentReason));
+			navigateAfterLogin(getEnrollmentRedirectPath(mode, response.enrollmentReason, response.organizationSlug));
 		},
 		[authLogin, mode, navigateAfterLogin],
 	);

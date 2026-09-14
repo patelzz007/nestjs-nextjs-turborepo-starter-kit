@@ -43,25 +43,52 @@ export async function submitMerchantOnboardingComplete(baseUrl: string, fields: 
 }
 
 export async function submitMerchantOnboardingDocuments(api: ApiClient<ApiRouter>, token: string, documents: readonly MerchantKybPendingDocument[]): Promise<void> {
-	const fileIds: string[] = [];
-	for (const document of documents) {
-		const checksumSha256 = await calculateFileSha256Hex(document.file);
-		const ticketEnvelope = await api.organizations.onboarding.documentUploadUrl.mutate({
-			token,
+	if (documents.length === 0) {
+		return;
+	}
+
+	const preparedDocuments = await Promise.all(
+		documents.map(async (document) => ({
+			document,
+			checksumSha256: await calculateFileSha256Hex(document.file),
+		})),
+	);
+
+	const batchTickets = await api.organizations.onboarding.documentBatchUploadUrl.mutate({
+		token,
+		files: preparedDocuments.map(({ document, checksumSha256 }) => ({
 			fileName: document.fileName,
 			mimeType: toDocumentMimeType(document.file),
 			sizeBytes: document.sizeBytes,
 			checksumSha256,
-		});
-		await uploadFileWithTicket(ticketEnvelope.data, document.file);
-		await api.organizations.onboarding.documentUploadComplete.mutate({
-			token,
-			fileId: ticketEnvelope.data.fileId,
-			checksumSha256,
-		});
-		fileIds.push(ticketEnvelope.data.fileId);
-	}
-	await api.organizations.onboarding.documentsSubmit.mutate({ token, documentFileIds: fileIds });
+		})),
+	});
+
+	await Promise.all(
+		batchTickets.data.uploads.map((ticket, index) => {
+			const prepared = preparedDocuments[index];
+			if (prepared === undefined) {
+				throw new Error("Upload ticket count does not match selected documents.");
+			}
+			return uploadFileWithTicket(ticket, prepared.document.file);
+		}),
+	);
+
+	const completed = await api.organizations.onboarding.documentBatchUploadComplete.mutate({
+		token,
+		completions: batchTickets.data.uploads.map((ticket, index) => {
+			const prepared = preparedDocuments[index];
+			if (prepared === undefined) {
+				throw new Error("Upload completion count does not match selected documents.");
+			}
+			return {
+				fileId: ticket.fileId,
+				checksumSha256: prepared.checksumSha256,
+			};
+		}),
+	});
+
+	await api.organizations.onboarding.documentsSubmit.mutate({ token, documentFileIds: completed.data.fileIds });
 }
 
 export async function submitMerchantKyb(

@@ -72,7 +72,11 @@ export function mapOrganizationToAdminResponse(org: Organization & { merchantPro
 	};
 }
 
-export function mapOrganizationToAdminDetailResponse(org: OrganizationAdminDetailRow, documents: readonly MerchantKybDocumentRecord[]): AdminMerchantDetailResponse {
+export function mapOrganizationToAdminDetailResponse(
+	org: OrganizationAdminDetailRow,
+	documents: readonly MerchantKybDocumentRecord[],
+	locations: readonly AdminMerchantDetailResponse["locations"],
+): AdminMerchantDetailResponse {
 	const ownerMember = org.memberships.find((member) => member.role === "OWNER");
 	const base = mapOrganizationToAdminResponse({ ...org, merchantProfile: org.merchantProfile });
 
@@ -80,6 +84,7 @@ export function mapOrganizationToAdminDetailResponse(org: OrganizationAdminDetai
 		...base,
 		kybFields: parseKybFieldsFromDb(org.merchantProfile?.kybFields ?? null),
 		documents: [...documents],
+		locations: [...locations],
 		ownerUserId: ownerMember?.userId ?? null,
 		ownerEmail: ownerMember?.user.email ?? null,
 		ownerFullName: ownerMember?.user.fullName ?? null,

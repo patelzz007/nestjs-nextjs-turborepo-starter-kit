@@ -323,10 +323,7 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 		],
 	});
 
-	await setRewardLocationScopes(REWARD_SEED_IDS.mlkRewardPublished, mlkOrganization.id, [
-		ORGANIZATION_SEED_IDS.mlkLocationKatil,
-		ORGANIZATION_SEED_IDS.mlkLocationBeruang,
-	]);
+	await setRewardLocationScopes(REWARD_SEED_IDS.mlkRewardPublished, mlkOrganization.id, [ORGANIZATION_SEED_IDS.mlkLocationKatil, ORGANIZATION_SEED_IDS.mlkLocationBeruang]);
 	await setRewardLocationScopes(REWARD_SEED_IDS.mlkRewardKatilOnly, mlkOrganization.id, [ORGANIZATION_SEED_IDS.mlkLocationKatil]);
 	await setRewardLocationScopes(REWARD_SEED_IDS.mlkRewardBeruangOnly, mlkOrganization.id, [ORGANIZATION_SEED_IDS.mlkLocationBeruang]);
 
@@ -380,10 +377,7 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 		data: { referrerRewardId: mlkReferrerReward.id },
 	});
 
-	await setRewardLocationScopes(mlkReferrerReward.id, mlkOrganization.id, [
-		ORGANIZATION_SEED_IDS.mlkLocationKatil,
-		ORGANIZATION_SEED_IDS.mlkLocationBeruang,
-	]);
+	await setRewardLocationScopes(mlkReferrerReward.id, mlkOrganization.id, [ORGANIZATION_SEED_IDS.mlkLocationKatil, ORGANIZATION_SEED_IDS.mlkLocationBeruang]);
 
 	await prisma.reward.createMany({
 		data: [

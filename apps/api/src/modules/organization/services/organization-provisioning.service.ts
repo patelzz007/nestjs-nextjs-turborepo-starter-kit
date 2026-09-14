@@ -64,6 +64,7 @@ export class OrganizationProvisioningService {
 								name: `${input.displayName} — Primary`,
 								code: "primary",
 								isPrimary: true,
+								status: "ACTIVE",
 							},
 						},
 						merchantProfile: {
@@ -137,6 +138,7 @@ export class OrganizationProvisioningService {
 								name: `${input.businessName} — Primary`,
 								code: "primary",
 								isPrimary: true,
+								status: "ACTIVE",
 							},
 						},
 						merchantProfile: {
@@ -232,6 +234,7 @@ export class OrganizationProvisioningService {
 								name: `${input.businessName} — Primary`,
 								code: "primary",
 								isPrimary: true,
+								status: "ACTIVE",
 							},
 						},
 						merchantProfile: {

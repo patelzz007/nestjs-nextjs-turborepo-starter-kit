@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { EnrollmentReasonSchema, SessionScopeSchema } from "./enrollment";
 import { EpochMsSchema } from "../api/common";
+import { OrganizationSlugSchema } from "../domain/organization/organization";
 import { VerifyEmailTokenParamSchema } from "../domain/platform/param-schemas";
 import { UserResponseSchema } from "./user";
 
@@ -133,6 +134,8 @@ export const LoginRestrictedEnrollmentResponseSchema = z
 		enrollmentReason: EnrollmentReasonSchema,
 		message: z.string(),
 		user: UserResponseSchema.optional(),
+		/** Present for merchant portal logins so the client can route to org-scoped settings. */
+		organizationSlug: OrganizationSlugSchema.optional(),
 		accessToken: z.string(),
 		refreshToken: z.string(),
 	})
@@ -147,6 +150,8 @@ export const LoginRestrictedEnrollmentClientResponseSchema = z
 		enrollmentReason: EnrollmentReasonSchema,
 		message: z.string(),
 		user: UserResponseSchema.optional(),
+		/** Present for merchant portal logins so the client can route to org-scoped settings. */
+		organizationSlug: OrganizationSlugSchema.optional(),
 	})
 	.strict();
 

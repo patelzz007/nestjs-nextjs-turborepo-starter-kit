@@ -12,7 +12,7 @@ export interface MerchantOnboardingBusinessStepProps {
 	readonly category: MerchantBusinessCategory;
 	readonly values: MerchantKybFieldValues;
 	readonly onCategoryChange: (value: MerchantBusinessCategory) => void;
-	readonly onBusinessFieldChange: (field: "businessName" | "legalName" | "addressText" | "contactPhone", value: string) => void;
+	readonly onBusinessFieldChange: (field: "legalName", value: string) => void;
 	readonly onSubmit: (event: SyntheticEvent<HTMLFormElement>) => void;
 }
 
@@ -23,7 +23,14 @@ export function MerchantOnboardingBusinessStep({ category, values, onCategoryCha
 				<Label>Business category</Label>
 				<MerchantCategoryPicker value={category} onChange={onCategoryChange} />
 			</div>
-			<MerchantKybBusinessFields values={values} onChange={onBusinessFieldChange} idPrefix="merchant-onboarding" showBusinessName={false} />
+			<MerchantKybBusinessFields
+				values={values}
+				onChange={onBusinessFieldChange}
+				idPrefix="merchant-onboarding"
+				showBusinessName={false}
+				showAddress={false}
+				showContactPhone={false}
+			/>
 			<div className="flex justify-end">
 				<Button type="submit" className="h-11 sm:min-w-36">
 					Continue

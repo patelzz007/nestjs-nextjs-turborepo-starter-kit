@@ -1,7 +1,7 @@
 "use client";
 
 import { MerchantSurfacePanel } from "@/components/merchant-ui/surface-panel";
-import type { OrganizationLocationResponse, OrganizationLocationScopeType } from "@workspace/shared";
+import type { OrganizationLocationResponse, OrganizationLocationScopeType, OrganizationLocationStatus } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/feedback/badge";
 import { MapPin, Phone } from "lucide-react";
 import * as React from "react";
@@ -16,6 +16,50 @@ export interface OrganizationLocationListProps {
 	readonly membershipLocationScopeType?: OrganizationLocationScopeType;
 	readonly membershipLocationIds?: readonly string[];
 	readonly showAccessHints?: boolean;
+	readonly onEditRejected?: (location: OrganizationLocationResponse) => void;
+}
+
+function locationStatusLabel(status: OrganizationLocationStatus): string {
+	if (status === "PENDING_APPROVAL") {
+		return "Pending review";
+	}
+	if (status === "REJECTED") {
+		return "Rejected";
+	}
+	if (status === "INACTIVE") {
+		return "Inactive";
+	}
+	return "Active";
+}
+
+function locationStatusVariant(status: OrganizationLocationStatus): "default" | "secondary" | "outline" | "destructive" {
+	if (status === "ACTIVE") {
+		return "default";
+	}
+	if (status === "REJECTED") {
+		return "destructive";
+	}
+	if (status === "PENDING_APPROVAL") {
+		return "outline";
+	}
+	return "secondary";
+}
+
+interface OrganizationLocationResubmitButtonProps {
+	readonly location: OrganizationLocationResponse;
+	readonly onEditRejected: (location: OrganizationLocationResponse) => void;
+}
+
+function OrganizationLocationResubmitButton({ location, onEditRejected }: OrganizationLocationResubmitButtonProps): React.JSX.Element {
+	const handleClick = React.useCallback((): void => {
+		onEditRejected(location);
+	}, [location, onEditRejected]);
+
+	return (
+		<button type="button" className="text-left text-sm font-medium text-primary hover:underline" onClick={handleClick}>
+			Edit and resubmit
+		</button>
+	);
 }
 
 function isLocationAccessible(locationId: string, scopeType: OrganizationLocationScopeType | undefined, scopedLocationIds: readonly string[]): boolean {
@@ -31,6 +75,7 @@ export function OrganizationLocationList({
 	membershipLocationScopeType,
 	membershipLocationIds = [],
 	showAccessHints = false,
+	onEditRejected,
 }: OrganizationLocationListProps): React.JSX.Element {
 	if (locations.length === 0) {
 		return (
@@ -58,7 +103,8 @@ export function OrganizationLocationList({
 								</div>
 							</div>
 							<div className="flex shrink-0 flex-wrap justify-end gap-2">
-								{location.isPrimary ? <Badge>Primary</Badge> : null}
+								<Badge variant={locationStatusVariant(location.status)}>{locationStatusLabel(location.status)}</Badge>
+								{location.isPrimary ? <Badge variant="secondary">Primary</Badge> : null}
 								{showAccessHints && membershipLocationScopeType === "SELECTED" ? (
 									<Badge variant={accessible ? "default" : "outline"}>{accessible ? "Your access" : "No access"}</Badge>
 								) : null}
@@ -74,7 +120,12 @@ export function OrganizationLocationList({
 									{location.contactPhone}
 								</p>
 							) : null}
+							{location.status === "REJECTED" && location.rejectionReason !== null ? <p className="text-destructive">Reason: {location.rejectionReason}</p> : null}
+							{location.status === "PENDING_APPROVAL" ? <p className="text-xs">This store is hidden from customers until RewardHub ops approves it.</p> : null}
 						</div>
+						{location.status === "REJECTED" && onEditRejected !== undefined ? (
+							<OrganizationLocationResubmitButton location={location} onEditRejected={onEditRejected} />
+						) : null}
 					</MerchantSurfacePanel>
 				);
 			})}

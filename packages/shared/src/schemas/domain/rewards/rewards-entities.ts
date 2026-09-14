@@ -3,7 +3,7 @@ import { z } from "zod";
 import { BaseResponseSchema, EpochMsSchema, type EpochMs } from "../../api/common";
 import { PaginationSchema } from "../../api/pagination";
 import { OrganizationLocationFilterSchema } from "../organization/location-filter";
-import { OrganizationLocationScopeTypeSchema, OrganizationSlugSchema } from "../organization/organization";
+import { OrganizationLocationResponseSchema, OrganizationLocationScopeTypeSchema, OrganizationSlugSchema } from "../organization/organization";
 import { JsonObjectSchema } from "../../runtime/json";
 import {
 	KybStatusSchema,
@@ -440,6 +440,7 @@ export type MerchantOrgResponse = z.output<typeof MerchantOrgResponseSchema>;
 export const AdminMerchantDetailResponseSchema = MerchantOrgResponseSchema.extend({
 	kybFields: JsonObjectSchema.nullable(),
 	documents: z.array(MerchantKybDocumentRecordSchema),
+	locations: z.array(OrganizationLocationResponseSchema),
 	ownerUserId: z.uuid().nullable(),
 	ownerEmail: z.string().nullable(),
 	ownerFullName: z.string().nullable(),

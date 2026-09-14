@@ -110,6 +110,9 @@ export async function seedOrganizationsAndMerchants(
 ): Promise<SeededOrganizations> {
 	const now = BigInt(Date.now());
 
+	const klPrimaryAddress = "12 Jalan Bukit Bintang, Kuala Lumpur";
+	const klPrimaryPhone = "+60321456789";
+
 	const klOrganization = await prisma.organization.create({
 		data: {
 			id: ORGANIZATION_SEED_IDS.klOrganization,
@@ -121,14 +124,20 @@ export async function seedOrganizationsAndMerchants(
 					id: ORGANIZATION_SEED_IDS.klLocation,
 					name: "Brew & Bean KL — Bukit Bintang",
 					code: "primary",
+					addressText: klPrimaryAddress,
+					city: "KUALA_LUMPUR",
+					contactPhone: klPrimaryPhone,
 					isPrimary: true,
+					status: "ACTIVE",
+					reviewedByUserId: klOwner.id,
+					reviewedAt: now,
 				},
 			},
 			merchantProfile: {
 				create: {
 					legalName: "Brew & Bean KL Sdn Bhd",
 					category: "cafe",
-					addressText: "12 Jalan Bukit Bintang, Kuala Lumpur",
+					addressText: klPrimaryAddress,
 					city: "KUALA_LUMPUR",
 					kybStatus: "APPROVED",
 					kybFields: {
@@ -136,7 +145,7 @@ export async function seedOrganizationsAndMerchants(
 						taxId: "C12345678",
 					},
 					contactEmail: klOwner.email,
-					contactPhone: "+60321456789",
+					contactPhone: klPrimaryPhone,
 				},
 			},
 			placement: {
@@ -164,6 +173,9 @@ export async function seedOrganizationsAndMerchants(
 		},
 	});
 
+	const mlkPrimaryAddress = "12 Jalan Bukit Katil, 75450 Melaka";
+	const mlkPrimaryPhone = "+6062812345";
+
 	const mlkOrganization = await prisma.organization.create({
 		data: {
 			id: ORGANIZATION_SEED_IDS.mlkOrganization,
@@ -176,10 +188,13 @@ export async function seedOrganizationsAndMerchants(
 						id: ORGANIZATION_SEED_IDS.mlkLocationKatil,
 						name: "Jonker Street Kitchen — Bukit Katil",
 						code: "bukit-katil",
-						addressText: "12 Jalan Bukit Katil, 75450 Melaka",
+						addressText: mlkPrimaryAddress,
 						city: "MELAKA",
-						contactPhone: "+6062812345",
+						contactPhone: mlkPrimaryPhone,
 						isPrimary: true,
+						status: "ACTIVE",
+						reviewedByUserId: mlkOwner.id,
+						reviewedAt: now,
 					},
 					{
 						id: ORGANIZATION_SEED_IDS.mlkLocationBeruang,
@@ -189,6 +204,19 @@ export async function seedOrganizationsAndMerchants(
 						city: "MELAKA",
 						contactPhone: "+6062815678",
 						isPrimary: false,
+						status: "ACTIVE",
+						reviewedByUserId: mlkOwner.id,
+						reviewedAt: now,
+					},
+					{
+						name: "Jonker Street Kitchen — Ayer Keroh (Pending)",
+						code: "ayer-keroh-pending",
+						addressText: "5 Jalan Lagenda, 75450 Melaka",
+						city: "MELAKA",
+						contactPhone: "+6062830000",
+						isPrimary: false,
+						status: "PENDING_APPROVAL",
+						requestedByUserId: mlkOwner.id,
 					},
 				],
 			},
@@ -196,14 +224,14 @@ export async function seedOrganizationsAndMerchants(
 				create: {
 					legalName: "Jonker Kitchen Melaka",
 					category: "restaurant",
-					addressText: "12 Jalan Bukit Katil, 75450 Melaka",
+					addressText: mlkPrimaryAddress,
 					city: "MELAKA",
 					kybStatus: "PENDING",
 					kybFields: {
 						registrationNo: "202002023456",
 					},
 					contactEmail: mlkOwner.email,
-					contactPhone: "+6062821234",
+					contactPhone: mlkPrimaryPhone,
 				},
 			},
 			placement: {
@@ -367,13 +395,14 @@ export function printOrganizationSeedCredentials(): void {
 🏢 Organization workspace (merchant portal)
 ──────────────────────────────────────────────
 Brew & Bean KL — brew.owner@kl-rewards.demo / BrewOwner@123
-  Canonical:  /orgs/${ORGANIZATION_SEED_SLUGS.kl}/dashboard
-  By org id:  /orgs/${ORGANIZATION_SEED_IDS.klOrganization}/dashboard
+  Primary store: Brew & Bean KL — Bukit Bintang (12 Jalan Bukit Bintang, Kuala Lumpur)
+  Canonical:     /orgs/${ORGANIZATION_SEED_SLUGS.kl}/dashboard
+  By org id:     /orgs/${ORGANIZATION_SEED_IDS.klOrganization}/dashboard
 
 Jonker Street Kitchen — jonker.owner@melaka-rewards.demo / JonkerOwner@123
-  Locations:  Bukit Katil (primary), Bukit Beruang
-  Canonical:  /orgs/${ORGANIZATION_SEED_SLUGS.mlk}/dashboard
-  By org id:  /orgs/${ORGANIZATION_SEED_IDS.mlkOrganization}/dashboard
+  Stores:        Bukit Katil (primary), Bukit Beruang (active), Ayer Keroh (pending approval)
+  Canonical:     /orgs/${ORGANIZATION_SEED_SLUGS.mlk}/dashboard
+  By org id:     /orgs/${ORGANIZATION_SEED_IDS.mlkOrganization}/dashboard
 
 UUID paths redirect to the canonical slug URL after login.
 `);

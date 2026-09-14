@@ -1,11 +1,13 @@
 "use client";
 
-import type { MerchantBusinessCategory, MerchantOnboardingInvitePreview } from "@workspace/shared";
+import type { MerchantBusinessCategory, MerchantOnboardingInvitePreview, OrganizationPrimaryLocationDraft } from "@workspace/shared";
 import {
 	MERCHANT_KYB_MAX_DOCUMENT_COUNT,
-	MerchantKybBusinessFieldsSchema,
 	MerchantKybRegistrationFieldsSchema,
+	MerchantOnboardingBusinessFieldsSchema,
 	MerchantOnboardingCompleteFieldsSchema,
+	OrganizationLocationDraftSchema,
+	OrganizationPrimaryLocationDraftSchema,
 } from "@workspace/shared";
 import { Button } from "@workspace/ui/components/form/button";
 import { cn } from "@workspace/ui/lib/core/utils";
@@ -22,9 +24,10 @@ import { MerchantOnboardingAccountStep } from "./onboarding-account-step";
 import { MerchantOnboardingBusinessStep } from "./onboarding-business-step";
 import { MerchantOnboardingDocumentsStep } from "./onboarding-documents-step";
 import { MerchantOnboardingRegistrationStep } from "./onboarding-registration-step";
+import { MerchantOnboardingStoresStep, type OnboardingLocationDraftRow } from "./onboarding-stores-step";
 
 type FlowStep = "loading" | "invalid" | "wizard" | "success";
-type WizardPanel = "business" | "registration" | "documents" | "account";
+type WizardPanel = "business" | "stores" | "registration" | "documents" | "account";
 
 interface WizardStepDefinition {
 	readonly id: WizardPanel;
@@ -33,7 +36,8 @@ interface WizardStepDefinition {
 }
 
 const WIZARD_STEPS: readonly WizardStepDefinition[] = [
-	{ id: "business", label: "Business", description: "Store and contact details" },
+	{ id: "business", label: "Business", description: "Legal name and category" },
+	{ id: "stores", label: "Stores", description: "Primary store and optional locations" },
 	{ id: "registration", label: "Registration", description: "SSM and tax information" },
 	{ id: "documents", label: "Documents", description: "Proof for admin review" },
 	{ id: "account", label: "Owner account", description: "Secure your login" },
@@ -62,6 +66,9 @@ function panelHeading(panel: WizardPanel): string {
 	if (panel === "business") {
 		return "Tell us about your business";
 	}
+	if (panel === "stores") {
+		return "Add your store locations";
+	}
 	if (panel === "registration") {
 		return "Add registration details";
 	}
@@ -88,6 +95,8 @@ export function MerchantOnboardingView({ token, loginHref = "/auth/login" }: Mer
 	const [values, setValues] = useState<MerchantKybFieldValues>(INITIAL_KYB_VALUES);
 	const [businessName, setBusinessName] = useState("");
 	const [isSubmitting, setIsSubmitting] = useState(false);
+	const [primaryLocation, setPrimaryLocation] = useState<OrganizationPrimaryLocationDraft>({ name: "", addressText: "", contactPhone: "" });
+	const [additionalLocations, setAdditionalLocations] = useState<readonly OnboardingLocationDraftRow[]>([]);
 
 	const strength = useMemo(() => passwordStrength(password), [password]);
 	const wizardIndex = WIZARD_STEPS.findIndex((step) => step.id === wizardPanel);
@@ -110,6 +119,7 @@ export function MerchantOnboardingView({ token, loginHref = "/auth/login" }: Mer
 				}
 				setInvite(response.data);
 				setValues((current) => ({ ...current, businessName: response.data.businessName, legalName: response.data.businessName }));
+				setPrimaryLocation((current) => ({ ...current, name: response.data.businessName }));
 				setFlowStep("wizard");
 			})
 			.catch((reason: unknown): void => {
@@ -123,7 +133,7 @@ export function MerchantOnboardingView({ token, loginHref = "/auth/login" }: Mer
 		};
 	}, [api.organizations.onboarding.validate, token]);
 
-	const handleBusinessFieldChange = useCallback((field: "businessName" | "legalName" | "addressText" | "contactPhone", value: string): void => {
+	const handleBusinessFieldChange = useCallback((field: "legalName", value: string): void => {
 		setValues((current) => ({ ...current, [field]: value }));
 	}, []);
 
@@ -156,6 +166,10 @@ export function MerchantOnboardingView({ token, loginHref = "/auth/login" }: Mer
 		advance("business");
 	}, [advance]);
 
+	const handleBackToStores = useCallback((): void => {
+		advance("stores");
+	}, [advance]);
+
 	const handleBackToRegistration = useCallback((): void => {
 		advance("registration");
 	}, [advance]);
@@ -167,20 +181,42 @@ export function MerchantOnboardingView({ token, loginHref = "/auth/login" }: Mer
 	const handleBusinessContinue = useCallback(
 		(event: SyntheticEvent<HTMLFormElement>): void => {
 			event.preventDefault();
-			const parsed = MerchantKybBusinessFieldsSchema.safeParse({
-				businessName: values.businessName,
+			const parsed = MerchantOnboardingBusinessFieldsSchema.safeParse({
 				legalName: values.legalName,
-				addressText: values.addressText,
-				contactPhone: values.contactPhone,
 			});
 			if (!parsed.success) {
 				setError(parsed.error.issues[0]?.message ?? "Check your business details.");
 				return;
 			}
-			advance("registration");
+			advance("stores");
 		},
 		[advance, values],
 	);
+
+	const handleStoresContinue = useCallback((): void => {
+		setError(null);
+		const parsedPrimary = OrganizationPrimaryLocationDraftSchema.safeParse({
+			name: primaryLocation.name,
+			addressText: primaryLocation.addressText,
+			contactPhone: primaryLocation.contactPhone,
+		});
+		if (!parsedPrimary.success) {
+			setError(parsedPrimary.error.issues[0]?.message ?? "Check your primary store details.");
+			return;
+		}
+		for (const location of additionalLocations) {
+			const parsed = OrganizationLocationDraftSchema.safeParse({
+				name: location.draft.name,
+				addressText: location.draft.addressText,
+				contactPhone: location.draft.contactPhone?.trim().length === 0 ? undefined : location.draft.contactPhone,
+			});
+			if (!parsed.success) {
+				setError(parsed.error.issues[0]?.message ?? "Check your additional store details.");
+				return;
+			}
+		}
+		advance("registration");
+	}, [additionalLocations, advance, primaryLocation]);
 
 	const handleRegistrationContinue = useCallback(
 		(event: SyntheticEvent<HTMLFormElement>): void => {
@@ -225,11 +261,11 @@ export function MerchantOnboardingView({ token, loginHref = "/auth/login" }: Mer
 				password,
 				category,
 				legalName: values.legalName,
-				addressText: values.addressText,
-				contactPhone: values.contactPhone,
+				primaryLocation,
 				registrationNo: values.registrationNo,
 				taxId: values.taxId,
 				documentType: values.documentType,
+				additionalLocations: additionalLocations.map((row) => row.draft),
 			});
 			if (!parsed.success) {
 				setError(parsed.error.issues[0]?.message ?? "Check your details and try again.");
@@ -250,7 +286,7 @@ export function MerchantOnboardingView({ token, loginHref = "/auth/login" }: Mer
 					setIsSubmitting(false);
 				});
 		},
-		[api, category, fullName, password, token, values],
+		[additionalLocations, api, category, fullName, password, primaryLocation, token, values],
 	);
 
 	if (flowStep === "loading") {
@@ -378,11 +414,23 @@ export function MerchantOnboardingView({ token, loginHref = "/auth/login" }: Mer
 					/>
 				) : null}
 
+				{wizardPanel === "stores" ? (
+					<MerchantOnboardingStoresStep
+						primaryLocation={primaryLocation}
+						onPrimaryLocationChange={setPrimaryLocation}
+						additionalLocations={additionalLocations}
+						onAdditionalLocationsChange={setAdditionalLocations}
+						onBack={handleBackToBusiness}
+						onContinue={handleStoresContinue}
+						error={error}
+					/>
+				) : null}
+
 				{wizardPanel === "registration" ? (
 					<MerchantOnboardingRegistrationStep
 						values={values}
 						onRegistrationFieldChange={handleRegistrationFieldChange}
-						onBack={handleBackToBusiness}
+						onBack={handleBackToStores}
 						onSubmit={handleRegistrationContinue}
 					/>
 				) : null}

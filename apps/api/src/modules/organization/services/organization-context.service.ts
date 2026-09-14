@@ -4,6 +4,7 @@ import { epochMs, UuidParamSchema, type OrganizationContextResponse, type Organi
 
 import { TenantTransactionService } from "../../../prisma/tenant-transaction.service";
 import { CedarPolicyEvaluatorService } from "../../authorization-cedar/services/cedar-policy-evaluator.service";
+import { mapOrganizationLocationToResponse } from "../utils/organization-location-mapper.util";
 import { OrganizationAuditService } from "./organization-audit.service";
 
 interface ResolvedOrganizationContext {
@@ -141,18 +142,7 @@ export class OrganizationContextService {
 						updatedAt: epochMs(Number(org.updatedAt)),
 					},
 					membership: resolved.membership,
-					locations: org.locations.map((l) => ({
-						id: l.id,
-						organizationId: l.organizationId,
-						name: l.name,
-						code: l.code,
-						addressText: l.addressText,
-						city: l.city,
-						contactPhone: l.contactPhone,
-						isPrimary: l.isPrimary,
-						createdAt: epochMs(Number(l.createdAt)),
-						updatedAt: epochMs(Number(l.updatedAt)),
-					})),
+					locations: org.locations.map((l) => mapOrganizationLocationToResponse(l)),
 					merchantProfile: org.merchantProfile
 						? {
 								organizationId: org.merchantProfile.organizationId,
@@ -201,7 +191,7 @@ export class OrganizationContextService {
 			},
 			async (tx) =>
 				tx.organizationLocation.findFirst({
-					where: { id: locationId, organizationId: resolved.organizationId, isDeleted: false },
+					where: { id: locationId, organizationId: resolved.organizationId, isDeleted: false, status: "ACTIVE" },
 					select: { id: true },
 				}),
 		);

@@ -228,6 +228,11 @@
 							"title": "KYB review",
 							"url": "/rewardhub/kyb",
 							"icon": "ShieldCheck"
+						},
+						{
+							"title": "Store requests",
+							"url": "/rewardhub/locations",
+							"icon": "MapPin"
 						}
 					]
 				}

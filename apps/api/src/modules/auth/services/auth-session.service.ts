@@ -55,6 +55,7 @@ export class AuthSessionService {
 		}
 
 		const userPermissions: UserPermissions = await this.authorizationChecker.getUserPermissionDetails(user.id);
+		let merchantOrganizationSlug: string | undefined;
 		if (clientType === "merchant") {
 			const membership = await this.prisma.organizationMembership.findFirst({
 				where: {
@@ -63,7 +64,11 @@ export class AuthSessionService {
 					status: "ACTIVE",
 					organization: { merchantProfile: { isNot: null }, isDeleted: false },
 				},
-				select: { id: true },
+				select: {
+					id: true,
+					organization: { select: { slug: true } },
+				},
+				orderBy: { createdAt: "asc" },
 			});
 			const canManageMerchants: boolean = userPermissions.permissions.some((permission) => permission.action === "MANAGE" && permission.resource === "MERCHANT_ORG");
 
@@ -73,6 +78,8 @@ export class AuthSessionService {
 					error: "MERCHANT_ACCESS_REQUIRED",
 				});
 			}
+
+			merchantOrganizationSlug = membership?.organization.slug;
 		}
 
 		const now: number = Date.now();
@@ -148,6 +155,7 @@ export class AuthSessionService {
 				enrollmentReason: restriction.reason,
 				message: restriction.message,
 				user: profile,
+				...(merchantOrganizationSlug !== undefined ? { organizationSlug: merchantOrganizationSlug } : {}),
 				...tokens,
 			};
 		}

@@ -227,13 +227,13 @@ export class RewardRepository extends BaseRepository<
 
 	public async countOrganizationLocations(organizationId: string): Promise<number> {
 		return this.prisma.organizationLocation.count({
-			where: { organizationId, isDeleted: false },
+			where: { organizationId, isDeleted: false, status: "ACTIVE" },
 		});
 	}
 
 	public async findOrganizationLocationIds(organizationId: string, locationIds: readonly string[]): Promise<string[]> {
 		const rows = await this.prisma.organizationLocation.findMany({
-			where: { organizationId, isDeleted: false, id: { in: [...locationIds] } },
+			where: { organizationId, isDeleted: false, status: "ACTIVE", id: { in: [...locationIds] } },
 			select: { id: true },
 		});
 		return rows.map((row) => row.id);

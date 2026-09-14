@@ -2,6 +2,7 @@
 
 import { MerchantPageHeader } from "@/components/merchant-ui/page-header";
 import { MerchantSurfacePanel } from "@/components/merchant-ui/surface-panel";
+import { resolveActiveOrganizationLocations } from "@/lib/org/location-access";
 import { organizationPath } from "@/lib/org/slug";
 import { resolveAuthErrorMessage } from "@workspace/client/lib/auth/errors";
 import { useAuth } from "@workspace/client/lib/auth";
@@ -73,7 +74,7 @@ function OrganizationTeamLocationCheckbox({ locationId, name, addressText, check
 export function OrganizationTeamPageView({ orgSlug }: OrganizationTeamPageViewProps): React.JSX.Element {
 	const { api } = useAuth();
 	const contextQuery = api.organizations.context.useQuery({ orgSlug });
-	const locations = contextQuery.data?.data.locations ?? [];
+	const locations = contextQuery.data?.data !== undefined ? resolveActiveOrganizationLocations(contextQuery.data.data) : [];
 
 	const [values, setValues] = React.useState<InviteFormValues>(DEFAULT_INVITE_VALUES);
 	const [error, setError] = React.useState<string | null>(null);

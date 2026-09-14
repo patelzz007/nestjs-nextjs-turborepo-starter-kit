@@ -20,6 +20,10 @@ export const OrganizationLocationScopeTypeSchema = z.enum(["ALL_LOCATIONS", "SEL
 
 export type OrganizationLocationScopeType = z.output<typeof OrganizationLocationScopeTypeSchema>;
 
+export const OrganizationLocationStatusSchema = z.enum(["PENDING_APPROVAL", "ACTIVE", "REJECTED", "INACTIVE"]);
+
+export type OrganizationLocationStatus = z.output<typeof OrganizationLocationStatusSchema>;
+
 export const OrganizationInvitationStatusSchema = z.enum(["PENDING", "ACCEPTED", "EXPIRED", "REVOKED"]);
 
 export type OrganizationInvitationStatus = z.output<typeof OrganizationInvitationStatusSchema>;
@@ -85,6 +89,8 @@ export const OrganizationLocationResponseSchema = z
 		addressText: z.string().nullable(),
 		city: PilotCitySchema.nullable(),
 		contactPhone: z.string().nullable(),
+		status: OrganizationLocationStatusSchema,
+		rejectionReason: z.string().nullable(),
 		isPrimary: z.boolean(),
 		createdAt: EpochMsSchema,
 		updatedAt: EpochMsSchema,
@@ -92,6 +98,111 @@ export const OrganizationLocationResponseSchema = z
 	.strict();
 
 export type OrganizationLocationResponse = z.output<typeof OrganizationLocationResponseSchema>;
+
+/** Draft store row for onboarding or admin pre-provisioning. */
+export const OrganizationLocationDraftSchema = z
+	.object({
+		name: z.string().min(1).max(200),
+		addressText: z.string().min(1).max(2000),
+		contactPhone: z.string().min(1).max(20).optional(),
+	})
+	.strict();
+
+export type OrganizationLocationDraft = z.output<typeof OrganizationLocationDraftSchema>;
+
+/** Primary store draft during onboarding — contact phone is required. */
+export const OrganizationPrimaryLocationDraftSchema = OrganizationLocationDraftSchema.extend({
+	contactPhone: z.string().min(5).max(20),
+});
+
+export type OrganizationPrimaryLocationDraft = z.output<typeof OrganizationPrimaryLocationDraftSchema>;
+
+export const OrganizationLocationCreateSchema = OrganizationLocationDraftSchema;
+
+export type OrganizationLocationCreateInput = z.output<typeof OrganizationLocationCreateSchema>;
+
+export const OrganizationLocationUpdateSchema = OrganizationLocationDraftSchema;
+
+export type OrganizationLocationUpdateInput = z.output<typeof OrganizationLocationUpdateSchema>;
+
+export const OrganizationLocationIdParamSchema = z
+	.object({
+		orgSlug: OrganizationRouteKeySchema,
+		locationId: z.uuid(),
+	})
+	.strict();
+
+export type OrganizationLocationIdParam = z.output<typeof OrganizationLocationIdParamSchema>;
+
+export const AdminOrganizationLocationCreateSchema = z
+	.object({
+		name: z.string().min(1).max(200),
+		addressText: z.string().min(1).max(2000),
+		contactPhone: z.string().min(1).max(20).optional(),
+		city: PilotCitySchema.optional(),
+		approveImmediately: z.boolean().default(true),
+	})
+	.strict();
+
+export type AdminOrganizationLocationCreateInput = z.output<typeof AdminOrganizationLocationCreateSchema>;
+
+export const AdminOrganizationLocationReviewSchema = z
+	.object({
+		approve: z.boolean(),
+		rejectionReason: z.string().min(1).max(2000).optional(),
+	})
+	.strict()
+	.superRefine((value, ctx) => {
+		if (!value.approve && (value.rejectionReason === undefined || value.rejectionReason.trim().length === 0)) {
+			ctx.addIssue({
+				code: "custom",
+				message: "Rejection reason is required when declining a store request",
+				path: ["rejectionReason"],
+			});
+		}
+	});
+
+export type AdminOrganizationLocationReviewInput = z.output<typeof AdminOrganizationLocationReviewSchema>;
+
+export const AdminOrganizationLocationReviewPathInputSchema = z
+	.object({
+		organizationId: z.uuid(),
+		locationId: z.uuid(),
+	})
+	.strict();
+
+export type AdminOrganizationLocationReviewPathInput = z.output<typeof AdminOrganizationLocationReviewPathInputSchema>;
+
+export const AdminLocationRequestListQuerySchema = z
+	.object({
+		page: z.coerce.number().int().positive().default(1),
+		limit: z.coerce.number().int().min(1).max(100).default(50),
+		status: OrganizationLocationStatusSchema.default("PENDING_APPROVAL"),
+	})
+	.strict();
+
+export type AdminLocationRequestListQuery = z.output<typeof AdminLocationRequestListQuerySchema>;
+
+export const AdminLocationRequestResponseSchema = z
+	.object({
+		id: z.uuid(),
+		organizationId: z.uuid(),
+		organizationSlug: OrganizationSlugSchema,
+		organizationDisplayName: z.string(),
+		name: z.string(),
+		code: z.string(),
+		addressText: z.string().nullable(),
+		city: PilotCitySchema.nullable(),
+		contactPhone: z.string().nullable(),
+		status: OrganizationLocationStatusSchema,
+		rejectionReason: z.string().nullable(),
+		isPrimary: z.boolean(),
+		requestedByUserId: z.uuid().nullable(),
+		createdAt: EpochMsSchema,
+	})
+	.strict();
+
+export type AdminLocationRequestResponse = z.output<typeof AdminLocationRequestResponseSchema>;
 
 export const OrganizationMembershipResponseSchema = z
 	.object({

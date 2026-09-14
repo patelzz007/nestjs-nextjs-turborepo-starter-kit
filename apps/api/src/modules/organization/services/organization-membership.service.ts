@@ -131,14 +131,31 @@ export class OrganizationMembershipService {
 					throw new BadRequestException("User is already a member of this organization");
 				}
 
-				const locationScopeRows =
-					input.locationScopeType === "ALL_LOCATIONS"
-						? [{ organizationId, scopeType: "ALL_LOCATIONS" as const, locationId: null }]
-						: input.locationIds.map((locationId) => ({
-								organizationId,
-								scopeType: "SELECTED" as const,
-								locationId,
-							}));
+				let locationScopeRows: { organizationId: string; scopeType: "ALL_LOCATIONS" | "SELECTED"; locationId: string | null }[];
+
+				if (input.locationScopeType === "ALL_LOCATIONS") {
+					locationScopeRows = [{ organizationId, scopeType: "ALL_LOCATIONS", locationId: null }];
+				} else {
+					const activeLocationIds = await tx.organizationLocation.findMany({
+						where: {
+							organizationId,
+							isDeleted: false,
+							status: "ACTIVE",
+							id: { in: [...input.locationIds] },
+						},
+						select: { id: true },
+					});
+
+					if (activeLocationIds.length !== input.locationIds.length) {
+						throw new BadRequestException("One or more selected stores are invalid or not yet approved");
+					}
+
+					locationScopeRows = input.locationIds.map((locationId) => ({
+						organizationId,
+						scopeType: "SELECTED" as const,
+						locationId,
+					}));
+				}
 
 				if (input.locationScopeType === "SELECTED" && locationScopeRows.length === 0) {
 					throw new BadRequestException("Select at least one location");

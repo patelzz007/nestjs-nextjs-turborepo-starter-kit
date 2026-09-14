@@ -41,6 +41,9 @@ CREATE TYPE "OrganizationMembershipStatus" AS ENUM ('ACTIVE', 'SUSPENDED', 'PEND
 CREATE TYPE "OrganizationLocationScopeType" AS ENUM ('ALL_LOCATIONS', 'SELECTED');
 
 -- CreateEnum
+CREATE TYPE "OrganizationLocationStatus" AS ENUM ('PENDING_APPROVAL', 'ACTIVE', 'REJECTED', 'INACTIVE');
+
+-- CreateEnum
 CREATE TYPE "OrganizationInvitationStatus" AS ENUM ('PENDING', 'ACCEPTED', 'EXPIRED', 'REVOKED');
 
 -- CreateEnum
@@ -667,6 +670,11 @@ CREATE TABLE "organization_locations" (
     "address_text" TEXT,
     "city" "PilotCity",
     "contact_phone" VARCHAR(20),
+    "status" "OrganizationLocationStatus" NOT NULL DEFAULT 'PENDING_APPROVAL',
+    "rejection_reason" TEXT,
+    "requested_by_user_id" TEXT,
+    "reviewed_by_user_id" TEXT,
+    "reviewed_at" BIGINT,
     "is_primary" BOOLEAN NOT NULL DEFAULT false,
     "is_deleted" BOOLEAN NOT NULL DEFAULT false,
     "deleted_at" BIGINT,
@@ -1590,6 +1598,9 @@ CREATE UNIQUE INDEX "organization_slug_history_slug_key" ON "organization_slug_h
 CREATE INDEX "organization_locations_organization_id_idx" ON "organization_locations"("organization_id");
 
 -- CreateIndex
+CREATE INDEX "organization_locations_organization_id_status_idx" ON "organization_locations"("organization_id", "status");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "organization_locations_organization_id_code_key" ON "organization_locations"("organization_id", "code");
 
 -- CreateIndex
@@ -1963,6 +1974,12 @@ ALTER TABLE "organization_slug_history" ADD CONSTRAINT "organization_slug_histor
 
 -- AddForeignKey
 ALTER TABLE "organization_locations" ADD CONSTRAINT "organization_locations_organization_id_fkey" FOREIGN KEY ("organization_id") REFERENCES "organizations"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "organization_locations" ADD CONSTRAINT "organization_locations_requested_by_user_id_fkey" FOREIGN KEY ("requested_by_user_id") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "organization_locations" ADD CONSTRAINT "organization_locations_reviewed_by_user_id_fkey" FOREIGN KEY ("reviewed_by_user_id") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "organization_memberships" ADD CONSTRAINT "organization_memberships_organization_id_fkey" FOREIGN KEY ("organization_id") REFERENCES "organizations"("id") ON DELETE CASCADE ON UPDATE CASCADE;

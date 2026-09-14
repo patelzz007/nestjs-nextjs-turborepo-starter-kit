@@ -19,7 +19,9 @@ import { LogService } from "../../logs/logs.service";
 import { EmailSenderService } from "../../notifications/email/email-sender.service";
 import { EMAIL_TEMPLATE_REGISTRY, buildEmailPreviewFromTemplate } from "../../notifications/email/email-template.registry";
 import { MerchantInviteEmailTemplate } from "../../notifications/email/templates/merchant-invite-email.template";
+import { OrganizationLocationRepository } from "../../organization/repositories/organization-location.repository";
 import { OrganizationRepository } from "../../organization/repositories/organization.repository";
+import { mapOrganizationLocationToResponse } from "../../organization/utils/organization-location-mapper.util";
 import { OrganizationProvisioningService } from "../../organization/services/organization-provisioning.service";
 import { RewardRepository } from "../repositories/reward.repository";
 import { mapOrganizationToAdminDetailResponse, mapOrganizationToAdminResponse, mapRewardToResponse } from "../utils/reward-mapper.util";
@@ -34,6 +36,7 @@ const INVITE_PREVIEW_TOKEN = "preview-invite-token";
 export class RewardsAdminService {
 	public constructor(
 		private readonly organizationRepository: OrganizationRepository,
+		private readonly organizationLocationRepository: OrganizationLocationRepository,
 		private readonly organizationProvisioning: OrganizationProvisioningService,
 		private readonly kybDocumentService: MerchantKybDocumentService,
 		private readonly rewardRepository: RewardRepository,
@@ -108,7 +111,9 @@ export class RewardsAdminService {
 		}
 
 		const documents = await this.kybDocumentService.mapDocumentRecordsFromOrg(organizationId);
-		return mapOrganizationToAdminDetailResponse(org, documents);
+		const locationRows = await this.organizationLocationRepository.listByOrganization(organizationId);
+		const locations = locationRows.map((row) => mapOrganizationLocationToResponse(row));
+		return mapOrganizationToAdminDetailResponse(org, documents, locations);
 	}
 
 	public async listMerchants(query: AdminMerchantListQuery): Promise<PaginatedServiceResult<MerchantOrgResponse>> {

@@ -30,6 +30,10 @@ export interface MerchantKybBusinessFieldsProps {
 	readonly businessNameReadOnly?: boolean;
 	/** When false, hides registered legal name. @default true */
 	readonly showLegalName?: boolean;
+	/** When false, hides business address. @default true */
+	readonly showAddress?: boolean;
+	/** When false, hides contact phone. @default true */
+	readonly showContactPhone?: boolean;
 }
 
 export interface MerchantKybRegistrationFieldsProps {
@@ -54,6 +58,8 @@ export function MerchantKybBusinessFields({
 	showBusinessName = true,
 	businessNameReadOnly = false,
 	showLegalName = true,
+	showAddress = true,
+	showContactPhone = true,
 }: MerchantKybBusinessFieldsProps): React.JSX.Element {
 	const isBusinessNameLocked = readOnly || businessNameReadOnly;
 
@@ -122,33 +128,37 @@ export function MerchantKybBusinessFields({
 					/>
 				</div>
 			) : null}
-			<div className="space-y-2">
-				<Label htmlFor={`${idPrefix}-address`}>Business address</Label>
-				<Textarea
-					id={`${idPrefix}-address`}
-					value={values.addressText}
-					onChange={handleAddressChange}
-					readOnly={readOnly}
-					disabled={readOnly}
-					required={!readOnly}
-					rows={3}
-					placeholder="Street, city, postcode"
-				/>
-			</div>
-			<div className="space-y-2">
-				<Label htmlFor={`${idPrefix}-contact-phone`}>Contact phone</Label>
-				<Input
-					id={`${idPrefix}-contact-phone`}
-					value={values.contactPhone}
-					onChange={handleContactPhoneChange}
-					readOnly={readOnly}
-					disabled={readOnly}
-					required={!readOnly}
-					autoComplete="tel"
-					className="h-11"
-					placeholder="+60321456789"
-				/>
-			</div>
+			{showAddress ? (
+				<div className="space-y-2">
+					<Label htmlFor={`${idPrefix}-address`}>Business address</Label>
+					<Textarea
+						id={`${idPrefix}-address`}
+						value={values.addressText}
+						onChange={handleAddressChange}
+						readOnly={readOnly}
+						disabled={readOnly}
+						required={!readOnly}
+						rows={3}
+						placeholder="Street, city, postcode"
+					/>
+				</div>
+			) : null}
+			{showContactPhone ? (
+				<div className="space-y-2">
+					<Label htmlFor={`${idPrefix}-contact-phone`}>Contact phone</Label>
+					<Input
+						id={`${idPrefix}-contact-phone`}
+						value={values.contactPhone}
+						onChange={handleContactPhoneChange}
+						readOnly={readOnly}
+						disabled={readOnly}
+						required={!readOnly}
+						autoComplete="tel"
+						className="h-11"
+						placeholder="+60321456789"
+					/>
+				</div>
+			) : null}
 		</div>
 	);
 }

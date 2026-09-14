@@ -19,7 +19,12 @@ import { MerchantOnboardingController } from "./controllers/merchant-onboarding.
 import { RedemptionsController } from "./controllers/redemptions.controller";
 import { RewardLegalController } from "./controllers/reward-legal.controller";
 import { RewardNotificationsController } from "./controllers/reward-notifications.controller";
-import { RewardsAdminInvitesController, RewardsAdminMerchantsController, RewardsAdminRewardsController } from "./controllers/rewards-admin.controller";
+import {
+	RewardsAdminInvitesController,
+	RewardsAdminLocationRequestsController,
+	RewardsAdminMerchantsController,
+	RewardsAdminRewardsController,
+} from "./controllers/rewards-admin.controller";
 import { MerchantApiKeyGuard } from "./guards/merchant-api-key.guard";
 import { ClaimService } from "./services/claim.service";
 import { ConsumerRewardsService } from "./services/consumer-rewards.service";
@@ -60,6 +65,7 @@ const rewardsQueueImports = redisUrl !== undefined && redisUrl.length > 0 ? [Rew
 		OrganizationAnalyticsController,
 		RewardsAdminInvitesController,
 		RewardsAdminRewardsController,
+		RewardsAdminLocationRequestsController,
 		RewardsAdminMerchantsController,
 	],
 	providers: [

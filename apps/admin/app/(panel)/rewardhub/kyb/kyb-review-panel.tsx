@@ -14,6 +14,8 @@ import type {
 	KybStatus,
 	MerchantKybDocumentRecord,
 	MerchantOrgResponse,
+	OrganizationLocationResponse,
+	OrganizationLocationStatus,
 } from "@workspace/shared";
 import { EpochMsSchema, JsonObjectSchema, JsonPrimitiveSchema, KybStatusSchema, nowEpochMs } from "@workspace/shared";
 import { z } from "zod";
@@ -102,6 +104,32 @@ function kybStatusVariant(status: KybStatus): "default" | "secondary" | "outline
 		return "destructive";
 	}
 	return "outline";
+}
+
+function locationStatusLabel(status: OrganizationLocationStatus): string {
+	if (status === "PENDING_APPROVAL") {
+		return "Pending review";
+	}
+	if (status === "REJECTED") {
+		return "Rejected";
+	}
+	if (status === "INACTIVE") {
+		return "Inactive";
+	}
+	return "Active";
+}
+
+function locationStatusVariant(status: OrganizationLocationStatus): "default" | "secondary" | "outline" | "destructive" {
+	if (status === "ACTIVE") {
+		return "default";
+	}
+	if (status === "REJECTED") {
+		return "destructive";
+	}
+	if (status === "PENDING_APPROVAL") {
+		return "outline";
+	}
+	return "secondary";
 }
 
 function buildKybFieldsPayload(
@@ -671,7 +699,6 @@ export default function KybReviewPanel({ initialMerchantOrgId, initialPendingMer
 												<DetailField label="Trading name" value={merchant.businessName} />
 												<DetailField label="Legal name" value={merchant.legalName} />
 												<DetailField label="Category" value={merchant.category} />
-												<DetailField className="md:col-span-2" label="Address" value={merchant.addressText} />
 											</div>
 										</div>
 
@@ -687,6 +714,39 @@ export default function KybReviewPanel({ initialMerchantOrgId, initialPendingMer
 												<DetailField className="md:col-span-2" label="Owner email" value={merchant.ownerEmail} mono />
 											</div>
 										</div>
+									</div>
+
+									<Separator />
+
+									<div className="grid min-w-0 gap-4">
+										<div className="flex items-center gap-2 text-sm font-medium">
+											<MapPin className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+											Store locations
+										</div>
+										{merchant.locations.length === 0 ? (
+											<p className="text-sm text-muted-foreground">No store locations have been submitted yet.</p>
+										) : (
+											<div className="grid gap-4">
+												{merchant.locations.map((location: OrganizationLocationResponse) => (
+													<div key={location.id} className="rounded-lg border border-border p-4">
+														<div className="flex flex-wrap items-center gap-2">
+															<p className="font-medium text-foreground">{location.name}</p>
+															{location.isPrimary ? <Badge variant="secondary">Primary</Badge> : null}
+															<Badge variant={locationStatusVariant(location.status)}>{locationStatusLabel(location.status)}</Badge>
+														</div>
+														<p className="mt-2 text-sm text-muted-foreground">{location.addressText ?? "No address provided"}</p>
+														<div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+															{location.city !== null ? <span>{formatPilotCity(location.city)}</span> : null}
+															{location.contactPhone !== null && location.contactPhone.length > 0 ? <span>{location.contactPhone}</span> : null}
+															<span className="font-mono">{location.code}</span>
+														</div>
+														{location.rejectionReason !== null && location.rejectionReason.length > 0 ? (
+															<p className="mt-2 text-sm text-destructive">Rejection reason: {location.rejectionReason}</p>
+														) : null}
+													</div>
+												))}
+											</div>
+										)}
 									</div>
 
 									<Separator />

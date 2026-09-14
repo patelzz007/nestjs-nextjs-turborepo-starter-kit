@@ -6,7 +6,13 @@ import {
 	type MerchantOnboardingCompleteFieldsInput,
 	type MerchantOnboardingCompleteResponse,
 	type MerchantOnboardingDocumentsSubmitInput,
+	type MerchantOnboardingDocumentBatchUploadCompleteInput,
+	type MerchantOnboardingDocumentBatchUploadCompleteItem,
+	type MerchantOnboardingDocumentBatchUploadCompleteResponse,
+	type MerchantOnboardingDocumentBatchUploadUrlInput,
+	type MerchantOnboardingDocumentBatchUploadUrlResponse,
 	type MerchantOnboardingDocumentUploadCompleteInput,
+	type MerchantOnboardingDocumentUploadItem,
 	type MerchantOnboardingDocumentUploadUrlInput,
 	type MerchantOnboardingInvitePreview,
 	type PilotCity,
@@ -18,6 +24,7 @@ import { UserProvisioningService } from "../../auth/services/user-provisioning.s
 import { FileService } from "../../files/services/file.service";
 import { OrganizationInviteRepository } from "../../organization/repositories/organization-invite.repository";
 import { OrganizationRepository } from "../../organization/repositories/organization.repository";
+import { OrganizationLocationService } from "../../organization/services/organization-location.service";
 import { OrganizationProvisioningService } from "../../organization/services/organization-provisioning.service";
 import { RewardAuditLogRepository } from "../repositories/reward-audit-log.repository";
 import { RewardUserRepository } from "../repositories/reward-user.repository";
@@ -47,6 +54,7 @@ export class MerchantOnboardingService {
 		private readonly userProvisioning: UserProvisioningService,
 		private readonly emailVerificationService: EmailVerificationService,
 		private readonly organizationProvisioning: OrganizationProvisioningService,
+		private readonly organizationLocationService: OrganizationLocationService,
 		private readonly fileService: FileService,
 		private readonly kybDocumentService: MerchantKybDocumentService,
 	) {}
@@ -101,11 +109,23 @@ export class MerchantOnboardingService {
 			displayName: invite.businessName.trim(),
 			category: input.category,
 			legalName: input.legalName.trim(),
-			addressText: input.addressText.trim(),
-			contactPhone: input.contactPhone.trim(),
+			addressText: input.primaryLocation.addressText.trim(),
+			contactPhone: input.primaryLocation.contactPhone.trim(),
 			kybFields: buildMerchantSubmittedKybFields(input),
 			kybStatus: "PENDING",
 		});
+
+		await this.organizationLocationService.finalizeOnboardingLocations(
+			invite.organizationId,
+			userId,
+			invite.city,
+			{
+				name: input.primaryLocation.name.trim(),
+				addressText: input.primaryLocation.addressText.trim(),
+				contactPhone: input.primaryLocation.contactPhone.trim(),
+			},
+			input.additionalLocations,
+		);
 
 		await this.organizationProvisioning.activateOrganization(invite.organizationId, userId);
 		await this.organizationInviteRepository.markAccepted(invite.id, userId, Date.now());
@@ -136,9 +156,38 @@ export class MerchantOnboardingService {
 		});
 	}
 
+	public async createDocumentUploadUrls(input: MerchantOnboardingDocumentBatchUploadUrlInput): Promise<MerchantOnboardingDocumentBatchUploadUrlResponse> {
+		const invite = await this.findAcceptedInvite(input.token);
+		const uploads = await Promise.all(
+			input.files.map((file: MerchantOnboardingDocumentUploadItem) =>
+				this.fileService.createUploadUrl(invite.acceptedByUserId, {
+					category: "MERCHANT_KYB",
+					fileName: file.fileName,
+					mimeType: file.mimeType,
+					sizeBytes: file.sizeBytes,
+					checksumSha256: file.checksumSha256,
+					organizationId: invite.organizationId,
+				}),
+			),
+		);
+		return { uploads };
+	}
+
 	public async completeDocumentUpload(input: MerchantOnboardingDocumentUploadCompleteInput): ReturnType<FileService["completeUpload"]> {
 		const invite = await this.findAcceptedInvite(input.token);
 		return this.fileService.completeUpload(invite.acceptedByUserId, input.fileId, { checksumSha256: input.checksumSha256 });
+	}
+
+	public async completeDocumentUploads(input: MerchantOnboardingDocumentBatchUploadCompleteInput): Promise<MerchantOnboardingDocumentBatchUploadCompleteResponse> {
+		const invite = await this.findAcceptedInvite(input.token);
+		await Promise.all(
+			input.completions.map((completion: MerchantOnboardingDocumentBatchUploadCompleteItem) =>
+				this.fileService.completeUpload(invite.acceptedByUserId, completion.fileId, {
+					checksumSha256: completion.checksumSha256,
+				}),
+			),
+		);
+		return { fileIds: input.completions.map((completion: MerchantOnboardingDocumentBatchUploadCompleteItem) => completion.fileId) };
 	}
 
 	public async submitDocuments(input: MerchantOnboardingDocumentsSubmitInput): Promise<{ success: true }> {
@@ -154,7 +203,7 @@ export class MerchantOnboardingService {
 
 	private async findValidInvite(token: string): Promise<ResolvedMerchantInvite> {
 		const tokenHash = sha256Hex(token);
-		const invite = await this.organizationInviteRepository.findByTokenHash(tokenHash);
+		const invite = await this.organizationInviteRepository.findByTokenHash(tokenHash, ["PENDING"]);
 
 		if (invite?.organization?.merchantProfile == null) {
 			throw new NotFoundException({ message: "Invalid merchant invite", error: "MERCHANT_INVITE_NOT_FOUND" });
@@ -184,10 +233,29 @@ export class MerchantOnboardingService {
 	}
 
 	private async findAcceptedInvite(token: string): Promise<ResolvedMerchantInvite & { readonly acceptedByUserId: string; readonly organizationId: string }> {
-		const invite = await this.findValidInvite(token);
+		const tokenHash = sha256Hex(token);
+		const invite = await this.organizationInviteRepository.findByTokenHash(tokenHash, ["ACCEPTED"]);
+
+		if (invite?.organization?.merchantProfile == null || invite.organizationId === null) {
+			throw new NotFoundException({ message: "Invalid merchant invite", error: "MERCHANT_INVITE_NOT_FOUND" });
+		}
+
 		if (invite.acceptedAt === null || invite.acceptedByUserId === null) {
 			throw new BadRequestException({ message: "Complete account setup before uploading documents", error: "MERCHANT_ONBOARDING_INCOMPLETE" });
 		}
-		return { ...invite, acceptedByUserId: invite.acceptedByUserId, organizationId: invite.organizationId };
+
+		const city: PilotCity = PilotCitySchema.parse(invite.organization.merchantProfile.city);
+
+		return {
+			id: invite.id,
+			email: invite.email,
+			businessName: invite.organization.displayName,
+			city,
+			expiresAt: Number(invite.expiresAt),
+			acceptedAt: Number(invite.acceptedAt),
+			acceptedByUserId: invite.acceptedByUserId,
+			organizationId: invite.organizationId,
+			organizationSlug: invite.organization.slug,
+		};
 	}
 }

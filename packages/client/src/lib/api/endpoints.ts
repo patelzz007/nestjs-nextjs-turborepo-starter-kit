@@ -90,9 +90,13 @@ import {
 	OrganizationContextResponseSchema,
 	OrganizationRewardMembershipResponseSchema,
 	MerchantOnboardingCompleteResponseSchema,
+	MerchantOnboardingDocumentBatchUploadCompleteResponseSchema,
+	MerchantOnboardingDocumentBatchUploadUrlResponseSchema,
 	MerchantOnboardingInvitePreviewSchema,
+	AdminLocationRequestResponseSchema,
 	AdminMerchantDetailResponseSchema,
 	MerchantOrgResponseSchema,
+	OrganizationLocationResponseSchema,
 	MerchantRedemptionListItemSchema,
 	MerchantAnalyticsResponseSchema,
 	RewardClaimCheckoutStatusSchema,
@@ -742,6 +746,16 @@ export const apiRouter = {
 			response: envelope(MerchantAnalyticsResponseSchema),
 			queryKey: ({ orgSlug, from, to, locationId }) => ["organization", orgSlug, "analytics", locationId, from, to],
 		}),
+		locations: {
+			create: defineMutation(apiContract.organizations.locations.create, {
+				response: envelope(OrganizationLocationResponseSchema),
+				queryKey: ({ orgSlug, name }) => ["organization", orgSlug, "locations", "create", name],
+			}),
+			update: defineMutation(apiContract.organizations.locations.update, {
+				response: envelope(OrganizationLocationResponseSchema),
+				queryKey: ({ orgSlug, locationId }) => ["organization", orgSlug, "locations", "update", locationId],
+			}),
+		},
 		onboarding: {
 			validate: defineMutation(apiContract.organizations.onboarding.validate, {
 				response: envelope(MerchantOnboardingInvitePreviewSchema),
@@ -755,9 +769,17 @@ export const apiRouter = {
 				response: envelope(CreateFileUploadUrlResponseSchema),
 				queryKey: ({ token, fileName }) => ["organization", "onboarding", "document-upload-url", token, fileName],
 			}),
+			documentBatchUploadUrl: defineMutation(apiContract.organizations.onboarding.documentBatchUploadUrl, {
+				response: envelope(MerchantOnboardingDocumentBatchUploadUrlResponseSchema),
+				queryKey: ({ token }) => ["organization", "onboarding", "document-batch-upload-url", token],
+			}),
 			documentUploadComplete: defineMutation(apiContract.organizations.onboarding.documentUploadComplete, {
 				response: envelope(CompleteFileUploadResponseSchema),
 				queryKey: ({ token, fileId }) => ["organization", "onboarding", "document-upload-complete", token, fileId],
+			}),
+			documentBatchUploadComplete: defineMutation(apiContract.organizations.onboarding.documentBatchUploadComplete, {
+				response: envelope(MerchantOnboardingDocumentBatchUploadCompleteResponseSchema),
+				queryKey: ({ token }) => ["organization", "onboarding", "document-batch-upload-complete", token],
 			}),
 			documentsSubmit: defineMutation(apiContract.organizations.onboarding.documentsSubmit, {
 				response: envelope(z.object({ success: z.literal(true) }).strict()),
@@ -802,6 +824,18 @@ export const apiRouter = {
 		updateKyb: defineMutation(apiContract.rewardsAdmin.updateKyb, {
 			response: envelope(z.object({ ok: z.literal(true) }).strict()),
 			queryKey: ({ organizationId }) => ["rewards-admin", "kyb", organizationId],
+		}),
+		listLocationRequests: defineQuery(apiContract.rewardsAdmin.listLocationRequests, {
+			response: envelope(z.array(AdminLocationRequestResponseSchema), ApiPaginatedMetaSchema),
+			queryKey: ({ page, limit, status }) => ["rewards-admin", "location-requests", page, limit, status],
+		}),
+		createOrganizationLocation: defineMutation(apiContract.rewardsAdmin.createOrganizationLocation, {
+			response: envelope(OrganizationLocationResponseSchema),
+			queryKey: ({ organizationId, name }) => ["rewards-admin", "organization", organizationId, "locations", "create", name],
+		}),
+		reviewOrganizationLocation: defineMutation(apiContract.rewardsAdmin.reviewOrganizationLocation, {
+			response: envelope(OrganizationLocationResponseSchema),
+			queryKey: ({ organizationId, locationId, approve }) => ["rewards-admin", "organization", organizationId, "locations", locationId, "review", approve],
 		}),
 	},
 	// NOTE: `as const` is required here — it preserves literal method/path types

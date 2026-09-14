@@ -1,7 +1,8 @@
 import { z } from "zod";
 
+import { OrganizationLocationDraftSchema, OrganizationPrimaryLocationDraftSchema } from "../organization/organization";
 import { EpochMsSchema } from "../../api/common";
-import { DocumentMimeTypeSchema, MERCHANT_KYB_UPLOAD_POLICY } from "../platform/storage";
+import { CreateFileUploadUrlResponseSchema, DocumentMimeTypeSchema, MERCHANT_KYB_UPLOAD_POLICY } from "../platform/storage";
 import { strongPassword } from "../../auth/auth";
 import { JsonObjectSchema } from "../../runtime/json";
 import {
@@ -112,10 +113,21 @@ export const MerchantKybRegistrationFieldsSchema = MerchantKybSubmissionFieldsSc
 
 export type MerchantKybRegistrationFieldsInput = z.output<typeof MerchantKybRegistrationFieldsSchema>;
 
-/** KYB details collected during onboarding — business name comes from the invite and documents upload after organization creation. */
-export const MerchantOnboardingKybFieldsSchema = MerchantKybSubmissionFormSchema.omit({ businessName: true });
+/** KYB details collected during onboarding — business name comes from the invite; store address is captured on the Stores step. */
+export const MerchantOnboardingKybFieldsSchema = MerchantKybSubmissionFormSchema.omit({
+	businessName: true,
+	addressText: true,
+	contactPhone: true,
+});
 
 export type MerchantOnboardingKybFieldsInput = z.output<typeof MerchantOnboardingKybFieldsSchema>;
+
+/** Business step fields for merchant onboarding (legal name only — address lives on the Stores step). */
+export const MerchantOnboardingBusinessFieldsSchema = MerchantKybSubmissionFieldsSchema.pick({
+	legalName: true,
+});
+
+export type MerchantOnboardingBusinessFieldsInput = z.output<typeof MerchantOnboardingBusinessFieldsSchema>;
 
 export const MerchantOnboardingValidateTokenSchema = z
 	.object({
@@ -144,11 +156,11 @@ export const MerchantOnboardingCompleteFieldsSchema = z
 		fullName: z.string().min(2).max(200),
 		category: MerchantBusinessCategorySchema,
 		legalName: MerchantOnboardingKybFieldsSchema.shape.legalName,
-		addressText: MerchantOnboardingKybFieldsSchema.shape.addressText,
-		contactPhone: MerchantOnboardingKybFieldsSchema.shape.contactPhone,
+		primaryLocation: OrganizationPrimaryLocationDraftSchema,
 		registrationNo: MerchantOnboardingKybFieldsSchema.shape.registrationNo,
 		taxId: MerchantOnboardingKybFieldsSchema.shape.taxId,
 		documentType: MerchantOnboardingKybFieldsSchema.shape.documentType,
+		additionalLocations: z.array(OrganizationLocationDraftSchema).max(10).default([]),
 	})
 	.strict();
 
@@ -177,6 +189,63 @@ export const MerchantOnboardingDocumentUploadCompleteSchema = z
 	.strict();
 
 export type MerchantOnboardingDocumentUploadCompleteInput = z.output<typeof MerchantOnboardingDocumentUploadCompleteSchema>;
+
+/** One file in a batch onboarding KYB upload request. */
+export const MerchantOnboardingDocumentUploadItemSchema = z
+	.object({
+		fileName: z.string().min(1).max(255),
+		mimeType: DocumentMimeTypeSchema,
+		sizeBytes: z.number().int().positive(),
+		checksumSha256: z.string().length(64),
+	})
+	.strict();
+
+export type MerchantOnboardingDocumentUploadItem = z.output<typeof MerchantOnboardingDocumentUploadItemSchema>;
+
+/** Batch invite-authorized upload ticket request for onboarding KYB documents. */
+export const MerchantOnboardingDocumentBatchUploadUrlSchema = z
+	.object({
+		token: z.string().min(1),
+		files: z.array(MerchantOnboardingDocumentUploadItemSchema).min(1).max(MERCHANT_KYB_MAX_DOCUMENT_COUNT),
+	})
+	.strict();
+
+export type MerchantOnboardingDocumentBatchUploadUrlInput = z.output<typeof MerchantOnboardingDocumentBatchUploadUrlSchema>;
+
+export const MerchantOnboardingDocumentBatchUploadUrlResponseSchema = z
+	.object({
+		uploads: z.array(CreateFileUploadUrlResponseSchema).min(1),
+	})
+	.strict();
+
+export type MerchantOnboardingDocumentBatchUploadUrlResponse = z.output<typeof MerchantOnboardingDocumentBatchUploadUrlResponseSchema>;
+
+export const MerchantOnboardingDocumentBatchUploadCompleteItemSchema = z
+	.object({
+		fileId: z.uuid(),
+		checksumSha256: z.string().length(64),
+	})
+	.strict();
+
+export type MerchantOnboardingDocumentBatchUploadCompleteItem = z.output<typeof MerchantOnboardingDocumentBatchUploadCompleteItemSchema>;
+
+/** Batch confirmation for invite-authorized onboarding KYB uploads. */
+export const MerchantOnboardingDocumentBatchUploadCompleteSchema = z
+	.object({
+		token: z.string().min(1),
+		completions: z.array(MerchantOnboardingDocumentBatchUploadCompleteItemSchema).min(1).max(MERCHANT_KYB_MAX_DOCUMENT_COUNT),
+	})
+	.strict();
+
+export type MerchantOnboardingDocumentBatchUploadCompleteInput = z.output<typeof MerchantOnboardingDocumentBatchUploadCompleteSchema>;
+
+export const MerchantOnboardingDocumentBatchUploadCompleteResponseSchema = z
+	.object({
+		fileIds: z.array(z.uuid()).min(1),
+	})
+	.strict();
+
+export type MerchantOnboardingDocumentBatchUploadCompleteResponse = z.output<typeof MerchantOnboardingDocumentBatchUploadCompleteResponseSchema>;
 
 /** Attaches completed onboarding documents to the newly provisioned merchant. */
 export const MerchantOnboardingDocumentsSubmitSchema = z
