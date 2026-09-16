@@ -5,7 +5,6 @@ import { apiContract, apiPath } from "@workspace/shared";
 import { ZodValidationPipe } from "../../../common/pipes/zod-validation.pipe";
 import { GetUser } from "../../auth/decorators/get-user.decorator";
 import type { AccessTokenPayload } from "../../auth/services/token.service";
-import { KernelIntegrationHelper } from "../../authorization/kernel/kernel-integration.helper";
 
 import { MarkRewardNotificationsReadDto } from "../dtos/rewards.dto";
 import { RewardNotificationService } from "../services/reward-notification.service";
@@ -16,7 +15,6 @@ import { RewardNotificationService } from "../services/reward-notification.servi
 export class RewardNotificationsController {
 	public constructor(
 		private readonly notificationService: RewardNotificationService,
-		private readonly kernelHelper: KernelIntegrationHelper,
 	) {}
 
 	@Get()
@@ -37,8 +35,5 @@ export class RewardNotificationsController {
 		@GetUser() user: AccessTokenPayload,
 		@Body(new ZodValidationPipe(apiContract.rewardNotifications.read.input)) body: { notificationIds?: string[]; markAll?: boolean },
 	): Promise<ReturnType<RewardNotificationService["markRead"]>> {
-		await this.kernelHelper.requireAction(user.sub, "UPDATE", "USER");
-		
-		return this.notificationService.markRead(user.sub, body.notificationIds, body.markAll);
 	}
 }

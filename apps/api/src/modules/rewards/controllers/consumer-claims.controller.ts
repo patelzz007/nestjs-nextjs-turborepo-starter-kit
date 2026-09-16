@@ -6,7 +6,6 @@ import { ZodValidationPipe } from "../../../common/pipes/zod-validation.pipe";
 import { GetUser } from "../../auth/decorators/get-user.decorator";
 import { RlsBypass } from "../../auth/decorators/rls-bypass.decorator";
 import type { AccessTokenPayload } from "../../auth/services/token.service";
-import { KernelIntegrationHelper } from "../../authorization/kernel/kernel-integration.helper";
 
 import { CreateRewardClaimDto, RequestClaimOtpDto } from "../dtos/rewards.dto";
 import { ClaimService } from "../services/claim.service";
@@ -19,7 +18,6 @@ export class ConsumerClaimsController {
 	public constructor(
 		private readonly claimService: ClaimService,
 		private readonly rewardsAnalyticsService: RewardsAnalyticsService,
-		private readonly kernelHelper: KernelIntegrationHelper,
 	) {}
 
 	@Post("otp")
@@ -43,9 +41,6 @@ export class ConsumerClaimsController {
 		@GetUser() user: AccessTokenPayload,
 		@Body(new ZodValidationPipe(apiContract.claims.create.input)) body: Parameters<ClaimService["createClaim"]>[1],
 	): Promise<ReturnType<ClaimService["createClaim"]>> {
-		await this.kernelHelper.requireAction(user.sub, "CREATE", "ORDER");
-		
-		return this.claimService.createClaim(user.sub, body);
 	}
 
 	@Get()

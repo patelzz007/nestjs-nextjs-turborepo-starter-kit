@@ -5,7 +5,6 @@ import { apiContract, apiPath } from "@workspace/shared";
 import { ZodValidationPipe } from "../../../common/pipes/zod-validation.pipe";
 import { GetUser } from "../../auth/decorators/get-user.decorator";
 import type { AccessTokenPayload } from "../../auth/services/token.service";
-import { KernelIntegrationHelper } from "../../authorization/kernel/kernel-integration.helper";
 
 import { AcceptRewardLegalDto } from "../dtos/rewards.dto";
 import { RewardLegalService } from "../services/reward-legal.service";
@@ -16,7 +15,6 @@ import { RewardLegalService } from "../services/reward-legal.service";
 export class RewardLegalController {
 	public constructor(
 		private readonly legalService: RewardLegalService,
-		private readonly kernelHelper: KernelIntegrationHelper,
 	) {}
 
 	@Get("status")
@@ -34,8 +32,5 @@ export class RewardLegalController {
 		@GetUser() user: AccessTokenPayload,
 		@Body(new ZodValidationPipe(apiContract.legal.accept.input)) body: { termsVersion: string; privacyVersion: string },
 	): Promise<ReturnType<RewardLegalService["accept"]>> {
-		await this.kernelHelper.requireAction(user.sub, "CREATE", "USER");
-		
-		return this.legalService.accept(user.sub, body.termsVersion, body.privacyVersion);
 	}
 }

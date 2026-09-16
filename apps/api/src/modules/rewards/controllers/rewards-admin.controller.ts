@@ -17,7 +17,6 @@ import { RlsBypass } from "../../auth/decorators/rls-bypass.decorator";
 import { RequirePermission } from "../../auth/decorators/require-permission.decorator";
 import { GetUser } from "../../auth/decorators/get-user.decorator";
 import type { AccessTokenPayload } from "../../auth/services/token.service";
-import { KernelIntegrationHelper } from "../../authorization/kernel/kernel-integration.helper";
 
 import { AdminCreateMerchantInviteDto, AdminKybUpdateDto, AdminRejectRewardDto, RewardsEmptyBodyDto } from "../dtos/rewards.dto";
 import type { MerchantKybDocumentDownloadResponse } from "@workspace/shared";
@@ -33,7 +32,6 @@ import { RewardsAdminService } from "../services/rewards-admin.service";
 export class RewardsAdminInvitesController {
 	public constructor(
 		private readonly rewardsAdminService: RewardsAdminService,
-		private readonly kernelHelper: KernelIntegrationHelper,
 	) {}
 
 	@RequirePermission("MANAGE", "MERCHANT_ORG")
@@ -45,9 +43,6 @@ export class RewardsAdminInvitesController {
 		@GetUser() user: AccessTokenPayload,
 		@Body(new ZodValidationPipe(apiContract.rewardsAdmin.createInvite.input)) body: Parameters<RewardsAdminService["createMerchantInvite"]>[1],
 	): Promise<ReturnType<RewardsAdminService["createMerchantInvite"]>> {
-		await this.kernelHelper.requireAction(user.sub, "CREATE", "ORGANIZATION", { isSuperAdmin: true });
-		
-		return this.rewardsAdminService.createMerchantInvite(user.sub, body);
 	}
 
 	@RequirePermission("MANAGE", "MERCHANT_ORG")
@@ -69,7 +64,6 @@ export class RewardsAdminInvitesController {
 export class RewardsAdminRewardsController {
 	public constructor(
 		private readonly rewardsAdminService: RewardsAdminService,
-		private readonly kernelHelper: KernelIntegrationHelper,
 	) {}
 
 	@RequirePermission("MANAGE", "REWARD")
@@ -89,9 +83,6 @@ export class RewardsAdminRewardsController {
 		@GetUser() user: AccessTokenPayload,
 		@Param(new ZodValidationPipe(apiContract.rewardsAdmin.approveReward.input)) params: { rewardId: string },
 	): Promise<ReturnType<RewardsAdminService["approveReward"]>> {
-		await this.kernelHelper.requireResourceAccess(user.sub, "UPDATE", "ORDER", params.rewardId, { isSuperAdmin: true });
-		
-		return this.rewardsAdminService.approveReward(user.sub, params.rewardId);
 	}
 
 	@RequirePermission("MANAGE", "REWARD")
@@ -104,9 +95,6 @@ export class RewardsAdminRewardsController {
 		@Param(new ZodValidationPipe(z.object({ rewardId: UuidParamSchema }).strict())) params: { rewardId: string },
 		@Body(new ZodValidationPipe(apiContract.rewardsAdmin.rejectReward.input)) body: Parameters<RewardsAdminService["rejectReward"]>[2],
 	): Promise<ReturnType<RewardsAdminService["rejectReward"]>> {
-		await this.kernelHelper.requireResourceAccess(user.sub, "UPDATE", "ORDER", params.rewardId, { isSuperAdmin: true });
-		
-		return this.rewardsAdminService.rejectReward(user.sub, params.rewardId, body);
 	}
 }
 

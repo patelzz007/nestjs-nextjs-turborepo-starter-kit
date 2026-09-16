@@ -26,7 +26,6 @@ import {
 import { ZodValidationPipe } from "../../../common/pipes/zod-validation.pipe";
 import { GetUser } from "../../auth/decorators/get-user.decorator";
 import type { AccessTokenPayload } from "../../auth/services/token.service";
-import { KernelIntegrationHelper } from "../../authorization/kernel/kernel-integration.helper";
 import { OrganizationContextService } from "../services/organization-context.service";
 import { OrganizationLocationService } from "../services/organization-location.service";
 import { OrganizationMembershipService } from "../services/organization-membership.service";
@@ -38,7 +37,6 @@ export class OrganizationController {
 		private readonly context: OrganizationContextService,
 		private readonly membership: OrganizationMembershipService,
 		private readonly locations: OrganizationLocationService,
-		private readonly kernelHelper: KernelIntegrationHelper,
 	) {}
 
 	@Get(":orgSlug/context")
@@ -70,9 +68,6 @@ export class OrganizationController {
 	): Promise<OrganizationLocationResponse> {
 		const organizationId = await this.context.resolveOrganizationIdBySlug(params.orgSlug);
 
-		await this.kernelHelper.requireAction(user.sub, "CREATE", "LOCATION", { organizationId });
-
-		return this.locations.createMerchantLocation(user.sub, params.orgSlug, body);
 	}
 
 	@Patch(":orgSlug/locations/:locationId")
@@ -84,9 +79,6 @@ export class OrganizationController {
 	): Promise<OrganizationLocationResponse> {
 		const organizationId = await this.context.resolveOrganizationIdBySlug(params.orgSlug);
 
-		await this.kernelHelper.requireResourceAccess(user.sub, "UPDATE", "LOCATION", params.locationId, { organizationId });
-
-		return this.locations.resubmitMerchantLocation(user.sub, params.orgSlug, params.locationId, body);
 	}
 
 	@Get(":orgSlug/members")

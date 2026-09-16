@@ -31,7 +31,7 @@ interface VersionManifest {
 @ApiTags("System")
 @Controller("version")
 export class VersionController {
-	public constructor(private readonly kernelHelper: KernelIntegrationHelper) {}
+	public constructor() {}
 	
 	@Public()
 	@Get()

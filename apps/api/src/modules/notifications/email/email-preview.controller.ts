@@ -19,7 +19,6 @@ import { ZodValidationPipe } from "../../../common/pipes/zod-validation.pipe";
 import { AdminAccessOnly } from "../../auth/decorators/admin-access.decorator";
 import { RequirePermission } from "../../auth/decorators/require-permission.decorator";
 import { GetUser } from "../../auth/decorators/get-user.decorator";
-import { KernelIntegrationHelper } from "../../authorization/kernel/kernel-integration.helper";
 import { createWrappedDto, createWrappedArrayDto } from "../../../common/dto/response-wrapper";
 import { TypedConfigService } from "../../../config/typed-config.service";
 import { EMAIL_TEMPLATE_REGISTRY, buildEmailPreview, listTemplateMeta } from "./email-template.registry";
@@ -60,7 +59,6 @@ export class EmailPreviewController {
 	constructor(
 		private readonly config: TypedConfigService,
 		private readonly sender: EmailSenderService,
-		private readonly kernelHelper: KernelIntegrationHelper,
 	) {
 		this.renderContext = EmailRenderContextSchema.parse({
 			appName: this.config.appName,
@@ -101,9 +99,6 @@ export class EmailPreviewController {
 	@ApiOkResponse({ type: WrappedSendResult, description: "Outcome of the send attempt" })
 	@ApiNotFoundResponse({ description: "Unknown template key" })
 	public async sendTest(@GetUser("sub") userId: string, @Param("key", new ZodValidationPipe(EmailTemplateKeyParamSchema)) key: string): Promise<EmailSendResult> {
-		await this.kernelHelper.requireAction(userId, "CREATE", "USER", { isSuperAdmin: true });
-		
-		const parsedKey = this.requireTemplate(key);
 		const template = EMAIL_TEMPLATE_REGISTRY[parsedKey].build();
 		return this.sender.send(template);
 	}

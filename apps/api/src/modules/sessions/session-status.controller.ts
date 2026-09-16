@@ -32,7 +32,7 @@ const WrappedSessionStatusResponse = createWrappedDto(SessionStatusSchema, "Wrap
 @ApiTags("Sessions")
 @Controller(apiPath("/session"))
 export class SessionStatusController {
-	public constructor(private readonly kernelHelper: KernelIntegrationHelper) {}
+	public constructor() {}
 	
 	@ApiBearerAuth()
 	@Get()
