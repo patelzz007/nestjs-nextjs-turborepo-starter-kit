@@ -1,7 +1,9 @@
 import { Injectable } from "@nestjs/common";
-import type { OrganizationApiKey, Prisma } from "@prisma/client";
+import type { OrganizationApiKey, Prisma, PrismaClient } from "@prisma/client";
 
 import { PrismaService } from "../../../prisma/prisma.service";
+
+export type MerchantApiKeyDbClient = Pick<PrismaClient, "organizationApiKey">;
 
 const API_KEY_LIST_INCLUDE = {
 	location: { select: { name: true } },
@@ -13,8 +15,8 @@ export type OrganizationApiKeyListRow = Prisma.OrganizationApiKeyGetPayload<{ in
 export class MerchantApiKeyRepository {
 	public constructor(private readonly prisma: PrismaService) {}
 
-	public async listByOrgId(organizationId: string, locationId?: string): Promise<OrganizationApiKeyListRow[]> {
-		return this.prisma.organizationApiKey.findMany({
+	public async listByOrgId(organizationId: string, locationId?: string, db: MerchantApiKeyDbClient = this.prisma): Promise<OrganizationApiKeyListRow[]> {
+		return db.organizationApiKey.findMany({
 			where: {
 				organizationId,
 				isDeleted: false,
@@ -25,15 +27,18 @@ export class MerchantApiKeyRepository {
 		});
 	}
 
-	public async create(input: {
-		readonly organizationId: string;
-		readonly locationId?: string;
-		readonly name: string;
-		readonly keyHash: string;
-		readonly keyPrefix: string;
-		readonly createdByUserId: string;
-	}): Promise<OrganizationApiKey> {
-		return this.prisma.organizationApiKey.create({
+	public async create(
+		input: {
+			readonly organizationId: string;
+			readonly locationId?: string;
+			readonly name: string;
+			readonly keyHash: string;
+			readonly keyPrefix: string;
+			readonly createdByUserId: string;
+		},
+		db: MerchantApiKeyDbClient = this.prisma,
+	): Promise<OrganizationApiKey> {
+		return db.organizationApiKey.create({
 			data: {
 				organizationId: input.organizationId,
 				locationId: input.locationId ?? null,
@@ -55,8 +60,8 @@ export class MerchantApiKeyRepository {
 		});
 	}
 
-	public async findActiveByIdAndOrg(keyId: string, organizationId: string): Promise<OrganizationApiKey | null> {
-		return this.prisma.organizationApiKey.findFirst({
+	public async findActiveByIdAndOrg(keyId: string, organizationId: string, db: MerchantApiKeyDbClient = this.prisma): Promise<OrganizationApiKey | null> {
+		return db.organizationApiKey.findFirst({
 			where: { id: keyId, organizationId, isDeleted: false },
 		});
 	}
@@ -68,8 +73,8 @@ export class MerchantApiKeyRepository {
 		});
 	}
 
-	public async revoke(keyId: string, revokedAt: number): Promise<void> {
-		await this.prisma.organizationApiKey.update({
+	public async revoke(keyId: string, revokedAt: number, db: MerchantApiKeyDbClient = this.prisma): Promise<void> {
+		await db.organizationApiKey.update({
 			where: { id: keyId },
 			data: { revokedAt },
 		});

@@ -93,4 +93,40 @@ describe("RLS hardening (integration)", () => {
 			expect(mlk.rowCount).toBe(0);
 		});
 	});
+
+	it("allows MLK owner to create org-wide API keys when tenant org context matches", async () => {
+		await withRlsSession(pool, { userId: REWARD_SEED_IDS.mlkOwnerUser, organizationId: ORGANIZATION_SEED_IDS.mlkOrganization, bypass: false }, async (client) => {
+			await client.query("BEGIN");
+			try {
+				const inserted = await client.query<{ id: string }>(
+					`INSERT INTO public.organization_api_keys (
+            id, organization_id, location_id, name, key_hash, key_prefix, created_by_user_id
+          ) VALUES (gen_random_uuid(), $1, NULL, 'RLS test key', $2, 'rls-test-prefix', $3)
+          RETURNING id`,
+					[ORGANIZATION_SEED_IDS.mlkOrganization, `rls-test-${crypto.randomUUID()}`, REWARD_SEED_IDS.mlkOwnerUser],
+				);
+				expect(inserted.rowCount).toBe(1);
+			} finally {
+				await client.query("ROLLBACK");
+			}
+		});
+	});
+
+	it("blocks branch-scoped API key insert when user lacks location ACL", async () => {
+		await withRlsSession(pool, { userId: REWARD_SEED_IDS.mlkCashierUser, organizationId: ORGANIZATION_SEED_IDS.mlkOrganization, bypass: false }, async (client) => {
+			await expect(
+				client.query(
+					`INSERT INTO public.organization_api_keys (
+            organization_id, location_id, name, key_hash, key_prefix, created_by_user_id
+          ) VALUES ($1, $2, 'RLS blocked', $3, 'blocked-prefix', $4)`,
+					[
+						ORGANIZATION_SEED_IDS.mlkOrganization,
+						ORGANIZATION_SEED_IDS.mlkLocationKatil,
+						`rls-blocked-${crypto.randomUUID()}`,
+						REWARD_SEED_IDS.mlkCashierUser,
+					],
+				),
+			).rejects.toThrow(/row-level security/i);
+		});
+	});
 });
