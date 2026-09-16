@@ -66,54 +66,55 @@ export class CapabilityDefinitionService implements OnModuleInit {
 	}
 
 	public async syncPlatformCapabilitiesFromPermissions(): Promise<void> {
-		// Bypass RLS for system initialization - no user context available yet
-		await this.prisma.$executeRawUnsafe("SET LOCAL app.rls_bypass = 'true'");
-		
-		const permissions = await this.prisma.permission.findMany({
-			where: { isDeleted: false },
-			select: {
-				id: true,
-				action: true,
-				resource: true,
-				description: true,
-				group: true,
-				isSystem: true,
-			},
-		});
-
-		for (const permission of permissions) {
-			const actionParsed = PermissionActionSchema.safeParse(permission.action);
-			const resourceParsed = PermissionResourceSchema.safeParse(permission.resource);
-			if (!actionParsed.success || !resourceParsed.success) {
-				continue;
-			}
-			const slug = toPlatformCapabilitySlug(actionParsed.data, resourceParsed.data);
-			await this.prisma.capabilityDefinition.upsert({
-				where: { slug },
-				create: {
-					slug,
-					scope: "PLATFORM",
-					label: permission.description ?? `${permission.action} ${permission.resource}`,
-					description: permission.description,
-					groupName: permission.group,
-					isSystem: permission.isSystem,
-					permissionId: permission.id,
-				},
-				update: {
-					label: permission.description ?? `${permission.action} ${permission.resource}`,
-					description: permission.description,
-					groupName: permission.group,
-					isSystem: permission.isSystem,
-					permissionId: permission.id,
-					isDeleted: false,
-					deletedAt: null,
-					updatedAt: Date.now(),
+		await this.prisma.$transaction(async (tx) => {
+			await tx.$executeRawUnsafe("SET LOCAL app.rls_bypass = 'true'");
+			
+			const permissions = await tx.permission.findMany({
+				where: { isDeleted: false },
+				select: {
+					id: true,
+					action: true,
+					resource: true,
+					description: true,
+					group: true,
+					isSystem: true,
 				},
 			});
-		}
 
-		this.invalidateCache();
-		this.logger.log(`Synced ${String(permissions.length)} platform capability definition(s) from permissions`);
+			for (const permission of permissions) {
+				const actionParsed = PermissionActionSchema.safeParse(permission.action);
+				const resourceParsed = PermissionResourceSchema.safeParse(permission.resource);
+				if (!actionParsed.success || !resourceParsed.success) {
+					continue;
+				}
+				const slug = toPlatformCapabilitySlug(actionParsed.data, resourceParsed.data);
+				await tx.capabilityDefinition.upsert({
+					where: { slug },
+					create: {
+						slug,
+						scope: "PLATFORM",
+						label: permission.description ?? `${permission.action} ${permission.resource}`,
+						description: permission.description,
+						groupName: permission.group,
+						isSystem: permission.isSystem,
+						permissionId: permission.id,
+					},
+					update: {
+						label: permission.description ?? `${permission.action} ${permission.resource}`,
+						description: permission.description,
+						groupName: permission.group,
+						isSystem: permission.isSystem,
+						permissionId: permission.id,
+						isDeleted: false,
+						deletedAt: null,
+						updatedAt: Date.now(),
+					},
+				});
+			}
+
+			this.invalidateCache();
+			this.logger.log(`Synced ${String(permissions.length)} platform capability definition(s) from permissions`);
+		});
 	}
 
 	private async loadCatalogCache(): Promise<CatalogCache> {
