@@ -1,5 +1,5 @@
 import { Injectable, Logger } from "@nestjs/common";
-import type { ResourceAcl, AclEffect } from "@prisma/client";
+import type { ResourceAcl, AclEffect, PermissionScope } from "@prisma/client";
 
 import { PrismaService } from "../../../prisma/prisma.service";
 
@@ -116,7 +116,7 @@ export class AclService {
 				resourceType: data.resourceType,
 				resourceId: data.resourceId ?? null,
 				effect: data.effect,
-				scope: data.scope as never,
+				scope: data.scope as PermissionScope | undefined,
 				organizationId: data.organizationId ?? null,
 				locationId: data.locationId ?? null,
 				reason: data.reason ?? null,

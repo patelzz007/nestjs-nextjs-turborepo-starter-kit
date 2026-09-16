@@ -5,6 +5,8 @@ import type {
 	AuthorizationEvaluationStep,
 	AuthorizationRequest,
 	AuthorizationResult,
+	PermissionAction,
+	PermissionResource,
 } from "@workspace/shared";
 import type { Prisma } from "@prisma/client";
 
@@ -293,8 +295,8 @@ export class AuthorizationKernelService {
 						some: {
 							isDeleted: false,
 							permission: {
-								action: action as never,
-								resource: resource as never,
+								action: action as PermissionAction,
+								resource: resource as PermissionResource,
 								isDeleted: false,
 							},
 						},
@@ -316,8 +318,8 @@ export class AuthorizationKernelService {
 							some: {
 								isDeleted: false,
 								permission: {
-									action: "MANAGE",
-									resource: resource as never,
+									action: "MANAGE" as PermissionAction,
+									resource: resource as PermissionResource,
 									isDeleted: false,
 								},
 							},

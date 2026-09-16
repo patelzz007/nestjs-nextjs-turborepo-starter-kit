@@ -58,8 +58,8 @@ export class AuthorizationKernelExamplesController {
 				locationId,
 				isSuperAdmin: user.isSuperAdmin,
 			},
-			action: action as never,
-			resource: resource as never,
+			action: action as PermissionAction,
+			resource: resource as PermissionResource,
 			resourceId,
 		};
 
@@ -96,8 +96,8 @@ export class AuthorizationKernelExamplesController {
 				locationId,
 				isSuperAdmin: user.isSuperAdmin,
 			},
-			action: action as never,
-			resource: resource as never,
+			action: action as PermissionAction,
+			resource: resource as PermissionResource,
 			resourceId,
 		};
 
@@ -132,8 +132,8 @@ export class AuthorizationKernelExamplesController {
 				locationId,
 				isSuperAdmin: user.isSuperAdmin,
 			},
-			action: action as never,
-			resource: resource as never,
+			action: action as PermissionAction,
+			resource: resource as PermissionResource,
 		};
 
 		const filter = await this.kernel.filter(request);

@@ -16,7 +16,7 @@ import {
 	type RequiredRolesMetadata,
 } from "../constants/authorization.constants";
 import { AuthorizationKernelService } from "../kernel/authorization-kernel.service";
-import type { AuthorizationDecision } from "@workspace/shared";
+import type { AuthorizationDecision, PermissionAction, PermissionResource } from "@workspace/shared";
 
 /**
  * **Kernel-First Authorization Guard**
@@ -138,8 +138,8 @@ export class AuthorizationGuard implements CanActivate {
 	private async checkPermission(userId: string, action: string, resource: string): Promise<void> {
 		const decision: AuthorizationDecision = await this.kernel.can({
 			userId,
-			action: action as never,
-			resource: resource as never,
+			action: action as PermissionAction,
+			resource: resource as PermissionResource,
 		});
 
 		if (decision === "DENY") {
@@ -155,16 +155,16 @@ export class AuthorizationGuard implements CanActivate {
 	 */
 	private async checkPermissions(userId: string, meta: RequiredPermissionsMetadata): Promise<void> {
 		const requirements = meta.permissions.map((p) => ({
-			action: p[0],
-			resource: p[1],
+			action: p[0] as PermissionAction,
+			resource: p[1] as PermissionResource,
 		}));
 
 		const results = await Promise.all(
 			requirements.map((req) =>
 				this.kernel.can({
 					userId,
-					action: req.action as never,
-					resource: req.resource as never,
+					action: req.action,
+					resource: req.resource,
 				}),
 			),
 		);
@@ -190,8 +190,8 @@ export class AuthorizationGuard implements CanActivate {
 		const checks = meta.roles.map((role) =>
 			this.kernel.can({
 				userId,
-				action: "ASSUME" as never,
-				resource: role as never,
+				action: "ASSUME" as PermissionAction,
+				resource: role as PermissionResource,
 			}),
 		);
 
@@ -232,8 +232,8 @@ export class AuthorizationGuard implements CanActivate {
 	private async hasAdminDashboardAccess(userId: string): Promise<boolean> {
 		const decision = await this.kernel.can({
 			userId,
-			action: "READ" as never,
-			resource: "ADMIN_DASHBOARD" as never,
+			action: "READ" as PermissionAction,
+			resource: "ADMIN_DASHBOARD" as PermissionResource,
 		});
 
 		return decision === "ALLOW";
