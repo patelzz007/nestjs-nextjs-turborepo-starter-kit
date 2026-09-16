@@ -18,6 +18,7 @@ import { createWrappedDto } from "../../common/dto/response-wrapper";
 import { extractClientInfo } from "../../common/utils/client-info";
 import { RlsBypass } from "../auth/decorators/rls-bypass.decorator";
 import { SetAuthCookiesInterceptor } from "../auth/interceptors/set-auth-cookies.interceptor";
+import { KernelIntegrationHelper } from "../authorization/kernel/kernel-integration.helper";
 
 import { ImpersonationService } from "./impersonation.service";
 
@@ -37,6 +38,7 @@ export class ImpersonationController {
 	constructor(
 		private readonly impersonationService: ImpersonationService,
 		private readonly config: TypedConfigService,
+		private readonly kernelHelper: KernelIntegrationHelper,
 	) {}
 
 	/**
@@ -69,6 +71,11 @@ export class ImpersonationController {
 				error: "ALREADY_IMPERSONATING",
 			});
 		}
+		
+		await this.kernelHelper.requireResourceAccess(admin.sub, "CREATE", "USER", targetUserId, {
+			isSuperAdmin: admin.isSuperAdmin,
+		});
+		
 		const { ipAddress } = extractClientInfo(req);
 		const userAgent: string | null = req.headers["user-agent"] ?? null;
 		return this.impersonationService.impersonateUser(admin.sub, targetUserId, ipAddress, userAgent);
@@ -98,6 +105,11 @@ export class ImpersonationController {
 				error: "NOT_IMPERSONATING",
 			});
 		}
+		
+		await this.kernelHelper.requireAction(payload.originalUserId, "DELETE", "USER", {
+			isSuperAdmin: true,
+		});
+		
 		const { ipAddress } = extractClientInfo(req);
 		const userAgent: string | null = req.headers["user-agent"] ?? null;
 		return this.impersonationService.stopImpersonation(payload.originalUserId, payload.sub, ipAddress, userAgent);

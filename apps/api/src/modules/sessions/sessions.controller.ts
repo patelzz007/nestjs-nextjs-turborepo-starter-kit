@@ -16,6 +16,7 @@ import { SetAuthCookiesInterceptor } from "../auth/interceptors/set-auth-cookies
 import { extractClientInfo } from "../../common/utils/client-info";
 import { readFirstHeader } from "../../common/utils/http-headers";
 import type { RefreshTokenPayload } from "../auth/services/token.service";
+import { KernelIntegrationHelper } from "../authorization/kernel/kernel-integration.helper";
 
 import { SessionsService } from "./sessions.service";
 
@@ -36,7 +37,10 @@ const WrappedSessionList = createWrappedArrayDto(SessionSchema, "WrappedSessionL
 @ApiTags("Sessions")
 @Controller(apiPath("/auth"))
 export class SessionsController {
-	constructor(private readonly sessionsService: SessionsService) {}
+	constructor(
+		private readonly sessionsService: SessionsService,
+		private readonly kernelHelper: KernelIntegrationHelper,
+	) {}
 
 	@Throttle({ default: { ttl: 60000, limit: 10 } })
 	@Public()
@@ -72,6 +76,8 @@ export class SessionsController {
 	@ApiOkResponse({ type: WrappedLogoutResponse, description: "Logged out from current device" })
 	@UseInterceptors(ClearAuthCookiesInterceptor)
 	public async logout(@GetUser() user: RefreshTokenPayload): Promise<LogoutResponse> {
+		await this.kernelHelper.requireResourceAccess(user.sub, "DELETE", "USER", user.jti);
+		
 		await this.sessionsService.logoutDevice(user.sub, user.jti);
 
 		return { message: "Logged out successfully" };
@@ -84,6 +90,8 @@ export class SessionsController {
 	@ApiOkResponse({ type: WrappedLogoutAllResponse, description: "Logged out from all devices" })
 	@UseInterceptors(ClearAuthCookiesInterceptor)
 	public async logoutAll(@GetUser() user: RefreshTokenPayload): Promise<LogoutAllResponse> {
+		await this.kernelHelper.requireAction(user.sub, "DELETE", "USER");
+		
 		await this.sessionsService.logoutAllDevices(user.sub);
 
 		return { message: "Logged out from all devices" };
