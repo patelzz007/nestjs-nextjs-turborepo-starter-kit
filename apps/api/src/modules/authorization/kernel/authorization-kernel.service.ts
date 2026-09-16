@@ -35,9 +35,18 @@ export class AuthorizationKernelService {
 
 	/**
 	 * Check if an action is allowed without throwing.
-	 * Returns a decision with explanation.
+	 * Returns ALLOW or DENY decision.
 	 */
-	public async can(request: AuthorizationRequest): Promise<AuthorizationResult> {
+	public async can(request: AuthorizationRequest): Promise<AuthorizationDecision> {
+		const result = await this.explain(request);
+		return result.decision;
+	}
+
+	/**
+	 * Get detailed explanation of authorization decision.
+	 * Returns full evaluation steps.
+	 */
+	public async explain(request: AuthorizationRequest): Promise<AuthorizationResult> {
 		const startTime = Date.now();
 		const evaluation: AuthorizationEvaluationStep[] = [];
 
@@ -270,13 +279,6 @@ export class AuthorizationKernelService {
 		return { OR: filters };
 	}
 
-	/**
-	 * Explain why an authorization decision was made.
-	 * Useful for debugging and administration.
-	 */
-	public async explain(request: AuthorizationRequest): Promise<AuthorizationResult> {
-		return this.can(request);
-	}
 
 	/**
 	 * Check if user has permission via role assignments.

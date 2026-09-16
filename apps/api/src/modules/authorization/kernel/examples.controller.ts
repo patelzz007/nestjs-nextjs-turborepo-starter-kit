@@ -90,12 +90,15 @@ export class AuthorizationKernelExamplesController {
 		@Query("locationId") locationId?: string,
 	): Promise<AuthorizationResult> {
 		const request: AuthorizationRequest = {
-			userId: user.id,
+			subject: {
+				userId: user.id,
+				organizationId,
+				locationId,
+				isSuperAdmin: user.isSuperAdmin,
+			},
 			action: action as never,
 			resource: resource as never,
 			resourceId,
-			organizationId,
-			locationId,
 		};
 
 		return this.kernel.explain(request);
@@ -123,11 +126,14 @@ export class AuthorizationKernelExamplesController {
 		@Query("locationId") locationId?: string,
 	): Promise<{ filter: Record<string, unknown> }> {
 		const request: AuthorizationRequest = {
-			userId: user.id,
+			subject: {
+				userId: user.id,
+				organizationId,
+				locationId,
+				isSuperAdmin: user.isSuperAdmin,
+			},
 			action: action as never,
 			resource: resource as never,
-			organizationId,
-			locationId,
 		};
 
 		const filter = await this.kernel.filter(request);
