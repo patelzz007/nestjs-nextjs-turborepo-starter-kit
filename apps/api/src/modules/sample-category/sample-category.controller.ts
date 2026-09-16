@@ -14,7 +14,6 @@ import { SampleCategoryService } from "./sample-category.service";
  * Routes inherit from the generated base and can be extended with custom logic.
  */
 @ApiTags("Sample Category")
-@Controller()
 export class SampleCategoryController extends GeneratedSampleCategoryController {
 	public constructor(protected readonly service: SampleCategoryService) {
 		super(service);
