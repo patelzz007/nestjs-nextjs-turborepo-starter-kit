@@ -231,12 +231,10 @@ export class AuthorizationKernelService {
 	 * Authorize an action, throwing ForbiddenException if denied.
 	 */
 	public async authorize(request: AuthorizationRequest): Promise<void> {
-		const result = await this.can(request);
+		const decision = await this.can(request);
 
-		if (result.decision === "DENY") {
+		if (decision === "DENY") {
 			const error = new Error("Authorization denied");
-			// Attach result for audit/logging
-			(error as Error & { authResult?: AuthorizationResult }).authResult = result;
 			throw error;
 		}
 	}

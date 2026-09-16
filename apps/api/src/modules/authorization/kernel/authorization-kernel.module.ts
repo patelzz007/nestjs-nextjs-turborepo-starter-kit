@@ -7,6 +7,7 @@ import { PolicyEngineService } from "./policy-engine.service";
 import { AclService } from "./acl.service";
 import { AuthorizationAuditKernelService } from "./authorization-audit-kernel.service";
 import { AuthorizationKernelExamplesController } from "./examples.controller";
+import { KernelIntegrationHelper } from "./kernel-integration.helper";
 
 /**
  * Authorization Kernel Module - provides the core authorization services.
@@ -16,6 +17,7 @@ import { AuthorizationKernelExamplesController } from "./examples.controller";
  * - PolicyEngineService: Evaluates Zod-validated policy DSL
  * - AclService: Manages resource ACLs (ALLOW/DENY)
  * - AuthorizationAuditKernelService: Audit trail for authorization decisions
+ * - KernelIntegrationHelper: Convenience methods for controllers/services
  */
 @Module({
 	controllers: [AuthorizationKernelExamplesController],
@@ -25,12 +27,14 @@ import { AuthorizationKernelExamplesController } from "./examples.controller";
 		PolicyEngineService,
 		AclService,
 		AuthorizationAuditKernelService,
+		KernelIntegrationHelper,
 	],
 	exports: [
 		AuthorizationKernelService,
 		PolicyEngineService,
 		AclService,
 		AuthorizationAuditKernelService,
+		KernelIntegrationHelper,
 	],
 })
 export class AuthorizationKernelModule {}
