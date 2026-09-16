@@ -1,7 +1,6 @@
-import { Module, forwardRef } from "@nestjs/common";
+import { Module } from "@nestjs/common";
 
 import { PrismaService } from "../../../prisma/prisma.service";
-import { AuthModule } from "../../auth/auth.module";
 
 import { AuthorizationKernelService } from "./authorization-kernel.service";
 import { PolicyEngineService } from "./policy-engine.service";
@@ -17,9 +16,11 @@ import { AuthorizationKernelExamplesController } from "./examples.controller";
  * - PolicyEngineService: Evaluates Zod-validated policy DSL
  * - AclService: Manages resource ACLs (ALLOW/DENY)
  * - AuthorizationAuditKernelService: Audit trail for authorization decisions
+ *
+ * Note: AuthGuard is applied globally via APP_GUARD in AuthModule,
+ * so controllers here don't need explicit @UseGuards(AuthGuard).
  */
 @Module({
-	imports: [forwardRef(() => AuthModule)],
 	controllers: [AuthorizationKernelExamplesController],
 	providers: [
 		PrismaService,

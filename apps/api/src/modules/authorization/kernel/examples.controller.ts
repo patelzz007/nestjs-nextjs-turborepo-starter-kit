@@ -1,7 +1,6 @@
-import { Controller, Get, Param, Query, UseGuards } from "@nestjs/common";
-import { ApiOperation, ApiParam, ApiQuery, ApiTags } from "@nestjs/swagger";
+import { Controller, Get, Param, Query } from "@nestjs/common";
+import { ApiBearerAuth, ApiOperation, ApiParam, ApiQuery, ApiTags } from "@nestjs/swagger";
 
-import { AuthGuard } from "../../auth/guards/auth.guard";
 import { CurrentUser } from "../decorators/current-user.decorator";
 import type { AuthenticatedUser } from "../../../types/authenticated-user";
 
@@ -21,10 +20,12 @@ import type {
  * 1. Use `can()` for permission checks
  * 2. Use `filter()` for query filtering
  * 3. Use `explain()` for debugging authorization decisions
+ *
+ * Note: Auth is handled by global AuthGuard, so no @UseGuards needed here.
  */
 @ApiTags("Authorization Kernel Examples")
+@ApiBearerAuth()
 @Controller("authorization-kernel/examples")
-@UseGuards(AuthGuard)
 export class AuthorizationKernelExamplesController {
 	public constructor(private readonly kernel: AuthorizationKernelService) {}
 
