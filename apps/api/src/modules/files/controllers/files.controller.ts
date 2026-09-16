@@ -54,9 +54,6 @@ export class FilesController {
 	@Authorize({
 		action: "CREATE",
 		resource: "ORGANIZATION",
-		context: (ctx) => ({
-			organizationId: ctx.switchToHttp().getRequest().body?.organizationId ?? null,
-		}),
 		description: "Create file upload URL",
 	})
 	@ApiOperation({ summary: "Create a browser upload ticket" })
