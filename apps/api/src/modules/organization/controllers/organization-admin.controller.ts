@@ -24,6 +24,7 @@ export class OrganizationAdminController {
 		@GetUser() user: AccessTokenPayload,
 		@Body(new ZodValidationPipe(AdminCreateOrganizationInviteSchema)) body: AdminCreateOrganizationInviteInput,
 	): Promise<{ organizationId: string; inviteToken: string }> {
+		const result = await this.provisioning.provisionFromPlatformInvite(user.sub, body);
 		return { organizationId: result.organizationId, inviteToken: result.inviteToken };
 	}
 }
