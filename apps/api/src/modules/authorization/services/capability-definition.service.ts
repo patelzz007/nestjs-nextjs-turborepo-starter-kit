@@ -66,6 +66,9 @@ export class CapabilityDefinitionService implements OnModuleInit {
 	}
 
 	public async syncPlatformCapabilitiesFromPermissions(): Promise<void> {
+		// Bypass RLS for system initialization - no user context available yet
+		await this.prisma.$executeRawUnsafe("SET LOCAL app.rls_bypass = 'true'");
+		
 		const permissions = await this.prisma.permission.findMany({
 			where: { isDeleted: false },
 			select: {
