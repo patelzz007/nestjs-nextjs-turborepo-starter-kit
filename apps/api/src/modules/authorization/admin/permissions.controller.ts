@@ -24,7 +24,10 @@ interface UpdatePermissionBody {
 @Controller(apiPath("/admin/permissions"))
 @ApiTags("Permissions")
 export class PermissionsController {
-	public constructor(private readonly authorization: AuthorizationService) {}
+	public constructor(
+		private readonly authorization: AuthorizationService,
+		private readonly kernelHelper: KernelIntegrationHelper,
+	) {}
 
 	@Get()
 	@SkipAuthThrottle()
@@ -50,7 +53,9 @@ export class PermissionsController {
 	@RequirePermission("CREATE", "PERMISSION")
 	@ApiBody({ type: CreatePermissionDto })
 	@ApiOkResponse({ description: "Created permission" })
-	public async create(@Body(new ZodValidationPipe(CreatePermissionDto.schema)) body: CreatePermissionDto): Promise<unknown> {
+	public async create(@GetUser("sub") userId: string, @Body(new ZodValidationPipe(CreatePermissionDto.schema)) body: CreatePermissionDto): Promise<unknown> {
+		await this.kernelHelper.requireAction(userId, "CREATE", "USER");
+		
 		return this.authorization.permissions.create({
 			action: body.action,
 			resource: body.resource,
@@ -71,7 +76,9 @@ export class PermissionsController {
 	@Throttle({ default: { ttl: 60000, limit: 10 } })
 	@RequirePermission("UPDATE", "PERMISSION")
 	@ApiOkResponse({ description: "Updated permission" })
-	public async update(@Param("id") id: string, @Body() body: UpdatePermissionBody): Promise<unknown> {
+	public async update(@GetUser("sub") userId: string, @Param("id") id: string, @Body() body: UpdatePermissionBody): Promise<unknown> {
+		await this.kernelHelper.requireResourceAccess(userId, "UPDATE", "USER", id);
+		
 		return this.authorization.permissions.update(id, {
 			...(body.description !== undefined ? { description: body.description } : {}),
 			...(body.group !== undefined ? { group: body.group } : {}),

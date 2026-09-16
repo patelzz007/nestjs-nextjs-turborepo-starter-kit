@@ -23,6 +23,7 @@ export class RolesController {
 		private readonly authorization: AuthorizationService,
 		private readonly conflictDetection: ConflictDetectionService,
 		private readonly prisma: PrismaService,
+		private readonly kernelHelper: KernelIntegrationHelper,
 	) {}
 
 	@Get()
@@ -48,7 +49,9 @@ export class RolesController {
 	@RequirePermission("CREATE", "ROLE")
 	@ApiBody({ type: CreateRoleDto })
 	@ApiOkResponse({ description: "Created role" })
-	public async create(@Body(new ZodValidationPipe(CreateRoleDto.schema)) body: CreateRoleDto): Promise<unknown> {
+	public async create(@GetUser("sub") userId: string, @Body(new ZodValidationPipe(CreateRoleDto.schema)) body: CreateRoleDto): Promise<unknown> {
+		await this.kernelHelper.requireAction(userId, "CREATE", "USER");
+		
 		return this.authorization.roles.create({
 			name: body.name,
 			description: body.description,
@@ -63,7 +66,9 @@ export class RolesController {
 	@RequirePermission("UPDATE", "ROLE")
 	@ApiBody({ type: AssignRoleToUserDto })
 	@ApiOkResponse({ description: "Role assigned to user" })
-	public async assignRoleToUser(@Body(new ZodValidationPipe(AssignRoleToUserDto.schema)) body: AssignRoleToUserDto): Promise<unknown> {
+	public async assignRoleToUser(@GetUser("sub") userId: string, @Body(new ZodValidationPipe(AssignRoleToUserDto.schema)) body: AssignRoleToUserDto): Promise<unknown> {
+		await this.kernelHelper.requireResourceAccess(userId, "UPDATE", "USER", body.userId);
+		
 		await this.authorization.roles.assignToUser(body.userId, body.roleId);
 		return { message: "Role assigned to user successfully" };
 	}
