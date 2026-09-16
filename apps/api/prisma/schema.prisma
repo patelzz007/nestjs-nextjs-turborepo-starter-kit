@@ -87,6 +87,34 @@ enum PermissionResource {
   SAMPLE_CATEGORY
   PRODUCT
   DEVTOOLS
+  ORDER
+  PAYMENT
+  INVENTORY
+  ORGANIZATION
+  LOCATION
+}
+
+enum PermissionScope {
+  GLOBAL
+  ORGANIZATION
+  LOCATION
+  RESOURCE
+  OWN
+}
+
+enum AclEffect {
+  ALLOW
+  DENY
+}
+
+enum PolicyEffect {
+  ALLOW
+  DENY
+}
+
+enum AuthorizationDecision {
+  ALLOW
+  DENY
 }
 
 // Tables
@@ -212,6 +240,7 @@ model Permission {
   action      PermissionAction
   resource    PermissionResource
   description String?            @db.Text
+  scope       PermissionScope    @default(GLOBAL)
 
   group      String? @db.VarChar(100)
   isSystem   Boolean @default(false)
@@ -227,7 +256,7 @@ model Permission {
   createdAt BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
   updatedAt BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
 
-  @@unique([action, resource])
+  @@unique([action, resource, scope])
   @@map("permissions")
 }
 
@@ -466,6 +495,97 @@ model RolePermission {
 
   @@unique([roleId, permissionId])
   @@map("role_permissions")
+}
+
+// ---------------------------------------------------------------------------
+// Authorization Kernel — ACL, Policies, Audit
+// ---------------------------------------------------------------------------
+
+/// RLS: resource ACL entries — ALLOW/DENY per subject+action+resource.
+/// Explicit DENY > Explicit ALLOW > Role ALLOW > default DENY.
+model ResourceAcl {
+  id             String     @id @default(uuid())
+  subjectType    String     @map("subject_type") @db.VarChar(50) // "USER" | "ROLE"
+  subjectId      String     @map("subject_id")
+  action         String     @db.VarChar(50)
+  resourceType   String     @map("resource_type") @db.VarChar(50)
+  resourceId     String?    @map("resource_id") // null = all resources of type
+  effect         AclEffect
+  scope          PermissionScope?
+  organizationId String?    @map("organization_id")
+  locationId     String?    @map("location_id")
+  conditions     Json?
+  expiresAt      BigInt?    @map("expires_at")
+  assignedBy     String?    @map("assigned_by")
+  reason         String?    @db.Text
+  isDeleted      Boolean    @default(false) @map("is_deleted")
+  deletedAt      BigInt?    @map("deleted_at")
+  createdAt      BigInt     @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
+  updatedAt      BigInt     @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
+
+  @@index([subjectType, subjectId])
+  @@index([resourceType, resourceId])
+  @@index([organizationId])
+  @@index([locationId])
+  @@map("resource_acls")
+}
+
+/// RLS: catalog — Policy definitions with Zod-validated DSL.
+model PolicyDefinition {
+  id             String        @id @default(uuid())
+  name           String        @db.VarChar(200)
+  description    String?       @db.Text
+  version        Int           @default(1)
+  effect         PolicyEffect
+  scope          PermissionScope
+  actions        String[]      // ["CREATE", "UPDATE", ...]
+  resources      String[]      // ["ORDER", "PAYMENT", ...]
+  organizationId String?       @map("organization_id")
+  locationId     String?       @map("location_id")
+  conditions     Json?         // Zod-validated policy DSL
+  isActive       Boolean       @default(true) @map("is_active")
+  publishedAt    BigInt?       @map("published_at")
+  publishedBy    String?       @map("published_by")
+  supersededBy   String?       @map("superseded_by")
+  isDeleted      Boolean       @default(false) @map("is_deleted")
+  deletedAt      BigInt?       @map("deleted_at")
+  createdAt      BigInt        @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
+  updatedAt      BigInt        @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
+
+  @@index([organizationId])
+  @@index([locationId])
+  @@index([isActive])
+  @@map("policy_definitions")
+}
+
+/// RLS: bypass only — Authorization audit trail.
+/// Logs DENY always, WRITE always, optional sensitive READ.
+model AuthorizationAudit {
+  id             String                @id @default(uuid())
+  actorId        String?               @map("actor_id")
+  organizationId String?               @map("organization_id")
+  locationId     String?               @map("location_id")
+  action         String                @db.VarChar(120)
+  resource       String                @db.VarChar(120)
+  resourceId     String?               @map("resource_id")
+  decision       AuthorizationDecision
+  reason         String?               @db.Text
+  policyIds      String[]              @default([]) @map("policy_ids")
+  aclIds         String[]              @default([]) @map("acl_ids")
+  evaluation     Json?                 // explain() output
+  ipAddress      String?               @map("ip_address") @db.VarChar(45)
+  userAgent      String?               @map("user_agent") @db.Text
+  requestId      String?               @map("request_id") @db.VarChar(64)
+  durationMs     Int?                  @map("duration_ms")
+  createdAt      BigInt                @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
+
+  @@index([actorId])
+  @@index([organizationId])
+  @@index([locationId])
+  @@index([decision])
+  @@index([action])
+  @@index([createdAt])
+  @@map("authorization_audits")
 }
 
 /// RLS: own row — `app_owns("userId")`.
