@@ -5,6 +5,7 @@ import { apiContract, apiPath } from "@workspace/shared";
 import { ZodValidationPipe } from "../../../common/pipes/zod-validation.pipe";
 import { GetUser } from "../../auth/decorators/get-user.decorator";
 import type { AccessTokenPayload } from "../../auth/services/token.service";
+import { KernelIntegrationHelper } from "../../authorization/kernel/kernel-integration.helper";
 
 import { MarkRewardNotificationsReadDto } from "../dtos/rewards.dto";
 import { RewardNotificationService } from "../services/reward-notification.service";
@@ -13,7 +14,10 @@ import { RewardNotificationService } from "../services/reward-notification.servi
 @ApiBearerAuth()
 @Controller(apiPath("/reward-notifications"))
 export class RewardNotificationsController {
-	public constructor(private readonly notificationService: RewardNotificationService) {}
+	public constructor(
+		private readonly notificationService: RewardNotificationService,
+		private readonly kernelHelper: KernelIntegrationHelper,
+	) {}
 
 	@Get()
 	@ApiOperation({ summary: "List in-app reward notifications" })
@@ -29,10 +33,12 @@ export class RewardNotificationsController {
 	@ApiOperation({ summary: "Mark reward notifications as read" })
 	@ApiBody({ type: MarkRewardNotificationsReadDto })
 	@ApiOkResponse({ description: "Notifications marked read" })
-	public markRead(
+	public async markRead(
 		@GetUser() user: AccessTokenPayload,
 		@Body(new ZodValidationPipe(apiContract.rewardNotifications.read.input)) body: { notificationIds?: string[]; markAll?: boolean },
-	): ReturnType<RewardNotificationService["markRead"]> {
+	): Promise<ReturnType<RewardNotificationService["markRead"]>> {
+		await this.kernelHelper.requireAction(user.sub, "UPDATE", "USER");
+		
 		return this.notificationService.markRead(user.sub, body.notificationIds, body.markAll);
 	}
 }

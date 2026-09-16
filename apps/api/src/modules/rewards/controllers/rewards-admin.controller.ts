@@ -17,6 +17,7 @@ import { RlsBypass } from "../../auth/decorators/rls-bypass.decorator";
 import { RequirePermission } from "../../auth/decorators/require-permission.decorator";
 import { GetUser } from "../../auth/decorators/get-user.decorator";
 import type { AccessTokenPayload } from "../../auth/services/token.service";
+import { KernelIntegrationHelper } from "../../authorization/kernel/kernel-integration.helper";
 
 import { AdminCreateMerchantInviteDto, AdminKybUpdateDto, AdminRejectRewardDto, RewardsEmptyBodyDto } from "../dtos/rewards.dto";
 import type { MerchantKybDocumentDownloadResponse } from "@workspace/shared";
@@ -30,17 +31,22 @@ import { RewardsAdminService } from "../services/rewards-admin.service";
 @RlsBypass()
 @Controller(apiPath("/admin/invites"))
 export class RewardsAdminInvitesController {
-	public constructor(private readonly rewardsAdminService: RewardsAdminService) {}
+	public constructor(
+		private readonly rewardsAdminService: RewardsAdminService,
+		private readonly kernelHelper: KernelIntegrationHelper,
+	) {}
 
 	@RequirePermission("MANAGE", "MERCHANT_ORG")
 	@Post()
 	@ApiOperation({ summary: "Create merchant invite" })
 	@ApiBody({ type: AdminCreateMerchantInviteDto })
 	@ApiOkResponse({ description: "Invite created with token" })
-	public createInvite(
+	public async createInvite(
 		@GetUser() user: AccessTokenPayload,
 		@Body(new ZodValidationPipe(apiContract.rewardsAdmin.createInvite.input)) body: Parameters<RewardsAdminService["createMerchantInvite"]>[1],
-	): ReturnType<RewardsAdminService["createMerchantInvite"]> {
+	): Promise<ReturnType<RewardsAdminService["createMerchantInvite"]>> {
+		await this.kernelHelper.requireAction(user.sub, "CREATE", "ORGANIZATION", { isSuperAdmin: true });
+		
 		return this.rewardsAdminService.createMerchantInvite(user.sub, body);
 	}
 
@@ -61,7 +67,10 @@ export class RewardsAdminInvitesController {
 @RlsBypass()
 @Controller(apiPath("/admin/rewards"))
 export class RewardsAdminRewardsController {
-	public constructor(private readonly rewardsAdminService: RewardsAdminService) {}
+	public constructor(
+		private readonly rewardsAdminService: RewardsAdminService,
+		private readonly kernelHelper: KernelIntegrationHelper,
+	) {}
 
 	@RequirePermission("MANAGE", "REWARD")
 	@Get("pending")

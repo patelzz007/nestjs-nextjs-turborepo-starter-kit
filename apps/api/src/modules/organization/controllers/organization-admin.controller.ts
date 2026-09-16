@@ -13,7 +13,10 @@ import { OrganizationProvisioningService } from "../services/organization-provis
 @ApiTags("Organizations")
 @Controller(apiPath("/admin/organizations"))
 export class OrganizationAdminController {
-	public constructor(private readonly provisioning: OrganizationProvisioningService) {}
+	public constructor(
+		private readonly provisioning: OrganizationProvisioningService,
+		private readonly kernelHelper: KernelIntegrationHelper,
+	) {}
 
 	@Post("invites")
 	@SuperAdminOnly()
@@ -23,6 +26,8 @@ export class OrganizationAdminController {
 		@GetUser() user: AccessTokenPayload,
 		@Body(new ZodValidationPipe(AdminCreateOrganizationInviteSchema)) body: AdminCreateOrganizationInviteInput,
 	): Promise<{ organizationId: string; inviteToken: string }> {
+		await this.kernelHelper.requireAction(user.sub, "CREATE", "ORGANIZATION", { isSuperAdmin: true });
+		
 		const result = await this.provisioning.provisionFromPlatformInvite(user.sub, body);
 		return { organizationId: result.organizationId, inviteToken: result.inviteToken };
 	}

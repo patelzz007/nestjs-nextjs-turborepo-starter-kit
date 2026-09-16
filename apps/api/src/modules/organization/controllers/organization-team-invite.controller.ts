@@ -32,6 +32,7 @@ export class OrganizationTeamInviteController {
 	public constructor(
 		private readonly membership: OrganizationMembershipService,
 		private readonly authService: AuthService,
+		private readonly kernelHelper: KernelIntegrationHelper,
 	) {}
 
 	@Public()
@@ -50,6 +51,8 @@ export class OrganizationTeamInviteController {
 		@GetUser() user: AccessTokenPayload,
 		@Body(new ZodValidationPipe(OrganizationTeamInviteTokenSchema)) body: OrganizationTeamInviteTokenInput,
 	): Promise<OrganizationTeamInviteAcceptResponse> {
+		await this.kernelHelper.requireAction(user.sub, "CREATE", "ORGANIZATION");
+		
 		return this.membership.acceptTeamInvite(user.sub, user.email, body.token);
 	}
 
