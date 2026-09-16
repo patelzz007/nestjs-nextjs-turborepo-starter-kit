@@ -7,6 +7,7 @@ import { PerformanceInterceptor } from "./common/interceptors/performance.interc
 import { CorrelationContextModule } from "./common/context/correlation-context.module";
 import { CorrelationContextInterceptor } from "./common/context/correlation-context.interceptor";
 import { CorrelationIdMiddleware } from "./common/middleware/correlation-id.middleware";
+import { AuthorizationContextMiddleware } from "./modules/authorization/middleware/authorization-context.middleware";
 import { ConfigModule } from "./config/config.module";
 import { JobsModule } from "./infrastructure/jobs/jobs.module";
 import { PlatformEventsModule } from "./infrastructure/outbox/platform-events.module";
@@ -140,6 +141,8 @@ if (observeEnabled && observeAppKey !== undefined && observeAppSecret !== undefi
 })
 export class AppModule implements NestModule {
 	public configure(consumer: MiddlewareConsumer): void {
-		consumer.apply(CorrelationIdMiddleware).forRoutes("*");
+		consumer
+			.apply(CorrelationIdMiddleware, AuthorizationContextMiddleware)
+			.forRoutes("*");
 	}
 }
