@@ -1,4 +1,5 @@
 import { Controller } from "@nestjs/common";
+import { ApiTags } from "@nestjs/swagger";
 
 import { GeneratedSampleCategoryController } from "./sample-category.controller.generated";
 
@@ -11,6 +12,7 @@ import { GeneratedSampleCategoryController } from "./sample-category.controller.
  *
  * Routes inherit from the generated base and can be extended with custom logic.
  */
+@ApiTags("Sample Category")
 @Controller()
 export class SampleCategoryController extends GeneratedSampleCategoryController {
 	public constructor(
