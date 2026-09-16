@@ -35,8 +35,7 @@ export class AuthorizationContextMiddleware implements NestMiddleware {
 			null;
 
 		// Extract locationId (check multiple sources)
-		const locationId =
-			(req.body as Record<string, unknown>)?.locationId ?? req.params?.["locationId"] ?? req.query?.["locationId"] ?? null;
+		const locationId = (req.body as Record<string, unknown>)?.locationId ?? req.params?.["locationId"] ?? req.query?.["locationId"] ?? null;
 
 		// Extract resourceId (common pattern for resource-specific operations)
 		const resourceId = req.params?.["id"] ?? req.params?.["resourceId"] ?? null;

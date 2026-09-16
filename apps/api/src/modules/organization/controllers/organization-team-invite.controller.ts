@@ -48,8 +48,7 @@ export class OrganizationTeamInviteController {
 	public async acceptTeamInvite(
 		@GetUser() user: AccessTokenPayload,
 		@Body(new ZodValidationPipe(OrganizationTeamInviteTokenSchema)) body: OrganizationTeamInviteTokenInput,
-	): Promise<OrganizationTeamInviteAcceptResponse> {
-	}
+	): Promise<OrganizationTeamInviteAcceptResponse> {}
 
 	@Public()
 	@RlsBypass()

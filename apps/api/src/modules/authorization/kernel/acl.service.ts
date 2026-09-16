@@ -37,10 +37,7 @@ export class AclService {
 				resourceId: request.resourceId ?? null,
 				effect: request.effect,
 				isDeleted: false,
-				OR: [
-					{ expiresAt: null },
-					{ expiresAt: { gt: now } },
-				],
+				OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
 			},
 			orderBy: {
 				createdAt: "desc",
@@ -73,10 +70,7 @@ export class AclService {
 					resourceId: request.resourceId ?? null,
 					effect: request.effect,
 					isDeleted: false,
-					OR: [
-						{ expiresAt: null },
-						{ expiresAt: { gt: now } },
-					],
+					OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
 				},
 				orderBy: {
 					createdAt: "desc",

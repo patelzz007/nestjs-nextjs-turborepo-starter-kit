@@ -145,9 +145,7 @@ describe("AuthorizationKernelService", () => {
 				},
 			]);
 
-			(prisma.role.findMany as jest.Mock).mockResolvedValue([
-				{ id: "role-1", name: "user" },
-			]);
+			(prisma.role.findMany as jest.Mock).mockResolvedValue([{ id: "role-1", name: "user" }]);
 
 			(prisma.rolePermission.findMany as jest.Mock).mockResolvedValue([
 				{
@@ -268,12 +266,7 @@ describe("AuthorizationKernelService", () => {
 			const decision = await service.can(request);
 
 			expect(decision).toBe("DENY");
-			expect(aclService.checkAcl).toHaveBeenCalledWith(
-				"user-123",
-				"DELETE",
-				"ORDER",
-				"order-123",
-			);
+			expect(aclService.checkAcl).toHaveBeenCalledWith("user-123", "DELETE", "ORDER", "order-123");
 		});
 
 		it("should ALLOW when ACL ALLOW exists (overrides missing role permission)", async () => {
@@ -299,9 +292,7 @@ describe("AuthorizationKernelService", () => {
 		it("should verify ACL precedence order: DENY > ALLOW > Role > Default DENY", async () => {
 			// Test 1: ACL DENY beats everything
 			aclService.checkAcl.mockResolvedValue("DENY");
-			(prisma.userPermission.findMany as jest.Mock).mockResolvedValue([
-				{ permission: { action: "READ", resource: "USER" } },
-			]);
+			(prisma.userPermission.findMany as jest.Mock).mockResolvedValue([{ permission: { action: "READ", resource: "USER" } }]);
 
 			let decision = await service.can(createAuthRequest());
 			expect(decision).toBe("DENY");
@@ -315,9 +306,7 @@ describe("AuthorizationKernelService", () => {
 
 			// Test 3: Role permission when no ACL
 			aclService.checkAcl.mockResolvedValue(null);
-			(prisma.userPermission.findMany as jest.Mock).mockResolvedValue([
-				{ permission: { action: "READ", resource: "USER" } },
-			]);
+			(prisma.userPermission.findMany as jest.Mock).mockResolvedValue([{ permission: { action: "READ", resource: "USER" } }]);
 
 			decision = await service.can(createAuthRequest());
 			expect(decision).toBe("ALLOW");
@@ -457,9 +446,7 @@ describe("AuthorizationKernelService", () => {
 				},
 			]);
 
-			(prisma.role.findMany as jest.Mock).mockResolvedValue([
-				{ id: "role-1", name: "admin" },
-			]);
+			(prisma.role.findMany as jest.Mock).mockResolvedValue([{ id: "role-1", name: "admin" }]);
 
 			(prisma.rolePermission.findMany as jest.Mock).mockResolvedValue([
 				{
@@ -502,9 +489,7 @@ describe("AuthorizationKernelService", () => {
 		it("should provide full decision trace for DENY with ACL", async () => {
 			// Setup: User has permission BUT ACL DENY
 			(prisma.userRole.findMany as jest.Mock).mockResolvedValue([]);
-			(prisma.userPermission.findMany as jest.Mock).mockResolvedValue([
-				{ permission: { action: "DELETE", resource: "ORDER" } },
-			]);
+			(prisma.userPermission.findMany as jest.Mock).mockResolvedValue([{ permission: { action: "DELETE", resource: "ORDER" } }]);
 
 			aclService.checkAcl.mockResolvedValue("DENY");
 			policyEngine.evaluate.mockResolvedValue(null);
@@ -561,9 +546,7 @@ describe("AuthorizationKernelService", () => {
 
 		it("should not throw when decision is ALLOW", async () => {
 			(prisma.userRole.findMany as jest.Mock).mockResolvedValue([]);
-			(prisma.userPermission.findMany as jest.Mock).mockResolvedValue([
-				{ permission: { action: "READ", resource: "USER" } },
-			]);
+			(prisma.userPermission.findMany as jest.Mock).mockResolvedValue([{ permission: { action: "READ", resource: "USER" } }]);
 			aclService.checkAcl.mockResolvedValue(null);
 			policyEngine.evaluate.mockResolvedValue(null);
 
@@ -584,9 +567,7 @@ describe("AuthorizationKernelService", () => {
 
 			expect(filter).toEqual(
 				expect.objectContaining({
-					OR: expect.arrayContaining([
-						expect.objectContaining({ ownerId: "user-123" }),
-					]),
+					OR: expect.arrayContaining([expect.objectContaining({ ownerId: "user-123" })]),
 				}),
 			);
 		});
@@ -665,9 +646,7 @@ describe("AuthorizationKernelService", () => {
 	describe("Performance & Caching", () => {
 		it("should cache permission lookups", async () => {
 			(prisma.userRole.findMany as jest.Mock).mockResolvedValue([]);
-			(prisma.userPermission.findMany as jest.Mock).mockResolvedValue([
-				{ permission: { action: "READ", resource: "USER" } },
-			]);
+			(prisma.userPermission.findMany as jest.Mock).mockResolvedValue([{ permission: { action: "READ", resource: "USER" } }]);
 			aclService.checkAcl.mockResolvedValue(null);
 			policyEngine.evaluate.mockResolvedValue(null);
 
@@ -685,9 +664,7 @@ describe("AuthorizationKernelService", () => {
 
 		it("should complete authorization check within performance threshold", async () => {
 			(prisma.userRole.findMany as jest.Mock).mockResolvedValue([]);
-			(prisma.userPermission.findMany as jest.Mock).mockResolvedValue([
-				{ permission: { action: "READ", resource: "USER" } },
-			]);
+			(prisma.userPermission.findMany as jest.Mock).mockResolvedValue([{ permission: { action: "READ", resource: "USER" } }]);
 			aclService.checkAcl.mockResolvedValue(null);
 			policyEngine.evaluate.mockResolvedValue(null);
 
@@ -724,9 +701,7 @@ describe("AuthorizationKernelService", () => {
 
 		it("should audit ALLOW decisions for write operations", async () => {
 			(prisma.userRole.findMany as jest.Mock).mockResolvedValue([]);
-			(prisma.userPermission.findMany as jest.Mock).mockResolvedValue([
-				{ permission: { action: "DELETE", resource: "USER" } },
-			]);
+			(prisma.userPermission.findMany as jest.Mock).mockResolvedValue([{ permission: { action: "DELETE", resource: "USER" } }]);
 			aclService.checkAcl.mockResolvedValue(null);
 			policyEngine.evaluate.mockResolvedValue(null);
 

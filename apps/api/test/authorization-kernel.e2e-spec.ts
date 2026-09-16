@@ -73,11 +73,7 @@ describe("Authorization Kernel E2E", () => {
 	describe("Permission-Based Authorization", () => {
 		it("should allow access when user has required permission", async () => {
 			// User with CREATE:ORDER permission
-			const response = await request(app.getHttpServer())
-				.post("/api/v1/orders")
-				.set("Authorization", `Bearer ${userToken}`)
-				.send({ /* order data */ })
-				.expect(201);
+			const response = await request(app.getHttpServer()).post("/api/v1/orders").set("Authorization", `Bearer ${userToken}`).send({/* order data */}).expect(201);
 
 			expect(response.body.success).toBe(true);
 		});
@@ -101,10 +97,7 @@ describe("Authorization Kernel E2E", () => {
 
 	describe("Super-Admin Bypass", () => {
 		it("should allow super-admin to access any resource", async () => {
-			const response = await request(app.getHttpServer())
-				.get("/api/v1/admin/users")
-				.set("Authorization", `Bearer ${adminToken}`)
-				.expect(200);
+			const response = await request(app.getHttpServer()).get("/api/v1/admin/users").set("Authorization", `Bearer ${adminToken}`).expect(200);
 
 			expect(response.body.success).toBe(true);
 		});
@@ -140,11 +133,7 @@ describe("Authorization Kernel E2E", () => {
 			});
 
 			// User has UPDATE:ORDER via role, but ACL DENY blocks it
-			await request(app.getHttpServer())
-				.patch(`/api/v1/orders/blocked-order-id`)
-				.set("Authorization", `Bearer ${userToken}`)
-				.send({ status: "COMPLETED" })
-				.expect(403);
+			await request(app.getHttpServer()).patch(`/api/v1/orders/blocked-order-id`).set("Authorization", `Bearer ${userToken}`).send({ status: "COMPLETED" }).expect(403);
 
 			// Cleanup
 			await prisma.resourceAcl.deleteMany({
@@ -165,10 +154,7 @@ describe("Authorization Kernel E2E", () => {
 			});
 
 			// User normally lacks DELETE:ORDER, but ACL ALLOW grants it
-			const response = await request(app.getHttpServer())
-				.delete(`/api/v1/orders/allowed-order-id`)
-				.set("Authorization", `Bearer ${userToken}`)
-				.expect(200);
+			const response = await request(app.getHttpServer()).delete(`/api/v1/orders/allowed-order-id`).set("Authorization", `Bearer ${userToken}`).expect(200);
 
 			expect(response.body.success).toBe(true);
 

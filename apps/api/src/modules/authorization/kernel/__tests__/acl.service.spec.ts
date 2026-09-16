@@ -48,12 +48,7 @@ describe("AclService", () => {
 				effect: "DENY" as AclEffect,
 			});
 
-			const result = await service.checkAcl(
-				"user-123",
-				"DELETE" as PermissionAction,
-				"ORDER" as PermissionResource,
-				"order-123",
-			);
+			const result = await service.checkAcl("user-123", "DELETE" as PermissionAction, "ORDER" as PermissionResource, "order-123");
 
 			expect(result).toBe("DENY");
 			expect(prisma.resourceAcl.findFirst).toHaveBeenCalledWith({
@@ -78,12 +73,7 @@ describe("AclService", () => {
 				effect: "ALLOW" as AclEffect,
 			});
 
-			const result = await service.checkAcl(
-				"user-123",
-				"UPDATE" as PermissionAction,
-				"ORDER" as PermissionResource,
-				"order-456",
-			);
+			const result = await service.checkAcl("user-123", "UPDATE" as PermissionAction, "ORDER" as PermissionResource, "order-456");
 
 			expect(result).toBe("ALLOW");
 		});
@@ -91,12 +81,7 @@ describe("AclService", () => {
 		it("should return null when no ACL exists", async () => {
 			(prisma.resourceAcl.findFirst as jest.Mock).mockResolvedValue(null);
 
-			const result = await service.checkAcl(
-				"user-123",
-				"READ" as PermissionAction,
-				"USER" as PermissionResource,
-				"user-456",
-			);
+			const result = await service.checkAcl("user-123", "READ" as PermissionAction, "USER" as PermissionResource, "user-456");
 
 			expect(result).toBeNull();
 		});
@@ -113,12 +98,7 @@ describe("AclService", () => {
 				priority: 100,
 			});
 
-			const result = await service.checkAcl(
-				"user-123",
-				"DELETE" as PermissionAction,
-				"ORDER" as PermissionResource,
-				"order-123",
-			);
+			const result = await service.checkAcl("user-123", "DELETE" as PermissionAction, "ORDER" as PermissionResource, "order-123");
 
 			expect(result).toBe("DENY");
 			expect(prisma.resourceAcl.findFirst).toHaveBeenCalledWith(
@@ -131,12 +111,7 @@ describe("AclService", () => {
 		it("should filter out soft-deleted ACLs", async () => {
 			(prisma.resourceAcl.findFirst as jest.Mock).mockResolvedValue(null);
 
-			await service.checkAcl(
-				"user-123",
-				"READ" as PermissionAction,
-				"USER" as PermissionResource,
-				"user-456",
-			);
+			await service.checkAcl("user-123", "READ" as PermissionAction, "USER" as PermissionResource, "user-456");
 
 			expect(prisma.resourceAcl.findFirst).toHaveBeenCalledWith(
 				expect.objectContaining({
@@ -435,12 +410,7 @@ describe("AclService", () => {
 
 			(prisma.resourceAcl.findFirst as jest.Mock).mockResolvedValue(highPriorityAcl);
 
-			const result = await service.checkAcl(
-				"user-123",
-				"DELETE" as PermissionAction,
-				"ORDER" as PermissionResource,
-				"order-123",
-			);
+			const result = await service.checkAcl("user-123", "DELETE" as PermissionAction, "ORDER" as PermissionResource, "order-123");
 
 			expect(result).toBe("DENY");
 			expect(prisma.resourceAcl.findFirst).toHaveBeenCalledWith(
@@ -458,12 +428,7 @@ describe("AclService", () => {
 			});
 
 			const start = Date.now();
-			await service.checkAcl(
-				"user-123",
-				"READ" as PermissionAction,
-				"USER" as PermissionResource,
-				"user-456",
-			);
+			await service.checkAcl("user-123", "READ" as PermissionAction, "USER" as PermissionResource, "user-456");
 			const duration = Date.now() - start;
 
 			// Should complete very quickly (< 50ms with mocks)

@@ -1,13 +1,5 @@
 import { Injectable, Logger } from "@nestjs/common";
-import type {
-	AuthorizationRequest,
-	AuthorizationResult,
-	AuthorizationEvaluationStep,
-	PolicyConditions,
-	PolicyCondition,
-	PolicyRule,
-	PolicyValue,
-} from "@workspace/shared";
+import type { AuthorizationRequest, AuthorizationResult, AuthorizationEvaluationStep, PolicyConditions, PolicyCondition, PolicyRule, PolicyValue } from "@workspace/shared";
 import { PolicyConditionsSchema } from "@workspace/shared";
 
 import { PrismaService } from "../../../prisma/prisma.service";
@@ -35,10 +27,7 @@ export class PolicyEngineService {
 				isDeleted: false,
 				actions: { has: request.action },
 				resources: { has: request.resource },
-				OR: [
-					{ organizationId: null },
-					{ organizationId: request.subject.organizationId },
-				],
+				OR: [{ organizationId: null }, { organizationId: request.subject.organizationId }],
 			},
 		});
 

@@ -263,11 +263,7 @@ describe("PolicyEngineService", () => {
 					name: "Complex Policy",
 					effect: "ALLOW",
 					conditions: {
-						AND: [
-							{ timeWindow: { startHour: 9, endHour: 17 } },
-							{ ipWhitelist: ["192.168.1.0/24"] },
-							{ organizationId: "org-123" },
-						],
+						AND: [{ timeWindow: { startHour: 9, endHour: 17 } }, { ipWhitelist: ["192.168.1.0/24"] }, { organizationId: "org-123" }],
 					},
 					actions: ["CREATE"],
 					resources: ["ORDER"],
@@ -303,11 +299,7 @@ describe("PolicyEngineService", () => {
 					name: "Flexible Access",
 					effect: "ALLOW",
 					conditions: {
-						OR: [
-							{ role: "admin" },
-							{ role: "superuser" },
-							{ ownershipRequired: true },
-						],
+						OR: [{ role: "admin" }, { role: "superuser" }, { ownershipRequired: true }],
 					},
 					actions: ["DELETE"],
 					resources: ["USER"],

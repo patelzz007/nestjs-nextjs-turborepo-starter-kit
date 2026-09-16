@@ -78,13 +78,9 @@ export class AuthorizationAuditKernelService {
 			return;
 		}
 
-		const policyIds = result.evaluation
-			.filter((step) => step.source === "policy" && step.details?.policyId !== undefined)
-			.map((step) => step.details?.policyId as string);
+		const policyIds = result.evaluation.filter((step) => step.source === "policy" && step.details?.policyId !== undefined).map((step) => step.details?.policyId as string);
 
-		const aclIds = result.evaluation
-			.filter((step) => step.source === "acl" && step.details?.aclId !== undefined)
-			.map((step) => step.details?.aclId as string);
+		const aclIds = result.evaluation.filter((step) => step.source === "acl" && step.details?.aclId !== undefined).map((step) => step.details?.aclId as string);
 
 		await this.log({
 			actorId: result.request.subject.userId,

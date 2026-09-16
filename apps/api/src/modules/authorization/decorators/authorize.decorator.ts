@@ -10,9 +10,7 @@ export const AUTHORIZE_KEY = "authorization:authorize";
  * Resource ID extractor function type.
  * Extracts resourceId from the execution context (e.g., from path params).
  */
-export type ResourceIdExtractor<TContext extends ExecutionContext = ExecutionContext> = (
-	context: TContext,
-) => string | null;
+export type ResourceIdExtractor<TContext extends ExecutionContext = ExecutionContext> = (context: TContext) => string | null;
 
 /**
  * Context extractor function type.
@@ -185,16 +183,16 @@ export function fromParam(paramName: string): ResourceIdExtractor {
  * })
  * async createOrder(@Body() data: CreateOrderDto) { ... }
  */
-export function fromBody<TContext extends Record<string, unknown>>(
-	fields: Record<keyof TContext, string>,
-): ContextExtractor<ExecutionContext, TContext> {
+export function fromBody<TContext extends Record<string, unknown>>(fields: Record<keyof TContext, string>): ContextExtractor<ExecutionContext, TContext> {
 	return (context: ExecutionContext): TContext => {
 		const request = context.switchToHttp().getRequest();
 		const result = {} as TContext;
 
 		for (const [key, path] of Object.entries(fields)) {
 			// Simple dot-notation path resolver
-			const value = path.split(".").reduce((obj: Record<string, unknown> | undefined, prop: string) => obj?.[prop] as Record<string, unknown> | undefined, request.body as Record<string, unknown>);
+			const value = path
+				.split(".")
+				.reduce((obj: Record<string, unknown> | undefined, prop: string) => obj?.[prop] as Record<string, unknown> | undefined, request.body as Record<string, unknown>);
 
 			result[key as keyof TContext] = value as TContext[keyof TContext];
 		}
@@ -220,15 +218,15 @@ export function fromBody<TContext extends Record<string, unknown>>(
  * })
  * async createLocation() { ... }
  */
-export function fromUser<TContext extends Record<string, unknown>>(
-	fields: Record<keyof TContext, string>,
-): ContextExtractor<ExecutionContext, TContext> {
+export function fromUser<TContext extends Record<string, unknown>>(fields: Record<keyof TContext, string>): ContextExtractor<ExecutionContext, TContext> {
 	return (context: ExecutionContext): TContext => {
 		const request = context.switchToHttp().getRequest();
 		const result = {} as TContext;
 
 		for (const [key, path] of Object.entries(fields)) {
-			const value = path.split(".").reduce((obj: Record<string, unknown> | undefined, prop: string) => obj?.[prop] as Record<string, unknown> | undefined, request.user as Record<string, unknown>);
+			const value = path
+				.split(".")
+				.reduce((obj: Record<string, unknown> | undefined, prop: string) => obj?.[prop] as Record<string, unknown> | undefined, request.user as Record<string, unknown>);
 
 			result[key as keyof TContext] = value as TContext[keyof TContext];
 		}

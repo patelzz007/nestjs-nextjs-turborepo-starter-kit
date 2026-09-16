@@ -5,13 +5,7 @@ import { CurrentUser } from "../decorators/current-user.decorator";
 import type { AuthenticatedUser } from "../../../types/authenticated-user";
 
 import { AuthorizationKernelService } from "./authorization-kernel.service";
-import type {
-	AuthorizationDecision,
-	AuthorizationRequest,
-	AuthorizationResult,
-	PermissionAction,
-	PermissionResource,
-} from "@workspace/shared";
+import type { AuthorizationDecision, AuthorizationRequest, AuthorizationResult, PermissionAction, PermissionResource } from "@workspace/shared";
 
 /**
  * Example controller demonstrating Authorization Kernel usage.

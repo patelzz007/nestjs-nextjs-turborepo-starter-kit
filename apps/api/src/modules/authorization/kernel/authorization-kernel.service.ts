@@ -279,7 +279,6 @@ export class AuthorizationKernelService {
 		return { OR: filters };
 	}
 
-
 	/**
 	 * Check if user has permission via role assignments.
 	 */

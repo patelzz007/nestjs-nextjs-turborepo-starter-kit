@@ -22,18 +22,7 @@ import { AuthorizationKernelExamplesController } from "./examples.controller";
  */
 @Module({
 	controllers: [AuthorizationKernelExamplesController],
-	providers: [
-		PrismaService,
-		AuthorizationKernelService,
-		PolicyEngineService,
-		AclService,
-		AuthorizationAuditKernelService,
-	],
-	exports: [
-		AuthorizationKernelService,
-		PolicyEngineService,
-		AclService,
-		AuthorizationAuditKernelService,
-	],
+	providers: [PrismaService, AuthorizationKernelService, PolicyEngineService, AclService, AuthorizationAuditKernelService],
+	exports: [AuthorizationKernelService, PolicyEngineService, AclService, AuthorizationAuditKernelService],
 })
 export class AuthorizationKernelModule {}
