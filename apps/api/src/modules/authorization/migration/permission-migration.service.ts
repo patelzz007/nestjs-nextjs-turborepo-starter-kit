@@ -40,78 +40,86 @@ export class PermissionMigrationService {
 	 * Sync explicit permission definitions into the database.
 	 */
 	public async syncDefinitions(definitions: readonly PermissionDefinition[]): Promise<MigrationResult> {
-		const created: PermissionDefinition[] = [];
-		const updated: PermissionDefinition[] = [];
+		return this.prisma.$transaction(async (tx) => {
+			await tx.$executeRaw`RESET ROLE`;
+			await tx.$executeRaw`SELECT set_config('app.current_user_id', '', true)`;
+			await tx.$executeRaw`SELECT set_config('app.rls_bypass', 'true', true)`;
+			await tx.$executeRaw`SELECT set_config('app.current_organization_id', '', true)`;
 
-		const existing = await this.prisma.permission.findMany({
-			where: { isDeleted: false },
-			select: { id: true, action: true, resource: true, description: true, group: true, isSystem: true },
-		});
+			const created: PermissionDefinition[] = [];
+			const updated: PermissionDefinition[] = [];
 
-		const existingMap = new Map<
-			string,
-			{
-				readonly id: string;
-				readonly action: string;
-				readonly resource: string;
-				readonly description: string | null;
-				readonly group: string | null;
-				readonly isSystem: boolean;
+			const existing = await tx.permission.findMany({
+				where: { isDeleted: false },
+				select: { id: true, action: true, resource: true, description: true, group: true, isSystem: true },
+			});
+
+			const existingMap = new Map<
+				string,
+				{
+					readonly id: string;
+					readonly action: string;
+					readonly resource: string;
+					readonly description: string | null;
+					readonly group: string | null;
+					readonly isSystem: boolean;
+				}
+			>();
+			for (const perm of existing) {
+				existingMap.set(`${perm.action}:${perm.resource}`, perm);
 			}
-		>();
-		for (const perm of existing) {
-			existingMap.set(`${perm.action}:${perm.resource}`, perm);
-		}
 
-		for (const definition of definitions) {
-			const key = `${definition.action}:${definition.resource}`;
-			const dbPerm = existingMap.get(key);
+			for (const definition of definitions) {
+				const key = `${definition.action}:${definition.resource}`;
+				const dbPerm = existingMap.get(key);
 
-			if (dbPerm === undefined) {
-				await this.prisma.permission.create({
-					data: {
-						action: definition.action,
-						resource: definition.resource,
-						description: definition.description,
-						group: definition.group,
-						isSystem: definition.isSystem ?? false,
-					},
-				});
-				created.push(definition);
-				this.logger.log(`Created permission: ${key}`);
-			} else {
-				const needsUpdate: boolean = dbPerm.description !== definition.description || dbPerm.group !== definition.group || dbPerm.isSystem !== (definition.isSystem ?? false);
-
-				if (needsUpdate) {
-					await this.prisma.permission.update({
-						where: { id: dbPerm.id },
+				if (dbPerm === undefined) {
+					await tx.permission.create({
 						data: {
+							action: definition.action,
+							resource: definition.resource,
 							description: definition.description,
 							group: definition.group,
 							isSystem: definition.isSystem ?? false,
 						},
 					});
-					updated.push(definition);
+					created.push(definition);
+					this.logger.log(`Created permission: ${key}`);
+				} else {
+					const needsUpdate: boolean = dbPerm.description !== definition.description || dbPerm.group !== definition.group || dbPerm.isSystem !== (definition.isSystem ?? false);
+
+					if (needsUpdate) {
+						await tx.permission.update({
+							where: { id: dbPerm.id },
+							data: {
+								description: definition.description,
+								group: definition.group,
+								isSystem: definition.isSystem ?? false,
+							},
+						});
+						updated.push(definition);
+					}
 				}
+
+				existingMap.delete(key);
 			}
 
-			existingMap.delete(key);
-		}
+			const orphaned: { readonly id: string; readonly action: string; readonly resource: string }[] = Array.from(existingMap.values()).map((p) => ({
+				id: p.id,
+				action: p.action,
+				resource: p.resource,
+			}));
 
-		const orphaned: { readonly id: string; readonly action: string; readonly resource: string }[] = Array.from(existingMap.values()).map((p) => ({
-			id: p.id,
-			action: p.action,
-			resource: p.resource,
-		}));
+			if (orphaned.length > 0) {
+				this.logger.warn(`Found ${String(orphaned.length)} permission(s) in DB not listed in code registry (admin-created or legacy)`);
+			}
 
-		if (orphaned.length > 0) {
-			this.logger.warn(`Found ${String(orphaned.length)} permission(s) in DB not listed in code registry (admin-created or legacy)`);
-		}
+			if (created.length > 0 || updated.length > 0) {
+				this.cache.clear();
+			}
 
-		if (created.length > 0 || updated.length > 0) {
-			this.cache.clear();
-		}
-
-		return { created, updated, orphaned };
+			await tx.$executeRaw`SET ROLE app_runtime`;
+			return { created, updated, orphaned };
+		});
 	}
 }
