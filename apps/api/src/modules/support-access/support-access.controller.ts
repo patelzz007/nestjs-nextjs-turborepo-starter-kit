@@ -7,6 +7,7 @@ import { RequirePermission } from "../auth/decorators/require-permission.decorat
 import { SuperAdminOnly } from "../auth/decorators/super-admin.decorator";
 import type { AccessTokenPayload } from "../auth/services/token.service";
 import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe";
+import { KernelIntegrationHelper } from "../authorization/kernel/kernel-integration.helper";
 import { SupportAccessService } from "./support-access.service";
 
 @ApiTags("Support Access")

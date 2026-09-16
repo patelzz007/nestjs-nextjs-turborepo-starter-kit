@@ -15,6 +15,8 @@ import {
 import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe";
 
 import { RequirePermission } from "../auth/decorators/require-permission.decorator";
+import { GetUser } from "../auth/decorators/get-user.decorator";
+import { KernelIntegrationHelper } from "../authorization/kernel/kernel-integration.helper";
 
 import {
 	GeoService,
