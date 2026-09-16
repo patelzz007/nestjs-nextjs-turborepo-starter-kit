@@ -12,9 +12,7 @@ import { OrganizationProvisioningService } from "../services/organization-provis
 @ApiTags("Organizations")
 @Controller(apiPath("/admin/organizations"))
 export class OrganizationAdminController {
-	public constructor(
-		private readonly provisioning: OrganizationProvisioningService,
-	) {}
+	public constructor(private readonly provisioning: OrganizationProvisioningService) {}
 
 	@Post("invites")
 	@SuperAdminOnly()

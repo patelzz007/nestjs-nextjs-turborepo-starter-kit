@@ -18,9 +18,7 @@ import { PolicyControlPlaneService } from "../services/policy-control-plane.serv
 @ApiTags("Authorization Policies")
 @Controller(apiPath("/policies"))
 export class PolicyControlPlaneController {
-	public constructor(
-		private readonly policies: PolicyControlPlaneService,
-	) {}
+	public constructor(private readonly policies: PolicyControlPlaneService) {}
 
 	@Post("drafts")
 	@RequirePermission("MANAGE", "SYSTEM_SETTINGS")
@@ -29,6 +27,7 @@ export class PolicyControlPlaneController {
 		@GetUser() user: AccessTokenPayload,
 		@Body(new ZodValidationPipe(CreatePolicyDraftSchema)) body: CreatePolicyDraftInput,
 	): Promise<{ draftId: string }> {
+		return this.policies.createDraft(user.sub, user.organizationId ?? null, body);
 	}
 
 	@Post("drafts/:draftId/simulate")
@@ -45,5 +44,6 @@ export class PolicyControlPlaneController {
 		@GetUser() user: AccessTokenPayload,
 		@Body(new ZodValidationPipe(PolicyPublishRequestSchema)) body: PolicyPublishRequestInput,
 	): Promise<{ version: number }> {
+		return this.policies.publish(body.draftId, user.sub);
 	}
 }
