@@ -213,31 +213,72 @@ Just use clean decorators:
 @Authorize({ action: "CREATE", resource: "ORDER" })
 ```
 
-### For Existing Routes
-1. Remove inline context extraction:
+### For Existing Routes with Request-Based Context
+1. Remove inline context extraction from request parameters/body/query:
    ```typescript
-   // Before
-   context: (ctx) => ({
-     organizationId: ctx.switchToHttp().getRequest().body?.organizationId,
+   // ❌ BEFORE
+   @Authorize({
+     action: "CREATE",
+     resource: "ORDER",
+     context: (ctx) => ({
+       organizationId: ctx.switchToHttp().getRequest().body?.organizationId,
+     }),
    })
    
-   // After
-   // (just delete it)
+   // ✅ AFTER
+   @Authorize({
+     action: "CREATE",
+     resource: "ORDER",
+   })
+   // Middleware automatically extracts organizationId
    ```
 
-2. If custom context is needed, keep only the custom parts:
-   ```typescript
-   // Before
-   context: (ctx) => ({
-     organizationId: ctx.switchToHttp().getRequest().body?.organizationId,
-     customField: ctx.switchToHttp().getRequest().body?.customField,
-   })
-   
-   // After
-   context: (ctx) => ({
-     customField: ctx.switchToHttp().getRequest().body?.customField,
-   })
-   ```
+### For Routes with User-Based Context
+Previously, some routes extracted `resourceId` from the authenticated user (e.g., `user.sub`, `user.jti`, `user.originalUserId`). These should be **removed** because:
+1. The middleware only extracts from request parameters/body/query, **not** from the authenticated user.
+2. User-specific authorization belongs in the **service layer**.
+
+```typescript
+// ❌ BEFORE
+@Authorize({
+  action: "UPDATE",
+  resource: "USER",
+  resourceId: (ctx) => ctx.switchToHttp().getRequest().user?.sub ?? null,
+  description: "Change password",
+})
+async changePassword(@GetUser("sub") userId: string, @Body() dto: ChangePasswordDto) {
+  return this.authService.changePassword(userId, dto);
+}
+
+// ✅ AFTER
+@Authorize({
+  action: "UPDATE",
+  resource: "USER",
+  description: "Change password",
+})
+async changePassword(@GetUser("sub") userId: string, @Body() dto: ChangePasswordDto) {
+  // Service layer validates that user can only change their own password
+  return this.authService.changePassword(userId, dto);
+}
+```
+
+**Rationale:** The `@Authorize` decorator handles **capability-based authorization** (can this user perform this action?), while **ownership-based authorization** (can this user modify *their own* data?) is validated in the service layer.
+
+### If Custom Context is Still Needed
+Keep only the custom parts that middleware doesn't provide:
+```typescript
+// ❌ BEFORE
+context: (ctx) => ({
+  organizationId: ctx.switchToHttp().getRequest().body?.organizationId,
+  customField: ctx.switchToHttp().getRequest().body?.customField,
+})
+
+// ✅ AFTER
+context: (ctx) => ({
+  customField: ctx.switchToHttp().getRequest().body?.customField,
+})
+// Middleware automatically provides organizationId
+```
 
 ## Edge Cases
 
@@ -259,6 +300,23 @@ Decorator context takes precedence over middleware context:
 // Middleware: { organizationId: "org-1" }
 // Decorator: { organizationId: "org-2" }
 // Result: { organizationId: "org-2" } ✅
+```
+
+### User-Specific Authorization
+The middleware **does NOT extract** from the authenticated user context (e.g., `user.sub`, `user.jti`, `user.originalUserId`). These values should be validated in the **service layer**, not in decorators:
+
+```typescript
+// ❌ BAD: Don't extract from user context in decorator
+@Authorize({
+  resourceId: (ctx) => ctx.switchToHttp().getRequest().user?.sub,
+})
+
+// ✅ GOOD: Validate in service layer
+@Authorize({ action: "UPDATE", resource: "USER" })
+async updateProfile(@GetUser("sub") userId: string) {
+  // Service validates that userId matches the resource being updated
+  return this.service.updateProfile(userId, ...);
+}
 ```
 
 ## Testing
