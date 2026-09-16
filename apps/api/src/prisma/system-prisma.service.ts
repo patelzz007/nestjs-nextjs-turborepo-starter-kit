@@ -37,11 +37,6 @@ export class SystemPrismaService extends PrismaClient implements OnModuleDestroy
 			: [{ emit: "event", level: "query" }];
 
 		super({
-			datasources: {
-				db: {
-					url: process.env.DATABASE_URL,
-				},
-			},
 			log: logConfig,
 		});
 
