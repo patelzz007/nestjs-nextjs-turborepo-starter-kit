@@ -1,7 +1,5 @@
 import { Injectable } from "@nestjs/common";
 
-import { KernelIntegrationHelper } from "../authorization/kernel/kernel-integration.helper";
-
 import { GeneratedSampleCategoryController } from "./sample-category.controller.generated";
 
 /**
@@ -17,7 +15,7 @@ import { GeneratedSampleCategoryController } from "./sample-category.controller.
 export class SampleCategoryController extends GeneratedSampleCategoryController {
 	public constructor(
 		...baseParams: ConstructorParameters<typeof GeneratedSampleCategoryController>,
-		private readonly kernelHelper: KernelIntegrationHelper,
+		
 	) {
 		super(...baseParams);
 	}

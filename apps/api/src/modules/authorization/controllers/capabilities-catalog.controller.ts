@@ -4,7 +4,6 @@ import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swa
 import { CapabilityCatalogQuerySchema, apiPath, type CapabilityDefinition } from "@workspace/shared";
 import { ZodValidationPipe } from "../../../common/pipes/zod-validation.pipe";
 import { RlsBypass } from "../../auth/decorators/rls-bypass.decorator";
-import { KernelIntegrationHelper } from "../kernel/kernel-integration.helper";
 
 import { CapabilityDefinitionService } from "../services/capability-definition.service";
 
@@ -15,7 +14,6 @@ import { CapabilityDefinitionService } from "../services/capability-definition.s
 export class CapabilitiesCatalogController {
 	public constructor(
 		private readonly capabilityDefinitions: CapabilityDefinitionService,
-		private readonly kernelHelper: KernelIntegrationHelper,
 	) {}
 
 	@Get()

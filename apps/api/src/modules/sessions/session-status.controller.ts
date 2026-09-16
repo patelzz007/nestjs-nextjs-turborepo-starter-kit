@@ -4,12 +4,13 @@ import { SessionStatusSchema, apiPath, epochMs, nowEpochMs, type EpochMs, type S
 
 import { ApiErrorResponseDto } from "../../common/dto/api-response.dto";
 import { createWrappedDto } from "../../common/dto/response-wrapper";
-import { KernelIntegrationHelper } from "../authorization/kernel/kernel-integration.helper";
+
 // The decorators below are imported from the auth module WITHOUT importing
 // AuthModule here — @GetUser is metadata-only (no DI), and the global
 // AuthGuard applies to this controller automatically. Do not "fix" this into
 // a module import; it would create an unnecessary coupling.
 import { GetUser } from "../auth/decorators/get-user.decorator";
+import { Authorize } from "../authorization/decorators/authorize.decorator";
 import type { AccessTokenPayload } from "../auth/services/token.service";
 
 const WrappedSessionStatusResponse = createWrappedDto(SessionStatusSchema, "WrappedSessionStatusResponse");

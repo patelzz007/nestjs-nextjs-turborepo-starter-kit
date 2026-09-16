@@ -7,27 +7,27 @@ import { RequirePermission } from "../auth/decorators/require-permission.decorat
 import { SuperAdminOnly } from "../auth/decorators/super-admin.decorator";
 import type { AccessTokenPayload } from "../auth/services/token.service";
 import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe";
-import { KernelIntegrationHelper } from "../authorization/kernel/kernel-integration.helper";
+import { Authorize } from "../authorization/decorators/authorize.decorator";
 import { SupportAccessService } from "./support-access.service";
 
 @ApiTags("Support Access")
 @Controller(apiPath("/support-access"))
 export class SupportAccessController {
-	public constructor(
-		private readonly supportAccess: SupportAccessService,
-		private readonly kernelHelper: KernelIntegrationHelper,
-	) {}
+	public constructor(private readonly supportAccess: SupportAccessService) {}
 
 	@Post("request")
 	@SuperAdminOnly()
 	@RequirePermission("CREATE", "USER")
+	@Authorize({
+		action: "CREATE",
+		resource: "USER",
+		description: "SuperAdmin can request support access",
+	})
 	@ApiOkResponse({ description: "Support access grant requested" })
 	public async requestGrant(
 		@GetUser() user: AccessTokenPayload,
 		@Body(new ZodValidationPipe(SupportAccessGrantRequestSchema)) body: SupportAccessGrantRequestInput,
 	): Promise<SupportAccessGrantResponse> {
-		await this.kernelHelper.requireAction(user.sub, "CREATE", "USER", { isSuperAdmin: true });
-		
 		return this.supportAccess.requestGrant(user.sub, body);
 	}
 
@@ -41,10 +41,14 @@ export class SupportAccessController {
 
 	@Post(":grantId/revoke")
 	@SuperAdminOnly()
+	@Authorize({
+		action: "DELETE",
+		resource: "USER",
+		resourceId: "grantId",
+		description: "SuperAdmin can revoke support access",
+	})
 	@ApiOkResponse({ description: "Support access grant revoked" })
-	public async revoke(@GetUser() user: AccessTokenPayload, @Param("grantId") grantId: string): Promise<{ message: string }> {
-		await this.kernelHelper.requireResourceAccess(user.sub, "DELETE", "USER", grantId, { isSuperAdmin: true });
-		
+	public async revoke(@Param("grantId") grantId: string, @GetUser() user: AccessTokenPayload): Promise<{ message: string }> {
 		await this.supportAccess.revoke(grantId, user.sub);
 		return { message: "Support access revoked" };
 	}

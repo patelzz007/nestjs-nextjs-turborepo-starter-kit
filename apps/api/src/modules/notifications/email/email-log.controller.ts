@@ -9,7 +9,6 @@ import { ZodValidationPipe } from "../../../common/pipes/zod-validation.pipe";
 import { AdminAccessOnly } from "../../auth/decorators/admin-access.decorator";
 import { RequirePermission } from "../../auth/decorators/require-permission.decorator";
 import { createWrappedDto } from "../../../common/dto/response-wrapper";
-import { KernelIntegrationHelper } from "../../authorization/kernel/kernel-integration.helper";
 
 import { EmailLogEventsService } from "./email-log-events.service";
 import { EmailLogService } from "./email-log.service";
@@ -37,7 +36,6 @@ export class EmailLogController {
 	constructor(
 		private readonly emailLogService: EmailLogService,
 		private readonly emailLogEvents: EmailLogEventsService,
-		private readonly kernelHelper: KernelIntegrationHelper,
 	) {}
 
 	/**
