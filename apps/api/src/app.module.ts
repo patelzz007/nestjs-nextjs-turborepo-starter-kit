@@ -141,8 +141,6 @@ if (observeEnabled && observeAppKey !== undefined && observeAppSecret !== undefi
 })
 export class AppModule implements NestModule {
 	public configure(consumer: MiddlewareConsumer): void {
-		consumer
-			.apply(CorrelationIdMiddleware, AuthorizationContextMiddleware)
-			.forRoutes("*");
+		consumer.apply(CorrelationIdMiddleware, AuthorizationContextMiddleware).forRoutes("*");
 	}
 }

@@ -24,13 +24,7 @@ export const PolicyOperatorSchema = z.enum([
 
 export type PolicyOperator = z.infer<typeof PolicyOperatorSchema>;
 
-export const PolicyValueSchema = z.union([
-	z.string(),
-	z.number(),
-	z.boolean(),
-	z.array(z.union([z.string(), z.number()])),
-	z.null(),
-]);
+export const PolicyValueSchema = z.union([z.string(), z.number(), z.boolean(), z.array(z.union([z.string(), z.number()])), z.null()]);
 
 export type PolicyValue = z.infer<typeof PolicyValueSchema>;
 
@@ -44,11 +38,11 @@ export const PolicyConditionSchema = z.object({
 
 export type PolicyCondition = z.infer<typeof PolicyConditionSchema>;
 
-export type PolicyRule = {
+export interface PolicyRule {
 	all?: PolicyRule[];
 	any?: PolicyRule[];
 	condition?: PolicyCondition;
-};
+}
 
 export const PolicyRuleSchema: z.ZodType<PolicyRule> = z.lazy(() =>
 	z.object({

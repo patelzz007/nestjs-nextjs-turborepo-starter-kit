@@ -12,9 +12,7 @@ import { CapabilityDefinitionService } from "../services/capability-definition.s
 @RlsBypass()
 @Controller(apiPath("/capabilities/catalog"))
 export class CapabilitiesCatalogController {
-	public constructor(
-		private readonly capabilityDefinitions: CapabilityDefinitionService,
-	) {}
+	public constructor(private readonly capabilityDefinitions: CapabilityDefinitionService) {}
 
 	@Get()
 	@ApiOperation({ summary: "List capability catalog entries (optionally filtered by scope)" })

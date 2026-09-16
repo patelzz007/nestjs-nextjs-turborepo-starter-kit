@@ -26,9 +26,7 @@ interface AuditQueryParams {
 @Controller(apiPath("/admin/audit"))
 @ApiTags("Audit Log")
 export class AuditController {
-	public constructor(
-		private readonly prisma: PrismaService,
-	) {}
+	public constructor(private readonly prisma: PrismaService) {}
 
 	@Get()
 	@RequirePermission("READ", "AUDIT_LOG")
