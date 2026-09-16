@@ -1,27 +1,13 @@
 -- Fix app_runtime role grants
 -- Run this after db:reset if you encounter "permission denied for schema public"
 
--- Drop the role if it exists (to start fresh)
+-- Create the role if it doesn't exist
 DO $$
 BEGIN
-    -- Revoke from all databases first
-    EXECUTE (
-        SELECT string_agg(
-            format('REVOKE ALL ON DATABASE %I FROM app_runtime', datname),
-            '; '
-        )
-        FROM pg_database
-        WHERE datname NOT IN ('template0', 'template1')
-    );
-    
-    -- Drop the role
-    IF EXISTS (SELECT FROM pg_roles WHERE rolname = 'app_runtime') THEN
-        DROP ROLE app_runtime;
+    IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'app_runtime') THEN
+        CREATE ROLE app_runtime NOLOGIN NOSUPERUSER NOINHERIT NOBYPASSRLS;
     END IF;
 END $$;
-
--- Recreate the role
-CREATE ROLE app_runtime NOLOGIN NOSUPERUSER NOINHERIT NOBYPASSRLS;
 
 -- Grant to current user (postgres)
 GRANT app_runtime TO CURRENT_USER;
