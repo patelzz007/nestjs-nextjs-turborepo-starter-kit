@@ -1,11 +1,13 @@
 import { Injectable, Logger, OnModuleDestroy } from "@nestjs/common";
+import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
+import { Pool } from "pg";
 
 /**
  * Dedicated Prisma client for system-level operations (migrations, initialization, etc.).
  *
  * Unlike PrismaService, this client:
- * - Does NOT use the RlsPool (no automatic SET ROLE app_runtime)
+ * - Uses a standard pg.Pool (NOT the RlsPool, so no automatic SET ROLE app_runtime)
  * - Connects directly as the DATABASE_URL superuser
  * - Should ONLY be used for system operations, never for user requests
  *
@@ -21,8 +23,12 @@ import { PrismaClient } from "@prisma/client";
 @Injectable()
 export class SystemPrismaService extends PrismaClient implements OnModuleDestroy {
 	private readonly logger: Logger = new Logger(SystemPrismaService.name);
+	private readonly pool: Pool;
 
 	public constructor() {
+		const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+		const adapter = new PrismaPg(pool);
+
 		const logLevel: string = process.env.LOG_LEVEL ?? "warn";
 		const isDebug: boolean = logLevel === "debug" || logLevel === "silly";
 
@@ -36,9 +42,8 @@ export class SystemPrismaService extends PrismaClient implements OnModuleDestroy
 				]
 			: [{ emit: "event", level: "query" }];
 
-		super({
-			log: logConfig,
-		});
+		super({ adapter, log: logConfig });
+		this.pool = pool;
 
 		this.$on("error" as never, ((event: { message: string; target: string }) => {
 			this.logger.error(`Prisma error: ${event.message} (target: ${event.target})`);
@@ -54,6 +59,7 @@ export class SystemPrismaService extends PrismaClient implements OnModuleDestroy
 	public async onModuleDestroy(): Promise<void> {
 		this.logger.log("Closing system database connection…");
 		await this.$disconnect();
+		await this.pool.end();
 		this.logger.log("System database connection closed");
 	}
 }
