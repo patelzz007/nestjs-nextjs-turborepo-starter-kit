@@ -32,6 +32,8 @@ interface VersionManifest {
 @ApiTags("System")
 @Controller("version")
 export class VersionController {
+	public constructor(private readonly kernelHelper: KernelIntegrationHelper) {}
+	
 	@Public()
 	@Get()
 	@ApiOperation({ summary: "API version manifest (current, supported, docs)" })

@@ -25,7 +25,10 @@ const WrappedHealthResponse = createWrappedDto(HealthResponseSchema, "WrappedHea
 @ApiTags("App")
 @Controller()
 export class HealthController {
-	constructor(private readonly healthService: HealthService) {}
+	constructor(
+		private readonly healthService: HealthService,
+		private readonly kernelHelper: KernelIntegrationHelper,
+	) {}
 
 	// `GET /` + `GET /health` are infra plumbing, not versioned business
 	// endpoints — they stay at `/` and `/health` (no `apiPath()` prefix).
