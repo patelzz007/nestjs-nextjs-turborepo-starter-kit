@@ -67,6 +67,10 @@ function findFiles(dir: string, pattern: RegExp): string[] {
 	const results: string[] = [];
 
 	function walk(currentDir: string) {
+		if (!fs.existsSync(currentDir)) {
+			return;
+		}
+
 		const files = fs.readdirSync(currentDir);
 
 		for (const file of files) {

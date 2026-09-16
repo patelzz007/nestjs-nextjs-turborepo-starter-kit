@@ -26,6 +26,7 @@ import type { MerchantActor } from "../../api-keys/types/merchant-actor.types";
 import { SkipAuthThrottle } from "../../auth/decorators/skip-auth-throttle.decorator";
 import { GetUser } from "../../auth/decorators/get-user.decorator";
 import type { AccessTokenPayload } from "../../auth/services/token.service";
+import { KernelIntegrationHelper } from "../../authorization/kernel/kernel-integration.helper";
 import { OrganizationRewardAuthService } from "../../organization/services/organization-reward-auth.service";
 
 import { MerchantCreateApiKeyDto, MerchantCreateRewardDto, MerchantUpdateRewardDto, RewardsEmptyBodyDto } from "../dtos/rewards.dto";
@@ -73,6 +74,7 @@ export class OrganizationKybController {
 		private readonly merchantKyb: MerchantKybService,
 		private readonly organizationRewardAuth: OrganizationRewardAuthService,
 		private readonly kybDocuments: MerchantKybDocumentService,
+		private readonly kernelHelper: KernelIntegrationHelper,
 	) {}
 
 	@SkipAuthThrottle()
@@ -95,7 +97,12 @@ export class OrganizationKybController {
 		@Param(new ZodValidationPipe(OrganizationSlugParamSchema)) params: z.output<typeof OrganizationSlugParamSchema>,
 		@Body(new ZodValidationPipe(MerchantKybSubmissionFieldsSchema)) body: z.output<typeof MerchantKybSubmissionFieldsSchema>,
 	): Promise<MerchantKybProfileResponse> {
-		await this.organizationRewardAuth.resolveOrganizationFromSlug(user.sub, params.orgSlug);
+		const resolved = await this.organizationRewardAuth.resolveOrganizationFromSlug(user.sub, params.orgSlug);
+		
+		await this.kernelHelper.requireAction(user.sub, "UPDATE", "ORGANIZATION", {
+			organizationId: resolved.organizationId,
+		});
+		
 		return this.merchantKyb.submitKyb(user.sub, params.orgSlug, body);
 	}
 
@@ -129,7 +136,10 @@ export class OrganizationKybController {
 @UseInterceptors(MerchantActorInterceptor)
 @Controller(apiPath("/orgs/:orgSlug/rewards"))
 export class OrganizationRewardsController {
-	public constructor(private readonly merchantRewardService: MerchantRewardService) {}
+	public constructor(
+		private readonly merchantRewardService: MerchantRewardService,
+		private readonly kernelHelper: KernelIntegrationHelper,
+	) {}
 
 	@SkipAuthThrottle()
 	@Get()
@@ -146,11 +156,15 @@ export class OrganizationRewardsController {
 	@ApiOperation({ summary: "Create a draft reward" })
 	@ApiBody({ type: MerchantCreateRewardDto })
 	@ApiOkResponse({ description: "Created reward" })
-	public createReward(
+	public async createReward(
 		@GetMerchantActor() actor: MerchantActor,
 		@Param(new ZodValidationPipe(OrganizationSlugParamSchema)) _params: z.output<typeof OrganizationSlugParamSchema>,
 		@Body(new ZodValidationPipe(MerchantCreateRewardSchema)) body: Parameters<MerchantRewardService["createReward"]>[1],
 	): ReturnType<MerchantRewardService["createReward"]> {
+		await this.kernelHelper.requireAction(actor.userId, "CREATE", "ORDER", {
+			organizationId: actor.organizationId,
+		});
+		
 		return this.merchantRewardService.createReward(actor, body);
 	}
 
@@ -158,12 +172,16 @@ export class OrganizationRewardsController {
 	@ApiOperation({ summary: "Update a draft or pending reward" })
 	@ApiBody({ type: MerchantUpdateRewardDto })
 	@ApiOkResponse({ description: "Updated reward" })
-	public updateReward(
+	public async updateReward(
 		@GetMerchantActor() actor: MerchantActor,
 		@Param(new ZodValidationPipe(z.object({ orgSlug: OrganizationSlugParamSchema.shape.orgSlug, rewardId: UuidParamSchema }).strict()))
 		params: { orgSlug: string; rewardId: string },
 		@Body(new ZodValidationPipe(MerchantUpdateRewardSchema)) body: Parameters<MerchantRewardService["updateReward"]>[2],
 	): ReturnType<MerchantRewardService["updateReward"]> {
+		await this.kernelHelper.requireResourceAccess(actor.userId, "UPDATE", "ORDER", params.rewardId, {
+			organizationId: actor.organizationId,
+		});
+		
 		return this.merchantRewardService.updateReward(actor, params.rewardId, body);
 	}
 
@@ -186,6 +204,7 @@ export class OrganizationApiKeysController {
 	public constructor(
 		private readonly merchantApiKeyService: MerchantApiKeyService,
 		private readonly organizationRewardAuth: OrganizationRewardAuthService,
+		private readonly kernelHelper: KernelIntegrationHelper,
 	) {}
 
 	@SkipAuthThrottle()
@@ -210,7 +229,12 @@ export class OrganizationApiKeysController {
 		@Param(new ZodValidationPipe(OrganizationSlugParamSchema)) params: z.output<typeof OrganizationSlugParamSchema>,
 		@Body(new ZodValidationPipe(MerchantCreateApiKeySchema)) body: Parameters<MerchantApiKeyService["createKey"]>[2],
 	): ReturnType<MerchantApiKeyService["createKey"]> {
-		await this.organizationRewardAuth.resolveOrganizationFromSlug(user.sub, params.orgSlug);
+		const resolved = await this.organizationRewardAuth.resolveOrganizationFromSlug(user.sub, params.orgSlug);
+		
+		await this.kernelHelper.requireAction(user.sub, "CREATE", "ORGANIZATION", {
+			organizationId: resolved.organizationId,
+		});
+		
 		return this.merchantApiKeyService.createKey(user.sub, params.orgSlug, body);
 	}
 
@@ -222,7 +246,12 @@ export class OrganizationApiKeysController {
 		@GetUser() user: AccessTokenPayload,
 		@Param(new ZodValidationPipe(apiContract.organizations.apiKeys.revoke.input)) params: { orgSlug: string; keyId: string },
 	): ReturnType<MerchantApiKeyService["revokeKey"]> {
-		await this.organizationRewardAuth.resolveOrganizationFromSlug(user.sub, params.orgSlug);
+		const resolved = await this.organizationRewardAuth.resolveOrganizationFromSlug(user.sub, params.orgSlug);
+		
+		await this.kernelHelper.requireResourceAccess(user.sub, "DELETE", "ORGANIZATION", params.keyId, {
+			organizationId: resolved.organizationId,
+		});
+		
 		return this.merchantApiKeyService.revokeKey(user.sub, params.orgSlug, params.keyId);
 	}
 }
