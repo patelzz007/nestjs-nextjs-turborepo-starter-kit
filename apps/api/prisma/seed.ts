@@ -57,6 +57,16 @@ async function main() {
 	await assignPermissionsToRoles(roles, permissions);
 	console.log("✅ Role permissions assigned");
 
+	console.log("Seeding Authorization Kernel (ACLs, Policies)...");
+	const kernelSummary = await seedAuthorizationKernel(
+		[
+			{ id: "admin-seed-id", email: "admin@example.com" },
+			{ id: "manager-seed-id", email: "manager@example.com" },
+		],
+		roles,
+	);
+	console.log(`✅ Authorization Kernel: ${kernelSummary.acls} ACLs, ${kernelSummary.policies} policies`);
+
 	console.log("Creating users...");
 	const users = await createUsers();
 	const userRole = roles.find((r) => r.name === "User")!;
