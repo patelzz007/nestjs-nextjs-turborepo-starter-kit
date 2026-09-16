@@ -78,8 +78,8 @@ export async function seedAuthorizationKernel(
 			name: "business-hours-access",
 			description: "Allow access only during business hours (9 AM - 5 PM UTC)",
 			scope: "GLOBAL",
-			action: "READ",
-			resource: "ADMIN_DASHBOARD",
+			actions: ["READ"],
+			resources: ["ADMIN_DASHBOARD"],
 			effect: "ALLOW",
 			conditions: JSON.stringify({
 				all: [
@@ -95,17 +95,15 @@ export async function seedAuthorizationKernel(
 					},
 				],
 			}),
-			priority: 100,
 			isActive: true,
 			version: 1,
-			createdById: adminUser.id,
 		},
 		{
 			name: "ip-whitelist-policy",
 			description: "Allow access from specific IP addresses",
 			scope: "GLOBAL",
-			action: "MANAGE",
-			resource: "SYSTEM_SETTINGS",
+			actions: ["MANAGE"],
+			resources: ["SYSTEM_SETTINGS"],
 			effect: "ALLOW",
 			conditions: JSON.stringify({
 				any: [
@@ -116,17 +114,15 @@ export async function seedAuthorizationKernel(
 					},
 				],
 			}),
-			priority: 200,
 			isActive: true,
 			version: 1,
-			createdById: adminUser.id,
 		},
 		{
 			name: "owner-only-delete",
 			description: "Only resource owner can delete their own resources",
 			scope: "OWN",
-			action: "DELETE",
-			resource: "ORDER",
+			actions: ["DELETE"],
+			resources: ["ORDER"],
 			effect: "ALLOW",
 			conditions: JSON.stringify({
 				all: [
@@ -137,17 +133,15 @@ export async function seedAuthorizationKernel(
 					},
 				],
 			}),
-			priority: 150,
 			isActive: true,
 			version: 1,
-			createdById: adminUser.id,
 		},
 		{
 			name: "deny-weekend-writes",
 			description: "Deny write operations on weekends",
 			scope: "GLOBAL",
-			action: "UPDATE",
-			resource: "PAYMENT",
+			actions: ["UPDATE"],
+			resources: ["PAYMENT"],
 			effect: "DENY",
 			conditions: JSON.stringify({
 				any: [
@@ -163,10 +157,8 @@ export async function seedAuthorizationKernel(
 					},
 				],
 			}),
-			priority: 300,
 			isActive: true,
 			version: 1,
-			createdById: adminUser.id,
 		},
 	];
 
