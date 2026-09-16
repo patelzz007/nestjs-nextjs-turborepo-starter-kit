@@ -33,7 +33,7 @@ const WrappedSessionStatusResponse = createWrappedDto(SessionStatusSchema, "Wrap
 @Controller(apiPath("/session"))
 export class SessionStatusController {
 	public constructor() {}
-	
+
 	@ApiBearerAuth()
 	@Get()
 	@ApiOperation({ summary: "Current session status (requires a valid access token)" })

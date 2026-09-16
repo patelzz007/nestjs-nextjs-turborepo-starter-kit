@@ -11,9 +11,7 @@ import { ConsumerRewardsService } from "../services/consumer-rewards.service";
 @ApiTags("Rewards")
 @Controller(apiPath("/rewards"))
 export class ConsumerRewardsController {
-	public constructor(
-		private readonly consumerRewardsService: ConsumerRewardsService,
-	) {}
+	public constructor(private readonly consumerRewardsService: ConsumerRewardsService) {}
 
 	@Public()
 	@RlsBypass()

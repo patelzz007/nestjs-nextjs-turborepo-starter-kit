@@ -67,7 +67,6 @@ export class OrganizationController {
 		@Body(new ZodValidationPipe(OrganizationLocationCreateSchema)) body: OrganizationLocationCreateInput,
 	): Promise<OrganizationLocationResponse> {
 		const organizationId = await this.context.resolveOrganizationIdBySlug(params.orgSlug);
-
 	}
 
 	@Patch(":orgSlug/locations/:locationId")
@@ -78,7 +77,6 @@ export class OrganizationController {
 		@Body(new ZodValidationPipe(OrganizationLocationUpdateSchema)) body: OrganizationLocationUpdateInput,
 	): Promise<OrganizationLocationResponse> {
 		const organizationId = await this.context.resolveOrganizationIdBySlug(params.orgSlug);
-
 	}
 
 	@Get(":orgSlug/members")

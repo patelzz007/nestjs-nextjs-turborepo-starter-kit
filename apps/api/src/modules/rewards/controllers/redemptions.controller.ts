@@ -15,9 +15,7 @@ import { RedemptionService } from "../services/redemption.service";
 @ApiTags("Redemptions")
 @Controller(apiPath("/redemptions"))
 export class RedemptionsController {
-	public constructor(
-		private readonly redemptionService: RedemptionService,
-	) {}
+	public constructor(private readonly redemptionService: RedemptionService) {}
 
 	@Public()
 	@RlsBypass()

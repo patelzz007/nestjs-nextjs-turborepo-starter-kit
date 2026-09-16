@@ -7,7 +7,6 @@ import { createWrappedDto } from "../../common/dto/response-wrapper";
 // The global AuthGuard reads the public marker via Reflector and skips these
 // routes. Do not "fix" this into a module import.
 import { Public } from "../auth/decorators/public.decorator";
-import { Authorize } from "../authorization/decorators/authorize.decorator";
 import { HealthService, type DeepHealthResponse } from "./health.service";
 
 // ── Wrapped Response DTOs ────────────────────────────────────────────────
@@ -24,10 +23,7 @@ const WrappedHealthResponse = createWrappedDto(HealthResponseSchema, "WrappedHea
 @ApiTags("App")
 @Controller()
 export class HealthController {
-	constructor(
-		private readonly healthService: HealthService,
-		
-	) {}
+	constructor(private readonly healthService: HealthService) {}
 
 	// `GET /` + `GET /health` are infra plumbing, not versioned business
 	// endpoints — they stay at `/` and `/health` (no `apiPath()` prefix).

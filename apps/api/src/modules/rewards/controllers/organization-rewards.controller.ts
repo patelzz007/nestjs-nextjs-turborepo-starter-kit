@@ -96,8 +96,7 @@ export class OrganizationKybController {
 		@Body(new ZodValidationPipe(MerchantKybSubmissionFieldsSchema)) body: z.output<typeof MerchantKybSubmissionFieldsSchema>,
 	): Promise<MerchantKybProfileResponse> {
 		const resolved = await this.organizationRewardAuth.resolveOrganizationFromSlug(user.sub, params.orgSlug);
-		
-		
+
 		return this.merchantKyb.submitKyb(user.sub, params.orgSlug, body);
 	}
 
@@ -131,9 +130,7 @@ export class OrganizationKybController {
 @UseInterceptors(MerchantActorInterceptor)
 @Controller(apiPath("/orgs/:orgSlug/rewards"))
 export class OrganizationRewardsController {
-	public constructor(
-		private readonly merchantRewardService: MerchantRewardService,
-	) {}
+	public constructor(private readonly merchantRewardService: MerchantRewardService) {}
 
 	@SkipAuthThrottle()
 	@Get()
@@ -155,7 +152,6 @@ export class OrganizationRewardsController {
 		@Param(new ZodValidationPipe(OrganizationSlugParamSchema)) _params: z.output<typeof OrganizationSlugParamSchema>,
 		@Body(new ZodValidationPipe(MerchantCreateRewardSchema)) body: Parameters<MerchantRewardService["createReward"]>[1],
 	): ReturnType<MerchantRewardService["createReward"]> {
-		
 		return this.merchantRewardService.createReward(actor, body);
 	}
 
@@ -169,7 +165,6 @@ export class OrganizationRewardsController {
 		params: { orgSlug: string; rewardId: string },
 		@Body(new ZodValidationPipe(MerchantUpdateRewardSchema)) body: Parameters<MerchantRewardService["updateReward"]>[2],
 	): ReturnType<MerchantRewardService["updateReward"]> {
-		
 		return this.merchantRewardService.updateReward(actor, params.rewardId, body);
 	}
 
@@ -217,8 +212,7 @@ export class OrganizationApiKeysController {
 		@Body(new ZodValidationPipe(MerchantCreateApiKeySchema)) body: Parameters<MerchantApiKeyService["createKey"]>[2],
 	): ReturnType<MerchantApiKeyService["createKey"]> {
 		const resolved = await this.organizationRewardAuth.resolveOrganizationFromSlug(user.sub, params.orgSlug);
-		
-		
+
 		return this.merchantApiKeyService.createKey(user.sub, params.orgSlug, body);
 	}
 
@@ -231,8 +225,7 @@ export class OrganizationApiKeysController {
 		@Param(new ZodValidationPipe(apiContract.organizations.apiKeys.revoke.input)) params: { orgSlug: string; keyId: string },
 	): ReturnType<MerchantApiKeyService["revokeKey"]> {
 		const resolved = await this.organizationRewardAuth.resolveOrganizationFromSlug(user.sub, params.orgSlug);
-		
-		
+
 		return this.merchantApiKeyService.revokeKey(user.sub, params.orgSlug, params.keyId);
 	}
 }

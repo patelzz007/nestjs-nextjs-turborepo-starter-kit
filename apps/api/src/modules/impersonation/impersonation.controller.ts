@@ -76,7 +76,7 @@ export class ImpersonationController {
 				error: "ALREADY_IMPERSONATING",
 			});
 		}
-		
+
 		const { ipAddress } = extractClientInfo(req);
 		const userAgent: string | null = req.headers["user-agent"] ?? null;
 		return this.impersonationService.impersonateUser(admin.sub, targetUserId, ipAddress, userAgent);
@@ -111,7 +111,7 @@ export class ImpersonationController {
 				error: "NOT_IMPERSONATING",
 			});
 		}
-		
+
 		const { ipAddress } = extractClientInfo(req);
 		const userAgent: string | null = req.headers["user-agent"] ?? null;
 		return this.impersonationService.stopImpersonation(payload.originalUserId, payload.sub, ipAddress, userAgent);

@@ -30,9 +30,7 @@ import { RewardsAdminService } from "../services/rewards-admin.service";
 @RlsBypass()
 @Controller(apiPath("/admin/invites"))
 export class RewardsAdminInvitesController {
-	public constructor(
-		private readonly rewardsAdminService: RewardsAdminService,
-	) {}
+	public constructor(private readonly rewardsAdminService: RewardsAdminService) {}
 
 	@RequirePermission("MANAGE", "MERCHANT_ORG")
 	@Post()
@@ -63,9 +61,7 @@ export class RewardsAdminInvitesController {
 @RlsBypass()
 @Controller(apiPath("/admin/rewards"))
 export class RewardsAdminRewardsController {
-	public constructor(
-		private readonly rewardsAdminService: RewardsAdminService,
-	) {}
+	public constructor(private readonly rewardsAdminService: RewardsAdminService) {}
 
 	@RequirePermission("MANAGE", "REWARD")
 	@Get("pending")

@@ -13,9 +13,7 @@ import { RewardNotificationService } from "../services/reward-notification.servi
 @ApiBearerAuth()
 @Controller(apiPath("/reward-notifications"))
 export class RewardNotificationsController {
-	public constructor(
-		private readonly notificationService: RewardNotificationService,
-	) {}
+	public constructor(private readonly notificationService: RewardNotificationService) {}
 
 	@Get()
 	@ApiOperation({ summary: "List in-app reward notifications" })

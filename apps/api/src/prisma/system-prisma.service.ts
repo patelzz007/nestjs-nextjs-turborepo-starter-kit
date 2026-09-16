@@ -45,14 +45,20 @@ export class SystemPrismaService extends PrismaClient implements OnModuleDestroy
 		super({ adapter, log: logConfig });
 		this.pool = pool;
 
-		this.$on("error" as never, ((event: { message: string; target: string }) => {
-			this.logger.error(`Prisma error: ${event.message} (target: ${event.target})`);
-		}) as never);
+		this.$on(
+			"error" as never,
+			((event: { message: string; target: string }) => {
+				this.logger.error(`Prisma error: ${event.message} (target: ${event.target})`);
+			}) as never,
+		);
 
 		if (isDebug) {
-			this.$on("query" as never, ((event: { query: string; duration: number }) => {
-				this.logger.debug(`Query: ${event.query} (${String(event.duration)}ms)`);
-			}) as never);
+			this.$on(
+				"query" as never,
+				((event: { query: string; duration: number }) => {
+					this.logger.debug(`Query: ${event.query} (${String(event.duration)}ms)`);
+				}) as never,
+			);
 		}
 	}
 

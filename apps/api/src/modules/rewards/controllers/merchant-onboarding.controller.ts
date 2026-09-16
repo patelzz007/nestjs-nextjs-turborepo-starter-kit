@@ -21,9 +21,7 @@ import { MerchantOnboardingService } from "../services/merchant-onboarding.servi
 @ApiTags("Organization Onboarding")
 @Controller(apiPath("/orgs/onboarding"))
 export class MerchantOnboardingController {
-	public constructor(
-		private readonly merchantOnboarding: MerchantOnboardingService,
-	) {}
+	public constructor(private readonly merchantOnboarding: MerchantOnboardingService) {}
 
 	@Public()
 	@RlsBypass()

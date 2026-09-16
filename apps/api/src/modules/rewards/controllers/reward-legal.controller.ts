@@ -13,9 +13,7 @@ import { RewardLegalService } from "../services/reward-legal.service";
 @ApiBearerAuth()
 @Controller(apiPath("/legal"))
 export class RewardLegalController {
-	public constructor(
-		private readonly legalService: RewardLegalService,
-	) {}
+	public constructor(private readonly legalService: RewardLegalService) {}
 
 	@Get("status")
 	@ApiOperation({ summary: "Get rewards legal acceptance and verified phone status" })
