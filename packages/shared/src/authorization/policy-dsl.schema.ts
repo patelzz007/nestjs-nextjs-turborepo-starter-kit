@@ -155,3 +155,29 @@ export const AuthorizationResultSchema = z
 	.strict();
 
 export type AuthorizationResult = z.infer<typeof AuthorizationResultSchema>;
+
+/**
+ * Authorization Audit Log Request Schema
+ * Used for recording authorization decisions in the audit log.
+ */
+export const AuthorizationAuditLogRequestSchema = z
+	.object({
+		actorId: z.string().optional(),
+		organizationId: z.string().optional(),
+		locationId: z.string().optional(),
+		action: z.string(),
+		resource: z.string(),
+		resourceId: z.string().optional(),
+		decision: AuthorizationDecisionSchema,
+		reason: z.string().optional(),
+		policyIds: z.array(z.string()).optional(),
+		aclIds: z.array(z.string()).optional(),
+		evaluation: z.array(AuthorizationEvaluationStepSchema).optional(),
+		ipAddress: z.string().optional(),
+		userAgent: z.string().optional(),
+		requestId: z.string().optional(),
+		durationMs: z.number().int().nonnegative().optional(),
+	})
+	.strict();
+
+export type AuthorizationAuditLogRequest = z.output<typeof AuthorizationAuditLogRequestSchema>;

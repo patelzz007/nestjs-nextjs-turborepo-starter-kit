@@ -1,25 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
-import type { AuthorizationDecision, AuthorizationResult } from "@workspace/shared";
+import type { AuthorizationAuditLogRequest, AuthorizationResult } from "@workspace/shared";
 
 import { PrismaService } from "../../../prisma/prisma.service";
-
-export interface AuditLogRequest {
-	actorId?: string;
-	organizationId?: string;
-	locationId?: string;
-	action: string;
-	resource: string;
-	resourceId?: string;
-	decision: AuthorizationDecision;
-	reason?: string;
-	policyIds?: string[];
-	aclIds?: string[];
-	evaluation?: unknown;
-	ipAddress?: string;
-	userAgent?: string;
-	requestId?: string;
-	durationMs?: number;
-}
 
 /**
  * Authorization Audit Service - records authorization decisions.
@@ -35,7 +17,7 @@ export class AuthorizationAuditKernelService {
 	 * Record an authorization audit log.
 	 * Uses app_rls_bypass() in RLS to bypass normal row-level restrictions.
 	 */
-	public async log(request: AuditLogRequest): Promise<void> {
+	public async log(request: AuthorizationAuditLogRequest): Promise<void> {
 		try {
 			await this.prisma.authorizationAudit.create({
 				data: {
