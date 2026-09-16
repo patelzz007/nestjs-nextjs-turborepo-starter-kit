@@ -85,10 +85,12 @@ export class RewardsAdminRewardsController {
 	@ApiOperation({ summary: "Approve a pending reward (no body required)" })
 	@ApiBody({ type: RewardsEmptyBodyDto, required: false })
 	@ApiOkResponse({ description: "Approved reward" })
-	public approveReward(
+	public async approveReward(
 		@GetUser() user: AccessTokenPayload,
 		@Param(new ZodValidationPipe(apiContract.rewardsAdmin.approveReward.input)) params: { rewardId: string },
-	): ReturnType<RewardsAdminService["approveReward"]> {
+	): Promise<ReturnType<RewardsAdminService["approveReward"]>> {
+		await this.kernelHelper.requireResourceAccess(user.sub, "UPDATE", "ORDER", params.rewardId, { isSuperAdmin: true });
+		
 		return this.rewardsAdminService.approveReward(user.sub, params.rewardId);
 	}
 
@@ -97,11 +99,13 @@ export class RewardsAdminRewardsController {
 	@ApiOperation({ summary: "Reject a pending reward" })
 	@ApiBody({ type: AdminRejectRewardDto })
 	@ApiOkResponse({ description: "Reward returned to draft" })
-	public rejectReward(
+	public async rejectReward(
 		@GetUser() user: AccessTokenPayload,
 		@Param(new ZodValidationPipe(z.object({ rewardId: UuidParamSchema }).strict())) params: { rewardId: string },
 		@Body(new ZodValidationPipe(apiContract.rewardsAdmin.rejectReward.input)) body: Parameters<RewardsAdminService["rejectReward"]>[2],
-	): ReturnType<RewardsAdminService["rejectReward"]> {
+	): Promise<ReturnType<RewardsAdminService["rejectReward"]>> {
+		await this.kernelHelper.requireResourceAccess(user.sub, "UPDATE", "ORDER", params.rewardId, { isSuperAdmin: true });
+		
 		return this.rewardsAdminService.rejectReward(user.sub, params.rewardId, body);
 	}
 }

@@ -22,6 +22,7 @@ import { LogService } from "../../logs/logs.service";
 import { Public } from "../../auth/decorators/public.decorator";
 import { SkipMutationIntent } from "../../auth/decorators/skip-mutation-intent.decorator";
 import { RlsBypass } from "../../auth/decorators/rls-bypass.decorator";
+import { KernelIntegrationHelper } from "../../authorization/kernel/kernel-integration.helper";
 
 import { EmailLogService, type WebhookUpdateResult } from "./email-log.service";
 import { ResendWebhookEventDto } from "./dtos/resend-webhook-event.dto";
