@@ -65,7 +65,6 @@ export class RolesController {
 	@Authorize({
 		action: "UPDATE",
 		resource: "USER",
-		resourceId: (ctx) => ctx.switchToHttp().getRequest().body?.userId ?? null,
 		description: "Assign role to user",
 	})
 	@ApiBody({ type: AssignRoleToUserDto })

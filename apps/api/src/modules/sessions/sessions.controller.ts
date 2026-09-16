@@ -71,7 +71,6 @@ export class SessionsController {
 	@Authorize({
 		action: "DELETE",
 		resource: "USER",
-		resourceId: (ctx) => ctx.switchToHttp().getRequest().user?.jti ?? null,
 		description: "Logout from current device",
 	})
 	@Post("/logout")

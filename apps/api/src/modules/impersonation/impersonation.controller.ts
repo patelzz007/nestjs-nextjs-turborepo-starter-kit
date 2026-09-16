@@ -94,10 +94,6 @@ export class ImpersonationController {
 	@Authorize({
 		action: "DELETE",
 		resource: "USER",
-		resourceId: (ctx) => {
-			const user = ctx.switchToHttp().getRequest().user;
-			return user?.originalUserId ?? null;
-		},
 		description: "Stop impersonation",
 	})
 	@Post("/stop-impersonation")

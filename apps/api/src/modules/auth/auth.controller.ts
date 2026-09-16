@@ -254,7 +254,6 @@ export class AuthController {
 	@Authorize({
 		action: "UPDATE",
 		resource: "USER",
-		resourceId: (ctx) => ctx.switchToHttp().getRequest().user?.sub ?? null,
 		description: "User can only change their own password",
 	})
 	@ApiOperation({ summary: "Change password for the authenticated user" })

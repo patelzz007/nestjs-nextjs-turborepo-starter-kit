@@ -68,10 +68,6 @@ export class MfaRecoveryController {
 	@Authorize({
 		action: "UPDATE",
 		resource: "USER",
-		resourceId: (ctx) => {
-			const body = ctx.switchToHttp().getRequest().body;
-			return body?.requestId ?? null;
-		},
 		description: "SuperAdmin can review MFA recovery requests",
 	})
 	@ApiOperation({ summary: "SuperAdmin: approve or deny an MFA recovery request" })
