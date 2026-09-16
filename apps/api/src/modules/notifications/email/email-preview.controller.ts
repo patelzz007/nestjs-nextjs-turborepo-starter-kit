@@ -18,7 +18,6 @@ import {
 import { ZodValidationPipe } from "../../../common/pipes/zod-validation.pipe";
 import { AdminAccessOnly } from "../../auth/decorators/admin-access.decorator";
 import { RequirePermission } from "../../auth/decorators/require-permission.decorator";
-import { GetUser } from "../../auth/decorators/get-user.decorator";
 import { createWrappedDto, createWrappedArrayDto } from "../../../common/dto/response-wrapper";
 import { TypedConfigService } from "../../../config/typed-config.service";
 import { EMAIL_TEMPLATE_REGISTRY, buildEmailPreview, listTemplateMeta } from "./email-template.registry";
@@ -98,8 +97,10 @@ export class EmailPreviewController {
 	@ApiOperation({ summary: "Send one email template (sample props)" })
 	@ApiOkResponse({ type: WrappedSendResult, description: "Outcome of the send attempt" })
 	@ApiNotFoundResponse({ description: "Unknown template key" })
-	public async sendTest(@GetUser("sub") userId: string, @Param("key", new ZodValidationPipe(EmailTemplateKeyParamSchema)) key: string): Promise<EmailSendResult> {
-		const template = EMAIL_TEMPLATE_REGISTRY[parsedKey].build();
+	public async sendTest(@Param("key", new ZodValidationPipe(EmailTemplateKeyParamSchema)) key: string): Promise<EmailSendResult> {
+		const parsedKey = this.requireTemplate(key);
+		const entry = EMAIL_TEMPLATE_REGISTRY[parsedKey];
+		const template = entry.build();
 		return this.sender.send(template);
 	}
 }

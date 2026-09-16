@@ -66,7 +66,7 @@ export class OrganizationController {
 		@Param(new ZodValidationPipe(OrganizationSlugParamSchema)) params: { orgSlug: string },
 		@Body(new ZodValidationPipe(OrganizationLocationCreateSchema)) body: OrganizationLocationCreateInput,
 	): Promise<OrganizationLocationResponse> {
-		const organizationId = await this.context.resolveOrganizationIdBySlug(params.orgSlug);
+		return this.locations.createMerchantLocation(user.sub, params.orgSlug, body);
 	}
 
 	@Patch(":orgSlug/locations/:locationId")
@@ -76,7 +76,7 @@ export class OrganizationController {
 		@Param(new ZodValidationPipe(OrganizationLocationIdParamSchema)) params: { orgSlug: string; locationId: string },
 		@Body(new ZodValidationPipe(OrganizationLocationUpdateSchema)) body: OrganizationLocationUpdateInput,
 	): Promise<OrganizationLocationResponse> {
-		const organizationId = await this.context.resolveOrganizationIdBySlug(params.orgSlug);
+		return this.locations.resubmitMerchantLocation(user.sub, params.orgSlug, params.locationId, body);
 	}
 
 	@Get(":orgSlug/members")

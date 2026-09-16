@@ -16,7 +16,7 @@ import {
 	type RequiredRolesMetadata,
 } from "../constants/authorization.constants";
 import { AuthorizationKernelService } from "../kernel/authorization-kernel.service";
-import type { AuthorizationDecision, PermissionAction, PermissionResource } from "@workspace/shared";
+import type { AuthorizationDecision, AuthorizationRequest } from "@workspace/shared";
 
 /**
  * **Kernel-First Authorization Guard**
@@ -132,15 +132,19 @@ export class AuthorizationGuard implements CanActivate {
 
 	// ── Private: Authorization Checks ────────────────────────────────────────
 
+	private buildKernelRequest(userId: string, action: string, resource: string): AuthorizationRequest {
+		return {
+			subject: { userId },
+			action,
+			resource,
+		};
+	}
+
 	/**
 	 * Check a single permission via kernel.
 	 */
 	private async checkPermission(userId: string, action: string, resource: string): Promise<void> {
-		const decision: AuthorizationDecision = await this.kernel.can({
-			userId,
-			action: action as PermissionAction,
-			resource: resource as PermissionResource,
-		});
+		const decision: AuthorizationDecision = await this.kernel.can(this.buildKernelRequest(userId, action, resource));
 
 		if (decision === "DENY") {
 			throw new ForbiddenException({
@@ -155,19 +159,11 @@ export class AuthorizationGuard implements CanActivate {
 	 */
 	private async checkPermissions(userId: string, meta: RequiredPermissionsMetadata): Promise<void> {
 		const requirements = meta.permissions.map((p) => ({
-			action: p[0] as PermissionAction,
-			resource: p[1] as PermissionResource,
+			action: p[0],
+			resource: p[1],
 		}));
 
-		const results = await Promise.all(
-			requirements.map((req) =>
-				this.kernel.can({
-					userId,
-					action: req.action,
-					resource: req.resource,
-				}),
-			),
-		);
+		const results = await Promise.all(requirements.map((req) => this.kernel.can(this.buildKernelRequest(userId, req.action, req.resource))));
 
 		const granted = meta.mode === "all" ? results.every((d) => d === "ALLOW") : results.some((d) => d === "ALLOW");
 
@@ -187,13 +183,7 @@ export class AuthorizationGuard implements CanActivate {
 	private async checkRoles(userId: string, meta: RequiredRolesMetadata): Promise<void> {
 		// For now, delegate to kernel's can() using role-based permissions
 		// In the future, kernel should have native role check support
-		const checks = meta.roles.map((role) =>
-			this.kernel.can({
-				userId,
-				action: "ASSUME" as PermissionAction,
-				resource: role as PermissionResource,
-			}),
-		);
+		const checks = meta.roles.map((role) => this.kernel.can(this.buildKernelRequest(userId, "ASSUME", role)));
 
 		const results = await Promise.all(checks);
 		const granted = meta.mode === "all" ? results.every((d) => d === "ALLOW") : results.some((d) => d === "ALLOW");
@@ -230,11 +220,7 @@ export class AuthorizationGuard implements CanActivate {
 	 * Check if user has admin dashboard access.
 	 */
 	private async hasAdminDashboardAccess(userId: string): Promise<boolean> {
-		const decision = await this.kernel.can({
-			userId,
-			action: "READ" as PermissionAction,
-			resource: "ADMIN_DASHBOARD" as PermissionResource,
-		});
+		const decision = await this.kernel.can(this.buildKernelRequest(userId, "READ", "ADMIN_DASHBOARD"));
 
 		return decision === "ALLOW";
 	}

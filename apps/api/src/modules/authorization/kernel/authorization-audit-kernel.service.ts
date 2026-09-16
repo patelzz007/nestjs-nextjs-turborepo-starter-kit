@@ -1,7 +1,19 @@
 import { Injectable, Logger } from "@nestjs/common";
-import type { AuthorizationAuditLogRequest, AuthorizationResult } from "@workspace/shared";
+import type { AuthorizationAuditLogRequest, AuthorizationEvaluationStep, AuthorizationResult } from "@workspace/shared";
+import { CaughtValueSchema } from "@workspace/shared";
 
+import { normalizeCaughtError } from "../../../common/utils/caught-error";
+import { parsePrismaNullableJson } from "../../../common/utils/prisma-json";
 import { PrismaService } from "../../../prisma/prisma.service";
+
+function readEvaluationDetailId(step: AuthorizationEvaluationStep, detailKey: "policyId" | "aclId"): string | undefined {
+	const details = step.details;
+	if (details === undefined) {
+		return undefined;
+	}
+	const value = details[detailKey];
+	return typeof value === "string" ? value : undefined;
+}
 
 /**
  * Authorization Audit Service - records authorization decisions.
@@ -31,16 +43,18 @@ export class AuthorizationAuditKernelService {
 					reason: request.reason ?? null,
 					policyIds: request.policyIds ?? [],
 					aclIds: request.aclIds ?? [],
-					evaluation: request.evaluation ?? null,
+					evaluation: parsePrismaNullableJson(request.evaluation ?? null),
 					ipAddress: request.ipAddress ?? null,
 					userAgent: request.userAgent ?? null,
 					requestId: request.requestId ?? null,
 					durationMs: request.durationMs ?? null,
 				},
 			});
-		} catch (error) {
+		} catch (error: unknown) {
 			// Never fail the request due to audit logging failure
-			this.logger.error(`Failed to record authorization audit: ${(error as Error).message}`);
+			const caught = CaughtValueSchema.safeParse(error);
+			const message = caught.success ? normalizeCaughtError(caught.data).message : "Unknown error";
+			this.logger.error(`Failed to record authorization audit: ${message}`);
 		}
 	}
 
@@ -78,9 +92,15 @@ export class AuthorizationAuditKernelService {
 			return;
 		}
 
-		const policyIds = result.evaluation.filter((step) => step.source === "policy" && step.details?.policyId !== undefined).map((step) => step.details?.policyId as string);
+		const policyIds = result.evaluation
+			.filter((step) => step.source === "policy")
+			.map((step) => readEvaluationDetailId(step, "policyId"))
+			.filter((id): id is string => id !== undefined);
 
-		const aclIds = result.evaluation.filter((step) => step.source === "acl" && step.details?.aclId !== undefined).map((step) => step.details?.aclId as string);
+		const aclIds = result.evaluation
+			.filter((step) => step.source === "acl")
+			.map((step) => readEvaluationDetailId(step, "aclId"))
+			.filter((id): id is string => id !== undefined);
 
 		await this.log({
 			actorId: result.request.subject.userId,

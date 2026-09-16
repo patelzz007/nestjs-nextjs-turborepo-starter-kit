@@ -8,7 +8,7 @@ import type {
 	PermissionAction,
 	PermissionResource,
 } from "@workspace/shared";
-import type { Prisma } from "@prisma/client";
+import { PermissionActionSchema, PermissionResourceSchema } from "@workspace/shared";
 
 import { PrismaService } from "../../../prisma/prisma.service";
 import { PolicyEngineService } from "./policy-engine.service";
@@ -245,7 +245,7 @@ export class AuthorizationKernelService {
 	 * Generate a Prisma WHERE filter based on authorization rules.
 	 * Used for filtering query results at the database level.
 	 */
-	public async filter(context: AuthorizationContext, action: string, resource: string): Promise<Record<string, unknown>> {
+	public filter(context: AuthorizationContext, _action: string, _resource: string): Record<string, unknown> {
 		// SuperAdmin: no filter
 		if (context.isSuperAdmin === true) {
 			return {};
@@ -283,6 +283,15 @@ export class AuthorizationKernelService {
 	 * Check if user has permission via role assignments.
 	 */
 	private async hasRolePermission(userId: string, action: string, resource: string): Promise<boolean> {
+		const parsedAction = PermissionActionSchema.safeParse(action);
+		const parsedResource = PermissionResourceSchema.safeParse(resource);
+		if (!parsedAction.success || !parsedResource.success) {
+			return false;
+		}
+
+		const permissionAction: PermissionAction = parsedAction.data;
+		const permissionResource: PermissionResource = parsedResource.data;
+
 		const result = await this.prisma.userRole.findFirst({
 			where: {
 				userId,
@@ -294,8 +303,8 @@ export class AuthorizationKernelService {
 						some: {
 							isDeleted: false,
 							permission: {
-								action: action as PermissionAction,
-								resource: resource as PermissionResource,
+								action: permissionAction,
+								resource: permissionResource,
 								isDeleted: false,
 							},
 						},
@@ -317,8 +326,8 @@ export class AuthorizationKernelService {
 							some: {
 								isDeleted: false,
 								permission: {
-									action: "MANAGE" as PermissionAction,
-									resource: resource as PermissionResource,
+									action: "MANAGE",
+									resource: permissionResource,
 									isDeleted: false,
 								},
 							},
@@ -341,31 +350,43 @@ export class AuthorizationKernelService {
 			return { owned: false, reason: "Resource ID not provided" };
 		}
 
-		// Generic ownership check - can be extended per resource type
-		const resourceTable = this.getResourceTable(request.resource);
+		const ownerUserId = await this.resolveResourceOwnerUserId(request.resource, request.resourceId);
 
-		if (resourceTable === null) {
+		if (ownerUserId === undefined) {
 			return { owned: false, reason: `Resource type ${request.resource} does not support ownership` };
 		}
 
-		try {
-			// @ts-expect-error -- Dynamic table access
-			const record = await this.prisma[resourceTable].findUnique({
-				where: { id: request.resourceId },
-				select: { userId: true },
-			});
+		if (ownerUserId === null) {
+			return { owned: false, reason: "Resource not found" };
+		}
 
-			if (record === null) {
-				return { owned: false, reason: "Resource not found" };
+		if (ownerUserId === request.subject.userId) {
+			return { owned: true, reason: "User is the resource owner" };
+		}
+
+		return { owned: false, reason: "User is not the resource owner" };
+	}
+
+	/** `undefined` when the resource type has no ownership model. */
+	private async resolveResourceOwnerUserId(resource: string, resourceId: string): Promise<string | null | undefined> {
+		switch (resource) {
+			case "USER": {
+				const user = await this.prisma.user.findUnique({ where: { id: resourceId }, select: { id: true } });
+				return user?.id ?? null;
 			}
-
-			if (record.userId === request.subject.userId) {
-				return { owned: true, reason: "User is the resource owner" };
+			case "URL": {
+				const url = await this.prisma.url.findUnique({ where: { id: resourceId }, select: { userId: true } });
+				return url?.userId ?? null;
 			}
-
-			return { owned: false, reason: "User is not the resource owner" };
-		} catch {
-			return { owned: false, reason: `Failed to check ownership for ${request.resource}` };
+			case "TAG": {
+				const tag = await this.prisma.tag.findUnique({ where: { id: resourceId }, select: { userId: true } });
+				return tag?.userId ?? null;
+			}
+			case "ORDER":
+			case "API_KEY":
+				return undefined;
+			default:
+				return undefined;
 		}
 	}
 
@@ -409,20 +430,5 @@ export class AuthorizationKernelService {
 		}
 
 		return { allowed: false, reason: "No relationship found granting access" };
-	}
-
-	/**
-	 * Map resource type to Prisma table name.
-	 */
-	private getResourceTable(resource: string): string | null {
-		const mapping: Record<string, string> = {
-			URL: "url",
-			TAG: "tag",
-			ORDER: "reward",
-			USER: "user",
-			API_KEY: "apiKey",
-		};
-
-		return mapping[resource] ?? null;
 	}
 }

@@ -1,50 +1,43 @@
 import { Injectable, NestMiddleware } from "@nestjs/common";
 import type { FastifyRequest, FastifyReply } from "fastify";
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return value !== null && typeof value === "object";
+}
+
+function readStringField(source: unknown, key: string): string | undefined {
+	if (!isRecord(source)) {
+		return undefined;
+	}
+	const value = source[key];
+	return typeof value === "string" ? value : undefined;
+}
+
 /**
  * Authorization Context Middleware
  *
  * Extracts common authorization context from the request and attaches it
  * to `request.authorizationContext` for use by the AuthorizationGuard.
- *
- * This avoids repetitive context extraction in every @Authorize decorator.
- *
- * ## Context Extraction Strategy:
- * 1. organizationId: body.organizationId → params.organizationId → params.orgId → query.organizationId
- * 2. locationId: body.locationId → params.locationId → query.locationId
- * 3. resourceId: params.id (most common pattern for resource-specific operations)
- *
- * ## Usage:
- * Controllers can now use clean decorators without inline context extraction:
- *
- * ```typescript
- * @Authorize({ action: "CREATE", resource: "ORDER" })
- * // organizationId/locationId/resourceId automatically available from middleware
- * ```
  */
 @Injectable()
 export class AuthorizationContextMiddleware implements NestMiddleware {
 	public use(req: FastifyRequest, _res: FastifyReply, next: () => void): void {
-		// Extract organizationId (check multiple sources)
 		const organizationId =
-			(req.body as Record<string, unknown>)?.organizationId ??
-			req.params?.["organizationId"] ??
-			req.params?.["orgId"] ??
-			req.params?.["orgSlug"] ??
-			req.query?.["organizationId"] ??
+			readStringField(req.body, "organizationId") ??
+			readStringField(req.params, "organizationId") ??
+			readStringField(req.params, "orgId") ??
+			readStringField(req.params, "orgSlug") ??
+			readStringField(req.query, "organizationId") ??
 			null;
 
-		// Extract locationId (check multiple sources)
-		const locationId = (req.body as Record<string, unknown>)?.locationId ?? req.params?.["locationId"] ?? req.query?.["locationId"] ?? null;
+		const locationId = readStringField(req.body, "locationId") ?? readStringField(req.params, "locationId") ?? readStringField(req.query, "locationId") ?? null;
 
-		// Extract resourceId (common pattern for resource-specific operations)
-		const resourceId = req.params?.["id"] ?? req.params?.["resourceId"] ?? null;
+		const resourceId = readStringField(req.params, "id") ?? readStringField(req.params, "resourceId") ?? null;
 
-		// Attach to request for use by AuthorizationGuard
-		(req as FastifyRequest & { authorizationContext: Record<string, unknown> }).authorizationContext = {
-			organizationId: typeof organizationId === "string" ? organizationId : null,
-			locationId: typeof locationId === "string" ? locationId : null,
-			resourceId: typeof resourceId === "string" ? resourceId : null,
+		req.authorizationContext = {
+			organizationId,
+			locationId,
+			resourceId,
 		};
 
 		next();

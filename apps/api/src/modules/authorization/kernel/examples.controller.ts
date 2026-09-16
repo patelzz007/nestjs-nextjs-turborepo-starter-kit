@@ -1,38 +1,46 @@
 import { Controller, Get, Param, Query } from "@nestjs/common";
-import { ApiBearerAuth, ApiOperation, ApiParam, ApiQuery, ApiTags } from "@nestjs/swagger";
+import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiParam, ApiQuery, ApiTags } from "@nestjs/swagger";
+import { z } from "zod";
 
+import {
+	apiPath,
+	AuthorizationDecisionSchema,
+	AuthorizationResultSchema,
+	type AuthorizationDecision,
+	type AuthorizationRequest,
+	type AuthorizationResult,
+	type PermissionAction,
+	type PermissionResource,
+} from "@workspace/shared";
+
+import { createWrappedDto } from "../../../common/dto/response-wrapper";
 import { CurrentUser } from "../decorators/current-user.decorator";
 import type { AuthenticatedUser } from "../../../types/authenticated-user";
 
 import { AuthorizationKernelService } from "./authorization-kernel.service";
-import type { AuthorizationDecision, AuthorizationRequest, AuthorizationResult, PermissionAction, PermissionResource } from "@workspace/shared";
+
+const AuthorizationDecisionResponseSchema = z.object({ decision: AuthorizationDecisionSchema }).strict();
+const FilterConditionsResponseSchema = z.object({ filter: z.record(z.string(), z.unknown()) }).strict();
+
+const WrappedAuthorizationDecisionResponse = createWrappedDto(AuthorizationDecisionResponseSchema, "WrappedAuthorizationDecisionResponse");
+const WrappedAuthorizationResultResponse = createWrappedDto(AuthorizationResultSchema, "WrappedAuthorizationResultResponse");
+const WrappedFilterConditionsResponse = createWrappedDto(FilterConditionsResponseSchema, "WrappedFilterConditionsResponse");
 
 /**
  * Example controller demonstrating Authorization Kernel usage.
- *
- * This controller shows how to:
- * 1. Use `can()` for permission checks
- * 2. Use `filter()` for query filtering
- * 3. Use `explain()` for debugging authorization decisions
- *
- * Note: Auth is handled by global AuthGuard, so no @UseGuards needed here.
  */
 @ApiTags("Authorization Kernel Examples")
 @ApiBearerAuth()
-@Controller("authorization-kernel/examples")
+@Controller(apiPath("/authorization-kernel/examples"))
 export class AuthorizationKernelExamplesController {
 	public constructor(private readonly kernel: AuthorizationKernelService) {}
 
-	/**
-	 * Check if current user can perform an action on a resource.
-	 *
-	 * @example GET /authorization-kernel/examples/can?action=UPDATE&resource=ORDER&resourceId=order-123
-	 */
 	@Get("can")
 	@ApiOperation({
 		summary: "Check permission (can)",
 		description: "Returns ALLOW or DENY decision for the authorization request",
 	})
+	@ApiOkResponse({ type: WrappedAuthorizationDecisionResponse, description: "Authorization decision" })
 	@ApiQuery({ name: "action", enum: ["CREATE", "READ", "UPDATE", "DELETE", "LIST", "MANAGE"] })
 	@ApiQuery({ name: "resource", enum: ["USER", "ORGANIZATION", "LOCATION", "ORDER", "PAYMENT", "INVENTORY"] })
 	@ApiQuery({ name: "resourceId", required: false })
@@ -53,8 +61,8 @@ export class AuthorizationKernelExamplesController {
 				locationId,
 				isSuperAdmin: user.isSuperAdmin,
 			},
-			action: action as PermissionAction,
-			resource: resource as PermissionResource,
+			action: action,
+			resource: resource,
 			resourceId,
 		};
 
@@ -63,16 +71,12 @@ export class AuthorizationKernelExamplesController {
 		return { decision };
 	}
 
-	/**
-	 * Get detailed explanation of authorization decision.
-	 *
-	 * @example GET /authorization-kernel/examples/explain/UPDATE/ORDER/order-123
-	 */
 	@Get("explain/:action/:resource/:resourceId")
 	@ApiOperation({
 		summary: "Explain authorization decision",
 		description: "Returns step-by-step breakdown of the authorization decision process",
 	})
+	@ApiOkResponse({ type: WrappedAuthorizationResultResponse, description: "Authorization explanation" })
 	@ApiParam({ name: "action", enum: ["CREATE", "READ", "UPDATE", "DELETE", "LIST", "MANAGE"] })
 	@ApiParam({ name: "resource", enum: ["USER", "ORGANIZATION", "LOCATION", "ORDER", "PAYMENT", "INVENTORY"] })
 	@ApiParam({ name: "resourceId" })
@@ -91,47 +95,41 @@ export class AuthorizationKernelExamplesController {
 				locationId,
 				isSuperAdmin: user.isSuperAdmin,
 			},
-			action: action as PermissionAction,
-			resource: resource as PermissionResource,
+			action: action,
+			resource: resource,
 			resourceId,
 		};
 
 		return this.kernel.explain(request);
 	}
 
-	/**
-	 * Get filter conditions for querying resources.
-	 *
-	 * @example GET /authorization-kernel/examples/filter?action=READ&resource=ORDER
-	 */
 	@Get("filter")
 	@ApiOperation({
 		summary: "Get filter conditions",
 		description: "Returns Prisma filter conditions for authorized resources",
 	})
+	@ApiOkResponse({ type: WrappedFilterConditionsResponse, description: "Prisma filter for authorized rows" })
 	@ApiQuery({ name: "action", enum: ["CREATE", "READ", "UPDATE", "DELETE", "LIST", "MANAGE"] })
 	@ApiQuery({ name: "resource", enum: ["USER", "ORGANIZATION", "LOCATION", "ORDER", "PAYMENT", "INVENTORY"] })
 	@ApiQuery({ name: "organizationId", required: false })
 	@ApiQuery({ name: "locationId", required: false })
-	public async getFilter(
+	public getFilter(
 		@CurrentUser() user: AuthenticatedUser,
 		@Query("action") action: PermissionAction,
 		@Query("resource") resource: PermissionResource,
 		@Query("organizationId") organizationId?: string,
 		@Query("locationId") locationId?: string,
-	): Promise<{ filter: Record<string, unknown> }> {
-		const request: AuthorizationRequest = {
-			subject: {
+	): { filter: Record<string, unknown> } {
+		const filter = this.kernel.filter(
+			{
 				userId: user.id,
 				organizationId,
 				locationId,
 				isSuperAdmin: user.isSuperAdmin,
 			},
-			action: action as PermissionAction,
-			resource: resource as PermissionResource,
-		};
-
-		const filter = await this.kernel.filter(request);
+			action,
+			resource,
+		);
 
 		return { filter };
 	}

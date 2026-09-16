@@ -1,5 +1,8 @@
 import { SetMetadata, ExecutionContext } from "@nestjs/common";
+import type { FastifyRequest } from "fastify";
 import type { PermissionAction, PermissionResource } from "@workspace/shared";
+
+import { isAuthenticatedUser } from "../../../types/authenticated-user";
 
 /**
  * Authorization metadata key for the new unified @Authorize decorator.
@@ -68,73 +71,57 @@ export interface AuthorizationRequirement<
 	readonly description?: string;
 }
 
+/** Mutable draft used only by {@link AuthorizeBuilder} (public requirement stays readonly). */
+interface AuthorizationRequirementDraft<
+	TAction extends PermissionAction = PermissionAction,
+	TResource extends PermissionResource = PermissionResource,
+	TContext extends Record<string, unknown> = Record<string, unknown>,
+> {
+	action?: TAction;
+	resource?: TResource;
+	resourceId?: string | ResourceIdExtractor | null;
+	context?: TContext | ContextExtractor<ExecutionContext, TContext>;
+	scope?: string;
+	description?: string;
+}
+
+function getHttpRequest(context: ExecutionContext): FastifyRequest {
+	return context.switchToHttp().getRequest<FastifyRequest>();
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return value !== null && typeof value === "object";
+}
+
+function readStringParam(params: unknown, key: string): string | undefined {
+	if (!isRecord(params)) {
+		return undefined;
+	}
+	const value = params[key];
+	return typeof value === "string" ? value : undefined;
+}
+
+function resolveDotPath(root: unknown, path: string): unknown {
+	let current: unknown = root;
+	for (const prop of path.split(".")) {
+		if (!isRecord(current)) {
+			return undefined;
+		}
+		current = current[prop];
+	}
+	return current;
+}
+
+function buildContextFromPaths(fields: Record<string, string>, root: unknown): Record<string, unknown> {
+	const result: Record<string, unknown> = {};
+	for (const [key, path] of Object.entries(fields)) {
+		result[key] = resolveDotPath(root, path);
+	}
+	return result;
+}
+
 /**
  * Unified @Authorize decorator for kernel-first authorization.
- *
- * Replaces the old @RequirePermission decorator with a more flexible,
- * type-safe, and kernel-native approach.
- *
- * @example
- * // Simple permission check
- * @Authorize({ action: "CREATE", resource: "ORDER" })
- * async createOrder() { ... }
- *
- * @example
- * // With resource ID from path param
- * @Authorize({
- *   action: "UPDATE",
- *   resource: "ORDER",
- *   resourceId: "id" // Extracts from req.params.id
- * })
- * async updateOrder(@Param("id") id: string) { ... }
- *
- * @example
- * // With custom resource ID extractor
- * @Authorize({
- *   action: "DELETE",
- *   resource: "ORDER",
- *   resourceId: (ctx) => ctx.switchToHttp().getRequest().params.orderId
- * })
- * async deleteOrder() { ... }
- *
- * @example
- * // With static context
- * @Authorize({
- *   action: "CREATE",
- *   resource: "LOCATION",
- *   context: { organizationId: "org-123" }
- * })
- * async createLocation() { ... }
- *
- * @example
- * // With dynamic context extractor
- * @Authorize({
- *   action: "UPDATE",
- *   resource: "LOCATION",
- *   resourceId: "id",
- *   context: (ctx) => ({
- *     organizationId: ctx.switchToHttp().getRequest().body.organizationId,
- *     locationId: ctx.switchToHttp().getRequest().params.id
- *   })
- * })
- * async updateLocation() { ... }
- *
- * @example
- * // With generic typed context
- * interface OrderContext {
- *   organizationId: string;
- *   orderTotal: number;
- * }
- *
- * @Authorize<"CREATE", "ORDER", OrderContext>({
- *   action: "CREATE",
- *   resource: "ORDER",
- *   context: (ctx) => ({
- *     organizationId: ctx.switchToHttp().getRequest().user.organizationId,
- *     orderTotal: ctx.switchToHttp().getRequest().body.total
- *   })
- * })
- * async createOrder() { ... }
  */
 export function Authorize<
 	TAction extends PermissionAction = PermissionAction,
@@ -144,119 +131,36 @@ export function Authorize<
 	return SetMetadata(AUTHORIZE_KEY, requirement);
 }
 
-/**
- * Helper to create a resource ID extractor from a param name.
- *
- * @param paramName - The name of the path parameter (e.g., "id", "orderId")
- * @returns A resource ID extractor function
- *
- * @example
- * @Authorize({
- *   action: "UPDATE",
- *   resource: "ORDER",
- *   resourceId: fromParam("orderId")
- * })
- * async updateOrder(@Param("orderId") orderId: string) { ... }
- */
 export function fromParam(paramName: string): ResourceIdExtractor {
 	return (context: ExecutionContext): string | null => {
-		const request = context.switchToHttp().getRequest();
-		const value = request.params?.[paramName];
-		return typeof value === "string" ? value : null;
+		const request = getHttpRequest(context);
+		const value = readStringParam(request.params, paramName);
+		return value ?? null;
 	};
 }
 
-/**
- * Helper to create a context extractor from request body fields.
- *
- * @param fields - Object mapping context keys to body field paths
- * @returns A context extractor function
- *
- * @example
- * @Authorize({
- *   action: "CREATE",
- *   resource: "ORDER",
- *   context: fromBody({
- *     organizationId: "organizationId",
- *     locationId: "deliveryLocation.id"
- *   })
- * })
- * async createOrder(@Body() data: CreateOrderDto) { ... }
- */
-export function fromBody<TContext extends Record<string, unknown>>(fields: Record<keyof TContext, string>): ContextExtractor<ExecutionContext, TContext> {
-	return (context: ExecutionContext): TContext => {
-		const request = context.switchToHttp().getRequest();
-		const result = {} as TContext;
-
-		for (const [key, path] of Object.entries(fields)) {
-			// Simple dot-notation path resolver
-			const value = path
-				.split(".")
-				.reduce((obj: Record<string, unknown> | undefined, prop: string) => obj?.[prop] as Record<string, unknown> | undefined, request.body as Record<string, unknown>);
-
-			result[key as keyof TContext] = value as TContext[keyof TContext];
-		}
-
-		return result;
+export function fromBody(fields: Record<string, string>): ContextExtractor {
+	return (context: ExecutionContext): Record<string, unknown> => {
+		const request = getHttpRequest(context);
+		return buildContextFromPaths(fields, request.body);
 	};
 }
 
-/**
- * Helper to create a context extractor from user properties.
- *
- * @param fields - Object mapping context keys to user property paths
- * @returns A context extractor function
- *
- * @example
- * @Authorize({
- *   action: "CREATE",
- *   resource: "LOCATION",
- *   context: fromUser({
- *     organizationId: "organizationId",
- *     isSuperAdmin: "isSuperAdmin"
- *   })
- * })
- * async createLocation() { ... }
- */
-export function fromUser<TContext extends Record<string, unknown>>(fields: Record<keyof TContext, string>): ContextExtractor<ExecutionContext, TContext> {
-	return (context: ExecutionContext): TContext => {
-		const request = context.switchToHttp().getRequest();
-		const result = {} as TContext;
-
-		for (const [key, path] of Object.entries(fields)) {
-			const value = path
-				.split(".")
-				.reduce((obj: Record<string, unknown> | undefined, prop: string) => obj?.[prop] as Record<string, unknown> | undefined, request.user as Record<string, unknown>);
-
-			result[key as keyof TContext] = value as TContext[keyof TContext];
-		}
-
-		return result;
+export function fromUser(fields: Record<string, string>): ContextExtractor {
+	return (context: ExecutionContext): Record<string, unknown> => {
+		const request = getHttpRequest(context);
+		const user = request.user;
+		const root: unknown = isAuthenticatedUser(user) ? user : undefined;
+		return buildContextFromPaths(fields, root);
 	};
 }
 
-/**
- * Type-safe authorization requirement builder for complex scenarios.
- *
- * @example
- * const orderAuth = AuthorizeBuilder<"UPDATE", "ORDER">()
- *   .action("UPDATE")
- *   .resource("ORDER")
- *   .resourceId(fromParam("id"))
- *   .context((ctx) => ({
- *     organizationId: ctx.switchToHttp().getRequest().user.organizationId
- *   }))
- *   .build();
- *
- * @Authorize(orderAuth)
- * async updateOrder() { ... }
- */
 export class AuthorizeBuilder<
 	TAction extends PermissionAction = PermissionAction,
 	TResource extends PermissionResource = PermissionResource,
 	TContext extends Record<string, unknown> = Record<string, unknown>,
 > {
-	private requirement: Partial<AuthorizationRequirement<TAction, TResource, TContext>> = {};
+	private readonly requirement: AuthorizationRequirementDraft<TAction, TResource, TContext> = {};
 
 	public action(action: TAction): this {
 		this.requirement.action = action;
@@ -289,24 +193,23 @@ export class AuthorizeBuilder<
 	}
 
 	public build(): AuthorizationRequirement<TAction, TResource, TContext> {
-		if (!this.requirement.action || !this.requirement.resource) {
+		const action = this.requirement.action;
+		const resource = this.requirement.resource;
+		if (action === undefined || resource === undefined) {
 			throw new Error("AuthorizeBuilder: action and resource are required");
 		}
 
-		return this.requirement as AuthorizationRequirement<TAction, TResource, TContext>;
+		return {
+			action,
+			resource,
+			resourceId: this.requirement.resourceId,
+			context: this.requirement.context,
+			scope: this.requirement.scope,
+			description: this.requirement.description,
+		};
 	}
 }
 
-/**
- * Helper to create multiple authorization requirements (for AND semantics).
- *
- * @example
- * @Authorize(requireAll(
- *   { action: "READ", resource: "USER" },
- *   { action: "UPDATE", resource: "USER" }
- * ))
- * async updateUserProfile() { ... }
- */
 export function requireAll<
 	TAction extends PermissionAction = PermissionAction,
 	TResource extends PermissionResource = PermissionResource,
@@ -315,16 +218,6 @@ export function requireAll<
 	return requirements;
 }
 
-/**
- * Helper to create multiple authorization requirements (for OR semantics).
- *
- * @example
- * @Authorize(requireAny(
- *   { action: "UPDATE", resource: "ORDER" },
- *   { action: "MANAGE", resource: "ORDER" }
- * ))
- * async modifyOrder() { ... }
- */
 export function requireAny<
 	TAction extends PermissionAction = PermissionAction,
 	TResource extends PermissionResource = PermissionResource,

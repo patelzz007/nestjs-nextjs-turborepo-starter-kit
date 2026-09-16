@@ -8,7 +8,6 @@ import { apiPath, type PermissionListItem } from "@workspace/shared";
 import { AuthorizationService } from "../services/authorization.service";
 import { ZodValidationPipe } from "../../../common/pipes/zod-validation.pipe";
 import { Authorize } from "../decorators/authorize.decorator";
-import { GetUser } from "../../auth/decorators/get-user.decorator";
 import { CreatePermissionDto, GrantPermissionToUserDto, SyncUserPermissionsDto, CheckPermissionDto } from "./dtos/permission.dto";
 
 // ── DTOs (only for PATCH — body is optional-field) ───────────────────────────

@@ -10,7 +10,6 @@ import { createWrappedDto } from "../../common/dto/response-wrapper";
 // AuthGuard applies to this controller automatically. Do not "fix" this into
 // a module import; it would create an unnecessary coupling.
 import { GetUser } from "../auth/decorators/get-user.decorator";
-import { Authorize } from "../authorization/decorators/authorize.decorator";
 import type { AccessTokenPayload } from "../auth/services/token.service";
 
 const WrappedSessionStatusResponse = createWrappedDto(SessionStatusSchema, "WrappedSessionStatusResponse");
@@ -32,8 +31,6 @@ const WrappedSessionStatusResponse = createWrappedDto(SessionStatusSchema, "Wrap
 @ApiTags("Sessions")
 @Controller(apiPath("/session"))
 export class SessionStatusController {
-	public constructor() {}
-
 	@ApiBearerAuth()
 	@Get()
 	@ApiOperation({ summary: "Current session status (requires a valid access token)" })

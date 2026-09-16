@@ -1,8 +1,43 @@
 import { Injectable, Logger } from "@nestjs/common";
-import type { AuthorizationRequest, AuthorizationResult, AuthorizationEvaluationStep, PolicyConditions, PolicyCondition, PolicyRule, PolicyValue } from "@workspace/shared";
-import { PolicyConditionsSchema } from "@workspace/shared";
+import type {
+	AuthorizationContext,
+	AuthorizationRequest,
+	AuthorizationResult,
+	AuthorizationEvaluationStep,
+	PolicyCondition,
+	PolicyRule,
+	PolicyValue,
+} from "@workspace/shared";
+import { PolicyConditionsSchema, PolicyValueSchema } from "@workspace/shared";
 
+import { normalizeCaughtError } from "../../../common/utils/caught-error";
 import { PrismaService } from "../../../prisma/prisma.service";
+
+function readSubjectField(subject: AuthorizationContext, key: string): unknown {
+	switch (key) {
+		case "userId":
+			return subject.userId;
+		case "organizationId":
+			return subject.organizationId ?? null;
+		case "locationId":
+			return subject.locationId ?? null;
+		case "isSuperAdmin":
+			return subject.isSuperAdmin ?? null;
+		case "roles":
+			return subject.roles ?? null;
+		default:
+			return subject.attributes?.[key] ?? null;
+	}
+}
+
+function toPolicyValue(value: unknown): PolicyValue {
+	const parsed = PolicyValueSchema.safeParse(value);
+	return parsed.success ? parsed.data : null;
+}
+
+function isInArrayMember(value: unknown): value is string | number {
+	return typeof value === "string" || typeof value === "number";
+}
 
 /**
  * Policy Engine - evaluates Zod-validated policy DSL.
@@ -59,7 +94,7 @@ export class PolicyEngineService {
 					evaluation.push({
 						source: "policy",
 						effect: policy.effect === "ALLOW" ? "ALLOW" : "DENY",
-						reason: `Policy "${policy.name}" (v${policy.version}) matched`,
+						reason: `Policy "${policy.name}" (v${String(policy.version)}) matched`,
 						details: { policyId: policy.id },
 					});
 
@@ -75,15 +110,16 @@ export class PolicyEngineService {
 					evaluation.push({
 						source: "policy",
 						effect: "NO_MATCH",
-						reason: `Policy "${policy.name}" (v${policy.version}) did not match`,
+						reason: `Policy "${policy.name}" (v${String(policy.version)}) did not match`,
 					});
 				}
 			} catch (error) {
-				this.logger.error(`Failed to evaluate policy ${policy.id}: ${(error as Error).message}`);
+				const message = normalizeCaughtError(error).message;
+				this.logger.error(`Failed to evaluate policy ${policy.id}: ${message}`);
 				evaluation.push({
 					source: "policy",
 					effect: "NO_MATCH",
-					reason: `Policy evaluation error: ${(error as Error).message}`,
+					reason: `Policy evaluation error: ${message}`,
 				});
 			}
 		}
@@ -135,7 +171,7 @@ export class PolicyEngineService {
 			// Reference to actor attribute like $user.organizationId
 			compareValue = this.resolveValueRef(condition.valueRef, request);
 		} else {
-			compareValue = condition.value;
+			compareValue = condition.value ?? null;
 		}
 
 		// Apply operator
@@ -149,7 +185,7 @@ export class PolicyEngineService {
 	private resolveField(field: string, request: AuthorizationRequest): unknown {
 		if (field.startsWith("$user.")) {
 			const key = field.slice(6);
-			return request.subject[key as keyof typeof request.subject] ?? null;
+			return readSubjectField(request.subject, key);
 		}
 
 		if (field.startsWith("$resource.")) {
@@ -167,13 +203,12 @@ export class PolicyEngineService {
 	private resolveValueRef(valueRef: string, request: AuthorizationRequest): PolicyValue {
 		if (valueRef.startsWith("$user.")) {
 			const key = valueRef.slice(6);
-			const value = request.subject[key as keyof typeof request.subject];
-			return value !== undefined ? (value as PolicyValue) : null;
+			return toPolicyValue(readSubjectField(request.subject, key));
 		}
 
 		if (valueRef.startsWith("$resource.")) {
 			const key = valueRef.slice(10);
-			return (request.resourceAttributes?.[key] as PolicyValue) ?? null;
+			return toPolicyValue(request.resourceAttributes?.[key]);
 		}
 
 		return null;
@@ -191,16 +226,16 @@ export class PolicyEngineService {
 				return fieldValue !== compareValue;
 			}
 			case "in": {
-				if (!Array.isArray(compareValue)) {
+				if (!Array.isArray(compareValue) || !isInArrayMember(fieldValue)) {
 					return false;
 				}
-				return compareValue.includes(fieldValue as string | number);
+				return compareValue.includes(fieldValue);
 			}
 			case "not_in": {
-				if (!Array.isArray(compareValue)) {
+				if (!Array.isArray(compareValue) || !isInArrayMember(fieldValue)) {
 					return false;
 				}
-				return !compareValue.includes(fieldValue as string | number);
+				return !compareValue.includes(fieldValue);
 			}
 			case "contains": {
 				if (typeof fieldValue !== "string" || typeof compareValue !== "string") {

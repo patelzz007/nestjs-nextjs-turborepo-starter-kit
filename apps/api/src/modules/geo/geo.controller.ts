@@ -15,7 +15,6 @@ import {
 import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe";
 
 import { RequirePermission } from "../auth/decorators/require-permission.decorator";
-import { GetUser } from "../auth/decorators/get-user.decorator";
 import { Authorize } from "../authorization/decorators/authorize.decorator";
 
 import {

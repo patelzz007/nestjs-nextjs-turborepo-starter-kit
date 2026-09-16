@@ -27,7 +27,7 @@ export class PolicyControlPlaneController {
 		@GetUser() user: AccessTokenPayload,
 		@Body(new ZodValidationPipe(CreatePolicyDraftSchema)) body: CreatePolicyDraftInput,
 	): Promise<{ draftId: string }> {
-		return this.policies.createDraft(user.sub, user.organizationId ?? null, body);
+		return this.policies.createDraft(user.sub, null, body);
 	}
 
 	@Post("drafts/:draftId/simulate")
