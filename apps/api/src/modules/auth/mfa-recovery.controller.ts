@@ -15,6 +15,7 @@ import { createWrappedArrayDto, createWrappedDto } from "../../common/dto/respon
 import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe";
 import { GetUser } from "./decorators/get-user.decorator";
 import { SuperAdminOnly } from "./decorators/super-admin.decorator";
+import { KernelIntegrationHelper } from "../authorization/kernel/kernel-integration.helper";
 import { MfaRecoveryService } from "./services/mfa-recovery.service";
 
 const WrappedMfaRecoveryStatusResponse = createWrappedDto(MfaRecoveryStatusResponseSchema, "WrappedMfaRecoveryStatusResponse");

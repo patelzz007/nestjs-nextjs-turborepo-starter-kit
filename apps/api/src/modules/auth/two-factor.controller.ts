@@ -31,6 +31,7 @@ import { GetUser } from "./decorators/get-user.decorator";
 import { Public } from "./decorators/public.decorator";
 import { RlsBypass } from "./decorators/rls-bypass.decorator";
 import { SetAuthCookiesInterceptor } from "./interceptors/set-auth-cookies.interceptor";
+import { KernelIntegrationHelper } from "../authorization/kernel/kernel-integration.helper";
 import { TwoFactorService } from "./services/two-factor.service";
 
 const WrappedTwoFactorSetupResponse = createWrappedDto(TwoFactorSetupResponseSchema, "WrappedTwoFactorSetupResponse");
