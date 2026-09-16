@@ -39,10 +39,11 @@ export class RewardsAdminInvitesController {
 	@ApiOperation({ summary: "Create merchant invite" })
 	@ApiBody({ type: AdminCreateMerchantInviteDto })
 	@ApiOkResponse({ description: "Invite created with token" })
-	public async createInvite(
+	public createInvite(
 		@GetUser() user: AccessTokenPayload,
 		@Body(new ZodValidationPipe(apiContract.rewardsAdmin.createInvite.input)) body: Parameters<RewardsAdminService["createMerchantInvite"]>[1],
-	): Promise<ReturnType<RewardsAdminService["createMerchantInvite"]>> {
+	): ReturnType<RewardsAdminService["createMerchantInvite"]> {
+		return this.rewardsAdminService.createMerchantInvite(user.sub, body);
 	}
 
 	@RequirePermission("MANAGE", "MERCHANT_ORG")
@@ -79,10 +80,11 @@ export class RewardsAdminRewardsController {
 	@ApiOperation({ summary: "Approve a pending reward (no body required)" })
 	@ApiBody({ type: RewardsEmptyBodyDto, required: false })
 	@ApiOkResponse({ description: "Approved reward" })
-	public async approveReward(
+	public approveReward(
 		@GetUser() user: AccessTokenPayload,
 		@Param(new ZodValidationPipe(apiContract.rewardsAdmin.approveReward.input)) params: { rewardId: string },
-	): Promise<ReturnType<RewardsAdminService["approveReward"]>> {
+	): ReturnType<RewardsAdminService["approveReward"]> {
+		return this.rewardsAdminService.approveReward(user.sub, params.rewardId);
 	}
 
 	@RequirePermission("MANAGE", "REWARD")
@@ -90,11 +92,12 @@ export class RewardsAdminRewardsController {
 	@ApiOperation({ summary: "Reject a pending reward" })
 	@ApiBody({ type: AdminRejectRewardDto })
 	@ApiOkResponse({ description: "Reward returned to draft" })
-	public async rejectReward(
+	public rejectReward(
 		@GetUser() user: AccessTokenPayload,
 		@Param(new ZodValidationPipe(z.object({ rewardId: UuidParamSchema }).strict())) params: { rewardId: string },
 		@Body(new ZodValidationPipe(apiContract.rewardsAdmin.rejectReward.input)) body: Parameters<RewardsAdminService["rejectReward"]>[2],
-	): Promise<ReturnType<RewardsAdminService["rejectReward"]>> {
+	): ReturnType<RewardsAdminService["rejectReward"]> {
+		return this.rewardsAdminService.rejectReward(user.sub, params.rewardId, body);
 	}
 }
 

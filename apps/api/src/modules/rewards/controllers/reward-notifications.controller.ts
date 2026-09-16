@@ -31,9 +31,10 @@ export class RewardNotificationsController {
 	@ApiOperation({ summary: "Mark reward notifications as read" })
 	@ApiBody({ type: MarkRewardNotificationsReadDto })
 	@ApiOkResponse({ description: "Notifications marked read" })
-	public async markRead(
+	public markRead(
 		@GetUser() user: AccessTokenPayload,
 		@Body(new ZodValidationPipe(apiContract.rewardNotifications.read.input)) body: { notificationIds?: string[]; markAll?: boolean },
-	): Promise<ReturnType<RewardNotificationService["markRead"]>> {
+	): ReturnType<RewardNotificationService["markRead"]> {
+		return this.notificationService.markRead(user.sub, body.notificationIds, body.markAll);
 	}
 }

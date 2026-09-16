@@ -28,9 +28,10 @@ export class RewardLegalController {
 	@ApiOperation({ summary: "Accept rewards terms and privacy policy" })
 	@ApiBody({ type: AcceptRewardLegalDto })
 	@ApiOkResponse({ description: "Legal acceptance recorded" })
-	public async acceptLegal(
+	public acceptLegal(
 		@GetUser() user: AccessTokenPayload,
 		@Body(new ZodValidationPipe(apiContract.legal.accept.input)) body: { termsVersion: string; privacyVersion: string },
-	): Promise<ReturnType<RewardLegalService["accept"]>> {
+	): ReturnType<RewardLegalService["accept"]> {
+		return this.legalService.accept(user.sub, body.termsVersion, body.privacyVersion);
 	}
 }

@@ -37,10 +37,11 @@ export class ConsumerClaimsController {
 	@ApiOperation({ summary: "Claim a reward after OTP verification" })
 	@ApiBody({ type: CreateRewardClaimDto })
 	@ApiOkResponse({ description: "Claim created with backup code" })
-	public async createClaim(
+	public createClaim(
 		@GetUser() user: AccessTokenPayload,
 		@Body(new ZodValidationPipe(apiContract.claims.create.input)) body: Parameters<ClaimService["createClaim"]>[1],
-	): Promise<ReturnType<ClaimService["createClaim"]>> {
+	): ReturnType<ClaimService["createClaim"]> {
+		return this.claimService.createClaim(user.sub, body);
 	}
 
 	@Get()
