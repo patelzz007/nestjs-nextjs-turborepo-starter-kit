@@ -67,7 +67,10 @@ export class CapabilityDefinitionService implements OnModuleInit {
 
 	public async syncPlatformCapabilitiesFromPermissions(): Promise<void> {
 		await this.prisma.$transaction(async (tx) => {
-			await tx.$executeRawUnsafe("SET LOCAL app.rls_bypass = 'true'");
+			await tx.$executeRaw`RESET ROLE`;
+			await tx.$executeRaw`SELECT set_config('app.current_user_id', '', true)`;
+			await tx.$executeRaw`SELECT set_config('app.rls_bypass', 'true', true)`;
+			await tx.$executeRaw`SELECT set_config('app.current_organization_id', '', true)`;
 			
 			const permissions = await tx.permission.findMany({
 				where: { isDeleted: false },
@@ -112,6 +115,7 @@ export class CapabilityDefinitionService implements OnModuleInit {
 				});
 			}
 
+			await tx.$executeRaw`SET ROLE app_runtime`;
 			this.invalidateCache();
 			this.logger.log(`Synced ${String(permissions.length)} platform capability definition(s) from permissions`);
 		});
