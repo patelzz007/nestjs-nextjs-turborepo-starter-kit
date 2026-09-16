@@ -31,7 +31,10 @@ import {
 @ApiTags("Geo")
 @Controller(apiPath("/geo"))
 export class GeoController {
-	public constructor(private readonly geoService: GeoService) {}
+	public constructor(
+		private readonly geoService: GeoService,
+		private readonly kernelHelper: KernelIntegrationHelper,
+	) {}
 
 	// ── Stats ──────────────────────────────────────────────────────────
 
@@ -64,7 +67,9 @@ export class GeoController {
 	@Post("import")
 	@ApiOperation({ summary: "Bulk import geo data" })
 	@ApiOkResponse({ description: "Import result with created/updated/skipped counts" })
-	public importData(@Body(new ZodValidationPipe(GeoImportInputSchema)) body: Parameters<GeoService["importData"]>[0]): Promise<ImportResult> {
+	public async importData(@GetUser("sub") userId: string, @Body(new ZodValidationPipe(GeoImportInputSchema)) body: Parameters<GeoService["importData"]>[0]): Promise<ImportResult> {
+		await this.kernelHelper.requireAction(userId, "CREATE", "USER");
+		
 		return this.geoService.importData(body);
 	}
 

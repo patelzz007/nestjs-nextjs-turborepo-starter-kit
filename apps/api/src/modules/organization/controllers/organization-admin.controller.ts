@@ -7,6 +7,7 @@ import { GetUser } from "../../auth/decorators/get-user.decorator";
 import { RequirePermission } from "../../auth/decorators/require-permission.decorator";
 import { SuperAdminOnly } from "../../auth/decorators/super-admin.decorator";
 import type { AccessTokenPayload } from "../../auth/services/token.service";
+import { KernelIntegrationHelper } from "../../authorization/kernel/kernel-integration.helper";
 import { OrganizationProvisioningService } from "../services/organization-provisioning.service";
 
 @ApiTags("Organizations")

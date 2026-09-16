@@ -13,7 +13,10 @@ import { SupportAccessService } from "./support-access.service";
 @ApiTags("Support Access")
 @Controller(apiPath("/support-access"))
 export class SupportAccessController {
-	public constructor(private readonly supportAccess: SupportAccessService) {}
+	public constructor(
+		private readonly supportAccess: SupportAccessService,
+		private readonly kernelHelper: KernelIntegrationHelper,
+	) {}
 
 	@Post("request")
 	@SuperAdminOnly()
@@ -23,6 +26,8 @@ export class SupportAccessController {
 		@GetUser() user: AccessTokenPayload,
 		@Body(new ZodValidationPipe(SupportAccessGrantRequestSchema)) body: SupportAccessGrantRequestInput,
 	): Promise<SupportAccessGrantResponse> {
+		await this.kernelHelper.requireAction(user.sub, "CREATE", "USER", { isSuperAdmin: true });
+		
 		return this.supportAccess.requestGrant(user.sub, body);
 	}
 
@@ -38,6 +43,8 @@ export class SupportAccessController {
 	@SuperAdminOnly()
 	@ApiOkResponse({ description: "Support access grant revoked" })
 	public async revoke(@GetUser() user: AccessTokenPayload, @Param("grantId") grantId: string): Promise<{ message: string }> {
+		await this.kernelHelper.requireResourceAccess(user.sub, "DELETE", "USER", grantId, { isSuperAdmin: true });
+		
 		await this.supportAccess.revoke(grantId, user.sub);
 		return { message: "Support access revoked" };
 	}

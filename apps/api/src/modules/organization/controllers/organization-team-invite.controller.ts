@@ -23,6 +23,7 @@ import { Public } from "../../auth/decorators/public.decorator";
 import { RlsBypass } from "../../auth/decorators/rls-bypass.decorator";
 import { SetAuthCookiesInterceptor } from "../../auth/interceptors/set-auth-cookies.interceptor";
 import type { AccessTokenPayload } from "../../auth/services/token.service";
+import { KernelIntegrationHelper } from "../../authorization/kernel/kernel-integration.helper";
 import { OrganizationMembershipService } from "../services/organization-membership.service";
 
 @ApiTags("Organizations")
