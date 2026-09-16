@@ -2,6 +2,7 @@ import { Controller } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 
 import { GeneratedSampleCategoryController } from "./sample-category.controller.generated";
+import { SampleCategoryService } from "./sample-category.service";
 
 /**
  * Developer-owned controller extension point with Authorization Kernel integration.
@@ -15,11 +16,8 @@ import { GeneratedSampleCategoryController } from "./sample-category.controller.
 @ApiTags("Sample Category")
 @Controller()
 export class SampleCategoryController extends GeneratedSampleCategoryController {
-	public constructor(
-		...baseParams: ConstructorParameters<typeof GeneratedSampleCategoryController>,
-		
-	) {
-		super(...baseParams);
+	public constructor(protected readonly service: SampleCategoryService) {
+		super(service);
 	}
 
 	// Override generated methods here to add kernel authorization checks
