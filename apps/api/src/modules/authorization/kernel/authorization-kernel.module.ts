@@ -6,6 +6,7 @@ import { AuthorizationKernelService } from "./authorization-kernel.service";
 import { PolicyEngineService } from "./policy-engine.service";
 import { AclService } from "./acl.service";
 import { AuthorizationAuditKernelService } from "./authorization-audit-kernel.service";
+import { AuthorizationKernelExamplesController } from "./examples.controller";
 
 /**
  * Authorization Kernel Module - provides the core authorization services.
@@ -17,6 +18,7 @@ import { AuthorizationAuditKernelService } from "./authorization-audit-kernel.se
  * - AuthorizationAuditKernelService: Audit trail for authorization decisions
  */
 @Module({
+	controllers: [AuthorizationKernelExamplesController],
 	providers: [
 		PrismaService,
 		AuthorizationKernelService,
