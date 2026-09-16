@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { Controller } from "@nestjs/common";
 
 import { GeneratedSampleCategoryController } from "./sample-category.controller.generated";
 
@@ -11,7 +11,7 @@ import { GeneratedSampleCategoryController } from "./sample-category.controller.
  *
  * Routes inherit from the generated base and can be extended with custom logic.
  */
-@Injectable()
+@Controller()
 export class SampleCategoryController extends GeneratedSampleCategoryController {
 	public constructor(
 		...baseParams: ConstructorParameters<typeof GeneratedSampleCategoryController>,
