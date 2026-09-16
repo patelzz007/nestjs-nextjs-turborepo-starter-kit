@@ -21,7 +21,8 @@
 		"db:migrate:status": "dotenv -e .env -- prisma migrate status",
 		"db:seed": "dotenv -e .env -- tsx prisma/seed.ts",
 		"db:studio": "dotenv -e .env -- prisma studio",
-		"db:reset": "dotenv -e .env -- prisma migrate reset --force && pnpm db:generate && pnpm db:seed",
+		"db:reset": "dotenv -e .env -- prisma migrate reset --force && pnpm db:generate && pnpm db:fix-role && pnpm db:seed",
+		"db:fix-role": "dotenv -e .env -- psql $DATABASE_URL -f prisma/scripts/fix-app-runtime-role.sql",
 		"telescope:cli": "tsx scripts/telescope-cli.ts",
 		"telescope:docs": "tsx scripts/gen-telescope-docs.ts",
 		"kyb:backfill": "dotenv -e .env -- tsx scripts/backfill-kyb-documents.ts"
