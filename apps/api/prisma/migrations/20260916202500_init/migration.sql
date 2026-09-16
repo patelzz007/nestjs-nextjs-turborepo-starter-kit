@@ -17,7 +17,19 @@ CREATE TYPE "MfaRecoveryRequestStatus" AS ENUM ('PENDING', 'APPROVED', 'DENIED',
 CREATE TYPE "PermissionAction" AS ENUM ('CREATE', 'READ', 'UPDATE', 'DELETE', 'LIST', 'MANAGE');
 
 -- CreateEnum
-CREATE TYPE "PermissionResource" AS ENUM ('USER', 'PROFILE', 'ROLE', 'PERMISSION', 'ADMIN_DASHBOARD', 'SYSTEM_SETTINGS', 'URL', 'TAG', 'API_KEY', 'ANALYTICS', 'AUDIT_LOG', 'REPORT', 'EMAIL', 'GEO', 'REWARD', 'MERCHANT_ORG', 'REDEMPTION', 'SAMPLE_CATEGORY', 'PRODUCT', 'DEVTOOLS');
+CREATE TYPE "PermissionResource" AS ENUM ('USER', 'PROFILE', 'ROLE', 'PERMISSION', 'ADMIN_DASHBOARD', 'SYSTEM_SETTINGS', 'URL', 'TAG', 'API_KEY', 'ANALYTICS', 'AUDIT_LOG', 'REPORT', 'EMAIL', 'GEO', 'REWARD', 'MERCHANT_ORG', 'REDEMPTION', 'SAMPLE_CATEGORY', 'PRODUCT', 'DEVTOOLS', 'ORDER', 'PAYMENT', 'INVENTORY', 'ORGANIZATION', 'LOCATION');
+
+-- CreateEnum
+CREATE TYPE "PermissionScope" AS ENUM ('GLOBAL', 'ORGANIZATION', 'LOCATION', 'RESOURCE', 'OWN');
+
+-- CreateEnum
+CREATE TYPE "AclEffect" AS ENUM ('ALLOW', 'DENY');
+
+-- CreateEnum
+CREATE TYPE "PolicyEffect" AS ENUM ('ALLOW', 'DENY');
+
+-- CreateEnum
+CREATE TYPE "AuthorizationDecision" AS ENUM ('ALLOW', 'DENY');
 
 -- CreateEnum
 CREATE TYPE "CapabilityScope" AS ENUM ('PLATFORM', 'MERCHANT', 'ADMIN');
@@ -175,6 +187,7 @@ CREATE TABLE "permissions" (
     "action" "PermissionAction" NOT NULL,
     "resource" "PermissionResource" NOT NULL,
     "description" TEXT,
+    "scope" "PermissionScope" NOT NULL DEFAULT 'GLOBAL',
     "group" VARCHAR(100),
     "isSystem" BOOLEAN NOT NULL DEFAULT false,
     "conditions" JSONB,
@@ -352,6 +365,78 @@ CREATE TABLE "role_permissions" (
     "updatedAt" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
 
     CONSTRAINT "role_permissions_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "resource_acls" (
+    "id" TEXT NOT NULL,
+    "subject_type" VARCHAR(50) NOT NULL,
+    "subject_id" TEXT NOT NULL,
+    "action" VARCHAR(50) NOT NULL,
+    "resource_type" VARCHAR(50) NOT NULL,
+    "resource_id" TEXT,
+    "effect" "AclEffect" NOT NULL,
+    "scope" "PermissionScope",
+    "organization_id" TEXT,
+    "location_id" TEXT,
+    "conditions" JSONB,
+    "expires_at" BIGINT,
+    "assigned_by" TEXT,
+    "reason" TEXT,
+    "is_deleted" BOOLEAN NOT NULL DEFAULT false,
+    "deleted_at" BIGINT,
+    "createdAt" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
+    "updatedAt" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
+
+    CONSTRAINT "resource_acls_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "policy_definitions" (
+    "id" TEXT NOT NULL,
+    "name" VARCHAR(200) NOT NULL,
+    "description" TEXT,
+    "version" INTEGER NOT NULL DEFAULT 1,
+    "effect" "PolicyEffect" NOT NULL,
+    "scope" "PermissionScope" NOT NULL,
+    "actions" TEXT[],
+    "resources" TEXT[],
+    "organization_id" TEXT,
+    "location_id" TEXT,
+    "conditions" JSONB,
+    "is_active" BOOLEAN NOT NULL DEFAULT true,
+    "published_at" BIGINT,
+    "published_by" TEXT,
+    "superseded_by" TEXT,
+    "is_deleted" BOOLEAN NOT NULL DEFAULT false,
+    "deleted_at" BIGINT,
+    "createdAt" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
+    "updatedAt" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
+
+    CONSTRAINT "policy_definitions_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "authorization_audits" (
+    "id" TEXT NOT NULL,
+    "actor_id" TEXT,
+    "organization_id" TEXT,
+    "location_id" TEXT,
+    "action" VARCHAR(120) NOT NULL,
+    "resource" VARCHAR(120) NOT NULL,
+    "resource_id" TEXT,
+    "decision" "AuthorizationDecision" NOT NULL,
+    "reason" TEXT,
+    "policy_ids" TEXT[] DEFAULT ARRAY[]::TEXT[],
+    "acl_ids" TEXT[] DEFAULT ARRAY[]::TEXT[],
+    "evaluation" JSONB,
+    "ip_address" VARCHAR(45),
+    "user_agent" TEXT,
+    "request_id" VARCHAR(64),
+    "duration_ms" INTEGER,
+    "createdAt" BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM now()) * 1000)::bigint,
+
+    CONSTRAINT "authorization_audits_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -1404,7 +1489,7 @@ CREATE UNIQUE INDEX "roles_name_key" ON "roles"("name");
 CREATE INDEX "roles_parent_id_idx" ON "roles"("parent_id");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "permissions_action_resource_key" ON "permissions"("action", "resource");
+CREATE UNIQUE INDEX "permissions_action_resource_scope_key" ON "permissions"("action", "resource", "scope");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "capability_definitions_slug_key" ON "capability_definitions"("slug");
@@ -1474,6 +1559,45 @@ CREATE UNIQUE INDEX "user_permissions_userId_permissionId_key" ON "user_permissi
 
 -- CreateIndex
 CREATE UNIQUE INDEX "role_permissions_roleId_permissionId_key" ON "role_permissions"("roleId", "permissionId");
+
+-- CreateIndex
+CREATE INDEX "resource_acls_subject_type_subject_id_idx" ON "resource_acls"("subject_type", "subject_id");
+
+-- CreateIndex
+CREATE INDEX "resource_acls_resource_type_resource_id_idx" ON "resource_acls"("resource_type", "resource_id");
+
+-- CreateIndex
+CREATE INDEX "resource_acls_organization_id_idx" ON "resource_acls"("organization_id");
+
+-- CreateIndex
+CREATE INDEX "resource_acls_location_id_idx" ON "resource_acls"("location_id");
+
+-- CreateIndex
+CREATE INDEX "policy_definitions_organization_id_idx" ON "policy_definitions"("organization_id");
+
+-- CreateIndex
+CREATE INDEX "policy_definitions_location_id_idx" ON "policy_definitions"("location_id");
+
+-- CreateIndex
+CREATE INDEX "policy_definitions_is_active_idx" ON "policy_definitions"("is_active");
+
+-- CreateIndex
+CREATE INDEX "authorization_audits_actor_id_idx" ON "authorization_audits"("actor_id");
+
+-- CreateIndex
+CREATE INDEX "authorization_audits_organization_id_idx" ON "authorization_audits"("organization_id");
+
+-- CreateIndex
+CREATE INDEX "authorization_audits_location_id_idx" ON "authorization_audits"("location_id");
+
+-- CreateIndex
+CREATE INDEX "authorization_audits_decision_idx" ON "authorization_audits"("decision");
+
+-- CreateIndex
+CREATE INDEX "authorization_audits_action_idx" ON "authorization_audits"("action");
+
+-- CreateIndex
+CREATE INDEX "authorization_audits_createdAt_idx" ON "authorization_audits"("createdAt");
 
 -- CreateIndex
 CREATE INDEX "refresh_tokens_userId_idx" ON "refresh_tokens"("userId");

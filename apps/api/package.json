@@ -9,8 +9,8 @@
 		"start": "node dist/main.js",
 		"db:push": "dotenv -e .env -- prisma db push --accept-data-loss && pnpm db:apply-security",
 		"db:apply-security": "dotenv -e .env -- tsx scripts/apply-rls.ts",
-		"db:check-rls-manifest": "tsx scripts/check-rls-manifest.ts",
 		"db:rls": "pnpm db:apply-security",
+		"db:check-rls-manifest": "tsx scripts/check-rls-manifest.ts",
 		"lint": "eslint",
 		"format": "prettier --write \"**/*.{ts,tsx}\"",
 		"typecheck": "cross-env NODE_OPTIONS=--max-old-space-size=8192 tsc -p tsconfig.typecheck.json",
@@ -23,9 +23,7 @@
 		"db:migrate:status": "dotenv -e .env -- prisma migrate status",
 		"db:seed": "dotenv -e .env -- tsx prisma/seed.ts",
 		"db:studio": "dotenv -e .env -- prisma studio",
-		"db:reset": "dotenv -e .env -- prisma migrate reset --force && pnpm db:generate && pnpm db:apply-security && pnpm db:seed",
-		"telescope:cli": "tsx scripts/telescope-cli.ts",
-		"telescope:docs": "tsx scripts/gen-telescope-docs.ts",
+		"db:reset": "dotenv -e .env -- prisma migrate reset --force && pnpm db:generate",
 		"kyb:backfill": "dotenv -e .env -- tsx scripts/backfill-kyb-documents.ts"
 	},
 	"dependencies": {

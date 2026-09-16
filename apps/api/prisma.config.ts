@@ -18,7 +18,7 @@ export default defineConfig({
 	schema: resolve(import.meta.dirname, "prisma/schema.prisma"),
 	migrations: {
 		path: resolve(import.meta.dirname, "prisma/migrations"),
-		seed: "tsx prisma/seed.ts",
+		seed: "tsx prisma/seed-bootstrap.ts",
 	},
 	datasource: {
 		url: databaseUrl,

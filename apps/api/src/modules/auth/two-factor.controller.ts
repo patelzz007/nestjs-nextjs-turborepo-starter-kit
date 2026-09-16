@@ -31,6 +31,7 @@ import { GetUser } from "./decorators/get-user.decorator";
 import { Public } from "./decorators/public.decorator";
 import { RlsBypass } from "./decorators/rls-bypass.decorator";
 import { SetAuthCookiesInterceptor } from "./interceptors/set-auth-cookies.interceptor";
+import { Authorize } from "../authorization/decorators/authorize.decorator";
 import { TwoFactorService } from "./services/two-factor.service";
 
 const WrappedTwoFactorSetupResponse = createWrappedDto(TwoFactorSetupResponseSchema, "WrappedTwoFactorSetupResponse");
@@ -57,6 +58,7 @@ export class TwoFactorController {
 	@ApiBearerAuth()
 	@Post("/2fa/enable")
 	@HttpCode(200)
+	@Authorize({ action: "UPDATE", resource: "USER", description: "User can enable their own 2FA" })
 	@ApiOperation({ summary: "Confirm 2FA enrollment with a TOTP code" })
 	@ApiOkResponse({ type: WrappedTwoFactorMessageResponse })
 	public async enableTwoFactor(
@@ -70,6 +72,7 @@ export class TwoFactorController {
 	@ApiBearerAuth()
 	@Post("/2fa/rotate")
 	@HttpCode(200)
+	@Authorize({ action: "UPDATE", resource: "USER", description: "User can rotate their own 2FA" })
 	@ApiOperation({ summary: "Rotate 2FA after confirming password and current TOTP or backup code" })
 	@ApiOkResponse({ type: WrappedTwoFactorSetupResponse })
 	public async rotateTwoFactor(

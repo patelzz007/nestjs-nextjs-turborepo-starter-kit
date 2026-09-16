@@ -16,6 +16,7 @@ import { SetAuthCookiesInterceptor } from "../auth/interceptors/set-auth-cookies
 import { extractClientInfo } from "../../common/utils/client-info";
 import { readFirstHeader } from "../../common/utils/http-headers";
 import type { RefreshTokenPayload } from "../auth/services/token.service";
+import { Authorize } from "../authorization/decorators/authorize.decorator";
 
 import { SessionsService } from "./sessions.service";
 
@@ -67,6 +68,11 @@ export class SessionsController {
 
 	@Public()
 	@UseGuards(RefreshTokenGuard)
+	@Authorize({
+		action: "DELETE",
+		resource: "USER",
+		description: "Logout from current device",
+	})
 	@Post("/logout")
 	@ApiOperation({ summary: "Logout from the current device" })
 	@ApiOkResponse({ type: WrappedLogoutResponse, description: "Logged out from current device" })
@@ -80,6 +86,7 @@ export class SessionsController {
 	@Public()
 	@Post("/logout-all")
 	@UseGuards(RefreshTokenGuard)
+	@Authorize({ action: "DELETE", resource: "USER", description: "Logout from all devices" })
 	@ApiOperation({ summary: "Logout from all devices" })
 	@ApiOkResponse({ type: WrappedLogoutAllResponse, description: "Logged out from all devices" })
 	@UseInterceptors(ClearAuthCookiesInterceptor)

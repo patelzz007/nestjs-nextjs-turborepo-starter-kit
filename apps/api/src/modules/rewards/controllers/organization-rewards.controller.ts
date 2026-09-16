@@ -96,6 +96,7 @@ export class OrganizationKybController {
 		@Body(new ZodValidationPipe(MerchantKybSubmissionFieldsSchema)) body: z.output<typeof MerchantKybSubmissionFieldsSchema>,
 	): Promise<MerchantKybProfileResponse> {
 		await this.organizationRewardAuth.resolveOrganizationFromSlug(user.sub, params.orgSlug);
+
 		return this.merchantKyb.submitKyb(user.sub, params.orgSlug, body);
 	}
 
@@ -146,7 +147,7 @@ export class OrganizationRewardsController {
 	@ApiOperation({ summary: "Create a draft reward" })
 	@ApiBody({ type: MerchantCreateRewardDto })
 	@ApiOkResponse({ description: "Created reward" })
-	public createReward(
+	public async createReward(
 		@GetMerchantActor() actor: MerchantActor,
 		@Param(new ZodValidationPipe(OrganizationSlugParamSchema)) _params: z.output<typeof OrganizationSlugParamSchema>,
 		@Body(new ZodValidationPipe(MerchantCreateRewardSchema)) body: Parameters<MerchantRewardService["createReward"]>[1],
@@ -158,7 +159,7 @@ export class OrganizationRewardsController {
 	@ApiOperation({ summary: "Update a draft or pending reward" })
 	@ApiBody({ type: MerchantUpdateRewardDto })
 	@ApiOkResponse({ description: "Updated reward" })
-	public updateReward(
+	public async updateReward(
 		@GetMerchantActor() actor: MerchantActor,
 		@Param(new ZodValidationPipe(z.object({ orgSlug: OrganizationSlugParamSchema.shape.orgSlug, rewardId: UuidParamSchema }).strict()))
 		params: { orgSlug: string; rewardId: string },
@@ -211,6 +212,7 @@ export class OrganizationApiKeysController {
 		@Body(new ZodValidationPipe(MerchantCreateApiKeySchema)) body: Parameters<MerchantApiKeyService["createKey"]>[2],
 	): ReturnType<MerchantApiKeyService["createKey"]> {
 		await this.organizationRewardAuth.resolveOrganizationFromSlug(user.sub, params.orgSlug);
+
 		return this.merchantApiKeyService.createKey(user.sub, params.orgSlug, body);
 	}
 
@@ -223,6 +225,7 @@ export class OrganizationApiKeysController {
 		@Param(new ZodValidationPipe(apiContract.organizations.apiKeys.revoke.input)) params: { orgSlug: string; keyId: string },
 	): ReturnType<MerchantApiKeyService["revokeKey"]> {
 		await this.organizationRewardAuth.resolveOrganizationFromSlug(user.sub, params.orgSlug);
+
 		return this.merchantApiKeyService.revokeKey(user.sub, params.orgSlug, params.keyId);
 	}
 }

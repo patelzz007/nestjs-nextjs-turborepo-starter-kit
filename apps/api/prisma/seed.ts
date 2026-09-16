@@ -16,6 +16,7 @@ import { ORGANIZATION_SEED_IDS, ORGANIZATION_SEED_SLUGS, printOrganizationSeedCr
 import { cleanupRewardSeedData, printRewardSeedCredentials, seedRewards } from "./seed/rewards";
 import { seedSamplePlatform } from "./seed/sample-platform";
 import { seedProducts } from "./seed/products";
+import { seedAuthorizationKernel } from "./seed/authorization-kernel";
 
 // ---------------------------------------------------------------------------
 // Orchestrator — runs the per-domain seeders in dependency order.
@@ -70,6 +71,10 @@ async function main() {
 	console.log("Assigning user-level permission overrides...");
 	await assignAdditionalPermissions(users, permissions);
 	console.log("✅ Permission overrides assigned");
+
+	console.log("Seeding Authorization Kernel (ACLs, Policies)...");
+	const kernelSummary = await seedAuthorizationKernel(users, roles);
+	console.log(`✅ Authorization Kernel: ${kernelSummary.acls} ACLs, ${kernelSummary.policies} policies`);
 
 	console.log("Creating refresh tokens...");
 	await createRefreshTokens(allUsers);

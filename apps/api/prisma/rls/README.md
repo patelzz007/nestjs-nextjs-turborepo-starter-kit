@@ -16,9 +16,10 @@ Instead:
 
 | Path | Purpose |
 |------|---------|
-| `prisma/rls.sql` | Main idempotent bundle (role, core helpers, enable RLS, baseline policies). Applied **first**. |
-| `prisma/rls/*.sql` | Ordered fragments (`01-`, `02-`, …). Helpers and **new** policy families — applied **after** `rls.sql`. |
-| `scripts/apply-rls.ts` | Applies all fragments + `rls.sql` via `psql`. |
+| `prisma/rls/01-acl-location-access.sql` | ReBAC + ACL helpers and location-scoped policies. Applied **first**. |
+| `prisma/rls.sql` | Main idempotent bundle (role, session helpers, enable RLS, baseline policies). Applied **second**. |
+| `prisma/rls/*.sql` | Other ordered fragments (`NN-*.sql`, then `99-app-runtime-grants`). **app_runtime** grants run **last**. |
+| `scripts/apply-rls.ts` | Applies `01` → `rls.sql` → other fragments → `99` via Node `pg` (no local `psql` required). |
 
 Add new generic helpers in `prisma/rls/NN-name.sql` (numeric prefix controls order). Add or adjust table policies in `rls.sql` (or split into more fragments over time).
 
@@ -44,7 +45,7 @@ Set **inside the same transaction** as tenant queries (`TenantTransactionService
 | `app.current_organization_id` | Active tenant |
 | `app.rls_bypass` | Trusted system path only |
 
-Helpers: `app_rls_bypass()`, `app_current_user_id()`, `app_current_organization_id()`, `app_tenant_organization_member_of(org_id)`, `app_tenant_has_location_access(location_id)`.
+Helpers: `app_rls_bypass()`, `app_current_user_id()`, `app_current_organization_id()`, `app_tenant_org_member(org_id)` (tenant context or legacy org membership), `app_tenant_organization_member_of(org_id)`, `app_tenant_has_location_access(location_id)`.
 
 Missing context must **not** widen access.
 

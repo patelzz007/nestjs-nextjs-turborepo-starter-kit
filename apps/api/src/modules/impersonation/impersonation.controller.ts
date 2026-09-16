@@ -18,6 +18,7 @@ import { createWrappedDto } from "../../common/dto/response-wrapper";
 import { extractClientInfo } from "../../common/utils/client-info";
 import { RlsBypass } from "../auth/decorators/rls-bypass.decorator";
 import { SetAuthCookiesInterceptor } from "../auth/interceptors/set-auth-cookies.interceptor";
+import { Authorize } from "../authorization/decorators/authorize.decorator";
 
 import { ImpersonationService } from "./impersonation.service";
 
@@ -51,6 +52,12 @@ export class ImpersonationController {
 	@RequiresFullSession()
 	@EmailVerified()
 	@RequirePermission("CREATE", "USER")
+	@Authorize({
+		action: "CREATE",
+		resource: "USER",
+		resourceId: "userId",
+		description: "SuperAdmin can impersonate any user",
+	})
 	@Post("/impersonate/:userId")
 	@UseInterceptors(SetAuthCookiesInterceptor)
 	@ApiOperation({ summary: "SuperAdmin: impersonate another user" })
@@ -69,6 +76,7 @@ export class ImpersonationController {
 				error: "ALREADY_IMPERSONATING",
 			});
 		}
+
 		const { ipAddress } = extractClientInfo(req);
 		const userAgent: string | null = req.headers["user-agent"] ?? null;
 		return this.impersonationService.impersonateUser(admin.sub, targetUserId, ipAddress, userAgent);
@@ -83,6 +91,11 @@ export class ImpersonationController {
 	@Throttle({ strict: { ttl: 60000, limit: 10 } })
 	@ApiBearerAuth()
 	@RlsBypass()
+	@Authorize({
+		action: "DELETE",
+		resource: "USER",
+		description: "Stop impersonation",
+	})
 	@Post("/stop-impersonation")
 	@UseInterceptors(SetAuthCookiesInterceptor)
 	@ApiOperation({ summary: "Stop impersonating and restore the original admin session" })
@@ -98,6 +111,7 @@ export class ImpersonationController {
 				error: "NOT_IMPERSONATING",
 			});
 		}
+
 		const { ipAddress } = extractClientInfo(req);
 		const userAgent: string | null = req.headers["user-agent"] ?? null;
 		return this.impersonationService.stopImpersonation(payload.originalUserId, payload.sub, ipAddress, userAgent);

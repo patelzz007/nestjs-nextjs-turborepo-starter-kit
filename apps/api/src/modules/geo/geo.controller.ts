@@ -15,6 +15,7 @@ import {
 import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe";
 
 import { RequirePermission } from "../auth/decorators/require-permission.decorator";
+import { Authorize } from "../authorization/decorators/authorize.decorator";
 
 import {
 	GeoService,
@@ -59,10 +60,11 @@ export class GeoController {
 	// ── Import ──────────────────────────────────────────────────────────
 
 	@RequirePermission("CREATE", "GEO")
+	@Authorize({ action: "CREATE", resource: "GEO", description: "Import geo data" })
 	@Post("import")
 	@ApiOperation({ summary: "Bulk import geo data" })
 	@ApiOkResponse({ description: "Import result with created/updated/skipped counts" })
-	public importData(@Body(new ZodValidationPipe(GeoImportInputSchema)) body: Parameters<GeoService["importData"]>[0]): Promise<ImportResult> {
+	public async importData(@Body(new ZodValidationPipe(GeoImportInputSchema)) body: Parameters<GeoService["importData"]>[0]): Promise<ImportResult> {
 		return this.geoService.importData(body);
 	}
 

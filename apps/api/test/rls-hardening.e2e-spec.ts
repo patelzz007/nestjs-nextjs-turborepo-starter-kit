@@ -48,69 +48,85 @@ describe("RLS hardening (integration)", () => {
 	});
 
 	it("allows organization members to read their own org rewards with tenant context", async () => {
-		await withRlsSession(
-			pool,
-			{ userId: REWARD_SEED_IDS.klOwnerUser, organizationId: ORGANIZATION_SEED_IDS.klOrganization, bypass: false },
-			async (client) => {
-				const result = await client.query<{ id: string }>(`SELECT id FROM public.rewards WHERE id = $1 LIMIT 1`, [REWARD_SEED_IDS.klRewardPublished]);
-				expect(result.rowCount).toBe(1);
-			},
-		);
+		await withRlsSession(pool, { userId: REWARD_SEED_IDS.klOwnerUser, organizationId: ORGANIZATION_SEED_IDS.klOrganization, bypass: false }, async (client) => {
+			const result = await client.query<{ id: string }>(`SELECT id FROM public.rewards WHERE id = $1 LIMIT 1`, [REWARD_SEED_IDS.klRewardPublished]);
+			expect(result.rowCount).toBe(1);
+		});
 	});
 
 	it("prevents organization members from reading another org non-public rewards with tenant context", async () => {
-		await withRlsSession(
-			pool,
-			{ userId: REWARD_SEED_IDS.klOwnerUser, organizationId: ORGANIZATION_SEED_IDS.klOrganization, bypass: false },
-			async (client) => {
-				const result = await client.query<{ id: string }>(`SELECT id FROM public.rewards WHERE id = $1 LIMIT 1`, [REWARD_SEED_IDS.mlkRewardDisabled]);
-				expect(result.rowCount).toBe(0);
-			},
-		);
+		await withRlsSession(pool, { userId: REWARD_SEED_IDS.klOwnerUser, organizationId: ORGANIZATION_SEED_IDS.klOrganization, bypass: false }, async (client) => {
+			const result = await client.query<{ id: string }>(`SELECT id FROM public.rewards WHERE id = $1 LIMIT 1`, [REWARD_SEED_IDS.mlkRewardDisabled]);
+			expect(result.rowCount).toBe(0);
+		});
 	});
 
 	it("allows MLK owner (ALL_LOCATIONS) to read terminals at every branch", async () => {
-		await withRlsSession(
-			pool,
-			{ userId: REWARD_SEED_IDS.mlkOwnerUser, organizationId: ORGANIZATION_SEED_IDS.mlkOrganization, bypass: false },
-			async (client) => {
-				const katil = await client.query<{ terminal_id: string }>(
-					`SELECT terminal_id FROM public.organization_terminals WHERE organization_id = $1 AND location_id = $2`,
-					[ORGANIZATION_SEED_IDS.mlkOrganization, ORGANIZATION_SEED_IDS.mlkLocationKatil],
-				);
-				const beruang = await client.query<{ terminal_id: string }>(
-					`SELECT terminal_id FROM public.organization_terminals WHERE organization_id = $1 AND location_id = $2`,
-					[ORGANIZATION_SEED_IDS.mlkOrganization, ORGANIZATION_SEED_IDS.mlkLocationBeruang],
-				);
-				expect(katil.rowCount).toBeGreaterThan(0);
-				expect(beruang.rowCount).toBeGreaterThan(0);
-			},
-		);
+		await withRlsSession(pool, { userId: REWARD_SEED_IDS.mlkOwnerUser, organizationId: ORGANIZATION_SEED_IDS.mlkOrganization, bypass: false }, async (client) => {
+			const katil = await client.query<{ terminal_id: string }>(`SELECT terminal_id FROM public.organization_terminals WHERE organization_id = $1 AND location_id = $2`, [
+				ORGANIZATION_SEED_IDS.mlkOrganization,
+				ORGANIZATION_SEED_IDS.mlkLocationKatil,
+			]);
+			const beruang = await client.query<{ terminal_id: string }>(`SELECT terminal_id FROM public.organization_terminals WHERE organization_id = $1 AND location_id = $2`, [
+				ORGANIZATION_SEED_IDS.mlkOrganization,
+				ORGANIZATION_SEED_IDS.mlkLocationBeruang,
+			]);
+			expect(katil.rowCount).toBeGreaterThan(0);
+			expect(beruang.rowCount).toBeGreaterThan(0);
+		});
 	});
 
 	it("restricts MLK cashier (SELECTED branch) to Beruang terminals only", async () => {
-		await withRlsSession(
-			pool,
-			{ userId: REWARD_SEED_IDS.mlkCashierUser, organizationId: ORGANIZATION_SEED_IDS.mlkOrganization, bypass: false },
-			async (client) => {
-				const beruang = await client.query(`SELECT terminal_id FROM public.organization_terminals WHERE terminal_id = $1`, ["MLK-BERUANG-01"]);
-				const katil = await client.query(`SELECT terminal_id FROM public.organization_terminals WHERE terminal_id = $1`, ["MLK-KATIL-01"]);
-				expect(beruang.rowCount).toBe(1);
-				expect(katil.rowCount).toBe(0);
-			},
-		);
+		await withRlsSession(pool, { userId: REWARD_SEED_IDS.mlkCashierUser, organizationId: ORGANIZATION_SEED_IDS.mlkOrganization, bypass: false }, async (client) => {
+			const beruang = await client.query(`SELECT terminal_id FROM public.organization_terminals WHERE terminal_id = $1`, ["MLK-BERUANG-01"]);
+			const katil = await client.query(`SELECT terminal_id FROM public.organization_terminals WHERE terminal_id = $1`, ["MLK-KATIL-01"]);
+			expect(beruang.rowCount).toBe(1);
+			expect(katil.rowCount).toBe(0);
+		});
 	});
 
 	it("allows KL cashier (SELECTED KL location) to read KL terminals only", async () => {
-		await withRlsSession(
-			pool,
-			{ userId: REWARD_SEED_IDS.klCashierUser, organizationId: ORGANIZATION_SEED_IDS.klOrganization, bypass: false },
-			async (client) => {
-				const kl = await client.query(`SELECT terminal_id FROM public.organization_terminals WHERE terminal_id = $1`, ["KL-REGISTER-01"]);
-				const mlk = await client.query(`SELECT terminal_id FROM public.organization_terminals WHERE terminal_id = $1`, ["MLK-BERUANG-01"]);
-				expect(kl.rowCount).toBe(1);
-				expect(mlk.rowCount).toBe(0);
-			},
-		);
+		await withRlsSession(pool, { userId: REWARD_SEED_IDS.klCashierUser, organizationId: ORGANIZATION_SEED_IDS.klOrganization, bypass: false }, async (client) => {
+			const kl = await client.query(`SELECT terminal_id FROM public.organization_terminals WHERE terminal_id = $1`, ["KL-REGISTER-01"]);
+			const mlk = await client.query(`SELECT terminal_id FROM public.organization_terminals WHERE terminal_id = $1`, ["MLK-BERUANG-01"]);
+			expect(kl.rowCount).toBe(1);
+			expect(mlk.rowCount).toBe(0);
+		});
+	});
+
+	it("allows MLK owner to create org-wide API keys when tenant org context matches", async () => {
+		await withRlsSession(pool, { userId: REWARD_SEED_IDS.mlkOwnerUser, organizationId: ORGANIZATION_SEED_IDS.mlkOrganization, bypass: false }, async (client) => {
+			await client.query("BEGIN");
+			try {
+				const inserted = await client.query<{ id: string }>(
+					`INSERT INTO public.organization_api_keys (
+            id, organization_id, location_id, name, key_hash, key_prefix, created_by_user_id
+          ) VALUES (gen_random_uuid(), $1, NULL, 'RLS test key', $2, 'rls-test-prefix', $3)
+          RETURNING id`,
+					[ORGANIZATION_SEED_IDS.mlkOrganization, `rls-test-${crypto.randomUUID()}`, REWARD_SEED_IDS.mlkOwnerUser],
+				);
+				expect(inserted.rowCount).toBe(1);
+			} finally {
+				await client.query("ROLLBACK");
+			}
+		});
+	});
+
+	it("blocks branch-scoped API key insert when user lacks location ACL", async () => {
+		await withRlsSession(pool, { userId: REWARD_SEED_IDS.mlkCashierUser, organizationId: ORGANIZATION_SEED_IDS.mlkOrganization, bypass: false }, async (client) => {
+			await expect(
+				client.query(
+					`INSERT INTO public.organization_api_keys (
+            organization_id, location_id, name, key_hash, key_prefix, created_by_user_id
+          ) VALUES ($1, $2, 'RLS blocked', $3, 'blocked-prefix', $4)`,
+					[
+						ORGANIZATION_SEED_IDS.mlkOrganization,
+						ORGANIZATION_SEED_IDS.mlkLocationKatil,
+						`rls-blocked-${crypto.randomUUID()}`,
+						REWARD_SEED_IDS.mlkCashierUser,
+					],
+				),
+			).rejects.toThrow(/row-level security/i);
+		});
 	});
 });

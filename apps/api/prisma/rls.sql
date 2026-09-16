@@ -6,7 +6,7 @@
 --
 --   pnpm db:migrate | db:deploy | db:reset | db:push
 --
--- via `scripts/apply-rls.ts` (runs this file, then prisma/rls/*.sql fragments).
+-- via `scripts/apply-rls.ts` (`01-acl-location-access.sql` → this file → other fragments → `99`).
 -- See prisma/rls/README.md and docs/rbac-acl-rls-architecture.md.
 -- ============================================================================
 
@@ -226,26 +226,63 @@ CREATE POLICY role_permissions_write ON public.role_permissions
   USING (app_rls_bypass())
   WITH CHECK (app_rls_bypass());
 
-DROP POLICY IF EXISTS merchant_role_capabilities_read ON public.merchant_role_capabilities;
-CREATE POLICY merchant_role_capabilities_read ON public.merchant_role_capabilities
-  FOR SELECT
-  USING (true);
+-- ── Authorization kernel (ACL, policies, audit) ────────────────────────────
 
-DROP POLICY IF EXISTS merchant_role_capabilities_write ON public.merchant_role_capabilities;
-CREATE POLICY merchant_role_capabilities_write ON public.merchant_role_capabilities
+ALTER TABLE public.resource_acls ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.resource_acls FORCE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS resource_acls_member ON public.resource_acls;
+CREATE POLICY resource_acls_member ON public.resource_acls
+  USING (
+    app_rls_bypass()
+    OR organization_id IS NULL
+    OR app_tenant_organization_member_of(organization_id)
+  )
+  WITH CHECK (app_rls_bypass());
+
+ALTER TABLE public.policy_definitions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.policy_definitions FORCE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS policy_definitions_read ON public.policy_definitions;
+CREATE POLICY policy_definitions_read ON public.policy_definitions
+  FOR SELECT
+  USING (
+    app_rls_bypass()
+    OR organization_id IS NULL
+    OR app_tenant_organization_member_of(organization_id)
+  );
+
+DROP POLICY IF EXISTS policy_definitions_write ON public.policy_definitions;
+CREATE POLICY policy_definitions_write ON public.policy_definitions
   FOR ALL
+  USING (app_rls_bypass())
+  WITH CHECK (app_rls_bypass());
+
+ALTER TABLE public.authorization_audits ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.authorization_audits FORCE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS authorization_audits_bypass ON public.authorization_audits;
+CREATE POLICY authorization_audits_bypass ON public.authorization_audits
   USING (app_rls_bypass())
   WITH CHECK (app_rls_bypass());
 
 -- ── Append-mostly tables (insert public, select/update/delete via bypass) ──
 
 DROP POLICY IF EXISTS logs_bypass ON public.logs;
+DROP POLICY IF EXISTS logs_insert ON public.logs;
+DROP POLICY IF EXISTS logs_select ON public.logs;
+DROP POLICY IF EXISTS logs_update ON public.logs;
+DROP POLICY IF EXISTS logs_delete ON public.logs;
 CREATE POLICY logs_insert ON public.logs FOR INSERT WITH CHECK (true);
 CREATE POLICY logs_select ON public.logs FOR SELECT USING (app_rls_bypass());
 CREATE POLICY logs_update ON public.logs FOR UPDATE USING (app_rls_bypass()) WITH CHECK (app_rls_bypass());
 CREATE POLICY logs_delete ON public.logs FOR DELETE USING (app_rls_bypass());
 
 DROP POLICY IF EXISTS email_logs_bypass ON public.email_logs;
+DROP POLICY IF EXISTS email_logs_insert ON public.email_logs;
+DROP POLICY IF EXISTS email_logs_select ON public.email_logs;
+DROP POLICY IF EXISTS email_logs_update ON public.email_logs;
+DROP POLICY IF EXISTS email_logs_delete ON public.email_logs;
 CREATE POLICY email_logs_insert ON public.email_logs FOR INSERT WITH CHECK (true);
 CREATE POLICY email_logs_select ON public.email_logs FOR SELECT USING (app_rls_bypass());
 CREATE POLICY email_logs_update ON public.email_logs FOR UPDATE USING (app_rls_bypass()) WITH CHECK (app_rls_bypass());
@@ -337,28 +374,7 @@ CREATE POLICY cities_write ON public.cities
   USING (app_rls_bypass())
   WITH CHECK (app_rls_bypass());
 
--- ── Rewards platform (organization-scoped — docs/rewards-platform-prd.md) ─
-
--- Membership helper for RewardHub tables — SECURITY DEFINER to avoid RLS recursion.
-CREATE OR REPLACE FUNCTION app_organization_member_of(org_id text) RETURNS boolean
-LANGUAGE sql
-STABLE
-SECURITY DEFINER
-SET search_path = public
-AS $$
-  SELECT app_rls_bypass() OR (
-    app_current_user_id() IS NOT NULL AND
-    EXISTS (
-      SELECT 1 FROM public.organization_memberships m
-      WHERE m.organization_id = org_id
-        AND m.user_id = app_current_user_id()
-        AND m.status = 'ACTIVE'
-        AND m.is_deleted = false
-    )
-  );
-$$;
-
-GRANT EXECUTE ON FUNCTION app_organization_member_of(text) TO app_runtime;
+-- ── Rewards platform (organization-scoped — ReBAC via app_tenant_org_member in 01) ─
 
 DO $$
 DECLARE
@@ -390,25 +406,15 @@ BEGIN
   END LOOP;
 END $$;
 
-DROP POLICY IF EXISTS organization_api_keys_org ON public.organization_api_keys;
-CREATE POLICY organization_api_keys_org ON public.organization_api_keys
-  USING (app_organization_member_of(organization_id) OR app_rls_bypass())
-  WITH CHECK (app_organization_member_of(organization_id) OR app_rls_bypass());
-
-DROP POLICY IF EXISTS organization_terminals_org ON public.organization_terminals;
-CREATE POLICY organization_terminals_org ON public.organization_terminals
-  USING (app_organization_member_of(organization_id) OR app_rls_bypass())
-  WITH CHECK (app_organization_member_of(organization_id) OR app_rls_bypass());
-
 DROP POLICY IF EXISTS organization_kyb_documents_org ON public.organization_kyb_documents;
 CREATE POLICY organization_kyb_documents_org ON public.organization_kyb_documents
-  USING (app_organization_member_of(organization_id) OR app_rls_bypass())
-  WITH CHECK (app_organization_member_of(organization_id) OR app_rls_bypass());
+  USING (app_tenant_org_member(organization_id) OR app_rls_bypass())
+  WITH CHECK (app_tenant_org_member(organization_id) OR app_rls_bypass());
 
 DROP POLICY IF EXISTS stored_files_owner ON public.stored_files;
 CREATE POLICY stored_files_owner ON public.stored_files
-  USING (app_owns(uploaded_by_id) OR (organization_id IS NOT NULL AND app_organization_member_of(organization_id)) OR app_rls_bypass())
-  WITH CHECK (app_owns(uploaded_by_id) OR (organization_id IS NOT NULL AND app_organization_member_of(organization_id)) OR app_rls_bypass());
+  USING (app_owns(uploaded_by_id) OR (organization_id IS NOT NULL AND app_tenant_org_member(organization_id)) OR app_rls_bypass())
+  WITH CHECK (app_owns(uploaded_by_id) OR (organization_id IS NOT NULL AND app_tenant_org_member(organization_id)) OR app_rls_bypass());
 
 DROP POLICY IF EXISTS file_variants_file ON public.file_variants;
 CREATE POLICY file_variants_file ON public.file_variants
@@ -417,7 +423,7 @@ CREATE POLICY file_variants_file ON public.file_variants
     OR EXISTS (
       SELECT 1 FROM public.stored_files sf
       WHERE sf.id = file_id
-        AND (app_owns(sf.uploaded_by_id) OR (sf.organization_id IS NOT NULL AND app_organization_member_of(sf.organization_id)))
+        AND (app_owns(sf.uploaded_by_id) OR (sf.organization_id IS NOT NULL AND app_tenant_org_member(sf.organization_id)))
     )
   )
   WITH CHECK (
@@ -425,7 +431,7 @@ CREATE POLICY file_variants_file ON public.file_variants
     OR EXISTS (
       SELECT 1 FROM public.stored_files sf
       WHERE sf.id = file_id
-        AND (app_owns(sf.uploaded_by_id) OR (sf.organization_id IS NOT NULL AND app_organization_member_of(sf.organization_id)))
+        AND (app_owns(sf.uploaded_by_id) OR (sf.organization_id IS NOT NULL AND app_tenant_org_member(sf.organization_id)))
     )
   );
 
@@ -436,8 +442,8 @@ CREATE POLICY product_images_catalog ON public.product_images
 
 DROP POLICY IF EXISTS organization_assets_org ON public.organization_assets;
 CREATE POLICY organization_assets_org ON public.organization_assets
-  USING (app_organization_member_of(organization_id) OR app_rls_bypass())
-  WITH CHECK (app_organization_member_of(organization_id) OR app_rls_bypass());
+  USING (app_tenant_org_member(organization_id) OR app_rls_bypass())
+  WITH CHECK (app_tenant_org_member(organization_id) OR app_rls_bypass());
 
 DROP POLICY IF EXISTS user_avatars_owner ON public.user_avatars;
 CREATE POLICY user_avatars_owner ON public.user_avatars
@@ -446,8 +452,8 @@ CREATE POLICY user_avatars_owner ON public.user_avatars
 
 DROP POLICY IF EXISTS organization_kyb_files_org ON public.organization_kyb_files;
 CREATE POLICY organization_kyb_files_org ON public.organization_kyb_files
-  USING (app_organization_member_of(organization_id) OR app_rls_bypass())
-  WITH CHECK (app_organization_member_of(organization_id) OR app_rls_bypass());
+  USING (app_tenant_org_member(organization_id) OR app_rls_bypass())
+  WITH CHECK (app_tenant_org_member(organization_id) OR app_rls_bypass());
 
 -- Published consumer rewards are marketplace-readable; org members see all org rewards.
 DROP POLICY IF EXISTS rewards_read ON public.rewards;
@@ -455,7 +461,7 @@ CREATE POLICY rewards_read ON public.rewards
   FOR SELECT
   USING (
     app_rls_bypass()
-    OR app_organization_member_of(organization_id)
+    OR app_tenant_org_member(organization_id)
     OR (
       is_deleted = false
       AND reward_kind = 'CONSUMER'
@@ -466,18 +472,18 @@ CREATE POLICY rewards_read ON public.rewards
 DROP POLICY IF EXISTS rewards_write ON public.rewards;
 CREATE POLICY rewards_write ON public.rewards
   FOR INSERT
-  WITH CHECK (app_organization_member_of(organization_id) OR app_rls_bypass());
+  WITH CHECK (app_tenant_org_member(organization_id) OR app_rls_bypass());
 
 DROP POLICY IF EXISTS rewards_update ON public.rewards;
 CREATE POLICY rewards_update ON public.rewards
   FOR UPDATE
-  USING (app_organization_member_of(organization_id) OR app_rls_bypass())
-  WITH CHECK (app_organization_member_of(organization_id) OR app_rls_bypass());
+  USING (app_tenant_org_member(organization_id) OR app_rls_bypass())
+  WITH CHECK (app_tenant_org_member(organization_id) OR app_rls_bypass());
 
 DROP POLICY IF EXISTS rewards_delete ON public.rewards;
 CREATE POLICY rewards_delete ON public.rewards
   FOR DELETE
-  USING (app_organization_member_of(organization_id) OR app_rls_bypass());
+  USING (app_tenant_org_member(organization_id) OR app_rls_bypass());
 
 ALTER TABLE public.reward_location_scopes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.reward_location_scopes FORCE ROW LEVEL SECURITY;
@@ -487,7 +493,7 @@ CREATE POLICY reward_location_scopes_read ON public.reward_location_scopes
   FOR SELECT
   USING (
     app_rls_bypass()
-    OR app_organization_member_of(organization_id)
+    OR app_tenant_org_member(organization_id)
     OR EXISTS (
       SELECT 1 FROM public.rewards r
       WHERE r.id = reward_location_scopes.reward_id
@@ -500,8 +506,8 @@ CREATE POLICY reward_location_scopes_read ON public.reward_location_scopes
 DROP POLICY IF EXISTS reward_location_scopes_write ON public.reward_location_scopes;
 CREATE POLICY reward_location_scopes_write ON public.reward_location_scopes
   FOR ALL
-  USING (app_organization_member_of(organization_id) OR app_rls_bypass())
-  WITH CHECK (app_organization_member_of(organization_id) OR app_rls_bypass());
+  USING (app_tenant_org_member(organization_id) OR app_rls_bypass())
+  WITH CHECK (app_tenant_org_member(organization_id) OR app_rls_bypass());
 
 DROP POLICY IF EXISTS reward_claims_own ON public.reward_claims;
 CREATE POLICY reward_claims_own ON public.reward_claims
@@ -512,12 +518,12 @@ DROP POLICY IF EXISTS reward_redemptions_access ON public.reward_redemptions;
 CREATE POLICY reward_redemptions_access ON public.reward_redemptions
   USING (
     app_owns(user_id)
-    OR app_organization_member_of(organization_id)
+    OR app_tenant_org_member(organization_id)
     OR app_rls_bypass()
   )
   WITH CHECK (
     app_owns(user_id)
-    OR app_organization_member_of(organization_id)
+    OR app_tenant_org_member(organization_id)
     OR app_rls_bypass()
   );
 
@@ -548,14 +554,14 @@ CREATE POLICY reward_notifications_own ON public.reward_notifications
 DROP POLICY IF EXISTS reward_audit_insert ON public.reward_audit_logs;
 CREATE POLICY reward_audit_insert ON public.reward_audit_logs
   FOR INSERT
-  WITH CHECK (app_rls_bypass() OR (organization_id IS NOT NULL AND app_organization_member_of(organization_id)));
+  WITH CHECK (app_rls_bypass() OR (organization_id IS NOT NULL AND app_tenant_org_member(organization_id)));
 
 DROP POLICY IF EXISTS reward_audit_select ON public.reward_audit_logs;
 CREATE POLICY reward_audit_select ON public.reward_audit_logs
   FOR SELECT
   USING (
     app_rls_bypass()
-    OR (organization_id IS NOT NULL AND app_organization_member_of(organization_id))
+    OR (organization_id IS NOT NULL AND app_tenant_org_member(organization_id))
   );
 
 DROP POLICY IF EXISTS reward_idempotency_bypass ON public.reward_redemption_idempotency_records;
@@ -584,30 +590,7 @@ CREATE POLICY platform_resource_idempotency_bypass ON public.platform_resource_i
   USING (app_rls_bypass())
   WITH CHECK (app_rls_bypass());
 -- ── Organization multi-tenancy (docs/multi-tenancy.md) ───────────────────
-
--- Tenant-scoped membership check (requires active tenant context).
-CREATE OR REPLACE FUNCTION app_tenant_organization_member_of(org_id text) RETURNS boolean
-LANGUAGE sql
-STABLE
-SECURITY DEFINER
-SET search_path = public
-AS $$
-  SELECT app_rls_bypass()
-    OR (
-      app_current_user_id() IS NOT NULL
-      AND app_current_organization_id() IS NOT NULL
-      AND app_current_organization_id() = org_id
-      AND EXISTS (
-        SELECT 1 FROM public.organization_memberships m
-        WHERE m.organization_id = org_id
-          AND m.user_id = app_current_user_id()
-          AND m.status = 'ACTIVE'
-          AND m.is_deleted = false
-      )
-    );
-$$;
-
-GRANT EXECUTE ON FUNCTION app_tenant_organization_member_of(text) TO app_runtime;
+-- ReBAC helpers: prisma/rls/01-acl-location-access.sql (applied before this bundle).
 
 DO $$
 DECLARE
@@ -689,6 +672,8 @@ CREATE POLICY organization_audit_logs_member ON public.organization_audit_logs
   WITH CHECK (app_rls_bypass() OR app_tenant_organization_member_of(organization_id));
 
 DROP POLICY IF EXISTS organization_access_requests_policy ON public.organization_access_requests;
+DROP POLICY IF EXISTS organization_access_requests_select ON public.organization_access_requests;
+DROP POLICY IF EXISTS organization_access_requests_insert ON public.organization_access_requests;
 CREATE POLICY organization_access_requests_select ON public.organization_access_requests
   FOR SELECT
   USING (app_rls_bypass() OR app_tenant_organization_member_of(organization_id) OR user_id = app_current_user_id());
@@ -698,8 +683,8 @@ CREATE POLICY organization_access_requests_insert ON public.organization_access_
 
 DROP POLICY IF EXISTS organization_merchant_profiles_member ON public.organization_merchant_profiles;
 CREATE POLICY organization_merchant_profiles_member ON public.organization_merchant_profiles
-  USING (app_rls_bypass() OR app_organization_member_of(organization_id))
-  WITH CHECK (app_rls_bypass() OR app_organization_member_of(organization_id));
+  USING (app_rls_bypass() OR app_tenant_org_member(organization_id))
+  WITH CHECK (app_rls_bypass() OR app_tenant_org_member(organization_id));
 
 -- Remaining organization tables: tenant member read, bypass write for sagas.
 DO $$

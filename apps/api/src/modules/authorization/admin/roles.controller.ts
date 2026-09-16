@@ -9,6 +9,7 @@ import { PrismaService } from "../../../prisma/prisma.service";
 import { ConflictDetectionService } from "../services/conflict-detection.service";
 import { AuthorizationService } from "../services/authorization.service";
 import { ZodValidationPipe } from "../../../common/pipes/zod-validation.pipe";
+import { Authorize } from "../decorators/authorize.decorator";
 import { CreateRoleDto, SetRoleParentDto, UpdateRoleDto, ValidateRoleAssignmentDto, AssignRoleToUserDto, SyncUserRolesDto } from "./dtos/role.dto";
 import { SyncRolePermissionsDto } from "./dtos/permission.dto";
 
@@ -44,6 +45,7 @@ export class RolesController {
 	@Post()
 	@Throttle({ default: { ttl: 60000, limit: 10 } })
 	@RequirePermission("CREATE", "ROLE")
+	@Authorize({ action: "CREATE", resource: "ROLE", description: "Create new role" })
 	@ApiBody({ type: CreateRoleDto })
 	@ApiOkResponse({ description: "Created role" })
 	public async create(@Body(new ZodValidationPipe(CreateRoleDto.schema)) body: CreateRoleDto): Promise<unknown> {
@@ -59,6 +61,11 @@ export class RolesController {
 	@Post("user/assign")
 	@Throttle({ default: { ttl: 60000, limit: 10 } })
 	@RequirePermission("UPDATE", "ROLE")
+	@Authorize({
+		action: "UPDATE",
+		resource: "USER",
+		description: "Assign role to user",
+	})
 	@ApiBody({ type: AssignRoleToUserDto })
 	@ApiOkResponse({ description: "Role assigned to user" })
 	public async assignRoleToUser(@Body(new ZodValidationPipe(AssignRoleToUserDto.schema)) body: AssignRoleToUserDto): Promise<unknown> {

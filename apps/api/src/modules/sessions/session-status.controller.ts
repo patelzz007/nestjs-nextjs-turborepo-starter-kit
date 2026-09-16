@@ -4,6 +4,7 @@ import { SessionStatusSchema, apiPath, epochMs, nowEpochMs, type EpochMs, type S
 
 import { ApiErrorResponseDto } from "../../common/dto/api-response.dto";
 import { createWrappedDto } from "../../common/dto/response-wrapper";
+
 // The decorators below are imported from the auth module WITHOUT importing
 // AuthModule here — @GetUser is metadata-only (no DI), and the global
 // AuthGuard applies to this controller automatically. Do not "fix" this into

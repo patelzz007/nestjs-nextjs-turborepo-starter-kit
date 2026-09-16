@@ -31,7 +31,7 @@ export const RLS_MANIFEST_PROFILES: Readonly<Record<RlsManifestProfile, readonly
 		"mfa_recovery_requests",
 		"user_avatars",
 	],
-	rbac_catalog: ["roles", "permissions", "capability_definitions", "role_permissions", "user_roles", "user_permissions"],
+	rbac_catalog: ["roles", "permissions", "capability_definitions", "role_permissions", "user_roles", "user_permissions", "policy_definitions"],
 	organization_tenant: [
 		"organizations",
 		"organization_slug_history",
@@ -58,6 +58,7 @@ export const RLS_MANIFEST_PROFILES: Readonly<Record<RlsManifestProfile, readonly
 		"rewards",
 		"reward_location_scopes",
 		"reward_audit_logs",
+		"resource_acls",
 	],
 	organization_location: ["organization_terminals", "organization_api_keys"],
 	bypass_only: [
@@ -66,6 +67,7 @@ export const RLS_MANIFEST_PROFILES: Readonly<Record<RlsManifestProfile, readonly
 		"platform_resource_audit_logs",
 		"platform_resource_idempotency_records",
 		"permission_audit_logs",
+		"authorization_audits",
 		"reward_redemption_idempotency_records",
 		"product_images",
 	],
@@ -74,14 +76,7 @@ export const RLS_MANIFEST_PROFILES: Readonly<Record<RlsManifestProfile, readonly
 	url_analytics: ["url_tags", "clicks", "logs", "email_logs", "impersonation_audit_logs", "api_key_usage_logs"],
 	file_derived: ["file_variants"],
 	product_catalog: ["product", "sample_category"],
-	reward_user: [
-		"reward_claims",
-		"reward_redemptions",
-		"reward_referrals",
-		"reward_otp_challenges",
-		"reward_legal_acceptances",
-		"reward_notifications",
-	],
+	reward_user: ["reward_claims", "reward_redemptions", "reward_referrals", "reward_otp_challenges", "reward_legal_acceptances", "reward_notifications"],
 	authorization_simulation: ["authorization_policy_simulations"],
 };
 
@@ -155,8 +150,7 @@ export function parsePrismaSchemaModels(schemaContent: string): PrismaTableModel
 		const hasOrganizationId = /\n\s*organizationId\s+String/.test(body);
 		const hasRequiredLocationId = /\n\s*locationId\s+String\s+@map\("location_id"\)/.test(body);
 		const hasOptionalLocationId =
-			/\n\s*locationId\s+String\?\s+@map\("location_id"\)/.test(body) ||
-			(/\n\s*locationId\s+String\?/.test(body) && body.includes('@map("location_id")'));
+			/\n\s*locationId\s+String\?\s+@map\("location_id"\)/.test(body) || (/\n\s*locationId\s+String\?/.test(body) && body.includes('@map("location_id")'));
 
 		models.push({
 			tableName,
@@ -217,17 +211,8 @@ export function computeRlsManifestDrift(input: {
 			orgModelsMissingManifest.push(model.tableName);
 		}
 		const profile = profileMap.get(model.tableName);
-		const locationScopeJunctionTables: readonly string[] = [
-			"reward_location_scopes",
-			"organization_invitation_location_scopes",
-			"organization_membership_location_scopes",
-		];
-		if (
-			model.hasRequiredLocationId &&
-			profile !== "organization_location" &&
-			profile !== "organization_tenant" &&
-			!locationScopeJunctionTables.includes(model.tableName)
-		) {
+		const locationScopeJunctionTables: readonly string[] = ["reward_location_scopes", "organization_invitation_location_scopes", "organization_membership_location_scopes"];
+		if (model.hasRequiredLocationId && profile !== "organization_location" && profile !== "organization_tenant" && !locationScopeJunctionTables.includes(model.tableName)) {
 			locationProfileMismatch.push(`${model.tableName} (expected organization_location or organization_tenant profile)`);
 		}
 		if (profile === "organization_location" && !model.hasRequiredLocationId && !model.hasOptionalLocationId) {

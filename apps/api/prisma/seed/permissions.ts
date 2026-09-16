@@ -8,7 +8,13 @@ export async function createPermissions(): Promise<Permission[]> {
 
 	for (const definition of definitions) {
 		await prisma.permission.upsert({
-			where: { action_resource: { action: definition.action, resource: definition.resource } },
+			where: {
+				action_resource_scope: {
+					action: definition.action,
+					resource: definition.resource,
+					scope: definition.scope ?? "GLOBAL",
+				},
+			},
 			update: {
 				description: definition.description,
 				group: definition.group,
@@ -17,6 +23,7 @@ export async function createPermissions(): Promise<Permission[]> {
 			create: {
 				action: definition.action,
 				resource: definition.resource,
+				scope: definition.scope ?? "GLOBAL",
 				description: definition.description,
 				group: definition.group,
 				isSystem: definition.isSystem ?? false,

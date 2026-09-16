@@ -24,6 +24,7 @@ import { OBJECT_STORAGE } from "../../storage/domain/storage.tokens";
 import { locatorFromStoredFile, toStorageObjectLocator } from "../../storage/utils/storage-locator.util";
 import { StoredFileRepository } from "../repositories/stored-file.repository";
 import { FileService } from "../services/file.service";
+import { Authorize } from "../../authorization/decorators/authorize.decorator";
 
 const FileIdParamSchema = z.object({ fileId: UuidParamSchema }).strict();
 
@@ -50,12 +51,17 @@ export class FilesController {
 
 	@Post("upload-url")
 	@ApiBearerAuth()
+	@Authorize({
+		action: "CREATE",
+		resource: "ORGANIZATION",
+		description: "Create file upload URL",
+	})
 	@ApiOperation({ summary: "Create a browser upload ticket" })
 	@ApiOkResponse({ description: "Browser upload ticket created" })
-	public createUploadUrl(
+	public async createUploadUrl(
 		@GetUser() user: AccessTokenPayload,
 		@Body(new ZodValidationPipe(apiContract.files.uploadUrl.input)) body: z.output<typeof CreateFileUploadUrlSchema>,
-	): ReturnType<FileService["createUploadUrl"]> {
+	): Promise<ReturnType<FileService["createUploadUrl"]>> {
 		return this.files.createUploadUrl(user.sub, body);
 	}
 

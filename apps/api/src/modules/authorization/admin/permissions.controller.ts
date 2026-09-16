@@ -7,6 +7,7 @@ import { SkipAuthThrottle } from "../../auth/decorators/skip-auth-throttle.decor
 import { apiPath, type PermissionListItem } from "@workspace/shared";
 import { AuthorizationService } from "../services/authorization.service";
 import { ZodValidationPipe } from "../../../common/pipes/zod-validation.pipe";
+import { Authorize } from "../decorators/authorize.decorator";
 import { CreatePermissionDto, GrantPermissionToUserDto, SyncUserPermissionsDto, CheckPermissionDto } from "./dtos/permission.dto";
 
 // ── DTOs (only for PATCH — body is optional-field) ───────────────────────────
@@ -46,6 +47,7 @@ export class PermissionsController {
 	@Post()
 	@Throttle({ default: { ttl: 60000, limit: 10 } })
 	@RequirePermission("CREATE", "PERMISSION")
+	@Authorize({ action: "CREATE", resource: "PERMISSION", description: "Create new permission" })
 	@ApiBody({ type: CreatePermissionDto })
 	@ApiOkResponse({ description: "Created permission" })
 	public async create(@Body(new ZodValidationPipe(CreatePermissionDto.schema)) body: CreatePermissionDto): Promise<unknown> {
@@ -68,6 +70,7 @@ export class PermissionsController {
 	@Patch(":id")
 	@Throttle({ default: { ttl: 60000, limit: 10 } })
 	@RequirePermission("UPDATE", "PERMISSION")
+	@Authorize({ action: "UPDATE", resource: "PERMISSION", resourceId: "id", description: "Update permission" })
 	@ApiOkResponse({ description: "Updated permission" })
 	public async update(@Param("id") id: string, @Body() body: UpdatePermissionBody): Promise<unknown> {
 		return this.authorization.permissions.update(id, {

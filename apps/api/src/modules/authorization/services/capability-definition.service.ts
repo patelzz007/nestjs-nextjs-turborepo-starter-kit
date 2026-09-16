@@ -11,6 +11,7 @@ import {
 } from "@workspace/shared";
 
 import { PrismaService } from "../../../prisma/prisma.service";
+import { SystemPrismaService } from "../../../prisma/system-prisma.service";
 
 type CatalogCache = ReadonlyMap<CapabilityScope, readonly CapabilityDefinition[]>;
 
@@ -23,7 +24,10 @@ export class CapabilityDefinitionService implements OnModuleInit {
 	private readonly logger: Logger = new Logger(CapabilityDefinitionService.name);
 	private catalogCache: CatalogCache | null = null;
 
-	public constructor(private readonly prisma: PrismaService) {}
+	public constructor(
+		private readonly prisma: PrismaService,
+		private readonly systemDb: SystemPrismaService,
+	) {}
 
 	public async onModuleInit(): Promise<void> {
 		await this.syncPlatformCapabilitiesFromPermissions();
@@ -66,7 +70,7 @@ export class CapabilityDefinitionService implements OnModuleInit {
 	}
 
 	public async syncPlatformCapabilitiesFromPermissions(): Promise<void> {
-		const permissions = await this.prisma.permission.findMany({
+		const permissions = await this.systemDb.permission.findMany({
 			where: { isDeleted: false },
 			select: {
 				id: true,
@@ -85,7 +89,7 @@ export class CapabilityDefinitionService implements OnModuleInit {
 				continue;
 			}
 			const slug = toPlatformCapabilitySlug(actionParsed.data, resourceParsed.data);
-			await this.prisma.capabilityDefinition.upsert({
+			await this.systemDb.capabilityDefinition.upsert({
 				where: { slug },
 				create: {
 					slug,

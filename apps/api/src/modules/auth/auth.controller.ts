@@ -62,6 +62,7 @@ import { ApiErrorResponseDto } from "../../common/dto/api-response.dto";
 import { createWrappedArrayDto, createWrappedDto } from "../../common/dto/response-wrapper";
 import { SetAuthCookiesInterceptor } from "./interceptors/set-auth-cookies.interceptor";
 import { extractClientInfo } from "../../common/utils/client-info";
+import { Authorize } from "../authorization/decorators/authorize.decorator";
 
 import { AuthService } from "./auth.service";
 import type { AccessTokenPayload } from "./services/token.service";
@@ -250,6 +251,11 @@ export class AuthController {
 	@ApiBearerAuth()
 	@Post("/change-password")
 	@HttpCode(200)
+	@Authorize({
+		action: "UPDATE",
+		resource: "USER",
+		description: "User can only change their own password",
+	})
 	@ApiOperation({ summary: "Change password for the authenticated user" })
 	@ApiBody({ type: ChangePasswordDto })
 	@ApiOkResponse({ type: WrappedChangePasswordResponse, description: "Password changed successfully" })
@@ -326,6 +332,12 @@ export class AuthController {
 	@SuperAdminOnly()
 	@EmailVerified()
 	@RequirePermission("UPDATE", "USER")
+	@Authorize({
+		action: "UPDATE",
+		resource: "USER",
+		resourceId: "userId",
+		description: "SuperAdmin can unlock any user account",
+	})
 	@Patch("/admin/users/:userId/unlock")
 	@ApiOperation({ summary: "SuperAdmin: unlock a locked user account" })
 	@ApiOkResponse({ type: WrappedMessageResponse, description: "Account unlocked" })

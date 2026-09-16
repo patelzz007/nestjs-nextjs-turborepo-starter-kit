@@ -1,7 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { getPermissionDefinitions, type PermissionDefinition } from "@workspace/shared";
 
-import { PrismaService } from "../../../prisma/prisma.service";
+import { SystemPrismaService } from "../../../prisma/system-prisma.service";
 import { AuthorizationCacheService } from "../cache/authorization-cache.service";
 
 /**
@@ -27,7 +27,7 @@ export class PermissionMigrationService {
 	private readonly logger: Logger = new Logger(PermissionMigrationService.name);
 
 	public constructor(
-		private readonly prisma: PrismaService,
+		private readonly systemDb: SystemPrismaService,
 		private readonly cache: AuthorizationCacheService,
 	) {}
 
@@ -43,7 +43,7 @@ export class PermissionMigrationService {
 		const created: PermissionDefinition[] = [];
 		const updated: PermissionDefinition[] = [];
 
-		const existing = await this.prisma.permission.findMany({
+		const existing = await this.systemDb.permission.findMany({
 			where: { isDeleted: false },
 			select: { id: true, action: true, resource: true, description: true, group: true, isSystem: true },
 		});
@@ -68,7 +68,7 @@ export class PermissionMigrationService {
 			const dbPerm = existingMap.get(key);
 
 			if (dbPerm === undefined) {
-				await this.prisma.permission.create({
+				await this.systemDb.permission.create({
 					data: {
 						action: definition.action,
 						resource: definition.resource,
@@ -83,7 +83,7 @@ export class PermissionMigrationService {
 				const needsUpdate: boolean = dbPerm.description !== definition.description || dbPerm.group !== definition.group || dbPerm.isSystem !== (definition.isSystem ?? false);
 
 				if (needsUpdate) {
-					await this.prisma.permission.update({
+					await this.systemDb.permission.update({
 						where: { id: dbPerm.id },
 						data: {
 							description: definition.description,
