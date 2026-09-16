@@ -26,6 +26,7 @@ import {
 import { ZodValidationPipe } from "../../../common/pipes/zod-validation.pipe";
 import { GetUser } from "../../auth/decorators/get-user.decorator";
 import type { AccessTokenPayload } from "../../auth/services/token.service";
+import { KernelIntegrationHelper } from "../../authorization/kernel/kernel-integration.helper";
 import { OrganizationContextService } from "../services/organization-context.service";
 import { OrganizationLocationService } from "../services/organization-location.service";
 import { OrganizationMembershipService } from "../services/organization-membership.service";
@@ -37,6 +38,7 @@ export class OrganizationController {
 		private readonly context: OrganizationContextService,
 		private readonly membership: OrganizationMembershipService,
 		private readonly locations: OrganizationLocationService,
+		private readonly kernelHelper: KernelIntegrationHelper,
 	) {}
 
 	@Get(":orgSlug/context")
