@@ -59,7 +59,7 @@ const signature = createHmac("sha256", key).update(signedContent).digest("base64
 
 console.warn("webhook-id          →", msgId);
 console.warn("webhook-timestamp   →", timestamp);
-console.warn("webhook-signature   →", `v1,${String(signature)}`);
+console.warn("webhook-signature   →", `v1,${signature}`);
 console.warn("body                →", payload);
 console.warn("");
 console.warn("─────────────────────────────── Swagger copy-paste block ───────────────────────────────");
@@ -67,7 +67,7 @@ console.warn("Paste these into the three header fields + the body of the 'Try it
 console.warn("");
 console.warn("Header: webhook-id          →", msgId);
 console.warn("Header: webhook-timestamp   →", timestamp);
-console.warn("Header: webhook-signature   →", `v1,${String(signature)}`);
+console.warn("Header: webhook-signature   →", `v1,${signature}`);
 console.warn("Body (paste EXACTLY, keep it on one line):");
 console.warn(payload);
 console.warn("");
@@ -75,7 +75,7 @@ console.warn("Or test the full tunnel in one shot (no Swagger needed):");
 console.warn(
 	`curl -s -X POST '${url}' -H 'content-type: application/json' ` +
 		`-H 'webhook-id: ${msgId}' -H 'webhook-timestamp: ${timestamp}' ` +
-		`-H 'webhook-signature: v1,${String(signature)}' -d '${payload}'`,
+		`-H 'webhook-signature: v1,${signature}' -d '${payload}'`,
 );
 console.warn("─────────────────────────────────────────────────────────────────────────────────────────");
 console.warn("");
@@ -84,7 +84,7 @@ const headers: Readonly<Record<string, string>> = {
 	"content-type": "application/json",
 	"webhook-id": msgId,
 	"webhook-timestamp": timestamp,
-	"webhook-signature": `v1,${String(signature)}`,
+	"webhook-signature": `v1,${signature}`,
 };
 async function postOnce(targetUrl: string, body: string): Promise<string> {
 	try {

@@ -1,14 +1,13 @@
 -- ============================================================================
--- Row-Level Security setup — standalone, idempotent
+-- Row-Level Security — main bundle (idempotent)
 -- ============================================================================
--- This file is the CANONICAL source for RLS in the project.  Prisma does not
--- support RLS natively, so `prisma migrate dev` and `prisma db push` never
--- emit these statements.  Run this AFTER every migration or push:
+-- Prisma migrations do NOT emit RLS. Do not append this SQL to migration.sql
+-- (squashed migrations would drop it). Security is applied automatically by:
 --
---   pnpm --filter @workspace/api db:rls
+--   pnpm db:migrate | db:deploy | db:reset | db:push
 --
--- The file is idempotent: every statement uses DROP IF EXISTS / CREATE OR
--- REPLACE so it can be re-applied safely at any time.
+-- via `scripts/apply-rls.ts` (runs this file, then prisma/rls/*.sql fragments).
+-- See prisma/rls/README.md and docs/rbac-acl-rls-architecture.md.
 -- ============================================================================
 
 -- ── 1. app_runtime role ────────────────────────────────────────────────────
@@ -622,6 +621,7 @@ BEGIN
     'organization_membership_location_scopes',
     'organization_merchant_profiles',
     'organization_invitations',
+    'organization_invitation_location_scopes',
     'organization_access_requests',
     'organization_lifecycle_events',
     'tenant_placements',
@@ -710,6 +710,7 @@ BEGIN
     'organization_slug_history',
     'organization_membership_location_scopes',
     'organization_invitations',
+    'organization_invitation_location_scopes',
     'organization_lifecycle_events',
     'tenant_placements',
     'organization_entitlements',

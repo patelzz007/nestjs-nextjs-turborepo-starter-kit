@@ -5,7 +5,7 @@ import { API_VERSION_PREFIX } from "@workspace/shared";
 
 import { ORGANIZATION_SEED_IDS, ORGANIZATION_SEED_SLUGS } from "../prisma/seed/organizations";
 import { REWARD_SEED_IDS } from "../prisma/seed/rewards";
-import { createE2eApp, login, mutationHeaders, uniqueClientIp } from "./e2e-helpers";
+import { clearPendingTeamInviteForEmail, createE2eApp, login, mutationHeaders, uniqueClientIp } from "./e2e-helpers";
 
 const DATABASE_URL: string = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/monorepo";
 
@@ -18,6 +18,7 @@ describe("Access hardening (e2e)", () => {
 
 		const pool = new Pool({ connectionString: DATABASE_URL });
 		await pool.query(`UPDATE public.users SET email_verified_at = $1 WHERE email = $2`, [Date.now(), "alice.johnson@example.com"]);
+		await clearPendingTeamInviteForEmail(pool, ORGANIZATION_SEED_IDS.klOrganization, "user@example.com");
 		const result = await pool.query<{ id: string }>(`SELECT id FROM public.organization_api_keys WHERE organization_id = $1 LIMIT 1`, [ORGANIZATION_SEED_IDS.mlkOrganization]);
 		await pool.end();
 		const keyId = result.rows[0]?.id;

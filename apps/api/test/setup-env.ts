@@ -28,4 +28,5 @@ process.env.RESEND_API_KEY ??= "re_dummy";
 process.env.EMAIL_FROM_ADDRESS ??= "noreply@example.com";
 process.env.APP_NAME ??= "hello-world";
 process.env.APP_URL ??= "http://localhost:3000";
-process.env.CORS_ORIGINS ??= "http://localhost:3000,http://localhost:3001,http://localhost:3003";
+// MutationIntentGuard validates Origin against this list — override .env so e2e stays deterministic.
+process.env.CORS_ORIGINS = "http://localhost:3000,http://localhost:3001,http://localhost:3003";
