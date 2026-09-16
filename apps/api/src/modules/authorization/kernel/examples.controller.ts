@@ -2,7 +2,7 @@ import { Controller, Get, Param, Query, UseGuards } from "@nestjs/common";
 import { ApiOperation, ApiParam, ApiQuery, ApiTags } from "@nestjs/swagger";
 
 import { AuthGuard } from "../../auth/guards/auth.guard";
-import { CurrentUser } from "../../auth/decorators/current-user.decorator";
+import { CurrentUser } from "../decorators/current-user.decorator";
 import type { AuthenticatedUser } from "../../../types/authenticated-user";
 
 import { AuthorizationKernelService } from "./authorization-kernel.service";
@@ -52,12 +52,15 @@ export class AuthorizationKernelExamplesController {
 		@Query("locationId") locationId?: string,
 	): Promise<{ decision: AuthorizationDecision }> {
 		const request: AuthorizationRequest = {
-			userId: user.id,
+			subject: {
+				userId: user.id,
+				organizationId,
+				locationId,
+				isSuperAdmin: user.isSuperAdmin,
+			},
 			action: action as never,
 			resource: resource as never,
 			resourceId,
-			organizationId,
-			locationId,
 		};
 
 		const decision = await this.kernel.can(request);
