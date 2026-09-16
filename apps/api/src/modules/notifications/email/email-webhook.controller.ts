@@ -77,6 +77,7 @@ export class EmailWebhookController {
 		private readonly config: TypedConfigService,
 		private readonly emailLogService: EmailLogService,
 		private readonly logService: LogService,
+		private readonly kernelHelper: KernelIntegrationHelper,
 	) {
 		this.resend = new Resend(this.config.resendApiKey);
 	}

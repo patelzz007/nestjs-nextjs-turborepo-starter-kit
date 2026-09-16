@@ -13,6 +13,7 @@ import { ZodValidationPipe } from "../../../common/pipes/zod-validation.pipe";
 import { GetUser } from "../../auth/decorators/get-user.decorator";
 import { RequirePermission } from "../../auth/decorators/require-permission.decorator";
 import type { AccessTokenPayload } from "../../auth/services/token.service";
+import { KernelIntegrationHelper } from "../../authorization/kernel/kernel-integration.helper";
 import { PolicyControlPlaneService } from "../services/policy-control-plane.service";
 
 @ApiTags("Authorization Policies")
