@@ -31,6 +31,7 @@ import { CapabilityDefinitionService } from "./services/capability-definition.se
 import { PermissionRepository } from "./repositories/permission.repository";
 import { RoleAssignmentRepository } from "./repositories/role-assignment.repository";
 import { RoleRepository } from "./repositories/role.repository";
+import { AuthorizationKernelModule } from "./kernel/authorization-kernel.module";
 
 /**
  * First-class authorization module for NestJS + Fastify + Prisma.
@@ -52,7 +53,7 @@ import { RoleRepository } from "./repositories/role.repository";
  */
 @Global()
 @Module({
-	imports: [PrismaModule, SessionsPersistenceModule, AccessTokenModule],
+	imports: [PrismaModule, SessionsPersistenceModule, AccessTokenModule, AuthorizationKernelModule],
 	providers: [
 		{
 			provide: "IN_MEMORY_AUTH_CACHE",
@@ -124,6 +125,7 @@ import { RoleRepository } from "./repositories/role.repository";
 		AuthRateLimitService,
 		AuthorizationEventEmitter,
 		CapabilityDefinitionService,
+		AuthorizationKernelModule,
 	],
 })
 export class AuthorizationModule implements OnModuleDestroy {
