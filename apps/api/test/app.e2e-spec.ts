@@ -1,6 +1,4 @@
-import { FastifyAdapter, type NestFastifyApplication } from "@nestjs/platform-fastify";
-import fastifyCookie from "@fastify/cookie";
-import { Test, type TestingModule } from "@nestjs/testing";
+import { type NestFastifyApplication } from "@nestjs/platform-fastify";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { API_VERSION_PREFIX, apiContract, type RestMethod } from "@workspace/shared";
 
@@ -8,7 +6,7 @@ import { API_VERSION_PREFIX, apiContract, type RestMethod } from "@workspace/sha
 // test-file imports, so the AppModule graph never sees unset config). This
 // spec boots the REAL AppModule and needs a reachable Postgres — see
 // `setup-env.ts` for the DATABASE_URL override.
-import { AppModule } from "../src/app.module";
+import { createE2eApp, mutationHeaders, uniqueClientIp } from "./e2e-helpers";
 
 // ── Contract-vs-routes drift guard ───────────────────────────────────────
 // Every `apiContract` leaf must map to a REGISTERED versioned route. This is
@@ -46,19 +44,7 @@ describe("App (e2e)", () => {
 	let app: NestFastifyApplication;
 
 	beforeAll(async () => {
-		const moduleFixture: TestingModule = await Test.createTestingModule({
-			imports: [AppModule],
-		}).compile();
-
-		// The API runs on the Fastify adapter; rawBody: true matches bootstrap()
-		// (the webhook controller reads `req.rawBody`). Versioning is explicit:
-		// business controllers build their paths with `apiPath()` from
-		// `@workspace/shared` (→ `/api/v1/…`), and health/webhook stay
-		// unversioned — mirroring main.ts exactly. `@fastify/cookie` decorates
-		// `request.cookies` (AuthGuard reads it directly), registered like main.ts.
-		app = moduleFixture.createNestApplication<NestFastifyApplication>(new FastifyAdapter(), { rawBody: true });
-		await app.register(fastifyCookie);
-		await app.init();
+		app = await createE2eApp();
 	});
 
 	afterAll(async () => {
@@ -90,6 +76,7 @@ describe("App (e2e)", () => {
 		const response = await app.inject({
 			method: "POST",
 			url: "/api/v1/auth/login",
+			headers: mutationHeaders({ "cf-connecting-ip": uniqueClientIp() }),
 			payload: { email: "no-such-user@example.com", password: "wrong-password" },
 		});
 

@@ -14,8 +14,13 @@ describe("organization isolation primitives", () => {
 
 	it("scopes SQL predicates to organization", () => {
 		const compiler = new PolicyTemplateCompiler();
-		const compiled = compiler.compile({ templateId: "tenant.location_scope_read", parameters: { requireLocationScope: true } }, "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
-		expect(compiled.sqlPredicate).toContain("organization_id");
-		expect(compiled.sqlPredicate).not.toContain("bbbb");
+		const organizationId = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee";
+		const compiled = compiler.compile(
+			{ templateId: "tenant.location_scope_read", parameters: { requireLocationScope: true } },
+			organizationId,
+		);
+		expect(compiled.sqlPredicate).toBe(
+			`"organization_id" = '${organizationId}' AND ("location_id" IS NULL OR "location_id" = ANY($locationIds))`,
+		);
 	});
 });

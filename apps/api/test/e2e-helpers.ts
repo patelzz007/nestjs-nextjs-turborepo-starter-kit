@@ -1,6 +1,7 @@
 import { FastifyAdapter, type NestFastifyApplication } from "@nestjs/platform-fastify";
 import fastifyCookie from "@fastify/cookie";
 import { Test, type TestingModule } from "@nestjs/testing";
+import { Pool } from "pg";
 import { API_VERSION_PREFIX, MUTATION_INTENT_HEADER, MUTATION_INTENT_VALUE } from "@workspace/shared";
 
 import { AppModule } from "../src/app.module";
@@ -20,6 +21,29 @@ export function uniqueClientIp(): string {
 	const suffix = nextClientIpSuffix;
 	nextClientIpSuffix += 1;
 	return `203.0.113.${String((suffix % 250) + 1)}`;
+}
+
+/** Removes stale TEAM_MEMBER invites so invite e2e tests are repeatable (uses RLS bypass). */
+export async function clearPendingTeamInviteForEmail(pool: Pool, organizationId: string, email: string): Promise<void> {
+	const client = await pool.connect();
+	try {
+		await client.query(`SELECT set_config('app.rls_bypass', 'true', true)`);
+		await client.query(
+			`DELETE FROM public.organization_invitation_location_scopes
+       WHERE invitation_id IN (
+         SELECT id FROM public.organization_invitations
+         WHERE organization_id = $1 AND email = $2 AND kind = 'TEAM_MEMBER' AND status = 'PENDING'
+       )`,
+			[organizationId, email],
+		);
+		await client.query(
+			`DELETE FROM public.organization_invitations
+       WHERE organization_id = $1 AND email = $2 AND kind = 'TEAM_MEMBER' AND status = 'PENDING'`,
+			[organizationId, email],
+		);
+	} finally {
+		client.release();
+	}
 }
 
 export function mutationHeaders(extra: Record<string, string> = {}): Record<string, string> {

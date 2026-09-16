@@ -32,6 +32,7 @@ coverImage: "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?auto=f
 | **[Dependency hygiene](./dependencies.md)**          | How `syncpack` keeps shared deps (React, Zod, TS) pinned to the same exact version everywhere.                                                          |
 | **[Prisma & database](./prisma.md)**                 | The DB layer, migrations, seeding, RLS tenancy, and every `db:*` command.                                                                                            |
 | **[Authorization & RBAC](./authorization.md)**       | Permissions, roles, guards, cache (memory + Redis), `/me` vs `/auth/permissions`, impersonation, admin RBAC UI.                                                      |
+| **[RBAC, ACL, and RLS](./rbac-acl-rls-architecture.md)** | Template security model: dynamic roles, location ACL, migration-free RLS workflow (`prisma/rls*`, `db:apply-security`). |
 | **[Auth roadmap](./auth-roadmap.md)**                | Auth ideas/designs + the 30-point hardening deep-dive (status per item) and the full A→Z auth flow, explained like you're 5.                            |
 | **[Boilerplate roadmap](./boilerplate-roadmap.md)**  | 15 improvements + 15 new features for the monorepo template itself (tests, CI/CD, Docker, tooling).                                                     |
 | **[UI component audit](./ui-components.md)**         | 20 improvements + 20 new features for every component in `packages/ui/src/components` (68 components, 2,720 items), tagged by area.                     |

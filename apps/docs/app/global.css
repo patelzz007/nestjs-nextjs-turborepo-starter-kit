@@ -165,6 +165,18 @@ h6 {
 	font-weight: 500;
 }
 
+/* Callouts — sans body stack; no prose blockquote italic */
+.docs-callout,
+.docs-callout p,
+.docs-callout em {
+	font-family: var(--font-sans);
+	font-style: normal;
+}
+
+.prose .docs-callout {
+	margin-block: 1.5rem;
+}
+
 /*
  * The article fills most of the main column (90% of its width) and is centered
  * with auto side margins, leaving an even 5% gutter on each side. The

@@ -181,7 +181,7 @@ pnpm db:generate
 > `packages/shared/dist/`. On a fresh clone, run `pnpm --filter @workspace/shared build`
 > before `pnpm db:seed` (or run `pnpm build` once) or the seed fails with a
 > "cannot find module" error.
-| `pnpm db:reset`          | `dotenv -e .env -- prisma migrate reset --force && pnpm db:seed` | Drops **all** tables, re-applies all migrations, then runs the seeder                              | 🔴 **Wipes the DB**   |
+| `pnpm db:reset`          | `migrate reset --force` → `db:generate` → `db:apply-security` → `db:seed` | Drops **all** tables, replays migrations, regenerates client, applies RLS, then seeds | 🔴 **Wipes the DB**   |
 | `pnpm db:studio`         | `prisma studio`                                       | Opens the Prisma Studio GUI at `localhost:5555` to browse/edit data                                | ❌ No (read/write UI) |
 
 > [!NOTE] **Why `dotenv -e .env --`?** Prisma CLI doesn't load `.env` automatically in all
@@ -328,10 +328,9 @@ migrations/
 - **`prisma migrate reset`** (`db:reset`) drops everything and replays all
   migrations from scratch, then seeds.
 
-> [!NOTE] **Prisma 7 no longer auto-seeds** on `migrate reset` / `migrate dev` — seeding
-> is only triggered explicitly via `prisma db seed`. That's why the `db:reset`
-> script chains the seeder manually (`migrate reset --force && pnpm db:seed`);
-> the two-step sequence is what the docs below describe as "re-seeds".
+> [!NOTE] **Prisma 7** does not auto-seed or auto-generate on `migrate reset` / `migrate dev`.
+> The `db:reset` script runs reset, then **`db:generate`**, **`db:apply-security`** (RLS), and
+> **`db:seed`** in that order. The old `--skip-seed` flag no longer exists.
 
 > [!NOTE] When you change the schema, **commit the generated migration folder** — it's part
 > of the repo so other environments can replay the exact same SQL.
@@ -454,8 +453,9 @@ Follow the [column / field change order](#column--field-change-order) in §4. Sh
 4. Seed if the new shape needs rows: `pnpm db:seed`.
 5. **Then** Zod in `packages/shared`, Nest `ZodValidationPipe` + Swagger wrappers, client contract leaf.
 6. `pnpm typecheck` and `pnpm lint`.
-7. Tenant tables: keep the RLS tail at the bottom of `20260818235200_init`
-   (Prisma PSL cannot emit GRANT / POLICY).
+7. Tenant tables: add RLS in `apps/api/prisma/rls.sql` (or `prisma/rls/NN-*.sql`);
+   see [RBAC, ACL, and RLS](./rbac-acl-rls-architecture.md). **Do not** patch
+   `migrations/*/migration.sql` for policies.
 
 ---
 
@@ -526,8 +526,8 @@ Handlers declare required action+resource with `@RequirePermission("READ", "USER
 `packages/shared/src/schemas/domain/rbac/rbac/permissions-registry.ts` (synced to DB on startup).
 
 **Policies** (also noted as `/// RLS:` on each model in `schema.prisma` — Prisma cannot emit
-`ENABLE ROW LEVEL SECURITY` from PSL, so the SQL lives in
-the squashed `20260818235200_init` migration):
+`ENABLE ROW LEVEL SECURITY` from PSL, so the SQL lives in `apps/api/prisma/rls.sql` and
+`apps/api/prisma/rls/*.sql`, applied by `pnpm db:apply-security` after every migrate/deploy/reset):
 
 - User data (`urls`, `tags`, `api_keys`, tokens, `user_roles`, …): `app_owns(owner_id)`.
 - Join tables (`url_tags`, `clicks`, `api_key_usage_logs`): exist via a parent the user owns.
@@ -535,12 +535,15 @@ the squashed `20260818235200_init` migration):
 - Ops (audit): bypass only. `logs` / `email_logs`: **INSERT**
   allowed for any session (capture on user traffic); SELECT/UPDATE/DELETE still bypass.
 
-**Apply the migration** before starting the API after this change, or every query fails
+**Apply schema + security** before starting the API after a fresh clone, or queries fail
 with `role "app_runtime" does not exist`:
 
 ```bash
-cd apps/api && pnpm db:deploy
+pnpm db:reset
+# or: cd apps/api && pnpm db:deploy   # applies migrations + RLS
 ```
+
+See [RBAC, ACL, and RLS](./rbac-acl-rls-architecture.md) for the full template model.
 
 ---
 

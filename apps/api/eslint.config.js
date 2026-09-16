@@ -18,15 +18,7 @@ export default [
 		languageOptions: {
 			parserOptions: {
 				projectService: {
-					allowDefaultProject: [
-						"src/modules/auth/*.spec.ts",
-						"scripts/apply-rls.ts",
-						"scripts/backfill-kyb-documents.ts",
-						"scripts/gen-telescope-docs.ts",
-						"scripts/render-email-previews.ts",
-						"scripts/telescope-cli.ts",
-						"scripts/test-webhook-signature.ts",
-					],
+					allowDefaultProject: ["src/modules/auth/*.spec.ts"],
 				},
 			},
 		},
@@ -49,8 +41,16 @@ export default [
 			"@typescript-eslint/no-unsafe-return": "off",
 		},
 	},
-	// Scripts use `import.meta.dirname` and Node APIs whose types
-	// cannot be fully resolved by strictTypeChecked.
+	{
+		files: ["scripts/**/*.ts"],
+		languageOptions: {
+			parserOptions: {
+				project: "./tsconfig.scripts.json",
+				projectService: false,
+			},
+		},
+	},
+	// Scripts use Node APIs whose types cannot be fully resolved by strictTypeChecked.
 	{
 		files: ["scripts/**/*.ts"],
 		rules: {

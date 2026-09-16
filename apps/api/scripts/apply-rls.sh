@@ -1,9 +1,8 @@
 #!/usr/bin/env bash
 # Apply Row-Level Security (RLS) to the database.
-# Usage: pnpm --filter @workspace/api db:rls
+# Prefer: pnpm db:apply-security (tsx scripts/apply-rls.ts)
 #
-# Reads DATABASE_URL from .env (strips Prisma's ?schema= param) and runs
-# prisma/rls.sql. Idempotent — safe to run any number of times.
+# Applies prisma/rls.sql then prisma/rls/*.sql in order. Idempotent.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

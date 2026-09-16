@@ -4,7 +4,10 @@
 		"noEmit": true,
 		"rootDir": ".",
 		"incremental": false,
-		"emitDecoratorMetadata": false
+		"emitDecoratorMetadata": false,
+		"types": ["node"],
+		"module": "NodeNext",
+		"moduleResolution": "NodeNext"
 	},
 	"include": ["scripts/**/*.ts"]
 }

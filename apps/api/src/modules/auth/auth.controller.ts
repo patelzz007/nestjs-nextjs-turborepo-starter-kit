@@ -56,6 +56,7 @@ import { Public } from "./decorators/public.decorator";
 import { RlsBypass } from "./decorators/rls-bypass.decorator";
 import { RequirePermission } from "./decorators/require-permission.decorator";
 import { SkipAuthThrottle } from "./decorators/skip-auth-throttle.decorator";
+import { SkipMutationIntent } from "./decorators/skip-mutation-intent.decorator";
 import { SuperAdminOnly } from "./decorators/super-admin.decorator";
 import { ApiErrorResponseDto } from "../../common/dto/api-response.dto";
 import { createWrappedArrayDto, createWrappedDto } from "../../common/dto/response-wrapper";
@@ -104,6 +105,7 @@ export class AuthController {
 	@Throttle({ strict: { ttl: 60000, limit: 3 } })
 	@Public()
 	@RlsBypass()
+	@SkipMutationIntent()
 	@Post("/signup")
 	@ApiOperation({ summary: "Register a new user account" })
 	@ApiBody({ type: SignupDto })
@@ -126,6 +128,7 @@ export class AuthController {
 	@Throttle({ strict: { ttl: 60000, limit: 5 } })
 	@Public()
 	@RlsBypass()
+	@SkipMutationIntent()
 	@Post("/login")
 	@ApiOperation({ summary: "Authenticate with email and password" })
 	@ApiBody({ type: LoginDto })
@@ -155,6 +158,7 @@ export class AuthController {
 	@Throttle({ strict: { ttl: 60000, limit: 3 } })
 	@Public()
 	@RlsBypass()
+	@SkipMutationIntent()
 	@Post("/resend-verification")
 	@HttpCode(200)
 	@ApiOperation({ summary: "Resend email verification link" })
@@ -179,6 +183,7 @@ export class AuthController {
 	@Throttle({ strict: { ttl: 60000, limit: 3 } })
 	@Public()
 	@RlsBypass()
+	@SkipMutationIntent()
 	@Post("/forgot-password")
 	@HttpCode(200)
 	@ApiOperation({ summary: "Request a password reset email" })
@@ -201,6 +206,7 @@ export class AuthController {
 	@Throttle({ strict: { ttl: 60000, limit: 5 } })
 	@Public()
 	@RlsBypass()
+	@SkipMutationIntent()
 	@Post("/reset-password")
 	@HttpCode(200)
 	@ApiOperation({ summary: "Reset password using a valid reset token" })
@@ -214,6 +220,7 @@ export class AuthController {
 	@Throttle({ strict: { ttl: 60000, limit: 10 } })
 	@Public()
 	@RlsBypass()
+	@SkipMutationIntent()
 	@Post("/validate-reset-token")
 	@HttpCode(200)
 	@ApiOperation({ summary: "Validate a password reset token without consuming it" })
@@ -225,6 +232,7 @@ export class AuthController {
 	@Throttle({ strict: { ttl: 60000, limit: 10 } })
 	@Public()
 	@RlsBypass()
+	@SkipMutationIntent()
 	@Post("/verify-login")
 	@HttpCode(200)
 	@ApiOperation({ summary: "Complete login with an email verification code" })
@@ -274,6 +282,7 @@ export class AuthController {
 
 	@Public()
 	@RlsBypass()
+	@SkipMutationIntent()
 	@SkipAuthThrottle()
 	@Post("/verify-email")
 	@ApiOperation({ summary: "Verify email address using a verification token" })

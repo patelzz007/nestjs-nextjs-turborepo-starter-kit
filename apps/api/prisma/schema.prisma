@@ -10,19 +10,20 @@ datasource db {
 // Row Level Security (Postgres)
 //
 // Prisma 7 PSL cannot emit CREATE ROLE, GRANT, ENABLE/FORCE RLS, or POLICY.
-// Those statements live at the **bottom** of `migrations/20260818235200_init`
-// and MUST stay there when this folder is squashed or regenerated.
+// **Do not append RLS to migrations/*/migration.sql** — squashed migrations
+// would drop it. Canonical SQL: `prisma/rls.sql` + `prisma/rls/*.sql`, applied
+// automatically by `pnpm db:migrate` / `db:reset` / `db:deploy` (`db:apply-security`).
 //
 // Schema-owned pieces (columns, indexes, maps) always land in this file first.
+// Each model may document its RLS profile with `/// RLS:` comments.
 //
 // Runtime (apps/api):
 //   - Role `app_runtime` (NOLOGIN NOSUPERUSER NOINHERIT NOBYPASSRLS)
-//   - GRANT USAGE ON SCHEMA public + table DML to app_runtime (PG 15+ public
-//     schema has no PUBLIC grants — without this, SET ROLE fails with 42501)
-//   - RlsPool: SET ROLE app_runtime on every checkout
-//   - Session: app.current_user_id, app.rls_bypass (RlsInterceptor ALS)
-//   - Helpers: app_rls_bypass(), app_current_user_id(), app_owns(owner_id)
-// See docs/prisma.md §10.
+//   - RlsPool + TenantTransactionService: SET ROLE + transaction-local set_config
+//   - Session: app.current_user_id, app.current_organization_id, app.rls_bypass
+//   - RBAC: roles/permissions (data) — guards, not per-role RLS policies
+//   - ACL: organization_memberships + location scopes — generic SQL helpers
+// See docs/rbac-acl-rls-architecture.md and docs/prisma.md §10.
 // ---------------------------------------------------------------------------
 
 enum Plan {
