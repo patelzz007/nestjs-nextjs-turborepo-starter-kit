@@ -67,8 +67,9 @@ SQL helpers (non-exhaustive):
 |----------|---------|
 | `app_rls_bypass()` | Trusted system path |
 | `app_owns(owner_id)` | User-owned rows |
-| `app_organization_member_of(org_id)` | Membership in org (any active tenant) |
+| `app_organization_member_of(org_id)` | Membership in org (ReBAC; no tenant header required) |
 | `app_tenant_organization_member_of(org_id)` | Active org context + membership |
+| `app_tenant_org_member(org_id)` | Tenant-scoped **or** org membership — use for reward/org-owned rows |
 | `app_tenant_has_location_access(location_id)` | ACL: org + location scope |
 | `app_tenant_row_org_location_access(org_id, location_id)` | Row carries org + location |
 

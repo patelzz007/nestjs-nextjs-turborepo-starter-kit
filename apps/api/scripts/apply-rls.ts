@@ -1,7 +1,7 @@
-import { spawnSync } from "node:child_process";
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { readFileSync, existsSync, readdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { Pool } from "pg";
 
 const apiDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const prismaDir = resolve(apiDir, "prisma");
@@ -46,43 +46,35 @@ function stripPrismaQueryParams(databaseUrl: string): string {
 	return databaseUrl.slice(0, questionMarkIndex);
 }
 
-function getNodeErrorCode(error: Error): string | undefined {
-	if (!Object.hasOwn(error, "code")) {
-		return undefined;
-	}
-
-	const descriptor = Object.getOwnPropertyDescriptor(error, "code");
-	const codeValue = descriptor?.value;
-
-	if (codeValue === undefined || codeValue === null) {
-		return undefined;
-	}
-
-	if (typeof codeValue === "string") {
-		return codeValue;
-	}
-
-	if (typeof codeValue === "number") {
-		return String(codeValue);
-	}
-
-	return undefined;
-}
-
 function listRlsSqlFiles(): string[] {
+	const fragments: string[] = [];
+
+	if (existsSync(rlsFragmentsDir)) {
+		const sorted = readdirSync(rlsFragmentsDir)
+			.filter((name: string) => name.endsWith(".sql"))
+			.sort((a: string, b: string) => a.localeCompare(b))
+			.map((name: string) => resolve(rlsFragmentsDir, name));
+		fragments.push(...sorted);
+	}
+
+	const aclFragment = fragments.find((path: string) => path.endsWith("01-acl-location-access.sql"));
+	const grantsFragment = fragments.find((path: string) => path.endsWith("99-app-runtime-grants.sql"));
+	const otherFragments = fragments.filter((path: string) => path !== aclFragment && path !== grantsFragment);
+
 	const files: string[] = [];
+
+	if (aclFragment !== undefined) {
+		files.push(aclFragment);
+	}
 
 	if (existsSync(rlsBundleFile)) {
 		files.push(rlsBundleFile);
 	}
 
-	if (existsSync(rlsFragmentsDir)) {
-		const fragments = readdirSync(rlsFragmentsDir)
-			.filter((name: string) => name.endsWith(".sql"))
-			.sort((a: string, b: string) => a.localeCompare(b))
-			.map((name: string) => resolve(rlsFragmentsDir, name));
+	files.push(...otherFragments);
 
-		files.push(...fragments);
+	if (grantsFragment !== undefined) {
+		files.push(grantsFragment);
 	}
 
 	if (files.length === 0) {
@@ -92,53 +84,53 @@ function listRlsSqlFiles(): string[] {
 	return files;
 }
 
-function runPsql(databaseUrl: string, sqlFile: string): void {
-	const command = process.platform === "win32" ? "psql.exe" : "psql";
-
-	const result = spawnSync(command, [databaseUrl, "-f", sqlFile], {
-		stdio: "inherit",
-		shell: false,
-	});
-
-	if (result.error !== undefined) {
-		const code = getNodeErrorCode(result.error);
-		if (code === "ENOENT") {
-			throw new Error(["psql was not found.", "", "Install PostgreSQL client tools and ensure psql is on PATH."].join("\n"));
-		}
-
-		throw result.error;
-	}
-
-	if (result.status !== 0) {
-		throw new Error(`psql exited with code ${String(result.status ?? "unknown")} while applying ${sqlFile}`);
-	}
+async function runSqlFile(pool: Pool, sqlFile: string): Promise<void> {
+	const sql = readFileSync(sqlFile, "utf8");
+	await pool.query(sql);
 }
 
-function run(): void {
+/**
+ * Apply `prisma/rls.sql` and `prisma/rls/*.sql` via the Node `pg` driver.
+ * No local `psql` binary required — only a reachable `DATABASE_URL` (Docker Postgres on localhost is fine).
+ */
+export async function applyRowLevelSecurity(): Promise<void> {
 	const databaseUrl = stripPrismaQueryParams(getDatabaseUrl());
 	const sqlFiles = listRlsSqlFiles();
+	const pool = new Pool({ connectionString: databaseUrl });
 
 	console.log("Applying Row-Level Security (idempotent) ...");
 
-	for (const sqlFile of sqlFiles) {
-		const relative = sqlFile.startsWith(apiDir) ? sqlFile.slice(apiDir.length + 1) : sqlFile;
-		console.log(`  → ${relative}`);
-		runPsql(databaseUrl, sqlFile);
-	}
+	try {
+		for (const sqlFile of sqlFiles) {
+			const relative = sqlFile.startsWith(apiDir) ? sqlFile.slice(apiDir.length + 1) : sqlFile;
+			console.log(`  → ${relative}`);
+			await runSqlFile(pool, sqlFile);
+		}
 
-	console.log("RLS applied successfully.");
+		console.log("RLS applied successfully.");
+	} finally {
+		await pool.end();
+	}
 }
 
-try {
-	run();
-} catch (error) {
-	console.error("");
-
-	if (error instanceof Error) {
-		console.error(`Error: ${error.message}`);
-	} else {
-		console.error(error);
+function isApplyRlsCliEntry(): boolean {
+	const entry = process.argv[1];
+	if (entry.length === 0) {
+		return false;
 	}
+	return resolve(entry) === fileURLToPath(import.meta.url);
+}
 
-	process.exit(1);
+if (isApplyRlsCliEntry()) {
+	void applyRowLevelSecurity().catch((error: unknown) => {
+		console.error("");
+
+		if (error instanceof Error) {
+			console.error(`Error: ${error.message}`);
+		} else {
+			console.error(error);
+		}
+
+		process.exit(1);
+	});
 }

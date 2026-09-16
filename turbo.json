@@ -98,6 +98,14 @@
 			"cache": false,
 			"env": ["DATABASE_URL"]
 		},
+		"db:apply-security": {
+			"cache": false,
+			"env": ["DATABASE_URL"]
+		},
+		"db:rls": {
+			"cache": false,
+			"env": ["DATABASE_URL"]
+		},
 		"db:migrate": {
 			"cache": false,
 			"env": ["DATABASE_URL"],

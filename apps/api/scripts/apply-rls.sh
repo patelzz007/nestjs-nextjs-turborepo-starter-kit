@@ -2,7 +2,7 @@
 # Apply Row-Level Security (RLS) to the database.
 # Prefer: pnpm db:apply-security (tsx scripts/apply-rls.ts)
 #
-# Applies prisma/rls.sql then prisma/rls/*.sql in order. Idempotent.
+# Legacy shell helper (requires local psql). Prefer: pnpm db:apply-security (uses Node pg).
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

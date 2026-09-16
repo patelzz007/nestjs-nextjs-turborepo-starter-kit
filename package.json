@@ -25,6 +25,8 @@
 		"db:migrate:status": "pnpm --filter @workspace/api db:migrate:status",
 		"db:generate": "pnpm --filter @workspace/api db:generate",
 		"db:push": "pnpm --filter @workspace/api db:push",
+		"db:apply-security": "pnpm --filter @workspace/api db:apply-security",
+		"db:rls": "pnpm --filter @workspace/api db:rls",
 		"db:seed": "pnpm --filter @workspace/api db:seed",
 		"db:studio": "pnpm --filter @workspace/api db:studio",
 		"db:reset": "pnpm --filter @workspace/api db:reset",

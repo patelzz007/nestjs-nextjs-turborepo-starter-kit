@@ -31,7 +31,7 @@ export const RLS_MANIFEST_PROFILES: Readonly<Record<RlsManifestProfile, readonly
 		"mfa_recovery_requests",
 		"user_avatars",
 	],
-	rbac_catalog: ["roles", "permissions", "capability_definitions", "role_permissions", "user_roles", "user_permissions"],
+	rbac_catalog: ["roles", "permissions", "capability_definitions", "role_permissions", "user_roles", "user_permissions", "policy_definitions"],
 	organization_tenant: [
 		"organizations",
 		"organization_slug_history",
@@ -58,6 +58,7 @@ export const RLS_MANIFEST_PROFILES: Readonly<Record<RlsManifestProfile, readonly
 		"rewards",
 		"reward_location_scopes",
 		"reward_audit_logs",
+		"resource_acls",
 	],
 	organization_location: ["organization_terminals", "organization_api_keys"],
 	bypass_only: [
@@ -66,6 +67,7 @@ export const RLS_MANIFEST_PROFILES: Readonly<Record<RlsManifestProfile, readonly
 		"platform_resource_audit_logs",
 		"platform_resource_idempotency_records",
 		"permission_audit_logs",
+		"authorization_audits",
 		"reward_redemption_idempotency_records",
 		"product_images",
 	],
