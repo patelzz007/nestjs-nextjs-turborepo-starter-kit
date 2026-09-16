@@ -17,6 +17,8 @@ import {
 } from "../constants/authorization.constants";
 import { AuthRateLimitService } from "../services/auth-rate-limit.service";
 import { AuthorizationCheckerService } from "../services/authorization-checker.service";
+import { AuthorizationKernelService } from "../kernel/authorization-kernel.service";
+import type { AuthorizationDecision } from "@workspace/shared";
 
 /**
  * Unified authorization guard that handles:
@@ -39,10 +41,17 @@ import { AuthorizationCheckerService } from "../services/authorization-checker.s
  *
  * A `MANAGE` permission on a resource satisfies any action on that
  * resource (handled inside `AuthorizationCheckerService`).
+ *
+ * ## Authorization Kernel Integration
+ *
+ * When `AuthorizationKernelService` is available, it is used for
+ * permission checks, providing advanced features like ACL DENY precedence,
+ * ownership, policies, and comprehensive audit trails.
  */
 @Injectable()
 export class AuthorizationGuard implements CanActivate {
 	private readonly logger: Logger = new Logger(AuthorizationGuard.name);
+	private readonly useKernel: boolean;
 
 	public constructor(
 		private readonly reflector: Reflector,
@@ -50,7 +59,11 @@ export class AuthorizationGuard implements CanActivate {
 		private readonly audit: AuthorizationAuditService,
 		private readonly rateLimit: AuthRateLimitService,
 		private readonly prisma: PrismaService,
-	) {}
+		private readonly kernel: AuthorizationKernelService,
+	) {
+		this.useKernel = true;
+		this.logger.log("AuthorizationGuard initialized with Authorization Kernel");
+	}
 
 	public async canActivate(context: ExecutionContext): Promise<boolean> {
 		// ── 1. Read all metadata from handler + class ──────────────────────
@@ -133,7 +146,19 @@ export class AuthorizationGuard implements CanActivate {
 		// Legacy single-permission decorator
 		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- getAllAndOverride returns T | undefined; metadata may not be set on every handler.
 		if (legacyPermission !== undefined) {
-			const granted: boolean = await this.checker.hasPermission(userId, legacyPermission.action, legacyPermission.resource);
+			let granted: boolean;
+
+			if (this.useKernel) {
+				const decision: AuthorizationDecision = await this.kernel.can({
+					userId,
+					action: legacyPermission.action as never,
+					resource: legacyPermission.resource as never,
+				});
+				granted = decision === "ALLOW";
+			} else {
+				granted = await this.checker.hasPermission(userId, legacyPermission.action, legacyPermission.resource);
+			}
+
 			if (!granted) {
 				throw new ForbiddenException({
 					message: "Insufficient permissions",
@@ -148,7 +173,23 @@ export class AuthorizationGuard implements CanActivate {
 			const requirements = permissionsMeta.permissions.map((p) => ({ action: p[0], resource: p[1] }));
 
 			if (permissionsMeta.mode === "all") {
-				const granted: boolean = await this.checker.hasAllPermissions(userId, requirements);
+				let granted: boolean;
+
+				if (this.useKernel) {
+					const results = await Promise.all(
+						requirements.map((req) =>
+							this.kernel.can({
+								userId,
+								action: req.action as never,
+								resource: req.resource as never,
+							}),
+						),
+					);
+					granted = results.every((decision) => decision === "ALLOW");
+				} else {
+					granted = await this.checker.hasAllPermissions(userId, requirements);
+				}
+
 				if (!granted) {
 					throw new ForbiddenException({
 						message: "Missing required permissions",
@@ -156,7 +197,23 @@ export class AuthorizationGuard implements CanActivate {
 					});
 				}
 			} else {
-				const granted: boolean = await this.checker.hasAnyPermission(userId, requirements);
+				let granted: boolean;
+
+				if (this.useKernel) {
+					const results = await Promise.all(
+						requirements.map((req) =>
+							this.kernel.can({
+								userId,
+								action: req.action as never,
+								resource: req.resource as never,
+							}),
+						),
+					);
+					granted = results.some((decision) => decision === "ALLOW");
+				} else {
+					granted = await this.checker.hasAnyPermission(userId, requirements);
+				}
+
 				if (!granted) {
 					throw new ForbiddenException({
 						message: "Missing any of the required permissions",
