@@ -62,6 +62,7 @@ import { ApiErrorResponseDto } from "../../common/dto/api-response.dto";
 import { createWrappedArrayDto, createWrappedDto } from "../../common/dto/response-wrapper";
 import { SetAuthCookiesInterceptor } from "./interceptors/set-auth-cookies.interceptor";
 import { extractClientInfo } from "../../common/utils/client-info";
+import { KernelIntegrationHelper } from "../authorization/kernel/kernel-integration.helper";
 
 import { AuthService } from "./auth.service";
 import type { AccessTokenPayload } from "./services/token.service";
@@ -100,7 +101,10 @@ const WrappedMessageResponse = createWrappedDto(MessageResponseSchema, "WrappedM
 @ApiTags("Auth")
 @Controller(apiPath("/auth"))
 export class AuthController {
-	constructor(private readonly authService: AuthService) {}
+	constructor(
+		private readonly authService: AuthService,
+		private readonly kernelHelper: KernelIntegrationHelper,
+	) {}
 
 	@Throttle({ strict: { ttl: 60000, limit: 3 } })
 	@Public()
@@ -257,6 +261,7 @@ export class AuthController {
 		@GetUser("sub") userId: string,
 		@Body(new ZodValidationPipe(apiContract.auth.changePassword.input)) body: ChangePasswordInput,
 	): Promise<ChangePasswordResponse> {
+		await this.kernelHelper.requireResourceAccess(userId, "UPDATE", "USER", userId);
 		return this.authService.changePassword(userId, body);
 	}
 
@@ -330,7 +335,9 @@ export class AuthController {
 	@ApiOperation({ summary: "SuperAdmin: unlock a locked user account" })
 	@ApiOkResponse({ type: WrappedMessageResponse, description: "Account unlocked" })
 	@ApiResponse({ status: 404, type: ApiErrorResponseDto, description: "User not found" })
-	public async unlockUser(@Param("userId", new ZodValidationPipe(UuidParamSchema)) userId: string): Promise<MessageResponse> {
+	public async unlockUser(@GetUser("sub") adminUserId: string, @Param("userId", new ZodValidationPipe(UuidParamSchema)) userId: string): Promise<MessageResponse> {
+		await this.kernelHelper.requireResourceAccess(adminUserId, "UPDATE", "USER", userId, { isSuperAdmin: true });
+		
 		return this.authService.unlockUser(userId);
 	}
 }
