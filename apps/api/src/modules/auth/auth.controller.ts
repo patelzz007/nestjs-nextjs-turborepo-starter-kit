@@ -62,7 +62,7 @@ import { ApiErrorResponseDto } from "../../common/dto/api-response.dto";
 import { createWrappedArrayDto, createWrappedDto } from "../../common/dto/response-wrapper";
 import { SetAuthCookiesInterceptor } from "./interceptors/set-auth-cookies.interceptor";
 import { extractClientInfo } from "../../common/utils/client-info";
-import { KernelIntegrationHelper } from "../authorization/kernel/kernel-integration.helper";
+import { Authorize } from "../authorization/decorators/authorize.decorator";
 
 import { AuthService } from "./auth.service";
 import type { AccessTokenPayload } from "./services/token.service";
@@ -101,10 +101,7 @@ const WrappedMessageResponse = createWrappedDto(MessageResponseSchema, "WrappedM
 @ApiTags("Auth")
 @Controller(apiPath("/auth"))
 export class AuthController {
-	constructor(
-		private readonly authService: AuthService,
-		private readonly kernelHelper: KernelIntegrationHelper,
-	) {}
+	constructor(private readonly authService: AuthService) {}
 
 	@Throttle({ strict: { ttl: 60000, limit: 3 } })
 	@Public()
@@ -254,6 +251,12 @@ export class AuthController {
 	@ApiBearerAuth()
 	@Post("/change-password")
 	@HttpCode(200)
+	@Authorize({
+		action: "UPDATE",
+		resource: "USER",
+		resourceId: (ctx) => ctx.switchToHttp().getRequest().user?.sub ?? null,
+		description: "User can only change their own password",
+	})
 	@ApiOperation({ summary: "Change password for the authenticated user" })
 	@ApiBody({ type: ChangePasswordDto })
 	@ApiOkResponse({ type: WrappedChangePasswordResponse, description: "Password changed successfully" })
@@ -261,7 +264,6 @@ export class AuthController {
 		@GetUser("sub") userId: string,
 		@Body(new ZodValidationPipe(apiContract.auth.changePassword.input)) body: ChangePasswordInput,
 	): Promise<ChangePasswordResponse> {
-		await this.kernelHelper.requireResourceAccess(userId, "UPDATE", "USER", userId);
 		return this.authService.changePassword(userId, body);
 	}
 
@@ -331,13 +333,17 @@ export class AuthController {
 	@SuperAdminOnly()
 	@EmailVerified()
 	@RequirePermission("UPDATE", "USER")
+	@Authorize({
+		action: "UPDATE",
+		resource: "USER",
+		resourceId: "userId",
+		description: "SuperAdmin can unlock any user account",
+	})
 	@Patch("/admin/users/:userId/unlock")
 	@ApiOperation({ summary: "SuperAdmin: unlock a locked user account" })
 	@ApiOkResponse({ type: WrappedMessageResponse, description: "Account unlocked" })
 	@ApiResponse({ status: 404, type: ApiErrorResponseDto, description: "User not found" })
-	public async unlockUser(@GetUser("sub") adminUserId: string, @Param("userId", new ZodValidationPipe(UuidParamSchema)) userId: string): Promise<MessageResponse> {
-		await this.kernelHelper.requireResourceAccess(adminUserId, "UPDATE", "USER", userId, { isSuperAdmin: true });
-		
+	public async unlockUser(@Param("userId", new ZodValidationPipe(UuidParamSchema)) userId: string): Promise<MessageResponse> {
 		return this.authService.unlockUser(userId);
 	}
 }

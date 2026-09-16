@@ -31,7 +31,7 @@ import { GetUser } from "./decorators/get-user.decorator";
 import { Public } from "./decorators/public.decorator";
 import { RlsBypass } from "./decorators/rls-bypass.decorator";
 import { SetAuthCookiesInterceptor } from "./interceptors/set-auth-cookies.interceptor";
-import { KernelIntegrationHelper } from "../authorization/kernel/kernel-integration.helper";
+import { Authorize } from "../authorization/decorators/authorize.decorator";
 import { TwoFactorService } from "./services/two-factor.service";
 
 const WrappedTwoFactorSetupResponse = createWrappedDto(TwoFactorSetupResponseSchema, "WrappedTwoFactorSetupResponse");
@@ -43,10 +43,7 @@ const WrappedLoginTwoFactorResponse = createWrappedDto(LoginServiceResponseSchem
 @ApiTags("Auth")
 @Controller(apiPath("/auth"))
 export class TwoFactorController {
-	public constructor(
-		private readonly twoFactorService: TwoFactorService,
-		private readonly kernelHelper: KernelIntegrationHelper,
-	) {}
+	public constructor(private readonly twoFactorService: TwoFactorService) {}
 
 	@Throttle({ strict: { ttl: 60000, limit: 5 } })
 	@ApiBearerAuth()
@@ -61,14 +58,13 @@ export class TwoFactorController {
 	@ApiBearerAuth()
 	@Post("/2fa/enable")
 	@HttpCode(200)
+	@Authorize({ action: "UPDATE", resource: "USER", description: "User can enable their own 2FA" })
 	@ApiOperation({ summary: "Confirm 2FA enrollment with a TOTP code" })
 	@ApiOkResponse({ type: WrappedTwoFactorMessageResponse })
 	public async enableTwoFactor(
 		@GetUser("sub") userId: string,
 		@Body(new ZodValidationPipe(apiContract.auth.twoFactorEnable.input)) body: EnableTwoFactorInput,
 	): Promise<TwoFactorMessageResponse> {
-		await this.kernelHelper.requireAction(userId, "UPDATE", "USER");
-		
 		return this.twoFactorService.enableTwoFactor(userId, body);
 	}
 
@@ -76,14 +72,13 @@ export class TwoFactorController {
 	@ApiBearerAuth()
 	@Post("/2fa/rotate")
 	@HttpCode(200)
+	@Authorize({ action: "UPDATE", resource: "USER", description: "User can rotate their own 2FA" })
 	@ApiOperation({ summary: "Rotate 2FA after confirming password and current TOTP or backup code" })
 	@ApiOkResponse({ type: WrappedTwoFactorSetupResponse })
 	public async rotateTwoFactor(
 		@GetUser("sub") userId: string,
 		@Body(new ZodValidationPipe(apiContract.auth.twoFactorRotate.input)) body: RotateTwoFactorInput,
 	): Promise<TwoFactorSetupResponse> {
-		await this.kernelHelper.requireAction(userId, "UPDATE", "USER");
-		
 		return this.twoFactorService.rotateTwoFactor(userId, body);
 	}
 

@@ -15,7 +15,7 @@ import { createWrappedArrayDto, createWrappedDto } from "../../common/dto/respon
 import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe";
 import { GetUser } from "./decorators/get-user.decorator";
 import { SuperAdminOnly } from "./decorators/super-admin.decorator";
-import { KernelIntegrationHelper } from "../authorization/kernel/kernel-integration.helper";
+import { Authorize } from "../authorization/decorators/authorize.decorator";
 import { MfaRecoveryService } from "./services/mfa-recovery.service";
 
 const WrappedMfaRecoveryStatusResponse = createWrappedDto(MfaRecoveryStatusResponseSchema, "WrappedMfaRecoveryStatusResponse");
@@ -24,23 +24,19 @@ const WrappedAdminMfaRecoveryRequestList = createWrappedArrayDto(AdminMfaRecover
 @ApiTags("Auth")
 @Controller(apiPath("/auth"))
 export class MfaRecoveryController {
-	public constructor(
-		private readonly mfaRecoveryService: MfaRecoveryService,
-		private readonly kernelHelper: KernelIntegrationHelper,
-	) {}
+	public constructor(private readonly mfaRecoveryService: MfaRecoveryService) {}
 
 	@Throttle({ strict: { ttl: 60000, limit: 3 } })
 	@ApiBearerAuth()
 	@Post("/mfa/recovery")
 	@HttpCode(200)
+	@Authorize({ action: "CREATE", resource: "USER", description: "User can initiate MFA recovery" })
 	@ApiOperation({ summary: "Initiate an admin-reviewed MFA recovery request" })
 	@ApiOkResponse({ type: WrappedMfaRecoveryStatusResponse })
 	public async initiateRecovery(
 		@GetUser("sub") userId: string,
 		@Body(new ZodValidationPipe(apiContract.auth.mfaRecoveryInitiate.input)) body: InitiateMfaRecoveryInput,
 	): Promise<MfaRecoveryStatusResponse> {
-		await this.kernelHelper.requireAction(userId, "CREATE", "USER");
-		
 		return this.mfaRecoveryService.initiateRecovery(userId, body);
 	}
 
@@ -69,16 +65,21 @@ export class MfaRecoveryController {
 	@SuperAdminOnly()
 	@Post("/admin/mfa/recovery/review")
 	@HttpCode(200)
+	@Authorize({
+		action: "UPDATE",
+		resource: "USER",
+		resourceId: (ctx) => {
+			const body = ctx.switchToHttp().getRequest().body;
+			return body?.requestId ?? null;
+		},
+		description: "SuperAdmin can review MFA recovery requests",
+	})
 	@ApiOperation({ summary: "SuperAdmin: approve or deny an MFA recovery request" })
 	@ApiOkResponse({ type: WrappedMfaRecoveryStatusResponse })
 	public async reviewRecovery(
 		@GetUser("sub") adminUserId: string,
 		@Body(new ZodValidationPipe(apiContract.auth.adminMfaRecoveryReview.input)) body: AdminReviewMfaRecoveryInput,
 	): Promise<MfaRecoveryStatusResponse> {
-		await this.kernelHelper.requireResourceAccess(adminUserId, "UPDATE", "USER", body.requestId, {
-			isSuperAdmin: true,
-		});
-		
 		if (body.action === "approve") {
 			return this.mfaRecoveryService.adminApprove(adminUserId, body);
 		}

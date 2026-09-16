@@ -9,7 +9,7 @@ import { PrismaService } from "../../../prisma/prisma.service";
 import { ConflictDetectionService } from "../services/conflict-detection.service";
 import { AuthorizationService } from "../services/authorization.service";
 import { ZodValidationPipe } from "../../../common/pipes/zod-validation.pipe";
-import { KernelIntegrationHelper } from "../kernel/kernel-integration.helper";
+import { Authorize } from "../decorators/authorize.decorator";
 import { GetUser } from "../../auth/decorators/get-user.decorator";
 import { CreateRoleDto, SetRoleParentDto, UpdateRoleDto, ValidateRoleAssignmentDto, AssignRoleToUserDto, SyncUserRolesDto } from "./dtos/role.dto";
 import { SyncRolePermissionsDto } from "./dtos/permission.dto";
@@ -23,7 +23,6 @@ export class RolesController {
 		private readonly authorization: AuthorizationService,
 		private readonly conflictDetection: ConflictDetectionService,
 		private readonly prisma: PrismaService,
-		private readonly kernelHelper: KernelIntegrationHelper,
 	) {}
 
 	@Get()
@@ -47,11 +46,10 @@ export class RolesController {
 	@Post()
 	@Throttle({ default: { ttl: 60000, limit: 10 } })
 	@RequirePermission("CREATE", "ROLE")
+	@Authorize({ action: "CREATE", resource: "ROLE", description: "Create new role" })
 	@ApiBody({ type: CreateRoleDto })
 	@ApiOkResponse({ description: "Created role" })
-	public async create(@GetUser("sub") userId: string, @Body(new ZodValidationPipe(CreateRoleDto.schema)) body: CreateRoleDto): Promise<unknown> {
-		await this.kernelHelper.requireAction(userId, "CREATE", "USER");
-		
+	public async create(@Body(new ZodValidationPipe(CreateRoleDto.schema)) body: CreateRoleDto): Promise<unknown> {
 		return this.authorization.roles.create({
 			name: body.name,
 			description: body.description,
@@ -64,11 +62,15 @@ export class RolesController {
 	@Post("user/assign")
 	@Throttle({ default: { ttl: 60000, limit: 10 } })
 	@RequirePermission("UPDATE", "ROLE")
+	@Authorize({
+		action: "UPDATE",
+		resource: "USER",
+		resourceId: (ctx) => ctx.switchToHttp().getRequest().body?.userId ?? null,
+		description: "Assign role to user",
+	})
 	@ApiBody({ type: AssignRoleToUserDto })
 	@ApiOkResponse({ description: "Role assigned to user" })
-	public async assignRoleToUser(@GetUser("sub") userId: string, @Body(new ZodValidationPipe(AssignRoleToUserDto.schema)) body: AssignRoleToUserDto): Promise<unknown> {
-		await this.kernelHelper.requireResourceAccess(userId, "UPDATE", "USER", body.userId);
-		
+	public async assignRoleToUser(@Body(new ZodValidationPipe(AssignRoleToUserDto.schema)) body: AssignRoleToUserDto): Promise<unknown> {
 		await this.authorization.roles.assignToUser(body.userId, body.roleId);
 		return { message: "Role assigned to user successfully" };
 	}

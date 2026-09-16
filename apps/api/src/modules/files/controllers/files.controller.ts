@@ -24,7 +24,7 @@ import { OBJECT_STORAGE } from "../../storage/domain/storage.tokens";
 import { locatorFromStoredFile, toStorageObjectLocator } from "../../storage/utils/storage-locator.util";
 import { StoredFileRepository } from "../repositories/stored-file.repository";
 import { FileService } from "../services/file.service";
-import { KernelIntegrationHelper } from "../../authorization/kernel/kernel-integration.helper";
+import { Authorize } from "../../authorization/decorators/authorize.decorator";
 
 const FileIdParamSchema = z.object({ fileId: UuidParamSchema }).strict();
 
@@ -47,21 +47,24 @@ export class FilesController {
 		private readonly files: FileService,
 		private readonly repository: StoredFileRepository,
 		@Inject(OBJECT_STORAGE) private readonly storage: ObjectStorage,
-		private readonly kernelHelper: KernelIntegrationHelper,
 	) {}
 
 	@Post("upload-url")
 	@ApiBearerAuth()
+	@Authorize({
+		action: "CREATE",
+		resource: "ORGANIZATION",
+		context: (ctx) => ({
+			organizationId: ctx.switchToHttp().getRequest().body?.organizationId ?? null,
+		}),
+		description: "Create file upload URL",
+	})
 	@ApiOperation({ summary: "Create a browser upload ticket" })
 	@ApiOkResponse({ description: "Browser upload ticket created" })
 	public async createUploadUrl(
 		@GetUser() user: AccessTokenPayload,
 		@Body(new ZodValidationPipe(apiContract.files.uploadUrl.input)) body: z.output<typeof CreateFileUploadUrlSchema>,
 	): Promise<ReturnType<FileService["createUploadUrl"]>> {
-		await this.kernelHelper.requireAction(user.sub, "CREATE", "ORGANIZATION", {
-			organizationId: body.organizationId,
-		});
-		
 		return this.files.createUploadUrl(user.sub, body);
 	}
 

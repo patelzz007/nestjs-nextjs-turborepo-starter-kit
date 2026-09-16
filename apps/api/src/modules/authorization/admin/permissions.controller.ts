@@ -7,7 +7,7 @@ import { SkipAuthThrottle } from "../../auth/decorators/skip-auth-throttle.decor
 import { apiPath, type PermissionListItem } from "@workspace/shared";
 import { AuthorizationService } from "../services/authorization.service";
 import { ZodValidationPipe } from "../../../common/pipes/zod-validation.pipe";
-import { KernelIntegrationHelper } from "../kernel/kernel-integration.helper";
+import { Authorize } from "../decorators/authorize.decorator";
 import { GetUser } from "../../auth/decorators/get-user.decorator";
 import { CreatePermissionDto, GrantPermissionToUserDto, SyncUserPermissionsDto, CheckPermissionDto } from "./dtos/permission.dto";
 
@@ -24,10 +24,7 @@ interface UpdatePermissionBody {
 @Controller(apiPath("/admin/permissions"))
 @ApiTags("Permissions")
 export class PermissionsController {
-	public constructor(
-		private readonly authorization: AuthorizationService,
-		private readonly kernelHelper: KernelIntegrationHelper,
-	) {}
+	public constructor(private readonly authorization: AuthorizationService) {}
 
 	@Get()
 	@SkipAuthThrottle()
@@ -51,11 +48,10 @@ export class PermissionsController {
 	@Post()
 	@Throttle({ default: { ttl: 60000, limit: 10 } })
 	@RequirePermission("CREATE", "PERMISSION")
+	@Authorize({ action: "CREATE", resource: "PERMISSION", description: "Create new permission" })
 	@ApiBody({ type: CreatePermissionDto })
 	@ApiOkResponse({ description: "Created permission" })
-	public async create(@GetUser("sub") userId: string, @Body(new ZodValidationPipe(CreatePermissionDto.schema)) body: CreatePermissionDto): Promise<unknown> {
-		await this.kernelHelper.requireAction(userId, "CREATE", "USER");
-		
+	public async create(@Body(new ZodValidationPipe(CreatePermissionDto.schema)) body: CreatePermissionDto): Promise<unknown> {
 		return this.authorization.permissions.create({
 			action: body.action,
 			resource: body.resource,
@@ -75,10 +71,9 @@ export class PermissionsController {
 	@Patch(":id")
 	@Throttle({ default: { ttl: 60000, limit: 10 } })
 	@RequirePermission("UPDATE", "PERMISSION")
+	@Authorize({ action: "UPDATE", resource: "PERMISSION", resourceId: "id", description: "Update permission" })
 	@ApiOkResponse({ description: "Updated permission" })
-	public async update(@GetUser("sub") userId: string, @Param("id") id: string, @Body() body: UpdatePermissionBody): Promise<unknown> {
-		await this.kernelHelper.requireResourceAccess(userId, "UPDATE", "USER", id);
-		
+	public async update(@Param("id") id: string, @Body() body: UpdatePermissionBody): Promise<unknown> {
 		return this.authorization.permissions.update(id, {
 			...(body.description !== undefined ? { description: body.description } : {}),
 			...(body.group !== undefined ? { group: body.group } : {}),
