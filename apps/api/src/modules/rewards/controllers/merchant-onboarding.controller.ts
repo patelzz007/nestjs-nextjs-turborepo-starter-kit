@@ -14,6 +14,7 @@ import {
 import { ZodValidationPipe } from "../../../common/pipes/zod-validation.pipe";
 import { Public } from "../../auth/decorators/public.decorator";
 import { RlsBypass } from "../../auth/decorators/rls-bypass.decorator";
+import { KernelIntegrationHelper } from "../../authorization/kernel/kernel-integration.helper";
 
 import { MerchantOnboardingValidateTokenDto } from "../dtos/rewards.dto";
 import { MerchantOnboardingService } from "../services/merchant-onboarding.service";
@@ -21,7 +22,10 @@ import { MerchantOnboardingService } from "../services/merchant-onboarding.servi
 @ApiTags("Organization Onboarding")
 @Controller(apiPath("/orgs/onboarding"))
 export class MerchantOnboardingController {
-	public constructor(private readonly merchantOnboarding: MerchantOnboardingService) {}
+	public constructor(
+		private readonly merchantOnboarding: MerchantOnboardingService,
+		private readonly kernelHelper: KernelIntegrationHelper,
+	) {}
 
 	@Public()
 	@RlsBypass()

@@ -3,6 +3,7 @@ import { ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { API_DEPRECATED_VERSIONS, API_VERSION, API_VERSION_PREFIX, apiDocsPath, apiVersionPrefix, type ApiVersion } from "@workspace/shared";
 
 import { Public } from "../auth/decorators/public.decorator";
+import { KernelIntegrationHelper } from "../authorization/kernel/kernel-integration.helper";
 
 interface VersionManifestEntry {
 	readonly version: ApiVersion;

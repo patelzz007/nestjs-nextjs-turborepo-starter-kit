@@ -5,13 +5,17 @@ import { apiContract, apiPath } from "@workspace/shared";
 import { ZodValidationPipe } from "../../../common/pipes/zod-validation.pipe";
 import { Public } from "../../auth/decorators/public.decorator";
 import { RlsBypass } from "../../auth/decorators/rls-bypass.decorator";
+import { KernelIntegrationHelper } from "../../authorization/kernel/kernel-integration.helper";
 
 import { ConsumerRewardsService } from "../services/consumer-rewards.service";
 
 @ApiTags("Rewards")
 @Controller(apiPath("/rewards"))
 export class ConsumerRewardsController {
-	public constructor(private readonly consumerRewardsService: ConsumerRewardsService) {}
+	public constructor(
+		private readonly consumerRewardsService: ConsumerRewardsService,
+		private readonly kernelHelper: KernelIntegrationHelper,
+	) {}
 
 	@Public()
 	@RlsBypass()

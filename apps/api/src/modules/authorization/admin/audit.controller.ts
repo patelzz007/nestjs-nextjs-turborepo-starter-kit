@@ -4,6 +4,7 @@ import { ApiOkResponse, ApiTags } from "@nestjs/swagger";
 import { RequirePermission } from "../../auth/decorators/require-permission.decorator";
 import { apiPath } from "@workspace/shared";
 import { PrismaService } from "../../../prisma/prisma.service";
+import { KernelIntegrationHelper } from "../kernel/kernel-integration.helper";
 
 interface AuditQueryParams {
 	/** Page number (1-indexed). */
@@ -26,7 +27,10 @@ interface AuditQueryParams {
 @Controller(apiPath("/admin/audit"))
 @ApiTags("Audit Log")
 export class AuditController {
-	public constructor(private readonly prisma: PrismaService) {}
+	public constructor(
+		private readonly prisma: PrismaService,
+		private readonly kernelHelper: KernelIntegrationHelper,
+	) {}
 
 	@Get()
 	@RequirePermission("READ", "AUDIT_LOG")

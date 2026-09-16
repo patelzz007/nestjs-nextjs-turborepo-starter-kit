@@ -5,6 +5,7 @@ import { apiContract, apiPath } from "@workspace/shared";
 import { ZodValidationPipe } from "../../../common/pipes/zod-validation.pipe";
 import { Public } from "../../auth/decorators/public.decorator";
 import { RlsBypass } from "../../auth/decorators/rls-bypass.decorator";
+import { KernelIntegrationHelper } from "../../authorization/kernel/kernel-integration.helper";
 
 import { MerchantPos } from "../decorators/merchant-pos.decorator";
 import { RedemptionConfirmDto, RedemptionValidateDto } from "../dtos/rewards.dto";
@@ -15,7 +16,10 @@ import { RedemptionService } from "../services/redemption.service";
 @ApiTags("Redemptions")
 @Controller(apiPath("/redemptions"))
 export class RedemptionsController {
-	public constructor(private readonly redemptionService: RedemptionService) {}
+	public constructor(
+		private readonly redemptionService: RedemptionService,
+		private readonly kernelHelper: KernelIntegrationHelper,
+	) {}
 
 	@Public()
 	@RlsBypass()

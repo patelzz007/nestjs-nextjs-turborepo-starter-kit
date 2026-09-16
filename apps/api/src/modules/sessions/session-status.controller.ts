@@ -4,6 +4,7 @@ import { SessionStatusSchema, apiPath, epochMs, nowEpochMs, type EpochMs, type S
 
 import { ApiErrorResponseDto } from "../../common/dto/api-response.dto";
 import { createWrappedDto } from "../../common/dto/response-wrapper";
+import { KernelIntegrationHelper } from "../authorization/kernel/kernel-integration.helper";
 // The decorators below are imported from the auth module WITHOUT importing
 // AuthModule here — @GetUser is metadata-only (no DI), and the global
 // AuthGuard applies to this controller automatically. Do not "fix" this into
@@ -30,6 +31,8 @@ const WrappedSessionStatusResponse = createWrappedDto(SessionStatusSchema, "Wrap
 @ApiTags("Sessions")
 @Controller(apiPath("/session"))
 export class SessionStatusController {
+	public constructor(private readonly kernelHelper: KernelIntegrationHelper) {}
+	
 	@ApiBearerAuth()
 	@Get()
 	@ApiOperation({ summary: "Current session status (requires a valid access token)" })
