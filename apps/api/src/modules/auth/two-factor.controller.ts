@@ -43,7 +43,10 @@ const WrappedLoginTwoFactorResponse = createWrappedDto(LoginServiceResponseSchem
 @ApiTags("Auth")
 @Controller(apiPath("/auth"))
 export class TwoFactorController {
-	public constructor(private readonly twoFactorService: TwoFactorService) {}
+	public constructor(
+		private readonly twoFactorService: TwoFactorService,
+		private readonly kernelHelper: KernelIntegrationHelper,
+	) {}
 
 	@Throttle({ strict: { ttl: 60000, limit: 5 } })
 	@ApiBearerAuth()
@@ -64,6 +67,8 @@ export class TwoFactorController {
 		@GetUser("sub") userId: string,
 		@Body(new ZodValidationPipe(apiContract.auth.twoFactorEnable.input)) body: EnableTwoFactorInput,
 	): Promise<TwoFactorMessageResponse> {
+		await this.kernelHelper.requireAction(userId, "UPDATE", "USER");
+		
 		return this.twoFactorService.enableTwoFactor(userId, body);
 	}
 
@@ -77,6 +82,8 @@ export class TwoFactorController {
 		@GetUser("sub") userId: string,
 		@Body(new ZodValidationPipe(apiContract.auth.twoFactorRotate.input)) body: RotateTwoFactorInput,
 	): Promise<TwoFactorSetupResponse> {
+		await this.kernelHelper.requireAction(userId, "UPDATE", "USER");
+		
 		return this.twoFactorService.rotateTwoFactor(userId, body);
 	}
 

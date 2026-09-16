@@ -9,6 +9,8 @@ import { PrismaService } from "../../../prisma/prisma.service";
 import { ConflictDetectionService } from "../services/conflict-detection.service";
 import { AuthorizationService } from "../services/authorization.service";
 import { ZodValidationPipe } from "../../../common/pipes/zod-validation.pipe";
+import { KernelIntegrationHelper } from "../kernel/kernel-integration.helper";
+import { GetUser } from "../../auth/decorators/get-user.decorator";
 import { CreateRoleDto, SetRoleParentDto, UpdateRoleDto, ValidateRoleAssignmentDto, AssignRoleToUserDto, SyncUserRolesDto } from "./dtos/role.dto";
 import { SyncRolePermissionsDto } from "./dtos/permission.dto";
 

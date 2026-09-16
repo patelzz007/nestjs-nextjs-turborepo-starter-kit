@@ -24,7 +24,10 @@ const WrappedAdminMfaRecoveryRequestList = createWrappedArrayDto(AdminMfaRecover
 @ApiTags("Auth")
 @Controller(apiPath("/auth"))
 export class MfaRecoveryController {
-	public constructor(private readonly mfaRecoveryService: MfaRecoveryService) {}
+	public constructor(
+		private readonly mfaRecoveryService: MfaRecoveryService,
+		private readonly kernelHelper: KernelIntegrationHelper,
+	) {}
 
 	@Throttle({ strict: { ttl: 60000, limit: 3 } })
 	@ApiBearerAuth()
@@ -36,6 +39,8 @@ export class MfaRecoveryController {
 		@GetUser("sub") userId: string,
 		@Body(new ZodValidationPipe(apiContract.auth.mfaRecoveryInitiate.input)) body: InitiateMfaRecoveryInput,
 	): Promise<MfaRecoveryStatusResponse> {
+		await this.kernelHelper.requireAction(userId, "CREATE", "USER");
+		
 		return this.mfaRecoveryService.initiateRecovery(userId, body);
 	}
 
@@ -70,6 +75,10 @@ export class MfaRecoveryController {
 		@GetUser("sub") adminUserId: string,
 		@Body(new ZodValidationPipe(apiContract.auth.adminMfaRecoveryReview.input)) body: AdminReviewMfaRecoveryInput,
 	): Promise<MfaRecoveryStatusResponse> {
+		await this.kernelHelper.requireResourceAccess(adminUserId, "UPDATE", "USER", body.requestId, {
+			isSuperAdmin: true,
+		});
+		
 		if (body.action === "approve") {
 			return this.mfaRecoveryService.adminApprove(adminUserId, body);
 		}
