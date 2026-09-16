@@ -1,4 +1,4 @@
-import { Module } from "@nestjs/common";
+import { Module, forwardRef } from "@nestjs/common";
 
 import { PrismaService } from "../../../prisma/prisma.service";
 import { AuthModule } from "../../auth/auth.module";
@@ -19,7 +19,7 @@ import { AuthorizationKernelExamplesController } from "./examples.controller";
  * - AuthorizationAuditKernelService: Audit trail for authorization decisions
  */
 @Module({
-	imports: [AuthModule],
+	imports: [forwardRef(() => AuthModule)],
 	controllers: [AuthorizationKernelExamplesController],
 	providers: [
 		PrismaService,
