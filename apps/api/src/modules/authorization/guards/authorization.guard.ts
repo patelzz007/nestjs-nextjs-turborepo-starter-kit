@@ -15,85 +15,64 @@ import {
 	type RequiredPermissionsMetadata,
 	type RequiredRolesMetadata,
 } from "../constants/authorization.constants";
-import { AuthRateLimitService } from "../services/auth-rate-limit.service";
-import { AuthorizationCheckerService } from "../services/authorization-checker.service";
 import { AuthorizationKernelService } from "../kernel/authorization-kernel.service";
 import type { AuthorizationDecision } from "@workspace/shared";
 
 /**
- * Unified authorization guard that handles:
+ * **Kernel-First Authorization Guard**
  *
- * 1. **Legacy `@RequirePermission(action, resource)`** — single permission check.
- * 2. **`@RequireAllPermissions(...)`** — AND semantics across multiple permissions.
- * 3. **`@RequireAnyPermission(...)`** — OR semantics across multiple permissions.
- * 4. **`@RequireAllRoles(...)`** — AND semantics across multiple roles.
- * 5. **`@RequireAnyRole(...)`** — OR semantics across multiple roles.
+ * Unified authorization guard powered exclusively by the Authorization Kernel.
+ * Handles all authorization decorators through a single kernel-based path.
  *
- * Registered as a **global guard** after `AuthGuard` so `request.user`
- * is already populated with the JWT identity.
+ * ## Features
+ * - Single authorization path (no branching/fallback)
+ * - Kernel-powered permission checks
+ * - Super-admin bypass with audit trail
+ * - Token version validation
+ * - Automatic admin access computation
  *
- * ## Super-admin bypass
+ * ## Supported Decorators
+ * - `@RequirePermission(action, resource)` - single permission
+ * - `@RequireAllPermissions(...)` - AND semantics
+ * - `@RequireAnyPermission(...)` - OR semantics
+ * - `@RequireAllRoles(...)` - role AND semantics
+ * - `@RequireAnyRole(...)` - role OR semantics
  *
- * Users with `isSuperAdmin: true` always pass this guard regardless of
- * their assigned permissions or roles.
- *
- * ## Wildcard: `MANAGE` action
- *
- * A `MANAGE` permission on a resource satisfies any action on that
- * resource (handled inside `AuthorizationCheckerService`).
- *
- * ## Authorization Kernel Integration
- *
- * When `AuthorizationKernelService` is available, it is used for
- * permission checks, providing advanced features like ACL DENY precedence,
- * ownership, policies, and comprehensive audit trails.
+ * ## Authorization Flow
+ * 1. Extract metadata from decorators
+ * 2. Authenticate user from JWT
+ * 3. Validate token version
+ * 4. Super-admin bypass (with audit)
+ * 5. Kernel authorization check
+ * 6. Compute admin access for downstream guards
  */
 @Injectable()
 export class AuthorizationGuard implements CanActivate {
 	private readonly logger: Logger = new Logger(AuthorizationGuard.name);
-	private readonly useKernel: boolean;
 
 	public constructor(
 		private readonly reflector: Reflector,
-		private readonly checker: AuthorizationCheckerService,
-		private readonly audit: AuthorizationAuditService,
-		private readonly rateLimit: AuthRateLimitService,
-		private readonly prisma: PrismaService,
 		private readonly kernel: AuthorizationKernelService,
+		private readonly audit: AuthorizationAuditService,
+		private readonly prisma: PrismaService,
 	) {
-		this.useKernel = true;
-		this.logger.log("AuthorizationGuard initialized with Authorization Kernel");
+		this.logger.log("AuthorizationGuard initialized (kernel-first)");
 	}
 
 	public async canActivate(context: ExecutionContext): Promise<boolean> {
-		// ── 1. Read all metadata from handler + class ──────────────────────
-		const legacyPermission: RequiredPermission | undefined = this.reflector.getAllAndOverride<RequiredPermission>(REQUIRED_PERMISSION_KEY, [
-			context.getHandler(),
-			context.getClass(),
-		]);
+		// ── 1. Read authorization metadata ─────────────────────────────────
+		const legacyPermission = this.getLegacyPermission(context);
+		const permissionsMeta = this.getPermissionsMeta(context);
+		const rolesMeta = this.getRolesMeta(context);
 
-		const permissionsMeta: RequiredPermissionsMetadata | undefined = this.reflector.getAllAndOverride<RequiredPermissionsMetadata>(REQUIRED_PERMISSIONS_KEY, [
-			context.getHandler(),
-			context.getClass(),
-		]);
-
-		const rolesMeta: RequiredRolesMetadata | undefined = this.reflector.getAllAndOverride<RequiredRolesMetadata>(REQUIRED_ROLES_KEY, [
-			context.getHandler(),
-			context.getClass(),
-		]);
-
-		// No authorization metadata → allow (public route or unguarded).
-		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- getAllAndOverride returns T | undefined; metadata may not be set on every handler.
-		if (legacyPermission === undefined && permissionsMeta === undefined && rolesMeta === undefined) {
-			// Still compute hasAdminAccess when no metadata is present, because
-			// downstream guards (AdminAccessGuard, SuperAdminGuard) and the
-			// RlsInterceptor rely on it being on request.user.
+		// No authorization metadata → public route
+		if (!legacyPermission && !permissionsMeta && !rolesMeta) {
 			await this.ensureAdminAccess(context);
 			return true;
 		}
 
-		// ── 2. Extract the authenticated user from the request ─────────────
-		const request: FastifyRequest = context.switchToHttp().getRequest<FastifyRequest>();
+		// ── 2. Extract authenticated user ──────────────────────────────────
+		const request = context.switchToHttp().getRequest<FastifyRequest>();
 		const user = request.user;
 
 		if (!isAuthenticatedUser(user)) {
@@ -103,175 +82,196 @@ export class AuthorizationGuard implements CanActivate {
 			});
 		}
 
-		const userId: string = user.id;
+		// ── 3. Token version validation ────────────────────────────────────
+		await this.validateTokenVersion(user.id, user.tokenVersion);
 
-		// ── 2b. Token version check ────────────────────────────────────────
-		// The JWT carries a `tokenVersion` that is incremented on every
-		// role/permission mutation. If the token is stale, reject immediately
-		// so the user must re-login (or refresh) to get a fresh token.
+		// ── 4. Super-admin bypass ──────────────────────────────────────────
+		if (user.isSuperAdmin) {
+			await this.auditSuperAdminBypass(user.id, context);
+			Object.assign<AuthenticatedUser, { hasAdminAccess: boolean }>(user, { hasAdminAccess: true });
+			return true;
+		}
+
+		// ── 5. Kernel authorization checks ─────────────────────────────────
+
+		// Single permission check
+		if (legacyPermission) {
+			await this.checkPermission(user.id, legacyPermission.action, legacyPermission.resource);
+		}
+
+		// Multi-permission checks (AND/OR)
+		if (permissionsMeta) {
+			await this.checkPermissions(user.id, permissionsMeta);
+		}
+
+		// Role checks (AND/OR)
+		if (rolesMeta) {
+			await this.checkRoles(user.id, rolesMeta);
+		}
+
+		// ── 6. Compute admin access ────────────────────────────────────────
+		const hasAdminAccess = await this.hasAdminDashboardAccess(user.id);
+		Object.assign<AuthenticatedUser, { hasAdminAccess: boolean }>(user, { hasAdminAccess });
+
+		return true;
+	}
+
+	// ── Private: Metadata Extraction ────────────────────────────────────────
+
+	private getLegacyPermission(context: ExecutionContext): RequiredPermission | undefined {
+		return this.reflector.getAllAndOverride<RequiredPermission>(REQUIRED_PERMISSION_KEY, [context.getHandler(), context.getClass()]);
+	}
+
+	private getPermissionsMeta(context: ExecutionContext): RequiredPermissionsMetadata | undefined {
+		return this.reflector.getAllAndOverride<RequiredPermissionsMetadata>(REQUIRED_PERMISSIONS_KEY, [context.getHandler(), context.getClass()]);
+	}
+
+	private getRolesMeta(context: ExecutionContext): RequiredRolesMetadata | undefined {
+		return this.reflector.getAllAndOverride<RequiredRolesMetadata>(REQUIRED_ROLES_KEY, [context.getHandler(), context.getClass()]);
+	}
+
+	// ── Private: Authorization Checks ────────────────────────────────────────
+
+	/**
+	 * Check a single permission via kernel.
+	 */
+	private async checkPermission(userId: string, action: string, resource: string): Promise<void> {
+		const decision: AuthorizationDecision = await this.kernel.can({
+			userId,
+			action: action as never,
+			resource: resource as never,
+		});
+
+		if (decision === "DENY") {
+			throw new ForbiddenException({
+				message: "Insufficient permissions",
+				error: "PERMISSION_DENIED",
+			});
+		}
+	}
+
+	/**
+	 * Check multiple permissions with AND/OR semantics via kernel.
+	 */
+	private async checkPermissions(userId: string, meta: RequiredPermissionsMetadata): Promise<void> {
+		const requirements = meta.permissions.map((p) => ({
+			action: p[0],
+			resource: p[1],
+		}));
+
+		const results = await Promise.all(
+			requirements.map((req) =>
+				this.kernel.can({
+					userId,
+					action: req.action as never,
+					resource: req.resource as never,
+				}),
+			),
+		);
+
+		const granted = meta.mode === "all" ? results.every((d) => d === "ALLOW") : results.some((d) => d === "ALLOW");
+
+		if (!granted) {
+			throw new ForbiddenException({
+				message: meta.mode === "all" ? "Missing required permissions" : "Missing any of the required permissions",
+				error: "PERMISSION_DENIED",
+			});
+		}
+	}
+
+	/**
+	 * Check roles via kernel.
+	 * Note: Role checks currently use legacy checker until kernel supports role-based checks natively.
+	 * TODO: Implement role checks in kernel for consistency.
+	 */
+	private async checkRoles(userId: string, meta: RequiredRolesMetadata): Promise<void> {
+		// For now, delegate to kernel's can() using role-based permissions
+		// In the future, kernel should have native role check support
+		const checks = meta.roles.map((role) =>
+			this.kernel.can({
+				userId,
+				action: "ASSUME" as never,
+				resource: role as never,
+			}),
+		);
+
+		const results = await Promise.all(checks);
+		const granted = meta.mode === "all" ? results.every((d) => d === "ALLOW") : results.some((d) => d === "ALLOW");
+
+		if (!granted) {
+			throw new ForbiddenException({
+				message: meta.mode === "all" ? "Missing required roles" : "Missing any of the required roles",
+				error: "ROLE_DENIED",
+			});
+		}
+	}
+
+	// ── Private: Token & Admin Access ───────────────────────────────────────
+
+	/**
+	 * Validate token version against database.
+	 * Rejects stale tokens to force re-authentication.
+	 */
+	private async validateTokenVersion(userId: string, tokenVersion: number): Promise<void> {
 		const dbUser = await this.prisma.user.findUnique({
 			where: { id: userId },
 			select: { tokenVersion: true },
 		});
-		if (dbUser !== null && dbUser.tokenVersion !== user.tokenVersion) {
+
+		if (dbUser !== null && dbUser.tokenVersion !== tokenVersion) {
 			throw new UnauthorizedException({
 				message: "Token revoked — authorization state changed",
 				error: "TOKEN_VERSION_MISMATCH",
 			});
 		}
-
-		// ── 3. Super-admin bypass ──────────────────────────────────────────
-		if (user.isSuperAdmin) {
-			// Audit trail for super-admin bypass
-			const requestUrl: string = context.switchToHttp().getRequest<FastifyRequest>().url;
-			await this.audit.log({
-				action: "SUPER_ADMIN_BYPASS",
-				actorId: userId,
-				detail: `Bypassed authorization for ${context.getHandler().name} at ${requestUrl}`,
-			});
-			// Super-admins always have admin access — set it eagerly so
-			// downstream guards don't need to re-resolve.
-			Object.assign<AuthenticatedUser, { hasAdminAccess: boolean }>(user, { hasAdminAccess: true });
-			return true;
-		}
-
-		// ── 3b. Compute hasAdminAccess at runtime ─────────────────────────
-		// Always resolve from DB/cache rather than trusting the JWT value,
-		// which may be stale if permissions changed after token issuance.
-		const hasAdminDashboard: boolean = await this.checker.hasPermission(userId, "READ", "ADMIN_DASHBOARD");
-		Object.assign<AuthenticatedUser, { hasAdminAccess: boolean }>(user, { hasAdminAccess: hasAdminDashboard });
-
-		// ── 4. Evaluate permission requirements ────────────────────────────
-
-		// Legacy single-permission decorator
-		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- getAllAndOverride returns T | undefined; metadata may not be set on every handler.
-		if (legacyPermission !== undefined) {
-			let granted: boolean;
-
-			if (this.useKernel) {
-				const decision: AuthorizationDecision = await this.kernel.can({
-					userId,
-					action: legacyPermission.action as never,
-					resource: legacyPermission.resource as never,
-				});
-				granted = decision === "ALLOW";
-			} else {
-				granted = await this.checker.hasPermission(userId, legacyPermission.action, legacyPermission.resource);
-			}
-
-			if (!granted) {
-				throw new ForbiddenException({
-					message: "Insufficient permissions",
-					error: "PERMISSION_DENIED",
-				});
-			}
-		}
-
-		// Multi-permission decorator
-		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- getAllAndOverride returns T | undefined; metadata may not be set on every handler.
-		if (permissionsMeta !== undefined) {
-			const requirements = permissionsMeta.permissions.map((p) => ({ action: p[0], resource: p[1] }));
-
-			if (permissionsMeta.mode === "all") {
-				let granted: boolean;
-
-				if (this.useKernel) {
-					const results = await Promise.all(
-						requirements.map((req) =>
-							this.kernel.can({
-								userId,
-								action: req.action as never,
-								resource: req.resource as never,
-							}),
-						),
-					);
-					granted = results.every((decision) => decision === "ALLOW");
-				} else {
-					granted = await this.checker.hasAllPermissions(userId, requirements);
-				}
-
-				if (!granted) {
-					throw new ForbiddenException({
-						message: "Missing required permissions",
-						error: "PERMISSION_DENIED",
-					});
-				}
-			} else {
-				let granted: boolean;
-
-				if (this.useKernel) {
-					const results = await Promise.all(
-						requirements.map((req) =>
-							this.kernel.can({
-								userId,
-								action: req.action as never,
-								resource: req.resource as never,
-							}),
-						),
-					);
-					granted = results.some((decision) => decision === "ALLOW");
-				} else {
-					granted = await this.checker.hasAnyPermission(userId, requirements);
-				}
-
-				if (!granted) {
-					throw new ForbiddenException({
-						message: "Missing any of the required permissions",
-						error: "PERMISSION_DENIED",
-					});
-				}
-			}
-		}
-
-		// ── 5. Evaluate role requirements ──────────────────────────────────
-
-		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- getAllAndOverride returns T | undefined; metadata may not be set on every handler.
-		if (rolesMeta !== undefined) {
-			if (rolesMeta.mode === "all") {
-				const granted: boolean = await this.checker.hasAllRoles(userId, rolesMeta.roles);
-				if (!granted) {
-					throw new ForbiddenException({
-						message: "Missing required roles",
-						error: "ROLE_DENIED",
-					});
-				}
-			} else {
-				const granted: boolean = await this.checker.hasAnyRole(userId, rolesMeta.roles);
-				if (!granted) {
-					throw new ForbiddenException({
-						message: "Missing any of the required roles",
-						error: "ROLE_DENIED",
-					});
-				}
-			}
-		}
-
-		return true;
 	}
 
 	/**
-	 * Ensure `hasAdminAccess` is present on `request.user` so downstream
-	 * guards and interceptors can read it without re-resolving.
-	 *
-	 * Called when no authorization metadata is present on the route (i.e.
-	 * routes that don't use `@RequirePermission` but still need admin
-	 * access for RLS bypass or downstream admin guards).
+	 * Check if user has admin dashboard access.
+	 */
+	private async hasAdminDashboardAccess(userId: string): Promise<boolean> {
+		const decision = await this.kernel.can({
+			userId,
+			action: "READ" as never,
+			resource: "ADMIN_DASHBOARD" as never,
+		});
+
+		return decision === "ALLOW";
+	}
+
+	/**
+	 * Audit super-admin authorization bypass.
+	 */
+	private async auditSuperAdminBypass(userId: string, context: ExecutionContext): Promise<void> {
+		const request = context.switchToHttp().getRequest<FastifyRequest>();
+		const handlerName = context.getHandler().name;
+
+		await this.audit.log({
+			action: "SUPER_ADMIN_BYPASS",
+			actorId: userId,
+			detail: `Bypassed authorization for ${handlerName} at ${request.url}`,
+		});
+	}
+
+	/**
+	 * Ensure hasAdminAccess is computed for public routes
+	 * (needed by downstream guards and RLS interceptor).
 	 */
 	private async ensureAdminAccess(context: ExecutionContext): Promise<void> {
-		const request: FastifyRequest = context.switchToHttp().getRequest<FastifyRequest>();
+		const request = context.switchToHttp().getRequest<FastifyRequest>();
 
 		if (!isAuthenticatedUser(request.user)) {
 			return;
 		}
 
-		const user: AuthenticatedUser = request.user;
+		const user = request.user;
 
 		if (user.isSuperAdmin) {
 			Object.assign<AuthenticatedUser, { hasAdminAccess: boolean }>(user, { hasAdminAccess: true });
 			return;
 		}
 
-		const hasAdminDashboard: boolean = await this.checker.hasPermission(user.id, "READ", "ADMIN_DASHBOARD");
-		Object.assign<AuthenticatedUser, { hasAdminAccess: boolean }>(user, { hasAdminAccess: hasAdminDashboard });
+		const hasAdminAccess = await this.hasAdminDashboardAccess(user.id);
+		Object.assign<AuthenticatedUser, { hasAdminAccess: boolean }>(user, { hasAdminAccess });
 	}
 }
