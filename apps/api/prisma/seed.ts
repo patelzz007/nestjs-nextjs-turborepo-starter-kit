@@ -16,6 +16,7 @@ import { ORGANIZATION_SEED_IDS, ORGANIZATION_SEED_SLUGS, printOrganizationSeedCr
 import { cleanupRewardSeedData, printRewardSeedCredentials, seedRewards } from "./seed/rewards";
 import { seedSamplePlatform } from "./seed/sample-platform";
 import { seedProducts } from "./seed/products";
+import { seedAuthorizationKernel } from "./seed/authorization-kernel";
 
 // ---------------------------------------------------------------------------
 // Orchestrator — runs the per-domain seeders in dependency order.
