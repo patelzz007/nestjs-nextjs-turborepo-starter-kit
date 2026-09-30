@@ -1,24 +1,41 @@
 import { Injectable, Logger } from "@nestjs/common";
+import type { PolicyDefinition } from "@prisma/client";
 import type {
+	AuthorizationAttributeValue,
 	AuthorizationContext,
-	AuthorizationRequest,
-	AuthorizationResult,
 	AuthorizationEvaluationStep,
+	AuthorizationRequest,
 	PolicyCondition,
+	PolicyOperator,
 	PolicyRule,
 	PolicyValue,
 } from "@workspace/shared";
-import { PolicyConditionsSchema, PolicyValueSchema } from "@workspace/shared";
+import { PolicyConditionsSchema } from "@workspace/shared";
 
-import { normalizeCaughtError } from "../../../common/utils/caught-error";
 import { PrismaService } from "../../../prisma/prisma.service";
 
-function readSubjectField(subject: AuthorizationContext, key: string): unknown {
+/**
+ * Outcome of the ABAC layer for one request:
+ * - `NOT_APPLICABLE` — no active policy targets this action/resource
+ * - `ALLOW` — at least one conditional ALLOW policy matched and no DENY matched
+ * - `DENY` — a DENY policy matched, or ALLOW policies exist but none matched
+ */
+export type PolicyDecision = "ALLOW" | "DENY" | "NOT_APPLICABLE";
+
+export interface PolicyEvaluation {
+	readonly decision: PolicyDecision;
+	readonly evaluation: readonly AuthorizationEvaluationStep[];
+}
+
+function readSubjectField(subject: AuthorizationContext, key: string): AuthorizationAttributeValue {
 	switch (key) {
 		case "userId":
+		case "id":
 			return subject.userId;
 		case "organizationId":
 			return subject.organizationId ?? null;
+		case "storeId":
+			return subject.storeId ?? null;
 		case "locationId":
 			return subject.locationId ?? null;
 		case "isSuperAdmin":
@@ -30,18 +47,121 @@ function readSubjectField(subject: AuthorizationContext, key: string): unknown {
 	}
 }
 
-function toPolicyValue(value: unknown): PolicyValue {
-	const parsed = PolicyValueSchema.safeParse(value);
-	return parsed.success ? parsed.data : null;
-}
-
-function isInArrayMember(value: unknown): value is string | number {
+function isScalarMember(value: AuthorizationAttributeValue): value is string | number {
 	return typeof value === "string" || typeof value === "number";
 }
 
+function compareNumbers(fieldValue: AuthorizationAttributeValue, compareValue: PolicyValue, compare: (left: number, right: number) => boolean): boolean {
+	if (typeof fieldValue !== "number" || typeof compareValue !== "number") {
+		return false;
+	}
+	return compare(fieldValue, compareValue);
+}
+
+function compareStrings(fieldValue: AuthorizationAttributeValue, compareValue: PolicyValue, compare: (left: string, right: string) => boolean): boolean {
+	if (typeof fieldValue !== "string" || typeof compareValue !== "string") {
+		return false;
+	}
+	return compare(fieldValue, compareValue);
+}
+
+/** Array membership, or substring when both sides are strings. */
+function containsValue(fieldValue: AuthorizationAttributeValue, compareValue: PolicyValue): boolean {
+	if (Array.isArray(fieldValue) && isScalarMember(compareValue)) {
+		return fieldValue.some((member) => member === compareValue);
+	}
+	return compareStrings(fieldValue, compareValue, (left, right) => left.includes(right));
+}
+
+function inList(fieldValue: AuthorizationAttributeValue, compareValue: PolicyValue): boolean {
+	if (!Array.isArray(compareValue) || !isScalarMember(fieldValue)) {
+		return false;
+	}
+	return compareValue.some((member) => member === fieldValue);
+}
+
 /**
- * Policy Engine - evaluates Zod-validated policy DSL.
- * No arbitrary JavaScript - only validated conditions.
+ * Apply one operator of the constrained DSL. Only the operators enumerated in
+ * `PolicyOperatorSchema` exist — there is no code path that executes stored code.
+ */
+export function applyPolicyOperator(operator: PolicyOperator, fieldValue: AuthorizationAttributeValue, compareValue: PolicyValue): boolean {
+	switch (operator) {
+		case "equals":
+			return fieldValue === compareValue;
+		case "not_equals":
+			return fieldValue !== compareValue;
+		case "in":
+			return inList(fieldValue, compareValue);
+		case "not_in":
+			return Array.isArray(compareValue) && isScalarMember(fieldValue) && !inList(fieldValue, compareValue);
+		case "contains":
+			return containsValue(fieldValue, compareValue);
+		case "not_contains":
+			return (typeof fieldValue === "string" || Array.isArray(fieldValue)) && !containsValue(fieldValue, compareValue);
+		case "starts_with":
+			return compareStrings(fieldValue, compareValue, (left, right) => left.startsWith(right));
+		case "ends_with":
+			return compareStrings(fieldValue, compareValue, (left, right) => left.endsWith(right));
+		case "greater_than":
+			return compareNumbers(fieldValue, compareValue, (left, right) => left > right);
+		case "greater_than_or_equals":
+			return compareNumbers(fieldValue, compareValue, (left, right) => left >= right);
+		case "less_than":
+			return compareNumbers(fieldValue, compareValue, (left, right) => left < right);
+		case "less_than_or_equals":
+			return compareNumbers(fieldValue, compareValue, (left, right) => left <= right);
+		case "exists":
+			return fieldValue !== null;
+		case "not_exists":
+			return fieldValue === null;
+	}
+}
+
+/**
+ * Resolve a condition field against the request:
+ * - `$user.<key>` → subject attribute
+ * - `$resource.<key>` or `<resource>.<key>` (e.g. `order.status`) → resource attribute
+ * - `<key>` → resource attribute
+ */
+function resolveField(field: string, request: AuthorizationRequest): AuthorizationAttributeValue {
+	if (field.startsWith("$user.")) {
+		return readSubjectField(request.subject, field.slice("$user.".length));
+	}
+	const resourcePrefix = `${request.resource.toLowerCase()}.`;
+	const key = field.startsWith("$resource.") ? field.slice("$resource.".length) : field.startsWith(resourcePrefix) ? field.slice(resourcePrefix.length) : field;
+	return request.resourceAttributes?.[key] ?? null;
+}
+
+function resolveComparison(condition: PolicyCondition, request: AuthorizationRequest): PolicyValue {
+	if (condition.valueRef === undefined) {
+		return condition.value ?? null;
+	}
+	return resolveField(condition.valueRef, request);
+}
+
+/** Recursively evaluate a validated rule. A rule with no branch never matches. */
+export function matchesPolicyRule(rule: PolicyRule, request: AuthorizationRequest): boolean {
+	if (rule.all !== undefined) {
+		return rule.all.every((child) => matchesPolicyRule(child, request));
+	}
+	if (rule.any !== undefined) {
+		return rule.any.some((child) => matchesPolicyRule(child, request));
+	}
+	if (rule.condition !== undefined) {
+		return applyPolicyOperator(rule.condition.operator, resolveField(rule.condition.field, request), resolveComparison(rule.condition, request));
+	}
+	return false;
+}
+
+/**
+ * Policy Engine — evaluates the Zod-validated policy DSL (ABAC).
+ *
+ * Semantics (fail closed):
+ * 1. A matching DENY policy denies.
+ * 2. When conditional ALLOW policies target the request, at least one must match.
+ * 3. A policy whose stored conditions fail validation is treated as matching when
+ *    it is a DENY policy and as not matching when it is an ALLOW policy.
+ * 4. With no applicable policy the layer abstains (`NOT_APPLICABLE`).
  */
 @Injectable()
 export class PolicyEngineService {
@@ -49,252 +169,93 @@ export class PolicyEngineService {
 
 	public constructor(private readonly prisma: PrismaService) {}
 
-	/**
-	 * Evaluate all applicable policies for a request.
-	 */
-	public async evaluate(request: AuthorizationRequest): Promise<AuthorizationResult> {
-		const evaluation: AuthorizationEvaluationStep[] = [];
+	public async evaluate(request: AuthorizationRequest): Promise<PolicyEvaluation> {
+		const policies = await this.findApplicablePolicies(request);
 
-		// Fetch applicable policies
-		const policies = await this.prisma.policyDefinition.findMany({
+		if (policies.length === 0) {
+			return {
+				decision: "NOT_APPLICABLE",
+				evaluation: [{ source: "policy", effect: "NO_MATCH", reason: "No active policy targets this request" }],
+			};
+		}
+
+		const evaluation: AuthorizationEvaluationStep[] = [];
+		let allowPolicies = 0;
+		let allowMatched = false;
+
+		for (const policy of policies) {
+			const matched = this.matches(policy, request);
+			if (policy.effect === "DENY") {
+				if (matched) {
+					evaluation.push({ source: "policy", effect: "DENY", reason: `Policy "${policy.name}" (v${String(policy.version)}) denies`, details: { policyId: policy.id } });
+					return { decision: "DENY", evaluation };
+				}
+				evaluation.push({ source: "policy", effect: "NO_MATCH", reason: `Deny policy "${policy.name}" did not match`, details: { policyId: policy.id } });
+				continue;
+			}
+
+			allowPolicies += 1;
+			if (matched) {
+				allowMatched = true;
+				evaluation.push({ source: "policy", effect: "ALLOW", reason: `Policy "${policy.name}" (v${String(policy.version)}) allows`, details: { policyId: policy.id } });
+			} else {
+				evaluation.push({ source: "policy", effect: "NO_MATCH", reason: `Allow policy "${policy.name}" conditions not met`, details: { policyId: policy.id } });
+			}
+		}
+
+		if (allowPolicies === 0) {
+			return { decision: "NOT_APPLICABLE", evaluation };
+		}
+
+		if (!allowMatched) {
+			evaluation.push({ source: "policy", effect: "DENY", reason: "Conditional allow policies exist but none matched" });
+			return { decision: "DENY", evaluation };
+		}
+
+		return { decision: "ALLOW", evaluation };
+	}
+
+	/** Evaluate stored JSON conditions (used by ACL entries as well). `null` = unconditional. */
+	public matchesStoredConditions(conditions: PolicyDefinition["conditions"], request: AuthorizationRequest, failClosedAs: boolean): boolean {
+		if (conditions === null) {
+			return true;
+		}
+		const parsed = PolicyConditionsSchema.safeParse(conditions);
+		if (!parsed.success) {
+			this.logger.error(`Rejected malformed authorization conditions: ${parsed.error.message}`);
+			return failClosedAs;
+		}
+		return matchesPolicyRule(parsed.data, request);
+	}
+
+	/**
+	 * Whether an active DENY policy without conditions targets the request —
+	 * such a policy removes every row from list filters.
+	 */
+	public async hasUnconditionalDeny(request: AuthorizationRequest): Promise<boolean> {
+		const policies = await this.findApplicablePolicies(request);
+		return policies.some((policy) => policy.effect === "DENY" && policy.conditions === null);
+	}
+
+	/** Active policies for the action/resource, bound to no tenant or to the verified tenant. */
+	private async findApplicablePolicies(request: AuthorizationRequest): Promise<PolicyDefinition[]> {
+		return this.prisma.policyDefinition.findMany({
 			where: {
 				isActive: true,
 				isDeleted: false,
 				actions: { has: request.action },
 				resources: { has: request.resource },
-				OR: [{ organizationId: null }, { organizationId: request.subject.organizationId }],
+				AND: [
+					{ OR: [{ organizationId: null }, ...(request.subject.organizationId === undefined ? [] : [{ organizationId: request.subject.organizationId }])] },
+					{ OR: [{ locationId: null }, ...(request.subject.locationId === undefined ? [] : [{ locationId: request.subject.locationId }])] },
+				],
 			},
+			orderBy: { createdAt: "asc" },
 		});
-
-		if (policies.length === 0) {
-			evaluation.push({
-				source: "policy",
-				effect: "NO_MATCH",
-				reason: "No active policies found for this request",
-			});
-
-			return {
-				decision: "ALLOW",
-				request,
-				evaluation,
-			};
-		}
-
-		// Evaluate each policy
-		for (const policy of policies) {
-			if (policy.conditions === null) {
-				continue;
-			}
-
-			try {
-				const conditions = PolicyConditionsSchema.parse(policy.conditions);
-				const result = this.evaluateRule(conditions, request);
-
-				if (result) {
-					evaluation.push({
-						source: "policy",
-						effect: policy.effect === "ALLOW" ? "ALLOW" : "DENY",
-						reason: `Policy "${policy.name}" (v${String(policy.version)}) matched`,
-						details: { policyId: policy.id },
-					});
-
-					// If any policy denies, return DENY immediately
-					if (policy.effect === "DENY") {
-						return {
-							decision: "DENY",
-							request,
-							evaluation,
-						};
-					}
-				} else {
-					evaluation.push({
-						source: "policy",
-						effect: "NO_MATCH",
-						reason: `Policy "${policy.name}" (v${String(policy.version)}) did not match`,
-					});
-				}
-			} catch (error) {
-				const message = normalizeCaughtError(error).message;
-				this.logger.error(`Failed to evaluate policy ${policy.id}: ${message}`);
-				evaluation.push({
-					source: "policy",
-					effect: "NO_MATCH",
-					reason: `Policy evaluation error: ${message}`,
-				});
-			}
-		}
-
-		// If any policy matched with ALLOW effect, allow
-		const hasAllowMatch = evaluation.some((step) => step.source === "policy" && step.effect === "ALLOW");
-
-		return {
-			decision: hasAllowMatch ? "ALLOW" : "DENY",
-			request,
-			evaluation,
-		};
 	}
 
-	/**
-	 * Evaluate a policy rule recursively.
-	 */
-	private evaluateRule(rule: PolicyRule, request: AuthorizationRequest): boolean {
-		// ALL: all conditions must be true
-		if (rule.all !== undefined) {
-			return rule.all.every((subRule) => this.evaluateRule(subRule, request));
-		}
-
-		// ANY: at least one condition must be true
-		if (rule.any !== undefined) {
-			return rule.any.some((subRule) => this.evaluateRule(subRule, request));
-		}
-
-		// CONDITION: evaluate the condition
-		if (rule.condition !== undefined) {
-			return this.evaluateCondition(rule.condition, request);
-		}
-
-		// Empty rule always fails
-		return false;
-	}
-
-	/**
-	 * Evaluate a single policy condition.
-	 */
-	private evaluateCondition(condition: PolicyCondition, request: AuthorizationRequest): boolean {
-		// Resolve the field value
-		const fieldValue = this.resolveField(condition.field, request);
-
-		// Resolve the comparison value
-		let compareValue: PolicyValue;
-
-		if (condition.valueRef !== undefined) {
-			// Reference to actor attribute like $user.organizationId
-			compareValue = this.resolveValueRef(condition.valueRef, request);
-		} else {
-			compareValue = condition.value ?? null;
-		}
-
-		// Apply operator
-		return this.applyOperator(condition.operator, fieldValue, compareValue);
-	}
-
-	/**
-	 * Resolve a field value from the request.
-	 * Supports dot notation like "order.organizationId" or "$user.organizationId".
-	 */
-	private resolveField(field: string, request: AuthorizationRequest): unknown {
-		if (field.startsWith("$user.")) {
-			const key = field.slice(6);
-			return readSubjectField(request.subject, key);
-		}
-
-		if (field.startsWith("$resource.")) {
-			const key = field.slice(10);
-			return request.resourceAttributes?.[key] ?? null;
-		}
-
-		// Default: look in resource attributes
-		return request.resourceAttributes?.[field] ?? null;
-	}
-
-	/**
-	 * Resolve a value reference like "$user.organizationId".
-	 */
-	private resolveValueRef(valueRef: string, request: AuthorizationRequest): PolicyValue {
-		if (valueRef.startsWith("$user.")) {
-			const key = valueRef.slice(6);
-			return toPolicyValue(readSubjectField(request.subject, key));
-		}
-
-		if (valueRef.startsWith("$resource.")) {
-			const key = valueRef.slice(10);
-			return toPolicyValue(request.resourceAttributes?.[key]);
-		}
-
-		return null;
-	}
-
-	/**
-	 * Apply a policy operator to values.
-	 */
-	private applyOperator(operator: string, fieldValue: unknown, compareValue: PolicyValue): boolean {
-		switch (operator) {
-			case "equals": {
-				return fieldValue === compareValue;
-			}
-			case "not_equals": {
-				return fieldValue !== compareValue;
-			}
-			case "in": {
-				if (!Array.isArray(compareValue) || !isInArrayMember(fieldValue)) {
-					return false;
-				}
-				return compareValue.includes(fieldValue);
-			}
-			case "not_in": {
-				if (!Array.isArray(compareValue) || !isInArrayMember(fieldValue)) {
-					return false;
-				}
-				return !compareValue.includes(fieldValue);
-			}
-			case "contains": {
-				if (typeof fieldValue !== "string" || typeof compareValue !== "string") {
-					return false;
-				}
-				return fieldValue.includes(compareValue);
-			}
-			case "not_contains": {
-				if (typeof fieldValue !== "string" || typeof compareValue !== "string") {
-					return false;
-				}
-				return !fieldValue.includes(compareValue);
-			}
-			case "starts_with": {
-				if (typeof fieldValue !== "string" || typeof compareValue !== "string") {
-					return false;
-				}
-				return fieldValue.startsWith(compareValue);
-			}
-			case "ends_with": {
-				if (typeof fieldValue !== "string" || typeof compareValue !== "string") {
-					return false;
-				}
-				return fieldValue.endsWith(compareValue);
-			}
-			case "greater_than": {
-				if (typeof fieldValue !== "number" || typeof compareValue !== "number") {
-					return false;
-				}
-				return fieldValue > compareValue;
-			}
-			case "greater_than_or_equals": {
-				if (typeof fieldValue !== "number" || typeof compareValue !== "number") {
-					return false;
-				}
-				return fieldValue >= compareValue;
-			}
-			case "less_than": {
-				if (typeof fieldValue !== "number" || typeof compareValue !== "number") {
-					return false;
-				}
-				return fieldValue < compareValue;
-			}
-			case "less_than_or_equals": {
-				if (typeof fieldValue !== "number" || typeof compareValue !== "number") {
-					return false;
-				}
-				return fieldValue <= compareValue;
-			}
-			case "exists": {
-				return fieldValue !== null && fieldValue !== undefined;
-			}
-			case "not_exists": {
-				return fieldValue === null || fieldValue === undefined;
-			}
-			default: {
-				this.logger.warn(`Unknown operator: ${operator}`);
-				return false;
-			}
-		}
+	private matches(policy: PolicyDefinition, request: AuthorizationRequest): boolean {
+		// Malformed DENY → matches (deny); malformed ALLOW → does not match.
+		return this.matchesStoredConditions(policy.conditions, request, policy.effect === "DENY");
 	}
 }

@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import type { DataValue } from "@workspace/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createAuthChannel, type AuthSyncEvent } from "./sync";
@@ -9,7 +10,7 @@ import { createAuthChannel, type AuthSyncEvent } from "./sync";
  * mirroring the real API well enough for auth-sync tests.
  */
 interface MockMessageEvent {
-	readonly data: unknown;
+	readonly data: DataValue;
 }
 
 class MockBroadcastChannel {
@@ -26,7 +27,7 @@ class MockBroadcastChannel {
 		MockBroadcastChannel.instances.push(this);
 	}
 
-	public postMessage(data: unknown): void {
+	public postMessage(data: DataValue): void {
 		for (const instance of MockBroadcastChannel.channelsByName.get(this.name) ?? []) {
 			if (instance === this || instance.closed) continue;
 			instance._listeners.forEach((listener) => {

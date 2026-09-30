@@ -91,11 +91,6 @@ export class ImpersonationController {
 	@Throttle({ strict: { ttl: 60000, limit: 10 } })
 	@ApiBearerAuth()
 	@RlsBypass()
-	@Authorize({
-		action: "DELETE",
-		resource: "USER",
-		description: "Stop impersonation",
-	})
 	@Post("/stop-impersonation")
 	@UseInterceptors(SetAuthCookiesInterceptor)
 	@ApiOperation({ summary: "Stop impersonating and restore the original admin session" })

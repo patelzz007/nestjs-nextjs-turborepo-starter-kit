@@ -2,13 +2,13 @@ import { cva } from "class-variance-authority";
 
 /** Panel sidebar nav row styles — shared by admin, web, and merchant. */
 export const panelSidebarNavItemVariants = cva(
-	"group flex h-auto min-h-0 w-full items-center justify-between gap-2 rounded-md px-3 py-2 text-sm transition-[background-color,color,transform] duration-200 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 active:scale-[0.99]",
+	"group flex h-auto min-h-0 w-full items-center justify-between gap-2 rounded-md px-3 py-2 font-[family-name:var(--font-sidebar)] text-sm font-normal tracking-[0.01em] transition-[background-color,color,transform] duration-200 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 active:scale-[0.99]",
 	{
 		variants: {
 			state: {
 				default: "text-sidebar-foreground/80 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground focus-visible:ring-sidebar-ring/40",
 				active:
-					"bg-sidebar-primary font-medium text-sidebar-primary-foreground hover:bg-sidebar-primary! hover:text-sidebar-primary-foreground! focus-visible:ring-sidebar-primary-foreground/50",
+					"bg-sidebar-primary font-medium tracking-[0.01em] text-sidebar-primary-foreground hover:bg-sidebar-primary! hover:text-sidebar-primary-foreground! focus-visible:ring-sidebar-primary-foreground/50",
 				disabled: "cursor-not-allowed text-muted-foreground opacity-50",
 			},
 		},

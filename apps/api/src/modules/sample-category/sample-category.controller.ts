@@ -1,5 +1,6 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from "@nestjs/common";
 import { ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
+import type { z } from "zod";
 
 import {
 	apiPath,
@@ -16,16 +17,21 @@ import { RequirePermission } from "../auth/decorators/require-permission.decorat
 
 import { SampleCategoryService } from "./sample-category.service";
 
-@ApiTags("SampleCategory")
+/**
+ * CRUD routes for sample categories. Every route is gated by
+ * `@RequirePermission`; see /docs/authorization-kernel-integration-guide.md
+ * for layering kernel checks (ACL, policies, ownership) on top.
+ */
+@ApiTags("SampleCategory", "Sample Category")
 @Controller(apiPath("/sample-category"))
-export class GeneratedSampleCategoryController {
-	public constructor(protected readonly service: SampleCategoryService) {}
+export class SampleCategoryController {
+	public constructor(private readonly service: SampleCategoryService) {}
 
 	@RequirePermission("LIST", "SAMPLE_CATEGORY")
 	@Get()
 	@ApiOperation({ summary: "List SampleCategories" })
 	@ApiOkResponse({ description: "Paginated list of samplecategories" })
-	public list(@Query(new ZodValidationPipe(SampleCategoryListQuerySchema)) query: Parameters<SampleCategoryService["list"]>[0]): ReturnType<SampleCategoryService["list"]> {
+	public list(@Query(new ZodValidationPipe(SampleCategoryListQuerySchema)) query: z.output<typeof SampleCategoryListQuerySchema>): ReturnType<SampleCategoryService["list"]> {
 		return this.service.list(query);
 	}
 
@@ -34,7 +40,7 @@ export class GeneratedSampleCategoryController {
 	@ApiOperation({ summary: "Bulk create samplecategories" })
 	@ApiOkResponse({ description: "Created samplecategories" })
 	public bulkCreate(
-		@Body(new ZodValidationPipe(BulkCreateSampleCategorySchema)) body: { items: Parameters<SampleCategoryService["createMany"]>[0] },
+		@Body(new ZodValidationPipe(BulkCreateSampleCategorySchema)) body: { items: z.output<typeof BulkCreateSampleCategorySchema>["items"] },
 	): ReturnType<SampleCategoryService["createMany"]> {
 		return this.service.createMany(body.items);
 	}
@@ -59,7 +65,7 @@ export class GeneratedSampleCategoryController {
 	@Post()
 	@ApiOperation({ summary: "Create SampleCategory" })
 	@ApiOkResponse({ description: "Created samplecategory" })
-	public create(@Body(new ZodValidationPipe(CreateSampleCategorySchema)) body: Parameters<SampleCategoryService["create"]>[0]): ReturnType<SampleCategoryService["create"]> {
+	public create(@Body(new ZodValidationPipe(CreateSampleCategorySchema)) body: z.output<typeof CreateSampleCategorySchema>): ReturnType<SampleCategoryService["create"]> {
 		return this.service.create(body);
 	}
 
@@ -69,7 +75,7 @@ export class GeneratedSampleCategoryController {
 	@ApiOkResponse({ description: "Updated samplecategory" })
 	public update(
 		@Param(new ZodValidationPipe(SampleCategoryIdParamSchema)) params: { id: string },
-		@Body(new ZodValidationPipe(UpdateSampleCategorySchema)) body: Parameters<SampleCategoryService["update"]>[1],
+		@Body(new ZodValidationPipe(UpdateSampleCategorySchema)) body: z.output<typeof UpdateSampleCategorySchema>,
 	): ReturnType<SampleCategoryService["update"]> {
 		return this.service.update(params.id, body);
 	}

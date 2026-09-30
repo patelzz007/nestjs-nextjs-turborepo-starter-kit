@@ -7,19 +7,19 @@ import { source } from "@/lib/source";
 
 /** `/sitemap.xml` — the landing page, every guide and every blog post. */
 export default function sitemap(): MetadataRoute.Sitemap {
-	const guides: MetadataRoute.Sitemap = source.getPages().map((page) => {
+	const guides: MetadataRoute.Sitemap = source.getPages().map((page): MetadataRoute.Sitemap[number] => {
 		const gitModified: number | undefined = getGitLastModified(page.path);
 		return {
 			url: `${BASE_URL}${page.url}`,
 			lastModified: gitModified !== undefined ? new Date(gitModified).toISOString() : undefined,
-			changeFrequency: "weekly" as const,
+			changeFrequency: "weekly",
 			priority: 0.7,
 		};
 	});
-	const posts: MetadataRoute.Sitemap = blogSource.getPages().map((page) => ({
+	const posts: MetadataRoute.Sitemap = blogSource.getPages().map((page): MetadataRoute.Sitemap[number] => ({
 		url: `${BASE_URL}${page.url}`,
 		lastModified: new Date(page.data.date).toISOString(),
-		changeFrequency: "weekly" as const,
+		changeFrequency: "weekly",
 		priority: 0.6,
 	}));
 	return [

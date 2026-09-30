@@ -16,6 +16,7 @@ import { MerchantKybVerificationApprovedSection } from "./verification-approved-
 import { profileToFieldValues, readKybStringField } from "./verification-profile-utils";
 import { MerchantKybVerificationStatusBanners } from "./verification-status-banners";
 import { MerchantKybVerificationUpdateSection, type MerchantKybVerificationUpdateStep } from "./verification-update-section";
+import { catchCaught } from "../../caught";
 
 export interface MerchantKybVerificationViewProps {
 	readonly orgSlug: string;
@@ -104,8 +105,8 @@ function MerchantKybVerificationContent({ orgSlug, profile }: MerchantKybVerific
 
 	const handleViewStoredDocument = React.useCallback(
 		(document: MerchantKybDocumentRecord): void => {
-			void Promise.all([fetchStoredDocumentUrl(document, "inline"), fetchStoredDocumentUrl(document, "attachment")])
-				.then(([viewUrl, downloadUrl]): void => {
+			void catchCaught(
+				Promise.all([fetchStoredDocumentUrl(document, "inline"), fetchStoredDocumentUrl(document, "attachment")]).then(([viewUrl, downloadUrl]): void => {
 					if (viewUrl === null || downloadUrl === null) {
 						setError("This document is still scanning or was rejected.");
 						return;
@@ -116,44 +117,47 @@ function MerchantKybVerificationContent({ orgSlug, profile }: MerchantKybVerific
 						viewUrl,
 						downloadUrl,
 					});
-				})
-				.catch((err: unknown): void => {
+				}),
+				(err): void => {
 					setError(resolveAuthErrorMessage(err));
-				});
+				},
+			);
 		},
 		[fetchStoredDocumentUrl],
 	);
 
 	const handleDownloadStoredDocument = React.useCallback(
 		(document: MerchantKybDocumentRecord): void => {
-			void fetchStoredDocumentUrl(document, "attachment")
-				.then((downloadUrl): void => {
+			void catchCaught(
+				fetchStoredDocumentUrl(document, "attachment").then((downloadUrl): void => {
 					if (downloadUrl === null) {
 						setError("This document is still scanning or was rejected.");
 						return;
 					}
 					triggerBrowserDownload(downloadUrl, document.fileName);
-				})
-				.catch((err: unknown): void => {
+				}),
+				(err): void => {
 					setError(resolveAuthErrorMessage(err));
-				});
+				},
+			);
 		},
 		[fetchStoredDocumentUrl],
 	);
 
 	const handleViewStoredDocumentSource = React.useCallback(
 		(document: MerchantKybDocumentRecord): void => {
-			void fetchStoredDocumentUrl(document, "inline")
-				.then((viewUrl): void => {
+			void catchCaught(
+				fetchStoredDocumentUrl(document, "inline").then((viewUrl): void => {
 					if (viewUrl === null) {
 						setError("This document is still scanning or was rejected.");
 						return;
 					}
 					openExternalDocument(viewUrl);
-				})
-				.catch((err: unknown): void => {
+				}),
+				(err): void => {
 					setError(resolveAuthErrorMessage(err));
-				});
+				},
+			);
 		},
 		[fetchStoredDocumentUrl],
 	);
@@ -229,8 +233,8 @@ function MerchantKybVerificationContent({ orgSlug, profile }: MerchantKybVerific
 			}
 
 			setIsSubmitting(true);
-			void submitMerchantKyb(api, orgSlug, parsed.data, values.documents, profile.organizationId)
-				.then((response): void => {
+			void catchCaught(
+				submitMerchantKyb(api, orgSlug, parsed.data, values.documents, profile.organizationId).then((response): void => {
 					setValues(profileToFieldValues(response));
 					setStep("business");
 					setSuccessMessage(
@@ -240,13 +244,13 @@ function MerchantKybVerificationContent({ orgSlug, profile }: MerchantKybVerific
 					);
 					void queryClient.invalidateQueries({ queryKey: MERCHANT_ME_QUERY_KEY });
 					void queryClient.invalidateQueries({ queryKey: ["merchant", "kyb"] });
-				})
-				.catch((err: unknown): void => {
+				}),
+				(err): void => {
 					setError(resolveAuthErrorMessage(err));
-				})
-				.finally((): void => {
-					setIsSubmitting(false);
-				});
+				},
+			).finally((): void => {
+				setIsSubmitting(false);
+			});
 		},
 		[api, orgSlug, profile.kybStatus, profile.organizationId, queryClient, values],
 	);

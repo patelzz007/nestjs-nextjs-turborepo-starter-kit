@@ -3,7 +3,12 @@
 	"compilerOptions": {
 		"outDir": "./dist",
 		"rootDir": "./src",
-		"incremental": true
+		"incremental": true,
+		// Resolve @workspace/shared TYPES to source (exports "development"
+		// condition). shared's built .d.ts currently truncates type-only
+		// import() paths (`import("../..")` — TS 6 declaration-emit bug), which
+		// degrades those types to `any` for tsc/eslint. Source types are exact.
+		"customConditions": ["development"]
 	},
 	"include": ["src/**/*"],
 	"exclude": ["node_modules", "dist", "src/**/*.spec.ts"]

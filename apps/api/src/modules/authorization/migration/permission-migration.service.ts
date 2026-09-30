@@ -45,7 +45,7 @@ export class PermissionMigrationService {
 
 		const existing = await this.systemDb.permission.findMany({
 			where: { isDeleted: false },
-			select: { id: true, action: true, resource: true, description: true, group: true, isSystem: true },
+			select: { id: true, action: true, resource: true, scope: true, description: true, group: true, isSystem: true },
 		});
 
 		const existingMap = new Map<
@@ -54,17 +54,18 @@ export class PermissionMigrationService {
 				readonly id: string;
 				readonly action: string;
 				readonly resource: string;
+				readonly scope: string;
 				readonly description: string | null;
 				readonly group: string | null;
 				readonly isSystem: boolean;
 			}
 		>();
 		for (const perm of existing) {
-			existingMap.set(`${perm.action}:${perm.resource}`, perm);
+			existingMap.set(`${perm.action}:${perm.resource}:${perm.scope}`, perm);
 		}
 
 		for (const definition of definitions) {
-			const key = `${definition.action}:${definition.resource}`;
+			const key = `${definition.action}:${definition.resource}:${definition.scope ?? "GLOBAL"}`;
 			const dbPerm = existingMap.get(key);
 
 			if (dbPerm === undefined) {
@@ -72,6 +73,7 @@ export class PermissionMigrationService {
 					data: {
 						action: definition.action,
 						resource: definition.resource,
+						scope: definition.scope ?? "GLOBAL",
 						description: definition.description,
 						group: definition.group,
 						isSystem: definition.isSystem ?? false,

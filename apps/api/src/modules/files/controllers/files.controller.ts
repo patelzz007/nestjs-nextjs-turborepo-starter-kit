@@ -18,13 +18,14 @@ import { ZodValidationPipe } from "../../../common/pipes/zod-validation.pipe";
 import { TypedConfigService } from "../../../config/typed-config.service";
 import { GetUser } from "../../auth/decorators/get-user.decorator";
 import { Public } from "../../auth/decorators/public.decorator";
+import { RlsBypass } from "../../auth/decorators/rls-bypass.decorator";
 import type { AccessTokenPayload } from "../../auth/services/token.service";
 import type { ObjectStorage } from "../../storage/domain/object-storage.port";
 import { OBJECT_STORAGE } from "../../storage/domain/storage.tokens";
 import { locatorFromStoredFile, toStorageObjectLocator } from "../../storage/utils/storage-locator.util";
 import { StoredFileRepository } from "../repositories/stored-file.repository";
 import { FileService } from "../services/file.service";
-import { Authorize } from "../../authorization/decorators/authorize.decorator";
+import { FileUploadAuthorizationService } from "../services/file-upload-authorization.service";
 
 const FileIdParamSchema = z.object({ fileId: UuidParamSchema }).strict();
 
@@ -45,27 +46,27 @@ export class FilesController {
 	public constructor(
 		private readonly config: TypedConfigService,
 		private readonly files: FileService,
+		private readonly uploadAuthorization: FileUploadAuthorizationService,
 		private readonly repository: StoredFileRepository,
 		@Inject(OBJECT_STORAGE) private readonly storage: ObjectStorage,
 	) {}
 
+	// Per-category authorization (own avatar, product, store branding, owner-only KYB):
+	// see FileUploadAuthorizationService.
 	@Post("upload-url")
 	@ApiBearerAuth()
-	@Authorize({
-		action: "CREATE",
-		resource: "ORGANIZATION",
-		description: "Create file upload URL",
-	})
 	@ApiOperation({ summary: "Create a browser upload ticket" })
 	@ApiOkResponse({ description: "Browser upload ticket created" })
 	public async createUploadUrl(
 		@GetUser() user: AccessTokenPayload,
 		@Body(new ZodValidationPipe(apiContract.files.uploadUrl.input)) body: z.output<typeof CreateFileUploadUrlSchema>,
 	): Promise<ReturnType<FileService["createUploadUrl"]>> {
+		await this.uploadAuthorization.assertCanUpload({ id: user.id, isSuperAdmin: user.isSuperAdmin }, body);
 		return this.files.createUploadUrl(user.sub, body);
 	}
 
 	@Public()
+	@RlsBypass()
 	@Post("processing-callback")
 	@ApiOperation({ summary: "External processing callback for file lifecycle updates" })
 	@ApiOkResponse({ description: "Processing result applied" })
@@ -79,6 +80,7 @@ export class FilesController {
 	}
 
 	@Public()
+	@RlsBypass()
 	@SkipEnvelope()
 	@Get("local-download")
 	@ApiOperation({ summary: "Serve a local filesystem object for signed/public URLs (development only)" })
@@ -146,6 +148,7 @@ export class FilesController {
 	}
 
 	@Public()
+	@RlsBypass()
 	@Post(":fileId/local-upload")
 	@ApiOperation({ summary: "Local filesystem shim for multipart POST uploads (development only)" })
 	@ApiOkResponse({ description: "Local upload stored" })

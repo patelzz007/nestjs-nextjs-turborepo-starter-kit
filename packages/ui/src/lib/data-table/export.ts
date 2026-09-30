@@ -1,6 +1,6 @@
 import type { ColumnDef, RowData } from "@tanstack/react-table";
 
-import { DataTableCellScalarSchema, parseDataTableCellValue, readDataTableRowField, toDataTableCellString } from "./prefs";
+import { DataTableCellScalarSchema, parseDataTableCellValue, readDataTableRowField, toDataTableCellString, type DataTableCellInput } from "./prefs";
 
 const UTILITY_COLUMNS: readonly string[] = ["select", "actions", "drag"];
 
@@ -38,7 +38,7 @@ function escapeCsvField(str: string): string {
  * Escapes a cell value for CSV/Spreadsheet exports so spreadsheet apps do not
  * evaluate it as a formula.
  */
-export function sanitizeExportCell(value: Parameters<typeof parseDataTableCellValue>[0]): string {
+export function sanitizeExportCell(value: DataTableCellInput): string {
 	const str = toDataTableCellString(parseDataTableCellValue(value));
 	return /^[=+\-@\t\r]/.test(str) ? `'${str}` : str;
 }

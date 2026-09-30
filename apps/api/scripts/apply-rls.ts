@@ -1,12 +1,12 @@
-import { readFileSync, existsSync, readdirSync } from "node:fs";
+import { readFileSync, existsSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Pool } from "pg";
+import { z } from "zod";
+
+import { buildRlsApplyPlan } from "./rls-apply-plan.js";
 
 const apiDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const prismaDir = resolve(apiDir, "prisma");
-const rlsBundleFile = resolve(prismaDir, "rls.sql");
-const rlsFragmentsDir = resolve(prismaDir, "rls");
 const envFile = resolve(apiDir, ".env");
 
 function getDatabaseUrl(): string {
@@ -46,56 +46,75 @@ function stripPrismaQueryParams(databaseUrl: string): string {
 	return databaseUrl.slice(0, questionMarkIndex);
 }
 
-function listRlsSqlFiles(): string[] {
-	const fragments: string[] = [];
+/** Deadlock (`40P01`) and lock-timeout (`55P03`) are transient when another session holds table locks. */
+const RETRYABLE_SQLSTATES: ReadonlySet<string> = new Set(["40P01", "55P03"]);
+const MAX_ATTEMPTS = 6;
+const LOCK_TIMEOUT = "10s";
 
-	if (existsSync(rlsFragmentsDir)) {
-		const sorted = readdirSync(rlsFragmentsDir)
-			.filter((name: string) => name.endsWith(".sql"))
-			.sort((a: string, b: string) => a.localeCompare(b))
-			.map((name: string) => resolve(rlsFragmentsDir, name));
-		fragments.push(...sorted);
-	}
+const PgErrorSchema = z.object({ code: z.string(), message: z.string() });
 
-	const aclFragment = fragments.find((path: string) => path.endsWith("01-acl-location-access.sql"));
-	const grantsFragment = fragments.find((path: string) => path.endsWith("99-app-runtime-grants.sql"));
-	const otherFragments = fragments.filter((path: string) => path !== aclFragment && path !== grantsFragment);
-
-	const files: string[] = [];
-
-	if (aclFragment !== undefined) {
-		files.push(aclFragment);
-	}
-
-	if (existsSync(rlsBundleFile)) {
-		files.push(rlsBundleFile);
-	}
-
-	files.push(...otherFragments);
-
-	if (grantsFragment !== undefined) {
-		files.push(grantsFragment);
-	}
-
-	if (files.length === 0) {
-		throw new Error(`No RLS SQL found. Expected ${rlsBundleFile} and/or ${rlsFragmentsDir}/*.sql`);
-	}
-
-	return files;
+function readRetryableError(error: Error): string | null {
+	const parsed = PgErrorSchema.safeParse(error);
+	return parsed.success && RETRYABLE_SQLSTATES.has(parsed.data.code) ? parsed.data.message : null;
 }
 
-async function runSqlFile(pool: Pool, sqlFile: string): Promise<void> {
-	const sql = readFileSync(sqlFile, "utf8");
-	await pool.query(sql);
+async function delay(ms: number): Promise<void> {
+	await new Promise<void>((resolveDelay) => {
+		setTimeout(resolveDelay, ms);
+	});
 }
 
 /**
- * Apply `prisma/rls.sql` and `prisma/rls/*.sql` via the Node `pg` driver.
+ * Apply one SQL file atomically on a dedicated connection.
+ *
+ * `ALTER TABLE … ENABLE ROW LEVEL SECURITY` / `CREATE POLICY` take ACCESS
+ * EXCLUSIVE locks table by table. A concurrently running API (queue workers,
+ * cron jobs, Prisma Studio) touching the same tables in another order can
+ * deadlock with it. The file runs in one explicit transaction with a bounded
+ * lock wait; on a deadlock or lock timeout the whole transaction rolls back,
+ * so retrying the (idempotent) file is safe.
+ */
+async function runSqlFile(pool: Pool, sqlFile: string): Promise<void> {
+	const sql = readFileSync(sqlFile, "utf8");
+
+	for (let attempt = 1; ; attempt += 1) {
+		const client = await pool.connect();
+		try {
+			await client.query("BEGIN");
+			await client.query(`SET LOCAL lock_timeout = '${LOCK_TIMEOUT}'`);
+			await client.query(sql);
+			await client.query("COMMIT");
+			return;
+		} catch (error) {
+			await client.query("ROLLBACK");
+			const retryable = error instanceof Error ? readRetryableError(error) : null;
+			if (retryable === null || attempt >= MAX_ATTEMPTS) {
+				throw error;
+			}
+			const backoffMs = 500 * 2 ** (attempt - 1);
+			console.warn(
+				`    ${retryable} — retrying in ${String(backoffMs)}ms (attempt ${String(attempt + 1)}/${String(MAX_ATTEMPTS)}). Stop the running API to avoid lock contention.`,
+			);
+			await delay(backoffMs);
+		} finally {
+			client.release();
+		}
+	}
+}
+
+/**
+ * Apply the RLS SQL via the Node `pg` driver.
+ *
+ * The file list comes from `buildRlsApplyPlan` (`RLS_APPLY_ORDER` in
+ * `scripts/rls-apply-plan.ts`), which validates disk drift and helper
+ * use-before-definition BEFORE any SQL runs — so ordering bugs fail here
+ * instead of against a fresh database.
+ *
  * No local `psql` binary required — only a reachable `DATABASE_URL` (Docker Postgres on localhost is fine).
  */
 export async function applyRowLevelSecurity(): Promise<void> {
 	const databaseUrl = stripPrismaQueryParams(getDatabaseUrl());
-	const sqlFiles = listRlsSqlFiles();
+	const sqlFiles = buildRlsApplyPlan(apiDir);
 	const pool = new Pool({ connectionString: databaseUrl });
 
 	console.log("Applying Row-Level Security (idempotent) ...");
@@ -121,16 +140,19 @@ function isApplyRlsCliEntry(): boolean {
 	return resolve(entry) === fileURLToPath(import.meta.url);
 }
 
-if (isApplyRlsCliEntry()) {
-	void applyRowLevelSecurity().catch((error: unknown) => {
+const FailureSchema = z.object({ message: z.string() });
+
+async function main(): Promise<void> {
+	try {
+		await applyRowLevelSecurity();
+	} catch (error) {
+		const failure = FailureSchema.safeParse(error);
 		console.error("");
-
-		if (error instanceof Error) {
-			console.error(`Error: ${error.message}`);
-		} else {
-			console.error(error);
-		}
-
+		console.error(`Error: ${failure.success ? failure.data.message : "RLS apply failed"}`);
 		process.exit(1);
-	});
+	}
+}
+
+if (isApplyRlsCliEntry()) {
+	void main();
 }

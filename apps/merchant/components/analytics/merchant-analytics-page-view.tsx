@@ -1,12 +1,13 @@
 "use client";
 
+import { MerchantCapabilityGate } from "@/components/access/merchant-capability-gate";
 import { MerchantLocationScopeBanner } from "@/components/layout/merchant-location-scope-banner";
-import { stubApiMeta } from "@/lib/api-envelope";
+import { stubApiMeta, successEnvelope } from "@/lib/api-envelope";
 import { useActiveLocationFilter } from "@/lib/org/location-context";
 import { useAuth } from "@workspace/client/lib/auth";
-import type { AnalyticsMetric, MerchantAnalyticsResponse } from "@workspace/shared";
+import { MERCHANT_CAPABILITY, type AnalyticsMetric, type MerchantAnalyticsResponse } from "@workspace/shared";
 import { AnalyticsChartCard, AnalyticsChartLegendItem } from "@workspace/ui/components/display/analytics-chart-card";
-import { AnalyticsFunnel } from "@workspace/ui/components/display/analytics-funnel";
+import { AnalyticsFunnel, type AnalyticsFunnelStep } from "@workspace/ui/components/display/analytics-funnel";
 import { AnalyticsPageHeader } from "@workspace/ui/components/display/analytics-page-header";
 import { AnalyticsStatCard, type AnalyticsStatAccent } from "@workspace/ui/components/display/analytics-stat-card";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@workspace/ui/components/display/chart";
@@ -52,21 +53,20 @@ export interface MerchantAnalyticsPageViewProps {
 	readonly initialAnalytics?: MerchantAnalyticsResponse;
 }
 
-export function MerchantAnalyticsPageView({ orgSlug, initialAnalytics }: MerchantAnalyticsPageViewProps): React.JSX.Element {
+/** Analytics route — requires `merchant:view_analytics` (analytics endpoint); the query mounts only when allowed. */
+export function MerchantAnalyticsPageView(props: MerchantAnalyticsPageViewProps): React.JSX.Element {
+	return (
+		<MerchantCapabilityGate capability={MERCHANT_CAPABILITY.viewAnalytics}>
+			<MerchantAnalyticsPageViewContent {...props} />
+		</MerchantCapabilityGate>
+	);
+}
+
+function MerchantAnalyticsPageViewContent({ orgSlug, initialAnalytics }: MerchantAnalyticsPageViewProps): React.JSX.Element {
 	const { api } = useAuth();
 	const { locationId } = useActiveLocationFilter();
 
-	const initialQueryData = React.useMemo(
-		() =>
-			initialAnalytics !== undefined
-				? {
-						success: true as const,
-						data: initialAnalytics,
-						meta: stubApiMeta(),
-					}
-				: undefined,
-		[initialAnalytics],
-	);
+	const initialQueryData = React.useMemo(() => (initialAnalytics !== undefined ? successEnvelope(initialAnalytics, stubApiMeta()) : undefined), [initialAnalytics]);
 
 	const analyticsQuery = api.organizations.analytics.useQuery(
 		{ orgSlug, locationId },
@@ -88,14 +88,14 @@ export function MerchantAnalyticsPageView({ orgSlug, initialAnalytics }: Merchan
 	);
 
 	const funnelSteps = React.useMemo(
-		() =>
+		(): readonly AnalyticsFunnelStep[] =>
 			analytics === undefined
 				? []
 				: [
-						{ label: "Rewards Created", value: analytics.totalRewards.value.toLocaleString(), accent: "primary" as const },
-						{ label: "Total Claims", value: analytics.totalClaims.value.toLocaleString(), accent: "info" as const },
-						{ label: "Redemptions", value: analytics.totalRedemptions.value.toLocaleString(), accent: "success" as const },
-						{ label: "Conversion", value: `${String(analytics.conversionRate.value)}%`, accent: "warning" as const },
+						{ label: "Rewards Created", value: analytics.totalRewards.value.toLocaleString(), accent: "primary" },
+						{ label: "Total Claims", value: analytics.totalClaims.value.toLocaleString(), accent: "info" },
+						{ label: "Redemptions", value: analytics.totalRedemptions.value.toLocaleString(), accent: "success" },
+						{ label: "Conversion", value: `${String(analytics.conversionRate.value)}%`, accent: "warning" },
 					],
 		[analytics],
 	);

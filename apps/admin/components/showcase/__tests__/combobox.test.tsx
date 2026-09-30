@@ -489,8 +489,14 @@ describe("Combobox", () => {
 		// 3) Reopen-sync: the input now holds the label; re-running the remote
 		//    search on it must find the item again and never show a bogus
 		//    "Nothing matches "js"" empty state.
+		//    A same-value change event is a no-op for React (value tracker), and
+		//    base-ui only auto-opens for real typed input (`inputType`), so drive
+		//    the sync explicitly: re-run the remote search with the label, then
+		//    reopen the popup the way a keyboard user would (ArrowDown).
 		act(() => {
+			fireEvent.change(input, { target: { value: "" } });
 			fireEvent.change(input, { target: { value: "JavaScript" } });
+			fireEvent.keyDown(input, { key: "ArrowDown" });
 		});
 		await waitFor(
 			() => {

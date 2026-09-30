@@ -15,7 +15,7 @@ import { z } from "zod";
 
 import { API_BASE_URL, API_URL_PREFIX } from "./config";
 import { applyRotatedSetCookies, collectSetCookies, hasRotatedAuthCookies } from "../auth/edge/proxy-refresh";
-import { eachRouterEntry, isErasedProcedureDef, isRouterSubtree, resolveRequest, type MutationDef, type ProcedureDef, type QueryDef } from "./endpoints";
+import { eachRouterEntry, isErasedProcedureDef, isRouterSubtree, resolveRequest, type MutationDef, type ProcedureDef, type QueryDef, type RouterTreeValue } from "./endpoints";
 
 // ── Config ─────────────────────────────────────────────────────────────────
 
@@ -155,7 +155,7 @@ export type ServerCallerBranch<V> =
 			? ServerMutationLeaf<Input, Resp>
 			: V extends object
 				? ServerCallerTree<V>
-				: never;
+				: V;
 
 export type ServerCallerTree<R extends object> = { [K in keyof R]: ServerCallerBranch<R[K]> };
 
@@ -504,7 +504,12 @@ export function createServerProcedureLeaf<Input extends SerializableInput, Resp 
 	return createServerMutationLeaf(context, def);
 }
 
-function isCompleteServerCaller<R extends object>(router: R, candidate: Partial<ServerCallerTree<R>>): candidate is ServerCallerTree<R> {
+/** Erased build-time shape — widened so each router key can accept any branch variant. */
+type ServerCallerTreeBuild<R extends object> = {
+	[K in keyof R]?: ServerCallerBranch<RouterTreeValue>;
+};
+
+function isCompleteServerCaller<R extends object>(router: R, candidate: ServerCallerTreeBuild<R> | ServerCallerTree<R>): candidate is ServerCallerTree<R> {
 	let complete = true;
 	eachRouterEntry(router, (key) => {
 		if (candidate[key] === undefined) {
@@ -514,23 +519,26 @@ function isCompleteServerCaller<R extends object>(router: R, candidate: Partial<
 	return complete;
 }
 
-function mapServerCallerBranch<V extends object>(context: ServerRequestContext, value: V): ServerCallerBranch<V> {
+function mapServerCallerBranch(context: ServerRequestContext, value: object): ServerCallerBranch<RouterTreeValue> {
 	if (isErasedProcedureDef(value)) {
-		return createServerProcedureLeaf(context, value) as ServerCallerBranch<V>;
+		return createServerProcedureLeaf(context, value);
 	}
 
 	if (isRouterSubtree(value)) {
-		return createServerCallerForRouter(value, context) as ServerCallerBranch<V>;
+		return createServerCallerForRouter(value, context);
 	}
 
 	throw new Error("Invalid router node — expected a procedure leaf or nested router.");
 }
 
 function buildServerCallerTree<R extends object>(router: R, context: ServerRequestContext): ServerCallerTree<R> {
-	const out: Partial<ServerCallerTree<R>> = {};
+	const out: ServerCallerTreeBuild<R> = {};
 
 	eachRouterEntry(router, (key, value) => {
-		out[key] = mapServerCallerBranch(context, value as Extract<R[typeof key], object>) as ServerCallerTree<R>[typeof key];
+		if (typeof value !== "object" || value === null) {
+			throw new Error("Invalid router node — expected a procedure leaf or nested router.");
+		}
+		out[key] = mapServerCallerBranch(context, value);
 	});
 
 	if (!isCompleteServerCaller(router, out)) {

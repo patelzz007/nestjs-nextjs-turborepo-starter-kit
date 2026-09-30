@@ -94,6 +94,41 @@ body {
 	font-size: 0.9375rem;
 }
 
+:root {
+	--scrollbar-size: 0.5rem;
+	--scrollbar-thumb: color-mix(in srgb, var(--color-fd-muted-foreground) 60%, transparent);
+	--scrollbar-thumb-hover: color-mix(in srgb, var(--color-fd-muted-foreground) 78%, transparent);
+}
+
+html,
+body,
+* {
+	scrollbar-width: thin;
+	scrollbar-color: var(--scrollbar-thumb) transparent;
+}
+
+*::-webkit-scrollbar {
+	width: var(--scrollbar-size);
+	height: var(--scrollbar-size);
+}
+
+*::-webkit-scrollbar-track {
+	background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+	background: var(--scrollbar-thumb);
+	border: 2px solid transparent;
+	border-radius: 9999px;
+	background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+	background: var(--scrollbar-thumb-hover);
+	border: 2px solid transparent;
+	background-clip: padding-box;
+}
+
 /*
  * Smooth anchor scrolling — the TOC (desktop rail + mobile popover) links to
  * `#heading-id` targets, and without this the browser jumps instantly. Only
@@ -132,7 +167,9 @@ h6 {
 	text-decoration-line: underline;
 	text-decoration-color: var(--color-fd-border);
 	text-decoration-thickness: 1px;
-	transition: text-decoration-color 150ms ease, color 150ms ease;
+	transition:
+		text-decoration-color 150ms ease,
+		color 150ms ease;
 }
 
 .docs-body a:hover,
@@ -433,7 +470,9 @@ h6 {
 	padding-inline: 1rem;
 	background: var(--color-fd-background);
 	border-bottom: 1px solid var(--color-fd-border);
-	box-shadow: 0 16px 40px hsl(222 47% 11% / 0.14), 0 2px 8px hsl(222 47% 11% / 0.08);
+	box-shadow:
+		0 16px 40px hsl(222 47% 11% / 0.14),
+		0 2px 8px hsl(222 47% 11% / 0.08);
 }
 
 /* ── Glossary tooltips ───────────────────────────────────────────────────── */

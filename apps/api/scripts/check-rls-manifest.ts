@@ -9,6 +9,7 @@ import {
 	parsePrismaSchemaModels,
 	type RlsManifestDriftReport,
 } from "../prisma/rls/manifest-index.js";
+import { buildRlsApplyPlan } from "./rls-apply-plan.js";
 
 const apiDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const prismaDir = resolve(apiDir, "prisma");
@@ -57,6 +58,9 @@ function reportHasIssues(report: RlsManifestDriftReport): boolean {
 }
 
 function run(): void {
+	// Fail fast on apply-order / helper-dependency drift before the table scan.
+	const applyPlan = buildRlsApplyPlan(apiDir);
+
 	if (!existsSync(schemaFile)) {
 		throw new Error(`Prisma schema not found: ${schemaFile}`);
 	}
@@ -75,6 +79,7 @@ function run(): void {
 	});
 
 	console.log("RLS manifest drift check");
+	console.log(`  Apply plan: ${String(applyPlan.length)} files in RLS_APPLY_ORDER (helper dependencies OK)`);
 	console.log(`  Prisma models: ${String(prismaModels.length)}`);
 	console.log(`  Manifest tables: ${String(manifestTables.length)}`);
 	console.log(`  RLS-enabled tables (sql scan): ${String(rlsEnabledTables.size)}`);

@@ -1,4 +1,5 @@
 import { HttpStatus } from "@nestjs/common";
+import { z } from "zod";
 
 /**
  * Standardized error response format for all API modules.
@@ -58,16 +59,9 @@ export function createStandardErrorResponse(
 /**
  * Common error codes used across the API.
  */
-export const ErrorCodes = {
-	VALIDATION_ERROR: "VALIDATION_ERROR",
-	NOT_FOUND: "NOT_FOUND",
-	UNAUTHORIZED: "UNAUTHORIZED",
-	FORBIDDEN: "FORBIDDEN",
-	CONFLICT: "CONFLICT",
-	RATE_LIMITED: "RATE_LIMITED",
-	INTERNAL_ERROR: "INTERNAL_ERROR",
-	BAD_REQUEST: "BAD_REQUEST",
-} as const;
+const ErrorCodeSchema = z.enum(["VALIDATION_ERROR", "NOT_FOUND", "UNAUTHORIZED", "FORBIDDEN", "CONFLICT", "RATE_LIMITED", "INTERNAL_ERROR", "BAD_REQUEST"]);
+
+export const ErrorCodes = ErrorCodeSchema.enum;
 
 /**
  * HTTP status code mapping for error codes.

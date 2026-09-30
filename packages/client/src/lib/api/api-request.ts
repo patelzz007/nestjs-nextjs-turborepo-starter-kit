@@ -200,7 +200,7 @@ export type CallerTreeBranch<V> =
 			? MutationCaller<Input, Resp>
 			: V extends object
 				? CallerTree<V>
-				: never;
+				: V;
 
 /** Recursively maps a router tree to tRPC-style caller leaves. */
 export type CallerTree<R extends object> = { [K in keyof R]: CallerTreeBranch<R[K]> };

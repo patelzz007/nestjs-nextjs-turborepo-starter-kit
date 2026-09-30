@@ -1,70 +1,76 @@
 import { UnauthorizedException } from "@nestjs/common";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { TypedConfigService } from "../../config/typed-config.service";
-import type { LogService } from "../logs/logs.service";
-import type { AuthorizationCheckerService } from "../authorization/services/authorization-checker.service";
-import type { UserSessionRevocationService } from "../authorization/services/user-session-revocation.service";
-import type { UserResponseMapper } from "../auth/services/user-response.mapper";
-import type { CryptoService } from "../auth/services/crypto.service";
-import type { AccessTokenStateService } from "../auth/services/access-token-state.service";
-import type { TokenService } from "../auth/services/token.service";
-import type { SessionRestrictionService } from "../auth/services/session-restriction.service";
-import type { SessionsEventsService } from "./sessions-events.service";
-import type { RefreshTokenRepository } from "./repositories/refresh-token.repository";
-import type { UserRepository } from "../auth/repositories/user.repository";
+import { Test } from "@nestjs/testing";
+
+import { TypedConfigService } from "../../config/typed-config.service";
+import { LogService } from "../logs/logs.service";
+import { AuthorizationCheckerService } from "../authorization/services/authorization-checker.service";
+import { UserSessionRevocationService } from "../authorization/services/user-session-revocation.service";
+import { UserResponseMapper } from "../auth/services/user-response.mapper";
+import { CryptoService } from "../auth/services/crypto.service";
+import { AccessTokenStateService } from "../auth/services/access-token-state.service";
+import { TokenService } from "../auth/services/token.service";
+import { SessionRestrictionService } from "../auth/services/session-restriction.service";
+import { SessionsEventsService } from "./sessions-events.service";
+import { RefreshTokenRepository } from "./repositories/refresh-token.repository";
+import { UserRepository } from "../auth/repositories/user.repository";
 
 import { SessionsService } from "./sessions.service";
 
 describe("SessionsService", () => {
 	let service: SessionsService;
-	let repository: {
-		findByIdIncludingDeleted: ReturnType<typeof vi.fn>;
-		rotateTokenIfHashMatches: ReturnType<typeof vi.fn>;
-		revokeAllForUsers: ReturnType<typeof vi.fn>;
+	const repository = {
+		findByIdIncludingDeleted: vi.fn(),
+		rotateTokenIfHashMatches: vi.fn(),
+		revokeAllForUsers: vi.fn(),
 	};
-	let users: { findLoginById: ReturnType<typeof vi.fn> };
-	let tokenService: { generateSessionTokens: ReturnType<typeof vi.fn> };
-	let cryptoService: { compare: ReturnType<typeof vi.fn>; hash: ReturnType<typeof vi.fn> };
+	const users = { findLoginById: vi.fn() };
+	const tokenService = { generateSessionTokens: vi.fn() };
+	const cryptoService = { compare: vi.fn(), hash: vi.fn() };
 	const userId = "user-1";
 	const refreshTokenJti = "rt-jti-1";
 
-	beforeEach(() => {
-		repository = {
-			findByIdIncludingDeleted: vi.fn(),
-			rotateTokenIfHashMatches: vi.fn(),
-			revokeAllForUsers: vi.fn(),
-		};
-		users = { findLoginById: vi.fn() };
+	beforeEach(async () => {
+		vi.clearAllMocks();
+		tokenService.generateSessionTokens.mockResolvedValue({ accessToken: "at", refreshToken: "rt" });
+		cryptoService.hash.mockResolvedValue("hashed");
 
-		const tokenServiceMock = { generateSessionTokens: vi.fn().mockResolvedValue({ accessToken: "at", refreshToken: "rt" }) };
-		const cryptoServiceMock = { compare: vi.fn(), hash: vi.fn().mockResolvedValue("hashed") };
-		tokenService = tokenServiceMock;
-		cryptoService = cryptoServiceMock;
-		const config = { jwtRefreshExpiry: "7d" } as TypedConfigService;
-		const logService = { warn: vi.fn() };
-		const authorizationChecker = { getUserPermissionDetails: vi.fn().mockResolvedValue({ roles: [], permissions: [] }) };
-		const mapper = { toFlatUser: vi.fn().mockReturnValue({ id: userId, tokenVersion: 1 }) };
-		const sessionsEvents = { emitAction: vi.fn() };
-		const accessTokenState = { bumpTokenVersion: vi.fn() };
-		const sessionRevocation = { revokeAllSessionsForUser: vi.fn() };
-		const sessionRestriction = {
-			resolveSessionTokens: vi.fn().mockReturnValue({ sessionScope: "restricted", mfaAssuredAt: undefined }),
-		};
+		// Typed stand-ins resolved from a Nest testing container — the real
+		// collaborators pull in Prisma, JWT and the email stack.
+		const moduleRef = await Test.createTestingModule({
+			providers: [
+				{ provide: RefreshTokenRepository, useValue: repository },
+				{ provide: UserRepository, useValue: users },
+				{ provide: TokenService, useValue: tokenService },
+				{ provide: CryptoService, useValue: cryptoService },
+				{ provide: TypedConfigService, useValue: { jwtRefreshExpiry: "7d" } },
+				{ provide: LogService, useValue: { warn: vi.fn() } },
+				{ provide: AuthorizationCheckerService, useValue: { getUserPermissionDetails: vi.fn().mockResolvedValue({ roles: [], permissions: [] }) } },
+				{ provide: UserResponseMapper, useValue: { toFlatUser: vi.fn().mockReturnValue({ id: userId, tokenVersion: 1 }) } },
+				{ provide: SessionsEventsService, useValue: { emitAction: vi.fn() } },
+				{ provide: AccessTokenStateService, useValue: { bumpTokenVersion: vi.fn() } },
+				{ provide: UserSessionRevocationService, useValue: { revokeAllSessionsForUser: vi.fn() } },
+				{
+					provide: SessionRestrictionService,
+					useValue: { resolveSessionTokens: vi.fn().mockReturnValue({ sessionScope: "restricted", mfaAssuredAt: undefined }) },
+				},
+			],
+		}).compile();
 
 		service = new SessionsService(
-			repository as unknown as RefreshTokenRepository,
-			users as unknown as UserRepository,
-			tokenServiceMock as unknown as TokenService,
-			cryptoServiceMock as unknown as CryptoService,
-			config,
-			logService as unknown as LogService,
-			authorizationChecker as unknown as AuthorizationCheckerService,
-			mapper as unknown as UserResponseMapper,
-			sessionsEvents as unknown as SessionsEventsService,
-			accessTokenState as unknown as AccessTokenStateService,
-			sessionRevocation as unknown as UserSessionRevocationService,
-			sessionRestriction as unknown as SessionRestrictionService,
+			moduleRef.get(RefreshTokenRepository),
+			moduleRef.get(UserRepository),
+			moduleRef.get(TokenService),
+			moduleRef.get(CryptoService),
+			moduleRef.get(TypedConfigService),
+			moduleRef.get(LogService),
+			moduleRef.get(AuthorizationCheckerService),
+			moduleRef.get(UserResponseMapper),
+			moduleRef.get(SessionsEventsService),
+			moduleRef.get(AccessTokenStateService),
+			moduleRef.get(UserSessionRevocationService),
+			moduleRef.get(SessionRestrictionService),
 		);
 	});
 

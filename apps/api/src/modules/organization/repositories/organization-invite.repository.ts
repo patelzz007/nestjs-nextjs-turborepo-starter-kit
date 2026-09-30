@@ -30,7 +30,7 @@ const TEAM_INVITE_INCLUDE = {
 			fullName: true,
 		},
 	},
-} as const satisfies Prisma.OrganizationInvitationInclude;
+} satisfies Prisma.OrganizationInvitationInclude;
 
 export type TeamInviteRow = Prisma.OrganizationInvitationGetPayload<{ include: typeof TEAM_INVITE_INCLUDE }>;
 

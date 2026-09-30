@@ -1,11 +1,28 @@
 import * as crypto from "crypto";
 
 import { InternalServerErrorException } from "@nestjs/common";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { TypedConfigService } from "../../../config/typed-config.service";
+import { TypedConfigService } from "../../../config/typed-config.service";
 
 import { SecretEncryptionService } from "./secret-encryption.service";
+
+const configState = vi.hoisted(() => {
+	const state: { mfaEncryptionKeys: Readonly<Record<number, string>> } = { mfaEncryptionKeys: {} };
+	return state;
+});
+
+vi.mock("../../../config/typed-config.service", () => ({
+	TypedConfigService: class {
+		/** Snapshot at construction so each service instance keeps its own key ring. */
+		public readonly mfaEncryptionKeys = configState.mfaEncryptionKeys;
+	},
+}));
+
+function configWithKeys(keys: Readonly<Record<number, string>>): TypedConfigService {
+	configState.mfaEncryptionKeys = keys;
+	return new TypedConfigService();
+}
 
 function makeKeyMaterial(seed: string): string {
 	return crypto.createHash("sha256").update(seed).digest("base64");
@@ -15,12 +32,10 @@ describe("SecretEncryptionService", () => {
 	const keyV1 = makeKeyMaterial("mfa-key-v1");
 	const keyV2 = makeKeyMaterial("mfa-key-v2");
 
-	let config: { mfaEncryptionKeys: Readonly<Record<number, string>> };
 	let service: SecretEncryptionService;
 
 	beforeEach(() => {
-		config = { mfaEncryptionKeys: { 1: keyV1, 2: keyV2 } };
-		service = new SecretEncryptionService(config as TypedConfigService);
+		service = new SecretEncryptionService(configWithKeys({ 1: keyV1, 2: keyV2 }));
 	});
 
 	it("round-trips encrypt and decrypt with the same context", () => {
@@ -40,12 +55,10 @@ describe("SecretEncryptionService", () => {
 	});
 
 	it("decrypts secrets encrypted with an older key version", () => {
-		const legacyConfig = { mfaEncryptionKeys: { 1: keyV1 } };
-		const legacyService = new SecretEncryptionService(legacyConfig as TypedConfigService);
+		const legacyService = new SecretEncryptionService(configWithKeys({ 1: keyV1 }));
 		const encrypted = legacyService.encrypt("legacy-secret", "totp-secret");
 
-		const rotatedConfig = { mfaEncryptionKeys: { 1: keyV1, 2: keyV2 } };
-		const rotatedService = new SecretEncryptionService(rotatedConfig as TypedConfigService);
+		const rotatedService = new SecretEncryptionService(configWithKeys({ 1: keyV1, 2: keyV2 }));
 		const decrypted = rotatedService.decrypt(encrypted.ciphertext, encrypted.iv, encrypted.keyVersion, "totp-secret");
 
 		expect(decrypted).toBe("legacy-secret");

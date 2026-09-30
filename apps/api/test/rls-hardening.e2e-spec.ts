@@ -119,12 +119,7 @@ describe("RLS hardening (integration)", () => {
 					`INSERT INTO public.organization_api_keys (
             organization_id, location_id, name, key_hash, key_prefix, created_by_user_id
           ) VALUES ($1, $2, 'RLS blocked', $3, 'blocked-prefix', $4)`,
-					[
-						ORGANIZATION_SEED_IDS.mlkOrganization,
-						ORGANIZATION_SEED_IDS.mlkLocationKatil,
-						`rls-blocked-${crypto.randomUUID()}`,
-						REWARD_SEED_IDS.mlkCashierUser,
-					],
+					[ORGANIZATION_SEED_IDS.mlkOrganization, ORGANIZATION_SEED_IDS.mlkLocationKatil, `rls-blocked-${crypto.randomUUID()}`, REWARD_SEED_IDS.mlkCashierUser],
 				),
 			).rejects.toThrow(/row-level security/i);
 		});

@@ -38,7 +38,7 @@ export class PasswordResetService {
 	 */
 	@TrackAuthFlow({
 		flow: "forgot-password",
-		clientType: (_dto: unknown, clientType?: unknown) => {
+		clientType: (_dto, clientType) => {
 			const parsed = z.string().safeParse(clientType);
 			return parsed.success ? parsed.data : null;
 		},

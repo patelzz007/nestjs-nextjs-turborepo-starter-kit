@@ -1,4 +1,5 @@
 import type { PermissionAction, PermissionResource } from "../platform/enums";
+import type { PermissionScope } from "../../../authorization/policy-dsl.schema";
 
 /**
  * Canonical permission catalog for this application.
@@ -20,11 +21,21 @@ export interface PermissionDefinition {
 	readonly description: string;
 	readonly group: string;
 	readonly isSystem?: boolean;
+	/**
+	 * Where the permission applies (default GLOBAL). OWN rows only reach the
+	 * subject's own records; STORE rows only apply inside a store the subject
+	 * is a member of. The same action × resource may exist once per scope.
+	 */
+	readonly scope?: PermissionScope;
 }
 
-/** Stable dot-notation id for a permission row (`user.read` → READ:USER). */
-export function toPermissionRegistryName(action: PermissionAction, resource: PermissionResource): string {
-	return `${resource.toLowerCase()}.${action.toLowerCase()}`;
+/**
+ * Stable dot-notation id for a permission row (`user.read` → READ:USER).
+ * Non-global scopes get a suffix (`url.update.own`, `store.read.store`).
+ */
+export function toPermissionRegistryName(action: PermissionAction, resource: PermissionResource, scope: PermissionScope = "GLOBAL"): string {
+	const base = `${resource.toLowerCase()}.${action.toLowerCase()}`;
+	return scope === "GLOBAL" ? base : `${base}.${scope.toLowerCase()}`;
 }
 
 /**
@@ -72,10 +83,6 @@ export const PERMISSION_DEFINITIONS: readonly PermissionDefinition[] = [
 	{ action: "READ", resource: "SYSTEM_SETTINGS", description: "View system settings", group: "System Settings" },
 	{ action: "UPDATE", resource: "SYSTEM_SETTINGS", description: "Update system settings", group: "System Settings" },
 	{ action: "MANAGE", resource: "SYSTEM_SETTINGS", description: "Full system management", group: "System Settings", isSystem: true },
-
-	// Developer Tools
-	{ action: "READ", resource: "DEVTOOLS", description: "View developer tools and generator status", group: "Developer Tools", isSystem: true },
-	{ action: "MANAGE", resource: "DEVTOOLS", description: "Run resource generator, rollback, and module init", group: "Developer Tools", isSystem: true },
 
 	// URL Management
 	{ action: "CREATE", resource: "URL", description: "Create short links", group: "URL Management" },
@@ -152,7 +159,45 @@ export const PERMISSION_DEFINITIONS: readonly PermissionDefinition[] = [
 	{ action: "LIST", resource: "REDEMPTION", description: "List redemptions", group: "Redemptions" },
 	{ action: "MANAGE", resource: "REDEMPTION", description: "Full redemption management", group: "Redemptions" },
 
-	// Generated sample resources (SuperAdmin-only; hidden from production navigation)
+	// Stores (platform administration — any store)
+	{ action: "CREATE", resource: "STORE", description: "Create stores", group: "Stores" },
+	{ action: "READ", resource: "STORE", description: "View any store", group: "Stores" },
+	{ action: "UPDATE", resource: "STORE", description: "Update any store", group: "Stores" },
+	{ action: "DELETE", resource: "STORE", description: "Delete stores", group: "Stores" },
+	{ action: "LIST", resource: "STORE", description: "List stores", group: "Stores" },
+	{ action: "MANAGE", resource: "STORE", description: "Full store management", group: "Stores" },
+
+	// Store-scoped (granted through a store membership role; valid only inside that store)
+	{ action: "READ", resource: "STORE", scope: "STORE", description: "View own store", group: "Store Operations" },
+	{ action: "UPDATE", resource: "STORE", scope: "STORE", description: "Update own store details", group: "Store Operations" },
+	{ action: "READ", resource: "REWARD", scope: "STORE", description: "View rewards at own store", group: "Store Operations" },
+	{ action: "LIST", resource: "REWARD", scope: "STORE", description: "List rewards at own store", group: "Store Operations" },
+	{ action: "CREATE", resource: "REDEMPTION", scope: "STORE", description: "Redeem rewards at own store", group: "Store Operations" },
+	{ action: "READ", resource: "REDEMPTION", scope: "STORE", description: "View redemptions at own store", group: "Store Operations" },
+	{ action: "LIST", resource: "REDEMPTION", scope: "STORE", description: "List redemptions at own store", group: "Store Operations" },
+
+	// Own records (customer app — only the subject's own rows)
+	{ action: "READ", resource: "PROFILE", scope: "OWN", description: "View own profile", group: "Own Records" },
+	{ action: "UPDATE", resource: "PROFILE", scope: "OWN", description: "Update own profile", group: "Own Records" },
+	{ action: "CREATE", resource: "URL", scope: "OWN", description: "Create own short links", group: "Own Records" },
+	{ action: "READ", resource: "URL", scope: "OWN", description: "View own URLs", group: "Own Records" },
+	{ action: "UPDATE", resource: "URL", scope: "OWN", description: "Update own URLs", group: "Own Records" },
+	{ action: "DELETE", resource: "URL", scope: "OWN", description: "Delete own URLs", group: "Own Records" },
+	{ action: "LIST", resource: "URL", scope: "OWN", description: "List own URLs", group: "Own Records" },
+	{ action: "CREATE", resource: "TAG", scope: "OWN", description: "Create own tags", group: "Own Records" },
+	{ action: "READ", resource: "TAG", scope: "OWN", description: "View own tags", group: "Own Records" },
+	{ action: "UPDATE", resource: "TAG", scope: "OWN", description: "Update own tags", group: "Own Records" },
+	{ action: "DELETE", resource: "TAG", scope: "OWN", description: "Delete own tags", group: "Own Records" },
+	{ action: "LIST", resource: "TAG", scope: "OWN", description: "List own tags", group: "Own Records" },
+	{ action: "CREATE", resource: "API_KEY", scope: "OWN", description: "Create own API keys", group: "Own Records" },
+	{ action: "READ", resource: "API_KEY", scope: "OWN", description: "View own API keys", group: "Own Records" },
+	{ action: "UPDATE", resource: "API_KEY", scope: "OWN", description: "Update own API keys", group: "Own Records" },
+	{ action: "DELETE", resource: "API_KEY", scope: "OWN", description: "Delete own API keys", group: "Own Records" },
+	{ action: "LIST", resource: "API_KEY", scope: "OWN", description: "List own API keys", group: "Own Records" },
+	{ action: "READ", resource: "ANALYTICS", scope: "OWN", description: "View analytics for own links", group: "Own Records" },
+	{ action: "LIST", resource: "ANALYTICS", scope: "OWN", description: "List analytics for own links", group: "Own Records" },
+
+	// Sample resources (SuperAdmin-only; hidden from production navigation)
 	{ action: "CREATE", resource: "SAMPLE_CATEGORY", description: "Create sample categories", group: "Platform Samples", isSystem: true },
 	{ action: "READ", resource: "SAMPLE_CATEGORY", description: "View sample categories", group: "Platform Samples", isSystem: true },
 	{ action: "UPDATE", resource: "SAMPLE_CATEGORY", description: "Update sample categories", group: "Platform Samples", isSystem: true },
@@ -175,6 +220,9 @@ export const PERMISSIONS: Partial<Record<PermissionResource, PermissionActionMap
 function buildPermissionTree(definitions: readonly PermissionDefinition[]): Partial<Record<PermissionResource, PermissionActionMap>> {
 	const tree: Partial<Record<PermissionResource, PermissionActionMap>> = {};
 	for (const definition of definitions) {
+		if ((definition.scope ?? "GLOBAL") !== "GLOBAL") {
+			continue;
+		}
 		let bucket: PermissionActionMap = tree[definition.resource] ?? {};
 		bucket = { ...bucket, [definition.action]: toPermissionRegistryName(definition.action, definition.resource) };
 		tree[definition.resource] = bucket;
@@ -192,7 +240,7 @@ export function getPermissionDefinitions(): readonly PermissionDefinition[] {
  * Useful for migration sync and validation.
  */
 export function getAllPermissionNames(): readonly string[] {
-	return PERMISSION_DEFINITIONS.map((definition) => toPermissionRegistryName(definition.action, definition.resource));
+	return PERMISSION_DEFINITIONS.map((definition) => toPermissionRegistryName(definition.action, definition.resource, definition.scope));
 }
 
 /** Every dot-notation permission id in the registry. */

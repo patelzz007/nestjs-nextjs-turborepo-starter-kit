@@ -1,10 +1,14 @@
 import { fileURLToPath } from "node:url";
 
+import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
+	plugins: [react()],
 	test: {
 		environment: "node",
+		// Declares the React act environment for jsdom component tests.
+		setupFiles: ["./vitest.setup.ts"],
 		include: ["**/*.test.{ts,tsx}"],
 		fileParallelism: false,
 	},

@@ -1,6 +1,7 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post } from "@nestjs/common";
 import { ApiBody, ApiOkResponse, ApiTags } from "@nestjs/swagger";
 import { Throttle } from "@nestjs/throttler";
+import type { Role } from "@prisma/client";
 
 import { RequirePermission } from "../../auth/decorators/require-permission.decorator";
 import { SkipAuthThrottle } from "../../auth/decorators/skip-auth-throttle.decorator";
@@ -10,8 +11,20 @@ import { ConflictDetectionService } from "../services/conflict-detection.service
 import { AuthorizationService } from "../services/authorization.service";
 import { ZodValidationPipe } from "../../../common/pipes/zod-validation.pipe";
 import { Authorize } from "../decorators/authorize.decorator";
+import { CurrentUser, type AuthenticatedUser } from "../decorators/current-user.decorator";
+import { PrivilegeEscalationService } from "../services/privilege-escalation.service";
 import { CreateRoleDto, SetRoleParentDto, UpdateRoleDto, ValidateRoleAssignmentDto, AssignRoleToUserDto, SyncUserRolesDto } from "./dtos/role.dto";
 import { SyncRolePermissionsDto } from "./dtos/permission.dto";
+
+/** Diff of roles / permissions a user would gain or lose with a new role set. */
+interface RoleAssignmentPreview {
+	readonly currentRoles: readonly string[];
+	readonly newRoles: readonly string[];
+	readonly roleAdded: readonly string[];
+	readonly roleRemoved: readonly string[];
+	readonly permissionsGained: readonly string[];
+	readonly permissionsLost: readonly string[];
+}
 
 // ── Controller ───────────────────────────────────────────────────────────────
 
@@ -22,6 +35,7 @@ export class RolesController {
 		private readonly authorization: AuthorizationService,
 		private readonly conflictDetection: ConflictDetectionService,
 		private readonly prisma: PrismaService,
+		private readonly escalation: PrivilegeEscalationService,
 	) {}
 
 	@Get()
@@ -48,12 +62,18 @@ export class RolesController {
 	@Authorize({ action: "CREATE", resource: "ROLE", description: "Create new role" })
 	@ApiBody({ type: CreateRoleDto })
 	@ApiOkResponse({ description: "Created role" })
-	public async create(@Body(new ZodValidationPipe(CreateRoleDto.schema)) body: CreateRoleDto): Promise<unknown> {
-		return this.authorization.roles.create({
-			name: body.name,
-			description: body.description,
-			parentId: body.parentId,
-		});
+	public async create(@CurrentUser() actor: AuthenticatedUser, @Body(new ZodValidationPipe(CreateRoleDto.schema)) body: CreateRoleDto): Promise<Role> {
+		if (body.parentId !== undefined) {
+			await this.escalation.assertCanGrantRoles(actor, [body.parentId]);
+		}
+		return this.authorization.roles.create(
+			{
+				name: body.name,
+				description: body.description,
+				parentId: body.parentId,
+			},
+			actor.id,
+		);
 	}
 
 	// ── User role assignment (action-style) ───────────────────────────────
@@ -68,8 +88,13 @@ export class RolesController {
 	})
 	@ApiBody({ type: AssignRoleToUserDto })
 	@ApiOkResponse({ description: "Role assigned to user" })
-	public async assignRoleToUser(@Body(new ZodValidationPipe(AssignRoleToUserDto.schema)) body: AssignRoleToUserDto): Promise<unknown> {
-		await this.authorization.roles.assignToUser(body.userId, body.roleId);
+	public async assignRoleToUser(
+		@CurrentUser() actor: AuthenticatedUser,
+		@Body(new ZodValidationPipe(AssignRoleToUserDto.schema)) body: AssignRoleToUserDto,
+	): Promise<{ readonly message: string }> {
+		this.escalation.assertNotSelf(actor, body.userId);
+		await this.escalation.assertCanGrantRoles(actor, [body.roleId]);
+		await this.authorization.roles.assignToUser(body.userId, body.roleId, actor.id);
 		return { message: "Role assigned to user successfully" };
 	}
 
@@ -78,8 +103,12 @@ export class RolesController {
 	@RequirePermission("UPDATE", "ROLE")
 	@ApiBody({ type: AssignRoleToUserDto })
 	@ApiOkResponse({ description: "Role removed from user" })
-	public async removeRoleFromUser(@Body(new ZodValidationPipe(AssignRoleToUserDto.schema)) body: AssignRoleToUserDto): Promise<unknown> {
-		await this.authorization.roles.removeFromUser(body.userId, body.roleId);
+	public async removeRoleFromUser(
+		@CurrentUser() actor: AuthenticatedUser,
+		@Body(new ZodValidationPipe(AssignRoleToUserDto.schema)) body: AssignRoleToUserDto,
+	): Promise<{ readonly message: string }> {
+		this.escalation.assertNotSelf(actor, body.userId);
+		await this.authorization.roles.removeFromUser(body.userId, body.roleId, actor.id);
 		return { message: "Role removed from user successfully" };
 	}
 
@@ -88,15 +117,20 @@ export class RolesController {
 	@RequirePermission("UPDATE", "ROLE")
 	@ApiBody({ type: SyncUserRolesDto })
 	@ApiOkResponse({ description: "User roles synced" })
-	public async syncUserRoles(@Body(new ZodValidationPipe(SyncUserRolesDto.schema)) body: SyncUserRolesDto): Promise<unknown> {
-		await this.authorization.roles.syncUserRoles(body.userId, body.roleIds);
+	public async syncUserRoles(
+		@CurrentUser() actor: AuthenticatedUser,
+		@Body(new ZodValidationPipe(SyncUserRolesDto.schema)) body: SyncUserRolesDto,
+	): Promise<{ readonly message: string }> {
+		this.escalation.assertNotSelf(actor, body.userId);
+		await this.escalation.assertCanGrantRoles(actor, body.roleIds);
+		await this.authorization.roles.syncUserRoles(body.userId, body.roleIds, actor.id);
 		return { message: "User roles synced successfully" };
 	}
 
 	@Get(":id")
 	@RequirePermission("READ", "ROLE")
 	@ApiOkResponse({ description: "Role detail" })
-	public async detail(@Param("id") id: string): Promise<unknown> {
+	public async detail(@Param("id") id: string): Promise<Role | null> {
 		return this.authorization.roles.findById(id);
 	}
 
@@ -105,20 +139,32 @@ export class RolesController {
 	@RequirePermission("UPDATE", "ROLE")
 	@ApiBody({ type: UpdateRoleDto })
 	@ApiOkResponse({ description: "Updated role" })
-	public async update(@Param("id") id: string, @Body(new ZodValidationPipe(UpdateRoleDto.schema)) body: UpdateRoleDto): Promise<unknown> {
-		return this.authorization.roles.update(id, {
-			...(body.name !== undefined ? { name: body.name } : {}),
-			...(body.description !== undefined ? { description: body.description } : {}),
-			...(body.isActive !== undefined ? { isActive: body.isActive } : {}),
-		});
+	public async update(
+		@CurrentUser() actor: AuthenticatedUser,
+		@Param("id") id: string,
+		@Body(new ZodValidationPipe(UpdateRoleDto.schema)) body: UpdateRoleDto,
+	): Promise<Role> {
+		await this.escalation.assertNotHoldingRole(actor, id);
+		if (body.isActive === true) {
+			await this.escalation.assertCanGrantRoles(actor, [id]);
+		}
+		return this.authorization.roles.updateAs(
+			id,
+			{
+				...(body.name !== undefined ? { name: body.name } : {}),
+				...(body.description !== undefined ? { description: body.description } : {}),
+				...(body.isActive !== undefined ? { isActive: body.isActive } : {}),
+			},
+			actor.id,
+		);
 	}
 
 	@Delete(":id")
 	@Throttle({ default: { ttl: 60000, limit: 10 } })
 	@RequirePermission("DELETE", "ROLE")
 	@ApiOkResponse({ description: "Role deleted" })
-	public async remove(@Param("id") id: string): Promise<unknown> {
-		await this.authorization.roles.remove(id);
+	public async remove(@CurrentUser() actor: AuthenticatedUser, @Param("id") id: string): Promise<{ readonly message: string }> {
+		await this.authorization.roles.remove(id, actor.id);
 		return { message: "Role deleted successfully" };
 	}
 
@@ -126,23 +172,38 @@ export class RolesController {
 	@RequirePermission("UPDATE", "ROLE")
 	@ApiBody({ type: SetRoleParentDto })
 	@ApiOkResponse({ description: "Parent role updated" })
-	public async setParent(@Param("id") id: string, @Body(new ZodValidationPipe(SetRoleParentDto.schema)) body: SetRoleParentDto): Promise<unknown> {
-		return this.authorization.roles.setParent(id, body.parentId);
+	public async setParent(
+		@CurrentUser() actor: AuthenticatedUser,
+		@Param("id") id: string,
+		@Body(new ZodValidationPipe(SetRoleParentDto.schema)) body: SetRoleParentDto,
+	): Promise<Role> {
+		await this.escalation.assertNotHoldingRole(actor, id);
+		if (body.parentId !== null) {
+			await this.escalation.assertCanGrantRoles(actor, [body.parentId]);
+		}
+		return this.authorization.roles.setParent(id, body.parentId, actor.id);
 	}
 
 	@Post(":id/permissions")
 	@RequirePermission("UPDATE", "ROLE")
 	@ApiBody({ type: SyncRolePermissionsDto })
 	@ApiOkResponse({ description: "Role permissions synced" })
-	public async syncPermissions(@Param("id") id: string, @Body(new ZodValidationPipe(SyncRolePermissionsDto.schema)) body: SyncRolePermissionsDto): Promise<unknown> {
-		await this.authorization.roles.syncPermissions(id, body.permissionIds);
+	public async syncPermissions(
+		@CurrentUser() actor: AuthenticatedUser,
+		@Param("id") id: string,
+		@Body(new ZodValidationPipe(SyncRolePermissionsDto.schema)) body: SyncRolePermissionsDto,
+	): Promise<{ readonly message: string }> {
+		await this.escalation.assertNotHoldingRole(actor, id);
+		await this.escalation.assertCanGrantPermissions(actor, body.permissionIds);
+		await this.authorization.roles.syncPermissions(id, body.permissionIds, actor.id);
 		return { message: "Role permissions synced successfully" };
 	}
 
 	@Post(":id/restore")
 	@RequirePermission("UPDATE", "ROLE")
 	@ApiOkResponse({ description: "Restored role" })
-	public async restore(@Param("id") id: string): Promise<unknown> {
+	public async restore(@CurrentUser() actor: AuthenticatedUser, @Param("id") id: string): Promise<Role> {
+		await this.escalation.assertCanGrantRoles(actor, [id]);
 		return this.authorization.roles.restore(id);
 	}
 
@@ -152,7 +213,10 @@ export class RolesController {
 	@RequirePermission("UPDATE", "ROLE")
 	@ApiBody({ type: ValidateRoleAssignmentDto })
 	@ApiOkResponse({ description: "Conflict validation result" })
-	public async validateAssignment(@Param("id") _id: string, @Body(new ZodValidationPipe(ValidateRoleAssignmentDto.schema)) body: ValidateRoleAssignmentDto): Promise<unknown> {
+	public async validateAssignment(
+		@Param("id") _id: string,
+		@Body(new ZodValidationPipe(ValidateRoleAssignmentDto.schema)) body: ValidateRoleAssignmentDto,
+	): Promise<{ readonly valid: boolean; readonly message: string }> {
 		await this.conflictDetection.validate(body.userId, body.roleIds);
 		return { valid: true, message: "No conflicts detected" };
 	}
@@ -163,7 +227,7 @@ export class RolesController {
 	@RequirePermission("READ", "ROLE")
 	@ApiBody({ type: ValidateRoleAssignmentDto })
 	@ApiOkResponse({ description: "Preview of what permissions would change" })
-	public async preview(@Body(new ZodValidationPipe(ValidateRoleAssignmentDto.schema)) body: ValidateRoleAssignmentDto): Promise<unknown> {
+	public async preview(@Body(new ZodValidationPipe(ValidateRoleAssignmentDto.schema)) body: ValidateRoleAssignmentDto): Promise<RoleAssignmentPreview> {
 		// Fetch current permissions
 		const currentPerms = await this.authorization.checkerService.getUserPermissionDetails(body.userId);
 		const currentPermSet: Set<string> = new Set<string>(currentPerms.permissions.map((p) => `${p.action}:${p.resource}`));

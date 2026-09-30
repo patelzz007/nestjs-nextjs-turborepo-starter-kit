@@ -5,6 +5,7 @@ import { resolveAuthErrorMessage } from "@workspace/client/lib/auth/errors";
 import { useAuth } from "@workspace/client/lib/auth";
 import { formatDateTimeWithSeconds } from "@/lib/format/dates";
 import { MfaRecoveryStatusBadge } from "@/components/security/mfa-recovery-status-badge";
+import { useSuperAdminStatus } from "@/lib/session/super-admin";
 import { Button } from "@workspace/ui/components/form/button";
 import { Label } from "@workspace/ui/components/form/label";
 import { Textarea } from "@workspace/ui/components/form/textarea";
@@ -20,14 +21,16 @@ export const MfaRecoveryReviewPanel = React.forwardRef<HTMLDivElement, MfaRecove
 	{ request, onReviewed },
 	ref,
 ): React.JSX.Element {
-	const { api, user: currentUser } = useAuth();
+	const { api } = useAuth();
+	// `POST /auth/admin/mfa/recovery/review` is `@SuperAdminOnly`.
+	const { isSuperAdmin } = useSuperAdminStatus();
 	const queryClient = useQueryClient();
 	const reviewMutation = api.auth.adminMfaRecoveryReview.useMutation();
 	const [notes, setNotes] = React.useState("");
 	const [error, setError] = React.useState<string | null>(null);
 	const [message, setMessage] = React.useState<string | null>(null);
 
-	const canReview: boolean = currentUser?.isSuperAdmin === true && request.status === "PENDING";
+	const canReview: boolean = isSuperAdmin && request.status === "PENDING";
 
 	const handleNotesChange = React.useCallback((event: React.ChangeEvent<HTMLTextAreaElement>): void => {
 		setNotes(event.target.value);
@@ -42,21 +45,22 @@ export const MfaRecoveryReviewPanel = React.forwardRef<HTMLDivElement, MfaRecove
 		(action: "approve" | "deny"): void => {
 			setError(null);
 			setMessage(null);
-			reviewMutation
-				.mutateAsync({
-					requestId: request.id,
-					action,
-					notes: notes.trim().length > 0 ? notes.trim() : undefined,
-				})
-				.then(async (response): Promise<void> => {
+			void (async (): Promise<void> => {
+				try {
+					const response = await reviewMutation.mutateAsync({
+						requestId: request.id,
+						action,
+						notes: notes.trim().length > 0 ? notes.trim() : undefined,
+					});
 					setMessage(response.data.message);
 					setNotes("");
 					await invalidateRecoveryQueries();
 					onReviewed?.();
-				})
-				.catch((err: unknown): void => {
-					setError(resolveAuthErrorMessage(err));
-				});
+				} catch (err) {
+					// Mutation + query rejections are always `Error`s; anything else gets the generic message.
+					setError(resolveAuthErrorMessage(err instanceof Error ? err : undefined));
+				}
+			})();
 		},
 		[invalidateRecoveryQueries, notes, onReviewed, request.id, reviewMutation],
 	);
@@ -130,7 +134,7 @@ export const MfaRecoveryReviewPanel = React.forwardRef<HTMLDivElement, MfaRecove
 					</div>
 					<p className="text-xs text-muted-foreground">Approved requests clear MFA after the configured security delay. The user must set up a new authenticator afterward.</p>
 				</div>
-			) : currentUser?.isSuperAdmin !== true ? (
+			) : !isSuperAdmin ? (
 				<p className="text-xs text-muted-foreground">Only super administrators can approve or deny MFA recovery requests.</p>
 			) : null}
 		</div>

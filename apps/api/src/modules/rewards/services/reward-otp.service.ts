@@ -55,8 +55,8 @@ export class RewardOtpService {
 		);
 
 		if (process.env.NODE_ENV !== "production") {
-			// eslint-disable-next-line no-console -- dev visibility when EMAIL_MODE=log-only
-			console.info(`[reward-otp] user=${userId} email=${user.email} phone=${phone} code=${code}`);
+			// Dev visibility when EMAIL_MODE=log-only.
+			process.stdout.write(`[reward-otp] user=${userId} email=${user.email} phone=${phone} code=${code}\n`);
 		}
 	}
 

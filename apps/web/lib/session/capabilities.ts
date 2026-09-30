@@ -1,52 +1,71 @@
 "use client";
 
 import { useAuth } from "@workspace/client/lib/auth";
-import { hasCapability, type CapabilitySlug, type SessionPermissionsResponse } from "@workspace/shared";
+import type { CapabilitySlug, SessionPermissionsResponse } from "@workspace/shared";
 import * as React from "react";
 
-import { stubApiMeta } from "@/lib/api-envelope";
+import { stubApiMeta, successEnvelope } from "@/lib/api-envelope";
 
-export interface SessionCapabilitiesState {
+/** Re-checks revocations promptly without hammering the API. */
+export const SESSION_PERMISSIONS_REFETCH_INTERVAL_MS = 60_000;
+
+const NO_CAPABILITIES: readonly CapabilitySlug[] = [];
+
+export interface SessionPermissionsState {
+	/** Capability slugs fed into `CapabilitiesProvider` — the single client source of truth. */
 	readonly capabilities: readonly CapabilitySlug[];
-	readonly hasCapability: (slug: CapabilitySlug) => boolean;
-	readonly isLoading: boolean;
-	readonly isReady: boolean;
+	/** Latest `GET /auth/permissions` answer (live, else preloaded) — `undefined` for guests. */
+	readonly session: SessionPermissionsResponse | undefined;
+	/** True once there is a permissions answer (live, preloaded, or a definitive error) — always true for guests. */
+	readonly isResolved: boolean;
 }
 
-/** Platform capability slugs from `GET /auth/permissions` (consumer web + impersonation). */
-export function useSessionCapabilities(initialSessionPermissions: SessionPermissionsResponse | undefined, sessionActive: boolean): SessionCapabilitiesState {
+/**
+ * Picks the capability list to trust. The live query wins whenever it has
+ * data — **even an empty list**, so permissions revoked to zero disappear —
+ * and the server-preloaded list is used only before the first live answer.
+ */
+export function resolveSessionCapabilities(live: SessionPermissionsResponse | undefined, preloaded: SessionPermissionsResponse | undefined): readonly CapabilitySlug[] {
+	if (live !== undefined) {
+		return live.capabilities;
+	}
+	return preloaded?.capabilities ?? NO_CAPABILITIES;
+}
+
+/**
+ * Owns `GET /auth/permissions` for the consumer web app. Mounted once by
+ * `WebAuthorizationProvider`, which feeds the result into
+ * `CapabilitiesProvider`; every other consumer reads through
+ * `useAuthorization()` / `useWebSession()`.
+ *
+ * Guests never call the endpoint and resolve to an empty capability set, so
+ * every gated control denies without a 401 round-trip.
+ */
+export function useSessionPermissionsQuery(initialSessionPermissions: SessionPermissionsResponse | undefined, isAuthenticated: boolean): SessionPermissionsState {
 	const { api } = useAuth();
 
 	const initialPermissionsData = React.useMemo(
-		() =>
-			initialSessionPermissions !== undefined
-				? {
-						success: true as const,
-						data: initialSessionPermissions,
-						meta: stubApiMeta(),
-					}
-				: undefined,
+		() => (initialSessionPermissions !== undefined ? successEnvelope(initialSessionPermissions, stubApiMeta()) : undefined),
 		[initialSessionPermissions],
 	);
 
 	const permissionsQuery = api.auth.permissions.useQuery(undefined, {
 		retry: 1,
 		staleTime: 30_000,
-		enabled: sessionActive,
+		refetchOnWindowFocus: true,
+		refetchInterval: SESSION_PERMISSIONS_REFETCH_INTERVAL_MS,
+		enabled: isAuthenticated,
 		initialData: initialPermissionsData,
 	});
 
-	const capabilities = React.useMemo((): readonly CapabilitySlug[] => permissionsQuery.data?.data.capabilities ?? [], [permissionsQuery.data?.data.capabilities]);
+	const liveResponse = isAuthenticated ? permissionsQuery.data?.data : undefined;
+	const preloaded = isAuthenticated ? initialSessionPermissions : undefined;
 
-	const checkCapability = React.useCallback((slug: CapabilitySlug): boolean => hasCapability(capabilities, slug), [capabilities]);
-
-	const isLoading = permissionsQuery.isPending;
-	const isReady = permissionsQuery.data !== undefined;
+	const capabilities = React.useMemo((): readonly CapabilitySlug[] => resolveSessionCapabilities(liveResponse, preloaded), [liveResponse, preloaded]);
 
 	return {
 		capabilities,
-		hasCapability: checkCapability,
-		isLoading,
-		isReady,
+		session: liveResponse ?? preloaded,
+		isResolved: !isAuthenticated || liveResponse !== undefined || preloaded !== undefined || permissionsQuery.isError,
 	};
 }

@@ -1,6 +1,6 @@
 import { createAdminServerCaller } from "@/lib/admin-server-api";
 
-import SampleCategoryDetailView from "../sample-category-detail-view.generated";
+import SampleCategoryDetailView from "../sample-category-detail-view";
 
 interface SampleCategoryDetailPageProps {
 	readonly params: Promise<{ id: string }>;

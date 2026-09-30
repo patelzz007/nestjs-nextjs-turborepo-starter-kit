@@ -4,13 +4,15 @@ import { invalidateSessionAuth } from "@workspace/client/lib/auth/session/invali
 import { createDataTableLabels } from "@/lib/data-table/labels";
 import { buildReadOnlyTableCheckbox } from "@/lib/data-table/capabilities";
 import { DataTableMobileCard } from "@/lib/data-table/mobile-card";
-import { readPaginatedNextCursor, readPaginatedTotal, stubPaginatedMeta } from "@/lib/format/api-envelope";
+import { readPaginatedNextCursor, readPaginatedTotal, stubPaginatedMeta, successEnvelope } from "@/lib/format/api-envelope";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { useManualHybridPagination } from "@/lib/data-table/use-manual-cursor-pagination";
 import { DataTableSearchToolbar } from "@/components/common/data-table-search-toolbar";
 import { useAuth } from "@workspace/client/lib/auth";
+import { useAuthorization } from "@workspace/client/lib/auth/can";
 import type { MerchantOrgResponse } from "@workspace/shared";
-import { KybStatusSchema, MerchantOrgStatusSchema } from "@workspace/shared";
+import { KybStatusSchema, MerchantOrgStatusSchema, PERMISSION } from "@workspace/shared";
+import { useCanStartImpersonation } from "@/lib/session/super-admin";
 import { Badge } from "@workspace/ui/components/feedback/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
 import { DataTable, type Action, type DataTableFeatures, type Filter } from "@workspace/ui/components/display/data-table";
@@ -32,6 +34,7 @@ const PAGE_SIZE_OPTIONS: readonly number[] = [10, 20, 50, 100];
 
 export default function MerchantsAllTable({ initialMerchants, initialTotal, initialTotalPages, initialHasNext }: MerchantsAllTableProps): React.JSX.Element {
 	const { api } = useAuth();
+	const { can } = useAuthorization();
 	const queryClient = useQueryClient();
 	const router = useRouter();
 	const [search, setSearch] = React.useState("");
@@ -64,11 +67,7 @@ export default function MerchantsAllTable({ initialMerchants, initialTotal, init
 	const initialQueryData = React.useMemo(
 		() =>
 			initialMerchants !== undefined
-				? {
-						success: true as const,
-						data: [...initialMerchants],
-						meta: stubPaginatedMeta(20, initialTotal ?? initialMerchants.length, 1, initialTotalPages ?? 1, initialHasNext ?? false),
-					}
+				? successEnvelope([...initialMerchants], stubPaginatedMeta(20, initialTotal ?? initialMerchants.length, 1, initialTotalPages ?? 1, initialHasNext ?? false))
 				: undefined,
 		[initialMerchants, initialHasNext, initialTotal, initialTotalPages],
 	);
@@ -108,12 +107,10 @@ export default function MerchantsAllTable({ initialMerchants, initialTotal, init
 		},
 	});
 
-	const meQuery = api.auth.me.useQuery(undefined);
-	const permissionsQuery = api.auth.permissions.useQuery(undefined);
-	const currentUser = meQuery.data?.data;
-	const session = permissionsQuery.data?.data;
-	const isImpersonating = session?.isImpersonating === true;
-	const canImpersonateOwner = currentUser?.isSuperAdmin === true && !isImpersonating;
+	// `PATCH /admin/merchants/:id/kyb` needs MANAGE; viewing the KYB page only LIST.
+	const canManageKyb = can(PERMISSION.MERCHANT_ORG.MANAGE);
+	// `POST /auth/impersonate/:userId` is `@SuperAdminOnly`.
+	const canImpersonateOwner = useCanStartImpersonation();
 
 	const handleImpersonateOwner = React.useCallback(
 		(merchant: MerchantOrgResponse): void => {
@@ -129,8 +126,8 @@ export default function MerchantsAllTable({ initialMerchants, initialTotal, init
 		const base: Action<MerchantOrgResponse>[] = [
 			{
 				key: "kyb",
-				label: "Review KYB",
-				description: "Update verification status",
+				label: canManageKyb ? "Review KYB" : "View KYB",
+				description: canManageKyb ? "Update verification status" : "Inspect verification details",
 				icon: <ShieldCheck className="size-4" />,
 				onClick: handleReviewKyb,
 			},
@@ -147,7 +144,7 @@ export default function MerchantsAllTable({ initialMerchants, initialTotal, init
 		}
 
 		return base;
-	}, [canImpersonateOwner, handleImpersonateOwner, handleReviewKyb]);
+	}, [canImpersonateOwner, canManageKyb, handleImpersonateOwner, handleReviewKyb]);
 
 	const mobileCardRender = React.useCallback(
 		(merchant: MerchantOrgResponse, cardActions?: Action<MerchantOrgResponse>[]): React.ReactNode => (

@@ -3,13 +3,14 @@
 import { MerchantLocationSwitcher, MerchantLocationSwitcherMobile } from "@/components/layout/merchant-location-switcher";
 import { MerchantNotificationsDropdown } from "@/components/layout/merchant-notifications-dropdown";
 import type { ServerUser } from "@/lib/auth/server";
-import { useMerchantCapabilities } from "@/lib/org/capabilities";
 import { useOrganizationPath } from "@/lib/org/use-organization-path";
 import { useMerchantSessionProfile } from "@/lib/session/profile";
 import { useMerchantSidebarControl } from "@/components/layout/use-merchant-sidebar-control";
 import { useMerchantSidebarStore } from "@/stores/sidebar-store";
 import { useAuth } from "@workspace/client/lib/auth";
+import { useAuthorization } from "@workspace/client/lib/auth/can";
 import { isRestrictedAuthUser } from "@workspace/client/lib/auth/session/map-auth-user";
+import { MERCHANT_CAPABILITY } from "@workspace/shared";
 import { AppShellProfileDropdown } from "@workspace/ui/components/navigation/app-shell-profile-dropdown";
 import { AppShellTopbar, useCommandPaletteShortcut } from "@workspace/ui/components/navigation/app-shell-topbar";
 import { ShellThemeToggle } from "@workspace/ui/components/navigation/shell-theme-toggle";
@@ -30,7 +31,7 @@ export function MerchantTopbar({ initialUser = null }: MerchantTopbarProps): Rea
 	const { logout, user } = useAuth();
 	const isEnrollmentLocked = isRestrictedAuthUser(user);
 	const sessionProfile = useMerchantSessionProfile();
-	const { hasCapability } = useMerchantCapabilities();
+	const { can } = useAuthorization();
 	const router = useRouter();
 	const settingsPath = useOrganizationPath("settings");
 	const dashboardPath = useOrganizationPath("dashboard");
@@ -64,7 +65,7 @@ export function MerchantTopbar({ initialUser = null }: MerchantTopbarProps): Rea
 			},
 		];
 
-		if (hasCapability("merchant:manage_api_keys")) {
+		if (can(MERCHANT_CAPABILITY.manageApiKeys)) {
 			items.push({
 				label: "API keys",
 				icon: <KeyRound className="size-4" aria-hidden="true" />,
@@ -75,7 +76,7 @@ export function MerchantTopbar({ initialUser = null }: MerchantTopbarProps): Rea
 		}
 
 		return items;
-	}, [apiKeysPath, dashboardPath, hasCapability, isEnrollmentLocked, router]);
+	}, [apiKeysPath, can, dashboardPath, isEnrollmentLocked, router]);
 
 	const profileName = sessionProfile.isLoading && initialUser !== null ? initialUser.name : sessionProfile.fullName;
 	const profileEmail = sessionProfile.isLoading && initialUser !== null ? initialUser.email : sessionProfile.email;

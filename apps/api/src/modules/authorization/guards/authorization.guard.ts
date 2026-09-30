@@ -1,11 +1,12 @@
-import { CanActivate, ExecutionContext, ForbiddenException, Injectable, Logger, UnauthorizedException } from "@nestjs/common";
+import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
 import type { FastifyRequest } from "fastify";
+import type { AuthorizationAttributes, AuthorizationContext, AuthorizationRequest, AuthorizationResult, PermissionAction, PermissionResource } from "@workspace/shared";
 
+import { readFirstHeader } from "../../../common/utils/http-headers";
+import { PrismaService } from "../../../prisma/prisma.service";
 import type { AuthenticatedUser } from "../../../types/authenticated-user";
 import { isAuthenticatedUser } from "../../../types/authenticated-user";
-import { PrismaService } from "../../../prisma/prisma.service";
-
 import { AuthorizationAuditService } from "../audit/authorization-audit.service";
 import {
 	REQUIRED_PERMISSION_KEY,
@@ -15,249 +16,259 @@ import {
 	type RequiredPermissionsMetadata,
 	type RequiredRolesMetadata,
 } from "../constants/authorization.constants";
+import { AUTHORIZE_KEY, readRouteParam, type AuthorizationRequirement } from "../decorators/authorize.decorator";
+import { AuthorizationException } from "../exceptions/authorization.exception";
+import { AuthorizationAuditKernelService, type AuthorizationAuditMetadata } from "../kernel/authorization-audit-kernel.service";
 import { AuthorizationKernelService } from "../kernel/authorization-kernel.service";
-import type { AuthorizationDecision, AuthorizationRequest } from "@workspace/shared";
+import { AuthorizationContextResolver, type RequestTenantContext } from "../services/authorization-context.resolver";
+
+interface RouteRequirements {
+	readonly permission?: RequiredPermission;
+	readonly permissions?: RequiredPermissionsMetadata;
+	readonly roles?: RequiredRolesMetadata;
+	readonly authorize?: AuthorizationRequirement;
+}
+
+function hasRequirements(requirements: RouteRequirements): boolean {
+	return requirements.permission !== undefined || requirements.permissions !== undefined || requirements.roles !== undefined || requirements.authorize !== undefined;
+}
 
 /**
- * **Kernel-First Authorization Guard**
+ * **Kernel-first Authorization Guard** (global `APP_GUARD`).
  *
- * Unified authorization guard powered exclusively by the Authorization Kernel.
- * Handles all authorization decorators through a single kernel-based path.
+ * Every protected route goes through the Authorization Kernel — there is no
+ * second authorization path. Supported declarations (all enforced, AND-ed):
  *
- * ## Features
- * - Single authorization path (no branching/fallback)
- * - Kernel-powered permission checks
- * - Super-admin bypass with audit trail
- * - Token version validation
- * - Automatic admin access computation
+ * - `@RequirePermission(action, resource)`
+ * - `@RequireAllPermissions(...)` / `@RequireAnyPermission(...)`
+ * - `@RequireAllRoles(...)` / `@RequireAnyRole(...)`
+ * - `@Authorize({ action, resource, resourceId, attributes })`
  *
- * ## Supported Decorators
- * - `@RequirePermission(action, resource)` - single permission
- * - `@RequireAllPermissions(...)` - AND semantics
- * - `@RequireAnyPermission(...)` - OR semantics
- * - `@RequireAllRoles(...)` - role AND semantics
- * - `@RequireAnyRole(...)` - role OR semantics
- *
- * ## Authorization Flow
- * 1. Extract metadata from decorators
- * 2. Authenticate user from JWT
- * 3. Validate token version
- * 4. Super-admin bypass (with audit)
- * 5. Kernel authorization check
- * 6. Compute admin access for downstream guards
+ * Flow:
+ * 1. Authenticated requests: validate token version, then resolve and verify the
+ *    tenant context (a forged `x-organization-id` / `x-location-id` → 403). The
+ *    verified context is attached to `request.authorizationContext` for RLS.
+ * 2. Routes without requirements only compute `hasAdminAccess`.
+ * 3. SuperAdmin → explicit, audited platform bypass.
+ * 4. Each requirement → `kernel.authorize()` (audited: DENY / writes / sensitive
+ *    reads). Any denial → uniform 403 that reveals nothing about the rule.
  */
 @Injectable()
 export class AuthorizationGuard implements CanActivate {
-	private readonly logger: Logger = new Logger(AuthorizationGuard.name);
-
 	public constructor(
 		private readonly reflector: Reflector,
 		private readonly kernel: AuthorizationKernelService,
+		private readonly decisionAudit: AuthorizationAuditKernelService,
 		private readonly audit: AuthorizationAuditService,
+		private readonly contextResolver: AuthorizationContextResolver,
 		private readonly prisma: PrismaService,
-	) {
-		this.logger.log("AuthorizationGuard initialized (kernel-first)");
-	}
+	) {}
 
 	public async canActivate(context: ExecutionContext): Promise<boolean> {
-		// ── 1. Read authorization metadata ─────────────────────────────────
-		const legacyPermission = this.getLegacyPermission(context);
-		const permissionsMeta = this.getPermissionsMeta(context);
-		const rolesMeta = this.getRolesMeta(context);
-
-		// No authorization metadata → public route
-		if (!legacyPermission && !permissionsMeta && !rolesMeta) {
-			await this.ensureAdminAccess(context);
-			return true;
-		}
-
-		// ── 2. Extract authenticated user ──────────────────────────────────
 		const request = context.switchToHttp().getRequest<FastifyRequest>();
 		const user = request.user;
+		const requirements = this.readRequirements(context);
+		const protectedRoute = hasRequirements(requirements);
 
 		if (!isAuthenticatedUser(user)) {
-			throw new UnauthorizedException({
-				message: "Authentication required",
-				error: "UNAUTHENTICATED",
-			});
-		}
-
-		// ── 3. Token version validation ────────────────────────────────────
-		await this.validateTokenVersion(user.id, user.tokenVersion);
-
-		// ── 4. Super-admin bypass ──────────────────────────────────────────
-		if (user.isSuperAdmin) {
-			await this.auditSuperAdminBypass(user.id, context);
-			Object.assign<AuthenticatedUser, { hasAdminAccess: boolean }>(user, { hasAdminAccess: true });
+			if (protectedRoute) {
+				throw new UnauthorizedException({ message: "Authentication required", error: "UNAUTHENTICATED" });
+			}
 			return true;
 		}
 
-		// ── 5. Kernel authorization checks ─────────────────────────────────
-
-		// Single permission check
-		if (legacyPermission) {
-			await this.checkPermission(user.id, legacyPermission.action, legacyPermission.resource);
+		if (protectedRoute) {
+			await this.validateTokenVersion(user.id, user.tokenVersion);
 		}
 
-		// Multi-permission checks (AND/OR)
-		if (permissionsMeta) {
-			await this.checkPermissions(user.id, permissionsMeta);
+		const tenant = await this.contextResolver.resolve(request, user);
+		request.authorizationContext = tenant.verified;
+
+		if (user.isSuperAdmin) {
+			if (protectedRoute) {
+				await this.auditSuperAdminBypass(user.id, context, request);
+			}
+			this.setAdminAccess(user, true);
+			return true;
 		}
 
-		// Role checks (AND/OR)
-		if (rolesMeta) {
-			await this.checkRoles(user.id, rolesMeta);
+		if (protectedRoute) {
+			await this.enforce(context, request, user, tenant, requirements);
 		}
 
-		// ── 6. Compute admin access ────────────────────────────────────────
-		const hasAdminAccess = await this.hasAdminDashboardAccess(user.id);
-		Object.assign<AuthenticatedUser, { hasAdminAccess: boolean }>(user, { hasAdminAccess });
-
+		this.setAdminAccess(user, await this.hasAdminDashboardAccess(user, tenant));
 		return true;
 	}
 
-	// ── Private: Metadata Extraction ────────────────────────────────────────
-
-	private getLegacyPermission(context: ExecutionContext): RequiredPermission | undefined {
-		return this.reflector.getAllAndOverride<RequiredPermission>(REQUIRED_PERMISSION_KEY, [context.getHandler(), context.getClass()]);
-	}
-
-	private getPermissionsMeta(context: ExecutionContext): RequiredPermissionsMetadata | undefined {
-		return this.reflector.getAllAndOverride<RequiredPermissionsMetadata>(REQUIRED_PERMISSIONS_KEY, [context.getHandler(), context.getClass()]);
-	}
-
-	private getRolesMeta(context: ExecutionContext): RequiredRolesMetadata | undefined {
-		return this.reflector.getAllAndOverride<RequiredRolesMetadata>(REQUIRED_ROLES_KEY, [context.getHandler(), context.getClass()]);
-	}
-
-	// ── Private: Authorization Checks ────────────────────────────────────────
-
-	private buildKernelRequest(userId: string, action: string, resource: string): AuthorizationRequest {
+	private readRequirements(context: ExecutionContext): RouteRequirements {
+		const targets = [context.getHandler(), context.getClass()];
 		return {
-			subject: { userId },
-			action,
-			resource,
+			permission: this.reflector.getAllAndOverride<RequiredPermission | undefined>(REQUIRED_PERMISSION_KEY, targets),
+			permissions: this.reflector.getAllAndOverride<RequiredPermissionsMetadata | undefined>(REQUIRED_PERMISSIONS_KEY, targets),
+			roles: this.reflector.getAllAndOverride<RequiredRolesMetadata | undefined>(REQUIRED_ROLES_KEY, targets),
+			authorize: this.reflector.getAllAndOverride<AuthorizationRequirement | undefined>(AUTHORIZE_KEY, targets),
 		};
 	}
 
-	/**
-	 * Check a single permission via kernel.
-	 */
-	private async checkPermission(userId: string, action: string, resource: string): Promise<void> {
-		const decision: AuthorizationDecision = await this.kernel.can(this.buildKernelRequest(userId, action, resource));
+	private async enforce(
+		context: ExecutionContext,
+		request: FastifyRequest,
+		user: AuthenticatedUser,
+		tenant: RequestTenantContext,
+		requirements: RouteRequirements,
+	): Promise<void> {
+		const subject = this.buildSubject(user, tenant);
+		const tenantAttributes = this.tenantAttributes(tenant);
+		const metadata = this.auditMetadata(request);
 
-		if (decision === "DENY") {
-			throw new ForbiddenException({
-				message: "Insufficient permissions",
-				error: "PERMISSION_DENIED",
-			});
+		if (requirements.permission !== undefined) {
+			await this.kernel.authorize(this.buildRequest(subject, requirements.permission.action, requirements.permission.resource, undefined, tenantAttributes), metadata);
+		}
+
+		if (requirements.permissions !== undefined) {
+			await this.enforcePermissions(subject, requirements.permissions, tenantAttributes, metadata);
+		}
+
+		if (requirements.roles !== undefined) {
+			const granted = await this.kernel.hasRoles(user.id, requirements.roles.roles, requirements.roles.mode);
+			if (!granted) {
+				throw new AuthorizationException();
+			}
+		}
+
+		if (requirements.authorize !== undefined) {
+			await this.enforceAuthorize(context, subject, requirements.authorize, tenantAttributes, metadata);
 		}
 	}
 
-	/**
-	 * Check multiple permissions with AND/OR semantics via kernel.
-	 */
-	private async checkPermissions(userId: string, meta: RequiredPermissionsMetadata): Promise<void> {
-		const requirements = meta.permissions.map((p) => ({
-			action: p[0],
-			resource: p[1],
-		}));
-
-		const results = await Promise.all(requirements.map((req) => this.kernel.can(this.buildKernelRequest(userId, req.action, req.resource))));
-
-		const granted = meta.mode === "all" ? results.every((d) => d === "ALLOW") : results.some((d) => d === "ALLOW");
-
-		if (!granted) {
-			throw new ForbiddenException({
-				message: meta.mode === "all" ? "Missing required permissions" : "Missing any of the required permissions",
-				error: "PERMISSION_DENIED",
-			});
+	private async enforcePermissions(
+		subject: AuthorizationContext,
+		meta: RequiredPermissionsMetadata,
+		attributes: AuthorizationAttributes,
+		metadata: AuthorizationAuditMetadata,
+	): Promise<void> {
+		if (meta.permissions.length === 0) {
+			throw new AuthorizationException();
 		}
+
+		if (meta.mode === "all") {
+			for (const [action, resource] of meta.permissions) {
+				await this.kernel.authorize(this.buildRequest(subject, action, resource, undefined, attributes), metadata);
+			}
+			return;
+		}
+
+		const results: AuthorizationResult[] = await Promise.all(
+			meta.permissions.map(([action, resource]) => this.kernel.explain(this.buildRequest(subject, action, resource, undefined, attributes))),
+		);
+		const allowed = results.find((result) => result.decision === "ALLOW");
+		if (allowed !== undefined) {
+			await this.decisionAudit.auditResult(allowed, metadata);
+			return;
+		}
+		for (const denied of results) {
+			await this.decisionAudit.auditResult(denied, metadata);
+		}
+		throw new AuthorizationException();
 	}
 
-	/**
-	 * Check roles via kernel.
-	 * Note: Role checks currently use legacy checker until kernel supports role-based checks natively.
-	 * TODO: Implement role checks in kernel for consistency.
-	 */
-	private async checkRoles(userId: string, meta: RequiredRolesMetadata): Promise<void> {
-		// For now, delegate to kernel's can() using role-based permissions
-		// In the future, kernel should have native role check support
-		const checks = meta.roles.map((role) => this.kernel.can(this.buildKernelRequest(userId, "ASSUME", role)));
-
-		const results = await Promise.all(checks);
-		const granted = meta.mode === "all" ? results.every((d) => d === "ALLOW") : results.some((d) => d === "ALLOW");
-
-		if (!granted) {
-			throw new ForbiddenException({
-				message: meta.mode === "all" ? "Missing required roles" : "Missing any of the required roles",
-				error: "ROLE_DENIED",
-			});
+	private async enforceAuthorize(
+		context: ExecutionContext,
+		subject: AuthorizationContext,
+		requirement: AuthorizationRequirement,
+		tenantAttributes: AuthorizationAttributes,
+		metadata: AuthorizationAuditMetadata,
+	): Promise<void> {
+		let resourceId: string | undefined;
+		if (requirement.resourceId !== undefined) {
+			const resolved = typeof requirement.resourceId === "string" ? readRouteParam(context, requirement.resourceId) : requirement.resourceId(context);
+			// A declared but unresolvable target is never widened to a global check.
+			if (resolved === null) {
+				throw new AuthorizationException();
+			}
+			resourceId = resolved;
 		}
+
+		const declared = requirement.attributes === undefined ? {} : typeof requirement.attributes === "function" ? requirement.attributes(context) : requirement.attributes;
+		// Tenant attributes come last so a body-supplied value can never override the routed tenant.
+		const attributes: AuthorizationAttributes = { ...declared, ...tenantAttributes };
+
+		await this.kernel.authorize(this.buildRequest(subject, requirement.action, requirement.resource, resourceId, attributes), metadata);
 	}
 
-	// ── Private: Token & Admin Access ───────────────────────────────────────
+	private buildSubject(user: AuthenticatedUser, tenant: RequestTenantContext): AuthorizationContext {
+		return {
+			userId: user.id,
+			isSuperAdmin: false,
+			...(tenant.verified.organizationId === undefined ? {} : { organizationId: tenant.verified.organizationId }),
+			...(tenant.verified.storeId === undefined ? {} : { storeId: tenant.verified.storeId }),
+			...(tenant.verified.locationId === undefined ? {} : { locationId: tenant.verified.locationId }),
+		};
+	}
 
-	/**
-	 * Validate token version against database.
-	 * Rejects stale tokens to force re-authentication.
-	 */
+	/** Requested tenant ids become resource attributes so scoped grants can compare them. */
+	private tenantAttributes(tenant: RequestTenantContext): AuthorizationAttributes {
+		const attributes: AuthorizationAttributes = {};
+		if (tenant.requested.organizationId !== undefined) {
+			attributes.organizationId = tenant.requested.organizationId;
+		}
+		if (tenant.requested.storeId !== undefined) {
+			attributes.storeId = tenant.requested.storeId;
+		}
+		if (tenant.requested.locationId !== undefined) {
+			attributes.locationId = tenant.requested.locationId;
+		}
+		return attributes;
+	}
+
+	private buildRequest(
+		subject: AuthorizationContext,
+		action: PermissionAction,
+		resource: PermissionResource,
+		resourceId: string | undefined,
+		resourceAttributes: AuthorizationAttributes,
+	): AuthorizationRequest {
+		return {
+			subject,
+			action,
+			resource,
+			...(resourceId === undefined ? {} : { resourceId }),
+			...(Object.keys(resourceAttributes).length === 0 ? {} : { resourceAttributes }),
+		};
+	}
+
+	private auditMetadata(request: FastifyRequest): AuthorizationAuditMetadata {
+		const userAgent = readFirstHeader(request.headers["user-agent"]);
+		const requestId = readFirstHeader(request.headers["x-correlation-id"]) ?? readFirstHeader(request.headers["x-request-id"]) ?? request.id;
+		return {
+			ipAddress: request.ip,
+			...(userAgent === undefined ? {} : { userAgent: userAgent.slice(0, 512) }),
+			requestId: requestId.slice(0, 64),
+		};
+	}
+
+	/** Rejects tokens minted before the user's authorization state last changed. */
 	private async validateTokenVersion(userId: string, tokenVersion: number): Promise<void> {
-		const dbUser = await this.prisma.user.findUnique({
-			where: { id: userId },
-			select: { tokenVersion: true },
-		});
-
+		const dbUser = await this.prisma.user.findUnique({ where: { id: userId }, select: { tokenVersion: true } });
 		if (dbUser !== null && dbUser.tokenVersion !== tokenVersion) {
-			throw new UnauthorizedException({
-				message: "Token revoked — authorization state changed",
-				error: "TOKEN_VERSION_MISMATCH",
-			});
+			throw new UnauthorizedException({ message: "Token revoked — authorization state changed", error: "TOKEN_VERSION_MISMATCH" });
 		}
 	}
 
-	/**
-	 * Check if user has admin dashboard access.
-	 */
-	private async hasAdminDashboardAccess(userId: string): Promise<boolean> {
-		const decision = await this.kernel.can(this.buildKernelRequest(userId, "READ", "ADMIN_DASHBOARD"));
-
+	private async hasAdminDashboardAccess(user: AuthenticatedUser, tenant: RequestTenantContext): Promise<boolean> {
+		const decision = await this.kernel.can(this.buildRequest(this.buildSubject(user, tenant), "READ", "ADMIN_DASHBOARD", undefined, {}));
 		return decision === "ALLOW";
 	}
 
-	/**
-	 * Audit super-admin authorization bypass.
-	 */
-	private async auditSuperAdminBypass(userId: string, context: ExecutionContext): Promise<void> {
-		const request = context.switchToHttp().getRequest<FastifyRequest>();
-		const handlerName = context.getHandler().name;
+	private setAdminAccess(user: AuthenticatedUser, hasAdminAccess: boolean): void {
+		Object.assign<AuthenticatedUser, { hasAdminAccess: boolean }>(user, { hasAdminAccess });
+	}
 
+	private async auditSuperAdminBypass(userId: string, context: ExecutionContext, request: FastifyRequest): Promise<void> {
 		await this.audit.log({
 			action: "SUPER_ADMIN_BYPASS",
 			actorId: userId,
-			detail: `Bypassed authorization for ${handlerName} at ${request.url}`,
+			detail: `Bypassed authorization for ${context.getHandler().name} at ${request.method} ${request.url}`,
 		});
-	}
-
-	/**
-	 * Ensure hasAdminAccess is computed for public routes
-	 * (needed by downstream guards and RLS interceptor).
-	 */
-	private async ensureAdminAccess(context: ExecutionContext): Promise<void> {
-		const request = context.switchToHttp().getRequest<FastifyRequest>();
-
-		if (!isAuthenticatedUser(request.user)) {
-			return;
-		}
-
-		const user = request.user;
-
-		if (user.isSuperAdmin) {
-			Object.assign<AuthenticatedUser, { hasAdminAccess: boolean }>(user, { hasAdminAccess: true });
-			return;
-		}
-
-		const hasAdminAccess = await this.hasAdminDashboardAccess(user.id);
-		Object.assign<AuthenticatedUser, { hasAdminAccess: boolean }>(user, { hasAdminAccess });
 	}
 }

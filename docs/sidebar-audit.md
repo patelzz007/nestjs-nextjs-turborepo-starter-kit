@@ -42,8 +42,9 @@ the improvements target **gaps**, not rewrites.
   (the demo tree goes 6 levels deep under Analytics → Reports → …). ✅
 - **Route-aware state.** `computeRouteState` in `lib/navigation/menu.ts` marks the active item
   (`isRouteActive` handles `/` exactly and boundary chars, so `/settings` never
-  highlights `/settings/general`), auto-expands the active branch, and optionally
-  highlights the parent. ✅
+  highlights `/settings/general`), auto-expands the active branch, and highlights
+  **only the deepest match** — parents/grandparents stay unhighlighted while one
+  of their descendants is the current page. ✅
 - **Search with highlighting.** In-sidebar search filters the tree and wraps
   matches in a `<mark>`-style highlight; a clear button and a "no results" state
   exist. ✅
@@ -191,9 +192,10 @@ navigation landmark signal.
 branches — single items and parents).
 
 **How:** `aria-current={isActive ? "page" : undefined}` on the button that renders
-an active leaf. For parent items that are active only because of
-`isHighlightParentItem`, `"page"` is wrong — use `aria-current="true"` there or
-skip it (only leaves say "page").
+an active item. Since `computeRouteState` only ever activates the deepest route
+match per branch, every active item is the route's closest match — `"page"` is
+correct for all of them (parents/grandparents are never active alongside their
+active child).
 
 **Acceptance criteria:**
 - [ ] `screen.getByRole("button", { current: "page" })` finds exactly one item on `/settings/general`.

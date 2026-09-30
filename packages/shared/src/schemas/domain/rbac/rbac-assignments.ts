@@ -28,6 +28,9 @@ export const AssignPermissionToUserSchema = z
 		expiresAt: EpochMsSchema.optional().meta({
 			description: "Optional epoch-ms timestamp when the grant expires",
 		}),
+		effect: z.enum(["ALLOW", "DENY"]).optional().meta({
+			description: "ALLOW grants the permission; DENY revokes it even when a role grants it (default ALLOW)",
+		}),
 	})
 	.strict();
 

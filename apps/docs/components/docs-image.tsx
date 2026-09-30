@@ -25,7 +25,6 @@ export function DocsImage({ src, alt, className, ...props }: DocsImageProps): Re
 	return (
 		<figure className="group/image not-prose my-8">
 			<div className="relative overflow-hidden rounded-xl border border-border/40 bg-muted/20">
-				{/* eslint-disable-next-line @next/next/no-img-element */}
 				<img
 					src={srcString}
 					alt={alt ?? ""}

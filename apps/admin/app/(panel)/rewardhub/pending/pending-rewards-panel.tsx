@@ -1,9 +1,10 @@
 "use client";
 
-import { stubApiMeta } from "@/lib/format/api-envelope";
+import { stubApiMeta, successEnvelope } from "@/lib/format/api-envelope";
 import { apiRouter } from "@workspace/client/lib/api/endpoints";
 import { useAuth } from "@workspace/client/lib/auth";
-import type { RewardResponse } from "@workspace/shared";
+import { Can } from "@workspace/client/lib/auth/can";
+import { PERMISSION, type RewardResponse } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/feedback/badge";
 import { Button } from "@workspace/ui/components/form/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
@@ -28,17 +29,7 @@ export default function PendingRewardsPanel({ initialRewards }: PendingRewardsPa
 	const [rejectingId, setRejectingId] = React.useState<string | null>(null);
 	const [rejectReason, setRejectReason] = React.useState<string>("");
 
-	const initialQueryData = React.useMemo(
-		() =>
-			initialRewards !== undefined
-				? {
-						success: true as const,
-						data: [...initialRewards],
-						meta: stubApiMeta(),
-					}
-				: undefined,
-		[initialRewards],
-	);
+	const initialQueryData = React.useMemo(() => (initialRewards !== undefined ? successEnvelope([...initialRewards], stubApiMeta()) : undefined), [initialRewards]);
 
 	const pendingQuery = api.rewardsAdmin.pendingRewards.useQuery({}, { initialData: initialQueryData });
 
@@ -160,16 +151,19 @@ export default function PendingRewardsPanel({ initialRewards }: PendingRewardsPa
 										<Badge variant="outline">{reward.status}</Badge>
 									</div>
 								</div>
-								<div className="flex shrink-0 gap-2">
-									<Button size="sm" variant="default" disabled={isBusy} data-reward-id={reward.id} onClick={handleApproveClick}>
-										<Check className="mr-1 size-4" />
-										Approve
-									</Button>
-									<Button size="sm" variant="outline" disabled={isBusy} data-reward-id={reward.id} onClick={handleStartRejectClick}>
-										<X className="mr-1 size-4" />
-										Reject
-									</Button>
-								</div>
+								{/* `POST /admin/rewards/:id/{approve,reject}` require MANAGE on REWARD. */}
+								<Can permission={PERMISSION.REWARD.MANAGE}>
+									<div className="flex shrink-0 gap-2">
+										<Button size="sm" variant="default" disabled={isBusy} data-reward-id={reward.id} onClick={handleApproveClick}>
+											<Check className="mr-1 size-4" />
+											Approve
+										</Button>
+										<Button size="sm" variant="outline" disabled={isBusy} data-reward-id={reward.id} onClick={handleStartRejectClick}>
+											<X className="mr-1 size-4" />
+											Reject
+										</Button>
+									</div>
+								</Can>
 							</div>
 							<dl className="grid gap-2 text-xs text-muted-foreground sm:grid-cols-2 lg:grid-cols-4">
 								<div>

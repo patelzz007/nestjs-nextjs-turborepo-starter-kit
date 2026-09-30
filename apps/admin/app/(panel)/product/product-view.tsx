@@ -2,16 +2,18 @@
 import { z } from "zod";
 
 import { createDataTableLabels } from "@/lib/data-table/labels";
-import { buildResourceTableCheckbox, canDeletePlatformResource } from "@/lib/data-table/capabilities";
+import { buildResourceTableCheckbox } from "@/lib/data-table/capabilities";
 import { fetchAllListPages, resolveManualBulkSelectionRows } from "@/lib/data-table/resolve-manual-bulk-selection";
-import { useSessionCapabilities } from "@/lib/session/capabilities";
+import { DisabledActionButton } from "@/components/common/disabled-action-button";
 import { useResourceDeleteDialog } from "@/components/common/resource-delete-dialog";
 import { DataTableMobileCard } from "@/lib/data-table/mobile-card";
-import { readPaginatedHasNext, readPaginatedNextCursor, readPaginatedTotal, stubPaginatedMeta } from "@/lib/format/api-envelope";
+import { readPaginatedHasNext, readPaginatedNextCursor, readPaginatedTotal, stubPaginatedMeta, successEnvelope } from "@/lib/format/api-envelope";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { useManualHybridPagination } from "@/lib/data-table/use-manual-cursor-pagination";
 import { DataTableSearchToolbar } from "@/components/common/data-table-search-toolbar";
 import { useAuth } from "@workspace/client/lib/auth";
+import { useAuthorization } from "@workspace/client/lib/auth/can";
+import { PERMISSION } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/feedback/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
 import { DataTable, type Action, type DataTableFeatures, type Filter } from "@workspace/ui/components/display/data-table";
@@ -25,7 +27,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { keepPreviousData, useQueryClient } from "@tanstack/react-query";
 import { toastMessage } from "@workspace/ui/components/feedback/toast";
 
-import { ProductListSortBySchema, type Product, type ProductListSortBy } from "@workspace/shared/schemas/domain/generated/product.generated";
+import { ProductListSortBySchema, type Product, type ProductListSortBy } from "@workspace/shared/schemas/domain/catalog/product";
 import type { DataTableBulkSelectionContext } from "@workspace/ui/lib/data-table/checkbox";
 
 function resolveListSortBy(columnId: string | undefined): ProductListSortBy | undefined {
@@ -59,8 +61,12 @@ export interface ProductViewProps {
 
 export default function ProductView({ initialRows, initialTotal, initialTotalPages, initialHasNext }: ProductViewProps): React.JSX.Element {
 	const { api } = useAuth();
-	const { hasCapability } = useSessionCapabilities();
-	const canDelete = canDeletePlatformResource(hasCapability, "PRODUCT");
+	// Each control mirrors its API route: GET /:id (READ), POST (CREATE), PATCH /:id (UPDATE), DELETE /:id + bulk-delete (DELETE).
+	const { can } = useAuthorization();
+	const canView = can(PERMISSION.PRODUCT.READ);
+	const canCreate = can(PERMISSION.PRODUCT.CREATE);
+	const canUpdate = can(PERMISSION.PRODUCT.UPDATE);
+	const canDelete = can(PERMISSION.PRODUCT.DELETE);
 	const { requestDelete, resourceDeleteDialog } = useResourceDeleteDialog();
 	const router = useRouter();
 	const queryClient = useQueryClient();
@@ -132,11 +138,7 @@ export default function ProductView({ initialRows, initialTotal, initialTotalPag
 	const initialQueryData = useMemo(
 		() =>
 			initialRows !== undefined
-				? {
-						success: true as const,
-						data: [...initialRows],
-						meta: stubPaginatedMeta(20, initialTotal ?? initialRows.length, 1, initialTotalPages ?? 1, initialHasNext ?? false),
-					}
+				? successEnvelope([...initialRows], stubPaginatedMeta(20, initialTotal ?? initialRows.length, 1, initialTotalPages ?? 1, initialHasNext ?? false))
 				: undefined,
 		[initialRows, initialHasNext, initialTotal, initialTotalPages],
 	);
@@ -249,22 +251,25 @@ export default function ProductView({ initialRows, initialTotal, initialTotalPag
 	);
 
 	const actions = useMemo((): Action<Product>[] => {
-		const base: Action<Product>[] = [
-			{
+		const base: Action<Product>[] = [];
+		if (canView) {
+			base.push({
 				key: "view",
 				label: "View",
 				description: "View product details",
 				icon: <Eye className="size-4" />,
 				onClick: handleView,
-			},
-			{
+			});
+		}
+		if (canUpdate) {
+			base.push({
 				key: "edit",
 				label: "Edit",
 				description: "Edit product",
 				icon: <Pencil className="size-4" />,
 				onClick: handleEdit,
-			},
-		];
+			});
+		}
 		if (canDelete) {
 			base.push({
 				key: "delete",
@@ -277,18 +282,17 @@ export default function ProductView({ initialRows, initialTotal, initialTotalPag
 			});
 		}
 		return base;
-	}, [canDelete, handleDelete, handleEdit, handleView]);
+	}, [canDelete, canUpdate, canView, handleDelete, handleEdit, handleView]);
 
 	const checkbox = useMemo(
 		() =>
 			buildResourceTableCheckbox<Product>({
-				hasCapability,
-				resource: "PRODUCT",
+				canDelete,
 				exportFilename: "product.csv",
 				exportableColumns: ["sku", "name", "price", "stockQuantity", "categoryId", "isActive", "isFeatured", "createdAt"],
 				onDeleteAll: handleBulkDelete,
 			}),
-		[handleBulkDelete, hasCapability],
+		[canDelete, handleBulkDelete],
 	);
 
 	const mobileCardRender = useCallback(
@@ -475,9 +479,13 @@ export default function ProductView({ initialRows, initialTotal, initialTotalPag
 					<h1 className="text-2xl font-semibold tracking-tight">Products</h1>
 					<p className="text-sm text-muted-foreground">Browse and manage products.</p>
 				</div>
-				<Button nativeButton={false} render={<Link href="/product/create" />}>
-					New Product
-				</Button>
+				{canCreate ? (
+					<Button nativeButton={false} render={<Link href="/product/create" />}>
+						New Product
+					</Button>
+				) : (
+					<DisabledActionButton reason="Creating a product requires the product create permission.">New Product</DisabledActionButton>
+				)}
 			</header>
 
 			<Card>
@@ -496,7 +504,7 @@ export default function ProductView({ initialRows, initialTotal, initialTotalPag
 						manualColumnFilters={manualColumnFilters}
 						onManualColumnFilterChange={handleManualColumnFilterChange}
 						mobileCardRender={mobileCardRender}
-						onRowClick={handleView}
+						onRowClick={canView ? handleView : undefined}
 						pagination={pagination}
 						pageSizeOptions={PAGE_SIZE_OPTIONS}
 						sorting={sorting}

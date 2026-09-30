@@ -7,7 +7,7 @@ import { seedRewardHubTenantPolicies } from "../../src/modules/organization/util
 import { prisma } from "./client";
 
 /** Fixed seed UUIDs for canonical organizations (URL slugs are the merchant entry point). */
-export const ORGANIZATION_SEED_IDS = {
+export const ORGANIZATION_SEED_IDS = Object.freeze({
 	klOrganization: "a178a4d1-6915-4eb3-bf84-6fb14e1feb6c",
 	mlkOrganization: "b57401d5-536e-464f-9ae9-4756b6dd5f61",
 	klLocation: "c178a4d1-6915-4eb3-bf84-6fb14e1feb6d",
@@ -19,15 +19,15 @@ export const ORGANIZATION_SEED_IDS = {
 	mlkCashierMembership: "157401d5-536e-464f-9ae9-4756b6dd5f64",
 	pendingNyonyaInvitation: "2178a4d1-6915-4eb3-bf84-6fb14e1feb70",
 	pendingKlTeamInvitation: "3178a4d1-6915-4eb3-bf84-6fb14e1feb71",
-} as const;
+});
 
 /** Plaintext team invite token for Brew & Bean KL pending cashier invite (seed only). */
 export const SEED_TEAM_INVITE_TOKEN_KL_ALICE = "seed_team_invite_token_kl_alice";
 
-export const ORGANIZATION_SEED_SLUGS = {
+export const ORGANIZATION_SEED_SLUGS = Object.freeze({
 	kl: "brew-bean-kl",
 	mlk: "jonker-street-kitchen",
-} as const;
+});
 
 const PLATFORM_GUARDRAIL_CEDAR = `forbid(principal, action, resource) when { action == "assignPolicyAdmin" && principal.role != "OWNER" };
 forbid(principal, action, resource) when { action == "removeLastOwner" };`;

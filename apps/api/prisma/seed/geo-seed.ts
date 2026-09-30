@@ -15,32 +15,50 @@
 // Usage: pnpm db:seed  (called from the main seed orchestrator)
 
 import { Prisma } from "@prisma/client";
+import { z } from "zod";
 
 import { prisma } from "./client";
 
 const API_BASE = "https://raw.githubusercontent.com/dr5hn/countries-states-cities-database/master/json/";
 
-async function fetchData(endpoint: string): Promise<readonly Record<string, unknown>[]> {
+const GeoJsonValueSchema = z.json();
+type GeoJsonValue = z.output<typeof GeoJsonValueSchema>;
+
+const GeoRowSchema = z.record(z.string(), GeoJsonValueSchema);
+type GeoRow = z.output<typeof GeoRowSchema>;
+
+const GeoRowListSchema = z.array(GeoRowSchema);
+
+async function fetchData(endpoint: string): Promise<readonly GeoRow[]> {
 	const response = await fetch(`${API_BASE}${endpoint}.json`);
-	const json: unknown = await response.json();
-	if (!Array.isArray(json)) {
+	const parsed = GeoRowListSchema.safeParse(await response.json());
+	if (!parsed.success) {
 		throw new Error(`Expected array from ${endpoint}`);
 	}
-	return json as readonly Record<string, unknown>[];
+	return parsed.data;
 }
 
-function str(val: unknown): string | null {
+function isGeoRow(val: GeoJsonValue | undefined): val is GeoRow {
+	return typeof val === "object" && val !== null && !Array.isArray(val);
+}
+
+function rowList(val: GeoJsonValue | undefined): readonly GeoRow[] | undefined {
+	if (!Array.isArray(val)) return undefined;
+	return val.filter(isGeoRow);
+}
+
+function str(val: GeoJsonValue | undefined): string | null {
 	if (val === null || val === undefined) return null;
 	return String(val);
 }
 
-function num(val: unknown): number | null {
+function num(val: GeoJsonValue | undefined): number | null {
 	if (val === null || val === undefined || val === "") return null;
 	const n = Number(val);
 	return Number.isFinite(n) ? n : null;
 }
 
-function bigInt(val: unknown): bigint | null {
+function bigInt(val: GeoJsonValue | undefined): bigint | null {
 	if (val === null || val === undefined || val === "") return null;
 	try {
 		return BigInt(Math.trunc(Number(val)));
@@ -49,11 +67,11 @@ function bigInt(val: unknown): bigint | null {
 	}
 }
 
-function toJson(val: unknown): Prisma.NullableJsonNullValueInput | Prisma.InputJsonValue {
+function toJson(val: GeoJsonValue | undefined): Prisma.NullableJsonNullValueInput | Prisma.InputJsonValue {
 	if (val === null || val === undefined) {
 		return Prisma.DbNull;
 	}
-	return JSON.parse(JSON.stringify(val)) as Prisma.InputJsonValue;
+	return val;
 }
 
 // ── Main seed ──────────────────────────────────────────────────────────────
@@ -221,8 +239,8 @@ export async function seedGeo(): Promise<void> {
 		const countryId = countryByIso2.get(String(country.iso2 ?? ""));
 		if (!countryId) continue;
 
-		const stateList = country.states as Record<string, unknown>[] | undefined;
-		if (!Array.isArray(stateList)) continue;
+		const stateList = rowList(country.states);
+		if (stateList === undefined) continue;
 
 		for (const state of stateList) {
 			// Match state by name + countryId
@@ -230,8 +248,8 @@ export async function seedGeo(): Promise<void> {
 			const matchedState = allStates.find((s) => s.name === stateName && s.countryId === countryId);
 			if (!matchedState) continue;
 
-			const cityList = state.cities as Record<string, unknown>[] | undefined;
-			if (!Array.isArray(cityList) || cityList.length === 0) continue;
+			const cityList = rowList(state.cities);
+			if (cityList === undefined || cityList.length === 0) continue;
 
 			await prisma.city.createMany({
 				data: cityList.map((city) => ({

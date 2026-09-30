@@ -4,34 +4,39 @@ import { CaughtValueSchema } from "@workspace/shared";
 
 import { normalizeCaughtError } from "../../../common/utils/caught-error";
 import { parsePrismaNullableJson } from "../../../common/utils/prisma-json";
-import { PrismaService } from "../../../prisma/prisma.service";
+import { SystemPrismaService } from "../../../prisma/system-prisma.service";
+
+/** Request metadata recorded alongside a decision. */
+export interface AuthorizationAuditMetadata {
+	readonly ipAddress?: string;
+	readonly userAgent?: string;
+	readonly requestId?: string;
+}
+
+const WRITE_ACTIONS: ReadonlySet<string> = new Set(["CREATE", "UPDATE", "DELETE", "MANAGE"]);
+const SENSITIVE_READ_RESOURCES: ReadonlySet<string> = new Set(["USER", "ROLE", "PERMISSION", "AUDIT_LOG", "SYSTEM_SETTINGS"]);
 
 function readEvaluationDetailId(step: AuthorizationEvaluationStep, detailKey: "policyId" | "aclId"): string | undefined {
-	const details = step.details;
-	if (details === undefined) {
-		return undefined;
-	}
-	const value = details[detailKey];
+	const value = step.details?.[detailKey];
 	return typeof value === "string" ? value : undefined;
 }
 
 /**
- * Authorization Audit Service - records authorization decisions.
- * Always logs DENY, always logs WRITE operations, optionally logs sensitive READ.
+ * Authorization decision audit trail (spec §63):
+ * DENY → always · writes → always · sensitive reads → always · ordinary reads → never.
+ *
+ * `authorization_audits` is an append-only, bypass-only table under RLS, so
+ * writes go through the system client. Audit failures never fail the request.
  */
 @Injectable()
 export class AuthorizationAuditKernelService {
 	private readonly logger = new Logger(AuthorizationAuditKernelService.name);
 
-	public constructor(private readonly prisma: PrismaService) {}
+	public constructor(private readonly systemDb: SystemPrismaService) {}
 
-	/**
-	 * Record an authorization audit log.
-	 * Uses app_rls_bypass() in RLS to bypass normal row-level restrictions.
-	 */
 	public async log(request: AuthorizationAuditLogRequest): Promise<void> {
 		try {
-			await this.prisma.authorizationAudit.create({
+			await this.systemDb.authorizationAudit.create({
 				data: {
 					actorId: request.actorId ?? null,
 					organizationId: request.organizationId ?? null,
@@ -50,57 +55,36 @@ export class AuthorizationAuditKernelService {
 					durationMs: request.durationMs ?? null,
 				},
 			});
-		} catch (error: unknown) {
-			// Never fail the request due to audit logging failure
+		} catch (error) {
 			const caught = CaughtValueSchema.safeParse(error);
 			const message = caught.success ? normalizeCaughtError(caught.data).message : "Unknown error";
 			this.logger.error(`Failed to record authorization audit: ${message}`);
 		}
 	}
 
-	/**
-	 * Determine if an authorization result should be audited.
-	 */
 	public shouldAudit(result: AuthorizationResult): boolean {
-		// Always audit DENY
 		if (result.decision === "DENY") {
 			return true;
 		}
-
-		// Always audit WRITE operations
-		const writeActions = ["CREATE", "UPDATE", "DELETE", "MANAGE"];
-
-		if (writeActions.includes(result.request.action)) {
+		if (WRITE_ACTIONS.has(result.request.action)) {
 			return true;
 		}
-
-		// Optionally audit sensitive READ operations
-		const sensitiveResources = ["USER", "ROLE", "PERMISSION", "ADMIN_DASHBOARD"];
-
-		if (result.request.action === "READ" && sensitiveResources.includes(result.request.resource)) {
-			return true;
-		}
-
-		return false;
+		return (result.request.action === "READ" || result.request.action === "LIST") && SENSITIVE_READ_RESOURCES.has(result.request.resource);
 	}
 
-	/**
-	 * Log an authorization result if it should be audited.
-	 */
-	public async auditResult(result: AuthorizationResult, metadata?: { ipAddress?: string; userAgent?: string; requestId?: string }): Promise<void> {
+	public async auditResult(result: AuthorizationResult, metadata?: AuthorizationAuditMetadata): Promise<void> {
 		if (!this.shouldAudit(result)) {
 			return;
 		}
 
-		const policyIds = result.evaluation
-			.filter((step) => step.source === "policy")
-			.map((step) => readEvaluationDetailId(step, "policyId"))
-			.filter((id): id is string => id !== undefined);
-
-		const aclIds = result.evaluation
-			.filter((step) => step.source === "acl")
-			.map((step) => readEvaluationDetailId(step, "aclId"))
-			.filter((id): id is string => id !== undefined);
+		const policyIds = result.evaluation.flatMap((step) => {
+			const id = step.source === "policy" ? readEvaluationDetailId(step, "policyId") : undefined;
+			return id === undefined ? [] : [id];
+		});
+		const aclIds = result.evaluation.flatMap((step) => {
+			const id = step.source === "acl" ? readEvaluationDetailId(step, "aclId") : undefined;
+			return id === undefined ? [] : [id];
+		});
 
 		await this.log({
 			actorId: result.request.subject.userId,
@@ -110,7 +94,7 @@ export class AuthorizationAuditKernelService {
 			resource: result.request.resource,
 			resourceId: result.request.resourceId,
 			decision: result.decision,
-			reason: result.evaluation[result.evaluation.length - 1]?.reason,
+			reason: result.evaluation.at(-1)?.reason,
 			policyIds,
 			aclIds,
 			evaluation: result.evaluation,

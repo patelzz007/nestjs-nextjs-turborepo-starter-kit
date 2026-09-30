@@ -8,6 +8,7 @@ import * as React from "react";
 import type { ApiClient } from "../api/use-api";
 import type { ApiRouter } from "../api/endpoints";
 import { uploadFileDirect, toDocumentMimeType, type DirectUploadInput } from "./direct-upload";
+import { catchCaught } from "../caught";
 
 export interface DirectUploadFileFieldProps {
 	readonly api: ApiClient<ApiRouter>;
@@ -53,28 +54,28 @@ export function DirectUploadFileField({
 			setIsUploading(true);
 			setProgressLabel(`Uploading ${file.name}…`);
 
-			void uploadFileDirect(
-				api,
-				{
-					...binding,
-					category,
-					fileName: file.name,
-					mimeType: toDocumentMimeType(file),
-				},
-				file,
-			)
-				.then((result): void => {
+			void catchCaught(
+				uploadFileDirect(
+					api,
+					{
+						...binding,
+						category,
+						fileName: file.name,
+						mimeType: toDocumentMimeType(file),
+					},
+					file,
+				).then((result): void => {
 					onChange?.(result.response.file);
 					setProgressLabel(result.response.file.status === "READY" ? `${file.name} is ready` : `${file.name} uploaded — processing`);
-				})
-				.catch((err: unknown): void => {
+				}),
+				(err): void => {
 					const message = err instanceof Error && err.message.length > 0 ? err.message : "Upload failed";
 					setError(message);
 					setProgressLabel(null);
-				})
-				.finally((): void => {
-					setIsUploading(false);
-				});
+				},
+			).finally((): void => {
+				setIsUploading(false);
+			});
 		},
 		[api, binding, category, onChange],
 	);

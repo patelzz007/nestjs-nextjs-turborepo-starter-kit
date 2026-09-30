@@ -12,6 +12,7 @@ import { useCallback, useEffect, useMemo, useState, type JSX } from "react";
 import { resolveAuthErrorMessage } from "../errors";
 import { useAuth } from "../index";
 import { passwordStrength } from "../password";
+import { catchCaught } from "../../caught";
 
 export interface ResetPasswordFormProps {
 	readonly token: string;
@@ -81,17 +82,16 @@ export function ResetPasswordForm({ token, loginHref = "/auth/login" }: ResetPas
 				return;
 			}
 
-			mutation
-				.mutateAsync(parsed.data)
-				.then((): void => {
+			void catchCaught(
+				mutation.mutateAsync(parsed.data).then((): void => {
 					router.push(loginHref);
-				})
-				.catch((err: unknown): void => {
+				}),
+				(err): void => {
 					setError(resolveAuthErrorMessage(err));
-				})
-				.finally((): void => {
-					setIsLoading(false);
-				});
+				},
+			).finally((): void => {
+				setIsLoading(false);
+			});
 		},
 		[confirmPassword, loginHref, mutation, password, router, token],
 	);

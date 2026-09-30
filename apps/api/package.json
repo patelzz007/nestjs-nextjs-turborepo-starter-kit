@@ -14,6 +14,7 @@
 		"lint": "eslint",
 		"format": "prettier --write \"**/*.{ts,tsx}\"",
 		"typecheck": "cross-env NODE_OPTIONS=--max-old-space-size=8192 tsc -p tsconfig.typecheck.json",
+		"test": "vitest run --config vitest.config.unit.ts",
 		"test:unit": "vitest run --config vitest.config.unit.ts",
 		"test:e2e": "vitest run --config vitest.config.e2e.ts",
 		"db:generate": "dotenv -e .env -- prisma generate",
@@ -24,7 +25,8 @@
 		"db:seed": "dotenv -e .env -- tsx prisma/seed.ts",
 		"db:studio": "dotenv -e .env -- prisma studio",
 		"db:reset": "dotenv -e .env -- prisma migrate reset --force && pnpm db:generate",
-		"kyb:backfill": "dotenv -e .env -- tsx scripts/backfill-kyb-documents.ts"
+		"kyb:backfill": "dotenv -e .env -- tsx scripts/backfill-kyb-documents.ts",
+		"bullmq:cleanup-repeat-jobs": "dotenv -e .env -- tsx scripts/cleanup-stale-bullmq-repeat-jobs.ts --force"
 	},
 	"dependencies": {
 		"@aws-sdk/client-lambda": "^3.1130.0",

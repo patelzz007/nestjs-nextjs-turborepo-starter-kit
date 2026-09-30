@@ -5,7 +5,7 @@ import { z } from "zod";
 
 import type { RequestWithTrace } from "../common/middleware/correlation-id.middleware";
 import { readFirstHeader, readReplyHeader } from "../common/utils/http-headers";
-import { parsePreSerializationValue, serializePreSerializationValue } from "../common/utils/serialize-pre-serialization-value";
+import { parsePreSerializationValue, serializePreSerializationValue, type PreSerializationPayload } from "../common/utils/serialize-pre-serialization-value";
 import { LogService } from "../modules/logs/logs.service";
 import { VersionController } from "../modules/health/version.controller";
 import { apiVersionOfUrl } from "./fastify-api-version";
@@ -154,7 +154,7 @@ export function registerFastifyHooks(app: NestFastifyApplication): void {
 		done();
 	});
 
-	server.addHook("preSerialization", (_request, _reply, payload, done): void => {
+	server.addHook("preSerialization", (_request, _reply, payload: PreSerializationPayload, done): void => {
 		const parsed = parsePreSerializationValue(payload);
 		if (parsed === null) {
 			done(null, payload);

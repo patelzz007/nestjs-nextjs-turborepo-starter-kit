@@ -17,7 +17,7 @@ const REWARD_WITH_ORGANIZATION_INCLUDE = {
 			location: { select: { name: true } },
 		},
 	},
-} as const satisfies Prisma.RewardInclude;
+} satisfies Prisma.RewardInclude;
 
 export type RewardWithOrganization = Prisma.RewardGetPayload<{ include: typeof REWARD_WITH_ORGANIZATION_INCLUDE }>;
 

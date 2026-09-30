@@ -1,40 +1,33 @@
 import type { Permission } from "@prisma/client";
+import { PolicyConditionsSchema, type PolicyConditions } from "@workspace/shared";
 
+import { parsePrismaInputJson } from "../../src/common/utils/prisma-json";
 import { prisma } from "./client";
 
 // ---------------------------------------------------------------------------
 // ABAC Demo — seed a condition on MANAGE:SYSTEM_SETTINGS
 // ---------------------------------------------------------------------------
-// This adds a runtime ABAC condition to the MANAGE:SYSTEM_SETTINGS permission.
-// The condition requires that the authenticated user's email exists (which
-// every authenticated user has). This demonstrates the ABAC evaluation
-// pipeline in the PermissionsGuard without breaking existing functionality.
+// This adds a runtime ABAC condition (policy DSL) to the MANAGE:SYSTEM_SETTINGS
+// permission. The Authorization Kernel evaluates a grant's conditions after its
+// scope matches; malformed conditions fail closed.
 //
-// To test: Log in as Frank Miller (frank.miller@example.com, Frank@123) who
-// has MANAGE:SYSTEM_SETTINGS via direct grant. The guard will evaluate the
-// condition {field: "user.email", operator: "exists", value: ""} at runtime.
-// Since Frank has an email, the condition passes and he can access the resource.
-//
-// To see ABAC deny behavior: Change the condition via the PATCH API to one
-// that fails, e.g.:
-//   PATCH /rbac/permissions/<MANAGE:SYSTEM_SETTINGS's id>
-//   Body: { "conditions": { "field": "extra.demoMode", "operator": "eq", "value": "enabled" } }
-// Since extra is always {}, the condition fails and access is denied.
+// The condition requires an authenticated subject id, so it always passes and
+// demonstrates the pipeline without changing access. To see ABAC deny behavior,
+// change it to one that fails, e.g.
+//   { "condition": { "field": "$user.demoMode", "operator": "equals", "value": "enabled" } }
 
 export async function seedAbacConditions(permissions: Permission[]): Promise<void> {
-	const manageSystemSettings = permissions.find((p) => p.action === "MANAGE" && p.resource === "SYSTEM_SETTINGS");
+	const manageSystemSettings = permissions.find((p) => p.action === "MANAGE" && p.resource === "SYSTEM_SETTINGS" && p.scope === "GLOBAL");
 	if (!manageSystemSettings) return;
 
-	// Condition: user.email must exist (always passes for authenticated users)
-	const abacCondition = {
-		field: "user.email",
-		operator: "exists",
-		value: "",
+	// Condition: the subject id must exist (always passes for authenticated users)
+	const abacCondition: PolicyConditions = {
+		condition: { field: "$user.userId", operator: "exists" },
 	};
 
 	await prisma.permission.update({
 		where: { id: manageSystemSettings.id },
-		data: { conditions: abacCondition },
+		data: { conditions: parsePrismaInputJson(PolicyConditionsSchema.parse(abacCondition)) },
 	});
 
 	console.log(`  ABAC demo: Set condition on MANAGE:SYSTEM_SETTINGS → ${JSON.stringify(abacCondition)}`);

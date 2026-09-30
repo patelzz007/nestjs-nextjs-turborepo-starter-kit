@@ -1,8 +1,10 @@
 "use client";
 
-import { stubPaginatedMeta } from "@/lib/format/api-envelope";
+import { stubPaginatedMeta, successEnvelope } from "@/lib/format/api-envelope";
 import { useAuth } from "@workspace/client/lib/auth";
-import type { AdminLocationRequestResponse } from "@workspace/shared";
+import { Can } from "@workspace/client/lib/auth/can";
+import { PERMISSION, type AdminLocationRequestResponse } from "@workspace/shared";
+import { AccessRestrictedNotice } from "@/components/common/access-restricted-notice";
 import { Badge } from "@workspace/ui/components/feedback/badge";
 import { Button } from "@workspace/ui/components/form/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
@@ -64,14 +66,7 @@ export default function LocationRequestsPanel({ initialPendingRequests }: Locati
 	const [rejectionReason, setRejectionReason] = React.useState("");
 
 	const pendingInitialData = React.useMemo(
-		() =>
-			initialPendingRequests !== undefined
-				? {
-						success: true as const,
-						data: [...initialPendingRequests],
-						meta: stubPaginatedMeta(50, initialPendingRequests.length, 1, 1, false),
-					}
-				: undefined,
+		() => (initialPendingRequests !== undefined ? successEnvelope([...initialPendingRequests], stubPaginatedMeta(50, initialPendingRequests.length, 1, 1, false)) : undefined),
 		[initialPendingRequests],
 	);
 
@@ -176,21 +171,26 @@ export default function LocationRequestsPanel({ initialPendingRequests }: Locati
 									<p className="font-mono text-xs text-muted-foreground">Code: {selectedRequest.code}</p>
 								</div>
 
-								<div className="space-y-2">
-									<Label htmlFor="rejection-reason">Rejection reason</Label>
-									<Textarea id="rejection-reason" value={rejectionReason} onChange={handleRejectionReasonChange} placeholder="Required only when rejecting" rows={3} />
-								</div>
+								{/* `PATCH /admin/merchants/:id/locations/:locationId/review` requires MANAGE on MERCHANT_ORG. */}
+								<Can
+									permission={PERMISSION.MERCHANT_ORG.MANAGE}
+									fallback={<AccessRestrictedNotice description="Approving or rejecting store requests requires the merchant organization manage permission." />}>
+									<div className="space-y-2">
+										<Label htmlFor="rejection-reason">Rejection reason</Label>
+										<Textarea id="rejection-reason" value={rejectionReason} onChange={handleRejectionReasonChange} placeholder="Required only when rejecting" rows={3} />
+									</div>
 
-								<div className="flex flex-wrap gap-2">
-									<Button type="button" onClick={handleApprove} disabled={reviewMutation.isPending}>
-										<Check className="size-4" aria-hidden="true" />
-										Approve store
-									</Button>
-									<Button type="button" variant="destructive" onClick={handleReject} disabled={reviewMutation.isPending}>
-										<X className="size-4" aria-hidden="true" />
-										Reject
-									</Button>
-								</div>
+									<div className="flex flex-wrap gap-2">
+										<Button type="button" onClick={handleApprove} disabled={reviewMutation.isPending}>
+											<Check className="size-4" aria-hidden="true" />
+											Approve store
+										</Button>
+										<Button type="button" variant="destructive" onClick={handleReject} disabled={reviewMutation.isPending}>
+											<X className="size-4" aria-hidden="true" />
+											Reject
+										</Button>
+									</div>
+								</Can>
 							</>
 						)}
 					</CardContent>

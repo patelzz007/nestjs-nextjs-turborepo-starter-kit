@@ -36,6 +36,7 @@ export interface AuthContextType {
 	/** Set the user after successful login. */
 	login: (user: AuthUser) => void;
 	logout: () => Promise<void>;
+	refreshSession: () => Promise<boolean>;
 	api: ApiClient<ApiRouter>;
 }
 
@@ -270,6 +271,12 @@ export function AuthProvider({
 		return refreshPromiseRef.current;
 	}, [cooldownRefresh]);
 
+	const refreshSession = useCallback(async (): Promise<boolean> => {
+		const uncheckedContext = createUncheckedApiRequestContext(baseUrl, { clientType, extraHeaders });
+		const response = await fetchMutationUnchecked(uncheckedContext, apiRouter.auth.refresh, {});
+		return response.ok;
+	}, [baseUrl, clientType, extraHeaders]);
+
 	// Initialize the API hook with cookie auth + silent refresh on 401
 	const api = useApi(apiRouter, baseUrl, handleUnauthorized, handleRefresh, { clientType, extraHeaders });
 
@@ -319,9 +326,10 @@ export function AuthProvider({
 			user,
 			login,
 			logout,
+			refreshSession,
 			api,
 		}),
-		[isAuthenticated, isLoading, revalidateSessionEnabled, user, login, logout, api],
+		[isAuthenticated, isLoading, revalidateSessionEnabled, user, login, logout, refreshSession, api],
 	);
 
 	return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

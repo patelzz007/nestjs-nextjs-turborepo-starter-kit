@@ -28,6 +28,7 @@ import { PolicyRegistry } from "./policies/policy-registry";
 import { AuditLogCleanup } from "./cleanup/audit-log.cleanup";
 import { AuthorizationEventEmitter } from "./events/authorization.events";
 import { CapabilityDefinitionService } from "./services/capability-definition.service";
+import { PrivilegeEscalationService } from "./services/privilege-escalation.service";
 import { PermissionRepository } from "./repositories/permission.repository";
 import { RoleAssignmentRepository } from "./repositories/role-assignment.repository";
 import { RoleRepository } from "./repositories/role.repository";
@@ -107,6 +108,7 @@ import { AuthorizationKernelModule } from "./kernel/authorization-kernel.module"
 		AuthRateLimitService,
 		AuthorizationEventEmitter,
 		CapabilityDefinitionService,
+		PrivilegeEscalationService,
 	],
 	exports: [
 		AuthorizationCacheService,
@@ -125,6 +127,7 @@ import { AuthorizationKernelModule } from "./kernel/authorization-kernel.module"
 		AuthRateLimitService,
 		AuthorizationEventEmitter,
 		CapabilityDefinitionService,
+		PrivilegeEscalationService,
 		AuthorizationKernelModule,
 	],
 })

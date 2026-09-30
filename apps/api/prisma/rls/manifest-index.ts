@@ -36,6 +36,8 @@ export const RLS_MANIFEST_PROFILES: Readonly<Record<RlsManifestProfile, readonly
 		"organizations",
 		"organization_slug_history",
 		"organization_locations",
+		"stores",
+		"store_memberships",
 		"organization_memberships",
 		"organization_membership_location_scopes",
 		"organization_merchant_profiles",
@@ -118,10 +120,17 @@ export function listAllManifestTables(): string[] {
 	return tables;
 }
 
+function isRlsManifestProfile(key: string): key is RlsManifestProfile {
+	return Object.hasOwn(RLS_MANIFEST_PROFILES, key);
+}
+
 export function buildManifestTableToProfileMap(): Map<string, RlsManifestProfile> {
 	const map = new Map<string, RlsManifestProfile>();
-	for (const [profile, tables] of Object.entries(RLS_MANIFEST_PROFILES) as [RlsManifestProfile, readonly string[]][]) {
-		for (const table of tables) {
+	for (const profile of Object.keys(RLS_MANIFEST_PROFILES)) {
+		if (!isRlsManifestProfile(profile)) {
+			continue;
+		}
+		for (const table of RLS_MANIFEST_PROFILES[profile]) {
 			map.set(table, profile);
 		}
 	}

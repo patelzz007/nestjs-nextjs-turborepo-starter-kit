@@ -91,7 +91,7 @@ async function postOnce(targetUrl: string, body: string): Promise<string> {
 		const res: Response = await fetch(targetUrl, { method: "POST", headers, body });
 		const bodyText: string = await res.text();
 		return `${String(res.status)} | ${bodyText}`;
-	} catch (cause: unknown) {
+	} catch (cause) {
 		const detail: string = cause instanceof Error ? cause.message : String(cause);
 		return `network error (is the API on :8080 / tunnel up?) — ${detail}`;
 	}

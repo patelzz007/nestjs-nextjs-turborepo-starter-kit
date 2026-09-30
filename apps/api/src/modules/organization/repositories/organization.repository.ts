@@ -14,7 +14,7 @@ const ADMIN_ORG_LIST_INCLUDE = {
 		include: { user: { select: { id: true } } },
 		take: 1,
 	},
-} as const satisfies Prisma.OrganizationInclude;
+} satisfies Prisma.OrganizationInclude;
 
 const ADMIN_ORG_DETAIL_INCLUDE = {
 	merchantProfile: true,
@@ -23,7 +23,7 @@ const ADMIN_ORG_DETAIL_INCLUDE = {
 		include: { user: { select: { id: true, email: true, fullName: true } } },
 	},
 	_count: { select: { memberships: { where: { isDeleted: false } } } },
-} as const satisfies Prisma.OrganizationInclude;
+} satisfies Prisma.OrganizationInclude;
 
 export type OrganizationAdminListRow = Prisma.OrganizationGetPayload<{ include: typeof ADMIN_ORG_LIST_INCLUDE }>;
 export type OrganizationAdminDetailRow = Prisma.OrganizationGetPayload<{ include: typeof ADMIN_ORG_DETAIL_INCLUDE }>;

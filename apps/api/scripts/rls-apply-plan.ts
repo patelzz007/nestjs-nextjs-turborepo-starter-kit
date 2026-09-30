@@ -1,0 +1,222 @@
+import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { resolve } from "node:path";
+
+/**
+ * RLS apply plan — the single source of truth for the order the RLS SQL files run.
+ *
+ * Layers (paths relative to `apps/api`); a file may only call helpers defined
+ * at or above its own layer:
+ *
+ * 1. `00-app-helpers.sql`          — session primitives (`app_rls_bypass()`, `app_owns()`, …)
+ * 2. `01-acl-location-access.sql`  — tenant/ACL helpers (call the primitives)
+ * 3. `prisma/rls.sql`              — role, enable RLS, policies (call both helper layers)
+ * 4. `99-app-runtime-grants.sql`   — grants over everything created above (must run last)
+ *
+ * The plan is validated before anything touches the database:
+ * - every listed file must exist, and every `*.sql` on disk must be listed
+ *   (register new `prisma/rls/NN-*.sql` fragments HERE);
+ * - every `app_*()` call must appear at or after the file that defines it, so a
+ *   helper used before its definition fails HERE instead of against a fresh
+ *   database (the original `function app_rls_bypass() does not exist` bug);
+ * - each helper may be defined in exactly one file.
+ *
+ * `pnpm db:apply-security` applies this plan; `pnpm db:check-rls-manifest`
+ * runs the same validation so violations fail in CI too.
+ */
+export const RLS_APPLY_ORDER: readonly string[] = [
+	"prisma/rls/00-app-helpers.sql",
+	"prisma/rls/01-acl-location-access.sql",
+	"prisma/rls.sql",
+	"prisma/rls/99-app-runtime-grants.sql",
+];
+
+/** One SQL file in the plan. `path` is the apiDir-relative path shown in errors. */
+export interface RlsPlanFile {
+	readonly path: string;
+	readonly sql: string;
+}
+
+/** `CREATE [OR REPLACE] FUNCTION [schema.]name(` — records where a helper is defined. */
+const HELPER_DEFINE_PATTERN = /\bCREATE\s+(?:OR\s+REPLACE\s+)?FUNCTION\s+(?:[a-z_][a-z0-9_]*\.)?([a-z_][a-z0-9_]*)\s*\(/gi;
+
+/** Any `app_*(` call — the RLS helper namespace (policies, function bodies, GRANTs). */
+const HELPER_CALL_PATTERN = /\b(app_[a-z0-9_]+)\s*\(/g;
+
+interface HelperToken {
+	readonly kind: "define" | "use";
+	readonly name: string;
+	readonly offset: number;
+}
+
+function lineOf(sql: string, offset: number): number {
+	return sql.slice(0, offset).split("\n").length;
+}
+
+/**
+ * Replaces SQL comments with spaces so their text can never be mistaken for a
+ * dependency (e.g. a header comment mentioning `app_owns()`). Length- and
+ * newline-preserving: token offsets and line numbers stay valid. Single-quoted
+ * strings and dollar-quoted bodies (`$$ … $$`) are kept verbatim.
+ */
+export function stripSqlComments(sql: string): string {
+	const out = sql.split("");
+	let i = 0;
+
+	const blank = (from: number, to: number): void => {
+		for (let j = from; j < to && j < out.length; j += 1) {
+			if (out[j] !== "\n") {
+				out[j] = " ";
+			}
+		}
+	};
+
+	while (i < sql.length) {
+		const char = sql[i];
+
+		if (char === "'") {
+			// Single-quoted string — keep verbatim ('' escapes a quote).
+			i += 1;
+			while (i < sql.length) {
+				if (sql[i] === "'") {
+					if (sql[i + 1] === "'") {
+						i += 2;
+						continue;
+					}
+					i += 1;
+					break;
+				}
+				i += 1;
+			}
+			continue;
+		}
+
+		// Dollar-quoted body ($$ … $$ or $tag$ … $tag$) — keep verbatim.
+		const dollar = /^\$[A-Za-z_0-9]*\$/.exec(sql.slice(i, i + 64));
+		if (dollar !== null) {
+			const tag = dollar[0];
+			const close = sql.indexOf(tag, i + tag.length);
+			i = close === -1 ? sql.length : close + tag.length;
+			continue;
+		}
+
+		if (char === "-" && sql[i + 1] === "-") {
+			let end = i;
+			while (end < sql.length && sql[end] !== "\n") {
+				end += 1;
+			}
+			blank(i, end);
+			i = end;
+			continue;
+		}
+
+		if (char === "/" && sql[i + 1] === "*") {
+			const close = sql.indexOf("*/", i + 2);
+			const end = close === -1 ? sql.length : close + 2;
+			blank(i, end);
+			i = end;
+			continue;
+		}
+
+		i += 1;
+	}
+
+	return out.join("");
+}
+
+function collectHelperTokens(sql: string): HelperToken[] {
+	const code = stripSqlComments(sql);
+	const tokens: HelperToken[] = [];
+
+	for (const match of code.matchAll(HELPER_DEFINE_PATTERN)) {
+		tokens.push({ kind: "define", name: match[1].toLowerCase(), offset: match.index });
+	}
+
+	for (const match of code.matchAll(HELPER_CALL_PATTERN)) {
+		tokens.push({ kind: "use", name: match[0].replace("(", "").toLowerCase(), offset: match.index });
+	}
+
+	// At the same offset (a `CREATE FUNCTION app_foo(` header matches both
+	// patterns) the definition wins, so a file may define a helper and call it.
+	return tokens.sort((a: HelperToken, b: HelperToken): number => a.offset - b.offset || (a.kind === "define" ? -1 : 1));
+}
+
+/**
+ * Asserts every `app_*()` call happens at or after the point its helper is
+ * defined, walking the plan in apply order. Mirrors PostgreSQL: SQL function
+ * bodies and policies are validated when created, so a helper referenced by an
+ * earlier file cannot exist on a fresh database.
+ */
+export function assertRlsHelperDependencies(files: readonly RlsPlanFile[]): void {
+	const definedBy = new Map<string, string>();
+
+	for (const file of files) {
+		for (const token of collectHelperTokens(file.sql)) {
+			if (token.kind === "define") {
+				const existing = definedBy.get(token.name);
+				if (existing !== undefined && existing !== file.path) {
+					throw new Error(`${file.path} redefines ${token.name}() — already defined in ${existing}. Each helper must be defined in exactly one file.`);
+				}
+				definedBy.set(token.name, file.path);
+				continue;
+			}
+
+			if (!definedBy.has(token.name)) {
+				const laterDefiner = files
+					.slice(files.indexOf(file) + 1)
+					.find((later: RlsPlanFile): boolean => collectHelperTokens(later.sql).some((t: HelperToken): boolean => t.kind === "define" && t.name === token.name));
+				const where = laterDefiner === undefined ? "no file in RLS_APPLY_ORDER" : laterDefiner.path;
+				throw new Error(
+					`${file.path} uses ${token.name}() at line ${String(lineOf(file.sql, token.offset))} before it is defined (defined in: ${where}). ` +
+						`A fresh database applies files in RLS_APPLY_ORDER order and would fail here. Move the definition earlier or reorder RLS_APPLY_ORDER (scripts/rls-apply-plan.ts).`,
+				);
+			}
+		}
+	}
+}
+
+/** Asserts the registered plan and the files on disk are the same set. */
+export function assertPlanMatchesDisk(order: readonly string[], diskFiles: readonly string[]): void {
+	const orderSet = new Set(order);
+	const diskSet = new Set(diskFiles);
+
+	const notOnDisk = order.filter((path: string): boolean => !diskSet.has(path));
+	if (notOnDisk.length > 0) {
+		throw new Error(`RLS_APPLY_ORDER lists files that do not exist: ${notOnDisk.join(", ")}. Restore them or remove them from RLS_APPLY_ORDER (scripts/rls-apply-plan.ts).`);
+	}
+
+	const notInOrder = diskFiles.filter((path: string): boolean => !orderSet.has(path));
+	if (notInOrder.length > 0) {
+		throw new Error(
+			`RLS SQL files on disk are missing from RLS_APPLY_ORDER: ${notInOrder.join(", ")}. Register them in RLS_APPLY_ORDER (scripts/rls-apply-plan.ts) at the layer they belong to.`,
+		);
+	}
+}
+
+/**
+ * Builds the validated apply plan for an apiDir: checks disk drift, then the
+ * helper dependency order, and returns the absolute file paths in apply order.
+ * Throws before any SQL runs if either check fails.
+ */
+export function buildRlsApplyPlan(apiDir: string): string[] {
+	const bundlePath = "prisma/rls.sql";
+	const fragmentsDir = resolve(apiDir, "prisma", "rls");
+
+	const diskFiles: string[] = [];
+	if (existsSync(resolve(apiDir, bundlePath))) {
+		diskFiles.push(bundlePath);
+	}
+	if (existsSync(fragmentsDir)) {
+		const fragments = readdirSync(fragmentsDir)
+			.filter((name: string): boolean => name.endsWith(".sql"))
+			.sort((a: string, b: string): number => a.localeCompare(b))
+			.map((name: string): string => `prisma/rls/${name}`);
+		diskFiles.push(...fragments);
+	}
+
+	assertPlanMatchesDisk(RLS_APPLY_ORDER, diskFiles);
+
+	const files: RlsPlanFile[] = RLS_APPLY_ORDER.map((path: string): RlsPlanFile => ({ path, sql: readFileSync(resolve(apiDir, path), "utf8") }));
+	assertRlsHelperDependencies(files);
+
+	return RLS_APPLY_ORDER.map((path: string): string => resolve(apiDir, path));
+}

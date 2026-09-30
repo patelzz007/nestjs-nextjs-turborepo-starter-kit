@@ -1,227 +1,108 @@
-import { SetMetadata, ExecutionContext } from "@nestjs/common";
+import { SetMetadata, type ExecutionContext } from "@nestjs/common";
 import type { FastifyRequest } from "fastify";
-import type { PermissionAction, PermissionResource } from "@workspace/shared";
+import { z } from "zod";
+import { AuthorizationAttributeValueSchema, type AuthorizationAttributes, type PermissionAction, type PermissionResource } from "@workspace/shared";
 
 import { isAuthenticatedUser } from "../../../types/authenticated-user";
 
-/**
- * Authorization metadata key for the new unified @Authorize decorator.
- */
+/** Metadata key read by `AuthorizationGuard` to enforce `@Authorize(...)`. */
 export const AUTHORIZE_KEY = "authorization:authorize";
 
-/**
- * Resource ID extractor function type.
- * Extracts resourceId from the execution context (e.g., from path params).
- */
-export type ResourceIdExtractor<TContext extends ExecutionContext = ExecutionContext> = (context: TContext) => string | null;
+/** Extracts the target resource id from the request (`null` = none resolvable → deny). */
+export type ResourceIdExtractor = (context: ExecutionContext) => string | null;
+
+/** Extracts server-side resource attributes for policy evaluation. */
+export type ResourceAttributesExtractor = (context: ExecutionContext) => AuthorizationAttributes;
 
 /**
- * Context extractor function type.
- * Extracts additional context from the execution context (e.g., organization ID, location ID).
- */
-export type ContextExtractor<TContext extends ExecutionContext = ExecutionContext, TResult extends Record<string, unknown> = Record<string, unknown>> = (
-	context: TContext,
-) => TResult;
-
-/**
- * Generic authorization requirement configuration.
+ * Route-level authorization requirement enforced by the global
+ * `AuthorizationGuard` through the Authorization Kernel.
  *
- * @template TAction - The permission action type (type-safe)
- * @template TResource - The permission resource type (type-safe)
- * @template TContext - Additional context type (generic, no any/unknown/never)
+ * @template TAction - permission action (compile-time checked)
+ * @template TResource - permission resource (compile-time checked)
  */
-export interface AuthorizationRequirement<
-	TAction extends PermissionAction = PermissionAction,
-	TResource extends PermissionResource = PermissionResource,
-	TContext extends Record<string, unknown> = Record<string, unknown>,
-> {
-	/**
-	 * The permission action required (READ, CREATE, UPDATE, DELETE, etc.)
-	 */
+export interface AuthorizationRequirement<TAction extends PermissionAction = PermissionAction, TResource extends PermissionResource = PermissionResource> {
 	readonly action: TAction;
-
-	/**
-	 * The permission resource type (USER, ORDER, LOCATION, etc.)
-	 */
 	readonly resource: TResource;
-
 	/**
-	 * Resource ID - can be:
-	 * - A static string
-	 * - A function to extract from context
-	 * - A param name (e.g., "id" → extracts from req.params.id)
-	 * - null for non-resource-specific checks
+	 * Target resource:
+	 * - a route **param name** (`"id"` → `req.params.id`), or
+	 * - an extractor such as {@link self} / {@link fromParam}.
+	 * When declared but unresolvable the guard denies (fail closed).
 	 */
-	readonly resourceId?: string | ResourceIdExtractor | null;
-
-	/**
-	 * Additional context for authorization decision.
-	 * Can be static values or a function to extract from request.
-	 */
-	readonly context?: TContext | ContextExtractor<ExecutionContext, TContext>;
-
-	/**
-	 * Optional scope restriction (GLOBAL, ORGANIZATION, LOCATION, RESOURCE, OWN)
-	 */
-	readonly scope?: string;
-
-	/**
-	 * Optional description for debugging/audit
-	 */
+	readonly resourceId?: string | ResourceIdExtractor;
+	/** Resource attributes for ABAC policies — static values or an extractor. */
+	readonly attributes?: AuthorizationAttributes | ResourceAttributesExtractor;
+	/** Human-readable purpose, surfaced in audits and docs. */
 	readonly description?: string;
 }
 
-/** Mutable draft used only by {@link AuthorizeBuilder} (public requirement stays readonly). */
-interface AuthorizationRequirementDraft<
-	TAction extends PermissionAction = PermissionAction,
-	TResource extends PermissionResource = PermissionResource,
-	TContext extends Record<string, unknown> = Record<string, unknown>,
-> {
-	action?: TAction;
-	resource?: TResource;
-	resourceId?: string | ResourceIdExtractor | null;
-	context?: TContext | ContextExtractor<ExecutionContext, TContext>;
-	scope?: string;
-	description?: string;
-}
+const RouteParamsSchema = z.record(z.string(), z.string());
+
+const RequestBodySchema = z.looseObject({});
 
 function getHttpRequest(context: ExecutionContext): FastifyRequest {
 	return context.switchToHttp().getRequest<FastifyRequest>();
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-	return value !== null && typeof value === "object";
-}
-
-function readStringParam(params: unknown, key: string): string | undefined {
-	if (!isRecord(params)) {
-		return undefined;
+/** Read a string route param (`null` when absent or not a string). */
+export function readRouteParam(context: ExecutionContext, paramName: string): string | null {
+	const parsed = RouteParamsSchema.safeParse(getHttpRequest(context).params);
+	if (!parsed.success) {
+		return null;
 	}
-	const value = params[key];
-	return typeof value === "string" ? value : undefined;
-}
-
-function resolveDotPath(root: unknown, path: string): unknown {
-	let current: unknown = root;
-	for (const prop of path.split(".")) {
-		if (!isRecord(current)) {
-			return undefined;
-		}
-		current = current[prop];
+	if (!Object.hasOwn(parsed.data, paramName)) {
+		return null;
 	}
-	return current;
-}
-
-function buildContextFromPaths(fields: Record<string, string>, root: unknown): Record<string, unknown> {
-	const result: Record<string, unknown> = {};
-	for (const [key, path] of Object.entries(fields)) {
-		result[key] = resolveDotPath(root, path);
-	}
-	return result;
+	const value = parsed.data[paramName];
+	return value.length === 0 ? null : value;
 }
 
 /**
- * Unified @Authorize decorator for kernel-first authorization.
+ * Enforce a kernel authorization check on a route handler.
+ *
+ * ```ts
+ * @Authorize({ action: "UPDATE", resource: "USER", resourceId: self() })
+ * @Authorize({ action: "DELETE", resource: "ORDER", resourceId: "id" })
+ * ```
  */
-export function Authorize<
-	TAction extends PermissionAction = PermissionAction,
-	TResource extends PermissionResource = PermissionResource,
-	TContext extends Record<string, unknown> = Record<string, unknown>,
->(requirement: AuthorizationRequirement<TAction, TResource, TContext>): MethodDecorator {
+export function Authorize<TAction extends PermissionAction, TResource extends PermissionResource>(requirement: AuthorizationRequirement<TAction, TResource>): MethodDecorator {
 	return SetMetadata(AUTHORIZE_KEY, requirement);
 }
 
+/** Resource id from a named route param. */
 export function fromParam(paramName: string): ResourceIdExtractor {
+	return (context: ExecutionContext): string | null => readRouteParam(context, paramName);
+}
+
+/**
+ * The authenticated caller's own user id — for self-service routes acting on
+ * the caller's own account (`USER` / `PROFILE` with OWN scope).
+ */
+export function self(): ResourceIdExtractor {
 	return (context: ExecutionContext): string | null => {
-		const request = getHttpRequest(context);
-		const value = readStringParam(request.params, paramName);
-		return value ?? null;
+		const user = getHttpRequest(context).user;
+		return isAuthenticatedUser(user) ? user.id : null;
 	};
 }
 
-export function fromBody(fields: Record<string, string>): ContextExtractor {
-	return (context: ExecutionContext): Record<string, unknown> => {
-		const request = getHttpRequest(context);
-		return buildContextFromPaths(fields, request.body);
-	};
-}
-
-export function fromUser(fields: Record<string, string>): ContextExtractor {
-	return (context: ExecutionContext): Record<string, unknown> => {
-		const request = getHttpRequest(context);
-		const user = request.user;
-		const root: unknown = isAuthenticatedUser(user) ? user : undefined;
-		return buildContextFromPaths(fields, root);
-	};
-}
-
-export class AuthorizeBuilder<
-	TAction extends PermissionAction = PermissionAction,
-	TResource extends PermissionResource = PermissionResource,
-	TContext extends Record<string, unknown> = Record<string, unknown>,
-> {
-	private readonly requirement: AuthorizationRequirementDraft<TAction, TResource, TContext> = {};
-
-	public action(action: TAction): this {
-		this.requirement.action = action;
-		return this;
-	}
-
-	public resource(resource: TResource): this {
-		this.requirement.resource = resource;
-		return this;
-	}
-
-	public resourceId(resourceId: string | ResourceIdExtractor | null): this {
-		this.requirement.resourceId = resourceId;
-		return this;
-	}
-
-	public context(context: TContext | ContextExtractor<ExecutionContext, TContext>): this {
-		this.requirement.context = context;
-		return this;
-	}
-
-	public scope(scope: string): this {
-		this.requirement.scope = scope;
-		return this;
-	}
-
-	public description(description: string): this {
-		this.requirement.description = description;
-		return this;
-	}
-
-	public build(): AuthorizationRequirement<TAction, TResource, TContext> {
-		const action = this.requirement.action;
-		const resource = this.requirement.resource;
-		if (action === undefined || resource === undefined) {
-			throw new Error("AuthorizeBuilder: action and resource are required");
+/** Resource attributes read from the request body — only policy-safe scalar/list values survive. */
+export function attributesFromBody(fields: readonly string[]): ResourceAttributesExtractor {
+	return (context: ExecutionContext): AuthorizationAttributes => {
+		const body = RequestBodySchema.safeParse(getHttpRequest(context).body);
+		const picked: AuthorizationAttributes = {};
+		if (!body.success) {
+			return picked;
 		}
-
-		return {
-			action,
-			resource,
-			resourceId: this.requirement.resourceId,
-			context: this.requirement.context,
-			scope: this.requirement.scope,
-			description: this.requirement.description,
-		};
-	}
-}
-
-export function requireAll<
-	TAction extends PermissionAction = PermissionAction,
-	TResource extends PermissionResource = PermissionResource,
-	TContext extends Record<string, unknown> = Record<string, unknown>,
->(...requirements: readonly AuthorizationRequirement<TAction, TResource, TContext>[]): readonly AuthorizationRequirement<TAction, TResource, TContext>[] {
-	return requirements;
-}
-
-export function requireAny<
-	TAction extends PermissionAction = PermissionAction,
-	TResource extends PermissionResource = PermissionResource,
-	TContext extends Record<string, unknown> = Record<string, unknown>,
->(...requirements: readonly AuthorizationRequirement<TAction, TResource, TContext>[]): readonly AuthorizationRequirement<TAction, TResource, TContext>[] {
-	return requirements;
+		for (const field of fields) {
+			if (!(field in body.data)) {
+				continue;
+			}
+			const value = AuthorizationAttributeValueSchema.safeParse(body.data[field]);
+			if (value.success) {
+				picked[field] = value.data;
+			}
+		}
+		return picked;
+	};
 }

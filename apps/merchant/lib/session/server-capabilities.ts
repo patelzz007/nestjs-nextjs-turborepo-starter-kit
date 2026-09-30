@@ -1,17 +1,5 @@
 import type { CapabilitySlug, OrganizationRewardMembershipResponse } from "@workspace/shared";
-import { hasCapability } from "@workspace/shared";
-
-const OWNER_REWARDHUB_CAPABILITIES: readonly CapabilitySlug[] = [
-	"merchant:view_dashboard",
-	"merchant:view_rewards",
-	"merchant:manage_rewards",
-	"merchant:view_redemptions",
-	"merchant:manage_api_keys",
-	"merchant:view_analytics",
-	"merchant:manage_kyb",
-];
-
-const CASHIER_REWARDHUB_CAPABILITIES: readonly CapabilitySlug[] = ["merchant:view_dashboard", "merchant:view_rewards", "merchant:view_redemptions", "merchant:view_analytics"];
+import { hasCapability, MERCHANT_ROLE_CAPABILITIES } from "@workspace/shared";
 
 export function resolveActiveOrganizationMembership(
 	memberships: readonly OrganizationRewardMembershipResponse[],
@@ -27,11 +15,8 @@ export function resolveActiveOrganizationMembership(
 export function resolveMerchantCapabilities(membership: OrganizationRewardMembershipResponse | undefined): readonly CapabilitySlug[] {
 	if (membership === undefined) return [];
 
-	if (membership.role === "OWNER" || membership.role === "ADMIN" || membership.role === "POLICY_ADMIN") return OWNER_REWARDHUB_CAPABILITIES;
-
-	if (membership.role === "CASHIER") return CASHIER_REWARDHUB_CAPABILITIES;
-
-	return ["merchant:view_dashboard"];
+	// Same table the API enforces before tenant Cedar policies (advisory UX state only).
+	return MERCHANT_ROLE_CAPABILITIES[membership.role];
 }
 
 export function serverHasMerchantCapability(

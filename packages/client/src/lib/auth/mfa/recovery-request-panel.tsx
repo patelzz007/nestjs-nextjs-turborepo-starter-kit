@@ -6,6 +6,7 @@ import { Button } from "@workspace/ui/components/form/button";
 import { Label } from "@workspace/ui/components/form/label";
 import { Textarea } from "@workspace/ui/components/form/textarea";
 import { useCallback, useState, type JSX } from "react";
+import { catchCaught } from "../../caught";
 
 function formatDateTime(ms: number): string {
 	return new Intl.DateTimeFormat(undefined, {
@@ -54,16 +55,16 @@ export function MfaRecoveryRequestPanel(): JSX.Element {
 			event.preventDefault();
 			setError(null);
 			setMessage(null);
-			initiateMutation
-				.mutateAsync({ reason: reason.trim().length > 0 ? reason.trim() : undefined })
-				.then((response): void => {
+			void catchCaught(
+				initiateMutation.mutateAsync({ reason: reason.trim().length > 0 ? reason.trim() : undefined }).then((response): void => {
 					setMessage(response.data.message);
 					setReason("");
 					void statusQuery.refetch();
-				})
-				.catch((err: unknown): void => {
+				}),
+				(err): void => {
 					setError(resolveAuthErrorMessage(err));
-				});
+				},
+			);
 		},
 		[initiateMutation, reason, statusQuery],
 	);

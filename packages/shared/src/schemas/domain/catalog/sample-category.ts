@@ -4,7 +4,7 @@ import { BooleanQueryParamSchema } from "../../api/query-params";
 
 import type { PaginatedServiceResult } from "../../api/api-response";
 
-/** Generated Zod contracts for SampleCategory. */
+/** Zod contracts for SampleCategory. */
 export const CreateSampleCategorySchema = z
 	.object({
 		description: z.string().nullable().optional(),

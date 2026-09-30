@@ -14,25 +14,15 @@ import { isMobileViewport } from "@workspace/ui/hooks/use-mobile";
 import { useWebCommandPaletteStore } from "@/stores/command-palette-store";
 import { useWebSidebarStore } from "@/stores/sidebar-store";
 import { SidebarPathSync } from "@workspace/client/lib/sidebar/sidebar-path-sync";
-import type { SessionPermissionsResponse } from "@workspace/shared";
 import * as React from "react";
 
 export interface RewardHubLayoutProps {
 	readonly children: React.ReactNode;
 	readonly initialUser?: ServerUser | null;
 	readonly sessionActive?: boolean;
-	readonly initialSessionPermissions?: SessionPermissionsResponse;
 }
 
-function RewardHubSidebarContent({
-	userName,
-	sessionActive,
-	initialSessionPermissions,
-}: {
-	readonly userName: string | null;
-	readonly sessionActive: boolean;
-	readonly initialSessionPermissions?: SessionPermissionsResponse;
-}): React.JSX.Element {
+function RewardHubSidebarContent({ userName }: { readonly userName: string | null }): React.JSX.Element {
 	const { setOpenMobile } = useShellSidebar();
 
 	const handleNavigate = React.useCallback((): void => {
@@ -41,11 +31,14 @@ function RewardHubSidebarContent({
 		}
 	}, [setOpenMobile]);
 
-	return <WebSidebarPanel userName={userName} sessionActive={sessionActive} initialSessionPermissions={initialSessionPermissions} onNavigate={handleNavigate} />;
+	return <WebSidebarPanel userName={userName} onNavigate={handleNavigate} />;
 }
 
-/** Consumer shell — custom sidebar + topbar with command palette. */
-export function RewardHubLayout({ children, initialUser = null, sessionActive = false, initialSessionPermissions }: RewardHubLayoutProps): React.JSX.Element {
+/**
+ * Consumer shell — custom sidebar + topbar with command palette. Capabilities
+ * come from the root `WebAuthorizationProvider`.
+ */
+export function RewardHubLayout({ children, initialUser = null, sessionActive = false }: RewardHubLayoutProps): React.JSX.Element {
 	const { user, login, api } = useAuth();
 	const { isOpen: sidebarOpen, open: openSidebar, close: closeSidebar } = useWebSidebarControl();
 
@@ -83,10 +76,10 @@ export function RewardHubLayout({ children, initialUser = null, sessionActive = 
 	return (
 		<AppPanelShell
 			shellClassName="web-app"
-			banner={<ImpersonationBanner sessionActive={sessionActive} />}
+			banner={<ImpersonationBanner />}
 			sidebarOpen={sidebarOpen}
 			onSidebarOpenChange={handleSidebarOpenChange}
-			sidebar={<RewardHubSidebarContent userName={sidebarUserName} sessionActive={sessionActive} initialSessionPermissions={initialSessionPermissions} />}
+			sidebar={<RewardHubSidebarContent userName={sidebarUserName} />}
 			topbar={<RewardHubTopbar />}>
 			<SidebarPathSync store={useWebSidebarStore} />
 			<WebShellBreadcrumb />

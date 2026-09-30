@@ -103,14 +103,8 @@ import {
 	SampleCategoryIdParamSchema,
 	SampleCategoryListQuerySchema,
 	UpdateSampleCategorySchema,
-} from "../schemas/domain/generated/sample-category.generated";
-import {
-	BulkCreateProductSchema,
-	CreateProductSchema,
-	ProductIdParamSchema,
-	ProductListQuerySchema,
-	UpdateProductSchema,
-} from "../schemas/domain/generated/product.generated";
+} from "../schemas/domain/catalog/sample-category";
+import { BulkCreateProductSchema, CreateProductSchema, ProductIdParamSchema, ProductListQuerySchema, UpdateProductSchema } from "../schemas/domain/catalog/product";
 import { BulkDeleteIdsSchema } from "../schemas/api/bulk-mutation";
 import { CompleteFileUploadSchema, CreateFileUploadUrlSchema, FileDownloadDispositionSchema } from "../schemas/domain/platform/storage";
 import type { ApiVersion } from "./versioning";
@@ -590,7 +584,6 @@ export const apiContract = {
 			input: z.intersection(AdminOrganizationLocationReviewPathInputSchema, AdminOrganizationLocationReviewSchema),
 		}),
 	},
-	// @app-generated:begin sampleCategory
 	sampleCategory: {
 		list: defineContract({ method: "GET", path: apiRoutes.sampleCategory.list, input: SampleCategoryListQuerySchema }),
 		detail: defineContract({ method: "GET", path: apiRoutes.sampleCategory.detail.path, input: SampleCategoryIdParamSchema }),
@@ -601,8 +594,6 @@ export const apiContract = {
 		delete: defineContract({ method: "DELETE", path: apiRoutes.sampleCategory.delete.path, input: SampleCategoryIdParamSchema }),
 		restore: defineContract({ method: "POST", path: apiRoutes.sampleCategory.restore.path, input: SampleCategoryIdParamSchema }),
 	},
-	// @app-generated:end sampleCategory
-	// @app-generated:begin product
 	product: {
 		list: defineContract({ method: "GET", path: apiRoutes.product.list, input: ProductListQuerySchema }),
 		detail: defineContract({ method: "GET", path: apiRoutes.product.detail.path, input: ProductIdParamSchema }),
@@ -613,7 +604,6 @@ export const apiContract = {
 		delete: defineContract({ method: "DELETE", path: apiRoutes.product.delete.path, input: ProductIdParamSchema }),
 		restore: defineContract({ method: "POST", path: apiRoutes.product.restore.path, input: ProductIdParamSchema }),
 	},
-	// @app-generated:end product
 };
 
 /** The full contract tree — used to derive the client router + API pipes. */

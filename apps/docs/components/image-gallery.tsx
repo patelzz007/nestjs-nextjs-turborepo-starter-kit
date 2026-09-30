@@ -29,6 +29,15 @@ const ImageGalleryItemSchema = z.object({
 	alt: z.string(),
 });
 
+type ImageGalleryItem = z.infer<typeof ImageGalleryItemSchema>;
+
+/** Array of items where each malformed entry degrades to `null` (and is dropped) instead of failing the whole gallery. */
+const ImageGalleryItemsSchema = z.array(ImageGalleryItemSchema.nullable().catch(null));
+
+function isImageGalleryItem(item: ImageGalleryItem | null): item is ImageGalleryItem {
+	return item !== null;
+}
+
 export interface ImageGalleryProps {
 	/** JSON-string array of gallery items (emitted by the remark plugin). */
 	readonly items?: string;
@@ -41,15 +50,12 @@ function flattenCaption(value: string): string {
 }
 
 export function ImageGallery({ items, className }: ImageGalleryProps): React.JSX.Element {
-	let parsedItems: z.infer<typeof ImageGalleryItemSchema>[] = [];
+	let parsedItems: ImageGalleryItem[] = [];
 	if (items !== undefined) {
 		try {
-			const raw: unknown = JSON.parse(items);
-			if (Array.isArray(raw)) {
-				parsedItems = raw
-					.map((item) => ImageGalleryItemSchema.safeParse(item))
-					.filter((result): result is { readonly success: true; readonly data: z.infer<typeof ImageGalleryItemSchema> } => result.success)
-					.map((result) => result.data);
+			const parsed = ImageGalleryItemsSchema.safeParse(JSON.parse(items));
+			if (parsed.success) {
+				parsedItems = parsed.data.filter(isImageGalleryItem);
 			}
 		} catch {
 			parsedItems = [];
@@ -71,7 +77,6 @@ export function ImageGallery({ items, className }: ImageGalleryProps): React.JSX
 						className="group/gallery flex flex-col overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md">
 						{/* Screenshot frame — full image, never cropped. */}
 						<div className="bg-dot-grid relative h-56 overflow-hidden bg-muted/40 sm:h-64">
-							{/* eslint-disable-next-line @next/next/no-img-element */}
 							<img
 								src={item.src}
 								alt={item.alt}

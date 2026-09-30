@@ -3,13 +3,14 @@ import type { FastifyRequest } from "fastify";
 declare module "fastify" {
 	interface FastifyRequest {
 		/**
-		 * Authorization context extracted by AuthorizationContextMiddleware.
-		 * Contains common context like organizationId, locationId, resourceId.
+		 * Server-verified tenant context, attached by `AuthorizationGuard` after
+		 * checking the caller's active organization membership / location scope.
+		 * Absent ids were either not requested or not proven — never raw client input.
 		 */
 		authorizationContext?: {
-			organizationId: string | null;
-			locationId: string | null;
-			resourceId: string | null;
+			readonly organizationId?: string;
+			readonly storeId?: string;
+			readonly locationId?: string;
 		};
 	}
 }

@@ -5,14 +5,17 @@ import { Button } from "@workspace/ui/components/form/button";
 import { Label } from "@workspace/ui/components/form/label";
 import type { JSX, SyntheticEvent } from "react";
 
-import { MerchantKybBusinessFields, type MerchantKybFieldValues } from "../kyb/fields";
+import { MerchantKybBusinessFields, type MerchantKybBusinessFieldName, type MerchantKybFieldValues } from "../kyb/fields";
 import { MerchantCategoryPicker } from "./category-picker";
+
+/** The business fields `MerchantKybBusinessFields` can edit. */
+export type BusinessFieldName = MerchantKybBusinessFieldName;
 
 export interface MerchantOnboardingBusinessStepProps {
 	readonly category: MerchantBusinessCategory;
 	readonly values: MerchantKybFieldValues;
 	readonly onCategoryChange: (value: MerchantBusinessCategory) => void;
-	readonly onBusinessFieldChange: (field: "legalName", value: string) => void;
+	readonly onBusinessFieldChange: (field: BusinessFieldName, value: string) => void;
 	readonly onSubmit: (event: SyntheticEvent<HTMLFormElement>) => void;
 }
 

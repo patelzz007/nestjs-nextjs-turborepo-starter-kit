@@ -1,12 +1,13 @@
 import { Injectable } from "@nestjs/common";
+import type { CreateProductInput, Product, ProductListQuery, UpdateProductInput } from "@workspace/shared";
 
-import { GeneratedProductRepository } from "./product.repository.generated";
-import { GeneratedProductService } from "./product.service.generated";
+import { BaseService } from "../../platform/persistence/base.service";
 
-/** Developer-owned service extension point. */
+import { ProductRepository } from "./product.repository";
+
 @Injectable()
-export class ProductService extends GeneratedProductService {
-	public constructor(repository: GeneratedProductRepository) {
+export class ProductService extends BaseService<Product, CreateProductInput, UpdateProductInput, ProductListQuery, ProductRepository> {
+	public constructor(repository: ProductRepository) {
 		super(repository);
 	}
 }

@@ -6,6 +6,7 @@ import { useCallback, useState, type JSX } from "react";
 
 import { resolveAuthErrorMessage } from "../errors";
 import { useAuth } from "../index";
+import { catchCaught } from "../../caught";
 
 export function EmailVerificationPanel(): JSX.Element | null {
 	const { user, api } = useAuth();
@@ -21,17 +22,16 @@ export function EmailVerificationPanel(): JSX.Element | null {
 		setMessage(null);
 		setIsSending(true);
 
-		resendMutation
-			.mutateAsync({ email: user.email })
-			.then((response): void => {
+		void catchCaught(
+			resendMutation.mutateAsync({ email: user.email }).then((response): void => {
 				setMessage(response.data.message);
-			})
-			.catch((err: unknown): void => {
+			}),
+			(err): void => {
 				setError(resolveAuthErrorMessage(err));
-			})
-			.finally((): void => {
-				setIsSending(false);
-			});
+			},
+		).finally((): void => {
+			setIsSending(false);
+		});
 	}, [resendMutation, user]);
 
 	if (user === null) return null;

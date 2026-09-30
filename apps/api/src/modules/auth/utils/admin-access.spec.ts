@@ -1,5 +1,6 @@
 import { ForbiddenException } from "@nestjs/common";
 import { describe, expect, it } from "vitest";
+import { z } from "zod";
 
 import type { AccessTokenPayload, RefreshTokenPayload } from "../services/token.service";
 
@@ -14,8 +15,7 @@ const adminAccessToken: AccessTokenPayload = {
 	isSuperAdmin: false,
 	isEmailVerified: true,
 	hasAdminAccess: true,
-	roles: [],
-	permissions: [],
+	tokenVersion: 1,
 };
 
 const plainUserToken: AccessTokenPayload = {
@@ -30,6 +30,8 @@ const refreshToken: RefreshTokenPayload = {
 	email: "user@example.com",
 	jti: "refresh-jti",
 	tokenType: "refresh",
+	iat: 1_700_000_000,
+	exp: 1_700_604_800,
 };
 
 describe("userHasAdminAccess", () => {
@@ -76,7 +78,10 @@ describe("requireAdminAccessToken", () => {
 			throw new Error("Expected requireAdminAccessToken to throw");
 		} catch (error) {
 			expect(error).toBeInstanceOf(ForbiddenException);
-			const response = (error as ForbiddenException).getResponse() as { readonly message: string; readonly error: string };
+			if (!(error instanceof ForbiddenException)) {
+				throw error;
+			}
+			const response = z.object({ message: z.string(), error: z.string() }).parse(error.getResponse());
 			expect(response.message).toBe("Custom admin message");
 			expect(response.error).toBe(ADMIN_ACCESS_ERROR);
 		}

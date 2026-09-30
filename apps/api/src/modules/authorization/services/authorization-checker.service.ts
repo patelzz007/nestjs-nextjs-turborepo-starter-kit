@@ -149,6 +149,11 @@ export class AuthorizationCheckerService {
 
 	/** Flat capability slug list for FE gating (`GET /auth/permissions`). */
 	public async getUserCapabilitySlugs(userId: string): Promise<readonly CapabilitySlug[]> {
+		// Platform SuperAdmins bypass every backend check, so the UI must not hide what they can do.
+		const user = await this.prisma.user.findFirst({ where: { id: userId, isDeleted: false }, select: { isSuperAdmin: true } });
+		if (user?.isSuperAdmin === true) {
+			return allPlatformCapabilitySlugs();
+		}
 		const auth: CachedAuthorization = await this.resolve(userId);
 		const slugs: CapabilitySlug[] = [];
 		for (const entry of auth.capabilities) {
@@ -187,6 +192,7 @@ export class AuthorizationCheckerService {
 			where: {
 				userId,
 				isDeleted: false,
+				effect: "ALLOW",
 				permission: { isDeleted: false },
 				OR: [{ expiresAt: null }, { expiresAt: { gt: nowMs } }],
 			},
@@ -226,6 +232,7 @@ export class AuthorizationCheckerService {
 			where: {
 				userId,
 				isDeleted: false,
+				effect: "ALLOW",
 				permission: { isDeleted: false },
 				OR: [{ expiresAt: null }, { expiresAt: { gt: nowMs } }],
 			},
@@ -296,6 +303,7 @@ export class AuthorizationCheckerService {
 			where: {
 				userId,
 				isDeleted: false,
+				effect: "ALLOW",
 				permission: { isDeleted: false },
 				OR: [{ expiresAt: null }, { expiresAt: { gt: nowMs } }],
 			},
@@ -412,6 +420,7 @@ export class AuthorizationCheckerService {
 			where: {
 				userId,
 				isDeleted: false,
+				effect: "ALLOW",
 				permission: { isDeleted: false },
 				OR: [{ expiresAt: null }, { expiresAt: { gt: nowMs } }],
 			},
@@ -435,6 +444,26 @@ export class AuthorizationCheckerService {
 				action: up.permission.action,
 				resource: up.permission.resource,
 			});
+		}
+
+		// 6. Explicit DENY overrides remove the permission (DENY on MANAGE removes the whole resource).
+		const deniedOverrides = await this.prisma.userPermission.findMany({
+			where: {
+				userId,
+				isDeleted: false,
+				effect: "DENY",
+				permission: { isDeleted: false },
+				OR: [{ expiresAt: null }, { expiresAt: { gt: nowMs } }],
+			},
+			select: { permission: { select: { action: true, resource: true } } },
+		});
+		for (const [key, permission] of permissionMap) {
+			const denied = deniedOverrides.some(
+				(override) => override.permission.resource === permission.resource && (override.permission.action === permission.action || override.permission.action === "MANAGE"),
+			);
+			if (denied) {
+				permissionMap.delete(key);
+			}
 		}
 
 		const capabilitySet = new Set<string>();
@@ -486,6 +515,11 @@ export class AuthorizationCheckerService {
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
+
+/** Every platform capability (`resource × action`) — the SuperAdmin capability set. */
+function allPlatformCapabilitySlugs(): CapabilitySlug[] {
+	return PermissionResourceSchema.options.flatMap((resource) => PermissionActionSchema.options.map((action) => toPlatformCapabilitySlug(action, resource)));
+}
 
 /**
  * Evaluate whether a set of cached permissions satisfies a requirement.

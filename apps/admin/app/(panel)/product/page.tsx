@@ -1,7 +1,7 @@
 import { createAdminServerCaller } from "@/lib/admin-server-api";
 import { readPaginatedHasNext, readPaginatedTotal, readPaginatedTotalPages } from "@/lib/format/api-envelope";
 
-import ProductView from "./product-view.generated";
+import ProductView from "./product-view";
 
 export const dynamic = "force-dynamic";
 

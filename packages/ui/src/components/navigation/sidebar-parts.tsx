@@ -1,6 +1,7 @@
 "use client";
 
 import { mergeProps } from "@base-ui/react/merge-props";
+import type { BaseUIEvent } from "@base-ui/react/types";
 import { useRender } from "@base-ui/react/use-render";
 import { Button } from "@workspace/ui/components/form/button";
 import { Input } from "@workspace/ui/components/form/input";
@@ -108,8 +109,10 @@ export const SidebarTrigger = React.forwardRef<HTMLButtonElement, React.Componen
 ): React.JSX.Element {
 	const { toggleSidebar, labels } = useSidebar();
 
+	// Button is a base-ui wrapper — its onClick receives `BaseUIEvent`
+	// (native event + preventBaseUIHandler), not a plain React.MouseEvent.
 	const handleSidebarTriggerClick = React.useCallback(
-		(event: Parameters<NonNullable<React.ComponentProps<typeof Button>["onClick"]>>[0]): void => {
+		(event: BaseUIEvent<React.MouseEvent<HTMLButtonElement>>): void => {
 			onClick?.(event);
 			toggleSidebar();
 		},

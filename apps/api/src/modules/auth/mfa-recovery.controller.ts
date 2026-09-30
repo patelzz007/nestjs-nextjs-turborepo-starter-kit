@@ -15,7 +15,7 @@ import { createWrappedArrayDto, createWrappedDto } from "../../common/dto/respon
 import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe";
 import { GetUser } from "./decorators/get-user.decorator";
 import { SuperAdminOnly } from "./decorators/super-admin.decorator";
-import { Authorize } from "../authorization/decorators/authorize.decorator";
+import { Authorize, self } from "../authorization/decorators/authorize.decorator";
 import { MfaRecoveryService } from "./services/mfa-recovery.service";
 
 const WrappedMfaRecoveryStatusResponse = createWrappedDto(MfaRecoveryStatusResponseSchema, "WrappedMfaRecoveryStatusResponse");
@@ -30,7 +30,7 @@ export class MfaRecoveryController {
 	@ApiBearerAuth()
 	@Post("/mfa/recovery")
 	@HttpCode(200)
-	@Authorize({ action: "CREATE", resource: "USER", description: "User can initiate MFA recovery" })
+	@Authorize({ action: "UPDATE", resource: "USER", resourceId: self(), description: "User can initiate MFA recovery for their own account" })
 	@ApiOperation({ summary: "Initiate an admin-reviewed MFA recovery request" })
 	@ApiOkResponse({ type: WrappedMfaRecoveryStatusResponse })
 	public async initiateRecovery(

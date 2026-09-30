@@ -22,8 +22,11 @@ const PreSerializationValueSchema: z.ZodType<PreSerializationValue> = z.lazy(() 
 	]),
 );
 
-/** Parses an unknown Fastify pre-serialization payload. */
-export function parsePreSerializationValue(value: unknown): PreSerializationValue | null {
+/** Any value a route handler can hand to Fastify's `preSerialization` hook. */
+export type PreSerializationPayload = object | string | number | boolean | bigint | symbol | null | undefined;
+
+/** Parses an untyped Fastify pre-serialization payload. */
+export function parsePreSerializationValue(value: PreSerializationPayload): PreSerializationValue | null {
 	const parsed = PreSerializationValueSchema.safeParse(value);
 	if (!parsed.success) {
 		return null;

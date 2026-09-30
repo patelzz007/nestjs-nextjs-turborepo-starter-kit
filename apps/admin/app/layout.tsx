@@ -7,7 +7,7 @@ import { cn } from "@workspace/ui/lib/core/utils";
 import type { Metadata } from "next";
 import { ReduxDevToolsGuard } from "@workspace/ui/components/redux-devtools-guard";
 import { bricolageGrotesque } from "@workspace/ui/fonts/bricolage-grotesque";
-import { Geist, Geist_Mono, JetBrains_Mono } from "next/font/google";
+import { Geist, Geist_Mono, JetBrains_Mono, Rubik } from "next/font/google";
 
 import { AdminClientAuthWrapper } from "@/components/admin-client-auth-wrapper";
 import { AppDocumentShell } from "@workspace/ui/components/app-document-shell";
@@ -24,6 +24,12 @@ const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
 const fontMono = Geist_Mono({
 	subsets: ["latin"],
 	variable: "--font-mono",
+});
+
+const rubik = Rubik({
+	subsets: ["latin"],
+	weight: ["400", "500"],
+	variable: "--font-sidebar",
 });
 
 export const metadata: Metadata = {
@@ -52,7 +58,7 @@ export default function RootLayout({
 
 	return (
 		<AppDocumentShell
-			htmlClassName={cn("antialiased", fontMono.variable, "font-sans", geist.variable, jetbrainsMonoHeading.variable, bricolageGrotesque.variable)}
+			htmlClassName={cn("antialiased", fontMono.variable, "font-sans", geist.variable, jetbrainsMonoHeading.variable, bricolageGrotesque.variable, rubik.variable)}
 			bodyClassName="admin-app">
 			{/* Prevent Redux DevTools extension from serializing React Query / zustand state */}
 			<ReduxDevToolsGuard />

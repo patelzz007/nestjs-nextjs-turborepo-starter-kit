@@ -1,5 +1,6 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from "@nestjs/common";
 import { ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
+import type { z } from "zod";
 
 import {
 	apiPath,
@@ -18,14 +19,14 @@ import { ProductService } from "./product.service";
 
 @ApiTags("Product")
 @Controller(apiPath("/product"))
-export class GeneratedProductController {
-	public constructor(protected readonly service: ProductService) {}
+export class ProductController {
+	public constructor(private readonly service: ProductService) {}
 
 	@RequirePermission("LIST", "PRODUCT")
 	@Get()
 	@ApiOperation({ summary: "List Products" })
 	@ApiOkResponse({ description: "Paginated list of products" })
-	public list(@Query(new ZodValidationPipe(ProductListQuerySchema)) query: Parameters<ProductService["list"]>[0]): ReturnType<ProductService["list"]> {
+	public list(@Query(new ZodValidationPipe(ProductListQuerySchema)) query: z.output<typeof ProductListQuerySchema>): ReturnType<ProductService["list"]> {
 		return this.service.list(query);
 	}
 
@@ -34,7 +35,7 @@ export class GeneratedProductController {
 	@ApiOperation({ summary: "Bulk create products" })
 	@ApiOkResponse({ description: "Created products" })
 	public bulkCreate(
-		@Body(new ZodValidationPipe(BulkCreateProductSchema)) body: { items: Parameters<ProductService["createMany"]>[0] },
+		@Body(new ZodValidationPipe(BulkCreateProductSchema)) body: { items: z.output<typeof BulkCreateProductSchema>["items"] },
 	): ReturnType<ProductService["createMany"]> {
 		return this.service.createMany(body.items);
 	}
@@ -59,7 +60,7 @@ export class GeneratedProductController {
 	@Post()
 	@ApiOperation({ summary: "Create Product" })
 	@ApiOkResponse({ description: "Created product" })
-	public create(@Body(new ZodValidationPipe(CreateProductSchema)) body: Parameters<ProductService["create"]>[0]): ReturnType<ProductService["create"]> {
+	public create(@Body(new ZodValidationPipe(CreateProductSchema)) body: z.output<typeof CreateProductSchema>): ReturnType<ProductService["create"]> {
 		return this.service.create(body);
 	}
 
@@ -69,7 +70,7 @@ export class GeneratedProductController {
 	@ApiOkResponse({ description: "Updated product" })
 	public update(
 		@Param(new ZodValidationPipe(ProductIdParamSchema)) params: { id: string },
-		@Body(new ZodValidationPipe(UpdateProductSchema)) body: Parameters<ProductService["update"]>[1],
+		@Body(new ZodValidationPipe(UpdateProductSchema)) body: z.output<typeof UpdateProductSchema>,
 	): ReturnType<ProductService["update"]> {
 		return this.service.update(params.id, body);
 	}

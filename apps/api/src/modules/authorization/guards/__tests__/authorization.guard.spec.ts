@@ -1,373 +1,258 @@
-import { ExecutionContext, ForbiddenException, UnauthorizedException } from "@nestjs/common";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { UnauthorizedException, type ExecutionContext } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
-import { Test, TestingModule } from "@nestjs/testing";
-import type { FastifyRequest } from "fastify";
+import type { AccessTokenPayload, AuthorizationRequest, AuthorizationResult } from "@workspace/shared";
 
-import { AuthorizationGuard } from "../authorization.guard.refactored";
-import { AuthorizationKernelService } from "../../kernel/authorization-kernel.service";
-import { AuthorizationAuditService } from "../../audit/authorization-audit.service";
+import { accessToken, createHttpContext, testRequest, type TestHttpRequest, type TestRouteMetadata } from "../../../../../test/support/http-execution-context";
+
 import { PrismaService } from "../../../../prisma/prisma.service";
-import type { AuthenticatedUser } from "../../../../types/authenticated-user";
+import { AuthorizationAuditService } from "../../audit/authorization-audit.service";
 import { REQUIRED_PERMISSION_KEY, REQUIRED_PERMISSIONS_KEY, REQUIRED_ROLES_KEY } from "../../constants/authorization.constants";
+import { AUTHORIZE_KEY, self, type AuthorizationRequirement } from "../../decorators/authorize.decorator";
+import { AuthorizationException } from "../../exceptions/authorization.exception";
+import { AuthorizationAuditKernelService } from "../../kernel/authorization-audit-kernel.service";
+import { AuthorizationKernelService } from "../../kernel/authorization-kernel.service";
+import { AuthorizationContextResolver, type RequestTenantContext } from "../../services/authorization-context.resolver";
+import { AuthorizationGuard } from "../authorization.guard";
 
-describe("AuthorizationGuard (Kernel-First)", () => {
-	let guard: AuthorizationGuard;
-	let reflector: Reflector;
-	let kernel: jest.Mocked<AuthorizationKernelService>;
-	let audit: jest.Mocked<AuthorizationAuditService>;
-	let prisma: jest.Mocked<PrismaService>;
+const mocks = vi.hoisted(() => ({
+	authorize: vi.fn(),
+	explain: vi.fn(),
+	can: vi.fn(),
+	hasRoles: vi.fn(),
+	auditResult: vi.fn(),
+	auditLog: vi.fn(),
+	resolve: vi.fn(),
+	userFindUnique: vi.fn(),
+}));
 
-	const mockUser: AuthenticatedUser = {
-		id: "user-123",
-		email: "test@example.com",
-		fullName: "Test User",
-		tokenVersion: 1,
-		isSuperAdmin: false,
-		hasAdminAccess: false,
-	};
+vi.mock("../../kernel/authorization-kernel.service", () => ({
+	AuthorizationKernelService: class {
+		public readonly authorize = mocks.authorize;
+		public readonly explain = mocks.explain;
+		public readonly can = mocks.can;
+		public readonly hasRoles = mocks.hasRoles;
+	},
+}));
 
-	const mockSuperAdmin: AuthenticatedUser = {
-		...mockUser,
-		id: "superadmin-123",
-		isSuperAdmin: true,
-		hasAdminAccess: true,
-	};
+vi.mock("../../kernel/authorization-audit-kernel.service", () => ({
+	AuthorizationAuditKernelService: class {
+		public readonly auditResult = mocks.auditResult;
+	},
+}));
 
-	const createMockContext = (user: Partial<AuthenticatedUser> | undefined, metadata: Record<string, unknown> = {}): ExecutionContext => {
-		const request = {
-			user,
-			url: "/api/v1/test",
-		} as FastifyRequest;
+vi.mock("../../audit/authorization-audit.service", () => ({
+	AuthorizationAuditService: class {
+		public readonly log = mocks.auditLog;
+	},
+}));
 
-		return {
-			switchToHttp: () => ({
-				getRequest: () => request,
-			}),
-			getHandler: () => ({ name: "testHandler" }),
-			getClass: () => ({ name: "TestController" }),
-		} as ExecutionContext;
-	};
+vi.mock("../../services/authorization-context.resolver", () => ({
+	AuthorizationContextResolver: class {
+		public readonly resolve = mocks.resolve;
+	},
+}));
 
-	beforeEach(async () => {
-		const mockKernel = {
-			can: jest.fn(),
-			explain: jest.fn(),
-			authorize: jest.fn(),
-		};
+vi.mock("../../../../prisma/prisma.service", () => ({
+	PrismaService: class {
+		public readonly user = { findUnique: mocks.userFindUnique };
+	},
+}));
 
-		const mockAudit = {
-			log: jest.fn(),
-		};
+function createGuard(): AuthorizationGuard {
+	return new AuthorizationGuard(
+		new Reflector(),
+		new AuthorizationKernelService(),
+		new AuthorizationAuditKernelService(),
+		new AuthorizationAuditService(),
+		new AuthorizationContextResolver(),
+		new PrismaService(),
+	);
+}
 
-		const mockPrisma = {
-			user: {
-				findUnique: jest.fn(),
+function contextFor(
+	user: AccessTokenPayload | undefined,
+	metadata: TestRouteMetadata = {},
+	params: Record<string, string> = {},
+): { request: TestHttpRequest; context: ExecutionContext } {
+	const request = testRequest({ user, params });
+	return { request, context: createHttpContext(request, metadata) };
+}
+
+const noTenant: RequestTenantContext = { verified: {}, requested: {} };
+
+function result(decision: "ALLOW" | "DENY", request: AuthorizationRequest): AuthorizationResult {
+	return { decision, request, evaluation: [] };
+}
+
+describe("AuthorizationGuard", () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+		mocks.resolve.mockResolvedValue(noTenant);
+		mocks.userFindUnique.mockResolvedValue({ tokenVersion: 1 });
+		mocks.authorize.mockResolvedValue(undefined);
+		mocks.can.mockResolvedValue("DENY");
+		mocks.auditResult.mockResolvedValue(undefined);
+		mocks.auditLog.mockResolvedValue(undefined);
+	});
+
+	it("lets anonymous requests through routes without requirements", async () => {
+		await expect(createGuard().canActivate(contextFor(undefined).context)).resolves.toBe(true);
+		expect(mocks.resolve).not.toHaveBeenCalled();
+	});
+
+	it("rejects anonymous requests to protected routes with 401", async () => {
+		const { context } = contextFor(undefined, { [REQUIRED_PERMISSION_KEY]: { action: "READ", resource: "USER" } });
+
+		await expect(createGuard().canActivate(context)).rejects.toBeInstanceOf(UnauthorizedException);
+	});
+
+	it("attaches the verified tenant context for RLS on every authenticated request", async () => {
+		mocks.resolve.mockResolvedValue({ verified: { organizationId: "org-a" }, requested: { organizationId: "org-a" } });
+		const { request, context } = contextFor(accessToken());
+
+		await createGuard().canActivate(context);
+
+		expect(request.authorizationContext).toEqual({ organizationId: "org-a" });
+	});
+
+	it("propagates a forged tenant header rejection", async () => {
+		mocks.resolve.mockRejectedValue(new AuthorizationException());
+
+		await expect(createGuard().canActivate(contextFor(accessToken()).context)).rejects.toBeInstanceOf(AuthorizationException);
+	});
+
+	it("enforces @RequirePermission through kernel.authorize with the verified subject and requested tenant attributes", async () => {
+		mocks.resolve.mockResolvedValue({ verified: { organizationId: "org-a" }, requested: { organizationId: "org-a" } });
+		const { context } = contextFor(accessToken(), { [REQUIRED_PERMISSION_KEY]: { action: "READ", resource: "ORDER" } });
+
+		await createGuard().canActivate(context);
+
+		expect(mocks.authorize).toHaveBeenCalledWith(
+			{ subject: { userId: "user-1", isSuperAdmin: false, organizationId: "org-a" }, action: "READ", resource: "ORDER", resourceAttributes: { organizationId: "org-a" } },
+			expect.objectContaining({ ipAddress: "127.0.0.1", userAgent: "vitest", requestId: "corr-1" }),
+		);
+	});
+
+	it("denies when the kernel denies", async () => {
+		mocks.authorize.mockRejectedValue(new AuthorizationException());
+		const { context } = contextFor(accessToken(), { [REQUIRED_PERMISSION_KEY]: { action: "DELETE", resource: "USER" } });
+
+		await expect(createGuard().canActivate(context)).rejects.toBeInstanceOf(AuthorizationException);
+	});
+
+	it("rejects stale tokens on protected routes", async () => {
+		mocks.userFindUnique.mockResolvedValue({ tokenVersion: 2 });
+		const { context } = contextFor(accessToken(), { [REQUIRED_PERMISSION_KEY]: { action: "READ", resource: "USER" } });
+
+		await expect(createGuard().canActivate(context)).rejects.toBeInstanceOf(UnauthorizedException);
+	});
+
+	describe("@Authorize", () => {
+		it("is enforced with the resource id read from the named route param", async () => {
+			const requirement: AuthorizationRequirement = { action: "UPDATE", resource: "PERMISSION", resourceId: "id" };
+			const { context } = contextFor(accessToken(), { [AUTHORIZE_KEY]: requirement }, { id: "perm-9" });
+
+			await createGuard().canActivate(context);
+
+			expect(mocks.authorize).toHaveBeenCalledWith(expect.objectContaining({ action: "UPDATE", resource: "PERMISSION", resourceId: "perm-9" }), expect.anything());
+		});
+
+		it("resolves self() to the caller for self-service routes", async () => {
+			const requirement: AuthorizationRequirement = { action: "UPDATE", resource: "USER", resourceId: self() };
+
+			await createGuard().canActivate(contextFor(accessToken(), { [AUTHORIZE_KEY]: requirement }).context);
+
+			expect(mocks.authorize).toHaveBeenCalledWith(expect.objectContaining({ resource: "USER", resourceId: "user-1" }), expect.anything());
+		});
+
+		it("fails closed when the declared resource id cannot be resolved", async () => {
+			const requirement: AuthorizationRequirement = { action: "DELETE", resource: "ORDER", resourceId: "id" };
+
+			await expect(createGuard().canActivate(contextFor(accessToken(), { [AUTHORIZE_KEY]: requirement }).context)).rejects.toBeInstanceOf(AuthorizationException);
+			expect(mocks.authorize).not.toHaveBeenCalled();
+		});
+
+		it("never lets declared attributes override the routed tenant", async () => {
+			mocks.resolve.mockResolvedValue({ verified: {}, requested: { organizationId: "org-a" } });
+			const requirement: AuthorizationRequirement = { action: "UPDATE", resource: "ORDER", attributes: { organizationId: "org-evil", status: "PENDING" } };
+
+			await createGuard().canActivate(contextFor(accessToken(), { [AUTHORIZE_KEY]: requirement }).context);
+
+			expect(mocks.authorize).toHaveBeenCalledWith(expect.objectContaining({ resourceAttributes: { organizationId: "org-a", status: "PENDING" } }), expect.anything());
+		});
+	});
+
+	describe("multi-permission and role requirements", () => {
+		const anyOf = {
+			[REQUIRED_PERMISSIONS_KEY]: {
+				mode: "any",
+				permissions: [
+					["UPDATE", "ROLE"],
+					["UPDATE", "PERMISSION"],
+				],
 			},
 		};
 
-		const module: TestingModule = await Test.createTestingModule({
-			providers: [
-				AuthorizationGuard,
-				{
-					provide: Reflector,
-					useValue: new Reflector(),
-				},
-				{
-					provide: AuthorizationKernelService,
-					useValue: mockKernel,
-				},
-				{
-					provide: AuthorizationAuditService,
-					useValue: mockAudit,
-				},
-				{
-					provide: PrismaService,
-					useValue: mockPrisma,
-				},
-			],
-		}).compile();
+		it("ANY mode allows when one permission is allowed and audits it", async () => {
+			mocks.explain.mockImplementation(async (request: AuthorizationRequest) => result(request.resource === "PERMISSION" ? "ALLOW" : "DENY", request));
 
-		guard = module.get<AuthorizationGuard>(AuthorizationGuard);
-		reflector = module.get<Reflector>(Reflector);
-		kernel = module.get(AuthorizationKernelService);
-		audit = module.get(AuthorizationAuditService);
-		prisma = module.get(PrismaService);
-	});
-
-	afterEach(() => {
-		jest.clearAllMocks();
-	});
-
-	describe("Public Routes (No Metadata)", () => {
-		it("should allow public routes with no authorization metadata", async () => {
-			const context = createMockContext(undefined);
-			jest.spyOn(reflector, "getAllAndOverride").mockReturnValue(undefined);
-
-			const result = await guard.canActivate(context);
-
-			expect(result).toBe(true);
-			expect(kernel.can).not.toHaveBeenCalled();
+			await expect(createGuard().canActivate(contextFor(accessToken(), anyOf).context)).resolves.toBe(true);
+			expect(mocks.auditResult).toHaveBeenCalledWith(expect.objectContaining({ decision: "ALLOW" }), expect.anything());
 		});
 
-		it("should compute admin access for authenticated users on public routes", async () => {
-			const context = createMockContext(mockUser);
-			jest.spyOn(reflector, "getAllAndOverride").mockReturnValue(undefined);
-			kernel.can.mockResolvedValue("ALLOW");
-			(prisma.user.findUnique as jest.Mock).mockResolvedValue({ tokenVersion: 1 });
+		it("ANY mode denies and audits every denial when nothing is allowed", async () => {
+			mocks.explain.mockImplementation(async (request: AuthorizationRequest) => result("DENY", request));
 
-			await guard.canActivate(context);
-
-			const request = context.switchToHttp().getRequest<FastifyRequest>();
-			expect((request.user as AuthenticatedUser).hasAdminAccess).toBeDefined();
-		});
-	});
-
-	describe("Authentication", () => {
-		it("should throw UnauthorizedException if user is not authenticated", async () => {
-			const context = createMockContext(undefined);
-			jest.spyOn(reflector, "getAllAndOverride").mockReturnValueOnce({ action: "READ", resource: "USER" }).mockReturnValue(undefined);
-
-			await expect(guard.canActivate(context)).rejects.toThrow(UnauthorizedException);
-			await expect(guard.canActivate(context)).rejects.toMatchObject({
-				message: "Authentication required",
-				error: "UNAUTHENTICATED",
-			});
+			await expect(createGuard().canActivate(contextFor(accessToken(), anyOf).context)).rejects.toBeInstanceOf(AuthorizationException);
+			expect(mocks.auditResult).toHaveBeenCalledTimes(2);
 		});
 
-		it("should reject stale tokens (token version mismatch)", async () => {
-			const context = createMockContext(mockUser);
-			jest.spyOn(reflector, "getAllAndOverride").mockReturnValueOnce({ action: "READ", resource: "USER" }).mockReturnValue(undefined);
-
-			(prisma.user.findUnique as jest.Mock).mockResolvedValue({ tokenVersion: 2 }); // Different version
-
-			await expect(guard.canActivate(context)).rejects.toThrow(UnauthorizedException);
-			await expect(guard.canActivate(context)).rejects.toMatchObject({
-				message: "Token revoked — authorization state changed",
-				error: "TOKEN_VERSION_MISMATCH",
-			});
-		});
-	});
-
-	describe("Super-Admin Bypass", () => {
-		it("should bypass authorization for super-admins", async () => {
-			const context = createMockContext(mockSuperAdmin);
-			jest.spyOn(reflector, "getAllAndOverride").mockReturnValueOnce({ action: "DELETE", resource: "USER" }).mockReturnValue(undefined);
-
-			(prisma.user.findUnique as jest.Mock).mockResolvedValue({ tokenVersion: 1 });
-
-			const result = await guard.canActivate(context);
-
-			expect(result).toBe(true);
-			expect(kernel.can).not.toHaveBeenCalled();
-			expect(audit.log).toHaveBeenCalledWith(
-				expect.objectContaining({
-					action: "SUPER_ADMIN_BYPASS",
-					actorId: "superadmin-123",
-				}),
-			);
-		});
-
-		it("should set hasAdminAccess to true for super-admins", async () => {
-			const context = createMockContext(mockSuperAdmin);
-			jest.spyOn(reflector, "getAllAndOverride").mockReturnValueOnce({ action: "READ", resource: "USER" }).mockReturnValue(undefined);
-
-			(prisma.user.findUnique as jest.Mock).mockResolvedValue({ tokenVersion: 1 });
-
-			await guard.canActivate(context);
-
-			const request = context.switchToHttp().getRequest<FastifyRequest>();
-			expect((request.user as AuthenticatedUser).hasAdminAccess).toBe(true);
-		});
-	});
-
-	describe("Single Permission Check (@RequirePermission)", () => {
-		it("should ALLOW when kernel returns ALLOW", async () => {
-			const context = createMockContext(mockUser);
-			jest.spyOn(reflector, "getAllAndOverride").mockReturnValueOnce({ action: "READ", resource: "USER" }).mockReturnValue(undefined);
-
-			(prisma.user.findUnique as jest.Mock).mockResolvedValue({ tokenVersion: 1 });
-			kernel.can.mockResolvedValue("ALLOW");
-
-			const result = await guard.canActivate(context);
-
-			expect(result).toBe(true);
-			expect(kernel.can).toHaveBeenCalledWith({
-				userId: "user-123",
-				action: "READ",
-				resource: "USER",
-			});
-		});
-
-		it("should DENY when kernel returns DENY", async () => {
-			const context = createMockContext(mockUser);
-			jest.spyOn(reflector, "getAllAndOverride").mockReturnValueOnce({ action: "DELETE", resource: "USER" }).mockReturnValue(undefined);
-
-			(prisma.user.findUnique as jest.Mock).mockResolvedValue({ tokenVersion: 1 });
-			kernel.can.mockResolvedValue("DENY");
-
-			await expect(guard.canActivate(context)).rejects.toThrow(ForbiddenException);
-			await expect(guard.canActivate(context)).rejects.toMatchObject({
-				message: "Insufficient permissions",
-				error: "PERMISSION_DENIED",
-			});
-		});
-	});
-
-	describe("Multi-Permission Check (@RequireAllPermissions)", () => {
-		it("should ALLOW when ALL permissions are granted (AND semantics)", async () => {
-			const context = createMockContext(mockUser);
-			jest
-				.spyOn(reflector, "getAllAndOverride")
-				.mockReturnValueOnce(undefined)
-				.mockReturnValueOnce({
+		it("ALL mode authorizes each permission", async () => {
+			const { context } = contextFor(accessToken(), {
+				[REQUIRED_PERMISSIONS_KEY]: {
 					mode: "all",
 					permissions: [
-						["READ", "USER"],
-						["UPDATE", "USER"],
+						["READ", "ROLE"],
+						["READ", "PERMISSION"],
 					],
-				})
-				.mockReturnValue(undefined);
+				},
+			});
 
-			(prisma.user.findUnique as jest.Mock).mockResolvedValue({ tokenVersion: 1 });
-			kernel.can.mockResolvedValue("ALLOW"); // Both checks return ALLOW
+			await createGuard().canActivate(context);
 
-			const result = await guard.canActivate(context);
-
-			expect(result).toBe(true);
-			expect(kernel.can).toHaveBeenCalledTimes(3); // 2 permission checks + 1 admin dashboard check
+			expect(mocks.authorize).toHaveBeenCalledTimes(2);
 		});
 
-		it("should DENY when ANY permission is missing (AND semantics)", async () => {
-			const context = createMockContext(mockUser);
-			jest
-				.spyOn(reflector, "getAllAndOverride")
-				.mockReturnValueOnce(undefined)
-				.mockReturnValueOnce({
-					mode: "all",
-					permissions: [
-						["READ", "USER"],
-						["DELETE", "USER"],
-					],
-				})
-				.mockReturnValue(undefined);
+		it("evaluates role requirements natively (no pseudo ASSUME action)", async () => {
+			const roles = { [REQUIRED_ROLES_KEY]: { mode: "any", roles: ["Admin"] } };
+			mocks.hasRoles.mockResolvedValue(false);
 
-			(prisma.user.findUnique as jest.Mock).mockResolvedValue({ tokenVersion: 1 });
-			kernel.can.mockResolvedValueOnce("ALLOW").mockResolvedValueOnce("DENY"); // Second check fails
+			await expect(createGuard().canActivate(contextFor(accessToken(), roles).context)).rejects.toBeInstanceOf(AuthorizationException);
+			expect(mocks.hasRoles).toHaveBeenCalledWith("user-1", ["Admin"], "any");
 
-			await expect(guard.canActivate(context)).rejects.toThrow(ForbiddenException);
-			await expect(guard.canActivate(context)).rejects.toMatchObject({
-				message: "Missing required permissions",
-				error: "PERMISSION_DENIED",
-			});
+			mocks.hasRoles.mockResolvedValue(true);
+			await expect(createGuard().canActivate(contextFor(accessToken(), roles).context)).resolves.toBe(true);
 		});
 	});
 
-	describe("Multi-Permission Check (@RequireAnyPermission)", () => {
-		it("should ALLOW when ANY permission is granted (OR semantics)", async () => {
-			const context = createMockContext(mockUser);
-			jest
-				.spyOn(reflector, "getAllAndOverride")
-				.mockReturnValueOnce(undefined)
-				.mockReturnValueOnce({
-					mode: "any",
-					permissions: [
-						["READ", "USER"],
-						["DELETE", "USER"],
-					],
-				})
-				.mockReturnValue(undefined);
+	it("audits the SuperAdmin bypass on protected routes", async () => {
+		const superAdmin = accessToken({ isSuperAdmin: true });
+		const { context } = contextFor(superAdmin, { [REQUIRED_PERMISSION_KEY]: { action: "DELETE", resource: "USER" } });
 
-			(prisma.user.findUnique as jest.Mock).mockResolvedValue({ tokenVersion: 1 });
-			kernel.can.mockResolvedValueOnce("ALLOW").mockResolvedValueOnce("DENY"); // First check passes
-
-			const result = await guard.canActivate(context);
-
-			expect(result).toBe(true);
-		});
-
-		it("should DENY when ALL permissions are missing (OR semantics)", async () => {
-			const context = createMockContext(mockUser);
-			jest
-				.spyOn(reflector, "getAllAndOverride")
-				.mockReturnValueOnce(undefined)
-				.mockReturnValueOnce({
-					mode: "any",
-					permissions: [
-						["DELETE", "USER"],
-						["MANAGE", "SYSTEM"],
-					],
-				})
-				.mockReturnValue(undefined);
-
-			(prisma.user.findUnique as jest.Mock).mockResolvedValue({ tokenVersion: 1 });
-			kernel.can.mockResolvedValue("DENY"); // All checks fail
-
-			await expect(guard.canActivate(context)).rejects.toThrow(ForbiddenException);
-			await expect(guard.canActivate(context)).rejects.toMatchObject({
-				message: "Missing any of the required permissions",
-				error: "PERMISSION_DENIED",
-			});
-		});
+		await expect(createGuard().canActivate(context)).resolves.toBe(true);
+		expect(mocks.authorize).not.toHaveBeenCalled();
+		expect(mocks.auditLog).toHaveBeenCalledWith(expect.objectContaining({ action: "SUPER_ADMIN_BYPASS", actorId: "user-1" }));
+		expect(superAdmin.hasAdminAccess).toBe(true);
 	});
 
-	describe("Admin Access Computation", () => {
-		it("should compute hasAdminAccess based on ADMIN_DASHBOARD permission", async () => {
-			const context = createMockContext(mockUser);
-			jest.spyOn(reflector, "getAllAndOverride").mockReturnValueOnce({ action: "READ", resource: "USER" }).mockReturnValue(undefined);
+	it("computes hasAdminAccess from the kernel", async () => {
+		const plain = accessToken();
+		mocks.can.mockResolvedValue("ALLOW");
 
-			(prisma.user.findUnique as jest.Mock).mockResolvedValue({ tokenVersion: 1 });
-			kernel.can.mockImplementation(async ({ action, resource }) => {
-				if (action === "READ" && resource === "ADMIN_DASHBOARD") {
-					return "ALLOW";
-				}
-				return "ALLOW";
-			});
+		await createGuard().canActivate(contextFor(plain).context);
 
-			await guard.canActivate(context);
-
-			const request = context.switchToHttp().getRequest<FastifyRequest>();
-			expect((request.user as AuthenticatedUser).hasAdminAccess).toBe(true);
-		});
-
-		it("should set hasAdminAccess to false when user lacks ADMIN_DASHBOARD permission", async () => {
-			const context = createMockContext(mockUser);
-			jest.spyOn(reflector, "getAllAndOverride").mockReturnValueOnce({ action: "READ", resource: "USER" }).mockReturnValue(undefined);
-
-			(prisma.user.findUnique as jest.Mock).mockResolvedValue({ tokenVersion: 1 });
-			kernel.can.mockImplementation(async ({ action, resource }) => {
-				if (action === "READ" && resource === "ADMIN_DASHBOARD") {
-					return "DENY";
-				}
-				return "ALLOW";
-			});
-
-			await guard.canActivate(context);
-
-			const request = context.switchToHttp().getRequest<FastifyRequest>();
-			expect((request.user as AuthenticatedUser).hasAdminAccess).toBe(false);
-		});
-	});
-
-	describe("Integration", () => {
-		it("should handle full authorization flow", async () => {
-			const context = createMockContext(mockUser);
-			jest.spyOn(reflector, "getAllAndOverride").mockReturnValueOnce({ action: "CREATE", resource: "ORDER" }).mockReturnValue(undefined);
-
-			(prisma.user.findUnique as jest.Mock).mockResolvedValue({ tokenVersion: 1 });
-			kernel.can.mockResolvedValue("ALLOW");
-
-			const result = await guard.canActivate(context);
-
-			expect(result).toBe(true);
-			expect(prisma.user.findUnique).toHaveBeenCalledWith({
-				where: { id: "user-123" },
-				select: { tokenVersion: true },
-			});
-			expect(kernel.can).toHaveBeenCalledWith({
-				userId: "user-123",
-				action: "CREATE",
-				resource: "ORDER",
-			});
-		});
+		expect(plain.hasAdminAccess).toBe(true);
+		expect(mocks.can).toHaveBeenCalledWith(expect.objectContaining({ action: "READ", resource: "ADMIN_DASHBOARD" }));
 	});
 });

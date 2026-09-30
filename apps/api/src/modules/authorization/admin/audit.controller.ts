@@ -1,3 +1,4 @@
+import type { PermissionAuditLog } from "@prisma/client";
 import { Controller, Get, Query } from "@nestjs/common";
 import { ApiOkResponse, ApiTags } from "@nestjs/swagger";
 
@@ -23,6 +24,15 @@ interface AuditQueryParams {
  *
  * All queries require `AUDIT_LOG:READ` permission.
  */
+/** One page of permission audit log entries. */
+interface AuditLogPage {
+	readonly items: readonly PermissionAuditLog[];
+	readonly total: number;
+	readonly page: number;
+	readonly limit: number;
+	readonly totalPages: number;
+}
+
 @Controller(apiPath("/admin/audit"))
 @ApiTags("Audit Log")
 export class AuditController {
@@ -31,7 +41,7 @@ export class AuditController {
 	@Get()
 	@RequirePermission("READ", "AUDIT_LOG")
 	@ApiOkResponse({ description: "Paginated audit log entries" })
-	public async list(@Query() query: AuditQueryParams): Promise<unknown> {
+	public async list(@Query() query: AuditQueryParams): Promise<AuditLogPage> {
 		const page: number = Math.max(1, Number(query.page ?? "1"));
 		const limit: number = Math.min(100, Math.max(1, Number(query.limit ?? "20")));
 		const skip: number = (page - 1) * limit;

@@ -7,7 +7,7 @@ export type MerchantApiKeyDbClient = Pick<PrismaClient, "organizationApiKey">;
 
 const API_KEY_LIST_INCLUDE = {
 	location: { select: { name: true } },
-} as const satisfies Prisma.OrganizationApiKeyInclude;
+} satisfies Prisma.OrganizationApiKeyInclude;
 
 export type OrganizationApiKeyListRow = Prisma.OrganizationApiKeyGetPayload<{ include: typeof API_KEY_LIST_INCLUDE }>;
 

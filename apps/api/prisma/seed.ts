@@ -1,6 +1,7 @@
 import "dotenv/config";
 
 import { prisma } from "./seed/client";
+import { requireRow } from "./seed/require-row";
 import { seedAbacConditions } from "./seed/abac";
 import { seedMerchantCapabilities } from "./seed/capabilities";
 import { createApiKeys, createApiKeyUsageLogs } from "./seed/api-keys";
@@ -17,6 +18,7 @@ import { cleanupRewardSeedData, printRewardSeedCredentials, seedRewards } from "
 import { seedSamplePlatform } from "./seed/sample-platform";
 import { seedProducts } from "./seed/products";
 import { seedAuthorizationKernel } from "./seed/authorization-kernel";
+import { seedStores } from "./seed/stores";
 
 // ---------------------------------------------------------------------------
 // Orchestrator — runs the per-domain seeders in dependency order.
@@ -59,7 +61,10 @@ async function main() {
 
 	console.log("Creating users...");
 	const users = await createUsers();
-	const userRole = roles.find((r) => r.name === "User")!;
+	const userRole = requireRow(
+		roles.find((r) => r.name === "User"),
+		"role User",
+	);
 	const extraUsers = await generateAdditionalSeedData(roles, userRole);
 	const allUsers = [...users, ...extraUsers];
 	console.log(`✅ ${allUsers.length} users (${users.length} primary + ${extraUsers.length} additional)`);
@@ -135,7 +140,10 @@ async function main() {
 	await cleanupRewardSeedData();
 	console.log("✅ Rewards seed cleanup done");
 
-	const adminUser = users.find((u) => u.email === "admin@example.com")!;
+	const adminUser = requireRow(
+		users.find((u) => u.email === "admin@example.com"),
+		"user admin@example.com",
+	);
 
 	console.log("Seeding platform guardrail policies...");
 	await seedPlatformGuardrails(adminUser);
@@ -146,6 +154,10 @@ async function main() {
 	console.log(
 		`✅ Rewards: ${rewardSummary.organizations} organizations, ${rewardSummary.rewards} rewards, ${rewardSummary.claims} claims, ${rewardSummary.redemptions} redemptions`,
 	);
+	console.log("Seeding stores and store memberships...");
+	const storeSummary = await seedStores(roles);
+	console.log(`✅ Stores: ${String(storeSummary.stores)} stores, ${String(storeSummary.memberships)} store memberships`);
+
 	console.log(
 		`✅ Organizations: ${ORGANIZATION_SEED_SLUGS.kl}, ${ORGANIZATION_SEED_SLUGS.mlk} (${ORGANIZATION_SEED_IDS.klOrganization}, ${ORGANIZATION_SEED_IDS.mlkOrganization})`,
 	);
@@ -188,11 +200,15 @@ jack.anderson@example.com /  Jack@123        (User role · PRO)
 	printRewardSeedCredentials();
 }
 
-main()
-	.catch((e: unknown) => {
-		console.error("❌ Seed failed:", e);
+async function run(): Promise<void> {
+	try {
+		await main();
+	} catch (error) {
+		console.error("❌ Seed failed:", error);
 		process.exit(1);
-	})
-	.finally(async () => {
+	} finally {
 		await prisma.$disconnect();
-	});
+	}
+}
+
+void run();

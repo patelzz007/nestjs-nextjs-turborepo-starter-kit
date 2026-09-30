@@ -15,7 +15,7 @@ describe("EmailTemplateRegistry", () => {
 	it("covers every key in the shared EmailTemplateKeySchema (and nothing extra)", () => {
 		const schemaKeys: readonly string[] = EmailTemplateKeySchema.options;
 		const registryKeys: readonly string[] = Object.keys(EMAIL_TEMPLATE_REGISTRY);
-		expect(registryKeys.sort()).toEqual([...schemaKeys].sort());
+		expect([...registryKeys].sort()).toEqual([...schemaKeys].sort());
 	});
 
 	it("every registry entry builds a template with a valid preview", () => {

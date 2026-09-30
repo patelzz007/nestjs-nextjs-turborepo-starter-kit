@@ -10,7 +10,7 @@ import { setMerchantActorOnRequest } from "../types/api-key-auth-request";
 export class MerchantActorInterceptor implements NestInterceptor {
 	public constructor(private readonly merchantRequestAuth: MerchantRequestAuthService) {}
 
-	public intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
+	public intercept<T>(context: ExecutionContext, next: CallHandler<T>): Observable<T> {
 		const request: FastifyRequest = context.switchToHttp().getRequest<FastifyRequest>();
 		const routeParams = request.params;
 		const orgSlug =

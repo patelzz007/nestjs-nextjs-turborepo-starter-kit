@@ -6,7 +6,8 @@
 --
 --   pnpm db:migrate | db:deploy | db:reset | db:push
 --
--- via `scripts/apply-rls.ts` (`01-acl-location-access.sql` → this file → other fragments → `99`).
+-- via `scripts/apply-rls.ts` — apply order + fresh-database validation live in
+-- `RLS_APPLY_ORDER` (scripts/rls-apply-plan.ts).
 -- See prisma/rls/README.md and docs/rbac-acl-rls-architecture.md.
 -- ============================================================================
 
@@ -27,27 +28,11 @@ GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO app_runtime;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO app_runtime;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO app_runtime;
 
--- ── 2. RLS helper functions ────────────────────────────────────────────────
-
-CREATE OR REPLACE FUNCTION app_rls_bypass() RETURNS boolean
-LANGUAGE sql STABLE AS $$
-  SELECT COALESCE(NULLIF(current_setting('app.rls_bypass', true), ''), 'false')::boolean;
-$$;
-
-CREATE OR REPLACE FUNCTION app_current_user_id() RETURNS text
-LANGUAGE sql STABLE AS $$
-  SELECT NULLIF(current_setting('app.current_user_id', true), '');
-$$;
-
-CREATE OR REPLACE FUNCTION app_current_organization_id() RETURNS text
-LANGUAGE sql STABLE AS $$
-  SELECT NULLIF(current_setting('app.current_organization_id', true), '');
-$$;
-
-CREATE OR REPLACE FUNCTION app_owns(owner_id text) RETURNS boolean
-LANGUAGE sql STABLE AS $$
-  SELECT app_rls_bypass() OR (app_current_user_id() IS NOT NULL AND app_current_user_id() = owner_id);
-$$;
+-- ── 2. EXECUTE grants for base helpers ─────────────────────────────────────
+-- Definitions live in `prisma/rls/00-app-helpers.sql` (applied first —
+-- `01-acl-location-access.sql` calls them, so they must predate this bundle).
+-- Only the grants happen here, after the role from §1 exists. EXECUTE on every
+-- helper (including `01`'s) is re-applied by `99-app-runtime-grants.sql`.
 
 GRANT EXECUTE ON FUNCTION app_rls_bypass() TO app_runtime;
 GRANT EXECUTE ON FUNCTION app_current_user_id() TO app_runtime;
@@ -600,6 +585,8 @@ BEGIN
     'organizations',
     'organization_slug_history',
     'organization_locations',
+    'stores',
+    'store_memberships',
     'organization_memberships',
     'organization_membership_location_scopes',
     'organization_merchant_profiles',
@@ -661,6 +648,35 @@ CREATE POLICY organization_locations_member ON public.organization_locations
     OR app_organization_member_of(organization_id)
   );
 
+-- Stores: organization members read their org's stores; store members read their store.
+-- Writes happen through location sagas / seeds (bypass) — stores mirror locations.
+DROP POLICY IF EXISTS stores_member ON public.stores;
+CREATE POLICY stores_member ON public.stores
+  USING (
+    app_rls_bypass()
+    OR app_tenant_organization_member_of(organization_id)
+    OR app_organization_member_of(organization_id)
+    OR EXISTS (
+      SELECT 1
+      FROM public.store_memberships sm
+      WHERE sm.store_id = stores.id
+        AND sm.user_id = app_current_user_id()
+        AND sm.status = 'ACTIVE'
+        AND sm.is_deleted = false
+    )
+  )
+  WITH CHECK (app_rls_bypass());
+
+-- Store memberships: a user sees their own rows; organization members see the org's rows.
+DROP POLICY IF EXISTS store_memberships_member ON public.store_memberships;
+CREATE POLICY store_memberships_member ON public.store_memberships
+  USING (
+    app_rls_bypass()
+    OR user_id = app_current_user_id()
+    OR app_tenant_organization_member_of(organization_id)
+  )
+  WITH CHECK (app_rls_bypass());
+
 DROP POLICY IF EXISTS organization_memberships_member ON public.organization_memberships;
 CREATE POLICY organization_memberships_member ON public.organization_memberships
   USING (app_rls_bypass() OR app_tenant_organization_member_of(organization_id))
@@ -721,8 +737,7 @@ CREATE POLICY authorization_policy_simulations_bypass ON public.authorization_po
   USING (app_rls_bypass())
   WITH CHECK (app_rls_bypass());
 
--- @app-generated:begin SampleCategory
--- Generated RLS for SampleCategory (admin-only)
+-- RLS for SampleCategory (admin-only)
 ALTER TABLE sample_category ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS sample_category_select ON sample_category;
 DROP POLICY IF EXISTS sample_category_insert ON sample_category;
@@ -732,9 +747,7 @@ CREATE POLICY sample_category_select ON sample_category FOR SELECT USING (app_rl
 CREATE POLICY sample_category_insert ON sample_category FOR INSERT WITH CHECK (app_rls_bypass());
 CREATE POLICY sample_category_update ON sample_category FOR UPDATE USING (app_rls_bypass()) WITH CHECK (app_rls_bypass());
 CREATE POLICY sample_category_delete ON sample_category FOR DELETE USING (app_rls_bypass());
--- @app-generated:end SampleCategory
--- @app-generated:begin Product
--- Generated RLS for Product (admin-only)
+-- RLS for Product (admin-only)
 ALTER TABLE product ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS product_select ON product;
 DROP POLICY IF EXISTS product_insert ON product;
@@ -744,4 +757,3 @@ CREATE POLICY product_select ON product FOR SELECT USING (app_rls_bypass());
 CREATE POLICY product_insert ON product FOR INSERT WITH CHECK (app_rls_bypass());
 CREATE POLICY product_update ON product FOR UPDATE USING (app_rls_bypass()) WITH CHECK (app_rls_bypass());
 CREATE POLICY product_delete ON product FOR DELETE USING (app_rls_bypass());
--- @app-generated:end Product

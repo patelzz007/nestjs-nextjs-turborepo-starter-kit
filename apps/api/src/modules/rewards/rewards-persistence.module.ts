@@ -1,4 +1,4 @@
-import { Module } from "@nestjs/common";
+import { Module, type Provider } from "@nestjs/common";
 
 import { PrismaModule } from "../../prisma/prisma.module";
 
@@ -15,7 +15,7 @@ import { RewardReferralRepository } from "./repositories/reward-referral.reposit
 import { RewardRepository } from "./repositories/reward.repository";
 import { RewardUserRepository } from "./repositories/reward-user.repository";
 
-const REWARD_REPOSITORIES = [
+const REWARD_REPOSITORIES: readonly Provider[] = [
 	RewardRepository,
 	RewardClaimRepository,
 	RewardRedemptionRepository,
@@ -28,7 +28,7 @@ const REWARD_REPOSITORIES = [
 	RewardUserRepository,
 	OrganizationKybDocumentRepository,
 	MerchantApiKeyRepository,
-] as const;
+];
 
 @Module({
 	imports: [PrismaModule],

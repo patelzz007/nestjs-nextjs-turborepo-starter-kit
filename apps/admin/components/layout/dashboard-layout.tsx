@@ -18,7 +18,12 @@ import { buildSidebarView } from "@/lib/navigation/menu";
 import { filterCompiledSidebarMenu } from "@/lib/navigation/filter-menu-by-capabilities";
 import { SIDEBAR_MENU } from "@/lib/navigation/sidebar-menu";
 import { resolvePinnedMenuItems } from "@/lib/navigation/pinned-items";
-import { useSessionCapabilities } from "@/lib/session/capabilities";
+import { ADMIN_ROUTE_AUTHORIZATION, filterSuperAdminOnlyMenu } from "@/lib/navigation/route-authorization";
+import { buildSearchableItems } from "@/lib/palette/search";
+import { useSessionPermissionsQuery } from "@/lib/session/capabilities";
+import { useSuperAdminStatus } from "@/lib/session/super-admin";
+import { RouteAuthorizationGuard } from "@/components/access/route-authorization-guard";
+import { AuthorizedNavigationProvider } from "@/components/layout/authorized-navigation";
 import { ADMIN_SIDEBAR_LABELS } from "@/lib/sidebar-labels";
 import { useAdminBreadcrumb } from "@/components/common/admin-breadcrumb";
 import { AdminSidebarPanel } from "@/components/layout/sidebar/sidebar";
@@ -29,8 +34,9 @@ import { ScrollToTop } from "@workspace/ui/components/navigation/scroll-to-top";
 import { useCommandPaletteStore } from "@/stores/command-palette-store";
 import { useSidebarStore } from "@/stores/sidebar-store";
 import { SidebarPathSync } from "@workspace/client/lib/sidebar/sidebar-path-sync";
+import { CapabilitiesProvider } from "@workspace/client/lib/auth/can";
 import type { CompiledSidebarMenuData } from "@workspace/client/lib/sidebar/sidebar-menu-schema";
-import type { CapabilitySlug, SessionPermissionsResponse } from "@workspace/shared";
+import type { SessionPermissionsResponse } from "@workspace/shared";
 import type { FooterAction, SidebarUser } from "@/lib/navigation/sidebar";
 
 const SIDEBAR_STORAGE = createNoopSidebarStorage();
@@ -51,7 +57,11 @@ export interface DashboardLayoutProps {
 	/** Optional notification counts keyed by compiled menu item id. */
 	readonly sidebarBadges?: Readonly<Record<string, string | number>>;
 	readonly initialSessionPermissions?: SessionPermissionsResponse;
+	/** Server-evaluated feature flags; items/routes behind a disabled flag are hidden. */
+	readonly enabledFeatureFlags?: readonly string[];
 }
+
+const NO_FEATURE_FLAGS: readonly string[] = [];
 
 function useTrailDocumentTitle(): void {
 	const { status } = useAdminBreadcrumb();
@@ -97,7 +107,15 @@ function ShellBreadcrumb(): React.JSX.Element {
 	);
 }
 
-export function DashboardLayout({ user, onLogout, footerActions = [], children, sidebarBadges = {}, initialSessionPermissions }: DashboardLayoutProps): React.JSX.Element {
+export function DashboardLayout({
+	user,
+	onLogout,
+	footerActions = [],
+	children,
+	sidebarBadges = {},
+	initialSessionPermissions,
+	enabledFeatureFlags = NO_FEATURE_FLAGS,
+}: DashboardLayoutProps): React.JSX.Element {
 	useTrailDocumentTitle();
 	const router = useRouter();
 	const isOpen = useSidebarStore((s) => s.isOpen);
@@ -118,7 +136,8 @@ export function DashboardLayout({ user, onLogout, footerActions = [], children, 
 	const defaultWorkspaces = useDefaultWorkspaces();
 	const currentPage = pathname;
 	const [activeWorkspaceId, setActiveWorkspaceId] = React.useState<string>("default");
-	const { capabilities, isReady: isCapabilitiesReady } = useSessionCapabilities(initialSessionPermissions);
+	const { capabilities, isResolved: isPermissionsResolved } = useSessionPermissionsQuery(initialSessionPermissions);
+	const superAdmin = useSuperAdminStatus();
 
 	const displayMenu = React.useMemo(
 		(): CompiledSidebarMenuData => ({
@@ -129,21 +148,22 @@ export function DashboardLayout({ user, onLogout, footerActions = [], children, 
 		[menu],
 	);
 
-	const filterCapabilities = React.useMemo((): readonly CapabilitySlug[] => {
-		if (isCapabilitiesReady && capabilities.length > 0) {
-			return capabilities;
-		}
-		return initialSessionPermissions?.capabilities ?? [];
-	}, [capabilities, initialSessionPermissions?.capabilities, isCapabilitiesReady]);
+	// One authorized menu drives the sidebar, the command palette, and pinned
+	// favorites: `permission allowed AND feature enabled` (AND super admin for
+	// `@SuperAdminOnly` pages).
+	const filteredMenu = React.useMemo(
+		() => filterSuperAdminOnlyMenu(filterCompiledSidebarMenu(displayMenu, capabilities, { enabledFeatureFlags }), ADMIN_ROUTE_AUTHORIZATION, superAdmin.isSuperAdmin),
+		[displayMenu, capabilities, enabledFeatureFlags, superAdmin.isSuperAdmin],
+	);
 
-	const filteredMenu = React.useMemo(() => filterCompiledSidebarMenu(displayMenu, filterCapabilities), [displayMenu, filterCapabilities]);
+	const searchableItems = React.useMemo(() => buildSearchableItems(filteredMenu), [filteredMenu]);
 
 	const view = React.useMemo(
-		() => buildSidebarView({ menu: filteredMenu, pathname: currentPage, sectionOrder, searchQuery, isHighlightParentItem: false }),
+		() => buildSidebarView({ menu: filteredMenu, pathname: currentPage, sectionOrder, searchQuery }),
 		[filteredMenu, currentPage, sectionOrder, searchQuery],
 	);
 
-	const pinnedItems = React.useMemo(() => resolvePinnedMenuItems(pinnedUrls), [pinnedUrls]);
+	const pinnedItems = React.useMemo(() => resolvePinnedMenuItems(pinnedUrls, searchableItems), [pinnedUrls, searchableItems]);
 
 	const expandedItems = useRouteExpandedItems(currentPage, storeExpandedItems, view.routeState.autoExpandedItems, resetExpandedItems);
 
@@ -247,24 +267,34 @@ export function DashboardLayout({ user, onLogout, footerActions = [], children, 
 	);
 
 	return (
-		<SidebarProvider open={isOpen} onOpenChange={handleSidebarOpenChange} labels={DEFAULT_SIDEBAR_LABELS} storage={SIDEBAR_STORAGE} badges={sidebarBadges}>
-			<SidebarPathSync store={useSidebarStore} />
-			<Button type="button" variant="ghost" onClick={handleSkipToContent} className={SKIP_TO_CONTENT_CLASS}>
-				{ADMIN_SIDEBAR_LABELS.skipToContent}
-			</Button>
-			<Sidebar collapsible="offcanvas" className="admin-shell-sidebar border-e border-sidebar-border bg-card">
-				<AdminSidebarPanel {...sidebarProps} />
-			</Sidebar>
-			<SidebarInset className={cn("flex h-svh min-w-0 flex-col overflow-hidden bg-background")}>
-				<Topbar user={user} onLogout={onLogout} />
-				<main id="main-content" tabIndex={-1} className="flex-1 overflow-y-auto overscroll-none outline-none">
-					<PanelShellContent>
-						<ShellBreadcrumb />
-						{children}
-					</PanelShellContent>
-					<ScrollToTop threshold={300} />
-				</main>
-			</SidebarInset>
-		</SidebarProvider>
+		<CapabilitiesProvider capabilities={capabilities}>
+			<AuthorizedNavigationProvider searchableItems={searchableItems}>
+				<SidebarProvider open={isOpen} onOpenChange={handleSidebarOpenChange} labels={DEFAULT_SIDEBAR_LABELS} storage={SIDEBAR_STORAGE} badges={sidebarBadges}>
+					<SidebarPathSync store={useSidebarStore} />
+					<Button type="button" variant="ghost" onClick={handleSkipToContent} className={SKIP_TO_CONTENT_CLASS}>
+						{ADMIN_SIDEBAR_LABELS.skipToContent}
+					</Button>
+					<Sidebar collapsible="offcanvas" className="admin-shell-sidebar border-e border-sidebar-border bg-card">
+						<AdminSidebarPanel {...sidebarProps} />
+					</Sidebar>
+					<SidebarInset className={cn("flex h-svh min-w-0 flex-col overflow-hidden bg-background")}>
+						<Topbar user={user} onLogout={onLogout} />
+						<main id="main-content" tabIndex={-1} className="flex-1 overflow-y-auto overscroll-none outline-none">
+							<PanelShellContent>
+								<ShellBreadcrumb />
+								<RouteAuthorizationGuard
+									rules={ADMIN_ROUTE_AUTHORIZATION}
+									enabledFeatureFlags={enabledFeatureFlags}
+									isResolved={isPermissionsResolved}
+									superAdmin={superAdmin}>
+									{children}
+								</RouteAuthorizationGuard>
+							</PanelShellContent>
+							<ScrollToTop threshold={300} />
+						</main>
+					</SidebarInset>
+				</SidebarProvider>
+			</AuthorizedNavigationProvider>
+		</CapabilitiesProvider>
 	);
 }

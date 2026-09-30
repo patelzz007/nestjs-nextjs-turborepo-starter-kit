@@ -5,7 +5,7 @@ import { z } from "zod";
 import { createDataTableLabels } from "@/lib/data-table/labels";
 import { buildReadOnlyTableCheckbox } from "@/lib/data-table/capabilities";
 import { DataTableMobileCard } from "@/lib/data-table/mobile-card";
-import { readPaginatedNextCursor, readPaginatedTotal, stubPaginatedMeta } from "@/lib/format/api-envelope";
+import { readPaginatedNextCursor, readPaginatedTotal, stubPaginatedMeta, successEnvelope } from "@/lib/format/api-envelope";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { useManualHybridPagination } from "@/lib/data-table/use-manual-cursor-pagination";
 import { DataTableSearchToolbar } from "@/components/common/data-table-search-toolbar";
@@ -83,11 +83,7 @@ export default function UsersAllTable({
 	const initialQueryData = React.useMemo(
 		() =>
 			initialUsers !== undefined
-				? {
-						success: true as const,
-						data: [...initialUsers],
-						meta: stubPaginatedMeta(20, initialTotal ?? initialUsers.length, 1, initialTotalPages ?? 1, initialHasNext ?? false),
-					}
+				? successEnvelope([...initialUsers], stubPaginatedMeta(20, initialTotal ?? initialUsers.length, 1, initialTotalPages ?? 1, initialHasNext ?? false))
 				: undefined,
 		[initialUsers, initialHasNext, initialTotal, initialTotalPages],
 	);

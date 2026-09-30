@@ -1,4 +1,7 @@
 import type { Prisma } from "@prisma/client";
+import { PolicyConditionsSchema, type PolicyConditions } from "@workspace/shared";
+
+import { parsePrismaInputJson } from "../../src/common/utils/prisma-json";
 
 import { prisma } from "./client";
 
@@ -73,90 +76,52 @@ export async function seedAuthorizationKernel(
 
 	await prisma.resourceAcl.createMany({ data: acls, skipDuplicates: true });
 
+	// Conditions use the Zod-validated policy DSL (`PolicyConditionsSchema`) —
+	// never executable code. The policy engine fails closed on malformed rules.
+	const completedOrderLock: PolicyConditions = {
+		condition: { field: "order.status", operator: "equals", value: "COMPLETED" },
+	};
+	const refundLimit: PolicyConditions = {
+		all: [
+			{ condition: { field: "payment.status", operator: "equals", value: "PAID" } },
+			{ condition: { field: "payment.amount", operator: "less_than_or_equals", value: 500 } },
+		],
+	};
+	const sameOrganizationInventory: PolicyConditions = {
+		condition: { field: "inventory.organizationId", operator: "equals", valueRef: "$user.organizationId" },
+	};
+
 	const policies: Prisma.PolicyDefinitionCreateManyInput[] = [
 		{
-			name: "business-hours-access",
-			description: "Allow access only during business hours (9 AM - 5 PM UTC)",
+			name: "completed-orders-are-immutable",
+			description: "Completed orders cannot be updated or deleted",
 			scope: "GLOBAL",
-			actions: ["READ"],
-			resources: ["ADMIN_DASHBOARD"],
-			effect: "ALLOW",
-			conditions: JSON.stringify({
-				all: [
-					{
-						operator: "gte",
-						path: "context.hour",
-						value: 9,
-					},
-					{
-						operator: "lte",
-						path: "context.hour",
-						value: 17,
-					},
-				],
-			}),
-			isActive: true,
-			version: 1,
-		},
-		{
-			name: "ip-whitelist-policy",
-			description: "Allow access from specific IP addresses",
-			scope: "GLOBAL",
-			actions: ["MANAGE"],
-			resources: ["SYSTEM_SETTINGS"],
-			effect: "ALLOW",
-			conditions: JSON.stringify({
-				any: [
-					{
-						operator: "in",
-						path: "context.ipAddress",
-						value: ["192.168.1.1", "10.0.0.1"],
-					},
-				],
-			}),
-			isActive: true,
-			version: 1,
-		},
-		{
-			name: "owner-only-delete",
-			description: "Only resource owner can delete their own resources",
-			scope: "OWN",
-			actions: ["DELETE"],
+			actions: ["UPDATE", "DELETE"],
 			resources: ["ORDER"],
-			effect: "ALLOW",
-			conditions: JSON.stringify({
-				all: [
-					{
-						operator: "eq",
-						path: "resource.ownerId",
-						value: { ref: "user.id" },
-					},
-				],
-			}),
+			effect: "DENY",
+			conditions: parsePrismaInputJson(PolicyConditionsSchema.parse(completedOrderLock)),
 			isActive: true,
 			version: 1,
 		},
 		{
-			name: "deny-weekend-writes",
-			description: "Deny write operations on weekends",
-			scope: "GLOBAL",
+			name: "payment-update-limit",
+			description: "Payments may only be updated while PAID and at most 500",
+			scope: "ORGANIZATION",
 			actions: ["UPDATE"],
 			resources: ["PAYMENT"],
-			effect: "DENY",
-			conditions: JSON.stringify({
-				any: [
-					{
-						operator: "eq",
-						path: "context.dayOfWeek",
-						value: 0,
-					},
-					{
-						operator: "eq",
-						path: "context.dayOfWeek",
-						value: 6,
-					},
-				],
-			}),
+			effect: "ALLOW",
+			conditions: parsePrismaInputJson(PolicyConditionsSchema.parse(refundLimit)),
+			isActive: true,
+			version: 1,
+		},
+		{
+			name: "inventory-same-organization",
+			description: "Inventory changes are limited to the caller's verified organization",
+			scope: "ORGANIZATION",
+			actions: ["UPDATE", "DELETE"],
+			resources: ["INVENTORY"],
+			effect: "ALLOW",
+			conditions: parsePrismaInputJson(PolicyConditionsSchema.parse(sameOrganizationInventory)),
 			isActive: true,
 			version: 1,
 		},

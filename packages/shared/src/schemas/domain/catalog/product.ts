@@ -4,7 +4,7 @@ import { BooleanQueryParamSchema } from "../../api/query-params";
 
 import type { PaginatedServiceResult } from "../../api/api-response";
 
-/** Generated Zod contracts for Product. */
+/** Zod contracts for Product. */
 export const CreateProductSchema = z
 	.object({
 		brand: z.string().nullable().optional(),

@@ -180,8 +180,14 @@ async function main(): Promise<void> {
 	});
 }
 
-main().catch((error: unknown): void => {
-	const message = error instanceof Error ? error.message : String(error);
-	console.error(message);
-	process.exit(1);
-});
+async function run(): Promise<void> {
+	try {
+		await main();
+	} catch (error) {
+		const message = error instanceof Error ? error.message : String(error);
+		console.error(message);
+		process.exit(1);
+	}
+}
+
+void run();

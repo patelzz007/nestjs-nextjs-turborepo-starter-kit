@@ -66,6 +66,15 @@ export default [
 			"no-console": "off",
 		},
 	},
+	{
+		files: ["scripts/cleanup-stale-bullmq-repeat-jobs.ts"],
+		rules: {
+			"@typescript-eslint/no-unsafe-assignment": "off",
+			"@typescript-eslint/no-unsafe-member-access": "off",
+			"@typescript-eslint/no-unsafe-call": "off",
+			"@typescript-eslint/no-floating-promises": "off",
+		},
+	},
 
 	// Env vars are read at runtime; turbo.json does not enumerate every key.
 	{
@@ -129,16 +138,6 @@ export default [
 		},
 		rules: {
 			"local-rules/no-unversioned-controller": "error",
-		},
-	},
-
-	// Generated resource controllers are extended by developer-owned shells
-	// that are registered in the module; the base class is not injected directly.
-	{
-		files: ["src/**/*.controller.generated.ts"],
-		rules: {
-			"@darraghor/nestjs-typed/injectable-should-be-provided": "off",
-			"@darraghor/nestjs-typed/api-method-should-specify-api-response": "off",
 		},
 	},
 

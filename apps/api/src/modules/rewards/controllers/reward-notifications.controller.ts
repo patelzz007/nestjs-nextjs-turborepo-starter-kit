@@ -1,5 +1,6 @@
 import { Body, Controller, Get, Post, Query } from "@nestjs/common";
 import { ApiBearerAuth, ApiBody, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
+import type { z } from "zod";
 
 import { apiContract, apiPath } from "@workspace/shared";
 import { ZodValidationPipe } from "../../../common/pipes/zod-validation.pipe";
@@ -20,7 +21,7 @@ export class RewardNotificationsController {
 	@ApiOkResponse({ description: "Notifications with unread count" })
 	public listNotifications(
 		@GetUser() user: AccessTokenPayload,
-		@Query(new ZodValidationPipe(apiContract.rewardNotifications.list.input)) query: Parameters<RewardNotificationService["listForUser"]>[1],
+		@Query(new ZodValidationPipe(apiContract.rewardNotifications.list.input)) query: z.output<typeof apiContract.rewardNotifications.list.input>,
 	): ReturnType<RewardNotificationService["listForUser"]> {
 		return this.notificationService.listForUser(user.sub, query);
 	}

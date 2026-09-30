@@ -1,8 +1,11 @@
 "use client";
 
-import { useMerchantCapabilities } from "@/lib/org/capabilities";
+import { useMerchantAuthorizationStatus, useMerchantRoleAccess } from "@/components/access/merchant-authorization-provider";
+import type { MerchantRoleAction } from "@/lib/org/membership-roles";
+import { Can } from "@workspace/client/lib/auth/can";
 import type { CapabilitySlug } from "@workspace/shared";
-import { ShieldAlert } from "lucide-react";
+import { Skeleton } from "@workspace/ui/components/feedback/skeleton";
+import { Eye, ShieldAlert } from "lucide-react";
 import * as React from "react";
 
 export interface MerchantAccessDeniedProps {
@@ -26,21 +29,70 @@ export function MerchantAccessDenied({
 	);
 }
 
+/** Placeholder while the active membership resolves — avoids flashing a denied state. */
+export function MerchantAccessLoading(): React.JSX.Element {
+	return (
+		<div role="status" aria-live="polite" aria-label="Checking access" className="space-y-4">
+			<Skeleton className="h-8 w-1/3" />
+			<Skeleton className="h-4 w-2/3" />
+			<Skeleton className="h-40 w-full" />
+		</div>
+	);
+}
+
+export interface MerchantReadOnlyNoticeProps {
+	readonly children: React.ReactNode;
+}
+
+/** Inline notice for sections a role can view but not change. */
+export function MerchantReadOnlyNotice({ children }: MerchantReadOnlyNoticeProps): React.JSX.Element {
+	return (
+		<div role="note" className="flex items-start gap-3 rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+			<Eye className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+			<p>{children}</p>
+		</div>
+	);
+}
+
 export interface MerchantCapabilityGateProps {
 	readonly capability: CapabilitySlug;
 	readonly children: React.ReactNode;
+	/** Rendered when denied. Defaults to {@link MerchantAccessDenied}. */
 	readonly fallback?: React.ReactNode;
 }
 
-/** Renders children only when the active membership has the required capability. */
+/** Page/section gate: `<Can>` with the merchant loading state and access-denied fallback. */
 export function MerchantCapabilityGate({ capability, children, fallback }: MerchantCapabilityGateProps): React.JSX.Element {
-	const { hasCapability, isLoading } = useMerchantCapabilities();
+	const { isLoading } = useMerchantAuthorizationStatus();
 
 	if (isLoading) {
-		return <p className="text-sm text-muted-foreground">Checking access…</p>;
+		return <MerchantAccessLoading />;
 	}
 
-	if (!hasCapability(capability)) {
+	return (
+		<Can permission={capability} fallback={fallback ?? <MerchantAccessDenied />}>
+			{children}
+		</Can>
+	);
+}
+
+export interface MerchantRoleGateProps {
+	readonly action: MerchantRoleAction;
+	readonly children: React.ReactNode;
+	/** Rendered when denied. Defaults to {@link MerchantAccessDenied}. */
+	readonly fallback?: React.ReactNode;
+}
+
+/** Page/section gate for OWNER/ADMIN-only organization actions that have no capability slug. */
+export function MerchantRoleGate({ action, children, fallback }: MerchantRoleGateProps): React.JSX.Element {
+	const { isLoading } = useMerchantAuthorizationStatus();
+	const allowed = useMerchantRoleAccess(action);
+
+	if (isLoading) {
+		return <MerchantAccessLoading />;
+	}
+
+	if (!allowed) {
 		return <>{fallback ?? <MerchantAccessDenied />}</>;
 	}
 

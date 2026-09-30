@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 
-import type { User } from "@prisma/client";
+import type { User, RewardType } from "@prisma/client";
 import * as bcrypt from "bcrypt";
 
 import { cleanupOrganizationSeedData, ORGANIZATION_SEED_IDS, SEED_TEAM_INVITE_TOKEN_KL_ALICE, seedOrganizationsAndMerchants } from "./organizations";
@@ -8,7 +8,7 @@ import { prisma } from "./client";
 import { deterministicUuid } from "./deterministic-uuid";
 
 /** Fixed seed UUIDs for idempotent re-seeds. */
-export const REWARD_SEED_IDS = {
+export const REWARD_SEED_IDS = Object.freeze({
 	klOwnerUser: "326494e1-b45d-4203-b881-05b60ae50b4a",
 	mlkOwnerUser: "b9cda090-b9e8-42e4-b7b1-b6d00294f022",
 	klCashierUser: "937f5e43-9b11-47d0-866c-91fec89bc250",
@@ -31,18 +31,31 @@ export const REWARD_SEED_IDS = {
 	claimRedeemedMlk: "a2c10eb7-7a56-456c-9b8c-5e3d1143c5c3",
 	referralPending: "13d97a9f-cb94-432b-bdb7-9011649cad0c",
 	referralCredited: "594dcffc-3091-4aca-befa-affd618d5c36",
-} as const;
+});
 
 /**
  * Plaintext merchant API keys for staging / simulator (seed only).
  * Suffix matches production format: `openssl rand -base64 128` (fixed here for idempotent seeds).
  */
-export const DEMO_MERCHANT_API_KEYS = {
+export const DEMO_MERCHANT_API_KEYS = Object.freeze({
 	kl: "mk_live_IwgbQID2Csq4nbnfwUxVUrQT8lwrlhEz7bzagwasKyFtZYSQ42LSH43lzTfRdBkV7tZArdHQQE4EW0wDHpVAroL57w/+5AzsCxRpax2fmu3JqITATsJKJRi4+fifNVj1E3WswonhsleEBinxwcMOlqccH0suhUq6mJWVvaWYkf8=",
 	mlk: "mk_live_Dx20Nsn5K79wGXWaTYbEvUyVLQrXWIwExA7zsK4jGyMMKxVPxsmJHoIrGimviO7RBtbb5ZdLsEcT0vxGeBVhV7NP72FoIRxFcF17juhUiMxrHxfAMuIy5NuYIK/eMqDdpWY5KNYxMGNCy/iT20Kc7813y2bMoOjZTCJJ/84JMQY=",
-} as const;
+});
 
 /** Plaintext QR token for pending KL claim (hash stored in DB). */
+/** Extra published marketplace rewards seeded for Brew & Bean KL. */
+interface ExtraKlRewardSeed {
+	readonly title: string;
+	readonly description: string;
+	readonly rewardType: RewardType;
+	readonly rewardValue?: number;
+	readonly category: string;
+	readonly placeholderImageKey: string;
+	readonly quantityTotal: number;
+	readonly quantityRemaining: number;
+	readonly quantityReserved: number;
+}
+
 export const DEMO_QR_TOKEN_PENDING_KL = "seed_qr_token_kl_pending_alice_001";
 
 /** Plaintext backup code for pending KL claim. */
@@ -454,11 +467,11 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 	});
 
 	// Extra published rewards for marketplace volume
-	const extraKlRewards = [
+	const extraKlRewards: readonly ExtraKlRewardSeed[] = [
 		{
 			title: "RM5 cashback on dine-in",
 			description: "Credited on your next visit.",
-			rewardType: "CASHBACK" as const,
+			rewardType: "CASHBACK",
 			rewardValue: 5,
 			category: "restaurant",
 			placeholderImageKey: "category-restaurant",
@@ -469,7 +482,7 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 		{
 			title: "Double loyalty points weekend",
 			description: "Earn 2x points on all orders.",
-			rewardType: "POINTS" as const,
+			rewardType: "POINTS",
 			rewardValue: 200,
 			category: "retail",
 			placeholderImageKey: "category-retail",
@@ -480,7 +493,7 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 		{
 			title: "BOGO signature noodles",
 			description: "Buy one bowl, get one free.",
-			rewardType: "BOGO" as const,
+			rewardType: "BOGO",
 			rewardValue: 1,
 			category: "food",
 			placeholderImageKey: "category-food",
@@ -491,7 +504,7 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 		{
 			title: "Second coffee 50% off",
 			description: "Afternoon pick-me-up 2–5pm.",
-			rewardType: "DISCOUNT" as const,
+			rewardType: "DISCOUNT",
 			category: "cafe",
 			placeholderImageKey: "category-cafe",
 			quantityTotal: 60,
@@ -501,7 +514,7 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 		{
 			title: "Free croissant with any drink",
 			description: "Breakfast bundle.",
-			rewardType: "FREE_ITEM" as const,
+			rewardType: "FREE_ITEM",
 			category: "food",
 			placeholderImageKey: "category-food",
 			quantityTotal: 40,
@@ -511,7 +524,7 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 		{
 			title: "Wellness: Free yoga class voucher",
 			description: "Partner studio next door.",
-			rewardType: "FREE_ITEM" as const,
+			rewardType: "FREE_ITEM",
 			category: "wellness",
 			placeholderImageKey: "category-wellness",
 			quantityTotal: 25,

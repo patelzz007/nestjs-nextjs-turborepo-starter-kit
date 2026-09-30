@@ -70,10 +70,6 @@ export function buildEmailTemplateFromJobData(templateKey: EmailTemplateKey, pro
 			return new MerchantInviteEmailTemplate(MerchantInviteEmailPropsSchema.parse(props));
 		case "team-member-invite":
 			return new TeamMemberInviteEmailTemplate(TeamMemberInviteEmailPropsSchema.parse(props));
-		default: {
-			const exhaustive: never = templateKey;
-			throw new Error(`Unknown email template key: ${String(exhaustive)}`);
-		}
 	}
 }
 

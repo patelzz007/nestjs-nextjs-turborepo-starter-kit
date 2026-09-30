@@ -74,8 +74,8 @@ export class RewardsAdminService {
 		}
 
 		if (process.env.NODE_ENV !== "production") {
-			// eslint-disable-next-line no-console -- dev visibility when EMAIL_MODE=log-only
-			console.info(`[merchant-invite] email=${input.email} url=${inviteUrl}`);
+			// Dev visibility when EMAIL_MODE=log-only.
+			process.stdout.write(`[merchant-invite] email=${input.email} url=${inviteUrl}\n`);
 		}
 
 		return {

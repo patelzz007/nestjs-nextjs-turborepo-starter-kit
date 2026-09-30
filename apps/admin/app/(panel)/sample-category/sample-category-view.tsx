@@ -2,16 +2,18 @@
 import { z } from "zod";
 
 import { createDataTableLabels } from "@/lib/data-table/labels";
-import { buildResourceTableCheckbox, canDeletePlatformResource } from "@/lib/data-table/capabilities";
+import { buildResourceTableCheckbox } from "@/lib/data-table/capabilities";
 import { fetchAllListPages, resolveManualBulkSelectionRows } from "@/lib/data-table/resolve-manual-bulk-selection";
-import { useSessionCapabilities } from "@/lib/session/capabilities";
+import { DisabledActionButton } from "@/components/common/disabled-action-button";
 import { useResourceDeleteDialog } from "@/components/common/resource-delete-dialog";
 import { DataTableMobileCard } from "@/lib/data-table/mobile-card";
-import { readPaginatedHasNext, readPaginatedNextCursor, readPaginatedTotal, stubPaginatedMeta } from "@/lib/format/api-envelope";
+import { readPaginatedHasNext, readPaginatedNextCursor, readPaginatedTotal, stubPaginatedMeta, successEnvelope } from "@/lib/format/api-envelope";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { useManualHybridPagination } from "@/lib/data-table/use-manual-cursor-pagination";
 import { DataTableSearchToolbar } from "@/components/common/data-table-search-toolbar";
 import { useAuth } from "@workspace/client/lib/auth";
+import { useAuthorization } from "@workspace/client/lib/auth/can";
+import { PERMISSION } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/feedback/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
 import { DataTable, type Action, type DataTableFeatures, type Filter } from "@workspace/ui/components/display/data-table";
@@ -24,7 +26,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { keepPreviousData, useQueryClient } from "@tanstack/react-query";
 import { toastMessage } from "@workspace/ui/components/feedback/toast";
 
-import { SampleCategoryListSortBySchema, type SampleCategory, type SampleCategoryListSortBy } from "@workspace/shared/schemas/domain/generated/sample-category.generated";
+import { SampleCategoryListSortBySchema, type SampleCategory, type SampleCategoryListSortBy } from "@workspace/shared/schemas/domain/catalog/sample-category";
 import type { DataTableBulkSelectionContext } from "@workspace/ui/lib/data-table/checkbox";
 
 function resolveListSortBy(columnId: string | undefined): SampleCategoryListSortBy | undefined {
@@ -58,8 +60,12 @@ export interface SampleCategoryViewProps {
 
 export default function SampleCategoryView({ initialRows, initialTotal, initialTotalPages, initialHasNext }: SampleCategoryViewProps): React.JSX.Element {
 	const { api } = useAuth();
-	const { hasCapability } = useSessionCapabilities();
-	const canDelete = canDeletePlatformResource(hasCapability, "SAMPLE_CATEGORY");
+	// Each control mirrors its API route: GET /:id (READ), POST (CREATE), PATCH /:id (UPDATE), DELETE /:id + bulk-delete (DELETE).
+	const { can } = useAuthorization();
+	const canView = can(PERMISSION.SAMPLE_CATEGORY.READ);
+	const canCreate = can(PERMISSION.SAMPLE_CATEGORY.CREATE);
+	const canUpdate = can(PERMISSION.SAMPLE_CATEGORY.UPDATE);
+	const canDelete = can(PERMISSION.SAMPLE_CATEGORY.DELETE);
 	const { requestDelete, resourceDeleteDialog } = useResourceDeleteDialog();
 	const router = useRouter();
 	const queryClient = useQueryClient();
@@ -117,11 +123,7 @@ export default function SampleCategoryView({ initialRows, initialTotal, initialT
 	const initialQueryData = useMemo(
 		() =>
 			initialRows !== undefined
-				? {
-						success: true as const,
-						data: [...initialRows],
-						meta: stubPaginatedMeta(20, initialTotal ?? initialRows.length, 1, initialTotalPages ?? 1, initialHasNext ?? false),
-					}
+				? successEnvelope([...initialRows], stubPaginatedMeta(20, initialTotal ?? initialRows.length, 1, initialTotalPages ?? 1, initialHasNext ?? false))
 				: undefined,
 		[initialRows, initialHasNext, initialTotal, initialTotalPages],
 	);
@@ -223,22 +225,25 @@ export default function SampleCategoryView({ initialRows, initialTotal, initialT
 	);
 
 	const actions = useMemo((): Action<SampleCategory>[] => {
-		const base: Action<SampleCategory>[] = [
-			{
+		const base: Action<SampleCategory>[] = [];
+		if (canView) {
+			base.push({
 				key: "view",
 				label: "View",
 				description: "View samplecategory details",
 				icon: <Eye className="size-4" />,
 				onClick: handleView,
-			},
-			{
+			});
+		}
+		if (canUpdate) {
+			base.push({
 				key: "edit",
 				label: "Edit",
 				description: "Edit samplecategory",
 				icon: <Pencil className="size-4" />,
 				onClick: handleEdit,
-			},
-		];
+			});
+		}
 		if (canDelete) {
 			base.push({
 				key: "delete",
@@ -251,18 +256,17 @@ export default function SampleCategoryView({ initialRows, initialTotal, initialT
 			});
 		}
 		return base;
-	}, [canDelete, handleDelete, handleEdit, handleView]);
+	}, [canDelete, canUpdate, canView, handleDelete, handleEdit, handleView]);
 
 	const checkbox = useMemo(
 		() =>
 			buildResourceTableCheckbox<SampleCategory>({
-				hasCapability,
-				resource: "SAMPLE_CATEGORY",
+				canDelete,
 				exportFilename: "sample-category.csv",
 				exportableColumns: ["name", "slug", "sortOrder", "isActive", "createdAt"],
 				onDeleteAll: handleBulkDelete,
 			}),
-		[handleBulkDelete, hasCapability],
+		[canDelete, handleBulkDelete],
 	);
 
 	const mobileCardRender = useCallback(
@@ -373,9 +377,13 @@ export default function SampleCategoryView({ initialRows, initialTotal, initialT
 					<h1 className="text-2xl font-semibold tracking-tight">Categories</h1>
 					<p className="text-sm text-muted-foreground">Browse and manage categories.</p>
 				</div>
-				<Button nativeButton={false} render={<Link href="/sample-category/create" />}>
-					New SampleCategory
-				</Button>
+				{canCreate ? (
+					<Button nativeButton={false} render={<Link href="/sample-category/create" />}>
+						New SampleCategory
+					</Button>
+				) : (
+					<DisabledActionButton reason="Creating a category requires the category create permission.">New SampleCategory</DisabledActionButton>
+				)}
 			</header>
 
 			<Card>
@@ -394,7 +402,7 @@ export default function SampleCategoryView({ initialRows, initialTotal, initialT
 						manualColumnFilters={manualColumnFilters}
 						onManualColumnFilterChange={handleManualColumnFilterChange}
 						mobileCardRender={mobileCardRender}
-						onRowClick={handleView}
+						onRowClick={canView ? handleView : undefined}
 						pagination={pagination}
 						pageSizeOptions={PAGE_SIZE_OPTIONS}
 						sorting={sorting}

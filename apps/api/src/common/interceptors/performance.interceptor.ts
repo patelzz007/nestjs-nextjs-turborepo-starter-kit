@@ -13,7 +13,7 @@ export class PerformanceInterceptor implements NestInterceptor {
 	private readonly logger: Logger = new Logger(PerformanceInterceptor.name);
 	private readonly slowRequestThreshold: number = 1000;
 
-	public intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
+	public intercept<T>(context: ExecutionContext, next: CallHandler<T>): Observable<T> {
 		const request: FastifyRequest = context.switchToHttp().getRequest<FastifyRequest>();
 		const startTime: number = Date.now();
 		const method: string = request.method;

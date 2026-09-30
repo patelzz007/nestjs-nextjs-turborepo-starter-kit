@@ -2,14 +2,14 @@
 
 import { Button } from "@workspace/ui/components/form/button";
 import { cn } from "@workspace/ui/lib/core/utils";
-import useEmblaCarousel, { type UseEmblaCarouselType } from "embla-carousel-react";
+import type { EmblaCarouselType, EmblaOptionsType, EmblaPluginType } from "embla-carousel";
+import useEmblaCarousel, { type EmblaViewportRefType } from "embla-carousel-react";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import * as React from "react";
 
-type CarouselApi = UseEmblaCarouselType[1];
-type UseCarouselParameters = Parameters<typeof useEmblaCarousel>;
-type CarouselOptions = UseCarouselParameters[0];
-type CarouselPlugin = UseCarouselParameters[1];
+type CarouselApi = EmblaCarouselType | undefined;
+type CarouselOptions = EmblaOptionsType;
+type CarouselPlugin = EmblaPluginType[];
 
 interface CarouselProps {
 	opts?: CarouselOptions;
@@ -19,8 +19,8 @@ interface CarouselProps {
 }
 
 type CarouselContextProps = {
-	carouselRef: ReturnType<typeof useEmblaCarousel>[0];
-	api: ReturnType<typeof useEmblaCarousel>[1];
+	carouselRef: EmblaViewportRefType;
+	api: CarouselApi;
 	scrollPrev: () => void;
 	scrollNext: () => void;
 	canScrollPrev: boolean;

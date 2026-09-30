@@ -20,7 +20,7 @@ name: hello-world
 
 services:
   redis:
-    image: redis:7-alpine
+    image: redis:8.10.1
     container_name: hello-world-redis
     restart: unless-stopped
     ports:
@@ -37,7 +37,7 @@ services:
       - infra
 
   kafka:
-    image: apache/kafka:3.9.0
+    image: apache/kafka:4.3.1
     container_name: hello-world-kafka
     hostname: kafka
     restart: unless-stopped
@@ -73,7 +73,7 @@ services:
       - infra
 
   rabbitmq:
-    image: rabbitmq:3.13-management-alpine
+    image: rabbitmq:4.3.5
     container_name: hello-world-rabbitmq
     restart: unless-stopped
     ports:

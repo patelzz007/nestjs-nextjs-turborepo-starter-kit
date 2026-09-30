@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-/** Maximum rows accepted by generated bulk create / bulk delete endpoints. */
+/** Maximum rows accepted by resource bulk create / bulk delete endpoints. */
 export const BULK_MUTATION_MAX_ITEMS = 100;
 
 /** Shared request body for bulk soft-delete endpoints. */

@@ -137,7 +137,7 @@ export class LogService {
 					});
 				}
 			}
-		} catch (error: unknown) {
+		} catch (error) {
 			const message: string = error instanceof Error ? error.message : String(error);
 			this.logger.error(`Error in memory monitoring: ${message}`, {
 				context: "MemoryMonitor",

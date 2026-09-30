@@ -13,7 +13,7 @@ import { BaseRepository } from "../../platform/persistence/base.repository";
 import type { CascadeSoftDeleteMutationArgs, CascadeRestoreParentArgs } from "../../platform/persistence/cascade-soft-delete";
 import { PrismaService } from "../../prisma/prisma.service";
 
-function toDomain(row: Prisma.SampleCategoryGetPayload<Record<string, never>>): SampleCategoryEntity {
+function toDomain(row: Prisma.SampleCategoryGetPayload<Prisma.SampleCategoryDefaultArgs>): SampleCategoryEntity {
 	return {
 		id: row.id,
 		description: row.description,
@@ -79,10 +79,10 @@ const SampleCategoryRepositoryPorts = {
 	buildListOrderBy: resolveOrderBy,
 	buildListCursorOrderBy,
 	mergeListCursor,
-	readListCursorId: (row: Prisma.SampleCategoryGetPayload<Record<string, never>>): string => row.id,
+	readListCursorId: (row: Prisma.SampleCategoryGetPayload<Prisma.SampleCategoryDefaultArgs>): string => row.id,
 	buildFindByIdWhere: (id: string): Prisma.SampleCategoryWhereInput => ({ id, deletedAt: null }),
 	buildFindByIdIncludingDeletedWhere: (id: string): Prisma.SampleCategoryWhereInput => ({ id }),
-	readDeletedAt: (row: Prisma.SampleCategoryGetPayload<Record<string, never>>): number | null => (row.deletedAt === null ? null : Number(row.deletedAt)),
+	readDeletedAt: (row: Prisma.SampleCategoryGetPayload<Prisma.SampleCategoryDefaultArgs>): number | null => (row.deletedAt === null ? null : Number(row.deletedAt)),
 	buildUpdateWhere: (id: string): Prisma.SampleCategoryWhereUniqueInput => ({ id }),
 	stampUpdate: (data: Prisma.SampleCategoryUpdateInput): Prisma.SampleCategoryUpdateInput => ({ ...data, updatedAt: nowEpochMs() }),
 	stampSoftDelete: (): Prisma.SampleCategoryUpdateInput => ({ deletedAt: nowEpochMs(), updatedAt: nowEpochMs() }),
@@ -116,12 +116,12 @@ const SampleCategoryRepositoryPorts = {
 };
 
 @Injectable()
-export class GeneratedSampleCategoryRepository extends BaseRepository<
+export class SampleCategoryRepository extends BaseRepository<
 	SampleCategoryEntity,
 	CreateSampleCategoryInput,
 	UpdateSampleCategoryInput,
 	SampleCategoryListQuery,
-	Prisma.SampleCategoryGetPayload<Record<string, never>>,
+	Prisma.SampleCategoryGetPayload<Prisma.SampleCategoryDefaultArgs>,
 	Prisma.SampleCategoryWhereInput,
 	Prisma.SampleCategoryOrderByWithRelationInput,
 	Prisma.SampleCategoryCreateInput,

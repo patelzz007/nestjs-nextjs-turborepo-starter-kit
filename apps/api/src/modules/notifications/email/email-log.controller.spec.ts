@@ -1,13 +1,19 @@
 import type { MessageEvent } from "@nestjs/common";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { EmailLogService } from "./email-log.service";
+import { PrismaService } from "../../../prisma/prisma.service";
 import { EmailLogEventsService } from "./email-log-events.service";
 import { EmailLogController } from "./email-log.controller";
+import { EmailLogRepository } from "./email-log.repository";
+import { EmailLogService } from "./email-log.service";
 
-// The stream() tests only exercise the SSE wiring, so the list service is a
-// stub — the events service is real to prove the pub/sub bridge end to end.
-const serviceStub = {} as unknown as EmailLogService;
+vi.mock("../../../prisma/prisma.service", () => ({
+	PrismaService: class {},
+}));
+
+// The stream() tests only exercise the SSE wiring, so the list service sits on
+// an inert Prisma stub — the events service is real to prove the pub/sub bridge end to end.
+const serviceStub = new EmailLogService(new EmailLogRepository(new PrismaService()), new EmailLogEventsService());
 
 describe("EmailLogController (SSE stream)", () => {
 	afterEach(() => {

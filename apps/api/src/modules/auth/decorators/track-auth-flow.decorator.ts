@@ -8,7 +8,23 @@ import { AuthEventsService } from "../services/auth-events.service";
  * Extracts the userId from the method's arguments or return value.
  * Return `null` for anonymous flows (e.g., forgot-password where user may not exist).
  */
-type UserIdExtractor = (...args: unknown[]) => string | null | undefined;
+type UserIdExtractor = (...args: readonly AuthFlowMethodArg[]) => string | null | undefined;
+
+/** Any runtime value a decorated method can receive as an argument. */
+export type AuthFlowMethodArg = object | string | number | boolean | bigint | symbol | null | undefined;
+
+/** Host instance of a decorated method; `authEvents` is injected by Nest. */
+interface AuthFlowHost {
+	readonly authEvents?: AuthEventsService;
+}
+
+type AuthFlowMethod<TArgs extends AuthFlowMethodArg[], TResult extends AuthFlowMethodArg> = (this: AuthFlowHost, ...args: TArgs) => Promise<TResult>;
+
+type AuthFlowMethodDecorator = <TArgs extends AuthFlowMethodArg[], TResult extends AuthFlowMethodArg>(
+	target: object,
+	propertyKey: string | symbol,
+	descriptor: TypedPropertyDescriptor<AuthFlowMethod<TArgs, TResult>>,
+) => TypedPropertyDescriptor<AuthFlowMethod<TArgs, TResult>>;
 
 interface TrackAuthFlowOptions {
 	/** The auth flow name (e.g., "signup", "login", "forgot-password"). */
@@ -24,10 +40,6 @@ interface TrackAuthFlowOptions {
 	 */
 	readonly userId?: UserIdExtractor;
 }
-
-const AsyncMethodSchema = z.custom<(...args: readonly unknown[]) => Promise<unknown>>((value) => {
-	return value !== null && value !== undefined && typeof value === "function";
-});
 
 const AuthResultIdSchema = z.object({ id: z.string() }).strict();
 const AuthResultUserIdSchema = z.object({ userId: z.string() }).strict();
@@ -58,17 +70,20 @@ const AuthErrorUserIdSchema = z.object({ userId: z.string() }).strict();
  *       // ...
  *   }
  */
-export function TrackAuthFlow(options: TrackAuthFlowOptions): MethodDecorator {
+export function TrackAuthFlow(options: TrackAuthFlowOptions): AuthFlowMethodDecorator {
 	const { flow, clientType: clientTypeExtractor, userId: userIdExtractor } = options;
 
-	return function (_target: object, propertyKey: string | symbol, descriptor: PropertyDescriptor): PropertyDescriptor {
-		const parsedMethod = AsyncMethodSchema.safeParse(descriptor.value);
-		if (!parsedMethod.success) {
+	return function <TArgs extends AuthFlowMethodArg[], TResult extends AuthFlowMethodArg>(
+		_target: object,
+		propertyKey: string | symbol,
+		descriptor: TypedPropertyDescriptor<AuthFlowMethod<TArgs, TResult>>,
+	): TypedPropertyDescriptor<AuthFlowMethod<TArgs, TResult>> {
+		const originalMethod = descriptor.value;
+		if (originalMethod === undefined) {
 			throw new TypeError(`TrackAuthFlow can only decorate async methods (${String(propertyKey)})`);
 		}
-		const originalMethod = parsedMethod.data;
 
-		descriptor.value = async function (this: { readonly authEvents?: AuthEventsService }, ...args: unknown[]): Promise<unknown> {
+		descriptor.value = async function (this: AuthFlowHost, ...args: TArgs): Promise<TResult> {
 			const flowStartedAt: number = performance.now();
 			const getAuthEvents = (): AuthEventsService | undefined => this.authEvents;
 
@@ -93,7 +108,7 @@ export function TrackAuthFlow(options: TrackAuthFlowOptions): MethodDecorator {
 			};
 
 			try {
-				const result: unknown = await originalMethod.apply(this, args);
+				const result: TResult = await originalMethod.apply(this, args);
 
 				let userId: string | null = null;
 				if (userIdExtractor !== undefined) {
@@ -123,7 +138,7 @@ export function TrackAuthFlow(options: TrackAuthFlowOptions): MethodDecorator {
 	};
 }
 
-function extractUserIdFromResult(result: unknown): string | null {
+function extractUserIdFromResult(result: AuthFlowMethodArg): string | null {
 	const jsonValue = JsonValueSchema.safeParse(result);
 	if (!jsonValue.success) {
 		return null;

@@ -6,7 +6,7 @@ import { nowEpochMs, type CreateProductInput, type Product as ProductEntity, typ
 import { BaseRepository } from "../../platform/persistence/base.repository";
 import { PrismaService } from "../../prisma/prisma.service";
 
-function toDomain(row: Prisma.ProductGetPayload<Record<string, never>>): ProductEntity {
+function toDomain(row: Prisma.ProductGetPayload<Prisma.ProductDefaultArgs>): ProductEntity {
 	return {
 		id: row.id,
 		brand: row.brand,
@@ -162,10 +162,10 @@ const ProductRepositoryPorts = {
 	buildListOrderBy: resolveOrderBy,
 	buildListCursorOrderBy,
 	mergeListCursor,
-	readListCursorId: (row: Prisma.ProductGetPayload<Record<string, never>>): string => row.id,
+	readListCursorId: (row: Prisma.ProductGetPayload<Prisma.ProductDefaultArgs>): string => row.id,
 	buildFindByIdWhere: (id: string): Prisma.ProductWhereInput => ({ id, deletedAt: null }),
 	buildFindByIdIncludingDeletedWhere: (id: string): Prisma.ProductWhereInput => ({ id }),
-	readDeletedAt: (row: Prisma.ProductGetPayload<Record<string, never>>): number | null => (row.deletedAt === null ? null : Number(row.deletedAt)),
+	readDeletedAt: (row: Prisma.ProductGetPayload<Prisma.ProductDefaultArgs>): number | null => (row.deletedAt === null ? null : Number(row.deletedAt)),
 	buildUpdateWhere: (id: string, expectedVersion?: number): Prisma.ProductWhereUniqueInput => ({ id, version: expectedVersion }),
 	stampUpdate: (data: Prisma.ProductUpdateInput): Prisma.ProductUpdateInput => ({ ...data, version: { increment: 1 }, updatedAt: nowEpochMs() }),
 	stampSoftDelete: (): Prisma.ProductUpdateInput => ({ deletedAt: nowEpochMs(), updatedAt: nowEpochMs() }),
@@ -173,12 +173,12 @@ const ProductRepositoryPorts = {
 };
 
 @Injectable()
-export class GeneratedProductRepository extends BaseRepository<
+export class ProductRepository extends BaseRepository<
 	ProductEntity,
 	CreateProductInput,
 	UpdateProductInput,
 	ProductListQuery,
-	Prisma.ProductGetPayload<Record<string, never>>,
+	Prisma.ProductGetPayload<Prisma.ProductDefaultArgs>,
 	Prisma.ProductWhereInput,
 	Prisma.ProductOrderByWithRelationInput,
 	Prisma.ProductCreateInput,

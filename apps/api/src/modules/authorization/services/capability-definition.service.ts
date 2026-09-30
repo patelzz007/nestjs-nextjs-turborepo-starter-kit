@@ -76,12 +76,16 @@ export class CapabilityDefinitionService implements OnModuleInit {
 				id: true,
 				action: true,
 				resource: true,
+				scope: true,
 				description: true,
 				group: true,
 				isSystem: true,
 			},
+			// GLOBAL rows sort first, so they own the capability when several scopes share a slug.
+			orderBy: [{ scope: "asc" }, { createdAt: "asc" }],
 		});
 
+		const syncedSlugs = new Set<string>();
 		for (const permission of permissions) {
 			const actionParsed = PermissionActionSchema.safeParse(permission.action);
 			const resourceParsed = PermissionResourceSchema.safeParse(permission.resource);
@@ -89,6 +93,11 @@ export class CapabilityDefinitionService implements OnModuleInit {
 				continue;
 			}
 			const slug = toPlatformCapabilitySlug(actionParsed.data, resourceParsed.data);
+			// One capability per action × resource: the first (preferably GLOBAL) permission row links it.
+			if (syncedSlugs.has(slug)) {
+				continue;
+			}
+			syncedSlugs.add(slug);
 			await this.systemDb.capabilityDefinition.upsert({
 				where: { slug },
 				create: {

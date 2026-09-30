@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common";
 import type { OrganizationLocation, OrganizationLocationStatus, PilotCity, Prisma, PrismaClient } from "@prisma/client";
 import { PrismaService } from "../../../prisma/prisma.service";
 import { allocateUniqueLocationCode } from "../utils/organization-location-code.util";
+import { syncStoreForLocation } from "../utils/store-sync.util";
 
 type DbTx = Omit<PrismaClient, "$connect" | "$disconnect" | "$on" | "$transaction" | "$extends">;
 
@@ -13,7 +14,7 @@ const ADMIN_LOCATION_REQUEST_INCLUDE = {
 			displayName: true,
 		},
 	},
-} as const satisfies Prisma.OrganizationLocationInclude;
+} satisfies Prisma.OrganizationLocationInclude;
 
 export type AdminLocationRequestRow = Prisma.OrganizationLocationGetPayload<{ include: typeof ADMIN_LOCATION_REQUEST_INCLUDE }>;
 
@@ -101,7 +102,7 @@ export class OrganizationLocationRepository {
 		const code = await allocateUniqueLocationCode(tx, data.organizationId, data.name);
 		const now = BigInt(Date.now());
 
-		return tx.organizationLocation.create({
+		const location = await tx.organizationLocation.create({
 			data: {
 				organizationId: data.organizationId,
 				name: data.name.trim(),
@@ -118,6 +119,8 @@ export class OrganizationLocationRepository {
 				updatedAt: now,
 			},
 		});
+		await syncStoreForLocation(tx, location);
+		return location;
 	}
 
 	public async listByOrganization(organizationId: string): Promise<OrganizationLocation[]> {
@@ -148,7 +151,7 @@ export class OrganizationLocationRepository {
 
 		const now = BigInt(Date.now());
 
-		return tx.organizationLocation.update({
+		const location = await tx.organizationLocation.update({
 			where: { id: primary.id },
 			data: {
 				name: input.name.trim(),
@@ -161,6 +164,8 @@ export class OrganizationLocationRepository {
 				updatedAt: now,
 			},
 		});
+		await syncStoreForLocation(tx, location);
+		return location;
 	}
 
 	public async updateRejectedLocation(
@@ -175,7 +180,7 @@ export class OrganizationLocationRepository {
 	): Promise<OrganizationLocation> {
 		const now = BigInt(Date.now());
 
-		return tx.organizationLocation.update({
+		const location = await tx.organizationLocation.update({
 			where: { id: locationId },
 			data: {
 				name: input.name.trim(),
@@ -189,6 +194,8 @@ export class OrganizationLocationRepository {
 				updatedAt: now,
 			},
 		});
+		await syncStoreForLocation(tx, location);
+		return location;
 	}
 
 	public async reviewLocation(
@@ -202,7 +209,7 @@ export class OrganizationLocationRepository {
 	): Promise<OrganizationLocation> {
 		const now = BigInt(Date.now());
 
-		return tx.organizationLocation.update({
+		const location = await tx.organizationLocation.update({
 			where: { id: locationId },
 			data: {
 				status: input.approve ? "ACTIVE" : "REJECTED",
@@ -212,5 +219,7 @@ export class OrganizationLocationRepository {
 				updatedAt: now,
 			},
 		});
+		await syncStoreForLocation(tx, location);
+		return location;
 	}
 }

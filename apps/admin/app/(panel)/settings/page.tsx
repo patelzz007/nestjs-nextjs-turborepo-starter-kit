@@ -7,6 +7,6 @@ import { redirect } from "next/navigation";
  * Server-side `redirect()` throws during render, so there is no client-side
  * flash or effect to manage.
  */
-export default function SettingsPage(): never {
+export default function SettingsPage(): React.ReactNode {
 	redirect("/settings/general");
 }

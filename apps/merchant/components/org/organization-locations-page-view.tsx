@@ -1,5 +1,7 @@
 "use client";
 
+import { useMerchantAuthorizationStatus, useMerchantRoleAccess } from "@/components/access/merchant-authorization-provider";
+import { MerchantReadOnlyNotice } from "@/components/access/merchant-capability-gate";
 import { MerchantPageHeader } from "@/components/merchant-ui/page-header";
 import { MerchantSurfacePanel } from "@/components/merchant-ui/surface-panel";
 import { OrganizationLocationList } from "@/components/org/organization-location-list";
@@ -16,8 +18,11 @@ export interface OrganizationLocationsPageViewProps {
 	readonly orgSlug: string;
 }
 
+/** Store locations route — readable by every member; request/resubmit are OWNER/ADMIN-only on the API (`assertCanManageLocations`). */
 export function OrganizationLocationsPageView({ orgSlug }: OrganizationLocationsPageViewProps): React.JSX.Element {
 	const { api } = useAuth();
+	const canManageLocations = useMerchantRoleAccess("manageLocations");
+	const { isLoading: isAuthorizationLoading } = useMerchantAuthorizationStatus();
 	const contextQuery = api.organizations.context.useQuery({ orgSlug });
 	const context = contextQuery.data?.data;
 	const [showCreateForm, setShowCreateForm] = React.useState(false);
@@ -55,11 +60,17 @@ export function OrganizationLocationsPageView({ orgSlug }: OrganizationLocations
 				title="Store locations"
 				description="Manage stores under this organization. New locations require RewardHub approval before they appear to customers or POS integrations."
 				actions={
-					<Button type="button" onClick={handleToggleCreateForm} disabled={contextQuery.isLoading}>
-						{showCreateForm ? "Close form" : "Add store"}
-					</Button>
+					canManageLocations ? (
+						<Button type="button" onClick={handleToggleCreateForm} disabled={contextQuery.isLoading}>
+							{showCreateForm ? "Close form" : "Add store"}
+						</Button>
+					) : undefined
 				}
 			/>
+
+			{canManageLocations || isAuthorizationLoading ? null : (
+				<MerchantReadOnlyNotice>Only organization owners and admins can request new stores or resubmit rejected ones.</MerchantReadOnlyNotice>
+			)}
 
 			{contextQuery.isError ? (
 				<MerchantSurfacePanel className="border-destructive/30 bg-destructive/5 p-5">
@@ -74,7 +85,7 @@ export function OrganizationLocationsPageView({ orgSlug }: OrganizationLocations
 				</MerchantSurfacePanel>
 			) : null}
 
-			{showCreateForm ? (
+			{canManageLocations && showCreateForm ? (
 				<MerchantSurfacePanel className="space-y-4 p-5 sm:p-6">
 					<div>
 						<p className="font-medium text-foreground">Request a new store</p>
@@ -84,7 +95,7 @@ export function OrganizationLocationsPageView({ orgSlug }: OrganizationLocations
 				</MerchantSurfacePanel>
 			) : null}
 
-			{editingLocation !== undefined ? (
+			{canManageLocations && editingLocation !== undefined ? (
 				<MerchantSurfacePanel className="space-y-4 p-5 sm:p-6">
 					<div>
 						<p className="font-medium text-foreground">Resubmit rejected store</p>
@@ -125,7 +136,7 @@ export function OrganizationLocationsPageView({ orgSlug }: OrganizationLocations
 						membershipLocationScopeType={context.membership.locationScopeType}
 						membershipLocationIds={context.membership.locationIds}
 						showAccessHints
-						onEditRejected={handleEditRejected}
+						onEditRejected={canManageLocations ? handleEditRejected : undefined}
 					/>
 				</>
 			) : null}

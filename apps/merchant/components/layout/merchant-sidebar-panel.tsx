@@ -1,9 +1,9 @@
 "use client";
 
+import { useMerchantAuthorizationStatus } from "@/components/access/merchant-authorization-provider";
 import { ImpersonateUserPanel } from "@/components/impersonation/impersonate-user-panel";
 import { MerchantSidebarNavItem } from "@/components/layout/merchant-sidebar-nav-item";
 import { isMerchantEnrollmentAllowedPath, useMerchantEnrollmentLock } from "@/lib/auth/enrollment";
-import { useMerchantCapabilities } from "@/lib/org/capabilities";
 import { applyEnrollmentNavLock } from "@/lib/navigation/apply-enrollment-nav-lock";
 import { createMerchantNavHrefResolver } from "@/lib/navigation/resolve-nav-href";
 import { useMerchantSessionProfile } from "@/lib/session/profile";
@@ -14,9 +14,10 @@ import { MERCHANT_SIDEBAR_LABELS } from "@/lib/navigation/sidebar-labels";
 import { renderMerchantPaletteIcon } from "@/lib/palette/nav-items";
 import { useMerchantCommandPaletteStore } from "@/stores/command-palette-store";
 import { useMerchantSidebarStore } from "@/stores/sidebar-store";
-import { resolveActiveOrganizationMembership, resolveMerchantCapabilities } from "@/lib/session/server-capabilities";
+import { resolveActiveOrganizationMembership } from "@/lib/session/server-capabilities";
+import { useAuthorization } from "@workspace/client/lib/auth/can";
 import type { CompiledSidebarMenuData } from "@workspace/client/lib/sidebar/sidebar-menu-schema";
-import type { CapabilitySlug, OrganizationRewardMembershipResponse } from "@workspace/shared";
+import type { OrganizationRewardMembershipResponse } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/feedback/badge";
 import { Label } from "@workspace/ui/components/form/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@workspace/ui/components/form/select";
@@ -89,13 +90,9 @@ export function MerchantSidebarPanel({ memberships, organizationSlug, onStoreCha
 	const router = useRouter();
 	const sessionProfile = useMerchantSessionProfile();
 	const { isLocked: isEnrollmentLocked, disabledTooltip: enrollmentDisabledTooltip, enrollmentReason } = useMerchantEnrollmentLock();
-	const { capabilities, membership: activeMembershipFromCapabilities } = useMerchantCapabilities(memberships);
-	const activeMembership = activeMembershipFromCapabilities ?? resolveActiveOrganizationMembership(memberships, organizationSlug);
-
-	const menuFilterCapabilities = React.useMemo((): readonly CapabilitySlug[] => {
-		const fromMemberships = resolveMerchantCapabilities(resolveActiveOrganizationMembership(memberships, organizationSlug));
-		return fromMemberships.length > 0 ? fromMemberships : capabilities;
-	}, [capabilities, memberships, organizationSlug]);
+	const { can } = useAuthorization();
+	const { capabilities: menuFilterCapabilities } = useMerchantAuthorizationStatus();
+	const activeMembership = resolveActiveOrganizationMembership(memberships, organizationSlug);
 	const searchInputRef = React.useRef<HTMLInputElement>(null);
 	const navContainerRef = React.useRef<HTMLDivElement>(null);
 
@@ -127,11 +124,11 @@ export function MerchantSidebarPanel({ memberships, organizationSlug, onStoreCha
 	const resolvedMenu = React.useMemo(() => withResolvedSidebarMenuUrls(enrollmentLockedMenu, resolveNavHref), [enrollmentLockedMenu, resolveNavHref]);
 
 	const view = React.useMemo(
-		() => buildSidebarView({ menu: resolvedMenu, pathname: currentPage, sectionOrder, searchQuery, isHighlightParentItem: true }),
+		() => buildSidebarView({ menu: resolvedMenu, pathname: currentPage, sectionOrder, searchQuery }),
 		[resolvedMenu, currentPage, sectionOrder, searchQuery],
 	);
 
-	const pinnedItems = React.useMemo(() => resolveMerchantPinnedMenuItems(pinnedUrls, menuFilterCapabilities), [pinnedUrls, menuFilterCapabilities]);
+	const pinnedItems = React.useMemo(() => resolveMerchantPinnedMenuItems(pinnedUrls, can), [pinnedUrls, can]);
 	const expandedItems = useRouteExpandedItems(currentPage, storeExpandedItems, view.routeState.autoExpandedItems, resetExpandedItems);
 	const activeItems = view.routeState.activeItems;
 

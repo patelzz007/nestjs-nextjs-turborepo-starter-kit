@@ -1,299 +1,126 @@
-import { Test, type TestingModule } from "@nestjs/testing";
-import { INestApplication } from "@nestjs/common";
-import request from "supertest";
+import { Pool } from "pg";
+import { type NestFastifyApplication } from "@nestjs/platform-fastify";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { AppModule } from "../src/app.module";
-import { PrismaService } from "../src/prisma/prisma.service";
 import { AuthorizationKernelService } from "../src/modules/authorization/kernel/authorization-kernel.service";
+import { runWithSystemRlsContext } from "../src/prisma/rls-context";
+import { ORGANIZATION_SEED_IDS } from "../prisma/seed/organizations";
+import { createE2eApp } from "./e2e-helpers";
+
+const DATABASE_URL: string = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/monorepo";
+
+async function idFor(pool: Pool, sql: string, value: string): Promise<string> {
+	const result = await pool.query<{ id: string }>(sql, [value]);
+	const id = result.rows.at(0)?.id;
+	if (id === undefined) {
+		throw new Error(`Seed data missing for ${value} — run pnpm db:seed`);
+	}
+	return id;
+}
 
 /**
- * E2E Tests for Authorization Kernel
- *
- * Tests the full authorization flow from HTTP request → Guard → Kernel → Database
+ * Authorization Kernel against the seeded database: real role grants,
+ * per-user overrides, ACL precedence, tenant verification, and filters.
+ * Kernel reads run as an allowlisted system operation, exactly like the
+ * guard's pre-handler phase.
  */
-describe("Authorization Kernel E2E", () => {
-	let app: INestApplication;
-	let prisma: PrismaService;
+describe("Authorization Kernel (e2e, seeded database)", () => {
+	let app: NestFastifyApplication;
+	let pool: Pool;
 	let kernel: AuthorizationKernelService;
-	let adminToken: string;
-	let userToken: string;
 	let userId: string;
-	let adminId: string;
+	let managerId: string;
+	let mlkOwnerId: string;
+	let readReportPermissionId: string;
+	const createdAclIds: string[] = [];
+
+	const asSystem = <T>(work: () => Promise<T>): Promise<T> => runWithSystemRlsContext("request.pre_handler", work);
 
 	beforeAll(async () => {
-		const moduleFixture: TestingModule = await Test.createTestingModule({
-			imports: [AppModule],
-		}).compile();
-
-		app = moduleFixture.createNestApplication();
-		await app.init();
-
-		prisma = app.get<PrismaService>(PrismaService);
-		kernel = app.get<AuthorizationKernelService>(AuthorizationKernelService);
-
-		// Setup: Create test users with different permissions
-		await setupTestUsers();
+		app = await createE2eApp();
+		kernel = app.get(AuthorizationKernelService);
+		pool = new Pool({ connectionString: DATABASE_URL });
+		userId = await idFor(pool, `SELECT id FROM public.users WHERE email = $1`, "user@example.com");
+		managerId = await idFor(pool, `SELECT id FROM public.users WHERE email = $1`, "manager@example.com");
+		mlkOwnerId = await idFor(pool, `SELECT id FROM public.users WHERE email = $1`, "jonker.owner@melaka-rewards.demo");
+		readReportPermissionId = await idFor(pool, `SELECT id FROM public.permissions WHERE action = 'READ' AND resource = 'REPORT' AND scope = $1`, "GLOBAL");
 	});
 
 	afterAll(async () => {
-		await cleanupTestData();
+		await pool.query(`DELETE FROM public.user_permissions WHERE "userId" = $1 AND "permissionId" = $2`, [managerId, readReportPermissionId]);
+		if (createdAclIds.length > 0) {
+			await pool.query(`DELETE FROM public.resource_acls WHERE id = ANY($1)`, [createdAclIds]);
+		}
+		await pool.end();
 		await app.close();
 	});
 
-	describe("Public Routes", () => {
-		it("should allow access to public routes without authentication", async () => {
-			const response = await request(app.getHttpServer()).get("/api/v1/health").expect(200);
+	it("allows the seeded admin dashboard permission for Admin-role users", async () => {
+		const adminId = await idFor(pool, `SELECT id FROM public.users WHERE email = $1`, "admin@example.com");
 
-			expect(response.body.success).toBe(true);
-		});
-
-		it("should allow access to /version without authentication", async () => {
-			const response = await request(app.getHttpServer()).get("/version").expect(200);
-
-			expect(response.body.current).toBeDefined();
-		});
+		expect(await asSystem(() => kernel.can({ subject: { userId: adminId }, action: "READ", resource: "ADMIN_DASHBOARD" }))).toBe("ALLOW");
 	});
 
-	describe("Authenticated Routes", () => {
-		it("should deny access without token", async () => {
-			await request(app.getHttpServer()).get("/api/v1/auth/me").expect(401);
-		});
-
-		it("should allow access with valid token", async () => {
-			const response = await request(app.getHttpServer()).get("/api/v1/auth/me").set("Authorization", `Bearer ${userToken}`).expect(200);
-
-			expect(response.body.data.id).toBe(userId);
-		});
-
-		it("should reject expired/invalid token", async () => {
-			await request(app.getHttpServer()).get("/api/v1/auth/me").set("Authorization", "Bearer invalid-token").expect(401);
-		});
+	it("denies by default for permissions the subject does not hold", async () => {
+		expect(await asSystem(() => kernel.can({ subject: { userId }, action: "DELETE", resource: "USER" }))).toBe("DENY");
 	});
 
-	describe("Permission-Based Authorization", () => {
-		it("should allow access when user has required permission", async () => {
-			// User with CREATE:ORDER permission
-			const response = await request(app.getHttpServer()).post("/api/v1/orders").set("Authorization", `Bearer ${userToken}`).send({/* order data */}).expect(201);
-
-			expect(response.body.success).toBe(true);
-		});
-
-		it("should deny access when user lacks required permission", async () => {
-			// User without DELETE:ORDER permission
-			await request(app.getHttpServer()).delete(`/api/v1/orders/test-order-id`).set("Authorization", `Bearer ${userToken}`).expect(403);
-		});
-
-		it("should allow access when user has permission via role", async () => {
-			// User with MANAGER role that grants UPDATE:ORDER
-			const response = await request(app.getHttpServer())
-				.patch(`/api/v1/orders/test-order-id`)
-				.set("Authorization", `Bearer ${userToken}`)
-				.send({ status: "COMPLETED" })
-				.expect(200);
-
-			expect(response.body.success).toBe(true);
-		});
+	it("honours implicit self grants but never extends them to other users", async () => {
+		expect(await asSystem(() => kernel.can({ subject: { userId }, action: "UPDATE", resource: "USER", resourceId: userId }))).toBe("ALLOW");
+		expect(await asSystem(() => kernel.can({ subject: { userId }, action: "UPDATE", resource: "USER", resourceId: managerId }))).toBe("DENY");
 	});
 
-	describe("Super-Admin Bypass", () => {
-		it("should allow super-admin to access any resource", async () => {
-			const response = await request(app.getHttpServer()).get("/api/v1/admin/users").set("Authorization", `Bearer ${adminToken}`).expect(200);
+	it("lets a per-user DENY override beat a role grant", async () => {
+		expect(await asSystem(() => kernel.can({ subject: { userId: managerId }, action: "READ", resource: "REPORT" }))).toBe("ALLOW");
 
-			expect(response.body.success).toBe(true);
-		});
+		await pool.query(
+			`INSERT INTO public.user_permissions (id, "userId", "permissionId", effect) VALUES (gen_random_uuid(), $1, $2, 'DENY')
+       ON CONFLICT ("userId", "permissionId") DO UPDATE SET is_deleted = false, deleted_at = NULL, effect = 'DENY'`,
+			[managerId, readReportPermissionId],
+		);
 
-		it("should audit super-admin bypass", async () => {
-			await request(app.getHttpServer()).get("/api/v1/admin/users").set("Authorization", `Bearer ${adminToken}`).expect(200);
-
-			// Verify audit log was created
-			const auditLogs = await prisma.authorizationAudit.findMany({
-				where: {
-					actorId: adminId,
-					action: "SUPER_ADMIN_BYPASS",
-				},
-				orderBy: { createdAt: "desc" },
-				take: 1,
-			});
-
-			expect(auditLogs.length).toBeGreaterThan(0);
-		});
+		const result = await asSystem(() => kernel.explain({ subject: { userId: managerId }, action: "READ", resource: "REPORT" }));
+		expect(result.decision).toBe("DENY");
+		expect(result.evaluation.at(-1)?.source).toBe("override");
 	});
 
-	describe("ACL Precedence", () => {
-		it("should deny access when ACL DENY exists (even with role ALLOW)", async () => {
-			// Setup: Create ACL DENY for specific resource
-			await prisma.resourceAcl.create({
-				data: {
-					userId,
-					effect: "DENY",
-					action: "UPDATE",
-					resource: "ORDER",
-					resourceId: "blocked-order-id",
-				},
-			});
-
-			// User has UPDATE:ORDER via role, but ACL DENY blocks it
-			await request(app.getHttpServer()).patch(`/api/v1/orders/blocked-order-id`).set("Authorization", `Bearer ${userToken}`).send({ status: "COMPLETED" }).expect(403);
-
-			// Cleanup
-			await prisma.resourceAcl.deleteMany({
-				where: { userId, resourceId: "blocked-order-id" },
-			});
-		});
-
-		it("should allow access when ACL ALLOW exists", async () => {
-			// Setup: Create ACL ALLOW for specific resource
-			await prisma.resourceAcl.create({
-				data: {
-					userId,
-					effect: "ALLOW",
-					action: "DELETE",
-					resource: "ORDER",
-					resourceId: "allowed-order-id",
-				},
-			});
-
-			// User normally lacks DELETE:ORDER, but ACL ALLOW grants it
-			const response = await request(app.getHttpServer()).delete(`/api/v1/orders/allowed-order-id`).set("Authorization", `Bearer ${userToken}`).expect(200);
-
-			expect(response.body.success).toBe(true);
-
-			// Cleanup
-			await prisma.resourceAcl.deleteMany({
-				where: { userId, resourceId: "allowed-order-id" },
-			});
-		});
-	});
-
-	describe("Token Version Validation", () => {
-		it("should reject token when tokenVersion changed (e.g., permission revoked)", async () => {
-			// Simulate permission change that increments tokenVersion
-			await prisma.user.update({
-				where: { id: userId },
-				data: { tokenVersion: { increment: 1 } },
-			});
-
-			// Old token should now be rejected
-			await request(app.getHttpServer()).get("/api/v1/auth/me").set("Authorization", `Bearer ${userToken}`).expect(401);
-
-			// Revert for other tests
-			await prisma.user.update({
-				where: { id: userId },
-				data: { tokenVersion: { decrement: 1 } },
-			});
-		});
-	});
-
-	describe("Kernel API", () => {
-		it("should return ALLOW for authorized action", async () => {
-			const decision = await kernel.can({
-				userId,
-				action: "CREATE",
-				resource: "ORDER",
-			});
-
-			expect(decision).toBe("ALLOW");
-		});
-
-		it("should return DENY for unauthorized action", async () => {
-			const decision = await kernel.can({
-				userId,
-				action: "DELETE",
-				resource: "USER",
-			});
-
-			expect(decision).toBe("DENY");
-		});
-
-		it("should provide detailed explanation via explain()", async () => {
-			const result = await kernel.explain({
-				subject: { userId },
-				action: "CREATE",
-				resource: "ORDER",
-				resourceId: null,
-				context: {},
-			});
-
-			expect(result.decision).toBe("ALLOW");
-			expect(result.matchedGrants.length).toBeGreaterThan(0);
-			expect(result.matchedGrants[0]).toHaveProperty("source");
-			expect(result.matchedGrants[0]).toHaveProperty("action");
-		});
-
-		it("should generate correct filter for accessible resources", async () => {
-			const filter = await kernel.filter({
-				userId,
-				action: "READ",
-				resource: "ORDER",
-			});
-
-			expect(filter).toHaveProperty("OR");
-			expect(Array.isArray(filter.OR)).toBe(true);
-		});
-	});
-
-	// ─── Test Helpers ────────────────────────────────────────────────────────
-
-	async function setupTestUsers(): Promise<void> {
-		// Create test user with basic permissions
-		const user = await prisma.user.create({
-			data: {
-				email: "test-user@example.com",
-				fullName: "Test User",
-				passwordHash: "hashed-password",
-				isEmailVerified: true,
-				isSuperAdmin: false,
-			},
-		});
-		userId = user.id;
-
-		// Create super-admin user
-		const admin = await prisma.user.create({
-			data: {
-				email: "admin@example.com",
-				fullName: "Admin User",
-				passwordHash: "hashed-password",
-				isEmailVerified: true,
-				isSuperAdmin: true,
-			},
-		});
-		adminId = admin.id;
-
-		// Grant permissions to test user
-		const createOrderPermission = await prisma.permission.findFirst({
-			where: { action: "CREATE", resource: "ORDER" },
-		});
-
-		if (createOrderPermission) {
-			await prisma.userPermission.create({
-				data: {
-					userId,
-					permissionId: createOrderPermission.id,
-				},
-			});
+	it("applies explicit ACL DENY for one resource without affecting others", async () => {
+		const created = await pool.query<{ id: string }>(
+			`INSERT INTO public.resource_acls (id, subject_type, subject_id, action, resource_type, resource_id, effect)
+       VALUES (gen_random_uuid(), 'USER', $1, 'UPDATE', 'USER', $1, 'DENY') RETURNING id`,
+			[userId],
+		);
+		const aclId = created.rows.at(0)?.id;
+		if (aclId !== undefined) {
+			createdAclIds.push(aclId);
 		}
 
-		// Generate tokens (simplified - in real app would use TokenService)
-		userToken = await generateTestToken(userId, false);
-		adminToken = await generateTestToken(adminId, true);
-	}
+		expect(await asSystem(() => kernel.can({ subject: { userId }, action: "UPDATE", resource: "USER", resourceId: userId }))).toBe("DENY");
+		expect(await asSystem(() => kernel.can({ subject: { userId }, action: "READ", resource: "USER", resourceId: userId }))).toBe("ALLOW");
+	});
 
-	async function cleanupTestData(): Promise<void> {
-		// Delete test users and their related data
-		await prisma.userPermission.deleteMany({
-			where: { userId: { in: [userId, adminId] } },
-		});
-		await prisma.resourceAcl.deleteMany({
-			where: { userId: { in: [userId, adminId] } },
-		});
-		await prisma.user.deleteMany({
-			where: { id: { in: [userId, adminId] } },
-		});
-	}
+	it("rejects a forged organization and accepts a verified membership", async () => {
+		const forged = await asSystem(() =>
+			kernel.explain({ subject: { userId, organizationId: ORGANIZATION_SEED_IDS.mlkOrganization }, action: "READ", resource: "USER", resourceId: userId }),
+		);
+		expect(forged.decision).toBe("DENY");
+		expect(forged.evaluation.at(-1)?.source).toBe("tenant");
 
-	async function generateTestToken(id: string, isSuperAdmin: boolean): Promise<string> {
-		// Simplified token generation for tests
-		// In real implementation, use TokenService
-		return `test-token-${id}-${isSuperAdmin}`;
-	}
+		const member = await asSystem(() =>
+			kernel.explain({ subject: { userId: mlkOwnerId, organizationId: ORGANIZATION_SEED_IDS.mlkOrganization }, action: "READ", resource: "USER", resourceId: mlkOwnerId }),
+		);
+		expect(member.decision).toBe("ALLOW");
+		expect(member.request.subject.organizationId).toBe(ORGANIZATION_SEED_IDS.mlkOrganization);
+	});
+
+	it("never grants permissions from organization membership alone", async () => {
+		expect(
+			await asSystem(() => kernel.can({ subject: { userId: mlkOwnerId, organizationId: ORGANIZATION_SEED_IDS.mlkOrganization }, action: "DELETE", resource: "ORGANIZATION" })),
+		).toBe("DENY");
+	});
+
+	it("builds list filters from grants", async () => {
+		expect(await asSystem(() => kernel.filter({ userId }, "READ", "USER"))).toEqual({ id: { in: [userId] } });
+		expect(await asSystem(() => kernel.filter({ userId }, "DELETE", "ORDER"))).toEqual({ id: { in: [] } });
+	});
 });

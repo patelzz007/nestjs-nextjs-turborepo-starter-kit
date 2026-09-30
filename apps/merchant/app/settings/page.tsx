@@ -3,7 +3,7 @@ import { organizationPath } from "@/lib/org/slug";
 import { redirect } from "next/navigation";
 
 /** Legacy `/settings` entry — forwards to the active organization settings route. */
-export default async function MerchantSettingsRedirectPage(): Promise<never> {
+export default async function MerchantSettingsRedirectPage(): Promise<React.ReactNode> {
 	const ctx = await loadMerchantServerContext();
 	const organizationSlug = ctx.organizationSlug ?? ctx.memberships[0]?.organizationSlug;
 

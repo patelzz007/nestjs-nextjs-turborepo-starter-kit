@@ -1,9 +1,15 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
-import type { TypedConfigService } from "../../../config/typed-config.service";
+import { TypedConfigService } from "../../../config/typed-config.service";
 import type { UserLogin } from "../repositories/user.repository";
 
 import { SessionRestrictionService } from "./session-restriction.service";
+
+vi.mock("../../../config/typed-config.service", () => ({
+	TypedConfigService: class {
+		public readonly mfaEnrollmentDeadlineMs = 7 * 24 * 60 * 60 * 1000;
+	},
+}));
 
 function buildUser(overrides: Partial<UserLogin> = {}): UserLogin {
 	return {
@@ -16,7 +22,7 @@ function buildUser(overrides: Partial<UserLogin> = {}): UserLogin {
 		updatedAt: BigInt(Date.now()),
 		isDeleted: false,
 		deletedAt: null,
-		emailVerifiedAt: BigInt(Date.now()),
+		emailVerifiedAt: BigInt(Date.now() - 60_000),
 		tokenVersion: 1,
 		twoFactorEnabled: false,
 		mfaEnrollmentDeadline: BigInt(Date.now() + 60_000),
@@ -30,8 +36,7 @@ function buildUser(overrides: Partial<UserLogin> = {}): UserLogin {
 }
 
 describe("SessionRestrictionService", () => {
-	const config = { mfaEnrollmentDeadlineMs: 7 * 24 * 60 * 60 * 1000 } as TypedConfigService;
-	const service = new SessionRestrictionService(config);
+	const service = new SessionRestrictionService(new TypedConfigService());
 	const now: number = Date.now();
 
 	it("returns restricted scope when email is not verified", () => {

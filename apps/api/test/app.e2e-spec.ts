@@ -21,12 +21,11 @@ interface ContractLeaf {
 	readonly path: string;
 }
 
-function collectContractLeaves(node: unknown, out: ContractLeaf[]): void {
-	if (node === null || typeof node !== "object") return;
+function collectContractLeaves(node: object, out: ContractLeaf[]): void {
 	if ("method" in node && "path" in node && typeof node.method === "string" && typeof node.path === "string") {
-		const method: string = node.method as string;
+		const method: string = node.method;
 		if (method === "GET" || method === "POST" || method === "PUT" || method === "PATCH" || method === "DELETE") {
-			out.push({ method, path: node.path as string });
+			out.push({ method, path: node.path });
 		}
 		return;
 	}

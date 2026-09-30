@@ -1,8 +1,11 @@
 "use client";
 
-import { stubApiMeta } from "@/lib/format/api-envelope";
+import { stubApiMeta, successEnvelope } from "@/lib/format/api-envelope";
 import { useAuth } from "@workspace/client/lib/auth";
-import type { SampleCategory } from "@workspace/shared/schemas/domain/generated/sample-category.generated";
+import { useAuthorization } from "@workspace/client/lib/auth/can";
+import { PERMISSION } from "@workspace/shared";
+import { AdminAccessDenied } from "@/components/access/admin-access-denied";
+import type { SampleCategory } from "@workspace/shared/schemas/domain/catalog/sample-category";
 import { Badge } from "@workspace/ui/components/feedback/badge";
 import { Button } from "@workspace/ui/components/form/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
@@ -30,19 +33,17 @@ function DetailField({ label, value }: { readonly label: string; readonly value:
 
 export default function SampleCategoryDetailView({ id, initialSampleCategory }: SampleCategoryDetailViewProps): React.JSX.Element {
 	const { api } = useAuth();
-	const initialQueryData = useMemo(
-		() =>
-			initialSampleCategory !== undefined
-				? {
-						success: true as const,
-						data: initialSampleCategory,
-						meta: stubApiMeta(),
-					}
-				: undefined,
-		[initialSampleCategory],
-	);
-	const detailQuery = api.sampleCategory.detail.useQuery({ id }, { initialData: initialQueryData });
+	// GET /sample-category/:id needs READ (the list only LIST); PATCH /sample-category/:id needs UPDATE.
+	const { can } = useAuthorization();
+	const canView = can(PERMISSION.SAMPLE_CATEGORY.READ);
+	const canUpdate = can(PERMISSION.SAMPLE_CATEGORY.UPDATE);
+	const initialQueryData = useMemo(() => (initialSampleCategory !== undefined ? successEnvelope(initialSampleCategory, stubApiMeta()) : undefined), [initialSampleCategory]);
+	const detailQuery = api.sampleCategory.detail.useQuery({ id }, { enabled: canView, initialData: initialQueryData });
 	const entity: SampleCategory | undefined = detailQuery.data?.data;
+
+	if (!canView) {
+		return <AdminAccessDenied description="Viewing category details requires the category read permission." />;
+	}
 
 	if (detailQuery.isLoading && entity === undefined) {
 		return <p className="text-muted-foreground">{"Loading samplecategory…"}</p>;
@@ -67,10 +68,12 @@ export default function SampleCategoryDetailView({ id, initialSampleCategory }: 
 					<ArrowLeft className="mr-2 size-4" />
 					{"Back to categories"}
 				</Button>
-				<Button nativeButton={false} render={<Link href={`/sample-category/${entity.id}/edit`} />}>
-					<Pencil className="mr-2 size-4" />
-					Edit
-				</Button>
+				{canUpdate ? (
+					<Button nativeButton={false} render={<Link href={`/sample-category/${entity.id}/edit`} />}>
+						<Pencil className="mr-2 size-4" />
+						Edit
+					</Button>
+				) : null}
 			</div>
 
 			<Card>

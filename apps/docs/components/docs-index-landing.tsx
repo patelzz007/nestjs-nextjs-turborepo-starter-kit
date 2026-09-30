@@ -1,4 +1,4 @@
-import { ArrowRight, BookOpen, ExternalLink, FileCode2, Layers, Rocket, Search } from "lucide-react";
+import { ArrowRight, BookOpen, ExternalLink, FileCode2, Layers, Rocket, Search, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 
 import { OpenSearchButton } from "@/components/open-search-button";
@@ -7,7 +7,7 @@ import { DOCS_LANDING_STATS, FEATURED_GUIDES, type DocsSection } from "@/lib/doc
 import { SECTION_ICONS } from "@/lib/docs-tree";
 import { GITHUB_URL, SITE_DESCRIPTION } from "@/lib/site";
 
-const FEATURED_ICONS = [Rocket, Layers, BookOpen, FileCode2] as const;
+const FEATURED_ICONS: readonly LucideIcon[] = [Rocket, Layers, BookOpen, FileCode2];
 
 export interface DocsIndexLandingProps {
 	readonly sections: readonly DocsSection[];

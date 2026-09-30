@@ -24,6 +24,7 @@ import { Badge } from "@workspace/ui/components/feedback/badge";
 import { createDataTableLabels, type DataTableLabels } from "@/lib/data-table/labels";
 import { DataTableMobileCard } from "@/lib/data-table/mobile-card";
 import { DataTable, type Action, type DataTableCheckboxConfig, type DataTableFeatures, type Filter } from "@workspace/ui/components/display/data-table";
+import type { DataTableCellScalar } from "@workspace/ui/lib/data-table/prefs";
 import type { ColumnDef } from "@tanstack/react-table";
 import { CircleCheck, CircleDashed, Copy, Eye, Pencil, Trash2 } from "lucide-react";
 
@@ -167,7 +168,7 @@ export function DataTableShowcase(): React.JSX.Element {
 	// replace just that field, so edits stay correct under sort/filter/page.
 	// The `columnId in item` guard keeps a future `editableColumns` typo from
 	// writing a phantom key onto the record.
-	const handleCellEdit = useCallback((_rowIndex: number, columnId: string, value: unknown, row: DashboardRow): void => {
+	const handleCellEdit = useCallback((_rowIndex: number, columnId: string, value: DataTableCellScalar, row: DashboardRow): void => {
 		setRows((prev) => prev.map((item) => (item.id === row.id && columnId in item ? { ...item, [columnId]: String(value) } : item)));
 		toastMessage.success({ title: `Updated “${row.header}” — ${EDITABLE_COLUMN_LABELS[columnId] ?? columnId} → ${String(value)}` });
 	}, []);

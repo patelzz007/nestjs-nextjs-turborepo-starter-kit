@@ -11,9 +11,18 @@ import type { AuthUser } from "../session/store";
  * Rotates the httpOnly session after email verification so access tokens pick up
  * `isEmailVerified` / `sessionScope: full` from the database.
  */
-export async function syncSessionAfterEmailVerification(api: ApiClient<ApiRouter>, login: (user: AuthUser) => void, queryClient: QueryClient): Promise<void> {
+export async function syncSessionAfterEmailVerification(
+	api: ApiClient<ApiRouter>,
+	login: (user: AuthUser) => void,
+	queryClient: QueryClient,
+	refreshSession?: () => Promise<boolean>,
+): Promise<void> {
 	try {
-		await api.auth.refresh.mutate({});
+		if (refreshSession) {
+			await refreshSession();
+		} else {
+			await api.auth.refresh.mutate({});
+		}
 	} catch {
 		// Guest may open the verify link without an active session.
 	}

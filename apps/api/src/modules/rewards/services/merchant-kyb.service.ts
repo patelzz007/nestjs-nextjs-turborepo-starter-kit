@@ -21,8 +21,10 @@ export class MerchantKybService {
 		private readonly auditLogRepository: RewardAuditLogRepository,
 	) {}
 
+	/** Owner-only: KYB holds the business's legal and identity details. */
 	public async getProfile(userId: string, orgSlug: string): Promise<MerchantKybProfileResponse> {
 		const resolved = await this.organizationRewardAuth.resolveOrganizationFromSlug(userId, orgSlug);
+		await this.merchantContext.requireOwnerRole(userId, resolved.organizationId, orgSlug);
 
 		return this.tenantTx.withTenantTransaction(
 			{

@@ -1,47 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { NextRequest } from "next/server";
+import { NextRequest } from "next/server";
+import type { NextResponse } from "next/server";
 
-import { proxy, resetWebProxyRefreshCooldownForTests } from "./proxy";
 import { isAccessTokenExpired, resolveProxySessionRefresh, shouldAttemptProxyRefresh } from "@workspace/client/lib/auth/edge/proxy-refresh";
 
+import { proxy, resetWebProxyRefreshCooldownForTests } from "./proxy";
+
 // ── Mocks ──────────────────────────────────────────────────────────────────
-// The proxy module imports `next/server` (NextResponse) and
-// `@workspace/client/lib/api/config` (API_BASE_URL). Both are mocked below
-// (vi.mock factories are hoisted above the import).
+// `next/server` is intentionally NOT mocked: real NextRequest/NextResponse
+// run fine in the node vitest environment, so tests assert on actual response
+// objects (status, Location header, cookies) instead of casting fake doubles.
 
-interface CookieCall {
-	readonly name: string;
-	readonly value: string;
-	readonly options?: Record<string, unknown>;
-}
-
-class MockResponseCookies {
-	public readonly calls: CookieCall[] = [];
-
-	public set(name: string, value: string, options?: Record<string, unknown>): void {
-		this.calls.push({ name, value, options });
-	}
-}
-
-interface MockResponse {
-	readonly status: number;
-	readonly url?: string;
-	readonly cookies: MockResponseCookies;
-}
-
-const nextResponse = vi.hoisted(() => {
-	const createResponse = (init?: { readonly status?: number; readonly url?: string }): MockResponse => ({
-		status: init?.status ?? 200,
-		url: init?.url,
-		cookies: new MockResponseCookies(),
-	});
-	return {
-		next: vi.fn((): MockResponse => createResponse()),
-		redirect: vi.fn((url: string | URL): MockResponse => createResponse({ status: 307, url: String(url) })),
-	};
-});
-
-vi.mock("next/server", () => ({ NextResponse: nextResponse }));
 vi.mock("@workspace/client/lib/api/config", () => ({ API_BASE_URL: "http://api.test", API_URL_PREFIX: "/api/v1" }));
 
 // ── Request / response plumbing ─────────────────────────────────────────────
@@ -55,44 +24,57 @@ interface RequestOptions {
 	readonly query?: Record<string, string>;
 }
 
-function makeRequest(options: RequestOptions): unknown {
-	const cookieValue = (name: string): { readonly value: string } | undefined => {
-		const value = name === "accessToken" ? options.accessToken : name === "refreshToken" ? options.refreshToken : undefined;
-		return value === undefined || value === null ? undefined : { value };
-	};
-	return {
-		cookies: { get: cookieValue },
-		headers: {
-			get: (name: string): string | null => {
-				if (name === "sec-fetch-mode") return options.secFetchMode ?? null;
-				if (name === "accept") return options.accept ?? null;
-				return null;
-			},
-		},
-		nextUrl: {
-			pathname: options.pathname ?? "/",
-			searchParams: new URLSearchParams(options.query),
-		},
-		url: `http://localhost:3000${options.pathname ?? "/"}`,
-	};
+function makeRequest(options: RequestOptions): NextRequest {
+	const headers = new Headers();
+	if (options.secFetchMode !== null && options.secFetchMode !== undefined) headers.set("sec-fetch-mode", options.secFetchMode);
+	if (options.accept !== null && options.accept !== undefined) headers.set("accept", options.accept);
+
+	const cookieParts: string[] = [];
+	if (options.accessToken !== null && options.accessToken !== undefined) cookieParts.push(`accessToken=${options.accessToken}`);
+	if (options.refreshToken !== null && options.refreshToken !== undefined) cookieParts.push(`refreshToken=${options.refreshToken}`);
+	if (cookieParts.length > 0) headers.set("cookie", cookieParts.join("; "));
+
+	const url = new URL(`http://localhost:3000${options.pathname ?? "/"}`);
+	for (const [name, value] of Object.entries(options.query ?? {})) url.searchParams.set(name, value);
+
+	return new NextRequest(url, { headers });
 }
 
-function runProxy(options: RequestOptions): Promise<MockResponse> {
-	const request = makeRequest(options);
-	return proxy(request as NextRequest) as unknown as Promise<MockResponse>;
+function runProxy(options: RequestOptions): Promise<NextResponse> {
+	return proxy(makeRequest(options));
 }
 
-/** The URL the proxy redirected to (normalised from the URL object it passes). */
-function redirectTarget(): string {
-	const call = nextResponse.redirect.mock.calls[0];
-	if (call === undefined) throw new Error("redirect was never called");
-	const url = call[0];
-	return typeof url === "string" ? url : url.href;
+/** The redirect target of a redirect response, or undefined when it did not redirect. */
+function redirectLocation(response: NextResponse): string | undefined {
+	return response.headers.get("location") ?? undefined;
 }
 
-function makeJwt(payload: Record<string, unknown>): string {
-	const encode = (value: unknown): string => btoa(JSON.stringify(value)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-	return `${encode({ alg: "none", typ: "JWT" })}.${encode(payload)}.signature`;
+/** The value of a cookie set on the response, or undefined when absent. */
+function cookieValue(response: NextResponse, name: string): string | undefined {
+	return response.cookies.get(name)?.value;
+}
+
+/** Auth cookies the proxy cleared (present with an empty value), sorted. */
+function clearedCookieNames(response: NextResponse): readonly string[] {
+	return ["accessToken", "refreshToken"].filter((name) => cookieValue(response, name) === "").sort();
+}
+
+interface JwtHeader {
+	readonly alg: string;
+	readonly typ: string;
+}
+
+interface JwtClaims {
+	readonly sub: string;
+	readonly exp: number;
+}
+
+function base64UrlJson(value: JwtHeader | JwtClaims): string {
+	return btoa(JSON.stringify(value)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+function makeJwt(payload: JwtClaims): string {
+	return `${base64UrlJson({ alg: "none", typ: "JWT" })}.${base64UrlJson(payload)}.signature`;
 }
 
 function expiredToken(): string {
@@ -131,24 +113,22 @@ describe("web proxy route protection", () => {
 		const response = await runProxy({ pathname: "/hello" });
 
 		expect(response.status).toBe(307);
-		expect(redirectTarget()).toBe("http://localhost:3000/auth/login?redirect=%2Fhello");
+		expect(redirectLocation(response)).toBe("http://localhost:3000/auth/login?redirect=%2Fhello");
 	});
 
 	it("allows authenticated users at the root without redirect", async () => {
 		const response = await runProxy({ pathname: "/", accessToken: validToken(), refreshToken: "rt" });
 
 		expect(response.status).toBe(200);
-		expect(nextResponse.next).toHaveBeenCalled();
-		expect(nextResponse.redirect).not.toHaveBeenCalled();
+		expect(redirectLocation(response)).toBeUndefined();
 	});
 
 	it("clears orphaned access cookies on protected routes", async () => {
 		const response = await runProxy({ pathname: "/hello", accessToken: validToken() });
 
 		expect(response.status).toBe(307);
-		expect(redirectTarget()).toBe("http://localhost:3000/auth/login?redirect=%2Fhello");
-		const cleared = response.cookies.calls.filter((call) => call.value === "");
-		expect(cleared.map((call) => call.name).sort()).toEqual(["accessToken", "refreshToken"]);
+		expect(redirectLocation(response)).toBe("http://localhost:3000/auth/login?redirect=%2Fhello");
+		expect(clearedCookieNames(response)).toEqual(["accessToken", "refreshToken"]);
 	});
 
 	it("bounces authenticated users away from auth routes", async () => {
@@ -156,7 +136,7 @@ describe("web proxy route protection", () => {
 		const response = await runProxy({ pathname: "/auth/login", accessToken: validToken(), refreshToken: "rt", ...DOC_NAV });
 
 		expect(response.status).toBe(307);
-		expect(redirectTarget()).toBe("http://localhost:3000/rewardhub");
+		expect(redirectLocation(response)).toBe("http://localhost:3000/rewardhub");
 	});
 
 	it("allows authenticated users to open verify-email links", async () => {
@@ -168,8 +148,24 @@ describe("web proxy route protection", () => {
 		});
 
 		expect(response.status).toBe(200);
-		expect(nextResponse.next).toHaveBeenCalled();
-		expect(nextResponse.redirect).not.toHaveBeenCalled();
+		expect(redirectLocation(response)).toBeUndefined();
+	});
+
+	it("does not silently refresh token-auth verify-email pages", async () => {
+		const fetchMock = vi.fn();
+		vi.stubGlobal("fetch", fetchMock);
+
+		const response = await runProxy({
+			pathname: "/auth/verify-email",
+			accessToken: validToken(),
+			refreshToken: "rt",
+			query: { token: "test-token" },
+			...DOC_NAV,
+		});
+
+		expect(response.status).toBe(200);
+		expect(redirectLocation(response)).toBeUndefined();
+		expect(fetchMock).not.toHaveBeenCalled();
 	});
 
 	it("allows authenticated users to open reset-password links", async () => {
@@ -181,45 +177,42 @@ describe("web proxy route protection", () => {
 		});
 
 		expect(response.status).toBe(200);
-		expect(nextResponse.next).toHaveBeenCalled();
-		expect(nextResponse.redirect).not.toHaveBeenCalled();
+		expect(redirectLocation(response)).toBeUndefined();
 	});
 
 	it("honours the redirect param on auth routes", async () => {
 		stubRefreshResponse(200, ["accessToken=live-at; Path=/; HttpOnly", "refreshToken=live-rt; Path=/; HttpOnly"]);
-		await runProxy({ pathname: "/auth/login", accessToken: validToken(), refreshToken: "rt", ...DOC_NAV, query: { redirect: "/hello" } });
+		const response = await runProxy({ pathname: "/auth/login", accessToken: validToken(), refreshToken: "rt", ...DOC_NAV, query: { redirect: "/hello" } });
 
-		expect(redirectTarget()).toBe("http://localhost:3000/hello");
+		expect(redirectLocation(response)).toBe("http://localhost:3000/hello");
 	});
 
 	it("ignores a redirect param that is not a protected route (no open redirects)", async () => {
 		stubRefreshResponse(200, ["accessToken=live-at; Path=/; HttpOnly", "refreshToken=live-rt; Path=/; HttpOnly"]);
-		await runProxy({ pathname: "/auth/login", accessToken: validToken(), refreshToken: "rt", ...DOC_NAV, query: { redirect: "//evil.com" } });
+		const response = await runProxy({ pathname: "/auth/login", accessToken: validToken(), refreshToken: "rt", ...DOC_NAV, query: { redirect: "//evil.com" } });
 
-		expect(redirectTarget()).toBe("http://localhost:3000/rewardhub");
+		expect(redirectLocation(response)).toBe("http://localhost:3000/rewardhub");
 	});
 
 	it("serves public routes to everyone", async () => {
 		const response = await runProxy({ pathname: "/about" });
 
 		expect(response.status).toBe(200);
-		expect(nextResponse.next).toHaveBeenCalled();
-		expect(nextResponse.redirect).not.toHaveBeenCalled();
+		expect(redirectLocation(response)).toBeUndefined();
 	});
 
 	it("serves login when the access token is expired and no refresh token exists", async () => {
 		const response = await runProxy({ pathname: "/auth/login", accessToken: expiredToken() });
 
 		expect(response.status).toBe(200);
-		expect(nextResponse.next).toHaveBeenCalled();
-		expect(nextResponse.redirect).not.toHaveBeenCalled();
+		expect(redirectLocation(response)).toBeUndefined();
 	});
 
 	it("redirects protected routes to login when the access token is expired with no refresh", async () => {
 		const response = await runProxy({ pathname: "/hello", accessToken: expiredToken() });
 
 		expect(response.status).toBe(307);
-		expect(redirectTarget()).toBe("http://localhost:3000/auth/login?redirect=%2Fhello");
+		expect(redirectLocation(response)).toBe("http://localhost:3000/auth/login?redirect=%2Fhello");
 	});
 
 	it("serves the home page as guest when the session is dead (no login redirect)", async () => {
@@ -228,18 +221,15 @@ describe("web proxy route protection", () => {
 		const response = await runProxy({ pathname: "/", accessToken: expiredToken(), refreshToken: "rt-dead", ...DOC_NAV });
 
 		expect(response.status).toBe(200);
-		expect(nextResponse.next).toHaveBeenCalled();
-		expect(nextResponse.redirect).not.toHaveBeenCalled();
+		expect(redirectLocation(response)).toBeUndefined();
 	});
 
 	it("clears stale cookies on guest routes when access token exists without refresh", async () => {
 		const response = await runProxy({ pathname: "/", accessToken: expiredToken() });
 
 		expect(response.status).toBe(200);
-		expect(nextResponse.redirect).not.toHaveBeenCalled();
-
-		const cleared = response.cookies.calls.filter((call) => call.value === "");
-		expect(cleared.map((call) => call.name).sort()).toEqual(["accessToken", "refreshToken"]);
+		expect(redirectLocation(response)).toBeUndefined();
+		expect(clearedCookieNames(response)).toEqual(["accessToken", "refreshToken"]);
 	});
 });
 
@@ -254,13 +244,16 @@ describe("web proxy server-side refresh", () => {
 				isDocumentNavigation: true,
 				isAuthRoute: false,
 				isPublicRoute: false,
+				tokenAuthRoute: false,
 			}),
 		).toBe(true);
 
+		// A successful refresh must rotate BOTH auth cookies (the client library
+		// rejects a response that is missing either one) — see `hasRotatedAuthCookies`.
 		const attemptRefresh = vi.fn().mockResolvedValue({
 			ok: true,
 			status: 200,
-			setCookies: ["accessToken=new-at; Path=/; HttpOnly"],
+			setCookies: ["accessToken=new-at; Path=/; HttpOnly", "refreshToken=new-rt; Path=/; HttpOnly"],
 		});
 
 		const result = await resolveProxySessionRefresh({
@@ -269,7 +262,9 @@ describe("web proxy server-side refresh", () => {
 			isDocumentNavigation: true,
 			isAuthRoute: false,
 			isPublicRoute: false,
+			tokenAuthRoute: false,
 			accessTokenCookieName: "accessToken",
+			refreshTokenCookieName: "refreshToken",
 			app: "web",
 			pathname: "/hello",
 			attemptRefresh,
@@ -301,17 +296,18 @@ describe("web proxy server-side refresh", () => {
 			const secondResponse = await runProxy({ pathname: "/hello", accessToken: expiredToken(), refreshToken: "rt-cooldown", ...DOC_NAV });
 
 			expect(secondResponse.status).toBe(200);
-			expect(secondResponse.cookies.calls).toHaveLength(0);
+			expect(cookieValue(secondResponse, "accessToken")).toBeUndefined();
+			expect(cookieValue(secondResponse, "refreshToken")).toBeUndefined();
 			expect(failingFetch).toHaveBeenCalledTimes(1);
 
 			// Move past the cooldown and restore a healthy API: the refresh works
 			// again (success also clears the cooldown, so later tests are unaffected).
 			await vi.advanceTimersByTimeAsync(60_001);
-			stubRefreshResponse(200, ["accessToken=new-at; Path=/; HttpOnly"]);
+			stubRefreshResponse(200, ["accessToken=new-at; Path=/; HttpOnly", "refreshToken=new-rt; Path=/; HttpOnly"]);
 			const thirdResponse = await runProxy({ pathname: "/hello", accessToken: expiredToken(), refreshToken: "rt-cooldown", ...DOC_NAV });
 
 			expect(thirdResponse.status).toBe(200);
-			expect(thirdResponse.cookies.calls.find((call) => call.name === "accessToken")?.value).toBe("new-at");
+			expect(cookieValue(thirdResponse, "accessToken")).toBe("new-at");
 		} finally {
 			vi.useRealTimers();
 		}
@@ -324,14 +320,17 @@ describe("web proxy server-side refresh", () => {
 		const response = await runProxy({ pathname: "/hello", accessToken: expiredToken(), refreshToken: "rt-old", ...DOC_NAV });
 
 		expect(response.status).toBe(200);
-		expect(nextResponse.redirect).not.toHaveBeenCalled();
+		expect(redirectLocation(response)).toBeUndefined();
 
-		const accessCall = response.cookies.calls.find((call) => call.name === "accessToken");
-		expect(accessCall?.value).toBe("new-at");
-		expect(accessCall?.options).toMatchObject({ httpOnly: true, secure: true, sameSite: "lax", path: "/" });
+		const accessCookie = response.cookies.get("accessToken");
+		expect(accessCookie?.value).toBe("new-at");
+		expect(accessCookie?.httpOnly).toBe(true);
+		expect(accessCookie?.secure).toBe(true);
+		expect(accessCookie?.sameSite).toBe("lax");
+		expect(accessCookie?.path).toBe("/");
 
-		const refreshCall = response.cookies.calls.find((call) => call.name === "refreshToken");
-		expect(refreshCall?.value).toBe("new-rt");
+		const refreshCookie = response.cookies.get("refreshToken");
+		expect(refreshCookie?.value).toBe("new-rt");
 	});
 
 	it("clears stale cookies and redirects to login when the refresh token is dead", async () => {
@@ -340,11 +339,11 @@ describe("web proxy server-side refresh", () => {
 		const response = await runProxy({ pathname: "/hello", accessToken: expiredToken(), refreshToken: "rt-dead", ...DOC_NAV });
 
 		expect(response.status).toBe(307);
-		expect(redirectTarget()).toBe("http://localhost:3000/auth/login?redirect=%2Fhello");
+		expect(redirectLocation(response)).toBe("http://localhost:3000/auth/login?redirect=%2Fhello");
 
-		const cleared = response.cookies.calls.filter((call) => call.value === "");
-		expect(cleared.map((call) => call.name).sort()).toEqual(["accessToken", "refreshToken"]);
-		expect(cleared.every((call) => call.options?.maxAge === 0)).toBe(true);
+		const cleared = clearedCookieNames(response);
+		expect(cleared).toEqual(["accessToken", "refreshToken"]);
+		expect(cleared.every((name) => response.cookies.get(name)?.maxAge === 0)).toBe(true);
 	});
 
 	it("serves the page without clearing cookies on a transient refresh failure", async () => {
@@ -353,8 +352,9 @@ describe("web proxy server-side refresh", () => {
 		const response = await runProxy({ pathname: "/hello", accessToken: expiredToken(), refreshToken: "rt", ...DOC_NAV });
 
 		expect(response.status).toBe(200);
-		expect(response.cookies.calls).toHaveLength(0);
-		expect(nextResponse.redirect).not.toHaveBeenCalled();
+		expect(cookieValue(response, "accessToken")).toBeUndefined();
+		expect(cookieValue(response, "refreshToken")).toBeUndefined();
+		expect(redirectLocation(response)).toBeUndefined();
 	});
 
 	it("does not refresh for RSC / prefetch data requests", async () => {
@@ -387,18 +387,16 @@ describe("web proxy server-side refresh", () => {
 		});
 
 		expect(response.status).toBe(200);
-		expect(nextResponse.redirect).not.toHaveBeenCalled();
-		const cleared = response.cookies.calls.filter((call) => call.value === "");
-		expect(cleared.map((call) => call.name).sort()).toEqual(["accessToken", "refreshToken"]);
+		expect(redirectLocation(response)).toBeUndefined();
+		expect(clearedCookieNames(response)).toEqual(["accessToken", "refreshToken"]);
 	});
 
 	it("serves login without bounce when only an orphaned access cookie remains", async () => {
 		const response = await runProxy({ pathname: "/auth/login", accessToken: validToken() });
 
 		expect(response.status).toBe(200);
-		expect(nextResponse.redirect).not.toHaveBeenCalled();
-		const cleared = response.cookies.calls.filter((call) => call.value === "");
-		expect(cleared.map((call) => call.name).sort()).toEqual(["accessToken", "refreshToken"]);
+		expect(redirectLocation(response)).toBeUndefined();
+		expect(clearedCookieNames(response)).toEqual(["accessToken", "refreshToken"]);
 	});
 
 	it("redirects protected routes to login when the refresh cookie is missing", async () => {
@@ -408,7 +406,7 @@ describe("web proxy server-side refresh", () => {
 		const response = await runProxy({ pathname: "/hello", accessToken: expiredToken(), ...DOC_NAV });
 
 		expect(response.status).toBe(307);
-		expect(redirectTarget()).toBe("http://localhost:3000/auth/login?redirect=%2Fhello");
+		expect(redirectLocation(response)).toBe("http://localhost:3000/auth/login?redirect=%2Fhello");
 		expect(fetchMock).not.toHaveBeenCalled();
 	});
 });

@@ -1,46 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { NextRequest } from "next/server";
+import { NextRequest } from "next/server";
+import type { NextResponse } from "next/server";
 
 import { proxy, resetAdminProxyRefreshCooldownForTests } from "./proxy";
 
 // ── Mocks ──────────────────────────────────────────────────────────────────
-// The proxy module imports `next/server` (NextResponse) and
-// `@workspace/client/lib/api/config` (API_BASE_URL). Both are mocked below
-// (vi.mock factories are hoisted above the import).
+// `next/server` is intentionally NOT mocked: real NextRequest/NextResponse
+// run fine in the node vitest environment, so tests assert on actual response
+// objects (status, Location header, cookies) instead of casting fake doubles.
 
-interface CookieCall {
-	readonly name: string;
-	readonly value: string;
-	readonly options?: Record<string, unknown>;
-}
-
-class MockResponseCookies {
-	public readonly calls: CookieCall[] = [];
-
-	public set(name: string, value: string, options?: Record<string, unknown>): void {
-		this.calls.push({ name, value, options });
-	}
-}
-
-interface MockResponse {
-	readonly status: number;
-	readonly url?: string;
-	readonly cookies: MockResponseCookies;
-}
-
-const nextResponse = vi.hoisted(() => {
-	const createResponse = (init?: { readonly status?: number; readonly url?: string }): MockResponse => ({
-		status: init?.status ?? 200,
-		url: init?.url,
-		cookies: new MockResponseCookies(),
-	});
-	return {
-		next: vi.fn((): MockResponse => createResponse()),
-		redirect: vi.fn((url: string | URL): MockResponse => createResponse({ status: 307, url: String(url) })),
-	};
-});
-
-vi.mock("next/server", () => ({ NextResponse: nextResponse }));
 vi.mock("@workspace/client/lib/api/config", () => ({ API_BASE_URL: "http://api.test", API_URL_PREFIX: "/api/v1" }));
 
 // ── Request / response plumbing ─────────────────────────────────────────────
@@ -54,44 +22,57 @@ interface RequestOptions {
 	readonly query?: Record<string, string>;
 }
 
-function makeRequest(options: RequestOptions): unknown {
-	const cookieValue = (name: string): { readonly value: string } | undefined => {
-		const value = name === "adminAccessToken" ? options.accessToken : name === "adminRefreshToken" ? options.refreshToken : undefined;
-		return value === undefined || value === null ? undefined : { value };
-	};
-	return {
-		cookies: { get: cookieValue },
-		headers: {
-			get: (name: string): string | null => {
-				if (name === "sec-fetch-mode") return options.secFetchMode ?? null;
-				if (name === "accept") return options.accept ?? null;
-				return null;
-			},
-		},
-		nextUrl: {
-			pathname: options.pathname ?? "/",
-			searchParams: new URLSearchParams(options.query),
-		},
-		url: `http://localhost:3001${options.pathname ?? "/"}`,
-	};
+function makeRequest(options: RequestOptions): NextRequest {
+	const headers = new Headers();
+	if (options.secFetchMode !== null && options.secFetchMode !== undefined) headers.set("sec-fetch-mode", options.secFetchMode);
+	if (options.accept !== null && options.accept !== undefined) headers.set("accept", options.accept);
+
+	const cookieParts: string[] = [];
+	if (options.accessToken !== null && options.accessToken !== undefined) cookieParts.push(`adminAccessToken=${options.accessToken}`);
+	if (options.refreshToken !== null && options.refreshToken !== undefined) cookieParts.push(`adminRefreshToken=${options.refreshToken}`);
+	if (cookieParts.length > 0) headers.set("cookie", cookieParts.join("; "));
+
+	const url = new URL(`http://localhost:3001${options.pathname ?? "/"}`);
+	for (const [name, value] of Object.entries(options.query ?? {})) url.searchParams.set(name, value);
+
+	return new NextRequest(url, { headers });
 }
 
-function runProxy(options: RequestOptions): Promise<MockResponse> {
-	const request = makeRequest(options);
-	return proxy(request as NextRequest) as unknown as Promise<MockResponse>;
+function runProxy(options: RequestOptions): Promise<NextResponse> {
+	return proxy(makeRequest(options));
 }
 
-/** The URL the proxy redirected to (normalised from the URL object it passes). */
-function redirectTarget(): string {
-	const call = nextResponse.redirect.mock.calls[0];
-	if (call === undefined) throw new Error("redirect was never called");
-	const url = call[0];
-	return typeof url === "string" ? url : url.href;
+/** The redirect target of a redirect response, or undefined when it did not redirect. */
+function redirectLocation(response: NextResponse): string | undefined {
+	return response.headers.get("location") ?? undefined;
 }
 
-function makeJwt(payload: Record<string, unknown>): string {
-	const encode = (value: unknown): string => btoa(JSON.stringify(value)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-	return `${encode({ alg: "none", typ: "JWT" })}.${encode(payload)}.signature`;
+/** Names of the cookies the proxy cleared (set with an empty value), sorted. */
+function clearedCookieNames(response: NextResponse): readonly string[] {
+	return response.cookies
+		.getAll()
+		.filter((cookie) => cookie.value === "")
+		.map((cookie) => cookie.name)
+		.sort();
+}
+
+interface JwtHeader {
+	readonly alg: string;
+	readonly typ: string;
+}
+
+interface AdminJwtClaims {
+	readonly sub: string;
+	readonly exp: number;
+	readonly hasAdminAccess: boolean;
+}
+
+function base64UrlJson(value: JwtHeader | AdminJwtClaims): string {
+	return btoa(JSON.stringify(value)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+function makeJwt(payload: AdminJwtClaims): string {
+	return `${base64UrlJson({ alg: "none", typ: "JWT" })}.${base64UrlJson(payload)}.signature`;
 }
 
 /** An expired admin token WITHOUT admin access (hasAdminAccess: false). */
@@ -131,22 +112,21 @@ describe("admin proxy route protection", () => {
 		const response = await runProxy({ pathname: "/users" });
 
 		expect(response.status).toBe(307);
-		expect(redirectTarget()).toBe("http://localhost:3001/auth/login?redirect=%2Fusers");
+		expect(redirectLocation(response)).toBe("http://localhost:3001/auth/login?redirect=%2Fusers");
 	});
 
 	it("redirects authenticated non-admins back to login", async () => {
 		const response = await runProxy({ pathname: "/", accessToken: nonAdminToken(), refreshToken: "rt" });
 
 		expect(response.status).toBe(307);
-		expect(redirectTarget()).toBe("http://localhost:3001/auth/login");
+		expect(redirectLocation(response)).toBe("http://localhost:3001/auth/login");
 	});
 
 	it("serves the panel to admins", async () => {
 		const response = await runProxy({ pathname: "/users", accessToken: adminToken(3600), refreshToken: "rt" });
 
 		expect(response.status).toBe(200);
-		expect(nextResponse.next).toHaveBeenCalled();
-		expect(nextResponse.redirect).not.toHaveBeenCalled();
+		expect(redirectLocation(response)).toBeUndefined();
 	});
 
 	it("bounces admins away from auth routes back into the panel", async () => {
@@ -155,42 +135,39 @@ describe("admin proxy route protection", () => {
 		const response = await runProxy({ pathname: "/auth/login", accessToken: adminToken(3600), refreshToken: "rt", ...DOC_NAV });
 
 		expect(response.status).toBe(307);
-		expect(redirectTarget()).toBe("http://localhost:3001/");
+		expect(redirectLocation(response)).toBe("http://localhost:3001/");
 	});
 
 	it("blocks open-redirect attempts on auth routes", async () => {
 		const live = adminToken(3600);
 		stubRefreshResponse(200, [`adminAccessToken=${live}; Path=/; HttpOnly`, "adminRefreshToken=live-rt; Path=/; HttpOnly"]);
-		await runProxy({ pathname: "/auth/login", accessToken: adminToken(3600), refreshToken: "rt", ...DOC_NAV, query: { redirect: "//evil.com" } });
-		expect(redirectTarget()).toBe("http://localhost:3001/");
+		const evilResponse = await runProxy({ pathname: "/auth/login", accessToken: adminToken(3600), refreshToken: "rt", ...DOC_NAV, query: { redirect: "//evil.com" } });
+		expect(redirectLocation(evilResponse)).toBe("http://localhost:3001/");
 
-		vi.clearAllMocks();
-		await runProxy({ pathname: "/auth/login", accessToken: adminToken(3600), refreshToken: "rt", ...DOC_NAV, query: { redirect: "/auth/login" } });
-		expect(redirectTarget()).toBe("http://localhost:3001/");
+		const loopResponse = await runProxy({ pathname: "/auth/login", accessToken: adminToken(3600), refreshToken: "rt", ...DOC_NAV, query: { redirect: "/auth/login" } });
+		expect(redirectLocation(loopResponse)).toBe("http://localhost:3001/");
 	});
 
 	it("serves login when the access token is expired and no refresh token exists", async () => {
 		const response = await runProxy({ pathname: "/auth/login", accessToken: expiredNonAdminToken() });
 
 		expect(response.status).toBe(200);
-		expect(nextResponse.next).toHaveBeenCalled();
-		expect(nextResponse.redirect).not.toHaveBeenCalled();
+		expect(redirectLocation(response)).toBeUndefined();
 	});
 
 	it("redirects protected routes to login when the access token is expired with no refresh", async () => {
 		const response = await runProxy({ pathname: "/", accessToken: expiredNonAdminToken() });
 
 		expect(response.status).toBe(307);
-		expect(redirectTarget()).toBe("http://localhost:3001/auth/login?redirect=%2F");
+		expect(redirectLocation(response)).toBe("http://localhost:3001/auth/login?redirect=%2F");
 	});
 
 	it("clears orphaned access cookies on panel routes", async () => {
 		const response = await runProxy({ pathname: "/users", accessToken: adminToken(3600) });
 
 		expect(response.status).toBe(307);
-		expect(redirectTarget()).toBe("http://localhost:3001/auth/login?redirect=%2Fusers");
-		const cleared = response.cookies.calls.filter((call) => call.value === "");
-		expect(cleared.map((call) => call.name).sort()).toEqual(["adminAccessToken", "adminRefreshToken"]);
+		expect(redirectLocation(response)).toBe("http://localhost:3001/auth/login?redirect=%2Fusers");
+		expect(clearedCookieNames(response)).toEqual(["adminAccessToken", "adminRefreshToken"]);
 	});
 });
 
@@ -219,7 +196,7 @@ describe("admin proxy server-side refresh", () => {
 			const secondResponse = await runProxy({ pathname: "/", accessToken: adminToken(-60), refreshToken: "rt-admin-cooldown", ...DOC_NAV });
 
 			expect(secondResponse.status).toBe(200);
-			expect(secondResponse.cookies.calls).toHaveLength(0);
+			expect(secondResponse.cookies.getAll()).toHaveLength(0);
 			expect(failingFetch).toHaveBeenCalledTimes(1);
 
 			// Move past the cooldown and restore a healthy API: the refresh works
@@ -232,7 +209,7 @@ describe("admin proxy server-side refresh", () => {
 			const thirdResponse = await runProxy({ pathname: "/", accessToken: adminToken(-60), refreshToken: "rt-admin-cooldown", ...DOC_NAV });
 
 			expect(thirdResponse.status).toBe(200);
-			expect(thirdResponse.cookies.calls.find((call) => call.name === "adminAccessToken")?.value).toBe(rotated);
+			expect(thirdResponse.cookies.get("adminAccessToken")?.value).toBe(rotated);
 		} finally {
 			vi.useRealTimers();
 		}
@@ -248,10 +225,9 @@ describe("admin proxy server-side refresh", () => {
 		const response = await runProxy({ pathname: "/", accessToken: expiredNonAdminToken(), refreshToken: "rt-old", ...DOC_NAV });
 
 		expect(response.status).toBe(200);
-		expect(nextResponse.redirect).not.toHaveBeenCalled();
+		expect(redirectLocation(response)).toBeUndefined();
 
-		const accessCall = response.cookies.calls.find((call) => call.name === "adminAccessToken");
-		expect(accessCall?.value).toBe(rotated);
+		expect(response.cookies.get("adminAccessToken")?.value).toBe(rotated);
 	});
 
 	it("clears stale cookies and redirects to login when the refresh token is dead", async () => {
@@ -260,11 +236,11 @@ describe("admin proxy server-side refresh", () => {
 		const response = await runProxy({ pathname: "/", accessToken: expiredNonAdminToken(), refreshToken: "rt-dead", ...DOC_NAV });
 
 		expect(response.status).toBe(307);
-		expect(redirectTarget()).toBe("http://localhost:3001/auth/login?redirect=%2F");
+		expect(redirectLocation(response)).toBe("http://localhost:3001/auth/login?redirect=%2F");
 
-		const cleared = response.cookies.calls.filter((call) => call.value === "");
-		expect(cleared.map((call) => call.name).sort()).toEqual(["adminAccessToken", "adminRefreshToken"]);
-		expect(cleared.every((call) => call.options?.maxAge === 0)).toBe(true);
+		const cleared = clearedCookieNames(response);
+		expect(cleared).toEqual(["adminAccessToken", "adminRefreshToken"]);
+		expect(cleared.every((name) => response.cookies.get(name)?.maxAge === 0)).toBe(true);
 	});
 
 	it("serves the panel without clearing cookies on a transient refresh failure", async () => {
@@ -273,8 +249,8 @@ describe("admin proxy server-side refresh", () => {
 		const response = await runProxy({ pathname: "/", accessToken: adminToken(-60), refreshToken: "rt", ...DOC_NAV });
 
 		expect(response.status).toBe(200);
-		expect(response.cookies.calls).toHaveLength(0);
-		expect(nextResponse.redirect).not.toHaveBeenCalled();
+		expect(response.cookies.getAll()).toHaveLength(0);
+		expect(redirectLocation(response)).toBeUndefined();
 	});
 
 	it("clears cookies on login when the refresh token is dead but access is still time-valid", async () => {
@@ -289,17 +265,15 @@ describe("admin proxy server-side refresh", () => {
 		});
 
 		expect(response.status).toBe(200);
-		expect(nextResponse.redirect).not.toHaveBeenCalled();
-		const cleared = response.cookies.calls.filter((call) => call.value === "");
-		expect(cleared.map((call) => call.name).sort()).toEqual(["adminAccessToken", "adminRefreshToken"]);
+		expect(redirectLocation(response)).toBeUndefined();
+		expect(clearedCookieNames(response)).toEqual(["adminAccessToken", "adminRefreshToken"]);
 	});
 
 	it("serves login without bounce when only an orphaned access cookie remains", async () => {
 		const response = await runProxy({ pathname: "/auth/login", accessToken: adminToken(3600) });
 
 		expect(response.status).toBe(200);
-		expect(nextResponse.redirect).not.toHaveBeenCalled();
-		const cleared = response.cookies.calls.filter((call) => call.value === "");
-		expect(cleared.map((call) => call.name).sort()).toEqual(["adminAccessToken", "adminRefreshToken"]);
+		expect(redirectLocation(response)).toBeUndefined();
+		expect(clearedCookieNames(response)).toEqual(["adminAccessToken", "adminRefreshToken"]);
 	});
 });

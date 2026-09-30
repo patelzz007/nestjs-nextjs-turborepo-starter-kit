@@ -23,6 +23,8 @@ export interface DashboardShellProps {
 	 */
 	readonly initialUser?: SidebarUser | null;
 	readonly initialSessionPermissions?: SessionPermissionsResponse;
+	/** Server-evaluated feature flags (env-backed), forwarded to the menu filter and route guard. */
+	readonly enabledFeatureFlags?: readonly string[];
 }
 
 /**
@@ -45,7 +47,7 @@ const PLACEHOLDER_USER: SidebarUser = { name: "Account", email: "Loading profile
  * error screen — a still-loading one renders the full shell with the
  * placeholder identity.
  */
-export function DashboardShell({ footerActions = [], children, initialUser = null, initialSessionPermissions }: DashboardShellProps): React.JSX.Element {
+export function DashboardShell({ footerActions = [], children, initialUser = null, initialSessionPermissions, enabledFeatureFlags }: DashboardShellProps): React.JSX.Element {
 	const { api, logout } = useAuth();
 	// The breadcrumb provider must wrap EVERY consumer (the layout's own
 	// `useTrailDocumentTitle` + `ShellBreadcrumb`), so it lives here — one
@@ -102,7 +104,8 @@ export function DashboardShell({ footerActions = [], children, initialUser = nul
 				user={{ name: resolvedUser.name, email: resolvedUser.email }}
 				onLogout={handleLogout}
 				footerActions={footerActions}
-				initialSessionPermissions={initialSessionPermissions}>
+				initialSessionPermissions={initialSessionPermissions}
+				enabledFeatureFlags={enabledFeatureFlags}>
 				{children}
 			</DashboardLayout>
 		</AdminBreadcrumbProvider>

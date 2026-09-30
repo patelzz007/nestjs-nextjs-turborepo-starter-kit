@@ -1,5 +1,6 @@
 "use client";
 
+import { MerchantAuthorizationProvider } from "@/components/access/merchant-authorization-provider";
 import { MerchantBreadcrumbProvider } from "@/components/common/merchant-breadcrumb";
 import { MerchantShellBreadcrumb } from "@/components/layout/merchant-shell-breadcrumb";
 import { MerchantShellBanners } from "@/components/merchant-shell-banners";
@@ -9,7 +10,7 @@ import { useMerchantSidebarControl } from "@/components/layout/use-merchant-side
 import { MerchantSidebarPanel } from "@/components/layout/merchant-sidebar-panel";
 import { MerchantTopbar } from "@/components/layout/merchant-topbar";
 import type { ServerUser } from "@/lib/auth/server";
-import { stubApiMeta } from "@/lib/api-envelope";
+import { stubApiMeta, successEnvelope } from "@/lib/api-envelope";
 import { MERCHANT_ME_QUERY_OPTIONS } from "@/lib/session/me-query";
 import { MerchantLocationProvider } from "@/lib/org/location-context";
 import { useMerchantOrg } from "@/lib/session/root-provider";
@@ -76,14 +77,7 @@ export function MerchantShell({
 	);
 
 	const initialMeData = React.useMemo(
-		() =>
-			initialMemberships !== undefined && initialMemberships.length > 0
-				? {
-						success: true as const,
-						data: [...initialMemberships],
-						meta: stubApiMeta(),
-					}
-				: undefined,
+		() => (initialMemberships !== undefined && initialMemberships.length > 0 ? successEnvelope([...initialMemberships], stubApiMeta()) : undefined),
 		[initialMemberships],
 	);
 
@@ -131,34 +125,36 @@ export function MerchantShell({
 	const showMembershipLoading = !hasMemberships && membershipsQuery.isLoading;
 
 	return (
-		<MerchantLocationProvider>
-			<MerchantBreadcrumbProvider>
-				<SidebarPathSync store={useMerchantSidebarStore} />
-				<MerchantPanelLayout
-					scrollKey={pathname}
-					banner={<MerchantShellBanners initialIsImpersonating={initialIsImpersonating} />}
-					sidebarOpen={sidebarOpen}
-					onSidebarOpenChange={handleSidebarOpenChange}
-					sidebar={<MerchantSidebarContent memberships={memberships} organizationSlug={organizationSlug} onStoreChange={handleStoreChange} />}
-					topbar={<MerchantTopbar initialUser={initialUser} />}>
-					{showMembershipLoading ? (
-						<p className="text-sm text-muted-foreground">Loading merchant access…</p>
-					) : showMembershipGate ? (
-						<div className="rounded-xl border border-dashed border-border bg-card p-10 text-center">
-							<p className="text-sm font-medium text-foreground">No merchant membership found</p>
-							<p className="mt-2 text-sm text-muted-foreground">Ask an admin for an invite, or impersonate a merchant owner from the panel below.</p>
-							<div className="mt-6">
-								<ImpersonateUserPanel />
+		<MerchantAuthorizationProvider initialMemberships={initialMemberships}>
+			<MerchantLocationProvider>
+				<MerchantBreadcrumbProvider>
+					<SidebarPathSync store={useMerchantSidebarStore} />
+					<MerchantPanelLayout
+						scrollKey={pathname}
+						banner={<MerchantShellBanners initialIsImpersonating={initialIsImpersonating} />}
+						sidebarOpen={sidebarOpen}
+						onSidebarOpenChange={handleSidebarOpenChange}
+						sidebar={<MerchantSidebarContent memberships={memberships} organizationSlug={organizationSlug} onStoreChange={handleStoreChange} />}
+						topbar={<MerchantTopbar initialUser={initialUser} />}>
+						{showMembershipLoading ? (
+							<p className="text-sm text-muted-foreground">Loading merchant access…</p>
+						) : showMembershipGate ? (
+							<div className="rounded-xl border border-dashed border-border bg-card p-10 text-center">
+								<p className="text-sm font-medium text-foreground">No merchant membership found</p>
+								<p className="mt-2 text-sm text-muted-foreground">Ask an admin for an invite, or impersonate a merchant owner from the panel below.</p>
+								<div className="mt-6">
+									<ImpersonateUserPanel />
+								</div>
 							</div>
-						</div>
-					) : (
-						<>
-							<MerchantShellBreadcrumb />
-							{children}
-						</>
-					)}
-				</MerchantPanelLayout>
-			</MerchantBreadcrumbProvider>
-		</MerchantLocationProvider>
+						) : (
+							<>
+								<MerchantShellBreadcrumb />
+								{children}
+							</>
+						)}
+					</MerchantPanelLayout>
+				</MerchantBreadcrumbProvider>
+			</MerchantLocationProvider>
+		</MerchantAuthorizationProvider>
 	);
 }

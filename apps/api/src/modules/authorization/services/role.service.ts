@@ -54,7 +54,7 @@ export class RoleService extends BaseService<Role, CreateRoleInput, UpdateRoleIn
 	 *
 	 * @throws ConflictException if a role with the same name already exists.
 	 */
-	public override async create(input: CreateRoleInput): Promise<Role> {
+	public override async create(input: CreateRoleInput, actorId = "system"): Promise<Role> {
 		const existing: Role | null = await this.repository.findByName(input.name);
 
 		if (existing !== null) {
@@ -63,7 +63,7 @@ export class RoleService extends BaseService<Role, CreateRoleInput, UpdateRoleIn
 
 		const role: Role = await this.repository.create(input);
 
-		await this.audit.logRoleCreation("system", role.id, role.name);
+		await this.audit.logRoleCreation(actorId, role.id, role.name);
 		this.logger.log(`Created role "${role.name}" (${role.id})`);
 		return role;
 	}
@@ -74,6 +74,15 @@ export class RoleService extends BaseService<Role, CreateRoleInput, UpdateRoleIn
 	 * @throws NotFoundException if the role does not exist.
 	 */
 	public override async update(roleId: string, input: UpdateRoleInput): Promise<Role> {
+		return this.updateAs(roleId, input, "system");
+	}
+
+	/**
+	 * Update a role's metadata on behalf of an actor (audited with the actor id).
+	 *
+	 * @throws NotFoundException if the role does not exist.
+	 */
+	public async updateAs(roleId: string, input: UpdateRoleInput, actorId: string): Promise<Role> {
 		const role: Role | null = await this.repository.findById(roleId);
 
 		if (role === null) {
@@ -84,7 +93,7 @@ export class RoleService extends BaseService<Role, CreateRoleInput, UpdateRoleIn
 
 		await this.invalidateRoleUsers(roleId);
 
-		await this.audit.log({ action: "ROLE_UPDATED", actorId: "system", targetRoleId: roleId, detail: JSON.stringify(input) });
+		await this.audit.log({ action: "ROLE_UPDATED", actorId, targetRoleId: roleId, detail: JSON.stringify(input) });
 		this.logger.log(`Updated role "${updated.name}" (${updated.id})`);
 		return updated;
 	}
@@ -94,7 +103,7 @@ export class RoleService extends BaseService<Role, CreateRoleInput, UpdateRoleIn
 	 *
 	 * @throws NotFoundException if the role does not exist.
 	 */
-	public async remove(roleId: string): Promise<void> {
+	public async remove(roleId: string, actorId = "system"): Promise<void> {
 		const role: Role | null = await this.repository.findById(roleId);
 
 		if (role === null) {
@@ -111,7 +120,7 @@ export class RoleService extends BaseService<Role, CreateRoleInput, UpdateRoleIn
 
 		await this.invalidateRoleUsers(roleId);
 
-		await this.audit.logRoleDeletion("system", roleId, role.name);
+		await this.audit.logRoleDeletion(actorId, roleId, role.name);
 		this.logger.log(`Soft-deleted role "${role.name}" (${role.id})`);
 	}
 
@@ -173,10 +182,11 @@ export class RoleService extends BaseService<Role, CreateRoleInput, UpdateRoleIn
 	/**
 	 * Sync (replace) all permissions on a role.
 	 */
-	public async syncPermissions(roleId: string, permissionIds: readonly string[]): Promise<void> {
+	public async syncPermissions(roleId: string, permissionIds: readonly string[], actorId = "system"): Promise<void> {
 		await this.assignments.syncRolePermissions(roleId, permissionIds);
 
 		await this.invalidateRoleUsers(roleId);
+		await this.audit.log({ action: "ROLE_PERMISSIONS_SYNCED", actorId, targetRoleId: roleId, detail: permissionIds.join(",") });
 	}
 
 	// ── Role → User assignment ───────────────────────────────────────────
@@ -211,7 +221,7 @@ export class RoleService extends BaseService<Role, CreateRoleInput, UpdateRoleIn
 	/**
 	 * Sync (replace) all roles on a user.
 	 */
-	public async syncUserRoles(userId: string, roleIds: readonly string[]): Promise<void> {
+	public async syncUserRoles(userId: string, roleIds: readonly string[], actorId = "system"): Promise<void> {
 		if (roleIds.length > 10) {
 			throw new ConflictException("A user can have at most 10 roles. Reconsider your role design if more are needed.");
 		}
@@ -220,6 +230,7 @@ export class RoleService extends BaseService<Role, CreateRoleInput, UpdateRoleIn
 		await this.sessionRevocation.revokeAllSessionsForUser(userId);
 		this.cache.invalidate(userId);
 		this.events.emitUsersMeInvalidate([userId]);
+		await this.audit.log({ action: "USER_ROLES_SYNCED", actorId, targetUserId: userId, detail: roleIds.join(",") });
 	}
 
 	// ── Restore ──────────────────────────────────────────────────────
@@ -246,7 +257,7 @@ export class RoleService extends BaseService<Role, CreateRoleInput, UpdateRoleIn
 	/**
 	 * Set (or clear) the parent role for hierarchy inheritance.
 	 */
-	public async setParent(roleId: string, parentId: string | null): Promise<Role> {
+	public async setParent(roleId: string, parentId: string | null, actorId = "system"): Promise<Role> {
 		const role: Role | null = await this.findById(roleId);
 		if (role === null) {
 			throw new NotFoundException(`Role ${roleId} not found`);
@@ -267,6 +278,7 @@ export class RoleService extends BaseService<Role, CreateRoleInput, UpdateRoleIn
 		const updated: Role = await this.repository.setParent(roleId, parentId);
 
 		await this.invalidateRoleUsers(roleId);
+		await this.audit.log({ action: "ROLE_PARENT_SET", actorId, targetRoleId: roleId, detail: parentId ?? "none" });
 		return updated;
 	}
 

@@ -19,7 +19,7 @@ export interface RepositoryListResult<TEntity> {
 	readonly hasPrevious: boolean;
 }
 
-/** Lifecycle flags shared by generated and manual repositories. */
+/** Lifecycle flags shared by resource repositories. */
 export interface BaseRepositoryOptions {
 	readonly softDelete: boolean;
 	readonly concurrency: boolean;

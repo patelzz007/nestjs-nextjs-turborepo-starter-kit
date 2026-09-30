@@ -9,11 +9,11 @@ import { PrismaService } from "../../../prisma/prisma.service";
 
 const CLAIM_WITH_REWARD_TITLE_INCLUDE = {
 	reward: { select: { title: true } },
-} as const satisfies Prisma.RewardClaimInclude;
+} satisfies Prisma.RewardClaimInclude;
 
 const CLAIM_WITH_REWARD_INCLUDE = {
 	reward: true,
-} as const satisfies Prisma.RewardClaimInclude;
+} satisfies Prisma.RewardClaimInclude;
 
 export type RewardClaimWithRewardTitle = Prisma.RewardClaimGetPayload<{ include: typeof CLAIM_WITH_REWARD_TITLE_INCLUDE }>;
 export type RewardClaimWithReward = Prisma.RewardClaimGetPayload<{ include: typeof CLAIM_WITH_REWARD_INCLUDE }>;

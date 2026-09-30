@@ -24,7 +24,7 @@ import { PasswordStrengthMeter } from "@workspace/ui/components/form/password-st
 import { Separator } from "@workspace/ui/components/display/separator";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type { EpochMs, UserResponse } from "@workspace/shared";
+import type { EpochMs, LoginClientResponse, LoginRestrictedEnrollmentClientResponse, UserResponse } from "@workspace/shared";
 import { useCallback, useMemo, useState, type JSX } from "react";
 
 import { isAccountLockedError, resolveAuthErrorMessage } from "../errors";
@@ -35,6 +35,7 @@ import { DemoAccountButton, DemoInfoBox, SOCIAL_PROVIDERS, SocialButton } from "
 import type { DemoAccount, LoginFormProps, SocialProvider } from "./login-form-types";
 
 import { passwordStrength } from "../password";
+import { catchCaught } from "../../caught";
 
 export type { DemoAccount, LoginFormMode, LoginFormProps } from "./login-form-types";
 
@@ -140,7 +141,7 @@ export function LoginForm({
 	);
 
 	const completeRestrictedEnrollment = useCallback(
-		(response: Extract<Parameters<typeof isLoginRestrictedEnrollment>[0], { requiresEnrollment: true }>): void => {
+		(response: LoginRestrictedEnrollmentClientResponse): void => {
 			if (response.user !== undefined) {
 				authLogin({
 					id: response.user.id,
@@ -162,7 +163,7 @@ export function LoginForm({
 	);
 
 	const handleLoginResponse = useCallback(
-		(response: Parameters<typeof isLoginSuccess>[0]): void => {
+		(response: LoginClientResponse): void => {
 			if (isLoginTwoFactorPending(response)) {
 				setTwoFactorTempToken(response.tempToken);
 				setTwoFactorUseBackupCode(false);
@@ -200,12 +201,11 @@ export function LoginForm({
 			setError(null);
 			setLockout(null);
 
-			loginMutation
-				.mutateAsync({ email: emailValue, password: passwordValue })
-				.then((data): void => {
+			void catchCaught(
+				loginMutation.mutateAsync({ email: emailValue, password: passwordValue }).then((data): void => {
 					handleLoginResponse(data.data);
-				})
-				.catch((err: unknown): void => {
+				}),
+				(err): void => {
 					// Map the API's canonical error code to a friendly message;
 					// ACCOUNT_LOCKED carries a structured lockout payload used to
 					// render a live countdown (see lockout state below).
@@ -213,10 +213,10 @@ export function LoginForm({
 						setLockout({ remainingSeconds: err.remainingSeconds, lockedUntil: err.lockedUntil });
 					}
 					setError(resolveAuthErrorMessage(err));
-				})
-				.finally((): void => {
-					setIsLoading(false);
-				});
+				},
+			).finally((): void => {
+				setIsLoading(false);
+			});
 		},
 		[loginMutation, handleLoginResponse],
 	);
@@ -237,17 +237,16 @@ export function LoginForm({
 					return;
 				}
 
-				backupCodeMutation
-					.mutateAsync({ tempToken: twoFactorTempToken, backupCode })
-					.then((data): void => {
+				void catchCaught(
+					backupCodeMutation.mutateAsync({ tempToken: twoFactorTempToken, backupCode }).then((data): void => {
 						handleLoginResponse(data.data);
-					})
-					.catch((err: unknown): void => {
+					}),
+					(err): void => {
 						setError(resolveAuthErrorMessage(err));
-					})
-					.finally((): void => {
-						setIsLoading(false);
-					});
+					},
+				).finally((): void => {
+					setIsLoading(false);
+				});
 				return;
 			}
 
@@ -256,17 +255,16 @@ export function LoginForm({
 				return;
 			}
 
-			twoFactorMutation
-				.mutateAsync({ tempToken: twoFactorTempToken, token: twoFactorCode })
-				.then((data): void => {
+			void catchCaught(
+				twoFactorMutation.mutateAsync({ tempToken: twoFactorTempToken, token: twoFactorCode }).then((data): void => {
 					handleLoginResponse(data.data);
-				})
-				.catch((err: unknown): void => {
+				}),
+				(err): void => {
 					setError(resolveAuthErrorMessage(err));
-				})
-				.finally((): void => {
-					setIsLoading(false);
-				});
+				},
+			).finally((): void => {
+				setIsLoading(false);
+			});
 		},
 		[backupCode, backupCodeMutation, handleLoginResponse, twoFactorCode, twoFactorMutation, twoFactorTempToken, twoFactorUseBackupCode],
 	);
@@ -280,17 +278,16 @@ export function LoginForm({
 
 			setIsLoading(true);
 			setError(null);
-			verifyLoginMutation
-				.mutateAsync({ verificationId, code: verificationCode })
-				.then((data): void => {
+			void catchCaught(
+				verifyLoginMutation.mutateAsync({ verificationId, code: verificationCode }).then((data): void => {
 					handleLoginResponse(data.data);
-				})
-				.catch((err: unknown): void => {
+				}),
+				(err): void => {
 					setError(resolveAuthErrorMessage(err));
-				})
-				.finally((): void => {
-					setIsLoading(false);
-				});
+				},
+			).finally((): void => {
+				setIsLoading(false);
+			});
 		},
 		[handleLoginResponse, verificationCode, verificationId, verifyLoginMutation],
 	);

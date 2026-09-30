@@ -26,8 +26,7 @@ async function bootstrap(): Promise<void> {
 		const now: number = performance.now();
 		const stepMs: number = now - phaseStart;
 		const totalMs: number = now - bootStart;
-		// eslint-disable-next-line no-console
-		console.log(`✓ ${label} (+${stepMs.toFixed(0)}ms, ${totalMs.toFixed(0)}ms total) [heap: ${heapUsed()}MB]`);
+		process.stdout.write(`✓ ${label} (+${stepMs.toFixed(0)}ms, ${totalMs.toFixed(0)}ms total) [heap: ${heapUsed()}MB]\n`);
 		phaseStart = now;
 	};
 
@@ -82,7 +81,7 @@ async function bootstrap(): Promise<void> {
 	const nestOptions: NestApplicationOptions = {
 		rawBody: true,
 		// Include `log` in dev so Nest prints the mapped route list on boot.
-		logger: isDev ? (["error", "warn", "log"] as const) : undefined,
+		logger: isDev ? ["error", "warn", "log"] : undefined,
 		...(ObserveInstrument !== undefined ? { instrument: ObserveInstrument } : {}),
 	};
 	const app = await NestFactory.create<NestFastifyApplication>(AppModule, adapter, nestOptions);
@@ -174,11 +173,10 @@ async function bootstrap(): Promise<void> {
 	healthService.markReady();
 	registerGracefulShutdown(app, healthService, logService);
 	if (swaggerEnabled) {
-		// eslint-disable-next-line no-console -- intentional boot banner
-		console.log(`✓ Swagger docs at http://${listenHost}:${String(port)}${apiDocsPath()}`);
+		process.stdout.write(`✓ Swagger docs at http://${listenHost}:${String(port)}${apiDocsPath()}\n`);
 	}
-	// eslint-disable-next-line no-console -- intentional boot banner
-	console.log(`\n🚀 API ready in ${(performance.now() - bootStart).toFixed(0)}ms [peak heap: ${heapUsed()}MB]`);
+	// Intentional boot banner.
+	process.stdout.write(`\n🚀 API ready in ${(performance.now() - bootStart).toFixed(0)}ms [peak heap: ${heapUsed()}MB]\n`);
 }
 
 void bootstrap();

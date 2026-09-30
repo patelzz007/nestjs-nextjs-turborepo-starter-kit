@@ -46,7 +46,7 @@ function formatLocationSummary(preview: OrganizationTeamInvitePreview): string {
 	return "Selected locations";
 }
 
-function resolveTeamInviteFormError(error: unknown): string {
+function resolveTeamInviteFormError(error: Error): string {
 	if (error instanceof ApiError && error.statusCode === 404) {
 		return "This invitation could not be found. Restart the API dev server if you just deployed changes, or ask your admin to send a new invite link.";
 	}

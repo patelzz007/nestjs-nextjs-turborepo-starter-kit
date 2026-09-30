@@ -1,5 +1,6 @@
 import { Body, Controller, Get, Param, Post, Query } from "@nestjs/common";
 import { ApiBearerAuth, ApiBody, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
+import type { z } from "zod";
 
 import { apiContract, apiPath } from "@workspace/shared";
 import { ZodValidationPipe } from "../../../common/pipes/zod-validation.pipe";
@@ -39,7 +40,7 @@ export class ConsumerClaimsController {
 	@ApiOkResponse({ description: "Claim created with backup code" })
 	public createClaim(
 		@GetUser() user: AccessTokenPayload,
-		@Body(new ZodValidationPipe(apiContract.claims.create.input)) body: Parameters<ClaimService["createClaim"]>[1],
+		@Body(new ZodValidationPipe(apiContract.claims.create.input)) body: z.output<typeof apiContract.claims.create.input>,
 	): ReturnType<ClaimService["createClaim"]> {
 		return this.claimService.createClaim(user.sub, body);
 	}
@@ -49,7 +50,7 @@ export class ConsumerClaimsController {
 	@ApiOkResponse({ description: "Paginated claims" })
 	public listClaims(
 		@GetUser() user: AccessTokenPayload,
-		@Query(new ZodValidationPipe(apiContract.claims.list.input)) query: Parameters<ClaimService["listClaims"]>[1],
+		@Query(new ZodValidationPipe(apiContract.claims.list.input)) query: z.output<typeof apiContract.claims.list.input>,
 	): ReturnType<ClaimService["listClaims"]> {
 		return this.claimService.listClaims(user.sub, query);
 	}
@@ -59,7 +60,7 @@ export class ConsumerClaimsController {
 	@ApiOkResponse({ description: "Claims, redemptions, and referral metrics" })
 	public getAnalytics(
 		@GetUser() user: AccessTokenPayload,
-		@Query(new ZodValidationPipe(apiContract.claims.analytics.input)) query: Parameters<RewardsAnalyticsService["getUserAnalytics"]>[1],
+		@Query(new ZodValidationPipe(apiContract.claims.analytics.input)) query: z.output<typeof apiContract.claims.analytics.input>,
 	): ReturnType<RewardsAnalyticsService["getUserAnalytics"]> {
 		return this.rewardsAnalyticsService.getUserAnalytics(user.sub, query);
 	}

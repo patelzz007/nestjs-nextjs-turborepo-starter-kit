@@ -1,28 +1,41 @@
 import { Module } from "@nestjs/common";
 
-import { PrismaService } from "../../../prisma/prisma.service";
-
-import { AuthorizationKernelService } from "./authorization-kernel.service";
-import { PolicyEngineService } from "./policy-engine.service";
+import { AuthorizationContextResolver } from "../services/authorization-context.resolver";
 import { AclService } from "./acl.service";
 import { AuthorizationAuditKernelService } from "./authorization-audit-kernel.service";
-import { AuthorizationKernelExamplesController } from "./examples.controller";
+import { AuthorizationDecisionsController } from "./authorization-decisions.controller";
+import { AuthorizationKernelService } from "./authorization-kernel.service";
+import { PolicyEngineService } from "./policy-engine.service";
+import { ResourceOwnershipResolver } from "./resource-ownership.resolver";
+import { SubjectGrantsLoader } from "./subject-grants.loader";
+import { TenantMembershipService } from "./tenant-membership.service";
 
 /**
- * Authorization Kernel Module - provides the core authorization services.
+ * Authorization Kernel Module — the single backend decision point.
  *
- * Services:
- * - AuthorizationKernelService: Main service with can(), authorize(), filter(), explain()
- * - PolicyEngineService: Evaluates Zod-validated policy DSL
- * - AclService: Manages resource ACLs (ALLOW/DENY)
- * - AuthorizationAuditKernelService: Audit trail for authorization decisions
+ * - AuthorizationKernelService: can(), authorize(), explain(), filter(), resourceCapabilities(), hasRoles()
+ * - SubjectGrantsLoader: roles (with hierarchy), role permissions, user overrides
+ * - TenantMembershipService: organization / location membership verification (ReBAC)
+ * - ResourceOwnershipResolver: DB-backed ownership for OWN-scoped grants
+ * - AclService: resource-level ALLOW / DENY exceptions
+ * - PolicyEngineService: Zod-validated conditional policies (ABAC)
+ * - AuthorizationAuditKernelService: decision audit trail
+ * - AuthorizationContextResolver: verifies client-requested tenant context per request
  *
- * Note: AuthGuard is applied globally via APP_GUARD in AuthModule,
- * so controllers here don't need explicit @UseGuards(AuthGuard).
+ * `PrismaService` / `SystemPrismaService` come from the global PrismaModule.
  */
 @Module({
-	controllers: [AuthorizationKernelExamplesController],
-	providers: [PrismaService, AuthorizationKernelService, PolicyEngineService, AclService, AuthorizationAuditKernelService],
-	exports: [AuthorizationKernelService, PolicyEngineService, AclService, AuthorizationAuditKernelService],
+	controllers: [AuthorizationDecisionsController],
+	providers: [
+		AuthorizationKernelService,
+		SubjectGrantsLoader,
+		TenantMembershipService,
+		ResourceOwnershipResolver,
+		PolicyEngineService,
+		AclService,
+		AuthorizationAuditKernelService,
+		AuthorizationContextResolver,
+	],
+	exports: [AuthorizationKernelService, TenantMembershipService, PolicyEngineService, AclService, AuthorizationAuditKernelService, AuthorizationContextResolver],
 })
 export class AuthorizationKernelModule {}

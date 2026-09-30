@@ -2,6 +2,7 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@workspace/ui/components/form/button";
+import { CaughtValueSchema } from "@workspace/shared";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type JSX } from "react";
@@ -24,7 +25,7 @@ export function VerifyEmailView({ token, settingsHref, loginHref = "/auth/login"
 	const [message, setMessage] = useState("Verifying your email...");
 	const router = useRouter();
 	const queryClient = useQueryClient();
-	const { api, login } = useAuth();
+	const { api, login, refreshSession } = useAuth();
 	const completedRef = useRef(false);
 	const cancelledRef = useRef(false);
 	const redirectTarget = successRedirectHref ?? settingsHref;
@@ -63,25 +64,26 @@ export function VerifyEmailView({ token, settingsHref, loginHref = "/auth/login"
 					return;
 				}
 
-				await syncSessionAfterEmailVerification(api, login, queryClient);
+				await syncSessionAfterEmailVerification(api, login, queryClient, refreshSession);
 				if (isCancelled()) {
 					return;
 				}
 
 				redirectAfterVerification(verifyResponse.data.message);
-			} catch (err: unknown) {
+			} catch (err) {
 				if (isCancelled()) {
 					return;
 				}
+				const caught = CaughtValueSchema.safeParse(err);
 				setStatus("error");
-				setMessage(resolveAuthErrorMessage(err));
+				setMessage(resolveAuthErrorMessage(caught.success ? caught.data : undefined));
 			}
 		})();
 
 		return (): void => {
 			cancelledRef.current = true;
 		};
-	}, [api, api.auth.verifyEmail, login, queryClient, redirectTarget, router, token]);
+	}, [api, api.auth.verifyEmail, login, queryClient, redirectTarget, refreshSession, router, token]);
 
 	return (
 		<div className="space-y-4 text-center">

@@ -62,7 +62,7 @@ import { ApiErrorResponseDto } from "../../common/dto/api-response.dto";
 import { createWrappedArrayDto, createWrappedDto } from "../../common/dto/response-wrapper";
 import { SetAuthCookiesInterceptor } from "./interceptors/set-auth-cookies.interceptor";
 import { extractClientInfo } from "../../common/utils/client-info";
-import { Authorize } from "../authorization/decorators/authorize.decorator";
+import { Authorize, self } from "../authorization/decorators/authorize.decorator";
 
 import { AuthService } from "./auth.service";
 import type { AccessTokenPayload } from "./services/token.service";
@@ -254,6 +254,7 @@ export class AuthController {
 	@Authorize({
 		action: "UPDATE",
 		resource: "USER",
+		resourceId: self(),
 		description: "User can only change their own password",
 	})
 	@ApiOperation({ summary: "Change password for the authenticated user" })

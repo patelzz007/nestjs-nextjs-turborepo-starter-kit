@@ -1,8 +1,11 @@
 "use client";
 
-import { stubApiMeta } from "@/lib/format/api-envelope";
+import { stubApiMeta, successEnvelope } from "@/lib/format/api-envelope";
 import { useAuth } from "@workspace/client/lib/auth";
-import type { Product } from "@workspace/shared/schemas/domain/generated/product.generated";
+import { useAuthorization } from "@workspace/client/lib/auth/can";
+import { PERMISSION } from "@workspace/shared";
+import { AdminAccessDenied } from "@/components/access/admin-access-denied";
+import type { Product } from "@workspace/shared/schemas/domain/catalog/product";
 import { Badge } from "@workspace/ui/components/feedback/badge";
 import { Button } from "@workspace/ui/components/form/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
@@ -30,19 +33,17 @@ function DetailField({ label, value }: { readonly label: string; readonly value:
 
 export default function ProductDetailView({ id, initialProduct }: ProductDetailViewProps): React.JSX.Element {
 	const { api } = useAuth();
-	const initialQueryData = useMemo(
-		() =>
-			initialProduct !== undefined
-				? {
-						success: true as const,
-						data: initialProduct,
-						meta: stubApiMeta(),
-					}
-				: undefined,
-		[initialProduct],
-	);
-	const detailQuery = api.product.detail.useQuery({ id }, { initialData: initialQueryData });
+	// GET /product/:id needs READ (the list only LIST); PATCH /product/:id needs UPDATE.
+	const { can } = useAuthorization();
+	const canView = can(PERMISSION.PRODUCT.READ);
+	const canUpdate = can(PERMISSION.PRODUCT.UPDATE);
+	const initialQueryData = useMemo(() => (initialProduct !== undefined ? successEnvelope(initialProduct, stubApiMeta()) : undefined), [initialProduct]);
+	const detailQuery = api.product.detail.useQuery({ id }, { enabled: canView, initialData: initialQueryData });
 	const entity: Product | undefined = detailQuery.data?.data;
+
+	if (!canView) {
+		return <AdminAccessDenied description="Viewing product details requires the product read permission." />;
+	}
 
 	if (detailQuery.isLoading && entity === undefined) {
 		return <p className="text-muted-foreground">{"Loading product…"}</p>;
@@ -67,10 +68,12 @@ export default function ProductDetailView({ id, initialProduct }: ProductDetailV
 					<ArrowLeft className="mr-2 size-4" />
 					{"Back to products"}
 				</Button>
-				<Button nativeButton={false} render={<Link href={`/product/${entity.id}/edit`} />}>
-					<Pencil className="mr-2 size-4" />
-					Edit
-				</Button>
+				{canUpdate ? (
+					<Button nativeButton={false} render={<Link href={`/product/${entity.id}/edit`} />}>
+						<Pencil className="mr-2 size-4" />
+						Edit
+					</Button>
+				) : null}
 			</div>
 
 			<Card>

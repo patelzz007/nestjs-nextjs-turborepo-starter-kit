@@ -1,5 +1,6 @@
 "use client";
 
+import { MerchantAccessDenied, MerchantRoleGate } from "@/components/access/merchant-capability-gate";
 import { MerchantPageHeader } from "@/components/merchant-ui/page-header";
 import { MerchantSurfacePanel } from "@/components/merchant-ui/surface-panel";
 import { resolveActiveOrganizationLocations } from "@/lib/org/location-access";
@@ -46,8 +47,6 @@ const LOCATION_SCOPE_OPTIONS: readonly { readonly value: OrganizationLocationSco
 	{ value: "ALL_LOCATIONS", label: "All locations" },
 	{ value: "SELECTED", label: "Selected locations" },
 ];
-
-const TEAM_MANAGER_ROLES: readonly OrganizationMembershipRole[] = ["OWNER", "ADMIN"];
 
 type InviteFormValues = z.output<typeof OrganizationMemberInviteFieldsSchema>;
 
@@ -137,7 +136,23 @@ function PendingInviteRow({ invite, locationLabel, disabled, onRevoke }: Pending
 	);
 }
 
+/** Team route — roster, invites, and revocations are OWNER/ADMIN-only on the API (`assertCanManageTeam`). */
 export function OrganizationTeamPageView({ orgSlug }: OrganizationTeamPageViewProps): React.JSX.Element {
+	return (
+		<MerchantRoleGate
+			action="manageTeam"
+			fallback={
+				<div className="space-y-8">
+					<MerchantPageHeader title="Team & access" description="Invite colleagues and manage their store access." />
+					<MerchantAccessDenied title="Owner or admin access required" description="Only organization owners and admins can view or manage team members." />
+				</div>
+			}>
+			<OrganizationTeamPageContent orgSlug={orgSlug} />
+		</MerchantRoleGate>
+	);
+}
+
+function OrganizationTeamPageContent({ orgSlug }: OrganizationTeamPageViewProps): React.JSX.Element {
 	const { api } = useAuth();
 	const queryClient = useQueryClient();
 	const contextQuery = api.organizations.context.useQuery({ orgSlug });
@@ -145,7 +160,6 @@ export function OrganizationTeamPageView({ orgSlug }: OrganizationTeamPageViewPr
 	const invitesQuery = api.organizations.listMemberInvites.useQuery({ orgSlug });
 
 	const locations = contextQuery.data?.data !== undefined ? resolveActiveOrganizationLocations(contextQuery.data.data) : [];
-	const canManageTeam = contextQuery.data?.data !== undefined && TEAM_MANAGER_ROLES.includes(contextQuery.data.data.membership.role);
 
 	const [values, setValues] = React.useState<InviteFormValues>(DEFAULT_INVITE_VALUES);
 	const [error, setError] = React.useState<string | null>(null);
@@ -273,126 +287,118 @@ export function OrganizationTeamPageView({ orgSlug }: OrganizationTeamPageViewPr
 				</div>
 			</MerchantSurfacePanel>
 
-			{canManageTeam ? (
-				<MerchantSurfacePanel className="space-y-4 p-6">
-					<div className="flex items-center justify-between gap-3">
-						<h2 className="text-base font-semibold text-foreground">Pending invitations</h2>
-						<Badge variant="outline">{String(pendingInvites.length)}</Badge>
+			<MerchantSurfacePanel className="space-y-4 p-6">
+				<div className="flex items-center justify-between gap-3">
+					<h2 className="text-base font-semibold text-foreground">Pending invitations</h2>
+					<Badge variant="outline">{String(pendingInvites.length)}</Badge>
+				</div>
+				{invitesQuery.isLoading ? <p className="text-sm text-muted-foreground">Loading invitations…</p> : null}
+				{pendingInvites.length === 0 && !invitesQuery.isLoading ? (
+					<p className="text-sm text-muted-foreground">No pending invitations.</p>
+				) : (
+					<div className="space-y-3">
+						{pendingInvites.map((invite) => (
+							<PendingInviteRow
+								key={invite.id}
+								invite={invite}
+								locationLabel={formatInviteLocationAccess(invite, locations)}
+								disabled={revokeMutation.isPending}
+								onRevoke={handleRevokeInvite}
+							/>
+						))}
 					</div>
-					{invitesQuery.isLoading ? <p className="text-sm text-muted-foreground">Loading invitations…</p> : null}
-					{pendingInvites.length === 0 && !invitesQuery.isLoading ? (
-						<p className="text-sm text-muted-foreground">No pending invitations.</p>
-					) : (
-						<div className="space-y-3">
-							{pendingInvites.map((invite) => (
-								<PendingInviteRow
-									key={invite.id}
-									invite={invite}
-									locationLabel={formatInviteLocationAccess(invite, locations)}
-									disabled={revokeMutation.isPending}
-									onRevoke={handleRevokeInvite}
-								/>
-							))}
-						</div>
-					)}
-				</MerchantSurfacePanel>
-			) : null}
+				)}
+			</MerchantSurfacePanel>
 
-			{canManageTeam ? (
-				<MerchantSurfacePanel className="space-y-6 p-6">
-					<h2 className="text-base font-semibold text-foreground">Invite a team member</h2>
-					<form className="space-y-6" onSubmit={handleSubmit}>
-						<div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_12rem]">
-							<div className="space-y-2">
-								<Label htmlFor="invite-email">Email address</Label>
-								<Input
-									id="invite-email"
-									type="email"
-									autoComplete="email"
-									placeholder="alice@company.com"
-									value={values.email}
-									onChange={handleEmailChange}
-									disabled={inviteMutation.isPending}
-								/>
-							</div>
-							<div className="space-y-2">
-								<Label htmlFor="invite-role">Role</Label>
-								<Select value={values.role} onValueChange={handleRoleChange} disabled={inviteMutation.isPending}>
-									<SelectTrigger id="invite-role">
-										<SelectValue placeholder="Select role" />
-									</SelectTrigger>
-									<SelectContent>
-										{INVITE_ROLES.map((role) => (
-											<SelectItem key={role.value} value={role.value}>
-												{role.label}
-											</SelectItem>
+			<MerchantSurfacePanel className="space-y-6 p-6">
+				<h2 className="text-base font-semibold text-foreground">Invite a team member</h2>
+				<form className="space-y-6" onSubmit={handleSubmit}>
+					<div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_12rem]">
+						<div className="space-y-2">
+							<Label htmlFor="invite-email">Email address</Label>
+							<Input
+								id="invite-email"
+								type="email"
+								autoComplete="email"
+								placeholder="alice@company.com"
+								value={values.email}
+								onChange={handleEmailChange}
+								disabled={inviteMutation.isPending}
+							/>
+						</div>
+						<div className="space-y-2">
+							<Label htmlFor="invite-role">Role</Label>
+							<Select value={values.role} onValueChange={handleRoleChange} disabled={inviteMutation.isPending}>
+								<SelectTrigger id="invite-role">
+									<SelectValue placeholder="Select role" />
+								</SelectTrigger>
+								<SelectContent>
+									{INVITE_ROLES.map((role) => (
+										<SelectItem key={role.value} value={role.value}>
+											{role.label}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+						</div>
+					</div>
+
+					<div className="space-y-4 rounded-xl border border-border bg-background/60 p-4">
+						<div className="space-y-2">
+							<Label htmlFor="invite-location-scope">Location access</Label>
+							<Select value={values.locationScopeType} onValueChange={handleLocationScopeChange} disabled={inviteMutation.isPending}>
+								<SelectTrigger id="invite-location-scope">
+									<SelectValue placeholder="Select location scope" />
+								</SelectTrigger>
+								<SelectContent>
+									{LOCATION_SCOPE_OPTIONS.map((option) => (
+										<SelectItem key={option.value} value={option.value}>
+											{option.label}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+							<p className="text-sm text-muted-foreground">
+								Members with all-locations access automatically gain access when new stores are added. Selected scope limits access to specific sites.
+							</p>
+						</div>
+
+						{values.locationScopeType === "SELECTED" ? (
+							<div className="space-y-3">
+								<p className="text-sm font-medium text-foreground">Choose locations</p>
+								{locations.length === 0 ? (
+									<p className="text-sm text-muted-foreground">No active locations are available for this organization yet.</p>
+								) : (
+									<div className="grid gap-3 sm:grid-cols-2">
+										{locations.map((location) => (
+											<OrganizationTeamLocationCheckbox
+												key={location.id}
+												locationId={location.id}
+												name={location.name}
+												addressText={location.addressText}
+												checked={values.locationIds.includes(location.id)}
+												disabled={inviteMutation.isPending}
+												onToggle={handleLocationToggle}
+											/>
 										))}
-									</SelectContent>
-								</Select>
+									</div>
+								)}
 							</div>
-						</div>
+						) : null}
+					</div>
 
-						<div className="space-y-4 rounded-xl border border-border bg-background/60 p-4">
-							<div className="space-y-2">
-								<Label htmlFor="invite-location-scope">Location access</Label>
-								<Select value={values.locationScopeType} onValueChange={handleLocationScopeChange} disabled={inviteMutation.isPending}>
-									<SelectTrigger id="invite-location-scope">
-										<SelectValue placeholder="Select location scope" />
-									</SelectTrigger>
-									<SelectContent>
-										{LOCATION_SCOPE_OPTIONS.map((option) => (
-											<SelectItem key={option.value} value={option.value}>
-												{option.label}
-											</SelectItem>
-										))}
-									</SelectContent>
-								</Select>
-								<p className="text-sm text-muted-foreground">
-									Members with all-locations access automatically gain access when new stores are added. Selected scope limits access to specific sites.
-								</p>
-							</div>
+					{error !== null ? <p className="text-sm text-destructive">{error}</p> : null}
 
-							{values.locationScopeType === "SELECTED" ? (
-								<div className="space-y-3">
-									<p className="text-sm font-medium text-foreground">Choose locations</p>
-									{locations.length === 0 ? (
-										<p className="text-sm text-muted-foreground">No active locations are available for this organization yet.</p>
-									) : (
-										<div className="grid gap-3 sm:grid-cols-2">
-											{locations.map((location) => (
-												<OrganizationTeamLocationCheckbox
-													key={location.id}
-													locationId={location.id}
-													name={location.name}
-													addressText={location.addressText}
-													checked={values.locationIds.includes(location.id)}
-													disabled={inviteMutation.isPending}
-													onToggle={handleLocationToggle}
-												/>
-											))}
-										</div>
-									)}
-								</div>
-							) : null}
-						</div>
-
-						{error !== null ? <p className="text-sm text-destructive">{error}</p> : null}
-
-						<div className="flex flex-wrap items-center gap-3">
-							<Button type="submit" disabled={inviteMutation.isPending}>
-								{inviteMutation.isPending ? "Sending invite…" : "Send invitation"}
-							</Button>
-							<Link href={organizationPath(orgSlug, "dashboard")} className="text-sm text-muted-foreground hover:text-foreground">
-								Back to dashboard
-							</Link>
-						</div>
-					</form>
-				</MerchantSurfacePanel>
-			) : (
-				<MerchantSurfacePanel className="p-6">
-					<p className="text-sm text-muted-foreground">Only organization owners and admins can invite or manage team members.</p>
-				</MerchantSurfacePanel>
-			)}
+					<div className="flex flex-wrap items-center gap-3">
+						<Button type="submit" disabled={inviteMutation.isPending}>
+							{inviteMutation.isPending ? "Sending invite…" : "Send invitation"}
+						</Button>
+						<Link href={organizationPath(orgSlug, "dashboard")} className="text-sm text-muted-foreground hover:text-foreground">
+							Back to dashboard
+						</Link>
+					</div>
+				</form>
+			</MerchantSurfacePanel>
 		</div>
 	);
 }

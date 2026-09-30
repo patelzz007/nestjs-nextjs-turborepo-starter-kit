@@ -1,12 +1,19 @@
 import { Injectable } from "@nestjs/common";
+import type { CreateSampleCategoryInput, SampleCategory, SampleCategoryListQuery, UpdateSampleCategoryInput } from "@workspace/shared";
 
-import { GeneratedSampleCategoryRepository } from "./sample-category.repository.generated";
-import { GeneratedSampleCategoryService } from "./sample-category.service.generated";
+import { BaseService } from "../../platform/persistence/base.service";
 
-/** Developer-owned service extension point. */
+import { SampleCategoryRepository } from "./sample-category.repository";
+
 @Injectable()
-export class SampleCategoryService extends GeneratedSampleCategoryService {
-	public constructor(repository: GeneratedSampleCategoryRepository) {
+export class SampleCategoryService extends BaseService<
+	SampleCategory,
+	CreateSampleCategoryInput,
+	UpdateSampleCategoryInput,
+	SampleCategoryListQuery,
+	SampleCategoryRepository
+> {
+	public constructor(repository: SampleCategoryRepository) {
 		super(repository);
 	}
 }

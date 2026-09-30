@@ -1,18 +1,17 @@
 "use client";
 
+import { useWebSession } from "@/components/auth/web-authorization-provider";
 import { ImpersonateUserPanel } from "@/components/impersonation/impersonate-user-panel";
 import { WebSidebarNavItem } from "@/components/layout/web-sidebar-nav-item";
 import { filterCompiledSidebarMenu } from "@/lib/navigation/filter-menu-by-capabilities";
 import { USER_SIDEBAR_MENU } from "@/lib/navigation/sidebar-menu";
 import { resolveWebPinnedMenuItems } from "@/lib/navigation/pinned-items";
-import { useSessionCapabilities } from "@/lib/session/capabilities";
 import { WEB_SIDEBAR_LABELS } from "@/lib/navigation/sidebar-labels";
 import { renderWebPaletteIcon } from "@/lib/palette/nav-items";
 import { useWebCommandPaletteStore } from "@/stores/command-palette-store";
 import { useWebSidebarStore } from "@/stores/sidebar-store";
 import { useAuth } from "@workspace/client/lib/auth";
 import type { CompiledSidebarMenuData } from "@workspace/client/lib/sidebar/sidebar-menu-schema";
-import type { CapabilitySlug, SessionPermissionsResponse } from "@workspace/shared";
 import { PanelSidebarHeader } from "@workspace/ui/components/navigation/panel-sidebar-header";
 import { PanelSidebarSearch } from "@workspace/ui/components/navigation/panel-sidebar-search";
 import { PanelSidebarSectionHeader } from "@workspace/ui/components/navigation/panel-sidebar-section-header";
@@ -37,8 +36,6 @@ import * as React from "react";
 
 export interface WebSidebarPanelProps {
 	readonly userName: string | null;
-	readonly sessionActive?: boolean;
-	readonly initialSessionPermissions?: SessionPermissionsResponse;
 	readonly onNavigate?: () => void;
 }
 
@@ -72,11 +69,11 @@ function WebSidebarPinnedItem({ title, url, icon, isActive, onNavigate }: WebSid
 	);
 }
 
-export function WebSidebarPanel({ userName, sessionActive = false, initialSessionPermissions, onNavigate }: WebSidebarPanelProps): React.JSX.Element {
+export function WebSidebarPanel({ userName, onNavigate }: WebSidebarPanelProps): React.JSX.Element {
 	const pathname = usePathname();
 	const router = useRouter();
 	const { user } = useAuth();
-	const { capabilities, isReady: isCapabilitiesReady } = useSessionCapabilities(initialSessionPermissions, sessionActive);
+	const { capabilities } = useWebSession();
 	const searchInputRef = React.useRef<HTMLInputElement>(null);
 	const navContainerRef = React.useRef<HTMLDivElement>(null);
 
@@ -91,14 +88,7 @@ export function WebSidebarPanel({ userName, sessionActive = false, initialSessio
 		};
 	}, [menu]);
 
-	const filterCapabilities = React.useMemo((): readonly CapabilitySlug[] => {
-		if (isCapabilitiesReady && capabilities.length > 0) {
-			return capabilities;
-		}
-		return initialSessionPermissions?.capabilities ?? [];
-	}, [capabilities, initialSessionPermissions?.capabilities, isCapabilitiesReady]);
-
-	const filteredMenu = React.useMemo(() => filterCompiledSidebarMenu(displayMenu, filterCapabilities), [displayMenu, filterCapabilities]);
+	const filteredMenu = React.useMemo(() => filterCompiledSidebarMenu(displayMenu, capabilities), [displayMenu, capabilities]);
 	const currentPage = pathname;
 	const setSearchQuery = useWebSidebarStore((state) => state.setSearchQuery);
 	const clearSearch = useWebSidebarStore((state) => state.clearSearch);
@@ -110,7 +100,7 @@ export function WebSidebarPanel({ userName, sessionActive = false, initialSessio
 	const pinnedUrls = useWebCommandPaletteStore((state) => state.pinnedUrls);
 
 	const view = React.useMemo(
-		() => buildSidebarView({ menu: filteredMenu, pathname: currentPage, sectionOrder, searchQuery, isHighlightParentItem: true }),
+		() => buildSidebarView({ menu: filteredMenu, pathname: currentPage, sectionOrder, searchQuery }),
 		[filteredMenu, currentPage, sectionOrder, searchQuery],
 	);
 
@@ -316,7 +306,7 @@ export function WebSidebarPanel({ userName, sessionActive = false, initialSessio
 				) : null}
 
 				<div className={view.bottomItems.length > 0 ? "px-2 pt-2" : "px-2 pb-2"}>
-					<ImpersonateUserPanel sessionActive={sessionActive} />
+					<ImpersonateUserPanel />
 				</div>
 			</SidebarFooter>
 

@@ -1,8 +1,10 @@
 "use client";
 
 import { useAuth } from "@workspace/client/lib/auth";
+import { useAuthorization } from "@workspace/client/lib/auth/can";
 
-import type { Envelope, EmailPreview, EmailPreviewListResponse, EmailTemplateMeta } from "@workspace/shared";
+import { DisabledActionButton } from "@/components/common/disabled-action-button";
+import { PERMISSION, type Envelope, type EmailPreview, type EmailPreviewListResponse, type EmailTemplateMeta } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/feedback/badge";
 import { Button } from "@workspace/ui/components/form/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
@@ -95,6 +97,9 @@ export default function EmailPreviewPage({
 	readonly initialSelectedKey?: string;
 }): React.JSX.Element {
 	const { api } = useAuth();
+	const { can } = useAuthorization();
+	// `POST /notifications/email-preview/:key/send` requires CREATE on EMAIL (previewing needs only READ).
+	const canSendTest = can(PERMISSION.EMAIL.CREATE);
 
 	const [selectedKey, setSelectedKey] = React.useState<string | null>(initialSelectedKey ?? null);
 	const [mode, setMode] = React.useState<PreviewMode>("preview");
@@ -274,10 +279,17 @@ export default function EmailPreviewPage({
 										{copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
 										{copied ? "Copied" : "Copy"}
 									</Button>
-									<Button variant="default" size="sm" onClick={handleSendTest} disabled={sendMutation.isPending || preview === undefined} className="gap-1.5">
-										{sendMutation.isPending ? <Loader2 className="size-3.5 animate-spin" /> : <Send className="size-3.5" />}
-										{sendMutation.isPending ? "Sending…" : "Send test email"}
-									</Button>
+									{canSendTest ? (
+										<Button variant="default" size="sm" onClick={handleSendTest} disabled={sendMutation.isPending || preview === undefined} className="gap-1.5">
+											{sendMutation.isPending ? <Loader2 className="size-3.5 animate-spin" /> : <Send className="size-3.5" />}
+											{sendMutation.isPending ? "Sending…" : "Send test email"}
+										</Button>
+									) : (
+										<DisabledActionButton size="sm" className="gap-1.5" reason="Sending test emails requires the email create permission.">
+											<Send className="size-3.5" />
+											Send test email
+										</DisabledActionButton>
+									)}
 								</div>
 							</CardHeader>
 							<CardContent className="relative min-h-[40vh]">

@@ -1,6 +1,6 @@
 "use client";
 
-import { stubApiMeta } from "@/lib/api-envelope";
+import { stubApiMeta, successEnvelope } from "@/lib/api-envelope";
 import { useAuth } from "@workspace/client/lib/auth";
 import type { AnalyticsMetric, RewardClaimStatus, UserRewardsAnalyticsResponse } from "@workspace/shared";
 import { AnalyticsChartCard, AnalyticsChartLegendItem } from "@workspace/ui/components/display/analytics-chart-card";
@@ -84,17 +84,7 @@ export interface RewardHubAnalyticsPageViewProps {
 export function RewardHubAnalyticsPageView({ initialAnalytics }: RewardHubAnalyticsPageViewProps): React.JSX.Element {
 	const { api } = useAuth();
 
-	const initialQueryData = React.useMemo(
-		() =>
-			initialAnalytics !== undefined
-				? {
-						success: true as const,
-						data: initialAnalytics,
-						meta: stubApiMeta(),
-					}
-				: undefined,
-		[initialAnalytics],
-	);
+	const initialQueryData = React.useMemo(() => (initialAnalytics !== undefined ? successEnvelope(initialAnalytics, stubApiMeta()) : undefined), [initialAnalytics]);
 
 	const analyticsQuery = api.claims.analytics.useQuery(
 		{},

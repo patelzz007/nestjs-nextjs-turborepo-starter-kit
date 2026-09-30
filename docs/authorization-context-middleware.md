@@ -1,3 +1,16 @@
+---
+title: "Authorization Context Middleware (superseded)"
+tags: ["authorization", "history", "superseded"]
+description: "Historical note from before the authorization overhaul. See the Authorization System guides for the current design."
+author: "Platform Team"
+lastUpdated: 1790812800000
+coverImage: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=1600&q=80"
+---
+
+> [!WARNING]
+> **Superseded.** This page describes the authorization design *before* the authorization overhaul and is kept for history only.
+> The current, maintained documentation is **[Authorization System — Start Here](./authorization-system/overview.md)**.
+
 # Authorization Context Middleware
 
 ## Overview
@@ -340,5 +353,5 @@ const mockRequest = {
 
 ## See Also
 - [Authorization Guard Documentation](./authorization-kernel.md)
-- [@Authorize Decorator Documentation](./authorize-decorator.md)
-- [Authorization Kernel Architecture](./authorization-kernel-architecture.md)
+- [@Authorize Decorator Documentation](./authorization-system/backend.md)
+- [Authorization Kernel Architecture](./authorization-kernel.md)

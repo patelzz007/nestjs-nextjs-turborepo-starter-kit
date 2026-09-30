@@ -1,34 +1,28 @@
 import type { RowData } from "@tanstack/react-table";
 import type { DataTableCheckboxConfig, DataTableBulkSelectionContext } from "@workspace/ui/lib/data-table/checkbox";
-import { toPlatformCapabilitySlug, type CapabilitySlug, type PermissionResource } from "@workspace/shared";
-
-/** Returns true when the session includes `DELETE` on the given platform resource. */
-export function canDeletePlatformResource(hasCapability: (slug: CapabilitySlug) => boolean, resource: PermissionResource): boolean {
-	return hasCapability(toPlatformCapabilitySlug("DELETE", resource));
-}
 
 export interface ResourceTableCheckboxOptions<TData extends RowData> {
-	readonly hasCapability: (slug: CapabilitySlug) => boolean;
-	readonly resource: PermissionResource;
+	/**
+	 * `useAuthorization().can(PERMISSION.<RESOURCE>.DELETE)` — the container
+	 * decides; bulk delete is offered only when true.
+	 */
+	readonly canDelete: boolean;
 	readonly exportFilename: string;
 	readonly exportableColumns?: readonly string[];
 	readonly onDeleteAll?: (selectedRows: TData[], context: DataTableBulkSelectionContext) => void | Promise<void>;
+	/** Already filtered by the caller to the actions the session may run. */
 	readonly bulkActions?: DataTableCheckboxConfig<TData>["bulkActions"];
-	readonly requiredCapabilityForBulkActions?: CapabilitySlug;
 }
 
-/** Checkbox + multi-format export; bulk delete only when the user has DELETE permission. */
+/** Checkbox + multi-format export; bulk delete only when the session may delete. */
 export function buildResourceTableCheckbox<TData extends RowData>(options: ResourceTableCheckboxOptions<TData>): DataTableCheckboxConfig<TData> {
-	const includeDelete = options.onDeleteAll !== undefined && canDeletePlatformResource(options.hasCapability, options.resource);
-	const capabilitySlug = options.requiredCapabilityForBulkActions;
-	const filteredBulkActions =
-		options.bulkActions !== undefined && capabilitySlug !== undefined ? options.bulkActions.filter(() => options.hasCapability(capabilitySlug)) : options.bulkActions;
+	const includeDelete = options.onDeleteAll !== undefined && options.canDelete;
 
 	return {
 		export: true,
 		exportFilename: options.exportFilename,
 		...(options.exportableColumns !== undefined ? { exportableColumns: [...options.exportableColumns] } : {}),
-		...(filteredBulkActions !== undefined && filteredBulkActions.length > 0 ? { bulkActions: filteredBulkActions } : {}),
+		...(options.bulkActions !== undefined && options.bulkActions.length > 0 ? { bulkActions: options.bulkActions } : {}),
 		...(includeDelete ? { onDeleteAll: options.onDeleteAll } : {}),
 	};
 }

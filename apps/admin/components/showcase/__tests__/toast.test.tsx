@@ -13,12 +13,15 @@ import { Toaster, createToastManager, createToastMessage, toastA11yProps, toastP
 // `Node.contains` THROWS. Worse, jsdom `dispatchEvent` doesn't re-throw listener
 // exceptions, so it surfaces as an unhandled error that fails the whole run.
 // Mirror the browser: non-Node arguments return `false` instead of throwing.
-// The original is captured as a plain function (with an explicit `this` type)
-// and invoked only via `.call(this, other)` with a real receiver, so the
-// `unbound-method` lint (which assumes method detaching loses `this`) doesn't
-// apply — hence the disable on the next line.
-// eslint-disable-next-line @typescript-eslint/unbound-method
-const realNodeContains: (this: Node, other: Node | null) => boolean = Node.prototype.contains;
+// Node arguments keep the DOM-spec semantics of `contains` (inclusive
+// descendant check via `compareDocumentPosition`). The shim is installed with
+// `vi.spyOn` so `vi.restoreAllMocks()` puts the pristine method back afterwards.
+function shimmedNodeContains(this: Node, other: Node | null): boolean {
+	if (other === null || !(other instanceof Node)) {
+		return false;
+	}
+	return other === this || (this.compareDocumentPosition(other) & Node.DOCUMENT_POSITION_CONTAINED_BY) !== 0;
+}
 
 /** jsdom has no ResizeObserver; base-ui tolerates its absence, stub to be safe. */
 class ResizeObserverStub {
@@ -38,7 +41,7 @@ afterEach(() => {
 	vi.unstubAllGlobals();
 	vi.useRealTimers();
 	// Restore the shimmed `contains` so other test files see the pristine method.
-	Node.prototype.contains = realNodeContains;
+	vi.restoreAllMocks();
 });
 
 describe("Toast", () => {
@@ -47,12 +50,7 @@ describe("Toast", () => {
 	beforeEach(() => {
 		vi.stubGlobal("ResizeObserver", ResizeObserverStub);
 		// Apply the jsdom `contains` fidelity shim (see header comment).
-		Node.prototype.contains = function contains(this: Node, other: Node | null): boolean {
-			if (other === null || !(other instanceof Node)) {
-				return false;
-			}
-			return realNodeContains.call(this, other);
-		};
+		vi.spyOn(Node.prototype, "contains").mockImplementation(shimmedNodeContains);
 	});
 
 	it("renders a toast from the imperative manager with title + description (features 1/2)", () => {

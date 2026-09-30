@@ -2,12 +2,14 @@
 
 import { MerchantInventoryBar, MerchantRewardStatusBadge } from "@/components/merchant-ui/reward-status";
 import { MerchantRewardFormFields } from "@/components/rewards/merchant-reward-form-fields";
-import { useMerchantCapabilities } from "@/lib/org/capabilities";
+import { MerchantCapabilityGate, MerchantReadOnlyNotice } from "@/components/access/merchant-capability-gate";
 import { invalidateMerchantRewardsListCache, upsertMerchantRewardInListCache } from "@/lib/rewards/query-cache";
-import { stubApiMeta } from "@/lib/api-envelope";
+import { stubApiMeta, successEnvelope } from "@/lib/api-envelope";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@workspace/client/lib/auth";
+import { useAuthorization } from "@workspace/client/lib/auth/can";
 import {
+	MERCHANT_CAPABILITY,
 	mapMerchantUpdateRewardFormToInput,
 	mapRewardResponseToFormValues,
 	MerchantUpdateRewardFormSchema,
@@ -35,22 +37,21 @@ function isRewardEditable(status: RewardResponse["status"]): boolean {
 	return status === "DRAFT" || status === "PENDING_REVIEW";
 }
 
-export function MerchantEditRewardPageView({ orgSlug, rewardId, initialRewards }: MerchantEditRewardPageViewProps): React.JSX.Element {
+/** Reward detail route — viewing needs `merchant:view_rewards`; edit/submit need `merchant:manage_rewards`. */
+export function MerchantEditRewardPageView(props: MerchantEditRewardPageViewProps): React.JSX.Element {
+	return (
+		<MerchantCapabilityGate capability={MERCHANT_CAPABILITY.viewRewards}>
+			<MerchantEditRewardPageContent {...props} />
+		</MerchantCapabilityGate>
+	);
+}
+
+function MerchantEditRewardPageContent({ orgSlug, rewardId, initialRewards }: MerchantEditRewardPageViewProps): React.JSX.Element {
 	const { api } = useAuth();
 	const queryClient = useQueryClient();
-	const { hasCapability } = useMerchantCapabilities();
+	const { can } = useAuthorization();
 
-	const initialQueryData = React.useMemo(
-		() =>
-			initialRewards !== undefined
-				? {
-						success: true as const,
-						data: [...initialRewards],
-						meta: stubApiMeta(),
-					}
-				: undefined,
-		[initialRewards],
-	);
+	const initialQueryData = React.useMemo(() => (initialRewards !== undefined ? successEnvelope([...initialRewards], stubApiMeta()) : undefined), [initialRewards]);
 
 	const rewardsQuery = api.organizations.rewards.list.useQuery(
 		{ orgSlug },
@@ -81,7 +82,7 @@ export function MerchantEditRewardPageView({ orgSlug, rewardId, initialRewards }
 	}, [reward, reset]);
 
 	const selectedType = useWatch({ control, name: "rewardType" });
-	const canManageRewards = hasCapability("merchant:manage_rewards");
+	const canManageRewards = can(MERCHANT_CAPABILITY.manageRewards);
 	const canEdit = canManageRewards && reward !== undefined && isRewardEditable(reward.status);
 	const canPublish = canManageRewards && reward?.status === "DRAFT";
 	const rewardsPath = organizationPath(orgSlug, "rewards");
@@ -177,6 +178,8 @@ export function MerchantEditRewardPageView({ orgSlug, rewardId, initialRewards }
 					<MerchantRewardStatusBadge status={reward.status} />
 				</div>
 			</div>
+
+			{canManageRewards ? null : <MerchantReadOnlyNotice>Your role can view this reward but not edit it or submit it for review.</MerchantReadOnlyNotice>}
 
 			<form onSubmit={handleFormSubmit} className="space-y-6">
 				<MerchantRewardFormFields

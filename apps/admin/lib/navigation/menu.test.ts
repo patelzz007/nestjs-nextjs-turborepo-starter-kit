@@ -86,25 +86,60 @@ describe("compileMenu (unique ids)", () => {
 });
 
 describe("computeRouteState", () => {
-	it("marks the exact match active (and its route-prefix parents)", () => {
-		const { activeItems } = computeRouteState(ITEMS, "/settings/general", false);
+	it("marks only the matching page active, never its ancestors", () => {
+		const { activeItems } = computeRouteState(ITEMS, "/settings/general");
 		expect(activeItems["settings-general"]).toBe(true);
-		// "/settings" is a route prefix of "/settings/general", so it is active too.
-		expect(activeItems.settings).toBe(true);
+		// "/settings" is a route prefix of "/settings/general", but the parent
+		// yields to its active child — parents/grandparents must not highlight.
+		expect(activeItems.settings).toBeUndefined();
 	});
 
 	it("auto-expands ancestors of an active item", () => {
-		const { autoExpandedItems } = computeRouteState(ITEMS, "/settings/general", false);
+		const { autoExpandedItems } = computeRouteState(ITEMS, "/settings/general");
 		expect(autoExpandedItems.settings).toBe(true);
 	});
 
-	it("highlights the root parent when requested", () => {
-		const { activeItems } = computeRouteState(ITEMS, "/settings/general", true);
+	it("keeps the parent active only when no child matches the route", () => {
+		// Unmapped detail page under "/settings": no leaf matches exactly, so the
+		// parent is the closest match and stays lit.
+		const { activeItems } = computeRouteState(ITEMS, "/settings/unknown");
 		expect(activeItems.settings).toBe(true);
+		expect(activeItems["settings-general"]).toBeUndefined();
+	});
+
+	it("highlights only the child when a parent shares its URL", () => {
+		// Merchant-style menu: "My Rewards" and "All Rewards" resolve to the same
+		// page — only the leaf lights up, while the parent still auto-expands.
+		const items: readonly CompiledSidebarMenuItem[] = [
+			{
+				id: "my-rewards",
+				title: "My Rewards",
+				url: "/orgs/jonker-street-kitchen/rewards",
+				children: [
+					{ id: "all-rewards", title: "All Rewards", url: "/orgs/jonker-street-kitchen/rewards" },
+					{ id: "rewards-new", title: "Create New", url: "/orgs/jonker-street-kitchen/rewards/new" },
+				],
+			},
+		];
+		const { activeItems, autoExpandedItems } = computeRouteState(items, "/orgs/jonker-street-kitchen/rewards");
+		expect(activeItems["all-rewards"]).toBe(true);
+		expect(activeItems["my-rewards"]).toBeUndefined();
+		expect(activeItems["rewards-new"]).toBeUndefined();
+		expect(autoExpandedItems["my-rewards"]).toBe(true);
+	});
+
+	it("lights the closest child (not the parent) on unmapped detail pages", () => {
+		const { activeItems, autoExpandedItems } = computeRouteState(ITEMS, "/settings/general/advanced");
+
+		// No entry points exactly at this URL → the closest match wins: the child
+		// "/settings/general" is a longer (closer) prefix than "/settings".
+		expect(activeItems["settings-general"]).toBe(true);
+		expect(activeItems.settings).toBeUndefined();
+		expect(autoExpandedItems.settings).toBe(true);
 	});
 
 	it("skips disabled children when computing the active branch", () => {
-		const { autoExpandedItems, activeItems } = computeRouteState(ITEMS, "/docs/alpha", false);
+		const { autoExpandedItems, activeItems } = computeRouteState(ITEMS, "/docs/alpha");
 		expect(activeItems["docs-alpha"]).toBeUndefined();
 		expect(autoExpandedItems.docs).toBeUndefined();
 	});
@@ -121,12 +156,12 @@ describe("computeRouteState", () => {
 				],
 			},
 		];
-		const { activeItems } = computeRouteState(items, "/docs/settings", false);
+		const { activeItems } = computeRouteState(items, "/docs/settings");
 		// The exact page is active…
 		expect(activeItems["docs-settings"]).toBe(true);
-		// …the route-prefix parent stays active…
-		expect(activeItems.docs).toBe(true);
-		// …but the shallower sibling leaf is not (it only matches on /docs itself).
+		// …the route-prefix parent yields to it (no parent highlighting)…
+		expect(activeItems.docs).toBeUndefined();
+		// …and the shallower sibling leaf is not either (it only matches on /docs itself).
 		expect(activeItems["docs-all"]).toBeUndefined();
 	});
 
@@ -142,8 +177,10 @@ describe("computeRouteState", () => {
 				],
 			},
 		];
-		const { activeItems } = computeRouteState(items, "/docs", false);
+		const { activeItems } = computeRouteState(items, "/docs");
 		expect(activeItems["docs-all"]).toBe(true);
+		// The parent shares the child's URL and must not highlight alongside it.
+		expect(activeItems.docs).toBeUndefined();
 	});
 });
 
@@ -206,7 +243,7 @@ describe("filterItemsBySearch", () => {
 
 describe("sectionHasActiveItem", () => {
 	it("is true when an item (or descendant) is active", () => {
-		const { activeItems } = computeRouteState(ITEMS, "/settings/security", false);
+		const { activeItems } = computeRouteState(ITEMS, "/settings/security");
 		expect(sectionHasActiveItem(ITEMS, activeItems)).toBe(true);
 	});
 
@@ -223,7 +260,6 @@ describe("buildSidebarView", () => {
 			pathname: "/",
 			sectionOrder: ["Account", "Main"],
 			searchQuery: "",
-			isHighlightParentItem: false,
 		});
 		expect(ordered.sections.map((section) => section.title)).toEqual(["Account", "Main"]);
 	});
@@ -235,14 +271,13 @@ describe("buildSidebarView", () => {
 			pathname: "/",
 			sectionOrder: null,
 			searchQuery: "",
-			isHighlightParentItem: false,
 		});
 		expect(natural.sections.map((section) => section.title)).toEqual(["Main", "Account"]);
 	});
 
 	it("reports noResults only while searching with zero matches", () => {
 		const menu = compileMenu(RAW_MENU);
-		const params = { menu, pathname: "/", sectionOrder: null, isHighlightParentItem: false };
+		const params = { menu, pathname: "/", sectionOrder: null };
 		const empty = buildSidebarView({ ...params, searchQuery: "" });
 		expect(empty.noResults).toBe(false);
 		const miss = buildSidebarView({ ...params, searchQuery: "zzz-no-match" });

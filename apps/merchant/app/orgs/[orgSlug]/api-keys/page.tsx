@@ -1,7 +1,7 @@
 import { MerchantApiKeysPageView } from "@/components/api-keys/merchant-api-keys-page-view";
 import { loadMerchantServerContext, readOrganizationLocationCookie } from "@/lib/merchant-server-api";
 import { serverHasMerchantCapability } from "@/lib/session/server-capabilities";
-import type { MerchantApiKeySummary } from "@workspace/shared";
+import { MERCHANT_CAPABILITY, type MerchantApiKeySummary } from "@workspace/shared";
 import * as React from "react";
 
 export const dynamic = "force-dynamic";
@@ -15,7 +15,8 @@ export default async function MerchantApiKeysPage({ params }: MerchantApiKeysPag
 	const { server, memberships, organizationSlug } = await loadMerchantServerContext();
 	const locationId = await readOrganizationLocationCookie();
 
-	const canManageApiKeys = serverHasMerchantCapability(memberships, organizationSlug ?? orgSlug, "merchant:manage_api_keys");
+	// Skip the server prefetch for roles the API would reject; the client view gates the UI.
+	const canManageApiKeys = serverHasMerchantCapability(memberships, organizationSlug ?? orgSlug, MERCHANT_CAPABILITY.manageApiKeys);
 
 	let initialKeys: readonly MerchantApiKeySummary[] | undefined;
 	if (canManageApiKeys) {
@@ -27,5 +28,5 @@ export default async function MerchantApiKeysPage({ params }: MerchantApiKeysPag
 		}
 	}
 
-	return <MerchantApiKeysPageView orgSlug={orgSlug} initialKeys={initialKeys} canManageApiKeys={canManageApiKeys} />;
+	return <MerchantApiKeysPageView orgSlug={orgSlug} initialKeys={initialKeys} />;
 }

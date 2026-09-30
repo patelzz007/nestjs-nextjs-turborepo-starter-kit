@@ -3,7 +3,7 @@ import { organizationPath } from "@/lib/org/slug";
 import { redirect } from "next/navigation";
 
 /** Legacy `/rewards` entry — forwards to the active organization rewards route. */
-export default async function MerchantRewardsRedirectPage(): Promise<never> {
+export default async function MerchantRewardsRedirectPage(): Promise<React.ReactNode> {
 	const organizationSlug = await readOrganizationSlugCookie();
 
 	if (organizationSlug !== undefined && organizationSlug.length > 0) {

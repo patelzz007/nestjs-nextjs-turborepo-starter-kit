@@ -40,7 +40,10 @@ export const DataTableCellValueSchema = z.union([DataTableCellScalarSchema, Data
 
 export type DataTableCellValue = z.output<typeof DataTableCellValueSchema>;
 
-export function parseDataTableCellValue(raw: DataTableCellScalar | object | null | undefined): DataTableCellValue {
+/** Raw cell input accepted by the cell parser (before validation/normalization). */
+export type DataTableCellInput = DataTableCellScalar | object | null | undefined;
+
+export function parseDataTableCellValue(raw: DataTableCellInput): DataTableCellValue {
 	if (raw === null || raw === undefined) {
 		return "";
 	}
@@ -49,7 +52,7 @@ export function parseDataTableCellValue(raw: DataTableCellScalar | object | null
 }
 
 /** Coerce a TanStack cell value (passed through Zod) into a display string. */
-export function displayStringFromTanStackValue(raw: DataTableCellScalar | object | null | undefined): string {
+export function displayStringFromTanStackValue(raw: DataTableCellInput): string {
 	return toDataTableCellString(parseDataTableCellValue(raw));
 }
 

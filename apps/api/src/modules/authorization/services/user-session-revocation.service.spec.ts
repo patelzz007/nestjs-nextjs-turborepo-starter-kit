@@ -1,50 +1,59 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { AccessTokenStateService } from "../../auth/services/access-token-state.service";
-import type { RefreshTokenRepository } from "../../sessions/repositories/refresh-token.repository";
-import type { SessionUserRepository } from "../../sessions/repositories/session-user.repository";
+import { AccessTokenStateService } from "../../auth/services/access-token-state.service";
+import { RefreshTokenRepository } from "../../sessions/repositories/refresh-token.repository";
+import { SessionUserRepository } from "../../sessions/repositories/session-user.repository";
 
 import { UserSessionRevocationService } from "./user-session-revocation.service";
 
+const mocks = vi.hoisted(() => ({
+	revokeAllForUsers: vi.fn(),
+	bumpTokenVersions: vi.fn(),
+	invalidate: vi.fn(),
+}));
+
+vi.mock("../../sessions/repositories/refresh-token.repository", () => ({
+	RefreshTokenRepository: class {
+		public readonly revokeAllForUsers = mocks.revokeAllForUsers;
+	},
+}));
+
+vi.mock("../../sessions/repositories/session-user.repository", () => ({
+	SessionUserRepository: class {
+		public readonly bumpTokenVersions = mocks.bumpTokenVersions;
+	},
+}));
+
+vi.mock("../../auth/services/access-token-state.service", () => ({
+	AccessTokenStateService: class {
+		public readonly invalidate = mocks.invalidate;
+	},
+}));
+
+function createService(): UserSessionRevocationService {
+	return new UserSessionRevocationService(new RefreshTokenRepository(), new SessionUserRepository(), new AccessTokenStateService());
+}
+
 describe("UserSessionRevocationService", () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+		mocks.revokeAllForUsers.mockResolvedValue(undefined);
+		mocks.bumpTokenVersions.mockResolvedValue(undefined);
+	});
+
 	it("revokes refresh tokens, bumps tokenVersion, and invalidates access-token cache", async () => {
-		const refreshTokens = {
-			revokeAllForUsers: vi.fn().mockResolvedValue(undefined),
-		};
-		const sessionUsers = {
-			bumpTokenVersions: vi.fn().mockResolvedValue(undefined),
-		};
-		const accessTokenState = {
-			invalidate: vi.fn(),
-		};
+		await createService().revokeAllSessionsForUsers(["user-1", "user-1"]);
 
-		const service = new UserSessionRevocationService(
-			refreshTokens as unknown as RefreshTokenRepository,
-			sessionUsers as unknown as SessionUserRepository,
-			accessTokenState as unknown as AccessTokenStateService,
-		);
-
-		await service.revokeAllSessionsForUsers(["user-1", "user-1"]);
-
-		expect(refreshTokens.revokeAllForUsers).toHaveBeenCalledWith(["user-1"]);
-		expect(sessionUsers.bumpTokenVersions).toHaveBeenCalledWith(["user-1"]);
-		expect(accessTokenState.invalidate).toHaveBeenCalledWith("user-1");
+		expect(mocks.revokeAllForUsers).toHaveBeenCalledWith(["user-1"]);
+		expect(mocks.bumpTokenVersions).toHaveBeenCalledWith(["user-1"]);
+		expect(mocks.invalidate).toHaveBeenCalledWith("user-1");
 	});
 
 	it("no-ops when userIds is empty", async () => {
-		const refreshTokens = { revokeAllForUsers: vi.fn() };
-		const sessionUsers = { bumpTokenVersions: vi.fn() };
-		const accessTokenState = { invalidate: vi.fn() };
-		const service = new UserSessionRevocationService(
-			refreshTokens as unknown as RefreshTokenRepository,
-			sessionUsers as unknown as SessionUserRepository,
-			accessTokenState as unknown as AccessTokenStateService,
-		);
+		await createService().revokeAllSessionsForUsers([]);
 
-		await service.revokeAllSessionsForUsers([]);
-
-		expect(refreshTokens.revokeAllForUsers).not.toHaveBeenCalled();
-		expect(sessionUsers.bumpTokenVersions).not.toHaveBeenCalled();
-		expect(accessTokenState.invalidate).not.toHaveBeenCalled();
+		expect(mocks.revokeAllForUsers).not.toHaveBeenCalled();
+		expect(mocks.bumpTokenVersions).not.toHaveBeenCalled();
+		expect(mocks.invalidate).not.toHaveBeenCalled();
 	});
 });

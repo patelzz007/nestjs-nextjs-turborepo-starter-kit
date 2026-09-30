@@ -1,14 +1,15 @@
 "use client";
 
+import { MerchantCapabilityGate } from "@/components/access/merchant-capability-gate";
 import { MerchantLocationScopeBanner } from "@/components/layout/merchant-location-scope-banner";
 import { MerchantEmptyState } from "@/components/merchant-ui/empty-state";
 import { MerchantPageHeader } from "@/components/merchant-ui/page-header";
 import { MerchantStatCard } from "@/components/merchant-ui/stat-card";
 import { MerchantSurfacePanel } from "@/components/merchant-ui/surface-panel";
-import { stubPaginatedMetaFromHydration } from "@/lib/api-envelope";
+import { stubPaginatedMetaFromHydration, successEnvelope } from "@/lib/api-envelope";
 import { useActiveLocationFilter } from "@/lib/org/location-context";
 import { useAuth } from "@workspace/client/lib/auth";
-import type { MerchantRedemptionListItem } from "@workspace/shared";
+import { MERCHANT_CAPABILITY, type MerchantRedemptionListItem } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/feedback/badge";
 import { format } from "date-fns";
 import { CalendarClock, Receipt, ScanLine } from "lucide-react";
@@ -21,18 +22,23 @@ export interface MerchantRedemptionsPageViewProps {
 	readonly initialRedemptions?: readonly MerchantRedemptionListItem[];
 }
 
-export function MerchantRedemptionsPageView({ orgSlug, initialRedemptions }: MerchantRedemptionsPageViewProps): React.JSX.Element {
+/** Redemptions route — requires `merchant:view_redemptions` (redemptions endpoint); the query mounts only when allowed. */
+export function MerchantRedemptionsPageView(props: MerchantRedemptionsPageViewProps): React.JSX.Element {
+	return (
+		<MerchantCapabilityGate capability={MERCHANT_CAPABILITY.viewRedemptions}>
+			<MerchantRedemptionsPageViewContent {...props} />
+		</MerchantCapabilityGate>
+	);
+}
+
+function MerchantRedemptionsPageViewContent({ orgSlug, initialRedemptions }: MerchantRedemptionsPageViewProps): React.JSX.Element {
 	const { api } = useAuth();
 	const { locationId } = useActiveLocationFilter();
 
 	const initialQueryData = React.useMemo(
 		() =>
 			initialRedemptions !== undefined
-				? {
-						success: true as const,
-						data: [...initialRedemptions],
-						meta: stubPaginatedMetaFromHydration(REDEMPTIONS_LIMIT, initialRedemptions.length, false),
-					}
+				? successEnvelope([...initialRedemptions], stubPaginatedMetaFromHydration(REDEMPTIONS_LIMIT, initialRedemptions.length, false))
 				: undefined,
 		[initialRedemptions],
 	);

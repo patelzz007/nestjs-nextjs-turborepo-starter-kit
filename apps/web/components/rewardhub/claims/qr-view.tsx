@@ -1,6 +1,6 @@
 "use client";
 
-import { stubApiMeta } from "@/lib/api-envelope";
+import { stubApiMeta, successEnvelope } from "@/lib/api-envelope";
 import { WebPageHeader } from "@/components/web-ui/page-header";
 import { WebSurfacePanel } from "@/components/web-ui/surface-panel";
 import { useAuth } from "@workspace/client/lib/auth";
@@ -21,17 +21,7 @@ export interface ClaimQrViewProps {
 export function ClaimQrView({ claimId, initialQr }: ClaimQrViewProps): React.JSX.Element {
 	const { api } = useAuth();
 
-	const initialQueryData = React.useMemo(
-		() =>
-			initialQr !== undefined
-				? {
-						success: true as const,
-						data: initialQr,
-						meta: stubApiMeta(),
-					}
-				: undefined,
-		[initialQr],
-	);
+	const initialQueryData = React.useMemo(() => (initialQr !== undefined ? successEnvelope(initialQr, stubApiMeta()) : undefined), [initialQr]);
 
 	const qrQuery = api.claims.qr.useQuery(
 		{ claimId },

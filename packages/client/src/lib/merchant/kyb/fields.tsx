@@ -19,9 +19,12 @@ export interface MerchantKybFieldValues {
 	readonly documents: MerchantKybPendingDocument[];
 }
 
+/** The business fields `MerchantKybBusinessFields` can edit, derived from its own props contract. */
+export type MerchantKybBusinessFieldName = keyof MerchantKybBusinessFieldsProps["values"];
+
 export interface MerchantKybBusinessFieldsProps {
 	readonly values: Pick<MerchantKybFieldValues, "businessName" | "legalName" | "addressText" | "contactPhone">;
-	readonly onChange?: (field: "businessName" | "legalName" | "addressText" | "contactPhone", value: string) => void;
+	readonly onChange?: (field: MerchantKybBusinessFieldName, value: string) => void;
 	readonly idPrefix?: string;
 	readonly readOnly?: boolean;
 	/** When false, hides the store name field. @default true */
@@ -36,9 +39,12 @@ export interface MerchantKybBusinessFieldsProps {
 	readonly showContactPhone?: boolean;
 }
 
+/** The registration fields `MerchantKybRegistrationFields` can edit, derived from its own props contract. */
+export type MerchantKybRegistrationFieldName = keyof MerchantKybRegistrationFieldsProps["values"];
+
 export interface MerchantKybRegistrationFieldsProps {
 	readonly values: Pick<MerchantKybFieldValues, "registrationNo" | "taxId" | "documentType">;
-	readonly onChange?: (field: "registrationNo" | "taxId" | "documentType", value: string) => void;
+	readonly onChange?: (field: MerchantKybRegistrationFieldName, value: string) => void;
 	readonly idPrefix?: string;
 	readonly readOnly?: boolean;
 }
@@ -235,14 +241,14 @@ export function MerchantKybRegistrationFields({ values, onChange, idPrefix = "me
 
 export function MerchantKybFields({ values, onChange, idPrefix = "merchant-kyb", showDocuments = true }: MerchantKybFieldsProps): React.JSX.Element {
 	const handleBusinessChange = React.useCallback(
-		(field: "businessName" | "legalName" | "addressText" | "contactPhone", value: string): void => {
+		(field: MerchantKybBusinessFieldName, value: string): void => {
 			onChange(field, value);
 		},
 		[onChange],
 	);
 
 	const handleRegistrationChange = React.useCallback(
-		(field: "registrationNo" | "taxId" | "documentType", value: string): void => {
+		(field: MerchantKybRegistrationFieldName, value: string): void => {
 			onChange(field, value);
 		},
 		[onChange],

@@ -1,33 +1,43 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { EmailLogEventsService } from "./email-log-events.service";
+import { PrismaService } from "../../../prisma/prisma.service";
+import { EmailLogEventsService } from "./email-log-events.service";
+import { EmailLogRepository } from "./email-log.repository";
 import { EmailLogService } from "./email-log.service";
 
-const createMock = vi.fn();
-const updateManyMock = vi.fn();
-const findManyMock = vi.fn();
-const countMock = vi.fn();
-const emitUpdatedMock = vi.fn();
+const { createMock, updateStatusByResendIdMock, countByResendIdMock, listRecentMock, emitUpdatedMock } = vi.hoisted(() => ({
+	createMock: vi.fn(),
+	updateStatusByResendIdMock: vi.fn(),
+	countByResendIdMock: vi.fn(),
+	listRecentMock: vi.fn(),
+	emitUpdatedMock: vi.fn(),
+}));
 
-const prismaMock = {
-	emailLog: {
-		create: createMock,
-		updateMany: updateManyMock,
-		findMany: findManyMock,
-		count: countMock,
+vi.mock("./email-log.repository", () => ({
+	EmailLogRepository: class {
+		public readonly create = createMock;
+		public readonly updateStatusByResendId = updateStatusByResendIdMock;
+		public readonly countByResendId = countByResendIdMock;
+		public readonly listRecent = listRecentMock;
 	},
-} as never;
+}));
 
-const eventsMock = {
-	emitUpdated: emitUpdatedMock,
-} as unknown as EmailLogEventsService;
+vi.mock("./email-log-events.service", () => ({
+	EmailLogEventsService: class {
+		public readonly emitUpdated = emitUpdatedMock;
+	},
+}));
+
+vi.mock("../../../prisma/prisma.service", () => ({
+	PrismaService: class {},
+}));
 
 describe("EmailLogService", () => {
 	let service: EmailLogService;
 
 	beforeEach(() => {
 		vi.clearAllMocks();
-		service = new EmailLogService(prismaMock, eventsMock);
+		service = new EmailLogService(new EmailLogRepository(new PrismaService()), new EmailLogEventsService());
 	});
 
 	it("creates a row and returns its id", async () => {
@@ -43,8 +53,11 @@ describe("EmailLogService", () => {
 		expect(emitUpdatedMock).toHaveBeenCalledTimes(1);
 		expect(createMock).toHaveBeenCalledWith(
 			expect.objectContaining({
-				data: expect.objectContaining({ templateKey: "welcome", status: "sent", resendId: "re-1" }),
-				select: { id: true },
+				templateKey: "welcome",
+				to: "a@b.com",
+				subject: "Welcome aboard!",
+				status: "sent",
+				resendId: "re-1",
 			}),
 		);
 	});
@@ -56,62 +69,60 @@ describe("EmailLogService", () => {
 	});
 
 	it("applies a forward transition (sent row + delivered event) and reports 'updated'", async () => {
-		updateManyMock.mockResolvedValue({ count: 1 });
+		updateStatusByResendIdMock.mockResolvedValue(1);
 		const outcome = await service.updateStatusByResendId("re-9", "delivered");
 		expect(outcome).toBe("updated");
 		expect(emitUpdatedMock).toHaveBeenCalledTimes(1);
-		expect(updateManyMock).toHaveBeenCalledWith(
-			expect.objectContaining({
-				// delivered is allowed from sent/delivered — plus bounced (soft-bounce recovery).
-				where: { resendId: "re-9", status: { in: ["sent", "delivered", "bounced"] } },
-				data: expect.objectContaining({ status: "delivered" }),
-			}),
-		);
+		// delivered is allowed from sent/delivered — plus bounced (soft-bounce recovery).
+		expect(updateStatusByResendIdMock).toHaveBeenCalledWith("re-9", "delivered", ["sent", "delivered", "bounced"], undefined);
 	});
 
 	it("re-applying the same status is idempotent (delivered + delivered event)", async () => {
-		updateManyMock.mockResolvedValue({ count: 1 });
+		updateStatusByResendIdMock.mockResolvedValue(1);
 		const outcome = await service.updateStatusByResendId("re-9", "delivered");
 		expect(outcome).toBe("updated");
-		expect(updateManyMock).toHaveBeenCalledWith(expect.objectContaining({ where: { resendId: "re-9", status: { in: ["sent", "delivered", "bounced"] } } }));
+		expect(updateStatusByResendIdMock).toHaveBeenCalledWith("re-9", "delivered", ["sent", "delivered", "bounced"], undefined);
 	});
 
 	it("allows delivered AFTER bounced (soft-bounce retry eventually succeeded)", async () => {
-		updateManyMock.mockResolvedValue({ count: 1 });
+		updateStatusByResendIdMock.mockResolvedValue(1);
 		const outcome = await service.updateStatusByResendId("re-9", "delivered");
 		expect(outcome).toBe("updated");
+		// "bounced" must stay in the allowed-source set for delivered.
+		expect(updateStatusByResendIdMock).toHaveBeenCalledWith("re-9", "delivered", expect.arrayContaining(["bounced"]), undefined);
 	});
 
 	it("ignores a replayed event that would regress the status (delivered row + sent event) → 'stale'", async () => {
-		updateManyMock.mockResolvedValue({ count: 0 });
-		countMock.mockResolvedValue(1); // row exists, just not allowed to move backwards
+		updateStatusByResendIdMock.mockResolvedValue(0);
+		countByResendIdMock.mockResolvedValue(1); // row exists, just not allowed to move backwards
 		const outcome = await service.updateStatusByResendId("re-9", "sent");
 		expect(outcome).toBe("stale");
 		expect(emitUpdatedMock).not.toHaveBeenCalled();
-		// sent is only allowed FROM sent — a delivered row is filtered out by the where.
-		expect(updateManyMock).toHaveBeenCalledWith(expect.objectContaining({ where: { resendId: "re-9", status: { in: ["sent"] } } }));
+		// sent is only allowed FROM sent — the where clause filters out progressed rows.
+		expect(updateStatusByResendIdMock).toHaveBeenCalledWith("re-9", "sent", ["sent"], undefined);
 	});
 
 	it("never regresses a terminal status (complained row + delivered event) → 'stale'", async () => {
-		updateManyMock.mockResolvedValue({ count: 0 });
-		countMock.mockResolvedValue(1);
+		updateStatusByResendIdMock.mockResolvedValue(0);
+		countByResendIdMock.mockResolvedValue(1);
 		const outcome = await service.updateStatusByResendId("re-9", "delivered");
 		expect(outcome).toBe("stale");
 		expect(emitUpdatedMock).not.toHaveBeenCalled();
 	});
 
 	it("reports 'not_found' for an email this system never sent (no row, no write)", async () => {
-		updateManyMock.mockResolvedValue({ count: 0 });
-		countMock.mockResolvedValue(0);
+		updateStatusByResendIdMock.mockResolvedValue(0);
+		countByResendIdMock.mockResolvedValue(0);
 		const outcome = await service.updateStatusByResendId("spoofed-id", "bounced");
 		expect(outcome).toBe("not_found");
 		expect(emitUpdatedMock).not.toHaveBeenCalled();
-		expect(updateManyMock).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ resendId: "spoofed-id" }) }));
+		expect(updateStatusByResendIdMock).toHaveBeenCalledWith("spoofed-id", "bounced", ["sent", "delivered", "bounced"], undefined);
 	});
 
 	it("maps recent rows to the wire contract (epoch dates, no tracking fields)", async () => {
 		const createdAt = Date.parse("2026-08-11T10:00:00.000Z");
-		findManyMock.mockResolvedValue([
+		const updatedAt = createdAt;
+		listRecentMock.mockResolvedValue([
 			{
 				id: "row-1",
 				templateKey: "welcome",
@@ -133,7 +144,7 @@ describe("EmailLogService", () => {
 				status: "delivered",
 				resendId: "re-1",
 				createdAt,
-				updatedAt: createdAt,
+				updatedAt,
 			}),
 		);
 		// Tracking fields are gone from the wire contract.
