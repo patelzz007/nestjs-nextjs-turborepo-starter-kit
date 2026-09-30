@@ -17,7 +17,7 @@ export interface ListPageMapper<TRow, TEntity> {
 	readonly toDomain: (row: TRow) => TEntity;
 }
 
-/** Shared offset + cursor list implementation for generated repositories. */
+/** Shared offset + cursor list implementation for resource repositories. */
 export async function fetchListPage<TQuery extends PaginationInput, TWhere, TOrderBy, TRow, TEntity>(
 	query: TQuery,
 	ports: ListPagePorts<TQuery, TWhere, TOrderBy, TRow>,

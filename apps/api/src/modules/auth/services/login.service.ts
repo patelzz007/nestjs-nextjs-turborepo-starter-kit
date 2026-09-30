@@ -37,7 +37,7 @@ export class LoginService {
 
 	@TrackAuthFlow({
 		flow: "login",
-		clientType: (_loginDto: unknown, clientType?: unknown) => {
+		clientType: (_loginDto, clientType) => {
 			const parsed = z.string().safeParse(clientType);
 			return parsed.success ? parsed.data : null;
 		},

@@ -6,9 +6,10 @@ import * as React from "react";
  * Returns a stable callback that delays invocation until `delayMs` after the
  * last call.  The returned callback is referentially stable — safe for effect
  * deps and memoised props.  If the component unmounts, the pending call is
- * cancelled.
+ * cancelled.  Single-argument form (e.g. a state setter); the latest argument
+ * wins.
  */
-export function useDebouncedCallback<T extends readonly unknown[]>(callback: (...args: T) => void, delayMs: number): (...args: T) => void {
+export function useDebouncedCallback<TArg>(callback: (arg: TArg) => void, delayMs: number): (arg: TArg) => void {
 	const callbackRef = React.useRef(callback);
 	const timeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -27,13 +28,13 @@ export function useDebouncedCallback<T extends readonly unknown[]>(callback: (..
 	}, []);
 
 	return React.useCallback(
-		(...args: T): void => {
+		(arg: TArg): void => {
 			if (timeoutRef.current !== null) {
 				clearTimeout(timeoutRef.current);
 			}
 			timeoutRef.current = setTimeout((): void => {
 				timeoutRef.current = null;
-				callbackRef.current(...args);
+				callbackRef.current(arg);
 			}, delayMs);
 		},
 		[delayMs],

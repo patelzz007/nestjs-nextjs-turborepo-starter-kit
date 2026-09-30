@@ -12,6 +12,7 @@ import { useCallback, useMemo, useState, type JSX } from "react";
 import { resolveAuthErrorMessage } from "../errors";
 import { useAuth } from "../index";
 import { passwordStrength } from "../password";
+import { catchCaught } from "../../caught";
 
 export interface SignupFormProps {
 	readonly loginHref?: string;
@@ -53,17 +54,16 @@ export function SignupForm({ loginHref = "/auth/login" }: SignupFormProps): JSX.
 				return;
 			}
 
-			mutation
-				.mutateAsync(parsed.data)
-				.then((): void => {
+			void catchCaught(
+				mutation.mutateAsync(parsed.data).then((): void => {
 					setIsSubmitted(true);
-				})
-				.catch((err: unknown): void => {
+				}),
+				(err): void => {
 					setError(resolveAuthErrorMessage(err));
-				})
-				.finally((): void => {
-					setIsLoading(false);
-				});
+				},
+			).finally((): void => {
+				setIsLoading(false);
+			});
 		},
 		[email, fullName, mutation, password],
 	);

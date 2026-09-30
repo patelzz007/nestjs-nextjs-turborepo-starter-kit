@@ -2,10 +2,11 @@
 
 import { isMerchantEnrollmentAllowedPath, useMerchantEnrollmentLock } from "@/lib/auth/enrollment";
 import { createMerchantNavHrefResolver } from "@/lib/navigation/resolve-nav-href";
-import { useMerchantCapabilities } from "@/lib/org/capabilities";
 import { useOrganizationSlug } from "@/lib/org/use-organization-slug";
 import { useOrganizationPath } from "@/lib/org/use-organization-path";
 import { buildMerchantPaletteItems, renderMerchantPaletteIcon } from "@/lib/palette/nav-items";
+import { useAuthorization } from "@workspace/client/lib/auth/can";
+import { MERCHANT_CAPABILITY } from "@workspace/shared";
 import { toastMessage } from "@workspace/ui/components/feedback/toast";
 import { useMerchantCommandPaletteStore } from "@/stores/command-palette-store";
 import { AppCommandPalette, type AppCommandPaletteQuickAction } from "@workspace/ui/components/navigation/app-command-palette";
@@ -22,7 +23,7 @@ export interface MerchantCommandPaletteProps {
 export function MerchantCommandPalette({ open: externalOpen, setOpen: externalSetOpen }: MerchantCommandPaletteProps): React.JSX.Element {
 	const router = useRouter();
 	const { setTheme, resolvedTheme } = useTheme();
-	const { capabilities, hasCapability } = useMerchantCapabilities();
+	const { can } = useAuthorization();
 	const { isLocked: isEnrollmentLocked, disabledTooltip: enrollmentDisabledTooltip } = useMerchantEnrollmentLock();
 	const organizationSlug = useOrganizationSlug();
 	const settingsPath = useOrganizationPath("settings");
@@ -54,11 +55,11 @@ export function MerchantCommandPalette({ open: externalOpen, setOpen: externalSe
 			},
 		];
 
-		if (!isEnrollmentLocked && hasCapability("merchant:manage_rewards")) {
+		if (!isEnrollmentLocked && can(MERCHANT_CAPABILITY.viewRewards)) {
 			actions.push({
 				id: "open-rewards",
 				title: "Open rewards",
-				description: "Manage offers and inventory",
+				description: "Browse offers and inventory",
 				icon: Ticket,
 				color: "text-emerald-600 bg-emerald-100 dark:text-emerald-300 dark:bg-emerald-900/40",
 				keywords: ["home", "offers", "inventory"],
@@ -70,15 +71,15 @@ export function MerchantCommandPalette({ open: externalOpen, setOpen: externalSe
 		}
 
 		return actions;
-	}, [closePalette, hasCapability, isEnrollmentLocked, resolvedTheme, rewardsPath, router, setTheme]);
+	}, [can, closePalette, isEnrollmentLocked, resolvedTheme, rewardsPath, router, setTheme]);
 
 	const searchableItems = React.useMemo(() => {
-		const items = buildMerchantPaletteItems(capabilities);
+		const items = buildMerchantPaletteItems(can);
 		if (!isEnrollmentLocked) {
 			return items;
 		}
 		return items.filter((item) => isMerchantEnrollmentAllowedPath(item.url));
-	}, [capabilities, isEnrollmentLocked]);
+	}, [can, isEnrollmentLocked]);
 
 	const handleNavigate = React.useCallback(
 		(url: string): void => {

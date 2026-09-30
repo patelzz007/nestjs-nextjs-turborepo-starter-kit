@@ -1,4 +1,4 @@
-import type { EnrollmentReason } from "@workspace/shared";
+import type { CaughtValue, EnrollmentReason } from "@workspace/shared";
 
 import { ApiError } from "../../api/use-api";
 import { decodeJwtPayload } from "./jwt";
@@ -53,6 +53,6 @@ export function consumeEnrollmentMessage(): string | null {
 }
 
 /** Whether an API error indicates the route is blocked for restricted sessions. */
-export function isRestrictedSessionError(error: unknown): boolean {
+export function isRestrictedSessionError(error: CaughtValue): boolean {
 	return error instanceof ApiError && error.error === "RESTRICTED_SESSION";
 }

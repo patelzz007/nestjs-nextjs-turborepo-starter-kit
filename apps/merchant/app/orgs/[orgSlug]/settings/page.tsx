@@ -1,5 +1,6 @@
 "use client";
 
+import { useMerchantRoleAccess } from "@/components/access/merchant-authorization-provider";
 import { EmailVerificationGateDialog } from "@/components/email-verification-gate-dialog";
 import { organizationPath } from "@/lib/org/slug";
 import { SecuritySettingsPanel } from "@workspace/client/lib/auth/mfa/security-settings-panel";
@@ -13,6 +14,7 @@ import type { JSX } from "react";
 export default function MerchantSettingsPage(): JSX.Element {
 	const params = useParams();
 	const orgSlug = typeof params.orgSlug === "string" ? params.orgSlug : "";
+	const canSubmitKyb = useMerchantRoleAccess("submitKyb");
 
 	return (
 		<div className="space-y-8">
@@ -29,17 +31,19 @@ export default function MerchantSettingsPage(): JSX.Element {
 					</Button>
 				</div>
 			</div>
-			<div className="rounded-xl border bg-card p-4">
-				<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-					<div className="space-y-1">
-						<p className="font-medium">Business verification (KYB)</p>
-						<p className="text-sm text-muted-foreground">Review your KYB submission and update details or documents while verification is pending.</p>
+			{canSubmitKyb ? (
+				<div className="rounded-xl border bg-card p-4">
+					<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+						<div className="space-y-1">
+							<p className="font-medium">Business verification (KYB)</p>
+							<p className="text-sm text-muted-foreground">Review your KYB submission and update details or documents while verification is pending.</p>
+						</div>
+						<Button variant="outline" className="shrink-0" nativeButton={false} render={<Link href={organizationPath(orgSlug, "settings/verification")} />}>
+							View verification
+						</Button>
 					</div>
-					<Button variant="outline" className="shrink-0" nativeButton={false} render={<Link href={organizationPath(orgSlug, "settings/verification")} />}>
-						View verification
-					</Button>
 				</div>
-			</div>
+			) : null}
 			<SecuritySettingsPanel />
 		</div>
 	);

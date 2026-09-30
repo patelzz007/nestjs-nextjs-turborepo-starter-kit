@@ -7,6 +7,7 @@ import { PerformanceInterceptor } from "./common/interceptors/performance.interc
 import { CorrelationContextModule } from "./common/context/correlation-context.module";
 import { CorrelationContextInterceptor } from "./common/context/correlation-context.interceptor";
 import { CorrelationIdMiddleware } from "./common/middleware/correlation-id.middleware";
+import { RlsPreHandlerMiddleware } from "./common/middleware/rls-pre-handler.middleware";
 import { ConfigModule } from "./config/config.module";
 import { JobsModule } from "./infrastructure/jobs/jobs.module";
 import { PlatformEventsModule } from "./infrastructure/outbox/platform-events.module";
@@ -90,12 +91,6 @@ if (observeEnabled && observeAppKey !== undefined && observeAppSecret !== undefi
 		SupportAccessModule,
 		EncryptionModule,
 		RewardsModule,
-		// @app-generated:begin module:sample-category
-		SampleCategoryModule,
-		// @app-generated:end module:sample-category
-		// @app-generated:begin module:product
-		ProductModule,
-		// @app-generated:end module:product
 		ProductModule,
 		SampleCategoryModule,
 		// Conditionally include ObserveModule
@@ -140,6 +135,6 @@ if (observeEnabled && observeAppKey !== undefined && observeAppSecret !== undefi
 })
 export class AppModule implements NestModule {
 	public configure(consumer: MiddlewareConsumer): void {
-		consumer.apply(CorrelationIdMiddleware).forRoutes("*");
+		consumer.apply(RlsPreHandlerMiddleware, CorrelationIdMiddleware).forRoutes("*");
 	}
 }

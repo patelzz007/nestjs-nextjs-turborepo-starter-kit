@@ -1,5 +1,5 @@
 import type { ThrottlerModuleOptions } from "@nestjs/throttler";
-import { HttpHeaderValueSchema, RequestLikeSchema, type RequestLike } from "@workspace/shared";
+import { HttpHeaderValueSchema, RequestLikeSchema, type HttpHeaderValue, type RequestLike } from "@workspace/shared";
 
 import type { TypedConfigService } from "../../../config/typed-config.service";
 
@@ -12,7 +12,7 @@ export function resolveAuthClientIp(req: RequestLike): string {
 		return UNKNOWN_CLIENT;
 	}
 	const headers = parsed.data.headers ?? {};
-	const headerStr = (raw: unknown): string => {
+	const headerStr = (raw: HttpHeaderValue | undefined): string => {
 		const v = HttpHeaderValueSchema.safeParse(raw);
 		if (!v.success) {
 			return "";

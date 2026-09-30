@@ -1,6 +1,6 @@
 import { createAdminServerCaller } from "@/lib/admin-server-api";
 
-import ProductDetailView from "../product-detail-view.generated";
+import ProductDetailView from "../product-detail-view";
 
 interface ProductDetailPageProps {
 	readonly params: Promise<{ id: string }>;

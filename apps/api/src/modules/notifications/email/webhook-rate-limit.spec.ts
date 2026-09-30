@@ -1,13 +1,47 @@
-import { type INestApplication } from "@nestjs/common";
+import { Controller, ForbiddenException, Get, UseGuards } from "@nestjs/common";
 import { Test, type TestingModule } from "@nestjs/testing";
-import { ThrottlerModule, type ThrottlerModuleOptions } from "@nestjs/throttler";
+import { ThrottlerGuard, ThrottlerModule, type ThrottlerModuleOptions } from "@nestjs/throttler";
 import { FastifyAdapter, type NestFastifyApplication } from "@nestjs/platform-fastify";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ConfigModule } from "../../../config/config.module";
 import { TypedConfigService } from "../../../config/typed-config.service";
 import { resolveClientIp, webhookThrottlerOptionsFactory } from "./webhook-throttler";
-import { ProbeController } from "./webhook-rate-limit.probe";
+
+/**
+ * Test-only controller wired into a throwaway TestingModule to exercise
+ * `ThrottlerGuard`. Decorators are applied as calls because the spec
+ * transformer does not support decorator syntax.
+ */
+class ProbeController {
+	public ping(): { readonly ok: true } {
+		return { ok: true };
+	}
+
+	/**
+	 * Mimics a signature-rejected request: the handler throws 403 like the real
+	 * webhook does on a bad signature. The guard runs BEFORE the handler, so
+	 * these requests still consume the per-IP bucket — proving that a flood of
+	 * invalid requests is throttled too (brute-force protection).
+	 */
+	public forbidden(): void {
+		throw new ForbiddenException("Invalid webhook signature");
+	}
+}
+
+function decorateMethod(target: object, key: string, decorators: readonly MethodDecorator[]): void {
+	const descriptor = Object.getOwnPropertyDescriptor(target, key);
+	if (descriptor === undefined) {
+		throw new Error(`Missing method ${key}`);
+	}
+	for (const decorator of [...decorators].reverse()) {
+		decorator(target, key, descriptor);
+	}
+}
+
+Controller("probe")(ProbeController);
+decorateMethod(ProbeController.prototype, "ping", [UseGuards(ThrottlerGuard), Get()]);
+decorateMethod(ProbeController.prototype, "forbidden", [UseGuards(ThrottlerGuard), Get("forbidden")]);
 
 describe("resolveClientIp", () => {
 	it("prefers cf-connecting-ip (set by Cloudflare's edge, forwarded by cloudflared)", () => {
@@ -36,14 +70,17 @@ describe("resolveClientIp", () => {
 	});
 });
 
+/** Real config service reading a stubbed WEBHOOK_RATE_LIMIT_PER_MINUTE. */
 function fakeConfig(limit: number): TypedConfigService {
-	return { webhookRateLimitPerMinute: limit } as unknown as TypedConfigService;
+	vi.stubEnv("WEBHOOK_RATE_LIMIT_PER_MINUTE", String(limit));
+	return new TypedConfigService();
 }
 
 async function buildApp(limit: number): Promise<NestFastifyApplication> {
 	const moduleFixture: TestingModule = await Test.createTestingModule({
 		imports: [
 			ThrottlerModule.forRootAsync({
+				imports: [],
 				useFactory: (): ThrottlerModuleOptions => webhookThrottlerOptionsFactory(fakeConfig(limit)),
 			}),
 		],
@@ -55,6 +92,10 @@ async function buildApp(limit: number): Promise<NestFastifyApplication> {
 }
 
 describe("Webhook per-IP rate limiting (ThrottlerGuard)", () => {
+	afterEach(() => {
+		vi.unstubAllEnvs();
+	});
+
 	it("rejects the request that exceeds the per-IP limit with 429 + a clear message", async () => {
 		const app: NestFastifyApplication = await buildApp(3);
 		try {

@@ -1,4 +1,13 @@
-import { ApiPaginatedMetaSchema, ApiResponseMetaSchema, nowEpochMs, stubPaginatedMeta, type ApiPaginatedMeta, type ApiResponseMeta } from "@workspace/shared";
+import {
+	ApiPaginatedMetaSchema,
+	ApiResponseMetaSchema,
+	nowEpochMs,
+	stubPaginatedMeta,
+	type ApiPaginatedMeta,
+	type ApiResponseMeta,
+	type DataValue,
+	type Envelope,
+} from "@workspace/shared";
 
 export { stubPaginatedMeta };
 
@@ -43,4 +52,9 @@ export function readPaginatedHasPrevious(meta: ApiResponseMeta | undefined, fall
 /** Read `nextCursor` from a paginated envelope meta object. */
 export function readPaginatedNextCursor(meta: ApiResponseMeta | undefined): string | null {
 	return parsePaginatedMeta(meta)?.nextCursor ?? null;
+}
+
+/** Build a success envelope (`{ success: true, data, meta }`) for SSR-hydrated react-query `initialData`. */
+export function successEnvelope<TData extends DataValue>(data: TData, meta: ApiResponseMeta): Envelope<TData> {
+	return { success: true, data, meta };
 }

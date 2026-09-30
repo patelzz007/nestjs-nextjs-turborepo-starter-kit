@@ -8,6 +8,7 @@ import { upsertMerchantRewardInListCache } from "@/lib/rewards/query-cache";
 import { useAuth } from "@workspace/client/lib/auth";
 import { useQueryClient } from "@tanstack/react-query";
 import {
+	MERCHANT_CAPABILITY,
 	mapMerchantCreateRewardFormToInput,
 	MerchantRewardFormFieldsSchema,
 	type MerchantCreateRewardFormValues,
@@ -52,7 +53,16 @@ export interface MerchantCreateRewardPageViewProps {
 	readonly defaultCategory: RewardCategory;
 }
 
-export function MerchantCreateRewardPageView({ orgSlug, defaultCategory }: MerchantCreateRewardPageViewProps): React.JSX.Element {
+/** Create-reward route — requires `merchant:manage_rewards` (create endpoint); form hooks mount only when allowed. */
+export function MerchantCreateRewardPageView(props: MerchantCreateRewardPageViewProps): React.JSX.Element {
+	return (
+		<MerchantCapabilityGate capability={MERCHANT_CAPABILITY.manageRewards}>
+			<MerchantCreateRewardPageContent {...props} />
+		</MerchantCapabilityGate>
+	);
+}
+
+function MerchantCreateRewardPageContent({ orgSlug, defaultCategory }: MerchantCreateRewardPageViewProps): React.JSX.Element {
 	const { api } = useAuth();
 	const queryClient = useQueryClient();
 	const router = useRouter();
@@ -125,69 +135,67 @@ export function MerchantCreateRewardPageView({ orgSlug, defaultCategory }: Merch
 	}, []);
 
 	return (
-		<MerchantCapabilityGate capability="merchant:manage_rewards">
-			<div className="mx-auto space-y-6">
-				<div className="mb-2 flex items-center gap-4">
+		<div className="mx-auto space-y-6">
+			<div className="mb-2 flex items-center gap-4">
+				<Link href={rewardsPath}>
+					<Button type="button" variant="ghost" size="icon" aria-label="Back to rewards">
+						<ArrowLeft className="size-5" aria-hidden="true" />
+					</Button>
+				</Link>
+				<div>
+					<h1 className="text-2xl font-bold tracking-tight text-foreground lg:text-3xl">Create Reward</h1>
+					<p className="mt-1 text-muted-foreground">Design a new reward campaign</p>
+				</div>
+			</div>
+
+			<form onSubmit={handleFormSubmit} className="space-y-6">
+				<MerchantRewardFormFields
+					register={register}
+					control={control}
+					errors={errors}
+					setValue={setValue}
+					selectedType={selectedType}
+					onTypeSelect={handleTypeSelect}
+					onMaxClaimsChange={handleMaxClaimsChange}
+				/>
+
+				<MerchantRewardLocationFields control={control} errors={errors} setValue={setValue} disabled={createMutation.isPending} />
+
+				<Card className="border-border/80 bg-card shadow-xs">
+					<CardContent className="p-6">
+						<div className="flex items-center justify-between">
+							<div className="flex items-center gap-3">
+								<Switch id="saveAsDraft" checked={saveAsDraft} onCheckedChange={handleSaveAsDraftChange} />
+								<Label htmlFor="saveAsDraft" className="cursor-pointer">
+									<span className="font-medium">Save as Draft</span>
+									<span className="block text-sm text-muted-foreground">Don&apos;t publish yet, save for later</span>
+								</Label>
+							</div>
+						</div>
+					</CardContent>
+				</Card>
+
+				<div className="flex items-center justify-end gap-4">
 					<Link href={rewardsPath}>
-						<Button type="button" variant="ghost" size="icon" aria-label="Back to rewards">
-							<ArrowLeft className="size-5" aria-hidden="true" />
+						<Button type="button" variant="outline">
+							Cancel
 						</Button>
 					</Link>
-					<div>
-						<h1 className="text-2xl font-bold tracking-tight text-foreground lg:text-3xl">Create Reward</h1>
-						<p className="mt-1 text-muted-foreground">Design a new reward campaign</p>
-					</div>
+					<Button type="submit" disabled={createMutation.isPending} className="gap-2">
+						{createMutation.isPending ? (
+							<>
+								<Loader2 className="size-4 animate-spin" aria-hidden="true" />
+								Saving...
+							</>
+						) : (
+							<>
+								<Save className="size-4" aria-hidden="true" />
+								{saveAsDraft ? "Save Draft" : "Create Reward"}
+							</>
+						)}
+					</Button>
 				</div>
-
-				<form onSubmit={handleFormSubmit} className="space-y-6">
-					<MerchantRewardFormFields
-						register={register}
-						control={control}
-						errors={errors}
-						setValue={setValue}
-						selectedType={selectedType}
-						onTypeSelect={handleTypeSelect}
-						onMaxClaimsChange={handleMaxClaimsChange}
-					/>
-
-					<MerchantRewardLocationFields control={control} errors={errors} setValue={setValue} disabled={createMutation.isPending} />
-
-					<Card className="border-border/80 bg-card shadow-xs">
-						<CardContent className="p-6">
-							<div className="flex items-center justify-between">
-								<div className="flex items-center gap-3">
-									<Switch id="saveAsDraft" checked={saveAsDraft} onCheckedChange={handleSaveAsDraftChange} />
-									<Label htmlFor="saveAsDraft" className="cursor-pointer">
-										<span className="font-medium">Save as Draft</span>
-										<span className="block text-sm text-muted-foreground">Don&apos;t publish yet, save for later</span>
-									</Label>
-								</div>
-							</div>
-						</CardContent>
-					</Card>
-
-					<div className="flex items-center justify-end gap-4">
-						<Link href={rewardsPath}>
-							<Button type="button" variant="outline">
-								Cancel
-							</Button>
-						</Link>
-						<Button type="submit" disabled={createMutation.isPending} className="gap-2">
-							{createMutation.isPending ? (
-								<>
-									<Loader2 className="size-4 animate-spin" aria-hidden="true" />
-									Saving...
-								</>
-							) : (
-								<>
-									<Save className="size-4" aria-hidden="true" />
-									{saveAsDraft ? "Save Draft" : "Create Reward"}
-								</>
-							)}
-						</Button>
-					</div>
-				</form>
-			</div>
-		</MerchantCapabilityGate>
+			</form>
+		</div>
 	);
 }

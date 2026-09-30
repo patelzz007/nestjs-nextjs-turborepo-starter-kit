@@ -6,11 +6,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { z } from "zod";
 
-import { compileMenu } from "@/lib/navigation/sidebar-menu";
+import { compileMenu, SIDEBAR_MENU } from "@/lib/navigation/sidebar-menu";
 import { buildSidebarView, type SidebarView, type SearchableMenuItem } from "@/lib/navigation/menu";
 import { ADMIN_SIDEBAR_LABELS } from "@/lib/sidebar-labels";
 import { useSidebarStore } from "@/stores/sidebar-store";
-import type { SidebarMenuData } from "@/lib/navigation/sidebar";
+import type { CompiledSidebarMenuData, SidebarMenuData } from "@/lib/navigation/sidebar";
+import { filterCompiledSidebarMenu } from "@/lib/navigation/filter-menu-by-capabilities";
+import { PERMISSION } from "@workspace/shared";
 
 import { AdminSidebarPanel } from "@/components/layout/sidebar/sidebar";
 import { useRouteExpandedItems } from "@/components/layout/use-route-expanded-items";
@@ -117,8 +119,8 @@ interface HarnessProps {
 	readonly pathname: string;
 	readonly onLogout?: () => void;
 	readonly onReportIssue?: () => void;
-	readonly isMobile?: boolean;
 	readonly pinnedItems?: readonly SearchableMenuItem[];
+	readonly menu?: CompiledSidebarMenuData;
 }
 
 /**
@@ -128,9 +130,7 @@ interface HarnessProps {
  * typing in search / reordering sections re-renders with a fresh view, exactly
  * like the real layout.
  */
-function SidebarHarness({ pathname, onLogout, onReportIssue, isMobile = false, pinnedItems = [] }: HarnessProps): React.JSX.Element {
-	// eslint-disable-next-line react-hooks/globals -- Test harness intentionally sets a module-level mock control variable.
-	harnessIsMobile = isMobile;
+function SidebarHarness({ pathname, onLogout, onReportIssue, pinnedItems = [], menu = COMPILED_MENU }: HarnessProps): React.JSX.Element {
 	const searchQuery = useSidebarStore((s) => s.searchQuery);
 	const sectionOrder = useSidebarStore((s) => s.sectionOrder);
 	const setSearchQuery = useSidebarStore((s) => s.setSearchQuery);
@@ -140,10 +140,7 @@ function SidebarHarness({ pathname, onLogout, onReportIssue, isMobile = false, p
 	const resetExpandedItems = useSidebarStore((s) => s.resetExpandedItems);
 	const moveSectionUp = useSidebarStore((s) => s.moveSectionUp);
 	const moveSectionDown = useSidebarStore((s) => s.moveSectionDown);
-	const view: SidebarView = React.useMemo(
-		() => buildSidebarView({ menu: COMPILED_MENU, pathname, sectionOrder, searchQuery, isHighlightParentItem: false }),
-		[pathname, sectionOrder, searchQuery],
-	);
+	const view: SidebarView = React.useMemo(() => buildSidebarView({ menu, pathname, sectionOrder, searchQuery }), [menu, pathname, sectionOrder, searchQuery]);
 	const expandedItems = useRouteExpandedItems(pathname, storeExpandedItems, view.routeState.autoExpandedItems, resetExpandedItems);
 	const handleSearchChange = React.useCallback(
 		(event: React.ChangeEvent<HTMLInputElement>): void => {
@@ -241,12 +238,13 @@ describe("Sidebar", () => {
 		expect(screen.getByText("ada@example.com")).toBeTruthy();
 	});
 
-	it("marks the active item and its route-prefix ancestors with data-active", () => {
+	it("marks only the active item with data-active, never its ancestors", () => {
 		pathnameMock.mockReturnValue("/settings/general");
 		render(<SidebarHarness pathname="/settings/general" />);
 		expect(screen.getByRole("button", { name: "General" }).getAttribute("data-active")).toBe("true");
-		// "/settings" is a route prefix, so the Settings parent is active too.
-		expect(screen.getByRole("button", { name: "Settings" }).getAttribute("data-active")).toBe("true");
+		// "/settings" is a route prefix, but the parent must not highlight
+		// alongside its active child.
+		expect(screen.getByRole("button", { name: "Settings" }).getAttribute("data-active")).toBeNull();
 		// Unrelated items are not.
 		expect(screen.getByRole("button", { name: "Overview" }).getAttribute("data-active")).toBeNull();
 	});
@@ -316,7 +314,8 @@ describe("Sidebar", () => {
 	});
 
 	it("navigates on leaf click and closes the mobile menu", () => {
-		render(<SidebarHarness pathname="/" isMobile />);
+		harnessIsMobile = true;
+		render(<SidebarHarness pathname="/" />);
 		fireEvent.click(screen.getByRole("button", { name: "Support" }));
 		expect(pushMock).toHaveBeenCalledWith("/support");
 		expect(setOpenMobileMock).toHaveBeenCalledWith(false);
@@ -466,5 +465,31 @@ describe("SidebarStore persistence", () => {
 		} else {
 			throw new Error("stored payload did not match the expected shape");
 		}
+	});
+});
+
+describe("Sidebar with the authorized admin menu", () => {
+	beforeEach(() => {
+		harnessIsMobile = false;
+		useSidebarStore.setState({ isOpen: true, sectionOrder: null, expandedItems: {}, searchQuery: "" });
+	});
+
+	afterEach(() => {
+		cleanup();
+	});
+
+	it("does not render Products without the product list permission", () => {
+		const menu = filterCompiledSidebarMenu(SIDEBAR_MENU, [], { enabledFeatureFlags: [] });
+		render(<SidebarHarness pathname="/" menu={menu} />);
+
+		expect(screen.queryByRole("button", { name: "Products" })).toBeNull();
+		expect(screen.getByRole("button", { name: "Overview" })).toBeDefined();
+	});
+
+	it("renders Products when the product list permission is held", () => {
+		const menu = filterCompiledSidebarMenu(SIDEBAR_MENU, [PERMISSION.PRODUCT.LIST], { enabledFeatureFlags: [] });
+		render(<SidebarHarness pathname="/" menu={menu} />);
+
+		expect(screen.getByRole("button", { name: "Products" })).toBeDefined();
 	});
 });

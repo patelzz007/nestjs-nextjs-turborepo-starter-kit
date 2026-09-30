@@ -1,6 +1,6 @@
 "use client";
 
-import { stubPaginatedMetaFromHydration } from "@/lib/api-envelope";
+import { stubPaginatedMetaFromHydration, successEnvelope } from "@/lib/api-envelope";
 import { WebEmptyState } from "@/components/web-ui/empty-state";
 import { WebPageHeader } from "@/components/web-ui/page-header";
 import { WebStatCard } from "@/components/web-ui/stat-card";
@@ -29,11 +29,7 @@ export function MyClaimsPageView({ initialClaims, initialListMeta }: MyClaimsPag
 	const initialQueryData = React.useMemo(
 		() =>
 			initialClaims !== undefined
-				? {
-						success: true as const,
-						data: [...initialClaims],
-						meta: initialListMeta ?? stubPaginatedMetaFromHydration(CLAIMS_LIMIT, initialClaims.length, false),
-					}
+				? successEnvelope([...initialClaims], initialListMeta ?? stubPaginatedMetaFromHydration(CLAIMS_LIMIT, initialClaims.length, false))
 				: undefined,
 		[initialClaims, initialListMeta],
 	);

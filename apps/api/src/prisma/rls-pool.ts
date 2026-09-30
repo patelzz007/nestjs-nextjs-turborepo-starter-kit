@@ -2,7 +2,7 @@ import { Pool, type PoolClient, type PoolConfig } from "pg";
 
 import { ThrownErrorSchema } from "@workspace/shared";
 
-import { currentRlsContextOrBypass } from "./rls-context";
+import { currentRlsContextOrUnscoped } from "./rls-context";
 
 /** Fail checkout instead of hanging until Fastify's plugin timeout. */
 const DEFAULT_CONNECT_TIMEOUT_MS = 5_000;
@@ -70,7 +70,7 @@ export class RlsPool extends Pool {
 }
 
 async function applyRlsSession(client: PoolClient): Promise<void> {
-	const ctx = currentRlsContextOrBypass("pool_checkout");
+	const ctx = currentRlsContextOrUnscoped();
 	await client.query("SET ROLE app_runtime");
 	if (ctx.requireExplicitContext && !ctx.bypass && ctx.organizationId.length === 0) {
 		throw new Error("Tenant database access requires organization context — use TenantTransactionService");
@@ -78,4 +78,5 @@ async function applyRlsSession(client: PoolClient): Promise<void> {
 	await client.query("SELECT set_config('app.current_user_id', $1, false)", [ctx.userId]);
 	await client.query("SELECT set_config('app.rls_bypass', $1, false)", [ctx.bypass ? "true" : "false"]);
 	await client.query("SELECT set_config('app.current_organization_id', $1, false)", [ctx.organizationId]);
+	await client.query("SELECT set_config('app.system_operation', $1, false)", [ctx.systemOperation]);
 }

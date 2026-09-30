@@ -17,7 +17,7 @@
 // if one survived, so a missed file becomes a build error instead of a
 // runtime crash in production.
 //
-// String/template literal contents are skipped so generator templates that
+// String/template literal contents are skipped so source-code templates that
 // embed import-like text are not rewritten or flagged.
 //
 // Usage (run from the workspace whose dist/ you are fixing):
@@ -322,6 +322,6 @@ if (leftovers.length > 0) {
 	for (const file of leftovers) {
 		console.error(`  - ${file}`);
 	}
-	console.error("Stop any process that writes to dist/ without .js extensions (e.g. an old `tsc --watch` on @workspace/cli).");
+	console.error("Stop any process that writes to dist/ without .js extensions (e.g. an old `tsc --watch`).");
 	process.exit(1);
 }

@@ -9,7 +9,7 @@ import { PrismaService } from "../../../prisma/prisma.service";
 
 const REDEMPTION_LIST_INCLUDE = {
 	claim: { include: { reward: { select: { title: true } } } },
-} as const satisfies Prisma.RewardRedemptionInclude;
+} satisfies Prisma.RewardRedemptionInclude;
 
 export type RewardRedemptionListRow = Prisma.RewardRedemptionGetPayload<{ include: typeof REDEMPTION_LIST_INCLUDE }>;
 

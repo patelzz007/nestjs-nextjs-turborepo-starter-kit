@@ -1,25 +1,32 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { z } from "zod";
 
-import type { TypedConfigService } from "../../../config/typed-config.service";
-import type { LogService } from "../../logs/logs.service";
-import type { EmailLogService } from "./email-log.service";
+import { TypedConfigService } from "../../../config/typed-config.service";
+import { PrismaService } from "../../../prisma/prisma.service";
+import { LogService } from "../../logs/logs.service";
+import { EmailLogEventsService } from "./email-log-events.service";
+import { EmailLogRepository } from "./email-log.repository";
+import { EmailLogService } from "./email-log.service";
 import { EmailSenderService } from "./email-sender.service";
 import { VerificationEmailTemplate } from "./templates/verification-email.template";
 
 // ── Mocks ─────────────────────────────────────────────────────────────────
 
-const resendSendMock = vi.fn();
+interface EmailConfigState {
+	resendApiKey: string;
+	emailFromAddress: string;
+	emailMode: "send" | "log-only" | "noop";
+	emailTestTo: string | undefined;
+	emailReplyTo: string | undefined;
+	emailMaxAttempts: number;
+	emailTimeoutMs: number;
+	emailRateLimitPerMinute: number;
+	appName: string;
+	appUrl: string;
+}
 
-vi.mock("resend", () => {
-	class MockResend {
-		public readonly emails = { send: resendSendMock };
-		public readonly webhooks = { verify: vi.fn() };
-	}
-	return { Resend: MockResend };
-});
-
-function createConfig(overrides: Partial<Record<string, unknown>> = {}): TypedConfigService {
-	const base = {
+const mocks = vi.hoisted(() => {
+	const baseConfig: EmailConfigState = {
 		resendApiKey: "re_dummy",
 		emailFromAddress: "noreply@example.com",
 		emailMode: "send",
@@ -31,19 +38,70 @@ function createConfig(overrides: Partial<Record<string, unknown>> = {}): TypedCo
 		appName: "Acme Inc",
 		appUrl: "https://app.example.com",
 	};
-	return { ...base, ...overrides } as TypedConfigService;
+	return {
+		baseConfig,
+		config: { current: baseConfig },
+		resendSend: vi.fn(),
+		logInfo: vi.fn(),
+		logWarn: vi.fn(),
+		logError: vi.fn(),
+		emailLogCreate: vi.fn(),
+		emailLogUpdateStatusByResendId: vi.fn(),
+	};
+});
+
+const resendSendMock = mocks.resendSend;
+
+vi.mock("resend", () => {
+	class MockResend {
+		public readonly emails = { send: mocks.resendSend };
+		public readonly webhooks = { verify: vi.fn() };
+	}
+	return { Resend: MockResend };
+});
+
+vi.mock("../../../config/typed-config.service", () => ({
+	TypedConfigService: class {
+		// Snapshot at construction so each service keeps the config it was built with.
+		public readonly resendApiKey = mocks.config.current.resendApiKey;
+		public readonly emailFromAddress = mocks.config.current.emailFromAddress;
+		public readonly emailMode = mocks.config.current.emailMode;
+		public readonly emailTestTo = mocks.config.current.emailTestTo;
+		public readonly emailReplyTo = mocks.config.current.emailReplyTo;
+		public readonly emailMaxAttempts = mocks.config.current.emailMaxAttempts;
+		public readonly emailTimeoutMs = mocks.config.current.emailTimeoutMs;
+		public readonly emailRateLimitPerMinute = mocks.config.current.emailRateLimitPerMinute;
+		public readonly appName = mocks.config.current.appName;
+		public readonly appUrl = mocks.config.current.appUrl;
+	},
+}));
+
+vi.mock("../../../prisma/prisma.service", () => ({
+	PrismaService: class {},
+}));
+
+vi.mock("../../logs/logs.service", () => ({
+	LogService: class {
+		public readonly info = mocks.logInfo;
+		public readonly warn = mocks.logWarn;
+		public readonly error = mocks.logError;
+	},
+}));
+
+vi.mock("./email-log.service", () => ({
+	EmailLogService: class {
+		public readonly create = mocks.emailLogCreate;
+		public readonly updateStatusByResendId = mocks.emailLogUpdateStatusByResendId;
+	},
+}));
+
+function createConfig(overrides: Partial<EmailConfigState> = {}): TypedConfigService {
+	mocks.config.current = { ...mocks.baseConfig, ...overrides };
+	return new TypedConfigService();
 }
 
-const logServiceMock = {
-	info: vi.fn(),
-	warn: vi.fn(),
-	error: vi.fn(),
-} as unknown as LogService;
-
-const emailLogServiceMock = {
-	create: vi.fn().mockResolvedValue({ id: "log-1" }),
-	updateStatusByResendId: vi.fn().mockResolvedValue("updated"),
-} as unknown as EmailLogService;
+const logServiceMock = new LogService();
+const emailLogServiceMock = new EmailLogService(new EmailLogRepository(new PrismaService()), new EmailLogEventsService());
 
 function makeTemplate(): VerificationEmailTemplate {
 	return new VerificationEmailTemplate({ to: "jamie@example.com", verificationToken: "tok-123", expiresInHours: 24 });
@@ -52,11 +110,13 @@ function makeTemplate(): VerificationEmailTemplate {
 describe("EmailSenderService", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
+		mocks.emailLogCreate.mockResolvedValue({ id: "log-1" });
+		mocks.emailLogUpdateStatusByResendId.mockResolvedValue("updated");
 	});
 
 	it("returns invalid-props without calling Resend when props are malformed", async () => {
 		const service = new EmailSenderService(createConfig(), logServiceMock, emailLogServiceMock);
-		const template = new VerificationEmailTemplate({ to: "not-an-email", verificationToken: "tok" });
+		const template = new VerificationEmailTemplate({ to: "not-an-email", verificationToken: "tok", expiresInHours: 24 });
 		const result = await service.send(template);
 		expect(result.ok).toBe(false);
 		if (!result.ok) {
@@ -92,8 +152,7 @@ describe("EmailSenderService", () => {
 		const service = new EmailSenderService(createConfig({ emailTestTo: "qa@example.com" }), logServiceMock, emailLogServiceMock);
 		const result = await service.send(makeTemplate());
 		expect(result.ok).toBe(true);
-		const sentPayload = resendSendMock.mock.calls[0]?.[0] as { readonly to: string };
-		expect(sentPayload.to).toBe("qa@example.com");
+		expect(resendSendMock.mock.calls[0]?.[0]).toMatchObject({ to: "qa@example.com" });
 	});
 
 	it("returns the resend id on success and persists a sent row", async () => {
@@ -113,7 +172,7 @@ describe("EmailSenderService", () => {
 			}),
 		);
 		// The rendered HTML must NOT contain any tracking pixel (tracking removed).
-		const sentPayload = resendSendMock.mock.calls[0]?.[0] as { readonly html: string };
+		const sentPayload = z.object({ html: z.string() }).parse(resendSendMock.mock.calls[0]?.[0]);
 		expect(sentPayload.html).not.toContain("/notifications/tracking/open");
 	});
 
@@ -169,8 +228,8 @@ describe("EmailSenderService", () => {
 
 	it("times out a hung send and reports timeout", async () => {
 		resendSendMock.mockImplementation(
-			(): Promise<never> =>
-				new Promise((_resolve: (value: never) => void) => {
+			(): Promise<void> =>
+				new Promise<void>(() => {
 					// Never resolves — the abort timer must fire.
 				}),
 		);

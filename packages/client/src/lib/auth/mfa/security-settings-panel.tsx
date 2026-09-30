@@ -16,6 +16,7 @@ import { useCallback, useEffect, useRef, useState, type JSX } from "react";
 
 import { MfaRecoveryRequestPanel } from "./recovery-request-panel";
 import { useEmailVerifiedToast } from "../email/use-verified-toast";
+import { catchCaught } from "../../caught";
 
 /** Allowed characters for MFA backup codes (matches server charset). */
 const BACKUP_CODE_CHARSET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
@@ -74,17 +75,16 @@ function TwoFactorSetupPanel(): JSX.Element {
 		setError(null);
 		setMessage(null);
 		setIsLoadingSetup(true);
-		api.auth.twoFactorSetup
-			.fetchOrThrow(undefined)
-			.then((response): void => {
+		void catchCaught(
+			api.auth.twoFactorSetup.fetchOrThrow(undefined).then((response): void => {
 				applySetupResponse(response.data);
-			})
-			.catch((err: unknown): void => {
+			}),
+			(err): void => {
 				setError(resolveAuthErrorMessage(err));
-			})
-			.finally((): void => {
-				setIsLoadingSetup(false);
-			});
+			},
+		).finally((): void => {
+			setIsLoadingSetup(false);
+		});
 	}, [api.auth.twoFactorSetup, applySetupResponse]);
 
 	const handleTokenChange = useCallback((event: React.ChangeEvent<HTMLInputElement>): void => {
@@ -131,9 +131,8 @@ function TwoFactorSetupPanel(): JSX.Element {
 		(event: React.SyntheticEvent<HTMLFormElement>): void => {
 			event.preventDefault();
 			setError(null);
-			enableMutation
-				.mutateAsync({ token })
-				.then((response): void => {
+			void catchCaught(
+				enableMutation.mutateAsync({ token }).then((response): void => {
 					setMessage(response.data.message);
 					setSecret(null);
 					setQrCodeDataUrl(null);
@@ -141,10 +140,11 @@ function TwoFactorSetupPanel(): JSX.Element {
 					setToken("");
 					setSavedCodesConfirmed(false);
 					void remainingQuery.refetch();
-				})
-				.catch((err: unknown): void => {
+				}),
+				(err): void => {
 					setError(resolveAuthErrorMessage(err));
-				});
+				},
+			);
 		},
 		[enableMutation, remainingQuery, token],
 	);
@@ -157,9 +157,8 @@ function TwoFactorSetupPanel(): JSX.Element {
 
 			const rotateInput = rotateUseBackupCode ? { password: rotatePassword, backupCode: rotateBackupCode } : { password: rotatePassword, token: rotateToken };
 
-			rotateMutation
-				.mutateAsync(rotateInput)
-				.then((response): void => {
+			void catchCaught(
+				rotateMutation.mutateAsync(rotateInput).then((response): void => {
 					applySetupResponse(response.data);
 					setRotatePassword("");
 					setRotateToken("");
@@ -167,10 +166,11 @@ function TwoFactorSetupPanel(): JSX.Element {
 					setRotateUseBackupCode(false);
 					setMessage("Two-factor authentication rotated. Scan the new QR code and save your new backup codes.");
 					void remainingQuery.refetch();
-				})
-				.catch((err: unknown): void => {
+				}),
+				(err): void => {
 					setError(resolveAuthErrorMessage(err));
-				});
+				},
+			);
 		},
 		[applySetupResponse, remainingQuery, rotateBackupCode, rotateMutation, rotatePassword, rotateToken, rotateUseBackupCode],
 	);

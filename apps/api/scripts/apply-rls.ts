@@ -1,12 +1,12 @@
-import { spawnSync } from "node:child_process";
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { readFileSync, existsSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { Pool } from "pg";
+import { z } from "zod";
+
+import { buildRlsApplyPlan } from "./rls-apply-plan.js";
 
 const apiDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const prismaDir = resolve(apiDir, "prisma");
-const rlsBundleFile = resolve(prismaDir, "rls.sql");
-const rlsFragmentsDir = resolve(prismaDir, "rls");
 const envFile = resolve(apiDir, ".env");
 
 function getDatabaseUrl(): string {
@@ -46,99 +46,113 @@ function stripPrismaQueryParams(databaseUrl: string): string {
 	return databaseUrl.slice(0, questionMarkIndex);
 }
 
-function getNodeErrorCode(error: Error): string | undefined {
-	if (!Object.hasOwn(error, "code")) {
-		return undefined;
-	}
+/** Deadlock (`40P01`) and lock-timeout (`55P03`) are transient when another session holds table locks. */
+const RETRYABLE_SQLSTATES: ReadonlySet<string> = new Set(["40P01", "55P03"]);
+const MAX_ATTEMPTS = 6;
+const LOCK_TIMEOUT = "10s";
 
-	const descriptor = Object.getOwnPropertyDescriptor(error, "code");
-	const codeValue = descriptor?.value;
+const PgErrorSchema = z.object({ code: z.string(), message: z.string() });
 
-	if (codeValue === undefined || codeValue === null) {
-		return undefined;
-	}
-
-	if (typeof codeValue === "string") {
-		return codeValue;
-	}
-
-	if (typeof codeValue === "number") {
-		return String(codeValue);
-	}
-
-	return undefined;
+function readRetryableError(error: Error): string | null {
+	const parsed = PgErrorSchema.safeParse(error);
+	return parsed.success && RETRYABLE_SQLSTATES.has(parsed.data.code) ? parsed.data.message : null;
 }
 
-function listRlsSqlFiles(): string[] {
-	const files: string[] = [];
-
-	if (existsSync(rlsBundleFile)) {
-		files.push(rlsBundleFile);
-	}
-
-	if (existsSync(rlsFragmentsDir)) {
-		const fragments = readdirSync(rlsFragmentsDir)
-			.filter((name: string) => name.endsWith(".sql"))
-			.sort((a: string, b: string) => a.localeCompare(b))
-			.map((name: string) => resolve(rlsFragmentsDir, name));
-
-		files.push(...fragments);
-	}
-
-	if (files.length === 0) {
-		throw new Error(`No RLS SQL found. Expected ${rlsBundleFile} and/or ${rlsFragmentsDir}/*.sql`);
-	}
-
-	return files;
-}
-
-function runPsql(databaseUrl: string, sqlFile: string): void {
-	const command = process.platform === "win32" ? "psql.exe" : "psql";
-
-	const result = spawnSync(command, [databaseUrl, "-f", sqlFile], {
-		stdio: "inherit",
-		shell: false,
+async function delay(ms: number): Promise<void> {
+	await new Promise<void>((resolveDelay) => {
+		setTimeout(resolveDelay, ms);
 	});
+}
 
-	if (result.error !== undefined) {
-		const code = getNodeErrorCode(result.error);
-		if (code === "ENOENT") {
-			throw new Error(["psql was not found.", "", "Install PostgreSQL client tools and ensure psql is on PATH."].join("\n"));
+/**
+ * Apply one SQL file atomically on a dedicated connection.
+ *
+ * `ALTER TABLE … ENABLE ROW LEVEL SECURITY` / `CREATE POLICY` take ACCESS
+ * EXCLUSIVE locks table by table. A concurrently running API (queue workers,
+ * cron jobs, Prisma Studio) touching the same tables in another order can
+ * deadlock with it. The file runs in one explicit transaction with a bounded
+ * lock wait; on a deadlock or lock timeout the whole transaction rolls back,
+ * so retrying the (idempotent) file is safe.
+ */
+async function runSqlFile(pool: Pool, sqlFile: string): Promise<void> {
+	const sql = readFileSync(sqlFile, "utf8");
+
+	for (let attempt = 1; ; attempt += 1) {
+		const client = await pool.connect();
+		try {
+			await client.query("BEGIN");
+			await client.query(`SET LOCAL lock_timeout = '${LOCK_TIMEOUT}'`);
+			await client.query(sql);
+			await client.query("COMMIT");
+			return;
+		} catch (error) {
+			await client.query("ROLLBACK");
+			const retryable = error instanceof Error ? readRetryableError(error) : null;
+			if (retryable === null || attempt >= MAX_ATTEMPTS) {
+				throw error;
+			}
+			const backoffMs = 500 * 2 ** (attempt - 1);
+			console.warn(
+				`    ${retryable} — retrying in ${String(backoffMs)}ms (attempt ${String(attempt + 1)}/${String(MAX_ATTEMPTS)}). Stop the running API to avoid lock contention.`,
+			);
+			await delay(backoffMs);
+		} finally {
+			client.release();
 		}
-
-		throw result.error;
-	}
-
-	if (result.status !== 0) {
-		throw new Error(`psql exited with code ${String(result.status ?? "unknown")} while applying ${sqlFile}`);
 	}
 }
 
-function run(): void {
+/**
+ * Apply the RLS SQL via the Node `pg` driver.
+ *
+ * The file list comes from `buildRlsApplyPlan` (`RLS_APPLY_ORDER` in
+ * `scripts/rls-apply-plan.ts`), which validates disk drift and helper
+ * use-before-definition BEFORE any SQL runs — so ordering bugs fail here
+ * instead of against a fresh database.
+ *
+ * No local `psql` binary required — only a reachable `DATABASE_URL` (Docker Postgres on localhost is fine).
+ */
+export async function applyRowLevelSecurity(): Promise<void> {
 	const databaseUrl = stripPrismaQueryParams(getDatabaseUrl());
-	const sqlFiles = listRlsSqlFiles();
+	const sqlFiles = buildRlsApplyPlan(apiDir);
+	const pool = new Pool({ connectionString: databaseUrl });
 
 	console.log("Applying Row-Level Security (idempotent) ...");
 
-	for (const sqlFile of sqlFiles) {
-		const relative = sqlFile.startsWith(apiDir) ? sqlFile.slice(apiDir.length + 1) : sqlFile;
-		console.log(`  → ${relative}`);
-		runPsql(databaseUrl, sqlFile);
-	}
+	try {
+		for (const sqlFile of sqlFiles) {
+			const relative = sqlFile.startsWith(apiDir) ? sqlFile.slice(apiDir.length + 1) : sqlFile;
+			console.log(`  → ${relative}`);
+			await runSqlFile(pool, sqlFile);
+		}
 
-	console.log("RLS applied successfully.");
+		console.log("RLS applied successfully.");
+	} finally {
+		await pool.end();
+	}
 }
 
-try {
-	run();
-} catch (error) {
-	console.error("");
-
-	if (error instanceof Error) {
-		console.error(`Error: ${error.message}`);
-	} else {
-		console.error(error);
+function isApplyRlsCliEntry(): boolean {
+	const entry = process.argv[1];
+	if (entry.length === 0) {
+		return false;
 	}
+	return resolve(entry) === fileURLToPath(import.meta.url);
+}
 
-	process.exit(1);
+const FailureSchema = z.object({ message: z.string() });
+
+async function main(): Promise<void> {
+	try {
+		await applyRowLevelSecurity();
+	} catch (error) {
+		const failure = FailureSchema.safeParse(error);
+		console.error("");
+		console.error(`Error: ${failure.success ? failure.data.message : "RLS apply failed"}`);
+		process.exit(1);
+	}
+}
+
+if (isApplyRlsCliEntry()) {
+	void main();
 }

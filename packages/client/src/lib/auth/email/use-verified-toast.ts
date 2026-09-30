@@ -11,7 +11,7 @@ import { syncSessionAfterEmailVerification } from "./sync-after-verification";
 /** Shows a one-time success toast and refreshes the session after email verification. */
 export function useEmailVerifiedToast(): void {
 	const queryClient = useQueryClient();
-	const { api, login } = useAuth();
+	const { api, login, refreshSession } = useAuth();
 	const handledRef = useRef(false);
 
 	useEffect((): void => {
@@ -26,7 +26,7 @@ export function useEmailVerifiedToast(): void {
 		});
 
 		void (async (): Promise<void> => {
-			await syncSessionAfterEmailVerification(api, login, queryClient);
+			await syncSessionAfterEmailVerification(api, login, queryClient, refreshSession);
 		})();
-	}, [api, login, queryClient]);
+	}, [api, login, queryClient, refreshSession]);
 }

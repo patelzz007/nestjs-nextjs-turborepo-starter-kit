@@ -1,8 +1,10 @@
 "use client";
 
-import { stubPaginatedMeta } from "@/lib/format/api-envelope";
+import { stubPaginatedMeta, successEnvelope } from "@/lib/format/api-envelope";
 import { apiRouter } from "@workspace/client/lib/api/endpoints";
 import { useAuth } from "@workspace/client/lib/auth";
+import { Can } from "@workspace/client/lib/auth/can";
+import { AccessRestrictedNotice } from "@/components/common/access-restricted-notice";
 import { MerchantKybDocumentPreviewDialog, type MerchantKybDocumentPreviewState } from "@workspace/client/lib/merchant/kyb/document-preview-dialog";
 import { openExternalDocument, triggerBrowserDownload } from "@workspace/client/lib/merchant/kyb/document-utils";
 import { MerchantKybStoredDocumentList } from "@workspace/client/lib/merchant/kyb/stored-document-list";
@@ -17,7 +19,7 @@ import type {
 	OrganizationLocationResponse,
 	OrganizationLocationStatus,
 } from "@workspace/shared";
-import { EpochMsSchema, JsonObjectSchema, JsonPrimitiveSchema, KybStatusSchema, nowEpochMs } from "@workspace/shared";
+import { EpochMsSchema, JsonObjectSchema, JsonPrimitiveSchema, KybStatusSchema, nowEpochMs, PERMISSION } from "@workspace/shared";
 import { z } from "zod";
 import { Badge } from "@workspace/ui/components/feedback/badge";
 import { Button } from "@workspace/ui/components/form/button";
@@ -409,13 +411,7 @@ export default function KybReviewPanel({ initialMerchantOrgId, initialPendingMer
 
 	const pendingInitialData = React.useMemo(
 		() =>
-			initialPendingMerchants !== undefined
-				? {
-						success: true as const,
-						data: [...initialPendingMerchants],
-						meta: stubPaginatedMeta(50, initialPendingMerchants.length, 1, 1, false),
-					}
-				: undefined,
+			initialPendingMerchants !== undefined ? successEnvelope([...initialPendingMerchants], stubPaginatedMeta(50, initialPendingMerchants.length, 1, 1, false)) : undefined,
 		[initialPendingMerchants],
 	);
 
@@ -464,8 +460,9 @@ export default function KybReviewPanel({ initialMerchantOrgId, initialPendingMer
 
 	const handleViewDocument = React.useCallback(
 		(document: MerchantKybDocumentRecord): void => {
-			void Promise.all([fetchMerchantDocumentUrl(document, "inline"), fetchMerchantDocumentUrl(document, "attachment")])
-				.then(([viewUrl, downloadUrl]): void => {
+			void (async (): Promise<void> => {
+				try {
+					const [viewUrl, downloadUrl] = await Promise.all([fetchMerchantDocumentUrl(document, "inline"), fetchMerchantDocumentUrl(document, "attachment")]);
 					if (viewUrl === null || downloadUrl === null) {
 						toastMessage.error({ title: "Document unavailable", description: "This document is still scanning or was rejected." });
 						return;
@@ -476,47 +473,49 @@ export default function KybReviewPanel({ initialMerchantOrgId, initialPendingMer
 						viewUrl,
 						downloadUrl,
 					});
-				})
-				.catch((error: unknown): void => {
+				} catch (error) {
 					const description = error instanceof Error ? error.message : "Could not open document.";
 					toastMessage.error({ title: "Preview failed", description });
-				});
+				}
+			})();
 		},
 		[fetchMerchantDocumentUrl],
 	);
 
 	const handleDownloadDocument = React.useCallback(
 		(document: MerchantKybDocumentRecord): void => {
-			void fetchMerchantDocumentUrl(document, "attachment")
-				.then((downloadUrl): void => {
+			void (async (): Promise<void> => {
+				try {
+					const downloadUrl = await fetchMerchantDocumentUrl(document, "attachment");
 					if (downloadUrl === null) {
 						toastMessage.error({ title: "Document unavailable", description: "This document is still scanning or was rejected." });
 						return;
 					}
 					triggerBrowserDownload(downloadUrl, document.fileName);
-				})
-				.catch((error: unknown): void => {
+				} catch (error) {
 					const description = error instanceof Error ? error.message : "Download failed.";
 					toastMessage.error({ title: "Download failed", description });
-				});
+				}
+			})();
 		},
 		[fetchMerchantDocumentUrl],
 	);
 
 	const handleViewDocumentSource = React.useCallback(
 		(document: MerchantKybDocumentRecord): void => {
-			void fetchMerchantDocumentUrl(document, "inline")
-				.then((viewUrl): void => {
+			void (async (): Promise<void> => {
+				try {
+					const viewUrl = await fetchMerchantDocumentUrl(document, "inline");
 					if (viewUrl === null) {
 						toastMessage.error({ title: "Document unavailable", description: "This document is still scanning or was rejected." });
 						return;
 					}
 					openExternalDocument(viewUrl);
-				})
-				.catch((error: unknown): void => {
+				} catch (error) {
 					const description = error instanceof Error ? error.message : "Could not open document.";
 					toastMessage.error({ title: "View source failed", description });
-				});
+				}
+			})();
 		},
 		[fetchMerchantDocumentUrl],
 	);
@@ -794,12 +793,17 @@ export default function KybReviewPanel({ initialMerchantOrgId, initialPendingMer
 								</CardContent>
 							</Card>
 
-							<KybReviewDecisionForm
-								key={`${merchant.id}-${String(merchant.updatedAt)}`}
-								merchant={merchant}
-								isSaving={updateKyb.isPending}
-								onSubmitReview={handleSubmitReview}
-							/>
+							{/* `PATCH /admin/merchants/:id/kyb` requires MANAGE on MERCHANT_ORG; viewing needs only LIST. */}
+							<Can
+								permission={PERMISSION.MERCHANT_ORG.MANAGE}
+								fallback={<AccessRestrictedNotice description="Updating a merchant's KYB status requires the merchant organization manage permission." />}>
+								<KybReviewDecisionForm
+									key={`${merchant.id}-${String(merchant.updatedAt)}`}
+									merchant={merchant}
+									isSaving={updateKyb.isPending}
+									onSubmitReview={handleSubmitReview}
+								/>
+							</Can>
 						</>
 					) : null}
 				</div>

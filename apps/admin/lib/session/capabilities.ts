@@ -1,56 +1,57 @@
 "use client";
 
 import { useAuth } from "@workspace/client/lib/auth";
-import { hasCapability, type CapabilitySlug, type SessionPermissionsResponse } from "@workspace/shared";
+import type { CapabilitySlug, SessionPermissionsResponse } from "@workspace/shared";
 import * as React from "react";
 
 import { stubApiMeta } from "@/lib/format/api-envelope";
 
-export interface SessionCapabilitiesState {
+/** Re-checks revocations promptly without hammering the API. */
+export const SESSION_PERMISSIONS_REFETCH_INTERVAL_MS = 60_000;
+
+export interface SessionPermissionsState {
+	/** Capability slugs fed into `CapabilitiesProvider` — the single client source of truth. */
 	readonly capabilities: readonly CapabilitySlug[];
-	readonly hasCapability: (slug: CapabilitySlug) => boolean;
-	readonly isLoading: boolean;
-	readonly isReady: boolean;
+	/** True once there is a permissions answer (live, preloaded, or a definitive error). */
+	readonly isResolved: boolean;
 }
 
-/** Platform capability slugs from `GET /auth/permissions` (admin + impersonation flows). */
-export function useSessionCapabilities(initialSessionPermissions?: SessionPermissionsResponse): SessionCapabilitiesState {
-	const { api } = useAuth();
+/**
+ * Picks the capability list to trust. The live query wins whenever it has
+ * data — **even an empty list**, so permissions revoked to zero disappear —
+ * and the server-preloaded list is used only before the first live answer.
+ */
+export function resolveSessionCapabilities(live: SessionPermissionsResponse | undefined, preloaded: SessionPermissionsResponse | undefined): readonly CapabilitySlug[] {
+	if (live !== undefined) {
+		return live.capabilities;
+	}
+	return preloaded?.capabilities ?? [];
+}
 
-	const initialPermissionsData = React.useMemo(
-		() =>
-			initialSessionPermissions !== undefined
-				? {
-						success: true as const,
-						data: initialSessionPermissions,
-						meta: stubApiMeta(),
-					}
-				: undefined,
-		[initialSessionPermissions],
-	);
+/**
+ * Owns `GET /auth/permissions` for the admin panel. Mounted once by
+ * `DashboardLayout`, which feeds the result into `CapabilitiesProvider`;
+ * every other consumer reads through `useAuthorization()`.
+ */
+export function useSessionPermissionsQuery(initialSessionPermissions?: SessionPermissionsResponse): SessionPermissionsState {
+	const { api } = useAuth();
 
 	const permissionsQuery = api.auth.permissions.useQuery(undefined, {
 		retry: 1,
 		staleTime: 30_000,
-		initialData: initialPermissionsData,
+		refetchOnWindowFocus: true,
+		refetchInterval: SESSION_PERMISSIONS_REFETCH_INTERVAL_MS,
+		initialData: initialSessionPermissions !== undefined ? { success: true, data: initialSessionPermissions, meta: stubApiMeta() } : undefined,
 	});
 
-	const capabilities = React.useMemo((): readonly CapabilitySlug[] => {
-		if (permissionsQuery.data === undefined) {
-			return [];
-		}
-		return permissionsQuery.data.data.capabilities;
-	}, [permissionsQuery.data]);
-
-	const checkCapability = React.useCallback((slug: CapabilitySlug): boolean => hasCapability(capabilities, slug), [capabilities]);
-
-	const isLoading = permissionsQuery.isPending;
-	const isReady = permissionsQuery.data !== undefined;
+	const liveResponse = permissionsQuery.data?.data;
+	const capabilities = React.useMemo(
+		(): readonly CapabilitySlug[] => resolveSessionCapabilities(liveResponse, initialSessionPermissions),
+		[liveResponse, initialSessionPermissions],
+	);
 
 	return {
 		capabilities,
-		hasCapability: checkCapability,
-		isLoading,
-		isReady,
+		isResolved: liveResponse !== undefined || initialSessionPermissions !== undefined || permissionsQuery.isError,
 	};
 }

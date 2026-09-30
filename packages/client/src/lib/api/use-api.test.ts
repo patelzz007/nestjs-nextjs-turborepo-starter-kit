@@ -10,7 +10,9 @@ import { firstFetchCall, headersOf, inputUrl, jsonResponse, type FetchImpl } fro
 
 const BASE_URL = "http://api.test";
 
+/** Index signature keeps the envelope assignable to `DataValue` for `jsonResponse`. */
 interface Envelope {
+	readonly [key: string]: DataValue;
 	readonly success: true;
 	readonly data: DataValue;
 	readonly meta: { readonly timestamp: number };

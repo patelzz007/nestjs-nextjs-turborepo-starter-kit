@@ -80,6 +80,7 @@ export const VERSIONED_ROUTE_PREFIXES: readonly [
 	"/sample-category",
 	"/product",
 	"/capabilities/catalog",
+	"/authorization/decisions",
 ] = [
 	"/auth",
 	"/session",
@@ -120,6 +121,7 @@ export const VERSIONED_ROUTE_PREFIXES: readonly [
 	"/sample-category",
 	"/product",
 	"/capabilities/catalog",
+	"/authorization/decisions",
 ];
 
 export type VersionedRoutePrefix = (typeof VERSIONED_ROUTE_PREFIXES)[number];

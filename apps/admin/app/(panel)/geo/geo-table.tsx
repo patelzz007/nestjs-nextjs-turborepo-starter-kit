@@ -18,8 +18,10 @@ import { keepPreviousData } from "@tanstack/react-query";
 import { Building2, Globe, Landmark, MapPin, TreePine } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { z } from "zod";
 
 import { useAuth } from "@workspace/client/lib/auth";
+import type { DataValue } from "@workspace/shared";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -32,10 +34,6 @@ interface GeoRow {
 	readonly longitude?: number;
 	readonly emoji?: string;
 	readonly flag?: boolean;
-}
-
-interface ExtractedData {
-	readonly rows: readonly unknown[];
 }
 
 interface GeoTableStats {
@@ -54,50 +52,46 @@ type TabKey = "countries" | "states" | "cities";
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
-function isRecord(v: unknown): v is Record<string, unknown> {
-	return v !== null && typeof v === "object" && !Array.isArray(v);
+const OptionalStringSchema = z.string().optional().catch(undefined);
+const OptionalCoordinateSchema = z
+	.union([z.number(), z.string().transform((value): number => Number(value))])
+	.optional()
+	.catch(undefined);
+
+/** Lenient per-row parse: bad fields fall back to defaults; non-object rows become `null` and are dropped. */
+const GeoApiRowSchema = z
+	.object({
+		id: z.number().catch(0),
+		name: z.string().catch(""),
+		iso2: OptionalStringSchema,
+		countryCode: OptionalStringSchema,
+		stateCode: OptionalStringSchema,
+		emoji: OptionalStringSchema,
+		latitude: OptionalCoordinateSchema,
+		longitude: OptionalCoordinateSchema,
+		flag: z.boolean().optional().catch(undefined),
+	})
+	.nullable()
+	.catch(null);
+
+type GeoApiRow = NonNullable<z.infer<typeof GeoApiRowSchema>>;
+
+const GeoApiRowsSchema = z.array(GeoApiRowSchema);
+
+/** Envelope `data` is either a bare row array or a paginated `{ items }` object. */
+const GeoEnvelopeSchema = z.object({
+	data: z.union([GeoApiRowsSchema, z.object({ items: GeoApiRowsSchema })]),
+});
+
+function isGeoApiRow(row: GeoApiRow | null): row is GeoApiRow {
+	return row !== null;
 }
 
-function readStr(obj: Record<string, unknown>, key: string): string {
-	return typeof obj[key] === "string" ? obj[key] : "";
-}
-
-function readNum(obj: Record<string, unknown>, key: string): number {
-	return typeof obj[key] === "number" ? obj[key] : 0;
-}
-
-function readStrN(obj: Record<string, unknown>, key: string): string | undefined {
-	return typeof obj[key] === "string" ? obj[key] : undefined;
-}
-
-function readNumN(obj: Record<string, unknown>, key: string): number | undefined {
-	const v = obj[key];
-	return typeof v === "number" ? v : typeof v === "string" ? Number(v) : undefined;
-}
-
-function extractRows(raw: unknown): ExtractedData {
-	if (raw === null || typeof raw !== "object") return { rows: [] };
-
-	const env: Record<string, unknown> = {};
-	for (const [k, v] of Object.entries(raw)) {
-		env[k] = v;
-	}
-	const data = env.data;
-
-	if (Array.isArray(data)) {
-		return { rows: data };
-	}
-
-	if (data !== null && typeof data === "object" && "items" in data) {
-		const dataObj: Record<string, unknown> = {};
-		for (const [k, v] of Object.entries(data)) {
-			dataObj[k] = v;
-		}
-		const rawItems: unknown[] = Array.isArray(dataObj.items) ? dataObj.items : [];
-		return { rows: rawItems };
-	}
-
-	return { rows: [] };
+function extractRows(raw: DataValue | undefined): readonly GeoApiRow[] {
+	const parsed = GeoEnvelopeSchema.safeParse(raw);
+	if (!parsed.success) return [];
+	const rows = Array.isArray(parsed.data.data) ? parsed.data.data : parsed.data.data.items;
+	return rows.filter(isGeoApiRow);
 }
 
 // ── Stat card ──────────────────────────────────────────────────────────────
@@ -303,46 +297,46 @@ export default function GeoView({ initialStats }: GeoTableProps): React.JSX.Elem
 	const activeQuery = activeTab === "countries" ? countriesQuery : activeTab === "states" ? statesQuery : citiesQuery;
 	const tableError: string | null = activeQuery.isError ? "Could not load geographic data. Clear search or sort and try again." : null;
 
-	const countriesExtracted = useMemo((): ExtractedData => extractRows(countriesQuery.data), [countriesQuery.data]);
-	const statesExtracted = useMemo((): ExtractedData => extractRows(statesQuery.data), [statesQuery.data]);
-	const citiesExtracted = useMemo((): ExtractedData => extractRows(citiesQuery.data), [citiesQuery.data]);
+	const countryRows = useMemo((): readonly GeoApiRow[] => extractRows(countriesQuery.data), [countriesQuery.data]);
+	const stateRows = useMemo((): readonly GeoApiRow[] => extractRows(statesQuery.data), [statesQuery.data]);
+	const cityRows = useMemo((): readonly GeoApiRow[] => extractRows(citiesQuery.data), [citiesQuery.data]);
 
 	const countryItems = useMemo(
 		(): GeoRow[] =>
-			countriesExtracted.rows.filter(isRecord).map((c) => ({
-				id: readNum(c, "id"),
-				name: readStr(c, "name"),
-				countryCode: readStrN(c, "iso2"),
+			countryRows.map((c) => ({
+				id: c.id,
+				name: c.name,
+				countryCode: c.iso2,
 				flag: c.flag === true,
-				emoji: readStrN(c, "emoji"),
+				emoji: c.emoji,
 			})),
-		[countriesExtracted.rows],
+		[countryRows],
 	);
 	const stateItems = useMemo(
 		(): GeoRow[] =>
-			statesExtracted.rows.filter(isRecord).map((s) => ({
-				id: readNum(s, "id"),
-				name: readStr(s, "name"),
-				countryCode: readStrN(s, "countryCode"),
-				stateCode: readStrN(s, "iso2"),
-				latitude: readNumN(s, "latitude"),
-				longitude: readNumN(s, "longitude"),
+			stateRows.map((s) => ({
+				id: s.id,
+				name: s.name,
+				countryCode: s.countryCode,
+				stateCode: s.iso2,
+				latitude: s.latitude,
+				longitude: s.longitude,
 				flag: s.flag === true,
 			})),
-		[statesExtracted.rows],
+		[stateRows],
 	);
 	const cityItems = useMemo(
 		(): GeoRow[] =>
-			citiesExtracted.rows.filter(isRecord).map((c) => ({
-				id: readNum(c, "id"),
-				name: readStr(c, "name"),
-				countryCode: readStrN(c, "countryCode"),
-				stateCode: readStrN(c, "stateCode"),
-				latitude: readNumN(c, "latitude"),
-				longitude: readNumN(c, "longitude"),
+			cityRows.map((c) => ({
+				id: c.id,
+				name: c.name,
+				countryCode: c.countryCode,
+				stateCode: c.stateCode,
+				latitude: c.latitude,
+				longitude: c.longitude,
 				flag: c.flag === true,
 			})),
-		[citiesExtracted.rows],
+		[cityRows],
 	);
 
 	const items = activeTab === "countries" ? countryItems : activeTab === "states" ? stateItems : cityItems;

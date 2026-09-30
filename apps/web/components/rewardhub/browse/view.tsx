@@ -2,7 +2,7 @@
 
 import { RewardHubCatalog } from "@/components/rewardhub/browse/catalog";
 import { RewardHubFilters } from "@/components/rewardhub/browse/filters";
-import { readPaginatedHasNext, readPaginatedNextCursor, stubPaginatedMetaFromHydration } from "@/lib/api-envelope";
+import { readPaginatedHasNext, readPaginatedNextCursor, stubPaginatedMetaFromHydration, successEnvelope } from "@/lib/api-envelope";
 import { WebEmptyState } from "@/components/web-ui/empty-state";
 import { useAuth } from "@workspace/client/lib/auth";
 import { ApiPaginatedMeta, type PilotCity, type RewardCategory, type RewardResponse } from "@workspace/shared";
@@ -45,11 +45,7 @@ export function RewardHubBrowseView({
 	const initialQueryData = React.useMemo(
 		() =>
 			initialRewards !== undefined && isDefaultQuery
-				? {
-						success: true as const,
-						data: [...initialRewards],
-						meta: initialListMeta ?? stubPaginatedMetaFromHydration(12, initialRewards.length, initialHasNext ?? false),
-					}
+				? successEnvelope([...initialRewards], initialListMeta ?? stubPaginatedMetaFromHydration(12, initialRewards.length, initialHasNext ?? false))
 				: undefined,
 		[initialHasNext, initialListMeta, initialRewards, isDefaultQuery],
 	);

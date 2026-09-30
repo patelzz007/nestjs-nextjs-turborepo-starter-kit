@@ -1,5 +1,5 @@
 import type { ThrottlerModuleOptions } from "@nestjs/throttler";
-import { HttpHeaderValueSchema, RequestLikeSchema, type RequestLike } from "@workspace/shared";
+import { HttpHeaderValueSchema, RequestLikeSchema, type HttpHeaderValue, type RequestLike } from "@workspace/shared";
 
 import type { TypedConfigService } from "../../../config/typed-config.service";
 
@@ -24,7 +24,7 @@ const UNKNOWN_CLIENT = "unknown";
 	}
 	const headers = parsed.data.headers ?? {};
 	// Helper: extract a single string from a header value (string or string[]).
-	const headerStr = (raw: unknown): string => {
+	const headerStr = (raw: HttpHeaderValue | undefined): string => {
 		const v = HttpHeaderValueSchema.safeParse(raw);
 		if (!v.success) return "";
 		return Array.isArray(v.data) ? (v.data[0] ?? "") : v.data;

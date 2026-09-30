@@ -6,6 +6,11 @@ import { AssignRoleToUserSchema, AdminUserListQuerySchema, apiContract } from "@
 
 import { ZodValidationPipe } from "./zod-validation.pipe";
 
+const ValidationErrorBodySchema = z.object({
+	message: z.string(),
+	errors: z.array(z.object({ path: z.string(), message: z.string() })),
+});
+
 const TestSchema = z
 	.object({
 		email: z.string().email(),
@@ -29,10 +34,10 @@ describe("ZodValidationPipe (compiled ajv)", () => {
 			throw new Error("Expected transform to throw");
 		} catch (error) {
 			expect(error).toBeInstanceOf(BadRequestException);
-			const body = (error as BadRequestException).getResponse() as {
-				readonly message: string;
-				readonly errors: readonly { readonly path: string; readonly message: string }[];
-			};
+			if (!(error instanceof BadRequestException)) {
+				throw error;
+			}
+			const body = ValidationErrorBodySchema.parse(error.getResponse());
 			expect(body.message).toBe("Validation failed");
 			expect(body.errors.length).toBeGreaterThan(0);
 			expect(body.errors.map((issue) => issue.path)).toEqual(expect.arrayContaining(["email", "password"]));

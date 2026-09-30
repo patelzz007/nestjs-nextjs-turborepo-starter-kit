@@ -1,10 +1,11 @@
+import type { DataValue } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
 import { decodeJwtPayload } from "./jwt";
 
 /** Build a JWT string from a payload (base64url header/payload, dummy signature). */
-function makeJwt(payload: unknown, header: Record<string, unknown> = { alg: "none", typ: "JWT" }): string {
-	const encode = (value: unknown): string => btoa(JSON.stringify(value)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+function makeJwt(payload: DataValue, header: DataValue = { alg: "none", typ: "JWT" }): string {
+	const encode = (value: DataValue): string => btoa(JSON.stringify(value)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 	return `${encode(header)}.${encode(payload)}.signature`;
 }
 

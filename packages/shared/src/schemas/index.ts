@@ -976,7 +976,6 @@ export type { EmailSendJob, QueueName, RewardsMaintenanceJob, StorageCleanupJob,
 export { QUEUE_JOB_OPTIONS } from "./infrastructure/queue-job-options";
 export { OutboxEnqueueInputSchema, OutboxEventRecordSchema, OutboxEventStatusSchema, OUTBOX_EVENT_STATUSES } from "./infrastructure/outbox";
 export type { OutboxEnqueueInput, OutboxEventRecord, OutboxEventStatus } from "./infrastructure/outbox";
-// @app-generated:begin sampleCategory
 export {
 	BulkCreateSampleCategorySchema,
 	CreateSampleCategorySchema,
@@ -985,7 +984,7 @@ export {
 	SampleCategoryListResponseSchema,
 	SampleCategorySchema,
 	UpdateSampleCategorySchema,
-} from "./domain/generated/sample-category.generated";
+} from "./domain/catalog/sample-category";
 export type {
 	BulkCreateSampleCategoryInput,
 	CreateSampleCategoryInput,
@@ -993,9 +992,7 @@ export type {
 	SampleCategoryListQuery,
 	SampleCategoryListResponse,
 	UpdateSampleCategoryInput,
-} from "./domain/generated/sample-category.generated";
-// @app-generated:end sampleCategory
-// @app-generated:begin product
+} from "./domain/catalog/sample-category";
 export {
 	BulkCreateProductSchema,
 	CreateProductSchema,
@@ -1004,9 +1001,8 @@ export {
 	ProductListResponseSchema,
 	ProductSchema,
 	UpdateProductSchema,
-} from "./domain/generated/product.generated";
-export type { BulkCreateProductInput, CreateProductInput, Product, ProductListQuery, ProductListResponse, UpdateProductInput } from "./domain/generated/product.generated";
-// @app-generated:end product
+} from "./domain/catalog/product";
+export type { BulkCreateProductInput, CreateProductInput, Product, ProductListQuery, ProductListResponse, UpdateProductInput } from "./domain/catalog/product";
 export {
 	PlatformResourceAuditInputSchema,
 	PlatformResourceAuditRecordSchema,

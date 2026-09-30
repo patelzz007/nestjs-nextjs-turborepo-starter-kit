@@ -16,11 +16,14 @@ Instead:
 
 | Path | Purpose |
 |------|---------|
-| `prisma/rls.sql` | Main idempotent bundle (role, core helpers, enable RLS, baseline policies). Applied **first**. |
-| `prisma/rls/*.sql` | Ordered fragments (`01-`, `02-`, …). Helpers and **new** policy families — applied **after** `rls.sql`. |
-| `scripts/apply-rls.ts` | Applies all fragments + `rls.sql` via `psql`. |
+| `prisma/rls/00-app-helpers.sql` | Base session helpers (`app_rls_bypass()`, `app_current_user_id()`, `app_current_organization_id()`, `app_owns()`). Applied **first** — `01` and `rls.sql` call them, so a fresh database needs them before anything else. |
+| `prisma/rls/01-acl-location-access.sql` | ReBAC + ACL helpers and location-scoped policies. Applied **second**. |
+| `prisma/rls.sql` | Main idempotent bundle (role, grants, enable RLS, baseline policies). Applied **third**. |
+| `prisma/rls/*.sql` | Other ordered fragments (`NN-*.sql`, then `99-app-runtime-grants`). **app_runtime** grants run **last**. |
+| `scripts/rls-apply-plan.ts` | `RLS_APPLY_ORDER` — the apply order, plus disk-drift and helper use-before-define validation (runs before any SQL, also in `db:check-rls-manifest`). |
+| `scripts/apply-rls.ts` | Applies the validated plan via Node `pg` (no local `psql` required). |
 
-Add new generic helpers in `prisma/rls/NN-name.sql` (numeric prefix controls order). Add or adjust table policies in `rls.sql` (or split into more fragments over time).
+Add new fragments as `prisma/rls/NN-name.sql` and register them in `RLS_APPLY_ORDER` (`scripts/rls-apply-plan.ts`) — unregistered files, missing files, and helpers used before their defining file all fail the plan. Add or adjust table policies in `rls.sql` (or split into more fragments over time).
 
 ## Architecture (RBAC vs ACL vs RLS)
 
@@ -44,7 +47,7 @@ Set **inside the same transaction** as tenant queries (`TenantTransactionService
 | `app.current_organization_id` | Active tenant |
 | `app.rls_bypass` | Trusted system path only |
 
-Helpers: `app_rls_bypass()`, `app_current_user_id()`, `app_current_organization_id()`, `app_tenant_organization_member_of(org_id)`, `app_tenant_has_location_access(location_id)`.
+Helpers: `app_rls_bypass()`, `app_current_user_id()`, `app_current_organization_id()`, `app_tenant_org_member(org_id)` (tenant context or legacy org membership), `app_tenant_organization_member_of(org_id)`, `app_tenant_has_location_access(location_id)`.
 
 Missing context must **not** widen access.
 

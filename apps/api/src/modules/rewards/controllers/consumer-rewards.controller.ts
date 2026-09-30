@@ -1,5 +1,6 @@
 import { Controller, Get, Header, Param, Query } from "@nestjs/common";
 import { ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
+import type { z } from "zod";
 
 import { apiContract, apiPath } from "@workspace/shared";
 import { ZodValidationPipe } from "../../../common/pipes/zod-validation.pipe";
@@ -20,7 +21,7 @@ export class ConsumerRewardsController {
 	@ApiOperation({ summary: "Browse published consumer rewards" })
 	@ApiOkResponse({ description: "Paginated marketplace rewards" })
 	public listRewards(
-		@Query(new ZodValidationPipe(apiContract.rewards.list.input)) query: Parameters<ConsumerRewardsService["listMarketplace"]>[0],
+		@Query(new ZodValidationPipe(apiContract.rewards.list.input)) query: z.output<typeof apiContract.rewards.list.input>,
 	): ReturnType<ConsumerRewardsService["listMarketplace"]> {
 		return this.consumerRewardsService.listMarketplace(query);
 	}

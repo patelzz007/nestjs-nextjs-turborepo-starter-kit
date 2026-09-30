@@ -8,6 +8,7 @@
 	--sidebar-width-mobile: 20rem;
 	--sidebar-width-icon: 3rem;
 	--font-button: "Bricolage Grotesque", var(--font-sans);
+	--font-sidebar: var(--font-sans);
 	--max-width-8xl: 88rem;
 	--max-width-9xl: 96rem;
 	--max-width-10xl: 104rem;

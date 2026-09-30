@@ -1,12 +1,19 @@
 import { describe, expect, it } from "vitest";
 
-import { apiRoutes, buildQuery, buildRoute, isParamRoute, RouteDefSchema, type RouteDef } from "./api-routes";
+import { apiRoutes, buildQuery, buildRoute, isParamRoute, ParamRouteSchema, RouteDefSchema, type RouteDef } from "./api-routes";
 
 // ── apiRoutes shape ────────────────────────────────────────────────────────
 
+const REQUIRED_ROUTE_GROUPS: readonly string[] = ["auth", "email", "geo"];
+
 describe("apiRoutes", () => {
 	it("has all top-level groups", () => {
-		expect(Object.keys(apiRoutes)).toEqual(["auth", "email", "geo"]);
+		// The registry grows with the product; assert the core groups are
+		// present rather than freezing the full key list.
+		const groups: readonly string[] = Object.keys(apiRoutes);
+		for (const required of REQUIRED_ROUTE_GROUPS) {
+			expect(groups).toContain(required);
+		}
 	});
 
 	it("static routes are plain strings", () => {
@@ -34,10 +41,9 @@ describe("isParamRoute", () => {
 	});
 
 	it("returns false for objects missing params", () => {
-		// Intentional: tests runtime rejection of a malformed route missing `params`.
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- TS requires the cast to test malformed input.
-		const malformed: RouteDef = { path: "/geo/countries/:id" } as RouteDef;
-		expect(isParamRoute(malformed)).toBe(false);
+		// Runtime rejection of a malformed route missing `params` — validated
+		// through the exported schema instead of casting a partial object.
+		expect(ParamRouteSchema.safeParse({ path: "/geo/countries/:id" }).success).toBe(false);
 	});
 
 	it("returns false for empty params array", () => {

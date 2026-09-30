@@ -11,3 +11,38 @@
 
 @import "./base.css";
 @import "./components.css";
+
+:root {
+	--scrollbar-size: 0.5rem;
+	--scrollbar-thumb: color-mix(in srgb, var(--muted-foreground) 58%, transparent);
+	--scrollbar-thumb-hover: color-mix(in srgb, var(--muted-foreground) 76%, transparent);
+}
+
+html,
+body,
+* {
+	scrollbar-width: thin;
+	scrollbar-color: var(--scrollbar-thumb) transparent;
+}
+
+*::-webkit-scrollbar {
+	width: var(--scrollbar-size);
+	height: var(--scrollbar-size);
+}
+
+*::-webkit-scrollbar-track {
+	background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+	background: var(--scrollbar-thumb);
+	border: 2px solid transparent;
+	border-radius: 9999px;
+	background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+	background: var(--scrollbar-thumb-hover);
+	border: 2px solid transparent;
+	background-clip: padding-box;
+}

@@ -6,6 +6,7 @@ import { PrismaService } from "../../../prisma/prisma.service";
 import { AuthorizationCacheService } from "../cache/authorization-cache.service";
 import { AuthorizationEventEmitter } from "../events/authorization.events";
 import { UserSessionRevocationService } from "../services/user-session-revocation.service";
+import { runWithSystemRlsContext } from "../../../prisma/rls-context";
 
 /**
  * Scheduled job that cleans up expired direct user permissions.
@@ -33,6 +34,10 @@ export class PermissionExpiryCleanup {
 	 */
 	@Cron(CronExpression.EVERY_HOUR)
 	public async handleExpiryCleanup(): Promise<void> {
+		await runWithSystemRlsContext("scheduled.maintenance", async (): Promise<void> => this.runHandleExpiryCleanup());
+	}
+
+	private async runHandleExpiryCleanup(): Promise<void> {
 		const nowMs = nowEpochMs();
 
 		const expired = await this.prisma.userPermission.findMany({

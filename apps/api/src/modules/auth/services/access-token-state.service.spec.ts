@@ -1,26 +1,31 @@
 import { UnauthorizedException } from "@nestjs/common";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { TypedConfigService } from "../../../config/typed-config.service";
-import type { PrismaService } from "../../../prisma/prisma.service";
+import { TypedConfigService } from "../../../config/typed-config.service";
+import { PrismaService } from "../../../prisma/prisma.service";
 
 import { AccessTokenStateService } from "./access-token-state.service";
 
-function createConfigMock(): TypedConfigService {
-	return {
-		accessTokenStateCacheTtlMs: 30_000,
-		accessTokenStateCacheMaxEntries: 50_000,
-	} as TypedConfigService;
-}
+const mocks = vi.hoisted(() => ({
+	userFindUnique: vi.fn(),
+	userUpdate: vi.fn(),
+}));
+
+vi.mock("../../../config/typed-config.service", () => ({
+	TypedConfigService: class {
+		public readonly accessTokenStateCacheTtlMs = 30_000;
+		public readonly accessTokenStateCacheMaxEntries = 50_000;
+	},
+}));
+
+vi.mock("../../../prisma/prisma.service", () => ({
+	PrismaService: class {
+		public readonly user = { findUnique: mocks.userFindUnique, update: mocks.userUpdate };
+	},
+}));
 
 describe("AccessTokenStateService", () => {
 	let service: AccessTokenStateService;
-	let prisma: {
-		user: {
-			findUnique: ReturnType<typeof vi.fn>;
-			update: ReturnType<typeof vi.fn>;
-		};
-	};
 
 	const userId = "user-1";
 	const accountState = {
@@ -30,21 +35,16 @@ describe("AccessTokenStateService", () => {
 	};
 
 	beforeEach(() => {
-		prisma = {
-			user: {
-				findUnique: vi.fn().mockResolvedValue(accountState),
-				update: vi.fn(),
-			},
-		};
-
-		service = new AccessTokenStateService(prisma as unknown as PrismaService, createConfigMock());
+		vi.clearAllMocks();
+		mocks.userFindUnique.mockResolvedValue(accountState);
+		service = new AccessTokenStateService(new PrismaService(), new TypedConfigService());
 	});
 
 	it("uses the cache on a second validation for the same user", async () => {
 		await service.assertTokenValid(userId, 3);
 		await service.assertTokenValid(userId, 3);
 
-		expect(prisma.user.findUnique).toHaveBeenCalledTimes(1);
+		expect(mocks.userFindUnique).toHaveBeenCalledTimes(1);
 	});
 
 	it("throws TOKEN_VERSION_MISMATCH when the JWT version is stale", async () => {
@@ -53,7 +53,7 @@ describe("AccessTokenStateService", () => {
 				error: "TOKEN_VERSION_MISMATCH",
 			},
 		});
-		expect(prisma.user.findUnique).toHaveBeenCalledTimes(1);
+		expect(mocks.userFindUnique).toHaveBeenCalledTimes(1);
 	});
 
 	it("invalidate clears the cache so the next check re-fetches from the database", async () => {
@@ -61,11 +61,11 @@ describe("AccessTokenStateService", () => {
 		service.invalidate(userId);
 		await service.assertTokenValid(userId, 3);
 
-		expect(prisma.user.findUnique).toHaveBeenCalledTimes(2);
+		expect(mocks.userFindUnique).toHaveBeenCalledTimes(2);
 	});
 
 	it("rejects deleted accounts before checking tokenVersion", async () => {
-		prisma.user.findUnique.mockResolvedValue({
+		mocks.userFindUnique.mockResolvedValue({
 			...accountState,
 			isDeleted: true,
 		});

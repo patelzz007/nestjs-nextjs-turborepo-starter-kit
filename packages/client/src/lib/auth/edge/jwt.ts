@@ -29,8 +29,7 @@ export function decodeJwtPayload(token: string): JwtPayload | null {
 		const base64: string = payload.replace(/-/g, "+").replace(/_/g, "/");
 		const decoded: string = atob(base64);
 
-		const parsed: unknown = JSON.parse(decoded);
-		const result = JwtPayloadSchema.safeParse(parsed);
+		const result = JwtPayloadSchema.safeParse(JSON.parse(decoded));
 		return result.success ? result.data : null;
 	} catch {
 		return null;

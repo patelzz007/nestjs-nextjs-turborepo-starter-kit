@@ -26,7 +26,7 @@ function extractUser(ctx: ExecutionContext): AuthenticatedUser {
  * }
  * ```
  */
-export const CurrentUser = createParamDecorator((_data: unknown, ctx: ExecutionContext): AuthenticatedUser => {
+export const CurrentUser = createParamDecorator((_data: undefined, ctx: ExecutionContext): AuthenticatedUser => {
 	return extractUser(ctx);
 });
 
@@ -40,6 +40,6 @@ export const CurrentUser = createParamDecorator((_data: unknown, ctx: ExecutionC
  * }
  * ```
  */
-export const CurrentUserId = createParamDecorator((_data: unknown, ctx: ExecutionContext): string => {
+export const CurrentUserId = createParamDecorator((_data: undefined, ctx: ExecutionContext): string => {
 	return extractUser(ctx).id;
 });

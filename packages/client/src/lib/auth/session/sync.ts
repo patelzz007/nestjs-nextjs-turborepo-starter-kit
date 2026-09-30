@@ -62,7 +62,7 @@ export function createAuthChannel(name: string): AuthChannel {
 			}
 		},
 		subscribe(handler: (event: AuthSyncEvent) => void): () => void {
-			const onMessage = (message: MessageEvent<unknown>): void => {
+			const onMessage = (message: MessageEvent): void => {
 				// Validate the payload through the schema — other tabs might post anything.
 				const parsed = AuthSyncEventSchema.safeParse(message.data);
 				if (parsed.success) {

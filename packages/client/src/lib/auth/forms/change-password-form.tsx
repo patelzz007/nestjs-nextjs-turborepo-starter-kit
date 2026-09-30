@@ -10,6 +10,7 @@ import { useCallback, useMemo, useState, type JSX } from "react";
 import { resolveAuthErrorMessage } from "../errors";
 import { useAuth } from "../index";
 import { passwordStrength } from "../password";
+import { catchCaught } from "../../caught";
 
 export interface ChangePasswordFormProps {
 	readonly onSuccess?: () => void;
@@ -52,21 +53,20 @@ export function ChangePasswordForm({ onSuccess }: ChangePasswordFormProps): JSX.
 				return;
 			}
 
-			mutation
-				.mutateAsync(parsed.data)
-				.then((response): void => {
+			void catchCaught(
+				mutation.mutateAsync(parsed.data).then((response): void => {
 					setSuccess(response.data.message);
 					setCurrentPassword("");
 					setNewPassword("");
 					setConfirmPassword("");
 					onSuccess?.();
-				})
-				.catch((err: unknown): void => {
+				}),
+				(err): void => {
 					setError(resolveAuthErrorMessage(err));
-				})
-				.finally((): void => {
-					setIsLoading(false);
-				});
+				},
+			).finally((): void => {
+				setIsLoading(false);
+			});
 		},
 		[confirmPassword, currentPassword, mutation, newPassword, onSuccess],
 	);

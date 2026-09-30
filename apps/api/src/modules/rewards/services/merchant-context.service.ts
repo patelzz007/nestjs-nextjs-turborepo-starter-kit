@@ -1,5 +1,6 @@
 import { ForbiddenException, Injectable } from "@nestjs/common";
 import type { CapabilitySlug, OrganizationRewardMembershipResponse } from "@workspace/shared";
+import { merchantRoleHasCapability } from "@workspace/shared";
 
 import type { MerchantActor } from "../../api-keys/types/merchant-actor.types";
 import type { MerchantApiKeyAuthContext } from "../../api-keys/types/api-key-auth.types";
@@ -13,8 +14,18 @@ const CAPABILITY_TO_CEDAR_ACTION: Partial<Record<CapabilitySlug, string>> = {
 	"merchant:view_redemptions": "rewardhub:view_redemptions",
 	"merchant:manage_api_keys": "rewardhub:manage_api_keys",
 	"merchant:view_analytics": "rewardhub:view_analytics",
-	"merchant:manage_kyb": "rewardhub:manage_kyb",
 };
+
+/** Baseline role gate (shared with the merchant app); tenant Cedar policies may only narrow it. */
+function requireRoleCapability(membership: OrganizationRewardMembershipResponse, capability: CapabilitySlug): void {
+	if (!merchantRoleHasCapability(membership.role, capability)) {
+		throw new ForbiddenException({
+			message: "Your organization role does not include this capability",
+			error: "ORGANIZATION_ROLE_CAPABILITY_REQUIRED",
+			capability,
+		});
+	}
+}
 
 @Injectable()
 export class MerchantContextService {
@@ -63,6 +74,7 @@ export class MerchantContextService {
 		}
 
 		const resolved = await this.organizationRewardAuth.resolveOrganizationFromSlug(actor.userId, actor.orgSlug ?? actor.organizationId);
+		requireRoleCapability(resolved.membership, capability);
 		await this.organizationRewardAuth.requireCedarAction(actor.userId, actor.organizationId, cedarAction, "RewardHub", actor.organizationId, resolved.membership);
 	}
 
@@ -81,6 +93,7 @@ export class MerchantContextService {
 				capability,
 			});
 		}
+		requireRoleCapability(resolved.membership, capability);
 		await this.organizationRewardAuth.requireCedarAction(userId, resolved.organizationId, cedarAction, "RewardHub", resolved.organizationId, resolved.membership);
 	}
 

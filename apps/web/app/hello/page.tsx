@@ -1,5 +1,4 @@
 import { createWebServerCaller } from "@/lib/web-server-api";
-import { hasServerSession } from "@/lib/auth/server";
 
 import HelloView from "./hello-view";
 
@@ -14,7 +13,7 @@ export const dynamic = "force-dynamic";
  */
 export default async function HelloPage(): Promise<React.JSX.Element> {
 	const server = createWebServerCaller();
-	const [data, sessionActive] = await Promise.all([server.auth.me.query(undefined), hasServerSession()]);
+	const data = await server.auth.me.query(undefined);
 
-	return <HelloView initialEnvelope={data} sessionActive={sessionActive} />;
+	return <HelloView initialEnvelope={data} />;
 }

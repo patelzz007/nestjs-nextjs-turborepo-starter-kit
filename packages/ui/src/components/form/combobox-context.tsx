@@ -20,9 +20,8 @@ export type ComboboxSize = z.infer<typeof comboboxSizeSchema>;
  * The calc is evaluated once by the browser instead of per list element, and
  * consumers can override `--combobox-list-max-h` at their own scope.
  */
-/** CSS custom properties are kebab-case by spec; bypass the camelCase naming rule for this one. */
-// eslint-disable-next-line @typescript-eslint/naming-convention
-export type ComboboxListMaxHeightStyle = React.CSSProperties & { readonly "--combobox-list-max-h": string };
+/** CSS custom properties are kebab-case by spec, so the key is declared via `Record` rather than a property signature. */
+export type ComboboxListMaxHeightStyle = React.CSSProperties & Readonly<Record<"--combobox-list-max-h", string>>;
 
 export const comboboxListMaxHeightStyle: ComboboxListMaxHeightStyle = {
 	"--combobox-list-max-h": "min(calc(var(--spacing-72) - var(--spacing-9)), calc(var(--available-height) - var(--spacing-9)))",

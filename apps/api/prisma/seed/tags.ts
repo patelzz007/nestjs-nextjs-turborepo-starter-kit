@@ -1,9 +1,14 @@
 import type { Tag, User } from "@prisma/client";
 
 import { prisma } from "./client";
+import { requireRow } from "./require-row";
 
 export async function createTags(users: User[]): Promise<Tag[]> {
-	const get = (email: string) => users.find((u) => u.email === email)!;
+	const get = (email: string): User =>
+		requireRow(
+			users.find((u) => u.email === email),
+			`user ${email}`,
+		);
 
 	const tagsData = [
 		// Alice

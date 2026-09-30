@@ -1,14 +1,13 @@
 "use client";
 
 import { MerchantLocationScopeBanner } from "@/components/layout/merchant-location-scope-banner";
-import { MerchantAccessDenied } from "@/components/access/merchant-capability-gate";
+import { MerchantAccessDenied, MerchantCapabilityGate } from "@/components/access/merchant-capability-gate";
 import { MerchantPageHeader } from "@/components/merchant-ui/page-header";
 import { MerchantSurfacePanel } from "@/components/merchant-ui/surface-panel";
-import { useMerchantCapabilities } from "@/lib/org/capabilities";
 import { useActiveLocationFilter, useMerchantLocation } from "@/lib/org/location-context";
-import { stubApiMeta } from "@/lib/api-envelope";
+import { stubApiMeta, successEnvelope } from "@/lib/api-envelope";
 import { useAuth } from "@workspace/client/lib/auth";
-import type { MerchantApiKeySummary } from "@workspace/shared";
+import { MERCHANT_CAPABILITY, type MerchantApiKeySummary } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/feedback/badge";
 import { Button } from "@workspace/ui/components/form/button";
 import { Input } from "@workspace/ui/components/form/input";
@@ -47,33 +46,40 @@ function ApiKeyRow({ apiKey, isRevoking, onRevoke }: ApiKeyRowProps): React.JSX.
 
 export interface MerchantApiKeysPageViewProps {
 	readonly orgSlug: string;
-	readonly canManageApiKeys: boolean;
 	readonly initialKeys?: readonly MerchantApiKeySummary[];
 }
 
-export function MerchantApiKeysPageView({ orgSlug, canManageApiKeys, initialKeys }: MerchantApiKeysPageViewProps): React.JSX.Element {
+const API_KEYS_DESCRIPTION = "Create keys for in-store terminals. Each key is shown once at creation — copy it immediately.";
+
+/** POS API keys route — list/create/revoke all require `merchant:manage_api_keys`. */
+export function MerchantApiKeysPageView(props: MerchantApiKeysPageViewProps): React.JSX.Element {
+	return (
+		<MerchantCapabilityGate
+			capability={MERCHANT_CAPABILITY.manageApiKeys}
+			fallback={
+				<div className="space-y-8">
+					<MerchantPageHeader title="POS API keys" description="Keys for redemption terminals — owner or admin access required." />
+					<MerchantAccessDenied
+						title="Owner or admin access required"
+						description="API key management is limited to store owners and admins. Contact your account owner if you need a new terminal key."
+					/>
+				</div>
+			}>
+			<MerchantApiKeysPageContent {...props} />
+		</MerchantCapabilityGate>
+	);
+}
+
+function MerchantApiKeysPageContent({ orgSlug, initialKeys }: MerchantApiKeysPageViewProps): React.JSX.Element {
 	const { api } = useAuth();
-	const { hasCapability, isPolicyReady } = useMerchantCapabilities();
 	const { locationId } = useActiveLocationFilter();
 	const { activeLocation } = useMerchantLocation();
-	const canManage = isPolicyReady ? hasCapability("merchant:manage_api_keys") : canManageApiKeys;
 
-	const initialKeysData = React.useMemo(
-		() =>
-			initialKeys !== undefined
-				? {
-						success: true as const,
-						data: [...initialKeys],
-						meta: stubApiMeta(),
-					}
-				: undefined,
-		[initialKeys],
-	);
+	const initialKeysData = React.useMemo(() => (initialKeys !== undefined ? successEnvelope([...initialKeys], stubApiMeta()) : undefined), [initialKeys]);
 
 	const keysQuery = api.organizations.apiKeys.list.useQuery(
 		{ orgSlug, locationId },
 		{
-			enabled: canManage,
 			initialData: locationId === undefined ? initialKeysData : undefined,
 		},
 	);
@@ -112,30 +118,9 @@ export function MerchantApiKeysPageView({ orgSlug, canManageApiKeys, initialKeys
 		[orgSlug, revokeMutation],
 	);
 
-	if (!canManage) {
-		return (
-			<div className="space-y-8">
-				<MerchantPageHeader title="POS API keys" description="Keys for redemption terminals — owner access required." />
-				<MerchantAccessDenied
-					title="Owner access required"
-					description="API key management is limited to the store owner. Contact your account owner if you need a new terminal key."
-				/>
-			</div>
-		);
-	}
-
-	if (!isPolicyReady) {
-		return (
-			<div className="space-y-8">
-				<MerchantPageHeader title="POS API keys" description="Create keys for in-store terminals. Each key is shown once at creation — copy it immediately." />
-				<p className="text-sm text-muted-foreground">Loading API keys…</p>
-			</div>
-		);
-	}
-
 	return (
 		<div className="space-y-8">
-			<MerchantPageHeader title="POS API keys" description="Create keys for in-store terminals. Each key is shown once at creation — copy it immediately." />
+			<MerchantPageHeader title="POS API keys" description={API_KEYS_DESCRIPTION} />
 			<MerchantLocationScopeBanner />
 
 			<div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">

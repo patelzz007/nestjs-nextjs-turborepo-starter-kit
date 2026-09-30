@@ -21,10 +21,11 @@ import { passwordStrength } from "../../auth/password";
 import type { MerchantKybFieldValues } from "../kyb/fields";
 import { submitMerchantOnboardingComplete, submitMerchantOnboardingDocuments } from "../kyb/multipart";
 import { MerchantOnboardingAccountStep } from "./onboarding-account-step";
-import { MerchantOnboardingBusinessStep } from "./onboarding-business-step";
+import { MerchantOnboardingBusinessStep, type BusinessFieldName } from "./onboarding-business-step";
 import { MerchantOnboardingDocumentsStep } from "./onboarding-documents-step";
 import { MerchantOnboardingRegistrationStep } from "./onboarding-registration-step";
 import { MerchantOnboardingStoresStep, type OnboardingLocationDraftRow } from "./onboarding-stores-step";
+import { catchCaught } from "../../caught";
 
 type FlowStep = "loading" | "invalid" | "wizard" | "success";
 type WizardPanel = "business" | "stores" | "registration" | "documents" | "account";
@@ -111,9 +112,8 @@ export function MerchantOnboardingView({ token, loginHref = "/auth/login" }: Mer
 
 	useEffect((): (() => void) => {
 		let cancelled = false;
-		void api.organizations.onboarding.validate
-			.mutate({ token })
-			.then((response): void => {
+		void catchCaught(
+			api.organizations.onboarding.validate.mutate({ token }).then((response): void => {
 				if (cancelled) {
 					return;
 				}
@@ -121,19 +121,20 @@ export function MerchantOnboardingView({ token, loginHref = "/auth/login" }: Mer
 				setValues((current) => ({ ...current, businessName: response.data.businessName, legalName: response.data.businessName }));
 				setPrimaryLocation((current) => ({ ...current, name: response.data.businessName }));
 				setFlowStep("wizard");
-			})
-			.catch((reason: unknown): void => {
+			}),
+			(reason): void => {
 				if (!cancelled) {
 					setFlowStep("invalid");
 					setError(resolveAuthErrorMessage(reason));
 				}
-			});
+			},
+		);
 		return (): void => {
 			cancelled = true;
 		};
 	}, [api.organizations.onboarding.validate, token]);
 
-	const handleBusinessFieldChange = useCallback((field: "legalName", value: string): void => {
+	const handleBusinessFieldChange = useCallback((field: BusinessFieldName, value: string): void => {
 		setValues((current) => ({ ...current, [field]: value }));
 	}, []);
 
@@ -273,18 +274,18 @@ export function MerchantOnboardingView({ token, loginHref = "/auth/login" }: Mer
 			}
 
 			setIsSubmitting(true);
-			void submitMerchantOnboardingComplete(API_BASE_URL, parsed.data)
-				.then(async (response): Promise<void> => {
+			void catchCaught(
+				submitMerchantOnboardingComplete(API_BASE_URL, parsed.data).then(async (response): Promise<void> => {
 					await submitMerchantOnboardingDocuments(api, token, values.documents);
 					setBusinessName(response.businessName);
 					setFlowStep("success");
-				})
-				.catch((reason: unknown): void => {
+				}),
+				(reason): void => {
 					setError(resolveAuthErrorMessage(reason));
-				})
-				.finally((): void => {
-					setIsSubmitting(false);
-				});
+				},
+			).finally((): void => {
+				setIsSubmitting(false);
+			});
 		},
 		[additionalLocations, api, category, fullName, password, primaryLocation, token, values],
 	);

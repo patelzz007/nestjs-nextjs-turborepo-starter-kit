@@ -1,7 +1,7 @@
 import * as crypto from "crypto";
 
 import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from "@nestjs/common";
-import { TwoFactorLoginChallengePurpose } from "@prisma/client";
+import { TwoFactorLoginChallengePurpose, type Prisma } from "@prisma/client";
 import { generateSecret, generateURI, verifySync } from "otplib";
 import * as QRCode from "qrcode";
 import type {
@@ -507,7 +507,7 @@ export class TwoFactorService {
 		return currentTimeStep + delta;
 	}
 
-	private parseBackupCodeHashes(value: Parameters<typeof BackupCodesHashesSchema.parse>[0]): readonly string[] {
+	private parseBackupCodeHashes(value: Prisma.JsonValue): readonly string[] {
 		return BackupCodesHashesSchema.parse(value);
 	}
 }

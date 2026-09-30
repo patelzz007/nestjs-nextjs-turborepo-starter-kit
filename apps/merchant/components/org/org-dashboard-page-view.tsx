@@ -1,10 +1,13 @@
 "use client";
 
+import { useMerchantRoleAccess } from "@/components/access/merchant-authorization-provider";
+import { MerchantCapabilityGate } from "@/components/access/merchant-capability-gate";
 import { MerchantStatCard } from "@/components/merchant-ui/stat-card";
 import { MerchantSurfacePanel } from "@/components/merchant-ui/surface-panel";
 import { OrganizationLocationList } from "@/components/org/organization-location-list";
 import { organizationPath } from "@/lib/org/slug";
-import type { KybStatus, OrganizationContextResponse, OrganizationLifecycleState, OrganizationMembershipRole } from "@workspace/shared";
+import { Can } from "@workspace/client/lib/auth/can";
+import { MERCHANT_CAPABILITY, type KybStatus, type OrganizationContextResponse, type OrganizationLifecycleState, type OrganizationMembershipRole } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/feedback/badge";
 import { Button, buttonVariants } from "@workspace/ui/components/form/button";
 import { cn } from "@workspace/ui/lib/core/utils";
@@ -96,7 +99,19 @@ export interface OrgDashboardPageViewProps {
 	readonly contextError?: boolean;
 }
 
-export function OrgDashboardPageView({ orgSlug, context, contextError = false }: OrgDashboardPageViewProps): React.JSX.Element {
+/** Organization dashboard — requires `merchant:view_dashboard`; shortcuts are shown only for routes the role can use. */
+export function OrgDashboardPageView(props: OrgDashboardPageViewProps): React.JSX.Element {
+	return (
+		<MerchantCapabilityGate capability={MERCHANT_CAPABILITY.viewDashboard}>
+			<OrgDashboardPageContent {...props} />
+		</MerchantCapabilityGate>
+	);
+}
+
+function OrgDashboardPageContent({ orgSlug, context, contextError = false }: OrgDashboardPageViewProps): React.JSX.Element {
+	const canManageTeam = useMerchantRoleAccess("manageTeam");
+	const canSubmitKyb = useMerchantRoleAccess("submitKyb");
+	const canManageLocations = useMerchantRoleAccess("manageLocations");
 	const displayName = context?.organization.displayName ?? orgSlug;
 	const lifecycleState = context?.organization.lifecycleState;
 	const membershipRole = context?.membership.role;
@@ -191,18 +206,22 @@ export function OrgDashboardPageView({ orgSlug, context, contextError = false }:
 							description="View every store site under this organization and your location access scope."
 							icon={<MapPin className="size-5" aria-hidden="true" />}
 						/>
-						<OrgNavLink
-							href={organizationPath(orgSlug, "settings/team")}
-							title="Team & access"
-							description="Invite members, manage roles, and review access requests."
-							icon={<Users className="size-5" aria-hidden="true" />}
-						/>
-						<OrgNavLink
-							href={organizationPath(orgSlug, "settings/verification")}
-							title="Business verification"
-							description="Submit or update KYB documents for this organization."
-							icon={<ShieldCheck className="size-5" aria-hidden="true" />}
-						/>
+						{canManageTeam ? (
+							<OrgNavLink
+								href={organizationPath(orgSlug, "settings/team")}
+								title="Team & access"
+								description="Invite members, manage roles, and review access requests."
+								icon={<Users className="size-5" aria-hidden="true" />}
+							/>
+						) : null}
+						{canSubmitKyb ? (
+							<OrgNavLink
+								href={organizationPath(orgSlug, "settings/verification")}
+								title="Business verification"
+								description="Submit or update KYB documents for this organization."
+								icon={<ShieldCheck className="size-5" aria-hidden="true" />}
+							/>
+						) : null}
 					</div>
 				</section>
 
@@ -212,24 +231,30 @@ export function OrgDashboardPageView({ orgSlug, context, contextError = false }:
 						<p className="text-sm text-muted-foreground">Rewards, analytics, and POS activity for this organization.</p>
 					</div>
 					<div className="space-y-3">
-						<OrgNavLink
-							href={organizationPath(orgSlug, "rewards")}
-							title="Rewards"
-							description="Claims, redemptions, conversion metrics, and active campaigns."
-							icon={<Gift className="size-5" aria-hidden="true" />}
-						/>
-						<OrgNavLink
-							href={organizationPath(orgSlug, "analytics")}
-							title="Analytics"
-							description="Performance trends and top-performing rewards."
-							icon={<BarChart3 className="size-5" aria-hidden="true" />}
-						/>
-						<OrgNavLink
-							href={organizationPath(orgSlug, "redemptions")}
-							title="Redemptions log"
-							description="Recent POS scans and redemption confirmations."
-							icon={<LayoutDashboard className="size-5" aria-hidden="true" />}
-						/>
+						<Can permission={MERCHANT_CAPABILITY.viewRewards}>
+							<OrgNavLink
+								href={organizationPath(orgSlug, "rewards")}
+								title="Rewards"
+								description="Claims, redemptions, conversion metrics, and active campaigns."
+								icon={<Gift className="size-5" aria-hidden="true" />}
+							/>
+						</Can>
+						<Can permission={MERCHANT_CAPABILITY.viewAnalytics}>
+							<OrgNavLink
+								href={organizationPath(orgSlug, "analytics")}
+								title="Analytics"
+								description="Performance trends and top-performing rewards."
+								icon={<BarChart3 className="size-5" aria-hidden="true" />}
+							/>
+						</Can>
+						<Can permission={MERCHANT_CAPABILITY.viewRedemptions}>
+							<OrgNavLink
+								href={organizationPath(orgSlug, "redemptions")}
+								title="Redemptions log"
+								description="Recent POS scans and redemption confirmations."
+								icon={<LayoutDashboard className="size-5" aria-hidden="true" />}
+							/>
+						</Can>
 					</div>
 				</section>
 			</div>
@@ -245,7 +270,7 @@ export function OrgDashboardPageView({ orgSlug, context, contextError = false }:
 						</div>
 						<Link href={organizationPath(orgSlug, "settings/locations")} className={cn(buttonVariants({ variant: "outline", size: "sm" }), "gap-2 bg-transparent")}>
 							<MapPin className="size-4" aria-hidden="true" />
-							Manage locations
+							{canManageLocations ? "Manage locations" : "View locations"}
 						</Link>
 					</div>
 					<OrganizationLocationList

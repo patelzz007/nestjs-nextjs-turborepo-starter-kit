@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import type { Permission, UserPermission, UserRole } from "@prisma/client";
+import type { AclEffect, Permission, UserPermission, UserRole } from "@prisma/client";
 
 import { nowEpochMs } from "@workspace/shared";
 
@@ -39,6 +39,11 @@ export class RoleAssignmentRepository {
 				data: { isDeleted: true, deletedAt: nowEpochMs() },
 			});
 			if (permissionIds.length > 0) {
+				// Revive previously soft-deleted rows (the unique key makes createMany skip them).
+				await tx.rolePermission.updateMany({
+					where: { roleId, permissionId: { in: [...permissionIds] } },
+					data: { isDeleted: false, deletedAt: null },
+				});
 				await tx.rolePermission.createMany({
 					data: permissionIds.map((permissionId) => ({ roleId, permissionId })),
 					skipDuplicates: true,
@@ -69,6 +74,11 @@ export class RoleAssignmentRepository {
 				data: { isDeleted: true, deletedAt: nowEpochMs() },
 			});
 			if (roleIds.length > 0) {
+				// Revive previously soft-deleted rows (the unique key makes createMany skip them).
+				await tx.userRole.updateMany({
+					where: { userId, roleId: { in: [...roleIds] } },
+					data: { isDeleted: false, deletedAt: null },
+				});
 				await tx.userRole.createMany({
 					data: roleIds.map((roleId) => ({ userId, roleId })),
 					skipDuplicates: true,
@@ -83,13 +93,14 @@ export class RoleAssignmentRepository {
 		});
 	}
 
-	public async givePermissionToUser(userId: string, permissionId: string, expiresAt?: number): Promise<UserPermission> {
+	public async givePermissionToUser(userId: string, permissionId: string, expiresAt?: number, effect: AclEffect = "ALLOW"): Promise<UserPermission> {
 		return this.prisma.userPermission.upsert({
 			where: { userId_permissionId: { userId, permissionId } },
-			create: { userId, permissionId, expiresAt: expiresAt ?? null },
+			create: { userId, permissionId, effect, expiresAt: expiresAt ?? null },
 			update: {
 				isDeleted: false,
 				deletedAt: null,
+				effect,
 				...(expiresAt !== undefined ? { expiresAt } : {}),
 			},
 		});
@@ -109,6 +120,11 @@ export class RoleAssignmentRepository {
 				data: { isDeleted: true, deletedAt: nowEpochMs() },
 			});
 			if (permissionIds.length > 0) {
+				// Revive previously soft-deleted rows (the unique key makes createMany skip them).
+				await tx.userPermission.updateMany({
+					where: { userId, permissionId: { in: [...permissionIds] } },
+					data: { isDeleted: false, deletedAt: null, effect: "ALLOW", expiresAt: null },
+				});
 				await tx.userPermission.createMany({
 					data: permissionIds.map((permissionId) => ({ userId, permissionId })),
 					skipDuplicates: true,

@@ -38,12 +38,15 @@ export type RouteDef = z.infer<typeof RouteDefSchema>;
 /** Nested route tree — leaves are RouteDef, branches are nested groups. */
 export type RouteTree = RouteDef | { readonly [key: string]: RouteTree };
 
-function isRouteDef(value: unknown): value is RouteDef {
+/** A branch of the route tree (a named group of nested routes). */
+type RouteTreeNode = Readonly<Record<string, RouteTree>>;
+
+function isRouteDef(value: RouteTree): value is RouteDef {
 	return RouteDefSchema.safeParse(value).success;
 }
 
-function isRouteTreeNode(value: unknown): value is Record<string, RouteTree> {
-	return value !== null && typeof value === "object" && !Array.isArray(value) && !isRouteDef(value);
+function isRouteTreeNode(value: RouteTree): value is RouteTreeNode {
+	return typeof value === "object" && !Array.isArray(value) && !isRouteDef(value);
 }
 
 /** True when `route` is a parameterized route (has `.params`). */
@@ -244,7 +247,6 @@ export const apiRoutes = {
 			params: ["organizationId", "documentId"],
 		},
 	},
-	// @app-generated:begin sampleCategory
 	sampleCategory: {
 		list: "/sample-category",
 		detail: { path: "/sample-category/:id", params: ["id"] },
@@ -255,8 +257,6 @@ export const apiRoutes = {
 		delete: { path: "/sample-category/:id", params: ["id"] },
 		restore: { path: "/sample-category/:id/restore", params: ["id"] },
 	},
-	// @app-generated:end sampleCategory
-	// @app-generated:begin product
 	product: {
 		list: "/product",
 		detail: { path: "/product/:id", params: ["id"] },
@@ -267,7 +267,6 @@ export const apiRoutes = {
 		delete: { path: "/product/:id", params: ["id"] },
 		restore: { path: "/product/:id/restore", params: ["id"] },
 	},
-	// @app-generated:end product
 } satisfies Record<string, RouteTree>;
 
 /** The full route tree — exported for type-level access. */
@@ -290,7 +289,7 @@ function extractPlaceholders(path: string): string[] {
 }
 
 /** Validate a single route leaf against the Zod schema + placeholder consistency. */
-function validateLeaf(routeName: string, value: unknown): void {
+function validateLeaf(routeName: string, value: RouteDef): void {
 	const result = RouteDefSchema.safeParse(value);
 	if (!result.success) {
 		throw new Error(`apiRoutes: Invalid route "${routeName}" — ${result.error.message}`);
@@ -309,7 +308,7 @@ function validateLeaf(routeName: string, value: unknown): void {
 
 /** Walk the route tree and validate every leaf (supports nested groups). */
 function validateRoutes(): void {
-	function walk(node: Record<string, RouteTree>, prefix: string): void {
+	function walk(node: RouteTreeNode, prefix: string): void {
 		for (const [name, value] of Object.entries(node)) {
 			const routeName = prefix.length > 0 ? `${prefix}.${name}` : name;
 			if (isRouteDef(value)) {

@@ -8,6 +8,6 @@ import { notFound } from "next/navigation";
  * the 404 page. Without this file, an unknown URL would fall back to the root
  * `app/not-found.tsx` (no shell).
  */
-export default function PanelCatchAll(): never {
+export default function PanelCatchAll(): React.ReactNode {
 	notFound();
 }

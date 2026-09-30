@@ -871,7 +871,6 @@ export const apiRouter = {
 	// NOTE: `as const` is required here — it preserves literal method/path types
 	// so that `typeof apiRouter` can be used to derive the full client + server
 	// type system. Without it, TypeScript widens all strings to `string`.,
-	// @app-generated:begin sampleCategory
 	sampleCategory: {
 		list: defineQuery(apiContract.sampleCategory.list, {
 			response: envelope(z.array(SampleCategorySchema), ApiPaginatedMetaSchema),
@@ -916,8 +915,6 @@ export const apiRouter = {
 			queryKey: ({ id }) => ["sample-category", "restore", id],
 		}),
 	},
-	// @app-generated:end sampleCategory
-	// @app-generated:begin product
 	product: {
 		list: defineQuery(apiContract.product.list, {
 			response: envelope(z.array(ProductSchema), ApiPaginatedMetaSchema),
@@ -965,8 +962,7 @@ export const apiRouter = {
 			queryKey: ({ id }) => ["product", "restore", id],
 		}),
 	},
-	// @app-generated:end product
-} as const;
+};
 
 /** The full router tree — used to derive the client router + server caller types. */
 export type ApiRouter = typeof apiRouter;

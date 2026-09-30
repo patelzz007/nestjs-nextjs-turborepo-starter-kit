@@ -2,6 +2,7 @@ import type { Permission, PermissionAction, PermissionResource, Plan, Role, User
 import * as bcrypt from "bcrypt";
 
 import { prisma } from "./client";
+import { requireRow } from "./require-row";
 
 /** Grace period before MFA enrollment is required for existing seed users. */
 const MFA_ENROLLMENT_GRACE_MS = 30 * 24 * 60 * 60 * 1000;
@@ -206,8 +207,16 @@ export async function createUsers(): Promise<User[]> {
 }
 
 export async function assignRolesToUsers(users: User[], roles: Role[]): Promise<void> {
-	const get = (email: string) => users.find((u) => u.email === email)!;
-	const role = (name: string) => roles.find((r) => r.name === name)!;
+	const get = (email: string): User =>
+		requireRow(
+			users.find((u) => u.email === email),
+			`user ${email}`,
+		);
+	const role = (name: string): Role =>
+		requireRow(
+			roles.find((r) => r.name === name),
+			`role ${name}`,
+		);
 
 	const assignments = [
 		{ user: get("superadmin@example.com"), role: role("SuperAdmin") },
@@ -240,8 +249,17 @@ export async function assignRolesToUsers(users: User[], roles: Role[]): Promise<
 }
 
 export async function assignAdditionalPermissions(users: User[], permissions: Permission[]): Promise<void> {
-	const get = (email: string) => users.find((u) => u.email === email)!;
-	const perm = (action: PermissionAction, resource: PermissionResource) => permissions.find((p) => p.action === action && p.resource === resource)!;
+	const get = (email: string): User =>
+		requireRow(
+			users.find((u) => u.email === email),
+			`user ${email}`,
+		);
+	// Permissions exist once per scope; direct grants target the GLOBAL row.
+	const perm = (action: PermissionAction, resource: PermissionResource): Permission =>
+		requireRow(
+			permissions.find((p) => p.action === action && p.resource === resource && p.scope === "GLOBAL"),
+			`permission ${action}:${resource} (GLOBAL)`,
+		);
 
 	const overrides = [
 		// admin@ — role lacks DELETE:USER; demonstrates a direct permission grant.

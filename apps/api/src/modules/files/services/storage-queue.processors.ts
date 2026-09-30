@@ -9,6 +9,7 @@ import type { ObjectStorage } from "../../storage/domain/object-storage.port";
 import { OBJECT_STORAGE } from "../../storage/domain/storage.tokens";
 import { toStorageObjectLocator } from "../../storage/utils/storage-locator.util";
 import { StoredFileRepository } from "../repositories/stored-file.repository";
+import { runWithSystemRlsContext } from "../../../prisma/rls-context";
 
 const STORAGE_CLEANUP_INTERVAL_MS = 60 * 60 * 1000;
 const STORAGE_CLEANUP_SCHEDULER_ID = "storage-cleanup";
@@ -30,14 +31,14 @@ export class StorageQueueScheduler implements OnModuleInit {
 
 		const schedulers = await this.cleanupQueue.getJobSchedulers(0, -1, true);
 		for (const scheduler of schedulers) {
-			if (!hasLegacyRepeatableKeyShape(scheduler.key)) {
+			if (!hasLegacyRepeatableKeyShape(scheduler.key) && scheduler.key !== `repeat:${STORAGE_CLEANUP_SCHEDULER_ID}`) {
 				continue;
 			}
 			try {
 				await this.cleanupQueue.removeJobScheduler(scheduler.key);
-				this.logger.warn(`Removed legacy repeatable scheduler ${scheduler.key} from ${QUEUE_NAMES[5]}`);
+				this.logger.warn(`Removed stale scheduler ${scheduler.key} from ${QUEUE_NAMES[5]}`);
 			} catch (error) {
-				this.logger.warn(`Could not remove legacy repeatable scheduler ${scheduler.key}: ${String(error)}`);
+				this.logger.warn(`Could not remove stale scheduler ${scheduler.key}: ${String(error)}`);
 			}
 		}
 
@@ -60,6 +61,10 @@ export class StorageCleanupProcessor extends WorkerHost {
 	}
 
 	public async process(job: Job): Promise<void> {
+		await runWithSystemRlsContext("queue.job", async (): Promise<void> => this.handle(job));
+	}
+
+	private async handle(job: Job): Promise<void> {
 		StorageCleanupJobSchema.parse(job.data);
 		const staleFiles = await this.repository.listStalePending(STALE_PENDING_MAX_AGE_MS);
 		for (const file of staleFiles) {
@@ -90,6 +95,10 @@ export class StorageDeleteProcessor extends WorkerHost {
 	}
 
 	public async process(job: Job): Promise<void> {
+		await runWithSystemRlsContext("queue.job", async (): Promise<void> => this.handle(job));
+	}
+
+	private async handle(job: Job): Promise<void> {
 		const payload = StorageDeleteJobSchema.parse(job.data);
 		const locator = toStorageObjectLocator(payload.provider, payload.container, payload.path);
 		try {

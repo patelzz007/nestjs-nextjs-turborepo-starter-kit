@@ -1,5 +1,6 @@
 import { Body, Controller, Delete, Get, Header, Param, Patch, Post, Query } from "@nestjs/common";
 import { ApiTags, ApiOperation, ApiOkResponse, ApiQuery } from "@nestjs/swagger";
+import type { z } from "zod";
 import type { City, Country, Region, State, Subregion } from "@prisma/client";
 
 import {
@@ -15,6 +16,7 @@ import {
 import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe";
 
 import { RequirePermission } from "../auth/decorators/require-permission.decorator";
+import { Authorize } from "../authorization/decorators/authorize.decorator";
 
 import {
 	GeoService,
@@ -52,17 +54,18 @@ export class GeoController {
 	@ApiQuery({ name: "q", required: true, description: "Search query" })
 	@ApiQuery({ name: "country", required: false, description: "ISO 3166-1 alpha-2 country code to scope results" })
 	@ApiQuery({ name: "limit", required: false, description: "Max results (1-20)", example: 10 })
-	public autocomplete(@Query(new ZodValidationPipe(GeoAutocompleteQuerySchema)) query: Parameters<GeoService["autocomplete"]>[0]): Promise<readonly AutocompleteItem[]> {
+	public autocomplete(@Query(new ZodValidationPipe(GeoAutocompleteQuerySchema)) query: z.output<typeof GeoAutocompleteQuerySchema>): Promise<readonly AutocompleteItem[]> {
 		return this.geoService.autocomplete(query);
 	}
 
 	// ── Import ──────────────────────────────────────────────────────────
 
 	@RequirePermission("CREATE", "GEO")
+	@Authorize({ action: "CREATE", resource: "GEO", description: "Import geo data" })
 	@Post("import")
 	@ApiOperation({ summary: "Bulk import geo data" })
 	@ApiOkResponse({ description: "Import result with created/updated/skipped counts" })
-	public importData(@Body(new ZodValidationPipe(GeoImportInputSchema)) body: Parameters<GeoService["importData"]>[0]): Promise<ImportResult> {
+	public async importData(@Body(new ZodValidationPipe(GeoImportInputSchema)) body: z.output<typeof GeoImportInputSchema>): Promise<ImportResult> {
 		return this.geoService.importData(body);
 	}
 
@@ -70,7 +73,7 @@ export class GeoController {
 	@Post("import/validate")
 	@ApiOperation({ summary: "Validate geo import data without inserting" })
 	@ApiOkResponse({ description: "Validation result with row-level errors" })
-	public validateImport(@Body(new ZodValidationPipe(GeoImportValidateInputSchema)) body: Parameters<GeoService["validateImport"]>[0]): ImportValidationResult {
+	public validateImport(@Body(new ZodValidationPipe(GeoImportValidateInputSchema)) body: z.output<typeof GeoImportValidateInputSchema>): ImportValidationResult {
 		return this.geoService.validateImport(body);
 	}
 
@@ -85,7 +88,7 @@ export class GeoController {
 	@ApiQuery({ name: "countryCode", required: false, description: "Filter by ISO 3166-1 alpha-2 country code" })
 	@ApiQuery({ name: "regionId", required: false, description: "Filter by region ID" })
 	public exportData(
-		@Query(new ZodValidationPipe(GeoExportQuerySchema)) query: Parameters<GeoService["exportData"]>[0],
+		@Query(new ZodValidationPipe(GeoExportQuerySchema)) query: z.output<typeof GeoExportQuerySchema>,
 	): Promise<readonly Region[] | readonly Subregion[] | readonly Country[] | readonly State[] | readonly City[]> {
 		return this.geoService.exportData(query);
 	}
@@ -98,7 +101,7 @@ export class GeoController {
 	@ApiOkResponse({ description: "Cascade preview with affected entity counts" })
 	@ApiQuery({ name: "entity", required: true, description: "Entity type (region, subregion, country, state)" })
 	@ApiQuery({ name: "id", required: true, description: "Entity ID" })
-	public cascadePreview(@Query(new ZodValidationPipe(CascadePreviewSchema)) query: Parameters<GeoService["cascadePreview"]>[0]): Promise<CascadePreviewResult> {
+	public cascadePreview(@Query(new ZodValidationPipe(CascadePreviewSchema)) query: z.output<typeof CascadePreviewSchema>): Promise<CascadePreviewResult> {
 		return this.geoService.cascadePreview(query);
 	}
 
@@ -116,7 +119,7 @@ export class GeoController {
 	@ApiQuery({ name: "sort", required: false, description: "Sort field (prefix with - for desc, e.g. -name)" })
 	@ApiQuery({ name: "include", required: false, description: "Comma-separated related entities (e.g. subregions,countries)" })
 	@ApiQuery({ name: "flag", required: false, description: "Filter by active flag" })
-	public listRegions(@Query(new ZodValidationPipe(apiContract.geo.regions.input)) query: Parameters<GeoService["listRegions"]>[0]): Promise<ListResult<Region>> {
+	public listRegions(@Query(new ZodValidationPipe(apiContract.geo.regions.input)) query: z.output<typeof apiContract.geo.regions.input>): Promise<ListResult> {
 		return this.geoService.listRegions(query);
 	}
 
@@ -133,7 +136,7 @@ export class GeoController {
 	@Post("regions")
 	@ApiOperation({ summary: "Create a region" })
 	@ApiOkResponse({ description: "Created region" })
-	public createRegion(@Body(new ZodValidationPipe(apiContract.geo.createRegion.input)) body: Parameters<GeoService["createRegion"]>[0]): Promise<Region> {
+	public createRegion(@Body(new ZodValidationPipe(apiContract.geo.createRegion.input)) body: z.output<typeof apiContract.geo.createRegion.input>): Promise<Region> {
 		return this.geoService.createRegion(body);
 	}
 
@@ -143,7 +146,7 @@ export class GeoController {
 	@ApiOkResponse({ description: "Updated region" })
 	public updateRegion(
 		@Param("id", new ZodValidationPipe(GeoIdParamSchema)) param: { readonly id: number },
-		@Body(new ZodValidationPipe(apiContract.geo.updateRegion.input)) body: Parameters<GeoService["updateRegion"]>[1],
+		@Body(new ZodValidationPipe(apiContract.geo.updateRegion.input)) body: z.output<typeof apiContract.geo.updateRegion.input>,
 	): Promise<Region> {
 		return this.geoService.updateRegion(param.id, body);
 	}
@@ -171,7 +174,7 @@ export class GeoController {
 	@ApiQuery({ name: "sort", required: false })
 	@ApiQuery({ name: "include", required: false })
 	@ApiQuery({ name: "flag", required: false })
-	public listSubregions(@Query(new ZodValidationPipe(apiContract.geo.subregions.input)) query: Parameters<GeoService["listSubregions"]>[0]): Promise<ListResult<Subregion>> {
+	public listSubregions(@Query(new ZodValidationPipe(apiContract.geo.subregions.input)) query: z.output<typeof apiContract.geo.subregions.input>): Promise<ListResult> {
 		return this.geoService.listSubregions(query);
 	}
 
@@ -188,7 +191,9 @@ export class GeoController {
 	@Post("subregions")
 	@ApiOperation({ summary: "Create a subregion" })
 	@ApiOkResponse({ description: "Created subregion" })
-	public createSubregion(@Body(new ZodValidationPipe(apiContract.geo.createSubregion.input)) body: Parameters<GeoService["createSubregion"]>[0]): Promise<Subregion> {
+	public createSubregion(
+		@Body(new ZodValidationPipe(apiContract.geo.createSubregion.input)) body: z.output<typeof apiContract.geo.createSubregion.input>,
+	): Promise<Subregion> {
 		return this.geoService.createSubregion(body);
 	}
 
@@ -198,7 +203,7 @@ export class GeoController {
 	@ApiOkResponse({ description: "Updated subregion" })
 	public updateSubregion(
 		@Param("id", new ZodValidationPipe(GeoIdParamSchema)) param: { readonly id: number },
-		@Body(new ZodValidationPipe(apiContract.geo.updateSubregion.input)) body: Parameters<GeoService["updateSubregion"]>[1],
+		@Body(new ZodValidationPipe(apiContract.geo.updateSubregion.input)) body: z.output<typeof apiContract.geo.updateSubregion.input>,
 	): Promise<Subregion> {
 		return this.geoService.updateSubregion(param.id, body);
 	}
@@ -228,7 +233,7 @@ export class GeoController {
 	@ApiQuery({ name: "sort", required: false })
 	@ApiQuery({ name: "include", required: false })
 	@ApiQuery({ name: "flag", required: false })
-	public listCountries(@Query(new ZodValidationPipe(apiContract.geo.countries.input)) query: Parameters<GeoService["listCountries"]>[0]): Promise<ListResult<Country>> {
+	public listCountries(@Query(new ZodValidationPipe(apiContract.geo.countries.input)) query: z.output<typeof apiContract.geo.countries.input>): Promise<ListResult> {
 		return this.geoService.listCountries(query);
 	}
 
@@ -245,7 +250,7 @@ export class GeoController {
 	@Post("countries")
 	@ApiOperation({ summary: "Create a country" })
 	@ApiOkResponse({ description: "Created country" })
-	public createCountry(@Body(new ZodValidationPipe(apiContract.geo.createCountry.input)) body: Parameters<GeoService["createCountry"]>[0]): Promise<Country> {
+	public createCountry(@Body(new ZodValidationPipe(apiContract.geo.createCountry.input)) body: z.output<typeof apiContract.geo.createCountry.input>): Promise<Country> {
 		return this.geoService.createCountry(body);
 	}
 
@@ -255,7 +260,7 @@ export class GeoController {
 	@ApiOkResponse({ description: "Updated country" })
 	public updateCountry(
 		@Param("id", new ZodValidationPipe(GeoIdParamSchema)) param: { readonly id: number },
-		@Body(new ZodValidationPipe(apiContract.geo.updateCountry.input)) body: Parameters<GeoService["updateCountry"]>[1],
+		@Body(new ZodValidationPipe(apiContract.geo.updateCountry.input)) body: z.output<typeof apiContract.geo.updateCountry.input>,
 	): Promise<Country> {
 		return this.geoService.updateCountry(param.id, body);
 	}
@@ -284,7 +289,7 @@ export class GeoController {
 	@ApiQuery({ name: "sort", required: false })
 	@ApiQuery({ name: "include", required: false })
 	@ApiQuery({ name: "flag", required: false })
-	public listStates(@Query(new ZodValidationPipe(apiContract.geo.states.input)) query: Parameters<GeoService["listStates"]>[0]): Promise<ListResult<State>> {
+	public listStates(@Query(new ZodValidationPipe(apiContract.geo.states.input)) query: z.output<typeof apiContract.geo.states.input>): Promise<ListResult> {
 		return this.geoService.listStates(query);
 	}
 
@@ -301,7 +306,7 @@ export class GeoController {
 	@Post("states")
 	@ApiOperation({ summary: "Create a state" })
 	@ApiOkResponse({ description: "Created state" })
-	public createState(@Body(new ZodValidationPipe(apiContract.geo.createState.input)) body: Parameters<GeoService["createState"]>[0]): Promise<State> {
+	public createState(@Body(new ZodValidationPipe(apiContract.geo.createState.input)) body: z.output<typeof apiContract.geo.createState.input>): Promise<State> {
 		return this.geoService.createState(body);
 	}
 
@@ -311,7 +316,7 @@ export class GeoController {
 	@ApiOkResponse({ description: "Updated state" })
 	public updateState(
 		@Param("id", new ZodValidationPipe(GeoIdParamSchema)) param: { readonly id: number },
-		@Body(new ZodValidationPipe(apiContract.geo.updateState.input)) body: Parameters<GeoService["updateState"]>[1],
+		@Body(new ZodValidationPipe(apiContract.geo.updateState.input)) body: z.output<typeof apiContract.geo.updateState.input>,
 	): Promise<State> {
 		return this.geoService.updateState(param.id, body);
 	}
@@ -342,7 +347,7 @@ export class GeoController {
 	@ApiQuery({ name: "sort", required: false })
 	@ApiQuery({ name: "include", required: false })
 	@ApiQuery({ name: "flag", required: false })
-	public listCities(@Query(new ZodValidationPipe(apiContract.geo.cities.input)) query: Parameters<GeoService["listCities"]>[0]): Promise<ListResult<City>> {
+	public listCities(@Query(new ZodValidationPipe(apiContract.geo.cities.input)) query: z.output<typeof apiContract.geo.cities.input>): Promise<ListResult> {
 		return this.geoService.listCities(query);
 	}
 
@@ -359,7 +364,7 @@ export class GeoController {
 	@Post("cities")
 	@ApiOperation({ summary: "Create a city" })
 	@ApiOkResponse({ description: "Created city" })
-	public createCity(@Body(new ZodValidationPipe(apiContract.geo.createCity.input)) body: Parameters<GeoService["createCity"]>[0]): Promise<City> {
+	public createCity(@Body(new ZodValidationPipe(apiContract.geo.createCity.input)) body: z.output<typeof apiContract.geo.createCity.input>): Promise<City> {
 		return this.geoService.createCity(body);
 	}
 
@@ -369,7 +374,7 @@ export class GeoController {
 	@ApiOkResponse({ description: "Updated city" })
 	public updateCity(
 		@Param("id", new ZodValidationPipe(GeoIdParamSchema)) param: { readonly id: number },
-		@Body(new ZodValidationPipe(apiContract.geo.updateCity.input)) body: Parameters<GeoService["updateCity"]>[1],
+		@Body(new ZodValidationPipe(apiContract.geo.updateCity.input)) body: z.output<typeof apiContract.geo.updateCity.input>,
 	): Promise<City> {
 		return this.geoService.updateCity(param.id, body);
 	}

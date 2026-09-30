@@ -4,6 +4,7 @@ import type { AdminUserDetail } from "@workspace/shared";
 import { invalidateSessionAuth } from "@workspace/client/lib/auth/session/invalidate-auth";
 import { useAuth } from "@workspace/client/lib/auth";
 import { UserDetailButton } from "@/components/users/user-detail-button";
+import { useCanStartImpersonation } from "@/lib/session/super-admin";
 import { useQueryClient } from "@tanstack/react-query";
 import { UserRoundSearch } from "lucide-react";
 import * as React from "react";
@@ -14,13 +15,13 @@ export interface ImpersonateUserButtonProps {
 
 /**
  * Super-admin action to impersonate a non-super-admin user from the detail page.
+ * `POST /auth/impersonate/:userId` is `@SuperAdminOnly`, so the super-admin
+ * session flag (not a capability) gates it.
  */
 export function ImpersonateUserButton({ targetUser }: ImpersonateUserButtonProps): React.JSX.Element | null {
-	const { api } = useAuth();
+	const { api, user: currentUser } = useAuth();
 	const queryClient = useQueryClient();
-
-	const meQuery = api.auth.me.useQuery(undefined);
-	const permissionsQuery = api.auth.permissions.useQuery(undefined);
+	const canStartImpersonation = useCanStartImpersonation();
 
 	const impersonateMutation = api.auth.impersonate.useMutation({
 		onSuccess: async (): Promise<void> => {
@@ -28,11 +29,7 @@ export function ImpersonateUserButton({ targetUser }: ImpersonateUserButtonProps
 		},
 	});
 
-	const currentUser = meQuery.data?.data;
-	const session = permissionsQuery.data?.data;
-	const isImpersonating = session?.isImpersonating === true;
-
-	const canImpersonate = currentUser?.isSuperAdmin === true && !targetUser.isSuperAdmin && targetUser.isActive && targetUser.id !== currentUser.id && !isImpersonating;
+	const canImpersonate = canStartImpersonation && !targetUser.isSuperAdmin && targetUser.isActive && targetUser.id !== currentUser?.id;
 
 	const handleImpersonate = React.useCallback((): void => {
 		void impersonateMutation.mutateAsync({ userId: targetUser.id });

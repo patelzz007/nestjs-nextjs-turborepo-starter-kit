@@ -1,3 +1,4 @@
+import { AccessGate } from "@/components/auth/access-gate";
 import { ClaimQrView } from "@/components/rewardhub/claims/qr-view";
 import { createWebServerCaller } from "@/lib/web-server-api";
 import type { RewardClaimQrResponse } from "@workspace/shared";
@@ -17,5 +18,9 @@ export default async function ClaimQrPage({ params }: { readonly params: Promise
 		initialQr = undefined;
 	}
 
-	return <ClaimQrView claimId={claimId} initialQr={initialQr} />;
+	return (
+		<AccessGate feature="this redemption code">
+			<ClaimQrView claimId={claimId} initialQr={initialQr} />
+		</AccessGate>
+	);
 }

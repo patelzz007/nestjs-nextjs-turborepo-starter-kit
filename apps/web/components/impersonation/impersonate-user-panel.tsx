@@ -1,9 +1,11 @@
 "use client";
 
-import type { AdminUserDetail } from "@workspace/shared";
+import { useWebSession } from "@/components/auth/web-authorization-provider";
+import { PERMISSION, type AdminUserDetail, type CapabilitySlug } from "@workspace/shared";
 import { readPaginatedHasNext, readPaginatedNextCursor } from "@/lib/api-envelope";
 import { invalidateSessionAuth } from "@workspace/client/lib/auth/session/invalidate-auth";
 import { useAuth } from "@workspace/client/lib/auth";
+import { useAuthorization } from "@workspace/client/lib/auth/can";
 import { Button } from "@workspace/ui/components/form/button";
 import { Input } from "@workspace/ui/components/form/input";
 import { useQueryClient } from "@tanstack/react-query";
@@ -11,32 +13,47 @@ import { UserRoundSearch } from "lucide-react";
 import * as React from "react";
 
 /**
- * Super-admin panel to impersonate a user from the web app (uses web session cookies).
+ * Capabilities the impersonation endpoints enforce (besides `@SuperAdminOnly`):
+ * `GET /auth/admin/users` → `LIST USER`, `POST /auth/impersonate/:userId` → `CREATE USER`.
  */
-export function ImpersonateUserPanel({ sessionActive }: { readonly sessionActive: boolean }): React.JSX.Element | null {
+export const IMPERSONATION_PERMISSIONS: readonly CapabilitySlug[] = [PERMISSION.USER.LIST, PERMISSION.USER.CREATE];
+
+/**
+ * Container gate for the impersonation panel — hidden unless the signed-in
+ * user is a super-admin holding every capability the endpoints require and is
+ * not already impersonating.
+ */
+export function ImpersonateUserPanel(): React.JSX.Element | null {
+	const { user } = useAuth();
+	const { session } = useWebSession();
+	const { canAll } = useAuthorization();
+
+	const currentUserId = user?.id;
+	const isImpersonating = session?.isImpersonating === true;
+	const allowed = user?.isSuperAdmin === true && !isImpersonating && canAll(IMPERSONATION_PERMISSIONS);
+
+	if (!allowed || currentUserId === undefined) {
+		return null;
+	}
+
+	return <ImpersonateUserList currentUserId={currentUserId} />;
+}
+
+/** Super-admin panel to impersonate a user from the web app (uses web session cookies). */
+function ImpersonateUserList({ currentUserId }: { readonly currentUserId: string }): React.JSX.Element {
 	const { api } = useAuth();
 	const queryClient = useQueryClient();
-
-	const meQuery = api.auth.me.useQuery(undefined, { enabled: sessionActive });
-	const permissionsQuery = api.auth.permissions.useQuery(undefined, { enabled: sessionActive });
 
 	const [search, setSearch] = React.useState<string>("");
 	const [cursor, setCursor] = React.useState<string | null>(null);
 	const [cursorHistory, setCursorHistory] = React.useState<readonly (string | null)[]>([null]);
 
-	const currentUser = meQuery.data?.data;
-	const session = permissionsQuery.data?.data;
-	const isImpersonating = session?.isImpersonating === true;
-	const canLoadUsers = meQuery.isSuccess && permissionsQuery.isSuccess && currentUser?.isSuperAdmin === true && !isImpersonating;
-
-	const usersQuery = api.auth.adminUsers.useQuery(
-		{
-			limit: 10,
-			...(cursor !== null ? { cursor } : {}),
-			...(search.length > 0 ? { search } : {}),
-		},
-		{ enabled: canLoadUsers },
-	);
+	const usersQuery = api.auth.adminUsers.useQuery({
+		page: 1,
+		limit: 10,
+		...(cursor !== null ? { cursor } : {}),
+		...(search.length > 0 ? { search } : {}),
+	});
 
 	const impersonateMutation = api.auth.impersonate.useMutation({
 		onSuccess: async (): Promise<void> => {
@@ -88,10 +105,6 @@ export function ImpersonateUserPanel({ sessionActive }: { readonly sessionActive
 		setCursor(nextCursor);
 	}, [nextCursor]);
 
-	if (currentUser?.isSuperAdmin !== true || isImpersonating) {
-		return null;
-	}
-
 	const users: readonly AdminUserDetail[] = usersQuery.data?.data ?? [];
 
 	return (
@@ -112,7 +125,7 @@ export function ImpersonateUserPanel({ sessionActive }: { readonly sessionActive
 				) : (
 					<ul className="max-h-48 divide-y overflow-y-auto rounded-md border">
 						{users.map((user: AdminUserDetail) => {
-							const canImpersonate = user.isActive && !user.isSuperAdmin && user.id !== currentUser.id;
+							const canImpersonate = user.isActive && !user.isSuperAdmin && user.id !== currentUserId;
 							return (
 								<li key={user.id} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
 									<div className="min-w-0">

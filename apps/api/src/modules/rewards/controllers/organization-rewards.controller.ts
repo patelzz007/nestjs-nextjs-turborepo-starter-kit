@@ -31,6 +31,7 @@ import { OrganizationRewardAuthService } from "../../organization/services/organ
 import { MerchantCreateApiKeyDto, MerchantCreateRewardDto, MerchantUpdateRewardDto, RewardsEmptyBodyDto } from "../dtos/rewards.dto";
 import { MerchantApiKeyService } from "../services/merchant-api-key.service";
 import { MerchantKybDocumentService } from "../services/merchant-kyb-document.service";
+import { MerchantContextService } from "../services/merchant-context.service";
 import { MerchantKybService } from "../services/merchant-kyb.service";
 import { MerchantRewardService } from "../services/merchant-reward.service";
 import { RewardsAnalyticsService } from "../services/rewards-analytics.service";
@@ -73,11 +74,12 @@ export class OrganizationKybController {
 		private readonly merchantKyb: MerchantKybService,
 		private readonly organizationRewardAuth: OrganizationRewardAuthService,
 		private readonly kybDocuments: MerchantKybDocumentService,
+		private readonly merchantContext: MerchantContextService,
 	) {}
 
 	@SkipAuthThrottle()
 	@Get()
-	@ApiOperation({ summary: "Get the organization KYB profile" })
+	@ApiOperation({ summary: "Get the organization KYB profile (owner only)" })
 	@ApiOkResponse({ description: "Organization KYB profile" })
 	public async getProfile(
 		@GetUser() user: AccessTokenPayload,
@@ -96,11 +98,12 @@ export class OrganizationKybController {
 		@Body(new ZodValidationPipe(MerchantKybSubmissionFieldsSchema)) body: z.output<typeof MerchantKybSubmissionFieldsSchema>,
 	): Promise<MerchantKybProfileResponse> {
 		await this.organizationRewardAuth.resolveOrganizationFromSlug(user.sub, params.orgSlug);
+
 		return this.merchantKyb.submitKyb(user.sub, params.orgSlug, body);
 	}
 
 	@Get("documents/:documentId/download")
-	@ApiOperation({ summary: "Get a short-lived signed download URL for a CLEAN KYB document" })
+	@ApiOperation({ summary: "Get a short-lived signed download URL for a CLEAN KYB document (owner only)" })
 	@ApiOkResponse({ description: "Signed download URL or scan status" })
 	public async downloadDocument(
 		@GetUser() user: AccessTokenPayload,
@@ -118,6 +121,8 @@ export class OrganizationKybController {
 		},
 	): Promise<MerchantKybDocumentDownloadResponse> {
 		const resolved = await this.organizationRewardAuth.resolveOrganizationFromSlug(user.sub, params.orgSlug);
+		// KYB documents are owner-only, like the profile they belong to.
+		await this.merchantContext.requireOwnerRole(user.sub, resolved.organizationId, params.orgSlug);
 		return this.kybDocuments.getDownloadUrl(params.documentId, resolved.organizationId, query.disposition ?? "inline");
 	}
 }
@@ -146,10 +151,10 @@ export class OrganizationRewardsController {
 	@ApiOperation({ summary: "Create a draft reward" })
 	@ApiBody({ type: MerchantCreateRewardDto })
 	@ApiOkResponse({ description: "Created reward" })
-	public createReward(
+	public async createReward(
 		@GetMerchantActor() actor: MerchantActor,
 		@Param(new ZodValidationPipe(OrganizationSlugParamSchema)) _params: z.output<typeof OrganizationSlugParamSchema>,
-		@Body(new ZodValidationPipe(MerchantCreateRewardSchema)) body: Parameters<MerchantRewardService["createReward"]>[1],
+		@Body(new ZodValidationPipe(MerchantCreateRewardSchema)) body: z.output<typeof MerchantCreateRewardSchema>,
 	): ReturnType<MerchantRewardService["createReward"]> {
 		return this.merchantRewardService.createReward(actor, body);
 	}
@@ -158,11 +163,11 @@ export class OrganizationRewardsController {
 	@ApiOperation({ summary: "Update a draft or pending reward" })
 	@ApiBody({ type: MerchantUpdateRewardDto })
 	@ApiOkResponse({ description: "Updated reward" })
-	public updateReward(
+	public async updateReward(
 		@GetMerchantActor() actor: MerchantActor,
 		@Param(new ZodValidationPipe(z.object({ orgSlug: OrganizationSlugParamSchema.shape.orgSlug, rewardId: UuidParamSchema }).strict()))
 		params: { orgSlug: string; rewardId: string },
-		@Body(new ZodValidationPipe(MerchantUpdateRewardSchema)) body: Parameters<MerchantRewardService["updateReward"]>[2],
+		@Body(new ZodValidationPipe(MerchantUpdateRewardSchema)) body: z.output<typeof MerchantUpdateRewardSchema>,
 	): ReturnType<MerchantRewardService["updateReward"]> {
 		return this.merchantRewardService.updateReward(actor, params.rewardId, body);
 	}
@@ -195,7 +200,7 @@ export class OrganizationApiKeysController {
 	public async listKeys(
 		@GetUser() user: AccessTokenPayload,
 		@Param(new ZodValidationPipe(OrganizationSlugParamSchema)) params: z.output<typeof OrganizationSlugParamSchema>,
-		@Query(new ZodValidationPipe(MerchantApiKeyListQuerySchema)) query: Parameters<MerchantApiKeyService["listKeys"]>[2],
+		@Query(new ZodValidationPipe(MerchantApiKeyListQuerySchema)) query: z.output<typeof MerchantApiKeyListQuerySchema>,
 	): ReturnType<MerchantApiKeyService["listKeys"]> {
 		await this.organizationRewardAuth.resolveOrganizationFromSlug(user.sub, params.orgSlug);
 		return this.merchantApiKeyService.listKeys(user.sub, params.orgSlug, query);
@@ -208,9 +213,10 @@ export class OrganizationApiKeysController {
 	public async createKey(
 		@GetUser() user: AccessTokenPayload,
 		@Param(new ZodValidationPipe(OrganizationSlugParamSchema)) params: z.output<typeof OrganizationSlugParamSchema>,
-		@Body(new ZodValidationPipe(MerchantCreateApiKeySchema)) body: Parameters<MerchantApiKeyService["createKey"]>[2],
+		@Body(new ZodValidationPipe(MerchantCreateApiKeySchema)) body: z.output<typeof MerchantCreateApiKeySchema>,
 	): ReturnType<MerchantApiKeyService["createKey"]> {
 		await this.organizationRewardAuth.resolveOrganizationFromSlug(user.sub, params.orgSlug);
+
 		return this.merchantApiKeyService.createKey(user.sub, params.orgSlug, body);
 	}
 
@@ -223,6 +229,7 @@ export class OrganizationApiKeysController {
 		@Param(new ZodValidationPipe(apiContract.organizations.apiKeys.revoke.input)) params: { orgSlug: string; keyId: string },
 	): ReturnType<MerchantApiKeyService["revokeKey"]> {
 		await this.organizationRewardAuth.resolveOrganizationFromSlug(user.sub, params.orgSlug);
+
 		return this.merchantApiKeyService.revokeKey(user.sub, params.orgSlug, params.keyId);
 	}
 }

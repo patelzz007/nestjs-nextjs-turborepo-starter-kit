@@ -88,6 +88,36 @@ enum PermissionResource {
   SAMPLE_CATEGORY
   PRODUCT
   DEVTOOLS
+  ORDER
+  PAYMENT
+  INVENTORY
+  ORGANIZATION
+  LOCATION
+  STORE
+}
+
+enum PermissionScope {
+  GLOBAL
+  ORGANIZATION
+  STORE
+  LOCATION
+  RESOURCE
+  OWN
+}
+
+enum AclEffect {
+  ALLOW
+  DENY
+}
+
+enum PolicyEffect {
+  ALLOW
+  DENY
+}
+
+enum AuthorizationDecision {
+  ALLOW
+  DENY
 }
 
 // Tables
@@ -166,6 +196,7 @@ model User {
   organizationApiKeysCreated           OrganizationApiKey[]            @relation("OrganizationApiKeyCreator")
   organizationLocationsRequested       OrganizationLocation[]          @relation("OrganizationLocationRequestedBy")
   organizationLocationsReviewed        OrganizationLocation[]          @relation("OrganizationLocationReviewedBy")
+  storeMemberships                     StoreMembership[]               @relation("StoreMemberships")
   rewardClaims                         RewardClaim[]
   rewardRedemptions                    RewardRedemption[]
   rewardReferralsAsReferrer            RewardReferral[]                @relation("ReferrerUser")
@@ -195,8 +226,9 @@ model Role {
   children Role[]  @relation("RoleHierarchy")
 
   // Relations
-  userRoles       UserRole[]
-  rolePermissions RolePermission[]
+  userRoles        UserRole[]
+  rolePermissions  RolePermission[]
+  storeMemberships StoreMembership[]
 
   isDeleted Boolean @default(false) @map("is_deleted")
   deletedAt BigInt? @map("deleted_at")
@@ -213,6 +245,7 @@ model Permission {
   action      PermissionAction
   resource    PermissionResource
   description String?            @db.Text
+  scope       PermissionScope    @default(GLOBAL)
 
   group      String? @db.VarChar(100)
   isSystem   Boolean @default(false)
@@ -228,7 +261,7 @@ model Permission {
   createdAt BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
   updatedAt BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
 
-  @@unique([action, resource])
+  @@unique([action, resource, scope])
   @@map("permissions")
 }
 
@@ -435,6 +468,9 @@ model UserPermission {
   user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
 
+  /// Per-user override: ALLOW grants the permission; DENY revokes it even when a role grants it.
+  effect AclEffect @default(ALLOW)
+
   assignedAt BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
   assignedBy String?
   expiresAt  BigInt?
@@ -467,6 +503,97 @@ model RolePermission {
 
   @@unique([roleId, permissionId])
   @@map("role_permissions")
+}
+
+// ---------------------------------------------------------------------------
+// Authorization Kernel — ACL, Policies, Audit
+// ---------------------------------------------------------------------------
+
+/// RLS: resource ACL entries — ALLOW/DENY per subject+action+resource.
+/// Explicit DENY > Explicit ALLOW > Role ALLOW > default DENY.
+model ResourceAcl {
+  id             String     @id @default(uuid())
+  subjectType    String     @map("subject_type") @db.VarChar(50) // "USER" | "ROLE"
+  subjectId      String     @map("subject_id")
+  action         String     @db.VarChar(50)
+  resourceType   String     @map("resource_type") @db.VarChar(50)
+  resourceId     String?    @map("resource_id") // null = all resources of type
+  effect         AclEffect
+  scope          PermissionScope?
+  organizationId String?    @map("organization_id")
+  locationId     String?    @map("location_id")
+  conditions     Json?
+  expiresAt      BigInt?    @map("expires_at")
+  assignedBy     String?    @map("assigned_by")
+  reason         String?    @db.Text
+  isDeleted      Boolean    @default(false) @map("is_deleted")
+  deletedAt      BigInt?    @map("deleted_at")
+  createdAt      BigInt     @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
+  updatedAt      BigInt     @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
+
+  @@index([subjectType, subjectId])
+  @@index([resourceType, resourceId])
+  @@index([organizationId])
+  @@index([locationId])
+  @@map("resource_acls")
+}
+
+/// RLS: catalog — Policy definitions with Zod-validated DSL.
+model PolicyDefinition {
+  id             String        @id @default(uuid())
+  name           String        @db.VarChar(200)
+  description    String?       @db.Text
+  version        Int           @default(1)
+  effect         PolicyEffect
+  scope          PermissionScope
+  actions        String[]      // ["CREATE", "UPDATE", ...]
+  resources      String[]      // ["ORDER", "PAYMENT", ...]
+  organizationId String?       @map("organization_id")
+  locationId     String?       @map("location_id")
+  conditions     Json?         // Zod-validated policy DSL
+  isActive       Boolean       @default(true) @map("is_active")
+  publishedAt    BigInt?       @map("published_at")
+  publishedBy    String?       @map("published_by")
+  supersededBy   String?       @map("superseded_by")
+  isDeleted      Boolean       @default(false) @map("is_deleted")
+  deletedAt      BigInt?       @map("deleted_at")
+  createdAt      BigInt        @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
+  updatedAt      BigInt        @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
+
+  @@index([organizationId])
+  @@index([locationId])
+  @@index([isActive])
+  @@map("policy_definitions")
+}
+
+/// RLS: bypass only — Authorization audit trail.
+/// Logs DENY always, WRITE always, optional sensitive READ.
+model AuthorizationAudit {
+  id             String                @id @default(uuid())
+  actorId        String?               @map("actor_id")
+  organizationId String?               @map("organization_id")
+  locationId     String?               @map("location_id")
+  action         String                @db.VarChar(120)
+  resource       String                @db.VarChar(120)
+  resourceId     String?               @map("resource_id")
+  decision       AuthorizationDecision
+  reason         String?               @db.Text
+  policyIds      String[]              @default([]) @map("policy_ids")
+  aclIds         String[]              @default([]) @map("acl_ids")
+  evaluation     Json?                 // explain() output
+  ipAddress      String?               @map("ip_address") @db.VarChar(45)
+  userAgent      String?               @map("user_agent") @db.Text
+  requestId      String?               @map("request_id") @db.VarChar(64)
+  durationMs     Int?                  @map("duration_ms")
+  createdAt      BigInt                @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
+
+  @@index([actorId])
+  @@index([organizationId])
+  @@index([locationId])
+  @@index([decision])
+  @@index([action])
+  @@index([createdAt])
+  @@map("authorization_audits")
 }
 
 /// RLS: own row — `app_owns("userId")`.
@@ -989,6 +1116,8 @@ model Organization {
   membershipLocationScopes         OrganizationMembershipLocationScope[]
   invitationLocationScopes         OrganizationInvitationLocationScope[]
   rewardLocationScopes             RewardLocationScope[]
+  stores                           Store[]
+  storeMemberships                 StoreMembership[]
 
   @@index([lifecycleState])
   @@map("organizations")
@@ -1038,6 +1167,7 @@ model OrganizationLocation {
   terminals                   OrganizationTerminal[]
   redemptions                 RewardRedemption[]
   apiKeys                OrganizationApiKey[]
+  store                  Store?
 
   @@unique([organizationId, code])
   @@index([organizationId])
@@ -1085,6 +1215,62 @@ model OrganizationMembershipLocationScope {
   @@unique([membershipId, locationId])
   @@index([organizationId])
   @@map("organization_membership_location_scopes")
+}
+
+/// Store lifecycle — mirrors the linked location (ACTIVE only while the location is ACTIVE).
+enum StoreStatus {
+  ACTIVE
+  INACTIVE
+}
+
+/// RLS: TENANT — a store within an organization (spec §35). Each store is linked 1:1 to
+/// its operational `OrganizationLocation` (terminals, rewards, redemptions) and kept in
+/// sync by `OrganizationLocationRepository`.
+model Store {
+  id             String      @id @default(uuid())
+  organizationId String      @map("organization_id")
+  locationId     String      @unique @map("location_id")
+  name           String      @db.VarChar(200)
+  code           String      @db.VarChar(64)
+  status         StoreStatus @default(INACTIVE)
+  isDeleted      Boolean     @default(false) @map("is_deleted")
+  deletedAt      BigInt?     @map("deleted_at")
+  createdAt      BigInt      @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
+  updatedAt      BigInt      @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
+
+  organization Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  location     OrganizationLocation @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  memberships  StoreMembership[]
+
+  @@unique([organizationId, code])
+  @@index([organizationId, status])
+  @@map("stores")
+}
+
+/// RLS: TENANT — a user's membership in one store with a dynamic RBAC role (spec §36).
+/// The role's permissions apply only inside this store (STORE scope).
+model StoreMembership {
+  id             String                       @id @default(uuid())
+  organizationId String                       @map("organization_id")
+  storeId        String                       @map("store_id")
+  userId         String                       @map("user_id")
+  roleId         String                       @map("role_id")
+  status         OrganizationMembershipStatus @default(ACTIVE)
+  isDeleted      Boolean                      @default(false) @map("is_deleted")
+  deletedAt      BigInt?                      @map("deleted_at")
+  createdAt      BigInt                       @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
+  updatedAt      BigInt                       @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  store        Store        @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  user         User         @relation("StoreMemberships", fields: [userId], references: [id], onDelete: Cascade)
+  role         Role         @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([storeId, userId])
+  @@index([userId])
+  @@index([organizationId])
+  @@index([roleId])
+  @@map("store_memberships")
 }
 
 /// RLS: TENANT — merchant-specific organization profile (KYB, contact).
@@ -1983,7 +2169,7 @@ model AnalyticsEvent {
   @@map("analytics_events")
 }
 
-/// Generic audit log for generated platform resources.
+/// Generic audit log for platform resources.
 model PlatformResourceAuditLog {
   id           String  @id @default(uuid())
   resourceType String  @map("resource_type") @db.VarChar(120)
@@ -1997,7 +2183,7 @@ model PlatformResourceAuditLog {
   @@map("platform_resource_audit_logs")
 }
 
-/// Idempotency records for generated platform mutations.
+/// Idempotency records for platform resource mutations.
 model PlatformResourceIdempotencyRecord {
   id             String @id @default(uuid())
   scope          String @db.VarChar(200)
@@ -2010,8 +2196,7 @@ model PlatformResourceIdempotencyRecord {
   @@map("platform_resource_idempotency_records")
 }
 
-// @app-generated:begin SampleCategory
-/// Generated resource model (SampleCategory).
+/// Platform resource model (SampleCategory).
 model SampleCategory {
   id          String    @id @default(uuid())
   description String?   @db.Text
@@ -2027,9 +2212,7 @@ model SampleCategory {
   @@map("sample_category")
 }
 
-// @app-generated:end SampleCategory
-// @app-generated:begin Product
-/// Generated resource model (Product).
+/// Platform resource model (Product).
 model Product {
   id               String          @id @default(uuid())
   brand            String?
@@ -2056,4 +2239,3 @@ model Product {
   @@map("product")
 }
 
-// @app-generated:end Product

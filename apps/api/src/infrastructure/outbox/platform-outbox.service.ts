@@ -13,6 +13,14 @@ import {
 
 import { CorrelationContextService } from "../../common/context/correlation-context.service";
 import { PrismaService } from "../../prisma/prisma.service";
+import { runWithSystemRlsContext } from "../../prisma/rls-context";
+
+/** The one capability `enqueue` needs from a caller's transaction. */
+export interface OutboxWriter {
+	readonly outboxEvent: {
+		create(args: { data: Prisma.OutboxEventCreateInput }): PromiseLike<{ readonly id: string }>;
+	};
+}
 
 @Injectable()
 export class PlatformOutboxService {
@@ -23,23 +31,28 @@ export class PlatformOutboxService {
 		private readonly correlationContext: CorrelationContextService,
 	) {}
 
-	public async enqueue(input: OutboxEnqueueInput, tx?: Prisma.TransactionClient): Promise<string> {
+	public async enqueue(input: OutboxEnqueueInput, tx?: OutboxWriter): Promise<string> {
 		const parsed = OutboxEnqueueInputSchema.parse(input);
-		const client = tx ?? this.prisma;
-		const created = await client.outboxEvent.create({
-			data: {
-				topic: parsed.topic,
-				eventType: parsed.eventType,
-				partitionKey: parsed.partitionKey,
-				correlationId: parsed.correlationId,
-				payload: parsed.payload,
-				status: "PENDING",
-			},
-		});
+		const data: Prisma.OutboxEventCreateInput = {
+			topic: parsed.topic,
+			eventType: parsed.eventType,
+			partitionKey: parsed.partitionKey,
+			correlationId: parsed.correlationId,
+			payload: parsed.payload,
+			status: "PENDING",
+		};
+		if (tx !== undefined) {
+			// Inside a caller's transaction the transaction's own RLS session applies.
+			const created = await tx.outboxEvent.create({ data });
+			return created.id;
+		}
+		// `outbox_events` is infrastructure (bypass-only under RLS): recording an event is an
+		// allowlisted system operation independent of the requesting user's row scope.
+		const created = await runWithSystemRlsContext("outbox.enqueue", async () => this.prisma.outboxEvent.create({ data }));
 		return created.id;
 	}
 
-	public async enqueueEnvelope(topic: KafkaTopic, envelope: PlatformEventEnvelope, partitionKey: string | null, tx?: Prisma.TransactionClient): Promise<string> {
+	public async enqueueEnvelope(topic: KafkaTopic, envelope: PlatformEventEnvelope, partitionKey: string | null, tx?: OutboxWriter): Promise<string> {
 		const validated = PlatformEventEnvelopeSchema.parse(envelope);
 		const correlationId = validated.correlationId ?? this.correlationContext.get() ?? null;
 		const envelopeWithCorrelation: PlatformEventEnvelope = {

@@ -3,7 +3,7 @@ import { organizationPath } from "@/lib/org/slug";
 import { redirect } from "next/navigation";
 
 /** Legacy `/api-keys` entry — forwards to the active organization API keys route. */
-export default async function MerchantApiKeysRedirectPage(): Promise<never> {
+export default async function MerchantApiKeysRedirectPage(): Promise<React.ReactNode> {
 	const organizationSlug = await readOrganizationSlugCookie();
 
 	if (organizationSlug !== undefined && organizationSlug.length > 0) {

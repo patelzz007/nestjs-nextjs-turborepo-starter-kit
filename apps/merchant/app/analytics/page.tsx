@@ -3,7 +3,7 @@ import { organizationPath } from "@/lib/org/slug";
 import { redirect } from "next/navigation";
 
 /** Legacy `/analytics` entry — forwards to the active organization analytics route. */
-export default async function MerchantAnalyticsRedirectPage(): Promise<never> {
+export default async function MerchantAnalyticsRedirectPage(): Promise<React.ReactNode> {
 	const organizationSlug = await readOrganizationSlugCookie();
 
 	if (organizationSlug !== undefined && organizationSlug.length > 0) {

@@ -1,5 +1,5 @@
 import { ConflictException, Injectable, Logger, NotFoundException } from "@nestjs/common";
-import type { Permission, UserPermission } from "@prisma/client";
+import type { AclEffect, Permission, UserPermission } from "@prisma/client";
 import type { PaginatedServiceResult, PermissionAction, PermissionResource } from "@workspace/shared";
 
 import { BaseService } from "../../../platform/persistence/base.service";
@@ -169,13 +169,13 @@ export class PermissionService extends BaseService<Permission, CreatePermissionI
 	/**
 	 * Give a direct permission to a user (idempotent).
 	 */
-	public async giveToUser(userId: string, permissionId: string, expiresAt?: number, actorId = "system"): Promise<UserPermission> {
+	public async giveToUser(userId: string, permissionId: string, expiresAt?: number, actorId = "system", effect: AclEffect = "ALLOW"): Promise<UserPermission> {
 		const permission: Permission | null = await this.findById(permissionId);
 		if (permission === null) {
 			throw new NotFoundException(`Permission ${permissionId} not found`);
 		}
 
-		const result: UserPermission = await this.assignments.givePermissionToUser(userId, permissionId, expiresAt);
+		const result: UserPermission = await this.assignments.givePermissionToUser(userId, permissionId, expiresAt, effect);
 
 		await this.sessionRevocation.revokeAllSessionsForUser(userId);
 		this.cache.invalidate(userId);
@@ -199,12 +199,13 @@ export class PermissionService extends BaseService<Permission, CreatePermissionI
 	/**
 	 * Sync (replace) all direct permissions on a user.
 	 */
-	public async syncUserPermissions(userId: string, permissionIds: readonly string[]): Promise<void> {
+	public async syncUserPermissions(userId: string, permissionIds: readonly string[], actorId = "system"): Promise<void> {
 		await this.assignments.syncUserPermissions(userId, permissionIds);
 
 		await this.sessionRevocation.revokeAllSessionsForUser(userId);
 		this.cache.invalidate(userId);
 		this.events.emitUsersMeInvalidate([userId]);
+		await this.audit.log({ action: "USER_PERMISSIONS_SYNCED", actorId, targetUserId: userId, detail: permissionIds.join(",") });
 	}
 
 	private async invalidatePermissionUsers(permissionId: string): Promise<void> {

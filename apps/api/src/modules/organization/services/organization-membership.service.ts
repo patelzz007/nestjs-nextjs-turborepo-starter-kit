@@ -241,8 +241,8 @@ export class OrganizationMembershipService {
 		}
 
 		if (process.env.NODE_ENV !== "production") {
-			// eslint-disable-next-line no-console -- dev visibility when EMAIL_MODE=log-only
-			console.info(`[team-member-invite] email=${input.email} url=${inviteUrl}`);
+			// Dev visibility when EMAIL_MODE=log-only.
+			process.stdout.write(`[team-member-invite] email=${input.email} url=${inviteUrl}\n`);
 		}
 
 		await this.audit.record({

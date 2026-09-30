@@ -39,7 +39,7 @@ export class RewardsAdminInvitesController {
 	@ApiOkResponse({ description: "Invite created with token" })
 	public createInvite(
 		@GetUser() user: AccessTokenPayload,
-		@Body(new ZodValidationPipe(apiContract.rewardsAdmin.createInvite.input)) body: Parameters<RewardsAdminService["createMerchantInvite"]>[1],
+		@Body(new ZodValidationPipe(apiContract.rewardsAdmin.createInvite.input)) body: z.output<typeof apiContract.rewardsAdmin.createInvite.input>,
 	): ReturnType<RewardsAdminService["createMerchantInvite"]> {
 		return this.rewardsAdminService.createMerchantInvite(user.sub, body);
 	}
@@ -50,7 +50,7 @@ export class RewardsAdminInvitesController {
 	@ApiBody({ type: AdminCreateMerchantInviteDto })
 	@ApiOkResponse({ description: "Rendered invite email preview" })
 	public previewInviteEmail(
-		@Body(new ZodValidationPipe(apiContract.rewardsAdmin.previewInviteEmail.input)) body: Parameters<RewardsAdminService["previewMerchantInviteEmail"]>[0],
+		@Body(new ZodValidationPipe(apiContract.rewardsAdmin.previewInviteEmail.input)) body: z.output<typeof apiContract.rewardsAdmin.previewInviteEmail.input>,
 	): ReturnType<RewardsAdminService["previewMerchantInviteEmail"]> {
 		return this.rewardsAdminService.previewMerchantInviteEmail(body);
 	}
@@ -91,7 +91,7 @@ export class RewardsAdminRewardsController {
 	public rejectReward(
 		@GetUser() user: AccessTokenPayload,
 		@Param(new ZodValidationPipe(z.object({ rewardId: UuidParamSchema }).strict())) params: { rewardId: string },
-		@Body(new ZodValidationPipe(apiContract.rewardsAdmin.rejectReward.input)) body: Parameters<RewardsAdminService["rejectReward"]>[2],
+		@Body(new ZodValidationPipe(apiContract.rewardsAdmin.rejectReward.input)) body: z.output<typeof apiContract.rewardsAdmin.rejectReward.input>,
 	): ReturnType<RewardsAdminService["rejectReward"]> {
 		return this.rewardsAdminService.rejectReward(user.sub, params.rewardId, body);
 	}
@@ -109,7 +109,7 @@ export class RewardsAdminLocationRequestsController {
 	@ApiOperation({ summary: "List pending organization store location requests" })
 	@ApiOkResponse({ description: "Paginated location requests" })
 	public listLocationRequests(
-		@Query(new ZodValidationPipe(apiContract.rewardsAdmin.listLocationRequests.input)) query: Parameters<OrganizationLocationService["listAdminLocationRequests"]>[0],
+		@Query(new ZodValidationPipe(apiContract.rewardsAdmin.listLocationRequests.input)) query: z.output<typeof apiContract.rewardsAdmin.listLocationRequests.input>,
 	): ReturnType<OrganizationLocationService["listAdminLocationRequests"]> {
 		return this.organizationLocations.listAdminLocationRequests(query);
 	}
@@ -131,7 +131,7 @@ export class RewardsAdminMerchantsController {
 	@ApiOperation({ summary: "List merchant organizations" })
 	@ApiOkResponse({ description: "Paginated merchant org list" })
 	public listMerchants(
-		@Query(new ZodValidationPipe(apiContract.rewardsAdmin.listOrganizations.input)) query: Parameters<RewardsAdminService["listMerchants"]>[0],
+		@Query(new ZodValidationPipe(apiContract.rewardsAdmin.listOrganizations.input)) query: z.output<typeof apiContract.rewardsAdmin.listOrganizations.input>,
 	): ReturnType<RewardsAdminService["listMerchants"]> {
 		return this.rewardsAdminService.listMerchants(query);
 	}
@@ -171,7 +171,7 @@ export class RewardsAdminMerchantsController {
 	@ApiOkResponse({ description: "KYB updated" })
 	public async updateKyb(
 		@Param(new ZodValidationPipe(apiContract.rewardsAdmin.updateKyb.input)) params: { organizationId: string },
-		@Body(new ZodValidationPipe(AdminKybUpdateSchema)) body: Parameters<RewardsAdminService["updateMerchantKyb"]>[1],
+		@Body(new ZodValidationPipe(AdminKybUpdateSchema)) body: z.output<typeof AdminKybUpdateSchema>,
 	): Promise<{ ok: true }> {
 		await this.rewardsAdminService.updateMerchantKyb(params.organizationId, body);
 		return { ok: true };
@@ -184,7 +184,7 @@ export class RewardsAdminMerchantsController {
 	public createLocation(
 		@GetUser() user: AccessTokenPayload,
 		@Param(new ZodValidationPipe(apiContract.rewardsAdmin.getOrganization.input)) params: { organizationId: string },
-		@Body(new ZodValidationPipe(AdminOrganizationLocationCreateSchema)) body: Parameters<OrganizationLocationService["createAdminLocation"]>[2],
+		@Body(new ZodValidationPipe(AdminOrganizationLocationCreateSchema)) body: z.output<typeof AdminOrganizationLocationCreateSchema>,
 	): ReturnType<OrganizationLocationService["createAdminLocation"]> {
 		return this.organizationLocations.createAdminLocation(user.sub, params.organizationId, body);
 	}
@@ -196,7 +196,7 @@ export class RewardsAdminMerchantsController {
 	public reviewLocation(
 		@GetUser() user: AccessTokenPayload,
 		@Param(new ZodValidationPipe(AdminOrganizationLocationReviewPathInputSchema)) params: { organizationId: string; locationId: string },
-		@Body(new ZodValidationPipe(AdminOrganizationLocationReviewSchema)) body: Parameters<OrganizationLocationService["reviewAdminLocation"]>[3],
+		@Body(new ZodValidationPipe(AdminOrganizationLocationReviewSchema)) body: z.output<typeof AdminOrganizationLocationReviewSchema>,
 	): ReturnType<OrganizationLocationService["reviewAdminLocation"]> {
 		return this.organizationLocations.reviewAdminLocation(user.sub, params.organizationId, params.locationId, body);
 	}

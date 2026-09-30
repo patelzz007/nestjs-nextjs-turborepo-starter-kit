@@ -1,9 +1,14 @@
 import { Injectable } from "@nestjs/common";
-import type { City, Country, Prisma, Region, State, Subregion } from "@prisma/client";
+import type { City, Country, Region, State, Subregion } from "@prisma/client";
 
 import type {
 	CityListQuery,
 	CountryListQuery,
+	CreateCityInput,
+	CreateCountryInput,
+	CreateRegionInput,
+	CreateStateInput,
+	CreateSubregionInput,
 	GeoAutocompleteQuery,
 	GeoExportQuery,
 	GeoImportInput,
@@ -12,6 +17,11 @@ import type {
 	RegionListQuery,
 	StateListQuery,
 	SubregionListQuery,
+	UpdateCityInput,
+	UpdateCountryInput,
+	UpdateRegionInput,
+	UpdateStateInput,
+	UpdateSubregionInput,
 } from "@workspace/shared";
 
 import { GeoRepository } from "../repositories/geo.repository";
@@ -46,7 +56,7 @@ export class GeoService {
 		return this.repository.cascadePreview(input);
 	}
 
-	public listRegions(query: RegionListQuery): Promise<import("../repositories/geo.repository").ListResult<Region>> {
+	public listRegions(query: RegionListQuery): Promise<import("../repositories/geo.repository").ListResult> {
 		return this.repository.listRegions(query);
 	}
 
@@ -54,11 +64,11 @@ export class GeoService {
 		return this.repository.getRegion(id);
 	}
 
-	public createRegion(input: Prisma.RegionCreateInput): Promise<Region> {
+	public createRegion(input: CreateRegionInput): Promise<Region> {
 		return this.repository.createRegion(input);
 	}
 
-	public updateRegion(id: number, input: Prisma.RegionUpdateInput): Promise<Region> {
+	public updateRegion(id: number, input: UpdateRegionInput): Promise<Region> {
 		return this.repository.updateRegion(id, input);
 	}
 
@@ -66,7 +76,7 @@ export class GeoService {
 		return this.repository.deleteRegion(id);
 	}
 
-	public listSubregions(query: SubregionListQuery): Promise<import("../repositories/geo.repository").ListResult<Subregion>> {
+	public listSubregions(query: SubregionListQuery): Promise<import("../repositories/geo.repository").ListResult> {
 		return this.repository.listSubregions(query);
 	}
 
@@ -74,11 +84,11 @@ export class GeoService {
 		return this.repository.getSubregion(id);
 	}
 
-	public createSubregion(input: Prisma.SubregionCreateInput): Promise<Subregion> {
+	public createSubregion(input: CreateSubregionInput): Promise<Subregion> {
 		return this.repository.createSubregion(input);
 	}
 
-	public updateSubregion(id: number, input: Prisma.SubregionUpdateInput): Promise<Subregion> {
+	public updateSubregion(id: number, input: UpdateSubregionInput): Promise<Subregion> {
 		return this.repository.updateSubregion(id, input);
 	}
 
@@ -86,7 +96,7 @@ export class GeoService {
 		return this.repository.deleteSubregion(id);
 	}
 
-	public listCountries(query: CountryListQuery): Promise<import("../repositories/geo.repository").ListResult<Country>> {
+	public listCountries(query: CountryListQuery): Promise<import("../repositories/geo.repository").ListResult> {
 		return this.repository.listCountries(query);
 	}
 
@@ -94,11 +104,11 @@ export class GeoService {
 		return this.repository.getCountry(id);
 	}
 
-	public createCountry(input: Prisma.CountryCreateInput): Promise<Country> {
+	public createCountry(input: CreateCountryInput): Promise<Country> {
 		return this.repository.createCountry(input);
 	}
 
-	public updateCountry(id: number, input: Prisma.CountryUpdateInput): Promise<Country> {
+	public updateCountry(id: number, input: UpdateCountryInput): Promise<Country> {
 		return this.repository.updateCountry(id, input);
 	}
 
@@ -106,7 +116,7 @@ export class GeoService {
 		return this.repository.deleteCountry(id);
 	}
 
-	public listStates(query: StateListQuery): Promise<import("../repositories/geo.repository").ListResult<State>> {
+	public listStates(query: StateListQuery): Promise<import("../repositories/geo.repository").ListResult> {
 		return this.repository.listStates(query);
 	}
 
@@ -114,11 +124,11 @@ export class GeoService {
 		return this.repository.getState(id);
 	}
 
-	public createState(input: Prisma.StateCreateInput): Promise<State> {
+	public createState(input: CreateStateInput): Promise<State> {
 		return this.repository.createState(input);
 	}
 
-	public updateState(id: number, input: Prisma.StateUpdateInput): Promise<State> {
+	public updateState(id: number, input: UpdateStateInput): Promise<State> {
 		return this.repository.updateState(id, input);
 	}
 
@@ -126,7 +136,7 @@ export class GeoService {
 		return this.repository.deleteState(id);
 	}
 
-	public listCities(query: CityListQuery): Promise<import("../repositories/geo.repository").ListResult<City>> {
+	public listCities(query: CityListQuery): Promise<import("../repositories/geo.repository").ListResult> {
 		return this.repository.listCities(query);
 	}
 
@@ -134,11 +144,11 @@ export class GeoService {
 		return this.repository.getCity(id);
 	}
 
-	public createCity(input: Prisma.CityCreateInput): Promise<City> {
+	public createCity(input: CreateCityInput): Promise<City> {
 		return this.repository.createCity(input);
 	}
 
-	public updateCity(id: number, input: Prisma.CityUpdateInput): Promise<City> {
+	public updateCity(id: number, input: UpdateCityInput): Promise<City> {
 		return this.repository.updateCity(id, input);
 	}
 

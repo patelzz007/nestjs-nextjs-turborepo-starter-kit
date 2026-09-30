@@ -1,4 +1,13 @@
-import { ApiPaginatedMetaSchema, ApiResponseMetaSchema, nowEpochMs, stubPaginatedMeta, stubPaginatedMetaFromHydration, type ApiResponseMeta } from "@workspace/shared";
+import {
+	ApiPaginatedMetaSchema,
+	ApiResponseMetaSchema,
+	nowEpochMs,
+	stubPaginatedMeta,
+	stubPaginatedMetaFromHydration,
+	type ApiResponseMeta,
+	type DataValue,
+	type Envelope,
+} from "@workspace/shared";
 
 export { stubPaginatedMeta, stubPaginatedMetaFromHydration };
 
@@ -23,4 +32,9 @@ export function readPaginatedNextCursor(meta: ApiResponseMeta | undefined): stri
 	}
 	const parsed = ApiPaginatedMetaSchema.safeParse(meta);
 	return parsed.success ? parsed.data.nextCursor : null;
+}
+
+/** Build a success envelope (`{ success: true, data, meta }`) for SSR-hydrated react-query `initialData`. */
+export function successEnvelope<TData extends DataValue>(data: TData, meta: ApiResponseMeta): Envelope<TData> {
+	return { success: true, data, meta };
 }

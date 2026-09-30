@@ -47,16 +47,19 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
 	public async onModuleInit(): Promise<void> {
 		// Fire-and-forget: connect in background so NestFactory.create() returns fast.
 		// The first DB query will await `this.connected` if the pool isn't ready yet.
-		void this.$connect()
-			.then(() => {
-				this.logger.log("Database connected");
-				this.resolveConnected?.();
-			})
-			.catch((err: unknown) => {
-				this.logger.error(`Database connection failed: ${String(err)}`);
-				// Still resolve so the app can start and retry on first request
-				this.resolveConnected?.();
-			});
+		void this.connectInBackground();
+	}
+
+	private async connectInBackground(): Promise<void> {
+		try {
+			await this.$connect();
+			this.logger.log("Database connected");
+			this.resolveConnected?.();
+		} catch (err) {
+			this.logger.error(`Database connection failed: ${String(err)}`);
+			// Still resolve so the app can start and retry on first request
+			this.resolveConnected?.();
+		}
 	}
 
 	/**

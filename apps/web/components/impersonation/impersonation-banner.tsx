@@ -1,5 +1,6 @@
 "use client";
 
+import { useWebSession } from "@/components/auth/web-authorization-provider";
 import { invalidateSessionAuth } from "@workspace/client/lib/auth/session/invalidate-auth";
 import { useAuth } from "@workspace/client/lib/auth";
 import { Button } from "@workspace/ui/components/form/button";
@@ -9,15 +10,22 @@ import * as React from "react";
 
 /**
  * Banner shown while a super-admin is impersonating another user (web app).
+ * `POST /auth/stop-impersonation` needs no permission (any impersonation
+ * session may end itself), so the banner is gated only on the session flag.
  */
-export function ImpersonationBanner({ sessionActive }: { readonly sessionActive: boolean }): React.JSX.Element | null {
+export function ImpersonationBanner(): React.JSX.Element | null {
+	const { session } = useWebSession();
+
+	if (session?.isImpersonating !== true) {
+		return null;
+	}
+
+	return <ImpersonationBannerContent />;
+}
+
+function ImpersonationBannerContent(): React.JSX.Element {
 	const { api } = useAuth();
 	const queryClient = useQueryClient();
-
-	const permissionsQuery = api.auth.permissions.useQuery(undefined, {
-		enabled: sessionActive,
-		retry: 1,
-	});
 
 	const stopMutation = api.auth.stopImpersonation.useMutation({
 		onSuccess: async (): Promise<void> => {
@@ -25,16 +33,9 @@ export function ImpersonationBanner({ sessionActive }: { readonly sessionActive:
 		},
 	});
 
-	const session = permissionsQuery.data?.data;
-	const isImpersonating = session?.isImpersonating === true;
-
 	const handleStop = React.useCallback((): void => {
 		void stopMutation.mutateAsync({});
 	}, [stopMutation]);
-
-	if (!isImpersonating) {
-		return null;
-	}
 
 	return (
 		<div className="shrink-0 border-b border-amber-500/40 bg-amber-500/15 px-4 py-2.5">

@@ -1,6 +1,7 @@
 "use client";
 
 import {
+	PERMISSION,
 	PermissionActionSchema,
 	PermissionResourceSchema,
 	type AdminUserDetail,
@@ -11,6 +12,8 @@ import {
 } from "@workspace/shared";
 import { invalidateSessionAuth } from "@workspace/client/lib/auth/session/invalidate-auth";
 import { useAuth } from "@workspace/client/lib/auth";
+import { useAuthorization } from "@workspace/client/lib/auth/can";
+import { AccessRestrictedNotice } from "@/components/common/access-restricted-notice";
 import { AccessHierarchyRow } from "@/components/access/access-hierarchy";
 import { AccessPermissionTree } from "@/components/access/access-permission-tree";
 import { UserDetailButton } from "@/components/users/user-detail-button";
@@ -40,6 +43,11 @@ export interface UserAccessPanelProps {
 
 /**
  * Smart panel for managing a user's roles and direct permissions via admin RBAC APIs.
+ *
+ * Gating mirrors the API: role assign/remove need `role.update`
+ * (`POST /admin/roles/user/{assign,remove}`), direct grant/revoke need
+ * `permission.update` (`POST /admin/permissions/user/{grant,revoke}`), and
+ * the checker needs `permission.read` (`POST /admin/permissions/check`).
  */
 export function UserAccessPanel({
 	userId,
@@ -50,7 +58,11 @@ export function UserAccessPanel({
 	permissionsCatalogError = false,
 }: UserAccessPanelProps): React.JSX.Element {
 	const { api } = useAuth();
+	const { can } = useAuthorization();
 	const queryClient = useQueryClient();
+	const canManageRoles = can(PERMISSION.ROLE.UPDATE);
+	const canManageDirectGrants = can(PERMISSION.PERMISSION.UPDATE);
+	const canCheckPermissions = can(PERMISSION.PERMISSION.READ);
 
 	const [assignRoleId, setAssignRoleId] = React.useState<string | null>(null);
 	const [checkAction, setCheckAction] = React.useState<PermissionAction>("READ");
@@ -95,6 +107,7 @@ export function UserAccessPanel({
 	const availableRoles: readonly RoleListItem[] = rolesCatalog.filter((role) => !assignedRoleIds.has(role.id) && role.isActive);
 	const directGrants = permissionsCatalog.filter((perm) => directPermissionIds.has(perm.id));
 	const catalogPermissionTree = buildPermissionTree(permissionsCatalog);
+	const directGrantTree = buildPermissionTree(directGrants);
 	const effectivePermissionTree = buildPermissionTree(user.permissions);
 
 	const inheritedPermissionIds: Set<string> = React.useMemo((): Set<string> => {
@@ -198,48 +211,61 @@ export function UserAccessPanel({
 										key={role.id}
 										label={role.name}
 										description={role.description}
-										onRemove={roleRemoveHandlers[role.id]}
+										onRemove={canManageRoles ? roleRemoveHandlers[role.id] : undefined}
 										removeDisabled={removeRole.isPending}
 									/>
 								))}
 							</div>
-							<div className="flex flex-wrap items-end gap-3 border-t border-dashed pt-4">
-								<div className="min-w-[200px] flex-1 space-y-1">
-									<Label htmlFor="assign-role">Add role</Label>
-									<Select value={assignRoleId} onValueChange={handleAssignRoleChange}>
-										<SelectTrigger id="assign-role" className="w-full">
-											<SelectValue placeholder="Select role…" />
-										</SelectTrigger>
-										<SelectContent>
-											{availableRoles.length === 0 ? <SelectEmpty text="No roles available to assign" /> : null}
-											{availableRoles.map((role) => (
-												<SelectItem key={role.id} value={role.id}>
-													{role.name}
-												</SelectItem>
-											))}
-										</SelectContent>
-									</Select>
+							{canManageRoles ? (
+								<div className="flex flex-wrap items-end gap-3 border-t border-dashed pt-4">
+									<div className="min-w-[200px] flex-1 space-y-1">
+										<Label htmlFor="assign-role">Add role</Label>
+										<Select value={assignRoleId} onValueChange={handleAssignRoleChange}>
+											<SelectTrigger id="assign-role" className="w-full">
+												<SelectValue placeholder="Select role…" />
+											</SelectTrigger>
+											<SelectContent>
+												{availableRoles.length === 0 ? <SelectEmpty text="No roles available to assign" /> : null}
+												{availableRoles.map((role) => (
+													<SelectItem key={role.id} value={role.id}>
+														{role.name}
+													</SelectItem>
+												))}
+											</SelectContent>
+										</Select>
+									</div>
+									<UserDetailButton type="button" disabled={assignRoleId === null || assignRole.isPending} onClick={handleAssignRoleClick}>
+										Assign role
+									</UserDetailButton>
 								</div>
-								<UserDetailButton type="button" disabled={assignRoleId === null || assignRole.isPending} onClick={handleAssignRoleClick}>
-									Assign role
-								</UserDetailButton>
-							</div>
+							) : (
+								<AccessRestrictedNotice description="Assigning or removing roles requires the role update permission." />
+							)}
 						</TabsContent>
 
 						<TabsContent value="direct-grants" className="mt-4 space-y-4">
-							<p className="text-sm text-muted-foreground">
-								Check permissions to grant directly to this user. Uncheck to revoke. “Via role” means the user already has it from an assigned role.
-							</p>
-							<AccessPermissionTree
-								groups={catalogPermissionTree}
-								emptyMessage="No permissions in catalog."
-								defaultOpen={false}
-								selectable
-								selectedPermissionIds={selectedDirectPermissionIds}
-								inheritedPermissionIds={inheritedPermissionIds}
-								onTogglePermission={handleToggleDirectPermission}
-								toggleDisabled={permissionTogglePending}
-							/>
+							{canManageDirectGrants ? (
+								<>
+									<p className="text-sm text-muted-foreground">
+										Check permissions to grant directly to this user. Uncheck to revoke. “Via role” means the user already has it from an assigned role.
+									</p>
+									<AccessPermissionTree
+										groups={catalogPermissionTree}
+										emptyMessage="No permissions in catalog."
+										defaultOpen={false}
+										selectable
+										selectedPermissionIds={selectedDirectPermissionIds}
+										inheritedPermissionIds={inheritedPermissionIds}
+										onTogglePermission={handleToggleDirectPermission}
+										toggleDisabled={permissionTogglePending}
+									/>
+								</>
+							) : (
+								<>
+									<AccessRestrictedNotice description="Granting or revoking direct permissions requires the permission update permission." />
+									<AccessPermissionTree groups={directGrantTree} emptyMessage="No direct permission grants." defaultOpen={false} />
+								</>
+							)}
 						</TabsContent>
 
 						<TabsContent value="effective" className="mt-4 space-y-4">
@@ -250,73 +276,75 @@ export function UserAccessPanel({
 				</CardContent>
 			</Card>
 
-			<Card>
-				<CardHeader>
-					<CardTitle className="text-lg">Permission checker</CardTitle>
-					<CardDescription>
-						Inspect why this user has or lacks a permission. Seed roles are flat — customer User accounts only get customer-app permissions unless you assign staff roles or
-						direct grants.
-					</CardDescription>
-				</CardHeader>
-				<CardContent className="space-y-4">
-					<div className="grid gap-4 sm:grid-cols-2">
-						<div className="space-y-1">
-							<Label htmlFor="check-action">Action</Label>
-							<Select value={checkAction} onValueChange={handleCheckActionChange}>
-								<SelectTrigger id="check-action" className="w-full">
-									<SelectValue placeholder="Action" />
-								</SelectTrigger>
-								<SelectContent>
-									{PERMISSION_ACTIONS.map((action) => (
-										<SelectItem key={action} value={action}>
-											{action}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-						</div>
-						<div className="space-y-1">
-							<Label htmlFor="check-resource">Resource</Label>
-							<Select value={checkResource} onValueChange={handleCheckResourceChange}>
-								<SelectTrigger id="check-resource" className="w-full">
-									<SelectValue placeholder="Resource" />
-								</SelectTrigger>
-								<SelectContent>
-									{PERMISSION_RESOURCES.map((resource) => (
-										<SelectItem key={resource} value={resource}>
-											{resource}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-						</div>
-					</div>
-					<UserDetailButton type="button" disabled={checkPermission.isPending} onClick={handleCheckPermissionClick}>
-						Run check
-					</UserDetailButton>
-
-					{checkResult !== null ? (
-						<div className="rounded-lg border bg-muted/30 p-4">
-							<div className="flex items-center gap-2 text-sm font-medium">
-								{checkResult.allowed ? <ShieldCheck className="size-4 text-green-600" /> : <ShieldX className="size-4 text-destructive" />}
-								{checkResult.allowed ? "Allowed" : "Denied"}
+			{canCheckPermissions ? (
+				<Card>
+					<CardHeader>
+						<CardTitle className="text-lg">Permission checker</CardTitle>
+						<CardDescription>
+							Inspect why this user has or lacks a permission. Seed roles are flat — customer User accounts only get customer-app permissions unless you assign staff roles or
+							direct grants.
+						</CardDescription>
+					</CardHeader>
+					<CardContent className="space-y-4">
+						<div className="grid gap-4 sm:grid-cols-2">
+							<div className="space-y-1">
+								<Label htmlFor="check-action">Action</Label>
+								<Select value={checkAction} onValueChange={handleCheckActionChange}>
+									<SelectTrigger id="check-action" className="w-full">
+										<SelectValue placeholder="Action" />
+									</SelectTrigger>
+									<SelectContent>
+										{PERMISSION_ACTIONS.map((action) => (
+											<SelectItem key={action} value={action}>
+												{action}
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
 							</div>
-							{checkResult.grants.length > 0 ? (
-								<ul className="mt-2 space-y-1 border-l border-border pl-3 text-sm text-muted-foreground">
-									{checkResult.grants.map((grant, index) => (
-										<li key={`${grant.via}-${grant.detail ?? ""}-${String(index)}`}>
-											<span className="font-medium text-foreground">{formatPermissionGrantVia(grant.via)}</span>
-											{grant.detail !== undefined ? ` — ${grant.detail}` : ""}
-										</li>
-									))}
-								</ul>
-							) : (
-								<p className="mt-2 text-sm text-muted-foreground">No matching grants.</p>
-							)}
+							<div className="space-y-1">
+								<Label htmlFor="check-resource">Resource</Label>
+								<Select value={checkResource} onValueChange={handleCheckResourceChange}>
+									<SelectTrigger id="check-resource" className="w-full">
+										<SelectValue placeholder="Resource" />
+									</SelectTrigger>
+									<SelectContent>
+										{PERMISSION_RESOURCES.map((resource) => (
+											<SelectItem key={resource} value={resource}>
+												{resource}
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
+							</div>
 						</div>
-					) : null}
-				</CardContent>
-			</Card>
+						<UserDetailButton type="button" disabled={checkPermission.isPending} onClick={handleCheckPermissionClick}>
+							Run check
+						</UserDetailButton>
+
+						{checkResult !== null ? (
+							<div className="rounded-lg border bg-muted/30 p-4">
+								<div className="flex items-center gap-2 text-sm font-medium">
+									{checkResult.allowed ? <ShieldCheck className="size-4 text-green-600" /> : <ShieldX className="size-4 text-destructive" />}
+									{checkResult.allowed ? "Allowed" : "Denied"}
+								</div>
+								{checkResult.grants.length > 0 ? (
+									<ul className="mt-2 space-y-1 border-l border-border pl-3 text-sm text-muted-foreground">
+										{checkResult.grants.map((grant, index) => (
+											<li key={`${grant.via}-${grant.detail ?? ""}-${String(index)}`}>
+												<span className="font-medium text-foreground">{formatPermissionGrantVia(grant.via)}</span>
+												{grant.detail !== undefined ? ` — ${grant.detail}` : ""}
+											</li>
+										))}
+									</ul>
+								) : (
+									<p className="mt-2 text-sm text-muted-foreground">No matching grants.</p>
+								)}
+							</div>
+						) : null}
+					</CardContent>
+				</Card>
+			) : null}
 		</div>
 	);
 }

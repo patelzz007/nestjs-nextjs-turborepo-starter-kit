@@ -6,7 +6,7 @@
 //   ADMIN_E2E_BASE_URL=http://localhost:3001 pnpm --filter @workspace/admin exec vitest run e2e
 import { describe, expect, it } from "vitest";
 
-// eslint-disable-next-line turbo/no-undeclared-env-vars -- opt-in env; see e2e/README.md
+// Opt-in env (see e2e/README.md); `turbo/no-undeclared-env-vars` is scoped off for e2e/** in eslint.config.js.
 const BASE_URL: string | undefined = process.env.ADMIN_E2E_BASE_URL;
 
 describe.skipIf(!BASE_URL)("admin e2e smoke", () => {

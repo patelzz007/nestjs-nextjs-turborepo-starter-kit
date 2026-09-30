@@ -29,57 +29,94 @@ export const RouteStateSchema = z.object({
 
 export type RouteState = z.output<typeof RouteStateSchema>;
 
+/** A route match found while walking the menu tree. */
+interface RouteMatch {
+	readonly id: string;
+	/** The top-level item this match was found under (aliases in other sections are separate branches). */
+	readonly rootId: string;
+	/** Ids of the strict ancestors of this item — they must auto-expand. */
+	readonly ancestors: readonly string[];
+	readonly urlLength: number;
+	readonly depth: number;
+	readonly isExact: boolean;
+}
+
+/** Closest match to `pathname` = longest matching URL; deeper item wins ties (a parent sharing its URL with its child). */
+function isCloserMatch(candidate: RouteMatch, current: RouteMatch): boolean {
+	if (candidate.urlLength !== current.urlLength) {
+		return candidate.urlLength > current.urlLength;
+	}
+	return candidate.depth > current.depth;
+}
+
 /**
  * Walks the menu tree and returns:
- * - `activeItems` — every item that matches the current route (and, when
- *   `isHighlightParentItem` is set, the top-level ancestor of an active item).
- * - `autoExpandedItems` — every item that has an active descendant (so the
- *   active branch is expanded without any user interaction).
+ * - `activeItems` — items for the current route. **Ancestors of an active item
+ *   are never active themselves** (no parent/grandparent highlighting):
+ *   1. When menu entries point **exactly** at the current pathname, each root
+ *      branch lights its deepest such entry — aliases in other sections still
+ *      light up, but a parent sharing its URL with the active child ("Users" →
+ *      "All Users") stays dark.
+ *   2. Otherwise (an unmapped detail page like `/users/<id>`) the **single
+ *      closest match** — longest matching URL, deeper item on ties — lights up,
+ *      so the closest child wins over its parent.
+ * - `autoExpandedItems` — every ancestor of an active item (the active branch
+ *   still expands without any user interaction).
  *
  * Items are keyed by their **compiled `id`** (never the title) — ids are
  * globally unique, so same-titled items can't cross-highlight each other.
  */
-export function computeRouteState(items: readonly CompiledSidebarMenuItem[], pathname: string, isHighlightParentItem: boolean): RouteState {
+export function computeRouteState(items: readonly CompiledSidebarMenuItem[], pathname: string): RouteState {
 	const activeItems: Record<string, boolean> = {};
 	const autoExpandedItems: Record<string, boolean> = {};
+	const matches: RouteMatch[] = [];
 
-	const checkItem = (item: CompiledSidebarMenuItem, isRootLevel: boolean): { readonly isActive: boolean; readonly hasActiveChild: boolean } => {
-		const itemId = item.id;
+	const walk = (item: CompiledSidebarMenuItem, rootId: string, depth: number, ancestors: readonly string[]): void => {
+		// Disabled items are never navigable, so they must never highlight.
+		// Matches are plain prefix matches (`isRouteActive`); exactness and URL
+		// specificity are resolved by the winner selection below.
+		if (item.disabled !== true && isRouteActive(item.url, pathname)) {
+			matches.push({ id: item.id, rootId, ancestors, urlLength: item.url.length, depth, isExact: pathname === item.url });
+		}
 		const children = item.children;
-		const hasChildren = children !== undefined && children.length > 0;
-
-		// Route matching rules:
-		// - Disabled items are never navigable, so they must never highlight.
-		// - Parents (items with children) match their URL plus any nested route
-		//   below it — e.g. "Docs Home" (/docs) stays lit on /docs/some-page.
-		// - Leaf items match their URL **exactly**. A leaf whose URL is a prefix
-		//   of a sibling page must not light up while that sibling is active.
-		const isExactMatch = item.disabled !== true && isRouteActive(item.url, pathname) && (hasChildren || pathname === item.url);
-
-		let hasActiveChild = false;
 		if (children !== undefined) {
+			const childAncestors = [...ancestors, item.id];
 			for (const child of children) {
-				const result = checkItem(child, false);
-				if (result.isActive || result.hasActiveChild) {
-					hasActiveChild = true;
-					autoExpandedItems[itemId] = true;
-				}
+				walk(child, rootId, depth + 1, childAncestors);
 			}
 		}
-
-		if (isHighlightParentItem) {
-			if (isExactMatch || (isRootLevel && hasActiveChild)) {
-				activeItems[itemId] = true;
-			}
-		} else if (isExactMatch) {
-			activeItems[itemId] = true;
-		}
-
-		return { isActive: isExactMatch, hasActiveChild };
 	};
 
 	for (const item of items) {
-		checkItem(item, true);
+		walk(item, item.id, 1, []);
+	}
+
+	const winners: RouteMatch[] = [];
+	const exactMatches = matches.filter((match) => match.isExact);
+	if (exactMatches.length > 0) {
+		// Exact page entries win; one per root branch (the deepest, so parents
+		// yield to the child that shares their URL).
+		const winnersByRoot = new Map<string, RouteMatch>();
+		for (const match of exactMatches) {
+			const current = winnersByRoot.get(match.rootId);
+			if (current === undefined || isCloserMatch(match, current)) {
+				winnersByRoot.set(match.rootId, match);
+			}
+		}
+		winners.push(...winnersByRoot.values());
+	} else {
+		// Unmapped page: light only the single closest match in the whole menu.
+		const closest = matches.reduce<RouteMatch | null>((best, match) => (best === null || isCloserMatch(match, best) ? match : best), null);
+		if (closest !== null) {
+			winners.push(closest);
+		}
+	}
+
+	for (const winner of winners) {
+		activeItems[winner.id] = true;
+		for (const ancestorId of winner.ancestors) {
+			autoExpandedItems[ancestorId] = true;
+		}
 	}
 
 	return { activeItems, autoExpandedItems };
@@ -190,7 +227,6 @@ export const SidebarViewParamsSchema = z.object({
 	pathname: z.string(),
 	sectionOrder: z.array(z.string()).readonly().nullable(),
 	searchQuery: z.string(),
-	isHighlightParentItem: z.boolean(),
 });
 
 export type SidebarViewParams = z.output<typeof SidebarViewParamsSchema>;
@@ -200,11 +236,11 @@ export type SidebarViewParams = z.output<typeof SidebarViewParamsSchema>;
  * never affects highlighting), then search-filtered + reordered sections.
  * Pure and unit-testable — the component layer just renders it.
  */
-export function buildSidebarView({ menu, pathname, sectionOrder, searchQuery, isHighlightParentItem }: SidebarViewParams): SidebarView {
+export function buildSidebarView({ menu, pathname, sectionOrder, searchQuery }: SidebarViewParams): SidebarView {
 	const isSearching = searchQuery.trim().length > 0;
 
 	const allItems: readonly CompiledSidebarMenuItem[] = [...menu.sections.flatMap((section) => section.items), ...menu.bottomItems];
-	const routeState = computeRouteState(allItems, pathname, isHighlightParentItem);
+	const routeState = computeRouteState(allItems, pathname);
 
 	const filteredSections: readonly SidebarViewSection[] = menu.sections
 		.map((section) => ({ title: section.title, items: filterItemsBySearch(section.items, searchQuery), color: section.color }))

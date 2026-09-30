@@ -2,13 +2,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
-import {
-	buildManifestTableToProfileMap,
-	collectRlsEnabledTableNames,
-	computeRlsManifestDrift,
-	listAllManifestTables,
-	parsePrismaSchemaModels,
-} from "./manifest-index";
+import { buildManifestTableToProfileMap, collectRlsEnabledTableNames, computeRlsManifestDrift, listAllManifestTables, parsePrismaSchemaModels } from "./manifest-index";
 
 const apiDir = resolve(import.meta.dirname, "..", "..");
 const schemaFile = resolve(apiDir, "prisma", "schema.prisma");

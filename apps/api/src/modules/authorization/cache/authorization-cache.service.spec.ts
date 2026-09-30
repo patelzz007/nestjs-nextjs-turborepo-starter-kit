@@ -1,14 +1,18 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 
-import type { TypedConfigService } from "../../../config/typed-config.service";
+import { TypedConfigService } from "../../../config/typed-config.service";
 
 import { AuthorizationCacheService, type CachedAuthorization } from "./authorization-cache.service";
 
+vi.mock("../../../config/typed-config.service", () => ({
+	TypedConfigService: class {
+		public readonly authorizationCacheTtlMs = 5 * 60 * 1000;
+		public readonly authorizationCacheMaxEntries = 10_000;
+	},
+}));
+
 function createConfigMock(): TypedConfigService {
-	return {
-		authorizationCacheTtlMs: 5 * 60 * 1000,
-		authorizationCacheMaxEntries: 10_000,
-	} as TypedConfigService;
+	return new TypedConfigService();
 }
 
 describe("AuthorizationCacheService", () => {

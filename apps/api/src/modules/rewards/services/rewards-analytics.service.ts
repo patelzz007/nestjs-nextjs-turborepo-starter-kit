@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common";
+import type { Prisma, RewardClaimStatus } from "@prisma/client";
 
 import type { MerchantAnalyticsResponse, RewardsAnalyticsQuery, UserRewardsAnalyticsResponse } from "@workspace/shared";
 import { EpochMsSchema } from "@workspace/shared";
@@ -35,7 +36,7 @@ export class RewardsAnalyticsService {
 		const period = resolveAnalyticsPeriod(query.from, query.to);
 		const previous = previousAnalyticsPeriod(period);
 
-		const rewardWhere = { organizationId: orgId, isDeleted: false, rewardKind: "CONSUMER" as const };
+		const rewardWhere: Prisma.RewardWhereInput = { organizationId: orgId, isDeleted: false, rewardKind: "CONSUMER" };
 
 		const [
 			totalRewards,
@@ -171,7 +172,8 @@ export class RewardsAnalyticsService {
 		const currentConversion = conversionRatePercent(currentClaims.length, currentRedeemed);
 		const previousConversion = conversionRatePercent(previousClaims.length, previousRedeemed);
 
-		const statusCounts = new Map<"PENDING" | "REDEEMED" | "EXPIRED", number>();
+		const claimStatuses: readonly RewardClaimStatus[] = ["PENDING", "REDEEMED", "EXPIRED"];
+		const statusCounts = new Map<RewardClaimStatus, number>();
 		for (const claim of currentClaims) {
 			statusCounts.set(claim.status, (statusCounts.get(claim.status) ?? 0) + 1);
 		}
@@ -192,7 +194,7 @@ export class RewardsAnalyticsService {
 					redemptionTimestamps,
 				),
 			].map((point) => ({ ...point, date: EpochMsSchema.parse(point.date) })),
-			byStatus: (["PENDING", "REDEEMED", "EXPIRED"] as const).map((status) => ({
+			byStatus: claimStatuses.map((status) => ({
 				status,
 				count: statusCounts.get(status) ?? 0,
 			})),

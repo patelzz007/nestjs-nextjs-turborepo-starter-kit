@@ -17,6 +17,7 @@ import {
 	isDocumentNavigation,
 	refreshSessionFromProxy,
 	resolveProxySessionRefresh,
+	type AuthCookieClearOptions,
 	type ProxyRefreshResult,
 } from "@workspace/client/lib/auth/edge/proxy-refresh";
 import { NextResponse } from "next/server";
@@ -29,11 +30,11 @@ import type { NextRequest } from "next/server";
 const ACCESS_TOKEN_COOKIE = "adminAccessToken";
 const REFRESH_TOKEN_COOKIE = "adminRefreshToken";
 const CLIENT_ORIGIN: string = process.env.NEXT_PUBLIC_ADMIN_URL ?? "http://localhost:3001";
-const COOKIE_CLEAR_OPTIONS = {
+const COOKIE_CLEAR_OPTIONS: AuthCookieClearOptions = {
 	domain: process.env.COOKIE_DOMAIN,
 	path: "/",
 	secure: process.env.NODE_ENV === "production",
-	sameSite: "lax" as const,
+	sameSite: "lax",
 };
 
 // The whole admin panel lives under `/` (overview, settings, users, …).
@@ -124,6 +125,7 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
 		isDocumentNavigation: isDocumentNavigation(request.headers),
 		isAuthRoute,
 		isPublicRoute,
+		tokenAuthRoute: isTokenAuthRoute(pathname),
 		accessTokenCookieName: ACCESS_TOKEN_COOKIE,
 		refreshTokenCookieName: REFRESH_TOKEN_COOKIE,
 		app: "admin",

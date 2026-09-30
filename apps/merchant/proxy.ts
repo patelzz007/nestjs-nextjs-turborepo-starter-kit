@@ -9,6 +9,7 @@ import {
 	isDocumentNavigation,
 	refreshSessionFromProxy,
 	resolveProxySessionRefresh,
+	type AuthCookieClearOptions,
 	type ProxyRefreshResult,
 } from "@workspace/client/lib/auth/edge/proxy-refresh";
 import { NextResponse } from "next/server";
@@ -18,11 +19,11 @@ const ACCESS_TOKEN_COOKIE = "merchantAccessToken";
 const ORGANIZATION_SLUG_COOKIE = "organizationSlug";
 const REFRESH_TOKEN_COOKIE = "merchantRefreshToken";
 const CLIENT_ORIGIN: string = process.env.NEXT_PUBLIC_MERCHANT_URL ?? "http://localhost:3003";
-const COOKIE_CLEAR_OPTIONS = {
+const COOKIE_CLEAR_OPTIONS: AuthCookieClearOptions = {
 	domain: process.env.COOKIE_DOMAIN,
 	path: "/",
 	secure: process.env.NODE_ENV === "production",
-	sameSite: "lax" as const,
+	sameSite: "lax",
 };
 const PROTECTED_ROUTE_PREFIXES: readonly string[] = ["/analytics", "/rewards", "/redemptions", "/api-keys", "/settings"];
 const AUTH_ROUTES: readonly string[] = ["/auth/login", "/auth/verify-email", "/auth/reset-password", "/onboarding"];
@@ -101,6 +102,7 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
 		isDocumentNavigation: isDocumentNavigation(request.headers),
 		isAuthRoute,
 		isPublicRoute: false,
+		tokenAuthRoute: isTokenAuthRoute(pathname),
 		accessTokenCookieName: ACCESS_TOKEN_COOKIE,
 		refreshTokenCookieName: REFRESH_TOKEN_COOKIE,
 		app: "merchant",

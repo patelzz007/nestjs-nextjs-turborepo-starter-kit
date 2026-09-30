@@ -1,7 +1,6 @@
 import { BarChart3, KeyRound, LayoutDashboard, ScanLine, Ticket, type LucideIcon } from "lucide-react";
 
-import type { CapabilitySlug } from "@workspace/shared";
-import { hasCapability } from "@workspace/shared";
+import { MERCHANT_CAPABILITY, type CapabilitySlug } from "@workspace/shared";
 
 export interface MerchantNavItem {
 	readonly id: string;
@@ -23,7 +22,7 @@ export const MERCHANT_NAV_ITEMS: readonly MerchantNavItem[] = [
 		description: "Store performance snapshot",
 		icon: LayoutDashboard,
 		keywords: ["dashboard", "home", "overview"],
-		requiredCapability: "merchant:view_dashboard",
+		requiredCapability: MERCHANT_CAPABILITY.viewDashboard,
 	},
 	{
 		id: "analytics",
@@ -33,7 +32,7 @@ export const MERCHANT_NAV_ITEMS: readonly MerchantNavItem[] = [
 		description: "Performance and trends",
 		icon: BarChart3,
 		keywords: ["analytics", "stats", "charts", "metrics"],
-		requiredCapability: "merchant:view_analytics",
+		requiredCapability: MERCHANT_CAPABILITY.viewAnalytics,
 	},
 	{
 		id: "rewards",
@@ -43,7 +42,7 @@ export const MERCHANT_NAV_ITEMS: readonly MerchantNavItem[] = [
 		description: "Offers and inventory",
 		icon: Ticket,
 		keywords: ["rewards", "offers", "drafts"],
-		requiredCapability: "merchant:view_rewards",
+		requiredCapability: MERCHANT_CAPABILITY.viewRewards,
 	},
 	{
 		id: "rewards-new",
@@ -53,7 +52,7 @@ export const MERCHANT_NAV_ITEMS: readonly MerchantNavItem[] = [
 		description: "Launch a new campaign",
 		icon: Ticket,
 		keywords: ["create", "new", "reward", "draft"],
-		requiredCapability: "merchant:manage_rewards",
+		requiredCapability: MERCHANT_CAPABILITY.manageRewards,
 	},
 	{
 		id: "redemptions",
@@ -63,7 +62,7 @@ export const MERCHANT_NAV_ITEMS: readonly MerchantNavItem[] = [
 		description: "POS activity",
 		icon: ScanLine,
 		keywords: ["redemptions", "pos", "activity"],
-		requiredCapability: "merchant:view_redemptions",
+		requiredCapability: MERCHANT_CAPABILITY.viewRedemptions,
 	},
 	{
 		id: "api-keys",
@@ -73,18 +72,20 @@ export const MERCHANT_NAV_ITEMS: readonly MerchantNavItem[] = [
 		description: "Terminal access",
 		icon: KeyRound,
 		keywords: ["api", "keys", "terminal"],
-		requiredCapability: "merchant:manage_api_keys",
+		requiredCapability: MERCHANT_CAPABILITY.manageApiKeys,
 	},
 ];
 
-export function filterMerchantNavItems(items: readonly MerchantNavItem[], capabilities: readonly CapabilitySlug[]): readonly MerchantNavItem[] {
-	return items.filter((item) => item.requiredCapability === undefined || hasCapability(capabilities, item.requiredCapability));
+/** Capability predicate — pass `useAuthorization().can` so nav uses the shared checker. */
+export type MerchantCapabilityPredicate = (permission: CapabilitySlug) => boolean;
+
+export function filterMerchantNavItems(items: readonly MerchantNavItem[], can: MerchantCapabilityPredicate): readonly MerchantNavItem[] {
+	return items.filter((item) => item.requiredCapability === undefined || can(item.requiredCapability));
 }
 
-export function resolvePinnedMerchantNavItems(pinnedUrls: readonly string[], capabilities: readonly CapabilitySlug[]): readonly MerchantNavItem[] {
-	return pinnedUrls
-		.map((url) => filterMerchantNavItems(MERCHANT_NAV_ITEMS, capabilities).find((item) => item.url === url))
-		.filter((item): item is MerchantNavItem => item !== undefined);
+export function resolvePinnedMerchantNavItems(pinnedUrls: readonly string[], can: MerchantCapabilityPredicate): readonly MerchantNavItem[] {
+	const allowedItems = filterMerchantNavItems(MERCHANT_NAV_ITEMS, can);
+	return pinnedUrls.map((url) => allowedItems.find((item) => item.url === url)).filter((item): item is MerchantNavItem => item !== undefined);
 }
 
 export function matchesMerchantNavQuery(item: MerchantNavItem, query: string): boolean {

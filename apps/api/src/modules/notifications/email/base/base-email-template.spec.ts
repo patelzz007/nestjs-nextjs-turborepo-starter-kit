@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { BaseEmailPropsSchema } from "@workspace/shared";
 
-import { BaseEmailTemplate, type CtaConfig } from "./base-email-template";
+import { BaseEmailTemplate, type CtaConfig, type EmailAccent } from "./base-email-template";
 import type { EmailRenderContext } from "./email-render-context";
 import { PasswordResetEmailTemplate } from "../templates/password-reset-email.template";
 import { VerificationEmailTemplate } from "../templates/verification-email.template";
@@ -19,7 +19,7 @@ class TestTemplate extends BaseEmailTemplate<{ readonly to: string; readonly ful
 	public readonly key: string = "test";
 	public readonly propsSchema = BaseEmailPropsSchema.extend({ fullName: z.string() });
 	public readonly subject: string = "Test subject";
-	protected readonly accent = "sky" as const;
+	protected readonly accent: EmailAccent = "sky";
 	protected readonly eyebrow: string = "Test";
 	protected readonly heading: string = "Hello";
 	public getPreviewText(): string {

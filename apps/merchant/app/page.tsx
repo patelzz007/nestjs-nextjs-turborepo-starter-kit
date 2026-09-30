@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 export const dynamic = "force-dynamic";
 
 /** Post-login entry — route users into their first organization workspace. */
-export default async function MerchantHomePage(): Promise<never> {
+export default async function MerchantHomePage(): Promise<React.ReactNode> {
 	const ctx = await loadMerchantServerContext();
 	const slug = ctx.organizationSlug ?? ctx.memberships[0]?.organizationSlug;
 

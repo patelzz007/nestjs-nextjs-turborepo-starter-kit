@@ -1,7 +1,6 @@
 packages:
   - "apps/*"
   - "packages/*"
-  - "resources"
 
 allowBuilds:
   '@firebase/util': true
@@ -82,6 +81,14 @@ minimumReleaseAgeExclude:
   - '@aws-sdk/s3-request-presigner@3.1130.0'
   - '@nestjs/schematics@12.0.1'
   - zod@4.6.2
+  - '@turbo/darwin-64@2.11.5'
+  - '@turbo/darwin-arm64@2.11.5'
+  - '@turbo/linux-64@2.11.5'
+  - '@turbo/linux-arm64@2.11.5'
+  - '@turbo/windows-64@2.11.5'
+  - '@turbo/windows-arm64@2.11.5'
+  - eslint-plugin-turbo@2.11.5
+  - turbo@2.11.5
 
 # @darraghor/eslint-plugin-nestjs-typed does `import ts from "typescript"`
 # directly (undisclosed in its manifest), so Node resolves the hoisted TS 7

@@ -20,7 +20,7 @@ const USER_SELECT_BASE = {
 	updatedAt: true,
 	isDeleted: true,
 	deletedAt: true,
-} as const satisfies Prisma.UserSelect;
+} satisfies Prisma.UserSelect;
 
 const USER_SELECT_PROFILE = {
 	...USER_SELECT_BASE,
@@ -29,7 +29,7 @@ const USER_SELECT_PROFILE = {
 	twoFactorEnabled: true,
 	mfaEnrollmentDeadline: true,
 	mfaAssuredAt: true,
-} as const satisfies Prisma.UserSelect;
+} satisfies Prisma.UserSelect;
 
 const USER_SELECT_LOGIN = {
 	...USER_SELECT_PROFILE,
@@ -37,13 +37,13 @@ const USER_SELECT_LOGIN = {
 	failedLoginAttempts: true,
 	lockedUntil: true,
 	twoFactorSecret: true,
-} as const satisfies Prisma.UserSelect;
+} satisfies Prisma.UserSelect;
 
 const USER_SELECT_ADMIN_DETAIL = {
 	...USER_SELECT_PROFILE,
 	failedLoginAttempts: true,
 	lockedUntil: true,
-} as const satisfies Prisma.UserSelect;
+} satisfies Prisma.UserSelect;
 
 /** Base user fields returned from queries. */
 export type UserBase = Prisma.UserGetPayload<{ select: typeof USER_SELECT_BASE }>;

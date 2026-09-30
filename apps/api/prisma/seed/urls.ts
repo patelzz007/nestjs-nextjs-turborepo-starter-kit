@@ -1,10 +1,15 @@
 import type { DeviceType, RedirectType, Tag, Url, User } from "@prisma/client";
 
 import { prisma } from "./client";
+import { requireRow } from "./require-row";
 import { BROWSERS, CITIES, COUNTRIES, DEVICES, OSS, REFERRERS, UTM_MEDIUMS, UTM_SOURCES, daysAgo, daysFromNow, rand, randInt } from "./helpers";
 
 export async function createUrls(users: User[]): Promise<Url[]> {
-	const get = (email: string) => users.find((u) => u.email === email)!;
+	const get = (email: string): User =>
+		requireRow(
+			users.find((u) => u.email === email),
+			`user ${email}`,
+		);
 
 	const urlsData: {
 		userId: string | null;
@@ -364,9 +369,21 @@ export async function createUrls(users: User[]): Promise<Url[]> {
 }
 
 export async function createUrlTags(users: User[], urls: Url[], tags: Tag[]): Promise<void> {
-	const u = (email: string) => users.find((x) => x.email === email)!;
-	const ul = (code: string) => urls.find((x) => x.shortCode === code)!;
-	const tg = (userId: string, name: string) => tags.find((x) => x.userId === userId && x.name === name)!;
+	const u = (email: string): User =>
+		requireRow(
+			users.find((x) => x.email === email),
+			`user ${email}`,
+		);
+	const ul = (code: string): Url =>
+		requireRow(
+			urls.find((x) => x.shortCode === code),
+			`url ${code}`,
+		);
+	const tg = (userId: string, name: string): Tag =>
+		requireRow(
+			tags.find((x) => x.userId === userId && x.name === name),
+			`tag ${name} for user ${userId}`,
+		);
 
 	const alice = u("alice.johnson@example.com");
 	const bob = u("bob.smith@example.com");

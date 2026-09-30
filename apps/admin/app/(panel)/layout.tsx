@@ -3,6 +3,7 @@ import * as React from "react";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { createAdminServerCaller } from "@/lib/admin-server-api";
 import { getServerUser } from "@/lib/auth-server";
+import { resolveEnabledFeatureFlags } from "@/lib/feature-flags";
 import { SessionPermissionsResponseSchema, type SessionPermissionsResponse } from "@workspace/shared";
 
 export interface PanelLayoutProps {
@@ -38,7 +39,7 @@ export default async function PanelLayout({ children }: PanelLayoutProps): Promi
 	const [initialUser, initialSessionPermissions] = await Promise.all([getServerUser(), loadInitialSessionPermissions(server)]);
 
 	return (
-		<DashboardShell initialUser={initialUser} initialSessionPermissions={initialSessionPermissions}>
+		<DashboardShell initialUser={initialUser} initialSessionPermissions={initialSessionPermissions} enabledFeatureFlags={resolveEnabledFeatureFlags()}>
 			{children}
 		</DashboardShell>
 	);

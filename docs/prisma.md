@@ -453,7 +453,7 @@ Follow the [column / field change order](#column--field-change-order) in §4. Sh
 4. Seed if the new shape needs rows: `pnpm db:seed`.
 5. **Then** Zod in `packages/shared`, Nest `ZodValidationPipe` + Swagger wrappers, client contract leaf.
 6. `pnpm typecheck` and `pnpm lint`.
-7. Tenant tables: add RLS in `apps/api/prisma/rls.sql` (or `prisma/rls/NN-*.sql`);
+7. Tenant tables: add RLS in `apps/api/prisma/rls.sql` (or `prisma/rls/NN-*.sql`, registered in `RLS_APPLY_ORDER` — `apps/api/scripts/rls-apply-plan.ts`);
    see [RBAC, ACL, and RLS](./rbac-acl-rls-architecture.md). **Do not** patch
    `migrations/*/migration.sql` for policies.
 

@@ -3,7 +3,13 @@ import { z } from "zod";
 
 import type {
 	CityListQuery,
+	DataValue,
 	CountryListQuery,
+	CreateCityInput,
+	CreateCountryInput,
+	CreateRegionInput,
+	CreateStateInput,
+	CreateSubregionInput,
 	GeoAutocompleteQuery,
 	GeoExportQuery,
 	GeoImportInput,
@@ -14,44 +20,65 @@ import type {
 	RegionListQuery,
 	StateListQuery,
 	SubregionListQuery,
+	UpdateCityInput,
+	UpdateCountryInput,
+	UpdateRegionInput,
+	UpdateStateInput,
+	UpdateSubregionInput,
 } from "@workspace/shared";
 import { buildOffsetPaginationMeta, JsonObjectSchema } from "@workspace/shared";
 import type { City, Country, Prisma, Region, State, Subregion } from "@prisma/client";
 
+import { parsePrismaNullableDataValue } from "../../../common/utils/prisma-json";
 import { PrismaService } from "../../../prisma/prisma.service";
+
+/** Raw Prisma row value before JSON-safe conversion (JSON columns, BigInt, Decimal, Date, relations). */
+type GeoRawValue = string | number | boolean | bigint | null | undefined | Date | Prisma.Decimal | readonly GeoRawValue[] | GeoRawRecord;
+
+interface GeoRawRecord {
+	readonly [key: string]: GeoRawValue;
+}
+
+function isGeoRawList(v: GeoRawValue): v is readonly GeoRawValue[] {
+	return Array.isArray(v);
+}
+
+/** Prisma Decimal: detect via toNumber method (duck-typing). */
+function isPrismaDecimal(v: GeoRawValue): v is Prisma.Decimal {
+	return typeof v === "object" && v !== null && "toNumber" in v && typeof v.toNumber === "function";
+}
+
+function toDataValue(v: GeoRawValue): DataValue | undefined {
+	if (v === null || v === undefined) return v;
+	if (typeof v === "bigint") return Number(v);
+	if (v instanceof Date) return v.toISOString();
+	// `undefined` array slots serialize as `null` in JSON.
+	if (isGeoRawList(v)) return v.map((item) => toDataValue(item) ?? null);
+	if (isPrismaDecimal(v)) return v.toNumber();
+	if (typeof v === "object") return toDataRecord(v);
+	return v;
+}
+
+function toDataRecord(v: GeoRawRecord): Readonly<Record<string, DataValue | undefined>> {
+	const out: Record<string, DataValue | undefined> = {};
+	for (const [k, val] of Object.entries(v)) {
+		out[k] = toDataValue(val);
+	}
+	return out;
+}
 
 /**
  * Recursively convert non-JSON-safe Prisma types (BigInt, Decimal, Date)
  * to JSON-safe primitives so the data can pass DataValueSchema validation
  * in the ResponseInterceptor.
  */
-function sanitizeForDataValue<T>(obj: T): T {
-	function toDataValue(v: unknown): unknown {
-		if (v === null || v === undefined) return v;
-		if (typeof v === "bigint") return Number(v);
-		if (v instanceof Date) return v.toISOString();
-		if (Array.isArray(v)) return v.map(toDataValue);
-		if (typeof v === "object") {
-			// Prisma Decimal: detect via toNumber method (duck-typing)
-			if ("toNumber" in v && typeof v.toNumber === "function") {
-				// eslint-disable-next-line @typescript-eslint/no-unsafe-call -- Prisma Decimal.toNumber() returns number
-				return Number(v.toNumber());
-			}
-			const out: Record<string, unknown> = {};
-			for (const [k, val] of Object.entries(v)) {
-				out[k] = toDataValue(val);
-			}
-			return out;
-		}
-		return v;
-	}
-	// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- safe by construction: toDataValue preserves object shape
-	return toDataValue(obj) as T;
+function sanitizeForDataValue(rows: readonly GeoRawRecord[]): readonly DataValue[] {
+	return rows.map(toDataRecord);
 }
 
 /** Hybrid list response shape (matches {@link PaginatedServiceResult} for the response interceptor). */
-export interface ListResult<T> {
-	readonly items: readonly T[];
+export interface ListResult {
+	readonly items: readonly DataValue[];
 	readonly limit: number;
 	readonly total: number;
 	readonly page: number;
@@ -82,13 +109,13 @@ interface GeoCursorOrder {
 
 const GEO_CURSOR_ORDER: GeoCursorOrder = { id: "asc" };
 
-async function fetchGeoCursorPage<TWhere, TRow extends { id: number }>(options: {
+async function fetchGeoCursorPage<TWhere, TRow extends GeoRawRecord & { readonly id: number }>(options: {
 	readonly limit: number;
 	readonly cursor?: string;
 	readonly where: TWhere;
 	readonly mergeCursor: (where: TWhere, cursorId: number) => TWhere;
 	readonly findMany: (args: { where: TWhere; take: number; skip?: number; orderBy: GeoCursorOrder }) => Promise<TRow[]>;
-}): Promise<{ readonly items: readonly TRow[]; readonly nextCursor: string | null; readonly hasNext: boolean }> {
+}): Promise<{ readonly items: readonly DataValue[]; readonly nextCursor: string | null; readonly hasNext: boolean }> {
 	const cursorId = options.cursor !== undefined ? decodeCursor(options.cursor) : null;
 	const mergedWhere = cursorId !== null ? options.mergeCursor(options.where, cursorId) : options.where;
 	const rows = await options.findMany({ where: mergedWhere, take: options.limit + 1, orderBy: GEO_CURSOR_ORDER });
@@ -98,14 +125,17 @@ async function fetchGeoCursorPage<TWhere, TRow extends { id: number }>(options: 
 	return { items: sanitizeForDataValue(items), nextCursor, hasNext };
 }
 
-interface FetchGeoListPageOptions<TWhere, TRow extends { id: number }> {
+interface FetchGeoListPageOptions<TWhere, TRow extends GeoRawRecord & { readonly id: number }> {
 	readonly where: TWhere;
 	readonly count: (where: TWhere) => Promise<number>;
 	readonly findMany: (args: { where: TWhere; take: number; skip?: number; orderBy: GeoCursorOrder }) => Promise<TRow[]>;
 }
 
 /** Offset + cursor list pagination for geo entities keyed by ascending numeric `id`. */
-async function fetchGeoListPage<TWhere, TRow extends { id: number }>(query: PaginationInput, options: FetchGeoListPageOptions<TWhere, TRow>): Promise<ListResult<TRow>> {
+async function fetchGeoListPage<TWhere, TRow extends GeoRawRecord & { readonly id: number }>(
+	query: PaginationInput,
+	options: FetchGeoListPageOptions<TWhere, TRow>,
+): Promise<ListResult> {
 	const total = await options.count(options.where);
 	const useCursor = query.cursor !== undefined;
 	const page = query.page;
@@ -222,7 +252,7 @@ const geoNameFieldSchema = z.string();
 const geoNonEmptyNameSchema = z.string().trim().min(1);
 const geoNonNegativeIntSchema = z.number().int().nonnegative();
 
-function sanitizePrismaNameField(input: { name?: unknown }): void {
+function sanitizePrismaNameField(input: { name?: string | null }): void {
 	const parsed = geoNameFieldSchema.safeParse(input.name);
 	if (parsed.success) {
 		input.name = sanitize(parsed.data) ?? parsed.data;
@@ -245,6 +275,52 @@ function parseImportIntField(row: JsonObject, field: string): number | null {
 function parseImportStringField(row: JsonObject, field: string, fallback = ""): string {
 	const parsed = geoNameFieldSchema.safeParse(row[field]);
 	return parsed.success ? parsed.data : fallback;
+}
+
+// ── DTO → Prisma input mappers ────────────────────────────────────────────────
+// Contract DTOs (zod outputs) carry scalar foreign keys and nullable `DataValue`
+// JSON fields. Prisma's *Unchecked* inputs accept the scalar FKs directly, and
+// JSON `null` must become the `DbNull` sentinel — `parsePrismaNullableDataValue`
+// converts and runtime-validates both (`undefined` leaves the field unset).
+
+function toPrismaCreateRegion(input: CreateRegionInput): Prisma.RegionUncheckedCreateInput {
+	return { ...input, translations: parsePrismaNullableDataValue(input.translations) };
+}
+
+function toPrismaUpdateRegion(input: UpdateRegionInput): Prisma.RegionUncheckedUpdateInput {
+	return { ...input, translations: parsePrismaNullableDataValue(input.translations) };
+}
+
+function toPrismaCreateSubregion(input: CreateSubregionInput): Prisma.SubregionUncheckedCreateInput {
+	return { ...input, translations: parsePrismaNullableDataValue(input.translations) };
+}
+
+function toPrismaUpdateSubregion(input: UpdateSubregionInput): Prisma.SubregionUncheckedUpdateInput {
+	return { ...input, translations: parsePrismaNullableDataValue(input.translations) };
+}
+
+function toPrismaCreateCountry(input: CreateCountryInput): Prisma.CountryUncheckedCreateInput {
+	return { ...input, timezones: parsePrismaNullableDataValue(input.timezones), translations: parsePrismaNullableDataValue(input.translations) };
+}
+
+function toPrismaUpdateCountry(input: UpdateCountryInput): Prisma.CountryUncheckedUpdateInput {
+	return { ...input, timezones: parsePrismaNullableDataValue(input.timezones), translations: parsePrismaNullableDataValue(input.translations) };
+}
+
+function toPrismaCreateState(input: CreateStateInput): Prisma.StateUncheckedCreateInput {
+	return { ...input, translations: parsePrismaNullableDataValue(input.translations) };
+}
+
+function toPrismaUpdateState(input: UpdateStateInput): Prisma.StateUncheckedUpdateInput {
+	return { ...input, translations: parsePrismaNullableDataValue(input.translations) };
+}
+
+function toPrismaCreateCity(input: CreateCityInput): Prisma.CityUncheckedCreateInput {
+	return { ...input, translations: parsePrismaNullableDataValue(input.translations) };
+}
+
+function toPrismaUpdateCity(input: UpdateCityInput): Prisma.CityUncheckedUpdateInput {
+	return { ...input, translations: parsePrismaNullableDataValue(input.translations) };
 }
 
 @Injectable()
@@ -345,7 +421,7 @@ export class GeoRepository {
 
 	// ── Region ──────────────────────────────────────────────────────────
 
-	public async listRegions(query: RegionListQuery): Promise<ListResult<Region>> {
+	public async listRegions(query: RegionListQuery): Promise<ListResult> {
 		const { search, flag, ids, include } = query;
 		const idList = parseIds(ids);
 		const searchIds = search !== undefined ? await this.fuzzySearchIds("regions", search, 200) : null;
@@ -368,15 +444,15 @@ export class GeoRepository {
 		return region;
 	}
 
-	public async createRegion(input: Prisma.RegionCreateInput): Promise<Region> {
+	public async createRegion(input: CreateRegionInput): Promise<Region> {
 		if (input.name) sanitizePrismaNameField(input);
-		return this.prisma.region.create({ data: input });
+		return this.prisma.region.create({ data: toPrismaCreateRegion(input) });
 	}
 
-	public async updateRegion(id: number, input: Prisma.RegionUpdateInput): Promise<Region> {
+	public async updateRegion(id: number, input: UpdateRegionInput): Promise<Region> {
 		await this.getRegion(id);
 		sanitizePrismaNameField(input);
-		return this.prisma.region.update({ where: { id }, data: input });
+		return this.prisma.region.update({ where: { id }, data: toPrismaUpdateRegion(input) });
 	}
 
 	public async deleteRegion(id: number): Promise<{ readonly message: string }> {
@@ -387,7 +463,7 @@ export class GeoRepository {
 
 	// ── Subregion ───────────────────────────────────────────────────────
 
-	public async listSubregions(query: SubregionListQuery): Promise<ListResult<Subregion>> {
+	public async listSubregions(query: SubregionListQuery): Promise<ListResult> {
 		const { search, regionId, flag, ids, include } = query;
 		const idList = parseIds(ids);
 		const searchIds = search !== undefined ? await this.fuzzySearchIds("subregions", search, 200) : null;
@@ -411,15 +487,15 @@ export class GeoRepository {
 		return subregion;
 	}
 
-	public async createSubregion(input: Prisma.SubregionCreateInput): Promise<Subregion> {
+	public async createSubregion(input: CreateSubregionInput): Promise<Subregion> {
 		if (input.name) sanitizePrismaNameField(input);
-		return this.prisma.subregion.create({ data: input });
+		return this.prisma.subregion.create({ data: toPrismaCreateSubregion(input) });
 	}
 
-	public async updateSubregion(id: number, input: Prisma.SubregionUpdateInput): Promise<Subregion> {
+	public async updateSubregion(id: number, input: UpdateSubregionInput): Promise<Subregion> {
 		await this.getSubregion(id);
 		sanitizePrismaNameField(input);
-		return this.prisma.subregion.update({ where: { id }, data: input });
+		return this.prisma.subregion.update({ where: { id }, data: toPrismaUpdateSubregion(input) });
 	}
 
 	public async deleteSubregion(id: number): Promise<{ readonly message: string }> {
@@ -430,7 +506,7 @@ export class GeoRepository {
 
 	// ── Country ─────────────────────────────────────────────────────────
 
-	public async listCountries(query: CountryListQuery): Promise<ListResult<Country>> {
+	public async listCountries(query: CountryListQuery): Promise<ListResult> {
 		const { search, iso2, regionId, subregionId, flag, ids, include } = query;
 		const idList = parseIds(ids);
 		const searchIds = search !== undefined ? await this.fuzzySearchIds("countries", search, 200) : null;
@@ -456,15 +532,15 @@ export class GeoRepository {
 		return country;
 	}
 
-	public async createCountry(input: Prisma.CountryCreateInput): Promise<Country> {
+	public async createCountry(input: CreateCountryInput): Promise<Country> {
 		if (input.name) sanitizePrismaNameField(input);
-		return this.prisma.country.create({ data: input });
+		return this.prisma.country.create({ data: toPrismaCreateCountry(input) });
 	}
 
-	public async updateCountry(id: number, input: Prisma.CountryUpdateInput): Promise<Country> {
+	public async updateCountry(id: number, input: UpdateCountryInput): Promise<Country> {
 		await this.getCountry(id);
 		sanitizePrismaNameField(input);
-		return this.prisma.country.update({ where: { id }, data: input });
+		return this.prisma.country.update({ where: { id }, data: toPrismaUpdateCountry(input) });
 	}
 
 	public async deleteCountry(id: number): Promise<{ readonly message: string }> {
@@ -475,7 +551,7 @@ export class GeoRepository {
 
 	// ── State ───────────────────────────────────────────────────────────
 
-	public async listStates(query: StateListQuery): Promise<ListResult<State>> {
+	public async listStates(query: StateListQuery): Promise<ListResult> {
 		const { search, countryId, countryCode, flag, ids, include } = query;
 		const idList = parseIds(ids);
 		const searchIds = search !== undefined ? await this.fuzzySearchIds("states", search, 200) : null;
@@ -500,15 +576,15 @@ export class GeoRepository {
 		return state;
 	}
 
-	public async createState(input: Prisma.StateCreateInput): Promise<State> {
+	public async createState(input: CreateStateInput): Promise<State> {
 		if (input.name) sanitizePrismaNameField(input);
-		return this.prisma.state.create({ data: input });
+		return this.prisma.state.create({ data: toPrismaCreateState(input) });
 	}
 
-	public async updateState(id: number, input: Prisma.StateUpdateInput): Promise<State> {
+	public async updateState(id: number, input: UpdateStateInput): Promise<State> {
 		await this.getState(id);
 		sanitizePrismaNameField(input);
-		return this.prisma.state.update({ where: { id }, data: input });
+		return this.prisma.state.update({ where: { id }, data: toPrismaUpdateState(input) });
 	}
 
 	public async deleteState(id: number): Promise<{ readonly message: string }> {
@@ -519,7 +595,7 @@ export class GeoRepository {
 
 	// ── City ────────────────────────────────────────────────────────────
 
-	public async listCities(query: CityListQuery): Promise<ListResult<City>> {
+	public async listCities(query: CityListQuery): Promise<ListResult> {
 		const { search, stateId, countryId, countryCode, stateCode, flag, ids, include } = query;
 		const idList = parseIds(ids);
 		const searchIds = search !== undefined ? await this.fuzzySearchIds("cities", search, 200) : null;
@@ -546,15 +622,15 @@ export class GeoRepository {
 		return city;
 	}
 
-	public async createCity(input: Prisma.CityCreateInput): Promise<City> {
+	public async createCity(input: CreateCityInput): Promise<City> {
 		if (input.name) sanitizePrismaNameField(input);
-		return this.prisma.city.create({ data: input });
+		return this.prisma.city.create({ data: toPrismaCreateCity(input) });
 	}
 
-	public async updateCity(id: number, input: Prisma.CityUpdateInput): Promise<City> {
+	public async updateCity(id: number, input: UpdateCityInput): Promise<City> {
 		await this.getCity(id);
 		sanitizePrismaNameField(input);
-		return this.prisma.city.update({ where: { id }, data: input });
+		return this.prisma.city.update({ where: { id }, data: toPrismaUpdateCity(input) });
 	}
 
 	public async deleteCity(id: number): Promise<{ readonly message: string }> {

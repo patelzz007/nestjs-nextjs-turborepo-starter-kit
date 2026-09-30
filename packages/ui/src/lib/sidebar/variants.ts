@@ -1,7 +1,7 @@
 import { cva } from "class-variance-authority";
 
 const sidebarMenuItemBase =
-	"flex w-full items-center gap-2 overflow-hidden rounded-md text-start ring-sidebar-ring outline-hidden transition-[width,height,padding,background-color,color] focus-visible:ring-2 disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 [&_svg]:size-4 [&_svg]:shrink-0 [&>span:last-child]:truncate";
+	"flex w-full items-center gap-2 overflow-hidden rounded-md font-[family-name:var(--font-sidebar)] font-normal tracking-[0.01em] text-start ring-sidebar-ring outline-hidden transition-[width,height,padding,background-color,color] focus-visible:ring-2 disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 [&_svg]:size-4 [&_svg]:shrink-0 [&>span:last-child]:truncate";
 
 export const sidebarMenuButtonVariants = cva(
 	`peer/menu-button group/menu-button ${sidebarMenuItemBase} p-2 group-has-data-[sidebar=menu-action]/menu-item:pe-8 group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-2! hover:bg-sidebar-accent hover:text-sidebar-accent-foreground active:bg-sidebar-accent active:text-sidebar-accent-foreground data-open:hover:bg-sidebar-accent data-open:hover:text-sidebar-accent-foreground`,
@@ -20,7 +20,7 @@ export const sidebarMenuButtonVariants = cva(
 			state: {
 				default: "",
 				active:
-					"bg-sidebar-primary font-medium text-sidebar-primary-foreground hover:bg-sidebar-primary! hover:text-sidebar-primary-foreground! data-active:bg-sidebar-primary data-active:font-medium data-active:text-sidebar-primary-foreground data-active:hover:bg-sidebar-primary! data-active:hover:text-sidebar-primary-foreground!",
+					"bg-sidebar-primary font-medium tracking-[0.01em] text-sidebar-primary-foreground hover:bg-sidebar-primary! hover:text-sidebar-primary-foreground! data-active:bg-sidebar-primary data-active:font-medium data-active:tracking-[0.01em] data-active:text-sidebar-primary-foreground data-active:hover:bg-sidebar-primary! data-active:hover:text-sidebar-primary-foreground!",
 				disabled: "pointer-events-none opacity-50",
 			},
 		},
@@ -43,7 +43,7 @@ export const sidebarMenuSubButtonVariants = cva(
 			state: {
 				default: "",
 				active:
-					"bg-sidebar-primary font-medium text-sidebar-primary-foreground hover:bg-sidebar-primary! hover:text-sidebar-primary-foreground! data-active:bg-sidebar-primary data-active:text-sidebar-primary-foreground data-active:hover:bg-sidebar-primary! data-active:hover:text-sidebar-primary-foreground! data-active:[&>svg]:text-sidebar-primary-foreground",
+					"bg-sidebar-primary font-medium tracking-[0.01em] text-sidebar-primary-foreground hover:bg-sidebar-primary! hover:text-sidebar-primary-foreground! data-active:bg-sidebar-primary data-active:font-medium data-active:tracking-[0.01em] data-active:text-sidebar-primary-foreground data-active:hover:bg-sidebar-primary! data-active:hover:text-sidebar-primary-foreground! data-active:[&>svg]:text-sidebar-primary-foreground",
 				disabled: "pointer-events-none opacity-50",
 			},
 		},

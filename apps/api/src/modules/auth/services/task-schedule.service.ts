@@ -4,6 +4,7 @@ import { Cron, CronExpression } from "@nestjs/schedule";
 import { LogService } from "../../../modules/logs/logs.service";
 import { PrismaService } from "../../../prisma/prisma.service";
 import { MfaRecoveryService } from "./mfa-recovery.service";
+import { runWithSystemRlsContext } from "../../../prisma/rls-context";
 
 /**
  * Scheduled tasks for auth module housekeeping.
@@ -25,6 +26,10 @@ export class TaskScheduleService {
 	 */
 	@Cron(CronExpression.EVERY_HOUR)
 	public async cleanupExpiredResetTokens(): Promise<void> {
+		await runWithSystemRlsContext("scheduled.maintenance", async (): Promise<void> => this.runCleanupExpiredResetTokens());
+	}
+
+	private async runCleanupExpiredResetTokens(): Promise<void> {
 		const nowMs: number = Date.now();
 
 		const result = await this.prisma.passwordResetToken.deleteMany({
@@ -49,6 +54,10 @@ export class TaskScheduleService {
 	/** Processes approved MFA recovery requests whose security delay has elapsed. */
 	@Cron(CronExpression.EVERY_10_MINUTES)
 	public async processMfaRecoveryUnlocks(): Promise<void> {
+		await runWithSystemRlsContext("scheduled.maintenance", async (): Promise<void> => this.runProcessMfaRecoveryUnlocks());
+	}
+
+	private async runProcessMfaRecoveryUnlocks(): Promise<void> {
 		await this.mfaRecoveryService.processScheduledUnlocks();
 	}
 }

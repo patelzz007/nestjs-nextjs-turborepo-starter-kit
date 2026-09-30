@@ -2,8 +2,11 @@
 
 import * as React from "react";
 
-/** Returns a stable callback that delays invocation until `delayMs` after the last call. */
-export function useDebouncedCallback<T extends readonly unknown[]>(callback: (...args: T) => void, delayMs: number): (...args: T) => void {
+/**
+ * Returns a stable callback that delays invocation until `delayMs` after the last call.
+ * The debounced callback forwards the most recent single argument (e.g. a state setter's value).
+ */
+export function useDebouncedCallback<TArg>(callback: (arg: TArg) => void, delayMs: number): (arg: TArg) => void {
 	const callbackRef = React.useRef(callback);
 	const timeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -20,13 +23,13 @@ export function useDebouncedCallback<T extends readonly unknown[]>(callback: (..
 	}, []);
 
 	return React.useCallback(
-		(...args: T): void => {
+		(arg: TArg): void => {
 			if (timeoutRef.current !== null) {
 				clearTimeout(timeoutRef.current);
 			}
 			timeoutRef.current = setTimeout((): void => {
 				timeoutRef.current = null;
-				callbackRef.current(...args);
+				callbackRef.current(arg);
 			}, delayMs);
 		},
 		[delayMs],

@@ -7,7 +7,6 @@ import { createWrappedDto } from "../../common/dto/response-wrapper";
 // The global AuthGuard reads the public marker via Reflector and skips these
 // routes. Do not "fix" this into a module import.
 import { Public } from "../auth/decorators/public.decorator";
-
 import { HealthService, type DeepHealthResponse } from "./health.service";
 
 // ── Wrapped Response DTOs ────────────────────────────────────────────────

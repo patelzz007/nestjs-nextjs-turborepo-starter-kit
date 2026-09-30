@@ -2,6 +2,7 @@ import type { User } from "@prisma/client";
 import * as bcrypt from "bcrypt";
 
 import { prisma } from "./client";
+import { requireRow } from "./require-row";
 import { daysAgo, daysFromNow, generateSeedApiKey, rand, randInt } from "./helpers";
 
 export async function createApiKeys(users: User[]): Promise<void> {
@@ -12,7 +13,11 @@ export async function createApiKeys(users: User[]): Promise<void> {
 	// For a full reset, use: npx prisma migrate reset
 
 	const hash = (s: string): Promise<string> => bcrypt.hash(s, 10);
-	const get = (email: string) => users.find((u) => u.email === email)!;
+	const get = (email: string): User =>
+		requireRow(
+			users.find((u) => u.email === email),
+			`user ${email}`,
+		);
 
 	// Track raw keys to display to the tester
 	const rawKeyLog: Array<{ email: string; name: string; rawKey: string }> = [];

@@ -1,14 +1,15 @@
 "use client";
 
+import { MerchantCapabilityGate, MerchantReadOnlyNotice } from "@/components/access/merchant-capability-gate";
 import { MerchantRewardsCatalog } from "@/components/rewards/merchant-rewards-catalog";
 import { MerchantRewardsSummaryStrip } from "@/components/rewards/merchant-rewards-summary-strip";
 import { MerchantEmptyState } from "@/components/merchant-ui/empty-state";
 import { MerchantPageHeader } from "@/components/merchant-ui/page-header";
-import { useMerchantCapabilities } from "@/lib/org/capabilities";
 import { useMerchantLocation } from "@/lib/org/location-context";
 import { organizationPath } from "@/lib/org/slug";
 import { useAuth } from "@workspace/client/lib/auth";
-import type { RewardResponse, RewardStatus } from "@workspace/shared";
+import { useAuthorization } from "@workspace/client/lib/auth/can";
+import { MERCHANT_CAPABILITY, type RewardResponse, type RewardStatus } from "@workspace/shared";
 import { Button, buttonVariants } from "@workspace/ui/components/form/button";
 import { cn } from "@workspace/ui/lib/core/utils";
 import { AlertCircle, Gift, Plus, Sparkles, Ticket } from "lucide-react";
@@ -23,12 +24,21 @@ export interface MerchantRewardsPageViewProps {
 	readonly orgSlug: string;
 }
 
+/** Rewards catalog route — requires `merchant:view_rewards` (list endpoint); create CTAs need `merchant:manage_rewards`. */
 export function MerchantRewardsPageView({ orgSlug }: MerchantRewardsPageViewProps): React.JSX.Element {
+	return (
+		<MerchantCapabilityGate capability={MERCHANT_CAPABILITY.viewRewards}>
+			<MerchantRewardsPageContent orgSlug={orgSlug} />
+		</MerchantCapabilityGate>
+	);
+}
+
+function MerchantRewardsPageContent({ orgSlug }: MerchantRewardsPageViewProps): React.JSX.Element {
 	const { api } = useAuth();
+	const { can } = useAuthorization();
 	const createRewardPath = organizationPath(orgSlug, "rewards/new");
-	const { hasCapability } = useMerchantCapabilities();
 	const { locationId, isLoading: isLocationLoading } = useMerchantLocation();
-	const canManageRewards = hasCapability("merchant:manage_rewards");
+	const canManageRewards = can(MERCHANT_CAPABILITY.manageRewards);
 
 	const rewardsQuery = api.organizations.rewards.list.useQuery(
 		{ orgSlug, locationId },
@@ -93,6 +103,8 @@ export function MerchantRewardsPageView({ orgSlug }: MerchantRewardsPageViewProp
 					) : undefined
 				}
 			/>
+
+			{canManageRewards ? null : <MerchantReadOnlyNotice>Your role can view rewards but not create, edit, or submit them for review.</MerchantReadOnlyNotice>}
 
 			<MerchantRewardsSummaryStrip items={summaryItems} />
 

@@ -1,21 +1,7 @@
-import type { SearchableMenuItem } from "@/lib/navigation/menu";
-import { SEARCHABLE_ITEMS } from "@/lib/palette/search";
-
-const SEARCHABLE_ITEMS_BY_URL = new Map<string, SearchableMenuItem>(SEARCHABLE_ITEMS.map((item) => [item.url, item]));
-
-/** Resolves command-palette pinned URLs to flat menu entries for the sidebar favorites row. */
-export function resolvePinnedMenuItems(pinnedUrls: readonly string[]): readonly SearchableMenuItem[] {
-	const resolved: SearchableMenuItem[] = [];
-	const seenUrls = new Set<string>();
-	for (const url of pinnedUrls) {
-		if (seenUrls.has(url)) {
-			continue;
-		}
-		const item = SEARCHABLE_ITEMS_BY_URL.get(url);
-		if (item !== undefined) {
-			seenUrls.add(url);
-			resolved.push(item);
-		}
-	}
-	return resolved;
-}
+/**
+ * Resolves command-palette pinned URLs against a searchable index for the
+ * sidebar favorites row. Admin passes the **authorized** index (see
+ * `AuthorizedNavigationProvider`), so a pin to a page the user can no longer
+ * see simply drops out.
+ */
+export { resolvePinnedMenuItems } from "@workspace/ui/lib/palette/resolve-pinned-menu-items";

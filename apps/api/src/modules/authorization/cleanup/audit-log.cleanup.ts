@@ -4,6 +4,7 @@ import { Cron, CronExpression } from "@nestjs/schedule";
 import { nowEpochMs } from "@workspace/shared";
 
 import { PrismaService } from "../../../prisma/prisma.service";
+import { runWithSystemRlsContext } from "../../../prisma/rls-context";
 
 /** Retention period for authorization audit logs (90 days in milliseconds). */
 const RETENTION_MS: number = 90 * 24 * 60 * 60 * 1000;
@@ -29,6 +30,10 @@ export class AuditLogCleanup {
 	 */
 	@Cron(CronExpression.EVERY_HOUR)
 	public async handleCleanup(): Promise<void> {
+		await runWithSystemRlsContext("scheduled.maintenance", async (): Promise<void> => this.runHandleCleanup());
+	}
+
+	private async runHandleCleanup(): Promise<void> {
 		const cutoff = BigInt(nowEpochMs() - RETENTION_MS);
 
 		const { count } = await this.prisma.permissionAuditLog.updateMany({

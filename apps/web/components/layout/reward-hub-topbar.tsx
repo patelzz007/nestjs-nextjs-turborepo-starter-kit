@@ -1,5 +1,6 @@
 "use client";
 
+import { useWebSession } from "@/components/auth/web-authorization-provider";
 import { WebNotificationsDropdown } from "@/components/layout/web-notifications-dropdown";
 import { useWebSidebarControl } from "@/components/layout/use-web-sidebar-control";
 import { useWebSidebarStore } from "@/stores/sidebar-store";
@@ -19,6 +20,7 @@ const CommandPalette = dynamic(() => import("@/components/layout/command-palette
 /** Sticky topbar with sidebar toggle and command palette search. */
 export function RewardHubTopbar(): React.JSX.Element {
 	const { user, logout } = useAuth();
+	const { isAuthenticated } = useWebSession();
 	const router = useRouter();
 	const { isOpen: sidebarOpen } = useWebSidebarControl();
 	const menuTitle = useWebSidebarStore((state) => state.menu.header.title);
@@ -80,13 +82,16 @@ export function RewardHubTopbar(): React.JSX.Element {
 					<ShellThemeToggle />
 				</div>
 
-				<div className="mx-1 hidden sm:mx-2 sm:block">
-					<Link href="/rewardhub/settings" aria-label="Settings">
-						<Button variant="ghost" size="icon" className="rounded-full">
-							<Settings className="size-5 text-muted-foreground" />
-						</Button>
-					</Link>
-				</div>
+				{/* Account settings need a session (no permission) — hidden for guests. */}
+				{isAuthenticated ? (
+					<div className="mx-1 hidden sm:mx-2 sm:block">
+						<Link href="/rewardhub/settings" aria-label="Settings">
+							<Button variant="ghost" size="icon" className="rounded-full">
+								<Settings className="size-5 text-muted-foreground" />
+							</Button>
+						</Link>
+					</div>
+				) : null}
 
 				{user !== null ? (
 					<div className="ml-1 md:ml-3">

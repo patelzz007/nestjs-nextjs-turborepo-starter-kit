@@ -33,7 +33,6 @@
 				"EMAIL_TEST_TO",
 				"EMAIL_TIMEOUT_MS",
 				"EMAIL_VERIFICATION_SECRET",
-				"ENABLE_GENERATOR_UI",
 				"HOST",
 				"JWT_ACCESS_EXPIRY",
 				"JWT_ACCESS_SECRET",
@@ -95,6 +94,14 @@
 			"cache": false
 		},
 		"db:deploy": {
+			"cache": false,
+			"env": ["DATABASE_URL"]
+		},
+		"db:apply-security": {
+			"cache": false,
+			"env": ["DATABASE_URL"]
+		},
+		"db:rls": {
 			"cache": false,
 			"env": ["DATABASE_URL"]
 		},
@@ -170,7 +177,6 @@
 				"EMAIL_TEST_TO",
 				"EMAIL_TIMEOUT_MS",
 				"EMAIL_VERIFICATION_SECRET",
-				"ENABLE_GENERATOR_UI",
 				"HOST",
 				"JWT_ACCESS_EXPIRY",
 				"JWT_ACCESS_SECRET",

@@ -1,7 +1,8 @@
 "use client";
 
 import { ICON_MAP } from "@/lib/navigation/menu-icons";
-import { SEARCH_ALIAS_MAP, SEARCHABLE_ITEMS } from "@/lib/palette/search";
+import { SEARCH_ALIAS_MAP } from "@/lib/palette/search";
+import { useAuthorizedSearchableItems } from "@/components/layout/authorized-navigation";
 import { useCommandPaletteStore } from "@/stores/command-palette-store";
 import { AppCommandPalette, type AppCommandPaletteQuickAction } from "@workspace/ui/components/navigation/app-command-palette";
 import { CreditCard, LayoutDashboard, Settings, SunMoon } from "lucide-react";
@@ -28,6 +29,7 @@ function renderMenuIcon(iconName: string | undefined, className: string): React.
 export function CommandPalette({ open: externalOpen, setOpen: externalSetOpen }: CommandPaletteProps): React.JSX.Element {
 	const router = useRouter();
 	const { setTheme, resolvedTheme } = useTheme();
+	const searchableItems = useAuthorizedSearchableItems();
 
 	const recentSearches = useCommandPaletteStore((s) => s.recentSearches);
 	const pinnedUrls = useCommandPaletteStore((s) => s.pinnedUrls);
@@ -108,7 +110,7 @@ export function CommandPalette({ open: externalOpen, setOpen: externalSetOpen }:
 			setOpen={externalSetOpen}
 			title="Command palette"
 			description="Search commands, pages, and actions"
-			searchableItems={SEARCHABLE_ITEMS}
+			searchableItems={searchableItems}
 			quickActions={quickActions}
 			recentSearches={recentSearches}
 			pinnedUrls={pinnedUrls}

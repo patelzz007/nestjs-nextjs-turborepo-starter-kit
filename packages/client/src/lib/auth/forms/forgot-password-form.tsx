@@ -10,6 +10,7 @@ import { useCallback, useState, type JSX } from "react";
 
 import { resolveAuthErrorMessage } from "../errors";
 import { useAuth } from "../index";
+import { catchCaught } from "../../caught";
 
 export interface ForgotPasswordFormProps {
 	readonly loginHref?: string;
@@ -41,17 +42,16 @@ export function ForgotPasswordForm({ loginHref = "/auth/login" }: ForgotPassword
 			}
 
 			const input: ForgotPasswordInput = parsed.data;
-			mutation
-				.mutateAsync(input)
-				.then((): void => {
+			void catchCaught(
+				mutation.mutateAsync(input).then((): void => {
 					setIsSubmitted(true);
-				})
-				.catch((err: unknown): void => {
+				}),
+				(err): void => {
 					setError(resolveAuthErrorMessage(err));
-				})
-				.finally((): void => {
-					setIsLoading(false);
-				});
+				},
+			).finally((): void => {
+				setIsLoading(false);
+			});
 		},
 		[email, mutation],
 	);

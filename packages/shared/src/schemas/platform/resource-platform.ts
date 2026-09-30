@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import { JsonObjectSchema } from "../runtime/json";
 
-/** Generic platform audit record for generated resources. */
+/** Generic platform audit record for platform resources. */
 export const PlatformResourceAuditRecordSchema = z
 	.object({
 		id: z.uuid(),

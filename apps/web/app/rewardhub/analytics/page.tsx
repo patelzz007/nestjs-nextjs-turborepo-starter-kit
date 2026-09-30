@@ -1,3 +1,4 @@
+import { AccessGate } from "@/components/auth/access-gate";
 import { RewardHubAnalyticsPageView } from "@/components/rewardhub/shared/analytics-page-view";
 import { getServerUser } from "@/lib/auth/server";
 import { createWebServerCaller } from "@/lib/web-server-api";
@@ -24,5 +25,9 @@ export default async function RewardHubAnalyticsPage(): Promise<React.JSX.Elemen
 		initialAnalytics = undefined;
 	}
 
-	return <RewardHubAnalyticsPageView initialAnalytics={initialAnalytics} />;
+	return (
+		<AccessGate feature="your reward activity">
+			<RewardHubAnalyticsPageView initialAnalytics={initialAnalytics} />
+		</AccessGate>
+	);
 }

@@ -23,7 +23,7 @@ interface DisplayUser {
 	readonly isSuperAdmin: boolean;
 	readonly hasAdminAccess: boolean;
 	readonly roles: readonly { readonly id: string; readonly name: string }[];
-	readonly permissions?: readonly unknown[];
+	readonly permissions?: readonly string[];
 	readonly isActive?: boolean;
 	readonly createdAt?: number;
 }
@@ -56,7 +56,7 @@ function fromApiResponse(user: UserResponse): DisplayUser {
 	};
 }
 
-export default function HelloView({ initialEnvelope, sessionActive }: { readonly initialEnvelope: Envelope<UserResponse>; readonly sessionActive: boolean }): JSX.Element {
+export default function HelloView({ initialEnvelope }: { readonly initialEnvelope: Envelope<UserResponse> }): JSX.Element {
 	const { api } = useAuth();
 	const storeUser = useAuthUser();
 	const [showDetails, setShowDetails] = useState(false);
@@ -72,7 +72,6 @@ export default function HelloView({ initialEnvelope, sessionActive }: { readonly
 	const permissionCount: number | undefined = permissionsQuery.data?.data.permissions.length;
 	const storeUserDisplay: DisplayUser | null = storeUser !== null ? fromStoreUser(storeUser) : null;
 	const user: DisplayUser | null = apiUser ?? storeUserDisplay;
-	const showImpersonatePanel = user?.isSuperAdmin === true && permissionsQuery.isSuccess && permissionsQuery.data.data.isImpersonating !== true;
 
 	if (meQuery.isLoading && user === null) {
 		return (
@@ -102,7 +101,7 @@ export default function HelloView({ initialEnvelope, sessionActive }: { readonly
 
 	return (
 		<div className="flex min-h-svh flex-col">
-			<ImpersonationBanner sessionActive={sessionActive} />
+			<ImpersonationBanner />
 			<div className="flex flex-1 items-center justify-center p-8">
 				<div className="w-full max-w-lg space-y-8">
 					{/* Breadcrumb (context-driven, with mandatory icons) */}
@@ -195,7 +194,8 @@ export default function HelloView({ initialEnvelope, sessionActive }: { readonly
 						<LogoutButton variant="destructive" />
 					</div>
 
-					{showImpersonatePanel ? <ImpersonateUserPanel sessionActive /> : null}
+					{/* Self-gating: super-admin + LIST/CREATE USER, hidden while impersonating. */}
+					<ImpersonateUserPanel />
 				</div>
 			</div>
 		</div>

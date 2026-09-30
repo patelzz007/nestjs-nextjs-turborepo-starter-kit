@@ -1,6 +1,6 @@
 import { nextJsConfig } from "@workspace/eslint-config/next-js";
 
-/** @type {import("eslint").Linter.Config} */	export default [
+/** @type {import("eslint").Linter.Config} */ export default [
 	...nextJsConfig,
 	{
 		rules: {
@@ -12,12 +12,11 @@ import { nextJsConfig } from "@workspace/eslint-config/next-js";
 		},
 	},
 	{
-		// proxy.test.ts exercises the proxy with structural test doubles for
-		// NextRequest/NextResponse. The type-assertion ban is a false positive
-		// for test mocks, so it is scoped to the test file only.
-		files: ["proxy.test.ts"],
+		// The opt-in e2e smoke reads `ADMIN_E2E_BASE_URL` (see e2e/README.md). It is
+		// a local-only switch that must not become part of any turbo task hash.
+		files: ["e2e/**"],
 		rules: {
-			"@typescript-eslint/consistent-type-assertions": "off",
+			"turbo/no-undeclared-env-vars": "off",
 		},
 	},
 ];

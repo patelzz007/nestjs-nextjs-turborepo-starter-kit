@@ -6,23 +6,23 @@ import { PrismaService } from "../../../prisma/prisma.service";
 const USER_ATTRIBUTION_SELECT = {
 	pendingAttributionToken: true,
 	pendingAttributionExpiresAt: true,
-} as const satisfies Prisma.UserSelect;
+} satisfies Prisma.UserSelect;
 
 const USER_EMAIL_SELECT = {
 	email: true,
-} as const satisfies Prisma.UserSelect;
+} satisfies Prisma.UserSelect;
 
 const USER_ACTIVE_BY_EMAIL_SELECT = {
 	id: true,
 	email: true,
 	fullName: true,
-} as const satisfies Prisma.UserSelect;
+} satisfies Prisma.UserSelect;
 
 const USER_ONBOARDING_SELECT = {
 	id: true,
 	passwordHash: true,
 	fullName: true,
-} as const satisfies Prisma.UserSelect;
+} satisfies Prisma.UserSelect;
 
 export type UserAttributionFields = Prisma.UserGetPayload<{ select: typeof USER_ATTRIBUTION_SELECT }>;
 export type UserEmailFields = Prisma.UserGetPayload<{ select: typeof USER_EMAIL_SELECT }>;
@@ -32,7 +32,7 @@ export type UserOnboardingFields = Prisma.UserGetPayload<{ select: typeof USER_O
 const USER_CLAIM_CHECKOUT_SELECT = {
 	phone: true,
 	phoneVerifiedAt: true,
-} as const satisfies Prisma.UserSelect;
+} satisfies Prisma.UserSelect;
 
 export type UserClaimCheckoutFields = Prisma.UserGetPayload<{ select: typeof USER_CLAIM_CHECKOUT_SELECT }>;
 

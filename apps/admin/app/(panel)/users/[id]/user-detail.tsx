@@ -1,6 +1,6 @@
 "use client";
 
-import type { AdminUserDetail, PermissionListItem, RoleListItem } from "@workspace/shared";
+import { PERMISSION, type AdminUserDetail, type PermissionListItem, type RoleListItem } from "@workspace/shared";
 import { UserAccessPanel } from "@/components/access/user-access-panel";
 import { ImpersonateUserButton } from "@/components/impersonation/impersonate-user-button";
 import { UserMfaRecoveryPanel } from "@/components/users/user-mfa-recovery-panel";
@@ -8,6 +8,7 @@ import { UserProfileOverview } from "@/components/users/user-profile-overview";
 import { stubApiMeta } from "@/lib/format/api-envelope";
 import { UserDetailBreadcrumb } from "@/components/users/user-detail-breadcrumb";
 import { useAuth } from "@workspace/client/lib/auth";
+import { useAuthorization } from "@workspace/client/lib/auth/can";
 import Link from "next/link";
 import * as React from "react";
 
@@ -23,6 +24,10 @@ export interface UserDetailViewProps {
  */
 export default function UserDetailView({ userId, initialUser, initialRoles, initialPermissions }: UserDetailViewProps): React.JSX.Element {
 	const { api } = useAuth();
+	const { can } = useAuthorization();
+	// Catalog reads are separately permissioned (LIST ROLE / LIST PERMISSION) — skip calls that would 403.
+	const canListRoles = can(PERMISSION.ROLE.LIST);
+	const canListPermissions = can(PERMISSION.PERMISSION.LIST);
 
 	const userQuery = api.auth.adminUserDetail.useQuery(
 		{ userId },
@@ -31,12 +36,14 @@ export default function UserDetailView({ userId, initialUser, initialRoles, init
 	const rolesQuery = api.admin.roles.list.useQuery(
 		{},
 		{
+			enabled: canListRoles,
 			initialData: initialRoles !== undefined ? { success: true, data: { items: [...initialRoles], total: initialRoles.length }, meta: stubApiMeta() } : undefined,
 		},
 	);
 	const permissionsQuery = api.admin.permissions.list.useQuery(
 		{},
 		{
+			enabled: canListPermissions,
 			initialData:
 				initialPermissions !== undefined ? { success: true, data: { items: [...initialPermissions], total: initialPermissions.length }, meta: stubApiMeta() } : undefined,
 		},

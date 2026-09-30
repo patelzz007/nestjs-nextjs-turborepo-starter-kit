@@ -22,6 +22,11 @@ export const REFRESH_SKEW_MS = 30_000;
 /** Hard timeout (ms) for the proxy→API refresh call so navigation never blocks. */
 export const REFRESH_TIMEOUT_MS = 3_000;
 
+/** A thrown fetch error whose `cause` carries a non-empty message (e.g. `connect ECONNREFUSED …`). */
+const ErrorCauseMessageSchema = z.object({
+	cause: z.object({ message: z.string().min(1) }),
+});
+
 export const ProxyRefreshConfigSchema = z.object({
 	apiBaseUrl: z.string(),
 	/** Cookie name carrying the refresh token (`refreshToken` | `adminRefreshToken`). */
@@ -90,6 +95,7 @@ export const ProxyRefreshTriggerContextSchema = z.object({
 	isDocumentNavigation: z.boolean(),
 	isAuthRoute: z.boolean(),
 	isPublicRoute: z.boolean(),
+	tokenAuthRoute: z.boolean().default(false),
 });
 
 export type ProxyRefreshTriggerContext = z.output<typeof ProxyRefreshTriggerContextSchema>;
@@ -107,6 +113,16 @@ export function shouldAttemptProxyRefresh(context: ProxyRefreshTriggerContext): 
 	const refreshToken: string | undefined = context.refreshToken;
 
 	if (accessToken === undefined && refreshToken === undefined) {
+		return false;
+	}
+
+	// Token-auth pages (verify-email, reset-password, onboarding) are one-shot
+	// flows. A route-level refresh here can rotate the same refresh token twice
+	// across the page load + client verification mutation, which causes the
+	// backend to reject the second rotation as a superseded token and log the
+	// user out. Let the actual token-action request handle its own session
+	// update instead of silently refreshing in the proxy.
+	if (context.tokenAuthRoute) {
 		return false;
 	}
 
@@ -131,6 +147,7 @@ export const ProxySessionRefreshInputSchema = z.object({
 	isDocumentNavigation: z.boolean(),
 	isAuthRoute: z.boolean(),
 	isPublicRoute: z.boolean(),
+	tokenAuthRoute: z.boolean().default(false),
 	accessTokenCookieName: z.string(),
 	refreshTokenCookieName: z.string(),
 	app: z.enum(["web", "admin", "merchant"]),
@@ -161,6 +178,7 @@ export async function resolveProxySessionRefresh(input: ProxySessionRefreshInput
 		isDocumentNavigation: input.isDocumentNavigation,
 		isAuthRoute: input.isAuthRoute,
 		isPublicRoute: input.isPublicRoute,
+		tokenAuthRoute: input.tokenAuthRoute,
 	};
 
 	let rotatedCookies: string[] = [];
@@ -375,12 +393,11 @@ export async function refreshSessionFromProxy(config: ProxyRefreshConfig): Promi
 			signal: controller.signal,
 		});
 		return { ok: response.ok, status: response.status, setCookies: collectSetCookies(response.headers) };
-	} catch (error: unknown) {
+	} catch (error) {
 		// Surface the underlying cause (e.g. `connect ECONNREFUSED 127.0.0.1:8080`
 		// when the API is down) so the proxy log line is actually diagnosable.
-		const cause: unknown = typeof error === "object" && error !== null && "cause" in error ? error.cause : undefined;
-		const causeMessage: unknown = typeof cause === "object" && cause !== null && "message" in cause ? cause.message : undefined;
-		const errorDetail: string = typeof causeMessage === "string" && causeMessage.length > 0 ? causeMessage : error instanceof Error ? error.message : String(error);
+		const withCause = ErrorCauseMessageSchema.safeParse(error);
+		const errorDetail: string = withCause.success ? withCause.data.cause.message : error instanceof Error ? error.message : String(error);
 		return { ok: false, status: 0, setCookies: [], errorDetail };
 	} finally {
 		clearTimeout(timeoutId);

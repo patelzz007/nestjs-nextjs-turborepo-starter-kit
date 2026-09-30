@@ -14,7 +14,7 @@ import {
 import type { DataValue, SerializableInput } from "@workspace/shared";
 
 import { createMutationCaller, createQueryCaller, type ApiRequestContext, type ApiResponse } from "./api-request";
-import { eachRouterEntry, isErasedProcedureDef, isRouterSubtree, type MutationDef, type ProcedureDef, type QueryDef } from "./endpoints";
+import { eachRouterEntry, isErasedProcedureDef, isRouterSubtree, type MutationDef, type ProcedureDef, type QueryDef, type RouterTreeValue } from "./endpoints";
 
 /** A GET procedure on the client — `.useQuery()` / `.fetch()` / `.fetchOrThrow()`. */
 export interface ClientQueryProcedure<Input, Resp> {
@@ -31,13 +31,7 @@ export interface ClientMutationProcedure<Input, Resp> {
 
 /** Recursively maps the router tree to client procedures with React hooks. */
 export type ClientRouterTree<R extends object> = {
-	[K in keyof R]: R[K] extends QueryDef<infer Input, infer Resp>
-		? ClientQueryProcedure<Input, Resp>
-		: R[K] extends MutationDef<infer Input, infer Resp>
-			? ClientMutationProcedure<Input, Resp>
-			: R[K] extends object
-				? ClientRouterTree<R[K]>
-				: never;
+	[K in keyof R]: ClientRouterTreeBranch<R[K]>;
 };
 
 export function createQueryProcedure<Input extends SerializableInput, Resp extends DataValue>(
@@ -84,6 +78,11 @@ export function createProcedureForDef<Input extends SerializableInput, Resp exte
 	return createMutationProcedure(context, def);
 }
 
+/**
+ * Maps one router value to its client binding. Router values are always procedure
+ * defs or nested routers (objects); a non-object value (never produced by
+ * `defineQuery` / `defineMutation`) passes through unchanged.
+ */
 type ClientRouterTreeBranch<V> =
 	V extends QueryDef<infer Input, infer Resp>
 		? ClientQueryProcedure<Input, Resp>
@@ -91,21 +90,26 @@ type ClientRouterTreeBranch<V> =
 			? ClientMutationProcedure<Input, Resp>
 			: V extends object
 				? ClientRouterTree<V>
-				: never;
+				: V;
 
-function mapClientRouterBranch<V extends object>(context: ApiRequestContext, value: V): ClientRouterTreeBranch<V> {
+/** Erased build-time shape — widened so each router key can accept any branch variant. */
+type ClientRouterTreeBuild<R extends object> = {
+	[K in keyof R]?: ClientRouterTreeBranch<RouterTreeValue>;
+};
+
+function mapClientRouterBranch(context: ApiRequestContext, value: object): ClientRouterTreeBranch<RouterTreeValue> {
 	if (isErasedProcedureDef(value)) {
-		return createProcedureForDef(context, value) as ClientRouterTreeBranch<V>;
+		return createProcedureForDef(context, value);
 	}
 
 	if (isRouterSubtree(value)) {
-		return buildClientRouter(value, context) as ClientRouterTreeBranch<V>;
+		return buildClientRouter(value, context);
 	}
 
 	throw new Error("Invalid router node — expected a procedure leaf or nested router.");
 }
 
-function isCompleteClientRouter<R extends object>(router: R, candidate: Partial<ClientRouterTree<R>>): candidate is ClientRouterTree<R> {
+function isCompleteClientRouter<R extends object>(router: R, candidate: ClientRouterTreeBuild<R> | ClientRouterTree<R>): candidate is ClientRouterTree<R> {
 	let complete = true;
 	eachRouterEntry(router, (key) => {
 		if (candidate[key] === undefined) {
@@ -120,10 +124,13 @@ function isCompleteClientRouter<R extends object>(router: R, candidate: Partial<
  * Transport is delegated to the tRPC-style caller in `api-request`.
  */
 export function buildClientRouter<R extends object>(router: R, context: ApiRequestContext): ClientRouterTree<R> {
-	const out: Partial<ClientRouterTree<R>> = {};
+	const out: ClientRouterTreeBuild<R> = {};
 
 	eachRouterEntry(router, (key, value) => {
-		out[key] = mapClientRouterBranch(context, value as Extract<R[typeof key], object>) as ClientRouterTree<R>[typeof key];
+		if (typeof value !== "object" || value === null) {
+			throw new Error("Invalid router node — expected a procedure leaf or nested router.");
+		}
+		out[key] = mapClientRouterBranch(context, value);
 	});
 
 	if (!isCompleteClientRouter(router, out)) {

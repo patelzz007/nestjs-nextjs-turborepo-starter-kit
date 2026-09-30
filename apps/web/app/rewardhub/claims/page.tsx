@@ -1,3 +1,4 @@
+import { AccessGate } from "@/components/auth/access-gate";
 import { MyClaimsPageView } from "@/components/rewardhub/claims/my-claims-page-view";
 import { createWebServerCaller } from "@/lib/web-server-api";
 import { ApiPaginatedMetaSchema, type RewardClaimResponse } from "@workspace/shared";
@@ -24,5 +25,9 @@ export default async function MyClaimsPage(): Promise<React.JSX.Element> {
 		initialClaims = undefined;
 	}
 
-	return <MyClaimsPageView initialClaims={initialClaims} initialListMeta={initialListMeta} />;
+	return (
+		<AccessGate feature="your claimed rewards">
+			<MyClaimsPageView initialClaims={initialClaims} initialListMeta={initialListMeta} />
+		</AccessGate>
+	);
 }

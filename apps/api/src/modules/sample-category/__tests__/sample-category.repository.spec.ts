@@ -1,15 +1,15 @@
 import { describe, expect, it } from "vitest";
 
-import { GeneratedSampleCategoryRepository } from "../sample-category.repository.generated";
+import { SampleCategoryRepository } from "../sample-category.repository";
 
-describe("GeneratedSampleCategoryRepository", () => {
+describe("SampleCategoryRepository", () => {
 	it("exposes list and findById repository methods", () => {
-		expect(GeneratedSampleCategoryRepository.prototype.list).toBeDefined();
-		expect(GeneratedSampleCategoryRepository.prototype.findById).toBeDefined();
+		expect(SampleCategoryRepository.prototype.list).toBeDefined();
+		expect(SampleCategoryRepository.prototype.findById).toBeDefined();
 	});
 
 	it("exposes create and delete repository methods", () => {
-		expect(GeneratedSampleCategoryRepository.prototype.create).toBeDefined();
-		expect(GeneratedSampleCategoryRepository.prototype.delete).toBeDefined();
+		expect(SampleCategoryRepository.prototype.create).toBeDefined();
+		expect(SampleCategoryRepository.prototype.delete).toBeDefined();
 	});
 });

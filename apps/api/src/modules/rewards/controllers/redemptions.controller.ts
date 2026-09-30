@@ -1,5 +1,6 @@
 import { Body, Controller, Post, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiBody, ApiHeader, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
+import type { z } from "zod";
 
 import { apiContract, apiPath } from "@workspace/shared";
 import { ZodValidationPipe } from "../../../common/pipes/zod-validation.pipe";
@@ -28,7 +29,7 @@ export class RedemptionsController {
 	@ApiOkResponse({ description: "Redemption preview" })
 	public validate(
 		@MerchantPos() pos: MerchantPosContext,
-		@Body(new ZodValidationPipe(apiContract.redemptions.validate.input)) body: Parameters<RedemptionService["validate"]>[2],
+		@Body(new ZodValidationPipe(apiContract.redemptions.validate.input)) body: z.output<typeof apiContract.redemptions.validate.input>,
 	): ReturnType<RedemptionService["validate"]> {
 		return this.redemptionService.validate(pos.organizationId, pos.terminalId, body);
 	}
@@ -44,7 +45,7 @@ export class RedemptionsController {
 	@ApiOkResponse({ description: "Redemption confirmed" })
 	public confirm(
 		@MerchantPos() pos: MerchantPosContext,
-		@Body(new ZodValidationPipe(apiContract.redemptions.confirm.input)) body: Parameters<RedemptionService["confirm"]>[2],
+		@Body(new ZodValidationPipe(apiContract.redemptions.confirm.input)) body: z.output<typeof apiContract.redemptions.confirm.input>,
 	): ReturnType<RedemptionService["confirm"]> {
 		return this.redemptionService.confirm(pos.organizationId, pos.terminalId, body);
 	}

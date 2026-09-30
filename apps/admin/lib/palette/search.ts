@@ -1,5 +1,5 @@
-import { SIDEBAR_MENU } from "@/lib/navigation/sidebar-menu";
 import { flattenMenuItems } from "@/lib/navigation/menu";
+import type { CompiledSidebarMenuData } from "@/lib/navigation/sidebar";
 import { findSuggestion, matchesQuery as matchesQueryBase, parseInput, ParsedInputSchema, ScopeTypeSchema, scopeConfig } from "@workspace/ui/lib/palette/search";
 import type { ParsedInput, ScopeType } from "@workspace/ui/lib/palette/search";
 import type { PaletteSearchableItem } from "@workspace/ui/lib/palette/types";
@@ -48,17 +48,19 @@ export const SEARCH_ALIAS_MAP: Readonly<Record<string, readonly string[]>> = {
 	gamma: ["Project Gamma"],
 };
 
-function buildSearchableItems(): readonly PaletteSearchableItem[] {
+/**
+ * Flattens a menu into palette entries. Callers pass the **authorized**
+ * (capability + feature-flag filtered) menu so the palette and pinned
+ * favorites never surface pages the sidebar hides.
+ */
+export function buildSearchableItems(menu: CompiledSidebarMenuData): readonly PaletteSearchableItem[] {
 	const items: PaletteSearchableItem[] = [];
-	for (const section of SIDEBAR_MENU.sections) {
+	for (const section of menu.sections) {
 		flattenMenuItems(section.items, section.title, [], items);
 	}
-	flattenMenuItems(SIDEBAR_MENU.bottomItems, "Account", [], items);
+	flattenMenuItems(menu.bottomItems, "Account", [], items);
 	return items;
 }
-
-/** All navigable admin pages, flattened once at module load. */
-export const SEARCHABLE_ITEMS: readonly PaletteSearchableItem[] = buildSearchableItems();
 
 export function matchesQuery(itemTitle: string, itemBreadcrumb: readonly string[], rawQuery: string): boolean {
 	return matchesQueryBase(itemTitle, itemBreadcrumb, rawQuery, SEARCH_ALIAS_MAP);

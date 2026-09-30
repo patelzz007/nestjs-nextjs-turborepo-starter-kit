@@ -9,7 +9,7 @@
 // technical / inconsistent). This catalog is the single place the apps own the
 // wording, keyed by the stable code.
 
-import { ApiErrorBodySchema, AuthErrorCodeSchema, EpochMsSchema, LockedErrorCodeSchema, type EpochMs } from "@workspace/shared";
+import { ApiErrorBodySchema, AuthErrorCodeSchema, EpochMsSchema, LockedErrorCodeSchema, type CaughtValue, type EpochMs } from "@workspace/shared";
 import { z } from "zod";
 
 import { ApiError } from "../api/use-api";
@@ -69,12 +69,12 @@ const AccountLockedErrorSchema = ApiErrorBodySchema.extend({
 });
 
 /**
- * Normalize an unknown thrown value into a `string | null` message:
+ * Normalize a thrown value into a `string | null` message:
  * - plain string → itself
  * - `ApiError` / API error body → `message`
  * - anything else with a `.message` string → that message
  */
-export function extractAuthErrorMessage(error: unknown): string | null {
+export function extractAuthErrorMessage(error: CaughtValue): string | null {
 	const asString = NonEmptyStringSchema.safeParse(error);
 	if (asString.success) {
 		return asString.data;
@@ -105,7 +105,7 @@ export function extractAuthErrorMessage(error: unknown): string | null {
  * 2. The server's own `message` (or any `.message`)
  * 3. A generic fallback
  */
-export function resolveAuthErrorMessage(error: unknown, locale: Locale = DEFAULT_LOCALE): string {
+export function resolveAuthErrorMessage(error: CaughtValue, locale: Locale = DEFAULT_LOCALE): string {
 	const catalog: AuthMessageCatalog = AUTH_MESSAGE_CATALOGS[locale];
 
 	if (error instanceof ApiError && error.error !== undefined) {
@@ -125,7 +125,7 @@ export function resolveAuthErrorMessage(error: unknown, locale: Locale = DEFAULT
  * payload — the login form uses this to render a live countdown instead of the
  * static message.
  */
-export function isAccountLockedError(error: unknown): error is ApiError & { readonly lockedUntil: EpochMs; readonly remainingSeconds: number } {
+export function isAccountLockedError(error: CaughtValue): error is ApiError & { readonly lockedUntil: EpochMs; readonly remainingSeconds: number } {
 	if (!(error instanceof ApiError)) return false;
 
 	return AccountLockedErrorSchema.safeParse({

@@ -18,6 +18,7 @@ import {
 	isDocumentNavigation,
 	refreshSessionFromProxy,
 	resolveProxySessionRefresh,
+	type AuthCookieClearOptions,
 	type ProxyRefreshResult,
 } from "@workspace/client/lib/auth/edge/proxy-refresh";
 import { NextResponse } from "next/server";
@@ -26,11 +27,11 @@ import type { NextRequest } from "next/server";
 const ACCESS_TOKEN_COOKIE = "accessToken";
 const REFRESH_TOKEN_COOKIE = "refreshToken";
 const CLIENT_ORIGIN: string = process.env.NEXT_PUBLIC_APP_URL ?? process.env.APP_URL ?? "http://localhost:3000";
-const COOKIE_CLEAR_OPTIONS = {
+const COOKIE_CLEAR_OPTIONS: AuthCookieClearOptions = {
 	domain: process.env.COOKIE_DOMAIN,
 	path: "/",
 	secure: process.env.NODE_ENV === "production",
-	sameSite: "lax" as const,
+	sameSite: "lax",
 };
 
 function getDefaultAuthenticatedPath(): string {
@@ -108,6 +109,7 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
 		isDocumentNavigation: isDocumentNavigation(request.headers),
 		isAuthRoute,
 		isPublicRoute,
+		tokenAuthRoute: isWebTokenAuthPath(pathname),
 		accessTokenCookieName: ACCESS_TOKEN_COOKIE,
 		refreshTokenCookieName: REFRESH_TOKEN_COOKIE,
 		app: "web",

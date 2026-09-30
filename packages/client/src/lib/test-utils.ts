@@ -1,5 +1,6 @@
 // Test-only helpers shared by the auth/ and api/ suites. NEVER import this in
 // production code — it exists solely so tests can assert on fetch calls.
+import type { DataValue } from "@workspace/shared";
 import type { Mock } from "vitest";
 
 /** Signature of the stubbed global `fetch` used across the test suite. */
@@ -10,7 +11,7 @@ export interface FetchCall {
 	readonly init: RequestInit;
 }
 
-export function jsonResponse(status: number, body: unknown): Response {
+export function jsonResponse(status: number, body: DataValue): Response {
 	return new Response(JSON.stringify(body), {
 		status,
 		headers: { "content-type": "application/json" },

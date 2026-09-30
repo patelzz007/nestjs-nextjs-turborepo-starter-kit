@@ -1,15 +1,15 @@
 import { describe, expect, it } from "vitest";
 
-import { GeneratedProductRepository } from "../product.repository.generated";
+import { ProductRepository } from "../product.repository";
 
-describe("GeneratedProductRepository", () => {
+describe("ProductRepository", () => {
 	it("exposes list and findById repository methods", () => {
-		expect(GeneratedProductRepository.prototype.list).toBeDefined();
-		expect(GeneratedProductRepository.prototype.findById).toBeDefined();
+		expect(ProductRepository.prototype.list).toBeDefined();
+		expect(ProductRepository.prototype.findById).toBeDefined();
 	});
 
 	it("exposes create and delete repository methods", () => {
-		expect(GeneratedProductRepository.prototype.create).toBeDefined();
-		expect(GeneratedProductRepository.prototype.delete).toBeDefined();
+		expect(ProductRepository.prototype.create).toBeDefined();
+		expect(ProductRepository.prototype.delete).toBeDefined();
 	});
 });

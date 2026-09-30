@@ -1,11 +1,11 @@
-import type { PermissionAction, PermissionResource } from "@workspace/shared";
+import type { AuthorizationAttributes, PermissionAction, PermissionResource } from "@workspace/shared";
 
 /**
  * Context passed to a policy when evaluating authorization.
  *
  * Contains the authenticated user and the resource being accessed.
  */
-export interface PolicyContext<T = Record<string, unknown>> {
+export interface PolicyContext<T = AuthorizationAttributes> {
 	/** The user ID of the authenticated user. */
 	readonly userId: string;
 	/** Whether the user is a super-admin. */

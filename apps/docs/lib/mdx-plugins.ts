@@ -140,9 +140,7 @@ function prependTaskMarkerToParagraph(paragraph: Paragraph, checked: boolean): v
  */
 interface MdastNodeLike {
 	readonly type: string;
-	readonly value?: unknown;
-	readonly url?: unknown;
-	readonly alt?: unknown;
+	readonly value?: string;
 	readonly children?: readonly MdastNodeLike[];
 }
 

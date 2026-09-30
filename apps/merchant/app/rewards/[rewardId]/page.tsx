@@ -7,7 +7,7 @@ interface MerchantRewardRedirectPageProps {
 }
 
 /** Legacy `/rewards/:rewardId` entry — forwards to the active organization reward detail route. */
-export default async function MerchantRewardRedirectPage({ params }: MerchantRewardRedirectPageProps): Promise<never> {
+export default async function MerchantRewardRedirectPage({ params }: MerchantRewardRedirectPageProps): Promise<React.ReactNode> {
 	const { rewardId } = await params;
 	const organizationSlug = await readOrganizationSlugCookie();
 

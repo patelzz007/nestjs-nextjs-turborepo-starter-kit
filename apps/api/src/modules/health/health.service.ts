@@ -4,11 +4,17 @@ import { HealthResponseSchema, nowEpochMs, type HealthResponse } from "@workspac
 
 import { PrismaService } from "../../prisma/prisma.service";
 
+/** Scalar value a module health report may carry. */
+export type ModuleHealthReportValue = string | number | boolean | bigint | null;
+
+/** Detailed per-module health report. */
+export type ModuleHealthReport = Readonly<Record<string, ModuleHealthReportValue>>;
+
 /** Module health status */
 interface ModuleHealth {
 	readonly name: string;
 	readonly healthy: boolean;
-	readonly details: Record<string, unknown>;
+	readonly details: ModuleHealthReport;
 }
 
 /** Deep-check response extends the basic health shape with external service probes. */
@@ -27,7 +33,7 @@ export const MODULE_HEALTH_INDICATORS = "MODULE_HEALTH_INDICATORS";
 /** Interface for module health indicators */
 export interface ModuleHealthIndicator {
 	readonly isHealthy: () => Promise<boolean>;
-	readonly getReport?: () => Promise<Record<string, unknown>>;
+	readonly getReport?: () => Promise<ModuleHealthReport>;
 }
 
 @Injectable()

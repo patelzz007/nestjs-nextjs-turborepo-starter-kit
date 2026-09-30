@@ -99,7 +99,8 @@ export class EmailPreviewController {
 	@ApiNotFoundResponse({ description: "Unknown template key" })
 	public async sendTest(@Param("key", new ZodValidationPipe(EmailTemplateKeyParamSchema)) key: string): Promise<EmailSendResult> {
 		const parsedKey = this.requireTemplate(key);
-		const template = EMAIL_TEMPLATE_REGISTRY[parsedKey].build();
+		const entry = EMAIL_TEMPLATE_REGISTRY[parsedKey];
+		const template = entry.build();
 		return this.sender.send(template);
 	}
 }
