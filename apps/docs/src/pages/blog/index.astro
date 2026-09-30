@@ -1,0 +1,37 @@
+---
+import Breadcrumbs from "@/components/Breadcrumbs.astro";
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { postHref } from "@/lib/blog";
+import { getPosts } from "@/lib/content";
+import { formatEpochDate, readingMinutes } from "@/lib/dates";
+
+const posts = await getPosts();
+---
+
+<BaseLayout title="Blog" description="Engineering notes on how and why the monorepo is built the way it is.">
+	<main id="main-content" class="mx-auto max-w-[1060px] px-5 pt-7 pb-24 md:px-11">
+		<Breadcrumbs crumbs={[{ label: "Home", href: "/" }, { label: "Blog" }]} />
+		<h1 class="page-title">Engineering Blog</h1>
+		<p class="page-description">
+			The reasoning behind the architecture — migrations, trade-offs and lessons learned. Subscribe via <a class="text-brand" href="/feed.xml">RSS</a>.
+		</p>
+		<div class="post-grid mt-10">
+			{
+				posts.map((post) => (
+					<article class="guide-card">
+						<p class="post-card__meta">
+							<span class="tag">{post.data.category}</span>
+							<time datetime={new Date(post.data.date).toISOString()}>{formatEpochDate(post.data.date)}</time>
+							<span>·</span>
+							<span>{readingMinutes(post.body ?? "")} min read</span>
+						</p>
+						<h2 class="guide-card__title">
+							<a href={postHref(post.id)}>{post.data.title}</a>
+						</h2>
+						<p class="guide-card__description">{post.data.description}</p>
+					</article>
+				))
+			}
+		</div>
+	</main>
+</BaseLayout>

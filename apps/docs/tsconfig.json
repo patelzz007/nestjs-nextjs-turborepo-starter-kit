@@ -1,17 +1,14 @@
 {
-	"extends": "@workspace/typescript-config/nextjs.json",
+	"extends": "astro/tsconfigs/strictest",
 	"compilerOptions": {
+		"baseUrl": ".",
 		"paths": {
-			"@/*": ["./*"],
-			"@workspace/ui/*": ["../../packages/ui/src/*"]
+			"@/*": ["./src/*"]
 		},
-		"plugins": [
-			{
-				"name": "next"
-			}
-		],
-		"customConditions": ["development"]
+		"types": ["node"],
+		// The shared ESLint config enforces dot access (`dataset.theme`); the rest of the monorepo leaves this off too.
+		"noPropertyAccessFromIndexSignature": false
 	},
-	"include": ["next-env.d.ts", "next.config.mjs", "**/*.ts", "**/*.tsx", "**/*.mts", ".next/types/**/*.ts", ".next/dev/types/**/*.ts"],
-	"exclude": ["node_modules"]
+	"include": [".astro/types.d.ts", "src/**/*", "astro.config.ts", "vitest.config.ts"],
+	"exclude": ["dist", "node_modules"]
 }

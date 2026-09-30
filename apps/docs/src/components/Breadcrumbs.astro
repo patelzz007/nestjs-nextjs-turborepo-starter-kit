@@ -1,0 +1,28 @@
+---
+import Icon from "@/components/Icon.astro";
+
+export interface Crumb {
+	readonly label: string;
+	/** Omit for the current page. */
+	readonly href?: string | undefined;
+}
+
+interface Props {
+	readonly crumbs: readonly Crumb[];
+}
+
+const { crumbs } = Astro.props;
+---
+
+<nav aria-label="Breadcrumb">
+	<ol class="breadcrumbs">
+		{
+			crumbs.map((crumb, index) => (
+				<li class="inline-flex items-center gap-1.5">
+					{index > 0 && <Icon name="chevronRight" size={13} />}
+					{crumb.href === undefined ? <span aria-current="page">{crumb.label}</span> : <a href={crumb.href}>{crumb.label}</a>}
+				</li>
+			))
+		}
+	</ol>
+</nav>

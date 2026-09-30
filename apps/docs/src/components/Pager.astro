@@ -1,0 +1,40 @@
+---
+import Icon from "@/components/Icon.astro";
+
+export interface PagerLink {
+	readonly title: string;
+	readonly href: string;
+}
+
+interface Props {
+	readonly previous: PagerLink | null;
+	readonly next: PagerLink | null;
+}
+
+const { previous, next } = Astro.props;
+---
+
+{
+	(previous !== null || next !== null) && (
+		<nav class="pager" aria-label="Previous and next pages">
+			{previous !== null && (
+				<a class="pager__card" href={previous.href} rel="prev">
+					<span class="pager__label">
+						<Icon name="arrowRight" size={13} class="rotate-180" />
+						Previous
+					</span>
+					<span class="pager__title">{previous.title}</span>
+				</a>
+			)}
+			{next !== null && (
+				<a class="pager__card pager__card--next" href={next.href} rel="next">
+					<span class="pager__label">
+						Next
+						<Icon name="arrowRight" size={13} />
+					</span>
+					<span class="pager__title">{next.title}</span>
+				</a>
+			)}
+		</nav>
+	)
+}

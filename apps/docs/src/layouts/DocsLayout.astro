@@ -1,0 +1,35 @@
+---
+import Sidebar from "@/components/Sidebar.astro";
+import TableOfContents from "@/components/TableOfContents.astro";
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import type { NavSection } from "@/lib/navigation";
+import type { TocItem } from "@/lib/toc";
+
+interface Props {
+	readonly title: string;
+	readonly description?: string | undefined;
+	readonly sections: readonly NavSection[];
+	/** Current guide id; `null` on the learning-center overview. */
+	readonly activeId: string | null;
+	/** "On this page" entries; omit for pages without a right rail. */
+	readonly toc?: readonly TocItem[] | undefined;
+	readonly editUrl?: string | undefined;
+	readonly image?: string | undefined;
+	/** Wider content column. */
+	readonly wide?: boolean;
+}
+
+const { title, description, sections, activeId, toc, editUrl, image, wide = false } = Astro.props;
+---
+
+<BaseLayout title={title} description={description} activeId={activeId} showFooter={false} image={image} type={activeId === null ? "website" : "article"}>
+	<div class="docs-shell">
+		<Sidebar sections={sections} activeId={activeId} />
+		<main id="main-content" class="docs-main">
+			<article class:list={["docs-article", { "docs-article--wide": wide }]}>
+				<slot />
+			</article>
+			{toc !== undefined && <TableOfContents items={toc} editUrl={editUrl} />}
+		</main>
+	</div>
+</BaseLayout>

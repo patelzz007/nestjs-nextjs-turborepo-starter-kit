@@ -1,0 +1,60 @@
+---
+import Icon from "@/components/Icon.astro";
+import { groupToc, type TocItem } from "@/lib/toc";
+
+interface Props {
+	readonly items: readonly TocItem[];
+	/** "Edit this page on GitHub" target, when the page has a source file. */
+	readonly editUrl?: string | undefined;
+}
+
+const { items, editUrl } = Astro.props;
+const groups = groupToc(items);
+---
+
+<aside class="toc" aria-label="On this page">
+	{
+		items.length > 0 && (
+			<>
+				<p class="toc__title">
+					<Icon name="alignLeft" size={16} />
+					On this page
+				</p>
+				<ul class="toc__list" data-toc>
+					{groups.map((group) => (
+						<li>
+							<a class="toc__link" href={`#${group.item.slug}`} data-toc-link={group.item.slug}>
+								{group.item.text}
+							</a>
+							{group.children.length > 0 && (
+								<ul class="toc__list toc__list--nested">
+									{group.children.map((child) => (
+										<li>
+											<a class="toc__link" href={`#${child.slug}`} data-toc-link={child.slug}>
+												{child.text}
+											</a>
+										</li>
+									))}
+								</ul>
+							)}
+						</li>
+					))}
+				</ul>
+			</>
+		)
+	}
+	<div class="toc__actions">
+		<button type="button" class="toc__action" data-scroll-top>
+			<Icon name="arrowRight" size={14} class="-rotate-90" />
+			Back to top
+		</button>
+		{
+			editUrl !== undefined && (
+				<a class="toc__action" href={editUrl} target="_blank" rel="noopener noreferrer">
+					<Icon name="pencil" size={14} />
+					Edit on GitHub
+				</a>
+			)
+		}
+	</div>
+</aside>

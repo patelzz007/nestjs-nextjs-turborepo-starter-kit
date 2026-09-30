@@ -1,0 +1,16 @@
+---
+import Icon from "@/components/Icon.astro";
+import BaseLayout from "@/layouts/BaseLayout.astro";
+---
+
+<BaseLayout title="Page not found">
+	<main id="main-content" class="not-found">
+		<p class="not-found__code">404</p>
+		<h1 class="page-title mt-4">This page doesn't exist</h1>
+		<p class="page-description">It may have moved when the guides were reorganised. Try searching instead.</p>
+		<div class="flex flex-wrap justify-center gap-3">
+			<a class="button-primary" href="/docs"><Icon name="bookOpen" size={16} />Browse all guides</a>
+			<button type="button" class="pill-button mt-7" data-search-open><Icon name="search" size={14} />Search</button>
+		</div>
+	</main>
+</BaseLayout>

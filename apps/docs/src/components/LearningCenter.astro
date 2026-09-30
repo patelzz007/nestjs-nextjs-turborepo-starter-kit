@@ -1,0 +1,52 @@
+---
+import Icon from "@/components/Icon.astro";
+import { sectionSlug, tileTone, type NavSection } from "@/lib/navigation";
+import type { TocItem } from "@/lib/toc";
+
+interface Props {
+	readonly sections: readonly NavSection[];
+	readonly quickLinks: ReadonlyMap<string, readonly TocItem[]>;
+}
+
+const { sections, quickLinks } = Astro.props;
+---
+
+<div>
+	{
+		sections.map((section) => (
+			<section class="card-section" aria-labelledby={sectionSlug(section.title)}>
+				<h2 class="card-section__title" id={sectionSlug(section.title)}>
+					{section.title}
+				</h2>
+				<div class="card-grid">
+					{section.items.map((item, index) => {
+						const links = quickLinks.get(item.id) ?? [];
+						return (
+							<article class="guide-card">
+								<span class="guide-card__tile" data-tone={tileTone(index)}>
+									<Icon name={item.icon} size={30} />
+								</span>
+								<h3 class="guide-card__title">
+									<a href={item.href}>{item.title}</a>
+								</h3>
+								<p class="guide-card__description">
+									{item.description.length > 0 && <>{item.description} </>}
+									<span class="guide-card__more">Learn more</span>
+								</p>
+								{links.length > 0 && (
+									<ul class="guide-card__links" aria-label={`${item.title} sections`}>
+										{links.map((link) => (
+											<li>
+												<a href={`${item.href}#${link.slug}`}>{link.text}</a>
+											</li>
+										))}
+									</ul>
+								)}
+							</article>
+						);
+					})}
+				</div>
+			</section>
+		))
+	}
+</div>

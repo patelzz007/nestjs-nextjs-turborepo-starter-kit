@@ -41,16 +41,17 @@
 		"recharts": "3.10.1",
 		"rxjs": "^7.8.2",
 		"shadcn": "^4.21.0",
+		"shiki": "^4.4.3",
 		"tailwind-merge": "^3.6.0",
 		"tw-animate-css": "^1.4.0",
 		"zod": "4.6.2"
 	},
 	"devDependencies": {
-		"next": "16.3.4",
 		"@tailwindcss/postcss": "^4.3.3",
 		"@testing-library/dom": "^10.4.1",
 		"@testing-library/react": "^16.3.3",
 		"@turbo/gen": "^2.10.12",
+		"@types/hast": "^3.0.5",
 		"@types/node": "^26.4.1",
 		"@types/react": "^19.3.0",
 		"@types/react-dom": "^19.3.0",
@@ -59,6 +60,7 @@
 		"@workspace/typescript-config": "workspace:*",
 		"eslint": "^9.39.5",
 		"jsdom": "^30.0.1",
+		"next": "16.3.4",
 		"tailwindcss": "^4.3.3",
 		"typescript": "6.0.2",
 		"vitest": "^5.0.0"
@@ -75,6 +77,7 @@
 		"./components/navigation/*": "./src/components/navigation/*.tsx",
 		"./components/feedback/*": "./src/components/feedback/*.tsx",
 		"./components/chat/*": "./src/components/chat/*.tsx",
+		"./components/display/code-block-highlight": "./src/components/display/code-block-highlight.ts",
 		"./components/display/*": "./src/components/display/*.tsx",
 		"./hooks/*": "./src/hooks/*.ts",
 		"./fonts/*": "./src/fonts/*.ts"

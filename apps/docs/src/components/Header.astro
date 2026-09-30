@@ -1,0 +1,55 @@
+---
+import Icon from "@/components/Icon.astro";
+import { GITHUB_URL, HEADER_TABS, isExternalTab, isTabActive, SITE_NAME } from "@/lib/site";
+
+interface Props {
+	readonly pathname: string;
+}
+
+const { pathname } = Astro.props;
+const tabs = HEADER_TABS.map((tab) => ({ ...tab, active: isTabActive(tab, pathname), external: isExternalTab(tab) }));
+---
+
+<header class="site-header">
+	<div class="site-header__top">
+		<button type="button" class="icon-button -ml-2 lg:hidden" data-drawer-toggle aria-label="Open navigation" aria-controls="site-drawer" aria-expanded="false">
+			<Icon name="menu" size={20} />
+		</button>
+		<a href="/" class="brand">
+			<span class="brand__mark"><Icon name="bookOpen" size={15} /></span>
+			{SITE_NAME}
+		</a>
+		<button type="button" class="header-search" data-search-open aria-label="Search the docs" aria-haspopup="dialog">
+			<Icon name="search" size={16} />
+			<span>Search</span>
+			<kbd data-search-shortcut>⌘K</kbd>
+		</button>
+		<div class="header-actions">
+			<button type="button" class="icon-button md:hidden" data-search-open aria-label="Search the docs" aria-haspopup="dialog">
+				<Icon name="search" size={18} />
+			</button>
+			<a class="icon-button" href={GITHUB_URL} target="_blank" rel="noopener noreferrer" aria-label="GitHub repository">
+				<Icon name="github" size={18} />
+			</a>
+			<button type="button" class="icon-button" data-theme-toggle aria-label="Toggle dark mode">
+				<Icon name="sun" size={18} class="theme-icon--light" />
+				<Icon name="moon" size={18} class="theme-icon--dark" />
+			</button>
+		</div>
+	</div>
+	<nav class="header-tabs" aria-label="Primary">
+		{
+			tabs.map((tab) => (
+				<a
+					href={tab.href}
+					class:list={["header-tab", { "is-active": tab.active }]}
+					aria-current={tab.active ? "page" : undefined}
+					target={tab.external ? "_blank" : undefined}
+					rel={tab.external ? "noopener noreferrer" : undefined}>
+					{tab.label}
+					{tab.external && <Icon name="arrowUpRight" size={12} />}
+				</a>
+			))
+		}
+	</nav>
+</header>

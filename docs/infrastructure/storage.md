@@ -4,7 +4,7 @@ tags: ["storage", "s3", "infrastructure", "operations", "kyb"]
 description: "ELI5 guide for file uploads: local dev, AWS S3, Firebase Storage, and deploying to dev / staging / production."
 order: 20
 author: "Acme Inc."
-lastUpdated: 1757692800000
+lastUpdated: 1790812800000
 coverImage: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1600&q=80"
 ---
 
@@ -29,7 +29,7 @@ Same upload flow everywhere. Only the `.env` values change.
 6. [Local dev (no AWS) — start here](#6-local-dev-no-aws--start-here)
 7. [Local dev with real S3 (optional)](#7-local-dev-with-real-s3-optional)
 8. [CDK deploy guide — A to Z (beginner friendly)](#8-cdk-deploy-guide--a-to-z-beginner-friendly)
-9. [Fill in `apps/api/.env`](#9-fill-in-appsapenv)
+9. [Fill in `apps/api/.env`](#9-fill-in-appsapienv)
 10. [Firebase Storage (ELI5)](#10-firebase-storage-eli5)
 11. [Test that it works](#11-test-that-it-works)
 12. [Troubleshooting](#12-troubleshooting)
@@ -622,7 +622,7 @@ STORAGE_DOWNLOAD_TTL_SECONDS=300
 
 `STORAGE_S3_PUBLIC_BUCKET` is optional — the API does not copy files there today. Keep it only if you plan to wire background workers to the CDK public bucket.
 
-See [§9](#9-fill-in-appsapenv) for all env shapes (single bucket, staging, production).
+See [§9](#9-fill-in-appsapienv) for all env shapes (single bucket, staging, production).
 
 ---
 

@@ -1,0 +1,31 @@
+---
+import Icon from "@/components/Icon.astro";
+
+/** Command-palette search (⌘K / Ctrl K / "/"). Behaviour lives in `src/scripts/search.ts`. */
+---
+
+<dialog class="search-dialog" data-search-dialog aria-label="Search the docs">
+	<div class="search-dialog__field">
+		<Icon name="search" size={18} />
+		<input
+			class="search-dialog__input"
+			type="search"
+			placeholder="Search guides, sections and posts…"
+			autocomplete="off"
+			spellcheck="false"
+			aria-label="Search"
+			aria-controls="search-results"
+			data-search-input
+		/>
+		<button type="button" class="icon-button" data-search-close aria-label="Close search">
+			<Icon name="x" size={16} />
+		</button>
+	</div>
+	<ul id="search-results" class="search-dialog__results" role="listbox" aria-label="Results" data-search-results></ul>
+	<p class="search-dialog__status" data-search-status>Type to search the guides.</p>
+	<div class="search-dialog__footer" aria-hidden="true">
+		<span><kbd>↑</kbd><kbd>↓</kbd> to navigate</span>
+		<span><kbd>↵</kbd> to open</span>
+		<span><kbd>esc</kbd> to close</span>
+	</div>
+</dialog>

@@ -1,0 +1,82 @@
+---
+import "@/styles/global.css";
+
+import Header from "@/components/Header.astro";
+import MobileDrawer from "@/components/MobileDrawer.astro";
+import SearchDialog from "@/components/SearchDialog.astro";
+import SiteFooter from "@/components/SiteFooter.astro";
+import { getGuides, navSectionsFor } from "@/lib/content";
+import { SITE_DESCRIPTION, SITE_NAME } from "@/lib/site";
+
+interface Props {
+	/** Page title; the site name is appended. */
+	readonly title: string;
+	readonly description?: string | undefined;
+	/** Current guide id (`null` on the learning-center overview) — highlights it in the drawer's tree. */
+	readonly activeId?: string | null | undefined;
+	/** Guide pages have their own sticky layout and skip the global footer. */
+	readonly showFooter?: boolean;
+	/** Social preview image (absolute or site-relative). */
+	readonly image?: string | undefined;
+	readonly type?: "website" | "article";
+}
+
+const { title, description = SITE_DESCRIPTION, activeId, showFooter = true, image, type = "website" } = Astro.props;
+// Every page gets the drawer's guide tree (getCollection is cached across pages).
+const sections = navSectionsFor(await getGuides());
+const pathname = Astro.url.pathname;
+const fullTitle = title === SITE_NAME ? title : `${title} · ${SITE_NAME}`;
+const canonical = Astro.site === undefined ? undefined : new URL(pathname, Astro.site).href;
+const imageUrl = image === undefined || Astro.site === undefined ? undefined : new URL(image, Astro.site).href;
+---
+
+<!doctype html>
+<html lang="en" data-theme="light">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>{fullTitle}</title>
+		<meta name="description" content={description} />
+		{canonical !== undefined && <link rel="canonical" href={canonical} />}
+		<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+		<link rel="alternate" type="application/rss+xml" title={`${SITE_NAME} blog`} href="/feed.xml" />
+		<link rel="sitemap" href="/sitemap-index.xml" />
+		<meta property="og:site_name" content={SITE_NAME} />
+		<meta property="og:title" content={fullTitle} />
+		<meta property="og:description" content={description} />
+		<meta property="og:type" content={type} />
+		{canonical !== undefined && <meta property="og:url" content={canonical} />}
+		{imageUrl !== undefined && <meta property="og:image" content={imageUrl} />}
+		<meta name="twitter:card" content={imageUrl === undefined ? "summary" : "summary_large_image"} />
+		<meta name="theme-color" content="#ffffff" />
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+		<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+		<!-- Applies the saved / OS theme before first paint (keep the key in sync with src/scripts/theme.ts). -->
+		<script is:inline>
+			(function () {
+				var theme = "light";
+				try {
+					var saved = localStorage.getItem("docs:theme");
+					theme = saved === "dark" || saved === "light" ? saved : matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+				} catch (error) {
+					theme = "light";
+				}
+				document.documentElement.dataset.theme = theme;
+			})();
+		</script>
+	</head>
+	<body>
+		<a class="skip-link" href="#main-content">Skip to content</a>
+		<Header pathname={pathname} />
+		<MobileDrawer pathname={pathname} sections={sections} activeId={activeId} />
+		<slot />
+		{showFooter && <SiteFooter />}
+		<SearchDialog />
+		<script>
+			import { initSite } from "@/scripts/main";
+
+			initSite();
+		</script>
+	</body>
+</html>

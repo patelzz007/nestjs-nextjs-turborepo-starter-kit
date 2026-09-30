@@ -4,7 +4,7 @@ tags: ["overview", "setup", "getting-started"]
 description: "5-minute overview of the project — tech stack, folder structure, request lifecycle, and how to run it."
 order: 12
 author: "Acme Inc."
-lastUpdated: 1787529600000
+lastUpdated: 1790812800000
 coverImage: "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?auto=format&fit=crop&w=1600&q=80"
 ---
 
@@ -45,7 +45,7 @@ apps/
   api/          → NestJS backend (src/modules/*)
   admin/        → Next.js admin panel (app/(panel)/*)
   web/          → Next.js user-facing app
-  docs/         → Fumadocs documentation site
+  docs/         → Astro documentation site (renders repo-root docs/ + blog/)
 
 packages/
   shared/       → Zod schemas, contracts, route registry (shared by all apps)

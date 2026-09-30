@@ -1,0 +1,19 @@
+---
+import NavTree from "@/components/NavTree.astro";
+import type { NavSection } from "@/lib/navigation";
+
+interface Props {
+	readonly sections: readonly NavSection[];
+	/** Guide id of the current page; `null` on the learning-center overview. */
+	readonly activeId: string | null;
+}
+
+const { sections, activeId } = Astro.props;
+---
+
+<!-- Desktop (lg+) guide tree. Below lg the same tree lives in the drawer (MobileDrawer.astro). -->
+<aside class="docs-sidebar" data-sidebar aria-label="Guides">
+	<nav aria-label="Guides">
+		<NavTree sections={sections} activeId={activeId} />
+	</nav>
+</aside>

@@ -4,7 +4,7 @@ tags: ["admin", "nextjs", "auth", "data-fetching", "ssr"]
 description: "Guide to the admin app at localhost:3001 — route map, proxy-based auth with isolated cookies, the dashboard layout/sidebar/command palette, the useApi + server-api + prefetchPage data-fetching stack, SSR page conventions, and env vars."
 order: 21
 author: "Acme Inc."
-lastUpdated: 1772000000000
+lastUpdated: 1790812800000
 coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=1600&q=80"
 ---
 
@@ -82,8 +82,8 @@ The login page (`/auth/login`) is a server component: it reads `?redirect=` and 
 - `(panel)/layout.tsx` → `dashboard-layout.tsx`: sidebar (menu config in
   `apps/admin/lib/navigation/sidebar-menu.json` + icon map), topbar with breadcrumbs + theme toggle + command
   palette (`⌘K`), and the panel content area.
-- Command palette: global search across pages, telescope users, status, documents — the docs
-  app's palette matches it (`apps/docs`).
+- Command palette: global search across pages, telescope users, status, documents. The docs
+  site (`apps/docs`) has its own `⌘K` search over a build-time index (`apps/docs/src/scripts/search.ts`).
 
 ## Data fetching
 

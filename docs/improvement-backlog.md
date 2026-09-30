@@ -2,7 +2,7 @@
 title: "Improvement backlog"
 description: "Full-repo audit against the 25 non-negotiable engineering rules. Written so a junior engineer can understand what is broken, why it matters, and what to do next."
 author: "Acme Inc."
-lastUpdated: 1786972800000
+lastUpdated: 1790812800000
 coverImage: "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=1600&q=80"
 tags: ["audit", "typesafety", "rls", "ui", "backup", "telescope"]
 ---
@@ -261,11 +261,17 @@ Counts from the audit (Aug 2026, refreshed): **0** `any`; **0** `as const` in UI
 
 ### `apps/docs`
 
-119. `changeFrequency: "weekly" as const` → typed union / `satisfies`.
-120. `typeof name === "string"` / `typeof structuredData === "function"` in page/tree/search — Zod adapters.
-121. Callout hues + `bg-black/50` overlays → tokens / CVA kinds.
-122. OG image hex map — one shared constant file (OG cannot use CSS vars).
-123. Landing marketing copy → content module.
+> ✅ 119–123 resolved on 2026-10-01 by rebuilding the docs site on Astro (Next.js + Fumadocs removed):
+> the sitemap comes from `@astrojs/sitemap`, search/meta payloads are validated with zod
+> (`src/lib/search.ts`, `src/lib/navigation.ts`), callouts and every colour are CSS tokens in
+> `src/styles/global.css`, the generated OG images are gone (guides use their `coverImage`), and
+> landing copy lives in `src/pages/index.astro` + `src/lib/site.ts`.
+
+119. ~~`changeFrequency: "weekly" as const` → typed union / `satisfies`.~~
+120. ~~`typeof name === "string"` / `typeof structuredData === "function"` in page/tree/search — Zod adapters.~~
+121. ~~Callout hues + `bg-black/50` overlays → tokens / CVA kinds.~~
+122. ~~OG image hex map — one shared constant file (OG cannot use CSS vars).~~
+123. ~~Landing marketing copy → content module.~~
 
 ### `packages/client`
 

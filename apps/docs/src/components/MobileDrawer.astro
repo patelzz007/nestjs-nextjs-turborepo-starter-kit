@@ -1,0 +1,61 @@
+---
+import Icon from "@/components/Icon.astro";
+import NavTree from "@/components/NavTree.astro";
+import type { NavSection } from "@/lib/navigation";
+import { HEADER_TABS, isExternalTab, isTabActive, SITE_NAME } from "@/lib/site";
+
+interface Props {
+	readonly pathname: string;
+	readonly sections: readonly NavSection[];
+	readonly activeId?: string | null | undefined;
+}
+
+const { pathname, sections, activeId } = Astro.props;
+---
+
+<!--
+	Small-screen navigation (below lg): a full-height sheet above the header with
+	its own close button, the header tabs and the guide tree. Behaviour lives in
+	src/scripts/drawer.ts (focus, Escape, scroll lock, closing on navigation).
+-->
+<div id="site-drawer" class="drawer" data-drawer role="dialog" aria-modal="true" aria-label="Navigation" tabindex="-1">
+	<div class="drawer__head">
+		<a href="/" class="brand">
+			<span class="brand__mark"><Icon name="bookOpen" size={15} /></span>
+			{SITE_NAME}
+		</a>
+		<button type="button" class="icon-button" data-drawer-close aria-label="Close navigation">
+			<Icon name="x" size={18} />
+		</button>
+	</div>
+	<div class="drawer__body">
+		<nav aria-label="Sections">
+			<ul class="nav-tree">
+				{
+					HEADER_TABS.map((tab) => {
+						const active = isTabActive(tab, pathname);
+						const external = isExternalTab(tab);
+						return (
+							<li>
+								<a
+									href={tab.href}
+									class:list={["nav-node", { "is-active": active && activeId === undefined }]}
+									aria-current={active ? "page" : undefined}
+									target={external ? "_blank" : undefined}
+									rel={external ? "noopener noreferrer" : undefined}>
+									{tab.label}
+									{external && <Icon name="externalLink" size={13} class="ml-auto text-muted-foreground" />}
+								</a>
+							</li>
+						);
+					})
+				}
+			</ul>
+		</nav>
+		<p class="drawer__label">Guides</p>
+		<nav aria-label="Guides">
+			<NavTree sections={sections} activeId={activeId} />
+		</nav>
+	</div>
+</div>
+<div class="drawer-backdrop" data-drawer-backdrop hidden></div>

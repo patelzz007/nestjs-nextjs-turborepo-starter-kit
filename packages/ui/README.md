@@ -58,6 +58,109 @@ import {
 - **CVA** — `sidebarMenuButtonVariants` / `sidebarMenuSubButtonVariants` with `state: default | active | disabled`
 
 
+## Code block (`display/code-block.tsx`)
+
+A full port of the [ReUI code block](https://reui.io/components/code-block) (registry item
+`code-block.json`): Shiki highlighting, streaming, diffs, ANSI, folding, focus mode, line
+selection, per-line actions, wrap, collapse/expand, copy and download. Public names, prop names,
+`data-slot` / `data-*` attributes and `--code-block-*` custom properties match ReUI, so its docs
+and examples apply — with the deviations listed below.
+
+Two modules:
+
+- **`display/code-block.tsx`** (`"use client"`) — the parts and hooks.
+- **`display/code-block-highlight.ts`** (no directive, server-safe) — the lazy Shiki engine
+  (JavaScript regex engine, so no `wasm-unsafe-eval` in your CSP; static per-grammar/theme
+  import maps — add a language by adding a line to `codeBlockLanguages`) and pure helpers:
+  `highlightCode`, `parseLineSpec`, `normalizeCode`, `buildWordDecorations`,
+  `stripNotationComments`, `toPlainLines`, `markdownCodeProps`, `markdownFences`,
+  `resolveCodeBlockLanguage`, `parseUnifiedDiff`, `ansiToLines`, `resetCodeBlockHighlighter`
+  (test seam), `codeBlockLanguages`, `codeBlockThemes`, `DEFAULT_CODE_BLOCK_THEMES`.
+
+**Parts:** `CodeBlock` (root; renders the code surface itself — children are chrome only),
+`CodeBlockHeader`, `CodeBlockTitle`, `CodeBlockLanguage`, `CodeBlockCopyButton`,
+`CodeBlockDownloadButton`, `CodeBlockWrapToggle`, `CodeBlockExpandButton`,
+`CodeBlockLineActions` (render prop, shown on the hovered/focused row, `side="end" | "gutter"`),
+`CodeBlockContent` (compose the surface inside your own ScrollArea). **Hooks:**
+`useCodeBlockConfig`, `useCodeBlockFolding`, `useCodeBlockSelection`.
+
+**Main `CodeBlock` props:** `code` + `language` (client highlighting) **or** `lines`
+(pre-highlighted), `themes` (`{ light, dark }`, default github-light/dark; `"css-variables"`
+for token theming), `highlight`, `showLineNumbers` + `startLine` (CSS counter — numbers never
+copy), `highlightedLines` / `focusedLines` / `diff` / `lineLevels` (line specs: `[2, 3]` or
+`"2-4,7"`, source-numbered), `highlightedWords`, `transformers` (Shiki; `[!code ++]` notation lands
+in the same line state — hoist the array to module scope), `streaming` (deferred tokenisation,
+caret, stick-to-bottom, completion announcement), `wrap` / `defaultWrap` / `onWrapChange`,
+`maxLines` + `expanded` / `defaultExpanded` / `onExpandedChange`, `foldable` + `foldRegions` /
+`folded` / `defaultFolded` / `onFoldedChange`, `selectable` + `selectedLines` /
+`defaultSelectedLines` / `onSelectedLinesChange`, `variant` (`default | ghost`), `label`,
+`completeAnnouncement`, and **`labels` (required)**.
+
+**Labels.** The kit keeps English out of components (rule 11), so the root requires
+`labels: CodeBlockLabels`. Pass `DEFAULT_CODE_BLOCK_LABELS` or a translated copy; parameterised
+strings (`foldLines`, `unfoldLines`, `unfoldHiddenLines`, `hiddenLines`, `languageCode`, `lines`,
+`complete`) are functions. Per-part props still override (`CodeBlockCopyButton labels`,
+`CodeBlockDownloadButton label`, root `label` / `completeAnnouncement`, children of the wrap and
+expand buttons). Keep the object reference stable (module constant) — it reaches every memoised
+row. Because it contains functions, a **server component** must import the labels object from a
+module (e.g. `DEFAULT_CODE_BLOCK_LABELS` from this client module), not build one inline.
+
+**Server-highlighted path.** A server component awaits `highlightCode` and passes `lines`; the
+client then loads no Shiki at all. Copy/download fall back to the lines' text.
+
+```tsx
+// server component
+import { highlightCode } from "@workspace/ui/components/display/code-block-highlight";
+import {
+	CodeBlock,
+	CodeBlockCopyButton,
+	CodeBlockHeader,
+	CodeBlockLanguage,
+	CodeBlockTitle,
+	DEFAULT_CODE_BLOCK_LABELS,
+} from "@workspace/ui/components/display/code-block";
+
+const lines = await highlightCode(source, { language: "tsx", highlightedLines: "3-5" });
+
+<CodeBlock labels={DEFAULT_CODE_BLOCK_LABELS} lines={lines} language="tsx" showLineNumbers>
+	<CodeBlockHeader>
+		<CodeBlockTitle>app.tsx</CodeBlockTitle>
+		<CodeBlockLanguage />
+		<CodeBlockCopyButton />
+	</CodeBlockHeader>
+</CodeBlock>;
+
+// client, streaming from a model
+<CodeBlock labels={DEFAULT_CODE_BLOCK_LABELS} code={partial} language="python" streaming={!done} maxLines={20} foldable>
+	<CodeBlockExpandButton />
+</CodeBlock>;
+```
+
+`parseUnifiedDiff(patch)` returns per-file `lines` with dual old/new gutter labels;
+`ansiToLines(stdout)` turns SGR colour codes into `lines` (palette overridable via
+`--code-ansi-*`). `markdownCodeProps` / `markdownFences` are the react-markdown / raw-transcript
+glue. Theme tokens used: `--card`, `--primary`, `--success`, `--destructive`, `--warning`,
+`--info`, `--accent`, `--muted` (all in `styles/tokens.css`).
+
+**Deliberate deviations from ReUI** (behaviour otherwise identical):
+
+- `labels` root prop (required) + `DEFAULT_CODE_BLOCK_LABELS`; every hard-coded English string
+  moved there. A copy/download button rendered outside any `CodeBlock` falls back to the defaults.
+- Every DOM-rendering part forwards a ref (`CodeBlockContent` → the content wrapper;
+  `CodeBlockExpandButton` → its button, `className` still styles the floating wrapper).
+- `onCopyError` receives an `Error` (a non-`Error` rejection is wrapped, original on `cause`).
+- Type-level only: real Shiki/hast types instead of `unknown`/casts; the highlight effect reads its
+  serialized spec back through a zod schema; object types are `interface`s.
+- Lint-driven restructuring with no visible change: the latest-value refs sync in a layout effect
+  instead of during render; the stream-complete announcement is derived during render instead of
+  set in an effect; pointer/focus tracking (`<pre>`) and listbox keyboard handling (viewport) are
+  native listeners; the row's `option` role and its handlers are applied together only when
+  selectable; clicks inside a line-action group are ignored by the row instead of
+  `stopPropagation` on the group.
+- Fixes: the folded-lines chip unfolds by source line (ReUI used the displayed number, wrong
+  when `startLine ≠ 1`); language/theme/extension lookups ignore `Object.prototype` keys; a
+  highlight result is also tagged with its language.
+
 ## React Hook Form
 
 `react-hook-form` is an **optional peer** — install it in the app that owns the form:

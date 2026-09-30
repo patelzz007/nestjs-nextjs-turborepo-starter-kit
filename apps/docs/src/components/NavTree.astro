@@ -1,0 +1,43 @@
+---
+import Icon from "@/components/Icon.astro";
+import type { NavSection } from "@/lib/navigation";
+
+interface Props {
+	readonly sections: readonly NavSection[];
+	/** Guide id of the current page; `null` on the learning-center overview; `undefined` elsewhere. */
+	readonly activeId?: string | null | undefined;
+}
+
+const { sections, activeId } = Astro.props;
+const onOverview = activeId === null;
+---
+
+<ul class="nav-tree">
+	<li>
+		<a href="/" class:list={["nav-node", { "is-active": onOverview }]} aria-current={onOverview ? "page" : undefined}>Monorepo Learning Center</a>
+	</li>
+	{
+		sections.map((section) => {
+			const containsActive = section.items.some((item) => item.id === activeId);
+			return (
+				<li>
+					<details class="nav-group" open={containsActive || undefined}>
+						<summary class="nav-node">
+							{section.title}
+							<Icon name="chevronRight" size={16} class="chevron" />
+						</summary>
+						<ul>
+							{section.items.map((item) => (
+								<li>
+									<a href={item.href} class:list={["nav-node", { "is-active": item.id === activeId }]} aria-current={item.id === activeId ? "page" : undefined}>
+										{item.title}
+									</a>
+								</li>
+							))}
+						</ul>
+					</details>
+				</li>
+			);
+		})
+	}
+</ul>

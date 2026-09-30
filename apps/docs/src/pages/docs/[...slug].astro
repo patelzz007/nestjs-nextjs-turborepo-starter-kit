@@ -1,0 +1,77 @@
+---
+import type { GetStaticPaths, InferGetStaticPropsType } from "astro";
+import { render } from "astro:content";
+
+import Breadcrumbs from "@/components/Breadcrumbs.astro";
+import Feedback from "@/components/Feedback.astro";
+import Icon from "@/components/Icon.astro";
+import Pager from "@/components/Pager.astro";
+import DocsLayout from "@/layouts/DocsLayout.astro";
+import { getGuides, navSectionsFor } from "@/lib/content";
+import { formatEpochDate, readingMinutes } from "@/lib/dates";
+import { findNeighbours, findSection } from "@/lib/navigation";
+import { githubEditUrl } from "@/lib/site";
+import { buildToc } from "@/lib/toc";
+
+export const getStaticPaths = (async () => {
+	const guides = await getGuides();
+	const sections = navSectionsFor(guides);
+	return guides.map((guide) => ({ params: { slug: guide.id }, props: { guide, sections } }));
+}) satisfies GetStaticPaths;
+
+type Props = InferGetStaticPropsType<typeof getStaticPaths>;
+
+const { guide, sections }: Props = Astro.props;
+const { Content, headings } = await render(guide);
+const section = findSection(sections, guide.id);
+const { previous, next } = findNeighbours(sections, guide.id);
+const editUrl = githubEditUrl("docs", `${guide.id}.md`);
+const superseded = guide.data.tags.includes("superseded");
+const visibleTags = guide.data.tags.filter((tag) => tag !== "superseded");
+---
+
+<DocsLayout
+	title={guide.data.title}
+	description={guide.data.description}
+	sections={sections}
+	activeId={guide.id}
+	toc={buildToc(headings)}
+	editUrl={editUrl}
+	image={guide.data.coverImage}>
+	<Breadcrumbs crumbs={[{ label: "Guides", href: "/docs" }, ...(section === null ? [] : [{ label: section.title }]), { label: guide.data.title }]} />
+	<h1 class="page-title">{guide.data.title}</h1>
+	{guide.data.description !== undefined && <p class="page-description">{guide.data.description}</p>}
+	<div class="page-meta">
+		<span><Icon name="users" size={14} />{guide.data.author}</span>
+		<span>
+			<Icon name="pencil" size={14} />Updated <time datetime={new Date(guide.data.lastUpdated).toISOString()}>{formatEpochDate(guide.data.lastUpdated)}</time>
+		</span>
+		<span><Icon name="timer" size={14} />{readingMinutes(guide.body ?? "")} min read</span>
+		{
+			visibleTags.length > 0 && (
+				<ul class="tag-list" aria-label="Tags">
+					{visibleTags.map((tag) => (
+						<li class="tag">{tag}</li>
+					))}
+				</ul>
+			)
+		}
+	</div>
+	{
+		superseded && (
+			<aside class="callout mt-6" data-kind="warning">
+				<p class="callout-title">Superseded</p>
+				<p>This guide is kept for history. Its content may no longer match the code — use the sidebar to find the current guide.</p>
+			</aside>
+		)
+	}
+	<div class="prose">
+		<Content />
+	</div>
+	<Feedback />
+	<div class="page-footer-meta">
+		<span>Last updated {formatEpochDate(guide.data.lastUpdated)}</span>
+		<a href={editUrl} target="_blank" rel="noopener noreferrer"><Icon name="pencil" size={14} />Edit this page on GitHub</a>
+	</div>
+	<Pager previous={previous} next={next} />
+</DocsLayout>

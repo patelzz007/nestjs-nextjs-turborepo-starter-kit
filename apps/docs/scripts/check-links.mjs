@@ -54,7 +54,7 @@ function pageFileForDocsUrl(url) {
 	const match = /^\/docs\/(.+)$/.exec(url);
 	if (match === null) return undefined;
 	const slug = match[1].split("#")[0].split("?")[0];
-	// README keeps its original case (`/docs/README`); everything else lowercases.
+	// Ids keep their file-name case (`/docs/README`); a lower-cased fallback covers older links.
 	const candidates = [slug, slug.toLowerCase()];
 	for (const candidate of candidates) {
 		const filePath = join(DOCS_DIR, `${candidate}.md`);
@@ -64,8 +64,10 @@ function pageFileForDocsUrl(url) {
 }
 
 const problems = [];
-const files = readdirSync(DOCS_DIR)
+// Recursive: guides live in sub-folders too (`docs/authorization-system/*.md`).
+const files = readdirSync(DOCS_DIR, { recursive: true, encoding: "utf8" })
 	.filter((name) => name.endsWith(".md"))
+	.sort()
 	.map((name) => join(DOCS_DIR, name));
 
 for (const filePath of files) {

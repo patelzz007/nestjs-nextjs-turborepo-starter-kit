@@ -1,0 +1,13 @@
+{
+	"$schema": "https://turbo.build/schema.json",
+	"extends": ["//"],
+	"tasks": {
+		"build": {
+			"inputs": ["$TURBO_EXTENDS$", "$TURBO_ROOT$/docs/**", "$TURBO_ROOT$/blog/**"],
+			"env": ["$TURBO_EXTENDS$", "PUBLIC_SITE_URL", "PUBLIC_ADMIN_URL", "PUBLIC_API_DOCS_URL"]
+		},
+		"typecheck": {
+			"inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/docs/**", "$TURBO_ROOT$/blog/**"]
+		}
+	}
+}

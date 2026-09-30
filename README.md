@@ -58,7 +58,7 @@
 | ------- | --- | ---- | ------- |
 | **Web** | `@workspace/web` | `3000` | Public landing + authenticated Reward Hub for consumers |
 | **Admin** | `@workspace/admin` | `3001` | Internal operations panel |
-| **Docs** | `@workspace/docs` | `3002` | In-repo documentation site |
+| **Docs** | `@workspace/docs` | `3002` | Astro documentation site for `docs/` + `blog/` (see `apps/docs/README.md`) |
 | **Merchant** | `@workspace/merchant` | `3003` | Merchant portal (isolated auth cookies) |
 | **API** | `@workspace/api` | `8080` | NestJS backend — Swagger at `/v1/docs` |
 

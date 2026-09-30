@@ -1,19 +1,16 @@
-import { nextJsConfig } from "@workspace/eslint-config/next-js";
+import { config as baseConfig } from "@workspace/eslint-config/base";
 
-/** @type {import("eslint").Linter.Config} */
+/**
+ * The docs site is an Astro app: its logic lives in plain TypeScript modules
+ * (`src/lib/**`, `src/scripts/**`), linted by the shared base config.
+ * `.astro` templates are type-checked by `astro check` (the `typecheck` task).
+ *
+ * @type {import("eslint").Linter.Config}
+ */
 export default [
-	...nextJsConfig,
+	...baseConfig,
 	{
-		// `fumadocs-mdx` generates `.source/*` (config bundle + runtime entry
-		// points) on every build — generated code, not ours to lint.
-		ignores: [".source/**"],
-	},
-	{
-		// Docs screenshots are static MDX assets rendered at natural size inside
-		// the lightbox; `next/image` optimization/sizing does not apply to them.
-		files: ["components/docs-image.tsx", "components/image-gallery.tsx"],
-		rules: {
-			"@next/next/no-img-element": "off",
-		},
+		// Build output and Astro's generated type stubs — generated code, not ours to lint.
+		ignores: ["dist/**", ".astro/**"],
 	},
 ];

@@ -4,7 +4,7 @@ tags: ["toast", "notifications", "ui", "sonner", "migration"]
 description: "The in-house base-ui Toast & Toastr manager — the typed toastMessage API (success/info/warning/error/loading/promise), six placements, progress bars, countdown bars, soft-solid theming, and the sonner migration that removed ~80 call sites."
 order: 20
 author: "Acme Inc."
-lastUpdated: 1787011200000
+lastUpdated: 1790812800000
 coverImage: "https://images.unsplash.com/photo-1557683316-973673baf926?auto=format&fit=crop&w=1600&q=80"
 ---
 
@@ -14,14 +14,14 @@ coverImage: "https://images.unsplash.com/photo-1557683316-973673baf926?auto=form
 > manager with a typed imperative API (`toastMessage`), soft-solid per-type theming, six
 > placements, an auto-dismiss **countdown bar** (with a ticking "Dismisses in Xs" label that
 > freezes on hover/window-blur, in sync with base-ui's own timer), a manual **progress bar**
-> via the `data` slot, and swipe-to-dismiss. It replaced sonner across the admin + docs apps —
+> via the `data` slot, and swipe-to-dismiss. It replaced sonner across the admin app —
 > see [§Migration](#from-sonner).
 >
 > **Ground truth** (verified 2026-08-18):
 >
 > - Component: `packages/ui/src/components/feedback/toast.tsx` (~900 lines)
-> - Mounted in: `apps/admin/app/layout.tsx` + `apps/docs/app/layout.tsx` (one `<Toaster />` per manager)
-> - Call sites: ~80 across `apps/admin` (settings, emails, showcases, geo) + `apps/docs/components/lightbox.ts`
+> - Mounted in: `apps/admin/app/layout.tsx` (one `<Toaster />` per manager). The docs site (`apps/docs`) is a static Astro build and has no toasts.
+> - Call sites: ~80 across `apps/admin` (settings, emails, showcases, geo)
 > - Showcase + tests: `apps/admin/components/showcase/toast-showcase.tsx`, `apps/admin/components/showcase/toast.test.tsx`
 
 ## Getting started

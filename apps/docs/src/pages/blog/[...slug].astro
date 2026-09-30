@@ -1,0 +1,66 @@
+---
+import type { GetStaticPaths, InferGetStaticPropsType } from "astro";
+import { render } from "astro:content";
+
+import Breadcrumbs from "@/components/Breadcrumbs.astro";
+import Feedback from "@/components/Feedback.astro";
+import Icon from "@/components/Icon.astro";
+import Pager from "@/components/Pager.astro";
+import TableOfContents from "@/components/TableOfContents.astro";
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { postHref } from "@/lib/blog";
+import { getPosts } from "@/lib/content";
+import { formatEpochDate, readingMinutes } from "@/lib/dates";
+import { githubEditUrl } from "@/lib/site";
+import { buildToc } from "@/lib/toc";
+
+export const getStaticPaths = (async () => {
+	const posts = await getPosts();
+	return posts.map((post, index) => {
+		const newer = posts[index - 1];
+		const older = posts[index + 1];
+		return {
+			params: { slug: post.id },
+			props: {
+				post,
+				previous: newer === undefined ? null : { title: newer.data.title, href: postHref(newer.id) },
+				next: older === undefined ? null : { title: older.data.title, href: postHref(older.id) },
+			},
+		};
+	});
+}) satisfies GetStaticPaths;
+
+type Props = InferGetStaticPropsType<typeof getStaticPaths>;
+
+const { post, previous, next }: Props = Astro.props;
+const { Content, headings } = await render(post);
+const editUrl = githubEditUrl("blog", `${post.id}.md`);
+---
+
+<BaseLayout title={post.data.title} description={post.data.description} image={post.data.coverImage} type="article">
+	<main id="main-content" class="docs-main">
+		<article class="docs-article">
+			<Breadcrumbs crumbs={[{ label: "Blog", href: "/blog" }, { label: post.data.category }, { label: post.data.title }]} />
+			<h1 class="page-title">{post.data.title}</h1>
+			<p class="page-description">{post.data.description}</p>
+			<div class="page-meta">
+				<span><Icon name="users" size={14} />{post.data.author}</span>
+				<span>
+					<Icon name="pencil" size={14} /><time datetime={new Date(post.data.date).toISOString()}>{formatEpochDate(post.data.date)}</time>
+				</span>
+				<span><Icon name="timer" size={14} />{readingMinutes(post.body ?? "")} min read</span>
+				<span class="tag">{post.data.category}</span>
+			</div>
+			<div class="prose">
+				<Content />
+			</div>
+			<Feedback />
+			<div class="page-footer-meta">
+				<a href="/blog"><Icon name="arrowRight" size={14} class="rotate-180" />All posts</a>
+				<a href={editUrl} target="_blank" rel="noopener noreferrer"><Icon name="pencil" size={14} />Edit this post on GitHub</a>
+			</div>
+			<Pager previous={previous} next={next} />
+		</article>
+		<TableOfContents items={buildToc(headings)} editUrl={editUrl} />
+	</main>
+</BaseLayout>

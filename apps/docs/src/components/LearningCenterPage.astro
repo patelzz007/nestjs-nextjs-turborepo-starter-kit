@@ -1,0 +1,29 @@
+---
+import Breadcrumbs from "@/components/Breadcrumbs.astro";
+import LearningCenter from "@/components/LearningCenter.astro";
+import DocsLayout from "@/layouts/DocsLayout.astro";
+import { getLearningCenter } from "@/lib/content";
+import { flattenNav, sectionSlug } from "@/lib/navigation";
+import { SITE_DESCRIPTION, SITE_TITLE } from "@/lib/site";
+import type { TocItem } from "@/lib/toc";
+
+/** The learning-center overview, served at both `/` and `/docs`. */
+const { sections, quickLinks } = await getLearningCenter();
+const total = flattenNav(sections).length;
+const toc: readonly TocItem[] = sections.map((section) => ({ slug: sectionSlug(section.title), text: section.title, depth: 2 }));
+---
+
+<DocsLayout title={SITE_TITLE} description={SITE_DESCRIPTION} sections={sections} activeId={null} toc={toc} wide>
+	<Breadcrumbs crumbs={[{ label: "Learning Center" }]} />
+	<h1 class="page-title">{SITE_TITLE}</h1>
+	<div class="prose">
+		<p>
+			Welcome to the monorepo documentation. These {total} guides cover everything you need to build on the starter kit — setup, architecture,
+			authorization, infrastructure and tooling — written so a new teammate can ship on day one.
+		</p>
+		<p>Explore the topics below, or press <kbd data-search-shortcut>⌘K</kbd> to search.</p>
+	</div>
+	<div class="mt-12">
+		<LearningCenter sections={sections} quickLinks={quickLinks} />
+	</div>
+</DocsLayout>

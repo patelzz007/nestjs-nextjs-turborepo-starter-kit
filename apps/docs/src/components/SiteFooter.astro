@@ -1,0 +1,18 @@
+---
+import { API_DOCS_URL, GITHUB_URL, SITE_NAME } from "@/lib/site";
+
+const year = new Date().getUTCFullYear();
+---
+
+<footer class="site-footer">
+	<div class="site-footer__inner">
+		<p class="m-0">© {year} {SITE_NAME}. Built from the repository's <code>docs/</code> and <code>blog/</code> folders.</p>
+		<nav aria-label="Footer">
+			<a href="/docs">Guides</a>
+			<a href="/blog">Blog</a>
+			<a href="/feed.xml">RSS</a>
+			<a href={API_DOCS_URL} target="_blank" rel="noopener noreferrer">API Reference</a>
+			<a href={GITHUB_URL} target="_blank" rel="noopener noreferrer">GitHub</a>
+		</nav>
+	</div>
+</footer>

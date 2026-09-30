@@ -1,0 +1,23 @@
+---
+import Icon from "@/components/Icon.astro";
+
+/**
+ * "Was this page helpful?" — the answer is remembered per page in
+ * localStorage only (no analytics backend yet); see `src/scripts/feedback.ts`.
+ */
+---
+
+<section class="page-feedback" data-feedback aria-label="Page feedback">
+	<p class="page-feedback__question">Was this page helpful?</p>
+	<div class="page-feedback__buttons">
+		<button type="button" class="pill-button" data-feedback-value="yes" aria-pressed="false">
+			<Icon name="thumbsUp" size={14} />
+			Yes
+		</button>
+		<button type="button" class="pill-button" data-feedback-value="no" aria-pressed="false">
+			<Icon name="thumbsDown" size={14} />
+			No
+		</button>
+	</div>
+	<p class="page-feedback__thanks w-full" data-feedback-thanks hidden>Thanks for the feedback!</p>
+</section>

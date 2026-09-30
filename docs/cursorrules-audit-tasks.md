@@ -2,7 +2,7 @@
 title: "Cursorrules audit — task reference"
 description: "Actionable improvement tasks from the full-repo audit against .cursorrules. Pick a section, ship a small PR, tick the checkbox."
 author: "Acme Inc."
-lastUpdated: 1787191200000
+lastUpdated: 1790812800000
 coverImage: "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=1600&q=80"
 tags: ["audit", "cursorrules", "typesafety", "rls", "ui", "tasks"]
 ---
@@ -459,8 +459,8 @@ pnpm db:reset        # reset + rls + seed (from apps/api)
 
 | Task | Fix |
 |------|-----|
-| [ ] `typeof` in searchParams / tree parsers | Zod at boundary |
-| [ ] Lightbox / code chrome | Theme tokens |
+| [x] `typeof` in searchParams / tree parsers | Zod at boundary — obsolete: the site was rebuilt on Astro (2026-10-01) |
+| [x] Lightbox / code chrome | Theme tokens — code frames now use CSS tokens (`apps/docs/src/styles/global.css`) |
 
 ---
 
