@@ -57,7 +57,7 @@ These came up while building and testing:
 - **Rotate 2FA UX** — separated “toggle 2FA” from “rotate keys” in security settings so buttons are not cramped.
 - **Admin MFA recovery UI** — there is no “admin rotate user TOTP” button. Recovery is **support-reviewed**:
   - User requests recovery in security settings.
-  - SuperAdmin approves/denies at `/settings/security/mfa-recovery`.
+  - SuperAdmin approves/denies at `/users/mfa-recovery`.
   - User detail page shows recovery status per user.
 - **Stale shared package builds** — after changing Zod schemas in `packages/shared`, run `pnpm --filter @workspace/shared build` or client imports break.
 - **Admin permissions catalog UI** — `/settings/access` Permissions tab uses a file-explorer tree (`TreeView`) instead of chips, with a detail panel when you click a permission.
@@ -144,7 +144,7 @@ The user must have completed MFA **within the last few minutes** (step-up). Conf
 
 | Location | Role |
 |----------|------|
-| `/settings/security/mfa-recovery` | Queue of recovery requests |
+| `/users/mfa-recovery` | Queue of recovery requests |
 | `UserMfaRecoveryPanel` on user detail | Per-user recovery actions |
 | `/settings/access` Permissions tab | Explorer tree + detail panel for permission catalog |
 | `packages/ui/.../tree-view.tsx` | Reusable tree with optional checkboxes |
@@ -263,7 +263,7 @@ packages/client/src/lib/auth/
   mfa-recovery-request-panel.tsx
 
 apps/admin/
-  app/(panel)/settings/security/mfa-recovery/
+  app/(panel)/users/mfa-recovery/
   components/security/mfa-recovery-*.tsx
   components/access/access-permission-explorer-tree.tsx
 ```

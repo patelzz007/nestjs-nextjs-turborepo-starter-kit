@@ -5,6 +5,7 @@ import { LogService } from "../../../modules/logs/logs.service";
 import { PrismaService } from "../../../prisma/prisma.service";
 import { TrackAuthFlow } from "../decorators/track-auth-flow.decorator";
 import { AccessTokenStateService } from "./access-token-state.service";
+import { AuthEventsService } from "./auth-events.service";
 import { CryptoService } from "./crypto.service";
 import { EmailService } from "./email.service";
 import { PasswordHistoryService } from "./password-history.service";
@@ -22,6 +23,8 @@ export class ChangePasswordService {
 		private readonly emailService: EmailService,
 		private readonly logService: LogService,
 		private readonly accessTokenState: AccessTokenStateService,
+		/** Read by `@TrackAuthFlow` to record the change-password outcome. */
+		private readonly authEvents: AuthEventsService,
 	) {}
 
 	@TrackAuthFlow({ flow: "change-password" })

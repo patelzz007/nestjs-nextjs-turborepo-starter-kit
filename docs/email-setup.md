@@ -129,7 +129,7 @@ The fastest way to prove the config is a real send without triggering an auth fl
    - In dev, set `EMAIL_TEST_TO=you@gmail.com` in `.env` so the sample recipient is
      replaced with your own inbox.
 4. A toast shows the outcome: `Sent! Resend id <id>` (or the failure reason).
-5. The row lands in **Settings → Email Log** (`/email-log`) with a `sent` badge.
+5. The row lands in **Emails → Log** (`/emails/log`) with a `sent` badge.
 
 > [!NOTE] Why the button is safe: it only ever sends **sample** props, never real user data,
 > and with `EMAIL_TEST_TO` set it can only reach _your_ inbox.
@@ -160,7 +160,7 @@ failed. Without them, a password-reset email that bounced silently is a support 
 > (Domains → Tracking); delivery events keep working either way.
 >
 > **The admin log is live.** Every write (a new send, a delivery webhook flip) pushes an
-> SSE frame down `GET /notifications/email-log/events`, and the `/email-log` page refetches
+> SSE frame down `GET /notifications/email-log/events`, and the `/emails/log` page refetches
 > instantly — status flips appear the moment the event lands, no polling, no refresh. (See
 > [Email Template System → Live updates (SSE)](./email.md) for the wiring.)
 

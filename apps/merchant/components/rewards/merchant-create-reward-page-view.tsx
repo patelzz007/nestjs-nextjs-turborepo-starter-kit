@@ -24,7 +24,7 @@ import { Switch } from "@workspace/ui/components/form/switch";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { addDays, format } from "date-fns";
 import { ArrowLeft, Loader2, Save } from "lucide-react";
-import { organizationPath } from "@/lib/org/slug";
+import { orgRoutes } from "@/lib/routes";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
@@ -68,7 +68,7 @@ function MerchantCreateRewardPageContent({ orgSlug, defaultCategory }: MerchantC
 	const router = useRouter();
 	const { locationId: activeLocationId, accessibleLocations } = useMerchantLocation();
 	const hasMultipleLocations = accessibleLocations.length > 1;
-	const rewardsPath = organizationPath(orgSlug, "rewards");
+	const rewardsPath = orgRoutes(orgSlug).rewards.list;
 	const [saveAsDraft, setSaveAsDraft] = React.useState<boolean>(false);
 
 	const {
@@ -91,7 +91,7 @@ function MerchantCreateRewardPageContent({ orgSlug, defaultCategory }: MerchantC
 				title: saveAsDraft ? "Draft saved" : "Reward created",
 				description: saveAsDraft ? "Your draft is ready to edit." : "Redirecting to reward details.",
 			});
-			router.push(organizationPath(orgSlug, `rewards/${response.data.id}`), { scroll: false });
+			router.push(orgRoutes(orgSlug).rewards.edit(response.data.id), { scroll: false });
 		},
 		onError: (): void => {
 			toastMessage.error({ title: "Create failed", description: "Could not create reward." });

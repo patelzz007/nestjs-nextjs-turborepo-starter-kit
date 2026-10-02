@@ -4,6 +4,23 @@ import { config } from "@workspace/eslint-config/react-internal";
 export default [
 	...config,
 	{
+		// ── Env boundary (docs/configuration.md) ──────────────────────
+		// src/lib/api/config.ts is this package's only env module: it validates
+		// NEXT_PUBLIC_API_URL / NODE_ENV with zod. Everything else imports from it.
+		files: ["**/*.ts", "**/*.tsx"],
+		ignores: ["src/lib/api/config.ts"],
+		rules: {
+			"no-restricted-properties": [
+				"error",
+				{
+					object: "process",
+					property: "env",
+					message: "Read configuration through src/lib/api/config.ts (validated), never process.env directly. See docs/configuration.md.",
+				},
+			],
+		},
+	},
+	{
 		files: ["src/lib/api/client-router.ts", "src/lib/api/server-request.ts"],
 		rules: {
 			"@typescript-eslint/consistent-type-assertions": "off",

@@ -1352,7 +1352,7 @@ The admin app (`apps/admin`) wires these APIs for day-to-day RBAC management:
 
 | Route | Purpose |
 |-------|---------|
-| `/users/all` | Paginated user list (`GET /auth/admin/users`) with links to per-user management |
+| `/users` | Paginated user list (`GET /auth/admin/users`) with links to per-user management |
 | `/users/[id]` | User profile + `UserAccessPanel` — assign/remove roles, grant/revoke direct permissions, per-user permission checker; **Impersonate** (super-admin) |
 | `/settings/access` | Roles & permissions catalog + global permission checker |
 

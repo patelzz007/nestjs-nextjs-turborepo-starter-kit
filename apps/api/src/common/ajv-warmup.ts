@@ -29,7 +29,7 @@ function isZodSchema(value: ContractTreeValue): value is ZodV4.ZodType {
 }
 
 /** Walk a nested object tree and collect all Zod schemas (objects with _def). */
-function collectSchemas(obj: ContractTreeValue, schemas: ZodV4.ZodType[] = []): ZodV4.ZodType[] {
+export function collectSchemas(obj: ContractTreeValue, schemas: ZodV4.ZodType[] = []): ZodV4.ZodType[] {
 	if (!isObjectLike(obj)) {
 		return schemas;
 	}

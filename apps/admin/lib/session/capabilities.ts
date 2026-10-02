@@ -4,7 +4,7 @@ import { useAuth } from "@workspace/client/lib/auth";
 import type { CapabilitySlug, SessionPermissionsResponse } from "@workspace/shared";
 import * as React from "react";
 
-import { stubApiMeta } from "@/lib/format/api-envelope";
+import { initialDataOption, stubApiMeta, successEnvelope } from "@workspace/client/lib/api/envelope";
 
 /** Re-checks revocations promptly without hammering the API. */
 export const SESSION_PERMISSIONS_REFETCH_INTERVAL_MS = 60_000;
@@ -41,7 +41,7 @@ export function useSessionPermissionsQuery(initialSessionPermissions?: SessionPe
 		staleTime: 30_000,
 		refetchOnWindowFocus: true,
 		refetchInterval: SESSION_PERMISSIONS_REFETCH_INTERVAL_MS,
-		initialData: initialSessionPermissions !== undefined ? { success: true, data: initialSessionPermissions, meta: stubApiMeta() } : undefined,
+		...initialDataOption(initialSessionPermissions !== undefined ? successEnvelope(initialSessionPermissions, stubApiMeta()) : undefined),
 	});
 
 	const liveResponse = permissionsQuery.data?.data;

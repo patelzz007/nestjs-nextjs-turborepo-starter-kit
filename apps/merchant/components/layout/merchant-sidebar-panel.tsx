@@ -242,8 +242,8 @@ export function MerchantSidebarPanel({ memberships, organizationSlug, onStoreCha
 				{isEnrollmentLocked ? (
 					<div className="mx-2 mb-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2.5 text-xs leading-relaxed text-amber-950 dark:text-amber-100">
 						{enrollmentReason === "mfa_enrollment"
-							? "Set up two-factor authentication to unlock navigation. Account settings stays available until enrollment is complete."
-							: "Verify your email to unlock navigation. Account settings stays available until verification is complete."}
+							? "Set up two-factor authentication to unlock navigation. Your Account page stays available until enrollment is complete."
+							: "Verify your email to unlock navigation. Your Account page stays available until verification is complete."}
 					</div>
 				) : null}
 
@@ -299,7 +299,7 @@ export function MerchantSidebarPanel({ memberships, organizationSlug, onStoreCha
 							isSearching={view.isSearching}
 							isActiveSection={sectionHasActiveItem(section.items, activeItems)}
 							allTitles={view.sectionTitles}
-							color={section.color}
+							{...(section.color !== undefined ? { color: section.color } : {})}
 							moveUpTitle={MERCHANT_SIDEBAR_LABELS.moveSectionUpTitle}
 							moveDownTitle={MERCHANT_SIDEBAR_LABELS.moveSectionDownTitle}
 							moveUpAriaLabel={MERCHANT_SIDEBAR_LABELS.moveSectionUpAriaLabel(section.title)}

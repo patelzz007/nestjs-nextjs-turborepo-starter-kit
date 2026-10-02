@@ -14,29 +14,27 @@ import { EpochMsSchema } from "../api/common";
  * makes the silent-refresh flow observable: after a 401→refresh→retry the
  * `expiresAt` visibly jumps forward by `JWT_ACCESS_EXPIRY`.
  */
-export const SessionStatusSchema = z
-	.object({
-		userId: z.string().meta({
-			description: "The authenticated user's id (JWT `sub`)",
-			example: "cm0abcdef1234567890",
-		}),
-		email: z.email().meta({
-			description: "The authenticated user's email (JWT `email`)",
-			example: "admin@example.com",
-		}),
-		fullName: z.string().meta({
-			description: "The authenticated user's full name (JWT `fullName`)",
-			example: "Alex Morgan",
-		}),
-		expiresAt: EpochMsSchema.nullable().meta({
-			description: "Epoch ms when the current access token expires (JWT `exp`), or null when the token carries no expiry",
-			example: 1786300000000,
-		}),
-		checkedAt: EpochMsSchema.meta({
-			description: "Epoch ms when this status was produced (server clock)",
-			example: 1786300000000,
-		}),
-	})
-	.strict();
+export const SessionStatusSchema = z.object({
+	userId: z.string().meta({
+		description: "The authenticated user's id (JWT `sub`)",
+		example: "cm0abcdef1234567890",
+	}),
+	email: z.email().meta({
+		description: "The authenticated user's email (JWT `email`)",
+		example: "admin@example.com",
+	}),
+	fullName: z.string().meta({
+		description: "The authenticated user's full name (JWT `fullName`)",
+		example: "Alex Morgan",
+	}),
+	expiresAt: EpochMsSchema.nullable().meta({
+		description: "Epoch ms when the current access token expires (JWT `exp`), or null when the token carries no expiry",
+		example: 1786300000000,
+	}),
+	checkedAt: EpochMsSchema.meta({
+		description: "Epoch ms when this status was produced (server clock)",
+		example: 1786300000000,
+	}),
+});
 
 export type SessionStatus = z.output<typeof SessionStatusSchema>;

@@ -15,15 +15,15 @@ import { USER_DETAIL_PAGE_BUTTON_CLASS } from "../users/user-detail-button";
 
 export interface AccessPermissionTreeProps {
 	readonly groups: readonly PermissionTreeGroupNode[];
-	readonly emptyMessage?: string;
-	readonly defaultOpen?: boolean;
-	readonly selectable?: boolean;
-	readonly selectedPermissionIds?: ReadonlySet<string>;
-	readonly inheritedPermissionIds?: ReadonlySet<string>;
-	readonly onTogglePermission?: (permissionId: string, selected: boolean) => void;
-	readonly toggleDisabled?: boolean;
-	readonly onRemovePermission?: (permissionId: string) => void;
-	readonly removeDisabled?: boolean;
+	readonly emptyMessage?: string | undefined;
+	readonly defaultOpen?: boolean | undefined;
+	readonly selectable?: boolean | undefined;
+	readonly selectedPermissionIds?: ReadonlySet<string> | undefined;
+	readonly inheritedPermissionIds?: ReadonlySet<string> | undefined;
+	readonly onTogglePermission?: ((permissionId: string, selected: boolean) => void) | undefined;
+	readonly toggleDisabled?: boolean | undefined;
+	readonly onRemovePermission?: ((permissionId: string) => void) | undefined;
+	readonly removeDisabled?: boolean | undefined;
 }
 
 type PermissionTreeDisplay =
@@ -60,14 +60,14 @@ function countSelectedInGroup(groupNode: PermissionTreeGroupNode, selectedPermis
 interface AccessPermissionTreeLeafProps {
 	readonly permissionId: string;
 	readonly label: string;
-	readonly description?: string | null;
-	readonly selectable?: boolean;
-	readonly selected?: boolean;
-	readonly inherited?: boolean;
-	readonly onTogglePermission?: (permissionId: string, selected: boolean) => void;
-	readonly toggleDisabled?: boolean;
-	readonly onRemovePermission?: (permissionId: string) => void;
-	readonly removeDisabled?: boolean;
+	readonly description?: string | null | undefined;
+	readonly selectable?: boolean | undefined;
+	readonly selected?: boolean | undefined;
+	readonly inherited?: boolean | undefined;
+	readonly onTogglePermission?: ((permissionId: string, selected: boolean) => void) | undefined;
+	readonly toggleDisabled?: boolean | undefined;
+	readonly onRemovePermission?: ((permissionId: string) => void) | undefined;
+	readonly removeDisabled?: boolean | undefined;
 }
 
 const AccessPermissionTreeLeaf = React.forwardRef<HTMLDivElement, AccessPermissionTreeLeafProps>(function AccessPermissionTreeLeaf(
@@ -142,13 +142,13 @@ const AccessPermissionTreeLeaf = React.forwardRef<HTMLDivElement, AccessPermissi
 
 interface AccessPermissionTreeLeafListProps {
 	readonly permissions: readonly PermissionTreeLeaf[];
-	readonly selectable?: boolean;
-	readonly selectedPermissionIds?: ReadonlySet<string>;
-	readonly inheritedPermissionIds?: ReadonlySet<string>;
-	readonly onTogglePermission?: (permissionId: string, selected: boolean) => void;
-	readonly toggleDisabled?: boolean;
-	readonly onRemovePermission?: (permissionId: string) => void;
-	readonly removeDisabled?: boolean;
+	readonly selectable?: boolean | undefined;
+	readonly selectedPermissionIds?: ReadonlySet<string> | undefined;
+	readonly inheritedPermissionIds?: ReadonlySet<string> | undefined;
+	readonly onTogglePermission?: ((permissionId: string, selected: boolean) => void) | undefined;
+	readonly toggleDisabled?: boolean | undefined;
+	readonly onRemovePermission?: ((permissionId: string) => void) | undefined;
+	readonly removeDisabled?: boolean | undefined;
 }
 
 function AccessPermissionTreeLeafList({
@@ -184,14 +184,14 @@ function AccessPermissionTreeLeafList({
 
 interface AccessPermissionTreeResourceProps {
 	readonly resourceNode: PermissionTreeResourceNode;
-	readonly defaultOpen?: boolean;
-	readonly selectable?: boolean;
-	readonly selectedPermissionIds?: ReadonlySet<string>;
-	readonly inheritedPermissionIds?: ReadonlySet<string>;
-	readonly onTogglePermission?: (permissionId: string, selected: boolean) => void;
-	readonly toggleDisabled?: boolean;
-	readonly onRemovePermission?: (permissionId: string) => void;
-	readonly removeDisabled?: boolean;
+	readonly defaultOpen?: boolean | undefined;
+	readonly selectable?: boolean | undefined;
+	readonly selectedPermissionIds?: ReadonlySet<string> | undefined;
+	readonly inheritedPermissionIds?: ReadonlySet<string> | undefined;
+	readonly onTogglePermission?: ((permissionId: string, selected: boolean) => void) | undefined;
+	readonly toggleDisabled?: boolean | undefined;
+	readonly onRemovePermission?: ((permissionId: string) => void) | undefined;
+	readonly removeDisabled?: boolean | undefined;
 }
 
 function AccessPermissionTreeResource({
@@ -238,14 +238,14 @@ function AccessPermissionTreeResource({
 
 interface AccessPermissionTreeGroupProps {
 	readonly groupNode: PermissionTreeGroupNode;
-	readonly defaultOpen?: boolean;
-	readonly selectable?: boolean;
-	readonly selectedPermissionIds?: ReadonlySet<string>;
-	readonly inheritedPermissionIds?: ReadonlySet<string>;
-	readonly onTogglePermission?: (permissionId: string, selected: boolean) => void;
-	readonly toggleDisabled?: boolean;
-	readonly onRemovePermission?: (permissionId: string) => void;
-	readonly removeDisabled?: boolean;
+	readonly defaultOpen?: boolean | undefined;
+	readonly selectable?: boolean | undefined;
+	readonly selectedPermissionIds?: ReadonlySet<string> | undefined;
+	readonly inheritedPermissionIds?: ReadonlySet<string> | undefined;
+	readonly onTogglePermission?: ((permissionId: string, selected: boolean) => void) | undefined;
+	readonly toggleDisabled?: boolean | undefined;
+	readonly onRemovePermission?: ((permissionId: string) => void) | undefined;
+	readonly removeDisabled?: boolean | undefined;
 }
 
 function AccessPermissionTreeGroup({

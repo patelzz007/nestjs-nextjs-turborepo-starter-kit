@@ -1,6 +1,7 @@
 import nestjsPlugin from "@darraghor/eslint-plugin-nestjs-typed";
 
 import { config as baseConfig } from "./base.js";
+import { backendImportBoundaryConfig } from "./import-boundaries.js";
 
 /**
  * A custom ESLint configuration for NestJS applications (apps/api).
@@ -95,6 +96,21 @@ export const nestjsConfig = [
 		files: ["**/*.ts", "**/*.tsx", "**/*.mts", "**/*.cts"],
 		rules: {
 			"@darraghor/nestjs-typed/api-property-matches-property-optionality": "warn",
+			// The Zod response decorators (apps/api/src/common/decorators/
+			// zod-response.decorators.ts, ADR 022) document the success and error
+			// responses in Swagger from the shared contract, so they satisfy this
+			// rule. A handler with no response decorator still fails.
+			"@darraghor/nestjs-typed/api-method-should-specify-api-response": [
+				"error",
+				{ additionalCustomApiResponseDecorators: ["ZodResponse", "ZodPaginatedResponse", "ZodRawResponse"] },
+			],
 		},
 	},
+
+	// ── Import boundaries: a Node backend never imports frontend code ──
+	// Universal patterns (no app→app imports, no src/dist reach-ins) plus
+	// @workspace/client, @workspace/ui, next, react, react-dom. Re-states the
+	// universal list because `no-restricted-imports` options replace, not
+	// merge (see import-boundaries.js and docs/eslint.md).
+	backendImportBoundaryConfig,
 ];

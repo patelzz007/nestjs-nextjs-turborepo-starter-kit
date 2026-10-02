@@ -4,7 +4,7 @@ tags: ["typescript", "tooling", "config"]
 description: "How TypeScript is configured across the monorepo via the shared @workspace/typescript-config package."
 order: 5
 author: "Acme Inc."
-lastUpdated: 1785628800000
+lastUpdated: 1790812800000
 coverImage: "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?auto=format&fit=crop&w=1600&q=80"
 ---
 
@@ -83,11 +83,15 @@ Every other config `extends` this one. It sets the strict baseline:
 | `resolveJsonModule`        | `true`                              | `import data from "./data.json"` is allowed                         |
 | `skipLibCheck`             | `true`                              | Don't type-check `.d.ts` files from node_modules (faster)           |
 | `incremental`              | `false`                             | No `.tsbuildinfo` caching by default (overridden in api)            |
-| `noUncheckedIndexedAccess` | `true`                              | **Array/object index access is `T                                   | undefined`** — forces handling undefined |
+| `noUncheckedIndexedAccess` | `true`                              | Array/object index access is `T \| undefined` — forces handling undefined |
+| `exactOptionalPropertyTypes` | `true`                            | `key?: T` means "absent", not "`undefined`" — write `key?: T \| undefined` when both are meant |
+| `noImplicitOverride`       | `true`                              | Overriding a base-class member requires the `override` keyword       |
+| `noFallthroughCasesInSwitch` | `true`                            | A non-empty `case` must `break`/`return`                             |
 
-> [!WARNING] `noUncheckedIndexedAccess: true` is the strictest (and most annoying) option.
-> `arr[0]` is `T | undefined`, so you must handle the `undefined` case. Some
-> workspaces deliberately turn it off (see below) when it produces noise.
+> [!WARNING] These four flags apply to **every** workspace — none may turn them off
+> (platform spec §2.3). `arr[0]` is `T | undefined`, and passing `undefined` to an
+> optional property is an error: omit the key (`...(v === undefined ? {} : { key: v })`),
+> widen your own type to `key?: T | undefined`, or for zod shapes use `.exactOptional()`.
 
 ### `nextjs.json` — for Next.js apps
 
@@ -141,8 +145,6 @@ Extends `base.json` with NestJS requirements:
 		"lib": ["ESNext"],
 		"module": "ESNext",
 		"moduleResolution": "bundler",
-		"noFallthroughCasesInSwitch": true,
-		"noUncheckedIndexedAccess": false,
 		"removeComments": true,
 		"sourceMap": true
 	}
@@ -156,8 +158,6 @@ Extends `base.json` with NestJS requirements:
   suffixes on value imports. Dev and prod both run the Rspack bundle
   (`dist/main.js`) under plain `node`. See `docs/architecture.md` for
   the full build story.
-- `noUncheckedIndexedAccess: false` — turned **off** because NestJS + Prisma code
-  hits too many false positives (e.g. `process.env.X!` patterns in the seeder).
 - `sourceMap: true` + `removeComments: true` — good for `tsc`-based builds.
 
 ---
@@ -166,12 +166,12 @@ Extends `base.json` with NestJS requirements:
 
 | Workspace                 | `tsconfig.json` extends                           | Key additions                                                                                                         |
 | ------------------------- | ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| `apps/web`                | `@workspace/typescript-config/nextjs.json`        | `@/*`, `@workspace/client/*`, `@workspace/ui/*` path aliases; `customConditions: ["development"]`; Next include globs |
-| `apps/admin`              | `@workspace/typescript-config/nextjs.json`        | Same as web                                                                                                           |
+| `apps/web`                | `@workspace/typescript-config/nextjs.json`        | `@/*` path alias only; `customConditions: ["development"]`; Next include globs                                        |
+| `apps/admin`              | `@workspace/typescript-config/nextjs.json`        | Same as web (also `apps/merchant`)                                                                                    |
 | `apps/api`                | `@workspace/typescript-config/nestjs.json`        | `outDir: ./dist`, `rootDir: ./src`, `incremental: true`; excludes `src/**/*.spec.ts`                                  |
-| `packages/client`         | `@workspace/typescript-config/react-library.json` | `module: ESNext`, `moduleResolution: bundler`; hosts auth / API client code                                           |
+| `packages/client`         | `@workspace/typescript-config/react-library.json` | `module: ESNext`, `moduleResolution: bundler`, `customConditions: ["development"]`; hosts auth / API client code      |
 | `packages/ui`             | `@workspace/typescript-config/react-library.json` | `module: ESNext`, `moduleResolution: bundler`, `@workspace/ui/*` alias                                                |
-| `packages/shared`         | `@workspace/typescript-config/base.json`          | `module: ESNext`, `moduleResolution: bundler`, `noEmit: true`, `noUncheckedIndexedAccess: false`, `lib: ["es2022"]`   |
+| `packages/shared`         | `@workspace/typescript-config/base.json`          | `module: ESNext`, `moduleResolution: bundler`, `noEmit: true`, `lib: ["es2022"]`                                      |
 | repo root `tsconfig.json` | `@workspace/typescript-config/base.json`          | Nothing extra                                                                                                         |
 
 > [!NOTE] **Why do `packages/shared`, `packages/client`, and `packages/ui` use `bundler`
@@ -216,15 +216,20 @@ Extends `base.json` with NestJS requirements:
 
 ## 4. Path aliases
 
-Web and admin define import shortcuts:
+The Next apps define exactly one alias, for their own files:
 
 ```json title="tsconfig.json"
 "paths": {
-  "@/*": ["./*"],
-  "@workspace/client/*": ["../../packages/client/src/*"],
-  "@workspace/ui/*": ["../../packages/ui/src/*"]
+  "@/*": ["./*"]
 }
 ```
+
+Workspace packages are **not** aliased. `@workspace/client`, `@workspace/ui` and
+`@workspace/shared` resolve through each package's `package.json#exports`, the
+same way Turbopack and Vitest resolve them, so an app can only import what a
+package deliberately exposes. A `paths` entry like
+`"@workspace/client/*": ["../../packages/client/src/*"]` would bypass that
+public surface and is not allowed (see [ESLint → Import boundaries](./eslint.md#31-import-boundaries)).
 
 So in `apps/web` you can write:
 
@@ -238,8 +243,10 @@ App code imports **types** (`LoginInput`) for annotations and props. Import the
 **schema** (`LoginSchema`) only at validation boundaries — `zodResolver`,
 `ZodValidationPipe`, `.parse()` / `.safeParse()`.
 
-- `@workspace/ui/*` and `@workspace/client/*` resolve straight to the **source**
-  files, so package changes are picked up instantly in dev.
+- `@workspace/ui/...` and `@workspace/client/...` resolve through their explicit
+  `exports` entries, which point at **source** files (`./src/...ts[x]`), so
+  package changes are still picked up instantly in dev. To make a new module
+  public, add an `exports` entry. That is a deliberate API decision.
 - `@workspace/shared` resolves through the package `exports` field (no path alias):
   the `development` condition (enabled via `customConditions` in these tsconfigs)
   maps it to `packages/shared/src/index.ts`; anywhere else it maps to the built
@@ -396,7 +403,7 @@ directly from `@workspace/shared` at the validation site.
 - **Function contracts** — `OnRefresh`, `AuthChannel`, `FooterAction`, store
   shapes like `SidebarState` (they carry callbacks/observables zod can't
   validate).
-- **Generics** — `PaginatedResponse<T>`, `ApiResponse<T>`, `RequestOptions`.
+- **Generics** — `PaginatedServiceResult<T>`, `ApiResponse<T>`, `RequestOptions`.
   A schema can't be generic; where a generic factory exists, derive the type
   from it (below) instead of writing the shape by hand.
 - **Third-party `extends`** — `RequestWithTrace extends Request`,
@@ -426,7 +433,7 @@ export type MenuItem = z.output<typeof MenuItemSchema>;
 instantiation expression so it can never drift:
 
 ```ts
-export type PaginatedResponse<T> = z.output<ReturnType<typeof PaginatedResponseSchema<z.ZodType<T>>>>;
+export type PaginatedEnvelope<T> = z.output<ReturnType<typeof createApiPaginatedEnvelopeSchema<z.ZodType<T>>>>;
 ```
 
 **Strict vs. strip — pick by boundary:**
@@ -434,6 +441,9 @@ export type PaginatedResponse<T> = z.output<ReturnType<typeof PaginatedResponseS
 - **Decode paths** (JWT claims, raw error bodies) → **non-strict** so adding a
   claim/key can't take down the whole pipeline (`JwtPermissionSchema`,
   `ApiErrorSchema`). Unknown keys are stripped, never rejected.
+- **API response schemas** → **non-strict**, always: the API strips internal
+  fields with them and clients ignore fields added later (ADR 022,
+  [Response contracts](./response-contracts.md)). Request schemas stay `.strict()`.
 - **Config at load** (`sidebar-menu.json`) → `.strict()` so renamed keys fail
   loudly at boot instead of silently rendering a broken menu.
 - **Transport contracts** (the client's `ApiResponse<T>`) → plain type; no
@@ -450,7 +460,7 @@ localStorage hydration, frontmatter. (See `sidebar-menu.ts`, `token.service.ts`,
 | Layer | Defines `XxxSchema` + `Xxx` type | Consumes |
 |-------|-------------------------------|----------|
 | `packages/shared` | Every contract / domain / runtime schema | Barrel export only |
-| `apps/api` controllers + `dtos/` | — | `ZodValidationPipe`, `createZodDto`, `createWrappedDto` |
+| `apps/api` controllers | — | `@ZodBody` / `@ZodQuery` / `@ZodParams`, `@ZodResponse` / `@ZodPaginatedResponse` |
 | `apps/api` services | — | `.parse()` at trust boundaries (JWT decode, event emit, Prisma JSON hydrate) |
 | `apps/api` utils | — | `safeParse` in `caught-error`, `http-headers`, telescope sanitize |
 | `apps/admin` pages/tables | Local UI schemas (sidebar, notifications) in same file as type | `Schema.parse(draft)` for URL/search params; `type` for component props |
@@ -460,12 +470,14 @@ localStorage hydration, frontmatter. (See `sidebar-menu.ts`, `token.service.ts`,
 
 Auth, session, impersonation, and email-log services publish completion events
 through small `*EventsService` classes (`node:events` + rxjs `Observable`).
-Producers validate with the shared schema **before** emit:
+Producers validate with the shared schema **before** the event is written to the
+transactional outbox (in the same transaction as the domain change):
 
 ```ts
 // impersonation.service.ts — type on the wire; schema at the boundary
-this.impersonationEvents.emitAction(
-  ImpersonationActionEventSchema.parse({
+await this.outbox.enqueueInTransaction(tx, {
+  type: "impersonation.action",
+  payload: ImpersonationActionEventSchema.parse({
     action: "start",
     superAdminId: superAdmin.id,
     targetUserId: targetUser.id,
@@ -473,13 +485,14 @@ this.impersonationEvents.emitAction(
     error: null,
     durationMs: Math.round(performance.now() - actionStartedAt),
   }),
-);
+});
 ```
 
-`ImpersonationEventsService.emitAction` accepts `ImpersonationActionEvent` (the
-type). `.parse()` catches typos, wrong enums, or extra keys before any subscriber
-(Telescope job adapter) sees the payload. Schemas are defined in
-`packages/shared/src/schemas/domain/platform/events.ts`.
+`enqueueInTransaction` accepts a `PlatformEventInput` (the discriminated
+`{ type, payload }` union). `.parse()` catches typos, wrong enums, or extra keys
+before the row is stored. Payload schemas are defined in
+`packages/shared/src/schemas/domain/platform/events.ts`; the envelope / wire
+schemas in `packages/shared/src/schemas/infrastructure/kafka.ts`.
 
 **`schemas/runtime/`** — cross-cutting parse helpers used by the API (not HTTP
 contract shapes): `JsonValue` / `JsonValueInput`, `StringRecordSchema`,

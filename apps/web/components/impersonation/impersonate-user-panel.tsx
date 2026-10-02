@@ -2,7 +2,7 @@
 
 import { useWebSession } from "@/components/auth/web-authorization-provider";
 import { PERMISSION, type AdminUserDetail, type CapabilitySlug } from "@workspace/shared";
-import { readPaginatedHasNext, readPaginatedNextCursor } from "@/lib/api-envelope";
+import { readPaginatedHasNext, readPaginatedNextCursor } from "@workspace/client/lib/api/envelope";
 import { invalidateSessionAuth } from "@workspace/client/lib/auth/session/invalidate-auth";
 import { useAuth } from "@workspace/client/lib/auth";
 import { useAuthorization } from "@workspace/client/lib/auth/can";

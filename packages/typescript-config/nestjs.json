@@ -10,8 +10,6 @@
 		"lib": ["ESNext"],
 		"module": "ESNext",
 		"moduleResolution": "bundler",
-		"noFallthroughCasesInSwitch": true,
-		"noUncheckedIndexedAccess": false,
 		"removeComments": true,
 		"sourceMap": true
 	}

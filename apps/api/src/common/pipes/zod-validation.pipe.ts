@@ -1,9 +1,32 @@
 import { BadRequestException, Injectable, type PipeTransform } from "@nestjs/common";
 import Ajv, { type ErrorObject, type ValidateFunction } from "ajv";
 import type { z as ZodV4 } from "zod/v4";
-import { toJSONSchema } from "zod/v4";
+import { toJSONSchema, url } from "zod/v4";
 
-import { EmailAddressSchema, JsonObjectSchema, JsonPrimitiveSchema, JsonRecordSchema, UuidParamSchema, type JsonObject, type JsonValue } from "@workspace/shared";
+import {
+	EmailAddressSchema,
+	JsonObjectSchema,
+	JsonPrimitiveSchema,
+	JsonRecordSchema,
+	JsonValueSchema,
+	UuidParamSchema,
+	type JsonObject,
+	type JsonValue,
+} from "@workspace/shared";
+
+/**
+ * How a {@link ZodValidationPipe} validates:
+ *
+ * - `"ajv"` (default) — the schema compiled to JSON Schema + Ajv; returns the
+ *   (coerced) input. Fastest; for schemas JSON Schema can fully express.
+ * - `"zod"` — `schema.safeParse()`; returns the PARSED output. For schemas whose
+ *   rules JSON Schema cannot express (preprocess, refinements) — the list-query
+ *   grammar (`@ZodListQuery`) relies on this to normalize filters and to reject
+ *   unknown sort fields with a message listing the allowed ones.
+ */
+export interface ZodValidationPipeOptions {
+	readonly engine: "ajv" | "zod";
+}
 
 /**
  * Validation pipe backed by a COMPILED JSON-Schema validator instead of a
@@ -37,9 +60,15 @@ export class ZodValidationPipe implements PipeTransform<JsonValue, JsonValue> {
 	/** Cache of compiled validators keyed by schema reference. */
 	private readonly cache = new WeakMap<ZodV4.ZodType, ValidateFunction>();
 
-	constructor(private readonly schema: ZodV4.ZodType) {}
+	constructor(
+		private readonly schema: ZodV4.ZodType,
+		private readonly options: ZodValidationPipeOptions = { engine: "ajv" },
+	) {}
 
 	public transform(value: JsonValue): JsonValue {
+		if (this.options.engine === "zod") {
+			return this.parseWithZod(value);
+		}
 		const validator: ValidateFunction = this.getValidator();
 
 		if (validator(value)) {
@@ -63,6 +92,30 @@ export class ZodValidationPipe implements PipeTransform<JsonValue, JsonValue> {
 			}),
 		);
 
+		throw new BadRequestException({
+			message: "Validation failed",
+			errors: issues,
+			statusCode: 400,
+		});
+	}
+
+	/**
+	 * Zod engine: runs the schema itself (preprocess / refinements included) and
+	 * returns its PARSED output. Same `{ message, errors }` failure body as the
+	 * Ajv path, so clients and the global filter see one validation contract.
+	 */
+	private parseWithZod(value: JsonValue): JsonValue {
+		const result = this.schema.safeParse(value);
+		if (result.success) {
+			return JsonValueSchema.parse(result.data);
+		}
+		const issues: readonly { readonly path: string; readonly message: string; readonly code: string }[] = result.error.issues.map(
+			(issue): { readonly path: string; readonly message: string; readonly code: string } => ({
+				path: issue.path.length > 0 ? issue.path.map((segment): string => String(segment)).join(".") : "root",
+				message: issue.message,
+				code: issue.code,
+			}),
+		);
 		throw new BadRequestException({
 			message: "Validation failed",
 			errors: issues,
@@ -160,17 +213,33 @@ function readAjvParamList(params: Record<string, JsonValue>, key: string): strin
 
 const ajvWithFormats = new WeakSet<Ajv>();
 
-/** Register JSON Schema formats emitted by Zod v4 (`z.email()`, `z.uuid()`, etc.). */
+/**
+ * Every JSON Schema `format` the `apiContract` schemas emit (Zod v4
+ * `toJSONSchema`), mapped to the Zod schema that DEFINES it — so the Ajv check
+ * is exactly as strict as the Zod rule, never a second definition.
+ *
+ * Ajv runs with `strict: false`, which merely WARNS about an unknown format and
+ * then skips the check — a request would validate more loosely than its schema.
+ * `zod-validation.pipe.spec.ts` therefore fails the build when a contract
+ * emits a format missing here: add it (with the Zod schema behind it).
+ *
+ * `z.url({ protocol })` emits plain `uri` (the protocol rule has no JSON Schema
+ * form): a schema that needs it must use the pipe's `zod` engine.
+ */
+export const AJV_STRING_FORMATS: Readonly<Record<string, ZodV4.ZodType>> = {
+	email: EmailAddressSchema,
+	uuid: UuidParamSchema,
+	uri: url(),
+};
+
+/** Register {@link AJV_STRING_FORMATS} on an Ajv instance (once). */
 function registerAjvFormats(ajv: Ajv): void {
 	if (ajvWithFormats.has(ajv)) {
 		return;
 	}
-	ajv.addFormat("email", (value: JsonValue): boolean => {
-		return EmailAddressSchema.safeParse(value).success;
-	});
-	ajv.addFormat("uuid", (value: JsonValue): boolean => {
-		return UuidParamSchema.safeParse(value).success;
-	});
+	for (const [format, schema] of Object.entries(AJV_STRING_FORMATS)) {
+		ajv.addFormat(format, (value: JsonValue): boolean => schema.safeParse(value).success);
+	}
 	ajvWithFormats.add(ajv);
 }
 

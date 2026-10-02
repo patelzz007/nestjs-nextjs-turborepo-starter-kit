@@ -1,19 +1,28 @@
 import { Injectable, UnauthorizedException } from "@nestjs/common";
-import { SessionActionEventSchema, SessionSchema, epochMs, type EpochMs, type FlatUserResponse, type RefreshResponse, type Session } from "@workspace/shared";
+import {
+	SessionActionEventSchema,
+	SessionSchema,
+	epochMs,
+	type EpochMs,
+	type FlatUserResponse,
+	type PlatformEventInput,
+	type RefreshResponse,
+	type Session,
+	type SessionActionEvent,
+} from "@workspace/shared";
 
 import { parseExpiryToMilliseconds } from "../../common/utils/expiry";
 import { TypedConfigService } from "../../config/typed-config.service";
+import { PlatformOutboxService } from "../../infrastructure/outbox/platform-outbox.service";
 import { LogService } from "../../modules/logs/logs.service";
 import { AuthorizationCheckerService } from "../authorization/services/authorization-checker.service";
 import { UserSessionRevocationService } from "../authorization/services/user-session-revocation.service";
 import { UserRepository } from "../auth/repositories/user.repository";
 import { UserResponseMapper } from "../auth/services/user-response.mapper";
 import { CryptoService } from "../auth/services/crypto.service";
-import { AccessTokenStateService } from "../auth/services/access-token-state.service";
 import { SessionRestrictionService } from "../auth/services/session-restriction.service";
 import { TokenService } from "../auth/services/token.service";
 import { RefreshTokenRepository } from "./repositories/refresh-token.repository";
-import { SessionsEventsService } from "./sessions-events.service";
 
 /** Grace window after rotation where a stale presentation is treated as superseded, not theft. */
 const REFRESH_SUPERSEDED_GRACE_MS = 30_000;
@@ -33,8 +42,7 @@ export class SessionsService {
 		private readonly logService: LogService,
 		private readonly authorizationChecker: AuthorizationCheckerService,
 		private readonly mapper: UserResponseMapper,
-		private readonly sessionsEvents: SessionsEventsService,
-		private readonly accessTokenState: AccessTokenStateService,
+		private readonly outbox: PlatformOutboxService,
 		private readonly sessionRevocation: UserSessionRevocationService,
 		private readonly sessionRestriction: SessionRestrictionService,
 	) {}
@@ -90,15 +98,7 @@ export class SessionsService {
 			if (recentlyRotated && storedToken.previousTokenHash !== null) {
 				const matchesPrevious = await this.cryptoService.compare(rawRefreshTokenJwt, storedToken.previousTokenHash);
 				if (matchesPrevious) {
-					this.sessionsEvents.emitAction(
-						SessionActionEventSchema.parse({
-							action: "refresh",
-							userId: user.id,
-							status: "failed",
-							error: "REFRESH_TOKEN_SUPERSEDED",
-							durationMs: Math.round(performance.now() - actionStartedAt),
-						}),
-					);
+					await this.outbox.recordTelemetry(sessionActionEvent("refresh", user.id, "REFRESH_TOKEN_SUPERSEDED", actionStartedAt));
 					throw new UnauthorizedException({
 						message: "Refresh token was already rotated. Please retry with the latest session.",
 						error: "REFRESH_TOKEN_SUPERSEDED",
@@ -107,15 +107,7 @@ export class SessionsService {
 			}
 
 			if (recentlyRotated) {
-				this.sessionsEvents.emitAction(
-					SessionActionEventSchema.parse({
-						action: "refresh",
-						userId: user.id,
-						status: "failed",
-						error: "REFRESH_TOKEN_SUPERSEDED",
-						durationMs: Math.round(performance.now() - actionStartedAt),
-					}),
-				);
+				await this.outbox.recordTelemetry(sessionActionEvent("refresh", user.id, "REFRESH_TOKEN_SUPERSEDED", actionStartedAt));
 				throw new UnauthorizedException({
 					message: "Refresh token was already rotated. Please retry with the latest session.",
 					error: "REFRESH_TOKEN_SUPERSEDED",
@@ -128,18 +120,10 @@ export class SessionsService {
 				metadata: { tokenId: storedToken.id },
 			});
 
-			await this.repository.revokeAllForUsers([user.id]);
-			await this.accessTokenState.bumpTokenVersion(user.id);
-
-			this.sessionsEvents.emitAction(
-				SessionActionEventSchema.parse({
-					action: "refresh",
-					userId: user.id,
-					status: "failed",
-					error: "TOKEN_THEFT_DETECTED",
-					durationMs: Math.round(performance.now() - actionStartedAt),
-				}),
-			);
+			// Revoke every session + bump tokenVersion, and record the event, in one transaction.
+			await this.sessionRevocation.revokeAllSessionsForUser(user.id, async (tx): Promise<void> => {
+				await this.outbox.enqueueInTransaction(tx, sessionActionEvent("refresh", user.id, "TOKEN_THEFT_DETECTED", actionStartedAt));
+			});
 			throw new UnauthorizedException({
 				message: "Suspicious activity detected. All sessions have been revoked. Please log in again.",
 				error: "TOKEN_THEFT_DETECTED",
@@ -161,23 +145,22 @@ export class SessionsService {
 		});
 		const hashedRt = await this.cryptoService.hash(tokens.refreshToken);
 
-		const rotationResult = await this.repository.rotateTokenIfHashMatches(storedToken.id, storedToken.token, {
-			token: hashedRt,
-			deviceInfo: deviceInfo ?? storedToken.deviceInfo,
-			ipAddress: ipAddress ?? storedToken.ipAddress,
-			expiresAt,
-		});
+		const rotationResult = await this.repository.rotateTokenIfHashMatches(
+			storedToken.id,
+			storedToken.token,
+			{
+				token: hashedRt,
+				deviceInfo: deviceInfo ?? storedToken.deviceInfo,
+				ipAddress: ipAddress ?? storedToken.ipAddress,
+				expiresAt,
+			},
+			async (tx): Promise<void> => {
+				await this.outbox.enqueueInTransaction(tx, sessionActionEvent("refresh", user.id, null, actionStartedAt));
+			},
+		);
 
 		if (rotationResult === "superseded") {
-			this.sessionsEvents.emitAction(
-				SessionActionEventSchema.parse({
-					action: "refresh",
-					userId: user.id,
-					status: "failed",
-					error: "REFRESH_TOKEN_SUPERSEDED",
-					durationMs: Math.round(performance.now() - actionStartedAt),
-				}),
-			);
+			await this.outbox.recordTelemetry(sessionActionEvent("refresh", user.id, "REFRESH_TOKEN_SUPERSEDED", actionStartedAt));
 			throw new UnauthorizedException({
 				message: "Refresh token was already rotated. Please retry with the latest session.",
 				error: "REFRESH_TOKEN_SUPERSEDED",
@@ -191,16 +174,6 @@ export class SessionsService {
 			});
 		}
 
-		this.sessionsEvents.emitAction(
-			SessionActionEventSchema.parse({
-				action: "refresh",
-				userId: user.id,
-				status: "succeeded",
-				error: null,
-				durationMs: Math.round(performance.now() - actionStartedAt),
-			}),
-		);
-
 		return tokens;
 	}
 
@@ -209,33 +182,22 @@ export class SessionsService {
 		const storedToken = await this.repository.findByIdIncludingDeleted(refreshTokenJti);
 
 		if (storedToken?.userId === userId) {
-			await this.repository.revokeById(storedToken.id);
+			await this.repository.revokeById(storedToken.id, async (tx): Promise<void> => {
+				await this.outbox.enqueueInTransaction(tx, sessionActionEvent("logout-device", userId, null, actionStartedAt));
+			});
+			return;
 		}
 
-		this.sessionsEvents.emitAction(
-			SessionActionEventSchema.parse({
-				action: "logout-device",
-				userId,
-				status: "succeeded",
-				error: null,
-				durationMs: Math.round(performance.now() - actionStartedAt),
-			}),
-		);
+		// Nothing to revoke (unknown / foreign token) — logout is idempotent, so the
+		// outcome is still "succeeded", but there is no domain write to be atomic with.
+		await this.outbox.recordTelemetry(sessionActionEvent("logout-device", userId, null, actionStartedAt));
 	}
 
 	public async logoutAllDevices(userId: string): Promise<void> {
 		const actionStartedAt: number = performance.now();
-		await this.sessionRevocation.revokeAllSessionsForUser(userId);
-
-		this.sessionsEvents.emitAction(
-			SessionActionEventSchema.parse({
-				action: "logout-all",
-				userId,
-				status: "succeeded",
-				error: null,
-				durationMs: Math.round(performance.now() - actionStartedAt),
-			}),
-		);
+		await this.sessionRevocation.revokeAllSessionsForUser(userId, async (tx): Promise<void> => {
+			await this.outbox.enqueueInTransaction(tx, sessionActionEvent("logout-all", userId, null, actionStartedAt));
+		});
 	}
 
 	public async getSessions(userId: string): Promise<Session[]> {
@@ -251,4 +213,21 @@ export class SessionsService {
 			}),
 		);
 	}
+}
+
+/**
+ * `session.action` outbox event. `error === null` means the action succeeded;
+ * a non-null error code marks it failed.
+ */
+function sessionActionEvent(action: SessionActionEvent["action"], userId: string, error: string | null, startedAt: number): PlatformEventInput {
+	return {
+		type: "session.action",
+		payload: SessionActionEventSchema.parse({
+			action,
+			userId,
+			status: error === null ? "succeeded" : "failed",
+			error,
+			durationMs: Math.round(performance.now() - startedAt),
+		}),
+	};
 }

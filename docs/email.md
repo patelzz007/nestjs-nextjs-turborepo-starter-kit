@@ -60,9 +60,9 @@ coverImage: "https://images.unsplash.com/photo-1596526131083-e8c633c948d2?auto=f
 | Email log | `email-log.service.ts` + Prisma `EmailLog` model (`email_logs` table, migrations `20260809182240_add_email_log`, `20260811132303_add_email_engagement_tracking`, `20260811133228_add_email_log_resend_id_index`, `20260811160000_remove_email_tracking`) | One row per send; the webhook flips `sent → delivered / bounced / complained / failed`. `resend_id` is indexed (every webhook looks a row up by it). The tracking columns (`tracking_token` / `opened_at` / `clicked_at`) were dropped by the `remove_email_tracking` migration — open/click tracking is gone |
 | Admin preview API | `GET /notifications/email-preview`, `GET /notifications/email-preview/:key` | Sample props only — never sends mail |
 | Resend webhook | `POST /notifications/email-webhook` | `@Public()` + signature-verified via `resend.webhooks.verify` (booted with `rawBody: true`). Handles delivery events (status flips, bounce/complaint reasons captured into `error`); tracking events (`email.opened` / `email.clicked`) are acknowledged and ignored — open/click tracking was removed |
-| Admin preview page | `apps/admin/app/(panel)/emails/page.tsx` + sidebar entry (Settings → Email Templates) | Template index + iframe preview + HTML/text tabs + copy |
-| Admin email log | `apps/admin/app/(panel)/email-log/page.tsx` + sidebar entry (Settings → Email Log) | `GET /api/v1/notifications/email-log` (JWT-guarded, `?limit=` 1–500) → shared `DataTable`. Delivery-only status badges (Sent / Delivered / Bounced / Complained / Failed) with bounce/complaint reasons in `error`. Search, export, mobile cards. **Live updates via SSE** — see "Live updates (SSE)" below |
-| Env vars | `EMAIL_MODE`, `EMAIL_TEST_TO`, `EMAIL_REPLY_TO`, `EMAIL_MAX_ATTEMPTS`, `EMAIL_TIMEOUT_MS`, `EMAIL_RATE_LIMIT_PER_MINUTE`, `RESEND_WEBHOOK_SECRET` | Added to shared `EnvSchema` + `TypedConfigService` |
+| Admin preview page | `apps/admin/app/(panel)/emails/templates/page.tsx` (`/emails/templates`) + sidebar entry (Emails → Templates) | Template index + iframe preview + HTML/text tabs + copy |
+| Admin email log | `apps/admin/app/(panel)/emails/log/page.tsx` (`/emails/log`) + sidebar entry (Emails → Log) | `GET /api/v1/notifications/email-log` (JWT-guarded, `?limit=` 1–500) → shared `DataTable`. Delivery-only status badges (Sent / Delivered / Bounced / Complained / Failed) with bounce/complaint reasons in `error`. Search, export, mobile cards. **Live updates via SSE** — see "Live updates (SSE)" below |
+| Env vars | `EMAIL_MODE`, `EMAIL_TEST_TO`, `EMAIL_REPLY_TO`, `EMAIL_MAX_ATTEMPTS`, `EMAIL_TIMEOUT_MS`, `EMAIL_RATE_LIMIT_PER_MINUTE`, `RESEND_WEBHOOK_SECRET` | Validated by the API env schema (`apps/api/src/config/api-config.schema.ts`, see [API Configuration](./api-configuration.md)) and read through `TypedConfigService` |
 
 ### Live wiring (verified 2026-08-10)
 
@@ -127,23 +127,49 @@ coverImage: "https://images.unsplash.com/photo-1596526131083-e8c633c948d2?auto=f
 > want engagement data back, re-add it from git history — this doc and
 > `docs/email-setup.md` were updated alongside the removal.
 
+### Design: one shell, one building-block kit
+
+Every email renders through `BaseEmailTemplate` (`base/base-email-template.ts`):
+
+- **Shell** — brand row (monogram + app name) above a 600px card (the standard email width);
+  a 4px **accent bar** in the template's tone, an eyebrow pill, a 26px heading, the body, and
+  a footer outside the card. Table layout + inline styles for every client; a
+  `prefers-color-scheme: dark` block and a ≤620px mobile block override them.
+- **Tokens** — `EMAIL_THEME` mirrors the web brand theme (`apps/web/app/web-theme.css`) as hex,
+  because mail clients support neither `oklch()` nor CSS variables. Change both together.
+- **Tone** — `accent` picks the palette in `ACCENT_PALETTES`: `indigo` brand (account / product),
+  `green` success, `amber` worth-a-look security change, `red` danger, `sky` codes / invites.
+  The CTA button is always the brand colour.
+- **Building blocks** — compose bodies from these instead of hand-written inline styles; each
+  escapes its own values:
+
+  | Block | Use for |
+  |---|---|
+  | `paragraph(html)` / `note(html)` | body copy / small muted notes — interpolate data via `strong()`, `link()` or `escape()` |
+  | `detailsCard(rows)` | label/value facts (device, location, role, expiry) |
+  | `highlight(title, subtitle?)` | the one thing the reader must notice (a reward, a lock period) |
+  | `callout(title, body)` | guidance in the tone's colour ("Wasn't you?") |
+  | `steps(items)` | a numbered how-to |
+  | `otpCodeBlock(code)` | one-time codes, one tile per character |
+  | `ctaInBody(context)` + `ctaPlacement = "in-body"` | put the button mid-body (e.g. above `linkBlock`); otherwise the shell renders `getCta()` after the body |
+  | `linkBlock(href)` | the "button not working?" raw-link fallback |
+
 ### Template gallery (rendered with sample props)
 
-Every template below is rendered with the **same HTML, shell, and colors** (slate-800 hero band
-+ slate CTA buttons via `SHELL_HEADER_BG`/`SHELL_CTA_BG`; content-area chips keep per-accent
-color via `ACCENT_PALETTES`). Generated from the preview API's sample props with headless
-Chrome — the captures are **light-mode renders** (dark-mode mail clients get the
-`@media (prefers-color-scheme: dark)` overrides instead).
+Generated from the registry's sample props with headless Chrome — **light-mode** renders (dark
+mail clients get the `prefers-color-scheme: dark` overrides).
 
 | Template | Preview |
 |---|---|
-| **Email Verification** (green accent) | ![Email Verification](./images/email/verification.png) |
+| **Email Verification** (green, in-body CTA + link fallback) | ![Email Verification](./images/email/verification.png) |
 | **Password Reset** (indigo) | ![Password Reset](./images/email/password-reset.png) |
-| **Account Locked** (red, locked-duration chip) | ![Account Locked](./images/email/account-locked.png) |
-| **Welcome** (green, onboarding list) | ![Welcome](./images/email/welcome.png) |
-| **Security Alert** (amber, device/location chip) | ![Security Alert](./images/email/security-alert.png) |
+| **Account Locked** (red, `highlight`) | ![Account Locked](./images/email/account-locked.png) |
+| **Welcome** (green, `steps`) | ![Welcome](./images/email/welcome.png) |
+| **Security Alert** (amber, `detailsCard` + `callout`) | ![Security Alert](./images/email/security-alert.png) |
+| **Login Verification** (indigo, `otpCodeBlock`) | ![Login Verification](./images/email/login-verification.png) |
+| **Team Invite** (sky, `detailsCard` + in-body CTA) | ![Team Invite](./images/email/team-member-invite.png) |
 | **Admin Alert** (indigo, `[Admin]` subject prefix) | ![Admin Alert](./images/email/admin-alert.png) |
-| **API Key Created** (sky, key-name chip) | ![API Key Created](./images/email/api-key-created.png) |
+| **API Key Created** (sky, `detailsCard`) | ![API Key Created](./images/email/api-key-created.png) |
 
 ### Quick-start env setup
 
@@ -156,7 +182,7 @@ APP_URL=https://app.example.com
 
 # Optional but recommended
 EMAIL_MODE=log-only            # send | log-only | noop (dev default: send)
-EMAIL_TEST_TO=you@example.com  # redirects EVERY send to one inbox (non-prod)
+EMAIL_TEST_TO=you@example.com  # redirects EVERY send to one inbox (local only: rejected on a deployed production APP_URL)
 EMAIL_MAX_ATTEMPTS=3
 EMAIL_TIMEOUT_MS=10000
 EMAIL_RATE_LIMIT_PER_MINUTE=0  # 0 = disabled
@@ -189,9 +215,9 @@ renders). The admin side has `lib/email-log-live.test.ts` (SSE `readyState → L
 
 ### The 20 improvements (make what exists better)
 
-1. **Token-driven design tokens instead of hardcoded hex** — `SHELL_HEADER_BG`,
-   `SHELL_CTA_BG`, and the per-template `ACCENT_PALETTES` in `base-email-template.ts` are
-   hardcoded color strings. Move them into one token map so a rebrand touches a single place.
+1. ~~**Token-driven design tokens instead of hardcoded hex**~~ — **done:** one `EMAIL_THEME`
+   token map + `ACCENT_PALETTES` in `base-email-template.ts`, and templates compose the shared
+   building blocks instead of inline styles (see "Design" above).
 2. **Subject discipline enshrined in a test** — add a registry test asserting every subject is
    ≤ 78 chars, not ALL-CAPS, and free of spam trigger words (relates to item 29).
 3. **Preheader length rule** — `getPreviewText()` exists per template; add a ≤ 100 char

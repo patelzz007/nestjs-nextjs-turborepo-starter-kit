@@ -161,6 +161,25 @@ glue. Theme tokens used: `--card`, `--primary`, `--success`, `--destructive`, `-
   when `startLine ≠ 1`); language/theme/extension lookups ignore `Object.prototype` keys; a
   highlight result is also tagged with its language.
 
+## Entity avatar (`display/entity-avatar.tsx`)
+
+A square (or `shape="circle"`) brand mark for a named entity — a shop, organization or team.
+Composes `Avatar`; data-agnostic (`name` + optional `src`, nothing domain-specific).
+
+- **Logo** — `src` renders lazily in place (`loading="lazy"`), `object-contain` on the neutral
+  `bg-background` surface, so a logo is never cropped.
+- **Monogram** — with no `src`, or while the logo loads / if it fails, up to two initials
+  (`getUserInitials`) on a tint chosen deterministically from the name (`getEntityAvatarTone`,
+  `chart-1`…`chart-4` at 20%, foreground text; never `chart-5`, the themes' neutral grey slot) — every app theme, light and dark, recolours it.
+- **Sizes** — `sm` (8) · `md` (10) · `lg` (12) · `xl` (16) spacing units.
+- **Accessibility** — `alt` follows `<img alt>` semantics and defaults to `name`. Pass `alt=""`
+  when the name is already rendered as adjacent text: the mark is then hidden from assistive
+  technology instead of announcing the name twice.
+
+```tsx
+<EntityAvatar name={shop.name} src={shop.logoUrl} alt="" size="lg" />
+```
+
 ## React Hook Form
 
 `react-hook-form` is an **optional peer** — install it in the app that owns the form:

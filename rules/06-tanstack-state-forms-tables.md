@@ -439,7 +439,7 @@ export function useCancelOrder(): UseMutationResult<Order, AppApiError, CancelOr
 ## Table state ownership — full picture
 
 ```text
-URL params        → page, pageSize, sortBy, sortDirection, filters   (shareable, refresh-safe, drives the server query)
+URL params        → page, limit, sort, filter, search                (shareable, refresh-safe, drives the server query — docs/list-queries.md)
 TanStack Table    → column visibility, row selection, expansion      (controlled by the smart component when it matters outside the table)
 Zustand           → purely client UI (density toggle, panel open)    (if it should persist, deliberately persist it)
 TanStack Query    → the rows themselves                              (never copied elsewhere)

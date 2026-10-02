@@ -79,3 +79,32 @@ export function buildWeeklyTimeSeries(
 
 	return [...buckets.entries()].sort((left, right) => left[0] - right[0]).map(([date, counts]) => ({ date, claims: counts.claims, redemptions: counts.redemptions }));
 }
+
+/** Mean bill in minor units (0 when there were no bills). */
+export function averageBillMinor(totalMinor: number, bills: number): number {
+	return bills === 0 ? 0 : Math.round(totalMinor / bills);
+}
+
+/** Paid bills per UTC week (Monday start) across the period — every week present, empty weeks as zero. */
+export function buildWeeklySalesSeries(
+	period: AnalyticsPeriod,
+	bills: readonly { readonly paidAt: number; readonly billTotalMinor: number }[],
+): readonly { date: number; salesMinor: number; bills: number }[] {
+	const buckets = new Map<number, { salesMinor: number; bills: number }>();
+	for (let cursor = startOfWeekUtc(period.fromMs); cursor <= startOfWeekUtc(period.toMs); cursor += 7 * 86_400_000) {
+		buckets.set(cursor, { salesMinor: 0, bills: 0 });
+	}
+
+	for (const bill of bills) {
+		if (bill.paidAt < period.fromMs || bill.paidAt > period.toMs) {
+			continue;
+		}
+		const bucket = buckets.get(startOfWeekUtc(bill.paidAt));
+		if (bucket !== undefined) {
+			bucket.salesMinor += bill.billTotalMinor;
+			bucket.bills += 1;
+		}
+	}
+
+	return [...buckets.entries()].sort((left, right) => left[0] - right[0]).map(([date, totals]) => ({ date, salesMinor: totals.salesMinor, bills: totals.bills }));
+}

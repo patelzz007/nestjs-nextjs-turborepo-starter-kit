@@ -4,6 +4,9 @@ import type { AccessTokenPayload } from "../auth/services/token.service";
 
 import { SessionStatusController } from "./session-status.controller";
 
+/** Fixed token expiry (epoch seconds) for a deterministic assertion. */
+const EXPIRES_AT_SECONDS = 1_752_767_000;
+
 describe("SessionStatusController", () => {
 	let controller: SessionStatusController;
 
@@ -30,9 +33,8 @@ describe("SessionStatusController", () => {
 				isSuperAdmin: true,
 				isEmailVerified: true,
 				hasAdminAccess: true,
-				roles: [],
-				permissions: [],
-				exp: 1_752_767_000, // fixed instant for a deterministic assertion
+				tokenVersion: 1,
+				exp: EXPIRES_AT_SECONDS,
 			};
 
 			const session = controller.getSession(payload);
@@ -40,7 +42,7 @@ describe("SessionStatusController", () => {
 			expect(session.userId).toBe("user-123");
 			expect(session.email).toBe("admin@example.com");
 			expect(session.fullName).toBe("Alex Morgan");
-			expect(session.expiresAt).toBe(payload.exp! * 1000);
+			expect(session.expiresAt).toBe(EXPIRES_AT_SECONDS * 1000);
 			// checkedAt is produced by the server clock — must be a plausible epoch ms.
 			expect(session.checkedAt).toBeGreaterThan(0);
 			expect(Number.isSafeInteger(session.checkedAt)).toBe(true);
@@ -56,8 +58,7 @@ describe("SessionStatusController", () => {
 				isSuperAdmin: false,
 				isEmailVerified: true,
 				hasAdminAccess: false,
-				roles: [],
-				permissions: [],
+				tokenVersion: 1,
 			};
 
 			const session = controller.getSession(payload);

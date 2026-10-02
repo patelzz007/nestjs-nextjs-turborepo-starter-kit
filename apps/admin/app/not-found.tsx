@@ -1,4 +1,5 @@
 import { AdminNotFoundContent } from "@/components/common/not-found-content";
+import { ROUTES } from "@/lib/routes";
 
 /**
  * Global not-found boundary for URLs that match no route anywhere (e.g.
@@ -7,5 +8,7 @@ import { AdminNotFoundContent } from "@/components/common/not-found-content";
  * shell belongs to the `(panel)` route group (see `(panel)/not-found.tsx`).
  */
 export default function RootNotFound(): React.JSX.Element {
-	return <AdminNotFoundContent backHref="/" backLabel="Back to login" message="This page doesn't exist. Head back to the login page or check the address you typed." />;
+	return (
+		<AdminNotFoundContent backHref={ROUTES.home} backLabel="Back to login" message="This page doesn't exist. Head back to the login page or check the address you typed." />
+	);
 }

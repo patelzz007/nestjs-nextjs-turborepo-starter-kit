@@ -2,6 +2,7 @@
 
 import { ForgotPasswordForm } from "@workspace/client/lib/auth/forms/forgot-password-form";
 import { AuthLayout } from "@workspace/ui/components/layout/auth-layout";
+import { ROUTES } from "@/lib/routes";
 
 export default function AdminForgotPasswordPage(): React.JSX.Element {
 	return (
@@ -19,7 +20,7 @@ export default function AdminForgotPasswordPage(): React.JSX.Element {
 			copyright="Admin Panel"
 			labels={{ mobileBack: "Back", toggleThemeAria: "Toggle theme", rightsReserved: "All rights reserved." }}
 			showBackButton
-			backHref="/auth/login"
+			backHref={ROUTES.auth.login}
 			backLabel="Back to sign in">
 			<ForgotPasswordForm />
 		</AuthLayout>

@@ -4,7 +4,7 @@ tags: ["authorization", "how-to", "recipes", "permissions", "rls"]
 description: "Step-by-step recipes: add a permission, protect an endpoint, build a list endpoint, gate a button, add a store-scoped feature, add ownership, add a tenant table with RLS, write policies and ACLs, run background jobs, and debug a denial."
 order: 24
 author: "Platform Team"
-lastUpdated: 1790812800000
+lastUpdated: 1790899200000
 coverImage: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=1600&q=80"
 ---
 
@@ -91,7 +91,7 @@ public async refund(actor: AuthenticatedUser, tenant: VerifiedTenantContext, ord
 
 Always pass the record's `organizationId` / `storeId` / `locationId` as resource attributes —
 without them, `ORGANIZATION` / `STORE` / `LOCATION` grants do not apply (fail closed).
-Read the tenant from `request.authorizationContext` (the guard verified it), never from
+Read the tenant from the request context — `requestContext.current()?.tenant` (the guard verified it), never from
 headers or the body.
 
 ### 2.4 Checklist
@@ -146,7 +146,7 @@ public async list(user: AuthenticatedUser, tenant: VerifiedTenantContext, query:
    `@SuperAdminOnly` pages go into the explicit `superAdminOnly` route rules instead.
 4. Add tests (see [testing](./testing.md#4-frontend-tests)).
 
-Merchant: use `MERCHANT_CAPABILITY.*` and `MerchantCapabilityGate` / `MerchantRoleGate`.
+Merchant: use `MERCHANT_CAPABILITY.*` and `MerchantCapabilityGate` / `useAuthorization()` — never a membership role name. A new org page also needs a rule in `ORG_PAGE_RULES` and a `guardOrgPage` call (see [frontend §5](./frontend.md#5-merchant-app-appsmerchant)).
 Web: use `AccessGate`.
 
 ---

@@ -1,29 +1,29 @@
 "use client";
 
-import { usePathname } from "next/navigation";
 import * as React from "react";
 
 import { useAdminBreadcrumb } from "@/components/common/admin-breadcrumb";
-import { resolveAdminTrail, withTrailTailLabel } from "@/lib/navigation/breadcrumb";
 
 /**
- * Smart breadcrumb bridge for data-driven pages (the /users/[id] demo).
+ * Smart breadcrumb bridge for data-driven pages (the /users/[id] page).
  *
- * The route resolver produces URL-derived crumbs (`Users › 123`), but the
- * entity's real name is only known at runtime. This component overrides the
- * final crumb via `setItems` and restores the route-derived trail on cleanup.
+ * The route resolver produces URL-derived crumbs (`Users › 123`); the user's
+ * real name is only known at runtime, so this names the final crumb with it.
+ * The label is scoped to the current pathname by the provider, so it can't be
+ * overwritten by route resolution and never leaks onto another page.
  */
-export function UserDetailBreadcrumb({ displayName }: { readonly displayName?: string }): React.JSX.Element | null {
-	const pathname = usePathname();
-	const { setItems, reset } = useAdminBreadcrumb();
+export function UserDetailBreadcrumb({ displayName }: { readonly displayName?: string | undefined }): React.JSX.Element | null {
+	const { setTailLabel } = useAdminBreadcrumb();
 
-	React.useEffect(() => {
+	React.useEffect((): (() => void) | undefined => {
 		if (displayName === undefined) {
 			return undefined;
 		}
-		setItems(withTrailTailLabel(resolveAdminTrail(pathname), displayName));
-		return reset;
-	}, [setItems, reset, pathname, displayName]);
+		setTailLabel(displayName);
+		return (): void => {
+			setTailLabel(null);
+		};
+	}, [setTailLabel, displayName]);
 
 	return null;
 }

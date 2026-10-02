@@ -62,34 +62,42 @@ export interface AuthProviderProps {
 	 * Base URL of the API. Defaults to the env-driven `API_BASE_URL`
 	 * (see lib/config.ts) — override only when you need a per-call value.
 	 */
-	readonly baseUrl?: string;
-	readonly onUnauthorizedRedirect?: string;
-	readonly navigate?: (url: string) => void;
-	readonly refresh?: () => void;
+	readonly baseUrl?: string | undefined;
+	readonly onUnauthorizedRedirect?: string | undefined;
+	readonly navigate?: ((url: string) => void) | undefined;
+	readonly refresh?: (() => void) | undefined;
 	/**
 	 * Cookie names to check for authentication status.
 	 * Defaults to accessToken / refreshToken (web app).
 	 * The admin panel passes adminAccessToken / adminRefreshToken.
 	 */
-	readonly cookieNames?: CookieNamesConfig;
+	readonly cookieNames?: CookieNamesConfig | undefined;
 	/**
 	 * Client type identifier. When set to "admin", the logout request
 	 * sends `X-Client-Type: admin` so the backend only clears the
 	 * admin cookie set (not the web cookies).
 	 */
-	readonly clientType?: "web" | "admin" | "merchant";
+	readonly clientType?: "web" | "admin" | "merchant" | undefined;
 	/** Extra headers sent on every API request from this auth context. */
-	readonly extraHeaders?: Record<string, string>;
+	readonly extraHeaders?: Record<string, string> | undefined;
 	/**
 	 * When a 401 invalidates the session, navigation to `onUnauthorizedRedirect`
 	 * only happens if this returns true. Defaults to always redirect.
 	 */
-	readonly shouldRedirectOnUnauthorized?: () => boolean;
+	readonly shouldRedirectOnUnauthorized?: (() => boolean) | undefined;
 	/**
 	 * When false, skips the initial `GET /auth/me` on mount (e.g. login / onboarding).
 	 * Re-runs when this transitions to true (navigating into the app).
 	 */
-	readonly revalidateSessionEnabled?: boolean;
+	readonly revalidateSessionEnabled?: boolean | undefined;
+	/**
+	 * Whether the server saw a session cookie for this page. `false` skips ONLY
+	 * the on-mount revalidation — a guest has no session to restore, and asking
+	 * answered `/auth/me` + `/auth/permissions` with 401 on every page view.
+	 * Cross-tab sync and the post-login session sync are unaffected. Becoming
+	 * `true` (e.g. the layout re-renders after sign-in) revalidates.
+	 */
+	readonly sessionHint?: boolean | undefined;
 }
 
 export function AuthProvider({
@@ -103,6 +111,7 @@ export function AuthProvider({
 	extraHeaders,
 	shouldRedirectOnUnauthorized,
 	revalidateSessionEnabled = true,
+	sessionHint = true,
 }: AuthProviderProps): JSX.Element {
 	const queryClient = useQueryClient();
 	const [isLoading, setIsLoading] = useState(true);
@@ -144,7 +153,7 @@ export function AuthProvider({
 		const isCancelled = (): boolean => abortController.signal.aborted;
 
 		void (async (): Promise<void> => {
-			if (revalidateSessionEnabled) {
+			if (revalidateSessionEnabled && sessionHint) {
 				await revalidateSession();
 			}
 			if (!isCancelled()) {
@@ -154,7 +163,7 @@ export function AuthProvider({
 		return (): void => {
 			abortController.abort();
 		};
-	}, [revalidateSession, revalidateSessionEnabled]);
+	}, [revalidateSession, revalidateSessionEnabled, sessionHint]);
 
 	interface InvalidateSessionOptions {
 		readonly broadcast?: boolean;

@@ -1,0 +1,28 @@
+{
+	// Type-checks every TypeScript file OUTSIDE the production program
+	// (tsconfig.typecheck.json) under the same strict flags: unit specs
+	// (src/**/*.spec.ts, __tests__), e2e specs + test support (test/**), the
+	// Prisma seed + RLS manifest (prisma/**), the tool configs, and the scripts
+	// that import the Nest source graph (they run through tsx, which resolves
+	// like `bundler`, exactly as src/ is written). Node-only scripts are checked
+	// under NodeNext by tsconfig.scripts.json. Vitest does not type-check, so
+	// without this program spec type errors are invisible. Wired into `typecheck`.
+	"extends": "./tsconfig.typecheck.json",
+	"compilerOptions": {
+		"rootDir": ".",
+		// Unit specs use vitest's bare describe/it/expect globals (vitest.config.unit.ts `globals: true`).
+		"types": ["node", "vitest/globals"]
+	},
+	"include": [
+		// All of src/ (not just the specs) so ambient augmentations such as
+		// src/types/fastify.d.ts apply exactly as they do to the app.
+		"src/**/*.ts",
+		"test/**/*.ts",
+		"prisma/**/*.ts",
+		"scripts/render-email-previews.ts",
+		"vitest.config.unit.ts",
+		"vitest.config.e2e.ts",
+		"prisma.config.ts"
+	],
+	"exclude": ["node_modules", "dist"]
+}

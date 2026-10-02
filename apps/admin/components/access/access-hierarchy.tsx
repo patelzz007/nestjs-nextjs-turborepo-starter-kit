@@ -9,9 +9,9 @@ import * as React from "react";
 
 export interface AccessHierarchySectionProps {
 	readonly title: string;
-	readonly count?: number;
-	readonly description?: string;
-	readonly defaultOpen?: boolean;
+	readonly count?: number | undefined;
+	readonly description?: string | undefined;
+	readonly defaultOpen?: boolean | undefined;
 	readonly children: React.ReactNode;
 }
 
@@ -44,11 +44,11 @@ export const AccessHierarchySection = React.forwardRef<HTMLDivElement, AccessHie
 
 export interface AccessHierarchyRowProps {
 	readonly label: string;
-	readonly description?: string | null;
-	readonly mono?: boolean;
-	readonly onRemove?: () => void;
-	readonly removeDisabled?: boolean;
-	readonly depth?: number;
+	readonly description?: string | null | undefined;
+	readonly mono?: boolean | undefined;
+	readonly onRemove?: (() => void) | undefined;
+	readonly removeDisabled?: boolean | undefined;
+	readonly depth?: number | undefined;
 }
 
 /**
@@ -77,10 +77,10 @@ export const AccessHierarchyRow = React.forwardRef<HTMLDivElement, AccessHierarc
 
 export interface AccessHierarchyGroupProps {
 	readonly title: string;
-	readonly count?: number;
-	readonly defaultOpen?: boolean;
+	readonly count?: number | undefined;
+	readonly defaultOpen?: boolean | undefined;
 	readonly children: React.ReactNode;
-	readonly depth?: number;
+	readonly depth?: number | undefined;
 }
 
 /**

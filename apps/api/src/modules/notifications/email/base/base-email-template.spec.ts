@@ -6,7 +6,6 @@ import { BaseEmailPropsSchema } from "@workspace/shared";
 import { BaseEmailTemplate, type CtaConfig, type EmailAccent } from "./base-email-template";
 import type { EmailRenderContext } from "./email-render-context";
 import { PasswordResetEmailTemplate } from "../templates/password-reset-email.template";
-import { VerificationEmailTemplate } from "../templates/verification-email.template";
 
 const context: EmailRenderContext = {
 	appName: "Acme Inc",
@@ -31,7 +30,7 @@ class TestTemplate extends BaseEmailTemplate<{ readonly to: string; readonly ful
 	public renderBodyText(): string {
 		return `Hi ${this.props.fullName}`;
 	}
-	public getCta(): CtaConfig | null {
+	public override getCta(): CtaConfig | null {
 		return { label: "Do It", href: "https://app.example.com/action" };
 	}
 }
@@ -95,5 +94,65 @@ describe("BaseEmailTemplate", () => {
 		expect(text).toContain("Action: Do It");
 		expect(text).toContain("https://app.example.com/action");
 		expect(text).toContain(`© ${String(new Date().getFullYear())} ${context.appName}`);
+	});
+});
+
+/** A hostile value every building block must escape. */
+const HOSTILE = '<b onmouseover="x">Hi</b>';
+
+/** Exercises every building block with hostile input, CTA placed in the body. */
+class BlocksTemplate extends BaseEmailTemplate<{ readonly to: string }> {
+	public readonly key: string = "blocks";
+	public readonly propsSchema = BaseEmailPropsSchema;
+	public readonly subject: string = "Blocks";
+	protected readonly accent: EmailAccent = "red";
+	protected readonly eyebrow: string = "Blocks";
+	protected readonly heading: string = "Building blocks";
+	protected override readonly ctaPlacement = "in-body";
+	public getPreviewText(): string {
+		return "Blocks";
+	}
+	public renderBodyHtml(renderContext: EmailRenderContext): string {
+		return [
+			this.paragraph(`Hello ${this.strong(HOSTILE)}`),
+			this.detailsCard([{ label: HOSTILE, value: HOSTILE }]),
+			this.highlight(HOSTILE, HOSTILE),
+			this.callout(HOSTILE, HOSTILE),
+			this.steps([{ title: HOSTILE, description: HOSTILE }]),
+			this.otpCodeBlock("482916"),
+			this.ctaInBody(renderContext),
+			this.note(this.link("https://app.example.com/x?a=1&b=2", HOSTILE)),
+		].join("");
+	}
+	public renderBodyText(): string {
+		return "Blocks";
+	}
+	public override getCta(): CtaConfig | null {
+		return { label: "Go now", href: "https://app.example.com/go" };
+	}
+}
+
+describe("BaseEmailTemplate building blocks", () => {
+	const html: string = new BlocksTemplate({ to: "a@b.com" }).renderHtml(context);
+
+	it("escapes every value they are given", () => {
+		expect(html).not.toContain(HOSTILE);
+		expect(html).not.toContain("<b onmouseover");
+		expect(html.split("&lt;b onmouseover=&quot;x&quot;&gt;Hi&lt;/b&gt;").length - 1).toBeGreaterThanOrEqual(9);
+		expect(html).toContain("https://app.example.com/x?a=1&amp;b=2");
+	});
+
+	it("renders a one-time code as one tile per character", () => {
+		expect(html.match(/class="email-otp-tile"/g)).toHaveLength(6);
+	});
+
+	it("renders an in-body CTA exactly once (the shell does not add a second), and keeps it in the plain-text twin", () => {
+		expect(html.match(/>Go now &rarr;</g)).toHaveLength(1);
+		expect(new BlocksTemplate({ to: "a@b.com" }).renderText(context)).toContain("Action: Go now");
+	});
+
+	it("keeps the card at the standard 600px email width with the tone's accent bar", () => {
+		expect(html).toContain("max-width: 600px");
+		expect(html).toContain("background: #dc2626;");
 	});
 });

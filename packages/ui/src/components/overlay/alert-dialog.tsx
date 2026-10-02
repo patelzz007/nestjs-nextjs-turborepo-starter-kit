@@ -463,18 +463,18 @@ function AlertDialogDescription({ className, ...props }: React.ComponentProps<ty
 // ── Footer ──────────────────────────────────────────────────────────────────
 
 export interface AlertDialogFooterProps extends React.ComponentProps<"div"> {
-	readonly actionOrder?: AlertDialogActionOrder;
-	readonly stackOrder?: AlertDialogStackOrder;
-	readonly confirmShortcut?: string;
-	readonly confirmLoading?: boolean;
+	readonly actionOrder?: AlertDialogActionOrder | undefined;
+	readonly stackOrder?: AlertDialogStackOrder | undefined;
+	readonly confirmShortcut?: string | undefined;
+	readonly confirmLoading?: boolean | undefined;
 	readonly loadingLabel: string;
 	readonly confirmLabel: string;
 	readonly cancelLabel: string;
-	readonly countdownLabel?: string;
-	readonly thirdAction?: ReactNode;
-	readonly onConfirm?: () => void;
-	readonly onCancel?: () => void;
-	readonly severity?: AlertDialogSeverity;
+	readonly countdownLabel?: string | undefined;
+	readonly thirdAction?: ReactNode | undefined;
+	readonly onConfirm?: (() => void) | undefined;
+	readonly onCancel?: (() => void) | undefined;
+	readonly severity?: AlertDialogSeverity | undefined;
 }
 
 function AlertDialogFooter({
@@ -526,13 +526,13 @@ function AlertDialogFooter({
 // ── Action (improvement 3: loading state; feature 2) ────────────────────────
 
 export interface AlertDialogActionProps extends React.ComponentProps<typeof Button> {
-	readonly confirmLoading?: boolean;
+	readonly confirmLoading?: boolean | undefined;
 	readonly loadingLabel: string;
 	readonly confirmLabel: string;
-	readonly confirmShortcut?: string;
-	readonly countdownLabel?: string;
-	readonly onConfirm?: () => void;
-	readonly severity?: AlertDialogSeverity;
+	readonly confirmShortcut?: string | undefined;
+	readonly countdownLabel?: string | undefined;
+	readonly onConfirm?: (() => void) | undefined;
+	readonly severity?: AlertDialogSeverity | undefined;
 }
 
 const AlertDialogAction = React.forwardRef<HTMLButtonElement, AlertDialogActionProps>(function AlertDialogAction(
@@ -596,7 +596,7 @@ const AlertDialogAction = React.forwardRef<HTMLButtonElement, AlertDialogActionP
 // (intersections in heritage clauses). Type aliases still allow intersections.
 export type AlertDialogCancelProps = AlertDialogPrimitive.Close.Props &
 	React.ComponentProps<typeof Button> & {
-		readonly onCancel?: () => void;
+		readonly onCancel?: (() => void) | undefined;
 	};
 
 const AlertDialogCancel = React.forwardRef<HTMLButtonElement, AlertDialogCancelProps>(function AlertDialogCancel(

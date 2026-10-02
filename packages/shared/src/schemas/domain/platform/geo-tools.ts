@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { CitySchema } from "./geo-city";
+
 import { JsonObjectSchema } from "../../runtime/json";
 import { GeoIdSchema } from "./geo-shared";
 
@@ -7,9 +9,9 @@ import { GeoIdSchema } from "./geo-shared";
 
 export const GeoAutocompleteQuerySchema = z
 	.object({
-		q: z.string().min(1).max(100),
-		country: z.string().length(2).optional(),
-		limit: z.coerce.number().int().min(1).max(20).optional().default(10),
+		q: z.string().min(1).max(100).describe("Search query"),
+		country: z.string().length(2).optional().describe("ISO 3166-1 alpha-2 country code to scope results"),
+		limit: z.coerce.number().int().min(1).max(20).optional().default(10).describe("Max results (1-20)"),
 	})
 	.strict();
 
@@ -73,9 +75,9 @@ export type GeoImportValidationResult = z.output<typeof GeoImportValidationResul
 
 export const GeoExportQuerySchema = z
 	.object({
-		format: z.enum(["json", "csv"]).optional().default("json"),
-		countryCode: z.string().length(2).optional(),
-		regionId: z.coerce.number().int().nonnegative().optional(),
+		format: z.enum(["json", "csv"]).optional().default("json").describe("Export format (json or csv)"),
+		countryCode: z.string().length(2).optional().describe("Filter by ISO 3166-1 alpha-2 country code"),
+		regionId: z.coerce.number().int().nonnegative().optional().describe("Filter by region ID"),
 	})
 	.strict();
 
@@ -84,8 +86,8 @@ export type GeoExportQuery = z.output<typeof GeoExportQuerySchema>;
 // ── Cascade Preview ───────────────────────────────────────────────────────
 
 export const CascadePreviewSchema = z.object({
-	entity: z.enum(["region", "subregion", "country", "state"]),
-	id: z.coerce.number().int().nonnegative(),
+	entity: z.enum(["region", "subregion", "country", "state"]).describe("Entity type (region, subregion, country, state)"),
+	id: z.coerce.number().int().nonnegative().describe("Entity ID"),
 });
 
 export type CascadePreviewInput = z.output<typeof CascadePreviewSchema>;
@@ -103,3 +105,33 @@ export const CascadePreviewResultSchema = z.object({
 });
 
 export type CascadePreviewResult = z.output<typeof CascadePreviewResultSchema>;
+
+/** `GET /geo/stats` payload — entity counts per geo level. */
+export const GeoStatsSchema = z.object({
+	regions: z.number().int().nonnegative(),
+	subregions: z.number().int().nonnegative(),
+	countries: z.number().int().nonnegative(),
+	states: z.number().int().nonnegative(),
+	cities: z.number().int().nonnegative(),
+});
+
+export type GeoStats = z.output<typeof GeoStatsSchema>;
+
+/** `GET /geo/autocomplete` payload. */
+export const GeoAutocompleteResponseSchema = z.array(GeoAutocompleteItemSchema);
+
+/**
+ * `GET /geo/export` payload — the CITIES of every country matching the filter
+ * (`countryCode` / `regionId`), ordered by name, inside the standard success
+ * envelope. That is what the endpoint has always sent, for both `format=json`
+ * and `format=csv`: CSV rendering is not implemented server-side (the `format`
+ * flag is accepted for forward compatibility), so a client that wants CSV
+ * converts these rows itself.
+ *
+ * Previously documented as a union of every level's array; with strip-mode
+ * objects that union matched a city row as a `Region` first and stripped
+ * every city-specific field, so the contract is the one shape actually sent.
+ */
+export const GeoExportResponseSchema = z.array(CitySchema);
+
+export type GeoExportResponse = z.output<typeof GeoExportResponseSchema>;

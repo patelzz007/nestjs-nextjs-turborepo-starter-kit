@@ -1,7 +1,7 @@
 "use client";
 
 import { useMerchantOrg } from "@/lib/session/root-provider";
-import { stubApiMeta, successEnvelope } from "@/lib/api-envelope";
+import { initialDataOption, stubApiMeta, successEnvelope } from "@workspace/client/lib/api/envelope";
 import { MERCHANT_ME_QUERY_OPTIONS } from "@/lib/session/me-query";
 import { resolveActiveOrganizationMembership, resolveMerchantCapabilities } from "@/lib/session/server-capabilities";
 import { useAuth } from "@workspace/client/lib/auth";
@@ -32,7 +32,7 @@ export function useMerchantCapabilities(initialMemberships?: readonly Organizati
 	const membershipsQuery = api.organizations.membershipsBootstrap.useQuery(
 		{},
 		{
-			initialData: initialMeData,
+			...initialDataOption(initialMeData),
 			...MERCHANT_ME_QUERY_OPTIONS,
 		},
 	);

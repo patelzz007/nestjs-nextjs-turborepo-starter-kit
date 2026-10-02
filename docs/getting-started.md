@@ -4,7 +4,7 @@ tags: ["getting-started", "setup", "quickstart"]
 description: "From an empty laptop to a running monorepo: prerequisites, env setup, database bootstrap, and all three apps."
 order: 1
 author: "Acme Inc."
-lastUpdated: 1786406400000
+lastUpdated: 1790812800000
 coverImage: "https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&w=1600&q=80"
 ---
 
@@ -20,12 +20,13 @@ coverImage: "https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=f
 > ```bash
 > git clone <repo-url> && cd hello-world
 > pnpm install
-> # start PostgreSQL, then create the database:
-> createdb monorepo   # or: psql -U postgres -c "CREATE DATABASE monorepo;"
+> pnpm docker:up                                # Postgres, Redis, Kafka, RabbitMQ, Mailpit, MinIO
+> # (or use your own PostgreSQL and create the database named in DATABASE_URL)
 > cp apps/api/.env.example apps/api/.env        # fill in secrets
 > cp apps/web/.env.example apps/web/.env
 > cp apps/admin/.env.example apps/admin/.env
-> pnpm db:all                                   # generate → deploy → seed (~30s)
+> cp apps/merchant/.env.example apps/merchant/.env
+> pnpm db:all                                   # generate → deploy → seed (development scenario)
 > pnpm dev                                      # web :3000, admin :3001, api :8080
 > ```
 
@@ -82,9 +83,10 @@ three apps and six shared packages:
 
 | Tool           | Version                         | Why you need it                                               | Check it's installed              |
 | -------------- | ------------------------------- | ------------------------------------------------------------- | --------------------------------- |
-| **Node.js**    | `>= 20`                         | Runs everything (Next.js, NestJS, Prisma)                     | `node -v`                         |
-| **pnpm**       | `11.18.0` (this repo's version) | The package manager (faster than npm, enforces the workspace) | `pnpm -v`                         |
-| **PostgreSQL** | 14+ (any recent)                | The database                                                  | `psql --version` and `pg_isready` |
+| **Node.js**    | `>= 20.19` (CI runs the 24 LTS line) | Runs everything (Next.js, NestJS, Prisma)                | `node -v`                         |
+| **pnpm**       | `12.6.0` (`packageManager` in `package.json`) | The package manager (faster than npm, enforces the workspace) | `pnpm -v`               |
+| **PostgreSQL** | 18 recommended (Docker stack + CI use `postgres:18.6`) | The database                                   | `psql --version` and `pg_isready` |
+| **Docker**     | any recent (optional)           | Runs the local stack in `compose.yml` (Postgres, Redis, …)    | `docker compose version`          |
 | **git**        | any                             | Clone the repo                                                | `git --version`                   |
 
 ### Installing Node.js
@@ -103,21 +105,21 @@ nvm use 20
 
 ### Installing pnpm
 
-The repo pins its pnpm version (`packageManager: "pnpm@11.18.0"`). The cleanest way
+The repo pins its pnpm version (`packageManager: "pnpm@12.6.0"`). The cleanest way
 to get it is **corepack** (ships with Node):
 
 ```bash
 corepack enable
-corepack prepare pnpm@11.18.0 --activate
+corepack prepare pnpm@12.6.0 --activate
 
 # verify
-pnpm -v    # should print 11.18.0
+pnpm -v    # should print 12.6.0
 ```
 
 If you already have pnpm but a different version, install the repo's version once:
 
 ```bash
-corepack use pnpm@11.18.0   # pins it for this folder
+corepack use pnpm@12.6.0   # pins it for this folder
 ```
 
 > [!WARNING] **Don't mix package managers.** Use `pnpm` only — never `npm install` or
@@ -129,22 +131,24 @@ Pick **one** of these (all are fine):
 
 ```bash
 # Option A — Homebrew (macOS)
-brew install postgresql@17
-brew services start postgresql@17
+brew install postgresql@18
+brew services start postgresql@18
 
-# Option B — Docker (any OS)
-docker run --name monorepo-pg -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres \
-  -e POSTGRES_DB=monorepo -p 5432:5432 -d postgres:17
-
-# Option B2 — Docker Compose (Redis + Kafka + RabbitMQ + Bull Board)
-# From the repo root (PostgreSQL is expected to run locally — not in compose):
+# Option B — Docker Compose (recommended: the whole local stack, any OS)
+# From the repo root:
 pnpm docker:up
+# PostgreSQL: localhost:5432 — postgres / postgres, database nestjs-nextjs-turborepo-starter-kit
+#             (matches DATABASE_URL in apps/api/.env.example; already has the app_runtime RLS role)
+# Mailpit:  SMTP localhost:1025 — inbox at http://localhost:8025
+# MinIO:    S3 API http://localhost:9000 — console at http://localhost:9001 (minioadmin/minioadmin)
 # Redis:    localhost:6379
 # Kafka:    localhost:9092
 # RabbitMQ: localhost:5672 — management UI at http://localhost:15672 (rabbit/rabbit)
 # BullMQ:   uses Redis; queue dashboard at http://localhost:3030
 # Analytics consumer (optional): pnpm dev:analytics-consumer
 # Messaging architecture: docs/infrastructure/messaging.md
+# Ports, credentials, overrides (e.g. a native Postgres already on 5432):
+#   docs/operations/local-infrastructure.md
 
 # Option C — Postgres.app (macOS, GUI)
 # Download from https://postgresapp.com and click "Start"
@@ -206,8 +210,9 @@ psql -U postgres -c "CREATE DATABASE monorepo;"
 ```
 
 > [!WARNING] The seed and migrations **will not create the database for you** — it must
-> exist before `pnpm db:all`. If you used the Docker option above, the container
-> already created it (`POSTGRES_DB=monorepo`).
+> exist before `pnpm db:all`. If you used the Docker Compose option above, the container
+> already created `nestjs-nextjs-turborepo-starter-kit` (the name in `apps/api/.env.example`),
+> so skip `createdb` and keep the example `DATABASE_URL`.
 
 The default connection string this repo expects:
 
@@ -231,31 +236,39 @@ creates their own from the committed `.env.example` templates.
 cp apps/api/.env.example apps/api/.env
 ```
 
-Open `apps/api/.env` and fill in real values:
+Open `apps/api/.env` and fill in the blanks. The API validates **every** variable
+once at startup with one zod schema and refuses to boot — listing every missing
+or invalid variable **by name, never printing a value** — until they are right.
+Secrets have **no defaults** in any environment. The full reference (every
+variable, default and rule) is [API Configuration](./api-configuration.md); the
+ones you must set are:
 
-| Variable                    | Example                                                                | What it's for                                            |
-| --------------------------- | ---------------------------------------------------------------------- | -------------------------------------------------------- |
-| `NODE_ENV`                  | `development`                                                          | Runtime mode                                             |
-| `APP_NAME`                  | `Freebuff API`                                                         | Shown in docs/emails                                     |
-| `APP_URL`                   | `http://localhost:3000`                                                | Base URL of the web app (used in emails)                 |
-| `PORT`                      | `8080`                                                                 | Port the API listens on                                  |
-| `CORS_ORIGINS`              | `http://localhost:3000,http://localhost:3001`                          | Comma-separated frontend origins allowed to call the API |
-| `DATABASE_URL`              | `postgresql://postgres:postgres@localhost:5432/monorepo?schema=public` | Postgres connection string                               |
-| `JWT_ACCESS_SECRET`         | (`openssl rand -base64 128`)                                           | Signs access tokens                                      |
-| `JWT_ACCESS_EXPIRY`         | `15m`                                                                  | Access token lifetime (e.g. `15m`, `1h`)                 |
-| `JWT_REFRESH_SECRET`        | (`openssl rand -base64 128`)                                           | Signs refresh tokens                                     |
-| `JWT_REFRESH_EXPIRY`        | `7d`                                                                   | Refresh token lifetime                                   |
-| `EMAIL_VERIFICATION_SECRET`   | (`openssl rand -base64 128`)                                           | Signs email-verification tokens                          |
-| `TWO_FACTOR_PENDING_SECRET` | (`openssl rand -base64 128`)                                           | Signs short-lived 2FA login step tokens                    |
-| `MFA_ENCRYPTION_KEYS`         | (`{"1":"<openssl rand -base64 128>"}`)                                 | AES key material for encrypted MFA secrets                 |
-| `BCRYPT_SALT_ROUNDS`        | `10`                                                                   | Password hashing cost                                    |
-| `RESEND_API_KEY`            | `re_...`                                                               | Sends transactional emails (signup, password reset)      |
-| `EMAIL_FROM_ADDRESS`        | `noreply@example.com`                                                  | "From" address for emails                                |
-| `COOKIE_DOMAIN`               | `localhost`                                                            | Share cookies across localhost ports (API + apps)        |
-| `AUTHORIZATION_CACHE_BACKEND` | `auto`                                                                 | `memory`, `redis`, or `auto` — see [Authorization](./authorization.md#cache-layer) |
-| `REDIS_URL`                   | `redis://localhost:6379`                                               | Required for `redis` cache backend in deployed envs      |
-| `TENANCY_ENABLED`             | `false`                                                                | Multi-tenant RLS mode — see [ADR 007](./adr/007-tenancy-and-rls-bypass.md) |
-| `DEFAULT_ORGANIZATION_ID`     | `default`                                                              | Org scope for single-tenant / fallback                   |
+| Variable                       | Example                                                                | What it's for |
+| ------------------------------ | ---------------------------------------------------------------------- | ------------- |
+| `NODE_ENV`                     | `development`                                                          | **Required.** `development` / `test` / `production` |
+| `APP_NAME`                     | `Freebuff API`                                                         | **Required.** Shown in emails and authenticator apps |
+| `APP_URL`                      | `http://localhost:3000`                                                | **Required.** Web app base URL (email links) |
+| `ADMIN_APP_URL`                | `http://localhost:3001`                                                | **Required.** Admin app base URL (email links) |
+| `MERCHANT_APP_URL`             | `http://localhost:3003`                                                | **Required.** Merchant portal base URL (invite links) |
+| `CORS_ORIGINS`                 | `http://localhost:3000,http://localhost:3001,http://localhost:3003`    | **Required.** Comma-separated frontend origins allowed to call the API |
+| `DATABASE_URL`                 | `postgresql://postgres:postgres@localhost:5432/monorepo?schema=public` | **Required.** Postgres connection string |
+| `JWT_ACCESS_SECRET`            | (`pnpm secrets:generate`)                                              | **Required secret** (≥ 32 chars). Signs access tokens |
+| `JWT_REFRESH_SECRET`           | (`pnpm secrets:generate`)                                              | **Required secret**, must differ from the others. Signs refresh tokens |
+| `EMAIL_VERIFICATION_SECRET`    | (`pnpm secrets:generate`)                                              | **Required secret.** Signs email-verification tokens |
+| `TWO_FACTOR_PENDING_SECRET`    | (`pnpm secrets:generate`)                                              | **Required secret.** Signs short-lived 2FA login step tokens |
+| `MFA_ENCRYPTION_KEYS`          | (`{"1":"<openssl rand -base64 32>"}`)                                  | **Required secret.** Versioned AES-256 keys (each base64 of exactly 32 bytes) for encrypted MFA secrets |
+| `TENANT_ENCRYPTION_MASTER_KEY` | (`openssl rand -base64 32`)                                            | **Required secret, no fallback** — base64 of exactly 32 bytes; wraps each organization's data key |
+| `EMAIL_FROM_ADDRESS`           | `noreply@example.com`                                                  | **Required.** "From" address for emails |
+| `EMAIL_MODE`                   | `log-only`                                                             | `send` (default, needs `RESEND_API_KEY`), `log-only` or `noop` |
+| `RESEND_API_KEY`               | `re_...`                                                               | **Required when `EMAIL_MODE=send`.** Sends transactional emails |
+| `COOKIE_DOMAIN`                | `localhost`                                                            | Share auth cookies across localhost ports (API + apps) |
+| `REDIS_URL`                    | `redis://localhost:6379`                                               | Optional locally, **required in production** (queues, distributed caches) |
+| `SWAGGER_ENABLED`              | unset                                                                  | `0`/`false` hides the public `/v1/docs` (on by default in every environment) — see [API Routes](./api-routes.md#13-api-docs-swagger) |
+| `TENANCY_ENABLED`              | `false`                                                                | Multi-tenant RLS mode — see [ADR 007](./adr/007-tenancy-and-rls-bypass.md) |
+
+Everything else (`PORT`, `HOST`, JWT expiries, bcrypt rounds, throttles, cache
+sizes, storage, Kafka, Observe, …) has a documented default in
+`apps/api/.env.example` and [API Configuration](./api-configuration.md).
 
 > [!NOTE] **CORS** (Cross-Origin Resource Sharing): the browser blocks a page on one
 > origin (say `localhost:3000`) from calling an API on another origin unless
@@ -263,7 +276,7 @@ Open `apps/api/.env` and fill in real values:
 > value above is for — add any frontend origin that should be allowed to call
 > the API.
 
-**Generate strong secrets** (writes all app-owned signing keys into `apps/api/.env`):
+**Generate strong secrets** (writes all app-owned signing secrets, a 32-byte MFA key and — only if missing — the tenant master key into `apps/api/.env`):
 
 ```bash
 pnpm secrets:generate apps/api/.env
@@ -291,9 +304,10 @@ Run the repository secret scan locally before opening a PR:
 pnpm secrets:scan
 ```
 
-> [!NOTE] Email sending is **optional** for local dev. If you don't have a Resend key yet,
-> leave `RESEND_API_KEY` empty — auth still works; only the actual email delivery
-> will fail (you'll see the error in the API logs).
+> [!NOTE] Email sending is **optional** for local dev. Without a Resend key, keep
+> `EMAIL_MODE=log-only` (the `.env.example` default) — emails are printed to the
+> API log instead of sent. `EMAIL_MODE=send` without `RESEND_API_KEY` stops the
+> API at boot with a message naming `RESEND_API_KEY`.
 
 ### The web app (`apps/web/.env`)
 
@@ -301,9 +315,12 @@ pnpm secrets:scan
 cp apps/web/.env.example apps/web/.env
 ```
 
-| Variable              | Example                 | What it's for                         |
-| --------------------- | ----------------------- | ------------------------------------- |
-| `NEXT_PUBLIC_API_URL` | `http://localhost:8080` | Base URL of the API the browser calls |
+| Variable                         | Example                 | What it's for                                                  |
+| -------------------------------- | ----------------------- | -------------------------------------------------------------- |
+| `NEXT_PUBLIC_API_URL`            | `http://localhost:8080` | **Required.** Base URL of the API the browser calls            |
+| `NEXT_PUBLIC_APP_URL`            | `http://localhost:3000` | **Required.** The web app's own origin (session-refresh Origin) |
+| `NEXT_PUBLIC_SHOW_DEMO_ACCOUNTS` | `true` (optional)       | One-click demo logins; `true`/`false`, default `false`         |
+| `COOKIE_DOMAIN`                  | `localhost` (optional)  | Server-only; must match the API's `COOKIE_DOMAIN`              |
 
 ### The admin app (`apps/admin/.env`)
 
@@ -313,13 +330,20 @@ cp apps/admin/.env.example apps/admin/.env
 
 | Variable                    | Example                 | What it's for                                                                                                     |
 | --------------------------- | ----------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `NEXT_PUBLIC_API_URL`       | `http://localhost:8080` | Base URL of the API the browser calls                                                                             |
-| `NEXT_PUBLIC_WEB_URL`       | `http://localhost:3000` | Web app URL used by the "main website" login link                                                                 |
+| `NEXT_PUBLIC_API_URL`       | `http://localhost:8080` | **Required.** Base URL of the API the browser calls                                                               |
+| `NEXT_PUBLIC_ADMIN_URL`     | `http://localhost:3001` | **Required.** The admin app's own origin (session-refresh Origin)                                                 |
+| `NEXT_PUBLIC_WEB_URL`       | `http://localhost:3000` | **Required.** Web app URL used by the "main website" login link and the impersonation banner                      |
+| `NEXT_PUBLIC_MERCHANT_URL`  | `http://localhost:3003` | **Required.** Merchant portal URL (impersonation banner)                                                          |
 | `NEXT_PUBLIC_SESSION_POLL_MS` | `60000` (optional)    | Session-status badge steady-poll interval in ms — OPT-IN; unset/`0` disables steady polling (default). The countdown is computed locally from the JWT `exp` claim, so the badge works with zero polling |
+
+The merchant app (`apps/merchant/.env`) needs `NEXT_PUBLIC_API_URL` and
+`NEXT_PUBLIC_MERCHANT_URL` (`http://localhost:3003`); see its `.env.example`.
 
 > [!NOTE] `NEXT_PUBLIC_*` vars are inlined into the browser bundle at build time. When you
 > deploy, set them to your production URLs (e.g. `https://api.example.com` and
-> `https://app.example.com`).
+> `https://app.example.com`). Every app validates its env with zod: a missing or
+> malformed **required** value fails `next build` / server start with an error that
+> names the variable (never its value). See [Configuration](./configuration.md).
 
 ---
 
@@ -354,6 +378,45 @@ Expect it to take ~30 seconds and end with:
 > [!WARNING] The seed is **idempotent** — safe to re-run as many times as you like. Note it
 > **wipes volatile demo data** (refresh tokens, clicks, API keys, usage logs) at the
 > start, so any API keys you created manually will be removed.
+
+### Seed scenarios
+
+`pnpm db:seed` (and `pnpm db:all`) seed the **`development`** scenario unless you pick another one.
+Everything after `--` is passed to the seed script:
+
+```bash
+pnpm db:seed                                        # development (default)
+pnpm db:seed -- --scenario empty                    # reference data only
+pnpm db:seed -- --scenario enterprise --seed 123    # large deterministic tenant
+pnpm db:seed -- --help                              # list scenarios and options
+pnpm db:all -- --scenario enterprise                # generate → deploy → seed, with a scenario
+```
+
+| Scenario | What it creates | Typical use |
+| --- | --- | --- |
+| `empty` | Reference data only: permissions, roles and role grants, the MERCHANT capability catalog, the ABAC demo condition. **No users or tenants.** It never deletes anything — run `pnpm db:reset` first for a truly empty database. | Starting a real project on the template; testing first-run flows |
+| `development` | Reference data plus the full demo dataset: the test accounts below, URLs/clicks/API keys, geo data (downloaded from GitHub, ~1–3 min), categories, products, the two demo organizations with rewards, stores. **Resets all organization/reward rows** before re-creating the demo tenants. | Day-to-day development (default) |
+| `enterprise` | Reference data, the test accounts below, 70 categories, and one large tenant — **Northwind Retail Group** (`/orgs/northwind-enterprise/dashboard`) with 25 locations/stores, 250 members, 500 products. Additive: other tenants are left alone. Runs in seconds. | Pagination, performance, and scale testing |
+
+**Deterministic by design.** `--seed <n>` (0–4294967295, default `1`) drives a small seeded
+pseudo-random generator (`apps/api/prisma/seed/prng.ts`), so the same `--scenario enterprise --seed 123`
+produces byte-identical names, prices, stock levels, and dates on every machine. Structure — ids,
+emails, location codes, SKUs, who holds which role at which location — depends only on the dataset
+size, never on the seed, so re-running with a different seed **updates the same rows in place**
+instead of adding a second tenant. Timestamps are offsets from a fixed epoch (2026-01-01 UTC), not
+the wall clock. Only `enterprise` uses `--seed`; `development` keeps its existing data.
+
+Enterprise accounts (in addition to the test accounts below):
+
+| Email | Password | Organization role |
+| --- | --- | --- |
+| `owner@enterprise.example.com` | `EnterpriseOwner@123` | OWNER (all locations) |
+| `member.0001@enterprise.example.com` … `member.0249@enterprise.example.com` | `EnterpriseMember@123` | `0001` POLICY_ADMIN; every 25th ADMIN (all locations); every 4th MEMBER; the rest CASHIER at one location |
+
+To add a scenario: add its name to `SeedScenarioSchema` in `apps/api/prisma/seed/seed-options.ts`,
+write `apps/api/prisma/seed/scenarios/<name>.ts`, and register it in `SEED_SCENARIO_RUNNERS`
+(`scenarios/index.ts`) — the runner map is typed as a full `Record`, so a missing runner fails to
+compile. Keep generated data in a pure builder with unit tests (see `enterprise-dataset.ts`).
 
 ### Seeded login accounts
 
@@ -501,13 +564,17 @@ Run these from the **repo root**:
 | `pnpm db:migrate:status`                           | Show applied / pending migrations                         |
 | `pnpm db:deploy`                                   | Apply pending migrations (CI/prod)                        |
 | `pnpm db:generate`                                 | Regenerate Prisma client types                            |
-| `pnpm db:seed`                                     | Re-seed the database (idempotent)                         |
+| `pnpm db:seed`                                     | Re-seed the database (idempotent, `development` scenario) |
+| `pnpm db:seed -- --scenario <name> [--seed <n>]`   | Seed `empty` / `development` / `enterprise` — see [Seed scenarios](#seed-scenarios) |
+| `pnpm db:check-rls-manifest`                       | Verify Prisma models ↔ RLS manifest ↔ RLS SQL (CI check)  |
+| `pnpm test:e2e`                                    | API e2e tests against the database in `apps/api/.env`     |
+| `pnpm docs:check-links`                            | Validate internal links in `docs/` (CI check)             |
 | `pnpm db:reset`                                    | 🔴 Drop all data, re-migrate, re-seed                     |
 | `pnpm db:studio`                                   | Open Prisma Studio (localhost:5555)                       |
 | `pnpm deps:check`                                  | Verify shared deps (React/Zod/TS) are the same everywhere |
 | `pnpm deps:fix`                                    | Auto-align dependency versions                            |
 | `pnpm turbo run db:<task>`                         | Run any db task through turbo explicitly                  |
-| `pnpm docker:up`                                   | Start local infra (Redis, Kafka, RabbitMQ, Bull Board) |
+| `pnpm docker:up`                                   | Start local infra (Postgres, Redis, Kafka, RabbitMQ, Bull Board, Mailpit, MinIO) — [details](./operations/local-infrastructure.md) |
 | `pnpm docker:down`                                 | Stop and remove infra containers                          |
 | `pnpm docker:ps`                                   | Show infra container status                               |
 | `pnpm docker:logs`                                 | Tail infra container logs                                 |
@@ -550,8 +617,9 @@ These are enforced by ESLint **and** code review. Violations fail CI:
 
 - **Put request/response shapes in `packages/shared/src/schemas/`** — never inside
   an app or a NestJS module. Both FE and BE import from there.
-- **Use `createZodDto(Schema)`** for NestJS DTOs — Swagger and validation both come
-  free from the shared schema.
+- **Declare inputs with `@ZodBody` / `@ZodQuery` / `@ZodParams` and the response with
+  `@ZodResponse` / `@ZodPaginatedResponse`** — validation, Swagger and response enforcement all
+  come from the shared schema ([Response contracts](./response-contracts.md)).
 - **Call the API through the `useApi` hook** (`@workspace/client`) — never raw
   `fetch` in a page. New endpoints get a typed entry in
   `packages/client/src/lib/endpoints.ts`.
@@ -731,7 +799,7 @@ follows:
   palette**, a notifications bell (no unread dot on the trigger — the count only
   shows inside the dropdown; see _Notifications_ below), a network status
   indicator (`components/common/network-status-bar.tsx`), theme toggle
-  (`components/common/theme-toggle.tsx`), settings link (→ `/settings/general`),
+  (`components/common/theme-toggle.tsx`), settings link (→ `/settings`),
   and the profile dropdown. Mobile detection uses the shared `useMediaQuery` hook
   (`hooks/use-media-query.ts`) at the `lg` breakpoint — no hand-rolled resize
   listeners.
@@ -751,8 +819,8 @@ follows:
 - **The profile dropdown** (`components/settings/profile-01.tsx`) — a polished
   card: avatar with online-status dot, name + email, a **plan badge** (with an
   Upgrade button), and menu actions (Billing, Settings, Terms & Policies) followed
-  by Logout. Every action navigates to a **real route** (`/settings/billing`,
-  `/settings/general`) — there is no dead `/settings` link anymore.
+  by Logout. Every action navigates to a **real route** (`/account/profile`,
+  `/account/security`, `/settings/billing`) — see [Routing](./routing.md).
 - **Notifications** — split into a smart + dumb pair (rules 9–11):
   `components/notifications/notifications-dropdown.tsx` (smart) owns the state —
   it loads the data, tracks read/dismissed items, and hands **props + callbacks**
@@ -999,14 +1067,14 @@ follows:
     `shiki`, `mermaid`, `server-only` (+ `@types/mdast`). Sidebar
     **Documentation → Docs Home** lists every guide; the sidebar menu,
     breadcrumbs, and ⌘K palette pick them up automatically.
-- **Settings pages** — `apps/admin/app/(panel)/settings/general/page.tsx` (profile
-  form + notification toggles + timezone, all state at the page level) and
+- **Account & settings pages** — `apps/admin/app/(panel)/account/profile/page.tsx` (the
+  admin's own profile form + notification toggles + timezone, all state at the page level) and
   `apps/admin/app/(panel)/settings/billing/page.tsx` (current plan + feature
   checklist, payment method card, invoices table). They render **content only** —
   the `(panel)` layout supplies the shell — and are wired into the sidebar JSON
   under **Settings** → General / Billing (plus a disabled Security subtree). A
   server-component `app/(panel)/settings/page.tsx` `redirect()`s a direct hit on
-  `/settings` to `/settings/general`.
+  `/settings` to `/settings/billing` (personal pages live under `/account`).
 - **Route protection** — `apps/admin/proxy.ts` (Next.js 16 middleware
   convention) treats **everything except `/auth/*`** as protected: unauthenticated
   visitors are bounced to `/auth/login?redirect=<original path>`, and the login
@@ -1134,7 +1202,7 @@ follows:
   `pnpm test` (turbo delegates to each workspace's `test` script).
 - **Dependencies** — `zustand`, `framer-motion`, and `vitest` (dev) are declared
   in **`apps/admin/package.json`** (app-level, not in `packages/ui`). The dashboard
-  page reuses `components/dashboard/section-cards.tsx`,
+  page shows real platform sales (`components/dashboard/platform-sales-cards.tsx`) and reuses
   `components/dashboard/chart-area-interactive.tsx`, and `data/dashboard-data.json`
   from the original dashboard-01 block; the data-table is split across
   `components/dashboard/data-table.tsx` (main component),
@@ -1149,11 +1217,12 @@ Not sure? Read [architecture.md](./architecture.md) first.
 
 | Symptom                                                                 | Cause & fix                                                                                                                                                         |
 | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pnpm: command not found`                                               | pnpm isn't installed. Run `corepack enable && corepack prepare pnpm@11.18.0 --activate`.                                                                            |
+| `pnpm: command not found`                                               | pnpm isn't installed. Run `corepack enable && corepack prepare pnpm@12.6.0 --activate`.                                                                            |
 | `Unsupported engine` / node version error during install                | Your Node is too old. The repo needs Node **>= 20**. Install 20+ and retry.                                                                                         |
-| `psql: could not connect to server` / `Connection refused (0x0000274D)` | Postgres isn't running. Start it (`brew services start postgresql@17` or your Docker container) and re-run `pg_isready`.                                            |
+| `psql: could not connect to server` / `Connection refused (0x0000274D)` | Postgres isn't running. Start it (`brew services start postgresql@18` or `pnpm docker:up`) and re-run `pg_isready`.                                            |
 | `Environment variable not found: DATABASE_URL` / `datasource.url property is required` | `apps/api/.env` is missing or incomplete. Copy `.env.example` → `.env` and fill it in. Prisma 7 reads the URL from `prisma.config.ts`, which loads that file. |
 | `database "monorepo" does not exist`                                    | Create it first: `createdb monorepo`.                                                                                                                               |
+| `Invalid seed arguments` from `pnpm db:seed`                           | Unknown scenario or malformed `--seed`. Run `pnpm db:seed -- --help` for the valid options. |
 | `P3009: migration found that was not applied` / schema not up to date   | Run `pnpm db:all` (applies pending migrations).                                                                                                                     |
 | `Tasks: 2 successful, 1 failed` from `pnpm db:all`                      | `db:deploy` or `db:generate` failed, so the seed was skipped (by design). Run `pnpm turbo run db:deploy` to see the real error.                                     |
 | Port 3000/3001/8080 already in use                                      | Another process is on the port. Find it (`lsof -i :3000`) and stop it, or change `PORT` in `apps/api/.env`.                                                         |
@@ -1200,14 +1269,13 @@ need separate public and private buckets. See
 
 Full CDK walkthrough: [Storage §8 — A to Z](./infrastructure/storage.md#8-cdk-deploy-guide--a-to-z-beginner-friendly).
 
-Migrate legacy rows with `pnpm --filter @workspace/api kyb:backfill -- --dry-run`.
-
 **Q: I changed `schema.prisma` — what now?**
 A: Prisma first, then generate, then Zod, then the pipe. 1) Edit `apps/api/prisma/schema.prisma`.
 2) `pnpm db:migrate` (applies SQL **and** `prisma generate`). 3) Add/update Zod in
-`packages/shared` so BE and FE share one shape. 4) Nest: `ZodValidationPipe(apiContract.*.input)`
-plus `createWrappedDto` / `@ApiBody` for Swagger sample req/res. 5) Client leaf in
-`endpoints.ts`. 6) `pnpm typecheck`. See [prisma.md](./prisma.md) §4.
+`packages/shared` so BE and FE share one shape (response schemas map `bigint`/`Date` columns to
+epoch-ms numbers). 4) Nest: `@ZodBody(apiContract.*.input)` for the request and
+`@ZodResponse(...)` / `@ZodPaginatedResponse(...)` for the response. 5) Client leaf in
+`endpoints.ts`. 6) `pnpm typecheck`, then `pnpm openapi:export`. See [prisma.md](./prisma.md) §4.
 
 **Q: Where does the `:8080` / `3000` / `3001` come from?**
 A: Defaults in `main.ts` (API) and the Next.js apps. Override with `PORT` (API) and
@@ -1215,11 +1283,11 @@ A: Defaults in `main.ts` (API) and the Next.js apps. Override with `PORT` (API) 
 
 **Q: How do I add a new API endpoint?**
 A: If it needs a new column, Prisma migrate + generate **before** Zod. Then:
-1) Zod in `packages/shared/src/schemas/<domain>.ts` + `apiContract` leaf.
-2) Nest service + controller with `ZodValidationPipe(apiContract.<leaf>.input)` and
-`createZodDto` / `createWrappedDto` for Swagger. 3) Typed leaf in
+1) Zod in `packages/shared/src/schemas/<domain>.ts` + `apiContract` leaf (with its `response`).
+2) Nest service + controller with `@ZodBody(apiContract.<leaf>.input)` (and friends) and one
+`@ZodResponse` / `@ZodPaginatedResponse` with the leaf's response schema. 3) Typed leaf in
 `packages/client/src/lib/api/endpoints.ts` (and `use-api.ts` / `server-api.ts`).
-4) Wire the UI via `useApi`.
+4) Wire the UI via `useApi`. 5) `pnpm openapi:export` — see [Response contracts](./response-contracts.md).
 
 ---
 

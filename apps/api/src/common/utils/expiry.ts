@@ -18,7 +18,10 @@ export const parseExpiryToMilliseconds = (expiry: string): number => {
 		throw new Error(`Invalid expiry format: "${expiry}". Expected format: <number><s|m|h|d> (e.g. "15m", "7d")`);
 	}
 
-	const valueStr: string = groups[1];
+	const valueStr: string | undefined = groups[1];
+	if (valueStr === undefined) {
+		throw new Error(`Invalid expiry format: "${expiry}". Expected format: <number><s|m|h|d> (e.g. "15m", "7d")`);
+	}
 	const unitParsed = StringValueSchema.safeParse(groups[2]);
 	const unit: string = unitParsed.success ? unitParsed.data : "m";
 

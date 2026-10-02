@@ -54,9 +54,10 @@ export interface PolicyRule {
 export const PolicyRuleSchema: z.ZodType<PolicyRule> = z.lazy(() =>
 	z
 		.object({
-			all: z.array(PolicyRuleSchema).min(1).optional(),
-			any: z.array(PolicyRuleSchema).min(1).optional(),
-			condition: PolicyConditionSchema.optional(),
+			// exactOptional(): absent, never `undefined` — matches PolicyRule's optional keys.
+			all: z.array(PolicyRuleSchema).min(1).exactOptional(),
+			any: z.array(PolicyRuleSchema).min(1).exactOptional(),
+			condition: PolicyConditionSchema.exactOptional(),
 		})
 		.strict()
 		.refine((rule) => [rule.all, rule.any, rule.condition].filter((branch) => branch !== undefined).length === 1, {
@@ -156,27 +157,31 @@ export const AuthorizationRequestSchema = z
 export type AuthorizationRequest = z.infer<typeof AuthorizationRequestSchema>;
 
 /**
- * Authorization evaluation result with explanation.
+ * One step of an authorization evaluation (part of the explain response — open, ADR 022).
  */
-export const AuthorizationEvaluationStepSchema = z
-	.object({
-		source: z.enum(["superadmin", "validation", "tenant", "override", "acl", "role", "scope", "policy", "ownership", "relationship", "default"]),
-		effect: z.enum(["ALLOW", "DENY", "NO_MATCH"]),
-		reason: z.string().optional(),
-		details: AuthorizationAttributesSchema.optional(),
-	})
-	.strict();
+export const AuthorizationEvaluationStepSchema = z.object({
+	source: z.enum(["superadmin", "validation", "tenant", "override", "acl", "role", "scope", "policy", "ownership", "relationship", "default"]),
+	effect: z.enum(["ALLOW", "DENY", "NO_MATCH"]),
+	reason: z.string().optional(),
+	details: AuthorizationAttributesSchema.optional(),
+});
 
 export type AuthorizationEvaluationStep = z.infer<typeof AuthorizationEvaluationStepSchema>;
 
-export const AuthorizationResultSchema = z
-	.object({
-		decision: AuthorizationDecisionSchema,
-		request: AuthorizationRequestSchema,
-		evaluation: z.array(AuthorizationEvaluationStepSchema),
-		durationMs: z.number().int().nonnegative().optional(),
-	})
-	.strict();
+/**
+ * Also the `GET /authorization/decisions/explain` response, so it is open
+ * (strip unknown keys — ADR 022): the strict subject / request schemas are
+ * re-declared from their `shape` here rather than nested as-is.
+ */
+export const AuthorizationResultSchema = z.object({
+	decision: AuthorizationDecisionSchema,
+	request: z.object({
+		...AuthorizationRequestSchema.shape,
+		subject: z.object(AuthorizationContextSchema.shape),
+	}),
+	evaluation: z.array(AuthorizationEvaluationStepSchema),
+	durationMs: z.number().int().nonnegative().optional(),
+});
 
 export type AuthorizationResult = z.infer<typeof AuthorizationResultSchema>;
 

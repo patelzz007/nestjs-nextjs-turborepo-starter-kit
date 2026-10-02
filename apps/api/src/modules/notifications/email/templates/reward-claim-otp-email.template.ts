@@ -24,10 +24,11 @@ export class RewardClaimOtpEmailTemplate extends BaseEmailTemplate<RewardClaimOt
 	}
 
 	public renderBodyHtml(_context: EmailRenderContext): string {
-		return `
-        <p class="email-text" style="color: #334155; font-size: 15px; line-height: 1.7; margin: 0 0 16px 0;">Enter this code to claim <strong>${this.escape(this.props.rewardTitle)}</strong>:</p>
-        ${this.otpCodeBlock(this.props.otpCode)}
-        <p class="email-muted" style="color: #64748b; font-size: 13px; line-height: 1.6; margin: 0;">Expires in ${String(this.props.expiresInMinutes)} minutes. If you didn't request this, ignore this email.</p>`;
+		return [
+			this.paragraph(`Enter this code to claim ${this.strong(this.props.rewardTitle)}:`),
+			this.otpCodeBlock(this.props.otpCode),
+			this.note(`The code expires in ${this.strong(`${String(this.props.expiresInMinutes)} minutes`)}. Didn't request it? You can ignore this email.`),
+		].join("");
 	}
 
 	public renderBodyText(_context: EmailRenderContext): string {

@@ -7,6 +7,7 @@ import { Input } from "@workspace/ui/components/form/input";
 import { Label } from "@workspace/ui/components/form/label";
 import { useRouter } from "next/navigation";
 import * as React from "react";
+import { walletClaimPath } from "@/lib/routes";
 
 const TERMS_VERSION = "1.0";
 const PRIVACY_VERSION = "1.0";
@@ -95,7 +96,7 @@ export function RewardClaimFlow({ rewardId, onMessage, onClaimFailed }: RewardCl
 		onSuccess: (response): void => {
 			const claimId = response.data.claim.id;
 			onMessage(`Claim successful! Backup code: ${response.data.backupCode}`);
-			router.push(`/rewardhub/claims/${claimId}`);
+			router.push(walletClaimPath(claimId));
 		},
 		onError: (error: Error): void => {
 			if (error.message.includes("LEGAL_ACCEPTANCE_REQUIRED")) {

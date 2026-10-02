@@ -1,33 +1,27 @@
-import { Controller, Get, NotFoundException, Param, Post } from "@nestjs/common";
-import { ApiNotFoundResponse, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
+import { Controller, Get, HttpStatus, NotFoundException, Post } from "@nestjs/common";
+import { ApiNotFoundResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
 
 import {
+	EmailPreviewListResponseSchema,
 	EmailPreviewSchema,
 	EmailRenderContextSchema,
 	EmailSendResultSchema,
 	EmailTemplateKeyParamSchema,
-	EmailTemplateMetaSchema,
 	type EmailPreview,
+	type EmailPreviewListResponse,
 	type EmailRenderContext,
 	type EmailSendResult,
 	type EmailTemplateKey,
-	type EmailTemplateMeta,
 	apiPath,
 } from "@workspace/shared";
 
-import { ZodValidationPipe } from "../../../common/pipes/zod-validation.pipe";
+import { ZodParam } from "../../../common/decorators/zod-request.decorators";
+import { ZodResponse } from "../../../common/decorators/zod-response.decorators";
 import { AdminAccessOnly } from "../../auth/decorators/admin-access.decorator";
 import { RequirePermission } from "../../auth/decorators/require-permission.decorator";
-import { createWrappedDto, createWrappedArrayDto } from "../../../common/dto/response-wrapper";
 import { TypedConfigService } from "../../../config/typed-config.service";
 import { EMAIL_TEMPLATE_REGISTRY, buildEmailPreview, listTemplateMeta } from "./email-template.registry";
 import { EmailSenderService } from "./email-sender.service";
-
-// ── Wrapped Response DTOs ────────────────────────────────────────────────
-
-const WrappedPreviewList = createWrappedArrayDto(EmailTemplateMetaSchema, "WrappedEmailPreviewList");
-const WrappedPreviewDetail = createWrappedDto(EmailPreviewSchema, "WrappedEmailPreviewDetail");
-const WrappedSendResult = createWrappedDto(EmailSendResultSchema, "WrappedEmailSendResult");
 
 /**
  * Admin-only preview endpoints. The admin panel lists every template, then
@@ -70,8 +64,8 @@ export class EmailPreviewController {
 	@RequirePermission("READ", "EMAIL")
 	@Get()
 	@ApiOperation({ summary: "List email template metadata" })
-	@ApiOkResponse({ type: WrappedPreviewList, description: "Metadata for every registered email template" })
-	public list(): { readonly templates: readonly EmailTemplateMeta[] } {
+	@ZodResponse(EmailPreviewListResponseSchema, { description: "Metadata for every registered email template" })
+	public list(): EmailPreviewListResponse {
 		return { templates: listTemplateMeta() };
 	}
 
@@ -79,9 +73,9 @@ export class EmailPreviewController {
 	@RequirePermission("READ", "EMAIL")
 	@Get(":key")
 	@ApiOperation({ summary: "Render one email template preview" })
-	@ApiOkResponse({ type: WrappedPreviewDetail, description: "Rendered preview for one template" })
+	@ZodResponse(EmailPreviewSchema, { description: "Rendered preview for one template" })
 	@ApiNotFoundResponse({ description: "Unknown template key" })
-	public detail(@Param("key", new ZodValidationPipe(EmailTemplateKeyParamSchema)) key: string): EmailPreview {
+	public detail(@ZodParam("key", EmailTemplateKeyParamSchema) key: string): EmailPreview {
 		const parsedKey = this.requireTemplate(key);
 		return buildEmailPreview(parsedKey, this.renderContext);
 	}
@@ -95,9 +89,9 @@ export class EmailPreviewController {
 	@RequirePermission("CREATE", "EMAIL")
 	@Post(":key/send")
 	@ApiOperation({ summary: "Send one email template (sample props)" })
-	@ApiOkResponse({ type: WrappedSendResult, description: "Outcome of the send attempt" })
+	@ZodResponse(EmailSendResultSchema, { status: HttpStatus.CREATED, description: "Outcome of the send attempt" })
 	@ApiNotFoundResponse({ description: "Unknown template key" })
-	public async sendTest(@Param("key", new ZodValidationPipe(EmailTemplateKeyParamSchema)) key: string): Promise<EmailSendResult> {
+	public async sendTest(@ZodParam("key", EmailTemplateKeyParamSchema) key: string): Promise<EmailSendResult> {
 		const parsedKey = this.requireTemplate(key);
 		const entry = EMAIL_TEMPLATE_REGISTRY[parsedKey];
 		const template = entry.build();

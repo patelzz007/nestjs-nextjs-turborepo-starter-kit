@@ -4,15 +4,15 @@ export interface SidebarMenuItemLike {
 	readonly id: string;
 	readonly title: string;
 	readonly url: string;
-	readonly icon?: string;
-	readonly disabled?: boolean;
-	readonly children?: readonly SidebarMenuItemLike[];
+	readonly icon?: string | undefined;
+	readonly disabled?: boolean | undefined;
+	readonly children?: readonly SidebarMenuItemLike[] | undefined;
 }
 
 export type PanelSectionColor = "blue" | "green" | "amber" | "rose" | "purple" | "teal";
 
 export interface SidebarMenuDataLike {
-	readonly sections: readonly { readonly title: string; readonly items: readonly SidebarMenuItemLike[]; readonly color?: PanelSectionColor }[];
+	readonly sections: readonly { readonly title: string; readonly items: readonly SidebarMenuItemLike[]; readonly color?: PanelSectionColor | undefined }[];
 	readonly bottomItems: readonly SidebarMenuItemLike[];
 }
 

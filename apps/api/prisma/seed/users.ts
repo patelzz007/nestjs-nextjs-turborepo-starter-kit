@@ -191,7 +191,7 @@ export async function createUsers(): Promise<User[]> {
 			update: {
 				fullName: u.fullName,
 				isActive: u.isActive,
-				plan: u.plan ?? "FREE",
+				plan: u.plan,
 				isSuperAdmin: u.isSuperAdmin,
 				emailVerifiedAt: u.emailVerifiedAt ?? null,
 				mfaEnrollmentDeadline: u.mfaEnrollmentDeadline ?? mfaEnrollmentDeadline,

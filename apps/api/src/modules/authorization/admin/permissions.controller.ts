@@ -1,25 +1,34 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post } from "@nestjs/common";
-import { ApiBody, ApiOkResponse, ApiTags } from "@nestjs/swagger";
+import { Controller, Delete, Get, HttpStatus, Patch, Post } from "@nestjs/common";
+import { ApiTags } from "@nestjs/swagger";
 import { Throttle } from "@nestjs/throttler";
-import type { Permission } from "@prisma/client";
 
 import { RequirePermission } from "../../auth/decorators/require-permission.decorator";
 import { SkipAuthThrottle } from "../../auth/decorators/skip-auth-throttle.decorator";
-import { apiPath, type CheckPermissionResponse, type PermissionListItem } from "@workspace/shared";
+import {
+	AdminPermissionDetailResponseSchema,
+	AdminPermissionResponseSchema,
+	apiPath,
+	CheckPermissionResponseSchema,
+	PermissionGroupsResponseSchema,
+	PermissionListResponseSchema,
+	RbacMessageResponseSchema,
+	UuidParamSchema,
+	type AdminPermissionDetailResponse,
+	type AdminPermissionResponse,
+	type CheckPermissionResponse,
+	type PermissionGroupsResponse,
+	type PermissionListItem,
+	type PermissionListResponse,
+	type RbacMessageResponse,
+} from "@workspace/shared";
 import { AuthorizationService } from "../services/authorization.service";
-import { ZodValidationPipe } from "../../../common/pipes/zod-validation.pipe";
+import { ZodBody, ZodParam } from "../../../common/decorators/zod-request.decorators";
+import { ZodResponse } from "../../../common/decorators/zod-response.decorators";
 import { Authorize } from "../decorators/authorize.decorator";
 import { CurrentUser, type AuthenticatedUser } from "../decorators/current-user.decorator";
 import { PrivilegeEscalationService } from "../services/privilege-escalation.service";
-import { CreatePermissionDto, GrantPermissionToUserDto, SyncUserPermissionsDto, CheckPermissionDto } from "./dtos/permission.dto";
-
-// ── DTOs (only for PATCH — body is optional-field) ───────────────────────────
-
-interface UpdatePermissionBody {
-	readonly description?: string;
-	readonly group?: string;
-	readonly isSystem?: boolean;
-}
+import { CreatePermissionDto, GrantPermissionToUserDto, SyncUserPermissionsDto, CheckPermissionDto, UpdatePermissionDto } from "./dtos/permission.dto";
+import { toAdminPermissionResponse } from "./mappers/rbac-response.mappers";
 
 // ── Controller ───────────────────────────────────────────────────────────────
 
@@ -34,8 +43,8 @@ export class PermissionsController {
 	@Get()
 	@SkipAuthThrottle()
 	@RequirePermission("LIST", "PERMISSION")
-	@ApiOkResponse({ description: "List of permissions" })
-	public async list(): Promise<{ readonly items: readonly PermissionListItem[]; readonly total: number }> {
+	@ZodResponse(PermissionListResponseSchema, { description: "List of permissions" })
+	public async list(): Promise<PermissionListResponse> {
 		const { items } = await this.authorization.permissions.findAll({ limit: 500 });
 		return {
 			items: items.map((permission): PermissionListItem => ({
@@ -54,43 +63,45 @@ export class PermissionsController {
 	@Throttle({ default: { ttl: 60000, limit: 10 } })
 	@RequirePermission("CREATE", "PERMISSION")
 	@Authorize({ action: "CREATE", resource: "PERMISSION", description: "Create new permission" })
-	@ApiBody({ type: CreatePermissionDto })
-	@ApiOkResponse({ description: "Created permission" })
-	public async create(@Body(new ZodValidationPipe(CreatePermissionDto.schema)) body: CreatePermissionDto): Promise<Permission> {
-		return this.authorization.permissions.create({
+	@ZodResponse(AdminPermissionResponseSchema, { status: HttpStatus.CREATED, description: "Created permission" })
+	public async create(@ZodBody(CreatePermissionDto.schema) body: CreatePermissionDto): Promise<AdminPermissionResponse> {
+		const permission = await this.authorization.permissions.create({
 			action: body.action,
 			resource: body.resource,
 			description: body.description,
 			group: body.group,
 			isSystem: body.isSystem,
 		});
+		return toAdminPermissionResponse(permission);
 	}
 
 	@Get(":id")
 	@RequirePermission("READ", "PERMISSION")
-	@ApiOkResponse({ description: "Permission detail" })
-	public async detail(@Param("id") id: string): Promise<Permission | null> {
-		return this.authorization.permissions.findById(id);
+	@ZodResponse(AdminPermissionDetailResponseSchema, { description: "Permission detail, or `null` when no permission has that id" })
+	public async detail(@ZodParam("id", UuidParamSchema) id: string): Promise<AdminPermissionDetailResponse> {
+		const permission = await this.authorization.permissions.findById(id);
+		return permission === null ? null : toAdminPermissionResponse(permission);
 	}
 
 	@Patch(":id")
 	@Throttle({ default: { ttl: 60000, limit: 10 } })
 	@RequirePermission("UPDATE", "PERMISSION")
 	@Authorize({ action: "UPDATE", resource: "PERMISSION", resourceId: "id", description: "Update permission" })
-	@ApiOkResponse({ description: "Updated permission" })
-	public async update(@Param("id") id: string, @Body() body: UpdatePermissionBody): Promise<Permission> {
-		return this.authorization.permissions.update(id, {
+	@ZodResponse(AdminPermissionResponseSchema, { description: "Updated permission" })
+	public async update(@ZodParam("id", UuidParamSchema) id: string, @ZodBody(UpdatePermissionDto.schema) body: UpdatePermissionDto): Promise<AdminPermissionResponse> {
+		const permission = await this.authorization.permissions.update(id, {
 			...(body.description !== undefined ? { description: body.description } : {}),
 			...(body.group !== undefined ? { group: body.group } : {}),
 			...(body.isSystem !== undefined ? { isSystem: body.isSystem } : {}),
 		});
+		return toAdminPermissionResponse(permission);
 	}
 
 	@Delete(":id")
 	@Throttle({ default: { ttl: 60000, limit: 10 } })
 	@RequirePermission("DELETE", "PERMISSION")
-	@ApiOkResponse({ description: "Permission deleted" })
-	public async remove(@Param("id") id: string): Promise<{ readonly message: string }> {
+	@ZodResponse(RbacMessageResponseSchema, { description: "Permission deleted" })
+	public async remove(@ZodParam("id", UuidParamSchema) id: string): Promise<RbacMessageResponse> {
 		await this.authorization.permissions.remove(id);
 		return { message: "Permission deleted successfully" };
 	}
@@ -98,36 +109,31 @@ export class PermissionsController {
 	@Post(":id/restore")
 	@Throttle({ default: { ttl: 60000, limit: 10 } })
 	@RequirePermission("UPDATE", "PERMISSION")
-	@ApiOkResponse({ description: "Restored permission" })
-	public async restore(@Param("id") id: string): Promise<Permission> {
-		return this.authorization.permissions.restore(id);
+	@ZodResponse(AdminPermissionResponseSchema, { status: HttpStatus.CREATED, description: "Restored permission" })
+	public async restore(@ZodParam("id", UuidParamSchema) id: string): Promise<AdminPermissionResponse> {
+		return toAdminPermissionResponse(await this.authorization.permissions.restore(id));
 	}
 
 	@Get("groups/list")
 	@RequirePermission("LIST", "PERMISSION")
-	@ApiOkResponse({ description: "List of permission groups" })
-	public async listGroups(): Promise<{ readonly groups: readonly string[] }> {
+	@ZodResponse(PermissionGroupsResponseSchema, { description: "List of permission groups" })
+	public async listGroups(): Promise<PermissionGroupsResponse> {
 		const groups = await this.authorization.permissions.listGroups();
 		return { groups };
 	}
 
 	@Post("check")
 	@RequirePermission("READ", "PERMISSION")
-	@ApiBody({ type: CheckPermissionDto })
-	@ApiOkResponse({ description: "Permission check result with grant provenance" })
-	public async checkPermission(@Body(new ZodValidationPipe(CheckPermissionDto.schema)) body: CheckPermissionDto): Promise<CheckPermissionResponse> {
+	@ZodResponse(CheckPermissionResponseSchema, { status: HttpStatus.CREATED, description: "Permission check result with grant provenance" })
+	public async checkPermission(@ZodBody(CheckPermissionDto.schema) body: CheckPermissionDto): Promise<CheckPermissionResponse> {
 		return this.authorization.checkerService.checkPermissionWithGrants(body.userId, body.action, body.resource);
 	}
 
 	@Post("user/grant")
 	@Throttle({ default: { ttl: 60000, limit: 10 } })
 	@RequirePermission("UPDATE", "PERMISSION")
-	@ApiBody({ type: GrantPermissionToUserDto })
-	@ApiOkResponse({ description: "Direct permission granted to user" })
-	public async grantToUser(
-		@CurrentUser() actor: AuthenticatedUser,
-		@Body(new ZodValidationPipe(GrantPermissionToUserDto.schema)) body: GrantPermissionToUserDto,
-	): Promise<{ readonly message: string }> {
+	@ZodResponse(RbacMessageResponseSchema, { status: HttpStatus.CREATED, description: "Direct permission granted to user" })
+	public async grantToUser(@CurrentUser() actor: AuthenticatedUser, @ZodBody(GrantPermissionToUserDto.schema) body: GrantPermissionToUserDto): Promise<RbacMessageResponse> {
 		const effect = body.effect ?? "ALLOW";
 		this.escalation.assertNotSelf(actor, body.userId);
 		// A DENY override only restricts the target; an ALLOW must be a subset of the actor's own grants.
@@ -141,12 +147,11 @@ export class PermissionsController {
 	@Post("user/revoke")
 	@Throttle({ default: { ttl: 60000, limit: 10 } })
 	@RequirePermission("UPDATE", "PERMISSION")
-	@ApiBody({ type: GrantPermissionToUserDto })
-	@ApiOkResponse({ description: "Direct permission revoked from user" })
+	@ZodResponse(RbacMessageResponseSchema, { status: HttpStatus.CREATED, description: "Direct permission revoked from user" })
 	public async revokeFromUser(
 		@CurrentUser() actor: AuthenticatedUser,
-		@Body(new ZodValidationPipe(GrantPermissionToUserDto.schema)) body: GrantPermissionToUserDto,
-	): Promise<{ readonly message: string }> {
+		@ZodBody(GrantPermissionToUserDto.schema) body: GrantPermissionToUserDto,
+	): Promise<RbacMessageResponse> {
 		// Revoking an override can lift a DENY — treat it like granting.
 		this.escalation.assertNotSelf(actor, body.userId);
 		await this.escalation.assertCanGrantPermissions(actor, [body.permissionId]);
@@ -157,12 +162,11 @@ export class PermissionsController {
 	@Post("user/sync")
 	@Throttle({ default: { ttl: 60000, limit: 10 } })
 	@RequirePermission("UPDATE", "PERMISSION")
-	@ApiBody({ type: SyncUserPermissionsDto })
-	@ApiOkResponse({ description: "User permissions synced" })
+	@ZodResponse(RbacMessageResponseSchema, { status: HttpStatus.CREATED, description: "User permissions synced" })
 	public async syncUserPermissions(
 		@CurrentUser() actor: AuthenticatedUser,
-		@Body(new ZodValidationPipe(SyncUserPermissionsDto.schema)) body: SyncUserPermissionsDto,
-	): Promise<{ readonly message: string }> {
+		@ZodBody(SyncUserPermissionsDto.schema) body: SyncUserPermissionsDto,
+	): Promise<RbacMessageResponse> {
 		this.escalation.assertNotSelf(actor, body.userId);
 		await this.escalation.assertCanGrantPermissions(actor, body.permissionIds);
 		await this.authorization.permissions.syncUserPermissions(body.userId, body.permissionIds, actor.id);

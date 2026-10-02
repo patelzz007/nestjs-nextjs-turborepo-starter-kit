@@ -4,7 +4,7 @@ import { MerchantInventoryBar, MerchantRewardStatusBadge } from "@/components/me
 import { MerchantRewardFormFields } from "@/components/rewards/merchant-reward-form-fields";
 import { MerchantCapabilityGate, MerchantReadOnlyNotice } from "@/components/access/merchant-capability-gate";
 import { invalidateMerchantRewardsListCache, upsertMerchantRewardInListCache } from "@/lib/rewards/query-cache";
-import { stubApiMeta, successEnvelope } from "@/lib/api-envelope";
+import { initialDataOption, stubApiMeta, successEnvelope } from "@workspace/client/lib/api/envelope";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@workspace/client/lib/auth";
 import { useAuthorization } from "@workspace/client/lib/auth/can";
@@ -21,7 +21,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@work
 import { toastMessage } from "@workspace/ui/components/feedback/toast";
 import { Button } from "@workspace/ui/components/form/button";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { organizationPath } from "@/lib/org/slug";
+import { orgRoutes } from "@/lib/routes";
 import { ArrowLeft, BarChart3, Loader2, Save } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
@@ -30,7 +30,7 @@ import { useForm, useWatch } from "react-hook-form";
 export interface MerchantEditRewardPageViewProps {
 	readonly orgSlug: string;
 	readonly rewardId: string;
-	readonly initialRewards?: readonly RewardResponse[];
+	readonly initialRewards?: readonly RewardResponse[] | undefined;
 }
 
 function isRewardEditable(status: RewardResponse["status"]): boolean {
@@ -56,7 +56,7 @@ function MerchantEditRewardPageContent({ orgSlug, rewardId, initialRewards }: Me
 	const rewardsQuery = api.organizations.rewards.list.useQuery(
 		{ orgSlug },
 		{
-			initialData: initialQueryData,
+			...initialDataOption(initialQueryData),
 			staleTime: 0,
 			refetchOnMount: "always",
 		},
@@ -85,7 +85,7 @@ function MerchantEditRewardPageContent({ orgSlug, rewardId, initialRewards }: Me
 	const canManageRewards = can(MERCHANT_CAPABILITY.manageRewards);
 	const canEdit = canManageRewards && reward !== undefined && isRewardEditable(reward.status);
 	const canPublish = canManageRewards && reward?.status === "DRAFT";
-	const rewardsPath = organizationPath(orgSlug, "rewards");
+	const rewardsPath = orgRoutes(orgSlug).rewards.list;
 
 	const updateMutation = api.organizations.rewards.update.useMutation({
 		onSuccess: (response): void => {

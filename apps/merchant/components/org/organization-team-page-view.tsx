@@ -1,10 +1,10 @@
 "use client";
 
-import { MerchantAccessDenied, MerchantRoleGate } from "@/components/access/merchant-capability-gate";
+import { MerchantAccessDenied, MerchantCapabilityGate } from "@/components/access/merchant-capability-gate";
 import { MerchantPageHeader } from "@/components/merchant-ui/page-header";
 import { MerchantSurfacePanel } from "@/components/merchant-ui/surface-panel";
 import { resolveActiveOrganizationLocations } from "@/lib/org/location-access";
-import { organizationPath } from "@/lib/org/slug";
+import { orgRoutes } from "@/lib/routes";
 import { resolveAuthErrorMessage } from "@workspace/client/lib/auth/errors";
 import { useAuth } from "@workspace/client/lib/auth";
 import {
@@ -15,6 +15,7 @@ import {
 	type OrganizationMemberInviteResponse,
 	type OrganizationMemberRosterResponse,
 	type OrganizationMembershipRole,
+	MERCHANT_CAPABILITY,
 } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/feedback/badge";
 import { Button } from "@workspace/ui/components/form/button";
@@ -136,19 +137,19 @@ function PendingInviteRow({ invite, locationLabel, disabled, onRevoke }: Pending
 	);
 }
 
-/** Team route — roster, invites, and revocations are OWNER/ADMIN-only on the API (`assertCanManageTeam`). */
+/** Team route — roster, invites, and revocations need `merchant:manage_team` (enforced by the API on every call). */
 export function OrganizationTeamPageView({ orgSlug }: OrganizationTeamPageViewProps): React.JSX.Element {
 	return (
-		<MerchantRoleGate
-			action="manageTeam"
+		<MerchantCapabilityGate
+			capability={MERCHANT_CAPABILITY.manageTeam}
 			fallback={
 				<div className="space-y-8">
 					<MerchantPageHeader title="Team & access" description="Invite colleagues and manage their store access." />
-					<MerchantAccessDenied title="Owner or admin access required" description="Only organization owners and admins can view or manage team members." />
+					<MerchantAccessDenied title="Team access required" description="Your role can't view or manage team members. Contact your store owner if you need access." />
 				</div>
 			}>
 			<OrganizationTeamPageContent orgSlug={orgSlug} />
-		</MerchantRoleGate>
+		</MerchantCapabilityGate>
 	);
 }
 
@@ -393,7 +394,7 @@ function OrganizationTeamPageContent({ orgSlug }: OrganizationTeamPageViewProps)
 						<Button type="submit" disabled={inviteMutation.isPending}>
 							{inviteMutation.isPending ? "Sending invite…" : "Send invitation"}
 						</Button>
-						<Link href={organizationPath(orgSlug, "dashboard")} className="text-sm text-muted-foreground hover:text-foreground">
+						<Link href={orgRoutes(orgSlug).dashboard} className="text-sm text-muted-foreground hover:text-foreground">
 							Back to dashboard
 						</Link>
 					</div>

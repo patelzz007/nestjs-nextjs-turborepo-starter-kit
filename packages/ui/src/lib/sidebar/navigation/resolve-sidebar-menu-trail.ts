@@ -16,8 +16,8 @@ import { FileText, type LucideIcon } from "lucide-react";
 export interface SidebarMenuTrailNode {
 	readonly title: string;
 	readonly url: string;
-	readonly icon?: string;
-	readonly children?: readonly SidebarMenuTrailNode[];
+	readonly icon?: string | undefined;
+	readonly children?: readonly SidebarMenuTrailNode[] | undefined;
 }
 
 export interface SidebarMenuTrailSection {
@@ -30,6 +30,18 @@ export interface SidebarMenuTrailData {
 	readonly bottomItems: readonly SidebarMenuTrailNode[];
 }
 
+/** What an app knows about one of its pages that has no menu entry. */
+export interface SidebarTrailPage {
+	/** Crumb label — e.g. a generic "Reward" for a detail page whose title loads later. Omitted → humanized URL segment. */
+	readonly label?: string | undefined;
+}
+
+/**
+ * Classifies a pathname below the deepest menu match: a page (optionally
+ * labelled) or `null` when no page lives at that URL.
+ */
+export type SidebarTrailPageResolver = (pathname: string) => SidebarTrailPage | null;
+
 export interface ResolveSidebarMenuTrailConfig {
 	readonly menu: SidebarMenuTrailData;
 	readonly pathname: string;
@@ -38,6 +50,21 @@ export interface ResolveSidebarMenuTrailConfig {
 	readonly rootCurrentLabel: string;
 	readonly rootIcon: LucideIcon;
 	readonly unknownFallbackLabel: string;
+	/**
+	 * Prepend the section title as a context crumb (`Platform › Catalog`) for
+	 * items of multi-item sections. Default `true`. Apps whose sections are
+	 * mere groupings of single pages turn it off so the trail starts at the page.
+	 */
+	readonly includeSectionContext?: boolean | undefined;
+	/**
+	 * Describes the app's pages for URL segments past the deepest menu match.
+	 * When given, an intermediate segment that is not a page
+	 * (`/rewardhub/rewards` in `/rewardhub/rewards/42`) produces no crumb, one
+	 * that is a page becomes a linked crumb, and a page's `label` replaces the
+	 * humanized segment. Omitted → every remaining segment becomes an unlinked,
+	 * humanized crumb.
+	 */
+	readonly resolvePage?: SidebarTrailPageResolver | undefined;
 }
 
 function labelFromSegment(segment: string): string {
@@ -95,25 +122,56 @@ function withSectionContext(
 	item: SidebarMenuTrailNode,
 	trail: readonly BreadcrumbItem[],
 	resolveIcon: (iconName: string | undefined) => LucideIcon,
+	includeSectionContext: boolean,
 ): readonly BreadcrumbItem[] {
-	if (!shouldPrependSectionTitle(section, item)) {
+	if (!includeSectionContext || !shouldPrependSectionTitle(section, item)) {
 		return trail;
 	}
 	return [{ label: section.title, icon: resolveIcon(item.icon) }, ...trail];
 }
 
+/**
+ * Crumbs for the segments of `pathname` from index `startIndex` on — the part
+ * of the URL no menu item covers. See `ResolveSidebarMenuTrailConfig.resolvePage`.
+ */
+function segmentCrumbs(pathname: string, startIndex: number, resolvePage: SidebarTrailPageResolver | undefined): readonly BreadcrumbItem[] {
+	const segments = segmentsOfPath(pathname);
+	const crumbs: BreadcrumbItem[] = [];
+	for (let index = startIndex; index < segments.length; index += 1) {
+		const segment = segments[index];
+		if (segment === undefined) {
+			continue;
+		}
+		if (resolvePage === undefined) {
+			crumbs.push({ label: labelFromSegment(segment), icon: FileText });
+			continue;
+		}
+		const path = `/${segments.slice(0, index + 1).join("/")}`;
+		const page = resolvePage(path);
+		const isCurrent = index === segments.length - 1;
+		if (page === null && !isCurrent) {
+			continue;
+		}
+		const label = page?.label ?? labelFromSegment(segment);
+		crumbs.push(isCurrent ? { label, icon: FileText } : { label, href: path, icon: FileText });
+	}
+	return crumbs;
+}
+
 function appendUnresolvedSegments(
 	pathname: string,
-	trail: BreadcrumbItem[],
+	trail: readonly BreadcrumbItem[],
 	flatNodes: readonly SidebarMenuTrailNode[],
 	adapter: NavTreeAdapter<SidebarMenuTrailNode>,
+	resolvePage: SidebarTrailPageResolver | undefined,
 ): readonly BreadcrumbItem[] {
 	const prefixLength = bestSharedSegmentPrefix(pathname, flatNodes, adapter.getUrl);
-	const remaining = segmentsOfPath(pathname).slice(prefixLength);
-	for (const segment of remaining) {
-		trail.push({ label: labelFromSegment(segment), icon: FileText });
-	}
-	return trail;
+	return [...trail, ...segmentCrumbs(pathname, prefixLength, resolvePage)];
+}
+
+/** True when some menu item's URL is `pathname` or one of its ancestors. O(n · d). */
+function hasMenuAncestor(pathname: string, flatNodes: readonly SidebarMenuTrailNode[], adapter: NavTreeAdapter<SidebarMenuTrailNode>): boolean {
+	return flatNodes.some((node) => isPathAncestor(adapter.getUrl(node), pathname));
 }
 
 /**
@@ -132,18 +190,33 @@ export function withTrailTailLabel(trail: readonly BreadcrumbItem[], label: stri
  * Returns crumbs with mandatory icons; the final crumb has no `href`.
  */
 export function resolveSidebarMenuTrail(config: ResolveSidebarMenuTrailConfig): readonly BreadcrumbItem[] {
-	const { menu, pathname, resolveIcon, resolveHref = identitySidebarResolveHref, rootCurrentLabel, rootIcon, unknownFallbackLabel } = config;
+	const {
+		menu,
+		pathname,
+		resolveIcon,
+		resolveHref = identitySidebarResolveHref,
+		rootCurrentLabel,
+		rootIcon,
+		unknownFallbackLabel,
+		includeSectionContext = true,
+		resolvePage,
+	} = config;
 	const normalizedPath = normalizePath(pathname);
 	const snapshot = createSidebarMenuSnapshot(menu);
 	const adapter = createNavAdapter(resolveIcon, resolveHref);
 	const trail: BreadcrumbItem[] = [];
+	// Matching a section on its first URL segment alone is a last resort: when
+	// a real ancestor exists in the menu (e.g. every page of an app sits under
+	// one base segment), an unrelated parent sharing that segment must not
+	// capture the trail.
+	const allowSegmentRootMatch = !hasMenuAncestor(normalizedPath, snapshot.flatNodes, adapter);
 
 	for (const section of menu.sections) {
 		for (const item of section.items) {
 			const icon = resolveIcon(item.icon);
 			const itemHref = adapter.getUrl(item);
 			if (itemHref === normalizedPath) {
-				if (shouldPrependSectionTitle(section, item)) {
+				if (includeSectionContext && shouldPrependSectionTitle(section, item)) {
 					return [
 						{ label: section.title, icon },
 						{ label: item.title, href: itemHref, icon },
@@ -152,20 +225,32 @@ export function resolveSidebarMenuTrail(config: ResolveSidebarMenuTrailConfig): 
 				return [{ label: item.title, icon }];
 			}
 			const children = item.children;
-			if (children !== undefined && (isPathAncestor(itemHref, normalizedPath) || sharesPathSegmentRoot(itemHref, normalizedPath))) {
+			if (children !== undefined && (isPathAncestor(itemHref, normalizedPath) || (allowSegmentRootMatch && sharesPathSegmentRoot(itemHref, normalizedPath)))) {
 				const sectionTrail: BreadcrumbItem[] = [adapter.toLinkedCrumb(item)];
 				if (walkNavTreeForPath(children, normalizedPath, sectionTrail, adapter)) {
-					return appendUnresolvedSegments(normalizedPath, [...withSectionContext(section, item, sectionTrail, resolveIcon)], snapshot.flatNodes, adapter);
+					return appendUnresolvedSegments(
+						normalizedPath,
+						withSectionContext(section, item, sectionTrail, resolveIcon, includeSectionContext),
+						snapshot.flatNodes,
+						adapter,
+						resolvePage,
+					);
 				}
 				if (sharesPathSegmentRoot(itemHref, normalizedPath)) {
-					return appendUnresolvedSegments(normalizedPath, [...withSectionContext(section, item, sectionTrail, resolveIcon)], snapshot.flatNodes, adapter);
+					return appendUnresolvedSegments(
+						normalizedPath,
+						withSectionContext(section, item, sectionTrail, resolveIcon, includeSectionContext),
+						snapshot.flatNodes,
+						adapter,
+						resolvePage,
+					);
 				}
 			}
 		}
 	}
 
 	if (walkNavTreeForPath(menu.bottomItems, normalizedPath, trail, adapter)) {
-		return appendUnresolvedSegments(normalizedPath, trail, snapshot.flatNodes, adapter);
+		return appendUnresolvedSegments(normalizedPath, trail, snapshot.flatNodes, adapter, resolvePage);
 	}
 
 	const segments = segmentsOfPath(normalizedPath);
@@ -173,11 +258,7 @@ export function resolveSidebarMenuTrail(config: ResolveSidebarMenuTrailConfig): 
 		const prefix = `/${segments.slice(0, keep).join("/")}`;
 		const prefixTrail: BreadcrumbItem[] = [];
 		if (walkNavTreeForPath(snapshot.roots, prefix, prefixTrail, adapter, { asParent: true })) {
-			const remaining = segments.slice(keep);
-			for (const segment of remaining) {
-				prefixTrail.push({ label: labelFromSegment(segment), icon: FileText });
-			}
-			return prefixTrail;
+			return [...prefixTrail, ...segmentCrumbs(normalizedPath, keep, resolvePage)];
 		}
 	}
 

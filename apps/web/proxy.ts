@@ -9,7 +9,10 @@
 import { API_BASE_URL } from "@workspace/client/lib/api/config";
 import { decodeJwtPayload } from "@workspace/client/lib/auth/edge/jwt";
 import { getEnrollmentRedirectPath, isEnrollmentAllowedPath, isRestrictedSession } from "@workspace/client/lib/auth/edge/restricted-session";
-import { isWebAuthPath, isWebProtectedPath, isWebPublicExactPath, isWebTokenAuthPath } from "@/lib/auth/routes";
+import { isWebAuthPath, isWebProtectedPath, isWebTokenAuthPath } from "@/lib/auth/routes";
+import { LOGIN_REDIRECT_PARAM, ROUTES } from "@/lib/routes";
+import { clientEnv } from "@/lib/env/env.client";
+import { serverEnv } from "@/lib/env/env.server";
 import {
 	applyRotatedSetCookies,
 	clearAuthCookies,
@@ -21,26 +24,33 @@ import {
 	type AuthCookieClearOptions,
 	type ProxyRefreshResult,
 } from "@workspace/client/lib/auth/edge/proxy-refresh";
+import { NodeEnvSchema } from "@workspace/shared";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 const ACCESS_TOKEN_COOKIE = "accessToken";
 const REFRESH_TOKEN_COOKIE = "refreshToken";
-const CLIENT_ORIGIN: string = process.env.NEXT_PUBLIC_APP_URL ?? process.env.APP_URL ?? "http://localhost:3000";
+const CLIENT_ORIGIN: string = clientEnv.NEXT_PUBLIC_APP_URL;
 const COOKIE_CLEAR_OPTIONS: AuthCookieClearOptions = {
-	domain: process.env.COOKIE_DOMAIN,
+	domain: serverEnv.COOKIE_DOMAIN,
 	path: "/",
-	secure: process.env.NODE_ENV === "production",
+	secure: serverEnv.NODE_ENV === NodeEnvSchema.enum.production,
 	sameSite: "lax",
 };
 
-function getDefaultAuthenticatedPath(): string {
-	return "/rewardhub";
-}
+/** Where a signed-in visitor lands when the login page has no usable `redirect`. */
+const DEFAULT_AUTHENTICATED_PATH: string = ROUTES.rewardHub.browse;
+
+/**
+ * The web app has no always-public exact routes: the guest-browsable pages
+ * (`/`, `/rewards/*`) still refresh an expired session on navigation so a
+ * signed-in member sees their signed-in chrome there.
+ */
+const HAS_PUBLIC_EXACT_ROUTE = false;
 
 function redirectToLogin(request: NextRequest, pathname: string, rotatedCookies: readonly string[]): NextResponse {
-	const loginUrl = new URL("/auth/login", request.url);
-	loginUrl.searchParams.set("redirect", pathname);
+	const loginUrl = new URL(ROUTES.auth.login, request.url);
+	loginUrl.searchParams.set(LOGIN_REDIRECT_PARAM, pathname);
 	return clearCookies(applyRotatedCookies(NextResponse.redirect(loginUrl), rotatedCookies), [ACCESS_TOKEN_COOKIE, REFRESH_TOKEN_COOKIE]);
 }
 
@@ -97,7 +107,6 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
 
 	const isProtectedRoute = isWebProtectedPath(pathname);
 	const isAuthRoute = isWebAuthPath(pathname);
-	const isPublicRoute = isWebPublicExactPath(pathname);
 	const isGuestBrowsable = !isProtectedRoute && !isAuthRoute;
 
 	let rotatedCookies: readonly string[] = [];
@@ -108,7 +117,7 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
 		refreshToken,
 		isDocumentNavigation: isDocumentNavigation(request.headers),
 		isAuthRoute,
-		isPublicRoute,
+		isPublicRoute: HAS_PUBLIC_EXACT_ROUTE,
 		tokenAuthRoute: isWebTokenAuthPath(pathname),
 		accessTokenCookieName: ACCESS_TOKEN_COOKIE,
 		refreshTokenCookieName: REFRESH_TOKEN_COOKIE,
@@ -129,11 +138,6 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
 
 	const isAuthenticated = hasRouteSession(accessToken, refreshToken, effectiveAccessToken);
 
-	// Allow public routes for everyone
-	if (isPublicRoute) {
-		return applyRotatedCookies(NextResponse.next(), rotatedCookies);
-	}
-
 	// If accessing protected route without authentication, redirect to login
 	if (isProtectedRoute && !isAuthenticated) {
 		return redirectToLogin(request, pathname, rotatedCookies);
@@ -149,8 +153,8 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
 	// Login/signup bounce — but token flows (verify email, reset password) must
 	// still run when the user already has a session (common right after signup).
 	if (isAuthRoute && isAuthenticated && !isWebTokenAuthPath(pathname)) {
-		const redirectPath: string | null = request.nextUrl.searchParams.get("redirect");
-		const targetPath: string = redirectPath !== null && (isWebProtectedPath(redirectPath) || redirectPath === "/") ? redirectPath : getDefaultAuthenticatedPath();
+		const redirectPath: string | null = request.nextUrl.searchParams.get(LOGIN_REDIRECT_PARAM);
+		const targetPath: string = redirectPath !== null && (isWebProtectedPath(redirectPath) || redirectPath === ROUTES.home) ? redirectPath : DEFAULT_AUTHENTICATED_PATH;
 
 		return applyRotatedCookies(NextResponse.redirect(new URL(targetPath, request.url)), rotatedCookies);
 	}

@@ -2,7 +2,7 @@
 
 import { WebSidebarNavCollapse } from "@/components/layout/web-sidebar-nav-collapse";
 import { WEB_MENU_ICON_MAP } from "@/lib/navigation/menu-icons";
-import type { CompiledSidebarMenuItem } from "@/lib/navigation/sidebar";
+import type { CompiledSidebarMenuItem } from "@/lib/navigation/sidebar-menu";
 import { SidebarMenuBadge, SidebarMenuItem } from "@workspace/ui/components/navigation/sidebar";
 import { Button } from "@workspace/ui/components/form/button";
 import { highlightText } from "@workspace/ui/lib/core/highlight-text";

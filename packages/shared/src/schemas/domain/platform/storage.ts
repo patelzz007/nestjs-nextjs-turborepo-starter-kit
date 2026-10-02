@@ -125,19 +125,17 @@ export const DEFAULT_DOCUMENT_UPLOAD_POLICY: FileUploadPolicy = toFileUploadPoli
 
 export const MERCHANT_KYB_UPLOAD_POLICY: FileUploadPolicy = DEFAULT_DOCUMENT_UPLOAD_POLICY;
 
-export const FileRecordSchema = z
-	.object({
-		id: z.uuid(),
-		category: FileCategorySchema,
-		visibility: FileVisibilitySchema,
-		originalName: z.string(),
-		mimeType: DocumentMimeTypeSchema,
-		sizeBytes: z.number().int().nonnegative(),
-		status: FileStatusSchema,
-		publicUrl: z.string().nullable(),
-		uploadedAt: EpochMsSchema,
-	})
-	.strict();
+export const FileRecordSchema = z.object({
+	id: z.uuid(),
+	category: FileCategorySchema,
+	visibility: FileVisibilitySchema,
+	originalName: z.string(),
+	mimeType: DocumentMimeTypeSchema,
+	sizeBytes: z.number().int().nonnegative(),
+	status: FileStatusSchema,
+	publicUrl: z.string().nullable(),
+	uploadedAt: EpochMsSchema,
+});
 
 export type FileRecord = z.output<typeof FileRecordSchema>;
 
@@ -217,17 +215,15 @@ export const BrowserUploadTicketHeadersSchema = z.record(z.string(), z.string())
 export type BrowserUploadTicketHeaders = z.output<typeof BrowserUploadTicketHeadersSchema>;
 
 /** API-issued upload ticket consumed by the browser before `/files/:id/complete`. */
-export const BrowserUploadTicketSchema = z
-	.object({
-		fileId: z.uuid(),
-		objectPath: z.string().min(1),
-		expiresIn: z.number().int().positive(),
-		method: BrowserUploadMethodSchema,
-		uploadUrl: z.url(),
-		fields: BrowserUploadTicketFieldsSchema.optional(),
-		headers: BrowserUploadTicketHeadersSchema.optional(),
-	})
-	.strict();
+export const BrowserUploadTicketSchema = z.object({
+	fileId: z.uuid(),
+	objectPath: z.string().min(1),
+	expiresIn: z.number().int().positive(),
+	method: BrowserUploadMethodSchema,
+	uploadUrl: z.url(),
+	fields: BrowserUploadTicketFieldsSchema.optional(),
+	headers: BrowserUploadTicketHeadersSchema.optional(),
+});
 
 export type BrowserUploadTicket = z.output<typeof BrowserUploadTicketSchema>;
 
@@ -243,22 +239,18 @@ export const CompleteFileUploadSchema = z
 
 export type CompleteFileUploadInput = z.output<typeof CompleteFileUploadSchema>;
 
-export const CompleteFileUploadResponseSchema = z
-	.object({
-		file: FileRecordSchema,
-	})
-	.strict();
+export const CompleteFileUploadResponseSchema = z.object({
+	file: FileRecordSchema,
+});
 
 export type CompleteFileUploadResponse = z.output<typeof CompleteFileUploadResponseSchema>;
 
-export const FileDownloadResponseSchema = z
-	.object({
-		fileId: z.uuid(),
-		status: FileStatusSchema,
-		downloadUrl: z.string().nullable(),
-		expiresAt: EpochMsSchema.nullable(),
-	})
-	.strict();
+export const FileDownloadResponseSchema = z.object({
+	fileId: z.uuid(),
+	status: FileStatusSchema,
+	downloadUrl: z.string().nullable(),
+	expiresAt: EpochMsSchema.nullable(),
+});
 
 export type FileDownloadResponse = z.output<typeof FileDownloadResponseSchema>;
 
@@ -279,3 +271,10 @@ export const FileProcessingResultSchema = z
 	.strict();
 
 export type FileProcessingResult = z.output<typeof FileProcessingResultSchema>;
+
+/** `GET /files/:fileId` payload. */
+export const FileDetailResponseSchema = z.object({
+	file: FileRecordSchema,
+});
+
+export type FileDetailResponse = z.output<typeof FileDetailResponseSchema>;

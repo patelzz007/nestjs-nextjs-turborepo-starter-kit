@@ -2,7 +2,24 @@ import type { DeviceType, Plan, Role, Tag, Url, User } from "@prisma/client";
 import * as bcrypt from "bcrypt";
 
 import { prisma } from "./client";
-import { BROWSERS, CITIES, COUNTRIES, DEVICES, OSS, REFERRERS, UTM_MEDIUMS, UTM_SOURCES, cycle, daysAgo, daysFromNow, generateSeedApiKey, rand, randInt } from "./helpers";
+import {
+	BROWSERS,
+	CITIES,
+	COUNTRIES,
+	DEVICES,
+	OSS,
+	REFERRERS,
+	UTM_MEDIUMS,
+	UTM_SOURCES,
+	cycle,
+	daysAgo,
+	daysFromNow,
+	generateSeedApiKey,
+	rand,
+	randInt,
+	randomIpv4,
+} from "./helpers";
+import { seedLog } from "./seed-log";
 
 // Additional Seed Data (20 extra users with URLs, tags, clicks, and API keys)
 export async function generateAdditionalSeedData(roles: Role[], userRole: Role): Promise<User[]> {
@@ -36,7 +53,7 @@ export async function generateAdditionalSeedData(roles: Role[], userRole: Role):
 	const createdUsers: User[] = [];
 	const urlList: Url[] = [];
 	const tagList: Tag[] = [];
-	const apiKeyRows: Array<{
+	const apiKeyRows: {
 		userId: string;
 		name: string;
 		keyHash: string;
@@ -44,9 +61,9 @@ export async function generateAdditionalSeedData(roles: Role[], userRole: Role):
 		scopes: string[];
 		rateLimitTier: string;
 		isActive: boolean;
-		expiresAt?: number;
-	}> = [];
-	const rawKeyLog: Array<{ email: string; rawKey: string }> = [];
+		expiresAt: number | null;
+	}[] = [];
+	const rawKeyLog: { email: string; rawKey: string }[] = [];
 
 	for (const [i, name] of NAMES.entries()) {
 		const email = `user-${String(i + 1).padStart(2, "0")}@example.com`;
@@ -82,16 +99,16 @@ export async function generateAdditionalSeedData(roles: Role[], userRole: Role):
 			data: [
 				{
 					userId: u.id,
-					token: `rt_${u.id}_d_${Date.now()}`,
+					token: `rt_${u.id}_d_${String(Date.now())}`,
 					deviceInfo: "Chrome on Windows",
-					ipAddress: `${randInt(1, 254)}.${randInt(0, 255)}.${randInt(0, 255)}.${randInt(1, 254)}`,
+					ipAddress: randomIpv4(),
 					expiresAt: daysFromNow(7),
 				},
 				{
 					userId: u.id,
-					token: `rt_${u.id}_m_${Date.now() + 1}`,
+					token: `rt_${u.id}_m_${String(Date.now() + 1)}`,
 					deviceInfo: "Safari on iOS",
-					ipAddress: `${randInt(1, 254)}.${randInt(0, 255)}.${randInt(0, 255)}.${randInt(1, 254)}`,
+					ipAddress: randomIpv4(),
 					expiresAt: daysFromNow(30),
 				},
 			],
@@ -103,11 +120,11 @@ export async function generateAdditionalSeedData(roles: Role[], userRole: Role):
 		const userTags: Tag[] = [];
 		for (let t = 0; t < tagNames; t++) {
 			const tag = await prisma.tag.upsert({
-				where: { userId_name: { userId: u.id, name: `tag-${i + 1}-${t}` } },
+				where: { userId_name: { userId: u.id, name: `tag-${String(i + 1)}-${String(t)}` } },
 				update: {},
 				create: {
 					userId: u.id,
-					name: `tag-${i + 1}-${t}`,
+					name: `tag-${String(i + 1)}-${String(t)}`,
 					color: rand(tagColors),
 				},
 			});
@@ -118,19 +135,19 @@ export async function generateAdditionalSeedData(roles: Role[], userRole: Role):
 		// Create 12-18 URLs per user
 		const urlCount = randInt(12, 18);
 		for (let uIdx = 0; uIdx < urlCount; uIdx++) {
-			const shortCode = `usr${i + 1}-${uIdx}`;
+			const shortCode = `usr${String(i + 1)}-${String(uIdx)}`;
 			const url = await prisma.url.upsert({
 				where: { shortCode },
 				update: {},
 				create: {
 					userId: u.id,
 					shortCode,
-					originalUrl: `https://example.com/user-${i + 1}/${uIdx}`,
-					title: `User ${i + 1} — URL ${uIdx + 1}`,
+					originalUrl: `https://example.com/user-${String(i + 1)}/${String(uIdx)}`,
+					title: `User ${String(i + 1)} — URL ${String(uIdx + 1)}`,
 					redirectType: "TEMPORARY",
 					isActive: true,
 					clickCount: randInt(0, 500),
-					expiresAt: Math.random() > 0.8 ? daysFromNow(randInt(30, 90)) : undefined,
+					expiresAt: Math.random() > 0.8 ? daysFromNow(randInt(30, 90)) : null,
 				},
 			});
 			urlList.push(url);
@@ -160,14 +177,15 @@ export async function generateAdditionalSeedData(roles: Role[], userRole: Role):
 			const tier = k < 5 ? baseTier : cycle(allTiers, k);
 			const active = k < 12 ? isActive : false; // last few are inactive
 			const hasExpiry = k >= 10 && k < 14;
+			const firstName = fullName.split(" ")[0] ?? fullName;
 			const name =
 				k % 4 === 0
-					? `${fullName.split(" ")[0]} — API Key ${k + 1}`
+					? `${firstName} — API Key ${String(k + 1)}`
 					: k % 4 === 1
-						? `${fullName.split(" ")[0]} — Read-Only ${k + 1}`
+						? `${firstName} — Read-Only ${String(k + 1)}`
 						: k % 4 === 2
-							? `${fullName.split(" ")[0]} — Full Access ${k + 1}`
-							: `${fullName.split(" ")[0]} — Dev Key ${k + 1}`;
+							? `${firstName} — Full Access ${String(k + 1)}`
+							: `${firstName} — Dev Key ${String(k + 1)}`;
 			apiKeyRows.push({
 				userId: u.id,
 				name,
@@ -176,7 +194,7 @@ export async function generateAdditionalSeedData(roles: Role[], userRole: Role):
 				scopes,
 				rateLimitTier: tier,
 				isActive: active,
-				expiresAt: hasExpiry ? daysFromNow(randInt(15, 90)) : undefined,
+				expiresAt: hasExpiry ? daysFromNow(randInt(15, 90)) : null,
 			});
 			rawKeyLog.push({ email, rawKey });
 		}
@@ -190,19 +208,19 @@ export async function generateAdditionalSeedData(roles: Role[], userRole: Role):
 	// ── Create 50 anonymous URLs (userId: null) for extra pagination data ─
 	const ANONYMOUS_URL_COUNT = 50;
 	for (let a = 0; a < ANONYMOUS_URL_COUNT; a++) {
-		const shortCode = `anon-bulk-${a}`;
+		const shortCode = `anon-bulk-${String(a)}`;
 		const anonymousUrl = await prisma.url.upsert({
 			where: { shortCode },
 			update: {},
 			create: {
 				userId: null,
 				shortCode,
-				originalUrl: `https://example.com/anonymous/${a}`,
-				title: Math.random() > 0.3 ? `Anonymous Page ${a + 1}` : null,
+				originalUrl: `https://example.com/anonymous/${String(a)}`,
+				title: Math.random() > 0.3 ? `Anonymous Page ${String(a + 1)}` : null,
 				redirectType: Math.random() > 0.5 ? "PERMANENT" : "TEMPORARY",
 				isActive: true,
 				clickCount: randInt(0, 300),
-				expiresAt: Math.random() > 0.85 ? daysFromNow(randInt(30, 180)) : undefined,
+				expiresAt: Math.random() > 0.85 ? daysFromNow(randInt(30, 180)) : null,
 			},
 		});
 		urlList.push(anonymousUrl);
@@ -210,7 +228,7 @@ export async function generateAdditionalSeedData(roles: Role[], userRole: Role):
 
 	// Create clicks for the new URLs
 	if (urlList.length > 0) {
-		const clickRows: Array<{
+		const clickRows: {
 			urlId: string;
 			ipAddress: string;
 			country: string;
@@ -223,16 +241,14 @@ export async function generateAdditionalSeedData(roles: Role[], userRole: Role):
 			utmMedium: string | null;
 			utmCampaign: string | null;
 			clickedAt: number;
-		}> = [];
-
-		const ip = () => `${randInt(1, 254)}.${randInt(0, 255)}.${randInt(0, 255)}.${randInt(1, 254)}`;
+		}[] = [];
 
 		for (const url of urlList) {
 			const extraClicks = randInt(5, 20);
 			for (let c = 0; c < extraClicks; c++) {
 				clickRows.push({
 					urlId: url.id,
-					ipAddress: ip(),
+					ipAddress: randomIpv4(),
 					country: rand(COUNTRIES),
 					city: rand(CITIES),
 					deviceType: rand(DEVICES),
@@ -255,11 +271,11 @@ export async function generateAdditionalSeedData(roles: Role[], userRole: Role):
 	}
 
 	// Log generated API keys
-	console.log("");
-	console.log("  📋 Additional API Keys:");
-	console.log("  ────────────────────────────────────────────────────────");
+	seedLog("");
+	seedLog("  📋 Additional API Keys:");
+	seedLog("  ────────────────────────────────────────────────────────");
 	for (const entry of rawKeyLog) {
-		console.log(`  ${entry.email.padEnd(35)} ${entry.rawKey}`);
+		seedLog(`  ${entry.email.padEnd(35)} ${entry.rawKey}`);
 	}
 
 	return createdUsers;

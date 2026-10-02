@@ -20,7 +20,7 @@ export function membershipFixture(role: OrganizationMembershipRole): Organizatio
 
 export interface AuthorizationFixture {
 	/** Active membership role; `undefined` means no membership (every check denies). */
-	readonly role?: OrganizationMembershipRole;
+	readonly role?: OrganizationMembershipRole | undefined;
 	readonly isLoading?: boolean;
 }
 
@@ -28,7 +28,7 @@ export interface AuthorizationFixture {
 export function renderWithAuthorization(ui: React.ReactElement, { role, isLoading = false }: AuthorizationFixture = {}): RenderResult {
 	const membership = role === undefined ? undefined : membershipFixture(role);
 	return render(
-		<MerchantAuthorizationStateProvider isLoading={isLoading} membershipRole={role} capabilities={resolveMerchantCapabilities(membership)}>
+		<MerchantAuthorizationStateProvider isLoading={isLoading} capabilities={resolveMerchantCapabilities(membership)}>
 			{ui}
 		</MerchantAuthorizationStateProvider>,
 	);

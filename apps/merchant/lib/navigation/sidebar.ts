@@ -3,9 +3,9 @@ import { z } from "zod";
 export interface SidebarMenuItemNode {
 	readonly title: string;
 	readonly url: string;
-	readonly icon?: string;
-	readonly disabled?: boolean;
-	readonly children?: readonly SidebarMenuItemNode[];
+	readonly icon?: string | undefined;
+	readonly disabled?: boolean | undefined;
+	readonly children?: readonly SidebarMenuItemNode[] | undefined;
 }
 
 export const SidebarMenuItemSchema: z.ZodType<SidebarMenuItemNode> = z.lazy(() =>
@@ -64,9 +64,9 @@ export interface CompiledSidebarMenuItemNode {
 	readonly id: string;
 	readonly title: string;
 	readonly url: string;
-	readonly icon?: string;
-	readonly disabled?: boolean;
-	readonly children?: readonly CompiledSidebarMenuItemNode[];
+	readonly icon?: string | undefined;
+	readonly disabled?: boolean | undefined;
+	readonly children?: readonly CompiledSidebarMenuItemNode[] | undefined;
 }
 
 export type CompiledSidebarMenuItem = z.output<typeof CompiledSidebarMenuItemSchema>;

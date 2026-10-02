@@ -1,21 +1,23 @@
 import { z } from "zod";
 
 import { DataValueSchema } from "../../api/common";
-import { PaginationSchema } from "../../api/pagination";
-import { GeoCursorSchema, GeoDateTimeFieldSchema, GeoIdSchema, GeoIdsSchema, GeoIncludeSchema } from "./geo-shared";
+import { defineListQuery, listFilter, ListSearchSchema } from "../../api/list-query";
+import { GEO_LIST_DEFAULT_LIMIT, GeoDateTimeFieldSchema, GeoIdSchema, GeoIncludeSchema } from "./geo-shared";
 
-export const SubregionSchema = z
-	.object({
-		id: GeoIdSchema,
-		name: z.string(),
-		translations: DataValueSchema.nullable(),
-		wikiDataId: z.string().nullable(),
-		flag: z.boolean(),
-		regionId: GeoIdSchema,
-		createdAt: GeoDateTimeFieldSchema,
-		updatedAt: GeoDateTimeFieldSchema,
-	})
-	.strict();
+/**
+ * Subregion response DTO. Open (not `.strict()`): the response interceptor strips
+ * unknown keys instead of failing, so adding a column never breaks a client.
+ */
+export const SubregionSchema = z.object({
+	id: GeoIdSchema,
+	name: z.string(),
+	translations: DataValueSchema.nullable(),
+	wikiDataId: z.string().nullable(),
+	flag: z.boolean(),
+	regionId: GeoIdSchema,
+	createdAt: GeoDateTimeFieldSchema,
+	updatedAt: GeoDateTimeFieldSchema,
+});
 
 export type Subregion = z.output<typeof SubregionSchema>;
 
@@ -44,14 +46,18 @@ export const UpdateSubregionSchema = z
 
 export type UpdateSubregionInput = z.output<typeof UpdateSubregionSchema>;
 
-export const SubregionListQuerySchema = PaginationSchema.extend({
-	search: z.string().optional(),
-	regionId: z.coerce.number().int().nonnegative().optional(),
-	flag: z.coerce.boolean().optional(),
-	ids: GeoIdsSchema,
-	sort: z.string().optional(),
-	cursor: GeoCursorSchema,
-	include: GeoIncludeSchema,
-}).strict();
-
+/** `GET /geo/subregions` list query — see docs/list-queries.md. */
+export const subregionListQuery = defineListQuery({
+	sortable: ["id", "name"],
+	defaultSort: [{ field: "id", direction: "asc" }],
+	filter: {
+		id: listFilter.number({ eq: true, in: true }),
+		regionId: listFilter.number({ eq: true, in: true }),
+		flag: listFilter.boolean({ eq: true }),
+	},
+	params: { search: ListSearchSchema, include: GeoIncludeSchema },
+	defaultLimit: GEO_LIST_DEFAULT_LIMIT,
+});
+export const SubregionListQuerySchema = subregionListQuery.schema;
 export type SubregionListQuery = z.output<typeof SubregionListQuerySchema>;
+export type SubregionListSortField = (typeof subregionListQuery.sortable)[number];

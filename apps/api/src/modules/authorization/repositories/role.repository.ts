@@ -4,6 +4,7 @@ import type { Prisma, Role } from "@prisma/client";
 import { nowEpochMs, type PaginationInput } from "@workspace/shared";
 
 import { BaseRepository } from "../../../platform/persistence/base.repository";
+import type { ListOrder } from "../../../platform/persistence/list-query/list-order";
 import { PrismaService } from "../../../prisma/prisma.service";
 
 import type { CreateRoleInput, UpdateRoleInput } from "../services/role.service";
@@ -39,10 +40,9 @@ const RoleRepositoryPorts = {
 	toCreateInput,
 	toUpdateInput,
 	buildListWhere: (): Prisma.RoleWhereInput => ({ isDeleted: false }),
-	buildListOrderBy: (): Prisma.RoleOrderByWithRelationInput => ({ name: "asc" }),
-	buildListCursorOrderBy: (): Prisma.RoleOrderByWithRelationInput => ({ id: "asc" }),
-	mergeListCursor: (where: Prisma.RoleWhereInput, cursorId: string): Prisma.RoleWhereInput => ({ ...where, id: { gt: cursorId } }),
-	readListCursorId: (row: Role): string => row.id,
+	// Internal catalog read (no HTTP list query): name order, offset pages only.
+	buildListOrder: (): ListOrder<Prisma.RoleOrderByWithRelationInput> => ({ orderBy: [{ name: "asc" }, { id: "asc" }], isDefault: true }),
+	andWhere: (left: Prisma.RoleWhereInput, right: Prisma.RoleWhereInput): Prisma.RoleWhereInput => ({ AND: [left, right] }),
 	buildFindByIdWhere: (id: string): Prisma.RoleWhereInput => ({ id, isDeleted: false }),
 	buildUpdateWhere: (id: string): Prisma.RoleWhereUniqueInput => ({ id }),
 	stampUpdate: (data: Prisma.RoleUpdateInput): Prisma.RoleUpdateInput => ({ ...data, updatedAt: nowEpochMs() }),

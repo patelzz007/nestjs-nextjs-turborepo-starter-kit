@@ -68,6 +68,7 @@ function stripDarkMediaBlock(html: string): string {
 		result = result.slice(0, idx) + result.slice(j + 1);
 		idx = result.indexOf(marker);
 	}
+	return result;
 }
 
 const entries: readonly EmailTemplateEntry[] = Object.values(EMAIL_TEMPLATE_REGISTRY);

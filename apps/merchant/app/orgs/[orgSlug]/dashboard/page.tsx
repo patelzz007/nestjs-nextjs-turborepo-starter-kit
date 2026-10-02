@@ -1,6 +1,7 @@
 import { OrgDashboardPageView } from "@/components/org/org-dashboard-page-view";
 import { OrgSlugBootstrap } from "@/components/org/org-slug-bootstrap";
 import { loadMerchantServerContext } from "@/lib/merchant-server-api";
+import { guardOrgPage } from "@/lib/org/org-page-guard";
 import { resolveOrganizationTenantFromUrlSegment } from "@/lib/org/resolve-slug";
 import type { OrganizationContextResponse } from "@workspace/shared";
 
@@ -12,6 +13,10 @@ export const dynamic = "force-dynamic";
 
 export default async function OrgDashboardPage({ params }: OrgDashboardPageProps): Promise<React.JSX.Element> {
 	const { orgSlug } = await params;
+	const denied = await guardOrgPage(orgSlug, "/dashboard");
+	if (denied !== null) {
+		return denied;
+	}
 	const ctx = await loadMerchantServerContext();
 	const resolvedTenant = resolveOrganizationTenantFromUrlSegment(ctx.memberships, orgSlug);
 	const contextRouteKey = resolvedTenant?.slug ?? orgSlug;

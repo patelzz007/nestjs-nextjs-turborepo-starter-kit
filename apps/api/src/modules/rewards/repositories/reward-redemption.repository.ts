@@ -1,9 +1,11 @@
 import { Injectable } from "@nestjs/common";
 import type { Prisma, RewardRedemption } from "@prisma/client";
 
-import type { MerchantRedemptionListQuery } from "@workspace/shared";
+import { merchantRedemptionListQuery, type MerchantRedemptionListQuery, type MerchantRedemptionListSortField } from "@workspace/shared";
 
-import { fetchStringIdListPage } from "../../../platform/persistence/cursor-list";
+import { fetchListPage } from "../../../platform/persistence/list-page";
+import { timestampIdKeyset, type ListKeyset } from "../../../platform/persistence/list-query/keyset-cursor";
+import { buildListOrder, type ListOrder, type SortColumns } from "../../../platform/persistence/list-query/list-order";
 import type { RepositoryListResult } from "../../../platform/persistence/types";
 import { PrismaService } from "../../../prisma/prisma.service";
 
@@ -12,6 +14,35 @@ const REDEMPTION_LIST_INCLUDE = {
 } satisfies Prisma.RewardRedemptionInclude;
 
 export type RewardRedemptionListRow = Prisma.RewardRedemptionGetPayload<{ include: typeof REDEMPTION_LIST_INCLUDE }>;
+
+// ── List query → Prisma (explicit field → column mapping; see docs/list-queries.md) ──
+
+const REDEMPTION_SORT_COLUMNS: SortColumns<MerchantRedemptionListSortField, Prisma.RewardRedemptionOrderByWithRelationInput> = {
+	redeemedAt: (direction) => ({ redeemedAt: direction }),
+};
+
+/** Keyset for the default order (`redeemedAt desc, id desc`). */
+const REDEMPTION_LIST_KEYSET: ListKeyset<RewardRedemptionListRow, Prisma.RewardRedemptionWhereInput> = timestampIdKeyset(
+	(row: RewardRedemptionListRow) => ({ at: Number(row.redeemedAt), id: row.id }),
+	({ at, id }): Prisma.RewardRedemptionWhereInput => ({ OR: [{ redeemedAt: { lt: at } }, { redeemedAt: at, id: { lt: id } }] }),
+);
+
+/**
+ * The organization's live redemptions, optionally narrowed to ONE store.
+ * Both are authorization scopes resolved by the service (never raw client input).
+ */
+export function buildRedemptionListWhere(organizationId: string, locationId: string | undefined): Prisma.RewardRedemptionWhereInput {
+	return {
+		AND: [{ organizationId, isDeleted: false, claim: { isDeleted: false, reward: { isDeleted: false } } }, ...(locationId !== undefined ? [{ locationId }] : [])],
+	};
+}
+
+export function buildRedemptionListOrder(query: MerchantRedemptionListQuery): ListOrder<Prisma.RewardRedemptionOrderByWithRelationInput> {
+	return buildListOrder(merchantRedemptionListQuery.resolveSort(query.sort), {
+		columns: REDEMPTION_SORT_COLUMNS,
+		tieBreaker: (direction) => ({ id: direction }),
+	});
+}
 
 @Injectable()
 export class RewardRedemptionRepository {
@@ -27,23 +58,19 @@ export class RewardRedemptionRepository {
 		return this.prisma.rewardRedemption.findUnique({ where: { id: redemptionId } });
 	}
 
-	public async listForMerchant(organizationId: string, query: MerchantRedemptionListQuery): Promise<RepositoryListResult<RewardRedemptionListRow>> {
-		const where: Prisma.RewardRedemptionWhereInput = {
-			organizationId,
-			isDeleted: false,
-			claim: { isDeleted: false, reward: { isDeleted: false } },
-			...(query.locationId !== undefined ? { locationId: query.locationId } : {}),
-		};
-		return fetchStringIdListPage(query, {
-			where,
-			mergeCursor: (baseWhere, cursorId) => ({ ...baseWhere, id: { gt: cursorId } }),
-			readId: (row) => row.id,
-			findMany: (args): Promise<RewardRedemptionListRow[]> =>
-				this.prisma.rewardRedemption.findMany({
-					...args,
-					include: REDEMPTION_LIST_INCLUDE,
-				}),
-			count: (listWhere) => this.prisma.rewardRedemption.count({ where: listWhere }),
+	/** `locationId` is the AUTHORIZED store scope (already checked against the member's stores), or `undefined` for every store. */
+	public async listForMerchant(
+		organizationId: string,
+		locationId: string | undefined,
+		query: MerchantRedemptionListQuery,
+	): Promise<RepositoryListResult<RewardRedemptionListRow>> {
+		return fetchListPage(query, {
+			where: buildRedemptionListWhere(organizationId, locationId),
+			order: buildRedemptionListOrder(query),
+			keyset: REDEMPTION_LIST_KEYSET,
+			and: (left, right) => ({ AND: [left, right] }),
+			count: (where) => this.prisma.rewardRedemption.count({ where }),
+			findMany: (args): Promise<RewardRedemptionListRow[]> => this.prisma.rewardRedemption.findMany({ ...args, include: REDEMPTION_LIST_INCLUDE }),
 		});
 	}
 
@@ -68,6 +95,8 @@ export class RewardRedemptionRepository {
 		readonly claimId: string;
 		readonly rewardId: string;
 		readonly organizationId: string;
+		/** The store the POS call came from; `null` when unknown. */
+		readonly locationId: string | null;
 		readonly userId: string;
 		readonly terminalId: string;
 		readonly redemptionMethod: "SCAN" | "MANUAL";
@@ -97,6 +126,7 @@ export class RewardRedemptionRepository {
 				data: {
 					claimId: input.claimId,
 					organizationId: input.organizationId,
+					locationId: input.locationId,
 					userId: input.userId,
 					terminalId: input.terminalId,
 					redemptionMethod: input.redemptionMethod,

@@ -12,15 +12,8 @@
 -- ============================================================================
 
 -- ── 1. app_runtime role ────────────────────────────────────────────────────
-
-DO $$
-BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'app_runtime') THEN
-    CREATE ROLE app_runtime NOLOGIN NOSUPERUSER NOINHERIT NOBYPASSRLS;
-  END IF;
-END $$;
-
-GRANT app_runtime TO CURRENT_USER;
+-- Created (and granted to the migrating user) in prisma/rls/00-app-helpers.sql,
+-- which is applied first — see RLS_APPLY_ORDER.
 
 GRANT USAGE ON SCHEMA public TO app_runtime;
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO app_runtime;
@@ -72,6 +65,8 @@ BEGIN
     'email_logs',
     'outbox_events',
     'analytics_events',
+    'inbox_processed_events',
+    'inbox_dead_letters',
     'platform_resource_audit_logs',
     'platform_resource_idempotency_records'
   ]
@@ -371,6 +366,7 @@ BEGIN
     'rewards',
     'reward_claims',
     'reward_redemptions',
+    'reward_sales',
     'reward_referrals',
     'reward_otp_challenges',
     'reward_legal_acceptances',
@@ -512,6 +508,20 @@ CREATE POLICY reward_redemptions_access ON public.reward_redemptions
     OR app_rls_bypass()
   );
 
+-- A paid POS bill: visible to the customer and to the merchant's members (same shape as reward_redemptions).
+DROP POLICY IF EXISTS reward_sales_access ON public.reward_sales;
+CREATE POLICY reward_sales_access ON public.reward_sales
+  USING (
+    app_owns(user_id)
+    OR app_tenant_org_member(organization_id)
+    OR app_rls_bypass()
+  )
+  WITH CHECK (
+    app_owns(user_id)
+    OR app_tenant_org_member(organization_id)
+    OR app_rls_bypass()
+  );
+
 DROP POLICY IF EXISTS reward_referrals_parties ON public.reward_referrals;
 CREATE POLICY reward_referrals_parties ON public.reward_referrals
   USING (
@@ -560,8 +570,33 @@ CREATE POLICY outbox_events_bypass ON public.outbox_events
   USING (app_rls_bypass())
   WITH CHECK (app_rls_bypass());
 
+-- Transactional outbox (docs/adr/015-transactional-outbox-and-inbox.md): an
+-- event row is written in the SAME transaction as the domain change it
+-- describes, and that transaction runs under the caller's (usually
+-- user/tenant-scoped, non-bypass) RLS session. This policy lets any app
+-- session APPEND a fresh PENDING row — nothing more: no SELECT (so no
+-- INSERT … RETURNING; the producer assigns the id), no UPDATE/DELETE, and no
+-- pre-published / pre-failed / pre-attempted rows. Reading and advancing rows
+-- stays bypass-only (the dispatcher runs as the `outbox.publish` system op).
+DROP POLICY IF EXISTS outbox_events_append ON public.outbox_events;
+CREATE POLICY outbox_events_append ON public.outbox_events
+  FOR INSERT
+  WITH CHECK (status = 'PENDING' AND attempts = 0 AND published_at IS NULL AND last_error IS NULL);
+
 DROP POLICY IF EXISTS analytics_events_bypass ON public.analytics_events;
 CREATE POLICY analytics_events_bypass ON public.analytics_events
+  USING (app_rls_bypass())
+  WITH CHECK (app_rls_bypass());
+
+-- Consumer inbox ledger + parked poison messages — written by Kafka consumers
+-- (apps/analytics-consumer) inside a bypass session; never user-visible.
+DROP POLICY IF EXISTS inbox_processed_events_bypass ON public.inbox_processed_events;
+CREATE POLICY inbox_processed_events_bypass ON public.inbox_processed_events
+  USING (app_rls_bypass())
+  WITH CHECK (app_rls_bypass());
+
+DROP POLICY IF EXISTS inbox_dead_letters_bypass ON public.inbox_dead_letters;
+CREATE POLICY inbox_dead_letters_bypass ON public.inbox_dead_letters
   USING (app_rls_bypass())
   WITH CHECK (app_rls_bypass());
 

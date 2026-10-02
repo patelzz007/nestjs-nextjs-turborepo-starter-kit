@@ -1,15 +1,22 @@
-import { Body, Controller, Param, Post } from "@nestjs/common";
-import { ApiOkResponse, ApiTags } from "@nestjs/swagger";
+import { Controller, HttpStatus, Post } from "@nestjs/common";
+import { ApiTags } from "@nestjs/swagger";
 import {
 	apiPath,
 	CreatePolicyDraftSchema,
+	PolicyDraftCreatedResponseSchema,
 	PolicyPublishRequestSchema,
+	PolicyPublishResponseSchema,
+	PolicySimulationResultSchema,
+	UuidParamSchema,
 	type CreatePolicyDraftInput,
+	type PolicyDraftCreatedResponse,
 	type PolicyPublishRequestInput,
+	type PolicyPublishResponse,
 	type PolicySimulationResult,
 } from "@workspace/shared";
 
-import { ZodValidationPipe } from "../../../common/pipes/zod-validation.pipe";
+import { ZodBody, ZodParam } from "../../../common/decorators/zod-request.decorators";
+import { ZodResponse } from "../../../common/decorators/zod-response.decorators";
 import { GetUser } from "../../auth/decorators/get-user.decorator";
 import { RequirePermission } from "../../auth/decorators/require-permission.decorator";
 import type { AccessTokenPayload } from "../../auth/services/token.service";
@@ -22,28 +29,22 @@ export class PolicyControlPlaneController {
 
 	@Post("drafts")
 	@RequirePermission("MANAGE", "SYSTEM_SETTINGS")
-	@ApiOkResponse({ description: "Policy draft created" })
-	public async createDraft(
-		@GetUser() user: AccessTokenPayload,
-		@Body(new ZodValidationPipe(CreatePolicyDraftSchema)) body: CreatePolicyDraftInput,
-	): Promise<{ draftId: string }> {
+	@ZodResponse(PolicyDraftCreatedResponseSchema, { status: HttpStatus.CREATED, description: "Policy draft created" })
+	public async createDraft(@GetUser() user: AccessTokenPayload, @ZodBody(CreatePolicyDraftSchema) body: CreatePolicyDraftInput): Promise<PolicyDraftCreatedResponse> {
 		return this.policies.createDraft(user.sub, null, body);
 	}
 
 	@Post("drafts/:draftId/simulate")
 	@RequirePermission("MANAGE", "SYSTEM_SETTINGS")
-	@ApiOkResponse({ description: "Policy simulation result" })
-	public async simulate(@GetUser() user: AccessTokenPayload, @Param("draftId") draftId: string): Promise<PolicySimulationResult> {
+	@ZodResponse(PolicySimulationResultSchema, { status: HttpStatus.CREATED, description: "Policy simulation result" })
+	public async simulate(@GetUser() user: AccessTokenPayload, @ZodParam("draftId", UuidParamSchema) draftId: string): Promise<PolicySimulationResult> {
 		return this.policies.simulate(draftId, user.sub);
 	}
 
 	@Post("publish")
 	@RequirePermission("MANAGE", "SYSTEM_SETTINGS")
-	@ApiOkResponse({ description: "Published policy version" })
-	public async publish(
-		@GetUser() user: AccessTokenPayload,
-		@Body(new ZodValidationPipe(PolicyPublishRequestSchema)) body: PolicyPublishRequestInput,
-	): Promise<{ version: number }> {
+	@ZodResponse(PolicyPublishResponseSchema, { status: HttpStatus.CREATED, description: "Published policy version" })
+	public async publish(@GetUser() user: AccessTokenPayload, @ZodBody(PolicyPublishRequestSchema) body: PolicyPublishRequestInput): Promise<PolicyPublishResponse> {
 		return this.policies.publish(body.draftId, user.sub);
 	}
 }

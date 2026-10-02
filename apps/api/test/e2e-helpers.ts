@@ -1,8 +1,11 @@
+import { randomInt } from "node:crypto";
+
 import { FastifyAdapter, type NestFastifyApplication } from "@nestjs/platform-fastify";
 import fastifyCookie from "@fastify/cookie";
 import { Test, type TestingModule } from "@nestjs/testing";
 import { Pool } from "pg";
-import { API_VERSION_PREFIX, MUTATION_INTENT_HEADER, MUTATION_INTENT_VALUE } from "@workspace/shared";
+import { API_VERSION_PREFIX, MUTATION_INTENT_HEADER, MUTATION_INTENT_VALUE, ApiSuccessResponseSchema, type ApiResponseMeta } from "@workspace/shared";
+import { type z } from "zod";
 
 import { AppModule } from "../src/app.module";
 import { HealthService } from "../src/modules/health/health.service";
@@ -12,15 +15,53 @@ export interface LoginResult {
 	readonly refreshToken: string;
 }
 
+/** The resolved result of `app.inject({...})` (light-my-request response). */
+export type InjectResponse = Awaited<ReturnType<NestFastifyApplication["inject"]>>;
+
+/** A success envelope whose `data` has been validated against a known schema. */
+export interface ParsedSuccessEnvelope<Data> {
+	readonly success: true;
+	readonly data: Data;
+	readonly meta: ApiResponseMeta;
+}
+
+/**
+ * Parses an injected response body as the standard success envelope
+ * (`{ success: true, data, meta }`) with `data` validated by `dataSchema`.
+ * Throws (failing the test) when the body does not match the contract, so
+ * assertions only ever run against a typed, validated value.
+ */
+export function parseSuccessEnvelope<DataSchema extends z.ZodType>(response: InjectResponse, dataSchema: DataSchema): ParsedSuccessEnvelope<z.output<DataSchema>> {
+	const envelope = ApiSuccessResponseSchema.parse(response.json());
+	return { success: envelope.success, data: dataSchema.parse(envelope.data), meta: envelope.meta };
+}
+
 const CLIENT_ORIGIN = "http://localhost:3000";
 
-let nextClientIpSuffix = 1;
+/** Synthetic client addresses come from 198.18.0.0/15 (RFC 2544 benchmarking space). */
+const SYNTHETIC_IP_FIRST_OCTET = 198;
+const SYNTHETIC_IP_SECOND_OCTET_BASE = 18;
+/** Values one IPv4 octet can take. */
+const OCTET_VALUES = 256;
+/** Addresses available in 198.18.0.0/15 — two /16 blocks. */
+const SYNTHETIC_IP_POOL_SIZE = 2 * OCTET_VALUES * OCTET_VALUES;
 
-/** Distinct synthetic IPs so auth throttler buckets do not collide across e2e logins. */
+/**
+ * Random per-file start: every e2e file gets a fresh copy of this module, and
+ * the auth throttler buckets live in Redis across files AND across runs (60 s
+ * window), so a fixed start made every file's first login share one bucket and
+ * hit 429 once enough files logged in.
+ */
+let nextClientIpIndex: number = randomInt(SYNTHETIC_IP_POOL_SIZE);
+
+/** Distinct synthetic IPs so auth throttler buckets do not collide across e2e logins, files or runs. */
 export function uniqueClientIp(): string {
-	const suffix = nextClientIpSuffix;
-	nextClientIpSuffix += 1;
-	return `203.0.113.${String((suffix % 250) + 1)}`;
+	const index: number = nextClientIpIndex % SYNTHETIC_IP_POOL_SIZE;
+	nextClientIpIndex += 1;
+	const block: number = Math.floor(index / (OCTET_VALUES * OCTET_VALUES));
+	const third: number = Math.floor(index / OCTET_VALUES) % OCTET_VALUES;
+	const fourth: number = index % OCTET_VALUES;
+	return `${String(SYNTHETIC_IP_FIRST_OCTET)}.${String(SYNTHETIC_IP_SECOND_OCTET_BASE + block)}.${String(third)}.${String(fourth)}`;
 }
 
 /** Removes stale TEAM_MEMBER invites so invite e2e tests are repeatable (uses RLS bypass). */
@@ -61,6 +102,9 @@ export function extractCookie(setCookieHeader: string | string[] | undefined, na
 	const headers: readonly string[] = Array.isArray(setCookieHeader) ? setCookieHeader : [setCookieHeader];
 	for (const header of headers) {
 		const [pair] = header.split(";");
+		if (pair === undefined) {
+			continue;
+		}
 		const [cookieName, value] = pair.split("=", 2);
 		if (cookieName === name && value !== undefined) {
 			return value;

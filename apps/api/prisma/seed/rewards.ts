@@ -6,6 +6,7 @@ import * as bcrypt from "bcrypt";
 import { cleanupOrganizationSeedData, ORGANIZATION_SEED_IDS, SEED_TEAM_INVITE_TOKEN_KL_ALICE, seedOrganizationsAndMerchants } from "./organizations";
 import { prisma } from "./client";
 import { deterministicUuid } from "./deterministic-uuid";
+import { seedLog } from "./seed-log";
 
 /** Fixed seed UUIDs for idempotent re-seeds. */
 export const REWARD_SEED_IDS = Object.freeze({
@@ -143,6 +144,8 @@ export async function cleanupRewardSeedData(): Promise<void> {
 	await prisma.rewardLegalAcceptance.deleteMany();
 	await prisma.rewardOtpChallenge.deleteMany();
 	await prisma.rewardRedemption.deleteMany();
+	// After redemptions: they reference their sale (ON DELETE RESTRICT).
+	await prisma.rewardSale.deleteMany();
 	await prisma.rewardClaim.deleteMany();
 	await prisma.rewardReferral.deleteMany();
 	await prisma.rewardLocationScope.deleteMany();
@@ -725,8 +728,8 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 			data: {
 				userId: consumer.id,
 				rewardId: REWARD_SEED_IDS.klRewardPublished,
-				redemptionTokenHash: sha256Hex(`seed_qr_bulk_kl_${consumer.id}_${index}`),
-				backupCodeHash: sha256Hex(`seed_backup_bulk_${consumer.id}_${index}`),
+				redemptionTokenHash: sha256Hex(`seed_qr_bulk_kl_${consumer.id}_${String(index)}`),
+				backupCodeHash: sha256Hex(`seed_backup_bulk_${consumer.id}_${String(index)}`),
 				status: isRedeemed ? "REDEEMED" : "PENDING",
 				claimedAt: msDaysAgo(index + 1),
 				claimExpiresAt: msFromNow(6 - index),
@@ -891,7 +894,7 @@ export async function seedRewards(adminUser: User, consumerUsers: User[]): Promi
 }
 
 export function printRewardSeedCredentials(): void {
-	console.log(`
+	seedLog(`
 🎁 Rewards platform seed credentials
 ──────────────────────────────────────────────
 Merchant owners

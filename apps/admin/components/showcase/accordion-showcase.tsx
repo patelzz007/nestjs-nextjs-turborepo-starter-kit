@@ -121,8 +121,15 @@ export function AccordionShowcase({ faqItems, statusItems, reorderItems, variant
 				<CardContent>
 					<Accordion multiple defaultValue={["status-db"]}>
 						{statusItems.map((item) => (
-							<AccordionItem key={item.value} value={item.value} disabled={item.disabled} lazy={item.lazy}>
-								<AccordionTrigger status={item.status} count={item.count} shortcut={item.shortcut}>
+							<AccordionItem
+								key={item.value}
+								value={item.value}
+								{...(item.disabled !== undefined ? { disabled: item.disabled } : {})}
+								{...(item.lazy !== undefined ? { lazy: item.lazy } : {})}>
+								<AccordionTrigger
+									{...(item.status !== undefined ? { status: item.status } : {})}
+									{...(item.count !== undefined ? { count: item.count } : {})}
+									{...(item.shortcut !== undefined ? { shortcut: item.shortcut } : {})}>
 									{item.title}
 								</AccordionTrigger>
 								<AccordionContent>{item.body}</AccordionContent>

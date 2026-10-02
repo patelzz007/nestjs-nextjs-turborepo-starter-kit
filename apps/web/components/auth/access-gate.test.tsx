@@ -9,7 +9,7 @@ import { WebSessionTestProvider, type WebSessionState } from "@/components/auth/
 import { GUEST_SESSION_STATE, signedInSession } from "@/test-support/session";
 
 vi.mock("next/navigation", () => ({
-	usePathname: (): string => "/rewardhub/claims",
+	usePathname: (): string => "/rewardhub/wallet",
 }));
 
 afterEach(() => {
@@ -32,7 +32,7 @@ describe("AccessGate", () => {
 
 		expect(screen.queryByText("gated-content")).toBeNull();
 		expect(screen.getByText("Sign in to see your rewards.")).toBeDefined();
-		expect(screen.getByRole("link", { name: "Sign in" }).getAttribute("href")).toBe("/auth/login?redirect=%2Frewardhub%2Fclaims");
+		expect(screen.getByRole("link", { name: "Sign in" }).getAttribute("href")).toBe("/auth/login?redirect=%2Frewardhub%2Fwallet");
 	});
 
 	it("uses an explicit returnTo and sign-in copy when given", () => {

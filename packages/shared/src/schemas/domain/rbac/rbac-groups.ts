@@ -34,58 +34,48 @@ export const RenameGroupSchema = z
 export type RenameGroupInput = z.output<typeof RenameGroupSchema>;
 
 /** Slim role reference (id + name only). */
-const RoleRefSchema = z
-	.object({
-		id: z.string(),
-		name: z.string(),
-	})
-	.strict();
+const RoleRefSchema = z.object({
+	id: z.string(),
+	name: z.string(),
+});
 
 /** A permission's assigned roles and user count. */
-const PermissionAssignmentSchema = z
-	.object({
-		id: z.string(),
-		action: PermissionActionSchema,
-		resource: PermissionResourceSchema,
-		description: z.string().nullable(),
-		isSystem: z.boolean(),
-		conditions: z.nullable(z.record(z.string(), z.union([z.string(), z.number(), z.boolean(), z.null()]))),
-		roles: z.array(RoleRefSchema),
-		directUsers: z.number(),
-	})
-	.strict();
+const PermissionAssignmentSchema = z.object({
+	id: z.string(),
+	action: PermissionActionSchema,
+	resource: PermissionResourceSchema,
+	description: z.string().nullable(),
+	isSystem: z.boolean(),
+	conditions: z.nullable(z.record(z.string(), z.union([z.string(), z.number(), z.boolean(), z.null()]))),
+	roles: z.array(RoleRefSchema),
+	directUsers: z.number(),
+});
 
 /** Group listing entry. */
-export const GroupListEntrySchema = z
-	.object({
-		group: z.string(),
-		permissionCount: z.number(),
-		resources: z.array(z.string()),
-	})
-	.strict();
+export const GroupListEntrySchema = z.object({
+	group: z.string(),
+	permissionCount: z.number(),
+	resources: z.array(z.string()),
+});
 
 export type GroupListEntry = z.output<typeof GroupListEntrySchema>;
 
 /** Group permissions result. */
-export const GroupPermissionsResponseSchema = z
-	.object({
-		group: z.string(),
-		permissionCount: z.number(),
-		permissions: z.array(PermissionAssignmentSchema),
-	})
-	.strict();
+export const GroupPermissionsResponseSchema = z.object({
+	group: z.string(),
+	permissionCount: z.number(),
+	permissions: z.array(PermissionAssignmentSchema),
+});
 
 export type GroupPermissionsResponse = z.output<typeof GroupPermissionsResponseSchema>;
 
 /** Group operation result (create, rename, delete, assign). */
-export const GroupOperationResponseSchema = z
-	.object({
-		group: z.string().optional(),
-		affectedPermissions: z.number().optional(),
-		assignedCount: z.number().optional(),
-		message: z.string(),
-	})
-	.strict();
+export const GroupOperationResponseSchema = z.object({
+	group: z.string().optional(),
+	affectedPermissions: z.number().optional(),
+	assignedCount: z.number().optional(),
+	message: z.string(),
+});
 
 export type GroupOperationResponse = z.output<typeof GroupOperationResponseSchema>;
 

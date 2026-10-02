@@ -1,7 +1,7 @@
 "use client";
 
-import { resolveAuthErrorMessage } from "@workspace/client/lib/auth/errors";
-import { useAuth } from "@workspace/client/lib/auth";
+import { resolveAuthErrorMessage } from "../errors";
+import { useAuth } from "../index";
 import { Button } from "@workspace/ui/components/form/button";
 import { Label } from "@workspace/ui/components/form/label";
 import { Textarea } from "@workspace/ui/components/form/textarea";

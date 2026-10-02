@@ -54,8 +54,8 @@ export function readRouteParam(context: ExecutionContext, paramName: string): st
 	if (!Object.hasOwn(parsed.data, paramName)) {
 		return null;
 	}
-	const value = parsed.data[paramName];
-	return value.length === 0 ? null : value;
+	const value: string | undefined = parsed.data[paramName];
+	return value === undefined || value.length === 0 ? null : value;
 }
 
 /**

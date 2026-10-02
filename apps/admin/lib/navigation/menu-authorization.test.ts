@@ -1,15 +1,23 @@
+import { createGrantedCapabilities, isCapabilityGranted } from "@workspace/client/lib/auth/permission-check";
 import { PERMISSION, type CapabilitySlug } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 
 import { filterCompiledSidebarMenu } from "@/lib/navigation/filter-menu-by-capabilities";
 import { ADMIN_MENU_AUTHORIZATION, applyMenuAuthorization } from "@/lib/navigation/menu-authorization";
-import { ADMIN_ROUTE_AUTHORIZATION, filterSuperAdminOnlyMenu } from "@/lib/navigation/route-authorization";
+import { ADMIN_ROUTE_AUTHORIZATION, filterMenuByRouteAccess, type RouteAccessSession } from "@/lib/navigation/route-authorization";
 import type { SidebarMenuData } from "@/lib/navigation/sidebar";
 import { SIDEBAR_MENU } from "@/lib/navigation/sidebar-menu";
 import { buildSearchableItems } from "@/lib/palette/search";
 
+function routeSession(capabilities: readonly CapabilitySlug[], isSuperAdmin: boolean): RouteAccessSession {
+	const granted = createGrantedCapabilities(capabilities);
+	return { isGranted: (permission: CapabilitySlug): boolean => isCapabilityGranted(granted, permission), enabledFeatureFlags: [], isSuperAdmin };
+}
+
 function visibleItems(capabilities: readonly CapabilitySlug[], isSuperAdmin: boolean): ReturnType<typeof buildSearchableItems> {
-	return buildSearchableItems(filterSuperAdminOnlyMenu(filterCompiledSidebarMenu(SIDEBAR_MENU, capabilities), ADMIN_ROUTE_AUTHORIZATION, isSuperAdmin));
+	return buildSearchableItems(
+		filterMenuByRouteAccess(filterCompiledSidebarMenu(SIDEBAR_MENU, capabilities), ADMIN_ROUTE_AUTHORIZATION, routeSession(capabilities, isSuperAdmin)),
+	);
 }
 
 function visibleUrls(capabilities: readonly CapabilitySlug[], isSuperAdmin = false): readonly string[] {
@@ -27,8 +35,8 @@ describe("applyMenuAuthorization", () => {
 			{
 				title: "Main",
 				items: [
-					{ title: "Geo", url: "/geo" },
-					{ title: "Parent", url: "/p", children: [{ title: "Products", url: "/product" }] },
+					{ title: "Geography", url: "/geography" },
+					{ title: "Parent", url: "/p", children: [{ title: "Products", url: "/catalog/products" }] },
 				],
 			},
 		],
@@ -48,24 +56,50 @@ describe("applyMenuAuthorization", () => {
 describe("admin sidebar authorization", () => {
 	it("hides permissioned pages from a session without capabilities", () => {
 		const urls = visibleUrls([]);
-		for (const url of ["/geo", "/emails", "/email-log", "/settings/access", "/product", "/sample-category", "/rewardhub/merchants", "/rewardhub/kyb", "/rewardhub/invites"]) {
+		for (const url of [
+			"/geography",
+			"/emails/templates",
+			"/emails/log",
+			"/settings/access",
+			"/catalog/products",
+			"/catalog/categories",
+			"/merchants",
+			"/merchants/invites",
+			"/merchants/verification",
+			"/merchants/store-requests",
+			"/rewards/review",
+		]) {
 			expect(urls).not.toContain(url);
 		}
-		// "/rewardhub/pending" is also the Reward Hub group's URL, so assert on the item title.
-		expect(visibleTitles([])).not.toContain("Pending rewards");
-		expect(visibleTitles([PERMISSION.REWARD.MANAGE])).toContain("Pending rewards");
-		expect(urls).toContain("/settings/general");
+		// Structural section parents disappear when none of their children survive.
+		for (const url of ["/emails", "/rewards", "/catalog"]) {
+			expect(urls).not.toContain(url);
+		}
+		expect(visibleTitles([])).not.toContain("Review");
+		expect(visibleTitles([PERMISSION.REWARD.MANAGE])).toContain("Review");
+		expect(urls).toContain("/settings/billing");
+		expect(urls).toContain("/account/profile");
+		expect(urls).toContain("/account/security");
 	});
 
 	it("shows each page once its API permission is granted (MANAGE implies LIST)", () => {
 		const urls = visibleUrls([PERMISSION.GEO.READ, PERMISSION.EMAIL.LIST, PERMISSION.MERCHANT_ORG.MANAGE, PERMISSION.PRODUCT.LIST]);
-		expect(urls).toContain("/geo");
-		expect(urls).toContain("/email-log");
-		expect(urls).toContain("/rewardhub/merchants");
-		expect(urls).toContain("/rewardhub/kyb");
-		expect(urls).toContain("/rewardhub/invites");
-		expect(urls).toContain("/product");
-		expect(urls).not.toContain("/emails");
+		expect(urls).toContain("/geography");
+		expect(urls).toContain("/emails/log");
+		expect(urls).toContain("/merchants");
+		expect(urls).toContain("/merchants/verification");
+		expect(urls).toContain("/merchants/invites");
+		expect(urls).toContain("/merchants/store-requests");
+		expect(urls).toContain("/catalog/products");
+		expect(urls).not.toContain("/catalog/categories");
+		expect(urls).not.toContain("/emails/templates");
+	});
+
+	it("keeps a structural section visible through one granted child", () => {
+		const urls = visibleUrls([PERMISSION.EMAIL.LIST]);
+		expect(urls).toContain("/emails");
+		expect(urls).toContain("/emails/log");
+		expect(urls).not.toContain("/emails/templates");
 	});
 
 	it("shows access control for any of its three permissions", () => {
@@ -74,9 +108,9 @@ describe("admin sidebar authorization", () => {
 	});
 
 	it("hides super-admin-only pages unless the session is a super admin", () => {
-		expect(visibleUrls([PERMISSION.USER.MANAGE])).not.toContain("/users/all");
-		expect(visibleUrls([PERMISSION.MERCHANT_ORG.LIST])).not.toContain("/rewardhub/users");
-		expect(visibleUrls([], true)).toContain("/users/all");
-		expect(visibleUrls([PERMISSION.MERCHANT_ORG.LIST], true)).toContain("/rewardhub/users");
+		expect(visibleUrls([PERMISSION.USER.MANAGE])).not.toContain("/users");
+		expect(visibleUrls([PERMISSION.USER.MANAGE])).not.toContain("/users/mfa-recovery");
+		expect(visibleUrls([], true)).toContain("/users");
+		expect(visibleUrls([], true)).toContain("/users/mfa-recovery");
 	});
 });

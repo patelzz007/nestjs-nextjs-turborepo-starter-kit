@@ -1,50 +1,20 @@
-"use client";
+import { OrganizationSettingsIndexView } from "@/components/org/organization-settings-index-view";
+import { guardOrgPage } from "@/lib/org/org-page-guard";
+import * as React from "react";
 
-import { useMerchantRoleAccess } from "@/components/access/merchant-authorization-provider";
-import { EmailVerificationGateDialog } from "@/components/email-verification-gate-dialog";
-import { organizationPath } from "@/lib/org/slug";
-import { SecuritySettingsPanel } from "@workspace/client/lib/auth/mfa/security-settings-panel";
-import { AnalyticsPageHeader } from "@workspace/ui/components/display/analytics-page-header";
-import { Button } from "@workspace/ui/components/form/button";
-import Link from "next/link";
-import { useParams } from "next/navigation";
-import type { JSX } from "react";
+export const dynamic = "force-dynamic";
 
-/** Merchant account security settings — email verification, password, and 2FA. */
-export default function MerchantSettingsPage(): JSX.Element {
-	const params = useParams();
-	const orgSlug = typeof params.orgSlug === "string" ? params.orgSlug : "";
-	const canSubmitKyb = useMerchantRoleAccess("submitKyb");
+interface OrganizationSettingsPageProps {
+	readonly params: Promise<{ orgSlug: string }>;
+}
 
-	return (
-		<div className="space-y-8">
-			<EmailVerificationGateDialog />
-			<AnalyticsPageHeader title="Account settings" description="Verify your email, manage your password, and configure two-factor authentication." />
-			<div className="rounded-xl border bg-card p-4">
-				<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-					<div className="space-y-1">
-						<p className="font-medium">Store locations</p>
-						<p className="text-sm text-muted-foreground">View every store site under this organization and your location access scope.</p>
-					</div>
-					<Button variant="outline" className="shrink-0" nativeButton={false} render={<Link href={organizationPath(orgSlug, "settings/locations")} />}>
-						View locations
-					</Button>
-				</div>
-			</div>
-			{canSubmitKyb ? (
-				<div className="rounded-xl border bg-card p-4">
-					<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-						<div className="space-y-1">
-							<p className="font-medium">Business verification (KYB)</p>
-							<p className="text-sm text-muted-foreground">Review your KYB submission and update details or documents while verification is pending.</p>
-						</div>
-						<Button variant="outline" className="shrink-0" nativeButton={false} render={<Link href={organizationPath(orgSlug, "settings/verification")} />}>
-							View verification
-						</Button>
-					</div>
-				</div>
-			) : null}
-			<SecuritySettingsPanel />
-		</div>
-	);
+/** Organization settings section index — links to team, locations, and business verification. */
+export default async function OrganizationSettingsPage({ params }: OrganizationSettingsPageProps): Promise<React.JSX.Element> {
+	const { orgSlug } = await params;
+	const denied = await guardOrgPage(orgSlug, "/settings");
+	if (denied !== null) {
+		return denied;
+	}
+
+	return <OrganizationSettingsIndexView orgSlug={orgSlug} />;
 }

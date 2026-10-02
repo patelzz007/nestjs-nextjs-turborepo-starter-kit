@@ -1,18 +1,26 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from "@nestjs/common";
-import { ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
+import { Controller, Delete, Get, HttpStatus, Patch, Post } from "@nestjs/common";
+import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import type { z } from "zod";
 
 import {
 	apiPath,
+	BulkCreateProductResponseSchema,
 	BulkCreateProductSchema,
 	BulkDeleteIdsSchema,
+	BulkDeleteResultSchema,
+	DeleteSuccessDataSchema,
 	CreateProductSchema,
 	ProductIdParamSchema,
 	ProductListQuerySchema,
+	ProductSchema,
+	type DeleteSuccessData,
+	type ProductListQuery,
 	UpdateProductSchema,
 } from "@workspace/shared";
 
-import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe";
+import { ZodBody, ZodListQuery, ZodParams } from "../../common/decorators/zod-request.decorators";
+import { ZodPaginatedResponse, ZodResponse } from "../../common/decorators/zod-response.decorators";
+import { Idempotent } from "../../platform/idempotency/idempotent.decorator";
 import { RequirePermission } from "../auth/decorators/require-permission.decorator";
 
 import { ProductService } from "./product.service";
@@ -25,52 +33,51 @@ export class ProductController {
 	@RequirePermission("LIST", "PRODUCT")
 	@Get()
 	@ApiOperation({ summary: "List Products" })
-	@ApiOkResponse({ description: "Paginated list of products" })
-	public list(@Query(new ZodValidationPipe(ProductListQuerySchema)) query: z.output<typeof ProductListQuerySchema>): ReturnType<ProductService["list"]> {
+	@ZodPaginatedResponse(ProductSchema, { description: "Paginated list of products" })
+	public list(@ZodListQuery(ProductListQuerySchema) query: ProductListQuery): ReturnType<ProductService["list"]> {
 		return this.service.list(query);
 	}
 
 	@RequirePermission("CREATE", "PRODUCT")
 	@Post("bulk")
 	@ApiOperation({ summary: "Bulk create products" })
-	@ApiOkResponse({ description: "Created products" })
-	public bulkCreate(
-		@Body(new ZodValidationPipe(BulkCreateProductSchema)) body: { items: z.output<typeof BulkCreateProductSchema>["items"] },
-	): ReturnType<ProductService["createMany"]> {
+	@ZodResponse(BulkCreateProductResponseSchema, { status: HttpStatus.CREATED, description: "Created products" })
+	public bulkCreate(@ZodBody(BulkCreateProductSchema) body: { items: z.output<typeof BulkCreateProductSchema>["items"] }): ReturnType<ProductService["createMany"]> {
 		return this.service.createMany(body.items);
 	}
 
 	@RequirePermission("DELETE", "PRODUCT")
 	@Post("bulk-delete")
 	@ApiOperation({ summary: "Bulk soft delete products" })
-	@ApiOkResponse({ description: "Bulk delete result" })
-	public bulkDelete(@Body(new ZodValidationPipe(BulkDeleteIdsSchema)) body: { ids: string[] }): ReturnType<ProductService["deleteMany"]> {
+	@ZodResponse(BulkDeleteResultSchema, { status: HttpStatus.CREATED, description: "Bulk delete result" })
+	public bulkDelete(@ZodBody(BulkDeleteIdsSchema) body: { ids: string[] }): ReturnType<ProductService["deleteMany"]> {
 		return this.service.deleteMany(body.ids);
 	}
 
 	@RequirePermission("READ", "PRODUCT")
 	@Get(":id")
 	@ApiOperation({ summary: "Get Product by id" })
-	@ApiOkResponse({ description: "Product detail" })
-	public get(@Param(new ZodValidationPipe(ProductIdParamSchema)) params: { id: string }): ReturnType<ProductService["getById"]> {
+	@ZodResponse(ProductSchema, { description: "Product detail" })
+	public get(@ZodParams(ProductIdParamSchema) params: { id: string }): ReturnType<ProductService["getById"]> {
 		return this.service.getById(params.id);
 	}
 
 	@RequirePermission("CREATE", "PRODUCT")
+	@Idempotent()
 	@Post()
-	@ApiOperation({ summary: "Create Product" })
-	@ApiOkResponse({ description: "Created product" })
-	public create(@Body(new ZodValidationPipe(CreateProductSchema)) body: z.output<typeof CreateProductSchema>): ReturnType<ProductService["create"]> {
+	@ApiOperation({ summary: "Create Product (send an Idempotency-Key header to make retries safe)" })
+	@ZodResponse(ProductSchema, { status: HttpStatus.CREATED, description: "Created product" })
+	public create(@ZodBody(CreateProductSchema) body: z.output<typeof CreateProductSchema>): ReturnType<ProductService["create"]> {
 		return this.service.create(body);
 	}
 
 	@RequirePermission("UPDATE", "PRODUCT")
 	@Patch(":id")
 	@ApiOperation({ summary: "Update Product" })
-	@ApiOkResponse({ description: "Updated product" })
+	@ZodResponse(ProductSchema, { description: "Updated product" })
 	public update(
-		@Param(new ZodValidationPipe(ProductIdParamSchema)) params: { id: string },
-		@Body(new ZodValidationPipe(UpdateProductSchema)) body: z.output<typeof UpdateProductSchema>,
+		@ZodParams(ProductIdParamSchema) params: { id: string },
+		@ZodBody(UpdateProductSchema) body: z.output<typeof UpdateProductSchema>,
 	): ReturnType<ProductService["update"]> {
 		return this.service.update(params.id, body);
 	}
@@ -78,8 +85,8 @@ export class ProductController {
 	@RequirePermission("DELETE", "PRODUCT")
 	@Delete(":id")
 	@ApiOperation({ summary: "Soft delete Product" })
-	@ApiOkResponse({ description: "Product deleted" })
-	public async delete(@Param(new ZodValidationPipe(ProductIdParamSchema)) params: { id: string }): Promise<{ success: true }> {
+	@ZodResponse(DeleteSuccessDataSchema, { description: "Product deleted" })
+	public async delete(@ZodParams(ProductIdParamSchema) params: { id: string }): Promise<DeleteSuccessData> {
 		await this.service.delete(params.id);
 		return { success: true };
 	}
@@ -87,8 +94,8 @@ export class ProductController {
 	@RequirePermission("UPDATE", "PRODUCT")
 	@Post(":id/restore")
 	@ApiOperation({ summary: "Restore Product" })
-	@ApiOkResponse({ description: "Restored product" })
-	public restore(@Param(new ZodValidationPipe(ProductIdParamSchema)) params: { id: string }): ReturnType<ProductService["restore"]> {
+	@ZodResponse(ProductSchema, { status: HttpStatus.CREATED, description: "Restored product" })
+	public restore(@ZodParams(ProductIdParamSchema) params: { id: string }): ReturnType<ProductService["restore"]> {
 		return this.service.restore(params.id);
 	}
 }

@@ -34,6 +34,11 @@ export interface LoginFormProps {
 	 * (the admin panel's privilege gate). @default mode === "admin"
 	 */
 	readonly requireAdminAccess?: boolean;
+	/**
+	 * Where "Forgot password?" leads; `null` hides the link (an app without
+	 * a password-reset flow, e.g. merchant). @default APP_LINKS.auth.forgotPassword
+	 */
+	readonly forgotPasswordHref?: string | null;
 }
 
 export interface SocialProvider {

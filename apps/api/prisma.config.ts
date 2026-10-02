@@ -14,7 +14,6 @@ if (databaseUrl === undefined || databaseUrl.length === 0) {
 }
 
 export default defineConfig({
-	earlyAccess: true,
 	schema: resolve(import.meta.dirname, "prisma/schema.prisma"),
 	migrations: {
 		path: resolve(import.meta.dirname, "prisma/migrations"),

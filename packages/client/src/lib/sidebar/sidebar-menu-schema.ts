@@ -42,11 +42,11 @@ export type SidebarAuthorization = z.output<typeof SidebarAuthorizationSchema>;
 export interface SidebarMenuItemNode {
 	readonly title: string;
 	readonly url: string;
-	readonly icon?: string;
-	readonly disabled?: boolean;
-	readonly authorization?: SidebarAuthorization;
-	readonly featureFlag?: string;
-	readonly children?: readonly SidebarMenuItemNode[];
+	readonly icon?: string | undefined;
+	readonly disabled?: boolean | undefined;
+	readonly authorization?: SidebarAuthorization | undefined;
+	readonly featureFlag?: string | undefined;
+	readonly children?: readonly SidebarMenuItemNode[] | undefined;
 }
 
 export const SidebarMenuItemSchema: z.ZodType<SidebarMenuItemNode> = z.lazy(() =>
@@ -108,11 +108,11 @@ export interface CompiledSidebarMenuItemNode {
 	readonly id: string;
 	readonly title: string;
 	readonly url: string;
-	readonly icon?: string;
-	readonly disabled?: boolean;
-	readonly authorization?: SidebarAuthorization;
-	readonly featureFlag?: string;
-	readonly children?: readonly CompiledSidebarMenuItemNode[];
+	readonly icon?: string | undefined;
+	readonly disabled?: boolean | undefined;
+	readonly authorization?: SidebarAuthorization | undefined;
+	readonly featureFlag?: string | undefined;
+	readonly children?: readonly CompiledSidebarMenuItemNode[] | undefined;
 }
 
 export const CompiledSidebarMenuItemSchema: z.ZodType<CompiledSidebarMenuItemNode> = z.lazy(() =>

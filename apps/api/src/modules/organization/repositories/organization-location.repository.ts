@@ -1,5 +1,12 @@
 import { Injectable } from "@nestjs/common";
 import type { OrganizationLocation, OrganizationLocationStatus, PilotCity, Prisma, PrismaClient } from "@prisma/client";
+import { adminLocationRequestListQuery, type AdminLocationRequestListQuery, type AdminLocationRequestListSortField } from "@workspace/shared";
+
+import { fetchListPage } from "../../../platform/persistence/list-page";
+import { timestampIdKeyset, type ListKeyset } from "../../../platform/persistence/list-query/keyset-cursor";
+import { buildListOrder, type ListOrder, type SortColumns } from "../../../platform/persistence/list-query/list-order";
+import { fieldWhere, toPrismaEqualityFilter } from "../../../platform/persistence/list-query/prisma-filter";
+import type { RepositoryListResult } from "../../../platform/persistence/types";
 import { PrismaService } from "../../../prisma/prisma.service";
 import { allocateUniqueLocationCode } from "../utils/organization-location-code.util";
 import { syncStoreForLocation } from "../utils/store-sync.util";
@@ -17,6 +24,33 @@ const ADMIN_LOCATION_REQUEST_INCLUDE = {
 } satisfies Prisma.OrganizationLocationInclude;
 
 export type AdminLocationRequestRow = Prisma.OrganizationLocationGetPayload<{ include: typeof ADMIN_LOCATION_REQUEST_INCLUDE }>;
+
+// ── Admin location-request list query → Prisma (see docs/list-queries.md) ──
+
+const ADMIN_LOCATION_REQUEST_SORT_COLUMNS: SortColumns<AdminLocationRequestListSortField, Prisma.OrganizationLocationOrderByWithRelationInput> = {
+	createdAt: (direction) => ({ createdAt: direction }),
+	name: (direction) => ({ name: direction }),
+};
+
+/** Keyset for the default order (`createdAt asc, id asc` — oldest request first). */
+const ADMIN_LOCATION_REQUEST_LIST_KEYSET: ListKeyset<AdminLocationRequestRow, Prisma.OrganizationLocationWhereInput> = timestampIdKeyset(
+	(row: AdminLocationRequestRow) => ({ at: Number(row.createdAt), id: row.id }),
+	({ at, id }): Prisma.OrganizationLocationWhereInput => ({ OR: [{ createdAt: { gt: at } }, { createdAt: at, id: { gt: id } }] }),
+);
+
+/** Live, non-primary locations (store requests) + the filter AST. */
+export function buildAdminLocationRequestListWhere(query: AdminLocationRequestListQuery): Prisma.OrganizationLocationWhereInput {
+	return {
+		AND: [{ isDeleted: false, isPrimary: false }, ...fieldWhere(toPrismaEqualityFilter(query.filter?.status), (status) => ({ status }))],
+	};
+}
+
+export function buildAdminLocationRequestListOrder(query: AdminLocationRequestListQuery): ListOrder<Prisma.OrganizationLocationOrderByWithRelationInput> {
+	return buildListOrder(adminLocationRequestListQuery.resolveSort(query.sort), {
+		columns: ADMIN_LOCATION_REQUEST_SORT_COLUMNS,
+		tieBreaker: (direction) => ({ id: direction }),
+	});
+}
 
 export interface CreateOrganizationLocationData {
 	readonly organizationId: string;
@@ -72,29 +106,15 @@ export class OrganizationLocationRepository {
 		return rows.map((row) => row.id);
 	}
 
-	public async listAdminRequests(status: OrganizationLocationStatus, skip: number, take: number): Promise<AdminLocationRequestRow[]> {
-		return this.prisma.organizationLocation.findMany({
-			where: { isDeleted: false, status, isPrimary: false },
-			orderBy: { createdAt: "asc" },
-			skip,
-			take,
-			include: ADMIN_LOCATION_REQUEST_INCLUDE,
-		});
-	}
-
-	public async listAdminRequestsInTx(tx: DbTx, status: OrganizationLocationStatus, skip: number, take: number): Promise<AdminLocationRequestRow[]> {
-		return tx.organizationLocation.findMany({
-			where: { isDeleted: false, status, isPrimary: false },
-			orderBy: { createdAt: "asc" },
-			skip,
-			take,
-			include: ADMIN_LOCATION_REQUEST_INCLUDE,
-		});
-	}
-
-	public async countAdminRequests(status: OrganizationLocationStatus): Promise<number> {
-		return this.prisma.organizationLocation.count({
-			where: { isDeleted: false, status, isPrimary: false },
+	/** One page of the admin location-request queue, read inside the caller's (system-operation) transaction. */
+	public async listAdminRequestsInTx(tx: DbTx, query: AdminLocationRequestListQuery): Promise<RepositoryListResult<AdminLocationRequestRow>> {
+		return fetchListPage(query, {
+			where: buildAdminLocationRequestListWhere(query),
+			order: buildAdminLocationRequestListOrder(query),
+			keyset: ADMIN_LOCATION_REQUEST_LIST_KEYSET,
+			and: (left, right) => ({ AND: [left, right] }),
+			count: (where) => tx.organizationLocation.count({ where }),
+			findMany: (args): Promise<AdminLocationRequestRow[]> => tx.organizationLocation.findMany({ ...args, include: ADMIN_LOCATION_REQUEST_INCLUDE }),
 		});
 	}
 

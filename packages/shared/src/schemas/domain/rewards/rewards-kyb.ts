@@ -20,41 +20,25 @@ export const MERCHANT_KYB_MAX_DOCUMENT_BYTES = MERCHANT_KYB_UPLOAD_POLICY.maxByt
 /** Maximum number of KYB documents per submission. */
 export const MERCHANT_KYB_MAX_DOCUMENT_COUNT = MERCHANT_KYB_UPLOAD_POLICY.maxCount;
 
-/** Legacy inline document shape (pre-object-storage migration — `kyb_fields.documents`). */
-export const MerchantKybLegacyDocumentSchema = z
-	.object({
-		fileName: z.string().min(1).max(255),
-		mimeType: DocumentMimeTypeSchema,
-		sizeBytes: z.number().int().positive().max(MERCHANT_KYB_MAX_DOCUMENT_BYTES),
-		contentBase64: z.string().min(1).max(7_000_000),
-	})
-	.strict();
-
-export type MerchantKybLegacyDocument = z.output<typeof MerchantKybLegacyDocumentSchema>;
-
 /** KYB document metadata returned by the API (object storage reference). */
-export const MerchantKybDocumentRecordSchema = z
-	.object({
-		id: z.uuid(),
-		fileName: z.string().min(1).max(255),
-		mimeType: DocumentMimeTypeSchema,
-		sizeBytes: z.number().int().positive().max(MERCHANT_KYB_MAX_DOCUMENT_BYTES),
-		scanStatus: KybDocumentScanStatusSchema,
-		uploadedAt: EpochMsSchema,
-	})
-	.strict();
+export const MerchantKybDocumentRecordSchema = z.object({
+	id: z.uuid(),
+	fileName: z.string().min(1).max(255),
+	mimeType: DocumentMimeTypeSchema,
+	sizeBytes: z.number().int().positive().max(MERCHANT_KYB_MAX_DOCUMENT_BYTES),
+	scanStatus: KybDocumentScanStatusSchema,
+	uploadedAt: EpochMsSchema,
+});
 
 export type MerchantKybDocumentRecord = z.output<typeof MerchantKybDocumentRecordSchema>;
 
 /** Signed download URL for a CLEAN KYB document. */
-export const MerchantKybDocumentDownloadResponseSchema = z
-	.object({
-		documentId: z.uuid(),
-		scanStatus: KybDocumentScanStatusSchema,
-		downloadUrl: z.url().nullable(),
-		expiresAt: EpochMsSchema.nullable(),
-	})
-	.strict();
+export const MerchantKybDocumentDownloadResponseSchema = z.object({
+	documentId: z.uuid(),
+	scanStatus: KybDocumentScanStatusSchema,
+	downloadUrl: z.url().nullable(),
+	expiresAt: EpochMsSchema.nullable(),
+});
 
 export type MerchantKybDocumentDownloadResponse = z.output<typeof MerchantKybDocumentDownloadResponseSchema>;
 
@@ -137,15 +121,13 @@ export const MerchantOnboardingValidateTokenSchema = z
 
 export type MerchantOnboardingValidateTokenInput = z.output<typeof MerchantOnboardingValidateTokenSchema>;
 
-export const MerchantOnboardingInvitePreviewSchema = z
-	.object({
-		email: z.email(),
-		businessName: z.string(),
-		city: PilotCitySchema,
-		expiresAt: EpochMsSchema,
-		hasExistingAccount: z.boolean(),
-	})
-	.strict();
+export const MerchantOnboardingInvitePreviewSchema = z.object({
+	email: z.email(),
+	businessName: z.string(),
+	city: PilotCitySchema,
+	expiresAt: EpochMsSchema,
+	hasExistingAccount: z.boolean(),
+});
 
 export type MerchantOnboardingInvitePreview = z.output<typeof MerchantOnboardingInvitePreviewSchema>;
 
@@ -212,11 +194,9 @@ export const MerchantOnboardingDocumentBatchUploadUrlSchema = z
 
 export type MerchantOnboardingDocumentBatchUploadUrlInput = z.output<typeof MerchantOnboardingDocumentBatchUploadUrlSchema>;
 
-export const MerchantOnboardingDocumentBatchUploadUrlResponseSchema = z
-	.object({
-		uploads: z.array(CreateFileUploadUrlResponseSchema).min(1),
-	})
-	.strict();
+export const MerchantOnboardingDocumentBatchUploadUrlResponseSchema = z.object({
+	uploads: z.array(CreateFileUploadUrlResponseSchema).min(1),
+});
 
 export type MerchantOnboardingDocumentBatchUploadUrlResponse = z.output<typeof MerchantOnboardingDocumentBatchUploadUrlResponseSchema>;
 
@@ -239,11 +219,9 @@ export const MerchantOnboardingDocumentBatchUploadCompleteSchema = z
 
 export type MerchantOnboardingDocumentBatchUploadCompleteInput = z.output<typeof MerchantOnboardingDocumentBatchUploadCompleteSchema>;
 
-export const MerchantOnboardingDocumentBatchUploadCompleteResponseSchema = z
-	.object({
-		fileIds: z.array(z.uuid()).min(1),
-	})
-	.strict();
+export const MerchantOnboardingDocumentBatchUploadCompleteResponseSchema = z.object({
+	fileIds: z.array(z.uuid()).min(1),
+});
 
 export type MerchantOnboardingDocumentBatchUploadCompleteResponse = z.output<typeof MerchantOnboardingDocumentBatchUploadCompleteResponseSchema>;
 
@@ -257,36 +235,32 @@ export const MerchantOnboardingDocumentsSubmitSchema = z
 
 export type MerchantOnboardingDocumentsSubmitInput = z.output<typeof MerchantOnboardingDocumentsSubmitSchema>;
 
-export const MerchantKybProfileResponseSchema = z
-	.object({
-		organizationId: z.uuid(),
-		businessName: z.string(),
-		legalName: z.string().nullable(),
-		addressText: z.string().nullable(),
-		contactPhone: z.string().nullable(),
-		contactEmail: z.string(),
-		city: PilotCitySchema,
-		kybStatus: KybStatusSchema,
-		kybFields: JsonObjectSchema.nullable(),
-		documents: z.array(MerchantKybDocumentRecordSchema),
-		status: MerchantOrgStatusSchema,
-	})
-	.strict();
+export const MerchantKybProfileResponseSchema = z.object({
+	organizationId: z.uuid(),
+	businessName: z.string(),
+	legalName: z.string().nullable(),
+	addressText: z.string().nullable(),
+	contactPhone: z.string().nullable(),
+	contactEmail: z.string(),
+	city: PilotCitySchema,
+	kybStatus: KybStatusSchema,
+	kybFields: JsonObjectSchema.nullable(),
+	documents: z.array(MerchantKybDocumentRecordSchema),
+	status: MerchantOrgStatusSchema,
+});
 
 export type MerchantKybProfileResponse = z.output<typeof MerchantKybProfileResponseSchema>;
 
-export const MerchantOnboardingCompleteResponseSchema = z
-	.object({
-		organizationId: z.uuid(),
-		organizationSlug: z
-			.string()
-			.min(2)
-			.max(64)
-			.regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
-		businessName: z.string(),
-		role: MerchantMemberRoleSchema,
-	})
-	.strict();
+export const MerchantOnboardingCompleteResponseSchema = z.object({
+	organizationId: z.uuid(),
+	organizationSlug: z
+		.string()
+		.min(2)
+		.max(64)
+		.regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
+	businessName: z.string(),
+	role: MerchantMemberRoleSchema,
+});
 
 export type MerchantOnboardingCompleteResponse = z.output<typeof MerchantOnboardingCompleteResponseSchema>;
 
@@ -301,15 +275,13 @@ export const MerchantCreateMemberSchema = z
 
 export type MerchantCreateMemberInput = z.output<typeof MerchantCreateMemberSchema>;
 
-export const MerchantMemberCreatedResponseSchema = z
-	.object({
-		userId: z.uuid(),
-		email: z.string(),
-		fullName: z.string(),
-		organizationId: z.uuid(),
-		role: MerchantMemberRoleSchema,
-	})
-	.strict();
+export const MerchantMemberCreatedResponseSchema = z.object({
+	userId: z.uuid(),
+	email: z.string(),
+	fullName: z.string(),
+	organizationId: z.uuid(),
+	role: MerchantMemberRoleSchema,
+});
 
 export type MerchantMemberCreatedResponse = z.output<typeof MerchantMemberCreatedResponseSchema>;
 

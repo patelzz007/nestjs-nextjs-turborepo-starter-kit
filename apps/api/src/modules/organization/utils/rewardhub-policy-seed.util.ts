@@ -6,6 +6,14 @@ type PolicySeedClient = Pick<PrismaClient, "authorizationPolicyDraft" | "authori
 const REWARDHUB_OWNER_CEDAR = `permit(principal, action, resource) when { principal.role == "OWNER" || principal.role == "ADMIN" };`;
 const REWARDHUB_CASHIER_CEDAR = `permit(principal, action, resource) when { principal.role == "CASHIER" };`;
 
+/**
+ * Default TENANT Cedar policy published for every organization. It is role-
+ * based and action-agnostic, so it never denies what the merchant role table
+ * (`MERCHANT_ROLE_CAPABILITIES`) grants to OWNER / ADMIN / CASHIER; tenants
+ * narrow it through the policy control plane.
+ */
+export const REWARDHUB_DEFAULT_TENANT_CEDAR = `${REWARDHUB_OWNER_CEDAR}\n${REWARDHUB_CASHIER_CEDAR}`;
+
 function sha256Hex(value: string): string {
 	return createHash("sha256").update(value).digest("hex");
 }
@@ -20,7 +28,7 @@ export async function seedRewardHubTenantPolicies(tx: PolicySeedClient, organiza
 		return;
 	}
 
-	const cedarSource = `${REWARDHUB_OWNER_CEDAR}\n${REWARDHUB_CASHIER_CEDAR}`;
+	const cedarSource = REWARDHUB_DEFAULT_TENANT_CEDAR;
 	const draft = await tx.authorizationPolicyDraft.create({
 		data: {
 			organizationId,

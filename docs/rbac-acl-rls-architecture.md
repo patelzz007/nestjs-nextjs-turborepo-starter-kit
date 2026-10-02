@@ -78,7 +78,7 @@ Location scope rows use `ALL_LOCATIONS` or `SELECTED` (see `buildMembershipLocat
 ## Example: new location-scoped table
 
 1. Add model in `schema.prisma` with `organizationId` + `locationId`.
-2. Add table name to `RLS_ORGANIZATION_LOCATION_TABLES` in `table-manifest.ts`.
+2. Add table name to `RLS_MANIFEST_PROFILES.organization_location` in `prisma/rls/manifest-index.ts`.
 3. In `rls.sql` (or a new `prisma/rls/NN-*.sql` fragment), enable RLS and add policies using `app_tenant_row_org_location_access(organization_id, location_id)`.
 4. `pnpm db:migrate` — schema + security apply together.
 5. Expose endpoints with `@RequirePermission(...)` — assign permissions to roles via admin UI/seed.
@@ -139,15 +139,15 @@ Goal: new domains (orders, inventory, billing) copy a **profile**, not invent po
 
 ### 1. Pick a manifest profile
 
-[`table-manifest.ts`](../apps/api/prisma/rls/table-manifest.ts) lists table names by **data shape**, not by feature:
+`RLS_MANIFEST_PROFILES` in [`manifest-index.ts`](../apps/api/prisma/rls/manifest-index.ts) (re-exported by [`table-manifest.ts`](../apps/api/prisma/rls/table-manifest.ts)) lists table names by **data shape**, not by feature:
 
 | Profile | Use when | SQL primitive |
 |---------|----------|----------------|
-| `RLS_OWNERSHIP_TABLES` | Row has `user_id` / owner | `app_owns(...)` |
-| `RLS_RBAC_CATALOG_TABLES` | Global permission catalog | Open `SELECT`, writes via bypass |
-| `RLS_ORGANIZATION_TENANT_TABLES` | Org boundary, no branch ACL | `app_tenant_organization_member_of(org_id)` |
-| `RLS_ORGANIZATION_LOCATION_TABLES` | Org + branch | `app_tenant_row_org_location_access(org_id, location_id)` |
-| `RLS_BYPASS_ONLY_TABLES` | Jobs, outbox, platform audit | `app_rls_bypass()` only |
+| `ownership` | Row has `user_id` / owner | `app_owns(...)` |
+| `rbac_catalog` | Global permission catalog | Open `SELECT`, writes via bypass |
+| `organization_tenant` | Org boundary, no branch ACL | `app_tenant_organization_member_of(org_id)` |
+| `organization_location` | Org + branch | `app_tenant_row_org_location_access(org_id, location_id)` |
+| `bypass_only` | Jobs, outbox, platform audit | `app_rls_bypass()` only |
 
 Add the Prisma `@@map` table name to the right array so reviewers see intent in one place.
 

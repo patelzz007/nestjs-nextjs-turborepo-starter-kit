@@ -17,8 +17,12 @@
 					"title": "Analytics",
 					"url": "/analytics",
 					"icon": "BarChart3",
-					"disabled": true,
 					"children": [
+						{
+							"title": "Sales",
+							"url": "/analytics/sales",
+							"icon": "TrendingUp"
+						},
 						{
 							"title": "Realtime",
 							"url": "/analytics/realtime",
@@ -91,13 +95,18 @@
 				},
 				{
 					"title": "Users",
-					"url": "/users/all",
+					"url": "/users",
 					"icon": "Users",
 					"children": [
 						{
-							"title": "All Users",
-							"url": "/users/all",
+							"title": "All users",
+							"url": "/users",
 							"icon": "CircleUserRound"
+						},
+						{
+							"title": "MFA recovery",
+							"url": "/users/mfa-recovery",
+							"icon": "ShieldAlert"
 						},
 						{
 							"title": "Roles",
@@ -134,107 +143,65 @@
 					]
 				},
 				{
-					"title": "Settings",
-					"url": "/settings",
-					"icon": "Settings",
+					"title": "Merchants",
+					"url": "/merchants",
+					"icon": "Briefcase",
 					"children": [
 						{
-							"title": "General",
-							"url": "/settings/general",
-							"icon": "Gauge"
+							"title": "All merchants",
+							"url": "/merchants",
+							"icon": "Package"
 						},
 						{
-							"title": "Access control",
-							"url": "/settings/access",
+							"title": "Invites",
+							"url": "/merchants/invites",
+							"icon": "Send"
+						},
+						{
+							"title": "Verification",
+							"url": "/merchants/verification",
 							"icon": "ShieldCheck"
 						},
 						{
-							"title": "Security",
-							"url": "/settings/security",
-							"icon": "Shield",
-							"children": [
-								{
-									"title": "MFA recovery",
-									"url": "/settings/security/mfa-recovery",
-									"icon": "ShieldCheck"
-								},
-								{
-									"title": "Sessions",
-									"url": "/settings/security/sessions",
-									"icon": "Activity",
-									"disabled": true
-								},
-								{
-									"title": "Audit Log",
-									"url": "/settings/security/audit-log",
-									"icon": "Database",
-									"disabled": true
-								}
-							]
+							"title": "Store requests",
+							"url": "/merchants/store-requests",
+							"icon": "MapPin"
+						}
+					]
+				},
+				{
+					"title": "Rewards",
+					"url": "/rewards",
+					"icon": "Gift",
+					"children": [
+						{
+							"title": "Review",
+							"url": "/rewards/review",
+							"icon": "ListChecks"
+						}
+					]
+				},
+				{
+					"title": "Emails",
+					"url": "/emails",
+					"icon": "Mail",
+					"children": [
+						{
+							"title": "Templates",
+							"url": "/emails/templates",
+							"icon": "ScrollText"
 						},
 						{
-							"title": "Billing",
-							"url": "/settings/billing",
-							"icon": "CreditCard"
-						},
-						{
-							"title": "Email Templates",
-							"url": "/emails",
-							"icon": "Mail"
-						},
-						{
-							"title": "Email Log",
-							"url": "/email-log",
+							"title": "Log",
+							"url": "/emails/log",
 							"icon": "MailCheck"
 						}
 					]
 				},
 				{
-					"title": "Geographic Data",
-					"url": "/geo",
+					"title": "Geography",
+					"url": "/geography",
 					"icon": "Globe"
-				},
-				{
-					"title": "Reward Hub",
-					"url": "/rewardhub/pending",
-					"icon": "Gift",
-					"children": [
-						{
-							"title": "Merchants",
-							"url": "/rewardhub/merchants",
-							"icon": "Package"
-						},
-						{
-							"title": "Users",
-							"url": "/rewardhub/users",
-							"icon": "Users"
-						},
-						{
-							"title": "Pending rewards",
-							"url": "/rewardhub/pending",
-							"icon": "ListChecks"
-						},
-						{
-							"title": "Merchant invites",
-							"url": "/rewardhub/invites",
-							"icon": "Send"
-						},
-						{
-							"title": "Merchant roles",
-							"url": "/rewardhub/role-capabilities",
-							"icon": "Shield"
-						},
-						{
-							"title": "KYB review",
-							"url": "/rewardhub/kyb",
-							"icon": "ShieldCheck"
-						},
-						{
-							"title": "Store requests",
-							"url": "/rewardhub/locations",
-							"icon": "MapPin"
-						}
-					]
 				}
 			]
 		},
@@ -267,19 +234,72 @@
 			"color": "purple",
 			"items": [
 				{
-					"title": "Categories",
-					"url": "/sample-category",
-					"icon": "FolderTree"
+					"title": "Catalog",
+					"url": "/catalog",
+					"icon": "Layers",
+					"children": [
+						{
+							"title": "Products",
+							"url": "/catalog/products",
+							"icon": "Package"
+						},
+						{
+							"title": "Categories",
+							"url": "/catalog/categories",
+							"icon": "FolderTree"
+						}
+					]
 				},
 				{
-					"title": "Products",
-					"url": "/product",
-					"icon": "Package"
+					"title": "Settings",
+					"url": "/settings",
+					"icon": "Settings",
+					"children": [
+						{
+							"title": "Billing",
+							"url": "/settings/billing",
+							"icon": "CreditCard"
+						},
+						{
+							"title": "Access control",
+							"url": "/settings/access",
+							"icon": "ShieldCheck"
+						},
+						{
+							"title": "Audit log",
+							"url": "/settings/audit-log",
+							"icon": "Database",
+							"disabled": true
+						}
+					]
 				}
 			]
 		}
 	],
 	"bottomItems": [
+		{
+			"title": "Account",
+			"url": "/account",
+			"icon": "UserCog",
+			"children": [
+				{
+					"title": "Profile",
+					"url": "/account/profile",
+					"icon": "UserRound"
+				},
+				{
+					"title": "Security",
+					"url": "/account/security",
+					"icon": "Shield"
+				},
+				{
+					"title": "Sessions",
+					"url": "/account/sessions",
+					"icon": "Activity",
+					"disabled": true
+				}
+			]
+		},
 		{
 			"title": "Support",
 			"url": "/support",

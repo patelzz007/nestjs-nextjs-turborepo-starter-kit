@@ -23,8 +23,3 @@ export function readOrganizationSlugCookie(): string | undefined {
 	const value = match.slice(prefix.length);
 	return value.length > 0 ? decodeURIComponent(value) : undefined;
 }
-
-export function organizationPath(slug: string, subpath = ""): string {
-	const normalized = subpath.startsWith("/") ? subpath : subpath.length > 0 ? `/${subpath}` : "";
-	return `/orgs/${slug}${normalized}`;
-}

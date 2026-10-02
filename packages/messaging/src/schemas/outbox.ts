@@ -52,9 +52,14 @@ export const OutboxEnqueueInputSchema = z
 
 export type OutboxEnqueueInput = z.output<typeof OutboxEnqueueInputSchema>;
 
-/** Minimal JSON envelope for broker publish (Kafka, etc.). */
+/**
+ * Minimal JSON envelope for broker publish (Kafka, etc.). `eventId` is the
+ * producer-assigned stable id (the outbox row id): a message republished after
+ * a crash carries the same id, so consumer inboxes can dedupe on it.
+ */
 export const MessageEnvelopeSchema = z
 	.object({
+		eventId: z.uuid(),
 		type: z.string().min(1),
 		correlationId: z.string().nullable(),
 		occurredAt: z.number().int().nonnegative(),

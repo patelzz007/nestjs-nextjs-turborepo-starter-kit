@@ -59,15 +59,15 @@ function ControlledHarness({
 			<AlertDialogContent
 				severity={severity ?? "info"}
 				labels={labels}
-				requireConfirmation={requireConfirmation}
+				{...(requireConfirmation !== undefined ? { requireConfirmation } : {})}
 				confirmationValue={confirmationValue}
 				onConfirmationValueChange={setConfirmationValue}
-				requireReason={requireReason}
+				{...(requireReason !== undefined ? { requireReason } : {})}
 				reasonValue={reasonValue}
 				onReasonValueChange={setReasonValue}
-				delaySeconds={delaySeconds}
-				confirmLoading={confirmLoading}
-				onConfirm={onConfirm}>
+				{...(delaySeconds !== undefined ? { delaySeconds } : {})}
+				{...(confirmLoading !== undefined ? { confirmLoading } : {})}
+				{...(onConfirm !== undefined ? { onConfirm } : {})}>
 				<AlertDialogTitle>Are you sure?</AlertDialogTitle>
 				<AlertDialogDescription>This action is permanent.</AlertDialogDescription>
 			</AlertDialogContent>

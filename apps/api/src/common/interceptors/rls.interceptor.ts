@@ -4,6 +4,7 @@ import type { FastifyRequest } from "fastify";
 import { Observable } from "rxjs";
 
 import { TenancyConfigService } from "../../config/tenancy.config";
+import { RequestContextService } from "../context/request-context";
 import { isAuthenticatedUser } from "../../types/authenticated-user";
 import { RLS_BYPASS_KEY } from "../../modules/auth/decorators/rls-bypass.decorator";
 import { rlsStorage, systemRlsContext, type RlsContext } from "../../prisma/rls-context";
@@ -21,14 +22,16 @@ import { rlsStorage, systemRlsContext, type RlsContext } from "../../prisma/rls-
  * - anonymous → no user, no bypass (only publicly visible rows)
  *
  * The organization id is never read from raw client input here: it comes from
- * `request.authorizationContext`, which `AuthorizationGuard` fills only after
- * verifying the caller's active membership.
+ * the request context's tenant (ADR 017), which `AuthorizationGuard` binds only
+ * after verifying the caller's active membership. This interceptor is where the
+ * request-scoped context feeds the separate, transaction-scoped RLS store.
  */
 @Injectable()
 export class RlsInterceptor implements NestInterceptor {
 	public constructor(
 		private readonly reflector: Reflector,
 		private readonly tenancy: TenancyConfigService,
+		private readonly requestContext: RequestContextService,
 	) {}
 
 	public intercept<T>(context: ExecutionContext, next: CallHandler<T>): Observable<T> {
@@ -40,7 +43,7 @@ export class RlsInterceptor implements NestInterceptor {
 
 	private contextFromRequest(context: ExecutionContext): RlsContext {
 		const request: FastifyRequest = context.switchToHttp().getRequest<FastifyRequest>();
-		const organizationId: string = this.resolveOrganizationId(request);
+		const organizationId: string = this.resolveOrganizationId();
 		const user = request.user;
 
 		if (this.reflector.getAllAndOverride<boolean | undefined>(RLS_BYPASS_KEY, [context.getHandler(), context.getClass()]) === true) {
@@ -61,10 +64,10 @@ export class RlsInterceptor implements NestInterceptor {
 		return { userId: user?.sub ?? "", bypass: false, organizationId, requireExplicitContext: false, systemOperation: "" };
 	}
 
-	private resolveOrganizationId(request: FastifyRequest): string {
+	private resolveOrganizationId(): string {
 		if (!this.tenancy.enabled) {
 			return this.tenancy.defaultOrganizationId;
 		}
-		return request.authorizationContext?.organizationId ?? this.tenancy.defaultOrganizationId;
+		return this.requestContext.current()?.tenant.organizationId ?? this.tenancy.defaultOrganizationId;
 	}
 }

@@ -15,6 +15,7 @@ import { z } from "zod";
 
 import { API_BASE_URL, API_URL_PREFIX } from "./config";
 import { applyRotatedSetCookies, collectSetCookies, hasRotatedAuthCookies } from "../auth/edge/proxy-refresh";
+import { ApiResponseContractError, parseResponseContract, type ApiResponseContractIssue } from "./response-contract";
 import { eachRouterEntry, isErasedProcedureDef, isRouterSubtree, resolveRequest, type MutationDef, type ProcedureDef, type QueryDef, type RouterTreeValue } from "./endpoints";
 
 // ── Config ─────────────────────────────────────────────────────────────────
@@ -37,11 +38,21 @@ export interface ServerApiConfig {
 	readonly fetchImpl?: typeof fetch;
 }
 
-export const DEFAULT_SERVER_API_CONFIG: ServerApiConfig = {
+/**
+ * Library defaults. `clientOrigin` is deliberately absent: it is the calling
+ * app's own public origin, validated by that app's `lib/env/env.client.ts`,
+ * so every caller must supply it (see `ServerApiConfigInput`) — there is no
+ * hardcoded localhost fallback to silently ship to production.
+ */
+export type ServerApiConfigDefaults = Omit<ServerApiConfig, "clientOrigin">;
+
+/** Overrides accepted by `resolveConfig`; `clientOrigin` is always required. */
+export type ServerApiConfigInput = Partial<ServerApiConfig> & Pick<ServerApiConfig, "clientOrigin">;
+
+export const DEFAULT_SERVER_API_CONFIG: ServerApiConfigDefaults = {
 	accessTokenCookie: "adminAccessToken",
 	refreshTokenCookie: "adminRefreshToken",
 	clientType: "admin",
-	clientOrigin: process.env.NEXT_PUBLIC_ADMIN_URL ?? "http://localhost:3001",
 	staleTimeMs: 60 * 1000,
 	gcTimeMs: 5 * 60 * 1000,
 	timeoutMs: 10_000,
@@ -52,20 +63,18 @@ export const DEFAULT_SERVER_API_CONFIG: ServerApiConfig = {
 	logLevel: "warn",
 };
 
-export const DEFAULT_WEB_SERVER_API_CONFIG: ServerApiConfig = {
+export const DEFAULT_WEB_SERVER_API_CONFIG: ServerApiConfigDefaults = {
 	...DEFAULT_SERVER_API_CONFIG,
 	accessTokenCookie: "accessToken",
 	refreshTokenCookie: "refreshToken",
 	clientType: "web",
-	clientOrigin: process.env.NEXT_PUBLIC_APP_URL ?? process.env.APP_URL ?? "http://localhost:3000",
 };
 
-export const DEFAULT_MERCHANT_SERVER_API_CONFIG: ServerApiConfig = {
+export const DEFAULT_MERCHANT_SERVER_API_CONFIG: ServerApiConfigDefaults = {
 	...DEFAULT_SERVER_API_CONFIG,
 	accessTokenCookie: "merchantAccessToken",
 	refreshTokenCookie: "merchantRefreshToken",
 	clientType: "merchant",
-	clientOrigin: process.env.NEXT_PUBLIC_MERCHANT_URL ?? "http://localhost:3003",
 };
 
 /**
@@ -77,7 +86,7 @@ export const DEFAULT_MERCHANT_SERVER_API_CONFIG: ServerApiConfig = {
  */
 export interface RefreshMutationDef {
 	readonly path: string;
-	readonly version?: import("@workspace/shared").ApiVersion;
+	readonly version?: import("@workspace/shared").ApiVersion | undefined;
 }
 
 export interface ServerRequestContext {
@@ -99,9 +108,9 @@ export function createDefaultLogger(logLevel: ServerApiLogLevel): (event: Prefet
 	};
 }
 
-export function resolveConfig(overrides: Partial<ServerApiConfig> | undefined): ServerApiConfig {
+export function resolveConfig(overrides: ServerApiConfigInput): ServerApiConfig {
 	const merged: ServerApiConfig = { ...DEFAULT_SERVER_API_CONFIG, ...overrides };
-	if (overrides?.logger === undefined && overrides?.logLevel !== undefined && merged.logLevel !== DEFAULT_SERVER_API_CONFIG.logLevel) {
+	if (overrides.logger === undefined && overrides.logLevel !== undefined && merged.logLevel !== DEFAULT_SERVER_API_CONFIG.logLevel) {
 		return { ...merged, logger: createDefaultLogger(merged.logLevel) };
 	}
 	return merged;
@@ -110,13 +119,13 @@ export function resolveConfig(overrides: Partial<ServerApiConfig> | undefined): 
 // ── Public types ────────────────────────────────────────────────────────────
 
 export interface PrefetchCallOptions<Resp extends DataValue = DataValue> {
-	readonly signal?: AbortSignal;
-	readonly allowRefresh?: boolean;
-	readonly fallbackData?: Resp;
-	readonly captureHeaders?: readonly string[];
-	readonly headers?: Readonly<Record<string, string>>;
-	readonly page?: string;
-	readonly traceId?: string;
+	readonly signal?: AbortSignal | undefined;
+	readonly allowRefresh?: boolean | undefined;
+	readonly fallbackData?: Resp | undefined;
+	readonly captureHeaders?: readonly string[] | undefined;
+	readonly headers?: Readonly<Record<string, string>> | undefined;
+	readonly page?: string | undefined;
+	readonly traceId?: string | undefined;
 }
 
 export interface PrefetchLogEvent {
@@ -245,6 +254,10 @@ export function classifyError(error: Error | string): PrefetchFailure {
 	if (error instanceof PrefetchHttpError) return { kind: "http", status: error.status };
 	if (error instanceof PrefetchTimeoutError) return { kind: "timeout" };
 	if (error instanceof PrefetchAbortError) return { kind: "aborted" };
+	if (error instanceof ApiResponseContractError) {
+		const firstIssue: ApiResponseContractIssue | undefined = error.issues[0];
+		return { kind: "schema", message: firstIssue === undefined ? error.message : `${firstIssue.path}: ${firstIssue.message}` };
+	}
 	if (error instanceof z.ZodError) {
 		const firstIssue: { readonly path: readonly (string | number | symbol)[] } | undefined = error.issues[0];
 		const path: string = firstIssue === undefined ? "" : firstIssue.path.join(".");
@@ -261,14 +274,16 @@ function createFetchObservable(
 	url: string,
 	extraHeaders: Readonly<Record<string, string>> | undefined,
 	config: ServerApiConfig,
-	token: () => string,
+	token: () => string | undefined,
 	forwarded: Readonly<Record<string, string>>,
 	contextSignal?: AbortSignal,
 ): Observable<Response> {
 	return defer(() => {
+		const currentToken: string | undefined = token();
 		const requestHeaders: Record<string, string> = {
 			Accept: "application/json",
-			Cookie: `${encodeURIComponent(config.accessTokenCookie)}=${encodeURIComponent(token())}`,
+			// A public route fetched for a visitor with no session carries no cookie.
+			...(currentToken === undefined ? {} : { Cookie: `${encodeURIComponent(config.accessTokenCookie)}=${encodeURIComponent(currentToken)}` }),
 			"X-Client-Type": config.clientType,
 			...forwarded,
 			...extraHeaders,
@@ -366,7 +381,7 @@ function createPrefetchObservable<Input extends SerializableInput, Resp extends 
 	def: QueryDef<Input, Resp>,
 	input: Input,
 	extraHeaders: Readonly<Record<string, string>> | undefined,
-	token: () => string,
+	token: () => string | undefined,
 	applyToken: (fresh: string) => void,
 	forwarded: Readonly<Record<string, string>>,
 	contextSignal: AbortSignal | undefined,
@@ -402,14 +417,16 @@ function createPrefetchObservable<Input extends SerializableInput, Resp extends 
 		timeout({ each: config.timeoutMs, with: () => throwError(() => new PrefetchTimeoutError()) }),
 		mergeMap((response: Response) =>
 			from(response.json()).pipe(
-				map((raw: DataValue): { readonly raw: DataValue; readonly headers: Readonly<Record<string, string>> } => ({
+				map((raw: DataValue): { readonly raw: DataValue; readonly status: number; readonly headers: Readonly<Record<string, string>> } => ({
 					raw,
+					status: response.status,
 					headers: captureResponseHeaders(response, captureHeaders),
 				})),
 			),
 		),
-		map(({ raw, headers: captured }): { readonly raw: Resp; readonly headers: Readonly<Record<string, string>> } => ({
-			raw: def.responseSchema.parse(raw),
+		map(({ raw, status, headers: captured }): { readonly raw: Resp; readonly headers: Readonly<Record<string, string>> } => ({
+			// The one response-validation point of the SSR pipeline (ADR 022).
+			raw: parseResponseContract(def.responseSchema, raw, { method: "GET", url, status }),
 			headers: captured,
 		})),
 	);
@@ -426,10 +443,12 @@ export async function fetchServerQuery<Input extends SerializableInput, Resp ext
 	const parsed: Input = def.inputSchema.parse(input);
 	const cookieStore = await cookies();
 	const accessToken: string | undefined = cookieStore.get(context.config.accessTokenCookie)?.value;
-	if (accessToken === undefined) throw new PrefetchNoCookieError();
+	// A route that needs a session is skipped without one (no pointless 401 round trip);
+	// a public route is fetched anonymously — guests get server-rendered public data.
+	if (accessToken === undefined && def.access !== "public") throw new PrefetchNoCookieError();
 
 	const forwarded: Readonly<Record<string, string>> = await getForwardedHeaders();
-	let currentToken: string = accessToken;
+	let currentToken: string | undefined = accessToken;
 	const { raw } = await firstValueFrom(
 		createPrefetchObservable(
 			context,
@@ -442,7 +461,8 @@ export async function fetchServerQuery<Input extends SerializableInput, Resp ext
 			},
 			forwarded,
 			call?.signal,
-			call?.allowRefresh ?? true,
+			// Nothing to refresh for an anonymous request.
+			accessToken !== undefined && (call?.allowRefresh ?? true),
 			call?.captureHeaders ?? [],
 		),
 	);
@@ -473,7 +493,8 @@ export async function fetchServerMutation<Input extends SerializableInput, Resp 
 		cache: "no-store",
 	});
 	if (!response.ok) throw new PrefetchHttpError(response.status);
-	return def.responseSchema.parse(await response.json());
+	const responseBody: DataValue = z.custom<DataValue>().parse(await response.json());
+	return parseResponseContract(def.responseSchema, responseBody, { method: def.method, url: response.url, status: response.status });
 }
 
 export function createServerQueryLeaf<Input extends SerializableInput, Resp extends DataValue>(

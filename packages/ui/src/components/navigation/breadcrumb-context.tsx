@@ -1,5 +1,6 @@
 "use client";
 
+import { FileText } from "lucide-react";
 import * as React from "react";
 import { z } from "zod";
 
@@ -14,7 +15,9 @@ import { z } from "zod";
 //     `z.custom` typing hole) — malformed icons fail at parse, not render
 //   - the items array schema is hoisted to a module constant
 //     (`BREADCRUMB_ITEMS_SCHEMA`) — parsed once, not re-created per call
-//   - `INITIAL_STATUS` is `Object.freeze`d — no shared-mutable-status bug
+//   - the route trail is computed during render — ready on first paint, and
+//     page overrides / tail labels are pathname-scoped state, so a parent
+//     effect can never overwrite them and they never leak onto another page
 //   - `subscribe(listener)` returns an **unsubscribe** (rule 16) and delivers
 //     the current status immediately (listeners diff without another read)
 //   - `notify` snapshots the listener set before iterating — a listener that
@@ -31,8 +34,8 @@ import { z } from "zod";
 // `useSyncExternalStore` — breadcrumb state is per-page (owned by the route
 // group), not global, so a plain context is the right tool. Responsive
 // collapse thresholds live in the smart consumer (`BreadcrumbTrail`'s
-// `maxItems`), not here. `reset`-in-cleanup is the documented override
-// pattern for data-driven pages (see the bridges in `apps/admin`).
+// `maxItems`), not here. Data-driven pages name their final crumb with `setTailLabel`
+// (or replace the trail with `setItems`) — both are scoped to the pathname.
 // ════════════════════════════════════════════════════════════════════════════
 
 /**
@@ -102,9 +105,6 @@ function toReady(items: readonly BreadcrumbItem[]): BreadcrumbStatus {
 	return { kind: "ready", items: parsed.data };
 }
 
-/** The initial (pre-resolution) status — frozen so no consumer can mutate it (improvement 5). */
-const INITIAL_STATUS: BreadcrumbStatus = Object.freeze({ kind: "loading" });
-
 export interface BreadcrumbContextValue {
 	/**
 	 * The current trail — either route-derived (the app's `resolve` function
@@ -124,6 +124,13 @@ export interface BreadcrumbContextValue {
 	/** Clears any override and falls back to the route-derived trail. */
 	readonly reset: () => void;
 	/**
+	 * Names the current page's final crumb (e.g. a user's or reward's name,
+	 * known only at runtime) without replacing the rest of the trail; `null`
+	 * clears it. Scoped to the current pathname — it never leaks onto another
+	 * page, and the provider's own route resolution can't overwrite it.
+	 */
+	readonly setTailLabel: (label: string | null) => void;
+	/**
 	 * Subscribes to trail changes. The listener is invoked immediately with
 	 * the CURRENT status (so shell chrome can diff without another context
 	 * read) and on every later change. Returns an unsubscribe function —
@@ -135,9 +142,11 @@ export interface BreadcrumbContextValue {
 
 export interface BreadcrumbProviderProps {
 	readonly pathname: string;
-	/** When this changes, the trail is re-resolved even if `pathname` is unchanged (e.g. tenant context). */
-	readonly revalidateKey?: string;
-	/** Optional per-mount resolver override (e.g. tenant-scoped href mapping). */
+	/**
+	 * Optional per-mount resolver override (e.g. tenant-scoped href mapping).
+	 * The trail is re-resolved whenever this function's identity changes, so
+	 * memoize it on whatever it closes over (e.g. the organization slug).
+	 */
 	readonly resolve?: (pathname: string) => readonly BreadcrumbItem[];
 	readonly children: React.ReactNode;
 }
@@ -147,6 +156,21 @@ export interface BreadcrumbContextInstance {
 	readonly provider: React.ComponentType<BreadcrumbProviderProps>;
 	/** Reads the trail. Throws when used outside the provider. */
 	readonly useBreadcrumb: () => BreadcrumbContextValue;
+}
+
+/** A value set by a page, valid only on the pathname it was set on. */
+interface PathScoped<T> {
+	readonly pathname: string;
+	readonly value: T;
+}
+
+/** Replaces the final crumb's label (or makes a one-crumb trail when there is none). */
+function applyTailLabel(items: readonly BreadcrumbItem[], label: string): readonly BreadcrumbItem[] {
+	const last = items.at(-1);
+	if (last === undefined) {
+		return [{ label, icon: FileText }];
+	}
+	return [...items.slice(0, -1), { label, icon: last.icon }];
 }
 
 /**
@@ -170,37 +194,44 @@ export interface BreadcrumbContextInstance {
 export function createBreadcrumbContext(defaultResolve: (pathname: string) => readonly BreadcrumbItem[]): BreadcrumbContextInstance {
 	const BreadcrumbContext = React.createContext<BreadcrumbContextValue | null>(null);
 
-	function BreadcrumbProvider({ pathname, revalidateKey, resolve, children }: BreadcrumbProviderProps): React.JSX.Element {
-		const [trail, setTrail] = React.useState<BreadcrumbStatus>(INITIAL_STATUS);
+	function BreadcrumbProvider({ pathname, resolve, children }: BreadcrumbProviderProps): React.JSX.Element {
+		const resolver = resolve ?? defaultResolve;
+		// Page-supplied state is keyed by the pathname it was set on, so it is
+		// ignored on any other page (no cleanup ordering to get wrong) and the
+		// route trail below can never overwrite it.
+		const [override, setOverride] = React.useState<PathScoped<BreadcrumbStatus> | null>(null);
+		const [tailLabel, setTailLabelState] = React.useState<PathScoped<string> | null>(null);
 		const listenersRef = React.useRef<Set<(status: BreadcrumbStatus) => void>>(new Set());
-		const resolveRef = React.useRef(resolve ?? defaultResolve);
-		resolveRef.current = resolve ?? defaultResolve;
-		// Latest status for subscribe-time delivery. Written in an effect (never
-		// during render — React Compiler rule), so callbacks stay fresh without
-		// re-creating `subscribe` on every status change.
-		const statusRef = React.useRef<BreadcrumbStatus>(INITIAL_STATUS);
 
+		// The route-derived trail is computed during render (not in an effect):
+		// it is ready on the first paint, and a child's override set in its own
+		// effect is not raced by a later parent effect.
+		const routeStatus = React.useMemo<BreadcrumbStatus>(() => toReady(resolver(pathname)), [resolver, pathname]);
+
+		const status = React.useMemo<BreadcrumbStatus>(() => {
+			if (override !== null && override.pathname === pathname) {
+				return override.value;
+			}
+			if (tailLabel !== null && tailLabel.pathname === pathname && routeStatus.kind === "ready") {
+				return toReady(applyTailLabel(routeStatus.items, tailLabel.value));
+			}
+			return routeStatus;
+		}, [override, tailLabel, pathname, routeStatus]);
+
+		// Latest status for subscribe-time delivery (written in an effect, never during render).
+		const statusRef = React.useRef<BreadcrumbStatus>(status);
+
+		// Every change — route or page driven — notifies subscribers.
 		React.useEffect(() => {
-			statusRef.current = trail;
-		}, [trail]);
-
-		const notify = React.useCallback((next: BreadcrumbStatus): void => {
+			statusRef.current = status;
 			// Snapshot the set before iterating — a listener that unsubscribes
 			// mid-iteration must not skip the remaining siblings (improvement 3).
 			for (const listener of [...listenersRef.current]) {
-				listener(next);
+				listener(status);
 			}
-		}, []);
+		}, [status]);
 
-		// Re-resolve when the pathname changes; every change also notifies
-		// subscribers so shell chrome hears about route changes too.
-		React.useEffect(() => {
-			const next = toReady(resolveRef.current(pathname));
-			setTrail(next);
-			notify(next);
-		}, [pathname, revalidateKey, notify]);
-
-		const subscribe = React.useCallback((listener: (status: BreadcrumbStatus) => void): (() => void) => {
+		const subscribe = React.useCallback((listener: (next: BreadcrumbStatus) => void): (() => void) => {
 			listenersRef.current.add(listener);
 			// Deliver the current status immediately so consumers can diff
 			// without reading the context again (improvement 7).
@@ -212,29 +243,34 @@ export function createBreadcrumbContext(defaultResolve: (pathname: string) => re
 
 		const setItems = React.useCallback(
 			(items: readonly BreadcrumbItem[]): void => {
-				const next = toReady(items);
-				setTrail(next);
-				notify(next);
+				setOverride({ pathname, value: toReady(items) });
 			},
-			[notify],
+			[pathname],
 		);
 
 		const setError = React.useCallback(
 			(message: string): void => {
-				const next: BreadcrumbStatus = { kind: "error", message };
-				setTrail(next);
-				notify(next);
+				setOverride({ pathname, value: { kind: "error", message } });
 			},
-			[notify],
+			[pathname],
 		);
 
 		const reset = React.useCallback((): void => {
-			const next = toReady(resolveRef.current(pathname));
-			setTrail(next);
-			notify(next);
-		}, [notify, pathname]);
+			setOverride(null);
+		}, []);
 
-		const value = React.useMemo<BreadcrumbContextValue>(() => ({ status: trail, setItems, setError, reset, subscribe }), [trail, setItems, setError, reset, subscribe]);
+		const setTailLabel = React.useCallback(
+			(label: string | null): void => {
+				const trimmed = label?.trim() ?? "";
+				setTailLabelState(trimmed.length === 0 ? null : { pathname, value: trimmed });
+			},
+			[pathname],
+		);
+
+		const value = React.useMemo<BreadcrumbContextValue>(
+			() => ({ status, setItems, setError, reset, setTailLabel, subscribe }),
+			[status, setItems, setError, reset, setTailLabel, subscribe],
+		);
 
 		return <BreadcrumbContext.Provider value={value}>{children}</BreadcrumbContext.Provider>;
 	}

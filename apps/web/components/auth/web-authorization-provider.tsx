@@ -30,7 +30,7 @@ export interface WebAuthorizationProviderProps {
 	/** Server saw a recoverable session cookie on this request. */
 	readonly sessionActive: boolean;
 	/** SSR `GET /auth/permissions` answer for first paint. */
-	readonly initialSessionPermissions?: SessionPermissionsResponse;
+	readonly initialSessionPermissions?: SessionPermissionsResponse | undefined;
 	readonly children: React.ReactNode;
 }
 

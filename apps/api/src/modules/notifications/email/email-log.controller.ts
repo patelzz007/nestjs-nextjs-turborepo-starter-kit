@@ -1,21 +1,17 @@
-import { Controller, Get, Query, Sse } from "@nestjs/common";
+import { Controller, Get, Sse } from "@nestjs/common";
 import type { MessageEvent } from "@nestjs/common";
-import { ApiOkResponse, ApiOperation, ApiQuery, ApiTags } from "@nestjs/swagger";
+import { ApiOkResponse, ApiOperation, ApiProduces, ApiTags } from "@nestjs/swagger";
 import { interval, map, merge, type Observable } from "rxjs";
 
-import { apiContract, EmailLogListResponseSchema, nowEpochMs, type EmailLogEntry, type EmailLogListQuery, apiPath } from "@workspace/shared";
+import { apiContract, apiPath, EmailLogEntrySchema, nowEpochMs, type EmailLogEntry, type EmailLogListQuery, type PaginatedServiceResult } from "@workspace/shared";
 
-import { ZodValidationPipe } from "../../../common/pipes/zod-validation.pipe";
+import { ZodListQuery } from "../../../common/decorators/zod-request.decorators";
+import { ZodPaginatedResponse } from "../../../common/decorators/zod-response.decorators";
 import { AdminAccessOnly } from "../../auth/decorators/admin-access.decorator";
 import { RequirePermission } from "../../auth/decorators/require-permission.decorator";
-import { createWrappedDto } from "../../../common/dto/response-wrapper";
 
 import { EmailLogEventsService } from "./email-log-events.service";
 import { EmailLogService } from "./email-log.service";
-
-// ── Wrapped Response DTO ──────────────────────────────────────────────────
-
-const WrappedEmailLogList = createWrappedDto(EmailLogListResponseSchema, "WrappedEmailLogList");
 
 /**
  * Admin-only audit surface for outbound email. Lists the most recent
@@ -39,18 +35,15 @@ export class EmailLogController {
 	) {}
 
 	/**
-	 * Recent rows, newest first. `?limit=` clamps the page size (default 100,
-	 * max 500) so a rogue value can't 500 the query or dump the whole table.
+	 * Paginated email-log rows (newest first by default) — sort, filter and
+	 * search follow the shared list grammar (docs/list-queries.md).
 	 */
 	@RequirePermission("LIST", "EMAIL")
 	@Get()
-	@ApiOperation({ summary: "List recent sent emails" })
-	@ApiQuery({ name: "limit", required: false, description: "Max rows to return (default 100, max 500)", example: 50 })
-	@ApiOkResponse({ type: WrappedEmailLogList, description: "Most recent EmailLog rows" })
-	public async list(@Query(new ZodValidationPipe(apiContract.email.logList.input)) query: EmailLogListQuery): Promise<{ readonly logs: readonly EmailLogEntry[] }> {
-		const limit: number = Math.max(1, Math.min(query.limit, 500));
-		const logs: EmailLogEntry[] = await this.emailLogService.listRecent(limit);
-		return { logs };
+	@ApiOperation({ summary: "List sent emails" })
+	@ZodPaginatedResponse(EmailLogEntrySchema, { description: "Paginated EmailLog rows; pagination is in `meta`" })
+	public async list(@ZodListQuery(apiContract.email.logList.input) query: EmailLogListQuery): Promise<PaginatedServiceResult<EmailLogEntry>> {
+		return this.emailLogService.list(query);
 	}
 
 	/**
@@ -69,7 +62,8 @@ export class EmailLogController {
 	@RequirePermission("LIST", "EMAIL")
 	@Sse("events")
 	@ApiOperation({ summary: "Live EmailLog update stream (SSE)" })
-	@ApiOkResponse({ description: "text/event-stream; one `{ updatedAt }` frame per EmailLog write" })
+	@ApiProduces("text/event-stream")
+	@ApiOkResponse({ description: "text/event-stream; one `{ updatedAt }` frame per EmailLog write (pass-through: no envelope, no response contract)" })
 	public stream(): Observable<MessageEvent> {
 		return merge(
 			this.emailLogEvents.observeUpdates().pipe(map((): MessageEvent => ({ data: { updatedAt: nowEpochMs() } }))),

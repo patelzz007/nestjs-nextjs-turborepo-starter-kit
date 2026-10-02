@@ -1,5 +1,8 @@
-import type { MessagingEnvKeys } from "../core/env";
-
+/**
+ * Connection settings are EXPLICIT: the app validates its own environment
+ * (e.g. apps/api `config/api-config.schema.ts`) and passes the values in.
+ * This package never reads `process.env` — `undefined` means "disabled".
+ */
 export interface MessagingModuleOptions {
 	/** Kafka / kafkajs client id (e.g. `my-api`). */
 	readonly clientId: string;
@@ -9,14 +12,12 @@ export interface MessagingModuleOptions {
 	readonly queueNames: readonly string[];
 	/** Bull key prefix — default `bull`. */
 	readonly bullPrefix?: string;
-	/** Explicit Redis URL — falls back to `REDIS_URL` env when omitted. */
-	readonly redisUrl?: string;
-	/** Explicit Kafka brokers — falls back to `KAFKA_BROKERS` env when omitted. */
-	readonly kafkaBrokers?: readonly string[];
-	/** Explicit RabbitMQ URL — falls back to `RABBITMQ_URL` env when omitted. */
-	readonly rabbitmqUrl?: string;
-	/** Env var names when resolving from `process.env`. */
-	readonly envKeys?: MessagingEnvKeys;
+	/** Redis URL; `undefined` disables Redis + BullMQ. */
+	readonly redisUrl: string | undefined;
+	/** Kafka bootstrap servers; `undefined` (or empty) disables the producer. */
+	readonly kafkaBrokers: readonly string[] | undefined;
+	/** RabbitMQ URL; `undefined` disables the placeholder service. */
+	readonly rabbitmqUrl: string | undefined;
 	/** Queue polled for BullMQ health checks — defaults to first queue name. */
 	readonly healthQueueName?: string;
 }
@@ -32,29 +33,18 @@ export interface ResolvedMessagingOptions {
 	readonly healthQueueName: string | undefined;
 }
 
+const DEFAULT_BULL_PREFIX = "bull";
+
+/** Applies defaults and normalizes "configured but empty" to disabled. */
 export function resolveMessagingOptions(options: MessagingModuleOptions): ResolvedMessagingOptions {
-	const envKeys = options.envKeys;
-	const redisFromEnv = envKeys !== undefined ? process.env[envKeys.redisUrl] : process.env.REDIS_URL;
-	const kafkaFromEnv = envKeys !== undefined ? process.env[envKeys.kafkaBrokers] : process.env.KAFKA_BROKERS;
-	const rabbitFromEnv = envKeys !== undefined ? process.env[envKeys.rabbitmqUrl] : process.env.RABBITMQ_URL;
-
-	const kafkaBrokers =
-		options.kafkaBrokers ??
-		(kafkaFromEnv !== undefined && kafkaFromEnv.length > 0
-			? kafkaFromEnv
-					.split(",")
-					.map((broker) => broker.trim())
-					.filter((broker) => broker.length > 0)
-			: undefined);
-
 	return {
 		clientId: options.clientId,
 		connectionName: options.connectionName,
 		queueNames: options.queueNames,
-		bullPrefix: options.bullPrefix ?? "bull",
-		redisUrl: options.redisUrl ?? (redisFromEnv !== undefined && redisFromEnv.length > 0 ? redisFromEnv : undefined),
-		kafkaBrokers: kafkaBrokers !== undefined && kafkaBrokers.length > 0 ? kafkaBrokers : undefined,
-		rabbitmqUrl: options.rabbitmqUrl ?? (rabbitFromEnv !== undefined && rabbitFromEnv.length > 0 ? rabbitFromEnv : undefined),
+		bullPrefix: options.bullPrefix ?? DEFAULT_BULL_PREFIX,
+		redisUrl: options.redisUrl !== undefined && options.redisUrl.length > 0 ? options.redisUrl : undefined,
+		kafkaBrokers: options.kafkaBrokers !== undefined && options.kafkaBrokers.length > 0 ? options.kafkaBrokers : undefined,
+		rabbitmqUrl: options.rabbitmqUrl !== undefined && options.rabbitmqUrl.length > 0 ? options.rabbitmqUrl : undefined,
 		healthQueueName: options.healthQueueName ?? options.queueNames[0],
 	};
 }

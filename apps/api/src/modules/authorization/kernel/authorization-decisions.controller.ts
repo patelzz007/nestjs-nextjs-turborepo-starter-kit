@@ -1,6 +1,5 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Post, Query, Req } from "@nestjs/common";
-import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
-import type { FastifyRequest } from "fastify";
+import { Controller, Get, Post } from "@nestjs/common";
+import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import {
 	apiPath,
 	AuthorizationDecisionsRequestSchema,
@@ -14,15 +13,13 @@ import {
 	type AuthorizationResult,
 } from "@workspace/shared";
 
-import { createWrappedDto } from "../../../common/dto/response-wrapper";
-import { ZodValidationPipe } from "../../../common/pipes/zod-validation.pipe";
+import { RequestContextService, type RequestTenant } from "../../../common/context/request-context";
+import { ZodBody, ZodQuery } from "../../../common/decorators/zod-request.decorators";
+import { ZodResponse } from "../../../common/decorators/zod-response.decorators";
 import type { AuthenticatedUser } from "../../../types/authenticated-user";
 import { RequirePermission } from "../../auth/decorators/require-permission.decorator";
 import { CurrentUser } from "../decorators/current-user.decorator";
 import { AuthorizationKernelService } from "./authorization-kernel.service";
-
-const WrappedDecisionsResponse = createWrappedDto(AuthorizationDecisionsResponseSchema, "WrappedAuthorizationDecisionsResponse");
-const WrappedAuthorizationResultResponse = createWrappedDto(AuthorizationResultSchema, "WrappedAuthorizationResultResponse");
 
 /**
  * Authorization decisions for UI capability rendering (spec §12 option C) and
@@ -35,23 +32,26 @@ const WrappedAuthorizationResultResponse = createWrappedDto(AuthorizationResultS
 @ApiBearerAuth()
 @Controller(apiPath("/authorization/decisions"))
 export class AuthorizationDecisionsController {
-	public constructor(private readonly kernel: AuthorizationKernelService) {}
+	public constructor(
+		private readonly kernel: AuthorizationKernelService,
+		private readonly requestContext: RequestContextService,
+	) {}
 
 	@Post()
-	@HttpCode(HttpStatus.OK)
 	@ApiOperation({ summary: "Evaluate capability checks for the current user (UI hints — the API re-authorizes every operation)" })
-	@ApiOkResponse({ type: WrappedDecisionsResponse })
+	@ZodResponse(AuthorizationDecisionsResponseSchema, { description: "One decision per requested check, in request order" })
 	public async decide(
 		@CurrentUser() user: AuthenticatedUser,
-		@Req() request: FastifyRequest,
-		@Body(new ZodValidationPipe(AuthorizationDecisionsRequestSchema)) body: AuthorizationDecisionsRequest,
+		@ZodBody(AuthorizationDecisionsRequestSchema) body: AuthorizationDecisionsRequest,
 	): Promise<AuthorizationDecisionsResponse> {
+		// Server-verified tenant, bound by AuthorizationGuard into the request context (ADR 017).
+		const tenant: RequestTenant | undefined = this.requestContext.current()?.tenant;
 		const subject: AuthorizationContext = {
 			userId: user.id,
 			isSuperAdmin: user.isSuperAdmin,
-			...(request.authorizationContext?.organizationId === undefined ? {} : { organizationId: request.authorizationContext.organizationId }),
-			...(request.authorizationContext?.storeId === undefined ? {} : { storeId: request.authorizationContext.storeId }),
-			...(request.authorizationContext?.locationId === undefined ? {} : { locationId: request.authorizationContext.locationId }),
+			...(tenant?.organizationId === undefined ? {} : { organizationId: tenant.organizationId }),
+			...(tenant?.storeId === undefined ? {} : { storeId: tenant.storeId }),
+			...(tenant?.locationId === undefined ? {} : { locationId: tenant.locationId }),
 		};
 
 		const results = await Promise.all(
@@ -71,11 +71,8 @@ export class AuthorizationDecisionsController {
 	@Get("explain")
 	@RequirePermission("READ", "PERMISSION")
 	@ApiOperation({ summary: "Admin: step-by-step explanation of an authorization decision" })
-	@ApiOkResponse({ type: WrappedAuthorizationResultResponse })
-	public async explain(
-		@CurrentUser() user: AuthenticatedUser,
-		@Query(new ZodValidationPipe(AuthorizationExplainQuerySchema)) query: AuthorizationExplainQuery,
-	): Promise<AuthorizationResult> {
+	@ZodResponse(AuthorizationResultSchema, { description: "The decision with every evaluation step" })
+	public async explain(@CurrentUser() user: AuthenticatedUser, @ZodQuery(AuthorizationExplainQuerySchema) query: AuthorizationExplainQuery): Promise<AuthorizationResult> {
 		const explainingSelf = query.userId === undefined || query.userId === user.id;
 		// The kernel re-verifies organization / location membership for the explained subject.
 		return this.kernel.explain({

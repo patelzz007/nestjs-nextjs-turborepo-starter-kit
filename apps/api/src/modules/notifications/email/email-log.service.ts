@@ -1,7 +1,21 @@
 import { Injectable } from "@nestjs/common";
+import type { EmailLog } from "@prisma/client";
 
-import { EmailLogCreateSchema, EmailLogEntrySchema, EmailLogStatusSchema, epochMs, type EmailLogCreate, type EmailLogEntry, type EmailLogStatus } from "@workspace/shared";
+import {
+	EmailLogCreateSchema,
+	EmailLogEntrySchema,
+	EmailLogStatusSchema,
+	epochMs,
+	type EmailLogCreate,
+	type EmailLogEntry,
+	type EmailLogListQuery,
+	type PaginatedServiceResult,
+	type EmailLogStatus,
+	type EmailLogUpdatedEvent,
+} from "@workspace/shared";
 
+import { mapListResult, toPaginatedServiceResult } from "../../../platform/persistence/list-page";
+import { PlatformOutboxService } from "../../../infrastructure/outbox/platform-outbox.service";
 import { EmailLogEventsService } from "./email-log-events.service";
 import { EmailLogRepository } from "./email-log.repository";
 
@@ -53,20 +67,28 @@ export class EmailLogService {
 	public constructor(
 		private readonly repository: EmailLogRepository,
 		private readonly events: EmailLogEventsService,
+		private readonly outbox: PlatformOutboxService,
 	) {}
 
-	/** Insert a new EmailLog row. Returns the generated id. */
+	/**
+	 * Insert a new EmailLog row and its `email.log.updated` platform event in
+	 * one transaction (transactional outbox), then signal the in-process SSE
+	 * stream after commit. Returns the generated id.
+	 */
 	public async create(input: EmailLogCreate): Promise<{ readonly id: string }> {
 		const parsed: EmailLogCreate = EmailLogCreateSchema.parse(input);
-		const row = await this.repository.create(parsed);
-		this.events.emitUpdated({
+		const event: EmailLogUpdatedEvent = {
 			templateKey: parsed.templateKey,
 			status: parsed.status,
 			to: parsed.to,
 			resendId: parsed.resendId ?? null,
 			error: parsed.error ?? null,
 			durationMs: parsed.durationMs ?? null,
+		};
+		const row = await this.repository.create(parsed, async (tx): Promise<void> => {
+			await this.outbox.enqueueInTransaction(tx, { type: "email.log.updated", payload: event });
 		});
+		this.events.emitUpdated(event);
 		return row;
 	}
 
@@ -95,24 +117,27 @@ export class EmailLogService {
 	}
 
 	/**
-	 * Most recent rows, newest first — used by the admin log page / audits.
-	 *
-	 * Prisma returns `Date` objects, but the wire contract wants ISO strings —
-	 * so the rows are mapped here before the strict schema validates them.
+	 * One page of email-log rows for the admin log page (newest first by
+	 * default). `bigint` epochs are mapped to numbers and every row is
+	 * re-validated by the strict wire schema.
 	 */
-	public async listRecent(limit = 100): Promise<EmailLogEntry[]> {
-		const rows = await this.repository.listRecent(limit);
-		const mapped = rows.map((row) => ({
-			id: row.id,
-			templateKey: row.templateKey,
-			to: row.to,
-			subject: row.subject,
-			status: row.status,
-			resendId: row.resendId ?? undefined,
-			error: row.error ?? undefined,
-			createdAt: epochMs(Number(row.createdAt)),
-			updatedAt: epochMs(Number(row.updatedAt)),
-		}));
-		return EmailLogEntrySchema.array().parse(mapped);
+	public async list(query: EmailLogListQuery): Promise<PaginatedServiceResult<EmailLogEntry>> {
+		const result = await this.repository.list(query);
+		return toPaginatedServiceResult(mapListResult(result, toEmailLogEntry), query);
 	}
+}
+
+/** Persistence row → the public `EmailLogEntry` contract. */
+export function toEmailLogEntry(row: EmailLog): EmailLogEntry {
+	return EmailLogEntrySchema.parse({
+		id: row.id,
+		templateKey: row.templateKey,
+		to: row.to,
+		subject: row.subject,
+		status: row.status,
+		resendId: row.resendId ?? undefined,
+		error: row.error ?? undefined,
+		createdAt: epochMs(Number(row.createdAt)),
+		updatedAt: epochMs(Number(row.updatedAt)),
+	});
 }

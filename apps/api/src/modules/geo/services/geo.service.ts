@@ -1,7 +1,23 @@
 import { Injectable } from "@nestjs/common";
-import type { City, Country, Region, State, Subregion } from "@prisma/client";
 
 import type {
+	CascadePreviewResult,
+	City,
+	CityListItem,
+	Country,
+	CountryListItem,
+	GeoAutocompleteItem,
+	GeoImportResult,
+	GeoImportValidationResult,
+	GeoStats,
+	MessageResponse,
+	PaginatedServiceResult,
+	Region,
+	RegionListItem,
+	State,
+	StateListItem,
+	Subregion,
+	SubregionListItem,
 	CityListQuery,
 	CountryListQuery,
 	CreateCityInput,
@@ -26,37 +42,35 @@ import type {
 
 import { GeoRepository } from "../repositories/geo.repository";
 
-export type { AutocompleteItem, CascadePreviewResult, GeoStats, ImportResult, ImportValidationResult, ListResult } from "../repositories/geo.repository";
-
 @Injectable()
 export class GeoService {
 	public constructor(private readonly repository: GeoRepository) {}
 
-	public getStats(): Promise<import("../repositories/geo.repository").GeoStats> {
+	public getStats(): Promise<GeoStats> {
 		return this.repository.getStats();
 	}
 
-	public autocomplete(query: GeoAutocompleteQuery): Promise<readonly import("../repositories/geo.repository").AutocompleteItem[]> {
+	public autocomplete(query: GeoAutocompleteQuery): Promise<readonly GeoAutocompleteItem[]> {
 		return this.repository.autocomplete(query);
 	}
 
-	public importData(input: GeoImportInput): Promise<import("../repositories/geo.repository").ImportResult> {
+	public importData(input: GeoImportInput): Promise<GeoImportResult> {
 		return this.repository.importData(input);
 	}
 
-	public validateImport(input: GeoImportValidateInput): import("../repositories/geo.repository").ImportValidationResult {
+	public validateImport(input: GeoImportValidateInput): GeoImportValidationResult {
 		return this.repository.validateImport(input);
 	}
 
-	public exportData(query: GeoExportQuery): Promise<readonly Region[] | readonly Subregion[] | readonly Country[] | readonly State[] | readonly City[]> {
+	public exportData(query: GeoExportQuery): Promise<readonly City[]> {
 		return this.repository.exportData(query);
 	}
 
-	public cascadePreview(input: CascadePreviewInput): Promise<import("../repositories/geo.repository").CascadePreviewResult> {
+	public cascadePreview(input: CascadePreviewInput): Promise<CascadePreviewResult> {
 		return this.repository.cascadePreview(input);
 	}
 
-	public listRegions(query: RegionListQuery): Promise<import("../repositories/geo.repository").ListResult> {
+	public listRegions(query: RegionListQuery): Promise<PaginatedServiceResult<RegionListItem>> {
 		return this.repository.listRegions(query);
 	}
 
@@ -72,11 +86,11 @@ export class GeoService {
 		return this.repository.updateRegion(id, input);
 	}
 
-	public deleteRegion(id: number): Promise<{ readonly message: string }> {
+	public deleteRegion(id: number): Promise<MessageResponse> {
 		return this.repository.deleteRegion(id);
 	}
 
-	public listSubregions(query: SubregionListQuery): Promise<import("../repositories/geo.repository").ListResult> {
+	public listSubregions(query: SubregionListQuery): Promise<PaginatedServiceResult<SubregionListItem>> {
 		return this.repository.listSubregions(query);
 	}
 
@@ -92,11 +106,11 @@ export class GeoService {
 		return this.repository.updateSubregion(id, input);
 	}
 
-	public deleteSubregion(id: number): Promise<{ readonly message: string }> {
+	public deleteSubregion(id: number): Promise<MessageResponse> {
 		return this.repository.deleteSubregion(id);
 	}
 
-	public listCountries(query: CountryListQuery): Promise<import("../repositories/geo.repository").ListResult> {
+	public listCountries(query: CountryListQuery): Promise<PaginatedServiceResult<CountryListItem>> {
 		return this.repository.listCountries(query);
 	}
 
@@ -112,11 +126,11 @@ export class GeoService {
 		return this.repository.updateCountry(id, input);
 	}
 
-	public deleteCountry(id: number): Promise<{ readonly message: string }> {
+	public deleteCountry(id: number): Promise<MessageResponse> {
 		return this.repository.deleteCountry(id);
 	}
 
-	public listStates(query: StateListQuery): Promise<import("../repositories/geo.repository").ListResult> {
+	public listStates(query: StateListQuery): Promise<PaginatedServiceResult<StateListItem>> {
 		return this.repository.listStates(query);
 	}
 
@@ -132,11 +146,11 @@ export class GeoService {
 		return this.repository.updateState(id, input);
 	}
 
-	public deleteState(id: number): Promise<{ readonly message: string }> {
+	public deleteState(id: number): Promise<MessageResponse> {
 		return this.repository.deleteState(id);
 	}
 
-	public listCities(query: CityListQuery): Promise<import("../repositories/geo.repository").ListResult> {
+	public listCities(query: CityListQuery): Promise<PaginatedServiceResult<CityListItem>> {
 		return this.repository.listCities(query);
 	}
 
@@ -152,7 +166,7 @@ export class GeoService {
 		return this.repository.updateCity(id, input);
 	}
 
-	public deleteCity(id: number): Promise<{ readonly message: string }> {
+	public deleteCity(id: number): Promise<MessageResponse> {
 		return this.repository.deleteCity(id);
 	}
 }

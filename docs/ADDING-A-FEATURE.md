@@ -150,8 +150,8 @@ export class ReportService {
 
 ```ts
 // apps/api/src/modules/report/report.controller.ts
-import { Controller, Get, Query, UseGuards } from "@nestjs/common";
-import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe";
+import { Controller, Get, UseGuards } from "@nestjs/common";
+import { ZodQuery } from "../../common/decorators/zod-request.decorators";
 import { AuthGuard } from "../auth/guards/auth.guard";
 import { PermissionGuard } from "../rbac/permission.guard";
 import { RequirePermission } from "../rbac/require-permission.decorator";
@@ -166,7 +166,7 @@ export class ReportController {
 
   @Get()
   @RequirePermission("LIST", "REPORT")
-  public list(@Query(new ZodValidationPipe(apiContract.report.list.input)) query: Parameters<typeof apiContract.report.list.input.parse>[0]) {
+  public list(@ZodQuery(apiContract.report.list.input) query: Parameters<typeof apiContract.report.list.input.parse>[0]) {
     return this.service.list(query);
   }
 }

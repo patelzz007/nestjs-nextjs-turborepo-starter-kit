@@ -41,6 +41,7 @@
 				"KAFKA_BROKERS",
 				"LOG_LEVEL",
 				"NEXT_PUBLIC_API_URL",
+				"NEXT_RUNTIME",
 				"NODE_ENV",
 				"OBSERVE_APP_KEY",
 				"OBSERVE_APP_SECRET",
@@ -89,6 +90,11 @@
 		},
 		"test": {
 			"dependsOn": ["^build"]
+		},
+		"openapi:export": {
+			"dependsOn": ["^build"],
+			"cache": false,
+			"env": ["DATABASE_URL", "REDIS_URL"]
 		},
 		"db:generate": {
 			"cache": false
@@ -184,6 +190,7 @@
 				"JWT_REFRESH_SECRET",
 				"KAFKA_BROKERS",
 				"NEXT_PUBLIC_API_URL",
+				"NEXT_RUNTIME",
 				"NODE_ENV",
 				"OBSERVE_APP_KEY",
 				"OBSERVE_APP_SECRET",

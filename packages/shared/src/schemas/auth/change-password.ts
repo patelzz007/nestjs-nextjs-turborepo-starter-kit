@@ -20,10 +20,8 @@ export const ChangePasswordSchema = z
 
 export type ChangePasswordInput = z.output<typeof ChangePasswordSchema>;
 
-export const ChangePasswordResponseSchema = z
-	.object({
-		message: z.string(),
-	})
-	.strict();
+export const ChangePasswordResponseSchema = z.object({
+	message: z.string(),
+});
 
 export type ChangePasswordResponse = z.output<typeof ChangePasswordResponseSchema>;

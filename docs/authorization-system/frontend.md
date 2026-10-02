@@ -4,7 +4,7 @@ tags: ["authorization", "frontend", "react", "nextjs", "can", "sidebar", "admin"
 description: "How the admin, merchant and web apps decide what to show: the shared can() API, the <Can> component, providers, route guards, sidebar filtering, UX rules, and per-app helpers."
 order: 23
 author: "Platform Team"
-lastUpdated: 1790812800000
+lastUpdated: 1790899200000
 coverImage: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=1600&q=80"
 ---
 
@@ -118,7 +118,7 @@ MERCHANT_CAPABILITY.manageRewards  // "merchant:manage_rewards"
 |---|---|---|
 | Admin | `GET /auth/permissions`, preloaded on the server in `app/(panel)/layout.tsx`, then `useSessionPermissionsQuery()` (`lib/session/capabilities.ts`) | refetch on window focus + every 60 s; **live data wins even when empty** (a user whose permissions were all revoked immediately sees nothing) |
 | Web | same endpoint, in `WebAuthorizationProvider` (`components/auth/web-authorization-provider.tsx`) mounted in `app/layout.tsx` | same rules; **guests never call the endpoint** and get an empty set |
-| Merchant | the active organization membership (`api.organizations.membershipsBootstrap`) → role → `MERCHANT_ROLE_CAPABILITIES`, in `MerchantAuthorizationProvider` | refetched with the memberships query |
+| Merchant | the active organization membership (`api.organizations.membershipsBootstrap`) → role → `MERCHANT_ROLE_CAPABILITIES`, in `MerchantAuthorizationProvider`; the server page guard reads the same memberships per request | refetched with the memberships query |
 
 Platform SuperAdmins receive **every** platform capability from `/auth/permissions`, because
 the backend lets them do everything.
@@ -148,57 +148,103 @@ the same as unauthorized (spec §25). Unauthorized items are removed, not disabl
 |---|---|---|
 | Provider | `components/layout/dashboard-layout.tsx` | mounts `CapabilitiesProvider` with live capabilities |
 | Page requirements | `lib/navigation/menu-authorization.ts` | `ADMIN_MENU_AUTHORIZATION`: sidebar URL → `PERMISSION.*` requirement, one line per page with a comment naming the API route it mirrors |
-| Route rules | `lib/navigation/route-authorization.ts` | built from the menu + explicit rules; longest URL prefix wins; `superAdminOnly` rules for `@SuperAdminOnly` pages |
-| Route guard | `components/access/route-authorization-guard.tsx` | renders `AdminAccessDenied` when the current page's rule is not met |
+| Route rules | `lib/navigation/route-authorization.ts` | built from the menu + explicit per-page rules (`ROUTE_PATTERNS` in `lib/routes.ts`: detail pages need READ, edit pages UPDATE); the most specific pattern wins (a literal segment beats `[id]`); disabled menu items create no rules; `superAdminOnly` rules for `@SuperAdminOnly` pages |
+| Route guard | `components/access/route-authorization-guard.tsx` | renders `AdminAccessDenied` when the current page's rule is not met — also during the server render (permissions are loaded server-side), so a denied page never flashes |
+| Visible ⇔ allowed | `filterMenuByRouteAccess` + `canAccessRoute` (`AuthorizedNavigationProvider` in `dashboard-layout.tsx`) | the sidebar, ⌘K palette (items + quick actions), pinned items, topbar and profile links all use the guard's own rules — an item is shown exactly when its page would render |
+| Coverage test | `lib/navigation/page-authorization.test.ts` | every `app/**/page.tsx` has a reviewed rule (both directions), and "visible ⇔ allowed" holds for every capability set |
 | Super admin | `lib/session/super-admin.ts` | `useSuperAdminStatus()`, `useCanStartImpersonation()` |
 | Disabled action | `components/common/disabled-action-button.tsx` | disabled button + tooltip + screen-reader reason |
 | Inline notice | `components/common/access-restricted-notice.tsx` | "you can view but not change" message |
 | Access denied page | `components/access/admin-access-denied.tsx` | full-page fallback |
 
+Pages never repeat their own route rule in-page (no `<Can>` wrapper, `canView` early return, or
+`enabled: can(...)` query flag for the permission the route already requires) — the route guard
+is the single page-level check; in-page checks are only for finer-grained actions that need a
+*different* permission (e.g. the Edit link on a detail page needs `*.UPDATE`).
+
 What is gated (each maps to the permission of the API route it calls):
 
 | Area | Requirement | When not allowed |
 |---|---|---|
-| Access control page | any of `ROLE.LIST`, `PERMISSION.LIST`, `PERMISSION.READ`; each tab its own | tab hidden; notice when none |
+| Access control page | any of `ROLE.LIST`, `PERMISSION.LIST`, `PERMISSION.READ`; each tab its own | tab hidden; page denied when none |
 | User access panel | assign / remove roles `ROLE.UPDATE`; direct grants `PERMISSION.UPDATE`; permission checker `PERMISSION.READ` | read-only notice, checker hidden |
 | Users pages, MFA recovery review | SuperAdmin | hidden / denied |
 | Impersonate | SuperAdmin and not already impersonating | hidden |
 | Reward Hub merchants / KYB / locations | `MERCHANT_ORG.LIST`; decisions and reviews `MERCHANT_ORG.MANAGE` | read-only notice |
-| Pending rewards approve / reject | `REWARD.MANAGE` | hidden |
+| Pending rewards review, approve / reject | `REWARD.MANAGE` (the page's own rule, so the actions are not re-checked) | page denied |
 | Invites | `MERCHANT_ORG.MANAGE` | page denied |
 | Emails / email log / send test email | `EMAIL.READ` / `EMAIL.LIST` / `EMAIL.CREATE` | page denied / disabled button with reason |
 | Geo | `GEO.READ` | page denied |
+| Sales analytics page (`GET /admin/analytics/sales`) | `ANALYTICS.READ` | page denied |
+| Overview "Platform sales" cards (same endpoint; the overview itself is open) | `ANALYTICS.READ` | section hidden, never queried |
 | Products, sample categories | list `*.LIST`; create `*.CREATE`; view `*.READ`; edit `*.UPDATE`; delete `*.DELETE` | create disabled with reason; row actions hidden; detail / edit pages denied |
 
 ---
 
 ## 5. Merchant app (`apps/merchant`)
 
+Every merchant gate checks a **`merchant:*` capability** (`MERCHANT_CAPABILITY.*`) — never a
+membership role name. Capabilities come from the active membership's role through
+`MERCHANT_ROLE_CAPABILITIES`, the same table the API enforces first (see the
+[backend role table](./backend.md#12-merchant-reward-hub-capabilities)).
+
 | Building block | File |
 |---|---|
-| Provider | `components/access/merchant-authorization-provider.tsx` — `MerchantAuthorizationProvider` (feeds `CapabilitiesProvider`), `useMerchantAuthorizationStatus()`, `useMerchantRoleAccess(action)` |
-| Capability gate | `components/access/merchant-capability-gate.tsx` — `MerchantCapabilityGate` (skeleton while loading, then `<Can fallback={<MerchantAccessDenied/>}>`), `MerchantRoleGate`, `MerchantReadOnlyNotice` |
-| Role rules | `lib/org/membership-roles.ts` — `manageTeam` / `manageLocations` (`OWNER`, `ADMIN`), `submitKyb` (`OWNER`), mirroring the API services |
+| Provider | `components/access/merchant-authorization-provider.tsx` — `MerchantAuthorizationProvider` (feeds `CapabilitiesProvider`), `useMerchantAuthorizationStatus()` (`isLoading`, `capabilities`) |
+| Capability gate | `components/access/merchant-capability-gate.tsx` — `MerchantCapabilityGate` (skeleton while loading, then `<Can fallback={<MerchantAccessDenied/>}>`), `MerchantAccessDenied`, `MerchantReadOnlyNotice` |
 | Capability hook | `lib/org/capabilities.ts` — `useMerchantCapabilities()` (membership → capabilities) |
+| **Org route map** | `lib/navigation/org-route-authorization.ts` — `ORG_PAGE_RULES`: every page under `app/orgs/[orgSlug]/` → its capability requirement, or explicitly `open` with a reason |
+| **Server page guard** | `lib/org/org-page-guard.tsx` — `guardOrgPage(orgSlug, route)`; decision in `lib/org/org-page-access.ts` |
 
-| Area | Capability / rule | When not allowed |
+### 5.1 Page guard (brute-force navigation)
+
+Every org page calls the guard **first**, on the server, before it fetches anything:
+
+```tsx
+export default async function OrganizationTeamPage({ params }: Props): Promise<React.JSX.Element> {
+	const { orgSlug } = await params;
+	const denied = await guardOrgPage(orgSlug, "/settings/team");
+	if (denied !== null) {
+		return denied; // MerchantAccessDenied, rendered on the server
+	}
+	return <OrganizationTeamPageView orgSlug={orgSlug} />;
+}
+```
+
+- The guard reads the membership for **the organization in the URL** (never another
+  membership's role) and evaluates the route's rule in `ORG_PAGE_RULES`. No membership in that
+  organization → denied.
+- It runs per page, not in the org layout: layouts do not re-render on client-side navigation,
+  so a layout check would be skipped when moving between org pages.
+- `lib/navigation/org-route-authorization.test.ts` fails when a page has no rule, a rule has no
+  page, or a page does not call `guardOrgPage` with its own route before loading data.
+- The same map drives the command palette and pinned items (`filterMerchantNavItems` →
+  `canOpenOrgPath`); the sidebar JSON carries identical `authorization` blocks (enforced by the
+  same test), so an item is **hidden exactly when its page would be denied**.
+
+| Route (org-relative) | Requirement | Denied → |
 |---|---|---|
-| Sidebar, palette, pinned, topbar | the item's capability | hidden |
-| Dashboard | `viewDashboard` | denied page |
-| Rewards list / create / edit / submit | `viewRewards`; changing needs `manageRewards` | denied page; create hidden + read-only notice; read-only form |
-| Redemptions | `viewRedemptions` | denied page (no query is sent) |
-| Analytics | `viewAnalytics` | denied page (no query is sent) |
-| API keys | `manageApiKeys` | "owner or admin access required" |
-| Team and invites, add / resubmit store | `OWNER` or `ADMIN` role | denied / action hidden |
-| **KYB page and settings card** | **`OWNER` role only** (the API enforces the same) | denied page; card hidden |
+| `/` | open (redirects to the dashboard) | — |
+| `/dashboard` | `viewDashboard` | denied page |
+| `/rewards`, `/rewards/[rewardId]/edit` | `viewRewards`; changing needs `manageRewards` | denied page; read-only form / create hidden |
+| `/rewards/new` | `manageRewards` | denied page |
+| `/redemptions` | `viewRedemptions` | denied page (no query is sent) |
+| `/analytics` | `viewAnalytics` | denied page (no query is sent) |
+| `/terminals` | `manageApiKeys` (a paired till receives an API key) | denied page (no query is sent) |
+| `/api-keys` | `manageApiKeys` | denied page |
+| `/settings` | any of `manageTeam`, `viewLocations`, `manageVerification` | denied page; each card shows only with its page's capability |
+| `/settings/team` | `manageTeam` (`OWNER`, `ADMIN`) | "Team access required" |
+| `/settings/locations` | `viewLocations` (every member); add / resubmit store needs `manageLocations` | denied page; action hidden + read-only notice |
+| `/settings/verification` | `manageVerification` (`OWNER` only — the API enforces the same) | "Owner access required" |
+| `/account` | open (personal account; enrollment sessions must reach it) | — |
 
 ```tsx
 const { can } = useAuthorization();
 {can(MERCHANT_CAPABILITY.manageRewards) ? <CreateRewardButton /> : <MerchantReadOnlyNotice>Only managers can create rewards.</MerchantReadOnlyNotice>}
 
-<MerchantRoleGate action="submitKyb">
+<MerchantCapabilityGate capability={MERCHANT_CAPABILITY.manageVerification}>
 	<KybForm />
-</MerchantRoleGate>
+</MerchantCapabilityGate>
 ```
 
 ---
@@ -210,6 +256,9 @@ const { can } = useAuthorization();
 | Provider | `components/auth/web-authorization-provider.tsx` — one provider for the whole app; `useWebSession()` |
 | Section gate | `components/auth/access-gate.tsx` — `AccessGate`: guest → sign-in prompt; signed in without permission → "not available for your account"; allowed → children; loading → nothing |
 | Fallback UI | `components/auth/access-fallback.tsx` |
+| Route table | `lib/navigation/route-access.ts` — `WEB_ROUTE_ACCESS`: every page's audience (public / guest-only / signed-in), optional capability, breadcrumb label; tested against `proxy.ts` and the pages on disk |
+| Route guard | `components/auth/route-access-guard.tsx` — `WebRouteAccessGuard` in the RewardHub shell: sign-in prompt or "not available" for a page whose capability is missing |
+| Visible ⇔ allowed | sidebar (`applyWebRouteAuthorization`), ⌘K palette, quick actions and pinned items all filter through `useCanAccessWebPath` |
 
 | Area | API rule | Gate |
 |---|---|---|
@@ -227,7 +276,8 @@ ownership.
 ## 7. Sidebar filtering (all apps)
 
 Menus are **application-owned config** (spec §14): admin `lib/navigation/sidebar-menu.json` +
-`menu-authorization.ts`; merchant `data/merchant-sidebar-menu.json`. The schema is in
+`menu-authorization.ts`; merchant `data/merchant-sidebar-menu.json` (each item's `authorization`
+must equal its page's rule in `ORG_PAGE_RULES`). The schema is in
 `packages/client/src/lib/sidebar/sidebar-menu-schema.ts`:
 
 ```ts

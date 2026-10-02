@@ -9,7 +9,7 @@ export interface AdminClientAuthWrapperProps {
 	readonly children: ReactNode;
 }
 
-/** Admin auth bridge — skips `/auth/me` on login / password-reset / verify-email routes. */
+/** Admin auth bridge — skips `/auth/me` on the auth pages (`ADMIN_AUTH_ROUTE_PREFIXES`). */
 export function AdminClientAuthWrapper({ children }: AdminClientAuthWrapperProps): JSX.Element {
 	const pathname = usePathname();
 

@@ -1,10 +1,10 @@
 import { Pool } from "pg";
 import { type NestFastifyApplication } from "@nestjs/platform-fastify";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { API_VERSION_PREFIX } from "@workspace/shared";
+import { API_VERSION_PREFIX, ApiErrorResponseSchema, AuthorizationDecisionsResponseSchema, AuthorizationResultSchema } from "@workspace/shared";
 
 import { ORGANIZATION_SEED_IDS } from "../prisma/seed/organizations";
-import { createE2eApp, extractCookie, login, mutationHeaders, type LoginResult } from "./e2e-helpers";
+import { createE2eApp, extractCookie, login, mutationHeaders, parseSuccessEnvelope, type LoginResult } from "./e2e-helpers";
 
 const DATABASE_URL: string = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/monorepo";
 
@@ -80,7 +80,7 @@ describe("Authorization hardening (e2e)", () => {
 			});
 
 			expect(response.statusCode, response.body).toBe(403);
-			expect(response.json().error).toBe("PERMISSION_DENIED");
+			expect(ApiErrorResponseSchema.parse(response.json()).error.code).toBe("PERMISSION_DENIED");
 		});
 
 		it("accepts the header for an active member", async () => {
@@ -130,7 +130,7 @@ describe("Authorization hardening (e2e)", () => {
 			});
 
 			expect(response.statusCode, response.body).toBe(200);
-			expect(response.json().data.results.map((result: { allowed: boolean }) => result.allowed)).toEqual([true, false]);
+			expect(parseSuccessEnvelope(response, AuthorizationDecisionsResponseSchema).data.results.map((result) => result.allowed)).toEqual([true, false]);
 		});
 
 		it("rejects a forged x-store-id for another organization's store", async () => {
@@ -166,7 +166,7 @@ describe("Authorization hardening (e2e)", () => {
 			});
 
 			expect(response.statusCode, response.body).toBe(200);
-			const allowed = response.json().data.results.map((result: { allowed: boolean }) => result.allowed);
+			const allowed = parseSuccessEnvelope(response, AuthorizationDecisionsResponseSchema).data.results.map((result) => result.allowed);
 			expect(allowed).toEqual([true, false, false, false]);
 		});
 
@@ -186,7 +186,7 @@ describe("Authorization hardening (e2e)", () => {
 				headers: { cookie: cookieHeader(admin) },
 			});
 			expect(explained.statusCode).toBe(200);
-			expect(explained.json().data.decision).toBe("DENY");
+			expect(parseSuccessEnvelope(explained, AuthorizationResultSchema).data.decision).toBe("DENY");
 		});
 	});
 
@@ -218,7 +218,7 @@ describe("Authorization hardening (e2e)", () => {
 			});
 
 			expect(response.statusCode, response.body).toBe(403);
-			expect(response.json().error).toBe("PERMISSION_DENIED");
+			expect(ApiErrorResponseSchema.parse(response.json()).error.code).toBe("PERMISSION_DENIED");
 		});
 
 		it("blocks granting a role with permissions the actor does not hold", async () => {
@@ -232,7 +232,7 @@ describe("Authorization hardening (e2e)", () => {
 			});
 
 			expect(response.statusCode, response.body).toBe(403);
-			expect(response.json().error).toBe("PERMISSION_DENIED");
+			expect(ApiErrorResponseSchema.parse(response.json()).error.code).toBe("PERMISSION_DENIED");
 		});
 
 		it("allows granting a role whose permissions the actor already holds", async () => {

@@ -23,8 +23,8 @@ export interface MerchantCommandPaletteState {
 const MAX_RECENT = 6;
 
 const PersistedPaletteSchema = z.object({
-	recentSearches: z.array(MerchantRecentSearchSchema).optional(),
-	pinnedUrls: z.array(z.string()).optional(),
+	recentSearches: z.array(MerchantRecentSearchSchema).exactOptional(),
+	pinnedUrls: z.array(z.string()).exactOptional(),
 });
 
 export const useMerchantCommandPaletteStore = create<MerchantCommandPaletteState>()(

@@ -1,6 +1,6 @@
 import { format } from "date-fns";
 
-import { ApiKeyCreatedEmailPropsSchema, nowEpochMs, type ApiKeyCreatedEmailProps } from "@workspace/shared";
+import { ApiKeyCreatedEmailPropsSchema, nowEpochMs, type ApiKeyCreatedEmailProps, APP_LINKS } from "@workspace/shared";
 
 import { BaseEmailTemplate, type CtaConfig, type EmailAccent } from "../base/base-email-template";
 import type { EmailRenderContext } from "../base/email-render-context";
@@ -16,6 +16,7 @@ export class ApiKeyCreatedEmailTemplate extends BaseEmailTemplate<ApiKeyCreatedE
 		to: "jamie@example.com",
 		keyName: "production-deploy",
 		createdAt: nowEpochMs(),
+		manageKeysUrl: `https://merchant.example.com${APP_LINKS.merchant.apiKeys("brew-bean-kl")}`,
 	};
 
 	public readonly key: string = "api-key-created";
@@ -29,10 +30,10 @@ export class ApiKeyCreatedEmailTemplate extends BaseEmailTemplate<ApiKeyCreatedE
 		return `The "${this.props.keyName}" key was added to your ${context.appName} account.`;
 	}
 
-	public getCta(context: EmailRenderContext): CtaConfig | null {
+	public override getCta(_context: EmailRenderContext): CtaConfig | null {
 		return {
-			label: "Manage API Keys",
-			href: this.buildUrl(context, "/settings/api-keys"),
+			label: "Manage API keys",
+			href: this.props.manageKeysUrl,
 		};
 	}
 
@@ -42,17 +43,15 @@ export class ApiKeyCreatedEmailTemplate extends BaseEmailTemplate<ApiKeyCreatedE
 	}
 
 	public renderBodyHtml(context: EmailRenderContext): string {
-		return `
-        <p class="email-text" style="color: #334155; font-size: 15px; line-height: 1.7; margin: 0 0 20px 0;">A new API key was added to your <strong>${this.escape(context.appName)}</strong> account on <strong>${this.escape(this.createdLabel)}</strong>:</p>
-        <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%; margin: 0 0 20px 0;">
-          <tr>
-            <td class="email-chip" style="background: ${this.palette.chipBg}; border: 1px solid ${this.palette.chipBorder}; border-radius: 10px; padding: 16px 18px;">
-              <p style="margin: 0; font-size: 14px; font-weight: 600; color: ${this.palette.chipText};">${this.escape(this.props.keyName)}</p>
-            </td>
-          </tr>
-        </table>
-        <p class="email-text" style="color: #334155; font-size: 15px; line-height: 1.7; margin: 0 0 8px 0;">If this was you, no action is needed.</p>
-        <p class="email-muted" style="color: #64748b; font-size: 13px; line-height: 1.6; margin: 0;">If you didn't create this key, <a href="${this.escape(this.buildUrl(context, "/settings/api-keys"))}" style="color: #2563eb; text-decoration: underline;">revoke it now</a> and contact support.</p>`;
+		return [
+			this.paragraph(`A new API key was added to your ${this.strong(context.appName)} account.`),
+			this.detailsCard([
+				{ label: "Key name", value: this.props.keyName },
+				{ label: "Created", value: this.createdLabel },
+			]),
+			this.paragraph("If this was you, no action is needed."),
+			this.note(`Didn't create this key? ${this.link(this.props.manageKeysUrl, "Revoke it now")} and contact support.`),
+		].join("");
 	}
 
 	public renderBodyText(context: EmailRenderContext): string {
@@ -61,7 +60,7 @@ export class ApiKeyCreatedEmailTemplate extends BaseEmailTemplate<ApiKeyCreatedE
 			`- Name: ${this.props.keyName}`,
 			"",
 			"If this was you, no action is needed.",
-			`If you didn't create this key, revoke it at ${context.appUrl}/settings/api-keys and contact support.`,
+			`If you didn't create this key, revoke it at ${this.props.manageKeysUrl} and contact support.`,
 		].join("\n");
 	}
 }

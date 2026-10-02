@@ -7,6 +7,9 @@ import { currentRlsContextOrUnscoped } from "./rls-context";
 /** Fail checkout instead of hanging until Fastify's plugin timeout. */
 const DEFAULT_CONNECT_TIMEOUT_MS = 5_000;
 
+/** Pool settings the caller must decide explicitly (from the validated config). */
+export type RlsPoolConfig = PoolConfig & Required<Pick<PoolConfig, "connectionString" | "max" | "idleTimeoutMillis" | "allowExitOnIdle">>;
+
 type ConnectCallback = (err: Error | undefined, client?: PoolClient, done?: (release?: boolean | Error) => void) => void;
 
 /**
@@ -19,17 +22,15 @@ type ConnectCallback = (err: Error | undefined, client?: PoolClient, done?: (rel
  * Swagger/login look “dead”).
  */
 export class RlsPool extends Pool {
-	public constructor(config: PoolConfig) {
+	/**
+	 * Pool tuning for Fastify's concurrent request model comes from the
+	 * validated config (DB_POOL_MAX, DB_IDLE_TIMEOUT_MS; exit-on-idle only
+	 * outside production) — the pool itself never reads the environment.
+	 */
+	public constructor(config: RlsPoolConfig) {
 		super({
 			...config,
 			connectionTimeoutMillis: config.connectionTimeoutMillis ?? DEFAULT_CONNECT_TIMEOUT_MS,
-			// Pool tuning for Fastify's concurrent request model:
-			// - max: cap connections to avoid overwhelming Postgres
-			// - idleTimeoutMillis: release idle connections to free server resources
-			// - allowExitOnIdle: let the process exit when all connections are idle (dev convenience)
-			max: config.max ?? Number(process.env.DB_POOL_MAX ?? 10),
-			idleTimeoutMillis: config.idleTimeoutMillis ?? Number(process.env.DB_IDLE_TIMEOUT_MS ?? 30_000),
-			allowExitOnIdle: config.allowExitOnIdle ?? process.env.NODE_ENV !== "production",
 		});
 	}
 

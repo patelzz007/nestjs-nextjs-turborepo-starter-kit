@@ -1,23 +1,46 @@
 import { Injectable } from "@nestjs/common";
 import type { Prisma, RewardClaimStatus } from "@prisma/client";
 
-import type { MerchantAnalyticsResponse, RewardsAnalyticsQuery, UserRewardsAnalyticsResponse } from "@workspace/shared";
-import { EpochMsSchema } from "@workspace/shared";
+import type {
+	AdminSalesAnalyticsQuery,
+	AdminSalesAnalyticsResponse,
+	MerchantAnalyticsResponse,
+	MerchantBusinessCategory,
+	RewardsAnalyticsQuery,
+	SalesSummary,
+	UserRewardsAnalyticsResponse,
+	UserSpendByCategory,
+	UserSpendingSummary,
+} from "@workspace/shared";
+import { DEFAULT_SALE_CURRENCY, EpochMsSchema } from "@workspace/shared";
 
 import { RewardClaimRepository } from "../repositories/reward-claim.repository";
 import { RewardRedemptionRepository } from "../repositories/reward-redemption.repository";
 import { RewardReferralRepository } from "../repositories/reward-referral.repository";
 import { RewardRepository } from "../repositories/reward.repository";
+import { RewardSaleRepository, type SalesScope } from "../repositories/reward-sale.repository";
 import {
+	averageBillMinor,
 	buildAnalyticsMetric,
+	buildWeeklySalesSeries,
 	buildWeeklyTimeSeries,
 	conversionRatePercent,
 	percentChange,
 	previousAnalyticsPeriod,
 	resolveAnalyticsPeriod,
+	type AnalyticsPeriod,
 } from "../utils/rewards-analytics.util";
 import type { MerchantActor } from "../../api-keys/types/merchant-actor.types";
 import { MerchantContextService } from "./merchant-context.service";
+
+/** Merchants listed in a user's "where you spent the most". */
+const USER_TOP_SPEND_MERCHANTS = 5;
+
+/** Merchants listed in the admin's top-sellers table. */
+const ADMIN_TOP_MERCHANTS = 10;
+
+/** Shown if a merchant row vanished between the sales query and the name lookup. */
+const UNKNOWN_MERCHANT_NAME = "Merchant";
 
 @Injectable()
 export class RewardsAnalyticsService {
@@ -27,6 +50,7 @@ export class RewardsAnalyticsService {
 		private readonly redemptionRepository: RewardRedemptionRepository,
 		private readonly rewardReferralRepository: RewardReferralRepository,
 		private readonly merchantContext: MerchantContextService,
+		private readonly saleRepository: RewardSaleRepository,
 	) {}
 
 	public async getMerchantAnalytics(actor: MerchantActor, query: RewardsAnalyticsQuery): Promise<MerchantAnalyticsResponse> {
@@ -50,6 +74,7 @@ export class RewardsAnalyticsService {
 			referralCurrent,
 			referralPrevious,
 			rewardTitles,
+			sales,
 		] = await Promise.all([
 			this.rewardRepository.count(rewardWhere),
 			this.rewardRepository.count({ ...rewardWhere, status: "PUBLISHED" }),
@@ -62,6 +87,7 @@ export class RewardsAnalyticsService {
 			this.rewardReferralRepository.countByMerchantOrg(orgId, { gte: period.fromMs, lte: period.toMs }),
 			this.rewardReferralRepository.countByMerchantOrg(orgId, { gte: previous.fromMs, lte: previous.toMs }),
 			this.rewardRepository.listIdAndTitle(rewardWhere),
+			this.buildSalesSummary({ organizationId: orgId, locationId }, period),
 		]);
 
 		const currentClaims = claimRows.filter((row) => {
@@ -125,6 +151,7 @@ export class RewardsAnalyticsService {
 				}))
 				.sort((left, right) => right.claims + right.redemptions - (left.claims + left.redemptions))
 				.slice(0, 8),
+			sales,
 		};
 	}
 
@@ -132,9 +159,10 @@ export class RewardsAnalyticsService {
 		const period = resolveAnalyticsPeriod(query.from, query.to);
 		const previous = previousAnalyticsPeriod(period);
 
-		const [claimRows, referralRows] = await Promise.all([
+		const [claimRows, referralRows, spending] = await Promise.all([
 			this.rewardClaimRepository.listForUserAnalytics(userId, { gte: previous.fromMs, lte: period.toMs }),
 			this.rewardReferralRepository.listForReferrerAnalytics(userId, { gte: previous.fromMs, lte: period.toMs }),
+			this.buildSpendingSummary(userId, period),
 		]);
 
 		const currentClaims = claimRows.filter((row) => {
@@ -168,7 +196,7 @@ export class RewardsAnalyticsService {
 		const currentReferralsCredited = currentReferrals.filter((row) => row.status === "CREDITED").length;
 		const previousReferralsCredited = previousReferrals.filter((row) => row.status === "CREDITED").length;
 
-		const redemptionTimestamps = currentClaims.filter((row) => row.status === "REDEEMED").map((row) => Number(row.claimedAt));
+		const redemptionTimestamps = currentClaims.flatMap((row) => (row.status === "REDEEMED" && row.redeemedAt !== null ? [Number(row.redeemedAt)] : []));
 		const currentConversion = conversionRatePercent(currentClaims.length, currentRedeemed);
 		const previousConversion = conversionRatePercent(previousClaims.length, previousRedeemed);
 
@@ -198,6 +226,99 @@ export class RewardsAnalyticsService {
 				status,
 				count: statusCounts.get(status) ?? 0,
 			})),
+			spending,
+		};
+	}
+
+	/** Platform-wide paid bills for `GET /admin/analytics/sales` (the controller enforces `ANALYTICS:READ`). */
+	public async getAdminSalesAnalytics(actorUserId: string, query: AdminSalesAnalyticsQuery): Promise<AdminSalesAnalyticsResponse> {
+		const period = resolveAnalyticsPeriod(query.from, query.to);
+		const previous = previousAnalyticsPeriod(period);
+		const range = { gte: period.fromMs, lte: period.toMs };
+
+		const [sales, topMerchants, activeNow, activeBefore] = await Promise.all([
+			this.buildSalesSummary({}, period),
+			this.saleRepository.groupByOrganization({}, range, ADMIN_TOP_MERCHANTS),
+			this.saleRepository.countOrganizations(range),
+			this.saleRepository.countOrganizations({ gte: previous.fromMs, lte: previous.toMs }),
+		]);
+		const merchants = await this.saleRepository.listMerchantSummaries(
+			topMerchants.map((group) => group.organizationId),
+			actorUserId,
+		);
+
+		return {
+			period: { from: EpochMsSchema.parse(period.fromMs), to: EpochMsSchema.parse(period.toMs) },
+			sales,
+			activeMerchants: buildAnalyticsMetric(activeNow, activeBefore),
+			topMerchants: topMerchants.map((group) => ({
+				organizationId: group.organizationId,
+				name: merchants.get(group.organizationId)?.name ?? UNKNOWN_MERCHANT_NAME,
+				category: merchants.get(group.organizationId)?.category ?? null,
+				salesMinor: group.totalMinor,
+				bills: group.bills,
+			})),
+		};
+	}
+
+	/** Paid-bill totals for `scope` in `period`, compared with the previous period of equal length. */
+	private async buildSalesSummary(scope: SalesScope, period: AnalyticsPeriod): Promise<SalesSummary> {
+		const previous = previousAnalyticsPeriod(period);
+		const range = { gte: period.fromMs, lte: period.toMs };
+		const [current, prior, points] = await Promise.all([
+			this.saleRepository.aggregate(scope, range),
+			this.saleRepository.aggregate(scope, { gte: previous.fromMs, lte: previous.toMs }),
+			this.saleRepository.listPoints(scope, range),
+		]);
+
+		return {
+			currency: DEFAULT_SALE_CURRENCY,
+			totalSalesMinor: buildAnalyticsMetric(current.totalMinor, prior.totalMinor),
+			bills: buildAnalyticsMetric(current.bills, prior.bills),
+			averageBillMinor: buildAnalyticsMetric(averageBillMinor(current.totalMinor, current.bills), averageBillMinor(prior.totalMinor, prior.bills)),
+			overTime: buildWeeklySalesSeries(period, points).map((point) => ({ ...point, date: EpochMsSchema.parse(point.date) })),
+		};
+	}
+
+	/** Where (merchant) and on what (merchant category) the user spent, from the bills of their redeemed rewards. */
+	private async buildSpendingSummary(userId: string, period: AnalyticsPeriod): Promise<UserSpendingSummary> {
+		const previous = previousAnalyticsPeriod(period);
+		const range = { gte: period.fromMs, lte: period.toMs };
+		const [current, prior, byOrganization] = await Promise.all([
+			this.saleRepository.aggregate({ userId }, range),
+			this.saleRepository.aggregate({ userId }, { gte: previous.fromMs, lte: previous.toMs }),
+			this.saleRepository.groupByOrganization({ userId }, range),
+		]);
+		const merchants = await this.saleRepository.listMerchantSummaries(
+			byOrganization.map((group) => group.organizationId),
+			userId,
+		);
+
+		const byMerchant = byOrganization.map((group) => ({
+			organizationId: group.organizationId,
+			merchantName: merchants.get(group.organizationId)?.name ?? UNKNOWN_MERCHANT_NAME,
+			category: merchants.get(group.organizationId)?.category ?? null,
+			totalMinor: group.totalMinor,
+			visits: group.bills,
+		}));
+
+		const categoryTotals = new Map<MerchantBusinessCategory | null, { totalMinor: number; visits: number }>();
+		for (const merchant of byMerchant) {
+			const entry = categoryTotals.get(merchant.category) ?? { totalMinor: 0, visits: 0 };
+			entry.totalMinor += merchant.totalMinor;
+			entry.visits += merchant.visits;
+			categoryTotals.set(merchant.category, entry);
+		}
+		const byCategory: UserSpendByCategory[] = [...categoryTotals.entries()]
+			.map(([category, totals]) => ({ category, totalMinor: totals.totalMinor, visits: totals.visits }))
+			.sort((left, right) => right.totalMinor - left.totalMinor);
+
+		return {
+			currency: DEFAULT_SALE_CURRENCY,
+			totalSpentMinor: buildAnalyticsMetric(current.totalMinor, prior.totalMinor),
+			visits: buildAnalyticsMetric(current.bills, prior.bills),
+			byMerchant: byMerchant.slice(0, USER_TOP_SPEND_MERCHANTS),
+			byCategory,
 		};
 	}
 }

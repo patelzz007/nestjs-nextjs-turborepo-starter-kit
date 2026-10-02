@@ -12,10 +12,10 @@ type CarouselOptions = EmblaOptionsType;
 type CarouselPlugin = EmblaPluginType[];
 
 interface CarouselProps {
-	opts?: CarouselOptions;
-	plugins?: CarouselPlugin;
-	orientation?: "horizontal" | "vertical";
-	setApi?: (api: CarouselApi) => void;
+	opts?: CarouselOptions | undefined;
+	plugins?: CarouselPlugin | undefined;
+	orientation?: "horizontal" | "vertical" | undefined;
+	setApi?: ((api: CarouselApi) => void) | undefined;
 }
 
 type CarouselContextProps = {

@@ -4,7 +4,7 @@ tags: ["logging", "observability"]
 description: "The 40 must-have items for the in-house Datadog-style logging service (terminal + DB, no external SaaS) — each grounded in the current code."
 order: 12
 author: "Acme Inc."
-lastUpdated: 1785888000000
+lastUpdated: 1790812800000
 coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=1600&q=80"
 ---
 
@@ -23,9 +23,10 @@ coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=form
 >   correlationId, metadata, durationMs, errorGroup, tags, timestamp) but **no code writes to it**.
 > - The pino packages (`nestjs-pino`, `pino-http`, `pino-pretty`) are **already in
 >   `apps/api/package.json`** but **not wired up**.
-> - `CorrelationIdMiddleware` (sets `req.correlationId` + `X-Correlation-Id` header) and
->   `ResponseInterceptor` (captures `request.responseData`, wraps every response in
->   `{ success, data, meta: { correlationId, timestamp } }`) already exist.
+> - The one request context (ADR 017, `common/context/request-context.ts`) carries the
+>   validated correlation id, principal and verified tenant; `LogService`, pino, the
+>   success envelope (`ResponseInterceptor`) and the error envelope all read the
+>   correlation id from it — see [Request context](#request-context) below.
 >
 > This system must follow the repo's non-negotiable rules: no `any`/`unknown`/`never`, no type
 > casting, infer types from zod schemas, generic types first, explicit access modifiers + return
@@ -84,8 +85,11 @@ durationMs?, errorGroup?, tags: string[], metadata: Record<string, z.union([...]
 
 ## 5. Every entry gets `correlationId` automatically
 
-**What:** `CorrelationIdMiddleware` already stamps `req.correlationId`. Thread it into
-`LogService` so every log line within a request carries the same ID.
+> [!NOTE] **Status: implemented** (2026-10-01) — option (a), via the one request
+> context. See [Request context](#request-context).
+
+**What:** thread the request's correlation id into `LogService` so every log line
+within a request carries the same ID.
 **Why:** this is the "trace one request end-to-end" superpower — filter the dashboard by a
 correlationId and see the whole journey.
 **How:** `LogService` needs the current request. Options: (a) use `AsyncLocalStorage` (set in a
@@ -120,6 +124,13 @@ Centralize with an `ErrorLogSchema` zod type for error metadata.
 
 ## 9. Global exception filter → log every unhandled error
 
+> [!NOTE] **Status: implemented** (2026-10-01). `GlobalExceptionFilter`
+> (`apps/api/src/common/errors/global-exception.filter.ts`, `APP_FILTER`) logs unexpected 5xx
+> at `error` with the full stack + `correlationId`, `errorCode`, `httpStatus`, `userId` and the
+> query-redacted URL; typed `AppError` 5xx at `warn` without a stack; 4xx are covered by the
+> access-log line. It also produces the client-facing error envelope — see
+> [Error Model](./error-model.md).
+
 **What:** a `catch-all` filter that logs 5xx with full details (and 4xx at warn/info).
 **Why:** today, errors that don't go through `LogService` manually are invisible.
 **How:** `ExceptionFilter` (`@Catch()`) registered via `APP_FILTER` that builds the structured
@@ -133,6 +144,10 @@ entry — status, message, stack, path, correlationId, userId — and calls `Log
 current call sites; several omit it), and make the dashboard filter by context.
 
 ## 11. `userId` stamped on authenticated log lines
+
+> [!NOTE] **Status: implemented** (2026-10-01) — `AuthGuard` binds the principal into
+> the request context; `LogService` adds `userId` (and `impersonatorId`,
+> `organizationId`) to every line written after authentication.
 
 **What:** when a request is authenticated, attach the user's id to every log entry.
 **Why:** "what did user X do / what broke for user X" is the most common support question.
@@ -189,6 +204,83 @@ log metadata.
 **Why:** one accidental `console.log(loginDto)` is a breach.
 **How:** a `sanitizeMetadata` step in `LogService` that removes keys matching a denylist
 (zod union of literal keys) before formatting/persisting — and unit test it.
+
+### Redaction
+
+> [!NOTE] **Status: implemented** (2026-10-01) — `apps/api/src/common/logging/redaction.ts`.
+
+There is exactly **one** list of sensitive field names, `SENSITIVE_FIELD_NAMES`, and every log
+sink derives from it:
+
+| Sink | Mechanism | Coverage |
+|---|---|---|
+| Fastify's pino logger (`main.ts`) | `redact.paths` from `buildPinoRedactPaths()` | request/response headers + each field at the root and up to 3 levels deep (fast-redact matches exact, case-sensitive paths only) |
+| `LogService` metadata | `redactSecrets(value)` | any depth, inside arrays, case-insensitive, `-`/`_` ignored (`Set-Cookie` = `set_cookie` = `setCookie`), cycle-safe (`[CIRCULAR]`), never mutates the input |
+| URLs in access/error log lines | `redactUrl(url)` | query-string values of sensitive parameters (`?token=[REDACTED]&page=2`) |
+
+Covered names: `password`, `newPassword`, `currentPassword`, `confirmPassword`, `oldPassword`,
+`passwordConfirmation`, `token`, `accessToken`, `refreshToken`, `idToken`, `sessionToken`,
+`csrfToken`, `secret`, `clientSecret`, `apiKey`, `privateKey`, `authorization`,
+`proxy-authorization`, `cookie`, `set-cookie`, `x-api-key`, `otp`, `code`, `totp`, `totpCode`,
+`otpCode`, `mfaCode`, `twoFactorCode`, `verificationCode`, `recoveryCode(s)`, `backupCode(s)`,
+`card`, `cardNumber`, `cvc`, `cvv`, `iban`, `accountNumber` — plus any field whose normalized
+name **ends with** `password`, `secret`, `token`, `apikey`, `privatekey`, `otp`, `cvv`, `cvc`,
+`cardnumber` or `accountnumber` (`resetToken`, `jwtSecret`, `stripeApiKey`). Values are replaced
+with `"[REDACTED]"`.
+
+> [!WARNING]
+> `code` is redacted because it is the request-body field for 2FA / email OTP codes. Log
+> machine error codes as **`errorCode`**, never `code`. Free-text log **messages** are not
+> scanned — never interpolate a secret into the message string.
+
+To protect a new field, add it to `SENSITIVE_FIELD_NAMES` and extend
+`redaction.spec.ts` — pino, `LogService` and URL redaction all pick it up.
+
+### Request context
+
+> [!NOTE] **Status: implemented** (2026-10-01) — [ADR 017](./adr/017-unified-request-context.md).
+
+There is exactly **one** per-request context: `RequestContext`
+(`apps/api/src/common/context/request-context.ts`), read through the injectable
+`RequestContextService`. It is an `AsyncLocalStorage` store, so any code running
+on behalf of a request — guards, interceptors, services, repositories, outbox
+writes — reaches it without a request reference.
+
+| Field | Set by | When |
+| --- | --- | --- |
+| `correlationId`, `traceId` | `RequestContextMiddleware` | request start (before every guard) |
+| `ip`, `userAgent` | `RequestContextMiddleware` | request start |
+| `principal` (`userId`, `impersonatorId`) | `AuthGuard` / `RefreshTokenGuard` | after authentication |
+| `tenant` (`organizationId`, `storeId`, `locationId` — verified only) | `AuthorizationGuard` | after tenant resolution |
+
+**Correlation id rules** (`common/context/correlation-id.ts`):
+
+- A caller may send `X-Correlation-Id` (or `X-Request-Id`). It is used only when it
+  is 1–64 characters of `A–Z a–z 0–9 . _ : -`; anything else (spaces, newlines,
+  a 10 KB header) is ignored and a fresh id is generated.
+- The id is decided **once per request** and is the same everywhere: the
+  `X-Correlation-Id` and `x-request-id` response headers, Fastify's `request.id`,
+  pino's `correlationId` binding, `meta.correlationId` in success and error
+  envelopes, `LogService` lines, the authorization audit's `requestId`, and
+  outbox rows / Kafka envelopes.
+
+**What a log line looks like inside a request:**
+
+```text
+LOG [LogService] HTTP GET v1 /api/v1/auth/me 401 4.2ms (boot-check-0001) | {"correlationId":"boot-check-0001"}
+LOG [OrdersService] Order created | {"correlationId":"…","userId":"user-7","organizationId":"org-9","orderId":"…"}
+{"level":30,"correlationId":"pino-check-42","req":{"method":"GET","url":"/api/v1/auth/me",…},"msg":"incoming request"}
+```
+
+- `LogService` merges `correlationId`, `userId`, `impersonatorId` and
+  `organizationId` in front of the caller's metadata; an explicit `userId`
+  option wins. Outside a request (boot, cron, queue workers) nothing is added.
+- Fastify's pino logger binds `correlationId` on every request child logger
+  (`logController: new LogController({ requestIdLogLabel: "correlationId" })`).
+  `LOG_LEVEL` (default `warn`) controls pino; `info` shows the request lines.
+- Never read `request.headers["x-correlation-id"]` yourself — it is untrusted
+  input. Use `RequestContextService.correlationId()` (or
+  `resolveCorrelationId(request.raw)` where a failure may precede the context).
 
 ## 18. PII awareness — email hashed or truncated in non-audit logs
 
@@ -362,5 +454,5 @@ find X" recipes.
 **Why:** a junior must be able to operate the system (rule 14).
 **How:** each item, once shipped, gets a ✅ and its recipe appended below.
 
-_Last updated: 2026-08-05._
+_Last updated: 2026-10-01._
 

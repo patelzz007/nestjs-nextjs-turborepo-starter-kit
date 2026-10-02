@@ -66,6 +66,8 @@ export const RLS_MANIFEST_PROFILES: Readonly<Record<RlsManifestProfile, readonly
 	bypass_only: [
 		"outbox_events",
 		"analytics_events",
+		"inbox_processed_events",
+		"inbox_dead_letters",
 		"platform_resource_audit_logs",
 		"platform_resource_idempotency_records",
 		"permission_audit_logs",
@@ -78,7 +80,7 @@ export const RLS_MANIFEST_PROFILES: Readonly<Record<RlsManifestProfile, readonly
 	url_analytics: ["url_tags", "clicks", "logs", "email_logs", "impersonation_audit_logs", "api_key_usage_logs"],
 	file_derived: ["file_variants"],
 	product_catalog: ["product", "sample_category"],
-	reward_user: ["reward_claims", "reward_redemptions", "reward_referrals", "reward_otp_challenges", "reward_legal_acceptances", "reward_notifications"],
+	reward_user: ["reward_claims", "reward_redemptions", "reward_sales", "reward_referrals", "reward_otp_challenges", "reward_legal_acceptances", "reward_notifications"],
 	authorization_simulation: ["authorization_policy_simulations"],
 };
 
@@ -178,6 +180,9 @@ export function collectRlsEnabledTableNames(rlsSqlContent: string): Set<string> 
 	const arrayPattern = /FOREACH\s+\w+\s+IN\s+ARRAY\s+ARRAY\[([\s\S]*?)\]/g;
 	for (const match of rlsSqlContent.matchAll(arrayPattern)) {
 		const inner = match[1];
+		if (inner === undefined) {
+			continue;
+		}
 		const quoted = inner.match(/'([^']+)'/g);
 		if (quoted !== null) {
 			for (const item of quoted) {
@@ -188,12 +193,18 @@ export function collectRlsEnabledTableNames(rlsSqlContent: string): Set<string> 
 
 	const alterPattern = /ALTER TABLE(?: IF EXISTS)? public\.(\w+) ENABLE ROW LEVEL SECURITY/g;
 	for (const match of rlsSqlContent.matchAll(alterPattern)) {
-		tables.add(match[1]);
+		const tableName = match[1];
+		if (tableName !== undefined) {
+			tables.add(tableName);
+		}
 	}
 
 	const alterUnqualified = /ALTER TABLE (\w+) ENABLE ROW LEVEL SECURITY/g;
 	for (const match of rlsSqlContent.matchAll(alterUnqualified)) {
-		tables.add(match[1]);
+		const tableName = match[1];
+		if (tableName !== undefined) {
+			tables.add(tableName);
+		}
 	}
 
 	return tables;

@@ -58,14 +58,21 @@ export const MERCHANT_BUSINESS_CATEGORY_LABELS: Record<MerchantBusinessCategory,
 	beverage: "Beverage",
 };
 
-export const RewardRulesSchema = z
-	.object({
-		minSpendMyr: z.number().nonnegative().optional(),
-		maxUsePerUser: z.number().int().positive().optional(),
-	})
-	.strict();
+/** Label for a merchant without a (recognised) business category — used by every sales / spending breakdown. */
+export const UNCATEGORISED_MERCHANT_CATEGORY_LABEL = "Other";
+
+const rewardRulesShape = {
+	minSpendMyr: z.number().nonnegative().optional(),
+	maxUsePerUser: z.number().int().positive().optional(),
+};
+
+/** Reward rules as a merchant SENDS them (request input) — closed: unknown keys are rejected. */
+export const RewardRulesSchema = z.object(rewardRulesShape).strict();
 
 export type RewardRules = z.output<typeof RewardRulesSchema>;
+
+/** Reward rules as the API RETURNS them (inside `RewardResponseSchema`) — open, so additive fields never break a client (ADR 022). */
+export const RewardRulesResponseSchema = z.object(rewardRulesShape);
 
 /** 8-char backup code: A–Z + 2–9, excludes 0/O/1/I. */
 export const RewardBackupCodeSchema = z

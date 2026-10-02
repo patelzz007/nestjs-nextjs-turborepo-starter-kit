@@ -6,6 +6,7 @@ import { useAuth } from "@workspace/client/lib/auth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
 import Link from "next/link";
 import * as React from "react";
+import { ROUTES } from "@/lib/routes";
 
 export interface UserMfaRecoveryPanelProps {
 	readonly userId: string;
@@ -22,8 +23,8 @@ export const UserMfaRecoveryPanel = React.forwardRef<HTMLDivElement, UserMfaReco
 
 	const requestsQuery = api.auth.adminMfaRecoveryRequests.useQuery({
 		page: 1,
-		userId,
 		limit: 5,
+		filter: { userId: { eq: userId } },
 	});
 
 	const requests: readonly AdminMfaRecoveryRequest[] = requestsQuery.data?.data ?? [];
@@ -74,7 +75,7 @@ export const UserMfaRecoveryPanel = React.forwardRef<HTMLDivElement, UserMfaReco
 					{requests.length > 1 ? (
 						<p className="text-xs text-muted-foreground">
 							Showing the most recent request. View older requests in the{" "}
-							<Link href="/settings/security/mfa-recovery" className="text-primary underline-offset-4 hover:underline">
+							<Link href={ROUTES.users.mfaRecovery} className="text-primary underline-offset-4 hover:underline">
 								global MFA recovery queue
 							</Link>
 							.

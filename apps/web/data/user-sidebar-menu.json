@@ -5,78 +5,62 @@
   },
   "sections": [
     {
-      "title": "Overview",
-      "color": "blue",
-      "items": [
-        {
-          "title": "Dashboard",
-          "url": "/rewardhub",
-          "icon": "LayoutDashboard",
-          "disabled": false
-        }
-      ]
-    },
-    {
       "title": "Rewards",
       "color": "green",
       "items": [
         {
-          "title": "Discover",
+          "title": "Browse Rewards",
           "url": "/rewardhub",
           "icon": "Search",
-          "disabled": false,
-          "children": [
-            {
-              "title": "Browse All",
-              "url": "/rewardhub",
-              "icon": "Grid",
-              "disabled": false
-            },
-            {
-              "title": "Near Me",
-              "url": "/rewardhub/nearby",
-              "icon": "MapPin",
-              "disabled": true
-            },
-            {
-              "title": "Trending",
-              "url": "/rewardhub/trending",
-              "icon": "TrendingUp",
-              "disabled": true
-            },
-            {
-              "title": "Categories",
-              "url": "#",
-              "icon": "FolderOpen",
-              "disabled": true
-            }
-          ]
+          "disabled": false
         },
         {
+          "title": "Near Me",
+          "url": "/rewardhub/nearby",
+          "icon": "MapPin",
+          "disabled": true
+        },
+        {
+          "title": "Trending",
+          "url": "/rewardhub/trending",
+          "icon": "TrendingUp",
+          "disabled": true
+        },
+        {
+          "title": "Categories",
+          "url": "/rewardhub/categories",
+          "icon": "FolderOpen",
+          "disabled": true
+        },
+        {
+          "title": "Favorites",
+          "url": "/rewardhub/favorites",
+          "icon": "Heart",
+          "disabled": true
+        }
+      ]
+    },
+    {
+      "title": "Wallet",
+      "color": "blue",
+      "items": [
+        {
           "title": "My Wallet",
-          "url": "/rewardhub/claims",
+          "url": "/rewardhub/wallet",
           "icon": "Wallet",
-          "disabled": false,
-          "children": [
-            {
-              "title": "Active Rewards",
-              "url": "/rewardhub/claims",
-              "icon": "Gift",
-              "disabled": false
-            },
-            {
-              "title": "Redeemed",
-              "url": "/rewardhub/claims/redeemed",
-              "icon": "CheckCircle",
-              "disabled": true
-            },
-            {
-              "title": "Expired",
-              "url": "/rewardhub/claims/expired",
-              "icon": "Clock",
-              "disabled": true
-            }
-          ]
+          "disabled": false
+        },
+        {
+          "title": "Redeemed",
+          "url": "/rewardhub/wallet/redeemed",
+          "icon": "CheckCircle",
+          "disabled": true
+        },
+        {
+          "title": "Expired",
+          "url": "/rewardhub/wallet/expired",
+          "icon": "Clock",
+          "disabled": true
         }
       ]
     },
@@ -86,23 +70,21 @@
       "items": [
         {
           "title": "My Activity",
-          "url": "/rewardhub/analytics",
+          "url": "/rewardhub/activity",
           "icon": "BarChart2",
-          "disabled": false,
-          "children": [
-            {
-              "title": "Overview",
-              "url": "/rewardhub/analytics",
-              "icon": "PieChart",
-              "disabled": false
-            },
-            {
-              "title": "Claims",
-              "url": "/rewardhub/analytics/claims",
-              "icon": "TrendingUp",
-              "disabled": true
-            }
-          ]
+          "disabled": false
+        },
+        {
+          "title": "Claim Trends",
+          "url": "/rewardhub/activity/claims",
+          "icon": "TrendingUp",
+          "disabled": true
+        },
+        {
+          "title": "History",
+          "url": "/rewardhub/activity/history",
+          "icon": "Clock",
+          "disabled": true
         }
       ]
     },
@@ -112,13 +94,13 @@
       "items": [
         {
           "title": "Referrals",
-          "url": "#",
+          "url": "/rewardhub/referrals",
           "icon": "Users",
-          "disabled": false,
+          "disabled": true,
           "children": [
             {
               "title": "Invite Friends",
-              "url": "/rewardhub/referrals",
+              "url": "/rewardhub/referrals/invite",
               "icon": "UserPlus",
               "disabled": true
             },
@@ -138,13 +120,13 @@
         },
         {
           "title": "Points",
-          "url": "#",
+          "url": "/rewardhub/points",
           "icon": "Award",
-          "disabled": false,
+          "disabled": true,
           "children": [
             {
               "title": "Balance",
-              "url": "/rewardhub/points",
+              "url": "/rewardhub/points/balance",
               "icon": "Wallet",
               "disabled": true
             },
@@ -163,32 +145,14 @@
           ]
         }
       ]
-    },
-    {
-      "title": "Activity",
-      "color": "teal",
-      "items": [
-        {
-          "title": "History",
-          "url": "/rewardhub/history",
-          "icon": "Clock",
-          "disabled": true
-        },
-        {
-          "title": "Favorites",
-          "url": "/rewardhub/favorites",
-          "icon": "Heart",
-          "disabled": true
-        }
-      ]
     }
   ],
   "bottomItems": [
     {
-      "title": "Settings",
-      "url": "/rewardhub/settings",
-      "icon": "Settings",
-      "disabled": true
+      "title": "Account",
+      "url": "/rewardhub/account",
+      "icon": "UserCog",
+      "disabled": false
     },
     {
       "title": "Help & Support",

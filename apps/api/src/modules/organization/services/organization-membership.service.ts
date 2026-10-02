@@ -14,6 +14,8 @@ import {
 	type OrganizationTeamInvitePreview,
 	type OrganizationTeamInviteRegisterAcceptInput,
 	type ReviewOrganizationAccessRequestInput,
+	APP_LINKS,
+	MERCHANT_CAPABILITY,
 } from "@workspace/shared";
 
 import { CryptoService } from "../../auth/services/crypto.service";
@@ -28,9 +30,9 @@ import { OrganizationInviteRepository, type TeamInviteRow } from "../repositorie
 import { buildMembershipLocationScopeRows } from "../utils/organization-membership-location-scope.util";
 import { mapMembershipToRosterResponse } from "../utils/organization-membership-mapper.util";
 import { OrganizationAuditService } from "./organization-audit.service";
+import { OrganizationRewardAuthService } from "./organization-reward-auth.service";
 
 const INVITE_TTL_DAYS = 7;
-const TEAM_MANAGER_ROLES: readonly OrganizationMembershipRole[] = ["OWNER", "ADMIN"];
 
 const ROLE_LABELS: Readonly<Record<OrganizationMembershipRole, string>> = {
 	OWNER: "Owner",
@@ -44,6 +46,9 @@ function sha256Hex(value: string): string {
 	return createHash("sha256").update(value).digest("hex");
 }
 
+/** Allowlisted system operation that reads co-members' profiles into the team roster. */
+export const TEAM_ROSTER_PROFILES_OPERATION = "organization.membership.roster";
+
 @Injectable()
 export class OrganizationMembershipService {
 	public constructor(
@@ -56,6 +61,7 @@ export class OrganizationMembershipService {
 		private readonly cryptoService: CryptoService,
 		private readonly userProvisioning: UserProvisioningService,
 		private readonly emailVerificationService: EmailVerificationService,
+		private readonly organizationRewardAuth: OrganizationRewardAuthService,
 	) {}
 
 	public async createAccessRequest(userId: string, organizationId: string, input: OrganizationAccessRequestCreateInput): Promise<OrganizationAccessRequestResponse> {
@@ -156,7 +162,7 @@ export class OrganizationMembershipService {
 		organizationDisplayName: string,
 		input: OrganizationMemberInviteInput,
 	): Promise<OrganizationMemberInviteCreatedResponse> {
-		this.assertCanManageTeam(inviterRole);
+		await this.requireManageTeam(inviterId, inviterRole, organizationId);
 
 		const existingMembership = await this.tenantTx.withSystemOperation(
 			{
@@ -240,7 +246,7 @@ export class OrganizationMembershipService {
 			});
 		}
 
-		if (process.env.NODE_ENV !== "production") {
+		if (!this.config.isProduction) {
 			// Dev visibility when EMAIL_MODE=log-only.
 			process.stdout.write(`[team-member-invite] email=${input.email} url=${inviteUrl}\n`);
 		}
@@ -261,7 +267,7 @@ export class OrganizationMembershipService {
 	}
 
 	public async listMembers(actorId: string, actorRole: OrganizationMembershipRole, organizationId: string): Promise<OrganizationMemberRosterResponse[]> {
-		this.assertCanManageTeam(actorRole);
+		await this.requireManageTeam(actorId, actorRole, organizationId);
 
 		const rows = await this.tenantTx.withTenantTransaction(
 			{
@@ -273,19 +279,37 @@ export class OrganizationMembershipService {
 			async (tx) =>
 				tx.organizationMembership.findMany({
 					where: { organizationId, isDeleted: false },
-					include: {
-						user: { select: { email: true, fullName: true } },
-						locationScopes: true,
-					},
+					include: { locationScopes: true },
 					orderBy: [{ role: "asc" }, { createdAt: "asc" }],
 				}),
 		);
 
-		return rows.map((row) => mapMembershipToRosterResponse(row));
+		// `users` RLS lets a session read only its own row, so the tenant
+		// transaction above cannot join co-members' profiles (they came back
+		// null -> 500). Read exactly this org's members' name + email under an
+		// allowlisted system operation, AFTER the manage-team check passed;
+		// never widen the `users` policy (it would expose whole user rows).
+		const userIds: string[] = rows.map((row) => row.userId);
+		const profiles = await this.tenantTx.withSystemOperation(
+			{
+				operation: TEAM_ROSTER_PROFILES_OPERATION,
+				reason: "Team roster: member names and emails for an authorized team manager",
+				correlationId: `team-roster:${organizationId}`,
+				actorUserId: actorId,
+			},
+			async (tx) => tx.user.findMany({ where: { id: { in: userIds } }, select: { id: true, email: true, fullName: true } }),
+		);
+		const profileById = new Map(profiles.map((profile) => [profile.id, profile]));
+
+		return rows.flatMap((row): OrganizationMemberRosterResponse[] => {
+			const profile = profileById.get(row.userId);
+			// A membership whose user row is gone is not a rosterable member.
+			return profile === undefined ? [] : [mapMembershipToRosterResponse({ ...row, user: profile })];
+		});
 	}
 
 	public async listPendingInvites(actorId: string, actorRole: OrganizationMembershipRole, organizationId: string): Promise<OrganizationMemberInviteResponse[]> {
-		this.assertCanManageTeam(actorRole);
+		await this.requireManageTeam(actorId, actorRole, organizationId);
 
 		const rows = await this.tenantTx.withTenantTransaction(
 			{
@@ -300,7 +324,7 @@ export class OrganizationMembershipService {
 	}
 
 	public async revokeInvite(actorId: string, actorRole: OrganizationMembershipRole, organizationId: string, inviteId: string): Promise<void> {
-		this.assertCanManageTeam(actorRole);
+		await this.requireManageTeam(actorId, actorRole, organizationId);
 
 		const invite = await this.tenantTx.withSystemOperation(
 			{
@@ -575,15 +599,11 @@ export class OrganizationMembershipService {
 	private buildTeamInviteUrl(token: string): string {
 		const base = this.config.merchantAppUrl.replace(/\/+$/, "");
 		const params = new URLSearchParams({ token });
-		return `${base}/team-invite?${params.toString()}`;
+		return `${base}${APP_LINKS.merchant.teamInvite}?${params.toString()}`;
 	}
 
-	private assertCanManageTeam(role: OrganizationMembershipRole): void {
-		if (!TEAM_MANAGER_ROLES.includes(role)) {
-			throw new ForbiddenException({
-				message: "Only organization owners and admins can manage team members",
-				error: "ORGANIZATION_TEAM_FORBIDDEN",
-			});
-		}
+	/** Team roster, invites, and revocations need `merchant:manage_team` (role table → tenant Cedar policy). */
+	private async requireManageTeam(userId: string, role: OrganizationMembershipRole, organizationId: string): Promise<void> {
+		await this.organizationRewardAuth.requireMembershipCapability({ userId, organizationId, role }, MERCHANT_CAPABILITY.manageTeam);
 	}
 }

@@ -1,12 +1,12 @@
 import { redirect } from "next/navigation";
 
+import { ROUTES } from "@/lib/routes";
+
 /**
- * Settings landing route. The sidebar lists the parent item at `/settings` (a
- * toggle with children, so the sidebar never navigates here) — but if the URL
- * is hit directly, send the user to the General tab instead of a 404.
- * Server-side `redirect()` throws during render, so there is no client-side
- * flash or effect to manage.
+ * `/settings` — section index. Platform settings open on Billing, the one tab every admin can see. The sidebar
+ * lists this URL as a toggle-only parent, so it is only reached by typing or
+ * sharing it. Server-side `redirect()` throws during render — no client flash.
  */
-export default function SettingsPage(): React.ReactNode {
-	redirect("/settings/general");
+export default function SettingsIndexPage(): React.ReactNode {
+	redirect(ROUTES.settings.billing);
 }

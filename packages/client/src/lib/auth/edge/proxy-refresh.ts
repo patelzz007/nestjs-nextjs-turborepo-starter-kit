@@ -9,9 +9,9 @@
 
 import { z } from "zod";
 
-import { MUTATION_INTENT_HEADER, MUTATION_INTENT_VALUE } from "@workspace/shared";
+import { MUTATION_INTENT_HEADER, MUTATION_INTENT_VALUE, NodeEnvSchema } from "@workspace/shared";
 
-import { API_URL_PREFIX } from "../../api/config";
+import { API_URL_PREFIX, RUNTIME_NODE_ENV } from "../../api/config";
 import { apiRouter } from "../../api/endpoints";
 import { decodeJwtPayload } from "./jwt";
 import { collectSetCookies, extractRotatedAccessToken, hasRotatedAuthCookies } from "./proxy-refresh-cookies";
@@ -298,7 +298,7 @@ export type ProxyRefreshLogEntry = z.output<typeof ProxyRefreshLogEntrySchema>;
  * "test"`) so proxy tests stay quiet.
  */
 export function logProxyRefresh(entry: ProxyRefreshLogEntry): void {
-	if (process.env.NODE_ENV === "test") return;
+	if (RUNTIME_NODE_ENV === NodeEnvSchema.enum.test) return;
 
 	const detail: Record<ProxyRefreshOutcome, string> = {
 		refreshed: `rotated ${String(entry.rotatedCookieCount)} cookie(s)`,

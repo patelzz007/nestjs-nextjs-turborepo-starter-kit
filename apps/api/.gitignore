@@ -1,5 +1,7 @@
 # Environment
-.env
+# Every env file and copy (.env, .env.local, .env_bak, .env.bak, …) — only the documented examples are committed.
+.env*
+!.env.example
 
 # Build output
 dist/

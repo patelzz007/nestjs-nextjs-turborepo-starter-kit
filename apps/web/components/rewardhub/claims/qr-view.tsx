@@ -1,6 +1,6 @@
 "use client";
 
-import { stubApiMeta, successEnvelope } from "@/lib/api-envelope";
+import { initialDataOption, stubApiMeta, successEnvelope } from "@workspace/client/lib/api/envelope";
 import { WebPageHeader } from "@/components/web-ui/page-header";
 import { WebSurfacePanel } from "@/components/web-ui/surface-panel";
 import { useAuth } from "@workspace/client/lib/auth";
@@ -11,24 +11,24 @@ import { cn } from "@workspace/ui/lib/core/utils";
 import { format } from "date-fns";
 import Link from "next/link";
 import * as React from "react";
+import { ROUTES } from "@/lib/routes";
 
 export interface ClaimQrViewProps {
 	readonly claimId: string;
-	readonly initialQr?: RewardClaimQrResponse;
+	readonly initialQr?: RewardClaimQrResponse | undefined;
 }
 
-/** Active claim redemption QR + backup code display. */
+/**
+ * Active claim redemption QR + backup code display. The back link names the
+ * parent breadcrumb (`My Wallet`); the final crumb reads "Show at checkout"
+ * like the heading, because the QR response carries no reward title.
+ */
 export function ClaimQrView({ claimId, initialQr }: ClaimQrViewProps): React.JSX.Element {
 	const { api } = useAuth();
 
 	const initialQueryData = React.useMemo(() => (initialQr !== undefined ? successEnvelope(initialQr, stubApiMeta()) : undefined), [initialQr]);
 
-	const qrQuery = api.claims.qr.useQuery(
-		{ claimId },
-		{
-			initialData: initialQueryData,
-		},
-	);
+	const qrQuery = api.claims.qr.useQuery({ claimId }, initialDataOption(initialQueryData));
 	const qr = qrQuery.data?.data;
 
 	const handleRefresh = React.useCallback((): void => {
@@ -43,8 +43,8 @@ export function ClaimQrView({ claimId, initialQr }: ClaimQrViewProps): React.JSX
 		return (
 			<div className="space-y-6">
 				<WebPageHeader title="Claim unavailable" description="This claim may have expired or already been redeemed." />
-				<Link href="/rewardhub/claims" className={cn(buttonVariants({ variant: "outline" }))}>
-					Back to my rewards
+				<Link href={ROUTES.rewardHub.wallet} className={cn(buttonVariants({ variant: "outline" }))}>
+					Back to My Wallet
 				</Link>
 			</div>
 		);
@@ -54,8 +54,8 @@ export function ClaimQrView({ claimId, initialQr }: ClaimQrViewProps): React.JSX
 		<div className="mx-auto max-w-4xl space-y-8">
 			<WebPageHeader title="Show at checkout" description="Let the cashier scan your QR code, or read out the backup code if scanning fails." />
 
-			<Link href="/rewardhub/claims" className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "-mt-4")}>
-				← My rewards
+			<Link href={ROUTES.rewardHub.wallet} className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "-mt-4")}>
+				← My Wallet
 			</Link>
 
 			<WebSurfacePanel accent className="p-5 sm:p-6">

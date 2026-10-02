@@ -6,6 +6,10 @@ export const SYSTEM_OPERATIONS: Readonly<Record<string, { readonly description: 
 	"organization.provision": { description: "Organization provisioning saga steps", role: "app_runtime" },
 	"organization.membership.invite": { description: "Create, revoke, and resolve team member invitations", role: "app_runtime" },
 	"organization.membership.accept": { description: "Accept a team member invitation and create membership", role: "app_runtime" },
+	"organization.membership.roster": {
+		description: "Read member names and emails for the team roster (users RLS is self-only); only after the manage-team check",
+		role: "app_runtime",
+	},
 	"organization.location.onboarding_finalize": { description: "Finalize primary and additional stores after merchant onboarding", role: "app_runtime" },
 	"organization.location.admin_create": { description: "RewardHub admin creates an organization store location", role: "app_runtime" },
 	"organization.location.admin_review": { description: "RewardHub admin approves or rejects a store location request", role: "app_runtime" },
@@ -14,7 +18,11 @@ export const SYSTEM_OPERATIONS: Readonly<Record<string, { readonly description: 
 	"policy.publish": { description: "Atomic policy version publication", role: "app_runtime" },
 	"seed.bootstrap": { description: "Database seed scripts", role: "app_runtime" },
 	"auth.pre_login": { description: "Pre-authentication user lookup", role: "app_runtime" },
-	"files.upload_authorization": { description: "Resolve the uploader's organization role for upload-url authorization", role: "app_runtime" },
+	"rewards.sales.merchant_summary": {
+		description: "Read merchant names/categories for sales breakdowns (customer spending, admin top merchants) — ids come from sales the caller may already see",
+		role: "app_runtime",
+	},
+	"files.authorization": { description: "Resolve the caller's organization role to authorize a file upload, read, completion or delete", role: "app_runtime" },
 	"health.probe": { description: "Health check database probe", role: "app_runtime" },
 	"request.pre_handler": { description: "Authentication + authorization lookups before the RLS interceptor narrows the request", role: "app_runtime" },
 	"queue.job": { description: "Background queue job processing (BullMQ workers)", role: "app_runtime" },
@@ -23,6 +31,8 @@ export const SYSTEM_OPERATIONS: Readonly<Record<string, { readonly description: 
 	"platform.superadmin": { description: "Platform super-admin request scope", role: "app_runtime" },
 	"platform.staff_single_tenant": { description: "Admin staff in single-tenant mode", role: "app_runtime" },
 	"storage.callback": { description: "Storage processing callbacks and local-driver transfers", role: "app_runtime" },
+	"http.idempotency": { description: "Record, replay, and release Idempotency-Key responses (bypass-only idempotency table)", role: "app_runtime" },
+	"idempotency.retention": { description: "Scheduled purge of expired Idempotency-Key records past their retention grace (BullMQ scheduler)", role: "app_runtime" },
 };
 
 export function isAllowlistedSystemOperation(operation: string): boolean {

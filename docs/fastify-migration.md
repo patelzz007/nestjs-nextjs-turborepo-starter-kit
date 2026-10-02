@@ -61,6 +61,9 @@ tags: ["fastify", "migration", "performance", "api"]
 - Validation: `ZodValidationPipe` now compiles schemas with Ajv ONCE (via zod v4's
   native `toJSONSchema`) instead of parsing with Zod per request — Zod remains the
   single source of truth shared with the FE; error shape unchanged.
+  Every JSON Schema `format` the contracts emit (`email`, `uuid`, `uri`) is registered in
+  `AJV_STRING_FORMATS`, backed by the Zod schema that defines it; a guard test fails when a
+  contract emits a format that is not registered (Ajv would otherwise skip the check).
 - New env vars: `TRUST_PROXY`, `LOG_LEVEL` (registered in `turbo.json`).
 
 > **Notes for readers:** the plan below documents *why* each change was needed and

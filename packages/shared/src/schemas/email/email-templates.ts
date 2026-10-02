@@ -106,6 +106,14 @@ export type SecurityAlertEmailProps = z.output<typeof SecurityAlertEmailPropsSch
 export const AdminAlertEmailPropsSchema = BaseEmailPropsSchema.extend({
 	title: z.string().min(1),
 	message: z.string().min(1),
+	/**
+	 * Optional call to action. Absolute URL: the render context's `appUrl` is
+	 * the consumer web app, so the caller (who knows the audience) supplies it.
+	 */
+	action: z
+		.object({ label: z.string().min(1), url: z.url() })
+		.strict()
+		.optional(),
 }).strict();
 
 export type AdminAlertEmailProps = z.output<typeof AdminAlertEmailPropsSchema>;
@@ -113,6 +121,8 @@ export type AdminAlertEmailProps = z.output<typeof AdminAlertEmailPropsSchema>;
 export const ApiKeyCreatedEmailPropsSchema = BaseEmailPropsSchema.extend({
 	keyName: z.string().min(1),
 	createdAt: EpochMsSchema,
+	/** Absolute URL of the organization's API-keys page (merchant app, org-scoped). */
+	manageKeysUrl: z.url(),
 }).strict();
 
 export type ApiKeyCreatedEmailProps = z.output<typeof ApiKeyCreatedEmailPropsSchema>;

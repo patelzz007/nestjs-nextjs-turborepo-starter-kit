@@ -60,9 +60,15 @@ describe("AccessControlPanel authorization", () => {
 		expect(screen.getByRole("tab", { name: "Permission checker" }).getAttribute("aria-selected")).toBe("true");
 	});
 
-	it("renders an inline notice when no tab is permitted", () => {
-		renderPanel([]);
-		expect(screen.queryByRole("tab")).toBeNull();
-		expect(screen.getByText("No access-control views available")).toBeDefined();
+	it("selects the first permitted tab — permissions when roles cannot be listed", () => {
+		renderPanel([PERMISSION.PERMISSION.LIST, PERMISSION.PERMISSION.READ]);
+		expect(screen.queryByRole("tab", { name: /Roles/ })).toBeNull();
+		expect(screen.getByRole("tab", { name: /Permissions/ }).getAttribute("aria-selected")).toBe("true");
+		expect(screen.getByRole("tab", { name: "Permission checker" }).getAttribute("aria-selected")).toBe("false");
+	});
+
+	it("selects the roles tab first when every view is permitted", () => {
+		renderPanel([PERMISSION.ROLE.LIST, PERMISSION.PERMISSION.LIST, PERMISSION.PERMISSION.READ]);
+		expect(screen.getByRole("tab", { name: /Roles/ }).getAttribute("aria-selected")).toBe("true");
 	});
 });

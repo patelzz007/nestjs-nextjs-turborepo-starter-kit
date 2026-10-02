@@ -87,7 +87,7 @@ export function useResourceDeleteDialog(labels: AlertDialogLabels = ADMIN_RESOUR
 				actionOrder="cancel-first"
 				labels={labels}
 				confirmLoading={confirmLoading}
-				count={dialogState?.count}
+				{...(dialogState?.count !== undefined ? { count: dialogState.count } : {})}
 				onConfirm={handleConfirmClick}>
 				<AlertDialogMedia severity="critical">
 					<Trash2 aria-hidden="true" />

@@ -1,5 +1,6 @@
 import { MerchantAnalyticsPageView } from "@/components/analytics/merchant-analytics-page-view";
 import { loadMerchantServerContext, readOrganizationLocationCookie } from "@/lib/merchant-server-api";
+import { guardOrgPage } from "@/lib/org/org-page-guard";
 import type { MerchantAnalyticsResponse } from "@workspace/shared";
 import * as React from "react";
 
@@ -11,6 +12,10 @@ interface MerchantAnalyticsPageProps {
 
 export default async function MerchantAnalyticsPage({ params }: MerchantAnalyticsPageProps): Promise<React.JSX.Element> {
 	const { orgSlug } = await params;
+	const denied = await guardOrgPage(orgSlug, "/analytics");
+	if (denied !== null) {
+		return denied;
+	}
 	const { server } = await loadMerchantServerContext();
 	const locationId = await readOrganizationLocationCookie();
 

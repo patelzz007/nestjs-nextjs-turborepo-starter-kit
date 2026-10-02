@@ -1,211 +1,53 @@
 import "dotenv/config";
 
 import { prisma } from "./seed/client";
-import { requireRow } from "./seed/require-row";
-import { seedAbacConditions } from "./seed/abac";
-import { seedMerchantCapabilities } from "./seed/capabilities";
-import { createApiKeys, createApiKeyUsageLogs } from "./seed/api-keys";
-import { generateAdditionalSeedData } from "./seed/extra-users";
-import { createPermissions } from "./seed/permissions";
-import { assignPermissionsToRoles, assignRoleHierarchy, createRoles } from "./seed/roles";
-import { createTags } from "./seed/tags";
-import { createPasswordResetTokens, createRefreshTokens } from "./seed/tokens";
-import { assignAdditionalPermissions, assignRolesToUsers, createUsers } from "./seed/users";
-import { createClicks, createUrlTags, createUrls } from "./seed/urls";
-import { seedGeo } from "./seed/geo-seed";
-import { ORGANIZATION_SEED_IDS, ORGANIZATION_SEED_SLUGS, printOrganizationSeedCredentials, seedPlatformGuardrails } from "./seed/organizations";
-import { cleanupRewardSeedData, printRewardSeedCredentials, seedRewards } from "./seed/rewards";
-import { seedSamplePlatform } from "./seed/sample-platform";
-import { seedProducts } from "./seed/products";
-import { seedAuthorizationKernel } from "./seed/authorization-kernel";
-import { seedStores } from "./seed/stores";
+import { SEED_SCENARIO_RUNNERS } from "./seed/scenarios";
+import { formatSeedUsage, parseSeedArguments, SeedArgumentError, type SeedCommand } from "./seed/seed-options";
+import { seedLog } from "./seed/seed-log";
 
 // ---------------------------------------------------------------------------
-// Orchestrator — runs the per-domain seeders in dependency order.
-// Each seeder lives in `prisma/seed/<domain>.ts` and imports the shared
-// `prisma` client from `prisma/seed/client.ts`.
+// Orchestrator — parses `--scenario` / `--seed`, then runs that scenario.
+//
+//   pnpm db:seed                                        (development)
+//   pnpm db:seed -- --scenario empty
+//   pnpm db:seed -- --scenario enterprise --seed 123
+//
+// Each scenario lives in `prisma/seed/scenarios/<name>.ts`; per-domain seeders
+// live in `prisma/seed/<domain>.ts` and share the client in `prisma/seed/client.ts`.
 // ---------------------------------------------------------------------------
 
-async function main() {
-	console.log("🌱 Starting seed...\n");
+/** Conventional exit code for command-line usage errors (EX_USAGE, sysexits.h). */
+const EXIT_USAGE_ERROR = 64;
 
-	// ── Idempotency cleanup ─────────────────────────────────────────────
-	// Reference data (permissions, roles, users, tags, URLs) is
-	// upserted below so it survives re-runs. Rows with random/unique values
-	// (refresh tokens, clicks, API keys, usage logs, reset tokens) have no
-	// stable key to upsert against — wipe them first so re-running db:seed
-	// converges to the same state instead of throwing or accumulating rows.
-	console.log("Cleaning volatile demo rows...");
-	await prisma.passwordResetToken.deleteMany();
-	await prisma.apiKeyUsageLog.deleteMany();
-	await prisma.apiKey.deleteMany();
-	await prisma.click.deleteMany();
-	await prisma.refreshToken.deleteMany();
-	console.log("✅ Volatile demo rows cleaned\n");
-
-	console.log("Creating permissions...");
-	const permissions = await createPermissions();
-	console.log(`✅ ${permissions.length} permissions`);
-
-	console.log("Creating roles...");
-	const roles = await createRoles();
-	console.log(`✅ ${roles.length} roles`);
-
-	console.log("Configuring role hierarchy (flat — no parent links)...");
-	await assignRoleHierarchy(roles);
-	console.log("✅ Role hierarchy configured");
-
-	console.log("Assigning permissions to roles...");
-	await assignPermissionsToRoles(roles, permissions);
-	console.log("✅ Role permissions assigned");
-
-	console.log("Creating users...");
-	const users = await createUsers();
-	const userRole = requireRow(
-		roles.find((r) => r.name === "User"),
-		"role User",
-	);
-	const extraUsers = await generateAdditionalSeedData(roles, userRole);
-	const allUsers = [...users, ...extraUsers];
-	console.log(`✅ ${allUsers.length} users (${users.length} primary + ${extraUsers.length} additional)`);
-
-	console.log("Assigning roles to users...");
-	await assignRolesToUsers(users, roles);
-	console.log("✅ User roles assigned");
-
-	console.log("Assigning user-level permission overrides...");
-	await assignAdditionalPermissions(users, permissions);
-	console.log("✅ Permission overrides assigned");
-
-	console.log("Seeding Authorization Kernel (ACLs, Policies)...");
-	const kernelSummary = await seedAuthorizationKernel(users, roles);
-	console.log(`✅ Authorization Kernel: ${kernelSummary.acls} ACLs, ${kernelSummary.policies} policies`);
-
-	console.log("Creating refresh tokens...");
-	await createRefreshTokens(allUsers);
-	console.log("✅ Refresh tokens created");
-
-	console.log("Creating tags...");
-	const tags = await createTags(allUsers);
-	console.log(`✅ ${tags.length} tags`);
-
-	console.log("Creating URLs...");
-	const urls = await createUrls(allUsers);
-	console.log(`✅ ${urls.length} URLs`);
-
-	console.log("Linking URL tags...");
-	await createUrlTags(allUsers, urls, tags);
-	console.log("✅ URL tags linked");
-
-	console.log("Creating clicks...");
-	await createClicks(urls);
-	const clickCount = await prisma.click.count();
-	console.log(`✅ ${clickCount} clicks`);
-
-	console.log("Creating API keys...");
-	await createApiKeys(allUsers);
-	const keyCount = await prisma.apiKey.count();
-	console.log(`✅ ${keyCount} API keys`);
-
-	console.log("Seeding API key usage logs...");
-	await createApiKeyUsageLogs();
-	const usageLogCount = await prisma.apiKeyUsageLog.count();
-	console.log(`✅ ${usageLogCount} API key usage log entries`);
-
-	console.log("Seeding merchant capability catalog...");
-	const merchantCapabilitySummary = await seedMerchantCapabilities();
-	console.log(`✅ ${String(merchantCapabilitySummary.definitions)} MERCHANT capability definitions`);
-
-	console.log("Seeding ABAC demo conditions...");
-	await seedAbacConditions(permissions);
-	console.log(`✅ ABAC conditions seeded on MANAGE:SYSTEM_SETTINGS`);
-
-	console.log("Creating password reset tokens...");
-	await createPasswordResetTokens(users);
-	const passwordResetCount = await prisma.passwordResetToken.count();
-	console.log(`✅ ${passwordResetCount} password reset tokens`);
-
-	console.log("Seeding geo data (regions, countries, states, cities)...");
-	await seedGeo();
-
-	console.log("Seeding sample categories...");
-	const sampleSummary = await seedSamplePlatform();
-	console.log(`✅ Categories: ${String(sampleSummary.categories)}`);
-
-	console.log("Seeding demo products...");
-	const productSummary = await seedProducts();
-	console.log(`✅ Products: ${String(productSummary.products)} items`);
-
-	console.log("Cleaning rewards platform seed data...");
-	await cleanupRewardSeedData();
-	console.log("✅ Rewards seed cleanup done");
-
-	const adminUser = requireRow(
-		users.find((u) => u.email === "admin@example.com"),
-		"user admin@example.com",
-	);
-
-	console.log("Seeding platform guardrail policies...");
-	await seedPlatformGuardrails(adminUser);
-	console.log("✅ Platform guardrails seeded");
-
-	console.log("Seeding rewards platform (organizations, merchants, rewards, claims)...");
-	const rewardSummary = await seedRewards(adminUser, allUsers);
-	console.log(
-		`✅ Rewards: ${rewardSummary.organizations} organizations, ${rewardSummary.rewards} rewards, ${rewardSummary.claims} claims, ${rewardSummary.redemptions} redemptions`,
-	);
-	console.log("Seeding stores and store memberships...");
-	const storeSummary = await seedStores(roles);
-	console.log(`✅ Stores: ${String(storeSummary.stores)} stores, ${String(storeSummary.memberships)} store memberships`);
-
-	console.log(
-		`✅ Organizations: ${ORGANIZATION_SEED_SLUGS.kl}, ${ORGANIZATION_SEED_SLUGS.mlk} (${ORGANIZATION_SEED_IDS.klOrganization}, ${ORGANIZATION_SEED_IDS.mlkOrganization})`,
-	);
-
-	console.log(`
-🎉 Seed complete!
-
-📋 Entity counts
-──────────────────────────────────────────────
-Permissions   : ${permissions.length}
-Roles         : ${roles.length}
-Users         : ${allUsers.length}
-Tags          : ${tags.length}
-URLs          : ${urls.length}
-Clicks        : ${clickCount}
-API Keys      : ${keyCount}
-API Key Logs  : ${usageLogCount}
-Reset Tokens  : ${passwordResetCount}
-Categories    : ${sampleSummary.categories}
-Products      : ${productSummary.products}
-
-👤 Test accounts
-──────────────────────────────────────────────
-superadmin@example.com    /  SuperAdmin@123  (isSuperAdmin · ENTERPRISE · email verified)
-admin@example.com         /  Admin@123       (Admin role  · ENTERPRISE · email verified)
-manager@example.com       /  Manager@123     (Manager role · PRO)
-user@example.com          /  User@123        (User role · FREE)
-alice.johnson@example.com /  Alice@123       (User role · PRO)
-bob.smith@example.com     /  Bob@123         (User role · PRO)
-carol.white@example.com   /  Carol@123       (User role · FREE)
-david.lee@example.com     /  David@123       (Manager role · PRO)
-eve.davis@example.com     /  Eve@123         (User role · FREE · INACTIVE)
-frank.miller@example.com  /  Frank@123       (Admin role · ENTERPRISE)
-grace.wilson@example.com  /  Grace@123       (User role · FREE)
-henry.moore@example.com   /  Henry@123       (User role · PRO)
-isla.taylor@example.com   /  Isla@123        (User role · FREE)
-jack.anderson@example.com /  Jack@123        (User role · PRO)
-`);
-	printOrganizationSeedCredentials();
-	printRewardSeedCredentials();
+function readCommand(): SeedCommand | null {
+	try {
+		return parseSeedArguments(process.argv.slice(2));
+	} catch (error) {
+		if (error instanceof SeedArgumentError) {
+			console.error(`❌ Invalid seed arguments\n${error.message}\n\n${formatSeedUsage()}`);
+			process.exitCode = EXIT_USAGE_ERROR;
+			return null;
+		}
+		throw error;
+	}
 }
 
 async function run(): Promise<void> {
+	const command = readCommand();
+	if (command === null) {
+		return;
+	}
+	if (command.kind === "help") {
+		seedLog(formatSeedUsage());
+		return;
+	}
+
 	try {
-		await main();
+		seedLog(`🌱 Starting seed (scenario: ${command.scenario}, seed: ${String(command.seed)})...\n`);
+		await SEED_SCENARIO_RUNNERS[command.scenario](command);
 	} catch (error) {
 		console.error("❌ Seed failed:", error);
-		process.exit(1);
+		process.exitCode = 1;
 	} finally {
 		await prisma.$disconnect();
 	}

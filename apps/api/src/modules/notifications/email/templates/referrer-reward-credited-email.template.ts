@@ -1,4 +1,4 @@
-import { ReferrerRewardCreditedEmailPropsSchema, type ReferrerRewardCreditedEmailProps } from "@workspace/shared";
+import { ReferrerRewardCreditedEmailPropsSchema, type ReferrerRewardCreditedEmailProps, APP_LINKS } from "@workspace/shared";
 
 import { BaseEmailTemplate, type CtaConfig, type EmailAccent } from "../base/base-email-template";
 import type { EmailRenderContext } from "../base/email-render-context";
@@ -22,18 +22,18 @@ export class ReferrerRewardCreditedEmailTemplate extends BaseEmailTemplate<Refer
 		return `Claim "${this.props.rewardTitle}" within ${String(this.props.claimExpiresDays)} days.`;
 	}
 
-	public getCta(context: EmailRenderContext): CtaConfig | null {
+	public override getCta(context: EmailRenderContext): CtaConfig | null {
 		return {
-			label: "View My Rewards",
-			href: this.buildUrl(context, "/rewards/claims"),
+			label: "View my rewards",
+			href: this.buildUrl(context, APP_LINKS.web.wallet),
 		};
 	}
 
 	public renderBodyHtml(_context: EmailRenderContext): string {
-		return `
-        <p class="email-text" style="color: #334155; font-size: 15px; line-height: 1.7; margin: 0 0 16px 0;">Someone you referred just redeemed a reward. You earned:</p>
-        <p class="email-text" style="color: #0f172a; font-size: 17px; font-weight: 600; margin: 0 0 16px 0;">${this.escape(this.props.rewardTitle)}</p>
-        <p class="email-muted" style="color: #64748b; font-size: 13px; line-height: 1.6; margin: 0;">Claim within <strong>${String(this.props.claimExpiresDays)} days</strong> before it expires.</p>`;
+		return [
+			this.paragraph("Someone you referred just redeemed a reward — so you earned one too:"),
+			this.highlight(this.props.rewardTitle, `Claim it within ${String(this.props.claimExpiresDays)} days before it expires.`),
+		].join("");
 	}
 
 	public renderBodyText(_context: EmailRenderContext): string {

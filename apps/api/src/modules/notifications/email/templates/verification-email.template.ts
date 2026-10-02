@@ -1,4 +1,4 @@
-import { VerificationEmailPropsSchema, type VerificationEmailProps } from "@workspace/shared";
+import { VerificationEmailPropsSchema, type VerificationEmailProps, APP_LINKS } from "@workspace/shared";
 
 import { BaseEmailTemplate, type CtaConfig, type EmailAccent } from "../base/base-email-template";
 import type { EmailRenderContext } from "../base/email-render-context";
@@ -33,28 +33,31 @@ export class VerificationEmailTemplate extends BaseEmailTemplate<VerificationEma
 		return { ...context, appUrl: this.props.appUrl };
 	}
 
-	public getCta(context: EmailRenderContext): CtaConfig | null {
+	/** The button sits in the body, above the copy-link fallback. */
+	protected override readonly ctaPlacement = "in-body";
+
+	public override getCta(context: EmailRenderContext): CtaConfig | null {
 		const linkContext: EmailRenderContext = this.linkContext(context);
 		return {
-			label: "Verify Email",
-			href: this.buildUrl(linkContext, "/auth/verify-email", { token: this.props.verificationToken }),
+			label: "Verify email",
+			href: this.buildUrl(linkContext, APP_LINKS.auth.verifyEmail, { token: this.props.verificationToken }),
 		};
 	}
 
 	public renderBodyHtml(context: EmailRenderContext): string {
 		const linkContext: EmailRenderContext = this.linkContext(context);
-		const href: string = this.buildUrl(linkContext, "/auth/verify-email", { token: this.props.verificationToken });
-		return `
-        <p class="email-text" style="color: #334155; font-size: 15px; line-height: 1.7; margin: 0 0 8px 0;">Welcome to <strong>${this.escape(context.appName)}</strong>! Please confirm your email address so we know it's really you.</p>
-        <p class="email-text" style="color: #334155; font-size: 15px; line-height: 1.7; margin: 0 0 20px 0;">One click and your account is ready to go.</p>
-        ${this.linkBlock(href)}
-        <p class="email-muted" style="color: #64748b; font-size: 13px; line-height: 1.6; margin: 0 0 6px 0;">This link expires in <strong>${String(this.props.expiresInHours)} hours</strong>.</p>
-        <p class="email-muted" style="color: #64748b; font-size: 13px; line-height: 1.6; margin: 0;">If you didn't create an account, you can safely ignore this email.</p>`;
+		const href: string = this.buildUrl(linkContext, APP_LINKS.auth.verifyEmail, { token: this.props.verificationToken });
+		return [
+			this.paragraph(`Welcome to ${this.strong(context.appName)}! Confirm your email address so we know it's really you — one click and your account is ready.`),
+			this.ctaInBody(context),
+			this.linkBlock(href),
+			this.note(`This link expires in ${this.strong(`${String(this.props.expiresInHours)} hours`)}. Didn't create an account? You can safely ignore this email.`),
+		].join("");
 	}
 
 	public renderBodyText(context: EmailRenderContext): string {
 		const linkContext: EmailRenderContext = this.linkContext(context);
-		const href: string = this.buildUrl(linkContext, "/auth/verify-email", { token: this.props.verificationToken });
+		const href: string = this.buildUrl(linkContext, APP_LINKS.auth.verifyEmail, { token: this.props.verificationToken });
 		return [
 			`Welcome to ${context.appName}!`,
 			"",

@@ -9,9 +9,9 @@ import { formatKybDocumentSize, formatKybScanStatus } from "./document-utils";
 
 interface MerchantKybStoredDocumentItemProps {
 	readonly document: MerchantKybDocumentRecord;
-	readonly onView?: (document: MerchantKybDocumentRecord) => void;
-	readonly onDownload?: (document: MerchantKybDocumentRecord) => void;
-	readonly onViewSource?: (document: MerchantKybDocumentRecord) => void;
+	readonly onView?: ((document: MerchantKybDocumentRecord) => void) | undefined;
+	readonly onDownload?: ((document: MerchantKybDocumentRecord) => void) | undefined;
+	readonly onViewSource?: ((document: MerchantKybDocumentRecord) => void) | undefined;
 }
 
 function MerchantKybStoredDocumentItem({ document, onView, onDownload, onViewSource }: MerchantKybStoredDocumentItemProps): React.JSX.Element {
@@ -59,10 +59,10 @@ function MerchantKybStoredDocumentItem({ document, onView, onDownload, onViewSou
 
 export interface MerchantKybStoredDocumentListProps {
 	readonly documents: readonly MerchantKybDocumentRecord[];
-	readonly onView?: (document: MerchantKybDocumentRecord) => void;
-	readonly onDownload?: (document: MerchantKybDocumentRecord) => void;
-	readonly onViewSource?: (document: MerchantKybDocumentRecord) => void;
-	readonly className?: string;
+	readonly onView?: ((document: MerchantKybDocumentRecord) => void) | undefined;
+	readonly onDownload?: ((document: MerchantKybDocumentRecord) => void) | undefined;
+	readonly onViewSource?: ((document: MerchantKybDocumentRecord) => void) | undefined;
+	readonly className?: string | undefined;
 }
 
 export function MerchantKybStoredDocumentList({ documents, onView, onDownload, onViewSource, className }: MerchantKybStoredDocumentListProps): React.JSX.Element {

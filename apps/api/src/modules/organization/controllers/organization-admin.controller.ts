@@ -1,8 +1,15 @@
-import { Body, Controller, Post } from "@nestjs/common";
-import { ApiOkResponse, ApiTags } from "@nestjs/swagger";
-import { AdminCreateOrganizationInviteSchema, apiPath, type AdminCreateOrganizationInviteInput } from "@workspace/shared";
+import { Controller, HttpStatus, Post } from "@nestjs/common";
+import { ApiTags } from "@nestjs/swagger";
+import {
+	AdminCreateOrganizationInviteSchema,
+	AdminOrganizationInviteCreatedResponseSchema,
+	apiPath,
+	type AdminCreateOrganizationInviteInput,
+	type AdminOrganizationInviteCreatedResponse,
+} from "@workspace/shared";
 
-import { ZodValidationPipe } from "../../../common/pipes/zod-validation.pipe";
+import { ZodBody } from "../../../common/decorators/zod-request.decorators";
+import { ZodResponse } from "../../../common/decorators/zod-response.decorators";
 import { GetUser } from "../../auth/decorators/get-user.decorator";
 import { RequirePermission } from "../../auth/decorators/require-permission.decorator";
 import { SuperAdminOnly } from "../../auth/decorators/super-admin.decorator";
@@ -17,11 +24,11 @@ export class OrganizationAdminController {
 	@Post("invites")
 	@SuperAdminOnly()
 	@RequirePermission("CREATE", "MERCHANT_ORG")
-	@ApiOkResponse({ description: "Organization invite created" })
+	@ZodResponse(AdminOrganizationInviteCreatedResponseSchema, { status: HttpStatus.CREATED, description: "Organization invite created" })
 	public async createInvite(
 		@GetUser() user: AccessTokenPayload,
-		@Body(new ZodValidationPipe(AdminCreateOrganizationInviteSchema)) body: AdminCreateOrganizationInviteInput,
-	): Promise<{ organizationId: string; inviteToken: string }> {
+		@ZodBody(AdminCreateOrganizationInviteSchema) body: AdminCreateOrganizationInviteInput,
+	): Promise<AdminOrganizationInviteCreatedResponse> {
 		const result = await this.provisioning.provisionFromPlatformInvite(user.sub, body);
 		return { organizationId: result.organizationId, inviteToken: result.inviteToken };
 	}

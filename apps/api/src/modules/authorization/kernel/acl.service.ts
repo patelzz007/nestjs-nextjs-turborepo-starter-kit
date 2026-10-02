@@ -21,8 +21,8 @@ export interface AclLookup {
 	/** Which entries to consider — see {@link AclResourceScope}. */
 	readonly resourceScope: AclResourceScope;
 	/** Server-verified tenant; org/location-bound entries only apply inside it. */
-	readonly organizationId?: string;
-	readonly locationId?: string;
+	readonly organizationId?: string | undefined;
+	readonly locationId?: string | undefined;
 }
 
 export interface AclMatches {

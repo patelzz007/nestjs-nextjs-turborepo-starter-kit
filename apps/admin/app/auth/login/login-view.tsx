@@ -46,7 +46,7 @@ export function LoginView({ redirectPath, webBaseUrl, showDemoAccounts }: LoginV
 			<LoginForm
 				mode="admin"
 				redirectPath={redirectPath}
-				demoAccounts={showDemoAccounts ? ADMIN_DEMO_ACCOUNTS : undefined}
+				{...(showDemoAccounts ? { demoAccounts: ADMIN_DEMO_ACCOUNTS } : {})}
 				footer={
 					<p className="text-center text-xs text-balance text-muted-foreground">
 						Returning to{" "}

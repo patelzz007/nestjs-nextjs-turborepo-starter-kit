@@ -5,6 +5,7 @@ import pluginReactHooks from "eslint-plugin-react-hooks";
 import globals from "globals";
 
 import { config as baseConfig } from "./base.js";
+import { frontendImportBoundaryConfig } from "./import-boundaries.js";
 
 /**
  * A custom ESLint configuration for Next.js applications (apps/web, apps/admin).
@@ -98,6 +99,12 @@ export const nextJsConfig = [
 			"jsx-a11y/aria-role": ["error", { ignoreNonDom: true }],
 		},
 	},
+
+	// ── Import boundaries (frontend) ────────────────────────────────────
+	// Universal boundaries + no server-only packages (Prisma, NestJS, queues,
+	// @workspace/messaging) in browser-bundled code, and no server-only
+	// modules imported from "use client" files. See docs/eslint.md.
+	frontendImportBoundaryConfig,
 
 	// ── Next.js rules ───────────────────────────────────────────────────
 	{

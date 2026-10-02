@@ -49,9 +49,9 @@ describe("resolvePinnedMenuItems", () => {
 
 	it("drops a pin to a page the session is no longer authorized for", () => {
 		const authorized = buildSearchableItems(filterCompiledSidebarMenu(SIDEBAR_MENU, [PERMISSION.PRODUCT.LIST], { enabledFeatureFlags: [] }));
-		expect(resolvePinnedMenuItems(["/product"], authorized)).toHaveLength(1);
+		expect(resolvePinnedMenuItems(["/catalog/products"], authorized)).toHaveLength(1);
 
 		const revoked = buildSearchableItems(filterCompiledSidebarMenu(SIDEBAR_MENU, [], { enabledFeatureFlags: [] }));
-		expect(resolvePinnedMenuItems(["/product"], revoked)).toHaveLength(0);
+		expect(resolvePinnedMenuItems(["/catalog/products"], revoked)).toHaveLength(0);
 	});
 });

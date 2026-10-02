@@ -9,7 +9,7 @@ import {
 	OrganizationLocationDraftSchema,
 	OrganizationPrimaryLocationDraftSchema,
 } from "@workspace/shared";
-import { Button } from "@workspace/ui/components/form/button";
+import { buttonVariants } from "@workspace/ui/components/form/button";
 import { cn } from "@workspace/ui/lib/core/utils";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState, type ChangeEvent, type JSX, type SyntheticEvent } from "react";
@@ -304,9 +304,9 @@ export function MerchantOnboardingView({ token, loginHref = "/auth/login" }: Mer
 			<div className="space-y-6 text-center">
 				<h2 className="text-xl font-semibold tracking-tight">Invite unavailable</h2>
 				<p className="text-sm text-muted-foreground">{error ?? "This invite link is invalid or has expired."}</p>
-				<Button variant="outline" nativeButton={false} className="w-full sm:w-auto" render={<Link href={loginHref} />}>
+				<Link href={loginHref} className={cn(buttonVariants({ variant: "outline" }), "w-full sm:w-auto")}>
 					Back to sign in
-				</Button>
+				</Link>
 			</div>
 		);
 	}
@@ -326,9 +326,9 @@ export function MerchantOnboardingView({ token, loginHref = "/auth/login" }: Mer
 						application.
 					</p>
 				</div>
-				<Button nativeButton={false} className="h-11 w-full sm:w-auto" render={<Link href={loginUrl} />}>
+				<Link href={loginUrl} className={cn(buttonVariants(), "h-11 w-full sm:w-auto")}>
 					Continue to sign in
-				</Button>
+				</Link>
 			</div>
 		);
 	}

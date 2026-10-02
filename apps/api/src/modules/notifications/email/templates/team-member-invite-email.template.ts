@@ -25,22 +25,30 @@ export class TeamMemberInviteEmailTemplate extends BaseEmailTemplate<TeamMemberI
 		return `Accept your invite to join ${this.props.organizationName} as ${this.props.roleLabel}.`;
 	}
 
-	public getCta(_context: EmailRenderContext): CtaConfig | null {
+	/** The button sits in the body, above the copy-link fallback. */
+	protected override readonly ctaPlacement = "in-body";
+
+	public override getCta(_context: EmailRenderContext): CtaConfig | null {
 		return {
 			label: "Accept invitation",
 			href: this.props.inviteUrl,
 		};
 	}
 
-	public renderBodyHtml(_context: EmailRenderContext): string {
-		return `
-        <p class="email-text" style="color: #334155; font-size: 15px; line-height: 1.7; margin: 0 0 16px 0;">You've been invited to join <strong>${this.escape(this.props.organizationName)}</strong> as <strong>${this.escape(this.props.roleLabel)}</strong>.</p>
-        <p class="email-text" style="color: #334155; font-size: 15px; line-height: 1.7; margin: 0 0 16px 0;">Location access: <strong>${this.escape(this.props.locationSummary)}</strong>.</p>
-        <p class="email-text" style="color: #334155; font-size: 15px; line-height: 1.7; margin: 0 0 20px 0;">Sign in with this email address and accept the invite to get started.</p>
-        ${this.linkBlock(this.props.inviteUrl)}
-        <p class="email-muted" style="color: #64748b; font-size: 13px; line-height: 1.6; margin: 0 0 6px 0;">This invite expires in <strong>${String(this.props.expiresInDays)} days</strong>.</p>
-        <p class="email-muted" style="color: #64748b; font-size: 13px; line-height: 1.6; margin: 0;">If you weren't expecting this, you can ignore this email.</p>
-        <p class="email-muted" style="color: #64748b; font-size: 12px; line-height: 1.6; margin: 16px 0 0 0; font-family: ui-monospace, monospace;">${this.escape(this.props.inviteUrl)}</p>`;
+	public renderBodyHtml(context: EmailRenderContext): string {
+		return [
+			this.paragraph(`You've been invited to join ${this.strong(this.props.organizationName)}.`),
+			this.detailsCard([
+				{ label: "Organization", value: this.props.organizationName },
+				{ label: "Role", value: this.props.roleLabel },
+				{ label: "Location access", value: this.props.locationSummary },
+				{ label: "Invite expires", value: `In ${String(this.props.expiresInDays)} days` },
+			]),
+			this.paragraph("Sign in with this email address and accept the invite to get started."),
+			this.ctaInBody(context),
+			this.linkBlock(this.props.inviteUrl),
+			this.note("Weren't expecting this? You can ignore this email."),
+		].join("");
 	}
 
 	public renderBodyText(_context: EmailRenderContext): string {

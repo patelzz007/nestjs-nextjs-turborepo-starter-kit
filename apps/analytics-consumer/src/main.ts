@@ -1,48 +1,18 @@
-import { randomUUID } from "node:crypto";
-import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
-
-import { KAFKA_TOPICS, PlatformEventEnvelope, PlatformEventEnvelopeSchema, readPlatformEventOrganizationId } from "@workspace/shared";
-import { config as loadEnv } from "dotenv";
+import { EnvValidationError, KAFKA_TOPICS } from "@workspace/shared";
 import { Kafka } from "kafkajs";
 import pg from "pg";
 
-const DEFAULT_SHUTDOWN_TIMEOUT_MS = 15_000;
+import { loadConsumerEnv, type ConsumerEnv } from "./env";
+import { InboxRetentionScheduler } from "./inbox-retention";
+import { createConsoleJsonLogger } from "./logger";
+import { ANALYTICS_CONSUMER_ID, handlePlatformMessage, type MessageHandlerDeps } from "./message-handler";
+import { PgInboxStore } from "./pg-inbox-store";
+
 const SUBSCRIBE_RETRY_DELAY_MS = 1_000;
 const SUBSCRIBE_MAX_ATTEMPTS = 10;
-
-/** Load shared API env so DATABASE_URL / KAFKA_BROKERS match the Nest app. */
-function loadSharedEnv(): void {
-	const packageRoot: string = dirname(fileURLToPath(import.meta.url));
-	const envPath: string = resolve(packageRoot, "../../api/.env");
-	const result = loadEnv({ path: envPath });
-	if (result.error !== undefined) {
-		throw new Error(`Failed to load ${envPath}: ${result.error.message}`);
-	}
-	if (result.parsed === undefined || Object.keys(result.parsed).length === 0) {
-		throw new Error(`No variables loaded from ${envPath} — copy apps/api/.env.example to apps/api/.env`);
-	}
-}
-
-function readRequiredEnv(name: string): string {
-	const value: string | undefined = process.env[name];
-	if (value === undefined || value.trim().length === 0) {
-		throw new Error(`${name} is required (set it in apps/api/.env)`);
-	}
-	return value;
-}
-
-function readShutdownTimeoutMs(): number {
-	const raw: string | undefined = process.env.SHUTDOWN_TIMEOUT_MS;
-	if (raw === undefined || raw.trim() === "") {
-		return DEFAULT_SHUTDOWN_TIMEOUT_MS;
-	}
-	const parsed = Number(raw);
-	if (!Number.isFinite(parsed) || parsed <= 0) {
-		return DEFAULT_SHUTDOWN_TIMEOUT_MS;
-	}
-	return parsed;
-}
+const SERVICE_NAME = "analytics-consumer";
+/** Exit code for "the worker cannot start with this configuration". */
+const INVALID_CONFIGURATION_EXIT_CODE = 1;
 
 function sleep(ms: number): Promise<void> {
 	return new Promise((resolveSleep): void => {
@@ -50,38 +20,45 @@ function sleep(ms: number): Promise<void> {
 	});
 }
 
-loadSharedEnv();
+/** Validate the environment before connecting to anything; print a value-free error and exit if invalid. */
+function loadEnvOrExit(): ConsumerEnv {
+	try {
+		return loadConsumerEnv();
+	} catch (error) {
+		if (error instanceof EnvValidationError) {
+			process.stderr.write(`${error.message}\n`);
+			process.exit(INVALID_CONFIGURATION_EXIT_CODE);
+		}
+		throw error;
+	}
+}
 
-const databaseUrl: string = readRequiredEnv("DATABASE_URL");
-const kafkaBrokersRaw: string = readRequiredEnv("KAFKA_BROKERS");
+const env: ConsumerEnv = loadEnvOrExit();
 
-const brokers: string[] = kafkaBrokersRaw
-	.split(",")
-	.map((broker: string): string => broker.trim())
-	.filter((broker: string): boolean => broker.length > 0);
+const logger = createConsoleJsonLogger(SERVICE_NAME);
+const pool = new pg.Pool({ connectionString: env.DATABASE_URL });
+const kafka = new Kafka({ clientId: SERVICE_NAME, brokers: env.KAFKA_BROKERS });
+// The group id doubles as the inbox consumer id — each logical consumer dedupes on its own.
+const consumer = kafka.consumer({ groupId: ANALYTICS_CONSUMER_ID });
 
-const pool = new pg.Pool({ connectionString: databaseUrl });
-const kafka = new Kafka({ clientId: "analytics-consumer", brokers });
-const consumer = kafka.consumer({ groupId: "analytics-warehouse" });
+const inboxStore = new PgInboxStore(pool);
+
+const handlerDeps: MessageHandlerDeps = {
+	store: inboxStore,
+	logger,
+	consumerId: ANALYTICS_CONSUMER_ID,
+	nowMs: (): number => Date.now(),
+};
+
+// Hourly purge of inbox claims older than ANALYTICS_INBOX_RETENTION_DAYS (advisory-locked: one instance at a time).
+const inboxRetention = new InboxRetentionScheduler({
+	store: inboxStore,
+	logger,
+	nowMs: (): number => Date.now(),
+	retentionDays: env.ANALYTICS_INBOX_RETENTION_DAYS,
+});
 
 let shutdownStarted = false;
-
-/** Metadata-only ingest — tenant id tagged when present in envelope payload (no content). */
-async function ingest(topic: string, envelope: PlatformEventEnvelope): Promise<void> {
-	const organizationId = readPlatformEventOrganizationId(envelope.payload);
-	const metadataPayload = {
-		type: envelope.type,
-		correlationId: envelope.correlationId,
-		organizationId,
-		occurredAt: envelope.occurredAt,
-	};
-
-	await pool.query(
-		`INSERT INTO analytics_events (id, topic, event_type, correlation_id, partition_key, payload, occurred_at)
-     VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7)`,
-		[randomUUID(), topic, envelope.type, envelope.correlationId, organizationId ?? envelope.type, JSON.stringify(metadataPayload), envelope.occurredAt],
-	);
-}
 
 /** Platform topics are created by the API producer on first publish — ensure they exist before subscribing. */
 async function ensureKafkaTopics(): Promise<void> {
@@ -101,7 +78,7 @@ async function ensureKafkaTopics(): Promise<void> {
 			})),
 			waitForLeaders: true,
 		});
-		console.log(`Created Kafka topics: ${missingTopics.join(", ")}`);
+		logger.info({ event: "analytics.topics_created", topics: missingTopics.join(",") });
 	} finally {
 		await admin.disconnect();
 	}
@@ -116,7 +93,7 @@ async function subscribeToPlatformTopics(): Promise<void> {
 		} catch (error) {
 			lastError = error instanceof Error ? error : new Error(String(error));
 			if (attempt < SUBSCRIBE_MAX_ATTEMPTS) {
-				console.warn(`Kafka subscribe attempt ${String(attempt)} failed (${lastError.message}) — retrying…`);
+				logger.warn({ event: "analytics.subscribe_retry", attempt, error: lastError.message });
 				await sleep(SUBSCRIBE_RETRY_DELAY_MS * attempt);
 			}
 		}
@@ -130,24 +107,23 @@ async function shutdown(signal: NodeJS.Signals): Promise<void> {
 	}
 	shutdownStarted = true;
 
-	const shutdownTimeoutMs: number = readShutdownTimeoutMs();
-	console.log(`\nReceived ${signal} — shutting down analytics consumer (timeout ${String(shutdownTimeoutMs)}ms)…`);
+	logger.info({ event: "analytics.shutdown_started", signal, timeoutMs: env.SHUTDOWN_TIMEOUT_MS });
 
 	const forceExitTimer: NodeJS.Timeout = setTimeout((): void => {
-		console.error(`Shutdown timed out after ${String(shutdownTimeoutMs)}ms — forcing exit`);
+		logger.error({ event: "analytics.shutdown_timed_out", timeoutMs: env.SHUTDOWN_TIMEOUT_MS });
 		process.exit(1);
-	}, shutdownTimeoutMs);
+	}, env.SHUTDOWN_TIMEOUT_MS);
 
 	try {
 		await consumer.disconnect();
+		await inboxRetention.stop();
 		await pool.end();
 		clearTimeout(forceExitTimer);
-		console.log("Analytics consumer shut down — Kafka and Postgres connections closed");
+		logger.info({ event: "analytics.shutdown_completed" });
 		process.exit(0);
 	} catch (error) {
 		clearTimeout(forceExitTimer);
-		const message = error instanceof Error ? error.message : String(error);
-		console.error(`Shutdown failed: ${message}`);
+		logger.error({ event: "analytics.shutdown_failed", error: error instanceof Error ? error.message : String(error) });
 		process.exit(1);
 	}
 }
@@ -167,25 +143,26 @@ async function main(): Promise<void> {
 	await ensureKafkaTopics();
 	await consumer.connect();
 	await subscribeToPlatformTopics();
-	console.log(`Analytics consumer subscribed to ${KAFKA_TOPICS.join(", ")}`);
+	logger.info({ event: "analytics.subscribed", topics: KAFKA_TOPICS.join(","), groupId: ANALYTICS_CONSUMER_ID });
 
 	await consumer.run({
-		eachMessage: async ({ topic, message }): Promise<void> => {
-			if (message.value === null) {
-				return;
-			}
-			const parsed = PlatformEventEnvelopeSchema.parse(JSON.parse(message.value.toString()));
-			await ingest(topic, parsed);
+		// At-least-once: the offset commits only after the handler resolves. The
+		// handler dedupes redeliveries via the inbox and parks poison messages;
+		// it only throws on transient failures, which kafkajs retries with backoff.
+		eachMessage: async ({ topic, partition, message }): Promise<void> => {
+			await handlePlatformMessage({ topic, partition, offset: message.offset, value: message.value }, handlerDeps);
 		},
 	});
+
+	inboxRetention.start();
+	logger.info({ event: "analytics.inbox_retention_scheduled", retentionDays: env.ANALYTICS_INBOX_RETENTION_DAYS });
 }
 
 async function run(): Promise<void> {
 	try {
 		await main();
 	} catch (error) {
-		const message = error instanceof Error ? error.message : String(error);
-		console.error(message);
+		logger.error({ event: "analytics.fatal", error: error instanceof Error ? error.message : String(error) });
 		process.exit(1);
 	}
 }

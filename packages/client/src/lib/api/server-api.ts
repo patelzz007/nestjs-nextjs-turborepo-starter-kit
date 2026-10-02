@@ -4,7 +4,14 @@
 import "server-only";
 
 import { apiRouter, type ApiRouter } from "./endpoints";
-import { createServerCallerForRouter, createServerRequestContext, resolveConfig, type ServerApiConfig, type ServerCallerTree } from "./server-request";
+import {
+	createServerCallerForRouter,
+	createServerRequestContext,
+	resolveConfig,
+	type ServerApiConfig,
+	type ServerApiConfigInput,
+	type ServerCallerTree,
+} from "./server-request";
 
 export {
 	classifyError,
@@ -25,6 +32,8 @@ export {
 	type PrefetchLogEvent,
 	type PrefetchOutcome,
 	type ServerApiConfig,
+	type ServerApiConfigDefaults,
+	type ServerApiConfigInput,
 	type ServerApiLogLevel,
 	type ServerCallerBranch,
 	type ServerCallerTree,
@@ -40,7 +49,7 @@ export type ServerCaller = ServerCallerTree<ApiRouter>;
  * Creates the SSR caller for `apiRouter` with the given config.
  * For custom routers, use `createServerCallerForRouter(router, context)` directly.
  */
-export function createServerCaller(config?: Partial<ServerApiConfig>): ServerCaller {
+export function createServerCaller(config: ServerApiConfigInput): ServerCaller {
 	const resolved: ServerApiConfig = resolveConfig(config);
 	const context = createServerRequestContext(resolved, apiRouter.auth.refresh);
 	return createServerCallerForRouter(apiRouter, context);

@@ -194,11 +194,13 @@ model User {
   authorizationPolicySimulations       AuthorizationPolicySimulation[] @relation("AuthorizationPolicySimulator")
   supportAccessGrants                  SupportAccessGrant[]            @relation("SupportAccessGrantSupportUser")
   organizationApiKeysCreated           OrganizationApiKey[]            @relation("OrganizationApiKeyCreator")
+  organizationTerminalsCreated         OrganizationTerminal[]          @relation("OrganizationTerminalCreator")
   organizationLocationsRequested       OrganizationLocation[]          @relation("OrganizationLocationRequestedBy")
   organizationLocationsReviewed        OrganizationLocation[]          @relation("OrganizationLocationReviewedBy")
   storeMemberships                     StoreMembership[]               @relation("StoreMemberships")
   rewardClaims                         RewardClaim[]
   rewardRedemptions                    RewardRedemption[]
+  rewardSales                          RewardSale[]
   rewardReferralsAsReferrer            RewardReferral[]                @relation("ReferrerUser")
   rewardReferralsAsReferee             RewardReferral[]                @relation("RefereeUser")
   rewardOtpChallenges                  RewardOtpChallenge[]
@@ -512,24 +514,24 @@ model RolePermission {
 /// RLS: resource ACL entries — ALLOW/DENY per subject+action+resource.
 /// Explicit DENY > Explicit ALLOW > Role ALLOW > default DENY.
 model ResourceAcl {
-  id             String     @id @default(uuid())
-  subjectType    String     @map("subject_type") @db.VarChar(50) // "USER" | "ROLE"
-  subjectId      String     @map("subject_id")
-  action         String     @db.VarChar(50)
-  resourceType   String     @map("resource_type") @db.VarChar(50)
-  resourceId     String?    @map("resource_id") // null = all resources of type
+  id             String           @id @default(uuid())
+  subjectType    String           @map("subject_type") @db.VarChar(50) // "USER" | "ROLE"
+  subjectId      String           @map("subject_id")
+  action         String           @db.VarChar(50)
+  resourceType   String           @map("resource_type") @db.VarChar(50)
+  resourceId     String?          @map("resource_id") // null = all resources of type
   effect         AclEffect
   scope          PermissionScope?
-  organizationId String?    @map("organization_id")
-  locationId     String?    @map("location_id")
+  organizationId String?          @map("organization_id")
+  locationId     String?          @map("location_id")
   conditions     Json?
-  expiresAt      BigInt?    @map("expires_at")
-  assignedBy     String?    @map("assigned_by")
-  reason         String?    @db.Text
-  isDeleted      Boolean    @default(false) @map("is_deleted")
-  deletedAt      BigInt?    @map("deleted_at")
-  createdAt      BigInt     @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
-  updatedAt      BigInt     @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
+  expiresAt      BigInt?          @map("expires_at")
+  assignedBy     String?          @map("assigned_by")
+  reason         String?          @db.Text
+  isDeleted      Boolean          @default(false) @map("is_deleted")
+  deletedAt      BigInt?          @map("deleted_at")
+  createdAt      BigInt           @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
+  updatedAt      BigInt           @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
 
   @@index([subjectType, subjectId])
   @@index([resourceType, resourceId])
@@ -540,25 +542,25 @@ model ResourceAcl {
 
 /// RLS: catalog — Policy definitions with Zod-validated DSL.
 model PolicyDefinition {
-  id             String        @id @default(uuid())
-  name           String        @db.VarChar(200)
-  description    String?       @db.Text
-  version        Int           @default(1)
+  id             String          @id @default(uuid())
+  name           String          @db.VarChar(200)
+  description    String?         @db.Text
+  version        Int             @default(1)
   effect         PolicyEffect
   scope          PermissionScope
-  actions        String[]      // ["CREATE", "UPDATE", ...]
-  resources      String[]      // ["ORDER", "PAYMENT", ...]
-  organizationId String?       @map("organization_id")
-  locationId     String?       @map("location_id")
-  conditions     Json?         // Zod-validated policy DSL
-  isActive       Boolean       @default(true) @map("is_active")
-  publishedAt    BigInt?       @map("published_at")
-  publishedBy    String?       @map("published_by")
-  supersededBy   String?       @map("superseded_by")
-  isDeleted      Boolean       @default(false) @map("is_deleted")
-  deletedAt      BigInt?       @map("deleted_at")
-  createdAt      BigInt        @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
-  updatedAt      BigInt        @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
+  actions        String[] // ["CREATE", "UPDATE", ...]
+  resources      String[] // ["ORDER", "PAYMENT", ...]
+  organizationId String?         @map("organization_id")
+  locationId     String?         @map("location_id")
+  conditions     Json? // Zod-validated policy DSL
+  isActive       Boolean         @default(true) @map("is_active")
+  publishedAt    BigInt?         @map("published_at")
+  publishedBy    String?         @map("published_by")
+  supersededBy   String?         @map("superseded_by")
+  isDeleted      Boolean         @default(false) @map("is_deleted")
+  deletedAt      BigInt?         @map("deleted_at")
+  createdAt      BigInt          @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
+  updatedAt      BigInt          @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint"))
 
   @@index([organizationId])
   @@index([locationId])
@@ -580,7 +582,7 @@ model AuthorizationAudit {
   reason         String?               @db.Text
   policyIds      String[]              @default([]) @map("policy_ids")
   aclIds         String[]              @default([]) @map("acl_ids")
-  evaluation     Json?                 // explain() output
+  evaluation     Json? // explain() output
   ipAddress      String?               @map("ip_address") @db.VarChar(45)
   userAgent      String?               @map("user_agent") @db.Text
   requestId      String?               @map("request_id") @db.VarChar(64)
@@ -1106,6 +1108,7 @@ model Organization {
   auditLogs                OrganizationAuditLog[]
   rewards                  Reward[]
   redemptions              RewardRedemption[]
+  rewardSales              RewardSale[]
   rewardAuditLogs          RewardAuditLog[]
   apiKeys                  OrganizationApiKey[]
   kybDocuments             OrganizationKybDocument[]
@@ -1113,11 +1116,11 @@ model Organization {
   assets                   OrganizationAsset[]
   terminals                OrganizationTerminal[]
   storedFiles              StoredFile[]                          @relation("StoredFileOrganization")
-  membershipLocationScopes         OrganizationMembershipLocationScope[]
-  invitationLocationScopes         OrganizationInvitationLocationScope[]
-  rewardLocationScopes             RewardLocationScope[]
-  stores                           Store[]
-  storeMemberships                 StoreMembership[]
+  membershipLocationScopes OrganizationMembershipLocationScope[]
+  invitationLocationScopes OrganizationInvitationLocationScope[]
+  rewardLocationScopes     RewardLocationScope[]
+  stores                   Store[]
+  storeMemberships         StoreMembership[]
 
   @@index([lifecycleState])
   @@map("organizations")
@@ -1158,16 +1161,17 @@ model OrganizationLocation {
   createdAt         BigInt                     @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
   updatedAt         BigInt                     @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
 
-  organization      Organization                          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  requestedBy       User?                                 @relation("OrganizationLocationRequestedBy", fields: [requestedByUserId], references: [id], onDelete: SetNull)
-  reviewedBy        User?                                 @relation("OrganizationLocationReviewedBy", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
-  locationScopes              OrganizationMembershipLocationScope[]
-  invitationLocationScopes    OrganizationInvitationLocationScope[]
-  rewardLocationScopes        RewardLocationScope[]
-  terminals                   OrganizationTerminal[]
-  redemptions                 RewardRedemption[]
-  apiKeys                OrganizationApiKey[]
-  store                  Store?
+  organization             Organization                          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  requestedBy              User?                                 @relation("OrganizationLocationRequestedBy", fields: [requestedByUserId], references: [id], onDelete: SetNull)
+  reviewedBy               User?                                 @relation("OrganizationLocationReviewedBy", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
+  locationScopes           OrganizationMembershipLocationScope[]
+  invitationLocationScopes OrganizationInvitationLocationScope[]
+  rewardLocationScopes     RewardLocationScope[]
+  terminals                OrganizationTerminal[]
+  redemptions              RewardRedemption[]
+  rewardSales              RewardSale[]
+  apiKeys                  OrganizationApiKey[]
+  store                    Store?
 
   @@unique([organizationId, code])
   @@index([organizationId])
@@ -1275,18 +1279,20 @@ model StoreMembership {
 
 /// RLS: TENANT — merchant-specific organization profile (KYB, contact).
 model OrganizationMerchantProfile {
-  id             String    @id @default(uuid())
-  organizationId String    @unique @map("organization_id")
-  legalName      String?   @map("legal_name") @db.VarChar(200)
-  category       String    @db.VarChar(100)
-  addressText    String?   @map("address_text") @db.Text
-  city           PilotCity
-  kybStatus      KybStatus @default(PENDING) @map("kyb_status")
-  kybFields      Json?     @map("kyb_fields")
-  contactEmail   String    @map("contact_email") @db.VarChar(100)
-  contactPhone   String?   @map("contact_phone") @db.VarChar(20)
-  createdAt      BigInt    @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
-  updatedAt      BigInt    @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
+  id                         String    @id @default(uuid())
+  organizationId             String    @unique @map("organization_id")
+  legalName                  String?   @map("legal_name") @db.VarChar(200)
+  category                   String    @db.VarChar(100)
+  addressText                String?   @map("address_text") @db.Text
+  city                       PilotCity
+  kybStatus                  KybStatus @default(PENDING) @map("kyb_status")
+  kybFields                  Json?     @map("kyb_fields")
+  contactEmail               String    @map("contact_email") @db.VarChar(100)
+  contactPhone               String?   @map("contact_phone") @db.VarChar(20)
+  /// When on, POS calls with a manually created API key must come from a registered terminal id.
+  requireRegisteredTerminals Boolean   @default(false) @map("require_registered_terminals")
+  createdAt                  BigInt    @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
+  updatedAt                  BigInt    @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
@@ -1311,9 +1317,9 @@ model OrganizationInvitation {
   createdAt         BigInt                        @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
   updatedAt         BigInt                        @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
 
-  organization   Organization?                       @relation(fields: [organizationId], references: [id], onDelete: SetNull)
-  createdByAdmin User                                @relation("OrganizationInvitationCreator", fields: [createdByAdminId], references: [id], onDelete: Restrict)
-  acceptedByUser User?                               @relation("OrganizationInvitationAcceptor", fields: [acceptedByUserId], references: [id], onDelete: SetNull)
+  organization   Organization?                         @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  createdByAdmin User                                  @relation("OrganizationInvitationCreator", fields: [createdByAdminId], references: [id], onDelete: Restrict)
+  acceptedByUser User?                                 @relation("OrganizationInvitationAcceptor", fields: [acceptedByUserId], references: [id], onDelete: SetNull)
   locationScopes OrganizationInvitationLocationScope[]
 
   @@index([email])
@@ -1842,6 +1848,8 @@ model OrganizationApiKey {
   organization Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   location     OrganizationLocation? @relation(fields: [locationId], references: [id], onDelete: SetNull)
   createdBy    User                  @relation("OrganizationApiKeyCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  sales        RewardSale[]
+  terminal     OrganizationTerminal?
 
   @@index([organizationId])
   @@index([locationId])
@@ -1850,18 +1858,30 @@ model OrganizationApiKey {
 
 /// RLS: via organization_id and location_id.
 model OrganizationTerminal {
-  id             String  @id @default(uuid())
-  organizationId String  @map("organization_id")
-  locationId     String  @map("location_id")
-  terminalId     String  @map("terminal_id") @db.VarChar(100)
-  label          String? @db.VarChar(100)
-  isDeleted      Boolean @default(false) @map("is_deleted")
-  deletedAt      BigInt? @map("deleted_at")
-  createdAt      BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
-  updatedAt      BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
+  id                   String  @id @default(uuid())
+  organizationId       String  @map("organization_id")
+  locationId           String  @map("location_id")
+  terminalId           String  @map("terminal_id") @db.VarChar(100)
+  label                String? @db.VarChar(100)
+  /// The member who registered the till (null for seeded rows).
+  createdByUserId      String? @map("created_by_user_id")
+  /// The API key issued when the till paired (one key per terminal; re-pairing rotates it).
+  apiKeyId             String? @unique @map("api_key_id")
+  /// sha256 of the live one-time pairing code; cleared once used.
+  pairingCodeHash      String? @unique @map("pairing_code_hash") @db.VarChar(64)
+  pairingCodeExpiresAt BigInt? @map("pairing_code_expires_at")
+  pairedAt             BigInt? @map("paired_at")
+  lastSeenAt           BigInt? @map("last_seen_at")
+  isDeleted            Boolean @default(false) @map("is_deleted")
+  deletedAt            BigInt? @map("deleted_at")
+  deletedBy            String? @map("deleted_by")
+  createdAt            BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
+  updatedAt            BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
 
   organization Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   location     OrganizationLocation @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  createdBy    User?                @relation("OrganizationTerminalCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  apiKey       OrganizationApiKey?  @relation(fields: [apiKeyId], references: [id], onDelete: SetNull)
 
   @@unique([organizationId, terminalId])
   @@index([locationId])
@@ -1870,47 +1890,47 @@ model OrganizationTerminal {
 
 /// RLS: organization members for writes; public read for published consumer rewards.
 model Reward {
-  id                     String       @id @default(uuid())
-  organizationId         String       @map("organization_id")
-  title                  String       @db.VarChar(200)
-  description            String       @db.Text
-  rewardType             RewardType   @map("reward_type")
-  rewardValue            Int          @default(0) @map("reward_value")
-  termsConditions        String?      @map("terms_conditions") @db.Text
-  rewardKind             RewardKind   @default(CONSUMER) @map("reward_kind")
-  category               String       @db.VarChar(100)
-  placeholderImageKey    String       @map("placeholder_image_key") @db.VarChar(100)
+  id                     String                        @id @default(uuid())
+  organizationId         String                        @map("organization_id")
+  title                  String                        @db.VarChar(200)
+  description            String                        @db.Text
+  rewardType             RewardType                    @map("reward_type")
+  rewardValue            Int                           @default(0) @map("reward_value")
+  termsConditions        String?                       @map("terms_conditions") @db.Text
+  rewardKind             RewardKind                    @default(CONSUMER) @map("reward_kind")
+  category               String                        @db.VarChar(100)
+  placeholderImageKey    String                        @map("placeholder_image_key") @db.VarChar(100)
   rules                  Json?
-  quantityTotal          Int          @map("quantity_total")
-  quantityRemaining      Int          @map("quantity_remaining")
-  quantityReserved       Int          @default(0) @map("quantity_reserved")
-  startDate              BigInt?      @map("start_date")
-  expiryDate             BigInt       @map("expiry_date")
-  status                 RewardStatus @default(DRAFT)
-  claimCount             Int          @default(0) @map("claim_count")
-  redemptionCount        Int          @default(0) @map("redemption_count")
+  quantityTotal          Int                           @map("quantity_total")
+  quantityRemaining      Int                           @map("quantity_remaining")
+  quantityReserved       Int                           @default(0) @map("quantity_reserved")
+  startDate              BigInt?                       @map("start_date")
+  expiryDate             BigInt                        @map("expiry_date")
+  status                 RewardStatus                  @default(DRAFT)
+  claimCount             Int                           @default(0) @map("claim_count")
+  redemptionCount        Int                           @default(0) @map("redemption_count")
   metadata               Json?
-  referralsEnabled       Boolean      @default(true) @map("referrals_enabled")
-  referralPoolTotal      Int?         @map("referral_pool_total")
-  referralPoolRemaining  Int?         @map("referral_pool_remaining")
-  referrerRewardId       String?      @map("referrer_reward_id")
+  referralsEnabled       Boolean                       @default(true) @map("referrals_enabled")
+  referralPoolTotal      Int?                          @map("referral_pool_total")
+  referralPoolRemaining  Int?                          @map("referral_pool_remaining")
+  referrerRewardId       String?                       @map("referrer_reward_id")
   parentConsumerRewardId String?                       @map("parent_consumer_reward_id")
   locationScopeType      OrganizationLocationScopeType @default(ALL_LOCATIONS) @map("location_scope_type")
   submittedForReviewAt   BigInt?                       @map("submitted_for_review_at")
-  autoPublishAt          BigInt?      @map("auto_publish_at")
-  reviewedAt             BigInt?      @map("reviewed_at")
-  reviewedByUserId       String?      @map("reviewed_by_user_id")
-  rejectionReason        String?      @map("rejection_reason") @db.Text
-  isDeleted              Boolean      @default(false) @map("is_deleted")
-  deletedAt              BigInt?      @map("deleted_at")
-  createdAt              BigInt       @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
-  updatedAt              BigInt       @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
+  autoPublishAt          BigInt?                       @map("auto_publish_at")
+  reviewedAt             BigInt?                       @map("reviewed_at")
+  reviewedByUserId       String?                       @map("reviewed_by_user_id")
+  rejectionReason        String?                       @map("rejection_reason") @db.Text
+  isDeleted              Boolean                       @default(false) @map("is_deleted")
+  deletedAt              BigInt?                       @map("deleted_at")
+  createdAt              BigInt                        @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
+  updatedAt              BigInt                        @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
 
-  organization         Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  referrerReward       Reward?          @relation("ConsumerReferrerReward", fields: [referrerRewardId], references: [id], onDelete: SetNull)
-  consumerRewards      Reward[]         @relation("ConsumerReferrerReward")
-  parentConsumerReward Reward?          @relation("ReferrerCloneParent", fields: [parentConsumerRewardId], references: [id], onDelete: SetNull)
-  referrerClones       Reward[]         @relation("ReferrerCloneParent")
+  organization         Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  referrerReward       Reward?               @relation("ConsumerReferrerReward", fields: [referrerRewardId], references: [id], onDelete: SetNull)
+  consumerRewards      Reward[]              @relation("ConsumerReferrerReward")
+  parentConsumerReward Reward?               @relation("ReferrerCloneParent", fields: [parentConsumerRewardId], references: [id], onDelete: SetNull)
+  referrerClones       Reward[]              @relation("ReferrerCloneParent")
   claims               RewardClaim[]
   referrals            RewardReferral[]
   locationScopes       RewardLocationScope[]
@@ -1984,6 +2004,8 @@ model RewardRedemption {
   terminalId       String                 @map("terminal_id") @db.VarChar(100)
   redemptionMethod RewardRedemptionMethod @map("redemption_method")
   idempotencyKey   String                 @map("idempotency_key") @db.VarChar(64)
+  /// The POS checkout (paid bill) this redemption belongs to; null for single `/redemptions/confirm` redemptions.
+  saleId           String?                @map("sale_id")
   redeemedAt       BigInt                 @map("redeemed_at")
   isDeleted        Boolean                @default(false) @map("is_deleted")
   deletedAt        BigInt?                @map("deleted_at")
@@ -1994,13 +2016,54 @@ model RewardRedemption {
   organization Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   location     OrganizationLocation? @relation(fields: [locationId], references: [id], onDelete: SetNull)
   user         User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sale         RewardSale?           @relation(fields: [saleId], references: [id], onDelete: Restrict)
 
   @@unique([organizationId, idempotencyKey])
   @@index([organizationId])
   @@index([locationId])
   @@index([userId])
   @@index([redeemedAt])
+  @@index([saleId])
   @@map("reward_redemptions")
+}
+
+/// One paid POS bill on which a customer redeemed one or more rewards
+/// (`POST /redemptions/checkout`). The source of every "sales" figure:
+/// merchant/admin sales analytics and the customer's spending breakdown.
+/// Money is stored in minor units (sen) with an explicit ISO-4217 currency.
+model RewardSale {
+  id             String  @id @default(uuid())
+  organizationId String  @map("organization_id")
+  /// The store the bill was paid at (store-scoped API key, else the registered terminal's store); null when unknown.
+  locationId     String? @map("location_id")
+  /// The customer whose rewards were redeemed.
+  userId         String  @map("user_id")
+  terminalId     String  @map("terminal_id") @db.VarChar(100)
+  apiKeyId       String? @map("api_key_id")
+  billTotalMinor Int     @map("bill_total_minor")
+  currency       String  @db.VarChar(3)
+  idempotencyKey String  @map("idempotency_key") @db.VarChar(64)
+  /// sha256 of the canonical request — a retried key with a different payload is rejected, never replayed.
+  requestHash    String  @map("request_hash") @db.VarChar(64)
+  paidAt         BigInt  @map("paid_at")
+  isDeleted      Boolean @default(false) @map("is_deleted")
+  deletedAt      BigInt? @map("deleted_at")
+  deletedBy      String? @map("deleted_by")
+  createdAt      BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
+  updatedAt      BigInt  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
+
+  organization Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  location     OrganizationLocation? @relation(fields: [locationId], references: [id], onDelete: SetNull)
+  user         User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  apiKey       OrganizationApiKey?   @relation(fields: [apiKeyId], references: [id], onDelete: SetNull)
+  redemptions  RewardRedemption[]
+
+  @@unique([organizationId, idempotencyKey])
+  @@index([organizationId, paidAt])
+  @@index([userId, paidAt])
+  @@index([locationId])
+  @@index([paidAt])
+  @@map("reward_sales")
 }
 
 /// RLS: referrer/referee own rows + bypass.
@@ -2128,13 +2191,19 @@ model RewardRedemptionIdempotencyRecord {
   @@map("reward_redemption_idempotency_records")
 }
 
+/// Outbox row lifecycle. FAILED is the dead-letter state (malformed envelope or retries exhausted) —
+/// an operator re-queues a row by setting it back to PENDING (docs/infrastructure/messaging.md).
 enum OutboxEventStatus {
   PENDING
   PUBLISHED
   FAILED
 }
 
-/// Transactional outbox for durable Kafka publishing (RLS bypass — infrastructure table).
+/// Transactional outbox for durable Kafka publishing (docs/adr/015-transactional-outbox-and-inbox.md).
+/// Rows are INSERTed in the SAME transaction as the domain change they describe; `id` is the stable
+/// event id carried on the wire (`eventId`) so consumer inboxes can dedupe redeliveries.
+/// RLS: append-only INSERT of fresh PENDING rows from any app session; read/update is bypass-only
+/// (dispatcher, `outbox.publish` system operation). Seed: intentionally empty (runtime ledger).
 model OutboxEvent {
   id            String            @id @default(uuid())
   topic         String            @db.VarChar(100)
@@ -2145,12 +2214,65 @@ model OutboxEvent {
   status        OutboxEventStatus @default(PENDING)
   attempts      Int               @default(0)
   lastError     String?           @map("last_error") @db.Text
+  /// Epoch ms before which the dispatcher must not claim the row: set to a lease on claim and to the
+  /// exponential-backoff deadline after a failed publish.
+  availableAt   BigInt            @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("available_at")
   publishedAt   BigInt?           @map("published_at")
   createdAt     BigInt            @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
   updatedAt     BigInt            @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
 
   @@index([status, createdAt])
+  @@index([status, availableAt])
   @@map("outbox_events")
+}
+
+/// Consumer inbox (idempotency ledger) — one row per (consumer, event id) a Kafka consumer has
+/// applied. Written in the SAME transaction as the consumer's side effect with
+/// `INSERT … ON CONFLICT DO NOTHING`; the composite primary key is the dedupe guarantee, so a
+/// redelivered or republished event is applied exactly once per consumer.
+/// RLS: bypass-only infrastructure table. Seed: intentionally empty (runtime ledger).
+model InboxProcessedEvent {
+  consumer    String @db.VarChar(100)
+  eventId     String @map("event_id") @db.Uuid
+  topic       String @db.VarChar(100)
+  eventType   String @map("event_type") @db.VarChar(100)
+  processedAt BigInt @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("processed_at")
+
+  @@id([consumer, eventId])
+  @@index([processedAt])
+  @@map("inbox_processed_events")
+}
+
+/// Why a consumer parked a Kafka message instead of applying it.
+enum InboxDeadLetterReason {
+  EMPTY_MESSAGE
+  MALFORMED_JSON
+  SCHEMA_VIOLATION
+  PERMANENT_PROCESSING_ERROR
+}
+
+/// Poison messages a Kafka consumer could not apply. Parking (instead of throwing) keeps the
+/// partition flowing; the unique Kafka coordinates make re-parking the same record a no-op.
+/// Operators inspect `raw_value` / `error`, fix the cause, and replay (docs/infrastructure/messaging.md).
+/// RLS: bypass-only infrastructure table. Seed: intentionally empty (runtime ledger).
+model InboxDeadLetter {
+  id         String                @id @default(uuid())
+  consumer   String                @db.VarChar(100)
+  topic      String                @db.VarChar(255)
+  partition  Int
+  /// Kafka offsets are int64 — stored as their decimal string form.
+  offset     String                @db.VarChar(32)
+  /// Stable event id when the message parsed far enough to carry one.
+  eventId    String?               @map("event_id") @db.Uuid
+  reason     InboxDeadLetterReason
+  error      String                @db.Text
+  /// Raw message value (truncated) for diagnosis and replay.
+  rawValue   String?               @map("raw_value") @db.Text
+  receivedAt BigInt                @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("received_at")
+
+  @@unique([consumer, topic, partition, offset])
+  @@index([consumer, receivedAt])
+  @@map("inbox_dead_letters")
 }
 
 /// Analytics staging table populated by the analytics-consumer service.
@@ -2183,16 +2305,33 @@ model PlatformResourceAuditLog {
   @@map("platform_resource_audit_logs")
 }
 
-/// Idempotency records for platform resource mutations.
+/// Lifecycle of an idempotency record (platform/idempotency, docs/api-routes.md → Idempotency).
+enum IdempotencyRecordStatus {
+  /// A request holding this key is executing; duplicates get 409 IDEMPOTENCY_REQUEST_IN_PROGRESS until `expiresAt` (the lease).
+  IN_PROGRESS
+  /// The response is stored in `responseBody` and replayed for identical requests until `expiresAt`.
+  COMPLETED
+}
+
+/// Idempotency records for platform resource mutations and `@Idempotent()` HTTP endpoints.
+/// Ephemeral infrastructure state (not a business entity): an expired row is
+/// taken over in place by the next request with the same key — never deleted.
 model PlatformResourceIdempotencyRecord {
-  id             String @id @default(uuid())
-  scope          String @db.VarChar(200)
-  idempotencyKey String @map("idempotency_key") @db.VarChar(128)
-  requestHash    String @map("request_hash") @db.VarChar(128)
-  responseBody   Json   @map("response_body")
-  createdAt      BigInt @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
+  id             String                  @id @default(uuid())
+  scope          String                  @db.VarChar(200)
+  idempotencyKey String                  @map("idempotency_key") @db.VarChar(128)
+  requestHash    String                  @map("request_hash") @db.VarChar(128)
+  status         IdempotencyRecordStatus @default(COMPLETED)
+  /// Null while IN_PROGRESS.
+  responseBody   Json?                   @map("response_body")
+  /// IN_PROGRESS: lease end (a crashed request frees the key). COMPLETED: end of the replay window.
+  /// The app always sets it explicitly; the DB default (created + 24h) only backfills pre-existing rows.
+  expiresAt      BigInt                  @default(dbgenerated("((EXTRACT(EPOCH FROM now()) * 1000)::bigint + 86400000)")) @map("expires_at")
+  createdAt      BigInt                  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("created_at")
+  updatedAt      BigInt                  @default(dbgenerated("(EXTRACT(EPOCH FROM now()) * 1000)::bigint")) @map("updated_at")
 
   @@unique([scope, idempotencyKey], map: "platform_resource_idempotency_scope_key")
+  @@index([expiresAt], map: "platform_resource_idempotency_expires_at_idx")
   @@map("platform_resource_idempotency_records")
 }
 
@@ -2238,4 +2377,3 @@ model Product {
 
   @@map("product")
 }
-

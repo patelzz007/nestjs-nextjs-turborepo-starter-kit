@@ -1,18 +1,14 @@
-import { ApiSuccessResponseSchema, ApiErrorResponseSchema } from "@workspace/shared";
+import { ApiErrorResponseSchema } from "@workspace/shared";
 import { createZodDto } from "nestjs-zod";
 
 /**
- * Wraps any successful response in the standard `{ success, data, meta }` envelope.
- * The `data` field is `z.unknown()` so Swagger shows a generic "object" type —
- * the endpoint-specific DTOs describe the actual data shape.
+ * Swagger component for the `{ success: false, error, meta }` error envelope
+ * (ADR 016). Every response decorator (`@ZodResponse` & co., ADR 022)
+ * documents `4XX` / `5XX` with it; add a specific
+ * `@ApiResponse({ status: 409, type: ApiErrorResponseDto, description })`
+ * where a particular failure deserves its own description.
  *
- * Used in `@ApiOkResponse({ type: ApiSuccessResponseDto })` decorators to match
- * what the ResponseInterceptor actually returns.
- */
-export class ApiSuccessResponseDto extends createZodDto(ApiSuccessResponseSchema) {}
-
-/**
- * Wraps any error response in the `{ success: false, error, meta }` envelope.
- * Used in `@ApiResponse({ status: 4xx, type: ApiErrorResponseDto })` decorators.
+ * Success responses are NOT documented with DTO classes: they come from the
+ * shared zod schema of each handler's response decorator.
  */
 export class ApiErrorResponseDto extends createZodDto(ApiErrorResponseSchema) {}

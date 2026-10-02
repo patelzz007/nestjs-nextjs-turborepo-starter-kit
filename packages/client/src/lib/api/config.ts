@@ -1,23 +1,44 @@
 // ============================================
-// lib/config.ts - Runtime configuration
+// lib/api/config.ts - Runtime configuration (the package's env module)
 // ============================================
-// Everything that can be configured via environment variables lives here so the
-// shared client package has zero hardcoded URLs. Next.js inlines `NEXT_PUBLIC_*`
-// vars at build time, so each app (web/admin) resolves its own value from its
-// own `.env` file. The localhost fallback only applies during local development
-// when no `.env` has been created yet.
+// This is the ONLY file in @workspace/client that reads `process.env` (the
+// package lint config enforces it). The package is transpiled by each Next
+// app (`transpilePackages`), so the literal `process.env.X` reads below are
+// inlined per app at build time — which is why each variable must be written
+// as a literal member access, never looked up dynamically.
+//
+// Values are validated with the shared zod building blocks and the module
+// fails fast (at build / server start) with a named, value-free error rather
+// than silently falling back to a hardcoded URL. See docs/configuration.md.
 
-import { API_VERSION_PREFIX } from "@workspace/shared";
+import { API_VERSION_PREFIX, HttpUrlEnvSchema, NodeEnvSchema, parseEnvOrThrow } from "@workspace/shared";
+import { z } from "zod";
 
-const DEFAULT_API_BASE_URL = "http://localhost:8080";
+const ClientPackageEnvSchema = z.strictObject({
+	NEXT_PUBLIC_API_URL: HttpUrlEnvSchema,
+	NODE_ENV: NodeEnvSchema,
+});
+
+const clientPackageEnv: Readonly<z.output<typeof ClientPackageEnvSchema>> = parseEnvOrThrow(
+	ClientPackageEnvSchema,
+	{
+		NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
+		NODE_ENV: process.env.NODE_ENV,
+	} satisfies Record<keyof z.input<typeof ClientPackageEnvSchema>, string | undefined>,
+	"@workspace/client (NEXT_PUBLIC_API_URL / NODE_ENV)",
+);
 
 /**
- * Base URL of the NestJS API, read from `NEXT_PUBLIC_API_URL`.
- *
- * Set `NEXT_PUBLIC_API_URL` in `apps/web/.env` / `apps/admin/.env` when
- * deploying (e.g. `NEXT_PUBLIC_API_URL=https://api.example.com`).
+ * Base URL of the NestJS API, read from `NEXT_PUBLIC_API_URL`
+ * (e.g. `NEXT_PUBLIC_API_URL=https://api.example.com` in `apps/<app>/.env`).
  */
-export const API_BASE_URL: string = process.env.NEXT_PUBLIC_API_URL ?? DEFAULT_API_BASE_URL;
+export const API_BASE_URL: string = clientPackageEnv.NEXT_PUBLIC_API_URL;
+
+/**
+ * `NODE_ENV` the bundle was built for. Next.js inlines it in both server and
+ * browser bundles, so it is safe to read from shared (isomorphic) code.
+ */
+export const RUNTIME_NODE_ENV: z.output<typeof NodeEnvSchema> = clientPackageEnv.NODE_ENV;
 
 /**
  * Versioned path prefix for every API route. The single source of truth is

@@ -1,7 +1,9 @@
 "use client";
 
+import { ROUTES } from "@/lib/routes";
 import { MerchantOnboardingView } from "@workspace/client/lib/merchant/onboarding/view";
-import { Button } from "@workspace/ui/components/form/button";
+import { cn } from "@workspace/ui/lib/core/utils";
+import { Button, buttonVariants } from "@workspace/ui/components/form/button";
 import { useTheme } from "next-themes";
 import Link from "next/link";
 import { Moon, Sun } from "lucide-react";
@@ -44,7 +46,7 @@ function OnboardingContent(): JSX.Element {
 		);
 	}
 
-	return <MerchantOnboardingView token={token} loginHref="/auth/login" />;
+	return <MerchantOnboardingView token={token} loginHref={ROUTES.auth.login} />;
 }
 
 export default function MerchantOnboardingPage(): JSX.Element {
@@ -68,9 +70,9 @@ export default function MerchantOnboardingPage(): JSX.Element {
 						</div>
 					</div>
 					<div className="flex items-center gap-2">
-						<Button variant="ghost" size="sm" className="hidden sm:inline-flex" nativeButton={false} render={<Link href="/auth/login" />}>
+						<Link href={ROUTES.auth.login} className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "hidden sm:inline-flex")}>
 							Sign in
-						</Button>
+						</Link>
 						<OnboardingThemeToggle />
 					</div>
 				</header>

@@ -23,6 +23,12 @@ export class MerchantApiKeyVerificationService {
 			provider: "merchant",
 			apiKeyId: keyRecord.id,
 			organizationId: keyRecord.organizationId,
+			locationId: keyRecord.locationId,
+			terminal:
+				keyRecord.terminal === null || keyRecord.terminal.isDeleted
+					? null
+					: { id: keyRecord.terminal.id, terminalId: keyRecord.terminal.terminalId, locationId: keyRecord.terminal.locationId },
+			requireRegisteredTerminals: keyRecord.organization.merchantProfile?.requireRegisteredTerminals ?? false,
 			capabilities: MERCHANT_API_KEY_CAPABILITIES,
 		};
 	}

@@ -4,7 +4,7 @@ tags: ["authorization", "rbac", "acl", "abac", "rebac", "rls", "security", "over
 description: "The one-page map of the authorization system: the mental model, every layer, where the code lives, and which guide to read next."
 order: 20
 author: "Platform Team"
-lastUpdated: 1790812800000
+lastUpdated: 1790899200000
 coverImage: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=1600&q=80"
 ---
 
@@ -87,8 +87,8 @@ A permission such as `ORDER:DELETE` is a **capability**, not a blank cheque. It 
 | Decorators | `decorators/authorize.decorator.ts`, `modules/auth/decorators/require-permission.decorator.ts`, `decorators/require-*.decorator.ts` | Declare what a route needs |
 | Request tenant context | `services/authorization-context.resolver.ts` | Reads `x-organization-id` / `x-store-id` / `x-location-id` and verifies them |
 | Privilege escalation | `services/privilege-escalation.service.ts` | Stops admins granting what they do not hold or editing themselves |
-| Upload authorization | `modules/files/services/file-upload-authorization.service.ts` | Per-category rules for `POST /files/upload-url` |
-| Merchant role gate | `modules/rewards/services/merchant-context.service.ts` | Merchant capability checks (role table → Cedar) |
+| File authorization | `modules/files/services/file-authorization.service.ts` | Per-category rules for every `/files` operation (upload, complete, read, download, delete) |
+| Merchant capability gate | `modules/organization/services/organization-reward-auth.service.ts` (`requireMembershipCapability`), via `modules/rewards/services/merchant-context.service.ts` | Every `merchant:*` check — role table → tenant Cedar policy (team, locations, KYB, rewards, API keys, analytics) |
 | RLS context | `src/prisma/rls-context.ts`, `rls-pool.ts`, `common/interceptors/rls.interceptor.ts`, `common/middleware/rls-pre-handler.middleware.ts` | Tells Postgres who is asking |
 
 ### Shared vocabulary (`packages/shared`)
@@ -106,7 +106,7 @@ A permission such as `ORDER:DELETE` is a **capability**, not a blank cheque. It 
 |---|---|---|
 | Shared (`packages/client`) | `CapabilitiesProvider` | `useAuthorization()` → `{ can, cannot, canAll, canAny }`, `<Can>` |
 | Admin (`apps/admin`) | mounted in `components/layout/dashboard-layout.tsx` | `RouteAuthorizationGuard`, `DisabledActionButton`, `AccessRestrictedNotice`, `useSuperAdminStatus()` |
-| Merchant (`apps/merchant`) | `MerchantAuthorizationProvider` | `MerchantCapabilityGate`, `MerchantRoleGate`, `useMerchantRoleAccess()` |
+| Merchant (`apps/merchant`) | `MerchantAuthorizationProvider` | `guardOrgPage` + `ORG_PAGE_RULES` (server-side page guard), `MerchantCapabilityGate`, `useAuthorization()` |
 | Web (`apps/web`) | `WebAuthorizationProvider` (in `app/layout.tsx`) | `AccessGate`, `useWebSession()` |
 
 ---

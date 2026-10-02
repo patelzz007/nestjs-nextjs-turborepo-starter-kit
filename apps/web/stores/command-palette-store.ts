@@ -22,9 +22,11 @@ export interface WebCommandPaletteState {
 
 const MAX_RECENT = 6;
 
+// exactOptional(): a persisted key is either present with a real value or absent —
+// never `undefined` — so spreading the parsed snapshot can't blank out current state.
 const PersistedPaletteSchema = z.object({
-	recentSearches: z.array(RecentSearchSchema).optional(),
-	pinnedUrls: z.array(z.string()).optional(),
+	recentSearches: z.array(RecentSearchSchema).exactOptional(),
+	pinnedUrls: z.array(z.string()).exactOptional(),
 });
 
 export const useWebCommandPaletteStore = create<WebCommandPaletteState>()(

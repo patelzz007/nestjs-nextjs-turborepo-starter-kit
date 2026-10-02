@@ -22,7 +22,7 @@ The following end-to-end flows are implemented across the NestJS API, shared Zod
 | ---- | --- | -- |
 | Forgot password | `POST /auth/forgot-password` | `/auth/forgot-password` (web + admin) |
 | Reset password | `POST /auth/reset-password` | `/auth/reset-password?token=…` |
-| Change password (authenticated) | `POST /auth/change-password` | Admin `/settings/security`, web `/rewardhub/settings` |
+| Change password (authenticated) | `POST /auth/change-password` | Admin `/account/security`, web `/rewardhub/account`, merchant `/orgs/[orgSlug]/account` |
 | TOTP 2FA setup / enable / disable | `GET /auth/2fa/setup`, `POST /auth/2fa/enable`, `POST /auth/2fa/disable` | `SecuritySettingsPanel` (shared client component) |
 | Login with 2FA step | `POST /auth/login` → `POST /auth/login/2fa` or `POST /auth/login/backup-code` | `LoginForm` 2FA step |
 | Login verification (new device) | `POST /auth/login` → `POST /auth/verify-login` | `LoginForm` email OTP step |
@@ -2159,7 +2159,7 @@ The app's login mutation resolves. Now:
 
 ## Step 5 — The proxy checks you at the door (every page load)
 
-Every navigation (`/hello`, `/settings/general`, …) hits `proxy.ts` **before** the page is served. The proxy can read the `HttpOnly` cookies because it runs on the server. It checks:
+Every navigation (`/hello`, `/settings/billing`, …) hits `proxy.ts` **before** the page is served. The proxy can read the `HttpOnly` cookies because it runs on the server. It checks:
 
 1. **Do you have an access-token cookie?** No → redirect to `/auth/login?redirect=<wherever you were going>`. That `redirect` param is why, after you log in, you land *back* where you were headed.
 2. **Is it expired (or about to expire within 30s)?** Maybe → the proxy calls the API's `/auth/refresh` *on your behalf* (server-to-server), grabs the two fresh `Set-Cookie` headers, and **forwards them to your browser** on the response. You get a silently rotated session — the first API call the page makes never even sees a 401. (Item 29's cooldown means a flaky API isn't hammered on every navigation.)
@@ -2209,7 +2209,7 @@ When any API call comes back **401** (e.g. the token expired mid-session without
 Clicking **Logout** (in web or admin):
 
 1. The app calls `POST /auth/logout` (with `X-Client-Type: admin` from the admin panel so only the admin cookie set is cleared).
-2. The API **soft-deletes the session row** (the refresh token can never be used again) and a `ClearAuthCookiesInterceptor` clears both cookies in the response.
+2. The API **soft-deletes the session row** (the refresh token can never be used again) and a `ClearAuthCookiesInterceptor` clears both cookies in the response. Logout is **idempotent** (`OptionalRefreshTokenGuard`): with a missing or expired refresh token there is no session to revoke, but the call still answers `201` and still clears the cookies — so a stale httpOnly access cookie (which JavaScript cannot remove) never survives a logout. `test/logout.e2e-spec.ts` covers the guest, stale-cookie and valid-session cases.
 3. The app clears its React Query cache (no stale user data survives), marks itself logged out, **broadcasts `"logged-out"`** to other tabs (item 30) — those tabs also clear and bounce to login — and navigates to `/auth/login`.
 4. If the logout network call fails, the app still logs out locally (cookies cleared on the next real navigation by the proxy's dead-session path). No stuck sessions.
 

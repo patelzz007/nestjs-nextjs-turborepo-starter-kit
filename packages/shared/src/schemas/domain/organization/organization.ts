@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { EpochMsSchema } from "../../api/common";
+import { defineListQuery, listFilter } from "../../api/list-query";
 import { strongPassword } from "../../auth/password";
 import { KybStatusSchema, PilotCitySchema } from "../rewards/rewards-enums";
 
@@ -85,22 +86,27 @@ export const OrganizationSlugParamSchema = z
 
 export type OrganizationSlugParam = z.output<typeof OrganizationSlugParamSchema>;
 
-export const OrganizationLocationResponseSchema = z
-	.object({
-		id: z.uuid(),
-		organizationId: z.uuid(),
-		name: z.string(),
-		code: z.string(),
-		addressText: z.string().nullable(),
-		city: PilotCitySchema.nullable(),
-		contactPhone: z.string().nullable(),
-		status: OrganizationLocationStatusSchema,
-		rejectionReason: z.string().nullable(),
-		isPrimary: z.boolean(),
-		createdAt: EpochMsSchema,
-		updatedAt: EpochMsSchema,
-	})
-	.strict();
+/** Route params of `POST /orgs/:orgSlug/access-requests/:requestId/review`. */
+export const OrganizationAccessRequestParamSchema = OrganizationSlugParamSchema.extend({
+	requestId: z.uuid(),
+}).strict();
+
+export type OrganizationAccessRequestParam = z.output<typeof OrganizationAccessRequestParamSchema>;
+
+export const OrganizationLocationResponseSchema = z.object({
+	id: z.uuid(),
+	organizationId: z.uuid(),
+	name: z.string(),
+	code: z.string(),
+	addressText: z.string().nullable(),
+	city: PilotCitySchema.nullable(),
+	contactPhone: z.string().nullable(),
+	status: OrganizationLocationStatusSchema,
+	rejectionReason: z.string().nullable(),
+	isPrimary: z.boolean(),
+	createdAt: EpochMsSchema,
+	updatedAt: EpochMsSchema,
+});
 
 export type OrganizationLocationResponse = z.output<typeof OrganizationLocationResponseSchema>;
 
@@ -178,91 +184,88 @@ export const AdminOrganizationLocationReviewPathInputSchema = z
 
 export type AdminOrganizationLocationReviewPathInput = z.output<typeof AdminOrganizationLocationReviewPathInputSchema>;
 
-export const AdminLocationRequestListQuerySchema = z
-	.object({
-		page: z.coerce.number().int().positive().default(1),
-		limit: z.coerce.number().int().min(1).max(100).default(50),
-		status: OrganizationLocationStatusSchema.default("PENDING_APPROVAL"),
-	})
-	.strict();
+/** Page size the admin location-request queue has always used. */
+export const ADMIN_LOCATION_REQUEST_DEFAULT_LIMIT = 50;
 
+/** `GET /admin/location-requests` list query — oldest first (a FIFO review queue); the queue view sends `filter[status]=PENDING_APPROVAL`. */
+export const adminLocationRequestListQuery = defineListQuery({
+	sortable: ["createdAt", "name"],
+	defaultSort: [{ field: "createdAt", direction: "asc" }],
+	filter: {
+		status: listFilter.enumeration(OrganizationLocationStatusSchema, { eq: true, in: true }),
+	},
+	params: {},
+	defaultLimit: ADMIN_LOCATION_REQUEST_DEFAULT_LIMIT,
+});
+export const AdminLocationRequestListQuerySchema = adminLocationRequestListQuery.schema;
 export type AdminLocationRequestListQuery = z.output<typeof AdminLocationRequestListQuerySchema>;
+export type AdminLocationRequestListSortField = (typeof adminLocationRequestListQuery.sortable)[number];
 
-export const AdminLocationRequestResponseSchema = z
-	.object({
-		id: z.uuid(),
-		organizationId: z.uuid(),
-		organizationSlug: OrganizationSlugSchema,
-		organizationDisplayName: z.string(),
-		name: z.string(),
-		code: z.string(),
-		addressText: z.string().nullable(),
-		city: PilotCitySchema.nullable(),
-		contactPhone: z.string().nullable(),
-		status: OrganizationLocationStatusSchema,
-		rejectionReason: z.string().nullable(),
-		isPrimary: z.boolean(),
-		requestedByUserId: z.uuid().nullable(),
-		createdAt: EpochMsSchema,
-	})
-	.strict();
+export const AdminLocationRequestResponseSchema = z.object({
+	id: z.uuid(),
+	organizationId: z.uuid(),
+	organizationSlug: OrganizationSlugSchema,
+	organizationDisplayName: z.string(),
+	name: z.string(),
+	code: z.string(),
+	addressText: z.string().nullable(),
+	city: PilotCitySchema.nullable(),
+	contactPhone: z.string().nullable(),
+	status: OrganizationLocationStatusSchema,
+	rejectionReason: z.string().nullable(),
+	isPrimary: z.boolean(),
+	requestedByUserId: z.uuid().nullable(),
+	createdAt: EpochMsSchema,
+});
 
 export type AdminLocationRequestResponse = z.output<typeof AdminLocationRequestResponseSchema>;
 
-export const OrganizationMembershipResponseSchema = z
-	.object({
-		id: z.uuid(),
-		organizationId: z.uuid(),
-		userId: z.uuid(),
-		role: OrganizationMembershipRoleSchema,
-		status: OrganizationMembershipStatusSchema,
-		displayName: z.string().nullable(),
-		locationScopeType: OrganizationLocationScopeTypeSchema,
-		locationIds: z.array(z.uuid()),
-		createdAt: EpochMsSchema,
-		updatedAt: EpochMsSchema,
-	})
-	.strict();
+export const OrganizationMembershipResponseSchema = z.object({
+	id: z.uuid(),
+	organizationId: z.uuid(),
+	userId: z.uuid(),
+	role: OrganizationMembershipRoleSchema,
+	status: OrganizationMembershipStatusSchema,
+	displayName: z.string().nullable(),
+	locationScopeType: OrganizationLocationScopeTypeSchema,
+	locationIds: z.array(z.uuid()),
+	createdAt: EpochMsSchema,
+	updatedAt: EpochMsSchema,
+});
 
 export type OrganizationMembershipResponse = z.output<typeof OrganizationMembershipResponseSchema>;
 
-export const OrganizationSummaryResponseSchema = z
-	.object({
-		id: z.uuid(),
-		slug: OrganizationSlugSchema,
-		displayName: z.string(),
-		lifecycleState: OrganizationLifecycleStateSchema,
-		primaryLocationId: z.uuid().nullable(),
-		createdAt: EpochMsSchema,
-		updatedAt: EpochMsSchema,
-	})
-	.strict();
+export const OrganizationSummaryResponseSchema = z.object({
+	id: z.uuid(),
+	slug: OrganizationSlugSchema,
+	displayName: z.string(),
+	lifecycleState: OrganizationLifecycleStateSchema,
+	primaryLocationId: z.uuid().nullable(),
+	createdAt: EpochMsSchema,
+	updatedAt: EpochMsSchema,
+});
 
 export type OrganizationSummaryResponse = z.output<typeof OrganizationSummaryResponseSchema>;
 
-export const OrganizationMerchantProfileResponseSchema = z
-	.object({
-		organizationId: z.uuid(),
-		legalName: z.string().nullable(),
-		category: z.string(),
-		city: PilotCitySchema,
-		kybStatus: KybStatusSchema,
-		contactEmail: z.email(),
-		contactPhone: z.string().nullable(),
-	})
-	.strict();
+export const OrganizationMerchantProfileResponseSchema = z.object({
+	organizationId: z.uuid(),
+	legalName: z.string().nullable(),
+	category: z.string(),
+	city: PilotCitySchema,
+	kybStatus: KybStatusSchema,
+	contactEmail: z.email(),
+	contactPhone: z.string().nullable(),
+});
 
 export type OrganizationMerchantProfileResponse = z.output<typeof OrganizationMerchantProfileResponseSchema>;
 
-export const OrganizationContextResponseSchema = z
-	.object({
-		organization: OrganizationSummaryResponseSchema,
-		membership: OrganizationMembershipResponseSchema,
-		locations: z.array(OrganizationLocationResponseSchema),
-		merchantProfile: OrganizationMerchantProfileResponseSchema.nullable(),
-		policyVersion: z.number().int().nonnegative(),
-	})
-	.strict();
+export const OrganizationContextResponseSchema = z.object({
+	organization: OrganizationSummaryResponseSchema,
+	membership: OrganizationMembershipResponseSchema,
+	locations: z.array(OrganizationLocationResponseSchema),
+	merchantProfile: OrganizationMerchantProfileResponseSchema.nullable(),
+	policyVersion: z.number().int().nonnegative(),
+});
 
 export type OrganizationContextResponse = z.output<typeof OrganizationContextResponseSchema>;
 
@@ -287,16 +290,14 @@ export const OrganizationAccessRequestCreateSchema = z
 
 export type OrganizationAccessRequestCreateInput = z.output<typeof OrganizationAccessRequestCreateSchema>;
 
-export const OrganizationAccessRequestResponseSchema = z
-	.object({
-		id: z.uuid(),
-		organizationId: z.uuid(),
-		userId: z.uuid(),
-		status: OrganizationAccessRequestStatusSchema,
-		message: z.string().nullable(),
-		createdAt: EpochMsSchema,
-	})
-	.strict();
+export const OrganizationAccessRequestResponseSchema = z.object({
+	id: z.uuid(),
+	organizationId: z.uuid(),
+	userId: z.uuid(),
+	status: OrganizationAccessRequestStatusSchema,
+	message: z.string().nullable(),
+	createdAt: EpochMsSchema,
+});
 
 export type OrganizationAccessRequestResponse = z.output<typeof OrganizationAccessRequestResponseSchema>;
 
@@ -353,49 +354,43 @@ export const OrganizationMemberInviteSchema = OrganizationMemberInviteFieldsSche
 
 export type OrganizationMemberInviteInput = z.output<typeof OrganizationMemberInviteSchema>;
 
-export const OrganizationMemberRosterResponseSchema = z
-	.object({
-		id: z.uuid(),
-		organizationId: z.uuid(),
-		userId: z.uuid(),
-		email: z.email(),
-		fullName: z.string(),
-		role: OrganizationMembershipRoleSchema,
-		status: OrganizationMembershipStatusSchema,
-		displayName: z.string().nullable(),
-		locationScopeType: OrganizationLocationScopeTypeSchema,
-		locationIds: z.array(z.uuid()),
-		createdAt: EpochMsSchema,
-		updatedAt: EpochMsSchema,
-	})
-	.strict();
+export const OrganizationMemberRosterResponseSchema = z.object({
+	id: z.uuid(),
+	organizationId: z.uuid(),
+	userId: z.uuid(),
+	email: z.email(),
+	fullName: z.string(),
+	role: OrganizationMembershipRoleSchema,
+	status: OrganizationMembershipStatusSchema,
+	displayName: z.string().nullable(),
+	locationScopeType: OrganizationLocationScopeTypeSchema,
+	locationIds: z.array(z.uuid()),
+	createdAt: EpochMsSchema,
+	updatedAt: EpochMsSchema,
+});
 
 export type OrganizationMemberRosterResponse = z.output<typeof OrganizationMemberRosterResponseSchema>;
 
-export const OrganizationMemberInviteResponseSchema = z
-	.object({
-		id: z.uuid(),
-		organizationId: z.uuid(),
-		email: z.email(),
-		intendedRole: OrganizationMembershipRoleSchema,
-		locationScopeType: OrganizationLocationScopeTypeSchema,
-		locationIds: z.array(z.uuid()),
-		status: OrganizationInvitationStatusSchema,
-		invitedByUserId: z.uuid(),
-		invitedByName: z.string(),
-		expiresAt: EpochMsSchema,
-		createdAt: EpochMsSchema,
-	})
-	.strict();
+export const OrganizationMemberInviteResponseSchema = z.object({
+	id: z.uuid(),
+	organizationId: z.uuid(),
+	email: z.email(),
+	intendedRole: OrganizationMembershipRoleSchema,
+	locationScopeType: OrganizationLocationScopeTypeSchema,
+	locationIds: z.array(z.uuid()),
+	status: OrganizationInvitationStatusSchema,
+	invitedByUserId: z.uuid(),
+	invitedByName: z.string(),
+	expiresAt: EpochMsSchema,
+	createdAt: EpochMsSchema,
+});
 
 export type OrganizationMemberInviteResponse = z.output<typeof OrganizationMemberInviteResponseSchema>;
 
-export const OrganizationMemberInviteCreatedResponseSchema = z
-	.object({
-		inviteId: z.uuid(),
-		message: z.string(),
-	})
-	.strict();
+export const OrganizationMemberInviteCreatedResponseSchema = z.object({
+	inviteId: z.uuid(),
+	message: z.string(),
+});
 
 export type OrganizationMemberInviteCreatedResponse = z.output<typeof OrganizationMemberInviteCreatedResponseSchema>;
 
@@ -426,35 +421,29 @@ export const OrganizationTeamInviteRegisterAcceptSchema = z
 
 export type OrganizationTeamInviteRegisterAcceptInput = z.output<typeof OrganizationTeamInviteRegisterAcceptSchema>;
 
-export const OrganizationTeamInvitePreviewSchema = z
-	.object({
-		email: z.email(),
-		organizationDisplayName: z.string(),
-		organizationSlug: OrganizationSlugSchema,
-		intendedRole: OrganizationMembershipRoleSchema,
-		locationScopeType: OrganizationLocationScopeTypeSchema,
-		locationIds: z.array(z.uuid()),
-		locationLabels: z.array(
-			z
-				.object({
-					id: z.uuid(),
-					name: z.string(),
-				})
-				.strict(),
-		),
-		expiresAt: EpochMsSchema,
-		hasExistingAccount: z.boolean(),
-	})
-	.strict();
+export const OrganizationTeamInvitePreviewSchema = z.object({
+	email: z.email(),
+	organizationDisplayName: z.string(),
+	organizationSlug: OrganizationSlugSchema,
+	intendedRole: OrganizationMembershipRoleSchema,
+	locationScopeType: OrganizationLocationScopeTypeSchema,
+	locationIds: z.array(z.uuid()),
+	locationLabels: z.array(
+		z.object({
+			id: z.uuid(),
+			name: z.string(),
+		}),
+	),
+	expiresAt: EpochMsSchema,
+	hasExistingAccount: z.boolean(),
+});
 
 export type OrganizationTeamInvitePreview = z.output<typeof OrganizationTeamInvitePreviewSchema>;
 
-export const OrganizationTeamInviteAcceptResponseSchema = z
-	.object({
-		organizationSlug: OrganizationSlugSchema,
-		message: z.string(),
-	})
-	.strict();
+export const OrganizationTeamInviteAcceptResponseSchema = z.object({
+	organizationSlug: OrganizationSlugSchema,
+	message: z.string(),
+});
 
 export type OrganizationTeamInviteAcceptResponse = z.output<typeof OrganizationTeamInviteAcceptResponseSchema>;
 
@@ -467,17 +456,15 @@ export const PolicyBuilderPayloadSchema = z
 
 export type PolicyBuilderPayload = z.output<typeof PolicyBuilderPayloadSchema>;
 
-export const AuthorizationPolicyDraftResponseSchema = z
-	.object({
-		id: z.uuid(),
-		organizationId: z.uuid().nullable(),
-		scope: AuthorizationPolicyScopeSchema,
-		name: z.string(),
-		status: AuthorizationPolicyStatusSchema,
-		createdAt: EpochMsSchema,
-		updatedAt: EpochMsSchema,
-	})
-	.strict();
+export const AuthorizationPolicyDraftResponseSchema = z.object({
+	id: z.uuid(),
+	organizationId: z.uuid().nullable(),
+	scope: AuthorizationPolicyScopeSchema,
+	name: z.string(),
+	status: AuthorizationPolicyStatusSchema,
+	createdAt: EpochMsSchema,
+	updatedAt: EpochMsSchema,
+});
 
 export type AuthorizationPolicyDraftResponse = z.output<typeof AuthorizationPolicyDraftResponseSchema>;
 
@@ -493,16 +480,23 @@ export const SupportAccessGrantRequestSchema = z
 
 export type SupportAccessGrantRequestInput = z.output<typeof SupportAccessGrantRequestSchema>;
 
-export const SupportAccessGrantResponseSchema = z
+/** Body of `POST /support-access/:grantId/approve` — the tenant approving the grant for one of its organizations. */
+export const SupportAccessGrantApproveSchema = z
 	.object({
-		id: z.uuid(),
 		organizationId: z.uuid(),
-		mode: SupportAccessGrantModeSchema,
-		status: SupportAccessGrantStatusSchema,
-		expiresAt: EpochMsSchema,
-		createdAt: EpochMsSchema,
 	})
 	.strict();
+
+export type SupportAccessGrantApproveInput = z.output<typeof SupportAccessGrantApproveSchema>;
+
+export const SupportAccessGrantResponseSchema = z.object({
+	id: z.uuid(),
+	organizationId: z.uuid(),
+	mode: SupportAccessGrantModeSchema,
+	status: SupportAccessGrantStatusSchema,
+	expiresAt: EpochMsSchema,
+	createdAt: EpochMsSchema,
+});
 
 export type SupportAccessGrantResponse = z.output<typeof SupportAccessGrantResponseSchema>;
 
@@ -514,15 +508,27 @@ export const OrganizationDeletionRequestSchema = z
 
 export type OrganizationDeletionRequestInput = z.output<typeof OrganizationDeletionRequestSchema>;
 
-export const OrganizationQuotaStatusSchema = z
-	.object({
-		quotaKey: z.string(),
-		limitValue: z.number().int().nonnegative(),
-		usedValue: z.number().int().nonnegative(),
-		windowEnd: EpochMsSchema,
-	})
-	.strict();
+export const OrganizationQuotaStatusSchema = z.object({
+	quotaKey: z.string(),
+	limitValue: z.number().int().nonnegative(),
+	usedValue: z.number().int().nonnegative(),
+	windowEnd: EpochMsSchema,
+});
 
 export type OrganizationQuotaStatus = z.output<typeof OrganizationQuotaStatusSchema>;
 
 export { OrganizationLocationFilterSchema, type OrganizationLocationFilter } from "./location-filter";
+
+/** `GET /orgs/:orgSlug/members` payload — the (bounded) member roster. */
+export const OrganizationMemberRosterListResponseSchema = z.array(OrganizationMemberRosterResponseSchema);
+
+/** `GET /orgs/:orgSlug/members/invites` payload — the (bounded) pending invite roster. */
+export const OrganizationMemberInviteListResponseSchema = z.array(OrganizationMemberInviteResponseSchema);
+
+/** `POST /admin/organizations/invites` payload — the new organization and the onboarding token to share with its owner. */
+export const AdminOrganizationInviteCreatedResponseSchema = z.object({
+	organizationId: z.uuid(),
+	inviteToken: z.string().min(1),
+});
+
+export type AdminOrganizationInviteCreatedResponse = z.output<typeof AdminOrganizationInviteCreatedResponseSchema>;

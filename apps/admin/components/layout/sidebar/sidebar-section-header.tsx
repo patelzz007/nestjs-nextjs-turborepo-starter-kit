@@ -27,7 +27,7 @@ export interface SidebarSectionHeaderProps {
 	readonly allTitles: readonly string[];
 	readonly isActiveSection: boolean;
 	readonly labels: AdminSidebarLabels;
-	readonly color?: SectionColor;
+	readonly color?: SectionColor | undefined;
 	readonly onMoveSectionUp: (title: string, allTitles: readonly string[]) => void;
 	readonly onMoveSectionDown: (title: string, allTitles: readonly string[]) => void;
 }

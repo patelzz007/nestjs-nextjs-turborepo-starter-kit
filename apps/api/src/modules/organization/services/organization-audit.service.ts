@@ -7,11 +7,11 @@ export interface OrganizationAuditInput {
 	readonly actorUserId: string | null;
 	readonly action: string;
 	readonly resourceType: string;
-	readonly resourceId?: string;
-	readonly decision?: string;
-	readonly policyVersion?: number;
-	readonly correlationId?: string;
-	readonly metadata?: Record<string, string | number | boolean | null>;
+	readonly resourceId?: string | undefined;
+	readonly decision?: string | undefined;
+	readonly policyVersion?: number | undefined;
+	readonly correlationId?: string | undefined;
+	readonly metadata?: Record<string, string | number | boolean | null> | undefined;
 }
 
 @Injectable()
@@ -37,7 +37,7 @@ export class OrganizationAuditService {
 						decision: input.decision ?? null,
 						policyVersion: input.policyVersion ?? null,
 						correlationId: input.correlationId ?? null,
-						metadata: input.metadata ?? undefined,
+						...(input.metadata === undefined ? {} : { metadata: input.metadata }),
 					},
 				});
 			},

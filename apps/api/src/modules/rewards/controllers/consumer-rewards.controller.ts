@@ -1,9 +1,10 @@
-import { Controller, Get, Header, Param, Query } from "@nestjs/common";
-import { ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
+import { Controller, Get, Header } from "@nestjs/common";
+import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import type { z } from "zod";
 
-import { apiContract, apiPath } from "@workspace/shared";
-import { ZodValidationPipe } from "../../../common/pipes/zod-validation.pipe";
+import { apiContract, apiPath, RewardResponseSchema } from "@workspace/shared";
+import { ZodListQuery, ZodParams } from "../../../common/decorators/zod-request.decorators";
+import { ZodPaginatedResponse, ZodResponse } from "../../../common/decorators/zod-response.decorators";
 import { Public } from "../../auth/decorators/public.decorator";
 import { RlsBypass } from "../../auth/decorators/rls-bypass.decorator";
 
@@ -19,9 +20,9 @@ export class ConsumerRewardsController {
 	@Get()
 	@Header("Cache-Control", "public, max-age=60")
 	@ApiOperation({ summary: "Browse published consumer rewards" })
-	@ApiOkResponse({ description: "Paginated marketplace rewards" })
+	@ZodPaginatedResponse(RewardResponseSchema, { description: "Paginated marketplace rewards" })
 	public listRewards(
-		@Query(new ZodValidationPipe(apiContract.rewards.list.input)) query: z.output<typeof apiContract.rewards.list.input>,
+		@ZodListQuery(apiContract.rewards.list.input) query: z.output<typeof apiContract.rewards.list.input>,
 	): ReturnType<ConsumerRewardsService["listMarketplace"]> {
 		return this.consumerRewardsService.listMarketplace(query);
 	}
@@ -31,8 +32,8 @@ export class ConsumerRewardsController {
 	@Get(":rewardId")
 	@Header("Cache-Control", "public, max-age=60")
 	@ApiOperation({ summary: "Get published reward detail" })
-	@ApiOkResponse({ description: "Reward detail" })
-	public getReward(@Param(new ZodValidationPipe(apiContract.rewards.detail.input)) params: { rewardId: string }): ReturnType<ConsumerRewardsService["getPublishedReward"]> {
+	@ZodResponse(RewardResponseSchema, { description: "Reward detail" })
+	public getReward(@ZodParams(apiContract.rewards.detail.input) params: { rewardId: string }): ReturnType<ConsumerRewardsService["getPublishedReward"]> {
 		return this.consumerRewardsService.getPublishedReward(params.rewardId);
 	}
 }

@@ -8,11 +8,11 @@ import { fastify, type FastifyRequest } from "fastify";
 export async function captureFastifyRequest(options: { readonly headers: Record<string, string>; readonly payload?: string }): Promise<FastifyRequest> {
 	const app = fastify();
 	const holder: { request?: FastifyRequest } = {};
-	app.post("/capture", async (request) => {
+	app.post("/capture", (request) => {
 		holder.request = request;
-		return {};
+		return Promise.resolve({});
 	});
-	await app.inject({ method: "POST", url: "/capture", headers: options.headers, payload: options.payload });
+	await app.inject({ method: "POST", url: "/capture", headers: options.headers, ...(options.payload === undefined ? {} : { payload: options.payload }) });
 	await app.close();
 	if (holder.request === undefined) {
 		throw new Error("Fastify did not route the capture request");

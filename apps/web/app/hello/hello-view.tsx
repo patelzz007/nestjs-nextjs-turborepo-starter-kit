@@ -154,7 +154,7 @@ export default function HelloView({ initialEnvelope }: { readonly initialEnvelop
 									<span className="text-muted-foreground">User ID</span>
 									<span className="font-mono text-xs">{user.id}</span>
 								</div>
-								{"isActive" in user && user.isActive !== undefined ? (
+								{user.isActive !== undefined ? (
 									<div className="flex justify-between">
 										<span className="text-muted-foreground">Active</span>
 										<span>{user.isActive ? "Yes" : "No"}</span>
@@ -164,7 +164,7 @@ export default function HelloView({ initialEnvelope }: { readonly initialEnvelop
 									<span className="text-muted-foreground">Admin Access</span>
 									<span>{user.hasAdminAccess ? "Yes" : "No"}</span>
 								</div>
-								{"createdAt" in user && user.createdAt !== undefined ? (
+								{user.createdAt !== undefined ? (
 									<div className="flex justify-between">
 										<span className="text-muted-foreground">Created</span>
 										<span>{format(new Date(user.createdAt), "MMM d, yyyy")}</span>
@@ -174,7 +174,7 @@ export default function HelloView({ initialEnvelope }: { readonly initialEnvelop
 									<span className="text-muted-foreground">Roles</span>
 									<span>{user.roles.map((r) => r.name).join(", ") || "None"}</span>
 								</div>
-								{"permissions" in user && user.permissions !== undefined ? (
+								{user.permissions !== undefined ? (
 									<div className="flex justify-between">
 										<span className="text-muted-foreground">Permissions</span>
 										<span>{user.permissions.length}</span>

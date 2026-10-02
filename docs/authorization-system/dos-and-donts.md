@@ -4,7 +4,7 @@ tags: ["authorization", "best-practices", "security", "code-review"]
 description: "The rules to check before opening a pull request that touches permissions, tenants, RLS, or gated UI — each with a short why."
 order: 25
 author: "Platform Team"
-lastUpdated: 1790812800000
+lastUpdated: 1790899200000
 coverImage: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=1600&q=80"
 ---
 
@@ -25,7 +25,7 @@ coverImage: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=f
 | Put a decorator (`@RequirePermission`, `@Authorize`, …) or a `kernel.authorize()` call on **every** mutation and privileged read | The frontend can be bypassed with curl (spec §2). |
 | Use `@Authorize({ …, resourceId })` or `kernel.authorize()` with the record when the answer depends on **which** record | A global permission does not mean "every record" (spec §5, §94). |
 | Pass the record's `organizationId` / `storeId` / `locationId` as `resourceAttributes` | Tenant-scoped grants fail closed without them. |
-| Read the tenant from `request.authorizationContext` | It is verified; headers and bodies are not (spec §55). |
+| Read the tenant from the request context (`RequestContextService.current()?.tenant`) | It is verified; headers and bodies are not (spec §55). |
 | Use `kernel.filter()` for list endpoints | One query, no data leak, no N+1 (spec §32, §58). |
 | Keep business validation separate from authorization | "May they?" and "is this state change valid?" are different questions (spec §96). |
 | Use `self()` for self-service routes | Implicit own-account grants only apply to the caller's own record. |
@@ -38,7 +38,7 @@ coverImage: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=f
 
 | Don't | Why |
 |---|---|
-| `if (user.role === "ADMIN")` in business code | Roles are data; permissions are the vocabulary (spec §67, §110). Use `kernel.can()`. |
+| `if (user.role === "ADMIN")` in business code (merchant: `role === "OWNER"`, role lists) | Roles are data; permissions are the vocabulary (spec §67, §110). Use `kernel.can()`; merchant code uses `MERCHANT_CAPABILITY.*` (`requireMembershipCapability`, `can()`). |
 | Treat organization membership as permission | Membership only lets **scoped** permissions apply. It grants nothing by itself. |
 | Trust `organizationId` / `storeId` / `ownerId` from the request body or headers | Forged tenant ids and ownership claims are the classic multi-tenant bug (spec §55, §92). |
 | Load all rows and filter in JavaScript | Leaks data into memory and logs, and is slow (spec §57). |

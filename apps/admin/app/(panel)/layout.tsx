@@ -24,8 +24,8 @@ async function loadInitialSessionPermissions(server: ReturnType<typeof createAdm
 }
 
 /**
- * Route-group layout for every authenticated admin page (`/`, `/settings/*`,
- * …). A **server component**: it decodes the access-token JWT cookie and hands
+ * Route-group layout for every authenticated admin page (`/`, `/users/*`,
+ * `/settings/*`, `/account/*`, …). A **server component**: it decodes the access-token JWT cookie and hands
  * the real user identity to the client `DashboardShell`, so SSR paints the
  * sidebar/topbar with the actual name/email — no placeholder flash.
  *

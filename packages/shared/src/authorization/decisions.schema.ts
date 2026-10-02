@@ -27,17 +27,21 @@ export const AuthorizationDecisionsRequestSchema = z
 
 export type AuthorizationDecisionsRequest = z.output<typeof AuthorizationDecisionsRequestSchema>;
 
-export const AuthorizationCheckResultSchema = AuthorizationCheckSchema.extend({
+/**
+ * One answered check. Response schema: open (strip unknown keys — ADR 022), so
+ * it re-declares the strict request schema's fields instead of extending it.
+ */
+export const AuthorizationCheckResultSchema = z.object({
+	...AuthorizationCheckSchema.shape,
 	allowed: z.boolean(),
-}).strict();
+});
 
 export type AuthorizationCheckResult = z.output<typeof AuthorizationCheckResultSchema>;
 
-export const AuthorizationDecisionsResponseSchema = z
-	.object({
-		results: z.array(AuthorizationCheckResultSchema),
-	})
-	.strict();
+/** `POST /authorization/decisions` payload. */
+export const AuthorizationDecisionsResponseSchema = z.object({
+	results: z.array(AuthorizationCheckResultSchema),
+});
 
 export type AuthorizationDecisionsResponse = z.output<typeof AuthorizationDecisionsResponseSchema>;
 

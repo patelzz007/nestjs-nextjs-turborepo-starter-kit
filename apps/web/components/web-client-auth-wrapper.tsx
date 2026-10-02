@@ -6,11 +6,13 @@ import { usePathname } from "next/navigation";
 import { useCallback, type JSX, type ReactNode } from "react";
 
 export interface WebClientAuthWrapperProps {
+	/** The server saw a session cookie on this request (`hasServerSession`). */
+	readonly sessionActive: boolean;
 	readonly children: ReactNode;
 }
 
 /** Web auth bridge — skips login redirect on guest-browsable routes (e.g. `/`). */
-export function WebClientAuthWrapper({ children }: WebClientAuthWrapperProps): JSX.Element {
+export function WebClientAuthWrapper({ sessionActive, children }: WebClientAuthWrapperProps): JSX.Element {
 	const pathname = usePathname();
 
 	const shouldRedirectOnUnauthorized = useCallback((): boolean => {
@@ -19,8 +21,10 @@ export function WebClientAuthWrapper({ children }: WebClientAuthWrapperProps): J
 
 	const revalidateSessionEnabled = !isWebAuthPath(pathname);
 
+	// `sessionHint`: a guest (no session cookie on the server) skips the on-mount
+	// `/auth/me` + `/auth/permissions` round trip that could only answer 401.
 	return (
-		<ClientAuthWrapper shouldRedirectOnUnauthorized={shouldRedirectOnUnauthorized} revalidateSessionEnabled={revalidateSessionEnabled}>
+		<ClientAuthWrapper shouldRedirectOnUnauthorized={shouldRedirectOnUnauthorized} revalidateSessionEnabled={revalidateSessionEnabled} sessionHint={sessionActive}>
 			{children}
 		</ClientAuthWrapper>
 	);

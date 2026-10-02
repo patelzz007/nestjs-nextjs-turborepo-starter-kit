@@ -4,10 +4,7 @@
 		"module": "ESNext",
 		"moduleResolution": "bundler",
 		"types": ["node"],
-		"paths": {
-			"@workspace/client/*": ["./src/*"],
-			"@workspace/ui/*": ["../ui/src/*"]
-		}
+		"customConditions": ["development"]
 	},
 	"include": ["."],
 	"exclude": ["node_modules", "dist"]

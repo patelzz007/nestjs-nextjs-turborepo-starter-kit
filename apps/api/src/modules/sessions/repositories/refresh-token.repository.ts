@@ -4,6 +4,7 @@ import type { Prisma, RefreshToken } from "@prisma/client";
 import { epochMs, nowEpochMs, type EpochMs, type PaginationInput } from "@workspace/shared";
 
 import { BaseRepository } from "../../../platform/persistence/base.repository";
+import type { ListOrder } from "../../../platform/persistence/list-query/list-order";
 import type { EmptyMutationInput } from "../../../platform/persistence/types";
 import { PrismaService } from "../../../prisma/prisma.service";
 
@@ -35,10 +36,9 @@ const RefreshTokenRepositoryPorts = {
 		isDeleted: false,
 		expiresAt: { gte: Date.now() },
 	}),
-	buildListOrderBy: (): Prisma.RefreshTokenOrderByWithRelationInput => ({ createdAt: "desc" }),
-	buildListCursorOrderBy: (): Prisma.RefreshTokenOrderByWithRelationInput => ({ id: "asc" }),
-	mergeListCursor: (where: Prisma.RefreshTokenWhereInput, cursorId: string): Prisma.RefreshTokenWhereInput => ({ ...where, id: { gt: cursorId } }),
-	readListCursorId: (row: RefreshToken): string => row.id,
+	// Internal read (no HTTP list query): newest first, offset pages only.
+	buildListOrder: (): ListOrder<Prisma.RefreshTokenOrderByWithRelationInput> => ({ orderBy: [{ createdAt: "desc" }, { id: "desc" }], isDefault: true }),
+	andWhere: (left: Prisma.RefreshTokenWhereInput, right: Prisma.RefreshTokenWhereInput): Prisma.RefreshTokenWhereInput => ({ AND: [left, right] }),
 	buildFindByIdWhere: (id: string): Prisma.RefreshTokenWhereInput => ({ id, isDeleted: false }),
 	buildUpdateWhere: (id: string): Prisma.RefreshTokenWhereUniqueInput => ({ id }),
 	stampUpdate: (data: Prisma.RefreshTokenUpdateInput): Prisma.RefreshTokenUpdateInput => ({ ...data, updatedAt: nowEpochMs() }),
@@ -114,65 +114,76 @@ export class RefreshTokenRepository extends BaseRepository<
 	/**
 	 * Atomically rotate a refresh token only when the stored hash still matches.
 	 * Returns `superseded` when another request already rotated the token recently.
+	 * `onRotated` (the caller's outbox event) runs inside the same transaction,
+	 * only when this call performed the rotation.
 	 */
 	public async rotateTokenIfHashMatches(
 		id: string,
 		expectedTokenHash: string,
 		data: { readonly token: string; readonly deviceInfo: string | null; readonly ipAddress: string | null; readonly expiresAt: EpochMs },
+		onRotated: (tx: Prisma.TransactionClient) => Promise<void>,
 	): Promise<RotateTokenResult> {
 		const now: number = nowEpochMs();
 
-		const updated = await this.prisma.refreshToken.updateMany({
-			where: {
-				id,
-				token: expectedTokenHash,
-				isDeleted: false,
-				expiresAt: { gte: now },
-			},
-			data: {
-				previousTokenHash: expectedTokenHash,
-				token: data.token,
-				deviceInfo: data.deviceInfo,
-				ipAddress: data.ipAddress,
-				expiresAt: data.expiresAt,
-				rotationVersion: { increment: 1 },
-				updatedAt: now,
-			},
-		});
+		return this.prisma.$transaction(async (tx): Promise<RotateTokenResult> => {
+			const updated = await tx.refreshToken.updateMany({
+				where: {
+					id,
+					token: expectedTokenHash,
+					isDeleted: false,
+					expiresAt: { gte: now },
+				},
+				data: {
+					previousTokenHash: expectedTokenHash,
+					token: data.token,
+					deviceInfo: data.deviceInfo,
+					ipAddress: data.ipAddress,
+					expiresAt: data.expiresAt,
+					rotationVersion: { increment: 1 },
+					updatedAt: now,
+				},
+			});
 
-		if (updated.count === 1) {
-			return "rotated";
-		}
+			if (updated.count === 1) {
+				await onRotated(tx);
+				return "rotated";
+			}
 
-		const current = await this.findByIdIncludingDeleted(id);
-		if (current === null || current.isDeleted) {
+			const current = await tx.refreshToken.findUnique({ where: { id } });
+			if (current === null || current.isDeleted) {
+				return "missing";
+			}
+
+			const supersededGraceMs = 30_000;
+			if (current.updatedAt >= now - supersededGraceMs && current.token !== expectedTokenHash) {
+				return "superseded";
+			}
+
 			return "missing";
-		}
-
-		const supersededGraceMs = 30_000;
-		if (current.updatedAt >= now - supersededGraceMs && current.token !== expectedTokenHash) {
-			return "superseded";
-		}
-
-		return "missing";
+		});
 	}
 
-	public async revokeAllForUsers(userIds: readonly string[]): Promise<void> {
+	/** Soft-delete every active refresh token of `userIds` (pass `db` to join a caller's transaction). */
+	public async revokeAllForUsers(userIds: readonly string[], db: Prisma.TransactionClient = this.prisma): Promise<void> {
 		if (userIds.length === 0) {
 			return;
 		}
 		const now: number = nowEpochMs();
-		await this.prisma.refreshToken.updateMany({
+		await db.refreshToken.updateMany({
 			where: { userId: { in: [...userIds] }, isDeleted: false },
 			data: { isDeleted: true, deletedAt: now, updatedAt: now },
 		});
 	}
 
-	public async revokeById(id: string): Promise<void> {
+	/** Soft-delete one refresh token; `withinTransaction` (the caller's outbox event) commits with it. */
+	public async revokeById(id: string, withinTransaction: (tx: Prisma.TransactionClient) => Promise<void>): Promise<void> {
 		const now: number = nowEpochMs();
-		await this.prisma.refreshToken.update({
-			where: { id },
-			data: { isDeleted: true, deletedAt: now, updatedAt: now },
+		await this.prisma.$transaction(async (tx): Promise<void> => {
+			await tx.refreshToken.update({
+				where: { id },
+				data: { isDeleted: true, deletedAt: now, updatedAt: now },
+			});
+			await withinTransaction(tx);
 		});
 	}
 }

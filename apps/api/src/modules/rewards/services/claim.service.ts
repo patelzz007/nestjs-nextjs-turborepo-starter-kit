@@ -7,12 +7,11 @@ import type {
 	RewardClaimListQuery,
 	RewardClaimQrResponse,
 	RewardClaimResponse,
-	RewardType,
 } from "@workspace/shared";
 import { EpochMsSchema, RewardBackupCodeSchema } from "@workspace/shared";
 
-import { paginateCursorListResult } from "../../../platform/persistence/cursor-list";
-import { RewardClaimRepository } from "../repositories/reward-claim.repository";
+import { mapListResult, toPaginatedServiceResult } from "../../../platform/persistence/list-page";
+import { RewardClaimRepository, type RewardClaimRedemptionLookup } from "../repositories/reward-claim.repository";
 import { RewardReferralRepository } from "../repositories/reward-referral.repository";
 import { RewardRepository } from "../repositories/reward.repository";
 import { RewardUserRepository } from "../repositories/reward-user.repository";
@@ -105,7 +104,10 @@ export class ClaimService {
 
 	public async listClaims(userId: string, query: RewardClaimListQuery): Promise<PaginatedServiceResult<RewardClaimResponse>> {
 		const result = await this.rewardClaimRepository.listForUser(userId, query);
-		return paginateCursorListResult({ ...result, items: result.items.map((row) => mapClaimToResponse(row, row.reward.title)) }, query);
+		return toPaginatedServiceResult(
+			mapListResult(result, (row) => mapClaimToResponse(row, row.reward.title)),
+			query,
+		);
 	}
 
 	public async getClaimQr(userId: string, claimId: string): Promise<RewardClaimQrResponse> {
@@ -136,22 +138,7 @@ export class ClaimService {
 		};
 	}
 
-	public async findClaimByTokenOrBackup(
-		token: string | undefined,
-		backupCode: string | undefined,
-	): Promise<{
-		claim: {
-			id: string;
-			userId: string;
-			rewardId: string;
-			status: "PENDING" | "REDEEMED" | "EXPIRED";
-			claimExpiresAt: bigint;
-			redemptionTokenHash: string;
-			backupFailedAttempts: number;
-			backupLockedUntil: bigint | null;
-		};
-		reward: { id: string; organizationId: string; title: string; rewardType: RewardType; expiryDate: bigint };
-	}> {
+	public async findClaimByTokenOrBackup(token: string | undefined, backupCode: string | undefined): Promise<RewardClaimRedemptionLookup> {
 		if (token !== undefined) {
 			const claim = await this.rewardClaimRepository.findByRedemptionTokenHash(sha256Hex(token));
 			if (claim === null) {

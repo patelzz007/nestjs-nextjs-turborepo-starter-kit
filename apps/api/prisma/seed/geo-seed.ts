@@ -18,6 +18,7 @@ import { Prisma } from "@prisma/client";
 import { z } from "zod";
 
 import { prisma } from "./client";
+import { seedLog } from "./seed-log";
 
 const API_BASE = "https://raw.githubusercontent.com/dr5hn/countries-states-cities-database/master/json/";
 
@@ -47,9 +48,12 @@ function rowList(val: GeoJsonValue | undefined): readonly GeoRow[] | undefined {
 	return val.filter(isGeoRow);
 }
 
+/** JSON scalars the upstream dataset uses for text-ish fields (objects/arrays are never text). */
+const GeoScalarSchema = z.union([z.string(), z.number(), z.boolean()]);
+
 function str(val: GeoJsonValue | undefined): string | null {
-	if (val === null || val === undefined) return null;
-	return String(val);
+	const scalar = GeoScalarSchema.safeParse(val);
+	return scalar.success ? String(scalar.data) : null;
 }
 
 function num(val: GeoJsonValue | undefined): number | null {
@@ -77,7 +81,7 @@ function toJson(val: GeoJsonValue | undefined): Prisma.NullableJsonNullValueInpu
 // ── Main seed ──────────────────────────────────────────────────────────────
 
 export async function seedGeo(): Promise<void> {
-	console.log("Geo seeding started...");
+	seedLog("Geo seeding started...");
 
 	// ── Cleanup (geo tables are not cleaned in the main seed's volatile wipe)
 	await prisma.city.deleteMany();
@@ -90,7 +94,7 @@ export async function seedGeo(): Promise<void> {
 	const regionRows = await fetchData("regions");
 	await prisma.region.createMany({
 		data: regionRows.map((row) => ({
-			name: String(row.name ?? ""),
+			name: str(row.name) ?? "",
 			translations: toJson(row.translations),
 			wikiDataId: str(row.wikiDataId),
 		})),
@@ -111,7 +115,7 @@ export async function seedGeo(): Promise<void> {
 			if (dbId !== undefined) apiRegionById.set(apiId, dbId);
 		}
 	}
-	console.log(`Seeded ${String(allRegions.length)} regions`);
+	seedLog(`Seeded ${String(allRegions.length)} regions`);
 
 	// ── Subregions ─────────────────────────────────────────────────────
 	const subregionRows = await fetchData("subregions");
@@ -134,7 +138,7 @@ export async function seedGeo(): Promise<void> {
 				const regionId = apiRegionId !== null ? apiRegionById.get(apiRegionId) : undefined;
 				if (!regionId) return null;
 				return {
-					name: String(row.name ?? ""),
+					name: str(row.name) ?? "",
 					translations: toJson(row.translations),
 					wikiDataId: str(row.wikiDataId),
 					regionId,
@@ -155,7 +159,7 @@ export async function seedGeo(): Promise<void> {
 			if (dbId !== undefined) apiSubregionById.set(apiId, dbId);
 		}
 	}
-	console.log(`Seeded ${String(allSubregions.length)} subregions`);
+	seedLog(`Seeded ${String(allSubregions.length)} subregions`);
 
 	// ── Countries ──────────────────────────────────────────────────────
 	const countryRows = await fetchData("countries");
@@ -164,7 +168,7 @@ export async function seedGeo(): Promise<void> {
 			const apiRegionId = num(row.region_id);
 			const apiSubregionId = num(row.subregion_id);
 			return {
-				name: String(row.name ?? ""),
+				name: str(row.name) ?? "",
 				iso3: str(row.iso3),
 				iso2: str(row.iso2),
 				numericCode: str(row.numeric_code),
@@ -196,18 +200,18 @@ export async function seedGeo(): Promise<void> {
 
 	const allCountries = await prisma.country.findMany();
 	const countryByIso2 = new Map(allCountries.map((c) => [c.iso2 ?? "", c.id]));
-	console.log(`Seeded ${String(allCountries.length)} countries`);
+	seedLog(`Seeded ${String(allCountries.length)} countries`);
 
 	// ── States ─────────────────────────────────────────────────────────
 	const stateRows = await fetchData("states");
 	await prisma.state.createMany({
 		data: stateRows
 			.map((row) => {
-				const countryCode = String(row.country_code ?? "");
+				const countryCode = str(row.country_code) ?? "";
 				const countryId = countryByIso2.get(countryCode);
 				if (!countryId) return null;
 				return {
-					name: String(row.name ?? ""),
+					name: str(row.name) ?? "",
 					countryCode,
 					fipsCode: str(row.fips_code),
 					iso2: str(row.iso2),
@@ -229,14 +233,14 @@ export async function seedGeo(): Promise<void> {
 	});
 
 	const allStates = await prisma.state.findMany();
-	console.log(`Seeded ${String(allStates.length)} states`);
+	seedLog(`Seeded ${String(allStates.length)} states`);
 
 	// ── Cities (from countries+states+cities.json — nested) ────────────
 	const nestedRows = await fetchData("countries%2Bstates%2Bcities");
 	let cityCount = 0;
 
 	for (const country of nestedRows) {
-		const countryId = countryByIso2.get(String(country.iso2 ?? ""));
+		const countryId = countryByIso2.get(str(country.iso2) ?? "");
 		if (!countryId) continue;
 
 		const stateList = rowList(country.states);
@@ -244,7 +248,7 @@ export async function seedGeo(): Promise<void> {
 
 		for (const state of stateList) {
 			// Match state by name + countryId
-			const stateName = String(state.name ?? "");
+			const stateName = str(state.name) ?? "";
 			const matchedState = allStates.find((s) => s.name === stateName && s.countryId === countryId);
 			if (!matchedState) continue;
 
@@ -253,9 +257,9 @@ export async function seedGeo(): Promise<void> {
 
 			await prisma.city.createMany({
 				data: cityList.map((city) => ({
-					name: String(city.name ?? ""),
-					stateCode: String(state.iso2 ?? ""),
-					countryCode: String(country.iso2 ?? ""),
+					name: str(city.name) ?? "",
+					stateCode: str(state.iso2) ?? "",
+					countryCode: str(country.iso2) ?? "",
 					latitude: num(city.latitude) ?? 0,
 					longitude: num(city.longitude) ?? 0,
 					native: str(city.native),
@@ -269,7 +273,7 @@ export async function seedGeo(): Promise<void> {
 			cityCount += cityList.length;
 		}
 	}
-	console.log(`Seeded ${String(cityCount)} cities`);
+	seedLog(`Seeded ${String(cityCount)} cities`);
 
-	console.log("Geo seeding completed!");
+	seedLog("Geo seeding completed!");
 }

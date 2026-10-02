@@ -2,10 +2,11 @@
 
 import { ICON_MAP } from "@/lib/navigation/menu-icons";
 import { SEARCH_ALIAS_MAP } from "@/lib/palette/search";
-import { useAuthorizedSearchableItems } from "@/components/layout/authorized-navigation";
+import { useAuthorizedSearchableItems, useCanAccessRoute } from "@/components/layout/authorized-navigation";
 import { useCommandPaletteStore } from "@/stores/command-palette-store";
+import { ROUTES } from "@/lib/routes";
 import { AppCommandPalette, type AppCommandPaletteQuickAction } from "@workspace/ui/components/navigation/app-command-palette";
-import { CreditCard, LayoutDashboard, Settings, SunMoon } from "lucide-react";
+import { CircleUserRound, CreditCard, LayoutDashboard, Settings, SunMoon } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useRouter } from "next/navigation";
 import * as React from "react";
@@ -13,6 +14,12 @@ import * as React from "react";
 export interface CommandPaletteProps {
 	readonly open?: boolean;
 	readonly setOpen?: (open: boolean) => void;
+}
+
+/** A quick action plus the page it opens (none for in-place actions such as the theme toggle). */
+interface RoutedQuickAction {
+	readonly href?: string;
+	readonly action: AppCommandPaletteQuickAction;
 }
 
 function renderMenuIcon(iconName: string | undefined, className: string): React.ReactNode {
@@ -30,6 +37,7 @@ export function CommandPalette({ open: externalOpen, setOpen: externalSetOpen }:
 	const router = useRouter();
 	const { setTheme, resolvedTheme } = useTheme();
 	const searchableItems = useAuthorizedSearchableItems();
+	const canAccessRoute = useCanAccessRoute();
 
 	const recentSearches = useCommandPaletteStore((s) => s.recentSearches);
 	const pinnedUrls = useCommandPaletteStore((s) => s.pinnedUrls);
@@ -40,62 +48,89 @@ export function CommandPalette({ open: externalOpen, setOpen: externalSetOpen }:
 		externalSetOpen?.(false);
 	}, [externalSetOpen]);
 
-	const quickActions = React.useMemo(
-		(): readonly AppCommandPaletteQuickAction[] => [
+	const quickActions = React.useMemo((): readonly AppCommandPaletteQuickAction[] => {
+		const navigateTo = (href: string): void => {
+			router.push(href);
+			closePalette();
+		};
+		const actions: readonly RoutedQuickAction[] = [
 			{
-				id: "toggle-theme",
-				title: "Toggle Theme",
-				description: "Switch between light and dark mode",
-				icon: SunMoon,
-				color: "text-amber-600 bg-amber-100 dark:text-amber-300 dark:bg-amber-900/40",
-				shortcut: "⌘T",
-				keywords: ["dark", "light", "mode", "theme"],
-				run: (): void => {
-					closePalette();
-					setTheme(resolvedTheme === "dark" ? "light" : "dark");
+				action: {
+					id: "toggle-theme",
+					title: "Toggle Theme",
+					description: "Switch between light and dark mode",
+					icon: SunMoon,
+					color: "text-amber-600 bg-amber-100 dark:text-amber-300 dark:bg-amber-900/40",
+					shortcut: "⌘T",
+					keywords: ["dark", "light", "mode", "theme"],
+					run: (): void => {
+						closePalette();
+						setTheme(resolvedTheme === "dark" ? "light" : "dark");
+					},
 				},
 			},
 			{
-				id: "open-settings",
-				title: "Open Settings",
-				description: "Manage your account and preferences",
-				icon: Settings,
-				color: "text-indigo-600 bg-indigo-100 dark:text-indigo-300 dark:bg-indigo-900/40",
-				shortcut: "⌘,",
-				keywords: ["preferences", "account", "config"],
-				run: (): void => {
-					router.push("/settings/general");
-					closePalette();
+				href: ROUTES.settings.index,
+				action: {
+					id: "open-settings",
+					title: "Open Settings",
+					description: "Platform configuration — billing and access control",
+					icon: Settings,
+					color: "text-indigo-600 bg-indigo-100 dark:text-indigo-300 dark:bg-indigo-900/40",
+					shortcut: "⌘,",
+					keywords: ["configuration", "config", "platform"],
+					run: (): void => {
+						navigateTo(ROUTES.settings.index);
+					},
 				},
 			},
 			{
-				id: "go-dashboard",
-				title: "Go to Dashboard",
-				description: "Return to the main dashboard",
-				icon: LayoutDashboard,
-				color: "text-blue-600 bg-blue-100 dark:text-blue-300 dark:bg-blue-900/40",
-				shortcut: "⌘D",
-				keywords: ["home", "main", "overview"],
-				run: (): void => {
-					router.push("/");
-					closePalette();
+				href: ROUTES.account.index,
+				action: {
+					id: "open-account",
+					title: "Open Account",
+					description: "Your profile, password, and two-factor authentication",
+					icon: CircleUserRound,
+					color: "text-sky-600 bg-sky-100 dark:text-sky-300 dark:bg-sky-900/40",
+					keywords: ["profile", "account", "preferences", "password", "2fa", "mfa"],
+					run: (): void => {
+						navigateTo(ROUTES.account.index);
+					},
 				},
 			},
 			{
-				id: "open-billing",
-				title: "Open Billing",
-				description: "View your plan and invoices",
-				icon: CreditCard,
-				color: "text-emerald-600 bg-emerald-100 dark:text-emerald-300 dark:bg-emerald-900/40",
-				keywords: ["plan", "invoice", "payment", "subscription"],
-				run: (): void => {
-					router.push("/settings/billing");
-					closePalette();
+				href: ROUTES.home,
+				action: {
+					id: "go-dashboard",
+					title: "Go to Dashboard",
+					description: "Return to the main dashboard",
+					icon: LayoutDashboard,
+					color: "text-blue-600 bg-blue-100 dark:text-blue-300 dark:bg-blue-900/40",
+					shortcut: "⌘D",
+					keywords: ["home", "main", "overview"],
+					run: (): void => {
+						navigateTo(ROUTES.home);
+					},
 				},
 			},
-		],
-		[closePalette, router, resolvedTheme, setTheme],
-	);
+			{
+				href: ROUTES.settings.billing,
+				action: {
+					id: "open-billing",
+					title: "Open Billing",
+					description: "View your plan and invoices",
+					icon: CreditCard,
+					color: "text-emerald-600 bg-emerald-100 dark:text-emerald-300 dark:bg-emerald-900/40",
+					keywords: ["plan", "invoice", "payment", "subscription"],
+					run: (): void => {
+						navigateTo(ROUTES.settings.billing);
+					},
+				},
+			},
+		];
+		// Navigation actions obey the route guard's rules, like the searchable items.
+		return actions.filter((entry) => entry.href === undefined || canAccessRoute(entry.href)).map((entry) => entry.action);
+	}, [canAccessRoute, closePalette, router, resolvedTheme, setTheme]);
 
 	const handleNavigate = React.useCallback(
 		(url: string): void => {
@@ -106,8 +141,8 @@ export function CommandPalette({ open: externalOpen, setOpen: externalSetOpen }:
 
 	return (
 		<AppCommandPalette
-			open={externalOpen}
-			setOpen={externalSetOpen}
+			{...(externalOpen !== undefined ? { open: externalOpen } : {})}
+			{...(externalSetOpen !== undefined ? { setOpen: externalSetOpen } : {})}
 			title="Command palette"
 			description="Search commands, pages, and actions"
 			searchableItems={searchableItems}

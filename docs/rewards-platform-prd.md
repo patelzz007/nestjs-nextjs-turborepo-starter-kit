@@ -60,6 +60,7 @@ Extend existing auth: **User**, **RBAC**, **RLS** patterns from hello-world. **M
 2. Merchant confirms → `POST /v1/redemptions/confirm` with `token`, `idempotencyKey`, headers `Authorization: Bearer <api_key>`, `X-Terminal-Id: <terminal_id>`.
 3. First confirm: `Claim` pending → redeemed, insert `Redemption`. Second confirm same token: **409**.
 4. **Strict idempotency:** same token + **different** `idempotencyKey` → **409** (sloppy integrator protection).
+5. **Checkout (preferred):** after payment the POS calls `POST /v1/redemptions/checkout` with the bill total (sen) and every code on the bill — all-or-nothing, idempotent, recorded as one sale (the source of sales analytics). See [POS integration](./pos-integration.md).
 
 ### 3.3 Merchant publish
 
@@ -331,6 +332,9 @@ Headers: `Authorization: Bearer <api_key>`, `X-Terminal-Id: <terminal_id>`
 |--------|------|------|
 | POST | `/v1/redemptions/validate` | `{ "token" }` or `{ "backupCode" }` |
 | POST | `/v1/redemptions/confirm` | `{ "token" \| "backupCode", "idempotencyKey" }` |
+| POST | `/v1/redemptions/checkout` | `{ "idempotencyKey", "billTotalMinor", "currency", "codes": [{ "token" \| "backupCode" }] }` |
+
+Full integrator guide (store resolution, errors, retries): [POS integration](./pos-integration.md).
 
 **Validate:** read-only state except **audit log** write.
 
@@ -364,6 +368,19 @@ Headers: `Authorization: Bearer <api_key>`, `X-Terminal-Id: <terminal_id>`
 ### Reward images (Phase 1)
 
 **Stock placeholders by category** — no merchant uploads.
+
+### Merchant identity on rewards
+
+Every reward response (`RewardResponseSchema`) carries `organizationName` and
+`organizationLogoUrl` — the public URL of the organization's live `LOGO` asset
+(`organization_assets` → `stored_files`, file `READY` with a public path), or `null`
+when none is uploaded. The repository loads it in the same query as the rewards
+(no N+1); a stored value that is not an absolute http(s) URL degrades to `null`.
+Consumer reward cards, list rows and the detail view lead with the merchant's mark
+(`EntityAvatar` via `RewardMerchantAvatar`): the logo when present, otherwise a
+coloured monogram of the shop name, so the shop is recognisable at a glance.
+Logo upload UI for merchants is a follow-up (the upload/binding path already exists:
+`STORE_LOGO` files bind to the `LOGO` asset on completion).
 
 ---
 

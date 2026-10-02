@@ -18,7 +18,6 @@ import { AppDocumentShell } from "@workspace/ui/components/app-document-shell";
 import { ThemeProvider } from "@workspace/ui/components/theme-provider";
 import { Toaster } from "@workspace/ui/components/feedback/toast";
 import { ScrollToTop } from "@workspace/ui/components/navigation/scroll-to-top";
-import { validateWebEnv } from "@workspace/shared/runtime/index";
 
 const inter = Inter({
 	subsets: ["latin"],
@@ -51,15 +50,6 @@ export default async function RootLayout({
 }: Readonly<{
 	children: React.ReactNode;
 }>): Promise<React.JSX.Element> {
-	if (typeof window === "undefined") {
-		const webEnvResult = validateWebEnv(process.env);
-		if (!webEnvResult.success) {
-			console.error("❌ Web app environment validation failed:");
-			console.error(webEnvResult.error);
-			throw new Error("Web app environment validation failed");
-		}
-	}
-
 	// One capability source for every page: guests resolve to an empty set.
 	const sessionActive = await hasServerSession();
 	const initialSessionPermissions = await loadWebInitialSessionPermissions(sessionActive);
@@ -68,7 +58,7 @@ export default async function RootLayout({
 		<AppDocumentShell htmlClassName={cn("font-sans antialiased", inter.variable, playfair.variable, bricolageGrotesque.variable, rubik.variable)} bodyClassName="web-app">
 			<ReduxDevToolsGuard />
 			<QueryProvider>
-				<WebClientAuthWrapper>
+				<WebClientAuthWrapper sessionActive={sessionActive}>
 					<WebSessionBootstrap />
 					<WebAuthorizationProvider sessionActive={sessionActive} initialSessionPermissions={initialSessionPermissions}>
 						<ThemeProvider>

@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 import { createApiRequestContext, createUncheckedApiRequestContext, fetchMutationUnchecked, fetchQuery, useApi, type OnRefresh, type OnUnauthorized } from "./use-api";
-import { type DataValue } from "@workspace/shared";
+import { DataValueSchema, singleResponse, type DataValue } from "@workspace/shared";
 import { apiRouter, defineMutation, defineQuery } from "./endpoints";
 import { firstFetchCall, headersOf, inputUrl, jsonResponse, type FetchImpl } from "../test-utils";
 
@@ -18,12 +18,8 @@ interface Envelope {
 	readonly meta: { readonly timestamp: number };
 }
 
-/** Minimal mirror of the API's ResponseInterceptor envelope. */
-const envelopeSchema = z.object({
-	success: z.literal(true),
-	data: z.custom<DataValue>(),
-	meta: z.object({ timestamp: z.number() }),
-});
+/** Fixture response contract: any JSON `data` inside the standard success envelope. */
+const fixtureResponse = singleResponse(DataValueSchema);
 
 function successEnvelope(data: DataValue): Envelope {
 	return { success: true, data, meta: { timestamp: 1786428000000 } };
@@ -31,25 +27,22 @@ function successEnvelope(data: DataValue): Envelope {
 
 /** Minimal tRPC-style GET def mirroring `apiRouter.auth.me` for the 401-pipeline tests. */
 const meDef = defineQuery(
-	{ method: "GET", path: "/auth/me", input: z.undefined() },
+	{ method: "GET", path: "/auth/me", input: z.undefined(), response: fixtureResponse },
 	{
-		response: envelopeSchema,
 		queryKey: () => ["auth", "me"],
 	},
 );
 
 const paginatedDef = defineQuery(
-	{ method: "GET", path: "/items", input: z.object({ page: z.number(), q: z.string().optional() }) },
+	{ method: "GET", path: "/items", input: z.object({ page: z.number(), q: z.string().optional() }), response: fixtureResponse },
 	{
-		response: envelopeSchema,
 		queryKey: (input) => ["items", input.page],
 	},
 );
 
 const loginDef = defineMutation(
-	{ method: "POST", path: "/auth/login", input: z.object({ email: z.string() }) },
+	{ method: "POST", path: "/auth/login", input: z.object({ email: z.string() }), response: fixtureResponse },
 	{
-		response: envelopeSchema,
 		queryKey: () => ["auth", "login"],
 	},
 );

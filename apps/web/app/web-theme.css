@@ -1,6 +1,7 @@
 /* Consumer Reward Hub — trust blue with neutral interactive highlights (solid colors only). */
 
-.web-app {
+/* Light only — in dark mode the shared soft-dark neutrals (packages/ui tokens.css) must not be shadowed here. */
+:root:not(.dark) .web-app {
 	--background: oklch(0.985 0.006 250);
 	--foreground: oklch(0.28 0.03 250);
 	--card: oklch(1 0 0);
@@ -33,31 +34,13 @@
 	--chart-5: oklch(0.48 0.03 250);
 }
 
+/* Dark: brand colours only — the soft-dark neutrals come from packages/ui tokens.css. */
 .dark .web-app {
-	--background: oklch(0.17 0.02 250);
-	--foreground: oklch(0.96 0.01 250);
-	--card: oklch(0.21 0.025 250);
-	--card-foreground: oklch(0.96 0.01 250);
-	--popover: oklch(0.21 0.025 250);
-	--popover-foreground: oklch(0.96 0.01 250);
 	--primary: oklch(0.68 0.16 264);
 	--primary-foreground: oklch(0.17 0.02 250);
-	--secondary: oklch(0.25 0.03 250);
-	--secondary-foreground: oklch(0.96 0.01 250);
-	--muted: oklch(0.25 0.025 250);
-	--muted-foreground: oklch(0.72 0.03 250);
-	--accent: oklch(0.26 0.03 250);
-	--accent-foreground: oklch(0.96 0.01 250);
-	--border: oklch(1 0 0 / 12%);
-	--input: oklch(1 0 0 / 16%);
 	--ring: oklch(0.68 0.16 264);
-	--sidebar: var(--background);
-	--sidebar-foreground: oklch(0.96 0.01 250);
 	--sidebar-primary: oklch(0.68 0.16 264);
 	--sidebar-primary-foreground: oklch(0.17 0.02 250);
-	--sidebar-accent: oklch(0.25 0.03 250);
-	--sidebar-accent-foreground: oklch(0.96 0.01 250);
-	--sidebar-border: oklch(1 0 0 / 20%);
 	--sidebar-ring: oklch(0.68 0.16 264);
 	--chart-1: oklch(0.68 0.16 264);
 	--chart-2: oklch(0.72 0.14 165);

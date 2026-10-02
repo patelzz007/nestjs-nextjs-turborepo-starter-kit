@@ -5,14 +5,15 @@ import { PermissionResource as PrismaPermissionResource } from "@prisma/client";
 import { nowEpochMs, type PaginationInput, type PermissionAction, type PermissionResource } from "@workspace/shared";
 
 import { BaseRepository } from "../../../platform/persistence/base.repository";
+import type { ListOrder } from "../../../platform/persistence/list-query/list-order";
 import { PrismaService } from "../../../prisma/prisma.service";
 
 import type { CreatePermissionInput, UpdatePermissionInput } from "../services/permission.service";
 
 export interface PermissionListQuery extends PaginationInput {
-	readonly resource?: PermissionResource;
-	readonly action?: PermissionAction;
-	readonly group?: string;
+	readonly resource?: PermissionResource | undefined;
+	readonly action?: PermissionAction | undefined;
+	readonly group?: string | undefined;
 }
 
 function toPrismaResource(resource: PermissionResource): PrismaPermissionResource {
@@ -61,10 +62,9 @@ const PermissionRepositoryPorts = {
 	toCreateInput,
 	toUpdateInput,
 	buildListWhere,
-	buildListOrderBy: (): Prisma.PermissionOrderByWithRelationInput[] => [{ resource: "asc" }, { action: "asc" }],
-	buildListCursorOrderBy: (): Prisma.PermissionOrderByWithRelationInput[] => [{ id: "asc" }],
-	mergeListCursor: (where: Prisma.PermissionWhereInput, cursorId: string): Prisma.PermissionWhereInput => ({ ...where, id: { gt: cursorId } }),
-	readListCursorId: (row: Permission): string => row.id,
+	// Internal catalog read (no HTTP list query): resource/action order, offset pages only.
+	buildListOrder: (): ListOrder<Prisma.PermissionOrderByWithRelationInput> => ({ orderBy: [{ resource: "asc" }, { action: "asc" }, { id: "asc" }], isDefault: true }),
+	andWhere: (left: Prisma.PermissionWhereInput, right: Prisma.PermissionWhereInput): Prisma.PermissionWhereInput => ({ AND: [left, right] }),
 	buildFindByIdWhere: (id: string): Prisma.PermissionWhereInput => ({ id, isDeleted: false }),
 	buildUpdateWhere: (id: string): Prisma.PermissionWhereUniqueInput => ({ id }),
 	stampUpdate: (data: Prisma.PermissionUpdateInput): Prisma.PermissionUpdateInput => ({ ...data, updatedAt: nowEpochMs() }),
@@ -80,7 +80,7 @@ export class PermissionRepository extends BaseRepository<
 	PermissionListQuery,
 	Permission,
 	Prisma.PermissionWhereInput,
-	Prisma.PermissionOrderByWithRelationInput[],
+	Prisma.PermissionOrderByWithRelationInput,
 	Prisma.PermissionCreateInput,
 	Prisma.PermissionUpdateInput,
 	Prisma.PermissionWhereUniqueInput

@@ -8,6 +8,12 @@ export default defineConfig({
 	test: {
 		environment: "node",
 		include: ["src/**/*.test.{ts,tsx}"],
+		// `src/lib/api/config.ts` validates NEXT_PUBLIC_API_URL at import and
+		// fails fast when it is missing; vitest does not load `.env`, so give the
+		// tests a deterministic fixture value (never a real endpoint).
+		env: {
+			NEXT_PUBLIC_API_URL: "http://api.test",
+		},
 	},
 	resolve: {
 		alias: {

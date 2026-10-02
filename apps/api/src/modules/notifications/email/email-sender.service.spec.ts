@@ -2,18 +2,22 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 import { TypedConfigService } from "../../../config/typed-config.service";
+import { RequestContextService } from "../../../common/context/request-context";
+import { PlatformOutboxService } from "../../../infrastructure/outbox/platform-outbox.service";
 import { PrismaService } from "../../../prisma/prisma.service";
+import { TenantTransactionService } from "../../../prisma/tenant-transaction.service";
 import { LogService } from "../../logs/logs.service";
 import { EmailLogEventsService } from "./email-log-events.service";
 import { EmailLogRepository } from "./email-log.repository";
 import { EmailLogService } from "./email-log.service";
 import { EmailSenderService } from "./email-sender.service";
 import { VerificationEmailTemplate } from "./templates/verification-email.template";
+import { createTestApiConfig, createTestTypedConfig } from "../../../../test/support/test-api-env";
 
 // ── Mocks ─────────────────────────────────────────────────────────────────
 
 interface EmailConfigState {
-	resendApiKey: string;
+	resendApiKey: string | null;
 	emailFromAddress: string;
 	emailMode: "send" | "log-only" | "noop";
 	emailTestTo: string | undefined;
@@ -97,11 +101,15 @@ vi.mock("./email-log.service", () => ({
 
 function createConfig(overrides: Partial<EmailConfigState> = {}): TypedConfigService {
 	mocks.config.current = { ...mocks.baseConfig, ...overrides };
-	return new TypedConfigService();
+	return new TypedConfigService(createTestApiConfig());
 }
 
-const logServiceMock = new LogService();
-const emailLogServiceMock = new EmailLogService(new EmailLogRepository(new PrismaService()), new EmailLogEventsService());
+const logServiceMock = new LogService(createTestTypedConfig(), new RequestContextService());
+const emailLogServiceMock = new EmailLogService(
+	new EmailLogRepository(new PrismaService(createTestTypedConfig())),
+	new EmailLogEventsService(),
+	new PlatformOutboxService(new TenantTransactionService(new PrismaService(createTestTypedConfig())), new RequestContextService()),
+);
 
 function makeTemplate(): VerificationEmailTemplate {
 	return new VerificationEmailTemplate({ to: "jamie@example.com", verificationToken: "tok-123", expiresInHours: 24 });
@@ -125,6 +133,14 @@ describe("EmailSenderService", () => {
 		expect(resendSendMock).not.toHaveBeenCalled();
 	});
 
+	it("never constructs a Resend client without RESEND_API_KEY and fails the send instead of calling out", async () => {
+		const service = new EmailSenderService(createConfig({ resendApiKey: null }), logServiceMock, emailLogServiceMock);
+		const result = await service.send(makeTemplate());
+		expect(result.ok).toBe(false);
+		expect(resendSendMock).not.toHaveBeenCalled();
+		expect(mocks.emailLogCreate).toHaveBeenCalledWith(expect.objectContaining({ status: "failed" }));
+	});
+
 	it("noop mode never touches the network but persists a row", async () => {
 		const service = new EmailSenderService(createConfig({ emailMode: "noop" }), logServiceMock, emailLogServiceMock);
 		const result = await service.send(makeTemplate());
@@ -133,7 +149,7 @@ describe("EmailSenderService", () => {
 			expect(result.mode).toBe("noop");
 		}
 		expect(resendSendMock).not.toHaveBeenCalled();
-		expect(emailLogServiceMock.create).toHaveBeenCalledTimes(1);
+		expect(mocks.emailLogCreate).toHaveBeenCalledTimes(1);
 	});
 
 	it("log-only mode prints the rendered text and returns ok", async () => {
@@ -144,7 +160,7 @@ describe("EmailSenderService", () => {
 			expect(result.mode).toBe("log-only");
 		}
 		expect(resendSendMock).not.toHaveBeenCalled();
-		expect(logServiceMock.info).toHaveBeenCalled();
+		expect(mocks.logInfo).toHaveBeenCalled();
 	});
 
 	it("applies the EMAIL_TEST_TO override in send mode", async () => {
@@ -164,7 +180,7 @@ describe("EmailSenderService", () => {
 			expect(result.id).toBe("re-42");
 			expect(result.mode).toBe("send");
 		}
-		expect(emailLogServiceMock.create).toHaveBeenCalledWith(
+		expect(mocks.emailLogCreate).toHaveBeenCalledWith(
 			expect.objectContaining({
 				templateKey: "verification",
 				status: "sent",

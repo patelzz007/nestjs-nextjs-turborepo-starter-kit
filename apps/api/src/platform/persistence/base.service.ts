@@ -1,7 +1,6 @@
-import { NotFoundException } from "@nestjs/common";
-
 import type { BulkDeleteResult, PaginatedServiceResult, PaginationInput } from "@workspace/shared";
 
+import { ResourceNotFoundError } from "./persistence.errors";
 import type { RepositoryInstance, RepositoryListResult } from "./types";
 
 export abstract class BaseService<TEntity, TCreate, TUpdate, TQuery extends PaginationInput, TRepository extends RepositoryInstance<TEntity, TCreate, TUpdate, TQuery>> {
@@ -28,7 +27,7 @@ export abstract class BaseService<TEntity, TCreate, TUpdate, TQuery extends Pagi
 	public async getById(id: string): Promise<TEntity> {
 		const row = await this.repository.findById(id);
 		if (row === null) {
-			throw new NotFoundException("Resource not found");
+			throw new ResourceNotFoundError(id);
 		}
 		return row;
 	}

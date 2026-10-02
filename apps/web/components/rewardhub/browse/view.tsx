@@ -2,19 +2,20 @@
 
 import { RewardHubCatalog } from "@/components/rewardhub/browse/catalog";
 import { RewardHubFilters } from "@/components/rewardhub/browse/filters";
-import { readPaginatedHasNext, readPaginatedNextCursor, stubPaginatedMetaFromHydration, successEnvelope } from "@/lib/api-envelope";
+import { initialDataOption, readPaginatedHasNext, readPaginatedNextCursor, stubPaginatedMetaFromHydration, successEnvelope } from "@workspace/client/lib/api/envelope";
 import { WebEmptyState } from "@/components/web-ui/empty-state";
 import { useAuth } from "@workspace/client/lib/auth";
 import { ApiPaginatedMeta, type PilotCity, type RewardCategory, type RewardResponse } from "@workspace/shared";
 import { Gift, MapPin, Search, Sparkles } from "lucide-react";
 import * as React from "react";
+import { LANDING_SECTION_IDS, ROUTE_PREFIXES } from "@/lib/routes";
 
 const CATEGORIES: readonly RewardCategory[] = ["cafe", "restaurant", "retail", "wellness", "entertainment", "food", "beverage"];
 
 export interface RewardHubBrowseViewProps {
-	readonly initialRewards?: readonly RewardResponse[];
-	readonly initialHasNext?: boolean;
-	readonly initialListMeta?: ApiPaginatedMeta;
+	readonly initialRewards?: readonly RewardResponse[] | undefined;
+	readonly initialHasNext?: boolean | undefined;
+	readonly initialListMeta?: ApiPaginatedMeta | undefined;
 	readonly variant?: "landing" | "dashboard";
 	readonly detailPathPrefix?: string;
 }
@@ -25,7 +26,7 @@ export function RewardHubBrowseView({
 	initialHasNext,
 	initialListMeta,
 	variant = "dashboard",
-	detailPathPrefix = "/rewardhub",
+	detailPathPrefix = ROUTE_PREFIXES.rewardHubRewards,
 }: RewardHubBrowseViewProps): React.JSX.Element {
 	const { api } = useAuth();
 	const [cursor, setCursor] = React.useState<string | null>(null);
@@ -56,12 +57,11 @@ export function RewardHubBrowseView({
 			limit: 12,
 			...(cursor !== null ? { cursor } : {}),
 			...(search.length > 0 ? { search } : {}),
-			...(city !== "ALL" ? { city } : {}),
-			...(category !== "ALL" ? { category } : {}),
+			...(city !== "ALL" || category !== "ALL"
+				? { filter: { city: city !== "ALL" ? { eq: city } : undefined, category: category !== "ALL" ? { eq: category } : undefined } }
+				: {}),
 		},
-		{
-			initialData: initialQueryData,
-		},
+		initialDataOption(initialQueryData),
 	);
 
 	const rewards = rewardsQuery.data?.data ?? [];
@@ -172,7 +172,7 @@ export function RewardHubBrowseView({
 				</header>
 			) : (
 				<div className="space-y-2">
-					<h2 id="rewards" className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+					<h2 id={LANDING_SECTION_IDS.rewards} className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
 						Live offers near you
 					</h2>
 					<p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">Filter by city or category. Sign in from the header when you&apos;re ready to claim.</p>

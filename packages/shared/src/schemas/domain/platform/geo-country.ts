@@ -1,42 +1,44 @@
 import { z } from "zod";
 
 import { DataValueSchema } from "../../api/common";
-import { PaginationSchema } from "../../api/pagination";
-import { GeoCursorSchema, GeoDateTimeFieldSchema, GeoIdSchema, GeoIdsSchema, GeoIncludeSchema } from "./geo-shared";
+import { defineListQuery, listFilter, ListSearchSchema } from "../../api/list-query";
+import { GEO_LIST_DEFAULT_LIMIT, GeoDateTimeFieldSchema, GeoIdSchema, GeoIncludeSchema } from "./geo-shared";
 
-export const CountrySchema = z
-	.object({
-		id: GeoIdSchema,
-		name: z.string(),
-		iso3: z.string().nullable(),
-		numericCode: z.string().nullable(),
-		iso2: z.string().nullable(),
-		phonecode: z.string().nullable(),
-		capital: z.string().nullable(),
-		currency: z.string().nullable(),
-		currencyName: z.string().nullable(),
-		currencySymbol: z.string().nullable(),
-		tld: z.string().nullable(),
-		native: z.string().nullable(),
-		population: z.number().nullable(),
-		gdp: z.number().nullable(),
-		region: z.string().nullable(),
-		subregion: z.string().nullable(),
-		nationality: z.string().nullable(),
-		timezones: DataValueSchema.nullable(),
-		translations: DataValueSchema.nullable(),
-		latitude: z.number().nullable(),
-		longitude: z.number().nullable(),
-		emoji: z.string().nullable(),
-		emojiU: z.string().nullable(),
-		wikiDataId: z.string().nullable(),
-		flag: z.boolean(),
-		regionId: GeoIdSchema.nullable(),
-		subregionId: GeoIdSchema.nullable(),
-		createdAt: GeoDateTimeFieldSchema,
-		updatedAt: GeoDateTimeFieldSchema,
-	})
-	.strict();
+/**
+ * Country response DTO. Open (not `.strict()`): the response interceptor strips
+ * unknown keys instead of failing, so adding a column never breaks a client.
+ */
+export const CountrySchema = z.object({
+	id: GeoIdSchema,
+	name: z.string(),
+	iso3: z.string().nullable(),
+	numericCode: z.string().nullable(),
+	iso2: z.string().nullable(),
+	phonecode: z.string().nullable(),
+	capital: z.string().nullable(),
+	currency: z.string().nullable(),
+	currencyName: z.string().nullable(),
+	currencySymbol: z.string().nullable(),
+	tld: z.string().nullable(),
+	native: z.string().nullable(),
+	population: z.number().nullable(),
+	gdp: z.number().nullable(),
+	region: z.string().nullable(),
+	subregion: z.string().nullable(),
+	nationality: z.string().nullable(),
+	timezones: DataValueSchema.nullable(),
+	translations: DataValueSchema.nullable(),
+	latitude: z.number().nullable(),
+	longitude: z.number().nullable(),
+	emoji: z.string().nullable(),
+	emojiU: z.string().nullable(),
+	wikiDataId: z.string().nullable(),
+	flag: z.boolean(),
+	regionId: GeoIdSchema.nullable(),
+	subregionId: GeoIdSchema.nullable(),
+	createdAt: GeoDateTimeFieldSchema,
+	updatedAt: GeoDateTimeFieldSchema,
+});
 
 export type Country = z.output<typeof CountrySchema>;
 
@@ -107,16 +109,20 @@ export const UpdateCountrySchema = z
 
 export type UpdateCountryInput = z.output<typeof UpdateCountrySchema>;
 
-export const CountryListQuerySchema = PaginationSchema.extend({
-	search: z.string().optional(),
-	iso2: z.string().length(2).optional(),
-	regionId: z.coerce.number().int().nonnegative().optional(),
-	subregionId: z.coerce.number().int().nonnegative().optional(),
-	flag: z.coerce.boolean().optional(),
-	ids: GeoIdsSchema,
-	sort: z.string().optional(),
-	cursor: GeoCursorSchema,
-	include: GeoIncludeSchema,
-}).strict();
-
+/** `GET /geo/countries` list query — see docs/list-queries.md. */
+export const countryListQuery = defineListQuery({
+	sortable: ["id", "name", "iso2"],
+	defaultSort: [{ field: "id", direction: "asc" }],
+	filter: {
+		id: listFilter.number({ eq: true, in: true }),
+		iso2: listFilter.string({ eq: true, in: true }),
+		regionId: listFilter.number({ eq: true, in: true, isNull: true }),
+		subregionId: listFilter.number({ eq: true, in: true, isNull: true }),
+		flag: listFilter.boolean({ eq: true }),
+	},
+	params: { search: ListSearchSchema, include: GeoIncludeSchema },
+	defaultLimit: GEO_LIST_DEFAULT_LIMIT,
+});
+export const CountryListQuerySchema = countryListQuery.schema;
 export type CountryListQuery = z.output<typeof CountryListQuerySchema>;
+export type CountryListSortField = (typeof countryListQuery.sortable)[number];

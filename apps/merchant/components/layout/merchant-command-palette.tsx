@@ -4,6 +4,7 @@ import { isMerchantEnrollmentAllowedPath, useMerchantEnrollmentLock } from "@/li
 import { createMerchantNavHrefResolver } from "@/lib/navigation/resolve-nav-href";
 import { useOrganizationSlug } from "@/lib/org/use-organization-slug";
 import { useOrganizationPath } from "@/lib/org/use-organization-path";
+import { ORG_ROUTES } from "@/lib/routes";
 import { buildMerchantPaletteItems, renderMerchantPaletteIcon } from "@/lib/palette/nav-items";
 import { useAuthorization } from "@workspace/client/lib/auth/can";
 import { MERCHANT_CAPABILITY } from "@workspace/shared";
@@ -26,8 +27,8 @@ export function MerchantCommandPalette({ open: externalOpen, setOpen: externalSe
 	const { can } = useAuthorization();
 	const { isLocked: isEnrollmentLocked, disabledTooltip: enrollmentDisabledTooltip } = useMerchantEnrollmentLock();
 	const organizationSlug = useOrganizationSlug();
-	const settingsPath = useOrganizationPath("settings");
-	const rewardsPath = useOrganizationPath("rewards");
+	const accountPath = useOrganizationPath(ORG_ROUTES.account);
+	const rewardsPath = useOrganizationPath(ORG_ROUTES.rewards.list);
 	const resolveNavHref = React.useMemo(() => createMerchantNavHrefResolver(organizationSlug), [organizationSlug]);
 
 	const recentSearches = useMerchantCommandPaletteStore((state) => state.recentSearches);
@@ -89,19 +90,19 @@ export function MerchantCommandPalette({ open: externalOpen, setOpen: externalSe
 					title: "Account setup required",
 					description: enrollmentDisabledTooltip,
 				});
-				router.push(settingsPath);
+				router.push(accountPath);
 				return;
 			}
 			router.push(resolveNavHref(url));
 			closePalette();
 		},
-		[closePalette, enrollmentDisabledTooltip, isEnrollmentLocked, resolveNavHref, router, settingsPath],
+		[accountPath, closePalette, enrollmentDisabledTooltip, isEnrollmentLocked, resolveNavHref, router],
 	);
 
 	return (
 		<AppCommandPalette
-			open={externalOpen}
-			setOpen={externalSetOpen}
+			{...(externalOpen !== undefined ? { open: externalOpen } : {})}
+			{...(externalSetOpen !== undefined ? { setOpen: externalSetOpen } : {})}
 			title="Search Merchant Portal"
 			description="Navigate pages, pin shortcuts, and run quick actions"
 			placeholder="Search merchant portal pages and actions…"

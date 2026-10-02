@@ -13,6 +13,7 @@ import { AuthorizationCheckerService } from "../../authorization/services/author
 import { TrackAuthFlow } from "../decorators/track-auth-flow.decorator";
 import { UserRepository } from "../repositories/user.repository";
 import { AccountLockoutService } from "./account-lockout.service";
+import { AuthEventsService } from "./auth-events.service";
 import { CryptoService } from "./crypto.service";
 import { LoginVerificationService } from "./login-verification.service";
 import { TwoFactorService } from "./two-factor.service";
@@ -33,6 +34,8 @@ export class LoginService {
 		private readonly lockoutService: AccountLockoutService,
 		private readonly twoFactorService: TwoFactorService,
 		private readonly loginVerificationService: LoginVerificationService,
+		/** Read by `@TrackAuthFlow` to record the login outcome. */
+		private readonly authEvents: AuthEventsService,
 	) {}
 
 	@TrackAuthFlow({

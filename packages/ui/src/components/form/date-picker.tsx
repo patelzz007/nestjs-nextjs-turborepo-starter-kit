@@ -86,7 +86,12 @@ const DatePicker = React.forwardRef<HTMLButtonElement, DatePickerProps>(function
 				}
 			/>
 			<PopoverContent className="w-auto p-0" align="start">
-				<Calendar mode="single" selected={selectedDate} onSelect={handleSelect} disabled={isDateDisabled} defaultMonth={selectedDate} />
+				<Calendar
+					mode="single"
+					onSelect={handleSelect}
+					disabled={isDateDisabled}
+					{...(selectedDate === undefined ? {} : { selected: selectedDate, defaultMonth: selectedDate })}
+				/>
 			</PopoverContent>
 			{name !== undefined ? <input type="hidden" name={name} value={value ?? ""} readOnly /> : null}
 		</Popover>

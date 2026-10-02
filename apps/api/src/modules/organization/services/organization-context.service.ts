@@ -5,6 +5,7 @@ import { epochMs, UuidParamSchema, type OrganizationContextResponse, type Organi
 import { TenantTransactionService } from "../../../prisma/tenant-transaction.service";
 import { CedarPolicyEvaluatorService } from "../../authorization-cedar/services/cedar-policy-evaluator.service";
 import { mapOrganizationLocationToResponse } from "../utils/organization-location-mapper.util";
+import { mapMembershipToResponse } from "../utils/organization-membership-mapper.util";
 import { OrganizationAuditService } from "./organization-audit.service";
 
 interface ResolvedOrganizationContext {
@@ -68,28 +69,14 @@ export class OrganizationContextService {
 				},
 			);
 
-			if (row === null || row.memberships.length === 0) {
+			const membership = row?.memberships[0];
+			if (row === null || membership === undefined) {
 				throw new NotFoundException();
 			}
 
-			const membership = row.memberships[0];
-			const locationScopeType = membership.locationScopes.length === 0 ? "ALL_LOCATIONS" : membership.locationScopes[0].scopeType;
-			const locationIds = membership.locationScopes.flatMap((s) => (s.locationId === null ? [] : [s.locationId]));
-
 			const policyVersion = await this.cedar.getActivePolicyVersion(row.id);
 
-			const membershipResponse: OrganizationMembershipResponse = {
-				id: membership.id,
-				organizationId: membership.organizationId,
-				userId: membership.userId,
-				role: membership.role,
-				status: membership.status,
-				displayName: membership.displayName,
-				locationScopeType,
-				locationIds,
-				createdAt: epochMs(Number(membership.createdAt)),
-				updatedAt: epochMs(Number(membership.updatedAt)),
-			};
+			const membershipResponse: OrganizationMembershipResponse = mapMembershipToResponse(membership);
 
 			return {
 				organizationId: row.id,
@@ -137,7 +124,7 @@ export class OrganizationContextService {
 						slug: org.slug,
 						displayName: org.displayName,
 						lifecycleState: org.lifecycleState,
-						primaryLocationId: primary.id,
+						primaryLocationId: primary?.id ?? null,
 						createdAt: epochMs(Number(org.createdAt)),
 						updatedAt: epochMs(Number(org.updatedAt)),
 					},

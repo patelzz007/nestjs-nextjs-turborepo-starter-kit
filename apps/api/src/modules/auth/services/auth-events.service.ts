@@ -1,44 +1,24 @@
 import { Injectable } from "@nestjs/common";
-import { EventEmitter } from "node:events";
-import { Observable } from "rxjs";
 
-import { type AuthFlowEvent } from "@workspace/shared";
+import { AuthFlowEventSchema, type AuthFlowEvent } from "@workspace/shared";
 
-/** Event name used on the internal emitter for every auth flow completion. */
-export const AUTH_FLOW_EVENT = "auth.flow";
+import { PlatformOutboxService, type TelemetryRecordResult } from "../../../infrastructure/outbox/platform-outbox.service";
 
 /**
- * In-process pub/sub bridge between the auth flows and every observer.
- * Mirrors `EmailLogEventsService` — a tiny `node:events` EventEmitter with
- * per-process semantics and an rxjs `Observable` surface so subscribers can
- * never leak a listener.
+ * Records completed auth flows (signup, login, password reset, …) as
+ * `auth.flow` platform events in the transactional outbox.
  *
- * The auth services call {@link emitFlow} once per completed flow; observers
- * subscribe via {@link observeFlows}.
+ * An auth flow outcome is telemetry about the whole flow (status, error code,
+ * duration) — including failed attempts that write nothing — so it is recorded
+ * in its own awaited transaction rather than inside one domain transaction.
+ * The `@TrackAuthFlow` decorator calls {@link recordFlow} once per flow.
  */
 @Injectable()
 export class AuthEventsService {
-	private readonly emitter: EventEmitter = new EventEmitter();
+	public constructor(private readonly outbox: PlatformOutboxService) {}
 
-	/** Fire a single completed-flow signal to every subscriber. */
-	public emitFlow(event: AuthFlowEvent): void {
-		this.emitter.emit(AUTH_FLOW_EVENT, event);
-	}
-
-	/**
-	 * Cold Observable of completed-flow events. Subscribing attaches a
-	 * listener, unsubscribing removes it — so an adapter that shuts down can
-	 * never leak a listener on the shared emitter.
-	 */
-	public observeFlows(): Observable<AuthFlowEvent> {
-		return new Observable<AuthFlowEvent>((subscriber) => {
-			const handler = (event: AuthFlowEvent): void => {
-				subscriber.next(event);
-			};
-			this.emitter.on(AUTH_FLOW_EVENT, handler);
-			return (): void => {
-				this.emitter.off(AUTH_FLOW_EVENT, handler);
-			};
-		});
+	/** Durably record one completed flow. Never throws — see `PlatformOutboxService.recordTelemetry`. */
+	public async recordFlow(event: AuthFlowEvent): Promise<TelemetryRecordResult> {
+		return this.outbox.recordTelemetry({ type: "auth.flow", payload: AuthFlowEventSchema.parse(event) });
 	}
 }

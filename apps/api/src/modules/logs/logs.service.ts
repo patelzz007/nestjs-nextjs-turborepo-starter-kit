@@ -1,7 +1,11 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { setInterval, clearInterval } from "timers";
 
-import { LogServiceOptionsSchema, type LogServiceOptions } from "@workspace/shared";
+import { LogServiceOptionsSchema, MetadataValueSchema, type LogServiceOptions } from "@workspace/shared";
+
+import { RequestContextService, type RequestLogFields } from "../../common/context/request-context";
+import { redactSecrets } from "../../common/logging/redaction";
+import { TypedConfigService } from "../../config/typed-config.service";
 
 export type LogOptions = LogServiceOptions;
 
@@ -11,6 +15,10 @@ export type LogOptions = LogServiceOptions;
  * Wraps NestJS's built-in Logger and provides a consistent interface
  * for info, warn, and error log levels with metadata support.
  * Includes memory monitoring and leak detection capabilities.
+ *
+ * Every line written inside a request carries that request's `correlationId`
+ * (plus `userId` / `impersonatorId` / `organizationId` once known), read from
+ * the one request context (ADR 017) — callers never thread it through.
  */
 @Injectable()
 export class LogService {
@@ -22,9 +30,12 @@ export class LogService {
 	private readonly memoryLeakThresholdMb = 50; // Alert if growth > 50MB over baseline
 	private readonly sampleIntervalMs = 5000; // Sample every 5 seconds
 
-	constructor() {
-		// Start memory monitoring in production or when explicitly enabled
-		if (process.env.NODE_ENV === "production" || process.env.MEMORY_MONITORING === "true") {
+	public constructor(
+		config: TypedConfigService,
+		private readonly requestContext: RequestContextService,
+	) {
+		// Memory monitoring: always in production, opt-in elsewhere (MEMORY_MONITORING=true).
+		if (config.memoryMonitoring) {
 			this.startMemoryMonitoring();
 		}
 	}
@@ -43,11 +54,14 @@ export class LogService {
 		this.logger.warn(formatted, logContext);
 	}
 
-	public error(message: string, options?: LogOptions & { trace?: string }): void {
-		const parsed = options === undefined ? undefined : LogServiceOptionsSchema.parse(options);
+	public error(message: string, options?: LogOptions & { trace?: string | undefined }): void {
+		// `trace` is not part of the strict LogServiceOptionsSchema — split it off
+		// before validation (otherwise every call that passes a stack trace threw).
+		const { trace, ...logOptions } = options ?? {};
+		const parsed = options === undefined ? undefined : LogServiceOptionsSchema.parse(logOptions);
 		const logContext: string = parsed?.context ?? LogService.name;
 		const formatted: string = this.formatMessage(message, parsed);
-		this.logger.error(formatted, options?.trace, logContext);
+		this.logger.error(formatted, trace, logContext);
 	}
 
 	/**
@@ -171,18 +185,36 @@ export class LogService {
 	}
 
 	private formatMessage(message: string, options?: LogOptions): string {
-		if (options?.metadata === undefined && options?.userId === undefined) {
+		const requestFields: RequestLogFields | undefined = this.requestContext.logFields();
+		if (options?.metadata === undefined && options?.userId === undefined && requestFields === undefined) {
 			return message;
 		}
 
 		const parts: Record<string, string | number | boolean | null> = {};
 
-		if (options.userId !== undefined) {
+		// Request identifiers first; an explicit `userId` option wins.
+		if (requestFields !== undefined) {
+			parts.correlationId = requestFields.correlationId;
+			if (requestFields.userId !== undefined) {
+				parts.userId = requestFields.userId;
+			}
+			if (requestFields.impersonatorId !== undefined) {
+				parts.impersonatorId = requestFields.impersonatorId;
+			}
+			if (requestFields.organizationId !== undefined) {
+				parts.organizationId = requestFields.organizationId;
+			}
+		}
+
+		if (options?.userId !== undefined) {
 			parts.userId = options.userId;
 		}
 
-		if (options.metadata !== undefined) {
-			for (const [key, value] of Object.entries(options.metadata)) {
+		if (options?.metadata !== undefined) {
+			// Centralized redaction (common/logging/redaction.ts): secrets never
+			// reach the log line, whatever key casing/separator the caller used.
+			const redacted = MetadataValueSchema.parse(redactSecrets(options.metadata));
+			for (const [key, value] of Object.entries(redacted)) {
 				parts[key] = value;
 			}
 		}

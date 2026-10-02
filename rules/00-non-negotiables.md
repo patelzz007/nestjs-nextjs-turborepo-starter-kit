@@ -447,7 +447,7 @@ Relying on human reviewers to catch every instance of `any`/casts/missing return
 
 The authoritative ESLint configuration is in `13-ci-cd-and-quality-gates.md` ("Reference ESLint configuration"). Two details matter:
 
-- `@typescript-eslint/consistent-type-assertions` does **not** flag `as const` (const assertions are always allowed by that rule), so `as const`, `unknown`, `never` and `z.any()/z.unknown()/z.never()` are banned through explicit `no-restricted-syntax` selectors.
+- `@typescript-eslint/consistent-type-assertions` does **not** flag `as const` (const assertions are always allowed by that rule), so `as const` / `<const>` and `z.any()` / `z.unknown()` / `z.never()` are banned through explicit `no-restricted-syntax` selectors in `packages/eslint-config/base.js` §9. The `unknown` / `never` **type keywords** are not lint-enforced yet (catch clauses and `.catch()` callbacks legitimately need `unknown`, and `never` is allowed for exhaustiveness checks) — reviewers enforce them.
 - Every rule is `error`, never `warn`, and lint runs with `--max-warnings=0` — a warning is a failure here.
 
 A PR cannot merge with a lint error — this is enforced at the CI gate level (`13-ci-cd-and-quality-gates.md`), not as a suggestion a developer can dismiss locally. If you find yourself reaching for `// eslint-disable-next-line @typescript-eslint/no-explicit-any` to get past this, stop — that is the exact moment this document asks you to fix the underlying type instead, not silence the tool that's correctly telling you something is wrong.

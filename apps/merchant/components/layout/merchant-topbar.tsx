@@ -4,6 +4,7 @@ import { MerchantLocationSwitcher, MerchantLocationSwitcherMobile } from "@/comp
 import { MerchantNotificationsDropdown } from "@/components/layout/merchant-notifications-dropdown";
 import type { ServerUser } from "@/lib/auth/server";
 import { useOrganizationPath } from "@/lib/org/use-organization-path";
+import { ORG_ROUTES } from "@/lib/routes";
 import { useMerchantSessionProfile } from "@/lib/session/profile";
 import { useMerchantSidebarControl } from "@/components/layout/use-merchant-sidebar-control";
 import { useMerchantSidebarStore } from "@/stores/sidebar-store";
@@ -15,7 +16,7 @@ import { AppShellProfileDropdown } from "@workspace/ui/components/navigation/app
 import { AppShellTopbar, useCommandPaletteShortcut } from "@workspace/ui/components/navigation/app-shell-topbar";
 import { ShellThemeToggle } from "@workspace/ui/components/navigation/shell-theme-toggle";
 import { Button } from "@workspace/ui/components/form/button";
-import { Gift, KeyRound, LayoutDashboard, Settings } from "lucide-react";
+import { CircleUser, Gift, KeyRound, LayoutDashboard, Settings } from "lucide-react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -33,9 +34,10 @@ export function MerchantTopbar({ initialUser = null }: MerchantTopbarProps): Rea
 	const sessionProfile = useMerchantSessionProfile();
 	const { can } = useAuthorization();
 	const router = useRouter();
-	const settingsPath = useOrganizationPath("settings");
-	const dashboardPath = useOrganizationPath("dashboard");
-	const apiKeysPath = useOrganizationPath("api-keys");
+	const settingsPath = useOrganizationPath(ORG_ROUTES.settings.index);
+	const accountPath = useOrganizationPath(ORG_ROUTES.account);
+	const dashboardPath = useOrganizationPath(ORG_ROUTES.dashboard);
+	const apiKeysPath = useOrganizationPath(ORG_ROUTES.apiKeys);
 	const { isOpen: sidebarOpen } = useMerchantSidebarControl();
 	const menuTitle = useMerchantSidebarStore((state) => state.menu.header.title);
 	const [commandOpen, setCommandOpen] = React.useState<boolean>(false);
@@ -51,19 +53,30 @@ export function MerchantTopbar({ initialUser = null }: MerchantTopbarProps): Rea
 	}, [logout]);
 
 	const profileMenuItems = React.useMemo((): readonly { label: string; icon: React.ReactNode; onClick: () => void }[] => {
+		const accountItem = {
+			label: "Account",
+			icon: <CircleUser className="size-4" aria-hidden="true" />,
+			onClick: (): void => {
+				router.push(accountPath);
+			},
+		};
+
+		// The personal account is where enrollment is completed — it stays reachable while locked.
 		if (isEnrollmentLocked) {
-			return [];
+			return [accountItem];
 		}
 
-		const items: { label: string; icon: React.ReactNode; onClick: () => void }[] = [
-			{
+		const items: { label: string; icon: React.ReactNode; onClick: () => void }[] = [accountItem];
+
+		if (can(MERCHANT_CAPABILITY.viewDashboard)) {
+			items.push({
 				label: "Dashboard",
 				icon: <LayoutDashboard className="size-4" aria-hidden="true" />,
 				onClick: (): void => {
 					router.push(dashboardPath);
 				},
-			},
-		];
+			});
+		}
 
 		if (can(MERCHANT_CAPABILITY.manageApiKeys)) {
 			items.push({
@@ -76,7 +89,7 @@ export function MerchantTopbar({ initialUser = null }: MerchantTopbarProps): Rea
 		}
 
 		return items;
-	}, [apiKeysPath, can, dashboardPath, isEnrollmentLocked, router]);
+	}, [accountPath, apiKeysPath, can, dashboardPath, isEnrollmentLocked, router]);
 
 	const profileName = sessionProfile.isLoading && initialUser !== null ? initialUser.name : sessionProfile.fullName;
 	const profileEmail = sessionProfile.isLoading && initialUser !== null ? initialUser.email : sessionProfile.email;
@@ -109,13 +122,15 @@ export function MerchantTopbar({ initialUser = null }: MerchantTopbarProps): Rea
 					<ShellThemeToggle />
 				</div>
 
-				<div className="mx-1 hidden sm:mx-2 sm:block">
-					<Link href={settingsPath} aria-label="Settings">
-						<Button variant="ghost" size="icon" className="rounded-full">
-							<Settings className="size-5 text-muted-foreground" />
-						</Button>
-					</Link>
-				</div>
+				{isEnrollmentLocked ? null : (
+					<div className="mx-1 hidden sm:mx-2 sm:block">
+						<Link href={settingsPath} aria-label="Organization settings">
+							<Button variant="ghost" size="icon" className="rounded-full">
+								<Settings className="size-5 text-muted-foreground" />
+							</Button>
+						</Link>
+					</div>
+				)}
 
 				{profileEmail.length > 0 ? (
 					<div className="ml-1 md:ml-3">

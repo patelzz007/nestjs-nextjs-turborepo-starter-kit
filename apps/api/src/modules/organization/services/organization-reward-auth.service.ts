@@ -1,9 +1,10 @@
 import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
-import type { OrganizationRewardMembershipResponse } from "@workspace/shared";
-import { epochMs } from "@workspace/shared";
+import type { CapabilitySlug, OrganizationMembershipRole, OrganizationRewardMembershipResponse } from "@workspace/shared";
+import { epochMs, merchantRoleHasCapability, MerchantCapabilitySchema } from "@workspace/shared";
 
 import { TenantTransactionService } from "../../../prisma/tenant-transaction.service";
 import { CedarPolicyEvaluatorService } from "../../authorization-cedar/services/cedar-policy-evaluator.service";
+import { MERCHANT_CAPABILITY_CEDAR_ACTIONS } from "../constants/merchant-capability-cedar-actions";
 import { OrganizationAuditService } from "./organization-audit.service";
 import { OrganizationContextService } from "./organization-context.service";
 
@@ -13,6 +14,38 @@ export interface ResolvedOrganizationRewardContext {
 	readonly userId: string;
 	readonly membership: OrganizationRewardMembershipResponse;
 	readonly policyVersion: number;
+}
+
+/** The member a merchant capability is checked for — always resolved server-side, never from the request. */
+export interface OrganizationCapabilitySubject {
+	readonly userId: string;
+	readonly organizationId: string;
+	readonly role: OrganizationMembershipRole;
+}
+
+/** Tenant Cedar action guarding `capability`; throws for slugs no API action is guarded by (fail closed). */
+function resolveCedarAction(capability: CapabilitySlug): string {
+	const parsed = MerchantCapabilitySchema.safeParse(capability);
+	const cedarAction = parsed.success ? MERCHANT_CAPABILITY_CEDAR_ACTIONS[parsed.data] : null;
+	if (cedarAction === null) {
+		throw new ForbiddenException({
+			message: "Unknown reward hub capability",
+			error: "ORGANIZATION_CAPABILITY_UNKNOWN",
+			capability,
+		});
+	}
+	return cedarAction;
+}
+
+/** Baseline role gate (the table shared with the merchant app); tenant Cedar policies may only narrow it. */
+function requireRoleCapability(role: OrganizationMembershipRole, capability: CapabilitySlug): void {
+	if (!merchantRoleHasCapability(role, capability)) {
+		throw new ForbiddenException({
+			message: "Your organization role does not include this capability",
+			error: "ORGANIZATION_ROLE_CAPABILITY_REQUIRED",
+			capability,
+		});
+	}
 }
 
 @Injectable()
@@ -62,20 +95,38 @@ export class OrganizationRewardAuthService {
 		};
 	}
 
+	/**
+	 * The single merchant capability check: membership role table first (shared
+	 * with the merchant app, so the UI hides exactly what the API denies), then
+	 * the tenant Cedar policy for the capability's action (audited). Throws 403.
+	 */
+	public async requireMembershipCapability(subject: OrganizationCapabilitySubject, capability: CapabilitySlug): Promise<void> {
+		const cedarAction = resolveCedarAction(capability);
+		requireRoleCapability(subject.role, capability);
+		await this.requireCedarAction(subject.userId, subject.organizationId, cedarAction, "RewardHub", subject.organizationId, subject.role);
+	}
+
+	/** Resolves the caller's membership for `orgSlug` (uniform 404 for non-members), then {@link requireMembershipCapability}. */
+	public async requireCapabilityForSlug(userId: string, orgSlug: string, capability: CapabilitySlug): Promise<ResolvedOrganizationRewardContext> {
+		const resolved = await this.resolveOrganizationFromSlug(userId, orgSlug);
+		await this.requireMembershipCapability({ userId, organizationId: resolved.organizationId, role: resolved.membership.role }, capability);
+		return resolved;
+	}
+
 	public async requireCedarAction(
 		userId: string,
 		organizationId: string,
 		action: string,
 		resourceType: string,
 		resourceId: string,
-		membership: OrganizationRewardMembershipResponse,
+		membershipRole: OrganizationMembershipRole,
 	): Promise<void> {
 		const decision = await this.cedar.evaluate({
 			organizationId,
 			principal: `User::"${userId}"`,
 			action: `Action::"${action}"`,
 			resource: `${resourceType}::"${resourceId}"`,
-			membershipRole: membership.role,
+			membershipRole,
 			locationScopeType: "ALL_LOCATIONS",
 			locationIds: [],
 		});

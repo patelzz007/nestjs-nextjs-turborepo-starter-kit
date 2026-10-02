@@ -212,6 +212,8 @@ On **every authenticated request**, `AuthGuard` calls `AccessTokenStateService.a
 
 A short-lived in-process cache (30 seconds) avoids hitting the database on every request while still propagating revocations quickly.
 
+**Guests make no session calls.** The web app passes `sessionHint` (did the server see a session cookie — `hasServerSession`) to `AuthProvider`; without one it skips the on-mount `/auth/me` + `/auth/permissions` revalidation, which could only answer 401. Cross-tab sync and the post-login session sync are unaffected.
+
 **Logout-all bumps `tokenVersion`:** `POST /auth/logout-all` soft-deletes every refresh token **and** increments `tokenVersion`, so outstanding access tokens die immediately — not only after their 15-minute expiry.
 
 **Revoked refresh rejection:** `POST /auth/refresh` rejects refresh tokens whose database row has `isDeleted: true` with `401 REFRESH_TOKEN_REVOKED` before rotation logic runs. Token-theft detection also revokes all refresh rows and bumps `tokenVersion`.

@@ -1,10 +1,16 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import type { Organization, OrganizationMerchantProfile, PrismaClient } from "@prisma/client";
-import { JsonObjectSchema, buildMerchantSubmittedKybFields, type JsonObject, type MerchantKybProfileResponse, type MerchantKybSubmissionFieldsInput } from "@workspace/shared";
+import {
+	JsonObjectSchema,
+	MERCHANT_CAPABILITY,
+	buildMerchantSubmittedKybFields,
+	type JsonObject,
+	type MerchantKybProfileResponse,
+	type MerchantKybSubmissionFieldsInput,
+} from "@workspace/shared";
 
 import { OrganizationRewardAuthService } from "../../organization/services/organization-reward-auth.service";
 import { TenantTransactionService } from "../../../prisma/tenant-transaction.service";
-import { MerchantContextService } from "./merchant-context.service";
 import { RewardAuditLogRepository } from "../repositories/reward-audit-log.repository";
 import { MerchantKybDocumentService } from "./merchant-kyb-document.service";
 import { mapLifecycleToMerchantStatus } from "../utils/reward-mapper.util";
@@ -14,17 +20,15 @@ type TransactionClient = Omit<PrismaClient, "$connect" | "$disconnect" | "$on" |
 @Injectable()
 export class MerchantKybService {
 	public constructor(
-		private readonly merchantContext: MerchantContextService,
 		private readonly organizationRewardAuth: OrganizationRewardAuthService,
 		private readonly tenantTx: TenantTransactionService,
 		private readonly kybDocumentService: MerchantKybDocumentService,
 		private readonly auditLogRepository: RewardAuditLogRepository,
 	) {}
 
-	/** Owner-only: KYB holds the business's legal and identity details. */
+	/** `merchant:manage_verification` (OWNER-only in the role table): KYB holds the business's legal and identity details. */
 	public async getProfile(userId: string, orgSlug: string): Promise<MerchantKybProfileResponse> {
-		const resolved = await this.organizationRewardAuth.resolveOrganizationFromSlug(userId, orgSlug);
-		await this.merchantContext.requireOwnerRole(userId, resolved.organizationId, orgSlug);
+		const resolved = await this.organizationRewardAuth.requireCapabilityForSlug(userId, orgSlug, MERCHANT_CAPABILITY.manageVerification);
 
 		return this.tenantTx.withTenantTransaction(
 			{
@@ -38,8 +42,7 @@ export class MerchantKybService {
 	}
 
 	public async submitKyb(userId: string, orgSlug: string, input: MerchantKybSubmissionFieldsInput): Promise<MerchantKybProfileResponse> {
-		const resolved = await this.organizationRewardAuth.resolveOrganizationFromSlug(userId, orgSlug);
-		await this.merchantContext.requireOwnerRole(userId, resolved.organizationId, orgSlug);
+		const resolved = await this.organizationRewardAuth.requireCapabilityForSlug(userId, orgSlug, MERCHANT_CAPABILITY.manageVerification);
 
 		return this.tenantTx.withTenantTransaction(
 			{

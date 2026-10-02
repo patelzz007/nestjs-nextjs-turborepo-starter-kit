@@ -37,6 +37,19 @@ export interface RewardHubAdminInviteProvisionResult {
 	readonly expiresAt: number;
 }
 
+/**
+ * The organization is created with exactly one nested primary location in the
+ * same statement — its absence is an invariant violation, so fail the
+ * transaction (rolling back the whole provisioning) rather than continue.
+ */
+function requirePrimaryLocation<TLocation>(locations: readonly TLocation[]): TLocation {
+	const [primaryLocation] = locations;
+	if (primaryLocation === undefined) {
+		throw new Error("Organization was created without its primary location");
+	}
+	return primaryLocation;
+}
+
 @Injectable()
 export class OrganizationProvisioningService {
 	public constructor(private readonly tenantTx: TenantTransactionService) {}
@@ -107,7 +120,7 @@ export class OrganizationProvisioningService {
 					},
 				});
 
-				const primaryLocation = org.locations[0];
+				const primaryLocation = requirePrimaryLocation(org.locations);
 				return { organizationId: org.id, locationId: primaryLocation.id };
 			},
 		);
@@ -179,7 +192,7 @@ export class OrganizationProvisioningService {
 					include: { locations: true },
 				});
 
-				const primaryLocation = org.locations[0];
+				const primaryLocation = requirePrimaryLocation(org.locations);
 				const membership = await tx.organizationMembership.create({
 					data: {
 						organizationId: org.id,

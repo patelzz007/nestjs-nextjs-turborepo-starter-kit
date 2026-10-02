@@ -1,18 +1,14 @@
 "use client";
 
-import { organizationPath } from "@/lib/org/slug";
+import { resolveOrgHref, type AppPath } from "@/lib/routes";
 import { useOrganizationSlug } from "@/lib/org/use-organization-slug";
 
-/** Resolves an org-scoped merchant route from a menu-relative subpath. */
-export function useOrganizationPath(subpath = "dashboard"): string {
+/**
+ * Browser href for an org-relative route (`ORG_ROUTES.*`) in the active
+ * organization. Before the organization is known it falls back to the
+ * top-level entry page that resolves it server-side (see `resolveOrgHref`).
+ */
+export function useOrganizationPath(path: AppPath): AppPath {
 	const organizationSlug = useOrganizationSlug();
-
-	if (organizationSlug === undefined) {
-		if (subpath === "dashboard" || subpath === "") {
-			return "/";
-		}
-		return subpath.startsWith("/") ? subpath : `/${subpath}`;
-	}
-
-	return organizationPath(organizationSlug, subpath);
+	return resolveOrgHref(organizationSlug, path);
 }

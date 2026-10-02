@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import type { RewardNotification } from "@prisma/client";
 
-import type { RewardNotificationListQuery, RewardNotificationResponse } from "@workspace/shared";
+import type { RewardNotificationListQuery, RewardNotificationListResponse, RewardNotificationResponse } from "@workspace/shared";
 import { EpochMsSchema, JsonObjectSchema } from "@workspace/shared";
 
 import { RewardNotificationRepository } from "../repositories/reward-notification.repository";
@@ -10,12 +10,18 @@ import { RewardNotificationRepository } from "../repositories/reward-notificatio
 export class RewardNotificationService {
 	public constructor(private readonly notificationRepository: RewardNotificationRepository) {}
 
-	public async listForUser(userId: string, query: RewardNotificationListQuery): Promise<{ items: RewardNotificationResponse[]; unreadCount: number }> {
-		const { rows, unreadCount } = await this.notificationRepository.listForUser(userId, query);
+	/**
+	 * One feed page (newest first by default) plus the unread badge count; keyset-paginated via `nextCursor`.
+	 * The `GET /reward-notifications` payload is a feed page, not a `meta`-paginated table list.
+	 */
+	public async listForUser(userId: string, query: RewardNotificationListQuery): Promise<RewardNotificationListResponse> {
+		const { page, unreadCount } = await this.notificationRepository.listForUser(userId, query);
 
 		return {
-			items: rows.map((row) => this.map(row)),
+			items: page.items.map((row) => this.map(row)),
 			unreadCount,
+			nextCursor: page.nextCursor,
+			hasNext: page.hasNext,
 		};
 	}
 

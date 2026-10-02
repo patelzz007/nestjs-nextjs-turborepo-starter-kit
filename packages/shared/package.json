@@ -24,7 +24,6 @@
 		}
 	},
 	"dependencies": {
-		"@workspace/messaging": "workspace:*",
 		"zod": "4.6.2"
 	},
 	"devDependencies": {

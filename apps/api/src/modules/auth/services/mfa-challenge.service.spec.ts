@@ -1,15 +1,16 @@
 import { UnauthorizedException } from "@nestjs/common";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { JwtService } from "@nestjs/jwt";
 import { Test } from "@nestjs/testing";
 import { TwoFactorLoginChallengePurpose } from "@prisma/client";
 
-import { TypedConfigService } from "../../../config/typed-config.service";
 import { PrismaService } from "../../../prisma/prisma.service";
 import { AccountLockoutService } from "./account-lockout.service";
 
 import { MfaChallengeService } from "./mfa-challenge.service";
+import { TypedConfigService } from "../../../config/typed-config.service";
+import { createTestApiConfig, createTestTypedConfig } from "../../../../test/support/test-api-env";
 
 const mocks = vi.hoisted(() => ({
 	challengeCreate: vi.fn(),
@@ -59,12 +60,25 @@ describe("MfaChallengeService", () => {
 	const challengeId = "challenge-abc";
 	const userId = "user-123";
 	const now = Date.now();
+	/** Login challenges live 10 minutes (MfaChallengeService's CHALLENGE_TTL_MS). */
+	const CHALLENGE_TTL_MS = 10 * 60 * 1000;
 
 	beforeEach(async () => {
 		vi.clearAllMocks();
+		// Freeze the clock so epoch-ms timestamps written by the service are exact.
+		vi.spyOn(Date, "now").mockReturnValue(now);
 		mocks.recordFailedAttempt.mockResolvedValue(undefined);
 
-		service = new MfaChallengeService(new PrismaService(), new JwtService(), new TypedConfigService(), await createAccountLockoutService());
+		service = new MfaChallengeService(
+			new PrismaService(createTestTypedConfig()),
+			new JwtService(),
+			new TypedConfigService(createTestApiConfig()),
+			await createAccountLockoutService(),
+		);
+	});
+
+	afterEach(() => {
+		vi.restoreAllMocks();
 	});
 
 	describe("createLoginChallenge", () => {
@@ -81,7 +95,7 @@ describe("MfaChallengeService", () => {
 					clientType: "web",
 					deviceInfo: "Chrome",
 					ipAddress: "127.0.0.1",
-					expiresAt: expect.any(Number),
+					expiresAt: now + CHALLENGE_TTL_MS,
 				},
 				select: { id: true },
 			});
@@ -115,7 +129,7 @@ describe("MfaChallengeService", () => {
 			});
 			expect(mocks.challengeUpdateMany).toHaveBeenCalledWith({
 				where: { id: challengeId, consumedAt: null },
-				data: { consumedAt: expect.any(Number) },
+				data: { consumedAt: now },
 			});
 			expect(mocks.recordFailedAttempt).toHaveBeenCalledTimes(1);
 		});
@@ -129,7 +143,7 @@ describe("MfaChallengeService", () => {
 
 			expect(mocks.challengeUpdateMany).toHaveBeenCalledWith({
 				where: { id: challengeId, consumedAt: null },
-				data: { consumedAt: expect.any(Number) },
+				data: { consumedAt: now },
 			});
 		});
 	});

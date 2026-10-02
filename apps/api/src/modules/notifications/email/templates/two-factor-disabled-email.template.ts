@@ -21,9 +21,10 @@ export class TwoFactorDisabledEmailTemplate extends BaseEmailTemplate<TwoFactorS
 	}
 
 	public renderBodyHtml(context: EmailRenderContext): string {
-		return `
-        <p class="email-text" style="color: #334155; font-size: 15px; line-height: 1.7; margin: 0 0 20px 0;">Two-factor authentication was disabled on your <strong>${this.escape(context.appName)}</strong> account.</p>
-        <p class="email-muted" style="color: #64748b; font-size: 13px; line-height: 1.6; margin: 0;">If you did not make this change, reset your password and contact support immediately.</p>`;
+		return [
+			this.paragraph(`Two-factor authentication was turned ${this.strong("off")} for your ${this.strong(context.appName)} account. Signing in now needs only your password.`),
+			this.callout("Wasn't you?", "Reset your password and contact support immediately, then turn two-factor authentication back on."),
+		].join("");
 	}
 
 	public renderBodyText(context: EmailRenderContext): string {

@@ -1,5 +1,5 @@
 import { RewardHubBrowseView } from "@/components/rewardhub/browse/view";
-import { readPaginatedHasNext } from "@/lib/api-envelope";
+import { readPaginatedHasNext } from "@workspace/client/lib/api/envelope";
 import { createWebServerCaller } from "@/lib/web-server-api";
 import { ApiPaginatedMetaSchema, type RewardResponse } from "@workspace/shared";
 import * as React from "react";

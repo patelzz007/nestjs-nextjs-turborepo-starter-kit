@@ -42,6 +42,15 @@ const HELPER_DEFINE_PATTERN = /\bCREATE\s+(?:OR\s+REPLACE\s+)?FUNCTION\s+(?:[a-z
 /** Any `app_*(` call — the RLS helper namespace (policies, function bodies, GRANTs). */
 const HELPER_CALL_PATTERN = /\b(app_[a-z0-9_]+)\s*\(/g;
 
+/** `CREATE ROLE name` — records where a role is created. */
+const ROLE_DEFINE_PATTERN = /\bCREATE\s+ROLE\s+([a-z_][a-z0-9_]*)/gi;
+
+interface RoleToken {
+	readonly kind: "define" | "use";
+	readonly name: string;
+	readonly offset: number;
+}
+
 interface HelperToken {
 	readonly kind: "define" | "use";
 	readonly name: string;
@@ -128,7 +137,10 @@ function collectHelperTokens(sql: string): HelperToken[] {
 	const tokens: HelperToken[] = [];
 
 	for (const match of code.matchAll(HELPER_DEFINE_PATTERN)) {
-		tokens.push({ kind: "define", name: match[1].toLowerCase(), offset: match.index });
+		const helperName = match[1];
+		if (helperName !== undefined) {
+			tokens.push({ kind: "define", name: helperName.toLowerCase(), offset: match.index });
+		}
 	}
 
 	for (const match of code.matchAll(HELPER_CALL_PATTERN)) {
@@ -174,6 +186,83 @@ export function assertRlsHelperDependencies(files: readonly RlsPlanFile[]): void
 	}
 }
 
+function escapeRegExp(value: string): string {
+	return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * Role tokens in one file: `CREATE ROLE x` definitions and bare references to
+ * any role in `roleNames` (GRANT … TO x, SET ROLE x, …). Comments are ignored;
+ * a quoted mention such as `rolname = 'x'` (the existence check guarding a
+ * CREATE ROLE) is not a use.
+ */
+function collectRoleTokens(sql: string, roleNames: ReadonlySet<string>): RoleToken[] {
+	const code = stripSqlComments(sql);
+	const tokens: RoleToken[] = [];
+	const definitionOffsets = new Set<number>();
+
+	for (const match of code.matchAll(ROLE_DEFINE_PATTERN)) {
+		const rawName = match[1];
+		if (rawName === undefined) {
+			continue;
+		}
+		const name = rawName.toLowerCase();
+		const nameOffset = match.index + match[0].length - name.length;
+		definitionOffsets.add(nameOffset);
+		tokens.push({ kind: "define", name, offset: match.index });
+	}
+
+	for (const role of roleNames) {
+		const usePattern = new RegExp(`(?<![\\w'"])${escapeRegExp(role)}(?![\\w'"])`, "gi");
+		for (const match of code.matchAll(usePattern)) {
+			if (!definitionOffsets.has(match.index)) {
+				tokens.push({ kind: "use", name: role, offset: match.index });
+			}
+		}
+	}
+
+	return tokens.sort((a: RoleToken, b: RoleToken): number => a.offset - b.offset || (a.kind === "define" ? -1 : 1));
+}
+
+/**
+ * Asserts every role the plan creates is referenced only at or after its
+ * `CREATE ROLE`, walking files in apply order, and is created in exactly one
+ * file. On a fresh cluster a GRANT to a not-yet-created role aborts the apply
+ * with `role "…" does not exist` (roles are cluster-wide, so long-lived dev
+ * clusters never notice).
+ */
+export function assertRlsRoleDependencies(files: readonly RlsPlanFile[]): void {
+	const roleNames = new Set<string>();
+	for (const file of files) {
+		for (const match of stripSqlComments(file.sql).matchAll(ROLE_DEFINE_PATTERN)) {
+			const roleName = match[1];
+			if (roleName !== undefined) {
+				roleNames.add(roleName.toLowerCase());
+			}
+		}
+	}
+
+	const createdBy = new Map<string, string>();
+	for (const file of files) {
+		for (const token of collectRoleTokens(file.sql, roleNames)) {
+			if (token.kind === "define") {
+				const existing = createdBy.get(token.name);
+				if (existing !== undefined && existing !== file.path) {
+					throw new Error(`${file.path} creates role ${token.name} — already created in ${existing}. Each role must be created in exactly one file.`);
+				}
+				createdBy.set(token.name, file.path);
+				continue;
+			}
+			if (!createdBy.has(token.name)) {
+				throw new Error(
+					`${file.path} uses role ${token.name} at line ${String(lineOf(file.sql, token.offset))} before it is created. ` +
+						`A fresh cluster applies files in RLS_APPLY_ORDER order and would fail here. Create the role in an earlier file (prisma/rls/00-app-helpers.sql).`,
+				);
+			}
+		}
+	}
+}
+
 /** Asserts the registered plan and the files on disk are the same set. */
 export function assertPlanMatchesDisk(order: readonly string[], diskFiles: readonly string[]): void {
 	const orderSet = new Set(order);
@@ -194,7 +283,7 @@ export function assertPlanMatchesDisk(order: readonly string[], diskFiles: reado
 
 /**
  * Builds the validated apply plan for an apiDir: checks disk drift, then the
- * helper dependency order, and returns the absolute file paths in apply order.
+ * helper and role dependency order, and returns the absolute file paths in apply order.
  * Throws before any SQL runs if either check fails.
  */
 export function buildRlsApplyPlan(apiDir: string): string[] {
@@ -217,6 +306,7 @@ export function buildRlsApplyPlan(apiDir: string): string[] {
 
 	const files: RlsPlanFile[] = RLS_APPLY_ORDER.map((path: string): RlsPlanFile => ({ path, sql: readFileSync(resolve(apiDir, path), "utf8") }));
 	assertRlsHelperDependencies(files);
+	assertRlsRoleDependencies(files);
 
 	return RLS_APPLY_ORDER.map((path: string): string => resolve(apiDir, path));
 }

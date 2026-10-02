@@ -215,7 +215,7 @@ Counts from the audit (Aug 2026, refreshed): **0** `any`; **0** `as const` in UI
 ### Overview gallery / showcases
 
 88. `page.tsx` is a one-line wrapper. Move FAQ, demo rows, chart series, jump-nav into the **server page**; gallery receives props.
-89. `SectionCards` hardcoded stats → `cards` prop.
+89. ~~`SectionCards` hardcoded stats → `cards` prop.~~ Done: replaced by `PlatformSalesCards` (real `GET /admin/analytics/sales` data via the shared `SalesStatCards`).
 90. `ChartAreaInteractive` hardcoded `chartData` → props; drop `typeof value !== "string"`.
 91. `DataTableShowcase` owns DEMO_ROWS — page should own them.
 92. Combobox/Select/Alert/Toast/Accordion showcases: options and copy from page.

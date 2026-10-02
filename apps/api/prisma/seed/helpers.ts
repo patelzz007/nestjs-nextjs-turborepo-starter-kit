@@ -11,11 +11,14 @@ export const rand = <T>(arr: T[]): T => {
 	if (value === undefined) throw new Error("rand: unexpected undefined");
 	return value;
 };
-export const randInt = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min;
+export const randInt = (min: number, max: number): number => Math.floor(Math.random() * (max - min + 1)) + min;
+
+/** A random, non-network/non-broadcast-looking IPv4 address for seeded sessions and logs. */
+export const randomIpv4 = (): string => `${String(randInt(1, 254))}.${String(randInt(0, 255))}.${String(randInt(0, 255))}.${String(randInt(1, 254))}`;
 
 // Epoch-millisecond helpers (DB stores BigInt epoch ms).
-export const daysAgo = (n: number) => Date.now() - n * 86_400_000;
-export const daysFromNow = (n: number) => Date.now() + n * 86_400_000;
+export const daysAgo = (n: number): number => Date.now() - n * 86_400_000;
+export const daysFromNow = (n: number): number => Date.now() + n * 86_400_000;
 
 /** Safely get an array element using modulo cycling. Assumes the array is non-empty. */
 export const cycle = <T>(arr: T[], i: number): T => {

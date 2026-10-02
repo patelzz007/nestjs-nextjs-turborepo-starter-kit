@@ -16,18 +16,17 @@ export const CapabilitySlugSchema = z
 
 export type CapabilitySlug = z.output<typeof CapabilitySlugSchema>;
 
-export const CapabilityDefinitionSchema = z
-	.object({
-		id: z.string(),
-		slug: CapabilitySlugSchema,
-		scope: CapabilityScopeSchema,
-		label: z.string(),
-		description: z.string().nullable(),
-		groupName: z.string().nullable(),
-		sortOrder: z.number().int(),
-		isSystem: z.boolean(),
-	})
-	.strict();
+/** One capability catalog entry. Response schema: unknown keys are stripped, never rejected (ADR 022). */
+export const CapabilityDefinitionSchema = z.object({
+	id: z.string(),
+	slug: CapabilitySlugSchema,
+	scope: CapabilityScopeSchema,
+	label: z.string(),
+	description: z.string().nullable(),
+	groupName: z.string().nullable(),
+	sortOrder: z.number().int(),
+	isSystem: z.boolean(),
+});
 
 export type CapabilityDefinition = z.output<typeof CapabilityDefinitionSchema>;
 
@@ -81,3 +80,8 @@ export function withCapabilityToggled(catalogOrder: readonly CapabilitySlug[], s
 	}
 	return next;
 }
+
+/** `GET /capabilities` payload — the capability catalog. */
+export const CapabilityCatalogResponseSchema = z.array(CapabilityDefinitionSchema);
+
+export type CapabilityCatalogResponse = z.output<typeof CapabilityCatalogResponseSchema>;

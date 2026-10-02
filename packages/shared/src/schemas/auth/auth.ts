@@ -1,5 +1,7 @@
 import { z } from "zod";
 import { EnrollmentReasonSchema, SessionScopeSchema } from "./enrollment";
+import { LoginVerificationPendingResponseSchema } from "./login-verification";
+import { LoginTwoFactorPendingResponseSchema } from "./two-factor";
 import { EpochMsSchema } from "../api/common";
 import { OrganizationSlugSchema } from "../domain/organization/organization";
 import { VerifyEmailTokenParamSchema } from "../domain/platform/param-schemas";
@@ -57,6 +59,17 @@ export const AuthClientTypeSchema = z.enum(["web", "admin", "merchant"]);
 
 export type AuthClientType = z.output<typeof AuthClientTypeSchema>;
 
+/**
+ * `?client_type=` on the public auth endpoints — the fallback for callers that
+ * cannot set the `X-Client-Type` header (e.g. Swagger UI's "Try it out").
+ * Not strict: other query keys are ignored, exactly as before.
+ */
+export const AuthClientTypeQuerySchema = z.object({
+	client_type: AuthClientTypeSchema.optional().describe("Which frontend initiated the action (fallback for the X-Client-Type header)."),
+});
+
+export type AuthClientTypeQuery = z.output<typeof AuthClientTypeQuerySchema>;
+
 export const ResetPasswordSchema = z
 	.object({
 		token: z.string().min(1, "Reset token is required").meta({
@@ -85,17 +98,20 @@ export type ResendVerificationInput = z.output<typeof ResendVerificationSchema>;
 
 // ── Session ──────────────────────────────────────────────────────────────
 
-export const SessionSchema = z
-	.object({
-		id: z.string(),
-		deviceInfo: z.string().nullable(),
-		ipAddress: z.string().nullable(),
-		expiresAt: EpochMsSchema,
-		createdAt: EpochMsSchema,
-	})
-	.strict();
+export const SessionSchema = z.object({
+	id: z.string(),
+	deviceInfo: z.string().nullable(),
+	ipAddress: z.string().nullable(),
+	expiresAt: EpochMsSchema,
+	createdAt: EpochMsSchema,
+});
 
 export type Session = z.output<typeof SessionSchema>;
+
+/** `GET /auth/sessions` — the caller's active sessions. */
+export const SessionListResponseSchema = z.array(SessionSchema);
+
+export type SessionListResponse = z.output<typeof SessionListResponseSchema>;
 
 // ── Service-level schemas (not exposed to FE clients) ────────────────────
 
@@ -137,16 +153,14 @@ export const LoginRestrictedEnrollmentResponseSchema = z
 export type LoginRestrictedEnrollmentResponse = z.output<typeof LoginRestrictedEnrollmentResponseSchema>;
 
 /** Client-visible restricted enrollment result after cookies are set. */
-export const LoginRestrictedEnrollmentClientResponseSchema = z
-	.object({
-		requiresEnrollment: z.literal(true),
-		enrollmentReason: EnrollmentReasonSchema,
-		message: z.string(),
-		user: UserResponseSchema.optional(),
-		/** Present for merchant portal logins so the client can route to org-scoped settings. */
-		organizationSlug: OrganizationSlugSchema.optional(),
-	})
-	.strict();
+export const LoginRestrictedEnrollmentClientResponseSchema = z.object({
+	requiresEnrollment: z.literal(true),
+	enrollmentReason: EnrollmentReasonSchema,
+	message: z.string(),
+	user: UserResponseSchema.optional(),
+	/** Present for merchant portal logins so the client can route to org-scoped settings. */
+	organizationSlug: OrganizationSlugSchema.optional(),
+});
 
 export type LoginRestrictedEnrollmentClientResponse = z.output<typeof LoginRestrictedEnrollmentClientResponseSchema>;
 
@@ -165,89 +179,77 @@ export type RefreshResponse = z.output<typeof RefreshResponseSchema>;
 
 // ── Response Schemas ─────────────────────────────────────────────────────
 
-export const LoginResponseSchema = z
-	.object({
-		user: UserResponseSchema,
-	})
-	.strict();
+export const LoginResponseSchema = z.object({
+	user: UserResponseSchema,
+});
 
 export type LoginResponse = z.output<typeof LoginResponseSchema>;
 
-/** Client-visible login result after cookies are set (or 2FA / verification step required). */
+/**
+ * Client-visible login result after cookies are set (or 2FA / verification step required).
+ *
+ * The response contract of every login-like route (`/auth/login`, `/auth/verify-login`,
+ * `/auth/login/2fa`, `/auth/login/backup-code`): `SetAuthCookiesInterceptor` moves the
+ * tokens into httpOnly cookies, and parsing with this schema strips any token that
+ * would still be in the body.
+ *
+ * ORDER MATTERS. The variants share no common discriminator key, and response
+ * objects strip unknown keys, so `z.union` returns the FIRST option that
+ * matches and silently drops the fields of later ones. Every flag-carrying
+ * variant (`requiresEnrollment` / `requiresTwoFactor` / `requiresVerification`,
+ * each a required `true` literal) therefore comes BEFORE the plain `{ user }`
+ * success: the restricted-enrollment variant carries an optional `user` and
+ * would otherwise be swallowed by `LoginResponseSchema`. No flag variant can
+ * match another's payload (each requires its own literal flag).
+ */
 export const LoginClientResponseSchema = z.union([
-	LoginResponseSchema,
 	LoginRestrictedEnrollmentClientResponseSchema,
-	z
-		.object({
-			requiresTwoFactor: z.literal(true),
-			tempToken: z.string().min(1),
-			message: z.string(),
-		})
-		.strict(),
-	z
-		.object({
-			requiresVerification: z.literal(true),
-			verificationId: z.string().min(1),
-			message: z.string(),
-		})
-		.strict(),
+	LoginTwoFactorPendingResponseSchema,
+	LoginVerificationPendingResponseSchema,
+	LoginResponseSchema,
 ]);
 
 export type LoginClientResponse = z.output<typeof LoginClientResponseSchema>;
 
-export const SignupResponseSchema = z
-	.object({
-		message: z.string(),
-	})
-	.strict();
+export const SignupResponseSchema = z.object({
+	message: z.string(),
+});
 
 export type SignupResponse = z.output<typeof SignupResponseSchema>;
 
-export const RefreshResponseMessageSchema = z
-	.object({
-		message: z.string(),
-	})
-	.strict();
+export const RefreshResponseMessageSchema = z.object({
+	message: z.string(),
+});
 
 export type RefreshResponseMessage = z.output<typeof RefreshResponseMessageSchema>;
 
-export const LogoutResponseSchema = z
-	.object({
-		message: z.string(),
-	})
-	.strict();
+export const LogoutResponseSchema = z.object({
+	message: z.string(),
+});
 
 export type LogoutResponse = z.output<typeof LogoutResponseSchema>;
 
-export const LogoutAllResponseSchema = z
-	.object({
-		message: z.string(),
-	})
-	.strict();
+export const LogoutAllResponseSchema = z.object({
+	message: z.string(),
+});
 
 export type LogoutAllResponse = z.output<typeof LogoutAllResponseSchema>;
 
-export const ForgotPasswordResponseSchema = z
-	.object({
-		message: z.string(),
-	})
-	.strict();
+export const ForgotPasswordResponseSchema = z.object({
+	message: z.string(),
+});
 
 export type ForgotPasswordResponse = z.output<typeof ForgotPasswordResponseSchema>;
 
-export const ResetPasswordResponseSchema = z
-	.object({
-		message: z.string(),
-	})
-	.strict();
+export const ResetPasswordResponseSchema = z.object({
+	message: z.string(),
+});
 
 export type ResetPasswordResponse = z.output<typeof ResetPasswordResponseSchema>;
 
-export const ResendVerificationResponseSchema = z
-	.object({
-		message: z.string(),
-	})
-	.strict();
+export const ResendVerificationResponseSchema = z.object({
+	message: z.string(),
+});
 
 export type ResendVerificationResponse = z.output<typeof ResendVerificationResponseSchema>;
 
@@ -259,22 +261,18 @@ export const VerifyEmailSchema = z
 
 export type VerifyEmailInput = z.output<typeof VerifyEmailSchema>;
 
-export const VerifyEmailResponseSchema = z
-	.object({
-		message: z.string(),
-	})
-	.strict();
+export const VerifyEmailResponseSchema = z.object({
+	message: z.string(),
+});
 
 export type VerifyEmailResponse = z.output<typeof VerifyEmailResponseSchema>;
 
-export const ImpersonateResponseSchema = z
-	.object({
-		message: z.string(),
-		impersonating: z.literal(true),
-		originalUserId: z.string(),
-		user: UserResponseSchema,
-	})
-	.strict();
+export const ImpersonateResponseSchema = z.object({
+	message: z.string(),
+	impersonating: z.literal(true),
+	originalUserId: z.string(),
+	user: UserResponseSchema,
+});
 
 export type ImpersonateResponse = z.output<typeof ImpersonateResponseSchema>;
 
@@ -285,11 +283,9 @@ export const ImpersonateServiceResponseSchema = ImpersonateResponseSchema.extend
 
 export type ImpersonateServiceResponse = z.output<typeof ImpersonateServiceResponseSchema>;
 
-export const StopImpersonationResponseSchema = z
-	.object({
-		message: z.string(),
-	})
-	.strict();
+export const StopImpersonationResponseSchema = z.object({
+	message: z.string(),
+});
 
 export type StopImpersonationResponse = z.output<typeof StopImpersonationResponseSchema>;
 

@@ -8,15 +8,12 @@ import {
 	FileText,
 	FolderOpen,
 	Gift,
-	Grid,
 	Heart,
 	HelpCircle,
-	LayoutDashboard,
 	MapPin,
-	PieChart,
 	Search,
-	Settings,
 	TrendingUp,
+	UserCog,
 	UserPlus,
 	Users,
 	Wallet,
@@ -24,9 +21,7 @@ import {
 } from "lucide-react";
 
 export const WEB_MENU_ICON_MAP: Readonly<Record<string, LucideIcon>> = {
-	LayoutDashboard,
 	Search,
-	Grid,
 	MapPin,
 	TrendingUp,
 	FolderOpen,
@@ -41,8 +36,7 @@ export const WEB_MENU_ICON_MAP: Readonly<Record<string, LucideIcon>> = {
 	FileText,
 	Heart,
 	BarChart2,
-	PieChart,
-	Settings,
+	UserCog,
 	HelpCircle,
 	AlertCircle,
 };

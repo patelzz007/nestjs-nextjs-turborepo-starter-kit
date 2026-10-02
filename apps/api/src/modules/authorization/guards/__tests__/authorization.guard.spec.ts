@@ -5,15 +5,16 @@ import type { AccessTokenPayload, AuthorizationRequest, AuthorizationResult } fr
 
 import { accessToken, createHttpContext, testRequest, type TestHttpRequest, type TestRouteMetadata } from "../../../../../test/support/http-execution-context";
 
-import { PrismaService } from "../../../../prisma/prisma.service";
 import { AuthorizationAuditService } from "../../audit/authorization-audit.service";
 import { REQUIRED_PERMISSION_KEY, REQUIRED_PERMISSIONS_KEY, REQUIRED_ROLES_KEY } from "../../constants/authorization.constants";
 import { AUTHORIZE_KEY, self, type AuthorizationRequirement } from "../../decorators/authorize.decorator";
 import { AuthorizationException } from "../../exceptions/authorization.exception";
 import { AuthorizationAuditKernelService } from "../../kernel/authorization-audit-kernel.service";
-import { AuthorizationKernelService } from "../../kernel/authorization-kernel.service";
+import { TenantMembershipService } from "../../kernel/tenant-membership.service";
 import { AuthorizationContextResolver, type RequestTenantContext } from "../../services/authorization-context.resolver";
 import { AuthorizationGuard } from "../authorization.guard";
+import { createTestAuthorizationKernel, createTestPrisma, createTestSystemPrisma } from "../../../../../test/support/test-service-graph";
+import { RequestContextService, type RequestTenant } from "../../../../common/context/request-context";
 
 const mocks = vi.hoisted(() => ({
 	authorize: vi.fn(),
@@ -59,14 +60,18 @@ vi.mock("../../../../prisma/prisma.service", () => ({
 	},
 }));
 
+const requestContext = new RequestContextService();
+
 function createGuard(): AuthorizationGuard {
+	const prisma = createTestPrisma();
 	return new AuthorizationGuard(
 		new Reflector(),
-		new AuthorizationKernelService(),
-		new AuthorizationAuditKernelService(),
-		new AuthorizationAuditService(),
-		new AuthorizationContextResolver(),
-		new PrismaService(),
+		createTestAuthorizationKernel(prisma),
+		new AuthorizationAuditKernelService(createTestSystemPrisma()),
+		new AuthorizationAuditService(prisma),
+		new AuthorizationContextResolver(new TenantMembershipService(prisma)),
+		prisma,
+		requestContext,
 	);
 }
 
@@ -107,13 +112,25 @@ describe("AuthorizationGuard", () => {
 		await expect(createGuard().canActivate(context)).rejects.toBeInstanceOf(UnauthorizedException);
 	});
 
-	it("attaches the verified tenant context for RLS on every authenticated request", async () => {
-		mocks.resolve.mockResolvedValue({ verified: { organizationId: "org-a" }, requested: { organizationId: "org-a" } });
-		const { request, context } = contextFor(accessToken());
+	it("binds the verified tenant into the request context (for RLS) on every authenticated request", async () => {
+		mocks.resolve.mockResolvedValue({ verified: { organizationId: "org-a" }, requested: { organizationId: "org-a", locationId: "loc-forged" } });
+		const { context } = contextFor(accessToken());
 
-		await createGuard().canActivate(context);
+		const tenant: RequestTenant | undefined = await requestContext.run({ correlationId: "corr-ctx", ip: undefined, userAgent: undefined }, async () => {
+			await createGuard().canActivate(context);
+			return requestContext.current()?.tenant;
+		});
 
-		expect(request.authorizationContext).toEqual({ organizationId: "org-a" });
+		// Only the VERIFIED ids — a requested-but-unproven location never reaches the context.
+		expect(tenant).toEqual({ organizationId: "org-a", storeId: undefined, locationId: undefined });
+	});
+
+	it("audits decisions with the request context's correlation id, not a raw header", async () => {
+		const { context } = contextFor(accessToken(), { [REQUIRED_PERMISSION_KEY]: { action: "READ", resource: "ORDER" } });
+
+		await requestContext.run({ correlationId: "corr-from-context", ip: undefined, userAgent: undefined }, () => createGuard().canActivate(context));
+
+		expect(mocks.authorize).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ requestId: "corr-from-context" }));
 	});
 
 	it("propagates a forged tenant header rejection", async () => {
@@ -195,14 +212,14 @@ describe("AuthorizationGuard", () => {
 		};
 
 		it("ANY mode allows when one permission is allowed and audits it", async () => {
-			mocks.explain.mockImplementation(async (request: AuthorizationRequest) => result(request.resource === "PERMISSION" ? "ALLOW" : "DENY", request));
+			mocks.explain.mockImplementation((request: AuthorizationRequest) => Promise.resolve(result(request.resource === "PERMISSION" ? "ALLOW" : "DENY", request)));
 
 			await expect(createGuard().canActivate(contextFor(accessToken(), anyOf).context)).resolves.toBe(true);
 			expect(mocks.auditResult).toHaveBeenCalledWith(expect.objectContaining({ decision: "ALLOW" }), expect.anything());
 		});
 
 		it("ANY mode denies and audits every denial when nothing is allowed", async () => {
-			mocks.explain.mockImplementation(async (request: AuthorizationRequest) => result("DENY", request));
+			mocks.explain.mockImplementation((request: AuthorizationRequest) => Promise.resolve(result("DENY", request)));
 
 			await expect(createGuard().canActivate(contextFor(accessToken(), anyOf).context)).rejects.toBeInstanceOf(AuthorizationException);
 			expect(mocks.auditResult).toHaveBeenCalledTimes(2);

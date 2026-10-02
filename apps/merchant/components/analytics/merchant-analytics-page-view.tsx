@@ -1,10 +1,13 @@
 "use client";
 
 import { MerchantCapabilityGate } from "@/components/access/merchant-capability-gate";
+import { MerchantSalesSection } from "@/components/analytics/merchant-sales-section";
 import { MerchantLocationScopeBanner } from "@/components/layout/merchant-location-scope-banner";
-import { stubApiMeta, successEnvelope } from "@/lib/api-envelope";
+import { initialDataOption, stubApiMeta, successEnvelope } from "@workspace/client/lib/api/envelope";
 import { useActiveLocationFilter } from "@/lib/org/location-context";
+import { orgRoutes } from "@/lib/routes";
 import { useAuth } from "@workspace/client/lib/auth";
+import { useAuthorization } from "@workspace/client/lib/auth/can";
 import { MERCHANT_CAPABILITY, type AnalyticsMetric, type MerchantAnalyticsResponse } from "@workspace/shared";
 import { AnalyticsChartCard, AnalyticsChartLegendItem } from "@workspace/ui/components/display/analytics-chart-card";
 import { AnalyticsFunnel, type AnalyticsFunnelStep } from "@workspace/ui/components/display/analytics-funnel";
@@ -50,7 +53,7 @@ function formatMetricValue(metric: AnalyticsMetric, suffix?: string): string {
 
 export interface MerchantAnalyticsPageViewProps {
 	readonly orgSlug: string;
-	readonly initialAnalytics?: MerchantAnalyticsResponse;
+	readonly initialAnalytics?: MerchantAnalyticsResponse | undefined;
 }
 
 /** Analytics route — requires `merchant:view_analytics` (analytics endpoint); the query mounts only when allowed. */
@@ -64,15 +67,17 @@ export function MerchantAnalyticsPageView(props: MerchantAnalyticsPageViewProps)
 
 function MerchantAnalyticsPageViewContent({ orgSlug, initialAnalytics }: MerchantAnalyticsPageViewProps): React.JSX.Element {
 	const { api } = useAuth();
+	const { can } = useAuthorization();
 	const { locationId } = useActiveLocationFilter();
+	// The empty sales state links to API keys only for members who may create one (POST /orgs/:orgSlug/api-keys).
+	const apiKeysHref = can(MERCHANT_CAPABILITY.manageApiKeys) ? orgRoutes(orgSlug).apiKeys : undefined;
 
 	const initialQueryData = React.useMemo(() => (initialAnalytics !== undefined ? successEnvelope(initialAnalytics, stubApiMeta()) : undefined), [initialAnalytics]);
 
 	const analyticsQuery = api.organizations.analytics.useQuery(
 		{ orgSlug, locationId },
-		{
-			initialData: locationId === undefined ? initialQueryData : undefined,
-		},
+		// SSR data is for the unfiltered view only.
+		initialDataOption(locationId === undefined ? initialQueryData : undefined),
 	);
 
 	const analytics = analyticsQuery.data?.data;
@@ -104,79 +109,90 @@ function MerchantAnalyticsPageViewContent({ orgSlug, initialAnalytics }: Merchan
 
 	return (
 		<div className="space-y-8">
-			<AnalyticsPageHeader title="Analytics" description="Track your reward performance and customer engagement" />
+			<AnalyticsPageHeader title="Analytics" description="Track your sales, reward performance and customer engagement" />
 			<MerchantLocationScopeBanner />
 
-			<div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
-				{STAT_CARDS.map((stat) => {
-					const metric = analytics?.[stat.key];
+			<MerchantSalesSection sales={analytics?.sales} isLoading={isLoading} apiKeysHref={apiKeysHref} />
 
-					return (
-						<AnalyticsStatCard
-							key={stat.key}
-							label={stat.label}
-							icon={stat.icon}
-							accent={stat.accent}
-							value={metric !== undefined ? formatMetricValue(metric, stat.suffix) : undefined}
-							changePercent={metric?.changePercent ?? null}
-							isLoading={isLoading || metric === undefined}
-						/>
-					);
-				})}
-			</div>
+			<section aria-labelledby="merchant-rewards-analytics-heading" className="space-y-4">
+				<div className="space-y-1">
+					<h2 id="merchant-rewards-analytics-heading" className="text-lg font-semibold tracking-tight text-foreground">
+						Rewards & engagement
+					</h2>
+					<p className="text-sm text-muted-foreground">Claims, redemptions and referrals from your rewards.</p>
+				</div>
 
-			<div className="grid gap-6 lg:grid-cols-2">
-				<AnalyticsChartCard
-					title="Claims & Redemptions"
-					description="Weekly performance over the last 8 weeks"
-					isLoading={isLoading}
-					legend={
-						<>
-							<AnalyticsChartLegendItem label="Claims" colorClass="bg-chart-1" />
-							<AnalyticsChartLegendItem label="Redemptions" colorClass="bg-chart-2" />
-						</>
-					}>
-					<ChartContainer config={CLAIMS_CHART_CONFIG} className="aspect-auto h-[300px] w-full">
-						<AreaChart data={chartData}>
-							<CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-border/60" />
-							<XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={8} className="text-xs" />
-							<YAxis tickLine={false} axisLine={false} width={36} className="text-xs" />
-							<ChartTooltip content={<ChartTooltipContent />} />
-							<Area dataKey="claims" type="monotone" fill="var(--color-claims)" fillOpacity={0.18} stroke="var(--color-claims)" strokeWidth={2} stackId="1" />
-							<Area dataKey="redemptions" type="monotone" fill="var(--color-redemptions)" fillOpacity={0.18} stroke="var(--color-redemptions)" strokeWidth={2} stackId="2" />
-						</AreaChart>
-					</ChartContainer>
-				</AnalyticsChartCard>
+				<div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
+					{STAT_CARDS.map((stat) => {
+						const metric = analytics?.[stat.key];
 
-				<AnalyticsChartCard
-					title="Top Performing Rewards"
-					description="Claims and redemptions by reward"
-					isLoading={isLoading}
-					legend={
-						<>
-							<AnalyticsChartLegendItem label="Claims" colorClass="bg-chart-1" />
-							<AnalyticsChartLegendItem label="Redemptions" colorClass="bg-chart-2" />
-						</>
-					}>
-					<ChartContainer config={TOP_REWARDS_CHART_CONFIG} className="aspect-auto h-[300px] w-full">
-						<BarChart data={analytics?.topRewards ?? []} layout="vertical" margin={{ left: 4, right: 8 }}>
-							<CartesianGrid strokeDasharray="3 3" horizontal={false} className="stroke-border/60" />
-							<XAxis type="number" tickLine={false} axisLine={false} className="text-xs" />
-							<YAxis dataKey="title" type="category" width={108} tickLine={false} axisLine={false} className="text-xs" tickFormatter={formatYAxisTickLabel} />
-							<ChartTooltip content={<ChartTooltipContent />} />
-							<Bar dataKey="claims" fill="var(--color-claims)" name="Claims" radius={[0, 4, 4, 0]} />
-							<Bar dataKey="redemptions" fill="var(--color-redemptions)" name="Redemptions" radius={[0, 4, 4, 0]} />
-						</BarChart>
-					</ChartContainer>
-				</AnalyticsChartCard>
-			</div>
+						return (
+							<AnalyticsStatCard
+								key={stat.key}
+								label={stat.label}
+								icon={stat.icon}
+								accent={stat.accent}
+								{...(metric !== undefined ? { value: formatMetricValue(metric, stat.suffix) } : {})}
+								changePercent={metric?.changePercent ?? null}
+								isLoading={isLoading || metric === undefined}
+							/>
+						);
+					})}
+				</div>
 
-			<AnalyticsFunnel
-				title="Conversion Funnel"
-				description="Track how rewards flow from creation to redemption"
-				steps={funnelSteps}
-				isLoading={isLoading || analytics === undefined}
-			/>
+				<div className="grid gap-6 lg:grid-cols-2">
+					<AnalyticsChartCard
+						title="Claims & Redemptions"
+						description="Weekly performance over the last 8 weeks"
+						isLoading={isLoading}
+						legend={
+							<>
+								<AnalyticsChartLegendItem label="Claims" colorClass="bg-chart-1" />
+								<AnalyticsChartLegendItem label="Redemptions" colorClass="bg-chart-2" />
+							</>
+						}>
+						<ChartContainer config={CLAIMS_CHART_CONFIG} className="aspect-auto h-[300px] w-full">
+							<AreaChart data={chartData}>
+								<CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-border/60" />
+								<XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={8} className="text-xs" />
+								<YAxis tickLine={false} axisLine={false} width={36} className="text-xs" />
+								<ChartTooltip content={<ChartTooltipContent />} />
+								<Area dataKey="claims" type="monotone" fill="var(--color-claims)" fillOpacity={0.18} stroke="var(--color-claims)" strokeWidth={2} stackId="1" />
+								<Area dataKey="redemptions" type="monotone" fill="var(--color-redemptions)" fillOpacity={0.18} stroke="var(--color-redemptions)" strokeWidth={2} stackId="2" />
+							</AreaChart>
+						</ChartContainer>
+					</AnalyticsChartCard>
+
+					<AnalyticsChartCard
+						title="Top Performing Rewards"
+						description="Claims and redemptions by reward"
+						isLoading={isLoading}
+						legend={
+							<>
+								<AnalyticsChartLegendItem label="Claims" colorClass="bg-chart-1" />
+								<AnalyticsChartLegendItem label="Redemptions" colorClass="bg-chart-2" />
+							</>
+						}>
+						<ChartContainer config={TOP_REWARDS_CHART_CONFIG} className="aspect-auto h-[300px] w-full">
+							<BarChart data={analytics?.topRewards ?? []} layout="vertical" margin={{ left: 4, right: 8 }}>
+								<CartesianGrid strokeDasharray="3 3" horizontal={false} className="stroke-border/60" />
+								<XAxis type="number" tickLine={false} axisLine={false} className="text-xs" />
+								<YAxis dataKey="title" type="category" width={108} tickLine={false} axisLine={false} className="text-xs" tickFormatter={formatYAxisTickLabel} />
+								<ChartTooltip content={<ChartTooltipContent />} />
+								<Bar dataKey="claims" fill="var(--color-claims)" name="Claims" radius={[0, 4, 4, 0]} />
+								<Bar dataKey="redemptions" fill="var(--color-redemptions)" name="Redemptions" radius={[0, 4, 4, 0]} />
+							</BarChart>
+						</ChartContainer>
+					</AnalyticsChartCard>
+				</div>
+
+				<AnalyticsFunnel
+					title="Conversion Funnel"
+					description="Track how rewards flow from creation to redemption"
+					steps={funnelSteps}
+					isLoading={isLoading || analytics === undefined}
+				/>
+			</section>
 		</div>
 	);
 }

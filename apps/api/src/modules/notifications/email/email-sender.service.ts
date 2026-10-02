@@ -70,7 +70,8 @@ type SendFailureReason = "invalid-props" | "config" | "timeout" | "rate-limited"
  */
 @Injectable()
 export class EmailSenderService {
-	private readonly resend: Resend;
+	/** `null` when RESEND_API_KEY is unset — only allowed with EMAIL_MODE=log-only/noop (enforced at boot). */
+	private readonly resend: Resend | null;
 	private readonly fromAddress: string;
 	private readonly renderContext: EmailRenderContext;
 	/** Recipient → timestamps of recent sends (sliding window rate limit). */
@@ -83,7 +84,8 @@ export class EmailSenderService {
 		private readonly emailLogService: EmailLogService,
 		@Optional() private readonly emailQueue?: EmailQueueService,
 	) {
-		this.resend = new Resend(this.config.resendApiKey);
+		const apiKey: string | null = this.config.resendApiKey;
+		this.resend = apiKey === null ? null : new Resend(apiKey);
 		this.fromAddress = this.config.emailFromAddress;
 		this.renderContext = EmailRenderContextSchema.parse({
 			appName: this.config.appName,
@@ -193,10 +195,15 @@ export class EmailSenderService {
 		readonly subject: string;
 		readonly html: string;
 		readonly text: string;
-		readonly cc?: readonly string[];
-		readonly bcc?: readonly string[];
-		readonly replyTo?: string;
+		readonly cc?: readonly string[] | undefined;
+		readonly bcc?: readonly string[] | undefined;
+		readonly replyTo?: string | undefined;
 	}): Promise<string> {
+		// Unreachable in a valid deployment: EMAIL_MODE=send requires RESEND_API_KEY at boot.
+		const resend: Resend | null = this.resend;
+		if (resend === null) {
+			throw new Error("RESEND_API_KEY is not configured — set it, or use EMAIL_MODE=log-only / noop");
+		}
 		const maxAttempts: number = this.config.emailMaxAttempts;
 		const timeoutMs: number = this.config.emailTimeoutMs;
 
@@ -214,16 +221,16 @@ export class EmailSenderService {
 			// Timeout via Promise.race: Resend's send() takes no AbortSignal,
 			// so a hung network call is cut with a synthetic TimeoutError.
 			try {
-				const sendPromise: Promise<ResendSendResponse> = this.resend.emails
+				const sendPromise: Promise<ResendSendResponse> = resend.emails
 					.send({
 						from: this.fromAddress,
 						to: payload.to,
 						subject: payload.subject,
 						html: payload.html,
 						text: payload.text,
-						cc: payload.cc !== undefined && payload.cc.length > 0 ? [...payload.cc] : undefined,
-						bcc: payload.bcc !== undefined && payload.bcc.length > 0 ? [...payload.bcc] : undefined,
-						replyTo: payload.replyTo,
+						...(payload.cc !== undefined && payload.cc.length > 0 ? { cc: [...payload.cc] } : {}),
+						...(payload.bcc !== undefined && payload.bcc.length > 0 ? { bcc: [...payload.bcc] } : {}),
+						...(payload.replyTo === undefined ? {} : { replyTo: payload.replyTo }),
 					})
 					.then((response) => ResendSendResponseSchema.parse(response));
 				const result: ResendSendResponse = await Promise.race([sendPromise, rejectAfter<ResendSendResponse>(timeoutMs, new TimeoutError())]);

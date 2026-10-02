@@ -4,17 +4,18 @@ import { z } from "zod";
  * Props for one hydrated code block, serialised into the page at build time
  * and parsed back in the browser. The schema mirrors `CodeBlockLine` from
  * `@workspace/ui/components/display/code-block-highlight`, so what the build
- * highlighted is exactly what React hydrates. Optional fields use
- * `exactOptional()` (absent, never `undefined`) to match those types under
- * `exactOptionalPropertyTypes`.
+ * highlighted is exactly what React hydrates. Each schema mirrors its type's
+ * optionality under `exactOptionalPropertyTypes` (ADR 018): token and line
+ * fields are `key?: T | undefined` (`.optional()`), line-state fields are
+ * `key?: T` (`.exactOptional()`).
  */
 export const CodeBlockTokenSchema = z
 	.object({
 		content: z.string(),
-		color: z.string().exactOptional(),
-		colorDark: z.string().exactOptional(),
-		fontStyle: z.enum(["italic", "bold", "underline"]).exactOptional(),
-		word: z.boolean().exactOptional(),
+		color: z.string().optional(),
+		colorDark: z.string().optional(),
+		fontStyle: z.enum(["italic", "bold", "underline"]).optional(),
+		word: z.boolean().optional(),
 	})
 	.strict();
 
@@ -32,8 +33,8 @@ export const CodeBlockLineSchema = z
 		tokens: z.array(CodeBlockTokenSchema),
 		number: z.number().int(),
 		text: z.string(),
-		state: CodeBlockLineStateSchema.exactOptional(),
-		gutter: z.string().exactOptional(),
+		state: CodeBlockLineStateSchema.optional(),
+		gutter: z.string().optional(),
 	})
 	.strict();
 

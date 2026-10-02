@@ -1,7 +1,7 @@
 "use client";
 
-import { RewardCategoryVisual } from "@/components/rewardhub/detail/category-visual";
 import { RewardInventoryBar } from "@/components/rewardhub/detail/inventory-bar";
+import { RewardMerchantAvatar } from "@/components/rewardhub/shared/merchant-avatar";
 import type { RewardResponse } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/feedback/badge";
 import { buttonVariants } from "@workspace/ui/components/form/button";
@@ -10,6 +10,7 @@ import { format } from "date-fns";
 import { ArrowUpRight } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
+import { childPath, ROUTE_PREFIXES } from "@/lib/routes";
 
 export interface RewardListRowProps {
 	readonly reward: RewardResponse;
@@ -31,7 +32,7 @@ function buildMetaLine(reward: RewardResponse, expiryLabel: string): string {
 }
 
 /** Compact list row for browsing many consumer offers. */
-export function RewardListRow({ reward, detailPathPrefix = "/rewardhub" }: RewardListRowProps): React.JSX.Element {
+export function RewardListRow({ reward, detailPathPrefix = ROUTE_PREFIXES.rewardHubRewards }: RewardListRowProps): React.JSX.Element {
 	const expiryLabel = format(new Date(reward.expiryDate), "d MMM yyyy");
 	const percentLeft = reward.quantityTotal > 0 ? Math.round((reward.quantityRemaining / reward.quantityTotal) * 100) : 0;
 	const isLowStock = percentLeft > 0 && percentLeft <= 20;
@@ -44,9 +45,7 @@ export function RewardListRow({ reward, detailPathPrefix = "/rewardhub" }: Rewar
 				"group flex items-center gap-3.5 rounded-xl border border-border bg-card px-3.5 py-3 shadow-xs transition-[border-color,box-shadow] duration-200 motion-reduce:transition-none sm:gap-4 sm:px-4 sm:py-3.5",
 				isSoldOut ? "opacity-80" : "hover:border-primary/30 hover:shadow-sm",
 			)}>
-			<div className="flex size-10 shrink-0 items-center justify-center rounded-lg border border-border bg-secondary text-primary sm:size-11 sm:rounded-xl">
-				<RewardCategoryVisual category={reward.category} className="size-4 sm:size-[1.125rem]" />
-			</div>
+			<RewardMerchantAvatar reward={reward} size="md" />
 
 			<div className="min-w-0 flex-1">
 				<div className="flex min-w-0 items-center gap-2">
@@ -72,7 +71,7 @@ export function RewardListRow({ reward, detailPathPrefix = "/rewardhub" }: Rewar
 			</p>
 
 			<Link
-				href={`${detailPathPrefix}/${reward.id}`}
+				href={childPath(detailPathPrefix, reward.id)}
 				className={cn(
 					buttonVariants({ variant: isSoldOut ? "outline" : "default", size: "sm" }),
 					"h-9 shrink-0 gap-1.5 px-3 sm:px-3.5",

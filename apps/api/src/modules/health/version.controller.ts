@@ -1,21 +1,18 @@
 import { Controller, Get } from "@nestjs/common";
-import { ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
-import { API_DEPRECATED_VERSIONS, API_VERSION, API_VERSION_PREFIX, apiDocsPath, apiVersionPrefix, type ApiVersion } from "@workspace/shared";
+import { ApiOperation, ApiTags } from "@nestjs/swagger";
+import {
+	API_DEPRECATED_VERSIONS,
+	API_VERSION,
+	API_VERSION_PREFIX,
+	ApiVersionManifestSchema,
+	apiDocsPath,
+	apiVersionPrefix,
+	type ApiVersion,
+	type ApiVersionManifest,
+} from "@workspace/shared";
 
+import { ZodRawResponse } from "../../common/decorators/zod-response.decorators";
 import { Public } from "../auth/decorators/public.decorator";
-
-interface VersionManifestEntry {
-	readonly version: ApiVersion;
-	readonly sunsetAt?: string;
-}
-
-interface VersionManifest {
-	readonly current: ApiVersion;
-	readonly default: ApiVersion;
-	readonly supported: readonly VersionManifestEntry[];
-	readonly docs: string;
-	readonly prefix: string;
-}
 
 /**
  * `GET /version` — machine-readable API version manifest. UNVERSIONED by
@@ -27,6 +24,10 @@ interface VersionManifest {
  * Returns the current version, the full supported list (with sunset dates for
  * deprecated ones), and the docs/prefix locations so a client can switch its
  * pinned version without hardcoding anything.
+ *
+ * Sent RAW — no `{ success, data, meta }` envelope (`@ZodRawResponse`): its
+ * consumer is the client transport's 404 negotiation (`loadVersionManifest`
+ * in `packages/client`), which parses the body with `ApiVersionManifestSchema`.
  */
 @ApiTags("System")
 @Controller("version")
@@ -34,8 +35,8 @@ export class VersionController {
 	@Public()
 	@Get()
 	@ApiOperation({ summary: "API version manifest (current, supported, docs)" })
-	@ApiOkResponse({ description: "Version negotiation manifest" })
-	public getVersion(): VersionManifest {
+	@ZodRawResponse(ApiVersionManifestSchema, { description: "Version negotiation manifest" })
+	public getVersion(): ApiVersionManifest {
 		return {
 			current: API_VERSION,
 			default: API_VERSION,

@@ -14,11 +14,11 @@ import { usePathname, useRouter } from "next/navigation";
 import * as React from "react";
 
 import { useIsDesktop } from "@workspace/ui/hooks/use-mobile";
-import { buildSidebarView } from "@/lib/navigation/menu";
+import { buildSidebarView } from "@workspace/ui/lib/sidebar/menu-view";
 import { filterCompiledSidebarMenu } from "@/lib/navigation/filter-menu-by-capabilities";
 import { SIDEBAR_MENU } from "@/lib/navigation/sidebar-menu";
 import { resolvePinnedMenuItems } from "@/lib/navigation/pinned-items";
-import { ADMIN_ROUTE_AUTHORIZATION, filterSuperAdminOnlyMenu } from "@/lib/navigation/route-authorization";
+import { ADMIN_ROUTE_AUTHORIZATION, canAccessRoute, filterMenuByRouteAccess, type RouteAccessSession } from "@/lib/navigation/route-authorization";
 import { buildSearchableItems } from "@/lib/palette/search";
 import { useSessionPermissionsQuery } from "@/lib/session/capabilities";
 import { useSuperAdminStatus } from "@/lib/session/super-admin";
@@ -35,8 +35,9 @@ import { useCommandPaletteStore } from "@/stores/command-palette-store";
 import { useSidebarStore } from "@/stores/sidebar-store";
 import { SidebarPathSync } from "@workspace/client/lib/sidebar/sidebar-path-sync";
 import { CapabilitiesProvider } from "@workspace/client/lib/auth/can";
+import { createGrantedCapabilities, isCapabilityGranted } from "@workspace/client/lib/auth/permission-check";
 import type { CompiledSidebarMenuData } from "@workspace/client/lib/sidebar/sidebar-menu-schema";
-import type { SessionPermissionsResponse } from "@workspace/shared";
+import type { CapabilitySlug, SessionPermissionsResponse } from "@workspace/shared";
 import type { FooterAction, SidebarUser } from "@/lib/navigation/sidebar";
 
 const SIDEBAR_STORAGE = createNoopSidebarStorage();
@@ -56,9 +57,9 @@ export interface DashboardLayoutProps {
 	readonly children: React.ReactNode;
 	/** Optional notification counts keyed by compiled menu item id. */
 	readonly sidebarBadges?: Readonly<Record<string, string | number>>;
-	readonly initialSessionPermissions?: SessionPermissionsResponse;
+	readonly initialSessionPermissions?: SessionPermissionsResponse | undefined;
 	/** Server-evaluated feature flags; items/routes behind a disabled flag are hidden. */
-	readonly enabledFeatureFlags?: readonly string[];
+	readonly enabledFeatureFlags?: readonly string[] | undefined;
 }
 
 const NO_FEATURE_FLAGS: readonly string[] = [];
@@ -99,7 +100,7 @@ function ShellBreadcrumb(): React.JSX.Element {
 		<BreadcrumbTrail
 			items={status.kind === "ready" ? status.items : []}
 			status={status.kind}
-			errorMessage={status.kind === "error" ? status.message : undefined}
+			{...(status.kind === "error" ? { errorMessage: status.message } : {})}
 			maxItems={maxItems}
 			renderLink={renderLink}
 			onCopy={handleCopy}
@@ -148,13 +149,27 @@ export function DashboardLayout({
 		[menu],
 	);
 
+	// The facts the route guard decides with — the menu filter and every other
+	// link source below evaluate the very same rules, so they cannot disagree.
+	const routeSession = React.useMemo((): RouteAccessSession => {
+		const granted = createGrantedCapabilities(capabilities);
+		return {
+			isGranted: (permission: CapabilitySlug): boolean => isCapabilityGranted(granted, permission),
+			enabledFeatureFlags,
+			isSuperAdmin: superAdmin.isSuperAdmin,
+		};
+	}, [capabilities, enabledFeatureFlags, superAdmin.isSuperAdmin]);
+
 	// One authorized menu drives the sidebar, the command palette, and pinned
-	// favorites: `permission allowed AND feature enabled` (AND super admin for
-	// `@SuperAdminOnly` pages).
+	// favorites: `permission allowed AND feature enabled` (spec semantics of the
+	// capability filter), then every item whose page the route guard would
+	// deny is removed (`@SuperAdminOnly` pages, per-page rules).
 	const filteredMenu = React.useMemo(
-		() => filterSuperAdminOnlyMenu(filterCompiledSidebarMenu(displayMenu, capabilities, { enabledFeatureFlags }), ADMIN_ROUTE_AUTHORIZATION, superAdmin.isSuperAdmin),
-		[displayMenu, capabilities, enabledFeatureFlags, superAdmin.isSuperAdmin],
+		() => filterMenuByRouteAccess(filterCompiledSidebarMenu(displayMenu, capabilities, { enabledFeatureFlags }), ADMIN_ROUTE_AUTHORIZATION, routeSession),
+		[displayMenu, capabilities, enabledFeatureFlags, routeSession],
 	);
+
+	const canAccessPath = React.useCallback((href: string): boolean => canAccessRoute(ADMIN_ROUTE_AUTHORIZATION, href, routeSession), [routeSession]);
 
 	const searchableItems = React.useMemo(() => buildSearchableItems(filteredMenu), [filteredMenu]);
 
@@ -268,7 +283,7 @@ export function DashboardLayout({
 
 	return (
 		<CapabilitiesProvider capabilities={capabilities}>
-			<AuthorizedNavigationProvider searchableItems={searchableItems}>
+			<AuthorizedNavigationProvider searchableItems={searchableItems} canAccessRoute={canAccessPath}>
 				<SidebarProvider open={isOpen} onOpenChange={handleSidebarOpenChange} labels={DEFAULT_SIDEBAR_LABELS} storage={SIDEBAR_STORAGE} badges={sidebarBadges}>
 					<SidebarPathSync store={useSidebarStore} />
 					<Button type="button" variant="ghost" onClick={handleSkipToContent} className={SKIP_TO_CONTENT_CLASS}>

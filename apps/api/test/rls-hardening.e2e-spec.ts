@@ -41,7 +41,7 @@ describe("RLS hardening (integration)", () => {
 
 		for (const table of tables) {
 			await withRlsSession(pool, { userId: "user@example.com", organizationId: "", bypass: false }, async (client) => {
-				const result = await client.query(`SELECT COUNT(*)::int AS count FROM public.${table}`);
+				const result = await client.query<{ count: number }>(`SELECT COUNT(*)::int AS count FROM public.${table}`);
 				expect(result.rows[0]?.count).toBe(0);
 			});
 		}
@@ -63,14 +63,14 @@ describe("RLS hardening (integration)", () => {
 
 	it("allows MLK owner (ALL_LOCATIONS) to read terminals at every branch", async () => {
 		await withRlsSession(pool, { userId: REWARD_SEED_IDS.mlkOwnerUser, organizationId: ORGANIZATION_SEED_IDS.mlkOrganization, bypass: false }, async (client) => {
-			const katil = await client.query<{ terminal_id: string }>(`SELECT terminal_id FROM public.organization_terminals WHERE organization_id = $1 AND location_id = $2`, [
-				ORGANIZATION_SEED_IDS.mlkOrganization,
-				ORGANIZATION_SEED_IDS.mlkLocationKatil,
-			]);
-			const beruang = await client.query<{ terminal_id: string }>(`SELECT terminal_id FROM public.organization_terminals WHERE organization_id = $1 AND location_id = $2`, [
-				ORGANIZATION_SEED_IDS.mlkOrganization,
-				ORGANIZATION_SEED_IDS.mlkLocationBeruang,
-			]);
+			const katil = await client.query<{ terminalId: string }>(
+				`SELECT terminal_id AS "terminalId" FROM public.organization_terminals WHERE organization_id = $1 AND location_id = $2`,
+				[ORGANIZATION_SEED_IDS.mlkOrganization, ORGANIZATION_SEED_IDS.mlkLocationKatil],
+			);
+			const beruang = await client.query<{ terminalId: string }>(
+				`SELECT terminal_id AS "terminalId" FROM public.organization_terminals WHERE organization_id = $1 AND location_id = $2`,
+				[ORGANIZATION_SEED_IDS.mlkOrganization, ORGANIZATION_SEED_IDS.mlkLocationBeruang],
+			);
 			expect(katil.rowCount).toBeGreaterThan(0);
 			expect(beruang.rowCount).toBeGreaterThan(0);
 		});

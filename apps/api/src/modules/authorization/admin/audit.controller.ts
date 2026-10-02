@@ -1,73 +1,27 @@
-import type { PermissionAuditLog } from "@prisma/client";
-import { Controller, Get, Query } from "@nestjs/common";
-import { ApiOkResponse, ApiTags } from "@nestjs/swagger";
+import { Controller, Get } from "@nestjs/common";
+import { ApiTags } from "@nestjs/swagger";
+import { apiPath, AuditLogEntrySchema, AuditLogQuerySchema, type AuditLogEntry, type AuditLogQueryInput, type PaginatedServiceResult } from "@workspace/shared";
 
+import { ZodListQuery } from "../../../common/decorators/zod-request.decorators";
+import { ZodPaginatedResponse } from "../../../common/decorators/zod-response.decorators";
 import { RequirePermission } from "../../auth/decorators/require-permission.decorator";
-import { apiPath } from "@workspace/shared";
-import { PrismaService } from "../../../prisma/prisma.service";
-
-interface AuditQueryParams {
-	/** Page number (1-indexed). */
-	readonly page?: string;
-	/** Items per page. */
-	readonly limit?: string;
-	/** Filter by action type. */
-	readonly action?: string;
-	/** Filter by actor user ID. */
-	readonly actorId?: string;
-	/** Filter by target user ID. */
-	readonly targetUserId?: string;
-}
+import { PermissionAuditLogQueryService } from "./services/permission-audit-log-query.service";
 
 /**
- * Controller for querying authorization audit logs.
+ * Query authorization audit logs.
  *
- * All queries require `AUDIT_LOG:READ` permission.
+ * All queries require `AUDIT_LOG:READ` permission. The controller only
+ * validates and delegates — the query lives in `PermissionAuditLogRepository`.
  */
-/** One page of permission audit log entries. */
-interface AuditLogPage {
-	readonly items: readonly PermissionAuditLog[];
-	readonly total: number;
-	readonly page: number;
-	readonly limit: number;
-	readonly totalPages: number;
-}
-
 @Controller(apiPath("/admin/audit"))
 @ApiTags("Audit Log")
 export class AuditController {
-	public constructor(private readonly prisma: PrismaService) {}
+	public constructor(private readonly auditLogs: PermissionAuditLogQueryService) {}
 
 	@Get()
 	@RequirePermission("READ", "AUDIT_LOG")
-	@ApiOkResponse({ description: "Paginated audit log entries" })
-	public async list(@Query() query: AuditQueryParams): Promise<AuditLogPage> {
-		const page: number = Math.max(1, Number(query.page ?? "1"));
-		const limit: number = Math.min(100, Math.max(1, Number(query.limit ?? "20")));
-		const skip: number = (page - 1) * limit;
-
-		const where = {
-			...(query.action !== undefined ? { action: query.action } : {}),
-			...(query.actorId !== undefined ? { actorId: query.actorId } : {}),
-			...(query.targetUserId !== undefined ? { targetUserId: query.targetUserId } : {}),
-		};
-
-		const [items, total] = await Promise.all([
-			this.prisma.permissionAuditLog.findMany({
-				where,
-				orderBy: { createdAt: "desc" },
-				skip,
-				take: limit,
-			}),
-			this.prisma.permissionAuditLog.count({ where }),
-		]);
-
-		return {
-			items,
-			total,
-			page,
-			limit,
-			totalPages: Math.ceil(total / limit),
-		};
+	@ZodPaginatedResponse(AuditLogEntrySchema, { description: "Paginated audit log entries (newest first); pagination is in `meta`" })
+	public async list(@ZodListQuery(AuditLogQuerySchema) query: AuditLogQueryInput): Promise<PaginatedServiceResult<AuditLogEntry>> {
+		return this.auditLogs.list(query);
 	}
 }

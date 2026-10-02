@@ -51,7 +51,8 @@ export class AccountLockoutService {
 
 		await this.userRepo.update(user.id, {
 			failedLoginAttempts: { increment: 1 },
-			lockedUntil: shouldLock ? lockedUntil : undefined,
+			// Only write the lock when the threshold is crossed; otherwise leave the column untouched.
+			...(shouldLock ? { lockedUntil } : {}),
 		});
 
 		if (shouldLock) {

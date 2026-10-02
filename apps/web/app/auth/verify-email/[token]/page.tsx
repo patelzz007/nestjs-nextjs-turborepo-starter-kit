@@ -1,3 +1,4 @@
+import { verifyEmailPath } from "@/lib/routes";
 import { redirect } from "next/navigation";
 
 interface LegacyVerifyEmailPageProps {
@@ -7,5 +8,5 @@ interface LegacyVerifyEmailPageProps {
 /** Legacy path-style links (`/auth/verify-email/:token`) → query-param form. */
 export default async function LegacyWebVerifyEmailPage({ params }: LegacyVerifyEmailPageProps): Promise<React.ReactNode> {
 	const { token } = await params;
-	redirect(`/auth/verify-email?token=${encodeURIComponent(token)}`);
+	redirect(verifyEmailPath(token));
 }

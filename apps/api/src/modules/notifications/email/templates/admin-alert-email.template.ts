@@ -14,6 +14,7 @@ export class AdminAlertEmailTemplate extends BaseEmailTemplate<AdminAlertEmailPr
 		to: "ops@example.com",
 		title: "Webhook delivery failing",
 		message: "The Resend webhook has not delivered an event in the last 15 minutes.\n\nPlease check the dashboard and the delivery logs.",
+		action: { label: "Open admin panel", url: "https://admin.example.com/" },
 	};
 
 	public readonly key: string = "admin-alert";
@@ -29,24 +30,16 @@ export class AdminAlertEmailTemplate extends BaseEmailTemplate<AdminAlertEmailPr
 		return `${this.props.title} — action may be required on ${context.appName}.`;
 	}
 
-	public getCta(context: EmailRenderContext): CtaConfig | null {
-		return {
-			label: "Open Admin Panel",
-			href: this.buildUrl(context, "/"),
-		};
+	public override getCta(_context: EmailRenderContext): CtaConfig | null {
+		return this.props.action === undefined ? null : { label: this.props.action.label, href: this.props.action.url };
 	}
 
 	public renderBodyHtml(context: EmailRenderContext): string {
 		const paragraphs: readonly string[] = this.props.message.split(/\n{2,}/);
-		return `
-        <p class="email-text" style="color: #334155; font-size: 15px; line-height: 1.7; margin: 0 0 20px 0;">An automated alert from <strong>${this.escape(context.appName)}</strong>:</p>
-        <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%; margin: 0 0 20px 0;">
-          <tr>
-            <td class="email-chip" style="background: ${this.palette.chipBg}; border: 1px solid ${this.palette.chipBorder}; border-radius: 10px; padding: 18px 20px;">
-              ${paragraphs.map((paragraph: string): string => `<p class="email-text" style="color: #334155; font-size: 14px; line-height: 1.7; margin: 0 0 8px 0; white-space: pre-line;">${this.escape(paragraph)}</p>`).join("")}
-            </td>
-          </tr>
-        </table>`;
+		return [
+			this.paragraph(`An automated alert from ${this.strong(context.appName)}:`),
+			paragraphs.map((paragraph: string): string => this.callout(this.props.title, paragraph)).join(""),
+		].join("");
 	}
 
 	public renderBodyText(context: EmailRenderContext): string {

@@ -1,7 +1,7 @@
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
-import { RLS_APPLY_ORDER, assertPlanMatchesDisk, assertRlsHelperDependencies, buildRlsApplyPlan, type RlsPlanFile } from "./rls-apply-plan";
+import { RLS_APPLY_ORDER, assertPlanMatchesDisk, assertRlsHelperDependencies, assertRlsRoleDependencies, buildRlsApplyPlan, type RlsPlanFile } from "./rls-apply-plan.js";
 
 const apiDir = resolve(import.meta.dirname, "..");
 
@@ -24,7 +24,9 @@ describe("RLS apply plan", () => {
 			planFile("a.sql", "CREATE POLICY p ON t USING (app_owns(id));"),
 			planFile("b.sql", "CREATE FUNCTION app_owns(id text) RETURNS boolean LANGUAGE sql AS $$ SELECT true $$;"),
 		];
-		expect((): void => assertRlsHelperDependencies(plan)).toThrowError(/app_owns\(\).*before it is defined/s);
+		expect((): void => {
+			assertRlsHelperDependencies(plan);
+		}).toThrow(/app_owns\(\).*before it is defined/s);
 	});
 
 	it("accepts the same files once the helper-defining layer comes first", () => {
@@ -32,7 +34,9 @@ describe("RLS apply plan", () => {
 			planFile("a.sql", "CREATE FUNCTION app_owns(id text) RETURNS boolean LANGUAGE sql AS $$ SELECT true $$;"),
 			planFile("b.sql", "CREATE POLICY p ON t USING (app_owns(id));"),
 		];
-		expect((): void => assertRlsHelperDependencies(plan)).not.toThrow();
+		expect((): void => {
+			assertRlsHelperDependencies(plan);
+		}).not.toThrow();
 	});
 
 	it("rejects a helper defined in two different files", () => {
@@ -40,23 +44,70 @@ describe("RLS apply plan", () => {
 			planFile("a.sql", "CREATE FUNCTION app_owns(id text) RETURNS boolean LANGUAGE sql AS $$ SELECT true $$;"),
 			planFile("b.sql", "CREATE OR REPLACE FUNCTION app_owns(id text) RETURNS boolean LANGUAGE sql AS $$ SELECT true $$;"),
 		];
-		expect((): void => assertRlsHelperDependencies(plan)).toThrowError(/app_owns\(\).*exactly one file/s);
+		expect((): void => {
+			assertRlsHelperDependencies(plan);
+		}).toThrow(/app_owns\(\).*exactly one file/s);
 	});
 
 	it("ignores helper mentions inside SQL comments", () => {
 		const plan: RlsPlanFile[] = [planFile("notes.sql", "-- docs mention app_owns(id) and app_rls_bypass()\nCREATE TABLE t (id text);")];
-		expect((): void => assertRlsHelperDependencies(plan)).not.toThrow();
+		expect((): void => {
+			assertRlsHelperDependencies(plan);
+		}).not.toThrow();
 	});
 
 	it("rejects files on disk that are not registered in RLS_APPLY_ORDER", () => {
-		expect((): void => assertPlanMatchesDisk(["a.sql", "b.sql"], ["a.sql", "b.sql", "c.sql"])).toThrowError(/files on disk are missing from RLS_APPLY_ORDER: c\.sql/);
+		expect((): void => {
+			assertPlanMatchesDisk(["a.sql", "b.sql"], ["a.sql", "b.sql", "c.sql"]);
+		}).toThrow(/files on disk are missing from RLS_APPLY_ORDER: c\.sql/);
 	});
 
 	it("rejects plan entries whose files are missing from disk", () => {
-		expect((): void => assertPlanMatchesDisk(["a.sql", "b.sql"], ["b.sql"])).toThrowError(/lists files that do not exist: a\.sql/);
+		expect((): void => {
+			assertPlanMatchesDisk(["a.sql", "b.sql"], ["b.sql"]);
+		}).toThrow(/lists files that do not exist: a\.sql/);
 	});
 
 	it("accepts a plan that exactly matches disk", () => {
-		expect((): void => assertPlanMatchesDisk(["a.sql", "b.sql"], ["a.sql", "b.sql"])).not.toThrow();
+		expect((): void => {
+			assertPlanMatchesDisk(["a.sql", "b.sql"], ["a.sql", "b.sql"]);
+		}).not.toThrow();
+	});
+
+	it("rejects a role granted to before the file that creates it — the fresh-cluster bug", () => {
+		const plan: RlsPlanFile[] = [planFile("a.sql", "GRANT EXECUTE ON FUNCTION f() TO app_runtime;"), planFile("b.sql", "CREATE ROLE app_runtime NOLOGIN;")];
+		expect((): void => {
+			assertRlsRoleDependencies(plan);
+		}).toThrow(/uses role app_runtime at line 1 before it is created/);
+	});
+
+	it("accepts a guarded CREATE ROLE whose existence check quotes the role name", () => {
+		const plan: RlsPlanFile[] = [
+			planFile(
+				"a.sql",
+				"DO $$\nBEGIN\n  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'app_runtime') THEN\n    CREATE ROLE app_runtime NOLOGIN;\n  END IF;\nEND $$;\nGRANT app_runtime TO CURRENT_USER;",
+			),
+			planFile("b.sql", "GRANT USAGE ON SCHEMA public TO app_runtime;"),
+		];
+		expect((): void => {
+			assertRlsRoleDependencies(plan);
+		}).not.toThrow();
+	});
+
+	it("rejects a role created in two different files", () => {
+		const plan: RlsPlanFile[] = [planFile("a.sql", "CREATE ROLE app_runtime NOLOGIN;"), planFile("b.sql", "CREATE ROLE app_runtime NOLOGIN;")];
+		expect((): void => {
+			assertRlsRoleDependencies(plan);
+		}).toThrow(/creates role app_runtime — already created in a\.sql/);
+	});
+
+	it("ignores role mentions in comments and inside longer identifiers", () => {
+		const plan: RlsPlanFile[] = [
+			planFile("a.sql", "-- grants to app_runtime later\nCREATE TABLE app_runtime_log (id text);"),
+			planFile("b.sql", "CREATE ROLE app_runtime NOLOGIN;"),
+		];
+		expect((): void => {
+			assertRlsRoleDependencies(plan);
+		}).not.toThrow();
 	});
 });

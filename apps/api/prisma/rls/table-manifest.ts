@@ -7,12 +7,6 @@
  * 3. Run `pnpm db:migrate` and `pnpm db:check-rls-manifest`.
  */
 
-export {
-	RLS_BYPASS_ONLY_TABLES,
-	RLS_MANIFEST_PROFILES,
-	RLS_ORGANIZATION_LOCATION_TABLES,
-	RLS_ORGANIZATION_TENANT_TABLES,
-	RLS_OWNERSHIP_TABLES,
-	RLS_RBAC_CATALOG_TABLES,
-	type RlsManifestProfile,
-} from "./manifest-index";
+// The per-profile `RLS_*_TABLES` aliases are deprecated in manifest-index.ts;
+// read `RLS_MANIFEST_PROFILES.<profile>` instead.
+export { RLS_MANIFEST_PROFILES, type RlsManifestProfile } from "./manifest-index";

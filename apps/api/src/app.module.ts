@@ -1,16 +1,17 @@
 import { MiddlewareConsumer, Module, type DynamicModule, type NestApplicationOptions, type NestModule } from "@nestjs/common";
-import { APP_GUARD, APP_INTERCEPTOR } from "@nestjs/core";
+import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from "@nestjs/core";
 import { ScheduleModule } from "@nestjs/schedule";
 
+import { GlobalExceptionFilter } from "./common/errors/global-exception.filter";
 import { ResponseInterceptor } from "./common/interceptors/response.interceptor";
 import { PerformanceInterceptor } from "./common/interceptors/performance.interceptor";
-import { CorrelationContextModule } from "./common/context/correlation-context.module";
-import { CorrelationContextInterceptor } from "./common/context/correlation-context.interceptor";
-import { CorrelationIdMiddleware } from "./common/middleware/correlation-id.middleware";
+import { RequestContextModule } from "./common/context/request-context.module";
+import { RequestContextMiddleware } from "./common/middleware/request-context.middleware";
 import { RlsPreHandlerMiddleware } from "./common/middleware/rls-pre-handler.middleware";
+import { getApiConfig } from "./config/api-config";
+import type { ObserveConfig } from "./config/api-config.schema";
 import { ConfigModule } from "./config/config.module";
 import { JobsModule } from "./infrastructure/jobs/jobs.module";
-import { PlatformEventsModule } from "./infrastructure/outbox/platform-events.module";
 import { OutboxModule } from "./infrastructure/outbox/outbox.module";
 import { AppMessagingModule } from "./messaging/app-messaging.module";
 import { AuthorizationAdminModule } from "./modules/authorization/admin/authorization-admin.module";
@@ -42,22 +43,18 @@ import { PrismaModule } from "./prisma/prisma.module";
 import { RlsInterceptor } from "./common/interceptors/rls.interceptor";
 
 // ── Optional ObserveModule (ESM-compatible dynamic import) ──────────────────
-// Loaded only when OBSERVE_ENABLED=1 and credentials are set. Off by default in
-// dev — instrumentation + the agent worker add measurable boot overhead.
-const observeAppKey: string | undefined = process.env.OBSERVE_APP_KEY;
-const observeAppSecret: string | undefined = process.env.OBSERVE_APP_SECRET;
-const observeEnabled: boolean = Boolean(observeAppKey && observeAppSecret) && (process.env.NODE_ENV === "production" || process.env.OBSERVE_ENABLED === "1");
+// Loaded only when the validated config enables it (OBSERVE_ENABLED=1, or
+// production, with credentials set). Off by default in dev — instrumentation +
+// the agent worker add measurable boot overhead. The config was already
+// parsed (and validated) by main.ts before this module was imported.
+const observeConfig: ObserveConfig | null = getApiConfig().observability.observe;
 
 let observeImports: DynamicModule[] = [];
 export let ObserveInstrument: NestApplicationOptions["instrument"] | undefined = undefined;
 
-if (observeEnabled && observeAppKey !== undefined && observeAppSecret !== undefined) {
+if (observeConfig !== null) {
 	const { bootstrapObserve } = await import("./observe.bootstrap");
-	const observeBootstrap = bootstrapObserve({
-		appKey: observeAppKey,
-		appSecret: observeAppSecret,
-		serviceId: process.env.OBSERVE_SERVICE_ID ?? "freebuff-api",
-	});
+	const observeBootstrap = bootstrapObserve(observeConfig);
 	observeImports = observeBootstrap.imports;
 	ObserveInstrument = observeBootstrap.instrument;
 }
@@ -65,15 +62,13 @@ if (observeEnabled && observeAppKey !== undefined && observeAppSecret !== undefi
 @Module({
 	imports: [
 		ConfigModule,
-		CorrelationContextModule,
+		RequestContextModule,
 		AppMessagingModule.register(),
 		PrismaModule,
 		JobsModule,
 		OutboxModule,
-		PlatformEventsModule,
 		AuthorizationModule,
 		AuthorizationAdminModule,
-
 		ScheduleModule.forRoot(),
 		LogsModule,
 		HealthModule,
@@ -97,9 +92,10 @@ if (observeEnabled && observeAppKey !== undefined && observeAppSecret !== undefi
 		...observeImports,
 	],
 	providers: [
+		// One error envelope for every failure — docs/error-model.md, ADR 016.
 		{
-			provide: APP_INTERCEPTOR,
-			useClass: CorrelationContextInterceptor,
+			provide: APP_FILTER,
+			useClass: GlobalExceptionFilter,
 		},
 		{
 			provide: APP_INTERCEPTOR,
@@ -135,6 +131,8 @@ if (observeEnabled && observeAppKey !== undefined && observeAppSecret !== undefi
 })
 export class AppModule implements NestModule {
 	public configure(consumer: MiddlewareConsumer): void {
-		consumer.apply(RlsPreHandlerMiddleware, CorrelationIdMiddleware).forRoutes("*");
+		// Request context first (ADR 017): everything after it — including the
+		// RLS pre-handler scope and every guard — runs inside it.
+		consumer.apply(RequestContextMiddleware, RlsPreHandlerMiddleware).forRoutes("*");
 	}
 }

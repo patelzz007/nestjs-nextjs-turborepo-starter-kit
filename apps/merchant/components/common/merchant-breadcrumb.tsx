@@ -21,7 +21,7 @@ function MerchantBreadcrumbProvider({ children }: MerchantBreadcrumbProviderProp
 	const resolveTrail = React.useCallback((currentPathname: string) => resolveMerchantTrail(currentPathname, resolveHref), [resolveHref]);
 
 	return (
-		<BreadcrumbProvider pathname={pathname} revalidateKey={organizationSlug ?? ""} resolve={resolveTrail}>
+		<BreadcrumbProvider pathname={pathname} resolve={resolveTrail}>
 			{children}
 		</BreadcrumbProvider>
 	);

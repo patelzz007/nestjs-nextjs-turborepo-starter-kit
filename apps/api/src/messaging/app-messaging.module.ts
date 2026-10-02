@@ -2,9 +2,10 @@ import { DynamicModule, Module } from "@nestjs/common";
 
 import { registerMessagingInfrastructureModule, resolveMessagingOptions } from "@workspace/messaging/nest";
 
+import { getApiConfig } from "../config/api-config";
 import { OutboxQueueModule } from "../infrastructure/outbox/outbox-queue.module";
 
-import { APP_MESSAGING_CONFIG } from "./app-messaging.config";
+import { buildAppMessagingConfig } from "./app-messaging.config";
 
 /**
  * Application messaging entry point.
@@ -13,8 +14,9 @@ import { APP_MESSAGING_CONFIG } from "./app-messaging.config";
 @Module({})
 export class AppMessagingModule {
 	public static register(): DynamicModule {
-		const resolved = resolveMessagingOptions(APP_MESSAGING_CONFIG);
-		const messaging = registerMessagingInfrastructureModule(APP_MESSAGING_CONFIG);
+		const options = buildAppMessagingConfig(getApiConfig().messaging);
+		const resolved = resolveMessagingOptions(options);
+		const messaging = registerMessagingInfrastructureModule(options);
 		const imports = resolved.redisUrl !== undefined ? [messaging, OutboxQueueModule] : [messaging];
 
 		return {

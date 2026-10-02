@@ -1,9 +1,10 @@
-import { Body, Controller, Get, Param, Patch, Post, Query } from "@nestjs/common";
-import { ApiBearerAuth, ApiBody, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
+import { Controller, Get, HttpStatus, Patch, Post } from "@nestjs/common";
+import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { z } from "zod";
 
 import {
 	AdminKybUpdateSchema,
+	AdminSalesAnalyticsResponseSchema,
 	AdminOrganizationLocationCreateSchema,
 	AdminOrganizationLocationReviewPathInputSchema,
 	AdminOrganizationLocationReviewSchema,
@@ -11,19 +12,31 @@ import {
 	apiPath,
 	FileDownloadDispositionSchema,
 	UuidParamSchema,
+	AdminMerchantInviteCreatedResponseSchema,
+	EmailPreviewSchema,
+	RewardResponseListSchema,
+	RewardResponseSchema,
+	AdminLocationRequestResponseSchema,
+	MerchantOrgResponseSchema,
+	AdminMerchantDetailResponseSchema,
+	MerchantKybDocumentDownloadResponseSchema,
+	OkResponseSchema,
+	OrganizationLocationResponseSchema,
 } from "@workspace/shared";
-import { ZodValidationPipe } from "../../../common/pipes/zod-validation.pipe";
+import { ZodBody, ZodListQuery, ZodQuery, ZodParams } from "../../../common/decorators/zod-request.decorators";
+import { ZodPaginatedResponse, ZodResponse } from "../../../common/decorators/zod-response.decorators";
 import { RlsBypass } from "../../auth/decorators/rls-bypass.decorator";
 import { RequirePermission } from "../../auth/decorators/require-permission.decorator";
 import { GetUser } from "../../auth/decorators/get-user.decorator";
 import type { AccessTokenPayload } from "../../auth/services/token.service";
 
-import { AdminCreateMerchantInviteDto, AdminKybUpdateDto, AdminRejectRewardDto, RewardsEmptyBodyDto } from "../dtos/rewards.dto";
+import { RewardsEmptyBodyDto } from "../dtos/rewards.dto";
 import type { MerchantKybDocumentDownloadResponse } from "@workspace/shared";
 
 import { OrganizationLocationService } from "../../organization/services/organization-location.service";
 import { MerchantKybDocumentService } from "../services/merchant-kyb-document.service";
 import { RewardsAdminService } from "../services/rewards-admin.service";
+import { RewardsAnalyticsService } from "../services/rewards-analytics.service";
 
 @ApiTags("Rewards Admin")
 @ApiBearerAuth()
@@ -35,11 +48,10 @@ export class RewardsAdminInvitesController {
 	@RequirePermission("MANAGE", "MERCHANT_ORG")
 	@Post()
 	@ApiOperation({ summary: "Create merchant invite" })
-	@ApiBody({ type: AdminCreateMerchantInviteDto })
-	@ApiOkResponse({ description: "Invite created with token" })
+	@ZodResponse(AdminMerchantInviteCreatedResponseSchema, { status: HttpStatus.CREATED, description: "Invite created with token" })
 	public createInvite(
 		@GetUser() user: AccessTokenPayload,
-		@Body(new ZodValidationPipe(apiContract.rewardsAdmin.createInvite.input)) body: z.output<typeof apiContract.rewardsAdmin.createInvite.input>,
+		@ZodBody(apiContract.rewardsAdmin.createInvite.input) body: z.output<typeof apiContract.rewardsAdmin.createInvite.input>,
 	): ReturnType<RewardsAdminService["createMerchantInvite"]> {
 		return this.rewardsAdminService.createMerchantInvite(user.sub, body);
 	}
@@ -47,10 +59,9 @@ export class RewardsAdminInvitesController {
 	@RequirePermission("MANAGE", "MERCHANT_ORG")
 	@Post("preview-email")
 	@ApiOperation({ summary: "Preview merchant invite email with form data (does not send)" })
-	@ApiBody({ type: AdminCreateMerchantInviteDto })
-	@ApiOkResponse({ description: "Rendered invite email preview" })
+	@ZodResponse(EmailPreviewSchema, { status: HttpStatus.CREATED, description: "Rendered invite email preview" })
 	public previewInviteEmail(
-		@Body(new ZodValidationPipe(apiContract.rewardsAdmin.previewInviteEmail.input)) body: z.output<typeof apiContract.rewardsAdmin.previewInviteEmail.input>,
+		@ZodBody(apiContract.rewardsAdmin.previewInviteEmail.input) body: z.output<typeof apiContract.rewardsAdmin.previewInviteEmail.input>,
 	): ReturnType<RewardsAdminService["previewMerchantInviteEmail"]> {
 		return this.rewardsAdminService.previewMerchantInviteEmail(body);
 	}
@@ -66,7 +77,7 @@ export class RewardsAdminRewardsController {
 	@RequirePermission("MANAGE", "REWARD")
 	@Get("pending")
 	@ApiOperation({ summary: "List rewards pending moderation" })
-	@ApiOkResponse({ description: "Pending rewards" })
+	@ZodResponse(RewardResponseListSchema, { description: "Pending rewards" })
 	public listPendingRewards(): ReturnType<RewardsAdminService["listPendingRewards"]> {
 		return this.rewardsAdminService.listPendingRewards();
 	}
@@ -75,10 +86,10 @@ export class RewardsAdminRewardsController {
 	@Post(":rewardId/approve")
 	@ApiOperation({ summary: "Approve a pending reward (no body required)" })
 	@ApiBody({ type: RewardsEmptyBodyDto, required: false })
-	@ApiOkResponse({ description: "Approved reward" })
+	@ZodResponse(RewardResponseSchema, { status: HttpStatus.CREATED, description: "Approved reward" })
 	public approveReward(
 		@GetUser() user: AccessTokenPayload,
-		@Param(new ZodValidationPipe(apiContract.rewardsAdmin.approveReward.input)) params: { rewardId: string },
+		@ZodParams(apiContract.rewardsAdmin.approveReward.input) params: { rewardId: string },
 	): ReturnType<RewardsAdminService["approveReward"]> {
 		return this.rewardsAdminService.approveReward(user.sub, params.rewardId);
 	}
@@ -86,12 +97,11 @@ export class RewardsAdminRewardsController {
 	@RequirePermission("MANAGE", "REWARD")
 	@Post(":rewardId/reject")
 	@ApiOperation({ summary: "Reject a pending reward" })
-	@ApiBody({ type: AdminRejectRewardDto })
-	@ApiOkResponse({ description: "Reward returned to draft" })
+	@ZodResponse(RewardResponseSchema, { status: HttpStatus.CREATED, description: "Reward returned to draft" })
 	public rejectReward(
 		@GetUser() user: AccessTokenPayload,
-		@Param(new ZodValidationPipe(z.object({ rewardId: UuidParamSchema }).strict())) params: { rewardId: string },
-		@Body(new ZodValidationPipe(apiContract.rewardsAdmin.rejectReward.input)) body: z.output<typeof apiContract.rewardsAdmin.rejectReward.input>,
+		@ZodParams(z.object({ rewardId: UuidParamSchema }).strict()) params: { rewardId: string },
+		@ZodBody(apiContract.rewardsAdmin.rejectReward.input) body: z.output<typeof apiContract.rewardsAdmin.rejectReward.input>,
 	): ReturnType<RewardsAdminService["rejectReward"]> {
 		return this.rewardsAdminService.rejectReward(user.sub, params.rewardId, body);
 	}
@@ -107,9 +117,9 @@ export class RewardsAdminLocationRequestsController {
 	@RequirePermission("LIST", "MERCHANT_ORG")
 	@Get()
 	@ApiOperation({ summary: "List pending organization store location requests" })
-	@ApiOkResponse({ description: "Paginated location requests" })
+	@ZodPaginatedResponse(AdminLocationRequestResponseSchema, { description: "Paginated location requests" })
 	public listLocationRequests(
-		@Query(new ZodValidationPipe(apiContract.rewardsAdmin.listLocationRequests.input)) query: z.output<typeof apiContract.rewardsAdmin.listLocationRequests.input>,
+		@ZodListQuery(apiContract.rewardsAdmin.listLocationRequests.input) query: z.output<typeof apiContract.rewardsAdmin.listLocationRequests.input>,
 	): ReturnType<OrganizationLocationService["listAdminLocationRequests"]> {
 		return this.organizationLocations.listAdminLocationRequests(query);
 	}
@@ -129,9 +139,9 @@ export class RewardsAdminMerchantsController {
 	@RequirePermission("LIST", "MERCHANT_ORG")
 	@Get()
 	@ApiOperation({ summary: "List merchant organizations" })
-	@ApiOkResponse({ description: "Paginated merchant org list" })
+	@ZodPaginatedResponse(MerchantOrgResponseSchema, { description: "Paginated merchant org list" })
 	public listMerchants(
-		@Query(new ZodValidationPipe(apiContract.rewardsAdmin.listOrganizations.input)) query: z.output<typeof apiContract.rewardsAdmin.listOrganizations.input>,
+		@ZodListQuery(apiContract.rewardsAdmin.listOrganizations.input) query: z.output<typeof apiContract.rewardsAdmin.listOrganizations.input>,
 	): ReturnType<RewardsAdminService["listMerchants"]> {
 		return this.rewardsAdminService.listMerchants(query);
 	}
@@ -139,24 +149,22 @@ export class RewardsAdminMerchantsController {
 	@RequirePermission("LIST", "MERCHANT_ORG")
 	@Get(":organizationId")
 	@ApiOperation({ summary: "Get merchant organization detail for KYB review" })
-	@ApiOkResponse({ description: "Merchant org detail with KYB payload" })
-	public getMerchant(
-		@Param(new ZodValidationPipe(apiContract.rewardsAdmin.getOrganization.input)) params: { organizationId: string },
-	): ReturnType<RewardsAdminService["getMerchantDetail"]> {
+	@ZodResponse(AdminMerchantDetailResponseSchema, { description: "Merchant org detail with KYB payload" })
+	public getMerchant(@ZodParams(apiContract.rewardsAdmin.getOrganization.input) params: { organizationId: string }): ReturnType<RewardsAdminService["getMerchantDetail"]> {
 		return this.rewardsAdminService.getMerchantDetail(params.organizationId);
 	}
 
 	@RequirePermission("LIST", "MERCHANT_ORG")
 	@Get(":organizationId/documents/:documentId/download")
 	@ApiOperation({ summary: "Get a short-lived signed download URL for a merchant KYB document" })
-	@ApiOkResponse({ description: "Signed download URL or scan status" })
+	@ZodResponse(MerchantKybDocumentDownloadResponseSchema, { description: "Signed download URL or scan status" })
 	public downloadDocument(
-		@Param(new ZodValidationPipe(z.object({ organizationId: UuidParamSchema, documentId: UuidParamSchema }).strict()))
+		@ZodParams(z.object({ organizationId: UuidParamSchema, documentId: UuidParamSchema }).strict())
 		params: {
 			organizationId: string;
 			documentId: string;
 		},
-		@Query(new ZodValidationPipe(z.object({ disposition: FileDownloadDispositionSchema.optional() }).strict()))
+		@ZodQuery(z.object({ disposition: FileDownloadDispositionSchema.optional() }).strict())
 		query: {
 			disposition?: "inline" | "attachment";
 		},
@@ -167,11 +175,10 @@ export class RewardsAdminMerchantsController {
 	@RequirePermission("MANAGE", "MERCHANT_ORG")
 	@Patch(":organizationId/kyb")
 	@ApiOperation({ summary: "Update merchant KYB status" })
-	@ApiBody({ type: AdminKybUpdateDto })
-	@ApiOkResponse({ description: "KYB updated" })
+	@ZodResponse(OkResponseSchema, { description: "KYB updated" })
 	public async updateKyb(
-		@Param(new ZodValidationPipe(apiContract.rewardsAdmin.updateKyb.input)) params: { organizationId: string },
-		@Body(new ZodValidationPipe(AdminKybUpdateSchema)) body: z.output<typeof AdminKybUpdateSchema>,
+		@ZodParams(apiContract.rewardsAdmin.updateKyb.input) params: { organizationId: string },
+		@ZodBody(AdminKybUpdateSchema) body: z.output<typeof AdminKybUpdateSchema>,
 	): Promise<{ ok: true }> {
 		await this.rewardsAdminService.updateMerchantKyb(params.organizationId, body);
 		return { ok: true };
@@ -180,11 +187,11 @@ export class RewardsAdminMerchantsController {
 	@RequirePermission("MANAGE", "MERCHANT_ORG")
 	@Post(":organizationId/locations")
 	@ApiOperation({ summary: "Create an organization store location" })
-	@ApiOkResponse({ description: "Organization location created" })
+	@ZodResponse(OrganizationLocationResponseSchema, { status: HttpStatus.CREATED, description: "Organization location created" })
 	public createLocation(
 		@GetUser() user: AccessTokenPayload,
-		@Param(new ZodValidationPipe(apiContract.rewardsAdmin.getOrganization.input)) params: { organizationId: string },
-		@Body(new ZodValidationPipe(AdminOrganizationLocationCreateSchema)) body: z.output<typeof AdminOrganizationLocationCreateSchema>,
+		@ZodParams(apiContract.rewardsAdmin.getOrganization.input) params: { organizationId: string },
+		@ZodBody(AdminOrganizationLocationCreateSchema) body: z.output<typeof AdminOrganizationLocationCreateSchema>,
 	): ReturnType<OrganizationLocationService["createAdminLocation"]> {
 		return this.organizationLocations.createAdminLocation(user.sub, params.organizationId, body);
 	}
@@ -192,12 +199,31 @@ export class RewardsAdminMerchantsController {
 	@RequirePermission("MANAGE", "MERCHANT_ORG")
 	@Patch(":organizationId/locations/:locationId/review")
 	@ApiOperation({ summary: "Approve or reject an organization store location request" })
-	@ApiOkResponse({ description: "Organization location reviewed" })
+	@ZodResponse(OrganizationLocationResponseSchema, { description: "Organization location reviewed" })
 	public reviewLocation(
 		@GetUser() user: AccessTokenPayload,
-		@Param(new ZodValidationPipe(AdminOrganizationLocationReviewPathInputSchema)) params: { organizationId: string; locationId: string },
-		@Body(new ZodValidationPipe(AdminOrganizationLocationReviewSchema)) body: z.output<typeof AdminOrganizationLocationReviewSchema>,
+		@ZodParams(AdminOrganizationLocationReviewPathInputSchema) params: { organizationId: string; locationId: string },
+		@ZodBody(AdminOrganizationLocationReviewSchema) body: z.output<typeof AdminOrganizationLocationReviewSchema>,
 	): ReturnType<OrganizationLocationService["reviewAdminLocation"]> {
 		return this.organizationLocations.reviewAdminLocation(user.sub, params.organizationId, params.locationId, body);
+	}
+}
+
+@ApiTags("Rewards Admin")
+@ApiBearerAuth()
+@RlsBypass()
+@Controller(apiPath("/admin/analytics"))
+export class RewardsAdminAnalyticsController {
+	public constructor(private readonly analytics: RewardsAnalyticsService) {}
+
+	@RequirePermission("READ", "ANALYTICS")
+	@Get("sales")
+	@ApiOperation({ summary: "Platform-wide sales: paid POS bills, compared with the previous period, plus top merchants" })
+	@ZodResponse(AdminSalesAnalyticsResponseSchema, { description: "Platform sales analytics" })
+	public getSales(
+		@GetUser() user: AccessTokenPayload,
+		@ZodQuery(apiContract.rewardsAdmin.salesAnalytics.input) query: z.output<typeof apiContract.rewardsAdmin.salesAnalytics.input>,
+	): ReturnType<RewardsAnalyticsService["getAdminSalesAnalytics"]> {
+		return this.analytics.getAdminSalesAnalytics(user.sub, query);
 	}
 }

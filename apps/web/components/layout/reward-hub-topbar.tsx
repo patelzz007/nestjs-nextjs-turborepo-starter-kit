@@ -14,6 +14,7 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
+import { ROUTES } from "@/lib/routes";
 
 const CommandPalette = dynamic(() => import("@/components/layout/command-palette").then((module) => module.CommandPalette), { ssr: false });
 
@@ -42,14 +43,14 @@ export function RewardHubTopbar(): React.JSX.Element {
 				label: "Browse rewards",
 				icon: <Gift className="size-4" aria-hidden="true" />,
 				onClick: (): void => {
-					router.push("/rewardhub");
+					router.push(ROUTES.rewardHub.browse);
 				},
 			},
 			{
 				label: "My rewards",
 				icon: <Ticket className="size-4" aria-hidden="true" />,
 				onClick: (): void => {
-					router.push("/rewardhub/claims");
+					router.push(ROUTES.rewardHub.wallet);
 				},
 			},
 		],
@@ -82,10 +83,10 @@ export function RewardHubTopbar(): React.JSX.Element {
 					<ShellThemeToggle />
 				</div>
 
-				{/* Account settings need a session (no permission) — hidden for guests. */}
+				{/* Personal account settings need a session (no permission) — hidden for guests. */}
 				{isAuthenticated ? (
 					<div className="mx-1 hidden sm:mx-2 sm:block">
-						<Link href="/rewardhub/settings" aria-label="Settings">
+						<Link href={ROUTES.rewardHub.account} aria-label="Account settings">
 							<Button variant="ghost" size="icon" className="rounded-full">
 								<Settings className="size-5 text-muted-foreground" />
 							</Button>

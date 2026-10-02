@@ -114,7 +114,7 @@ Re-audited against `.cursorrules` after data-table refactor and admin-guard cons
 - [x] Shared `schemas/runtime/` — `json`, `caught-error`, `http-headers`, `prisma-query`, `primitives` (+ `JsonValueInput` for Prisma write helpers)
 - [x] Shared `schemas/domain/platform/events.ts` — `AuthFlowEvent`, `SessionActionEvent`, `ImpersonationActionEvent`, `EmailLogUpdatedEvent`
 - [x] Shared `schemas/email/email-templates.ts` — all seven template prop schemas + `EmailRenderContext`
-- [x] Swagger envelope factories — `createApiSuccessEnvelopeSchema` / `createApiSuccessArrayEnvelopeSchema` in `api-response.ts`; `response-wrapper.ts` delegates to shared
+- [x] Swagger envelope factories — `createApiSuccessEnvelopeSchema` / `createApiPaginatedEnvelopeSchema` in `api-response.ts`, used by the response decorators (ADR 022; `response-wrapper.ts` was removed in Phase C2)
 - [x] **Auth httpOnly cookies on login/refresh** — `LoginTokenFieldsSchema` must not use `.strict()` (login body includes `user`; refresh includes `message`); `SetAuthCookiesInterceptor` extracts tokens and strips them from JSON; spec in `set-auth-cookies.interceptor.spec.ts`
 - [x] **Prisma query event subscriber** — `subscribePrismaQueryEvents` calls native `$on` with correct `this`; `PrismaQuerySubscriberSchema` uses `z.custom` for `$on` (not `z.function` with `void` output — Prisma returns the client)
 - [x] **P2 UI kit (first slice)** — `packages/ui/README.md`, `field-state.ts` / `field-variants.ts`, forwardRef + CVA `state` on core form controls, z-index tokens (`z-overlay` / `z-popover` / `z-toast`), required `labels` on FormShell / AuthLayout / Pagination / NotFoundContent / LockoutCountdown, `ui-kit-contract.test.ts`; app call sites in `apps/web`, `apps/admin`, `packages/client`
@@ -229,7 +229,7 @@ pnpm db:reset        # reset + rls + seed (from apps/api)
 **Intentionally still in API (not portable to shared):**
 
 - `common/utils/prisma-json.ts` — Prisma-specific `z.custom<Prisma.InputJsonValue>`
-- `common/dto/response-wrapper.ts` — thin NestJS `createZodDto` wrapper (schemas live in shared factories)
+- `common/decorators/zod-response.decorators.ts` — `@ZodResponse` / `@ZodPaginatedResponse` / `@ZodRawResponse` (schemas live in shared; replaced `response-wrapper.ts` in Phase C2)
 - `*.spec.ts` — local test fixtures
 
 ### Type safety — schema vs type consumption (apps)
@@ -294,7 +294,7 @@ pnpm db:reset        # reset + rls + seed (from apps/api)
 | [x] Admin access guard | `admin-access.guard.ts`, `admin-access.decorator.ts`, `utils/admin-access.ts` — replaces `backup-admin.guard.ts`, inline checks in `telescope-admin.guard.ts` / `super-admin.guard.ts`, and `backup.controller.ts` `requireAdminAccessToken` |
 | [x] `secureEquals` | `common/utils/secure-equals.ts` — replaces private copies in `auth.guard.ts`, `telescope-admin.guard.ts` |
 | [x] `ThrownErrorSchema` for errors | `rls-pool.ts`, `backup-scheduler.service.ts`, `backup.service.ts` | Shared `schemas/runtime/primitives.ts` |
-| [x] Thin Swagger DTO wrappers | `apps/api/src/common/dto/response-wrapper.ts` | Envelope shape in shared; wrapper only calls `createZodDto` |
+| [x] Response contracts | `apps/api/src/common/decorators/zod-response.decorators.ts` | Envelope shape in shared; one decorator documents + enforces each response (ADR 022) |
 
 ---
 
@@ -312,7 +312,7 @@ pnpm db:reset        # reset + rls + seed (from apps/api)
 | [x] Boundary schemas (new) | `http-headers.ts` | `RequestLikeSchema`, `HeadersRecordSchema`, `RouteParamsSchema`, `OptionalStringHeaderSchema`, `ForwardedForHeaderSchema` — eliminate all `typeof` guards at HTTP boundaries |
 | [x] Boundary schemas for request parsing | `http-headers.ts` | `RequestLikeSchema`, `HeadersRecordSchema`, `RouteParamsSchema`, `OptionalStringHeaderSchema`, `ForwardedForHeaderSchema` — replace all `typeof` guards at HTTP boundaries |
 | [x] Domain events + email template props | `domain/events.ts`, `email/email-templates.ts` | Event bus + seven email templates |
-| [x] Swagger envelope factories | `createApiSuccessEnvelopeSchema`, `createApiSuccessArrayEnvelopeSchema` | `api-response.ts`; `response-wrapper.ts` is a thin Nest wrapper |
+| [x] Swagger envelope factories | `createApiSuccessEnvelopeSchema`, `createApiPaginatedEnvelopeSchema` | `api-response.ts`; consumed by the response decorators and the shared contract (`singleResponse` / `paginatedResponse`) |
 | [x] `JsonValueInput` | `schemas/runtime/json.ts` | Prisma JSON write helpers type params without `z.input<typeof …>` in API |
 
 ### `packages/client`

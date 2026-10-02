@@ -13,7 +13,8 @@ export function mapMembershipLocationScope(membership: MembershipWithScopes): {
 	readonly locationScopeType: OrganizationMembershipResponse["locationScopeType"];
 	readonly locationIds: string[];
 } {
-	const locationScopeType = membership.locationScopes.length === 0 ? "ALL_LOCATIONS" : membership.locationScopes[0].scopeType;
+	// No scope rows means the membership spans every location.
+	const locationScopeType = membership.locationScopes[0]?.scopeType ?? "ALL_LOCATIONS";
 	const locationIds = membership.locationScopes.flatMap((scope) => (scope.locationId === null ? [] : [scope.locationId]));
 
 	return { locationScopeType, locationIds };

@@ -32,41 +32,43 @@ describe("isRestrictedSession", () => {
 });
 
 describe("getEnrollmentRedirectPath", () => {
-	it("returns web settings for the web app", () => {
-		expect(getEnrollmentRedirectPath("web", "mfa_enrollment")).toBe("/rewardhub/settings");
+	it("sends the web app to its account page (inside the /rewardhub shell)", () => {
+		expect(getEnrollmentRedirectPath("web", "mfa_enrollment")).toBe("/rewardhub/account");
 	});
 
-	it("returns org-scoped settings for merchant when organization slug is known", () => {
-		expect(getEnrollmentRedirectPath("merchant", "email_verification", "brew-bean-kl")).toBe("/orgs/brew-bean-kl/settings");
+	it("sends merchant to the org-scoped account page when the organization slug is known", () => {
+		expect(getEnrollmentRedirectPath("merchant", "email_verification", "brew-bean-kl")).toBe("/orgs/brew-bean-kl/account");
 	});
 
-	it("returns /settings fallback for merchant without organization slug", () => {
-		expect(getEnrollmentRedirectPath("merchant", "email_verification")).toBe("/settings");
+	it("sends merchant without a slug to /account, which resolves the organization server-side", () => {
+		expect(getEnrollmentRedirectPath("merchant", "email_verification")).toBe("/account");
 	});
 
-	it("returns /settings for admin apps", () => {
-		expect(getEnrollmentRedirectPath("admin", "mfa_enrollment")).toBe("/settings");
+	it("sends admin to /account", () => {
+		expect(getEnrollmentRedirectPath("admin", "mfa_enrollment")).toBe("/account");
 	});
 });
 
 describe("isEnrollmentAllowedPath", () => {
-	it("allows verify-email, login, and settings routes", () => {
+	it("allows verify-email, login, and the personal account pages", () => {
 		expect(isEnrollmentAllowedPath("/auth/verify-email")).toBe(true);
 		expect(isEnrollmentAllowedPath("/auth/verify-email/token")).toBe(true);
 		expect(isEnrollmentAllowedPath("/auth/login")).toBe(true);
-		expect(isEnrollmentAllowedPath("/rewardhub/settings")).toBe(true);
-		expect(isEnrollmentAllowedPath("/settings/security")).toBe(true);
+		expect(isEnrollmentAllowedPath("/rewardhub/account")).toBe(true);
+		expect(isEnrollmentAllowedPath("/account")).toBe(true);
+		expect(isEnrollmentAllowedPath("/account/security")).toBe(true);
 	});
 
-	it("allows organization-scoped merchant settings routes", () => {
-		expect(isEnrollmentAllowedPath("/orgs/brew-bean-kl/settings")).toBe(true);
-		expect(isEnrollmentAllowedPath("/orgs/brew-bean-kl/settings/verification")).toBe(true);
-		expect(isEnrollmentAllowedPath("/orgs/jonker-street-kitchen/settings/team")).toBe(true);
+	it("allows the organization-scoped merchant account page", () => {
+		expect(isEnrollmentAllowedPath("/orgs/brew-bean-kl/account")).toBe(true);
+		expect(isEnrollmentAllowedPath("/orgs/brew-bean-kl/account/security")).toBe(true);
 	});
 
-	it("blocks protected dashboard routes", () => {
+	it("blocks org / platform settings and protected app routes (only the personal account is reachable)", () => {
+		expect(isEnrollmentAllowedPath("/orgs/brew-bean-kl/settings/team")).toBe(false);
+		expect(isEnrollmentAllowedPath("/settings/access")).toBe(false);
 		expect(isEnrollmentAllowedPath("/rewardhub")).toBe(false);
-		expect(isEnrollmentAllowedPath("/analytics")).toBe(false);
+		expect(isEnrollmentAllowedPath("/accounts")).toBe(false);
 	});
 });
 

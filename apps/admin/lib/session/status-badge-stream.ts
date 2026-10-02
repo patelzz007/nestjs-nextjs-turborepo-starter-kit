@@ -2,8 +2,10 @@ import { asyncScheduler, type Observable, type SchedulerLike, merge, startWith, 
 
 import type { SessionStatus } from "@workspace/shared";
 
+import { clientEnv } from "@/lib/env/env.client";
+
 import type { SessionState } from "./status-badge";
-import { defaultVisibilitySource, didTokenRotate, fetchSessionStateWithRetry, isDocumentVisible, resolvePollMs, sameSessionState, secondsUntil } from "./status-badge-helpers";
+import { defaultVisibilitySource, didTokenRotate, fetchSessionStateWithRetry, isDocumentVisible, sameSessionState, secondsUntil } from "./status-badge-helpers";
 
 export interface SessionBadgeStreamParams {
 	readonly fetchSession: () => Promise<SessionStatus>;
@@ -27,7 +29,7 @@ export function buildSessionBadgeStreams(params: SessionBadgeStreamParams): Sess
 		fetchSession,
 		isVisible = isDocumentVisible,
 		visibilityChanges = defaultVisibilitySource(),
-		pollMs = resolvePollMs(process.env.NEXT_PUBLIC_SESSION_POLL_MS),
+		pollMs = clientEnv.NEXT_PUBLIC_SESSION_POLL_MS,
 		retryMs = 2_000,
 		tickMs = 1_000,
 		pulseMs = 2_000,

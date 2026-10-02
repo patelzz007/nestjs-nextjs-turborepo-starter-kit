@@ -40,14 +40,14 @@ export function EmailVerificationGateDialog(): React.JSX.Element | null {
 					</div>
 					<DialogDescription>
 						{isMfaEnrollment
-							? "Rewards, Analytics, and other portal pages stay locked until two-factor authentication is enabled. Complete setup in Account settings below."
+							? "Rewards, Analytics, and other portal pages stay locked until two-factor authentication is enabled. Complete setup on your Account page below."
 							: "Rewards, Analytics, and other portal pages stay locked until your email is verified. Check your inbox for the verification link, or resend it below."}
 					</DialogDescription>
 				</DialogHeader>
 				{isMfaEnrollment ? null : <EmailVerificationPanel />}
 				<DialogFooter>
 					<Button type="button" variant="outline" onClick={handleContinue}>
-						Continue to settings
+						Continue to account
 					</Button>
 				</DialogFooter>
 			</DialogContent>

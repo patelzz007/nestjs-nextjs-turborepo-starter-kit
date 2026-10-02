@@ -2,7 +2,7 @@ import { apiRouter } from "@workspace/client/lib/api/endpoints";
 import type { Envelope, RewardResponse } from "@workspace/shared";
 import type { QueryClient, QueryKey } from "@tanstack/react-query";
 
-import { stubApiMeta } from "@/lib/api-envelope";
+import { stubApiMeta } from "@workspace/client/lib/api/envelope";
 
 type MerchantRewardsListResponse = Envelope<readonly RewardResponse[]>;
 

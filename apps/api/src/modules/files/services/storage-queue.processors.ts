@@ -1,6 +1,6 @@
 import { Processor, WorkerHost, InjectQueue } from "@nestjs/bullmq";
 import { Inject, Injectable, Logger, type OnModuleInit } from "@nestjs/common";
-import { Job, Queue, hasLegacyRepeatableKeyShape } from "bullmq";
+import { Job, Queue } from "bullmq";
 
 import { QUEUE_NAMES, StorageCleanupJobSchema, StorageDeleteJobSchema } from "@workspace/shared";
 
@@ -10,6 +10,7 @@ import { OBJECT_STORAGE } from "../../storage/domain/storage.tokens";
 import { toStorageObjectLocator } from "../../storage/utils/storage-locator.util";
 import { StoredFileRepository } from "../repositories/stored-file.repository";
 import { runWithSystemRlsContext } from "../../../prisma/rls-context";
+import { registerMaintenanceScheduler } from "../../../infrastructure/jobs/maintenance-scheduler";
 
 const STORAGE_CLEANUP_INTERVAL_MS = 60 * 60 * 1000;
 const STORAGE_CLEANUP_SCHEDULER_ID = "storage-cleanup";
@@ -29,21 +30,17 @@ export class StorageQueueScheduler implements OnModuleInit {
 			return;
 		}
 
-		const schedulers = await this.cleanupQueue.getJobSchedulers(0, -1, true);
-		for (const scheduler of schedulers) {
-			if (!hasLegacyRepeatableKeyShape(scheduler.key) && scheduler.key !== `repeat:${STORAGE_CLEANUP_SCHEDULER_ID}`) {
-				continue;
-			}
-			try {
-				await this.cleanupQueue.removeJobScheduler(scheduler.key);
-				this.logger.warn(`Removed stale scheduler ${scheduler.key} from ${QUEUE_NAMES[5]}`);
-			} catch (error) {
-				this.logger.warn(`Could not remove stale scheduler ${scheduler.key}: ${String(error)}`);
-			}
-		}
-
-		const payload = StorageCleanupJobSchema.parse({});
-		await this.cleanupQueue.upsertJobScheduler(STORAGE_CLEANUP_SCHEDULER_ID, { every: STORAGE_CLEANUP_INTERVAL_MS }, { name: "cleanup-stale-pending", data: payload });
+		await registerMaintenanceScheduler(
+			this.cleanupQueue,
+			{
+				queueName: QUEUE_NAMES[5],
+				schedulerId: STORAGE_CLEANUP_SCHEDULER_ID,
+				everyMs: STORAGE_CLEANUP_INTERVAL_MS,
+				jobName: "cleanup-stale-pending",
+				data: StorageCleanupJobSchema.parse({}),
+			},
+			this.logger,
+		);
 		this.logger.log("Registered BullMQ storage cleanup scheduler");
 	}
 }

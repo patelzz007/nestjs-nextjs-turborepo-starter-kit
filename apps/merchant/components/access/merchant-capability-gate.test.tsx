@@ -5,7 +5,7 @@ import { MERCHANT_CAPABILITY } from "@workspace/shared";
 import * as React from "react";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { MerchantCapabilityGate, MerchantRoleGate } from "@/components/access/merchant-capability-gate";
+import { MerchantCapabilityGate } from "@/components/access/merchant-capability-gate";
 import { renderWithAuthorization } from "@/test/authorization";
 
 function ManageRewardsProbe(): React.JSX.Element {
@@ -99,23 +99,23 @@ describe("shared authorization API", () => {
 	});
 });
 
-describe("MerchantRoleGate", () => {
-	it("renders children for an allowed membership role", () => {
+describe("MerchantCapabilityGate for organization management", () => {
+	it("renders the verification form only for owners (merchant:manage_verification)", () => {
 		renderWithAuthorization(
-			<MerchantRoleGate action="submitKyb">
+			<MerchantCapabilityGate capability={MERCHANT_CAPABILITY.manageVerification}>
 				<p>kyb form</p>
-			</MerchantRoleGate>,
+			</MerchantCapabilityGate>,
 			{ role: "OWNER" },
 		);
 
 		expect(screen.getByText("kyb form")).toBeTruthy();
 	});
 
-	it("renders the fallback for a disallowed membership role", () => {
+	it("renders the fallback for admins, who cannot manage verification", () => {
 		renderWithAuthorization(
-			<MerchantRoleGate action="submitKyb" fallback={<p>owner only</p>}>
+			<MerchantCapabilityGate capability={MERCHANT_CAPABILITY.manageVerification} fallback={<p>owner only</p>}>
 				<p>kyb form</p>
-			</MerchantRoleGate>,
+			</MerchantCapabilityGate>,
 			{ role: "ADMIN" },
 		);
 
@@ -125,13 +125,14 @@ describe("MerchantRoleGate", () => {
 
 	it("shows the loading skeleton while the membership resolves", () => {
 		renderWithAuthorization(
-			<MerchantRoleGate action="manageTeam">
+			<MerchantCapabilityGate capability={MERCHANT_CAPABILITY.manageTeam}>
 				<p>team</p>
-			</MerchantRoleGate>,
+			</MerchantCapabilityGate>,
 			{ isLoading: true },
 		);
 
 		expect(screen.getByRole("status", { name: "Checking access" })).toBeTruthy();
 		expect(screen.queryByText("You don't have access to this page")).toBeNull();
+		expect(screen.queryByText("team")).toBeNull();
 	});
 });

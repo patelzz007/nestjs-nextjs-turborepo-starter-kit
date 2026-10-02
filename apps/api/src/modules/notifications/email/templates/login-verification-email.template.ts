@@ -25,11 +25,16 @@ export class LoginVerificationEmailTemplate extends BaseEmailTemplate<LoginVerif
 	}
 
 	public renderBodyHtml(_context: EmailRenderContext): string {
-		return `
-        <p class="email-text" style="color: #334155; font-size: 15px; line-height: 1.7; margin: 0 0 16px 0;">We noticed a sign-in attempt from a new device or location. Enter this code to continue:</p>
-        ${this.otpCodeBlock(this.props.verificationCode)}
-        <p class="email-muted" style="color: #64748b; font-size: 13px; line-height: 1.6; margin: 0 0 8px 0;">Device: ${this.escape(this.props.deviceInfo)}</p>
-        <p class="email-muted" style="color: #64748b; font-size: 13px; line-height: 1.6; margin: 0;">IP address: ${this.escape(this.props.ipAddress)} · Expires in ${String(this.props.expiresInMinutes)} minutes.</p>`;
+		return [
+			this.paragraph("Someone is signing in to your account from a new device or location. Enter this code to continue:"),
+			this.otpCodeBlock(this.props.verificationCode),
+			this.detailsCard([
+				{ label: "Device", value: this.props.deviceInfo },
+				{ label: "IP address", value: this.props.ipAddress },
+				{ label: "Expires in", value: `${String(this.props.expiresInMinutes)} minutes` },
+			]),
+			this.note("Didn't try to sign in? Don't share this code — change your password instead."),
+		].join("");
 	}
 
 	public renderBodyText(_context: EmailRenderContext): string {

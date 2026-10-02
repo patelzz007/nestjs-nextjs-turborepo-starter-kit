@@ -14,6 +14,7 @@
 // ============================================
 "use client";
 
+import { APP_LINKS } from "@workspace/shared";
 import { Button } from "@workspace/ui/components/form/button";
 import { FormShell } from "@workspace/ui/components/form/form-shell";
 import { Input } from "@workspace/ui/components/form/input";
@@ -61,6 +62,7 @@ export function LoginForm({
 	footer,
 	mode = "web",
 	requireAdminAccess = mode === "admin",
+	forgotPasswordHref = APP_LINKS.auth.forgotPassword,
 }: LoginFormProps): JSX.Element {
 	const [email, setEmail] = useState(defaultEmail ?? "");
 	const [password, setPassword] = useState("");
@@ -432,9 +434,11 @@ export function LoginForm({
 					<div className="space-y-2">
 						<div className="flex items-center justify-between">
 							<Label htmlFor="password">Password</Label>
-							<Link href="/auth/forgot-password" className="text-sm font-medium text-primary hover:underline">
-								Forgot password?
-							</Link>
+							{forgotPasswordHref === null ? null : (
+								<Link href={forgotPasswordHref} className="text-sm font-medium text-primary hover:underline">
+									Forgot password?
+								</Link>
+							)}
 						</div>
 						<PasswordInput
 							id="password"

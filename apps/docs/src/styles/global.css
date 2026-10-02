@@ -76,33 +76,34 @@
 	color-scheme: light;
 }
 
+/* Dark — the same soft, low-glare charcoal as the apps (packages/ui tokens.css), never near black. */
 [data-theme="dark"] {
 	--brand: #8276c9;
 	--brand-hover: #a197e0;
-	--brand-soft: #252333;
+	--brand-soft: #302d4a;
 	--brand-glow: rgb(130 118 201 / 0.18);
-	--bg: #1a1922;
-	--surface: #1f1e28;
-	--surface-muted: #21202b;
-	--hover: #22212c;
-	--text: #c2cad1;
-	--text-secondary: #93999e;
-	--muted: #82878d;
-	--faint: #62666c;
-	--border: #232430;
-	--border-strong: #2a2c3a;
-	--tree-line: #3d3f50;
+	--bg: #22272e;
+	--surface: #262c34;
+	--surface-muted: #2d333b;
+	--hover: #2d333b;
+	--text: #cdd5dd;
+	--text-secondary: #9aa7b4;
+	--muted: #8b97a3;
+	--faint: #6e7a86;
+	--border: #353c46;
+	--border-strong: #3d4550;
+	--tree-line: #4a5260;
 	--code-inline-bg: rgb(230 231 233 / 0.04);
-	--info-bg: #172231;
-	--info-border: #1b2b40;
-	--success-bg: #192629;
-	--success-border: #192c2c;
-	--warning-bg: #2a2317;
-	--warning-border: #3a2e17;
-	--error-bg: #2b1a1d;
-	--error-border: #3d1f22;
+	--info-bg: #1f3245;
+	--info-border: #28415c;
+	--success-bg: #1f3530;
+	--success-border: #28463d;
+	--warning-bg: #3a3020;
+	--warning-border: #4d3f24;
+	--error-bg: #3d2629;
+	--error-border: #552c31;
 	--mark: rgb(247 144 9 / 0.3);
-	--overlay: rgb(0 0 0 / 0.6);
+	--overlay: rgb(0 0 0 / 0.5);
 	--shadow-card: none;
 	--shadow-pop: 0 20px 24px -4px rgb(0 0 0 / 0.5);
 	color-scheme: dark;

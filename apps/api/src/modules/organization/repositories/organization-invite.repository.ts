@@ -84,15 +84,16 @@ export class OrganizationInviteRepository {
 				status: "PENDING",
 				createdByAdminId: input.invitedByUserId,
 				expiresAt: BigInt(input.expiresAt),
-				locationScopes:
-					input.locationScopeType === "SELECTED"
-						? {
+				...(input.locationScopeType === "SELECTED"
+					? {
+							locationScopes: {
 								create: input.locationIds.map((locationId) => ({
 									organizationId: input.organizationId,
 									locationId,
 								})),
-							}
-						: undefined,
+							},
+						}
+					: {}),
 			},
 		});
 	}

@@ -28,7 +28,8 @@ export class MerchantKybDocumentService {
 			throw new NotFoundException({ message: "Document not found", error: "KYB_DOCUMENT_NOT_FOUND" });
 		}
 
-		const download = await this.fileService.getDownloadUrl(match.file.uploadedById, documentId, disposition);
+		// The caller authorized `merchant:manage_verification` (merchant) or MERCHANT_ORG:LIST (admin) for this organization.
+		const download = await this.fileService.createDownloadUrl(match.file, disposition);
 		return {
 			documentId,
 			scanStatus: this.mapScanStatus(match.file.status, match.file.scanStatus),

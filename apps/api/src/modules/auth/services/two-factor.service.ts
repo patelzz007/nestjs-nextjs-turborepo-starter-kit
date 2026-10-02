@@ -420,12 +420,12 @@ export class TwoFactorService {
 	}
 
 	private verifyTotpToken(secret: string, token: string, lastTotpStep: bigint | null): TotpVerificationResult {
-		const afterTimeStep = lastTotpStep !== null ? Number(lastTotpStep) : undefined;
 		const verification = verifySync({
 			token,
 			secret,
 			epochTolerance: TOTP_EPOCH_TOLERANCE_SECONDS,
-			afterTimeStep,
+			// Replay protection only applies once a step has been consumed.
+			...(lastTotpStep === null ? {} : { afterTimeStep: Number(lastTotpStep) }),
 		});
 
 		if (!verification.valid) {

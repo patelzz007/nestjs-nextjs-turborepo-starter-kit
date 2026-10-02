@@ -89,7 +89,7 @@ async function copyCurrentUrl(): Promise<boolean> {
 
 export interface CopyLinkButtonProps {
 	/** Fired after a copy attempt with the result (smart layer wires the toast). */
-	readonly onCopy?: (ok: boolean) => void;
+	readonly onCopy?: ((ok: boolean) => void) | undefined;
 }
 
 /**

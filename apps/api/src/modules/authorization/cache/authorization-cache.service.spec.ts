@@ -3,6 +3,7 @@ import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { TypedConfigService } from "../../../config/typed-config.service";
 
 import { AuthorizationCacheService, type CachedAuthorization } from "./authorization-cache.service";
+import { createTestApiConfig } from "../../../../test/support/test-api-env";
 
 vi.mock("../../../config/typed-config.service", () => ({
 	TypedConfigService: class {
@@ -12,7 +13,7 @@ vi.mock("../../../config/typed-config.service", () => ({
 }));
 
 function createConfigMock(): TypedConfigService {
-	return new TypedConfigService();
+	return new TypedConfigService(createTestApiConfig());
 }
 
 describe("AuthorizationCacheService", () => {
@@ -31,6 +32,7 @@ describe("AuthorizationCacheService", () => {
 		return {
 			roles: ["admin"],
 			permissions: [{ action: "users.view", resource: "users" }],
+			capabilities: [],
 			cachedAt: Date.now(),
 			...overrides,
 		};

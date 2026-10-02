@@ -8,8 +8,9 @@ import { registerRedisInfrastructureModule } from "./redis/redis-infrastructure.
 import { MESSAGING_OPTIONS } from "./tokens";
 
 export { BullMqHealthIndicator, BullMqInfrastructureModule, registerBullMqInfrastructureModule } from "./bullmq/bullmq-infrastructure.module";
+export { BullMqWorkerDrainService } from "./bullmq/bullmq-worker-drain.service";
 export { KafkaInfrastructureModule, registerKafkaInfrastructureModule } from "./kafka/kafka-infrastructure.module";
-export { DisabledKafkaProducerService, KafkaHealthIndicator, KafkaProducerService } from "./kafka/kafka-producer.service";
+export { DisabledKafkaProducerService, KAFKA_EVENT_ID_HEADER, KAFKA_EVENT_TYPE_HEADER, KafkaHealthIndicator, KafkaProducerService } from "./kafka/kafka-producer.service";
 export { RabbitMqInfrastructureModule, registerRabbitMqInfrastructureModule } from "./rabbitmq/rabbitmq-infrastructure.module";
 export { DisabledRabbitMqService, RabbitMqHealthIndicator, RabbitMqService } from "./rabbitmq/rabbitmq.service";
 export { RedisInfrastructureModule, registerRedisInfrastructureModule } from "./redis/redis-infrastructure.module";

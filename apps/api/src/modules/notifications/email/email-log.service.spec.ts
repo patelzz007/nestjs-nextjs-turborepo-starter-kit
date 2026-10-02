@@ -1,15 +1,21 @@
+import { EmailLogListQuerySchema } from "@workspace/shared";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { RequestContextService } from "../../../common/context/request-context";
+import { PlatformOutboxService } from "../../../infrastructure/outbox/platform-outbox.service";
 import { PrismaService } from "../../../prisma/prisma.service";
+import { TenantTransactionService } from "../../../prisma/tenant-transaction.service";
 import { EmailLogEventsService } from "./email-log-events.service";
 import { EmailLogRepository } from "./email-log.repository";
 import { EmailLogService } from "./email-log.service";
+import { createTestTypedConfig } from "../../../../test/support/test-api-env";
 
-const { createMock, updateStatusByResendIdMock, countByResendIdMock, listRecentMock, emitUpdatedMock } = vi.hoisted(() => ({
-	createMock: vi.fn(),
+const { createMock, updateStatusByResendIdMock, countByResendIdMock, listMock, emitUpdatedMock, enqueueInTransactionMock } = vi.hoisted(() => ({
+	createMock: vi.fn<EmailLogRepository["create"]>(),
+	enqueueInTransactionMock: vi.fn<PlatformOutboxService["enqueueInTransaction"]>(),
 	updateStatusByResendIdMock: vi.fn(),
 	countByResendIdMock: vi.fn(),
-	listRecentMock: vi.fn(),
+	listMock: vi.fn(),
 	emitUpdatedMock: vi.fn(),
 }));
 
@@ -18,7 +24,7 @@ vi.mock("./email-log.repository", () => ({
 		public readonly create = createMock;
 		public readonly updateStatusByResendId = updateStatusByResendIdMock;
 		public readonly countByResendId = countByResendIdMock;
-		public readonly listRecent = listRecentMock;
+		public readonly list = listMock;
 	},
 }));
 
@@ -32,16 +38,34 @@ vi.mock("../../../prisma/prisma.service", () => ({
 	PrismaService: class {},
 }));
 
+vi.mock("../../../infrastructure/outbox/platform-outbox.service", () => ({
+	PlatformOutboxService: class {
+		public readonly enqueueInTransaction = enqueueInTransactionMock;
+	},
+}));
+
+/** Sentinel for the repository's transaction client — the event must be written with exactly this client. */
+const ROW_TX = new PrismaService(createTestTypedConfig());
+
 describe("EmailLogService", () => {
 	let service: EmailLogService;
 
 	beforeEach(() => {
 		vi.clearAllMocks();
-		service = new EmailLogService(new EmailLogRepository(new PrismaService()), new EmailLogEventsService());
+		service = new EmailLogService(
+			new EmailLogRepository(new PrismaService(createTestTypedConfig())),
+			new EmailLogEventsService(),
+			new PlatformOutboxService(new TenantTransactionService(new PrismaService(createTestTypedConfig())), new RequestContextService()),
+		);
+		// The repository runs the caller's same-transaction write inside its transaction.
+		createMock.mockImplementation(async (_input, withinTransaction): Promise<{ readonly id: string }> => {
+			await withinTransaction(ROW_TX);
+			return { id: "row-1" };
+		});
+		enqueueInTransactionMock.mockResolvedValue("evt-1");
 	});
 
 	it("creates a row and returns its id", async () => {
-		createMock.mockResolvedValue({ id: "row-1" });
 		const result = await service.create({
 			templateKey: "welcome",
 			to: "a@b.com",
@@ -59,7 +83,25 @@ describe("EmailLogService", () => {
 				status: "sent",
 				resendId: "re-1",
 			}),
+			expect.any(Function),
 		);
+	});
+
+	it("writes the email.log.updated event in the SAME transaction as the row", async () => {
+		await service.create({ templateKey: "welcome", to: "a@b.com", subject: "Welcome aboard!", status: "sent", resendId: "re-1" });
+
+		expect(enqueueInTransactionMock).toHaveBeenCalledWith(ROW_TX, {
+			type: "email.log.updated",
+			payload: { templateKey: "welcome", status: "sent", to: "a@b.com", resendId: "re-1", error: null, durationMs: null },
+		});
+	});
+
+	it("does not signal the SSE stream when the row + event transaction fails", async () => {
+		createMock.mockRejectedValue(new Error("insert failed"));
+
+		await expect(service.create({ templateKey: "welcome", to: "a@b.com", subject: "Welcome aboard!", status: "sent" })).rejects.toThrow("insert failed");
+
+		expect(emitUpdatedMock).not.toHaveBeenCalled();
 	});
 
 	it("rejects malformed emails via the create schema", async () => {
@@ -119,25 +161,37 @@ describe("EmailLogService", () => {
 		expect(updateStatusByResendIdMock).toHaveBeenCalledWith("spoofed-id", "bounced", ["sent", "delivered", "bounced"], undefined);
 	});
 
-	it("maps recent rows to the wire contract (epoch dates, no tracking fields)", async () => {
+	it("maps a list page to the wire contract (epoch dates, no tracking fields) and keeps the pagination", async () => {
 		const createdAt = Date.parse("2026-08-11T10:00:00.000Z");
 		const updatedAt = createdAt;
-		listRecentMock.mockResolvedValue([
-			{
-				id: "row-1",
-				templateKey: "welcome",
-				to: "a@b.com",
-				subject: "Welcome",
-				status: "delivered",
-				resendId: "re-1",
-				error: null,
-				metadata: { staleTrackingKey: "x" },
-				createdAt,
-				updatedAt: createdAt,
-			},
-		]);
-		const rows = await service.listRecent(10);
-		expect(rows[0]).toEqual(
+		listMock.mockResolvedValue({
+			items: [
+				{
+					id: "row-1",
+					templateKey: "welcome",
+					to: "a@b.com",
+					subject: "Welcome",
+					status: "delivered",
+					resendId: "re-1",
+					error: null,
+					metadata: { staleTrackingKey: "x" },
+					createdAt: BigInt(createdAt),
+					updatedAt: BigInt(createdAt),
+				},
+			],
+			total: 11,
+			page: 1,
+			totalPages: 2,
+			nextCursor: "next",
+			hasNext: true,
+			hasPrevious: false,
+		});
+		const query = EmailLogListQuerySchema.parse({ limit: "10" });
+		const result = await service.list(query);
+		expect(listMock).toHaveBeenCalledWith(query);
+		expect(result).toEqual(expect.objectContaining({ limit: 10, total: 11, page: 1, totalPages: 2, nextCursor: "next", hasNext: true, hasPrevious: false }));
+		const [row] = result.items;
+		expect(row).toEqual(
 			expect.objectContaining({
 				id: "row-1",
 				templateKey: "welcome",
@@ -148,8 +202,8 @@ describe("EmailLogService", () => {
 			}),
 		);
 		// Tracking fields are gone from the wire contract.
-		expect(rows[0]).not.toHaveProperty("openUserAgent");
-		expect(rows[0]).not.toHaveProperty("openedAt");
-		expect(rows[0]).not.toHaveProperty("clickedAt");
+		expect(row).not.toHaveProperty("openUserAgent");
+		expect(row).not.toHaveProperty("openedAt");
+		expect(row).not.toHaveProperty("clickedAt");
 	});
 });

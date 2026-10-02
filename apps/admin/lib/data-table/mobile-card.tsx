@@ -16,7 +16,7 @@ export interface DataTableMobileCardProps<T extends RowData> {
 	readonly subtitle?: React.ReactNode;
 	readonly badge?: React.ReactNode;
 	readonly fields?: readonly DataTableMobileCardField[];
-	readonly actions?: readonly Action<T>[];
+	readonly actions?: readonly Action<T>[] | undefined;
 }
 
 export function DataTableMobileCard<T extends RowData>({ item, title, subtitle, badge, fields = [], actions }: DataTableMobileCardProps<T>): React.JSX.Element {

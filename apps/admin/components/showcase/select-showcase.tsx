@@ -236,7 +236,7 @@ export function SelectShowcase(): React.JSX.Element {
 							</SelectTrigger>
 							<SelectContent>
 								{LANGUAGES.map((option) => (
-									<SelectItem key={option.value} value={option.value} description={option.description}>
+									<SelectItem key={option.value} value={option.value} {...(option.description !== undefined ? { description: option.description } : {})}>
 										{option.label}
 									</SelectItem>
 								))}

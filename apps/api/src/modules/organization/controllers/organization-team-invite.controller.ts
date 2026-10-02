@@ -1,7 +1,10 @@
-import { Body, Controller, Headers, Post, Req, UseInterceptors } from "@nestjs/common";
-import { ApiOkResponse, ApiTags } from "@nestjs/swagger";
+import { Controller, Headers, HttpStatus, Post, Req, UseInterceptors } from "@nestjs/common";
+import { ApiTags } from "@nestjs/swagger";
 import {
 	apiPath,
+	LoginClientResponseSchema,
+	OrganizationTeamInviteAcceptResponseSchema,
+	OrganizationTeamInvitePreviewSchema,
 	OrganizationTeamInviteRegisterAcceptSchema,
 	OrganizationTeamInviteTokenSchema,
 	type LoginRestrictedEnrollmentResponse,
@@ -16,7 +19,8 @@ import {
 import type { FastifyRequest } from "fastify";
 
 import { extractClientInfo } from "../../../common/utils/client-info";
-import { ZodValidationPipe } from "../../../common/pipes/zod-validation.pipe";
+import { ZodBody } from "../../../common/decorators/zod-request.decorators";
+import { ZodResponse } from "../../../common/decorators/zod-response.decorators";
 import { AuthService } from "../../auth/auth.service";
 import { GetUser } from "../../auth/decorators/get-user.decorator";
 import { Public } from "../../auth/decorators/public.decorator";
@@ -36,18 +40,16 @@ export class OrganizationTeamInviteController {
 	@Public()
 	@RlsBypass()
 	@Post("validate")
-	@ApiOkResponse({ description: "Team invite preview when the token is valid" })
-	public async validateTeamInvite(
-		@Body(new ZodValidationPipe(OrganizationTeamInviteTokenSchema)) body: OrganizationTeamInviteTokenInput,
-	): Promise<OrganizationTeamInvitePreview> {
+	@ZodResponse(OrganizationTeamInvitePreviewSchema, { status: HttpStatus.CREATED, description: "Team invite preview when the token is valid" })
+	public async validateTeamInvite(@ZodBody(OrganizationTeamInviteTokenSchema) body: OrganizationTeamInviteTokenInput): Promise<OrganizationTeamInvitePreview> {
 		return this.membership.validateTeamInvite(body.token);
 	}
 
 	@Post("accept")
-	@ApiOkResponse({ description: "Team invite accepted and membership created" })
+	@ZodResponse(OrganizationTeamInviteAcceptResponseSchema, { status: HttpStatus.CREATED, description: "Team invite accepted and membership created" })
 	public async acceptTeamInvite(
 		@GetUser() user: AccessTokenPayload,
-		@Body(new ZodValidationPipe(OrganizationTeamInviteTokenSchema)) body: OrganizationTeamInviteTokenInput,
+		@ZodBody(OrganizationTeamInviteTokenSchema) body: OrganizationTeamInviteTokenInput,
 	): Promise<OrganizationTeamInviteAcceptResponse> {
 		return this.membership.acceptTeamInvite(user.sub, user.email, body.token);
 	}
@@ -56,9 +58,9 @@ export class OrganizationTeamInviteController {
 	@RlsBypass()
 	@UseInterceptors(SetAuthCookiesInterceptor)
 	@Post("register-and-accept")
-	@ApiOkResponse({ description: "Create a staff account from a team invite and sign in" })
+	@ZodResponse(LoginClientResponseSchema, { status: HttpStatus.CREATED, description: "Create a staff account from a team invite and sign in" })
 	public async registerAndAcceptTeamInvite(
-		@Body(new ZodValidationPipe(OrganizationTeamInviteRegisterAcceptSchema)) body: OrganizationTeamInviteRegisterAcceptInput,
+		@ZodBody(OrganizationTeamInviteRegisterAcceptSchema) body: OrganizationTeamInviteRegisterAcceptInput,
 		@Headers("x-client-type") headerClientType: string | undefined,
 		@Req() req: FastifyRequest,
 	): Promise<LoginServiceResponse | LoginRestrictedEnrollmentResponse | LoginTwoFactorPendingResponse | LoginVerificationPendingResponse> {

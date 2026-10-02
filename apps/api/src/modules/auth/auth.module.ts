@@ -6,6 +6,7 @@ import type Redis from "ioredis";
 
 import { TypedConfigService } from "../../config/typed-config.service";
 import { ConfigModule } from "../../config/config.module";
+import { OutboxModule } from "../../infrastructure/outbox/outbox.module";
 import { REDIS_PUBLISHER } from "../../infrastructure/redis/redis.tokens";
 import { NotificationsModule } from "../notifications/notifications.module";
 import { AuthorizationModule } from "../authorization/authorization.module";
@@ -58,6 +59,7 @@ import { RedisThrottlerStorage } from "./throttling/redis-throttler.storage";
 @Module({
 	imports: [
 		PrismaModule,
+		OutboxModule,
 		AccessTokenModule,
 		JwtModule.register({ global: true }),
 		AuthorizationModule,

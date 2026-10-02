@@ -2,6 +2,7 @@ import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from "@nestjs/commo
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 
+import { TypedConfigService } from "../config/typed-config.service";
 import { RlsPool } from "./rls-pool";
 
 @Injectable()
@@ -13,13 +14,17 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
 	private readonly connected: Promise<void>;
 	private resolveConnected: (() => void) | undefined;
 
-	public constructor() {
-		const pool = new RlsPool({ connectionString: process.env.DATABASE_URL });
+	public constructor(config: TypedConfigService) {
+		const pool = new RlsPool({
+			connectionString: config.databaseUrl,
+			max: config.databasePoolMax,
+			idleTimeoutMillis: config.databaseIdleTimeoutMs,
+			allowExitOnIdle: config.databaseAllowExitOnIdle,
+		});
 		const adapter = new PrismaPg(pool);
 
-		// Configure logging based on environment
-		const logLevel: string = process.env.LOG_LEVEL ?? "warn";
-		const isDebug: boolean = logLevel === "debug" || logLevel === "silly";
+		// Configure logging based on LOG_LEVEL (validated config)
+		const isDebug: boolean = config.isDebugLogging;
 
 		// Query events are available via Prisma's $on method.
 		// NOTE: Prisma 7 driver adapters may not emit these — log capture degrades

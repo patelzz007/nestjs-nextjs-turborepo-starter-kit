@@ -2,9 +2,9 @@
 export type FieldState = "default" | "loading" | "disabled" | "error";
 
 export interface FieldStateInput {
-	readonly disabled?: boolean;
-	readonly loading?: boolean;
-	readonly ariaInvalid?: boolean | "true" | "false" | "grammar" | "spelling";
+	readonly disabled?: boolean | undefined;
+	readonly loading?: boolean | undefined;
+	readonly ariaInvalid?: boolean | "true" | "false" | "grammar" | "spelling" | undefined;
 }
 
 /** Derive CVA `state` from standard control props (no `typeof` checks). */

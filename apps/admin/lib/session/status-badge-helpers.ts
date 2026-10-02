@@ -86,12 +86,3 @@ export function defaultVisibilitySource(): Observable<Event> {
 	const target: EventTarget = typeof document === "undefined" ? new EventTarget() : document;
 	return fromEvent(target, "visibilitychange");
 }
-
-export function resolvePollMs(envValue: string | null | undefined): number | null {
-	if (envValue === undefined || envValue === null || envValue.trim() === "") return null;
-
-	const parsed = Number(envValue.trim());
-	if (!Number.isFinite(parsed) || parsed < 0) return null;
-
-	return parsed === 0 ? null : Math.round(parsed);
-}

@@ -3,7 +3,8 @@
 import { MerchantSessionBootstrap } from "@/components/merchant-session-bootstrap";
 import { isMerchantAuthPath } from "@/lib/auth/routes";
 import { clearOrganizationLocationCookie } from "@/lib/org/location";
-import { organizationPath, writeOrganizationSlugCookie } from "@/lib/org/slug";
+import { writeOrganizationSlugCookie } from "@/lib/org/slug";
+import { orgRoutes } from "@/lib/routes";
 import { ClientAuthWrapper } from "@workspace/client/lib/auth/session/client-auth-wrapper";
 import { usePathname, useRouter } from "next/navigation";
 import * as React from "react";
@@ -37,7 +38,7 @@ export function useMerchantOrg(): MerchantOrgContextValue {
 
 export interface MerchantRootProviderProps {
 	readonly children: React.ReactNode;
-	readonly initialOrganizationSlug?: string;
+	readonly initialOrganizationSlug?: string | undefined;
 }
 
 /** Merchant portal root — org context is URL-scoped via organizationSlug cookie. */
@@ -71,7 +72,7 @@ export function MerchantRootProvider({ children, initialOrganizationSlug }: Merc
 			setOrganizationSlugState(slug);
 			writeOrganizationSlugCookie(slug);
 			clearOrganizationLocationCookie();
-			router.push(organizationPath(slug, "dashboard"));
+			router.push(orgRoutes(slug).dashboard);
 			if (options?.refresh === true) {
 				router.refresh();
 			}

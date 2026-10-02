@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
 	MERCHANT_CAPABILITY,
 	MERCHANT_ROLE_CAPABILITIES,
+	MerchantCapabilitySchema,
 	merchantRoleHasCapability,
 	PERMISSION,
 	IMPLICIT_SELF_GRANTS,
@@ -12,6 +13,7 @@ import {
 	withResourceCapability,
 } from "./permission";
 import { PolicyConditionsSchema } from "./policy-dsl.schema";
+import { OrganizationMembershipRoleSchema } from "../schemas/domain/organization/organization";
 
 describe("permission vocabulary", () => {
 	it("derives platform capability slugs from resource × action", () => {
@@ -66,21 +68,49 @@ describe("policy DSL schema", () => {
 });
 
 describe("merchant role capabilities", () => {
-	it("gives owners and admins every capability", () => {
-		expect(MERCHANT_ROLE_CAPABILITIES.OWNER).toContain(MERCHANT_CAPABILITY.manageApiKeys);
+	it("gives owners every capability", () => {
+		expect(MERCHANT_ROLE_CAPABILITIES.OWNER).toEqual(MerchantCapabilitySchema.options);
+		expect(merchantRoleHasCapability("OWNER", MERCHANT_CAPABILITY.manageVerification)).toBe(true);
+	});
+
+	it("gives admins everything except business verification (KYB stays owner-only)", () => {
+		expect(MERCHANT_ROLE_CAPABILITIES.ADMIN).toEqual(MerchantCapabilitySchema.options.filter((capability) => capability !== MERCHANT_CAPABILITY.manageVerification));
 		expect(merchantRoleHasCapability("ADMIN", MERCHANT_CAPABILITY.manageRewards)).toBe(true);
+		expect(merchantRoleHasCapability("ADMIN", MERCHANT_CAPABILITY.manageTeam)).toBe(true);
+		expect(merchantRoleHasCapability("ADMIN", MERCHANT_CAPABILITY.manageLocations)).toBe(true);
+		expect(merchantRoleHasCapability("ADMIN", MERCHANT_CAPABILITY.manageVerification)).toBe(false);
 	});
 
 	it("keeps cashiers read-only", () => {
-		expect(merchantRoleHasCapability("CASHIER", MERCHANT_CAPABILITY.viewRedemptions)).toBe(true);
+		expect(MERCHANT_ROLE_CAPABILITIES.CASHIER).toEqual([
+			MERCHANT_CAPABILITY.viewDashboard,
+			MERCHANT_CAPABILITY.viewRewards,
+			MERCHANT_CAPABILITY.viewRedemptions,
+			MERCHANT_CAPABILITY.viewAnalytics,
+			MERCHANT_CAPABILITY.viewLocations,
+		]);
 		expect(merchantRoleHasCapability("CASHIER", MERCHANT_CAPABILITY.manageRewards)).toBe(false);
 		expect(merchantRoleHasCapability("CASHIER", MERCHANT_CAPABILITY.manageApiKeys)).toBe(false);
+		expect(merchantRoleHasCapability("CASHIER", MERCHANT_CAPABILITY.manageTeam)).toBe(false);
+		expect(merchantRoleHasCapability("CASHIER", MERCHANT_CAPABILITY.manageLocations)).toBe(false);
+		expect(merchantRoleHasCapability("CASHIER", MERCHANT_CAPABILITY.manageVerification)).toBe(false);
 	});
 
-	it("limits policy admins and members to the dashboard", () => {
+	it("limits policy admins and members to the dashboard and the store locations list", () => {
 		for (const role of ["POLICY_ADMIN", "MEMBER"] satisfies ("POLICY_ADMIN" | "MEMBER")[]) {
-			expect(MERCHANT_ROLE_CAPABILITIES[role]).toEqual([MERCHANT_CAPABILITY.viewDashboard]);
+			expect(MERCHANT_ROLE_CAPABILITIES[role]).toEqual([MERCHANT_CAPABILITY.viewDashboard, MERCHANT_CAPABILITY.viewLocations]);
 		}
+	});
+
+	it("lets every member read the store locations (the org context is member-wide on the API)", () => {
+		for (const role of OrganizationMembershipRoleSchema.options) {
+			expect(merchantRoleHasCapability(role, MERCHANT_CAPABILITY.viewLocations)).toBe(true);
+		}
+	});
+
+	it("registers every capability slug exactly once", () => {
+		const byName = (left: string, right: string): number => left.localeCompare(right);
+		expect(Object.values(MERCHANT_CAPABILITY).sort(byName)).toEqual([...MerchantCapabilitySchema.options].sort(byName));
 	});
 
 	it("fails closed on unknown capabilities", () => {

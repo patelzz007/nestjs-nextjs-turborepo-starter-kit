@@ -1,166 +1,113 @@
-import { Injectable, type NestInterceptor, type ExecutionContext, type CallHandler, HttpException, HttpStatus } from "@nestjs/common";
+import { Injectable, type CallHandler, type ExecutionContext, type NestInterceptor } from "@nestjs/common";
+import { SSE_METADATA } from "@nestjs/common/constants.js";
 import { Reflector } from "@nestjs/core";
+import { nowEpochMs, type ApiPaginatedMeta, type ApiResponseMeta, type DataValue, type PaginatedServiceResult } from "@workspace/shared";
 import type { FastifyRequest } from "fastify";
-import { type Observable, throwError } from "rxjs";
-import { catchError, map } from "rxjs/operators";
-import {
-	ApiResponseShapeSchema,
-	DataValueSchema,
-	PaginatedServiceResultSchema,
-	nowEpochMs,
-	type ApiResponseShape,
-	type DataValue,
-	type PaginatedServiceResult,
-} from "@workspace/shared";
+import { throwError, type Observable } from "rxjs";
+import { map } from "rxjs/operators";
+
+import { RequestContextService } from "../context/request-context";
+import { getResponseContract, type RouteResponseContract } from "../decorators/zod-response.decorators";
 import { SKIP_ENVELOPE } from "../decorators/skip-envelope.decorator";
+import { MissingResponseContractError, ResponseContractViolationError } from "../errors/response-contract.error";
 
-/**
- * Zod schema for a PaginatedResult shape (from paginate()).
- */
-const PaginatedResultSchema = PaginatedServiceResultSchema;
-
-/** Narrow controller data to a paginated service result. */
-function parsePaginated(value: DataValue): PaginatedServiceResult | null {
-	const parsed = PaginatedResultSchema.safeParse(value);
-	return parsed.success ? parsed.data : null;
+/** The single success envelope — `{ success, data, meta }`. */
+interface SingleEnvelope {
+	readonly success: true;
+	readonly data: DataValue;
+	readonly meta: ApiResponseMeta;
 }
 
-/** Narrow controller data to an already-wrapped API response. */
-function parseApiResponse(value: DataValue): ApiResponseShape | null {
-	const parsed = ApiResponseShapeSchema.safeParse(value);
-	return parsed.success ? parsed.data : null;
+/** The paginated success envelope — `{ success, data: items, meta: { …pagination } }`. */
+interface PaginatedEnvelope {
+	readonly success: true;
+	readonly data: readonly DataValue[];
+	readonly meta: ApiPaginatedMeta;
 }
 
+/** What this interceptor sends: one of the two envelopes, or a raw body (`@ZodRawResponse`). */
+type ResponseBody = SingleEnvelope | PaginatedEnvelope | DataValue;
+
 /**
- * Standard response envelope for all API responses.
+ * Turns every handler result into the wire body its RESPONSE CONTRACT
+ * declares (ADR 022, `common/decorators/zod-response.decorators.ts`):
  *
- * The interceptor wraps every controller response in a consistent structure:
  * ```json
- * {
- *   "success": true,
- *   "data": { ... },
- *   "meta": { "correlationId": "...", "timestamp": "..." }
- * }
+ * { "success": true, "data": { … }, "meta": { "correlationId": "…", "timestamp": 1790812800000 } }
+ * { "success": true, "data": [ … ], "meta": { "limit": 20, "total": 100, "page": 1, "totalPages": 5,
+ *   "nextCursor": null, "hasNext": true, "hasPrevious": false, "correlationId": "…", "timestamp": … } }
  * ```
  *
- * Paginated responses get a richer meta object with pagination metadata:
- * ```json
- * {
- *   "success": true,
- *   "data": [ ... items ... ],
- *   "meta": {
- *     "total": 100,
- *     "page": 1,
- *     "limit": 20,
- *     "totalPages": 5,
- *     "hasNext": true,
- *     "hasPrevious": false,
- *     "correlationId": "...",
- *     "timestamp": "..."
- *   }
- * }
- * ```
+ * The result is parsed ONCE with the contract's schema: unknown keys are
+ * stripped (an internal field never reaches the wire) and a mismatch throws
+ * `ResponseContractViolationError` — the global exception filter logs it and
+ * answers `500 INTERNAL_ERROR`. A JSON route WITHOUT a contract fails the same
+ * way before its handler runs (`MissingResponseContractError`); the OpenAPI
+ * e2e test keeps that from ever shipping.
+ *
+ * Pass-through (no contract, no envelope): `@Sse()` routes and
+ * `text/event-stream` requests (frames are written to the socket directly) and
+ * `@SkipEnvelope()` routes that write their own reply (binary downloads).
  */
 @Injectable()
 export class ResponseInterceptor implements NestInterceptor {
-	constructor(private readonly reflector: Reflector) {}
+	public constructor(
+		private readonly reflector: Reflector,
+		private readonly requestContext: RequestContextService,
+	) {}
 
-	public intercept(context: ExecutionContext, next: CallHandler<DataValue>): Observable<DataValue | object> {
+	public intercept(context: ExecutionContext, next: CallHandler<DataValue>): Observable<ResponseBody> {
 		const request: FastifyRequest = context.switchToHttp().getRequest<FastifyRequest>();
-		// ── SSE routes pass through untouched ──────────────────────────────
-		// The `@Sse()` adapter writes each frame (`data: …`) directly to the
-		// wire. Wrapping every frame in the `{ success, data, meta }` envelope
-		// would corrupt the stream (each frame would become a nested envelope),
-		// so `text/event-stream` requests bypass the wrapper entirely. The
-		// global AuthGuard still applies — the stream stays admin-only.
-		// `includes` (not strict equality) tolerates clients that send
-		// `text/event-stream, */*` or other Accept parameters.
+		// `includes` (not strict equality) tolerates `text/event-stream, */*` and Accept parameters.
 		const acceptHeader: string | undefined = request.headers.accept;
-		if (acceptHeader?.includes("text/event-stream")) {
+		if (acceptHeader?.includes("text/event-stream") === true || this.reflector.get<boolean | undefined>(SSE_METADATA, context.getHandler()) === true) {
 			return next.handle();
 		}
-		// @SkipEnvelope() — bypass wrapper for raw responses
 		if (this.reflector.getAllAndOverride<boolean>(SKIP_ENVELOPE, [context.getHandler(), context.getClass()])) {
 			return next.handle();
 		}
-		const correlationId: string = request.correlationId ?? "";
+
+		const route = `${context.getClass().name}.${context.getHandler().name}`;
+		const contract: RouteResponseContract | undefined = getResponseContract(context.getHandler());
+		if (contract === undefined) {
+			return throwError(() => new MissingResponseContractError(route));
+		}
+		const correlationId: string = this.requestContext.resolveCorrelationId(request.raw);
 
 		return next.handle().pipe(
-			map((raw: DataValue): object => {
-				const validated = DataValueSchema.safeParse(raw);
-				const data: DataValue = validated.success ? validated.data : raw;
-				const paginated: PaginatedServiceResult | null = parsePaginated(data);
-				if (paginated !== null) {
-					const { items, limit, total, page, totalPages, nextCursor, hasNext, hasPrevious } = paginated;
-
-					const wrapped = {
-						success: true,
-						data: items,
-						meta: {
-							limit,
-							total,
-							page,
-							totalPages,
-							nextCursor,
-							hasNext,
-							hasPrevious,
-							correlationId,
-							timestamp: nowEpochMs(),
-						},
-					};
-
-					request.responseData = wrapped;
-					return wrapped;
-				}
-
-				const apiResponse: ApiResponseShape | null = parseApiResponse(data);
-				if (apiResponse !== null) {
-					const { meta } = apiResponse;
-
-					const wrapped = {
-						...apiResponse,
-						meta: {
-							...meta,
-							correlationId,
-							timestamp: nowEpochMs(),
-						},
-					};
-
-					request.responseData = wrapped;
-					return wrapped;
-				}
-
-				// ── Case 3: Plain data → standard success envelope ──
-				const wrapped = {
-					success: true,
-					data,
-					meta: {
-						correlationId,
-						timestamp: nowEpochMs(),
-					},
-				};
-
-				request.responseData = wrapped;
-				return wrapped;
-			}),
-			// ── Catch errors so error responses are also displayed in terminal ──
-			catchError((err: Error) => {
-				const statusCode: number = err instanceof HttpException ? err.getStatus() : HttpStatus.INTERNAL_SERVER_ERROR;
-
-				request.responseData = {
-					success: false,
-					error: {
-						message: err.message,
-						statusCode,
-					},
-					meta: {
-						correlationId,
-						timestamp: nowEpochMs(),
-					},
-				};
-
-				return throwError(() => err);
+			map((result: DataValue): ResponseBody => {
+				const body: ResponseBody = ResponseInterceptor.toBody(contract, result, route, correlationId);
+				request.responseData = body;
+				return body;
 			}),
 		);
+	}
+
+	/** Parse `result` with the contract (single pass) and wrap it in the declared envelope. */
+	public static toBody(contract: RouteResponseContract, result: DataValue, route: string, correlationId: string): ResponseBody {
+		if (contract.kind === "paginated") {
+			const page = contract.page.safeParse(result);
+			if (!page.success) {
+				throw new ResponseContractViolationError(route, page.error);
+			}
+			return ResponseInterceptor.paginatedEnvelope(page.data, correlationId);
+		}
+		const parsed = contract.schema.safeParse(result);
+		if (!parsed.success) {
+			throw new ResponseContractViolationError(route, parsed.error);
+		}
+		if (contract.kind === "raw") {
+			return parsed.data;
+		}
+		return { success: true, data: parsed.data, meta: { correlationId, timestamp: nowEpochMs() } };
+	}
+
+	private static paginatedEnvelope(page: PaginatedServiceResult, correlationId: string): PaginatedEnvelope {
+		const { items, limit, total, page: pageNumber, totalPages, nextCursor, hasNext, hasPrevious } = page;
+		return {
+			success: true,
+			data: items,
+			meta: { limit, total, page: pageNumber, totalPages, nextCursor, hasNext, hasPrevious, correlationId, timestamp: nowEpochMs() },
+		};
 	}
 }

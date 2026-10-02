@@ -1,24 +1,62 @@
-# Local infrastructure for development.
+# Local infrastructure for development. DEV ONLY — never deploy this file.
 #
 # Usage:
-#   docker compose up -d
+#   docker compose up -d            (or: pnpm docker:up)
 #   docker compose ps
-#   docker compose down
+#   docker compose down             (keeps data volumes; add -v to wipe them)
 #
 # BullMQ is a Node.js library — it has no standalone container. It stores jobs in Redis.
 # The bull-board service below is an optional dashboard for monitoring BullMQ queues.
 #
 # Service URLs (from the host machine):
+#   PostgreSQL  → localhost:5432  (postgres / postgres, database nestjs-nextjs-turborepo-starter-kit)
 #   Redis       → localhost:6379
 #   Kafka       → localhost:9092
 #   RabbitMQ    → localhost:5672  (AMQP)  |  http://localhost:15672  (management UI, rabbit / rabbit)
 #   Bull Board  → http://localhost:3030  (BullMQ queue dashboard)
+#   Mailpit     → localhost:1025  (SMTP)  |  http://localhost:8025  (web inbox)
+#   MinIO       → http://localhost:9000  (S3 API)  |  http://localhost:9001  (console, minioadmin / minioadmin)
 #
-# PostgreSQL is not included — use your local instance and set DATABASE_URL in apps/api/.env.
+# Credentials and host ports of the newer services (postgres, mailpit, minio) are
+# env-interpolated with the dev defaults shown above — override them in your shell
+# or a git-ignored `.env` file next to this compose file, e.g. when a native
+# PostgreSQL already owns port 5432:
+#   POSTGRES_PORT=5433 docker compose up -d     (then use :5433 in apps/api/.env DATABASE_URL)
+# Full reference: docs/operations/local-infrastructure.md
+#
+# The new services bind to 127.0.0.1 only, so the default dev passwords are never
+# reachable from other machines on your network.
 
 name: hello-world
 
 services:
+  # postgres:
+  #   # Same major as the documented local install (PostgreSQL 18) and the CI service container.
+  #   image: postgres:18.6
+  #   container_name: hello-world-postgres
+  #   restart: unless-stopped
+  #   ports:
+  #     - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+  #   environment:
+  #     # POSTGRES_DB is created on first start. `pnpm db:deploy` then applies the
+  #     # migrations and prisma/rls*.sql, which create the `app_runtime` RLS role.
+  #     POSTGRES_USER: ${POSTGRES_USER:-postgres}
+  #     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+  #     POSTGRES_DB: ${POSTGRES_DB:-nestjs-nextjs-turborepo-starter-kit}
+  #   volumes:
+  #     # PostgreSQL 18+ images keep PGDATA under /var/lib/postgresql/<major>/docker.
+  #     # The volume name carries the major version: a major upgrade needs a
+  #     # dump/restore, and a fresh volume can never be mixed with older data files.
+  #     - postgres_18_data:/var/lib/postgresql
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+  #     interval: 5s
+  #     timeout: 3s
+  #     retries: 20
+  #     start_period: 10s
+  #   networks:
+  #     - infra
+
   redis:
     image: redis:8.10.1
     container_name: hello-world-redis
@@ -109,14 +147,97 @@ services:
       REDIS_PASSWORD: ""
       REDIS_USE_TLS: "false"
       BULL_PREFIX: bull
-      QUEUE_NAMES: email.send,rewards.auto-publish,claims.expire-pending,claims.expire-referrer,outbox.publish,storage.cleanup,storage.delete
+      QUEUE_NAMES: email.send,rewards.auto-publish,claims.expire-pending,claims.expire-referrer,outbox.publish,storage.cleanup,storage.delete,idempotency.retention
     networks:
       - infra
 
+  mailpit:
+    # Local SMTP sink + web inbox. Nothing sent to it leaves your machine.
+    image: axllent/mailpit:v1.31.3
+    container_name: hello-world-mailpit
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${MAILPIT_SMTP_PORT:-1025}:1025"
+      - "127.0.0.1:${MAILPIT_UI_PORT:-8025}:8025"
+    environment:
+      MP_DATABASE: /data/mailpit.db
+      MP_MAX_MESSAGES: 5000
+      # Accept any SMTP credentials over plain TCP — dev only.
+      MP_SMTP_AUTH_ACCEPT_ANY: "1"
+      MP_SMTP_AUTH_ALLOW_INSECURE: "1"
+    volumes:
+      - mailpit_data:/data
+    healthcheck:
+      test: ["CMD", "/mailpit", "readyz"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    networks:
+      - infra
+
+  # minio:
+  #   # S3-compatible object storage. Upstream MinIO stopped publishing container
+  #   # images (minio/minio, quay.io/minio/minio) in late 2025; pgsty/minio is the
+  #   # maintained community build of the same server. Pinned to a release tag.
+  #   image: pgsty/minio:RELEASE.2026-08-04T00-00-00Z
+  #   container_name: hello-world-minio
+  #   restart: unless-stopped
+  #   command: ["server", "/data", "--console-address", ":9001"]
+  #   ports:
+  #     - "127.0.0.1:${MINIO_API_PORT:-9000}:9000"
+  #     - "127.0.0.1:${MINIO_CONSOLE_PORT:-9001}:9001"
+  #   environment:
+  #     MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+  #     MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+  #   volumes:
+  #     - minio_data:/data
+  #   healthcheck:
+  #     test: ["CMD", "mc", "ready", "local"]
+  #     interval: 5s
+  #     timeout: 5s
+  #     retries: 20
+  #     start_period: 5s
+  #   networks:
+  #     - infra
+
+  # minio-init:
+  #   # One-shot bootstrap: creates the buckets the API's storage config expects
+  #   # (STORAGE_PRIVATE_CONTAINER / STORAGE_PUBLIC_CONTAINER fallbacks in
+  #   # TypedConfigService) and lets anonymous clients GET (not list) objects in
+  #   # the public one — the same shape as a CDN-fronted public bucket.
+  #   # Idempotent — safe on every `docker compose up`.
+  #   image: pgsty/mc:RELEASE.2026-09-16T00-00-00Z
+  #   container_name: hello-world-minio-init
+  #   restart: "no"
+  #   depends_on:
+  #     minio:
+  #       condition: service_healthy
+  #   environment:
+  #     MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+  #     MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+  #     MINIO_PRIVATE_BUCKET: ${MINIO_PRIVATE_BUCKET:-local-private-bucket}
+  #     MINIO_PUBLIC_BUCKET: ${MINIO_PUBLIC_BUCKET:-local-public-bucket}
+  #   entrypoint: ["/bin/sh", "-c"]
+  #   command:
+  #     - >-
+  #       set -eu;
+  #       mc alias set local http://minio:9000 "$${MINIO_ROOT_USER}" "$${MINIO_ROOT_PASSWORD}";
+  #       mc mb --ignore-existing "local/$${MINIO_PRIVATE_BUCKET}";
+  #       mc mb --ignore-existing "local/$${MINIO_PUBLIC_BUCKET}";
+  #       printf '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"AWS":["*"]},"Action":["s3:GetObject"],"Resource":["arn:aws:s3:::%s/*"]}]}' "$${MINIO_PUBLIC_BUCKET}" > /tmp/public-read.json;
+  #       mc anonymous set-json /tmp/public-read.json "local/$${MINIO_PUBLIC_BUCKET}";
+  #       echo "MinIO buckets ready: $${MINIO_PRIVATE_BUCKET}, $${MINIO_PUBLIC_BUCKET}"
+  #   networks:
+  #     - infra
+
 volumes:
+  postgres_18_data:
   redis_data:
   kafka_data:
   rabbitmq_data:
+  mailpit_data:
+  minio_data:
 
 networks:
   infra:

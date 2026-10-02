@@ -23,10 +23,10 @@ import type { DecorationItem, HighlighterCore, LanguageInput, ShikiTransformer, 
  */
 export interface CodeBlockToken {
 	content: string;
-	color?: string;
-	colorDark?: string;
-	fontStyle?: CodeBlockFontStyle;
-	word?: boolean;
+	color?: string | undefined;
+	colorDark?: string | undefined;
+	fontStyle?: CodeBlockFontStyle | undefined;
+	word?: boolean | undefined;
 }
 
 export type CodeBlockFontStyle = "italic" | "bold" | "underline";
@@ -64,26 +64,26 @@ export interface CodeBlockLine {
 	tokens: CodeBlockToken[];
 	number: number;
 	text: string;
-	state?: CodeBlockLineState;
+	state?: CodeBlockLineState | undefined;
 	/**
 	 * Replaces the counter-driven gutter number for this row - a unified patch
 	 * shows "old new" pairs, a hunk header shows dots. Rendered verbatim.
 	 */
-	gutter?: string;
+	gutter?: string | undefined;
 }
 
 /** Source lines, as `[2, 3, 4]` or as a range string such as `"2-4,7"`. */
 export type CodeBlockLineSpec = number[] | string;
 
 export interface CodeBlockDiffSpec {
-	added?: CodeBlockLineSpec;
-	removed?: CodeBlockLineSpec;
+	added?: CodeBlockLineSpec | undefined;
+	removed?: CodeBlockLineSpec | undefined;
 }
 
-export type CodeBlockLevelSpec = Partial<Record<CodeBlockLevel, CodeBlockLineSpec>>;
+export type CodeBlockLevelSpec = Partial<Record<CodeBlockLevel, CodeBlockLineSpec | undefined>>;
 
 /** A word to mark, optionally restricted to some source lines. */
-export type CodeBlockWordSpec = string | { word: string; lines?: CodeBlockLineSpec };
+export type CodeBlockWordSpec = string | { word: string; lines?: CodeBlockLineSpec | undefined };
 
 export interface CodeBlockThemes {
 	light: string;
@@ -99,28 +99,28 @@ export interface CodeBlockThemes {
 export type CodeBlockTransformer = ShikiTransformer;
 
 export interface CodeBlockHighlightOptions {
-	language?: string;
-	themes?: CodeBlockThemes;
-	transformers?: CodeBlockTransformer[];
-	startLine?: number;
+	language?: string | undefined;
+	themes?: CodeBlockThemes | undefined;
+	transformers?: CodeBlockTransformer[] | undefined;
+	startLine?: number | undefined;
 	/**
 	 * Distinguishes same-signature blocks in the line-reuse cache. Without it,
 	 * two identically-configured streams evict each other's previous document.
 	 * The root passes its own instance id.
 	 */
-	instanceKey?: string;
-	highlightedLines?: CodeBlockLineSpec;
-	highlightedWords?: CodeBlockWordSpec[];
-	focusedLines?: CodeBlockLineSpec;
-	diff?: CodeBlockDiffSpec;
-	lineLevels?: CodeBlockLevelSpec;
+	instanceKey?: string | undefined;
+	highlightedLines?: CodeBlockLineSpec | undefined;
+	highlightedWords?: CodeBlockWordSpec[] | undefined;
+	focusedLines?: CodeBlockLineSpec | undefined;
+	diff?: CodeBlockDiffSpec | undefined;
+	lineLevels?: CodeBlockLevelSpec | undefined;
 }
 
 /** What a `CodeBlockLineActions` render prop receives. */
 export interface CodeBlockLineActionContext {
 	line: number;
 	text: string;
-	state?: CodeBlockLineState;
+	state?: CodeBlockLineState | undefined;
 }
 
 export type CodeBlockLineActionsRender = (context: CodeBlockLineActionContext) => ReactNode;
@@ -398,7 +398,7 @@ const MARKDOWN_LANGUAGE_CLASS_RE = /(?:^|\s)language-([\w+#-]+)/;
  * construction, because a still-streaming fence has no closing delimiter and
  * often no language yet, and must render as plain text rather than throw.
  */
-export function markdownCodeProps(props: CodeBlockMarkdownElementProps): { code: string; language?: string } {
+export function markdownCodeProps(props: CodeBlockMarkdownElementProps): { code: string; language?: string | undefined } {
 	let language: string | undefined;
 	let code = "";
 
@@ -445,7 +445,7 @@ export function markdownCodeProps(props: CodeBlockMarkdownElementProps): { code:
 export interface CodeBlockMarkdownPart {
 	type: "text" | "code";
 	content: string;
-	language?: string;
+	language?: string | undefined;
 	/** True for a fence whose closing delimiter has not arrived yet. */
 	open: boolean;
 }

@@ -5,7 +5,8 @@ import DashboardGallery from "./dashboard-gallery";
  * wrapper: the heavy showcase sections below the fold stay lazy-loaded on the
  * client (`ssr: false` in `dashboard-gallery.tsx` is deliberate — recharts,
  * react-table, dnd-kit etc. should not block first paint), but the shell
- * (jump-to nav, stat cards) is server-rendered in the initial HTML.
+ * (jump-to nav) is server-rendered in the initial HTML. The platform sales
+ * cards are real data (READ ANALYTICS) and load on the client behind skeletons.
  */
 export default function PanelHomePage(): React.JSX.Element {
 	return <DashboardGallery />;

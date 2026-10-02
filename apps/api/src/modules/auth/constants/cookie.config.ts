@@ -3,6 +3,8 @@ import { Injectable } from "@nestjs/common";
 
 import { type CookieNames } from "@workspace/shared";
 
+import { TypedConfigService } from "../../../config/typed-config.service";
+
 export type { CookieNames };
 
 /** Name of the access token cookie */
@@ -48,26 +50,27 @@ export class CookieConfigService {
 	public readonly refreshTokenName: CookieNames = REFRESH_TOKEN_COOKIE_NAME;
 
 	/** Options for the access token cookie */
-	public readonly accessTokenOptions: ExtendedCookieOptions = {
+	public readonly accessTokenOptions: ExtendedCookieOptions;
+
+	/** Options for the refresh token cookie */
+	public readonly refreshTokenOptions: ExtendedCookieOptions;
+
+	public constructor(config: TypedConfigService) {
 		// In development the API (localhost:8080) and the web/admin apps
 		// (localhost:3000/3001) run on different ports. Setting the cookie
 		// domain to "localhost" (without port) makes the browser share the
 		// cookie across all localhost ports — so the Next.js proxy can read
 		// the httpOnly tokens. In production the domain is either the actual
 		// host or unset (same-origin behind a reverse proxy).
-		domain: process.env.COOKIE_DOMAIN ?? undefined,
-		httpOnly: true,
-		secure: process.env.NODE_ENV === "production",
-		sameSite: "lax",
-		path: "/",
-	};
-
-	/** Options for the refresh token cookie */
-	public readonly refreshTokenOptions: ExtendedCookieOptions = {
-		domain: process.env.COOKIE_DOMAIN ?? undefined,
-		httpOnly: true,
-		secure: process.env.NODE_ENV === "production",
-		sameSite: "lax",
-		path: "/",
-	};
+		const shared: ExtendedCookieOptions = {
+			// Omit `domain` entirely when unset (host-only cookie).
+			...(config.cookieDomain === undefined ? {} : { domain: config.cookieDomain }),
+			httpOnly: true,
+			secure: config.secureCookies,
+			sameSite: "lax",
+			path: "/",
+		};
+		this.accessTokenOptions = shared;
+		this.refreshTokenOptions = { ...shared };
+	}
 }

@@ -10,7 +10,7 @@ import { useMerchantSidebarControl } from "@/components/layout/use-merchant-side
 import { MerchantSidebarPanel } from "@/components/layout/merchant-sidebar-panel";
 import { MerchantTopbar } from "@/components/layout/merchant-topbar";
 import type { ServerUser } from "@/lib/auth/server";
-import { stubApiMeta, successEnvelope } from "@/lib/api-envelope";
+import { initialDataOption, stubApiMeta, successEnvelope } from "@workspace/client/lib/api/envelope";
 import { MERCHANT_ME_QUERY_OPTIONS } from "@/lib/session/me-query";
 import { MerchantLocationProvider } from "@/lib/org/location-context";
 import { useMerchantOrg } from "@/lib/session/root-provider";
@@ -27,7 +27,7 @@ import * as React from "react";
 export interface MerchantShellProps {
 	readonly children: React.ReactNode;
 	readonly initialMemberships?: readonly OrganizationRewardMembershipResponse[];
-	readonly initialOrganizationSlug?: string;
+	readonly initialOrganizationSlug?: string | undefined;
 	readonly initialUser?: ServerUser | null;
 	readonly initialIsImpersonating?: boolean;
 }
@@ -84,7 +84,7 @@ export function MerchantShell({
 	const membershipsQuery = api.organizations.membershipsBootstrap.useQuery(
 		{},
 		{
-			initialData: initialMeData,
+			...initialDataOption(initialMeData),
 			...MERCHANT_ME_QUERY_OPTIONS,
 		},
 	);

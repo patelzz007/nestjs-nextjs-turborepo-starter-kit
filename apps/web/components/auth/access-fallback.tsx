@@ -4,18 +4,14 @@ import { cn } from "@workspace/ui/lib/core/utils";
 import { Lock, LogIn } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
-
-/** Login URL that returns the visitor to `returnTo` after signing in. */
-export function buildSignInHref(returnTo: string): string {
-	return `/auth/login?redirect=${encodeURIComponent(returnTo)}`;
-}
+import { loginPath } from "@/lib/routes";
 
 export interface SignInPromptProps {
 	readonly title: string;
 	readonly description: string;
 	/** Path to come back to after signing in. */
 	readonly returnTo: string;
-	readonly className?: string;
+	readonly className?: string | undefined;
 }
 
 /** Guest fallback for a section that needs an account. */
@@ -27,7 +23,7 @@ export function SignInPrompt({ title, description, returnTo, className }: SignIn
 			description={description}
 			icon={<LogIn className="size-5" aria-hidden="true" />}
 			action={
-				<Link href={buildSignInHref(returnTo)} className={cn(buttonVariants())}>
+				<Link href={loginPath(returnTo)} className={cn(buttonVariants())}>
 					Sign in
 				</Link>
 			}
@@ -38,7 +34,7 @@ export function SignInPrompt({ title, description, returnTo, className }: SignIn
 export interface AccessUnavailableNoticeProps {
 	readonly title: string;
 	readonly description: string;
-	readonly className?: string;
+	readonly className?: string | undefined;
 }
 
 /** Signed-in fallback for a section the account's permissions do not cover. */

@@ -23,7 +23,7 @@ export interface CreateStoredFileInput {
 	readonly storageBucket: string;
 	readonly storagePath: string;
 	readonly uploadedById: string;
-	readonly organizationId?: string;
+	readonly organizationId?: string | undefined;
 }
 
 export interface CreateFileVariantInput {
@@ -88,13 +88,14 @@ export class StoredFileRepository {
 			scanResult: string;
 		}>,
 	): Promise<StoredFile> {
-		const scanResult = data?.scanResult !== undefined ? sanitizePostgresText(data.scanResult, SCAN_RESULT_MAX_LENGTH) : undefined;
+		const { scanResult, ...fields } = data ?? {};
 		return this.prisma.storedFile.update({
 			where: { id },
 			data: {
 				status,
-				...data,
-				scanResult,
+				...fields,
+				// Only touch the column when a scan result is supplied — always stored sanitized.
+				...(scanResult === undefined ? {} : { scanResult: sanitizePostgresText(scanResult, SCAN_RESULT_MAX_LENGTH) }),
 			},
 		});
 	}

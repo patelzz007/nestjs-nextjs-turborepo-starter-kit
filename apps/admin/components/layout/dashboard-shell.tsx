@@ -21,10 +21,10 @@ export interface DashboardShellProps {
 	 * `GET /auth/me` still runs on the client and supersedes this once it
 	 * resolves. `null`/`undefined` falls back to the placeholder.
 	 */
-	readonly initialUser?: SidebarUser | null;
-	readonly initialSessionPermissions?: SessionPermissionsResponse;
+	readonly initialUser?: SidebarUser | null | undefined;
+	readonly initialSessionPermissions?: SessionPermissionsResponse | undefined;
 	/** Server-evaluated feature flags (env-backed), forwarded to the menu filter and route guard. */
-	readonly enabledFeatureFlags?: readonly string[];
+	readonly enabledFeatureFlags?: readonly string[] | undefined;
 }
 
 /**

@@ -70,7 +70,7 @@ const form = useForm({ validators: { onChange: CreateOrderSchema } });
 ```ts
 // apps/api — server-side validation, for correctness/security, using the SAME schema
 @Post()
-public async create(@Body(new ZodValidationPipe(CreateOrderSchema)) dto: CreateOrderDto) { ... }
+public async create(@ZodBody(CreateOrderSchema) dto: CreateOrderDto) { ... }
 ```
 
 If you ever find yourself writing two different validation rules for the same field on the frontend and backend, that's a bug waiting to happen — go back to a single shared schema in `packages/contracts` instead.
@@ -78,7 +78,7 @@ If you ever find yourself writing two different validation rules for the same fi
 ## Never hand-maintain a second source of truth
 
 - Do not hand-write a `CreateOrderDto` class with `class-validator` decorators *and* a separate `createOrderSchema` zod schema that's supposed to match it — pick zod, once, and derive everything else.
-- Do not hand-write Swagger/OpenAPI annotations (`@ApiProperty()` describing fields by hand) that duplicate what the zod schema already says. Generate the OpenAPI schema **from** the zod schema (e.g. via `nestjs-zod`'s `zodToOpenAPI`/`createZodDto`, or `@asteasolutions/zod-to-openapi`) so the request validator, the response type, and the published API docs cannot drift from each other.
+- Do not hand-write Swagger/OpenAPI annotations (`@ApiProperty()` describing fields by hand) that duplicate what the zod schema already says. Generate the OpenAPI schema **from** the zod schema so the request validator, the response type, and the published API docs cannot drift from each other. In `apps/api` that means declaring every request input with `@ZodBody` / `@ZodQuery` / `@ZodParams` / `@ZodParam` (`common/decorators/zod-request.decorators.ts`) — they validate with `ZodValidationPipe` and document the same schema (see `docs/api-routes.md` §13) — and every response with exactly one `@ZodResponse` / `@ZodPaginatedResponse` / `@ZodRawResponse` (`common/decorators/zod-response.decorators.ts`) — they document the response, set its status, enforce it at runtime and type-check the handler (see "Response validation" below, ADR 022). Put field descriptions and examples on the schema (`.describe()` / `.meta({ description, example })`), never in a parallel `@ApiQuery` / `@ApiBody`.
 - The frontend imports the **same** schema from `packages/contracts` for its TanStack Query response typing and its TanStack Form validation — it does not redeclare the shape.
 
 ```ts
@@ -95,17 +95,16 @@ export type CreateOrderDto = z.infer<typeof CreateOrderSchema>;
 ```
 
 ```ts
-// apps/api — request validation + Swagger, both from the same schema
-export class CreateOrderRequestDto extends createZodDto(CreateOrderSchema) {}
-
+// apps/api — request validation + Swagger requestBody, response docs + enforcement, all from shared schemas
 @Post()
-@ApiBody({ type: CreateOrderRequestDto })
-public async create(@Body() dto: CreateOrderRequestDto): Promise<OrderResponseDto> { ... }
+@ZodResponse(OrderSchema, { status: HttpStatus.CREATED })
+public async create(@ZodBody(CreateOrderSchema) dto: CreateOrderDto): Promise<Order> { ... }
 ```
 
 ```ts
-// apps/web — same schema, used for the query response type and the form
-const orders = z.array(OrderSchema).parse(await res.json());
+// apps/web — same schemas: the contract leaf's response envelope is parsed by the fetch layer,
+// the request schema drives the form
+const order = await api.orders.create.mutate(input); // parsed with apiContract.orders.create.response
 const form = useForm({ validators: { onChange: CreateOrderSchema } });
 ```
 
@@ -143,7 +142,27 @@ Every externally supplied value is untrusted: HTTP body, query params, route par
 
 ## Response validation
 
-For important boundaries, validating the response is worthwhile even when the producer is internal — it catches version drift, incorrect adapters, malformed provider responses, and accidental breaking changes before they reach a consumer, instead of the consumer discovering the mismatch through a confusing runtime crash three layers downstream.
+Validating the response catches version drift, incorrect adapters, malformed provider responses, and accidental breaking changes before they reach a consumer, instead of the consumer discovering the mismatch through a confusing runtime crash three layers downstream. In this repository it is not optional — every endpoint has a response contract (ADR 022, `docs/response-contracts.md`):
+
+- **One schema, declared on the contract leaf.** `defineContract({ …, response: singleResponse(XSchema) })` or `paginatedResponse(ItemSchema)` for list-grammar endpoints. Two envelopes only: `{ success, data, meta }` and `{ success, data: Item[], meta: { …pagination } }`.
+- **The API documents AND enforces it.** The handler carries `@ZodResponse(XSchema)` / `@ZodPaginatedResponse(ItemSchema)` with the same schema reference. The global `ResponseInterceptor` parses the result once: unknown keys are stripped (an internal field can never leak), a mismatch is a logged `500 INTERNAL_ERROR`. The decorator also refuses to compile on a handler whose return type does not fit the schema — so a controller can never return a Prisma model (`bigint`, `Date`, internal columns); map to the DTO in the service.
+- **The client parses with the same envelope**, in one place (`parseResponseContract`); a mismatch is a typed `ApiResponseContractError`, never silently passed on.
+- **Response schemas are open** (no `.strict()`), so the server strips instead of failing and clients ignore fields added later. Request schemas stay strict.
+- **Public routes say so on the leaf.** `defineContract({ …, access: "public" })` exactly when the handler is `@Public()` (omitted = `"authenticated"`). The SSR caller (`fetchServerQuery`) then fetches it for a visitor with no session — anonymously, no cookie, no refresh — instead of skipping it, so guests get server-rendered public data. `test/openapi-document.e2e-spec.ts` fails when a leaf's `access` and its handler's `@Public()` disagree.
+
+```ts
+// ❌ DON'T — documents nothing, enforces nothing, leaks whatever the row contains
+@Get(':id')
+@ApiOkResponse({ description: 'Order' })
+public findOne(@ZodParam('id', OrderIdSchema) id: OrderId): Promise<PrismaOrder> { return this.prisma.order.findUniqueOrThrow({ where: { id } }); }
+
+// ✅ DO — the shared schema is the documentation, the runtime filter and the compile-time check
+@Get(':id')
+@ZodResponse(OrderSchema)
+public findOne(@ZodParam('id', OrderIdSchema) id: OrderId): Promise<Order> { return this.orders.getById(id); }
+```
+
+`docs/generated/openapi.json` is the committed export of the resulting document; regenerate it with `pnpm openapi:export` whenever a request or response contract changes (the e2e suite fails while it is stale).
 
 ## REST conventions
 
@@ -179,6 +198,8 @@ const SortFieldSchema = z.enum(['createdAt', 'total', 'status']);
 ```
 
 Filters are schema-defined; avoid a generic "anything query" param that could accidentally expose internal columns.
+
+Every paginated list endpoint uses the one list grammar — `defineListQuery({ sortable, defaultSort, filter, params })` in `@workspace/shared`, `@ZodListQuery` on the controller, explicit per-field Prisma translation with an `id` tie-breaker in the repository, `tableStateToListQuery` on the client. Do not invent per-endpoint `sortBy` / `sortDirection` / top-level filter flags. See `docs/list-queries.md` and ADR 021.
 
 ## Versioning
 
@@ -416,9 +437,9 @@ const PaymentResultSchema = z.discriminatedUnion('status', [
 async findOne(@Param('id') id: string) { ... } // any string at all is accepted here, including something that isn't even a valid UUID
 
 // ✅ DO — validate route/query params with the same rigor as a request
-// body, via the ZodValidationPipe from 02-backend-nestjs.md
+// body, via the Zod request decorators from 02-backend-nestjs.md (they also document the param)
 @Get(':id')
-async findOne(@Param('id', new ZodValidationPipe(OrderIdSchema)) id: OrderId) { ... }
+async findOne(@ZodParam('id', OrderIdSchema) id: OrderId) { ... }
 ```
 
 ## Cross-app schema reuse — a worked example across all three apps
@@ -428,12 +449,11 @@ async findOne(@Param('id', new ZodValidationPipe(OrderIdSchema)) id: OrderId) { 
 export const OrderSchema = z.object({ id: z.uuid(), total: z.number().nonnegative(), status: OrderStatusSchema });
 export type Order = z.infer<typeof OrderSchema>;
 
-// apps/api/src/modules/orders/orders.controller.ts
-export class OrderResponseDto extends createZodDto(OrderSchema) {}
-@Get(':id') async findOne(): Promise<OrderResponseDto> { ... }
+// apps/api/src/modules/orders/orders.controller.ts — documented + enforced + type-checked
+@Get(':id') @ZodResponse(OrderSchema) public async findOne(...): Promise<Order> { ... }
 
-// apps/web/src/app/orders/[id]/page.tsx
-const order = OrderSchema.parse(await res.json()); // same schema, validated on the client
+// apps/web/src/app/orders/[id]/page.tsx — the fetch layer parses with the contract leaf's envelope
+const { data: order } = await api.orders.detail.fetchOrThrow({ id }); // same schema, validated on the client
 
 // apps/mobile/src/app/orders/[id].tsx
 const order = OrderSchema.parse(await res.json()); // identical validation, identical type, zero duplication
@@ -459,7 +479,7 @@ Three apps, one schema, one place a field ever gets added/changed/removed — th
 
 ```text
 ❌ Some endpoints return a bare array, others { items }, others { data, total }.
-✅ One envelope shape per kind: single → the object (or { data }), list → { data, meta }, error → the shared ErrorResponseSchema.
+✅ One envelope shape per kind: single → { success, data, meta }, list → { success, data: Item[], meta: { …pagination } } (createApiSuccessEnvelopeSchema / createApiPaginatedEnvelopeSchema), error → the shared ApiErrorResponseSchema (docs/error-model.md). Never invent a third.
 ```
 
 ## Documenting an endpoint's contract completely

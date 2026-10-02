@@ -32,8 +32,8 @@ const RecentSearchSchema = z.object({
 export type RecentSearch = z.infer<typeof RecentSearchSchema>;
 
 const PersistedPaletteSchema = z.object({
-	recentSearches: z.array(RecentSearchSchema).optional(),
-	pinnedUrls: z.array(z.string()).optional(),
+	recentSearches: z.array(RecentSearchSchema).exactOptional(),
+	pinnedUrls: z.array(z.string()).exactOptional(),
 });
 
 /**

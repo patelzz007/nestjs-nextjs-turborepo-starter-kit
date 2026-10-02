@@ -25,24 +25,30 @@ Portable **Redis, BullMQ, Kafka, and RabbitMQ (placeholder)** wiring for NestJS 
 // apps/api/src/messaging/app-messaging.config.ts
 import type { MessagingModuleOptions } from "@workspace/messaging/nest";
 
-export const APP_MESSAGING_CONFIG: MessagingModuleOptions = {
-  clientId: process.env.MESSAGING_CLIENT_ID ?? "my-api",
-  connectionName: process.env.MESSAGING_CONNECTION_NAME ?? "my-api",
-  queueNames: ["email.send", "reports.generate"], // your queues
-  bullPrefix: "bull",
-  healthQueueName: "email.send",
-};
+// Values come from YOUR app's validated config — this package never reads process.env.
+export function buildAppMessagingConfig(config: MyAppConfig["messaging"]): MessagingModuleOptions {
+  return {
+    clientId: config.clientId,
+    connectionName: config.connectionName,
+    queueNames: ["email.send", "reports.generate"], // your queues
+    bullPrefix: "bull",
+    healthQueueName: "email.send",
+    redisUrl: config.redisUrl, // undefined → Redis + BullMQ disabled
+    kafkaBrokers: config.kafkaBrokers, // undefined → Kafka producer is a no-op
+    rabbitmqUrl: config.rabbitmqUrl, // undefined → RabbitMQ placeholder disabled
+  };
+}
 ```
 
 4. Register in `AppModule`:
 
 ```typescript
 import { registerMessagingInfrastructureModule } from "@workspace/messaging/nest";
-import { APP_MESSAGING_CONFIG } from "./messaging/app-messaging.config";
+import { buildAppMessagingConfig } from "./messaging/app-messaging.config";
 
 @Module({
   imports: [
-    registerMessagingInfrastructureModule(APP_MESSAGING_CONFIG),
+    registerMessagingInfrastructureModule(buildAppMessagingConfig(appConfig.messaging)),
   ],
 })
 export class AppModule {}
@@ -66,27 +72,31 @@ export class EmailSendProcessor extends WorkerHost {
 
 | Export | Purpose |
 |--------|---------|
-| `@workspace/messaging` | Redis/Bull helpers, outbox schemas, env parsing |
+| `@workspace/messaging` | Redis/Bull helpers, outbox schemas |
 | `@workspace/messaging/nest` | `MessagingInfrastructureModule`, health indicators, tokens |
 
 ### Nest modules (all via `registerMessagingInfrastructureModule`)
 
 - **Redis** — `REDIS_PUBLISHER`, `REDIS_SUBSCRIBER` (ioredis, or `null` if no URL)
 - **BullMQ** — registers all `queueNames`, exports `BullModule`
-- **Kafka** — `KafkaProducerService.publish(topic, envelope)` or no-op
+- **Kafka** — `KafkaProducerService.publish(topic, envelope, partitionKey?)` or no-op. Every message carries the envelope's stable `eventId` in the body and in the `event-id` header (`KAFKA_EVENT_ID_HEADER`), plus `event-type` (`KAFKA_EVENT_TYPE_HEADER`)
 - **RabbitMQ** — placeholder service + health (logs when URL set, no consumers)
 
 ---
 
-## Environment variables (defaults)
+## Configuration (explicit, no environment reads)
 
-| Variable | Purpose |
-|----------|---------|
-| `REDIS_URL` | Enables Redis + BullMQ |
-| `KAFKA_BROKERS` | Comma-separated brokers |
-| `RABBITMQ_URL` | Placeholder health only |
+This package **never reads `process.env`**. The app validates its own
+environment (apps/api: `REDIS_URL`, `KAFKA_BROKERS`, `RABBITMQ_URL`,
+`MESSAGING_CLIENT_ID`, `MESSAGING_CONNECTION_NAME` — see
+[API configuration](../../docs/api-configuration.md)) and passes the values
+through `MessagingModuleOptions`:
 
-Override env key names via `envKeys` in `MessagingModuleOptions`.
+| Option | Purpose |
+|--------|---------|
+| `redisUrl` | Enables Redis + BullMQ (`undefined` disables) |
+| `kafkaBrokers` | Kafka bootstrap servers (`undefined` disables) |
+| `rabbitmqUrl` | Placeholder health only (`undefined` disables) |
 
 ---
 
@@ -103,6 +113,8 @@ import {
 
 Use these for transactional outbox tables and Kafka payloads in any app.
 
+`MessageEnvelopeSchema` requires `eventId` (uuid): the producer-assigned, stable id of the event — in the transactional outbox pattern it is the outbox row id. A message republished after a crash keeps the same `eventId`, so consumers dedupe on it in an inbox table (`INSERT … ON CONFLICT DO NOTHING` in the same transaction as their side effect). See [ADR 015](../../docs/adr/015-transactional-outbox-and-inbox.md).
+
 ---
 
 ## Docker (reference)
@@ -116,7 +128,8 @@ This repo’s `compose.yml` is app-agnostic except Bull Board’s `QUEUE_NAMES` 
 1. **Processors never live in this package** — only connection plumbing.
 2. **Queue names are configured, not hardcoded** — pass `queueNames: [...]`.
 3. **Kafka topics are strings** — app validates with its own Zod enums.
-4. **Disabled = safe no-op** — missing env vars disable brokers without crashing boot.
+4. **Disabled = safe no-op** — an `undefined` connection setting disables that broker without crashing boot.
+5. **No environment reads** — connection settings arrive through options, validated by the app.
 
 ---
 

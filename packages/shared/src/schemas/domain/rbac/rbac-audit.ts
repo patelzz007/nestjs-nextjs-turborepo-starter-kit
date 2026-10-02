@@ -1,43 +1,36 @@
 import { z } from "zod";
 
 import { BaseResponseSchema } from "../../api/common";
+import { defineListQuery, listFilter } from "../../api/list-query";
 
-export const AuditLogQuerySchema = z
-	.object({
-		actorId: z.uuid().optional().meta({
-			description: "Filter by actor ID",
-		}),
-		targetUserId: z.uuid().optional().meta({
-			description: "Filter by target user ID",
-		}),
-		targetRoleId: z.uuid().optional().meta({
-			description: "Filter by target role ID",
-		}),
-		action: z.string().optional().meta({
-			description: "Filter by action type",
-		}),
-		page: z.coerce.number().int().min(1).optional().default(1).meta({
-			description: "Page number (1-based)",
-		}),
-		limit: z.coerce.number().int().min(1).max(100).optional().default(20).meta({
-			description: "Results per page",
-		}),
-	})
-	.strict();
-
+/** `GET /admin/audit` list query (newest first) — see docs/list-queries.md. */
+export const auditLogListQuery = defineListQuery({
+	sortable: ["createdAt"],
+	defaultSort: [{ field: "createdAt", direction: "desc" }],
+	filter: {
+		action: listFilter.string({ eq: true, in: true }),
+		actorId: listFilter.uuid({ eq: true }),
+		targetUserId: listFilter.uuid({ eq: true }),
+		targetRoleId: listFilter.uuid({ eq: true }),
+		createdAt: listFilter.epochMs({ gte: true, lte: true }),
+	},
+	params: {},
+});
+export const AuditLogQuerySchema = auditLogListQuery.schema;
 export type AuditLogQueryInput = z.output<typeof AuditLogQuerySchema>;
+export type AuditLogListSortField = (typeof auditLogListQuery.sortable)[number];
 
-/** Audit log entry. */
-export const AuditLogEntrySchema = BaseResponseSchema.omit({ isDeleted: true, deletedAt: true })
-	.extend({
-		id: z.string(),
-		actorId: z.string().nullable(),
-		targetUserId: z.string().nullable(),
-		targetRoleId: z.string().nullable(),
-		permissionId: z.string().nullable(),
-		action: z.string(),
-		detail: z.string().nullable(),
-	})
-	.strict();
+/** Audit log entry (`GET /admin/audit` list item). Open response schema (ADR 022) — `BaseResponseSchema` is strict, so its fields are spread. */
+export const AuditLogEntrySchema = z.object({
+	createdAt: BaseResponseSchema.shape.createdAt,
+	updatedAt: BaseResponseSchema.shape.updatedAt,
+	id: z.string(),
+	actorId: z.string().nullable(),
+	targetUserId: z.string().nullable(),
+	targetRoleId: z.string().nullable(),
+	permissionId: z.string().nullable(),
+	action: z.string(),
+	detail: z.string().nullable(),
+});
 
 export type AuditLogEntry = z.output<typeof AuditLogEntrySchema>;

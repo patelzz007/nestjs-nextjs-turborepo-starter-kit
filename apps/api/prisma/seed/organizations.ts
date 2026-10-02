@@ -5,6 +5,7 @@ import type { Organization, User } from "@prisma/client";
 import { seedRewardHubTenantPolicies } from "../../src/modules/organization/utils/rewardhub-policy-seed.util";
 
 import { prisma } from "./client";
+import { seedLog } from "./seed-log";
 
 /** Fixed seed UUIDs for canonical organizations (URL slugs are the merchant entry point). */
 export const ORGANIZATION_SEED_IDS = Object.freeze({
@@ -420,7 +421,7 @@ export async function seedOrganizationsAndMerchants(
 }
 
 export function printOrganizationSeedCredentials(): void {
-	console.log(`
+	seedLog(`
 🏢 Organization workspace (merchant portal)
 ──────────────────────────────────────────────
 Brew & Bean KL — brew.owner@kl-rewards.demo / BrewOwner@123

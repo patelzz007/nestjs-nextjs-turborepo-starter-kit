@@ -1,7 +1,8 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import type { OrganizationLocationStatus, PilotCity } from "@prisma/client";
 import {
 	epochMs,
+	MERCHANT_CAPABILITY,
 	type AdminLocationRequestListQuery,
 	type AdminLocationRequestResponse,
 	type AdminOrganizationLocationCreateInput,
@@ -14,14 +15,15 @@ import {
 	type PaginatedServiceResult,
 } from "@workspace/shared";
 
+import { mapListResult, toPaginatedServiceResult } from "../../../platform/persistence/list-page";
 import { TenantTransactionService } from "../../../prisma/tenant-transaction.service";
 import { OrganizationLocationRepository, type AdminLocationRequestRow } from "../repositories/organization-location.repository";
 import { mapOrganizationLocationToResponse } from "../utils/organization-location-mapper.util";
 import { OrganizationAuditService } from "./organization-audit.service";
 import { OrganizationContextService } from "./organization-context.service";
+import { OrganizationRewardAuthService } from "./organization-reward-auth.service";
 
 const MAX_PENDING_LOCATIONS_PER_ORG = 5;
-const LOCATION_MANAGER_ROLES: readonly OrganizationMembershipRole[] = ["OWNER", "ADMIN"];
 
 @Injectable()
 export class OrganizationLocationService {
@@ -30,11 +32,12 @@ export class OrganizationLocationService {
 		private readonly organizationContext: OrganizationContextService,
 		private readonly locationRepository: OrganizationLocationRepository,
 		private readonly audit: OrganizationAuditService,
+		private readonly organizationRewardAuth: OrganizationRewardAuthService,
 	) {}
 
 	public async createMerchantLocation(userId: string, orgSlug: string, input: OrganizationLocationCreateInput): Promise<OrganizationLocationResponse> {
 		const resolved = await this.organizationContext.resolveBySlug(userId, orgSlug);
-		this.assertCanManageLocations(resolved.membership.role);
+		await this.requireManageLocations(userId, resolved.membership.role, resolved.organizationId);
 
 		return this.tenantTx.withTenantTransaction(
 			{
@@ -86,7 +89,7 @@ export class OrganizationLocationService {
 
 	public async resubmitMerchantLocation(userId: string, orgSlug: string, locationId: string, input: OrganizationLocationUpdateInput): Promise<OrganizationLocationResponse> {
 		const resolved = await this.organizationContext.resolveBySlug(userId, orgSlug);
-		this.assertCanManageLocations(resolved.membership.role);
+		await this.requireManageLocations(userId, resolved.membership.role, resolved.organizationId);
 
 		return this.tenantTx.withTenantTransaction(
 			{
@@ -218,34 +221,19 @@ export class OrganizationLocationService {
 	}
 
 	public async listAdminLocationRequests(query: AdminLocationRequestListQuery): Promise<PaginatedServiceResult<AdminLocationRequestResponse>> {
-		const skip = (query.page - 1) * query.limit;
-		const [rows, total] = await Promise.all([
-			this.tenantTx.withSystemOperation(
-				{
-					operation: "organization.location.admin_list",
-					reason: "List organization location requests",
-					correlationId: `admin-location-requests:${query.status}`,
-					actorUserId: null,
-				},
-				async (tx) => this.locationRepository.listAdminRequestsInTx(tx, query.status, skip, query.limit),
-			),
-			this.locationRepository.countAdminRequests(query.status),
-		]);
-
-		const items = rows.map((row) => this.mapAdminLocationRequest(row));
-
-		const totalPages = Math.max(1, Math.ceil(total / query.limit));
-
-		return {
-			items,
-			total,
-			page: query.page,
-			limit: query.limit,
-			totalPages,
-			nextCursor: null,
-			hasNext: query.page < totalPages,
-			hasPrevious: query.page > 1,
-		};
+		const result = await this.tenantTx.withSystemOperation(
+			{
+				operation: "organization.location.admin_list",
+				reason: "List organization location requests",
+				correlationId: "admin-location-requests",
+				actorUserId: null,
+			},
+			async (tx) => this.locationRepository.listAdminRequestsInTx(tx, query),
+		);
+		return toPaginatedServiceResult(
+			mapListResult(result, (row) => this.mapAdminLocationRequest(row)),
+			query,
+		);
 	}
 
 	public async finalizeOnboardingLocations(
@@ -308,12 +296,8 @@ export class OrganizationLocationService {
 		};
 	}
 
-	private assertCanManageLocations(role: OrganizationMembershipRole): void {
-		if (!LOCATION_MANAGER_ROLES.includes(role)) {
-			throw new ForbiddenException({
-				message: "Only organization owners and admins can manage store locations",
-				error: "ORGANIZATION_LOCATION_FORBIDDEN",
-			});
-		}
+	/** Requesting and resubmitting stores need `merchant:manage_locations` (role table → tenant Cedar policy). */
+	private async requireManageLocations(userId: string, role: OrganizationMembershipRole, organizationId: string): Promise<void> {
+		await this.organizationRewardAuth.requireMembershipCapability({ userId, organizationId, role }, MERCHANT_CAPABILITY.manageLocations);
 	}
 }

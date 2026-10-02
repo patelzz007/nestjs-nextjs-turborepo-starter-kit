@@ -9,7 +9,7 @@ import { proxy, resetAdminProxyRefreshCooldownForTests } from "./proxy";
 // run fine in the node vitest environment, so tests assert on actual response
 // objects (status, Location header, cookies) instead of casting fake doubles.
 
-vi.mock("@workspace/client/lib/api/config", () => ({ API_BASE_URL: "http://api.test", API_URL_PREFIX: "/api/v1" }));
+vi.mock("@workspace/client/lib/api/config", () => ({ API_BASE_URL: "http://api.test", API_URL_PREFIX: "/api/v1", RUNTIME_NODE_ENV: "test" }));
 
 // ── Request / response plumbing ─────────────────────────────────────────────
 
@@ -65,6 +65,8 @@ interface AdminJwtClaims {
 	readonly sub: string;
 	readonly exp: number;
 	readonly hasAdminAccess: boolean;
+	readonly sessionScope?: "restricted";
+	readonly isEmailVerified?: boolean;
 }
 
 function base64UrlJson(value: JwtHeader | AdminJwtClaims): string {
@@ -82,6 +84,11 @@ function expiredNonAdminToken(): string {
 
 function adminToken(expInSeconds: number): string {
 	return makeJwt({ sub: "u_1", exp: Math.floor(Date.now() / 1000) + expInSeconds, hasAdminAccess: true });
+}
+
+/** A live admin token for a restricted (enrollment) session — MFA not yet enrolled. */
+function restrictedAdminToken(): string {
+	return makeJwt({ sub: "u_1", exp: Math.floor(Date.now() / 1000) + 3600, hasAdminAccess: true, sessionScope: "restricted", isEmailVerified: true });
 }
 
 function nonAdminToken(): string {
@@ -124,6 +131,36 @@ describe("admin proxy route protection", () => {
 
 	it("serves the panel to admins", async () => {
 		const response = await runProxy({ pathname: "/users", accessToken: adminToken(3600), refreshToken: "rt" });
+
+		expect(response.status).toBe(200);
+		expect(redirectLocation(response)).toBeUndefined();
+	});
+
+	it("sends restricted (enrollment) sessions to the personal account pages", async () => {
+		const response = await runProxy({ pathname: "/merchants", accessToken: restrictedAdminToken(), refreshToken: "rt" });
+
+		expect(response.status).toBe(307);
+		expect(redirectLocation(response)).toBe("http://localhost:3001/account");
+	});
+
+	it("lets restricted sessions reach /account/** to finish enrollment", async () => {
+		for (const pathname of ["/account", "/account/security"]) {
+			const response = await runProxy({ pathname, accessToken: restrictedAdminToken(), refreshToken: "rt" });
+
+			expect(response.status, pathname).toBe(200);
+			expect(redirectLocation(response), pathname).toBeUndefined();
+		}
+	});
+
+	it("does not treat a look-alike of an auth route as an auth page (segment-aware)", async () => {
+		const response = await runProxy({ pathname: "/auth/loginx" });
+
+		expect(response.status).toBe(307);
+		expect(redirectLocation(response)).toBe("http://localhost:3001/auth/login?redirect=%2Fauth%2Floginx");
+	});
+
+	it("serves the emailed verify-email token link even while an admin session is active", async () => {
+		const response = await runProxy({ pathname: "/auth/verify-email", accessToken: adminToken(3600), refreshToken: "rt", query: { token: "tok" } });
 
 		expect(response.status).toBe(200);
 		expect(redirectLocation(response)).toBeUndefined();

@@ -1,10 +1,11 @@
 import { UnauthorizedException } from "@nestjs/common";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { TypedConfigService } from "../../../config/typed-config.service";
 import { PrismaService } from "../../../prisma/prisma.service";
 
 import { AccessTokenStateService } from "./access-token-state.service";
+import { TypedConfigService } from "../../../config/typed-config.service";
+import { createTestApiConfig, createTestTypedConfig } from "../../../../test/support/test-api-env";
 
 const mocks = vi.hoisted(() => ({
 	userFindUnique: vi.fn(),
@@ -37,7 +38,7 @@ describe("AccessTokenStateService", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		mocks.userFindUnique.mockResolvedValue(accountState);
-		service = new AccessTokenStateService(new PrismaService(), new TypedConfigService());
+		service = new AccessTokenStateService(new PrismaService(createTestTypedConfig()), new TypedConfigService(createTestApiConfig()));
 	});
 
 	it("uses the cache on a second validation for the same user", async () => {

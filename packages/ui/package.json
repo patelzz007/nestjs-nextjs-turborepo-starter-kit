@@ -60,7 +60,7 @@
 		"@workspace/typescript-config": "workspace:*",
 		"eslint": "^9.39.5",
 		"jsdom": "^30.0.1",
-		"next": "16.3.4",
+		"next": "16.3.8",
 		"tailwindcss": "^4.3.3",
 		"typescript": "6.0.2",
 		"vitest": "^5.0.0"
@@ -68,7 +68,8 @@
 	"exports": {
 		"./globals.css": "./src/styles/globals.css",
 		"./postcss.config": "./postcss.config.mjs",
-		"./lib/*": "./src/lib/*",
+		"./lib/core/highlight-text": "./src/lib/core/highlight-text.tsx",
+		"./lib/*": "./src/lib/*.ts",
 		"./lib/*.tsx": "./src/lib/*.tsx",
 		"./lib/*.ts": "./src/lib/*.ts",
 		"./components/*": "./src/components/*.tsx",

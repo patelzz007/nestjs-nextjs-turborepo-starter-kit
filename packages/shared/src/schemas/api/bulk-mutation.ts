@@ -13,10 +13,8 @@ export const BulkDeleteIdsSchema = z
 export type BulkDeleteIdsInput = z.output<typeof BulkDeleteIdsSchema>;
 
 /** Shared response payload for bulk soft-delete endpoints. */
-export const BulkDeleteResultSchema = z
-	.object({
-		deletedCount: z.number().int().nonnegative(),
-	})
-	.strict();
+export const BulkDeleteResultSchema = z.object({
+	deletedCount: z.number().int().nonnegative(),
+});
 
 export type BulkDeleteResult = z.output<typeof BulkDeleteResultSchema>;

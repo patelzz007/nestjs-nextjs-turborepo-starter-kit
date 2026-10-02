@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable } from "@nestjs/common";
 
+import { TypedConfigService } from "../../../config/typed-config.service";
 import { EmailSenderService } from "../../notifications/email/email-sender.service";
 import { RewardClaimOtpEmailTemplate } from "../../notifications/email/templates/reward-claim-otp-email.template";
 import { RewardOtpChallengeRepository } from "../repositories/reward-otp-challenge.repository";
@@ -18,6 +19,7 @@ export class RewardOtpService {
 		private readonly rewardRepository: RewardRepository,
 		private readonly otpChallengeRepository: RewardOtpChallengeRepository,
 		private readonly emailSender: EmailSenderService,
+		private readonly config: TypedConfigService,
 	) {}
 
 	public async sendClaimOtp(userId: string, phone: string, rewardId: string): Promise<void> {
@@ -54,7 +56,7 @@ export class RewardOtpService {
 			}),
 		);
 
-		if (process.env.NODE_ENV !== "production") {
+		if (!this.config.isProduction) {
 			// Dev visibility when EMAIL_MODE=log-only.
 			process.stdout.write(`[reward-otp] user=${userId} email=${user.email} phone=${phone} code=${code}\n`);
 		}

@@ -4,7 +4,7 @@ tags: ["authorization", "troubleshooting", "faq", "rls", "403"]
 description: "Symptoms, causes and fixes for common authorization problems — unexpected 403s, missing menu items, RLS errors, reset deadlocks — plus answers to frequent design questions."
 order: 27
 author: "Platform Team"
-lastUpdated: 1790812800000
+lastUpdated: 1790899200000
 coverImage: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=1600&q=80"
 ---
 
@@ -27,8 +27,11 @@ coverImage: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=f
 | 403 on an organization member with no roles | membership is not permission | assign a role / store membership role |
 | 403 from a policy | a DENY policy matched, or ALLOW policies exist and none matched | `explain()` shows `source: "policy"` with the policy id |
 | Merchant cashier gets 403 creating a reward | expected: cashiers are read-only (`MERCHANT_ROLE_CAPABILITIES`) | use an `OWNER` / `ADMIN` account |
+| Merchant `403 ORGANIZATION_ROLE_CAPABILITY_REQUIRED` on team / locations / KYB | the role lacks `merchant:manage_team` / `manage_locations` / `manage_verification` (KYB is owner-only, admins included) | use an account whose role holds it |
+| Merchant `403 ORGANIZATION_ACTION_FORBIDDEN` although the role holds the capability | a tenant Cedar policy narrows it (or the organization has no published tenant policy) | check the organization's published policy versions |
+| Merchant page shows "You don't have access to this page" | `guardOrgPage` denied it on the server: the role lacks the capability in `ORG_PAGE_RULES`, or the URL names an organization you do not belong to | expected; the sidebar hides such pages |
 | Admin gets 403 assigning a role | subset rule: the admin does not hold every permission of that role, or they are editing themselves | ask a SuperAdmin, or grant the admin those permissions first |
-| 403 uploading a store logo / KYB document | only `OWNER` / `ADMIN` (logo, banner) and `OWNER` (KYB) may upload | check the membership role |
+| 403 uploading a store logo / KYB document | needs `merchant:manage_locations` (logo, banner — `OWNER` / `ADMIN`) or `merchant:manage_verification` (KYB — `OWNER`) | check the membership role in `MERCHANT_ROLE_CAPABILITIES` |
 
 ## 2. "A menu item / button is missing"
 

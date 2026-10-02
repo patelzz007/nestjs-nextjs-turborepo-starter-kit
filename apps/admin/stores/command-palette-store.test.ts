@@ -5,7 +5,7 @@ import { z } from "zod";
 
 import { useCommandPaletteStore, type RecentSearch } from "@/stores/command-palette-store";
 
-const RECENT: RecentSearch = { title: "Settings", url: "/settings/general", section: "Settings", icon: "Settings" };
+const RECENT: RecentSearch = { title: "Billing", url: "/settings/billing", section: "Platform", icon: "CreditCard" };
 
 /** Shape of what zustand persist writes to localStorage for the palette store. */
 const StoredPalettePayloadSchema = z.object({

@@ -1,18 +1,25 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from "@nestjs/common";
-import { ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
+import { Controller, Delete, Get, HttpStatus, Patch, Post } from "@nestjs/common";
+import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import type { z } from "zod";
 
 import {
 	apiPath,
+	BulkCreateSampleCategoryResponseSchema,
 	BulkCreateSampleCategorySchema,
 	BulkDeleteIdsSchema,
+	BulkDeleteResultSchema,
 	CreateSampleCategorySchema,
+	DeleteSuccessDataSchema,
 	SampleCategoryIdParamSchema,
 	SampleCategoryListQuerySchema,
+	SampleCategorySchema,
+	type DeleteSuccessData,
+	type SampleCategoryListQuery,
 	UpdateSampleCategorySchema,
 } from "@workspace/shared";
 
-import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe";
+import { ZodBody, ZodListQuery, ZodParams } from "../../common/decorators/zod-request.decorators";
+import { ZodPaginatedResponse, ZodResponse } from "../../common/decorators/zod-response.decorators";
 import { RequirePermission } from "../auth/decorators/require-permission.decorator";
 
 import { SampleCategoryService } from "./sample-category.service";
@@ -30,17 +37,17 @@ export class SampleCategoryController {
 	@RequirePermission("LIST", "SAMPLE_CATEGORY")
 	@Get()
 	@ApiOperation({ summary: "List SampleCategories" })
-	@ApiOkResponse({ description: "Paginated list of samplecategories" })
-	public list(@Query(new ZodValidationPipe(SampleCategoryListQuerySchema)) query: z.output<typeof SampleCategoryListQuerySchema>): ReturnType<SampleCategoryService["list"]> {
+	@ZodPaginatedResponse(SampleCategorySchema, { description: "Paginated list of samplecategories" })
+	public list(@ZodListQuery(SampleCategoryListQuerySchema) query: SampleCategoryListQuery): ReturnType<SampleCategoryService["list"]> {
 		return this.service.list(query);
 	}
 
 	@RequirePermission("CREATE", "SAMPLE_CATEGORY")
 	@Post("bulk")
 	@ApiOperation({ summary: "Bulk create samplecategories" })
-	@ApiOkResponse({ description: "Created samplecategories" })
+	@ZodResponse(BulkCreateSampleCategoryResponseSchema, { status: HttpStatus.CREATED, description: "Created samplecategories" })
 	public bulkCreate(
-		@Body(new ZodValidationPipe(BulkCreateSampleCategorySchema)) body: { items: z.output<typeof BulkCreateSampleCategorySchema>["items"] },
+		@ZodBody(BulkCreateSampleCategorySchema) body: { items: z.output<typeof BulkCreateSampleCategorySchema>["items"] },
 	): ReturnType<SampleCategoryService["createMany"]> {
 		return this.service.createMany(body.items);
 	}
@@ -48,34 +55,34 @@ export class SampleCategoryController {
 	@RequirePermission("DELETE", "SAMPLE_CATEGORY")
 	@Post("bulk-delete")
 	@ApiOperation({ summary: "Bulk soft delete samplecategories" })
-	@ApiOkResponse({ description: "Bulk delete result" })
-	public bulkDelete(@Body(new ZodValidationPipe(BulkDeleteIdsSchema)) body: { ids: string[] }): ReturnType<SampleCategoryService["deleteMany"]> {
+	@ZodResponse(BulkDeleteResultSchema, { status: HttpStatus.CREATED, description: "Bulk delete result" })
+	public bulkDelete(@ZodBody(BulkDeleteIdsSchema) body: { ids: string[] }): ReturnType<SampleCategoryService["deleteMany"]> {
 		return this.service.deleteMany(body.ids);
 	}
 
 	@RequirePermission("READ", "SAMPLE_CATEGORY")
 	@Get(":id")
 	@ApiOperation({ summary: "Get SampleCategory by id" })
-	@ApiOkResponse({ description: "SampleCategory detail" })
-	public get(@Param(new ZodValidationPipe(SampleCategoryIdParamSchema)) params: { id: string }): ReturnType<SampleCategoryService["getById"]> {
+	@ZodResponse(SampleCategorySchema, { description: "SampleCategory detail" })
+	public get(@ZodParams(SampleCategoryIdParamSchema) params: { id: string }): ReturnType<SampleCategoryService["getById"]> {
 		return this.service.getById(params.id);
 	}
 
 	@RequirePermission("CREATE", "SAMPLE_CATEGORY")
 	@Post()
 	@ApiOperation({ summary: "Create SampleCategory" })
-	@ApiOkResponse({ description: "Created samplecategory" })
-	public create(@Body(new ZodValidationPipe(CreateSampleCategorySchema)) body: z.output<typeof CreateSampleCategorySchema>): ReturnType<SampleCategoryService["create"]> {
+	@ZodResponse(SampleCategorySchema, { status: HttpStatus.CREATED, description: "Created samplecategory" })
+	public create(@ZodBody(CreateSampleCategorySchema) body: z.output<typeof CreateSampleCategorySchema>): ReturnType<SampleCategoryService["create"]> {
 		return this.service.create(body);
 	}
 
 	@RequirePermission("UPDATE", "SAMPLE_CATEGORY")
 	@Patch(":id")
 	@ApiOperation({ summary: "Update SampleCategory" })
-	@ApiOkResponse({ description: "Updated samplecategory" })
+	@ZodResponse(SampleCategorySchema, { description: "Updated samplecategory" })
 	public update(
-		@Param(new ZodValidationPipe(SampleCategoryIdParamSchema)) params: { id: string },
-		@Body(new ZodValidationPipe(UpdateSampleCategorySchema)) body: z.output<typeof UpdateSampleCategorySchema>,
+		@ZodParams(SampleCategoryIdParamSchema) params: { id: string },
+		@ZodBody(UpdateSampleCategorySchema) body: z.output<typeof UpdateSampleCategorySchema>,
 	): ReturnType<SampleCategoryService["update"]> {
 		return this.service.update(params.id, body);
 	}
@@ -83,8 +90,8 @@ export class SampleCategoryController {
 	@RequirePermission("DELETE", "SAMPLE_CATEGORY")
 	@Delete(":id")
 	@ApiOperation({ summary: "Soft delete SampleCategory" })
-	@ApiOkResponse({ description: "SampleCategory deleted" })
-	public async delete(@Param(new ZodValidationPipe(SampleCategoryIdParamSchema)) params: { id: string }): Promise<{ success: true }> {
+	@ZodResponse(DeleteSuccessDataSchema, { description: "SampleCategory deleted" })
+	public async delete(@ZodParams(SampleCategoryIdParamSchema) params: { id: string }): Promise<DeleteSuccessData> {
 		await this.service.delete(params.id);
 		return { success: true };
 	}
@@ -92,8 +99,8 @@ export class SampleCategoryController {
 	@RequirePermission("UPDATE", "SAMPLE_CATEGORY")
 	@Post(":id/restore")
 	@ApiOperation({ summary: "Restore SampleCategory" })
-	@ApiOkResponse({ description: "Restored samplecategory" })
-	public restore(@Param(new ZodValidationPipe(SampleCategoryIdParamSchema)) params: { id: string }): ReturnType<SampleCategoryService["restore"]> {
+	@ZodResponse(SampleCategorySchema, { status: HttpStatus.CREATED, description: "Restored samplecategory" })
+	public restore(@ZodParams(SampleCategoryIdParamSchema) params: { id: string }): ReturnType<SampleCategoryService["restore"]> {
 		return this.service.restore(params.id);
 	}
 }

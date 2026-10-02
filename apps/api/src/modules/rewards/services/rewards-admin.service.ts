@@ -10,11 +10,11 @@ import type {
 	PaginatedServiceResult,
 	RewardResponse,
 } from "@workspace/shared";
-import { EmailPreview, EmailRenderContextSchema, EpochMsSchema } from "@workspace/shared";
+import { EmailPreview, EmailRenderContextSchema, EpochMsSchema, APP_LINKS } from "@workspace/shared";
 
 import { parsePrismaInputJson } from "../../../common/utils/prisma-json";
 import { TypedConfigService } from "../../../config/typed-config.service";
-import { paginateCursorListResult } from "../../../platform/persistence/cursor-list";
+import { toPaginatedServiceResult } from "../../../platform/persistence/list-page";
 import { LogService } from "../../logs/logs.service";
 import { EmailSenderService } from "../../notifications/email/email-sender.service";
 import { EMAIL_TEMPLATE_REGISTRY, buildEmailPreviewFromTemplate } from "../../notifications/email/email-template.registry";
@@ -73,7 +73,7 @@ export class RewardsAdminService {
 			});
 		}
 
-		if (process.env.NODE_ENV !== "production") {
+		if (!this.config.isProduction) {
 			// Dev visibility when EMAIL_MODE=log-only.
 			process.stdout.write(`[merchant-invite] email=${input.email} url=${inviteUrl}\n`);
 		}
@@ -124,7 +124,7 @@ export class RewardsAdminService {
 			return { ...base, ownerUserId: row.memberships[0]?.userId ?? null };
 		});
 
-		return paginateCursorListResult({ ...result, items }, query);
+		return toPaginatedServiceResult({ ...result, items }, query);
 	}
 
 	public async listPendingRewards(): Promise<RewardResponse[]> {
@@ -189,7 +189,7 @@ export class RewardsAdminService {
 	private buildMerchantInviteUrl(token: string): string {
 		const base = this.config.merchantAppUrl.replace(/\/+$/, "");
 		const params = new URLSearchParams({ token });
-		return `${base}/onboarding?${params.toString()}`;
+		return `${base}${APP_LINKS.merchant.onboarding}?${params.toString()}`;
 	}
 
 	private formatPilotCityLabel(city: string): string {

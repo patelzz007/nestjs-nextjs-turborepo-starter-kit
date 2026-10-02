@@ -9,13 +9,11 @@ export const LoginVerificationCodeSchema = z
 export type LoginVerificationCode = z.output<typeof LoginVerificationCodeSchema>;
 
 /** Returned when login credentials are valid but email verification is required. */
-export const LoginVerificationPendingResponseSchema = z
-	.object({
-		requiresVerification: z.literal(true),
-		verificationId: z.string().min(1),
-		message: z.string(),
-	})
-	.strict();
+export const LoginVerificationPendingResponseSchema = z.object({
+	requiresVerification: z.literal(true),
+	verificationId: z.string().min(1),
+	message: z.string(),
+});
 
 export type LoginVerificationPendingResponse = z.output<typeof LoginVerificationPendingResponseSchema>;
 
@@ -36,10 +34,8 @@ export const ValidateResetTokenSchema = z
 
 export type ValidateResetTokenInput = z.output<typeof ValidateResetTokenSchema>;
 
-export const ValidateResetTokenResponseSchema = z
-	.object({
-		valid: z.boolean(),
-	})
-	.strict();
+export const ValidateResetTokenResponseSchema = z.object({
+	valid: z.boolean(),
+});
 
 export type ValidateResetTokenResponse = z.output<typeof ValidateResetTokenResponseSchema>;

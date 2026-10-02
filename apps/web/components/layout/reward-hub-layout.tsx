@@ -2,6 +2,7 @@
 
 import type { ServerUser } from "@/lib/auth/server";
 import { toAuthUser } from "@/lib/auth/map-auth-user";
+import { WebRouteAccessGuard } from "@/components/auth/route-access-guard";
 import { ImpersonationBanner } from "@/components/impersonation/impersonation-banner";
 import { useWebSidebarControl } from "@/components/layout/use-web-sidebar-control";
 import { WebSidebarPanel } from "@/components/layout/web-sidebar-panel";
@@ -18,7 +19,7 @@ import * as React from "react";
 
 export interface RewardHubLayoutProps {
 	readonly children: React.ReactNode;
-	readonly initialUser?: ServerUser | null;
+	readonly initialUser?: ServerUser | null | undefined;
 	readonly sessionActive?: boolean;
 }
 
@@ -36,7 +37,9 @@ function RewardHubSidebarContent({ userName }: { readonly userName: string | nul
 
 /**
  * Consumer shell — custom sidebar + topbar with command palette. Capabilities
- * come from the root `WebAuthorizationProvider`.
+ * come from the root `WebAuthorizationProvider`; `WebRouteAccessGuard` applies
+ * each page's capability rule from `WEB_ROUTE_ACCESS`, the same table that
+ * filters the sidebar and the command palette.
  */
 export function RewardHubLayout({ children, initialUser = null, sessionActive = false }: RewardHubLayoutProps): React.JSX.Element {
 	const { user, login, api } = useAuth();
@@ -83,7 +86,7 @@ export function RewardHubLayout({ children, initialUser = null, sessionActive = 
 			topbar={<RewardHubTopbar />}>
 			<SidebarPathSync store={useWebSidebarStore} />
 			<WebShellBreadcrumb />
-			{children}
+			<WebRouteAccessGuard>{children}</WebRouteAccessGuard>
 		</AppPanelShell>
 	);
 }

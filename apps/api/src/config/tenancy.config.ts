@@ -1,5 +1,7 @@
 import { Injectable } from "@nestjs/common";
 
+import { TypedConfigService } from "./typed-config.service";
+
 /**
  * Tenancy mode for RLS bypass and organization scoping.
  *
@@ -10,14 +12,15 @@ import { Injectable } from "@nestjs/common";
  */
 @Injectable()
 export class TenancyConfigService {
+	public constructor(private readonly config: TypedConfigService) {}
+
 	public get enabled(): boolean {
-		return process.env.TENANCY_ENABLED === "true";
+		return this.config.tenancyEnabled;
 	}
 
 	/** Default organization id for single-tenant mode and fallback in multi-tenant. */
 	public get defaultOrganizationId(): string {
-		const value = process.env.DEFAULT_ORGANIZATION_ID;
-		return value !== undefined && value.length > 0 ? value : "default";
+		return this.config.defaultOrganizationId;
 	}
 
 	/**

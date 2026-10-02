@@ -32,13 +32,13 @@ export type { AccessTokenPayload, RefreshTokenPayload } from "@workspace/shared"
 export type SessionScope = "full" | "restricted";
 
 export interface AccessTokenGenerationOptions {
-	readonly sessionScope?: SessionScope;
-	readonly mfaAssuredAt?: number;
+	readonly sessionScope?: SessionScope | undefined;
+	readonly mfaAssuredAt?: number | undefined;
 }
 
 export interface SessionTokenGenerationOptions {
 	readonly sessionScope: SessionScope;
-	readonly mfaAssuredAt?: number;
+	readonly mfaAssuredAt?: number | undefined;
 }
 
 @Injectable()

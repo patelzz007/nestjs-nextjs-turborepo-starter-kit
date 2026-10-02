@@ -1,12 +1,20 @@
-"use client";
-
 import { OrganizationTeamPageView } from "@/components/org/organization-team-page-view";
-import { useParams } from "next/navigation";
+import { guardOrgPage } from "@/lib/org/org-page-guard";
 import * as React from "react";
 
-export default function OrganizationTeamPage(): React.JSX.Element {
-	const params = useParams();
-	const orgSlug = typeof params.orgSlug === "string" ? params.orgSlug : "";
+export const dynamic = "force-dynamic";
+
+interface OrganizationTeamPageProps {
+	readonly params: Promise<{ orgSlug: string }>;
+}
+
+/** Team roster and invitations — `merchant:manage_team`. */
+export default async function OrganizationTeamPage({ params }: OrganizationTeamPageProps): Promise<React.JSX.Element> {
+	const { orgSlug } = await params;
+	const denied = await guardOrgPage(orgSlug, "/settings/team");
+	if (denied !== null) {
+		return denied;
+	}
 
 	return <OrganizationTeamPageView orgSlug={orgSlug} />;
 }

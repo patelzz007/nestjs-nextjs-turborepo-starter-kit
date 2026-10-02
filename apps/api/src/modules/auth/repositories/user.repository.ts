@@ -1,8 +1,10 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
-import type { AdminUserListQuery } from "@workspace/shared";
+import { adminUserListQuery, type AdminUserListQuery, type AdminUserListSortField, type AdminUserStatus } from "@workspace/shared";
 
-import { fetchStringIdListPage } from "../../../platform/persistence/cursor-list";
+import { fetchListPage } from "../../../platform/persistence/list-page";
+import { timestampIdKeyset, type ListKeyset } from "../../../platform/persistence/list-query/keyset-cursor";
+import { buildListOrder, type ListOrder, type SortColumns } from "../../../platform/persistence/list-query/list-order";
 import type { RepositoryListResult } from "../../../platform/persistence/types";
 import { PrismaService } from "../../../prisma/prisma.service";
 
@@ -57,46 +59,56 @@ export type UserLogin = Prisma.UserGetPayload<{ select: typeof USER_SELECT_LOGIN
 /** Admin detail fields (profile + lockout fields). */
 export type UserAdminDetail = Prisma.UserGetPayload<{ select: typeof USER_SELECT_ADMIN_DETAIL }>;
 
-function buildAdminUserListWhere(query: AdminUserListQuery): Prisma.UserWhereInput {
-	const parts: Prisma.UserWhereInput[] = [];
-	const search = query.search?.trim();
+/** Every whitelisted admin-user sort field mapped to its column. */
+const ADMIN_USER_SORT_COLUMNS: SortColumns<AdminUserListSortField, Prisma.UserOrderByWithRelationInput> = {
+	fullName: (direction) => ({ fullName: direction }),
+	email: (direction) => ({ email: direction }),
+	createdAt: (direction) => ({ createdAt: direction }),
+};
 
-	if (search !== undefined && search.length > 0) {
-		parts.push({
-			OR: [{ fullName: { contains: search, mode: "insensitive" } }, { email: { contains: search, mode: "insensitive" } }],
-		});
-	}
+/** Keyset for the default order (`createdAt desc, id desc`). */
+const ADMIN_USER_LIST_KEYSET: ListKeyset<UserAdminDetail, Prisma.UserWhereInput> = timestampIdKeyset(
+	(row: UserAdminDetail) => ({ at: Number(row.createdAt), id: row.id }),
+	({ at, id }): Prisma.UserWhereInput => ({ OR: [{ createdAt: { lt: at } }, { createdAt: at, id: { lt: id } }] }),
+);
 
-	if (query.status === "active") {
-		parts.push({
-			isActive: true,
-			OR: [{ lockedUntil: null }, { lockedUntil: { lte: BigInt(Date.now()) } }],
-		});
-	} else if (query.status === "inactive") {
-		parts.push({ isActive: false });
-	} else if (query.status === "locked") {
-		parts.push({ lockedUntil: { gt: BigInt(Date.now()) } });
+/** The derived `status` filter (`isActive` + `lockedUntil`) → its column conditions, evaluated at `now`. */
+function buildAdminUserStatusWhere(status: AdminUserStatus, now: bigint): Prisma.UserWhereInput {
+	switch (status) {
+		case "active":
+			return { isActive: true, OR: [{ lockedUntil: null }, { lockedUntil: { lte: now } }] };
+		case "inactive":
+			return { isActive: false };
+		case "locked":
+			return { lockedUntil: { gt: now } };
+		default:
+			return assertNever(status);
 	}
+}
 
-	if (query.role !== undefined && query.role.length > 0) {
-		parts.push({
-			userRoles: {
-				some: {
-					isDeleted: false,
-					role: { name: query.role, isDeleted: false },
-				},
-			},
-		});
-	}
+function assertNever(value: never): never {
+	throw new Error(`Unhandled admin user status: ${String(value)}`);
+}
 
-	if (parts.length === 0) {
-		return {};
-	}
-	if (parts.length === 1) {
-		const [single] = parts;
-		return single;
-	}
-	return { AND: parts };
+/** Search + the filter AST, one explicit condition per whitelisted field. */
+export function buildAdminUserListWhere(query: AdminUserListQuery, now: bigint): Prisma.UserWhereInput {
+	const status: AdminUserStatus | undefined = query.filter?.status?.eq;
+	const role: string | undefined = query.filter?.role?.eq;
+	const conditions: Prisma.UserWhereInput[] = [
+		...(query.search !== undefined
+			? [{ OR: [{ fullName: { contains: query.search, mode: "insensitive" } }, { email: { contains: query.search, mode: "insensitive" } }] } satisfies Prisma.UserWhereInput]
+			: []),
+		...(status !== undefined ? [buildAdminUserStatusWhere(status, now)] : []),
+		...(role !== undefined ? [{ userRoles: { some: { isDeleted: false, role: { name: role, isDeleted: false } } } } satisfies Prisma.UserWhereInput] : []),
+	];
+	return { AND: conditions };
+}
+
+export function buildAdminUserListOrder(query: AdminUserListQuery): ListOrder<Prisma.UserOrderByWithRelationInput> {
+	return buildListOrder(adminUserListQuery.resolveSort(query.sort), {
+		columns: ADMIN_USER_SORT_COLUMNS,
+		tieBreaker: (direction) => ({ id: direction }),
+	});
 }
 
 /**
@@ -193,17 +205,13 @@ export class UserRepository {
 
 	/** List users with admin detail fields, filtered and paginated. */
 	public async listAdminUsers(query: AdminUserListQuery): Promise<RepositoryListResult<UserAdminDetail>> {
-		const where = buildAdminUserListWhere(query);
-		return fetchStringIdListPage(query, {
-			where,
-			mergeCursor: (baseWhere, cursorId) => ({ ...baseWhere, id: { gt: cursorId } }),
-			readId: (row) => row.id,
-			findMany: (args): Promise<UserAdminDetail[]> =>
-				this.prisma.user.findMany({
-					...args,
-					select: USER_SELECT_ADMIN_DETAIL,
-				}),
-			count: (listWhere) => this.prisma.user.count({ where: listWhere }),
+		return fetchListPage(query, {
+			where: buildAdminUserListWhere(query, BigInt(Date.now())),
+			order: buildAdminUserListOrder(query),
+			keyset: ADMIN_USER_LIST_KEYSET,
+			and: (left, right) => ({ AND: [left, right] }),
+			count: (where) => this.prisma.user.count({ where }),
+			findMany: (args): Promise<UserAdminDetail[]> => this.prisma.user.findMany({ ...args, select: USER_SELECT_ADMIN_DETAIL }),
 		});
 	}
 

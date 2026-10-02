@@ -35,13 +35,13 @@ export function useSidebar(): SidebarContextProps {
 export const SidebarProvider = React.forwardRef<
 	HTMLDivElement,
 	React.ComponentProps<"div"> & {
-		defaultOpen?: boolean;
-		open?: boolean;
-		onOpenChange?: (open: boolean) => void;
+		defaultOpen?: boolean | undefined;
+		open?: boolean | undefined;
+		onOpenChange?: ((open: boolean) => void) | undefined;
 		labels: SidebarLabels;
-		storage?: SidebarStorageAdapter;
-		keyboardShortcut?: string;
-		badges?: Readonly<Record<string, string | number>>;
+		storage?: SidebarStorageAdapter | undefined;
+		keyboardShortcut?: string | undefined;
+		badges?: Readonly<Record<string, string | number>> | undefined;
 	}
 >(function SidebarProvider(
 	{

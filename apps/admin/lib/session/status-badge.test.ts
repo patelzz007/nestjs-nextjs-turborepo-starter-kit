@@ -1,5 +1,6 @@
 import { Subject } from "rxjs";
 import { VirtualTimeScheduler } from "@/lib/virtual-time-scheduler";
+import { clientEnv } from "@/lib/env/env.client";
 import { ApiError } from "@workspace/client/lib/api/use-api";
 import { epochMs, type EpochMs, type SessionStatus } from "@workspace/shared";
 import { describe, expect, it, vi } from "vitest";
@@ -8,7 +9,6 @@ import {
 	buildSessionBadgeStreams,
 	didTokenRotate,
 	fetchSessionState,
-	resolvePollMs,
 	sameSessionState,
 	secondsUntil,
 	toSessionErrorMessage,
@@ -30,29 +30,6 @@ async function settle(): Promise<void> {
 }
 
 // ── Pure helpers ────────────────────────────────────────────────────────────
-
-describe("resolvePollMs", () => {
-	it("defaults to null (steady polling disabled) when the env var is unset or empty", () => {
-		// Zero-polling is the default: the countdown ticks locally from the
-		// mount-fetched exp claim, so a timer is never required.
-		expect(resolvePollMs(undefined)).toBeNull();
-		expect(resolvePollMs(null)).toBeNull();
-		expect(resolvePollMs("")).toBeNull();
-		expect(resolvePollMs("   ")).toBeNull();
-	});
-
-	it("returns null (polling disabled) for 0, and parses positive integers", () => {
-		expect(resolvePollMs("0")).toBeNull();
-		expect(resolvePollMs("60000")).toBe(60_000);
-		expect(resolvePollMs(" 300000 ")).toBe(300_000);
-	});
-
-	it("returns null for garbage input", () => {
-		expect(resolvePollMs("abc")).toBeNull();
-		expect(resolvePollMs("-5")).toBeNull();
-		expect(resolvePollMs("NaN")).toBeNull();
-	});
-});
 
 describe("secondsUntil", () => {
 	it("returns whole seconds remaining, floored at 0", () => {
@@ -156,43 +133,34 @@ describe("buildSessionBadgeStreams", () => {
 	});
 
 	it("countdown ticks locally with ZERO steady polling (the core promise)", async () => {
-		// Simulate a truly unset env (NOT `vi.stubEnv(..., undefined)` — that
-		// coerces to the string "undefined", which hits the garbage branch and
-		// passes coincidentally). Delete + restore keeps the test honest.
-		const envValue: string | undefined = process.env.NEXT_PUBLIC_SESSION_POLL_MS;
-		delete process.env.NEXT_PUBLIC_SESSION_POLL_MS;
+		// The default `pollMs` comes from the validated public env. vitest.config.ts
+		// leaves NEXT_PUBLIC_SESSION_POLL_MS unset, so the parsed default is null —
+		// asserted here so this test can never pass against a configured poll.
+		expect(clientEnv.NEXT_PUBLIC_SESSION_POLL_MS).toBeNull();
 
-		try {
-			const s = new VirtualTimeScheduler();
-			const fetchSession = vi.fn((): Promise<SessionStatus> => Promise.resolve(makeSession(epochMs(BASE + 3_600_000))));
-			// No pollMs → resolvePollMs(env) with unset env → null → the steady timer
-			// arm is dropped entirely. Yet the countdown MUST still tick locally from
-			// the mount-fetched expiresAt — that is the zero-poll promise.
-			const streams = buildSessionBadgeStreams({ fetchSession, scheduler: s, tickMs: 2 });
+		const s = new VirtualTimeScheduler();
+		const fetchSession = vi.fn((): Promise<SessionStatus> => Promise.resolve(makeSession(epochMs(BASE + 3_600_000))));
+		// No pollMs → env default null → the steady timer arm is dropped
+		// entirely. Yet the countdown MUST still tick locally from the
+		// mount-fetched expiresAt — that is the zero-poll promise.
+		const streams = buildSessionBadgeStreams({ fetchSession, scheduler: s, tickMs: 2 });
 
-			const ticks: (number | null)[] = [];
-			const sub = streams.secondsLeft$.subscribe({ next: (v) => ticks.push(v) });
-			await settle(); // mount fetch supplies the exp claim
-			expect(fetchSession).toHaveBeenCalledTimes(1); // ONE mount fetch, nothing else
+		const ticks: (number | null)[] = [];
+		const sub = streams.secondsLeft$.subscribe({ next: (v) => ticks.push(v) });
+		await settle(); // mount fetch supplies the exp claim
+		expect(fetchSession).toHaveBeenCalledTimes(1); // ONE mount fetch, nothing else
 
-			s.advanceBy(2);
-			s.advanceBy(2);
-			await settle();
-			// Countdown advanced locally without ANY further fetch.
-			expect(ticks.length).toBeGreaterThanOrEqual(3);
-			expect(fetchSession).toHaveBeenCalledTimes(1);
+		s.advanceBy(2);
+		s.advanceBy(2);
+		await settle();
+		// Countdown advanced locally without ANY further fetch.
+		expect(ticks.length).toBeGreaterThanOrEqual(3);
+		expect(fetchSession).toHaveBeenCalledTimes(1);
 
-			s.advanceBy(60_000); // minutes of idle — still zero steady polls
-			await settle();
-			expect(fetchSession).toHaveBeenCalledTimes(1);
-			sub.unsubscribe();
-		} finally {
-			if (envValue === undefined) {
-				delete process.env.NEXT_PUBLIC_SESSION_POLL_MS;
-			} else {
-				process.env.NEXT_PUBLIC_SESSION_POLL_MS = envValue;
-			}
-		}
+		s.advanceBy(60_000); // minutes of idle — still zero steady polls
+		await settle();
+		expect(fetchSession).toHaveBeenCalledTimes(1);
+		sub.unsubscribe();
 	});
 
 	it("polls, suppresses identical results, and re-emits changed ones", async () => {

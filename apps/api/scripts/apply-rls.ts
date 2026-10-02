@@ -134,7 +134,7 @@ export async function applyRowLevelSecurity(): Promise<void> {
 
 function isApplyRlsCliEntry(): boolean {
 	const entry = process.argv[1];
-	if (entry.length === 0) {
+	if (entry === undefined || entry.length === 0) {
 		return false;
 	}
 	return resolve(entry) === fileURLToPath(import.meta.url);

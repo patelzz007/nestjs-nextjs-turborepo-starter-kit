@@ -7,12 +7,12 @@ import {
 	type FlatUserResponse,
 } from "@workspace/shared";
 
+import { PlatformOutboxService } from "../../infrastructure/outbox/platform-outbox.service";
 import { LogService } from "../../modules/logs/logs.service";
 import { PrismaService } from "../../prisma/prisma.service";
 import { AuthorizationCheckerService } from "../authorization/services/authorization-checker.service";
 import { UserResponseMapper } from "../auth/services/user-response.mapper";
 import { TokenService } from "../auth/services/token.service";
-import { ImpersonationEventsService } from "./impersonation-events.service";
 
 /**
  * SuperAdmin impersonation flows — starting and stopping impersonation,
@@ -29,7 +29,7 @@ export class ImpersonationService {
 		private readonly authorizationChecker: AuthorizationCheckerService,
 		private readonly logService: LogService,
 		private readonly mapper: UserResponseMapper,
-		private readonly impersonationEvents: ImpersonationEventsService,
+		private readonly outbox: PlatformOutboxService,
 	) {}
 
 	/**
@@ -98,15 +98,28 @@ export class ImpersonationService {
 		// 5. Generate impersonation token
 		const accessToken = await this.tokenService.generateImpersonationToken(flatUser, superAdmin.id);
 
-		// 6. Persist audit log entry
-		await this.prisma.impersonationAuditLog.create({
-			data: {
-				impersonatorId: superAdmin.id,
-				targetUserId: targetUser.id,
-				action: "START",
-				ipAddress: ipAddress ?? null,
-				userAgent: userAgent ?? null,
-			},
+		// 6. Persist the audit log entry and its platform event atomically (transactional outbox)
+		await this.prisma.$transaction(async (tx): Promise<void> => {
+			await tx.impersonationAuditLog.create({
+				data: {
+					impersonatorId: superAdmin.id,
+					targetUserId: targetUser.id,
+					action: "START",
+					ipAddress: ipAddress ?? null,
+					userAgent: userAgent ?? null,
+				},
+			});
+			await this.outbox.enqueueInTransaction(tx, {
+				type: "impersonation.action",
+				payload: ImpersonationActionEventSchema.parse({
+					action: "start",
+					superAdminId: superAdmin.id,
+					targetUserId: targetUser.id,
+					status: "succeeded",
+					error: null,
+					durationMs: Math.round(performance.now() - actionStartedAt),
+				}),
+			});
 		});
 
 		// 7. Application-level audit log
@@ -117,17 +130,6 @@ export class ImpersonationService {
 				targetUserId: targetUser.id,
 			},
 		});
-
-		this.impersonationEvents.emitAction(
-			ImpersonationActionEventSchema.parse({
-				action: "start",
-				superAdminId: superAdmin.id,
-				targetUserId: targetUser.id,
-				status: "succeeded",
-				error: null,
-				durationMs: Math.round(performance.now() - actionStartedAt),
-			}),
-		);
 
 		return {
 			accessToken,
@@ -149,15 +151,28 @@ export class ImpersonationService {
 	public async stopImpersonation(impersonatorId: string, targetUserId: string, ipAddress?: string, userAgent?: string | null): Promise<StopImpersonationServiceResponse> {
 		const actionStartedAt: number = performance.now();
 
-		// Persist audit log entry with both IDs correctly recorded
-		await this.prisma.impersonationAuditLog.create({
-			data: {
-				impersonatorId,
-				targetUserId,
-				action: "STOP",
-				ipAddress: ipAddress ?? null,
-				userAgent: userAgent ?? null,
-			},
+		// Persist the audit log entry (both IDs correctly recorded) and its platform event atomically
+		await this.prisma.$transaction(async (tx): Promise<void> => {
+			await tx.impersonationAuditLog.create({
+				data: {
+					impersonatorId,
+					targetUserId,
+					action: "STOP",
+					ipAddress: ipAddress ?? null,
+					userAgent: userAgent ?? null,
+				},
+			});
+			await this.outbox.enqueueInTransaction(tx, {
+				type: "impersonation.action",
+				payload: ImpersonationActionEventSchema.parse({
+					action: "stop",
+					superAdminId: impersonatorId,
+					targetUserId,
+					status: "succeeded",
+					error: null,
+					durationMs: Math.round(performance.now() - actionStartedAt),
+				}),
+			});
 		});
 
 		const impersonator = await this.prisma.user.findUnique({
@@ -192,17 +207,6 @@ export class ImpersonationService {
 				targetUserId: targetUserId,
 			},
 		});
-
-		this.impersonationEvents.emitAction(
-			ImpersonationActionEventSchema.parse({
-				action: "stop",
-				superAdminId: impersonatorId,
-				targetUserId,
-				status: "succeeded",
-				error: null,
-				durationMs: Math.round(performance.now() - actionStartedAt),
-			}),
-		);
 
 		return {
 			message: "Impersonation ended. Original session restored.",

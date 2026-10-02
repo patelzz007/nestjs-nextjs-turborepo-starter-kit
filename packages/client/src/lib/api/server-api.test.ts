@@ -4,7 +4,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { classifyError, createServerCallerForRouter, createServerRequestContext, describeFailure, isPrefetchFailure, resolveConfig, type ServerApiConfig } from "./server-api";
+import { singleResponse } from "@workspace/shared";
+
 import { apiRouter, defineQuery, resolveRequest } from "./endpoints";
+import { ApiResponseContractError } from "./response-contract";
 
 // `server-only` throws outside React Server Components; stub it for tests.
 vi.mock("server-only", () => ({}));
@@ -24,17 +27,12 @@ vi.mock("next/headers", () => ({
 
 // ── Fixtures ────────────────────────────────────────────────────────────────
 
-const envelopeSchema = z.object({
-	success: z.literal(true),
-	data: z.object({ ok: z.literal("yes") }),
-	meta: z.object({}),
-});
+const okResponse = singleResponse(z.object({ ok: z.literal("yes") }));
 
 /** Fixture GET def — the def factories infer the constrained Input/Resp generics, so no widening cast is needed. */
 const endpoint = defineQuery(
-	{ method: "GET", path: "/geo/stats", input: z.object({}) },
+	{ method: "GET", path: "/geo/stats", input: z.object({}), response: okResponse },
 	{
-		response: envelopeSchema,
 		queryKey: () => ["geo", "stats"],
 	},
 );
@@ -118,6 +116,13 @@ describe("classifyError", () => {
 		expect(failure.kind).toBe("schema");
 	});
 
+	it("classifies a response-contract mismatch as schema, naming the first failing path", () => {
+		const failure = classifyError(
+			new ApiResponseContractError({ method: "GET", url: "http://api.test/api/v1/geo/stats", status: 200 }, [{ path: "data.ok", message: "Invalid input" }]),
+		);
+		expect(failure).toEqual({ kind: "schema", message: "data.ok: Invalid input" });
+	});
+
 	it("classifies a generic Error as unreachable with its message", () => {
 		const failure = classifyError(new Error("boom"));
 		expect(failure).toEqual({ kind: "unreachable", cause: "boom" });
@@ -139,29 +144,81 @@ describe("createServerCallerForRouter", () => {
 	});
 
 	it("binds query leaves from a router tree without a manual literal", async () => {
-		const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ success: true, data: { ok: "yes" }, meta: {} }));
+		const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ success: true, data: { ok: "yes" }, meta: { correlationId: "corr-1", timestamp: 1786428000000 } }));
 		const context = createServerRequestContext({ ...testConfig, fetchImpl: fetchMock }, apiRouter.auth.refresh);
 		const server = createServerCallerForRouter({ stats: endpoint }, context);
 
 		const data = await server.stats.query({});
 
-		expect(data).toEqual({ success: true, data: { ok: "yes" }, meta: {} });
+		expect(data).toEqual({ success: true, data: { ok: "yes" }, meta: { correlationId: "corr-1", timestamp: 1786428000000 } });
 		expect(fetchMock).toHaveBeenCalledTimes(1);
+	});
+
+	it("rejects a prefetched body that violates the response contract with a typed error", async () => {
+		const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ success: true, data: { ok: "no" }, meta: { correlationId: "corr-1", timestamp: 1786428000000 } }));
+		const context = createServerRequestContext({ ...testConfig, fetchImpl: fetchMock }, apiRouter.auth.refresh);
+		const server = createServerCallerForRouter({ stats: endpoint }, context);
+
+		await expect(server.stats.query({})).rejects.toBeInstanceOf(ApiResponseContractError);
+	});
+});
+
+describe("server queries without a session cookie", () => {
+	const publicEndpoint = defineQuery(
+		{ method: "GET", path: "/geo/stats", input: z.object({}), response: okResponse, access: "public" },
+		{
+			queryKey: () => ["geo", "stats", "public"],
+		},
+	);
+	const okBody = { success: true, data: { ok: "yes" }, meta: { correlationId: "corr-2", timestamp: 1786428000000 } };
+
+	beforeEach(() => {
+		cookiesMock.mockReturnValue(cookieStoreWithAccess(undefined));
+		mockForwardedHeaders();
+	});
+
+	it("skips a route that needs a session (no request is made)", async () => {
+		const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(okBody));
+		const server = createServerCallerForRouter({ stats: endpoint }, createServerRequestContext({ ...testConfig, fetchImpl: fetchMock }, apiRouter.auth.refresh));
+
+		await expect(server.stats.query({})).rejects.toThrow("no access-token cookie");
+		expect(fetchMock).not.toHaveBeenCalled();
+	});
+
+	it("fetches a public route anonymously — no Cookie header — so guests get server-rendered data", async () => {
+		const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(okBody));
+		const server = createServerCallerForRouter({ stats: publicEndpoint }, createServerRequestContext({ ...testConfig, fetchImpl: fetchMock }, apiRouter.auth.refresh));
+
+		await expect(server.stats.query({})).resolves.toEqual(okBody);
+		expect(fetchMock).toHaveBeenCalledTimes(1);
+		const headers = new Headers(fetchMock.mock.calls[0]?.[1]?.headers);
+		expect(headers.has("cookie")).toBe(false);
+		expect(headers.get("x-client-type")).toBe("admin");
+	});
+
+	it("carries the contract's access onto the query def (authenticated by default)", () => {
+		expect(endpoint.access).toBe("authenticated");
+		expect(publicEndpoint.access).toBe("public");
+		expect(apiRouter.rewards.list.access).toBe("public");
+		expect(apiRouter.claims.list.access).toBe("authenticated");
 	});
 });
 
 describe("resolveConfig", () => {
+	const APP_ORIGIN = "https://admin.example.com";
+
 	it("merges partial overrides onto defaults", () => {
-		const config = resolveConfig({ timeoutMs: 999 });
+		const config = resolveConfig({ clientOrigin: APP_ORIGIN, timeoutMs: 999 });
 		expect(config.timeoutMs).toBe(999);
 		expect(config.accessTokenCookie).toBe("adminAccessToken");
 		expect(config.clientType).toBe("admin");
 	});
 
-	it("returns full defaults when no overrides", () => {
-		const config = resolveConfig(undefined);
+	it("returns full defaults when only the required clientOrigin is given", () => {
+		const config = resolveConfig({ clientOrigin: APP_ORIGIN });
 		expect(config.retries).toBe(3);
 		expect(config.staleTimeMs).toBe(60_000);
+		expect(config.clientOrigin).toBe(APP_ORIGIN);
 	});
 });
 

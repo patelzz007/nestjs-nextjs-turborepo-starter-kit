@@ -4,7 +4,44 @@ import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { MerchantAnalyticsPageView } from "@/components/analytics/merchant-analytics-page-view";
+import { orgRoutes } from "@/lib/routes";
 import { renderWithAuthorization, TEST_ORG_SLUG } from "@/test/authorization";
+import { epochMs, type AnalyticsMetric, type MerchantAnalyticsResponse } from "@workspace/shared";
+
+const PERIOD_FROM = epochMs(1_788_220_800_000);
+const PERIOD_TO = epochMs(1_793_059_200_000);
+const ZERO: AnalyticsMetric = { value: 0, changePercent: null };
+
+function buildAnalytics(sales: MerchantAnalyticsResponse["sales"]): MerchantAnalyticsResponse {
+	return {
+		period: { from: PERIOD_FROM, to: PERIOD_TO },
+		totalRewards: { value: 3, changePercent: null },
+		activeRewards: { value: 2, changePercent: null },
+		totalClaims: ZERO,
+		totalRedemptions: ZERO,
+		conversionRate: ZERO,
+		referralCount: ZERO,
+		claimsOverTime: [],
+		topRewards: [],
+		sales,
+	};
+}
+
+const WITH_SALES = buildAnalytics({
+	currency: "MYR",
+	totalSalesMinor: { value: 250_000, changePercent: 25 },
+	bills: { value: 10, changePercent: 11 },
+	averageBillMinor: { value: 25_000, changePercent: 12 },
+	overTime: [{ date: PERIOD_FROM, salesMinor: 250_000, bills: 10 }],
+});
+
+const WITHOUT_SALES = buildAnalytics({
+	currency: "MYR",
+	totalSalesMinor: ZERO,
+	bills: ZERO,
+	averageBillMinor: ZERO,
+	overTime: [],
+});
 
 const { analyticsQuery } = vi.hoisted(() => ({
 	analyticsQuery: vi.fn(),
@@ -45,5 +82,33 @@ describe("MerchantAnalyticsPageView authorization", () => {
 
 		expect(screen.getByRole("status", { name: "Checking access" })).toBeTruthy();
 		expect(analyticsQuery).not.toHaveBeenCalled();
+	});
+});
+
+describe("MerchantAnalyticsPageView sales", () => {
+	it("shows the sales section ahead of the reward analytics", () => {
+		analyticsQuery.mockReturnValue({ data: { data: WITH_SALES }, isLoading: false });
+		renderWithAuthorization(<MerchantAnalyticsPageView orgSlug={TEST_ORG_SLUG} />, { role: "CASHIER" });
+
+		const headings = screen.getAllByRole("heading", { level: 2 }).map((heading) => heading.textContent);
+		expect(headings.slice(0, 2)).toEqual(["Sales", "Rewards & engagement"]);
+		expect(screen.getByText("RM 2,500.00")).toBeTruthy();
+		expect(screen.getByText("RM 250.00")).toBeTruthy();
+	});
+
+	it("links an owner without bills to the API keys page", () => {
+		analyticsQuery.mockReturnValue({ data: { data: WITHOUT_SALES }, isLoading: false });
+		renderWithAuthorization(<MerchantAnalyticsPageView orgSlug={TEST_ORG_SLUG} />, { role: "OWNER" });
+
+		expect(screen.getByText("No sales yet")).toBeTruthy();
+		expect(screen.getByRole("link", { name: "Set up API keys" }).getAttribute("href")).toBe(orgRoutes(TEST_ORG_SLUG).apiKeys);
+	});
+
+	it("does not offer the API keys link to a cashier, who cannot manage keys", () => {
+		analyticsQuery.mockReturnValue({ data: { data: WITHOUT_SALES }, isLoading: false });
+		renderWithAuthorization(<MerchantAnalyticsPageView orgSlug={TEST_ORG_SLUG} />, { role: "CASHIER" });
+
+		expect(screen.getByText("No sales yet")).toBeTruthy();
+		expect(screen.queryByRole("link", { name: "Set up API keys" })).toBeNull();
 	});
 });

@@ -3,12 +3,14 @@
 import { Avatar, AvatarFallback } from "@workspace/ui/components/display/avatar";
 import { Button } from "@workspace/ui/components/form/button";
 import { toastMessage } from "@workspace/ui/components/feedback/toast";
-import { CreditCard, FileText, LogOut, MoveUpRight, Settings, Sparkles } from "lucide-react";
+import { CircleUserRound, CreditCard, FileText, LogOut, MoveUpRight, Settings, Shield, Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 
 import { getUserInitials } from "@workspace/ui/lib/core/user-initials";
+import { useCanAccessRoute } from "@/components/layout/authorized-navigation";
 import type { SidebarUser } from "@/lib/navigation/sidebar";
+import { ROUTES } from "@/lib/routes";
 
 export interface Profile01Props {
 	readonly user: SidebarUser;
@@ -26,18 +28,24 @@ interface ProfileMenuItem {
 /**
  * Profile dropdown content shown in the topbar: the signed-in user's card
  * (avatar + online status + plan badge) followed by account / settings /
- * terms actions and a logout button. Navigation targets are real routes —
- * nothing points at a dead `/settings` route anymore.
+ * terms actions and a logout button. Personal pages (profile, security) live
+ * under `/account`; Billing and Settings are platform configuration.
  */
 export function Profile01({ user, onLogout, subscription = "Free Trial" }: Profile01Props): React.JSX.Element {
 	const router = useRouter();
 	const initials = getUserInitials(user.name);
+	const canAccessRoute = useCanAccessRoute();
 
-	const menuItems: readonly ProfileMenuItem[] = [
-		{ label: "Billing", href: "/settings/billing", icon: <CreditCard className="size-4" /> },
-		{ label: "Settings", href: "/settings/general", icon: <Settings className="size-4" /> },
+	// Links go through the route guard's rules: a page the session cannot open is not offered.
+	const allMenuItems: readonly ProfileMenuItem[] = [
+		{ label: "Account", href: ROUTES.account.profile, icon: <CircleUserRound className="size-4" /> },
+		{ label: "Security", href: ROUTES.account.security, icon: <Shield className="size-4" /> },
+		{ label: "Billing", href: ROUTES.settings.billing, icon: <CreditCard className="size-4" /> },
+		{ label: "Settings", href: ROUTES.settings.index, icon: <Settings className="size-4" /> },
 		{ label: "Terms & Policies", external: true, icon: <FileText className="size-4" /> },
 	];
+	const menuItems = allMenuItems.filter((item) => item.href === undefined || canAccessRoute(item.href));
+	const canUpgrade = canAccessRoute(ROUTES.settings.billing);
 
 	const handleMenuClick = React.useCallback(
 		(event: React.MouseEvent<HTMLButtonElement>): void => {
@@ -52,7 +60,7 @@ export function Profile01({ user, onLogout, subscription = "Free Trial" }: Profi
 	);
 
 	const handleUpgrade = React.useCallback((): void => {
-		router.push("/settings/billing");
+		router.push(ROUTES.settings.billing);
 	}, [router]);
 
 	const handleLogout = React.useCallback((): void => {
@@ -95,9 +103,11 @@ export function Profile01({ user, onLogout, subscription = "Free Trial" }: Profi
 								<p className="text-sm font-semibold text-foreground">{subscription}</p>
 							</div>
 						</div>
-						<Button type="button" variant="ghost" size="sm" onClick={handleUpgrade} className="text-xs font-medium text-primary hover:text-primary/80">
-							Upgrade
-						</Button>
+						{canUpgrade ? (
+							<Button type="button" variant="ghost" size="sm" onClick={handleUpgrade} className="text-xs font-medium text-primary hover:text-primary/80">
+								Upgrade
+							</Button>
+						) : null}
 					</div>
 				</div>
 

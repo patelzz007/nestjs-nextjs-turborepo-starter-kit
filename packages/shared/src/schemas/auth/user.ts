@@ -1,44 +1,38 @@
 import { z } from "zod";
 
 import { CapabilitySlugSchema } from "../domain/rbac/capabilities";
-import { PaginationSchema } from "../api/pagination";
+import { defineListQuery, listFilter, ListSearchSchema } from "../api/list-query";
 
 import { EpochMsSchema, BaseResponseSchema } from "../api/common";
 import { EnrollmentReasonSchema, SessionScopeSchema } from "./enrollment";
 
 // ── Shared role shape ──────────────────────────────────────────────────────
 
-export const SlimRoleSchema = z
-	.object({
-		id: z.string(),
-		name: z.string(),
-		description: z.string().nullable(),
-	})
-	.strict();
+export const SlimRoleSchema = z.object({
+	id: z.string(),
+	name: z.string(),
+	description: z.string().nullable(),
+});
 
 export type SlimRoleResponse = z.output<typeof SlimRoleSchema>;
 
 // ── Permission detail shape ────────────────────────────────────────────────
 
-export const PermissionDetailsSchema = z
-	.object({
-		id: z.string(),
-		action: z.string(),
-		resource: z.string(),
-		description: z.string().nullable(),
-		group: z.string().nullable(),
-	})
-	.strict();
+export const PermissionDetailsSchema = z.object({
+	id: z.string(),
+	action: z.string(),
+	resource: z.string(),
+	description: z.string().nullable(),
+	group: z.string().nullable(),
+});
 
 export type PermissionDetailsResponse = z.output<typeof PermissionDetailsSchema>;
 
 /** Permission context returned by `AuthorizationCheckerService.getUserPermissionDetails()`. */
-export const UserPermissionsSchema = z
-	.object({
-		roles: z.array(SlimRoleSchema),
-		permissions: z.array(PermissionDetailsSchema),
-	})
-	.strict();
+export const UserPermissionsSchema = z.object({
+	roles: z.array(SlimRoleSchema),
+	permissions: z.array(PermissionDetailsSchema),
+});
 
 export type UserPermissions = z.output<typeof UserPermissionsSchema>;
 
@@ -61,7 +55,7 @@ export const UserResponseSchema = BaseResponseSchema.extend({
 		description: "Incremented on role/permission mutations; JWTs with a stale version are rejected",
 	}),
 	roles: z.array(SlimRoleSchema),
-}).strict();
+});
 
 export type UserResponse = z.output<typeof UserResponseSchema>;
 
@@ -79,7 +73,7 @@ export const SessionPermissionsResponseSchema = UserPermissionsSchema.extend({
 	sessionScope: SessionScopeSchema.default("full"),
 	/** Present when `sessionScope` is `restricted`. */
 	enrollmentReason: EnrollmentReasonSchema.optional(),
-}).strict();
+});
 
 export type SessionPermissionsResponse = z.output<typeof SessionPermissionsResponseSchema>;
 
@@ -138,20 +132,27 @@ export const AdminUserDetailSchema = UserResponseSchema.extend({
 	directPermissionIds: z.array(z.string()).meta({
 		description: "Permission IDs granted directly to this user (not via roles)",
 	}),
-}).strict();
+});
 
 export type AdminUserDetail = z.output<typeof AdminUserDetailSchema>;
 
-/** Query string for `GET /auth/admin/users`. Query params arrive as strings; JSON Schema (Ajv) accepts either. */
-export const AdminUserListQuerySchema = PaginationSchema.extend({
-	limit: z.coerce.number().int().min(1).max(100).optional().default(20),
-	search: z.string().optional(),
-	sort: z.string().optional().describe("Sort field (prefix with - for desc, e.g. -fullName)"),
-	role: z.string().optional(),
-	status: z.enum(["active", "inactive", "locked"]).optional(),
-}).strict();
+/** Derived account state the admin user list filters on (`isActive` + `lockedUntil`). */
+export const AdminUserStatusSchema = z.enum(["active", "inactive", "locked"]);
+export type AdminUserStatus = z.output<typeof AdminUserStatusSchema>;
 
+/** `GET /auth/admin/users` list query — see docs/list-queries.md. */
+export const adminUserListQuery = defineListQuery({
+	sortable: ["fullName", "email", "createdAt"],
+	defaultSort: [{ field: "createdAt", direction: "desc" }],
+	filter: {
+		status: listFilter.enumeration(AdminUserStatusSchema, { eq: true }),
+		role: listFilter.string({ eq: true }),
+	},
+	params: { search: ListSearchSchema },
+});
+export const AdminUserListQuerySchema = adminUserListQuery.schema;
 export type AdminUserListQuery = z.output<typeof AdminUserListQuerySchema>;
+export type AdminUserListSortField = (typeof adminUserListQuery.sortable)[number];
 
 // ── Generic message response ───────────────────────────────────────────────
 

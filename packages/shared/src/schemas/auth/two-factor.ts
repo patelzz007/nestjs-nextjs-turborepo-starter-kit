@@ -19,13 +19,11 @@ export const BackupCodeSchema = z
 export type BackupCode = z.output<typeof BackupCodeSchema>;
 
 /** Response from `GET /auth/2fa/setup`. */
-export const TwoFactorSetupResponseSchema = z
-	.object({
-		secret: z.string().min(1),
-		qrCodeDataUrl: z.string().min(1),
-		backupCodes: z.array(BackupCodeSchema).length(10),
-	})
-	.strict();
+export const TwoFactorSetupResponseSchema = z.object({
+	secret: z.string().min(1),
+	qrCodeDataUrl: z.string().min(1),
+	backupCodes: z.array(BackupCodeSchema).length(10),
+});
 
 export type TwoFactorSetupResponse = z.output<typeof TwoFactorSetupResponseSchema>;
 
@@ -76,38 +74,30 @@ export const VerifyBackupCodeLoginSchema = z
 
 export type VerifyBackupCodeLoginInput = z.output<typeof VerifyBackupCodeLoginSchema>;
 
-export const TwoFactorMessageResponseSchema = z
-	.object({
-		message: z.string(),
-	})
-	.strict();
+export const TwoFactorMessageResponseSchema = z.object({
+	message: z.string(),
+});
 
 export type TwoFactorMessageResponse = z.output<typeof TwoFactorMessageResponseSchema>;
 
-export const VerifyBackupCodeResponseSchema = z
-	.object({
-		valid: z.boolean(),
-	})
-	.strict();
+export const VerifyBackupCodeResponseSchema = z.object({
+	valid: z.boolean(),
+});
 
 export type VerifyBackupCodeResponse = z.output<typeof VerifyBackupCodeResponseSchema>;
 
-export const BackupCodesRemainingResponseSchema = z
-	.object({
-		remaining: z.number().int().nonnegative(),
-	})
-	.strict();
+export const BackupCodesRemainingResponseSchema = z.object({
+	remaining: z.number().int().nonnegative(),
+});
 
 export type BackupCodesRemainingResponse = z.output<typeof BackupCodesRemainingResponseSchema>;
 
 /** Returned by `POST /auth/login` when 2FA is required before issuing cookies. */
-export const LoginTwoFactorPendingResponseSchema = z
-	.object({
-		requiresTwoFactor: z.literal(true),
-		tempToken: z.string().min(1),
-		message: z.string(),
-	})
-	.strict();
+export const LoginTwoFactorPendingResponseSchema = z.object({
+	requiresTwoFactor: z.literal(true),
+	tempToken: z.string().min(1),
+	message: z.string(),
+});
 
 export type LoginTwoFactorPendingResponse = z.output<typeof LoginTwoFactorPendingResponseSchema>;
 

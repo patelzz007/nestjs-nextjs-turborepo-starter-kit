@@ -67,10 +67,11 @@ export class CookieService {
 			};
 		}
 
-		// Determine default options
+		// Secure by default: callers pass environment-aware options from
+		// CookieConfigService (which relaxes `secure` outside production).
 		const defaultOptions: ExtendedCookieOptions = {
 			httpOnly: true,
-			secure: process.env.NODE_ENV === "production",
+			secure: true,
 			sameSite: "lax",
 			path: "/",
 		};

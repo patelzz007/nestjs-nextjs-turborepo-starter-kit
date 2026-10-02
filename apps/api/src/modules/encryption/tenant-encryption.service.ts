@@ -1,11 +1,27 @@
 import { Injectable, Logger } from "@nestjs/common";
-import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
+import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
 
+import { TypedConfigService } from "../../config/typed-config.service";
 import { TenantTransactionService } from "../../prisma/tenant-transaction.service";
 import { OrganizationAuditService } from "../organization/services/organization-audit.service";
 
 const ALGORITHM = "aes-256-gcm";
 const IV_LENGTH = 12;
+
+/** The base64 IV / auth-tag / ciphertext triple shared by both envelope formats. */
+interface GcmEnvelopeParts {
+	readonly iv: Buffer;
+	readonly tag: Buffer;
+	readonly data: Buffer;
+}
+
+/** Decode `iv:tag:data` (base64 parts); a missing part means the stored envelope is corrupt. */
+function decodeGcmParts(ivB64: string | undefined, tagB64: string | undefined, dataB64: string | undefined, label: string): GcmEnvelopeParts {
+	if (ivB64 === undefined || tagB64 === undefined || dataB64 === undefined) {
+		throw new Error(`Malformed ${label}: expected colon-separated iv, tag and ciphertext parts`);
+	}
+	return { iv: Buffer.from(ivB64, "base64"), tag: Buffer.from(tagB64, "base64"), data: Buffer.from(dataB64, "base64") };
+}
 
 /** Provider-portable envelope encryption — VPS pilot uses local master key; migrate to KMS later. */
 @Injectable()
@@ -16,9 +32,12 @@ export class TenantEncryptionService {
 	public constructor(
 		private readonly tenantTx: TenantTransactionService,
 		private readonly audit: OrganizationAuditService,
+		config: TypedConfigService,
 	) {
-		const masterSecret = process.env.TENANT_ENCRYPTION_MASTER_KEY ?? "pilot-dev-master-key-change-me";
-		this.masterKey = createHash("sha256").update(masterSecret).digest();
+		// TENANT_ENCRYPTION_MASTER_KEY is validated at boot (base64 of exactly
+		// 32 bytes, required in every environment, no fallback) — see
+		// config/api-config.schema.ts.
+		this.masterKey = config.tenantEncryptionMasterKey;
 	}
 
 	public async ensureOrganizationKey(organizationId: string, actorUserId: string | null): Promise<number> {
@@ -78,6 +97,10 @@ export class TenantEncryptionService {
 
 	public async decrypt(organizationId: string, payload: string, actorUserId: string | null, purpose: string): Promise<string> {
 		const [versionStr, ivB64, tagB64, dataB64] = payload.split(":");
+		if (versionStr === undefined) {
+			throw new Error("Malformed tenant ciphertext: missing key version");
+		}
+		const envelope: GcmEnvelopeParts = decodeGcmParts(ivB64, tagB64, dataB64, "tenant ciphertext");
 		const keyVersion = Number.parseInt(versionStr, 10);
 		const dataKey = await this.unwrapOrganizationKey(organizationId, keyVersion, actorUserId);
 
@@ -90,9 +113,9 @@ export class TenantEncryptionService {
 			metadata: { purpose },
 		});
 
-		const decipher = createDecipheriv(ALGORITHM, dataKey, Buffer.from(ivB64, "base64"));
-		decipher.setAuthTag(Buffer.from(tagB64, "base64"));
-		const decrypted = Buffer.concat([decipher.update(Buffer.from(dataB64, "base64")), decipher.final()]);
+		const decipher = createDecipheriv(ALGORITHM, dataKey, envelope.iv);
+		decipher.setAuthTag(envelope.tag);
+		const decrypted = Buffer.concat([decipher.update(envelope.data), decipher.final()]);
 		return decrypted.toString("utf8");
 	}
 
@@ -106,9 +129,10 @@ export class TenantEncryptionService {
 
 	private unwrapWrappedKey(wrappedKey: string): Buffer {
 		const [ivB64, tagB64, dataB64] = wrappedKey.split(":");
-		const decipher = createDecipheriv(ALGORITHM, this.masterKey, Buffer.from(ivB64, "base64"));
-		decipher.setAuthTag(Buffer.from(tagB64, "base64"));
-		return Buffer.concat([decipher.update(Buffer.from(dataB64, "base64")), decipher.final()]);
+		const envelope: GcmEnvelopeParts = decodeGcmParts(ivB64, tagB64, dataB64, "wrapped tenant key");
+		const decipher = createDecipheriv(ALGORITHM, this.masterKey, envelope.iv);
+		decipher.setAuthTag(envelope.tag);
+		return Buffer.concat([decipher.update(envelope.data), decipher.final()]);
 	}
 
 	private async unwrapOrganizationKey(organizationId: string, keyVersion: number, actorUserId: string | null): Promise<Buffer> {

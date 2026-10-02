@@ -4,23 +4,37 @@ import type { FastifyRequest } from "fastify";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { captureFastifyRequest } from "../../../../test/support/fastify-request";
-import { TypedConfigService } from "../../../config/typed-config.service";
+import { RequestContextService } from "../../../common/context/request-context";
+import { PlatformOutboxService } from "../../../infrastructure/outbox/platform-outbox.service";
 import { PrismaService } from "../../../prisma/prisma.service";
+import { TenantTransactionService } from "../../../prisma/tenant-transaction.service";
 import { LogService } from "../../logs/logs.service";
 import { EmailLogEventsService } from "./email-log-events.service";
 import { EmailLogRepository } from "./email-log.repository";
 import { EmailLogService } from "./email-log.service";
 import { EmailWebhookController } from "./email-webhook.controller";
+import { TypedConfigService } from "../../../config/typed-config.service";
+import { createTestApiConfig, createTestTypedConfig } from "../../../../test/support/test-api-env";
 
 // ── Mocks ─────────────────────────────────────────────────────────────────
 
-const mocks = vi.hoisted(() => ({
-	verify: vi.fn(),
-	logInfo: vi.fn(),
-	logWarn: vi.fn(),
-	logError: vi.fn(),
-	updateStatusByResendId: vi.fn(),
-}));
+interface WebhookConfigState {
+	webhookSecret: string | null;
+	apiKey: string | null;
+}
+
+const mocks = vi.hoisted(() => {
+	/** Per-test override of the configured signing secret / API key (null = not configured). */
+	const config: WebhookConfigState = { webhookSecret: "whsec_dGVzdC1zZWNyZXQ=", apiKey: "re_dummy" };
+	return {
+		config,
+		verify: vi.fn(),
+		logInfo: vi.fn(),
+		logWarn: vi.fn(),
+		logError: vi.fn(),
+		updateStatusByResendId: vi.fn(),
+	};
+});
 
 const verifyMock = mocks.verify;
 
@@ -34,8 +48,8 @@ vi.mock("resend", () => {
 
 vi.mock("../../../config/typed-config.service", () => ({
 	TypedConfigService: class {
-		public readonly resendWebhookSecret = "whsec_dGVzdC1zZWNyZXQ=";
-		public readonly resendApiKey = "re_dummy";
+		public readonly resendWebhookSecret: string | null = mocks.config.webhookSecret;
+		public readonly resendApiKey: string | null = mocks.config.apiKey;
 	},
 }));
 
@@ -57,10 +71,18 @@ vi.mock("./email-log.service", () => ({
 	},
 }));
 
-const EMAIL_ID: string = "56715290-9fa9-482a-b098-ba4cc1e1d813";
+const EMAIL_ID = "56715290-9fa9-482a-b098-ba4cc1e1d813";
 
 function makeController(): EmailWebhookController {
-	return new EmailWebhookController(new TypedConfigService(), new EmailLogService(new EmailLogRepository(new PrismaService()), new EmailLogEventsService()), new LogService());
+	return new EmailWebhookController(
+		new TypedConfigService(createTestApiConfig()),
+		new EmailLogService(
+			new EmailLogRepository(new PrismaService(createTestTypedConfig())),
+			new EmailLogEventsService(),
+			new PlatformOutboxService(new TenantTransactionService(new PrismaService(createTestTypedConfig())), new RequestContextService()),
+		),
+		new LogService(createTestTypedConfig(), new RequestContextService()),
+	);
 }
 
 /** A real Fastify request whose raw body + headers mimic a genuine Svix delivery. */
@@ -89,7 +111,24 @@ async function deliver(controller: EmailWebhookController, payload: object): Pro
 describe("EmailWebhookController", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
+		mocks.config.webhookSecret = "whsec_dGVzdC1zZWNyZXQ=";
+		mocks.config.apiKey = "re_dummy";
 		mocks.updateStatusByResendId.mockResolvedValue("updated");
+	});
+
+	it.each([
+		["RESEND_WEBHOOK_SECRET", { webhookSecret: null, apiKey: "re_dummy" }],
+		["RESEND_API_KEY", { webhookSecret: "whsec_dGVzdC1zZWNyZXQ=", apiKey: null }],
+	])("acknowledges but trusts nothing when %s is not configured", async (_missing: string, config: WebhookConfigState) => {
+		mocks.config.webhookSecret = config.webhookSecret;
+		mocks.config.apiKey = config.apiKey;
+
+		const result = await deliver(makeController(), { type: "email.bounced", data: { email_id: EMAIL_ID } });
+
+		expect(result).toEqual({ received: true });
+		expect(verifyMock).not.toHaveBeenCalled();
+		expect(mocks.updateStatusByResendId).not.toHaveBeenCalled();
+		expect(mocks.logWarn).toHaveBeenCalledWith(expect.stringContaining("not configured"), expect.anything());
 	});
 
 	it("acknowledges tracking events (email.opened) without touching the row", async () => {

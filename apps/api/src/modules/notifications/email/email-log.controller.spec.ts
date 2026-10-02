@@ -1,11 +1,15 @@
 import type { MessageEvent } from "@nestjs/common";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { RequestContextService } from "../../../common/context/request-context";
+import { PlatformOutboxService } from "../../../infrastructure/outbox/platform-outbox.service";
 import { PrismaService } from "../../../prisma/prisma.service";
+import { TenantTransactionService } from "../../../prisma/tenant-transaction.service";
 import { EmailLogEventsService } from "./email-log-events.service";
 import { EmailLogController } from "./email-log.controller";
 import { EmailLogRepository } from "./email-log.repository";
 import { EmailLogService } from "./email-log.service";
+import { createTestTypedConfig } from "../../../../test/support/test-api-env";
 
 vi.mock("../../../prisma/prisma.service", () => ({
 	PrismaService: class {},
@@ -13,7 +17,11 @@ vi.mock("../../../prisma/prisma.service", () => ({
 
 // The stream() tests only exercise the SSE wiring, so the list service sits on
 // an inert Prisma stub — the events service is real to prove the pub/sub bridge end to end.
-const serviceStub = new EmailLogService(new EmailLogRepository(new PrismaService()), new EmailLogEventsService());
+const serviceStub = new EmailLogService(
+	new EmailLogRepository(new PrismaService(createTestTypedConfig())),
+	new EmailLogEventsService(),
+	new PlatformOutboxService(new TenantTransactionService(new PrismaService(createTestTypedConfig())), new RequestContextService()),
+);
 
 describe("EmailLogController (SSE stream)", () => {
 	afterEach(() => {
@@ -30,7 +38,8 @@ describe("EmailLogController (SSE stream)", () => {
 		events.emitUpdated();
 
 		expect(frames).toHaveLength(2);
-		expect(frames[0]).toEqual({ data: expect.objectContaining({ updatedAt: expect.any(Number) }) });
+		expect(Object.keys(frames[0] ?? {})).toEqual(["data"]);
+		expect(frames[0]?.data).toHaveProperty("updatedAt", expect.any(Number));
 
 		subscription.unsubscribe();
 	});
@@ -74,8 +83,9 @@ describe("EmailLogController (SSE stream)", () => {
 		vi.advanceTimersByTime(25_000);
 
 		expect(frames).toHaveLength(1);
-		expect(frames[0].type).toBe("ping");
-		expect(frames[0].data).toBe("");
+		const [pingFrame] = frames;
+		expect(pingFrame?.type).toBe("ping");
+		expect(pingFrame?.data).toBe("");
 		subscription.unsubscribe();
 	});
 });

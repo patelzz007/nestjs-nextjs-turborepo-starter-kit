@@ -6,14 +6,22 @@ import {
 	type CreateSampleCategoryInput,
 	type SampleCategory as SampleCategoryEntity,
 	type SampleCategoryListQuery,
+	type SampleCategoryListSortField,
 	type UpdateSampleCategoryInput,
+	sampleCategoryListQuery,
 } from "@workspace/shared";
+import { z } from "zod";
 
 import { BaseRepository } from "../../platform/persistence/base.repository";
+import { defineKeyset, type ListKeyset } from "../../platform/persistence/list-query/keyset-cursor";
+import { buildListOrder, type ListOrder, type SortColumns } from "../../platform/persistence/list-query/list-order";
+import { fieldWhere, toPrismaComparableFilter, toPrismaNullableBooleanFilter } from "../../platform/persistence/list-query/prisma-filter";
 import type { CascadeSoftDeleteMutationArgs, CascadeRestoreParentArgs } from "../../platform/persistence/cascade-soft-delete";
 import { PrismaService } from "../../prisma/prisma.service";
 
-function toDomain(row: Prisma.SampleCategoryGetPayload<Prisma.SampleCategoryDefaultArgs>): SampleCategoryEntity {
+type SampleCategoryRow = Prisma.SampleCategoryGetPayload<Prisma.SampleCategoryDefaultArgs>;
+
+function toDomain(row: SampleCategoryRow): SampleCategoryEntity {
 	return {
 		id: row.id,
 		description: row.description,
@@ -26,60 +34,81 @@ function toDomain(row: Prisma.SampleCategoryGetPayload<Prisma.SampleCategoryDefa
 		updatedAt: Number(row.updatedAt),
 	};
 }
-const SORTABLE_FIELDS: ReadonlySet<string> = new Set(["name", "slug", "sortOrder", "createdAt"]);
+// ── List query → Prisma (explicit field → column mapping; see docs/list-queries.md) ──
 
-function buildSearchConditions(trimmedSearch: string): Prisma.SampleCategoryWhereInput[] {
-	return [{ name: { contains: trimmedSearch, mode: "insensitive" } }, { slug: { contains: trimmedSearch, mode: "insensitive" } }];
+/** Every whitelisted sort field mapped to its column. */
+export const SAMPLE_CATEGORY_SORT_COLUMNS: SortColumns<SampleCategoryListSortField, Prisma.SampleCategoryOrderByWithRelationInput> = {
+	name: (direction) => ({ name: direction }),
+	slug: (direction) => ({ slug: direction }),
+	sortOrder: (direction) => ({ sortOrder: direction }),
+	createdAt: (direction) => ({ createdAt: direction }),
+};
+
+/** Soft delete + the filter AST + search (name / slug). */
+export function buildSampleCategoryListWhere(query: SampleCategoryListQuery): Prisma.SampleCategoryWhereInput {
+	const filter = query.filter;
+	const conditions: Prisma.SampleCategoryWhereInput[] = [
+		{ deletedAt: null },
+		...fieldWhere(toPrismaNullableBooleanFilter(filter?.isActive), (isActive) => ({ isActive })),
+		...fieldWhere(toPrismaComparableFilter(filter?.createdAt), (createdAt) => ({ createdAt })),
+		...(query.search !== undefined
+			? [
+					{
+						OR: [{ name: { contains: query.search, mode: "insensitive" } }, { slug: { contains: query.search, mode: "insensitive" } }],
+					} satisfies Prisma.SampleCategoryWhereInput,
+				]
+			: []),
+	];
+	return { AND: conditions };
 }
 
-function resolveOrderBy(query: SampleCategoryListQuery): Prisma.SampleCategoryOrderByWithRelationInput {
-	const sortBy = query.sortBy ?? "createdAt";
-	const sortDirection = query.sortDirection ?? "desc";
-	if (!SORTABLE_FIELDS.has(sortBy)) {
-		return { createdAt: "desc" };
-	}
-	return { [sortBy]: sortDirection };
+export function buildSampleCategoryListOrder(query: SampleCategoryListQuery): ListOrder<Prisma.SampleCategoryOrderByWithRelationInput> {
+	return buildListOrder(sampleCategoryListQuery.resolveSort(query.sort), {
+		columns: SAMPLE_CATEGORY_SORT_COLUMNS,
+		tieBreaker: (direction) => ({ id: direction }),
+	});
 }
 
-function buildListCursorOrderBy(query: SampleCategoryListQuery): Prisma.SampleCategoryOrderByWithRelationInput {
-	const sortBy = query.sortBy ?? "createdAt";
-	const sortDirection = query.sortDirection ?? "desc";
-	if (!SORTABLE_FIELDS.has(sortBy)) {
-		return { createdAt: "desc", id: "asc" };
-	}
-	return { [sortBy]: sortDirection, id: "asc" };
-}
+/** Keyset for the default order (`createdAt desc, id desc`). */
+export const SAMPLE_CATEGORY_LIST_KEYSET: ListKeyset<SampleCategoryRow, Prisma.SampleCategoryWhereInput> = defineKeyset({
+	position: z.object({ createdAt: z.number().int().nonnegative(), id: z.uuid() }).strict(),
+	read: (row: SampleCategoryRow) => ({ createdAt: Number(row.createdAt), id: row.id }),
+	after: (position): Prisma.SampleCategoryWhereInput => ({
+		OR: [{ createdAt: { lt: position.createdAt } }, { createdAt: position.createdAt, id: { lt: position.id } }],
+	}),
+});
 
-function mergeListCursor(where: Prisma.SampleCategoryWhereInput, cursorId: string): Prisma.SampleCategoryWhereInput {
-	return { ...where, id: { gt: cursorId } };
-}
-
-function buildListWhere(query: SampleCategoryListQuery): Prisma.SampleCategoryWhereInput {
-	const where: Prisma.SampleCategoryWhereInput = {
-		deletedAt: null,
+// Optional DTO fields the caller did not supply are omitted (never passed as
+// `undefined`): Prisma then applies the column default on create and leaves the
+// column untouched on update. An explicit `null` description clears it.
+function toCreateInput(input: CreateSampleCategoryInput): Prisma.SampleCategoryCreateInput {
+	return {
+		name: input.name,
+		slug: input.slug,
+		...(input.description === undefined ? {} : { description: input.description }),
+		...(input.isActive === undefined ? {} : { isActive: input.isActive }),
+		...(input.sortOrder === undefined ? {} : { sortOrder: input.sortOrder }),
 	};
-	const trimmedSearch = query.search?.trim();
-	if (trimmedSearch !== undefined && trimmedSearch.length > 0) {
-		const searchConditions = buildSearchConditions(trimmedSearch);
-		if (searchConditions.length > 0) {
-			where.OR = searchConditions;
-		}
-	}
-	if (query.isActive !== undefined) {
-		where.isActive = query.isActive === true || query.isActive === "true";
-	}
-	return where;
+}
+
+function toUpdateInput(input: UpdateSampleCategoryInput): Prisma.SampleCategoryUpdateInput {
+	return {
+		...(input.name === undefined ? {} : { name: input.name }),
+		...(input.slug === undefined ? {} : { slug: input.slug }),
+		...(input.description === undefined ? {} : { description: input.description }),
+		...(input.isActive === undefined ? {} : { isActive: input.isActive }),
+		...(input.sortOrder === undefined ? {} : { sortOrder: input.sortOrder }),
+	};
 }
 
 const SampleCategoryRepositoryPorts = {
 	toDomain,
-	toCreateInput: (input: CreateSampleCategoryInput): Prisma.SampleCategoryCreateInput => input,
-	toUpdateInput: (input: UpdateSampleCategoryInput): Prisma.SampleCategoryUpdateInput => input,
-	buildListWhere,
-	buildListOrderBy: resolveOrderBy,
-	buildListCursorOrderBy,
-	mergeListCursor,
-	readListCursorId: (row: Prisma.SampleCategoryGetPayload<Prisma.SampleCategoryDefaultArgs>): string => row.id,
+	toCreateInput,
+	toUpdateInput,
+	buildListWhere: buildSampleCategoryListWhere,
+	buildListOrder: buildSampleCategoryListOrder,
+	listKeyset: SAMPLE_CATEGORY_LIST_KEYSET,
+	andWhere: (left: Prisma.SampleCategoryWhereInput, right: Prisma.SampleCategoryWhereInput): Prisma.SampleCategoryWhereInput => ({ AND: [left, right] }),
 	buildFindByIdWhere: (id: string): Prisma.SampleCategoryWhereInput => ({ id, deletedAt: null }),
 	buildFindByIdIncludingDeletedWhere: (id: string): Prisma.SampleCategoryWhereInput => ({ id }),
 	readDeletedAt: (row: Prisma.SampleCategoryGetPayload<Prisma.SampleCategoryDefaultArgs>): number | null => (row.deletedAt === null ? null : Number(row.deletedAt)),

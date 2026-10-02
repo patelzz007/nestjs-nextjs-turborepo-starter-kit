@@ -6,16 +6,22 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@work
 import { Loader2 } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
+import { ROUTES } from "@/lib/routes";
 
 export interface EmailPreviewCardProps {
-	readonly preview?: EmailPreview;
+	readonly preview?: EmailPreview | undefined;
 	readonly isLoading?: boolean;
 	readonly footerNote?: string;
 	readonly templatesHref?: string;
 }
 
 /** Dumb email preview card — iframe render of API-provided HTML. */
-export default function EmailPreviewCard({ preview, isLoading = false, footerNote, templatesHref = "/emails?key=merchant-invite" }: EmailPreviewCardProps): React.JSX.Element {
+export default function EmailPreviewCard({
+	preview,
+	isLoading = false,
+	footerNote,
+	templatesHref = ROUTES.emails.template("merchant-invite"),
+}: EmailPreviewCardProps): React.JSX.Element {
 	return (
 		<Card className="h-full">
 			<CardHeader className="pb-3">

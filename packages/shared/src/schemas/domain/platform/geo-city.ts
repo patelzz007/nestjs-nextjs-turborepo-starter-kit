@@ -1,28 +1,30 @@
 import { z } from "zod";
 
 import { DataValueSchema } from "../../api/common";
-import { PaginationSchema } from "../../api/pagination";
-import { GeoCursorSchema, GeoDateTimeFieldSchema, GeoIdSchema, GeoIdsSchema, GeoIncludeSchema } from "./geo-shared";
+import { defineListQuery, listFilter, ListSearchSchema } from "../../api/list-query";
+import { GEO_LIST_DEFAULT_LIMIT, GeoDateTimeFieldSchema, GeoIdSchema, GeoIncludeSchema } from "./geo-shared";
 
-export const CitySchema = z
-	.object({
-		id: GeoIdSchema,
-		name: z.string(),
-		stateCode: z.string(),
-		countryCode: z.string(),
-		latitude: z.number(),
-		longitude: z.number(),
-		native: z.string().nullable(),
-		timezone: z.string().nullable(),
-		translations: DataValueSchema.nullable(),
-		wikiDataId: z.string().nullable(),
-		flag: z.boolean(),
-		stateId: GeoIdSchema,
-		countryId: GeoIdSchema,
-		createdAt: GeoDateTimeFieldSchema,
-		updatedAt: GeoDateTimeFieldSchema,
-	})
-	.strict();
+/**
+ * City response DTO. Open (not `.strict()`): the response interceptor strips
+ * unknown keys instead of failing, so adding a column never breaks a client.
+ */
+export const CitySchema = z.object({
+	id: GeoIdSchema,
+	name: z.string(),
+	stateCode: z.string(),
+	countryCode: z.string(),
+	latitude: z.number(),
+	longitude: z.number(),
+	native: z.string().nullable(),
+	timezone: z.string().nullable(),
+	translations: DataValueSchema.nullable(),
+	wikiDataId: z.string().nullable(),
+	flag: z.boolean(),
+	stateId: GeoIdSchema,
+	countryId: GeoIdSchema,
+	createdAt: GeoDateTimeFieldSchema,
+	updatedAt: GeoDateTimeFieldSchema,
+});
 
 export type City = z.output<typeof CitySchema>;
 
@@ -65,17 +67,21 @@ export const UpdateCitySchema = z
 
 export type UpdateCityInput = z.output<typeof UpdateCitySchema>;
 
-export const CityListQuerySchema = PaginationSchema.extend({
-	search: z.string().optional(),
-	stateId: z.coerce.number().int().nonnegative().optional(),
-	countryId: z.coerce.number().int().nonnegative().optional(),
-	countryCode: z.string().length(2).optional(),
-	stateCode: z.string().optional(),
-	flag: z.coerce.boolean().optional(),
-	ids: GeoIdsSchema,
-	sort: z.string().optional(),
-	cursor: GeoCursorSchema,
-	include: GeoIncludeSchema,
-}).strict();
-
+/** `GET /geo/cities` list query — see docs/list-queries.md. */
+export const cityListQuery = defineListQuery({
+	sortable: ["id", "name", "countryCode", "stateCode"],
+	defaultSort: [{ field: "id", direction: "asc" }],
+	filter: {
+		id: listFilter.number({ eq: true, in: true }),
+		stateId: listFilter.number({ eq: true, in: true }),
+		countryId: listFilter.number({ eq: true, in: true }),
+		countryCode: listFilter.string({ eq: true, in: true }),
+		stateCode: listFilter.string({ eq: true, in: true }),
+		flag: listFilter.boolean({ eq: true }),
+	},
+	params: { search: ListSearchSchema, include: GeoIncludeSchema },
+	defaultLimit: GEO_LIST_DEFAULT_LIMIT,
+});
+export const CityListQuerySchema = cityListQuery.schema;
 export type CityListQuery = z.output<typeof CityListQuerySchema>;
+export type CityListSortField = (typeof cityListQuery.sortable)[number];

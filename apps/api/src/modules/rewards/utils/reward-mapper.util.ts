@@ -3,6 +3,7 @@ import type { Organization, OrganizationLifecycleState, OrganizationMerchantProf
 import {
 	EpochMsSchema,
 	JsonObjectSchema,
+	RewardResponseSchema,
 	RewardRulesSchema,
 	type AdminMerchantDetailResponse,
 	type EpochMs,
@@ -101,7 +102,32 @@ type RewardWithLocationScopes = Reward & {
 	readonly locationScopes?: readonly RewardLocationScopeRow[];
 };
 
-export function mapRewardToResponse(reward: RewardWithLocationScopes, organization?: Pick<Organization, "displayName">): RewardResponse {
+/** The organization fields a reward response carries — the shape the reward repository's include selects. */
+export interface RewardOrganizationSummary {
+	readonly displayName: string;
+	/** Live, READY `LOGO` assets with a public URL (0 or 1 — `(organizationId, assetType)` is unique). */
+	readonly assets: readonly { readonly file: { readonly publicPath: string | null } }[];
+}
+
+/** The response contract's own rule for a logo URL — the stored value is re-checked against it. */
+const OrganizationLogoUrlSchema = RewardResponseSchema.shape.organizationLogoUrl;
+
+/**
+ * The merchant logo URL for a reward response, or `null` (clients render a
+ * name monogram). A stored value that does not satisfy the contract (not an
+ * absolute http(s) URL) also degrades to `null`, deliberately: a bad logo
+ * must cost the merchant their logo, not fail the whole reward list.
+ */
+export function resolveOrganizationLogoUrl(organization: RewardOrganizationSummary | undefined): string | null {
+	const publicPath = organization?.assets.at(0)?.file.publicPath ?? null;
+	if (publicPath === null) {
+		return null;
+	}
+	const parsed = OrganizationLogoUrlSchema.safeParse(publicPath);
+	return parsed.success ? parsed.data : null;
+}
+
+export function mapRewardToResponse(reward: RewardWithLocationScopes, organization?: RewardOrganizationSummary): RewardResponse {
 	const locationScopes = reward.locationScopes ?? [];
 	const resolvedScopes = locationScopes.flatMap((scope) => {
 		if (scope.location === null) {
@@ -117,6 +143,7 @@ export function mapRewardToResponse(reward: RewardWithLocationScopes, organizati
 		id: reward.id,
 		organizationId: reward.organizationId,
 		organizationName: organization?.displayName,
+		organizationLogoUrl: resolveOrganizationLogoUrl(organization),
 		title: reward.title,
 		description: reward.description,
 		rewardType: reward.rewardType,

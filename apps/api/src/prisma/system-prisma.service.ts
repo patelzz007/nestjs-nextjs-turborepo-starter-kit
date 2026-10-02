@@ -3,6 +3,8 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient, type Prisma } from "@prisma/client";
 import { Pool } from "pg";
 
+import { TypedConfigService } from "../config/typed-config.service";
+
 /**
  * Dedicated Prisma client for system-level operations (migrations, initialization, etc.).
  *
@@ -25,12 +27,11 @@ export class SystemPrismaService extends PrismaClient<Prisma.PrismaClientOptions
 	private readonly logger: Logger = new Logger(SystemPrismaService.name);
 	private readonly pool: Pool;
 
-	public constructor() {
-		const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+	public constructor(config: TypedConfigService) {
+		const pool = new Pool({ connectionString: config.databaseUrl });
 		const adapter = new PrismaPg(pool);
 
-		const logLevel: string = process.env.LOG_LEVEL ?? "warn";
-		const isDebug: boolean = logLevel === "debug" || logLevel === "silly";
+		const isDebug: boolean = config.isDebugLogging;
 
 		type LogConfig = { readonly emit: "event"; readonly level: "query" | "info" | "warn" | "error" };
 		const logConfig: LogConfig[] = isDebug

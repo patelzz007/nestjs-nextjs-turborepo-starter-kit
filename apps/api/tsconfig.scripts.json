@@ -9,5 +9,7 @@
 		"module": "NodeNext",
 		"moduleResolution": "NodeNext"
 	},
-	"include": ["scripts/**/*.ts"]
+	"include": ["scripts/**/*.ts"],
+	// Imports the Nest source graph (extensionless, bundler-resolved) — checked by tsconfig.check.json.
+	"exclude": ["scripts/render-email-previews.ts"]
 }

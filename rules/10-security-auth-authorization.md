@@ -122,7 +122,7 @@ async checkout(@Body() body: { items: CartItem[]; totalPrice: number }) {
 // money-relevant from trusted server-side data, and IGNORES any client-
 // supplied value for it entirely
 @Post('checkout')
-async checkout(@Body(new ZodValidationPipe(CheckoutSchema)) body: CheckoutDto) {
+async checkout(@ZodBody(CheckoutSchema) body: CheckoutDto) {
   const items = await this.pricingService.priceItems(body.itemIds); // server looks up real, current prices
   const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0); // computed server-side, not trusted from the client
   await charge(total);

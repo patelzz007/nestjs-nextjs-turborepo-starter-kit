@@ -3,8 +3,8 @@ import type { EnrollmentReason, SessionScope, UserResponse } from "@workspace/sh
 import type { AuthUser } from "./store";
 
 export interface AuthSessionSource {
-	readonly sessionScope?: SessionScope;
-	readonly enrollmentReason?: EnrollmentReason;
+	readonly sessionScope?: SessionScope | undefined;
+	readonly enrollmentReason?: EnrollmentReason | undefined;
 }
 
 /** Maps an API user record into the client auth-store shape. */

@@ -1,4 +1,5 @@
 import { AdminNotFoundContent } from "@/components/common/not-found-content";
+import { ROUTES } from "@/lib/routes";
 
 /**
  * Not-found boundary for the authenticated panel. Because it lives inside the
@@ -10,7 +11,7 @@ import { AdminNotFoundContent } from "@/components/common/not-found-content";
 export default function PanelNotFound(): React.JSX.Element {
 	return (
 		<AdminNotFoundContent
-			backHref="/"
+			backHref={ROUTES.home}
 			backLabel="Back to dashboard"
 			message="The page you're looking for doesn't exist or may have been moved. Try navigating from the sidebar."
 		/>

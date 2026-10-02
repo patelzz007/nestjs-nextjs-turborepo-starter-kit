@@ -8,6 +8,8 @@ import { toastMessage } from "@workspace/ui/components/feedback/toast";
 import * as React from "react";
 import { useCallback, useState } from "react";
 
+import { ROUTES } from "@/lib/routes";
+
 // ── Demo data — content lives at the smart level (rules 9/10); the dumb
 // trail only renders what it is given. Icons are mandatory on every crumb. ──
 
@@ -27,8 +29,8 @@ const demoTrailLong: readonly BreadcrumbItem[] = [
 ];
 
 const demoTrailSettings: readonly BreadcrumbItem[] = [
-	{ label: "Settings", href: "/settings", icon: Settings },
-	{ label: "Security", href: "/settings/security", icon: Shield },
+	{ label: "Account", href: ROUTES.account.index, icon: Settings },
+	{ label: "Security", href: ROUTES.account.security, icon: Shield },
 	{ label: "Sessions", icon: Users },
 ];
 

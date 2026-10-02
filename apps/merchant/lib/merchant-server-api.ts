@@ -11,7 +11,9 @@ import {
 } from "@workspace/client/lib/api/server-api";
 import type { OrganizationRewardMembershipResponse } from "@workspace/shared";
 import { cookies } from "next/headers";
+import { cache } from "react";
 
+import { clientEnv } from "@/lib/env/env.client";
 import { resolveOrganizationSlugFromContext } from "@/lib/org/resolve-slug";
 import { ORGANIZATION_LOCATION_ID_COOKIE_NAME } from "@/lib/org/location";
 import { ORGANIZATION_SLUG_COOKIE_NAME } from "@/lib/org/slug";
@@ -22,7 +24,7 @@ export type MerchantServerCaller = ServerCallerTree<ApiRouter>;
  * Builds an SSR caller for any router tree using the merchant app's cookie config.
  */
 export function createMerchantServerCallerForRouter<R extends object>(router: R, config?: Partial<ServerApiConfig>): ServerCallerTree<R> {
-	const resolved: ServerApiConfig = resolveConfig({ ...DEFAULT_MERCHANT_SERVER_API_CONFIG, ...config });
+	const resolved: ServerApiConfig = resolveConfig({ ...DEFAULT_MERCHANT_SERVER_API_CONFIG, clientOrigin: clientEnv.NEXT_PUBLIC_MERCHANT_URL, ...config });
 	const context = createServerRequestContext(resolved, apiRouter.auth.refresh);
 	return createServerCallerForRouter(router, context);
 }
@@ -56,8 +58,12 @@ export async function readOrganizationLocationCookie(): Promise<string | undefin
 	return value;
 }
 
-/** Loads memberships + active organization slug for SSR panel routes. */
-export async function loadMerchantServerContext(): Promise<MerchantServerContext> {
+/**
+ * Loads memberships + active organization slug for SSR panel routes. Memoized
+ * per request (`React.cache`), so the org layout, `guardOrgPage` and the page
+ * share one memberships call.
+ */
+export const loadMerchantServerContext = cache(async (): Promise<MerchantServerContext> => {
 	const server = createMerchantServerCaller();
 	const preferredSlug = await readOrganizationSlugCookie();
 
@@ -76,6 +82,17 @@ export async function loadMerchantServerContext(): Promise<MerchantServerContext
 		memberships,
 		organizationSlug,
 	};
+});
+
+/**
+ * Organization a top-level entry page (`/`, `/account`) should open: the
+ * cookie-preferred membership, else the first one. `undefined` when the user
+ * has no organization yet (→ onboarding).
+ */
+export async function resolveMerchantEntryOrganizationSlug(): Promise<string | undefined> {
+	const ctx = await loadMerchantServerContext();
+	const slug = ctx.organizationSlug ?? ctx.memberships[0]?.organizationSlug;
+	return slug !== undefined && slug.length > 0 ? slug : undefined;
 }
 
 export {

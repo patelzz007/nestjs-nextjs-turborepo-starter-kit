@@ -9,6 +9,7 @@ import { Button } from "@workspace/ui/components/form/button";
 import { Skeleton } from "@workspace/ui/components/feedback/skeleton";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import * as React from "react";
+import { ROUTE_PREFIXES } from "@/lib/routes";
 
 export interface RewardHubCatalogProps {
 	readonly rewards: readonly RewardResponse[];
@@ -41,7 +42,15 @@ function CatalogSkeleton({ viewMode }: { readonly viewMode: "grid" | "list" }): 
 }
 
 /** Consumer rewards collection with grid/list toggle and cursor pagination. */
-export function RewardHubCatalog({ rewards, isLoading, hasNext, hasPrevious, onNext, onPrevious, detailPathPrefix = "/rewardhub" }: RewardHubCatalogProps): React.JSX.Element {
+export function RewardHubCatalog({
+	rewards,
+	isLoading,
+	hasNext,
+	hasPrevious,
+	onNext,
+	onPrevious,
+	detailPathPrefix = ROUTE_PREFIXES.rewardHubRewards,
+}: RewardHubCatalogProps): React.JSX.Element {
 	const { viewMode, setViewMode } = useRewardHubViewMode();
 
 	const resultLabel = isLoading ? "Loading offers…" : `Showing ${String(rewards.length)} offers`;

@@ -49,16 +49,17 @@ const AuthErrorMessageSchema = z.object({ message: z.string() }).strict();
 const AuthErrorUserIdSchema = z.object({ userId: z.string() }).strict();
 
 /**
- * Declarative decorator that wraps a method and automatically emits an
- * `AuthFlowEvent` on both success and failure, with accurate timing.
+ * Declarative decorator that wraps a method and durably records an
+ * `AuthFlowEvent` (outbox `auth.flow`) on both success and failure, with
+ * accurate timing. The host class must inject `authEvents: AuthEventsService`.
  *
- * Replaces the manual `flowStartedAt` + `emitFlow()` boilerplate that was
+ * Replaces the manual `flowStartedAt` + `recordFlow()` boilerplate that was
  * repeated in every auth method.
  *
  * @example
  *   @TrackAuthFlow({ flow: "signup" })
  *   public async signup(dto: SignupInput): Promise<SignupResponse> {
- *       // ... no emitFlow calls needed
+ *       // ... no recordFlow calls needed
  *   }
  *
  * @example
@@ -87,7 +88,7 @@ export function TrackAuthFlow(options: TrackAuthFlowOptions): AuthFlowMethodDeco
 			const flowStartedAt: number = performance.now();
 			const getAuthEvents = (): AuthEventsService | undefined => this.authEvents;
 
-			const emitEvent = (status: "succeeded" | "failed", error: string | null, userId: string | null): void => {
+			const recordEvent = async (status: "succeeded" | "failed", error: string | null, userId: string | null): Promise<void> => {
 				const authEvents = getAuthEvents();
 				if (authEvents === undefined) {
 					return;
@@ -95,7 +96,9 @@ export function TrackAuthFlow(options: TrackAuthFlowOptions): AuthFlowMethodDeco
 
 				const resolvedClientType = clientTypeExtractor !== undefined ? (clientTypeExtractor(...args) ?? null) : null;
 
-				authEvents.emitFlow(
+				// Awaited (never fire-and-forget); `recordFlow` never throws, so a
+				// telemetry write failure cannot replace the flow's own outcome.
+				await authEvents.recordFlow(
 					AuthFlowEventSchema.parse({
 						flow,
 						userId,
@@ -117,7 +120,7 @@ export function TrackAuthFlow(options: TrackAuthFlowOptions): AuthFlowMethodDeco
 					userId = extractUserIdFromResult(result);
 				}
 
-				emitEvent("succeeded", null, userId);
+				await recordEvent("succeeded", null, userId);
 				return result;
 			} catch (caught) {
 				const errorValue = CaughtValueSchema.safeParse(caught);
@@ -129,7 +132,7 @@ export function TrackAuthFlow(options: TrackAuthFlowOptions): AuthFlowMethodDeco
 					userId = extractUserIdFromCaught(errorValue.data);
 				}
 
-				emitEvent("failed", errorCode, userId);
+				await recordEvent("failed", errorCode, userId);
 				throw caught;
 			}
 		};

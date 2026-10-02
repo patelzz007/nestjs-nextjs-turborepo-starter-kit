@@ -137,7 +137,7 @@ export class LoginVerificationService {
 			context.ipAddress ?? "Unknown IP",
 		);
 
-		if (process.env.NODE_ENV !== "production") {
+		if (!this.config.isProduction) {
 			this.logService.info("Login verification OTP (dev only — use this code, not your authenticator app)", {
 				userId: context.userId,
 				context: "LoginVerificationService",
@@ -173,7 +173,7 @@ export class LoginVerificationService {
 	}
 
 	private async needsVerification(userId: string, deviceInfo: string | null): Promise<boolean> {
-		if (process.env.NODE_ENV === "test") {
+		if (this.config.isTest) {
 			return false;
 		}
 

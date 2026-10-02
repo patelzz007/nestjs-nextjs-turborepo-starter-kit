@@ -24,15 +24,23 @@ coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=form
 
 | Route | Page |
 | --- | --- |
-| `/auth/login` | Login (server component → `LoginView`, safe `?redirect=` handling) |
-| `/auth/forgot-password` | Forgot password |
-| `/` | Overview (dashboard, live Telescope activity, component showcases) |
-| `/backup` | Database Backup (create/queue/cancel/download/verify/restore + quota chip) |
-| `/emails`, `/email-log` | Email templates + delivery log |
-| `/settings` (+ `/general`, `/billing`) | Settings |
-| `/users`, `/users/[id]` | Users directory + profile (RBAC panel, **impersonate** for super-admins) |
-| `/telescope/*` | Requests, detail, SQL, exceptions, jobs, schedules, mail, logs, search, status, compare, users |
-| `/[...slug]` | Docs pages rendered from the repo-root `docs/` folder |
+Conventions and the shared rules: [Routing](./routing.md). Paths come from `apps/admin/lib/routes.ts`.
+
+| Route | Page |
+| --- | --- |
+| `/auth/login`, `/auth/forgot-password`, `/auth/reset-password`, `/auth/verify-email` | Auth (outside the shell; safe `?redirect=` handling) |
+| `/` | Overview — platform sales cards (real data, shown with `ANALYTICS.READ`) above the component gallery |
+| `/analytics/sales` (`/analytics` redirects) | Platform sales: total sales, bills, average bill, active merchants, weekly sales, top 10 merchants; `?weeks=4\|8\|12` picks the period (default 8) |
+| `/users`, `/users/[id]` | Users directory + profile (RBAC panel, **impersonate**) — super-admin |
+| `/users/mfa-recovery` | MFA recovery request queue — super-admin |
+| `/merchants` (+ `/invites`, `/verification`, `/store-requests`) | Merchants, merchant invites, KYB verification queue, store requests |
+| `/rewards/review` (`/rewards` redirects) | Rewards awaiting review |
+| `/emails/templates`, `/emails/log` (`/emails` redirects) | Email template previews (`?key=`) + delivery log |
+| `/geography` | Geographic reference data |
+| `/catalog/products`, `/catalog/categories` (`/new`, `/[id]`, `/[id]/edit`; `/catalog` redirects) | Example CRUD resources |
+| `/settings/billing`, `/settings/access` (`/settings` redirects to billing) | Platform settings |
+| `/account/profile`, `/account/security` (`/account` redirects to security) | The signed-in admin's own profile, password, 2FA (email verification / MFA enrollment lands here) |
+| `/[...slug]` | Unknown paths → the in-shell 404 |
 
 The whole panel lives under `/(panel)` — the layout there renders the dashboard shell
 (sidebar, topbar, command palette). `/auth/*` is outside the shell.
@@ -69,9 +77,9 @@ impersonating, `ImpersonationBanner` appears above the dashboard shell; **Stop i
 calls `POST /auth/stop-impersonation`, swaps the admin access cookie, and invalidates session
 queries. See [Authorization — Impersonation](./authorization.md#impersonation-super-admin).
 
-The login page (`/auth/login`) is a server component: it reads `?redirect=` and the env flags
-(`NEXT_PUBLIC_WEB_URL`, `NEXT_PUBLIC_SHOW_DEMO_ACCOUNTS`) **server-side**, keeping
-`useSearchParams`/env access out of the client bundle, then hands props to the client
+The login page (`/auth/login`) is a server component: it reads `?redirect=` and the validated
+public config (`clientEnv.NEXT_PUBLIC_WEB_URL`, `clientEnv.NEXT_PUBLIC_SHOW_DEMO_ACCOUNTS`)
+**server-side**, keeping `useSearchParams` out of the client bundle, then hands props to the client
 `LoginView` → shared `LoginForm` (`packages/client/src/lib/auth/login-form.tsx`).
 
 ## Layout & shell
@@ -127,8 +135,16 @@ boundary falls back to the client's own queries (never a correctness dependency)
 
 | Env var | Default | Purpose |
 | --- | --- | --- |
-| `NEXT_PUBLIC_WEB_URL` | `http://localhost:3000` | "Returning to main website" link |
-| `NEXT_PUBLIC_SHOW_DEMO_ACCOUNTS` | off | One-click demo login (never ship with this on) |
+| `NEXT_PUBLIC_API_URL` | required | API base URL |
+| `NEXT_PUBLIC_ADMIN_URL` | required | The admin app's own origin (session-refresh `Origin`) |
+| `NEXT_PUBLIC_WEB_URL` | required | "Returning to main website" link, impersonation banner |
+| `NEXT_PUBLIC_MERCHANT_URL` | required | Impersonation banner merchant-portal link |
+| `NEXT_PUBLIC_SHOW_DEMO_ACCOUNTS` | `false` | One-click demo login (never ship with this on) |
+| `NEXT_PUBLIC_SESSION_POLL_MS` | unset (disabled) | Opt-in session-badge steady poll (ms) |
+| `COOKIE_DOMAIN` | unset | Server-only; cookie domain used when the proxy clears auth cookies |
+
+All of these are validated by `lib/env/env.client.ts` / `env.server.ts`, and there are no
+hardcoded fallbacks. See [Configuration](./configuration.md).
 
 The admin cookies (`adminAccessToken`/`adminRefreshToken`) are hardcoded in `proxy.ts` +
 `client-auth-wrapper.tsx` for isolation — the API validates `X-Client-Type: admin` on login

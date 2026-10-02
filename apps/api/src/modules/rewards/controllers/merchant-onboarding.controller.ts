@@ -1,5 +1,5 @@
-import { Body, Controller, Post } from "@nestjs/common";
-import { ApiBody, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
+import { Controller, HttpStatus, Post } from "@nestjs/common";
+import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import {
 	apiContract,
 	apiPath,
@@ -10,12 +10,19 @@ import {
 	type MerchantOnboardingDocumentUploadCompleteInput,
 	type MerchantOnboardingDocumentUploadUrlInput,
 	type MerchantOnboardingValidateTokenInput,
+	MerchantOnboardingInvitePreviewSchema,
+	MerchantOnboardingCompleteResponseSchema,
+	CreateFileUploadUrlResponseSchema,
+	MerchantOnboardingDocumentBatchUploadUrlResponseSchema,
+	CompleteFileUploadResponseSchema,
+	MerchantOnboardingDocumentBatchUploadCompleteResponseSchema,
+	SuccessAckResponseSchema,
 } from "@workspace/shared";
-import { ZodValidationPipe } from "../../../common/pipes/zod-validation.pipe";
+import { ZodBody } from "../../../common/decorators/zod-request.decorators";
+import { ZodResponse } from "../../../common/decorators/zod-response.decorators";
 import { Public } from "../../auth/decorators/public.decorator";
 import { RlsBypass } from "../../auth/decorators/rls-bypass.decorator";
 
-import { MerchantOnboardingValidateTokenDto } from "../dtos/rewards.dto";
 import { MerchantOnboardingService } from "../services/merchant-onboarding.service";
 
 @ApiTags("Organization Onboarding")
@@ -27,10 +34,9 @@ export class MerchantOnboardingController {
 	@RlsBypass()
 	@Post("validate")
 	@ApiOperation({ summary: "Validate a merchant onboarding invite token" })
-	@ApiBody({ type: MerchantOnboardingValidateTokenDto })
-	@ApiOkResponse({ description: "Invite preview when the token is valid" })
+	@ZodResponse(MerchantOnboardingInvitePreviewSchema, { status: HttpStatus.CREATED, description: "Invite preview when the token is valid" })
 	public validateInvite(
-		@Body(new ZodValidationPipe(apiContract.organizations.onboarding.validate.input)) body: MerchantOnboardingValidateTokenInput,
+		@ZodBody(apiContract.organizations.onboarding.validate.input) body: MerchantOnboardingValidateTokenInput,
 	): ReturnType<MerchantOnboardingService["validateInviteToken"]> {
 		return this.merchantOnboarding.validateInviteToken(body.token);
 	}
@@ -39,9 +45,9 @@ export class MerchantOnboardingController {
 	@RlsBypass()
 	@Post("complete")
 	@ApiOperation({ summary: "Complete merchant onboarding — links OWNER membership and platform User role" })
-	@ApiOkResponse({ description: "Organization linked to the account" })
+	@ZodResponse(MerchantOnboardingCompleteResponseSchema, { status: HttpStatus.CREATED, description: "Organization linked to the account" })
 	public completeOnboarding(
-		@Body(new ZodValidationPipe(apiContract.organizations.onboarding.complete.input)) body: MerchantOnboardingCompleteFieldsInput,
+		@ZodBody(apiContract.organizations.onboarding.complete.input) body: MerchantOnboardingCompleteFieldsInput,
 	): ReturnType<MerchantOnboardingService["completeOnboarding"]> {
 		return this.merchantOnboarding.completeOnboarding(body);
 	}
@@ -50,9 +56,9 @@ export class MerchantOnboardingController {
 	@RlsBypass()
 	@Post("documents/upload-url")
 	@ApiOperation({ summary: "Create an invite-authorized KYB document upload ticket" })
-	@ApiOkResponse({ description: "Signed upload ticket for onboarding KYB documents" })
+	@ZodResponse(CreateFileUploadUrlResponseSchema, { status: HttpStatus.CREATED, description: "Signed upload ticket for onboarding KYB documents" })
 	public createDocumentUploadUrl(
-		@Body(new ZodValidationPipe(apiContract.organizations.onboarding.documentUploadUrl.input)) body: MerchantOnboardingDocumentUploadUrlInput,
+		@ZodBody(apiContract.organizations.onboarding.documentUploadUrl.input) body: MerchantOnboardingDocumentUploadUrlInput,
 	): ReturnType<MerchantOnboardingService["createDocumentUploadUrl"]> {
 		return this.merchantOnboarding.createDocumentUploadUrl(body);
 	}
@@ -61,9 +67,9 @@ export class MerchantOnboardingController {
 	@RlsBypass()
 	@Post("documents/upload-urls")
 	@ApiOperation({ summary: "Create invite-authorized KYB document upload tickets in one request" })
-	@ApiOkResponse({ description: "Signed upload tickets for onboarding KYB documents" })
+	@ZodResponse(MerchantOnboardingDocumentBatchUploadUrlResponseSchema, { status: HttpStatus.CREATED, description: "Signed upload tickets for onboarding KYB documents" })
 	public createDocumentUploadUrls(
-		@Body(new ZodValidationPipe(apiContract.organizations.onboarding.documentBatchUploadUrl.input)) body: MerchantOnboardingDocumentBatchUploadUrlInput,
+		@ZodBody(apiContract.organizations.onboarding.documentBatchUploadUrl.input) body: MerchantOnboardingDocumentBatchUploadUrlInput,
 	): ReturnType<MerchantOnboardingService["createDocumentUploadUrls"]> {
 		return this.merchantOnboarding.createDocumentUploadUrls(body);
 	}
@@ -72,9 +78,9 @@ export class MerchantOnboardingController {
 	@RlsBypass()
 	@Post("documents/upload-complete")
 	@ApiOperation({ summary: "Complete an invite-authorized KYB document upload" })
-	@ApiOkResponse({ description: "Onboarding KYB document upload finalized" })
+	@ZodResponse(CompleteFileUploadResponseSchema, { status: HttpStatus.CREATED, description: "Onboarding KYB document upload finalized" })
 	public completeDocumentUpload(
-		@Body(new ZodValidationPipe(apiContract.organizations.onboarding.documentUploadComplete.input)) body: MerchantOnboardingDocumentUploadCompleteInput,
+		@ZodBody(apiContract.organizations.onboarding.documentUploadComplete.input) body: MerchantOnboardingDocumentUploadCompleteInput,
 	): ReturnType<MerchantOnboardingService["completeDocumentUpload"]> {
 		return this.merchantOnboarding.completeDocumentUpload(body);
 	}
@@ -83,9 +89,9 @@ export class MerchantOnboardingController {
 	@RlsBypass()
 	@Post("documents/upload-complete-batch")
 	@ApiOperation({ summary: "Complete invite-authorized KYB document uploads in one request" })
-	@ApiOkResponse({ description: "Onboarding KYB document uploads finalized" })
+	@ZodResponse(MerchantOnboardingDocumentBatchUploadCompleteResponseSchema, { status: HttpStatus.CREATED, description: "Onboarding KYB document uploads finalized" })
 	public completeDocumentUploads(
-		@Body(new ZodValidationPipe(apiContract.organizations.onboarding.documentBatchUploadComplete.input)) body: MerchantOnboardingDocumentBatchUploadCompleteInput,
+		@ZodBody(apiContract.organizations.onboarding.documentBatchUploadComplete.input) body: MerchantOnboardingDocumentBatchUploadCompleteInput,
 	): ReturnType<MerchantOnboardingService["completeDocumentUploads"]> {
 		return this.merchantOnboarding.completeDocumentUploads(body);
 	}
@@ -94,9 +100,9 @@ export class MerchantOnboardingController {
 	@RlsBypass()
 	@Post("documents/submit")
 	@ApiOperation({ summary: "Attach onboarding KYB documents and submit the merchant for admin review" })
-	@ApiOkResponse({ description: "Onboarding KYB documents submitted for review" })
+	@ZodResponse(SuccessAckResponseSchema, { status: HttpStatus.CREATED, description: "Onboarding KYB documents submitted for review" })
 	public submitDocuments(
-		@Body(new ZodValidationPipe(apiContract.organizations.onboarding.documentsSubmit.input)) body: MerchantOnboardingDocumentsSubmitInput,
+		@ZodBody(apiContract.organizations.onboarding.documentsSubmit.input) body: MerchantOnboardingDocumentsSubmitInput,
 	): ReturnType<MerchantOnboardingService["submitDocuments"]> {
 		return this.merchantOnboarding.submitDocuments(body);
 	}

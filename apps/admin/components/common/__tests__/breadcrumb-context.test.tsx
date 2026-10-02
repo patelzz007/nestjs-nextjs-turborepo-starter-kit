@@ -82,6 +82,76 @@ describe("BreadcrumbContext", () => {
 		expect(result.current.status).toEqual({ kind: "error", message: "Boom" });
 	});
 
+	it("names the final crumb with setTailLabel and clears it with null", () => {
+		const { result } = renderHook(() => useBreadcrumb(), { wrapper: makeWrapper("/settings") });
+
+		act(() => {
+			result.current.setTailLabel("  Jane Doe  ");
+		});
+		let items = result.current.status.kind === "ready" ? result.current.status.items : [];
+		expect(items.map((item) => item.label)).toEqual(["Settings", "Jane Doe"]);
+
+		act(() => {
+			result.current.setTailLabel(null);
+		});
+		items = result.current.status.kind === "ready" ? result.current.status.items : [];
+		expect(items.map((item) => item.label)).toEqual(["Settings", "General"]);
+	});
+
+	it("keeps a label a child page sets at its FIRST render (the provider's route resolution never overwrites it)", () => {
+		function NamedPage(): React.JSX.Element {
+			const { setTailLabel, status } = useBreadcrumb();
+			React.useEffect(() => {
+				setTailLabel("Jane Doe");
+			}, [setTailLabel]);
+			return <p>{status.kind === "ready" ? status.items.map((item) => item.label).join(" › ") : status.kind}</p>;
+		}
+
+		const { container } = render(
+			<BreadcrumbProvider pathname="/settings">
+				<NamedPage />
+			</BreadcrumbProvider>,
+		);
+
+		expect(container.textContent).toBe("Settings › Jane Doe");
+	});
+
+	it("scopes labels and overrides to the pathname they were set on", () => {
+		function Probe(): React.JSX.Element {
+			const { status } = useBreadcrumb();
+			return <p>{status.kind === "ready" ? status.items.map((item) => item.label).join(" › ") : status.kind}</p>;
+		}
+		function Labeller(): null {
+			const { setTailLabel } = useBreadcrumb();
+			React.useEffect(() => {
+				setTailLabel("Jane Doe");
+			}, [setTailLabel]);
+			return null;
+		}
+
+		const { container, rerender } = render(
+			<BreadcrumbProvider pathname="/settings">
+				<Labeller />
+				<Probe />
+			</BreadcrumbProvider>,
+		);
+		expect(container.textContent).toBe("Settings › Jane Doe");
+
+		// Navigating away without the page clearing its label: the label stays behind.
+		rerender(
+			<BreadcrumbProvider pathname="/unknown">
+				<Probe />
+			</BreadcrumbProvider>,
+		);
+		expect(container.textContent).toBe("");
+		rerender(
+			<BreadcrumbProvider pathname="/settings">
+				<Probe />
+			</BreadcrumbProvider>,
+		);
+		expect(container.textContent).toBe("Settings › Jane Doe");
+	});
+
 	it("delivers malformed items as an error status instead of rendering them (improvement 1)", () => {
 		const { result } = renderHook(() => useBreadcrumb(), { wrapper: makeWrapper("/settings") });
 

@@ -1,9 +1,9 @@
 ---
 title: "Messaging & Events Architecture (ELI5)"
 tags: ["infrastructure", "messaging", "kafka", "bullmq", "redis"]
-description: "Plain-language guide to how data moves through Redis, BullMQ, Kafka, and the transactional outbox in this monorepo."
+description: "Plain-language guide to how data moves through Redis, BullMQ, Kafka, the transactional outbox, and the consumer inbox in this monorepo."
 author: "Backend Team"
-lastUpdated: 1788643200000
+lastUpdated: 1790812800000
 coverImage: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1600&q=80"
 ---
 
@@ -23,16 +23,18 @@ Imagine a busy restaurant:
 | **PostgreSQL** | The ledger in the back office | Source of truth: users, rewards, claims, outbox rows. |
 | **Redis** | A shared whiteboard + timer | Fast memory: BullMQ job storage, auth-cache pub/sub. |
 | **BullMQ** | Kitchen ticket rail | Internal **async jobs** inside the API process (email send, expire claims, sweep outbox). |
-| **Transactional outbox** | The “don’t lose this” tray | DB table (`outbox_events`). Events are **written with your business data** so they survive crashes. |
+| **Transactional outbox** | The “don’t lose this” tray | DB table (`outbox_events`). Events are written **in the same transaction** as your business data: both are saved, or neither is. |
 | **Kafka** | The delivery truck to the warehouse | Durable **platform events** for analytics / downstream systems. |
 | **RabbitMQ** | Empty loading dock (reserved) | In Docker for future non-Node workers — **not wired to the API yet**. |
-| **analytics-consumer** | Warehouse clerk | Separate small app: reads Kafka → writes `analytics_events`. |
+| **Consumer inbox** | The clerk’s “already filed” list | DB table (`inbox_processed_events`). A message delivered twice is filed once. |
+| **analytics-consumer** | Warehouse clerk | Separate small app: reads Kafka → checks the inbox → writes `analytics_events`. |
 
 **Rule of thumb**
 
 - **BullMQ** = work *this API* must do later (send email, sweep outbox).
 - **Kafka** = facts *the whole company* might want later (login, claim, email sent).
-- **Outbox** = bridge so Kafka messages are never lost if the API dies mid-request.
+- **Outbox** = bridge so Kafka messages are never lost if the API dies mid-request — and never sent for a change that was rolled back.
+- **Inbox** = guard so a message that arrives twice is only counted once.
 
 ---
 
@@ -47,7 +49,7 @@ Imagine a busy restaurant:
 │  apps/api  (NestJS)                                         │
 │  ├─ modules/*          domain: rewards, auth, notifications │
 │  ├─ messaging/         ONE config file for this app           │
-│  └─ infrastructure/outbox/  app-specific event bridge       │
+│  └─ infrastructure/outbox/  outbox producer + dispatcher    │
 └───────┬───────────────────────┬─────────────────────────────┘
         │                       │
         │ uses                  │ uses
@@ -66,8 +68,8 @@ Imagine a busy restaurant:
 
 | Generic (`@workspace/messaging`) | App-specific (`apps/api`) |
 |----------------------------------|---------------------------|
-| Redis clients, BullMQ root, Kafka producer | `APP_MESSAGING_CONFIG` (queue names, client id) |
-| Outbox **schemas** (topic = string) | `PlatformEventOutboxBridgeService` (which events to capture) |
+| Redis clients, BullMQ root, Kafka producer (connection settings passed in — the package never reads env) | `buildAppMessagingConfig(config.messaging)` (queue names, client id, validated `REDIS_URL` / `KAFKA_BROKERS` / `RABBITMQ_URL`) |
+| Outbox **schemas** (topic = string, `eventId`) | `PlatformOutboxService.enqueueInTransaction` call sites (which events, in which transaction) |
 | RabbitMQ placeholder + health | Prisma `outbox_events` model, processors |
 | Correlation-friendly Kafka publish | Reward/email/auth event payloads in `@workspace/shared` |
 
@@ -78,13 +80,13 @@ To reuse in another project: copy `packages/messaging`, add one config file, reg
 ## Request lifecycle (with correlation ID)
 
 1. Browser calls `POST /api/v1/claims`.
-2. `CorrelationIdMiddleware` sets `X-Correlation-Id` (or generates one).
-3. `CorrelationContextInterceptor` stores it in AsyncLocalStorage.
+2. `RequestContextMiddleware` opens the one request context ([ADR 017](../adr/017-unified-request-context.md)): a valid incoming `X-Correlation-Id` (≤ 64 safe characters) or a generated one, echoed in the `X-Correlation-Id` header.
+3. Guards add the authenticated principal and the verified tenant to the same context.
 4. `ClaimService` writes claim + decrements inventory in Postgres.
-5. Domain code may emit in-process events → outbox row includes the same correlation id.
-6. Later, outbox worker publishes to Kafka with that id in the envelope.
+5. In the **same database transaction**, the service calls `outbox.enqueueInTransaction(tx, event)` → the outbox row gets the correlation id and its own stable `eventId`.
+6. Later, the outbox dispatcher publishes to Kafka with both ids in the message.
 
-**Why it matters:** You can trace one user action from HTTP logs → outbox row → Kafka message → analytics row.
+**Why it matters:** You can trace one user action from HTTP logs → outbox row → Kafka message → analytics row (`analytics_events.id` = `eventId`).
 
 ---
 
@@ -99,17 +101,27 @@ sequenceDiagram
   participant Kafka as Kafka
   participant WH as analytics-consumer
 
-  API->>DB: Business write + outbox_events INSERT
-  Note over API,DB: Same request; row status=PENDING
+  API->>DB: BEGIN; business write; outbox_events INSERT; COMMIT
+  Note over API,DB: One transaction — both rows or neither
   Bull->>Worker: Every 5s sweep job
-  Worker->>DB: SELECT pending rows
-  Worker->>Kafka: publish(topic, envelope)
-  Worker->>DB: status=PUBLISHED
+  Worker->>DB: Claim due PENDING rows (lease, SKIP LOCKED)
+  Worker->>Kafka: publish(topic, envelope + eventId)
+  Worker->>DB: status=PUBLISHED (or retry with backoff / FAILED)
   Kafka->>WH: consume platform.*
-  WH->>DB: INSERT analytics_events
+  WH->>DB: BEGIN; inbox claim (ON CONFLICT DO NOTHING); analytics_events INSERT if new; COMMIT
 ```
 
-**ELI5:** Write the “letter” in the ledger before mailing it. A worker picks up unsent letters every few seconds.
+**ELI5:** Write the “letter” in the ledger *on the same page* as the business entry, so you can never have one without the other. A worker mails unsent letters every few seconds, and the warehouse clerk ticks each letter’s number off a list — if the same letter arrives twice, the second copy goes in the bin.
+
+### What can go wrong (and why it is fine)
+
+| Oops | What happens |
+|------|--------------|
+| The API crashes after the business write | Impossible to lose the event: it was saved in the same transaction. |
+| The business write fails / rolls back | The event rolls back with it — no event for a change that never happened. |
+| The worker crashes after publishing, before marking the row | The lease runs out, the row is published again **with the same `eventId`**, and the inbox skips the duplicate. |
+| Kafka is down | Rows wait (`PENDING`) and are retried with growing delays; after 8 tries they become `FAILED` for a human to look at. API requests keep working. |
+| A garbage message reaches the consumer | It is parked in `inbox_dead_letters` with the reason; the consumer keeps going instead of crashing on it forever. |
 
 ---
 
@@ -124,6 +136,8 @@ Configured in `apps/api/src/messaging/app-messaging.config.ts` → `QUEUE_NAMES`
 | `claims.expire-pending` | `RewardsQueueModule` | Expire consumer claims |
 | `claims.expire-referrer` | `RewardsQueueModule` | Expire referrer credits |
 | `outbox.publish` | `OutboxQueueModule` | Sweep outbox → Kafka |
+| `storage.cleanup` / `storage.delete` | `FilesModule` (processors) | Clean stale uploads / delete objects |
+| `idempotency.retention` | `IdempotencyRetentionQueueModule` | Hourly purge of expired `Idempotency-Key` records |
 
 **Pattern:** Infrastructure registers queue **names**; feature modules register **processors** (`@Processor(QUEUE_NAMES[n])`).
 
@@ -131,7 +145,7 @@ Configured in `apps/api/src/messaging/app-messaging.config.ts` → `QUEUE_NAMES`
 
 ## Kafka topics (this app)
 
-Defined in `packages/shared` → `KAFKA_TOPICS`. Envelope shape: `PlatformEventEnvelopeSchema`.
+Defined in `packages/shared` → `KAFKA_TOPICS`; `PLATFORM_EVENT_TOPICS` maps each event type to its topic. Stored envelope: `PlatformEventEnvelopeSchema`; wire message: `PlatformEventMessageSchema` (envelope + `eventId`).
 
 | Topic | Examples |
 |-------|----------|
@@ -193,7 +207,7 @@ pnpm --filter @workspace/analytics-consumer start   # optional
 ### New BullMQ job
 
 1. Add queue name to `QUEUE_NAMES` in `@workspace/shared`.
-2. Add name to `APP_MESSAGING_CONFIG.queueNames` (same tuple).
+2. `buildAppMessagingConfig` (`apps/api/src/messaging/app-messaging.config.ts`) already registers every `QUEUE_NAMES` entry — nothing to add there.
 3. Create `@Processor` in the **owning feature module**.
 4. Register processor in a static `@Module({ providers: [...] })` child module (ESLint).
 5. Update `compose.yml` Bull Board `QUEUE_NAMES` env.
@@ -201,9 +215,9 @@ pnpm --filter @workspace/analytics-consumer start   # optional
 ### New Kafka event
 
 1. Add topic to `KAFKA_TOPICS` if needed.
-2. Extend `PlatformEventEnvelopeSchema` in `@workspace/shared`.
-3. Emit from domain service → bridge writes outbox.
-4. Teach `analytics-consumer` if you need warehouse storage.
+2. Add an envelope member in `packages/shared/src/schemas/infrastructure/kafka.ts` (it feeds `PlatformEventEnvelopeSchema`, `PlatformEventInputSchema`, and `PlatformEventMessageSchema`) and map its type in `PLATFORM_EVENT_TOPICS`.
+3. In the domain service, call `outbox.enqueueInTransaction(tx, { type, payload })` **inside the transaction that makes the change** (or `outbox.recordTelemetry(...)` if the event describes no DB write). Add its partition key to `resolvePartitionKey`.
+4. Teach `analytics-consumer` if you need warehouse storage — any new consumer claims `(consumer, eventId)` in the inbox in the same transaction as its side effect.
 
 ### New project from this kit
 
@@ -217,6 +231,7 @@ pnpm --filter @workspace/analytics-consumer start   # optional
 ## Related docs
 
 - [Messaging operations](./messaging.md)
+- [ADR 015 — Transactional outbox + consumer inbox](../adr/015-transactional-outbox-and-inbox.md)
 - [`@workspace/messaging` package README](../../packages/messaging/README.md)
 - [RabbitMQ ADR](../adr/rabbitmq-placeholder.md)
 - [Authorization cache ADR](../adr/004-authorization-caching.md)

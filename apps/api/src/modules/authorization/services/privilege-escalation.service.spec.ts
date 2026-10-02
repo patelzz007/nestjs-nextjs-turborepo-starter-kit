@@ -1,10 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AuthorizationRequest } from "@workspace/shared";
 
-import { PrismaService } from "../../../prisma/prisma.service";
 import { AuthorizationException } from "../exceptions/authorization.exception";
-import { AuthorizationKernelService } from "../kernel/authorization-kernel.service";
 import { PrivilegeEscalationService, type AuthorizationActor } from "./privilege-escalation.service";
+import { createTestAuthorizationKernel, createTestPrisma } from "../../../../test/support/test-service-graph";
 
 const mocks = vi.hoisted(() => ({
 	can: vi.fn(),
@@ -38,21 +37,30 @@ const HELD = new Set(["UPDATE:ROLE", "READ:USER"]);
 const roleParents: Readonly<Record<string, string | null>> = { "role-manager": null, "role-regional": "role-manager", "role-admin": null };
 
 function service(): PrivilegeEscalationService {
-	return new PrivilegeEscalationService(new PrismaService(), new AuthorizationKernelService());
+	const prisma = createTestPrisma();
+	return new PrivilegeEscalationService(prisma, createTestAuthorizationKernel(prisma));
 }
 
 describe("PrivilegeEscalationService", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
-		mocks.can.mockImplementation(async (request: AuthorizationRequest) => (HELD.has(`${request.action}:${request.resource}`) ? "ALLOW" : "DENY"));
-		mocks.roleFindMany.mockImplementation(async ({ where }: { where: { id: { in: string[] } } }) => where.id.in.map((id) => ({ parentId: roleParents[id] ?? null })));
+		mocks.can.mockImplementation((request: AuthorizationRequest) => Promise.resolve(HELD.has(`${request.action}:${request.resource}`) ? "ALLOW" : "DENY"));
+		mocks.roleFindMany.mockImplementation(({ where }: { where: { id: { in: string[] } } }) =>
+			Promise.resolve(where.id.in.map((id) => ({ parentId: roleParents[id] ?? null }))),
+		);
 		mocks.userRoleFindMany.mockResolvedValue([{ roleId: "role-regional" }]);
 	});
 
 	it("blocks non-superadmins from changing their own assignments", () => {
-		expect(() => service().assertNotSelf(admin, "admin-1")).toThrow(AuthorizationException);
-		expect(() => service().assertNotSelf(admin, "user-2")).not.toThrow();
-		expect(() => service().assertNotSelf(superAdmin, "root")).not.toThrow();
+		expect(() => {
+			service().assertNotSelf(admin, "admin-1");
+		}).toThrow(AuthorizationException);
+		expect(() => {
+			service().assertNotSelf(admin, "user-2");
+		}).not.toThrow();
+		expect(() => {
+			service().assertNotSelf(superAdmin, "root");
+		}).not.toThrow();
 	});
 
 	it("blocks editing a role the actor holds directly or through inheritance", async () => {
@@ -75,9 +83,7 @@ describe("PrivilegeEscalationService", () => {
 		mocks.rolePermissionFindMany.mockResolvedValue([{ permission: { action: "READ", resource: "USER" } }, { permission: { action: "MANAGE", resource: "SYSTEM_SETTINGS" } }]);
 
 		await expect(service().assertCanGrantRoles(admin, ["role-regional"])).rejects.toBeInstanceOf(AuthorizationException);
-		expect(mocks.rolePermissionFindMany).toHaveBeenCalledWith(
-			expect.objectContaining({ where: expect.objectContaining({ roleId: { in: ["role-regional", "role-manager"] } }) }),
-		);
+		expect(mocks.rolePermissionFindMany.mock.lastCall?.[0]).toMatchObject({ where: { roleId: { in: ["role-regional", "role-manager"] } } });
 	});
 
 	it("exempts platform SuperAdmins", async () => {

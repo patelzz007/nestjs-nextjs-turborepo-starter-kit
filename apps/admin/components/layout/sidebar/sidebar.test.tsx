@@ -7,7 +7,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 import { compileMenu, SIDEBAR_MENU } from "@/lib/navigation/sidebar-menu";
-import { buildSidebarView, type SidebarView, type SearchableMenuItem } from "@/lib/navigation/menu";
+import { buildSidebarView, type SidebarView } from "@workspace/ui/lib/sidebar/menu-view";
+import type { SearchableMenuItem } from "@/lib/navigation/searchable-menu-items";
 import { ADMIN_SIDEBAR_LABELS } from "@/lib/sidebar-labels";
 import { useSidebarStore } from "@/stores/sidebar-store";
 import type { CompiledSidebarMenuData, SidebarMenuData } from "@/lib/navigation/sidebar";

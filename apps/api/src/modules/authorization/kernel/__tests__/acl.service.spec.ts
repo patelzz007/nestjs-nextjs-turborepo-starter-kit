@@ -1,13 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { ResourceAcl } from "@prisma/client";
+import type { Prisma, ResourceAcl } from "@prisma/client";
 import { PolicyConditionsSchema, type AuthorizationRequest } from "@workspace/shared";
 
 import { PrismaService } from "../../../../prisma/prisma.service";
 import { AclService, type AclLookup } from "../acl.service";
 import { PolicyEngineService } from "../policy-engine.service";
+import { createTestTypedConfig } from "../../../../../test/support/test-api-env";
 
 const mocks = vi.hoisted(() => ({
-	aclFindMany: vi.fn(),
+	aclFindMany: vi.fn<(args: Prisma.ResourceAclFindManyArgs) => Promise<ResourceAcl[]>>(),
 	policyFindMany: vi.fn(),
 }));
 
@@ -59,7 +60,7 @@ const request: AuthorizationRequest = {
 };
 
 function createService(): AclService {
-	const prisma = new PrismaService();
+	const prisma = new PrismaService(createTestTypedConfig());
 	return new AclService(prisma, new PolicyEngineService(prisma));
 }
 
@@ -73,25 +74,22 @@ describe("AclService.findApplicable", () => {
 		await createService().findApplicable(lookup, request);
 
 		expect(mocks.aclFindMany).toHaveBeenCalledTimes(1);
-		expect(mocks.aclFindMany).toHaveBeenCalledWith(
-			expect.objectContaining({
-				where: expect.objectContaining({
-					isDeleted: false,
-					action: { in: ["DELETE", "MANAGE"] },
-					resourceType: "ORDER",
-					AND: expect.arrayContaining([
-						{
-							OR: [
-								{ subjectType: "USER", subjectId: "user-1" },
-								{ subjectType: "ROLE", subjectId: { in: ["role-1"] } },
-							],
-						},
-						{ OR: [{ organizationId: null }, { organizationId: "org-a" }] },
-						{ OR: [{ locationId: null }] },
-						{ OR: [{ resourceId: null }, { resourceId: "order-1" }] },
-					]),
-				}),
-			}),
+		const where = mocks.aclFindMany.mock.lastCall?.[0].where;
+		expect(where?.isDeleted).toBe(false);
+		expect(where?.action).toEqual({ in: ["DELETE", "MANAGE"] });
+		expect(where?.resourceType).toBe("ORDER");
+		expect(where?.AND).toEqual(
+			expect.arrayContaining([
+				{
+					OR: [
+						{ subjectType: "USER", subjectId: "user-1" },
+						{ subjectType: "ROLE", subjectId: { in: ["role-1"] } },
+					],
+				},
+				{ OR: [{ organizationId: null }, { organizationId: "org-a" }] },
+				{ OR: [{ locationId: null }] },
+				{ OR: [{ resourceId: null }, { resourceId: "order-1" }] },
+			]),
 		);
 	});
 
@@ -99,14 +97,16 @@ describe("AclService.findApplicable", () => {
 		const service = createService();
 
 		await service.findApplicable({ ...lookup, resourceScope: { kind: "typeWide" } }, request);
-		expect(mocks.aclFindMany.mock.lastCall?.[0].where.AND).toContainEqual({ resourceId: null });
+		expect(mocks.aclFindMany.mock.lastCall?.[0].where?.AND).toContainEqual({ resourceId: null });
 
 		await service.findApplicable({ ...lookup, resourceScope: { kind: "everyResource" } }, request);
-		expect(mocks.aclFindMany.mock.lastCall?.[0].where.AND).toContainEqual({});
+		expect(mocks.aclFindMany.mock.lastCall?.[0].where?.AND).toContainEqual({});
 	});
 
 	it("splits entries by effect and drops entries whose conditions do not match", async () => {
-		const requiresPending = PolicyConditionsSchema.parse({ condition: { field: "status", operator: "equals", value: "PENDING" } });
+		const requiresPending: Prisma.JsonObject = { condition: { field: "status", operator: "equals", value: "PENDING" } };
+		// The fixture must be a VALID rule, so the drop below proves a non-match, not fail-closed parsing.
+		expect(PolicyConditionsSchema.safeParse(requiresPending).success).toBe(true);
 		mocks.aclFindMany.mockResolvedValue([
 			entry({ id: "deny-1", effect: "DENY" }),
 			entry({ id: "allow-1", effect: "ALLOW" }),

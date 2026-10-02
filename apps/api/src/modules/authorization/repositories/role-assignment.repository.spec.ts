@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { PrismaService } from "../../../prisma/prisma.service";
 import { RoleAssignmentRepository } from "./role-assignment.repository";
+import { createTestTypedConfig } from "../../../../test/support/test-api-env";
 
 /** Records every write the repository issues inside its transaction, in order. */
 const mocks = vi.hoisted(() => ({
@@ -10,13 +11,13 @@ const mocks = vi.hoisted(() => ({
 
 function recorder(model: string): Record<"updateMany" | "createMany", (args: object) => Promise<{ count: number }>> {
 	return {
-		updateMany: async (args: object) => {
+		updateMany: (args: object): Promise<{ count: number }> => {
 			mocks.calls.push({ model, op: "updateMany", args });
-			return { count: 1 };
+			return Promise.resolve({ count: 1 });
 		},
-		createMany: async (args: object) => {
+		createMany: (args: object): Promise<{ count: number }> => {
 			mocks.calls.push({ model, op: "createMany", args });
-			return { count: 1 };
+			return Promise.resolve({ count: 1 });
 		},
 	};
 }
@@ -40,7 +41,7 @@ describe("RoleAssignmentRepository sync", () => {
 	});
 
 	it("revives existing user roles instead of leaving them soft-deleted", async () => {
-		await new RoleAssignmentRepository(new PrismaService()).syncUserRoles("user-1", ["role-a", "role-b"]);
+		await new RoleAssignmentRepository(new PrismaService(createTestTypedConfig())).syncUserRoles("user-1", ["role-a", "role-b"]);
 
 		expect(mocks.calls.map((call) => call.op)).toEqual(["updateMany", "updateMany", "createMany"]);
 		expect(mocks.calls[1]).toEqual({
@@ -51,7 +52,7 @@ describe("RoleAssignmentRepository sync", () => {
 	});
 
 	it("revives existing role permissions", async () => {
-		await new RoleAssignmentRepository(new PrismaService()).syncRolePermissions("role-1", ["perm-a"]);
+		await new RoleAssignmentRepository(new PrismaService(createTestTypedConfig())).syncRolePermissions("role-1", ["perm-a"]);
 
 		expect(mocks.calls[1]).toEqual({
 			model: "rolePermission",
@@ -61,7 +62,7 @@ describe("RoleAssignmentRepository sync", () => {
 	});
 
 	it("revives existing direct permissions as ALLOW grants without expiry", async () => {
-		await new RoleAssignmentRepository(new PrismaService()).syncUserPermissions("user-1", ["perm-a"]);
+		await new RoleAssignmentRepository(new PrismaService(createTestTypedConfig())).syncUserPermissions("user-1", ["perm-a"]);
 
 		expect(mocks.calls[1]).toEqual({
 			model: "userPermission",
@@ -71,7 +72,7 @@ describe("RoleAssignmentRepository sync", () => {
 	});
 
 	it("only clears assignments when syncing to an empty set", async () => {
-		await new RoleAssignmentRepository(new PrismaService()).syncUserRoles("user-1", []);
+		await new RoleAssignmentRepository(new PrismaService(createTestTypedConfig())).syncUserRoles("user-1", []);
 
 		expect(mocks.calls.map((call) => call.op)).toEqual(["updateMany"]);
 	});

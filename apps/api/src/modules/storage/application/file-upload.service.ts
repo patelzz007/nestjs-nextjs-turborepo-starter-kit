@@ -49,8 +49,7 @@ export class FileUploadService {
 		const results: StoredObjectReference[] = [];
 
 		try {
-			for (let index = 0; index < input.files.length; index += 1) {
-				const file = input.files[index];
+			for (const [index, file] of input.files.entries()) {
 				const storagePath = input.buildStoragePath(file, index);
 				const locator = toStorageObjectLocator(provider, container, storagePath);
 				const uploadResult = await this.storage.upload({

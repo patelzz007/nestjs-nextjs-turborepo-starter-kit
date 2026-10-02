@@ -20,7 +20,6 @@ export {
 	fetchSessionStateWithRetry,
 	isDocumentVisible,
 	isExpiredSessionError,
-	resolvePollMs,
 	sameSessionState,
 	secondsUntil,
 	toSessionErrorMessage,

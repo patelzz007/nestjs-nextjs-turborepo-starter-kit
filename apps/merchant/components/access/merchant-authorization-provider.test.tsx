@@ -5,7 +5,7 @@ import { MERCHANT_CAPABILITY } from "@workspace/shared";
 import * as React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { MerchantAuthorizationProvider, useMerchantAuthorizationStatus, useMerchantRoleAccess } from "@/components/access/merchant-authorization-provider";
+import { MerchantAuthorizationProvider, useMerchantAuthorizationStatus } from "@/components/access/merchant-authorization-provider";
 import { resolveMerchantCapabilities } from "@/lib/session/server-capabilities";
 import { membershipFixture } from "@/test/authorization";
 
@@ -19,14 +19,14 @@ vi.mock("@/lib/org/capabilities", () => ({
 
 function Probe(): React.JSX.Element {
 	const { can } = useAuthorization();
-	const { isLoading, membershipRole } = useMerchantAuthorizationStatus();
-	const canManageTeam = useMerchantRoleAccess("manageTeam");
+	const { isLoading, capabilities } = useMerchantAuthorizationStatus();
 	return (
 		<ul>
 			<li>{`loading:${String(isLoading)}`}</li>
-			<li>{`role:${membershipRole ?? "none"}`}</li>
+			<li>{`capabilities:${String(capabilities.length)}`}</li>
 			<li>{`manageRewards:${String(can(MERCHANT_CAPABILITY.manageRewards))}`}</li>
-			<li>{`manageTeam:${String(canManageTeam)}`}</li>
+			<li>{`manageTeam:${String(can(MERCHANT_CAPABILITY.manageTeam))}`}</li>
+			<li>{`manageVerification:${String(can(MERCHANT_CAPABILITY.manageVerification))}`}</li>
 		</ul>
 	);
 }
@@ -47,9 +47,24 @@ describe("MerchantAuthorizationProvider", () => {
 			</MerchantAuthorizationProvider>,
 		);
 
-		expect(screen.getByText("role:OWNER")).toBeTruthy();
+		expect(screen.getByText(`capabilities:${String(resolveMerchantCapabilities(membership).length)}`)).toBeTruthy();
 		expect(screen.getByText("manageRewards:true")).toBeTruthy();
 		expect(screen.getByText("manageTeam:true")).toBeTruthy();
+		expect(screen.getByText("manageVerification:true")).toBeTruthy();
+	});
+
+	it("exposes organization management as capabilities, not roles (admins cannot manage verification)", () => {
+		const membership = membershipFixture("ADMIN");
+		merchantCapabilities.mockReturnValue({ membership, capabilities: resolveMerchantCapabilities(membership), isLoading: false, isPolicyReady: true });
+
+		render(
+			<MerchantAuthorizationProvider>
+				<Probe />
+			</MerchantAuthorizationProvider>,
+		);
+
+		expect(screen.getByText("manageTeam:true")).toBeTruthy();
+		expect(screen.getByText("manageVerification:false")).toBeTruthy();
 	});
 
 	it("reports loading and denies while the memberships query is pending", () => {
@@ -62,7 +77,7 @@ describe("MerchantAuthorizationProvider", () => {
 		);
 
 		expect(screen.getByText("loading:true")).toBeTruthy();
-		expect(screen.getByText("role:none")).toBeTruthy();
+		expect(screen.getByText("capabilities:0")).toBeTruthy();
 		expect(screen.getByText("manageRewards:false")).toBeTruthy();
 		expect(screen.getByText("manageTeam:false")).toBeTruthy();
 	});

@@ -16,7 +16,7 @@ export interface OrganizationLocationListProps {
 	readonly membershipLocationScopeType?: OrganizationLocationScopeType;
 	readonly membershipLocationIds?: readonly string[];
 	readonly showAccessHints?: boolean;
-	readonly onEditRejected?: (location: OrganizationLocationResponse) => void;
+	readonly onEditRejected?: ((location: OrganizationLocationResponse) => void) | undefined;
 }
 
 function locationStatusLabel(status: OrganizationLocationStatus): string {

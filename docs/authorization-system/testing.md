@@ -4,7 +4,7 @@ tags: ["authorization", "testing", "vitest", "e2e", "rls"]
 description: "Where the authorization tests live, how to run unit and database e2e suites, the house patterns for cast-free mocks, and what every new gated feature must test."
 order: 26
 author: "Platform Team"
-lastUpdated: 1790812800000
+lastUpdated: 1790899200000
 coverImage: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=1600&q=80"
 ---
 
@@ -61,8 +61,10 @@ dropdb authz_e2e
 | `services/privilege-escalation.service.spec.ts` | self-escalation, subset rule, inherited roles, SuperAdmin exemption |
 | `repositories/role-assignment.repository.spec.ts` | sync revives soft-deleted rows (regression) |
 | `src/infrastructure/outbox/platform-outbox.service.spec.ts` | outbox writes under `outbox.enqueue` (regression) |
-| `src/modules/files/services/file-upload-authorization.service.spec.ts` | per-category upload rules |
-| `src/modules/rewards/services/merchant-context.service.spec.ts` | merchant role table (cashier read-only, policy admin), owner-only KYB |
+| `src/modules/files/services/file-authorization.service.spec.ts` | per-category upload / complete / read / delete rules, Cedar consulted |
+| `src/modules/rewards/services/merchant-context.service.spec.ts` | merchant role table (cashier read-only, policy admin), owner-only KYB, POS keys never manage team / locations / verification |
+| `src/modules/organization/services/organization-reward-auth.service.spec.ts` | `requireMembershipCapability`: every role × team / locations / verification allowed exactly as before the capability migration, role table and default Cedar policy agree, Cedar narrowing, fail closed on capabilities without an API action |
+| `prisma/seed/merchant-capability-catalog.spec.ts` | one seeded `capability_definitions` row per merchant capability |
 | `src/common/interceptors/rls.interceptor.spec.ts` | RLS scope per caller type; verified organization only |
 | `src/common/middleware/rls-pre-handler.middleware.spec.ts` | a real Fastify app proves guards run inside `request.pre_handler` |
 | `src/prisma/rls-context.spec.ts` | fail-closed unscoped context, allowlist |
@@ -74,6 +76,7 @@ dropdb authz_e2e
 | `authorization-hardening.e2e-spec.ts` | forged `x-organization-id` / `x-store-id` → 403, store-scoped decisions, decisions endpoint, explain restricted to admins, `@Authorize(self())` routes, self-escalation and subset rule, refresh / logout under user-scoped RLS |
 | `authorization-kernel.e2e-spec.ts` | kernel against seeded data: admin dashboard, default deny, self grants, DENY override, ACL DENY, forged org, membership ≠ permission, filters |
 | `access-hardening.e2e-spec.ts`, `rls-hardening.e2e-spec.ts`, `organization-isolation.e2e-spec.ts` | cross-org reads / writes over HTTP, RLS at the database level |
+| `merchant-capabilities.e2e-spec.ts` | seeded owner vs cashier on team, KYB and store-location endpoints (`ORGANIZATION_ROLE_CAPABILITY_REQUIRED`), cashier still reads locations |
 
 ### Shared and frontend
 
@@ -82,6 +85,7 @@ dropdb authz_e2e
 | `packages/shared/src/authorization/permission.test.ts` | slugs, `MANAGE`, implicit self grants, merchant role table, strict policy schema |
 | `packages/client` (`can.test.tsx`, sidebar filter tests) | `can` / `cannot` / resource-aware checks, `<Can>`, six-level sidebar, any / all / cascade / disabled / feature flags |
 | `apps/admin`, `apps/merchant`, `apps/web` | each gated area with and without the capability, loading states, route guard |
+| `apps/merchant/lib/navigation/org-route-authorization.test.ts`, `lib/org/org-page-*.test.ts*` | every org page has a rule and calls `guardOrgPage` before loading data; sidebar and route map agree; sidebar per role hides exactly the denied pages; server denial rendering |
 
 ---
 

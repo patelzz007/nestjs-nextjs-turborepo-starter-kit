@@ -2,9 +2,11 @@ import { BadRequestException } from "@nestjs/common";
 import { z } from "zod";
 import { describe, expect, it } from "vitest";
 
-import { AssignRoleToUserSchema, AdminUserListQuerySchema, apiContract } from "@workspace/shared";
+import { AssignRoleToUserSchema, AdminUserListQuerySchema, apiContract, JsonValueSchema, type JsonValue } from "@workspace/shared";
+import { toJSONSchema } from "zod/v4";
 
-import { ZodValidationPipe } from "./zod-validation.pipe";
+import { collectSchemas } from "../ajv-warmup";
+import { AJV_STRING_FORMATS, ZodValidationPipe } from "./zod-validation.pipe";
 
 const ValidationErrorBodySchema = z.object({
 	message: z.string(),
@@ -13,7 +15,7 @@ const ValidationErrorBodySchema = z.object({
 
 const TestSchema = z
 	.object({
-		email: z.string().email(),
+		email: z.email(),
 		password: z.string().min(8),
 	})
 	.strict();
@@ -73,5 +75,39 @@ describe("ZodValidationPipe (compiled ajv)", () => {
 		const pipe = new ZodValidationPipe(apiContract.auth.adminUsers.input);
 
 		expect(pipe.transform({ page: "1", limit: "20", sort: "fullName" })).toEqual({ page: 1, limit: 20, sort: "fullName" });
+	});
+
+	it("enforces the uri format from z.url() exactly like Zod (it is not skipped)", () => {
+		const pipe = new ZodValidationPipe(z.object({ href: z.url() }).strict());
+
+		expect(pipe.transform({ href: "https://example.com/invite?token=abc" })).toEqual({ href: "https://example.com/invite?token=abc" });
+		expect(() => pipe.transform({ href: "not a url" })).toThrow(BadRequestException);
+	});
+
+	it("has a registered validator for every JSON Schema format the apiContract emits", () => {
+		const emitted = new Set<string>();
+		const collectFormats = (node: JsonValue): void => {
+			if (Array.isArray(node)) {
+				node.forEach(collectFormats);
+				return;
+			}
+			if (node === null || typeof node !== "object") {
+				return;
+			}
+			const format = node.format;
+			if (typeof format === "string") {
+				emitted.add(format);
+			}
+			Object.values(node).forEach(collectFormats);
+		};
+		for (const schema of collectSchemas(apiContract)) {
+			const converted = JsonValueSchema.safeParse(toJSONSchema(schema, { unrepresentable: "any" }));
+			if (converted.success) {
+				collectFormats(converted.data);
+			}
+		}
+
+		expect(emitted.size).toBeGreaterThan(0);
+		expect([...emitted].filter((format: string): boolean => !(format in AJV_STRING_FORMATS))).toEqual([]);
 	});
 });

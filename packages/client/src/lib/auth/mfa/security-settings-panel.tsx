@@ -1,10 +1,10 @@
 "use client";
 
-import { ChangePasswordForm } from "@workspace/client/lib/auth/forms/change-password-form";
-import { EmailVerificationPanel } from "@workspace/client/lib/auth/email/verification-panel";
-import { resolveAuthErrorMessage } from "@workspace/client/lib/auth/errors";
-import { useAuth } from "@workspace/client/lib/auth";
-import { consumeEnrollmentMessage } from "@workspace/client/lib/auth/edge/restricted-session";
+import { ChangePasswordForm } from "../forms/change-password-form";
+import { EmailVerificationPanel } from "../email/verification-panel";
+import { resolveAuthErrorMessage } from "../errors";
+import { useAuth } from "../index";
+import { consumeEnrollmentMessage } from "../edge/restricted-session";
 import { Button } from "@workspace/ui/components/form/button";
 import { Checkbox } from "@workspace/ui/components/form/checkbox";
 import { Input } from "@workspace/ui/components/form/input";

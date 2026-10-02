@@ -1,6 +1,6 @@
 "use client";
 
-import { ResetPasswordSchema } from "@workspace/shared";
+import { ResetPasswordSchema, APP_LINKS } from "@workspace/shared";
 import { FormShell } from "@workspace/ui/components/form/form-shell";
 import { Label } from "@workspace/ui/components/form/label";
 import { PasswordInput } from "@workspace/ui/components/form/password-input";
@@ -17,9 +17,11 @@ import { catchCaught } from "../../caught";
 export interface ResetPasswordFormProps {
 	readonly token: string;
 	readonly loginHref?: string;
+	/** Where "request a new link" leads. @default APP_LINKS.auth.forgotPassword */
+	readonly forgotPasswordHref?: string;
 }
 
-export function ResetPasswordForm({ token, loginHref = "/auth/login" }: ResetPasswordFormProps): JSX.Element {
+export function ResetPasswordForm({ token, loginHref = APP_LINKS.auth.login, forgotPasswordHref = APP_LINKS.auth.forgotPassword }: ResetPasswordFormProps): JSX.Element {
 	const [password, setPassword] = useState("");
 	const [confirmPassword, setConfirmPassword] = useState("");
 	const [error, setError] = useState<string | null>(null);
@@ -104,7 +106,7 @@ export function ResetPasswordForm({ token, loginHref = "/auth/login" }: ResetPas
 		return (
 			<div className="space-y-4 text-center">
 				<p className="text-sm text-destructive">This password reset link is invalid or has expired.</p>
-				<Link href="/auth/forgot-password" className="text-sm font-medium text-primary hover:underline">
+				<Link href={forgotPasswordHref} className="text-sm font-medium text-primary hover:underline">
 					Request a new reset link
 				</Link>
 			</div>

@@ -9,20 +9,19 @@ import {
 	type PermissionScope,
 } from "@workspace/shared";
 
+import { createTestAuthorizationKernel } from "../../../../../test/support/test-service-graph";
 import { AuthorizationException } from "../../exceptions/authorization.exception";
-import { AclService } from "../acl.service";
-import { AuthorizationAuditKernelService } from "../authorization-audit-kernel.service";
-import { AuthorizationKernelService } from "../authorization-kernel.service";
-import { PolicyEngineService, type PolicyEvaluation } from "../policy-engine.service";
-import { ResourceOwnershipResolver, type OwnershipLookup } from "../resource-ownership.resolver";
-import { SubjectGrantsLoader, type GrantSource, type SubjectGrant, type SubjectGrants } from "../subject-grants.loader";
-import { TenantMembershipService, type TenantVerification } from "../tenant-membership.service";
+import type { AuthorizationKernelService } from "../authorization-kernel.service";
+import type { PolicyEvaluation } from "../policy-engine.service";
+import type { OwnershipLookup } from "../resource-ownership.resolver";
+import type { GrantSource, SubjectGrant, SubjectGrants } from "../subject-grants.loader";
+import type { TenantVerification } from "../tenant-membership.service";
 
 /**
  * Collaborator mocks, hoisted so the `vi.mock` class factories can reference
  * them. Each collaborator is replaced by a fake class exposing the members the
- * kernel calls, so the kernel is constructed with instances of the imported
- * types — no casts anywhere.
+ * kernel calls; the kernel is built through its real constructor graph
+ * (test/support/test-service-graph.ts) — no casts anywhere.
  */
 const mocks = vi.hoisted(() => ({
 	load: vi.fn(),
@@ -132,14 +131,7 @@ function request(overrides: Partial<AuthorizationRequest> = {}): AuthorizationRe
 }
 
 function createKernel(): AuthorizationKernelService {
-	return new AuthorizationKernelService(
-		new SubjectGrantsLoader(),
-		new TenantMembershipService(),
-		new ResourceOwnershipResolver(),
-		new AclService(),
-		new PolicyEngineService(),
-		new AuthorizationAuditKernelService(),
-	);
+	return createTestAuthorizationKernel();
 }
 
 describe("AuthorizationKernelService", () => {

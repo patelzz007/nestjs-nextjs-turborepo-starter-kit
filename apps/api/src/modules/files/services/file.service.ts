@@ -157,25 +157,18 @@ export class FileService {
 		return { file: this.mapFileRecord(finalized) };
 	}
 
-	public async getFile(userId: string, fileId: string): Promise<FileRecord> {
+	/** Loads a live file record (404 otherwise). Callers authorize the operation before acting on it. */
+	public async requireFile(fileId: string): Promise<StoredFile> {
 		const file = await this.repository.findById(fileId);
 		if (file === null) {
 			throw new NotFoundException({ message: "File not found", error: "FILE_NOT_FOUND" });
 		}
-		if (file.uploadedById !== userId) {
-			throw new ForbiddenException({ message: "Not allowed to view this file", error: "FILE_VIEW_FORBIDDEN" });
-		}
-		return this.mapFileRecord(file);
+		return file;
 	}
 
-	public async getDownloadUrl(userId: string, fileId: string, disposition: FileDownloadDisposition = "inline"): Promise<FileDownloadResponse> {
-		const file = await this.repository.findById(fileId);
-		if (file === null) {
-			throw new NotFoundException({ message: "File not found", error: "FILE_NOT_FOUND" });
-		}
-		if (file.uploadedById !== userId && file.organizationId === null) {
-			throw new ForbiddenException({ message: "Not allowed to download this file", error: "FILE_DOWNLOAD_FORBIDDEN" });
-		}
+	/** Short-lived signed URL for an already-authorized file; `null` while it is not downloadable. */
+	public async createDownloadUrl(file: StoredFile, disposition: FileDownloadDisposition = "inline"): Promise<FileDownloadResponse> {
+		const fileId = file.id;
 		if (file.status === "SCANNING" || file.status === "PROCESSING" || file.status === "PENDING" || file.status === "UPLOADED") {
 			return { fileId, status: file.status, downloadUrl: null, expiresAt: null };
 		}
@@ -198,18 +191,12 @@ export class FileService {
 		};
 	}
 
-	public async deleteFile(userId: string, fileId: string): Promise<void> {
-		const file = await this.repository.findById(fileId);
-		if (file === null) {
-			throw new NotFoundException({ message: "File not found", error: "FILE_NOT_FOUND" });
-		}
-		if (file.uploadedById !== userId) {
-			throw new ForbiddenException({ message: "Not allowed to delete this file", error: "FILE_DELETE_FORBIDDEN" });
-		}
-		await this.repository.markDeleted(fileId);
+	/** Soft-deletes an already-authorized file and queues the physical delete. */
+	public async deleteStoredFile(file: StoredFile): Promise<void> {
+		await this.repository.markDeleted(file.id);
 		const locator = locatorFromStoredFile(file, this.config.storageProvider);
 		await this.storageQueue?.enqueuePhysicalDelete({
-			fileId,
+			fileId: file.id,
 			provider: locator.provider,
 			container: locator.container,
 			path: locator.path,

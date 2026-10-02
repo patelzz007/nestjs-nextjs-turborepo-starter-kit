@@ -1,5 +1,6 @@
 "use client";
 
+import { ROUTES } from "@/lib/routes";
 import { VerifyEmailView } from "@workspace/client/lib/auth/email/verify-email-view";
 import { AuthLayout } from "@workspace/ui/components/layout/auth-layout";
 import { useSearchParams } from "next/navigation";
@@ -17,7 +18,7 @@ function VerifyEmailContent(): JSX.Element {
 		);
 	}
 
-	return <VerifyEmailView token={token} settingsHref="/rewardhub/settings" />;
+	return <VerifyEmailView token={token} settingsHref={ROUTES.rewardHub.account} />;
 }
 
 export default function WebVerifyEmailPage(): JSX.Element {

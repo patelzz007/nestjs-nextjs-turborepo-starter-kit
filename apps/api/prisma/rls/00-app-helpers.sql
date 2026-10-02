@@ -11,8 +11,26 @@
 -- so `pnpm db:apply-security` aborted before any grants were applied.
 -- They now live here. The apply order and a use-before-define check live in
 -- `RLS_APPLY_ORDER` (scripts/rls-apply-plan.ts) and run before any SQL executes.
--- Idempotent (CREATE OR REPLACE) — safe to re-run.
+-- It also creates the `app_runtime` role — the ONLY place it is created. Every
+-- later file GRANTs to it (01 does so for its SECURITY DEFINER helpers), so on
+-- a brand-new cluster it must exist before anything else runs; the apply plan
+-- (`assertRlsRoleDependencies`) rejects any file that uses a role before the
+-- file that creates it.
+-- Idempotent (IF NOT EXISTS / CREATE OR REPLACE) — safe to re-run.
 -- ============================================================================
+
+-- ── app_runtime role (NOLOGIN: reached only via SET ROLE; NOBYPASSRLS: policies always apply)
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'app_runtime') THEN
+    CREATE ROLE app_runtime NOLOGIN NOSUPERUSER NOINHERIT NOBYPASSRLS;
+  END IF;
+END $$;
+
+GRANT app_runtime TO CURRENT_USER;
+
+-- ── session primitives
 
 CREATE OR REPLACE FUNCTION app_rls_bypass() RETURNS boolean
 LANGUAGE sql STABLE AS $$

@@ -1,12 +1,12 @@
-import { Body, Controller, Get, Post } from "@nestjs/common";
-import { ApiBearerAuth, ApiBody, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
+import { Controller, Get, HttpStatus, Post } from "@nestjs/common";
+import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 
-import { apiContract, apiPath } from "@workspace/shared";
-import { ZodValidationPipe } from "../../../common/pipes/zod-validation.pipe";
+import { apiContract, apiPath, RewardClaimCheckoutStatusSchema, OkResponseSchema } from "@workspace/shared";
+import { ZodBody } from "../../../common/decorators/zod-request.decorators";
+import { ZodResponse } from "../../../common/decorators/zod-response.decorators";
 import { GetUser } from "../../auth/decorators/get-user.decorator";
 import type { AccessTokenPayload } from "../../auth/services/token.service";
 
-import { AcceptRewardLegalDto } from "../dtos/rewards.dto";
 import { RewardLegalService } from "../services/reward-legal.service";
 
 @ApiTags("Legal")
@@ -17,18 +17,17 @@ export class RewardLegalController {
 
 	@Get("status")
 	@ApiOperation({ summary: "Get rewards legal acceptance and verified phone status" })
-	@ApiOkResponse({ description: "Claim checkout status for the signed-in user" })
+	@ZodResponse(RewardClaimCheckoutStatusSchema, { description: "Claim checkout status for the signed-in user" })
 	public getStatus(@GetUser() user: AccessTokenPayload): ReturnType<RewardLegalService["getCheckoutStatus"]> {
 		return this.legalService.getCheckoutStatus(user.sub);
 	}
 
 	@Post("accept")
 	@ApiOperation({ summary: "Accept rewards terms and privacy policy" })
-	@ApiBody({ type: AcceptRewardLegalDto })
-	@ApiOkResponse({ description: "Legal acceptance recorded" })
+	@ZodResponse(OkResponseSchema, { status: HttpStatus.CREATED, description: "Legal acceptance recorded" })
 	public acceptLegal(
 		@GetUser() user: AccessTokenPayload,
-		@Body(new ZodValidationPipe(apiContract.legal.accept.input)) body: { termsVersion: string; privacyVersion: string },
+		@ZodBody(apiContract.legal.accept.input) body: { termsVersion: string; privacyVersion: string },
 	): ReturnType<RewardLegalService["accept"]> {
 		return this.legalService.accept(user.sub, body.termsVersion, body.privacyVersion);
 	}

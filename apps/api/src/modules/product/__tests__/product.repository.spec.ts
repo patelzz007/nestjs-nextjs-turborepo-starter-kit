@@ -4,12 +4,12 @@ import { ProductRepository } from "../product.repository";
 
 describe("ProductRepository", () => {
 	it("exposes list and findById repository methods", () => {
-		expect(ProductRepository.prototype.list).toBeDefined();
-		expect(ProductRepository.prototype.findById).toBeDefined();
+		expect(ProductRepository.prototype).toHaveProperty("list", expect.any(Function));
+		expect(ProductRepository.prototype).toHaveProperty("findById", expect.any(Function));
 	});
 
 	it("exposes create and delete repository methods", () => {
-		expect(ProductRepository.prototype.create).toBeDefined();
-		expect(ProductRepository.prototype.delete).toBeDefined();
+		expect(ProductRepository.prototype).toHaveProperty("create", expect.any(Function));
+		expect(ProductRepository.prototype).toHaveProperty("delete", expect.any(Function));
 	});
 });

@@ -10,6 +10,8 @@ import {
 	type ServerCallerTree,
 } from "@workspace/client/lib/api/server-api";
 
+import { clientEnv } from "@/lib/env/env.client";
+
 export type WebServerCaller = ServerCallerTree<ApiRouter>;
 
 /**
@@ -17,7 +19,7 @@ export type WebServerCaller = ServerCallerTree<ApiRouter>;
  * Pass `apiRouter` (default via `createWebServerCaller`) or a custom subtree.
  */
 export function createWebServerCallerForRouter<R extends object>(router: R, config?: Partial<ServerApiConfig>): ServerCallerTree<R> {
-	const resolved: ServerApiConfig = resolveConfig({ ...DEFAULT_WEB_SERVER_API_CONFIG, ...config });
+	const resolved: ServerApiConfig = resolveConfig({ ...DEFAULT_WEB_SERVER_API_CONFIG, clientOrigin: clientEnv.NEXT_PUBLIC_APP_URL, ...config });
 	const context = createServerRequestContext(resolved, apiRouter.auth.refresh);
 	return createServerCallerForRouter(router, context);
 }

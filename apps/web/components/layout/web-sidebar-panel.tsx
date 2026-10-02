@@ -1,5 +1,6 @@
 "use client";
 
+import { useCanAccessWebPath } from "@/components/auth/route-access-guard";
 import { useWebSession } from "@/components/auth/web-authorization-provider";
 import { ImpersonateUserPanel } from "@/components/impersonation/impersonate-user-panel";
 import { WebSidebarNavItem } from "@/components/layout/web-sidebar-nav-item";
@@ -7,7 +8,7 @@ import { filterCompiledSidebarMenu } from "@/lib/navigation/filter-menu-by-capab
 import { USER_SIDEBAR_MENU } from "@/lib/navigation/sidebar-menu";
 import { resolveWebPinnedMenuItems } from "@/lib/navigation/pinned-items";
 import { WEB_SIDEBAR_LABELS } from "@/lib/navigation/sidebar-labels";
-import { renderWebPaletteIcon } from "@/lib/palette/nav-items";
+import { accessiblePaletteItems, renderWebPaletteIcon } from "@/lib/palette/nav-items";
 import { useWebCommandPaletteStore } from "@/stores/command-palette-store";
 import { useWebSidebarStore } from "@/stores/sidebar-store";
 import { useAuth } from "@workspace/client/lib/auth";
@@ -74,6 +75,7 @@ export function WebSidebarPanel({ userName, onNavigate }: WebSidebarPanelProps):
 	const router = useRouter();
 	const { user } = useAuth();
 	const { capabilities } = useWebSession();
+	const canAccessPath = useCanAccessWebPath();
 	const searchInputRef = React.useRef<HTMLInputElement>(null);
 	const navContainerRef = React.useRef<HTMLDivElement>(null);
 
@@ -104,7 +106,7 @@ export function WebSidebarPanel({ userName, onNavigate }: WebSidebarPanelProps):
 		[filteredMenu, currentPage, sectionOrder, searchQuery],
 	);
 
-	const pinnedItems = React.useMemo(() => resolveWebPinnedMenuItems(pinnedUrls), [pinnedUrls]);
+	const pinnedItems = React.useMemo(() => resolveWebPinnedMenuItems(pinnedUrls, accessiblePaletteItems(canAccessPath)), [pinnedUrls, canAccessPath]);
 	const expandedItems = useRouteExpandedItems(currentPage, storeExpandedItems, view.routeState.autoExpandedItems, resetExpandedItems);
 	const activeItems = view.routeState.activeItems;
 
@@ -245,7 +247,7 @@ export function WebSidebarPanel({ userName, onNavigate }: WebSidebarPanelProps):
 							isSearching={view.isSearching}
 							isActiveSection={sectionHasActiveItem(section.items, activeItems)}
 							allTitles={view.sectionTitles}
-							color={section.color}
+							{...(section.color !== undefined ? { color: section.color } : {})}
 							moveUpTitle={WEB_SIDEBAR_LABELS.moveSectionUpTitle}
 							moveDownTitle={WEB_SIDEBAR_LABELS.moveSectionDownTitle}
 							moveUpAriaLabel={WEB_SIDEBAR_LABELS.moveSectionUpAriaLabel(section.title)}

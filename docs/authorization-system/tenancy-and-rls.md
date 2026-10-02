@@ -82,9 +82,10 @@ What happens next:
 | A route / body / query claim is not proven | not trusted; only kept as a **resource attribute**. A `GLOBAL` permission may still act on another organization's record; an `ORGANIZATION` / `STORE` one may not. |
 | SuperAdmin | may select any tenant |
 
-The verified result is stored in `request.authorizationContext` and used by the kernel and the
-RLS interceptor. **Never read tenant ids from `request.headers` or the body yourself** — read
-`request.authorizationContext`.
+The verified result is bound into the request context (`RequestContextService.bindTenant`,
+[ADR 017](../adr/017-unified-request-context.md)) and used by the kernel and the RLS
+interceptor. **Never read tenant ids from `request.headers` or the body yourself** — read
+`requestContext.current()?.tenant` (verified ids only; absent = not requested or not proven).
 
 ---
 
@@ -102,7 +103,11 @@ Every tenant table has RLS enabled and **forced** (`prisma/rls.sql`, helpers in
 
 Queries on the shared pool (`PrismaService`) get these settings on every connection checkout
 (`src/prisma/rls-pool.ts`), taken from an `AsyncLocalStorage` scope
-(`src/prisma/rls-context.ts`). Which scope is active depends on **where** the code runs:
+(`src/prisma/rls-context.ts`). This RLS store is deliberately **separate** from the request
+context: its bypass / system-operation scopes are transaction-scoped and nest (and exist in
+queue jobs with no request at all). `RlsInterceptor` is the one place the request context
+(verified tenant) feeds it — see [ADR 017](../adr/017-unified-request-context.md). Which scope
+is active depends on **where** the code runs:
 
 | Where the code runs | RLS scope | Bypass? |
 |---|---|---|
@@ -116,7 +121,8 @@ Queries on the shared pool (`PrismaService`) get these settings on every connect
 | Handler, anonymous | no user | ❌ |
 | BullMQ workers | `queue.job` | ✅ |
 | `@Cron` maintenance | `scheduled.maintenance` | ✅ |
-| Outbox writes (`PlatformOutboxService.enqueue` without a caller transaction) | `outbox.enqueue` | ✅ |
+| Outbox event **inside** a domain transaction (`PlatformOutboxService.enqueueInTransaction`) | the caller's transaction session — `outbox_events_append` allows the INSERT without bypass | ❌ |
+| Outbox telemetry with no domain write (`PlatformOutboxService.recordTelemetry`) | `outbox.enqueue` | ✅ |
 | `TenantTransactionService.withTenantTransaction()` | the given user + organization, **transaction-local** | ❌ |
 | `TenantTransactionService.withSystemOperation()` | the given operation, **transaction-local** | ✅ |
 
@@ -134,10 +140,12 @@ A bypass is only possible for names listed in `src/prisma/system-operation.regis
 |---|---|
 | `request.pre_handler` | guards (authentication, kernel lookups) |
 | `queue.job`, `scheduled.maintenance` | background workers, cron jobs |
-| `outbox.enqueue`, `outbox.publish` | transactional outbox |
+| `outbox.enqueue`, `outbox.publish` | transactional outbox — standalone telemetry writes / the dispatcher ([ADR 015](../adr/015-transactional-outbox-and-inbox.md)) |
 | `route.rls_bypass`, `platform.superadmin`, `platform.staff_single_tenant` | the RLS interceptor |
 | `files.upload_authorization` | upload-url authorization (organization role lookup) |
 | `storage.callback` | storage callbacks |
+| `http.idempotency` | `@Idempotent()` endpoints recording/replaying `Idempotency-Key` responses |
+| `idempotency.retention` | hourly BullMQ job deleting expired `Idempotency-Key` records ([Messaging — Retention](../infrastructure/messaging.md#retention)) |
 | `auth.pre_login`, `health.probe`, `seed.bootstrap` | login lookup, health checks, seeds |
 | `tenant.enumerate`, `organization.*`, `policy.publish` | tenant sagas and schedulers |
 
@@ -154,6 +162,13 @@ public async cleanup(): Promise<void> {
 
 For a new kind of background work, **add a new, specific name** to the registry. Do not
 reuse a broad one "because it works".
+
+The registry guards the API process. `apps/analytics-consumer` is a separate process with its
+own `pg` pool (it does not use `PrismaService`); it sets the same session settings itself —
+`role = app_runtime`, `app.rls_bypass = true` — and tags them with its own operation names:
+`analytics.ingest` (inbox claim, analytics write, dead-letter park) and
+`analytics.inbox_retention` (hourly inbox purge). They are deliberately **not** in the API
+registry, so no API code path can borrow them.
 
 ---
 

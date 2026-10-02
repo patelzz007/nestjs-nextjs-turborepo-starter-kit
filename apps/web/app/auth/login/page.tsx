@@ -3,6 +3,9 @@
 import { LoginForm, type DemoAccount } from "@workspace/client/lib/auth/forms/login-form";
 import { AuthLayout } from "@workspace/ui/components/layout/auth-layout";
 
+import { clientEnv } from "@/lib/env/env.client";
+import { ROUTES } from "@/lib/routes";
+
 const WEB_DEMO_ACCOUNTS: readonly DemoAccount[] = [
 	{ label: "Super Admin", email: "superadmin@example.com", password: "SuperAdmin@123" },
 	{ label: "Admin", email: "admin@example.com", password: "Admin@123" },
@@ -10,7 +13,7 @@ const WEB_DEMO_ACCOUNTS: readonly DemoAccount[] = [
 	{ label: "User", email: "user@example.com", password: "User@123" },
 ];
 
-const SHOW_DEMO_ACCOUNTS: boolean = process.env.NEXT_PUBLIC_SHOW_DEMO_ACCOUNTS === "true";
+const SHOW_DEMO_ACCOUNTS: boolean = clientEnv.NEXT_PUBLIC_SHOW_DEMO_ACCOUNTS;
 
 export default function WebLoginPage(): React.JSX.Element {
 	return (
@@ -36,12 +39,12 @@ export default function WebLoginPage(): React.JSX.Element {
 				rightsReserved: "All rights reserved.",
 			}}>
 			<LoginForm
-				demoAccounts={SHOW_DEMO_ACCOUNTS ? WEB_DEMO_ACCOUNTS : undefined}
-				redirectPath="/rewardhub"
+				{...(SHOW_DEMO_ACCOUNTS ? { demoAccounts: WEB_DEMO_ACCOUNTS } : {})}
+				redirectPath={ROUTES.rewardHub.browse}
 				footer={
 					<p className="text-center text-xs text-balance text-muted-foreground">
 						Don&apos;t have an account?{" "}
-						<a href="/auth/signup" className="font-medium text-primary underline-offset-4 hover:underline">
+						<a href={ROUTES.auth.signup} className="font-medium text-primary underline-offset-4 hover:underline">
 							Sign up
 						</a>
 					</p>

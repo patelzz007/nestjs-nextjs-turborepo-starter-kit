@@ -63,14 +63,17 @@ export class OrdersController {
 
   @Post()
   @UseGuards(AuthGuard, PermissionGuard(Permission.ORDER_CREATE))
+  @ZodResponse(OrderSchema, { status: HttpStatus.CREATED })
   public async create(
-    @Body(new ZodValidationPipe(CreateOrderSchema)) dto: CreateOrderDto,
+    @ZodBody(CreateOrderSchema) dto: CreateOrderDto,
     @CurrentUser() user: AuthUser,
-  ): Promise<OrderResponseDto> {
+  ): Promise<Order> {
     return this.ordersService.create(dto, user);
   }
 }
 ```
+
+Every handler declares its response with exactly one `@ZodResponse` / `@ZodPaginatedResponse` / `@ZodRawResponse` using the shared schema of its contract leaf: it documents the response, sets the status, and the global `ResponseInterceptor` strips + enforces the result (a mismatch is a logged 500). The decorator only compiles when the handler's return type fits the schema, so a controller can never return a Prisma model — map rows to DTOs in the service/repository. See `docs/response-contracts.md` (ADR 022).
 
 Every endpoint's guards/permissions must be explicitly mapped, not assumed from context or copied from a neighboring endpoint without checking it's actually correct for this one — see `10-security-auth-authorization.md`'s per-endpoint mapping requirement.
 
@@ -589,14 +592,16 @@ export class HealthController {
 Building directly on `05-contracts-zod-api.md`'s "zod drives Swagger" rule, the actual bootstrap wiring:
 
 ```ts
-// main.ts
+// apps/api/src/common/api-docs.ts → buildOpenApiDocument(app), called from bootstrap
 const config = new DocumentBuilder()
   .setTitle('Orders API')
   .setVersion('1.0')
   .addBearerAuth()
   .build();
-const document = SwaggerModule.createDocument(app, config); // built from the createZodDto-based controllers — no hand-written schema duplication
-SwaggerModule.setup('api/docs', app, document);
+const document = cleanupOpenApiDoc(
+  SwaggerModule.createDocument(app, config, { standardSchemaConverter: zodStandardSchemaConverter }),
+); // request inputs from @ZodBody/@ZodQuery/@ZodParams/@ZodParam, responses from @ZodResponse/@ZodPaginatedResponse (ADR 022) — no hand-written schema duplication
+SwaggerModule.setup('v1/docs', app, document);
 ```
 
 Keep the Swagger UI disabled or authenticated in production if the API surface itself is not meant to be publicly browsable — treat the decision of "is our API documentation public" as a deliberate one, not a default left over from local development convenience.
@@ -687,8 +692,8 @@ export class OrdersController {
   @Post(':id/cancel')
   @UseGuards(AuthGuard, PermissionGuard(Permission.ORDER_CANCEL), OwnershipGuard('order', 'customer'))
   public async cancel(
-    @Param('id', new ZodValidationPipe(OrderIdSchema)) id: OrderId,
-    @Body(new ZodValidationPipe(CancelOrderSchema)) dto: CancelOrderDto,
+    @ZodParam('id', OrderIdSchema) id: OrderId,
+    @ZodBody(CancelOrderSchema) dto: CancelOrderDto,
     @CurrentUser() user: AuthUser,
   ): Promise<OrderResponseDto> {
     return this.cancelOrder.execute(id, dto, user);

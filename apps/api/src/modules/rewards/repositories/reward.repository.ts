@@ -1,15 +1,37 @@
 import { Injectable } from "@nestjs/common";
 import type { Prisma, Reward } from "@prisma/client";
 
-import { nowEpochMs, type RewardListQuery } from "@workspace/shared";
+import { nowEpochMs, rewardListQuery, type RewardListQuery, type RewardListSortField } from "@workspace/shared";
 
-import { fetchStringIdListPage } from "../../../platform/persistence/cursor-list";
 import { BaseRepository } from "../../../platform/persistence/base.repository";
+import { fetchListPage } from "../../../platform/persistence/list-page";
+import { timestampIdKeyset, type ListKeyset } from "../../../platform/persistence/list-query/keyset-cursor";
+import { buildListOrder, type ListOrder, type SortColumns } from "../../../platform/persistence/list-query/list-order";
+import { fieldWhere, toPrismaEqualityFilter } from "../../../platform/persistence/list-query/prisma-filter";
 import type { EmptyMutationInput, RepositoryListResult } from "../../../platform/persistence/types";
 import { PrismaService } from "../../../prisma/prisma.service";
 
+/**
+ * The merchant's logo, fetched in the same query as the reward (no N+1): the
+ * organization's live `LOGO` asset whose file finished processing and has a
+ * public URL. `(organizationId, assetType)` is unique, so this is 0 or 1 row.
+ *
+ * The file conditions live in the relation filter (not only in the mapper) so
+ * an asset whose `stored_files` row is hidden by RLS is excluded up front
+ * instead of tripping Prisma's required-relation check on `file`.
+ */
+const ORGANIZATION_LOGO_ASSETS_SELECT = {
+	where: {
+		assetType: "LOGO",
+		isDeleted: false,
+		file: { status: "READY", isDeleted: false, publicPath: { not: null } },
+	},
+	select: { file: { select: { publicPath: true } } },
+	take: 1,
+} satisfies Prisma.Organization$assetsArgs;
+
 const REWARD_WITH_ORGANIZATION_INCLUDE = {
-	organization: { select: { displayName: true } },
+	organization: { select: { displayName: true, assets: ORGANIZATION_LOGO_ASSETS_SELECT } },
 	locationScopes: {
 		where: { location: { isDeleted: false } },
 		select: {
@@ -58,36 +80,56 @@ function toUpdateInput(_input: EmptyMutationInput): Prisma.RewardUpdateInput {
 	throw new Error("RewardRepository.update via BaseRepository ports is not supported");
 }
 
-function buildMarketplaceWhere(query: RewardListQuery): Prisma.RewardWhereInput {
+// ── Marketplace list query → Prisma (explicit field → column mapping; see docs/list-queries.md) ──
+
+const REWARD_SORT_COLUMNS: SortColumns<RewardListSortField, Prisma.RewardOrderByWithRelationInput> = {
+	createdAt: (direction) => ({ createdAt: direction }),
+	expiryDate: (direction) => ({ expiryDate: direction }),
+	title: (direction) => ({ title: direction }),
+};
+
+/** Keyset for the default order (`createdAt desc, id desc`). */
+function rewardListKeyset<TRow extends Pick<Reward, "id" | "createdAt">>(): ListKeyset<TRow, Prisma.RewardWhereInput> {
+	return timestampIdKeyset(
+		(row: TRow) => ({ at: Number(row.createdAt), id: row.id }),
+		({ at, id }): Prisma.RewardWhereInput => ({ OR: [{ createdAt: { lt: at } }, { createdAt: at, id: { lt: id } }] }),
+	);
+}
+
+/** Published, in-stock, unexpired consumer rewards + the filter AST + search. */
+export function buildMarketplaceWhere(query: RewardListQuery, now = BigInt(Date.now())): Prisma.RewardWhereInput {
+	const filter = query.filter;
 	return {
-		isDeleted: false,
-		status: "PUBLISHED",
-		rewardKind: "CONSUMER",
-		quantityRemaining: { gt: 0 },
-		expiryDate: { gte: BigInt(Date.now()) },
-		...(query.category !== undefined ? { category: query.category } : {}),
-		...(query.search !== undefined
-			? {
-					OR: [{ title: { contains: query.search, mode: "insensitive" } }, { description: { contains: query.search, mode: "insensitive" } }],
-				}
-			: {}),
-		...(query.city !== undefined
-			? {
-					organization: { merchantProfile: { city: query.city } },
-				}
-			: {}),
+		AND: [
+			{ isDeleted: false, status: "PUBLISHED", rewardKind: "CONSUMER", quantityRemaining: { gt: 0 }, expiryDate: { gte: now } },
+			...fieldWhere(toPrismaEqualityFilter(filter?.category), (category) => ({ category })),
+			...fieldWhere(toPrismaEqualityFilter(filter?.city), (city): Prisma.RewardWhereInput => ({ organization: { merchantProfile: { city } } })),
+			...(query.search !== undefined
+				? [
+						{
+							OR: [{ title: { contains: query.search, mode: "insensitive" } }, { description: { contains: query.search, mode: "insensitive" } }],
+						} satisfies Prisma.RewardWhereInput,
+					]
+				: []),
+		],
 	};
+}
+
+export function buildMarketplaceOrder(query: RewardListQuery): ListOrder<Prisma.RewardOrderByWithRelationInput> {
+	return buildListOrder(rewardListQuery.resolveSort(query.sort), {
+		columns: REWARD_SORT_COLUMNS,
+		tieBreaker: (direction) => ({ id: direction }),
+	});
 }
 
 const RewardRepositoryPorts = {
 	toDomain,
 	toCreateInput,
 	toUpdateInput,
-	buildListWhere: buildMarketplaceWhere,
-	buildListOrderBy: (): Prisma.RewardOrderByWithRelationInput => ({ createdAt: "desc" }),
-	buildListCursorOrderBy: (): Prisma.RewardOrderByWithRelationInput => ({ id: "asc" }),
-	mergeListCursor: (where: Prisma.RewardWhereInput, cursorId: string): Prisma.RewardWhereInput => ({ ...where, id: { gt: cursorId } }),
-	readListCursorId: (row: Reward): string => row.id,
+	buildListWhere: (query: RewardListQuery): Prisma.RewardWhereInput => buildMarketplaceWhere(query),
+	buildListOrder: buildMarketplaceOrder,
+	listKeyset: rewardListKeyset<Reward>(),
+	andWhere: (left: Prisma.RewardWhereInput, right: Prisma.RewardWhereInput): Prisma.RewardWhereInput => ({ AND: [left, right] }),
 	buildFindByIdWhere: (id: string): Prisma.RewardWhereInput => ({
 		id,
 		isDeleted: false,
@@ -118,17 +160,13 @@ export class RewardRepository extends BaseRepository<
 	}
 
 	public async listMarketplace(query: RewardListQuery): Promise<RepositoryListResult<RewardWithOrganization>> {
-		const where = buildMarketplaceWhere(query);
-		return fetchStringIdListPage(query, {
-			where,
-			mergeCursor: (baseWhere, cursorId) => ({ ...baseWhere, id: { gt: cursorId } }),
-			readId: (row) => row.id,
-			findMany: (args): Promise<RewardWithOrganization[]> =>
-				this.prisma.reward.findMany({
-					...args,
-					include: REWARD_WITH_ORGANIZATION_INCLUDE,
-				}),
-			count: (listWhere) => this.prisma.reward.count({ where: listWhere }),
+		return fetchListPage(query, {
+			where: buildMarketplaceWhere(query),
+			order: buildMarketplaceOrder(query),
+			keyset: rewardListKeyset<RewardWithOrganization>(),
+			and: (left, right) => ({ AND: [left, right] }),
+			count: (where) => this.prisma.reward.count({ where }),
+			findMany: (args): Promise<RewardWithOrganization[]> => this.prisma.reward.findMany({ ...args, include: REWARD_WITH_ORGANIZATION_INCLUDE }),
 		});
 	}
 
@@ -291,7 +329,18 @@ export class RewardRepository extends BaseRepository<
 		});
 	}
 
-	public async autoPublishInTransaction(rewardId: string, referrerRewardId: string | null, organizationId: string, now: number): Promise<void> {
+	/**
+	 * Publish a reward (and its referrer reward) with its audit row, then run
+	 * `withinTransaction` — the caller's same-transaction write (the outbox
+	 * event) — so the status change and its event commit or roll back together.
+	 */
+	public async autoPublishInTransaction(
+		rewardId: string,
+		referrerRewardId: string | null,
+		organizationId: string,
+		now: number,
+		withinTransaction: (tx: Prisma.TransactionClient) => Promise<void>,
+	): Promise<void> {
 		await this.prisma.$transaction(async (tx) => {
 			await tx.reward.update({
 				where: { id: rewardId },
@@ -316,6 +365,8 @@ export class RewardRepository extends BaseRepository<
 					metadata: { rewardId },
 				},
 			});
+
+			await withinTransaction(tx);
 		});
 	}
 

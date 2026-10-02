@@ -5,15 +5,37 @@ import fastifyCompress from "@fastify/compress";
 import fastifyEtag from "@fastify/etag";
 import fastifyHelmet from "@fastify/helmet";
 import fastifyRateLimit from "@fastify/rate-limit";
-import fastifyRequestContext from "@fastify/request-context";
 import fastifyUnderPressure from "@fastify/under-pressure";
 import type { FastifyRequest } from "fastify";
 import { type ApiVersion } from "@workspace/shared";
 
+import { RateLimitError } from "../common/errors/app-error";
 import { TypedConfigService } from "../config/typed-config.service";
 import { readFirstHeader } from "../common/utils/http-headers";
 import { VersionController } from "../modules/health/version.controller";
 import { apiVersionOfUrl } from "./fastify-api-version";
+
+/** Milliseconds per second — converts the rate-limit window TTL to a `Retry-After` value. */
+const MS_PER_SECOND = 1000;
+
+/** The part of @fastify/rate-limit's error context the builder reads. */
+export interface RateLimitErrorContext {
+	readonly after: string;
+	readonly ttl: number;
+}
+
+/**
+ * @fastify/rate-limit throws whatever this returns from its onRequest hook;
+ * Nest routes it through its Fastify error handler into GlobalExceptionFilter,
+ * so rate-limited clients get the standard error envelope (code RATE_LIMITED)
+ * plus `Retry-After`.
+ */
+export function rateLimitErrorResponseBuilder(_request: FastifyRequest, context: RateLimitErrorContext): RateLimitError {
+	return new RateLimitError({
+		message: `Rate limit exceeded — retry after ${context.after}.`,
+		details: { retryAfterSeconds: Math.max(1, Math.ceil(context.ttl / MS_PER_SECOND)) },
+	});
+}
 
 export interface RegisterFastifyPluginsOptions {
 	readonly isDev: boolean;
@@ -37,7 +59,6 @@ export async function registerFastifyPlugins(app: NestFastifyApplication, option
 			fileSize: 5_242_880,
 		},
 	});
-	await server.register(fastifyRequestContext, { hook: "preHandler" });
 
 	if (!options.isDev) {
 		await server.register(fastifyCompress, { global: true, threshold: 1024 });
@@ -55,18 +76,7 @@ export async function registerFastifyPlugins(app: NestFastifyApplication, option
 				const version: string = requested ?? apiVersionOfUrl(request.url) ?? "unversioned";
 				return `${request.ip}:${version}`;
 			},
-			errorResponseBuilder: (
-				_request: FastifyRequest,
-				context: { readonly statusCode: number; readonly after: string },
-			): {
-				readonly statusCode: number;
-				readonly error: string;
-				readonly message: string;
-			} => ({
-				statusCode: context.statusCode,
-				error: "Too Many Requests",
-				message: `Rate limit exceeded — retry after ${context.after}.`,
-			}),
+			errorResponseBuilder: rateLimitErrorResponseBuilder,
 		});
 		await server.register(fastifyUnderPressure, {
 			maxEventLoopDelay: 1000,

@@ -1,10 +1,10 @@
 ---
 title: "ESLint Setup & How To Run It"
-tags: ["eslint", "linting", "tooling"]
+tags: ["eslint", "linting", "tooling", "import-boundaries"]
 description: "How ESLint is configured repo-wide and how to run it — both globally (via Turborepo) and per project."
 order: 6
 author: "Acme Inc."
-lastUpdated: 1785628800000
+lastUpdated: 1790812800000
 coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=1600&q=80"
 ---
 
@@ -22,6 +22,9 @@ coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=form
 1. [What the setup looks like (architecture)](#1-what-the-setup-looks-like-architecture)
 2. [The config files — who extends who](#2-the-config-files--who-extends-who)
 3. [The rules we enforce (and why)](#3-the-rules-we-enforce-and-why)
+   - [3.1 Import boundaries](#31-import-boundaries)
+   - [3.2 Env boundary (`process.env`)](#32-env-boundary-processenv)
+   - [3.3 Lint canaries](#33-lint-canaries)
 4. [Per-repo exceptions](#4-per-repo-exceptions)
 5. [Prettier integration](#5-prettier-integration)
 6. [How to run ESLint](#6-how-to-run-eslint)
@@ -44,17 +47,22 @@ rules — with small, deliberate deviations per repo.
 ```
 packages/eslint-config/          ← the shared config package (@workspace/eslint-config)
 ├── base.js                      ← core rules applied to EVERY repo
-├── next.js                      ← web + admin (adds React / Hooks / a11y / Next.js rules)
-├── react-internal.js            ← packages/ui (React library rules)
-└── nestjs.js                    ← apps/api (NestJS + DI-friendly rules)
+├── next.js                      ← web + admin + merchant (adds React / Hooks / a11y / Next.js rules)
+├── react-internal.js            ← packages/ui + packages/client (React library rules)
+├── nestjs.js                    ← apps/api (NestJS + DI-friendly rules)
+└── import-boundaries.js         ← import-boundary patterns + the local `workspace-boundaries` rule
+                                   (imported by base / next / react-internal / nestjs; also exported as
+                                   `@workspace/eslint-config/import-boundaries` for the Node workers)
 ```
 
 Each workspace's own `eslint.config.js` simply imports one of the above:
 
 | Workspace         | `eslint.config.js` imports         | Shared config used                        |
 | ----------------- | ---------------------------------- | ----------------------------------------- |
-| `apps/web`        | `nextJsConfig`                     | `@workspace/eslint-config/next-js`        |
-| `apps/admin`      | `nextJsConfig`                     | `@workspace/eslint-config/next-js`        |
+| `apps/web`        | `nextJsConfig` (+ env boundary)    | `@workspace/eslint-config/next-js`        |
+| `apps/admin`      | `nextJsConfig` (+ env boundary)    | `@workspace/eslint-config/next-js`        |
+| `apps/merchant`   | `nextJsConfig` (+ env boundary)    | `@workspace/eslint-config/next-js`        |
+| `packages/client` | `config` (+ env boundary)          | `@workspace/eslint-config/react-internal` |
 | `apps/api`        | `nestjsConfig` (+ local overrides) | `@workspace/eslint-config/nestjs`         |
 | `packages/ui`     | `config`                           | `@workspace/eslint-config/react-internal` |
 | `packages/shared` | `baseConfig` (+ Zod exception)     | `@workspace/eslint-config/base`           |
@@ -92,9 +100,11 @@ This is the heart of the setup. It stacks these layers, in order:
    `tsconfig.json` for type information.
 4. **`typescript-eslint` stylistic type-checked rules** (`stylisticTypeChecked`) —
    consistent type style (prefer interfaces, explicit `void` returns, no `{}` type).
-5. **Import rules** (`eslint-plugin-import`) — enforced import ordering
-   (builtin → external → internal → parent → sibling → index), no duplicate imports,
-   imports first, newline after imports.
+5. **Import rules** (`eslint-plugin-import`) — no duplicate imports, imports
+   first (ordering is left to Prettier). Plus the **universal import
+   boundaries** (`no-restricted-imports`): no app → app imports, no reaching into
+   a package's `src/`/`dist/`, no relative climbs into another workspace, no deep
+   `@workspace/shared/*` paths. See [3.1 Import boundaries](#31-import-boundaries).
 6. **Naming conventions** (`@typescript-eslint/naming-convention`) — `typeLike` →
    PascalCase, variables → camelCase/PascalCase/UPPER_CASE, functions → camelCase/PascalCase,
    class members → camelCase, private members require leading `_`.
@@ -106,9 +116,12 @@ This is the heart of the setup. It stacks these layers, in order:
    - `@typescript-eslint/no-unnecessary-condition`, `no-unnecessary-boolean-literal-compare`,
      `no-inferrable-types`, `prefer-readonly`, `return-await`
 8. **Type assertion ban** — `@typescript-eslint/consistent-type-assertions` with
-   `assertionStyle: "never"`. `as const` is automatically exempt (it is not a type
-   cast — it narrows literals). For CSS custom properties use the
-   `satisfies React.CSSProperties & Record<string, string>` pattern instead of `as`.
+   `assertionStyle: "never"`, plus `no-restricted-syntax` selectors that also ban
+   `as const` / `<const>` (the assertion rule exempts them) and `z.any()` /
+   `z.unknown()` / `z.never()`. Declare literal types explicitly instead: a typed tuple
+   (`const SIZES: readonly ["sm", "md"] = ["sm", "md"]`), an explicit union, or
+   `satisfies`. For CSS custom properties use a typed variable
+   (`React.CSSProperties & Record<\`--${string}\`, string>`) instead of `as`.
 9. **Explicit typing rules** —
    - `@typescript-eslint/no-explicit-any` → **error**
    - `@typescript-eslint/explicit-function-return-type` → **error**
@@ -118,11 +131,16 @@ This is the heart of the setup. It stacks these layers, in order:
 11. **Prettier plugin** — `prettier/prettier` as an **error**, configured with
     `usePrettierrc: true` so it reads the root `.prettierrc`.
 12. **Global ignore patterns** — `dist/`, `.next/`, `.turbo/`, `coverage/`,
-    `node_modules/`, `*.config.*`, `*.d.ts`, `prisma/`.
+    `node_modules/`, `*.config.*`, `*.d.ts`, `prisma/`. (`apps/api` re-includes its hand-written
+    `prisma/**/*.ts` seed and RLS manifest — see [Per-repo exceptions](#4-per-repo-exceptions).)
 
-### `next.js` (web + admin)
+### `next.js` (web + admin + merchant)
 
 Everything from `base.js`, plus:
+
+- **Frontend import boundaries** — the universal patterns plus a ban on
+  server-only packages, and the `workspace-boundaries/no-server-import-in-client-component`
+  rule (see [3.1](#31-import-boundaries))
 
 - `eslint-plugin-react` (recommended + jsx-runtime), browser/serviceworker globals
 - `react-hooks` recommended rules
@@ -131,17 +149,22 @@ Everything from `base.js`, plus:
 - Extra React rules: `jsx-no-leaked-render`, `jsx-no-bind`, `jsx-key`,
   `no-unstable-nested-components`, `no-array-index-key` (warn)
 
-### `react-internal.js` (packages/ui)
+### `react-internal.js` (packages/ui, packages/client)
 
-Everything from `base.js` plus the same React / hooks / a11y rules as `next.js`
-**without** the Next.js-specific rules.
+Everything from `base.js` plus the same React / hooks / a11y rules and the same
+frontend import boundaries as `next.js`, **without** the Next.js-specific rules.
 
 ### `nestjs.js` (apps/api)
 
 Everything from `base.js` plus:
 
 - **`@darraghor/eslint-plugin-nestjs-typed`** `flatRecommended` — NestJS-specific
-  rule set (controllers/services/providers, API property optionality, etc.)
+  rule set (controllers/services/providers, API property optionality, etc.).
+  `api-method-should-specify-api-response` stays an error and also accepts the
+  `@ZodResponse` / `@ZodPaginatedResponse` / `@ZodRawResponse` decorators via
+  `additionalCustomApiResponseDecorators`. They document the responses in
+  Swagger from the shared contract
+  ([ADR 022](adr/022-response-contracts.md)).
 - Relaxations needed for NestJS conventions:
   - `explicit-member-accessibility` off (DI constructor params like
     `private readonly prismaService` are the standard NestJS style — enforced by
@@ -150,6 +173,9 @@ Everything from `base.js` plus:
   - `no-extraneous-class` off (DTOs extend `createZodDto(...)`)
   - `no-unused-vars` allows `_`-prefixed args (DI tokens)
   - naming-convention keeps `private readonly x` without underscore
+- **Backend import boundaries** (`backendImportBoundaryConfig`) — see
+  [3.1](#31-import-boundaries): no `@workspace/client`, `@workspace/ui`, `next`,
+  `react`, `react-dom` (or their subpaths) in a Node backend.
 
 ---
 
@@ -162,12 +188,101 @@ These are the **non-negotiable** project rules and how ESLint enforces them:
 | No `any` / `z.any`                         | `no-explicit-any` = error + `strictTypeChecked` (`no-unsafe-*`)             |
 | No `unknown` / `z.unknown`                 | `strictTypeChecked` rules flag unsafe `unknown` usage                       |
 | No `never` / `z.never`                     | `no-unnecessary-condition` + `strictTypeChecked`                            |
-| No type casting / `as Type`                | `consistent-type-assertions` (`assertionStyle: "never"`; `as const` exempt) |
+| No type casting / `as Type` / `as const`   | `consistent-type-assertions` (`assertionStyle: "never"`) + `no-restricted-syntax` (`as const`, `<const>`, `z.any/unknown/never`) |
 | Avoid `typeof`, infer from Zod             | `strictTypeChecked` + code review; types come from `z.infer<>`              |
 | Use generic types (priority 0)             | `stylisticTypeChecked` + code review                                        |
 | Always add access modifiers + return types | `explicit-member-accessibility` + `explicit-function-return-type` = error   |
 | No `console.log` in production code        | `no-console` = warn (use a logger)                                          |
 | Strict equality                            | `eqeqeq` = error (except `== null` null-checks)                             |
+| Import only through public entry points    | `no-restricted-imports` patterns (below) + packages' explicit `exports`      |
+| Server code never reaches the browser      | frontend `no-restricted-imports` + `workspace-boundaries/*` + `server-only`  |
+| Env read only through validated modules    | `no-restricted-properties` on `process.env` (apps, analytics-consumer, api `src/**`, packages/client) |
+| Backends never import frontend code        | backend `no-restricted-imports` (`nestjs.js`, analytics-consumer)            |
+
+### 3.1 Import boundaries
+
+Defined once in `packages/eslint-config/import-boundaries.js` and enforced with
+ESLint core `no-restricted-imports` (`regex` patterns) plus one small local rule,
+so no extra plugin is installed. Every rule is `error`.
+
+**Universal** (every workspace, via `base.js`):
+
+| Pattern                                              | Why                                                                                         |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `@workspace/{web,admin,merchant,api,docs,…}`          | Apps are deployment units, never libraries. Share code through a `packages/*` workspace.    |
+| `@workspace/<pkg>/src/…`, `@workspace/<pkg>/dist/…`   | Internals are private. Import the package's `exports` entry points.                         |
+| `../../packages/…`, `../../apps/…` (relative climbs)  | Same boundary, bypassed with a relative path.                                               |
+| `@workspace/shared/…` (any subpath)                   | `@workspace/shared` has a single public entry point — add the symbol to its barrel instead. |
+
+**Frontend** (`next.js` and `react-internal.js` — the Next apps, `packages/client`,
+`packages/ui`) adds:
+
+| Pattern                                                                               | Why                                                        |
+| ------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| `@workspace/messaging`                                                                 | Node-only (Kafka / BullMQ / Redis clients).                |
+| `@prisma/*`, `prisma`, `@nestjs/*`, `bullmq`, `ioredis`, `kafkajs`, `amqplib`, `pg`, `bcrypt` | Server-only dependencies; the browser talks to the API. |
+
+**Backend** (`nestjs.js` → `apps/api`; also `apps/analytics-consumer` via
+`@workspace/eslint-config/import-boundaries`) adds:
+
+| Pattern                                          | Why                                                                                    |
+| ------------------------------------------------ | -------------------------------------------------------------------------------------- |
+| `@workspace/client`, `@workspace/ui` (+ subpaths) | Frontend-only (browser API client, React components). Share contracts via `@workspace/shared`. |
+| `next`, `react`, `react-dom` (+ subpaths)         | Frontend runtime; a Node backend never renders React or runs Next.js.                  |
+
+`packages/shared` no longer depends on the Node-only `@workspace/messaging`
+(nothing in it imported the package), so the shared package stays safe for
+both sides.
+
+**Client Components** — `workspace-boundaries/no-server-import-in-client-component`
+reports a *value* import of a server-only module from any file that starts with
+`"use client"`. Server-only is detected by specifier: `server-only`,
+`next/headers`, and the naming convention `…/env.server`, `…/server`,
+`…/auth-server`, `…-server-api`, `…/server-api`, `…/server-request`.
+`import type` is allowed (erased at build). Lint only sees direct imports; a
+server module that starts with `import "server-only"` also makes `next build`
+fail on transitive imports.
+
+Because a later flat-config block **replaces** an earlier block's
+`no-restricted-imports` options, the frontend and backend blocks re-state the
+universal patterns (`[...UNIVERSAL, ...FRONTEND]`, `[...UNIVERSAL, ...BACKEND]`). If a workspace config ever sets
+`no-restricted-imports` itself, spread the exported pattern arrays the same way
+instead of overriding them.
+
+The matching **public entry points**: `@workspace/client` now lists every public
+module explicitly in `package.json#exports` (no `./lib/*` wildcard), the apps'
+`tsconfig.json` no longer maps `@workspace/{client,ui,shared}/*` to `src/*`, and
+vitest configs no longer alias around `exports` — TypeScript, Turbopack and
+Vitest all resolve through the same `exports` map. To make a new module public,
+add an explicit `exports` entry (a deliberate API decision), never a path alias.
+
+### 3.2 Env boundary (`process.env`)
+
+`no-restricted-properties` bans `process.env` in `apps/web`, `apps/admin`,
+`apps/merchant`, `packages/client`, `apps/api/src/**` and
+`apps/analytics-consumer/src/**`, except in the env modules that validate it:
+
+| Workspace                 | Allowed files                                                   |
+| ------------------------- | --------------------------------------------------------------- |
+| Next apps                 | `lib/env/env.client.ts`, `lib/env/env.server.ts`, `lib/env/env.runtime.ts` (only checks `NEXT_RUNTIME`) |
+| `apps/admin`              | + `e2e/env.e2e.ts` (opt-in smoke-test switch)                   |
+| `packages/client`         | `src/lib/api/config.ts`                                         |
+| `apps/api`                | `src/config/api-config.ts` (scripts/, prisma/ and test/ are outside `src/**`) |
+| `apps/analytics-consumer` | `src/env.ts`                                                    |
+
+Everything else imports `clientEnv` / `serverEnv` (Next), injects
+`TypedConfigService` (API) or calls `loadConsumerEnv()` (consumer). See
+[Configuration](./configuration.md) and [API Configuration](./api-configuration.md). (`next.config.ts` and
+`vitest.config.ts` are build-tool files and are globally ignored by `base.js`.)
+
+### 3.3 Lint canaries
+
+`apps/web/eslint-boundaries.test.ts`, `packages/client/src/eslint-boundaries.test.ts`,
+`apps/api/src/eslint-boundaries.spec.ts` and `apps/analytics-consumer/src/eslint-boundaries.spec.ts`
+lint fixture snippets against the workspace's **real** effective config (only the
+boundary rules run, via `ruleFilter`) and assert each boundary fires — and that
+public entry points, Server Components and `import type` stay allowed. If a config
+change silently drops a boundary, `pnpm run test` fails.
 
 ---
 
@@ -177,19 +292,19 @@ These are the **non-negotiable** project rules and how ESLint enforces them:
 
 ```js
 export default [
-	// 1. Skip test files entirely
-	{ ignores: ["**/*.spec.ts", "**/*.test.ts"] },
+	{ ignores: ["eslint-rules/**"] },
 	...nestjsConfig,
 
-	// 2. Allow spec files that aren't in tsconfig.json
+	// 1. Un-ignore the hand-written Prisma seed + RLS manifest (base.js ignores `**/prisma/**`).
+	//    Must come AFTER the spread: a negated ignore only re-includes what an earlier object ignored.
+	{ ignores: ["!prisma/", "!prisma/**/", "!prisma/**/*.ts"] },
+
+	// 2. Specs, test/**, prisma/** and source-graph scripts are outside tsconfig.json,
+	//    so they are parsed with the strict program `typecheck` also runs.
 	{
-		files: ["**/*.ts", "**/*.tsx"],
+		files: ["src/**/*.spec.ts", "src/**/*.test.ts", "src/**/__tests__/**/*.ts", "test/**/*.ts", "prisma/**/*.ts", "scripts/render-email-previews.ts"],
 		languageOptions: {
-			parserOptions: {
-				projectService: {
-					allowDefaultProject: ["src/modules/auth/*.spec.ts"],
-				},
-			},
+			parserOptions: { project: "./tsconfig.check.json", tsconfigRootDir: import.meta.dirname, projectService: false },
 		},
 	},
 
@@ -219,10 +334,17 @@ export default [
 ];
 ```
 
+Test code is linted exactly like production code (spec files, e2e specs, test support, the Prisma
+seed): the only spec-specific allowance is the one in `rules/13-ci-cd-and-quality-gates.md`.
+
 > [!NOTE] **Why?** Prisma's complex generic chains, Zod v4 schema metafields (`.meta()`), and
 > dynamic Fastify middleware patterns cannot be fully resolved by `strictTypeChecked`,
 > which produces false-positive `no-unsafe-*` errors. These are validated at runtime
 > by the libraries themselves, so they're relaxed **only** for those file patterns.
+
+The API config also adds (tightening, not relaxing) the env boundary: a
+`no-restricted-properties` ban on `process.env` for `src/**/*.ts` except
+`src/config/api-config.ts` — see [3.2](#32-env-boundary-processenv).
 
 ### `packages/shared/eslint.config.js`
 

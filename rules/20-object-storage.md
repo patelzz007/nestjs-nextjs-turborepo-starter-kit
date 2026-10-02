@@ -113,7 +113,7 @@ For anything beyond small files, don't proxy the file's bytes through the NestJS
 @Post('uploads/signed-url')
 @UseGuards(AuthGuard)
 public async createSignedUploadUrl(
-  @Body(new ZodValidationPipe(SignedUploadRequestSchema)) dto: SignedUploadRequestDto,
+  @ZodBody(SignedUploadRequestSchema) dto: SignedUploadRequestDto,
   @CurrentUser() user: AuthUser,
 ): Promise<SignedUploadResponseDto> {
   const key = buildStorageKey({ tenantId: user.tenantId, purpose: dto.purpose, filename: dto.filename });

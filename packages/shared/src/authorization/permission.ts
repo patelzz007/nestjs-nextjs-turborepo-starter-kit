@@ -70,6 +70,9 @@ export const PERMISSION: PermissionRegistry = {
  * Merchant-app capability slugs (organization-scoped, granted per membership
  * role by the API's tenant policies). Same `can()` / `<Can>` API as platform
  * permissions: `can(MERCHANT_CAPABILITY.manageRewards)`.
+ *
+ * Every merchant page, sidebar item, and API check is expressed with one of
+ * these — never with a membership role name.
  */
 export const MerchantCapabilitySchema = z.enum([
 	"merchant:view_dashboard",
@@ -78,6 +81,10 @@ export const MerchantCapabilitySchema = z.enum([
 	"merchant:view_redemptions",
 	"merchant:manage_api_keys",
 	"merchant:view_analytics",
+	"merchant:manage_team",
+	"merchant:view_locations",
+	"merchant:manage_locations",
+	"merchant:manage_verification",
 ]);
 
 export type MerchantCapability = z.output<typeof MerchantCapabilitySchema>;
@@ -89,6 +96,14 @@ export interface MerchantCapabilityRegistry {
 	readonly viewRedemptions: MerchantCapability;
 	readonly manageApiKeys: MerchantCapability;
 	readonly viewAnalytics: MerchantCapability;
+	/** Team roster, invitations, and revocations. */
+	readonly manageTeam: MerchantCapability;
+	/** Read the organization's store locations (membership context — every member). */
+	readonly viewLocations: MerchantCapability;
+	/** Request / resubmit store locations and change store branding. */
+	readonly manageLocations: MerchantCapability;
+	/** Business verification (KYB): read, submit, and download documents. */
+	readonly manageVerification: MerchantCapability;
 }
 
 export const MERCHANT_CAPABILITY: MerchantCapabilityRegistry = {
@@ -98,6 +113,10 @@ export const MERCHANT_CAPABILITY: MerchantCapabilityRegistry = {
 	viewRedemptions: "merchant:view_redemptions",
 	manageApiKeys: "merchant:manage_api_keys",
 	viewAnalytics: "merchant:view_analytics",
+	manageTeam: "merchant:manage_team",
+	viewLocations: "merchant:view_locations",
+	manageLocations: "merchant:manage_locations",
+	manageVerification: "merchant:manage_verification",
 };
 
 /**
@@ -105,19 +124,31 @@ export const MERCHANT_CAPABILITY: MerchantCapabilityRegistry = {
  * table both the API (before tenant Cedar policies, which may only narrow it)
  * and the merchant app derive from.
  *
- * - OWNER / ADMIN run the business
- * - CASHIER operates the counter: view rewards, redemptions, analytics — no management
+ * - OWNER runs the business: everything, including business verification (KYB)
+ * - ADMIN runs operations: everything except business verification
+ * - CASHIER operates the counter: view rewards, redemptions, analytics, locations — no management
  * - POLICY_ADMIN administers tenant policies, not day-to-day operations
- * - MEMBER sees the dashboard only
+ * - MEMBER sees the dashboard and the store locations only
  */
 const ALL_MERCHANT_CAPABILITIES: readonly MerchantCapability[] = MerchantCapabilitySchema.options;
 
+/** KYB holds the business's legal and identity details — owner-only. */
+const OWNER_ONLY_MERCHANT_CAPABILITIES: readonly MerchantCapability[] = [MERCHANT_CAPABILITY.manageVerification];
+
+const MEMBER_MERCHANT_CAPABILITIES: readonly MerchantCapability[] = [MERCHANT_CAPABILITY.viewDashboard, MERCHANT_CAPABILITY.viewLocations];
+
 export const MERCHANT_ROLE_CAPABILITIES: Readonly<Record<OrganizationMembershipRole, readonly MerchantCapability[]>> = {
 	OWNER: ALL_MERCHANT_CAPABILITIES,
-	ADMIN: ALL_MERCHANT_CAPABILITIES,
-	CASHIER: [MERCHANT_CAPABILITY.viewDashboard, MERCHANT_CAPABILITY.viewRewards, MERCHANT_CAPABILITY.viewRedemptions, MERCHANT_CAPABILITY.viewAnalytics],
-	POLICY_ADMIN: [MERCHANT_CAPABILITY.viewDashboard],
-	MEMBER: [MERCHANT_CAPABILITY.viewDashboard],
+	ADMIN: ALL_MERCHANT_CAPABILITIES.filter((capability) => !OWNER_ONLY_MERCHANT_CAPABILITIES.includes(capability)),
+	CASHIER: [
+		MERCHANT_CAPABILITY.viewDashboard,
+		MERCHANT_CAPABILITY.viewRewards,
+		MERCHANT_CAPABILITY.viewRedemptions,
+		MERCHANT_CAPABILITY.viewAnalytics,
+		MERCHANT_CAPABILITY.viewLocations,
+	],
+	POLICY_ADMIN: MEMBER_MERCHANT_CAPABILITIES,
+	MEMBER: MEMBER_MERCHANT_CAPABILITIES,
 };
 
 /** Whether a membership role holds a merchant capability (fails closed on unknown slugs). */

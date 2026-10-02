@@ -6,7 +6,7 @@ import { MerchantEmptyState } from "@/components/merchant-ui/empty-state";
 import { MerchantPageHeader } from "@/components/merchant-ui/page-header";
 import { MerchantStatCard } from "@/components/merchant-ui/stat-card";
 import { MerchantSurfacePanel } from "@/components/merchant-ui/surface-panel";
-import { stubPaginatedMetaFromHydration, successEnvelope } from "@/lib/api-envelope";
+import { initialDataOption, stubPaginatedMetaFromHydration, successEnvelope } from "@workspace/client/lib/api/envelope";
 import { useActiveLocationFilter } from "@/lib/org/location-context";
 import { useAuth } from "@workspace/client/lib/auth";
 import { MERCHANT_CAPABILITY, type MerchantRedemptionListItem } from "@workspace/shared";
@@ -19,7 +19,7 @@ const REDEMPTIONS_LIMIT = 20;
 
 export interface MerchantRedemptionsPageViewProps {
 	readonly orgSlug: string;
-	readonly initialRedemptions?: readonly MerchantRedemptionListItem[];
+	readonly initialRedemptions?: readonly MerchantRedemptionListItem[] | undefined;
 }
 
 /** Redemptions route — requires `merchant:view_redemptions` (redemptions endpoint); the query mounts only when allowed. */
@@ -45,9 +45,8 @@ function MerchantRedemptionsPageViewContent({ orgSlug, initialRedemptions }: Mer
 
 	const redemptionsQuery = api.organizations.redemptions.useQuery(
 		{ orgSlug, page: 1, limit: REDEMPTIONS_LIMIT, locationId },
-		{
-			initialData: locationId === undefined ? initialQueryData : undefined,
-		},
+		// SSR data is for the unfiltered list only.
+		initialDataOption(locationId === undefined ? initialQueryData : undefined),
 	);
 	const rows: readonly MerchantRedemptionListItem[] = redemptionsQuery.data?.data ?? [];
 	const isLoading = redemptionsQuery.isLoading && initialRedemptions === undefined;

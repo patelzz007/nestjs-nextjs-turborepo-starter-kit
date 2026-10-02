@@ -36,7 +36,9 @@ yarn-error.log*
 .pnpm-debug.log*
 
 # env files (can opt-in for committing if needed)
-.env
+# Every env file and copy (.env, .env.local, .env_bak, .env.bak, …) — only the documented examples are committed.
+.env*
+!.env.example
 
 # vercel
 .vercel

@@ -5,7 +5,8 @@
 // (UNVERSIONED — it is the thing clients use to FIND the current version, so
 // it must never move when a major bumps). The client transport consults it on
 // a 404 from its pinned version ("deploy-any-or-die" negotiation) and the
-// API returns it from `VersionController`.
+// API returns it from `VersionController` as a RAW body (`@ZodRawResponse` —
+// no envelope), because the client parses the body with this schema directly.
 //
 // The `ApiVersion` type lives in `contracts/versioning.ts` (zero imports).
 // This file imports only the type (no runtime dep on contracts), so no cycle.
@@ -30,6 +31,6 @@ export const ApiVersionManifestSchema = z
 		/** Physical path prefix for the current version (`/api/v1`). */
 		prefix: z.string(),
 	})
-	.strict();
+	.meta({ description: "Sent RAW (no `{ success, data, meta }` envelope). Response schema: unknown keys are stripped, never rejected (ADR 022)." });
 
 export type ApiVersionManifest = z.output<typeof ApiVersionManifestSchema>;

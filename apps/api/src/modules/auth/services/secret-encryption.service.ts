@@ -82,8 +82,8 @@ export class SecretEncryptionService {
 	}
 
 	private requireKeyMaterial(keys: Readonly<Record<number, string>>, keyVersion: number): string {
-		const keyMaterial = keys[keyVersion];
-		if (keyMaterial.length === 0) {
+		const keyMaterial: string | undefined = keys[keyVersion];
+		if (keyMaterial === undefined || keyMaterial.length === 0) {
 			throw new InternalServerErrorException(`Missing MFA encryption key for version ${String(keyVersion)}`);
 		}
 		return keyMaterial;

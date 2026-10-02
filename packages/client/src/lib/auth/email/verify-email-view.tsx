@@ -1,8 +1,9 @@
 "use client";
 
+import { cn } from "@workspace/ui/lib/core/utils";
 import { useQueryClient } from "@tanstack/react-query";
-import { Button } from "@workspace/ui/components/form/button";
-import { CaughtValueSchema } from "@workspace/shared";
+import { buttonVariants } from "@workspace/ui/components/form/button";
+import { CaughtValueSchema, APP_LINKS } from "@workspace/shared";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type JSX } from "react";
@@ -20,7 +21,7 @@ export interface VerifyEmailViewProps {
 	readonly successRedirectHref?: string;
 }
 
-export function VerifyEmailView({ token, settingsHref, loginHref = "/auth/login", successRedirectHref }: VerifyEmailViewProps): JSX.Element {
+export function VerifyEmailView({ token, settingsHref, loginHref = APP_LINKS.auth.login, successRedirectHref }: VerifyEmailViewProps): JSX.Element {
 	const [status, setStatus] = useState<"loading" | "redirecting" | "error">("loading");
 	const [message, setMessage] = useState("Verifying your email...");
 	const router = useRouter();
@@ -90,9 +91,9 @@ export function VerifyEmailView({ token, settingsHref, loginHref = "/auth/login"
 			{status === "loading" || status === "redirecting" ? <p className="text-sm text-muted-foreground">{message}</p> : null}
 			{status === "error" ? <div className="rounded-lg border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive">{message}</div> : null}
 			{status === "error" ? (
-				<Button variant="outline" className="w-full" render={<Link href={loginHref} />}>
+				<Link href={loginHref} className={cn(buttonVariants({ variant: "outline" }), "w-full")}>
 					Back to sign in
-				</Button>
+				</Link>
 			) : null}
 		</div>
 	);

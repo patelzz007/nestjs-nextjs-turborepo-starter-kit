@@ -6,7 +6,7 @@ export interface WebEmptyStateProps {
 	readonly description: string;
 	readonly icon: React.ReactNode;
 	readonly action?: React.ReactNode;
-	readonly className?: string;
+	readonly className?: string | undefined;
 }
 
 export function WebEmptyState({ title, description, icon, action, className }: WebEmptyStateProps): React.JSX.Element {

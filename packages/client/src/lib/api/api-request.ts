@@ -10,20 +10,27 @@
 
 import {
 	ApiErrorBodySchema as ApiErrorSchema,
+	ApiErrorResponseSchema,
+	ApiLockoutDetailsSchema,
 	ApiVersionManifestSchema,
 	apiVersionPrefix,
+	JsonValueSchema,
 	MUTATION_INTENT_HEADER,
 	MUTATION_INTENT_VALUE,
 	type ApiErrorBody,
+	type ApiErrorDetails,
+	type ApiErrorResponse,
 	type ApiVersion,
 	type ApiVersionManifest,
 	type DataValue,
 	type EpochMs,
+	type JsonValue,
 	type SerializableInput,
 } from "@workspace/shared";
 import { z, type ZodType } from "zod";
 
 import { API_URL_PREFIX } from "./config";
+import { ApiResponseContractError, parseResponseContract } from "./response-contract";
 import { resolveRequest, eachRouterEntry, isRouterSubtree, type MutationDef, type ProcedureDef, type QueryDef, type RouterTree, type RouterTreeValue } from "./endpoints";
 
 // ── Auth callbacks & client config ───────────────────────────────────────────
@@ -42,24 +49,24 @@ export type OnRefresh = () => Promise<boolean>;
 export type ApiClientType = "web" | "admin" | "merchant";
 
 export interface UseApiOptions {
-	readonly clientType?: ApiClientType;
-	readonly extraHeaders?: Record<string, string>;
+	readonly clientType?: ApiClientType | undefined;
+	readonly extraHeaders?: Record<string, string> | undefined;
 }
 
 /** Runtime context shared by every procedure call on the client. */
 export interface ApiRequestContext {
 	readonly baseUrl: string;
-	readonly onUnauthorized?: OnUnauthorized;
-	readonly onRefresh?: OnRefresh;
-	readonly clientType?: ApiClientType;
-	readonly extraHeaders?: Record<string, string>;
+	readonly onUnauthorized?: OnUnauthorized | undefined;
+	readonly onRefresh?: OnRefresh | undefined;
+	readonly clientType?: ApiClientType | undefined;
+	readonly extraHeaders?: Record<string, string> | undefined;
 }
 
 /** Context for lifecycle calls that must bypass the 401 refresh pipeline (refresh / logout). */
 export interface UncheckedApiRequestContext {
 	readonly baseUrl: string;
-	readonly clientType?: ApiClientType;
-	readonly extraHeaders?: Record<string, string>;
+	readonly clientType?: ApiClientType | undefined;
+	readonly extraHeaders?: Record<string, string> | undefined;
 }
 
 export function createApiRequestContext(baseUrl: string, onUnauthorized?: OnUnauthorized, onRefresh?: OnRefresh, options?: UseApiOptions): ApiRequestContext {
@@ -126,19 +133,57 @@ export function createRefreshCooldown(refresh: RefreshCall, cooldownMs = 30_000)
 
 export { ApiErrorSchema, type ApiErrorBody };
 
-export class ApiError extends Error implements ApiErrorBody {
-	public readonly error?: string;
-	public readonly statusCode?: number;
-	public readonly lockedUntil?: EpochMs;
-	public readonly remainingSeconds?: number;
+/** Envelope-only fields carried alongside the flattened {@link ApiErrorBody}. */
+export interface ApiErrorExtras {
+	readonly details?: ApiErrorDetails | undefined;
+	readonly correlationId?: string | undefined;
+}
 
-	public constructor(body: ApiErrorBody) {
+/**
+ * A failed API call. The API answers every error with the envelope
+ * `{ success: false, error: { code, message, details? }, meta: { correlationId, timestamp } }`
+ * (docs/error-model.md); this class flattens it so existing UI code keeps
+ * working unchanged:
+ *
+ * - `error` / `code` — the stable machine code (`"INVALID_CREDENTIALS"`)
+ * - `statusCode` — the HTTP status of the response
+ * - `lockedUntil` / `remainingSeconds` — lifted from `details` on `ACCOUNT_LOCKED`
+ * - `details`, `correlationId` — the rest of the envelope (quote the id in support tickets)
+ */
+export class ApiError extends Error implements ApiErrorBody {
+	/** Machine code — kept under its historical name; same value as {@link code}. */
+	public readonly error?: string | undefined;
+	public readonly code?: string | undefined;
+	public readonly statusCode?: number | undefined;
+	public readonly lockedUntil?: EpochMs | undefined;
+	public readonly remainingSeconds?: number | undefined;
+	public readonly details?: ApiErrorDetails | undefined;
+	public readonly correlationId?: string | undefined;
+
+	public constructor(body: ApiErrorBody, extras: ApiErrorExtras = {}) {
 		super(body.message);
 		this.name = "ApiError";
 		this.error = body.error;
+		this.code = body.error;
 		this.statusCode = body.statusCode;
 		this.lockedUntil = body.lockedUntil;
 		this.remainingSeconds = body.remainingSeconds;
+		this.details = extras.details;
+		this.correlationId = extras.correlationId;
+	}
+
+	/** Build from the API's standard error envelope plus the HTTP status it arrived with. */
+	public static fromEnvelope(envelope: ApiErrorResponse, httpStatus: number): ApiError {
+		const lockout = ApiLockoutDetailsSchema.safeParse(envelope.error.details ?? {});
+		return new ApiError(
+			{
+				message: envelope.error.message,
+				error: envelope.error.code,
+				statusCode: httpStatus,
+				...(lockout.success ? { lockedUntil: lockout.data.lockedUntil, remainingSeconds: lockout.data.remainingSeconds } : {}),
+			},
+			{ details: envelope.error.details, correlationId: envelope.meta.correlationId },
+		);
 	}
 }
 
@@ -149,9 +194,9 @@ export type ApiErrorPayload = Error | string;
 type QueryParams = Record<string, string | number | boolean | undefined>;
 
 export interface BaseRequestOptions {
-	query?: QueryParams;
-	headers?: Record<string, string>;
-	signal?: AbortSignal;
+	query?: QueryParams | undefined;
+	headers?: Record<string, string> | undefined;
+	signal?: AbortSignal | undefined;
 }
 
 export type RequestOptions<Method extends HttpMethod, Body = undefined> = Method extends "GET" ? BaseRequestOptions : BaseRequestOptions & { body: Body };
@@ -173,8 +218,8 @@ export type ApiResponse<T> = ApiSuccess<T> | ApiFailure;
 
 /** Per-call overrides on top of the procedure def (signal, extra headers). */
 export interface ProcedureCallOptions {
-	readonly signal?: AbortSignal;
-	readonly headers?: Record<string, string>;
+	readonly signal?: AbortSignal | undefined;
+	readonly headers?: Record<string, string> | undefined;
 }
 
 // ── tRPC-style caller leaves ─────────────────────────────────────────────────
@@ -263,15 +308,25 @@ function isDeadSessionError(error: ApiErrorPayload): boolean {
 	return false;
 }
 
-async function readErrorPayload(response: Response): Promise<ApiErrorPayload> {
+/**
+ * Parse a non-2xx body: the standard error envelope first, then the legacy
+ * flat `{ message, error?, statusCode? }` body (older API builds, proxies),
+ * then raw text. `statusCode` always falls back to the real HTTP status.
+ */
+export async function readErrorPayload(response: Response): Promise<ApiErrorPayload> {
 	const text: string = await response.text();
 	if (text.length === 0) {
 		return new Error(`Request failed (${String(response.status)})`);
 	}
 	try {
-		const parsed = ApiErrorSchema.safeParse(JSON.parse(text));
-		if (parsed.success) {
-			return new ApiError(parsed.data);
+		const json: JsonValue = JsonValueSchema.parse(JSON.parse(text));
+		const envelope = ApiErrorResponseSchema.safeParse(json);
+		if (envelope.success) {
+			return ApiError.fromEnvelope(envelope.data, response.status);
+		}
+		const flat = ApiErrorSchema.safeParse(json);
+		if (flat.success) {
+			return new ApiError({ ...flat.data, statusCode: flat.data.statusCode ?? response.status });
 		}
 	} catch {
 		// Not JSON — fall through to raw text.
@@ -329,7 +384,7 @@ async function executeHttp<T, Body = undefined>(
 	method: HttpMethod,
 	path: string,
 	options: (BaseRequestOptions & { body?: Body }) | undefined,
-	responseSchema: ZodType<T> | undefined,
+	responseSchema: ZodType<T>,
 	bodySchema: ZodType<Body> | undefined,
 	onUnauthorized?: OnUnauthorized,
 	onRefresh?: OnRefresh,
@@ -337,10 +392,11 @@ async function executeHttp<T, Body = undefined>(
 ): Promise<ApiResponse<T>> {
 	const url = buildUrl(baseUrl, path, options?.query, version);
 	const headers = buildHeaders(options?.headers);
+	const signal: AbortSignal | undefined = options?.signal;
 	const init: RequestInit = {
 		method,
 		headers,
-		signal: options?.signal,
+		...(signal === undefined ? {} : { signal }),
 		credentials: "include",
 	};
 
@@ -366,10 +422,14 @@ async function executeHttp<T, Body = undefined>(
 
 			const text: string = isJson ? await res.text() : "";
 			const raw: DataValue = z.custom<DataValue>().parse(text.length === 0 ? null : JSON.parse(text));
-			const data: T = responseSchema ? responseSchema.parse(raw) : z.custom<T>().parse(raw);
+			// The one response-validation point of the browser transport (ADR 022).
+			const data: T = parseResponseContract(responseSchema, raw, { method, url: targetUrl, status: res.status });
 
 			return { ok: true, status: res.status, data };
 		} catch (error) {
+			if (error instanceof ApiResponseContractError) {
+				return { ok: false, status: error.status, data: null, error };
+			}
 			if (error instanceof DOMException && error.name === "AbortError") {
 				return { ok: false, status: 0, data: null, error: "aborted" };
 			}

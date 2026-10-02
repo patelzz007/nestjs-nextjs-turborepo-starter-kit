@@ -1,12 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { PolicyDefinition } from "@prisma/client";
+import type { PolicyDefinition, Prisma } from "@prisma/client";
 import { PolicyConditionsSchema, type AuthorizationRequest, type PolicyOperator, type PolicyValue } from "@workspace/shared";
 
 import { PrismaService } from "../../../../prisma/prisma.service";
 import { applyPolicyOperator, matchesPolicyRule, PolicyEngineService } from "../policy-engine.service";
+import { createTestTypedConfig } from "../../../../../test/support/test-api-env";
 
 const mocks = vi.hoisted(() => ({
-	policyFindMany: vi.fn(),
+	policyFindMany: vi.fn<(args: Prisma.PolicyDefinitionFindManyArgs) => Promise<PolicyDefinition[]>>(),
 }));
 
 vi.mock("../../../../prisma/prisma.service", () => ({
@@ -50,18 +51,24 @@ function request(overrides: Partial<AuthorizationRequest> = {}): AuthorizationRe
 	};
 }
 
-const statusIsCompleted = PolicyConditionsSchema.parse({ condition: { field: "order.status", operator: "equals", value: "COMPLETED" } });
-const sameOrganization = PolicyConditionsSchema.parse({ condition: { field: "order.organizationId", operator: "equals", valueRef: "$user.organizationId" } });
+/** Stored `conditions` JSON, exactly as the `policy_definitions` row holds it. */
+const statusIsCompleted: Prisma.JsonObject = { condition: { field: "order.status", operator: "equals", value: "COMPLETED" } };
+const sameOrganization: Prisma.JsonObject = { condition: { field: "order.organizationId", operator: "equals", valueRef: "$user.organizationId" } };
 
 describe("PolicyEngineService", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 	});
 
+	it("uses stored condition fixtures that are valid policy rules", () => {
+		expect(PolicyConditionsSchema.safeParse(statusIsCompleted).success).toBe(true);
+		expect(PolicyConditionsSchema.safeParse(sameOrganization).success).toBe(true);
+	});
+
 	it("abstains when no policy targets the request", async () => {
 		mocks.policyFindMany.mockResolvedValue([]);
 
-		const result = await new PolicyEngineService(new PrismaService()).evaluate(request());
+		const result = await new PolicyEngineService(new PrismaService(createTestTypedConfig())).evaluate(request());
 
 		expect(result.decision).toBe("NOT_APPLICABLE");
 	});
@@ -69,7 +76,7 @@ describe("PolicyEngineService", () => {
 	it("abstains when only non-matching DENY policies exist (does not block everyone)", async () => {
 		mocks.policyFindMany.mockResolvedValue([policy({ effect: "DENY", conditions: statusIsCompleted })]);
 
-		const result = await new PolicyEngineService(new PrismaService()).evaluate(request());
+		const result = await new PolicyEngineService(new PrismaService(createTestTypedConfig())).evaluate(request());
 
 		expect(result.decision).toBe("NOT_APPLICABLE");
 	});
@@ -77,7 +84,7 @@ describe("PolicyEngineService", () => {
 	it("denies when a DENY policy matches", async () => {
 		mocks.policyFindMany.mockResolvedValue([policy({ effect: "DENY", conditions: statusIsCompleted })]);
 
-		const result = await new PolicyEngineService(new PrismaService()).evaluate(request({ resourceAttributes: { status: "COMPLETED" } }));
+		const result = await new PolicyEngineService(new PrismaService(createTestTypedConfig())).evaluate(request({ resourceAttributes: { status: "COMPLETED" } }));
 
 		expect(result.decision).toBe("DENY");
 		expect(result.evaluation.at(-1)?.details).toEqual({ policyId: "policy-1" });
@@ -85,7 +92,7 @@ describe("PolicyEngineService", () => {
 
 	it("requires at least one conditional ALLOW policy to match", async () => {
 		mocks.policyFindMany.mockResolvedValue([policy({ conditions: sameOrganization })]);
-		const engine = new PolicyEngineService(new PrismaService());
+		const engine = new PolicyEngineService(new PrismaService(createTestTypedConfig()));
 
 		expect((await engine.evaluate(request())).decision).toBe("ALLOW");
 		expect((await engine.evaluate(request({ resourceAttributes: { organizationId: "org-b" } }))).decision).toBe("DENY");
@@ -93,7 +100,7 @@ describe("PolicyEngineService", () => {
 
 	it("fails closed on malformed stored conditions", async () => {
 		const legacyShape = { all: [{ operator: "gte", path: "context.hour", value: 9 }] };
-		const engine = new PolicyEngineService(new PrismaService());
+		const engine = new PolicyEngineService(new PrismaService(createTestTypedConfig()));
 
 		mocks.policyFindMany.mockResolvedValue([policy({ effect: "DENY", conditions: legacyShape })]);
 		expect((await engine.evaluate(request())).decision).toBe("DENY");
@@ -105,25 +112,25 @@ describe("PolicyEngineService", () => {
 	it("reports unconditional DENY policies for list filters", async () => {
 		mocks.policyFindMany.mockResolvedValue([policy({ effect: "DENY", conditions: null })]);
 
-		expect(await new PolicyEngineService(new PrismaService()).hasUnconditionalDeny(request())).toBe(true);
+		expect(await new PolicyEngineService(new PrismaService(createTestTypedConfig())).hasUnconditionalDeny(request())).toBe(true);
 	});
 
 	it("scopes the policy query to the verified tenant", async () => {
 		mocks.policyFindMany.mockResolvedValue([]);
 
-		await new PolicyEngineService(new PrismaService()).evaluate(request({ subject: { userId: "user-1", organizationId: "org-a", locationId: "loc-1" } }));
-
-		expect(mocks.policyFindMany).toHaveBeenCalledWith(
-			expect.objectContaining({
-				where: expect.objectContaining({
-					AND: [{ OR: [{ organizationId: null }, { organizationId: "org-a" }] }, { OR: [{ locationId: null }, { locationId: "loc-1" }] }],
-				}),
-			}),
+		await new PolicyEngineService(new PrismaService(createTestTypedConfig())).evaluate(
+			request({ subject: { userId: "user-1", organizationId: "org-a", locationId: "loc-1" } }),
 		);
+
+		expect(mocks.policyFindMany).toHaveBeenCalledTimes(1);
+		expect(mocks.policyFindMany.mock.lastCall?.[0].where?.AND).toEqual([
+			{ OR: [{ organizationId: null }, { organizationId: "org-a" }] },
+			{ OR: [{ locationId: null }, { locationId: "loc-1" }] },
+		]);
 	});
 
 	it("treats null stored conditions as unconditional", () => {
-		const engine = new PolicyEngineService(new PrismaService());
+		const engine = new PolicyEngineService(new PrismaService(createTestTypedConfig()));
 
 		expect(engine.matchesStoredConditions(null, request(), false)).toBe(true);
 	});

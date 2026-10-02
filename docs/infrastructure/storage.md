@@ -1007,15 +1007,6 @@ pnpm dev
 | No CORS errors | N/A | DevTools → Network clean on POST | DevTools → Network clean on PUT |
 | API logs | No errors on `POST /files/:id/complete` | Same | Same |
 
-### Legacy KYB documents (one-time migration)
-
-If old documents were stored as base64 in JSON:
-
-```bash
-pnpm --filter @workspace/api kyb:backfill -- --dry-run
-pnpm --filter @workspace/api kyb:backfill
-```
-
 ---
 
 ## 12. Troubleshooting
@@ -1133,9 +1124,6 @@ aws cloudformation describe-stacks \
   --region ap-southeast-5 \
   --query "Stacks[0].Outputs" \
   --output table
-
-# KYB backfill
-pnpm --filter @workspace/api kyb:backfill -- --dry-run
 ```
 
 ### Code map

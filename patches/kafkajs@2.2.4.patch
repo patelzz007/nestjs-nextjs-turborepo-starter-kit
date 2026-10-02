@@ -1,0 +1,15 @@
+diff --git a/src/network/requestQueue/index.js b/src/network/requestQueue/index.js
+index eee14d66c3869d90f7bac0ac755ecbad3f2a2741..bfe3cf7072ccbd1604ae8246c7da9f553af58610 100644
+--- a/src/network/requestQueue/index.js
++++ b/src/network/requestQueue/index.js
+@@ -314,6 +314,10 @@ module.exports = class RequestQueue extends EventEmitter {
+       if (this.pending.length > 0) {
+         scheduleAt = scheduleAt > 0 ? scheduleAt : CHECK_PENDING_REQUESTS_INTERVAL
+       }
++      // Never throttled (throttledUntil = -1) or the throttle already ended:
++      // the delay is negative, which Node clamps to 1ms with a
++      // TimeoutNegativeWarning. Clamp it here instead (same timing, no warning).
++      scheduleAt = Math.max(scheduleAt, 0)
+       this.throttleCheckTimeoutId = setTimeout(() => {
+         this.throttleCheckTimeoutId = null
+         this.checkPendingRequests()

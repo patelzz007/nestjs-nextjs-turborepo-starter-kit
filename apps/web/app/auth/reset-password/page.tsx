@@ -4,6 +4,7 @@ import { ResetPasswordForm } from "@workspace/client/lib/auth/forms/reset-passwo
 import { AuthLayout } from "@workspace/ui/components/layout/auth-layout";
 import { useSearchParams } from "next/navigation";
 import { Suspense, type JSX } from "react";
+import { ROUTES } from "@/lib/routes";
 
 function ResetPasswordContent(): JSX.Element {
 	const searchParams = useSearchParams();
@@ -36,7 +37,7 @@ export default function WebResetPasswordPage(): JSX.Element {
 			copyright="Reward Hub"
 			labels={{ mobileBack: "Back", toggleThemeAria: "Toggle theme", rightsReserved: "All rights reserved." }}
 			showBackButton
-			backHref="/auth/login"
+			backHref={ROUTES.auth.login}
 			backLabel="Back to sign in">
 			<Suspense fallback={<p className="text-center text-sm text-muted-foreground">Loading...</p>}>
 				<ResetPasswordContent />

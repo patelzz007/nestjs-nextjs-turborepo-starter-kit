@@ -1,6 +1,8 @@
 "use client";
 
-import { stubApiMeta, successEnvelope } from "@/lib/api-envelope";
+import { SpendingSection } from "@/components/rewardhub/shared/spending-section";
+import { toSpendingSectionState, type SpendingSectionState } from "@/lib/rewards/spending-insights";
+import { initialDataOption, stubApiMeta, successEnvelope } from "@workspace/client/lib/api/envelope";
 import { useAuth } from "@workspace/client/lib/auth";
 import type { AnalyticsMetric, RewardClaimStatus, UserRewardsAnalyticsResponse } from "@workspace/shared";
 import { AnalyticsChartCard, AnalyticsChartLegendItem } from "@workspace/ui/components/display/analytics-chart-card";
@@ -78,7 +80,7 @@ function formatMetricValue(metric: AnalyticsMetric, suffix?: string): string {
 }
 
 export interface RewardHubAnalyticsPageViewProps {
-	readonly initialAnalytics?: UserRewardsAnalyticsResponse;
+	readonly initialAnalytics?: UserRewardsAnalyticsResponse | undefined;
 }
 
 export function RewardHubAnalyticsPageView({ initialAnalytics }: RewardHubAnalyticsPageViewProps): React.JSX.Element {
@@ -86,15 +88,12 @@ export function RewardHubAnalyticsPageView({ initialAnalytics }: RewardHubAnalyt
 
 	const initialQueryData = React.useMemo(() => (initialAnalytics !== undefined ? successEnvelope(initialAnalytics, stubApiMeta()) : undefined), [initialAnalytics]);
 
-	const analyticsQuery = api.claims.analytics.useQuery(
-		{},
-		{
-			initialData: initialQueryData,
-		},
-	);
+	const analyticsQuery = api.claims.analytics.useQuery({}, initialDataOption(initialQueryData));
 
 	const analytics = analyticsQuery.data?.data;
 	const isLoading = analyticsQuery.isLoading && initialAnalytics === undefined;
+
+	const spendingState = React.useMemo((): SpendingSectionState => toSpendingSectionState(isLoading ? undefined : analytics?.spending), [analytics?.spending, isLoading]);
 
 	const chartData = React.useMemo(
 		() =>
@@ -107,7 +106,7 @@ export function RewardHubAnalyticsPageView({ initialAnalytics }: RewardHubAnalyt
 
 	return (
 		<div className="space-y-8">
-			<AnalyticsPageHeader title="My Activity" description="Track your claims, redemptions, and referral performance over time" />
+			<AnalyticsPageHeader title="My Activity" description="Track your claims, redemptions, referrals, and where your money goes" />
 
 			<div className="space-y-8">
 				{STAT_SECTIONS.map((section) => (
@@ -124,7 +123,7 @@ export function RewardHubAnalyticsPageView({ initialAnalytics }: RewardHubAnalyt
 										label={stat.label}
 										icon={stat.icon}
 										accent={stat.accent}
-										value={metric !== undefined ? formatMetricValue(metric, stat.suffix) : undefined}
+										{...(metric !== undefined ? { value: formatMetricValue(metric, stat.suffix) } : {})}
 										changePercent={metric?.changePercent ?? null}
 										isLoading={isLoading || metric === undefined}
 									/>
@@ -134,6 +133,8 @@ export function RewardHubAnalyticsPageView({ initialAnalytics }: RewardHubAnalyt
 					</section>
 				))}
 			</div>
+
+			<SpendingSection state={spendingState} />
 
 			<div className="grid gap-6 lg:grid-cols-2">
 				<AnalyticsChartCard

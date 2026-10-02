@@ -3,7 +3,8 @@ import { nowEpochMs } from "@workspace/shared";
 
 import { PrismaService } from "../../prisma/prisma.service";
 
-import { fetchListPage } from "./list-page";
+import { fetchListPage, mapListResult } from "./list-page";
+import { RepositoryMisconfiguredError, ResourceNotFoundError } from "./persistence.errors";
 import type { BaseRepositoryOptions, PrismaModelDelegate, RepositoryListResult, RepositoryPorts } from "./types";
 
 export abstract class BaseRepository<TEntity, TCreate, TUpdate, TQuery extends PaginationInput, TRow, TWhere, TOrderBy, TCreateInput, TUpdateInput, TUpdateWhere> {
@@ -40,21 +41,15 @@ export abstract class BaseRepository<TEntity, TCreate, TUpdate, TQuery extends P
 	}
 
 	public async list(query: TQuery): Promise<RepositoryListResult<TEntity>> {
-		return fetchListPage<TQuery, TWhere, TOrderBy, TRow, TEntity>(
-			query,
-			{
-				buildListWhere: (listQuery) => this.ports.buildListWhere(listQuery),
-				buildListOrderBy: (listQuery) => this.ports.buildListOrderBy(listQuery),
-				buildListCursorOrderBy: (listQuery) => this.ports.buildListCursorOrderBy(listQuery),
-				mergeListCursor: (baseWhere, cursorId) => this.ports.mergeListCursor(baseWhere, cursorId),
-				readListCursorId: (row: TRow) => this.ports.readListCursorId(row),
-				count: (where) => this.delegate.count({ where }),
-				findMany: (args) => this.delegate.findMany(args),
-			},
-			{
-				toDomain: (row: TRow) => this.ports.toDomain(row),
-			},
-		);
+		const result = await fetchListPage<TWhere, TOrderBy, TRow>(query, {
+			where: this.ports.buildListWhere(query),
+			order: this.ports.buildListOrder(query),
+			keyset: this.ports.listKeyset,
+			and: (left, right) => this.ports.andWhere(left, right),
+			count: (where) => this.delegate.count({ where }),
+			findMany: (args) => this.delegate.findMany(args),
+		});
+		return mapListResult(result, (row: TRow) => this.ports.toDomain(row));
 	}
 
 	public async update(id: string, input: TUpdate, expectedVersion?: number): Promise<TEntity> {
@@ -85,7 +80,7 @@ export abstract class BaseRepository<TEntity, TCreate, TUpdate, TQuery extends P
 
 	public async hardDelete(id: string): Promise<void> {
 		if (this.options.softDelete) {
-			throw new Error("hardDelete is disabled when softDelete is enabled");
+			throw new RepositoryMisconfiguredError("hardDelete is disabled when softDelete is enabled");
 		}
 		await this.delegate.delete({
 			where: this.ports.buildUpdateWhere(id),
@@ -94,7 +89,7 @@ export abstract class BaseRepository<TEntity, TCreate, TUpdate, TQuery extends P
 
 	public async softDelete(id: string): Promise<void> {
 		if (!this.options.softDelete) {
-			throw new Error("softDelete is disabled for this repository");
+			throw new RepositoryMisconfiguredError("softDelete is disabled for this repository");
 		}
 		await this.delegate.update({
 			where: this.ports.buildUpdateWhere(id),
@@ -104,18 +99,18 @@ export abstract class BaseRepository<TEntity, TCreate, TUpdate, TQuery extends P
 
 	public async restore(id: string): Promise<TEntity> {
 		if (!this.options.softDelete) {
-			throw new Error("softDelete is disabled for this repository");
+			throw new RepositoryMisconfiguredError("softDelete is disabled for this repository");
 		}
 		if (this.ports.cascadeSoftDelete !== undefined) {
 			const cascade = this.ports.cascadeSoftDelete;
 			const buildFindByIdIncludingDeletedWhere = this.ports.buildFindByIdIncludingDeletedWhere;
 			const readDeletedAt = this.ports.readDeletedAt;
 			if (buildFindByIdIncludingDeletedWhere === undefined || readDeletedAt === undefined) {
-				throw new Error("cascadeSoftDelete requires buildFindByIdIncludingDeletedWhere and readDeletedAt ports");
+				throw new RepositoryMisconfiguredError("cascadeSoftDelete requires buildFindByIdIncludingDeletedWhere and readDeletedAt ports");
 			}
 			const existing = await this.delegate.findFirst({ where: buildFindByIdIncludingDeletedWhere(id) });
 			if (existing === null) {
-				throw new Error("Resource not found");
+				throw new ResourceNotFoundError(id);
 			}
 			const deletedAt = readDeletedAt(existing);
 			if (deletedAt === null) {
@@ -127,7 +122,7 @@ export abstract class BaseRepository<TEntity, TCreate, TUpdate, TQuery extends P
 			});
 			const restored = await this.delegate.findFirst({ where: this.ports.buildFindByIdWhere(id) });
 			if (restored === null) {
-				throw new Error("Resource not found after restore");
+				throw new ResourceNotFoundError(id);
 			}
 			return this.ports.toDomain(restored);
 		}

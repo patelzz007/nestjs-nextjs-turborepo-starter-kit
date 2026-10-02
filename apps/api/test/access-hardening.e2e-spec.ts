@@ -1,11 +1,11 @@
 import { Pool } from "pg";
 import { type NestFastifyApplication } from "@nestjs/platform-fastify";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { API_VERSION_PREFIX } from "@workspace/shared";
+import { API_VERSION_PREFIX, ApiErrorResponseSchema, RewardClaimQrResponseSchema } from "@workspace/shared";
 
 import { ORGANIZATION_SEED_IDS, ORGANIZATION_SEED_SLUGS } from "../prisma/seed/organizations";
 import { REWARD_SEED_IDS } from "../prisma/seed/rewards";
-import { clearPendingTeamInviteForEmail, createE2eApp, login, mutationHeaders, uniqueClientIp } from "./e2e-helpers";
+import { clearPendingTeamInviteForEmail, createE2eApp, login, mutationHeaders, parseSuccessEnvelope, uniqueClientIp } from "./e2e-helpers";
 
 const DATABASE_URL: string = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/monorepo";
 
@@ -45,7 +45,7 @@ describe("Access hardening (e2e)", () => {
 
 		expect([401, 403]).toContain(response.statusCode);
 		if (response.statusCode === 401) {
-			expect(response.json().error).toBe("INVALID_CREDENTIALS");
+			expect(ApiErrorResponseSchema.parse(response.json()).error.code).toBe("INVALID_CREDENTIALS");
 		}
 	});
 
@@ -89,7 +89,7 @@ describe("Access hardening (e2e)", () => {
 		});
 
 		expect(response.statusCode).toBe(200);
-		expect(response.json().success).toBe(true);
+		expect(parseSuccessEnvelope(response, RewardClaimQrResponseSchema).success).toBe(true);
 	});
 
 	it("prevents a merchant owner from updating another org reward", async () => {

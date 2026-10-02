@@ -108,7 +108,13 @@ const Calendar = React.forwardRef<
 	);
 });
 
-function CalendarDayButton({ className, day, modifiers, locale, ...props }: React.ComponentProps<typeof DayButton> & { locale?: Partial<Locale> }): React.JSX.Element {
+function CalendarDayButton({
+	className,
+	day,
+	modifiers,
+	locale,
+	...props
+}: React.ComponentProps<typeof DayButton> & { locale?: Partial<Locale> | undefined }): React.JSX.Element {
 	const defaultClassNames = getDefaultClassNames();
 
 	const ref = React.useRef<HTMLButtonElement>(null);

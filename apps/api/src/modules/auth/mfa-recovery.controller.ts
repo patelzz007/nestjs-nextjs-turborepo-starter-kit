@@ -1,5 +1,5 @@
-import { Body, Controller, Get, HttpCode, Post, Query } from "@nestjs/common";
-import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
+import { Controller, Get, Post } from "@nestjs/common";
+import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { Throttle } from "@nestjs/throttler";
 import type {
 	AdminMfaRecoveryListQuery,
@@ -11,15 +11,12 @@ import type {
 } from "@workspace/shared";
 import { apiContract, apiPath, AdminMfaRecoveryRequestSchema, MfaRecoveryStatusResponseSchema } from "@workspace/shared";
 
-import { createWrappedArrayDto, createWrappedDto } from "../../common/dto/response-wrapper";
-import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe";
+import { ZodBody, ZodListQuery } from "../../common/decorators/zod-request.decorators";
+import { ZodPaginatedResponse, ZodResponse } from "../../common/decorators/zod-response.decorators";
 import { GetUser } from "./decorators/get-user.decorator";
 import { SuperAdminOnly } from "./decorators/super-admin.decorator";
 import { Authorize, self } from "../authorization/decorators/authorize.decorator";
 import { MfaRecoveryService } from "./services/mfa-recovery.service";
-
-const WrappedMfaRecoveryStatusResponse = createWrappedDto(MfaRecoveryStatusResponseSchema, "WrappedMfaRecoveryStatusResponse");
-const WrappedAdminMfaRecoveryRequestList = createWrappedArrayDto(AdminMfaRecoveryRequestSchema, "WrappedAdminMfaRecoveryRequestList");
 
 @ApiTags("Auth")
 @Controller(apiPath("/auth"))
@@ -29,13 +26,12 @@ export class MfaRecoveryController {
 	@Throttle({ strict: { ttl: 60000, limit: 3 } })
 	@ApiBearerAuth()
 	@Post("/mfa/recovery")
-	@HttpCode(200)
 	@Authorize({ action: "UPDATE", resource: "USER", resourceId: self(), description: "User can initiate MFA recovery for their own account" })
 	@ApiOperation({ summary: "Initiate an admin-reviewed MFA recovery request" })
-	@ApiOkResponse({ type: WrappedMfaRecoveryStatusResponse })
+	@ZodResponse(MfaRecoveryStatusResponseSchema, { description: "Recovery request status" })
 	public async initiateRecovery(
 		@GetUser("sub") userId: string,
-		@Body(new ZodValidationPipe(apiContract.auth.mfaRecoveryInitiate.input)) body: InitiateMfaRecoveryInput,
+		@ZodBody(apiContract.auth.mfaRecoveryInitiate.input) body: InitiateMfaRecoveryInput,
 	): Promise<MfaRecoveryStatusResponse> {
 		return this.mfaRecoveryService.initiateRecovery(userId, body);
 	}
@@ -43,7 +39,7 @@ export class MfaRecoveryController {
 	@ApiBearerAuth()
 	@Get("/mfa/recovery/status")
 	@ApiOperation({ summary: "Get the current MFA recovery request status" })
-	@ApiOkResponse({ type: WrappedMfaRecoveryStatusResponse })
+	@ZodResponse(MfaRecoveryStatusResponseSchema, { description: "Recovery request status" })
 	public async getRecoveryStatus(@GetUser("sub") userId: string): Promise<MfaRecoveryStatusResponse> {
 		return this.mfaRecoveryService.getRecoveryStatus(userId);
 	}
@@ -53,9 +49,9 @@ export class MfaRecoveryController {
 	@SuperAdminOnly()
 	@Get("/admin/mfa/recovery/requests")
 	@ApiOperation({ summary: "SuperAdmin: list MFA recovery requests" })
-	@ApiOkResponse({ type: WrappedAdminMfaRecoveryRequestList })
+	@ZodPaginatedResponse(AdminMfaRecoveryRequestSchema, { description: "Paginated MFA recovery requests" })
 	public async listRecoveryRequests(
-		@Query(new ZodValidationPipe(apiContract.auth.adminMfaRecoveryRequests.input)) query: AdminMfaRecoveryListQuery,
+		@ZodListQuery(apiContract.auth.adminMfaRecoveryRequests.input) query: AdminMfaRecoveryListQuery,
 	): Promise<PaginatedServiceResult<AdminMfaRecoveryRequest>> {
 		return this.mfaRecoveryService.listAdminRecoveryRequests(query);
 	}
@@ -64,17 +60,16 @@ export class MfaRecoveryController {
 	@ApiBearerAuth()
 	@SuperAdminOnly()
 	@Post("/admin/mfa/recovery/review")
-	@HttpCode(200)
 	@Authorize({
 		action: "UPDATE",
 		resource: "USER",
 		description: "SuperAdmin can review MFA recovery requests",
 	})
 	@ApiOperation({ summary: "SuperAdmin: approve or deny an MFA recovery request" })
-	@ApiOkResponse({ type: WrappedMfaRecoveryStatusResponse })
+	@ZodResponse(MfaRecoveryStatusResponseSchema, { description: "Reviewed recovery request status" })
 	public async reviewRecovery(
 		@GetUser("sub") adminUserId: string,
-		@Body(new ZodValidationPipe(apiContract.auth.adminMfaRecoveryReview.input)) body: AdminReviewMfaRecoveryInput,
+		@ZodBody(apiContract.auth.adminMfaRecoveryReview.input) body: AdminReviewMfaRecoveryInput,
 	): Promise<MfaRecoveryStatusResponse> {
 		if (body.action === "approve") {
 			return this.mfaRecoveryService.adminApprove(adminUserId, body);

@@ -1,12 +1,14 @@
 "use client";
 
-import { renderWebPaletteIcon, WEB_PALETTE_ITEMS } from "@/lib/palette/nav-items";
+import { useCanAccessWebPath } from "@/components/auth/route-access-guard";
+import { accessiblePaletteItems, renderWebPaletteIcon } from "@/lib/palette/nav-items";
 import { useWebCommandPaletteStore } from "@/stores/command-palette-store";
 import { AppCommandPalette, type AppCommandPaletteQuickAction } from "@workspace/ui/components/navigation/app-command-palette";
 import { Gift, SunMoon } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useRouter } from "next/navigation";
 import * as React from "react";
+import { ROUTES } from "@/lib/routes";
 
 export interface CommandPaletteProps {
 	readonly open?: boolean;
@@ -16,6 +18,9 @@ export interface CommandPaletteProps {
 export function CommandPalette({ open: externalOpen, setOpen: externalSetOpen }: CommandPaletteProps): React.JSX.Element {
 	const router = useRouter();
 	const { setTheme, resolvedTheme } = useTheme();
+	const canAccessPath = useCanAccessWebPath();
+	// Same route table as the guard and the sidebar: never offer a page the session cannot open.
+	const searchableItems = React.useMemo(() => accessiblePaletteItems(canAccessPath), [canAccessPath]);
 
 	const recentSearches = useWebCommandPaletteStore((state) => state.recentSearches);
 	const pinnedUrls = useWebCommandPaletteStore((state) => state.pinnedUrls);
@@ -26,20 +31,24 @@ export function CommandPalette({ open: externalOpen, setOpen: externalSetOpen }:
 		externalSetOpen?.(false);
 	}, [externalSetOpen]);
 
-	const quickActions = React.useMemo(
-		(): readonly AppCommandPaletteQuickAction[] => [
-			{
-				id: "toggle-theme",
-				title: "Toggle theme",
-				description: "Switch between light and dark mode",
-				icon: SunMoon,
-				color: "text-amber-600 bg-amber-100 dark:text-amber-300 dark:bg-amber-900/40",
-				keywords: ["dark", "light", "mode", "theme"],
-				run: (): void => {
-					closePalette();
-					setTheme(resolvedTheme === "dark" ? "light" : "dark");
-				},
+	const quickActions = React.useMemo((): readonly AppCommandPaletteQuickAction[] => {
+		const toggleTheme: AppCommandPaletteQuickAction = {
+			id: "toggle-theme",
+			title: "Toggle theme",
+			description: "Switch between light and dark mode",
+			icon: SunMoon,
+			color: "text-amber-600 bg-amber-100 dark:text-amber-300 dark:bg-amber-900/40",
+			keywords: ["dark", "light", "mode", "theme"],
+			run: (): void => {
+				closePalette();
+				setTheme(resolvedTheme === "dark" ? "light" : "dark");
 			},
+		};
+		if (!canAccessPath(ROUTES.rewardHub.browse)) {
+			return [toggleTheme];
+		}
+		return [
+			toggleTheme,
 			{
 				id: "browse-rewards",
 				title: "Browse rewards",
@@ -48,13 +57,12 @@ export function CommandPalette({ open: externalOpen, setOpen: externalSetOpen }:
 				color: "text-teal-600 bg-teal-100 dark:text-teal-300 dark:bg-teal-900/40",
 				keywords: ["home", "discover", "deals", "marketplace"],
 				run: (): void => {
-					router.push("/");
+					router.push(ROUTES.rewardHub.browse);
 					closePalette();
 				},
 			},
-		],
-		[closePalette, resolvedTheme, router, setTheme],
-	);
+		];
+	}, [canAccessPath, closePalette, resolvedTheme, router, setTheme]);
 
 	const handleNavigate = React.useCallback(
 		(url: string): void => {
@@ -65,12 +73,12 @@ export function CommandPalette({ open: externalOpen, setOpen: externalSetOpen }:
 
 	return (
 		<AppCommandPalette
-			open={externalOpen}
-			setOpen={externalSetOpen}
+			{...(externalOpen !== undefined ? { open: externalOpen } : {})}
+			{...(externalSetOpen !== undefined ? { setOpen: externalSetOpen } : {})}
 			title="Search Reward Hub"
 			description="Navigate pages, pin shortcuts, and run quick actions"
 			placeholder="Search rewards hub pages and actions…"
-			searchableItems={WEB_PALETTE_ITEMS}
+			searchableItems={searchableItems}
 			quickActions={quickActions}
 			recentSearches={recentSearches}
 			pinnedUrls={pinnedUrls}

@@ -16,9 +16,9 @@ import type {
  * testable against both raw and compiled menu shapes.
  */
 interface SidebarFilterNode {
-	readonly authorization?: SidebarAuthorization;
-	readonly featureFlag?: string;
-	readonly children?: readonly SidebarFilterNode[];
+	readonly authorization?: SidebarAuthorization | undefined;
+	readonly featureFlag?: string | undefined;
+	readonly children?: readonly SidebarFilterNode[] | undefined;
 }
 
 /** Optional inputs besides the capability list. */
@@ -28,13 +28,13 @@ export interface SidebarFilterOptions {
 	 * this list is removed with its subtree — visibility is
 	 * `permission allowed AND feature enabled`. Omitted → no flagged item shows.
 	 */
-	readonly enabledFeatureFlags?: readonly string[];
+	readonly enabledFeatureFlags?: readonly string[] | undefined;
 }
 
 /** The `{ permissions, mode }` part of a requirement — enough to evaluate it. */
 export interface PermissionRequirement {
 	readonly permissions: readonly CapabilitySlug[];
-	readonly mode?: SidebarPermissionMode;
+	readonly mode?: SidebarPermissionMode | undefined;
 }
 
 /** Requirement view shared by own and cascaded authorization. */
@@ -90,7 +90,7 @@ function isFeatureEnabled(item: SidebarFilterNode, enabledFeatureFlags: Readonly
 	return item.featureFlag === undefined || enabledFeatureFlags.has(item.featureFlag);
 }
 
-function filterNodes<TNode extends SidebarFilterNode & { readonly children?: readonly TNode[] }>(
+function filterNodes<TNode extends SidebarFilterNode & { readonly children?: readonly TNode[] | undefined }>(
 	items: readonly TNode[],
 	context: FilterContext,
 	inheritedCascade: SidebarAuthorization | null,

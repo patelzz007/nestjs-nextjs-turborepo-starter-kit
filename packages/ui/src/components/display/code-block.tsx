@@ -99,8 +99,8 @@ export const DEFAULT_CODE_BLOCK_LABELS: CodeBlockLabels = {
  * not. Splitting them keeps a stream from re-rendering the chrome per chunk.
  */
 export interface CodeBlockConfigValue {
-	language?: string;
-	resolvedLanguage?: string;
+	language?: string | undefined;
+	resolvedLanguage?: string | undefined;
 	showLineNumbers: boolean;
 	wrap: boolean;
 	setWrap: (wrap: boolean) => void;
@@ -522,15 +522,15 @@ interface CodeBlockLineRowProps {
 	readonly active: boolean;
 	readonly caret: boolean;
 	readonly labels: CodeBlockLabels;
-	readonly actions?: CodeBlockLineActionsRender | null;
-	readonly actionsSide?: CodeBlockLineActionsSide;
-	readonly domIdBase?: string;
-	readonly startLine?: number;
-	readonly onSelect?: (line: number, extend: boolean) => void;
-	readonly foldable?: boolean;
-	readonly foldRegion?: CodeBlockFoldRegion;
-	readonly folded?: boolean;
-	readonly onToggleFold?: (start: number) => void;
+	readonly actions?: CodeBlockLineActionsRender | null | undefined;
+	readonly actionsSide?: CodeBlockLineActionsSide | undefined;
+	readonly domIdBase?: string | undefined;
+	readonly startLine?: number | undefined;
+	readonly onSelect?: ((line: number, extend: boolean) => void) | undefined;
+	readonly foldable?: boolean | undefined;
+	readonly foldRegion?: CodeBlockFoldRegion | undefined;
+	readonly folded?: boolean | undefined;
+	readonly onToggleFold?: ((start: number) => void) | undefined;
 }
 
 /* Shift-click is line-range selection here, but the browser also reads it as
@@ -751,57 +751,57 @@ const CodeBlockLineRow = React.memo(function CodeBlockLineRow({
 /* -------------------------------------------------------------------------- */
 
 export type CodeBlockProps = {
-	code?: string;
-	language?: string;
-	lines?: CodeBlockLine[];
-	themes?: CodeBlockThemes;
-	highlight?: boolean;
-	showLineNumbers?: boolean;
-	startLine?: number;
-	wrap?: boolean;
-	defaultWrap?: boolean;
-	onWrapChange?: (wrap: boolean) => void;
-	maxLines?: number;
-	variant?: "default" | "ghost";
+	code?: string | undefined;
+	language?: string | undefined;
+	lines?: CodeBlockLine[] | undefined;
+	themes?: CodeBlockThemes | undefined;
+	highlight?: boolean | undefined;
+	showLineNumbers?: boolean | undefined;
+	startLine?: number | undefined;
+	wrap?: boolean | undefined;
+	defaultWrap?: boolean | undefined;
+	onWrapChange?: ((wrap: boolean) => void) | undefined;
+	maxLines?: number | undefined;
+	variant?: "default" | "ghost" | undefined;
 	/** Accessible name of the code region. Defaults to `labels.languageCode(language)` / `labels.code`. */
-	label?: string;
+	label?: string | undefined;
 	/**
 	 * Every user-facing string of the block and its parts. Required: pass
 	 * `DEFAULT_CODE_BLOCK_LABELS` or a translated copy. Keep the reference
 	 * stable (a module constant or a memo) - it reaches every memoised row.
 	 */
 	labels: CodeBlockLabels;
-	highlightedLines?: CodeBlockLineSpec;
-	highlightedWords?: CodeBlockWordSpec[];
-	focusedLines?: CodeBlockLineSpec;
-	diff?: CodeBlockDiffSpec;
-	lineLevels?: CodeBlockLevelSpec;
-	transformers?: CodeBlockTransformer[];
-	streaming?: boolean;
-	selectable?: boolean;
-	selectedLines?: number[];
-	defaultSelectedLines?: number[];
-	onSelectedLinesChange?: (lines: number[]) => void;
+	highlightedLines?: CodeBlockLineSpec | undefined;
+	highlightedWords?: CodeBlockWordSpec[] | undefined;
+	focusedLines?: CodeBlockLineSpec | undefined;
+	diff?: CodeBlockDiffSpec | undefined;
+	lineLevels?: CodeBlockLevelSpec | undefined;
+	transformers?: CodeBlockTransformer[] | undefined;
+	streaming?: boolean | undefined;
+	selectable?: boolean | undefined;
+	selectedLines?: number[] | undefined;
+	defaultSelectedLines?: number[] | undefined;
+	onSelectedLinesChange?: ((lines: number[]) => void) | undefined;
 	/** Screen-reader text announced when a stream finishes, for localisation. Overrides `labels.complete`. */
-	completeAnnouncement?: string;
+	completeAnnouncement?: string | undefined;
 	/** Collapsed state under `maxLines`, controlled. */
-	expanded?: boolean;
-	defaultExpanded?: boolean;
-	onExpandedChange?: (expanded: boolean) => void;
+	expanded?: boolean | undefined;
+	defaultExpanded?: boolean | undefined;
+	onExpandedChange?: ((expanded: boolean) => void) | undefined;
 	/** Detects fold regions from indentation and renders a toggle per region. */
-	foldable?: boolean;
+	foldable?: boolean | undefined;
 	/**
 	 * Replaces the indentation heuristic with your own regions (source-numbered,
 	 * like every line spec) - grammar folding, JSON blocks, patch hunks.
 	 * Implies nothing about `foldable`; pass both.
 	 */
-	foldRegions?: CodeBlockFoldRegion[];
+	foldRegions?: CodeBlockFoldRegion[] | undefined;
 	/** Folded regions by start line, 1-based within `code`. Controlled. */
-	folded?: number[];
+	folded?: number[] | undefined;
 	/** Folded regions by their start line, uncontrolled. */
-	defaultFolded?: number[];
-	onFoldedChange?: (folded: number[]) => void;
-	children?: React.ReactNode;
+	defaultFolded?: number[] | undefined;
+	onFoldedChange?: ((folded: number[]) => void) | undefined;
+	children?: React.ReactNode | undefined;
 } & Omit<React.ComponentPropsWithoutRef<"div">, "children" | "onSelect">;
 
 /* The highlight effect's presentation spec travels as ONE serialized key (see
@@ -830,14 +830,14 @@ interface SelectionState {
 	selection: number[];
 	selectedSet: Set<number>;
 	controlled: boolean;
-	onSelectedLinesChange?: (lines: number[]) => void;
+	onSelectedLinesChange?: ((lines: number[]) => void) | undefined;
 }
 
 interface FoldState {
 	foldedValue: number[];
 	foldedSet: Set<number>;
 	controlled: boolean;
-	onFoldedChange?: (folded: number[]) => void;
+	onFoldedChange?: ((folded: number[]) => void) | undefined;
 }
 
 /**
@@ -1328,7 +1328,7 @@ interface CodeBlockSurfaceProps {
 	selectable: boolean;
 	selectedSet: Set<number>;
 	toggleLine: (line: number, extend: boolean) => void;
-	visibleLines?: number;
+	visibleLines?: number | undefined;
 	gutterMax: number;
 	foldable: boolean;
 	gutterChannel: boolean;
@@ -1341,13 +1341,13 @@ interface CodeBlockSurfaceProps {
 	label: string;
 	labels: CodeBlockLabels;
 	contentId: string;
-	actions?: CodeBlockLineActionsRender | null;
-	completeAnnouncement?: string;
+	actions?: CodeBlockLineActionsRender | null | undefined;
+	completeAnnouncement?: string | undefined;
 	/** true when the root rendered its own surface (no CodeBlockContent found). */
-	builtInSurfaceRendered?: boolean;
+	builtInSurfaceRendered?: boolean | undefined;
 	/** false = no scroll container of its own; an ancestor scrolls instead. */
-	scroll?: boolean;
-	className?: string;
+	scroll?: boolean | undefined;
+	className?: string | undefined;
 }
 
 type SurfaceStyle = React.CSSProperties & Record<"--code-block-gutter-width", string>;

@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { EpochMsSchema } from "../api/common";
+import { defineListQuery, listFilter, ListSearchSchema } from "../api/list-query";
 
 /**
  * Email template system — shared contract.
@@ -42,14 +43,12 @@ export type EmailTemplateKey = z.output<typeof EmailTemplateKeySchema>;
 // ── Template metadata (list view) ─────────────────────────────────────────
 
 /** Static metadata for one template — used by the admin preview list. */
-export const EmailTemplateMetaSchema = z
-	.object({
-		key: EmailTemplateKeySchema,
-		label: z.string().min(1),
-		description: z.string().min(1),
-		sampleTo: z.email(),
-	})
-	.strict();
+export const EmailTemplateMetaSchema = z.object({
+	key: EmailTemplateKeySchema,
+	label: z.string().min(1),
+	description: z.string().min(1),
+	sampleTo: z.email(),
+});
 
 export type EmailTemplateMeta = z.output<typeof EmailTemplateMetaSchema>;
 
@@ -63,11 +62,9 @@ export type EmailPreviewPropValue = z.output<typeof EmailPreviewPropValueSchema>
 // ── Preview list response (admin index) ───────────────────────────────────
 
 /** Envelope data for `GET /notifications/email-preview`. */
-export const EmailPreviewListResponseSchema = z
-	.object({
-		templates: z.array(EmailTemplateMetaSchema),
-	})
-	.strict();
+export const EmailPreviewListResponseSchema = z.object({
+	templates: z.array(EmailTemplateMetaSchema),
+});
 
 export type EmailPreviewListResponse = z.output<typeof EmailPreviewListResponseSchema>;
 
@@ -78,19 +75,17 @@ export type EmailPreviewListResponse = z.output<typeof EmailPreviewListResponseS
  * subject / recipient / preview-text so the admin page can show everything
  * without ever constructing a template itself.
  */
-export const EmailPreviewSchema = z
-	.object({
-		key: EmailTemplateKeySchema,
-		label: z.string().min(1),
-		description: z.string().min(1),
-		subject: z.string().min(1),
-		to: z.email(),
-		previewText: z.string().min(1),
-		html: z.string().min(1),
-		text: z.string().min(1),
-		props: z.record(z.string(), EmailPreviewPropValueSchema),
-	})
-	.strict();
+export const EmailPreviewSchema = z.object({
+	key: EmailTemplateKeySchema,
+	label: z.string().min(1),
+	description: z.string().min(1),
+	subject: z.string().min(1),
+	to: z.email(),
+	previewText: z.string().min(1),
+	html: z.string().min(1),
+	text: z.string().min(1),
+	props: z.record(z.string(), EmailPreviewPropValueSchema),
+});
 
 export type EmailPreview = z.output<typeof EmailPreviewSchema>;
 
@@ -98,20 +93,16 @@ export type EmailPreview = z.output<typeof EmailPreviewSchema>;
 
 /** Outcome of `EmailSenderService.send()`. Never throws — callers inspect this. */
 export const EmailSendResultSchema = z.discriminatedUnion("ok", [
-	z
-		.object({
-			ok: z.literal(true),
-			id: z.string(),
-			mode: z.enum(["send", "log-only", "noop", "queued"]),
-		})
-		.strict(),
-	z
-		.object({
-			ok: z.literal(false),
-			reason: z.enum(["invalid-props", "config", "timeout", "rate-limited", "api-error"]),
-			detail: z.string().optional(),
-		})
-		.strict(),
+	z.object({
+		ok: z.literal(true),
+		id: z.string(),
+		mode: z.enum(["send", "log-only", "noop", "queued"]),
+	}),
+	z.object({
+		ok: z.literal(false),
+		reason: z.enum(["invalid-props", "config", "timeout", "rate-limited", "api-error"]),
+		detail: z.string().optional(),
+	}),
 ]);
 
 export type EmailSendResult = z.output<typeof EmailSendResultSchema>;
@@ -227,30 +218,19 @@ export type ResendWebhookEvent = z.output<typeof ResendWebhookEventSchema>;
 // ── Email log entry (admin audit list) ────────────────────────────────────
 
 /** One `email_logs` row as exposed to the admin panel. */
-export const EmailLogEntrySchema = z
-	.object({
-		id: z.string().min(1),
-		templateKey: EmailTemplateKeySchema,
-		to: z.string().min(1),
-		subject: z.string().min(1),
-		status: EmailLogStatusSchema,
-		resendId: z.string().nullable().optional(),
-		error: z.string().nullable().optional(),
-		createdAt: EpochMsSchema,
-		updatedAt: EpochMsSchema,
-	})
-	.strict();
+export const EmailLogEntrySchema = z.object({
+	id: z.string().min(1),
+	templateKey: EmailTemplateKeySchema,
+	to: z.string().min(1),
+	subject: z.string().min(1),
+	status: EmailLogStatusSchema,
+	resendId: z.string().nullable().optional(),
+	error: z.string().nullable().optional(),
+	createdAt: EpochMsSchema,
+	updatedAt: EpochMsSchema,
+});
 
 export type EmailLogEntry = z.output<typeof EmailLogEntrySchema>;
-
-/** Envelope data for `GET /notifications/email-log`. */
-export const EmailLogListResponseSchema = z
-	.object({
-		logs: z.array(EmailLogEntrySchema),
-	})
-	.strict();
-
-export type EmailLogListResponse = z.output<typeof EmailLogListResponseSchema>;
 
 // ── Email log create (API persistence) ────────────────────────────────────
 
@@ -273,20 +253,20 @@ export const EmailLogCreateSchema = z
 
 export type EmailLogCreate = z.output<typeof EmailLogCreateSchema>;
 
-/**
- * Query string for `GET /notifications/email-log`.
- *
- * No `.transform()` — Ajv's compiled validators can't represent transforms,
- * so `toJSONSchema()` in the ZodValidationPipe would throw. Clamping and
- * string-to-number coercion are handled by the controller instead.
- */
-export const EmailLogListQuerySchema = z
-	.object({
-		limit: z.number().int().min(1).max(500).optional().default(100),
-	})
-	.strict();
-
+/** `GET /notifications/email-log` list query (newest first) — see docs/list-queries.md. */
+export const emailLogListQuery = defineListQuery({
+	sortable: ["createdAt", "subject", "to", "status"],
+	defaultSort: [{ field: "createdAt", direction: "desc" }],
+	filter: {
+		status: listFilter.enumeration(EmailLogStatusSchema, { eq: true, in: true }),
+		templateKey: listFilter.string({ eq: true, in: true }),
+		createdAt: listFilter.epochMs({ gte: true, lte: true }),
+	},
+	params: { search: ListSearchSchema },
+});
+export const EmailLogListQuerySchema = emailLogListQuery.schema;
 export type EmailLogListQuery = z.output<typeof EmailLogListQuerySchema>;
+export type EmailLogListSortField = (typeof emailLogListQuery.sortable)[number];
 
 // ── Resend webhook signature headers ──────────────────────────────────────
 
@@ -300,3 +280,22 @@ export const ResendWebhookHeadersSchema = z
 	.strict();
 
 export type ResendWebhookHeaders = z.output<typeof ResendWebhookHeadersSchema>;
+
+// ── Resend webhook responses ──────────────────────────────────────────────
+
+/** `GET /notifications/email-webhook` payload — explains the endpoint to a browser / health check (Resend only POSTs). */
+export const EmailWebhookInfoResponseSchema = z.object({
+	ok: z.literal(true),
+	message: z.string(),
+	method: z.literal("POST"),
+	path: z.string(),
+});
+
+export type EmailWebhookInfoResponse = z.output<typeof EmailWebhookInfoResponseSchema>;
+
+/** `POST /notifications/email-webhook` payload — the delivery event was accepted (Resend only checks the 200). */
+export const EmailWebhookReceivedResponseSchema = z.object({
+	received: z.literal(true),
+});
+
+export type EmailWebhookReceivedResponse = z.output<typeof EmailWebhookReceivedResponseSchema>;

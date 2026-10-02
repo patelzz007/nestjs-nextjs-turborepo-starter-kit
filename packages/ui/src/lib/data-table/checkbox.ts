@@ -38,12 +38,12 @@ export interface DataTableCheckboxConfig<TData extends RowData = RowData> {
 }
 
 export interface ResolveDataTableCheckboxInput<TData extends RowData> {
-	readonly checkbox?: boolean | DataTableCheckboxConfig<TData>;
+	readonly checkbox?: boolean | DataTableCheckboxConfig<TData> | undefined;
 	readonly enableBulkSelection: boolean;
 	readonly bulkActions: DataTableBulkAction<TData>[];
 	readonly exportable: boolean;
-	readonly exportFilename?: string;
-	readonly exportableColumns?: string[];
+	readonly exportFilename?: string | undefined;
+	readonly exportableColumns?: string[] | undefined;
 	readonly labels: DataTableLabels;
 	readonly deleteSelectedIcon: React.ReactNode;
 }
@@ -53,8 +53,8 @@ export interface ResolvedDataTableCheckboxConfig<TData extends RowData> {
 	readonly bulkActions: DataTableBulkAction<TData>[];
 	readonly exportable: boolean;
 	readonly exportFormats: readonly DataTableExportFormat[];
-	readonly exportFilename?: string;
-	readonly exportableColumns?: string[];
+	readonly exportFilename?: string | undefined;
+	readonly exportableColumns?: string[] | undefined;
 }
 
 function includesExportFormat(formats: readonly DataTableExportFormat[], format: DataTableExportFormat): boolean {

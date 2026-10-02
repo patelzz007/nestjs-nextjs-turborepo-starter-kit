@@ -14,11 +14,11 @@
 // procedure-call envelope. `resolveRequest` is the single serializer shared
 // by the client transport and the server prefetch pipeline.
 //
-// The route contract (method + path + input schema) lives in
-// `@workspace/shared` (`apiContract`) — this module derives every def from it,
-// so the client router and the API's boundary validation can never drift.
-// Only the client-side concerns stay here: the response envelope schema, the
-// react-query key, and the serialization knobs (`toQuery` / `toBody`).
+// The route contract (method + path + input schema + response envelope) lives
+// in `@workspace/shared` (`apiContract`) — this module derives every def from
+// it, so the client router and the API's boundary validation can never drift.
+// Only the client-side concerns stay here: the react-query key and the
+// serialization knobs (`toQuery` / `toBody`).
 //
 // The input/output type parameters are CONSTRAINED (`SerializableInput` /
 // `DataValue`) so the shared pipeline (dedupe map, observable, spec closures)
@@ -27,120 +27,36 @@
 
 import type { QueryKey } from "@tanstack/react-query";
 import {
-	// ── Contract & shared types ───────────────────────────────────────
 	apiContract,
-	ApiPaginatedMetaSchema,
-	ApiResponseMetaSchema,
-	DeleteSuccessDataSchema,
-	BulkDeleteResultSchema,
-	type Envelope,
+	flattenQueryParams,
+	type ApiAccess,
 	type ApiContractDef,
-	type ApiResponseMeta,
 	type ApiVersion,
 	type DataValue,
+	type Envelope,
 	type RestMethod,
 	type SerializableInput,
-
-	// ── Auth response schemas ──────────────────────────────────────────
-	AdminUserDetailSchema,
-	AdminMfaRecoveryRequestSchema,
-	CheckPermissionResponseSchema,
-	CapabilityDefinitionSchema,
-	ChangePasswordResponseSchema,
-	ForgotPasswordResponseSchema,
-	ImpersonateResponseSchema,
-	LoginClientResponseSchema,
-	LogoutResponseSchema,
-	PermissionListResponseSchema,
-	RbacMessageResponseSchema,
-	RefreshResponseMessageSchema,
-	ResendVerificationResponseSchema,
-	ResetPasswordResponseSchema,
-	ValidateResetTokenResponseSchema,
-	RoleListResponseSchema,
-	SessionPermissionsResponseSchema,
-	SessionStatusSchema,
-	SignupResponseSchema,
-	StopImpersonationResponseSchema,
-	BackupCodesRemainingResponseSchema,
-	TwoFactorMessageResponseSchema,
-	TwoFactorSetupResponseSchema,
-	MfaRecoveryStatusResponseSchema,
-	UserResponseSchema,
-	VerifyBackupCodeResponseSchema,
-	VerifyEmailResponseSchema,
-
-	// ── Email schemas ─────────────────────────────────────────────────
-	EmailLogListResponseSchema,
-	EmailPreviewListResponseSchema,
-	EmailPreviewSchema,
-	EmailSendResultSchema,
-
-	// ── Geo schemas ──────────────────────────────────────────────────
-	CitySchema,
-	CountrySchema,
-	StateSchema,
-
-	// ── Rewards admin schemas ────────────────────────────────────────
-	AdminMerchantInviteCreatedResponseSchema,
-	MerchantApiKeyCreatedSchema,
-	MerchantApiKeySummarySchema,
-	MerchantKybDocumentDownloadResponseSchema,
-	MerchantKybProfileResponseSchema,
-	OrganizationContextResponseSchema,
-	OrganizationMemberInviteCreatedResponseSchema,
-	OrganizationMemberInviteResponseSchema,
-	OrganizationMemberRosterResponseSchema,
-	OrganizationRewardMembershipResponseSchema,
-	OrganizationTeamInviteAcceptResponseSchema,
-	OrganizationTeamInvitePreviewSchema,
-	MerchantOnboardingCompleteResponseSchema,
-	MerchantOnboardingDocumentBatchUploadCompleteResponseSchema,
-	MerchantOnboardingDocumentBatchUploadUrlResponseSchema,
-	MerchantOnboardingInvitePreviewSchema,
-	AdminLocationRequestResponseSchema,
-	AdminMerchantDetailResponseSchema,
-	MerchantOrgResponseSchema,
-	OrganizationLocationResponseSchema,
-	MerchantRedemptionListItemSchema,
-	MerchantAnalyticsResponseSchema,
-	RewardClaimCheckoutStatusSchema,
-	RewardClaimCreatedResponseSchema,
-	RewardClaimQrResponseSchema,
-	RewardClaimResponseSchema,
-	RewardNotificationResponseSchema,
-	RewardResponseSchema,
-	ProductSchema,
-	SampleCategorySchema,
-	UserRewardsAnalyticsResponseSchema,
-	CompleteFileUploadResponseSchema,
-	CreateFileUploadUrlResponseSchema,
-	FileDownloadResponseSchema,
-	FileRecordSchema,
 } from "@workspace/shared";
 import { z, type ZodType } from "zod";
 
-const OkResponseSchema = z.object({ ok: z.literal(true) }).strict();
+// Every endpoint answers with the ResponseInterceptor envelope
+// ({ success: true, data, meta }). Its exact schema comes from the shared
+// contract leaf (`response: singleResponse(…)` / `paginatedResponse(…)`,
+// ADR 022) — the client never re-declares a response shape, and the fetch
+// layer parses every body with it (`parseResponseContract`).
 
-const RewardNotificationListResponseSchema = z
-	.object({
-		items: z.array(RewardNotificationResponseSchema),
-		unreadCount: z.number().int().nonnegative(),
-	})
-	.strict();
-// Every endpoint returns the ResponseInterceptor envelope:
-// { success: true, data, meta }. We build a typed envelope schema per endpoint
-// so the FE knows the exact shape without `any` or `z.unknown`.
-
-function envelope<Data extends DataValue>(dataSchema: ZodType<Data>, metaSchema: ZodType<ApiResponseMeta> = ApiResponseMetaSchema): ZodType<Envelope<Data>> {
-	return z
-		.object({
-			success: z.literal(true),
-			data: dataSchema,
-			meta: metaSchema,
-		})
-		.strict();
+/**
+ * React-query key of a list endpoint: the resource prefix plus the WHOLE
+ * parsed list query, so every page / limit / cursor / sort / filter / search
+ * input is part of the key (no silently shared cache entries). Invalidate a
+ * resource's lists with the prefix alone (`["product", "list"]`).
+ */
+export function listQueryKey(prefix: readonly string[], input: SerializableInput): QueryKey {
+	return [...prefix, input];
 }
+
+/** Query-key prefix of every email-log list page — invalidate it to refetch them all (the SSE live view does). */
+export const EMAIL_LOG_LIST_QUERY_KEY_PREFIX: readonly string[] = ["email", "log-list"];
 
 // ── Definition model (input-first, tRPC-style) ────────────────────────────
 
@@ -156,13 +72,18 @@ export interface QueryDef<Input extends SerializableInput, Resp extends DataValu
 	 * so the transport derives `/api/v2/<path>` and the query key is
 	 * namespaced — server and client can never drift.
 	 */
-	readonly version?: ApiVersion;
+	readonly version?: ApiVersion | undefined;
+	/**
+	 * Who may call the route, from the contract (`"public"` = `@Public()` on the
+	 * API). The SSR caller fetches a public route even without a session cookie.
+	 */
+	readonly access: ApiAccess;
 	/** Single typed input, validated before every call (tRPC-style). */
 	readonly inputSchema: ZodType<Input>;
 	readonly responseSchema: ZodType<Resp>;
 	/** Derives the react-query key from the (parsed) input — server and client MUST agree. */
 	readonly queryKey: (input: Input) => QueryKey;
-	readonly baseOptions?: { readonly headers?: Record<string, string> };
+	readonly baseOptions?: { readonly headers?: Record<string, string> | undefined } | undefined;
 }
 
 /** A POST/PUT/PATCH/DELETE procedure: input → path params + JSON body, response → typed payload. */
@@ -171,18 +92,18 @@ export interface MutationDef<Input extends SerializableInput, Resp extends DataV
 	readonly method: Exclude<RestMethod, "GET">;
 	readonly path: string;
 	/** API version for this leaf — see `QueryDef.version`. */
-	readonly version?: ApiVersion;
+	readonly version?: ApiVersion | undefined;
 	readonly inputSchema: ZodType<Input>;
 	readonly responseSchema: ZodType<Resp>;
 	readonly queryKey: (input: Input) => QueryKey;
-	readonly baseOptions?: { readonly headers?: Record<string, string> };
+	readonly baseOptions?: { readonly headers?: Record<string, string> | undefined } | undefined;
 	/**
 	 * Maps the input to the request body. Default: every input key not consumed
 	 * by a `:param` segment or listed in `toQuery`.
 	 */
-	readonly toBody?: (input: Input) => DataValue;
+	readonly toBody?: ((input: Input) => DataValue) | undefined;
 	/** Input keys routed to the QUERY string instead of the body (e.g. `prune({ force })`). */
-	readonly toQuery?: readonly string[];
+	readonly toQuery?: readonly string[] | undefined;
 }
 
 export type ProcedureDef<Input extends SerializableInput, Resp extends DataValue> = QueryDef<Input, Resp> | MutationDef<Input, Resp>;
@@ -241,30 +162,30 @@ export function eachRouterEntry<R extends object>(router: R, visit: <K extends k
 	}
 }
 
-/**
- * Declares a GET procedure from its shared contract leaf. The contract owns
- * method + path + input; this layer adds the response envelope + query key.
- */
 /** Prefixes a query key with the version when a leaf opts out of the default — v2 keys can never collide with v1 cache entries. */
 function versionedKey(version: ApiVersion | undefined, base: QueryKey): QueryKey {
 	return version === undefined ? base : [version, ...base];
 }
 
-export function defineQuery<Input extends SerializableInput, Resp extends DataValue>(
-	contract: ApiContractDef<Input, "GET">,
+/**
+ * Declares a GET procedure from its shared contract leaf. The contract owns
+ * method + path + input + response envelope; this layer adds the query key.
+ */
+export function defineQuery<Input extends SerializableInput, Data extends DataValue>(
+	contract: ApiContractDef<Input, "GET", Data>,
 	opts: {
-		readonly response: ZodType<Resp>;
 		readonly queryKey: (input: Input) => QueryKey;
-		readonly baseOptions?: { readonly headers?: Record<string, string> };
+		readonly baseOptions?: { readonly headers?: Record<string, string> | undefined } | undefined;
 	},
-): QueryDef<Input, Resp> {
+): QueryDef<Input, Envelope<Data>> {
 	return {
 		kind: "query",
 		method: "GET",
 		path: contract.path,
 		version: contract.version,
+		access: contract.access ?? "authenticated",
 		inputSchema: contract.input,
-		responseSchema: opts.response,
+		responseSchema: contract.response.envelope,
 		queryKey: (input: Input): QueryKey => versionedKey(contract.version, opts.queryKey(input)),
 		baseOptions: opts.baseOptions,
 	};
@@ -272,25 +193,25 @@ export function defineQuery<Input extends SerializableInput, Resp extends DataVa
 
 /**
  * Declares a POST (or PUT/PATCH/DELETE) procedure from its shared contract
- * leaf. `toQuery` routes input keys to the query string instead of the body.
+ * leaf (which also owns the response envelope). `toQuery` routes input keys
+ * to the query string instead of the body.
  */
-export function defineMutation<Input extends SerializableInput, Resp extends DataValue, M extends Exclude<RestMethod, "GET">>(
-	contract: ApiContractDef<Input, M>,
+export function defineMutation<Input extends SerializableInput, Data extends DataValue, M extends Exclude<RestMethod, "GET">>(
+	contract: ApiContractDef<Input, M, Data>,
 	opts: {
-		readonly response: ZodType<Resp>;
 		readonly queryKey: (input: Input) => QueryKey;
-		readonly baseOptions?: { readonly headers?: Record<string, string> };
-		readonly toBody?: (input: Input) => DataValue;
-		readonly toQuery?: readonly string[];
+		readonly baseOptions?: { readonly headers?: Record<string, string> | undefined } | undefined;
+		readonly toBody?: ((input: Input) => DataValue) | undefined;
+		readonly toQuery?: readonly string[] | undefined;
 	},
-): MutationDef<Input, Resp> {
+): MutationDef<Input, Envelope<Data>> {
 	return {
 		kind: "mutation",
 		method: contract.method,
 		path: contract.path,
 		version: contract.version,
 		inputSchema: contract.input,
-		responseSchema: opts.response,
+		responseSchema: contract.response.envelope,
 		queryKey: (input: Input): QueryKey => versionedKey(contract.version, opts.queryKey(input)),
 		baseOptions: opts.baseOptions,
 		toBody: opts.toBody,
@@ -301,6 +222,12 @@ export function defineMutation<Input extends SerializableInput, Resp extends Dat
 // ── REST serialization (shared by client + server) ─────────────────────────
 
 const PARAM_PATTERN = /:([A-Za-z0-9_]+)/g;
+
+/** How `resolveRequest` routes leftover input keys — defaults to GET with no query overrides. */
+export interface ResolveRequestOptions {
+	readonly method?: RestMethod | undefined;
+	readonly toQuery?: readonly string[] | undefined;
+}
 
 /** Result of serializing an input onto a path template. */
 export interface ResolvedRequest {
@@ -318,7 +245,7 @@ export interface ResolvedRequest {
  * The `Input` constraint is what keeps this cast-free: a `SerializableInput`
  * is indexable by any key, so no `Record` re-typing is needed.
  */
-export function resolveRequest(path: string, input: SerializableInput, options?: { readonly method?: RestMethod; readonly toQuery?: readonly string[] }): ResolvedRequest {
+export function resolveRequest(path: string, input: SerializableInput, options?: ResolveRequestOptions): ResolvedRequest {
 	const record: Readonly<Record<string, DataValue | undefined>> = input ?? {};
 	const method: RestMethod = options?.method ?? "GET";
 	const paramNames: readonly string[] = [...path.matchAll(PARAM_PATTERN)].map((match) => match[1] ?? "");
@@ -340,10 +267,7 @@ export function resolveRequest(path: string, input: SerializableInput, options?:
 
 	if (method === "GET") {
 		if (leftover.length > 0) {
-			const search = new URLSearchParams();
-			for (const { key, value } of leftover) search.set(key, stringifyQueryValue(value));
-			const qs = search.toString();
-			url = `${url}${url.includes("?") ? "&" : "?"}${qs}`;
+			url = `${url}${url.includes("?") ? "&" : "?"}${toQueryString(leftover)}`;
 		}
 		return { url };
 	}
@@ -355,10 +279,7 @@ export function resolveRequest(path: string, input: SerializableInput, options?:
 		return [{ key, value }];
 	});
 	if (toQueryEntries.length > 0) {
-		const search = new URLSearchParams();
-		for (const { key, value } of toQueryEntries) search.set(key, stringifyQueryValue(value));
-		const qs = search.toString();
-		url = `${url}${url.includes("?") ? "&" : "?"}${qs}`;
+		url = `${url}${url.includes("?") ? "&" : "?"}${toQueryString(toQueryEntries)}`;
 	}
 
 	const body: Record<string, DataValue> = {};
@@ -366,7 +287,21 @@ export function resolveRequest(path: string, input: SerializableInput, options?:
 	return { url, body };
 }
 
-/** Serializes a query value without tripping no-base-to-string on arbitrary values. */
+/**
+ * Query-string serialization shared by GET inputs and mutation `toQuery` keys:
+ * nested objects become bracket keys (`filter[status][in]=A,B`) and arrays
+ * become comma lists — the list-query grammar the API decodes
+ * (`flattenQueryParams` is the inverse of the API's `nestBracketQueryParams`).
+ */
+function toQueryString(entries: readonly { readonly key: string; readonly value: DataValue }[]): string {
+	const search = new URLSearchParams();
+	for (const { key, value } of entries) {
+		for (const [name, serialized] of flattenQueryParams(key, value)) search.append(name, serialized);
+	}
+	return search.toString();
+}
+
+/** Serializes a path-param value without tripping no-base-to-string on arbitrary values. */
 function stringifyQueryValue(value: DataValue | undefined): string {
 	if (value === undefined) return "";
 	if (typeof value === "string") return value;
@@ -378,8 +313,8 @@ function stringifyQueryValue(value: DataValue | undefined): string {
 }
 
 // ── The router ─────────────────────────────────────────────────────────────
-// Every leaf derives path/method/input from `apiContract` (shared) and only
-// adds the client-side envelope + query key. Adding a route = adding one
+// Every leaf derives path/method/input/response from `apiContract` (shared)
+// and only adds the client-side query key. Adding a route = adding one
 // contract leaf in `@workspace/shared` + one def here + one pipe in the API
 // controller — a missing leaf is a compile error on the client and a 400 on
 // the API side.
@@ -388,140 +323,108 @@ export const apiRouter = {
 	auth: {
 		/** "Who am I?" — profile without permissions. */
 		me: defineQuery(apiContract.auth.me, {
-			response: envelope(UserResponseSchema),
 			queryKey: () => ["auth", "me"],
 		}),
 		/** Session roles + permissions — refetch after RBAC mutations. */
 		permissions: defineQuery(apiContract.auth.permissions, {
-			response: envelope(SessionPermissionsResponseSchema),
 			queryKey: () => ["auth", "permissions"],
 		}),
 		/** Very basic protected endpoint — proves the access token is valid and answers "who am I + when does my token expire" with no DB work. */
 		sessionStatus: defineQuery(apiContract.auth.sessionStatus, {
-			response: envelope(SessionStatusSchema),
 			queryKey: () => ["auth", "session-status"],
 		}),
 		login: defineMutation(apiContract.auth.login, {
-			response: envelope(LoginClientResponseSchema),
 			queryKey: () => ["auth", "login"],
 		}),
 		/** Admin login — sends `X-Client-Type: admin` for cookie isolation. */
 		adminLogin: defineMutation(apiContract.auth.adminLogin, {
-			response: envelope(LoginClientResponseSchema),
 			queryKey: () => ["auth", "admin-login"],
 			baseOptions: { headers: { "X-Client-Type": "admin" } },
 		}),
 		/** Merchant login — sends `X-Client-Type: merchant` for cookie isolation. */
 		merchantLogin: defineMutation(apiContract.auth.login, {
-			response: envelope(LoginClientResponseSchema),
 			queryKey: () => ["auth", "merchant-login"],
 			baseOptions: { headers: { "X-Client-Type": "merchant" } },
 		}),
 		signup: defineMutation(apiContract.auth.signup, {
-			response: envelope(SignupResponseSchema),
 			queryKey: () => ["auth", "signup"],
 		}),
 		refresh: defineMutation(apiContract.auth.refresh, {
-			response: envelope(RefreshResponseMessageSchema),
 			queryKey: () => ["auth", "refresh"],
 		}),
 		logout: defineMutation(apiContract.auth.logout, {
-			response: envelope(LogoutResponseSchema),
 			queryKey: () => ["auth", "logout"],
 		}),
 		forgotPassword: defineMutation(apiContract.auth.forgotPassword, {
-			response: envelope(ForgotPasswordResponseSchema),
 			queryKey: () => ["auth", "forgot-password"],
 		}),
 		resetPassword: defineMutation(apiContract.auth.resetPassword, {
-			response: envelope(ResetPasswordResponseSchema),
 			queryKey: () => ["auth", "reset-password"],
 		}),
 		validateResetToken: defineMutation(apiContract.auth.validateResetToken, {
-			response: envelope(ValidateResetTokenResponseSchema),
 			queryKey: () => ["auth", "validate-reset-token"],
 		}),
 		resendVerification: defineMutation(apiContract.auth.resendVerification, {
-			response: envelope(ResendVerificationResponseSchema),
 			queryKey: () => ["auth", "resend-verification"],
 		}),
 		verifyEmail: defineMutation(apiContract.auth.verifyEmail, {
-			response: envelope(VerifyEmailResponseSchema),
 			queryKey: ({ token }) => ["auth", "verify-email", token],
 		}),
 		changePassword: defineMutation(apiContract.auth.changePassword, {
-			response: envelope(ChangePasswordResponseSchema),
 			queryKey: () => ["auth", "change-password"],
 		}),
 		loginTwoFactor: defineMutation(apiContract.auth.loginTwoFactor, {
-			response: envelope(LoginClientResponseSchema),
 			queryKey: () => ["auth", "login-2fa"],
 		}),
 		loginBackupCode: defineMutation(apiContract.auth.loginBackupCode, {
-			response: envelope(LoginClientResponseSchema),
 			queryKey: () => ["auth", "login-backup-code"],
 		}),
 		verifyLogin: defineMutation(apiContract.auth.verifyLogin, {
-			response: envelope(LoginClientResponseSchema),
 			queryKey: () => ["auth", "verify-login"],
 		}),
 		twoFactorSetup: defineQuery(apiContract.auth.twoFactorSetup, {
-			response: envelope(TwoFactorSetupResponseSchema),
 			queryKey: () => ["auth", "2fa-setup"],
 		}),
 		twoFactorEnable: defineMutation(apiContract.auth.twoFactorEnable, {
-			response: envelope(TwoFactorMessageResponseSchema),
 			queryKey: () => ["auth", "2fa-enable"],
 		}),
 		twoFactorRotate: defineMutation(apiContract.auth.twoFactorRotate, {
-			response: envelope(TwoFactorSetupResponseSchema),
 			queryKey: () => ["auth", "2fa-rotate"],
 		}),
 		twoFactorBackupCodesRemaining: defineQuery(apiContract.auth.twoFactorBackupCodesRemaining, {
-			response: envelope(BackupCodesRemainingResponseSchema),
 			queryKey: () => ["auth", "2fa-backup-codes-remaining"],
 		}),
 		twoFactorVerifyBackupCode: defineMutation(apiContract.auth.twoFactorVerifyBackupCode, {
-			response: envelope(VerifyBackupCodeResponseSchema),
 			queryKey: () => ["auth", "2fa-verify-backup-code"],
 		}),
 		mfaRecoveryInitiate: defineMutation(apiContract.auth.mfaRecoveryInitiate, {
-			response: envelope(MfaRecoveryStatusResponseSchema),
 			queryKey: () => ["auth", "mfa-recovery-initiate"],
 		}),
 		mfaRecoveryStatus: defineQuery(apiContract.auth.mfaRecoveryStatus, {
-			response: envelope(MfaRecoveryStatusResponseSchema),
 			queryKey: () => ["auth", "mfa-recovery-status"],
 		}),
 		adminMfaRecoveryReview: defineMutation(apiContract.auth.adminMfaRecoveryReview, {
-			response: envelope(MfaRecoveryStatusResponseSchema),
 			queryKey: ({ requestId, action }) => ["auth", "admin-mfa-recovery-review", requestId, action],
 		}),
 		adminMfaRecoveryRequests: defineQuery(apiContract.auth.adminMfaRecoveryRequests, {
-			response: envelope(z.array(AdminMfaRecoveryRequestSchema), ApiPaginatedMetaSchema),
-			queryKey: ({ page, cursor, limit, status, userId }) => ["auth", "admin-mfa-recovery-requests", page, cursor, limit, status, userId],
+			queryKey: (input) => listQueryKey(["auth", "admin-mfa-recovery-requests"], input),
 		}),
 		adminUsers: defineQuery(apiContract.auth.adminUsers, {
-			response: envelope(z.array(AdminUserDetailSchema), ApiPaginatedMetaSchema),
-			queryKey: ({ page, cursor, limit, search, sort, role, status }) => ["auth", "admin-users", page, cursor, limit, search, sort, role, status],
+			queryKey: (input) => listQueryKey(["auth", "admin-users"], input),
 		}),
 		adminUserDetail: defineQuery(apiContract.auth.adminUserDetail, {
-			response: envelope(AdminUserDetailSchema),
 			queryKey: ({ userId }) => ["auth", "admin-user", userId],
 		}),
 		impersonate: defineMutation(apiContract.auth.impersonate, {
-			response: envelope(ImpersonateResponseSchema),
 			queryKey: ({ userId }) => ["auth", "impersonate", userId],
 		}),
 		stopImpersonation: defineMutation(apiContract.auth.stopImpersonation, {
-			response: envelope(StopImpersonationResponseSchema),
 			queryKey: () => ["auth", "stop-impersonation"],
 		}),
 	},
 
 	capabilities: {
 		catalog: defineQuery(apiContract.capabilities.catalog, {
-			response: envelope(z.array(CapabilityDefinitionSchema)),
 			queryKey: ({ scope }) => ["capabilities", "catalog", scope ?? "all"],
 		}),
 	},
@@ -529,41 +432,32 @@ export const apiRouter = {
 	admin: {
 		roles: {
 			list: defineQuery(apiContract.admin.roles.list, {
-				response: envelope(RoleListResponseSchema),
 				queryKey: () => ["admin", "roles", "list"],
 			}),
 			userAssign: defineMutation(apiContract.admin.roles.userAssign, {
-				response: envelope(RbacMessageResponseSchema),
 				queryKey: ({ userId }) => ["admin", "roles", "user-assign", userId],
 			}),
 			userRemove: defineMutation(apiContract.admin.roles.userRemove, {
-				response: envelope(RbacMessageResponseSchema),
 				queryKey: ({ userId }) => ["admin", "roles", "user-remove", userId],
 			}),
 			userSync: defineMutation(apiContract.admin.roles.userSync, {
-				response: envelope(RbacMessageResponseSchema),
 				queryKey: ({ userId }) => ["admin", "roles", "user-sync", userId],
 			}),
 		},
 		permissions: {
 			list: defineQuery(apiContract.admin.permissions.list, {
-				response: envelope(PermissionListResponseSchema),
 				queryKey: () => ["admin", "permissions", "list"],
 			}),
 			check: defineMutation(apiContract.admin.permissions.check, {
-				response: envelope(CheckPermissionResponseSchema),
 				queryKey: ({ userId, action, resource }) => ["admin", "permissions", "check", userId, action, resource],
 			}),
 			userGrant: defineMutation(apiContract.admin.permissions.userGrant, {
-				response: envelope(RbacMessageResponseSchema),
 				queryKey: ({ userId }) => ["admin", "permissions", "user-grant", userId],
 			}),
 			userRevoke: defineMutation(apiContract.admin.permissions.userRevoke, {
-				response: envelope(RbacMessageResponseSchema),
 				queryKey: ({ userId }) => ["admin", "permissions", "user-revoke", userId],
 			}),
 			userSync: defineMutation(apiContract.admin.permissions.userSync, {
-				response: envelope(RbacMessageResponseSchema),
 				queryKey: ({ userId }) => ["admin", "permissions", "user-sync", userId],
 			}),
 		},
@@ -572,247 +466,213 @@ export const apiRouter = {
 	// ── Email template preview procedures ─────────────────────────────────────
 	email: {
 		previewList: defineQuery(apiContract.email.previewList, {
-			response: envelope(EmailPreviewListResponseSchema),
 			queryKey: () => ["email", "preview-list"],
 		}),
 		/** Preview detail for one template key. */
 		previewDetail: defineQuery(apiContract.email.previewDetail, {
-			response: envelope(EmailPreviewSchema),
 			queryKey: ({ key }) => ["email", "preview-detail", key],
 		}),
 		/** Sends one template to the configured test address. */
 		previewSend: defineMutation(apiContract.email.previewSend, {
-			response: envelope(EmailSendResultSchema),
 			queryKey: ({ key }) => ["email", "preview-send", key],
 		}),
 		logList: defineQuery(apiContract.email.logList, {
-			response: envelope(EmailLogListResponseSchema),
-			queryKey: ({ limit }) => ["email", "log-list", limit],
+			queryKey: (input) => listQueryKey(EMAIL_LOG_LIST_QUERY_KEY_PREFIX, input),
 		}),
 	},
 
 	geo: {
 		stats: defineQuery(apiContract.geo.stats, {
-			response: envelope(z.object({ regions: z.number(), subregions: z.number(), countries: z.number(), states: z.number(), cities: z.number() }).strict()),
 			queryKey: () => ["geo", "stats"],
 		}),
 		countries: defineQuery(apiContract.geo.countries, {
-			response: envelope(z.array(CountrySchema), ApiPaginatedMetaSchema),
-			queryKey: ({ page, cursor, limit, search }) => ["geo", "countries", page, cursor, limit, search],
+			queryKey: (input) => listQueryKey(["geo", "countries"], input),
 		}),
 		states: defineQuery(apiContract.geo.states, {
-			response: envelope(z.array(StateSchema), ApiPaginatedMetaSchema),
-			queryKey: ({ page, cursor, limit, search, countryCode }) => ["geo", "states", page, cursor, limit, search, countryCode],
+			queryKey: (input) => listQueryKey(["geo", "states"], input),
 		}),
 		cities: defineQuery(apiContract.geo.cities, {
-			response: envelope(z.array(CitySchema), ApiPaginatedMetaSchema),
-			queryKey: ({ page, cursor, limit, search, countryCode }) => ["geo", "cities", page, cursor, limit, search, countryCode],
+			queryKey: (input) => listQueryKey(["geo", "cities"], input),
 		}),
 	},
 
 	rewards: {
 		list: defineQuery(apiContract.rewards.list, {
-			response: envelope(z.array(RewardResponseSchema), ApiPaginatedMetaSchema),
-			queryKey: ({ cursor, limit, search, category, city }) => ["rewards", "list", cursor, limit, search, category, city],
+			queryKey: (input) => listQueryKey(["rewards", "list"], input),
 		}),
 		detail: defineQuery(apiContract.rewards.detail, {
-			response: envelope(RewardResponseSchema),
 			queryKey: ({ rewardId }) => ["rewards", "detail", rewardId],
 		}),
 	},
 	legal: {
 		accept: defineMutation(apiContract.legal.accept, {
-			response: envelope(OkResponseSchema),
 			queryKey: ({ termsVersion, privacyVersion }) => ["legal", "accept", termsVersion, privacyVersion],
 		}),
 		status: defineQuery(apiContract.legal.status, {
-			response: envelope(RewardClaimCheckoutStatusSchema),
 			queryKey: () => ["legal", "status"],
 		}),
 	},
 	claims: {
 		otp: defineMutation(apiContract.claims.otp, {
-			response: envelope(OkResponseSchema),
 			queryKey: ({ rewardId, phone }) => ["claims", "otp", rewardId, phone],
 		}),
 		create: defineMutation(apiContract.claims.create, {
-			response: envelope(RewardClaimCreatedResponseSchema),
 			queryKey: ({ rewardId }) => ["claims", "create", rewardId],
 		}),
 		list: defineQuery(apiContract.claims.list, {
-			response: envelope(z.array(RewardClaimResponseSchema), ApiPaginatedMetaSchema),
-			queryKey: ({ cursor, limit, status }) => ["claims", "list", cursor, limit, status],
+			queryKey: (input) => listQueryKey(["claims", "list"], input),
 		}),
 		analytics: defineQuery(apiContract.claims.analytics, {
-			response: envelope(UserRewardsAnalyticsResponseSchema),
 			queryKey: ({ from, to }) => ["claims", "analytics", from, to],
 		}),
 		qr: defineQuery(apiContract.claims.qr, {
-			response: envelope(RewardClaimQrResponseSchema),
 			queryKey: ({ claimId }) => ["claims", "qr", claimId],
 		}),
 	},
 	rewardNotifications: {
 		list: defineQuery(apiContract.rewardNotifications.list, {
-			response: envelope(RewardNotificationListResponseSchema),
-			queryKey: ({ cursor, limit, unreadOnly }) => ["reward-notifications", "list", cursor, limit, unreadOnly],
+			queryKey: (input) => listQueryKey(["reward-notifications", "list"], input),
 		}),
 		read: defineMutation(apiContract.rewardNotifications.read, {
-			response: envelope(OkResponseSchema),
 			queryKey: () => ["reward-notifications", "read"],
 		}),
 	},
 	files: {
 		uploadUrl: defineMutation(apiContract.files.uploadUrl, {
-			response: envelope(CreateFileUploadUrlResponseSchema),
 			queryKey: ({ category, fileName }) => ["files", "upload-url", category, fileName],
 		}),
 		complete: defineMutation(apiContract.files.complete, {
-			response: envelope(CompleteFileUploadResponseSchema),
 			queryKey: ({ fileId }) => ["files", "complete", fileId],
 		}),
 		detail: defineQuery(apiContract.files.detail, {
-			response: envelope(z.object({ file: FileRecordSchema }).strict()),
 			queryKey: ({ fileId }) => ["files", "detail", fileId],
 		}),
 		downloadUrl: defineQuery(apiContract.files.downloadUrl, {
-			response: envelope(FileDownloadResponseSchema),
 			queryKey: ({ fileId }) => ["files", "download-url", fileId],
 		}),
 		delete: defineMutation(apiContract.files.delete, {
-			response: envelope(z.object({ success: z.literal(true) }).strict()),
 			queryKey: ({ fileId }) => ["files", "delete", fileId],
 		}),
 	},
 	organizations: {
 		membershipsBootstrap: defineQuery(apiContract.organizations.membershipsBootstrap, {
-			response: envelope(z.array(OrganizationRewardMembershipResponseSchema)),
 			queryKey: () => ["organizations", "memberships"],
 		}),
 		context: defineQuery(apiContract.organizations.context, {
-			response: envelope(OrganizationContextResponseSchema),
 			queryKey: ({ orgSlug }) => ["organization", orgSlug, "context"],
 		}),
 		listMembers: defineQuery(apiContract.organizations.listMembers, {
-			response: envelope(z.array(OrganizationMemberRosterResponseSchema)),
 			queryKey: ({ orgSlug }) => ["organization", orgSlug, "members"],
 		}),
 		listMemberInvites: defineQuery(apiContract.organizations.listMemberInvites, {
-			response: envelope(z.array(OrganizationMemberInviteResponseSchema)),
 			queryKey: ({ orgSlug }) => ["organization", orgSlug, "members", "invites"],
 		}),
 		inviteMember: defineMutation(apiContract.organizations.inviteMember, {
-			response: envelope(OrganizationMemberInviteCreatedResponseSchema),
 			queryKey: ({ orgSlug, email }) => ["organization", orgSlug, "members", "invite", email],
 		}),
 		revokeMemberInvite: defineMutation(apiContract.organizations.revokeMemberInvite, {
-			response: envelope(z.object({ message: z.string() }).strict()),
 			queryKey: ({ orgSlug, inviteId }) => ["organization", orgSlug, "members", "invites", "revoke", inviteId],
 		}),
 		validateTeamInvite: defineMutation(apiContract.organizations.validateTeamInvite, {
-			response: envelope(OrganizationTeamInvitePreviewSchema),
 			queryKey: ({ token }) => ["organization", "team-invite", "validate", token],
 		}),
 		acceptTeamInvite: defineMutation(apiContract.organizations.acceptTeamInvite, {
-			response: envelope(OrganizationTeamInviteAcceptResponseSchema),
 			queryKey: ({ token }) => ["organization", "team-invite", "accept", token],
 		}),
 		registerAndAcceptTeamInvite: defineMutation(apiContract.organizations.registerAndAcceptTeamInvite, {
-			response: envelope(LoginClientResponseSchema),
 			queryKey: ({ token }) => ["organization", "team-invite", "register-and-accept", token],
 			baseOptions: { headers: { "X-Client-Type": "merchant" } },
 		}),
 		kyb: {
 			get: defineQuery(apiContract.organizations.kyb.get, {
-				response: envelope(MerchantKybProfileResponseSchema),
 				queryKey: ({ orgSlug }) => ["organization", orgSlug, "kyb"],
 			}),
 			submit: defineMutation(apiContract.organizations.kyb.submit, {
-				response: envelope(MerchantKybProfileResponseSchema),
 				queryKey: ({ orgSlug }) => ["organization", orgSlug, "kyb", "submit"],
 			}),
 			downloadDocument: defineQuery(apiContract.organizations.kyb.downloadDocument, {
-				response: envelope(MerchantKybDocumentDownloadResponseSchema),
 				queryKey: ({ orgSlug, documentId, disposition }) => ["organization", orgSlug, "kyb", "documents", "download", documentId, disposition],
 			}),
 		},
 		rewards: {
 			list: defineQuery(apiContract.organizations.rewards.list, {
-				response: envelope(z.array(RewardResponseSchema)),
 				queryKey: ({ orgSlug, locationId }) => ["organization", orgSlug, "rewards", "list", locationId],
 			}),
 			create: defineMutation(apiContract.organizations.rewards.create, {
-				response: envelope(RewardResponseSchema),
 				queryKey: ({ orgSlug, title }) => ["organization", orgSlug, "rewards", "create", title],
 			}),
 			update: defineMutation(apiContract.organizations.rewards.update, {
-				response: envelope(RewardResponseSchema),
 				queryKey: ({ orgSlug, rewardId }) => ["organization", orgSlug, "rewards", "update", rewardId],
 			}),
 			publish: defineMutation(apiContract.organizations.rewards.publish, {
-				response: envelope(RewardResponseSchema),
 				queryKey: ({ orgSlug, rewardId }) => ["organization", orgSlug, "rewards", "publish", rewardId],
 			}),
 		},
 		apiKeys: {
 			list: defineQuery(apiContract.organizations.apiKeys.list, {
-				response: envelope(z.array(MerchantApiKeySummarySchema)),
-				queryKey: ({ orgSlug, locationId }) => ["organization", orgSlug, "api-keys", "list", locationId],
+				queryKey: (input) => listQueryKey(["organization", input.orgSlug, "api-keys", "list"], input),
 			}),
 			create: defineMutation(apiContract.organizations.apiKeys.create, {
-				response: envelope(MerchantApiKeyCreatedSchema),
 				queryKey: ({ orgSlug, name }) => ["organization", orgSlug, "api-keys", "create", name],
 			}),
 			revoke: defineMutation(apiContract.organizations.apiKeys.revoke, {
-				response: envelope(OkResponseSchema),
 				queryKey: ({ orgSlug, keyId }) => ["organization", orgSlug, "api-keys", "revoke", keyId],
 			}),
 		},
+		terminals: {
+			list: defineQuery(apiContract.organizations.terminals.list, {
+				queryKey: (input) => listQueryKey(["organization", input.orgSlug, "terminals", "list"], input),
+			}),
+			create: defineMutation(apiContract.organizations.terminals.create, {
+				queryKey: ({ orgSlug, name }) => ["organization", orgSlug, "terminals", "create", name],
+			}),
+			pairingCode: defineMutation(apiContract.organizations.terminals.pairingCode, {
+				queryKey: ({ orgSlug, id }) => ["organization", orgSlug, "terminals", "pairing-code", id],
+			}),
+			remove: defineMutation(apiContract.organizations.terminals.remove, {
+				queryKey: ({ orgSlug, id }) => ["organization", orgSlug, "terminals", "remove", id],
+			}),
+			settings: defineQuery(apiContract.organizations.terminals.settings, {
+				queryKey: ({ orgSlug }) => ["organization", orgSlug, "terminals", "settings"],
+			}),
+			updateSettings: defineMutation(apiContract.organizations.terminals.updateSettings, {
+				queryKey: ({ orgSlug }) => ["organization", orgSlug, "terminals", "settings", "update"],
+			}),
+		},
 		redemptions: defineQuery(apiContract.organizations.redemptions, {
-			response: envelope(z.array(MerchantRedemptionListItemSchema), ApiPaginatedMetaSchema),
-			queryKey: ({ orgSlug, cursor, limit, locationId }) => ["organization", orgSlug, "redemptions", locationId, cursor, limit],
+			queryKey: (input) => listQueryKey(["organization", input.orgSlug, "redemptions"], input),
 		}),
 		analytics: defineQuery(apiContract.organizations.analytics, {
-			response: envelope(MerchantAnalyticsResponseSchema),
 			queryKey: ({ orgSlug, from, to, locationId }) => ["organization", orgSlug, "analytics", locationId, from, to],
 		}),
 		locations: {
 			create: defineMutation(apiContract.organizations.locations.create, {
-				response: envelope(OrganizationLocationResponseSchema),
 				queryKey: ({ orgSlug, name }) => ["organization", orgSlug, "locations", "create", name],
 			}),
 			update: defineMutation(apiContract.organizations.locations.update, {
-				response: envelope(OrganizationLocationResponseSchema),
 				queryKey: ({ orgSlug, locationId }) => ["organization", orgSlug, "locations", "update", locationId],
 			}),
 		},
 		onboarding: {
 			validate: defineMutation(apiContract.organizations.onboarding.validate, {
-				response: envelope(MerchantOnboardingInvitePreviewSchema),
 				queryKey: ({ token }) => ["organization", "onboarding", "validate", token],
 			}),
 			complete: defineMutation(apiContract.organizations.onboarding.complete, {
-				response: envelope(MerchantOnboardingCompleteResponseSchema),
 				queryKey: ({ token }) => ["organization", "onboarding", "complete", token],
 			}),
 			documentUploadUrl: defineMutation(apiContract.organizations.onboarding.documentUploadUrl, {
-				response: envelope(CreateFileUploadUrlResponseSchema),
 				queryKey: ({ token, fileName }) => ["organization", "onboarding", "document-upload-url", token, fileName],
 			}),
 			documentBatchUploadUrl: defineMutation(apiContract.organizations.onboarding.documentBatchUploadUrl, {
-				response: envelope(MerchantOnboardingDocumentBatchUploadUrlResponseSchema),
 				queryKey: ({ token }) => ["organization", "onboarding", "document-batch-upload-url", token],
 			}),
 			documentUploadComplete: defineMutation(apiContract.organizations.onboarding.documentUploadComplete, {
-				response: envelope(CompleteFileUploadResponseSchema),
 				queryKey: ({ token, fileId }) => ["organization", "onboarding", "document-upload-complete", token, fileId],
 			}),
 			documentBatchUploadComplete: defineMutation(apiContract.organizations.onboarding.documentBatchUploadComplete, {
-				response: envelope(MerchantOnboardingDocumentBatchUploadCompleteResponseSchema),
 				queryKey: ({ token }) => ["organization", "onboarding", "document-batch-upload-complete", token],
 			}),
 			documentsSubmit: defineMutation(apiContract.organizations.onboarding.documentsSubmit, {
-				response: envelope(z.object({ success: z.literal(true) }).strict()),
 				queryKey: ({ token }) => ["organization", "onboarding", "documents-submit", token],
 			}),
 		},
@@ -820,145 +680,94 @@ export const apiRouter = {
 
 	rewardsAdmin: {
 		pendingRewards: defineQuery(apiContract.rewardsAdmin.pendingRewards, {
-			response: envelope(z.array(RewardResponseSchema)),
 			queryKey: () => ["rewards-admin", "pending"],
 		}),
 		listOrganizations: defineQuery(apiContract.rewardsAdmin.listOrganizations, {
-			response: envelope(z.array(MerchantOrgResponseSchema), ApiPaginatedMetaSchema),
-			queryKey: ({ page, cursor, limit, search, city, kybStatus, status }) => ["rewards-admin", "organizations", page, cursor, limit, search, city, kybStatus, status],
+			queryKey: (input) => listQueryKey(["rewards-admin", "organizations"], input),
 		}),
 		getOrganization: defineQuery(apiContract.rewardsAdmin.getOrganization, {
-			response: envelope(AdminMerchantDetailResponseSchema),
 			queryKey: ({ organizationId }) => ["rewards-admin", "organization", organizationId],
 		}),
 		downloadOrganizationDocument: defineQuery(apiContract.rewardsAdmin.downloadOrganizationDocument, {
-			response: envelope(MerchantKybDocumentDownloadResponseSchema),
 			queryKey: ({ organizationId, documentId, disposition }) => ["rewards-admin", "organization", organizationId, "documents", "download", documentId, disposition],
 		}),
 		createInvite: defineMutation(apiContract.rewardsAdmin.createInvite, {
-			response: envelope(AdminMerchantInviteCreatedResponseSchema),
 			queryKey: ({ email }) => ["rewards-admin", "invite", email],
 		}),
 		previewInviteEmail: defineMutation(apiContract.rewardsAdmin.previewInviteEmail, {
-			response: envelope(EmailPreviewSchema),
 			queryKey: ({ email, businessName, city }) => ["rewards-admin", "invite-preview", email, businessName, city],
 		}),
+		salesAnalytics: defineQuery(apiContract.rewardsAdmin.salesAnalytics, {
+			queryKey: ({ from, to }) => ["rewards-admin", "analytics", "sales", from, to],
+		}),
 		approveReward: defineMutation(apiContract.rewardsAdmin.approveReward, {
-			response: envelope(RewardResponseSchema),
 			queryKey: ({ rewardId }) => ["rewards-admin", "approve", rewardId],
 		}),
 		rejectReward: defineMutation(apiContract.rewardsAdmin.rejectReward, {
-			response: envelope(RewardResponseSchema),
 			queryKey: ({ rewardId }) => ["rewards-admin", "reject", rewardId],
 		}),
 		updateKyb: defineMutation(apiContract.rewardsAdmin.updateKyb, {
-			response: envelope(z.object({ ok: z.literal(true) }).strict()),
 			queryKey: ({ organizationId }) => ["rewards-admin", "kyb", organizationId],
 		}),
 		listLocationRequests: defineQuery(apiContract.rewardsAdmin.listLocationRequests, {
-			response: envelope(z.array(AdminLocationRequestResponseSchema), ApiPaginatedMetaSchema),
-			queryKey: ({ page, limit, status }) => ["rewards-admin", "location-requests", page, limit, status],
+			queryKey: (input) => listQueryKey(["rewards-admin", "location-requests"], input),
 		}),
 		createOrganizationLocation: defineMutation(apiContract.rewardsAdmin.createOrganizationLocation, {
-			response: envelope(OrganizationLocationResponseSchema),
 			queryKey: ({ organizationId, name }) => ["rewards-admin", "organization", organizationId, "locations", "create", name],
 		}),
 		reviewOrganizationLocation: defineMutation(apiContract.rewardsAdmin.reviewOrganizationLocation, {
-			response: envelope(OrganizationLocationResponseSchema),
 			queryKey: ({ organizationId, locationId, approve }) => ["rewards-admin", "organization", organizationId, "locations", locationId, "review", approve],
 		}),
 	},
-	// NOTE: `as const` is required here — it preserves literal method/path types
-	// so that `typeof apiRouter` can be used to derive the full client + server
-	// type system. Without it, TypeScript widens all strings to `string`.,
 	sampleCategory: {
 		list: defineQuery(apiContract.sampleCategory.list, {
-			response: envelope(z.array(SampleCategorySchema), ApiPaginatedMetaSchema),
-			queryKey: ({ page, cursor, limit, sortBy, sortDirection, search, isActive }) => [
-				"sample-category",
-				"list",
-				page,
-				cursor,
-				limit,
-				sortBy,
-				sortDirection,
-				search,
-				isActive,
-			],
+			queryKey: (input) => listQueryKey(["sample-category", "list"], input),
 		}),
 		detail: defineQuery(apiContract.sampleCategory.detail, {
-			response: envelope(SampleCategorySchema),
 			queryKey: ({ id }) => ["sample-category", "detail", id],
 		}),
 		create: defineMutation(apiContract.sampleCategory.create, {
-			response: envelope(SampleCategorySchema),
 			queryKey: ({ name }) => ["sample-category", "create", name],
 		}),
 		bulkCreate: defineMutation(apiContract.sampleCategory.bulkCreate, {
-			response: envelope(z.array(SampleCategorySchema)),
 			queryKey: ({ items }) => ["sample-category", "bulk-create", String(items.length)],
 		}),
 		bulkDelete: defineMutation(apiContract.sampleCategory.bulkDelete, {
-			response: envelope(BulkDeleteResultSchema),
 			queryKey: ({ ids }) => ["sample-category", "bulk-delete", ...ids],
 		}),
 		update: defineMutation(apiContract.sampleCategory.update, {
-			response: envelope(SampleCategorySchema),
 			queryKey: ({ id }) => ["sample-category", "update", id],
 		}),
 		delete: defineMutation(apiContract.sampleCategory.delete, {
-			response: envelope(DeleteSuccessDataSchema),
 			queryKey: ({ id }) => ["sample-category", "delete", id],
 		}),
 		restore: defineMutation(apiContract.sampleCategory.restore, {
-			response: envelope(SampleCategorySchema),
 			queryKey: ({ id }) => ["sample-category", "restore", id],
 		}),
 	},
 	product: {
 		list: defineQuery(apiContract.product.list, {
-			response: envelope(z.array(ProductSchema), ApiPaginatedMetaSchema),
-			queryKey: ({ page, cursor, limit, sortBy, sortDirection, search, isActive, isFeatured, categoryId, brand }) => [
-				"product",
-				"list",
-				page,
-				cursor,
-				limit,
-				sortBy,
-				sortDirection,
-				search,
-				isActive,
-				isFeatured,
-				categoryId,
-				brand,
-			],
+			queryKey: (input) => listQueryKey(["product", "list"], input),
 		}),
 		detail: defineQuery(apiContract.product.detail, {
-			response: envelope(ProductSchema),
 			queryKey: ({ id }) => ["product", "detail", id],
 		}),
 		create: defineMutation(apiContract.product.create, {
-			response: envelope(ProductSchema),
 			queryKey: ({ name }) => ["product", "create", name],
 		}),
 		bulkCreate: defineMutation(apiContract.product.bulkCreate, {
-			response: envelope(z.array(ProductSchema)),
 			queryKey: ({ items }) => ["product", "bulk-create", String(items.length)],
 		}),
 		bulkDelete: defineMutation(apiContract.product.bulkDelete, {
-			response: envelope(BulkDeleteResultSchema),
 			queryKey: ({ ids }) => ["product", "bulk-delete", ...ids],
 		}),
 		update: defineMutation(apiContract.product.update, {
-			response: envelope(ProductSchema),
 			queryKey: ({ id }) => ["product", "update", id],
 		}),
 		delete: defineMutation(apiContract.product.delete, {
-			response: envelope(DeleteSuccessDataSchema),
 			queryKey: ({ id }) => ["product", "delete", id],
 		}),
 		restore: defineMutation(apiContract.product.restore, {
-			response: envelope(ProductSchema),
 			queryKey: ({ id }) => ["product", "restore", id],
 		}),
 	},

@@ -47,10 +47,12 @@ export interface CreateSidebarStoreOptions {
 	readonly initialMenuData: SidebarMenuData;
 }
 
+// exactOptional(): a persisted key is either present with a real value or absent —
+// never `undefined` — so spreading the parsed snapshot can't blank out current state.
 const PersistedSidebarSchema = z.object({
-	isOpen: z.boolean().optional(),
-	sectionOrder: z.array(z.string()).nullable().optional(),
-	expandedItems: z.record(z.string(), z.boolean()).optional(),
+	isOpen: z.boolean().exactOptional(),
+	sectionOrder: z.array(z.string()).nullable().exactOptional(),
+	expandedItems: z.record(z.string(), z.boolean()).exactOptional(),
 });
 
 function moveInOrder(order: readonly string[], title: string, direction: -1 | 1): readonly string[] {
@@ -191,7 +193,7 @@ function buildSidebarStore(options: CreateSidebarStoreOptions): SidebarStore {
 						sectionOrder: state.sectionOrder,
 						expandedItems: capExpandedItems(state.expandedItems),
 					}),
-					merge: (persistedState, currentState) => {
+					merge: (persistedState, currentState): SidebarState => {
 						const parsed = PersistedSidebarSchema.safeParse(persistedState);
 						if (!parsed.success) {
 							return currentState;

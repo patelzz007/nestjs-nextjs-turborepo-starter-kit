@@ -88,7 +88,7 @@ packages/
 
 ## Quick start
 
-**Prerequisites:** Node 20+, pnpm 11, PostgreSQL running locally, and `psql` available in your system `PATH`.
+**Prerequisites:** Node 20.19+ (CI uses the 24 LTS line), pnpm 12, and either Docker (`pnpm docker:up` starts PostgreSQL 18, Redis, Kafka, RabbitMQ, Mailpit and MinIO — see [local infrastructure](./docs/operations/local-infrastructure.md)) or your own PostgreSQL 18.
 
 ```bash
 # Install dependencies + build shared workspace package
@@ -111,9 +111,9 @@ Copy-Item apps/merchant/.env.example apps/merchant/.env
 
 # Fill in secrets and DATABASE_URL inside apps/api/.env
 
-# Create the PostgreSQL database before running Prisma
-# Example:
-# CREATE DATABASE hello_world;
+# Start the local stack (creates the database named in apps/api/.env.example)
+pnpm docker:up
+# …or, with your own PostgreSQL, create the database named in DATABASE_URL first
 
 pnpm setup:db                         # build shared → generate → deploy → RLS → seed
 
@@ -164,6 +164,9 @@ pnpm dev:api
 | `pnpm build` | Build all workspaces |
 | `pnpm lint` / `pnpm format` / `pnpm typecheck` / `pnpm test` | Quality gates across the monorepo |
 | `pnpm db:all` / `db:migrate` / `db:generate` / `db:seed` / `db:studio` / `db:reset` | Database — see [docs/prisma.md](./docs/prisma.md) |
+| `pnpm db:seed -- --scenario empty\|development\|enterprise [--seed <n>]` | Seed a specific dataset — see [seed scenarios](./docs/getting-started.md#seed-scenarios) |
+| `pnpm docker:up` / `docker:down` / `docker:ps` / `docker:logs` | Local infrastructure — see [docs/operations/local-infrastructure.md](./docs/operations/local-infrastructure.md) |
+| `pnpm test:e2e` / `db:check-rls-manifest` / `docs:check-links` / `secrets:scan` | The extra checks CI runs — see [docs/operations/ci.md](./docs/operations/ci.md) |
 | `pnpm deps:check` / `deps:fix` / `deps:list` | Shared dependency version hygiene (syncpack) |
 | `pnpm kill:all` | Free dev ports 3000–3003 and 8080 |
 | `pnpm dlx shadcn@latest add <component> -c apps/web` | Add a shadcn component to `packages/ui` |

@@ -1,31 +1,11 @@
 import { ForbiddenException, Injectable } from "@nestjs/common";
 import type { CapabilitySlug, OrganizationRewardMembershipResponse } from "@workspace/shared";
-import { merchantRoleHasCapability } from "@workspace/shared";
 
 import type { MerchantActor } from "../../api-keys/types/merchant-actor.types";
 import type { MerchantApiKeyAuthContext } from "../../api-keys/types/api-key-auth.types";
 import { OrganizationContextService } from "../../organization/services/organization-context.service";
 import { OrganizationRewardAuthService } from "../../organization/services/organization-reward-auth.service";
 import { MERCHANT_API_KEY_CAPABILITIES } from "../constants/merchant-api-key-capabilities";
-
-const CAPABILITY_TO_CEDAR_ACTION: Partial<Record<CapabilitySlug, string>> = {
-	"merchant:view_rewards": "rewardhub:view_rewards",
-	"merchant:manage_rewards": "rewardhub:manage_rewards",
-	"merchant:view_redemptions": "rewardhub:view_redemptions",
-	"merchant:manage_api_keys": "rewardhub:manage_api_keys",
-	"merchant:view_analytics": "rewardhub:view_analytics",
-};
-
-/** Baseline role gate (shared with the merchant app); tenant Cedar policies may only narrow it. */
-function requireRoleCapability(membership: OrganizationRewardMembershipResponse, capability: CapabilitySlug): void {
-	if (!merchantRoleHasCapability(membership.role, capability)) {
-		throw new ForbiddenException({
-			message: "Your organization role does not include this capability",
-			error: "ORGANIZATION_ROLE_CAPABILITY_REQUIRED",
-			capability,
-		});
-	}
-}
 
 @Injectable()
 export class MerchantContextService {
@@ -64,18 +44,8 @@ export class MerchantContextService {
 			});
 		}
 
-		const cedarAction = CAPABILITY_TO_CEDAR_ACTION[capability];
-		if (cedarAction === undefined) {
-			throw new ForbiddenException({
-				message: "Unknown reward hub capability",
-				error: "ORGANIZATION_CAPABILITY_UNKNOWN",
-				capability,
-			});
-		}
-
 		const resolved = await this.organizationRewardAuth.resolveOrganizationFromSlug(actor.userId, actor.orgSlug ?? actor.organizationId);
-		requireRoleCapability(resolved.membership, capability);
-		await this.organizationRewardAuth.requireCedarAction(actor.userId, actor.organizationId, cedarAction, "RewardHub", actor.organizationId, resolved.membership);
+		await this.organizationRewardAuth.requireMembershipCapability({ userId: actor.userId, organizationId: actor.organizationId, role: resolved.membership.role }, capability);
 	}
 
 	public async resolveOrgIdForUser(userId: string, orgSlug: string): Promise<string> {
@@ -84,30 +54,7 @@ export class MerchantContextService {
 	}
 
 	public async requireUserCapability(userId: string, orgSlug: string, capability: CapabilitySlug): Promise<void> {
-		const resolved = await this.organizationRewardAuth.resolveOrganizationFromSlug(userId, orgSlug);
-		const cedarAction = CAPABILITY_TO_CEDAR_ACTION[capability];
-		if (cedarAction === undefined) {
-			throw new ForbiddenException({
-				message: "Unknown reward hub capability",
-				error: "ORGANIZATION_CAPABILITY_UNKNOWN",
-				capability,
-			});
-		}
-		requireRoleCapability(resolved.membership, capability);
-		await this.organizationRewardAuth.requireCedarAction(userId, resolved.organizationId, cedarAction, "RewardHub", resolved.organizationId, resolved.membership);
-	}
-
-	public async requireOwnerRole(userId: string, organizationId: string, orgSlug: string): Promise<void> {
-		const resolved = await this.organizationRewardAuth.resolveOrganizationFromSlug(userId, orgSlug);
-		if (resolved.organizationId !== organizationId) {
-			throw new ForbiddenException({ message: "Invalid organization", error: "ORGANIZATION_FORBIDDEN" });
-		}
-		if (resolved.membership.role !== "OWNER") {
-			throw new ForbiddenException({
-				message: "Only organization owners can perform this action",
-				error: "ORGANIZATION_OWNER_REQUIRED",
-			});
-		}
+		await this.organizationRewardAuth.requireCapabilityForSlug(userId, orgSlug, capability);
 	}
 
 	public async listMembershipsForUser(userId: string): Promise<OrganizationRewardMembershipResponse[]> {

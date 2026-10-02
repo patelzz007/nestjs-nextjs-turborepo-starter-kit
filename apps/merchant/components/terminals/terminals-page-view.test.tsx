@@ -1,0 +1,453 @@
+// @vitest-environment jsdom
+import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
+import * as React from "react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import { PAIRING_STATUS_POLL_INTERVAL_MS, TerminalsPageView } from "@/components/terminals/terminals-page-view";
+import type { MerchantLocationContextValue } from "@/lib/org/location-context";
+import { renderWithAuthorization, TEST_ORG_SLUG } from "@/test/authorization";
+import { buildPairing, buildTerminal, STORE_A, STORE_B, TERMINAL_FIXTURE_NOW } from "@/test/terminals";
+import {
+	MERCHANT_TERMINALS_PAGE_SIZE,
+	MerchantTerminalSettingsSchema,
+	OrganizationLocationResponseSchema,
+	POS_PAIRING_CODE_TTL_MS,
+	type MerchantTerminalPairing,
+	type MerchantTerminalSettings,
+	type MerchantTerminalSummary,
+	type OrganizationLocationResponse,
+} from "@workspace/shared";
+
+const {
+	terminalsListQuery,
+	settingsQuery,
+	createMutation,
+	pairingCodeMutation,
+	removeMutation,
+	updateSettingsMutation,
+	createMutate,
+	pairingCodeMutate,
+	removeMutate,
+	updateSettingsMutate,
+	refetch,
+	settingsRefetch,
+	locationState,
+} = vi.hoisted(() => ({
+	terminalsListQuery: vi.fn<(input: object, options?: PollOptions) => object>(),
+	settingsQuery: vi.fn(),
+	createMutation: vi.fn(),
+	pairingCodeMutation: vi.fn(),
+	removeMutation: vi.fn(),
+	updateSettingsMutation: vi.fn(),
+	createMutate: vi.fn(),
+	pairingCodeMutate: vi.fn(),
+	removeMutate: vi.fn(),
+	updateSettingsMutate: vi.fn(),
+	refetch: vi.fn(),
+	settingsRefetch: vi.fn(),
+	locationState: vi.fn<() => MerchantLocationContextValue>(),
+}));
+
+vi.mock("@workspace/client/lib/auth", () => ({
+	useAuth: (): object => ({
+		api: {
+			organizations: {
+				terminals: {
+					list: { useQuery: terminalsListQuery },
+					settings: { useQuery: settingsQuery },
+					create: { useMutation: createMutation },
+					pairingCode: { useMutation: pairingCodeMutation },
+					remove: { useMutation: removeMutation },
+					updateSettings: { useMutation: updateSettingsMutation },
+				},
+			},
+		},
+	}),
+}));
+
+vi.mock("@/lib/org/location-context", () => ({
+	useMerchantLocation: (): object => locationState(),
+	useActiveLocationFilter: (): object => ({ locationId: undefined }),
+}));
+
+const FIVE_MINUTES_MS = 5 * 60_000;
+
+function store(id: string, name: string): OrganizationLocationResponse {
+	return OrganizationLocationResponseSchema.parse({
+		id,
+		organizationId: "7f5f0f0e-7a53-4f5c-9d0a-0d6a6b8f2c11",
+		name,
+		code: name.toUpperCase(),
+		addressText: null,
+		city: null,
+		contactPhone: null,
+		status: "ACTIVE",
+		rejectionReason: null,
+		isPrimary: id === STORE_A.id,
+		createdAt: TERMINAL_FIXTURE_NOW,
+		updatedAt: TERMINAL_FIXTURE_NOW,
+	});
+}
+
+const BANGSAR = store(STORE_A.id, STORE_A.name);
+const MONT_KIARA = store(STORE_B.id, STORE_B.name);
+
+const UNPAIRED_TILL = buildTerminal({ id: "4d9a3f5e-2f6b-4c55-8f0c-9a4b1c2d3e4f", terminalId: "TERM-7F3K9QX2", name: "Front counter" });
+const ACTIVE_TILL = buildTerminal({
+	id: "5e0b4a6f-3a7c-4d66-9a1d-0b5c2d3e4f50",
+	terminalId: "TERM-9HX2KD4M",
+	name: "Drive-through",
+	status: "ACTIVE",
+	pairedAt: TERMINAL_FIXTURE_NOW,
+	lastSeenAt: TERMINAL_FIXTURE_NOW,
+	locationId: STORE_B.id,
+	locationName: STORE_B.name,
+});
+const NEW_TILL = buildTerminal({ id: "6f1c5b70-4b8d-4e77-8b2e-1c6d3e4f5061", terminalId: "TERM-K4M8PW2Z", name: "Back office" });
+
+interface QueryState {
+	readonly terminals?: readonly MerchantTerminalSummary[];
+	readonly isPending?: boolean;
+	readonly isError?: boolean;
+}
+
+/** What the page's list query returns. */
+let listState: QueryState = {};
+/** What the pairing-status poll returns (only while the pairing dialog is open). */
+let polledTerminals: readonly MerchantTerminalSummary[] = [];
+let settings: MerchantTerminalSettings = MerchantTerminalSettingsSchema.parse({ requireRegisteredTerminals: false });
+let nextPairing: MerchantTerminalPairing = buildPairing(NEW_TILL);
+
+interface PolledQuery {
+	readonly state: { readonly data: { readonly data: readonly MerchantTerminalSummary[] } | undefined };
+}
+
+interface PollOptions {
+	readonly enabled?: boolean;
+	readonly refetchInterval?: (query: PolledQuery) => number | false;
+}
+
+/**
+ * Stand-in for `list.useQuery`. The page's own list has no `enabled` option;
+ * the pairing-status poll does — and, like TanStack Query, it is re-run every
+ * `refetchInterval` until that returns `false`.
+ */
+function useListQueryMock(_input: object, options?: PollOptions): object {
+	const [, requery] = React.useReducer((count: number): number => count + 1, 0);
+	const isPoll = options?.enabled !== undefined;
+	const pollData = { data: polledTerminals, meta: {} };
+	const interval = isPoll && options.enabled ? (options.refetchInterval?.({ state: { data: pollData } }) ?? false) : false;
+
+	React.useEffect(() => {
+		if (interval === false) {
+			return undefined;
+		}
+		const timer = window.setInterval(requery, interval);
+		return (): void => {
+			window.clearInterval(timer);
+		};
+	}, [interval]);
+
+	if (!isPoll) {
+		const { terminals = [UNPAIRED_TILL, ACTIVE_TILL], isPending = false, isError = false } = listState;
+		return { data: isPending || isError ? undefined : { data: terminals, meta: {} }, isPending, isError, refetch };
+	}
+	return options.enabled ? { data: pollData, isPending: false, isError: false, refetch } : { data: undefined, isPending: true, isError: false, refetch };
+}
+
+interface MutationCallbacks<TData> {
+	readonly onSuccess?: (response: { readonly data: TData }) => void;
+	readonly onSettled?: () => void;
+}
+
+function renderAsAdmin(): void {
+	renderWithAuthorization(<TerminalsPageView orgSlug={TEST_ORG_SLUG} />, { role: "ADMIN" });
+}
+
+function openAddDialog(): HTMLElement {
+	fireEvent.click(screen.getByRole("button", { name: "Add terminal" }));
+	return screen.getByRole("dialog", { name: "Add a terminal" });
+}
+
+/** Text of every live region in `container` (the code block has its own). */
+function liveRegionText(container: HTMLElement): string {
+	return within(container)
+		.getAllByRole("status")
+		.map((region) => region.textContent)
+		.join(" ");
+}
+
+function addBackOffice(): Promise<HTMLElement> {
+	const dialog = openAddDialog();
+	fireEvent.change(within(dialog).getByLabelText("Terminal name"), { target: { value: "  Back office  " } });
+	fireEvent.change(within(dialog).getByLabelText("Store"), { target: { value: STORE_A.id } });
+	fireEvent.click(within(dialog).getByRole("button", { name: "Add terminal" }));
+	return screen.findByRole("dialog", { name: "Pair “Back office”" });
+}
+
+beforeEach((): void => {
+	listState = {};
+	polledTerminals = [];
+	settings = MerchantTerminalSettingsSchema.parse({ requireRegisteredTerminals: false });
+	nextPairing = buildPairing(NEW_TILL);
+	locationState.mockReturnValue({
+		locationId: undefined,
+		activeLocation: undefined,
+		accessibleLocations: [BANGSAR, MONT_KIARA],
+		canSelectAllLocations: true,
+		isLoading: false,
+		setLocationId: vi.fn(),
+	});
+	terminalsListQuery.mockImplementation(useListQueryMock);
+	settingsQuery.mockImplementation(() => ({ data: { data: settings, meta: {} }, isPending: false, isError: false, refetch: settingsRefetch }));
+	createMutation.mockImplementation((options?: MutationCallbacks<MerchantTerminalPairing>) => ({
+		mutate: createMutate.mockImplementation(() => {
+			options?.onSuccess?.({ data: nextPairing });
+		}),
+		reset: vi.fn(),
+		isPending: false,
+		error: null,
+	}));
+	pairingCodeMutation.mockImplementation((options?: MutationCallbacks<MerchantTerminalPairing>) => ({
+		mutate: pairingCodeMutate.mockImplementation(() => {
+			options?.onSuccess?.({ data: nextPairing });
+			options?.onSettled?.();
+		}),
+		isPending: false,
+	}));
+	removeMutation.mockImplementation(() => ({
+		mutate: removeMutate.mockImplementation((_input: object, callbacks?: MutationCallbacks<object>) => {
+			callbacks?.onSuccess?.({ data: { ok: true } });
+			callbacks?.onSettled?.();
+		}),
+		isPending: false,
+	}));
+	updateSettingsMutation.mockImplementation((options?: MutationCallbacks<MerchantTerminalSettings>) => ({
+		mutate: updateSettingsMutate.mockImplementation(() => {
+			options?.onSuccess?.({ data: settings });
+		}),
+		isPending: false,
+		error: null,
+	}));
+});
+
+afterEach((): void => {
+	cleanup();
+	vi.useRealTimers();
+	vi.clearAllMocks();
+});
+
+describe("TerminalsPageView authorization", () => {
+	it("renders the access-denied page and never lists terminals without merchant:manage_api_keys", () => {
+		renderWithAuthorization(<TerminalsPageView orgSlug={TEST_ORG_SLUG} />, { role: "CASHIER" });
+
+		expect(screen.getByText("Owner or admin access required")).toBeTruthy();
+		expect(screen.queryByRole("button", { name: "Add terminal" })).toBeNull();
+		expect(terminalsListQuery).not.toHaveBeenCalled();
+		expect(settingsQuery).not.toHaveBeenCalled();
+	});
+
+	it("requests one bounded page of terminals through the list grammar", () => {
+		renderAsAdmin();
+
+		expect(terminalsListQuery).toHaveBeenCalledWith(expect.objectContaining({ orgSlug: TEST_ORG_SLUG, page: 1, limit: MERCHANT_TERMINALS_PAGE_SIZE }), expect.anything());
+		expect(settingsQuery).toHaveBeenCalledWith({ orgSlug: TEST_ORG_SLUG }, expect.anything());
+	});
+});
+
+describe("TerminalsPageView list", () => {
+	it("summarizes the terminals and shows each one's id, store, status and last activity", () => {
+		vi.useFakeTimers({ toFake: ["Date"] });
+		vi.setSystemTime(TERMINAL_FIXTURE_NOW + FIVE_MINUTES_MS);
+		renderAsAdmin();
+
+		expect(screen.getByText("Active", { selector: "p" }).parentElement?.textContent).toContain("1");
+		expect(screen.getByText("Stores covered").parentElement?.textContent).toContain("1");
+		const list = screen.getByRole("list", { name: "Terminals" });
+		const [front, drive] = within(list).getAllByRole("listitem");
+		expect(front?.textContent).toContain("TERM-7F3K9QX2");
+		expect(front?.textContent).toContain("Not paired");
+		expect(front?.textContent).toContain("Never");
+		expect(drive?.textContent).toContain("Mont Kiara");
+		expect(drive?.textContent).toContain("5 minutes ago");
+		expect(within(list).getByRole("button", { name: "Copy terminal ID of Front counter" })).toBeTruthy();
+	});
+
+	it("shows a skeleton while loading, an empty state with a call to action, and a retry on error", () => {
+		listState = { isPending: true };
+		renderAsAdmin();
+		expect(screen.getByRole("list", { name: "Loading terminals" }).getAttribute("aria-busy")).toBe("true");
+		cleanup();
+
+		listState = { terminals: [] };
+		renderAsAdmin();
+		expect(screen.getByText("No terminals yet")).toBeTruthy();
+		fireEvent.click(screen.getByRole("button", { name: "Add your first terminal" }));
+		expect(screen.getByRole("dialog", { name: "Add a terminal" })).toBeTruthy();
+		cleanup();
+
+		listState = { isError: true };
+		renderAsAdmin();
+		fireEvent.click(within(screen.getByRole("alert")).getByRole("button", { name: "Try again" }));
+		expect(refetch).toHaveBeenCalled();
+	});
+
+	it("removes a terminal only after confirmation", async () => {
+		renderAsAdmin();
+
+		fireEvent.click(screen.getByRole("button", { name: "Remove Front counter" }));
+		expect(removeMutate).not.toHaveBeenCalled();
+		const dialog = await screen.findByRole("alertdialog");
+		expect(within(dialog).getByText("Remove “Front counter”?")).toBeTruthy();
+		expect(within(dialog).getByText(/stops working immediately and its key is revoked/u)).toBeTruthy();
+
+		fireEvent.click(within(dialog).getByRole("button", { name: "Remove terminal" }));
+		expect(removeMutate).toHaveBeenCalledWith({ orgSlug: TEST_ORG_SLUG, id: UNPAIRED_TILL.id }, expect.anything());
+		await waitFor(() => {
+			expect(screen.queryByRole("alertdialog")).toBeNull();
+		});
+	});
+
+	it("issues a new code for an unpaired till straight away, but confirms before re-pairing an active one", async () => {
+		renderAsAdmin();
+
+		fireEvent.click(screen.getByRole("button", { name: "Re-pair for Drive-through" }));
+		expect(pairingCodeMutate).not.toHaveBeenCalled();
+		const dialog = await screen.findByRole("alertdialog");
+		expect(within(dialog).getByText(/current key stops working/u)).toBeTruthy();
+		fireEvent.click(within(dialog).getByRole("button", { name: "Issue new code" }));
+		expect(pairingCodeMutate).toHaveBeenCalledWith({ orgSlug: TEST_ORG_SLUG, id: ACTIVE_TILL.id });
+		cleanup();
+		pairingCodeMutate.mockClear();
+
+		renderAsAdmin();
+		fireEvent.click(screen.getByRole("button", { name: "New pairing code for Front counter" }));
+		expect(pairingCodeMutate).toHaveBeenCalledWith({ orgSlug: TEST_ORG_SLUG, id: UNPAIRED_TILL.id });
+		expect(screen.queryByRole("alertdialog")).toBeNull();
+	});
+});
+
+describe("TerminalsPageView add and pair", () => {
+	beforeEach((): void => {
+		// The countdown ticks on `setInterval`; the code was issued at the fixture clock.
+		vi.useFakeTimers({ toFake: ["setInterval", "clearInterval", "Date"] });
+		vi.setSystemTime(TERMINAL_FIXTURE_NOW);
+	});
+
+	it("adds a terminal from the trimmed name and chosen store, then shows its pairing code", async () => {
+		renderAsAdmin();
+
+		const pairingDialog = await addBackOffice();
+
+		expect(createMutate).toHaveBeenCalledWith({ orgSlug: TEST_ORG_SLUG, name: "Back office", locationId: STORE_A.id });
+		expect(within(pairingDialog).getByText("ABCD 2345")).toBeTruthy();
+		expect(within(pairingDialog).getByRole("button", { name: "Copy pairing code" })).toBeTruthy();
+		expect(liveRegionText(pairingDialog)).toContain("Waiting for the till to pair…");
+		expect(within(pairingDialog).getByText(/"pairingCode":"ABCD2345"/u)).toBeTruthy();
+	});
+
+	it("makes the merchant choose a store when several are available and none is active", () => {
+		renderAsAdmin();
+
+		const dialog = openAddDialog();
+		fireEvent.change(within(dialog).getByLabelText("Terminal name"), { target: { value: "Back office" } });
+
+		expect(within(dialog).getByRole("button", { name: "Add terminal" }).hasAttribute("disabled")).toBe(true);
+	});
+
+	it("preselects the only store", () => {
+		locationState.mockReturnValue({
+			locationId: undefined,
+			activeLocation: undefined,
+			accessibleLocations: [BANGSAR],
+			canSelectAllLocations: false,
+			isLoading: false,
+			setLocationId: vi.fn(),
+		});
+		renderAsAdmin();
+
+		const storeSelect = within(openAddDialog()).getByLabelText("Store");
+		expect(storeSelect instanceof HTMLSelectElement ? storeSelect.value : "").toBe(STORE_A.id);
+	});
+
+	it("preselects the active store, and keeps the submit disabled for a blank name", () => {
+		locationState.mockReturnValue({
+			locationId: STORE_B.id,
+			activeLocation: MONT_KIARA,
+			accessibleLocations: [BANGSAR, MONT_KIARA],
+			canSelectAllLocations: true,
+			isLoading: false,
+			setLocationId: vi.fn(),
+		});
+		renderAsAdmin();
+
+		const dialog = openAddDialog();
+		const storeSelect = within(dialog).getByLabelText("Store");
+		expect(storeSelect instanceof HTMLSelectElement ? storeSelect.value : "").toBe(STORE_B.id);
+
+		fireEvent.change(within(dialog).getByLabelText("Terminal name"), { target: { value: "   " } });
+		expect(within(dialog).getByRole("button", { name: "Add terminal" }).hasAttribute("disabled")).toBe(true);
+	});
+
+	it("polls the terminal's store while the code is shown and flips to the paired state when the till pairs", async () => {
+		renderAsAdmin();
+
+		const pairingDialog = await addBackOffice();
+		const pollCall = terminalsListQuery.mock.calls.find((call) => call[1]?.enabled === true);
+		expect(pollCall?.[0]).toEqual(expect.objectContaining({ orgSlug: TEST_ORG_SLUG, locationId: STORE_A.id }));
+		const pollOptions: PollOptions | undefined = pollCall?.[1];
+		expect(pollOptions?.refetchInterval?.({ state: { data: undefined } })).toBe(PAIRING_STATUS_POLL_INTERVAL_MS);
+		expect(liveRegionText(pairingDialog)).toContain("Waiting for the till to pair…");
+
+		polledTerminals = [{ ...nextPairing.terminal, status: "ACTIVE", pairedAt: nextPairing.terminal.createdAt, pairingCodeExpiresAt: null }];
+		refetch.mockClear();
+		act((): void => {
+			vi.advanceTimersByTime(PAIRING_STATUS_POLL_INTERVAL_MS);
+		});
+
+		expect(liveRegionText(pairingDialog)).toContain("Paired — Back office is ready");
+		expect(screen.getByRole("dialog", { name: "Paired — Back office is ready" })).toBe(pairingDialog);
+		expect(within(pairingDialog).queryByText("ABCD 2345")).toBeNull();
+		expect(refetch).toHaveBeenCalled();
+		// Polling stops once the till has paired.
+		expect(pollOptions?.refetchInterval?.({ state: { data: { data: polledTerminals } } })).toBe(false);
+	});
+
+	it("offers a new code once the shown one expires", async () => {
+		renderAsAdmin();
+
+		const pairingDialog = await addBackOffice();
+		act((): void => {
+			vi.advanceTimersByTime(POS_PAIRING_CODE_TTL_MS);
+		});
+
+		expect(liveRegionText(pairingDialog)).toContain("Code expired");
+		fireEvent.click(within(pairingDialog).getByRole("button", { name: "New code" }));
+		expect(pairingCodeMutate).toHaveBeenCalledWith({ orgSlug: TEST_ORG_SLUG, id: NEW_TILL.id });
+	});
+});
+
+describe("TerminalsPageView settings", () => {
+	it("asks for confirmation before only allowing registered terminals", async () => {
+		renderAsAdmin();
+
+		fireEvent.click(screen.getByRole("switch", { name: "Only allow registered terminals" }));
+		expect(updateSettingsMutate).not.toHaveBeenCalled();
+		const dialog = await screen.findByRole("alertdialog");
+		expect(within(dialog).getByText(/manually created API key whose X-Terminal-Id isn’t a terminal registered here will be refused/u)).toBeTruthy();
+
+		fireEvent.click(within(dialog).getByRole("button", { name: "Turn on" }));
+		expect(updateSettingsMutate).toHaveBeenCalledWith({ orgSlug: TEST_ORG_SLUG, requireRegisteredTerminals: true });
+		expect(settingsRefetch).toHaveBeenCalled();
+	});
+
+	it("turns the policy off without a confirmation", () => {
+		settings = MerchantTerminalSettingsSchema.parse({ requireRegisteredTerminals: true });
+		renderAsAdmin();
+
+		fireEvent.click(screen.getByRole("switch", { name: "Only allow registered terminals" }));
+
+		expect(screen.queryByRole("alertdialog")).toBeNull();
+		expect(updateSettingsMutate).toHaveBeenCalledWith({ orgSlug: TEST_ORG_SLUG, requireRegisteredTerminals: false });
+	});
+});

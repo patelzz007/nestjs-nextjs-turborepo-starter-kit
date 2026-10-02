@@ -3,6 +3,7 @@ import { PolicyConditionsSchema, type PolicyConditions } from "@workspace/shared
 
 import { parsePrismaInputJson } from "../../src/common/utils/prisma-json";
 import { prisma } from "./client";
+import { seedLog } from "./seed-log";
 
 // ---------------------------------------------------------------------------
 // ABAC Demo — seed a condition on MANAGE:SYSTEM_SETTINGS
@@ -30,5 +31,5 @@ export async function seedAbacConditions(permissions: Permission[]): Promise<voi
 		data: { conditions: parsePrismaInputJson(PolicyConditionsSchema.parse(abacCondition)) },
 	});
 
-	console.log(`  ABAC demo: Set condition on MANAGE:SYSTEM_SETTINGS → ${JSON.stringify(abacCondition)}`);
+	seedLog(`  ABAC demo: Set condition on MANAGE:SYSTEM_SETTINGS → ${JSON.stringify(abacCondition)}`);
 }

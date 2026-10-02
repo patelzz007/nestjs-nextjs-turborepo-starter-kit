@@ -5,7 +5,9 @@ import { normalizePath } from "@workspace/ui/lib/sidebar/navigation/breadcrumb-t
 import { resolveSidebarMenuTrail, withTrailTailLabel } from "@workspace/ui/lib/sidebar/navigation/resolve-sidebar-menu-trail";
 
 import { WEB_MENU_ICON_MAP } from "@/lib/navigation/menu-icons";
+import { resolveWebTrailPage } from "@/lib/navigation/route-access";
 import { useWebSidebarStore } from "@/stores/sidebar-store";
+import { isPathWithin, ROUTE_PREFIXES } from "@/lib/routes";
 
 function resolveIcon(iconName: string | undefined): LucideIcon {
 	if (iconName !== undefined) {
@@ -19,11 +21,19 @@ function resolveIcon(iconName: string | undefined): LucideIcon {
 
 export { withTrailTailLabel };
 
-/** Builds the breadcrumb trail for a consumer Reward Hub path from the sidebar menu. */
+/**
+ * Builds the breadcrumb trail for a consumer Reward Hub path from the sidebar menu.
+ *
+ * The trail starts at the page's own menu item (`Browse Rewards`, `My Wallet`):
+ * the consumer menu's sections are plain groupings, so no section crumb is
+ * prepended. Below a menu item, only real pages become crumbs (from
+ * `WEB_ROUTE_ACCESS`) — `/rewardhub/rewards` has no page, so a reward detail
+ * reads `Browse Rewards › Reward` until the page sets the reward's title.
+ */
 export function resolveWebTrail(pathname: string): readonly BreadcrumbItem[] {
 	const normalizedPath = normalizePath(pathname);
 
-	if (normalizedPath.startsWith("/auth")) {
+	if (isPathWithin(normalizedPath, ROUTE_PREFIXES.auth)) {
 		return [];
 	}
 
@@ -34,5 +44,7 @@ export function resolveWebTrail(pathname: string): readonly BreadcrumbItem[] {
 		rootCurrentLabel: "Dashboard",
 		rootIcon: LayoutDashboard,
 		unknownFallbackLabel: "Dashboard",
+		includeSectionContext: false,
+		resolvePage: resolveWebTrailPage,
 	});
 }

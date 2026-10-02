@@ -4,6 +4,8 @@ import type { FastifyRequest } from "fastify";
 import type { AuthorizationAttributes, AuthorizationContext, AuthorizationRequest, AuthorizationResult, PermissionAction, PermissionResource } from "@workspace/shared";
 
 import { readFirstHeader } from "../../../common/utils/http-headers";
+import { RequestContextService } from "../../../common/context/request-context";
+import { MAX_USER_AGENT_LENGTH } from "../../../common/middleware/request-context.middleware";
 import { PrismaService } from "../../../prisma/prisma.service";
 import type { AuthenticatedUser } from "../../../types/authenticated-user";
 import { isAuthenticatedUser } from "../../../types/authenticated-user";
@@ -23,10 +25,10 @@ import { AuthorizationKernelService } from "../kernel/authorization-kernel.servi
 import { AuthorizationContextResolver, type RequestTenantContext } from "../services/authorization-context.resolver";
 
 interface RouteRequirements {
-	readonly permission?: RequiredPermission;
-	readonly permissions?: RequiredPermissionsMetadata;
-	readonly roles?: RequiredRolesMetadata;
-	readonly authorize?: AuthorizationRequirement;
+	readonly permission?: RequiredPermission | undefined;
+	readonly permissions?: RequiredPermissionsMetadata | undefined;
+	readonly roles?: RequiredRolesMetadata | undefined;
+	readonly authorize?: AuthorizationRequirement | undefined;
 }
 
 function hasRequirements(requirements: RouteRequirements): boolean {
@@ -47,7 +49,7 @@ function hasRequirements(requirements: RouteRequirements): boolean {
  * Flow:
  * 1. Authenticated requests: validate token version, then resolve and verify the
  *    tenant context (a forged `x-organization-id` / `x-location-id` → 403). The
- *    verified context is attached to `request.authorizationContext` for RLS.
+ *    verified context is bound into the request context (ADR 017) for RLS.
  * 2. Routes without requirements only compute `hasAdminAccess`.
  * 3. SuperAdmin → explicit, audited platform bypass.
  * 4. Each requirement → `kernel.authorize()` (audited: DENY / writes / sensitive
@@ -62,6 +64,7 @@ export class AuthorizationGuard implements CanActivate {
 		private readonly audit: AuthorizationAuditService,
 		private readonly contextResolver: AuthorizationContextResolver,
 		private readonly prisma: PrismaService,
+		private readonly requestContext: RequestContextService,
 	) {}
 
 	public async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -82,7 +85,7 @@ export class AuthorizationGuard implements CanActivate {
 		}
 
 		const tenant = await this.contextResolver.resolve(request, user);
-		request.authorizationContext = tenant.verified;
+		this.requestContext.bindTenant(tenant.verified);
 
 		if (user.isSuperAdmin) {
 			if (protectedRoute) {
@@ -239,11 +242,12 @@ export class AuthorizationGuard implements CanActivate {
 
 	private auditMetadata(request: FastifyRequest): AuthorizationAuditMetadata {
 		const userAgent = readFirstHeader(request.headers["user-agent"]);
-		const requestId = readFirstHeader(request.headers["x-correlation-id"]) ?? readFirstHeader(request.headers["x-request-id"]) ?? request.id;
+		// The request's validated correlation id (≤ 64 chars) — never the raw header.
+		const requestId: string = this.requestContext.resolveCorrelationId(request.raw);
 		return {
 			ipAddress: request.ip,
-			...(userAgent === undefined ? {} : { userAgent: userAgent.slice(0, 512) }),
-			requestId: requestId.slice(0, 64),
+			...(userAgent === undefined ? {} : { userAgent: userAgent.slice(0, MAX_USER_AGENT_LENGTH) }),
+			requestId,
 		};
 	}
 

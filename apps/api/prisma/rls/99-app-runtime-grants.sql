@@ -6,14 +6,7 @@
 -- Idempotent; safe to run on every `pnpm db:apply-security`.
 -- ============================================================================
 
-DO $$
-BEGIN
-  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'app_runtime') THEN
-    CREATE ROLE app_runtime NOLOGIN NOSUPERUSER NOINHERIT NOBYPASSRLS;
-  END IF;
-END $$;
-
-GRANT app_runtime TO CURRENT_USER;
+-- The role itself is created in 00-app-helpers.sql (applied first).
 
 GRANT USAGE ON SCHEMA public TO app_runtime;
 

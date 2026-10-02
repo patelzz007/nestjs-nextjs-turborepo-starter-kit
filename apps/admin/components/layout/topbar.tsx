@@ -11,12 +11,14 @@ import Link from "next/link";
 import * as React from "react";
 
 import { NetworkStatusIndicator } from "@/components/common/network-status-bar";
+import { useCanAccessRoute } from "@/components/layout/authorized-navigation";
 import { NotificationsDropdown } from "@/components/notifications/notifications-dropdown";
 import { SessionStatusBadge } from "@/components/common/session-status-badge";
 import { Profile01 } from "@/components/settings/profile-01";
 import { useSidebarStore } from "@/stores/sidebar-store";
 import { getUserInitials } from "@workspace/ui/lib/core/user-initials";
 import type { SidebarUser } from "@/lib/navigation/sidebar";
+import { ROUTES } from "@/lib/routes";
 
 const CommandPalette = dynamic(() => import("@/components/layout/command-palette").then((m) => m.CommandPalette), { ssr: false });
 
@@ -33,6 +35,7 @@ export interface TopbarProps {
 export function Topbar({ user, onLogout }: TopbarProps): React.JSX.Element {
 	const [commandOpen, setCommandOpen] = React.useState(false);
 	const menuTitle = useSidebarStore((state) => state.menu.header.title);
+	const canAccessRoute = useCanAccessRoute();
 
 	const handleOpenCommand = React.useCallback((): void => {
 		setCommandOpen(true);
@@ -73,13 +76,15 @@ export function Topbar({ user, onLogout }: TopbarProps): React.JSX.Element {
 					<ShellThemeToggle />
 				</div>
 
-				<div className="mx-1 hidden sm:mx-2 sm:block">
-					<Link href="/settings/general" aria-label="Settings">
-						<Button variant="ghost" size="icon" className="rounded-full">
-							<Settings className="size-5 text-muted-foreground" />
-						</Button>
-					</Link>
-				</div>
+				{canAccessRoute(ROUTES.settings.index) ? (
+					<div className="mx-1 hidden sm:mx-2 sm:block">
+						<Link href={ROUTES.settings.index} aria-label="Settings">
+							<Button variant="ghost" size="icon" className="rounded-full">
+								<Settings className="size-5 text-muted-foreground" />
+							</Button>
+						</Link>
+					</div>
+				) : null}
 
 				<div className="ml-1 md:ml-3">
 					<DropdownMenu>

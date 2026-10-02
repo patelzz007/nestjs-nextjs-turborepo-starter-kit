@@ -1279,6 +1279,12 @@ Embla-based carousel with context, prev/next, and slide group semantics.
 
 Recharts wrapper: `ChartContainer`, `ChartTooltipContent`, `ChartLegendContent`, `ChartStyle` with per-theme CSS vars.
 
+> **Money in charts.** API money is an integer count of minor units (sen) plus a currency code.
+> Render it with `formatMinorUnits(minor, currency)` / `formatMinorUnitsCompact` from
+> `@workspace/ui/lib/format/money` (the one money formatter for every app — `"RM 1,234.50"`,
+> `"RM 12.3K"` for axes), and pass the formatter to `ChartTooltipContent valueFormatter={…}` so the
+> tooltip never shows raw minor units. Example: the merchant and admin sales charts.
+
 1. `[T]` `toDisplayKey(value: unknown)` and `isRecord(value: unknown)` — rule 2 violation; replace with zod schemas (`z.string() | z.number()` unions) inferred from the data model.
 2. `[T]` `typeof value === "string"` / `typeof item.value === "number"` checks (rules 5/13) — replace with `KeySchema`/`ChartValueSchema` narrowing.
 3. `[T]` `ChartConfig` uses `theme?: never` / `color?: never` — rule 3 violation; model as a discriminated union (`color: string` | `theme: Record<...>`) with zod.

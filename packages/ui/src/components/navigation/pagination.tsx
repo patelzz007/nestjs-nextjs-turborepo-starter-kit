@@ -1,4 +1,4 @@
-import { Button } from "@workspace/ui/components/form/button";
+import { Button, buttonVariants } from "@workspace/ui/components/form/button";
 import { cn } from "@workspace/ui/lib/core/utils";
 import { cva, type VariantProps } from "class-variance-authority";
 import { ChevronLeftIcon, ChevronRightIcon, MoreHorizontalIcon } from "lucide-react";
@@ -50,13 +50,16 @@ const PaginationLink = React.forwardRef<HTMLAnchorElement, PaginationLinkProps>(
 	{ className, isActive, size = "icon", ...props },
 	ref,
 ): React.JSX.Element {
+	// A real link styled as a button — `Button` rendering an `<a>` would add
+	// `role="button"`, and screen readers would announce navigation as a button.
 	return (
-		<Button
-			variant={isActive ? "outline" : "ghost"}
-			size={size}
-			className={cn(className)}
-			nativeButton={false}
-			render={<a ref={ref} aria-current={isActive ? "page" : undefined} data-slot="pagination-link" data-active={isActive} {...props} />}
+		<a
+			ref={ref}
+			aria-current={isActive ? "page" : undefined}
+			data-slot="pagination-link"
+			data-active={isActive}
+			className={cn(buttonVariants({ variant: isActive ? "outline" : "ghost", size }), className)}
+			{...props}
 		/>
 	);
 });

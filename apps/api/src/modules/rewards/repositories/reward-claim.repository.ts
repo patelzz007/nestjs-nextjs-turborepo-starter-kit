@@ -1,22 +1,53 @@
 import { Injectable } from "@nestjs/common";
-import type { Prisma, Reward, RewardClaim, RewardType } from "@prisma/client";
+import type { OrganizationLocationScopeType, Prisma, Reward, RewardClaim, RewardType } from "@prisma/client";
 
-import type { RewardClaimListQuery } from "@workspace/shared";
+import { rewardClaimListQuery, type RewardClaimListQuery, type RewardClaimListSortField } from "@workspace/shared";
 
-import { fetchStringIdListPage } from "../../../platform/persistence/cursor-list";
+import { fetchListPage } from "../../../platform/persistence/list-page";
+import { timestampIdKeyset, type ListKeyset } from "../../../platform/persistence/list-query/keyset-cursor";
+import { buildListOrder, type ListOrder, type SortColumns } from "../../../platform/persistence/list-query/list-order";
+import { fieldWhere, toPrismaEqualityFilter } from "../../../platform/persistence/list-query/prisma-filter";
 import type { RepositoryListResult } from "../../../platform/persistence/types";
 import { PrismaService } from "../../../prisma/prisma.service";
+import { minSpendMinorFromRules } from "../utils/redemption-eligibility.util";
 
 const CLAIM_WITH_REWARD_TITLE_INCLUDE = {
 	reward: { select: { title: true } },
 } satisfies Prisma.RewardClaimInclude;
 
 const CLAIM_WITH_REWARD_INCLUDE = {
-	reward: true,
+	reward: { include: { locationScopes: { select: { locationId: true } } } },
 } satisfies Prisma.RewardClaimInclude;
 
 export type RewardClaimWithRewardTitle = Prisma.RewardClaimGetPayload<{ include: typeof CLAIM_WITH_REWARD_TITLE_INCLUDE }>;
 export type RewardClaimWithReward = Prisma.RewardClaimGetPayload<{ include: typeof CLAIM_WITH_REWARD_INCLUDE }>;
+
+// ── List query → Prisma (explicit field → column mapping; see docs/list-queries.md) ──
+
+const REWARD_CLAIM_SORT_COLUMNS: SortColumns<RewardClaimListSortField, Prisma.RewardClaimOrderByWithRelationInput> = {
+	claimedAt: (direction) => ({ claimedAt: direction }),
+	createdAt: (direction) => ({ createdAt: direction }),
+};
+
+/** Keyset for the default order (`claimedAt desc, id desc`). */
+const REWARD_CLAIM_LIST_KEYSET: ListKeyset<RewardClaimWithRewardTitle, Prisma.RewardClaimWhereInput> = timestampIdKeyset(
+	(row: RewardClaimWithRewardTitle) => ({ at: Number(row.claimedAt), id: row.id }),
+	({ at, id }): Prisma.RewardClaimWhereInput => ({ OR: [{ claimedAt: { lt: at } }, { claimedAt: at, id: { lt: id } }] }),
+);
+
+/** The signed-in user's live claims + the filter AST. `userId` is the authorization scope, never client input. */
+export function buildRewardClaimListWhere(userId: string, query: RewardClaimListQuery): Prisma.RewardClaimWhereInput {
+	return {
+		AND: [{ userId, isDeleted: false }, ...fieldWhere(toPrismaEqualityFilter(query.filter?.status), (status) => ({ status }))],
+	};
+}
+
+export function buildRewardClaimListOrder(query: RewardClaimListQuery): ListOrder<Prisma.RewardClaimOrderByWithRelationInput> {
+	return buildListOrder(rewardClaimListQuery.resolveSort(query.sort), {
+		columns: REWARD_CLAIM_SORT_COLUMNS,
+		tieBreaker: (direction) => ({ id: direction }),
+	});
+}
 
 export interface RewardClaimRedemptionLookup {
 	readonly claim: {
@@ -35,6 +66,11 @@ export interface RewardClaimRedemptionLookup {
 		readonly title: string;
 		readonly rewardType: RewardType;
 		readonly expiryDate: bigint;
+		readonly locationScopeType: OrganizationLocationScopeType;
+		/** The stores a `SELECTED`-scope reward is valid at (empty for `ALL_LOCATIONS`). */
+		readonly locationIds: readonly string[];
+		/** `rules.minSpendMyr` in minor units; `null` when the reward has no minimum. */
+		readonly minSpendMinor: number | null;
 	};
 }
 
@@ -67,22 +103,13 @@ export class RewardClaimRepository {
 	}
 
 	public async listForUser(userId: string, query: RewardClaimListQuery): Promise<RepositoryListResult<RewardClaimWithRewardTitle>> {
-		const where: Prisma.RewardClaimWhereInput = {
-			userId,
-			isDeleted: false,
-			...(query.status !== undefined ? { status: query.status } : {}),
-		};
-
-		return fetchStringIdListPage(query, {
-			where,
-			mergeCursor: (baseWhere, cursorId) => ({ ...baseWhere, id: { gt: cursorId } }),
-			readId: (row) => row.id,
-			findMany: (args): Promise<RewardClaimWithRewardTitle[]> =>
-				this.prisma.rewardClaim.findMany({
-					...args,
-					include: CLAIM_WITH_REWARD_TITLE_INCLUDE,
-				}),
-			count: (listWhere) => this.prisma.rewardClaim.count({ where: listWhere }),
+		return fetchListPage(query, {
+			where: buildRewardClaimListWhere(userId, query),
+			order: buildRewardClaimListOrder(query),
+			keyset: REWARD_CLAIM_LIST_KEYSET,
+			and: (left, right) => ({ AND: [left, right] }),
+			count: (where) => this.prisma.rewardClaim.count({ where }),
+			findMany: (args): Promise<RewardClaimWithRewardTitle[]> => this.prisma.rewardClaim.findMany({ ...args, include: CLAIM_WITH_REWARD_TITLE_INCLUDE }),
 		});
 	}
 
@@ -145,6 +172,9 @@ export class RewardClaimRepository {
 				title: claim.reward.title,
 				rewardType: claim.reward.rewardType,
 				expiryDate: claim.reward.expiryDate,
+				locationScopeType: claim.reward.locationScopeType,
+				locationIds: claim.reward.locationScopes.map((scope) => scope.locationId),
+				minSpendMinor: minSpendMinorFromRules(claim.reward.rules),
 			},
 		};
 	}
@@ -162,7 +192,19 @@ export class RewardClaimRepository {
 		});
 	}
 
-	public async expireClaimInTransaction(claimId: string, rewardId: string, organizationId: string, isReferrerCredit: boolean): Promise<boolean> {
+	/**
+	 * Expire a PENDING claim, return its reserved unit, and write the audit row;
+	 * `withinTransaction` (the caller's outbox event) runs only when the claim
+	 * actually expired, inside the same transaction. Returns false (and writes
+	 * nothing) when another worker already moved the claim.
+	 */
+	public async expireClaimInTransaction(
+		claimId: string,
+		rewardId: string,
+		organizationId: string,
+		isReferrerCredit: boolean,
+		withinTransaction: (tx: Prisma.TransactionClient) => Promise<void>,
+	): Promise<boolean> {
 		return this.prisma.$transaction(async (tx) => {
 			const updated = await tx.rewardClaim.updateMany({
 				where: { id: claimId, status: "PENDING", ...(isReferrerCredit ? { isReferrerCredit: true } : { isReferrerCredit: false }) },
@@ -189,6 +231,7 @@ export class RewardClaimRepository {
 				},
 			});
 
+			await withinTransaction(tx);
 			return true;
 		});
 	}
@@ -207,14 +250,17 @@ export class RewardClaimRepository {
 		});
 	}
 
-	public async listForUserAnalytics(userId: string, claimedAtRange: { readonly gte: number; readonly lte: number }): Promise<Pick<RewardClaim, "claimedAt" | "status">[]> {
+	public async listForUserAnalytics(
+		userId: string,
+		claimedAtRange: { readonly gte: number; readonly lte: number },
+	): Promise<Pick<RewardClaim, "claimedAt" | "redeemedAt" | "status">[]> {
 		return this.prisma.rewardClaim.findMany({
 			where: {
 				userId,
 				isDeleted: false,
 				claimedAt: claimedAtRange,
 			},
-			select: { claimedAt: true, status: true },
+			select: { claimedAt: true, redeemedAt: true, status: true },
 		});
 	}
 }

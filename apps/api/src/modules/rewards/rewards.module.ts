@@ -1,3 +1,4 @@
+import { OutboxModule } from "../../infrastructure/outbox/outbox.module";
 import { Module } from "@nestjs/common";
 
 import { AuthModule } from "../auth/auth.module";
@@ -16,10 +17,12 @@ import {
 	OrganizationRewardsController,
 } from "./controllers/organization-rewards.controller";
 import { MerchantOnboardingController } from "./controllers/merchant-onboarding.controller";
+import { OrganizationTerminalsController, PosTerminalsController } from "./controllers/organization-terminals.controller";
 import { RedemptionsController } from "./controllers/redemptions.controller";
 import { RewardLegalController } from "./controllers/reward-legal.controller";
 import { RewardNotificationsController } from "./controllers/reward-notifications.controller";
 import {
+	RewardsAdminAnalyticsController,
 	RewardsAdminInvitesController,
 	RewardsAdminLocationRequestsController,
 	RewardsAdminMerchantsController,
@@ -31,6 +34,8 @@ import { ConsumerRewardsService } from "./services/consumer-rewards.service";
 import { MerchantKybService } from "./services/merchant-kyb.service";
 import { MerchantOnboardingService } from "./services/merchant-onboarding.service";
 import { MerchantApiKeyService } from "./services/merchant-api-key.service";
+import { MerchantTerminalService } from "./services/merchant-terminal.service";
+import { PosPairingService } from "./services/pos-pairing.service";
 import { MerchantContextService } from "./services/merchant-context.service";
 import { RedemptionService } from "./services/redemption.service";
 import { RewardLegalService } from "./services/reward-legal.service";
@@ -43,12 +48,24 @@ import { RewardsQueueModule } from "./rewards-queue.module";
 import { FilesModule } from "../files/files.module";
 import { StorageModule } from "../storage/storage.module";
 import { MerchantKybDocumentService } from "./services/merchant-kyb-document.service";
+import { getApiConfig } from "../../config/api-config";
 
-const redisUrl: string | undefined = process.env.REDIS_URL;
-const rewardsQueueImports = redisUrl !== undefined && redisUrl.length > 0 ? [RewardsQueueModule] : [];
+// Queue wiring is decided at load time from the validated config (parsed by main.ts first).
+const redisUrl: string | undefined = getApiConfig().messaging.redisUrl;
+const rewardsQueueImports = redisUrl !== undefined ? [RewardsQueueModule] : [];
 
 @Module({
-	imports: [AuthModule, OrganizationModule, NotificationsModule, RewardsPersistenceModule, RewardsCoreServicesModule, StorageModule, FilesModule, ...rewardsQueueImports],
+	imports: [
+		AuthModule,
+		OrganizationModule,
+		NotificationsModule,
+		OutboxModule,
+		RewardsPersistenceModule,
+		RewardsCoreServicesModule,
+		StorageModule,
+		FilesModule,
+		...rewardsQueueImports,
+	],
 	controllers: [
 		ConsumerRewardsController,
 		ConsumerClaimsController,
@@ -61,8 +78,11 @@ const rewardsQueueImports = redisUrl !== undefined && redisUrl.length > 0 ? [Rew
 		MerchantOnboardingController,
 		OrganizationRewardsController,
 		OrganizationApiKeysController,
+		OrganizationTerminalsController,
+		PosTerminalsController,
 		OrganizationRedemptionsController,
 		OrganizationAnalyticsController,
+		RewardsAdminAnalyticsController,
 		RewardsAdminInvitesController,
 		RewardsAdminRewardsController,
 		RewardsAdminLocationRequestsController,
@@ -75,6 +95,8 @@ const rewardsQueueImports = redisUrl !== undefined && redisUrl.length > 0 ? [Rew
 		RewardOtpService,
 		RedemptionService,
 		MerchantApiKeyService,
+		MerchantTerminalService,
+		PosPairingService,
 		MerchantKybService,
 		MerchantKybDocumentService,
 		MerchantContextService,

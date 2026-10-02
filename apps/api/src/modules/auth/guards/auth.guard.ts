@@ -2,6 +2,7 @@ import { CanActivate, type ExecutionContext, Injectable, UnauthorizedException }
 import { Reflector } from "@nestjs/core";
 import type { FastifyRequest } from "fastify";
 
+import { RequestContextService } from "../../../common/context/request-context";
 import { readFirstHeader } from "../../../common/utils/http-headers";
 import { hasApiKeyAuthOnRequest } from "../../api-keys/types/api-key-auth-request";
 
@@ -9,6 +10,21 @@ import { AccessTokenStateService } from "../services/access-token-state.service"
 import { TokenService } from "../services/token.service";
 import type { AccessTokenPayload } from "../services/token.service";
 import { IS_PUBLIC_KEY } from "../decorators/public.decorator";
+
+const BEARER_PREFIX = "Bearer ";
+
+/**
+ * The token of an `Authorization: Bearer <token>` header, or `undefined` when
+ * there is none. A blank bearer (`"Bearer "`, sent by API tools whose token
+ * field is empty) counts as NO bearer, so it never hides a valid session cookie.
+ */
+export function readBearerToken(authorization: string | undefined): string | undefined {
+	if (authorization?.startsWith(BEARER_PREFIX) !== true) {
+		return undefined;
+	}
+	const token: string = authorization.slice(BEARER_PREFIX.length).trim();
+	return token.length > 0 ? token : undefined;
+}
 
 /**
  * Guard that validates the JWT access token.
@@ -22,7 +38,8 @@ import { IS_PUBLIC_KEY } from "../decorators/public.decorator";
  * the guard throws an `UnauthorizedException`.
  *
  * - Skips authentication for routes decorated with `@Public()`
- * - Attaches the decoded payload to `request.user` on the JWT path
+ * - Attaches the decoded payload to `request.user` on the JWT path and binds
+ *   the principal (user + impersonator) into the request context (ADR 017)
  */
 @Injectable()
 export class AuthGuard implements CanActivate {
@@ -30,6 +47,7 @@ export class AuthGuard implements CanActivate {
 		private readonly tokenService: TokenService,
 		private readonly accessTokenState: AccessTokenStateService,
 		private readonly reflector: Reflector,
+		private readonly requestContext: RequestContextService,
 	) {}
 
 	public async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -43,8 +61,7 @@ export class AuthGuard implements CanActivate {
 			return true;
 		}
 
-		const authorization: string | undefined = request.headers.authorization;
-		const bearer: string | undefined = authorization?.startsWith("Bearer ") ? authorization.slice(7) : undefined;
+		const bearer: string | undefined = readBearerToken(request.headers.authorization);
 
 		// Web and admin use isolated cookie pairs so logout in one app does not
 		// clear the session in the other. Pick the cookie set from X-Client-Type.
@@ -68,6 +85,10 @@ export class AuthGuard implements CanActivate {
 			const payload: AccessTokenPayload = await this.tokenService.verifyAccessToken(token);
 			await this.accessTokenState.assertTokenValid(payload.sub, payload.tokenVersion);
 			request.user = payload;
+			this.requestContext.bindPrincipal({
+				userId: payload.sub,
+				impersonatorId: payload.isImpersonating === true ? payload.originalUserId : undefined,
+			});
 			return true;
 		} catch (error) {
 			if (error instanceof UnauthorizedException) {

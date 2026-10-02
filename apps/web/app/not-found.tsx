@@ -2,6 +2,7 @@ import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 
 import { NotFoundContent } from "@workspace/ui/components/feedback/not-found-content";
+import { ROUTES } from "@/lib/routes";
 
 /**
  * Global not-found boundary for the web app — any URL that matches no route
@@ -18,7 +19,7 @@ export default function WebNotFound(): React.JSX.Element {
 			message="This page doesn't exist. Head back to the homepage or check the address you typed."
 			backLink={
 				<Link
-					href="/"
+					href={ROUTES.home}
 					className="inline-flex items-center gap-1.5 rounded-md bg-foreground px-4 py-2 text-sm font-medium text-background transition-colors hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none">
 					<ArrowLeft className="size-4" />
 					Back to home

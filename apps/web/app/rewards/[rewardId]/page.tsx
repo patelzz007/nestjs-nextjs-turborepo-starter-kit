@@ -1,5 +1,6 @@
 import { LandingShell } from "@/components/landing/landing-shell";
 import { RewardDetailView } from "@/components/rewardhub/detail/view";
+import { landingSectionPath, LANDING_SECTION_IDS } from "@/lib/routes";
 import { createWebServerCaller } from "@/lib/web-server-api";
 import { buttonVariants } from "@workspace/ui/components/form/button";
 import { cn } from "@workspace/ui/lib/core/utils";
@@ -25,7 +26,7 @@ export default async function PublicRewardDetailPage({ params }: { readonly para
 	return (
 		<LandingShell>
 			<div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
-				<Link href="/#rewards" className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "mb-6 -ml-2 gap-1.5")}>
+				<Link href={landingSectionPath(LANDING_SECTION_IDS.rewards)} className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "mb-6 -ml-2 gap-1.5")}>
 					<ArrowLeft className="size-4" aria-hidden="true" />
 					Back to offers
 				</Link>

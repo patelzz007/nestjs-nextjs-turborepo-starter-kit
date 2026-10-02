@@ -4,7 +4,7 @@ tags: ["architecture", "system-design", "monorepo"]
 description: "The big picture: what each workspace is for, how data flows between frontends and backend, and where new code belongs."
 order: 2
 author: "Acme Inc."
-lastUpdated: 1785628800000
+lastUpdated: 1790812800000
 coverImage: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1600&q=80"
 ---
 
@@ -107,34 +107,43 @@ Key points:
 - **The API runs on the Fastify adapter** (`@nestjs/platform-fastify`): cookies via
   `@fastify/cookie`, CORS via `@fastify/cors`, Nest middleware through bundled middie,
   and `rawBody: true` for the signature-verified Resend webhook. Express is fully removed.
-  Additional native plugins: `@fastify/request-context` (AsyncLocalStorage per-request
-  store), `@fastify/rate-limit` (per-IP, tighter cap on the webhook), `@fastify/compress`
+  Additional native plugins: `@fastify/rate-limit` (per-IP, tighter cap on the webhook), `@fastify/compress`
   (gzip/brotli), `@fastify/etag`, `@fastify/under-pressure` (event-loop/heap health).
+  The per-request store is the one typed request context
+  (`common/context/request-context.ts`, entered by `RequestContextMiddleware` —
+  [ADR 017](./adr/017-unified-request-context.md)); configuration is validated once
+  before boot ([API Configuration](./api-configuration.md)).
 - **Every business endpoint is served under `/api/v1` via EXPLICIT path helpers** —
   no Nest `enableVersioning` machinery (no `VERSION_NEUTRAL`/exclude quirks).
   `API_VERSION_PREFIX` + `apiPath()` in `packages/shared/src/contracts/versioning.ts`
   (re-exported from `contracts/index.ts`) is the single source of truth: server
   controllers build their `@Controller` paths with `apiPath("/auth")` → `/api/v1/auth`,
   and the client transport prepends the same constant to the logical contract paths.
-  `GET /`, `GET /health`, `GET /version` and `POST /notifications/email-webhook` stay
-  unversioned by not using the helper. Swagger is served at `/v1/docs` (`/docs`
-  redirects there). See [section 5](#5-api-versioning) for the full invariants —
+  `GET /`, `GET /health` (+ `/health/live`, `/health/ready`, `/health/deep`), `GET /version`
+  and `POST /notifications/email-webhook` stay unversioned by not using the helper. Swagger is
+  served at `/v1/docs` (`/docs` redirects there) — public, and on in every environment
+  unless `SWAGGER_ENABLED=0` (see
+  [API Routes → API docs](./api-routes.md#13-api-docs-swagger)). See [section 5](#5-api-versioning) for the full invariants —
   including the version manifest, `Accept-version` rewriting, and how to add a v2.
 - **Authentication is cookie-based.** The API sets `httpOnly` cookies on login; the
   frontends never store tokens in JS. `useApi` sends `credentials: "include"`, so the
   browser attaches the cookies automatically.
-- **No hardcoded URLs in shared packages.** `packages/client/src/lib/config.ts`
-  exports `API_BASE_URL`, resolved from `NEXT_PUBLIC_API_URL` (localhost fallback for
-  dev). Each app sets its own value in `apps/web/.env` / `apps/admin/.env`, so a
-  deployed web app points at the production API without code changes. The API reads
+- **No hardcoded URLs in shared packages.** `packages/client/src/lib/api/config.ts`
+  exports `API_BASE_URL`, parsed from `NEXT_PUBLIC_API_URL` with zod. There is no
+  localhost fallback: a missing value fails fast. Each app sets its own value in
+  `apps/<app>/.env` and reads the rest of its config through
+  `lib/env/env.client.ts` / `env.server.ts` (see [Configuration](./configuration.md)),
+  so a deployed web app points at the production API without code changes. The API reads
   `PORT` and `CORS_ORIGINS` (comma-separated) from `apps/api/.env` instead of
   hardcoding `8080` and localhost origins.
 - **The API response is always wrapped** by the `ResponseInterceptor`:
   `{ success: true, data, meta }` (or `{ success: false, error, meta }` on failure).
   The typed endpoint registry in `@workspace/client` models this exact envelope.
 - **`@workspace/shared` schemas are the single source of truth** for request/response
-  shapes: the API's DTOs extend them (via `createZodDto`), Swagger infers from them,
-  and the frontend's typed hooks validate responses with them.
+  shapes: the API validates inputs with them (`@ZodBody` & co.), documents and enforces every
+  response with them (`@ZodResponse` / `@ZodPaginatedResponse`, ADR 022), Swagger and the
+  committed `docs/generated/openapi.json` are generated from them, and the frontend's typed
+  client validates every response with the same contract leaf.
 
 ---
 
@@ -199,7 +208,7 @@ Schemas are grouped by domain (`auth/`, `api/`, `domain/`, `email/`, `runtime/`)
   export type LoginInput = z.output<typeof LoginSchema>;
   ```
 - **Application code consumes the type, not the schema** — use `LoginInput` in signatures; import `LoginSchema` only at HTTP boundaries (`ZodValidationPipe`, `createZodDto`), `.parse()` / `.safeParse()`, and tests. Do not re-export schemas from Nest services, email templates, or thin type-alias files. See `docs/typescript.md` §8.
-- **Internal event bus** — services emit `AuthFlowEvent`, `SessionActionEvent`, `ImpersonationActionEvent`, etc. Producers call `XxxEventSchema.parse({…})` once before `emit*` so Telescope subscribers always receive contract-valid payloads.
+- **Internal event bus** — services emit `AuthFlowEvent`, `SessionActionEvent`, `ImpersonationActionEvent`, etc. Producers call `XxxEventSchema.parse({…})` once before `emit*` so subscribers always receive contract-valid payloads.
 - **No `any`, `unknown`, `never`, no type casting.** Infer everything from Zod.
 - **Add new schemas to the barrel** (`src/index.ts`) or they won't be importable.
 
@@ -279,7 +288,8 @@ Both sides derive from the same definition, so they can never drift.
 ### Version manifest + client negotiation
 
 - `GET /version` (unversioned, root) returns `{ current, default, supported[], docs, prefix }`
-  — parsed by `ApiVersionManifestSchema` in `@workspace/shared`.
+  as a RAW body (no `{ success, data, meta }` envelope — `@ZodRawResponse`) — parsed by
+  `ApiVersionManifestSchema` in `@workspace/shared`.
 - On a **404** from the pinned version, the client transport (`use-api.ts`) fetches
   the manifest once (cached) and retries against `manifest.current` — the
   "deploy-any-or-die" pattern: web/admin can deploy before the API without breaking.
@@ -483,8 +493,8 @@ move it up to the page (smart component) or into `@workspace/client`.
 
 ### `@workspace/api` (port 8080)
 
-- NestJS app. Routes are grouped in `src/modules/` — `health` (`GET /` +
-  `GET /health`), `auth` (credentials, email verification, password reset,
+- NestJS app. Routes are grouped in `src/modules/` — `health` (`GET /`,
+  `GET /health/live`, `GET /health/ready`, legacy `GET /health` + `GET /health/deep`), `auth` (credentials, email verification, password reset,
   `/me`, `/auth/permissions`, SuperAdmin user management), `sessions`
   (refresh / logout / logout-all / active sessions, root `GET /session`),
   `impersonation` (`/auth/impersonate/:userId`, `/auth/stop-impersonation`),
@@ -506,9 +516,10 @@ Do NOT re-register`TypedConfigService` in feature modules; inject the global one
   config, cookie service) live in `modules/auth/{guards,decorators,interceptors,constants,services}`
   and are re-exported by `AuthModule` so `sessions`/`impersonation` still
   resolve them. What remains in `common/`: `response.interceptor`,
-  `correlation-id.middleware`, `zod-validation.pipe`, `utils/` (expiry,
-  client-info — shared by 2+ modules), `dto/` (the shared envelope
-  `api-response` + `response-wrapper`), `interfaces/json.ts`. **DTO rule:**
+  `context/` (request context + correlation id), `middleware/request-context.middleware`, `zod-validation.pipe`, `utils/` (expiry,
+  client-info — shared by 2+ modules), `dto/` (`ApiErrorResponseDto`, the error
+  envelope component), `decorators/` (`zod-request` / `zod-response` — request and
+  response contracts, ADR 022), `interfaces/json.ts`. **DTO rule:**
   modules own their DTOs (`modules/auth/dtos/`, …); `common/dto/` is only for
   shapes shared by 2+ modules.
 - **Module layout convention (point 18):** the controller sits at the module
@@ -518,9 +529,14 @@ Do NOT re-register`TypedConfigService` in feature modules; inject the global one
   `dtos/`; `rbac` hosts its own response schemas (`schemas/`); `health` is
   fully flat; `logs` is a single service. Splitting a module? Keep the same
   URL paths and move only the endpoint + its service methods.
-- Controllers use DTOs built with `createZodDto(<Schema from @workspace/shared>)`.
+- Controllers declare inputs with `@ZodBody` / `@ZodQuery` / `@ZodParams` and responses with
+  `@ZodResponse` / `@ZodPaginatedResponse` (schemas from `@workspace/shared`) — see
+  [Response contracts](./response-contracts.md).
 - Swagger docs live at `http://localhost:8080/v1/docs` (inferred from the same schemas).
-- The `ResponseInterceptor` wraps every response in `{ success, data, meta }`.
+- The `ResponseInterceptor` wraps every response in `{ success, data, meta }`; every failure
+  goes through `GlobalExceptionFilter` and answers
+  `{ success: false, error: { code, message, details? }, meta }` — see
+  [Error Model](./error-model.md).
 - **NestJS v12 + Rspack prod bundle.** `pnpm dev` → `rspack --watch --mode development`
   (built-in SWC + `RunScriptWebpackPlugin` restarts Node after each rebuild →
   `dist/main.js`), `pnpm build` → `rspack build --mode production`, `pnpm start` →

@@ -1,6 +1,6 @@
 "use client";
 
-import { stubPaginatedMetaFromHydration, successEnvelope } from "@/lib/api-envelope";
+import { initialDataOption, stubPaginatedMetaFromHydration, successEnvelope } from "@workspace/client/lib/api/envelope";
 import { WebEmptyState } from "@/components/web-ui/empty-state";
 import { WebPageHeader } from "@/components/web-ui/page-header";
 import { WebStatCard } from "@/components/web-ui/stat-card";
@@ -14,12 +14,13 @@ import { format } from "date-fns";
 import { Gift, QrCode, Ticket } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
+import { ROUTES, walletClaimPath } from "@/lib/routes";
 
 const CLAIMS_LIMIT = 20;
 
 export interface MyClaimsPageViewProps {
-	readonly initialClaims?: readonly RewardClaimResponse[];
-	readonly initialListMeta?: ApiPaginatedMeta;
+	readonly initialClaims?: readonly RewardClaimResponse[] | undefined;
+	readonly initialListMeta?: ApiPaginatedMeta | undefined;
 }
 
 /** List of the signed-in user's reward claims. */
@@ -34,12 +35,7 @@ export function MyClaimsPageView({ initialClaims, initialListMeta }: MyClaimsPag
 		[initialClaims, initialListMeta],
 	);
 
-	const claimsQuery = api.claims.list.useQuery(
-		{ page: 1, limit: CLAIMS_LIMIT },
-		{
-			initialData: initialQueryData,
-		},
-	);
+	const claimsQuery = api.claims.list.useQuery({ page: 1, limit: CLAIMS_LIMIT }, initialDataOption(initialQueryData));
 	const claims: readonly RewardClaimResponse[] = claimsQuery.data?.data ?? [];
 	const isLoading = claimsQuery.isLoading && initialClaims === undefined;
 
@@ -62,7 +58,7 @@ export function MyClaimsPageView({ initialClaims, initialListMeta }: MyClaimsPag
 					description="Browse local rewards and claim your first offer — it will appear here with a QR code for redemption."
 					icon={<Gift className="size-5" aria-hidden="true" />}
 					action={
-						<Link href="/" className={cn(buttonVariants())}>
+						<Link href={ROUTES.rewardHub.browse} className={cn(buttonVariants())}>
 							Browse rewards
 						</Link>
 					}
@@ -79,7 +75,7 @@ export function MyClaimsPageView({ initialClaims, initialListMeta }: MyClaimsPag
 								<div className="flex items-center gap-2">
 									<Badge variant="outline">{claim.status}</Badge>
 									{claim.status === "PENDING" ? (
-										<Link href={`/rewardhub/claims/${claim.id}`} className={cn(buttonVariants())}>
+										<Link href={walletClaimPath(claim.id)} className={cn(buttonVariants())}>
 											Show QR
 										</Link>
 									) : null}

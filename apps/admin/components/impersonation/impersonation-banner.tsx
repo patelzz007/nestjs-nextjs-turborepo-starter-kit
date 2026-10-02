@@ -2,10 +2,13 @@
 
 import { invalidateSessionAuth } from "@workspace/client/lib/auth/session/invalidate-auth";
 import { useAuth } from "@workspace/client/lib/auth";
+import { APP_LINKS } from "@workspace/shared";
 import { Button } from "@workspace/ui/components/form/button";
 import { useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle } from "lucide-react";
 import * as React from "react";
+
+import { clientEnv } from "@/lib/env/env.client";
 
 /**
  * Banner shown while a super-admin is impersonating another user.
@@ -27,8 +30,8 @@ export function ImpersonationBanner(): React.JSX.Element | null {
 	const session = permissionsQuery.data?.data;
 	const isImpersonating = session?.isImpersonating === true;
 
-	const webUrl = process.env.NEXT_PUBLIC_WEB_URL ?? "http://localhost:3000";
-	const merchantUrl = process.env.NEXT_PUBLIC_MERCHANT_URL ?? "http://localhost:3003";
+	const webUrl: string = clientEnv.NEXT_PUBLIC_WEB_URL;
+	const merchantUrl: string = clientEnv.NEXT_PUBLIC_MERCHANT_URL;
 
 	const handleStop = React.useCallback((): void => {
 		void stopMutation.mutateAsync({});
@@ -46,7 +49,7 @@ export function ImpersonationBanner(): React.JSX.Element | null {
 					<span className="min-w-0">You are impersonating another user. Actions run as the impersonated account.</span>
 				</div>
 				<div className="flex shrink-0 flex-wrap items-center gap-2">
-					<a href={`${webUrl}/rewardhub`} target="_blank" rel="noopener noreferrer" className="text-sm underline underline-offset-4">
+					<a href={`${webUrl}${APP_LINKS.web.rewardHub}`} target="_blank" rel="noopener noreferrer" className="text-sm underline underline-offset-4">
 						Consumer portal
 					</a>
 					<a href={merchantUrl} target="_blank" rel="noopener noreferrer" className="text-sm underline underline-offset-4">

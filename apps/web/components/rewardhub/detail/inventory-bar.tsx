@@ -16,13 +16,14 @@ export function RewardInventoryBar({ remaining, total, className, compact = fals
 	if (compact) {
 		return (
 			<div className={cn("flex min-w-[4.5rem] items-center gap-2", className)}>
-				<div className="h-1 min-w-0 flex-1 overflow-hidden rounded-full bg-muted">
+				{/* Decorative: the text beside it states the count. */}
+				<div aria-hidden="true" className="h-1 min-w-0 flex-1 overflow-hidden rounded-full bg-muted">
 					<div
 						className={cn("h-full rounded-full transition-[width] duration-300 motion-reduce:transition-none", isLow ? "bg-warning" : "bg-primary")}
 						style={{ width: `${String(percentLeft)}%` }}
 					/>
 				</div>
-				<span className="shrink-0 text-xs text-muted-foreground tabular-nums">{remaining}</span>
+				<span className="shrink-0 text-xs text-muted-foreground tabular-nums">{remaining} left</span>
 			</div>
 		);
 	}
@@ -35,7 +36,7 @@ export function RewardInventoryBar({ remaining, total, className, compact = fals
 					{remaining} of {total} left
 				</span>
 			</div>
-			<div className="h-1.5 overflow-hidden rounded-full bg-muted">
+			<div aria-hidden="true" className="h-1.5 overflow-hidden rounded-full bg-muted">
 				<div
 					className={cn("h-full rounded-full transition-[width] duration-300 motion-reduce:transition-none", isLow ? "bg-warning" : "bg-primary")}
 					style={{ width: `${String(percentLeft)}%` }}

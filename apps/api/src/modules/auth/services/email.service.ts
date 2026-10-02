@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
 
 import type { EpochMs, EmailSendResult } from "@workspace/shared";
-import { epochMs } from "@workspace/shared";
+import { epochMs, APP_LINKS } from "@workspace/shared";
 
 import { TypedConfigService } from "../../../config/typed-config.service";
 import { EmailSenderService } from "../../notifications/email/email-sender.service";
@@ -75,13 +75,15 @@ export class EmailService {
 		return this.sender.send(template);
 	}
 
+	/** Informational — no button: the recipient may belong to any app, so there is no single place to send them. */
 	public async sendMfaRecoveryUserNotification(email: string, title: string, message: string): Promise<void> {
 		const template = new AdminAlertEmailTemplate({ to: email, title, message });
 		await this.sender.send(template);
 	}
 
 	public async sendMfaRecoveryAdminNotification(email: string, title: string, message: string): Promise<void> {
-		const template = new AdminAlertEmailTemplate({ to: email, title, message });
+		const queueUrl: string = new URL(APP_LINKS.admin.mfaRecoveryQueue, this.config.adminAppUrl).toString();
+		const template = new AdminAlertEmailTemplate({ to: email, title, message, action: { label: "Review recovery requests", url: queueUrl } });
 		await this.sender.send(template);
 	}
 }

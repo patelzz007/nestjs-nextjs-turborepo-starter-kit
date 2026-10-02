@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { PrismaService } from "../../../../prisma/prisma.service";
 import { TenantMembershipService } from "../tenant-membership.service";
+import { createTestTypedConfig } from "../../../../../test/support/test-api-env";
 
 const mocks = vi.hoisted(() => ({
 	membershipFindFirst: vi.fn(),
@@ -26,16 +27,16 @@ const stores: Readonly<Record<string, { readonly id: string; readonly organizati
 	"store-b1": { id: "store-b1", organizationId: "org-b", locationId: "loc-b1" },
 };
 
-const service = (): TenantMembershipService => new TenantMembershipService(new PrismaService());
+const service = (): TenantMembershipService => new TenantMembershipService(new PrismaService(createTestTypedConfig()));
 
 describe("TenantMembershipService.verify", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
-		mocks.locationFindFirst.mockImplementation(async ({ where }: { where: { id: string } }) => {
+		mocks.locationFindFirst.mockImplementation(({ where }: { where: { id: string } }) => {
 			const organizationId = locations[where.id];
-			return organizationId === undefined ? null : { organizationId };
+			return Promise.resolve(organizationId === undefined ? null : { organizationId });
 		});
-		mocks.storeFindFirst.mockImplementation(async ({ where }: { where: { id: string } }) => stores[where.id] ?? null);
+		mocks.storeFindFirst.mockImplementation(({ where }: { where: { id: string } }) => Promise.resolve(stores[where.id] ?? null));
 		mocks.storeMembershipFindFirst.mockResolvedValue(null);
 	});
 
@@ -53,9 +54,7 @@ describe("TenantMembershipService.verify", () => {
 
 		expect(result.organizationRejected).toBe(true);
 		expect(result.context).toEqual({});
-		expect(mocks.membershipFindFirst).toHaveBeenCalledWith(
-			expect.objectContaining({ where: expect.objectContaining({ userId: "user-1", organizationId: "org-b", status: "ACTIVE", isDeleted: false }) }),
-		);
+		expect(mocks.membershipFindFirst.mock.lastCall?.[0]).toMatchObject({ where: { userId: "user-1", organizationId: "org-b", status: "ACTIVE", isDeleted: false } });
 	});
 
 	it("verifies an active membership", async () => {

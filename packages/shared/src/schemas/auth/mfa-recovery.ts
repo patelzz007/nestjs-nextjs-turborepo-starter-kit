@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { EpochMsSchema } from "../api/common";
-import { PaginationSchema } from "../api/pagination";
+import { defineListQuery, listFilter } from "../api/list-query";
 
 export const MfaRecoveryRequestStatusSchema = z.enum(["PENDING", "APPROVED", "DENIED", "COMPLETED", "NONE"]);
 
@@ -20,13 +20,11 @@ export const InitiateMfaRecoverySchema = z
 
 export type InitiateMfaRecoveryInput = z.output<typeof InitiateMfaRecoverySchema>;
 
-export const MfaRecoveryStatusResponseSchema = z
-	.object({
-		status: MfaRecoveryRequestStatusSchema,
-		scheduledUnlockAt: EpochMsSchema.optional(),
-		message: z.string(),
-	})
-	.strict();
+export const MfaRecoveryStatusResponseSchema = z.object({
+	status: MfaRecoveryRequestStatusSchema,
+	scheduledUnlockAt: EpochMsSchema.optional(),
+	message: z.string(),
+});
 
 export type MfaRecoveryStatusResponse = z.output<typeof MfaRecoveryStatusResponseSchema>;
 
@@ -41,28 +39,32 @@ export const AdminReviewMfaRecoverySchema = z
 export type AdminReviewMfaRecoveryInput = z.output<typeof AdminReviewMfaRecoverySchema>;
 
 /** Admin-visible MFA recovery request with user identity. */
-export const AdminMfaRecoveryRequestSchema = z
-	.object({
-		id: z.uuid(),
-		userId: z.uuid(),
-		userEmail: z.string(),
-		userFullName: z.string(),
-		status: MfaRecoveryRecordStatusSchema,
-		requestedAt: EpochMsSchema,
-		reviewedBy: z.uuid().nullable(),
-		reviewedAt: EpochMsSchema.nullable(),
-		scheduledUnlockAt: EpochMsSchema.nullable(),
-		completedAt: EpochMsSchema.nullable(),
-		notes: z.string().nullable(),
-	})
-	.strict();
+export const AdminMfaRecoveryRequestSchema = z.object({
+	id: z.uuid(),
+	userId: z.uuid(),
+	userEmail: z.string(),
+	userFullName: z.string(),
+	status: MfaRecoveryRecordStatusSchema,
+	requestedAt: EpochMsSchema,
+	reviewedBy: z.uuid().nullable(),
+	reviewedAt: EpochMsSchema.nullable(),
+	scheduledUnlockAt: EpochMsSchema.nullable(),
+	completedAt: EpochMsSchema.nullable(),
+	notes: z.string().nullable(),
+});
 
 export type AdminMfaRecoveryRequest = z.output<typeof AdminMfaRecoveryRequestSchema>;
 
-export const AdminMfaRecoveryListQuerySchema = PaginationSchema.extend({
-	limit: z.coerce.number().int().min(1).max(100).optional().default(20),
-	status: MfaRecoveryRecordStatusSchema.optional(),
-	userId: z.uuid().optional(),
-}).strict();
-
+/** `GET /auth/admin/mfa/recovery/requests` list query — see docs/list-queries.md. */
+export const adminMfaRecoveryListQuery = defineListQuery({
+	sortable: ["requestedAt", "createdAt"],
+	defaultSort: [{ field: "requestedAt", direction: "desc" }],
+	filter: {
+		status: listFilter.enumeration(MfaRecoveryRecordStatusSchema, { eq: true, in: true }),
+		userId: listFilter.uuid({ eq: true }),
+	},
+	params: {},
+});
+export const AdminMfaRecoveryListQuerySchema = adminMfaRecoveryListQuery.schema;
 export type AdminMfaRecoveryListQuery = z.output<typeof AdminMfaRecoveryListQuerySchema>;
+export type AdminMfaRecoveryListSortField = (typeof adminMfaRecoveryListQuery.sortable)[number];

@@ -1,11 +1,12 @@
-import { BadRequestException, Controller, ForbiddenException, Param, Post, Req, UseInterceptors } from "@nestjs/common";
-import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
+import { BadRequestException, Controller, ForbiddenException, HttpStatus, Post, Req, UseInterceptors } from "@nestjs/common";
+import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { Throttle } from "@nestjs/throttler";
 import type { ImpersonateServiceResponse, StopImpersonationServiceResponse } from "@workspace/shared";
 import { ImpersonateResponseSchema, StopImpersonationResponseSchema, UuidParamSchema, apiPath } from "@workspace/shared";
 import type { FastifyRequest } from "fastify";
 
-import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe";
+import { ZodParam } from "../../common/decorators/zod-request.decorators";
+import { ZodResponse } from "../../common/decorators/zod-response.decorators";
 import { TypedConfigService } from "../../config/typed-config.service";
 import { EmailVerified } from "../auth/decorators/email-verified.decorator";
 import { GetUser } from "../auth/decorators/get-user.decorator";
@@ -14,16 +15,12 @@ import { RequiresFullSession } from "../auth/decorators/requires-full-session.de
 import { SuperAdminOnly } from "../auth/decorators/super-admin.decorator";
 import type { AccessTokenPayload, RefreshTokenPayload } from "../auth/services/token.service";
 import { ApiErrorResponseDto } from "../../common/dto/api-response.dto";
-import { createWrappedDto } from "../../common/dto/response-wrapper";
 import { extractClientInfo } from "../../common/utils/client-info";
 import { RlsBypass } from "../auth/decorators/rls-bypass.decorator";
 import { SetAuthCookiesInterceptor } from "../auth/interceptors/set-auth-cookies.interceptor";
 import { Authorize } from "../authorization/decorators/authorize.decorator";
 
 import { ImpersonationService } from "./impersonation.service";
-
-const WrappedImpersonateResponse = createWrappedDto(ImpersonateResponseSchema, "WrappedImpersonateResponse");
-const WrappedStopImpersonationResponse = createWrappedDto(StopImpersonationResponseSchema, "WrappedStopImpersonationResponse");
 
 /**
  * SuperAdmin impersonation endpoints.
@@ -35,7 +32,7 @@ const WrappedStopImpersonationResponse = createWrappedDto(StopImpersonationRespo
 @ApiTags("Impersonation")
 @Controller(apiPath("/auth"))
 export class ImpersonationController {
-	constructor(
+	public constructor(
 		private readonly impersonationService: ImpersonationService,
 		private readonly config: TypedConfigService,
 	) {}
@@ -61,11 +58,11 @@ export class ImpersonationController {
 	@Post("/impersonate/:userId")
 	@UseInterceptors(SetAuthCookiesInterceptor)
 	@ApiOperation({ summary: "SuperAdmin: impersonate another user" })
-	@ApiOkResponse({ type: WrappedImpersonateResponse, description: "Impersonation started" })
+	@ZodResponse(ImpersonateResponseSchema, { status: HttpStatus.CREATED, description: "Impersonation started — the impersonation token is set as an httpOnly cookie" })
 	@ApiResponse({ status: 403, type: ApiErrorResponseDto, description: "SuperAdmin privileges required" })
 	public async impersonate(
 		@GetUser() user: AccessTokenPayload | RefreshTokenPayload | undefined,
-		@Param("userId", new ZodValidationPipe(UuidParamSchema)) targetUserId: string,
+		@ZodParam("userId", UuidParamSchema) targetUserId: string,
 		@Req() req: FastifyRequest,
 	): Promise<ImpersonateServiceResponse> {
 		const admin = requireAccessToken(user);
@@ -94,7 +91,7 @@ export class ImpersonationController {
 	@Post("/stop-impersonation")
 	@UseInterceptors(SetAuthCookiesInterceptor)
 	@ApiOperation({ summary: "Stop impersonating and restore the original admin session" })
-	@ApiOkResponse({ type: WrappedStopImpersonationResponse, description: "Impersonation ended" })
+	@ZodResponse(StopImpersonationResponseSchema, { status: HttpStatus.CREATED, description: "Impersonation ended — the admin token is restored as an httpOnly cookie" })
 	public async stopImpersonation(
 		@GetUser() user: AccessTokenPayload | RefreshTokenPayload | undefined,
 		@Req() req: FastifyRequest,

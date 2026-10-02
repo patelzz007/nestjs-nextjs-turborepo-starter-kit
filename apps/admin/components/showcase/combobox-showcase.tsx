@@ -150,7 +150,7 @@ export function ComboboxShowcase(): React.JSX.Element {
 							<ComboboxContent>
 								<ComboboxList>
 									{LANGUAGES.map((option) => (
-										<ComboboxItem key={option.value} value={option.value} description={option.description}>
+										<ComboboxItem key={option.value} value={option.value} {...(option.description !== undefined ? { description: option.description } : {})}>
 											{option.label}
 										</ComboboxItem>
 									))}
@@ -273,7 +273,7 @@ export function ComboboxShowcase(): React.JSX.Element {
 									<ComboboxGroup key={group[0]?.value}>
 										<ComboboxLabel>{group[0]?.group}</ComboboxLabel>
 										{group.map((option) => (
-											<ComboboxItem key={option.value} value={option.value} description={option.group}>
+											<ComboboxItem key={option.value} value={option.value} {...(option.group !== undefined ? { description: option.group } : {})}>
 												{option.label}
 											</ComboboxItem>
 										))}

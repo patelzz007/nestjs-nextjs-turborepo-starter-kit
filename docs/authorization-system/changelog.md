@@ -4,7 +4,7 @@ tags: ["authorization", "changelog", "migration", "security"]
 description: "Everything that changed in the authorization overhaul: security fixes, new kernel features, stores, RLS hardening, frontend gating, removed code, breaking changes, and known follow-ups."
 order: 28
 author: "Platform Team"
-lastUpdated: 1790812800000
+lastUpdated: 1790899200000
 coverImage: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=1600&q=80"
 ---
 
@@ -30,6 +30,8 @@ coverImage: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=f
 | 8 | `POST /files/upload-url` only checked avatars — anyone could get upload tickets for other organizations' KYB documents, store logos, or any product image | `FileUploadAuthorizationService` per-category rules |
 | 9 | The default tenant policy let **cashiers do every Reward Hub action** (manage rewards, API keys) | Shared `MERCHANT_ROLE_CAPABILITIES` enforced **before** Cedar; cashiers are read-only |
 | 10 | Any organization member could read the KYB profile and download KYB documents | KYB read, download and submit are **owner-only** |
+| 11 | Team, store-location and KYB endpoints checked **hard-coded role lists** inside services, mirrored by a client role table "kept in lockstep"; the merchant sidebar showed Team / Verification to every role (e.g. cashiers) and led to denied pages | New capabilities `merchant:manage_team`, `merchant:view_locations`, `merchant:manage_locations`, `merchant:manage_verification` in the shared role table, enforced by `requireMembershipCapability` (role table → Cedar) with the **same allowed roles**; the client role table is deleted; every org page is guarded on the server by `guardOrgPage` + `ORG_PAGE_RULES`; sidebar / palette hide what the role cannot open |
+| 12 | `GET /files/:id/download-url` handed **any signed-in user** a signed URL for any organization file (including KYB documents) whose id they knew; completing an upload re-bound store branding without re-checking; delete was uploader-only (a removed member could still delete branding, an admin could not); organization uploads skipped Cedar | `FileAuthorizationService` authorizes upload, complete, read, download and delete per category through `requireMembershipCapability` (role table → Cedar, audited) |
 
 ---
 
@@ -81,7 +83,7 @@ coverImage: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=f
 - Shared vocabulary `PERMISSION`, `ACTION`, `RESOURCE`, `MERCHANT_CAPABILITY`, `MERCHANT_ROLE_CAPABILITIES`.
 - `useAuthorization()` with `can`, `cannot`, `canAll`, `canAny`, resource-aware checks; `<Can resource fallback>`.
 - Admin: provider mounted; route guard; menu requirements in `menu-authorization.ts`; palette and pinned items use the filtered menu; every feature area gated; `DisabledActionButton`, `AccessRestrictedNotice`, `useSuperAdminStatus`.
-- Merchant: moved onto the shared provider; typed constants; loading states; role gates; owner-only KYB.
+- Merchant: moved onto the shared provider; typed constants; loading states; owner-only KYB. Role gates (`MerchantRoleGate`, `useMerchantRoleAccess`, `lib/org/membership-roles.ts`) were later replaced by capabilities and a server-side page guard (`guardOrgPage`, `ORG_PAGE_RULES`).
 - Web: one provider for the whole app; `AccessGate`; impersonation gated; guests never fetch permissions.
 - Live permissions win even when empty; refetch on focus and every 60 s.
 - Sidebar schema: `authorization { permissions, mode, cascade }`, `featureFlag`; legacy `requiredCapabilities` removed; slugs validated at load.
@@ -126,6 +128,9 @@ Products and sample categories are ordinary code now:
 | `useDebouncedCallback` (ui) takes one argument | — |
 | `@workspace/client` error helpers take `CaughtValue` | narrow caught errors first |
 | Role-service mutations accept an `actorId`; `RoleService.updateAs()` added | pass the actor |
+| Merchant team / location / KYB denials return `ORGANIZATION_ROLE_CAPABILITY_REQUIRED` instead of `ORGANIZATION_TEAM_FORBIDDEN` / `ORGANIZATION_LOCATION_FORBIDDEN` / `ORGANIZATION_OWNER_REQUIRED` (still `403`); they also pass the tenant Cedar policy now | match on the new code; make sure the organization has a published tenant policy |
+| `MerchantContextService.requireOwnerRole`, `useMerchantRoleAccess`, `MerchantRoleGate`, `membershipRole` on `useMerchantAuthorizationStatus()` removed | use `MERCHANT_CAPABILITY.*` with `requireUserCapability` / `MerchantCapabilityGate` / `useAuthorization()` |
+| `OrganizationRewardAuthService.requireCedarAction` takes the membership **role** (not the whole membership) | pass `membership.role` |
 
 ---
 

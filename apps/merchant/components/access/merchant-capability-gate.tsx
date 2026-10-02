@@ -1,7 +1,6 @@
 "use client";
 
-import { useMerchantAuthorizationStatus, useMerchantRoleAccess } from "@/components/access/merchant-authorization-provider";
-import type { MerchantRoleAction } from "@/lib/org/membership-roles";
+import { useMerchantAuthorizationStatus } from "@/components/access/merchant-authorization-provider";
 import { Can } from "@workspace/client/lib/auth/can";
 import type { CapabilitySlug } from "@workspace/shared";
 import { Skeleton } from "@workspace/ui/components/feedback/skeleton";
@@ -74,27 +73,4 @@ export function MerchantCapabilityGate({ capability, children, fallback }: Merch
 			{children}
 		</Can>
 	);
-}
-
-export interface MerchantRoleGateProps {
-	readonly action: MerchantRoleAction;
-	readonly children: React.ReactNode;
-	/** Rendered when denied. Defaults to {@link MerchantAccessDenied}. */
-	readonly fallback?: React.ReactNode;
-}
-
-/** Page/section gate for OWNER/ADMIN-only organization actions that have no capability slug. */
-export function MerchantRoleGate({ action, children, fallback }: MerchantRoleGateProps): React.JSX.Element {
-	const { isLoading } = useMerchantAuthorizationStatus();
-	const allowed = useMerchantRoleAccess(action);
-
-	if (isLoading) {
-		return <MerchantAccessLoading />;
-	}
-
-	if (!allowed) {
-		return <>{fallback ?? <MerchantAccessDenied />}</>;
-	}
-
-	return <>{children}</>;
 }

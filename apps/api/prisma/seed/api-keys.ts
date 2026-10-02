@@ -3,7 +3,8 @@ import * as bcrypt from "bcrypt";
 
 import { prisma } from "./client";
 import { requireRow } from "./require-row";
-import { daysAgo, daysFromNow, generateSeedApiKey, rand, randInt } from "./helpers";
+import { daysAgo, daysFromNow, generateSeedApiKey, rand, randInt, randomIpv4 } from "./helpers";
+import { seedLog } from "./seed-log";
 
 export async function createApiKeys(users: User[]): Promise<void> {
 	// NOTE: Keys are NOT deleted here on purpose — volatile cleanup happens at
@@ -20,9 +21,9 @@ export async function createApiKeys(users: User[]): Promise<void> {
 		);
 
 	// Track raw keys to display to the tester
-	const rawKeyLog: Array<{ email: string; name: string; rawKey: string }> = [];
+	const rawKeyLog: { email: string; name: string; rawKey: string }[] = [];
 
-	const rows: Array<{
+	const rows: {
 		userId: string;
 		name: string;
 		keyHash: string;
@@ -30,11 +31,11 @@ export async function createApiKeys(users: User[]): Promise<void> {
 		scopes: string[];
 		rateLimitTier: string;
 		isActive: boolean;
-		expiresAt?: number;
-	}> = [];
+		expiresAt: number | null;
+	}[] = [];
 
 	// Helper: generate a key row using random key + log the raw key for display
-	const addKey = async (email: string, name: string, scopes: string[], tier: string, active: boolean, expiresAt?: number) => {
+	const addKey = async (email: string, name: string, scopes: string[], tier: string, active: boolean, expiresAt?: number): Promise<void> => {
 		const { rawKey, keyPrefix } = generateSeedApiKey();
 		const keyHash = await hash(rawKey);
 		rows.push({
@@ -45,7 +46,7 @@ export async function createApiKeys(users: User[]): Promise<void> {
 			scopes,
 			rateLimitTier: tier,
 			isActive: active,
-			expiresAt,
+			expiresAt: expiresAt ?? null,
 		});
 		rawKeyLog.push({ email, name, rawKey });
 	};
@@ -84,13 +85,13 @@ export async function createApiKeys(users: User[]): Promise<void> {
 	await prisma.apiKey.createMany({ data: rows, skipDuplicates: true });
 
 	// ── Display generated keys so testers can use them ─────────────────────
-	console.log("");
-	console.log("  📋 Generated API Keys (use these for testing):");
-	console.log("  ─────────────────────────────────────────────────────────");
+	seedLog("");
+	seedLog("  📋 Generated API Keys (use these for testing):");
+	seedLog("  ─────────────────────────────────────────────────────────");
 	for (const entry of rawKeyLog) {
-		console.log(`  ${entry.email.padEnd(35)} ${entry.rawKey}`);
+		seedLog(`  ${entry.email.padEnd(35)} ${entry.rawKey}`);
 	}
-	console.log("");
+	seedLog("");
 }
 
 export async function createApiKeyUsageLogs(): Promise<void> {
@@ -101,7 +102,7 @@ export async function createApiKeyUsageLogs(): Promise<void> {
 
 	if (apiKeys.length === 0) return;
 
-	type UsageRow = {
+	interface UsageRow {
 		apiKeyId: string;
 		endpoint: string;
 		method: string;
@@ -110,9 +111,8 @@ export async function createApiKeyUsageLogs(): Promise<void> {
 		userAgent: string;
 		responseTimeMs: number;
 		createdAt: number;
-	};
+	}
 
-	const ip = () => `${randInt(1, 254)}.${randInt(0, 255)}.${randInt(0, 255)}.${randInt(1, 254)}`;
 	const ENDPOINTS = ["/api/v1/urls", "/api/v1/urls/ali-gh", "/api/v1/tags", "/api/v1/analytics", "/api/v1/api-keys"];
 	const METHODS = ["GET", "POST", "PATCH", "DELETE"];
 	const AGENTS = ["axios/1.7.0", "curl/8.4.0", "PostmanRuntime/7.36.0", "python-requests/2.31.0", "okhttp/4.12.0"];
@@ -129,7 +129,7 @@ export async function createApiKeyUsageLogs(): Promise<void> {
 				endpoint: rand(ENDPOINTS),
 				method: rand(METHODS),
 				statusCode: rand(STATUSES),
-				ipAddress: ip(),
+				ipAddress: randomIpv4(),
 				userAgent: rand(AGENTS),
 				responseTimeMs: randInt(15, 450),
 				createdAt: daysAgo(randInt(1, 30)),

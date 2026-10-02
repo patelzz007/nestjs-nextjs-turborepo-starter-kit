@@ -1,5 +1,5 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, UseInterceptors } from "@nestjs/common";
-import { ApiBearerAuth, ApiBody, ApiOkResponse, ApiOperation, ApiSecurity, ApiTags } from "@nestjs/swagger";
+import { Controller, Get, HttpStatus, Patch, Post, UseInterceptors } from "@nestjs/common";
+import { ApiBearerAuth, ApiBody, ApiOperation, ApiSecurity, ApiTags } from "@nestjs/swagger";
 import { z } from "zod";
 import type { MerchantKybDocumentDownloadResponse, MerchantKybProfileResponse, OrganizationRewardMembershipResponse } from "@workspace/shared";
 
@@ -17,8 +17,20 @@ import {
 	UuidParamSchema,
 	apiContract,
 	apiPath,
+	OrganizationRewardMembershipListResponseSchema,
+	MerchantKybProfileResponseSchema,
+	MerchantKybDocumentDownloadResponseSchema,
+	RewardResponseListSchema,
+	RewardResponseSchema,
+	MerchantApiKeySummarySchema,
+	MerchantApiKeyCreatedSchema,
+	OkResponseSchema,
+	MerchantRedemptionListItemSchema,
+	MerchantAnalyticsResponseSchema,
+	MERCHANT_CAPABILITY,
 } from "@workspace/shared";
-import { ZodValidationPipe } from "../../../common/pipes/zod-validation.pipe";
+import { ZodBody, ZodListQuery, ZodQuery, ZodParams } from "../../../common/decorators/zod-request.decorators";
+import { ZodPaginatedResponse, ZodResponse } from "../../../common/decorators/zod-response.decorators";
 import { AllowApiKeyAuth } from "../../api-keys/decorators/allow-api-key-auth.decorator";
 import { GetMerchantActor } from "../../api-keys/decorators/get-merchant-actor.decorator";
 import { MerchantActorInterceptor } from "../../api-keys/interceptors/merchant-actor.interceptor";
@@ -28,10 +40,9 @@ import { GetUser } from "../../auth/decorators/get-user.decorator";
 import type { AccessTokenPayload } from "../../auth/services/token.service";
 import { OrganizationRewardAuthService } from "../../organization/services/organization-reward-auth.service";
 
-import { MerchantCreateApiKeyDto, MerchantCreateRewardDto, MerchantUpdateRewardDto, RewardsEmptyBodyDto } from "../dtos/rewards.dto";
+import { RewardsEmptyBodyDto } from "../dtos/rewards.dto";
 import { MerchantApiKeyService } from "../services/merchant-api-key.service";
 import { MerchantKybDocumentService } from "../services/merchant-kyb-document.service";
-import { MerchantContextService } from "../services/merchant-context.service";
 import { MerchantKybService } from "../services/merchant-kyb.service";
 import { MerchantRewardService } from "../services/merchant-reward.service";
 import { RewardsAnalyticsService } from "../services/rewards-analytics.service";
@@ -45,7 +56,7 @@ export class OrganizationMembershipsBootstrapController {
 	@SkipAuthThrottle()
 	@Get()
 	@ApiOperation({ summary: "List RewardHub organization memberships for the current user" })
-	@ApiOkResponse({ description: "Organization reward hub memberships" })
+	@ZodResponse(OrganizationRewardMembershipListResponseSchema, { description: "Organization reward hub memberships" })
 	public listMemberships(@GetUser() user: AccessTokenPayload): Promise<OrganizationRewardMembershipResponse[]> {
 		return this.organizationRewardAuth.listMembershipsForUser(user.sub);
 	}
@@ -60,8 +71,11 @@ export class OrganizationRewardMembershipsController {
 	@SkipAuthThrottle()
 	@Get("memberships")
 	@ApiOperation({ summary: "List organization memberships for the current user" })
-	@ApiOkResponse({ description: "Organization reward hub memberships" })
-	public listMemberships(@GetUser() user: AccessTokenPayload): Promise<OrganizationRewardMembershipResponse[]> {
+	@ZodResponse(OrganizationRewardMembershipListResponseSchema, { description: "Organization reward hub memberships" })
+	public listMemberships(
+		@GetUser() user: AccessTokenPayload,
+		@ZodParams(OrganizationSlugParamSchema) _params: z.output<typeof OrganizationSlugParamSchema>,
+	): Promise<OrganizationRewardMembershipResponse[]> {
 		return this.organizationRewardAuth.listMembershipsForUser(user.sub);
 	}
 }
@@ -74,16 +88,15 @@ export class OrganizationKybController {
 		private readonly merchantKyb: MerchantKybService,
 		private readonly organizationRewardAuth: OrganizationRewardAuthService,
 		private readonly kybDocuments: MerchantKybDocumentService,
-		private readonly merchantContext: MerchantContextService,
 	) {}
 
 	@SkipAuthThrottle()
 	@Get()
 	@ApiOperation({ summary: "Get the organization KYB profile (owner only)" })
-	@ApiOkResponse({ description: "Organization KYB profile" })
+	@ZodResponse(MerchantKybProfileResponseSchema, { description: "Organization KYB profile" })
 	public async getProfile(
 		@GetUser() user: AccessTokenPayload,
-		@Param(new ZodValidationPipe(OrganizationSlugParamSchema)) params: z.output<typeof OrganizationSlugParamSchema>,
+		@ZodParams(OrganizationSlugParamSchema) params: z.output<typeof OrganizationSlugParamSchema>,
 	): Promise<MerchantKybProfileResponse> {
 		await this.organizationRewardAuth.resolveOrganizationFromSlug(user.sub, params.orgSlug);
 		return this.merchantKyb.getProfile(user.sub, params.orgSlug);
@@ -91,11 +104,11 @@ export class OrganizationKybController {
 
 	@Patch()
 	@ApiOperation({ summary: "Submit or resubmit business verification details (owner only)" })
-	@ApiOkResponse({ description: "Updated organization KYB profile" })
+	@ZodResponse(MerchantKybProfileResponseSchema, { description: "Updated organization KYB profile" })
 	public async submitKyb(
 		@GetUser() user: AccessTokenPayload,
-		@Param(new ZodValidationPipe(OrganizationSlugParamSchema)) params: z.output<typeof OrganizationSlugParamSchema>,
-		@Body(new ZodValidationPipe(MerchantKybSubmissionFieldsSchema)) body: z.output<typeof MerchantKybSubmissionFieldsSchema>,
+		@ZodParams(OrganizationSlugParamSchema) params: z.output<typeof OrganizationSlugParamSchema>,
+		@ZodBody(MerchantKybSubmissionFieldsSchema) body: z.output<typeof MerchantKybSubmissionFieldsSchema>,
 	): Promise<MerchantKybProfileResponse> {
 		await this.organizationRewardAuth.resolveOrganizationFromSlug(user.sub, params.orgSlug);
 
@@ -104,25 +117,22 @@ export class OrganizationKybController {
 
 	@Get("documents/:documentId/download")
 	@ApiOperation({ summary: "Get a short-lived signed download URL for a CLEAN KYB document (owner only)" })
-	@ApiOkResponse({ description: "Signed download URL or scan status" })
+	@ZodResponse(MerchantKybDocumentDownloadResponseSchema, { description: "Signed download URL or scan status" })
 	public async downloadDocument(
 		@GetUser() user: AccessTokenPayload,
-		@Param(
-			new ZodValidationPipe(
-				OrganizationSlugParamSchema.extend({
-					documentId: UuidParamSchema,
-				}).strict(),
-			),
+		@ZodParams(
+			OrganizationSlugParamSchema.extend({
+				documentId: UuidParamSchema,
+			}).strict(),
 		)
 		params: { orgSlug: string; documentId: string },
-		@Query(new ZodValidationPipe(z.object({ disposition: FileDownloadDispositionSchema.optional() }).strict()))
+		@ZodQuery(z.object({ disposition: FileDownloadDispositionSchema.optional() }).strict())
 		query: {
 			disposition?: "inline" | "attachment";
 		},
 	): Promise<MerchantKybDocumentDownloadResponse> {
-		const resolved = await this.organizationRewardAuth.resolveOrganizationFromSlug(user.sub, params.orgSlug);
-		// KYB documents are owner-only, like the profile they belong to.
-		await this.merchantContext.requireOwnerRole(user.sub, resolved.organizationId, params.orgSlug);
+		// KYB documents need `merchant:manage_verification` (owner-only), like the profile they belong to.
+		const resolved = await this.organizationRewardAuth.requireCapabilityForSlug(user.sub, params.orgSlug, MERCHANT_CAPABILITY.manageVerification);
 		return this.kybDocuments.getDownloadUrl(params.documentId, resolved.organizationId, query.disposition ?? "inline");
 	}
 }
@@ -139,35 +149,34 @@ export class OrganizationRewardsController {
 	@SkipAuthThrottle()
 	@Get()
 	@ApiOperation({ summary: "List organization rewards" })
-	@ApiOkResponse({ description: "Rewards for the organization" })
+	@ZodResponse(RewardResponseListSchema, { description: "Rewards for the organization" })
 	public listRewards(
 		@GetMerchantActor() actor: MerchantActor,
-		@Query(new ZodValidationPipe(MerchantRewardListQuerySchema)) query: z.output<typeof MerchantRewardListQuerySchema>,
+		@ZodParams(OrganizationSlugParamSchema) _params: z.output<typeof OrganizationSlugParamSchema>,
+		@ZodQuery(MerchantRewardListQuerySchema) query: z.output<typeof MerchantRewardListQuerySchema>,
 	): ReturnType<MerchantRewardService["listRewards"]> {
 		return this.merchantRewardService.listRewards(actor, query);
 	}
 
 	@Post()
 	@ApiOperation({ summary: "Create a draft reward" })
-	@ApiBody({ type: MerchantCreateRewardDto })
-	@ApiOkResponse({ description: "Created reward" })
+	@ZodResponse(RewardResponseSchema, { status: HttpStatus.CREATED, description: "Created reward" })
 	public async createReward(
 		@GetMerchantActor() actor: MerchantActor,
-		@Param(new ZodValidationPipe(OrganizationSlugParamSchema)) _params: z.output<typeof OrganizationSlugParamSchema>,
-		@Body(new ZodValidationPipe(MerchantCreateRewardSchema)) body: z.output<typeof MerchantCreateRewardSchema>,
+		@ZodParams(OrganizationSlugParamSchema) _params: z.output<typeof OrganizationSlugParamSchema>,
+		@ZodBody(MerchantCreateRewardSchema) body: z.output<typeof MerchantCreateRewardSchema>,
 	): ReturnType<MerchantRewardService["createReward"]> {
 		return this.merchantRewardService.createReward(actor, body);
 	}
 
 	@Patch(":rewardId")
 	@ApiOperation({ summary: "Update a draft or pending reward" })
-	@ApiBody({ type: MerchantUpdateRewardDto })
-	@ApiOkResponse({ description: "Updated reward" })
+	@ZodResponse(RewardResponseSchema, { description: "Updated reward" })
 	public async updateReward(
 		@GetMerchantActor() actor: MerchantActor,
-		@Param(new ZodValidationPipe(z.object({ orgSlug: OrganizationSlugParamSchema.shape.orgSlug, rewardId: UuidParamSchema }).strict()))
+		@ZodParams(z.object({ orgSlug: OrganizationSlugParamSchema.shape.orgSlug, rewardId: UuidParamSchema }).strict())
 		params: { orgSlug: string; rewardId: string },
-		@Body(new ZodValidationPipe(MerchantUpdateRewardSchema)) body: z.output<typeof MerchantUpdateRewardSchema>,
+		@ZodBody(MerchantUpdateRewardSchema) body: z.output<typeof MerchantUpdateRewardSchema>,
 	): ReturnType<MerchantRewardService["updateReward"]> {
 		return this.merchantRewardService.updateReward(actor, params.rewardId, body);
 	}
@@ -175,10 +184,10 @@ export class OrganizationRewardsController {
 	@Post(":rewardId/publish")
 	@ApiOperation({ summary: "Submit reward for moderation review (no body required)" })
 	@ApiBody({ type: RewardsEmptyBodyDto, required: false })
-	@ApiOkResponse({ description: "Reward pending review" })
+	@ZodResponse(RewardResponseSchema, { status: HttpStatus.CREATED, description: "Reward pending review" })
 	public publishReward(
 		@GetMerchantActor() actor: MerchantActor,
-		@Param(new ZodValidationPipe(apiContract.organizations.rewards.publish.input)) params: { orgSlug: string; rewardId: string },
+		@ZodParams(apiContract.organizations.rewards.publish.input) params: { orgSlug: string; rewardId: string },
 	): ReturnType<MerchantRewardService["publishReward"]> {
 		return this.merchantRewardService.publishReward(actor, params.rewardId);
 	}
@@ -196,11 +205,11 @@ export class OrganizationApiKeysController {
 	@SkipAuthThrottle()
 	@Get()
 	@ApiOperation({ summary: "List organization API keys" })
-	@ApiOkResponse({ description: "API key summaries" })
+	@ZodPaginatedResponse(MerchantApiKeySummarySchema, { description: "Paginated API key summaries; pagination is in `meta`" })
 	public async listKeys(
 		@GetUser() user: AccessTokenPayload,
-		@Param(new ZodValidationPipe(OrganizationSlugParamSchema)) params: z.output<typeof OrganizationSlugParamSchema>,
-		@Query(new ZodValidationPipe(MerchantApiKeyListQuerySchema)) query: z.output<typeof MerchantApiKeyListQuerySchema>,
+		@ZodParams(OrganizationSlugParamSchema) params: z.output<typeof OrganizationSlugParamSchema>,
+		@ZodListQuery(MerchantApiKeyListQuerySchema) query: z.output<typeof MerchantApiKeyListQuerySchema>,
 	): ReturnType<MerchantApiKeyService["listKeys"]> {
 		await this.organizationRewardAuth.resolveOrganizationFromSlug(user.sub, params.orgSlug);
 		return this.merchantApiKeyService.listKeys(user.sub, params.orgSlug, query);
@@ -208,12 +217,11 @@ export class OrganizationApiKeysController {
 
 	@Post()
 	@ApiOperation({ summary: "Create a POS API key" })
-	@ApiBody({ type: MerchantCreateApiKeyDto })
-	@ApiOkResponse({ description: "API key created (shown once)" })
+	@ZodResponse(MerchantApiKeyCreatedSchema, { status: HttpStatus.CREATED, description: "API key created (shown once)" })
 	public async createKey(
 		@GetUser() user: AccessTokenPayload,
-		@Param(new ZodValidationPipe(OrganizationSlugParamSchema)) params: z.output<typeof OrganizationSlugParamSchema>,
-		@Body(new ZodValidationPipe(MerchantCreateApiKeySchema)) body: z.output<typeof MerchantCreateApiKeySchema>,
+		@ZodParams(OrganizationSlugParamSchema) params: z.output<typeof OrganizationSlugParamSchema>,
+		@ZodBody(MerchantCreateApiKeySchema) body: z.output<typeof MerchantCreateApiKeySchema>,
 	): ReturnType<MerchantApiKeyService["createKey"]> {
 		await this.organizationRewardAuth.resolveOrganizationFromSlug(user.sub, params.orgSlug);
 
@@ -223,10 +231,10 @@ export class OrganizationApiKeysController {
 	@Post(":keyId/revoke")
 	@ApiOperation({ summary: "Revoke a POS API key (no body required)" })
 	@ApiBody({ type: RewardsEmptyBodyDto, required: false })
-	@ApiOkResponse({ description: "API key revoked" })
+	@ZodResponse(OkResponseSchema, { status: HttpStatus.CREATED, description: "API key revoked" })
 	public async revokeKey(
 		@GetUser() user: AccessTokenPayload,
-		@Param(new ZodValidationPipe(apiContract.organizations.apiKeys.revoke.input)) params: { orgSlug: string; keyId: string },
+		@ZodParams(apiContract.organizations.apiKeys.revoke.input) params: { orgSlug: string; keyId: string },
 	): ReturnType<MerchantApiKeyService["revokeKey"]> {
 		await this.organizationRewardAuth.resolveOrganizationFromSlug(user.sub, params.orgSlug);
 
@@ -246,10 +254,11 @@ export class OrganizationRedemptionsController {
 	@SkipAuthThrottle()
 	@Get()
 	@ApiOperation({ summary: "List organization redemptions" })
-	@ApiOkResponse({ description: "Paginated redemption history" })
+	@ZodPaginatedResponse(MerchantRedemptionListItemSchema, { description: "Paginated redemption history" })
 	public listRedemptions(
 		@GetMerchantActor() actor: MerchantActor,
-		@Query(new ZodValidationPipe(MerchantRedemptionListQuerySchema)) query: z.output<typeof MerchantRedemptionListQuerySchema>,
+		@ZodParams(OrganizationSlugParamSchema) _params: z.output<typeof OrganizationSlugParamSchema>,
+		@ZodListQuery(MerchantRedemptionListQuerySchema) query: z.output<typeof MerchantRedemptionListQuerySchema>,
 	): ReturnType<MerchantRewardService["listRedemptions"]> {
 		return this.merchantRewardService.listRedemptions(actor, query);
 	}
@@ -267,10 +276,11 @@ export class OrganizationAnalyticsController {
 	@SkipAuthThrottle()
 	@Get()
 	@ApiOperation({ summary: "Organization reward performance analytics" })
-	@ApiOkResponse({ description: "Summary metrics, trends, and top rewards" })
+	@ZodResponse(MerchantAnalyticsResponseSchema, { description: "Summary metrics, trends, and top rewards" })
 	public getAnalytics(
 		@GetMerchantActor() actor: MerchantActor,
-		@Query(new ZodValidationPipe(RewardsAnalyticsQuerySchema)) query: z.output<typeof RewardsAnalyticsQuerySchema>,
+		@ZodParams(OrganizationSlugParamSchema) _params: z.output<typeof OrganizationSlugParamSchema>,
+		@ZodQuery(RewardsAnalyticsQuerySchema) query: z.output<typeof RewardsAnalyticsQuerySchema>,
 	): ReturnType<RewardsAnalyticsService["getMerchantAnalytics"]> {
 		return this.rewardsAnalyticsService.getMerchantAnalytics(actor, query);
 	}

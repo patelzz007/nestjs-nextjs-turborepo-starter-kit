@@ -1,9 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { TypedConfigService } from "../../../config/typed-config.service";
 import type { UserLogin } from "../repositories/user.repository";
 
 import { SessionRestrictionService } from "./session-restriction.service";
+import { TypedConfigService } from "../../../config/typed-config.service";
+import { createTestApiConfig } from "../../../../test/support/test-api-env";
 
 vi.mock("../../../config/typed-config.service", () => ({
 	TypedConfigService: class {
@@ -36,7 +37,7 @@ function buildUser(overrides: Partial<UserLogin> = {}): UserLogin {
 }
 
 describe("SessionRestrictionService", () => {
-	const service = new SessionRestrictionService(new TypedConfigService());
+	const service = new SessionRestrictionService(new TypedConfigService(createTestApiConfig()));
 	const now: number = Date.now();
 
 	it("returns restricted scope when email is not verified", () => {

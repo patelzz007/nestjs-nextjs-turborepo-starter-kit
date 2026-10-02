@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable } from "@nestjs/common";
-import type { CreatePolicyDraftInput, PolicySimulationResult } from "@workspace/shared";
+import type { CreatePolicyDraftInput, PolicyDraftCreatedResponse, PolicyPublishResponse, PolicySimulationResult } from "@workspace/shared";
 import { createHash } from "node:crypto";
 
 import { TenantTransactionService } from "../../../prisma/tenant-transaction.service";
@@ -15,7 +15,7 @@ export class PolicyControlPlaneService {
 		private readonly cedar: CedarPolicyEvaluatorService,
 	) {}
 
-	public async createDraft(actorUserId: string, organizationId: string | null, input: CreatePolicyDraftInput): Promise<{ draftId: string }> {
+	public async createDraft(actorUserId: string, organizationId: string | null, input: CreatePolicyDraftInput): Promise<PolicyDraftCreatedResponse> {
 		const compiled = this.compiler.compile(input.builderPayload, organizationId);
 
 		const draft = await this.tenantTx.withSystemOperation(
@@ -93,7 +93,7 @@ export class PolicyControlPlaneService {
 		return result;
 	}
 
-	public async publish(draftId: string, actorUserId: string): Promise<{ version: number }> {
+	public async publish(draftId: string, actorUserId: string): Promise<PolicyPublishResponse> {
 		const draft = await this.tenantTx.withSystemOperation(
 			{
 				operation: "policy.publish",

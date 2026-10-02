@@ -5,7 +5,7 @@
 // controllers reference this tree instead of hardcoding path strings.
 //
 // Usage:
-//   import { apiRoutes, buildRoute } from "@workspace/shared/api-routes";
+//   import { apiRoutes, buildRoute } from "@workspace/shared";
 //
 //   // Static route — just a string:
 //   apiRoutes.geo.countries  // "/geo/countries"
@@ -166,9 +166,13 @@ export const apiRoutes = {
 		list: "/reward-notifications",
 		read: "/reward-notifications/read",
 	},
+	pos: {
+		pairTerminal: "/pos/terminals/pair",
+	},
 	redemptions: {
 		validate: "/redemptions/validate",
 		confirm: "/redemptions/confirm",
+		checkout: "/redemptions/checkout",
 	},
 	files: {
 		uploadUrl: "/files/upload-url",
@@ -200,6 +204,13 @@ export const apiRoutes = {
 			create: { path: "/orgs/:orgSlug/rewards", params: ["orgSlug"] },
 			update: { path: "/orgs/:orgSlug/rewards/:rewardId", params: ["orgSlug", "rewardId"] },
 			publish: { path: "/orgs/:orgSlug/rewards/:rewardId/publish", params: ["orgSlug", "rewardId"] },
+		},
+		terminals: {
+			list: { path: "/orgs/:orgSlug/terminals", params: ["orgSlug"] },
+			create: { path: "/orgs/:orgSlug/terminals", params: ["orgSlug"] },
+			pairingCode: { path: "/orgs/:orgSlug/terminals/:id/pairing-code", params: ["orgSlug", "id"] },
+			remove: { path: "/orgs/:orgSlug/terminals/:id", params: ["orgSlug", "id"] },
+			settings: { path: "/orgs/:orgSlug/terminals/settings", params: ["orgSlug"] },
 		},
 		apiKeys: {
 			list: { path: "/orgs/:orgSlug/api-keys", params: ["orgSlug"] },
@@ -246,6 +257,7 @@ export const apiRoutes = {
 			path: "/admin/merchants/:organizationId/documents/:documentId/download",
 			params: ["organizationId", "documentId"],
 		},
+		salesAnalytics: "/admin/analytics/sales",
 	},
 	sampleCategory: {
 		list: "/sample-category",

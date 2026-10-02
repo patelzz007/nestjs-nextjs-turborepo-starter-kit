@@ -3,7 +3,7 @@ title: "ADR 006: Module-Level Health Indicators"
 tags: ["adr", "health", "monitoring", "observability"]
 description: "Architecture decision record for implementing per-module health indicators with aggregated deep health checks."
 author: "Backend Team"
-lastUpdated: 1756003200000
+lastUpdated: 1790812800000
 coverImage: "https://images.unsplash.com/photo-1504639725590-34d0984388bd?w=1200&h=630&fit=crop"
 order: 6
 ---
@@ -39,6 +39,16 @@ export class AuthorizationHealthIndicator {
   }
 }
 ```
+
+## Update (2026-10-01): liveness, readiness and indicator criticality
+
+- `GET /health/live` (liveness) never touches the database or the readiness flag.
+- `GET /health/ready` (readiness) answers 503 — with every probe in `error.details.checks` —
+  when startup has not finished / shutdown began, the database does not answer within 2 s, or
+  a **critical** indicator fails. `/health` and `/health/deep` stay as deprecated aliases.
+- Each registered indicator now declares `critical`. The bundled messaging indicators (queue,
+  Kafka, RabbitMQ) are non-critical: a shared broker failing would otherwise take every
+  instance out of rotation at once. Details: [API Routes → Health probes](../api-routes.md#12-health-probes).
 
 ## Consequences
 

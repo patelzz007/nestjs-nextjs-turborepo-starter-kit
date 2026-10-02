@@ -163,7 +163,7 @@ describe("useCan hook", () => {
 describe("useAuthorization hook", () => {
 	interface ProbeProps {
 		readonly capabilities: readonly string[];
-		readonly order?: TestOrder;
+		readonly order?: TestOrder | undefined;
 	}
 
 	function Probe({ capabilities, order }: ProbeProps): React.JSX.Element {
@@ -174,7 +174,7 @@ describe("useAuthorization hook", () => {
 		);
 	}
 
-	function Checks({ order }: { readonly order?: TestOrder }): React.JSX.Element {
+	function Checks({ order }: { readonly order?: TestOrder | undefined }): React.JSX.Element {
 		const auth = useAuthorization();
 		return (
 			<div>

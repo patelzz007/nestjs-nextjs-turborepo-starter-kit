@@ -216,7 +216,7 @@ export interface CollectionItemActiveState {
 
 export interface MenuItemActiveState {
 	readonly highlighted: boolean;
-	readonly checked?: boolean;
+	readonly checked?: boolean | undefined;
 }
 
 /** Applies the active surface when a select/combobox row is selected or keyboard-highlighted. */

@@ -16,7 +16,7 @@ export interface RouteAuthorizationGuardProps {
 	/** False until the session permissions are known — avoids a denied-state flash. */
 	readonly isResolved: boolean;
 	/** Session super-admin flag for `superAdminOnly` rules; omitted → treated as not a super admin. */
-	readonly superAdmin?: SuperAdminStatus;
+	readonly superAdmin?: SuperAdminStatus | undefined;
 	readonly children: React.ReactNode;
 }
 

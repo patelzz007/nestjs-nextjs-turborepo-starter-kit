@@ -1,4 +1,4 @@
-import { PasswordChangedEmailPropsSchema, epochMs, type EmailAccent, type PasswordChangedEmailProps } from "@workspace/shared";
+import { PasswordChangedEmailPropsSchema, epochMs, type EmailAccent, type PasswordChangedEmailProps, APP_LINKS } from "@workspace/shared";
 
 import { BaseEmailTemplate } from "../base/base-email-template";
 import type { EmailRenderContext } from "../base/email-render-context";
@@ -21,9 +21,11 @@ export class PasswordChangedEmailTemplate extends BaseEmailTemplate<PasswordChan
 	}
 
 	public renderBodyHtml(context: EmailRenderContext): string {
-		return `
-        <p class="email-text" style="color: #334155; font-size: 15px; line-height: 1.7; margin: 0 0 20px 0;">Your <strong>${this.escape(context.appName)}</strong> password was changed successfully.</p>
-        <p class="email-muted" style="color: #64748b; font-size: 13px; line-height: 1.6; margin: 0;">If you did not make this change, contact support immediately and reset your password.</p>`;
+		return [
+			this.paragraph(`The password for your ${this.strong(context.appName)} account was just changed.`),
+			this.callout("Wasn't you?", "Reset your password right away and contact support — someone else may have access to your account."),
+			this.note(`Reset it here: ${this.link(this.buildUrl(context, APP_LINKS.auth.forgotPassword), "forgot password")}.`),
+		].join("");
 	}
 
 	public renderBodyText(context: EmailRenderContext): string {

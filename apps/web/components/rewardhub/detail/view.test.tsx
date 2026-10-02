@@ -10,6 +10,8 @@ import { GUEST_SESSION_STATE, signedInSession } from "@/test-support/session";
 /** Only the reward fields the detail view reads. */
 interface RewardStub {
 	readonly id: string;
+	readonly organizationName: string;
+	readonly organizationLogoUrl: string | null;
 	readonly title: string;
 	readonly description: string;
 	readonly category: string;
@@ -66,6 +68,8 @@ vi.mock("next/navigation", () => ({
 function buildReward(overrides: Partial<RewardStub> = {}): RewardStub {
 	return {
 		id: REWARD_ID,
+		organizationName: "Brew & Bean KL",
+		organizationLogoUrl: null,
 		title: "Free coffee",
 		description: "One free latte",
 		category: "food",
@@ -134,5 +138,32 @@ describe("RewardDetailView claim gating", () => {
 
 		expect(screen.queryByRole("link", { name: "Sign in" })).toBeNull();
 		expect(screen.getByRole("link", { name: "Browse other offers" })).toBeDefined();
+	});
+});
+
+describe("RewardDetailView merchant identity", () => {
+	const LOGO_URL = "https://cdn.example.com/organizations/brew-bean/logo.png";
+
+	it("names the offering shop beside its logo", () => {
+		rewardUseQuery.mockReturnValue({
+			data: { data: buildReward({ organizationLogoUrl: LOGO_URL }) },
+			isLoading: false,
+			refetch: (): Promise<void> => Promise.resolve(),
+		});
+		const { container } = render(
+			<WebSessionTestProvider session={GUEST_SESSION_STATE}>
+				<RewardDetailView rewardId={REWARD_ID} />
+			</WebSessionTestProvider>,
+		);
+
+		expect(screen.getByText("Brew & Bean KL")).toBeDefined();
+		expect(container.querySelector("[data-slot=entity-avatar] img")?.getAttribute("src")).toBe(LOGO_URL);
+	});
+
+	it("shows the shop's monogram when it has no logo", () => {
+		renderView(GUEST_SESSION_STATE);
+
+		expect(screen.getByText("Brew & Bean KL")).toBeDefined();
+		expect(screen.getByText("BK")).toBeDefined();
 	});
 });

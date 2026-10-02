@@ -12,39 +12,25 @@ import {
 	type AuthCookieClearOptions,
 	type ProxyRefreshResult,
 } from "@workspace/client/lib/auth/edge/proxy-refresh";
+import { NodeEnvSchema } from "@workspace/shared";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+
+import { isAllowedMerchantPostLoginRedirect, isMerchantAuthPath, isMerchantProtectedPath, isMerchantTokenAuthPath } from "@/lib/auth/routes";
+import { clientEnv } from "@/lib/env/env.client";
+import { serverEnv } from "@/lib/env/env.server";
+import { ROUTES } from "@/lib/routes";
 
 const ACCESS_TOKEN_COOKIE = "merchantAccessToken";
 const ORGANIZATION_SLUG_COOKIE = "organizationSlug";
 const REFRESH_TOKEN_COOKIE = "merchantRefreshToken";
-const CLIENT_ORIGIN: string = process.env.NEXT_PUBLIC_MERCHANT_URL ?? "http://localhost:3003";
+const CLIENT_ORIGIN: string = clientEnv.NEXT_PUBLIC_MERCHANT_URL;
 const COOKIE_CLEAR_OPTIONS: AuthCookieClearOptions = {
-	domain: process.env.COOKIE_DOMAIN,
+	domain: serverEnv.COOKIE_DOMAIN,
 	path: "/",
-	secure: process.env.NODE_ENV === "production",
+	secure: serverEnv.NODE_ENV === NodeEnvSchema.enum.production,
 	sameSite: "lax",
 };
-const PROTECTED_ROUTE_PREFIXES: readonly string[] = ["/analytics", "/rewards", "/redemptions", "/api-keys", "/settings"];
-const AUTH_ROUTES: readonly string[] = ["/auth/login", "/auth/verify-email", "/auth/reset-password", "/onboarding"];
-
-/** Token links must run even when the merchant session cookie is already set. */
-const TOKEN_AUTH_ROUTE_PREFIXES: readonly string[] = ["/auth/verify-email", "/auth/reset-password", "/onboarding"];
-
-function isTokenAuthRoute(pathname: string): boolean {
-	return TOKEN_AUTH_ROUTE_PREFIXES.some((route) => pathname.startsWith(route));
-}
-
-function isProtectedRoute(pathname: string): boolean {
-	return pathname === "/" || pathname.startsWith("/orgs/") || PROTECTED_ROUTE_PREFIXES.some((route) => pathname.startsWith(route));
-}
-
-function isAllowedPostLoginRedirect(pathname: string): boolean {
-	if (pathname.startsWith("/team-invite")) {
-		return true;
-	}
-	return isProtectedRoute(pathname);
-}
 
 const attemptRefresh = createProxyRefreshCooldown((refreshToken: string): Promise<ProxyRefreshResult> =>
 	refreshSessionFromProxy({
@@ -68,7 +54,7 @@ function applyRotatedCookies(response: NextResponse, setCookies: readonly string
 }
 
 function redirectToLogin(request: NextRequest, pathname: string, rotatedCookies: readonly string[]): NextResponse {
-	const loginUrl = new URL("/auth/login", request.url);
+	const loginUrl = new URL(ROUTES.auth.login, request.url);
 	loginUrl.searchParams.set("redirect", pathname);
 	return clearCookies(applyRotatedCookies(NextResponse.redirect(loginUrl), rotatedCookies), [ACCESS_TOKEN_COOKIE, REFRESH_TOKEN_COOKIE]);
 }
@@ -90,8 +76,9 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
 	const refreshToken = request.cookies.get(REFRESH_TOKEN_COOKIE)?.value;
 	const { pathname } = request.nextUrl;
 
-	const isProtectedRouteMatch = isProtectedRoute(pathname);
-	const isAuthRoute = AUTH_ROUTES.some((route) => pathname.startsWith(route));
+	const isProtectedRouteMatch = isMerchantProtectedPath(pathname);
+	const isAuthRoute = isMerchantAuthPath(pathname);
+	const isTokenAuthRoute = isMerchantTokenAuthPath(pathname);
 
 	let rotatedCookies: readonly string[] = [];
 	let effectiveAccessToken: string | undefined = accessToken;
@@ -102,7 +89,7 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
 		isDocumentNavigation: isDocumentNavigation(request.headers),
 		isAuthRoute,
 		isPublicRoute: false,
-		tokenAuthRoute: isTokenAuthRoute(pathname),
+		tokenAuthRoute: isTokenAuthRoute,
 		accessTokenCookieName: ACCESS_TOKEN_COOKIE,
 		refreshTokenCookieName: REFRESH_TOKEN_COOKIE,
 		app: "merchant",
@@ -134,9 +121,9 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
 		return applyRotatedCookies(NextResponse.redirect(new URL(enrollmentPath, request.url)), rotatedCookies);
 	}
 
-	if (isAuthRoute && isAuthenticated && !isTokenAuthRoute(pathname)) {
+	if (isAuthRoute && isAuthenticated && !isTokenAuthRoute) {
 		const redirect = request.nextUrl.searchParams.get("redirect");
-		const target = redirect !== null && isAllowedPostLoginRedirect(redirect) ? redirect : "/";
+		const target = redirect !== null && isAllowedMerchantPostLoginRedirect(redirect) ? redirect : ROUTES.home;
 		return applyRotatedCookies(NextResponse.redirect(new URL(target, request.url)), rotatedCookies);
 	}
 

@@ -1,9 +1,9 @@
 import { Controller, Get } from "@nestjs/common";
-import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
+import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { SessionStatusSchema, apiPath, epochMs, nowEpochMs, type EpochMs, type SessionStatus } from "@workspace/shared";
 
 import { ApiErrorResponseDto } from "../../common/dto/api-response.dto";
-import { createWrappedDto } from "../../common/dto/response-wrapper";
+import { ZodResponse } from "../../common/decorators/zod-response.decorators";
 
 // The decorators below are imported from the auth module WITHOUT importing
 // AuthModule here — @GetUser is metadata-only (no DI), and the global
@@ -11,8 +11,6 @@ import { createWrappedDto } from "../../common/dto/response-wrapper";
 // a module import; it would create an unnecessary coupling.
 import { GetUser } from "../auth/decorators/get-user.decorator";
 import type { AccessTokenPayload } from "../auth/services/token.service";
-
-const WrappedSessionStatusResponse = createWrappedDto(SessionStatusSchema, "WrappedSessionStatusResponse");
 
 /**
  * Session-status endpoint (`GET /api/v1/session` — versioned like every other
@@ -34,7 +32,7 @@ export class SessionStatusController {
 	@ApiBearerAuth()
 	@Get()
 	@ApiOperation({ summary: "Current session status (requires a valid access token)" })
-	@ApiOkResponse({ type: WrappedSessionStatusResponse, description: "Authenticated session identity + token expiry" })
+	@ZodResponse(SessionStatusSchema, { description: "Authenticated session identity + token expiry" })
 	@ApiResponse({ status: 401, type: ApiErrorResponseDto, description: "Access token missing / invalid / expired" })
 	public getSession(@GetUser() user: AccessTokenPayload): SessionStatus {
 		// `exp` is the JWT expiry in whole seconds since the Unix epoch.

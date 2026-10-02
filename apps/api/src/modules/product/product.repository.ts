@@ -1,12 +1,33 @@
 import { Injectable } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
 
-import { nowEpochMs, type CreateProductInput, type Product as ProductEntity, type ProductListQuery, type UpdateProductInput } from "@workspace/shared";
+import {
+	nowEpochMs,
+	productListQuery,
+	type CreateProductInput,
+	type Product as ProductEntity,
+	type ProductListQuery,
+	type ProductListSortField,
+	type UpdateProductInput,
+} from "@workspace/shared";
+import { z } from "zod";
 
 import { BaseRepository } from "../../platform/persistence/base.repository";
+import { defineKeyset, type ListKeyset } from "../../platform/persistence/list-query/keyset-cursor";
+import { buildListOrder, type ListOrder, type SortColumns } from "../../platform/persistence/list-query/list-order";
+import {
+	fieldWhere,
+	toPrismaComparableFilter,
+	toPrismaEqualityFilter,
+	toPrismaNullableBooleanFilter,
+	toPrismaNullableComparableFilter,
+	toPrismaNullableStringFilter,
+} from "../../platform/persistence/list-query/prisma-filter";
 import { PrismaService } from "../../prisma/prisma.service";
 
-function toDomain(row: Prisma.ProductGetPayload<Prisma.ProductDefaultArgs>): ProductEntity {
+type ProductRow = Prisma.ProductGetPayload<Prisma.ProductDefaultArgs>;
+
+function toDomain(row: ProductRow): ProductEntity {
 	return {
 		id: row.id,
 		brand: row.brand,
@@ -32,20 +53,20 @@ function toDomain(row: Prisma.ProductGetPayload<Prisma.ProductDefaultArgs>): Pro
 
 function toPrismaCreateInput(input: CreateProductInput): Prisma.ProductCreateInput {
 	return {
-		brand: input.brand,
+		...(input.brand === undefined ? {} : { brand: input.brand }),
 		category: { connect: { id: input.categoryId } },
-		compareAtPrice: input.compareAtPrice,
-		description: input.description,
-		imageUrl: input.imageUrl,
-		isActive: input.isActive,
-		isFeatured: input.isFeatured,
+		...(input.compareAtPrice === undefined ? {} : { compareAtPrice: input.compareAtPrice }),
+		...(input.description === undefined ? {} : { description: input.description }),
+		...(input.imageUrl === undefined ? {} : { imageUrl: input.imageUrl }),
+		...(input.isActive === undefined ? {} : { isActive: input.isActive }),
+		...(input.isFeatured === undefined ? {} : { isFeatured: input.isFeatured }),
 		name: input.name,
 		price: input.price,
-		shortDescription: input.shortDescription,
+		...(input.shortDescription === undefined ? {} : { shortDescription: input.shortDescription }),
 		sku: input.sku,
 		slug: input.slug,
-		stockQuantity: input.stockQuantity,
-		weightGrams: input.weightGrams,
+		...(input.stockQuantity === undefined ? {} : { stockQuantity: input.stockQuantity }),
+		...(input.weightGrams === undefined ? {} : { weightGrams: input.weightGrams }),
 	};
 }
 
@@ -95,78 +116,75 @@ function toPrismaUpdateInput(input: UpdateProductInput): Prisma.ProductUpdateInp
 	}
 	return data;
 }
-const SORTABLE_FIELDS: ReadonlySet<string> = new Set(["compareAtPrice", "name", "price", "sku", "slug", "stockQuantity", "createdAt"]);
+// ── List query → Prisma (explicit field → column mapping; see docs/list-queries.md) ──
 
-function buildSearchConditions(trimmedSearch: string): Prisma.ProductWhereInput[] {
-	return [
-		{ brand: { contains: trimmedSearch, mode: "insensitive" } },
-		{ name: { contains: trimmedSearch, mode: "insensitive" } },
-		{ sku: { contains: trimmedSearch, mode: "insensitive" } },
-		{ slug: { contains: trimmedSearch, mode: "insensitive" } },
-	];
-}
+/** Every whitelisted sort field mapped to its column. */
+export const PRODUCT_SORT_COLUMNS: SortColumns<ProductListSortField, Prisma.ProductOrderByWithRelationInput> = {
+	name: (direction) => ({ name: direction }),
+	price: (direction) => ({ price: direction }),
+	compareAtPrice: (direction) => ({ compareAtPrice: direction }),
+	sku: (direction) => ({ sku: direction }),
+	slug: (direction) => ({ slug: direction }),
+	stockQuantity: (direction) => ({ stockQuantity: direction }),
+	createdAt: (direction) => ({ createdAt: direction }),
+};
 
-function resolveOrderBy(query: ProductListQuery): Prisma.ProductOrderByWithRelationInput {
-	const sortBy = query.sortBy ?? "createdAt";
-	const sortDirection = query.sortDirection ?? "desc";
-	if (!SORTABLE_FIELDS.has(sortBy)) {
-		return { createdAt: "desc" };
-	}
-	return { [sortBy]: sortDirection };
-}
-
-function buildListCursorOrderBy(query: ProductListQuery): Prisma.ProductOrderByWithRelationInput {
-	const sortBy = query.sortBy ?? "createdAt";
-	const sortDirection = query.sortDirection ?? "desc";
-	if (!SORTABLE_FIELDS.has(sortBy)) {
-		return { createdAt: "desc", id: "asc" };
-	}
-	return { [sortBy]: sortDirection, id: "asc" };
-}
-
-function mergeListCursor(where: Prisma.ProductWhereInput, cursorId: string): Prisma.ProductWhereInput {
-	return { ...where, id: { gt: cursorId } };
-}
-
-function buildListWhere(query: ProductListQuery): Prisma.ProductWhereInput {
-	const where: Prisma.ProductWhereInput = {
-		deletedAt: null,
+function buildSearchWhere(search: string): Prisma.ProductWhereInput {
+	return {
+		OR: [
+			{ brand: { contains: search, mode: "insensitive" } },
+			{ name: { contains: search, mode: "insensitive" } },
+			{ sku: { contains: search, mode: "insensitive" } },
+			{ slug: { contains: search, mode: "insensitive" } },
+		],
 	};
-	const trimmedSearch = query.search?.trim();
-	if (trimmedSearch !== undefined && trimmedSearch.length > 0) {
-		const searchConditions = buildSearchConditions(trimmedSearch);
-		if (searchConditions.length > 0) {
-			where.OR = searchConditions;
-		}
-	}
-	if (query.isActive !== undefined) {
-		where.isActive = query.isActive === true || query.isActive === "true";
-	}
-	if (query.isFeatured !== undefined) {
-		where.isFeatured = query.isFeatured === true || query.isFeatured === "true";
-	}
-	if (query.categoryId !== undefined) {
-		where.categoryId = query.categoryId;
-	}
-	if (query.brand !== undefined) {
-		where.brand = { contains: query.brand, mode: "insensitive" };
-	}
-	return where;
 }
+
+/** Soft delete + the filter AST + search, one explicit column per whitelisted field. */
+export function buildProductListWhere(query: ProductListQuery): Prisma.ProductWhereInput {
+	const filter = query.filter;
+	const conditions: Prisma.ProductWhereInput[] = [
+		{ deletedAt: null },
+		...fieldWhere(toPrismaNullableBooleanFilter(filter?.isActive), (isActive) => ({ isActive })),
+		...fieldWhere(toPrismaNullableBooleanFilter(filter?.isFeatured), (isFeatured) => ({ isFeatured })),
+		...fieldWhere(toPrismaEqualityFilter(filter?.categoryId), (categoryId) => ({ categoryId })),
+		...fieldWhere(toPrismaNullableStringFilter(filter?.brand), (brand) => ({ brand })),
+		...fieldWhere(toPrismaComparableFilter(filter?.price), (price) => ({ price })),
+		...fieldWhere(toPrismaNullableComparableFilter(filter?.stockQuantity), (stockQuantity) => ({ stockQuantity })),
+		...fieldWhere(toPrismaComparableFilter(filter?.createdAt), (createdAt) => ({ createdAt })),
+		...(query.search !== undefined ? [buildSearchWhere(query.search)] : []),
+	];
+	return { AND: conditions };
+}
+
+export function buildProductListOrder(query: ProductListQuery): ListOrder<Prisma.ProductOrderByWithRelationInput> {
+	return buildListOrder(productListQuery.resolveSort(query.sort), {
+		columns: PRODUCT_SORT_COLUMNS,
+		tieBreaker: (direction) => ({ id: direction }),
+	});
+}
+
+/** Keyset for the default order (`createdAt desc, id desc`). */
+export const PRODUCT_LIST_KEYSET: ListKeyset<ProductRow, Prisma.ProductWhereInput> = defineKeyset({
+	position: z.object({ createdAt: z.number().int().nonnegative(), id: z.uuid() }).strict(),
+	read: (row: ProductRow) => ({ createdAt: Number(row.createdAt), id: row.id }),
+	after: (position): Prisma.ProductWhereInput => ({
+		OR: [{ createdAt: { lt: position.createdAt } }, { createdAt: position.createdAt, id: { lt: position.id } }],
+	}),
+});
 
 const ProductRepositoryPorts = {
 	toDomain,
 	toCreateInput: toPrismaCreateInput,
 	toUpdateInput: toPrismaUpdateInput,
-	buildListWhere,
-	buildListOrderBy: resolveOrderBy,
-	buildListCursorOrderBy,
-	mergeListCursor,
-	readListCursorId: (row: Prisma.ProductGetPayload<Prisma.ProductDefaultArgs>): string => row.id,
+	buildListWhere: buildProductListWhere,
+	buildListOrder: buildProductListOrder,
+	listKeyset: PRODUCT_LIST_KEYSET,
+	andWhere: (left: Prisma.ProductWhereInput, right: Prisma.ProductWhereInput): Prisma.ProductWhereInput => ({ AND: [left, right] }),
 	buildFindByIdWhere: (id: string): Prisma.ProductWhereInput => ({ id, deletedAt: null }),
 	buildFindByIdIncludingDeletedWhere: (id: string): Prisma.ProductWhereInput => ({ id }),
 	readDeletedAt: (row: Prisma.ProductGetPayload<Prisma.ProductDefaultArgs>): number | null => (row.deletedAt === null ? null : Number(row.deletedAt)),
-	buildUpdateWhere: (id: string, expectedVersion?: number): Prisma.ProductWhereUniqueInput => ({ id, version: expectedVersion }),
+	buildUpdateWhere: (id: string, expectedVersion?: number): Prisma.ProductWhereUniqueInput => ({ id, ...(expectedVersion === undefined ? {} : { version: expectedVersion }) }),
 	stampUpdate: (data: Prisma.ProductUpdateInput): Prisma.ProductUpdateInput => ({ ...data, version: { increment: 1 }, updatedAt: nowEpochMs() }),
 	stampSoftDelete: (): Prisma.ProductUpdateInput => ({ deletedAt: nowEpochMs(), updatedAt: nowEpochMs() }),
 	stampRestore: (): Prisma.ProductUpdateInput => ({ deletedAt: null, updatedAt: nowEpochMs() }),

@@ -73,47 +73,47 @@ export const RoleFilterSchema = z
 
 export type RoleFilterInput = z.output<typeof RoleFilterSchema>;
 
+// ── Responses ────────────────────────────────────────────────────────────────
+// Response schemas are open (strip unknown keys, never reject — ADR 022): the
+// API strips internal fields and clients tolerate additive ones. Shared shapes
+// that are strict elsewhere (`BaseResponseSchema`, `PermissionDetailsSchema`)
+// are re-opened by spreading their `shape` into a fresh `z.object`.
+
 /** Slim role row returned by `GET /admin/roles`. */
-export const RoleListItemSchema = z
-	.object({
-		id: z.string(),
-		name: z.string(),
-		description: z.string().nullable(),
-		isActive: z.boolean(),
-		parentId: z.string().nullable(),
-	})
-	.strict();
+export const RoleListItemSchema = z.object({
+	id: z.string(),
+	name: z.string(),
+	description: z.string().nullable(),
+	isActive: z.boolean(),
+	parentId: z.string().nullable(),
+});
 
 export type RoleListItem = z.output<typeof RoleListItemSchema>;
 
-export const RoleListResponseSchema = z
-	.object({
-		items: z.array(RoleListItemSchema),
-		total: z.number().int().nonnegative(),
-	})
-	.strict();
+/** `GET /admin/roles` payload. */
+export const RoleListResponseSchema = z.object({
+	items: z.array(RoleListItemSchema),
+	total: z.number().int().nonnegative(),
+});
 
 export type RoleListResponse = z.output<typeof RoleListResponseSchema>;
 
 /** Slim role reference (id + name only). */
-const RoleRefSchema = z
-	.object({
-		id: z.string(),
-		name: z.string(),
-	})
-	.strict();
+const RoleRefSchema = z.object({
+	id: z.string(),
+	name: z.string(),
+});
 
 /** Slim user reference for RBAC responses. */
-const UserRefSchema = z
-	.object({
-		id: z.string(),
-		fullName: z.string(),
-		email: z.string(),
-	})
-	.strict();
+const UserRefSchema = z.object({
+	id: z.string(),
+	fullName: z.string(),
+	email: z.string(),
+});
 
 /** Role with parent/children refs, permission assignments, and user assignments. */
-export const RoleResponseSchema = BaseResponseSchema.extend({
+export const RoleResponseSchema = z.object({
+	...BaseResponseSchema.shape,
 	id: z.string(),
 	name: z.string(),
 	description: z.string().nullable(),
@@ -122,20 +122,46 @@ export const RoleResponseSchema = BaseResponseSchema.extend({
 	parentId: z.string().nullable(),
 	parent: RoleRefSchema.nullable().optional(),
 	children: z.array(RoleRefSchema.extend({ isActive: z.boolean() })).optional(),
-	rolePermissions: z.array(z.object({ permission: PermissionDetailsSchema })).optional(),
+	rolePermissions: z.array(z.object({ permission: z.object(PermissionDetailsSchema.shape) })).optional(),
 	userRoles: z.array(z.object({ user: UserRefSchema })).optional(),
 	_count: z.object({ userRoles: z.number(), rolePermissions: z.number() }).optional(),
-}).strict();
+});
 
 export type RoleResponse = z.output<typeof RoleResponseSchema>;
 
+/** `GET /admin/roles/:id` payload — `null` when no role has that id. */
+export const RoleDetailResponseSchema = RoleResponseSchema.nullable();
+
+export type RoleDetailResponse = z.output<typeof RoleDetailResponseSchema>;
+
 /** Minimal role created response. */
-export const RoleCreatedResponseSchema = BaseResponseSchema.extend({
+export const RoleCreatedResponseSchema = z.object({
+	...BaseResponseSchema.shape,
 	id: z.string(),
 	name: z.string(),
 	description: z.string().nullable(),
 	parentId: z.string().nullable(),
 	isActive: z.boolean(),
-}).strict();
+});
 
 export type RoleCreatedResponse = z.output<typeof RoleCreatedResponseSchema>;
+
+/** `POST /admin/roles/:id/validate-assignment` payload — conflicts answer with an error instead. */
+export const RoleAssignmentValidationResponseSchema = z.object({
+	valid: z.boolean(),
+	message: z.string(),
+});
+
+export type RoleAssignmentValidationResponse = z.output<typeof RoleAssignmentValidationResponseSchema>;
+
+/** `POST /admin/roles/preview` payload — roles / permission keys (`ACTION:RESOURCE`) a user would gain or lose if their role set were replaced. */
+export const RoleAssignmentPreviewSchema = z.object({
+	currentRoles: z.array(z.string()),
+	newRoles: z.array(z.string()),
+	roleAdded: z.array(z.string()),
+	roleRemoved: z.array(z.string()),
+	permissionsGained: z.array(z.string()),
+	permissionsLost: z.array(z.string()),
+});
+
+export type RoleAssignmentPreview = z.output<typeof RoleAssignmentPreviewSchema>;

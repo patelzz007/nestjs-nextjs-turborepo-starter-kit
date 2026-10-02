@@ -225,6 +225,15 @@ Use one icon library consistently (as already noted) and treat icons as decorati
 <button onClick={onDelete} aria-label="Delete order"><TrashIcon aria-hidden="true" /></button>
 ```
 
+## Dark-mode palette — soft charcoal, never near-black
+
+The dark neutrals (background, cards, popovers, muted surfaces, borders, text) are defined ONCE in
+`packages/ui/src/styles/tokens.css` (`.dark`): a low-glare charcoal (`#22272e`-family) with raised
+surfaces a step lighter and off-white text — every text pair meets WCAG AA. App themes
+(`apps/*/app/*-theme.css`) override **brand colours only** in dark mode (primary, ring, charts) and
+scope their light neutrals to `:root:not(.dark)`, so they can't shadow the shared dark surfaces.
+The docs site (`apps/docs`) mirrors the same family as hex. Never introduce a near-black surface.
+
 ## Dark mode toggle implementation
 
 ```tsx

@@ -1,4 +1,4 @@
 {
 	"title": "Blog",
-	"pages": ["fastify-migration", "email-webhooks", "telescope", "epoch-timestamps"]
+	"pages": ["fastify-migration", "email-webhooks", "epoch-timestamps"]
 }

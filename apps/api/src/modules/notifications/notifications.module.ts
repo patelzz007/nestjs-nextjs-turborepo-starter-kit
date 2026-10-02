@@ -13,9 +13,11 @@ import { NotificationsHealthIndicator } from "./health/notifications.health";
 import { NotificationsEmailModule } from "./notifications-email.module";
 import { NotificationsQueueDisabledModule } from "./notifications-queue-disabled.module";
 import { NotificationsQueueModule } from "./notifications-queue.module";
+import { getApiConfig } from "../../config/api-config";
 
-const redisUrl: string | undefined = process.env.REDIS_URL;
-const notificationsQueueImports = redisUrl !== undefined && redisUrl.length > 0 ? [NotificationsQueueModule] : [NotificationsQueueDisabledModule];
+// Queue wiring is decided at load time from the validated config (parsed by main.ts first).
+const redisUrl: string | undefined = getApiConfig().messaging.redisUrl;
+const notificationsQueueImports = redisUrl !== undefined ? [NotificationsQueueModule] : [NotificationsQueueDisabledModule];
 
 @Module({
 	imports: [

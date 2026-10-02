@@ -14,14 +14,14 @@ import { UserSessionRevocationService } from "./user-session-revocation.service"
 
 export interface CreateRoleInput {
 	readonly name: string;
-	readonly description?: string;
-	readonly parentId?: string;
+	readonly description?: string | undefined;
+	readonly parentId?: string | undefined;
 }
 
 export interface UpdateRoleInput {
-	readonly name?: string;
-	readonly description?: string;
-	readonly isActive?: boolean;
+	readonly name?: string | undefined;
+	readonly description?: string | undefined;
+	readonly isActive?: boolean | undefined;
 }
 
 // ── Service ─────────────────────────────────────────────────────────────────

@@ -2,8 +2,29 @@ import { Injectable, NotFoundException } from "@nestjs/common";
 import { z } from "zod";
 
 import type {
+	CascadePreviewResult,
+	City,
+	CityListItem,
 	CityListQuery,
-	DataValue,
+	CityListSortField,
+	Country,
+	CountryListItem,
+	CountryListSortField,
+	GeoAutocompleteItem,
+	GeoImportResult,
+	GeoImportValidationResult,
+	GeoStats,
+	MessageResponse,
+	PaginatedServiceResult,
+	Region,
+	RegionListItem,
+	RegionListSortField,
+	State,
+	StateListItem,
+	StateListSortField,
+	Subregion,
+	SubregionListItem,
+	SubregionListSortField,
 	CountryListQuery,
 	CreateCityInput,
 	CreateCountryInput,
@@ -16,7 +37,6 @@ import type {
 	GeoImportValidateInput,
 	CascadePreviewInput,
 	JsonObject,
-	PaginationInput,
 	RegionListQuery,
 	StateListQuery,
 	SubregionListQuery,
@@ -26,221 +46,155 @@ import type {
 	UpdateStateInput,
 	UpdateSubregionInput,
 } from "@workspace/shared";
-import { buildOffsetPaginationMeta, JsonObjectSchema } from "@workspace/shared";
-import type { City, Country, Prisma, Region, State, Subregion } from "@prisma/client";
+import { cityListQuery, countryListQuery, JsonObjectSchema, regionListQuery, stateListQuery, subregionListQuery } from "@workspace/shared";
+import type { City as CityRow, Country as CountryRow, Prisma, Region as RegionRow, State as StateRow, Subregion as SubregionRow } from "@prisma/client";
 
 import { parsePrismaNullableDataValue } from "../../../common/utils/prisma-json";
+import { fetchListPage, mapListResult, toPaginatedServiceResult } from "../../../platform/persistence/list-page";
+import { defineKeyset, type ListKeyset } from "../../../platform/persistence/list-query/keyset-cursor";
+import { buildListOrder, type SortColumns } from "../../../platform/persistence/list-query/list-order";
+import {
+	fieldWhere,
+	toPrismaBooleanFilter,
+	toPrismaComparableFilter,
+	toPrismaNullableComparableFilter,
+	toPrismaNullableStringFilter,
+	toPrismaStringFilter,
+} from "../../../platform/persistence/list-query/prisma-filter";
 import { PrismaService } from "../../../prisma/prisma.service";
+import {
+	toCityDto,
+	toCityListItem,
+	toNullableGeoNumber,
+	toCountryDto,
+	toCountryListItem,
+	toRegionDto,
+	toRegionListItem,
+	toStateDto,
+	toStateListItem,
+	toSubregionDto,
+	toSubregionListItem,
+	type CityListRow,
+	type CountryListRow,
+	type RegionListRow,
+	type StateListRow,
+	type SubregionListRow,
+} from "../mappers/geo.mappers";
 
-/** Raw Prisma row value before JSON-safe conversion (JSON columns, BigInt, Decimal, Date, relations). */
-type GeoRawValue = string | number | boolean | bigint | null | undefined | Date | Prisma.Decimal | readonly GeoRawValue[] | GeoRawRecord;
+/** Upper bound on fuzzy-search matches a geo list narrows to before filtering / paging. */
+const GEO_SEARCH_MAX_MATCHES = 200;
 
-interface GeoRawRecord {
-	readonly [key: string]: GeoRawValue;
-}
+/** Every geo list's default order is `id asc`, so its keyset is just the numeric id. */
+const GeoIdPositionSchema = z.object({ id: z.number().int().nonnegative() }).strict();
 
-function isGeoRawList(v: GeoRawValue): v is readonly GeoRawValue[] {
-	return Array.isArray(v);
-}
-
-/** Prisma Decimal: detect via toNumber method (duck-typing). */
-function isPrismaDecimal(v: GeoRawValue): v is Prisma.Decimal {
-	return typeof v === "object" && v !== null && "toNumber" in v && typeof v.toNumber === "function";
-}
-
-function toDataValue(v: GeoRawValue): DataValue | undefined {
-	if (v === null || v === undefined) return v;
-	if (typeof v === "bigint") return Number(v);
-	if (v instanceof Date) return v.toISOString();
-	// `undefined` array slots serialize as `null` in JSON.
-	if (isGeoRawList(v)) return v.map((item) => toDataValue(item) ?? null);
-	if (isPrismaDecimal(v)) return v.toNumber();
-	if (typeof v === "object") return toDataRecord(v);
-	return v;
-}
-
-function toDataRecord(v: GeoRawRecord): Readonly<Record<string, DataValue | undefined>> {
-	const out: Record<string, DataValue | undefined> = {};
-	for (const [k, val] of Object.entries(v)) {
-		out[k] = toDataValue(val);
-	}
-	return out;
-}
-
-/**
- * Recursively convert non-JSON-safe Prisma types (BigInt, Decimal, Date)
- * to JSON-safe primitives so the data can pass DataValueSchema validation
- * in the ResponseInterceptor.
- */
-function sanitizeForDataValue(rows: readonly GeoRawRecord[]): readonly DataValue[] {
-	return rows.map(toDataRecord);
-}
-
-/** Hybrid list response shape (matches {@link PaginatedServiceResult} for the response interceptor). */
-export interface ListResult {
-	readonly items: readonly DataValue[];
-	readonly limit: number;
-	readonly total: number;
-	readonly page: number;
-	readonly totalPages: number;
-	readonly nextCursor: string | null;
-	readonly hasNext: boolean;
-	readonly hasPrevious: boolean;
-}
-
-/** Encode an id into an opaque cursor string. */
-function encodeCursor(id: number): string {
-	return Buffer.from(String(id), "utf-8").toString("base64url");
-}
-
-/** Decode an opaque cursor string back to an id. Returns null if invalid. */
-function decodeCursor(cursor: string): number | null {
-	try {
-		const decoded = Number(Buffer.from(cursor, "base64url").toString("utf-8"));
-		return Number.isFinite(decoded) && decoded >= 0 ? decoded : null;
-	} catch {
-		return null;
-	}
-}
-
-interface GeoCursorOrder {
-	readonly id: "asc";
-}
-
-const GEO_CURSOR_ORDER: GeoCursorOrder = { id: "asc" };
-
-async function fetchGeoCursorPage<TWhere, TRow extends GeoRawRecord & { readonly id: number }>(options: {
-	readonly limit: number;
-	readonly cursor?: string;
-	readonly where: TWhere;
-	readonly mergeCursor: (where: TWhere, cursorId: number) => TWhere;
-	readonly findMany: (args: { where: TWhere; take: number; skip?: number; orderBy: GeoCursorOrder }) => Promise<TRow[]>;
-}): Promise<{ readonly items: readonly DataValue[]; readonly nextCursor: string | null; readonly hasNext: boolean }> {
-	const cursorId = options.cursor !== undefined ? decodeCursor(options.cursor) : null;
-	const mergedWhere = cursorId !== null ? options.mergeCursor(options.where, cursorId) : options.where;
-	const rows = await options.findMany({ where: mergedWhere, take: options.limit + 1, orderBy: GEO_CURSOR_ORDER });
-	const hasNext = rows.length > options.limit;
-	const items = hasNext ? rows.slice(0, options.limit) : rows;
-	const nextCursor = hasNext ? encodeCursor(items[items.length - 1].id) : null;
-	return { items: sanitizeForDataValue(items), nextCursor, hasNext };
-}
-
-interface FetchGeoListPageOptions<TWhere, TRow extends GeoRawRecord & { readonly id: number }> {
-	readonly where: TWhere;
-	readonly count: (where: TWhere) => Promise<number>;
-	readonly findMany: (args: { where: TWhere; take: number; skip?: number; orderBy: GeoCursorOrder }) => Promise<TRow[]>;
-}
-
-/** Offset + cursor list pagination for geo entities keyed by ascending numeric `id`. */
-async function fetchGeoListPage<TWhere, TRow extends GeoRawRecord & { readonly id: number }>(
-	query: PaginationInput,
-	options: FetchGeoListPageOptions<TWhere, TRow>,
-): Promise<ListResult> {
-	const total = await options.count(options.where);
-	const useCursor = query.cursor !== undefined;
-	const page = query.page;
-	const offsetMeta = buildOffsetPaginationMeta(total, page, query.limit);
-
-	if (useCursor) {
-		const cursorResult = await fetchGeoCursorPage({
-			limit: query.limit,
-			cursor: query.cursor,
-			where: options.where,
-			mergeCursor: (where, cursorId) => ({ ...where, id: { gt: cursorId } }),
-			findMany: options.findMany,
-		});
-		return {
-			items: cursorResult.items,
-			limit: query.limit,
-			total,
-			page: offsetMeta.page,
-			totalPages: offsetMeta.totalPages,
-			nextCursor: cursorResult.nextCursor,
-			hasNext: cursorResult.hasNext,
-			hasPrevious: false,
-		};
-	}
-
-	const skip = (offsetMeta.page - 1) * query.limit;
-	const rows = await options.findMany({
-		where: options.where,
-		skip,
-		take: query.limit,
-		orderBy: GEO_CURSOR_ORDER,
+function geoIdKeyset<TRow extends { readonly id: number }, TWhere>(after: (id: number) => TWhere): ListKeyset<TRow, TWhere> {
+	return defineKeyset({
+		position: GeoIdPositionSchema,
+		read: (row: TRow) => ({ id: row.id }),
+		after: (position) => after(position.id),
 	});
-	const nextCursor = offsetMeta.hasNext ? encodeCursor(rows[rows.length - 1].id) : null;
+}
+
+// ── Sort columns (explicit API field → column mapping per entity) ──────────
+
+const REGION_SORT_COLUMNS: SortColumns<RegionListSortField, Prisma.RegionOrderByWithRelationInput> = {
+	id: (direction) => ({ id: direction }),
+	name: (direction) => ({ name: direction }),
+};
+
+const SUBREGION_SORT_COLUMNS: SortColumns<SubregionListSortField, Prisma.SubregionOrderByWithRelationInput> = {
+	id: (direction) => ({ id: direction }),
+	name: (direction) => ({ name: direction }),
+};
+
+const COUNTRY_SORT_COLUMNS: SortColumns<CountryListSortField, Prisma.CountryOrderByWithRelationInput> = {
+	id: (direction) => ({ id: direction }),
+	name: (direction) => ({ name: direction }),
+	iso2: (direction) => ({ iso2: direction }),
+};
+
+const STATE_SORT_COLUMNS: SortColumns<StateListSortField, Prisma.StateOrderByWithRelationInput> = {
+	id: (direction) => ({ id: direction }),
+	name: (direction) => ({ name: direction }),
+	countryCode: (direction) => ({ countryCode: direction }),
+	iso2: (direction) => ({ iso2: direction }),
+};
+
+const CITY_SORT_COLUMNS: SortColumns<CityListSortField, Prisma.CityOrderByWithRelationInput> = {
+	id: (direction) => ({ id: direction }),
+	name: (direction) => ({ name: direction }),
+	countryCode: (direction) => ({ countryCode: direction }),
+	stateCode: (direction) => ({ stateCode: direction }),
+};
+
+// ── List where builders (filter AST → explicit columns) ────────────────────
+
+export function buildRegionListWhere(query: RegionListQuery, searchIds: readonly number[] | undefined): Prisma.RegionWhereInput {
+	const filter = query.filter;
 	return {
-		items: sanitizeForDataValue(rows),
-		limit: query.limit,
-		total,
-		page: offsetMeta.page,
-		totalPages: offsetMeta.totalPages,
-		nextCursor,
-		hasNext: offsetMeta.hasNext,
-		hasPrevious: offsetMeta.hasPrevious,
+		AND: [
+			...fieldWhere(toPrismaComparableFilter(filter?.id), (id) => ({ id })),
+			...fieldWhere(toPrismaBooleanFilter(filter?.flag), (flag) => ({ flag })),
+			...(searchIds !== undefined ? [{ id: { in: [...searchIds] } }] : []),
+		],
 	};
 }
 
-/** Geo entity counts. */
-export interface GeoStats {
-	readonly regions: number;
-	readonly subregions: number;
-	readonly countries: number;
-	readonly states: number;
-	readonly cities: number;
-}
-
-/** Autocomplete result item. */
-export interface AutocompleteItem {
-	readonly id: number;
-	readonly name: string;
-	readonly entityType: "region" | "subregion" | "country" | "state" | "city";
-	readonly countryCode: string | null;
-	readonly stateCode: string | null;
-	readonly latitude: number | null;
-	readonly longitude: number | null;
-	readonly emoji: string | null;
-}
-
-/** Cascade preview result. */
-export interface CascadePreviewResult {
-	readonly entity: string;
-	readonly id: number;
-	readonly name: string;
-	readonly willDelete: {
-		readonly subregions?: number;
-		readonly countries?: number;
-		readonly states?: number;
-		readonly cities?: number;
+export function buildSubregionListWhere(query: SubregionListQuery, searchIds: readonly number[] | undefined): Prisma.SubregionWhereInput {
+	const filter = query.filter;
+	return {
+		AND: [
+			...fieldWhere(toPrismaComparableFilter(filter?.id), (id) => ({ id })),
+			...fieldWhere(toPrismaComparableFilter(filter?.regionId), (regionId) => ({ regionId })),
+			...fieldWhere(toPrismaBooleanFilter(filter?.flag), (flag) => ({ flag })),
+			...(searchIds !== undefined ? [{ id: { in: [...searchIds] } }] : []),
+		],
 	};
 }
 
-/** Import result. */
-export interface ImportResult {
-	readonly created: number;
-	readonly updated: number;
-	readonly skipped: number;
-	readonly errors: readonly { readonly row: number; readonly message: string }[];
+export function buildCountryListWhere(query: CountryListQuery, searchIds: readonly number[] | undefined): Prisma.CountryWhereInput {
+	const filter = query.filter;
+	return {
+		AND: [
+			...fieldWhere(toPrismaComparableFilter(filter?.id), (id) => ({ id })),
+			...fieldWhere(toPrismaNullableStringFilter(filter?.iso2), (iso2) => ({ iso2 })),
+			...fieldWhere(toPrismaNullableComparableFilter(filter?.regionId), (regionId) => ({ regionId })),
+			...fieldWhere(toPrismaNullableComparableFilter(filter?.subregionId), (subregionId) => ({ subregionId })),
+			...fieldWhere(toPrismaBooleanFilter(filter?.flag), (flag) => ({ flag })),
+			...(searchIds !== undefined ? [{ id: { in: [...searchIds] } }] : []),
+		],
+	};
 }
 
-/** Import validation result. */
-export interface ImportValidationResult {
-	readonly valid: boolean;
-	readonly totalRows: number;
-	readonly validRows: number;
-	readonly errors: readonly { readonly row: number; readonly field: string | null; readonly message: string }[];
+export function buildStateListWhere(query: StateListQuery, searchIds: readonly number[] | undefined): Prisma.StateWhereInput {
+	const filter = query.filter;
+	return {
+		AND: [
+			...fieldWhere(toPrismaComparableFilter(filter?.id), (id) => ({ id })),
+			...fieldWhere(toPrismaComparableFilter(filter?.countryId), (countryId) => ({ countryId })),
+			...fieldWhere(toPrismaStringFilter(filter?.countryCode), (countryCode) => ({ countryCode })),
+			...fieldWhere(toPrismaBooleanFilter(filter?.flag), (flag) => ({ flag })),
+			...(searchIds !== undefined ? [{ id: { in: [...searchIds] } }] : []),
+		],
+	};
+}
+
+export function buildCityListWhere(query: CityListQuery, searchIds: readonly number[] | undefined): Prisma.CityWhereInput {
+	const filter = query.filter;
+	return {
+		AND: [
+			...fieldWhere(toPrismaComparableFilter(filter?.id), (id) => ({ id })),
+			...fieldWhere(toPrismaComparableFilter(filter?.stateId), (stateId) => ({ stateId })),
+			...fieldWhere(toPrismaComparableFilter(filter?.countryId), (countryId) => ({ countryId })),
+			...fieldWhere(toPrismaStringFilter(filter?.countryCode), (countryCode) => ({ countryCode })),
+			...fieldWhere(toPrismaStringFilter(filter?.stateCode), (stateCode) => ({ stateCode })),
+			...fieldWhere(toPrismaBooleanFilter(filter?.flag), (flag) => ({ flag })),
+			...(searchIds !== undefined ? [{ id: { in: [...searchIds] } }] : []),
+		],
+	};
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────
-
-/** Parse comma-separated IDs into a number array. */
-function parseIds(ids: string | undefined): number[] | null {
-	if (!ids) return null;
-	return ids
-		.split(",")
-		.map((s) => Number(s.trim()))
-		.filter((n) => Number.isFinite(n) && n >= 0);
-}
 
 /** Sanitize a string value — strip HTML tags and trim. */
 function sanitize(val: string | null | undefined): string | null {
@@ -252,7 +206,7 @@ const geoNameFieldSchema = z.string();
 const geoNonEmptyNameSchema = z.string().trim().min(1);
 const geoNonNegativeIntSchema = z.number().int().nonnegative();
 
-function sanitizePrismaNameField(input: { name?: string | null }): void {
+function sanitizePrismaNameField(input: { name?: string | null | undefined }): void {
 	const parsed = geoNameFieldSchema.safeParse(input.name);
 	if (parsed.success) {
 		input.name = sanitize(parsed.data) ?? parsed.data;
@@ -281,46 +235,184 @@ function parseImportStringField(row: JsonObject, field: string, fallback = ""): 
 // Contract DTOs (zod outputs) carry scalar foreign keys and nullable `DataValue`
 // JSON fields. Prisma's *Unchecked* inputs accept the scalar FKs directly, and
 // JSON `null` must become the `DbNull` sentinel — `parsePrismaNullableDataValue`
-// converts and runtime-validates both (`undefined` leaves the field unset).
+// converts and runtime-validates it. Optional fields the caller did not supply
+// are omitted (never passed as `undefined`), so Prisma leaves those columns
+// untouched on update and applies the column default on create.
 
 function toPrismaCreateRegion(input: CreateRegionInput): Prisma.RegionUncheckedCreateInput {
-	return { ...input, translations: parsePrismaNullableDataValue(input.translations) };
+	return {
+		name: input.name,
+		...(input.translations === undefined ? {} : { translations: parsePrismaNullableDataValue(input.translations) }),
+		...(input.wikiDataId === undefined ? {} : { wikiDataId: input.wikiDataId }),
+		flag: input.flag,
+	};
 }
 
 function toPrismaUpdateRegion(input: UpdateRegionInput): Prisma.RegionUncheckedUpdateInput {
-	return { ...input, translations: parsePrismaNullableDataValue(input.translations) };
+	return {
+		...(input.name === undefined ? {} : { name: input.name }),
+		...(input.translations === undefined ? {} : { translations: parsePrismaNullableDataValue(input.translations) }),
+		...(input.wikiDataId === undefined ? {} : { wikiDataId: input.wikiDataId }),
+		...(input.flag === undefined ? {} : { flag: input.flag }),
+	};
 }
 
 function toPrismaCreateSubregion(input: CreateSubregionInput): Prisma.SubregionUncheckedCreateInput {
-	return { ...input, translations: parsePrismaNullableDataValue(input.translations) };
+	return {
+		name: input.name,
+		regionId: input.regionId,
+		...(input.translations === undefined ? {} : { translations: parsePrismaNullableDataValue(input.translations) }),
+		...(input.wikiDataId === undefined ? {} : { wikiDataId: input.wikiDataId }),
+		flag: input.flag,
+	};
 }
 
 function toPrismaUpdateSubregion(input: UpdateSubregionInput): Prisma.SubregionUncheckedUpdateInput {
-	return { ...input, translations: parsePrismaNullableDataValue(input.translations) };
+	return {
+		...(input.name === undefined ? {} : { name: input.name }),
+		...(input.regionId === undefined ? {} : { regionId: input.regionId }),
+		...(input.translations === undefined ? {} : { translations: parsePrismaNullableDataValue(input.translations) }),
+		...(input.wikiDataId === undefined ? {} : { wikiDataId: input.wikiDataId }),
+		...(input.flag === undefined ? {} : { flag: input.flag }),
+	};
 }
 
 function toPrismaCreateCountry(input: CreateCountryInput): Prisma.CountryUncheckedCreateInput {
-	return { ...input, timezones: parsePrismaNullableDataValue(input.timezones), translations: parsePrismaNullableDataValue(input.translations) };
+	return {
+		name: input.name,
+		...(input.iso3 === undefined ? {} : { iso3: input.iso3 }),
+		...(input.numericCode === undefined ? {} : { numericCode: input.numericCode }),
+		...(input.iso2 === undefined ? {} : { iso2: input.iso2 }),
+		...(input.phonecode === undefined ? {} : { phonecode: input.phonecode }),
+		...(input.capital === undefined ? {} : { capital: input.capital }),
+		...(input.currency === undefined ? {} : { currency: input.currency }),
+		...(input.currencyName === undefined ? {} : { currencyName: input.currencyName }),
+		...(input.currencySymbol === undefined ? {} : { currencySymbol: input.currencySymbol }),
+		...(input.tld === undefined ? {} : { tld: input.tld }),
+		...(input.native === undefined ? {} : { native: input.native }),
+		...(input.population === undefined ? {} : { population: input.population }),
+		...(input.gdp === undefined ? {} : { gdp: input.gdp }),
+		...(input.region === undefined ? {} : { region: input.region }),
+		...(input.subregion === undefined ? {} : { subregion: input.subregion }),
+		...(input.nationality === undefined ? {} : { nationality: input.nationality }),
+		...(input.timezones === undefined ? {} : { timezones: parsePrismaNullableDataValue(input.timezones) }),
+		...(input.translations === undefined ? {} : { translations: parsePrismaNullableDataValue(input.translations) }),
+		...(input.latitude === undefined ? {} : { latitude: input.latitude }),
+		...(input.longitude === undefined ? {} : { longitude: input.longitude }),
+		...(input.emoji === undefined ? {} : { emoji: input.emoji }),
+		...(input.emojiU === undefined ? {} : { emojiU: input.emojiU }),
+		...(input.wikiDataId === undefined ? {} : { wikiDataId: input.wikiDataId }),
+		flag: input.flag,
+		...(input.regionId === undefined ? {} : { regionId: input.regionId }),
+		...(input.subregionId === undefined ? {} : { subregionId: input.subregionId }),
+	};
 }
 
 function toPrismaUpdateCountry(input: UpdateCountryInput): Prisma.CountryUncheckedUpdateInput {
-	return { ...input, timezones: parsePrismaNullableDataValue(input.timezones), translations: parsePrismaNullableDataValue(input.translations) };
+	return {
+		...(input.name === undefined ? {} : { name: input.name }),
+		...(input.iso3 === undefined ? {} : { iso3: input.iso3 }),
+		...(input.numericCode === undefined ? {} : { numericCode: input.numericCode }),
+		...(input.iso2 === undefined ? {} : { iso2: input.iso2 }),
+		...(input.phonecode === undefined ? {} : { phonecode: input.phonecode }),
+		...(input.capital === undefined ? {} : { capital: input.capital }),
+		...(input.currency === undefined ? {} : { currency: input.currency }),
+		...(input.currencyName === undefined ? {} : { currencyName: input.currencyName }),
+		...(input.currencySymbol === undefined ? {} : { currencySymbol: input.currencySymbol }),
+		...(input.tld === undefined ? {} : { tld: input.tld }),
+		...(input.native === undefined ? {} : { native: input.native }),
+		...(input.population === undefined ? {} : { population: input.population }),
+		...(input.gdp === undefined ? {} : { gdp: input.gdp }),
+		...(input.region === undefined ? {} : { region: input.region }),
+		...(input.subregion === undefined ? {} : { subregion: input.subregion }),
+		...(input.nationality === undefined ? {} : { nationality: input.nationality }),
+		...(input.timezones === undefined ? {} : { timezones: parsePrismaNullableDataValue(input.timezones) }),
+		...(input.translations === undefined ? {} : { translations: parsePrismaNullableDataValue(input.translations) }),
+		...(input.latitude === undefined ? {} : { latitude: input.latitude }),
+		...(input.longitude === undefined ? {} : { longitude: input.longitude }),
+		...(input.emoji === undefined ? {} : { emoji: input.emoji }),
+		...(input.emojiU === undefined ? {} : { emojiU: input.emojiU }),
+		...(input.wikiDataId === undefined ? {} : { wikiDataId: input.wikiDataId }),
+		...(input.flag === undefined ? {} : { flag: input.flag }),
+		...(input.regionId === undefined ? {} : { regionId: input.regionId }),
+		...(input.subregionId === undefined ? {} : { subregionId: input.subregionId }),
+	};
 }
 
 function toPrismaCreateState(input: CreateStateInput): Prisma.StateUncheckedCreateInput {
-	return { ...input, translations: parsePrismaNullableDataValue(input.translations) };
+	return {
+		name: input.name,
+		countryCode: input.countryCode,
+		countryId: input.countryId,
+		...(input.fipsCode === undefined ? {} : { fipsCode: input.fipsCode }),
+		...(input.iso2 === undefined ? {} : { iso2: input.iso2 }),
+		...(input.iso3166_2 === undefined ? {} : { iso3166_2: input.iso3166_2 }),
+		...(input.type === undefined ? {} : { type: input.type }),
+		...(input.level === undefined ? {} : { level: input.level }),
+		...(input.parentId === undefined ? {} : { parentId: input.parentId }),
+		...(input.native === undefined ? {} : { native: input.native }),
+		...(input.latitude === undefined ? {} : { latitude: input.latitude }),
+		...(input.longitude === undefined ? {} : { longitude: input.longitude }),
+		...(input.timezone === undefined ? {} : { timezone: input.timezone }),
+		...(input.translations === undefined ? {} : { translations: parsePrismaNullableDataValue(input.translations) }),
+		...(input.wikiDataId === undefined ? {} : { wikiDataId: input.wikiDataId }),
+		flag: input.flag,
+	};
 }
 
 function toPrismaUpdateState(input: UpdateStateInput): Prisma.StateUncheckedUpdateInput {
-	return { ...input, translations: parsePrismaNullableDataValue(input.translations) };
+	return {
+		...(input.name === undefined ? {} : { name: input.name }),
+		...(input.countryCode === undefined ? {} : { countryCode: input.countryCode }),
+		...(input.countryId === undefined ? {} : { countryId: input.countryId }),
+		...(input.fipsCode === undefined ? {} : { fipsCode: input.fipsCode }),
+		...(input.iso2 === undefined ? {} : { iso2: input.iso2 }),
+		...(input.iso3166_2 === undefined ? {} : { iso3166_2: input.iso3166_2 }),
+		...(input.type === undefined ? {} : { type: input.type }),
+		...(input.level === undefined ? {} : { level: input.level }),
+		...(input.parentId === undefined ? {} : { parentId: input.parentId }),
+		...(input.native === undefined ? {} : { native: input.native }),
+		...(input.latitude === undefined ? {} : { latitude: input.latitude }),
+		...(input.longitude === undefined ? {} : { longitude: input.longitude }),
+		...(input.timezone === undefined ? {} : { timezone: input.timezone }),
+		...(input.translations === undefined ? {} : { translations: parsePrismaNullableDataValue(input.translations) }),
+		...(input.wikiDataId === undefined ? {} : { wikiDataId: input.wikiDataId }),
+		...(input.flag === undefined ? {} : { flag: input.flag }),
+	};
 }
 
 function toPrismaCreateCity(input: CreateCityInput): Prisma.CityUncheckedCreateInput {
-	return { ...input, translations: parsePrismaNullableDataValue(input.translations) };
+	return {
+		name: input.name,
+		stateCode: input.stateCode,
+		countryCode: input.countryCode,
+		stateId: input.stateId,
+		countryId: input.countryId,
+		latitude: input.latitude,
+		longitude: input.longitude,
+		...(input.native === undefined ? {} : { native: input.native }),
+		...(input.timezone === undefined ? {} : { timezone: input.timezone }),
+		...(input.translations === undefined ? {} : { translations: parsePrismaNullableDataValue(input.translations) }),
+		...(input.wikiDataId === undefined ? {} : { wikiDataId: input.wikiDataId }),
+		flag: input.flag,
+	};
 }
 
 function toPrismaUpdateCity(input: UpdateCityInput): Prisma.CityUncheckedUpdateInput {
-	return { ...input, translations: parsePrismaNullableDataValue(input.translations) };
+	return {
+		...(input.name === undefined ? {} : { name: input.name }),
+		...(input.stateCode === undefined ? {} : { stateCode: input.stateCode }),
+		...(input.countryCode === undefined ? {} : { countryCode: input.countryCode }),
+		...(input.stateId === undefined ? {} : { stateId: input.stateId }),
+		...(input.countryId === undefined ? {} : { countryId: input.countryId }),
+		...(input.latitude === undefined ? {} : { latitude: input.latitude }),
+		...(input.longitude === undefined ? {} : { longitude: input.longitude }),
+		...(input.native === undefined ? {} : { native: input.native }),
+		...(input.timezone === undefined ? {} : { timezone: input.timezone }),
+		...(input.translations === undefined ? {} : { translations: parsePrismaNullableDataValue(input.translations) }),
+		...(input.wikiDataId === undefined ? {} : { wikiDataId: input.wikiDataId }),
+		...(input.flag === undefined ? {} : { flag: input.flag }),
+	};
 }
 
 @Injectable()
@@ -365,12 +457,12 @@ export class GeoRepository {
 
 	// ── Autocomplete ───────────────────────────────────────────────────
 
-	public async autocomplete(query: GeoAutocompleteQuery): Promise<readonly AutocompleteItem[]> {
+	public async autocomplete(query: GeoAutocompleteQuery): Promise<readonly GeoAutocompleteItem[]> {
 		const { q, country, limit } = query;
 		const like = `%${q}%`;
 		const countryFilter = country ? { countryCode: country } : {};
 
-		const [regions, subregions, countries, states, cities]: [Region[], Subregion[], Country[], State[], City[]] = await Promise.all([
+		const [regions, subregions, countries, states, cities] = await Promise.all([
 			this.prisma.region.findMany({ where: { name: { contains: like, mode: "insensitive" } }, take: limit }),
 			this.prisma.subregion.findMany({ where: { name: { contains: like, mode: "insensitive" } }, take: limit }),
 			this.prisma.country.findMany({ where: { name: { contains: like, mode: "insensitive" } }, take: limit }),
@@ -378,7 +470,7 @@ export class GeoRepository {
 			this.prisma.city.findMany({ where: { name: { contains: like, mode: "insensitive" }, ...countryFilter }, take: limit }),
 		]);
 
-		const items: AutocompleteItem[] = [];
+		const items: GeoAutocompleteItem[] = [];
 		for (const r of regions) items.push({ id: r.id, name: r.name, entityType: "region", countryCode: null, stateCode: null, latitude: null, longitude: null, emoji: null });
 		for (const s of subregions)
 			items.push({ id: s.id, name: s.name, entityType: "subregion", countryCode: null, stateCode: null, latitude: null, longitude: null, emoji: null });
@@ -389,8 +481,8 @@ export class GeoRepository {
 				entityType: "country",
 				countryCode: c.iso2,
 				stateCode: null,
-				latitude: c.latitude != null ? Number(c.latitude) : null,
-				longitude: c.longitude != null ? Number(c.longitude) : null,
+				latitude: toNullableGeoNumber(c.latitude),
+				longitude: toNullableGeoNumber(c.longitude),
 				emoji: c.emoji,
 			});
 		for (const s of states)
@@ -400,8 +492,8 @@ export class GeoRepository {
 				entityType: "state",
 				countryCode: s.countryCode,
 				stateCode: s.iso2,
-				latitude: s.latitude != null ? Number(s.latitude) : null,
-				longitude: s.longitude != null ? Number(s.longitude) : null,
+				latitude: toNullableGeoNumber(s.latitude),
+				longitude: toNullableGeoNumber(s.longitude),
 				emoji: null,
 			});
 		for (const c of cities)
@@ -411,8 +503,8 @@ export class GeoRepository {
 				entityType: "city",
 				countryCode: c.countryCode,
 				stateCode: c.stateCode,
-				latitude: Number(c.latitude),
-				longitude: Number(c.longitude),
+				latitude: c.latitude.toNumber(),
+				longitude: c.longitude.toNumber(),
 				emoji: null,
 			});
 
@@ -421,24 +513,25 @@ export class GeoRepository {
 
 	// ── Region ──────────────────────────────────────────────────────────
 
-	public async listRegions(query: RegionListQuery): Promise<ListResult> {
-		const { search, flag, ids, include } = query;
-		const idList = parseIds(ids);
-		const searchIds = search !== undefined ? await this.fuzzySearchIds("regions", search, 200) : null;
-		const where: Prisma.RegionWhereInput = {
-			...(searchIds !== null ? { id: { in: searchIds } } : {}),
-			...(flag !== undefined ? { flag } : {}),
-			...(idList !== null ? { id: { in: idList } } : {}),
-		};
-		const includeObj = this.parseRegionInclude(include);
-		return fetchGeoListPage(query, {
-			where,
-			count: (listWhere) => this.prisma.region.count({ where: listWhere }),
-			findMany: (args) => this.prisma.region.findMany({ ...args, include: includeObj }),
+	public async listRegions(query: RegionListQuery): Promise<PaginatedServiceResult<RegionListItem>> {
+		const searchIds = query.search !== undefined ? await this.fuzzySearchIds("regions", query.search, GEO_SEARCH_MAX_MATCHES) : undefined;
+		const includeObj = this.parseRegionInclude(query.include);
+		const result = await fetchListPage(query, {
+			where: buildRegionListWhere(query, searchIds),
+			order: buildListOrder(regionListQuery.resolveSort(query.sort), { columns: REGION_SORT_COLUMNS, tieBreaker: (direction) => ({ id: direction }), uniqueField: "id" }),
+			keyset: geoIdKeyset<RegionListRow, Prisma.RegionWhereInput>((id) => ({ id: { gt: id } })),
+			and: (left, right) => ({ AND: [left, right] }),
+			count: (where) => this.prisma.region.count({ where }),
+			findMany: (args) => this.prisma.region.findMany({ ...args, ...(includeObj === undefined ? {} : { include: includeObj }) }),
 		});
+		return toPaginatedServiceResult(mapListResult(result, toRegionListItem), query);
 	}
 
 	public async getRegion(id: number): Promise<Region> {
+		return toRegionDto(await this.findRegionOrThrow(id));
+	}
+
+	private async findRegionOrThrow(id: number): Promise<RegionRow> {
 		const region = await this.prisma.region.findUnique({ where: { id } });
 		if (region === null) throw new NotFoundException(`Region #${String(id)} not found`);
 		return region;
@@ -446,42 +539,46 @@ export class GeoRepository {
 
 	public async createRegion(input: CreateRegionInput): Promise<Region> {
 		if (input.name) sanitizePrismaNameField(input);
-		return this.prisma.region.create({ data: toPrismaCreateRegion(input) });
+		return toRegionDto(await this.prisma.region.create({ data: toPrismaCreateRegion(input) }));
 	}
 
 	public async updateRegion(id: number, input: UpdateRegionInput): Promise<Region> {
-		await this.getRegion(id);
+		await this.findRegionOrThrow(id);
 		sanitizePrismaNameField(input);
-		return this.prisma.region.update({ where: { id }, data: toPrismaUpdateRegion(input) });
+		return toRegionDto(await this.prisma.region.update({ where: { id }, data: toPrismaUpdateRegion(input) }));
 	}
 
-	public async deleteRegion(id: number): Promise<{ readonly message: string }> {
-		await this.getRegion(id);
+	public async deleteRegion(id: number): Promise<MessageResponse> {
+		await this.findRegionOrThrow(id);
 		await this.prisma.region.delete({ where: { id } });
 		return { message: `Region #${String(id)} deleted` };
 	}
 
 	// ── Subregion ───────────────────────────────────────────────────────
 
-	public async listSubregions(query: SubregionListQuery): Promise<ListResult> {
-		const { search, regionId, flag, ids, include } = query;
-		const idList = parseIds(ids);
-		const searchIds = search !== undefined ? await this.fuzzySearchIds("subregions", search, 200) : null;
-		const where: Prisma.SubregionWhereInput = {
-			...(searchIds !== null ? { id: { in: searchIds } } : {}),
-			...(regionId !== undefined ? { regionId } : {}),
-			...(flag !== undefined ? { flag } : {}),
-			...(idList !== null ? { id: { in: idList } } : {}),
-		};
-		const includeObj = this.parseSubregionInclude(include);
-		return fetchGeoListPage(query, {
-			where,
-			count: (listWhere) => this.prisma.subregion.count({ where: listWhere }),
-			findMany: (args) => this.prisma.subregion.findMany({ ...args, include: includeObj }),
+	public async listSubregions(query: SubregionListQuery): Promise<PaginatedServiceResult<SubregionListItem>> {
+		const searchIds = query.search !== undefined ? await this.fuzzySearchIds("subregions", query.search, GEO_SEARCH_MAX_MATCHES) : undefined;
+		const includeObj = this.parseSubregionInclude(query.include);
+		const result = await fetchListPage(query, {
+			where: buildSubregionListWhere(query, searchIds),
+			order: buildListOrder(subregionListQuery.resolveSort(query.sort), {
+				columns: SUBREGION_SORT_COLUMNS,
+				tieBreaker: (direction) => ({ id: direction }),
+				uniqueField: "id",
+			}),
+			keyset: geoIdKeyset<SubregionListRow, Prisma.SubregionWhereInput>((id) => ({ id: { gt: id } })),
+			and: (left, right) => ({ AND: [left, right] }),
+			count: (where) => this.prisma.subregion.count({ where }),
+			findMany: (args) => this.prisma.subregion.findMany({ ...args, ...(includeObj === undefined ? {} : { include: includeObj }) }),
 		});
+		return toPaginatedServiceResult(mapListResult(result, toSubregionListItem), query);
 	}
 
 	public async getSubregion(id: number): Promise<Subregion> {
+		return toSubregionDto(await this.findSubregionOrThrow(id));
+	}
+
+	private async findSubregionOrThrow(id: number): Promise<SubregionRow> {
 		const subregion = await this.prisma.subregion.findUnique({ where: { id } });
 		if (subregion === null) throw new NotFoundException(`Subregion #${String(id)} not found`);
 		return subregion;
@@ -489,44 +586,42 @@ export class GeoRepository {
 
 	public async createSubregion(input: CreateSubregionInput): Promise<Subregion> {
 		if (input.name) sanitizePrismaNameField(input);
-		return this.prisma.subregion.create({ data: toPrismaCreateSubregion(input) });
+		return toSubregionDto(await this.prisma.subregion.create({ data: toPrismaCreateSubregion(input) }));
 	}
 
 	public async updateSubregion(id: number, input: UpdateSubregionInput): Promise<Subregion> {
-		await this.getSubregion(id);
+		await this.findSubregionOrThrow(id);
 		sanitizePrismaNameField(input);
-		return this.prisma.subregion.update({ where: { id }, data: toPrismaUpdateSubregion(input) });
+		return toSubregionDto(await this.prisma.subregion.update({ where: { id }, data: toPrismaUpdateSubregion(input) }));
 	}
 
-	public async deleteSubregion(id: number): Promise<{ readonly message: string }> {
-		await this.getSubregion(id);
+	public async deleteSubregion(id: number): Promise<MessageResponse> {
+		await this.findSubregionOrThrow(id);
 		await this.prisma.subregion.delete({ where: { id } });
 		return { message: `Subregion #${String(id)} deleted` };
 	}
 
 	// ── Country ─────────────────────────────────────────────────────────
 
-	public async listCountries(query: CountryListQuery): Promise<ListResult> {
-		const { search, iso2, regionId, subregionId, flag, ids, include } = query;
-		const idList = parseIds(ids);
-		const searchIds = search !== undefined ? await this.fuzzySearchIds("countries", search, 200) : null;
-		const where: Prisma.CountryWhereInput = {
-			...(searchIds !== null ? { id: { in: searchIds } } : {}),
-			...(iso2 !== undefined ? { iso2 } : {}),
-			...(regionId !== undefined ? { regionId } : {}),
-			...(subregionId !== undefined ? { subregionId } : {}),
-			...(flag !== undefined ? { flag } : {}),
-			...(idList !== null ? { id: { in: idList } } : {}),
-		};
-		const includeObj = this.parseCountryInclude(include);
-		return fetchGeoListPage(query, {
-			where,
-			count: (listWhere) => this.prisma.country.count({ where: listWhere }),
-			findMany: (args) => this.prisma.country.findMany({ ...args, include: includeObj }),
+	public async listCountries(query: CountryListQuery): Promise<PaginatedServiceResult<CountryListItem>> {
+		const searchIds = query.search !== undefined ? await this.fuzzySearchIds("countries", query.search, GEO_SEARCH_MAX_MATCHES) : undefined;
+		const includeObj = this.parseCountryInclude(query.include);
+		const result = await fetchListPage(query, {
+			where: buildCountryListWhere(query, searchIds),
+			order: buildListOrder(countryListQuery.resolveSort(query.sort), { columns: COUNTRY_SORT_COLUMNS, tieBreaker: (direction) => ({ id: direction }), uniqueField: "id" }),
+			keyset: geoIdKeyset<CountryListRow, Prisma.CountryWhereInput>((id) => ({ id: { gt: id } })),
+			and: (left, right) => ({ AND: [left, right] }),
+			count: (where) => this.prisma.country.count({ where }),
+			findMany: (args) => this.prisma.country.findMany({ ...args, ...(includeObj === undefined ? {} : { include: includeObj }) }),
 		});
+		return toPaginatedServiceResult(mapListResult(result, toCountryListItem), query);
 	}
 
 	public async getCountry(id: number): Promise<Country> {
+		return toCountryDto(await this.findCountryOrThrow(id));
+	}
+
+	private async findCountryOrThrow(id: number): Promise<CountryRow> {
 		const country = await this.prisma.country.findUnique({ where: { id } });
 		if (country === null) throw new NotFoundException(`Country #${String(id)} not found`);
 		return country;
@@ -534,43 +629,42 @@ export class GeoRepository {
 
 	public async createCountry(input: CreateCountryInput): Promise<Country> {
 		if (input.name) sanitizePrismaNameField(input);
-		return this.prisma.country.create({ data: toPrismaCreateCountry(input) });
+		return toCountryDto(await this.prisma.country.create({ data: toPrismaCreateCountry(input) }));
 	}
 
 	public async updateCountry(id: number, input: UpdateCountryInput): Promise<Country> {
-		await this.getCountry(id);
+		await this.findCountryOrThrow(id);
 		sanitizePrismaNameField(input);
-		return this.prisma.country.update({ where: { id }, data: toPrismaUpdateCountry(input) });
+		return toCountryDto(await this.prisma.country.update({ where: { id }, data: toPrismaUpdateCountry(input) }));
 	}
 
-	public async deleteCountry(id: number): Promise<{ readonly message: string }> {
-		await this.getCountry(id);
+	public async deleteCountry(id: number): Promise<MessageResponse> {
+		await this.findCountryOrThrow(id);
 		await this.prisma.country.delete({ where: { id } });
 		return { message: `Country #${String(id)} deleted` };
 	}
 
 	// ── State ───────────────────────────────────────────────────────────
 
-	public async listStates(query: StateListQuery): Promise<ListResult> {
-		const { search, countryId, countryCode, flag, ids, include } = query;
-		const idList = parseIds(ids);
-		const searchIds = search !== undefined ? await this.fuzzySearchIds("states", search, 200) : null;
-		const where: Prisma.StateWhereInput = {
-			...(searchIds !== null ? { id: { in: searchIds } } : {}),
-			...(countryId !== undefined ? { countryId } : {}),
-			...(countryCode !== undefined ? { countryCode } : {}),
-			...(flag !== undefined ? { flag } : {}),
-			...(idList !== null ? { id: { in: idList } } : {}),
-		};
-		const includeObj = this.parseStateInclude(include);
-		return fetchGeoListPage(query, {
-			where,
-			count: (listWhere) => this.prisma.state.count({ where: listWhere }),
-			findMany: (args) => this.prisma.state.findMany({ ...args, include: includeObj }),
+	public async listStates(query: StateListQuery): Promise<PaginatedServiceResult<StateListItem>> {
+		const searchIds = query.search !== undefined ? await this.fuzzySearchIds("states", query.search, GEO_SEARCH_MAX_MATCHES) : undefined;
+		const includeObj = this.parseStateInclude(query.include);
+		const result = await fetchListPage(query, {
+			where: buildStateListWhere(query, searchIds),
+			order: buildListOrder(stateListQuery.resolveSort(query.sort), { columns: STATE_SORT_COLUMNS, tieBreaker: (direction) => ({ id: direction }), uniqueField: "id" }),
+			keyset: geoIdKeyset<StateListRow, Prisma.StateWhereInput>((id) => ({ id: { gt: id } })),
+			and: (left, right) => ({ AND: [left, right] }),
+			count: (where) => this.prisma.state.count({ where }),
+			findMany: (args) => this.prisma.state.findMany({ ...args, ...(includeObj === undefined ? {} : { include: includeObj }) }),
 		});
+		return toPaginatedServiceResult(mapListResult(result, toStateListItem), query);
 	}
 
 	public async getState(id: number): Promise<State> {
+		return toStateDto(await this.findStateOrThrow(id));
+	}
+
+	private async findStateOrThrow(id: number): Promise<StateRow> {
 		const state = await this.prisma.state.findUnique({ where: { id } });
 		if (state === null) throw new NotFoundException(`State #${String(id)} not found`);
 		return state;
@@ -578,45 +672,42 @@ export class GeoRepository {
 
 	public async createState(input: CreateStateInput): Promise<State> {
 		if (input.name) sanitizePrismaNameField(input);
-		return this.prisma.state.create({ data: toPrismaCreateState(input) });
+		return toStateDto(await this.prisma.state.create({ data: toPrismaCreateState(input) }));
 	}
 
 	public async updateState(id: number, input: UpdateStateInput): Promise<State> {
-		await this.getState(id);
+		await this.findStateOrThrow(id);
 		sanitizePrismaNameField(input);
-		return this.prisma.state.update({ where: { id }, data: toPrismaUpdateState(input) });
+		return toStateDto(await this.prisma.state.update({ where: { id }, data: toPrismaUpdateState(input) }));
 	}
 
-	public async deleteState(id: number): Promise<{ readonly message: string }> {
-		await this.getState(id);
+	public async deleteState(id: number): Promise<MessageResponse> {
+		await this.findStateOrThrow(id);
 		await this.prisma.state.delete({ where: { id } });
 		return { message: `State #${String(id)} deleted` };
 	}
 
 	// ── City ────────────────────────────────────────────────────────────
 
-	public async listCities(query: CityListQuery): Promise<ListResult> {
-		const { search, stateId, countryId, countryCode, stateCode, flag, ids, include } = query;
-		const idList = parseIds(ids);
-		const searchIds = search !== undefined ? await this.fuzzySearchIds("cities", search, 200) : null;
-		const where: Prisma.CityWhereInput = {
-			...(searchIds !== null ? { id: { in: searchIds } } : {}),
-			...(stateId !== undefined ? { stateId } : {}),
-			...(countryId !== undefined ? { countryId } : {}),
-			...(countryCode !== undefined ? { countryCode } : {}),
-			...(stateCode !== undefined ? { stateCode } : {}),
-			...(flag !== undefined ? { flag } : {}),
-			...(idList !== null ? { id: { in: idList } } : {}),
-		};
-		const includeObj = this.parseCityInclude(include);
-		return fetchGeoListPage(query, {
-			where,
-			count: (listWhere) => this.prisma.city.count({ where: listWhere }),
-			findMany: (args) => this.prisma.city.findMany({ ...args, include: includeObj }),
+	public async listCities(query: CityListQuery): Promise<PaginatedServiceResult<CityListItem>> {
+		const searchIds = query.search !== undefined ? await this.fuzzySearchIds("cities", query.search, GEO_SEARCH_MAX_MATCHES) : undefined;
+		const includeObj = this.parseCityInclude(query.include);
+		const result = await fetchListPage(query, {
+			where: buildCityListWhere(query, searchIds),
+			order: buildListOrder(cityListQuery.resolveSort(query.sort), { columns: CITY_SORT_COLUMNS, tieBreaker: (direction) => ({ id: direction }), uniqueField: "id" }),
+			keyset: geoIdKeyset<CityListRow, Prisma.CityWhereInput>((id) => ({ id: { gt: id } })),
+			and: (left, right) => ({ AND: [left, right] }),
+			count: (where) => this.prisma.city.count({ where }),
+			findMany: (args) => this.prisma.city.findMany({ ...args, ...(includeObj === undefined ? {} : { include: includeObj }) }),
 		});
+		return toPaginatedServiceResult(mapListResult(result, toCityListItem), query);
 	}
 
 	public async getCity(id: number): Promise<City> {
+		return toCityDto(await this.findCityOrThrow(id));
+	}
+
+	private async findCityOrThrow(id: number): Promise<CityRow> {
 		const city = await this.prisma.city.findUnique({ where: { id } });
 		if (city === null) throw new NotFoundException(`City #${String(id)} not found`);
 		return city;
@@ -624,24 +715,24 @@ export class GeoRepository {
 
 	public async createCity(input: CreateCityInput): Promise<City> {
 		if (input.name) sanitizePrismaNameField(input);
-		return this.prisma.city.create({ data: toPrismaCreateCity(input) });
+		return toCityDto(await this.prisma.city.create({ data: toPrismaCreateCity(input) }));
 	}
 
 	public async updateCity(id: number, input: UpdateCityInput): Promise<City> {
-		await this.getCity(id);
+		await this.findCityOrThrow(id);
 		sanitizePrismaNameField(input);
-		return this.prisma.city.update({ where: { id }, data: toPrismaUpdateCity(input) });
+		return toCityDto(await this.prisma.city.update({ where: { id }, data: toPrismaUpdateCity(input) }));
 	}
 
-	public async deleteCity(id: number): Promise<{ readonly message: string }> {
-		await this.getCity(id);
+	public async deleteCity(id: number): Promise<MessageResponse> {
+		await this.findCityOrThrow(id);
 		await this.prisma.city.delete({ where: { id } });
 		return { message: `City #${String(id)} deleted` };
 	}
 
 	// ── Import ──────────────────────────────────────────────────────────
 
-	public async importData(input: GeoImportInput): Promise<ImportResult> {
+	public async importData(input: GeoImportInput): Promise<GeoImportResult> {
 		const { entity, data, upsert } = input;
 		let created = 0;
 		let updated = 0;
@@ -663,7 +754,7 @@ export class GeoRepository {
 		return { created, updated, skipped, errors };
 	}
 
-	public validateImport(input: GeoImportValidateInput): ImportValidationResult {
+	public validateImport(input: GeoImportValidateInput): GeoImportValidationResult {
 		const { entity, data } = input;
 		const errors: { row: number; field: string | null; message: string }[] = [];
 		let validRows = 0;
@@ -683,7 +774,7 @@ export class GeoRepository {
 
 	// ── Export ──────────────────────────────────────────────────────────
 
-	public async exportData(query: GeoExportQuery): Promise<readonly Region[] | readonly Subregion[] | readonly Country[] | readonly State[] | readonly City[]> {
+	public async exportData(query: GeoExportQuery): Promise<readonly City[]> {
 		const { countryCode, regionId } = query;
 
 		// Export countries filtered, and cascade their states/cities
@@ -701,8 +792,8 @@ export class GeoRepository {
 
 		const cities = await this.prisma.city.findMany({ where: { stateId: { in: stateIds } }, orderBy: { name: "asc" } });
 
-		// Return as a flat array for CSV export
-		return cities;
+		// The flat city rows ARE the export (see `GeoExportResponseSchema`).
+		return cities.map(toCityDto);
 	}
 
 	// ── Cascade Preview ─────────────────────────────────────────────────

@@ -1,8 +1,9 @@
 "use client";
 
-import { stubApiMeta, successEnvelope } from "@/lib/api-envelope";
+import { initialDataOption, stubApiMeta, successEnvelope } from "@workspace/client/lib/api/envelope";
 import { AccessGate } from "@/components/auth/access-gate";
 import { RewardClaimFlow } from "@/components/rewardhub/detail/claim-flow";
+import { RewardMerchantAvatar } from "@/components/rewardhub/shared/merchant-avatar";
 import { WebPageHeader } from "@/components/web-ui/page-header";
 import { WebSurfacePanel } from "@/components/web-ui/surface-panel";
 import { useAuth } from "@workspace/client/lib/auth";
@@ -14,10 +15,11 @@ import { cn } from "@workspace/ui/lib/core/utils";
 import { format } from "date-fns";
 import Link from "next/link";
 import * as React from "react";
+import { ROUTES } from "@/lib/routes";
 
 export interface RewardDetailViewProps {
 	readonly rewardId: string;
-	readonly initialReward?: RewardResponse;
+	readonly initialReward?: RewardResponse | undefined;
 }
 
 /**
@@ -32,7 +34,7 @@ export function RewardDetailView({ rewardId, initialReward }: RewardDetailViewPr
 	const rewardQuery = api.rewards.detail.useQuery(
 		{ rewardId },
 		{
-			initialData: initialQueryData,
+			...initialDataOption(initialQueryData),
 			refetchInterval: 60_000,
 		},
 	);
@@ -65,7 +67,7 @@ export function RewardDetailView({ rewardId, initialReward }: RewardDetailViewPr
 		return (
 			<div className="space-y-6">
 				<WebPageHeader title="Reward unavailable" description="This reward may have expired or been removed." />
-				<Link href="/rewardhub" className={cn(buttonVariants({ variant: "outline" }))}>
+				<Link href={ROUTES.rewardHub.browse} className={cn(buttonVariants({ variant: "outline" }))}>
 					Back to browse
 				</Link>
 			</div>
@@ -78,16 +80,24 @@ export function RewardDetailView({ rewardId, initialReward }: RewardDetailViewPr
 		<div className="space-y-8">
 			<WebPageHeader title={reward.title} description={reward.description} />
 
-			<Link href="/rewardhub" className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "-mt-4")}>
+			<Link href={ROUTES.rewardHub.browse} className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "-mt-4")}>
 				← Back to browse
 			</Link>
 
 			<WebSurfacePanel className="p-5 sm:p-6">
+				{reward.organizationName !== undefined ? (
+					<div className="mb-4 flex items-center gap-3">
+						<RewardMerchantAvatar reward={reward} size="xl" />
+						<div className="min-w-0">
+							<p className="text-xs text-muted-foreground">Offered by</p>
+							<p className="truncate text-base font-semibold text-foreground">{reward.organizationName}</p>
+						</div>
+					</div>
+				) : null}
 				<div className="flex flex-wrap gap-2">
 					<Badge variant="secondary" className="capitalize">
 						{reward.category}
 					</Badge>
-					{reward.organizationName !== undefined ? <Badge variant="outline">{reward.organizationName}</Badge> : null}
 					<Badge variant="outline">{reward.rewardType.replace("_", " ")}</Badge>
 					{isSoldOut ? <Badge variant="destructive">Sold out</Badge> : null}
 					{claimBlockReason === "expired" ? <Badge variant="destructive">Expired</Badge> : null}
@@ -105,7 +115,7 @@ export function RewardDetailView({ rewardId, initialReward }: RewardDetailViewPr
 					{!canClaim ? (
 						<div className="space-y-3">
 							<p className="text-sm text-muted-foreground">{rewardClaimBlockMessage(claimBlockReason)}</p>
-							<Link href="/rewardhub" className={cn(buttonVariants({ variant: "outline" }))}>
+							<Link href={ROUTES.rewardHub.browse} className={cn(buttonVariants({ variant: "outline" }))}>
 								Browse other offers
 							</Link>
 						</div>

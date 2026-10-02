@@ -14,7 +14,7 @@ import { CryptoService } from "./crypto.service";
 import { UserResponseMapper } from "./user-response.mapper";
 
 export interface IssueSessionOptions {
-	readonly mfaAssured?: boolean;
+	readonly mfaAssured?: boolean | undefined;
 }
 
 /**

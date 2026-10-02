@@ -1,6 +1,6 @@
 import { BULK_MUTATION_MAX_ITEMS } from "../../api/bulk-mutation";
 import { z } from "zod";
-import { BooleanQueryParamSchema } from "../../api/query-params";
+import { defineListQuery, listFilter, ListSearchSchema } from "../../api/list-query";
 
 import type { PaginatedServiceResult } from "../../api/api-response";
 
@@ -36,23 +36,27 @@ export const UpdateProductSchema = CreateProductSchema.partial();
 export type UpdateProductInput = z.output<typeof UpdateProductSchema>;
 
 export const ProductIdParamSchema = z.object({ id: z.uuid() }).strict();
-export const ProductListSortBySchema = z.enum(["compareAtPrice", "name", "price", "sku", "slug", "stockQuantity", "createdAt"]);
-export type ProductListSortBy = z.output<typeof ProductListSortBySchema>;
-export const ProductListQuerySchema = z
-	.object({
-		page: z.coerce.number().int().min(1).optional().default(1),
-		cursor: z.string().min(1).optional(),
-		limit: z.coerce.number().int().positive().max(100).default(20),
-		sortBy: ProductListSortBySchema.optional(),
-		sortDirection: z.enum(["asc", "desc"]).optional(),
-		search: z.string().trim().min(1).optional(),
-		isActive: BooleanQueryParamSchema,
-		isFeatured: BooleanQueryParamSchema,
-		categoryId: z.uuid().optional(),
-		brand: z.string().trim().min(1).optional(),
-	})
-	.strict();
+/**
+ * `GET /product` list query — see docs/list-queries.md. Sort, filter and search
+ * whitelists live here once and drive the API, Swagger and the typed client.
+ */
+export const productListQuery = defineListQuery({
+	sortable: ["name", "price", "compareAtPrice", "sku", "slug", "stockQuantity", "createdAt"],
+	defaultSort: [{ field: "createdAt", direction: "desc" }],
+	filter: {
+		isActive: listFilter.boolean({ eq: true }),
+		isFeatured: listFilter.boolean({ eq: true }),
+		categoryId: listFilter.uuid({ eq: true, in: true }),
+		brand: listFilter.string({ eq: true, contains: true, isNull: true }),
+		price: listFilter.number({ gte: true, lte: true }),
+		stockQuantity: listFilter.number({ eq: true, gte: true, lte: true }),
+		createdAt: listFilter.epochMs({ gte: true, lte: true }),
+	},
+	params: { search: ListSearchSchema },
+});
+export const ProductListQuerySchema = productListQuery.schema;
 export type ProductListQuery = z.output<typeof ProductListQuerySchema>;
+export type ProductListSortField = (typeof productListQuery.sortable)[number];
 
 export const ProductSchema = z
 	.object({
@@ -76,7 +80,7 @@ export const ProductSchema = z
 		createdAt: z.number().int().nonnegative(),
 		updatedAt: z.number().int().nonnegative(),
 	})
-	.strict();
+	.meta({ description: "A product. Response schema: unknown keys are stripped, never rejected (ADR 022)." });
 export type Product = z.output<typeof ProductSchema>;
 
 export const ProductListResponseSchema = z
@@ -88,3 +92,6 @@ export const ProductListResponseSchema = z
 	})
 	.strict();
 export type ProductListResponse = PaginatedServiceResult<Product>;
+
+/** `POST /product/bulk` payload — the created products, in request order. */
+export const BulkCreateProductResponseSchema = z.array(ProductSchema);

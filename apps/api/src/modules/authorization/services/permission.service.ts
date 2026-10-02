@@ -15,15 +15,15 @@ import { UserSessionRevocationService } from "./user-session-revocation.service"
 export interface CreatePermissionInput {
 	readonly action: PermissionAction;
 	readonly resource: PermissionResource;
-	readonly description?: string;
-	readonly group?: string;
-	readonly isSystem?: boolean;
+	readonly description?: string | undefined;
+	readonly group?: string | undefined;
+	readonly isSystem?: boolean | undefined;
 }
 
 export interface UpdatePermissionInput {
-	readonly description?: string;
-	readonly group?: string;
-	readonly isSystem?: boolean;
+	readonly description?: string | undefined;
+	readonly group?: string | undefined;
+	readonly isSystem?: boolean | undefined;
 }
 
 // ── Service ─────────────────────────────────────────────────────────────────

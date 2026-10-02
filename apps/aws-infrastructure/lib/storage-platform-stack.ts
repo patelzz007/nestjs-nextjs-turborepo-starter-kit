@@ -14,6 +14,22 @@ import { readContextStringList } from "./cdk-context.util.js";
 
 const DEFAULT_BROWSER_ORIGINS: readonly string[] = ["http://localhost:3000", "http://localhost:3001", "http://localhost:3003"];
 
+/**
+ * An `s3.Bucket` that is assignable to `s3.IBucket` under `exactOptionalPropertyTypes`.
+ *
+ * Upstream CDK types `Bucket#isWebsite` as a getter returning `boolean | undefined`
+ * while `IBucket#isWebsite` is `isWebsite?: boolean`, so a concrete `Bucket` cannot be
+ * passed where an `IBucket` is expected (e.g. `S3BucketOrigin.withOriginAccessControl`)
+ * with that compiler flag on. This narrows the getter to the documented `@default false`
+ * — every CDK consumer only tests it for truthiness, so the synthesized template is
+ * unchanged. Remove once aws-cdk-lib aligns the two declarations.
+ */
+class OriginBucket extends s3.Bucket {
+	public override get isWebsite(): boolean {
+		return super.isWebsite ?? false;
+	}
+}
+
 export interface StoragePlatformStackProps extends cdk.StackProps {
 	readonly environmentName: string;
 	readonly browserOrigins?: readonly string[];
@@ -64,7 +80,7 @@ export class StoragePlatformStack extends cdk.Stack {
 			removalPolicy: cdk.RemovalPolicy.RETAIN,
 		});
 
-		const publicOriginBucket = new s3.Bucket(this, "PublicOriginBucket", {
+		const publicOriginBucket = new OriginBucket(this, "PublicOriginBucket", {
 			bucketName: `${namePrefix}-public-origin`,
 			blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
 			enforceSSL: true,

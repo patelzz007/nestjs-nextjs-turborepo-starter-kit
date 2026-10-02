@@ -1,12 +1,11 @@
 "use client";
 
-import { useMerchantRoleAccess } from "@/components/access/merchant-authorization-provider";
 import { MerchantCapabilityGate } from "@/components/access/merchant-capability-gate";
 import { MerchantStatCard } from "@/components/merchant-ui/stat-card";
 import { MerchantSurfacePanel } from "@/components/merchant-ui/surface-panel";
 import { OrganizationLocationList } from "@/components/org/organization-location-list";
-import { organizationPath } from "@/lib/org/slug";
-import { Can } from "@workspace/client/lib/auth/can";
+import { orgRoutes, ROUTES } from "@/lib/routes";
+import { Can, useAuthorization } from "@workspace/client/lib/auth/can";
 import { MERCHANT_CAPABILITY, type KybStatus, type OrganizationContextResponse, type OrganizationLifecycleState, type OrganizationMembershipRole } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/feedback/badge";
 import { Button, buttonVariants } from "@workspace/ui/components/form/button";
@@ -109,9 +108,8 @@ export function OrgDashboardPageView(props: OrgDashboardPageViewProps): React.JS
 }
 
 function OrgDashboardPageContent({ orgSlug, context, contextError = false }: OrgDashboardPageViewProps): React.JSX.Element {
-	const canManageTeam = useMerchantRoleAccess("manageTeam");
-	const canSubmitKyb = useMerchantRoleAccess("submitKyb");
-	const canManageLocations = useMerchantRoleAccess("manageLocations");
+	const { can } = useAuthorization();
+	const canManageLocations = can(MERCHANT_CAPABILITY.manageLocations);
 	const displayName = context?.organization.displayName ?? orgSlug;
 	const lifecycleState = context?.organization.lifecycleState;
 	const membershipRole = context?.membership.role;
@@ -200,28 +198,30 @@ function OrgDashboardPageContent({ orgSlug, context, contextError = false }: Org
 						</p>
 					</div>
 					<div className="space-y-3">
-						<OrgNavLink
-							href={organizationPath(orgSlug, "settings/locations")}
-							title="Store locations"
-							description="View every store site under this organization and your location access scope."
-							icon={<MapPin className="size-5" aria-hidden="true" />}
-						/>
-						{canManageTeam ? (
+						<Can permission={MERCHANT_CAPABILITY.viewLocations}>
 							<OrgNavLink
-								href={organizationPath(orgSlug, "settings/team")}
+								href={orgRoutes(orgSlug).settings.locations}
+								title="Store locations"
+								description="View every store site under this organization and your location access scope."
+								icon={<MapPin className="size-5" aria-hidden="true" />}
+							/>
+						</Can>
+						<Can permission={MERCHANT_CAPABILITY.manageTeam}>
+							<OrgNavLink
+								href={orgRoutes(orgSlug).settings.team}
 								title="Team & access"
 								description="Invite members, manage roles, and review access requests."
 								icon={<Users className="size-5" aria-hidden="true" />}
 							/>
-						) : null}
-						{canSubmitKyb ? (
+						</Can>
+						<Can permission={MERCHANT_CAPABILITY.manageVerification}>
 							<OrgNavLink
-								href={organizationPath(orgSlug, "settings/verification")}
+								href={orgRoutes(orgSlug).settings.verification}
 								title="Business verification"
 								description="Submit or update KYB documents for this organization."
 								icon={<ShieldCheck className="size-5" aria-hidden="true" />}
 							/>
-						) : null}
+						</Can>
 					</div>
 				</section>
 
@@ -233,7 +233,7 @@ function OrgDashboardPageContent({ orgSlug, context, contextError = false }: Org
 					<div className="space-y-3">
 						<Can permission={MERCHANT_CAPABILITY.viewRewards}>
 							<OrgNavLink
-								href={organizationPath(orgSlug, "rewards")}
+								href={orgRoutes(orgSlug).rewards.list}
 								title="Rewards"
 								description="Claims, redemptions, conversion metrics, and active campaigns."
 								icon={<Gift className="size-5" aria-hidden="true" />}
@@ -241,7 +241,7 @@ function OrgDashboardPageContent({ orgSlug, context, contextError = false }: Org
 						</Can>
 						<Can permission={MERCHANT_CAPABILITY.viewAnalytics}>
 							<OrgNavLink
-								href={organizationPath(orgSlug, "analytics")}
+								href={orgRoutes(orgSlug).analytics}
 								title="Analytics"
 								description="Performance trends and top-performing rewards."
 								icon={<BarChart3 className="size-5" aria-hidden="true" />}
@@ -249,7 +249,7 @@ function OrgDashboardPageContent({ orgSlug, context, contextError = false }: Org
 						</Can>
 						<Can permission={MERCHANT_CAPABILITY.viewRedemptions}>
 							<OrgNavLink
-								href={organizationPath(orgSlug, "redemptions")}
+								href={orgRoutes(orgSlug).redemptions}
 								title="Redemptions log"
 								description="Recent POS scans and redemption confirmations."
 								icon={<LayoutDashboard className="size-5" aria-hidden="true" />}
@@ -268,10 +268,12 @@ function OrgDashboardPageContent({ orgSlug, context, contextError = false }: Org
 								{context.locations.length} location{context.locations.length === 1 ? "" : "s"} under this organization.
 							</p>
 						</div>
-						<Link href={organizationPath(orgSlug, "settings/locations")} className={cn(buttonVariants({ variant: "outline", size: "sm" }), "gap-2 bg-transparent")}>
-							<MapPin className="size-4" aria-hidden="true" />
-							{canManageLocations ? "Manage locations" : "View locations"}
-						</Link>
+						<Can permission={MERCHANT_CAPABILITY.viewLocations}>
+							<Link href={orgRoutes(orgSlug).settings.locations} className={cn(buttonVariants({ variant: "outline", size: "sm" }), "gap-2 bg-transparent")}>
+								<MapPin className="size-4" aria-hidden="true" />
+								{canManageLocations ? "Manage locations" : "View locations"}
+							</Link>
+						</Can>
 					</div>
 					<OrganizationLocationList
 						locations={context.locations}
@@ -314,7 +316,7 @@ function OrgDashboardPageContent({ orgSlug, context, contextError = false }: Org
 								</div>
 							) : null}
 						</div>
-						<Link href="/" className={cn(buttonVariants({ variant: "outline" }), "gap-2 bg-transparent")}>
+						<Link href={ROUTES.home} className={cn(buttonVariants({ variant: "outline" }), "gap-2 bg-transparent")}>
 							<Gift className="size-4" aria-hidden="true" />
 							Open merchant home
 						</Link>
@@ -322,7 +324,7 @@ function OrgDashboardPageContent({ orgSlug, context, contextError = false }: Org
 				</MerchantSurfacePanel>
 			) : (
 				<div className="flex flex-wrap gap-3">
-					<Link href="/">
+					<Link href={ROUTES.home}>
 						<Button variant="outline" className="gap-2 bg-transparent">
 							<Gift className="size-4" aria-hidden="true" />
 							Go to merchant home

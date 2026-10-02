@@ -15,6 +15,14 @@ export const WEB_PALETTE_ITEMS: readonly PaletteSearchableItem[] = ALL_WEB_NAV_I
 	icon: item.id,
 }));
 
+/**
+ * The palette entries `canAccess` allows — pass `useCanAccessWebPath()` so the
+ * palette and the pinned row only offer pages the route guard would render.
+ */
+export function accessiblePaletteItems(canAccess: (href: string) => boolean, items: readonly PaletteSearchableItem[] = WEB_PALETTE_ITEMS): readonly PaletteSearchableItem[] {
+	return items.filter((item) => canAccess(item.url));
+}
+
 const iconById = new Map<string, LucideIcon>(ALL_WEB_NAV_ITEMS.map((item) => [item.id, item.icon]));
 
 export function renderWebPaletteIcon(iconKey: string | undefined, className: string): React.ReactNode {

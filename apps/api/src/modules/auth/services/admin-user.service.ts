@@ -9,7 +9,7 @@ import {
 	type UserResponse,
 } from "@workspace/shared";
 
-import { paginateCursorListResult } from "../../../platform/persistence/cursor-list";
+import { toPaginatedServiceResult } from "../../../platform/persistence/list-page";
 
 import { LogService } from "../../../modules/logs/logs.service";
 import { PrismaService } from "../../../prisma/prisma.service";
@@ -82,7 +82,7 @@ export class AdminUserService {
 			};
 		});
 
-		return paginateCursorListResult({ ...listResult, items }, query);
+		return toPaginatedServiceResult({ ...listResult, items }, query);
 	}
 
 	public async getAdminUserDetail(userId: string): Promise<AdminUserDetail> {

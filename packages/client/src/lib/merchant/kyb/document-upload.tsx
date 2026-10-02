@@ -83,9 +83,9 @@ function collectValidatedDocuments(files: readonly File[], existingCount: number
 interface MerchantKybDocumentListItemProps {
 	readonly document: MerchantKybPendingDocument;
 	readonly index: number;
-	readonly onRemoveAtIndex?: (index: number) => void;
-	readonly readOnly?: boolean;
-	readonly onOpen?: (index: number) => void;
+	readonly onRemoveAtIndex?: ((index: number) => void) | undefined;
+	readonly readOnly?: boolean | undefined;
+	readonly onOpen?: ((index: number) => void) | undefined;
 }
 
 function MerchantKybDocumentListItem({ document, index, onRemoveAtIndex, readOnly = false, onOpen }: MerchantKybDocumentListItemProps): React.JSX.Element {
@@ -129,12 +129,12 @@ function MerchantKybDocumentListItem({ document, index, onRemoveAtIndex, readOnl
 
 export interface MerchantKybDocumentUploadProps {
 	readonly documents: readonly MerchantKybPendingDocument[];
-	readonly onChange?: (documents: MerchantKybPendingDocument[]) => void;
-	readonly idPrefix?: string;
-	readonly helperText?: string;
-	readonly className?: string;
-	readonly readOnly?: boolean;
-	readonly onOpenDocument?: (index: number) => void;
+	readonly onChange?: ((documents: MerchantKybPendingDocument[]) => void) | undefined;
+	readonly idPrefix?: string | undefined;
+	readonly helperText?: string | undefined;
+	readonly className?: string | undefined;
+	readonly readOnly?: boolean | undefined;
+	readonly onOpenDocument?: ((index: number) => void) | undefined;
 }
 
 export const MerchantKybDocumentUpload = React.memo(

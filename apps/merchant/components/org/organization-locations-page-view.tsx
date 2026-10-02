@@ -1,15 +1,16 @@
 "use client";
 
-import { useMerchantAuthorizationStatus, useMerchantRoleAccess } from "@/components/access/merchant-authorization-provider";
+import { useMerchantAuthorizationStatus } from "@/components/access/merchant-authorization-provider";
 import { MerchantReadOnlyNotice } from "@/components/access/merchant-capability-gate";
 import { MerchantPageHeader } from "@/components/merchant-ui/page-header";
 import { MerchantSurfacePanel } from "@/components/merchant-ui/surface-panel";
 import { OrganizationLocationList } from "@/components/org/organization-location-list";
 import { OrganizationLocationRequestForm } from "@/components/org/organization-location-request-form";
 import { resolveActiveOrganizationLocations, resolveAllOrganizationLocations } from "@/lib/org/location-access";
-import { organizationPath } from "@/lib/org/slug";
+import { orgRoutes } from "@/lib/routes";
 import { useAuth } from "@workspace/client/lib/auth";
-import type { OrganizationLocationResponse } from "@workspace/shared";
+import { useAuthorization } from "@workspace/client/lib/auth/can";
+import { MERCHANT_CAPABILITY, type OrganizationLocationResponse } from "@workspace/shared";
 import { Button } from "@workspace/ui/components/form/button";
 import Link from "next/link";
 import * as React from "react";
@@ -18,10 +19,11 @@ export interface OrganizationLocationsPageViewProps {
 	readonly orgSlug: string;
 }
 
-/** Store locations route — readable by every member; request/resubmit are OWNER/ADMIN-only on the API (`assertCanManageLocations`). */
+/** Store locations route — `merchant:view_locations` (every member); request/resubmit need `merchant:manage_locations` (enforced by the API). */
 export function OrganizationLocationsPageView({ orgSlug }: OrganizationLocationsPageViewProps): React.JSX.Element {
 	const { api } = useAuth();
-	const canManageLocations = useMerchantRoleAccess("manageLocations");
+	const { can } = useAuthorization();
+	const canManageLocations = can(MERCHANT_CAPABILITY.manageLocations);
 	const { isLoading: isAuthorizationLoading } = useMerchantAuthorizationStatus();
 	const contextQuery = api.organizations.context.useQuery({ orgSlug });
 	const context = contextQuery.data?.data;
@@ -69,7 +71,7 @@ export function OrganizationLocationsPageView({ orgSlug }: OrganizationLocations
 			/>
 
 			{canManageLocations || isAuthorizationLoading ? null : (
-				<MerchantReadOnlyNotice>Only organization owners and admins can request new stores or resubmit rejected ones.</MerchantReadOnlyNotice>
+				<MerchantReadOnlyNotice>Your role can view store locations but not request new stores or resubmit rejected ones.</MerchantReadOnlyNotice>
 			)}
 
 			{contextQuery.isError ? (
@@ -141,7 +143,7 @@ export function OrganizationLocationsPageView({ orgSlug }: OrganizationLocations
 				</>
 			) : null}
 
-			<Link href={organizationPath(orgSlug, "dashboard")} className="text-sm text-muted-foreground hover:text-foreground">
+			<Link href={orgRoutes(orgSlug).dashboard} className="text-sm text-muted-foreground hover:text-foreground">
 				Back to dashboard
 			</Link>
 		</div>

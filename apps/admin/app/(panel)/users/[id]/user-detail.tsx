@@ -5,18 +5,19 @@ import { UserAccessPanel } from "@/components/access/user-access-panel";
 import { ImpersonateUserButton } from "@/components/impersonation/impersonate-user-button";
 import { UserMfaRecoveryPanel } from "@/components/users/user-mfa-recovery-panel";
 import { UserProfileOverview } from "@/components/users/user-profile-overview";
-import { stubApiMeta } from "@/lib/format/api-envelope";
+import { initialDataOption, stubApiMeta, successEnvelope } from "@workspace/client/lib/api/envelope";
 import { UserDetailBreadcrumb } from "@/components/users/user-detail-breadcrumb";
 import { useAuth } from "@workspace/client/lib/auth";
 import { useAuthorization } from "@workspace/client/lib/auth/can";
 import Link from "next/link";
 import * as React from "react";
+import { ROUTES } from "@/lib/routes";
 
 export interface UserDetailViewProps {
 	readonly userId: string;
-	readonly initialUser?: AdminUserDetail;
-	readonly initialRoles?: readonly RoleListItem[];
-	readonly initialPermissions?: readonly PermissionListItem[];
+	readonly initialUser?: AdminUserDetail | undefined;
+	readonly initialRoles?: readonly RoleListItem[] | undefined;
+	readonly initialPermissions?: readonly PermissionListItem[] | undefined;
 }
 
 /**
@@ -29,23 +30,21 @@ export default function UserDetailView({ userId, initialUser, initialRoles, init
 	const canListRoles = can(PERMISSION.ROLE.LIST);
 	const canListPermissions = can(PERMISSION.PERMISSION.LIST);
 
-	const userQuery = api.auth.adminUserDetail.useQuery(
-		{ userId },
-		{ initialData: initialUser !== undefined ? { success: true, data: initialUser, meta: stubApiMeta() } : undefined },
-	);
+	const userQuery = api.auth.adminUserDetail.useQuery({ userId }, initialDataOption(initialUser !== undefined ? successEnvelope(initialUser, stubApiMeta()) : undefined));
 	const rolesQuery = api.admin.roles.list.useQuery(
 		{},
 		{
 			enabled: canListRoles,
-			initialData: initialRoles !== undefined ? { success: true, data: { items: [...initialRoles], total: initialRoles.length }, meta: stubApiMeta() } : undefined,
+			...initialDataOption(initialRoles !== undefined ? successEnvelope({ items: [...initialRoles], total: initialRoles.length }, stubApiMeta()) : undefined),
 		},
 	);
 	const permissionsQuery = api.admin.permissions.list.useQuery(
 		{},
 		{
 			enabled: canListPermissions,
-			initialData:
-				initialPermissions !== undefined ? { success: true, data: { items: [...initialPermissions], total: initialPermissions.length }, meta: stubApiMeta() } : undefined,
+			...initialDataOption(
+				initialPermissions !== undefined ? successEnvelope({ items: [...initialPermissions], total: initialPermissions.length }, stubApiMeta()) : undefined,
+			),
 		},
 	);
 
@@ -62,7 +61,7 @@ export default function UserDetailView({ userId, initialUser, initialRoles, init
 			) : userQuery.isError || user === undefined ? (
 				<div className="rounded-lg border border-destructive/30 bg-destructive/5 p-6 text-sm text-destructive">
 					Failed to load user.{" "}
-					<Link href="/users/all" className="underline">
+					<Link href={ROUTES.users.list} className="underline">
 						Back to users
 					</Link>
 				</div>

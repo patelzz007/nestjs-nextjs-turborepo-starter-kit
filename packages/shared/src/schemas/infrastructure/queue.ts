@@ -4,7 +4,7 @@ import { EmailPreviewPropValueSchema, EmailTemplateKeySchema } from "../email/em
 import { StorageProviderSchema } from "../domain/platform/storage";
 
 /** BullMQ queue names used by the API (must match compose Bull Board prefix). */
-export const QUEUE_NAMES: ["email.send", "rewards.auto-publish", "claims.expire-pending", "claims.expire-referrer", "outbox.publish", "storage.cleanup", "storage.delete"] = [
+export const QUEUE_NAMES: [
 	"email.send",
 	"rewards.auto-publish",
 	"claims.expire-pending",
@@ -12,7 +12,8 @@ export const QUEUE_NAMES: ["email.send", "rewards.auto-publish", "claims.expire-
 	"outbox.publish",
 	"storage.cleanup",
 	"storage.delete",
-];
+	"idempotency.retention",
+] = ["email.send", "rewards.auto-publish", "claims.expire-pending", "claims.expire-referrer", "outbox.publish", "storage.cleanup", "storage.delete", "idempotency.retention"];
 
 export const QueueNameSchema = z.enum(QUEUE_NAMES);
 

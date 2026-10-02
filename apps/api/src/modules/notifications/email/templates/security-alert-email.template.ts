@@ -1,4 +1,4 @@
-import { nowEpochMs, SecurityAlertEmailPropsSchema, type SecurityAlertEmailProps } from "@workspace/shared";
+import { nowEpochMs, SecurityAlertEmailPropsSchema, type SecurityAlertEmailProps, APP_LINKS } from "@workspace/shared";
 
 import { BaseEmailTemplate, type EmailAccent } from "../base/base-email-template";
 import type { EmailRenderContext } from "../base/email-render-context";
@@ -46,18 +46,19 @@ export class SecurityAlertEmailTemplate extends BaseEmailTemplate<SecurityAlertE
 	}
 
 	public renderBodyHtml(context: EmailRenderContext): string {
-		const detailLines: readonly string[] = [this.props.deviceLabel ?? "A device you may not recognize", this.props.location ?? "Unknown location"];
-		return `
-        <p class="email-text" style="color: #334155; font-size: 15px; line-height: 1.7; margin: 0 0 16px 0;">We noticed a sign-in to your <strong>${this.escape(context.appName)}</strong> account <strong>${this.escape(this.signedInLabel)}</strong>:</p>
-        <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%; margin: 0 0 20px 0;">
-          <tr>
-            <td class="email-chip" style="background: ${this.palette.chipBg}; border: 1px solid ${this.palette.chipBorder}; border-radius: 10px; padding: 16px 18px;">
-              ${detailLines.map((line: string): string => `<p style="margin: 0 0 4px 0; font-size: 14px; font-weight: 600; color: ${this.palette.chipText};">${this.escape(line)}</p>`).join("")}
-            </td>
-          </tr>
-        </table>
-        <p class="email-text" style="color: #334155; font-size: 15px; line-height: 1.7; margin: 0 0 8px 0;">Was this you? You're all set — no action needed.</p>
-        <p class="email-text" style="color: #334155; font-size: 15px; line-height: 1.7; margin: 0 0 20px 0;">If it wasn't, please <a href="${this.escape(this.buildUrl(context, "/auth/reset-password"))}" style="color: #2563eb; text-decoration: underline;">reset your password</a> and review your <a href="${this.escape(this.buildUrl(context, "/settings/sessions"))}" style="color: #2563eb; text-decoration: underline;">active sessions</a>.</p>`;
+		return [
+			this.paragraph(`We noticed a new sign-in to your ${this.strong(context.appName)} account ${this.strong(this.signedInLabel)}.`),
+			this.detailsCard([
+				{ label: "Device", value: this.props.deviceLabel ?? "A device you may not recognize" },
+				{ label: "Location", value: this.props.location ?? "Unknown location" },
+				{ label: "When", value: this.signedInLabel },
+			]),
+			this.paragraph("Was this you? You're all set — no action needed."),
+			this.callout("Didn't sign in?", "Reset your password now and sign out of any sessions you don't recognize."),
+			this.note(
+				`${this.link(this.buildUrl(context, APP_LINKS.auth.forgotPassword), "Reset password")} · ${this.link(this.buildUrl(context, APP_LINKS.web.account), "Review active sessions")}`,
+			),
+		].join("");
 	}
 
 	public renderBodyText(context: EmailRenderContext): string {
@@ -67,7 +68,7 @@ export class SecurityAlertEmailTemplate extends BaseEmailTemplate<SecurityAlertE
 			`- Location: ${this.props.location ?? "unknown"}`,
 			"",
 			"Was this you? You're all set — no action needed.",
-			"If it wasn't, reset your password at " + `${context.appUrl}/auth/reset-password` + " and review your sessions at " + `${context.appUrl}/settings/sessions`,
+			`If it wasn't, reset your password at ${this.buildUrl(context, APP_LINKS.auth.forgotPassword)} and review your sessions at ${this.buildUrl(context, APP_LINKS.web.account)}`,
 		].join("\n");
 	}
 }

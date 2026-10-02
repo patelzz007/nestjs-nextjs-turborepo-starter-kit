@@ -1,39 +1,23 @@
-import type { AccessTokenPayload, RefreshTokenPayload } from "../modules/auth/services/token.service";
+import type { RefreshTokenPayload } from "../modules/auth/services/token.service";
 
-import type { RequestContext } from "@fastify/request-context";
 import type { JsonValue } from "./json";
 
 // Re-export for convenience — consumers can import from either path.
 export type { AuthenticatedUser, isAuthenticatedUser } from "./authenticated-user";
 
-// Extend the FastifyRequest type to include the authenticated user payload,
-// correlation ID (set by the correlation-id middleware and mirrored onto the
-// FastifyRequest by the preHandler hook in main.ts), and response data (set
-// by interceptors). Guards/interceptors receive the FastifyRequest on this
-// adapter, so these fields are typed directly on it.
+// Extend the FastifyRequest type with the authenticated user payload and the
+// response data captured by interceptors. Guards/interceptors receive the
+// FastifyRequest on this adapter, so these fields are typed directly on it.
+//
+// Request-scoped identifiers (correlation id, trace id, principal, tenant)
+// are NOT stored on the request object: they live in the one request context
+// (`common/context/request-context.ts`, ADR 017). `request.id` is the
+// correlation id (genReqId → `common/context/correlation-id.ts`).
 declare module "fastify" {
 	interface FastifyRequest {
 		user?: import("./authenticated-user").AuthenticatedUser | RefreshTokenPayload;
-		/** Correlation ID for request tracing (set by correlation-id middleware) */
-		correlationId?: string;
-		/** Trace ID — alias of correlationId, used for request grouping */
-		traceId?: string;
 		/** Response data captured by ResponseInterceptor for logging/audit */
 		responseData?: JsonValue;
-		/** Per-request store from `@fastify/request-context`. */
-		readonly requestContext: RequestContext;
-	}
-}
-
-// @fastify/request-context — the per-request AsyncLocalStorage store. The
-// correlation/trace ids are mirrored here by the preHandler hook in main.ts so
-// any code spawned during a request can read them without a request reference.
-declare module "@fastify/request-context" {
-	interface RequestContextData {
-		/** Correlation ID for request tracing. */
-		correlationId?: string;
-		/** Trace ID — alias of correlationId, used for request grouping. */
-		traceId?: string;
 	}
 }
 

@@ -43,15 +43,15 @@ afterEach(() => {
 });
 
 describe("RewardHubTopbar", () => {
-	it("links to account settings for signed-in users", () => {
+	it("links to the personal account page for signed-in users", () => {
 		renderTopbar(signedInSession());
 
-		expect(screen.getByRole("link", { name: "Settings" }).getAttribute("href")).toBe("/rewardhub/settings");
+		expect(screen.getByRole("link", { name: "Account settings" }).getAttribute("href")).toBe("/rewardhub/account");
 	});
 
-	it("hides the settings link from anonymous visitors", () => {
+	it("hides the account link from anonymous visitors", () => {
 		renderTopbar(GUEST_SESSION_STATE);
 
-		expect(screen.queryByRole("link", { name: "Settings" })).toBeNull();
+		expect(screen.queryByRole("link", { name: "Account settings" })).toBeNull();
 	});
 });

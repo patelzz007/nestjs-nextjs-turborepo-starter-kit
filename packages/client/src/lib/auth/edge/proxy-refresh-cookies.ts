@@ -116,28 +116,29 @@ export function applyRotatedSetCookies(writer: RotatedCookieWriter, setCookies: 
 			secure: cookie.secure,
 			sameSite: cookie.sameSite,
 			path: cookie.path,
-			domain: cookie.domain ?? undefined,
-			maxAge: cookie.maxAge ?? undefined,
-			expires: cookie.expires ?? undefined,
+			...(cookie.domain === null ? {} : { domain: cookie.domain }),
+			...(cookie.maxAge === null ? {} : { maxAge: cookie.maxAge }),
+			...(cookie.expires === null ? {} : { expires: cookie.expires }),
 		});
 	}
 }
 
 export interface AuthCookieClearOptions {
-	readonly domain?: string;
-	readonly path?: string;
-	readonly secure?: boolean;
-	readonly sameSite?: "lax" | "strict" | "none";
+	readonly domain?: string | undefined;
+	readonly path?: string | undefined;
+	/** Required: the calling app derives it from its validated server env (`NODE_ENV`). */
+	readonly secure: boolean;
+	readonly sameSite?: "lax" | "strict" | "none" | undefined;
 }
 
 export function clearAuthCookies(writer: RotatedCookieWriter, names: readonly string[], options: AuthCookieClearOptions): void {
 	for (const name of names) {
 		writer.set(name, "", {
 			httpOnly: true,
-			secure: options.secure ?? process.env.NODE_ENV === "production",
+			secure: options.secure,
 			sameSite: options.sameSite ?? "lax",
 			path: options.path ?? "/",
-			domain: options.domain,
+			...(options.domain === undefined ? {} : { domain: options.domain }),
 			maxAge: 0,
 		});
 	}

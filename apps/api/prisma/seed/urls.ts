@@ -2,7 +2,7 @@ import type { DeviceType, RedirectType, Tag, Url, User } from "@prisma/client";
 
 import { prisma } from "./client";
 import { requireRow } from "./require-row";
-import { BROWSERS, CITIES, COUNTRIES, DEVICES, OSS, REFERRERS, UTM_MEDIUMS, UTM_SOURCES, daysAgo, daysFromNow, rand, randInt } from "./helpers";
+import { BROWSERS, CITIES, COUNTRIES, DEVICES, OSS, REFERRERS, UTM_MEDIUMS, UTM_SOURCES, daysAgo, daysFromNow, rand, randInt, randomIpv4 } from "./helpers";
 
 export async function createUrls(users: User[]): Promise<Url[]> {
 	const get = (email: string): User =>
@@ -461,7 +461,7 @@ export async function createUrlTags(users: User[], urls: Url[], tags: Tag[]): Pr
 }
 
 export async function createClicks(urls: Url[]): Promise<void> {
-	type ClickRow = {
+	interface ClickRow {
 		urlId: string;
 		ipAddress: string;
 		country: string;
@@ -474,15 +474,13 @@ export async function createClicks(urls: Url[]): Promise<void> {
 		utmMedium: string | null;
 		utmCampaign: string | null;
 		clickedAt: number;
-	};
-
-	const ip = () => `${randInt(1, 254)}.${randInt(0, 255)}.${randInt(0, 255)}.${randInt(1, 254)}`;
+	}
 
 	const makeClick = (urlId: string, daysBack: number, withUtm = false): ClickRow => {
 		const ci = randInt(0, COUNTRIES.length - 1);
 		return {
 			urlId,
-			ipAddress: ip(),
+			ipAddress: randomIpv4(),
 			country: COUNTRIES[ci] ?? "MY",
 			city: CITIES[ci] ?? "Kuala Lumpur",
 			deviceType: rand(DEVICES),

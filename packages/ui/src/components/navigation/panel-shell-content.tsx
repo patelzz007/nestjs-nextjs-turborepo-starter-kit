@@ -6,7 +6,7 @@ import * as React from "react";
 
 export interface PanelShellContentProps {
 	readonly children: React.ReactNode;
-	readonly className?: string;
+	readonly className?: string | undefined;
 }
 
 /**

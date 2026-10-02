@@ -20,7 +20,8 @@ import * as React from "react";
 import { ICON_MAP } from "@/lib/navigation/menu-icons";
 import { getUserInitials } from "@workspace/ui/lib/core/user-initials";
 import { useSidebarStore } from "@/stores/sidebar-store";
-import { sectionHasActiveItem, isRouteActive, type SidebarView, type SearchableMenuItem } from "@/lib/navigation/menu";
+import { sectionHasActiveItem, isRouteActive, type SidebarView } from "@workspace/ui/lib/sidebar/menu-view";
+import type { SearchableMenuItem } from "@/lib/navigation/searchable-menu-items";
 import type { AdminSidebarLabels } from "@/lib/sidebar-labels";
 import type { FooterAction, SidebarUser } from "@/lib/navigation/sidebar";
 

@@ -8,6 +8,8 @@ import turboPlugin from "eslint-plugin-turbo";
 import tseslint from "typescript-eslint";
 import globals from "globals";
 
+import { universalImportBoundaryConfig } from "./import-boundaries.js";
+
 /**
  * A shared ESLint configuration for the repository.
  *
@@ -84,6 +86,13 @@ export const config = [
 			"import/first": "error",
 		},
 	},
+
+	// ── 6b. Import boundaries (rules/01-repository-architecture.md) ──
+	// No app → app imports, no reaching into a package's src/ or dist/, no
+	// relative climbs into another workspace, no deep @workspace/shared paths.
+	// Frontend configs (next.js, react-internal) extend this list with
+	// browser-safety patterns. See import-boundaries.js and docs/eslint.md.
+	universalImportBoundaryConfig,
 
 	// ── 7. Naming conventions (TypeScript strict) ──────────────────
 	// Scoped to TS files: these rules need parserServices (typed linting) and
@@ -197,13 +206,29 @@ export const config = [
 	},
 
 	// ── 9. Non-negotiable: explicit type casting ban (Rule #4) ────
-	//    Only bans `as Type` and `<Type>value` assertions.
-	//    `as const` is NOT banned because it is not a type cast — it narrows
-	//    literal types for better type inference (required by cva, shadcn,
-	//    and constant tuple patterns).
+	//    Bans `as Type` / `<Type>value` assertions AND `as const` / `<const>`.
+	//    `as const` is banned too (AGENTS.md, rules/00, platform spec §2.1):
+	//    declare the literal type explicitly instead — a typed tuple
+	//    (`const SIZES: readonly ["sm", "md"] = ["sm", "md"]`), an explicit
+	//    union, or `satisfies` for an object checked against a type.
 	{
 		files: ["**/*.ts", "**/*.tsx", "**/*.mts", "**/*.cts"],
 		rules: {
+			"no-restricted-syntax": [
+				"error",
+				{
+					selector: "TSAsExpression > TSTypeReference.typeAnnotation[typeName.name='const']",
+					message: "`as const` is banned (rules/00-non-negotiables.md). Declare the literal type explicitly: a typed tuple, an explicit union, or `satisfies`.",
+				},
+				{
+					selector: "TSTypeAssertion > TSTypeReference.typeAnnotation[typeName.name='const']",
+					message: "`<const>` assertions are banned (rules/00-non-negotiables.md). Declare the literal type explicitly instead.",
+				},
+				{
+					selector: "CallExpression[callee.type='MemberExpression'][callee.object.name='z'][callee.property.name=/^(any|unknown|never)$/]",
+					message: "`z.any()` / `z.unknown()` / `z.never()` are banned (rules/00-non-negotiables.md). Describe the real shape with a precise schema.",
+				},
+			],
 			// No type assertions — use Zod inference or proper types.
 			// NOTE: `as const` is automatically exempted from this rule.
 			// For CSS custom properties (e.g. `{ "--color-bg": value }`), use the

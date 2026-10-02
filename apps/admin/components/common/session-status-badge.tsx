@@ -40,11 +40,11 @@ const INITIAL_STATE: SessionState = { status: "loading" };
 
 export interface SessionStatusViewProps {
 	readonly status: "loading" | "error" | "ready";
-	readonly email?: string;
-	readonly fullName?: string;
+	readonly email?: string | undefined;
+	readonly fullName?: string | undefined;
 	/** Seconds remaining until the current access token expires. */
-	readonly secondsLeft?: number;
-	readonly errorMessage?: string;
+	readonly secondsLeft?: number | undefined;
+	readonly errorMessage?: string | undefined;
 	/**
 	 * True for a couple of seconds right after a silent refresh rotated the
 	 * token — renders a green pulse + "Refreshed just now" instead of the

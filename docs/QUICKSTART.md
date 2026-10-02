@@ -85,16 +85,20 @@ Client component → useApi() hook
 # 1. Install dependencies
 pnpm install
 
-# 2. Set up database
-cd apps/api
-cp .env.example .env  # fill in DATABASE_URL, JWT secrets, RESEND_API_KEY
-npx prisma migrate dev
-npx prisma db seed
+# 2. Start local infrastructure (Postgres, Redis, Kafka, RabbitMQ, Mailpit, MinIO)
+pnpm docker:up        # or bring your own PostgreSQL 18 — see getting-started.md §2
 
-# 3. Start all apps
+# 3. Set up the database (from the repo root)
+cp apps/api/.env.example apps/api/.env   # fill in JWT secrets: pnpm secrets:generate apps/api/.env
+pnpm db:all                              # generate → migrate deploy + RLS → seed (development scenario)
+# other datasets:
+#   pnpm db:seed -- --scenario empty                  (reference data only)
+#   pnpm db:seed -- --scenario enterprise --seed 123  (1 big tenant, deterministic)
+
+# 4. Start all apps
 pnpm run dev  # from repo root (turborepo)
 
-# 4. Open
+# 5. Open
 # API:       http://localhost:8080
 # Admin:     http://localhost:3001
 # Web:       http://localhost:3000
@@ -157,4 +161,7 @@ All API paths live in one tree. Changing a path here updates contracts, controll
 | `telescope.md` | Observability dashboard (requests, exceptions, SQL, mail) |
 | `token-refresh.md` | Token refresh flow (proxy + client) |
 | `prisma.md` | Database schema, migrations, RLS |
+| `getting-started.md` §7 | Seed scenarios (`empty` / `development` / `enterprise`) and `--seed` |
+| `operations/local-infrastructure.md` | Docker Compose services, ports, credentials, overrides |
+| `operations/ci.md` | CI jobs, how to reproduce them locally, planned stages |
 | `type-safety.md` | Type safety rules and patterns |

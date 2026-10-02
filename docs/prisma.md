@@ -53,7 +53,8 @@ coverImage: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=form
 apps/api/
 ├── prisma/
 │   ├── schema.prisma           ← the schema (models, enums, relations)
-│   ├── seed.ts                 ← the seeder (users, roles, URLs, clicks, tags…)
+│   ├── seed.ts                 ← seed CLI: --scenario empty|development|enterprise, --seed <n>
+│   ├── seed/                   ← per-domain seeders, scenarios/, deterministic PRNG (prng.ts)
 │   └── migrations/
 │       ├── migration_lock.toml
 │       └── <timestamp>_<name>/
@@ -121,8 +122,8 @@ do not ship a SQL-only column Prisma could have modeled.
 pnpm db:migrate
 #    (same as: prisma migrate dev, then prisma generate)
 # 3. Only then add/update Zod in packages/shared (BE + FE share it).
-# 4. Nest: ZodValidationPipe(apiContract.*.input) + createWrappedDto / ApiBody
-#    so Swagger sample req/res match the same schema.
+# 4. Nest: @ZodBody(apiContract.*.input) + @ZodResponse(...) / @ZodPaginatedResponse(...)
+#    so Swagger, validation and response enforcement use the same schema (ADR 022).
 # 5. Wire the client leaf (endpoints.ts + use-api + server-api).
 
 # Client types only (no schema change):
@@ -139,7 +140,7 @@ pnpm db:generate
 2. **`pnpm db:migrate`** (from `apps/api`) — writes `migrations/<timestamp>_*/migration.sql`, applies it, runs `prisma generate`.
 3. **`npx prisma generate`** is already part of `db:migrate`. Run `pnpm db:generate` only if you pulled migrations and need the client without creating a new one.
 4. **`packages/shared` Zod** — request/response/query schemas. Types are `z.output<typeof Schema>` (no hand-written twins). Runtime helpers live under `schemas/runtime/`; internal events under `schemas/domain/platform/events.ts`.
-5. **Nest HTTP boundary** — `ZodValidationPipe(apiContract.<domain>.<leaf>.input)` (or the same shared schema). Swagger samples come from `createZodDto` / `createWrappedDto` + `@ApiBody` / `@ApiOkResponse`, not a second DTO shape.
+5. **Nest HTTP boundary** — `@ZodBody` / `@ZodQuery` / `@ZodParams` with `apiContract.<domain>.<leaf>.input` (or the same shared schema) and one `@ZodResponse` / `@ZodPaginatedResponse` with the leaf's response schema. Never return a Prisma model from a controller: map `bigint` / `Date` columns to the response DTO in the repository or service — the response decorator does not compile otherwise ([Response contracts](./response-contracts.md)).
 6. **Application types** — services, templates, and adapters import `X` (type) from `@workspace/shared`; `XSchema` only where `.parse()` / `safeParse()` runs. See `docs/typescript.md` §8.
 7. **RLS** — if the table is tenant-scoped, add `ENABLE`/`FORCE ROW LEVEL SECURITY` + policies in SQL (Prisma PSL cannot emit them). See §10.
 
@@ -174,7 +175,7 @@ pnpm db:generate
 | `pnpm db:migrate:status` | `dotenv -e .env -- prisma migrate status`             | Shows which migrations are applied / pending                                                       | ❌ No                 |
 | `pnpm db:generate`       | `dotenv -e .env -- prisma generate`                   | Regenerates the Prisma client types in `node_modules/.prisma`                                      | ❌ No                 |
 | `pnpm db:push`           | `dotenv -e .env -- prisma db push --accept-data-loss` | Pushes schema straight to the DB **without a migration file** (dev-only)                           | ⚠️ Can drop data      |
-| `pnpm db:seed`           | `dotenv -e .env -- tsx prisma/seed.ts`               | Runs the seeder (idempotent — safe to re-run)                                                      | ⚠️ Rewrites seed rows |
+| `pnpm db:seed`           | `dotenv -e .env -- tsx prisma/seed.ts`               | Runs the seeder (idempotent — safe to re-run). Default scenario `development`; pick another with `pnpm db:seed -- --scenario empty\|enterprise [--seed <n>]` — see [Seed scenarios](./getting-started.md#seed-scenarios) | ⚠️ Rewrites seed rows |
 
 > [!NOTE] **Note:** the seeder runs through `tsx`, which resolves `@workspace/shared` via
 > default (non-`development`) export conditions → it imports the **built**

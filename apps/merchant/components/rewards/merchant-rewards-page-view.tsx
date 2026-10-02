@@ -6,7 +6,7 @@ import { MerchantRewardsSummaryStrip } from "@/components/rewards/merchant-rewar
 import { MerchantEmptyState } from "@/components/merchant-ui/empty-state";
 import { MerchantPageHeader } from "@/components/merchant-ui/page-header";
 import { useMerchantLocation } from "@/lib/org/location-context";
-import { organizationPath } from "@/lib/org/slug";
+import { orgRoutes } from "@/lib/routes";
 import { useAuth } from "@workspace/client/lib/auth";
 import { useAuthorization } from "@workspace/client/lib/auth/can";
 import { MERCHANT_CAPABILITY, type RewardResponse, type RewardStatus } from "@workspace/shared";
@@ -36,7 +36,7 @@ export function MerchantRewardsPageView({ orgSlug }: MerchantRewardsPageViewProp
 function MerchantRewardsPageContent({ orgSlug }: MerchantRewardsPageViewProps): React.JSX.Element {
 	const { api } = useAuth();
 	const { can } = useAuthorization();
-	const createRewardPath = organizationPath(orgSlug, "rewards/new");
+	const createRewardPath = orgRoutes(orgSlug).rewards.new;
 	const { locationId, isLoading: isLocationLoading } = useMerchantLocation();
 	const canManageRewards = can(MERCHANT_CAPABILITY.manageRewards);
 

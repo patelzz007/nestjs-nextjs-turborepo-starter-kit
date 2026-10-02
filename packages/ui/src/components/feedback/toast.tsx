@@ -218,7 +218,7 @@ function ToastProvider({
 	timeout = 5000,
 	countdownLabel = DEFAULT_COUNTDOWN_LABEL,
 	...props
-}: ToastPrimitive.Provider.Props & { readonly countdownLabel?: (seconds: number) => ReactNode }): React.JSX.Element {
+}: ToastPrimitive.Provider.Props & { readonly countdownLabel?: ((seconds: number) => ReactNode) | undefined }): React.JSX.Element {
 	const windowFocused = useWindowFocused();
 	// Ref-counted hover/focus: cards increment/decrement as the pointer or focus
 	// moves between them, so the shared pause never drops while still engaged
@@ -457,9 +457,9 @@ export interface ToastCountdownProps {
 	readonly duration: number;
 	/** Freezes the bar — mirrors the conditions under which base-ui pauses its
 	 *  dismiss timer (hover/focus on the card, window blur). @default false */
-	readonly paused?: boolean;
+	readonly paused?: boolean | undefined;
 	/** Tint for the draining bar (per-type token class). */
-	readonly className?: string;
+	readonly className?: string | undefined;
 }
 
 function ToastCountdown({ duration, paused = false, className }: ToastCountdownProps): React.JSX.Element {
@@ -681,7 +681,7 @@ export interface ToasterProps extends ToastPrimitive.Provider.Props {
 	/** Where the toast stack appears (feature 11). @default "bottom-right" */
 	readonly position?: ToastPosition;
 	/** Countdown-label copy renderer (feature 19 — i18n). @default `(s) => `Dismisses in ${s}s`` */
-	readonly countdownLabel?: (seconds: number) => ReactNode;
+	readonly countdownLabel?: ((seconds: number) => ReactNode) | undefined;
 }
 
 // Mount exactly ONE <Toaster /> per manager — a second instance bound to the

@@ -12,7 +12,6 @@ import { Geist, Geist_Mono, JetBrains_Mono, Rubik } from "next/font/google";
 import { AdminClientAuthWrapper } from "@/components/admin-client-auth-wrapper";
 import { AppDocumentShell } from "@workspace/ui/components/app-document-shell";
 import { ThemeProvider } from "@workspace/ui/components/theme-provider";
-import { validateAdminEnv } from "@workspace/shared/runtime/index";
 
 const jetbrainsMonoHeading = JetBrains_Mono({
 	subsets: ["latin"],
@@ -44,18 +43,6 @@ export default function RootLayout({
 }: Readonly<{
 	children: React.ReactNode;
 }>): React.JSX.Element {
-	// Validate environment variables on client-side (for NEXT_PUBLIC_ vars)
-	if (typeof window === "undefined") {
-		// Server-side validation
-		const adminEnvResult = validateAdminEnv(process.env);
-		if (!adminEnvResult.success) {
-			console.error("❌ Admin app environment validation failed:");
-			console.error(adminEnvResult.error);
-			// In Next.js, we can throw to prevent rendering during SSR
-			throw new Error("Admin app environment validation failed");
-		}
-	}
-
 	return (
 		<AppDocumentShell
 			htmlClassName={cn("antialiased", fontMono.variable, "font-sans", geist.variable, jetbrainsMonoHeading.variable, bricolageGrotesque.variable, rubik.variable)}

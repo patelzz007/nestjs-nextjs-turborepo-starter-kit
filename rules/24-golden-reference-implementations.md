@@ -18,6 +18,8 @@ export type RewardStatus = z.infer<typeof RewardStatusSchema>;
 export const REWARD_NAME_MAX_LENGTH = 120;
 export const REWARD_POINTS_MAX = 1_000_000;
 
+// A RESPONSE schema: open (no `.strict()`) — the API strips unknown keys with it and clients
+// ignore fields added later (ADR 022). Epoch-ms numbers, never Date / bigint.
 export const RewardSchema = z.object({
   id: RewardIdSchema,
   organizationId: z.uuid(),
@@ -28,20 +30,33 @@ export const RewardSchema = z.object({
 });
 export type Reward = z.infer<typeof RewardSchema>;
 
-export const CreateRewardSchema = RewardSchema.pick({ name: true, pointsCost: true });
+// A REQUEST schema derived from it: strict again — unknown keys are a caller bug.
+export const CreateRewardSchema = RewardSchema.pick({ name: true, pointsCost: true }).strict();
 export type CreateRewardDto = z.infer<typeof CreateRewardSchema>;
 
-export const RewardListQuerySchema = z.object({
-  status: RewardStatusSchema.optional(),
-  page: z.coerce.number().int().positive().default(1),
-  pageSize: z.coerce.number().int().positive().max(100).default(20),
-  sortBy: z.enum(['createdAtEpochMs', 'pointsCost', 'name']).default('createdAtEpochMs'),
-  sortDirection: z.enum(['asc', 'desc']).default('desc'),
+// The ONE list grammar (docs/list-queries.md): page/limit/cursor, sort=-createdAt,name,
+// filter[field][op]=value, search — whitelists declared once, here.
+export const rewardListQuery = defineListQuery({
+  sortable: ['createdAt', 'pointsCost', 'name'],
+  defaultSort: [{ field: 'createdAt', direction: 'desc' }],
+  filter: {
+    status: listFilter.enumeration(RewardStatusSchema, { eq: true, in: true }),
+    pointsCost: listFilter.number({ gte: true, lte: true }),
+  },
+  params: { search: ListSearchSchema },
 });
+export const RewardListQuerySchema = rewardListQuery.schema;
 export type RewardListQuery = z.infer<typeof RewardListQuerySchema>;
+export type RewardListSortField = (typeof rewardListQuery.sortable)[number];
+
+// The route contract: method + path + input + RESPONSE, shared by the API and the typed client.
+export const rewardContract = {
+  list: defineContract({ method: 'GET', path: apiRoutes.rewards.list, input: RewardListQuerySchema, response: paginatedResponse(RewardSchema) }),
+  publish: defineContract({ method: 'POST', path: apiRoutes.rewards.publish.path, input: z.object({ id: RewardIdSchema }).strict(), response: singleResponse(RewardSchema) }),
+};
 ```
 
-Why it looks like this: branded ID (no mixing IDs), named constants (no magic numbers), `.max()` bounds (server-enforced), allowlisted sort fields, bounded `pageSize`, one schema feeding API + web + mobile + Swagger.
+Why it looks like this: branded ID (no mixing IDs), named constants (no magic numbers), `.max()` bounds (server-enforced), allowlisted sort fields and per-field filter operators, bounded `limit`, an open response schema next to strict request schemas, and one contract leaf per route feeding API validation, API response enforcement, the typed client, Swagger and the exported `docs/generated/openapi.json`.
 
 ---
 
@@ -119,6 +134,17 @@ describe('RewardPublishPolicy', () => {
 ## 4. Repository (race-safe write, soft-delete aware, no N+1)
 
 ```ts
+const REWARD_SORT_COLUMNS: SortColumns<RewardListSortField, Prisma.RewardOrderByWithRelationInput> = {
+  createdAt: (direction) => ({ createdAt: direction }),
+  pointsCost: (direction) => ({ pointsCost: direction }),
+  name: (direction) => ({ name: direction }),
+};
+
+const REWARD_LIST_KEYSET = timestampIdKeyset<PrismaRewardRow, Prisma.RewardWhereInput>(
+  (row) => ({ at: Number(row.createdAt), id: row.id }),
+  ({ at, id }) => ({ OR: [{ createdAt: { lt: at } }, { createdAt: at, id: { lt: id } }] }),
+);
+
 export class RewardsRepository extends PrismaBaseRepository<Reward, RewardId, PrismaRewardRow> {
   public constructor(prisma: PrismaService) {
     super(prisma);
@@ -131,22 +157,25 @@ export class RewardsRepository extends PrismaBaseRepository<Reward, RewardId, Pr
     return row ? this.toDomain(row) : null;
   }
 
-  public async list(organizationId: string, query: RewardListQuery): Promise<{ rows: Reward[]; total: number }> {
-    const where = {
-      organizationId,
-      isDeleted: false,
-      ...(query.status ? { status: toPrismaStatus(query.status) } : {}),
-    };
-    const [rows, total] = await this.prisma.$transaction([
-      this.prisma.reward.findMany({
-        where,
-        orderBy: { [query.sortBy === 'createdAtEpochMs' ? 'createdAt' : query.sortBy]: query.sortDirection },
-        skip: (query.page - 1) * query.pageSize,
-        take: query.pageSize, // bounded by the schema's .max(100)
-      }),
-      this.prisma.reward.count({ where }),
-    ]);
-    return { rows: rows.map((row) => this.toDomain(row)), total };
+  public async list(organizationId: string, query: RewardListQuery): Promise<RepositoryListResult<Reward>> {
+    const result = await fetchListPage(query, {
+      // tenant scope is an argument, never a client filter; every API field maps to ONE explicit column
+      where: {
+        AND: [
+          { organizationId, isDeleted: false },
+          ...fieldWhere(toPrismaEqualityFilter(query.filter?.status), (status) => ({ status })),
+          ...fieldWhere(toPrismaComparableFilter(query.filter?.pointsCost), (pointsCost) => ({ pointsCost })),
+          ...(query.search !== undefined ? [{ name: { contains: query.search, mode: 'insensitive' } }] : []),
+        ],
+      },
+      // whitelisted sort → columns, with the `id` tie-breaker appended so pages are stable
+      order: buildListOrder(rewardListQuery.resolveSort(query.sort), { columns: REWARD_SORT_COLUMNS, tieBreaker: (direction) => ({ id: direction }) }),
+      keyset: REWARD_LIST_KEYSET, // createdAt desc, id desc — the default order
+      and: (left, right) => ({ AND: [left, right] }),
+      count: (where) => this.prisma.reward.count({ where }),
+      findMany: (args) => this.prisma.reward.findMany(args), // take bounded by the schema's limit max (100)
+    });
+    return mapListResult(result, (row) => this.toDomain(row));
   }
 
   public async publish(id: RewardId, organizationId: string): Promise<Reward> {
@@ -217,26 +246,28 @@ export class RewardsController {
 
   @Get()
   @UseGuards(AuthGuard, PermissionGuard(Permission.REWARD_READ))
+  @ZodPaginatedResponse(RewardSchema, { description: 'One page of rewards' })
   public async list(
-    @Query(new ZodValidationPipe(RewardListQuerySchema)) query: RewardListQuery,
+    @ZodListQuery(RewardListQuerySchema) query: RewardListQuery,
     @CurrentUser() user: AuthUser,
-  ): Promise<RewardListResponseDto> {
+  ): Promise<PaginatedServiceResult<Reward>> {
     return this.listRewards.execute(query, user);
   }
 
   @Post(':id/publish')
   @UseGuards(AuthGuard, PermissionGuard(Permission.REWARD_PUBLISH), OwnershipGuard('reward', 'organization'))
   @Throttle({ default: { limit: 30, ttl: 60_000 } })
+  @ZodResponse(RewardSchema, { description: 'The published reward' })
   public async publish(
-    @Param('id', new ZodValidationPipe(RewardIdSchema)) id: RewardId,
+    @ZodParam('id', RewardIdSchema) id: RewardId,
     @CurrentUser() user: AuthUser,
-  ): Promise<RewardResponseDto> {
+  ): Promise<Reward> {
     return this.publishReward.execute(id, user);
   }
 }
 ```
 
-The audit-log interceptor is global, so nothing here can forget it. Swagger derives from the zod-backed DTOs.
+The audit-log interceptor is global, so nothing here can forget it. Every input decorator validates and documents its schema; the ONE response decorator per handler (same schema as the contract leaf) documents the success + `4XX`/`5XX` responses, sets the status, makes the global `ResponseInterceptor` strip and enforce the result, and refuses to compile if the service hands back anything that is not a `Reward` (e.g. a Prisma row with `bigint` columns). No `@ApiOkResponse`, no `@HttpCode`, no hand-written DTO class.
 
 ---
 

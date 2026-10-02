@@ -94,8 +94,9 @@ export class FirebaseObjectStorageAdapter implements ObjectStorage, PublicDelive
 		const [url] = await this.bucketFile(input.locator).getSignedUrl({
 			action: "read",
 			expires: Date.now() + input.expiresInSeconds * 1000,
-			responseDisposition:
-				input.disposition !== undefined && input.fileName !== undefined ? `${input.disposition}; filename="${input.fileName.replaceAll('"', "_")}"` : undefined,
+			...(input.disposition !== undefined && input.fileName !== undefined
+				? { responseDisposition: `${input.disposition}; filename="${input.fileName.replaceAll('"', "_")}"` }
+				: {}),
 		});
 		return url;
 	}

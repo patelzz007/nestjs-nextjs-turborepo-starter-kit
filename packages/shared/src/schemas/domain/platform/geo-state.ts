@@ -1,32 +1,34 @@
 import { z } from "zod";
 
 import { DataValueSchema } from "../../api/common";
-import { PaginationSchema } from "../../api/pagination";
-import { GeoCursorSchema, GeoDateTimeFieldSchema, GeoIdSchema, GeoIdsSchema, GeoIncludeSchema } from "./geo-shared";
+import { defineListQuery, listFilter, ListSearchSchema } from "../../api/list-query";
+import { GEO_LIST_DEFAULT_LIMIT, GeoDateTimeFieldSchema, GeoIdSchema, GeoIncludeSchema } from "./geo-shared";
 
-export const StateSchema = z
-	.object({
-		id: GeoIdSchema,
-		name: z.string(),
-		countryCode: z.string(),
-		fipsCode: z.string().nullable(),
-		iso2: z.string().nullable(),
-		iso3166_2: z.string().nullable(),
-		type: z.string().nullable(),
-		level: z.number().int().nullable(),
-		parentId: GeoIdSchema.nullable(),
-		native: z.string().nullable(),
-		latitude: z.number().nullable(),
-		longitude: z.number().nullable(),
-		timezone: z.string().nullable(),
-		translations: DataValueSchema.nullable(),
-		wikiDataId: z.string().nullable(),
-		flag: z.boolean(),
-		countryId: GeoIdSchema,
-		createdAt: GeoDateTimeFieldSchema,
-		updatedAt: GeoDateTimeFieldSchema,
-	})
-	.strict();
+/**
+ * State response DTO. Open (not `.strict()`): the response interceptor strips
+ * unknown keys instead of failing, so adding a column never breaks a client.
+ */
+export const StateSchema = z.object({
+	id: GeoIdSchema,
+	name: z.string(),
+	countryCode: z.string(),
+	fipsCode: z.string().nullable(),
+	iso2: z.string().nullable(),
+	iso3166_2: z.string().nullable(),
+	type: z.string().nullable(),
+	level: z.number().int().nullable(),
+	parentId: GeoIdSchema.nullable(),
+	native: z.string().nullable(),
+	latitude: z.number().nullable(),
+	longitude: z.number().nullable(),
+	timezone: z.string().nullable(),
+	translations: DataValueSchema.nullable(),
+	wikiDataId: z.string().nullable(),
+	flag: z.boolean(),
+	countryId: GeoIdSchema,
+	createdAt: GeoDateTimeFieldSchema,
+	updatedAt: GeoDateTimeFieldSchema,
+});
 
 export type State = z.output<typeof StateSchema>;
 
@@ -77,15 +79,19 @@ export const UpdateStateSchema = z
 
 export type UpdateStateInput = z.output<typeof UpdateStateSchema>;
 
-export const StateListQuerySchema = PaginationSchema.extend({
-	search: z.string().optional(),
-	countryId: z.coerce.number().int().nonnegative().optional(),
-	countryCode: z.string().length(2).optional(),
-	flag: z.coerce.boolean().optional(),
-	ids: GeoIdsSchema,
-	sort: z.string().optional(),
-	cursor: GeoCursorSchema,
-	include: GeoIncludeSchema,
-}).strict();
-
+/** `GET /geo/states` list query — see docs/list-queries.md. */
+export const stateListQuery = defineListQuery({
+	sortable: ["id", "name", "countryCode", "iso2"],
+	defaultSort: [{ field: "id", direction: "asc" }],
+	filter: {
+		id: listFilter.number({ eq: true, in: true }),
+		countryId: listFilter.number({ eq: true, in: true }),
+		countryCode: listFilter.string({ eq: true, in: true }),
+		flag: listFilter.boolean({ eq: true }),
+	},
+	params: { search: ListSearchSchema, include: GeoIncludeSchema },
+	defaultLimit: GEO_LIST_DEFAULT_LIMIT,
+});
+export const StateListQuerySchema = stateListQuery.schema;
 export type StateListQuery = z.output<typeof StateListQuerySchema>;
+export type StateListSortField = (typeof stateListQuery.sortable)[number];

@@ -49,13 +49,13 @@ export function buildExportColumns<TFeatures extends object, TData extends RowDa
 	extra: readonly string[] = UTILITY_COLUMNS,
 ): ColumnDef<TFeatures, TData>[] {
 	return columns.filter((col) => {
-		const key = "id" in col ? String(col.id) : "accessorKey" in col ? String(col.accessorKey) : undefined;
+		const key = "id" in col ? col.id : "accessorKey" in col ? String(col.accessorKey) : undefined;
 		return key !== undefined && !extra.includes(key);
 	});
 }
 
 function resolveColumnKey<TFeatures extends object, TData extends RowData>(col: ColumnDef<TFeatures, TData>): string | undefined {
-	if ("id" in col && col.id !== undefined) {
+	if ("id" in col) {
 		return col.id;
 	}
 	if ("accessorKey" in col) {

@@ -1,7 +1,8 @@
 "use client";
 
-import type { AdminMfaRecoveryRequest, MfaRecoveryRecordStatus } from "@workspace/shared";
-import { readPaginatedNextCursor, readPaginatedTotal, stubPaginatedMeta } from "@/lib/format/api-envelope";
+import { adminMfaRecoveryListQuery, type AdminMfaRecoveryRequest, type MfaRecoveryRecordStatus } from "@workspace/shared";
+import { eqFilter, tableStateToListQuery } from "@workspace/client/lib/api/list-query";
+import { initialDataOption, readPaginatedNextCursor, readPaginatedTotal, stubPaginatedMeta, successEnvelope } from "@workspace/client/lib/api/envelope";
 import { useManualHybridPagination } from "@/lib/data-table/use-manual-cursor-pagination";
 import { createDataTableLabels } from "@/lib/data-table/labels";
 import { buildReadOnlyTableCheckbox } from "@/lib/data-table/capabilities";
@@ -19,6 +20,7 @@ import { useRouter } from "next/navigation";
 import { Eye } from "lucide-react";
 import * as React from "react";
 import { keepPreviousData } from "@tanstack/react-query";
+import { ROUTES } from "@/lib/routes";
 
 const PAGE_SIZE_OPTIONS: readonly number[] = [10, 20, 50];
 const STATUS_FILTER_OPTIONS: readonly { readonly value: "all" | MfaRecoveryRecordStatus; readonly label: string }[] = [
@@ -30,11 +32,11 @@ const STATUS_FILTER_OPTIONS: readonly { readonly value: "all" | MfaRecoveryRecor
 ];
 
 export interface MfaRecoveryQueueProps {
-	readonly initialRequests?: readonly AdminMfaRecoveryRequest[];
-	readonly initialTotal?: number;
-	readonly initialTotalPages?: number;
-	readonly initialHasNext?: boolean;
-	readonly initialStatus?: MfaRecoveryRecordStatus;
+	readonly initialRequests?: readonly AdminMfaRecoveryRequest[] | undefined;
+	readonly initialTotal?: number | undefined;
+	readonly initialTotalPages?: number | undefined;
+	readonly initialHasNext?: boolean | undefined;
+	readonly initialStatus?: MfaRecoveryRecordStatus | undefined;
 }
 
 export const MfaRecoveryQueue = React.forwardRef<HTMLDivElement, MfaRecoveryQueueProps>(function MfaRecoveryQueue(
@@ -64,20 +66,14 @@ export const MfaRecoveryQueue = React.forwardRef<HTMLDivElement, MfaRecoveryQueu
 	});
 
 	const requestsQuery = api.auth.adminMfaRecoveryRequests.useQuery(
-		{
-			...listQuery,
-			status: statusParam,
-		},
+		tableStateToListQuery(adminMfaRecoveryListQuery, { pagination: listQuery, sorting: [], filter: { status: eqFilter(statusParam) } }),
 		{
 			placeholderData: keepPreviousData,
-			initialData:
+			...initialDataOption(
 				initialRequests !== undefined
-					? {
-							success: true,
-							data: [...initialRequests],
-							meta: stubPaginatedMeta(pageSize, initialTotal ?? initialRequests.length, 1, initialTotalPages ?? 1, initialHasNext ?? false),
-						}
+					? successEnvelope([...initialRequests], stubPaginatedMeta(pageSize, initialTotal ?? initialRequests.length, 1, initialTotalPages ?? 1, initialHasNext ?? false))
 					: undefined,
+			),
 		},
 	);
 
@@ -152,7 +148,7 @@ export const MfaRecoveryQueue = React.forwardRef<HTMLDivElement, MfaRecoveryQueu
 
 	const handleViewUser = React.useCallback(
 		(request: AdminMfaRecoveryRequest): void => {
-			router.push(`/users/${request.userId}`);
+			router.push(ROUTES.users.detail(request.userId));
 		},
 		[router],
 	);
@@ -209,7 +205,7 @@ export const MfaRecoveryQueue = React.forwardRef<HTMLDivElement, MfaRecoveryQueu
 				id: "actions",
 				header: "",
 				cell: ({ row }) => (
-					<Link href={`/users/${row.original.userId}`} className="text-sm text-primary underline-offset-4 hover:underline">
+					<Link href={ROUTES.users.detail(row.original.userId)} className="text-sm text-primary underline-offset-4 hover:underline">
 						View user
 					</Link>
 				),

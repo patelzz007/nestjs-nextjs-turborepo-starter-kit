@@ -9,12 +9,14 @@ import type {
 	MerchantUpdateRewardInput,
 	OrganizationLocationScopeType,
 	PaginatedServiceResult,
+	RewardPlatformEvent,
 	RewardResponse,
 } from "@workspace/shared";
 import { EpochMsSchema, RewardPlatformEventSchema } from "@workspace/shared";
 
+import { PlatformOutboxService } from "../../../infrastructure/outbox/platform-outbox.service";
 import type { MerchantActor } from "../../api-keys/types/merchant-actor.types";
-import { paginateCursorListResult } from "../../../platform/persistence/cursor-list";
+import { mapListResult, toPaginatedServiceResult } from "../../../platform/persistence/list-page";
 import { RewardClaimRepository } from "../repositories/reward-claim.repository";
 import { RewardRedemptionRepository } from "../repositories/reward-redemption.repository";
 import { RewardRepository } from "../repositories/reward.repository";
@@ -22,7 +24,6 @@ import { mapRewardToResponse } from "../utils/reward-mapper.util";
 import { OrganizationRepository } from "../../organization/repositories/organization.repository";
 import { MerchantContextService } from "./merchant-context.service";
 import { RewardNotificationService } from "./reward-notification.service";
-import { RewardsPlatformEventsService } from "./rewards-platform-events.service";
 
 const AUTO_PUBLISH_MS = 24 * 60 * 60 * 1000;
 const REFERRER_REWARD_MAX_TTL_MS = 30 * 24 * 60 * 60 * 1000;
@@ -36,7 +37,7 @@ export class MerchantRewardService {
 		private readonly merchantContext: MerchantContextService,
 		private readonly organizationRepository: OrganizationRepository,
 		private readonly notificationService: RewardNotificationService,
-		private readonly rewardsPlatformEvents: RewardsPlatformEventsService,
+		private readonly outbox: PlatformOutboxService,
 	) {}
 
 	public async listRewards(actor: MerchantActor, query: MerchantRewardListQuery = {}): Promise<RewardResponse[]> {
@@ -52,7 +53,9 @@ export class MerchantRewardService {
 		const { locationScopeType, locationIds } = await this.resolveRewardLocationScope(actor, input.locationScopeType, input.locationIds);
 
 		const referralsEnabled = input.referralsEnabled;
-		const referralPoolTotal = referralsEnabled ? input.referralPoolTotal : null;
+		// The contract requires `referralPoolTotal` whenever referrals are enabled; an
+		// absent pool is stored as SQL NULL (the column's default) either way.
+		const referralPoolTotal: number | null = referralsEnabled ? (input.referralPoolTotal ?? null) : null;
 		const saveAsDraft = input.saveAsDraft;
 		const now = Date.now();
 		const autoPublishAt = saveAsDraft ? null : now + AUTO_PUBLISH_MS;
@@ -68,7 +71,7 @@ export class MerchantRewardService {
 				rewardKind: "CONSUMER",
 				category: input.category,
 				placeholderImageKey: `category-${input.category}`,
-				rules: input.rules ?? undefined,
+				...(input.rules === undefined ? {} : { rules: input.rules }),
 				quantityTotal: input.quantityTotal,
 				quantityRemaining: input.quantityTotal,
 				startDate: input.startDate ?? null,
@@ -84,7 +87,7 @@ export class MerchantRewardService {
 			locationIds,
 		);
 
-		if (referralsEnabled && referralPoolTotal !== null && referralPoolTotal !== undefined) {
+		if (referralsEnabled && referralPoolTotal !== null) {
 			const referrerTitle = input.referrerRewardTitle ?? `${input.title} — Referrer bonus`;
 			const referrerExpiry = Math.min(input.expiryDate, Date.now() + REFERRER_REWARD_MAX_TTL_MS);
 
@@ -233,19 +236,16 @@ export class MerchantRewardService {
 	public async listRedemptions(actor: MerchantActor, query: MerchantRedemptionListQuery): Promise<PaginatedServiceResult<MerchantRedemptionListItem>> {
 		await this.merchantContext.requireActorCapability(actor, "merchant:view_redemptions");
 		const locationId = await this.merchantContext.resolveLocationFilter(actor, query.locationId);
-		const result = await this.redemptionRepository.listForMerchant(actor.organizationId, { ...query, locationId });
+		const result = await this.redemptionRepository.listForMerchant(actor.organizationId, locationId, query);
 
-		return paginateCursorListResult(
-			{
-				...result,
-				items: result.items.map((row) => ({
-					redemptionId: row.id,
-					rewardTitle: row.claim.reward.title,
-					redeemedAt: EpochMsSchema.parse(Number(row.redeemedAt)),
-					terminalId: row.terminalId,
-					redemptionMethod: row.redemptionMethod,
-				})),
-			},
+		return toPaginatedServiceResult(
+			mapListResult(result, (row) => ({
+				redemptionId: row.id,
+				rewardTitle: row.claim.reward.title,
+				redeemedAt: EpochMsSchema.parse(Number(row.redeemedAt)),
+				terminalId: row.terminalId,
+				redemptionMethod: row.redemptionMethod,
+			})),
 			query,
 		);
 	}
@@ -255,16 +255,15 @@ export class MerchantRewardService {
 		const pending = await this.rewardRepository.listPendingAutoPublish(now);
 
 		for (const reward of pending) {
-			await this.rewardRepository.autoPublishInTransaction(reward.id, reward.referrerRewardId, reward.organizationId, now);
-
-			this.rewardsPlatformEvents.emit(
-				RewardPlatformEventSchema.parse({
-					event: "reward.auto_published",
-					actorUserId: null,
-					organizationId: reward.organizationId,
-					metadata: { rewardId: reward.id },
-				}),
-			);
+			const event = RewardPlatformEventSchema.parse({
+				event: "reward.auto_published",
+				actorUserId: null,
+				organizationId: reward.organizationId,
+				metadata: { rewardId: reward.id },
+			});
+			await this.rewardRepository.autoPublishInTransaction(reward.id, reward.referrerRewardId, reward.organizationId, now, async (tx): Promise<void> => {
+				await this.enqueueRewardEvent(tx, event);
+			});
 
 			const ownerUserIds = await this.organizationRepository.listOwnerUserIds(reward.organizationId);
 
@@ -283,20 +282,15 @@ export class MerchantRewardService {
 		const expiredClaims = await this.rewardClaimRepository.listExpiredPending({ isReferrerCredit: false, now, take: 200 });
 
 		for (const claim of expiredClaims) {
-			const expired = await this.rewardClaimRepository.expireClaimInTransaction(claim.id, claim.rewardId, claim.reward.organizationId, false);
-
-			if (!expired) {
-				continue;
-			}
-
-			this.rewardsPlatformEvents.emit(
-				RewardPlatformEventSchema.parse({
-					event: "reward.claim_expired",
-					actorUserId: claim.userId,
-					organizationId: claim.reward.organizationId,
-					metadata: { claimId: claim.id, isReferrerCredit: claim.isReferrerCredit },
-				}),
-			);
+			const event = RewardPlatformEventSchema.parse({
+				event: "reward.claim_expired",
+				actorUserId: claim.userId,
+				organizationId: claim.reward.organizationId,
+				metadata: { claimId: claim.id, isReferrerCredit: claim.isReferrerCredit },
+			});
+			await this.rewardClaimRepository.expireClaimInTransaction(claim.id, claim.rewardId, claim.reward.organizationId, false, async (tx): Promise<void> => {
+				await this.enqueueRewardEvent(tx, event);
+			});
 		}
 
 		return expiredClaims.length;
@@ -307,23 +301,23 @@ export class MerchantRewardService {
 		const expiredClaims = await this.rewardClaimRepository.listExpiredPending({ isReferrerCredit: true, now, take: 200 });
 
 		for (const claim of expiredClaims) {
-			const expired = await this.rewardClaimRepository.expireClaimInTransaction(claim.id, claim.rewardId, claim.reward.organizationId, true);
-
-			if (!expired) {
-				continue;
-			}
-
-			this.rewardsPlatformEvents.emit(
-				RewardPlatformEventSchema.parse({
-					event: "reward.claim_expired",
-					actorUserId: claim.userId,
-					organizationId: claim.reward.organizationId,
-					metadata: { claimId: claim.id, isReferrerCredit: true },
-				}),
-			);
+			const event = RewardPlatformEventSchema.parse({
+				event: "reward.claim_expired",
+				actorUserId: claim.userId,
+				organizationId: claim.reward.organizationId,
+				metadata: { claimId: claim.id, isReferrerCredit: true },
+			});
+			await this.rewardClaimRepository.expireClaimInTransaction(claim.id, claim.rewardId, claim.reward.organizationId, true, async (tx): Promise<void> => {
+				await this.enqueueRewardEvent(tx, event);
+			});
 		}
 
 		return expiredClaims.length;
+	}
+
+	/** Same-transaction outbox write for a reward state change (see `PlatformOutboxService`). */
+	private async enqueueRewardEvent(tx: Prisma.TransactionClient, payload: RewardPlatformEvent): Promise<void> {
+		await this.outbox.enqueueInTransaction(tx, { type: "reward.platform", payload });
 	}
 
 	private async findOrgConsumerReward(

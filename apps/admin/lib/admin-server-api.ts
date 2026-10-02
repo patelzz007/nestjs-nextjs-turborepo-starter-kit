@@ -10,13 +10,15 @@ import {
 	type ServerCallerTree,
 } from "@workspace/client/lib/api/server-api";
 
+import { clientEnv } from "@/lib/env/env.client";
+
 export type AdminServerCaller = ServerCallerTree<ApiRouter>;
 
 /**
  * Builds an SSR caller for any router tree using the admin app's cookie config.
  */
 export function createAdminServerCallerForRouter<R extends object>(router: R, config?: Partial<ServerApiConfig>): ServerCallerTree<R> {
-	const resolved: ServerApiConfig = resolveConfig({ ...DEFAULT_SERVER_API_CONFIG, ...config });
+	const resolved: ServerApiConfig = resolveConfig({ ...DEFAULT_SERVER_API_CONFIG, clientOrigin: clientEnv.NEXT_PUBLIC_ADMIN_URL, ...config });
 	const context = createServerRequestContext(resolved, apiRouter.auth.refresh);
 	return createServerCallerForRouter(router, context);
 }

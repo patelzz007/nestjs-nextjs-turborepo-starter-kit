@@ -5,9 +5,17 @@ import { noUnversionedController } from "./eslint-rules/no-unversioned-controlle
 export default [
 	// Global ignores — must be first so ESLint skips these files entirely
 	{
-		ignores: ["**/*.spec.ts", "**/*.test.ts", "**/*.e2e-spec.ts", "test/**", "eslint-rules/**"],
+		ignores: ["eslint-rules/**"],
 	},
 	...nestjsConfig,
+
+	// Un-ignore the hand-written Prisma seed + RLS manifest: the shared base
+	// config ignores `**/prisma/**` (generated clients elsewhere), but here it is
+	// source code that must meet the same bar as src/. Must follow the spread:
+	// a negated global ignore only re-includes what an EARLIER object ignored.
+	{
+		ignores: ["!prisma/", "!prisma/**/", "!prisma/**/*.ts"],
+	},
 
 	// ── Parser options: allow spec files as default project members ──
 	// Spec files are excluded from tsconfig.json, but typescript-eslint's
@@ -50,6 +58,19 @@ export default [
 			},
 		},
 	},
+	// ── Tests, seed, and source-graph scripts: type-aware lint via tsconfig.check.json ──
+	// These files are outside tsconfig.json (the build program), so they are
+	// parsed with the strict check program that `typecheck` also runs.
+	{
+		files: ["src/**/*.spec.ts", "src/**/*.test.ts", "src/**/__tests__/**/*.ts", "test/**/*.ts", "prisma/**/*.ts", "scripts/render-email-previews.ts"],
+		languageOptions: {
+			parserOptions: {
+				project: "./tsconfig.check.json",
+				tsconfigRootDir: import.meta.dirname,
+				projectService: false,
+			},
+		},
+	},
 	// Scripts use Node APIs whose types cannot be fully resolved by strictTypeChecked.
 	{
 		files: ["scripts/**/*.ts"],
@@ -78,15 +99,29 @@ export default [
 
 	// Env vars are read at runtime; turbo.json does not enumerate every key.
 	{
-		files: [
-			"scripts/**/*.ts",
-			"src/config/**/*.ts",
-			"src/messaging/**/*.config.ts",
-			"src/modules/auth/constants/**/*.ts",
-			"src/modules/logs/**/*.ts",
-		],
+		files: ["scripts/**/*.ts", "src/config/**/*.ts"],
 		rules: {
 			"turbo/no-undeclared-env-vars": "off",
+		},
+	},
+
+	// ── Env boundary (docs/api-configuration.md) ──────────────────
+	// `process.env` is read ONLY by src/config/api-config.ts, which parses it
+	// once through the zod schema in api-config.schema.ts (fail fast, value-free
+	// errors). Everything else injects TypedConfigService (or, for load-time
+	// module wiring, calls getApiConfig()).
+	{
+		files: ["src/**/*.ts"],
+		ignores: ["src/config/api-config.ts"],
+		rules: {
+			"no-restricted-properties": [
+				"error",
+				{
+					object: "process",
+					property: "env",
+					message: "Read configuration through TypedConfigService / getApiConfig() (src/config), never process.env directly. See docs/api-configuration.md.",
+				},
+			],
 		},
 	},
 
@@ -138,36 +173,6 @@ export default [
 		},
 		rules: {
 			"local-rules/no-unversioned-controller": "error",
-		},
-	},
-
-	// ── Improvement 19: banned type keywords in the telescope module ──
-	// The project rule forbids `any` / `unknown` / `never` in code. The
-	// telescope module is fully clean, so the ban is enforced here with
-	// no-restricted-syntax (AST selectors). Roll the same override into
-	// other modules as they are cleaned up.
-	{
-		files: ["src/modules/telescope/**/*.ts", "scripts/telescope-cli.ts", "scripts/gen-telescope-docs.ts"],
-		rules: {
-			// catch callbacks are deliberately typed `(err: Error)` (repo
-			// convention — see ResponseInterceptor); the plugin's preferred
-			// `unknown` is itself banned by the project rule below.
-			"@typescript-eslint/use-unknown-in-catch-callback-variable": "off",
-			"no-restricted-syntax": [
-				"error",
-				{
-					selector: "TSAnyKeyword",
-					message: "`any` is banned — define a zod schema and infer the type instead.",
-				},
-				{
-					selector: "TSUnknownKeyword",
-					message: "`unknown` is banned — use a zod schema with z.output<T> or a union type.",
-				},
-				{
-					selector: "TSNeverKeyword",
-					message: "`never` is banned — model the empty case with a proper schema type.",
-				},
-			],
 		},
 	},
 ];

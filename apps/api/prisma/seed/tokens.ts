@@ -3,7 +3,7 @@ import * as crypto from "crypto";
 import * as bcrypt from "bcrypt";
 
 import { prisma } from "./client";
-import { daysAgo, daysFromNow, rand, randInt } from "./helpers";
+import { daysAgo, daysFromNow, rand, randomIpv4 } from "./helpers";
 
 export async function createRefreshTokens(users: User[]): Promise<void> {
 	const activeUsers = users.filter((u) => u.isActive);
@@ -12,16 +12,16 @@ export async function createRefreshTokens(users: User[]): Promise<void> {
 			data: [
 				{
 					userId: u.id,
-					token: `rt_${u.id}_desktop_${Date.now()}`,
+					token: `rt_${u.id}_desktop_${String(Date.now())}`,
 					deviceInfo: rand(["Chrome on Windows", "Safari on macOS", "Firefox on Linux"]),
-					ipAddress: `${randInt(1, 254)}.${randInt(0, 255)}.${randInt(0, 255)}.${randInt(1, 254)}`,
+					ipAddress: randomIpv4(),
 					expiresAt: daysFromNow(7),
 				},
 				{
 					userId: u.id,
-					token: `rt_${u.id}_mobile_${Date.now() + 1}`,
+					token: `rt_${u.id}_mobile_${String(Date.now() + 1)}`,
 					deviceInfo: rand(["Chrome on Android", "Safari on iOS", "Samsung Internet"]),
-					ipAddress: `${randInt(1, 254)}.${randInt(0, 255)}.${randInt(0, 255)}.${randInt(1, 254)}`,
+					ipAddress: randomIpv4(),
 					expiresAt: daysFromNow(30),
 				},
 			],
@@ -33,14 +33,14 @@ export async function createPasswordResetTokens(users: User[]): Promise<void> {
 	const hash = (s: string): Promise<string> => bcrypt.hash(s, 10);
 	const activeUsers = users.filter((u) => u.isActive);
 
-	const rows: Array<{
+	const rows: {
 		userId: string;
 		token: string;
 		expiresAt: number;
-	}> = [];
+	}[] = [];
 
 	// Create 3 pending tokens for different users
-	const pendingRequests: Array<{ email: string }> = [{ email: "user@example.com" }, { email: "alice.johnson@example.com" }, { email: "henry.moore@example.com" }];
+	const pendingRequests: { email: string }[] = [{ email: "user@example.com" }, { email: "alice.johnson@example.com" }, { email: "henry.moore@example.com" }];
 
 	for (const { email } of pendingRequests) {
 		const user = activeUsers.find((u) => u.email === email);

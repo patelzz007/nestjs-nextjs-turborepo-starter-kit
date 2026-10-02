@@ -62,7 +62,7 @@ async function removeJob(queue: Queue, jobId: string): Promise<void> {
 async function main(): Promise<void> {
 	for (const queueName of queueNames) {
 		const queue = new Queue(queueName, {
-			connection: { url: redisUrl, maxRetriesPerRequest: null },
+			connection: { ...(redisUrl === undefined ? {} : { url: redisUrl }), maxRetriesPerRequest: null },
 			prefix,
 		});
 

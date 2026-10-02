@@ -4,7 +4,7 @@ tags: ["authorization", "nestjs", "kernel", "rbac", "acl", "abac", "audit"]
 description: "How the API decides allow or deny: the guard, the kernel's precedence, scopes, overrides, ACLs, ownership, policies, list filters, explain, audit, and privilege-escalation protection."
 order: 21
 author: "Platform Team"
-lastUpdated: 1790812800000
+lastUpdated: 1790899200000
 coverImage: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=1600&q=80"
 ---
 
@@ -365,38 +365,81 @@ The real actor id is written to the audit log (never `"system"`).
 
 ## 12. Merchant (Reward Hub) capabilities
 
-Merchant endpoints use **merchant capabilities** (`merchant:*` slugs) instead of platform
-permissions. `MerchantContextService.requireActorCapability()` checks, in order:
+Merchant endpoints use **merchant capabilities** (`merchant:*` slugs, `MERCHANT_CAPABILITY.*`)
+instead of platform permissions — **never** membership role names. Every check goes through
+one method, `OrganizationRewardAuthService.requireMembershipCapability()`
+(`modules/organization/services/organization-reward-auth.service.ts`), reached via
+`MerchantContextService.requireActorCapability()` / `requireUserCapability()` (rewards, API
+keys, analytics, KYB) or directly (team, store locations). It checks, in order:
 
-1. **POS API keys** — only `view_rewards`, `manage_rewards`, `view_redemptions`, `view_analytics`.
-2. **The role table** `MERCHANT_ROLE_CAPABILITIES` (shared with the merchant app):
+1. **POS API keys** (`requireActorCapability` only) — only `view_rewards`, `manage_rewards`,
+   `view_redemptions`, `view_analytics`. A key can never manage the team, locations,
+   verification, other keys or terminals. (A till *gets* its key by pairing:
+   `POST /pos/terminals/pair` exchanges a one-time code a member issued for a key bound to
+   that terminal — see [POS integration](../pos-integration.md).)
+2. **The role table** `MERCHANT_ROLE_CAPABILITIES` (`packages/shared/src/authorization/permission.ts`,
+   shared with the merchant app, so the UI hides exactly what the API denies). Denial:
+   `403 ORGANIZATION_ROLE_CAPABILITY_REQUIRED`.
 
-   | Membership role | Capabilities |
-   |---|---|
-   | `OWNER`, `ADMIN` | everything |
-   | `CASHIER` | view dashboard, rewards, redemptions, analytics — **no management** |
-   | `POLICY_ADMIN` | dashboard only (administers policies, not operations) |
-   | `MEMBER` | dashboard only |
+   | Capability | `OWNER` | `ADMIN` | `CASHIER` | `POLICY_ADMIN` | `MEMBER` | API rule it guards |
+   |---|:-:|:-:|:-:|:-:|:-:|---|
+   | `merchant:view_dashboard` | ✅ | ✅ | ✅ | ✅ | ✅ | none — membership context (UX only) |
+   | `merchant:view_rewards` | ✅ | ✅ | ✅ | — | — | `GET /orgs/:orgSlug/rewards` |
+   | `merchant:manage_rewards` | ✅ | ✅ | — | — | — | create / update / publish rewards |
+   | `merchant:view_redemptions` | ✅ | ✅ | ✅ | — | — | `GET /orgs/:orgSlug/redemptions` |
+   | `merchant:manage_api_keys` | ✅ | ✅ | — | — | — | `/orgs/:orgSlug/api-keys`, `/orgs/:orgSlug/terminals` (POS terminal registration and pairing) |
+   | `merchant:view_analytics` | ✅ | ✅ | ✅ | — | — | `GET /orgs/:orgSlug/analytics` |
+   | `merchant:manage_team` | ✅ | ✅ | — | — | — | `GET /orgs/:orgSlug/members[/invites]`, `POST …/members/invite`, `POST …/invites/:id/revoke` |
+   | `merchant:view_locations` | ✅ | ✅ | ✅ | ✅ | ✅ | none — locations come from the member-wide `GET /orgs/:orgSlug/context` (UX only) |
+   | `merchant:manage_locations` | ✅ | ✅ | — | — | — | `POST /orgs/:orgSlug/locations`, `PATCH …/locations/:id`; store logo / banner uploads |
+   | `merchant:manage_verification` | ✅ | — | — | — | — | `GET` / `PATCH /orgs/:orgSlug/kyb`, KYB document download and upload |
 
-3. **Tenant Cedar policies** — may only **narrow** the table further.
+3. **Tenant Cedar policies** — the capability's Cedar action
+   (`MERCHANT_CAPABILITY_CEDAR_ACTIONS`, `modules/organization/constants/merchant-capability-cedar-actions.ts`,
+   e.g. `merchant:manage_team` → `rewardhub:manage_team`) is evaluated against the
+   organization's published policy and audited (`authorize.<action>` in
+   `organization_audit_logs`). Cedar may only **narrow** the table; the default tenant policy
+   (`REWARDHUB_DEFAULT_TENANT_CEDAR`) permits `OWNER` / `ADMIN` / `CASHIER` for every action, so
+   it never denies what the table grants (a unit test proves the two agree). Denial:
+   `403 ORGANIZATION_ACTION_FORBIDDEN`.
 
-Owner / admin-only organization actions use membership-role checks:
-team and invites (`OWNER`, `ADMIN`), store locations (`OWNER`, `ADMIN`), **KYB — read,
-download and submit — `OWNER` only** (`MerchantContextService.requireOwnerRole`).
+Capabilities mapped to `null` in `MERCHANT_CAPABILITY_CEDAR_ACTIONS` (`view_dashboard`,
+`view_locations`) guard no API action; asking the API to enforce one fails closed
+(`403 ORGANIZATION_CAPABILITY_UNKNOWN`). The map is a `Record` over the shared vocabulary, so a
+new capability does not compile until it is mapped.
+
+> [!NOTE]
+> Team, store-location and KYB endpoints used to check hard-coded role lists
+> (`assertCanManageTeam`, `assertCanManageLocations`, `requireOwnerRole`) that returned
+> `ORGANIZATION_TEAM_FORBIDDEN`, `ORGANIZATION_LOCATION_FORBIDDEN` and
+> `ORGANIZATION_OWNER_REQUIRED`. They now return `ORGANIZATION_ROLE_CAPABILITY_REQUIRED`
+> (still `403`), for the same allowed roles.
 
 ---
 
-## 13. File uploads
+## 13. Files
 
-`POST /files/upload-url` is authorized per file category by `FileUploadAuthorizationService`:
+Every authenticated `/files` operation is authorized per file category by `FileAuthorizationService`
+(`modules/files/services/file-authorization.service.ts`). The controller loads the file, asks the
+service, then acts.
 
-| Category | Rule |
-|---|---|
-| `USER_AVATAR` | only for your own account |
-| `PRODUCT_IMAGE` | `PRODUCT:UPDATE` on that product (kernel) |
-| `STORE_LOGO`, `STORE_BANNER` | active `OWNER` or `ADMIN` of that organization |
-| `MERCHANT_KYB` | active `OWNER` of that organization |
-| SuperAdmin | any category |
+| Category | Upload (`POST /files/upload-url`), complete, delete | Read (`GET /files/:id`, `GET /files/:id/download-url`) |
+|---|---|---|
+| `USER_AVATAR` | upload: own account only; afterwards the uploader | the uploader |
+| `PRODUCT_IMAGE` | upload: `PRODUCT:UPDATE` on that product (kernel); afterwards the uploader | the uploader |
+| `STORE_LOGO`, `STORE_BANNER` | `merchant:manage_locations` (`OWNER`, `ADMIN`) | any active member (`merchant:view_locations`) |
+| `MERCHANT_KYB` | `merchant:manage_verification` (`OWNER`) | `merchant:manage_verification` (`OWNER`) |
+| SuperAdmin | any | any |
+
+- **Same check as the rest of the merchant API.** Organization capabilities that guard an action go
+  through `OrganizationRewardAuthService.requireMembershipCapability`: the shared role table, then the
+  tenant Cedar policy, with an audited decision. Membership-only capabilities (Cedar action `null`,
+  e.g. reading store branding) use the role table alone.
+- **Re-checked at completion.** Completing a branding upload rebinds the organization's logo or banner,
+  so a member demoted after requesting the ticket cannot finish it.
+- **Organization files belong to the organization.** Whoever holds the capability *now* may delete
+  them; a former member who uploaded them may not. Non-members never get a download URL.
+- The caller's role is read through the allowlisted system operation `files.authorization`.
 
 Merchant onboarding uploads use their own invite-token endpoints and never reach this check.
 

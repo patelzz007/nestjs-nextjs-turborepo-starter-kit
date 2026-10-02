@@ -1,9 +1,9 @@
 import type { NestFastifyApplication } from "@nestjs/platform-fastify";
-import "@fastify/request-context";
 import { API_DEPRECATED_VERSIONS, API_VERSION, API_VERSION_PREFIX, apiVersionPrefix, type ApiVersion, StringValueSchema } from "@workspace/shared";
 import { z } from "zod";
 
-import type { RequestWithTrace } from "../common/middleware/correlation-id.middleware";
+import { HTTP_SERVER_ERROR_MIN_STATUS } from "../common/errors/error-codes";
+import { redactUrl } from "../common/logging/redaction";
 import { readFirstHeader, readReplyHeader } from "../common/utils/http-headers";
 import { parsePreSerializationValue, serializePreSerializationValue, type PreSerializationPayload } from "../common/utils/serialize-pre-serialization-value";
 import { LogService } from "../modules/logs/logs.service";
@@ -24,38 +24,6 @@ type CspNonce = z.output<typeof CspNonceSchema>;
 interface FastifyRouteOptions {
 	readonly url?: string;
 	config?: Record<string, string | number | boolean | { readonly max: number; readonly timeWindow: string }>;
-}
-
-interface RequestContextStore {
-	set(key: "correlationId" | "traceId", value: string | undefined): void;
-}
-
-const RequestContextStoreSchema = z.object({
-	set: z.function({
-		input: z.tuple([z.enum(["correlationId", "traceId"]), z.union([z.string(), z.undefined()])]),
-		output: z.void(),
-	}),
-});
-
-function readRequestContextStore(target: object): RequestContextStore | undefined {
-	const parsed = RequestContextStoreSchema.safeParse(Reflect.get(target, "requestContext"));
-	return parsed.success ? parsed.data : undefined;
-}
-
-function mirrorCorrelationIds(request: { readonly id: string; readonly raw: RequestWithTrace }): void {
-	const rawRequest: RequestWithTrace = request.raw;
-	const correlationId: string | undefined = rawRequest.correlationId ?? request.id;
-	if (rawRequest.correlationId !== undefined) {
-		Reflect.set(request, "correlationId", rawRequest.correlationId);
-	}
-	if (rawRequest.traceId !== undefined) {
-		Reflect.set(request, "traceId", rawRequest.traceId);
-	}
-	const contextStore = readRequestContextStore(request);
-	if (contextStore !== undefined) {
-		contextStore.set("correlationId", correlationId);
-		contextStore.set("traceId", correlationId);
-	}
 }
 
 function readCspNonce(reply: object): CspNonce | undefined {
@@ -100,12 +68,8 @@ export function registerFastifyHooks(app: NestFastifyApplication): void {
 		done();
 	});
 
-	server.addHook("preHandler", (request, _reply, done): void => {
-		mirrorCorrelationIds(request);
-		done();
-	});
-
 	server.addHook("onSend", (request, reply, payload, done): void => {
+		// `request.id` IS the correlation id (genReqId → common/context/correlation-id.ts).
 		reply.header("x-request-id", request.id);
 		const servedVersion: string | undefined = apiVersionOfUrl(request.url);
 		if (servedVersion !== undefined) {
@@ -140,16 +104,24 @@ export function registerFastifyHooks(app: NestFastifyApplication): void {
 		const logService: LogService = app.get(LogService);
 		const servedVersion: string | undefined = apiVersionOfUrl(request.url);
 		logService.info(
-			`HTTP ${request.method} ${servedVersion === undefined ? "" : `${servedVersion} `}${request.url} ${String(reply.statusCode)} ${reply.elapsedTime.toFixed(1)}ms (${request.id})`,
+			`HTTP ${request.method} ${servedVersion === undefined ? "" : `${servedVersion} `}${redactUrl(request.url)} ${String(reply.statusCode)} ${reply.elapsedTime.toFixed(1)}ms (${request.id})`,
 		);
 		done();
 	});
 
-	server.addHook("onError", (request, _reply, error, done): void => {
+	server.addHook("onError", (request, reply, error, done): void => {
+		// Client errors (4xx: malformed JSON, oversized body, …) are already
+		// recorded by the onResponse access line and answered with the error
+		// envelope — only server failures deserve an error-level entry + stack.
+		if (reply.statusCode < HTTP_SERVER_ERROR_MIN_STATUS) {
+			done();
+			return;
+		}
 		const logService: LogService = app.get(LogService);
-		logService.error(`HTTP ${request.method} ${request.url} failed: ${error.message} (${request.id})`, {
+		const safeUrl: string = redactUrl(request.url);
+		logService.error(`HTTP ${request.method} ${safeUrl} failed: ${error.message} (${request.id})`, {
 			trace: error.stack,
-			metadata: { requestId: request.id, url: request.url, method: request.method },
+			metadata: { requestId: request.id, url: safeUrl, method: request.method },
 		});
 		done();
 	});

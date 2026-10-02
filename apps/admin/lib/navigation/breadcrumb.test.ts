@@ -9,10 +9,16 @@ describe("resolveAdminTrail", () => {
 		expect(trail[0]?.href).toBeUndefined();
 	});
 
+	it("resolves the sales analytics page under its Analytics section", () => {
+		const trail = resolveAdminTrail("/analytics/sales");
+		expect(trail.map((crumb) => crumb.label)).toEqual(["Analytics", "Sales"]);
+		expect(trail.map((crumb) => crumb.href)).toEqual(["/analytics", undefined]);
+	});
+
 	it("resolves a nested route as parent crumb + current page", () => {
-		const trail = resolveAdminTrail("/settings/general");
-		expect(trail.map((crumb) => crumb.label)).toEqual(["Settings", "General"]);
-		expect(trail.map((crumb) => crumb.href)).toEqual(["/settings", undefined]);
+		const trail = resolveAdminTrail("/merchants/verification");
+		expect(trail.map((crumb) => crumb.label)).toEqual(["Merchants", "Verification"]);
+		expect(trail.map((crumb) => crumb.href)).toEqual(["/merchants", undefined]);
 	});
 
 	it("prepends the section title for multi-item content sections", () => {
@@ -24,14 +30,14 @@ describe("resolveAdminTrail", () => {
 	});
 
 	it("does not prepend the Main section title (it would duplicate context)", () => {
-		const trail = resolveAdminTrail("/users/roles");
-		expect(trail.map((crumb) => crumb.label)).toEqual(["Users", "Roles"]);
-		expect(trail.map((crumb) => crumb.href)).toEqual(["/users/all", undefined]);
+		const trail = resolveAdminTrail("/emails/log");
+		expect(trail.map((crumb) => crumb.label)).toEqual(["Emails", "Log"]);
+		expect(trail.map((crumb) => crumb.href)).toEqual(["/emails", undefined]);
 	});
 
 	it("resolves a deep nested route through every ancestor", () => {
-		const trail = resolveAdminTrail("/analytics/reports/marketing/campaigns");
-		expect(trail.map((crumb) => crumb.label)).toEqual(["Analytics", "Reports", "Marketing", "Campaigns"]);
+		const trail = resolveAdminTrail("/users/roles/admins");
+		expect(trail.map((crumb) => crumb.label)).toEqual(["Users", "Roles", "Admins"]);
 		expect(trail.at(-1)?.href).toBeUndefined();
 		// Every ancestor except the last is linked.
 		for (const [index, crumb] of trail.entries()) {
@@ -48,9 +54,25 @@ describe("resolveAdminTrail", () => {
 	});
 
 	it("resolves platform resources from the sidebar menu", () => {
-		const trail = resolveAdminTrail("/product");
-		expect(trail.map((crumb) => crumb.label)).toEqual(["Platform", "Products"]);
-		expect(trail.map((crumb) => crumb.href)).toEqual([undefined, "/product"]);
+		const trail = resolveAdminTrail("/catalog/products");
+		expect(trail.map((crumb) => crumb.label)).toEqual(["Platform", "Catalog", "Products"]);
+		expect(trail.map((crumb) => crumb.href)).toEqual([undefined, "/catalog", undefined]);
+	});
+
+	it("anchors detail pages on their nested resource entry (Catalog → Products stays in the trail)", () => {
+		const detail = resolveAdminTrail("/catalog/products/42");
+		expect(detail.map((crumb) => crumb.label)).toEqual(["Platform", "Catalog", "Products", "42"]);
+		expect(detail.map((crumb) => crumb.href)).toEqual([undefined, "/catalog", "/catalog/products", undefined]);
+
+		const edit = resolveAdminTrail("/catalog/products/42/edit");
+		expect(edit.map((crumb) => crumb.label)).toEqual(["Platform", "Catalog", "Products", "42", "Edit"]);
+		expect(edit.map((crumb) => crumb.href)).toEqual([undefined, "/catalog", "/catalog/products", undefined, undefined]);
+	});
+
+	it("resolves the personal account pages from the bottom items", () => {
+		const trail = resolveAdminTrail("/account/security");
+		expect(trail.map((crumb) => crumb.label)).toEqual(["Account", "Security"]);
+		expect(trail.map((crumb) => crumb.href)).toEqual(["/account", undefined]);
 	});
 
 	it("falls back to a linked Overview crumb for unknown routes", () => {
@@ -60,8 +82,8 @@ describe("resolveAdminTrail", () => {
 	});
 
 	it("handles a trailing slash on a known route", () => {
-		const trail = resolveAdminTrail("/settings/general/");
-		expect(trail.map((crumb) => crumb.label)).toEqual(["Settings", "General"]);
+		const trail = resolveAdminTrail("/settings/billing/");
+		expect(trail.map((crumb) => crumb.label)).toEqual(["Platform", "Settings", "Billing"]);
 	});
 
 	it("does not let a prefix match a similar-but-different route (/users vs /users-x)", () => {
@@ -74,11 +96,21 @@ describe("resolveAdminTrail", () => {
 	it("renders unknown dynamic segments as humanized current-page crumbs", () => {
 		const trail = resolveAdminTrail("/users/123");
 		expect(trail.map((crumb) => crumb.label)).toEqual(["Users", "123"]);
-		expect(trail.map((crumb) => crumb.href)).toEqual(["/users/all", undefined]);
+		expect(trail.map((crumb) => crumb.href)).toEqual(["/users", undefined]);
 	});
 
 	it("gives every crumb an icon (mandatory)", () => {
-		const paths: readonly string[] = ["/", "/analytics", "/settings/general", "/documents/alpha", "/users/roles", "/users/123", "/unknown/route"];
+		const paths: readonly string[] = [
+			"/",
+			"/analytics",
+			"/settings/billing",
+			"/documents/alpha",
+			"/users/mfa-recovery",
+			"/users/123",
+			"/catalog/products/42/edit",
+			"/account/security",
+			"/unknown/route",
+		];
 		for (const pathname of paths) {
 			for (const crumb of resolveAdminTrail(pathname)) {
 				expect(crumb.icon, `${pathname} → ${crumb.label}`).toBeDefined();

@@ -60,8 +60,10 @@ export class AuthRateLimitService {
 			this.keyStore.touchKey(userId, keyExpiresAt);
 		}
 
-		while (timestamps.length > 0 && timestamps[0] < cutoff) {
+		let oldest: number | undefined = timestamps[0];
+		while (oldest !== undefined && oldest < cutoff) {
 			timestamps.shift();
+			oldest = timestamps[0];
 		}
 
 		if (timestamps.length === 0) {

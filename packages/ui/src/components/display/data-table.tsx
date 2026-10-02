@@ -608,12 +608,12 @@ const RowActionsMenu = memoGeneric(function RowActionsMenu<TData extends RowData
 interface ExportMenuProps<TData extends RowData> {
 	readonly table: TanStackTable<DataTableFeatures, TData>;
 	readonly columns: ColumnDef<DataTableFeatures, TData>[];
-	readonly exportFilename?: string;
-	readonly exportableColumns?: string[];
+	readonly exportFilename?: string | undefined;
+	readonly exportableColumns?: string[] | undefined;
 	readonly exportFormats: readonly DataTableExportFormat[];
 	readonly labels: DataTableLabels;
 	readonly isServerMode: boolean;
-	readonly onFetchAllMatching?: () => Promise<TData[]>;
+	readonly onFetchAllMatching?: (() => Promise<TData[]>) | undefined;
 }
 
 /** Selection-aware row projection used by every export format. */
@@ -652,7 +652,7 @@ const ExportMenu = memoGeneric(function ExportMenu<TData extends RowData>({
 		const base = buildExportColumns(columns);
 		if (exportableColumns !== undefined && exportableColumns.length > 0) {
 			return base.filter((col) => {
-				const key = "id" in col ? String(col.id) : "accessorKey" in col ? String(col.accessorKey) : undefined;
+				const key = "id" in col ? col.id : "accessorKey" in col ? String(col.accessorKey) : undefined;
 				return key !== undefined && exportableColumns.includes(key);
 			});
 		}
@@ -1126,7 +1126,7 @@ const TableCellView = memoGeneric(function TableCellView<TData extends RowData>(
 interface TableRowViewProps<TData extends RowData> {
 	readonly row: Row<DataTableFeatures, TData>;
 	readonly rowIdx: number;
-	readonly rowHeight?: number;
+	readonly rowHeight?: number | undefined;
 	// Selection highlight — supplied by the per-row `table.Subscribe` island,
 	// because row objects are cached (stable identity) and `row.getIsSelected()`
 	// would otherwise go stale inside the memoized row (bugfix #2).
@@ -1136,7 +1136,7 @@ interface TableRowViewProps<TData extends RowData> {
 	readonly editingCell: EditingCell | null;
 	readonly dragIndex: number | null;
 	readonly dragOverIndex: number | null;
-	readonly onRowClick?: (row: TData) => void;
+	readonly onRowClick?: ((row: TData) => void) | undefined;
 	readonly onDragStart: (e: React.DragEvent, index: number) => void;
 	readonly onDragOver: (e: React.DragEvent, index: number) => void;
 	readonly onDrop: (e: React.DragEvent, index: number) => void;
@@ -1274,7 +1274,7 @@ interface MobileCardViewProps<TData extends RowData> {
 	readonly actions: Action<TData>[];
 	readonly labels: DataTableLabels;
 	readonly onAnyDeselect: () => void;
-	readonly onRowClick?: (row: TData) => void;
+	readonly onRowClick?: ((row: TData) => void) | undefined;
 }
 
 const MobileCardView = memoGeneric(function MobileCardView<TData extends RowData>({
@@ -1326,7 +1326,7 @@ const MobileCardView = memoGeneric(function MobileCardView<TData extends RowData
 
 interface SkeletonRowProps {
 	readonly cells: number;
-	readonly height?: number;
+	readonly height?: number | undefined;
 }
 
 const SkeletonRow = React.memo(function SkeletonRow({ cells, height }: SkeletonRowProps): React.JSX.Element {
@@ -1586,7 +1586,7 @@ export function DataTable<TData extends RowData>({
 	const columnIds = useMemo((): string[] => {
 		return initialColumns
 			.map((column) => {
-				if ("id" in column && column.id !== undefined) {
+				if ("id" in column) {
 					return column.id;
 				}
 				if ("accessorKey" in column) {
@@ -1858,7 +1858,8 @@ export function DataTable<TData extends RowData>({
 			manualPagination: isServerMode,
 			manualSorting: isServerMode,
 			manualFiltering: isServerMode,
-			pageCount,
+			// TanStack declares `pageCount?: number` exactly — omit it in client mode.
+			...(pageCount === undefined ? {} : { pageCount }),
 			globalFilterFn: (row, _columnId, filterValue): boolean => {
 				if (!searchKeys.length) return true;
 				const filterParsed = DataTableCellScalarSchema.safeParse(filterValue);

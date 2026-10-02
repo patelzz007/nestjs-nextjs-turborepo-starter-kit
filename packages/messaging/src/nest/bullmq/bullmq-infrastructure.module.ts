@@ -1,4 +1,5 @@
 import { DynamicModule, Inject, Injectable, Module } from "@nestjs/common";
+import { DiscoveryModule, DiscoveryService } from "@nestjs/core";
 import { BullModule, getQueueToken } from "@nestjs/bullmq";
 import { Queue } from "bullmq";
 
@@ -7,6 +8,14 @@ import { createBullMqConnection } from "../../core/redis";
 
 import { type ResolvedMessagingOptions } from "../messaging-options";
 import { MESSAGING_OPTIONS, MESSAGING_QUEUE_NAMES } from "../tokens";
+import { BullMqWorkerDrainService } from "./bullmq-worker-drain.service";
+
+/** Factory provider (no reliance on emitted decorator metadata, like `BullMqHealthIndicator`). */
+const workerDrainProvider = {
+	provide: BullMqWorkerDrainService,
+	useFactory: (discovery: DiscoveryService): BullMqWorkerDrainService => new BullMqWorkerDrainService(discovery),
+	inject: [DiscoveryService],
+};
 
 @Injectable()
 export class BullMqHealthIndicator implements MessagingHealthIndicator {
@@ -32,12 +41,22 @@ export class BullMqHealthIndicator implements MessagingHealthIndicator {
 	}
 
 	public getReport(): Promise<Record<string, string>> {
-		return Promise.resolve({
-			backend: this.isEnabled() ? "bullmq" : "disabled",
-			redis: this.options.redisUrl ?? "unset",
-			prefix: this.options.bullPrefix,
-		});
+		return Promise.resolve(bullMqHealthReport(this.options));
 	}
+}
+
+/**
+ * The BullMQ section of the deep health report. Never the Redis URL itself: it
+ * can carry credentials and `/health/deep` is public — `configured` / `unset`
+ * only, like the Kafka and RabbitMQ reports.
+ */
+export function bullMqHealthReport(options: Pick<ResolvedMessagingOptions, "redisUrl" | "bullPrefix">): Record<string, string> {
+	const isConfigured: boolean = options.redisUrl !== undefined;
+	return {
+		backend: isConfigured ? "bullmq" : "disabled",
+		redis: isConfigured ? "configured" : "unset",
+		prefix: options.bullPrefix,
+	};
 }
 
 /** Registers BullMQ root + all configured queue names. */
@@ -46,10 +65,13 @@ export class BullMqInfrastructureModule {}
 
 export function registerBullMqInfrastructureModule(options: ResolvedMessagingOptions): DynamicModule {
 	if (options.redisUrl === undefined) {
+		// The drain service is always present so shutdown code can call it
+		// unconditionally; with BullMQ disabled it finds no workers.
 		return {
 			module: BullMqInfrastructureModule,
-			providers: [],
-			exports: [],
+			imports: [DiscoveryModule],
+			providers: [workerDrainProvider],
+			exports: [BullMqWorkerDrainService],
 		};
 	}
 
@@ -67,6 +89,7 @@ export function registerBullMqInfrastructureModule(options: ResolvedMessagingOpt
 				prefix: options.bullPrefix,
 			}),
 			BullModule.registerQueue(...queueRegistrations),
+			DiscoveryModule,
 		],
 		providers: [
 			{
@@ -78,7 +101,8 @@ export function registerBullMqInfrastructureModule(options: ResolvedMessagingOpt
 				useFactory: (resolved: ResolvedMessagingOptions, queue: Queue): BullMqHealthIndicator => new BullMqHealthIndicator(resolved, queue),
 				inject: [MESSAGING_OPTIONS, getQueueToken(healthQueueName)],
 			},
+			workerDrainProvider,
 		],
-		exports: [BullModule, BullMqHealthIndicator, MESSAGING_QUEUE_NAMES],
+		exports: [BullModule, BullMqHealthIndicator, BullMqWorkerDrainService, MESSAGING_QUEUE_NAMES],
 	};
 }

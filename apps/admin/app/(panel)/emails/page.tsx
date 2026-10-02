@@ -1,37 +1,12 @@
-import { EmailTemplateKeySchema } from "@workspace/shared";
+import { redirect } from "next/navigation";
 
-import { createAdminServerCaller } from "@/lib/admin-server-api";
-
-import EmailPreviewView from "./email-templates";
-
-export const dynamic = "force-dynamic";
-
-function parseTemplateKey(value: string | string[] | undefined): string | undefined {
-	if (typeof value !== "string") {
-		return undefined;
-	}
-	const parsed = EmailTemplateKeySchema.safeParse(value);
-	return parsed.success ? parsed.data : undefined;
-}
+import { ROUTES } from "@/lib/routes";
 
 /**
- * `/emails` — prefetches the template list server-side PLUS the selected
- * template preview (`?key=merchant-invite` deep-links).
+ * `/emails` — section index. Emails open on the template browser. The sidebar
+ * lists this URL as a toggle-only parent, so it is only reached by typing or
+ * sharing it. Server-side `redirect()` throws during render — no client flash.
  */
-export default async function EmailPreviewPage({
-	searchParams,
-}: {
-	readonly searchParams: Promise<Record<string, string | string[] | undefined>>;
-}): Promise<React.JSX.Element> {
-	const server = createAdminServerCaller();
-	const params = await searchParams;
-	const requestedKey = parseTemplateKey(params.key);
-
-	const listData = await server.email.previewList.query(undefined);
-
-	const firstKey: string | undefined = EmailTemplateKeySchema.options[0];
-	const effectiveKey = requestedKey ?? firstKey;
-	const detailData = effectiveKey !== undefined ? await server.email.previewDetail.query({ key: effectiveKey }) : undefined;
-
-	return <EmailPreviewView initialList={listData} initialDetail={detailData} initialSelectedKey={requestedKey} />;
+export default function EmailsIndexPage(): React.ReactNode {
+	redirect(ROUTES.emails.templates);
 }

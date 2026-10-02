@@ -2,11 +2,13 @@ import { Controller, ForbiddenException, Get, UseGuards } from "@nestjs/common";
 import { Test, type TestingModule } from "@nestjs/testing";
 import { ThrottlerGuard, ThrottlerModule, type ThrottlerModuleOptions } from "@nestjs/throttler";
 import { FastifyAdapter, type NestFastifyApplication } from "@nestjs/platform-fastify";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
+import { z } from "zod";
 
 import { ConfigModule } from "../../../config/config.module";
 import { TypedConfigService } from "../../../config/typed-config.service";
 import { resolveClientIp, webhookThrottlerOptionsFactory } from "./webhook-throttler";
+import { createTestTypedConfig } from "../../../../test/support/test-api-env";
 
 /**
  * Test-only controller wired into a throwaway TestingModule to exercise
@@ -43,6 +45,9 @@ Controller("probe")(ProbeController);
 decorateMethod(ProbeController.prototype, "ping", [UseGuards(ThrottlerGuard), Get()]);
 decorateMethod(ProbeController.prototype, "forbidden", [UseGuards(ThrottlerGuard), Get("forbidden")]);
 
+/** The part of the 429 body this suite asserts on (the throttler adds status fields around it). */
+const ThrottledBodySchema = z.object({ message: z.string() });
+
 describe("resolveClientIp", () => {
 	it("prefers cf-connecting-ip (set by Cloudflare's edge, forwarded by cloudflared)", () => {
 		expect(
@@ -70,10 +75,9 @@ describe("resolveClientIp", () => {
 	});
 });
 
-/** Real config service reading a stubbed WEBHOOK_RATE_LIMIT_PER_MINUTE. */
+/** Real config service (parsed through the real schema) with WEBHOOK_RATE_LIMIT_PER_MINUTE set. */
 function fakeConfig(limit: number): TypedConfigService {
-	vi.stubEnv("WEBHOOK_RATE_LIMIT_PER_MINUTE", String(limit));
-	return new TypedConfigService();
+	return createTestTypedConfig({ WEBHOOK_RATE_LIMIT_PER_MINUTE: String(limit) });
 }
 
 async function buildApp(limit: number): Promise<NestFastifyApplication> {
@@ -92,10 +96,6 @@ async function buildApp(limit: number): Promise<NestFastifyApplication> {
 }
 
 describe("Webhook per-IP rate limiting (ThrottlerGuard)", () => {
-	afterEach(() => {
-		vi.unstubAllEnvs();
-	});
-
 	it("rejects the request that exceeds the per-IP limit with 429 + a clear message", async () => {
 		const app: NestFastifyApplication = await buildApp(3);
 		try {
@@ -105,7 +105,7 @@ describe("Webhook per-IP rate limiting (ThrottlerGuard)", () => {
 			}
 			const throttled = await app.inject({ method: "GET", url: "/probe" });
 			expect(throttled.statusCode).toBe(429);
-			expect(throttled.json().message).toContain("rate-limited per IP");
+			expect(ThrottledBodySchema.parse(throttled.json()).message).toContain("rate-limited per IP");
 		} finally {
 			await app.close();
 		}

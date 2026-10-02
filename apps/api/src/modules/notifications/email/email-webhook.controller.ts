@@ -1,21 +1,26 @@
-import { Controller, ForbiddenException, Get, Headers, HttpCode, Post, Req, UseGuards } from "@nestjs/common";
+import { Controller, ForbiddenException, Get, Headers, Post, Req, UseGuards } from "@nestjs/common";
 import type { RawBodyRequest } from "@nestjs/common";
-import { ApiBody, ApiHeader, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
+import { ApiBody, ApiHeader, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { ThrottlerGuard } from "@nestjs/throttler";
 import { Resend } from "resend";
 import type { FastifyRequest } from "fastify";
 
 import {
 	CaughtValueSchema,
+	EmailWebhookInfoResponseSchema,
+	EmailWebhookReceivedResponseSchema,
 	NonEmptyStringSchema,
 	ResendDeliveryDetailSchema,
 	ResendWebhookEventSchema,
 	ResendWebhookHeadersSchema,
 	StringValueSchema,
 	type EmailLogStatus,
+	type EmailWebhookInfoResponse,
+	type EmailWebhookReceivedResponse,
 	type ResendWebhookEvent,
 } from "@workspace/shared";
 
+import { ZodResponse } from "../../../common/decorators/zod-response.decorators";
 import { readCaughtErrorMessage } from "../../../common/utils/caught-error";
 import { TypedConfigService } from "../../../config/typed-config.service";
 import { LogService } from "../../logs/logs.service";
@@ -70,14 +75,16 @@ function webhookStatusFor(eventType: string): EmailLogStatus | undefined {
 @ApiTags("Email Webhook")
 @Controller("notifications/email-webhook")
 export class EmailWebhookController {
-	private readonly resend: Resend;
+	/** Resend SDK instance (signature verification); `null` when RESEND_API_KEY is unset. */
+	private readonly resend: Resend | null;
 
 	constructor(
 		private readonly config: TypedConfigService,
 		private readonly emailLogService: EmailLogService,
 		private readonly logService: LogService,
 	) {
-		this.resend = new Resend(this.config.resendApiKey);
+		const apiKey: string | null = this.config.resendApiKey;
+		this.resend = apiKey === null ? null : new Resend(apiKey);
 	}
 
 	/**
@@ -90,13 +97,8 @@ export class EmailWebhookController {
 	@Public()
 	@Get()
 	@ApiOperation({ summary: "Webhook endpoint info (GET is not the delivery path)" })
-	@ApiOkResponse({ description: "Explains the endpoint" })
-	public info(): {
-		readonly ok: true;
-		readonly message: string;
-		readonly method: "POST";
-		readonly path: string;
-	} {
+	@ZodResponse(EmailWebhookInfoResponseSchema, { description: "Explains the endpoint" })
+	public info(): EmailWebhookInfoResponse {
 		return {
 			ok: true,
 			message: "This is Resend's delivery webhook. Resend POSTs signed events here; a browser GET is not the delivery path.",
@@ -114,7 +116,6 @@ export class EmailWebhookController {
 	// route above is used by cloudflared/curl health checks, which must not
 	// consume the per-IP bucket.
 	@UseGuards(ThrottlerGuard)
-	@HttpCode(200)
 	@ApiOperation({
 		summary: "Resend delivery webhook (signature-verified)",
 		description:
@@ -171,13 +172,15 @@ export class EmailWebhookController {
 		required: true,
 		description: "v1,<base64 HMAC-SHA256> over `<id>.<timestamp>.<rawBody>` using the webhook signing secret — or `svix-signature`",
 	})
-	@ApiOkResponse({ description: "Webhook accepted" })
-	public async receive(@Req() req: RawBodyRequest<FastifyRequest>, @Headers() headers: Record<string, string | undefined>): Promise<{ readonly received: true }> {
-		const secret: string = this.config.resendWebhookSecret;
-		if (secret.length === 0) {
-			// No secret configured — the webhook is not wired up. Still answer 200
-			// so Resend stops retrying, and log once.
-			this.logService.warn("Resend webhook received but RESEND_WEBHOOK_SECRET is not configured", { context: "EmailWebhookController" });
+	// 200 (not 201) on purpose: Resend treats any 2xx as delivered, and the route has always answered 200.
+	@ZodResponse(EmailWebhookReceivedResponseSchema, { description: "Webhook accepted" })
+	public async receive(@Req() req: RawBodyRequest<FastifyRequest>, @Headers() headers: Record<string, string | undefined>): Promise<EmailWebhookReceivedResponse> {
+		const secret: string | null = this.config.resendWebhookSecret;
+		const resend: Resend | null = this.resend;
+		if (secret === null || resend === null) {
+			// Webhook not wired up (no signing secret / no Resend client). Still
+			// answer 200 so Resend stops retrying, and log once. Nothing is trusted.
+			this.logService.warn("Resend webhook received but RESEND_WEBHOOK_SECRET / RESEND_API_KEY is not configured", { context: "EmailWebhookController" });
 			return { received: true };
 		}
 
@@ -225,7 +228,7 @@ export class EmailWebhookController {
 		// "Invalid webhook signature" that leaks the DB error to a public route.
 		let resendEvent: ResendWebhookEvent;
 		try {
-			const verified = this.resend.webhooks.verify({
+			const verified = resend.webhooks.verify({
 				payload: rawBody,
 				headers: parsedHeaders.data,
 				webhookSecret: secret,

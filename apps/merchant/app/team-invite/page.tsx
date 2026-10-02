@@ -1,6 +1,6 @@
 "use client";
 
-import { organizationPath } from "@/lib/org/slug";
+import { orgRoutes, ROUTES } from "@/lib/routes";
 import { ApiError } from "@workspace/client/lib/api/use-api";
 import { resolveAuthErrorMessage } from "@workspace/client/lib/auth/errors";
 import { getEnrollmentRedirectPath, markEnrollmentMessage } from "@workspace/client/lib/auth/edge/restricted-session";
@@ -15,7 +15,8 @@ import {
 	type OrganizationTeamInvitePreview,
 } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/feedback/badge";
-import { Button } from "@workspace/ui/components/form/button";
+import { cn } from "@workspace/ui/lib/core/utils";
+import { Button, buttonVariants } from "@workspace/ui/components/form/button";
 import { Input } from "@workspace/ui/components/form/input";
 import { Label } from "@workspace/ui/components/form/label";
 import { PasswordInput } from "@workspace/ui/components/form/password-input";
@@ -132,7 +133,7 @@ function TeamInviteContent({ token }: TeamInviteContentProps): JSX.Element {
 	const navigateAfterJoin = useCallback(
 		(organizationSlug: string): void => {
 			toastMessage.success({ title: "Welcome to the team" });
-			router.replace(organizationPath(organizationSlug, "dashboard"));
+			router.replace(orgRoutes(organizationSlug).dashboard);
 			router.refresh();
 		},
 		[router],
@@ -294,12 +295,12 @@ function TeamInviteContent({ token }: TeamInviteContentProps): JSX.Element {
 
 	const loginHref = useMemo((): string => {
 		const params = new URLSearchParams({
-			redirect: `/team-invite?token=${token}`,
+			redirect: `${ROUTES.teamInvite}?${new URLSearchParams({ token }).toString()}`,
 		});
 		if (preview !== null) {
 			params.set("email", preview.email);
 		}
-		return `/auth/login?${params.toString()}`;
+		return `${ROUTES.auth.login}?${params.toString()}`;
 	}, [preview, token]);
 
 	const isLoading = validateMutation.isPending;
@@ -434,10 +435,10 @@ function TeamInviteContent({ token }: TeamInviteContentProps): JSX.Element {
 				</div>
 
 				<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-					<Button variant="outline" className="w-full sm:w-auto" nativeButton={false} render={<Link href="/" />}>
+					<Link href={ROUTES.home} className={cn(buttonVariants({ variant: "outline" }), "w-full sm:w-auto")}>
 						<ArrowLeft className="size-4" aria-hidden="true" />
 						Back home
-					</Button>
+					</Link>
 
 					{preview !== null && !authLoading ? (
 						emailMatchesInvite ? (
@@ -445,13 +446,13 @@ function TeamInviteContent({ token }: TeamInviteContentProps): JSX.Element {
 								{isAccepting ? "Joining team…" : "Accept invitation"}
 							</Button>
 						) : showSignInAction ? (
-							<Button className="w-full sm:w-auto" nativeButton={false} render={<Link href={loginHref} />}>
+							<Link href={loginHref} className={cn(buttonVariants(), "w-full sm:w-auto")}>
 								Sign in to accept
-							</Button>
+							</Link>
 						) : signedInWrongAccount ? (
-							<Button className="w-full sm:w-auto" nativeButton={false} render={<Link href={loginHref} />}>
+							<Link href={loginHref} className={cn(buttonVariants(), "w-full sm:w-auto")}>
 								Sign in with invited email
-							</Button>
+							</Link>
 						) : null
 					) : null}
 				</div>
@@ -469,10 +470,10 @@ function InvalidInviteCard(): JSX.Element {
 					<h1 className="text-xl font-semibold tracking-tight text-foreground">Invalid invitation link</h1>
 					<p className="text-sm text-muted-foreground">This link is missing a token or has already been used. Ask your organization admin to send a new team invitation.</p>
 				</div>
-				<Button variant="outline" className="w-full sm:w-auto" nativeButton={false} render={<Link href="/" />}>
+				<Link href={ROUTES.home} className={cn(buttonVariants({ variant: "outline" }), "w-full sm:w-auto")}>
 					<ArrowLeft className="size-4" aria-hidden="true" />
 					Back home
-				</Button>
+				</Link>
 			</div>
 		</div>
 	);

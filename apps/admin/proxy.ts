@@ -20,8 +20,14 @@ import {
 	type AuthCookieClearOptions,
 	type ProxyRefreshResult,
 } from "@workspace/client/lib/auth/edge/proxy-refresh";
+import { NodeEnvSchema } from "@workspace/shared";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+
+import { isAdminAuthPath, isAdminTokenAuthPath, isSafeAdminRedirect } from "@/lib/auth-routes";
+import { clientEnv } from "@/lib/env/env.client";
+import { serverEnv } from "@/lib/env/env.server";
+import { ROUTES } from "@/lib/routes";
 
 // ── Cookie names are isolated from web app ─────────────────────────────
 // The admin panel uses separate cookie names (adminAccessToken,
@@ -29,24 +35,17 @@ import type { NextRequest } from "next/server";
 // have their cookies recognized by the admin app.
 const ACCESS_TOKEN_COOKIE = "adminAccessToken";
 const REFRESH_TOKEN_COOKIE = "adminRefreshToken";
-const CLIENT_ORIGIN: string = process.env.NEXT_PUBLIC_ADMIN_URL ?? "http://localhost:3001";
+const CLIENT_ORIGIN: string = clientEnv.NEXT_PUBLIC_ADMIN_URL;
 const COOKIE_CLEAR_OPTIONS: AuthCookieClearOptions = {
-	domain: process.env.COOKIE_DOMAIN,
+	domain: serverEnv.COOKIE_DOMAIN,
 	path: "/",
-	secure: process.env.NODE_ENV === "production",
+	secure: serverEnv.NODE_ENV === NodeEnvSchema.enum.production,
 	sameSite: "lax",
 };
 
-// The whole admin panel lives under `/` (overview, settings, users, …).
-// Only `/auth/*` is open to unauthenticated visitors.
-const AUTH_ROUTES: readonly string[] = ["/auth/login", "/auth/forgot-password", "/auth/reset-password", "/auth/verify-email"];
-
-/** Token links must run even when the admin session cookie is already set. */
-const TOKEN_AUTH_ROUTE_PREFIXES: readonly string[] = ["/auth/verify-email", "/auth/reset-password"];
-
-function isTokenAuthRoute(pathname: string): boolean {
-	return TOKEN_AUTH_ROUTE_PREFIXES.some((route) => pathname.startsWith(route));
-}
+// The whole admin panel lives under `/` (overview, users, settings, account, …).
+// Only the auth pages (`ADMIN_AUTH_ROUTE_PREFIXES`) are open to unauthenticated
+// visitors; token links (verify email, reset password) run even with a session.
 
 // Routes accessible without authentication.
 const PUBLIC_ROUTES: readonly string[] = [];
@@ -73,12 +72,8 @@ export function resetAdminProxyRefreshCooldownForTests(): void {
 	attemptRefresh.reset();
 }
 
-function isSafeRedirect(redirect: string): boolean {
-	return redirect.startsWith("/") && !redirect.startsWith("//") && !redirect.startsWith("/auth/");
-}
-
 function redirectToLogin(request: NextRequest, pathname: string, rotatedCookies: readonly string[]): NextResponse {
-	const loginUrl = new URL("/auth/login", request.url);
+	const loginUrl = new URL(ROUTES.auth.login, request.url);
 	loginUrl.searchParams.set("redirect", pathname);
 	return clearCookies(applyRotatedCookies(NextResponse.redirect(loginUrl), rotatedCookies), [ACCESS_TOKEN_COOKIE, REFRESH_TOKEN_COOKIE]);
 }
@@ -112,7 +107,7 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
 	const refreshToken = request.cookies.get(REFRESH_TOKEN_COOKIE)?.value;
 	const { pathname } = request.nextUrl;
 
-	const isAuthRoute = AUTH_ROUTES.some((route) => pathname.startsWith(route));
+	const isAuthRoute = isAdminAuthPath(pathname);
 	const isPublicRoute = PUBLIC_ROUTES.some((route) => pathname === route);
 	const isPanelRoute = !isAuthRoute && !isPublicRoute;
 
@@ -125,7 +120,7 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
 		isDocumentNavigation: isDocumentNavigation(request.headers),
 		isAuthRoute,
 		isPublicRoute,
-		tokenAuthRoute: isTokenAuthRoute(pathname),
+		tokenAuthRoute: isAdminTokenAuthPath(pathname),
 		accessTokenCookieName: ACCESS_TOKEN_COOKIE,
 		refreshTokenCookieName: REFRESH_TOKEN_COOKIE,
 		app: "admin",
@@ -153,9 +148,9 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
 	}
 
 	if (isAuthRoute) {
-		if (isAuthenticated && hasAdminAccess && !isTokenAuthRoute(pathname)) {
+		if (isAuthenticated && hasAdminAccess && !isAdminTokenAuthPath(pathname)) {
 			const redirect = request.nextUrl.searchParams.get("redirect");
-			const targetUrl = redirect !== null && isSafeRedirect(redirect) ? redirect : "/";
+			const targetUrl = redirect !== null && isSafeAdminRedirect(redirect) ? redirect : ROUTES.home;
 			return applyRotatedCookies(NextResponse.redirect(new URL(targetUrl, request.url)), rotatedCookies);
 		}
 		if (!isAuthenticated && accessToken !== undefined) {
@@ -173,7 +168,7 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
 		return applyRotatedCookies(NextResponse.redirect(new URL(enrollmentPath, request.url)), rotatedCookies);
 	}
 	if (!hasAdminAccess) {
-		const loginUrl = new URL("/auth/login", request.url);
+		const loginUrl = new URL(ROUTES.auth.login, request.url);
 		return applyRotatedCookies(NextResponse.redirect(loginUrl), rotatedCookies);
 	}
 	return applyRotatedCookies(NextResponse.next(), rotatedCookies);

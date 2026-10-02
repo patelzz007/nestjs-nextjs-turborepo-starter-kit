@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { FastifyRequest } from "fastify";
 
 import { accessToken, createHttpContext, testRequest, type TestHttpRequest } from "../../../../test/support/http-execution-context";
+import { createTestPrisma } from "../../../../test/support/test-service-graph";
 
 import { AuthorizationException } from "../exceptions/authorization.exception";
 import { TenantMembershipService } from "../kernel/tenant-membership.service";
@@ -22,7 +23,7 @@ function fastifyRequest(request: TestHttpRequest): FastifyRequest {
 }
 
 describe("AuthorizationContextResolver", () => {
-	const resolver = (): AuthorizationContextResolver => new AuthorizationContextResolver(new TenantMembershipService());
+	const resolver = (): AuthorizationContextResolver => new AuthorizationContextResolver(new TenantMembershipService(createTestPrisma()));
 	const member = accessToken();
 
 	beforeEach(() => {

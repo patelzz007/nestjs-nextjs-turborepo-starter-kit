@@ -32,7 +32,7 @@ export function MerchantShellBreadcrumb(): React.JSX.Element {
 			<SharedBreadcrumbTrail
 				items={status.kind === "ready" ? status.items : []}
 				status={status.kind}
-				errorMessage={status.kind === "error" ? status.message : undefined}
+				{...(status.kind === "error" ? { errorMessage: status.message } : {})}
 				maxItems={maxItems}
 				renderLink={renderLink}
 				onCopy={handleCopy}

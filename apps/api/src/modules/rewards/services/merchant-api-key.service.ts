@@ -1,8 +1,9 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 
-import type { MerchantApiKeyCreated, MerchantApiKeyListQuery, MerchantApiKeySummary, MerchantCreateApiKeyInput } from "@workspace/shared";
+import type { MerchantApiKeyCreated, MerchantApiKeyListQuery, MerchantApiKeySummary, MerchantCreateApiKeyInput, PaginatedServiceResult } from "@workspace/shared";
 import { EpochMsSchema } from "@workspace/shared";
 
+import { mapListResult, toPaginatedServiceResult } from "../../../platform/persistence/list-page";
 import { OrganizationRewardAuthService } from "../../organization/services/organization-reward-auth.service";
 import { TenantTransactionService } from "../../../prisma/tenant-transaction.service";
 import { MerchantApiKeyRepository } from "../repositories/merchant-api-key.repository";
@@ -20,7 +21,7 @@ export class MerchantApiKeyService {
 		private readonly tenantTx: TenantTransactionService,
 	) {}
 
-	public async listKeys(userId: string, orgSlug: string, query: MerchantApiKeyListQuery): Promise<MerchantApiKeySummary[]> {
+	public async listKeys(userId: string, orgSlug: string, query: MerchantApiKeyListQuery): Promise<PaginatedServiceResult<MerchantApiKeySummary>> {
 		await this.merchantContext.requireUserCapability(userId, orgSlug, "merchant:manage_api_keys");
 		const resolved = await this.organizationRewardAuth.resolveOrganizationFromSlug(userId, orgSlug);
 		const locationId = query.locationId;
@@ -28,27 +29,30 @@ export class MerchantApiKeyService {
 			await this.merchantContext.assertAccessibleLocationForUser(userId, orgSlug, locationId);
 		}
 
-		const rows = await this.tenantTx.withTenantTransaction(
+		const result = await this.tenantTx.withTenantTransaction(
 			{
 				userId,
 				organizationId: resolved.organizationId,
 				purpose: "merchant.api_keys.list",
 				policyVersion: resolved.policyVersion,
 			},
-			async (tx) => this.merchantApiKeyRepository.listByOrgId(resolved.organizationId, locationId, tx),
+			async (tx) => this.merchantApiKeyRepository.listByOrgId(resolved.organizationId, locationId, query, tx),
 		);
 
-		return rows.map((row) => ({
-			id: row.id,
-			name: row.name,
-			locationId: row.locationId,
-			locationName: row.location?.name ?? null,
-			revokedAt: row.revokedAt === null ? null : EpochMsSchema.parse(Number(row.revokedAt)),
-			createdAt: EpochMsSchema.parse(Number(row.createdAt)),
-			updatedAt: EpochMsSchema.parse(Number(row.updatedAt)),
-			isDeleted: row.isDeleted,
-			deletedAt: row.deletedAt === null ? null : EpochMsSchema.parse(Number(row.deletedAt)),
-		}));
+		return toPaginatedServiceResult(
+			mapListResult(result, (row) => ({
+				id: row.id,
+				name: row.name,
+				locationId: row.locationId,
+				locationName: row.location?.name ?? null,
+				revokedAt: row.revokedAt === null ? null : EpochMsSchema.parse(Number(row.revokedAt)),
+				createdAt: EpochMsSchema.parse(Number(row.createdAt)),
+				updatedAt: EpochMsSchema.parse(Number(row.updatedAt)),
+				isDeleted: row.isDeleted,
+				deletedAt: row.deletedAt === null ? null : EpochMsSchema.parse(Number(row.deletedAt)),
+			})),
+			query,
+		);
 	}
 
 	public async createKey(userId: string, orgSlug: string, input: MerchantCreateApiKeyInput): Promise<MerchantApiKeyCreated> {

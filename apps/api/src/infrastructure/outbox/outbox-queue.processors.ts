@@ -1,41 +1,43 @@
 import { Processor, InjectQueue, WorkerHost } from "@nestjs/bullmq";
 import { Injectable, Logger, type OnModuleInit } from "@nestjs/common";
-import { Job, Queue, hasLegacyRepeatableKeyShape } from "bullmq";
+import { Job, Queue } from "bullmq";
 
 import { EmptyQueuePayloadSchema, MessageEnvelopeSchema, type MessageEnvelope } from "@workspace/messaging";
 import { KafkaProducerService } from "@workspace/messaging/nest";
-import { QUEUE_NAMES, QUEUE_JOB_OPTIONS, type PlatformEventEnvelope } from "@workspace/shared";
+import { QUEUE_NAMES, nowEpochMs, type KafkaTopic, type PlatformEventMessage } from "@workspace/shared";
 
 import { TypedConfigService } from "../../config/typed-config.service";
-import { PlatformOutboxService } from "./platform-outbox.service";
 import { runWithSystemRlsContext } from "../../prisma/rls-context";
+import { registerMaintenanceScheduler } from "../jobs/maintenance-scheduler";
+import { OutboxDispatchRepository } from "./outbox-dispatch.repository";
+import { OutboxDispatcher, type OutboxClock, type OutboxDispatchSummary, type OutboxPublisher } from "./outbox-dispatcher";
 
 const OUTBOX_SCHEDULER_ID = "outbox-publish";
 const OUTBOX_SWEEP_INTERVAL_MS = 5_000;
-const OUTBOX_BATCH_SIZE = 50;
 
-/** BullMQ job-scheduler iterations use ids like `repeat:<schedulerId>:<millis>`. */
-export function isSchedulerIterationFor(jobId: string | undefined, schedulerId: string): boolean {
-	if (!jobId?.startsWith("repeat:")) return false;
+/** Allowlisted system operation (system-operation.registry.ts) the dispatcher runs under. */
+export const OUTBOX_PUBLISH_OPERATION = "outbox.publish";
 
-	return jobId.startsWith(`repeat:${schedulerId}:`);
-}
+const SYSTEM_CLOCK: OutboxClock = { nowEpochMs: (): number => nowEpochMs() };
 
-export function isSchedulerIterationJob(jobOrId: Job | string | undefined): boolean {
-	if (jobOrId === undefined) return false;
-
-	const jobId = typeof jobOrId === "string" ? jobOrId : (jobOrId.id ?? "");
-	return jobId.startsWith("repeat:");
-}
-
-function toKafkaMessageEnvelope(envelope: PlatformEventEnvelope): MessageEnvelope {
-	const serialized: MessageEnvelope = MessageEnvelopeSchema.parse({
-		type: envelope.type,
-		correlationId: envelope.correlationId,
-		occurredAt: envelope.occurredAt,
-		payload: envelope.payload,
+/** Maps the platform wire message onto the generic broker envelope — `eventId` is carried through unchanged. */
+export function toKafkaMessageEnvelope(message: PlatformEventMessage): MessageEnvelope {
+	return MessageEnvelopeSchema.parse({
+		eventId: message.eventId,
+		type: message.type,
+		correlationId: message.correlationId,
+		occurredAt: message.occurredAt,
+		payload: message.payload,
 	});
-	return serialized;
+}
+
+/** Kafka adapter for the dispatcher's publisher port. */
+export class KafkaOutboxPublisher implements OutboxPublisher {
+	public constructor(private readonly producer: KafkaProducerService) {}
+
+	public async publish(topic: KafkaTopic, message: PlatformEventMessage, partitionKey: string | null): Promise<void> {
+		await this.producer.publish(topic, toKafkaMessageEnvelope(message), partitionKey);
+	}
 }
 
 /** Periodically sweeps pending outbox rows and publishes them to Kafka. */
@@ -53,64 +55,12 @@ export class OutboxQueueScheduler implements OnModuleInit {
 			return;
 		}
 
-		await this.removeLegacyRepeatableJobs();
-
-		const payload = EmptyQueuePayloadSchema.parse({});
-		await this.outboxQueue.upsertJobScheduler(OUTBOX_SCHEDULER_ID, { every: OUTBOX_SWEEP_INTERVAL_MS }, { name: "sweep", data: payload });
+		await registerMaintenanceScheduler(
+			this.outboxQueue,
+			{ queueName: QUEUE_NAMES[4], schedulerId: OUTBOX_SCHEDULER_ID, everyMs: OUTBOX_SWEEP_INTERVAL_MS, jobName: "sweep", data: EmptyQueuePayloadSchema.parse({}) },
+			this.logger,
+		);
 		this.logger.log("Registered BullMQ outbox publish scheduler");
-	}
-
-	private async removeLegacyRepeatableJobs(): Promise<void> {
-		const schedulers = await this.outboxQueue.getJobSchedulers(0, -1, true);
-		for (const scheduler of schedulers) {
-			const schedulerKey = scheduler.key;
-			const isThisScheduler = schedulerKey === `repeat:${OUTBOX_SCHEDULER_ID}` || isSchedulerIterationFor(schedulerKey, OUTBOX_SCHEDULER_ID);
-			if (!hasLegacyRepeatableKeyShape(schedulerKey) && !isThisScheduler) {
-				continue;
-			}
-			try {
-				await this.outboxQueue.removeJobScheduler(schedulerKey);
-				this.logger.log(`Removed stale scheduler ${schedulerKey} from ${QUEUE_NAMES[4]}`);
-			} catch (error) {
-				this.logger.warn(`Could not remove stale scheduler ${schedulerKey} from ${QUEUE_NAMES[4]}: ${String(error)}`);
-			}
-		}
-
-		const jobs = await this.outboxQueue.getJobs(["delayed", "waiting", "active", "failed"], 0, 500);
-		for (const job of jobs) {
-			const repeatJobKey = job.repeatJobKey ?? "";
-			const jobId = job.id ?? "";
-			const isRepeatIteration = isSchedulerIterationJob(jobId) || isSchedulerIterationJob(repeatJobKey);
-			if (isRepeatIteration && (isSchedulerIterationFor(jobId, OUTBOX_SCHEDULER_ID) || isSchedulerIterationFor(repeatJobKey, OUTBOX_SCHEDULER_ID))) {
-				const staleKey = repeatJobKey || jobId || "unknown";
-				try {
-					if (staleKey.startsWith("repeat:")) {
-						await this.outboxQueue.removeJobScheduler(staleKey);
-					}
-					this.logger.log(`Removed stale scheduler iteration ${staleKey} from ${QUEUE_NAMES[4]}`);
-				} catch (error) {
-					this.logger.warn(`Could not remove stale scheduler iteration ${staleKey} from ${QUEUE_NAMES[4]}: ${String(error)}`);
-				}
-				continue;
-			}
-
-			if (isRepeatIteration) {
-				continue;
-			}
-
-			const isLegacyRepeat = repeatJobKey !== "" && hasLegacyRepeatableKeyShape(repeatJobKey);
-			const isCorruptTimestamp = job.timestamp <= 0;
-			if (!isLegacyRepeat && !isCorruptTimestamp) {
-				continue;
-			}
-
-			try {
-				await job.remove();
-				this.logger.log(`Removed stale delayed job ${String(job.id)} from ${QUEUE_NAMES[4]}`);
-			} catch (error) {
-				this.logger.warn(`Could not remove stale job ${String(job.id)} from ${QUEUE_NAMES[4]}: ${String(error)}`);
-			}
-		}
 	}
 }
 
@@ -118,40 +68,29 @@ export class OutboxQueueScheduler implements OnModuleInit {
 @Injectable()
 export class OutboxPublishProcessor extends WorkerHost {
 	private readonly logger: Logger = new Logger(OutboxPublishProcessor.name);
+	private readonly dispatcher: OutboxDispatcher;
 
 	public constructor(
 		_outboxQueueScheduler: OutboxQueueScheduler,
 		private readonly config: TypedConfigService,
-		private readonly outboxService: PlatformOutboxService,
+		dispatchRepository: OutboxDispatchRepository,
 		private readonly kafkaProducer: KafkaProducerService,
 	) {
 		super();
+		this.dispatcher = new OutboxDispatcher(dispatchRepository, new KafkaOutboxPublisher(kafkaProducer), SYSTEM_CLOCK, this.logger);
 	}
 
-	public async process(job: Job): Promise<void> {
-		await runWithSystemRlsContext("queue.job", async (): Promise<void> => this.handle(job));
-	}
-
-	private async handle(job: Job): Promise<void> {
+	/**
+	 * One sweep. Row-level publish failures are handled per row (backoff /
+	 * dead-letter) and do not fail the job; only an infrastructure failure
+	 * (e.g. the claim query) throws, and BullMQ retries it per the
+	 * `outboxPublish` preset. Without Kafka, rows stay PENDING until it is enabled.
+	 */
+	public async process(job: Job): Promise<OutboxDispatchSummary | null> {
 		EmptyQueuePayloadSchema.parse(job.data);
 		if (!this.config.useKafka || !this.kafkaProducer.isEnabled()) {
-			return;
+			return null;
 		}
-
-		const pending = await this.outboxService.listPendingForPublish(OUTBOX_BATCH_SIZE);
-		for (const row of pending) {
-			try {
-				await this.kafkaProducer.publish(row.topic, toKafkaMessageEnvelope(row.envelope), row.partitionKey);
-				await this.outboxService.markPublished(row.id);
-			} catch (error) {
-				const message = error instanceof Error ? error.message : String(error);
-				this.logger.warn(`Outbox publish failed for ${row.id}: ${message}`);
-				await this.outboxService.markRetry(row.id, message);
-				if (job.attemptsMade >= QUEUE_JOB_OPTIONS.outboxPublish.attempts - 1) {
-					await this.outboxService.markFailed(row.id, message);
-				}
-				throw error;
-			}
-		}
+		return runWithSystemRlsContext(OUTBOX_PUBLISH_OPERATION, async (): Promise<OutboxDispatchSummary> => this.dispatcher.dispatchDue());
 	}
 }

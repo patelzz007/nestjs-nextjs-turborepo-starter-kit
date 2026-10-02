@@ -2,6 +2,8 @@ import { PERMISSION } from "@workspace/shared";
 
 import type { SidebarAuthorization, SidebarMenuData, SidebarMenuItem } from "@workspace/client/lib/sidebar/sidebar-menu-schema";
 
+import { ROUTES } from "@/lib/routes";
+
 /**
  * Sidebar item URL → the capability its page needs, mirroring the API route
  * the page loads (`@RequirePermission` on the Nest controller). Kept in
@@ -11,28 +13,31 @@ import type { SidebarAuthorization, SidebarMenuData, SidebarMenuItem } from "@wo
  * slug — they are listed in the route rules as `superAdminOnly` instead.
  */
 export const ADMIN_MENU_AUTHORIZATION: ReadonlyMap<string, SidebarAuthorization> = new Map<string, SidebarAuthorization>([
+	// GET /admin/analytics/sales (READ ANALYTICS)
+	[ROUTES.analytics.sales, { permissions: [PERMISSION.ANALYTICS.READ] }],
 	// GET /admin/roles (LIST ROLE) · GET /admin/permissions (LIST PERMISSION) · POST /admin/permissions/check (READ PERMISSION)
-	["/settings/access", { permissions: [PERMISSION.ROLE.LIST, PERMISSION.PERMISSION.LIST, PERMISSION.PERMISSION.READ], mode: "any" }],
+	[ROUTES.settings.access, { permissions: [PERMISSION.ROLE.LIST, PERMISSION.PERMISSION.LIST, PERMISSION.PERMISSION.READ], mode: "any" }],
 	// GET /notifications/email-preview (READ EMAIL)
-	["/emails", { permissions: [PERMISSION.EMAIL.READ] }],
+	[ROUTES.emails.templates, { permissions: [PERMISSION.EMAIL.READ] }],
 	// GET /notifications/email-log (LIST EMAIL)
-	["/email-log", { permissions: [PERMISSION.EMAIL.LIST] }],
+	[ROUTES.emails.log, { permissions: [PERMISSION.EMAIL.LIST] }],
 	// GET /geo/stats, /geo/countries… (READ GEO)
-	["/geo", { permissions: [PERMISSION.GEO.READ] }],
-	// GET /admin/merchants (LIST MERCHANT_ORG)
-	["/rewardhub/merchants", { permissions: [PERMISSION.MERCHANT_ORG.LIST] }],
+	[ROUTES.geography.index, { permissions: [PERMISSION.GEO.READ] }],
+	// GET /admin/merchants (LIST MERCHANT_ORG). The "Merchants" section shares
+	// this URL with its "All merchants" index child, so both carry it.
+	[ROUTES.merchants.list, { permissions: [PERMISSION.MERCHANT_ORG.LIST] }],
 	// GET /admin/rewards/pending (MANAGE REWARD)
-	["/rewardhub/pending", { permissions: [PERMISSION.REWARD.MANAGE] }],
+	[ROUTES.rewards.review, { permissions: [PERMISSION.REWARD.MANAGE] }],
 	// POST /admin/invites, /admin/invites/preview-email (MANAGE MERCHANT_ORG)
-	["/rewardhub/invites", { permissions: [PERMISSION.MERCHANT_ORG.MANAGE] }],
+	[ROUTES.merchants.invites, { permissions: [PERMISSION.MERCHANT_ORG.MANAGE] }],
 	// GET /admin/merchants/:id (LIST MERCHANT_ORG)
-	["/rewardhub/kyb", { permissions: [PERMISSION.MERCHANT_ORG.LIST] }],
+	[ROUTES.merchants.verification, { permissions: [PERMISSION.MERCHANT_ORG.LIST] }],
 	// GET /admin/location-requests (LIST MERCHANT_ORG)
-	["/rewardhub/locations", { permissions: [PERMISSION.MERCHANT_ORG.LIST] }],
+	[ROUTES.merchants.storeRequests, { permissions: [PERMISSION.MERCHANT_ORG.LIST] }],
 	// GET /sample-category (LIST SAMPLE_CATEGORY)
-	["/sample-category", { permissions: [PERMISSION.SAMPLE_CATEGORY.LIST] }],
+	[ROUTES.catalog.categories.list, { permissions: [PERMISSION.SAMPLE_CATEGORY.LIST] }],
 	// GET /product (LIST PRODUCT)
-	["/product", { permissions: [PERMISSION.PRODUCT.LIST] }],
+	[ROUTES.catalog.products.list, { permissions: [PERMISSION.PRODUCT.LIST] }],
 ]);
 
 function applyToItem(item: SidebarMenuItem, requirements: ReadonlyMap<string, SidebarAuthorization>): SidebarMenuItem {

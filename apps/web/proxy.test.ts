@@ -11,7 +11,7 @@ import { proxy, resetWebProxyRefreshCooldownForTests } from "./proxy";
 // run fine in the node vitest environment, so tests assert on actual response
 // objects (status, Location header, cookies) instead of casting fake doubles.
 
-vi.mock("@workspace/client/lib/api/config", () => ({ API_BASE_URL: "http://api.test", API_URL_PREFIX: "/api/v1" }));
+vi.mock("@workspace/client/lib/api/config", () => ({ API_BASE_URL: "http://api.test", API_URL_PREFIX: "/api/v1", RUNTIME_NODE_ENV: "test" }));
 
 // ── Request / response plumbing ─────────────────────────────────────────────
 
@@ -67,6 +67,8 @@ interface JwtHeader {
 interface JwtClaims {
 	readonly sub: string;
 	readonly exp: number;
+	readonly sessionScope?: "restricted" | "full";
+	readonly isEmailVerified?: boolean;
 }
 
 function base64UrlJson(value: JwtHeader | JwtClaims): string {
@@ -83,6 +85,11 @@ function expiredToken(): string {
 
 function validToken(): string {
 	return makeJwt({ sub: "u_1", exp: Math.floor(Date.now() / 1000) + 3600 });
+}
+
+/** A live enrollment-only session (email not verified yet). */
+function restrictedToken(): string {
+	return makeJwt({ sub: "u_1", exp: Math.floor(Date.now() / 1000) + 3600, sessionScope: "restricted", isEmailVerified: false });
 }
 
 function stubRefreshResponse(status: number, setCookies: readonly string[]): void {
@@ -194,8 +201,39 @@ describe("web proxy route protection", () => {
 		expect(redirectLocation(response)).toBe("http://localhost:3000/rewardhub");
 	});
 
-	it("serves public routes to everyone", async () => {
-		const response = await runProxy({ pathname: "/about" });
+	it("serves the guest-browsable public reward detail to everyone", async () => {
+		const response = await runProxy({ pathname: "/rewards/reward-1" });
+
+		expect(response.status).toBe(200);
+		expect(redirectLocation(response)).toBeUndefined();
+	});
+
+	it.each(["/rewardhub", "/rewardhub/rewards/reward-1", "/rewardhub/wallet", "/rewardhub/wallet/claim-1", "/rewardhub/activity", "/rewardhub/account"])(
+		"sends guests on the signed-in page %s to login, returning there afterwards",
+		async (pathname: string) => {
+			const response = await runProxy({ pathname });
+
+			expect(response.status).toBe(307);
+			expect(redirectLocation(response)).toBe(`http://localhost:3000/auth/login?redirect=${encodeURIComponent(pathname)}`);
+		},
+	);
+
+	it("matches protected prefixes by whole path segment (/rewardhubs is not /rewardhub)", async () => {
+		const response = await runProxy({ pathname: "/rewardhubs" });
+
+		expect(response.status).toBe(200);
+		expect(redirectLocation(response)).toBeUndefined();
+	});
+
+	it("sends a restricted (enrollment) session to the account page", async () => {
+		const response = await runProxy({ pathname: "/rewardhub/wallet", accessToken: restrictedToken(), refreshToken: "rt" });
+
+		expect(response.status).toBe(307);
+		expect(redirectLocation(response)).toBe("http://localhost:3000/rewardhub/account");
+	});
+
+	it("lets a restricted (enrollment) session open the account page", async () => {
+		const response = await runProxy({ pathname: "/rewardhub/account", accessToken: restrictedToken(), refreshToken: "rt" });
 
 		expect(response.status).toBe(200);
 		expect(redirectLocation(response)).toBeUndefined();

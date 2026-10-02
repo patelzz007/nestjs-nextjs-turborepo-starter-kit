@@ -36,15 +36,14 @@ export const CreatePolicyDraftSchema = z
 
 export type CreatePolicyDraftInput = z.output<typeof CreatePolicyDraftSchema>;
 
-export const PolicySimulationResultSchema = z
-	.object({
-		passed: z.boolean(),
-		warnings: z.array(z.string()),
-		errors: z.array(z.string()),
-		affectedPrincipalCount: z.number().int().nonnegative(),
-		wouldLockOutOwners: z.boolean(),
-	})
-	.strict();
+/** `POST /policies/drafts/:draftId/simulate` payload. Response schema: open (ADR 022). */
+export const PolicySimulationResultSchema = z.object({
+	passed: z.boolean(),
+	warnings: z.array(z.string()),
+	errors: z.array(z.string()),
+	affectedPrincipalCount: z.number().int().nonnegative(),
+	wouldLockOutOwners: z.boolean(),
+});
 
 export type PolicySimulationResult = z.output<typeof PolicySimulationResultSchema>;
 
@@ -70,5 +69,19 @@ export const PolicyPublishRequestSchema = z
 	.strict();
 
 export type PolicyPublishRequestInput = z.output<typeof PolicyPublishRequestSchema>;
+
+/** `POST /policies/drafts` payload — the id of the new draft. Response schema: open (ADR 022). */
+export const PolicyDraftCreatedResponseSchema = z.object({
+	draftId: z.uuid(),
+});
+
+export type PolicyDraftCreatedResponse = z.output<typeof PolicyDraftCreatedResponseSchema>;
+
+/** `POST /policies/publish` payload — the published bundle version. Response schema: open (ADR 022). */
+export const PolicyPublishResponseSchema = z.object({
+	version: z.number().int().positive(),
+});
+
+export type PolicyPublishResponse = z.output<typeof PolicyPublishResponseSchema>;
 
 export { AuthorizationPolicyScopeSchema, AuthorizationPolicyStatusSchema };

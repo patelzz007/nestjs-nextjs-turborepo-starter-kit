@@ -5,16 +5,25 @@ import { useAuth } from "@workspace/client/lib/auth";
 import type { EnrollmentReason } from "@workspace/shared";
 import * as React from "react";
 
+import { isPathWithin, ORG_ROUTES, ROUTES, toOrgRelativePath } from "@/lib/routes";
+
 export const MERCHANT_EMAIL_ENROLLMENT_DISABLED_TOOLTIP = "Verify your email to access this page";
 export const MERCHANT_MFA_ENROLLMENT_DISABLED_TOOLTIP = "Set up two-factor authentication to access this page";
 
-/** Whether a merchant route stays reachable while enrollment is pending. */
+/**
+ * Whether a merchant route stays reachable while enrollment is pending — only
+ * the personal account, where email verification / MFA enrollment happens.
+ * Accepts org-relative menu URLs (`/account`), the top-level `/account` entry,
+ * and org-scoped hrefs (`/orgs/{slug}/account/**`). Mirrors the proxy's
+ * `isEnrollmentAllowedPath` for the merchant surface.
+ */
 export function isMerchantEnrollmentAllowedPath(pathname: string): boolean {
-	if (pathname === "/settings" || pathname.startsWith("/settings/")) {
+	if (isPathWithin(pathname, ROUTES.account) || isPathWithin(pathname, ORG_ROUTES.account)) {
 		return true;
 	}
 
-	return /\/orgs\/[^/]+\/settings(?:\/|$)/.test(pathname);
+	const orgRelativePath = toOrgRelativePath(pathname);
+	return orgRelativePath !== undefined && isPathWithin(orgRelativePath, ORG_ROUTES.account);
 }
 
 export interface MerchantEnrollmentLock {

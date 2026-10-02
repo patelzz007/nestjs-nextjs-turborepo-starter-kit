@@ -9,11 +9,11 @@ import { cn } from "@workspace/ui/lib/core/utils";
 import type { AccordionDemoItem } from "@/components/showcase/accordion-showcase";
 import { ChartSkeleton } from "@/components/dashboard/chart-skeleton";
 import { LazySection } from "@/components/common/lazy-section";
-import { SectionCards } from "@/components/dashboard/section-cards";
+import { PlatformSalesCards } from "@/components/dashboard/platform-sales-cards";
 
 // ── Lazy demo sections ────────────────────────────────────────────────────
 // Every showcase below the fold (chart, table, accordion, …) is code-split so
-// the initial bundle only contains the chrome + stat cards. Heavy deps
+// the initial bundle only contains the chrome + platform sales cards. Heavy deps
 // (recharts, react-table, dnd-kit, react-hook-form, …) load in parallel with
 // hydration instead of blocking first paint — LCP and TBT both drop. The
 // `loading` skeletons reserve each section's height, so nothing jumps.
@@ -30,7 +30,7 @@ const selectSectionLoading = (): React.JSX.Element => <SectionSkeleton height="h
 const alertSectionLoading = (): React.JSX.Element => <SectionSkeleton height="h-40" />;
 const toastSectionLoading = (): React.JSX.Element => <SectionSkeleton height="h-40" />;
 
-// The chart sits right below the stat cards, so it loads immediately (its own
+// The chart sits right below the platform sales cards, so it loads immediately (its own
 // chart-shaped skeleton shows while the recharts chunk downloads). Everything
 // BELOW it is viewport-gated by `<LazySection>` and only mounts when scrolled
 // near — the chunk then downloads on demand and the section fades in.
@@ -269,7 +269,7 @@ export default function Page(): React.JSX.Element {
 					))}
 				</nav>
 
-				<SectionCards />
+				<PlatformSalesCards />
 				<div id="demo-chart" className="scroll-mt-4 px-4 lg:px-6">
 					{/* Chart skeleton → real chart is an instant swap once the recharts
 					    chunk resolves (standard dashboard behavior — the below-fold

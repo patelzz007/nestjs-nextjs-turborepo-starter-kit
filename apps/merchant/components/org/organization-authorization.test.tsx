@@ -52,7 +52,7 @@ afterEach((): void => {
 	organizationMutation.mockReset();
 });
 
-describe("OrganizationTeamPageView authorization (OWNER/ADMIN)", () => {
+describe("OrganizationTeamPageView authorization (merchant:manage_team)", () => {
 	it("shows the roster and invite form to admins", () => {
 		renderAs(<OrganizationTeamPageView orgSlug={TEST_ORG_SLUG} />, "ADMIN");
 
@@ -60,10 +60,10 @@ describe("OrganizationTeamPageView authorization (OWNER/ADMIN)", () => {
 		expect(screen.getByText("Pending invitations")).toBeTruthy();
 	});
 
-	it("denies the page and skips the roster queries for other roles", () => {
-		renderAs(<OrganizationTeamPageView orgSlug={TEST_ORG_SLUG} />, "CASHIER");
+	it.each(["CASHIER", "POLICY_ADMIN", "MEMBER"] satisfies OrganizationMembershipRole[])("denies the page and skips the roster queries for %s", (role) => {
+		renderAs(<OrganizationTeamPageView orgSlug={TEST_ORG_SLUG} />, role);
 
-		expect(screen.getByText("Owner or admin access required")).toBeTruthy();
+		expect(screen.getByText("Team access required")).toBeTruthy();
 		expect(screen.queryByRole("button", { name: "Send invitation" })).toBeNull();
 		expect(listMembersQuery).not.toHaveBeenCalled();
 	});
@@ -72,23 +72,23 @@ describe("OrganizationTeamPageView authorization (OWNER/ADMIN)", () => {
 		renderAs(<OrganizationTeamPageView orgSlug={TEST_ORG_SLUG} />, undefined, true);
 
 		expect(screen.getByRole("status", { name: "Checking access" })).toBeTruthy();
-		expect(screen.queryByText("Owner or admin access required")).toBeNull();
+		expect(screen.queryByText("Team access required")).toBeNull();
 	});
 });
 
-describe("OrganizationLocationsPageView authorization (OWNER/ADMIN)", () => {
-	it("offers store requests to owners", () => {
-		renderAs(<OrganizationLocationsPageView orgSlug={TEST_ORG_SLUG} />, "OWNER");
+describe("OrganizationLocationsPageView authorization (merchant:manage_locations)", () => {
+	it.each(["OWNER", "ADMIN"] satisfies OrganizationMembershipRole[])("offers store requests to %s", (role) => {
+		renderAs(<OrganizationLocationsPageView orgSlug={TEST_ORG_SLUG} />, role);
 
 		expect(screen.getByRole("button", { name: "Add store" })).toBeTruthy();
 		expect(screen.queryByRole("note")).toBeNull();
 	});
 
-	it("hides store requests and explains why for other roles", () => {
-		renderAs(<OrganizationLocationsPageView orgSlug={TEST_ORG_SLUG} />, "CASHIER");
+	it.each(["CASHIER", "POLICY_ADMIN", "MEMBER"] satisfies OrganizationMembershipRole[])("hides store requests and explains why for %s", (role) => {
+		renderAs(<OrganizationLocationsPageView orgSlug={TEST_ORG_SLUG} />, role);
 
 		expect(screen.queryByRole("button", { name: "Add store" })).toBeNull();
-		expect(screen.getByRole("note").textContent).toContain("owners and admins");
+		expect(screen.getByRole("note").textContent).toContain("can view store locations but not request new stores");
 	});
 
 	it("shows neither the action nor the notice while the membership resolves", () => {
@@ -114,7 +114,15 @@ describe("OrgDashboardPageView authorization", () => {
 		expect(screen.getByText("Rewards")).toBeTruthy();
 		expect(screen.getByText("Analytics")).toBeTruthy();
 		expect(screen.getByText("Redemptions log")).toBeTruthy();
+		expect(screen.getByText("Store locations")).toBeTruthy();
 		expect(screen.queryByText("Team & access")).toBeNull();
+		expect(screen.queryByText("Business verification")).toBeNull();
+	});
+
+	it("shows admins the team shortcut but not business verification", () => {
+		renderAs(<OrgDashboardPageView orgSlug={TEST_ORG_SLUG} context={null} />, "ADMIN");
+
+		expect(screen.getByText("Team & access")).toBeTruthy();
 		expect(screen.queryByText("Business verification")).toBeNull();
 	});
 

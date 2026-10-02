@@ -1,5 +1,6 @@
 import { prisma } from "./client";
 import { deterministicUuid } from "./deterministic-uuid";
+import { requireRow } from "./require-row";
 import { buildCategorySeedId, CATEGORY_SEED_COUNT } from "./sample-platform";
 
 export const PRODUCT_SEED_COUNT = 70;
@@ -52,7 +53,7 @@ export function buildProductSeedRows(count: number = PRODUCT_SEED_COUNT): readon
 	return Array.from({ length: count }, (_, index) => {
 		const sequence = index + 1;
 		const name = `Demo Product ${String(sequence).padStart(3, "0")}`;
-		const brand = BRAND_NAMES[index % BRAND_NAMES.length];
+		const brand = requireRow(BRAND_NAMES[index % BRAND_NAMES.length], `brand #${String(index % BRAND_NAMES.length)}`);
 		const basePrice = 12.99 + (index % 37) * 4.5;
 		const hasCompareAt = index % 4 === 0;
 		const categoryIndex = index % CATEGORY_SEED_COUNT;

@@ -1,7 +1,8 @@
 "use client";
 
-import { ForgotPasswordSchema, type ForgotPasswordInput } from "@workspace/shared";
-import { Button } from "@workspace/ui/components/form/button";
+import { cn } from "@workspace/ui/lib/core/utils";
+import { ForgotPasswordSchema, type ForgotPasswordInput, APP_LINKS } from "@workspace/shared";
+import { buttonVariants } from "@workspace/ui/components/form/button";
 import { FormShell } from "@workspace/ui/components/form/form-shell";
 import { Input } from "@workspace/ui/components/form/input";
 import { Label } from "@workspace/ui/components/form/label";
@@ -16,7 +17,7 @@ export interface ForgotPasswordFormProps {
 	readonly loginHref?: string;
 }
 
-export function ForgotPasswordForm({ loginHref = "/auth/login" }: ForgotPasswordFormProps): JSX.Element {
+export function ForgotPasswordForm({ loginHref = APP_LINKS.auth.login }: ForgotPasswordFormProps): JSX.Element {
 	const [email, setEmail] = useState("");
 	const [error, setError] = useState<string | null>(null);
 	const [isLoading, setIsLoading] = useState(false);
@@ -62,9 +63,9 @@ export function ForgotPasswordForm({ loginHref = "/auth/login" }: ForgotPassword
 				<div className="rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-foreground">
 					If an account exists with this email, we&apos;ve sent a password reset link. The link expires in 1 hour.
 				</div>
-				<Button variant="outline" className="w-full" render={<Link href={loginHref} />}>
+				<Link href={loginHref} className={cn(buttonVariants({ variant: "outline" }), "w-full")}>
 					Back to sign in
-				</Button>
+				</Link>
 			</div>
 		);
 	}

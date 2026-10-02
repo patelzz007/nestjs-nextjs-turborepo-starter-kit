@@ -4,6 +4,7 @@ import {
 	PERMISSION,
 	PermissionActionSchema,
 	PermissionResourceSchema,
+	type CheckPermissionResponse,
 	type AdminUserDetail,
 	type PermissionAction,
 	type PermissionListItem,
@@ -67,9 +68,7 @@ export function UserAccessPanel({
 	const [assignRoleId, setAssignRoleId] = React.useState<string | null>(null);
 	const [checkAction, setCheckAction] = React.useState<PermissionAction>("READ");
 	const [checkResource, setCheckResource] = React.useState<PermissionResource>("USER");
-	const [checkResult, setCheckResult] = React.useState<{ readonly allowed: boolean; readonly grants: readonly { readonly via: string; readonly detail?: string }[] } | null>(
-		null,
-	);
+	const [checkResult, setCheckResult] = React.useState<CheckPermissionResponse | null>(null);
 
 	const invalidateUser = React.useCallback(async (): Promise<void> => {
 		await invalidateSessionAuth(queryClient);

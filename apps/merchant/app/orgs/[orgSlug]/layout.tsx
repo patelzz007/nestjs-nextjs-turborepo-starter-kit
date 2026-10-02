@@ -3,7 +3,8 @@ import { MerchantShell } from "@/components/merchant-shell";
 import { getMerchantServerSession } from "@/lib/auth/server";
 import { loadMerchantServerContext } from "@/lib/merchant-server-api";
 import { isCanonicalOrganizationSlug, resolveOrganizationTenantFromUrlSegment } from "@/lib/org/resolve-slug";
-import { organizationPath, ORGANIZATION_SLUG_COOKIE_NAME } from "@/lib/org/slug";
+import { ORGANIZATION_SLUG_COOKIE_NAME } from "@/lib/org/slug";
+import { orgRoutes, ROUTES } from "@/lib/routes";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
@@ -25,18 +26,18 @@ export default async function OrgLayout({ children, params }: OrgLayoutProps): P
 			const cookieStore = await cookies();
 			const storedSlug = cookieStore.get(ORGANIZATION_SLUG_COOKIE_NAME)?.value;
 			if (storedSlug !== undefined && isCanonicalOrganizationSlug(storedSlug)) {
-				redirect(organizationPath(storedSlug, "dashboard"));
+				redirect(orgRoutes(storedSlug).dashboard);
 			}
-			redirect("/onboarding");
+			redirect(ROUTES.onboarding);
 		}
-		redirect(organizationPath(resolvedTenant.slug, "dashboard"));
+		redirect(orgRoutes(resolvedTenant.slug).dashboard);
 	}
 
 	if (resolvedTenant === undefined) {
 		const cookieStore = await cookies();
 		const storedSlug = cookieStore.get(ORGANIZATION_SLUG_COOKIE_NAME)?.value;
 		if (storedSlug !== undefined && isCanonicalOrganizationSlug(storedSlug) && storedSlug !== orgSlug) {
-			redirect(organizationPath(storedSlug, "dashboard"));
+			redirect(orgRoutes(storedSlug).dashboard);
 		}
 	}
 

@@ -10,7 +10,7 @@
       "items": [
         {
           "title": "Dashboard",
-          "url": "/",
+          "url": "/dashboard",
           "icon": "LayoutDashboard",
           "disabled": false,
           "authorization": { "permissions": ["merchant:view_dashboard"] }
@@ -53,9 +53,9 @@
         },
         {
           "title": "Campaigns",
-          "url": "#",
+          "url": "/campaigns",
           "icon": "Zap",
-          "disabled": false,
+          "disabled": true,
           "authorization": { "permissions": ["merchant:manage_rewards"] },
           "children": [
             {
@@ -88,13 +88,6 @@
       "color": "amber",
       "items": [
         {
-          "title": "QR Scanner",
-          "url": "/redemptions",
-          "icon": "QrCode",
-          "disabled": false,
-          "authorization": { "permissions": ["merchant:view_redemptions"] }
-        },
-        {
           "title": "Redemptions",
           "url": "/redemptions",
           "icon": "CheckCircle",
@@ -123,6 +116,13 @@
               "authorization": { "permissions": ["merchant:view_redemptions"] }
             }
           ]
+        },
+        {
+          "title": "POS terminals",
+          "url": "/terminals",
+          "icon": "MonitorSmartphone",
+          "disabled": false,
+          "authorization": { "permissions": ["merchant:manage_api_keys"] }
         },
         {
           "title": "API Keys",
@@ -174,7 +174,39 @@
     {
       "title": "Settings",
       "url": "/settings",
-      "icon": "Settings"
+      "icon": "Settings",
+      "authorization": { "permissions": ["merchant:manage_team", "merchant:view_locations", "merchant:manage_verification"], "mode": "any" },
+      "children": [
+        {
+          "title": "Overview",
+          "url": "/settings",
+          "icon": "Settings",
+          "authorization": { "permissions": ["merchant:manage_team", "merchant:view_locations", "merchant:manage_verification"], "mode": "any" }
+        },
+        {
+          "title": "Team",
+          "url": "/settings/team",
+          "icon": "Users",
+          "authorization": { "permissions": ["merchant:manage_team"] }
+        },
+        {
+          "title": "Locations",
+          "url": "/settings/locations",
+          "icon": "MapPin",
+          "authorization": { "permissions": ["merchant:view_locations"] }
+        },
+        {
+          "title": "Verification",
+          "url": "/settings/verification",
+          "icon": "ShieldCheck",
+          "authorization": { "permissions": ["merchant:manage_verification"] }
+        }
+      ]
+    },
+    {
+      "title": "Account",
+      "url": "/account",
+      "icon": "CircleUser"
     },
     {
       "title": "Help & Support",

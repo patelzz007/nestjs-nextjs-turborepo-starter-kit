@@ -3,6 +3,8 @@ import { z } from "zod";
 import type { PaginationInput } from "@workspace/shared";
 
 import type { CascadeSoftDeletePorts } from "./cascade-soft-delete";
+import type { ListKeyset } from "./list-query/keyset-cursor";
+import type { ListOrder } from "./list-query/list-order";
 
 /** Repositories that expose create/update only through dedicated methods use this input for BaseRepository ports. */
 export const EmptyMutationInputSchema = z.object({}).strict();
@@ -30,11 +32,14 @@ export interface RepositoryPorts<TEntity, TCreate, TUpdate, TQuery extends Pagin
 	readonly toDomain: (row: TRow) => TEntity;
 	readonly toCreateInput: (input: TCreate) => TCreateInput;
 	readonly toUpdateInput: (input: TUpdate) => TUpdateInput;
+	/** Complete list `where`: soft delete + scope + the query's filter AST + search, mapped column by column. */
 	readonly buildListWhere: (query: TQuery) => TWhere;
-	readonly buildListOrderBy: (query: TQuery) => TOrderBy;
-	readonly buildListCursorOrderBy: (query: TQuery) => TOrderBy;
-	readonly mergeListCursor: (where: TWhere, cursorId: string) => TWhere;
-	readonly readListCursorId: (row: TRow) => string;
+	/** The query's sort (or the default) mapped to explicit columns, with the unique tie-breaker appended. */
+	readonly buildListOrder: (query: TQuery) => ListOrder<TOrderBy>;
+	/** Keyset for cursor pagination in the default order; omit to support offset pages only. */
+	readonly listKeyset?: ListKeyset<TRow, TWhere>;
+	/** `{ AND: [left, right] }` — combines the list `where` with the keyset condition. */
+	readonly andWhere: (left: TWhere, right: TWhere) => TWhere;
 	readonly buildFindByIdWhere: (id: string) => TWhere;
 	/** Finds a row by id regardless of soft-delete state — required when `cascadeSoftDelete` is set. */
 	readonly buildFindByIdIncludingDeletedWhere?: (id: string) => TWhere;
@@ -60,7 +65,7 @@ export interface RepositoryInstance<TEntity, TCreate, TUpdate, TQuery extends Pa
 	readonly restore: (id: string) => Promise<TEntity>;
 }
 export interface PrismaModelDelegate<TRow, TWhere, TOrderBy, TCreateInput, TUpdateInput, TUpdateWhere, TDeleteWhere = TUpdateWhere> {
-	findMany(args: { where: TWhere; take: number; skip?: number; orderBy: TOrderBy }): Promise<TRow[]>;
+	findMany(args: { where: TWhere; take: number; skip?: number; orderBy: TOrderBy[] }): Promise<TRow[]>;
 	findFirst(args: { where: TWhere }): Promise<TRow | null>;
 	count(args: { where: TWhere }): Promise<number>;
 	create(args: { data: TCreateInput }): Promise<TRow>;

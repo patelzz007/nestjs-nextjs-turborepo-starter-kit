@@ -3,22 +3,31 @@ import { z } from "zod";
 import { EpochMsSchema, DataValueSchema, type DataValue } from "./common";
 
 // ── Shared response envelope primitives ──────────────────────────────────
+// Every success response is ONE of two envelopes (ADR 022, docs/response-contracts.md):
+//
+//   single    → { success: true, data: <Data>,   meta: ApiResponseMeta }
+//   paginated → { success: true, data: <Item>[], meta: ApiPaginatedMeta }
+//
+// built by `createApiSuccessEnvelopeSchema` / `createApiPaginatedEnvelopeSchema`.
+// The API documents and enforces them (`@ZodResponse` / `@ZodPaginatedResponse`),
+// the typed client parses every response with them. Envelope and meta objects
+// STRIP unknown keys (no `.strict()`): a field the API adds later is ignored by
+// an older client instead of failing its parse (rules/05 → "Contract change
+// safety matrix": adding a response field must be safe).
 
 /**
  * Metadata included in every API response by the ResponseInterceptor.
  */
-export const ApiResponseMetaSchema = z
-	.object({
-		correlationId: z.string().default("").meta({
-			description: "Request tracing ID (from X-Correlation-Id header or auto-generated)",
-			example: "abc123-def456",
-		}),
-		timestamp: EpochMsSchema.meta({
-			description: "Epoch milliseconds when the response was generated",
-			example: 1786300000000,
-		}),
-	})
-	.strict();
+export const ApiResponseMetaSchema = z.object({
+	correlationId: z.string().default("").meta({
+		description: "Request tracing ID (from X-Correlation-Id header or auto-generated)",
+		example: "abc123-def456",
+	}),
+	timestamp: EpochMsSchema.meta({
+		description: "Epoch milliseconds when the response was generated",
+		example: 1786300000000,
+	}),
+});
 
 export type ApiResponseMeta = z.output<typeof ApiResponseMetaSchema>;
 
@@ -33,24 +42,39 @@ export const ApiPaginatedMetaSchema = ApiResponseMetaSchema.extend({
 	nextCursor: z.string().nullable().meta({ description: "Opaque cursor for the next page, or null when there are no more rows", example: "Y2x1c18x" }),
 	hasNext: z.boolean().meta({ description: "Whether a next page exists", example: true }),
 	hasPrevious: z.boolean().meta({ description: "Whether a previous page exists", example: false }),
-}).strict();
+});
 
 export type ApiPaginatedMeta = z.output<typeof ApiPaginatedMetaSchema>;
 
 /**
- * Shape returned by the API `paginate()` helper before the response
- * interceptor flattens `items` into `data` and moves pagination into `meta`.
+ * The pagination fields a list service returns next to its `items` (the
+ * `paginate()` / `fetchListPage` result) — the response interceptor moves them
+ * into `meta` and the items into `data`.
  */
-export const PaginatedServiceResultSchema = z.object({
-	items: z.array(DataValueSchema),
-	limit: z.number(),
-	total: z.number(),
-	page: z.number(),
-	totalPages: z.number(),
+export const PaginatedServiceFieldsSchema = z.object({
+	limit: z.number().int().min(1),
+	total: z.number().int().nonnegative(),
+	page: z.number().int().min(1),
+	totalPages: z.number().int().min(1),
 	nextCursor: z.string().nullable(),
 	hasNext: z.boolean(),
 	hasPrevious: z.boolean(),
 });
+
+/**
+ * The service-side shape of ONE page of `itemSchema` items: what a list handler
+ * returns BEFORE the response interceptor flattens `items` into `data` and the
+ * pagination fields into `meta`. `@ZodPaginatedResponse` parses handler results
+ * with it, so every item is validated (and stripped) by the item schema.
+ */
+export function createPaginatedServiceResultSchema<ItemSchema extends z.ZodType>(
+	itemSchema: ItemSchema,
+): z.ZodObject<typeof PaginatedServiceFieldsSchema.shape & { items: z.ZodArray<ItemSchema> }> {
+	return PaginatedServiceFieldsSchema.extend({ items: z.array(itemSchema) });
+}
+
+/** Shape returned by the API list helpers, with JSON-safe items (see {@link createPaginatedServiceResultSchema}). */
+export const PaginatedServiceResultSchema = createPaginatedServiceResultSchema(DataValueSchema);
 
 export interface PaginatedServiceResult<TItem = DataValue> {
 	items: TItem[];
@@ -63,144 +87,73 @@ export interface PaginatedServiceResult<TItem = DataValue> {
 	hasPrevious: boolean;
 }
 
-/**
- * Partial envelope shape returned by controllers that pre-wrap their own
- * `meta` before the global ResponseInterceptor adds correlation + timestamp.
- */
-export const ApiResponseShapeSchema = z
-	.object({
-		success: z.boolean(),
-		meta: z.record(z.string(), DataValueSchema),
-	})
-	.strict();
-
-export type ApiResponseShape = z.output<typeof ApiResponseShapeSchema>;
-
 /** Payload returned by soft-delete endpoints (`DELETE /:id`). */
-export const DeleteSuccessDataSchema = z
-	.object({
-		success: z.literal(true),
-	})
-	.strict();
+export const DeleteSuccessDataSchema = z.object({
+	success: z.literal(true),
+});
 
 export type DeleteSuccessData = z.output<typeof DeleteSuccessDataSchema>;
 
+/** The `success` literal shared by both success envelopes. */
+const SuccessFlagSchema = z.literal(true).meta({
+	description: "Indicates the request was successful",
+	example: true,
+});
+
 /**
- * Standard success response envelope.
- * The `data` field contains the actual response payload.
- * Used by every successful endpoint response after the ResponseInterceptor.
+ * Success response envelope with an untyped (any JSON value) `data` — for
+ * tests and tools that inspect the envelope before knowing the endpoint.
+ * Endpoint code uses the typed factories below.
  */
-export const ApiSuccessResponseSchema = z
-	.object({
-		success: z.literal(true).meta({
-			description: "Indicates the request was successful",
-			example: true,
-		}),
-		data: DataValueSchema.meta({
-			description: "The response payload — varies by endpoint",
-		}),
-		meta: ApiResponseMetaSchema,
-	})
-	.strict();
+export const ApiSuccessResponseSchema = z.object({
+	success: SuccessFlagSchema,
+	data: DataValueSchema.meta({
+		description: "The response payload — varies by endpoint",
+	}),
+	meta: ApiResponseMetaSchema,
+});
 
 export type ApiSuccessResponse = z.output<typeof ApiSuccessResponseSchema>;
 
 /**
- * Swagger/OpenAPI envelope for a single `data` payload — parameterizes the
- * `data` field while keeping the success literal + meta shape consistent.
+ * The SINGLE success envelope `{ success: true, data, meta }` around
+ * `dataSchema` — used by the API (`@ZodResponse` documents it) and by the
+ * typed client (`singleResponse` in the shared contract parses with it).
  */
 export function createApiSuccessEnvelopeSchema<DataSchema extends z.ZodType>(
 	dataSchema: DataSchema,
 ): z.ZodObject<{
-	success: z.ZodLiteral<true>;
+	success: typeof SuccessFlagSchema;
 	data: DataSchema;
 	meta: typeof ApiResponseMetaSchema;
 }> {
-	return z
-		.object({
-			success: z.literal(true).meta({
-				description: "Indicates the request was successful",
-				example: true,
-			}),
-			data: dataSchema.meta({
-				description: "The response payload — structure varies by endpoint",
-			}),
-			meta: ApiResponseMetaSchema,
-		})
-		.strict();
+	return z.object({
+		success: SuccessFlagSchema,
+		data: dataSchema,
+		meta: ApiResponseMetaSchema,
+	});
 }
 
 /**
- * Swagger/OpenAPI envelope for array `data` payloads.
+ * The PAGINATED success envelope `{ success: true, data: Item[], meta }` with
+ * pagination fields in `meta` (docs/list-queries.md) — every list endpoint.
  */
-export function createApiSuccessArrayEnvelopeSchema<ItemSchema extends z.ZodType>(
+export function createApiPaginatedEnvelopeSchema<ItemSchema extends z.ZodType>(
 	itemSchema: ItemSchema,
 ): z.ZodObject<{
-	success: z.ZodLiteral<true>;
+	success: typeof SuccessFlagSchema;
 	data: z.ZodArray<ItemSchema>;
-	meta: typeof ApiResponseMetaSchema;
+	meta: typeof ApiPaginatedMetaSchema;
 }> {
-	return z
-		.object({
-			success: z.literal(true).meta({
-				description: "Indicates the request was successful",
-				example: true,
-			}),
-			data: z.array(itemSchema).meta({
-				description: "Array of response items — structure varies by endpoint",
-			}),
-			meta: ApiResponseMetaSchema,
-		})
-		.strict();
+	return z.object({
+		success: SuccessFlagSchema,
+		data: z.array(itemSchema),
+		meta: ApiPaginatedMetaSchema,
+	});
 }
 
-/**
- * Standard error response envelope.
- * Returned by the ResponseInterceptor when an exception is thrown.
- */
-export const ApiErrorResponseSchema = z
-	.object({
-		success: z.literal(false).meta({
-			description: "Indicates the request failed",
-			example: false,
-		}),
-		error: z
-			.object({
-				message: z.string().meta({
-					description: "Human-readable error message",
-					example: "Invalid email or password",
-				}),
-				statusCode: z.number().int().meta({
-					description: "HTTP status code",
-					example: 401,
-				}),
-				error: z.string().optional().meta({
-					description: "Error type / code (e.g. ACCESS_TOKEN_MISSING)",
-					example: "Unauthorized",
-				}),
-			})
-			.strict(),
-		meta: ApiResponseMetaSchema,
-	})
-	.strict();
-
-export type ApiErrorResponse = z.output<typeof ApiErrorResponseSchema>;
-
-/**
- * The raw error body the API returns (unwrapped from the `{ success, error, meta }`
- * envelope). The base fields (`message`, `statusCode`, `error`) come from the
- * shared envelope's `.shape.error`, while `statusCode` is made optional here
- * because not every error response includes it. Client-only lockout fields
- * (`lockedUntil`, `remainingSeconds`) are added via `.extend()` so both the
- * API and the client agree on the shape and can never drift.
- */
-export const ApiErrorBodySchema = ApiErrorResponseSchema.shape.error.extend({
-	statusCode: z.number().int().optional(),
-	lockedUntil: EpochMsSchema.optional(),
-	remainingSeconds: z.number().optional(),
-});
-
-export type ApiErrorBody = z.output<typeof ApiErrorBodySchema>;
+// The error envelope (`ApiErrorResponseSchema`) and the flattened client error
+// body (`ApiErrorBodySchema`) live in `./api-error.ts`.
 
 /**
  * The envelope is an interface WITH an index signature: the index signature is

@@ -21,9 +21,11 @@ export class TwoFactorEnabledEmailTemplate extends BaseEmailTemplate<TwoFactorSt
 	}
 
 	public renderBodyHtml(context: EmailRenderContext): string {
-		return `
-        <p class="email-text" style="color: #334155; font-size: 15px; line-height: 1.7; margin: 0 0 20px 0;">Two-factor authentication is now enabled on your <strong>${this.escape(context.appName)}</strong> account.</p>
-        <p class="email-muted" style="color: #64748b; font-size: 13px; line-height: 1.6; margin: 0;">You'll be asked for a code from your authenticator app the next time you sign in.</p>`;
+		return [
+			this.paragraph(`Two-factor authentication is now ${this.strong("on")} for your ${this.strong(context.appName)} account.`),
+			this.highlight("Your account is better protected", "Next time you sign in, we'll ask for a code from your authenticator app."),
+			this.note("Keep your backup codes somewhere safe — they get you in if you lose your phone."),
+		].join("");
 	}
 
 	public renderBodyText(context: EmailRenderContext): string {

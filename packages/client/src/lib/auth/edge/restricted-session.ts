@@ -7,9 +7,22 @@ export type AuthAppMode = "web" | "admin" | "merchant";
 
 const ENROLLMENT_MESSAGE_KEY = "auth:enrollment-message";
 
-const ENROLLMENT_ALLOWED_PREFIXES: readonly string[] = ["/auth/verify-email", "/auth/login", "/rewardhub/settings", "/settings"];
+/**
+ * Personal account pages — where a restricted session completes email
+ * verification or MFA enrollment (docs/routing.md: `/account` is personal,
+ * `/settings` is org / platform configuration).
+ *
+ * - web: `/rewardhub/account` (the signed-in shell lives under `/rewardhub`)
+ * - admin: `/account`
+ * - merchant: `/orgs/{slug}/account`; `/account` resolves the organization
+ *   server-side when the slug is not known yet
+ */
+const WEB_ACCOUNT_PATH = "/rewardhub/account";
+const ACCOUNT_PATH = "/account";
 
-const ORG_SETTINGS_PATH_PATTERN = /^\/orgs\/[^/]+\/settings(?:\/|$)/;
+const ENROLLMENT_ALLOWED_PREFIXES: readonly string[] = ["/auth/verify-email", "/auth/login", WEB_ACCOUNT_PATH, ACCOUNT_PATH];
+
+const ORG_ACCOUNT_PATH_PATTERN = /^\/orgs\/[^/]+\/account(?:\/|$)/;
 
 /** Whether the access token represents a restricted enrollment session. */
 export function isRestrictedSession(token: string): boolean {
@@ -17,15 +30,13 @@ export function isRestrictedSession(token: string): boolean {
 	return payload?.sessionScope === "restricted";
 }
 
-/** Settings path where the user completes email verification or MFA enrollment. */
+/** Account path where the user completes email verification or MFA enrollment. */
 export function getEnrollmentRedirectPath(mode: AuthAppMode, _enrollmentReason: EnrollmentReason, organizationSlug?: string): string {
-	if (mode === "web") return "/rewardhub/settings";
+	if (mode === "web") return WEB_ACCOUNT_PATH;
 
-	if (mode === "merchant" && organizationSlug !== undefined && organizationSlug.length > 0) return `/orgs/${organizationSlug}/settings`;
+	if (mode === "merchant" && organizationSlug !== undefined && organizationSlug.length > 0) return `/orgs/${organizationSlug}${ACCOUNT_PATH}`;
 
-	if (mode === "merchant") return "/settings";
-
-	return "/settings";
+	return ACCOUNT_PATH;
 }
 
 /** Frontend routes a restricted session may visit without being redirected. */
@@ -34,7 +45,7 @@ export function isEnrollmentAllowedPath(pathname: string): boolean {
 		return true;
 	}
 
-	return ORG_SETTINGS_PATH_PATTERN.test(pathname);
+	return ORG_ACCOUNT_PATH_PATTERN.test(pathname);
 }
 
 /** Persist an enrollment banner message across the post-login redirect. */

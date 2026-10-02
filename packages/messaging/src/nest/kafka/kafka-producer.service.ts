@@ -7,6 +7,12 @@ import { MessageEnvelopeSchema, type MessageEnvelope } from "../../schemas/outbo
 import { type ResolvedMessagingOptions } from "../messaging-options";
 import { MESSAGING_OPTIONS } from "../tokens";
 
+/** Kafka header carrying the stable event id — lets consumers dedupe without parsing the body. */
+export const KAFKA_EVENT_ID_HEADER = "event-id";
+
+/** Kafka header carrying the event type (routing / filtering without parsing the body). */
+export const KAFKA_EVENT_TYPE_HEADER = "event-type";
+
 /** Publishes validated JSON envelopes to Kafka when brokers are configured. */
 @Injectable()
 export class KafkaProducerService implements OnModuleInit, OnModuleDestroy {
@@ -63,6 +69,10 @@ export class KafkaProducerService implements OnModuleInit, OnModuleDestroy {
 				{
 					key: messageKey,
 					value: JSON.stringify(validated),
+					headers: {
+						[KAFKA_EVENT_ID_HEADER]: validated.eventId,
+						[KAFKA_EVENT_TYPE_HEADER]: validated.type,
+					},
 				},
 			],
 		});

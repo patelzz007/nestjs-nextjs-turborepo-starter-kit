@@ -18,7 +18,7 @@ export function generateOpaqueToken(): string {
 export function generateBackupCode(): RewardBackupCode {
 	let code = "";
 	for (let index = 0; index < 8; index += 1) {
-		code += BACKUP_ALPHABET[randomInt(0, BACKUP_ALPHABET.length)];
+		code += BACKUP_ALPHABET.charAt(randomInt(0, BACKUP_ALPHABET.length));
 	}
 	return RewardBackupCodeSchema.parse(code);
 }

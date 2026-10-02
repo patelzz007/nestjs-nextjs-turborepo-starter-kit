@@ -4,7 +4,7 @@
 "use client";
 
 import { API_BASE_URL, API_URL_PREFIX } from "@workspace/client/lib/api/config";
-import { apiRouter } from "@workspace/client/lib/api/endpoints";
+import { EMAIL_LOG_LIST_QUERY_KEY_PREFIX } from "@workspace/client/lib/api/endpoints";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { z } from "zod";
@@ -69,7 +69,7 @@ export function useEmailLogLive(): LiveState {
 			setState("open");
 		};
 		const handleMessage = (): void => {
-			void queryClient.invalidateQueries({ queryKey: apiRouter.email.logList.queryKey({ limit: 100 }) });
+			void queryClient.invalidateQueries({ queryKey: EMAIL_LOG_LIST_QUERY_KEY_PREFIX });
 		};
 		const handleError = (): void => {
 			// A drop flips readyState back to CONNECTING (auto-reconnect); an
