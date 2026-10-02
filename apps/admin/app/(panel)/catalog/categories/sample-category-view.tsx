@@ -6,30 +6,32 @@ import { fetchAllListPages, resolveManualBulkSelectionRows } from "@/lib/data-ta
 import { DisabledActionButton } from "@/components/common/disabled-action-button";
 import { useResourceDeleteDialog } from "@/components/common/resource-delete-dialog";
 import { DataTableMobileCard } from "@/lib/data-table/mobile-card";
-import { initialDataOption, readPaginatedHasNext, readPaginatedNextCursor, readPaginatedTotal, stubPaginatedMeta, successEnvelope } from "@workspace/client/lib/api/envelope";
-import { useDebouncedValue } from "@/hooks/use-debounced-value";
-import { useManualHybridPagination } from "@/lib/data-table/use-manual-cursor-pagination";
+import { initialDataOption, readPaginatedHasNext, readPaginatedNextCursor, readPaginatedTotal } from "@workspace/client/lib/api/envelope";
+import { prefetchedDataFor, type PrefetchedQuery } from "@workspace/client/lib/url-state/prefetched-query";
+import { useTableTextDraft } from "@/lib/data-table/use-table-text-draft";
+import { useUrlListPaging } from "@/lib/data-table/use-url-list-paging";
+import { CATEGORIES_PAGE_SIZE_OPTIONS, CATEGORIES_TABLE_URL_STATE, toCategoriesListQuery } from "@/lib/url-state/categories";
 import { DataTableSearchToolbar } from "@/components/common/data-table-search-toolbar";
 import { useAuth } from "@workspace/client/lib/auth";
 import { useAuthorization } from "@workspace/client/lib/auth/can";
-import { eqFilter, parseBooleanFilterOption, tableStateToListQuery } from "@workspace/client/lib/api/list-query";
-import { PERMISSION, sampleCategoryListQuery, type SampleCategory } from "@workspace/shared";
+import { ALL_FILTER_OPTION, parseBooleanFilterOption, toListSearch } from "@workspace/client/lib/api/list-query";
+import { LIST_FIRST_PAGE } from "@workspace/client/lib/url-state/list-url-state";
+import { useUrlState } from "@workspace/client/lib/url-state/use-url-state";
+import { PERMISSION, sampleCategoryListQuery, type Envelope, type SampleCategory } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/feedback/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
 import { DataTable, type Action, type DataTableFeatures, type Filter } from "@workspace/ui/components/display/data-table";
 import { buttonVariants } from "@workspace/ui/components/form/button";
-import type { ColumnDef, SortingState } from "@tanstack/react-table";
+import type { ColumnDef } from "@tanstack/react-table";
 import { Eye, Pencil, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 import { keepPreviousData, useQueryClient } from "@tanstack/react-query";
 import { toastMessage } from "@workspace/ui/components/feedback/toast";
 
 import type { DataTableBulkSelectionContext } from "@workspace/ui/lib/data-table/checkbox";
 import { ROUTES } from "@/lib/routes";
-
-const PAGE_SIZE_OPTIONS: readonly number[] = [10, 20, 50, 100];
 
 const labels = createDataTableLabels({
 	actionsMenuTitle: "SampleCategory actions",
@@ -39,13 +41,12 @@ const labels = createDataTableLabels({
 });
 
 export interface SampleCategoryViewProps {
-	readonly initialRows?: readonly SampleCategory[] | undefined;
-	readonly initialTotal?: number | undefined;
-	readonly initialTotalPages?: number | undefined;
-	readonly initialHasNext?: boolean | undefined;
+	/** The page the server prefetched for the URL it rendered. */
+	readonly initialPage?: PrefetchedQuery<Envelope<SampleCategory[]>> | undefined;
 }
 
-export default function SampleCategoryView({ initialRows, initialTotal, initialTotalPages, initialHasNext }: SampleCategoryViewProps): React.JSX.Element {
+/** `/catalog/categories` table — search, active filter, sort and page live in the URL (lib/url-state/categories). */
+export default function SampleCategoryView({ initialPage }: SampleCategoryViewProps): React.JSX.Element {
 	const { api } = useAuth();
 	// Each control mirrors its API route: GET /:id (READ), POST (CREATE), PATCH /:id (UPDATE), DELETE /:id + bulk-delete (DELETE).
 	const { can } = useAuthorization();
@@ -56,73 +57,51 @@ export default function SampleCategoryView({ initialRows, initialTotal, initialT
 	const { requestDelete, resourceDeleteDialog } = useResourceDeleteDialog();
 	const router = useRouter();
 	const queryClient = useQueryClient();
-	const [search, setSearch] = useState("");
-	const debouncedSearch = useDebouncedValue(search, 300);
-	const [sorting, setSorting] = useState<SortingState>([]);
-	const [isActiveFilter, setIsActiveFilter] = useState<string>("all");
-	const trimmedSearch = debouncedSearch.trim();
-	const parsedIsActive = parseBooleanFilterOption(isActiveFilter);
-	const isFiltered = trimmedSearch.length > 0 || isActiveFilter !== "all";
+	const [urlState, updateUrlState] = useUrlState(CATEGORIES_TABLE_URL_STATE);
+	const isFiltered = urlState.search !== undefined || urlState.isActive !== undefined;
+
+	const commitSearch = useCallback(
+		(value: string): void => {
+			updateUrlState({ search: toListSearch(value), page: LIST_FIRST_PAGE, cursor: undefined }, { history: "replace" });
+		},
+		[updateUrlState],
+	);
+	const [searchDraft, setSearchDraft] = useTableTextDraft(urlState.search, commitSearch);
 
 	const handleClearFilters = useCallback((): void => {
-		setSearch("");
-		setIsActiveFilter("all");
-	}, []);
-
-	const listFilter = useMemo(() => ({ isActive: eqFilter(parsedIsActive) }), [parsedIsActive]);
-
-	const buildListQuery = useCallback(
-		(listPage: number, limit: number) =>
-			tableStateToListQuery(sampleCategoryListQuery, { pagination: { page: listPage, limit }, sorting, search: trimmedSearch, filter: listFilter }),
-		[sorting, trimmedSearch, listFilter],
-	);
+		updateUrlState({ search: undefined, isActive: undefined, page: LIST_FIRST_PAGE, cursor: undefined });
+	}, [updateUrlState]);
 
 	const fetchAllMatchingSampleCategorys = useCallback(async (): Promise<SampleCategory[]> => {
 		const rows = await fetchAllListPages(async (listPage, limit) => {
-			const response = await api.sampleCategory.list.fetchOrThrow(buildListQuery(listPage, limit));
+			const response = await api.sampleCategory.list.fetchOrThrow(toCategoriesListQuery({ ...urlState, page: listPage, limit, cursor: undefined }));
 			return {
 				items: response.data,
 				hasNext: readPaginatedHasNext(response.meta),
 			};
 		});
 		return [...rows];
-	}, [api.sampleCategory.list, buildListQuery]);
+	}, [api.sampleCategory.list, urlState]);
 
-	const {
-		pageIndex,
-		pageSize,
-		listQuery: paginationQuery,
-		bindListMeta,
-		pagination: basePagination,
-	} = useManualHybridPagination<SampleCategory>(20, [debouncedSearch, sorting, isActiveFilter], (item) => item.id, {
+	const stateKey: string = CATEGORIES_TABLE_URL_STATE.serialize(urlState);
+	const resourceListQuery = api.sampleCategory.list.useQuery(toCategoriesListQuery(urlState), {
+		placeholderData: keepPreviousData,
+		...initialDataOption(prefetchedDataFor(initialPage, stateKey)),
+	});
+	const rows: SampleCategory[] = resourceListQuery.data?.data ?? [];
+	const { pagination, sorting, handleSortingChange } = useUrlListPaging({
+		state: urlState,
+		update: updateUrlState,
+		sortSpec: sampleCategoryListQuery,
+		totalCount: readPaginatedTotal(resourceListQuery.data?.meta),
+		nextCursor: readPaginatedNextCursor(resourceListQuery.data?.meta),
+		resetKey: CATEGORIES_TABLE_URL_STATE.serialize({ ...urlState, page: LIST_FIRST_PAGE, cursor: undefined }),
+		getRowId: getCategoryRowId,
 		onClearFilters: handleClearFilters,
 		isFiltered,
 		onFetchAllMatching: fetchAllMatchingSampleCategorys,
 	});
-	const initialQueryData = useMemo(
-		() =>
-			initialRows !== undefined
-				? successEnvelope([...initialRows], stubPaginatedMeta(20, initialTotal ?? initialRows.length, 1, initialTotalPages ?? 1, initialHasNext ?? false))
-				: undefined,
-		[initialRows, initialHasNext, initialTotal, initialTotalPages],
-	);
-	const resourceListQuery = api.sampleCategory.list.useQuery(
-		tableStateToListQuery(sampleCategoryListQuery, { pagination: paginationQuery, sorting, search: trimmedSearch, filter: listFilter }),
-		{
-			placeholderData: keepPreviousData,
-			...initialDataOption(
-				pageIndex === 0 && pageSize === 20 && trimmedSearch.length === 0 && sorting.length === 0 && isActiveFilter === "all" ? initialQueryData : undefined,
-			),
-		},
-	);
-	const rows: SampleCategory[] = resourceListQuery.data?.data ?? [];
-	const totalCount = readPaginatedTotal(resourceListQuery.data?.meta, initialTotal ?? initialRows?.length ?? 0);
-	const pagination = useMemo(() => ({ ...basePagination, totalCount }), [basePagination, totalCount]);
 	const tableError: string | null = resourceListQuery.isError ? "Could not load categories. Clear search or filters and try again." : null;
-
-	useEffect((): void => {
-		bindListMeta(readPaginatedNextCursor(resourceListQuery.data?.meta) ?? null);
-	}, [bindListMeta, resourceListQuery.data?.meta]);
 
 	const handleView = useCallback(
 		(item: SampleCategory): void => {
@@ -302,25 +281,20 @@ export default function SampleCategoryView({ initialRows, initialTotal, initialT
 		[],
 	);
 
-	const handleManualSortingChange = useCallback((nextSorting: SortingState): void => {
-		setSorting(nextSorting);
-	}, []);
-
-	const handleSearchChange = useCallback((value: string): void => {
-		setSearch(value);
-	}, []);
-
-	const handleManualColumnFilterChange = useCallback((filterKey: string, value: string | null): void => {
-		if (filterKey === "isActive") {
-			setIsActiveFilter(value === null || value === "all" ? "all" : value);
-		}
-	}, []);
+	const handleManualColumnFilterChange = useCallback(
+		(filterKey: string, value: string | null): void => {
+			if (filterKey === "isActive") {
+				updateUrlState({ isActive: parseBooleanFilterOption(value ?? ""), page: LIST_FIRST_PAGE, cursor: undefined });
+			}
+		},
+		[updateUrlState],
+	);
 
 	const manualColumnFilters = useMemo(
 		(): Readonly<Record<string, string>> => ({
-			isActive: isActiveFilter,
+			isActive: urlState.isActive === undefined ? ALL_FILTER_OPTION : String(urlState.isActive),
 		}),
-		[isActiveFilter],
+		[urlState.isActive],
 	);
 
 	const tableFilters = useMemo(
@@ -340,10 +314,10 @@ export default function SampleCategoryView({ initialRows, initialTotal, initialT
 	const searchToolbar = useMemo(
 		(): React.JSX.Element => (
 			<div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-				<DataTableSearchToolbar value={search} onChange={handleSearchChange} placeholder={labels.searchPlaceholder} ariaLabel={labels.searchAriaLabel} />
+				<DataTableSearchToolbar value={searchDraft} onChange={setSearchDraft} placeholder={labels.searchPlaceholder} ariaLabel={labels.searchAriaLabel} />
 			</div>
 		),
-		[handleSearchChange, search],
+		[searchDraft, setSearchDraft],
 	);
 
 	return (
@@ -380,9 +354,9 @@ export default function SampleCategoryView({ initialRows, initialTotal, initialT
 						mobileCardRender={mobileCardRender}
 						{...(canView ? { onRowClick: handleView } : {})}
 						pagination={pagination}
-						pageSizeOptions={PAGE_SIZE_OPTIONS}
+						pageSizeOptions={CATEGORIES_PAGE_SIZE_OPTIONS}
 						sorting={sorting}
-						onManualSortingChange={handleManualSortingChange}
+						onManualSortingChange={handleSortingChange}
 						isLoading={resourceListQuery.isLoading}
 						isRefetching={resourceListQuery.isFetching && !resourceListQuery.isLoading ? true : false}
 						error={tableError}
@@ -398,4 +372,8 @@ export default function SampleCategoryView({ initialRows, initialTotal, initialT
 			{resourceDeleteDialog}
 		</div>
 	);
+}
+
+function getCategoryRowId(category: SampleCategory): string {
+	return category.id;
 }

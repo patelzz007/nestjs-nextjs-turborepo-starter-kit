@@ -6,7 +6,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MerchantAnalyticsPageView } from "@/components/analytics/merchant-analytics-page-view";
 import { orgRoutes } from "@/lib/routes";
 import { renderWithAuthorization, TEST_ORG_SLUG } from "@/test/authorization";
-import { epochMs, type AnalyticsMetric, type MerchantAnalyticsResponse } from "@workspace/shared";
+import { contextQueryState, twoStoreSeed, TWO_STORE_CONTEXT, type ContextQueryState } from "@/test/tenant-context";
+import { STORE_B } from "@/test/terminals";
+import { apiRouter } from "@workspace/client/lib/api/endpoints";
+import { epochMs, type AnalyticsMetric, type Envelope, type MerchantAnalyticsResponse } from "@workspace/shared";
 
 const PERIOD_FROM = epochMs(1_788_220_800_000);
 const PERIOD_TO = epochMs(1_793_059_200_000);
@@ -43,24 +46,40 @@ const WITHOUT_SALES = buildAnalytics({
 	overTime: [],
 });
 
-const { analyticsQuery } = vi.hoisted(() => ({
-	analyticsQuery: vi.fn(),
+type AnalyticsInput = Parameters<typeof apiRouter.organizations.analytics.queryKey>[0];
+
+interface AnalyticsQueryOptions {
+	readonly initialData?: Envelope<MerchantAnalyticsResponse>;
+}
+
+const { analyticsQuery, contextQuery } = vi.hoisted(() => ({
+	analyticsQuery: vi.fn<(input: AnalyticsInput, options?: AnalyticsQueryOptions) => object>(),
+	contextQuery: vi.fn<() => ContextQueryState>(),
 }));
 
 vi.mock("@workspace/client/lib/auth", () => ({
 	useAuth: (): object => ({
-		api: { organizations: { analytics: { useQuery: analyticsQuery } } },
+		api: { organizations: { analytics: { useQuery: analyticsQuery }, context: { useQuery: contextQuery } } },
 	}),
 }));
 
 beforeEach((): void => {
 	analyticsQuery.mockReturnValue({ data: undefined, isLoading: true });
+	contextQuery.mockReturnValue(contextQueryState(TWO_STORE_CONTEXT));
 });
 
 afterEach((): void => {
 	cleanup();
 	analyticsQuery.mockReset();
+	contextQuery.mockReset();
 });
+
+/** The cache key of the analytics query's first render — what SSR data must be stored under. */
+function firstRenderQuery(): { readonly key: ReturnType<typeof apiRouter.organizations.analytics.queryKey>; readonly options: AnalyticsQueryOptions | undefined } {
+	const [input, options] = analyticsQuery.mock.calls.at(0) ?? [];
+	expect(input).toBeDefined();
+	return { key: input === undefined ? [] : apiRouter.organizations.analytics.queryKey(input), options };
+}
 
 describe("MerchantAnalyticsPageView authorization", () => {
 	it("renders analytics with merchant:view_analytics", () => {
@@ -110,5 +129,40 @@ describe("MerchantAnalyticsPageView sales", () => {
 
 		expect(screen.getByText("No sales yet")).toBeTruthy();
 		expect(screen.queryByRole("link", { name: "Set up API keys" })).toBeNull();
+	});
+});
+
+describe("MerchantAnalyticsPageView server prefetch (no double fetch)", () => {
+	it("seeds the first render with the server's analytics when they were fetched for the store the client filters by", () => {
+		renderWithAuthorization(<MerchantAnalyticsPageView orgSlug={TEST_ORG_SLUG} initialAnalytics={{ locationId: STORE_B.id, data: WITH_SALES }} />, {
+			role: "CASHIER",
+			tenantContext: twoStoreSeed(STORE_B.id),
+		});
+
+		const { key, options } = firstRenderQuery();
+		expect(key).toEqual(apiRouter.organizations.analytics.queryKey({ orgSlug: TEST_ORG_SLUG, locationId: STORE_B.id }));
+		expect(options?.initialData?.data).toEqual(WITH_SALES);
+	});
+
+	it("seeds the all-stores view only with all-stores data", () => {
+		renderWithAuthorization(<MerchantAnalyticsPageView orgSlug={TEST_ORG_SLUG} initialAnalytics={{ locationId: undefined, data: WITH_SALES }} />, {
+			role: "CASHIER",
+			tenantContext: twoStoreSeed(null),
+		});
+
+		const { key, options } = firstRenderQuery();
+		expect(key).toEqual(apiRouter.organizations.analytics.queryKey({ orgSlug: TEST_ORG_SLUG, locationId: undefined }));
+		expect(options?.initialData?.data).toEqual(WITH_SALES);
+	});
+
+	it("never caches another store's analytics under the client's key — the query fetches instead", () => {
+		renderWithAuthorization(<MerchantAnalyticsPageView orgSlug={TEST_ORG_SLUG} initialAnalytics={{ locationId: undefined, data: WITH_SALES }} />, {
+			role: "CASHIER",
+			tenantContext: twoStoreSeed(STORE_B.id),
+		});
+
+		const { key, options } = firstRenderQuery();
+		expect(key).toEqual(apiRouter.organizations.analytics.queryKey({ orgSlug: TEST_ORG_SLUG, locationId: STORE_B.id }));
+		expect(options?.initialData).toBeUndefined();
 	});
 });

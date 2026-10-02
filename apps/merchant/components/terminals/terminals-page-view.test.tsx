@@ -4,8 +4,8 @@ import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { PAIRING_STATUS_POLL_INTERVAL_MS, TerminalsPageView } from "@/components/terminals/terminals-page-view";
-import type { MerchantLocationContextValue } from "@/lib/org/location-context";
-import { renderWithAuthorization, TEST_ORG_SLUG } from "@/test/authorization";
+import { renderWithAuthorization, TEST_ORG_SLUG, type TenantContextSeed } from "@/test/authorization";
+import { contextQueryState, organizationContextFixture, type ContextQueryState } from "@/test/tenant-context";
 import { buildPairing, buildTerminal, STORE_A, STORE_B, TERMINAL_FIXTURE_NOW } from "@/test/terminals";
 import {
 	MERCHANT_TERMINALS_PAGE_SIZE,
@@ -15,8 +15,11 @@ import {
 	type MerchantTerminalPairing,
 	type MerchantTerminalSettings,
 	type MerchantTerminalSummary,
+	type OrganizationContextResponse,
 	type OrganizationLocationResponse,
+	type Envelope,
 } from "@workspace/shared";
+import { apiRouter } from "@workspace/client/lib/api/endpoints";
 
 const {
 	terminalsListQuery,
@@ -31,9 +34,9 @@ const {
 	updateSettingsMutate,
 	refetch,
 	settingsRefetch,
-	locationState,
+	contextQuery,
 } = vi.hoisted(() => ({
-	terminalsListQuery: vi.fn<(input: object, options?: PollOptions) => object>(),
+	terminalsListQuery: vi.fn<(input: TerminalsListInput, options?: ListOptions) => object>(),
 	settingsQuery: vi.fn(),
 	createMutation: vi.fn(),
 	pairingCodeMutation: vi.fn(),
@@ -45,7 +48,7 @@ const {
 	updateSettingsMutate: vi.fn(),
 	refetch: vi.fn(),
 	settingsRefetch: vi.fn(),
-	locationState: vi.fn<() => MerchantLocationContextValue>(),
+	contextQuery: vi.fn<() => ContextQueryState>(),
 }));
 
 vi.mock("@workspace/client/lib/auth", () => ({
@@ -60,14 +63,10 @@ vi.mock("@workspace/client/lib/auth", () => ({
 					remove: { useMutation: removeMutation },
 					updateSettings: { useMutation: updateSettingsMutation },
 				},
+				context: { useQuery: contextQuery },
 			},
 		},
 	}),
-}));
-
-vi.mock("@/lib/org/location-context", () => ({
-	useMerchantLocation: (): object => locationState(),
-	useActiveLocationFilter: (): object => ({ locationId: undefined }),
 }));
 
 const FIVE_MINUTES_MS = 5 * 60_000;
@@ -91,6 +90,17 @@ function store(id: string, name: string): OrganizationLocationResponse {
 
 const BANGSAR = store(STORE_A.id, STORE_A.name);
 const MONT_KIARA = store(STORE_B.id, STORE_B.name);
+
+const TWO_STORES: OrganizationContextResponse = organizationContextFixture({ locations: [BANGSAR, MONT_KIARA] });
+const ONE_STORE: OrganizationContextResponse = organizationContextFixture({ locations: [BANGSAR] });
+
+/** What the org layout seeds the tenant context with (the member's store choice + organization context). */
+let tenantSeed: TenantContextSeed = { initialLocationId: null };
+
+function seedTenant(context: OrganizationContextResponse, selectedLocationId: string | null): void {
+	tenantSeed = { initialLocationId: selectedLocationId, initialOrganizationContext: context };
+	contextQuery.mockReturnValue(contextQueryState(context));
+}
 
 const UNPAIRED_TILL = buildTerminal({ id: "4d9a3f5e-2f6b-4c55-8f0c-9a4b1c2d3e4f", terminalId: "TERM-7F3K9QX2", name: "Front counter" });
 const ACTIVE_TILL = buildTerminal({
@@ -127,12 +137,18 @@ interface PollOptions {
 	readonly refetchInterval?: (query: PolledQuery) => number | false;
 }
 
+type TerminalsListInput = Parameters<typeof apiRouter.organizations.terminals.list.queryKey>[0];
+
+interface ListOptions extends PollOptions {
+	readonly initialData?: Envelope<MerchantTerminalSummary[]>;
+}
+
 /**
  * Stand-in for `list.useQuery`. The page's own list has no `enabled` option;
  * the pairing-status poll does — and, like TanStack Query, it is re-run every
  * `refetchInterval` until that returns `false`.
  */
-function useListQueryMock(_input: object, options?: PollOptions): object {
+function useListQueryMock(_input: TerminalsListInput, options?: ListOptions): object {
 	const [, requery] = React.useReducer((count: number): number => count + 1, 0);
 	const isPoll = options?.enabled !== undefined;
 	const pollData = { data: polledTerminals, meta: {} };
@@ -161,7 +177,7 @@ interface MutationCallbacks<TData> {
 }
 
 function renderAsAdmin(): void {
-	renderWithAuthorization(<TerminalsPageView orgSlug={TEST_ORG_SLUG} />, { role: "ADMIN" });
+	renderWithAuthorization(<TerminalsPageView orgSlug={TEST_ORG_SLUG} />, { role: "ADMIN", tenantContext: tenantSeed });
 }
 
 function openAddDialog(): HTMLElement {
@@ -190,14 +206,7 @@ beforeEach((): void => {
 	polledTerminals = [];
 	settings = MerchantTerminalSettingsSchema.parse({ requireRegisteredTerminals: false });
 	nextPairing = buildPairing(NEW_TILL);
-	locationState.mockReturnValue({
-		locationId: undefined,
-		activeLocation: undefined,
-		accessibleLocations: [BANGSAR, MONT_KIARA],
-		canSelectAllLocations: true,
-		isLoading: false,
-		setLocationId: vi.fn(),
-	});
+	seedTenant(TWO_STORES, null);
 	terminalsListQuery.mockImplementation(useListQueryMock);
 	settingsQuery.mockImplementation(() => ({ data: { data: settings, meta: {} }, isPending: false, isError: false, refetch: settingsRefetch }));
 	createMutation.mockImplementation((options?: MutationCallbacks<MerchantTerminalPairing>) => ({
@@ -356,14 +365,7 @@ describe("TerminalsPageView add and pair", () => {
 	});
 
 	it("preselects the only store", () => {
-		locationState.mockReturnValue({
-			locationId: undefined,
-			activeLocation: undefined,
-			accessibleLocations: [BANGSAR],
-			canSelectAllLocations: false,
-			isLoading: false,
-			setLocationId: vi.fn(),
-		});
+		seedTenant(ONE_STORE, null);
 		renderAsAdmin();
 
 		const storeSelect = within(openAddDialog()).getByLabelText("Store");
@@ -371,14 +373,7 @@ describe("TerminalsPageView add and pair", () => {
 	});
 
 	it("preselects the active store, and keeps the submit disabled for a blank name", () => {
-		locationState.mockReturnValue({
-			locationId: STORE_B.id,
-			activeLocation: MONT_KIARA,
-			accessibleLocations: [BANGSAR, MONT_KIARA],
-			canSelectAllLocations: true,
-			isLoading: false,
-			setLocationId: vi.fn(),
-		});
+		seedTenant(TWO_STORES, STORE_B.id);
 		renderAsAdmin();
 
 		const dialog = openAddDialog();
@@ -449,5 +444,37 @@ describe("TerminalsPageView settings", () => {
 
 		expect(screen.queryByRole("alertdialog")).toBeNull();
 		expect(updateSettingsMutate).toHaveBeenCalledWith({ orgSlug: TEST_ORG_SLUG, requireRegisteredTerminals: false });
+	});
+});
+
+describe("TerminalsPageView server prefetch (no double fetch)", () => {
+	function renderWithPrefetch(prefetchedFor: string | undefined): ListOptions | undefined {
+		renderWithAuthorization(<TerminalsPageView orgSlug={TEST_ORG_SLUG} initialTerminals={{ locationId: prefetchedFor, data: [UNPAIRED_TILL] }} />, {
+			role: "ADMIN",
+			tenantContext: tenantSeed,
+		});
+		const [input, options] = terminalsListQuery.mock.calls.at(0) ?? [];
+		expect(input === undefined ? [] : apiRouter.organizations.terminals.list.queryKey(input)).toEqual(
+			apiRouter.organizations.terminals.list.queryKey({ orgSlug: TEST_ORG_SLUG, page: 1, limit: MERCHANT_TERMINALS_PAGE_SIZE, locationId: STORE_B.id }),
+		);
+		return options;
+	}
+
+	it("seeds the first render with the server's list when it was fetched for the store the client filters by", () => {
+		seedTenant(TWO_STORES, STORE_B.id);
+
+		expect(renderWithPrefetch(STORE_B.id)?.initialData?.data).toEqual([UNPAIRED_TILL]);
+	});
+
+	it("seeds the auto-selected store of a single-store member (the server prefetches that store too)", () => {
+		seedTenant(organizationContextFixture({ locations: [MONT_KIARA] }), null);
+
+		expect(renderWithPrefetch(STORE_B.id)?.initialData?.data).toEqual([UNPAIRED_TILL]);
+	});
+
+	it("never caches another store's list under the client's key — the query fetches instead", () => {
+		seedTenant(TWO_STORES, STORE_B.id);
+
+		expect(renderWithPrefetch(undefined)?.initialData).toBeUndefined();
 	});
 });

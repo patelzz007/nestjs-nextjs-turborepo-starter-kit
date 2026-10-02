@@ -150,17 +150,7 @@ function TeamInviteContent({ token }: TeamInviteContentProps): JSX.Element {
 
 	const completeAuthenticatedLogin = useCallback(
 		(loginResponse: LoginResponse): void => {
-			authLogin({
-				id: loginResponse.user.id,
-				email: loginResponse.user.email,
-				fullName: loginResponse.user.fullName,
-				isSuperAdmin: loginResponse.user.isSuperAdmin,
-				hasAdminAccess: loginResponse.user.hasAdminAccess,
-				isEmailVerified: loginResponse.user.isEmailVerified,
-				sessionScope: "full",
-				enrollmentReason: null,
-				roles: loginResponse.user.roles,
-			});
+			authLogin(loginResponse.user, { sessionScope: "full" });
 
 			const organizationSlug = joinedOrganizationSlug ?? preview?.organizationSlug;
 			if (organizationSlug !== undefined && organizationSlug.length > 0) {
@@ -185,17 +175,7 @@ function TeamInviteContent({ token }: TeamInviteContentProps): JSX.Element {
 
 			if (isLoginRestrictedEnrollment(loginResponse)) {
 				if (loginResponse.user !== undefined) {
-					authLogin({
-						id: loginResponse.user.id,
-						email: loginResponse.user.email,
-						fullName: loginResponse.user.fullName,
-						isSuperAdmin: loginResponse.user.isSuperAdmin,
-						hasAdminAccess: loginResponse.user.hasAdminAccess,
-						isEmailVerified: loginResponse.user.isEmailVerified,
-						sessionScope: "restricted",
-						enrollmentReason: loginResponse.enrollmentReason,
-						roles: loginResponse.user.roles,
-					});
+					authLogin(loginResponse.user, { sessionScope: "restricted", enrollmentReason: loginResponse.enrollmentReason });
 				}
 				markEnrollmentMessage(loginResponse.message);
 				const organizationSlug = joinedOrganizationSlug ?? loginResponse.organizationSlug ?? preview?.organizationSlug;

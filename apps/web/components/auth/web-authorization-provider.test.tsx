@@ -11,6 +11,7 @@ import { buildSessionPermissions } from "@/test-support/session";
 
 interface PermissionsQueryOptions {
 	readonly enabled?: boolean;
+	readonly initialData?: { readonly data: SessionPermissionsResponse };
 	readonly refetchOnWindowFocus?: boolean;
 	readonly refetchInterval?: number;
 }
@@ -28,9 +29,11 @@ interface AuthHarness {
 	user: AuthUserStub | null;
 	isLoading: boolean;
 	live: SessionPermissionsResponse | undefined;
+	/** `useIsServerRenderedSession()` — false once the tab crossed a sign-in / sign-out. */
+	serverRenderedSession: boolean;
 }
 
-const harness: AuthHarness = { user: null, isLoading: false, live: undefined };
+const harness: AuthHarness = { user: null, isLoading: false, live: undefined, serverRenderedSession: true };
 
 const { permissionsUseQuery } = vi.hoisted(() => ({
 	permissionsUseQuery: vi.fn<(input: undefined, options: PermissionsQueryOptions) => PermissionsQueryResult>(),
@@ -46,6 +49,7 @@ vi.mock("@workspace/client/lib/auth", () => ({
 		isLoading: harness.isLoading,
 		api: { auth: { permissions: { useQuery: permissionsUseQuery } } },
 	}),
+	useIsServerRenderedSession: (): boolean => harness.serverRenderedSession,
 }));
 
 function Probe(): React.JSX.Element {
@@ -78,6 +82,7 @@ beforeEach(() => {
 	harness.user = null;
 	harness.isLoading = false;
 	harness.live = undefined;
+	harness.serverRenderedSession = true;
 	permissionsUseQuery.mockReset();
 	permissionsUseQuery.mockImplementation((): PermissionsQueryResult => ({
 		data: harness.live !== undefined ? { data: harness.live } : undefined,
@@ -123,6 +128,24 @@ describe("WebAuthorizationProvider", () => {
 		expect(screen.getByText("can-create-url")).toBeDefined();
 		expect(screen.getByRole("button", { name: "Revoke key" })).toBeDefined();
 		expect(lastQueryOptions()).toMatchObject({ enabled: true, refetchOnWindowFocus: true, refetchInterval: SESSION_PERMISSIONS_REFETCH_INTERVAL_MS });
+	});
+
+	it("seeds the permissions query with the server answer on the session the server rendered for", () => {
+		harness.isLoading = true;
+		const serverAnswer = buildSessionPermissions({ capabilities: [PERMISSION.URL.CREATE] });
+		renderProvider(true, serverAnswer);
+
+		expect(lastQueryOptions()?.initialData?.data).toEqual(serverAnswer);
+	});
+
+	it("never seeds or trusts the server answer after the tab crossed a session boundary (another member signed in)", () => {
+		harness.user = { id: "member-y" };
+		harness.serverRenderedSession = false;
+		renderProvider(true, buildSessionPermissions({ capabilities: [PERMISSION.URL.CREATE] }));
+
+		expect(lastQueryOptions()?.initialData).toBeUndefined();
+		expect(screen.getByText("signed-in")).toBeDefined();
+		expect(screen.getByText("cannot-create-url")).toBeDefined();
 	});
 
 	it("lets an empty live answer revoke preloaded capabilities", () => {

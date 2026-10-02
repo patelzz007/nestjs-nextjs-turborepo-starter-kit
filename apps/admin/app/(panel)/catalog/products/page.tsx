@@ -1,19 +1,16 @@
 import { createAdminServerCaller } from "@/lib/admin-server-api";
-import { readPaginatedHasNext, readPaginatedTotal, readPaginatedTotalPages } from "@workspace/client/lib/api/envelope";
+import { toPrefetchedQuery } from "@workspace/client/lib/url-state/prefetched-query";
+import { PRODUCTS_TABLE_URL_STATE, toProductsListQuery } from "@/lib/url-state/products";
 
 import ProductView from "./product-view";
 
 export const dynamic = "force-dynamic";
 
-export default async function ProductPage(): Promise<React.JSX.Element> {
+/** `/catalog/products` — parses the table's URL state and prefetches that exact page. */
+export default async function ProductPage({ searchParams }: { readonly searchParams: Promise<Record<string, string | string[] | undefined>> }): Promise<React.JSX.Element> {
+	const urlState = PRODUCTS_TABLE_URL_STATE.parse(await searchParams);
 	const server = createAdminServerCaller();
-	const result = await Promise.allSettled([server.product.list.query({ page: 1, limit: 20 })]);
+	const [result] = await Promise.allSettled([server.product.list.query(toProductsListQuery(urlState))]);
 
-	const first = result[0];
-	const initialRows = first.status === "fulfilled" ? first.value.data : undefined;
-	const initialTotal = first.status === "fulfilled" ? readPaginatedTotal(first.value.meta) : undefined;
-	const initialTotalPages = first.status === "fulfilled" ? readPaginatedTotalPages(first.value.meta) : undefined;
-	const initialHasNext = first.status === "fulfilled" ? readPaginatedHasNext(first.value.meta, false) : undefined;
-
-	return <ProductView initialRows={initialRows} initialTotal={initialTotal} initialTotalPages={initialTotalPages} initialHasNext={initialHasNext} />;
+	return <ProductView initialPage={toPrefetchedQuery(PRODUCTS_TABLE_URL_STATE.serialize(urlState), result)} />;
 }

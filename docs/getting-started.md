@@ -525,6 +525,14 @@ with its request/response schemas (inferred from the shared Zod schemas).
 > to `/auth/login`. The route proxies only require the _access_ token cookie to
 > be present — validity is enforced by the API, not the proxy.
 
+> [!NOTE] **Who is signed in (client side):** read it with `useAuth()` from
+> `@workspace/client/lib/auth`. In new code, prefer the narrow hooks `useAuthUser()`,
+> `useIsAuthenticated()` and `useAuthCommands()`. Behind them is the `auth` feature store
+> ([ADR 023](./adr/023-client-state-feature-stores.md)), created once per `AuthProvider`
+> mount. It holds only the session _status_. The profile is the `/auth/me` query, which a
+> sign-in seeds from the login response. Nothing auth-related is ever written to
+> `localStorage`. This is UI state only: the API authorizes every request.
+
 > [!NOTE]The proxies run on the **Node.js runtime** — Next.js 16 runs `proxy.ts` on
 > Node by design (only the legacy `middleware.ts` convention can opt into
 > Edge), so there is no Edge runtime to set up on Node hosts (DigitalOcean /
@@ -758,24 +766,30 @@ follows:
   `flattenMenuItems` (with breadcrumbs), and `createItemId`. `components/common/highlight.tsx`
   is the single `<mark>` highlight utility both surfaces use for search results.
   These are unit-tested in `lib/__tests__/` (see testing below).
-- **State lives in a Zustand store** — each app re-exports from
-  `@workspace/client/lib/sidebar/sidebar-store` via `stores/sidebar-store.ts`
-  (admin: `admin-sidebar-state`, web: `web-sidebar-state`, merchant:
-  `merchant-sidebar-state`). The shared factory wraps **persist + Redux DevTools**
-  (`AdminSidebarStore`, `WebSidebarStore`, `MerchantSidebarStore`) so sidebar
-  actions appear in the browser extension alongside `AuthStore`. It owns:
-  - `menu` — validated sidebar menu JSON (compiled with unique item ids at store init).
-  - `currentPage` / `previousPage` — route history synced by `SidebarPathSync`.
-  - `isOpen` — desktop rail expanded/collapsed (persisted) with `toggle`/`open`/`close`.
-  - `sectionOrder` — the user's custom section ordering (persisted) with
-    `moveSectionUp`/`moveSectionDown`; `null` means "use the natural order from the
-    config`.
-  - `expandedItems` — manually opened nav branches (persisted, capped at 20 entries).
-  - `searchQuery` — **session-only, NOT persisted** (resets on reload).
-  - `skipHydration: true` — layouts call `useSidebarStore.persist.rehydrate()` once
-    after mount to avoid SSR/client hydration mismatches.
-  - `components/layout/use-sidebar-control.ts` binds **Ctrl/Cmd+B** to toggle the sidebar via a
-    `window` keydown listener (implemented exactly like the reference app).
+- **State lives in the sidebar feature store.** This is an NgRx-style Zustand feature
+  (`@workspace/client/lib/features/sidebar`; see
+  [ADR 023](./adr/023-client-state-feature-stores.md)).
+  - **Provider:** each app mounts `SidebarStoreProvider` once in its persistent shell, with
+    its storage key (`admin-sidebar-state`, `web-sidebar-state`, `merchant-sidebar-state`)
+    and DevTools name (`Sidebar · admin` …). The store is created per mount, never at
+    module scope.
+  - **Components use only the facade:** `useSidebarIsOpen()`, `useSidebarSectionOrder()`,
+    `useSidebarExpandedItems()`, `useSidebarSearchQuery()` and `useSidebarCommands()`.
+    Every change is a named action in Redux DevTools (development only), e.g.
+    `[ Sidebar ] Toggled` or `[ Sidebar ] Section Moved`.
+  - **What the store owns:**
+    - `isOpen`, the desktop rail (persisted).
+    - `sectionOrder`, the custom section order (persisted; `null` = config order).
+    - `expandedItems`, manually opened branches (persisted, capped at 20).
+    - `searchQuery`, which is **session-only**.
+  - **Restoring preferences:** they come back after mount through
+    `[ Sidebar ] Preferences Restored` (zod-validated; payloads from older builds are
+    upgraded), so the server HTML and the first client render always match.
+  - **Not state:**
+    - The **menu** is a static constant per app (`SIDEBAR_MENU`, `USER_SIDEBAR_MENU`,
+      `MERCHANT_SIDEBAR_MENU`).
+    - The **current page** is the URL (`usePathname()`).
+  - **Ctrl/Cmd+B** toggles the rail via the shared `SidebarProvider` in `packages/ui`.
 - **The sidebar** (`components/layout/sidebar.tsx`, with the recursive row in
   `components/layout/sidebar-nav-item.tsx` and the reorderable section header in
   `components/layout/sidebar-section-header.tsx`) is fully recursive and fluid:
@@ -806,16 +820,51 @@ follows:
 - **The command palette** (`components/layout/command-palette.tsx`) — a full-featured
   ⌘K search over every page in the sidebar JSON. It supports **scope prefixes**
   (`>` commands, `/` pages, `#` settings), quick actions (toggle theme, open
-  settings, go to dashboard, open billing), **pinned & recent chips** (persisted to
-  `localStorage` via `stores/command-palette-store.ts`, a zustand store — the
-  recents/pins survive reloads on purpose, but the **search text itself is local
-  component state** and resets on close/refresh; the store validates its persisted
-  payload with zod so a corrupted `command-palette-state` can't leak into live
-  state),
+  settings, go to dashboard, open billing), **pinned & recent chips**,
   per-item colour tiles, section badges, breadcrumb trails, fuzzy "did you mean?"
   suggestions (Levenshtein + filler-word stripping), and a keyboard-hint footer.
   The matching, alias, and styling logic lives in `lib/palette/search.ts` and
   `lib/palette/styles.ts` so the component stays small and the logic is testable.
+  - **Recents and pins** live in the shared command palette feature store
+    (`@workspace/client/lib/features/command-palette`; see
+    [ADR 023](./adr/023-client-state-feature-stores.md)), which the sidebar's pinned
+    row reads too. Each app mounts
+    `CommandPaletteStoreProvider` once in its persistent shell, next to
+    `SidebarStoreProvider`, with the storage key and DevTools name from its
+    `lib/palette/store-config.ts` (`command-palette-state` for admin,
+    `web-command-palette-state`, `merchant-command-palette-state`). Components read
+    `useCommandPaletteRecentSearches()` / `useCommandPalettePinnedUrls()` and change
+    state through `useCommandPaletteCommands()`, whose `recordRecentSearch` and
+    `togglePin` dispatch `[ Command Palette ] Recent Search Recorded` (newest first,
+    one entry per URL, capped at 6) and `[ Command Palette ] Pin Toggled`. The
+    recents/pins survive reloads on purpose: they are restored after mount through
+    `[ Command Palette ] Preferences Restored`, validated with zod (payloads from the
+    older `zustand/persist` build are upgraded; a corrupted one is ignored). The
+    **search text itself is local component state** and resets on close/refresh.
+- **Display preferences** live in the shared `ui-preferences` feature store
+  (`@workspace/client/lib/features/ui-preferences`; see
+  [ADR 023](./adr/023-client-state-feature-stores.md)). Today it holds one value,
+  `rewardsViewMode` (`grid` | `list`): the layout of the web rewards catalog and the
+  merchant rewards catalog.
+  - **Provider:** `UiPreferencesStoreProvider`, with the storage key and DevTools name
+    from each app's `lib/ui-preferences/store-config.ts`. Web mounts it once in the
+    **root layout** (`apps/web/app/layout.tsx`), not the `/rewardhub` shell, because the
+    public landing page (`/`) renders the same catalog. Merchant mounts it in
+    `MerchantShell`, next to the sidebar and command palette providers. Never nest a
+    second provider with the same key: the two stores would drift apart.
+  - **Facade:** components read `useRewardsViewMode()` and change it through
+    `useUiPreferencesCommands().changeRewardsViewMode`, which dispatches
+    `[ UI Preferences ] Rewards View Mode Changed`. Toggles parse their string value
+    with the re-exported `RewardsViewModeSchema`.
+  - **Persistence:** the keys are unchanged (`rewardhub-view-mode`,
+    `merchant-rewards-view-mode`). The choice is restored after mount through
+    `[ UI Preferences ] Preferences Restored`, so the first render is always `grid` and
+    matches the server HTML. The bare `grid`/`list` string the older helpers wrote is
+    upgraded by the schema; the next change rewrites it as
+    `{"rewardsViewMode":"list"}`.
+  - **Not here:** the colour theme (`next-themes`), data table column/density
+    preferences (`packages/ui` keeps those and stays store-free), and anything the URL
+    should own.
 - **The profile dropdown** (`components/settings/profile-01.tsx`) — a polished
   card: avatar with online-status dot, name + email, a **plan badge** (with an
   Upgrade button), and menu actions (Billing, Settings, Terms & Policies) followed

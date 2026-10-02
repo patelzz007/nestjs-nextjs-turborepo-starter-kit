@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MerchantCreateRewardPageView } from "@/components/rewards/merchant-create-reward-page-view";
 import { MerchantEditRewardPageView } from "@/components/rewards/merchant-edit-reward-page-view";
 import { renderWithAuthorization, TEST_ORG_SLUG } from "@/test/authorization";
+import { contextQueryState, TWO_STORE_CONTEXT } from "@/test/tenant-context";
 
 const REWARD_ID = "0b6e2c1a-3d4f-4a5b-8c9d-1e2f3a4b5c6d";
 
@@ -25,6 +26,7 @@ vi.mock("@workspace/client/lib/auth", () => ({
 					update: { useMutation: rewardsMutation },
 					publish: { useMutation: rewardsMutation },
 				},
+				context: { useQuery: (): object => contextQueryState(TWO_STORE_CONTEXT) },
 			},
 		},
 	}),

@@ -1,19 +1,23 @@
 "use client";
 
-import { adminUserListQuery, AdminUserStatusSchema, type AdminUserDetail } from "@workspace/shared";
-import { eqFilter, parseFilterOption, tableStateToListQuery } from "@workspace/client/lib/api/list-query";
+import { adminUserListQuery, AdminUserStatusSchema, type AdminUserDetail, type Envelope } from "@workspace/shared";
 import { createDataTableLabels } from "@/lib/data-table/labels";
 import { buildReadOnlyTableCheckbox } from "@/lib/data-table/capabilities";
 import { DataTableMobileCard } from "@/lib/data-table/mobile-card";
-import { initialDataOption, readPaginatedNextCursor, readPaginatedTotal, stubPaginatedMeta, successEnvelope } from "@workspace/client/lib/api/envelope";
-import { useDebouncedValue } from "@/hooks/use-debounced-value";
-import { useManualHybridPagination } from "@/lib/data-table/use-manual-cursor-pagination";
+import { initialDataOption, readPaginatedNextCursor, readPaginatedTotal } from "@workspace/client/lib/api/envelope";
+import { ALL_FILTER_OPTION, parseFilterOption, toListSearch } from "@workspace/client/lib/api/list-query";
+import { LIST_FIRST_PAGE } from "@workspace/client/lib/url-state/list-url-state";
+import { useUrlState } from "@workspace/client/lib/url-state/use-url-state";
+import { prefetchedDataFor, type PrefetchedQuery } from "@workspace/client/lib/url-state/prefetched-query";
+import { useTableTextDraft } from "@/lib/data-table/use-table-text-draft";
+import { useUrlListPaging } from "@/lib/data-table/use-url-list-paging";
+import { toUsersListQuery, USERS_PAGE_SIZE_OPTIONS, USERS_TABLE_URL_STATE } from "@/lib/url-state/users";
 import { DataTableSearchToolbar } from "@/components/common/data-table-search-toolbar";
 import { useAuth } from "@workspace/client/lib/auth";
 import { Badge } from "@workspace/ui/components/feedback/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
 import { DataTable, type Action, type DataTableFeatures, type Filter } from "@workspace/ui/components/display/data-table";
-import type { ColumnDef, SortingState } from "@tanstack/react-table";
+import type { ColumnDef } from "@tanstack/react-table";
 import { Eye } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -22,74 +26,57 @@ import { keepPreviousData } from "@tanstack/react-query";
 import { ROUTES } from "@/lib/routes";
 
 export interface UsersAllTableProps {
-	readonly initialUsers?: readonly AdminUserDetail[] | undefined;
-	readonly initialTotal?: number | undefined;
-	readonly initialTotalPages?: number | undefined;
-	readonly initialHasNext?: boolean | undefined;
+	/** The page the server prefetched for the URL it rendered. */
+	readonly initialPage?: PrefetchedQuery<Envelope<AdminUserDetail[]>> | undefined;
 	readonly heading?: string;
 	readonly description?: string;
 }
 
-const PAGE_SIZE_OPTIONS: readonly number[] = [10, 20, 50, 100];
-
+/**
+ * `/users` table. Search, status filter, sort and page live in the URL
+ * (lib/url-state/users) — shareable, refresh-safe and back/forward-aware; the
+ * only local state is the search box's in-progress draft.
+ */
 export default function UsersAllTable({
-	initialUsers,
-	initialTotal,
-	initialTotalPages,
-	initialHasNext,
+	initialPage,
 	heading = "Users",
 	description = "Manage accounts, roles, and direct permissions.",
 }: UsersAllTableProps): React.JSX.Element {
 	const { api } = useAuth();
 	const router = useRouter();
-	const [search, setSearch] = React.useState("");
-	const [statusFilter, setStatusFilter] = React.useState<string>("all");
-	const debouncedSearch = useDebouncedValue(search, 300);
-	const [sorting, setSorting] = React.useState<SortingState>([]);
+	const [urlState, updateUrlState] = useUrlState(USERS_TABLE_URL_STATE);
+	const isFiltered = urlState.search !== undefined || urlState.status !== undefined;
 
-	const trimmedSearch = debouncedSearch.trim();
-	const parsedStatus = parseFilterOption(statusFilter, AdminUserStatusSchema);
-	const isFiltered = trimmedSearch.length > 0 || statusFilter !== "all";
+	const commitSearch = React.useCallback(
+		(value: string): void => {
+			updateUrlState({ search: toListSearch(value), page: LIST_FIRST_PAGE, cursor: undefined }, { history: "replace" });
+		},
+		[updateUrlState],
+	);
+	const [searchDraft, setSearchDraft] = useTableTextDraft(urlState.search, commitSearch);
 
 	const handleClearFilters = React.useCallback((): void => {
-		setSearch("");
-		setStatusFilter("all");
-	}, []);
+		updateUrlState({ search: undefined, status: undefined, page: LIST_FIRST_PAGE, cursor: undefined });
+	}, [updateUrlState]);
 
-	const {
-		pageIndex,
-		pageSize,
-		listQuery,
-		bindListMeta,
-		pagination: basePagination,
-	} = useManualHybridPagination<AdminUserDetail>(20, [debouncedSearch, sorting, statusFilter], (user) => user.id, {
+	const stateKey: string = USERS_TABLE_URL_STATE.serialize(urlState);
+	const usersQuery = api.auth.adminUsers.useQuery(toUsersListQuery(urlState), {
+		placeholderData: keepPreviousData,
+		...initialDataOption(prefetchedDataFor(initialPage, stateKey)),
+	});
+
+	const rows: readonly AdminUserDetail[] = usersQuery.data?.data ?? [];
+	const { pagination, sorting, handleSortingChange } = useUrlListPaging({
+		state: urlState,
+		update: updateUrlState,
+		sortSpec: adminUserListQuery,
+		totalCount: readPaginatedTotal(usersQuery.data?.meta),
+		nextCursor: readPaginatedNextCursor(usersQuery.data?.meta),
+		resetKey: USERS_TABLE_URL_STATE.serialize({ ...urlState, page: LIST_FIRST_PAGE, cursor: undefined }),
+		getRowId: getUserRowId,
 		onClearFilters: handleClearFilters,
 		isFiltered,
 	});
-
-	const initialQueryData = React.useMemo(
-		() =>
-			initialUsers !== undefined
-				? successEnvelope([...initialUsers], stubPaginatedMeta(20, initialTotal ?? initialUsers.length, 1, initialTotalPages ?? 1, initialHasNext ?? false))
-				: undefined,
-		[initialUsers, initialHasNext, initialTotal, initialTotalPages],
-	);
-
-	const usersQuery = api.auth.adminUsers.useQuery(
-		tableStateToListQuery(adminUserListQuery, { pagination: listQuery, sorting, search: trimmedSearch, filter: { status: eqFilter(parsedStatus) } }),
-		{
-			placeholderData: keepPreviousData,
-			...initialDataOption(pageIndex === 0 && pageSize === 20 && trimmedSearch.length === 0 && sorting.length === 0 && statusFilter === "all" ? initialQueryData : undefined),
-		},
-	);
-
-	const rows: readonly AdminUserDetail[] = usersQuery.data?.data ?? [];
-	const totalCount = readPaginatedTotal(usersQuery.data?.meta, initialTotal ?? initialUsers?.length ?? 0);
-	const pagination = React.useMemo(() => ({ ...basePagination, totalCount }), [basePagination, totalCount]);
-
-	React.useEffect((): void => {
-		bindListMeta(readPaginatedNextCursor(usersQuery.data?.meta) ?? null);
-	}, [bindListMeta, usersQuery.data?.meta]);
 	const tableError: string | null = usersQuery.isError ? "Could not load users. Clear search or sort and try again." : null;
 
 	const handleViewUser = React.useCallback(
@@ -191,22 +178,16 @@ export default function UsersAllTable({
 		[],
 	);
 
-	const handleManualSortingChange = React.useCallback((nextSorting: SortingState): void => {
-		setSorting(nextSorting);
-	}, []);
-
-	const handleManualColumnFilterChange = React.useCallback((filterKey: string, value: string | null): void => {
-		if (filterKey === "status") {
-			setStatusFilter(value === null || value === "all" ? "all" : value);
-		}
-	}, []);
-
-	const manualColumnFilters = React.useMemo(
-		(): Readonly<Record<string, string>> => ({
-			status: statusFilter,
-		}),
-		[statusFilter],
+	const handleManualColumnFilterChange = React.useCallback(
+		(filterKey: string, value: string | null): void => {
+			if (filterKey === "status") {
+				updateUrlState({ status: parseFilterOption(value ?? "", AdminUserStatusSchema), page: LIST_FIRST_PAGE, cursor: undefined });
+			}
+		},
+		[updateUrlState],
 	);
+
+	const manualColumnFilters = React.useMemo((): Readonly<Record<string, string>> => ({ status: urlState.status ?? ALL_FILTER_OPTION }), [urlState.status]);
 
 	const tableFilters = React.useMemo(
 		(): Filter[] => [
@@ -225,13 +206,9 @@ export default function UsersAllTable({
 
 	const checkbox = React.useMemo(() => buildReadOnlyTableCheckbox("users.csv", ["fullName", "email"]), []);
 
-	const handleSearchChange = React.useCallback((value: string): void => {
-		setSearch(value);
-	}, []);
-
 	const toolbarContent = React.useMemo(
-		() => <DataTableSearchToolbar value={search} onChange={handleSearchChange} placeholder={tableLabels.searchPlaceholder} ariaLabel={tableLabels.searchAriaLabel} />,
-		[handleSearchChange, search, tableLabels.searchAriaLabel, tableLabels.searchPlaceholder],
+		() => <DataTableSearchToolbar value={searchDraft} onChange={setSearchDraft} placeholder={tableLabels.searchPlaceholder} ariaLabel={tableLabels.searchAriaLabel} />,
+		[searchDraft, setSearchDraft, tableLabels.searchAriaLabel, tableLabels.searchPlaceholder],
 	);
 
 	return (
@@ -258,16 +235,20 @@ export default function UsersAllTable({
 						onManualColumnFilterChange={handleManualColumnFilterChange}
 						mobileCardRender={mobileCardRender}
 						pagination={pagination}
-						pageSizeOptions={PAGE_SIZE_OPTIONS}
+						pageSizeOptions={USERS_PAGE_SIZE_OPTIONS}
 						sorting={sorting}
 						error={tableError}
 						isLoading={usersQuery.isLoading}
 						isRefetching={usersQuery.isFetching && !usersQuery.isLoading ? true : false}
-						onManualSortingChange={handleManualSortingChange}
+						onManualSortingChange={handleSortingChange}
 						toolbarContent={toolbarContent}
 					/>
 				</CardContent>
 			</Card>
 		</div>
 	);
+}
+
+function getUserRowId(user: AdminUserDetail): string {
+	return user.id;
 }

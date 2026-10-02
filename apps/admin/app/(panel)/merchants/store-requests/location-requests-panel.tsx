@@ -3,7 +3,8 @@
 import { initialDataOption, stubPaginatedMeta, successEnvelope } from "@workspace/client/lib/api/envelope";
 import { useAuth } from "@workspace/client/lib/auth";
 import { Can } from "@workspace/client/lib/auth/can";
-import { PERMISSION, type AdminLocationRequestResponse } from "@workspace/shared";
+import { AdminLocationRequestResponseSchema, PERMISSION, type AdminLocationRequestResponse } from "@workspace/shared";
+import { useUrlState } from "@workspace/client/lib/url-state/use-url-state";
 import { AccessRestrictedNotice } from "@/components/common/access-restricted-notice";
 import { Badge } from "@workspace/ui/components/feedback/badge";
 import { Button } from "@workspace/ui/components/form/button";
@@ -16,6 +17,7 @@ import { Building2, Check, MapPin, X } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
 import { ROUTES } from "@/lib/routes";
+import { STORE_REQUESTS_URL_STATE } from "@/lib/url-state/selection";
 
 const CITY_LABELS: Record<string, string> = {
 	KUALA_LUMPUR: "Kuala Lumpur",
@@ -60,10 +62,15 @@ export interface LocationRequestsPanelProps {
 	readonly initialPendingRequests?: readonly AdminLocationRequestResponse[] | undefined;
 }
 
+/**
+ * Store location request queue. The request open in the review panel is
+ * `?requestId=` (lib/url-state/selection); without one — or once it has been
+ * reviewed and left the queue — the first pending request is shown.
+ */
 export default function LocationRequestsPanel({ initialPendingRequests }: LocationRequestsPanelProps): React.JSX.Element {
 	const { api } = useAuth();
 	const queryClient = useQueryClient();
-	const [selectedRequestId, setSelectedRequestId] = React.useState<string | undefined>(initialPendingRequests?.[0]?.id);
+	const [selection, updateSelection] = useUrlState(STORE_REQUESTS_URL_STATE);
 	const [rejectionReason, setRejectionReason] = React.useState("");
 
 	const pendingInitialData = React.useMemo(
@@ -88,7 +95,7 @@ export default function LocationRequestsPanel({ initialPendingRequests }: Locati
 	});
 
 	const requests = requestsQuery.data?.data ?? [];
-	const selectedRequest = requests.find((request) => request.id === selectedRequestId) ?? requests[0];
+	const selectedRequest = requests.find((request) => request.id === selection.requestId) ?? requests[0];
 
 	const handleApprove = React.useCallback((): void => {
 		if (selectedRequest === undefined) {
@@ -117,9 +124,15 @@ export default function LocationRequestsPanel({ initialPendingRequests }: Locati
 		});
 	}, [rejectionReason, reviewMutation, selectedRequest]);
 
-	const handleSelectRequest = React.useCallback((requestId: string): void => {
-		setSelectedRequestId(requestId);
-	}, []);
+	const handleSelectRequest = React.useCallback(
+		(requestId: string): void => {
+			const parsed = AdminLocationRequestResponseSchema.shape.id.safeParse(requestId);
+			if (parsed.success) {
+				updateSelection({ requestId: parsed.data });
+			}
+		},
+		[updateSelection],
+	);
 
 	const handleRejectionReasonChange = React.useCallback(function handleRejectionReasonChange(event: React.ChangeEvent<HTMLTextAreaElement>): void {
 		setRejectionReason(event.target.value);

@@ -7,7 +7,7 @@
 | Remote API data | TanStack Query |
 | Form values | TanStack Form |
 | Validation | Zod (`05-contracts-zod-api.md`) |
-| URL state | Next.js URL/search params where appropriate |
+| URL state (table page/sort/filter/search, in-page selection) | The URL, via `defineUrlState` + `useUrlState` (`@workspace/client/lib/url-state`, docs/list-queries.md §7) |
 | Client UI state | Zustand |
 | Table engine | TanStack Table |
 | Persistence | API/database |
@@ -81,6 +81,43 @@ export function createCartStore() {
 }
 // wired up via a React context provider created once per request
 ```
+
+### Zustand feature stores — the house pattern
+
+Every piece of shared client state is a **feature store** built with the toolkit in
+`packages/client/src/lib/state` ([ADR 023](../docs/adr/023-client-state-feature-stores.md)).
+The reference implementation is `packages/client/src/lib/features/sidebar/`; copy its shape.
+
+```text
+features/<feature>/
+  state.ts      state type, initial state, persisted-slice zod schema (if persisted)
+  actions.ts    discriminated union  { type: "[ Feature ] Event", …payload }  + action creators
+  reducer.ts    pure switch over action.type, exhaustive (assertNever)
+  selectors.ts  narrow selectors; derived values computed here, never stored
+  effects.ts    ONLY if a real side effect exists (cookie, navigation, query invalidation)
+  store.ts      createXStore(deps) → createFeatureStore({ name, initialState, reducer, effects })
+  facade.tsx    the provider + useXxx() narrow hooks + useXxxCommands() — components import ONLY this
+```
+
+```tsx
+// ❌ DON'T — free-form store, module singleton, whole-store subscription, anonymous action
+export const useSidebarStore = create((set) => ({ isOpen: true, toggle: () => set((s) => ({ isOpen: !s.isOpen })) }));
+const sidebar = useSidebarStore();
+
+// ✅ DO — named event through a pure reducer, store per provider mount, narrow facade hooks
+<SidebarStoreProvider storageKey={ADMIN_SIDEBAR_STORAGE_KEY} devtoolsName={ADMIN_SIDEBAR_DEVTOOLS_NAME}>…</SidebarStoreProvider> // in the persistent shell
+const isOpen = useSidebarIsOpen();
+const { toggle } = useSidebarCommands(); // dispatches "[ Sidebar ] Toggled"
+```
+
+Rules:
+
+- **Name actions after what happened** (`[ Tenant Context ] Location Selected`), never after the setter (`setLocationId`). The DevTools timeline should read like a story.
+- **Reducers are pure.** No `fetch`, no `window`/`document`, no cookies, no `Date.now()`, no query client. That work goes in an effect.
+- **No effect for a purely synchronous change.** `[ Sidebar ] Toggled` needs none.
+- **Mount the provider at a persistent layout boundary** (the shell layout, never a page), so `router.push` / `<Link>` navigation keeps the state.
+- **Persist deliberately** with `connectFeaturePersistence`. It restores after mount through a `[ Feature ] … Restored` action and validates with zod. Never persist tokens or authorization data.
+- **Never store** what TanStack Query owns, what the URL owns, or what can be derived. That includes static config: the sidebar menu is a constant, not state.
 
 ## TanStack Form
 
@@ -328,14 +365,15 @@ export const useWizardStore = create(persist<WizardState>((set) => ({ ... }), { 
 
 // ✅ DO — persist deliberately, only for state that genuinely benefits
 // from surviving a reload (a user's deliberately chosen UI preference, like
-// sidebar-collapsed state), and use devtools middleware in development
-// only, never shipped to production bundles
-export const useSidebarStore = create(
-  devtools(
-    persist<SidebarState>((set) => ({ isCollapsed: false, toggle: () => set((s) => ({ isCollapsed: !s.isCollapsed })) }), { name: 'sidebar-preference' }),
-    { enabled: process.env.NODE_ENV === 'development' },
-  ),
-);
+// the sidebar rail), through the feature toolkit: zod-validated, restored
+// after mount via a named action, only the chosen slice written back.
+// DevTools are wired by createFeatureStore — development browser only.
+connectFeaturePersistence(store, window.localStorage, {
+  key: ADMIN_SIDEBAR_STORAGE_KEY,
+  schema: SidebarPreferencesSchema,
+  select: selectPreferences,
+  restore: sidebarActions.preferencesRestored, // "[ Sidebar ] Preferences Restored"
+});
 ```
 
 ## Async validation with debounce in TanStack Form
@@ -443,6 +481,22 @@ URL params        → page, limit, sort, filter, search                (shareabl
 TanStack Table    → column visibility, row selection, expansion      (controlled by the smart component when it matters outside the table)
 Zustand           → purely client UI (density toggle, panel open)    (if it should persist, deliberately persist it)
 TanStack Query    → the rows themselves                              (never copied elsewhere)
+```
+
+URL state goes through `@workspace/client/lib/url-state` (docs/list-queries.md §7): one
+`defineUrlState` declaration per table, parsed by the server page (prefetch) and read with
+`useUrlState` in the table — never mirrored into `useState`/Zustand. The only local state is the
+search box's in-progress draft (`useUrlDraft`).
+
+```tsx
+// ❌ DON'T — table state in useState: lost on reload, not shareable, Back does nothing
+const [page, setPage] = useState(1);
+const [status, setStatus] = useState("all");
+
+// ✅ DO — the URL is the single source; the server page parses the same declaration
+const [urlState, updateUrlState] = useUrlState(USERS_TABLE_URL_STATE);
+updateUrlState({ status: "locked", page: 1, cursor: undefined });                 // discrete → pushes a history entry
+updateUrlState({ search: "jane", page: 1, cursor: undefined }, { history: "replace" }); // debounced typing → replaces it
 ```
 
 ```tsx

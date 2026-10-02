@@ -5,7 +5,7 @@ import { MerchantRewardsCatalog } from "@/components/rewards/merchant-rewards-ca
 import { MerchantRewardsSummaryStrip } from "@/components/rewards/merchant-rewards-summary-strip";
 import { MerchantEmptyState } from "@/components/merchant-ui/empty-state";
 import { MerchantPageHeader } from "@/components/merchant-ui/page-header";
-import { useMerchantLocation } from "@/lib/org/location-context";
+import { useMerchantLocation } from "@/features/tenant-context/facade";
 import { orgRoutes } from "@/lib/routes";
 import { useAuth } from "@workspace/client/lib/auth";
 import { useAuthorization } from "@workspace/client/lib/auth/can";

@@ -1,6 +1,6 @@
 "use client";
 
-import { useAuth } from "@workspace/client/lib/auth";
+import { useAuth, useIsServerRenderedSession } from "@workspace/client/lib/auth";
 import type { CapabilitySlug, SessionPermissionsResponse } from "@workspace/shared";
 import * as React from "react";
 
@@ -40,14 +40,19 @@ export function resolveSessionCapabilities(live: SessionPermissionsResponse | un
  *
  * Guests never call the endpoint and resolve to an empty capability set, so
  * every gated control denies without a 401 round-trip.
+ *
+ * The server-rendered answer seeds the query and stands in before the first
+ * live answer ONLY on the session the server rendered for. After a sign-out
+ * or another member's sign-in it belongs to a session that is gone: using it
+ * would show the previous member's capabilities, and as `initialData` it
+ * would recreate the query as fresh right after the sign-out cache clear.
  */
 export function useSessionPermissionsQuery(initialSessionPermissions: SessionPermissionsResponse | undefined, isAuthenticated: boolean): SessionPermissionsState {
 	const { api } = useAuth();
+	const isServerRenderedSession = useIsServerRenderedSession();
+	const serverPermissions = isServerRenderedSession ? initialSessionPermissions : undefined;
 
-	const initialPermissionsData = React.useMemo(
-		() => (initialSessionPermissions !== undefined ? successEnvelope(initialSessionPermissions, stubApiMeta()) : undefined),
-		[initialSessionPermissions],
-	);
+	const initialPermissionsData = React.useMemo(() => (serverPermissions !== undefined ? successEnvelope(serverPermissions, stubApiMeta()) : undefined), [serverPermissions]);
 
 	const permissionsQuery = api.auth.permissions.useQuery(undefined, {
 		retry: 1,
@@ -59,7 +64,7 @@ export function useSessionPermissionsQuery(initialSessionPermissions: SessionPer
 	});
 
 	const liveResponse = isAuthenticated ? permissionsQuery.data?.data : undefined;
-	const preloaded = isAuthenticated ? initialSessionPermissions : undefined;
+	const preloaded = isAuthenticated ? serverPermissions : undefined;
 
 	const capabilities = React.useMemo((): readonly CapabilitySlug[] => resolveSessionCapabilities(liveResponse, preloaded), [liveResponse, preloaded]);
 

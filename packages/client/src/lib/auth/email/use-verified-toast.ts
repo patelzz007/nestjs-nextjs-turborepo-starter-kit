@@ -5,13 +5,14 @@ import { toastMessage } from "@workspace/ui/components/feedback/toast";
 import { useEffect, useRef } from "react";
 
 import { consumeEmailVerifiedToast } from "./verified-toast";
-import { useAuth } from "../index";
+import { useAuth, useAuthCommands } from "../index";
 import { syncSessionAfterEmailVerification } from "./sync-after-verification";
 
 /** Shows a one-time success toast and refreshes the session after email verification. */
 export function useEmailVerifiedToast(): void {
 	const queryClient = useQueryClient();
-	const { api, login, refreshSession } = useAuth();
+	const { api } = useAuth();
+	const sessionCommands = useAuthCommands();
 	const handledRef = useRef(false);
 
 	useEffect((): void => {
@@ -26,7 +27,7 @@ export function useEmailVerifiedToast(): void {
 		});
 
 		void (async (): Promise<void> => {
-			await syncSessionAfterEmailVerification(api, login, queryClient, refreshSession);
+			await syncSessionAfterEmailVerification(api, sessionCommands, queryClient);
 		})();
-	}, [api, login, queryClient, refreshSession]);
+	}, [api, queryClient, sessionCommands]);
 }

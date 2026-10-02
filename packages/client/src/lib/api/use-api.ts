@@ -22,6 +22,7 @@ export {
 	fetchQueryOrThrow,
 	ApiError,
 	ApiErrorSchema,
+	SessionRefreshUnavailableError,
 	type ApiClientType,
 	type ApiErrorBody,
 	type ApiErrorPayload,

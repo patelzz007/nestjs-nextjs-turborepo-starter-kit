@@ -10,7 +10,7 @@ import { useEffect, useRef, useState, type JSX } from "react";
 
 import { resolveAuthErrorMessage } from "../errors";
 import { markEmailVerifiedToast } from "./verified-toast";
-import { useAuth } from "../index";
+import { useAuth, useAuthCommands } from "../index";
 import { syncSessionAfterEmailVerification } from "./sync-after-verification";
 
 export interface VerifyEmailViewProps {
@@ -26,7 +26,8 @@ export function VerifyEmailView({ token, settingsHref, loginHref = APP_LINKS.aut
 	const [message, setMessage] = useState("Verifying your email...");
 	const router = useRouter();
 	const queryClient = useQueryClient();
-	const { api, login, refreshSession } = useAuth();
+	const { api } = useAuth();
+	const sessionCommands = useAuthCommands();
 	const completedRef = useRef(false);
 	const cancelledRef = useRef(false);
 	const redirectTarget = successRedirectHref ?? settingsHref;
@@ -65,7 +66,7 @@ export function VerifyEmailView({ token, settingsHref, loginHref = APP_LINKS.aut
 					return;
 				}
 
-				await syncSessionAfterEmailVerification(api, login, queryClient, refreshSession);
+				await syncSessionAfterEmailVerification(api, sessionCommands, queryClient);
 				if (isCancelled()) {
 					return;
 				}
@@ -84,7 +85,7 @@ export function VerifyEmailView({ token, settingsHref, loginHref = APP_LINKS.aut
 		return (): void => {
 			cancelledRef.current = true;
 		};
-	}, [api, api.auth.verifyEmail, login, queryClient, redirectTarget, refreshSession, router, token]);
+	}, [api, api.auth.verifyEmail, queryClient, redirectTarget, router, sessionCommands, token]);
 
 	return (
 		<div className="space-y-4 text-center">

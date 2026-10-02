@@ -7,7 +7,7 @@ import { identitySidebarResolveHref, type SidebarResolveHref } from "@workspace/
 import { MERCHANT_MENU_ICON_MAP } from "@/lib/navigation/menu-icons";
 import { resolveOrgPageRoute, type OrgPageRoute } from "@/lib/navigation/org-route-authorization";
 import { toOrgRelativePath } from "@/lib/routes";
-import { useMerchantSidebarStore } from "@/stores/sidebar-store";
+import { MERCHANT_SIDEBAR_MENU } from "@/lib/navigation/sidebar-menu";
 
 function resolveIcon(iconName: string | undefined): LucideIcon {
 	if (iconName !== undefined) {
@@ -48,7 +48,7 @@ function resolveMerchantTrailPage(orgRelativePath: string): SidebarTrailPage | n
  */
 export function resolveMerchantTrail(pathname: string, resolveHref: SidebarResolveHref = identitySidebarResolveHref): readonly BreadcrumbItem[] {
 	const trail = resolveSidebarMenuTrail({
-		menu: useMerchantSidebarStore.getState().menu,
+		menu: MERCHANT_SIDEBAR_MENU,
 		pathname: toOrgRelativePath(pathname) ?? pathname,
 		resolveIcon,
 		rootCurrentLabel: "Dashboard",

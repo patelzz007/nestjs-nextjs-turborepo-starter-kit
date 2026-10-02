@@ -1,6 +1,6 @@
 "use client";
 
-import { useMerchantLocation } from "@/lib/org/location-context";
+import { useMerchantLocation } from "@/features/tenant-context/facade";
 import { MerchantSurfacePanel } from "@/components/merchant-ui/surface-panel";
 import { MapPin } from "lucide-react";
 import * as React from "react";

@@ -4,7 +4,7 @@ import { z } from "zod";
 
 import { isAccountLockedError, resolveAuthErrorMessage } from "../auth/errors";
 import { jsonResponse, type FetchImpl } from "../test-utils";
-import { ApiError, createApiRequestContext, fetchQuery, readErrorPayload } from "./api-request";
+import { ApiError, createApiRequestContext, fetchQuery, readErrorPayload, type RefreshResult } from "./api-request";
 import { defineQuery } from "./endpoints";
 
 const LOCKED_UNTIL = 1790812800000;
@@ -95,7 +95,7 @@ describe("fetchQuery with the error envelope", () => {
 
 	it("does not attempt a refresh when the envelope code marks the session dead", async () => {
 		vi.stubGlobal("fetch", vi.fn<FetchImpl>().mockResolvedValue(jsonResponse(401, errorEnvelope("TOKEN_VERSION_MISMATCH", "Token revoked"))));
-		const onRefresh = vi.fn((): Promise<boolean> => Promise.resolve(true));
+		const onRefresh = vi.fn((): Promise<RefreshResult> => Promise.resolve("ok"));
 		const onUnauthorized = vi.fn((): Promise<void> => Promise.resolve());
 
 		const result = await fetchQuery(createApiRequestContext("http://api.test", onUnauthorized, onRefresh), meDef, undefined);

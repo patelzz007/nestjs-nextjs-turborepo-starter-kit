@@ -4,7 +4,7 @@ tags: ["api", "contracts", "pagination", "prisma", "data-table"]
 description: "The one list-query grammar every paginated endpoint speaks: how a resource declares it with defineListQuery, how the API parses and translates it to Prisma, and how tables build it on the client."
 order: 15
 author: "Platform Team"
-lastUpdated: 1790812800000
+lastUpdated: 1790899200000
 coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=1600&q=80"
 ---
 
@@ -195,19 +195,21 @@ Server-side DataTables build that input from table state with
 `tableStateToListQuery` (`@workspace/client/lib/api/list-query`):
 
 ```ts
-const listFilter = useMemo(() => ({ isActive: eqFilter(parseBooleanFilterOption(isActiveSelect)) }), [isActiveSelect]);
-
 const query = api.product.list.useQuery(
   tableStateToListQuery(productListQuery, {
-    pagination: paginationQuery,   // useManualHybridPagination → { page, limit, cursor? }
-    sorting,                       // TanStack SortingState
-    search: debouncedSearch,
-    filter: listFilter,
+    pagination: { page, limit, cursor },   // the table's page, page size and keyset cursor
+    sorting,                               // TanStack SortingState
+    search,
+    filter: { isActive: eqFilter(parseBooleanFilterOption(isActiveSelect)) },
     // sortAliases: { countryCode: "iso2" }  // when a column id differs from the API field
   }),
   { placeholderData: keepPreviousData },
 );
 ```
+
+A table whose state lives in the URL (§7 — every admin table) uses the sibling
+`listStateToListQuery(spec, { pagination, sort, search, filter })`, which takes the URL's
+`sort` param instead of TanStack sorting and applies exactly the same rules.
 
 The adapter never trusts the table: sort columns outside the whitelist are dropped (a UI-only
 column never produces a 400), the default order is sent as "no sort", a keyset `cursor` is only
@@ -260,3 +262,161 @@ memberships, `GET /admin/rewards/pending`, the capability catalog and email prev
    non-trivial a real-Postgres case in `apps/api/test/list-query.e2e-spec.ts`.
 7. Add the row to the table in §5 and check that the columns you sort/filter on are indexed
    (rules/19-performance-and-scalability.md).
+8. A table for it: declare its URL state (`defineUrlState` + `listUrlParams`, §7) and a
+   `to…ListQuery(state)` builder shared by the server page (prefetch) and the client table, with
+   a parsing test next to it (`apps/admin/lib/url-state/url-states.test.ts`).
+
+## 7. Table state in the URL
+
+A list table's page, page size, sort, filters and search are **URL state**: shareable,
+bookmarkable, refresh-safe and restored by back/forward ([ADR 023](./adr/023-client-state-feature-stores.md),
+rules/06 "Table state ownership"). They are never copied into `useState` or Zustand. The rows
+stay in TanStack Query; column visibility and density stay in the DataTable's own preferences.
+
+The URL speaks **the list grammar itself**, so a table URL maps 1:1 onto the request:
+
+```text
+/users?page=2&sort=-email&search=jane&filter[status]=locked
+  → GET /api/v1/auth/admin/users?page=2&limit=20&sort=-email&search=jane&filter[status][eq]=locked
+```
+
+Defaults are omitted (`/users` is page 1, the default page size, the default order, no
+filters), and `filter[…]` brackets are written unencoded so the address bar stays readable.
+
+### Declaring a table's URL state
+
+`@workspace/client/lib/url-state/*` (server-safe, except the two hooks):
+
+```ts
+// apps/admin/lib/url-state/users.ts — imported by the server page AND the client table
+export const USERS_TABLE_URL_STATE = defineUrlState(
+  {
+    ...listUrlParams(adminUserListQuery, { pageSizes: [10, 20, 50, 100], defaultLimit: 20 }), // page, limit, cursor, sort
+    search: listSearchParam(),
+    status: optionalUrlParam(AdminUserStatusSchema),
+  },
+  { urlKeys: { status: listFilterKey("status") } },                                          // ?filter[status]=
+);
+
+export function toUsersListQuery(state: UsersTableUrlState): TableListQueryInput<UsersListFilter> {
+  return listStateToListQuery(adminUserListQuery, { pagination: state, sort: state.sort, search: state.search, filter: { status: eqFilter(state.status) } });
+}
+```
+
+| Helper | What it does |
+| --- | --- |
+| `defineUrlState(shape, { urlKeys })` | One zod schema per param. `parse(searchParams)` **never throws**: each missing or invalid param falls back to its own default, independently. `serialize(state, current)` omits defaults and keeps params it does not own. |
+| `listUrlParams(listQuery, { pageSizes, defaultLimit })` | `page` (1…10 000), `limit` (one of the table's page sizes), `cursor`, `sort` (the resource's whitelist, normalized; the default order is dropped). |
+| `listSearchParam()` / `listTextFilterParam()` | Trimmed, bounded text; blank is absent. |
+| `optionalUrlParam(schema)` / `urlParamWithDefault(schema, value)` / `optionalBooleanUrlParam()` | Filter values and selections (`?key=`, `?organizationId=`), validated by the domain schema. |
+| `listFilterKey(field, op?)` | `filter[field]` (eq shorthand) or `filter[field][op]` — the API's own key. |
+| `listStateToListQuery(spec, state)` | URL state → list input (whitelist, default order, cursor rule re-applied). |
+| `useUrlState(codec)` | `[state, update(patch, { history })]` from `useSearchParams()`. |
+| `useUrlDraft(...)` (admin: `useTableTextDraft`) | The search box's in-progress text: local, committed to the URL after a debounce, reset when the URL changes from outside. |
+| `listPagePatch(state, page, nextCursor)` | The `{ page, cursor }` patch for a page move: a sequential "next" in the default order reuses `meta.nextCursor`, anything else pages by offset. |
+| `toPrefetchedQuery` / `prefetchedDataFor` (`lib/url-state/prefetched-query`) | Binds a server prefetch to the serialized URL state it was fetched for, and hands it back as `initialData` only for that state. |
+
+### Server page: parse and prefetch the requested page
+
+```tsx
+export default async function UsersPage({ searchParams }: { readonly searchParams: Promise<Record<string, string | string[] | undefined>> }): Promise<React.JSX.Element> {
+  const urlState = USERS_TABLE_URL_STATE.parse(await searchParams);
+  const [result] = await Promise.allSettled([createAdminServerCaller().auth.adminUsers.query(toUsersListQuery(urlState))]);
+  return <UsersAllTable initialPage={toPrefetchedQuery(USERS_TABLE_URL_STATE.serialize(urlState), result)} />;
+}
+```
+
+A reloaded or shared link therefore renders the requested page in the initial HTML. The
+client table builds the same input from the same URL; it uses the prefetched envelope as
+`initialData` only while its serialized state equals the one the server fetched
+(`prefetchedDataFor`). A failed prefetch is dropped (`toPrefetchedQuery` returns `undefined`)
+and the table fetches that page on the client.
+
+A **tabbed** table prefetches only its active tab. `/geography` keeps `?tab=` in the same URL
+state, so the state key already names the tab. Each tab returns its own row type, so the page
+tags the response with its tab (`GeoTabPage`, `lib/url-state/geography`). Each tab's query takes
+`initialData` only from a page tagged with its own tab:
+
+```tsx
+// page.tsx — one endpoint per tab, chosen by the URL
+const [statsResult, pageResult] = await Promise.allSettled([server.geo.stats.query({}), fetchActiveTabPage(server, urlState)]);
+return <GeoView initialStats={…} initialPage={toPrefetchedQuery(GEO_URL_STATE.serialize(urlState), pageResult)} />;
+
+// geo-table.tsx
+const prefetchedPage = prefetchedDataFor(initialPage, GEO_URL_STATE.serialize(urlState));
+api.geo.states.useQuery(toStatesListQuery(urlState), { enabled: activeTab === "states", ...initialDataOption(prefetchedPage?.tab === "states" ? prefetchedPage.envelope : undefined) });
+```
+
+Switching tabs on the client fetches the new tab. Switching back, or pressing Back, to the state
+the server rendered reads TanStack Query's cache. Nothing is refetched while that page is fresh.
+
+### Client table: read the URL, write patches
+
+```tsx
+const [urlState, updateUrlState] = useUrlState(USERS_TABLE_URL_STATE);
+const [searchDraft, setSearchDraft] = useTableTextDraft(urlState.search, (value) =>
+  updateUrlState({ search: toListSearch(value), page: 1, cursor: undefined }, { history: "replace" }));
+const query = api.auth.adminUsers.useQuery(toUsersListQuery(urlState), { placeholderData: keepPreviousData });
+const { pagination, sorting, handleSortingChange } = useUrlListPaging({ state: urlState, update: updateUrlState, sortSpec: adminUserListQuery, … });
+```
+
+Rules:
+
+- **Any filter, search or sort change resets to page 1** (and drops the cursor).
+- **push vs replace.** Discrete navigation — page, page size, sort, a filter select, an
+  in-page selection — **pushes** a history entry, so Back undoes it. Continuous input — the
+  debounced search box and free-text filters — **replaces** the current entry, so history
+  is not flooded with one entry per keystroke.
+- **Writes use the History API** (`history.pushState` / `replaceState`), which Next.js
+  integrates with its router: `useSearchParams()` updates and back/forward restores the
+  entry, **without** a server round trip. `router.push` would re-render the page's server
+  components on every change (re-fetching the prefetched page, waiting for the RSC payload,
+  showing `loading.tsx`). Use `router.push` only when the server must recompute something
+  for the new URL — e.g. `/analytics/sales?weeks=`, whose period ends at request time.
+- **Keyset cursor.** A sequential "next page" in the default order writes the response's
+  `meta.nextCursor` as `?cursor=`; any other jump pages by offset.
+- **Bad URLs never break a page.** An unknown sort field, an out-of-range page, a malformed
+  id: each falls back to its default and the rest of the URL still applies.
+- **A filter whose default is not "none"** (the MFA queue opens on `PENDING`) represents
+  "every value" as `filter[status]=all`, translated to "no filter" before the API call.
+
+### Store-scoped lists (merchant)
+
+A merchant list is also filtered by the member's **store**, which is not URL state: it is owned
+by the `tenant-context` feature store and its cookie ([Frontend routing](./routing.md#organization-and-store-context-merchant)).
+The request is the URL's list keys plus `locationId`, and the server prefetch is bound to
+**both**: `LocationScopedPrefetch<PrefetchedQuery<Envelope<…>>>`. The view seeds `initialData`
+only when the store and the serialized URL state both match:
+
+```tsx
+const [urlState, updateUrlState] = useUrlState(REDEMPTIONS_URL_STATE);
+const prefetchedPage = prefetchedDataFor(prefetchForLocation(initialRedemptions, locationId), REDEMPTIONS_URL_STATE.serialize(urlState));
+const query = api.organizations.redemptions.useQuery(toRedemptionsQuery(orgSlug, locationId, urlState), initialDataOption(prefetchedPage));
+```
+
+### Which pages keep their state in the URL
+
+| App | Page | URL state |
+| --- | --- | --- |
+| admin | `/users`, `/merchants`, `/catalog/products`, `/catalog/categories`, `/emails/log`, `/geography` (+ `?tab=`), `/users/mfa-recovery` | page, limit, cursor, sort, search, `filter[…]` |
+| admin | `/merchants/verification`, `/emails/templates`, `/merchants/store-requests`, `/users/mfa-recovery` | the in-page selection (`?organizationId=`, `?key=`, `?requestId=`) |
+| admin | `/analytics/sales` | `?weeks=` (written with `router.push`: the server computes the period) |
+| web | `/rewardhub` and the public landing catalog `/` | page, cursor, `search` (committed on submit), `filter[city]`, `filter[category]` |
+| merchant | `/orgs/[orgSlug]/redemptions` | page, cursor (the store stays in `tenant-context`) |
+| merchant | `/orgs/[orgSlug]/api-keys` | `?status=revoked\|all` — a view filter over the loaded keys (the counts need every key), so not an API filter and not part of the prefetch |
+
+Deliberately **not** URL state: the rewards grid/list layout (a per-device preference in the
+`ui-preferences` feature store), the merchant's store (`tenant-context` + cookie), open dialogs
+and confirmations, form drafts, the sidebar's impersonation user search (a shell widget on every
+page, not the page's state), and the guide's example tabs on the API-keys page. Pages with no
+list controls — the web wallet and activity pages, merchant rewards, team, locations, terminals,
+analytics and verification — have nothing to move until they gain search, filters or paging.
+
+A search box that commits on **submit** (the web catalog) keeps its unsubmitted text in
+`useSubmittedUrlDraft` (apps/web/lib/url-state): local, and reset whenever the URL's value changes.
+A submitted search is a discrete change, so it **pushes**.
+
+In-page selection (`/merchants/verification?organizationId=`, `/emails/templates?key=`,
+`?requestId=` on the review queues) uses the same `defineUrlState` / `useUrlState`: the
+selected item is derived from the URL on every render, never mirrored into `useState`.
+

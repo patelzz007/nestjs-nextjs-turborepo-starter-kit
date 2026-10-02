@@ -427,10 +427,16 @@ if (session.user.role === 'admin') { ... }
 To make the abstraction concrete across every layer this document covers, here's one feature (an orders list with filtering) built correctly, start to finish.
 
 ```tsx
+// lib/url-state/orders.ts — ONE declaration of the URL state, shared by server and client
+// (`@workspace/client/lib/url-state`, docs/list-queries.md §7). Each param falls back to its
+// default when missing or invalid, so a bad URL never throws.
+export const ORDERS_URL_STATE = defineUrlState({ status: optionalUrlParam(OrderStatusSchema) });
+export type OrderFilters = typeof ORDERS_URL_STATE.defaults;
+
 // app/orders/page.tsx — SMART: owns data fetching, URL state, transformation
-export default async function OrdersPage({ searchParams }: { searchParams: Record<string, string> }): Promise<JSX.Element> {
-  const filters = OrderFiltersSchema.parse(searchParams); // validated URL state
-  const orders = await getOrders(filters);                // data fetching
+export default async function OrdersPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }): Promise<JSX.Element> {
+  const filters = ORDERS_URL_STATE.parse(await searchParams); // validated URL state (Next 16: searchParams is a Promise)
+  const orders = await getOrders(filters);                     // data fetching
   const rows = orders.map(toOrderRow);                      // transformation
   return (
     <div>
@@ -450,12 +456,17 @@ function OrdersFilterBar({ filters, onChange }: OrdersFilterBarProps): JSX.Eleme
 }
 
 // _components/orders-filter-bar.client.tsx — the thin client boundary that
-// actually knows about Next.js navigation, kept as small as possible per
+// actually knows about the URL, kept as small as possible per
 // this document's "push use client down to the smallest leaf" rule
 'use client';
 function OrdersFilterBarClient(props: OrdersFilterBarProps): JSX.Element {
   const router = useRouter();
-  return <OrdersFilterBar {...props} onChange={(filters) => router.push(`?${new URLSearchParams(filters)}`)} />;
+  const pathname = usePathname();
+  // The rows are rendered by the server page here, so the server must re-run for the new URL:
+  // navigate with the router to the codec's canonical href (defaults omitted, history entry pushed).
+  // A table whose rows come from TanStack Query writes with `useUrlState` instead — a shallow
+  // History API update with no server round trip (docs/list-queries.md §7).
+  return <OrdersFilterBar {...props} onChange={(filters) => router.push(ORDERS_URL_STATE.href(pathname, filters), { scroll: false })} />;
 }
 ```
 

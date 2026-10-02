@@ -621,21 +621,22 @@ not worth it. The TUI sidebar is the intended "nice labels" surface, and it's al
 | `components/layout/dashboard-layout.tsx`          | framer-motion sidebar tween → CSS `transition-[width]`                                                                                                | framer-motion dropped from the app                                         |
 | `components/layout/mobile-menu-overlay.tsx`       | `AnimatePresence` → conditional render + `animate-in` CSS                                                                                             | framer-motion gone; the mobile `Sidebar` only mounts when opened           |
 | `components/docs/code-block.tsx`                  | shiki is a runtime `import()` (types stay static)                                                                                                     | ~300 KB shiki chunk leaves the docs bundle                                 |
-| `stores/sidebar-store.ts`                         | `skipHydration: true`; `DashboardLayout` calls `persist.rehydrate()` once after mount                                                                 | Fixes a hydration mismatch the shell's new SSR would otherwise cause       |
+| sidebar feature store                             | Persisted preferences restored after mount (`connectFeaturePersistence`), never during render                                                         | Fixes a hydration mismatch the shell's new SSR would otherwise cause       |
 
 ### ⚠️ The zustand gotcha (read before you touch the shell)
 
-The shell is now server-rendered. zustand's `persist` middleware rehydrates
-**synchronously from localStorage at store creation** on the client — sowithout `skipHydration`, the client's first render could differ from the SSR HTML (a
-persisted collapsed sidebar vs the default expanded one) and React would throw a
-hydration mismatch. Pattern to reuse:
+The shell is server-rendered. Restoring persisted state **while the store is created** would
+make the client's first render differ from the SSR HTML: a persisted collapsed sidebar against
+the default expanded one. React would then throw a hydration mismatch.
 
-```ts title="stores/sidebar-store.ts"
-persist(config, { name: KEY, skipHydration: true });
-// in a component that mounts on every panel page:
-useEffect(() => {
-	void useSidebarStore.persist.rehydrate();
-}, []);
+Feature stores avoid this by construction. The provider creates the store with the initial
+state, and `connectFeaturePersistence` restores the validated snapshot in an effect, after
+mount ([ADR 023](./adr/023-client-state-feature-stores.md)):
+
+```tsx title="packages/client/src/lib/features/sidebar/facade.tsx"
+<SidebarContextProvider
+	createStore={createStore}
+	onMount={(store) => connectFeaturePersistence(store, window.localStorage, sidebarPersistence(storageKey))}>
 ```
 
 ### 🚿 The SSR hydration checklist (every new shell component must pass this)
@@ -650,7 +651,7 @@ by the old spinner gate):
 | `navigator.onLine` in `useState`                   | Network pill mismatch              | Same pattern (init `true`)                                                |
 | `window.scrollY` in `useState`                     | ScrollToTop mismatch on reload     | Same pattern (init `false`)                                               |
 | next-themes `resolvedTheme` in render              | ThemeToggle Sun/Moon mismatch      | Mounted-gate: render an invisible placeholder until one frame after mount |
-| zustand `persist` sync rehydration                 | Sidebar collapsed state mismatch   | `skipHydration` + `rehydrate()` after mount (above)                       |
+| Persisted store state restored during render        | Sidebar collapsed state mismatch   | Restore after mount via `connectFeaturePersistence` (above)               |
 
 **Rule of thumb:** if a component's first render depends on `window`/`document`/
 `navigator`/localStorage/theme, its initial state must be the **same constant on

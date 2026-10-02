@@ -1,6 +1,5 @@
 import { OrgDashboardPageView } from "@/components/org/org-dashboard-page-view";
-import { OrgSlugBootstrap } from "@/components/org/org-slug-bootstrap";
-import { loadMerchantServerContext } from "@/lib/merchant-server-api";
+import { loadMerchantServerContext, loadOrganizationContext } from "@/lib/merchant-server-api";
 import { guardOrgPage } from "@/lib/org/org-page-guard";
 import { resolveOrganizationTenantFromUrlSegment } from "@/lib/org/resolve-slug";
 import type { OrganizationContextResponse } from "@workspace/shared";
@@ -21,22 +20,11 @@ export default async function OrgDashboardPage({ params }: OrgDashboardPageProps
 	const resolvedTenant = resolveOrganizationTenantFromUrlSegment(ctx.memberships, orgSlug);
 	const contextRouteKey = resolvedTenant?.slug ?? orgSlug;
 
-	let context: OrganizationContextResponse | null = null;
-	let contextError = false;
-
-	try {
-		const response = await ctx.server.organizations.context.query({ orgSlug: contextRouteKey });
-		context = response.data;
-	} catch {
-		contextError = true;
-	}
+	// Shared (per request) with the org layout, which loads the same context for the tenant-context seed.
+	const context: OrganizationContextResponse | null = (await loadOrganizationContext(contextRouteKey)) ?? null;
+	const contextError = context === null;
 
 	const displaySlug = context?.organization.slug ?? resolvedTenant?.slug ?? orgSlug;
 
-	return (
-		<>
-			<OrgSlugBootstrap orgSlug={displaySlug} />
-			<OrgDashboardPageView orgSlug={displaySlug} context={context} contextError={contextError} />
-		</>
-	);
+	return <OrgDashboardPageView orgSlug={displaySlug} context={context} contextError={contextError} />;
 }

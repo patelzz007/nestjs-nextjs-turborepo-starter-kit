@@ -1,6 +1,6 @@
 "use client";
 
-import { useMerchantOrg } from "@/lib/session/root-provider";
+import { useOrganizationSlug } from "@/lib/org/use-organization-slug";
 import { initialDataOption, stubApiMeta, successEnvelope } from "@workspace/client/lib/api/envelope";
 import { MERCHANT_ME_QUERY_OPTIONS } from "@/lib/session/me-query";
 import { resolveActiveOrganizationMembership, resolveMerchantCapabilities } from "@/lib/session/server-capabilities";
@@ -22,7 +22,7 @@ export interface MerchantCapabilitiesState {
  */
 export function useMerchantCapabilities(initialMemberships?: readonly OrganizationRewardMembershipResponse[]): MerchantCapabilitiesState {
 	const { api } = useAuth();
-	const { organizationSlug } = useMerchantOrg();
+	const organizationSlug = useOrganizationSlug();
 
 	const initialMeData = React.useMemo(
 		() => (initialMemberships !== undefined && initialMemberships.length > 0 ? successEnvelope([...initialMemberships], stubApiMeta()) : undefined),

@@ -9,7 +9,7 @@ export interface MerchantSessionProfile {
 	readonly isLoading: boolean;
 }
 
-/** Prefer live `/auth/me` over the persisted auth store (stale after impersonation). */
+/** Name + email for the shell from the live `/auth/me` query, with a loading flag for the first fetch. */
 export function useMerchantSessionProfile(): MerchantSessionProfile {
 	const { user, api } = useAuth();
 

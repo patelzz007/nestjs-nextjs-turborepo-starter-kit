@@ -10,7 +10,8 @@ import { TerminalList } from "@/components/terminals/terminal-list";
 import { TerminalPairingGuide } from "@/components/terminals/terminal-pairing-guide";
 import { TerminalSettingsCard } from "@/components/terminals/terminal-settings-card";
 import { clientEnv } from "@/lib/env/env.client";
-import { useActiveLocationFilter, useMerchantLocation } from "@/lib/org/location-context";
+import { useActiveLocationFilter, useMerchantLocation } from "@/features/tenant-context/facade";
+import { prefetchForLocation, type LocationScopedPrefetch } from "@/lib/org/location-prefetch";
 import { isPairingComplete, requiresRepairConfirmation, summarizeTerminals } from "@/lib/terminals/terminal-summary";
 import { initialDataOption, readPaginatedTotal, stubApiMeta, stubPaginatedMetaFromHydration, successEnvelope } from "@workspace/client/lib/api/envelope";
 import { useAuth } from "@workspace/client/lib/auth";
@@ -38,7 +39,8 @@ const REPAIR_DIALOG_LABELS = { ...SHOWCASE_ALERT_DIALOG_LABELS, confirm: "Issue 
 
 export interface TerminalsPageViewProps {
 	readonly orgSlug: string;
-	readonly initialTerminals?: readonly MerchantTerminalSummary[] | undefined;
+	/** Server-prefetched first page with the store filter it was fetched for. */
+	readonly initialTerminals?: LocationScopedPrefetch<readonly MerchantTerminalSummary[]> | undefined;
 	readonly initialSettings?: MerchantTerminalSettings | undefined;
 }
 
@@ -73,22 +75,23 @@ function TerminalsPageContent({ orgSlug, initialTerminals, initialSettings }: Te
 	const [terminalToRemove, setTerminalToRemove] = React.useState<MerchantTerminalSummary | null>(null);
 	const [removingTerminalId, setRemovingTerminalId] = React.useState<string | null>(null);
 
+	// Seed only with terminals the server fetched for this exact filter — never another store's under this key.
+	const prefetchedTerminals = prefetchForLocation(initialTerminals, locationId);
 	const initialTerminalsData = React.useMemo(
 		() =>
-			initialTerminals !== undefined
+			prefetchedTerminals !== undefined
 				? successEnvelope(
-						[...initialTerminals],
-						stubPaginatedMetaFromHydration(MERCHANT_TERMINALS_PAGE_SIZE, initialTerminals.length, initialTerminals.length >= MERCHANT_TERMINALS_PAGE_SIZE),
+						[...prefetchedTerminals],
+						stubPaginatedMetaFromHydration(MERCHANT_TERMINALS_PAGE_SIZE, prefetchedTerminals.length, prefetchedTerminals.length >= MERCHANT_TERMINALS_PAGE_SIZE),
 					)
 				: undefined,
-		[initialTerminals],
+		[prefetchedTerminals],
 	);
 	const initialSettingsData = React.useMemo(() => (initialSettings !== undefined ? successEnvelope(initialSettings, stubApiMeta()) : undefined), [initialSettings]);
 
 	const terminalsQuery = api.organizations.terminals.list.useQuery(
 		{ orgSlug, page: 1, limit: MERCHANT_TERMINALS_PAGE_SIZE, locationId },
-		// SSR data is for the unfiltered list only.
-		initialDataOption(locationId === undefined ? initialTerminalsData : undefined),
+		initialDataOption(initialTerminalsData),
 	);
 	const terminals: readonly MerchantTerminalSummary[] = terminalsQuery.data?.data ?? [];
 	const totalTerminals: number = readPaginatedTotal(terminalsQuery.data?.meta, terminals.length);

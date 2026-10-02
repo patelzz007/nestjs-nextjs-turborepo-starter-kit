@@ -2,7 +2,7 @@
 
 import { useCanAccessWebPath } from "@/components/auth/route-access-guard";
 import { accessiblePaletteItems, renderWebPaletteIcon } from "@/lib/palette/nav-items";
-import { useWebCommandPaletteStore } from "@/stores/command-palette-store";
+import { useCommandPaletteCommands, useCommandPalettePinnedUrls, useCommandPaletteRecentSearches } from "@workspace/client/lib/features/command-palette/facade";
 import { AppCommandPalette, type AppCommandPaletteQuickAction } from "@workspace/ui/components/navigation/app-command-palette";
 import { Gift, SunMoon } from "lucide-react";
 import { useTheme } from "next-themes";
@@ -22,10 +22,9 @@ export function CommandPalette({ open: externalOpen, setOpen: externalSetOpen }:
 	// Same route table as the guard and the sidebar: never offer a page the session cannot open.
 	const searchableItems = React.useMemo(() => accessiblePaletteItems(canAccessPath), [canAccessPath]);
 
-	const recentSearches = useWebCommandPaletteStore((state) => state.recentSearches);
-	const pinnedUrls = useWebCommandPaletteStore((state) => state.pinnedUrls);
-	const addRecent = useWebCommandPaletteStore((state) => state.addRecentSearch);
-	const togglePinned = useWebCommandPaletteStore((state) => state.togglePinnedUrl);
+	const recentSearches = useCommandPaletteRecentSearches();
+	const pinnedUrls = useCommandPalettePinnedUrls();
+	const { recordRecentSearch, togglePin } = useCommandPaletteCommands();
 
 	const closePalette = React.useCallback((): void => {
 		externalSetOpen?.(false);
@@ -82,8 +81,8 @@ export function CommandPalette({ open: externalOpen, setOpen: externalSetOpen }:
 			quickActions={quickActions}
 			recentSearches={recentSearches}
 			pinnedUrls={pinnedUrls}
-			onAddRecent={addRecent}
-			onTogglePinned={togglePinned}
+			onAddRecent={recordRecentSearch}
+			onTogglePinned={togglePin}
 			onNavigate={handleNavigate}
 			renderIcon={renderWebPaletteIcon}
 		/>

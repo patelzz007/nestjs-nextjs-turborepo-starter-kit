@@ -143,6 +143,16 @@ function crudRoutes(list: string): CrudRoutes {
 /** Query parameter of the sales analytics period preset (`/analytics/sales?weeks=8`). */
 export const SALES_PERIOD_WEEKS_PARAM = "weeks";
 
+// In-page selection params (lib/url-state declares how each is parsed).
+/** The merchant selected in the KYB verification queue (`/merchants/verification?organizationId=`). */
+export const MERCHANT_VERIFICATION_ORGANIZATION_PARAM = "organizationId";
+/** The template selected in the template browser (`/emails/templates?key=`). */
+export const EMAIL_TEMPLATE_KEY_PARAM = "key";
+/** The request selected in a review queue (MFA recovery, store location requests). */
+export const REVIEW_REQUEST_PARAM = "requestId";
+/** The active tab of the geography browser (`/geography?tab=states`). */
+export const GEOGRAPHY_TAB_PARAM = "tab";
+
 const ANALYTICS = "/analytics";
 const ANALYTICS_SALES = `${ANALYTICS}/sales`;
 const USERS = "/users";
@@ -177,7 +187,7 @@ export const ROUTES: AdminRoutes = {
 		list: MERCHANTS,
 		invites: `${MERCHANTS}/invites`,
 		verification: MERCHANT_VERIFICATION,
-		verificationFor: (organizationId: string): string => withQuery(MERCHANT_VERIFICATION, "organizationId", organizationId),
+		verificationFor: (organizationId: string): string => withQuery(MERCHANT_VERIFICATION, MERCHANT_VERIFICATION_ORGANIZATION_PARAM, organizationId),
 		storeRequests: `${MERCHANTS}/store-requests`,
 	},
 	rewards: {
@@ -187,7 +197,7 @@ export const ROUTES: AdminRoutes = {
 	emails: {
 		index: EMAILS,
 		templates: EMAIL_TEMPLATES,
-		template: (key: string): string => withQuery(EMAIL_TEMPLATES, "key", key),
+		template: (key: string): string => withQuery(EMAIL_TEMPLATES, EMAIL_TEMPLATE_KEY_PARAM, key),
 		log: `${EMAILS}/log`,
 	},
 	geography: {

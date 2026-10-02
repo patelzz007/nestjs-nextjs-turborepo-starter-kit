@@ -4,15 +4,19 @@ import { invalidateSessionAuth } from "@workspace/client/lib/auth/session/invali
 import { createDataTableLabels } from "@/lib/data-table/labels";
 import { buildReadOnlyTableCheckbox } from "@/lib/data-table/capabilities";
 import { DataTableMobileCard } from "@/lib/data-table/mobile-card";
-import { initialDataOption, readPaginatedNextCursor, readPaginatedTotal, stubPaginatedMeta, successEnvelope } from "@workspace/client/lib/api/envelope";
-import { useDebouncedValue } from "@/hooks/use-debounced-value";
-import { useManualHybridPagination } from "@/lib/data-table/use-manual-cursor-pagination";
+import { initialDataOption, readPaginatedNextCursor, readPaginatedTotal } from "@workspace/client/lib/api/envelope";
+import { prefetchedDataFor, type PrefetchedQuery } from "@workspace/client/lib/url-state/prefetched-query";
+import { useTableTextDraft } from "@/lib/data-table/use-table-text-draft";
+import { useUrlListPaging } from "@/lib/data-table/use-url-list-paging";
+import { MERCHANTS_PAGE_SIZE_OPTIONS, MERCHANTS_TABLE_URL_STATE, toMerchantsListQuery } from "@/lib/url-state/merchants";
 import { DataTableSearchToolbar } from "@/components/common/data-table-search-toolbar";
 import { useAuth } from "@workspace/client/lib/auth";
 import { useAuthorization } from "@workspace/client/lib/auth/can";
-import type { MerchantOrgResponse } from "@workspace/shared";
+import type { Envelope, MerchantOrgResponse } from "@workspace/shared";
 import { adminMerchantListQuery, KybStatusSchema, MerchantOrgStatusSchema, PERMISSION } from "@workspace/shared";
-import { eqFilter, parseFilterOption, tableStateToListQuery } from "@workspace/client/lib/api/list-query";
+import { ALL_FILTER_OPTION, parseFilterOption, toListSearch } from "@workspace/client/lib/api/list-query";
+import { LIST_FIRST_PAGE } from "@workspace/client/lib/url-state/list-url-state";
+import { useUrlState } from "@workspace/client/lib/url-state/use-url-state";
 import { useCanStartImpersonation } from "@/lib/session/super-admin";
 import { Badge } from "@workspace/ui/components/feedback/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
@@ -26,76 +30,52 @@ import * as React from "react";
 import { ROUTES } from "@/lib/routes";
 
 export interface MerchantsAllTableProps {
-	readonly initialMerchants?: readonly MerchantOrgResponse[] | undefined;
-	readonly initialTotal?: number | undefined;
-	readonly initialTotalPages?: number | undefined;
-	readonly initialHasNext?: boolean | undefined;
+	/** The page the server prefetched for the URL it rendered. */
+	readonly initialPage?: PrefetchedQuery<Envelope<MerchantOrgResponse[]>> | undefined;
 }
 
-const PAGE_SIZE_OPTIONS: readonly number[] = [10, 20, 50, 100];
-
-export default function MerchantsAllTable({ initialMerchants, initialTotal, initialTotalPages, initialHasNext }: MerchantsAllTableProps): React.JSX.Element {
+/**
+ * `/merchants` table. Search, KYB / org status filters and page live in the
+ * URL (lib/url-state/merchants); the only local state is the search draft.
+ */
+export default function MerchantsAllTable({ initialPage }: MerchantsAllTableProps): React.JSX.Element {
 	const { api } = useAuth();
 	const { can } = useAuthorization();
 	const queryClient = useQueryClient();
 	const router = useRouter();
-	const [search, setSearch] = React.useState("");
-	const [kybStatusFilter, setKybStatusFilter] = React.useState<string>("all");
-	const [statusFilter, setStatusFilter] = React.useState<string>("all");
-	const debouncedSearch = useDebouncedValue(search, 300);
+	const [urlState, updateUrlState] = useUrlState(MERCHANTS_TABLE_URL_STATE);
+	const isFiltered = urlState.search !== undefined || urlState.kybStatus !== undefined || urlState.status !== undefined;
 
-	const trimmedSearch = debouncedSearch.trim();
-	const parsedKybStatus = parseFilterOption(kybStatusFilter, KybStatusSchema);
-	const parsedOrgStatus = parseFilterOption(statusFilter, MerchantOrgStatusSchema);
-	const isFiltered = trimmedSearch.length > 0 || kybStatusFilter !== "all" || statusFilter !== "all";
+	const commitSearch = React.useCallback(
+		(value: string): void => {
+			updateUrlState({ search: toListSearch(value), page: LIST_FIRST_PAGE, cursor: undefined }, { history: "replace" });
+		},
+		[updateUrlState],
+	);
+	const [searchDraft, setSearchDraft] = useTableTextDraft(urlState.search, commitSearch);
 
 	const handleClearFilters = React.useCallback((): void => {
-		setSearch("");
-		setKybStatusFilter("all");
-		setStatusFilter("all");
-	}, []);
+		updateUrlState({ search: undefined, kybStatus: undefined, status: undefined, page: LIST_FIRST_PAGE, cursor: undefined });
+	}, [updateUrlState]);
 
-	const {
-		pageIndex,
-		pageSize,
-		listQuery,
-		bindListMeta,
-		pagination: basePagination,
-	} = useManualHybridPagination<MerchantOrgResponse>(20, [debouncedSearch, kybStatusFilter, statusFilter], (merchant) => merchant.id, {
+	const stateKey: string = MERCHANTS_TABLE_URL_STATE.serialize(urlState);
+	const merchantsQuery = api.rewardsAdmin.listOrganizations.useQuery(toMerchantsListQuery(urlState), {
+		placeholderData: keepPreviousData,
+		...initialDataOption(prefetchedDataFor(initialPage, stateKey)),
+	});
+
+	const rows: readonly MerchantOrgResponse[] = merchantsQuery.data?.data ?? [];
+	const { pagination } = useUrlListPaging({
+		state: urlState,
+		update: updateUrlState,
+		sortSpec: adminMerchantListQuery,
+		totalCount: readPaginatedTotal(merchantsQuery.data?.meta),
+		nextCursor: readPaginatedNextCursor(merchantsQuery.data?.meta),
+		resetKey: MERCHANTS_TABLE_URL_STATE.serialize({ ...urlState, page: LIST_FIRST_PAGE, cursor: undefined }),
+		getRowId: getMerchantRowId,
 		onClearFilters: handleClearFilters,
 		isFiltered,
 	});
-
-	const initialQueryData = React.useMemo(
-		() =>
-			initialMerchants !== undefined
-				? successEnvelope([...initialMerchants], stubPaginatedMeta(20, initialTotal ?? initialMerchants.length, 1, initialTotalPages ?? 1, initialHasNext ?? false))
-				: undefined,
-		[initialMerchants, initialHasNext, initialTotal, initialTotalPages],
-	);
-
-	const merchantsQuery = api.rewardsAdmin.listOrganizations.useQuery(
-		tableStateToListQuery(adminMerchantListQuery, {
-			pagination: listQuery,
-			sorting: [],
-			search: trimmedSearch,
-			filter: { kybStatus: eqFilter(parsedKybStatus), status: eqFilter(parsedOrgStatus) },
-		}),
-		{
-			placeholderData: keepPreviousData,
-			...initialDataOption(
-				pageIndex === 0 && pageSize === 20 && trimmedSearch.length === 0 && kybStatusFilter === "all" && statusFilter === "all" ? initialQueryData : undefined,
-			),
-		},
-	);
-
-	const rows: readonly MerchantOrgResponse[] = merchantsQuery.data?.data ?? [];
-	const totalCount = readPaginatedTotal(merchantsQuery.data?.meta, initialTotal ?? initialMerchants?.length ?? 0);
-	const pagination = React.useMemo(() => ({ ...basePagination, totalCount }), [basePagination, totalCount]);
-
-	React.useEffect((): void => {
-		bindListMeta(readPaginatedNextCursor(merchantsQuery.data?.meta) ?? null);
-	}, [bindListMeta, merchantsQuery.data?.meta]);
 	const tableError: string | null = merchantsQuery.isError ? "Could not load merchants. Clear search and try again." : null;
 
 	const handleReviewKyb = React.useCallback(
@@ -213,22 +193,24 @@ export default function MerchantsAllTable({ initialMerchants, initialTotal, init
 		[],
 	);
 
-	const handleManualColumnFilterChange = React.useCallback((filterKey: string, value: string | null): void => {
-		const next = value === null || value === "all" ? "all" : value;
-		if (filterKey === "kybStatus") {
-			setKybStatusFilter(next);
-		}
-		if (filterKey === "status") {
-			setStatusFilter(next);
-		}
-	}, []);
+	const handleManualColumnFilterChange = React.useCallback(
+		(filterKey: string, value: string | null): void => {
+			if (filterKey === "kybStatus") {
+				updateUrlState({ kybStatus: parseFilterOption(value ?? "", KybStatusSchema), page: LIST_FIRST_PAGE, cursor: undefined });
+			}
+			if (filterKey === "status") {
+				updateUrlState({ status: parseFilterOption(value ?? "", MerchantOrgStatusSchema), page: LIST_FIRST_PAGE, cursor: undefined });
+			}
+		},
+		[updateUrlState],
+	);
 
 	const manualColumnFilters = React.useMemo(
 		(): Readonly<Record<string, string>> => ({
-			kybStatus: kybStatusFilter,
-			status: statusFilter,
+			kybStatus: urlState.kybStatus ?? ALL_FILTER_OPTION,
+			status: urlState.status ?? ALL_FILTER_OPTION,
 		}),
-		[kybStatusFilter, statusFilter],
+		[urlState.kybStatus, urlState.status],
 	);
 
 	const tableFilters = React.useMemo(
@@ -257,13 +239,9 @@ export default function MerchantsAllTable({ initialMerchants, initialTotal, init
 
 	const checkbox = React.useMemo(() => buildReadOnlyTableCheckbox("merchants.csv", ["businessName", "city", "category", "contactEmail", "kybStatus", "status"]), []);
 
-	const handleSearchChange = React.useCallback((value: string): void => {
-		setSearch(value);
-	}, []);
-
 	const toolbarContent = React.useMemo(
-		() => <DataTableSearchToolbar value={search} onChange={handleSearchChange} placeholder={tableLabels.searchPlaceholder} ariaLabel={tableLabels.searchAriaLabel} />,
-		[handleSearchChange, search, tableLabels.searchAriaLabel, tableLabels.searchPlaceholder],
+		() => <DataTableSearchToolbar value={searchDraft} onChange={setSearchDraft} placeholder={tableLabels.searchPlaceholder} ariaLabel={tableLabels.searchAriaLabel} />,
+		[searchDraft, setSearchDraft, tableLabels.searchAriaLabel, tableLabels.searchPlaceholder],
 	);
 
 	return (
@@ -290,7 +268,7 @@ export default function MerchantsAllTable({ initialMerchants, initialTotal, init
 						onManualColumnFilterChange={handleManualColumnFilterChange}
 						mobileCardRender={mobileCardRender}
 						pagination={pagination}
-						pageSizeOptions={PAGE_SIZE_OPTIONS}
+						pageSizeOptions={MERCHANTS_PAGE_SIZE_OPTIONS}
 						error={tableError}
 						isLoading={merchantsQuery.isLoading}
 						isRefetching={merchantsQuery.isFetching && !merchantsQuery.isLoading ? true : false}
@@ -307,4 +285,8 @@ export default function MerchantsAllTable({ initialMerchants, initialTotal, init
 			</Card>
 		</div>
 	);
+}
+
+function getMerchantRowId(merchant: MerchantOrgResponse): string {
+	return merchant.id;
 }

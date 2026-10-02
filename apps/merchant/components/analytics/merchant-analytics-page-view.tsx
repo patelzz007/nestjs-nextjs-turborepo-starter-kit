@@ -4,7 +4,8 @@ import { MerchantCapabilityGate } from "@/components/access/merchant-capability-
 import { MerchantSalesSection } from "@/components/analytics/merchant-sales-section";
 import { MerchantLocationScopeBanner } from "@/components/layout/merchant-location-scope-banner";
 import { initialDataOption, stubApiMeta, successEnvelope } from "@workspace/client/lib/api/envelope";
-import { useActiveLocationFilter } from "@/lib/org/location-context";
+import { useActiveLocationFilter } from "@/features/tenant-context/facade";
+import { prefetchForLocation, type LocationScopedPrefetch } from "@/lib/org/location-prefetch";
 import { orgRoutes } from "@/lib/routes";
 import { useAuth } from "@workspace/client/lib/auth";
 import { useAuthorization } from "@workspace/client/lib/auth/can";
@@ -53,7 +54,8 @@ function formatMetricValue(metric: AnalyticsMetric, suffix?: string): string {
 
 export interface MerchantAnalyticsPageViewProps {
 	readonly orgSlug: string;
-	readonly initialAnalytics?: MerchantAnalyticsResponse | undefined;
+	/** Server-prefetched analytics with the store filter they were fetched for. */
+	readonly initialAnalytics?: LocationScopedPrefetch<MerchantAnalyticsResponse> | undefined;
 }
 
 /** Analytics route — requires `merchant:view_analytics` (analytics endpoint); the query mounts only when allowed. */
@@ -72,16 +74,14 @@ function MerchantAnalyticsPageViewContent({ orgSlug, initialAnalytics }: Merchan
 	// The empty sales state links to API keys only for members who may create one (POST /orgs/:orgSlug/api-keys).
 	const apiKeysHref = can(MERCHANT_CAPABILITY.manageApiKeys) ? orgRoutes(orgSlug).apiKeys : undefined;
 
-	const initialQueryData = React.useMemo(() => (initialAnalytics !== undefined ? successEnvelope(initialAnalytics, stubApiMeta()) : undefined), [initialAnalytics]);
+	// Seed only with data the server fetched for this exact filter — never another store's under this key.
+	const prefetchedAnalytics = prefetchForLocation(initialAnalytics, locationId);
+	const initialQueryData = React.useMemo(() => (prefetchedAnalytics !== undefined ? successEnvelope(prefetchedAnalytics, stubApiMeta()) : undefined), [prefetchedAnalytics]);
 
-	const analyticsQuery = api.organizations.analytics.useQuery(
-		{ orgSlug, locationId },
-		// SSR data is for the unfiltered view only.
-		initialDataOption(locationId === undefined ? initialQueryData : undefined),
-	);
+	const analyticsQuery = api.organizations.analytics.useQuery({ orgSlug, locationId }, initialDataOption(initialQueryData));
 
 	const analytics = analyticsQuery.data?.data;
-	const isLoading = analyticsQuery.isLoading && initialAnalytics === undefined;
+	const isLoading = analyticsQuery.isLoading;
 
 	const chartData = React.useMemo(
 		() =>

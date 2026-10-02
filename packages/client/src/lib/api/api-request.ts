@@ -30,7 +30,7 @@ import {
 import { z, type ZodType } from "zod";
 
 import { API_URL_PREFIX } from "./config";
-import { ApiResponseContractError, parseResponseContract } from "./response-contract";
+import { ApiResponseContractError, parseResponseContract, type ResponseContractSource } from "./response-contract";
 import { resolveRequest, eachRouterEntry, isRouterSubtree, type MutationDef, type ProcedureDef, type QueryDef, type RouterTree, type RouterTreeValue } from "./endpoints";
 
 // ── Auth callbacks & client config ───────────────────────────────────────────
@@ -42,8 +42,13 @@ export type HttpMethod = z.output<typeof HttpMethodSchema>;
 /** Callback invoked when an API request fails with 401 Unauthorized. */
 export type OnUnauthorized = () => void | Promise<void>;
 
-/** Called on 401 to silently refresh the session; resolves `true` when retry should proceed. */
-export type OnRefresh = () => Promise<boolean>;
+/**
+ * Called on 401 to silently refresh the session. Resolves how the refresh
+ * ended: `ok` retries the request, `expired` ends the session
+ * (`onUnauthorized`), `transient` fails only this request with a
+ * {@link SessionRefreshUnavailableError} — an unreachable API is not a dead session.
+ */
+export type OnRefresh = () => Promise<RefreshResult>;
 
 /** Which isolated cookie set the client uses. */
 export type ApiClientType = "web" | "admin" | "merchant";
@@ -109,26 +114,41 @@ export type RefreshResult = z.output<typeof RefreshResultSchema>;
 
 export type RefreshCall = () => Promise<RefreshResult>;
 
-export function createRefreshCooldown(refresh: RefreshCall, cooldownMs = 30_000): OnRefresh {
+/** After a transient refresh failure, further refreshes are skipped for this long (mirrors the proxy's fall-through). */
+export const REFRESH_TRANSIENT_COOLDOWN_MS = 30_000;
+
+/**
+ * Wraps a refresh so a dead API is not re-hit on every 401: inside the
+ * cooldown that follows a transient failure, the call resolves `"transient"`
+ * without touching the API. An expired session or a success re-arms nothing.
+ * Keeps how the refresh ended, so callers can tell a dead session from an
+ * unreachable API.
+ */
+export function createRefreshCooldown(refresh: RefreshCall, cooldownMs = REFRESH_TRANSIENT_COOLDOWN_MS): RefreshCall {
 	let lastTransientFailureAt: number | null = null;
 
-	return async (): Promise<boolean> => {
+	return async (): Promise<RefreshResult> => {
 		if (lastTransientFailureAt !== null && Date.now() - lastTransientFailureAt < cooldownMs) {
-			return false;
+			return "transient";
 		}
 
 		const result = await refresh();
-		if (result === "transient") {
-			lastTransientFailureAt = Date.now();
-			return false;
-		}
-		if (result === "expired") {
-			lastTransientFailureAt = null;
-			return false;
-		}
-		lastTransientFailureAt = null;
-		return true;
+		lastTransientFailureAt = result === "transient" ? Date.now() : null;
+		return result;
 	};
+}
+
+/**
+ * A request answered 401 and the silent refresh could not run right now (the
+ * API was unreachable, answered 5xx, or the refresh is in its cooldown). The
+ * session may well be alive, so it is NOT ended: only this request fails, and
+ * the next one tries again. The failure keeps the 401 it arrived with.
+ */
+export class SessionRefreshUnavailableError extends Error {
+	public constructor() {
+		super("The session could not be refreshed right now. Please try again.");
+		this.name = "SessionRefreshUnavailableError";
+	}
 }
 
 export { ApiErrorSchema, type ApiErrorBody };
@@ -301,7 +321,21 @@ function extractErrorMessage(error: Error | string, status: number): string {
 
 const SESSION_DEAD_ERROR_CODES: readonly string[] = ["TOKEN_VERSION_MISMATCH", "REFRESH_TOKEN_REVOKED", "TOKEN_THEFT_DETECTED"];
 
-function isDeadSessionError(error: ApiErrorPayload): boolean {
+/**
+ * The `status` of an {@link ApiFailure} that never got an HTTP answer
+ * (network error, CORS, aborted request).
+ */
+export const NO_HTTP_RESPONSE_STATUS = 0;
+
+/** The `error` of an {@link ApiFailure} whose request was aborted (its `AbortSignal` fired). */
+export const REQUEST_ABORTED_ERROR = "aborted";
+
+/**
+ * A 401 whose code says the whole session was revoked (password change,
+ * revocation, token theft) — refreshing cannot bring it back, so neither the
+ * 401 pipeline nor the session check tries.
+ */
+export function isDeadSessionError(error: ApiErrorPayload): boolean {
 	if (error instanceof ApiError && error.error !== undefined) {
 		return SESSION_DEAD_ERROR_CODES.includes(error.error);
 	}
@@ -371,6 +405,23 @@ async function loadVersionManifest(baseUrl: string): Promise<ApiVersionManifest 
 	}
 }
 
+/**
+ * A 2xx body as JSON. A body that is not JSON at all breaks the contract just
+ * like a mismatching one, so it becomes the same typed
+ * {@link ApiResponseContractError} — never a transport failure (status 0),
+ * which callers read as "the API is unreachable".
+ */
+function parseSuccessBody(text: string, source: ResponseContractSource): DataValue {
+	if (text.length === 0) {
+		return null;
+	}
+	try {
+		return z.custom<DataValue>().parse(JSON.parse(text));
+	} catch {
+		throw new ApiResponseContractError(source, [{ path: "root", message: "Response body is not valid JSON" }]);
+	}
+}
+
 function buildHeaders(baseHeaders: Record<string, string> | undefined): Record<string, string> {
 	return {
 		Accept: "application/json",
@@ -420,10 +471,11 @@ async function executeHttp<T, Body = undefined>(
 				return { ok: false, status: res.status, data: null, error: errorData };
 			}
 
+			const source: ResponseContractSource = { method, url: targetUrl, status: res.status };
 			const text: string = isJson ? await res.text() : "";
-			const raw: DataValue = z.custom<DataValue>().parse(text.length === 0 ? null : JSON.parse(text));
+			const raw: DataValue = parseSuccessBody(text, source);
 			// The one response-validation point of the browser transport (ADR 022).
-			const data: T = parseResponseContract(responseSchema, raw, { method, url: targetUrl, status: res.status });
+			const data: T = parseResponseContract(responseSchema, raw, source);
 
 			return { ok: true, status: res.status, data };
 		} catch (error) {
@@ -431,22 +483,26 @@ async function executeHttp<T, Body = undefined>(
 				return { ok: false, status: error.status, data: null, error };
 			}
 			if (error instanceof DOMException && error.name === "AbortError") {
-				return { ok: false, status: 0, data: null, error: "aborted" };
+				return { ok: false, status: NO_HTTP_RESPONSE_STATUS, data: null, error: REQUEST_ABORTED_ERROR };
 			}
 			if (error instanceof Error || typeof error === "string") {
-				return { ok: false, status: 0, data: null, error };
+				return { ok: false, status: NO_HTTP_RESPONSE_STATUS, data: null, error };
 			}
-			return { ok: false, status: 0, data: null, error: new Error(String(error)) };
+			return { ok: false, status: NO_HTTP_RESPONSE_STATUS, data: null, error: new Error(String(error)) };
 		}
 	};
 
 	let result: ApiResponse<T> = await execute(url);
 
 	if (!result.ok && result.status === 401 && onRefresh && !isDeadSessionError(result.error)) {
-		const refreshed: boolean = await onRefresh();
-		if (refreshed) {
+		const refreshed: RefreshResult = await onRefresh();
+		if (refreshed === "ok") {
 			result = await execute(url);
+		} else if (refreshed === "transient") {
+			// No verdict on the session: fail this request only, never the session.
+			return { ok: false, status: result.status, data: null, error: new SessionRefreshUnavailableError() };
 		}
+		// `expired`: the session is dead — fall through to `onUnauthorized`.
 	}
 
 	if (!result.ok && result.status === 401 && onUnauthorized) {

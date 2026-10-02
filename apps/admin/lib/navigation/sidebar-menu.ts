@@ -10,9 +10,15 @@ export type { CompiledSidebarMenuData, CompiledSidebarMenuItem, SidebarMenuData,
 
 /**
  * Validated admin sidebar menu JSON with per-page capability requirements
- * applied (`ADMIN_MENU_AUTHORIZATION`) — loaded into `useSidebarStore` at init.
+ * applied (`ADMIN_MENU_AUTHORIZATION`). Static per app — never sidebar store state.
  */
 export const SIDEBAR_MENU_DATA: SidebarMenuData = applyMenuAuthorization(SidebarMenuDataSchema.parse(sidebarMenuJson), ADMIN_MENU_AUTHORIZATION);
 
 /** Compiled menu snapshot for non-store consumers (tests, palette flattening). */
 export const SIDEBAR_MENU: CompiledSidebarMenuData = compileMenu(SIDEBAR_MENU_DATA);
+
+/** localStorage key of the admin sidebar preferences (rail, section order, expanded branches). */
+export const ADMIN_SIDEBAR_STORAGE_KEY = "admin-sidebar-state";
+
+/** Redux DevTools instance name of the admin sidebar store. */
+export const ADMIN_SIDEBAR_DEVTOOLS_NAME = "Sidebar · admin";

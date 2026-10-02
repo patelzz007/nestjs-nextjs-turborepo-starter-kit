@@ -11,7 +11,7 @@ import {
 
 import { ICON_MAP } from "@/lib/navigation/menu-icons";
 import { isPathWithin } from "@/lib/routes";
-import { useSidebarStore } from "@/stores/sidebar-store";
+import { SIDEBAR_MENU } from "@/lib/navigation/sidebar-menu";
 
 function resolveIcon(iconName: string | undefined): LucideIcon {
 	if (iconName !== undefined) {
@@ -86,7 +86,7 @@ function closestMenuAncestorUrl(urls: readonly string[], pathname: string): stri
  * that have children.
  */
 export function resolveAdminTrail(pathname: string): readonly BreadcrumbItem[] {
-	const menu = useSidebarStore.getState().menu;
+	const menu = SIDEBAR_MENU;
 	const normalizedPath = normalizePath(pathname);
 	const trail = resolveMenuTrail(menu, normalizedPath);
 	const urls = menuUrls(menu);

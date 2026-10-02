@@ -1,5 +1,4 @@
 "use client";
-import { z } from "zod";
 
 import { createDataTableLabels } from "@/lib/data-table/labels";
 import { buildResourceTableCheckbox } from "@/lib/data-table/capabilities";
@@ -7,31 +6,33 @@ import { fetchAllListPages, resolveManualBulkSelectionRows } from "@/lib/data-ta
 import { DisabledActionButton } from "@/components/common/disabled-action-button";
 import { useResourceDeleteDialog } from "@/components/common/resource-delete-dialog";
 import { DataTableMobileCard } from "@/lib/data-table/mobile-card";
-import { initialDataOption, readPaginatedHasNext, readPaginatedNextCursor, readPaginatedTotal, stubPaginatedMeta, successEnvelope } from "@workspace/client/lib/api/envelope";
-import { useDebouncedValue } from "@/hooks/use-debounced-value";
-import { useManualHybridPagination } from "@/lib/data-table/use-manual-cursor-pagination";
+import { initialDataOption, readPaginatedHasNext, readPaginatedNextCursor, readPaginatedTotal } from "@workspace/client/lib/api/envelope";
+import { prefetchedDataFor, type PrefetchedQuery } from "@workspace/client/lib/url-state/prefetched-query";
+import { useTableTextDraft } from "@/lib/data-table/use-table-text-draft";
+import { useUrlListPaging } from "@/lib/data-table/use-url-list-paging";
+import { PRODUCTS_PAGE_SIZE_OPTIONS, PRODUCTS_TABLE_URL_STATE, toProductsListQuery } from "@/lib/url-state/products";
 import { DataTableSearchToolbar } from "@/components/common/data-table-search-toolbar";
 import { useAuth } from "@workspace/client/lib/auth";
 import { useAuthorization } from "@workspace/client/lib/auth/can";
-import { eqFilter, parseBooleanFilterOption, tableStateToListQuery } from "@workspace/client/lib/api/list-query";
-import { PERMISSION, productListQuery, type Product } from "@workspace/shared";
+import { ALL_FILTER_OPTION, parseBooleanFilterOption, toListSearch } from "@workspace/client/lib/api/list-query";
+import { LIST_FIRST_PAGE } from "@workspace/client/lib/url-state/list-url-state";
+import { useUrlState } from "@workspace/client/lib/url-state/use-url-state";
+import { PERMISSION, productListQuery, type Envelope, type Product } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/feedback/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
 import { DataTable, type Action, type DataTableFeatures, type Filter } from "@workspace/ui/components/display/data-table";
 import { buttonVariants } from "@workspace/ui/components/form/button";
 import { Input } from "@workspace/ui/components/form/input";
-import type { ColumnDef, SortingState } from "@tanstack/react-table";
+import type { ColumnDef } from "@tanstack/react-table";
 import { Eye, Pencil, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 import { keepPreviousData, useQueryClient } from "@tanstack/react-query";
 import { toastMessage } from "@workspace/ui/components/feedback/toast";
 
 import type { DataTableBulkSelectionContext } from "@workspace/ui/lib/data-table/checkbox";
 import { ROUTES } from "@/lib/routes";
-
-const PAGE_SIZE_OPTIONS: readonly number[] = [10, 20, 50, 100];
 
 const labels = createDataTableLabels({
 	actionsMenuTitle: "Product actions",
@@ -41,13 +42,16 @@ const labels = createDataTableLabels({
 });
 
 export interface ProductViewProps {
-	readonly initialRows?: readonly Product[] | undefined;
-	readonly initialTotal?: number | undefined;
-	readonly initialTotalPages?: number | undefined;
-	readonly initialHasNext?: boolean | undefined;
+	/** The page the server prefetched for the URL it rendered. */
+	readonly initialPage?: PrefetchedQuery<Envelope<Product[]>> | undefined;
 }
 
-export default function ProductView({ initialRows, initialTotal, initialTotalPages, initialHasNext }: ProductViewProps): React.JSX.Element {
+/**
+ * `/catalog/products` table. Search, the active / featured selects, the
+ * category-id and brand text filters, sort and page all live in the URL
+ * (lib/url-state/products); the text inputs keep only their in-progress drafts.
+ */
+export default function ProductView({ initialPage }: ProductViewProps): React.JSX.Element {
 	const { api } = useAuth();
 	// Each control mirrors its API route: GET /:id (READ), POST (CREATE), PATCH /:id (UPDATE), DELETE /:id + bulk-delete (DELETE).
 	const { can } = useAuthorization();
@@ -58,101 +62,74 @@ export default function ProductView({ initialRows, initialTotal, initialTotalPag
 	const { requestDelete, resourceDeleteDialog } = useResourceDeleteDialog();
 	const router = useRouter();
 	const queryClient = useQueryClient();
-	const [search, setSearch] = useState("");
-	const debouncedSearch = useDebouncedValue(search, 300);
-	const [sorting, setSorting] = useState<SortingState>([]);
-	const [isActiveFilter, setIsActiveFilter] = useState<string>("all");
-	const [isFeaturedFilter, setIsFeaturedFilter] = useState<string>("all");
-	const [categoryIdFilter, setCategoryIdFilter] = useState("");
-	const [brandFilter, setBrandFilter] = useState("");
-	const trimmedSearch = debouncedSearch.trim();
-	const parsedIsActive = parseBooleanFilterOption(isActiveFilter);
-	const parsedIsFeatured = parseBooleanFilterOption(isFeaturedFilter);
-	const debouncedCategoryIdFilter = useDebouncedValue(categoryIdFilter, 300);
-	const parsedCategoryId = debouncedCategoryIdFilter.trim().length === 0 ? undefined : z.uuid().safeParse(debouncedCategoryIdFilter.trim()).data;
-	const debouncedBrandFilter = useDebouncedValue(brandFilter, 300);
-	const parsedBrand = debouncedBrandFilter.trim().length === 0 ? undefined : debouncedBrandFilter.trim();
-	const isFiltered = trimmedSearch.length > 0 || isActiveFilter !== "all" || isFeaturedFilter !== "all" || categoryIdFilter.trim().length > 0 || brandFilter.trim().length > 0;
+	const [urlState, updateUrlState] = useUrlState(PRODUCTS_TABLE_URL_STATE);
+	const isFiltered =
+		urlState.search !== undefined || urlState.isActive !== undefined || urlState.isFeatured !== undefined || urlState.categoryId !== undefined || urlState.brand !== undefined;
+
+	const commitSearch = useCallback(
+		(value: string): void => {
+			updateUrlState({ search: toListSearch(value), page: LIST_FIRST_PAGE, cursor: undefined }, { history: "replace" });
+		},
+		[updateUrlState],
+	);
+	const commitCategoryId = useCallback(
+		(value: string): void => {
+			updateUrlState({ categoryId: toListSearch(value), page: LIST_FIRST_PAGE, cursor: undefined }, { history: "replace" });
+		},
+		[updateUrlState],
+	);
+	const commitBrand = useCallback(
+		(value: string): void => {
+			updateUrlState({ brand: toListSearch(value), page: LIST_FIRST_PAGE, cursor: undefined }, { history: "replace" });
+		},
+		[updateUrlState],
+	);
+	const [searchDraft, setSearchDraft] = useTableTextDraft(urlState.search, commitSearch);
+	const [categoryIdDraft, setCategoryIdDraft] = useTableTextDraft(urlState.categoryId, commitCategoryId);
+	const [brandDraft, setBrandDraft] = useTableTextDraft(urlState.brand, commitBrand);
 
 	const handleClearFilters = useCallback((): void => {
-		setSearch("");
-		setIsActiveFilter("all");
-		setIsFeaturedFilter("all");
-		setCategoryIdFilter("");
-		setBrandFilter("");
-	}, []);
-
-	const listFilter = useMemo(
-		() => ({
-			isActive: eqFilter(parsedIsActive),
-			isFeatured: eqFilter(parsedIsFeatured),
-			categoryId: eqFilter(parsedCategoryId),
-			brand: parsedBrand !== undefined ? { contains: parsedBrand } : undefined,
-		}),
-		[parsedIsActive, parsedIsFeatured, parsedCategoryId, parsedBrand],
-	);
-
-	const buildListQuery = useCallback(
-		(listPage: number, limit: number) =>
-			tableStateToListQuery(productListQuery, { pagination: { page: listPage, limit }, sorting, search: trimmedSearch, filter: listFilter }),
-		[sorting, trimmedSearch, listFilter],
-	);
+		updateUrlState({
+			search: undefined,
+			isActive: undefined,
+			isFeatured: undefined,
+			categoryId: undefined,
+			brand: undefined,
+			page: LIST_FIRST_PAGE,
+			cursor: undefined,
+		});
+	}, [updateUrlState]);
 
 	const fetchAllMatchingProducts = useCallback(async (): Promise<Product[]> => {
 		const rows = await fetchAllListPages(async (listPage, limit) => {
-			const response = await api.product.list.fetchOrThrow(buildListQuery(listPage, limit));
+			const response = await api.product.list.fetchOrThrow(toProductsListQuery({ ...urlState, page: listPage, limit, cursor: undefined }));
 			return {
 				items: response.data,
 				hasNext: readPaginatedHasNext(response.meta),
 			};
 		});
 		return [...rows];
-	}, [api.product.list, buildListQuery]);
+	}, [api.product.list, urlState]);
 
-	const {
-		pageIndex,
-		pageSize,
-		listQuery: paginationQuery,
-		bindListMeta,
-		pagination: basePagination,
-	} = useManualHybridPagination<Product>(20, [debouncedSearch, sorting, isActiveFilter, isFeaturedFilter, categoryIdFilter, brandFilter], (item) => item.id, {
+	const stateKey: string = PRODUCTS_TABLE_URL_STATE.serialize(urlState);
+	const resourceListQuery = api.product.list.useQuery(toProductsListQuery(urlState), {
+		placeholderData: keepPreviousData,
+		...initialDataOption(prefetchedDataFor(initialPage, stateKey)),
+	});
+	const rows: Product[] = resourceListQuery.data?.data ?? [];
+	const { pagination, sorting, handleSortingChange } = useUrlListPaging({
+		state: urlState,
+		update: updateUrlState,
+		sortSpec: productListQuery,
+		totalCount: readPaginatedTotal(resourceListQuery.data?.meta),
+		nextCursor: readPaginatedNextCursor(resourceListQuery.data?.meta),
+		resetKey: PRODUCTS_TABLE_URL_STATE.serialize({ ...urlState, page: LIST_FIRST_PAGE, cursor: undefined }),
+		getRowId: getProductRowId,
 		onClearFilters: handleClearFilters,
 		isFiltered,
 		onFetchAllMatching: fetchAllMatchingProducts,
 	});
-	const initialQueryData = useMemo(
-		() =>
-			initialRows !== undefined
-				? successEnvelope([...initialRows], stubPaginatedMeta(20, initialTotal ?? initialRows.length, 1, initialTotalPages ?? 1, initialHasNext ?? false))
-				: undefined,
-		[initialRows, initialHasNext, initialTotal, initialTotalPages],
-	);
-	const resourceListQuery = api.product.list.useQuery(
-		tableStateToListQuery(productListQuery, { pagination: paginationQuery, sorting, search: trimmedSearch, filter: listFilter }),
-		{
-			placeholderData: keepPreviousData,
-			...initialDataOption(
-				pageIndex === 0 &&
-					pageSize === 20 &&
-					trimmedSearch.length === 0 &&
-					sorting.length === 0 &&
-					isActiveFilter === "all" &&
-					isFeaturedFilter === "all" &&
-					categoryIdFilter.trim().length === 0 &&
-					brandFilter.trim().length === 0
-					? initialQueryData
-					: undefined,
-			),
-		},
-	);
-	const rows: Product[] = resourceListQuery.data?.data ?? [];
-	const totalCount = readPaginatedTotal(resourceListQuery.data?.meta, initialTotal ?? initialRows?.length ?? 0);
-	const pagination = useMemo(() => ({ ...basePagination, totalCount }), [basePagination, totalCount]);
 	const tableError: string | null = resourceListQuery.isError ? "Could not load products. Clear search or filters and try again." : null;
-
-	useEffect((): void => {
-		bindListMeta(readPaginatedNextCursor(resourceListQuery.data?.meta) ?? null);
-	}, [bindListMeta, resourceListQuery.data?.meta]);
 
 	const handleView = useCallback(
 		(item: Product): void => {
@@ -351,37 +328,24 @@ export default function ProductView({ initialRows, initialTotal, initialTotalPag
 		[],
 	);
 
-	const handleManualSortingChange = useCallback((nextSorting: SortingState): void => {
-		setSorting(nextSorting);
-	}, []);
-
-	const handleSearchChange = useCallback((value: string): void => {
-		setSearch(value);
-	}, []);
-
-	const handleManualColumnFilterChange = useCallback((filterKey: string, value: string | null): void => {
-		if (filterKey === "isActive") {
-			setIsActiveFilter(value === null || value === "all" ? "all" : value);
-		}
-		if (filterKey === "isFeatured") {
-			setIsFeaturedFilter(value === null || value === "all" ? "all" : value);
-		}
-		if (filterKey === "categoryId") {
-			setCategoryIdFilter(value ?? "");
-		}
-		if (filterKey === "brand") {
-			setBrandFilter(value ?? "");
-		}
-	}, []);
+	const handleManualColumnFilterChange = useCallback(
+		(filterKey: string, value: string | null): void => {
+			if (filterKey === "isActive") {
+				updateUrlState({ isActive: parseBooleanFilterOption(value ?? ""), page: LIST_FIRST_PAGE, cursor: undefined });
+			}
+			if (filterKey === "isFeatured") {
+				updateUrlState({ isFeatured: parseBooleanFilterOption(value ?? ""), page: LIST_FIRST_PAGE, cursor: undefined });
+			}
+		},
+		[updateUrlState],
+	);
 
 	const manualColumnFilters = useMemo(
 		(): Readonly<Record<string, string>> => ({
-			isActive: isActiveFilter,
-			isFeatured: isFeaturedFilter,
-			categoryId: categoryIdFilter,
-			brand: brandFilter,
+			isActive: urlState.isActive === undefined ? ALL_FILTER_OPTION : String(urlState.isActive),
+			isFeatured: urlState.isFeatured === undefined ? ALL_FILTER_OPTION : String(urlState.isFeatured),
 		}),
-		[isActiveFilter, isFeaturedFilter, categoryIdFilter, brandFilter],
+		[urlState.isActive, urlState.isFeatured],
 	);
 
 	const tableFilters = useMemo(
@@ -406,13 +370,19 @@ export default function ProductView({ initialRows, initialTotal, initialTotalPag
 		[],
 	);
 
-	const handleCategoryIdTextFilterChange = useCallback(function handleCategoryIdTextFilterChange(event: React.ChangeEvent<HTMLInputElement>): void {
-		setCategoryIdFilter(event.target.value);
-	}, []);
+	const handleCategoryIdTextFilterChange = useCallback(
+		function handleCategoryIdTextFilterChange(event: React.ChangeEvent<HTMLInputElement>): void {
+			setCategoryIdDraft(event.target.value);
+		},
+		[setCategoryIdDraft],
+	);
 
-	const handleBrandTextFilterChange = useCallback(function handleBrandTextFilterChange(event: React.ChangeEvent<HTMLInputElement>): void {
-		setBrandFilter(event.target.value);
-	}, []);
+	const handleBrandTextFilterChange = useCallback(
+		function handleBrandTextFilterChange(event: React.ChangeEvent<HTMLInputElement>): void {
+			setBrandDraft(event.target.value);
+		},
+		[setBrandDraft],
+	);
 
 	const textFilterToolbar = useMemo(
 		(): React.JSX.Element => (
@@ -421,33 +391,24 @@ export default function ProductView({ initialRows, initialTotal, initialTotalPag
 					key="categoryId"
 					aria-label="Category Id"
 					placeholder="Filter by category id"
-					value={categoryIdFilter}
+					value={categoryIdDraft}
 					onChange={handleCategoryIdTextFilterChange}
 					className="h-9 w-full text-sm sm:w-44"
 				/>
-				,
-				<Input
-					key="brand"
-					aria-label="Brand"
-					placeholder="Filter by brand"
-					value={brandFilter}
-					onChange={handleBrandTextFilterChange}
-					className="h-9 w-full text-sm sm:w-44"
-				/>
-				,
+				<Input key="brand" aria-label="Brand" placeholder="Filter by brand" value={brandDraft} onChange={handleBrandTextFilterChange} className="h-9 w-full text-sm sm:w-44" />
 			</div>
 		),
-		[brandFilter, categoryIdFilter, handleBrandTextFilterChange, handleCategoryIdTextFilterChange],
+		[brandDraft, categoryIdDraft, handleBrandTextFilterChange, handleCategoryIdTextFilterChange],
 	);
 
 	const searchToolbar = useMemo(
 		(): React.JSX.Element => (
 			<div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-				<DataTableSearchToolbar value={search} onChange={handleSearchChange} placeholder={labels.searchPlaceholder} ariaLabel={labels.searchAriaLabel} />
+				<DataTableSearchToolbar value={searchDraft} onChange={setSearchDraft} placeholder={labels.searchPlaceholder} ariaLabel={labels.searchAriaLabel} />
 				{textFilterToolbar}
 			</div>
 		),
-		[handleSearchChange, search, textFilterToolbar],
+		[searchDraft, setSearchDraft, textFilterToolbar],
 	);
 
 	return (
@@ -484,9 +445,9 @@ export default function ProductView({ initialRows, initialTotal, initialTotalPag
 						mobileCardRender={mobileCardRender}
 						{...(canView ? { onRowClick: handleView } : {})}
 						pagination={pagination}
-						pageSizeOptions={PAGE_SIZE_OPTIONS}
+						pageSizeOptions={PRODUCTS_PAGE_SIZE_OPTIONS}
 						sorting={sorting}
-						onManualSortingChange={handleManualSortingChange}
+						onManualSortingChange={handleSortingChange}
 						isLoading={resourceListQuery.isLoading}
 						isRefetching={resourceListQuery.isFetching && !resourceListQuery.isLoading ? true : false}
 						error={tableError}
@@ -502,4 +463,8 @@ export default function ProductView({ initialRows, initialTotal, initialTotalPag
 			{resourceDeleteDialog}
 		</div>
 	);
+}
+
+function getProductRowId(product: Product): string {
+	return product.id;
 }

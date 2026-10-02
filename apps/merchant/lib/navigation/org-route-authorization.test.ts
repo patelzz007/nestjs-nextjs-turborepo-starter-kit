@@ -43,7 +43,13 @@ function collectOrgPages(directory: string): readonly OrgPageFile[] {
 const ORG_PAGES: readonly OrgPageFile[] = collectOrgPages(ORG_APP_DIR);
 
 /** Server data access a page must not start before its guard has run. */
-const DATA_ACCESS_MARKERS: readonly string[] = ["loadMerchantServerContext(", ".query(", "readOrganizationLocationCookie("];
+const DATA_ACCESS_MARKERS: readonly string[] = [
+	"loadMerchantServerContext(",
+	".query(",
+	"readOrganizationLocationCookie(",
+	"loadOrganizationContext(",
+	"loadServerLocationScope(",
+];
 
 function predicateFor(role: OrganizationMembershipRole | undefined): (capability: CapabilitySlug) => boolean {
 	const granted = createGrantedCapabilities(resolveMerchantCapabilities(role === undefined ? undefined : membershipFixture(role)));

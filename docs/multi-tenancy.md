@@ -35,6 +35,7 @@ URL orgSlug → OrganizationContext → Cedar → withTenantTransaction → Post
 | Cedar control plane | `apps/api/src/modules/authorization-cedar/` |
 | Support access (JIT) | `apps/api/src/modules/support-access/` |
 | Shared schemas | `packages/shared/src/schemas/domain/organization/organization.ts` |
+| Merchant client tenant/store context | `apps/merchant/features/tenant-context/`, `apps/merchant/lib/org/` — see [Frontend routing](./routing.md#organization-and-store-context-merchant) |
 
 ## Local / fresh database
 

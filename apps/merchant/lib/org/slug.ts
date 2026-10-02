@@ -1,25 +1,13 @@
-/** Cookie for active organization URL slug (canonical tenant context). */
+/**
+ * Cookie remembering the last organization the member opened. The URL owns the
+ * active organization (`/orgs/[orgSlug]`); this is only a preference read by
+ * entry routes outside it (`/`, `/account`, the org layout's fallback redirect).
+ * Written in exactly one place: `OrgTenantBootstrap` in the org layout.
+ */
 export const ORGANIZATION_SLUG_COOKIE_NAME = "organizationSlug";
 
 const COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 365;
 
 export function writeOrganizationSlugCookie(slug: string): void {
 	document.cookie = `${ORGANIZATION_SLUG_COOKIE_NAME}=${encodeURIComponent(slug)}; path=/; max-age=${String(COOKIE_MAX_AGE_SECONDS)}; samesite=lax`;
-}
-
-export function clearOrganizationSlugCookie(): void {
-	document.cookie = `${ORGANIZATION_SLUG_COOKIE_NAME}=; path=/; max-age=0; samesite=lax`;
-}
-
-export function readOrganizationSlugCookie(): string | undefined {
-	if (typeof document === "undefined") {
-		return undefined;
-	}
-	const prefix = `${ORGANIZATION_SLUG_COOKIE_NAME}=`;
-	const match = document.cookie.split("; ").find((entry) => entry.startsWith(prefix));
-	if (match === undefined) {
-		return undefined;
-	}
-	const value = match.slice(prefix.length);
-	return value.length > 0 ? decodeURIComponent(value) : undefined;
 }

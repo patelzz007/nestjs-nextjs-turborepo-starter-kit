@@ -126,17 +126,7 @@ export function LoginForm({
 				return;
 			}
 
-			authLogin({
-				id: data.user.id,
-				email: data.user.email,
-				fullName: data.user.fullName,
-				isSuperAdmin: data.user.isSuperAdmin,
-				hasAdminAccess: data.user.hasAdminAccess,
-				isEmailVerified: data.user.isEmailVerified,
-				sessionScope: "full",
-				enrollmentReason: null,
-				roles: data.user.roles,
-			});
+			authLogin(data.user, { sessionScope: "full" });
 			navigateAfterLogin(resolvedRedirect);
 		},
 		[authLogin, navigateAfterLogin, requireAdminAccess, resolvedRedirect],
@@ -145,17 +135,7 @@ export function LoginForm({
 	const completeRestrictedEnrollment = useCallback(
 		(response: LoginRestrictedEnrollmentClientResponse): void => {
 			if (response.user !== undefined) {
-				authLogin({
-					id: response.user.id,
-					email: response.user.email,
-					fullName: response.user.fullName,
-					isSuperAdmin: response.user.isSuperAdmin,
-					hasAdminAccess: response.user.hasAdminAccess,
-					isEmailVerified: response.user.isEmailVerified,
-					sessionScope: "restricted",
-					enrollmentReason: response.enrollmentReason,
-					roles: response.user.roles,
-				});
+				authLogin(response.user, { sessionScope: "restricted", enrollmentReason: response.enrollmentReason });
 			}
 
 			markEnrollmentMessage(response.message);

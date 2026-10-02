@@ -3,9 +3,25 @@
 import { createDataTableLabels, type DataTableLabels } from "@/lib/data-table/labels";
 import { buildReadOnlyTableCheckbox } from "@/lib/data-table/capabilities";
 import { DataTableMobileCard } from "@/lib/data-table/mobile-card";
-import { readPaginatedNextCursor, readPaginatedTotal } from "@workspace/client/lib/api/envelope";
-import { useDebouncedValue } from "@/hooks/use-debounced-value";
-import { useManualHybridPagination } from "@/lib/data-table/use-manual-cursor-pagination";
+import { initialDataOption, readPaginatedNextCursor, readPaginatedTotal } from "@workspace/client/lib/api/envelope";
+import { LIST_FIRST_PAGE } from "@workspace/client/lib/url-state/list-url-state";
+import { prefetchedDataFor, type PrefetchedQuery } from "@workspace/client/lib/url-state/prefetched-query";
+import { useUrlState } from "@workspace/client/lib/url-state/use-url-state";
+import { useTableTextDraft } from "@/lib/data-table/use-table-text-draft";
+import { useUrlListPaging } from "@/lib/data-table/use-url-list-paging";
+import {
+	CITY_SORT_ALIASES,
+	COUNTRY_SORT_ALIASES,
+	GEO_PAGE_SIZE_OPTIONS,
+	GEO_URL_STATE,
+	GeoTabSchema,
+	STATE_SORT_ALIASES,
+	toCitiesListQuery,
+	toCountriesListQuery,
+	toStatesListQuery,
+	type GeoTab,
+	type GeoTabPage,
+} from "@/lib/url-state/geography";
 import { DataTableSearchToolbar } from "@/components/common/data-table-search-toolbar";
 import { Badge } from "@workspace/ui/components/feedback/badge";
 import { Button } from "@workspace/ui/components/form/button";
@@ -13,16 +29,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/componen
 import { DataTable, type DataTableFeatures } from "@workspace/ui/components/display/data-table";
 import { Input } from "@workspace/ui/components/form/input";
 import { cn } from "@workspace/ui/lib/core/utils";
-import type { ColumnDef, SortingState } from "@tanstack/react-table";
+import type { ColumnDef } from "@tanstack/react-table";
 import { keepPreviousData } from "@tanstack/react-query";
 import { Building2, Globe, Landmark, MapPin, TreePine } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
-import { z } from "zod";
+import { useCallback, useMemo, type ReactNode } from "react";
 
 import { useAuth } from "@workspace/client/lib/auth";
-import { eqFilter, tableStateToListQuery, toListSearch, type SortColumnAliases } from "@workspace/client/lib/api/list-query";
-import { cityListQuery, countryListQuery, stateListQuery, type CountryListSortField, type DataValue, type StateListSortField } from "@workspace/shared";
+import { toListSearch } from "@workspace/client/lib/api/list-query";
+import { cityListQuery, countryListQuery, stateListQuery, type CityListItem, type CountryListItem, type GeoStats, type StateListItem } from "@workspace/shared";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -37,62 +52,42 @@ interface GeoRow {
 	readonly flag?: boolean | undefined;
 }
 
-interface GeoTableStats {
-	readonly regions: number;
-	readonly subregions: number;
-	readonly countries: number;
-	readonly states: number;
-	readonly cities: number;
+export interface GeoViewProps {
+	readonly initialStats?: GeoStats | undefined;
+	/** The active tab's page the server prefetched for the URL it rendered. */
+	readonly initialPage?: PrefetchedQuery<GeoTabPage> | undefined;
 }
 
-interface GeoTableProps {
-	readonly initialStats?: GeoTableStats | undefined;
+// ── Row mapping ────────────────────────────────────────────────────────────
+// Responses are already validated against the shared contract by the
+// transport (lib/api/response-contract), so the rows are typed here.
+
+function toCountryRow(country: CountryListItem): GeoRow {
+	return { id: country.id, name: country.name, countryCode: country.iso2 ?? undefined, flag: country.flag, emoji: country.emoji ?? undefined };
 }
 
-type TabKey = "countries" | "states" | "cities";
-
-// ── Helpers ────────────────────────────────────────────────────────────────
-
-const OptionalStringSchema = z.string().optional().catch(undefined);
-const OptionalCoordinateSchema = z
-	.union([z.number(), z.string().transform((value): number => Number(value))])
-	.optional()
-	.catch(undefined);
-
-/** Lenient per-row parse: bad fields fall back to defaults; non-object rows become `null` and are dropped. */
-const GeoApiRowSchema = z
-	.object({
-		id: z.number().catch(0),
-		name: z.string().catch(""),
-		iso2: OptionalStringSchema,
-		countryCode: OptionalStringSchema,
-		stateCode: OptionalStringSchema,
-		emoji: OptionalStringSchema,
-		latitude: OptionalCoordinateSchema,
-		longitude: OptionalCoordinateSchema,
-		flag: z.boolean().optional().catch(undefined),
-	})
-	.nullable()
-	.catch(null);
-
-type GeoApiRow = NonNullable<z.infer<typeof GeoApiRowSchema>>;
-
-const GeoApiRowsSchema = z.array(GeoApiRowSchema);
-
-/** Envelope `data` is either a bare row array or a paginated `{ items }` object. */
-const GeoEnvelopeSchema = z.object({
-	data: z.union([GeoApiRowsSchema, z.object({ items: GeoApiRowsSchema })]),
-});
-
-function isGeoApiRow(row: GeoApiRow | null): row is GeoApiRow {
-	return row !== null;
+function toStateRow(state: StateListItem): GeoRow {
+	return {
+		id: state.id,
+		name: state.name,
+		countryCode: state.countryCode,
+		stateCode: state.iso2 ?? undefined,
+		latitude: state.latitude ?? undefined,
+		longitude: state.longitude ?? undefined,
+		flag: state.flag,
+	};
 }
 
-function extractRows(raw: DataValue | undefined): readonly GeoApiRow[] {
-	const parsed = GeoEnvelopeSchema.safeParse(raw);
-	if (!parsed.success) return [];
-	const rows = Array.isArray(parsed.data.data) ? parsed.data.data : parsed.data.data.items;
-	return rows.filter(isGeoApiRow);
+function toCityRow(city: CityListItem): GeoRow {
+	return {
+		id: city.id,
+		name: city.name,
+		countryCode: city.countryCode,
+		stateCode: city.stateCode,
+		latitude: city.latitude,
+		longitude: city.longitude,
+		flag: city.flag,
+	};
 }
 
 // ── Stat card ──────────────────────────────────────────────────────────────
@@ -113,7 +108,7 @@ function StatCard({ label, value, icon }: { readonly label: string; readonly val
 
 // ── Segmented tab control ──────────────────────────────────────────────────
 
-const TAB_CONFIG: readonly { readonly key: TabKey; readonly label: string; readonly icon: typeof Globe }[] = [
+const TAB_CONFIG: readonly { readonly key: GeoTab; readonly label: string; readonly icon: typeof Globe }[] = [
 	{ key: "countries", label: "Countries", icon: Globe },
 	{ key: "states", label: "States", icon: MapPin },
 	{ key: "cities", label: "Cities", icon: TreePine },
@@ -124,15 +119,15 @@ function SegmentedTabs({
 	onTabChange,
 	counts,
 }: {
-	readonly activeTab: TabKey;
-	readonly onTabChange: (tab: TabKey) => void;
-	readonly counts: Readonly<Record<TabKey, number | undefined>>;
+	readonly activeTab: GeoTab;
+	readonly onTabChange: (tab: GeoTab) => void;
+	readonly counts: Readonly<Record<GeoTab, number | undefined>>;
 }): React.JSX.Element {
 	const handleTabClick = useCallback(
 		(event: React.MouseEvent<HTMLButtonElement>): void => {
-			const tabKey = event.currentTarget.dataset.tabKey;
-			if (tabKey === "countries" || tabKey === "states" || tabKey === "cities") {
-				onTabChange(tabKey);
+			const tab = GeoTabSchema.safeParse(event.currentTarget.dataset.tabKey);
+			if (tab.success) {
+				onTabChange(tab.data);
 			}
 		},
 		[onTabChange],
@@ -241,115 +236,86 @@ function useCityColumns(): ColumnDef<DataTableFeatures, GeoRow>[] {
 	);
 }
 
-// ── Hooks ──────────────────────────────────────────────────────────────────
-
-/** Country rows show the country's `iso2` in the `countryCode` column. */
-const COUNTRY_SORT_ALIASES: SortColumnAliases<CountryListSortField> = { countryCode: "iso2" };
-/** State rows show the state's own `iso2` in the `stateCode` column. */
-const STATE_SORT_ALIASES: SortColumnAliases<StateListSortField> = { stateCode: "iso2" };
-
 // ── Main component ─────────────────────────────────────────────────────────
 
-const PAGE_SIZE_OPTIONS: readonly number[] = [10, 20, 50, 100];
-
-export default function GeoView({ initialStats }: GeoTableProps): React.JSX.Element {
+/**
+ * `/geography` — tab, search, country-code filter, sort and page live in the
+ * URL (lib/url-state/geography); only the active tab's list is fetched. The
+ * server page prefetches the active tab's page; it seeds that tab's query
+ * only while the URL state is the one the server fetched.
+ */
+export default function GeoView({ initialStats, initialPage }: GeoViewProps): React.JSX.Element {
 	const { api } = useAuth();
 
 	const statsQuery = api.geo.stats.useQuery({});
 	const stats = statsQuery.data?.data ?? initialStats;
 
-	const [activeTab, setActiveTab] = useState<TabKey>("countries");
-	const [search, setSearch] = useState("");
-	const debouncedSearch = useDebouncedValue(search, 300);
-	const [countryFilter, setCountryFilter] = useState("");
-	const [sorting, setSorting] = useState<SortingState>([]);
-	const isFiltered = debouncedSearch.trim().length > 0 || countryFilter.trim().length > 0;
+	const [urlState, updateUrlState] = useUrlState(GEO_URL_STATE);
+	const activeTab: GeoTab = urlState.tab;
+	const isFiltered = urlState.search !== undefined || urlState.countryCode !== undefined;
+
+	const commitSearch = useCallback(
+		(value: string): void => {
+			updateUrlState({ search: toListSearch(value), page: LIST_FIRST_PAGE, cursor: undefined }, { history: "replace" });
+		},
+		[updateUrlState],
+	);
+	const commitCountryCode = useCallback(
+		(value: string): void => {
+			updateUrlState({ countryCode: toListSearch(value), page: LIST_FIRST_PAGE, cursor: undefined }, { history: "replace" });
+		},
+		[updateUrlState],
+	);
+	const [searchDraft, setSearchDraft] = useTableTextDraft(urlState.search, commitSearch);
+	const [countryCodeDraft, setCountryCodeDraft] = useTableTextDraft(urlState.countryCode, commitCountryCode);
 
 	const handleClearFilters = useCallback((): void => {
-		setSearch("");
-		setCountryFilter("");
-	}, []);
+		updateUrlState({ search: undefined, countryCode: undefined, page: LIST_FIRST_PAGE, cursor: undefined });
+	}, [updateUrlState]);
 
-	const {
-		listQuery: paginationQuery,
-		bindListMeta,
-		pagination: basePagination,
-	} = useManualHybridPagination<GeoRow>(20, [activeTab, debouncedSearch, countryFilter, sorting], (row) => String(row.id), {
-		onClearFilters: handleClearFilters,
-		isFiltered,
+	// The server prefetched one tab's page for one URL state: it seeds that tab's
+	// query only while the URL is still in that state (`stateKey` includes `?tab=`).
+	const prefetchedPage: GeoTabPage | undefined = prefetchedDataFor(initialPage, GEO_URL_STATE.serialize(urlState));
+	const countriesQuery = api.geo.countries.useQuery(toCountriesListQuery(urlState), {
+		placeholderData: keepPreviousData,
+		enabled: activeTab === "countries",
+		...initialDataOption(prefetchedPage?.tab === "countries" ? prefetchedPage.envelope : undefined),
 	});
-
-	const countryCodeFilter = useMemo(() => ({ countryCode: eqFilter(toListSearch(countryFilter)) }), [countryFilter]);
-	const countriesInput = useMemo(
-		() => tableStateToListQuery(countryListQuery, { pagination: paginationQuery, sorting, sortAliases: COUNTRY_SORT_ALIASES, search: debouncedSearch }),
-		[paginationQuery, sorting, debouncedSearch],
-	);
-	const statesInput = useMemo(
-		() => tableStateToListQuery(stateListQuery, { pagination: paginationQuery, sorting, sortAliases: STATE_SORT_ALIASES, search: debouncedSearch, filter: countryCodeFilter }),
-		[paginationQuery, sorting, debouncedSearch, countryCodeFilter],
-	);
-	const citiesInput = useMemo(
-		() => tableStateToListQuery(cityListQuery, { pagination: paginationQuery, sorting, search: debouncedSearch, filter: countryCodeFilter }),
-		[paginationQuery, sorting, debouncedSearch, countryCodeFilter],
-	);
-
-	const countriesQuery = api.geo.countries.useQuery(countriesInput, { placeholderData: keepPreviousData });
-	const statesQuery = api.geo.states.useQuery(statesInput, { placeholderData: keepPreviousData });
-	const citiesQuery = api.geo.cities.useQuery(citiesInput, { placeholderData: keepPreviousData });
+	const statesQuery = api.geo.states.useQuery(toStatesListQuery(urlState), {
+		placeholderData: keepPreviousData,
+		enabled: activeTab === "states",
+		...initialDataOption(prefetchedPage?.tab === "states" ? prefetchedPage.envelope : undefined),
+	});
+	const citiesQuery = api.geo.cities.useQuery(toCitiesListQuery(urlState), {
+		placeholderData: keepPreviousData,
+		enabled: activeTab === "cities",
+		...initialDataOption(prefetchedPage?.tab === "cities" ? prefetchedPage.envelope : undefined),
+	});
 
 	const activeQuery = activeTab === "countries" ? countriesQuery : activeTab === "states" ? statesQuery : citiesQuery;
 	const tableError: string | null = activeQuery.isError ? "Could not load geographic data. Clear search or sort and try again." : null;
 
-	const countryRows = useMemo((): readonly GeoApiRow[] => extractRows(countriesQuery.data), [countriesQuery.data]);
-	const stateRows = useMemo((): readonly GeoApiRow[] => extractRows(statesQuery.data), [statesQuery.data]);
-	const cityRows = useMemo((): readonly GeoApiRow[] => extractRows(citiesQuery.data), [citiesQuery.data]);
-
-	const countryItems = useMemo(
-		(): GeoRow[] =>
-			countryRows.map((c) => ({
-				id: c.id,
-				name: c.name,
-				countryCode: c.iso2,
-				flag: c.flag === true,
-				emoji: c.emoji,
-			})),
-		[countryRows],
-	);
-	const stateItems = useMemo(
-		(): GeoRow[] =>
-			stateRows.map((s) => ({
-				id: s.id,
-				name: s.name,
-				countryCode: s.countryCode,
-				stateCode: s.iso2,
-				latitude: s.latitude,
-				longitude: s.longitude,
-				flag: s.flag === true,
-			})),
-		[stateRows],
-	);
-	const cityItems = useMemo(
-		(): GeoRow[] =>
-			cityRows.map((c) => ({
-				id: c.id,
-				name: c.name,
-				countryCode: c.countryCode,
-				stateCode: c.stateCode,
-				latitude: c.latitude,
-				longitude: c.longitude,
-				flag: c.flag === true,
-			})),
-		[cityRows],
-	);
+	const countryItems = useMemo((): GeoRow[] => (countriesQuery.data?.data ?? []).map(toCountryRow), [countriesQuery.data]);
+	const stateItems = useMemo((): GeoRow[] => (statesQuery.data?.data ?? []).map(toStateRow), [statesQuery.data]);
+	const cityItems = useMemo((): GeoRow[] => (citiesQuery.data?.data ?? []).map(toCityRow), [citiesQuery.data]);
 
 	const items = activeTab === "countries" ? countryItems : activeTab === "states" ? stateItems : cityItems;
 
-	const totalCount = readPaginatedTotal(activeQuery.data?.meta, 0);
-	const pagination = useMemo(() => ({ ...basePagination, totalCount }), [basePagination, totalCount]);
-
-	useEffect((): void => {
-		bindListMeta(readPaginatedNextCursor(activeQuery.data?.meta) ?? null);
-	}, [activeQuery.data?.meta, bindListMeta]);
+	const { pagination, sorting, handleSortingChange } = useUrlListPaging({
+		state: urlState,
+		update: updateUrlState,
+		...(activeTab === "countries"
+			? { sortSpec: countryListQuery, sortAliases: COUNTRY_SORT_ALIASES }
+			: activeTab === "states"
+				? { sortSpec: stateListQuery, sortAliases: STATE_SORT_ALIASES }
+				: { sortSpec: cityListQuery, sortAliases: CITY_SORT_ALIASES }),
+		totalCount: readPaginatedTotal(activeQuery.data?.meta, 0),
+		nextCursor: readPaginatedNextCursor(activeQuery.data?.meta),
+		resetKey: GEO_URL_STATE.serialize({ ...urlState, page: LIST_FIRST_PAGE, cursor: undefined }),
+		getRowId: getGeoRowId,
+		onClearFilters: handleClearFilters,
+		isFiltered,
+	});
 
 	const countryColumns = useCountryColumns();
 	const stateColumns = useStateColumns();
@@ -381,24 +347,20 @@ export default function GeoView({ initialStats }: GeoTableProps): React.JSX.Elem
 		}
 	}, [activeTab, countryLabels, stateLabels, cityLabels]);
 
-	const handleCountryFilterChange = useCallback((event: React.ChangeEvent<HTMLInputElement>): void => {
-		setCountryFilter(event.target.value);
-	}, []);
+	const handleCountryFilterChange = useCallback(
+		(event: React.ChangeEvent<HTMLInputElement>): void => {
+			setCountryCodeDraft(event.target.value);
+		},
+		[setCountryCodeDraft],
+	);
 
-	const handleSearchChange = useCallback((value: string): void => {
-		setSearch(value);
-	}, []);
-
-	const handleTabChange = useCallback((tab: TabKey) => {
-		setActiveTab(tab);
-		setSearch("");
-		setCountryFilter("");
-		setSorting([]);
-	}, []);
-
-	const handleManualSortingChange = useCallback((newSorting: SortingState) => {
-		setSorting(newSorting);
-	}, []);
+	/** A new tab starts from that tab's defaults: every list param is cleared. */
+	const handleTabChange = useCallback(
+		(tab: GeoTab): void => {
+			updateUrlState({ ...GEO_URL_STATE.defaults, tab });
+		},
+		[updateUrlState],
+	);
 
 	const tabCounts = useMemo(
 		() => ({
@@ -463,13 +425,13 @@ export default function GeoView({ initialStats }: GeoTableProps): React.JSX.Elem
 	const toolbarContent = useMemo(
 		() => (
 			<div className="flex items-center gap-2">
-				<DataTableSearchToolbar value={search} onChange={handleSearchChange} placeholder={`Search ${activeTab}...`} className="relative w-[250px]" />
+				<DataTableSearchToolbar value={searchDraft} onChange={setSearchDraft} placeholder={`Search ${activeTab}...`} className="relative w-[250px]" />
 				{activeTab === "states" || activeTab === "cities" ? (
-					<Input placeholder="Country code" value={countryFilter} onChange={handleCountryFilterChange} className="w-[120px]" />
+					<Input placeholder="Country code" aria-label="Country code" value={countryCodeDraft} onChange={handleCountryFilterChange} className="w-[120px]" />
 				) : null}
 			</div>
 		),
-		[activeTab, search, countryFilter, handleCountryFilterChange, handleSearchChange],
+		[activeTab, searchDraft, setSearchDraft, countryCodeDraft, handleCountryFilterChange],
 	);
 
 	const checkbox = useMemo(() => buildReadOnlyTableCheckbox(`geo-${activeTab}.csv`), [activeTab]);
@@ -510,8 +472,8 @@ export default function GeoView({ initialStats }: GeoTableProps): React.JSX.Elem
 							mobileCardRender={mobileCardRender}
 							pagination={pagination}
 							sorting={sorting}
-							pageSizeOptions={PAGE_SIZE_OPTIONS}
-							onManualSortingChange={handleManualSortingChange}
+							pageSizeOptions={GEO_PAGE_SIZE_OPTIONS}
+							onManualSortingChange={handleSortingChange}
 							toolbarContent={toolbarContent}
 							error={tableError}
 							isLoading={activeTab === "countries" ? countriesQuery.isLoading : activeTab === "states" ? statesQuery.isLoading : citiesQuery.isLoading}
@@ -521,4 +483,8 @@ export default function GeoView({ initialStats }: GeoTableProps): React.JSX.Elem
 			</div>
 		</div>
 	);
+}
+
+function getGeoRowId(row: GeoRow): string {
+	return String(row.id);
 }

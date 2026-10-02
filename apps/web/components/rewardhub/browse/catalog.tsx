@@ -3,7 +3,7 @@
 import { RewardCard } from "@/components/rewardhub/browse/card";
 import { RewardListRow } from "@/components/rewardhub/browse/list-row";
 import { RewardHubViewToggle } from "@/components/rewardhub/browse/view-toggle";
-import { useRewardHubViewMode } from "@/components/rewardhub/browse/use-view-mode";
+import { useRewardsViewMode, useUiPreferencesCommands, type RewardsViewMode } from "@workspace/client/lib/features/ui-preferences/facade";
 import type { RewardResponse } from "@workspace/shared";
 import { Button } from "@workspace/ui/components/form/button";
 import { Skeleton } from "@workspace/ui/components/feedback/skeleton";
@@ -21,7 +21,7 @@ export interface RewardHubCatalogProps {
 	readonly detailPathPrefix?: string;
 }
 
-function CatalogSkeleton({ viewMode }: { readonly viewMode: "grid" | "list" }): React.JSX.Element {
+function CatalogSkeleton({ viewMode }: { readonly viewMode: RewardsViewMode }): React.JSX.Element {
 	if (viewMode === "list") {
 		return (
 			<div className="space-y-2">
@@ -51,7 +51,8 @@ export function RewardHubCatalog({
 	onPrevious,
 	detailPathPrefix = ROUTE_PREFIXES.rewardHubRewards,
 }: RewardHubCatalogProps): React.JSX.Element {
-	const { viewMode, setViewMode } = useRewardHubViewMode();
+	const viewMode = useRewardsViewMode();
+	const { changeRewardsViewMode } = useUiPreferencesCommands();
 
 	const resultLabel = isLoading ? "Loading offers…" : `Showing ${String(rewards.length)} offers`;
 
@@ -62,7 +63,7 @@ export function RewardHubCatalog({
 					<p className="text-sm font-medium text-foreground">{resultLabel}</p>
 					<p className="text-xs text-muted-foreground">Switch layout to compare offers at a glance.</p>
 				</div>
-				<RewardHubViewToggle viewMode={viewMode} onViewModeChange={setViewMode} />
+				<RewardHubViewToggle viewMode={viewMode} onViewModeChange={changeRewardsViewMode} />
 			</div>
 
 			{isLoading ? (

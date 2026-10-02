@@ -2,8 +2,8 @@
 
 import { useWebSession } from "@/components/auth/web-authorization-provider";
 import { WebNotificationsDropdown } from "@/components/layout/web-notifications-dropdown";
-import { useWebSidebarControl } from "@/components/layout/use-web-sidebar-control";
-import { useWebSidebarStore } from "@/stores/sidebar-store";
+import { USER_SIDEBAR_MENU } from "@/lib/navigation/sidebar-menu";
+import { useSidebarIsOpen } from "@workspace/client/lib/features/sidebar/facade";
 import { useAuth } from "@workspace/client/lib/auth";
 import { AppShellProfileDropdown } from "@workspace/ui/components/navigation/app-shell-profile-dropdown";
 import { AppShellTopbar, useCommandPaletteShortcut } from "@workspace/ui/components/navigation/app-shell-topbar";
@@ -23,8 +23,8 @@ export function RewardHubTopbar(): React.JSX.Element {
 	const { user, logout } = useAuth();
 	const { isAuthenticated } = useWebSession();
 	const router = useRouter();
-	const { isOpen: sidebarOpen } = useWebSidebarControl();
-	const menuTitle = useWebSidebarStore((state) => state.menu.header.title);
+	const sidebarOpen = useSidebarIsOpen();
+	const menuTitle = USER_SIDEBAR_MENU.header.title;
 	const [commandOpen, setCommandOpen] = React.useState<boolean>(false);
 
 	const handleOpenCommand = React.useCallback((): void => {

@@ -1,32 +1,24 @@
 import { RewardHubBrowseView } from "@/components/rewardhub/browse/view";
-import { readPaginatedHasNext } from "@workspace/client/lib/api/envelope";
+import { REWARDS_BROWSE_URL_STATE, toRewardsBrowseListQuery } from "@/lib/url-state/rewards-browse";
 import { createWebServerCaller } from "@/lib/web-server-api";
-import { ApiPaginatedMetaSchema, type RewardResponse } from "@workspace/shared";
+import { toPrefetchedQuery } from "@workspace/client/lib/url-state/prefetched-query";
 import * as React from "react";
-
-const REWARDS_LIMIT = 12;
 
 export const dynamic = "force-dynamic";
 
-/** Browse published consumer rewards — server-prefetched for the initial HTML. */
-export default async function RewardHubBrowsePage(): Promise<React.JSX.Element> {
-	const server = createWebServerCaller();
+/**
+ * Browse published consumer rewards. The catalog's search, filters and page
+ * live in the URL; the server parses them with the same declaration as the
+ * catalog and prefetches exactly that page, so a shared or reloaded link
+ * renders the requested results in the initial HTML.
+ */
+export default async function RewardHubBrowsePage({
+	searchParams,
+}: {
+	readonly searchParams: Promise<Record<string, string | string[] | undefined>>;
+}): Promise<React.JSX.Element> {
+	const urlState = REWARDS_BROWSE_URL_STATE.parse(await searchParams);
+	const [result] = await Promise.allSettled([createWebServerCaller().rewards.list.query(toRewardsBrowseListQuery(urlState))]);
 
-	let initialRewards: readonly RewardResponse[] | undefined;
-	let initialHasNext: boolean | undefined;
-	let initialListMeta: ReturnType<typeof ApiPaginatedMetaSchema.parse> | undefined;
-
-	try {
-		const response = await server.rewards.list.query({ page: 1, limit: REWARDS_LIMIT });
-		initialRewards = response.data;
-		initialHasNext = readPaginatedHasNext(response.meta, false);
-		const metaParsed = ApiPaginatedMetaSchema.safeParse(response.meta);
-		if (metaParsed.success) {
-			initialListMeta = metaParsed.data;
-		}
-	} catch {
-		initialRewards = undefined;
-	}
-
-	return <RewardHubBrowseView initialRewards={initialRewards} initialHasNext={initialHasNext} initialListMeta={initialListMeta} />;
+	return <RewardHubBrowseView initialPage={toPrefetchedQuery(REWARDS_BROWSE_URL_STATE.serialize(urlState), result)} />;
 }

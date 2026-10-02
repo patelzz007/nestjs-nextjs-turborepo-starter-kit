@@ -11,7 +11,7 @@
 // They are structural (no `@tanstack/react-table` import) so `packages/ui`'s
 // DataTable stays data-agnostic and this package stays framework-light.
 
-import { formatSortParam, LIST_MAX_SORT_TERMS, type DataValue, type SortTerm } from "@workspace/shared";
+import { formatSortParam, LIST_MAX_SORT_TERMS, LIST_VALUE_SEPARATOR, SORT_DESCENDING_PREFIX, type DataValue, type SortTerm } from "@workspace/shared";
 import type { ZodType } from "zod";
 
 /** One entry of TanStack Table's `SortingState` (`{ id: columnId, desc }`). */
@@ -42,6 +42,24 @@ export function tableSortingToListSort<TField extends string>(
 		if (terms.length === LIST_MAX_SORT_TERMS) break;
 	}
 	return terms.length > 0 ? formatSortParam(terms) : undefined;
+}
+
+/**
+ * A `sort` param (`-createdAt,name`) → TanStack sorting entries, WITHOUT
+ * validation: the entries go back through {@link tableSortingToListSort}'s
+ * whitelist before anything is sent, so unknown or repeated fields are dropped
+ * there. Empty keys are skipped; a missing param is the default order (`[]`).
+ */
+export function sortParamToTableSorting(sort: string | undefined): readonly TableSortingEntry[] {
+	if (sort === undefined) return [];
+	return sort
+		.split(LIST_VALUE_SEPARATOR)
+		.map((token: string): string => token.trim())
+		.map((token: string): TableSortingEntry => {
+			const desc: boolean = token.startsWith(SORT_DESCENDING_PREFIX);
+			return { id: desc ? token.slice(SORT_DESCENDING_PREFIX.length) : token, desc };
+		})
+		.filter((entry: TableSortingEntry): boolean => entry.id.length > 0);
 }
 
 /** Sentinel the admin filter selects use for "no filter". */
@@ -150,4 +168,32 @@ export function tableStateToListQuery<TField extends string, TFilter extends Tab
 		...(search !== undefined ? { search } : {}),
 		...(filter !== undefined ? { filter } : {}),
 	};
+}
+
+/** List state as a URL holds it (lib/url-state): the `sort` param instead of TanStack sorting. */
+export interface UrlListState<TFilter extends TableFilterState> {
+	readonly pagination: TablePaginationState;
+	/** The URL's `sort` param (API field names); `undefined` = the resource default. */
+	readonly sort: string | undefined;
+	readonly search?: string | undefined;
+	readonly filter?: TFilter | undefined;
+}
+
+/**
+ * URL list state → the list-query input. Same rules as
+ * {@link tableStateToListQuery} (whitelisted sort only, default order sent as
+ * "no sort", cursor only with the default order, blank search / empty filters
+ * omitted) — a server page and the client table build the identical input
+ * from the same URL, so the prefetched page and the client query share a key.
+ */
+export function listStateToListQuery<TField extends string, TFilter extends TableFilterState>(
+	spec: ListSortSpec<TField>,
+	state: UrlListState<TFilter>,
+): TableListQueryInput<TFilter> {
+	return tableStateToListQuery(spec, {
+		pagination: state.pagination,
+		sorting: sortParamToTableSorting(state.sort),
+		search: state.search,
+		filter: state.filter,
+	});
 }

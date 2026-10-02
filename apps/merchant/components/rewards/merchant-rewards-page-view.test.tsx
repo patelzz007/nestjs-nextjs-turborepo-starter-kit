@@ -5,18 +5,29 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { MerchantRewardsPageView } from "@/components/rewards/merchant-rewards-page-view";
 import { renderWithAuthorization, TEST_ORG_SLUG } from "@/test/authorization";
+import { contextQueryState, twoStoreSeed, TWO_STORE_CONTEXT, type ContextQueryState } from "@/test/tenant-context";
+import { STORE_A } from "@/test/terminals";
+import type { apiRouter } from "@workspace/client/lib/api/endpoints";
 
-const { rewardsListQuery } = vi.hoisted(() => ({
-	rewardsListQuery: vi.fn(),
+type RewardsListInput = Parameters<typeof apiRouter.organizations.rewards.list.queryKey>[0];
+
+interface RewardsListOptions {
+	readonly enabled?: boolean;
+}
+
+const { rewardsListQuery, contextQuery } = vi.hoisted(() => ({
+	rewardsListQuery: vi.fn<(input: RewardsListInput, options?: RewardsListOptions) => object>(),
+	contextQuery: vi.fn<() => ContextQueryState>(),
 }));
 
 vi.mock("@workspace/client/lib/auth", () => ({
 	useAuth: (): object => ({
-		api: { organizations: { rewards: { list: { useQuery: rewardsListQuery } } } },
+		api: { organizations: { rewards: { list: { useQuery: rewardsListQuery } }, context: { useQuery: contextQuery } } },
 	}),
 }));
 
 beforeEach((): void => {
+	contextQuery.mockReturnValue(contextQueryState(TWO_STORE_CONTEXT));
 	rewardsListQuery.mockReturnValue({
 		isSuccess: true,
 		isPending: false,
@@ -31,6 +42,7 @@ beforeEach((): void => {
 afterEach((): void => {
 	cleanup();
 	rewardsListQuery.mockReset();
+	contextQuery.mockReset();
 });
 
 describe("MerchantRewardsPageView authorization", () => {
@@ -63,5 +75,23 @@ describe("MerchantRewardsPageView authorization", () => {
 		expect(screen.getByRole("status", { name: "Checking access" })).toBeTruthy();
 		expect(screen.queryByText("You don't have access to this page")).toBeNull();
 		expect(rewardsListQuery).not.toHaveBeenCalled();
+	});
+});
+
+describe("MerchantRewardsPageView store filter", () => {
+	it("queries the chosen store on the first render once the server seeded the organization context", () => {
+		renderWithAuthorization(<MerchantRewardsPageView orgSlug={TEST_ORG_SLUG} />, { role: "OWNER", tenantContext: twoStoreSeed(STORE_A.id) });
+
+		const [input, options] = rewardsListQuery.mock.calls.at(0) ?? [];
+		expect(input).toEqual({ orgSlug: TEST_ORG_SLUG, locationId: STORE_A.id });
+		expect(options?.enabled).toBe(true);
+	});
+
+	it("waits for the accessible locations before querying when they are still loading", () => {
+		contextQuery.mockReturnValue(contextQueryState(undefined));
+		renderWithAuthorization(<MerchantRewardsPageView orgSlug={TEST_ORG_SLUG} />, { role: "OWNER", tenantContext: { initialLocationId: STORE_A.id } });
+
+		const [, options] = rewardsListQuery.mock.calls.at(0) ?? [];
+		expect(options?.enabled).toBe(false);
 	});
 });

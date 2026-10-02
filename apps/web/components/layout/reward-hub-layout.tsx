@@ -1,26 +1,25 @@
 "use client";
 
 import type { ServerUser } from "@/lib/auth/server";
-import { toAuthUser } from "@/lib/auth/map-auth-user";
 import { WebRouteAccessGuard } from "@/components/auth/route-access-guard";
 import { ImpersonationBanner } from "@/components/impersonation/impersonation-banner";
-import { useWebSidebarControl } from "@/components/layout/use-web-sidebar-control";
 import { WebSidebarPanel } from "@/components/layout/web-sidebar-panel";
 import { WebShellBreadcrumb } from "@/components/layout/web-shell-breadcrumb";
 import { RewardHubTopbar } from "@/components/layout/reward-hub-topbar";
-import { useAuth } from "@workspace/client/lib/auth";
+import { useAuthUser } from "@workspace/client/lib/auth";
+import { SessionCheckNotice } from "@workspace/client/lib/auth/session/session-check-notice";
 import { AppPanelShell } from "@workspace/ui/components/navigation/app-panel-shell";
 import { useSidebar as useShellSidebar } from "@workspace/ui/components/navigation/sidebar";
 import { isMobileViewport } from "@workspace/ui/hooks/use-mobile";
-import { useWebCommandPaletteStore } from "@/stores/command-palette-store";
-import { useWebSidebarStore } from "@/stores/sidebar-store";
-import { SidebarPathSync } from "@workspace/client/lib/sidebar/sidebar-path-sync";
+import { WEB_COMMAND_PALETTE_DEVTOOLS_NAME, WEB_COMMAND_PALETTE_STORAGE_KEY } from "@/lib/palette/store-config";
+import { WEB_SIDEBAR_DEVTOOLS_NAME, WEB_SIDEBAR_STORAGE_KEY } from "@/lib/navigation/sidebar-menu";
+import { CommandPaletteStoreProvider } from "@workspace/client/lib/features/command-palette/facade";
+import { SidebarStoreProvider, useSidebarCommands, useSidebarIsOpen } from "@workspace/client/lib/features/sidebar/facade";
 import * as React from "react";
 
 export interface RewardHubLayoutProps {
 	readonly children: React.ReactNode;
 	readonly initialUser?: ServerUser | null | undefined;
-	readonly sessionActive?: boolean;
 }
 
 function RewardHubSidebarContent({ userName }: { readonly userName: string | null }): React.JSX.Element {
@@ -41,22 +40,22 @@ function RewardHubSidebarContent({ userName }: { readonly userName: string | nul
  * each page's capability rule from `WEB_ROUTE_ACCESS`, the same table that
  * filters the sidebar and the command palette.
  */
-export function RewardHubLayout({ children, initialUser = null, sessionActive = false }: RewardHubLayoutProps): React.JSX.Element {
-	const { user, login, api } = useAuth();
-	const { isOpen: sidebarOpen, open: openSidebar, close: closeSidebar } = useWebSidebarControl();
+export function RewardHubLayout(props: RewardHubLayoutProps): React.JSX.Element {
+	return (
+		<SidebarStoreProvider storageKey={WEB_SIDEBAR_STORAGE_KEY} devtoolsName={WEB_SIDEBAR_DEVTOOLS_NAME}>
+			<CommandPaletteStoreProvider storageKey={WEB_COMMAND_PALETTE_STORAGE_KEY} devtoolsName={WEB_COMMAND_PALETTE_DEVTOOLS_NAME}>
+				<RewardHubShell {...props} />
+			</CommandPaletteStoreProvider>
+		</SidebarStoreProvider>
+	);
+}
 
-	const meQuery = api.auth.me.useQuery(undefined, {
-		enabled: sessionActive && user === null,
-		retry: false,
-	});
-
-	React.useEffect((): void => {
-		const profile = meQuery.data?.data;
-		if (profile === undefined) {
-			return;
-		}
-		login(toAuthUser(profile));
-	}, [login, meQuery.data?.data]);
+function RewardHubShell({ children, initialUser = null }: RewardHubLayoutProps): React.JSX.Element {
+	// The session check in the root `AuthProvider` restores the profile; the
+	// shell only reads it (the server-decoded `initialUser` covers first paint).
+	const user = useAuthUser();
+	const sidebarOpen = useSidebarIsOpen();
+	const { open: openSidebar, close: closeSidebar } = useSidebarCommands();
 
 	const handleSidebarOpenChange = React.useCallback(
 		(open: boolean): void => {
@@ -69,22 +68,21 @@ export function RewardHubLayout({ children, initialUser = null, sessionActive = 
 		[closeSidebar, openSidebar],
 	);
 
-	React.useLayoutEffect((): void => {
-		void useWebCommandPaletteStore.persist.rehydrate();
-		void useWebSidebarStore.persist.rehydrate();
-	}, []);
-
 	const sidebarUserName = user?.fullName ?? initialUser?.name ?? null;
 
 	return (
 		<AppPanelShell
 			shellClassName="web-app"
-			banner={<ImpersonationBanner />}
+			banner={
+				<>
+					<ImpersonationBanner />
+					<SessionCheckNotice />
+				</>
+			}
 			sidebarOpen={sidebarOpen}
 			onSidebarOpenChange={handleSidebarOpenChange}
 			sidebar={<RewardHubSidebarContent userName={sidebarUserName} />}
 			topbar={<RewardHubTopbar />}>
-			<SidebarPathSync store={useWebSidebarStore} />
 			<WebShellBreadcrumb />
 			<WebRouteAccessGuard>{children}</WebRouteAccessGuard>
 		</AppPanelShell>

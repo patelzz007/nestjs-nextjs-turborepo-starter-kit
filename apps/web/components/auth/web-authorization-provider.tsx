@@ -43,7 +43,7 @@ export interface WebAuthorizationProviderProps {
 export function WebAuthorizationProvider({ sessionActive, initialSessionPermissions, children }: WebAuthorizationProviderProps): React.JSX.Element {
 	const { user, isLoading } = useAuth();
 	// Until the client finishes revalidating, trust the server's cookie check so
-	// SSR and first client render agree; afterwards the auth store decides
+	// SSR and first client render agree; afterwards the auth session decides
 	// (logout clears it immediately, client-side login sets it).
 	const isAuthenticated = user !== null || (isLoading && sessionActive);
 

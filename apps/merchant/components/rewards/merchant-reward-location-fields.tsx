@@ -1,6 +1,6 @@
 "use client";
 
-import { useMerchantLocation } from "@/lib/org/location-context";
+import { useMerchantLocation } from "@/features/tenant-context/facade";
 import type { MerchantRewardFormValues, OrganizationLocationScopeType } from "@workspace/shared";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
 import { Checkbox } from "@workspace/ui/components/form/checkbox";

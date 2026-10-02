@@ -1,13 +1,13 @@
 "use client";
 
-import { RewardHubViewModeSchema, type RewardHubViewMode } from "@/lib/rewards/view-mode";
+import { RewardsViewModeSchema, type RewardsViewMode } from "@workspace/client/lib/features/ui-preferences/facade";
 import { ToggleGroup, ToggleGroupItem } from "@workspace/ui/components/form/toggle-group";
 import { LayoutGrid, List } from "lucide-react";
 import * as React from "react";
 
 export interface RewardHubViewToggleProps {
-	readonly viewMode: RewardHubViewMode;
-	readonly onViewModeChange: (mode: RewardHubViewMode) => void;
+	readonly viewMode: RewardsViewMode;
+	readonly onViewModeChange: (mode: RewardsViewMode) => void;
 }
 
 export function RewardHubViewToggle({ viewMode, onViewModeChange }: RewardHubViewToggleProps): React.JSX.Element {
@@ -17,7 +17,7 @@ export function RewardHubViewToggle({ viewMode, onViewModeChange }: RewardHubVie
 			if (next === undefined) {
 				return;
 			}
-			const parsed = RewardHubViewModeSchema.safeParse(next);
+			const parsed = RewardsViewModeSchema.safeParse(next);
 			if (parsed.success) {
 				onViewModeChange(parsed.data);
 			}

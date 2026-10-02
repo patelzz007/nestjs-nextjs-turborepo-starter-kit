@@ -3,8 +3,8 @@
 import { ICON_MAP } from "@/lib/navigation/menu-icons";
 import { SEARCH_ALIAS_MAP } from "@/lib/palette/search";
 import { useAuthorizedSearchableItems, useCanAccessRoute } from "@/components/layout/authorized-navigation";
-import { useCommandPaletteStore } from "@/stores/command-palette-store";
 import { ROUTES } from "@/lib/routes";
+import { useCommandPaletteCommands, useCommandPalettePinnedUrls, useCommandPaletteRecentSearches } from "@workspace/client/lib/features/command-palette/facade";
 import { AppCommandPalette, type AppCommandPaletteQuickAction } from "@workspace/ui/components/navigation/app-command-palette";
 import { CircleUserRound, CreditCard, LayoutDashboard, Settings, SunMoon } from "lucide-react";
 import { useTheme } from "next-themes";
@@ -39,10 +39,9 @@ export function CommandPalette({ open: externalOpen, setOpen: externalSetOpen }:
 	const searchableItems = useAuthorizedSearchableItems();
 	const canAccessRoute = useCanAccessRoute();
 
-	const recentSearches = useCommandPaletteStore((s) => s.recentSearches);
-	const pinnedUrls = useCommandPaletteStore((s) => s.pinnedUrls);
-	const addRecent = useCommandPaletteStore((s) => s.addRecentSearch);
-	const togglePinned = useCommandPaletteStore((s) => s.togglePinnedUrl);
+	const recentSearches = useCommandPaletteRecentSearches();
+	const pinnedUrls = useCommandPalettePinnedUrls();
+	const { recordRecentSearch, togglePin } = useCommandPaletteCommands();
 
 	const closePalette = React.useCallback((): void => {
 		externalSetOpen?.(false);
@@ -149,8 +148,8 @@ export function CommandPalette({ open: externalOpen, setOpen: externalSetOpen }:
 			quickActions={quickActions}
 			recentSearches={recentSearches}
 			pinnedUrls={pinnedUrls}
-			onAddRecent={addRecent}
-			onTogglePinned={togglePinned}
+			onAddRecent={recordRecentSearch}
+			onTogglePinned={togglePin}
 			onNavigate={handleNavigate}
 			renderIcon={renderMenuIcon}
 			aliasMap={SEARCH_ALIAS_MAP}

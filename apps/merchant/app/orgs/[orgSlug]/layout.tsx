@@ -3,6 +3,7 @@ import { MerchantShell } from "@/components/merchant-shell";
 import { getMerchantServerSession } from "@/lib/auth/server";
 import { loadMerchantServerContext } from "@/lib/merchant-server-api";
 import { isCanonicalOrganizationSlug, resolveOrganizationTenantFromUrlSegment } from "@/lib/org/resolve-slug";
+import { loadServerLocationScope, type ServerLocationScope } from "@/lib/org/server-location-scope";
 import { ORGANIZATION_SLUG_COOKIE_NAME } from "@/lib/org/slug";
 import { orgRoutes, ROUTES } from "@/lib/routes";
 import { cookies } from "next/headers";
@@ -41,10 +42,18 @@ export default async function OrgLayout({ children, params }: OrgLayoutProps): P
 		}
 	}
 
-	const activeSlug = resolvedTenant?.slug ?? ctx.organizationSlug ?? orgSlug;
+	// Seeds the tenant context (store filter + accessible locations) so the first client render
+	// asks for exactly the store the pages prefetch. Skipped for a non-member: the page guard denies.
+	const locationScope: ServerLocationScope | undefined = resolvedTenant !== undefined ? await loadServerLocationScope(orgSlug) : undefined;
 
 	return (
-		<MerchantShell initialMemberships={ctx.memberships} initialOrganizationSlug={activeSlug} initialUser={session.user} initialIsImpersonating={session.isImpersonating}>
+		<MerchantShell
+			orgSlug={orgSlug}
+			initialLocationId={locationScope?.selectedLocationId ?? null}
+			initialOrganizationContext={locationScope?.organizationContext}
+			initialMemberships={ctx.memberships}
+			initialUser={session.user}
+			initialIsImpersonating={session.isImpersonating}>
 			{resolvedTenant !== undefined ? <OrgTenantBootstrap orgSlug={resolvedTenant.slug} /> : null}
 			{children}
 		</MerchantShell>

@@ -19,7 +19,7 @@ import * as React from "react";
 
 import { ICON_MAP } from "@/lib/navigation/menu-icons";
 import { getUserInitials } from "@workspace/ui/lib/core/user-initials";
-import { useSidebarStore } from "@/stores/sidebar-store";
+import { SIDEBAR_MENU } from "@/lib/navigation/sidebar-menu";
 import { sectionHasActiveItem, isRouteActive, type SidebarView } from "@workspace/ui/lib/sidebar/menu-view";
 import type { SearchableMenuItem } from "@/lib/navigation/searchable-menu-items";
 import type { AdminSidebarLabels } from "@/lib/sidebar-labels";
@@ -107,7 +107,7 @@ export function AdminSidebarPanel({
 	navigationKey,
 }: SidebarProps): React.JSX.Element {
 	const { setOpenMobile, isMobile } = useSidebar();
-	const menu = useSidebarStore((state) => state.menu);
+	const menu = SIDEBAR_MENU;
 	const searchInputRef = React.useRef<HTMLInputElement>(null);
 	const navContainerRef = React.useRef<HTMLDivElement>(null);
 	// Derive route announcement for screen readers — computed inline, no state needed.

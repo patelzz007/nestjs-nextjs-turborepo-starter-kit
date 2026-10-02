@@ -1,7 +1,7 @@
 "use client";
 
-import { useAuth } from "@workspace/client/lib/auth";
-import { useAuthUser, type AuthUser } from "@workspace/client/lib/auth/session/store";
+import { initialDataOption } from "@workspace/client/lib/api/envelope";
+import { useAuth, useAuthUser, useIsServerRenderedSession, type AuthUser } from "@workspace/client/lib/auth";
 import type { Envelope, UserResponse } from "@workspace/shared";
 
 import { useCallback, useState, type JSX } from "react";
@@ -14,7 +14,7 @@ import { ImpersonateUserPanel } from "@/components/impersonation/impersonate-use
 import { ImpersonationBanner } from "@/components/impersonation/impersonation-banner";
 import { LogoutButton } from "@/components/logout-button";
 
-/** Unified user type that works with both API response and store user. */
+/** Unified user type that works with both the API response and the auth facade user. */
 interface DisplayUser {
 	readonly id: string;
 	readonly email: string;
@@ -64,7 +64,15 @@ export default function HelloView({ initialEnvelope }: { readonly initialEnvelop
 		setShowDetails((prev: boolean) => !prev);
 	}, []);
 
-	const meQuery = api.auth.me.useQuery(undefined, { initialData: initialEnvelope });
+	// The server-rendered profile seeds `/auth/me` only on the session it was
+	// rendered for, stamped with the server's answer time so staleTime applies
+	// from then. After a sign-out (cache cleared) or another member's sign-in it
+	// must not recreate the query with the previous member's profile.
+	const isServerRenderedSession = useIsServerRenderedSession();
+	const meQuery = api.auth.me.useQuery(undefined, {
+		...initialDataOption(isServerRenderedSession ? initialEnvelope : undefined),
+		initialDataUpdatedAt: initialEnvelope.meta.timestamp,
+	});
 	const permissionsQuery = api.auth.permissions.useQuery(undefined);
 
 	// Normalize both sources into DisplayUser, then pick the best available

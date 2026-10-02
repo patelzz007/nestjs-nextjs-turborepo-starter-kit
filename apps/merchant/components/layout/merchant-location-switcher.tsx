@@ -1,7 +1,7 @@
 "use client";
 
 import { resolveLocationShortLabel } from "@/lib/org/location-display";
-import { useMerchantLocation } from "@/lib/org/location-context";
+import { useMerchantLocation, useTenantContextCommands, type TenantContextCommands } from "@/features/tenant-context/facade";
 import { Button } from "@workspace/ui/components/form/button";
 import { Select, SelectContent, SelectItem, SelectTrigger } from "@workspace/ui/components/form/select";
 import { MapPin } from "lucide-react";
@@ -13,6 +13,15 @@ interface AccessibleLocation {
 	readonly id: string;
 	readonly name: string;
 	readonly code: string;
+}
+
+/** Applies a switcher choice (`undefined` = all locations) through the named tenant-context commands. */
+function applyLocationChoice(commands: TenantContextCommands, locationId: string | undefined): void {
+	if (locationId === undefined) {
+		commands.selectAllLocations();
+		return;
+	}
+	commands.selectLocation(locationId);
 }
 
 function resolveLocationSelection(
@@ -38,29 +47,23 @@ function resolveLocationSelection(
 }
 
 export function MerchantLocationSwitcher(): React.JSX.Element | null {
-	const { locationId, activeLocation, accessibleLocations, canSelectAllLocations, isLoading, setLocationId } = useMerchantLocation();
+	const { locationId, activeLocation, accessibleLocations, canSelectAllLocations, isLoading } = useMerchantLocation();
+	const commands = useTenantContextCommands();
 
 	const handleValueChange = React.useCallback(
 		(value: string | null): void => {
 			if (value === null) {
 				return;
 			}
-			setLocationId(value === ALL_LOCATIONS_VALUE ? undefined : value);
+			applyLocationChoice(commands, value === ALL_LOCATIONS_VALUE ? undefined : value);
 		},
-		[setLocationId],
+		[commands],
 	);
 
 	const selectedLocation = React.useMemo(
 		(): { readonly shortLabel: string; readonly fullLabel: string } => resolveLocationSelection(locationId, accessibleLocations, canSelectAllLocations),
 		[accessibleLocations, canSelectAllLocations, locationId],
 	);
-
-	const resolvedLocationId = React.useMemo((): string | undefined => {
-		if (locationId === undefined) {
-			return undefined;
-		}
-		return accessibleLocations.some((location) => location.id === locationId) ? locationId : undefined;
-	}, [accessibleLocations, locationId]);
 
 	if (isLoading || accessibleLocations.length === 0) {
 		return null;
@@ -81,7 +84,8 @@ export function MerchantLocationSwitcher(): React.JSX.Element | null {
 		);
 	}
 
-	const selectValue = resolvedLocationId ?? ALL_LOCATIONS_VALUE;
+	// `locationId` is already validated against the accessible locations by the tenant-context selectors.
+	const selectValue = locationId ?? ALL_LOCATIONS_VALUE;
 
 	return (
 		<div className="hidden max-w-[min(18rem,42vw)] md:block">
@@ -111,31 +115,42 @@ export function MerchantLocationSwitcher(): React.JSX.Element | null {
 	);
 }
 
+/**
+ * The mobile button's next filter: each store in turn, then "all locations"
+ * (only when the member may see org-wide rollups), then around again.
+ * `undefined` = all locations.
+ */
+export function resolveNextCycledLocationId(
+	accessibleLocations: readonly AccessibleLocation[],
+	canSelectAllLocations: boolean,
+	locationId: string | undefined,
+): string | undefined {
+	const currentIndex = accessibleLocations.findIndex((location) => location.id === locationId);
+
+	if (!canSelectAllLocations) {
+		const nextIndex = currentIndex < 0 ? 0 : (currentIndex + 1) % accessibleLocations.length;
+		return accessibleLocations.at(nextIndex)?.id;
+	}
+
+	if (locationId === undefined) {
+		return accessibleLocations.at(0)?.id;
+	}
+
+	if (currentIndex < accessibleLocations.length - 1) {
+		return accessibleLocations.at(currentIndex + 1)?.id;
+	}
+
+	return undefined;
+}
+
 /** Compact location switcher for mobile topbars. */
 export function MerchantLocationSwitcherMobile(): React.JSX.Element | null {
-	const { locationId, accessibleLocations, canSelectAllLocations, isLoading, setLocationId } = useMerchantLocation();
+	const { locationId, accessibleLocations, canSelectAllLocations, isLoading } = useMerchantLocation();
+	const commands = useTenantContextCommands();
 
 	const handleCycleLocation = React.useCallback((): void => {
-		if (!canSelectAllLocations) {
-			const currentIndex = accessibleLocations.findIndex((location) => location.id === locationId);
-			const nextIndex = currentIndex < 0 ? 0 : (currentIndex + 1) % accessibleLocations.length;
-			setLocationId(accessibleLocations[nextIndex]?.id);
-			return;
-		}
-
-		if (locationId === undefined) {
-			setLocationId(accessibleLocations[0]?.id);
-			return;
-		}
-
-		const currentIndex = accessibleLocations.findIndex((location) => location.id === locationId);
-		if (currentIndex < accessibleLocations.length - 1) {
-			setLocationId(accessibleLocations[currentIndex + 1]?.id);
-			return;
-		}
-
-		setLocationId(undefined);
-	}, [accessibleLocations, canSelectAllLocations, locationId, setLocationId]);
+		applyLocationChoice(commands, resolveNextCycledLocationId(accessibleLocations, canSelectAllLocations, locationId));
+	}, [accessibleLocations, canSelectAllLocations, commands, locationId]);
 
 	if (isLoading || accessibleLocations.length === 0 || (!canSelectAllLocations && accessibleLocations.length === 1)) {
 		return null;

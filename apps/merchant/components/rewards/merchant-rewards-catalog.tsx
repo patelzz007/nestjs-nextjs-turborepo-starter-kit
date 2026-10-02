@@ -3,7 +3,7 @@
 import { MerchantRewardCard } from "@/components/rewards/merchant-reward-card";
 import { MerchantRewardListRow } from "@/components/rewards/merchant-reward-list-row";
 import { MerchantRewardsViewToggle } from "@/components/rewards/merchant-rewards-view-toggle";
-import { useMerchantRewardsViewMode } from "@/components/rewards/use-merchant-rewards-view-mode";
+import { useRewardsViewMode, useUiPreferencesCommands, type RewardsViewMode } from "@workspace/client/lib/features/ui-preferences/facade";
 import type { RewardResponse } from "@workspace/shared";
 import { Skeleton } from "@workspace/ui/components/feedback/skeleton";
 import * as React from "react";
@@ -14,7 +14,7 @@ export interface MerchantRewardsCatalogProps {
 	readonly canManageRewards: boolean;
 }
 
-function RewardsCatalogSkeleton({ viewMode }: { readonly viewMode: "grid" | "list" }): React.JSX.Element {
+function RewardsCatalogSkeleton({ viewMode }: { readonly viewMode: RewardsViewMode }): React.JSX.Element {
 	if (viewMode === "list") {
 		return (
 			<div className="space-y-3">
@@ -36,7 +36,8 @@ function RewardsCatalogSkeleton({ viewMode }: { readonly viewMode: "grid" | "lis
 
 /** Rewards collection with grid/list layout toggle and toolbar. */
 export function MerchantRewardsCatalog({ rewards, isLoading, canManageRewards }: MerchantRewardsCatalogProps): React.JSX.Element {
-	const { viewMode, setViewMode } = useMerchantRewardsViewMode();
+	const viewMode = useRewardsViewMode();
+	const { changeRewardsViewMode } = useUiPreferencesCommands();
 
 	return (
 		<section className="space-y-4" aria-label="Rewards catalog">
@@ -45,7 +46,7 @@ export function MerchantRewardsCatalog({ rewards, isLoading, canManageRewards }:
 					<p className="text-sm font-medium text-foreground">{isLoading ? "Loading catalog…" : `${String(rewards.length)} reward${rewards.length === 1 ? "" : "s"}`}</p>
 					<p className="text-xs text-muted-foreground">Switch layout to compare inventory across offers.</p>
 				</div>
-				<MerchantRewardsViewToggle viewMode={viewMode} onViewModeChange={setViewMode} />
+				<MerchantRewardsViewToggle viewMode={viewMode} onViewModeChange={changeRewardsViewMode} />
 			</div>
 
 			{isLoading ? (

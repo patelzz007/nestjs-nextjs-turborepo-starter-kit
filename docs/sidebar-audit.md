@@ -10,6 +10,13 @@ coverImage: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=form
 
 # Sidebar Audit
 
+> [!NOTE] Historical document. Since [ADR 023](./adr/023-client-state-feature-stores.md), sidebar
+> state lives in the shared sidebar feature store (`packages/client/src/lib/features/sidebar`),
+> not `stores/sidebar-store.ts`. The menu is a static constant and the current page comes from
+> the URL. Likewise, palette recents and pins live in the shared command palette feature store
+> (`packages/client/src/lib/features/command-palette`), not `stores/command-palette-store.ts`.
+> File references below describe the code as it was when each item was written.
+
 > [!NOTE] Every item below is grounded in the **actual current sidebar code** — verified
 > against `apps/admin/components/layout/sidebar.tsx`, `sidebar-nav-item.tsx`,
 > `sidebar-section-header.tsx`, `mobile-menu-overlay.tsx`,

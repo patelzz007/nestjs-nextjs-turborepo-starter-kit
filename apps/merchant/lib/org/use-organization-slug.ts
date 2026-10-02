@@ -1,9 +1,18 @@
 "use client";
 
-import { useMerchantOrg } from "@/lib/session/root-provider";
+import { useParams } from "next/navigation";
 
-/** Active organization slug from client context (set by org layout / store switcher). */
+/** Name of the dynamic segment under `app/orgs/` that carries the tenant. */
+export const ORG_SLUG_ROUTE_PARAM = "orgSlug";
+
+/**
+ * Active organization slug — read from the `/orgs/[orgSlug]` URL segment, the
+ * single owner of the tenant (never mirrored into React or Zustand state).
+ * `undefined` outside org routes (e.g. `/auth/verify-email`): org-relative
+ * links then point at the top-level entry pages, which resolve the
+ * organization server-side from the `organizationSlug` cookie (`resolveOrgHref`).
+ */
 export function useOrganizationSlug(): string | undefined {
-	const { organizationSlug } = useMerchantOrg();
-	return organizationSlug;
+	const segment = useParams()[ORG_SLUG_ROUTE_PARAM];
+	return typeof segment === "string" && segment.length > 0 ? segment : undefined;
 }

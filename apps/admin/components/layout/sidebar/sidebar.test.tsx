@@ -1,18 +1,25 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { AlertCircle } from "lucide-react";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { z } from "zod";
 
-import { compileMenu, SIDEBAR_MENU } from "@/lib/navigation/sidebar-menu";
+import { ADMIN_SIDEBAR_STORAGE_KEY, compileMenu, SIDEBAR_MENU } from "@/lib/navigation/sidebar-menu";
 import { buildSidebarView, type SidebarView } from "@workspace/ui/lib/sidebar/menu-view";
 import type { SearchableMenuItem } from "@/lib/navigation/searchable-menu-items";
 import { ADMIN_SIDEBAR_LABELS } from "@/lib/sidebar-labels";
-import { useSidebarStore } from "@/stores/sidebar-store";
 import type { CompiledSidebarMenuData, SidebarMenuData } from "@/lib/navigation/sidebar";
 import { filterCompiledSidebarMenu } from "@/lib/navigation/filter-menu-by-capabilities";
+import {
+	SidebarStoreProvider,
+	useSidebarCommands,
+	useSidebarExpandedItems,
+	useSidebarIsOpen,
+	useSidebarSearchQuery,
+	useSidebarSectionOrder,
+} from "@workspace/client/lib/features/sidebar/facade";
 import { PERMISSION } from "@workspace/shared";
 
 import { AdminSidebarPanel } from "@/components/layout/sidebar/sidebar";
@@ -64,14 +71,20 @@ vi.mock("next/navigation", () => ({
 	}),
 }));
 
-/** Shape of what zustand persist writes to localStorage. `expandedItems` and `searchQuery` are optional so tests can assert their absence. */
-const StoredPayloadSchema = z.object({
-	state: z.object({
-		isOpen: z.boolean().optional(),
-		sectionOrder: z.array(z.string()).nullable().optional(),
-		expandedItems: z.record(z.string(), z.boolean()).optional(),
-		searchQuery: z.string().optional(),
-	}),
+/** What the probe renders: the sidebar store state, read through the facade like any component would. */
+const SidebarStateSchema = z.object({
+	isOpen: z.boolean(),
+	sectionOrder: z.array(z.string()).nullable(),
+	expandedItems: z.record(z.string(), z.boolean()),
+	searchQuery: z.string(),
+});
+
+/** What the store writes to localStorage — `searchQuery` optional so tests can assert its absence. */
+const StoredPreferencesSchema = z.object({
+	isOpen: z.boolean(),
+	sectionOrder: z.array(z.string()).nullable(),
+	expandedItems: z.record(z.string(), z.boolean()),
+	searchQuery: z.string().optional(),
 });
 
 const MENU: SidebarMenuData = {
@@ -132,15 +145,10 @@ interface HarnessProps {
  * like the real layout.
  */
 function SidebarHarness({ pathname, onLogout, onReportIssue, pinnedItems = [], menu = COMPILED_MENU }: HarnessProps): React.JSX.Element {
-	const searchQuery = useSidebarStore((s) => s.searchQuery);
-	const sectionOrder = useSidebarStore((s) => s.sectionOrder);
-	const setSearchQuery = useSidebarStore((s) => s.setSearchQuery);
-	const clearSearch = useSidebarStore((s) => s.clearSearch);
-	const storeExpandedItems = useSidebarStore((s) => s.expandedItems);
-	const setItemExpanded = useSidebarStore((s) => s.setItemExpanded);
-	const resetExpandedItems = useSidebarStore((s) => s.resetExpandedItems);
-	const moveSectionUp = useSidebarStore((s) => s.moveSectionUp);
-	const moveSectionDown = useSidebarStore((s) => s.moveSectionDown);
+	const searchQuery = useSidebarSearchQuery();
+	const sectionOrder = useSidebarSectionOrder();
+	const storeExpandedItems = useSidebarExpandedItems();
+	const { setSearchQuery, clearSearch, setItemExpanded, resetExpandedItems, moveSectionUp, moveSectionDown } = useSidebarCommands();
 	const view: SidebarView = React.useMemo(() => buildSidebarView({ menu, pathname, sectionOrder, searchQuery }), [menu, pathname, sectionOrder, searchQuery]);
 	const expandedItems = useRouteExpandedItems(pathname, storeExpandedItems, view.routeState.autoExpandedItems, resetExpandedItems);
 	const handleSearchChange = React.useCallback(
@@ -185,12 +193,36 @@ function SidebarHarness({ pathname, onLogout, onReportIssue, pinnedItems = [], m
 	);
 }
 
+/** Renders the store state as JSON, so tests assert on it without reaching into the store. */
+function SidebarStateProbe(): React.JSX.Element {
+	const state = { isOpen: useSidebarIsOpen(), sectionOrder: useSidebarSectionOrder(), expandedItems: useSidebarExpandedItems(), searchQuery: useSidebarSearchQuery() };
+	return <output data-testid="sidebar-state">{JSON.stringify(state)}</output>;
+}
+
+function readSidebarState(): z.output<typeof SidebarStateSchema> {
+	return SidebarStateSchema.parse(JSON.parse(screen.getByTestId("sidebar-state").textContent));
+}
+
+function readStoredPreferences(): z.output<typeof StoredPreferencesSchema> {
+	return StoredPreferencesSchema.parse(JSON.parse(localStorage.getItem(ADMIN_SIDEBAR_STORAGE_KEY) ?? "null"));
+}
+
+/** A fresh sidebar store per render (as in the app: one per mounted shell). */
+function renderSidebar(props: HarnessProps): ReturnType<typeof render> {
+	return render(
+		<SidebarStoreProvider storageKey={ADMIN_SIDEBAR_STORAGE_KEY} devtoolsName="Sidebar · test">
+			<SidebarHarness {...props} />
+			<SidebarStateProbe />
+		</SidebarStoreProvider>,
+	);
+}
+
 describe("Sidebar", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		harnessIsMobile = false;
 		pathnameMock.mockReturnValue("/");
-		useSidebarStore.setState({ isOpen: true, sectionOrder: null, expandedItems: {}, searchQuery: "" });
+		localStorage.clear();
 		Object.defineProperty(window, "matchMedia", {
 			writable: true,
 			value: vi.fn().mockImplementation((query: string) => ({
@@ -211,24 +243,22 @@ describe("Sidebar", () => {
 	});
 
 	it("renders nested children inside an indented submenu branch", () => {
-		render(<SidebarHarness pathname="/settings/general" />);
+		renderSidebar({ pathname: "/settings/general" });
 		expect(screen.getByRole("button", { name: "General" })).toBeTruthy();
 	});
 
 	it("renders the pinned section even while the sidebar search is active", () => {
-		useSidebarStore.setState({ searchQuery: "settings" });
-		render(
-			<SidebarHarness
-				pathname="/"
-				pinnedItems={[{ id: "main-settings-general", title: "General", url: "/settings/general", section: "Main", breadcrumb: ["Settings", "General"] }]}
-			/>,
-		);
+		renderSidebar({
+			pathname: "/",
+			pinnedItems: [{ id: "main-settings-general", title: "General", url: "/settings/general", section: "Main", breadcrumb: ["Settings", "General"] }],
+		});
+		fireEvent.change(screen.getByLabelText("Search menu"), { target: { value: "settings" } });
 		expect(screen.getByText("Pinned")).toBeTruthy();
 		expect(screen.getAllByRole("button", { name: "General" }).length).toBeGreaterThan(0);
 	});
 
 	it("renders sections, bottom items, the footer action and the user row", () => {
-		render(<SidebarHarness pathname="/" />);
+		renderSidebar({ pathname: "/" });
 		expect(screen.getByText("Main")).toBeTruthy();
 		expect(screen.getByText("Docs")).toBeTruthy();
 		expect(screen.getByRole("button", { name: "Overview" })).toBeTruthy();
@@ -241,7 +271,7 @@ describe("Sidebar", () => {
 
 	it("marks only the active item with data-active, never its ancestors", () => {
 		pathnameMock.mockReturnValue("/settings/general");
-		render(<SidebarHarness pathname="/settings/general" />);
+		renderSidebar({ pathname: "/settings/general" });
 		expect(screen.getByRole("button", { name: "General" }).getAttribute("data-active")).toBe("true");
 		// "/settings" is a route prefix, but the parent must not highlight
 		// alongside its active child.
@@ -252,34 +282,34 @@ describe("Sidebar", () => {
 
 	it("auto-expands the active branch without writing the store, and route wins on toggle", () => {
 		pathnameMock.mockReturnValue("/settings/general");
-		render(<SidebarHarness pathname="/settings/general" />);
+		renderSidebar({ pathname: "/settings/general" });
 		// Children render because the route auto-expanded the branch…
 		expect(screen.getByRole("button", { name: "General" })).toBeTruthy();
 		// …but nothing was persisted to the store yet.
-		expect(useSidebarStore.getState().expandedItems["main-settings"]).toBeUndefined();
+		expect(readSidebarState().expandedItems["main-settings"]).toBeUndefined();
 		// Clicking the auto-expanded parent (route wins) must not collapse it.
 		fireEvent.click(screen.getByRole("button", { name: "Settings" }));
 		expect(screen.getByRole("button", { name: "General" })).toBeTruthy();
 	});
 
 	it("persists manual expansion toggles when no route drives the branch", () => {
-		render(<SidebarHarness pathname="/" />);
+		renderSidebar({ pathname: "/" });
 		fireEvent.click(screen.getByRole("button", { name: "Settings" }));
-		expect(useSidebarStore.getState().expandedItems["main-settings"]).toBe(true);
+		expect(readSidebarState().expandedItems["main-settings"]).toBe(true);
 		fireEvent.click(screen.getByRole("button", { name: "Settings" }));
 		// Collapsing prunes the key (no dead `false` entries persisted).
-		expect(useSidebarStore.getState().expandedItems["main-settings"]).toBeUndefined();
+		expect(readSidebarState().expandedItems["main-settings"]).toBeUndefined();
 	});
 
 	it("renders disabled parents as a single disabled row with no children", () => {
-		render(<SidebarHarness pathname="/" />);
+		renderSidebar({ pathname: "/" });
 		const analytics = screen.getByRole("button", { name: "Analytics" });
 		expect(analytics.hasAttribute("disabled")).toBe(true);
 		expect(screen.queryByText("Realtime")).toBeNull();
 	});
 
 	it("filters the tree by search and restores it on clear", () => {
-		render(<SidebarHarness pathname="/" />);
+		renderSidebar({ pathname: "/" });
 		fireEvent.change(screen.getByLabelText("Search menu"), { target: { value: "security" } });
 		// Only the Settings → Security branch survives…
 		expect(screen.getByRole("button", { name: "Security" })).toBeTruthy();
@@ -293,19 +323,19 @@ describe("Sidebar", () => {
 	});
 
 	it("shows the no-results state for a query with zero matches", () => {
-		render(<SidebarHarness pathname="/" />);
+		renderSidebar({ pathname: "/" });
 		fireEvent.change(screen.getByLabelText("Search menu"), { target: { value: "zzz-no-match" } });
 		expect(screen.getByText("No menu items found")).toBeTruthy();
 	});
 
 	it("focuses the search box when / is pressed outside a text field", () => {
-		render(<SidebarHarness pathname="/" />);
+		renderSidebar({ pathname: "/" });
 		fireEvent.keyDown(window, { key: "/" });
 		expect(document.activeElement).toBe(screen.getByLabelText("Search menu"));
 	});
 
 	it("does not hijack / while the user is typing in a text field", () => {
-		render(<SidebarHarness pathname="/" />);
+		renderSidebar({ pathname: "/" });
 		const otherInput = document.createElement("input");
 		document.body.appendChild(otherInput);
 		otherInput.focus();
@@ -316,7 +346,7 @@ describe("Sidebar", () => {
 
 	it("navigates on leaf click and closes the mobile menu", () => {
 		harnessIsMobile = true;
-		render(<SidebarHarness pathname="/" />);
+		renderSidebar({ pathname: "/" });
 		fireEvent.click(screen.getByRole("button", { name: "Support" }));
 		expect(pushMock).toHaveBeenCalledWith("/support");
 		expect(setOpenMobileMock).toHaveBeenCalledWith(false);
@@ -324,7 +354,7 @@ describe("Sidebar", () => {
 
 	it("fires footer actions on click", () => {
 		const onReportIssue = vi.fn();
-		render(<SidebarHarness pathname="/" onReportIssue={onReportIssue} />);
+		renderSidebar({ pathname: "/", onReportIssue });
 		fireEvent.click(screen.getByRole("button", { name: "Report issue" }));
 		expect(onReportIssue).toHaveBeenCalledTimes(1);
 	});
@@ -334,7 +364,7 @@ describe("SidebarSectionHeader", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		harnessIsMobile = false;
-		useSidebarStore.setState({ isOpen: true, sectionOrder: null, expandedItems: {}, searchQuery: "" });
+		localStorage.clear();
 		Object.defineProperty(window, "matchMedia", {
 			writable: true,
 			value: vi.fn().mockImplementation((query: string) => ({
@@ -356,7 +386,7 @@ describe("SidebarSectionHeader", () => {
 
 	it("marks the section holding the active route by brightening the label", () => {
 		pathnameMock.mockReturnValue("/docs/getting-started");
-		render(<SidebarHarness pathname="/docs/getting-started" />);
+		renderSidebar({ pathname: "/docs/getting-started" });
 		const docsLabel = screen.getByText("Docs");
 		const mainLabel = screen.getByText("Main");
 		// The active section's label carries the signal — nothing else (no bar,
@@ -368,28 +398,27 @@ describe("SidebarSectionHeader", () => {
 	});
 
 	it("moves a section up via its reorder button", () => {
-		render(<SidebarHarness pathname="/" />);
+		renderSidebar({ pathname: "/" });
 		fireEvent.click(screen.getByRole("button", { name: "Move Docs section up" }));
-		expect(useSidebarStore.getState().sectionOrder).toEqual(["Docs", "Main"]);
+		expect(readSidebarState().sectionOrder).toEqual(["Docs", "Main"]);
 	});
 
 	it("moves a section down via Alt+ArrowDown from its reorder button", () => {
-		render(<SidebarHarness pathname="/" />);
+		renderSidebar({ pathname: "/" });
 		fireEvent.keyDown(screen.getByRole("button", { name: "Move Main section down" }), { key: "ArrowDown", altKey: true });
-		expect(useSidebarStore.getState().sectionOrder).toEqual(["Docs", "Main"]);
+		expect(readSidebarState().sectionOrder).toEqual(["Docs", "Main"]);
 	});
 
 	it("ignores arrow keys without the Alt modifier", () => {
-		render(<SidebarHarness pathname="/" />);
+		renderSidebar({ pathname: "/" });
 		fireEvent.keyDown(screen.getByRole("button", { name: "Move Main section down" }), { key: "ArrowDown" });
-		expect(useSidebarStore.getState().sectionOrder).toBeNull();
+		expect(readSidebarState().sectionOrder).toBeNull();
 	});
 });
 
-describe("SidebarStore persistence", () => {
+describe("Sidebar preferences persistence", () => {
 	beforeEach(() => {
 		localStorage.clear();
-		useSidebarStore.setState({ isOpen: true, sectionOrder: null, expandedItems: {}, searchQuery: "" });
 	});
 
 	afterEach(() => {
@@ -397,82 +426,48 @@ describe("SidebarStore persistence", () => {
 		cleanup();
 	});
 
-	it("strips stale expansions AND search queries from a legacy payload on rehydrate (refresh resets to default)", async () => {
-		// A payload written by an older build (before expansions/search went
-		// session-only) still contains `expandedItems` and `searchQuery`.
-		// Rehydration must drop both — this is what makes a soft/hard refresh
-		// restore the default menu and an empty search box.
+	it("restores the rail, section order and expansions saved by an older build — never its search text", () => {
+		// The envelope `zustand/persist` wrote before the sidebar became a feature store.
 		localStorage.setItem(
-			"admin-sidebar-state",
+			ADMIN_SIDEBAR_STORAGE_KEY,
 			JSON.stringify({
-				state: {
-					isOpen: false,
-					sectionOrder: ["Docs", "Main"],
-					expandedItems: { "main-settings": true, "docs-docs-home": true },
-					searchQuery: "security",
-				},
+				state: { isOpen: false, sectionOrder: ["Docs", "Main"], expandedItems: { "main-settings": true }, searchQuery: "security" },
 				version: 0,
 			}),
 		);
 
-		await useSidebarStore.persist.rehydrate();
+		renderSidebar({ pathname: "/" });
 
-		const state = useSidebarStore.getState();
-		// Expanded items are now persisted (capped at 20) — legacy expansions survive.
-		expect(state.expandedItems).toEqual({ "main-settings": true, "docs-docs-home": true });
-		// Search query is still session-only — resets on reload.
-		expect(state.searchQuery).toBe("");
-		// The user's real preferences (rail state, section order) survive.
-		expect(state.isOpen).toBe(false);
-		expect(state.sectionOrder).toEqual(["Docs", "Main"]);
+		expect(readSidebarState()).toEqual({ isOpen: false, sectionOrder: ["Docs", "Main"], expandedItems: { "main-settings": true }, searchQuery: "" });
 	});
 
-	it("ignores a corrupted persisted payload without clobbering live state", async () => {
-		// Seed a non-default value first: a corrupt payload must not overwrite the
-		// live state (the merge falls back to the current state untouched).
-		useSidebarStore.setState({ isOpen: false });
-		localStorage.setItem("admin-sidebar-state", JSON.stringify({ state: { isOpen: "nope", sectionOrder: 42 }, version: 0 }));
+	it("ignores a corrupted payload and starts from the defaults", () => {
+		localStorage.setItem(ADMIN_SIDEBAR_STORAGE_KEY, JSON.stringify({ isOpen: "nope", sectionOrder: 42, expandedItems: {} }));
 
-		await useSidebarStore.persist.rehydrate();
+		renderSidebar({ pathname: "/" });
 
-		const state = useSidebarStore.getState();
-		// Live state survives; expansions stay reset.
-		expect(state.isOpen).toBe(false);
-		expect(state.sectionOrder).toBeNull();
-		expect(state.expandedItems).toEqual({});
+		expect(readSidebarState()).toEqual({ isOpen: true, sectionOrder: null, expandedItems: {}, searchQuery: "" });
 	});
 
-	it("never writes expandedItems or searchQuery to storage (new refreshes start from the default menu + empty search)", () => {
-		// Toggle a few expansions and type a search, then trigger a persist write
-		// and confirm the stored payload contains neither `expandedItems` nor
-		// `searchQuery` — both are session-only.
-		useSidebarStore.getState().setItemExpanded("main-settings", true);
-		useSidebarStore.getState().setItemExpanded("docs-docs-home", true);
-		useSidebarStore.getState().setSearchQuery("security");
-		useSidebarStore.setState({ isOpen: false });
+	it("saves expansions and section order but never the search text", () => {
+		renderSidebar({ pathname: "/" });
 
-		const raw = localStorage.getItem("admin-sidebar-state");
-		expect(raw).not.toBeNull();
-		// Parse the stored payload with zod (no unchecked casts) — the schema
-		// tolerates the session-only keys being present so we can assert absence.
-		const parsed = StoredPayloadSchema.safeParse(JSON.parse(raw ?? "{}"));
-		if (parsed.success) {
-			// expandedItems is now persisted (capped at 20).
-			expect(parsed.data.state).toHaveProperty("expandedItems");
-			// searchQuery is still session-only — never persisted.
-			expect(parsed.data.state).not.toHaveProperty("searchQuery");
-			// The user's genuine preferences still persist.
-			expect(parsed.data.state.isOpen).toBe(false);
-		} else {
-			throw new Error("stored payload did not match the expected shape");
-		}
+		fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+		fireEvent.click(screen.getByRole("button", { name: "Move Docs section up" }));
+		act(() => {
+			fireEvent.change(screen.getByLabelText("Search menu"), { target: { value: "security" } });
+		});
+
+		const stored = readStoredPreferences();
+		expect(stored).toMatchObject({ isOpen: true, sectionOrder: ["Docs", "Main"], expandedItems: { "main-settings": true } });
+		expect(stored).not.toHaveProperty("searchQuery");
 	});
 });
 
 describe("Sidebar with the authorized admin menu", () => {
 	beforeEach(() => {
 		harnessIsMobile = false;
-		useSidebarStore.setState({ isOpen: true, sectionOrder: null, expandedItems: {}, searchQuery: "" });
+		localStorage.clear();
 	});
 
 	afterEach(() => {
@@ -481,7 +476,7 @@ describe("Sidebar with the authorized admin menu", () => {
 
 	it("does not render Products without the product list permission", () => {
 		const menu = filterCompiledSidebarMenu(SIDEBAR_MENU, [], { enabledFeatureFlags: [] });
-		render(<SidebarHarness pathname="/" menu={menu} />);
+		renderSidebar({ pathname: "/", menu });
 
 		expect(screen.queryByRole("button", { name: "Products" })).toBeNull();
 		expect(screen.getByRole("button", { name: "Overview" })).toBeDefined();
@@ -489,7 +484,7 @@ describe("Sidebar with the authorized admin menu", () => {
 
 	it("renders Products when the product list permission is held", () => {
 		const menu = filterCompiledSidebarMenu(SIDEBAR_MENU, [PERMISSION.PRODUCT.LIST], { enabledFeatureFlags: [] });
-		render(<SidebarHarness pathname="/" menu={menu} />);
+		renderSidebar({ pathname: "/", menu });
 
 		expect(screen.getByRole("button", { name: "Products" })).toBeDefined();
 	});

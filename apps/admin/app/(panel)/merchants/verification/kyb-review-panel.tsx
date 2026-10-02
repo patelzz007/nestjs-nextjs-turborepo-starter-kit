@@ -19,7 +19,7 @@ import type {
 	OrganizationLocationResponse,
 	OrganizationLocationStatus,
 } from "@workspace/shared";
-import { EpochMsSchema, JsonObjectSchema, JsonPrimitiveSchema, KybStatusSchema, nowEpochMs, PERMISSION } from "@workspace/shared";
+import { EpochMsSchema, JsonObjectSchema, JsonPrimitiveSchema, KybStatusSchema, MerchantOrgResponseSchema, nowEpochMs, PERMISSION } from "@workspace/shared";
 import { z } from "zod";
 import { Badge } from "@workspace/ui/components/feedback/badge";
 import { Button, buttonVariants } from "@workspace/ui/components/form/button";
@@ -35,9 +35,10 @@ import { cn } from "@workspace/ui/lib/core/utils";
 import { useQueryClient } from "@tanstack/react-query";
 import { Building2, Check, Clock, MapPin, ShieldCheck, User, X } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import * as React from "react";
 import { ROUTES } from "@/lib/routes";
+import { KYB_REVIEW_URL_STATE } from "@/lib/url-state/selection";
+import { useUrlState } from "@workspace/client/lib/url-state/use-url-state";
 
 const KYB_STATUSES: readonly KybStatus[] = KybStatusSchema.options;
 
@@ -398,16 +399,21 @@ function KybReviewDecisionForm({ merchant, isSaving, onSubmitReview }: KybReview
 }
 
 export interface KybReviewPanelProps {
-	readonly initialMerchantOrgId?: string | undefined;
 	readonly initialPendingMerchants?: readonly MerchantOrgResponse[] | undefined;
 }
 
-export default function KybReviewPanel({ initialMerchantOrgId, initialPendingMerchants }: KybReviewPanelProps): React.JSX.Element {
+/**
+ * KYB verification queue. The merchant open in the side panel is
+ * `?organizationId=` (lib/url-state/selection) — derived from the URL on every
+ * render, so a shared link, a reload and back/forward all show the same
+ * merchant, and there is no second copy to keep in sync.
+ */
+export default function KybReviewPanel({ initialPendingMerchants }: KybReviewPanelProps): React.JSX.Element {
 	const { api } = useAuth();
-	const router = useRouter();
 	const queryClient = useQueryClient();
 
-	const [organizationId, setMerchantOrgId] = React.useState<string>(initialMerchantOrgId ?? "");
+	const [selection, updateSelection] = useUrlState(KYB_REVIEW_URL_STATE);
+	const organizationId: string = selection.organizationId ?? "";
 	const [documentPreview, setDocumentPreview] = React.useState<MerchantKybDocumentPreviewState | null>(null);
 
 	const pendingInitialData = React.useMemo(
@@ -543,13 +549,12 @@ export default function KybReviewPanel({ initialMerchantOrgId, initialPendingMer
 
 	const handleMerchantSelect = React.useCallback(
 		function handleMerchantSelect(value: string | null): void {
-			if (value === null || value.length === 0) {
-				return;
+			const parsed = MerchantOrgResponseSchema.shape.id.safeParse(value);
+			if (parsed.success) {
+				updateSelection({ organizationId: parsed.data });
 			}
-			setMerchantOrgId(value);
-			router.replace(ROUTES.merchants.verificationFor(value));
 		},
-		[router],
+		[updateSelection],
 	);
 
 	const handleSubmitReview = React.useCallback(

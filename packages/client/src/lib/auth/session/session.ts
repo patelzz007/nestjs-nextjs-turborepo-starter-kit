@@ -1,17 +1,44 @@
 import type { EnrollmentReason, SessionScope, UserResponse } from "@workspace/shared";
 
-import type { AuthUser } from "./store";
+import type { AuthSessionScope } from "../../features/auth/state";
+
+/**
+ * The signed-in user as the client renders it: the `/auth/me` profile fields
+ * the UI needs, plus the session's scope. Composed by the auth facade from the
+ * `/auth/me` query and the auth feature store — never stored as a whole.
+ */
+export interface AuthUser {
+	readonly id: string;
+	readonly email: string;
+	readonly fullName: string;
+	readonly isSuperAdmin: boolean;
+	readonly hasAdminAccess: boolean;
+	readonly isEmailVerified: boolean;
+	/** Mirrors the current access token's `sessionScope` claim. */
+	readonly sessionScope: SessionScope;
+	/** Present when `sessionScope` is `restricted`. */
+	readonly enrollmentReason: EnrollmentReason | null;
+	readonly roles: readonly { readonly id: string; readonly name: string }[];
+}
 
 export interface AuthSessionSource {
 	readonly sessionScope?: SessionScope | undefined;
 	readonly enrollmentReason?: EnrollmentReason | undefined;
 }
 
-/** Maps an API user record into the client auth-store shape. */
-export function toAuthUser(user: UserResponse, session?: AuthSessionSource | null): AuthUser {
+/**
+ * The session scope a server answer describes. No source (or no scope in it)
+ * means a full session; a restricted one without a reason falls back to what
+ * the email-verification flag implies.
+ */
+export function resolveSessionScope(session: AuthSessionSource | null | undefined, isEmailVerified: boolean): AuthSessionScope {
 	const sessionScope = session?.sessionScope ?? "full";
-	const enrollmentReason = sessionScope === "restricted" ? (session?.enrollmentReason ?? resolveEnrollmentReasonFromUser(user)) : null;
+	const enrollmentReason = sessionScope === "restricted" ? (session?.enrollmentReason ?? resolveEnrollmentReasonFromFlags(isEmailVerified)) : null;
+	return { sessionScope, enrollmentReason };
+}
 
+/** The `AuthUser` view of a profile in a given session scope. */
+export function composeAuthUser(user: UserResponse, scope: AuthSessionScope): AuthUser {
 	return {
 		id: user.id,
 		email: user.email,
@@ -19,21 +46,22 @@ export function toAuthUser(user: UserResponse, session?: AuthSessionSource | nul
 		isSuperAdmin: user.isSuperAdmin,
 		hasAdminAccess: user.hasAdminAccess,
 		isEmailVerified: user.isEmailVerified,
-		sessionScope,
-		enrollmentReason,
+		sessionScope: scope.sessionScope,
+		enrollmentReason: scope.enrollmentReason,
 		roles: user.roles,
 	};
 }
 
+/** Maps an API user record (and the session answer, when known) into the client `AuthUser` shape. */
+export function toAuthUser(user: UserResponse, session?: AuthSessionSource | null): AuthUser {
+	return composeAuthUser(user, resolveSessionScope(session, user.isEmailVerified));
+}
+
 /** Merges JWT-aligned session fields into an existing auth user. */
 export function mergeAuthSessionFields(user: AuthUser, session: AuthSessionSource): AuthUser {
-	const sessionScope = session.sessionScope ?? "full";
-	const enrollmentReason = sessionScope === "restricted" ? (session.enrollmentReason ?? resolveEnrollmentReasonFromFlags(user.isEmailVerified)) : null;
-
 	return {
 		...user,
-		sessionScope,
-		enrollmentReason,
+		...resolveSessionScope(session, user.isEmailVerified),
 	};
 }
 
@@ -49,10 +77,6 @@ export function resolveAuthEnrollmentReason(user: AuthUser): EnrollmentReason | 
 	}
 
 	return user.enrollmentReason ?? resolveEnrollmentReasonFromFlags(user.isEmailVerified);
-}
-
-function resolveEnrollmentReasonFromUser(user: UserResponse): EnrollmentReason {
-	return resolveEnrollmentReasonFromFlags(user.isEmailVerified);
 }
 
 function resolveEnrollmentReasonFromFlags(isEmailVerified: boolean): EnrollmentReason {

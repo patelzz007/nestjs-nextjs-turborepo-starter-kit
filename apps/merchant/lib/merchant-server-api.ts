@@ -9,7 +9,7 @@ import {
 	type ServerApiConfig,
 	type ServerCallerTree,
 } from "@workspace/client/lib/api/server-api";
-import type { OrganizationRewardMembershipResponse } from "@workspace/shared";
+import { UuidParamSchema, type OrganizationContextResponse, type OrganizationRewardMembershipResponse } from "@workspace/shared";
 import { cookies } from "next/headers";
 import { cache } from "react";
 
@@ -49,14 +49,33 @@ export async function readOrganizationSlugCookie(): Promise<string | undefined> 
 	return value;
 }
 
-export async function readOrganizationLocationCookie(): Promise<string | undefined> {
+/**
+ * The member's chosen store from the `organizationLocationId` cookie, or `null`
+ * when absent or not a location id. A cookie is client input: this only checks
+ * its shape — access is decided by `loadServerLocationScope` (accessible
+ * locations) and, authoritatively, by the API on every request.
+ */
+export async function readOrganizationLocationCookie(): Promise<string | null> {
 	const cookieStore = await cookies();
-	const value = cookieStore.get(ORGANIZATION_LOCATION_ID_COOKIE_NAME)?.value;
-	if (value === undefined || value.length === 0) {
+	const parsed = UuidParamSchema.safeParse(cookieStore.get(ORGANIZATION_LOCATION_ID_COOKIE_NAME)?.value);
+	return parsed.success ? parsed.data : null;
+}
+
+/**
+ * The organization context (membership + locations) for `orgSlug`, memoized per
+ * request (`React.cache`) so the org layout and the page share one call.
+ * `undefined` when it cannot be loaded (not a member, API down) — callers
+ * degrade to the client fetching it; the API stays the authority.
+ */
+export const loadOrganizationContext = cache(async (orgSlug: string): Promise<OrganizationContextResponse | undefined> => {
+	const server = createMerchantServerCaller();
+	try {
+		const response = await server.organizations.context.query({ orgSlug });
+		return response.data;
+	} catch {
 		return undefined;
 	}
-	return value;
-}
+});
 
 /**
  * Loads memberships + active organization slug for SSR panel routes. Memoized

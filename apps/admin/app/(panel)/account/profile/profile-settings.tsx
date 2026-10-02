@@ -1,6 +1,6 @@
 "use client";
 
-import { useAuthUser } from "@workspace/client/lib/auth/session/store";
+import { useAuthUser } from "@workspace/client/lib/auth";
 import { Button } from "@workspace/ui/components/form/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
 import { Input } from "@workspace/ui/components/form/input";
@@ -29,7 +29,7 @@ interface TogglePreference {
 	readonly enabled: boolean;
 }
 
-/** Build initial profile from the auth store user, with fallback defaults. */
+/** Build initial profile from the signed-in user, with fallback defaults. */
 function getInitialProfile(user: ReturnType<typeof useAuthUser>): ProfileFormState {
 	return {
 		fullName: user?.fullName ?? "",

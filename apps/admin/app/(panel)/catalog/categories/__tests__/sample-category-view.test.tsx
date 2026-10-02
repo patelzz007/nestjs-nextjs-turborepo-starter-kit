@@ -1,10 +1,10 @@
 // @vitest-environment jsdom
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { CapabilitiesProvider } from "@workspace/client/lib/auth/can";
 import { PERMISSION, SampleCategorySchema, type CapabilitySlug, type SampleCategory } from "@workspace/shared";
 import * as React from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import SampleCategoryDetailView from "../sample-category-detail-view";
 import SampleCategoryView from "../sample-category-view";
@@ -17,7 +17,7 @@ interface AuthStub {
 	readonly api: {
 		readonly sampleCategory: {
 			readonly list: {
-				readonly useQuery: () => {
+				readonly useQuery: (input: object) => {
 					readonly data: { readonly data: readonly SampleCategory[] };
 					readonly isLoading: boolean;
 					readonly isError: boolean;
@@ -32,7 +32,8 @@ interface AuthStub {
 	};
 }
 
-const { CATEGORY_INPUT } = vi.hoisted(() => ({
+const { CATEGORY_INPUT, categoryListSpy } = vi.hoisted(() => ({
+	categoryListSpy: vi.fn(),
 	CATEGORY_INPUT: {
 		id: "2b3c4d5e-6f70-4a8b-9c0d-1e2f3a4b5c6d",
 		description: null,
@@ -46,8 +47,11 @@ const { CATEGORY_INPUT } = vi.hoisted(() => ({
 	},
 }));
 
+// The table reads its state from the address bar, as Next.js's
+// `useSearchParams` does once the History API integration has synced it.
 vi.mock("next/navigation", () => ({
 	useRouter: (): { readonly push: () => void } => ({ push: () => undefined }),
+	useSearchParams: (): URLSearchParams => new URLSearchParams(window.location.search),
 }));
 
 vi.mock("@workspace/client/lib/auth", () => {
@@ -56,7 +60,13 @@ vi.mock("@workspace/client/lib/auth", () => {
 	const auth: AuthStub = {
 		api: {
 			sampleCategory: {
-				list: { useQuery: () => ({ data: { data: [category] }, isLoading: false, isError: false, isFetching: false }), fetchOrThrow: () => Promise.resolve() },
+				list: {
+					useQuery: (input: object) => {
+						categoryListSpy(input);
+						return { data: { data: [category] }, isLoading: false, isError: false, isFetching: false };
+					},
+					fetchOrThrow: () => Promise.resolve(),
+				},
 				detail: { useQuery: () => ({ data: { data: category }, isLoading: false, isError: false }) },
 				delete: mutation,
 				bulkDelete: mutation,
@@ -74,8 +84,16 @@ function renderWith(capabilities: readonly CapabilitySlug[], node: React.ReactNo
 	);
 }
 
+const PATH = "/catalog/categories";
+
+beforeEach(() => {
+	window.history.replaceState(null, "", PATH);
+});
+
 afterEach(() => {
 	cleanup();
+	categoryListSpy.mockReset();
+	vi.restoreAllMocks();
 });
 
 describe("SampleCategoryView authorization", () => {
@@ -99,5 +117,26 @@ describe("SampleCategoryDetailView authorization", () => {
 		expect(screen.getByText("Beverages")).toBeDefined();
 		expect(screen.queryByRole("link", { name: "Edit" })).toBeNull();
 		expect(screen.queryByRole("button", { name: "Edit" })).toBeNull();
+	});
+});
+
+describe("SampleCategoryView URL state", () => {
+	it("queries the URL's search, active filter, sort and page", () => {
+		window.history.replaceState(null, "", `${PATH}?search=bev&filter[isActive]=true&sort=name&page=2&limit=50`);
+		renderWith([PERMISSION.SAMPLE_CATEGORY.LIST], <SampleCategoryView />);
+
+		expect(categoryListSpy).toHaveBeenLastCalledWith({ page: 2, limit: 50, sort: "name", search: "bev", filter: { isActive: { eq: true } } });
+		expect(screen.getByDisplayValue("bev")).toBeDefined();
+	});
+
+	it("pushes a sort change from the column header and returns to page 1", () => {
+		window.history.replaceState(null, "", `${PATH}?page=2`);
+		const pushState = vi.spyOn(window.history, "pushState");
+		renderWith([PERMISSION.SAMPLE_CATEGORY.LIST], <SampleCategoryView />);
+
+		fireEvent.click(screen.getByText("Name"));
+
+		expect(pushState).toHaveBeenCalledTimes(1);
+		expect(window.location.search).toBe("?sort=name");
 	});
 });

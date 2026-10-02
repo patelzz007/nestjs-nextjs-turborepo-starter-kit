@@ -15,7 +15,7 @@ import { useCanAccessRoute } from "@/components/layout/authorized-navigation";
 import { NotificationsDropdown } from "@/components/notifications/notifications-dropdown";
 import { SessionStatusBadge } from "@/components/common/session-status-badge";
 import { Profile01 } from "@/components/settings/profile-01";
-import { useSidebarStore } from "@/stores/sidebar-store";
+import { SIDEBAR_MENU } from "@/lib/navigation/sidebar-menu";
 import { getUserInitials } from "@workspace/ui/lib/core/user-initials";
 import type { SidebarUser } from "@/lib/navigation/sidebar";
 import { ROUTES } from "@/lib/routes";
@@ -34,7 +34,7 @@ export interface TopbarProps {
  */
 export function Topbar({ user, onLogout }: TopbarProps): React.JSX.Element {
 	const [commandOpen, setCommandOpen] = React.useState(false);
-	const menuTitle = useSidebarStore((state) => state.menu.header.title);
+	const menuTitle = SIDEBAR_MENU.header.title;
 	const canAccessRoute = useCanAccessRoute();
 
 	const handleOpenCommand = React.useCallback((): void => {

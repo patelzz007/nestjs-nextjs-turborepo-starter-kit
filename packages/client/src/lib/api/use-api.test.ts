@@ -3,10 +3,20 @@ import { renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
-import { createApiRequestContext, createUncheckedApiRequestContext, fetchMutationUnchecked, fetchQuery, useApi, type OnRefresh, type OnUnauthorized } from "./use-api";
+import {
+	createApiRequestContext,
+	createUncheckedApiRequestContext,
+	fetchMutationUnchecked,
+	fetchQuery,
+	SessionRefreshUnavailableError,
+	useApi,
+	type OnRefresh,
+	type OnUnauthorized,
+} from "./use-api";
 import { DataValueSchema, singleResponse, type DataValue } from "@workspace/shared";
 import { apiRouter, defineMutation, defineQuery } from "./endpoints";
 import { firstFetchCall, headersOf, inputUrl, jsonResponse, type FetchImpl } from "../test-utils";
+import { ApiResponseContractError } from "./response-contract";
 
 const BASE_URL = "http://api.test";
 
@@ -143,7 +153,7 @@ describe("useApi 401 pipeline", () => {
 			.mockResolvedValueOnce(jsonResponse(200, successEnvelope({ id: "u_1", email: "alex@example.com" })));
 		vi.stubGlobal("fetch", fetchMock);
 
-		const onRefresh = vi.fn<OnRefresh>().mockResolvedValue(true);
+		const onRefresh = vi.fn<OnRefresh>().mockResolvedValue("ok");
 		const onUnauthorized = vi.fn<OnUnauthorized>();
 
 		const { result } = renderHook(() => useApi(apiRouter, BASE_URL, onUnauthorized, onRefresh));
@@ -160,11 +170,11 @@ describe("useApi 401 pipeline", () => {
 		}
 	});
 
-	it("calls onUnauthorized when the refresh fails", async () => {
+	it("calls onUnauthorized when the refresh says the session expired", async () => {
 		const fetchMock = vi.fn<FetchImpl>().mockResolvedValueOnce(jsonResponse(401, { message: "Unauthorized" }));
 		vi.stubGlobal("fetch", fetchMock);
 
-		const onRefresh = vi.fn<OnRefresh>().mockResolvedValue(false);
+		const onRefresh = vi.fn<OnRefresh>().mockResolvedValue("expired");
 		const onUnauthorized = vi.fn<OnUnauthorized>();
 
 		const { result } = renderHook(() => useApi(apiRouter, BASE_URL, onUnauthorized, onRefresh));
@@ -179,11 +189,70 @@ describe("useApi 401 pipeline", () => {
 		if (!response.ok) expect(response.error).toBe("Unauthorized");
 	});
 
+	it("fails only the request — never the session — when the refresh could not run right now", async () => {
+		const fetchMock = vi.fn<FetchImpl>().mockResolvedValueOnce(jsonResponse(401, { message: "Unauthorized" }));
+		vi.stubGlobal("fetch", fetchMock);
+
+		const onRefresh = vi.fn<OnRefresh>().mockResolvedValue("transient");
+		const onUnauthorized = vi.fn<OnUnauthorized>();
+
+		const { result } = renderHook(() => useApi(apiRouter, BASE_URL, onUnauthorized, onRefresh));
+		const me = result.current.procedure(meDef);
+
+		const response = await me.fetch(undefined);
+
+		expect(onRefresh).toHaveBeenCalledTimes(1);
+		expect(onUnauthorized).not.toHaveBeenCalled();
+		expect(fetchMock).toHaveBeenCalledTimes(1);
+		expect(response.ok).toBe(false);
+		expect(response.status).toBe(401);
+		if (!response.ok) expect(response.error).toBeInstanceOf(SessionRefreshUnavailableError);
+	});
+
+	it("throws the typed refresh-unavailable error from fetchOrThrow, so queries fail without ending the session", async () => {
+		vi.stubGlobal("fetch", vi.fn<FetchImpl>().mockResolvedValueOnce(jsonResponse(401, { message: "Unauthorized" })));
+		const onRefresh = vi.fn<OnRefresh>().mockResolvedValue("transient");
+		const onUnauthorized = vi.fn<OnUnauthorized>();
+
+		const { result } = renderHook(() => useApi(apiRouter, BASE_URL, onUnauthorized, onRefresh));
+
+		await expect(result.current.procedure(meDef).fetchOrThrow(undefined)).rejects.toBeInstanceOf(SessionRefreshUnavailableError);
+		expect(onUnauthorized).not.toHaveBeenCalled();
+	});
+
+	it("still ends the session when the retried request is 401 again after a successful refresh", async () => {
+		const fetchMock = vi
+			.fn<FetchImpl>()
+			.mockResolvedValueOnce(jsonResponse(401, { message: "Unauthorized" }))
+			.mockResolvedValueOnce(jsonResponse(401, { message: "Unauthorized" }));
+		vi.stubGlobal("fetch", fetchMock);
+		const onRefresh = vi.fn<OnRefresh>().mockResolvedValue("ok");
+		const onUnauthorized = vi.fn<OnUnauthorized>();
+
+		const { result } = renderHook(() => useApi(apiRouter, BASE_URL, onUnauthorized, onRefresh));
+		const response = await result.current.procedure(meDef).fetch(undefined);
+
+		expect(onRefresh).toHaveBeenCalledTimes(1);
+		expect(fetchMock).toHaveBeenCalledTimes(2);
+		expect(onUnauthorized).toHaveBeenCalledTimes(1);
+		if (!response.ok) expect(response.error).toBe("Unauthorized");
+	});
+
+	it("maps a 2xx body that is not JSON to a contract violation, not a transport failure", async () => {
+		vi.stubGlobal("fetch", vi.fn<FetchImpl>().mockResolvedValue(new Response("<html>gateway</html>", { status: 200, headers: { "content-type": "application/json" } })));
+
+		const result = await fetchQuery(createApiRequestContext(BASE_URL), meDef, undefined);
+
+		expect(result.ok).toBe(false);
+		expect(result.status).toBe(200);
+		if (!result.ok) expect(result.error).toBeInstanceOf(ApiResponseContractError);
+	});
+
 	it("does not retry or call onUnauthorized on non-401 errors", async () => {
 		const fetchMock = vi.fn<FetchImpl>().mockResolvedValue(jsonResponse(403, { message: "Forbidden" }));
 		vi.stubGlobal("fetch", fetchMock);
 
-		const onRefresh = vi.fn<OnRefresh>().mockResolvedValue(true);
+		const onRefresh = vi.fn<OnRefresh>().mockResolvedValue("ok");
 		const onUnauthorized = vi.fn<OnUnauthorized>();
 
 		const { result } = renderHook(() => useApi(apiRouter, BASE_URL, onUnauthorized, onRefresh));
@@ -203,7 +272,7 @@ describe("useApi 401 pipeline", () => {
 			.mockResolvedValue(jsonResponse(200, successEnvelope({ userId: "u_1", email: "a@b.com", fullName: "A", expiresAt: null, checkedAt: 0 })));
 		vi.stubGlobal("fetch", fetchMock);
 
-		const onRefresh = vi.fn<OnRefresh>().mockResolvedValue(true);
+		const onRefresh = vi.fn<OnRefresh>().mockResolvedValue("ok");
 		const onUnauthorized = vi.fn<OnUnauthorized>();
 
 		const { result } = renderHook(() => useApi(apiRouter, BASE_URL, onUnauthorized, onRefresh, { clientType: "admin" }));
@@ -221,7 +290,7 @@ describe("useApi 401 pipeline", () => {
 			.mockResolvedValue(jsonResponse(200, successEnvelope({ userId: "u_1", email: "a@b.com", fullName: "A", expiresAt: null, checkedAt: 0 })));
 		vi.stubGlobal("fetch", fetchMock);
 
-		const onRefresh = vi.fn<OnRefresh>().mockResolvedValue(true);
+		const onRefresh = vi.fn<OnRefresh>().mockResolvedValue("ok");
 		const onUnauthorized = vi.fn<OnUnauthorized>();
 
 		const { result } = renderHook(() => useApi(apiRouter, BASE_URL, onUnauthorized, onRefresh, { clientType: "merchant" }));

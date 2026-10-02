@@ -1,13 +1,17 @@
 "use client";
 
 import { initialDataOption, readPaginatedNextCursor, readPaginatedTotal } from "@workspace/client/lib/api/envelope";
-import { eqFilter, parseFilterOption, tableStateToListQuery } from "@workspace/client/lib/api/list-query";
+import { ALL_FILTER_OPTION, parseFilterOption, toListSearch } from "@workspace/client/lib/api/list-query";
 import { useAuth } from "@workspace/client/lib/auth";
+import { LIST_FIRST_PAGE } from "@workspace/client/lib/url-state/list-url-state";
+import { useUrlState } from "@workspace/client/lib/url-state/use-url-state";
 
 import { emailLogListQuery, EmailLogStatusSchema, type EmailLogEntry, type EmailLogStatus, type Envelope } from "@workspace/shared";
 import { DataTableSearchToolbar } from "@/components/common/data-table-search-toolbar";
-import { useDebouncedValue } from "@/hooks/use-debounced-value";
-import { useManualHybridPagination } from "@/lib/data-table/use-manual-cursor-pagination";
+import { prefetchedDataFor, type PrefetchedQuery } from "@workspace/client/lib/url-state/prefetched-query";
+import { useTableTextDraft } from "@/lib/data-table/use-table-text-draft";
+import { useUrlListPaging } from "@/lib/data-table/use-url-list-paging";
+import { EMAIL_LOG_PAGE_SIZE_OPTIONS, EMAIL_LOG_URL_STATE, toEmailLogListQuery } from "@/lib/url-state/email-log";
 import { useEmailLogLive, type LiveState } from "@/lib/notifications/email-log-live";
 import { formatDateTime } from "@/lib/format/dates";
 import { Badge } from "@workspace/ui/components/feedback/badge";
@@ -18,17 +22,9 @@ import { buildReadOnlyTableCheckbox } from "@/lib/data-table/capabilities";
 import { DataTableMobileCard } from "@/lib/data-table/mobile-card";
 import { DataTable, type DataTableFeatures, type Filter } from "@workspace/ui/components/display/data-table";
 import { keepPreviousData } from "@tanstack/react-query";
-import type { ColumnDef, SortingState } from "@tanstack/react-table";
+import type { ColumnDef } from "@tanstack/react-table";
 import { CircleCheck, CircleX, Loader2, Mail, RefreshCw, TriangleAlert } from "lucide-react";
 import * as React from "react";
-
-/** Page size of the first (server-rendered) page. */
-export const EMAIL_LOG_PAGE_SIZE = 25;
-
-const PAGE_SIZE_OPTIONS: readonly number[] = [10, 25, 50, 100];
-
-/** Debounce for the search box, so typing does not fire a request per keystroke. */
-const SEARCH_DEBOUNCE_MS = 300;
 
 // ── Status presentation ───────────────────────────────────────────────────
 
@@ -102,44 +98,33 @@ function LivePill({ state }: { readonly state: LiveState }): React.JSX.Element {
  *
  * The page owns the data (fetched from `GET /notifications/email-log`), the
  * column defs, and the status presentation; the shared `DataTable` renders it
- * with search / pagination / export for free. Statuses are delivery-only
+ * with search / pagination / export for free. Search, status filter, sort and
+ * page live in the URL (lib/url-state/email-log). Statuses are delivery-only
  * (sent → delivered / bounced / complained / failed) — open/click tracking
  * was removed from the system.
  */
-export default function EmailLogPage({ initialEnvelope }: { readonly initialEnvelope: Envelope<EmailLogEntry[]> }): React.JSX.Element {
+export default function EmailLogPage({ initialPage }: { readonly initialPage?: PrefetchedQuery<Envelope<EmailLogEntry[]>> | undefined }): React.JSX.Element {
 	const { api } = useAuth();
-	const [search, setSearch] = React.useState("");
-	const debouncedSearch = useDebouncedValue(search, SEARCH_DEBOUNCE_MS);
-	const [sorting, setSorting] = React.useState<SortingState>([]);
-	const [statusFilter, setStatusFilter] = React.useState<string>("all");
-	const parsedStatus: EmailLogStatus | undefined = parseFilterOption(statusFilter, EmailLogStatusSchema);
-	const isFiltered = debouncedSearch.trim().length > 0 || parsedStatus !== undefined;
+	const [urlState, updateUrlState] = useUrlState(EMAIL_LOG_URL_STATE);
+	const isFiltered = urlState.search !== undefined || urlState.status !== undefined;
+
+	const commitSearch = React.useCallback(
+		(value: string): void => {
+			updateUrlState({ search: toListSearch(value), page: LIST_FIRST_PAGE, cursor: undefined }, { history: "replace" });
+		},
+		[updateUrlState],
+	);
+	const [searchDraft, setSearchDraft] = useTableTextDraft(urlState.search, commitSearch);
 
 	const handleClearFilters = React.useCallback((): void => {
-		setSearch("");
-		setStatusFilter("all");
-	}, []);
+		updateUrlState({ search: undefined, status: undefined, page: LIST_FIRST_PAGE, cursor: undefined });
+	}, [updateUrlState]);
 
-	const {
-		pageIndex,
-		pageSize,
-		listQuery: paginationQuery,
-		bindListMeta,
-		pagination: basePagination,
-	} = useManualHybridPagination<EmailLogEntry>(EMAIL_LOG_PAGE_SIZE, [debouncedSearch, sorting, statusFilter], (item) => item.id, {
-		onClearFilters: handleClearFilters,
-		isFiltered,
+	const stateKey: string = EMAIL_LOG_URL_STATE.serialize(urlState);
+	const logQuery = api.email.logList.useQuery(toEmailLogListQuery(urlState), {
+		placeholderData: keepPreviousData,
+		...initialDataOption(prefetchedDataFor(initialPage, stateKey)),
 	});
-
-	const listFilter = React.useMemo(() => ({ status: eqFilter(parsedStatus) }), [parsedStatus]);
-	const isInitialView = pageIndex === 0 && pageSize === EMAIL_LOG_PAGE_SIZE && !isFiltered && sorting.length === 0;
-	const logQuery = api.email.logList.useQuery(
-		tableStateToListQuery(emailLogListQuery, { pagination: paginationQuery, sorting, search: debouncedSearch, filter: listFilter }),
-		{
-			placeholderData: keepPreviousData,
-			...initialDataOption(isInitialView ? initialEnvelope : undefined),
-		},
-	);
 
 	// Live updates: SSE stream → invalidate the list queries on every webhook
 	// write, so delivery status flips appear instantly.
@@ -149,27 +134,35 @@ export default function EmailLogPage({ initialEnvelope }: { readonly initialEnve
 	const rows = React.useMemo(() => logQuery.data?.data ?? [], [logQuery.data]);
 	const totalCount = readPaginatedTotal(logQuery.data?.meta, rows.length);
 	const isRefetching: boolean = logQuery.isFetching && !logQuery.isLoading;
-	const pagination = React.useMemo(() => ({ ...basePagination, totalCount }), [basePagination, totalCount]);
+	const { pagination, sorting, handleSortingChange } = useUrlListPaging({
+		state: urlState,
+		update: updateUrlState,
+		sortSpec: emailLogListQuery,
+		totalCount,
+		nextCursor: readPaginatedNextCursor(logQuery.data?.meta),
+		resetKey: EMAIL_LOG_URL_STATE.serialize({ ...urlState, page: LIST_FIRST_PAGE, cursor: undefined }),
+		getRowId: getEmailLogRowId,
+		onClearFilters: handleClearFilters,
+		isFiltered,
+	});
 
-	React.useEffect((): void => {
-		bindListMeta(readPaginatedNextCursor(logQuery.data?.meta));
-	}, [bindListMeta, logQuery.data?.meta]);
+	const handleManualColumnFilterChange = React.useCallback(
+		(filterKey: string, value: string | null): void => {
+			if (filterKey === "status") {
+				const status: EmailLogStatus | undefined = parseFilterOption(value ?? "", EmailLogStatusSchema);
+				updateUrlState({ status, page: LIST_FIRST_PAGE, cursor: undefined });
+			}
+		},
+		[updateUrlState],
+	);
 
-	const handleManualSortingChange = React.useCallback((nextSorting: SortingState): void => {
-		setSorting(nextSorting);
-	}, []);
-
-	const handleManualColumnFilterChange = React.useCallback((filterKey: string, value: string | null): void => {
-		if (filterKey === "status") {
-			setStatusFilter(value ?? "all");
-		}
-	}, []);
-
-	const manualColumnFilters = React.useMemo(() => ({ status: statusFilter }), [statusFilter]);
+	const manualColumnFilters = React.useMemo((): Readonly<Record<string, string>> => ({ status: urlState.status ?? ALL_FILTER_OPTION }), [urlState.status]);
 
 	const searchToolbar = React.useMemo(
-		(): React.JSX.Element => <DataTableSearchToolbar value={search} onChange={setSearch} placeholder="Search recipient, subject, template..." ariaLabel="Search email log" />,
-		[search],
+		(): React.JSX.Element => (
+			<DataTableSearchToolbar value={searchDraft} onChange={setSearchDraft} placeholder="Search recipient, subject, template..." ariaLabel="Search email log" />
+		),
+		[searchDraft, setSearchDraft],
 	);
 
 	const statusFilters = React.useMemo(
@@ -313,9 +306,9 @@ export default function EmailLogPage({ initialEnvelope }: { readonly initialEnve
 						checkbox={checkbox}
 						enableColumnVisibility
 						pagination={pagination}
-						pageSizeOptions={PAGE_SIZE_OPTIONS}
+						pageSizeOptions={EMAIL_LOG_PAGE_SIZE_OPTIONS}
 						sorting={sorting}
-						onManualSortingChange={handleManualSortingChange}
+						onManualSortingChange={handleSortingChange}
 						isRefetching={isRefetching}
 						mobileCardRender={mobileCardRender}
 					/>
@@ -323,6 +316,10 @@ export default function EmailLogPage({ initialEnvelope }: { readonly initialEnve
 			</Card>
 		</div>
 	);
+}
+
+function getEmailLogRowId(entry: EmailLogEntry): string {
+	return entry.id;
 }
 
 /** Epoch-ms timestamp → locale string via date-fns (see lib/dates.ts). */

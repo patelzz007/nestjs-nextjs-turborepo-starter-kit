@@ -6,7 +6,7 @@ import { resolveSidebarMenuTrail, withTrailTailLabel } from "@workspace/ui/lib/s
 
 import { WEB_MENU_ICON_MAP } from "@/lib/navigation/menu-icons";
 import { resolveWebTrailPage } from "@/lib/navigation/route-access";
-import { useWebSidebarStore } from "@/stores/sidebar-store";
+import { USER_SIDEBAR_MENU } from "@/lib/navigation/sidebar-menu";
 import { isPathWithin, ROUTE_PREFIXES } from "@/lib/routes";
 
 function resolveIcon(iconName: string | undefined): LucideIcon {
@@ -38,7 +38,7 @@ export function resolveWebTrail(pathname: string): readonly BreadcrumbItem[] {
 	}
 
 	return resolveSidebarMenuTrail({
-		menu: useWebSidebarStore.getState().menu,
+		menu: USER_SIDEBAR_MENU,
 		pathname,
 		resolveIcon,
 		rootCurrentLabel: "Dashboard",

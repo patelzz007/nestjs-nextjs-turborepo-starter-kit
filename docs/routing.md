@@ -24,7 +24,7 @@ consistent across the three Next.js apps.
 | Parent URL = section prefix | never a child's URL (the parent must prefix-match every child) |
 | No duplicate menu URLs | two enabled items never share a URL — one exception: a section's "All …" leaf may share the section prefix, because parent rows only expand/collapse (the deeper leaf wins the highlight) |
 | Section index | exists — a page, or a redirect to its default child (`/settings` → `/settings/billing`) |
-| Detail pages in the path | `/merchants/[organizationId]`; query strings only for in-page selection or filters (`?key=`, `?page=`) |
+| Detail pages in the path | `/merchants/[organizationId]`; query strings only for in-page selection or filters (`?key=`, `?page=`), declared with `defineUrlState` and read with `useUrlState`, never mirrored into `useState` ([List queries §7](./list-queries.md#7-table-state-in-the-url)) |
 | Personal vs configuration | `account` = the signed-in user's profile, password, 2FA, sessions; `settings` = org / platform configuration |
 
 ## Where routes live
@@ -51,16 +51,54 @@ consistent across the three Next.js apps.
 
 - **web** — public: `/`, `/rewards/[rewardId]`, `/auth/*`. Signed-in shell under `/rewardhub`
   (browse), `/rewardhub/rewards/[rewardId]`, `/rewardhub/wallet[/[claimId]]`,
-  `/rewardhub/activity`, `/rewardhub/account`.
+  `/rewardhub/activity`, `/rewardhub/account`. The catalog on `/rewardhub` and on `/` keeps its
+  search, filters and page in the query string (`?search=&filter[city]=&filter[category]=&page=`).
 - **admin** — grouped by domain: `/analytics/sales` (`?weeks=` period filter), `/users` (+ `/[id]`, `/mfa-recovery`), `/merchants`
   (+ `/invites`, `/verification`, `/store-requests`), `/rewards/review`, `/emails/{templates,log}`,
   `/geography`, `/catalog/{products,categories}`, `/settings/{billing,access}` (platform),
   `/account/{profile,security}` (personal). Full table: [Admin panel](./admin-panel.md).
 - **merchant** — org-scoped under `/orgs/[orgSlug]`: `dashboard`, `rewards` (`new`,
-  `[rewardId]/edit`), `redemptions`, `analytics`, `terminals` (POS terminal pairing), `api-keys`, `settings` (organization index:
+  `[rewardId]/edit`), `redemptions` (`?page=`), `analytics`, `terminals` (POS terminal pairing), `api-keys` (`?status=` key filter), `settings` (organization index:
   `team`, `locations`, `verification`), `account` (personal). Top-level entry points: `/` and `/account` resolve the organization
   server-side; `/onboarding`, `/team-invite`, `/auth/*` (login, forgot-password, reset-password — the
   same paths as every app, from `APP_LINKS.auth`).
+
+## Organization and store context (merchant)
+
+The merchant's tenant is the **organization**; its **locations** are the organization's stores.
+Each value has one owner:
+
+| Value | Owner | Read it with |
+|---|---|---|
+| Active organization | The URL segment `/orgs/[orgSlug]` | `useOrganizationSlug()` (`useParams`), or the layout/page `params` on the server |
+| Last opened organization | `organizationSlug` cookie, written **only** by `OrgTenantBootstrap` in the org layout (a guard test enforces this) | Server entry routes: `/`, `/account`, the org layout's fallback redirect |
+| Accessible stores | TanStack Query `api.organizations.context` (server state, never copied into Zustand) | The tenant-context facade |
+| Chosen store (`null` = all stores) | Zustand feature store `apps/merchant/features/tenant-context`, mirrored to the `organizationLocationId` cookie by its effect | `useActiveLocationFilter()`, `useMerchantLocation()`, `useTenantContextCommands()` |
+
+- **Outside org routes** (`/auth/*`, `/onboarding`, `/team-invite`) there is no organization in the
+  URL: `useOrganizationSlug()` returns `undefined`, and org-relative links (`useOrganizationPath`)
+  point at the entry pages, which pick the organization on the server from the cookie.
+- **Switching organization** (sidebar switcher, `useSwitchOrganization`) clears the store cookie and
+  `router.push`es to the other organization's dashboard. The tenant-context provider is keyed by the
+  slug, so the new organization starts with a fresh store.
+- **The effective store is derived**, never stored (`resolveEffectiveLocationId`): a stored choice
+  the member can still access wins; otherwise "All locations" when the member has more than one store,
+  else their only store. While the stores are still loading, the stored choice is used as is.
+- **No double fetch.** The org layout calls `loadServerLocationScope(orgSlug)` (cookie + organization
+  context, memoized per request) and seeds the provider with the cookie value and the context. Pages
+  that prefetch (`analytics`, `redemptions`, `terminals`, `api-keys`) fetch with the same scope's
+  `effectiveLocationId`. They pass the data as `LocationScopedPrefetch` (`{ locationId, data }`). The
+  view seeds `initialData` only when that `locationId` equals the client's filter
+  (`prefetchForLocation`). A page with URL state as well (`redemptions?page=`) binds the prefetch to
+  both, `LocationScopedPrefetch<PrefetchedQuery<…>>`, and also checks the serialized URL state
+  ([List queries §7](./list-queries.md#store-scoped-lists-merchant)). The store itself never moves
+  into the URL. Server and client run the same derivation on the same inputs, so the
+  first client render asks for the key the server filled.
+- **Changing store needs no invalidation.** Every location-filtered query has `locationId` in its key.
+  A new store is a new key and is fetched when needed; the previous store's entries stay cached, so
+  switching back is instant.
+- **Never a security boundary.** The cookie is client input. The server only checks that it is a UUID,
+  and the API re-validates every `locationId` against the membership on every request.
 
 ## Route authorization (merchant)
 

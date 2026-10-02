@@ -3,7 +3,7 @@
 import { MerchantCapabilityGate } from "@/components/access/merchant-capability-gate";
 import { MerchantRewardFormFields } from "@/components/rewards/merchant-reward-form-fields";
 import { MerchantRewardLocationFields } from "@/components/rewards/merchant-reward-location-fields";
-import { useMerchantLocation } from "@/lib/org/location-context";
+import { useMerchantLocation } from "@/features/tenant-context/facade";
 import { upsertMerchantRewardInListCache } from "@/lib/rewards/query-cache";
 import { useAuth } from "@workspace/client/lib/auth";
 import { useQueryClient } from "@tanstack/react-query";

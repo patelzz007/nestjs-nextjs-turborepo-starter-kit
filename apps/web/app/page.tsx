@@ -7,12 +7,11 @@ import { RewardHubBrowseView } from "@/components/rewardhub/browse/view";
 import { hasServerSession } from "@/lib/auth/server";
 import { loginPath, ROUTE_PREFIXES, ROUTES } from "@/lib/routes";
 import { selectFeaturedOffers, selectMerchantNames, type FeaturedOffer } from "@/lib/rewards/featured-offers";
-import { readPaginatedHasNext } from "@workspace/client/lib/api/envelope";
+import { REWARDS_BROWSE_URL_STATE, toRewardsBrowseListQuery } from "@/lib/url-state/rewards-browse";
 import { createWebServerCaller } from "@/lib/web-server-api";
-import { ApiPaginatedMetaSchema, nowEpochMs, type RewardResponse } from "@workspace/shared";
+import { toPrefetchedQuery } from "@workspace/client/lib/url-state/prefetched-query";
+import { ApiPaginatedMetaSchema, nowEpochMs, type Envelope, type RewardResponse } from "@workspace/shared";
 import * as React from "react";
-
-const REWARDS_LIMIT = 12;
 
 interface LandingAction {
 	readonly label: string;
@@ -36,44 +35,45 @@ const MEMBER_ACTIONS: LandingActions = {
 
 export const dynamic = "force-dynamic";
 
-/** Public landing — browse rewards without signing in; the signed-in app lives under `/rewardhub`. */
-export default async function LandingPage(): Promise<React.JSX.Element> {
+/** The unfiltered first catalog page — what the hero's featured offers and live count describe. */
+const DEFAULT_CATALOG_STATE_KEY: string = REWARDS_BROWSE_URL_STATE.serialize(REWARDS_BROWSE_URL_STATE.defaults);
+
+/** Live offers in the whole catalog, or `undefined` when the request failed. */
+function readLiveOfferCount(result: PromiseSettledResult<Envelope<RewardResponse[]>>): number | undefined {
+	if (result.status !== "fulfilled") {
+		return undefined;
+	}
+	const meta = ApiPaginatedMetaSchema.safeParse(result.value.meta);
+	return meta.success ? meta.data.total : undefined;
+}
+
+/**
+ * Public landing — browse rewards without signing in; the signed-in app lives under `/rewardhub`.
+ * The catalog section's search, filters and page live in the URL (`/?filter[city]=MELAKA#rewards`);
+ * the hero always describes the whole catalog, so a filtered URL fetches both pages in parallel.
+ */
+export default async function LandingPage({ searchParams }: { readonly searchParams: Promise<Record<string, string | string[] | undefined>> }): Promise<React.JSX.Element> {
 	const server = createWebServerCaller();
+	const catalogState = REWARDS_BROWSE_URL_STATE.parse(await searchParams);
 	const isSignedIn = await hasServerSession();
 	const actions = isSignedIn ? MEMBER_ACTIONS : GUEST_ACTIONS;
 
-	let initialRewards: readonly RewardResponse[] | undefined;
-	let initialHasNext: boolean | undefined;
-	let initialListMeta: ReturnType<typeof ApiPaginatedMetaSchema.parse> | undefined;
+	const catalogStateKey: string = REWARDS_BROWSE_URL_STATE.serialize(catalogState);
+	const defaultRequest = server.rewards.list.query(toRewardsBrowseListQuery(REWARDS_BROWSE_URL_STATE.defaults));
+	const catalogRequest = catalogStateKey === DEFAULT_CATALOG_STATE_KEY ? defaultRequest : server.rewards.list.query(toRewardsBrowseListQuery(catalogState));
+	const [defaultResult, catalogResult] = await Promise.allSettled([defaultRequest, catalogRequest]);
 
-	try {
-		const response = await server.rewards.list.query({ page: 1, limit: REWARDS_LIMIT });
-		initialRewards = response.data;
-		initialHasNext = readPaginatedHasNext(response.meta, false);
-		const metaParsed = ApiPaginatedMetaSchema.safeParse(response.meta);
-		if (metaParsed.success) {
-			initialListMeta = metaParsed.data;
-		}
-	} catch {
-		initialRewards = undefined;
-	}
-
-	const featuredOffers: readonly FeaturedOffer[] = initialRewards === undefined ? [] : selectFeaturedOffers(initialRewards, nowEpochMs());
-	const merchantNames: readonly string[] = initialRewards === undefined ? [] : selectMerchantNames(initialRewards);
+	const defaultRewards: readonly RewardResponse[] = defaultResult.status === "fulfilled" ? defaultResult.value.data : [];
+	const featuredOffers: readonly FeaturedOffer[] = selectFeaturedOffers(defaultRewards, nowEpochMs());
+	const merchantNames: readonly string[] = selectMerchantNames(defaultRewards);
 
 	return (
 		<LandingShell>
-			<LandingHero featuredOffers={featuredOffers} liveOfferCount={initialListMeta?.total} secondaryAction={actions.hero} />
+			<LandingHero featuredOffers={featuredOffers} liveOfferCount={readLiveOfferCount(defaultResult)} secondaryAction={actions.hero} />
 			<LandingMerchants merchantNames={merchantNames} />
 			{/* The browse view owns the `#rewards` heading; offset it below the sticky header when jumped to. */}
 			<section className="mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-20 lg:px-8 [&_#rewards]:scroll-mt-24">
-				<RewardHubBrowseView
-					variant="landing"
-					detailPathPrefix={ROUTE_PREFIXES.publicRewards}
-					initialRewards={initialRewards}
-					initialHasNext={initialHasNext}
-					initialListMeta={initialListMeta}
-				/>
+				<RewardHubBrowseView variant="landing" detailPathPrefix={ROUTE_PREFIXES.publicRewards} initialPage={toPrefetchedQuery(catalogStateKey, catalogResult)} />
 			</section>
 			<LandingHowItWorks />
 			<LandingCallToAction

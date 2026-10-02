@@ -1,4 +1,8 @@
-/** Cookie for the active store location within the current organization workspace. */
+/**
+ * Cookie mirroring the member's chosen store (tenant-context feature effect) so
+ * server pages prefetch that store's data. Client input — the server only
+ * checks its shape and the API re-validates access on every request.
+ */
 export const ORGANIZATION_LOCATION_ID_COOKIE_NAME = "organizationLocationId";
 
 const COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 365;
@@ -9,17 +13,4 @@ export function writeOrganizationLocationCookie(locationId: string): void {
 
 export function clearOrganizationLocationCookie(): void {
 	document.cookie = `${ORGANIZATION_LOCATION_ID_COOKIE_NAME}=; path=/; max-age=0; samesite=lax`;
-}
-
-export function readOrganizationLocationCookie(): string | undefined {
-	if (typeof document === "undefined") {
-		return undefined;
-	}
-	const prefix = `${ORGANIZATION_LOCATION_ID_COOKIE_NAME}=`;
-	const match = document.cookie.split("; ").find((entry) => entry.startsWith(prefix));
-	if (match === undefined) {
-		return undefined;
-	}
-	const value = match.slice(prefix.length);
-	return value.length > 0 ? decodeURIComponent(value) : undefined;
 }

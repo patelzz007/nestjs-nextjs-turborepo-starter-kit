@@ -9,7 +9,7 @@ import { buildMerchantPaletteItems, renderMerchantPaletteIcon } from "@/lib/pale
 import { useAuthorization } from "@workspace/client/lib/auth/can";
 import { MERCHANT_CAPABILITY } from "@workspace/shared";
 import { toastMessage } from "@workspace/ui/components/feedback/toast";
-import { useMerchantCommandPaletteStore } from "@/stores/command-palette-store";
+import { useCommandPaletteCommands, useCommandPalettePinnedUrls, useCommandPaletteRecentSearches } from "@workspace/client/lib/features/command-palette/facade";
 import { AppCommandPalette, type AppCommandPaletteQuickAction } from "@workspace/ui/components/navigation/app-command-palette";
 import { SunMoon, Ticket } from "lucide-react";
 import { useTheme } from "next-themes";
@@ -31,10 +31,9 @@ export function MerchantCommandPalette({ open: externalOpen, setOpen: externalSe
 	const rewardsPath = useOrganizationPath(ORG_ROUTES.rewards.list);
 	const resolveNavHref = React.useMemo(() => createMerchantNavHrefResolver(organizationSlug), [organizationSlug]);
 
-	const recentSearches = useMerchantCommandPaletteStore((state) => state.recentSearches);
-	const pinnedUrls = useMerchantCommandPaletteStore((state) => state.pinnedUrls);
-	const addRecent = useMerchantCommandPaletteStore((state) => state.addRecentSearch);
-	const togglePinned = useMerchantCommandPaletteStore((state) => state.togglePinnedUrl);
+	const recentSearches = useCommandPaletteRecentSearches();
+	const pinnedUrls = useCommandPalettePinnedUrls();
+	const { recordRecentSearch, togglePin } = useCommandPaletteCommands();
 
 	const closePalette = React.useCallback((): void => {
 		externalSetOpen?.(false);
@@ -110,8 +109,8 @@ export function MerchantCommandPalette({ open: externalOpen, setOpen: externalSe
 			quickActions={quickActions}
 			recentSearches={recentSearches}
 			pinnedUrls={pinnedUrls}
-			onAddRecent={addRecent}
-			onTogglePinned={togglePinned}
+			onAddRecent={recordRecentSearch}
+			onTogglePinned={togglePin}
 			onNavigate={handleNavigate}
 			renderIcon={renderMerchantPaletteIcon}
 		/>

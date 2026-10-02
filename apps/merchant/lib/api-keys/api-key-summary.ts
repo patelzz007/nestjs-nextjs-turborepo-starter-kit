@@ -1,9 +1,15 @@
 import type { MerchantApiKeySummary } from "@workspace/shared";
+import { z } from "zod";
 
-/** Which keys the list shows. */
-export type ApiKeyFilter = "active" | "revoked" | "all";
+/** Which keys the list shows — a view filter over the loaded keys, held in the URL (`?status=`, lib/url-state/api-keys). */
+export const ApiKeyFilterSchema = z.enum(["active", "revoked", "all"]);
+export type ApiKeyFilter = z.output<typeof ApiKeyFilterSchema>;
 
-export const API_KEY_FILTERS: readonly ApiKeyFilter[] = ["active", "revoked", "all"];
+/** The filter options in display order. */
+export const API_KEY_FILTERS: readonly ApiKeyFilter[] = ApiKeyFilterSchema.options;
+
+/** The list opens on the keys that work today. */
+export const DEFAULT_API_KEY_FILTER: ApiKeyFilter = "active";
 
 /** Headline numbers for the API-keys page — computed from the keys the page loaded. */
 export interface ApiKeyStats {

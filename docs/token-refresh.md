@@ -4,7 +4,7 @@ tags: ["auth", "security", "tokens"]
 description: "How access-token rotation works across the Next.js server-side proxy and browser-side 401 recovery paths."
 order: 3
 author: "Acme Inc."
-lastUpdated: 1785715200000
+lastUpdated: 1790899200000
 coverImage: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=1600&q=80"
 ---
 
@@ -271,7 +271,7 @@ flowchart TD
 
 **Key idea:** the access token may still be within its time expiry (e.g. 15 minutes left), but the embedded `tokenVersion` is checked on every request. After a role change, that version is stale immediately — refresh cannot recover because refresh rows were deleted too.
 
-**Code paths:** `UserSessionRevocationService` (`apps/api/.../user-session-revocation.service.ts`), wired from `RoleService` and `PermissionService`; client handling in `packages/client/src/lib/api/api-request.ts` and `packages/client/src/lib/auth/index.tsx`; proxy hardening in `packages/client/src/lib/auth/proxy-refresh.ts`.
+**Code paths:** `UserSessionRevocationService` (`apps/api/.../user-session-revocation.service.ts`), wired from `RoleService` and `PermissionService`; client handling in `packages/client/src/lib/api/api-request.ts` and `packages/client/src/lib/features/auth/facade.tsx` (`AuthProvider`); proxy hardening in `packages/client/src/lib/auth/proxy-refresh.ts`.
 
 ---
 
@@ -617,8 +617,9 @@ This is intentional and accepted as a per-instance trade-off.
 Layer 2 lives in:
 
 ```text
-packages/client/src/lib/auth.tsx
-packages/client/src/lib/use-api.ts
+packages/client/src/lib/features/auth/facade.tsx   (AuthProvider — re-exported by @workspace/client/lib/auth)
+packages/client/src/lib/api/use-api.ts
+packages/client/src/lib/api/api-request.ts
 ```
 
 The refresh entry point is:
@@ -632,6 +633,132 @@ The request pipeline is handled by:
 ```text
 useApi
 ```
+
+#### Client session state (the `auth` feature store)
+
+`AuthProvider` keeps what the tab believes about its session in a per-mount
+`auth` feature store ([ADR 023](./adr/023-client-state-feature-stores.md)). It
+is UI status only — the httpOnly cookies and the API stay the only authority:
+
+| Owner | Holds |
+|---|---|
+| `auth` feature store | `status`: `unknown`, then `authenticated` (with the session's subject id and scope) or `signed-out` (with the reason). Also a session `epoch`. No token and no profile, and never persisted. |
+| TanStack Query | The profile (`GET /auth/me`) and permissions (`GET /auth/permissions`). A sign-in seeds `/auth/me` from the login response. |
+| Derived | `useAuth().user` = profile + scope. `isAuthenticated` and `isLoading` come from `status`. |
+
+Every transition is a named event (`[ Auth ] Session Established`, `Session
+Restored`, `Session Not Found`, `Session Scope Changed`, `Signed Out`, `Session
+Expired`, `Signed Out In Another Tab`, `Server Session Cleared`, …). The store and
+its effects guarantee the following.
+
+- **The cache is cleared on every way of losing the session.** That covers
+  `Signed Out`, `Session Expired`, `Signed Out In Another Tab`, and a
+  session check that no longer finds the session (`Session Not Found`).
+  - The clear is synchronous. It finishes before the flow's next step, such as
+    `POST /auth/logout` or navigation.
+  - While the tab is signed out this way, the silent refresh resolves `expired`
+    without calling the API.
+  - A session check never redirects and never runs the exit sequence: it
+    bypasses the 401 pipeline. The next real request still goes through the
+    401 → refresh → redirect rules.
+- **The cache is cleared when the identity changes.** If a sign-in or a session
+  check brings a different user than the one whose `/auth/me` is cached, the
+  whole cache is dropped before anything of the new user is written. This covers
+  the case where another member signed in in another tab. Every sign-in also
+  drops the cached `/auth/permissions`, even for the same member, because it
+  described the previous session.
+- **The receiving tab drops the session at once.** When another tab signs out,
+  this tab clears its state and cache before its own `POST /auth/logout` is sent.
+  That POST is repeated deliberately, because the sender broadcasts even if its
+  own POST failed. The redirect waits for it.
+- **The exit sequence runs once.** Concurrent 401s, and any later ones, run the
+  server logout, broadcast and redirect only once. Only the call that ended the
+  session runs them.
+- **Stale session checks are dropped.** The session `epoch` goes up at every
+  sign-in, every way of losing the session, and every identity change. A check
+  that started in an earlier epoch is ignored. For example, a `200` that arrives
+  after the user signed out never restores the session.
+- **Server-rendered session data is only used at epoch 0.** `useIsServerRenderedSession()`
+  is true only before the tab's first session boundary. Server-rendered session
+  data, such as `/auth/me` on `/hello` and the SSR `/auth/permissions` in
+  `WebAuthorizationProvider`, seeds a query (`initialData`) only while it is true.
+  Otherwise, a still-mounted component would recreate the previous member's
+  query as fresh right after the sign-out cache clear.
+- **Other tabs are told in order.** `logged-out` is posted only after
+  `POST /auth/logout` returns (`Server Session Cleared`), and only when the tab
+  is leaving for the login page. `logged-in` is posted on a sign-in. Only event
+  names cross tabs, never tokens.
+- **A restored session is fetched once.** The on-mount `/auth/me` +
+  `/auth/permissions` check seeds both queries, so each page load fetches the
+  profile only once.
+
+##### Session check outcomes
+
+The session check (`checkSession`, `packages/client/src/lib/auth/session/session-check.ts`)
+classifies every answer before it touches the store. Only `no-session` can end a
+session; an unreachable API never does.
+
+| `/auth/me` answer | Verdict | What the tab does |
+|---|---|---|
+| 2xx, body matches the contract | `valid` | `Session Restored` (seeds `/auth/me`, and `/auth/permissions` when that answered). A failed `/auth/permissions` alone does not block it: the live permissions query fills the scope in. |
+| 401 with `TOKEN_VERSION_MISMATCH`, `REFRESH_TOKEN_REVOKED` or `TOKEN_THEFT_DETECTED` | `no-session` | `Session Not Found` at once, no refresh. |
+| Any other 401 (expired, missing, invalid access token) | `expired-access-token` | ONE refresh through the tab's single-flight refresh (the same one the 401 pipeline uses, so the token rotates once), then one more read without refreshing. That read is final; a 401 now means `no-session`. The second read also runs after a refresh that answered 401, because another tab may have rotated the shared refresh token first (`REFRESH_TOKEN_SUPERSEDED`), leaving this tab a valid new pair. |
+| 403 | `unavailable` (`unexpected-status`), reported | The API answers 403 only after authentication succeeded (`AuthGuard` runs first), restricted sessions are allowlisted for both endpoints (`RestrictedSessionGuard`), and neither route has an authorization requirement. A 403 here comes from a gateway or a contract break: signing out would be wrong and a refresh cannot fix it. |
+| Other 4xx (404, 400, …) | `unavailable` (`unexpected-status`), reported | Same reasoning. |
+| 429 | `unavailable` (`rate-limited`) | Kept status, retried. |
+| 5xx | `unavailable` (`server-error`) | Kept status, retried. |
+| No HTTP answer | `unavailable` (`network`, or `aborted` when the browser cancelled it) | Kept status, retried. |
+| No answer within 10 s (`SESSION_CHECK_TIMEOUT_MS`) | `unavailable` (`timeout`) | The read is aborted. Before, a hung API kept the tab `unknown` forever. |
+| 2xx whose body the contract rejects, or that is not JSON | `unavailable` (`contract-violation`), reported | Never read as signed in. |
+| The refresh needed by an expired token could not run (network, 5xx, 30 s cooldown) or timed out | `unavailable` (`refresh-unavailable` / `timeout`) | Kept status, retried. |
+
+"Reported" means a structured `console.warn` (`event: "auth.session_check.contract_problem"`,
+endpoint, status, and the bounded zod issue list — never the body). The client has no
+error-reporting pipeline yet; outages are not reported, because every tab would report them.
+
+`unavailable` dispatches `[ Auth ] Session Check Failed` with the reason category. It
+changes only the store's `check` slice, never `status` or `epoch`:
+
+| Store slice | Values |
+|---|---|
+| `status` | unchanged: an `authenticated` tab stays authenticated (cache intact, no redirect, no broadcast); an `unknown` tab stays `unknown` (never `signed-out`). |
+| `check` | `ok` · `retrying { reason, failedAttempts }` · `paused { reason, failedAttempts }` |
+
+`useAuth().isLoading` stays `true` while the status is `unknown`, deliberately: consumers
+read `isLoading === false && user === null` as signed out. Whether the check is still
+running or failing is `useSessionCheckStatus()`. Each app shell mounts
+`SessionCheckNotice` (`@workspace/client/lib/auth/session/session-check-notice`), a
+polite `role="status"` banner shown only while `check` is not `ok`, with a "Try again"
+button once retries are paused. Guest pages do not mount it; the web landing header shows
+a neutral placeholder instead of "Sign in" while a member's session is unverified.
+
+##### Retry policy
+
+- **Backoff:** capped exponential with equal jitter: retry *n* waits between half and all
+  of `min(1 s × 2^(n−1), 30 s)`. Up to 6 retries (`SESSION_CHECK_MAX_RETRIES`), about
+  30–60 s in total, which covers a typical deploy restart. The fixed half keeps retries
+  from hammering; the random half spreads tabs and members that failed together.
+- **Budget:** past 6 failures the check is `paused` and nothing is sent until a trigger.
+  A verdict (`Session Restored` / `Session Not Found`) or any session boundary (sign-in,
+  sign-out, another member) resets it to `ok`.
+- **Stops:** a scheduled retry is cancelled, and a check in flight is aborted, at every
+  session boundary (epoch change), when the route stops checking, and on unmount. Only the
+  newest check applies: a new one aborts the one in flight, and an answer from an
+  earlier epoch is dropped.
+- **Hidden or offline:** a hidden tab or an offline browser does not retry (nobody is
+  looking, or the request cannot succeed). This is also what prevents a retry storm across
+  tabs: only the visible tab retries, and failed checks are never broadcast.
+- **Triggers** (only while `check` is not `ok`, so a healthy tab never re-checks on them),
+  each starting a new series (`[ Auth ] Session Recheck Requested`):
+  - `online`: the browser regained connectivity, the most likely moment the API is
+    reachable again.
+  - `visibilitychange` to visible: the member is looking again, and hidden tabs did not
+    retry.
+  - "Try again" (`useAuthCommands().recheckSession()`): the member asked.
+
+  The two browser events reach every tab at once, so those re-checks wait a random
+  0–1 s (`SESSION_RECHECK_JITTER_MS`). There is no unbounded loop: automatic retries are
+  capped per series, and only these triggers start a series.
 
 ---
 
@@ -761,7 +888,8 @@ The refresh operation must sit **outside the 401 → refresh pipeline that it dr
 
 ### 5.6 Client-side failure
 
-If the refresh request itself fails:
+What the 401 pipeline does depends on how the refresh ended (`OnRefresh` resolves a
+`RefreshResult`):
 
 ```text
 API request
@@ -770,18 +898,21 @@ API request
   401
     │
     ▼
-refresh
-    │
-    └── failure
+refresh ─┬─ ok ──────────► retry the request (a second 401 → onUnauthorized)
          │
-         ▼
-   onUnauthorized()
+         ├─ expired ─────► onUnauthorized()
+         │  (401 / 403)      ├── clear auth state + cache
+         │                   └── redirect /auth/login
          │
-         ├── clear auth state
-         └── redirect /auth/login
+         └─ transient ───► fail THIS request with SessionRefreshUnavailableError
+            (network, 5xx,   — the session is kept: no logout, no redirect,
+             or cooldown)      no cross-tab sign-out
 ```
 
-Unlike Layer 1, the browser-side mechanism does not have the same "serve the page anyway" fallback because the page is already running and the API request has explicitly failed.
+A refresh that could not reach the API says nothing about the session, so it never ends
+it. During the 30 s cooldown after a transient failure, further 401s fail the same way
+without calling the API. Before this, the pipeline collapsed the result to a boolean and
+a 5xx or network error on `/auth/refresh` signed the member out.
 
 ---
 
@@ -849,9 +980,9 @@ These two failure types must be treated differently.
 |---|---|---|---|
 | `200` | Refresh succeeded | Set new cookies | Retry request |
 | `401` / `403` | Refresh token is dead | Clear + login | Clear + login |
-| Network error | API unavailable | Keep stale session | Refresh fails |
-| Timeout | API unavailable | Keep stale session | Refresh fails |
-| `5xx` | API/server problem | Keep stale session | Refresh fails |
+| Network error | API unavailable | Keep stale session | Keep session; the request fails (`SessionRefreshUnavailableError`) |
+| Timeout | API unavailable | Keep stale session | Keep session; the request fails |
+| `5xx` | API/server problem | Keep stale session | Keep session; the request fails |
 
 #### The key distinction
 
@@ -878,7 +1009,9 @@ A full-page navigation is an opportunity to recover **before the application sta
 
 If the refresh service is temporarily unavailable, it is better to let the page render and preserve the session than to force a login because of a transient infrastructure problem.
 
-Layer 2 is different: it is already responding to an actual `401`.
+Layer 2 is already responding to an actual `401`, so it cannot serve a page "anyway". It keeps
+the session too when the refresh is transient — only the request that triggered it fails —
+and it ends the session only when the refresh says the session is dead (`401`/`403`).
 
 ---
 
@@ -1338,6 +1471,10 @@ It keeps the existing cookies and serves the page.
 
 Only a refresh response indicating that the refresh session is actually invalid (`401`/`403`) causes Layer 1 to clear the session immediately.
 
+In the browser, the same rule holds for Layer 2 (a transient refresh fails only the request,
+§5.6) and for the session check (an unreachable API keeps the tab's status and retries with
+backoff, see "Session check outcomes" in §5.1).
+
 ---
 
 ### Why can another tab sometimes stay logged in while this tab gets logged out?
@@ -1407,7 +1544,7 @@ flowchart TB
     NETWORK["<div style='padding: 14px 24px; font-weight: 600;'>⚠️ Transient Network / 5xx</div>"]
 
     NETWORK --> STALE["<div style='padding: 16px 24px;'>Layer 1<br/>Keep stale session<br/>Serve page</div>"]
-    NETWORK --> UNAUTH["<div style='padding: 16px 24px;'>Layer 2<br/>Refresh fails<br/>Unauthorized flow</div>"]
+    NETWORK --> UNAUTH["<div style='padding: 16px 24px;'>Layer 2<br/>Keep session<br/>Only the request fails</div>"]
 
 
     %% ─────────────────────────────────────────────
@@ -1429,8 +1566,8 @@ flowchart TB
     class NAV,API,REFRESH action
     class RESULT decision
     class SUCCESS success
-    class DEAD,UNAUTH failure
-    class NETWORK,STALE warning
+    class DEAD failure
+    class NETWORK,STALE,UNAUTH warning
 ```
 
 ---

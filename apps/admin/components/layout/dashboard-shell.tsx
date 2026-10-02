@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuth } from "@workspace/client/lib/auth";
+import { SessionCheckNotice } from "@workspace/client/lib/auth/session/session-check-notice";
 
 import { Button } from "@workspace/ui/components/form/button";
 import { usePathname } from "next/navigation";
@@ -9,6 +10,10 @@ import * as React from "react";
 import { ImpersonationBanner } from "@/components/impersonation/impersonation-banner";
 import { AdminBreadcrumbProvider } from "@/components/common/admin-breadcrumb";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
+import { ADMIN_SIDEBAR_DEVTOOLS_NAME, ADMIN_SIDEBAR_STORAGE_KEY } from "@/lib/navigation/sidebar-menu";
+import { ADMIN_COMMAND_PALETTE_DEVTOOLS_NAME, ADMIN_COMMAND_PALETTE_STORAGE_KEY } from "@/lib/palette/store-config";
+import { CommandPaletteStoreProvider } from "@workspace/client/lib/features/command-palette/facade";
+import { SidebarStoreProvider } from "@workspace/client/lib/features/sidebar/facade";
 import type { FooterAction, SidebarUser } from "@/lib/navigation/sidebar";
 import type { SessionPermissionsResponse } from "@workspace/shared";
 
@@ -100,14 +105,19 @@ export function DashboardShell({ footerActions = [], children, initialUser = nul
 	return (
 		<AdminBreadcrumbProvider pathname={pathname}>
 			<ImpersonationBanner />
-			<DashboardLayout
-				user={{ name: resolvedUser.name, email: resolvedUser.email }}
-				onLogout={handleLogout}
-				footerActions={footerActions}
-				initialSessionPermissions={initialSessionPermissions}
-				enabledFeatureFlags={enabledFeatureFlags}>
-				{children}
-			</DashboardLayout>
+			<SessionCheckNotice />
+			<SidebarStoreProvider storageKey={ADMIN_SIDEBAR_STORAGE_KEY} devtoolsName={ADMIN_SIDEBAR_DEVTOOLS_NAME}>
+				<CommandPaletteStoreProvider storageKey={ADMIN_COMMAND_PALETTE_STORAGE_KEY} devtoolsName={ADMIN_COMMAND_PALETTE_DEVTOOLS_NAME}>
+					<DashboardLayout
+						user={{ name: resolvedUser.name, email: resolvedUser.email }}
+						onLogout={handleLogout}
+						footerActions={footerActions}
+						initialSessionPermissions={initialSessionPermissions}
+						enabledFeatureFlags={enabledFeatureFlags}>
+						{children}
+					</DashboardLayout>
+				</CommandPaletteStoreProvider>
+			</SidebarStoreProvider>
 		</AdminBreadcrumbProvider>
 	);
 }

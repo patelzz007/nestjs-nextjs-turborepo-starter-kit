@@ -12,11 +12,10 @@ import { MERCHANT_SIDEBAR_MENU } from "@/lib/navigation/sidebar-menu";
 import { resolveMerchantPinnedMenuItems } from "@/lib/navigation/pinned-items";
 import { MERCHANT_SIDEBAR_LABELS } from "@/lib/navigation/sidebar-labels";
 import { renderMerchantPaletteIcon } from "@/lib/palette/nav-items";
-import { useMerchantCommandPaletteStore } from "@/stores/command-palette-store";
-import { useMerchantSidebarStore } from "@/stores/sidebar-store";
+import { useCommandPalettePinnedUrls } from "@workspace/client/lib/features/command-palette/facade";
+import { useSidebarCommands, useSidebarExpandedItems, useSidebarSearchQuery, useSidebarSectionOrder } from "@workspace/client/lib/features/sidebar/facade";
 import { resolveActiveOrganizationMembership } from "@/lib/session/server-capabilities";
 import { useAuthorization } from "@workspace/client/lib/auth/can";
-import type { CompiledSidebarMenuData } from "@workspace/client/lib/sidebar/sidebar-menu-schema";
 import type { OrganizationRewardMembershipResponse } from "@workspace/shared";
 import { Badge } from "@workspace/ui/components/feedback/badge";
 import { Label } from "@workspace/ui/components/form/label";
@@ -96,29 +95,15 @@ export function MerchantSidebarPanel({ memberships, organizationSlug, onStoreCha
 	const searchInputRef = React.useRef<HTMLInputElement>(null);
 	const navContainerRef = React.useRef<HTMLDivElement>(null);
 
-	const sectionOrder = useMerchantSidebarStore((state) => state.sectionOrder);
-	const searchQuery = useMerchantSidebarStore((state) => state.searchQuery);
-	const menu = useMerchantSidebarStore((state) => state.menu);
-	const displayMenu = React.useMemo(
-		(): CompiledSidebarMenuData => ({
-			header: menu.header,
-			sections: menu.sections,
-			bottomItems: menu.bottomItems.length > 0 ? menu.bottomItems : MERCHANT_SIDEBAR_MENU.bottomItems,
-		}),
-		[menu],
-	);
+	const sectionOrder = useSidebarSectionOrder();
+	const searchQuery = useSidebarSearchQuery();
 	const resolveNavHref = React.useMemo(() => createMerchantNavHrefResolver(organizationSlug), [organizationSlug]);
 	const currentPage = pathname;
-	const setSearchQuery = useMerchantSidebarStore((state) => state.setSearchQuery);
-	const clearSearch = useMerchantSidebarStore((state) => state.clearSearch);
-	const storeExpandedItems = useMerchantSidebarStore((state) => state.expandedItems);
-	const setItemExpanded = useMerchantSidebarStore((state) => state.setItemExpanded);
-	const resetExpandedItems = useMerchantSidebarStore((state) => state.resetExpandedItems);
-	const moveSectionUp = useMerchantSidebarStore((state) => state.moveSectionUp);
-	const moveSectionDown = useMerchantSidebarStore((state) => state.moveSectionDown);
-	const pinnedUrls = useMerchantCommandPaletteStore((state) => state.pinnedUrls);
+	const storeExpandedItems = useSidebarExpandedItems();
+	const { setSearchQuery, clearSearch, setItemExpanded, resetExpandedItems, moveSectionUp, moveSectionDown } = useSidebarCommands();
+	const pinnedUrls = useCommandPalettePinnedUrls();
 
-	const filteredMenu = React.useMemo(() => filterCompiledSidebarMenu(displayMenu, menuFilterCapabilities), [displayMenu, menuFilterCapabilities]);
+	const filteredMenu = React.useMemo(() => filterCompiledSidebarMenu(MERCHANT_SIDEBAR_MENU, menuFilterCapabilities), [menuFilterCapabilities]);
 	const enrollmentLockedMenu = React.useMemo(() => applyEnrollmentNavLock(filteredMenu, isEnrollmentLocked), [filteredMenu, isEnrollmentLocked]);
 
 	const resolvedMenu = React.useMemo(() => withResolvedSidebarMenuUrls(enrollmentLockedMenu, resolveNavHref), [enrollmentLockedMenu, resolveNavHref]);
@@ -226,7 +211,11 @@ export function MerchantSidebarPanel({ memberships, organizationSlug, onStoreCha
 
 	return (
 		<div className="flex h-full min-h-0 flex-col overflow-hidden bg-card text-sidebar-foreground">
-			<PanelSidebarHeader title={menu.header.title} subtitle={menu.header.subtitle} icon={<Gift className="size-4 text-primary" aria-hidden="true" />} />
+			<PanelSidebarHeader
+				title={MERCHANT_SIDEBAR_MENU.header.title}
+				subtitle={MERCHANT_SIDEBAR_MENU.header.subtitle}
+				icon={<Gift className="size-4 text-primary" aria-hidden="true" />}
+			/>
 
 			<SidebarContent ref={navContainerRef} className="[overflow-anchor:none]">
 				<PanelSidebarSearch

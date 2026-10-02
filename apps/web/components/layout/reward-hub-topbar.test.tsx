@@ -5,7 +5,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { WebSessionTestProvider, type WebSessionState } from "@/components/auth/web-authorization-provider";
 import { RewardHubTopbar } from "@/components/layout/reward-hub-topbar";
+import { WEB_SIDEBAR_DEVTOOLS_NAME, WEB_SIDEBAR_STORAGE_KEY } from "@/lib/navigation/sidebar-menu";
 import { GUEST_SESSION_STATE, signedInSession } from "@/test-support/session";
+import { SidebarStoreProvider } from "@workspace/client/lib/features/sidebar/facade";
 
 vi.mock("@workspace/client/lib/auth", () => ({
 	useAuth: (): { readonly user: null; readonly logout: () => Promise<void> } => ({ user: null, logout: (): Promise<void> => Promise.resolve() }),
@@ -33,7 +35,9 @@ vi.mock("@workspace/ui/components/navigation/shell-theme-toggle", () => ({
 function renderTopbar(session: WebSessionState): void {
 	render(
 		<WebSessionTestProvider session={session}>
-			<RewardHubTopbar />
+			<SidebarStoreProvider storageKey={WEB_SIDEBAR_STORAGE_KEY} devtoolsName={WEB_SIDEBAR_DEVTOOLS_NAME}>
+				<RewardHubTopbar />
+			</SidebarStoreProvider>
 		</WebSessionTestProvider>,
 	);
 }

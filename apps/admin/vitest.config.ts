@@ -13,7 +13,7 @@ export default defineConfig({
 		// Declares the React act environment so `act()` runs silently (React 19
 		// requires `globalThis.IS_REACT_ACT_ENVIRONMENT = true` in jsdom tests).
 		setupFiles: ["./vitest.setup.ts"],
-		include: ["lib/**/*.test.ts", "components/**/*.test.tsx", "app/**/*.test.tsx", "stores/**/*.test.ts", "proxy.test.ts", "instrumentation.test.ts", "e2e/**/*.e2e-spec.ts"],
+		include: ["lib/**/*.test.ts", "components/**/*.test.tsx", "app/**/*.test.tsx", "proxy.test.ts", "instrumentation.test.ts", "e2e/**/*.e2e-spec.ts"],
 		fileParallelism: false,
 		// Deterministic public config for the env modules (lib/env/*), which
 		// parse at import and fail fast when a required variable is missing.

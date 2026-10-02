@@ -7,20 +7,14 @@ export const dynamic = "force-dynamic";
 /**
  * `/merchants/verification` — review merchant KYB submissions and update
  * verification status. `?organizationId=` selects a merchant in the side panel
- * (in-page selection on the queue, so it stays in the query string).
+ * (in-page selection on the queue, so it stays in the query string); the
+ * panel reads it from the URL (lib/url-state/selection), which also renders it
+ * during SSR.
  */
-export default async function MerchantVerificationPage({
-	searchParams,
-}: {
-	readonly searchParams: Promise<Record<string, string | string[] | undefined>>;
-}): Promise<React.JSX.Element> {
-	const params = await searchParams;
-	const organizationIdParam = params.organizationId;
-	const initialMerchantOrgId = typeof organizationIdParam === "string" ? organizationIdParam : undefined;
-
+export default async function MerchantVerificationPage(): Promise<React.JSX.Element> {
 	const server = createAdminServerCaller();
 	const pendingResult = await Promise.allSettled([server.rewardsAdmin.listOrganizations.query({ page: 1, limit: 50, filter: { kybStatus: { eq: "PENDING" } } })]);
 	const pendingMerchants = pendingResult[0].status === "fulfilled" ? pendingResult[0].value.data : undefined;
 
-	return <KybReviewPanel initialMerchantOrgId={initialMerchantOrgId} initialPendingMerchants={pendingMerchants} />;
+	return <KybReviewPanel initialPendingMerchants={pendingMerchants} />;
 }

@@ -2,6 +2,7 @@ import "@workspace/ui/globals.css";
 import "./web-theme.css";
 
 import { QueryProvider } from "@workspace/client/lib/api/query-provider";
+import { UiPreferencesStoreProvider } from "@workspace/client/lib/features/ui-preferences/facade";
 import { cn } from "@workspace/ui/lib/core/utils";
 import type { Metadata } from "next";
 import { ReduxDevToolsGuard } from "@workspace/ui/components/redux-devtools-guard";
@@ -11,9 +12,9 @@ import { Inter, Playfair_Display, Rubik } from "next/font/google";
 import { WebAuthorizationProvider } from "@/components/auth/web-authorization-provider";
 import { WebBreadcrumbProvider } from "@/components/breadcrumb-provider";
 import { WebClientAuthWrapper } from "@/components/web-client-auth-wrapper";
-import { WebSessionBootstrap } from "@/components/web-session-bootstrap";
 import { hasServerSession } from "@/lib/auth/server";
 import { loadWebInitialSessionPermissions } from "@/lib/navigation/server";
+import { WEB_UI_PREFERENCES_DEVTOOLS_NAME, WEB_UI_PREFERENCES_STORAGE_KEY } from "@/lib/ui-preferences/store-config";
 import { AppDocumentShell } from "@workspace/ui/components/app-document-shell";
 import { ThemeProvider } from "@workspace/ui/components/theme-provider";
 import { Toaster } from "@workspace/ui/components/feedback/toast";
@@ -59,10 +60,12 @@ export default async function RootLayout({
 			<ReduxDevToolsGuard />
 			<QueryProvider>
 				<WebClientAuthWrapper sessionActive={sessionActive}>
-					<WebSessionBootstrap />
 					<WebAuthorizationProvider sessionActive={sessionActive} initialSessionPermissions={initialSessionPermissions}>
 						<ThemeProvider>
-							<WebBreadcrumbProvider>{children}</WebBreadcrumbProvider>
+							{/* Root, not the /rewardhub shell: the public landing page renders the rewards catalog too. */}
+							<UiPreferencesStoreProvider storageKey={WEB_UI_PREFERENCES_STORAGE_KEY} devtoolsName={WEB_UI_PREFERENCES_DEVTOOLS_NAME}>
+								<WebBreadcrumbProvider>{children}</WebBreadcrumbProvider>
+							</UiPreferencesStoreProvider>
 							<Toaster position="top-right" />
 							<ScrollToTop />
 						</ThemeProvider>

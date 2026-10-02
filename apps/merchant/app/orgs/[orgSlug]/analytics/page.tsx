@@ -1,6 +1,9 @@
 import { MerchantAnalyticsPageView } from "@/components/analytics/merchant-analytics-page-view";
-import { loadMerchantServerContext, readOrganizationLocationCookie } from "@/lib/merchant-server-api";
+import { toLocationQueryInput } from "@/features/tenant-context/selectors";
+import { loadMerchantServerContext } from "@/lib/merchant-server-api";
+import type { LocationScopedPrefetch } from "@/lib/org/location-prefetch";
 import { guardOrgPage } from "@/lib/org/org-page-guard";
+import { loadServerLocationScope } from "@/lib/org/server-location-scope";
 import type { MerchantAnalyticsResponse } from "@workspace/shared";
 import * as React from "react";
 
@@ -17,12 +20,13 @@ export default async function MerchantAnalyticsPage({ params }: MerchantAnalytic
 		return denied;
 	}
 	const { server } = await loadMerchantServerContext();
-	const locationId = await readOrganizationLocationCookie();
+	// The same store filter the client's first render derives, so the data lands under its query key.
+	const locationId = toLocationQueryInput((await loadServerLocationScope(orgSlug)).effectiveLocationId);
 
-	let initialAnalytics: MerchantAnalyticsResponse | undefined;
+	let initialAnalytics: LocationScopedPrefetch<MerchantAnalyticsResponse> | undefined;
 	try {
 		const response = await server.organizations.analytics.query({ orgSlug, locationId });
-		initialAnalytics = response.data;
+		initialAnalytics = { locationId, data: response.data };
 	} catch {
 		initialAnalytics = undefined;
 	}

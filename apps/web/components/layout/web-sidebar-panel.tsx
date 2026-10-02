@@ -9,10 +9,9 @@ import { USER_SIDEBAR_MENU } from "@/lib/navigation/sidebar-menu";
 import { resolveWebPinnedMenuItems } from "@/lib/navigation/pinned-items";
 import { WEB_SIDEBAR_LABELS } from "@/lib/navigation/sidebar-labels";
 import { accessiblePaletteItems, renderWebPaletteIcon } from "@/lib/palette/nav-items";
-import { useWebCommandPaletteStore } from "@/stores/command-palette-store";
-import { useWebSidebarStore } from "@/stores/sidebar-store";
+import { useCommandPalettePinnedUrls } from "@workspace/client/lib/features/command-palette/facade";
+import { useSidebarCommands, useSidebarExpandedItems, useSidebarSearchQuery, useSidebarSectionOrder } from "@workspace/client/lib/features/sidebar/facade";
 import { useAuth } from "@workspace/client/lib/auth";
-import type { CompiledSidebarMenuData } from "@workspace/client/lib/sidebar/sidebar-menu-schema";
 import { PanelSidebarHeader } from "@workspace/ui/components/navigation/panel-sidebar-header";
 import { PanelSidebarSearch } from "@workspace/ui/components/navigation/panel-sidebar-search";
 import { PanelSidebarSectionHeader } from "@workspace/ui/components/navigation/panel-sidebar-section-header";
@@ -79,27 +78,14 @@ export function WebSidebarPanel({ userName, onNavigate }: WebSidebarPanelProps):
 	const searchInputRef = React.useRef<HTMLInputElement>(null);
 	const navContainerRef = React.useRef<HTMLDivElement>(null);
 
-	const sectionOrder = useWebSidebarStore((state) => state.sectionOrder);
-	const searchQuery = useWebSidebarStore((state) => state.searchQuery);
-	const menu = useWebSidebarStore((state) => state.menu);
-	const displayMenu = React.useMemo((): CompiledSidebarMenuData => {
-		return {
-			header: menu.header,
-			sections: menu.sections,
-			bottomItems: menu.bottomItems.length > 0 ? menu.bottomItems : USER_SIDEBAR_MENU.bottomItems,
-		};
-	}, [menu]);
+	const sectionOrder = useSidebarSectionOrder();
+	const searchQuery = useSidebarSearchQuery();
+	const storeExpandedItems = useSidebarExpandedItems();
+	const { setSearchQuery, clearSearch, setItemExpanded, resetExpandedItems, moveSectionUp, moveSectionDown } = useSidebarCommands();
 
-	const filteredMenu = React.useMemo(() => filterCompiledSidebarMenu(displayMenu, capabilities), [displayMenu, capabilities]);
+	const filteredMenu = React.useMemo(() => filterCompiledSidebarMenu(USER_SIDEBAR_MENU, capabilities), [capabilities]);
 	const currentPage = pathname;
-	const setSearchQuery = useWebSidebarStore((state) => state.setSearchQuery);
-	const clearSearch = useWebSidebarStore((state) => state.clearSearch);
-	const storeExpandedItems = useWebSidebarStore((state) => state.expandedItems);
-	const setItemExpanded = useWebSidebarStore((state) => state.setItemExpanded);
-	const resetExpandedItems = useWebSidebarStore((state) => state.resetExpandedItems);
-	const moveSectionUp = useWebSidebarStore((state) => state.moveSectionUp);
-	const moveSectionDown = useWebSidebarStore((state) => state.moveSectionDown);
-	const pinnedUrls = useWebCommandPaletteStore((state) => state.pinnedUrls);
+	const pinnedUrls = useCommandPalettePinnedUrls();
 
 	const view = React.useMemo(
 		() => buildSidebarView({ menu: filteredMenu, pathname: currentPage, sectionOrder, searchQuery }),

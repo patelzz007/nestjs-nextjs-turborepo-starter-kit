@@ -22,20 +22,20 @@ afterEach(() => {
 });
 
 describe("createRefreshCooldown", () => {
-	it("returns true when the underlying refresh succeeds", async () => {
+	it("reports ok when the underlying refresh succeeds", async () => {
 		const underlying = refreshMock(["ok"]);
 		const onRefresh = createRefreshCooldown(underlying);
 
-		await expect(onRefresh()).resolves.toBe(true);
+		await expect(onRefresh()).resolves.toBe("ok");
 		expect(underlying).toHaveBeenCalledTimes(1);
 	});
 
-	it("returns false on a transient failure and short-circuits follow-ups within the cooldown window", async () => {
+	it("reports transient on a transient failure and short-circuits follow-ups within the cooldown window as transient", async () => {
 		const underlying = refreshMock(["transient", "ok"]);
 		const onRefresh = createRefreshCooldown(underlying);
 
-		await expect(onRefresh()).resolves.toBe(false);
-		await expect(onRefresh()).resolves.toBe(false);
+		await expect(onRefresh()).resolves.toBe("transient");
+		await expect(onRefresh()).resolves.toBe("transient");
 		expect(underlying).toHaveBeenCalledTimes(1);
 	});
 
@@ -43,11 +43,11 @@ describe("createRefreshCooldown", () => {
 		const underlying = refreshMock(["transient", "ok"]);
 		const onRefresh = createRefreshCooldown(underlying, COOLDOWN_MS);
 
-		await expect(onRefresh()).resolves.toBe(false);
+		await expect(onRefresh()).resolves.toBe("transient");
 		expect(underlying).toHaveBeenCalledTimes(1);
 
 		await vi.advanceTimersByTimeAsync(COOLDOWN_MS + 1);
-		await expect(onRefresh()).resolves.toBe(true);
+		await expect(onRefresh()).resolves.toBe("ok");
 		expect(underlying).toHaveBeenCalledTimes(2);
 	});
 
@@ -55,9 +55,9 @@ describe("createRefreshCooldown", () => {
 		const underlying = refreshMock(["expired", "ok"]);
 		const onRefresh = createRefreshCooldown(underlying);
 
-		await expect(onRefresh()).resolves.toBe(false);
+		await expect(onRefresh()).resolves.toBe("expired");
 		// No cooldown is armed for `expired` — the next 401 is a fresh attempt.
-		await expect(onRefresh()).resolves.toBe(true);
+		await expect(onRefresh()).resolves.toBe("ok");
 		expect(underlying).toHaveBeenCalledTimes(2);
 	});
 
@@ -65,11 +65,11 @@ describe("createRefreshCooldown", () => {
 		const underlying = refreshMock(["transient", "ok", "transient"]);
 		const onRefresh = createRefreshCooldown(underlying, COOLDOWN_MS);
 
-		await expect(onRefresh()).resolves.toBe(false);
+		await expect(onRefresh()).resolves.toBe("transient");
 		await vi.advanceTimersByTimeAsync(COOLDOWN_MS + 1);
-		await expect(onRefresh()).resolves.toBe(true);
+		await expect(onRefresh()).resolves.toBe("ok");
 		// Success resets the window: a new transient failure arms a fresh cooldown.
-		await expect(onRefresh()).resolves.toBe(false);
+		await expect(onRefresh()).resolves.toBe("transient");
 		expect(underlying).toHaveBeenCalledTimes(3);
 	});
 });

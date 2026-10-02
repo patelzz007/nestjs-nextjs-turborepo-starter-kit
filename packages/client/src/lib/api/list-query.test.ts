@@ -2,7 +2,17 @@ import { productListQuery, ProductListQuerySchema } from "@workspace/shared";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { ALL_FILTER_OPTION, eqFilter, parseBooleanFilterOption, parseFilterOption, tableSortingToListSort, tableStateToListQuery, toListSearch } from "./list-query";
+import {
+	ALL_FILTER_OPTION,
+	eqFilter,
+	listStateToListQuery,
+	parseBooleanFilterOption,
+	parseFilterOption,
+	sortParamToTableSorting,
+	tableSortingToListSort,
+	tableStateToListQuery,
+	toListSearch,
+} from "./list-query";
 import { resolveRequest } from "./endpoints";
 
 const LIST_PATH = "/product";
@@ -118,5 +128,49 @@ describe("tableStateToListQuery", () => {
 		expect(resolveRequestQueryForTest(input)).toBe(
 			"page=1&limit=20&sort=-price&filter%5BisActive%5D%5Beq%5D=true&filter%5Bprice%5D%5Bgte%5D=10&filter%5Bprice%5D%5Blte%5D=99",
 		);
+	});
+});
+
+describe("sortParamToTableSorting", () => {
+	it("splits the sort param into table entries without validating them", () => {
+		expect(sortParamToTableSorting("-price, name,,-")).toEqual([
+			{ id: "price", desc: true },
+			{ id: "name", desc: false },
+		]);
+	});
+
+	it("returns no entries for the default order", () => {
+		expect(sortParamToTableSorting(undefined)).toEqual([]);
+	});
+});
+
+describe("listStateToListQuery", () => {
+	it("builds the same input as tableStateToListQuery for the equivalent table state", () => {
+		const fromUrl = listStateToListQuery(productListQuery, {
+			pagination: { page: 3, limit: 50 },
+			sort: "-price,name",
+			search: " shoe ",
+			filter: { isActive: eqFilter(false) },
+		});
+		const fromTable = tableStateToListQuery(productListQuery, {
+			pagination: { page: 3, limit: 50 },
+			sorting: [
+				{ id: "price", desc: true },
+				{ id: "name", desc: false },
+			],
+			search: " shoe ",
+			filter: { isActive: eqFilter(false) },
+		});
+		expect(fromUrl).toEqual(fromTable);
+		expect(fromUrl).toEqual({ page: 3, limit: 50, sort: "-price,name", search: "shoe", filter: { isActive: { eq: false } } });
+	});
+
+	it("re-applies the whitelist, the default order and the cursor rule", () => {
+		expect(listStateToListQuery(productListQuery, { pagination: { page: 2, limit: 20, cursor: "abc" }, sort: "-createdAt" })).toEqual({ page: 2, limit: 20, cursor: "abc" });
+		expect(listStateToListQuery(productListQuery, { pagination: { page: 2, limit: 20, cursor: "abc" }, sort: "secret,-price" })).toEqual({
+			page: 2,
+			limit: 20,
+			sort: "-price",
+		});
 	});
 });

@@ -1,10 +1,10 @@
 // @vitest-environment jsdom
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { CapabilitiesProvider } from "@workspace/client/lib/auth/can";
 import { PERMISSION, type CapabilitySlug } from "@workspace/shared";
 import * as React from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import LocationRequestsPanel from "../location-requests-panel";
 
@@ -29,9 +29,20 @@ interface AuthStub {
 	};
 }
 
+const { FIRST_REQUEST_ID, SECOND_REQUEST_ID } = vi.hoisted(() => ({
+	FIRST_REQUEST_ID: "3f1c2b3a-4d5e-4f60-8a7b-9c0d1e2f3a01",
+	SECOND_REQUEST_ID: "3f1c2b3a-4d5e-4f60-8a7b-9c0d1e2f3a02",
+}));
+
+// The panel reads its selection from the address bar, as Next.js's
+// `useSearchParams` does once the History API integration has synced it.
+vi.mock("next/navigation", () => ({
+	useSearchParams: (): URLSearchParams => new URLSearchParams(window.location.search),
+}));
+
 vi.mock("@workspace/client/lib/auth", () => {
 	const request: LocationRequestStub = {
-		id: "location-1",
+		id: FIRST_REQUEST_ID,
 		organizationId: "org-1",
 		organizationDisplayName: "Sunrise Café",
 		name: "Bangsar outlet",
@@ -40,10 +51,20 @@ vi.mock("@workspace/client/lib/auth", () => {
 		city: "KUALA_LUMPUR",
 		contactPhone: null,
 	};
+	const second: LocationRequestStub = {
+		id: SECOND_REQUEST_ID,
+		organizationId: "org-2",
+		organizationDisplayName: "Moonlight Bakery",
+		name: "Gurney outlet",
+		code: "MOON-02",
+		addressText: "2 Gurney Drive",
+		city: "PENANG",
+		contactPhone: null,
+	};
 	const auth: AuthStub = {
 		api: {
 			rewardsAdmin: {
-				listLocationRequests: { useQuery: () => ({ data: { data: [request] }, isLoading: false }) },
+				listLocationRequests: { useQuery: () => ({ data: { data: [request, second] }, isLoading: false }) },
 				reviewOrganizationLocation: { useMutation: () => ({ mutate: () => undefined, isPending: false }) },
 			},
 		},
@@ -51,18 +72,29 @@ vi.mock("@workspace/client/lib/auth", () => {
 	return { useAuth: (): AuthStub => auth };
 });
 
-function renderPanel(capabilities: readonly CapabilitySlug[]): void {
-	render(
+const PATH = "/merchants/store-requests";
+
+function panel(capabilities: readonly CapabilitySlug[]): React.JSX.Element {
+	return (
 		<QueryClientProvider client={new QueryClient()}>
 			<CapabilitiesProvider capabilities={capabilities}>
 				<LocationRequestsPanel />
 			</CapabilitiesProvider>
-		</QueryClientProvider>,
+		</QueryClientProvider>
 	);
 }
 
+function renderPanel(capabilities: readonly CapabilitySlug[]): ReturnType<typeof render> {
+	return render(panel(capabilities));
+}
+
+beforeEach(() => {
+	window.history.replaceState(null, "", PATH);
+});
+
 afterEach(() => {
 	cleanup();
+	vi.restoreAllMocks();
 });
 
 describe("LocationRequestsPanel authorization", () => {
@@ -79,5 +111,34 @@ describe("LocationRequestsPanel authorization", () => {
 		expect(screen.queryByRole("button", { name: "Approve store" })).toBeNull();
 		expect(screen.queryByLabelText("Rejection reason")).toBeNull();
 		expect(screen.getByText("Approving or rejecting store requests requires the merchant organization manage permission.")).toBeDefined();
+	});
+});
+
+describe("LocationRequestsPanel selection (URL is the only source)", () => {
+	it("reviews the first pending request when the URL selects none", () => {
+		renderPanel([PERMISSION.MERCHANT_ORG.LIST]);
+		expect(screen.getByText("1 Jalan Telawi")).toBeDefined();
+		expect(screen.queryByText("2 Gurney Drive")).toBeNull();
+	});
+
+	it("reviews the request named by ?requestId=", () => {
+		window.history.replaceState(null, "", `${PATH}?requestId=${SECOND_REQUEST_ID}`);
+		renderPanel([PERMISSION.MERCHANT_ORG.LIST]);
+		expect(screen.getByText("2 Gurney Drive")).toBeDefined();
+		expect(screen.queryByText("1 Jalan Telawi")).toBeNull();
+	});
+
+	it("pushes a picked request to the URL and follows the URL back", () => {
+		const pushState = vi.spyOn(window.history, "pushState");
+		const view = renderPanel([PERMISSION.MERCHANT_ORG.LIST]);
+		fireEvent.click(screen.getByRole("button", { name: /Gurney outlet/ }));
+		expect(pushState).toHaveBeenCalledTimes(1);
+		expect(window.location.search).toBe(`?requestId=${SECOND_REQUEST_ID}`);
+		view.rerender(panel([PERMISSION.MERCHANT_ORG.LIST]));
+		expect(screen.getByText("2 Gurney Drive")).toBeDefined();
+
+		window.history.replaceState(null, "", PATH);
+		view.rerender(panel([PERMISSION.MERCHANT_ORG.LIST]));
+		expect(screen.getByText("1 Jalan Telawi")).toBeDefined();
 	});
 });

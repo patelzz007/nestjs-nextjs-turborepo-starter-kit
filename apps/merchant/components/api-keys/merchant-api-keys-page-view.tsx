@@ -8,12 +8,15 @@ import { MerchantAccessDenied, MerchantCapabilityGate } from "@/components/acces
 import { MerchantLocationScopeBanner } from "@/components/layout/merchant-location-scope-banner";
 import { MerchantPageHeader } from "@/components/merchant-ui/page-header";
 import { MerchantStatCard } from "@/components/merchant-ui/stat-card";
-import { summarizeApiKeys, type ApiKeyFilter } from "@/lib/api-keys/api-key-summary";
+import { DEFAULT_API_KEY_FILTER, summarizeApiKeys, type ApiKeyFilter } from "@/lib/api-keys/api-key-summary";
+import { API_KEYS_URL_STATE } from "@/lib/url-state/api-keys";
 import { clientEnv } from "@/lib/env/env.client";
-import { useActiveLocationFilter, useMerchantLocation } from "@/lib/org/location-context";
+import { useActiveLocationFilter, useMerchantLocation } from "@/features/tenant-context/facade";
+import { prefetchForLocation, type LocationScopedPrefetch } from "@/lib/org/location-prefetch";
 import { orgRoutes } from "@/lib/routes";
 import { initialDataOption, readPaginatedTotal, stubPaginatedMetaFromHydration, successEnvelope } from "@workspace/client/lib/api/envelope";
 import { useAuth } from "@workspace/client/lib/auth";
+import { useUrlState } from "@workspace/client/lib/url-state/use-url-state";
 import { MERCHANT_CAPABILITY, MERCHANT_API_KEYS_PAGE_SIZE, type MerchantApiKeySummary } from "@workspace/shared";
 import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogMedia, AlertDialogTitle } from "@workspace/ui/components/overlay/alert-dialog";
 import { SHOWCASE_ALERT_DIALOG_LABELS } from "@workspace/ui/lib/form/alert-dialog-labels";
@@ -25,7 +28,8 @@ const REVOKE_DIALOG_LABELS = { ...SHOWCASE_ALERT_DIALOG_LABELS, confirm: "Revoke
 
 export interface MerchantApiKeysPageViewProps {
 	readonly orgSlug: string;
-	readonly initialKeys?: readonly MerchantApiKeySummary[] | undefined;
+	/** Server-prefetched first page with the store filter it was fetched for. */
+	readonly initialKeys?: LocationScopedPrefetch<readonly MerchantApiKeySummary[]> | undefined;
 }
 
 /** POS API keys route — list/create/revoke all require `merchant:manage_api_keys`. */
@@ -57,26 +61,28 @@ function MerchantApiKeysPageContent({ orgSlug, initialKeys }: MerchantApiKeysPag
 	const { locationId } = useActiveLocationFilter();
 	const { activeLocation } = useMerchantLocation();
 
+	// Seed only with keys the server fetched for this exact filter — never another store's under this key.
+	const prefetchedKeys = prefetchForLocation(initialKeys, locationId);
 	const initialKeysData = React.useMemo(
 		() =>
-			initialKeys !== undefined
-				? successEnvelope([...initialKeys], stubPaginatedMetaFromHydration(MERCHANT_API_KEYS_PAGE_SIZE, initialKeys.length, initialKeys.length >= MERCHANT_API_KEYS_PAGE_SIZE))
+			prefetchedKeys !== undefined
+				? successEnvelope(
+						[...prefetchedKeys],
+						stubPaginatedMetaFromHydration(MERCHANT_API_KEYS_PAGE_SIZE, prefetchedKeys.length, prefetchedKeys.length >= MERCHANT_API_KEYS_PAGE_SIZE),
+					)
 				: undefined,
-		[initialKeys],
+		[prefetchedKeys],
 	);
 
-	const keysQuery = api.organizations.apiKeys.list.useQuery(
-		{ orgSlug, page: 1, limit: MERCHANT_API_KEYS_PAGE_SIZE, locationId },
-		// SSR data is for the unfiltered list only.
-		initialDataOption(locationId === undefined ? initialKeysData : undefined),
-	);
+	const keysQuery = api.organizations.apiKeys.list.useQuery({ orgSlug, page: 1, limit: MERCHANT_API_KEYS_PAGE_SIZE, locationId }, initialDataOption(initialKeysData));
 	const keys: readonly MerchantApiKeySummary[] = keysQuery.data?.data ?? [];
 	const totalKeys: number = readPaginatedTotal(keysQuery.data?.meta, keys.length);
 	const stats = summarizeApiKeys(keys);
 
+	// The filter is URL state (`?status=`): Back undoes a filter change and a shared link opens on it.
+	const [{ status: filter }, updateUrlState] = useUrlState(API_KEYS_URL_STATE);
 	const [name, setName] = React.useState<string>(DEFAULT_TERMINAL_NAME);
 	const [createdKey, setCreatedKey] = React.useState<CreatedKey | null>(null);
-	const [filter, setFilter] = React.useState<ApiKeyFilter>("active");
 	const [keyToRevoke, setKeyToRevoke] = React.useState<MerchantApiKeySummary | null>(null);
 	const [revokingKeyId, setRevokingKeyId] = React.useState<string | null>(null);
 
@@ -84,7 +90,8 @@ function MerchantApiKeysPageContent({ orgSlug, initialKeys }: MerchantApiKeysPag
 		onSuccess: (response): void => {
 			setCreatedKey({ name: response.data.name, secret: response.data.apiKey });
 			setName(DEFAULT_TERMINAL_NAME);
-			setFilter("active");
+			// Show the new key: a consequence of the create, not a navigation, so it replaces the entry.
+			updateUrlState({ status: DEFAULT_API_KEY_FILTER }, { history: "replace" });
 			void keysQuery.refetch();
 		},
 	});
@@ -110,6 +117,13 @@ function MerchantApiKeysPageContent({ orgSlug, initialKeys }: MerchantApiKeysPag
 			void createMutation.mutateAsync({ orgSlug, name: trimmedName, locationId });
 		},
 		[createMutation, locationId, orgSlug, trimmedName],
+	);
+
+	const handleFilterChange = React.useCallback(
+		(nextFilter: ApiKeyFilter): void => {
+			updateUrlState({ status: nextFilter });
+		},
+		[updateUrlState],
 	);
 
 	const handleDismissCreated = React.useCallback((): void => {
@@ -171,7 +185,7 @@ function MerchantApiKeysPageContent({ orgSlug, initialKeys }: MerchantApiKeysPag
 			<ApiKeyList
 				keys={keys}
 				filter={filter}
-				onFilterChange={setFilter}
+				onFilterChange={handleFilterChange}
 				isLoading={keysQuery.isPending}
 				isError={keysQuery.isError}
 				onRetry={handleRetry}

@@ -3,7 +3,6 @@ import "./merchant-theme.css";
 
 import { QueryProvider } from "@workspace/client/lib/api/query-provider";
 import { MerchantRootProvider } from "@/lib/session/root-provider";
-import { readOrganizationSlugCookie } from "@/lib/merchant-server-api";
 import { cn } from "@workspace/ui/lib/core/utils";
 import { AppDocumentShell } from "@workspace/ui/components/app-document-shell";
 import { ThemeProvider } from "@workspace/ui/components/theme-provider";
@@ -40,16 +39,14 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
-export default async function RootLayout({ children }: { readonly children: React.ReactNode }): Promise<React.JSX.Element> {
-	const initialOrganizationSlug = await readOrganizationSlugCookie();
-
+export default function RootLayout({ children }: { readonly children: React.ReactNode }): React.JSX.Element {
 	return (
 		<AppDocumentShell
 			htmlClassName={cn("font-sans antialiased", firaSans.variable, jetbrainsMono.variable, bricolageGrotesque.variable, rubik.variable)}
 			bodyClassName="merchant-app">
 			<ReduxDevToolsGuard />
 			<QueryProvider>
-				<MerchantRootProvider initialOrganizationSlug={initialOrganizationSlug}>
+				<MerchantRootProvider>
 					<ThemeProvider>
 						{children}
 						<Toaster position="top-right" />

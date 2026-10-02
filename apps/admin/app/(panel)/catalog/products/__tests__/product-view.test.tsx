@@ -1,10 +1,12 @@
 // @vitest-environment jsdom
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { CapabilitiesProvider } from "@workspace/client/lib/auth/can";
 import { PERMISSION, ProductSchema, type CapabilitySlug, type Product } from "@workspace/shared";
 import * as React from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import { TABLE_TEXT_DEBOUNCE_MS } from "@/lib/data-table/use-table-text-draft";
 
 import ProductDetailView from "../product-detail-view";
 import ProductView from "../product-view";
@@ -17,7 +19,7 @@ interface AuthStub {
 	readonly api: {
 		readonly product: {
 			readonly list: {
-				readonly useQuery: () => {
+				readonly useQuery: (input: object) => {
 					readonly data: { readonly data: readonly Product[] };
 					readonly isLoading: boolean;
 					readonly isError: boolean;
@@ -32,7 +34,8 @@ interface AuthStub {
 	};
 }
 
-const { PRODUCT_INPUT } = vi.hoisted(() => ({
+const { PRODUCT_INPUT, productListSpy } = vi.hoisted(() => ({
+	productListSpy: vi.fn(),
 	PRODUCT_INPUT: {
 		id: "6f1c2b3a-4d5e-4f60-8a7b-9c0d1e2f3a4b",
 		brand: null,
@@ -56,8 +59,11 @@ const { PRODUCT_INPUT } = vi.hoisted(() => ({
 	},
 }));
 
+// The table reads its state from the address bar, as Next.js's
+// `useSearchParams` does once the History API integration has synced it.
 vi.mock("next/navigation", () => ({
 	useRouter: (): { readonly push: () => void } => ({ push: () => undefined }),
+	useSearchParams: (): URLSearchParams => new URLSearchParams(window.location.search),
 }));
 
 vi.mock("@workspace/client/lib/auth", () => {
@@ -66,7 +72,13 @@ vi.mock("@workspace/client/lib/auth", () => {
 	const auth: AuthStub = {
 		api: {
 			product: {
-				list: { useQuery: () => ({ data: { data: [product] }, isLoading: false, isError: false, isFetching: false }), fetchOrThrow: () => Promise.resolve() },
+				list: {
+					useQuery: (input: object) => {
+						productListSpy(input);
+						return { data: { data: [product] }, isLoading: false, isError: false, isFetching: false };
+					},
+					fetchOrThrow: () => Promise.resolve(),
+				},
 				detail: { useQuery: () => ({ data: { data: product }, isLoading: false, isError: false }) },
 				delete: mutation,
 				bulkDelete: mutation,
@@ -84,8 +96,17 @@ function renderWith(capabilities: readonly CapabilitySlug[], node: React.ReactNo
 	);
 }
 
+const PATH = "/catalog/products";
+
+beforeEach(() => {
+	window.history.replaceState(null, "", PATH);
+});
+
 afterEach(() => {
 	cleanup();
+	productListSpy.mockReset();
+	vi.restoreAllMocks();
+	vi.useRealTimers();
 });
 
 describe("ProductView authorization", () => {
@@ -118,5 +139,44 @@ describe("ProductDetailView authorization", () => {
 		expect(screen.getByText("Latte")).toBeDefined();
 		expect(screen.queryByRole("link", { name: "Edit" })).toBeNull();
 		expect(screen.queryByRole("button", { name: "Edit" })).toBeNull();
+	});
+});
+
+describe("ProductView URL state", () => {
+	it("sends the URL's filters as the list grammar (text filters shown in their inputs)", () => {
+		window.history.replaceState(null, "", `${PATH}?filter[isActive]=false&filter[brand][contains]=Acme&filter[categoryId]=${PRODUCT_INPUT.categoryId}&sort=-price`);
+		renderWith([PERMISSION.PRODUCT.LIST], <ProductView />);
+
+		expect(productListSpy).toHaveBeenLastCalledWith({
+			page: 1,
+			limit: 20,
+			sort: "-price",
+			filter: { isActive: { eq: false }, isFeatured: undefined, categoryId: { eq: PRODUCT_INPUT.categoryId }, brand: { contains: "Acme" } },
+		});
+		expect(screen.getByRole("textbox", { name: "Brand" }).getAttribute("value")).toBe("Acme");
+		expect(screen.getByRole("textbox", { name: "Category Id" }).getAttribute("value")).toBe(PRODUCT_INPUT.categoryId);
+	});
+
+	it("keeps a half-typed category id in the URL but only sends a valid UUID", () => {
+		window.history.replaceState(null, "", `${PATH}?filter[categoryId]=1a2b`);
+		renderWith([PERMISSION.PRODUCT.LIST], <ProductView />);
+
+		expect(productListSpy).toHaveBeenLastCalledWith({ page: 1, limit: 20 });
+		expect(screen.getByRole("textbox", { name: "Category Id" }).getAttribute("value")).toBe("1a2b");
+	});
+
+	it("commits a brand filter to the URL (replace, page 1) after the debounce", () => {
+		vi.useFakeTimers();
+		window.history.replaceState(null, "", `${PATH}?page=4`);
+		const replaceState = vi.spyOn(window.history, "replaceState");
+		renderWith([PERMISSION.PRODUCT.LIST], <ProductView />);
+
+		fireEvent.change(screen.getByRole("textbox", { name: "Brand" }), { target: { value: "Acme " } });
+		act((): void => {
+			vi.advanceTimersByTime(TABLE_TEXT_DEBOUNCE_MS);
+		});
+
+		expect(replaceState).toHaveBeenCalledTimes(1);
+		expect(decodeURIComponent(window.location.search)).toBe("?filter[brand][contains]=Acme");
 	});
 });

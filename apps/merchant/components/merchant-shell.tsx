@@ -6,28 +6,35 @@ import { MerchantShellBreadcrumb } from "@/components/layout/merchant-shell-brea
 import { MerchantShellBanners } from "@/components/merchant-shell-banners";
 import { ImpersonateUserPanel } from "@/components/impersonation/impersonate-user-panel";
 import { MerchantPanelLayout } from "@/components/layout/merchant-panel-layout";
-import { useMerchantSidebarControl } from "@/components/layout/use-merchant-sidebar-control";
 import { MerchantSidebarPanel } from "@/components/layout/merchant-sidebar-panel";
 import { MerchantTopbar } from "@/components/layout/merchant-topbar";
 import type { ServerUser } from "@/lib/auth/server";
 import { initialDataOption, stubApiMeta, successEnvelope } from "@workspace/client/lib/api/envelope";
 import { MERCHANT_ME_QUERY_OPTIONS } from "@/lib/session/me-query";
-import { MerchantLocationProvider } from "@/lib/org/location-context";
-import { useMerchantOrg } from "@/lib/session/root-provider";
+import { TenantContextProvider } from "@/features/tenant-context/facade";
+import { useSwitchOrganization } from "@/lib/org/use-switch-organization";
 import { useAuth } from "@workspace/client/lib/auth";
-import type { OrganizationRewardMembershipResponse } from "@workspace/shared";
+import type { OrganizationContextResponse, OrganizationRewardMembershipResponse } from "@workspace/shared";
 import { useSidebar as useShellSidebar } from "@workspace/ui/components/navigation/sidebar";
 import { isMobileViewport } from "@workspace/ui/hooks/use-mobile";
-import { useMerchantCommandPaletteStore } from "@/stores/command-palette-store";
-import { useMerchantSidebarStore } from "@/stores/sidebar-store";
-import { SidebarPathSync } from "@workspace/client/lib/sidebar/sidebar-path-sync";
+import { MERCHANT_COMMAND_PALETTE_DEVTOOLS_NAME, MERCHANT_COMMAND_PALETTE_STORAGE_KEY } from "@/lib/palette/store-config";
+import { CommandPaletteStoreProvider } from "@workspace/client/lib/features/command-palette/facade";
+import { MERCHANT_SIDEBAR_DEVTOOLS_NAME, MERCHANT_SIDEBAR_STORAGE_KEY } from "@/lib/navigation/sidebar-menu";
+import { SidebarStoreProvider, useSidebarCommands, useSidebarIsOpen } from "@workspace/client/lib/features/sidebar/facade";
+import { MERCHANT_UI_PREFERENCES_DEVTOOLS_NAME, MERCHANT_UI_PREFERENCES_STORAGE_KEY } from "@/lib/ui-preferences/store-config";
+import { UiPreferencesStoreProvider } from "@workspace/client/lib/features/ui-preferences/facade";
 import { usePathname } from "next/navigation";
 import * as React from "react";
 
 export interface MerchantShellProps {
 	readonly children: React.ReactNode;
+	/** The `[orgSlug]` URL segment — the active organization (the URL owns it). */
+	readonly orgSlug: string;
+	/** The member's store choice as the server read it from the `organizationLocationId` cookie. */
+	readonly initialLocationId: string | null;
+	/** Organization context the server loaded — seeds the tenant context's accessible locations. */
+	readonly initialOrganizationContext?: OrganizationContextResponse | undefined;
 	readonly initialMemberships?: readonly OrganizationRewardMembershipResponse[];
-	readonly initialOrganizationSlug?: string | undefined;
 	readonly initialUser?: ServerUser | null;
 	readonly initialIsImpersonating?: boolean;
 }
@@ -38,7 +45,7 @@ function MerchantSidebarContent({
 	onStoreChange,
 }: {
 	readonly memberships: readonly OrganizationRewardMembershipResponse[];
-	readonly organizationSlug: string | undefined;
+	readonly organizationSlug: string;
 	readonly onStoreChange: (slug: string) => void;
 }): React.JSX.Element {
 	const { setOpenMobile } = useShellSidebar();
@@ -53,17 +60,32 @@ function MerchantSidebarContent({
 }
 
 /** Merchant portal chrome — custom sidebar + topbar with command palette. */
-export function MerchantShell({
+export function MerchantShell(props: MerchantShellProps): React.JSX.Element {
+	return (
+		<SidebarStoreProvider storageKey={MERCHANT_SIDEBAR_STORAGE_KEY} devtoolsName={MERCHANT_SIDEBAR_DEVTOOLS_NAME}>
+			<CommandPaletteStoreProvider storageKey={MERCHANT_COMMAND_PALETTE_STORAGE_KEY} devtoolsName={MERCHANT_COMMAND_PALETTE_DEVTOOLS_NAME}>
+				<UiPreferencesStoreProvider storageKey={MERCHANT_UI_PREFERENCES_STORAGE_KEY} devtoolsName={MERCHANT_UI_PREFERENCES_DEVTOOLS_NAME}>
+					<MerchantShellContent {...props} />
+				</UiPreferencesStoreProvider>
+			</CommandPaletteStoreProvider>
+		</SidebarStoreProvider>
+	);
+}
+
+function MerchantShellContent({
 	children,
+	orgSlug,
+	initialLocationId,
+	initialOrganizationContext,
 	initialMemberships,
-	initialOrganizationSlug,
 	initialUser = null,
 	initialIsImpersonating = false,
 }: MerchantShellProps): React.JSX.Element {
 	const { api } = useAuth();
 	const pathname = usePathname();
-	const { organizationSlug, setOrganizationSlug, syncOrganizationSlug } = useMerchantOrg();
-	const { isOpen: sidebarOpen, open: openSidebar, close: closeSidebar } = useMerchantSidebarControl();
+	const switchOrganization = useSwitchOrganization();
+	const sidebarOpen = useSidebarIsOpen();
+	const { open: openSidebar, close: closeSidebar } = useSidebarCommands();
 
 	const handleSidebarOpenChange = React.useCallback(
 		(open: boolean): void => {
@@ -91,50 +113,20 @@ export function MerchantShell({
 
 	const memberships = React.useMemo((): readonly OrganizationRewardMembershipResponse[] => membershipsQuery.data?.data ?? [], [membershipsQuery.data?.data]);
 
-	React.useLayoutEffect((): void => {
-		void useMerchantCommandPaletteStore.persist.rehydrate();
-		void useMerchantSidebarStore.persist.rehydrate();
-	}, []);
-
-	const syncedSlugRef = React.useRef<string | undefined>(undefined);
-
-	React.useEffect((): void => {
-		if (initialOrganizationSlug !== undefined) {
-			if (syncedSlugRef.current !== initialOrganizationSlug && organizationSlug !== initialOrganizationSlug) {
-				syncedSlugRef.current = initialOrganizationSlug;
-				syncOrganizationSlug(initialOrganizationSlug);
-			}
-			return;
-		}
-		const firstMembership = memberships[0];
-		if (firstMembership !== undefined && organizationSlug === undefined && syncedSlugRef.current !== firstMembership.organizationSlug) {
-			syncedSlugRef.current = firstMembership.organizationSlug;
-			syncOrganizationSlug(firstMembership.organizationSlug);
-		}
-	}, [initialOrganizationSlug, memberships, organizationSlug, syncOrganizationSlug]);
-
-	const handleStoreChange = React.useCallback(
-		(slug: string): void => {
-			setOrganizationSlug(slug, { refresh: true });
-		},
-		[setOrganizationSlug],
-	);
-
 	const hasMemberships = memberships.length > 0;
 	const showMembershipGate = membershipsQuery.isFetched && !hasMemberships;
 	const showMembershipLoading = !hasMemberships && membershipsQuery.isLoading;
 
 	return (
 		<MerchantAuthorizationProvider initialMemberships={initialMemberships}>
-			<MerchantLocationProvider>
+			<TenantContextProvider orgSlug={orgSlug} initialLocationId={initialLocationId} initialOrganizationContext={initialOrganizationContext}>
 				<MerchantBreadcrumbProvider>
-					<SidebarPathSync store={useMerchantSidebarStore} />
 					<MerchantPanelLayout
 						scrollKey={pathname}
 						banner={<MerchantShellBanners initialIsImpersonating={initialIsImpersonating} />}
 						sidebarOpen={sidebarOpen}
 						onSidebarOpenChange={handleSidebarOpenChange}
-						sidebar={<MerchantSidebarContent memberships={memberships} organizationSlug={organizationSlug} onStoreChange={handleStoreChange} />}
+						sidebar={<MerchantSidebarContent memberships={memberships} organizationSlug={orgSlug} onStoreChange={switchOrganization} />}
 						topbar={<MerchantTopbar initialUser={initialUser} />}>
 						{showMembershipLoading ? (
 							<p className="text-sm text-muted-foreground">Loading merchant access…</p>
@@ -154,7 +146,7 @@ export function MerchantShell({
 						)}
 					</MerchantPanelLayout>
 				</MerchantBreadcrumbProvider>
-			</MerchantLocationProvider>
+			</TenantContextProvider>
 		</MerchantAuthorizationProvider>
 	);
 }

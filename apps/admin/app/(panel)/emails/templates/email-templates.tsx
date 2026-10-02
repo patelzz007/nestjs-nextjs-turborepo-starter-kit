@@ -5,7 +5,9 @@ import { useAuthorization } from "@workspace/client/lib/auth/can";
 
 import { DisabledActionButton } from "@/components/common/disabled-action-button";
 import { initialDataOption } from "@workspace/client/lib/api/envelope";
-import { PERMISSION, type Envelope, type EmailPreview, type EmailPreviewListResponse, type EmailTemplateMeta } from "@workspace/shared";
+import { EmailTemplateKeySchema, PERMISSION, type Envelope, type EmailPreview, type EmailPreviewListResponse, type EmailTemplateMeta } from "@workspace/shared";
+import { useUrlState } from "@workspace/client/lib/url-state/use-url-state";
+import { EMAIL_TEMPLATES_URL_STATE } from "@/lib/url-state/selection";
 import { Badge } from "@workspace/ui/components/feedback/badge";
 import { Button } from "@workspace/ui/components/form/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/display/card";
@@ -91,19 +93,19 @@ function ModeTabButton({
 export default function EmailPreviewPage({
 	initialList,
 	initialDetail,
-	initialSelectedKey,
 }: {
 	readonly initialList: Envelope<EmailPreviewListResponse>;
 	readonly initialDetail?: Envelope<EmailPreview> | undefined;
-	readonly initialSelectedKey?: string | undefined;
 }): React.JSX.Element {
 	const { api } = useAuth();
 	const { can } = useAuthorization();
 	// `POST /notifications/email-preview/:key/send` requires CREATE on EMAIL (previewing needs only READ).
 	const canSendTest = can(PERMISSION.EMAIL.CREATE);
 
-	const [selectedKey, setSelectedKey] = React.useState<string | null>(initialSelectedKey ?? null);
-	const [mode, setMode] = React.useState<PreviewMode>("preview");
+	// The selected template is `?key=` (lib/url-state/selection): the URL is the
+	// only copy, so links, reloads and back/forward all show the same template.
+	const [selection, updateSelection] = useUrlState(EMAIL_TEMPLATES_URL_STATE);
+	const selectedKey: string | undefined = selection.key;
 	const copiedTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 	const [copied, setCopied] = React.useState(false);
 
@@ -117,6 +119,11 @@ export default function EmailPreviewPage({
 	// first template. Deriving (instead of an effect that calls setState)
 	// keeps the render pure and satisfies the React Compiler's rules.
 	const effectiveKey: string = selectedKey ?? templates[0]?.key ?? "";
+
+	// The preview mode belongs to the template it was picked for: selecting
+	// another template (by click or by back/forward) starts on "preview" again.
+	const [modeChoice, setModeChoice] = React.useState<{ readonly key: string; readonly mode: PreviewMode }>({ key: effectiveKey, mode: "preview" });
+	const mode: PreviewMode = modeChoice.key === effectiveKey ? modeChoice.mode : "preview";
 
 	const detailInitialData = React.useMemo((): Envelope<EmailPreview> | undefined => {
 		if (initialDetail === undefined || effectiveKey.length === 0) {
@@ -146,14 +153,22 @@ export default function EmailPreviewPage({
 	const preview: EmailPreview | undefined = detailQuery.data?.data.key === effectiveKey ? detailQuery.data.data : undefined;
 	const isDetailPending = effectiveKey.length > 0 && preview === undefined && (detailQuery.isLoading || detailQuery.isPending);
 
-	const handleSelectTemplate = React.useCallback((key: string): void => {
-		setSelectedKey(key);
-		setMode("preview");
-	}, []);
+	const handleSelectTemplate = React.useCallback(
+		(key: string): void => {
+			const parsed = EmailTemplateKeySchema.safeParse(key);
+			if (parsed.success) {
+				updateSelection({ key: parsed.data });
+			}
+		},
+		[updateSelection],
+	);
 
-	const handleSelectMode = React.useCallback((nextMode: PreviewMode): void => {
-		setMode(nextMode);
-	}, []);
+	const handleSelectMode = React.useCallback(
+		(nextMode: PreviewMode): void => {
+			setModeChoice({ key: effectiveKey, mode: nextMode });
+		},
+		[effectiveKey],
+	);
 
 	const handleCopy = React.useCallback((): void => {
 		if (preview === undefined) {

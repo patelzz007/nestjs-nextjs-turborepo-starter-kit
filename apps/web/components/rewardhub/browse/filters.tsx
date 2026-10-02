@@ -7,6 +7,9 @@ import { cn } from "@workspace/ui/lib/core/utils";
 import { MapPin, Search, X } from "lucide-react";
 import * as React from "react";
 
+/** The value of the "All cities" / "All" chips — no filter. */
+export const ALL_FILTER_CHIP = "ALL";
+
 const CITIES: readonly { readonly value: PilotCity; readonly label: string }[] = [
 	{ value: "KUALA_LUMPUR", label: "Kuala Lumpur" },
 	{ value: "MELAKA", label: "Melaka" },
@@ -14,13 +17,13 @@ const CITIES: readonly { readonly value: PilotCity; readonly label: string }[] =
 
 export interface RewardHubFiltersProps {
 	readonly searchDraft: string;
-	readonly city: PilotCity | "ALL";
-	readonly category: RewardCategory | "ALL";
+	readonly city: PilotCity | typeof ALL_FILTER_CHIP;
+	readonly category: RewardCategory | typeof ALL_FILTER_CHIP;
 	readonly categories: readonly RewardCategory[];
 	readonly onSearchDraftChange: (value: string) => void;
 	readonly onSearchSubmit: () => void;
-	readonly onCityChange: (city: PilotCity | "ALL") => void;
-	readonly onCategoryChange: (category: RewardCategory | "ALL") => void;
+	readonly onCityChange: (city: PilotCity | typeof ALL_FILTER_CHIP) => void;
+	readonly onCategoryChange: (category: RewardCategory | typeof ALL_FILTER_CHIP) => void;
 	readonly onClearFilters: () => void;
 	readonly hasActiveFilters: boolean;
 }
@@ -53,11 +56,11 @@ export function RewardHubFilters({
 	);
 
 	const handleCityAll = React.useCallback((): void => {
-		onCityChange("ALL");
+		onCityChange(ALL_FILTER_CHIP);
 	}, [onCityChange]);
 
 	const handleCategoryAll = React.useCallback((): void => {
-		onCategoryChange("ALL");
+		onCategoryChange(ALL_FILTER_CHIP);
 	}, [onCategoryChange]);
 
 	return (
@@ -84,7 +87,7 @@ export function RewardHubFilters({
 						City
 					</span>
 					<div className="flex flex-wrap gap-2">
-						<FilterChip label="All cities" isActive={city === "ALL"} onClick={handleCityAll} />
+						<FilterChip label="All cities" isActive={city === ALL_FILTER_CHIP} onClick={handleCityAll} />
 						{CITIES.map((item) => (
 							<CityChip key={item.value} city={item.value} label={item.label} activeCity={city} onSelect={onCityChange} />
 						))}
@@ -94,7 +97,7 @@ export function RewardHubFilters({
 				<div className="flex flex-wrap items-center gap-2">
 					<span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Category</span>
 					<div className="flex flex-wrap gap-2">
-						<FilterChip label="All" isActive={category === "ALL"} onClick={handleCategoryAll} />
+						<FilterChip label="All" isActive={category === ALL_FILTER_CHIP} onClick={handleCategoryAll} />
 						{categories.map((item) => (
 							<CategoryChip key={item} category={item} activeCategory={category} onSelect={onCategoryChange} />
 						))}
@@ -125,6 +128,7 @@ function FilterChip({ label, isActive, onClick }: FilterChipProps): React.JSX.El
 		<Button
 			type="button"
 			variant={isActive ? "default" : "outline"}
+			aria-pressed={isActive}
 			onClick={onClick}
 			className={cn("h-9 rounded-full px-4 text-sm capitalize", !isActive ? "bg-background" : undefined)}>
 			{label}
@@ -135,8 +139,8 @@ function FilterChip({ label, isActive, onClick }: FilterChipProps): React.JSX.El
 interface CityChipProps {
 	readonly city: PilotCity;
 	readonly label: string;
-	readonly activeCity: PilotCity | "ALL";
-	readonly onSelect: (city: PilotCity | "ALL") => void;
+	readonly activeCity: PilotCity | typeof ALL_FILTER_CHIP;
+	readonly onSelect: (city: PilotCity | typeof ALL_FILTER_CHIP) => void;
 }
 
 function CityChip({ city, label, activeCity, onSelect }: CityChipProps): React.JSX.Element {
@@ -149,8 +153,8 @@ function CityChip({ city, label, activeCity, onSelect }: CityChipProps): React.J
 
 interface CategoryChipProps {
 	readonly category: RewardCategory;
-	readonly activeCategory: RewardCategory | "ALL";
-	readonly onSelect: (category: RewardCategory | "ALL") => void;
+	readonly activeCategory: RewardCategory | typeof ALL_FILTER_CHIP;
+	readonly onSelect: (category: RewardCategory | typeof ALL_FILTER_CHIP) => void;
 }
 
 function CategoryChip({ category, activeCategory, onSelect }: CategoryChipProps): React.JSX.Element {

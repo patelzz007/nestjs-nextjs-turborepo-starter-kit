@@ -31,21 +31,16 @@ import { useRouteExpandedItems } from "@/components/layout/use-route-expanded-it
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
 import { Topbar } from "@/components/layout/topbar";
 import { ScrollToTop } from "@workspace/ui/components/navigation/scroll-to-top";
-import { useCommandPaletteStore } from "@/stores/command-palette-store";
-import { useSidebarStore } from "@/stores/sidebar-store";
-import { SidebarPathSync } from "@workspace/client/lib/sidebar/sidebar-path-sync";
+import { useCommandPalettePinnedUrls } from "@workspace/client/lib/features/command-palette/facade";
+import { useSidebarCommands, useSidebarExpandedItems, useSidebarIsOpen, useSidebarSearchQuery, useSidebarSectionOrder } from "@workspace/client/lib/features/sidebar/facade";
 import { CapabilitiesProvider } from "@workspace/client/lib/auth/can";
 import { createGrantedCapabilities, isCapabilityGranted } from "@workspace/client/lib/auth/permission-check";
-import type { CompiledSidebarMenuData } from "@workspace/client/lib/sidebar/sidebar-menu-schema";
 import type { CapabilitySlug, SessionPermissionsResponse } from "@workspace/shared";
 import type { FooterAction, SidebarUser } from "@/lib/navigation/sidebar";
 
 const SIDEBAR_STORAGE = createNoopSidebarStorage();
 
-function useDefaultWorkspaces(): readonly { readonly id: string; readonly name: string }[] {
-	const menuSubtitle = useSidebarStore((state) => state.menu.header.subtitle);
-	return React.useMemo(() => [{ id: "default", name: menuSubtitle }], [menuSubtitle]);
-}
+const DEFAULT_WORKSPACES: readonly { readonly id: string; readonly name: string }[] = [{ id: "default", name: SIDEBAR_MENU.header.subtitle }];
 
 const SKIP_TO_CONTENT_CLASS =
 	"sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[60] focus:rounded-md focus:bg-background focus:px-3 focus:py-2 focus:text-sm focus:font-medium focus:text-foreground focus:shadow-lg";
@@ -119,35 +114,17 @@ export function DashboardLayout({
 }: DashboardLayoutProps): React.JSX.Element {
 	useTrailDocumentTitle();
 	const router = useRouter();
-	const isOpen = useSidebarStore((s) => s.isOpen);
-	const openSidebar = useSidebarStore((s) => s.open);
-	const closeSidebar = useSidebarStore((s) => s.close);
-	const sectionOrder = useSidebarStore((s) => s.sectionOrder);
-	const searchQuery = useSidebarStore((s) => s.searchQuery);
-	const menu = useSidebarStore((s) => s.menu);
-	const setSearchQuery = useSidebarStore((s) => s.setSearchQuery);
-	const clearSearch = useSidebarStore((s) => s.clearSearch);
-	const storeExpandedItems = useSidebarStore((s) => s.expandedItems);
-	const setItemExpanded = useSidebarStore((s) => s.setItemExpanded);
-	const resetExpandedItems = useSidebarStore((s) => s.resetExpandedItems);
-	const moveSectionUp = useSidebarStore((s) => s.moveSectionUp);
-	const moveSectionDown = useSidebarStore((s) => s.moveSectionDown);
-	const pinnedUrls = useCommandPaletteStore((s) => s.pinnedUrls);
+	const isOpen = useSidebarIsOpen();
+	const sectionOrder = useSidebarSectionOrder();
+	const searchQuery = useSidebarSearchQuery();
+	const storeExpandedItems = useSidebarExpandedItems();
+	const { open: openSidebar, close: closeSidebar, setSearchQuery, clearSearch, setItemExpanded, resetExpandedItems, moveSectionUp, moveSectionDown } = useSidebarCommands();
+	const pinnedUrls = useCommandPalettePinnedUrls();
 	const pathname = usePathname();
-	const defaultWorkspaces = useDefaultWorkspaces();
 	const currentPage = pathname;
 	const [activeWorkspaceId, setActiveWorkspaceId] = React.useState<string>("default");
 	const { capabilities, isResolved: isPermissionsResolved } = useSessionPermissionsQuery(initialSessionPermissions);
 	const superAdmin = useSuperAdminStatus();
-
-	const displayMenu = React.useMemo(
-		(): CompiledSidebarMenuData => ({
-			header: menu.header,
-			sections: menu.sections,
-			bottomItems: menu.bottomItems.length > 0 ? menu.bottomItems : SIDEBAR_MENU.bottomItems,
-		}),
-		[menu],
-	);
 
 	// The facts the route guard decides with — the menu filter and every other
 	// link source below evaluate the very same rules, so they cannot disagree.
@@ -165,8 +142,8 @@ export function DashboardLayout({
 	// capability filter), then every item whose page the route guard would
 	// deny is removed (`@SuperAdminOnly` pages, per-page rules).
 	const filteredMenu = React.useMemo(
-		() => filterMenuByRouteAccess(filterCompiledSidebarMenu(displayMenu, capabilities, { enabledFeatureFlags }), ADMIN_ROUTE_AUTHORIZATION, routeSession),
-		[displayMenu, capabilities, enabledFeatureFlags, routeSession],
+		() => filterMenuByRouteAccess(filterCompiledSidebarMenu(SIDEBAR_MENU, capabilities, { enabledFeatureFlags }), ADMIN_ROUTE_AUTHORIZATION, routeSession),
+		[capabilities, enabledFeatureFlags, routeSession],
 	);
 
 	const canAccessPath = React.useCallback((href: string): boolean => canAccessRoute(ADMIN_ROUTE_AUTHORIZATION, href, routeSession), [routeSession]);
@@ -181,11 +158,6 @@ export function DashboardLayout({
 	const pinnedItems = React.useMemo(() => resolvePinnedMenuItems(pinnedUrls, searchableItems), [pinnedUrls, searchableItems]);
 
 	const expandedItems = useRouteExpandedItems(currentPage, storeExpandedItems, view.routeState.autoExpandedItems, resetExpandedItems);
-
-	React.useLayoutEffect((): void => {
-		void useSidebarStore.persist.rehydrate();
-		void useCommandPaletteStore.persist.rehydrate();
-	}, []);
 
 	const handleSidebarOpenChange = React.useCallback(
 		(open: boolean): void => {
@@ -255,7 +227,7 @@ export function DashboardLayout({
 			onMoveSectionUp: moveSectionUp,
 			onMoveSectionDown: moveSectionDown,
 			pinnedItems,
-			workspaces: defaultWorkspaces,
+			workspaces: DEFAULT_WORKSPACES,
 			activeWorkspaceId,
 			onWorkspaceChange: handleWorkspaceChange,
 			navigationKey: currentPage,
@@ -274,7 +246,6 @@ export function DashboardLayout({
 			moveSectionUp,
 			moveSectionDown,
 			pinnedItems,
-			defaultWorkspaces,
 			activeWorkspaceId,
 			handleWorkspaceChange,
 			currentPage,
@@ -285,7 +256,6 @@ export function DashboardLayout({
 		<CapabilitiesProvider capabilities={capabilities}>
 			<AuthorizedNavigationProvider searchableItems={searchableItems} canAccessRoute={canAccessPath}>
 				<SidebarProvider open={isOpen} onOpenChange={handleSidebarOpenChange} labels={DEFAULT_SIDEBAR_LABELS} storage={SIDEBAR_STORAGE} badges={sidebarBadges}>
-					<SidebarPathSync store={useSidebarStore} />
 					<Button type="button" variant="ghost" onClick={handleSkipToContent} className={SKIP_TO_CONTENT_CLASS}>
 						{ADMIN_SIDEBAR_LABELS.skipToContent}
 					</Button>

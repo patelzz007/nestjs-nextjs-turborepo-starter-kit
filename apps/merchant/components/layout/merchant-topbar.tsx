@@ -6,8 +6,8 @@ import type { ServerUser } from "@/lib/auth/server";
 import { useOrganizationPath } from "@/lib/org/use-organization-path";
 import { ORG_ROUTES } from "@/lib/routes";
 import { useMerchantSessionProfile } from "@/lib/session/profile";
-import { useMerchantSidebarControl } from "@/components/layout/use-merchant-sidebar-control";
-import { useMerchantSidebarStore } from "@/stores/sidebar-store";
+import { MERCHANT_SIDEBAR_MENU } from "@/lib/navigation/sidebar-menu";
+import { useSidebarIsOpen } from "@workspace/client/lib/features/sidebar/facade";
 import { useAuth } from "@workspace/client/lib/auth";
 import { useAuthorization } from "@workspace/client/lib/auth/can";
 import { isRestrictedAuthUser } from "@workspace/client/lib/auth/session/map-auth-user";
@@ -38,8 +38,8 @@ export function MerchantTopbar({ initialUser = null }: MerchantTopbarProps): Rea
 	const accountPath = useOrganizationPath(ORG_ROUTES.account);
 	const dashboardPath = useOrganizationPath(ORG_ROUTES.dashboard);
 	const apiKeysPath = useOrganizationPath(ORG_ROUTES.apiKeys);
-	const { isOpen: sidebarOpen } = useMerchantSidebarControl();
-	const menuTitle = useMerchantSidebarStore((state) => state.menu.header.title);
+	const sidebarOpen = useSidebarIsOpen();
+	const menuTitle = MERCHANT_SIDEBAR_MENU.header.title;
 	const [commandOpen, setCommandOpen] = React.useState<boolean>(false);
 
 	const handleOpenCommand = React.useCallback((): void => {

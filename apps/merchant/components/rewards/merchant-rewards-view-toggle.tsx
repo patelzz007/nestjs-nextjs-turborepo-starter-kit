@@ -1,13 +1,13 @@
 "use client";
 
-import { MerchantRewardsViewModeSchema, type MerchantRewardsViewMode } from "@/lib/rewards/view-mode";
+import { RewardsViewModeSchema, type RewardsViewMode } from "@workspace/client/lib/features/ui-preferences/facade";
 import { ToggleGroup, ToggleGroupItem } from "@workspace/ui/components/form/toggle-group";
 import { LayoutGrid, List } from "lucide-react";
 import * as React from "react";
 
 export interface MerchantRewardsViewToggleProps {
-	readonly viewMode: MerchantRewardsViewMode;
-	readonly onViewModeChange: (mode: MerchantRewardsViewMode) => void;
+	readonly viewMode: RewardsViewMode;
+	readonly onViewModeChange: (mode: RewardsViewMode) => void;
 }
 
 export function MerchantRewardsViewToggle({ viewMode, onViewModeChange }: MerchantRewardsViewToggleProps): React.JSX.Element {
@@ -17,7 +17,7 @@ export function MerchantRewardsViewToggle({ viewMode, onViewModeChange }: Mercha
 			if (next === undefined) {
 				return;
 			}
-			const parsed = MerchantRewardsViewModeSchema.safeParse(next);
+			const parsed = RewardsViewModeSchema.safeParse(next);
 			if (parsed.success) {
 				onViewModeChange(parsed.data);
 			}

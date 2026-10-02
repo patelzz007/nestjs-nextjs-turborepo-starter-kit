@@ -124,7 +124,7 @@ describe("isPathWithin", () => {
 // ── Source guard: route strings live only in lib/routes.ts ──────────────────
 
 const APP_ROOT: string = fileURLToPath(new URL("..", import.meta.url));
-const SOURCE_DIRS: readonly string[] = ["app", "components", "lib", "stores"];
+const SOURCE_DIRS: readonly string[] = ["app", "components", "lib"];
 const SOURCE_FILES_AT_ROOT: readonly string[] = ["proxy.ts"];
 const SOURCE_FILE_PATTERN = /\.tsx?$/;
 const TEST_FILE_PATTERN = /\.test\.tsx?$/;

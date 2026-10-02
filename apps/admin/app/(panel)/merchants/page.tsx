@@ -1,20 +1,19 @@
 import { createAdminServerCaller } from "@/lib/admin-server-api";
-import { readPaginatedHasNext, readPaginatedTotal, readPaginatedTotalPages } from "@workspace/client/lib/api/envelope";
+import { toPrefetchedQuery } from "@workspace/client/lib/url-state/prefetched-query";
+import { MERCHANTS_TABLE_URL_STATE, toMerchantsListQuery } from "@/lib/url-state/merchants";
 
 import MerchantsAllTable from "./merchants-all-table";
 
 export const dynamic = "force-dynamic";
 
-/** `/merchants` — the Merchants section index: every merchant organization. */
-export default async function MerchantsPage(): Promise<React.JSX.Element> {
+/**
+ * `/merchants` — the Merchants section index: every merchant organization.
+ * The server parses the table's URL state and prefetches that exact page.
+ */
+export default async function MerchantsPage({ searchParams }: { readonly searchParams: Promise<Record<string, string | string[] | undefined>> }): Promise<React.JSX.Element> {
+	const urlState = MERCHANTS_TABLE_URL_STATE.parse(await searchParams);
 	const server = createAdminServerCaller();
-	const result = await Promise.allSettled([server.rewardsAdmin.listOrganizations.query({ page: 1, limit: 20 })]);
+	const [result] = await Promise.allSettled([server.rewardsAdmin.listOrganizations.query(toMerchantsListQuery(urlState))]);
 
-	const first = result[0];
-	const initialMerchants = first.status === "fulfilled" ? first.value.data : undefined;
-	const initialTotal = first.status === "fulfilled" ? readPaginatedTotal(first.value.meta) : undefined;
-	const initialTotalPages = first.status === "fulfilled" ? readPaginatedTotalPages(first.value.meta) : undefined;
-	const initialHasNext = first.status === "fulfilled" ? readPaginatedHasNext(first.value.meta) : undefined;
-
-	return <MerchantsAllTable initialMerchants={initialMerchants} initialTotal={initialTotal} initialTotalPages={initialTotalPages} initialHasNext={initialHasNext} />;
+	return <MerchantsAllTable initialPage={toPrefetchedQuery(MERCHANTS_TABLE_URL_STATE.serialize(urlState), result)} />;
 }

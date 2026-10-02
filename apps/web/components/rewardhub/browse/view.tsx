@@ -1,123 +1,86 @@
 "use client";
 
 import { RewardHubCatalog } from "@/components/rewardhub/browse/catalog";
-import { RewardHubFilters } from "@/components/rewardhub/browse/filters";
-import { initialDataOption, readPaginatedHasNext, readPaginatedNextCursor, stubPaginatedMetaFromHydration, successEnvelope } from "@workspace/client/lib/api/envelope";
+import { ALL_FILTER_CHIP, RewardHubFilters } from "@/components/rewardhub/browse/filters";
+import { initialDataOption, readPaginatedHasNext, readPaginatedNextCursor } from "@workspace/client/lib/api/envelope";
+import { toListSearch } from "@workspace/client/lib/api/list-query";
+import { LIST_FIRST_PAGE, listPagePatch } from "@workspace/client/lib/url-state/list-url-state";
+import { prefetchedDataFor, type PrefetchedQuery } from "@workspace/client/lib/url-state/prefetched-query";
+import { useUrlState } from "@workspace/client/lib/url-state/use-url-state";
 import { WebEmptyState } from "@/components/web-ui/empty-state";
 import { useAuth } from "@workspace/client/lib/auth";
-import { ApiPaginatedMeta, type PilotCity, type RewardCategory, type RewardResponse } from "@workspace/shared";
+import type { Envelope, PilotCity, RewardCategory, RewardResponse } from "@workspace/shared";
 import { Gift, MapPin, Search, Sparkles } from "lucide-react";
 import * as React from "react";
 import { LANDING_SECTION_IDS, ROUTE_PREFIXES } from "@/lib/routes";
+import { REWARDS_BROWSE_URL_STATE, toRewardsBrowseListQuery } from "@/lib/url-state/rewards-browse";
+import { useSubmittedUrlDraft } from "@/lib/url-state/use-submitted-url-draft";
 
 const CATEGORIES: readonly RewardCategory[] = ["cafe", "restaurant", "retail", "wellness", "entertainment", "food", "beverage"];
 
 export interface RewardHubBrowseViewProps {
-	readonly initialRewards?: readonly RewardResponse[] | undefined;
-	readonly initialHasNext?: boolean | undefined;
-	readonly initialListMeta?: ApiPaginatedMeta | undefined;
+	/** The catalog page the server prefetched for the URL it rendered. */
+	readonly initialPage?: PrefetchedQuery<Envelope<RewardResponse[]>> | undefined;
 	readonly variant?: "landing" | "dashboard";
 	readonly detailPathPrefix?: string;
 }
 
-/** Consumer Reward Hub browse experience — filters, summary, and grid/list catalog. */
-export function RewardHubBrowseView({
-	initialRewards,
-	initialHasNext,
-	initialListMeta,
-	variant = "dashboard",
-	detailPathPrefix = ROUTE_PREFIXES.rewardHubRewards,
-}: RewardHubBrowseViewProps): React.JSX.Element {
+/**
+ * Consumer Reward Hub browse experience — filters, summary, and grid/list catalog.
+ * Search, city, category and page live in the URL (lib/url-state/rewards-browse):
+ * shareable, refresh-safe and back/forward-aware. The only local state is the
+ * search box's unsubmitted text; the grid/list layout is a `ui-preferences` preference.
+ */
+export function RewardHubBrowseView({ initialPage, variant = "dashboard", detailPathPrefix = ROUTE_PREFIXES.rewardHubRewards }: RewardHubBrowseViewProps): React.JSX.Element {
 	const { api } = useAuth();
-	const [cursor, setCursor] = React.useState<string | null>(null);
-	const [cursorHistory, setCursorHistory] = React.useState<readonly (string | null)[]>([null]);
-	const [search, setSearch] = React.useState<string>("");
-	const [searchDraft, setSearchDraft] = React.useState<string>("");
-	const [city, setCity] = React.useState<PilotCity | "ALL">("ALL");
-	const [category, setCategory] = React.useState<RewardCategory | "ALL">("ALL");
+	const [urlState, updateUrlState] = useUrlState(REWARDS_BROWSE_URL_STATE);
+	const [searchDraft, setSearchDraft] = useSubmittedUrlDraft(urlState.search);
 
-	const isDefaultQuery = cursor === null && search.length === 0 && city === "ALL" && category === "ALL";
-
-	const resetCursor = React.useCallback((): void => {
-		setCursor(null);
-		setCursorHistory([null]);
-	}, []);
-
-	const initialQueryData = React.useMemo(
-		() =>
-			initialRewards !== undefined && isDefaultQuery
-				? successEnvelope([...initialRewards], initialListMeta ?? stubPaginatedMetaFromHydration(12, initialRewards.length, initialHasNext ?? false))
-				: undefined,
-		[initialHasNext, initialListMeta, initialRewards, isDefaultQuery],
-	);
-
-	const rewardsQuery = api.rewards.list.useQuery(
-		{
-			page: cursorHistory.length,
-			limit: 12,
-			...(cursor !== null ? { cursor } : {}),
-			...(search.length > 0 ? { search } : {}),
-			...(city !== "ALL" || category !== "ALL"
-				? { filter: { city: city !== "ALL" ? { eq: city } : undefined, category: category !== "ALL" ? { eq: category } : undefined } }
-				: {}),
-		},
-		initialDataOption(initialQueryData),
-	);
+	const stateKey: string = REWARDS_BROWSE_URL_STATE.serialize(urlState);
+	const prefetchedPage = prefetchedDataFor(initialPage, stateKey);
+	const rewardsQuery = api.rewards.list.useQuery(toRewardsBrowseListQuery(urlState), initialDataOption(prefetchedPage));
 
 	const rewards = rewardsQuery.data?.data ?? [];
-	const hasNext = readPaginatedHasNext(rewardsQuery.data?.meta, isDefaultQuery && initialHasNext !== undefined ? initialHasNext : false);
+	const hasNext = readPaginatedHasNext(rewardsQuery.data?.meta);
 	const nextCursor = readPaginatedNextCursor(rewardsQuery.data?.meta);
-	const hasPrevious = cursorHistory.length > 1;
+	const hasPrevious = urlState.page > LIST_FIRST_PAGE;
 
+	// Every discrete change pushes a history entry, so Back undoes it; a new filter starts at page 1.
 	const handleSearchSubmit = React.useCallback((): void => {
-		setSearch(searchDraft.trim());
-		resetCursor();
-	}, [resetCursor, searchDraft]);
+		updateUrlState({ search: toListSearch(searchDraft), page: LIST_FIRST_PAGE, cursor: undefined });
+	}, [searchDraft, updateUrlState]);
 
 	const handleCityChange = React.useCallback(
-		(nextCity: PilotCity | "ALL"): void => {
-			setCity(nextCity);
-			resetCursor();
+		(nextCity: PilotCity | typeof ALL_FILTER_CHIP): void => {
+			updateUrlState({ city: nextCity === ALL_FILTER_CHIP ? undefined : nextCity, page: LIST_FIRST_PAGE, cursor: undefined });
 		},
-		[resetCursor],
+		[updateUrlState],
 	);
 
 	const handleCategoryChange = React.useCallback(
-		(nextCategory: RewardCategory | "ALL"): void => {
-			setCategory(nextCategory);
-			resetCursor();
+		(nextCategory: RewardCategory | typeof ALL_FILTER_CHIP): void => {
+			updateUrlState({ category: nextCategory === ALL_FILTER_CHIP ? undefined : nextCategory, page: LIST_FIRST_PAGE, cursor: undefined });
 		},
-		[resetCursor],
+		[updateUrlState],
 	);
 
 	const handleClearFilters = React.useCallback((): void => {
-		setSearch("");
-		setSearchDraft("");
-		setCity("ALL");
-		setCategory("ALL");
-		resetCursor();
-	}, [resetCursor]);
+		updateUrlState({ search: undefined, city: undefined, category: undefined, page: LIST_FIRST_PAGE, cursor: undefined });
+	}, [updateUrlState]);
 
 	const handleNext = React.useCallback((): void => {
-		if (nextCursor === null) {
-			return;
-		}
-		setCursorHistory((history) => [...history, nextCursor]);
-		setCursor(nextCursor);
-	}, [nextCursor]);
+		updateUrlState(listPagePatch(urlState, urlState.page + 1, nextCursor));
+	}, [nextCursor, updateUrlState, urlState]);
 
 	const handlePrevious = React.useCallback((): void => {
-		if (cursorHistory.length <= 1) {
+		if (urlState.page <= LIST_FIRST_PAGE) {
 			return;
 		}
-		const nextHistory = cursorHistory.slice(0, -1);
-		const previousCursor = nextHistory[nextHistory.length - 1] ?? null;
-		setCursorHistory(nextHistory);
-		setCursor(previousCursor);
-	}, [cursorHistory]);
+		updateUrlState(listPagePatch(urlState, urlState.page - 1, null));
+	}, [updateUrlState, urlState]);
 
-	const hasActiveFilters = search.length > 0 || city !== "ALL" || category !== "ALL";
-	const isLoading = rewardsQuery.isLoading && !(isDefaultQuery && initialRewards !== undefined);
+	const hasActiveFilters = urlState.search !== undefined || urlState.city !== undefined || urlState.category !== undefined;
+	const isLoading = rewardsQuery.isLoading;
 	const showEmpty = !isLoading && rewards.length === 0;
 
 	const summaryItems = React.useMemo(
@@ -181,8 +144,8 @@ export function RewardHubBrowseView({
 
 			<RewardHubFilters
 				searchDraft={searchDraft}
-				city={city}
-				category={category}
+				city={urlState.city ?? ALL_FILTER_CHIP}
+				category={urlState.category ?? ALL_FILTER_CHIP}
 				categories={CATEGORIES}
 				onSearchDraftChange={setSearchDraft}
 				onSearchSubmit={handleSearchSubmit}

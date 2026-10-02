@@ -1,0 +1,42 @@
+# Shared job bootstrap: pnpm (version from package.json "packageManager"),
+# pinned Node.js with the pnpm store cached, a frozen-lockfile install, and the
+# Prisma client (needed by lint/typecheck/test/build of @workspace/api).
+#
+# Third-party actions are pinned to full commit SHAs (tag in the trailing
+# comment); Dependabot (.github/dependabot.yml) proposes updates.
+name: Set up workspace
+description: Install pnpm + Node.js, restore the pnpm store cache, install dependencies, and generate the Prisma client.
+
+inputs:
+  node-version:
+    description: Node.js version to install.
+    required: true
+  generate-prisma-client:
+    description: Run `prisma generate` for @workspace/api after installing.
+    required: false
+    default: "true"
+
+runs:
+  using: composite
+  steps:
+    - name: Install pnpm
+      uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+    - name: Install Node.js
+      uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: pnpm
+
+    - name: Install dependencies (frozen lockfile)
+      shell: bash
+      run: pnpm install --frozen-lockfile
+
+    - name: Generate Prisma client
+      if: inputs.generate-prisma-client == 'true'
+      shell: bash
+      # prisma.config.ts refuses to load without DATABASE_URL, even though
+      # `prisma generate` never connects — an unroutable placeholder is enough.
+      env:
+        DATABASE_URL: postgresql://placeholder:placeholder@127.0.0.1:1/placeholder
+      run: pnpm --filter @workspace/api exec prisma generate
